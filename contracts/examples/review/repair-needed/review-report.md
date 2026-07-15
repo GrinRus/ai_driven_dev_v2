@@ -1,17 +1,21 @@
 # Review Report
 
-## Review scope
+## Verdict
 
-- Target stage output: `workitems/WI-REVIEW-EXAMPLE/stages/implement/output/implementation-report.md`
+- `approved`
 
 ## Findings
 
 - RV-1: The implementation is risky.
 
-## Approval status
+## Risks
 
-- `approved`
+- The unsupported finding prevents a reliable risk assessment.
 
-## Required changes
+## Required follow-up
 
 - none
+
+## Task acceptance evidence
+
+- Acceptance evidence must be regenerated after the malformed finding is repaired.

@@ -4,6 +4,13 @@ import re
 from pathlib import Path
 
 from aidd.core.implementation_eligibility import implementation_finalization_blocker
+from aidd.core.interview import (
+    AnswerResolution,
+    InterviewMarkdownParseError,
+    QuestionPolicy,
+    parse_answer_entries,
+    parse_question_entries,
+)
 from aidd.core.run_lookup import latest_run_id
 from aidd.core.stage_registry import DEFAULT_STAGE_CONTRACTS_ROOT, load_stage_manifest
 from aidd.core.task_plan import TaskCard, TaskPlanParseError, parse_task_plan
@@ -37,13 +44,8 @@ QA_REVIEW_RISK_CODE = "CROSS-QA-REVIEW-RISK"
 QA_UPSTREAM_EVIDENCE_CODE = "CROSS-QA-UPSTREAM-EVIDENCE"
 QA_UPSTREAM_VERDICT_CODE = "CROSS-QA-UPSTREAM-VERDICT"
 IMPLEMENTATION_FINALIZATION_CODE = "CROSS-IMPLEMENTATION-FINALIZATION"
+MALFORMED_INTERVIEW_DOCUMENT_CODE = "INTERVIEW-MALFORMED-DOCUMENT"
 
-_QUESTION_ID_PATTERN = re.compile(
-    r"^\s*-\s+`?(Q[\w-]+)`?\s+`?\[(blocking|non-blocking)\]`?"
-)
-_ANSWER_ID_PATTERN = re.compile(
-    r"^\s*-\s+`?(Q[\w-]+)`?\s+`?\[(resolved|partial|deferred)\]`?"
-)
 _REPAIR_BUDGET_EXHAUSTED_TOKEN = "repair-budget-exhausted"
 _STAGE_STATUS_PATTERN = re.compile(r"`?(succeeded|failed|blocked|needs-input)`?", re.IGNORECASE)
 _PROJECT_SET_ROW_PATTERN = re.compile(r"^\|\s*`([^`]+)`\s*\|\s*`([^`]+)`\s*\|")
@@ -119,82 +121,72 @@ def _extract_stage_status(stage_result_text: str) -> tuple[str | None, int | Non
     return None, None
 
 
-def _collect_question_ids(
+def _interview_parse_finding(
+    error: InterviewMarkdownParseError,
+) -> ValidationFinding:
+    if error.kind == "duplicate-id" and error.entry_id is not None:
+        is_question = error.document_name == "questions.md"
+        return ValidationFinding(
+            code=DUPLICATE_QUESTION_ID_CODE if is_question else DUPLICATE_ANSWER_ID_CODE,
+            message=(
+                f"Duplicate {'question' if is_question else 'answer'} id "
+                f"`{error.entry_id}` in {error.document_name}."
+            ),
+            severity="high",
+            location=ValidationIssueLocation(
+                workspace_relative_path=error.document_name,
+                line_number=error.line_number,
+            ),
+        )
+    return ValidationFinding(
+        code=MALFORMED_INTERVIEW_DOCUMENT_CODE,
+        message=f"Malformed interview document `{error.document_name}`: {error}",
+        severity="high",
+        location=ValidationIssueLocation(
+            workspace_relative_path=error.document_name,
+            line_number=error.line_number,
+        ),
+    )
+
+
+def _question_state(
     questions_text: str,
-) -> tuple[dict[str, int], tuple[ValidationFinding, ...]]:
-    question_ids: dict[str, int] = {}
-    findings: list[ValidationFinding] = []
-    for line_number, line in enumerate(questions_text.splitlines(), start=1):
-        match = _QUESTION_ID_PATTERN.search(line)
-        if match is None:
-            continue
-        question_id = match.group(1)
-        if question_id in question_ids:
-            findings.append(
-                ValidationFinding(
-                    code=DUPLICATE_QUESTION_ID_CODE,
-                    message=f"Duplicate question id `{question_id}` in questions.md.",
-                    severity="high",
-                    location=ValidationIssueLocation(
-                        workspace_relative_path="questions.md",
-                        line_number=line_number,
-                    ),
-                )
-            )
-            continue
-        question_ids[question_id] = line_number
-    return question_ids, tuple(findings)
+) -> tuple[dict[str, int], dict[str, int], tuple[ValidationFinding, ...], bool]:
+    try:
+        entries = parse_question_entries(questions_text)
+        parse_usable = True
+        parse_findings: tuple[ValidationFinding, ...] = ()
+    except InterviewMarkdownParseError as error:
+        entries = error.parsed_questions
+        parse_usable = error.kind == "duplicate-id" or bool(entries)
+        parse_findings = (_interview_parse_finding(error),)
+    question_ids = {entry.value.question_id: entry.line_number for entry in entries}
+    blocking_ids = {
+        entry.value.question_id: entry.line_number
+        for entry in entries
+        if entry.value.policy is QuestionPolicy.BLOCKING
+    }
+    return question_ids, blocking_ids, parse_findings, parse_usable
 
 
-def _collect_answer_ids(answers_text: str) -> tuple[dict[str, int], tuple[ValidationFinding, ...]]:
-    answer_ids: dict[str, int] = {}
-    findings: list[ValidationFinding] = []
-    for line_number, line in enumerate(answers_text.splitlines(), start=1):
-        match = _ANSWER_ID_PATTERN.search(line)
-        if match is None:
-            continue
-        question_id = match.group(1)
-        if question_id in answer_ids:
-            findings.append(
-                ValidationFinding(
-                    code=DUPLICATE_ANSWER_ID_CODE,
-                    message=f"Duplicate answer id `{question_id}` in answers.md.",
-                    severity="high",
-                    location=ValidationIssueLocation(
-                        workspace_relative_path="answers.md",
-                        line_number=line_number,
-                    ),
-                )
-            )
-            continue
-        answer_ids[question_id] = line_number
-    return answer_ids, tuple(findings)
-
-
-def _collect_resolved_answer_ids(answers_text: str) -> set[str]:
-    resolved_ids: set[str] = set()
-    for line in answers_text.splitlines():
-        match = _ANSWER_ID_PATTERN.search(line)
-        if match is None:
-            continue
-        question_id = match.group(1)
-        marker = match.group(2)
-        if marker == "resolved":
-            resolved_ids.add(question_id)
-    return resolved_ids
-
-
-def _collect_blocking_question_ids(questions_text: str) -> dict[str, int]:
-    blocking_ids: dict[str, int] = {}
-    for line_number, line in enumerate(questions_text.splitlines(), start=1):
-        match = _QUESTION_ID_PATTERN.search(line)
-        if match is None:
-            continue
-        question_id = match.group(1)
-        marker = match.group(2)
-        if marker == "blocking":
-            blocking_ids.setdefault(question_id, line_number)
-    return blocking_ids
+def _answer_state(
+    answers_text: str,
+) -> tuple[dict[str, int], set[str], tuple[ValidationFinding, ...], bool]:
+    try:
+        entries = parse_answer_entries(answers_text)
+        parse_usable = True
+        parse_findings: tuple[ValidationFinding, ...] = ()
+    except InterviewMarkdownParseError as error:
+        entries = error.parsed_answers
+        parse_usable = error.kind == "duplicate-id" or bool(entries)
+        parse_findings = (_interview_parse_finding(error),)
+    answer_ids = {entry.value.question_id: entry.line_number for entry in entries}
+    resolved_ids = {
+        entry.value.question_id
+        for entry in entries
+        if entry.value.resolution is AnswerResolution.RESOLVED
+    }
+    return answer_ids, resolved_ids, parse_findings, parse_usable
 
 
 def _workspace_relative(path: Path, workspace_root: Path) -> str:
@@ -792,13 +784,19 @@ def validate_cross_document_consistency(
     answer_ids: dict[str, int] = {}
     resolved_answer_ids: set[str] = set()
     blocking_question_ids: dict[str, int] = {}
+    questions_usable = True
+    answers_usable = True
     stage_status, stage_status_line = (
         _extract_stage_status(stage_result_text) if stage_result_text is not None else (None, None)
     )
 
     if questions_text is not None:
-        question_ids, question_findings = _collect_question_ids(questions_text)
-        blocking_question_ids = _collect_blocking_question_ids(questions_text)
+        (
+            question_ids,
+            blocking_question_ids,
+            question_findings,
+            questions_usable,
+        ) = _question_state(questions_text)
         for finding in question_findings:
             findings.append(
                 ValidationFinding(
@@ -813,8 +811,9 @@ def validate_cross_document_consistency(
             )
 
     if answers_text is not None:
-        answer_ids, answer_findings = _collect_answer_ids(answers_text)
-        resolved_answer_ids = _collect_resolved_answer_ids(answers_text)
+        answer_ids, resolved_answer_ids, answer_findings, answers_usable = _answer_state(
+            answers_text
+        )
         for finding in answer_findings:
             findings.append(
                 ValidationFinding(
@@ -828,44 +827,52 @@ def validate_cross_document_consistency(
                 )
             )
 
-        for question_id, line_number in answer_ids.items():
-            if question_id in question_ids:
+        if questions_usable and answers_usable:
+            for question_id, line_number in answer_ids.items():
+                if question_id in question_ids:
+                    continue
+                findings.append(
+                    ValidationFinding(
+                        code=ANSWER_WITHOUT_QUESTION_CODE,
+                        message=(
+                            f"Answer references `{question_id}` but no matching question exists "
+                            "in questions.md."
+                        ),
+                        severity="high",
+                        location=ValidationIssueLocation(
+                            workspace_relative_path=_workspace_relative(
+                                answers_path, workspace_root
+                            ),
+                            line_number=line_number,
+                        ),
+                    )
+                )
+
+    if questions_usable and answers_usable:
+        for question_id, line_number in blocking_question_ids.items():
+            if question_id in resolved_answer_ids:
                 continue
+            message = (
+                f"`{question_id}` is marked `[blocking]` and has no matching `[resolved]` answer "
+                "in `answers.md`."
+            )
+            if stage_status == "succeeded":
+                message += (
+                    " Stage status must not be `succeeded` while blocking questions remain."
+                )
             findings.append(
                 ValidationFinding(
-                    code=ANSWER_WITHOUT_QUESTION_CODE,
-                    message=(
-                        f"Answer references `{question_id}` but no matching question exists in "
-                        "questions.md."
-                    ),
-                    severity="high",
+                    code=BLOCKING_UNANSWERED_CODE,
+                    message=message,
+                    severity="critical",
                     location=ValidationIssueLocation(
-                        workspace_relative_path=_workspace_relative(answers_path, workspace_root),
+                        workspace_relative_path=_workspace_relative(
+                            questions_path, workspace_root
+                        ),
                         line_number=line_number,
                     ),
                 )
             )
-
-    for question_id, line_number in blocking_question_ids.items():
-        if question_id in resolved_answer_ids:
-            continue
-        message = (
-            f"`{question_id}` is marked `[blocking]` and has no matching `[resolved]` answer in "
-            "`answers.md`."
-        )
-        if stage_status == "succeeded":
-            message += " Stage status must not be `succeeded` while blocking questions remain."
-        findings.append(
-            ValidationFinding(
-                code=BLOCKING_UNANSWERED_CODE,
-                message=message,
-                severity="critical",
-                location=ValidationIssueLocation(
-                    workspace_relative_path=_workspace_relative(questions_path, workspace_root),
-                    line_number=line_number,
-                ),
-            )
-        )
 
     repair_brief_exists = repair_brief_path.exists()
     if stage_result_text is not None:

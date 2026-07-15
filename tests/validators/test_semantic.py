@@ -2090,6 +2090,64 @@ def test_validate_semantic_outputs_ignores_review_and_acceptance_ids_when_taskli
     assert any("missing required field" in finding.message for finding in findings)
 
 
+def test_validate_semantic_outputs_preserves_mixed_id_and_missing_coverage_findings(
+    tmp_path: Path,
+) -> None:
+    cards = (
+        """### TL-1 — Add regression coverage
+
+- Outcome: The regression is reproducible.
+- Dominant deliverable: `tests/test_example.py` records the failure.
+- In scope: `tests/test_example.py`.
+- Acceptance criteria:
+  - TL-1-AC1: The regression fails before the fix.
+""",
+        """### T2 — Apply the bounded fix
+
+- Outcome: The reproduced regression passes.
+- Dominant deliverable: `src/example.py` contains the fix.
+- In scope: `src/example.py`.
+- Acceptance criteria:
+  - T2-AC1: The regression passes after the fix.
+""",
+    )
+    expected_messages = {
+        "Task cards must not mix compact and prefixed task id styles.",
+        "Section `Dependencies` is missing task ids: T2.",
+        "Section `Verification notes` is missing task ids: T2.",
+    }
+
+    for index, ordered_cards in enumerate((cards, tuple(reversed(cards))), start=1):
+        workspace_root = tmp_path / f"case-{index}" / ".aidd"
+        work_item = f"WI-SEM-TASKLIST-MIXED-{index}"
+        _write_tasklist_document(
+            workspace_root,
+            work_item,
+            (
+                "# Tasklist\n\n"
+                "## Task summary\n\n"
+                "Split the regression into two bounded implementation tasks.\n\n"
+                "## Ordered tasks\n\n"
+                + "\n".join(ordered_cards)
+                + "\n"
+                "## Dependencies\n\n"
+                "- TL-1: none\n\n"
+                "## Verification notes\n\n"
+                "- TL-1: `pytest tests/test_example.py -q`\n"
+            ),
+        )
+
+        findings = validate_semantic_outputs(
+            stage="tasklist",
+            work_item=work_item,
+            workspace_root=workspace_root,
+        )
+
+        matched = tuple(finding for finding in findings if finding.message in expected_messages)
+        assert {finding.message for finding in matched} == expected_messages
+        assert all(finding.code == INCOMPLETE_SECTION_CODE for finding in matched)
+
+
 def test_validate_semantic_outputs_flags_invalid_tasklist_fixture_bundle() -> None:
     workspace_root = _SEMANTIC_FIXTURES_ROOT / "tasklist-invalid" / "workspace"
 
@@ -2784,6 +2842,8 @@ def test_validate_semantic_outputs_rejects_plain_tool_prose_as_command_evidence(
             "- Bun runner passed.\n"
             "- Prettier passed.\n"
             "- TypeScript tsc passed.\n\n"
+            "- pytest passed.\n"
+            "- Checked with ruff and it succeeded.\n\n"
             "## Risks\n\n"
             "- No residual risk remains.\n\n"
             "## Follow-up\n\n"
@@ -2798,6 +2858,8 @@ def test_validate_semantic_outputs_rejects_plain_tool_prose_as_command_evidence(
     )
 
     assert [finding.code for finding in findings] == [
+        UNVERIFIABLE_CHECK_CLAIM_CODE,
+        UNVERIFIABLE_CHECK_CLAIM_CODE,
         UNVERIFIABLE_CHECK_CLAIM_CODE,
         UNVERIFIABLE_CHECK_CLAIM_CODE,
         UNVERIFIABLE_CHECK_CLAIM_CODE,
@@ -4117,6 +4179,78 @@ def test_validate_semantic_outputs_accepts_flat_known_issue_metadata(
     assert findings == ()
 
 
+def test_validate_semantic_outputs_isolates_treatment_metadata_per_qa_risk(
+    tmp_path: Path,
+) -> None:
+    work_item = "WI-SEM-QA-ISOLATED-RISKS"
+    _write_qa_report(
+        tmp_path,
+        work_item,
+        """# QA Report
+
+## Verification summary
+
+- Quality verdict: `ready-with-risks`.
+- Verification passed with residual risks tracked by `EV-1`.
+
+## Release recommendation
+
+- `proceed-with-conditions`
+
+## Evidence
+
+- EV-1: `context/verification-output.md` reports full test pass.
+
+## Known issues
+
+- QR-1 (Severity: `medium`): retry telemetry remains partial.
+  - Mitigation: keep the retry alert enabled.
+  - Owner: platform maintainer.
+- QR-2 (Severity: `high`): rollback timing remains unverified.
+- QR-3 (Severity: `low`): weekend load coverage remains incomplete.
+
+## Readiness
+
+- Ready with conditions because `EV-1` is clean and risks are explicit.
+""",
+    )
+
+    findings = validate_semantic_outputs(
+        stage="qa",
+        work_item=work_item,
+        workspace_root=tmp_path,
+    )
+
+    assert findings == (
+        ValidationFinding(
+            code=RISK_UNDERREPORT_CODE,
+            message=(
+                "Each residual risk item must include mitigation and/or ownership notes."
+            ),
+            severity="medium",
+            location=ValidationIssueLocation(
+                workspace_relative_path=(
+                    "workitems/WI-SEM-QA-ISOLATED-RISKS/stages/qa/qa-report.md"
+                ),
+                line_number=21,
+            ),
+        ),
+        ValidationFinding(
+            code=RISK_UNDERREPORT_CODE,
+            message=(
+                "Each residual risk item must include mitigation and/or ownership notes."
+            ),
+            severity="medium",
+            location=ValidationIssueLocation(
+                workspace_relative_path=(
+                    "workitems/WI-SEM-QA-ISOLATED-RISKS/stages/qa/qa-report.md"
+                ),
+                line_number=22,
+            ),
+        ),
+    )
+
+
 def test_validate_semantic_outputs_flags_ready_with_residual_risk_entry(
     tmp_path: Path,
 ) -> None:
@@ -4234,7 +4368,7 @@ def test_validate_semantic_outputs_flags_known_issue_block_missing_severity(
                 workspace_relative_path=(
                     "workitems/WI-SEM-QA-MISSING-SEVERITY/stages/qa/qa-report.md"
                 ),
-                line_number=16,
+                line_number=18,
             ),
         ),
     )

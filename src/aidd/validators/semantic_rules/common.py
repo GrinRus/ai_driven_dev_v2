@@ -45,6 +45,9 @@ from aidd.validators.semantic_rules.evidence import (
     IMPLEMENT_ARTIFACT_REFERENCE_PATTERN as IMPLEMENT_ARTIFACT_REFERENCE_PATTERN,
 )
 from aidd.validators.semantic_rules.evidence import (
+    IMPLEMENT_ASSERTION_REFERENCE_PATTERN as IMPLEMENT_ASSERTION_REFERENCE_PATTERN,
+)
+from aidd.validators.semantic_rules.evidence import (
     IMPLEMENT_COMMAND_PATTERN as IMPLEMENT_COMMAND_PATTERN,
 )
 from aidd.validators.semantic_rules.evidence import (

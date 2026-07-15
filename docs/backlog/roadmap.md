@@ -8931,7 +8931,7 @@ Exit evidence:
 - tasklist, implement, review, and QA outputs cannot pass by satisfying local shape
   while contradicting their authored context.
 
-#### Slice W34-E1-S3 — validator report protocol and examples (`planned`)
+#### Slice W34-E1-S3 — validator report protocol and examples (`done`)
 Goal: make renderer, contract, prompts, consumers, and examples use one versioned
 validator vocabulary.
 
@@ -8946,7 +8946,7 @@ Local tasks:
   - Scope: validator-report protocol registry only.
   - Verification: every normative field/code and retained legacy alias has one
     registry entry and schema test.
-- `W34-E1-S3-T2` Normalize all eight success examples and exact invalid/repair
+- `W34-E1-S3-T2` (done) Normalize all eight success examples and exact invalid/repair
   expectations against the canonical protocol. [`COMPAT-02`]
   - Dependencies: `W34-E1-S3-T3`, `W34-E1-S3-T4`, `W34-E1-S3-T5`,
     `W34-E1-S3-T6`, `W34-E1-S3-T7`.
@@ -8987,7 +8987,7 @@ Exit evidence:
 - examples teach the behavior production validators enforce;
 - legacy validator-report consumers have a documented dual-read window.
 
-#### Slice W34-E1-S4 — item- and section-scoped semantic rules (`planned`)
+#### Slice W34-E1-S4 — item- and section-scoped semantic rules (`done`)
 Goal: close parser false passes and false failures caused by whole-document or
 whole-section matching.
 
@@ -8997,21 +8997,21 @@ Dependencies:
 
 Local tasks:
 
-- `W34-E1-S4-T1` Reuse the canonical section-aware interview parser in
+- `W34-E1-S4-T1` (done) Reuse the canonical section-aware interview parser in
   cross-validation. [`BUG-02`]
   - Scope: interview cross-document rule.
   - Verification: question-shaped prose outside the authoritative Questions section is
     ignored while real unanswered questions still block.
-- `W34-E1-S4-T2` Validate mitigation and owner metadata inside each QA risk item.
+- `W34-E1-S4-T2` (done) Validate mitigation and owner metadata inside each QA risk item.
   [`BUG-03`]
   - Scope: QA semantic rule.
   - Verification: a neighboring-risk isolation test reports the exact untreated risk.
-- `W34-E1-S4-T3` Preserve independent mixed-ID and missing-coverage findings through
+- `W34-E1-S4-T3` (done) Preserve independent mixed-ID and missing-coverage findings through
   the canonical Wave 35 task-plan parser. [`BUG-04`]
   - Scope: tasklist semantic regression coverage only.
   - Verification: a mixed-style tasklist with missing dependency/verification coverage
     emits both stable findings without introducing a second task grammar.
-- `W34-E1-S4-T4` Require command- or artifact-shaped executable evidence instead of
+- `W34-E1-S4-T4` (done) Require command- or artifact-shaped executable evidence instead of
   prose tool names. [`BUG-05`]
   - Scope: implementation evidence grammar.
   - Verification: a table covers accepted commands/artifacts and rejected prose-only

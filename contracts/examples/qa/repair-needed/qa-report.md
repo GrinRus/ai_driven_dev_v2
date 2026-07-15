@@ -1,21 +1,26 @@
 # QA Report
 
-## QA scope
+## Verification summary
 
 - Target implementation output: `workitems/WI-QA-EXAMPLE/stages/implement/output/implementation-report.md`
-
-## Quality verdict
-
-- `ready`
-
-## Residual risks
-
-- none
+- `workitems/WI-QA-EXAMPLE/stages/implement/output/implementation-report.md` claims critical verification is complete, but no executable evidence was captured.
 
 ## Release recommendation
 
-- `proceed`
+- `proceed-with-conditions`
 
-## Evidence references
+## Evidence
 
-- none recorded
+No verification evidence was captured.
+
+## Known issues
+
+- none
+
+## Readiness
+
+- QA verdict: `ready-with-risks`.
+
+## Task acceptance evidence
+
+- Acceptance evidence must be regenerated after verification evidence is repaired.

@@ -7,17 +7,12 @@ slice, and local task.
 
 ## Next
 
-- `W34-E1-S3-T2` — Normalize all eight success examples and exact invalid/repair
-  expectations against the canonical protocol.
+- `W34-E1-S5-T1` — Add one production-equivalent full-stack contract fixture runner.
 
 ## Soon
 
-
 ## Parking lot
 
-- `W34-E1-S4-T1` — Reuse the canonical section-aware interview parser in
-  cross-validation.
-- `W34-E1-S5-T1` — Add one production-equivalent full-stack contract fixture runner.
 - `W34-E2-S3-T1` — Move archive decisions to a separate append-only operator
   overlay/index.
 - `W34-E3-S2-T1` — Resolve each approval exactly once with compare-and-set semantics.
