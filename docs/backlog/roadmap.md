@@ -9840,7 +9840,7 @@ Sync notes:
 
 ---
 
-## Wave 35 — implementation-ready tasks and incremental execution (`planned`)
+## Wave 35 — implementation-ready tasks and incremental execution (`done`)
 
 Goal: turn the approved tasklist into complete task cards and execute them incrementally without
 changing the canonical eight-stage workflow.
@@ -9893,7 +9893,7 @@ Local tasks:
   - Scope: deterministic tasklist scenario inputs.
   - Verification: missing scope paths, escapes, forward dependencies, and scope conflicts stop or repair.
 
-### Epic W35-E2 — durable per-task execution (`planned`)
+### Epic W35-E2 — durable per-task execution (`done`)
 Linked stories: `US-03`, `US-04`, `US-06`, `US-10`, `US-11`, `US-13`
 
 #### Slice W35-E2-S1 — task plan and ledger (`done`)
@@ -10066,7 +10066,7 @@ Exit evidence:
 - task attempts, repository evidence, and aggregate finalization can evolve behind one
   stable application boundary.
 
-#### Slice W35-E2-S10 — bounded task repository evidence (`planned`)
+#### Slice W35-E2-S10 — bounded task repository evidence (`done`)
 Goal: avoid repeated full-repository hashing and duplicate attempt payloads while
 preserving immutable task evidence.
 
@@ -10088,7 +10088,7 @@ Local tasks:
   - Scope: task attempt evidence architecture only.
   - Verification: the decision selects one copy/reference model, forbids hard links,
     and names integrity, cleanup, resume, and read-model behavior.
-- `W35-E2-S10-T3` (next) Migrate duplicated global-attempt payloads to the canonical task
+- `W35-E2-S10-T3` (done) Migrate duplicated global-attempt payloads to the canonical task
   evidence contract. [`PERF-03`]
   - Dependencies: `W35-E2-S10-T2`.
   - Scope: task attempt evidence materialization only.

@@ -7,9 +7,6 @@ slice, and local task.
 
 ## Next
 
-- `W35-E2-S10-T3` — Migrate duplicated global-attempt payloads to the canonical task
-  evidence contract.
-
 ## Soon
 
 
@@ -101,6 +98,7 @@ slice, and local task.
 
 ## Current reconciliation
 
-- `2026-07-15` Immutable repository snapshots and the canonical task-attempt reference
-  contract are complete. Reference-based materialization is active in `Next`;
-  `Parking lot` remains unchanged.
+- `2026-07-15` Wave 35 is complete: task checkpoints reuse immutable repository
+  snapshots and task attempts reference canonical global runtime evidence without
+  payload copies or hard links. `Next` and `Soon` are empty pending a separate backlog
+  reconciliation; `Parking lot` remains unchanged.

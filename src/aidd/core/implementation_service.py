@@ -16,9 +16,9 @@ from aidd.core.run_store import (
     load_stage_metadata,
     next_attempt_number,
     persist_stage_status,
-    run_attempt_root,
 )
 from aidd.core.state_machine import StageState
+from aidd.core.task_attempt_evidence import write_task_attempt_references
 from aidd.core.task_attempt_lifecycle import (
     TaskExecutionContext,
     complete_task_attempt,
@@ -136,7 +136,7 @@ def _prepare_task_execution(
     )
 
 
-def _snapshot_global_attempts(
+def _record_global_attempt_references(
     *,
     context: TaskExecutionContext,
     request: ImplementationExecutionRequest,
@@ -147,23 +147,15 @@ def _snapshot_global_attempts(
         run_id=request.run_id,
         stage="implement",
     )
-    for attempt_number in range(context.global_attempt_start, end):
-        source = run_attempt_root(
-            workspace_root=request.workspace_root,
-            work_item=request.work_item,
-            run_id=request.run_id,
-            stage="implement",
-            attempt_number=attempt_number,
-        )
-        if not source.exists():
-            continue
-        destination = context.task_attempt_path / f"stage-attempt-{attempt_number:04d}"
-        shutil.copytree(source, destination)
-        for name in ("input-bundle.md", "runtime.log", "repair-context.md"):
-            artifact = destination / name
-            target = context.task_attempt_path / name
-            if artifact.exists() and (name != "input-bundle.md" or not target.exists()):
-                shutil.copy2(artifact, target)
+    write_task_attempt_references(
+        workspace_root=request.workspace_root,
+        work_item=request.work_item,
+        run_id=request.run_id,
+        task_id=context.task.id,
+        task_attempt_number=context.task_attempt_number,
+        task_attempt_path=context.task_attempt_path,
+        stage_attempt_numbers=tuple(range(context.global_attempt_start, end)),
+    )
 
 
 def _complete_task_execution(
@@ -173,7 +165,7 @@ def _complete_task_execution(
     succeeded: bool,
     blocker: str | None = None,
 ) -> TaskLedger:
-    _snapshot_global_attempts(context=context, request=request)
+    _record_global_attempt_references(context=context, request=request)
     implementation_report = (
         request.workspace_root
         / "workitems"

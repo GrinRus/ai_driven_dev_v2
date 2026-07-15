@@ -135,6 +135,7 @@ def test_task_diff_uses_canonical_scope_component_boundary_and_malformed_failure
         ledger=TaskLedger.create(plan),
         task=plan.tasks[0],
         global_attempt_start=1,
+        task_attempt_number=1,
         task_attempt_path=attempt,
     )
     final_snapshot = RepositorySnapshot(
