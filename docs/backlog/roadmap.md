@@ -10028,7 +10028,7 @@ Exit evidence:
 - CLI, UI, workflow, remediation, review, and QA observe the same task ledger and
   finalization policy.
 
-#### Slice W35-E2-S9 — task-execution change isolation (`planned`)
+#### Slice W35-E2-S9 — task-execution change isolation (`done`)
 Goal: reduce change coupling after all entrypoints use the same characterized core
 service.
 
@@ -10054,7 +10054,7 @@ Local tasks:
   - Scope: core implementation finalization only.
   - Verification: retry, publication failure, and successful aggregate fixtures retain
     ledger/status equivalence.
-- `W35-E2-S9-T4` Partition task execution tests by plan, attempt, repository evidence,
+- `W35-E2-S9-T4` (done) Partition task execution tests by plan, attempt, repository evidence,
   and finalization ownership. [`REF-06`]
   - Dependencies: `W35-E2-S9-T1`, `W35-E2-S9-T2`, `W35-E2-S9-T3`.
   - Scope: task execution tests and import-boundary assertion only.
