@@ -7,11 +7,19 @@ slice, and local task.
 
 ## Next
 
-- `W34-E7-S2-T4` — Adopt identifier containment for run and attempt paths after the
-  workspace/work-item rollout.
-
 ## Soon
 
+- `W35-E2-S8-T3` — Route workflow, stage, interact, and task CLI commands through the
+  typed implementation service.
+- `W35-E2-S8-T4` — Route UI stage, task, interact, and remediation mutations through
+  the typed implementation service.
+- `W35-E2-S8-T5` — Require successful task ledger finalization before review or QA.
+- `W34-E7-S4-T3` — Migrate task diff and scope gates to canonical allowed-write-scope.
+- `W34-E7-S4-T4` — Migrate repository diff and Implement Review reads to canonical
+  allowed-write-scope.
+- `W34-E1-S2-T4` — Bind QA risks, checks, and verdicts to review and implementation
+  evidence.
+- `W34-E7-S2-T5` — Adopt identifier containment for operator-overlay and CLI paths.
 
 ## Parking lot
 
@@ -104,7 +112,6 @@ slice, and local task.
 
 ## Current reconciliation
 
-- `2026-07-15` The seven foundation tasks selected from `Next` are complete. Their five
-  direct successors now form the bounded `Next` queue in dependency order; `Soon` is
-  intentionally empty, and the Wave 36 UI work remains in `Parking lot` behind the
-  Wave 34/35 and browser-foundation gates.
+- `2026-07-15` The five follow-up tasks selected from `Next` are complete. Their seven
+  direct successors are staged in `Soon` pending a separate bounded queue selection;
+  `Parking lot` remains unchanged.

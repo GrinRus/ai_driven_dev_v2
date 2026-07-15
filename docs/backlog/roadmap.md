@@ -9623,7 +9623,7 @@ Exit evidence:
 ### Epic W34-E7 — defensive local trust boundaries (`planned`)
 Linked stories: `US-01`, `US-03`, `US-07`, `US-08`, `US-10`, `US-12`
 
-#### Slice W34-E7-S1 — typed runtime operator policy (`planned`)
+#### Slice W34-E7-S1 — typed runtime operator policy (`done`)
 Goal: replace permissive lexical decisions with explicit local capability policy.
 
 Dependencies:
@@ -9677,7 +9677,7 @@ Local tasks:
   - Scope: harness and eval persisted paths.
   - Verification: every harness/bundle write-path family passes the same containment
     matrix.
-- `W34-E7-S2-T4` (`next`) Adopt the shared boundary for run and attempt paths. [`SEC-03`]
+- `W34-E7-S2-T4` (done) Adopt the shared boundary for run and attempt paths. [`SEC-03`]
   - Dependencies: `W34-E7-S2-T2`.
   - Scope: core run/attempt persisted paths only.
   - Verification: every run/attempt write-path family passes the shared containment

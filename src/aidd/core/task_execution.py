@@ -10,6 +10,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from uuid import uuid4
 
+from aidd.core.identifiers import contained_component_path
 from aidd.core.interview import stage_has_unresolved_blocking_questions
 from aidd.core.run_store import (
     load_stage_metadata,
@@ -148,14 +149,16 @@ def _write_attempt_state(
 def _task_attempts_root(
     *, workspace_root: Path, work_item: str, run_id: str, task_id: str
 ) -> Path:
-    return (
+    return contained_component_path(
         task_root(
             workspace_root=workspace_root,
             work_item=work_item,
             run_id=run_id,
             task_id=task_id,
-        )
-        / "attempts"
+        ),
+        "attempts",
+        boundary_root=workspace_root,
+        label="task attempts directory",
     )
 
 
@@ -259,15 +262,22 @@ def _copy_interview_evidence(stage_root: Path, attempt_path: Path) -> None:
 def _finalization_attempts_root(
     *, workspace_root: Path, work_item: str, run_id: str
 ) -> Path:
-    return (
+    finalization_root = contained_component_path(
         run_stage_root(
             workspace_root=workspace_root,
             work_item=work_item,
             run_id=run_id,
             stage="implement",
-        )
-        / "finalization"
-        / "attempts"
+        ),
+        "finalization",
+        boundary_root=workspace_root,
+        label="finalization directory",
+    )
+    return contained_component_path(
+        finalization_root,
+        "attempts",
+        boundary_root=workspace_root,
+        label="finalization attempts directory",
     )
 
 
@@ -305,7 +315,12 @@ def prepare_task_finalization(
         + "\n",
         encoding="utf-8",
     )
-    attempt_path = attempts_root / f"attempt-{number:04d}"
+    attempt_path = contained_component_path(
+        attempts_root,
+        f"attempt-{number:04d}",
+        boundary_root=workspace_root,
+        label="finalization attempt id",
+    )
     staging.replace(attempt_path)
     relative_path = attempt_path.relative_to(workspace_root).as_posix()
     ledger = ledger.transition_finalization(
@@ -528,7 +543,12 @@ def prepare_task_execution(
         attempt_number=task_attempt_number,
         status="preparing",
     )
-    task_attempt_path = attempts_root / f"attempt-{task_attempt_number:04d}"
+    task_attempt_path = contained_component_path(
+        attempts_root,
+        f"attempt-{task_attempt_number:04d}",
+        boundary_root=workspace_root,
+        label="task attempt id",
+    )
     staging_path.replace(task_attempt_path)
     implement_stage_root = (
         workspace_root / "workitems" / work_item / "stages" / "implement"

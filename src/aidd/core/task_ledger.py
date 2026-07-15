@@ -7,7 +7,7 @@ from enum import StrEnum
 from pathlib import Path
 from typing import Any
 
-from aidd.core.identifiers import resolve_contained_component
+from aidd.core.identifiers import contained_component_path
 from aidd.core.run_store import run_stage_root, write_json_payload
 from aidd.core.task_plan import TaskCard, TaskPlan
 
@@ -327,7 +327,12 @@ def task_root(*, workspace_root: Path, work_item: str, run_id: str, task_id: str
         )
         / TASKS_DIRNAME
     )
-    return resolve_contained_component(tasks_root, task_id, label="task id")
+    return contained_component_path(
+        tasks_root,
+        task_id,
+        boundary_root=workspace_root,
+        label="task id",
+    )
 
 
 def load_task_ledger(*, workspace_root: Path, work_item: str, run_id: str) -> TaskLedger | None:

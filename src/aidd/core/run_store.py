@@ -6,7 +6,7 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
-from aidd.core.identifiers import resolve_contained_component
+from aidd.core.identifiers import contained_component_path
 from aidd.core.models.run import RepairHistoryEntry, RunArtifactIndex, StageRunMetadata
 from aidd.core.resources import resolve_resource_layout_from_contracts_root
 from aidd.core.run_provenance import (
@@ -69,40 +69,56 @@ def _resolve_repository_root(
 
 
 def run_store_root(workspace_root: Path) -> Path:
-    return workspace_root / WORKSPACE_REPORTS_DIRNAME / WORKSPACE_REPORTS_RUNS_DIRNAME
+    reports_root = contained_component_path(
+        workspace_root,
+        WORKSPACE_REPORTS_DIRNAME,
+        boundary_root=workspace_root,
+        label="reports directory",
+    )
+    return contained_component_path(
+        reports_root,
+        WORKSPACE_REPORTS_RUNS_DIRNAME,
+        boundary_root=workspace_root,
+        label="runs directory",
+    )
 
 
 def work_item_runs_root(workspace_root: Path, work_item: str) -> Path:
-    return resolve_contained_component(
+    return contained_component_path(
         run_store_root(workspace_root=workspace_root),
         work_item,
+        boundary_root=workspace_root,
         label="work item id",
     )
 
 
 def run_root(workspace_root: Path, work_item: str, run_id: str) -> Path:
-    return resolve_contained_component(
+    return contained_component_path(
         work_item_runs_root(workspace_root=workspace_root, work_item=work_item),
         run_id,
+        boundary_root=workspace_root,
         label="run id",
     )
 
 
 def run_stages_root(workspace_root: Path, work_item: str, run_id: str) -> Path:
-    return (
-        run_root(workspace_root=workspace_root, work_item=work_item, run_id=run_id)
-        / RUN_STAGES_DIRNAME
+    return contained_component_path(
+        run_root(workspace_root=workspace_root, work_item=work_item, run_id=run_id),
+        RUN_STAGES_DIRNAME,
+        boundary_root=workspace_root,
+        label="run stages directory",
     )
 
 
 def run_stage_root(workspace_root: Path, work_item: str, run_id: str, stage: str) -> Path:
-    return resolve_contained_component(
+    return contained_component_path(
         run_stages_root(
             workspace_root=workspace_root,
             work_item=work_item,
             run_id=run_id,
         ),
         stage,
+        boundary_root=workspace_root,
         label="stage id",
     )
 
@@ -114,14 +130,16 @@ def format_attempt_directory_name(attempt_number: int) -> str:
 
 
 def run_attempts_root(workspace_root: Path, work_item: str, run_id: str, stage: str) -> Path:
-    return (
+    return contained_component_path(
         run_stage_root(
             workspace_root=workspace_root,
             work_item=work_item,
             run_id=run_id,
             stage=stage,
-        )
-        / RUN_ATTEMPTS_DIRNAME
+        ),
+        RUN_ATTEMPTS_DIRNAME,
+        boundary_root=workspace_root,
+        label="run attempts directory",
     )
 
 
@@ -133,14 +151,16 @@ def run_attempt_root(
     attempt_number: int,
 ) -> Path:
     attempt_dir = format_attempt_directory_name(attempt_number)
-    return (
+    return contained_component_path(
         run_attempts_root(
             workspace_root=workspace_root,
             work_item=work_item,
             run_id=run_id,
             stage=stage,
-        )
-        / attempt_dir
+        ),
+        attempt_dir,
+        boundary_root=workspace_root,
+        label="attempt id",
     )
 
 

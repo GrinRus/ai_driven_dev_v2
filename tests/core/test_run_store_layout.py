@@ -76,6 +76,88 @@ def test_format_attempt_directory_name_rejects_non_positive_numbers() -> None:
         format_attempt_directory_name(0)
 
 
+@pytest.mark.parametrize(
+    "invalid_id",
+    ("", ".", "..", "../run", "run/child", r"run\child", "/run", "x" * 129),
+)
+def test_run_paths_reject_invalid_identifiers_before_writes(
+    tmp_path: Path, invalid_id: str
+) -> None:
+    workspace_root = tmp_path / ".aidd"
+
+    with pytest.raises(ValueError):
+        run_root(workspace_root, "WI-001", invalid_id)
+
+    assert not workspace_root.exists()
+
+
+def test_run_path_helpers_preserve_relative_lexical_shape() -> None:
+    workspace_root = Path("relative-workspace")
+
+    assert run_attempt_root(workspace_root, "WI-001", "run-1", "plan", 2) == (
+        workspace_root
+        / WORKSPACE_REPORTS_DIRNAME
+        / WORKSPACE_REPORTS_RUNS_DIRNAME
+        / "WI-001"
+        / "run-1"
+        / RUN_STAGES_DIRNAME
+        / "plan"
+        / RUN_ATTEMPTS_DIRNAME
+        / "attempt-0002"
+    )
+
+
+@pytest.mark.parametrize("escape_level", ("reports", "runs", "work-item", "attempts"))
+def test_run_paths_reject_symlink_escapes(tmp_path: Path, escape_level: str) -> None:
+    workspace_root = tmp_path / ".aidd"
+    outside = tmp_path / "outside"
+    outside.mkdir()
+    workspace_root.mkdir()
+    reports = workspace_root / WORKSPACE_REPORTS_DIRNAME
+    runs = reports / WORKSPACE_REPORTS_RUNS_DIRNAME
+
+    if escape_level == "reports":
+        reports.symlink_to(outside, target_is_directory=True)
+    else:
+        reports.mkdir()
+        if escape_level == "runs":
+            runs.symlink_to(outside, target_is_directory=True)
+        else:
+            runs.mkdir()
+            work_item_root = runs / "WI-001"
+            if escape_level == "work-item":
+                work_item_root.symlink_to(outside, target_is_directory=True)
+            else:
+                attempts = (
+                    work_item_root
+                    / "run-1"
+                    / RUN_STAGES_DIRNAME
+                    / "plan"
+                    / RUN_ATTEMPTS_DIRNAME
+                )
+                attempts.parent.mkdir(parents=True)
+                attempts.symlink_to(outside, target_is_directory=True)
+
+    with pytest.raises(ValueError, match="inside|directly below"):
+        run_attempt_root(workspace_root, "WI-001", "run-1", "plan", 1)
+
+
+def test_invalid_run_id_creates_no_partial_manifest_tree(tmp_path: Path) -> None:
+    workspace_root = tmp_path / ".aidd"
+
+    with pytest.raises(ValueError):
+        create_run_manifest(
+            workspace_root=workspace_root,
+            work_item="WI-001",
+            run_id="../escape",
+            runtime_id="generic-cli",
+            stage_target="plan",
+            config_snapshot={},
+        )
+
+    assert not workspace_root.exists()
+
+
 def test_run_store_dataclass_root_matches_helper(tmp_path: Path) -> None:
     workspace_root = tmp_path / ".aidd"
     store = RunStore(workspace_root=workspace_root, work_item="WI-001", run_id="run-001")
