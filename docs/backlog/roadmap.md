@@ -8953,7 +8953,7 @@ Local tasks:
   - Scope: contract examples and full-stack validator fixtures.
   - Verification: every success example passes, while invalid and repair examples emit
     their exact expected codes.
-- `W34-E1-S3-T3` Make the validator report renderer emit registry-owned vocabulary.
+- `W34-E1-S3-T3` (done) Make the validator report renderer emit registry-owned vocabulary.
   [`COMPAT-01`]
   - Dependencies: `W34-E1-S3-T1`.
   - Scope: validator report rendering only.

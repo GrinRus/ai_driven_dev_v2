@@ -6,6 +6,11 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from aidd.validators.models import ValidationFinding
+from aidd.validators.protocol import (
+    ValidatorReportSection,
+    resolve_validator_finding_code,
+    validator_report_field,
+)
 
 
 @dataclass(frozen=True, slots=True)
@@ -14,15 +19,8 @@ class _RenderedFinding:
     occurrence_count: int
 
 
-def _classify_bucket(code: str) -> str:
-    normalized = code.strip().upper()
-    if normalized.startswith("STRUCT-"):
-        return "Structural checks"
-    if normalized.startswith("SEM-"):
-        return "Semantic checks"
-    if normalized.startswith("CROSS-"):
-        return "Cross-document checks"
-    return "Structural checks"
+def _classify_bucket(code: str) -> ValidatorReportSection:
+    return resolve_validator_finding_code(code, for_write=True).section
 
 
 def _format_location(finding: ValidationFinding) -> str:
@@ -58,10 +56,13 @@ def render_validator_report(findings: Iterable[ValidationFinding]) -> str:
     rendered_findings = _collapse_duplicate_findings(findings)
     findings_list = [rendered.finding for rendered in rendered_findings]
     occurrence_count = sum(rendered.occurrence_count for rendered in rendered_findings)
-    buckets: dict[str, list[_RenderedFinding]] = {
-        "Structural checks": [],
-        "Semantic checks": [],
-        "Cross-document checks": [],
+    finding_sections = (
+        ValidatorReportSection.STRUCTURAL,
+        ValidatorReportSection.SEMANTIC,
+        ValidatorReportSection.CROSS_DOCUMENT,
+    )
+    buckets: dict[ValidatorReportSection, list[_RenderedFinding]] = {
+        section: [] for section in finding_sections
     }
     for rendered in rendered_findings:
         buckets[_classify_bucket(rendered.finding.code)].append(rendered)
@@ -89,23 +90,31 @@ def render_validator_report(findings: Iterable[ValidationFinding]) -> str:
         "",
         "## Summary",
         "",
-        f"- Total issues: {len(findings_list)}",
-        f"- Blocking issues: {'yes' if blocking else 'no'}",
+        f"- {validator_report_field('total_issues').label}: {len(findings_list)}",
         (
-            "- Affected documents: "
+            f"- {validator_report_field('blocking_issues').label}: "
+            f"{'yes' if blocking else 'no'}"
+        ),
+        (
+            f"- {validator_report_field('affected_documents').label}: "
             + ", ".join(f"`{path}`" for path in affected_documents)
             if affected_documents
-            else "- Affected documents: none"
+            else f"- {validator_report_field('affected_documents').label}: none"
         ),
-        f"- Dominant failure categories: {dominant_labels}",
+        (
+            f"- {validator_report_field('dominant_failure_categories').label}: "
+            f"{dominant_labels}"
+        ),
     ]
     if occurrence_count != len(findings_list):
-        lines.append(f"- Finding occurrences: {occurrence_count}")
+        lines.append(
+            f"- {validator_report_field('finding_occurrences').label}: {occurrence_count}"
+        )
     lines.append("")
 
-    for heading in ("Structural checks", "Semantic checks", "Cross-document checks"):
-        lines.extend([f"## {heading}", ""])
-        bucket_findings = buckets[heading]
+    for section in finding_sections:
+        lines.extend([f"## {section.value}", ""])
+        bucket_findings = buckets[section]
         if not bucket_findings:
             lines.extend(["- none", ""])
             continue
@@ -126,8 +135,11 @@ def render_validator_report(findings: Iterable[ValidationFinding]) -> str:
         [
             "## Result",
             "",
-            f"- Verdict: `{verdict}`",
-            f"- Repair required for progression: {repair_required}",
+            f"- {validator_report_field('verdict').label}: `{verdict}`",
+            (
+                f"- {validator_report_field('repair_required').label}: "
+                f"{repair_required}"
+            ),
             "",
         ]
     )

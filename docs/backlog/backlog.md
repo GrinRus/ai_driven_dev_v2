@@ -7,11 +7,10 @@ slice, and local task.
 
 ## Next
 
-- `W34-E1-S3-T3` — Make the validator report renderer emit registry-owned vocabulary.
+- `W34-E1-S3-T4` — Align the validator-report Markdown contract with the registry.
 
 ## Soon
 
-- `W34-E1-S3-T4` — Align the validator-report Markdown contract with the registry.
 - `W34-E1-S3-T5` — Align validation repair prompts with the registry vocabulary.
 - `W34-E1-S3-T6` — Adopt the registry in dual-read validator-report consumers.
 
