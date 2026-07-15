@@ -7,6 +7,7 @@ import shlex
 from collections.abc import Iterable, Mapping
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
+from enum import StrEnum
 from pathlib import Path
 from typing import Any, Protocol
 from uuid import uuid4
@@ -126,6 +127,136 @@ _SHELL_DELETE_OR_PERMISSION_COMMANDS = frozenset(
         "chown",
     }
 )
+_VERIFY_COMMANDS = frozenset({"pytest", "ruff", "mypy", "cargo"})
+_PROJECT_WRITE_COMMANDS = frozenset({"cp", "mkdir", "mv", "touch"})
+
+
+class RuntimeOperatorCapability(StrEnum):
+    PROJECT_READ = "project-read"
+    WORKSPACE_READ = "workspace-read"
+    PROJECT_WRITE = "project-write"
+    WORKSPACE_WRITE = "workspace-write"
+    DELETE = "delete"
+    SHELL_INSPECT = "shell-inspect"
+    SHELL_VERIFY = "shell-verify"
+    SHELL_EXECUTE = "shell-execute"
+    PACKAGE_MUTATION = "package-mutation"
+    VCS_MUTATION = "vcs-mutation"
+    NETWORK = "network"
+    PUBLISH = "publish"
+    MCP_TOOL = "mcp-tool"
+    SUBAGENT = "subagent"
+    RUNTIME_PERMISSION = "runtime-permission"
+    DESTRUCTIVE = "destructive"
+    UNKNOWN = "unknown"
+
+
+class RuntimeOperatorCapabilityDisposition(StrEnum):
+    AUTO_ALLOW_ELIGIBLE = "auto-allow-eligible"
+    REQUIRES_OPERATOR = "requires-operator"
+    DENY = "deny"
+
+
+@dataclass(frozen=True, slots=True)
+class RuntimeOperatorCapabilityRule:
+    capability: RuntimeOperatorCapability
+    disposition: RuntimeOperatorCapabilityDisposition
+    requires_bounded_path: bool = False
+    requires_write_stage: bool = False
+
+
+@dataclass(frozen=True, slots=True)
+class RuntimeOperatorCapabilityAssessment:
+    capability: RuntimeOperatorCapability
+    rule: RuntimeOperatorCapabilityRule
+
+
+def _capability_rule(
+    capability: RuntimeOperatorCapability,
+) -> RuntimeOperatorCapabilityRule:
+    return RUNTIME_OPERATOR_CAPABILITY_RULES[capability]
+
+
+RUNTIME_OPERATOR_CAPABILITY_RULES = {
+    RuntimeOperatorCapability.PROJECT_READ: RuntimeOperatorCapabilityRule(
+        RuntimeOperatorCapability.PROJECT_READ,
+        RuntimeOperatorCapabilityDisposition.AUTO_ALLOW_ELIGIBLE,
+        requires_bounded_path=True,
+    ),
+    RuntimeOperatorCapability.WORKSPACE_READ: RuntimeOperatorCapabilityRule(
+        RuntimeOperatorCapability.WORKSPACE_READ,
+        RuntimeOperatorCapabilityDisposition.AUTO_ALLOW_ELIGIBLE,
+        requires_bounded_path=True,
+    ),
+    RuntimeOperatorCapability.PROJECT_WRITE: RuntimeOperatorCapabilityRule(
+        RuntimeOperatorCapability.PROJECT_WRITE,
+        RuntimeOperatorCapabilityDisposition.AUTO_ALLOW_ELIGIBLE,
+        requires_bounded_path=True,
+        requires_write_stage=True,
+    ),
+    RuntimeOperatorCapability.WORKSPACE_WRITE: RuntimeOperatorCapabilityRule(
+        RuntimeOperatorCapability.WORKSPACE_WRITE,
+        RuntimeOperatorCapabilityDisposition.AUTO_ALLOW_ELIGIBLE,
+        requires_bounded_path=True,
+    ),
+    RuntimeOperatorCapability.SHELL_INSPECT: RuntimeOperatorCapabilityRule(
+        RuntimeOperatorCapability.SHELL_INSPECT,
+        RuntimeOperatorCapabilityDisposition.AUTO_ALLOW_ELIGIBLE,
+        requires_bounded_path=True,
+    ),
+    RuntimeOperatorCapability.SHELL_VERIFY: RuntimeOperatorCapabilityRule(
+        RuntimeOperatorCapability.SHELL_VERIFY,
+        RuntimeOperatorCapabilityDisposition.AUTO_ALLOW_ELIGIBLE,
+        requires_bounded_path=True,
+    ),
+    RuntimeOperatorCapability.SHELL_EXECUTE: RuntimeOperatorCapabilityRule(
+        RuntimeOperatorCapability.SHELL_EXECUTE,
+        RuntimeOperatorCapabilityDisposition.AUTO_ALLOW_ELIGIBLE,
+        requires_bounded_path=True,
+    ),
+    **{
+        capability: RuntimeOperatorCapabilityRule(
+            capability,
+            RuntimeOperatorCapabilityDisposition.REQUIRES_OPERATOR,
+        )
+        for capability in (
+            RuntimeOperatorCapability.PACKAGE_MUTATION,
+            RuntimeOperatorCapability.VCS_MUTATION,
+            RuntimeOperatorCapability.NETWORK,
+            RuntimeOperatorCapability.PUBLISH,
+            RuntimeOperatorCapability.MCP_TOOL,
+            RuntimeOperatorCapability.SUBAGENT,
+            RuntimeOperatorCapability.RUNTIME_PERMISSION,
+            RuntimeOperatorCapability.UNKNOWN,
+        )
+    },
+    **{
+        capability: RuntimeOperatorCapabilityRule(
+            capability,
+            RuntimeOperatorCapabilityDisposition.DENY,
+        )
+        for capability in (
+            RuntimeOperatorCapability.DELETE,
+            RuntimeOperatorCapability.DESTRUCTIVE,
+        )
+    },
+}
+
+_REQUEST_KIND_CAPABILITIES = {
+    RuntimeOperatorRequestKind.FILE_READ: RuntimeOperatorCapability.PROJECT_READ,
+    RuntimeOperatorRequestKind.FILE_LIST: RuntimeOperatorCapability.PROJECT_READ,
+    RuntimeOperatorRequestKind.FILE_GLOB: RuntimeOperatorCapability.PROJECT_READ,
+    RuntimeOperatorRequestKind.FILE_GREP: RuntimeOperatorCapability.PROJECT_READ,
+    RuntimeOperatorRequestKind.FILE_CREATE: RuntimeOperatorCapability.PROJECT_WRITE,
+    RuntimeOperatorRequestKind.FILE_EDIT: RuntimeOperatorCapability.PROJECT_WRITE,
+    RuntimeOperatorRequestKind.FILE_WRITE: RuntimeOperatorCapability.PROJECT_WRITE,
+    RuntimeOperatorRequestKind.FILE_DELETE: RuntimeOperatorCapability.DELETE,
+    RuntimeOperatorRequestKind.NETWORK: RuntimeOperatorCapability.NETWORK,
+    RuntimeOperatorRequestKind.MCP_TOOL: RuntimeOperatorCapability.MCP_TOOL,
+    RuntimeOperatorRequestKind.SUBAGENT: RuntimeOperatorCapability.SUBAGENT,
+    RuntimeOperatorRequestKind.RUNTIME_PERMISSION: RuntimeOperatorCapability.RUNTIME_PERMISSION,
+    RuntimeOperatorRequestKind.UNKNOWN: RuntimeOperatorCapability.UNKNOWN,
+}
 
 
 def _utc_now() -> str:
@@ -230,6 +361,72 @@ class RuntimeOperatorRequest:
         )
 
 
+def assess_runtime_operator_request(
+    request: RuntimeOperatorRequest,
+    *,
+    configured_command_prefixes: tuple[str, ...] = (),
+) -> RuntimeOperatorCapabilityAssessment:
+    if request.kind is not RuntimeOperatorRequestKind.SHELL:
+        capability = _REQUEST_KIND_CAPABILITIES.get(
+            request.kind,
+            RuntimeOperatorCapability.UNKNOWN,
+        )
+        return RuntimeOperatorCapabilityAssessment(capability, _capability_rule(capability))
+
+    command = _request_command(request).strip()
+    try:
+        tokens = tuple(shlex.split(command))
+    except ValueError:
+        tokens = ()
+    if not tokens:
+        capability = RuntimeOperatorCapability.UNKNOWN
+    else:
+        guard_text = _shell_guard_text(command)
+        executable = Path(tokens[0]).name
+        if re.search(r"(?<![\w./-])(rm|rmdir|unlink|chmod|chown)(?![\w.-])", guard_text):
+            capability = RuntimeOperatorCapability.DESTRUCTIVE
+        elif executable in _PUBLISH_COMMANDS or any(
+            token in {"release", "publish"} for token in tokens[1:]
+        ):
+            capability = RuntimeOperatorCapability.PUBLISH
+        elif executable == "git" and len(tokens) >= 2 and tokens[1] in _NETWORK_GIT_SUBCOMMANDS:
+            capability = (
+                RuntimeOperatorCapability.PUBLISH
+                if tokens[1] == "push"
+                else RuntimeOperatorCapability.NETWORK
+            )
+        elif executable == "git" and len(tokens) >= 2 and tokens[1] in _ASK_GIT_SUBCOMMANDS:
+            capability = RuntimeOperatorCapability.VCS_MUTATION
+        elif executable in _PACKAGE_MANAGERS and _package_command_requires_operator(
+            executable=executable,
+            tokens=tokens,
+        ):
+            capability = RuntimeOperatorCapability.PACKAGE_MUTATION
+        elif _is_safe_inspect_shell(command):
+            capability = RuntimeOperatorCapability.SHELL_INSPECT
+        elif executable == "git" and len(tokens) >= 2 and tokens[1] in _SAFE_GIT_SUBCOMMANDS:
+            capability = RuntimeOperatorCapability.SHELL_VERIFY
+        elif _is_configured_command(command, configured_command_prefixes):
+            capability = RuntimeOperatorCapability.SHELL_VERIFY
+        elif executable in _VERIFY_COMMANDS or (
+            executable in {"python", "python3"} and "pytest" in tokens
+        ) or (executable == "uv" and len(tokens) >= 3 and tokens[1] == "run"):
+            capability = RuntimeOperatorCapability.SHELL_VERIFY
+        elif executable in _PROJECT_WRITE_COMMANDS or executable in {
+            "bash",
+            "python",
+            "python3",
+            "sh",
+            "zsh",
+        }:
+            capability = RuntimeOperatorCapability.SHELL_EXECUTE
+        elif _contains_url(tokens) or executable in _NETWORK_COMMANDS:
+            capability = RuntimeOperatorCapability.NETWORK
+        else:
+            capability = RuntimeOperatorCapability.UNKNOWN
+    return RuntimeOperatorCapabilityAssessment(capability, _capability_rule(capability))
+
+
 @dataclass(frozen=True, slots=True)
 class RuntimeOperatorDecision:
     request_id: str
@@ -295,6 +492,17 @@ class RuntimeOperatorPolicy:
                 reason="full-access policy allows runtime request",
             )
 
+        assessment = assess_runtime_operator_request(
+            request,
+            configured_command_prefixes=self.configured_command_prefixes,
+        )
+        if assessment.rule.disposition is RuntimeOperatorCapabilityDisposition.DENY:
+            return _decision(
+                request=request,
+                action=RuntimeOperatorDecisionAction.DENY,
+                reason=f"capability `{assessment.capability.value}` is denied by policy",
+            )
+
         denied_reason = self._deny_reason(request)
         if denied_reason is not None:
             return _decision(
@@ -303,7 +511,7 @@ class RuntimeOperatorPolicy:
                 reason=denied_reason,
             )
 
-        auto_decision = self._auto_decision(request)
+        auto_decision = self._auto_decision(request, assessment=assessment)
         if auto_decision is not None:
             return auto_decision
 
@@ -335,8 +543,15 @@ class RuntimeOperatorPolicy:
     def _auto_decision(
         self,
         request: RuntimeOperatorRequest,
+        *,
+        assessment: RuntimeOperatorCapabilityAssessment,
     ) -> RuntimeOperatorDecision | None:
         if self.auto_approval_preset is AutoApprovalPreset.OFF:
+            return None
+        if (
+            assessment.rule.disposition
+            is not RuntimeOperatorCapabilityDisposition.AUTO_ALLOW_ELIGIBLE
+        ):
             return None
 
         if request.kind in _READ_KINDS and self._paths_within_read_roots(request):
@@ -346,7 +561,7 @@ class RuntimeOperatorPolicy:
                 reason="auto-approved safe project/AIDD read/list/search request",
             )
         if request.kind is RuntimeOperatorRequestKind.SHELL:
-            return self._shell_auto_decision(request)
+            return self._shell_auto_decision(request, assessment=assessment)
         if self.permission_policy is RuntimePermissionPolicy.PLAN:
             return None
         if self.auto_approval_preset is not AutoApprovalPreset.BROAD:
@@ -370,6 +585,8 @@ class RuntimeOperatorPolicy:
     def _shell_auto_decision(
         self,
         request: RuntimeOperatorRequest,
+        *,
+        assessment: RuntimeOperatorCapabilityAssessment,
     ) -> RuntimeOperatorDecision | None:
         command = _request_command(request)
         if not command.strip():
@@ -377,6 +594,8 @@ class RuntimeOperatorPolicy:
         if not self._cwd_within_project_roots(request):
             return None
         if _requires_operator_for_shell(command):
+            return None
+        if assessment.rule.requires_write_stage and request.stage not in _WRITE_STAGES:
             return None
         if (
             self.permission_policy is not RuntimePermissionPolicy.PLAN
@@ -1089,11 +1308,17 @@ def _load_jsonl(path: Path) -> tuple[dict[str, Any], ...]:
 __all__ = [
     "OPERATOR_DECISIONS_FILENAME",
     "OPERATOR_REQUESTS_FILENAME",
+    "RUNTIME_OPERATOR_CAPABILITY_RULES",
     "RuntimeOperatorBroker",
+    "RuntimeOperatorCapability",
+    "RuntimeOperatorCapabilityAssessment",
+    "RuntimeOperatorCapabilityDisposition",
+    "RuntimeOperatorCapabilityRule",
     "RuntimeOperatorDecision",
     "RuntimeOperatorDecisionProvider",
     "RuntimeOperatorPolicy",
     "RuntimeOperatorRequest",
+    "assess_runtime_operator_request",
     "append_operator_decision",
     "append_operator_request",
     "load_operator_decisions",

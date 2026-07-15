@@ -42,6 +42,30 @@ remote-host, or malformed owners remain conflicts. UI mutation endpoints acquire
 returning a background job id. Stage success remains uncommitted until the final aggregate
 implementation report passes validation and atomic publication succeeds.
 
+## Public entrypoint contract
+
+When a validated rich `tasklist.md` exists, every public `implement` mutation is task-aware.
+No workflow, CLI, UI, interaction, or remediation entrypoint may convert a generic one-shot
+runtime result into implement-stage success. A missing ready task, a tasklist/ledger mismatch, or
+a changed source tasklist hash fails closed without publishing aggregate output or making `review`
+or `qa` eligible.
+
+| Entrypoint | Task selection | Ledger and finalization transition | Publication and downstream eligibility | Failure and remediation behavior |
+| --- | --- | --- | --- | --- |
+| Workflow run through `implement` | Execute dependency-ready tasks in authored order until the first non-success result, then finalize once all tasks succeeded. | Allocate one task attempt at a time; successful tasks remain succeeded. Enter aggregate finalization only from a complete successful ledger. | Publish `implementation-report.md` only after aggregate validation and atomic publication. Only that commit may make `review` eligible. | Stop on failed, blocked, or needs-input task. A continuation resumes from durable task evidence; it never replays succeeded tasks. |
+| CLI `stage run implement` | Use the same automatic dependency-ready selection as workflow execution. | Use the task ledger and aggregate finalization state; generic stage execution is not available. | Cannot publish or unlock downstream stages outside aggregate finalization. | No ready task, stale source hash, or inconsistent ledger is a terminal command error with no publication. |
+| CLI `stage interact implement` | Target the current dependency-ready or resumable task; when all tasks succeeded, target aggregate finalization. | Record the intervention under the selected task attempt or finalization attempt. | Rebuild and validate affected task or aggregate evidence before publication eligibility is restored. | Reject interaction when the target cannot be derived unambiguously. Never write a free-standing implement-stage result. |
+| CLI `task run` | Execute the explicitly selected pending, failed, or blocked task only when its dependencies succeeded. | Allocate the next monotonic task attempt and update only that task's ledger entry. | Task success alone does not publish aggregate output or unlock `review`. | Reject unknown, already-succeeded, dependency-blocked, or source-mismatched selections without changing successful entries. |
+| CLI `task finalize` | Select no task; require every authored task to be succeeded. | Allocate or resume an aggregate finalization attempt without rewriting task outcomes. | Successful validation and atomic publication commit implement-stage success and `review` eligibility. | Failed finalization remains retryable and retains all successful task outcomes. |
+| UI workflow and stage controls | Apply the workflow or stage-run selection rules above through the same core task-aware service. | Observe the same ledger/finalization transitions; the UI owns no alternate execution policy. | A background job id is not success. Eligibility changes only after the durable aggregate commit. | Acquire the shared mutation lease before accepting the job; surface domain conflicts and durable failed/blocked state. |
+| UI task and finalize controls | Apply the explicit task-run or aggregate-finalize rules above. | Persist task-local or finalization attempts through the same core service used by the CLI. | Never infer publication eligibility from a successful UI job alone. | Preserve prior successes and expose the resumable task/finalization target after failure. |
+| UI interaction and remediation | Resolve the affected task or finalization attempt from durable evidence. | Create a new monotonic attempt and mark downstream evidence stale before rerun. | Revalidate task evidence and, when affected, aggregate publication before restoring `review`/`qa` eligibility. | Fail closed when evidence cannot identify one valid target; remediation cannot bypass the ledger. |
+| `review` and `qa` progression | Select no implementation task. | Require a complete successful task ledger plus successful aggregate finalization matching the current tasklist hash. | `review` follows committed implement publication; `qa` additionally follows committed review success. | Forged or generic implement success, incomplete ledger state, stale hash, or failed finalization blocks progression. |
+
+Task-local success is durable across later task, interaction, remediation, and finalization
+failures. Remediation invalidates only the evidence that depends on the remediated checkpoint;
+it does not erase unrelated successful task attempts.
+
 ## Alternatives rejected
 
 - Rewriting task statuses into `tasklist.md` would mix runtime-authored intent with mutable system

@@ -12,6 +12,9 @@ from aidd.validators.cross_document import (
     REPAIR_BRIEF_NOT_REFERENCED_CODE,
     REPAIR_BUDGET_EXHAUSTED_CODE,
     REPAIR_MENTION_WITHOUT_BRIEF_CODE,
+    TASKLIST_PLAN_DEPENDENCY_CODE,
+    TASKLIST_PLAN_MILESTONE_CODE,
+    TASKLIST_PLAN_VERIFICATION_CODE,
     validate_cross_document_consistency,
 )
 from aidd.validators.models import ValidationFinding, ValidationIssueLocation
@@ -97,6 +100,126 @@ def _copy_example_bundle(
     stage_root.mkdir(parents=True, exist_ok=True)
     for source_path in example_root.glob("*.md"):
         shutil.copy2(source_path, stage_root / source_path.name)
+
+
+def _write_plan_tasklist_pair(
+    workspace_root: Path,
+    *,
+    task_one_milestone: str = "M1",
+    task_two_milestone: str = "M2",
+    task_two_command: str = "uv run pytest -q tests/api",
+) -> None:
+    work_item_root = workspace_root / "workitems" / "WI-001" / "stages"
+    plan_output = work_item_root / "plan" / "output"
+    tasklist_root = work_item_root / "tasklist"
+    plan_output.mkdir(parents=True)
+    tasklist_root.mkdir(parents=True)
+    plan_output.joinpath("plan.md").write_text(
+        "# Plan\n\n"
+        "## Milestones\n\n"
+        "- M1: Add the model.\n"
+        "- M2: Add the API.\n\n"
+        "## Dependencies\n\n"
+        "- M2 depends on M1.\n\n"
+        "## Verification notes\n\n"
+        "- M1: run `uv run pytest -q tests/model`.\n"
+        "- M2: run `uv run pytest -q tests/api`.\n",
+        encoding="utf-8",
+    )
+    tasklist_root.joinpath("tasklist.md").write_text(
+        "# Tasklist\n\n"
+        "## Ordered tasks\n\n"
+        "### T1 — Add model\n\n"
+        f"- Outcome: Complete {task_one_milestone}.\n"
+        "- Dominant deliverable: `src/model.py`.\n"
+        "- In scope: `src/model.py`.\n"
+        "- Acceptance criteria:\n"
+        "  - T1-AC1: The model behavior required by the milestone is covered.\n\n"
+        "### T2 — Add API\n\n"
+        f"- Outcome: Complete {task_two_milestone}.\n"
+        "- Dominant deliverable: `src/api.py`.\n"
+        "- In scope: `src/api.py`.\n"
+        "- Acceptance criteria:\n"
+        "  - T2-AC1: The API behavior required by the milestone is covered.\n\n"
+        "## Dependencies\n\n"
+        "- T1: none\n"
+        "- T2: T1\n\n"
+        "## Verification notes\n\n"
+        f"- T1: {task_one_milestone} `uv run pytest -q tests/model`\n"
+        f"- T2: M2 `{task_two_command}`\n",
+        encoding="utf-8",
+    )
+
+
+def test_tasklist_plan_cross_validation_accepts_exact_milestone_bindings(
+    tmp_path: Path,
+) -> None:
+    workspace_root = tmp_path / ".aidd"
+    _write_plan_tasklist_pair(workspace_root)
+
+    findings = validate_cross_document_consistency(
+        stage="tasklist",
+        work_item="WI-001",
+        workspace_root=workspace_root,
+    )
+
+    assert findings == ()
+
+
+def test_tasklist_plan_cross_validation_reports_unknown_and_uncovered_milestones(
+    tmp_path: Path,
+) -> None:
+    workspace_root = tmp_path / ".aidd"
+    _write_plan_tasklist_pair(workspace_root, task_one_milestone="M9")
+
+    findings = validate_cross_document_consistency(
+        stage="tasklist",
+        work_item="WI-001",
+        workspace_root=workspace_root,
+    )
+
+    milestone_findings = [item for item in findings if item.code == TASKLIST_PLAN_MILESTONE_CODE]
+    assert len(milestone_findings) == 2
+    assert any("unknown M9" in item.message for item in milestone_findings)
+    assert any("`M1` is not covered" in item.message for item in milestone_findings)
+
+
+def test_tasklist_plan_cross_validation_reports_inverted_dependency_mapping(
+    tmp_path: Path,
+) -> None:
+    workspace_root = tmp_path / ".aidd"
+    _write_plan_tasklist_pair(
+        workspace_root,
+        task_one_milestone="M2",
+        task_two_milestone="M1",
+    )
+
+    findings = validate_cross_document_consistency(
+        stage="tasklist",
+        work_item="WI-001",
+        workspace_root=workspace_root,
+    )
+
+    assert any(item.code == TASKLIST_PLAN_DEPENDENCY_CODE for item in findings)
+
+
+def test_tasklist_plan_cross_validation_preserves_exact_authored_command(
+    tmp_path: Path,
+) -> None:
+    workspace_root = tmp_path / ".aidd"
+    _write_plan_tasklist_pair(
+        workspace_root,
+        task_two_command="uv run pytest tests/api",
+    )
+
+    findings = validate_cross_document_consistency(
+        stage="tasklist",
+        work_item="WI-001",
+        workspace_root=workspace_root,
+    )
+
+    assert [item.code for item in findings] == [TASKLIST_PLAN_VERIFICATION_CODE]
+    assert "uv run pytest -q tests/api" in findings[0].message
 
 
 def test_validate_cross_document_consistency_passes_for_consistent_bundle(tmp_path: Path) -> None:

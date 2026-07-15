@@ -4,6 +4,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from aidd.config import ProjectConfig, ProjectSetConfig
+from aidd.core.identifiers import SafeIdentifier
 from aidd.core.project_set import (
     ResolvedProjectSet,
     persist_project_set_context,
@@ -153,17 +154,7 @@ class OnboardingService:
         return resolved_workspace
 
     def _normalize_work_item(self, work_item: str) -> str:
-        normalized_work_item = work_item.strip()
-        if not normalized_work_item:
-            raise ValueError("work_item is required.")
-        if normalized_work_item in {".", ".."}:
-            raise ValueError("work_item must be a plain identifier.")
-        if "/" in normalized_work_item or "\\" in normalized_work_item:
-            raise ValueError("work_item must not contain path separators.")
-        work_item_path = Path(normalized_work_item)
-        if work_item_path.is_absolute() or any(part == ".." for part in work_item_path.parts):
-            raise ValueError("work_item must not contain parent traversal.")
-        return normalized_work_item
+        return SafeIdentifier.parse(work_item, label="work_item").value
 
     def _discover_work_items(
         self,
