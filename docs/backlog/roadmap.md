@@ -9002,7 +9002,7 @@ Local tasks:
   - Scope: interview cross-document rule.
   - Verification: question-shaped prose outside the authoritative Questions section is
     ignored while real unanswered questions still block.
-- `W34-E1-S4-T2` Validate mitigation and owner metadata inside each QA risk item.
+- `W34-E1-S4-T2` (done) Validate mitigation and owner metadata inside each QA risk item.
   [`BUG-03`]
   - Scope: QA semantic rule.
   - Verification: a neighboring-risk isolation test reports the exact untreated risk.

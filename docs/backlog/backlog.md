@@ -7,12 +7,11 @@ slice, and local task.
 
 ## Next
 
-- `W34-E1-S4-T2` — Validate mitigation and owner metadata inside each QA risk item.
+- `W34-E1-S4-T3` — Preserve independent mixed-ID and missing-coverage findings through
+  the canonical Wave 35 task-plan parser.
 
 ## Soon
 
-- `W34-E1-S4-T3` — Preserve independent mixed-ID and missing-coverage findings through
-  the canonical Wave 35 task-plan parser.
 - `W34-E1-S4-T4` — Require command- or artifact-shaped executable evidence instead of
   prose tool names.
 

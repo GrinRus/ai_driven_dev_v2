@@ -3,7 +3,7 @@ from __future__ import annotations
 import re
 from pathlib import Path
 
-from aidd.validators.models import ValidationFinding
+from aidd.validators.models import ValidationFinding, ValidationIssueLocation
 from aidd.validators.semantic_rules.common import (
     IMPLEMENT_FILE_ENTRY_PATTERN,
     INCOMPLETE_SECTION_CODE,
@@ -90,12 +90,32 @@ def _validate_release_recommendation(
 
 
 def _risk_entry_items(risks: SemanticSection) -> tuple[str, ...]:
-    risk_items = extract_risk_blocks(risks.content)
-    return tuple(
-        item
-        for item in risk_items
-        if not is_empty_risk_entry(item) and not is_risk_metadata_entry(item)
-    )
+    grouped_items: list[str] = []
+    for item in extract_risk_blocks(risks.content):
+        if is_empty_risk_entry(item):
+            continue
+        if is_risk_metadata_entry(item):
+            if grouped_items:
+                grouped_items[-1] = f"{grouped_items[-1]}\n{item}"
+            continue
+        grouped_items.append(item)
+    return tuple(grouped_items)
+
+
+def _risk_item_location(
+    *,
+    context: SemanticDocumentContext,
+    risks: SemanticSection,
+    risk_item: str,
+    start_line_number: int,
+) -> tuple[ValidationIssueLocation, int]:
+    target = next((line.strip() for line in risk_item.splitlines() if line.strip()), "")
+    for line_number in range(start_line_number, len(context.markdown_lines) + 1):
+        source_line = context.markdown_lines[line_number - 1].strip()
+        normalized_source = source_line[2:].strip() if source_line.startswith("- ") else source_line
+        if normalized_source == target:
+            return context.location(line_number=line_number), line_number + 1
+    return risks.location, start_line_number
 
 
 def _validate_residual_risks(
@@ -147,35 +167,41 @@ def _validate_residual_risks(
             )
         )
 
+    next_search_line = risks.location.line_number or 1
     for risk_item in risk_entry_items:
-        if QA_RISK_SEVERITY_PATTERN.search(risk_item) is not None:
-            continue
-        findings.append(
-            context.finding(
-                code=RISK_UNDERREPORT_CODE,
-                message=(
-                    "Each residual risk item must include explicit severity "
-                    "(critical/high/medium/low)."
-                ),
-                severity="medium",
-                location=risks.location,
-            )
+        location, next_search_line = _risk_item_location(
+            context=context,
+            risks=risks,
+            risk_item=risk_item,
+            start_line_number=next_search_line,
         )
-        break
-
-    has_mitigation_or_owner_note = (
-        RISK_MITIGATION_PATTERN.search(risks.content) is not None
-        or QA_OWNER_PATTERN.search(risks.content) is not None
-    )
-    if has_residual_risk_entries and not has_mitigation_or_owner_note:
-        findings.append(
-            context.finding(
-                code=RISK_UNDERREPORT_CODE,
-                message=("Residual risk summary must include mitigation and/or ownership notes."),
-                severity="medium",
-                location=risks.location,
+        if QA_RISK_SEVERITY_PATTERN.search(risk_item) is None:
+            findings.append(
+                context.finding(
+                    code=RISK_UNDERREPORT_CODE,
+                    message=(
+                        "Each residual risk item must include explicit severity "
+                        "(critical/high/medium/low)."
+                    ),
+                    severity="medium",
+                    location=location,
+                )
             )
+        has_mitigation_or_owner_note = (
+            RISK_MITIGATION_PATTERN.search(risk_item) is not None
+            or QA_OWNER_PATTERN.search(risk_item) is not None
         )
+        if not has_mitigation_or_owner_note:
+            findings.append(
+                context.finding(
+                    code=RISK_UNDERREPORT_CODE,
+                    message=(
+                        "Each residual risk item must include mitigation and/or ownership notes."
+                    ),
+                    severity="medium",
+                    location=location,
+                )
+            )
     return tuple(findings)
 
 

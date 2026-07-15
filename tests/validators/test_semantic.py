@@ -4117,6 +4117,78 @@ def test_validate_semantic_outputs_accepts_flat_known_issue_metadata(
     assert findings == ()
 
 
+def test_validate_semantic_outputs_isolates_treatment_metadata_per_qa_risk(
+    tmp_path: Path,
+) -> None:
+    work_item = "WI-SEM-QA-ISOLATED-RISKS"
+    _write_qa_report(
+        tmp_path,
+        work_item,
+        """# QA Report
+
+## Verification summary
+
+- Quality verdict: `ready-with-risks`.
+- Verification passed with residual risks tracked by `EV-1`.
+
+## Release recommendation
+
+- `proceed-with-conditions`
+
+## Evidence
+
+- EV-1: `context/verification-output.md` reports full test pass.
+
+## Known issues
+
+- QR-1 (Severity: `medium`): retry telemetry remains partial.
+  - Mitigation: keep the retry alert enabled.
+  - Owner: platform maintainer.
+- QR-2 (Severity: `high`): rollback timing remains unverified.
+- QR-3 (Severity: `low`): weekend load coverage remains incomplete.
+
+## Readiness
+
+- Ready with conditions because `EV-1` is clean and risks are explicit.
+""",
+    )
+
+    findings = validate_semantic_outputs(
+        stage="qa",
+        work_item=work_item,
+        workspace_root=tmp_path,
+    )
+
+    assert findings == (
+        ValidationFinding(
+            code=RISK_UNDERREPORT_CODE,
+            message=(
+                "Each residual risk item must include mitigation and/or ownership notes."
+            ),
+            severity="medium",
+            location=ValidationIssueLocation(
+                workspace_relative_path=(
+                    "workitems/WI-SEM-QA-ISOLATED-RISKS/stages/qa/qa-report.md"
+                ),
+                line_number=21,
+            ),
+        ),
+        ValidationFinding(
+            code=RISK_UNDERREPORT_CODE,
+            message=(
+                "Each residual risk item must include mitigation and/or ownership notes."
+            ),
+            severity="medium",
+            location=ValidationIssueLocation(
+                workspace_relative_path=(
+                    "workitems/WI-SEM-QA-ISOLATED-RISKS/stages/qa/qa-report.md"
+                ),
+                line_number=22,
+            ),
+        ),
+    )
+
+
 def test_validate_semantic_outputs_flags_ready_with_residual_risk_entry(
     tmp_path: Path,
 ) -> None:
@@ -4234,7 +4306,7 @@ def test_validate_semantic_outputs_flags_known_issue_block_missing_severity(
                 workspace_relative_path=(
                     "workitems/WI-SEM-QA-MISSING-SEVERITY/stages/qa/qa-report.md"
                 ),
-                line_number=16,
+                line_number=18,
             ),
         ),
     )
