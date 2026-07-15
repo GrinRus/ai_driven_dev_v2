@@ -7,7 +7,6 @@ slice, and local task.
 
 ## Next
 
-- `W35-E2-S9-T2` — Extract typed repository baseline, diff, and scope evidence helpers.
 - `W35-E2-S9-T3` — Extract aggregate report, validation, publication, and finalization
   coordination.
 

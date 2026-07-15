@@ -37,17 +37,14 @@ from aidd.core.run_store import (
     run_manifest_path,
     run_root,
 )
-from aidd.core.task_execution import (
-    TaskExecutionContext,
-    load_task_execution_plan,
-    task_validation_findings,
-)
+from aidd.core.task_attempt_lifecycle import TaskExecutionContext, load_task_execution_plan
 from aidd.core.task_ledger import (
     TaskLedger,
     load_task_ledger,
 )
 from aidd.core.task_plan import TaskPlan
 from aidd.core.task_read_model import resolve_task_read_model
+from aidd.core.task_repository_evidence import task_validation_findings
 
 StageRunner = Callable[[StageRunOptions], None]
 
@@ -398,14 +395,10 @@ def finalize_implementation(
         runtime=runtime,
         config=config,
     )
-    ledger = load_task_ledger(
-        workspace_root=workspace_root, work_item=work_item, run_id=run_id
-    )
+    ledger = load_task_ledger(workspace_root=workspace_root, work_item=work_item, run_id=run_id)
     if ledger is None:
         raise ValueError(f"Task ledger does not exist for run `{run_id}`.")
-    selected_run_root = run_root(
-        workspace_root=workspace_root, work_item=work_item, run_id=run_id
-    )
+    selected_run_root = run_root(workspace_root=workspace_root, work_item=work_item, run_id=run_id)
     lease_context = (
         use_transferred_run_mutation_lease(mutation_lease)
         if mutation_lease is not None

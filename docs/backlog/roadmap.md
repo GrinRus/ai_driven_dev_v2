@@ -10042,7 +10042,7 @@ Local tasks:
   the task-execution hotspot. [`REF-06`]
   - Scope: core task attempt lifecycle only.
   - Verification: blocked/resumed/crashed attempt fixtures remain equivalent.
-- `W35-E2-S9-T2` Extract typed repository baseline, diff, and scope evidence helpers.
+- `W35-E2-S9-T2` (done) Extract typed repository baseline, diff, and scope evidence helpers.
   [`REF-06`]
   - Dependencies: `W34-E7-S4`.
   - Scope: core task repository evidence only; reuse `AllowedWriteScope` without a new

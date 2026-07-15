@@ -14,13 +14,8 @@ from aidd.core.mutation_lease import (
     use_transferred_run_mutation_lease,
 )
 from aidd.core.run_store import persist_stage_status
-from aidd.core.task_execution import (
-    TaskExecutionContext,
-    TaskResumeBlockedError,
-    _task_diff_evidence,
-    complete_task_execution,
-    prepare_task_execution,
-)
+from aidd.core.task_attempt_lifecycle import TaskExecutionContext, TaskResumeBlockedError
+from aidd.core.task_execution import complete_task_execution, prepare_task_execution
 from aidd.core.task_ledger import (
     TaskExecutionStatus,
     TaskFinalizationStatus,
@@ -30,6 +25,7 @@ from aidd.core.task_ledger import (
     persist_task_ledger,
 )
 from aidd.core.task_plan import TaskPlanParseError, parse_task_plan
+from aidd.core.task_repository_evidence import task_diff_evidence
 
 
 def _tasklist(*, second_dependency: str = "TL-1") -> str:
@@ -130,9 +126,7 @@ def test_parse_task_plan_rejects_forward_dependency() -> None:
     ),
 )
 def test_parse_task_plan_rejects_missing_or_unsafe_scope_path(scope: str) -> None:
-    markdown = _tasklist().replace(
-        "`contracts/example.md` and `tests/test_contract.py`.", scope
-    )
+    markdown = _tasklist().replace("`contracts/example.md` and `tests/test_contract.py`.", scope)
 
     with pytest.raises(TaskPlanParseError, match="in-scope path|repository-relative"):
         parse_task_plan(markdown)
@@ -146,10 +140,7 @@ def test_parse_task_plan_rejects_duplicate_and_mixed_task_ids() -> None:
     with pytest.raises(TaskPlanParseError, match="Duplicate task ids"):
         parse_task_plan(duplicate)
 
-    mixed = (
-        _tasklist()
-        .replace("TL-2", "T2")
-    )
+    mixed = _tasklist().replace("TL-2", "T2")
     with pytest.raises(TaskPlanParseError, match="must not mix"):
         parse_task_plan(mixed)
 
@@ -170,7 +161,14 @@ def test_task_diff_uses_canonical_scope_component_boundary_and_malformed_failure
     attempt = tmp_path / "attempt"
     attempt.mkdir()
     (attempt / "repository-baseline.json").write_text(
-        json.dumps({"files": {}}),
+        json.dumps(
+            {
+                "schema_version": 1,
+                "task_id": "TL-1",
+                "status": [],
+                "files": {},
+            }
+        ),
         encoding="utf-8",
     )
     context = TaskExecutionContext(
@@ -181,16 +179,14 @@ def test_task_diff_uses_canonical_scope_component_boundary_and_malformed_failure
         task_attempt_path=attempt,
     )
     monkeypatch.setattr(
-        "aidd.core.task_execution._repository_file_snapshot",
+        "aidd.core.task_repository_evidence.repository_file_snapshot",
         lambda _: {"src2/app.py": "changed"},
     )
-    scope_path = (
-        workspace_root / "workitems" / "WI-1" / "context" / "allowed-write-scope.md"
-    )
+    scope_path = workspace_root / "workitems" / "WI-1" / "context" / "allowed-write-scope.md"
     scope_path.parent.mkdir(parents=True)
     scope_path.write_text("# Allowed Write Scope\n\n- `src`\n", encoding="utf-8")
 
-    _, issues = _task_diff_evidence(
+    _, issues = task_diff_evidence(
         context=context,
         workspace_root=workspace_root,
         work_item="WI-1",
@@ -200,7 +196,7 @@ def test_task_diff_uses_canonical_scope_component_boundary_and_malformed_failure
     assert any("outside allowed write scope" in issue for issue in issues)
 
     scope_path.write_text("# Allowed Write Scope\n\n- `../escape`\n", encoding="utf-8")
-    _, malformed_issues = _task_diff_evidence(
+    _, malformed_issues = task_diff_evidence(
         context=context,
         workspace_root=workspace_root,
         work_item="WI-1",
@@ -217,8 +213,7 @@ def test_parse_task_plan_rejects_malformed_and_duplicate_acceptance_ids() -> Non
 
     duplicate = _tasklist().replace(
         "  - TL-1-AC1: The required field is documented.\n",
-        "  - TL-1-AC1: The required field is documented.\n"
-        "  - TL-1-AC1: The same id is repeated.\n",
+        "  - TL-1-AC1: The required field is documented.\n  - TL-1-AC1: The same id is repeated.\n",
     )
     with pytest.raises(TaskPlanParseError, match="duplicate acceptance ids"):
         parse_task_plan(duplicate)
@@ -285,8 +280,9 @@ def test_task_ledger_v1_defaults_finalization_and_v2_transitions() -> None:
     finalizing = first.transition_finalization(TaskFinalizationStatus.EXECUTING)
     assert finalizing.finalization.attempt_count == 1
     assert (
-        finalizing.transition_finalization(TaskFinalizationStatus.FAILED, blocker="publish")
-        .finalization.blocker
+        finalizing.transition_finalization(
+            TaskFinalizationStatus.FAILED, blocker="publish"
+        ).finalization.blocker
         == "publish"
     )
 
@@ -353,13 +349,7 @@ def test_run_mutation_lease_can_transfer_to_worker_thread(tmp_path: Path) -> Non
 def test_task_attempt_records_diff_relative_to_its_own_baseline(tmp_path: Path) -> None:
     workspace_root = tmp_path / ".aidd"
     tasklist_path = (
-        workspace_root
-        / "workitems"
-        / "WI-1"
-        / "stages"
-        / "tasklist"
-        / "output"
-        / "tasklist.md"
+        workspace_root / "workitems" / "WI-1" / "stages" / "tasklist" / "output" / "tasklist.md"
     )
     tasklist_path.parent.mkdir(parents=True, exist_ok=True)
     tasklist_path.write_text(_tasklist(), encoding="utf-8")
@@ -404,13 +394,7 @@ def test_task_attempt_records_diff_relative_to_its_own_baseline(tmp_path: Path) 
 def test_task_attempt_fails_when_reported_paths_do_not_match_local_diff(tmp_path: Path) -> None:
     workspace_root = tmp_path / ".aidd"
     tasklist_path = (
-        workspace_root
-        / "workitems"
-        / "WI-1"
-        / "stages"
-        / "tasklist"
-        / "output"
-        / "tasklist.md"
+        workspace_root / "workitems" / "WI-1" / "stages" / "tasklist" / "output" / "tasklist.md"
     )
     tasklist_path.parent.mkdir(parents=True, exist_ok=True)
     tasklist_path.write_text(_tasklist(), encoding="utf-8")
@@ -545,6 +529,4 @@ def test_blocked_task_preserves_questions_and_answers_until_resume(tmp_path: Pat
     )
 
     assert (resumed.task_attempt_path / "questions.md").exists()
-    assert "[resolved]" in (resumed.task_attempt_path / "answers.md").read_text(
-        encoding="utf-8"
-    )
+    assert "[resolved]" in (resumed.task_attempt_path / "answers.md").read_text(encoding="utf-8")
