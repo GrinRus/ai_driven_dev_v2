@@ -10078,12 +10078,12 @@ Dependencies:
 
 Local tasks:
 
-- `W35-E2-S10-T1` Capture one immutable `RepositorySnapshot` per checkpoint and reuse
+- `W35-E2-S10-T1` (done) Capture one immutable `RepositorySnapshot` per checkpoint and reuse
   it across validation and task completion. [`PERF-03`]
   - Scope: task repository scan lifecycle only.
   - Verification: a synthetic large-repository fixture asserts one scan per checkpoint
     while preserving exact diff/scope findings.
-- `W35-E2-S10-T2` Define the canonical task-attempt evidence layout, reference,
+- `W35-E2-S10-T2` (next) Define the canonical task-attempt evidence layout, reference,
   retention, and compatibility contract. [`PERF-03`]
   - Scope: task attempt evidence architecture only.
   - Verification: the decision selects one copy/reference model, forbids hard links,

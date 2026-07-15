@@ -37,6 +37,7 @@ from aidd.core.task_ledger import (
 )
 from aidd.core.task_repository_evidence import (
     capture_repository_snapshot,
+    load_repository_snapshot,
     repository_snapshot_payload,
     task_diff_evidence,
     write_repository_snapshot,
@@ -189,18 +190,20 @@ def _complete_task_execution(
             context.task_attempt_path / "implementation-report.md",
         )
     copy_interview_evidence(implementation_report.parent, context.task_attempt_path)
-    write_repository_snapshot(
-        context.task_attempt_path / "repository-final.json",
-        capture_repository_snapshot(
+    final_snapshot_path = context.task_attempt_path / "repository-final.json"
+    if final_snapshot_path.exists():
+        final_snapshot = load_repository_snapshot(final_snapshot_path)
+    else:
+        final_snapshot = capture_repository_snapshot(
             project_root=request.project_root,
             task_id=context.task.id,
-        ),
-    )
+        )
+        write_repository_snapshot(final_snapshot_path, final_snapshot)
     diff, issues = task_diff_evidence(
         context=context,
         workspace_root=request.workspace_root,
         work_item=request.work_item,
-        project_root=request.project_root,
+        final_snapshot=final_snapshot,
         report=report_text,
     )
     (context.task_attempt_path / "task-diff.json").write_text(
