@@ -7,8 +7,8 @@ slice, and local task.
 
 ## Next
 
-- `W34-E1-S5-T3` — Partition the monolithic semantic test module by stage and shared
-  invariant.
+- `W34-E1-S5-T4` — Remove unreachable validator scaffolds and unused constants after a
+  public-import compatibility check.
 
 ## Soon
 
@@ -96,5 +96,6 @@ slice, and local task.
 
 ## Current reconciliation
 
-- `2026-07-16` cross-document rules now have invariant/stage-local owners behind the stable
-  public facade. `W34-E1-S5-T3` is next for semantic test ownership partitioning.
+- `2026-07-16` semantic validator regression tests now have shared and stage-local owners
+  with the same collected cases. `W34-E1-S5-T4` is next for compatibility-checked dead
+  validator surface removal.

@@ -9042,7 +9042,7 @@ Local tasks:
   - Scope: validator implementation modules.
   - Verification: the public finding protocol and focused stage matrices remain
     unchanged.
-- `W34-E1-S5-T3` Partition the monolithic semantic test module by stage and shared
+- `W34-E1-S5-T3` (done) Partition the monolithic semantic test module by stage and shared
   invariant. [`REF-04`]
   - Scope: validator tests only.
   - Verification: the same regression cases are collected with no duplicate fixture
