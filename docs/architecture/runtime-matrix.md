@@ -76,10 +76,11 @@ CLI/UI decision provider is present. Current implemented live transports are:
 - Codex app-server approvals through `codex app-server --listen stdio://`.
 
 OpenCode remains degraded until its `serve` OpenAPI document exposes permission
-request/response endpoints. Claude Code remains degraded until the CLI exposes a
-permission prompt tool or an equivalent SDK callback path. When a live transport is
-not confirmed, non-full policies block before launch rather than running a provider
-command that AIDD cannot govern.
+request/response endpoints. Claude Code remains degraded until AIDD implements and
+registers a permission prompt tool or equivalent SDK callback transport. A provider help
+flag by itself is not an implemented AIDD transport and is not advertised as live-decision
+support. When a live transport is not confirmed, non-full policies block before launch
+rather than running a provider command that AIDD cannot govern.
 
 Manual real-protocol approval smoke is gated evidence, not a CI requirement. Use a
 disposable local project with `permission_policy = "brokered"`,

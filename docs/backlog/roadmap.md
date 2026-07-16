@@ -9386,7 +9386,7 @@ Local tasks:
   [`COMPAT-04`]
   - Scope: Qwen context, environment, and native prompt assembly.
   - Verification: native and adapter-flags intervention fixtures preserve both fields.
-- `W34-E4-S3-T2` Align Claude capability reporting with executable registered
+- `W34-E4-S3-T2` (done) Align Claude capability reporting with executable registered
   transports. [`COMPAT-05`]
   - Scope: Claude probe and adapter surface.
   - Verification: probe-to-execution conformance covers every claimed live path.

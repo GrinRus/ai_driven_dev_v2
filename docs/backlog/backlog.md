@@ -7,13 +7,10 @@ slice, and local task.
 
 ## Next
 
-- `W34-E4-S3-T2` — Align Claude capability reporting with executable registered
-  transports.
-
-## Soon
-
 - `W34-E4-S3-T3` — Preserve supported Codex live arguments and reject unsupported
   options explicitly.
+
+## Soon
 
 ## Parking lot
 
@@ -114,3 +111,6 @@ slice, and local task.
 - `2026-07-16` `W34-E4-S3-T1` is complete: Qwen now preserves intervention mode and
   operator-request metadata in native prompts and both execution environments.
   `W34-E4-S3-T2` is promoted to `Next`; `T3` is the direct successor in `Soon`.
+- `2026-07-16` `W34-E4-S3-T2` is complete: Claude capability reports now advertise
+  only the registered subprocess transport, while non-full permission policies continue
+  to block before launch. `W34-E4-S3-T3` is promoted to `Next`.
