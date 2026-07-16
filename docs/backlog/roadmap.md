@@ -9180,7 +9180,7 @@ Exit evidence:
 - same-run mutations cannot race metadata, attempts, or publication;
 - non-conflicting runs remain independently executable.
 
-#### Slice W34-E3-S2 — terminal-safe operator decisions (`next`)
+#### Slice W34-E3-S2 — terminal-safe operator decisions (`done`)
 Goal: keep runtime decisions immutable and make cancellation terminate all waiters.
 
 Dependencies:
@@ -9194,7 +9194,7 @@ Local tasks:
   - Scope: approval decision service.
   - Verification: concurrent opposite decisions yield one durable winner shared by the
     runtime and audit ledger.
-- `W34-E3-S2-T2` (next) Wake decision waiters on cancellation and reject decisions for
+- `W34-E3-S2-T2` (done) Wake decision waiters on cancellation and reject decisions for
   terminal jobs. [`REL-08`, `REF-02`]
   - Scope: job/approval lifecycle.
   - Verification: the waiter exits within a bound and no post-cancel continuation is
@@ -9205,7 +9205,7 @@ Exit evidence:
 - runtime behavior and durable approval history cannot disagree;
 - cancelled jobs retain no live decision-wait thread.
 
-#### Slice W34-E3-S3 — bounded local UI retention (`planned`)
+#### Slice W34-E3-S3 — bounded local UI retention (`next`)
 Goal: keep a long-lived local server within explicit memory and response budgets.
 
 Dependencies:
@@ -9214,7 +9214,7 @@ Dependencies:
 
 Local tasks:
 
-- `W34-E3-S3-T1` Store live chunks in a byte-bounded ring, cap responses, and evict
+- `W34-E3-S3-T1` (next) Store live chunks in a byte-bounded ring, cap responses, and evict
   terminal jobs by TTL/count. [`PERF-01`]
   - Scope: UI job registry.
   - Verification: a high-volume stress fixture stays within fixed memory and response

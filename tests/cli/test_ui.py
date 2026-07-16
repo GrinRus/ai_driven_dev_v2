@@ -14,6 +14,7 @@ from io import BytesIO
 from pathlib import Path
 from typing import Any
 
+import pytest
 import typer
 
 from aidd.cli import main as cli_main
@@ -55,6 +56,7 @@ from aidd.core.runtime_operator import (
     RuntimeOperatorRequest,
     append_operator_decision,
     append_operator_request,
+    load_operator_decisions,
 )
 from aidd.core.runtime_readiness import RuntimeReadinessProbeReport
 from aidd.core.stage_runner import prepare_stage_bundle
@@ -3197,6 +3199,196 @@ def test_ui_operator_decision_endpoint_wakes_live_stage_job(tmp_path: Path) -> N
     assert isinstance(decision, RuntimeOperatorDecision)
     assert completed_payload["status"] == "completed"
     assert decision.action is RuntimeOperatorDecisionAction.ALLOW_ONCE
+
+
+def test_ui_cancellation_wakes_operator_waiter_and_rejects_late_decision(
+    tmp_path: Path,
+) -> None:
+    workspace_root = tmp_path / ".aidd"
+    request_ready = threading.Event()
+    captured: dict[str, RuntimeOperatorDecision | RuntimeOperatorRequest] = {}
+    continued = threading.Event()
+
+    def fake_stage_runner(options: StageRunOptions) -> None:
+        run_id = options.run_id or "run-ui-cancel-approval"
+        create_run_manifest(
+            workspace_root=workspace_root,
+            work_item="WI-UI",
+            run_id=run_id,
+            runtime_id=options.runtime,
+            stage_target=options.stage,
+            config_snapshot={"mode": "ui-cancel-approval-test"},
+        )
+        attempt_path = create_next_attempt_directory(
+            workspace_root=workspace_root,
+            work_item="WI-UI",
+            run_id=run_id,
+            stage=options.stage,
+        )
+        request = RuntimeOperatorRequest.create(
+            runtime_id=options.runtime,
+            stage=options.stage,
+            kind=RuntimeOperatorRequestKind.SHELL,
+            payload={"command": "python -m pytest -q"},
+            cwd=tmp_path,
+        )
+        captured["request"] = request
+        broker = RuntimeOperatorBroker(
+            policy=RuntimeOperatorPolicy(
+                permission_policy=RuntimePermissionPolicy.BROKERED,
+                auto_approval_preset=AutoApprovalPreset.OFF,
+                project_roots=(tmp_path,),
+                workspace_root=workspace_root,
+            ),
+            attempt_path=attempt_path,
+        )
+        request_ready.set()
+        decision = broker.handle_request(
+            request,
+            decision_provider=options.runtime_operator_decision_provider,
+        )
+        assert decision is not None
+        captured["decision"] = decision
+        if decision.is_approval:
+            continued.set()
+
+    service = _service(workspace_root, stage_runner=fake_stage_runner)
+    response = service.handle_post(
+        "/api/stage/run",
+        {"stage": "plan", "runtime": "codex", "run_id": "run-ui-cancel-approval"},
+    )
+    job_id = str(_payload(response)["job_id"])
+    assert request_ready.wait(timeout=2)
+    _wait_job_status(service, job_id, "waiting-for-operator")
+
+    cancel_payload = _payload(service.handle_post(f"/api/jobs/{job_id}/cancel", {}))
+
+    assert cancel_payload["status"] == "cancelled"
+    for _ in range(100):
+        if not service._operator_decisions.has_waiter(job_id):
+            break
+        time.sleep(0.01)
+    else:  # pragma: no cover - assertion guard
+        raise AssertionError("operator waiter did not exit")
+    decision = captured["decision"]
+    request = captured["request"]
+    assert isinstance(decision, RuntimeOperatorDecision)
+    assert isinstance(request, RuntimeOperatorRequest)
+    assert decision.action is RuntimeOperatorDecisionAction.CANCEL
+    assert not continued.is_set()
+
+    late = service.handle_post(
+        f"/api/jobs/{job_id}/operator-requests/{request.id}/decision",
+        {"action": RuntimeOperatorDecisionAction.ALLOW_ONCE.value},
+    )
+    assert late.status == HTTPStatus.CONFLICT
+    assert "terminal" in _error_payload(late)["error"]  # type: ignore[operator]
+
+
+@pytest.mark.parametrize(
+    "action",
+    [RuntimeOperatorDecisionAction.ALLOW_ONCE, RuntimeOperatorDecisionAction.DENY],
+)
+def test_ui_operator_decision_and_cancel_race_share_one_winner(
+    tmp_path: Path,
+    action: RuntimeOperatorDecisionAction,
+) -> None:
+    workspace_root = tmp_path / ".aidd"
+    request_ready = threading.Event()
+    release = threading.Event()
+    captured: dict[str, RuntimeOperatorDecision | RuntimeOperatorRequest | Path] = {}
+
+    def fake_stage_runner(options: StageRunOptions) -> None:
+        run_id = options.run_id or "run-ui-approval-race"
+        create_run_manifest(
+            workspace_root=workspace_root,
+            work_item="WI-UI",
+            run_id=run_id,
+            runtime_id=options.runtime,
+            stage_target=options.stage,
+            config_snapshot={"mode": "ui-approval-race-test"},
+        )
+        attempt_path = create_next_attempt_directory(
+            workspace_root=workspace_root,
+            work_item="WI-UI",
+            run_id=run_id,
+            stage=options.stage,
+        )
+        request = RuntimeOperatorRequest.create(
+            runtime_id=options.runtime,
+            stage=options.stage,
+            kind=RuntimeOperatorRequestKind.SHELL,
+            payload={"command": "python -m pytest -q"},
+            cwd=tmp_path,
+        )
+        captured.update(request=request, attempt_path=attempt_path)
+        broker = RuntimeOperatorBroker(
+            policy=RuntimeOperatorPolicy(
+                permission_policy=RuntimePermissionPolicy.BROKERED,
+                auto_approval_preset=AutoApprovalPreset.OFF,
+                project_roots=(tmp_path,),
+                workspace_root=workspace_root,
+            ),
+            attempt_path=attempt_path,
+        )
+        request_ready.set()
+        decision = broker.handle_request(
+            request,
+            decision_provider=options.runtime_operator_decision_provider,
+        )
+        assert decision is not None
+        captured["decision"] = decision
+        assert release.wait(timeout=2)
+
+    service = _service(workspace_root, stage_runner=fake_stage_runner)
+    job_id = str(
+        _payload(
+            service.handle_post(
+                "/api/stage/run",
+                {"stage": "plan", "runtime": "codex", "run_id": "run-ui-approval-race"},
+            )
+        )["job_id"]
+    )
+    assert request_ready.wait(timeout=2)
+    _wait_job_status(service, job_id, "waiting-for-operator")
+    request = captured["request"]
+    assert isinstance(request, RuntimeOperatorRequest)
+    barrier = threading.Barrier(2)
+    responses: list[Any] = []
+
+    def decide() -> None:
+        barrier.wait()
+        responses.append(
+            service.handle_post(
+                f"/api/jobs/{job_id}/operator-requests/{request.id}/decision",
+                {"action": action.value},
+            )
+        )
+
+    def cancel() -> None:
+        barrier.wait()
+        responses.append(service.handle_post(f"/api/jobs/{job_id}/cancel", {}))
+
+    threads = [threading.Thread(target=decide), threading.Thread(target=cancel)]
+    for thread in threads:
+        thread.start()
+    for thread in threads:
+        thread.join(timeout=2)
+    release.set()
+
+    assert all(not thread.is_alive() for thread in threads)
+    assert {response.status for response in responses}.issubset({200, HTTPStatus.CONFLICT})
+    attempt_path = captured["attempt_path"]
+    assert isinstance(attempt_path, Path)
+    winners = load_operator_decisions(attempt_path / OPERATOR_DECISIONS_FILENAME)
+    assert len(winners) == 1
+    for _ in range(100):
+        if "decision" in captured and not service._operator_decisions.has_waiter(job_id):
+            break
+        time.sleep(0.01)
+    decision = captured["decision"]
+    assert isinstance(decision, RuntimeOperatorDecision)
+    assert decision == winners[0]
 
 
 def test_ui_remote_mutations_require_loopback_host(tmp_path: Path) -> None:

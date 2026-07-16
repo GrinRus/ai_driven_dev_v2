@@ -122,6 +122,7 @@ from aidd.core.runtime_operator import (
     RuntimeOperatorRequest,
     load_operator_decisions,
     load_operator_requests,
+    pending_operator_request_ids,
     resolve_operator_decision,
     unapproved_operator_request_ids,
 )
@@ -472,8 +473,154 @@ class UiRunJobStore:
 
 @dataclass(slots=True)
 class _UiOperatorDecisionWaiter:
+    job_id: str
+    request_id: str
+    attempt_path: Path
     condition: threading.Condition = field(default_factory=threading.Condition)
     decision: RuntimeOperatorDecision | None = None
+
+
+class _UiJobDecisionConflict(RuntimeError):
+    """Raised when a terminal UI job can no longer accept a decision."""
+
+
+class _UiOperatorDecisionCoordinator:
+    def __init__(
+        self,
+        *,
+        jobs: UiRunJobStore,
+        attempt_path_resolver: Callable[[str], Path | None],
+    ) -> None:
+        self._jobs = jobs
+        self._attempt_path_resolver = attempt_path_resolver
+        self._lock = threading.Lock()
+        self._waiters_by_request: dict[str, _UiOperatorDecisionWaiter] = {}
+        self._waiters_by_job: dict[str, _UiOperatorDecisionWaiter] = {}
+
+    def wait(
+        self,
+        *,
+        job_id: str,
+        request: RuntimeOperatorRequest,
+        attempt_path: Path,
+    ) -> RuntimeOperatorDecision:
+        waiter = _UiOperatorDecisionWaiter(
+            job_id=job_id,
+            request_id=request.id,
+            attempt_path=attempt_path,
+        )
+        with self._lock:
+            self._waiters_by_request[request.id] = waiter
+            self._waiters_by_job[job_id] = waiter
+            self._jobs.set_attempt_path(job_id, attempt_path)
+            self._jobs.wait_for_operator(
+                job_id,
+                result={
+                    "waiting_for_operator": True,
+                    "request_id": request.id,
+                    "attempt_path": attempt_path.as_posix(),
+                },
+                message="waiting for operator decision",
+            )
+        try:
+            with waiter.condition:
+                while waiter.decision is None:
+                    waiter.condition.wait()
+                return waiter.decision
+        finally:
+            with self._lock:
+                self._waiters_by_request.pop(request.id, None)
+                self._waiters_by_job.pop(job_id, None)
+                if (
+                    waiter.decision is not None
+                    and waiter.decision.action is not RuntimeOperatorDecisionAction.CANCEL
+                ):
+                    self._jobs.mark_running(
+                        job_id,
+                        message="runtime resumed after operator decision",
+                    )
+
+    def decide(
+        self,
+        *,
+        job_id: str,
+        attempt_path: Path,
+        decision: RuntimeOperatorDecision,
+    ) -> RuntimeOperatorDecision:
+        with self._lock:
+            status = str(self._jobs.view(job_id)["status"])
+            if status in _TERMINAL_JOB_STATUSES:
+                raise _UiJobDecisionConflict(
+                    f"UI job '{job_id}' is terminal and cannot accept operator decisions."
+                )
+            try:
+                winner = resolve_operator_decision(
+                    attempt_path=attempt_path,
+                    decision=decision,
+                )
+            except OperatorDecisionConflict as exc:
+                self._deliver_locked(exc.winner)
+                raise
+            self._deliver_locked(winner)
+            return winner
+
+    def cancel(self, job_id: str) -> dict[str, object]:
+        with self._lock:
+            job = self._jobs.view(job_id)
+            if str(job["status"]) != "waiting-for-operator":
+                return self._jobs.cancel(job_id)
+            attempt_path = self._attempt_path_resolver(job_id)
+            request_id = self._pending_request_id(job_id=job_id, attempt_path=attempt_path)
+            if attempt_path is None or request_id is None:
+                return self._jobs.cancel(job_id)
+            cancellation = RuntimeOperatorDecision(
+                request_id=request_id,
+                action=RuntimeOperatorDecisionAction.CANCEL,
+                source=RuntimeOperatorDecisionSource.UI,
+            )
+            try:
+                winner = resolve_operator_decision(
+                    attempt_path=attempt_path,
+                    decision=cancellation,
+                )
+            except OperatorDecisionConflict as exc:
+                winner = exc.winner
+            if winner.action is RuntimeOperatorDecisionAction.CANCEL:
+                payload = self._jobs.cancel(job_id)
+            else:
+                self._jobs.mark_running(
+                    job_id,
+                    message="runtime resumed before cancellation",
+                )
+                payload = self._jobs.cancel(job_id)
+            self._deliver_locked(winner)
+            return payload
+
+    def has_waiter(self, job_id: str) -> bool:
+        with self._lock:
+            return job_id in self._waiters_by_job
+
+    def _pending_request_id(
+        self,
+        *,
+        job_id: str,
+        attempt_path: Path | None,
+    ) -> str | None:
+        waiter = self._waiters_by_job.get(job_id)
+        if waiter is not None:
+            return waiter.request_id
+        if attempt_path is None:
+            return None
+        pending_ids = pending_operator_request_ids(attempt_path=attempt_path)
+        return pending_ids[0] if pending_ids else None
+
+    def _deliver_locked(self, decision: RuntimeOperatorDecision) -> None:
+        waiter = self._waiters_by_request.get(decision.request_id)
+        if waiter is None or waiter.decision is not None:
+            return
+        with waiter.condition:
+            waiter.decision = decision
+            waiter.condition.notify_all()
 
 
 @dataclass(frozen=True, slots=True)
@@ -1447,6 +1594,10 @@ class OperatorUiService:
         self._readiness_probe_provider = readiness_probe_provider
         self._folder_opener = folder_opener
         self._jobs = UiRunJobStore()
+        self._operator_decisions = _UiOperatorDecisionCoordinator(
+            jobs=self._jobs,
+            attempt_path_resolver=self._job_attempt_path,
+        )
         self._shutdown_requested = False
         self._context: UiProjectContext | None = (
             UiProjectContext(
@@ -1461,8 +1612,6 @@ class OperatorUiService:
         self._recent_project_roots: list[Path] = (
             [project_root] if options.work_item is not None else []
         )
-        self._operator_waiters_lock = threading.Lock()
-        self._operator_waiters: dict[str, _UiOperatorDecisionWaiter] = {}
 
     @property
     def workspace_root(self) -> Path:
@@ -2593,6 +2742,8 @@ class OperatorUiService:
                 },
                 status=HTTPStatus.CONFLICT,
             )
+        except _UiJobDecisionConflict as exc:
+            return _error_response(str(exc), status=HTTPStatus.CONFLICT)
         except RunMutationConflict as exc:
             return _error_response(str(exc), status=HTTPStatus.CONFLICT)
         except ValueError as exc:
@@ -2618,7 +2769,7 @@ class OperatorUiService:
     def _handle_job_post(self, *, path: str, payload: dict[str, Any]) -> UiResponse:
         parts = path.strip("/").split("/")
         if len(parts) == 4 and parts[:2] == ["api", "jobs"] and parts[3] == "cancel":
-            return _json_response(self._jobs.cancel(parts[2]))
+            return _json_response(self._operator_decisions.cancel(parts[2]))
         if (
             len(parts) == 6
             and parts[:2] == ["api", "jobs"]
@@ -2694,37 +2845,11 @@ class OperatorUiService:
         request: RuntimeOperatorRequest,
         attempt_path: Path,
     ) -> RuntimeOperatorDecision | None:
-        waiter = _UiOperatorDecisionWaiter()
-        with self._operator_waiters_lock:
-            self._operator_waiters[request.id] = waiter
-        self._jobs.set_attempt_path(job_id, attempt_path)
-        self._jobs.wait_for_operator(
-            job_id,
-            result={
-                "waiting_for_operator": True,
-                "request_id": request.id,
-                "attempt_path": attempt_path.as_posix(),
-            },
-            message="waiting for operator decision",
+        return self._operator_decisions.wait(
+            job_id=job_id,
+            request=request,
+            attempt_path=attempt_path,
         )
-        try:
-            with waiter.condition:
-                while waiter.decision is None:
-                    waiter.condition.wait(timeout=0.25)
-                return waiter.decision
-        finally:
-            with self._operator_waiters_lock:
-                self._operator_waiters.pop(request.id, None)
-            self._jobs.mark_running(job_id, message="runtime resumed after operator decision")
-
-    def _deliver_operator_decision(self, decision: RuntimeOperatorDecision) -> None:
-        with self._operator_waiters_lock:
-            waiter = self._operator_waiters.get(decision.request_id)
-        if waiter is None:
-            return
-        with waiter.condition:
-            waiter.decision = decision
-            waiter.condition.notify_all()
 
     def _record_operator_decision(
         self,
@@ -2748,11 +2873,11 @@ class OperatorUiService:
             source=RuntimeOperatorDecisionSource.UI,
             reason=None if payload.get("reason") is None else str(payload.get("reason")),
         )
-        winner = resolve_operator_decision(
+        self._operator_decisions.decide(
+            job_id=job_id,
             attempt_path=attempt_path,
             decision=decision,
         )
-        self._deliver_operator_decision(winner)
         return _operator_request_view(attempt_path)
 
     def _start_stage_job(self, payload: dict[str, Any]) -> object:

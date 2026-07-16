@@ -7,13 +7,10 @@ slice, and local task.
 
 ## Next
 
-- `W34-E3-S2-T2` — Wake decision waiters on cancellation and reject decisions for
-  terminal jobs.
-
-## Soon
-
 - `W34-E3-S3-T1` — Store live chunks in a byte-bounded ring, cap responses, and evict
   terminal jobs by TTL/count.
+
+## Soon
 
 ## Parking lot
 
@@ -94,6 +91,7 @@ slice, and local task.
 
 ## Current reconciliation
 
-- `2026-07-16` `W34-E3-S2-T1` closed with one core-owned compare-and-set decision
-  winner. Cancellation safety is now `Next`; bounded UI retention is its direct `Soon`
-  successor, while UI characterization remains parked behind executable frontend tests.
+- `2026-07-16` `W34-E3-S2` is complete: approval decisions now have one immutable
+  durable winner and cancellation terminates operator waiters without post-terminal
+  continuation. Bounded UI retention is now `Next`; UI characterization remains parked
+  behind executable frontend tests.
