@@ -9578,7 +9578,7 @@ Local tasks:
   - Scope: Claude, Codex, and OpenCode runner prompt helpers only.
   - Verification: native prompt fixtures remain equivalent and an architecture test
     excludes adapter-local prompt readers.
-- `W34-E6-S1-T2` Remove the unreferenced core interview capability helper after a
+- `W34-E6-S1-T2` (done) Remove the unreferenced core interview capability helper after a
   public-import check. [`DEAD-04`]
   - Scope: core interview surface.
   - Verification: import inventory and the interview suite pass.

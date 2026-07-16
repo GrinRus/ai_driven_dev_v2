@@ -7,12 +7,11 @@ slice, and local task.
 
 ## Next
 
-- `W34-E6-S1-T2` — Remove the unreferenced core interview capability helper after a
-  compatibility review.
+- `W34-E6-S1-T3` — Remove unused direct runtime dependencies and regenerate the lock.
 
 ## Soon
 
-- `W34-E6-S1-T3` — Remove unused direct runtime dependencies and regenerate the lock.
+- `W34-E6-S1-T4` — Remove the obsolete raw repository inventory `manifest.txt`.
 
 ## Parking lot
 
@@ -81,6 +80,10 @@ slice, and local task.
   queue-restoration policy in `docs/backlog/roadmap.md` (`W8-E3-S1`).
 
 ## Current reconciliation
+
+- `2026-07-16` `W34-E6-S1-T2` is complete: the unexported and unreferenced
+  `interview_supported()` helper is removed while parsing, persistence, and stage
+  routing remain unchanged. `T3` is promoted to `Next`; `T4` is in `Soon`.
 
 - `2026-07-16` `W34-E6-S1-T6` is complete: Claude, Codex, and OpenCode no longer define
   dead prompt-read shims; `aidd.adapters.native_prompt` remains the sole owner.
