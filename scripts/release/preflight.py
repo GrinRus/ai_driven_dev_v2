@@ -13,8 +13,11 @@ import urllib.request
 from collections.abc import Callable, Sequence
 from dataclasses import asdict, dataclass
 from pathlib import Path
+from typing import Literal
 
 PACKAGE_NAME = "ai-driven-dev-v2"
+COMMAND_TIMEOUT_SECONDS = 30.0
+NETWORK_TIMEOUT_SECONDS = 10.0
 
 
 @dataclass(frozen=True, slots=True)
@@ -22,6 +25,7 @@ class CommandResult:
     returncode: int
     stdout: str = ""
     stderr: str = ""
+    failure_kind: str | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -29,6 +33,7 @@ class PreflightCheck:
     name: str
     status: str
     detail: str
+    blocker_kind: str | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -43,7 +48,17 @@ class PreflightResult:
 
 CommandRunner = Callable[[Sequence[str], Path], CommandResult]
 BinaryResolver = Callable[[str], str | None]
-PyPIVersionProbe = Callable[[str], bool]
+PyPIProbeStatus = Literal["exists", "absent", "error"]
+
+
+@dataclass(frozen=True, slots=True)
+class PyPIProbeResult:
+    status: PyPIProbeStatus
+    detail: str
+    blocker_kind: str | None = None
+
+
+PyPIVersionProbe = Callable[[str], bool | PyPIProbeResult]
 
 
 def run_preflight(
@@ -78,7 +93,11 @@ def run_preflight(
         )
     )
 
-    branch = runner(("git", "rev-parse", "--abbrev-ref", "HEAD"), root)
+    branch = _invoke_command(
+        runner,
+        ("git", "rev-parse", "--abbrev-ref", "HEAD"),
+        root,
+    )
     branch_name = branch.stdout.strip()
     expected = expected_branch or f"release/v{candidate_version}"
     checks.append(
@@ -86,10 +105,12 @@ def run_preflight(
             name="branch",
             status="pass" if branch.returncode == 0 and branch_name == expected else "fail",
             detail=branch_name or branch.stderr.strip() or f"expected {expected}",
+            blocker_kind=branch.failure_kind,
         )
     )
 
-    remote_tag = runner(
+    remote_tag = _invoke_command(
+        runner,
         ("git", "ls-remote", "--tags", "origin", f"refs/tags/v{candidate_version}"),
         root,
     )
@@ -105,21 +126,35 @@ def run_preflight(
                 or remote_tag.stderr.strip()
                 or f"remote tag v{candidate_version} exists"
             ),
+            blocker_kind=remote_tag.failure_kind,
         )
     )
 
     if check_pypi:
-        exists_probe = pypi_version_exists or _pypi_version_exists
-        exists = exists_probe(candidate_version)
+        exists_probe = pypi_version_exists or _probe_pypi_version
+        try:
+            raw_probe = exists_probe(candidate_version)
+        except Exception as exc:
+            probe = _pypi_exception_result(exc)
+        else:
+            probe = (
+                PyPIProbeResult(
+                    status="exists" if raw_probe else "absent",
+                    detail=(
+                        f"PyPI version {candidate_version} already exists"
+                        if raw_probe
+                        else f"PyPI version {candidate_version} absent"
+                    ),
+                )
+                if isinstance(raw_probe, bool)
+                else raw_probe
+            )
         checks.append(
             PreflightCheck(
                 name="pypi-version-absence",
-                status="pass" if not exists else "fail",
-                detail=(
-                    f"PyPI version {candidate_version} absent"
-                    if not exists
-                    else f"PyPI version {candidate_version} already exists"
-                ),
+                status="pass" if probe.status == "absent" else "fail",
+                detail=probe.detail,
+                blocker_kind=probe.blocker_kind,
             )
         )
     else:
@@ -157,19 +192,34 @@ def _source_version(project_root: Path) -> str:
     with pyproject_path.open("rb") as file_obj:
         payload = tomllib.load(file_obj)
     project = payload.get("project", {})
-    if not isinstance(project, dict) or not isinstance(project.get("version"), str):
+    version = project.get("version") if isinstance(project, dict) else None
+    if not isinstance(version, str):
         raise ValueError("pyproject.toml must contain [project].version")
-    return project["version"]
+    return version
 
 
 def _run_command(argv: Sequence[str], cwd: Path) -> CommandResult:
-    completed = subprocess.run(
-        tuple(argv),
-        cwd=cwd,
-        check=False,
-        text=True,
-        capture_output=True,
-    )
+    try:
+        completed = subprocess.run(
+            tuple(argv),
+            cwd=cwd,
+            check=False,
+            text=True,
+            capture_output=True,
+            timeout=COMMAND_TIMEOUT_SECONDS,
+        )
+    except subprocess.TimeoutExpired:
+        return CommandResult(
+            returncode=124,
+            stderr=f"command timed out after {COMMAND_TIMEOUT_SECONDS:.0f}s",
+            failure_kind="timeout",
+        )
+    except OSError as exc:
+        return CommandResult(
+            returncode=127,
+            stderr=f"{type(exc).__name__}: {exc}",
+            failure_kind="transport",
+        )
     return CommandResult(
         returncode=completed.returncode,
         stdout=completed.stdout,
@@ -177,15 +227,78 @@ def _run_command(argv: Sequence[str], cwd: Path) -> CommandResult:
     )
 
 
-def _pypi_version_exists(version: str) -> bool:
+def _invoke_command(
+    runner: CommandRunner,
+    argv: Sequence[str],
+    cwd: Path,
+) -> CommandResult:
+    try:
+        return runner(argv, cwd)
+    except subprocess.TimeoutExpired as exc:
+        return CommandResult(
+            returncode=124,
+            stderr=f"command timed out: {exc}",
+            failure_kind="timeout",
+        )
+    except OSError as exc:
+        return CommandResult(
+            returncode=127,
+            stderr=f"{type(exc).__name__}: {exc}",
+            failure_kind="transport",
+        )
+
+
+def _probe_pypi_version(version: str) -> PyPIProbeResult:
     url = f"https://pypi.org/pypi/{PACKAGE_NAME}/{version}/json"
     try:
-        with urllib.request.urlopen(url, timeout=10) as response:  # noqa: S310
-            return response.status == 200
+        with urllib.request.urlopen(url, timeout=NETWORK_TIMEOUT_SECONDS) as response:  # noqa: S310
+            if response.status == 200:
+                return PyPIProbeResult(
+                    status="exists",
+                    detail=f"PyPI version {version} already exists",
+                )
+            return PyPIProbeResult(
+                status="error",
+                detail=f"PyPI registry returned unexpected HTTP {response.status}",
+                blocker_kind="server",
+            )
     except urllib.error.HTTPError as exc:
         if exc.code == 404:
-            return False
-        raise
+            return PyPIProbeResult(
+                status="absent",
+                detail=f"PyPI version {version} absent",
+            )
+        return PyPIProbeResult(
+            status="error",
+            detail=f"PyPI registry returned HTTP {exc.code}",
+            blocker_kind="server",
+        )
+    except Exception as exc:
+        return _pypi_exception_result(exc)
+
+
+def _pypi_exception_result(exc: BaseException) -> PyPIProbeResult:
+    if isinstance(exc, (TimeoutError, subprocess.TimeoutExpired)):
+        blocker_kind = "timeout"
+    elif isinstance(exc, urllib.error.HTTPError):
+        blocker_kind = "server"
+    elif isinstance(exc, urllib.error.URLError):
+        reason = exc.reason
+        reason_text = str(reason).lower()
+        blocker_kind = (
+            "tls"
+            if "ssl" in reason_text or "certificate" in reason_text
+            else "dns"
+            if "name resolution" in reason_text or "nodename" in reason_text
+            else "transport"
+        )
+    else:
+        blocker_kind = "transport"
+    return PyPIProbeResult(
+        status="error",
+        detail=f"PyPI registry probe failed: {type(exc).__name__}: {exc}",
+        blocker_kind=blocker_kind,
+    )
 
 
 def _parse_args(argv: Sequence[str]) -> argparse.Namespace:
@@ -201,14 +314,28 @@ def _parse_args(argv: Sequence[str]) -> argparse.Namespace:
 
 def main(argv: Sequence[str] | None = None) -> int:
     args = _parse_args(sys.argv[1:] if argv is None else argv)
-    result = run_preflight(
-        project_root=args.project_root,
-        version=args.version,
-        expected_branch=args.expected_branch,
-        gh_binary=args.gh_binary,
-        uv_binary=args.uv_binary,
-        check_pypi=not args.skip_pypi,
-    )
+    try:
+        result = run_preflight(
+            project_root=args.project_root,
+            version=args.version,
+            expected_branch=args.expected_branch,
+            gh_binary=args.gh_binary,
+            uv_binary=args.uv_binary,
+            check_pypi=not args.skip_pypi,
+        )
+    except Exception as exc:
+        result = PreflightResult(
+            version=args.version or "unknown",
+            success=False,
+            checks=(
+                PreflightCheck(
+                    name="preflight-execution",
+                    status="fail",
+                    detail=f"{type(exc).__name__}: {exc}",
+                    blocker_kind="preflight",
+                ),
+            ),
+        )
     print(result.to_json())
     return 0 if result.success else 1
 

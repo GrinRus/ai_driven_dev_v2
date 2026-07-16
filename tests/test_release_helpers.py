@@ -1,7 +1,10 @@
 from __future__ import annotations
 
 import importlib.util
+import json
+import subprocess
 import sys
+import urllib.error
 from collections.abc import Sequence
 from pathlib import Path
 from types import ModuleType
@@ -30,6 +33,7 @@ _EVIDENCE = _load_module(
 
 CommandResult = _PREFLIGHT.CommandResult
 run_preflight = _PREFLIGHT.run_preflight
+preflight_main = _PREFLIGHT.main
 collect_release_evidence = _EVIDENCE.collect_release_evidence
 
 
@@ -116,6 +120,80 @@ def test_release_preflight_reports_mismatched_source_version(tmp_path: Path) -> 
     assert result.success is False
     assert source_version.status == "fail"
     assert "0.1.0a9.dev0" in source_version.detail
+
+
+def test_release_preflight_normalizes_command_timeout(tmp_path: Path) -> None:
+    _write_pyproject(tmp_path, "0.1.0a9")
+
+    def runner(argv: Sequence[str], _cwd: Path) -> CommandResult:
+        raise subprocess.TimeoutExpired(argv, timeout=30)
+
+    result = run_preflight(
+        project_root=tmp_path,
+        command_runner=runner,
+        binary_resolver=lambda name: f"/usr/local/bin/{name}",
+        pypi_version_exists=lambda _version: False,
+    )
+
+    branch = next(check for check in result.checks if check.name == "branch")
+    remote_tag = next(
+        check for check in result.checks if check.name == "remote-tag-absence"
+    )
+    assert result.success is False
+    assert branch.blocker_kind == "timeout"
+    assert remote_tag.blocker_kind == "timeout"
+
+
+def test_release_preflight_normalizes_registry_failures(
+    tmp_path: Path,
+) -> None:
+    _write_pyproject(tmp_path, "0.1.0a9")
+
+    def runner(argv: Sequence[str], _cwd: Path) -> CommandResult:
+        if tuple(argv[:3]) == ("git", "rev-parse", "--abbrev-ref"):
+            return CommandResult(returncode=0, stdout="release/v0.1.0a9\n")
+        return CommandResult(returncode=0)
+
+    failures = (
+        TimeoutError("registry timeout"),
+        urllib.error.URLError("temporary failure in name resolution"),
+        urllib.error.URLError("certificate verify failed"),
+        urllib.error.HTTPError(
+            "https://pypi.org",
+            503,
+            "service unavailable",
+            hdrs=None,
+            fp=None,
+        ),
+    )
+    expected_kinds = ("timeout", "dns", "tls", "server")
+    for failure, expected_kind in zip(failures, expected_kinds, strict=True):
+        def _probe(_version: str, *, error: Exception = failure) -> bool:
+            raise error
+
+        result = run_preflight(
+            project_root=tmp_path,
+            command_runner=runner,
+            binary_resolver=lambda name: f"/usr/local/bin/{name}",
+            pypi_version_exists=_probe,
+        )
+        check = next(
+            item for item in result.checks if item.name == "pypi-version-absence"
+        )
+        assert check.status == "fail"
+        assert check.blocker_kind == expected_kind
+
+
+def test_release_preflight_main_emits_json_for_invalid_project(
+    tmp_path: Path,
+    capsys,
+) -> None:
+    exit_code = preflight_main(("--project-root", tmp_path.as_posix(), "--skip-pypi"))
+
+    payload = json.loads(capsys.readouterr().out)
+    assert exit_code == 1
+    assert payload["success"] is False
+    assert payload["checks"][0]["blocker_kind"] == "preflight"
 
 
 def test_release_evidence_collector_accepts_expected_links_and_outputs() -> None:

@@ -9478,7 +9478,7 @@ Local tasks:
   - Scope: eval log analysis.
   - Verification: structured/text fixture tables cover assertions, HTTP errors, missing
     executables/files, DNS, and timeout, and both public APIs agree.
-- `W34-E5-S3-T2` Bound release preflight subprocess and network failures. [`REL-15`]
+- `W34-E5-S3-T2` (done) Bound release preflight subprocess and network failures. [`REL-15`]
   - Scope: release preflight script.
   - Verification: timeout, transport, TLS/DNS, registry, and server failures still emit
     valid structured blocker output.

@@ -7,12 +7,12 @@ slice, and local task.
 
 ## Next
 
-- `W34-E5-S3-T2` — Bound release preflight subprocess and network failures.
+- `W34-E5-S3-T3` — Validate release evidence by exact host, path, semantic version, and
+  exit status.
 
 ## Soon
 
-- `W34-E5-S3-T3` — Validate release evidence by exact host, path, semantic version, and
-  exit status.
+- `W34-E5-S3-T4` — Run `node --check` for every packaged JavaScript asset in CI.
 
 ## Parking lot
 
@@ -86,6 +86,10 @@ slice, and local task.
 
 ## Current reconciliation
 
+- `2026-07-16` `W34-E5-S3-T2` is complete: release preflight bounds subprocess and
+  registry calls, preserves JSON output, and records timeout, DNS, TLS, transport, and
+  server blockers without treating uncertainty as version absence. `S3-T3` is promoted
+  to `Next`; `S3-T4` is in `Soon`.
 - `2026-07-16` `W34-E5-S3-T1` is complete: taxonomy and first-boundary APIs now project
   one ranked typed candidate set and agree for text, structured, validation, exit, and
   verification signals. `S3-T2` is promoted to `Next`; `S3-T3` is in `Soon`.
