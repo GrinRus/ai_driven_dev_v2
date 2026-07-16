@@ -219,9 +219,11 @@ def test_persist_attempt_runtime_artifacts_writes_log_and_exit_metadata(tmp_path
 
     exit_metadata = json.loads(artifacts.runtime_exit_metadata_path.read_text(encoding="utf-8"))
     assert exit_metadata == {
+        "adapter_outcome": "runtime_failure",
         "schema_version": 1,
         "exit_code": 17,
         "exit_classification": "non_zero_exit",
+        "stop_reason": "runtime_failure",
         "stdout_char_count": len(run_result.stdout_text),
         "stderr_char_count": len(run_result.stderr_text),
         "runtime_log_char_count": len(run_result.runtime_log_text),

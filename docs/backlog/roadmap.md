@@ -9340,7 +9340,7 @@ Dependencies:
 
 Local tasks:
 
-- `W34-E4-S2-T1` Define typed stop reasons and one runtime-evidence commit contract.
+- `W34-E4-S2-T1` (done) Define typed stop reasons and one runtime-evidence commit contract.
   [`REF-03`]
   - Scope: shared adapter result model.
   - Verification: a cross-adapter outcome table covers success, failure, timeout,

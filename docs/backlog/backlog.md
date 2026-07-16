@@ -7,12 +7,12 @@ slice, and local task.
 
 ## Next
 
-- `W34-E4-S2-T1` — Define typed stop reasons and one runtime-evidence commit contract.
+- `W34-E4-S2-T2` — Persist truthful Codex early-stop and blocked outcomes through the
+  shared contract.
 
 ## Soon
 
-- `W34-E4-S2-T2` — Persist truthful Codex early-stop and blocked outcomes through the
-  shared contract.
+- `W34-E4-S2-T3` — Persist canonical Qwen blocked outcomes through the shared contract.
 
 ## Parking lot
 
@@ -96,3 +96,6 @@ slice, and local task.
   terminal-safe and the local UI now bounds live-log memory, response size, and terminal
   job retention. `W34-E3-S4-T1` remains parked until executable frontend tests from
   `W34-E5-S3` satisfy its slice dependency.
+- `2026-07-16` `W34-E4-S2-T1` is complete: adapters now publish one atomic runtime
+  evidence envelope with a canonical outcome while retaining provider-specific exit
+  classifications. Codex early-stop truthfulness is the next bounded slice.

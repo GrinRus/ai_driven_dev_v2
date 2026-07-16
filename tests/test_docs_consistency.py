@@ -124,13 +124,16 @@ def test_adapter_protocol_documents_current_execution_result_surface() -> None:
     result_fields = {field.name for field in fields(RuntimeAdapterExecutionResult)}
 
     assert result_fields == {
+        "adapter_outcome",
         "details",
         "events_jsonl_path",
         "operator_decisions_path",
         "operator_requests_path",
         "pending_operator_request_ids",
         "questions_path",
+        "runtime_exit_metadata_path",
         "runtime_jsonl_path",
+        "runtime_log_path",
         "status",
         "succeeded",
     }
@@ -140,6 +143,8 @@ def test_adapter_protocol_documents_current_execution_result_surface() -> None:
         "`succeeded`, `failed`, or `blocked_for_operator`",
         "`runtime.jsonl` and `events.jsonl`",
         "`operator-requests.jsonl` and `operator-decisions.jsonl`",
+        "`runtime.log` and `runtime-exit.json`",
+        "canonical adapter outcome",
         "`questions.md`",
         "in-memory workflow semantics",
     ):

@@ -54,14 +54,17 @@ The adapter returns:
 - whether the runtime invocation succeeded;
 - the stable execution status: `succeeded`, `failed`, or `blocked_for_operator`;
 - a normalized details string, usually the adapter exit classification;
+- the canonical adapter outcome and paths to the committed `runtime.log` and
+  `runtime-exit.json` evidence envelope;
 - optional paths for emitted structured artifacts such as `runtime.jsonl` and `events.jsonl`;
 - an optional path to `questions.md` when runtime-native question events were persisted.
 - optional paths for `operator-requests.jsonl` and `operator-decisions.jsonl` when runtime
   approval handling was involved.
 
-Runtime stdout, stderr, combined raw logs, exit code, and normalized exit classification are
-persisted as attempt artifacts such as `runtime.log` and `runtime-exit.json`; they are not
-returned as in-memory workflow semantics for the core to interpret.
+Runtime stdout, stderr, combined raw logs, exit code, and adapter-specific exit classification
+are persisted as attempt artifacts such as `runtime.log` and `runtime-exit.json`; they are not
+returned as in-memory workflow semantics for the core to interpret. The result instead exposes
+their durable paths and a canonical adapter outcome.
 
 The request is core-owned. Adapters must not invent stage semantics or silently relocate
 stage outputs outside the expected workspace.
@@ -200,6 +203,27 @@ bridge taxonomy below is the documented source of truth for cross-layer reportin
 | harness setup, teardown, fixture, or scenario failure | `harness_fail` | Used by eval/harness lanes, not normal stage progression. |
 
 This mapping must prefer the earliest decisive signal, not the final symptom.
+
+### 7.1 Runtime outcome and evidence decision table
+
+Every launched, blocked, denied, cancelled, timed-out, or launch-failed adapter attempt commits
+one evidence envelope. `runtime.log` is written atomically first and schema-v1
+`runtime-exit.json` is the commit marker written last. Writers retain the adapter-specific
+`exit_classification` and also publish the canonical `adapter_outcome`.
+
+| Terminal condition | `adapter_outcome` | `stop_reason` | `exit_code` |
+| --- | --- | --- | --- |
+| runtime completed successfully | `success` | absent | provider/process code |
+| runtime exited unsuccessfully | `runtime_failure` | `runtime_failure` | provider/process code |
+| runtime budget expired | `timeout` | `timeout` | provider/process code when available |
+| execution was cancelled | `cancellation` | `cancellation` | provider/process code when available |
+| operator or policy denied execution | `denial` | `denial` | `null` when no provider process result exists |
+| execution is waiting for an operator | `blocked` | `blocked` | `null` |
+| executable launch failed | `launch_failure` | `launch_failure` | `null` |
+
+Success never has a stop reason. Blocked and launch-failure evidence never fabricates a process
+exit code. Workflow policy uses the canonical outcome; adapter-specific classifications remain
+available for provider diagnostics.
 
 ## 8. Workspace expectations
 

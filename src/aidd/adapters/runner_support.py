@@ -3,19 +3,20 @@ from __future__ import annotations
 import os
 import shlex
 from collections.abc import Mapping
-from dataclasses import dataclass
 from enum import StrEnum
 from pathlib import Path
 
-from aidd.adapters.runtime_artifacts import write_runtime_exit_metadata
+from aidd.adapters.runtime_evidence import (
+    RUNTIME_LOG_FILENAME,
+    RuntimeAdapterOutcome,
+    RuntimeEvidenceCommitRequest,
+    RuntimeEvidencePaths,
+    adapter_outcome_for_classification,
+    commit_runtime_evidence,
+    stop_reason_for_outcome,
+)
 
-RUNTIME_LOG_FILENAME = "runtime.log"
-
-
-@dataclass(frozen=True, slots=True)
-class RuntimeArtifactPaths:
-    runtime_log_path: Path
-    runtime_exit_metadata_path: Path
+RuntimeArtifactPaths = RuntimeEvidencePaths
 
 
 def split_configured_command(*, configured_command: str, runtime_label: str) -> tuple[str, ...]:
@@ -149,26 +150,27 @@ def build_aidd_execution_environment(
 def persist_runtime_log_artifacts(
     *,
     attempt_path: Path,
-    exit_code: int,
+    exit_code: int | None,
     exit_classification: str,
     stdout_text: str,
     stderr_text: str,
     runtime_log_text: str,
+    adapter_outcome: RuntimeAdapterOutcome | None = None,
 ) -> RuntimeArtifactPaths:
-    attempt_path.mkdir(parents=True, exist_ok=True)
-    runtime_log_path = attempt_path / RUNTIME_LOG_FILENAME
-    runtime_log_path.write_text(runtime_log_text, encoding="utf-8")
-    runtime_exit_metadata_path = write_runtime_exit_metadata(
-        attempt_path=attempt_path,
-        exit_code=exit_code,
-        exit_classification=exit_classification,
-        stdout_text=stdout_text,
-        stderr_text=stderr_text,
-        runtime_log_text=runtime_log_text,
+    resolved_outcome = adapter_outcome or adapter_outcome_for_classification(
+        exit_classification
     )
-    return RuntimeArtifactPaths(
-        runtime_log_path=runtime_log_path,
-        runtime_exit_metadata_path=runtime_exit_metadata_path,
+    return commit_runtime_evidence(
+        RuntimeEvidenceCommitRequest(
+            attempt_path=attempt_path,
+            adapter_outcome=resolved_outcome,
+            exit_classification=exit_classification,
+            exit_code=exit_code,
+            stdout_text=stdout_text,
+            stderr_text=stderr_text,
+            runtime_log_text=runtime_log_text,
+            stop_reason=stop_reason_for_outcome(resolved_outcome),
+        )
     )
 
 
