@@ -9037,7 +9037,7 @@ Local tasks:
   [`REF-04`]
   - Scope: validator test infrastructure.
   - Verification: every stage example uses the same runner and production registry.
-- `W34-E1-S5-T2` Split cross-document rules by invariant and stage behind the current
+- `W34-E1-S5-T2` (done) Split cross-document rules by invariant and stage behind the current
   public facade. [`REF-04`]
   - Scope: validator implementation modules.
   - Verification: the public finding protocol and focused stage matrices remain

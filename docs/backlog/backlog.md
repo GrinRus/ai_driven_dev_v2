@@ -7,8 +7,8 @@ slice, and local task.
 
 ## Next
 
-- `W34-E1-S5-T2` — Split cross-document rules by invariant and stage behind the current
-  public facade.
+- `W34-E1-S5-T3` — Partition the monolithic semantic test module by stage and shared
+  invariant.
 
 ## Soon
 
@@ -96,6 +96,5 @@ slice, and local task.
 
 ## Current reconciliation
 
-- `2026-07-16` the production-equivalent contract fixture runner now validates all stage
-  examples through the production coordinator. `W34-E1-S5-T2` is next for cross-document
-  rule isolation behind the existing facade.
+- `2026-07-16` cross-document rules now have invariant/stage-local owners behind the stable
+  public facade. `W34-E1-S5-T3` is next for semantic test ownership partitioning.
