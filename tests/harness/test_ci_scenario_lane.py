@@ -81,3 +81,12 @@ def test_ci_workflow_runs_the_standalone_lane() -> None:
     assert 'python-version: "3.12"' in workflow
     assert "python scripts/run_ci_scenarios.py --root .aidd-ci" in workflow
     assert "timeout-minutes: 20" in workflow
+
+
+def test_ci_workflow_runs_packaged_javascript_syntax_gate() -> None:
+    workflow = (REPO_ROOT / ".github/workflows/ci.yml").read_text(encoding="utf-8")
+
+    assert "Packaged JavaScript syntax" in workflow
+    assert "python scripts/check_packaged_javascript.py" in workflow
+    assert "Packaged JavaScript DOM state" in workflow
+    assert "node --test tests/frontend/*.test.mjs" in workflow

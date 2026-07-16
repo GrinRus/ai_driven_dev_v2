@@ -1,10 +1,13 @@
 from __future__ import annotations
 
+import pytest
+
 from aidd.evals.log_analysis import (
     CoarseRuntimeEvent,
     FailureTaxonomyResult,
     NormalizedRuntimeEvent,
     classify_failure_taxonomy,
+    select_first_failure_boundary,
 )
 
 
@@ -132,3 +135,57 @@ def test_classify_failure_taxonomy_returns_none_without_signals() -> None:
         category="none",
         reason="No failure signal detected.",
     )
+
+
+@pytest.mark.parametrize(
+    ("message", "expected_category"),
+    [
+        ("AssertionError: expected true", "runtime"),
+        ("HTTP status 503 from provider", "environment"),
+        ("executable not found: codex", "environment"),
+        ("No such file or directory: config.toml", "environment"),
+        ("temporary failure in name resolution", "environment"),
+        ("operation timed out", "environment"),
+    ],
+)
+def test_public_failure_classifiers_share_one_decision(
+    message: str,
+    expected_category: str,
+) -> None:
+    runtime_events = (_runtime_error_event(message),)
+
+    taxonomy = classify_failure_taxonomy(runtime_events=runtime_events)
+    boundary = select_first_failure_boundary(runtime_events=runtime_events)
+
+    assert taxonomy.category == expected_category
+    assert boundary.category == expected_category
+
+
+def test_normalized_runtime_failure_is_not_lost_by_taxonomy() -> None:
+    normalized_events = (
+        NormalizedRuntimeEvent(
+            line_number=3,
+            event_kind="provider_exception",
+            source="runtime",
+            payload={"event": "provider_exception"},
+        ),
+    )
+
+    taxonomy = classify_failure_taxonomy(normalized_events=normalized_events)
+    boundary = select_first_failure_boundary(normalized_events=normalized_events)
+
+    assert taxonomy.category == "runtime"
+    assert boundary.category == "runtime"
+
+
+def test_unknown_informational_message_has_no_prefix_fallback() -> None:
+    runtime_events = (
+        CoarseRuntimeEvent(
+            line_number=1,
+            category="info",
+            message="provider performed a custom operation",
+        ),
+    )
+
+    assert classify_failure_taxonomy(runtime_events=runtime_events).category == "none"
+    assert select_first_failure_boundary(runtime_events=runtime_events).category == "none"

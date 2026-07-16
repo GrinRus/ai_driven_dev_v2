@@ -96,6 +96,7 @@ def _assert_required_bundle_files(layout_root: Path) -> None:
         "runtime.log",
         "validator-report.md",
         "verdict.md",
+        "artifact-digests.json",
         "stage-timing.json",
         "stage-timing.md",
         "self-repair-matrix.json",

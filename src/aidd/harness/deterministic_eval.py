@@ -15,6 +15,7 @@ from aidd.harness.eval_models import (
 )
 from aidd.harness.eval_preparation import prepare_eval_run
 from aidd.harness.eval_reports import persist_eval_reports
+from aidd.harness.process_lifecycle import HarnessLifecycleBudget
 from aidd.harness.repo_prep import prepare_scenario_repository, prepare_working_copy
 from aidd.harness.runner import (
     HarnessAiddRunResult,
@@ -121,6 +122,7 @@ def _execute(
     working_copy: Path,
     work_item: str,
     aidd_command: tuple[str, ...],
+    lifecycle_budget: HarnessLifecycleBudget,
 ) -> HarnessAiddRunResult:
     config_path = _config_path(working_copy)
     if scenario.scenario_class == "deterministic-stage":
@@ -138,6 +140,7 @@ def _execute(
                 stage_start="idea",
                 stage_end=_STAGE_ORDER[stage_index - 1],
                 config_path=config_path,
+                lifecycle_budget=lifecycle_budget,
             )
             if prerequisite.exit_code != 0:
                 return prerequisite
@@ -149,6 +152,7 @@ def _execute(
             stage=stage,
             aidd_command=aidd_command,
             config_path=config_path,
+            lifecycle_budget=lifecycle_budget,
         )
     return invoke_aidd_run(
         scenario=scenario,
@@ -159,6 +163,7 @@ def _execute(
         stage_start=scenario.run.stage_start,
         stage_end=scenario.run.stage_end,
         config_path=config_path,
+        lifecycle_budget=lifecycle_budget,
     )
 
 
@@ -234,6 +239,12 @@ def execute_deterministic_eval(
     )
     state = EvalExecutionState()
     started = monotonic()
+    lifecycle_budget = HarnessLifecycleBudget.start(
+        None
+        if prep.scenario.run.timeout_minutes is None
+        else float(prep.scenario.run.timeout_minutes * 60),
+        now=started,
+    )
     try:
         state.prepared_repository = prepare_scenario_repository(
             cache_root=prep.cache_root,
@@ -258,6 +269,7 @@ def execute_deterministic_eval(
             state.setup_result = run_setup_steps(
                 scenario=prep.scenario,
                 working_copy_path=working_copy,
+                lifecycle_budget=lifecycle_budget,
             )
             _bootstrap_work_item(
                 working_copy=working_copy,
@@ -276,6 +288,7 @@ def execute_deterministic_eval(
                     working_copy=working_copy,
                     work_item=prep.work_item,
                     aidd_command=prep.aidd_command,
+                    lifecycle_budget=lifecycle_budget,
                 )
             except BaseException as exc:
                 state.run_error = exc
@@ -286,6 +299,7 @@ def execute_deterministic_eval(
                     scenario=prep.scenario,
                     working_copy_path=working_copy,
                     aidd_run_result=state.aidd_run_result,
+                    lifecycle_budget=lifecycle_budget,
                 )
             except BaseException as exc:
                 state.verification_error = exc
@@ -294,6 +308,7 @@ def execute_deterministic_eval(
             state.teardown_result = run_teardown_steps(
                 teardown_commands=prep.teardown_commands,
                 working_copy_path=working_copy,
+                lifecycle_budget=lifecycle_budget,
             )
         except BaseException as exc:
             state.teardown_error = exc

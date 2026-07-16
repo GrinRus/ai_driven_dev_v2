@@ -7,7 +7,7 @@ lint:
 	uv run --extra dev ruff check .
 
 typecheck:
-	uv run --extra dev python -m mypy src
+	uv run --extra dev python -m mypy src scripts
 
 test:
 	uv run --extra dev pytest -q

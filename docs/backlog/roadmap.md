@@ -9401,7 +9401,7 @@ Exit evidence:
 - permission mode does not silently drop configured behavior;
 - doctor/capability output never promises an unimplemented execution path.
 
-### Epic W34-E5 — executable automation, durable bundles, and release checks (`planned`)
+### Epic W34-E5 — executable automation, durable bundles, and release checks (`done`)
 Linked stories: `US-07`, `US-09`, `US-10`, `US-11`
 
 #### Slice W34-E5-S1 — deterministic CI scenario lane (`done`)
@@ -9432,7 +9432,7 @@ Exit evidence:
 - every CI-labelled scenario is executable and actually executed;
 - the deterministic pipeline has a supported product entry point.
 
-#### Slice W34-E5-S2 — bounded harness lifecycle and immutable bundles (`planned`)
+#### Slice W34-E5-S2 — bounded harness lifecycle and immutable bundles (`done`)
 Goal: bound the complete deterministic lifecycle and freeze completed evidence by value.
 
 Dependencies:
@@ -9441,16 +9441,16 @@ Dependencies:
 
 Local tasks:
 
-- `W34-E5-S2-T1` Apply one lifecycle budget and owned process groups to setup, run,
+- `W34-E5-S2-T1` (done) Apply one lifecycle budget and owned process groups to setup, run,
   verify, and teardown. [`REL-13`, `REF-01`]
   - Scope: deterministic harness runner.
   - Verification: timeout and descendant-exit tests cover every phase.
-- `W34-E5-S2-T2` Materialize result bundles by copy, hash, and atomic replace instead
+- `W34-E5-S2-T2` (done) Materialize result bundles by copy, hash, and atomic replace instead
   of hard links. [`REL-14`]
   - Scope: result bundle writer.
   - Verification: later source mutation cannot alter the destination and injected copy
     failure leaves no partial bundle.
-- `W34-E5-S2-T3` Make the running-stage frontend checkpoint transition-aware.
+- `W34-E5-S2-T3` (done) Make the running-stage frontend checkpoint transition-aware.
   [`TEST-03`, `REF-01`]
   - Scope: black-box checkpoint probe.
   - Verification: a barrier test completes the stage during probing and routes to the
@@ -9462,7 +9462,7 @@ Exit evidence:
 - completed bundles and checkpoint decisions remain stable under source mutation and
   concurrent stage transitions.
 
-#### Slice W34-E5-S3 — classification, release, and packaged-UI gates (`planned`)
+#### Slice W34-E5-S3 — classification, release, and packaged-UI gates (`done`)
 Goal: make automated classifications and release/package evidence reject ambiguous or
 non-executable claims.
 
@@ -9473,34 +9473,34 @@ Dependencies:
 
 Local tasks:
 
-- `W34-E5-S3-T1` Replace divergent eval classifiers with one typed earliest-failure
+- `W34-E5-S3-T1` (done) Replace divergent eval classifiers with one typed earliest-failure
   classifier. [`BUG-10`]
   - Scope: eval log analysis.
   - Verification: structured/text fixture tables cover assertions, HTTP errors, missing
     executables/files, DNS, and timeout, and both public APIs agree.
-- `W34-E5-S3-T2` Bound release preflight subprocess and network failures. [`REL-15`]
+- `W34-E5-S3-T2` (done) Bound release preflight subprocess and network failures. [`REL-15`]
   - Scope: release preflight script.
   - Verification: timeout, transport, TLS/DNS, registry, and server failures still emit
     valid structured blocker output.
-- `W34-E5-S3-T3` Validate release evidence by exact host, path, semantic version, and
+- `W34-E5-S3-T3` (done) Validate release evidence by exact host, path, semantic version, and
   exit status. [`BUG-12`]
   - Scope: release evidence collector.
   - Verification: unrelated hosts, prefix versions, and error-bearing transcripts fail.
-- `W34-E5-S3-T4` Run `node --check` for every packaged JavaScript asset in CI.
+- `W34-E5-S3-T4` (done) Run `node --check` for every packaged JavaScript asset in CI.
   [`TEST-02`]
   - Scope: package and CI syntax gate.
   - Verification: asset discovery is exhaustive and an intentional syntax error fails.
-- `W34-E5-S3-T5` Add lightweight DOM-state tests for module ordering, stale responses,
+- `W34-E5-S3-T5` (done) Add lightweight DOM-state tests for module ordering, stale responses,
   cancellation, and error rendering. [`TEST-02`]
   - Scope: packaged frontend behavior tests.
   - Verification: out-of-order and rejected mocked responses exercise deterministic
     state recovery.
-- `W34-E5-S3-T6` Make the built-wheel resource smoke offline-deterministic and bounded.
+- `W34-E5-S3-T6` (done) Make the built-wheel resource smoke offline-deterministic and bounded.
   [`TEST-05`]
   - Scope: package resource smoke test only.
   - Verification: `UV_OFFLINE=1` package-resource tests pass using the built wheel and
     every subprocess has an explicit timeout.
-- `W34-E5-S3-T7` Include release scripts in the strict mypy gate and fix their typed
+- `W34-E5-S3-T7` (done) Include release scripts in the strict mypy gate and fix their typed
   boundary returns. [`TEST-06`]
   - Scope: release-script typing plus configured mypy commands.
   - Verification: `python -m mypy src scripts` passes through local, CI, and release
@@ -9511,7 +9511,7 @@ Exit evidence:
 - failure taxonomy, release evidence, and packaged browser behavior have executable
   negative-path gates.
 
-#### Slice W34-E5-S4 — live orchestration change isolation (`planned`)
+#### Slice W34-E5-S4 — live orchestration change isolation (`done`)
 Goal: split the measured 8.6k-line live orchestration hotspot behind characterized typed
 boundaries after lifecycle and classification behavior is corrected.
 
@@ -9523,24 +9523,25 @@ Dependencies:
 
 Local tasks:
 
-- `W34-E5-S4-T1` Extract durable flow-state and resume coordination from live
+- `W34-E5-S4-T1` (done) Extract durable flow-state and resume coordination from live
   orchestration. [`REF-01`]
   - Scope: harness flow-state service.
   - Verification: deterministic resume and idempotency suites preserve bundle behavior.
-- `W34-E5-S4-T2` Consolidate process/checkpoint coordination and
+- `W34-E5-S4-T2` (done) Consolidate process/checkpoint coordination and
   `BlackBoxCommandResult` behind the existing steps module. [`REF-01`, `REF-05`]
   - Scope: live process, result-model, and checkpoint services.
   - Verification: facade and orchestration expose one result type, duplicate process
     helpers are absent, and lifecycle/monkeypatch fixtures preserve decisions.
-- `W34-E5-S4-T3` Extract pure quality-policy evaluation from orchestration. [`REF-01`]
+- `W34-E5-S4-T3` (done) Extract pure quality-policy evaluation from orchestration.
+  [`REF-01`]
   - Scope: quality policy only.
   - Verification: existing fixture verdicts remain equivalent.
-- `W34-E5-S4-T4` Make the existing reports module authoritative for atomic report,
+- `W34-E5-S4-T4` (done) Make the existing reports module authoritative for atomic report,
   transcript, and bundle rendering. [`REF-01`, `REF-05`]
   - Scope: live report writers only.
   - Verification: duplicate orchestration helpers are absent and golden JSON/Markdown
     bundles remain byte-stable.
-- `W34-E5-S4-T5` Replace the fake runtime's unconditional stage delay with an opt-in
+- `W34-E5-S4-T5` (done) Replace the fake runtime's unconditional stage delay with an opt-in
   transition barrier for checkpoint tests. [`TEST-04`]
   - Scope: live black-box test fixture only.
   - Verification: the same flow cases pass without fixed sleep outside explicit

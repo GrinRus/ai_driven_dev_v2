@@ -1,10 +1,16 @@
 from __future__ import annotations
 
+import json
+import os
 from pathlib import Path
 
 import pytest
 
-from aidd.harness.result_bundle import copy_or_link_run_artifacts, ensure_result_bundle_layout
+from aidd.harness.result_bundle import (
+    copy_or_link_run_artifacts,
+    ensure_result_bundle_layout,
+    read_artifact_digests,
+)
 
 
 def test_copy_or_link_run_artifacts_materializes_bundle_files(tmp_path: Path) -> None:
@@ -41,6 +47,23 @@ def test_copy_or_link_run_artifacts_materializes_bundle_files(tmp_path: Path) ->
     assert "pass" in layout.verdict_path.read_text(encoding="utf-8")
     assert "runtime" in layout.runtime_jsonl_path.read_text(encoding="utf-8")
     assert "normalized" in layout.events_jsonl_path.read_text(encoding="utf-8")
+    digest_payload = json.loads(
+        layout.artifact_digests_path.read_text(encoding="utf-8")
+    )
+    assert digest_payload["schema_version"] == 1
+    assert [item["path"] for item in digest_payload["artifacts"]] == sorted(
+        (
+            "events.jsonl",
+            "runtime.jsonl",
+            "runtime.log",
+            "validator-report.md",
+            "verdict.md",
+        )
+    )
+    assert os.stat(runtime_log_path).st_ino != os.stat(layout.runtime_log_path).st_ino
+
+    runtime_log_path.write_text("mutated source\n", encoding="utf-8")
+    assert layout.runtime_log_path.read_text(encoding="utf-8") == "runtime\n"
 
 
 def test_copy_or_link_run_artifacts_rejects_missing_source(tmp_path: Path) -> None:
@@ -57,3 +80,40 @@ def test_copy_or_link_run_artifacts_rejects_missing_source(tmp_path: Path) -> No
             validator_report_path=validator_report_path,
             verdict_path=verdict_path,
         )
+
+
+def test_copy_failure_does_not_publish_commit_marker(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    layout = ensure_result_bundle_layout(workspace_root=tmp_path, run_id="eval-run-204")
+    sources = tmp_path / "sources"
+    sources.mkdir()
+    runtime_log = sources / "runtime.log"
+    validator_report = sources / "validator-report.md"
+    verdict = sources / "verdict.md"
+    for path in (runtime_log, validator_report, verdict):
+        path.write_text(path.name, encoding="utf-8")
+
+    def _fail_copy(source: Path, destination: Path) -> str:
+        raise OSError(f"injected copy failure: {source} -> {destination}")
+
+    monkeypatch.setattr("aidd.harness.result_bundle.shutil.copyfile", _fail_copy)
+
+    with pytest.raises(OSError, match="injected copy failure"):
+        copy_or_link_run_artifacts(
+            layout=layout,
+            runtime_log_path=runtime_log,
+            validator_report_path=validator_report,
+            verdict_path=verdict,
+        )
+
+    assert not layout.artifact_digests_path.exists()
+    assert not tuple(layout.run_root.glob(".artifact-materialization-*"))
+
+
+def test_read_artifact_digests_warns_for_legacy_bundle(tmp_path: Path) -> None:
+    layout = ensure_result_bundle_layout(workspace_root=tmp_path, run_id="legacy-run")
+
+    with pytest.warns(UserWarning, match="legacy bundle"):
+        assert read_artifact_digests(layout=layout) is None

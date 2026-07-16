@@ -1,13 +1,12 @@
 from __future__ import annotations
 
 import os
-import subprocess
-import time
 from collections.abc import Callable, Mapping
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, cast
 
+from aidd.harness.process_lifecycle import HarnessLifecycleBudget, run_owned_process
 from aidd.harness.scenarios import Scenario
 
 
@@ -105,37 +104,45 @@ def _run_shell_commands(
     command_env: Mapping[str, str],
     error_label: str,
     error_type: type[RuntimeError],
+    lifecycle_budget: HarnessLifecycleBudget | None = None,
 ) -> tuple[HarnessCommandTranscript, ...]:
     command_transcripts: list[HarnessCommandTranscript] = []
     for command in commands:
-        start = time.monotonic()
-        completed = subprocess.run(
-            ["/bin/sh", "-c", command],
-            cwd=working_copy_path,
-            env=command_env,
-            capture_output=True,
-            text=True,
-            check=False,
+        timeout_seconds = (
+            None
+            if lifecycle_budget is None
+            else lifecycle_budget.remaining_seconds()
         )
-        duration_seconds = time.monotonic() - start
+        completed = run_owned_process(
+            command=("/bin/sh", "-c", command),
+            cwd=working_copy_path,
+            environment=dict(command_env),
+            timeout_seconds=timeout_seconds,
+        )
         transcript = HarnessCommandTranscript(
             command=command,
-            exit_code=completed.returncode,
-            stdout_text=completed.stdout,
-            stderr_text=completed.stderr,
-            duration_seconds=duration_seconds,
+            exit_code=completed.exit_code,
+            stdout_text=completed.stdout_text,
+            stderr_text=completed.stderr_text,
+            duration_seconds=completed.duration_seconds,
+            timed_out=completed.timed_out,
+            timeout_seconds=completed.timeout_seconds,
         )
         command_transcripts.append(transcript)
-        if completed.returncode != 0:
-            stderr = completed.stderr.strip() or completed.stdout.strip() or "no command output"
+        if completed.exit_code != 0:
+            stderr = (
+                completed.stderr_text.strip()
+                or completed.stdout_text.strip()
+                or "no command output"
+            )
             error = error_type(
                 f"{error_label} command failed with non-zero exit "
-                f"({completed.returncode}): {command}\n{stderr}"
+                f"({completed.exit_code}): {command}\n{stderr}"
             )
             annotated_error = cast(Any, error)
             annotated_error.command_transcripts = tuple(command_transcripts)
             annotated_error.failed_command = command
-            annotated_error.failed_exit_code = completed.returncode
+            annotated_error.failed_exit_code = completed.exit_code
             annotated_error.duration_seconds = sum(
                 item.duration_seconds for item in command_transcripts
             )
@@ -148,6 +155,7 @@ def run_setup_steps(
     scenario: Scenario,
     working_copy_path: Path,
     environment: Mapping[str, str] | None = None,
+    lifecycle_budget: HarnessLifecycleBudget | None = None,
 ) -> HarnessSetupResult:
     _validate_working_copy_path(working_copy_path)
 
@@ -159,20 +167,13 @@ def run_setup_steps(
         command_env=command_env,
         error_label="Setup",
         error_type=HarnessSetupError,
+        lifecycle_budget=lifecycle_budget,
     )
     return HarnessSetupResult(
         executed_commands=tuple(transcript.command for transcript in command_transcripts),
         command_transcripts=command_transcripts,
         duration_seconds=sum(transcript.duration_seconds for transcript in command_transcripts),
     )
-
-
-def _timeout_output_to_text(value: str | bytes | None) -> str:
-    if value is None:
-        return ""
-    if isinstance(value, bytes):
-        return value.decode("utf-8", errors="replace")
-    return value
 
 
 def _invoke_aidd_process(
@@ -183,6 +184,7 @@ def _invoke_aidd_process(
     work_item: str,
     command: tuple[str, ...],
     environment: Mapping[str, str] | None,
+    lifecycle_budget: HarnessLifecycleBudget | None,
 ) -> HarnessAiddRunResult:
     command_env = _command_environment(environment)
     command_env.update(
@@ -192,57 +194,55 @@ def _invoke_aidd_process(
             "AIDD_HARNESS_WORK_ITEM": work_item,
         }
     )
-    timeout_seconds = (
+    configured_timeout_seconds = (
         float(scenario.run.timeout_minutes * 60)
         if scenario.run.timeout_minutes is not None
         else None
     )
-    start = time.monotonic()
-    timed_out = False
-    try:
-        completed = subprocess.run(
-            command,
-            cwd=working_copy_path,
-            env=command_env,
-            capture_output=True,
-            text=True,
-            check=False,
-            timeout=timeout_seconds,
-        )
-        exit_code = completed.returncode
-        stdout_text = completed.stdout
-        stderr_text = completed.stderr
-    except subprocess.TimeoutExpired as exc:
-        timed_out = True
-        exit_code = 124
-        stdout_text = _timeout_output_to_text(exc.stdout)
-        stderr_text = _timeout_output_to_text(exc.stderr)
+    remaining_seconds = (
+        None
+        if lifecycle_budget is None
+        else lifecycle_budget.remaining_seconds()
+    )
+    timeout_candidates = tuple(
+        value
+        for value in (configured_timeout_seconds, remaining_seconds)
+        if value is not None
+    )
+    timeout_seconds = min(timeout_candidates) if timeout_candidates else None
+    completed = run_owned_process(
+        command=command,
+        cwd=working_copy_path,
+        environment=command_env,
+        timeout_seconds=timeout_seconds,
+    )
+    stderr_text = completed.stderr_text
+    if completed.timed_out:
         timeout_message = (
             f"AIDD run timed out after {timeout_seconds:.3f}s."
             if timeout_seconds is not None
             else "AIDD run timed out."
         )
         stderr_text = f"{stderr_text.rstrip()}\n{timeout_message}\n".lstrip()
-    duration_seconds = time.monotonic() - start
     command_transcript = HarnessCommandTranscript(
         command=" ".join(command),
-        exit_code=exit_code,
-        stdout_text=stdout_text,
+        exit_code=completed.exit_code,
+        stdout_text=completed.stdout_text,
         stderr_text=stderr_text,
-        duration_seconds=duration_seconds,
-        timed_out=timed_out,
+        duration_seconds=completed.duration_seconds,
+        timed_out=completed.timed_out,
         timeout_seconds=timeout_seconds,
     )
     return HarnessAiddRunResult(
         command=command,
         runtime_id=runtime_id,
         work_item=work_item,
-        exit_code=exit_code,
-        stdout_text=stdout_text,
+        exit_code=completed.exit_code,
+        stdout_text=completed.stdout_text,
         stderr_text=stderr_text,
-        duration_seconds=duration_seconds,
+        duration_seconds=completed.duration_seconds,
         command_transcript=command_transcript,
-        timed_out=timed_out,
+        timed_out=completed.timed_out,
         timeout_seconds=timeout_seconds,
     )
 
@@ -258,6 +258,7 @@ def invoke_aidd_run(
     stage_end: str | None = None,
     config_path: Path | None = None,
     environment: Mapping[str, str] | None = None,
+    lifecycle_budget: HarnessLifecycleBudget | None = None,
 ) -> HarnessAiddRunResult:
     _validate_working_copy_path(working_copy_path)
     if runtime_id not in scenario.runtime_targets:
@@ -292,6 +293,7 @@ def invoke_aidd_run(
         work_item=work_item,
         command=tuple(command_parts),
         environment=environment,
+        lifecycle_budget=lifecycle_budget,
     )
 
 
@@ -305,6 +307,7 @@ def invoke_aidd_stage(
     aidd_command: tuple[str, ...] = ("uv", "run", "aidd"),
     config_path: Path | None = None,
     environment: Mapping[str, str] | None = None,
+    lifecycle_budget: HarnessLifecycleBudget | None = None,
 ) -> HarnessAiddRunResult:
     _validate_working_copy_path(working_copy_path)
     if runtime_id not in scenario.runtime_targets:
@@ -336,6 +339,7 @@ def invoke_aidd_stage(
         work_item=work_item,
         command=tuple(command_parts),
         environment=environment,
+        lifecycle_budget=lifecycle_budget,
     )
 
 
@@ -345,6 +349,7 @@ def run_verification_steps(
     working_copy_path: Path,
     aidd_run_result: HarnessAiddRunResult,
     environment: Mapping[str, str] | None = None,
+    lifecycle_budget: HarnessLifecycleBudget | None = None,
 ) -> HarnessVerificationResult:
     _validate_working_copy_path(working_copy_path)
 
@@ -357,6 +362,7 @@ def run_verification_steps(
         command_env=command_env,
         error_label="Verification",
         error_type=HarnessVerificationError,
+        lifecycle_budget=lifecycle_budget,
     )
     return HarnessVerificationResult(
         executed_commands=tuple(transcript.command for transcript in command_transcripts),
@@ -371,6 +377,7 @@ def run_teardown_steps(
     teardown_commands: tuple[str, ...],
     working_copy_path: Path,
     environment: Mapping[str, str] | None = None,
+    lifecycle_budget: HarnessLifecycleBudget | None = None,
 ) -> HarnessTeardownResult:
     _validate_working_copy_path(working_copy_path)
 
@@ -382,6 +389,7 @@ def run_teardown_steps(
         command_env=command_env,
         error_label="Teardown",
         error_type=HarnessTeardownError,
+        lifecycle_budget=lifecycle_budget,
     )
     return HarnessTeardownResult(
         executed_commands=tuple(transcript.command for transcript in command_transcripts),
@@ -396,6 +404,7 @@ def run_with_teardown[T](
     teardown_commands: tuple[str, ...],
     working_copy_path: Path,
     environment: Mapping[str, str] | None = None,
+    lifecycle_budget: HarnessLifecycleBudget | None = None,
 ) -> tuple[T, HarnessTeardownResult]:
     result_marker = object()
     action_result: T | object = result_marker
@@ -410,6 +419,7 @@ def run_with_teardown[T](
             teardown_commands=teardown_commands,
             working_copy_path=working_copy_path,
             environment=environment,
+            lifecycle_budget=lifecycle_budget,
         )
     except BaseException as teardown_error:
         if action_error is not None:

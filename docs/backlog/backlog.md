@@ -7,24 +7,18 @@ slice, and local task.
 
 ## Next
 
-- `W34-E5-S2-T1` — Apply one lifecycle budget and owned process groups to setup, run,
-  verify, and teardown.
+- `W34-E6-S1-T1` — Remove superseded Claude question/resume code after a public-import
+  compatibility review.
 
 ## Soon
 
-- `W34-E5-S2-T2` — Materialize result bundles by copy, hash, and atomic replace instead
-  of hard links.
+- `W34-E6-S1-T2` — Remove the unreferenced core interview capability helper after a
+  compatibility review.
 
 ## Parking lot
 
 - `W34-E3-S4-T1` — Add characterization fixtures for corrected routes, jobs, approvals,
   and dashboard states.
-- `W34-E5-S3-T1` — Replace divergent eval classifiers with one typed earliest-failure
-  classifier.
-- `W34-E5-S4-T1` — Extract durable flow-state and resume coordination from live
-  orchestration.
-- `W34-E6-S1-T1` — Remove superseded Claude question/resume code after a public-import
-  compatibility review.
 - `W34-E6-S2-T1` — Close dependency-update proposals that target packages removed by
   the cleanup slice.
 - `W34-E7-S3-T1` — Reject ambiguous, unknown, or malformed safety-sensitive
@@ -89,6 +83,63 @@ slice, and local task.
 
 ## Current reconciliation
 
+- `2026-07-16` `W34-E5-S4-T4`, slice `W34-E5-S4`, and Epic `W34-E5` are complete:
+  atomic report writes, transcript serialization, flow-report rendering, and paired
+  JSON/Markdown bundle publication are reports-owned. `W34-E6-S1-T1` is promoted to
+  `Next`; `W34-E6-S1-T2` is in `Soon`.
+
+- `2026-07-16` `W34-E5-S4-T3` is complete: typed stage-audit and finding inputs now
+  produce a pure quality decision with verdict, progression, action, and reason; the
+  policy module has no filesystem, subprocess, clock, or network dependencies.
+
+- `2026-07-16` `W34-E5-S4-T2` is complete: the steps module now owns the canonical
+  command result, interruption, owned process loop, process-group cleanup, and combined
+  checkpoint classification; orchestration exposes compatibility bindings only.
+
+- `2026-07-16` `W34-E5-S4-T1` is complete: durable flow-state creation, atomic
+  persistence, read accessors, stale-run reconstruction, and explicit resume validation
+  now live in `live_e2e_flow_state`; orchestration retains the compatibility facade.
+
+- `2026-07-16` `W34-E5-S3` is complete: local, CI, release, contributor, and configured
+  strict typing now all cover `src scripts`, with no release-script suppressions.
+  `S4-T1` is promoted to `Next`; `S4-T2` is in `Soon`.
+- `2026-07-16` `W34-E5-S3-T6` is complete: the resource smoke builds offline with a
+  bounded command, imports directly from the extracted wheel under `UV_OFFLINE=1`, and
+  performs no dependency resolution. `S3-T7` is promoted to `Next`; `S4-T1` is in
+  `Soon`.
+- `2026-07-16` `W34-E5-S3-T5` is complete: provider-free `node:test` fixtures execute
+  real packaged modules for load ordering, stale dashboard suppression, poll invalidation
+  on cancellation, and escaped error rendering. `S3-T6` is promoted to `Next`; `S3-T7`
+  is in `Soon`.
+- `2026-07-16` `W34-E5-S3-T4` is complete: the manifest and filesystem JavaScript
+  sets must match exactly, every packaged asset passes bounded `node --check`, and CI
+  runs the executable syntax gate. `S3-T5` is promoted to `Next`; `S3-T6` is in `Soon`.
+- `2026-07-16` `W34-E5-S3-T3` is complete: release evidence requires canonical
+  GitHub/PyPI identities, an exact canonical version line, and explicit successful command
+  exit statuses; legacy payloads without status fail closed. `S3-T4` is promoted to
+  `Next`; `S3-T5` is in `Soon`.
+- `2026-07-16` `W34-E5-S3-T2` is complete: release preflight bounds subprocess and
+  registry calls, preserves JSON output, and records timeout, DNS, TLS, transport, and
+  server blockers without treating uncertainty as version absence. `S3-T3` is promoted
+  to `Next`; `S3-T4` is in `Soon`.
+- `2026-07-16` `W34-E5-S3-T1` is complete: taxonomy and first-boundary APIs now project
+  one ranked typed candidate set and agree for text, structured, validation, exit, and
+  verification signals. `S3-T2` is promoted to `Next`; `S3-T3` is in `Soon`.
+- `2026-07-16` `W34-E5-S2` is complete: running-stage checkpoints re-read durable
+  state after UI startup, record terminal transitions explicitly, and defer successful
+  transitions to the normal post-stage checkpoint. `S3-T1` is promoted to `Next`;
+  `S3-T2` is in `Soon`.
+- `2026-07-16` `W34-E5-S4-T5` is complete: the fake runtime no longer delays every
+  successful stage and exposes a bounded ready/release barrier only when checkpoint tests
+  opt in. `S2-T3` is promoted to `Next`; classifier task `S3-T1` is in `Soon`.
+- `2026-07-16` `W34-E5-S2-T2` is complete: result artifacts are copied into verified
+  staging files and published with ordered SHA-256 evidence plus an atomic commit marker;
+  hard links are no longer used. Independent fixture task `S4-T5` is promoted to `Next`;
+  `S2-T3` is in `Soon`.
+- `2026-07-16` `W34-E5-S2-T1` is complete: deterministic setup, run, verification, and
+  teardown now share one monotonic lifecycle budget and launch commands in owned process
+  groups with bounded descendant cleanup. `S2-T2` is promoted to `Next`; independent
+  checkpoint-fixture task `S4-T5` is in `Soon`.
 - `2026-07-16` `W34-E5-S1` is complete: the standalone deterministic lane discovers
   five CI manifests, executes all five through `aidd eval execute`, and verifies exact
   discovered/executed ID parity. `W34-E5-S2-T1` is promoted to `Next`; `S2-T2` is in

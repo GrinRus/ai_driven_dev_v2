@@ -87,5 +87,5 @@ testpaths = ["tests"]
 
 [tool.mypy]
 python_version = "3.12"
-files = ["src"]
+files = ["src", "scripts"]
 strict = true
