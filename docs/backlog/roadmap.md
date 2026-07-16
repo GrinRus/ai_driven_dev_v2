@@ -9495,7 +9495,7 @@ Local tasks:
   - Scope: packaged frontend behavior tests.
   - Verification: out-of-order and rejected mocked responses exercise deterministic
     state recovery.
-- `W34-E5-S3-T6` Make the built-wheel resource smoke offline-deterministic and bounded.
+- `W34-E5-S3-T6` (done) Make the built-wheel resource smoke offline-deterministic and bounded.
   [`TEST-05`]
   - Scope: package resource smoke test only.
   - Verification: `UV_OFFLINE=1` package-resource tests pass using the built wheel and

@@ -7,20 +7,18 @@ slice, and local task.
 
 ## Next
 
-- `W34-E5-S3-T6` — Make the built-wheel resource smoke offline-deterministic and
-  bounded.
+- `W34-E5-S3-T7` — Include release scripts in the strict mypy gate and fix their typed
+  boundary returns.
 
 ## Soon
 
-- `W34-E5-S3-T7` — Include release scripts in the strict mypy gate and fix their typed
-  boundary returns.
+- `W34-E5-S4-T1` — Extract durable flow-state and resume coordination from live
+  orchestration.
 
 ## Parking lot
 
 - `W34-E3-S4-T1` — Add characterization fixtures for corrected routes, jobs, approvals,
   and dashboard states.
-- `W34-E5-S4-T1` — Extract durable flow-state and resume coordination from live
-  orchestration.
 - `W34-E6-S1-T1` — Remove superseded Claude question/resume code after a public-import
   compatibility review.
 - `W34-E6-S2-T1` — Close dependency-update proposals that target packages removed by
@@ -87,6 +85,10 @@ slice, and local task.
 
 ## Current reconciliation
 
+- `2026-07-16` `W34-E5-S3-T6` is complete: the resource smoke builds offline with a
+  bounded command, imports directly from the extracted wheel under `UV_OFFLINE=1`, and
+  performs no dependency resolution. `S3-T7` is promoted to `Next`; `S4-T1` is in
+  `Soon`.
 - `2026-07-16` `W34-E5-S3-T5` is complete: provider-free `node:test` fixtures execute
   real packaged modules for load ordering, stale dashboard suppression, poll invalidation
   on cancellation, and escaped error rendering. `S3-T6` is promoted to `Next`; `S3-T7`

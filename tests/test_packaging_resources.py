@@ -3,7 +3,6 @@ from __future__ import annotations
 import hashlib
 import json
 import os
-import shutil
 import subprocess
 import sys
 import zipfile
@@ -23,7 +22,25 @@ def _repo_root() -> Path:
 
 
 def _uv_command() -> str:
-    return os.environ.get("UV") or shutil.which("uv") or "uv"
+    return os.environ.get("UV") or "uv"
+
+
+def _run_bounded(
+    command: list[str],
+    *,
+    cwd: Path,
+    environment: dict[str, str] | None = None,
+    timeout_seconds: float,
+) -> subprocess.CompletedProcess[str]:
+    return subprocess.run(
+        command,
+        cwd=cwd,
+        env=environment,
+        capture_output=True,
+        text=True,
+        check=False,
+        timeout=timeout_seconds,
+    )
 
 
 def _active_prompt_hashes() -> dict[str, str]:
@@ -46,20 +63,29 @@ def test_active_prompt_pack_paths_and_hashes_match_the_removal_baseline() -> Non
 
 
 def test_built_wheel_includes_runtime_owned_contracts_and_prompt_packs(tmp_path: Path) -> None:
-    completed = subprocess.run(
-        [_uv_command(), "build", "--wheel", "--out-dir", tmp_path.as_posix()],
+    offline_environment = {**os.environ, "UV_OFFLINE": "1"}
+    completed = _run_bounded(
+        [
+            _uv_command(),
+            "build",
+            "--offline",
+            "--wheel",
+            "--out-dir",
+            tmp_path.as_posix(),
+        ],
         cwd=_repo_root(),
-        capture_output=True,
-        text=True,
-        check=False,
+        environment=offline_environment,
+        timeout_seconds=120.0,
     )
 
     assert completed.returncode == 0, completed.stderr or completed.stdout
     wheel_paths = sorted(tmp_path.glob("*.whl"))
     assert wheel_paths
 
+    extracted_root = tmp_path / "wheel-root"
     with zipfile.ZipFile(wheel_paths[0]) as archive:
         archive_names = set(archive.namelist())
+        archive.extractall(extracted_root)
 
     for stage in STAGES:
         assert f"aidd/_resources/contracts/stages/{stage}.md" in archive_names
@@ -71,37 +97,42 @@ def test_built_wheel_includes_runtime_owned_contracts_and_prompt_packs(tmp_path:
     for asset in operator_static_asset_manifest():
         assert f"aidd/cli/static/{asset.filename}" in archive_names
 
-    installed_check = subprocess.run(
+    smoke_cwd = tmp_path / "smoke-cwd"
+    smoke_cwd.mkdir()
+    smoke_environment = {
+        **offline_environment,
+        "AIDD_WHEEL_ROOT": extracted_root.as_posix(),
+        "PYTHONPATH": extracted_root.as_posix(),
+    }
+    installed_check = _run_bounded(
         [
-            _uv_command(),
-            "run",
-            "--isolated",
-            "--no-cache",
-            "--python",
             sys.executable,
-            "--with",
-            wheel_paths[0].as_posix(),
-            "python",
             "-c",
             (
+                "import os; "
+                "from pathlib import Path; "
+                "import aidd; "
                 "from aidd.core.resources import default_stage_contracts_root; "
                 "from aidd.core.stages import STAGES; "
                 "from aidd.cli.ui_assets import "
                 "operator_static_asset_for_route, operator_static_asset_manifest; "
+                "wheel_root = Path(os.environ['AIDD_WHEEL_ROOT']).resolve(); "
+                "package_path = Path(aidd.__file__).resolve(); "
+                "wrong_package = not package_path.is_relative_to(wheel_root); "
                 "root = default_stage_contracts_root(); "
                 "missing = [stage for stage in STAGES if not (root / f'{stage}.md').exists()]; "
                 "assets = [operator_static_asset_for_route(asset.route) "
                 "for asset in operator_static_asset_manifest()]; "
                 "missing_assets = [asset for asset in assets if asset is None or not asset.text]; "
                 "raise SystemExit("
+                "f'package imported outside wheel: {package_path}' if wrong_package else "
                 "f'missing stage contracts: {missing}' if missing else "
                 "f'missing static assets: {missing_assets}' if missing_assets else 0)"
             ),
         ],
-        cwd=_repo_root(),
-        capture_output=True,
-        text=True,
-        check=False,
+        cwd=smoke_cwd,
+        environment=smoke_environment,
+        timeout_seconds=30.0,
     )
 
     assert installed_check.returncode == 0, installed_check.stderr or installed_check.stdout
