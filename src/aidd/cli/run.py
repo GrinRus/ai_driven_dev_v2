@@ -183,6 +183,13 @@ def run_callback(
         str,
         typer.Option("--to-stage", help="Last stage to include in the workflow run."),
     ] = STAGES[-1],
+    run_id: Annotated[
+        str | None,
+        typer.Option(
+            "--run-id",
+            help="Existing run id to continue; required for non-first --from-stage.",
+        ),
+    ] = None,
     root: Annotated[
         Path | None,
         typer.Option("--root", help="Root AIDD storage directory. Defaults to config value."),
@@ -223,6 +230,10 @@ def run_callback(
         raise typer.BadParameter(
             f"Option '--from-stage' ({from_stage}) must not come after '--to-stage' ({to_stage})."
         )
+    if from_stage != STAGES[0] and run_id is None:
+        raise typer.BadParameter(
+            f"Option '--run-id' is required when '--from-stage' is '{from_stage}'."
+        )
 
     if runtime not in _WORKFLOW_RUN_SUPPORTED_RUNTIMES:
         supported = ", ".join(_WORKFLOW_RUN_SUPPORTED_RUNTIMES)
@@ -250,28 +261,33 @@ def run_callback(
         "log_follow": log_follow,
         "mode": "workflow",
     }
-    result = run_workflow(
-        request=WorkflowRunRequest(
-            work_item=work_item,
-            runtime_id=runtime,
-            workspace_root=workspace_root,
-            config_path=config,
-            config_snapshot=config_snapshot,
-            stage_start=from_stage,
-            stage_end=to_stage,
-            log_follow=log_follow,
-        ),
-        stage_executor=_run_stage_from_workflow,
-        emit=lambda event: _print_workflow_event(
-            event,
-            work_item=work_item,
-            runtime=runtime,
-            from_stage=from_stage,
-            to_stage=to_stage,
-        ),
-        stage_selector=_select_next_runnable_stage,
-        advancement_summarizer=_summarize_workflow_advancement,
-    )
+    try:
+        result = run_workflow(
+            request=WorkflowRunRequest(
+                work_item=work_item,
+                runtime_id=runtime,
+                workspace_root=workspace_root,
+                config_path=config,
+                config_snapshot=config_snapshot,
+                stage_start=from_stage,
+                stage_end=to_stage,
+                log_follow=log_follow,
+                run_id=run_id,
+                continuation=run_id is not None,
+            ),
+            stage_executor=_run_stage_from_workflow,
+            emit=lambda event: _print_workflow_event(
+                event,
+                work_item=work_item,
+                runtime=runtime,
+                from_stage=from_stage,
+                to_stage=to_stage,
+            ),
+            stage_selector=_select_next_runnable_stage,
+            advancement_summarizer=_summarize_workflow_advancement,
+        )
+    except ValueError as exc:
+        raise typer.BadParameter(str(exc)) from exc
 
     if result.stopped_stage is not None:
         _print_workflow_run_summary(

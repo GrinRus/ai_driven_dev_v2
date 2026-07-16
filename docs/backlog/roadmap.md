@@ -9095,7 +9095,7 @@ Exit evidence:
 - a succeeded stage always has complete canonical outputs;
 - a raised adapter failure never leaves a durable executing stage.
 
-#### Slice W34-E2-S2 — canonical run identity and continuation (`planned`)
+#### Slice W34-E2-S2 — canonical run identity and continuation (`done`)
 Goal: make resume, latest-run selection, and manifest reuse agree on one authoritative
 run identity.
 
@@ -9116,7 +9116,7 @@ Local tasks:
   - Scope: run lookup, inspection, and resume resolution.
   - Verification: two same-second manifests resolve identically through every public
     consumer.
-- `W34-E2-S2-T3` Add explicit `--run-id` workflow continuation for non-first
+- `W34-E2-S2-T3` (done) Add explicit `--run-id` workflow continuation for non-first
   `--from-stage` starts. [`BUG-06`]
   - Scope: CLI workflow selection and core continuation service.
   - Verification: every non-first starting stage continues the requested run and

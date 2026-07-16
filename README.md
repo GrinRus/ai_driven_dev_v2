@@ -123,6 +123,16 @@ aidd run --work-item WI-001 --runtime codex --from-stage idea --to-stage plan --
 aidd run show --work-item WI-001 --root .aidd
 ```
 
+Starting from any stage after `idea` is an explicit continuation of existing run evidence:
+
+```bash
+aidd run --work-item WI-001 --runtime codex --run-id run-20260716T120000Z \
+  --from-stage research --to-stage plan --root .aidd
+```
+
+The selected run must already exist, contain the requested bounds, and have succeeded
+upstream stages; AIDD never allocates a new run for a non-first start.
+
 This creates `.aidd/` inside the local project and seeds the required intake context
 documents for the first stage. Treat `.aidd/` as project-local operator state that may
 include sensitive raw runtime logs, prompts, repository context, questions, answers, and

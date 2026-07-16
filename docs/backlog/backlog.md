@@ -7,15 +7,16 @@ slice, and local task.
 
 ## Next
 
-- `W34-E2-S2-T3` — Add explicit `--run-id` workflow continuation for non-first
-  `--from-stage` starts.
+- `W34-E2-S3-T1` — Move archive decisions to a separate append-only operator
+  overlay/index.
 
 ## Soon
 
+- `W34-E2-S3-T2` — Aggregate immutable per-attempt prompt provenance across
+  executed stages.
+
 ## Parking lot
 
-- `W34-E2-S3-T1` — Move archive decisions to a separate append-only operator
-  overlay/index.
 - `W34-E3-S2-T1` — Resolve each approval exactly once with compare-and-set semantics.
 - `W34-E3-S3-T1` — Store live chunks in a byte-bounded ring, cap responses, and evict
   terminal jobs by TTL/count.
@@ -96,6 +97,6 @@ slice, and local task.
 
 ## Current reconciliation
 
-- `2026-07-16` `W34-E2-S2-T2` is complete: all product consumers share fail-closed
-  latest-run selection with sub-second timestamps. `W34-E2-S2-T3` is next; immutable archive
-  overlays remain parked until the identity slice closes.
+- `2026-07-16` `W34-E2-S2` is complete: latest-run identity and explicit workflow
+  continuation are canonical. `W34-E2-S3-T1` is next, followed by per-attempt prompt
+  accountability.

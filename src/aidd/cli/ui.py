@@ -2929,7 +2929,8 @@ class OperatorUiService:
         runtime = _runtime_from_payload(payload)
         _validate_runtime(runtime)
         stage_start, stage_end = _workflow_bounds_from_payload(payload)
-        run_id = _optional_run_id_from_payload(payload) or allocate_workflow_run_id(
+        requested_run_id = _optional_run_id_from_payload(payload)
+        run_id = requested_run_id or allocate_workflow_run_id(
             workspace_root=self.workspace_root,
             work_item=self.work_item,
         )
@@ -2939,6 +2940,7 @@ class OperatorUiService:
         prepared_payload["from_stage"] = stage_start
         prepared_payload["to_stage"] = stage_end
         prepared_payload["run_id"] = run_id
+        prepared_payload["continuation"] = requested_run_id is not None
         prepared_payload["log_follow"] = log_follow
         lease = acquire_run_mutation_lease_handle(
             run_root(
@@ -3343,6 +3345,7 @@ class OperatorUiService:
                 config_snapshot=config_snapshot,
                 lineage=lineage,
                 run_id=run_id,
+                continuation=bool(payload.get("continuation", False)),
                 stage_start=stage_start,
                 stage_end=stage_end,
                 log_follow=log_follow,
