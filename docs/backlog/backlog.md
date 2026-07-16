@@ -7,13 +7,12 @@ slice, and local task.
 
 ## Next
 
-- `W34-E6-S1-T6` — Remove dead adapter-local prompt-read shims after confirming the
-  shared native-prompt owner.
+- `W34-E6-S1-T2` — Remove the unreferenced core interview capability helper after a
+  compatibility review.
 
 ## Soon
 
-- `W34-E6-S1-T2` — Remove the unreferenced core interview capability helper after a
-  compatibility review.
+- `W34-E6-S1-T3` — Remove unused direct runtime dependencies and regenerate the lock.
 
 ## Parking lot
 
@@ -82,6 +81,10 @@ slice, and local task.
   queue-restoration policy in `docs/backlog/roadmap.md` (`W8-E3-S1`).
 
 ## Current reconciliation
+
+- `2026-07-16` `W34-E6-S1-T6` is complete: Claude, Codex, and OpenCode no longer define
+  dead prompt-read shims; `aidd.adapters.native_prompt` remains the sole owner.
+  `W34-E6-S1-T2` is promoted to `Next`; `T3` is in `Soon`.
 
 - `2026-07-16` `W34-E6-S1-T1` is complete: the Claude-only question detection,
   persistence, fallback routing, and resume surface is removed; registered adapters

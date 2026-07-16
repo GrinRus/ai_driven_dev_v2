@@ -187,13 +187,6 @@ def _split_configured_command(*, configured_command: str, runtime_label: str) ->
     )
 
 
-def _read_text_for_prompt(path: Path) -> str:
-    try:
-        return path.read_text(encoding="utf-8")
-    except FileNotFoundError:
-        return f"[missing file: {path.as_posix()}]\n"
-
-
 def _build_native_prompt_text(
     *,
     context: ClaudeCodeCommandContext,

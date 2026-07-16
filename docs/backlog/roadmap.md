@@ -9573,7 +9573,7 @@ Local tasks:
   implementation-only tests after a public-import compatibility review. [`DEAD-03`]
   - Scope: Claude adapter legacy surface.
   - Verification: registered adapter integration tests cover the retained shared path.
-- `W34-E6-S1-T6` Remove dead adapter-local prompt-read shims after confirming
+- `W34-E6-S1-T6` (done) Remove dead adapter-local prompt-read shims after confirming
   `aidd.adapters.native_prompt` as the canonical owner. [`DEAD-03`]
   - Scope: Claude, Codex, and OpenCode runner prompt helpers only.
   - Verification: native prompt fixtures remain equivalent and an architecture test
