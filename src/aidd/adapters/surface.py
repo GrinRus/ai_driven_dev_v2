@@ -25,6 +25,7 @@ from aidd.adapters.codex import probe as probe_codex
 from aidd.adapters.codex.live import (
     codex_live_transport_available,
     execute_codex_live_transport,
+    parse_codex_live_command,
 )
 from aidd.adapters.codex.runner import (
     CodexCommandContext,
@@ -640,12 +641,14 @@ def _execute_codex(
         operator_request_path=request.operator_request_path,
         operator_request_markdown=request.operator_request_markdown,
     )
-    if should_use_live_transport(
+    use_live_transport = should_use_live_transport(
         permission_policy=request.permission_policy,
         interaction_mode=request.interaction_mode,
         execution_mode=request.execution_mode,
         provider_present=operator_decision_provider is not None,
-    ) and codex_live_transport_available(configured_command):
+    )
+    live_command = parse_codex_live_command(configured_command) if use_live_transport else None
+    if live_command is not None and codex_live_transport_available(live_command):
         broker = RuntimeOperatorBroker(
             policy=_operator_policy_for_stage_request(request),
             attempt_path=attempt_path,
@@ -663,6 +666,7 @@ def _execute_codex(
             on_stderr=on_stderr,
             timeout_seconds=request.timeout_seconds,
             cancel_requested=request.cancel_requested,
+            live_command=live_command,
         )
         if live_result.run_result is None:
             return RuntimeAdapterExecutionResult(

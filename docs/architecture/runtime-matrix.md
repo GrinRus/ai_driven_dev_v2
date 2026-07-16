@@ -75,6 +75,12 @@ CLI/UI decision provider is present. Current implemented live transports are:
 - Qwen dual-file control through `--json-file` and `--input-file`;
 - Codex app-server approvals through `codex app-server --listen stdio://`.
 
+Codex live mode parses the configured command before probing or launching app-server.
+The AIDD-managed `exec`/JSON/stdin and sandbox scaffolds remain accepted, while
+`--model`/`-m` is mapped to the app-server `thread/start` request. Profile, config,
+unknown, malformed, or extra positional arguments are rejected explicitly instead of
+being silently discarded.
+
 OpenCode remains degraded until its `serve` OpenAPI document exposes permission
 request/response endpoints. Claude Code remains degraded until AIDD implements and
 registers a permission prompt tool or equivalent SDK callback transport. A provider help

@@ -7,16 +7,17 @@ slice, and local task.
 
 ## Next
 
-- `W34-E4-S3-T3` — Preserve supported Codex live arguments and reject unsupported
-  options explicitly.
+- `W34-E5-S1-T1` — Repair stale CI-labelled smoke manifests and fixtures.
 
 ## Soon
+
+- `W34-E5-S1-T2` — Expose a deterministic local-only `aidd eval execute` entry point
+  over the existing pipeline.
 
 ## Parking lot
 
 - `W34-E3-S4-T1` — Add characterization fixtures for corrected routes, jobs, approvals,
   and dashboard states.
-- `W34-E5-S1-T1` — Repair stale CI-labelled smoke manifests and fixtures.
 - `W34-E5-S2-T1` — Apply one lifecycle budget and owned process groups to setup, run,
   verify, and teardown.
 - `W34-E5-S3-T1` — Replace divergent eval classifiers with one typed earliest-failure
@@ -114,3 +115,6 @@ slice, and local task.
 - `2026-07-16` `W34-E4-S3-T2` is complete: Claude capability reports now advertise
   only the registered subprocess transport, while non-full permission policies continue
   to block before launch. `W34-E4-S3-T3` is promoted to `Next`.
+- `2026-07-16` `W34-E4-S3` and Epic `W34-E4` are complete: Codex live preserves
+  supported model selection and rejects unsupported command options before launch.
+  `W34-E5-S1-T1` is promoted to `Next`; its direct successor `T2` is in `Soon`.

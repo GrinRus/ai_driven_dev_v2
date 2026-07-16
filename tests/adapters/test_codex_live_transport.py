@@ -9,6 +9,10 @@ from pathlib import Path
 
 import pytest
 
+from aidd.adapters.codex.live import (
+    CodexLiveCommandError,
+    parse_codex_live_command,
+)
 from aidd.adapters.process_supervisor import OwnedProcessSupervisor
 from aidd.adapters.runtime_execution import RuntimeSubprocessSpec, StageRuntimeRequest
 from aidd.adapters.surface import get_runtime_adapter_surface
@@ -18,7 +22,7 @@ from aidd.core.runtime_operator import (
     load_operator_requests,
 )
 from aidd.core.stage_models import AdapterExecutionStatus
-from aidd.runtime_catalog import RuntimeExecutionMode
+from aidd.runtime_catalog import RuntimeExecutionMode, get_runtime_definition
 from aidd.runtime_permissions import (
     AutoApprovalPreset,
     RuntimeInteractionMode,
@@ -278,6 +282,107 @@ def test_codex_live_transport_resumes_after_provider_decision(tmp_path: Path) ->
         "type": "readOnly",
         "networkAccess": False,
     }
+
+
+@pytest.mark.parametrize(
+    ("model_arguments", "expected_model"),
+    [
+        ("--model gpt-test", "gpt-test"),
+        ("-m gpt-test-mini", "gpt-test-mini"),
+        ("--model=gpt-test-equals", "gpt-test-equals"),
+    ],
+)
+def test_codex_live_transport_preserves_supported_model_option(
+    tmp_path: Path,
+    model_arguments: str,
+    expected_model: str,
+) -> None:
+    fake_codex = _fake_codex(tmp_path)
+    attempt_path = tmp_path / "attempt"
+
+    result = get_runtime_adapter_surface("codex").execute_stage_request(
+        configured_command=f"{fake_codex} exec --json {model_arguments} -",
+        request=_request(tmp_path),
+        attempt_path=attempt_path,
+        base_env={},
+        operator_decision_provider=_DecisionProvider(
+            RuntimeOperatorDecisionAction.ALLOW_FOR_SESSION
+        ),
+    )
+
+    assert result.resolved_status is AdapterExecutionStatus.SUCCEEDED
+    transcript = [
+        json.loads(line)
+        for line in (attempt_path / "codex-app-server.jsonl").read_text(
+            encoding="utf-8",
+        ).splitlines()
+    ]
+    thread_start = next(
+        item["payload"]
+        for item in transcript
+        if item["direction"] == "client"
+        and item["payload"].get("method") == "thread/start"
+    )
+    assert thread_start["params"]["model"] == expected_model
+
+
+def test_codex_live_parser_accepts_managed_default_commands() -> None:
+    definition = get_runtime_definition("codex")
+
+    assert parse_codex_live_command(definition.default_command).executable == "codex"
+    assert (
+        parse_codex_live_command(definition.brokered_default_command or "").executable
+        == "codex"
+    )
+
+
+@pytest.mark.parametrize(
+    "arguments",
+    [
+        "--profile team",
+        "--config model=gpt-test",
+        "-c model=gpt-test",
+        "--unknown",
+        "extra-positional",
+        "--model",
+        "--model first --model second",
+    ],
+)
+def test_codex_live_transport_rejects_unsupported_arguments_before_launch(
+    tmp_path: Path,
+    arguments: str,
+    monkeypatch,
+) -> None:
+    attempt_path = tmp_path / "attempt"
+    launches: list[RuntimeSubprocessSpec] = []
+
+    def unexpected_launch(
+        cls: type[OwnedProcessSupervisor],
+        spec: RuntimeSubprocessSpec,
+    ) -> OwnedProcessSupervisor:
+        _ = cls
+        launches.append(spec)
+        raise AssertionError("Codex live process launched unexpectedly")
+
+    monkeypatch.setattr(
+        OwnedProcessSupervisor,
+        "launch",
+        classmethod(unexpected_launch),
+    )
+
+    with pytest.raises(CodexLiveCommandError, match="codex-live-command"):
+        get_runtime_adapter_surface("codex").execute_stage_request(
+            configured_command=f"{_fake_codex(tmp_path)} exec --json {arguments} -",
+            request=_request(tmp_path),
+            attempt_path=attempt_path,
+            base_env={},
+            operator_decision_provider=_DecisionProvider(
+                RuntimeOperatorDecisionAction.ALLOW_ONCE
+            ),
+        )
+
+    assert launches == []
+    assert not attempt_path.exists()
 
 
 def test_codex_live_transport_denial_fails_stage(tmp_path: Path) -> None:

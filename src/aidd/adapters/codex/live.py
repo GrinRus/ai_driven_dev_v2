@@ -6,6 +6,7 @@ import subprocess
 import threading
 import time
 from collections.abc import Callable, Mapping
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
@@ -60,6 +61,113 @@ _AIDD_CODEX_APPROVAL_POLICY: dict[str, object] = {
         "skill_approval": True,
     }
 }
+_MANAGED_VALUE_OPTIONS = frozenset({"--sandbox"})
+_MANAGED_FLAG_OPTIONS = frozenset(
+    {
+        "--dangerously-bypass-approvals-and-sandbox",
+        "--json",
+        "--skip-git-repo-check",
+    }
+)
+_MANAGED_POSITIONAL_TOKENS = frozenset({"exec", "-"})
+_UNSUPPORTED_NAMED_OPTIONS = frozenset({"--profile", "-c", "--config"})
+
+
+class CodexLiveCommandError(ValueError):
+    """Raised when a configured Codex command cannot be represented by live transport."""
+
+
+@dataclass(frozen=True, slots=True)
+class CodexLiveCommand:
+    executable: str
+    model: str | None = None
+
+
+def parse_codex_live_command(configured_command: str) -> CodexLiveCommand:
+    try:
+        tokens = split_command(configured_command, runtime_label="codex")
+    except ValueError as exc:
+        raise CodexLiveCommandError(f"codex-live-command: {exc}") from exc
+
+    model: str | None = None
+    index = 1
+    seen_positionals: set[str] = set()
+    while index < len(tokens):
+        token = tokens[index]
+        if token in {"--model", "-m"}:
+            value, index = _required_option_value(tokens, index=index, option=token)
+            model = _merge_model_option(current=model, candidate=value)
+            continue
+        if token.startswith("--model="):
+            model = _merge_model_option(
+                current=model,
+                candidate=_non_empty_option_value(token.partition("=")[2], option="--model"),
+            )
+            index += 1
+            continue
+        if token in _UNSUPPORTED_NAMED_OPTIONS or any(
+            token.startswith(f"{option}=") for option in _UNSUPPORTED_NAMED_OPTIONS
+        ):
+            raise CodexLiveCommandError(
+                f"codex-live-command: option {token!r} is not supported by the "
+                "AIDD Codex live transport."
+            )
+        if token in _MANAGED_VALUE_OPTIONS:
+            _, index = _required_option_value(tokens, index=index, option=token)
+            continue
+        if any(token.startswith(f"{option}=") for option in _MANAGED_VALUE_OPTIONS):
+            _non_empty_option_value(token.partition("=")[2], option=token.partition("=")[0])
+            index += 1
+            continue
+        if token in _MANAGED_FLAG_OPTIONS:
+            index += 1
+            continue
+        if token in _MANAGED_POSITIONAL_TOKENS:
+            if token in seen_positionals:
+                raise CodexLiveCommandError(
+                    f"codex-live-command: duplicate managed token {token!r}."
+                )
+            seen_positionals.add(token)
+            index += 1
+            continue
+        raise CodexLiveCommandError(
+            f"codex-live-command: unsupported argument {token!r}; only the managed "
+            "AIDD exec scaffold and --model/-m are supported in live mode."
+        )
+
+    return CodexLiveCommand(executable=tokens[0], model=model)
+
+
+def _required_option_value(
+    tokens: tuple[str, ...],
+    *,
+    index: int,
+    option: str,
+) -> tuple[str, int]:
+    value_index = index + 1
+    if value_index >= len(tokens) or tokens[value_index].startswith("-"):
+        raise CodexLiveCommandError(
+            f"codex-live-command: option {option!r} requires a value."
+        )
+    return _non_empty_option_value(tokens[value_index], option=option), value_index + 1
+
+
+def _non_empty_option_value(value: str, *, option: str) -> str:
+    normalized = value.strip()
+    if not normalized:
+        raise CodexLiveCommandError(
+            f"codex-live-command: option {option!r} requires a non-empty value."
+        )
+    return normalized
+
+
+def _merge_model_option(*, current: str | None, candidate: str) -> str:
+    if current is not None and current != candidate:
+        raise CodexLiveCommandError(
+            "codex-live-command: conflicting model options "
+            f"{current!r} and {candidate!r}."
+        )
+    return candidate
 
 
 class _JsonRpcLineClient:
@@ -206,11 +314,17 @@ class _JsonRpcLineClient:
         self._item_cache[item_id] = cached
 
 
-def codex_live_transport_available(configured_command: str) -> bool:
-    tokens = split_command(configured_command, runtime_label="codex")
-    if Path(tokens[0]).name != "codex":
+def codex_live_transport_available(
+    configured_command: str | CodexLiveCommand,
+) -> bool:
+    command = (
+        parse_codex_live_command(configured_command)
+        if isinstance(configured_command, str)
+        else configured_command
+    )
+    if Path(command.executable).name != "codex":
         return False
-    help_text = run_help_text((tokens[0], "app-server", "--help"))
+    help_text = run_help_text((command.executable, "app-server", "--help"))
     return "--listen" in help_text and "generate-json-schema" in help_text
 
 
@@ -227,8 +341,10 @@ def execute_codex_live_transport(
     on_stderr: Callable[[str], None] | None,
     timeout_seconds: float | None,
     cancel_requested: Callable[[], bool] | None = None,
+    live_command: CodexLiveCommand | None = None,
 ) -> LiveTransportResult[CodexExitClassification]:
-    if not codex_live_transport_available(configured_command):
+    command = live_command or parse_codex_live_command(configured_command)
+    if not codex_live_transport_available(command):
         return LiveTransportResult(
             run_result=CodexRunResult(
                 exit_code=None,
@@ -244,9 +360,8 @@ def execute_codex_live_transport(
             ),
         )
 
-    tokens = split_command(configured_command, runtime_label="codex")
     spec = build_subprocess_spec(
-        configured_command=tokens[0],
+        configured_command=command.executable,
         context=context,
         base_env=base_env,
         repository_root=repository_root,
@@ -256,7 +371,7 @@ def execute_codex_live_transport(
     transcript_path = attempt_path / _CODEX_TRANSCRIPT_FILENAME
     supervisor = OwnedProcessSupervisor.launch(
         RuntimeSubprocessSpec(
-            command=(tokens[0], "app-server", "--listen", "stdio://"),
+            command=(command.executable, "app-server", "--listen", "stdio://"),
             cwd=repository_root,
             env=spec.env,
             stdin_text="",
@@ -308,18 +423,18 @@ def execute_codex_live_transport(
         )
 
     client.notify("initialized")
-    thread_start_id = client.request(
-            "thread/start",
-            {
-                "cwd": repository_root.as_posix(),
-                "approvalPolicy": _AIDD_CODEX_APPROVAL_POLICY,
-                "approvalsReviewer": "user",
-                "sandbox": "read-only",
-                "ephemeral": True,
-                "serviceName": "aidd",
-                "baseInstructions": "Run the AIDD stage request exactly as provided.",
-        },
-    )
+    thread_start_params: dict[str, object] = {
+        "cwd": repository_root.as_posix(),
+        "approvalPolicy": _AIDD_CODEX_APPROVAL_POLICY,
+        "approvalsReviewer": "user",
+        "sandbox": "read-only",
+        "ephemeral": True,
+        "serviceName": "aidd",
+        "baseInstructions": "Run the AIDD stage request exactly as provided.",
+    }
+    if command.model is not None:
+        thread_start_params["model"] = command.model
+    thread_start_id = client.request("thread/start", thread_start_params)
     pending_request_id, denied_reason, stop_reason = _drain_until_response(
         client=client,
         response_id=thread_start_id,
