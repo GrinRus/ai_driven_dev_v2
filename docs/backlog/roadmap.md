@@ -9237,7 +9237,7 @@ Dependencies:
 
 Local tasks:
 
-- `W34-E3-S4-T1` Add characterization fixtures for corrected routes, jobs, approvals,
+- `W34-E3-S4-T1` (done) Add characterization fixtures for corrected routes, jobs, approvals,
   and dashboard states. [`REF-02`]
   - Scope: UI tests.
   - Verification: API/state snapshots cover mutation conflicts, decisions,

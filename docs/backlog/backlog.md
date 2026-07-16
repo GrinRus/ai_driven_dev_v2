@@ -7,12 +7,11 @@ slice, and local task.
 
 ## Next
 
-- `W34-E3-S4-T1` — Add characterization fixtures for corrected routes, jobs, approvals,
-  and dashboard states.
+- `W34-E3-S4-T2` — Extract thin HTTP route handlers from `cli/ui.py`.
 
 ## Soon
 
-- `W34-E3-S4-T2` — Extract thin HTTP route handlers from `cli/ui.py`.
+- `W34-E3-S4-T3` — Extract pure dashboard reducers and evidence collectors.
 
 ## Parking lot
 
@@ -77,6 +76,11 @@ slice, and local task.
   queue-restoration policy in `docs/backlog/roadmap.md` (`W8-E3-S1`).
 
 ## Current reconciliation
+
+- `2026-07-16` `W34-E3-S4-T1` is complete: normalized characterization fixtures now
+  pin route responses, mutation conflicts, approval CAS, cancellation, retention, and
+  running/blocked/failed/stale/terminal dashboard states. `S4-T2` is promoted to
+  `Next`; `S4-T3` is in `Soon`.
 
 - `2026-07-16` `W34-E6-S2-T3`, slice `W34-E6-S2`, and Epic `W34-E6` are complete:
   maintained checkout, Python setup, uv setup, artifact download, and Scorecard actions
