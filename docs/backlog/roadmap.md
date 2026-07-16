@@ -9482,7 +9482,7 @@ Local tasks:
   - Scope: release preflight script.
   - Verification: timeout, transport, TLS/DNS, registry, and server failures still emit
     valid structured blocker output.
-- `W34-E5-S3-T3` Validate release evidence by exact host, path, semantic version, and
+- `W34-E5-S3-T3` (done) Validate release evidence by exact host, path, semantic version, and
   exit status. [`BUG-12`]
   - Scope: release evidence collector.
   - Verification: unrelated hosts, prefix versions, and error-bearing transcripts fail.
