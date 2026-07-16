@@ -9152,7 +9152,7 @@ Exit evidence:
 - completed-run source evidence is immutable;
 - full-flow accountability lists prompts actually used at every executed stage.
 
-### Epic W34-E3 — local operator concurrency and bounded UI state (`planned`)
+### Epic W34-E3 — local operator concurrency and bounded UI state (`done`)
 Linked stories: `US-03`, `US-06`, `US-10`, `US-11`
 
 #### Slice W34-E3-S1 — serialized run mutation (`done`)
@@ -9224,7 +9224,7 @@ Exit evidence:
 
 - local UI memory no longer grows without bound with job count or log volume.
 
-#### Slice W34-E3-S4 — UI service change isolation (`planned`)
+#### Slice W34-E3-S4 — UI service change isolation (`done`)
 Goal: separate routing, job/approval state, dashboard reduction, and next-flow rendering
 after their corrected behavior is characterized.
 
@@ -9248,7 +9248,7 @@ Local tasks:
 - `W34-E3-S4-T3` (done) Extract pure dashboard reducers and evidence collectors. [`REF-02`]
   - Scope: core dashboard read model.
   - Verification: deterministic state-to-view fixtures remain equivalent.
-- `W34-E3-S4-T4` Split the next-flow browser hotspot into controller and view modules.
+- `W34-E3-S4-T4` (done) Split the next-flow browser hotspot into controller and view modules.
   [`REF-02`]
   - Scope: packaged JavaScript.
   - Verification: DOM-state and packaged-asset tests preserve behavior and module

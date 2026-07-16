@@ -7,7 +7,8 @@ slice, and local task.
 
 ## Next
 
-- `W34-E3-S4-T4` — Split the next-flow browser hotspot into controller and view modules.
+- `W34-E7-S3-T1` — Reject ambiguous, unknown, or malformed safety-sensitive
+  configuration.
 
 ## Soon
 
@@ -15,8 +16,6 @@ No tasks are queued in `Soon`.
 
 ## Parking lot
 
-- `W34-E7-S3-T1` — Reject ambiguous, unknown, or malformed safety-sensitive
-  configuration.
 - `W34-E8-S1-T2` — Normalize inherited local-task statuses and historical disposition
   semantics.
 - `W34-E8-S2-T1` — Replace stale planned/completed-wave architecture wording with
@@ -76,6 +75,12 @@ No tasks are queued in `Soon`.
   queue-restoration policy in `docs/backlog/roadmap.md` (`W8-E3-S1`).
 
 ## Current reconciliation
+
+- `2026-07-16` `W34-E3-S4-T4`, slice `W34-E3-S4`, and Epic `W34-E3` are complete:
+  next-flow mutations remain in the compatible controller asset while terminal,
+  lineage/history, wizard, readiness/error, and next-action presentation now live in
+  a separately packaged view asset loaded before the remaining UI wiring.
+  `W34-E7-S3-T1` is promoted from Parking lot to `Next`; `Soon` remains empty.
 
 - `2026-07-16` `W34-E3-S4-T3` is complete: dashboard filesystem/read-model collection
   now produces one immutable evidence snapshot with request-local source caching, while

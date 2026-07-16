@@ -43,6 +43,15 @@ def _asset_text(route: str) -> str:
     return asset.text
 
 
+def _next_flow_assets() -> str:
+    return "\n".join(
+        (
+            _asset_text("/operator-next-flow-actions.js"),
+            _asset_text("/operator-next-flow-view.js"),
+        )
+    )
+
+
 def _assert_contains_all(text: str, expected: tuple[str, ...]) -> None:
     missing = [item for item in expected if item not in text]
     assert not missing
@@ -356,7 +365,8 @@ def test_operator_script_modules_own_static_ui_surfaces() -> None:
     questions = _asset_text("/operator-questions.js")
     approvals = _asset_text("/operator-approvals-interventions.js")
     logs = _asset_text("/operator-logs-jobs.js")
-    next_flow = _asset_text("/operator-next-flow-actions.js")
+    next_flow_controller = _asset_text("/operator-next-flow-actions.js")
+    next_flow_view = _asset_text("/operator-next-flow-view.js")
     onboarding = _asset_text("/operator-onboarding.js")
     cockpit = _asset_text("/operator-stage-cockpit.js")
     main = _asset_text("/operator-main.js")
@@ -399,10 +409,10 @@ def test_operator_script_modules_own_static_ui_surfaces() -> None:
     assert "async function startJobPolling(job)" in logs
     assert "function renderOnboarding()" in onboarding
     assert "function syncOnboardingCreateActionState()" in onboarding
-    assert "async function startWorkflow()" in next_flow
-    assert "async function handleNextAction()" in next_flow
-    assert "function renderFlowCompleteState()" in next_flow
-    assert "function renderRunHistory()" in next_flow
+    assert "async function startWorkflow()" in next_flow_controller
+    assert "async function handleNextAction()" in next_flow_controller
+    assert "function renderFlowCompleteState()" in next_flow_view
+    assert "function renderRunHistory()" in next_flow_view
     assert "async function renderCockpit()" in cockpit
     assert "function renderRecoveryActionBand(diagnostics)" in cockpit
     assert "function renderRepairTimeline(validation)" in cockpit
@@ -417,6 +427,40 @@ def test_operator_script_modules_own_static_ui_surfaces() -> None:
     assert 'event.target.closest("[data-refresh-dashboard]")' in main
     assert "requestCockpitReveal();" in main
     assert "refresh();" in main
+
+
+def test_operator_next_flow_controller_and_view_keep_separate_boundaries() -> None:
+    controller = _asset_text("/operator-next-flow-actions.js")
+    view = _asset_text("/operator-next-flow-view.js")
+    loader = _asset_text("/operator.js")
+
+    assert controller.count("return `") <= 1
+    assert "innerHTML =" not in controller
+    assert "function renderFlowCompleteState()" not in controller
+    assert "function renderNextFlowWizardShell(" not in controller
+    assert "async function startWorkflow()" in controller
+    assert "async function handleNextAction()" in controller
+
+    assert "function renderFlowCompleteState()" in view
+    assert "function renderRunHistory()" in view
+    assert "function renderNextFlowWizardShell(" in view
+    assert "function renderLaunchConfirmation()" in view
+    assert "function renderNextActionPanel()" in view
+    assert "fetch(" not in view
+    assert "postJson(" not in view
+
+    assert loader.index('"/operator-next-flow-actions.js"') < loader.index(
+        '"/operator-next-flow-view.js"'
+    )
+    assert loader.index('"/operator-next-flow-view.js"') < loader.index(
+        '"/operator-control-center.js"'
+    )
+    assert loader.index('"/operator-control-center.js"') < loader.index(
+        '"/operator-stage-cockpit.js"'
+    )
+    assert loader.index('"/operator-stage-cockpit.js"') < loader.index(
+        '"/operator-main.js"'
+    )
 
 
 def test_operator_api_state_asset_keeps_dashboard_runtime_and_tab_contracts() -> None:
@@ -846,7 +890,7 @@ def test_operator_control_center_asset_surfaces_running_stage_progress() -> None
 
 
 def test_operator_global_next_action_surfaces_live_job_progress() -> None:
-    next_flow = _asset_text("/operator-next-flow-actions.js")
+    next_flow = _next_flow_assets()
     components = _asset_text("/operator-components.css")
     responsive = _asset_text("/operator-responsive.css")
 
@@ -1209,7 +1253,7 @@ def test_operator_overview_static_contract_covers_run_accountability_card() -> N
 
 def test_operator_run_history_static_contract_covers_run_comparison_panel() -> None:
     cockpit = _asset_text("/operator-stage-cockpit.js")
-    next_flow = _asset_text("/operator-next-flow-actions.js")
+    next_flow = _next_flow_assets()
     api_state = _asset_text("/operator-api-state.js")
 
     _assert_contains_all(
@@ -1289,7 +1333,7 @@ def test_operator_implement_review_surfaces_missing_verification_evidence() -> N
 def test_operator_review_and_qa_decision_summaries_prioritize_next_actions() -> None:
     api_state = _asset_text("/operator-api-state.js")
     control = _asset_text("/operator-control-center.js")
-    next_flow = _asset_text("/operator-next-flow-actions.js")
+    next_flow = _next_flow_assets()
     components = _asset_text("/operator-components.css")
     responsive = _asset_text("/operator-responsive.css")
 
@@ -1369,7 +1413,7 @@ def test_operator_review_and_qa_decision_summaries_prioritize_next_actions() -> 
 
 def test_operator_stale_downstream_summary_prioritizes_rerun_guidance() -> None:
     api_state = _asset_text("/operator-api-state.js")
-    next_flow = _asset_text("/operator-next-flow-actions.js")
+    next_flow = _next_flow_assets()
     components = _asset_text("/operator-components.css")
     responsive = _asset_text("/operator-responsive.css")
 
@@ -1562,7 +1606,7 @@ def test_operator_logs_asset_keeps_filter_raw_cancel_and_polling_contracts() -> 
 
 
 def test_operator_next_flow_asset_keeps_launch_resume_and_runtime_guard_contracts() -> None:
-    next_flow = _asset_text("/operator-next-flow-actions.js")
+    next_flow = _next_flow_assets()
 
     _assert_contains_all(
         next_flow,
@@ -1781,7 +1825,7 @@ def test_operator_next_flow_asset_keeps_launch_resume_and_runtime_guard_contract
 
 
 def test_operator_next_action_explains_runtime_readiness_blocker_locally() -> None:
-    next_flow = _asset_text("/operator-next-flow-actions.js")
+    next_flow = _next_flow_assets()
     components = _asset_text("/operator-components.css")
     responsive = _asset_text("/operator-responsive.css")
 
@@ -1822,7 +1866,7 @@ def test_operator_next_action_explains_runtime_readiness_blocker_locally() -> No
 
 
 def test_operator_next_action_sidebar_is_status_mirror_when_global_cta_is_primary() -> None:
-    next_flow = _asset_text("/operator-next-flow-actions.js")
+    next_flow = _next_flow_assets()
     components = _asset_text("/operator-components.css")
 
     _assert_contains_all(
@@ -1856,7 +1900,7 @@ def test_operator_next_action_sidebar_is_status_mirror_when_global_cta_is_primar
 
 def test_operator_static_screen_landmarks_cover_accepted_mission_control_surfaces() -> None:
     html = _asset_text("/")
-    next_flow = _asset_text("/operator-next-flow-actions.js")
+    next_flow = _next_flow_assets()
     artifacts = _asset_text("/operator-artifacts-documents.js")
     cockpit = _asset_text("/operator-stage-cockpit.js")
     questions = _asset_text("/operator-questions.js")
@@ -1905,7 +1949,7 @@ def test_operator_static_screen_landmarks_cover_accepted_mission_control_surface
 
 def test_operator_flow_complete_static_contract_covers_terminal_handoff_actions() -> None:
     shell = _asset_text("/operator-shell-rendering.js")
-    next_flow = _asset_text("/operator-next-flow-actions.js")
+    next_flow = _next_flow_assets()
     components = _asset_text("/operator-components.css")
     responsive = _asset_text("/operator-responsive.css")
 
@@ -2066,7 +2110,7 @@ def test_operator_flow_complete_static_contract_covers_terminal_handoff_actions(
 
 
 def test_operator_next_flow_wizard_static_contract_covers_controls_and_preflight() -> None:
-    next_flow = _asset_text("/operator-next-flow-actions.js")
+    next_flow = _next_flow_assets()
 
     _assert_contains_all(
         next_flow,
@@ -2116,7 +2160,7 @@ def test_operator_next_flow_wizard_static_contract_covers_controls_and_preflight
 
 
 def test_operator_run_history_static_contract_covers_lineage_and_archive_labels() -> None:
-    next_flow = _asset_text("/operator-next-flow-actions.js")
+    next_flow = _next_flow_assets()
 
     _assert_contains_all(
         next_flow,

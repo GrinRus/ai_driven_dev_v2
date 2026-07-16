@@ -8,6 +8,7 @@
     "/operator-approvals-interventions.js",
     "/operator-logs-jobs.js",
     "/operator-next-flow-actions.js",
+    "/operator-next-flow-view.js",
     "/operator-control-center.js",
     "/operator-stage-cockpit.js",
     "/operator-main.js"
