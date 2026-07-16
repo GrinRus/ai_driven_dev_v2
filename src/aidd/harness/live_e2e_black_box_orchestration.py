@@ -75,6 +75,22 @@ from aidd.harness.install_artifact import (
     HarnessInstallResult,
     prepare_local_wheel_install,
 )
+from aidd.harness.live_e2e_black_box_steps import (
+    BlackBoxCommandResult,
+    LiveE2EInterrupted,
+)
+from aidd.harness.live_e2e_black_box_steps import (
+    _combined_frontend_checkpoint_classification as _steps_checkpoint_classification,
+)
+from aidd.harness.live_e2e_black_box_steps import (
+    _command_text as _steps_command_text,
+)
+from aidd.harness.live_e2e_black_box_steps import (
+    _run_black_box_command as _steps_run_black_box_command,
+)
+from aidd.harness.live_e2e_black_box_steps import (
+    _terminate_process as _steps_terminate_process,
+)
 from aidd.harness.live_e2e_flow_state import (
     FLOW_STATE_FILENAME,
     TERMINAL_STATUSES,
@@ -262,30 +278,6 @@ RUN_STAGE_HEARTBEAT_INTERVAL_SECONDS = 30.0
 
 
 @dataclass(frozen=True, slots=True)
-class BlackBoxCommandResult:
-    command: tuple[str, ...]
-    transcript: HarnessCommandTranscript
-    no_progress: bool = False
-    no_progress_details: dict[str, object] | None = None
-
-    @property
-    def exit_code(self) -> int:
-        return self.transcript.exit_code
-
-    @property
-    def stdout_text(self) -> str:
-        return self.transcript.stdout_text
-
-    @property
-    def stderr_text(self) -> str:
-        return self.transcript.stderr_text
-
-    @property
-    def duration_seconds(self) -> float:
-        return self.transcript.duration_seconds
-
-
-@dataclass(frozen=True, slots=True)
 class BlackBoxLiveE2EResult:
     scenario_id: str
     run_id: str
@@ -325,21 +317,6 @@ class FlowContext:
     started: float
     enable_next_flow_follow_up_proof: bool = False
     manual_frontend_evidence: Path | None = None
-
-
-class LiveE2EInterrupted(Exception):
-    def __init__(
-        self,
-        message: str,
-        *,
-        signum: int | None = None,
-        command_result: BlackBoxCommandResult | None = None,
-        cleanup: dict[str, object] | None = None,
-    ) -> None:
-        super().__init__(message)
-        self.signum = signum
-        self.command_result = command_result
-        self.cleanup = cleanup or {}
 
 
 def _utc_now() -> str:
@@ -455,7 +432,7 @@ def _append_operator_action(
         stream.write(json.dumps(event, sort_keys=True) + "\n")
 
 
-def _command_text(command: Sequence[str]) -> str:
+def _legacy_command_text(command: Sequence[str]) -> str:
     return " ".join(command)
 
 
@@ -526,7 +503,7 @@ def _emit_command_heartbeat(
     )
 
 
-def _run_black_box_command(
+def _legacy_run_black_box_command(
     *,
     command: tuple[str, ...],
     cwd: Path,
@@ -588,12 +565,12 @@ def _run_black_box_command(
 
         reader_threads = [
             threading.Thread(
-                target=_read_command_stream,
+                target=_legacy_read_command_stream,
                 args=("stdout", process.stdout, output_queue),
                 daemon=True,
             ),
             threading.Thread(
-                target=_read_command_stream,
+                target=_legacy_read_command_stream,
                 args=("stderr", process.stderr, output_queue),
                 daemon=True,
             ),
@@ -657,7 +634,7 @@ def _run_black_box_command(
             if hard_deadline is not None and now >= hard_deadline:
                 timed_out = True
                 exit_code = 124
-                cleanup = _stop_process_group_for_streaming(process)
+                cleanup = _legacy_stop_process_group_for_streaming(process)
                 for thread in reader_threads:
                     thread.join(timeout=1.0)
                 timeout_label = (
@@ -678,11 +655,11 @@ def _run_black_box_command(
             ):
                 no_progress = True
                 exit_code = PROVIDER_NO_PROGRESS_EXIT_CODE
-                cleanup = _stop_process_group_for_streaming(process)
+                cleanup = _legacy_stop_process_group_for_streaming(process)
                 for thread in reader_threads:
                     thread.join(timeout=1.0)
-                stdout_tail = _text_tail("".join(stdout_chunks))
-                stderr_tail = _text_tail("".join(stderr_chunks))
+                stdout_tail = _legacy_text_tail("".join(stdout_chunks))
+                stderr_tail = _legacy_text_tail("".join(stderr_chunks))
                 no_progress_details = {
                     "reason": "provider-no-progress",
                     "message": "provider-no-progress before completed stage artifact",
@@ -719,7 +696,7 @@ def _run_black_box_command(
         if exit_code is None:
             exit_code = process.returncode if process.returncode is not None else 1
     except LiveE2EInterrupted as exc:
-        cleanup = _stop_process_group_for_streaming(process)
+        cleanup = _legacy_stop_process_group_for_streaming(process)
         for thread in reader_threads:
             thread.join(timeout=1.0)
         duration_seconds = time.monotonic() - started
@@ -746,7 +723,7 @@ def _run_black_box_command(
         }
         raise
     except KeyboardInterrupt as exc:
-        cleanup = _stop_process_group_for_streaming(process)
+        cleanup = _legacy_stop_process_group_for_streaming(process)
         for thread in reader_threads:
             thread.join(timeout=1.0)
         duration_seconds = time.monotonic() - started
@@ -791,7 +768,7 @@ def _run_black_box_command(
     )
 
 
-def _read_command_stream(
+def _legacy_read_command_stream(
     name: str,
     stream: TextIO | None,
     output_queue: Queue[tuple[str, str | None]],
@@ -808,7 +785,7 @@ def _read_command_stream(
         output_queue.put((name, None))
 
 
-def _stop_process_group_for_streaming(
+def _legacy_stop_process_group_for_streaming(
     process: subprocess.Popen[str] | None,
 ) -> dict[str, object]:
     if process is None:
@@ -850,7 +827,7 @@ def _stop_process_group_for_streaming(
     }
 
 
-def _terminate_process_group(
+def _legacy_terminate_process_group(
     process: subprocess.Popen[str] | None,
 ) -> dict[str, object]:
     if process is None:
@@ -889,8 +866,8 @@ def _terminate_process_group(
     }
 
 
-def _terminate_process(process: subprocess.Popen[str]) -> tuple[str, str, int | None]:
-    cleanup = _terminate_process_group(process)
+def _legacy_terminate_process(process: subprocess.Popen[str]) -> tuple[str, str, int | None]:
+    cleanup = _legacy_terminate_process_group(process)
     return_code = cleanup.get("return_code")
     return (
         str(cleanup.get("stdout_text") or ""),
@@ -899,7 +876,7 @@ def _terminate_process(process: subprocess.Popen[str]) -> tuple[str, str, int | 
     )
 
 
-def _timeout_output_to_text(value: str | bytes | None) -> str:
+def _legacy_timeout_output_to_text(value: str | bytes | None) -> str:
     if value is None:
         return ""
     if isinstance(value, bytes):
@@ -907,8 +884,15 @@ def _timeout_output_to_text(value: str | bytes | None) -> str:
     return value
 
 
-def _text_tail(value: str, *, max_chars: int = 4000) -> str:
+def _legacy_text_tail(value: str, *, max_chars: int = 4000) -> str:
     return value[-max_chars:] if len(value) > max_chars else value
+
+
+# Compatibility bindings stay monkeypatchable from the orchestration facade while the
+# canonical process implementation and result model are owned by the steps module.
+_command_text = _steps_command_text
+_run_black_box_command = _steps_run_black_box_command
+_terminate_process = _steps_terminate_process
 
 
 def _observed_path_payload(path: Path) -> dict[str, object]:
@@ -5090,18 +5074,7 @@ def _observed_stage_status(ctx: FlowContext, stage: str) -> str | None:
     return None if metadata is None else metadata.status
 
 
-def _combined_frontend_checkpoint_classification(
-    *classifications: StepClassification,
-) -> StepClassification:
-    if any(classification == "fail" for classification in classifications):
-        return "fail"
-    if any(classification == "pass" for classification in classifications):
-        return "pass"
-    if any(classification == "blocked" for classification in classifications):
-        return "blocked"
-    if any(classification == "infra-fail" for classification in classifications):
-        return "infra-fail"
-    return "skipped"
+_combined_frontend_checkpoint_classification = _steps_checkpoint_classification
 
 
 def _remediation_action_path(ctx: FlowContext, action_id: str) -> Path:

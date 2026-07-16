@@ -7,12 +7,11 @@ slice, and local task.
 
 ## Next
 
-- `W34-E5-S4-T2` — Consolidate process/checkpoint coordination and
-  `BlackBoxCommandResult` behind the existing steps module.
+- `W34-E5-S4-T3` — Extract pure quality-policy evaluation from orchestration.
 
 ## Soon
 
-- `W34-E5-S4-T3` — Extract pure quality-policy evaluation from orchestration.
+- `W34-E5-S4-T4` — Make the reports module authoritative for live report rendering.
 
 ## Parking lot
 
@@ -83,6 +82,10 @@ slice, and local task.
   queue-restoration policy in `docs/backlog/roadmap.md` (`W8-E3-S1`).
 
 ## Current reconciliation
+
+- `2026-07-16` `W34-E5-S4-T2` is complete: the steps module now owns the canonical
+  command result, interruption, owned process loop, process-group cleanup, and combined
+  checkpoint classification; orchestration exposes compatibility bindings only.
 
 - `2026-07-16` `W34-E5-S4-T1` is complete: durable flow-state creation, atomic
   persistence, read accessors, stale-run reconstruction, and explicit resume validation

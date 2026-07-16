@@ -9527,7 +9527,7 @@ Local tasks:
   orchestration. [`REF-01`]
   - Scope: harness flow-state service.
   - Verification: deterministic resume and idempotency suites preserve bundle behavior.
-- `W34-E5-S4-T2` Consolidate process/checkpoint coordination and
+- `W34-E5-S4-T2` (done) Consolidate process/checkpoint coordination and
   `BlackBoxCommandResult` behind the existing steps module. [`REF-01`, `REF-05`]
   - Scope: live process, result-model, and checkpoint services.
   - Verification: facade and orchestration expose one result type, duplicate process
