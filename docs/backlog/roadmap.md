@@ -9532,7 +9532,8 @@ Local tasks:
   - Scope: live process, result-model, and checkpoint services.
   - Verification: facade and orchestration expose one result type, duplicate process
     helpers are absent, and lifecycle/monkeypatch fixtures preserve decisions.
-- `W34-E5-S4-T3` Extract pure quality-policy evaluation from orchestration. [`REF-01`]
+- `W34-E5-S4-T3` (done) Extract pure quality-policy evaluation from orchestration.
+  [`REF-01`]
   - Scope: quality policy only.
   - Verification: existing fixture verdicts remain equivalent.
 - `W34-E5-S4-T4` Make the existing reports module authoritative for atomic report,

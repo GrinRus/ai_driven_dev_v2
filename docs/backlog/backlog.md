@@ -7,11 +7,9 @@ slice, and local task.
 
 ## Next
 
-- `W34-E5-S4-T3` — Extract pure quality-policy evaluation from orchestration.
+- `W34-E5-S4-T4` — Make the reports module authoritative for live report rendering.
 
 ## Soon
-
-- `W34-E5-S4-T4` — Make the reports module authoritative for live report rendering.
 
 ## Parking lot
 
@@ -82,6 +80,10 @@ slice, and local task.
   queue-restoration policy in `docs/backlog/roadmap.md` (`W8-E3-S1`).
 
 ## Current reconciliation
+
+- `2026-07-16` `W34-E5-S4-T3` is complete: typed stage-audit and finding inputs now
+  produce a pure quality decision with verdict, progression, action, and reason; the
+  policy module has no filesystem, subprocess, clock, or network dependencies.
 
 - `2026-07-16` `W34-E5-S4-T2` is complete: the steps module now owns the canonical
   command result, interruption, owned process loop, process-group cleanup, and combined

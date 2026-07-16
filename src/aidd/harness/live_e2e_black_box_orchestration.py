@@ -131,6 +131,11 @@ from aidd.harness.live_e2e_flow_state import (
 from aidd.harness.live_e2e_flow_state import (
     state_status as _state_status,
 )
+from aidd.harness.live_e2e_quality_policy import (
+    QualityFlowDecision,
+    StageQualityAuditInput,
+    evaluate_quality_policy,
+)
 from aidd.harness.live_runtime_config import (
     validate_live_runtime_command,
     write_live_runtime_config,
@@ -2009,14 +2014,16 @@ def _stage_quality_audit_path(
     return ctx.bundle_root / STAGE_QUALITY_AUDITS_DIRNAME / f"{stage_run_id or stage}.md"
 
 
-def _stage_quality_audit_flow_decision(path: Path) -> str | None:
+def _stage_quality_audit_flow_decision(path: Path) -> QualityFlowDecision | None:
     if not path.exists():
         return None
     match = _QUALITY_REVIEW_DECISION_PATTERN.search(path.read_text(encoding="utf-8"))
     if match is None:
         return None
     decision = match.group("decision").strip().lower()
-    return decision if decision in _QUALITY_REVIEW_FLOW_DECISIONS else None
+    if decision not in _QUALITY_REVIEW_FLOW_DECISIONS:
+        return None
+    return cast(QualityFlowDecision, decision)
 
 
 _REMEDIATION_SOURCE_STAGE_PATTERN = re.compile(
@@ -2312,57 +2319,68 @@ def _quality_review_gate(ctx: FlowContext) -> StepClassification | None:
     if not _requires_stage_quality_audits(ctx):
         return None
     handled_remediation_requests = _state_handled_quality_stage_run_ids(ctx.bundle_root)
-    for stage_run in _state_completed_stage_runs(ctx.bundle_root):
-        stage = str(stage_run["stage"])
-        stage_run_id = str(stage_run["stage_run_id"])
-        required_path = _stage_quality_audit_path(
-            ctx,
-            stage,
-            stage_run_id=stage_run_id,
+    audits = tuple(
+        StageQualityAuditInput(
+            stage=str(stage_run["stage"]),
+            stage_run_id=str(stage_run["stage_run_id"]),
+            audit_exists=_stage_quality_audit_path(
+                ctx,
+                str(stage_run["stage"]),
+                stage_run_id=str(stage_run["stage_run_id"]),
+            ).exists(),
+            flow_decision=_stage_quality_audit_flow_decision(
+                _stage_quality_audit_path(
+                    ctx,
+                    str(stage_run["stage"]),
+                    stage_run_id=str(stage_run["stage_run_id"]),
+                )
+            ),
+            remediation_already_handled=(
+                str(stage_run["stage_run_id"]) in handled_remediation_requests
+            ),
         )
-        if not required_path.exists():
-            return _record_awaiting_quality_review(
-                ctx=ctx,
-                stage=stage,
-                stage_run_id=stage_run_id,
-                required_path=required_path,
-                reason="stage quality audit file is missing",
-            )
-        decision = _stage_quality_audit_flow_decision(required_path)
-        if decision is None:
-            return _record_awaiting_quality_review(
-                ctx=ctx,
-                stage=stage,
-                stage_run_id=stage_run_id,
-                required_path=required_path,
-                reason="stage quality audit is missing a valid Flow decision",
-            )
-        if decision == "stop-not-counted":
-            return _record_manual_quality_stop(
-                ctx=ctx,
-                stage=stage,
-                stage_run_id=stage_run_id,
-                audit_path=required_path,
-            )
-        if decision == "operator-intervention":
-            return _record_awaiting_quality_review(
-                ctx=ctx,
-                stage=stage,
-                stage_run_id=stage_run_id,
-                required_path=required_path,
-                reason="stage quality audit requested operator intervention",
-                decision=decision,
-            )
-        if decision == "request-remediation":
-            if stage_run_id in handled_remediation_requests:
-                continue
-            return _handle_quality_remediation_request(
-                ctx=ctx,
-                stage=stage,
-                stage_run_id=stage_run_id,
-                audit_path=required_path,
-            )
-    return None
+        for stage_run in _state_completed_stage_runs(ctx.bundle_root)
+    )
+    policy = evaluate_quality_policy(audits)
+    if policy.action == "continue":
+        return None
+    assert policy.stage is not None
+    assert policy.stage_run_id is not None
+    required_path = _stage_quality_audit_path(
+        ctx,
+        policy.stage,
+        stage_run_id=policy.stage_run_id,
+    )
+    if policy.action == "stop":
+        return _record_manual_quality_stop(
+            ctx=ctx,
+            stage=policy.stage,
+            stage_run_id=policy.stage_run_id,
+            audit_path=required_path,
+        )
+    if policy.action == "remediate":
+        return _handle_quality_remediation_request(
+            ctx=ctx,
+            stage=policy.stage,
+            stage_run_id=policy.stage_run_id,
+            audit_path=required_path,
+        )
+    decision = next(
+        (
+            audit.flow_decision
+            for audit in audits
+            if audit.stage_run_id == policy.stage_run_id
+        ),
+        None,
+    )
+    return _record_awaiting_quality_review(
+        ctx=ctx,
+        stage=policy.stage,
+        stage_run_id=policy.stage_run_id,
+        required_path=required_path,
+        reason=policy.reason,
+        decision=decision if decision == "operator-intervention" else None,
+    )
 
 
 def _manual_quality_artifacts_payload(ctx: FlowContext) -> dict[str, object]:
