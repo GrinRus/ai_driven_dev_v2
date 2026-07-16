@@ -9062,7 +9062,7 @@ Exit evidence:
 - contract changes have one full-stack test path and stage-local ownership;
 - confirmed unreachable validator and prompt-pack surface is absent.
 
-### Epic W34-E2 — transactional state and immutable evidence (`planned`)
+### Epic W34-E2 — transactional state and immutable evidence (`done`)
 Linked stories: `US-02`, `US-03`, `US-06`, `US-10`, `US-11`
 
 #### Slice W34-E2-S1 — atomic stage publication (`done`)
@@ -9095,7 +9095,7 @@ Exit evidence:
 - a succeeded stage always has complete canonical outputs;
 - a raised adapter failure never leaves a durable executing stage.
 
-#### Slice W34-E2-S2 — canonical run identity and continuation (`planned`)
+#### Slice W34-E2-S2 — canonical run identity and continuation (`done`)
 Goal: make resume, latest-run selection, and manifest reuse agree on one authoritative
 run identity.
 
@@ -9111,12 +9111,12 @@ Local tasks:
   - Scope: run manifest creation/reuse.
   - Verification: identical resume succeeds and every immutable-field mismatch is
     rejected explicitly.
-- `W34-E2-S2-T2` Use one latest-run resolver with sub-second identity and a shared tie
+- `W34-E2-S2-T2` (done) Use one latest-run resolver with sub-second identity and a shared tie
   policy. [`BUG-07`]
   - Scope: run lookup, inspection, and resume resolution.
   - Verification: two same-second manifests resolve identically through every public
     consumer.
-- `W34-E2-S2-T3` Add explicit `--run-id` workflow continuation for non-first
+- `W34-E2-S2-T3` (done) Add explicit `--run-id` workflow continuation for non-first
   `--from-stage` starts. [`BUG-06`]
   - Scope: CLI workflow selection and core continuation service.
   - Verification: every non-first starting stage continues the requested run and
@@ -9127,7 +9127,7 @@ Exit evidence:
 - the CLI can resume any valid non-first stage without allocating a contradictory run;
 - every consumer chooses the same latest run.
 
-#### Slice W34-E2-S3 — immutable completed-run overlays and accountability (`planned`)
+#### Slice W34-E2-S3 — immutable completed-run overlays and accountability (`done`)
 Goal: preserve completed-run bytes while exposing truthful operator state and all prompts
 actually used.
 
@@ -9137,11 +9137,11 @@ Dependencies:
 
 Local tasks:
 
-- `W34-E2-S3-T1` Move archive decisions to a separate append-only operator
+- `W34-E2-S3-T1` (done) Move archive decisions to a separate append-only operator
   overlay/index. [`ARCH-03`]
   - Scope: archive write/read model.
   - Verification: source manifest bytes and hash are identical before and after archive.
-- `W34-E2-S3-T2` Aggregate immutable per-attempt prompt provenance across executed
+- `W34-E2-S3-T2` (done) Aggregate immutable per-attempt prompt provenance across executed
   stages. [`ARCH-02`]
   - Scope: run accountability read model.
   - Verification: an idea-to-QA fixture exposes every executed prompt set and attempt

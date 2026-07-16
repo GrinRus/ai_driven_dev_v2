@@ -3,7 +3,14 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-from aidd.core.run_store import persist_stage_status, run_manifest_path
+import pytest
+
+from aidd.core.run_store import (
+    create_run_manifest,
+    persist_stage_status,
+    run_manifest_path,
+    work_item_runs_root,
+)
 from aidd.core.stage_registry import resolve_expected_output_documents
 from aidd.core.stages import STAGES
 from aidd.core.state_machine import StageState
@@ -123,8 +130,7 @@ def _mark_fake_stage_succeeded(
         ledger = ledger.transition("TL-1", TaskExecutionStatus.EXECUTING, attempt_number=1)
         ledger = ledger.transition("TL-1", TaskExecutionStatus.SUCCEEDED)
         finalization_relative = (
-            f"reports/runs/{work_item}/{run_id}/stages/implement/"
-            "finalization-attempts/attempt-0001"
+            f"reports/runs/{work_item}/{run_id}/stages/implement/finalization-attempts/attempt-0001"
         )
         ledger = ledger.transition_finalization(
             TaskFinalizationStatus.EXECUTING,
@@ -251,3 +257,195 @@ def test_run_workflow_returns_stopped_result_on_stage_failure(tmp_path: Path) ->
     assert result.stopped_stage == "research"
     assert result.exit_code == 7
     assert [summary.stage for summary in result.incomplete][:1] == ["research"]
+
+
+@pytest.mark.parametrize("stage_start", STAGES[1:])
+def test_run_workflow_continues_each_non_first_stage_in_requested_run(
+    tmp_path: Path,
+    stage_start: str,
+) -> None:
+    workspace_root = tmp_path / ".aidd"
+    work_item = f"WI-CONTINUE-{stage_start.upper()}"
+    run_id = "run-existing"
+    _seed_required_context(workspace_root, work_item=work_item)
+    create_run_manifest(
+        workspace_root=workspace_root,
+        work_item=work_item,
+        run_id=run_id,
+        runtime_id="generic-cli",
+        stage_target="qa",
+        config_snapshot={"mode": "test"},
+        workflow_stage_start="idea",
+        workflow_stage_end="qa",
+    )
+    for upstream in STAGES[: STAGES.index(stage_start)]:
+        _mark_fake_stage_succeeded(
+            workspace_root=workspace_root,
+            work_item=work_item,
+            run_id=run_id,
+            stage=upstream,
+        )
+
+    executed: list[str] = []
+
+    def _stage_executor(request: WorkflowStageExecutionRequest) -> None:
+        executed.append(request.stage)
+        _mark_fake_stage_succeeded(
+            workspace_root=request.workspace_root,
+            work_item=request.work_item,
+            run_id=request.run_id,
+            stage=request.stage,
+        )
+
+    result = run_workflow(
+        request=WorkflowRunRequest(
+            work_item=work_item,
+            runtime_id="generic-cli",
+            workspace_root=workspace_root,
+            config_path=Path("aidd.test.toml"),
+            config_snapshot={"mode": "test"},
+            stage_start=stage_start,
+            stage_end=stage_start,
+            run_id=run_id,
+            continuation=True,
+        ),
+        stage_executor=_stage_executor,
+    )
+
+    assert result.completed is True
+    assert result.run_id == run_id
+    assert executed == [stage_start]
+
+
+def test_run_workflow_rejects_non_first_start_without_run_before_allocation(
+    tmp_path: Path,
+) -> None:
+    workspace_root = tmp_path / ".aidd"
+    request = WorkflowRunRequest(
+        work_item="WI-NO-RUN",
+        runtime_id="generic-cli",
+        workspace_root=workspace_root,
+        config_path=Path("aidd.test.toml"),
+        config_snapshot={"mode": "test"},
+        stage_start="research",
+        stage_end="research",
+    )
+
+    with pytest.raises(ValueError, match="requires an explicit run_id"):
+        run_workflow(request=request, stage_executor=lambda _: None)
+
+    assert not work_item_runs_root(workspace_root, "WI-NO-RUN").exists()
+
+
+def test_run_workflow_rejects_missing_continuation_run_before_allocation(
+    tmp_path: Path,
+) -> None:
+    workspace_root = tmp_path / ".aidd"
+    request = WorkflowRunRequest(
+        work_item="WI-MISSING-RUN",
+        runtime_id="generic-cli",
+        workspace_root=workspace_root,
+        config_path=Path("aidd.test.toml"),
+        config_snapshot={"mode": "test"},
+        stage_start="research",
+        stage_end="research",
+        run_id="run-missing",
+        continuation=True,
+    )
+
+    with pytest.raises(ValueError, match="does not exist"):
+        run_workflow(request=request, stage_executor=lambda _: None)
+
+    assert not work_item_runs_root(workspace_root, "WI-MISSING-RUN").exists()
+
+
+@pytest.mark.parametrize(
+    ("original_end", "request_start", "request_end", "runtime_id", "expected"),
+    (
+        ("plan", "research", "qa", "generic-cli", "outside"),
+        ("qa", "research", "research", "codex", "immutable fields"),
+    ),
+)
+def test_run_workflow_rejects_incompatible_continuation_without_manifest_mutation(
+    tmp_path: Path,
+    original_end: str,
+    request_start: str,
+    request_end: str,
+    runtime_id: str,
+    expected: str,
+) -> None:
+    workspace_root = tmp_path / ".aidd"
+    work_item = "WI-INCOMPATIBLE"
+    run_id = "run-existing"
+    manifest_path = create_run_manifest(
+        workspace_root=workspace_root,
+        work_item=work_item,
+        run_id=run_id,
+        runtime_id="generic-cli",
+        stage_target=original_end,
+        config_snapshot={"mode": "test"},
+        workflow_stage_start="idea",
+        workflow_stage_end=original_end,
+    )
+    before = manifest_path.read_bytes()
+
+    with pytest.raises(ValueError, match=expected):
+        run_workflow(
+            request=WorkflowRunRequest(
+                work_item=work_item,
+                runtime_id=runtime_id,
+                workspace_root=workspace_root,
+                config_path=Path("aidd.test.toml"),
+                config_snapshot={"mode": "test"},
+                stage_start=request_start,
+                stage_end=request_end,
+                run_id=run_id,
+                continuation=True,
+            ),
+            stage_executor=lambda _: None,
+        )
+
+    assert manifest_path.read_bytes() == before
+
+
+def test_run_workflow_rejects_closed_continuation(tmp_path: Path) -> None:
+    workspace_root = tmp_path / ".aidd"
+    work_item = "WI-CLOSED"
+    run_id = "run-existing"
+    _seed_required_context(workspace_root, work_item=work_item)
+    manifest_path = create_run_manifest(
+        workspace_root=workspace_root,
+        work_item=work_item,
+        run_id=run_id,
+        runtime_id="generic-cli",
+        stage_target="research",
+        config_snapshot={"mode": "test"},
+        workflow_stage_start="idea",
+        workflow_stage_end="research",
+    )
+    for stage in ("idea", "research"):
+        _mark_fake_stage_succeeded(
+            workspace_root=workspace_root,
+            work_item=work_item,
+            run_id=run_id,
+            stage=stage,
+        )
+    before = manifest_path.read_bytes()
+
+    with pytest.raises(ValueError, match="already closed"):
+        run_workflow(
+            request=WorkflowRunRequest(
+                work_item=work_item,
+                runtime_id="generic-cli",
+                workspace_root=workspace_root,
+                config_path=Path("aidd.test.toml"),
+                config_snapshot={"mode": "test"},
+                stage_start="research",
+                stage_end="research",
+                run_id=run_id,
+                continuation=True,
+            ),
+            stage_executor=lambda _: None,
+        )
+
+    assert manifest_path.read_bytes() == before

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
@@ -88,6 +89,48 @@ def test_latest_run_path_uses_manifest_updated_timestamp(tmp_path: Path) -> None
         work_item=work_item,
         run_id="run-001",
     )
+
+
+def test_latest_run_resolver_preserves_sub_second_identity(tmp_path: Path) -> None:
+    workspace_root = tmp_path / ".aidd"
+    work_item = "WI-SUBSECOND"
+    same_second = datetime(2026, 7, 16, 10, 30, 0, tzinfo=UTC)
+
+    for run_id in ("run-001", "run-002"):
+        create_run_manifest(
+            workspace_root=workspace_root,
+            work_item=work_item,
+            run_id=run_id,
+            runtime_id="generic-cli",
+            stage_target="plan",
+            config_snapshot={"mode": "test"},
+        )
+    persist_stage_status(
+        workspace_root=workspace_root,
+        work_item=work_item,
+        run_id="run-001",
+        stage="plan",
+        status="running",
+        changed_at_utc=same_second.replace(microsecond=100_000),
+    )
+    persist_stage_status(
+        workspace_root=workspace_root,
+        work_item=work_item,
+        run_id="run-002",
+        stage="plan",
+        status="running",
+        changed_at_utc=same_second.replace(microsecond=900_000),
+    )
+
+    first_payload = json.loads(
+        run_manifest_path(workspace_root, work_item, "run-001").read_text(encoding="utf-8")
+    )
+    second_payload = json.loads(
+        run_manifest_path(workspace_root, work_item, "run-002").read_text(encoding="utf-8")
+    )
+    assert first_payload["updated_at_utc"] == "2026-07-16T10:30:00.100000Z"
+    assert second_payload["updated_at_utc"] == "2026-07-16T10:30:00.900000Z"
+    assert latest_run_id(workspace_root=workspace_root, work_item=work_item) == "run-002"
 
 
 def test_latest_attempt_number_resolves_highest_attempt(tmp_path: Path) -> None:

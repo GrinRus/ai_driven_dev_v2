@@ -512,6 +512,34 @@ def test_run_requires_explicit_runtime_for_product_execution() -> None:
     assert "id" in result.output
 
 
+def test_run_requires_explicit_run_id_for_non_first_start(tmp_path: Path) -> None:
+    workspace_root = tmp_path / ".aidd"
+    config_path = _write_config(tmp_path)
+
+    result = runner.invoke(
+        cli_main.app,
+        [
+            "run",
+            "--work-item",
+            "WI-CONTINUE",
+            "--runtime",
+            "generic-cli",
+            "--from-stage",
+            "research",
+            "--to-stage",
+            "plan",
+            "--root",
+            str(workspace_root),
+            "--config",
+            str(config_path),
+        ],
+    )
+
+    assert result.exit_code == 2
+    assert "--run-id" in result.output
+    assert not work_item_runs_root(workspace_root, "WI-CONTINUE").exists()
+
+
 def test_run_reports_actionable_missing_intake_context(tmp_path: Path) -> None:
     workspace_root = tmp_path / ".aidd"
     config_path = _write_config(tmp_path)

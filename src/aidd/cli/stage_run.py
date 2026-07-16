@@ -43,6 +43,7 @@ from aidd.core.run_store import (
     next_attempt_number,
     run_attempt_root,
     run_root,
+    write_attempt_artifact_index,
 )
 from aidd.core.runtime_operator import (
     OPERATOR_REQUESTS_FILENAME,
@@ -90,10 +91,7 @@ class StageRunOptions:
     cancel_requested: Callable[[], bool] | None = None
     defer_success_publication: bool = False
     validation_finding_provider: (
-        Callable[
-            [StageExecutionState, StageOutputDiscovery], tuple[ValidationFinding, ...]
-        ]
-        | None
+        Callable[[StageExecutionState, StageOutputDiscovery], tuple[ValidationFinding, ...]] | None
     ) = None
     intervention_request_path: Path | None = None
 
@@ -333,6 +331,15 @@ def _execute_adapter_invocation(
         prompt_pack_paths=tuple(prompt_pack_file_paths),
         repair_mode=invocation.repair_mode,
         intervention_mode=invocation.attempt_mode == "intervention",
+    )
+    write_attempt_artifact_index(
+        workspace_root=runtime_config.workspace_root,
+        work_item=invocation.work_item,
+        run_id=invocation.run_id,
+        stage=invocation.stage,
+        attempt_number=invocation.attempt_number,
+        attempt_mode=invocation.attempt_mode,
+        prompt_pack_paths=prompt_pack_paths_for_runtime,
     )
     runtime_request = StageRuntimeRequest(
         runtime_id=options.runtime,

@@ -11,6 +11,7 @@ from aidd.core.models.run import RepairHistoryEntry, RunArtifactIndex, StageRunM
 from aidd.core.resources import resolve_resource_layout_from_contracts_root
 from aidd.core.run_provenance import (
     classify_resource_source,
+    collect_prompt_file_provenance,
     collect_prompt_pack_provenance,
     resolve_repository_git_sha,
     resolve_resource_revision,
@@ -46,7 +47,7 @@ RUN_ADAPTER_EXCEPTION_FILENAME = "adapter-exception.json"
 
 
 def _format_utc_timestamp(timestamp: datetime | None = None) -> str:
-    moment = (timestamp or datetime.now(UTC)).astimezone(UTC).replace(microsecond=0)
+    moment = (timestamp or datetime.now(UTC)).astimezone(UTC)
     return moment.isoformat().replace("+00:00", "Z")
 
 
@@ -592,6 +593,8 @@ def write_attempt_artifact_index(
     changed_at_utc: datetime | None = None,
     contracts_root: Path = DEFAULT_STAGE_CONTRACTS_ROOT,
     repository_root: Path | None = None,
+    attempt_mode: str | None = None,
+    prompt_pack_paths: tuple[Path, ...] | None = None,
 ) -> Path:
     artifact_index_path = run_attempt_artifact_index_path(
         workspace_root=workspace_root,
@@ -635,11 +638,19 @@ def write_attempt_artifact_index(
         repository_root=repository_root,
     )
     resource_source = classify_resource_source(resolved_repository_root)
-    prompt_pack_provenance = collect_prompt_pack_provenance(
-        stage_target=stage,
-        contracts_root=contracts_root,
-        resource_root=resolved_repository_root,
-    )
+    if prompt_pack_paths is not None:
+        prompt_pack_provenance = collect_prompt_file_provenance(
+            prompt_pack_paths=prompt_pack_paths,
+            resource_root=resolved_repository_root,
+        )
+    elif existing_index is not None:
+        prompt_pack_provenance = existing_index.prompt_pack_provenance
+    else:
+        prompt_pack_provenance = collect_prompt_pack_provenance(
+            stage_target=stage,
+            contracts_root=contracts_root,
+            resource_root=resolved_repository_root,
+        )
 
     index = RunArtifactIndex.create(
         run_id=run_id,
@@ -651,6 +662,7 @@ def write_attempt_artifact_index(
         prompt_pack_provenance=prompt_pack_provenance,
         resource_source=resource_source,
         resource_root=resolved_repository_root.as_posix(),
+        attempt_mode=attempt_mode,
         changed_at_utc=timestamp,
     )
     if existing_index is not None:
@@ -665,6 +677,7 @@ def write_attempt_artifact_index(
             prompt_pack_provenance=index.prompt_pack_provenance,
             resource_source=index.resource_source,
             resource_root=index.resource_root,
+            attempt_mode=attempt_mode or existing_index.attempt_mode,
             created_at_utc=existing_index.created_at_utc,
             updated_at_utc=timestamp,
         )
@@ -964,29 +977,16 @@ def persist_run_archive_decision(
     source: str = "ui",
     changed_at_utc: datetime | None = None,
 ) -> dict[str, Any]:
-    manifest_path = run_manifest_path(
+    from aidd.core.run_archive import persist_run_archive_decision as persist_overlay
+
+    return persist_overlay(
         workspace_root=workspace_root,
         work_item=work_item,
         run_id=run_id,
+        reason=reason,
+        source=source,
+        changed_at_utc=changed_at_utc,
     )
-    if not manifest_path.exists():
-        raise ValueError(f"Run manifest is missing for work item '{work_item}', run '{run_id}'.")
-    payload = json.loads(manifest_path.read_text(encoding="utf-8"))
-    if not isinstance(payload, dict):
-        raise ValueError(
-            f"Run manifest must be a JSON object for work item '{work_item}', run '{run_id}'."
-        )
-    timestamp = _format_utc_timestamp(changed_at_utc)
-    archive = {
-        "archived": True,
-        "archived_at_utc": timestamp,
-        "reason": reason.strip() if isinstance(reason, str) and reason.strip() else None,
-        "source": source.strip() or "ui",
-    }
-    payload["operator_archive"] = archive
-    payload["updated_at_utc"] = timestamp
-    _write_json_payload(manifest_path, payload)
-    return archive
 
 
 @dataclass(frozen=True)

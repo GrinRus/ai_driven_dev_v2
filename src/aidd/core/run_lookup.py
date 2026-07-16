@@ -48,6 +48,10 @@ class CorruptedRunError(ResumeGuardError):
     """Raised when run metadata is missing or malformed."""
 
 
+class AmbiguousLatestRunError(CorruptedRunError):
+    """Raised when multiple runs share the latest authoritative timestamp."""
+
+
 class ClosedRunError(ResumeGuardError):
     """Raised when a run has already reached a terminal stage status."""
 
@@ -143,7 +147,17 @@ def latest_run_path(workspace_root: Path, work_item: str) -> Path | None:
     if not entries:
         return None
 
-    return max(entries, key=lambda item: (item[1], item[0].name))[0]
+    latest_timestamp = max(timestamp for _, timestamp in entries)
+    matching_paths = sorted(
+        (path for path, timestamp in entries if timestamp == latest_timestamp),
+        key=lambda path: path.name,
+    )
+    if len(matching_paths) > 1:
+        raise AmbiguousLatestRunError(
+            "Ambiguous latest run for work item "
+            f"'{work_item}': {', '.join(path.name for path in matching_paths)}."
+        )
+    return matching_paths[0]
 
 
 def latest_run_id(workspace_root: Path, work_item: str) -> str | None:
@@ -264,21 +278,9 @@ def guard_run_resume(
 
 
 def guard_latest_run_resume(workspace_root: Path, work_item: str, stage: str) -> str:
-    entries = _latest_run_entries(workspace_root=workspace_root, work_item=work_item)
-    if not entries:
+    run_id = latest_run_id(workspace_root=workspace_root, work_item=work_item)
+    if run_id is None:
         raise CorruptedRunError(f"No resumable runs found for work item '{work_item}'.")
-
-    latest_timestamp = max(timestamp for _, timestamp in entries)
-    matching_run_ids = sorted(
-        path.name for path, timestamp in entries if timestamp == latest_timestamp
-    )
-    if len(matching_run_ids) > 1:
-        raise CorruptedRunError(
-            "Ambiguous latest run for work item "
-            f"'{work_item}': {', '.join(matching_run_ids)}."
-        )
-
-    run_id = matching_run_ids[0]
     guard_run_resume(
         workspace_root=workspace_root,
         work_item=work_item,

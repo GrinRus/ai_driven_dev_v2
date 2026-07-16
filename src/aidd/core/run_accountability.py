@@ -6,7 +6,8 @@ from pathlib import Path
 from typing import Any
 
 from aidd.core.run_inspection import resolve_run_metadata_summary
-from aidd.core.run_store import run_manifest_path
+from aidd.core.run_lookup import latest_attempt_number
+from aidd.core.run_store import load_attempt_artifact_index, run_manifest_path
 from aidd.core.stages import STAGES
 
 
@@ -25,6 +26,14 @@ class RunAccountabilityStage:
 
 
 @dataclass(frozen=True, slots=True)
+class RunAccountabilityAttempt:
+    stage: str
+    attempt_number: int
+    attempt_mode: str
+    prompt_pack_provenance: tuple[RunAccountabilityPrompt, ...]
+
+
+@dataclass(frozen=True, slots=True)
 class RunAccountabilityView:
     run_id: str
     work_item: str
@@ -39,6 +48,7 @@ class RunAccountabilityView:
     resource_root: str | None
     config_snapshot: dict[str, Any]
     prompt_pack_provenance: tuple[RunAccountabilityPrompt, ...]
+    attempts: tuple[RunAccountabilityAttempt, ...]
     stage_graph: tuple[str, ...]
     stages: tuple[RunAccountabilityStage, ...]
     warnings: tuple[str, ...]
@@ -81,12 +91,79 @@ def resolve_run_accountability(
     )
     raw_config = manifest.get("config_snapshot", {})
     config_snapshot = raw_config if isinstance(raw_config, dict) else {}
-    prompts = tuple(
-        RunAccountabilityPrompt(path=entry.path, sha256=entry.sha256)
-        for entry in summary.prompt_pack_provenance
-    )
     warnings: list[str] = []
-    if not prompts:
+    attempts: list[RunAccountabilityAttempt] = []
+    aggregate_entries: list[RunAccountabilityPrompt] = []
+    aggregate_seen: set[tuple[str, str]] = set()
+    for stage in STAGES:
+        attempt_count = latest_attempt_number(
+            workspace_root=workspace_root,
+            work_item=work_item,
+            run_id=run_id,
+            stage=stage,
+        )
+        if attempt_count is None:
+            continue
+        for attempt_number in range(1, attempt_count + 1):
+            load_failed = False
+            try:
+                index = load_attempt_artifact_index(
+                    workspace_root=workspace_root,
+                    work_item=work_item,
+                    run_id=run_id,
+                    stage=stage,
+                    attempt_number=attempt_number,
+                )
+            except (OSError, ValueError, KeyError, json.JSONDecodeError) as exc:
+                index = None
+                load_failed = True
+                warnings.append(
+                    f"Attempt evidence is malformed for {stage} attempt {attempt_number}: "
+                    f"{type(exc).__name__}."
+                )
+            attempt_prompts = tuple(
+                RunAccountabilityPrompt(path=entry.path, sha256=entry.sha256)
+                for entry in (() if index is None else index.prompt_pack_provenance)
+            )
+            attempt_mode = (
+                "unknown" if index is None or index.attempt_mode is None else index.attempt_mode
+            )
+            if index is None and not load_failed:
+                warnings.append(
+                    f"Attempt artifact index is missing for {stage} attempt {attempt_number}."
+                )
+            elif index is not None and index.attempt_mode is None:
+                warnings.append(
+                    f"Attempt mode is missing for legacy {stage} attempt {attempt_number}."
+                )
+            attempts.append(
+                RunAccountabilityAttempt(
+                    stage=stage,
+                    attempt_number=attempt_number,
+                    attempt_mode=attempt_mode,
+                    prompt_pack_provenance=attempt_prompts,
+                )
+            )
+            for entry in attempt_prompts:
+                identity = (entry.path, entry.sha256)
+                if identity not in aggregate_seen:
+                    aggregate_seen.add(identity)
+                    aggregate_entries.append(entry)
+
+    if attempts:
+        prompts = tuple(aggregate_entries)
+    else:
+        prompts = tuple(
+            RunAccountabilityPrompt(path=entry.path, sha256=entry.sha256)
+            for entry in summary.prompt_pack_provenance
+        )
+    if not attempts and prompts:
+        warnings.append(
+            "Attempt-level prompt provenance is unavailable; using run-manifest fallback."
+        )
+    if attempts and not prompts:
+        warnings.append("Attempt-level prompt provenance contains no usable prompt entries.")
+    elif not prompts:
         warnings.append(
             "Run manifest has no prompt-pack provenance; it may predate provenance capture."
         )
@@ -108,6 +185,7 @@ def resolve_run_accountability(
         resource_root=str(manifest.get("resource_root", "")).strip() or None,
         config_snapshot=config_snapshot,
         prompt_pack_provenance=prompts,
+        attempts=tuple(attempts),
         stage_graph=STAGES,
         stages=tuple(
             RunAccountabilityStage(
@@ -124,6 +202,7 @@ def resolve_run_accountability(
 
 __all__ = [
     "RunAccountabilityPrompt",
+    "RunAccountabilityAttempt",
     "RunAccountabilityStage",
     "RunAccountabilityView",
     "resolve_run_accountability",

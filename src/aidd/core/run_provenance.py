@@ -77,13 +77,32 @@ def collect_prompt_pack_provenance(
         stage=stage_target,
         contracts_root=contracts_root,
     )
-    return tuple(
-        RunArtifactIndex.PromptPackProvenanceEntry(
-            path=prompt_path,
-            sha256=_sha256_hex((resource_root / prompt_path).resolve(strict=False)),
-        )
-        for prompt_path in prompt_pack_paths
+    return collect_prompt_file_provenance(
+        prompt_pack_paths=tuple(
+            (resource_root / prompt_path).resolve(strict=False) for prompt_path in prompt_pack_paths
+        ),
+        resource_root=resource_root,
     )
+
+
+def collect_prompt_file_provenance(
+    *,
+    prompt_pack_paths: tuple[Path, ...],
+    resource_root: Path,
+) -> tuple[RunArtifactIndex.PromptPackProvenanceEntry, ...]:
+    resolved_root = resource_root.resolve(strict=False)
+    entries: list[RunArtifactIndex.PromptPackProvenanceEntry] = []
+    for prompt_path in prompt_pack_paths:
+        resolved_path = prompt_path.resolve(strict=False)
+        if not resolved_path.is_relative_to(resolved_root):
+            raise ValueError(f"Prompt pack path escapes resource root: {prompt_path}")
+        entries.append(
+            RunArtifactIndex.PromptPackProvenanceEntry(
+                path=resolved_path.relative_to(resolved_root).as_posix(),
+                sha256=_sha256_hex(resolved_path),
+            )
+        )
+    return tuple(entries)
 
 
 def _sha256_hex(path: Path) -> str:
@@ -94,6 +113,7 @@ def _sha256_hex(path: Path) -> str:
 
 __all__ = [
     "classify_resource_source",
+    "collect_prompt_file_provenance",
     "collect_prompt_pack_provenance",
     "resolve_repository_git_sha",
     "resolve_resource_revision",
