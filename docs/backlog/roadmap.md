@@ -9022,7 +9022,7 @@ Exit evidence:
 - evidence is evaluated inside its authoritative item/section rather than borrowed from
   unrelated prose.
 
-#### Slice W34-E1-S5 — validator change isolation (`planned`)
+#### Slice W34-E1-S5 — validator change isolation (`done`)
 Goal: reduce contract synchronization cost after correctness behavior is characterized.
 
 Dependencies:
@@ -9033,26 +9033,26 @@ Dependencies:
 
 Local tasks:
 
-- `W34-E1-S5-T1` Add one production-equivalent full-stack contract fixture runner.
+- `W34-E1-S5-T1` (done) Add one production-equivalent full-stack contract fixture runner.
   [`REF-04`]
   - Scope: validator test infrastructure.
   - Verification: every stage example uses the same runner and production registry.
-- `W34-E1-S5-T2` Split cross-document rules by invariant and stage behind the current
+- `W34-E1-S5-T2` (done) Split cross-document rules by invariant and stage behind the current
   public facade. [`REF-04`]
   - Scope: validator implementation modules.
   - Verification: the public finding protocol and focused stage matrices remain
     unchanged.
-- `W34-E1-S5-T3` Partition the monolithic semantic test module by stage and shared
+- `W34-E1-S5-T3` (done) Partition the monolithic semantic test module by stage and shared
   invariant. [`REF-04`]
   - Scope: validator tests only.
   - Verification: the same regression cases are collected with no duplicate fixture
     ownership.
-- `W34-E1-S5-T4` Remove unreachable validator scaffolds and unused constants after a
+- `W34-E1-S5-T4` (done) Remove unreachable validator scaffolds and unused constants after a
   public-import compatibility check. [`DEAD-02`]
   - Scope: validator dead surface only.
   - Verification: the pre-Wave-35 tasklist semantic pipeline and other unreachable
     surfaces are absent; import inventory and the complete validator suite pass.
-- `W34-E1-S5-T5` Remove the unused packaged `common/run-rules.md` fragment without
+- `W34-E1-S5-T5` (done) Remove the unused packaged `common/run-rules.md` fragment without
   changing active prompt composition. [`DEAD-02`]
   - Scope: packaged prompt resources.
   - Verification: wheel inventory passes and active prompt hashes remain unchanged.

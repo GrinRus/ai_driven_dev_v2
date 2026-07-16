@@ -76,15 +76,6 @@ from aidd.validators.semantic_rules.evidence import (
 )
 from aidd.validators.semantic_rules.findings import validation_finding
 from aidd.validators.semantic_rules.ids import (
-    CITATION_ID_PATTERN as CITATION_ID_PATTERN,
-)
-from aidd.validators.semantic_rules.ids import (
-    MILESTONE_ID_PATTERN as MILESTONE_ID_PATTERN,
-)
-from aidd.validators.semantic_rules.ids import (
-    TASKLIST_TASK_ID_PATTERN as TASKLIST_TASK_ID_PATTERN,
-)
-from aidd.validators.semantic_rules.ids import (
     extract_citation_ids as extract_citation_ids,
 )
 from aidd.validators.semantic_rules.ids import (
@@ -124,10 +115,6 @@ UNSUPPORTED_VERDICT_CODE = "SEM-UNSUPPORTED-VERDICT"
 MISSING_EVIDENCE_REF_CODE = "SEM-MISSING-EVIDENCE-REF"
 RISK_UNDERREPORT_CODE = "SEM-RISK-UNDERREPORT"
 
-STAGE_HEADING_REQUIREMENT_PATTERN = re.compile(
-    r"required heading coverage in\s+`([^`]+)`\s*\((.+)\)",
-    flags=re.IGNORECASE,
-)
 UNSUPPORTED_CLAIM_PATTERN = re.compile(
     r"\b(always|never|guarantee(?:d|s)?|proven|certain(?:ly)?)\b",
     flags=re.IGNORECASE,

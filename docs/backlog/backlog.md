@@ -7,7 +7,6 @@ slice, and local task.
 
 ## Next
 
-- `W34-E1-S5-T1` — Add one production-equivalent full-stack contract fixture runner.
 
 ## Soon
 
@@ -95,6 +94,6 @@ slice, and local task.
 
 ## Current reconciliation
 
-- `2026-07-15` validator-report protocol v1 now owns registry, renderer, contract,
-  stage-brief skeleton, repair guidance, and all production readers. `W34-E1-S3-T2`
-  is next for the separate eight-stage example and exact invalid/repair normalization.
+- `2026-07-16` `W34-E1-S5` is complete: contract fixtures use the production coordinator,
+  cross-document and semantic-test ownership is isolated, and confirmed dead validator and
+  prompt surfaces are absent. The next bounded queue requires a separate reconciliation.
