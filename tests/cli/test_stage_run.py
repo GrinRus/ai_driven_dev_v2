@@ -314,17 +314,17 @@ def _write_cli_config(
     config_path.write_text(
         (
             "[workspace]\n"
-            "root = \".aidd\"\n\n"
+            'root = ".aidd"\n\n'
             "[runtime.generic_cli]\n"
-            f"command = \"{runtime_command}\"\n\n"
+            f'command = "{runtime_command}"\n\n'
             "[runtime.claude_code]\n"
-            f"command = \"{claude_code_command}\"\n\n"
+            f'command = "{claude_code_command}"\n\n'
             "[runtime.codex]\n"
-            f"command = \"{codex_command}\"\n\n"
+            f'command = "{codex_command}"\n\n'
             "[runtime.opencode]\n"
-            f"command = \"{opencode_command}\"\n\n"
+            f'command = "{opencode_command}"\n\n'
             "[runtime.qwen]\n"
-            f"command = \"{qwen_command}\"\n\n"
+            f'command = "{qwen_command}"\n\n'
             "[repair]\n"
             f"max_attempts = {max_repair_attempts}\n"
         ),
@@ -413,9 +413,7 @@ def test_stage_run_executes_generic_cli_stage_and_streams_with_log_follow(
         documents=_valid_plan_output_documents(),
         exit_code=0,
     )
-    runtime_command = (
-        f"{shlex.quote(sys.executable)} {shlex.quote(writer_script.as_posix())}"
-    )
+    runtime_command = f"{shlex.quote(sys.executable)} {shlex.quote(writer_script.as_posix())}"
     config_path = _write_cli_config(tmp_path=tmp_path, runtime_command=runtime_command)
 
     result = runner.invoke(
@@ -462,7 +460,13 @@ def test_stage_run_executes_generic_cli_stage_and_streams_with_log_follow(
     assert "runtime-output-line" in runtime_log
     assert "runtime-error-line" in runtime_log
     metadata_path = (
-        workspace_root / "reports" / "runs" / "WI-001" / run_id / "stages" / "plan"
+        workspace_root
+        / "reports"
+        / "runs"
+        / "WI-001"
+        / run_id
+        / "stages"
+        / "plan"
         / "stage-metadata.json"
     )
     metadata_payload = json.loads(metadata_path.read_text(encoding="utf-8"))
@@ -477,9 +481,7 @@ def test_stage_run_without_log_follow_omits_stream_prefixes(tmp_path: Path) -> N
         documents=_valid_plan_output_documents(),
         exit_code=0,
     )
-    runtime_command = (
-        f"{shlex.quote(sys.executable)} {shlex.quote(writer_script.as_posix())}"
-    )
+    runtime_command = f"{shlex.quote(sys.executable)} {shlex.quote(writer_script.as_posix())}"
     config_path = _write_cli_config(tmp_path=tmp_path, runtime_command=runtime_command)
 
     result = runner.invoke(
@@ -518,9 +520,7 @@ def test_stage_run_resolves_runtime_resources_from_outside_source_checkout(
         documents=_valid_plan_output_documents(),
         exit_code=0,
     )
-    runtime_command = (
-        f"{shlex.quote(sys.executable)} {shlex.quote(writer_script.as_posix())}"
-    )
+    runtime_command = f"{shlex.quote(sys.executable)} {shlex.quote(writer_script.as_posix())}"
     config_path = _write_cli_config(tmp_path=project_root, runtime_command=runtime_command)
     monkeypatch.chdir(project_root)
 
@@ -572,9 +572,7 @@ def test_stage_run_returns_nonzero_when_runtime_fails(tmp_path: Path) -> None:
         documents={},
         exit_code=3,
     )
-    runtime_command = (
-        f"{shlex.quote(sys.executable)} {shlex.quote(writer_script.as_posix())}"
-    )
+    runtime_command = f"{shlex.quote(sys.executable)} {shlex.quote(writer_script.as_posix())}"
     config_path = _write_cli_config(tmp_path=tmp_path, runtime_command=runtime_command)
 
     result = runner.invoke(
@@ -627,9 +625,7 @@ def test_stage_run_executes_supported_non_generic_runtime(
         documents=_valid_plan_output_documents(),
         exit_code=0,
     )
-    runtime_command = (
-        f"{shlex.quote(sys.executable)} {shlex.quote(writer_script.as_posix())}"
-    )
+    runtime_command = f"{shlex.quote(sys.executable)} {shlex.quote(writer_script.as_posix())}"
     config_path = _write_cli_config(
         tmp_path=tmp_path,
         runtime_command=runtime_command,
@@ -658,10 +654,7 @@ def test_stage_run_executes_supported_non_generic_runtime(
     )
 
     assert result.exit_code == 0, result.output
-    assert (
-        f"AIDD stage run: stage=plan work_item=WI-007 runtime={runtime} "
-        in result.stdout
-    )
+    assert f"AIDD stage run: stage=plan work_item=WI-007 runtime={runtime} " in result.stdout
     assert f"[{runtime}:plan:stdout] runtime-output-line" in result.stdout
     run_id = _run_id_for_work_item(workspace_root=workspace_root, work_item="WI-007")
     runtime_log_path = (
@@ -798,9 +791,7 @@ def test_stage_run_stops_on_native_opencode_zero_exit_provider_error(
     )
     assert runtime_log_path.exists()
     runtime_exit_metadata = json.loads(
-        (runtime_log_path.parent / RUNTIME_EXIT_METADATA_FILENAME).read_text(
-            encoding="utf-8"
-        )
+        (runtime_log_path.parent / RUNTIME_EXIT_METADATA_FILENAME).read_text(encoding="utf-8")
     )
     assert runtime_exit_metadata["exit_code"] == 0
     assert runtime_exit_metadata["exit_classification"] == "provider_error"
@@ -1084,9 +1075,7 @@ def test_stage_run_retries_after_repair_and_succeeds_within_budget(tmp_path: Pat
         next_documents=_valid_plan_output_documents(repair_trace=True),
         exit_code=0,
     )
-    runtime_command = (
-        f"{shlex.quote(sys.executable)} {shlex.quote(writer_script.as_posix())}"
-    )
+    runtime_command = f"{shlex.quote(sys.executable)} {shlex.quote(writer_script.as_posix())}"
     config_path = _write_cli_config(
         tmp_path=tmp_path,
         runtime_command=runtime_command,
@@ -1139,16 +1128,40 @@ def test_stage_run_retries_after_repair_and_succeeds_within_budget(tmp_path: Pat
         workspace_root / "workitems" / "WI-004" / "stages" / "plan" / "output" / "plan.md"
     ).exists()
     stage_result_text = (
-        workspace_root
-        / "workitems"
-        / "WI-004"
-        / "stages"
-        / "plan"
-        / "output"
-        / "stage-result.md"
+        workspace_root / "workitems" / "WI-004" / "stages" / "plan" / "output" / "stage-result.md"
     ).read_text(encoding="utf-8")
     assert "- Attempt `1` (`initial`) -> failed validation." in stage_result_text
     assert "- Attempt `2` (`repair`) -> succeeded." in stage_result_text
+    first_index = json.loads(
+        run_attempt_artifact_index_path(
+            workspace_root=workspace_root,
+            work_item="WI-004",
+            run_id=run_id,
+            stage="plan",
+            attempt_number=1,
+        ).read_text(encoding="utf-8")
+    )
+    repair_index = json.loads(
+        run_attempt_artifact_index_path(
+            workspace_root=workspace_root,
+            work_item="WI-004",
+            run_id=run_id,
+            stage="plan",
+            attempt_number=2,
+        ).read_text(encoding="utf-8")
+    )
+    assert first_index["attempt_mode"] == "initial"
+    assert repair_index["attempt_mode"] == "repair"
+    first_prompt_names = {
+        Path(entry["path"]).name for entry in first_index["prompt_pack_provenance"]
+    }
+    repair_prompt_names = {
+        Path(entry["path"]).name for entry in repair_index["prompt_pack_provenance"]
+    }
+    assert "repair.md" not in first_prompt_names
+    assert "intervention.md" not in first_prompt_names
+    assert "repair.md" in repair_prompt_names
+    assert "intervention.md" not in repair_prompt_names
 
 
 def test_stage_run_stops_when_repair_budget_is_exhausted(tmp_path: Path) -> None:
@@ -1159,9 +1172,7 @@ def test_stage_run_stops_when_repair_budget_is_exhausted(tmp_path: Path) -> None
         documents=_repair_trigger_plan_output_documents(),
         exit_code=0,
     )
-    runtime_command = (
-        f"{shlex.quote(sys.executable)} {shlex.quote(writer_script.as_posix())}"
-    )
+    runtime_command = f"{shlex.quote(sys.executable)} {shlex.quote(writer_script.as_posix())}"
     config_path = _write_cli_config(
         tmp_path=tmp_path,
         runtime_command=runtime_command,
@@ -1228,9 +1239,7 @@ def test_stage_run_blocks_on_runtime_native_question_event(tmp_path: Path) -> No
         exit_code=0,
         extra_stdout_lines=(question_event,),
     )
-    runtime_command = (
-        f"{shlex.quote(sys.executable)} {shlex.quote(writer_script.as_posix())}"
-    )
+    runtime_command = f"{shlex.quote(sys.executable)} {shlex.quote(writer_script.as_posix())}"
     config_path = _write_cli_config(
         tmp_path=tmp_path,
         runtime_command="python",
@@ -1262,21 +1271,11 @@ def test_stage_run_blocks_on_runtime_native_question_event(tmp_path: Path) -> No
     assert "Answers:" in result.stdout
     run_id = _run_id_for_work_item(workspace_root=workspace_root, work_item="WI-QUESTION")
     questions_text = (
-        workspace_root
-        / "workitems"
-        / "WI-QUESTION"
-        / "stages"
-        / "plan"
-        / "questions.md"
+        workspace_root / "workitems" / "WI-QUESTION" / "stages" / "plan" / "questions.md"
     ).read_text(encoding="utf-8")
     assert "Confirm the rollout owner." in questions_text
     answers_text = (
-        workspace_root
-        / "workitems"
-        / "WI-QUESTION"
-        / "stages"
-        / "plan"
-        / "answers.md"
+        workspace_root / "workitems" / "WI-QUESTION" / "stages" / "plan" / "answers.md"
     ).read_text(encoding="utf-8")
     assert "- none" in answers_text
 
@@ -1315,9 +1314,7 @@ def test_stage_run_resumes_blocked_stage_after_answers_are_provided(tmp_path: Pa
         next_documents=_valid_plan_output_documents(),
         exit_code=0,
     )
-    runtime_command = (
-        f"{shlex.quote(sys.executable)} {shlex.quote(writer_script.as_posix())}"
-    )
+    runtime_command = f"{shlex.quote(sys.executable)} {shlex.quote(writer_script.as_posix())}"
     config_path = _write_cli_config(
         tmp_path=tmp_path,
         runtime_command=runtime_command,
@@ -1347,10 +1344,7 @@ def test_stage_run_resumes_blocked_stage_after_answers_are_provided(tmp_path: Pa
     blocked_run_id = _run_id_for_work_item(workspace_root=workspace_root, work_item="WI-006")
     answers_path = workspace_root / "workitems" / "WI-006" / "stages" / "plan" / "answers.md"
     answers_path.write_text(
-        (
-            "# Answers\n\n"
-            "- `Q1` `[resolved]` Include migration fallback in the first rollout.\n"
-        ),
+        ("# Answers\n\n- `Q1` `[resolved]` Include migration fallback in the first rollout.\n"),
         encoding="utf-8",
     )
 
@@ -1415,10 +1409,7 @@ def test_prefix_stream_chunk_formats_multiline_follow_output() -> None:
         multi_stream=True,
     )
 
-    assert formatted == (
-        "[claude-code:plan:stdout] line-1\n"
-        "[claude-code:plan:stdout] line-2\n"
-    )
+    assert formatted == ("[claude-code:plan:stdout] line-1\n[claude-code:plan:stdout] line-2\n")
 
 
 def test_prefix_stream_chunk_leaves_single_stream_output_unchanged() -> None:

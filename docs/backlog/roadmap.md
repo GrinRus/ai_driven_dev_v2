@@ -9062,7 +9062,7 @@ Exit evidence:
 - contract changes have one full-stack test path and stage-local ownership;
 - confirmed unreachable validator and prompt-pack surface is absent.
 
-### Epic W34-E2 — transactional state and immutable evidence (`planned`)
+### Epic W34-E2 — transactional state and immutable evidence (`done`)
 Linked stories: `US-02`, `US-03`, `US-06`, `US-10`, `US-11`
 
 #### Slice W34-E2-S1 — atomic stage publication (`done`)
@@ -9127,7 +9127,7 @@ Exit evidence:
 - the CLI can resume any valid non-first stage without allocating a contradictory run;
 - every consumer chooses the same latest run.
 
-#### Slice W34-E2-S3 — immutable completed-run overlays and accountability (`planned`)
+#### Slice W34-E2-S3 — immutable completed-run overlays and accountability (`done`)
 Goal: preserve completed-run bytes while exposing truthful operator state and all prompts
 actually used.
 
@@ -9141,7 +9141,7 @@ Local tasks:
   overlay/index. [`ARCH-03`]
   - Scope: archive write/read model.
   - Verification: source manifest bytes and hash are identical before and after archive.
-- `W34-E2-S3-T2` Aggregate immutable per-attempt prompt provenance across executed
+- `W34-E2-S3-T2` (done) Aggregate immutable per-attempt prompt provenance across executed
   stages. [`ARCH-02`]
   - Scope: run accountability read model.
   - Verification: an idea-to-QA fixture exposes every executed prompt set and attempt

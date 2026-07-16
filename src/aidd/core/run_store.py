@@ -11,6 +11,7 @@ from aidd.core.models.run import RepairHistoryEntry, RunArtifactIndex, StageRunM
 from aidd.core.resources import resolve_resource_layout_from_contracts_root
 from aidd.core.run_provenance import (
     classify_resource_source,
+    collect_prompt_file_provenance,
     collect_prompt_pack_provenance,
     resolve_repository_git_sha,
     resolve_resource_revision,
@@ -592,6 +593,8 @@ def write_attempt_artifact_index(
     changed_at_utc: datetime | None = None,
     contracts_root: Path = DEFAULT_STAGE_CONTRACTS_ROOT,
     repository_root: Path | None = None,
+    attempt_mode: str | None = None,
+    prompt_pack_paths: tuple[Path, ...] | None = None,
 ) -> Path:
     artifact_index_path = run_attempt_artifact_index_path(
         workspace_root=workspace_root,
@@ -635,11 +638,19 @@ def write_attempt_artifact_index(
         repository_root=repository_root,
     )
     resource_source = classify_resource_source(resolved_repository_root)
-    prompt_pack_provenance = collect_prompt_pack_provenance(
-        stage_target=stage,
-        contracts_root=contracts_root,
-        resource_root=resolved_repository_root,
-    )
+    if prompt_pack_paths is not None:
+        prompt_pack_provenance = collect_prompt_file_provenance(
+            prompt_pack_paths=prompt_pack_paths,
+            resource_root=resolved_repository_root,
+        )
+    elif existing_index is not None:
+        prompt_pack_provenance = existing_index.prompt_pack_provenance
+    else:
+        prompt_pack_provenance = collect_prompt_pack_provenance(
+            stage_target=stage,
+            contracts_root=contracts_root,
+            resource_root=resolved_repository_root,
+        )
 
     index = RunArtifactIndex.create(
         run_id=run_id,
@@ -651,6 +662,7 @@ def write_attempt_artifact_index(
         prompt_pack_provenance=prompt_pack_provenance,
         resource_source=resource_source,
         resource_root=resolved_repository_root.as_posix(),
+        attempt_mode=attempt_mode,
         changed_at_utc=timestamp,
     )
     if existing_index is not None:
@@ -665,6 +677,7 @@ def write_attempt_artifact_index(
             prompt_pack_provenance=index.prompt_pack_provenance,
             resource_source=index.resource_source,
             resource_root=index.resource_root,
+            attempt_mode=attempt_mode or existing_index.attempt_mode,
             created_at_utc=existing_index.created_at_utc,
             updated_at_utc=timestamp,
         )

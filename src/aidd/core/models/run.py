@@ -42,8 +42,7 @@ class RepairHistoryEntry:
         normalized_trigger = self.trigger.strip().lower()
         if normalized_trigger not in {"initial", "repair", "intervention"}:
             raise ValueError(
-                "Repair history trigger must be one of 'initial', 'repair', "
-                "or 'intervention'."
+                "Repair history trigger must be one of 'initial', 'repair', or 'intervention'."
             )
         object.__setattr__(self, "trigger", normalized_trigger)
 
@@ -138,8 +137,7 @@ class StageRunMetadata:
     @classmethod
     def from_dict(cls, payload: dict[str, Any]) -> StageRunMetadata:
         history = tuple(
-            StageStatusChange.from_dict(change)
-            for change in payload.get("status_history", [])
+            StageStatusChange.from_dict(change) for change in payload.get("status_history", [])
         )
         if not history:
             fallback_timestamp = str(
@@ -152,8 +150,7 @@ class StageRunMetadata:
                 ),
             )
         repair_history = tuple(
-            RepairHistoryEntry.from_dict(entry)
-            for entry in payload.get("repair_history", [])
+            RepairHistoryEntry.from_dict(entry) for entry in payload.get("repair_history", [])
         )
 
         return cls(
@@ -262,6 +259,7 @@ class RunArtifactIndex:
     resource_root: str | None
     created_at_utc: str
     updated_at_utc: str
+    attempt_mode: str | None = None
     schema_version: int = 1
 
     @classmethod
@@ -277,6 +275,7 @@ class RunArtifactIndex:
         prompt_pack_provenance: tuple[PromptPackProvenanceEntry, ...] = (),
         resource_source: str | None = None,
         resource_root: str | None = None,
+        attempt_mode: str | None = None,
         changed_at_utc: str,
     ) -> RunArtifactIndex:
         return cls(
@@ -289,6 +288,7 @@ class RunArtifactIndex:
             prompt_pack_provenance=tuple(prompt_pack_provenance),
             resource_source=resource_source,
             resource_root=resource_root,
+            attempt_mode=attempt_mode,
             created_at_utc=changed_at_utc,
             updated_at_utc=changed_at_utc,
         )
@@ -303,6 +303,12 @@ class RunArtifactIndex:
             if parsed_entry is None:
                 continue
             prompt_pack_provenance.append(parsed_entry)
+        raw_attempt_mode = payload.get("attempt_mode")
+        attempt_mode = None
+        if raw_attempt_mode is not None:
+            attempt_mode = str(raw_attempt_mode).strip().lower()
+            if attempt_mode not in {"initial", "repair", "intervention"}:
+                raise ValueError(f"Unknown artifact-index attempt_mode: {attempt_mode}")
         return cls(
             schema_version=int(payload.get("schema_version", 1)),
             run_id=str(payload["run_id"]),
@@ -318,10 +324,9 @@ class RunArtifactIndex:
                 else None
             ),
             resource_root=(
-                str(payload["resource_root"])
-                if payload.get("resource_root") is not None
-                else None
+                str(payload["resource_root"]) if payload.get("resource_root") is not None else None
             ),
+            attempt_mode=attempt_mode,
             created_at_utc=str(payload["created_at_utc"]),
             updated_at_utc=str(payload["updated_at_utc"]),
         )
@@ -338,6 +343,7 @@ class RunArtifactIndex:
             "prompt_pack_provenance": [entry.to_dict() for entry in self.prompt_pack_provenance],
             "resource_source": self.resource_source,
             "resource_root": self.resource_root,
+            "attempt_mode": self.attempt_mode,
             "created_at_utc": self.created_at_utc,
             "updated_at_utc": self.updated_at_utc,
         }

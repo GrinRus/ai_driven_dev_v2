@@ -24,14 +24,11 @@ ATTEMPT_REPAIR_CONTEXT_FILENAME = RUN_ATTEMPT_REPAIR_CONTEXT_FILENAME
 
 
 def _missing_input_document_message(relative_path: str) -> str:
-    message = (
-        "Input bundle preparation requires an existing input document: "
-        f"{relative_path}"
-    )
+    message = f"Input bundle preparation requires an existing input document: {relative_path}"
     if relative_path.endswith("/context/intake.md"):
         return (
             f"{message}. Intake context is missing; initialize the work item with "
-            "`aidd init --work-item <id> --request \"...\" --root <root>` "
+            '`aidd init --work-item <id> --request "..." --root <root>` '
             "or create the required context documents before running a stage."
         )
     return message
@@ -293,6 +290,7 @@ def prepare_adapter_invocation(
         attempt_path=execution_state.attempt_path,
         expected_input_bundle=preparation_bundle.expected_input_bundle,
     )
+    attempt_mode = "intervention" if intervention_mode else "repair" if repair_mode else "initial"
     write_attempt_artifact_index(
         workspace_root=workspace_root,
         work_item=execution_state.work_item,
@@ -300,6 +298,7 @@ def prepare_adapter_invocation(
         stage=execution_state.stage,
         attempt_number=execution_state.attempt_number,
         contracts_root=contracts_root,
+        attempt_mode=attempt_mode,
     )
 
     return AdapterInvocationBundle(
@@ -316,13 +315,7 @@ def prepare_adapter_invocation(
         input_bundle_markdown=input_bundle_markdown,
         expected_input_bundle=preparation_bundle.expected_input_bundle,
         expected_output_documents=preparation_bundle.expected_output_documents,
-        attempt_mode=(
-            "intervention"
-            if intervention_mode
-            else "repair"
-            if repair_mode
-            else "initial"
-        ),
+        attempt_mode=attempt_mode,
         operator_request_path=intervention_request_path,
         operator_request_markdown=operator_request_markdown,
     )
@@ -351,12 +344,15 @@ def restore_core_owned_repair_brief(
             )
             / "repair-brief.md"
         )
-        if historical_repair_brief_trace_path(
-            workspace_root=workspace_root,
-            work_item=invocation_bundle.work_item,
-            run_id=invocation_bundle.run_id,
-            stage=invocation_bundle.stage,
-        ) is not None:
+        if (
+            historical_repair_brief_trace_path(
+                workspace_root=workspace_root,
+                work_item=invocation_bundle.work_item,
+                run_id=invocation_bundle.run_id,
+                stage=invocation_bundle.stage,
+            )
+            is not None
+        ):
             return model_authored_repair_brief_path
         if model_authored_repair_brief_path.exists():
             model_authored_repair_brief_path.unlink()

@@ -205,8 +205,9 @@ Wave 29 beta-hardening keeps the same boundary:
   optional while experimental authentication and transport behavior stabilize;
 - project-set UI grouping is a read model over declared related roots inside one selected
   project-local `.aidd/`, not concurrent unrelated multi-project execution;
-- prompt/workflow accountability is read-only provenance over run manifests, prompt hashes,
-  config snapshots, runtime id, Git SHA, and the canonical stage graph;
+- prompt/workflow accountability is read-only provenance over run manifests, config snapshots,
+  runtime id, Git SHA, and the canonical stage graph, plus ordered per-attempt prompt hashes and
+  the actual `initial`, `repair`, or `intervention` execution mode from each artifact index;
 - runtime approval audit is a bounded read surface over existing request/decision ledgers,
   not a replacement permission engine.
 

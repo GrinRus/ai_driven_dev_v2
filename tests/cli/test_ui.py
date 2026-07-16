@@ -2382,6 +2382,7 @@ def test_ui_operator_control_center_endpoints_return_structured_views(
     assert accountability["stage_graph"][:3] == ["idea", "research", "plan"]
     assert "config_snapshot" in accountability
     assert "prompt_pack_provenance" in accountability
+    assert "attempts" in accountability
     source_paths = {item["path"] for item in diff["source_files"]}  # type: ignore[index]
     assert {"app.py", "untracked.py"}.issubset(source_paths)
     assert diff["aidd_artifacts"]  # type: ignore[index]
