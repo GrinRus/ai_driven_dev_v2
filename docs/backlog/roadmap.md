@@ -9330,7 +9330,7 @@ Exit evidence:
 - configured timeout and cancellation cover prompt delivery, active execution, approval
   waits, pipe drain, and descendant shutdown.
 
-#### Slice W34-E4-S2 — runtime outcome and evidence truth (`planned`)
+#### Slice W34-E4-S2 — runtime outcome and evidence truth (`done`)
 Goal: make every blocked, failed, cancelled, or early-stopped runtime attempt leave one
 normalized and comparable evidence envelope.
 
@@ -9360,7 +9360,7 @@ Local tasks:
   - Scope: adapter surface.
   - Verification: a missing-executable conformance matrix produces equivalent durable
     evidence for every maintained runtime.
-- `W34-E4-S2-T5` Add a disk-backed runtime-log sink with bounded in-memory tails and
+- `W34-E4-S2-T5` (done) Add a disk-backed runtime-log sink with bounded in-memory tails and
   counters. [`PERF-02`]
   - Scope: shared runtime capture layer.
   - Verification: a high-volume fake runtime preserves the complete disk log within a

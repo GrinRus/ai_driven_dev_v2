@@ -40,6 +40,16 @@ class RuntimeEvidenceCommitRequest:
     stderr_text: str
     runtime_log_text: str
     stop_reason: RuntimeStopReason | None = None
+    runtime_log_source_path: Path | None = None
+    stdout_byte_count: int | None = None
+    stderr_byte_count: int | None = None
+    runtime_log_byte_count: int | None = None
+    stdout_char_count: int | None = None
+    stderr_char_count: int | None = None
+    runtime_log_char_count: int | None = None
+    stdout_truncated: bool = False
+    stderr_truncated: bool = False
+    runtime_log_truncated: bool = False
 
     def __post_init__(self) -> None:
         if not self.exit_classification.strip():
@@ -122,14 +132,39 @@ def commit_runtime_evidence(
         "exit_code": request.exit_code,
         "exit_classification": request.exit_classification,
         "adapter_outcome": request.adapter_outcome.value,
-        "stdout_char_count": len(request.stdout_text),
-        "stderr_char_count": len(request.stderr_text),
-        "runtime_log_char_count": len(request.runtime_log_text),
+        "stdout_char_count": (
+            request.stdout_char_count
+            if request.stdout_char_count is not None
+            else len(request.stdout_text)
+        ),
+        "stderr_char_count": (
+            request.stderr_char_count
+            if request.stderr_char_count is not None
+            else len(request.stderr_text)
+        ),
+        "runtime_log_char_count": (
+            request.runtime_log_char_count
+            if request.runtime_log_char_count is not None
+            else len(request.runtime_log_text)
+        ),
     }
+    if request.stdout_byte_count is not None:
+        metadata["stdout_byte_count"] = request.stdout_byte_count
+    if request.stderr_byte_count is not None:
+        metadata["stderr_byte_count"] = request.stderr_byte_count
+    if request.runtime_log_byte_count is not None:
+        metadata["runtime_log_byte_count"] = request.runtime_log_byte_count
+    if request.runtime_log_source_path is not None:
+        metadata["stdout_tail_truncated"] = request.stdout_truncated
+        metadata["stderr_tail_truncated"] = request.stderr_truncated
+        metadata["runtime_log_tail_truncated"] = request.runtime_log_truncated
     if request.stop_reason is not None:
         metadata["stop_reason"] = request.stop_reason.value
 
-    _atomic_write_text(paths.runtime_log_path, request.runtime_log_text)
+    if request.runtime_log_source_path is None:
+        _atomic_write_text(paths.runtime_log_path, request.runtime_log_text)
+    else:
+        os.replace(request.runtime_log_source_path, paths.runtime_log_path)
     _atomic_write_text(
         paths.runtime_exit_metadata_path,
         json.dumps(metadata, indent=2, sort_keys=True) + "\n",

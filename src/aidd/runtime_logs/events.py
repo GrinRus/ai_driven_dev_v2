@@ -20,6 +20,10 @@ class RuntimeRunResultLike(Protocol):
     def stderr_text(self) -> str:
         ...
 
+    @property
+    def structured_events_source_path(self) -> Path | None:
+        ...
+
 
 @dataclass(frozen=True, slots=True)
 class RuntimeEventArtifacts:
@@ -50,6 +54,18 @@ def structured_runtime_events(
     *,
     run_result: RuntimeRunResultLike,
 ) -> tuple[dict[str, object], ...]:
+    source_path = getattr(run_result, "structured_events_source_path", None)
+    if source_path is not None and source_path.exists():
+        events: list[dict[str, object]] = []
+        with source_path.open(encoding="utf-8") as handle:
+            for line in handle:
+                try:
+                    payload = json.loads(line)
+                except json.JSONDecodeError:
+                    continue
+                if isinstance(payload, dict):
+                    events.append(payload)
+        return tuple(events)
     stdout_events = _structured_stream_events(
         stream_text=run_result.stdout_text,
         source="stdout",

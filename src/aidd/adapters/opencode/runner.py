@@ -94,11 +94,20 @@ def _resolve_exit_classification(
     stop_reason: OpenCodeExitClassification | None,
     stdout_text: str = "",
     stderr_text: str = "",
+    structured_events_source_path: Path | None = None,
 ) -> OpenCodeExitClassification:
     if (
         stop_reason is None
         and exit_code == 0
-        and _has_structured_provider_error(stdout_text=stdout_text, stderr_text=stderr_text)
+        and (
+            _has_structured_provider_error(
+                stdout_text=stdout_text,
+                stderr_text=stderr_text,
+            )
+            or _structured_event_source_has_provider_error(
+                structured_events_source_path
+            )
+        )
     ):
         return OpenCodeExitClassification.PROVIDER_ERROR
     return resolve_exit_classification(
@@ -119,6 +128,25 @@ def _has_structured_provider_error(*, stdout_text: str, stderr_text: str) -> boo
             if not isinstance(payload, dict):
                 continue
             if _is_structured_provider_error_payload(payload):
+                return True
+    return False
+
+
+def _structured_event_source_has_provider_error(path: Path | None) -> bool:
+    if path is None or not path.exists():
+        return False
+    with path.open(encoding="utf-8") as handle:
+        for line in handle:
+            try:
+                event = json.loads(line)
+            except json.JSONDecodeError:
+                continue
+            if not isinstance(event, Mapping):
+                continue
+            payload = event.get("payload")
+            if isinstance(payload, Mapping) and _is_structured_provider_error_payload(
+                payload
+            ):
                 return True
     return False
 
@@ -450,6 +478,7 @@ def run_subprocess_with_streaming(
     cancel_requested: Callable[[], bool] | None = None,
     document_completion_paths: tuple[Path, ...] = (),
     document_completion_settle_seconds: float = _DOCUMENT_COMPLETION_SETTLE_SECONDS,
+    capture_directory: Path | None = None,
 ) -> OpenCodeRunResult:
     completion_requested = _build_document_completion_requested(
         expected_output_documents=document_completion_paths,
@@ -470,12 +499,14 @@ def run_subprocess_with_streaming(
         timeout_stop_reason=OpenCodeExitClassification.TIMEOUT,
         cancel_stop_reason=OpenCodeExitClassification.CANCELLED,
         launch_failure_stop_reason=OpenCodeExitClassification.LAUNCH_FAILURE,
+        capture_directory=capture_directory,
     )
     exit_classification = _resolve_exit_classification(
         exit_code=streamed_result.exit_code,
         stop_reason=streamed_result.stop_reason,
         stdout_text=streamed_result.stdout_text,
         stderr_text=streamed_result.stderr_text,
+        structured_events_source_path=streamed_result.structured_events_source_path,
     )
     return OpenCodeRunResult(
         exit_code=streamed_result.exit_code,
@@ -483,6 +514,17 @@ def run_subprocess_with_streaming(
         stderr_text=streamed_result.stderr_text,
         runtime_log_text=streamed_result.runtime_log_text,
         exit_classification=exit_classification,
+        runtime_log_source_path=streamed_result.runtime_log_source_path,
+        structured_events_source_path=streamed_result.structured_events_source_path,
+        stdout_byte_count=streamed_result.stdout_byte_count,
+        stderr_byte_count=streamed_result.stderr_byte_count,
+        runtime_log_byte_count=streamed_result.runtime_log_byte_count,
+        stdout_char_count=streamed_result.stdout_char_count,
+        stderr_char_count=streamed_result.stderr_char_count,
+        runtime_log_char_count=streamed_result.runtime_log_char_count,
+        stdout_truncated=streamed_result.stdout_truncated,
+        stderr_truncated=streamed_result.stderr_truncated,
+        runtime_log_truncated=streamed_result.runtime_log_truncated,
     )
 
 
@@ -499,5 +541,15 @@ def persist_attempt_runtime_log(
         stdout_text=run_result.stdout_text,
         stderr_text=run_result.stderr_text,
         runtime_log_text=run_result.runtime_log_text,
+        runtime_log_source_path=run_result.runtime_log_source_path,
+        stdout_byte_count=run_result.stdout_byte_count,
+        stderr_byte_count=run_result.stderr_byte_count,
+        runtime_log_byte_count=run_result.runtime_log_byte_count,
+        stdout_char_count=run_result.stdout_char_count,
+        stderr_char_count=run_result.stderr_char_count,
+        runtime_log_char_count=run_result.runtime_log_char_count,
+        stdout_truncated=run_result.stdout_truncated,
+        stderr_truncated=run_result.stderr_truncated,
+        runtime_log_truncated=run_result.runtime_log_truncated,
     )
     return paths.runtime_log_path

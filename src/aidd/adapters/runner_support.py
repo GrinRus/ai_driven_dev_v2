@@ -156,6 +156,16 @@ def persist_runtime_log_artifacts(
     stderr_text: str,
     runtime_log_text: str,
     adapter_outcome: RuntimeAdapterOutcome | None = None,
+    runtime_log_source_path: Path | None = None,
+    stdout_byte_count: int | None = None,
+    stderr_byte_count: int | None = None,
+    runtime_log_byte_count: int | None = None,
+    stdout_char_count: int | None = None,
+    stderr_char_count: int | None = None,
+    runtime_log_char_count: int | None = None,
+    stdout_truncated: bool = False,
+    stderr_truncated: bool = False,
+    runtime_log_truncated: bool = False,
 ) -> RuntimeArtifactPaths:
     resolved_outcome = adapter_outcome or adapter_outcome_for_classification(
         exit_classification
@@ -170,6 +180,16 @@ def persist_runtime_log_artifacts(
             stderr_text=stderr_text,
             runtime_log_text=runtime_log_text,
             stop_reason=stop_reason_for_outcome(resolved_outcome),
+            runtime_log_source_path=runtime_log_source_path,
+            stdout_byte_count=stdout_byte_count,
+            stderr_byte_count=stderr_byte_count,
+            runtime_log_byte_count=runtime_log_byte_count,
+            stdout_char_count=stdout_char_count,
+            stderr_char_count=stderr_char_count,
+            runtime_log_char_count=runtime_log_char_count,
+            stdout_truncated=stdout_truncated,
+            stderr_truncated=stderr_truncated,
+            runtime_log_truncated=runtime_log_truncated,
         )
     )
 

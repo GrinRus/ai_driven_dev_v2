@@ -2,16 +2,17 @@ from __future__ import annotations
 
 import threading
 import time
-from collections import deque
 from collections.abc import Callable
 from dataclasses import dataclass
 from enum import StrEnum
+from pathlib import Path
 from queue import Empty, Queue
 from typing import Literal, TextIO
 
 from aidd.adapters.process_io import ManagedStdinWriter
 from aidd.adapters.process_supervisor import OwnedProcessSupervisor
 from aidd.adapters.runtime_execution import RuntimeSubprocessSpec
+from aidd.adapters.runtime_log_capture import DiskBackedRuntimeLogSink
 from aidd.runtime_budget import validate_runtime_budget
 
 StreamTarget = Literal["stdout", "stderr"]
@@ -24,6 +25,17 @@ class StreamedSubprocessResult[ExitClassificationT: StrEnum]:
     stderr_text: str
     runtime_log_text: str
     stop_reason: ExitClassificationT | None
+    runtime_log_source_path: Path | None = None
+    structured_events_source_path: Path | None = None
+    stdout_byte_count: int | None = None
+    stderr_byte_count: int | None = None
+    runtime_log_byte_count: int | None = None
+    stdout_char_count: int | None = None
+    stderr_char_count: int | None = None
+    runtime_log_char_count: int | None = None
+    stdout_truncated: bool = False
+    stderr_truncated: bool = False
+    runtime_log_truncated: bool = False
 
 
 def stream_reader(
@@ -63,6 +75,7 @@ def run_streamed_subprocess[ExitClassificationT: StrEnum](
     on_stderr: Callable[[str], None] | None = None,
     queue_timeout_seconds: float = 0.1,
     launch_failure_stop_reason: ExitClassificationT | None = None,
+    capture_directory: Path | None = None,
 ) -> StreamedSubprocessResult[ExitClassificationT]:
     timeout_seconds = validate_runtime_budget(timeout_seconds)
     if completion_requested is not None and completion_stop_reason is None:
@@ -82,6 +95,7 @@ def run_streamed_subprocess[ExitClassificationT: StrEnum](
             stop_reason=launch_failure_stop_reason,
         )
     process = supervisor.process
+    sink = DiskBackedRuntimeLogSink(directory=capture_directory or spec.cwd)
 
     queue: Queue[tuple[StreamTarget, str | None]] = Queue()
     reader_threads = (
@@ -107,9 +121,6 @@ def run_streamed_subprocess[ExitClassificationT: StrEnum](
     for thread in reader_threads:
         thread.start()
 
-    stdout_chunks: deque[str] = deque()
-    stderr_chunks: deque[str] = deque()
-    runtime_log_chunks: deque[str] = deque()
     stream_done: dict[StreamTarget, bool] = {"stdout": False, "stderr": False}
     deadline = time.monotonic() + timeout_seconds if timeout_seconds is not None else None
     parent_exit_drain_deadline: float | None = None
@@ -142,6 +153,7 @@ def run_streamed_subprocess[ExitClassificationT: StrEnum](
             supervisor.drain_streams(reader_threads)
             if stdin_writer is not None:
                 stdin_writer.join()
+            sink.abort()
             raise
 
     while True:
@@ -164,6 +176,7 @@ def run_streamed_subprocess[ExitClassificationT: StrEnum](
             supervisor.request_stop()
             supervisor.drain_streams(reader_threads)
             stdin_writer.join()
+            sink.abort()
             assert writer_error is not None
             raise writer_error
         try:
@@ -179,25 +192,44 @@ def run_streamed_subprocess[ExitClassificationT: StrEnum](
                 break
             continue
 
-        runtime_log_chunks.append(chunk)
+        try:
+            sink.write(target, chunk)
+        except BaseException:
+            supervisor.request_stop()
+            supervisor.drain_streams(reader_threads)
+            if stdin_writer is not None:
+                stdin_writer.join()
+            sink.abort()
+            raise
         if target == "stdout":
-            stdout_chunks.append(chunk)
             _invoke_stream_callback(on_stdout, chunk)
             continue
 
-        stderr_chunks.append(chunk)
         _invoke_stream_callback(on_stderr, chunk)
 
     supervisor.drain_streams(reader_threads)
     if stdin_writer is not None:
         stdin_writer.join()
         if stdin_writer.error is not None and stop_reason is None:
+            sink.abort()
             raise stdin_writer.error
 
+    snapshot = sink.finish()
     return StreamedSubprocessResult(
         exit_code=process.wait(),
-        stdout_text="".join(stdout_chunks),
-        stderr_text="".join(stderr_chunks),
-        runtime_log_text="".join(runtime_log_chunks),
+        stdout_text=snapshot.stdout_text,
+        stderr_text=snapshot.stderr_text,
+        runtime_log_text=snapshot.runtime_log_text,
         stop_reason=stop_reason,
+        runtime_log_source_path=snapshot.runtime_log_source_path,
+        structured_events_source_path=snapshot.structured_events_source_path,
+        stdout_byte_count=snapshot.stdout_byte_count,
+        stderr_byte_count=snapshot.stderr_byte_count,
+        runtime_log_byte_count=snapshot.runtime_log_byte_count,
+        stdout_char_count=snapshot.stdout_char_count,
+        stderr_char_count=snapshot.stderr_char_count,
+        runtime_log_char_count=snapshot.runtime_log_char_count,
+        stdout_truncated=snapshot.stdout_truncated,
+        stderr_truncated=snapshot.stderr_truncated,
+        runtime_log_truncated=snapshot.runtime_log_truncated,
     )

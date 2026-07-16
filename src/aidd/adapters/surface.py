@@ -179,6 +179,16 @@ def _success_result(exit_classification: StrEnum, success_value: StrEnum) -> boo
     return exit_classification is success_value
 
 
+def _cleanup_runtime_capture_sources(run_result: object) -> None:
+    for field_name in (
+        "runtime_log_source_path",
+        "structured_events_source_path",
+    ):
+        path = getattr(run_result, field_name, None)
+        if isinstance(path, Path):
+            path.unlink(missing_ok=True)
+
+
 def _commit_terminal_evidence(
     *,
     attempt_path: Path,
@@ -502,8 +512,10 @@ def _execute_generic_cli(
         on_stderr=on_stderr,
         timeout_seconds=request.timeout_seconds,
         cancel_requested=request.cancel_requested,
+        capture_directory=attempt_path,
     )
     persist_generic_cli_runtime_artifacts(attempt_path=attempt_path, run_result=run_result)
+    _cleanup_runtime_capture_sources(run_result)
     evidence = runtime_evidence_paths(attempt_path)
     adapter_outcome = adapter_outcome_for_classification(
         run_result.exit_classification.value
@@ -566,6 +578,7 @@ def _execute_claude_code(
         on_stderr=on_stderr,
         timeout_seconds=request.timeout_seconds,
         cancel_requested=request.cancel_requested,
+        capture_directory=attempt_path,
     )
     persist_claude_code_runtime_log(attempt_path=attempt_path, run_result=run_result)
     evidence = runtime_evidence_paths(attempt_path)
@@ -585,6 +598,7 @@ def _execute_claude_code(
         stage=request.stage,
         adapter_question_events=question_detection.question_events,
     )
+    _cleanup_runtime_capture_sources(run_result)
     return RuntimeAdapterExecutionResult(
         succeeded=_success_result(
             run_result.exit_classification,
@@ -676,6 +690,7 @@ def _execute_codex(
             stage=request.stage,
             adapter_question_events=question_detection.question_events,
         )
+        _cleanup_runtime_capture_sources(codex_run_result)
         return RuntimeAdapterExecutionResult(
             succeeded=live_result.succeeded,
             status=live_result.status,
@@ -711,6 +726,7 @@ def _execute_codex(
         on_stderr=on_stderr,
         timeout_seconds=request.timeout_seconds,
         cancel_requested=request.cancel_requested,
+        capture_directory=attempt_path,
     )
     persist_codex_runtime_log(attempt_path=attempt_path, run_result=run_result)
     evidence = runtime_evidence_paths(attempt_path)
@@ -730,6 +746,7 @@ def _execute_codex(
         stage=request.stage,
         adapter_question_events=question_detection.question_events,
     )
+    _cleanup_runtime_capture_sources(run_result)
     return RuntimeAdapterExecutionResult(
         succeeded=_success_result(run_result.exit_classification, CodexExitClassification.SUCCESS),
         details=run_result.exit_classification.value,
@@ -789,6 +806,7 @@ def _execute_opencode(
         timeout_seconds=request.timeout_seconds,
         document_completion_paths=request.expected_output_documents,
         cancel_requested=request.cancel_requested,
+        capture_directory=attempt_path,
     )
     persist_opencode_runtime_log(attempt_path=attempt_path, run_result=run_result)
     evidence = runtime_evidence_paths(attempt_path)
@@ -808,6 +826,7 @@ def _execute_opencode(
         stage=request.stage,
         adapter_question_events=question_detection.question_events,
     )
+    _cleanup_runtime_capture_sources(run_result)
     return RuntimeAdapterExecutionResult(
         succeeded=run_result.exit_classification
         in (
@@ -897,6 +916,7 @@ def _execute_qwen(
             stage=request.stage,
             adapter_question_events=question_detection.question_events,
         )
+        _cleanup_runtime_capture_sources(qwen_run_result)
         return RuntimeAdapterExecutionResult(
             succeeded=live_result.succeeded,
             status=live_result.status,
@@ -933,6 +953,7 @@ def _execute_qwen(
         timeout_seconds=request.timeout_seconds,
         document_completion_paths=request.expected_output_documents,
         cancel_requested=request.cancel_requested,
+        capture_directory=attempt_path,
     )
     persist_qwen_runtime_log(attempt_path=attempt_path, run_result=run_result)
     evidence = runtime_evidence_paths(attempt_path)
@@ -952,6 +973,7 @@ def _execute_qwen(
         stage=request.stage,
         adapter_question_events=question_detection.question_events,
     )
+    _cleanup_runtime_capture_sources(run_result)
     return RuntimeAdapterExecutionResult(
         succeeded=run_result.exit_classification
         in (

@@ -10,6 +10,11 @@ from pathlib import Path
 from typing import Any, TypeVar
 
 from aidd.adapters.runtime_execution import RuntimeRunResult
+from aidd.adapters.runtime_log_capture import (
+    DiskBackedRuntimeLogSink,
+    RuntimeLogCaptureSnapshot,
+    StreamTarget,
+)
 from aidd.core.stage_models import AdapterExecutionStatus
 from aidd.runtime_catalog import RuntimeExecutionMode
 from aidd.runtime_permissions import RuntimeInteractionMode, RuntimePermissionPolicy
@@ -37,11 +42,11 @@ class StreamCapture:
     def __init__(
         self,
         *,
+        directory: Path,
         on_stdout: Callable[[str], None] | None = None,
         on_stderr: Callable[[str], None] | None = None,
     ) -> None:
-        self._stdout_lines: list[str] = []
-        self._stderr_lines: list[str] = []
+        self._sink = DiskBackedRuntimeLogSink(directory=directory)
         self._on_stdout = on_stdout
         self._on_stderr = on_stderr
         self._threads: list[threading.Thread] = []
@@ -49,15 +54,22 @@ class StreamCapture:
 
     @property
     def stdout_text(self) -> str:
-        return "".join(self._stdout_lines)
+        return self.snapshot.stdout_text
 
     @property
     def stderr_text(self) -> str:
-        return "".join(self._stderr_lines)
+        return self.snapshot.stderr_text
 
     @property
     def runtime_log_text(self) -> str:
-        return self.stdout_text + self.stderr_text
+        return self.snapshot.runtime_log_text
+
+    @property
+    def snapshot(self) -> RuntimeLogCaptureSnapshot:
+        return self._sink.finish()
+
+    def abort(self) -> None:
+        self._sink.abort()
 
     @property
     def reader_threads(self) -> tuple[threading.Thread, ...]:
@@ -73,7 +85,7 @@ class StreamCapture:
                 target=self._read_stream,
                 args=(
                     process.stdout,
-                    self._stdout_lines,
+                    "stdout",
                     self._on_stdout,
                     self._errors,
                 ),
@@ -86,7 +98,7 @@ class StreamCapture:
                 target=self._read_stream,
                 args=(
                     process.stderr,
-                    self._stderr_lines,
+                    "stderr",
                     self._on_stderr,
                     self._errors,
                 ),
@@ -99,16 +111,16 @@ class StreamCapture:
         for thread in self._threads:
             thread.join(timeout=timeout_seconds)
 
-    @staticmethod
     def _read_stream(
+        self,
         stream: Any,
-        destination: list[str],
+        target: StreamTarget,
         callback: Callable[[str], None] | None,
         errors: list[BaseException],
     ) -> None:
         try:
             for line in stream:
-                destination.append(line)
+                self._sink.write(target, line)
                 if callback is not None:
                     callback(line)
         except BaseException as exc:

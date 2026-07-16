@@ -103,7 +103,11 @@ def execute_qwen_live_transport(
     )
     supervisor = OwnedProcessSupervisor.launch(spec)
     process = supervisor.process
-    capture = StreamCapture(on_stdout=on_stdout, on_stderr=on_stderr)
+    capture = StreamCapture(
+        directory=attempt_path,
+        on_stdout=on_stdout,
+        on_stderr=on_stderr,
+    )
     capture.attach(process)
     seen_request_ids: set[str] = set()
     deadline = None if timeout_seconds is None else time.monotonic() + timeout_seconds
@@ -126,6 +130,7 @@ def execute_qwen_live_transport(
                 stdin_writer=stdin_writer,
             )
             assert capture_error is not None
+            capture.abort()
             raise capture_error
         if stdin_writer is not None and stdin_writer.error is not None:
             writer_error = stdin_writer.error
@@ -135,6 +140,7 @@ def execute_qwen_live_transport(
                 stdin_writer=stdin_writer,
             )
             assert writer_error is not None
+            capture.abort()
             raise writer_error
         if deadline is not None and time.monotonic() >= deadline:
             stop_reason = QwenExitClassification.TIMEOUT
@@ -194,12 +200,14 @@ def execute_qwen_live_transport(
         stdin_writer=stdin_writer,
     )
     if capture.error is not None:
+        capture.abort()
         raise capture.error
     if (
         stdin_writer is not None
         and stdin_writer.error is not None
         and stop_reason is None
     ):
+        capture.abort()
         raise stdin_writer.error
 
     if stop_reason is QwenExitClassification.CANCELLED:
@@ -433,12 +441,24 @@ def _run_result(
         classification = QwenExitClassification.SUCCESS
     else:
         classification = QwenExitClassification.NON_ZERO_EXIT
+    snapshot = capture.snapshot
     return QwenRunResult(
         exit_code=exit_code,
-        stdout_text=capture.stdout_text,
-        stderr_text=capture.stderr_text,
-        runtime_log_text=capture.runtime_log_text,
+        stdout_text=snapshot.stdout_text,
+        stderr_text=snapshot.stderr_text,
+        runtime_log_text=snapshot.runtime_log_text,
         exit_classification=classification,
+        runtime_log_source_path=snapshot.runtime_log_source_path,
+        structured_events_source_path=snapshot.structured_events_source_path,
+        stdout_byte_count=snapshot.stdout_byte_count,
+        stderr_byte_count=snapshot.stderr_byte_count,
+        runtime_log_byte_count=snapshot.runtime_log_byte_count,
+        stdout_char_count=snapshot.stdout_char_count,
+        stderr_char_count=snapshot.stderr_char_count,
+        runtime_log_char_count=snapshot.runtime_log_char_count,
+        stdout_truncated=snapshot.stdout_truncated,
+        stderr_truncated=snapshot.stderr_truncated,
+        runtime_log_truncated=snapshot.runtime_log_truncated,
     )
 
 
@@ -448,12 +468,24 @@ def _captured_run_result(
     exit_code: int | None,
     exit_classification: QwenExitClassification,
 ) -> QwenRunResult:
+    snapshot = capture.snapshot
     return QwenRunResult(
         exit_code=exit_code,
-        stdout_text=capture.stdout_text,
-        stderr_text=capture.stderr_text,
-        runtime_log_text=capture.runtime_log_text,
+        stdout_text=snapshot.stdout_text,
+        stderr_text=snapshot.stderr_text,
+        runtime_log_text=snapshot.runtime_log_text,
         exit_classification=exit_classification,
+        runtime_log_source_path=snapshot.runtime_log_source_path,
+        structured_events_source_path=snapshot.structured_events_source_path,
+        stdout_byte_count=snapshot.stdout_byte_count,
+        stderr_byte_count=snapshot.stderr_byte_count,
+        runtime_log_byte_count=snapshot.runtime_log_byte_count,
+        stdout_char_count=snapshot.stdout_char_count,
+        stderr_char_count=snapshot.stderr_char_count,
+        runtime_log_char_count=snapshot.runtime_log_char_count,
+        stdout_truncated=snapshot.stdout_truncated,
+        stderr_truncated=snapshot.stderr_truncated,
+        runtime_log_truncated=snapshot.runtime_log_truncated,
     )
 
 

@@ -7,16 +7,17 @@ slice, and local task.
 
 ## Next
 
-- `W34-E4-S2-T5` — Add a disk-backed runtime-log sink with bounded in-memory tails and
-  counters.
+- `W34-E4-S3-T1` — Propagate Qwen intervention mode and operator-request metadata.
 
 ## Soon
+
+- `W34-E4-S3-T2` — Align Claude capability reporting with executable registered
+  transports.
 
 ## Parking lot
 
 - `W34-E3-S4-T1` — Add characterization fixtures for corrected routes, jobs, approvals,
   and dashboard states.
-- `W34-E4-S3-T1` — Propagate Qwen intervention mode and operator-request metadata.
 - `W34-E5-S1-T1` — Repair stale CI-labelled smoke manifests and fixtures.
 - `W34-E5-S2-T1` — Apply one lifecycle budget and owned process groups to setup, run,
   verify, and teardown.
@@ -106,3 +107,6 @@ slice, and local task.
 - `2026-07-16` `W34-E4-S2-T4` is complete: missing, non-executable, and OS-level launch
   failures across all registered runtimes now fail before validation with a safe
   diagnostic, `exit_code: null`, and canonical launch-failure evidence.
+- `2026-07-16` `W34-E4-S2` is complete: runtime capture is disk-backed, keeps bounded
+  UTF-8 tails with exact counters, preserves the full combined log, and incrementally
+  materializes structured events. `W34-E4-S3-T1`/`T2` are now the bounded next queue.

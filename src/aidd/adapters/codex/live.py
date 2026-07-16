@@ -27,6 +27,10 @@ from aidd.adapters.live_transport import (
 )
 from aidd.adapters.process_supervisor import OwnedProcessSupervisor
 from aidd.adapters.runtime_execution import RuntimeSubprocessSpec
+from aidd.adapters.runtime_log_capture import (
+    DiskBackedRuntimeLogSink,
+    RuntimeLogCaptureSnapshot,
+)
 from aidd.core.runtime_operator import (
     RuntimeOperatorBroker,
     RuntimeOperatorDecision,
@@ -64,6 +68,7 @@ class _JsonRpcLineClient:
         *,
         process: subprocess.Popen[str],
         transcript_path: Path,
+        capture_directory: Path,
         on_stdout: Callable[[str], None] | None,
         on_stderr: Callable[[str], None] | None,
     ) -> None:
@@ -71,9 +76,8 @@ class _JsonRpcLineClient:
         self.transcript_path = transcript_path
         self._on_stdout = on_stdout
         self._on_stderr = on_stderr
+        self._sink = DiskBackedRuntimeLogSink(directory=capture_directory)
         self._messages: queue.Queue[Mapping[str, Any]] = queue.Queue()
-        self._stdout_lines: list[str] = []
-        self._stderr_lines: list[str] = []
         self._item_cache: dict[str, dict[str, Any]] = {}
         self._threads: list[threading.Thread] = []
         self._errors: list[BaseException] = []
@@ -81,15 +85,19 @@ class _JsonRpcLineClient:
 
     @property
     def stdout_text(self) -> str:
-        return "".join(self._stdout_lines)
+        return self.snapshot.stdout_text
 
     @property
     def stderr_text(self) -> str:
-        return "".join(self._stderr_lines)
+        return self.snapshot.stderr_text
 
     @property
     def runtime_log_text(self) -> str:
-        return self.stdout_text + self.stderr_text
+        return self.snapshot.runtime_log_text
+
+    @property
+    def snapshot(self) -> RuntimeLogCaptureSnapshot:
+        return self._sink.finish()
 
     @property
     def reader_threads(self) -> tuple[threading.Thread, ...]:
@@ -151,7 +159,7 @@ class _JsonRpcLineClient:
         assert self.process.stdout is not None
         try:
             for line in self.process.stdout:
-                self._stdout_lines.append(line)
+                self._sink.write("stdout", line)
                 if self._on_stdout is not None:
                     self._on_stdout(line)
                 message = _parse_json_line(line)
@@ -171,7 +179,7 @@ class _JsonRpcLineClient:
         assert self.process.stderr is not None
         try:
             for line in self.process.stderr:
-                self._stderr_lines.append(line)
+                self._sink.write("stderr", line)
                 if self._on_stderr is not None:
                     self._on_stderr(line)
         except BaseException as exc:
@@ -258,6 +266,7 @@ def execute_codex_live_transport(
     client = _JsonRpcLineClient(
         process=process,
         transcript_path=transcript_path,
+        capture_directory=attempt_path,
         on_stdout=on_stdout,
         on_stderr=on_stderr,
     )
@@ -740,12 +749,24 @@ def _run_result(
         classification = CodexExitClassification.SUCCESS
     else:
         classification = CodexExitClassification.NON_ZERO_EXIT
+    snapshot = client.snapshot
     return CodexRunResult(
         exit_code=exit_code,
-        stdout_text=client.stdout_text,
-        stderr_text=client.stderr_text,
-        runtime_log_text=client.runtime_log_text,
+        stdout_text=snapshot.stdout_text,
+        stderr_text=snapshot.stderr_text,
+        runtime_log_text=snapshot.runtime_log_text,
         exit_classification=classification,
+        runtime_log_source_path=snapshot.runtime_log_source_path,
+        structured_events_source_path=snapshot.structured_events_source_path,
+        stdout_byte_count=snapshot.stdout_byte_count,
+        stderr_byte_count=snapshot.stderr_byte_count,
+        runtime_log_byte_count=snapshot.runtime_log_byte_count,
+        stdout_char_count=snapshot.stdout_char_count,
+        stderr_char_count=snapshot.stderr_char_count,
+        runtime_log_char_count=snapshot.runtime_log_char_count,
+        stdout_truncated=snapshot.stdout_truncated,
+        stderr_truncated=snapshot.stderr_truncated,
+        runtime_log_truncated=snapshot.runtime_log_truncated,
     )
 
 
@@ -755,12 +776,24 @@ def _captured_run_result(
     exit_code: int | None,
     exit_classification: CodexExitClassification,
 ) -> CodexRunResult:
+    snapshot = client.snapshot
     return CodexRunResult(
         exit_code=exit_code,
-        stdout_text=client.stdout_text,
-        stderr_text=client.stderr_text,
-        runtime_log_text=client.runtime_log_text,
+        stdout_text=snapshot.stdout_text,
+        stderr_text=snapshot.stderr_text,
+        runtime_log_text=snapshot.runtime_log_text,
         exit_classification=exit_classification,
+        runtime_log_source_path=snapshot.runtime_log_source_path,
+        structured_events_source_path=snapshot.structured_events_source_path,
+        stdout_byte_count=snapshot.stdout_byte_count,
+        stderr_byte_count=snapshot.stderr_byte_count,
+        runtime_log_byte_count=snapshot.runtime_log_byte_count,
+        stdout_char_count=snapshot.stdout_char_count,
+        stderr_char_count=snapshot.stderr_char_count,
+        runtime_log_char_count=snapshot.runtime_log_char_count,
+        stdout_truncated=snapshot.stdout_truncated,
+        stderr_truncated=snapshot.stderr_truncated,
+        runtime_log_truncated=snapshot.runtime_log_truncated,
     )
 
 

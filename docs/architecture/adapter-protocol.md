@@ -146,7 +146,17 @@ AIDD distinguishes three observation layers.
 ### 5.1 Raw runtime log
 
 The closest possible representation of native runtime stdout/stderr. This is implemented for
-CLI-backed adapters through subprocess capture and `runtime.log` persistence.
+CLI-backed adapters through subprocess capture and `runtime.log` persistence. Capture is
+disk-backed: the sink writes the complete combined stream in observed order while retaining
+only the latest 256 KiB of stdout, 256 KiB of stderr, and 512 KiB of combined output in
+memory. Schema-v1 `runtime-exit.json` records full byte/character counters and additive tail
+truncation metadata. Oversized chunks are written completely to disk and truncated only in the
+in-memory tail.
+
+Structured JSONL records are processed incrementally while capture is active, or read from the
+provider-native JSONL artifact. Consumers never require the full raw stdout/stderr text in
+memory. A callback, writer, or capture failure terminates the owned process group and cannot
+publish a successful evidence commit.
 
 ### 5.2 Structured runtime log
 
