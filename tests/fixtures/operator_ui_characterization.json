@@ -1,0 +1,88 @@
+{
+  "approval_cas": {
+    "conflict_status": 409,
+    "decision_action": "allow_once",
+    "decision_source": "ui",
+    "durable_decision_count": 1,
+    "idempotent_status": 200,
+    "initial_status": 200
+  },
+  "dashboard_blocked_approval": {
+    "active_stage": "plan",
+    "approval_status": "approval-waiting",
+    "next_action": "inspect-validation",
+    "terminal_handoff": null
+  },
+  "dashboard_running": {
+    "active_job_status": "running",
+    "active_stage": "idea",
+    "next_action": "choose-runtime",
+    "terminal_handoff": null
+  },
+  "dashboard_runtime_failure": {
+    "active_stage": "plan",
+    "first_failure": "cancelled",
+    "next_action": "inspect-validation",
+    "terminal_handoff": null
+  },
+  "dashboard_stale_remediation": {
+    "active_stage": "qa",
+    "next_action": "rerun-stale-downstream",
+    "stale_stages": [
+      "review",
+      "qa"
+    ],
+    "terminal_handoff": null
+  },
+  "dashboard_terminal_qa": {
+    "active_stage": "qa",
+    "final_qa_status": "ready",
+    "next_action": "review-complete",
+    "terminal_handoff": "completed"
+  },
+  "job_cancellation": {
+    "cancel_state": "cancelled",
+    "exit_code": 130,
+    "previous_status": "waiting-for-operator",
+    "status": "cancelled"
+  },
+  "log_cursor_gap": {
+    "dropped_bytes": 60,
+    "has_more": true,
+    "oldest_cursor": 60,
+    "truncated": true
+  },
+  "routing": {
+    "get_static": {
+      "content_type": "text/javascript; charset=utf-8",
+      "status": 200
+    },
+    "get_unknown": {
+      "body": {
+        "error": "not found"
+      },
+      "content_type": "application/json; charset=utf-8",
+      "status": 404
+    },
+    "post_mutation_conflict": {
+      "body": {
+        "error": "Run mutation conflict: characterized owner already exists."
+      },
+      "content_type": "application/json; charset=utf-8",
+      "status": 409
+    },
+    "post_unknown": {
+      "body": {
+        "error": "not found"
+      },
+      "content_type": "application/json; charset=utf-8",
+      "status": 404
+    }
+  },
+  "terminal_decision_rejection": {
+    "body": {
+      "error": "UI job '<job-id>' is terminal and cannot accept operator decisions."
+    },
+    "status": 409
+  }
+}

@@ -11,6 +11,7 @@ const staticRoot = path.join(repositoryRoot, "src/aidd/cli/static");
 function classList() {
   return {
     add() {},
+    contains() { return false; },
     remove() {},
     toggle() {},
   };
@@ -122,6 +123,7 @@ test("operator bootstrap loads modules in declared order", async () => {
     "/operator-approvals-interventions.js",
     "/operator-logs-jobs.js",
     "/operator-next-flow-actions.js",
+    "/operator-next-flow-view.js",
     "/operator-control-center.js",
     "/operator-stage-cockpit.js",
     "/operator-main.js",
@@ -204,4 +206,65 @@ test("rejected log request renders a deterministic escaped error", async () => {
 
   assert.match(element("cockpitContent").innerHTML, /&lt;offline&gt;/);
   assert.doesNotMatch(element("cockpitContent").innerHTML, /<offline>/);
+});
+
+test("next-flow view renders terminal and readiness states without network mutations", async () => {
+  const {context, element} = domContext();
+  let fetchCount = 0;
+  context.fetch = async () => {
+    fetchCount += 1;
+    throw new Error("view must not fetch");
+  };
+  await load(context, "operator-api-state.js");
+  await load(context, "operator-shell-rendering.js");
+  await load(context, "operator-next-flow-actions.js");
+  await load(context, "operator-next-flow-view.js");
+  vm.runInContext(
+    `
+      state.selectedRuntime = "generic-cli";
+      state.readinessLoading = false;
+      state.readiness = {
+        runtimes: [{
+          runtime_id: "generic-cli",
+          provider_available: true,
+          execution_command_available: true
+        }]
+      };
+      state.dashboard = {
+        work_item: "WI-UI",
+        active_stage: "qa",
+        run: {run_id: "run-ui", runtime_id: "generic-cli", lineage: {}},
+        stages: [],
+        blockers: [],
+        next_action: {
+          action: "open-terminal-handoff",
+          label: "Review handoff",
+          detail: "Review terminal evidence.",
+          stage: "qa",
+          enabled: true
+        },
+        terminal_handoff: {
+          status: "completed",
+          final_qa_status: "ready",
+          final_artifacts: [],
+          blockers: [],
+          repair_counts: {attempts: 0, succeeded: 0, failed: 0},
+          repair_highlights: [],
+          approval_counts: {requested: 0, approved: 0, denied: 0, cancelled: 0, pending: 0},
+          questions_answered_count: 0,
+          questions_total_count: 0,
+          recommended_next_flow_actions: []
+        }
+      };
+      renderNextActionPanel();
+    `,
+    context,
+  );
+
+  const terminalHtml = vm.runInContext("renderFlowCompleteState()", context);
+
+  assert.match(terminalHtml, /Flow Complete/);
+  assert.match(terminalHtml, /QA terminal handoff/);
+  assert.match(element("nextActionPanel").innerHTML, /Review handoff/);
+  assert.equal(fetchCount, 0);
 });

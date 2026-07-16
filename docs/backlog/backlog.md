@@ -7,17 +7,15 @@ slice, and local task.
 
 ## Next
 
-- `W34-E3-S4-T1` — Add characterization fixtures for corrected routes, jobs, approvals,
-  and dashboard states.
+- `W34-E7-S3-T1` — Reject ambiguous, unknown, or malformed safety-sensitive
+  configuration.
 
 ## Soon
 
-- `W34-E3-S4-T2` — Extract thin HTTP route handlers from `cli/ui.py`.
+No tasks are queued in `Soon`.
 
 ## Parking lot
 
-- `W34-E7-S3-T1` — Reject ambiguous, unknown, or malformed safety-sensitive
-  configuration.
 - `W34-E8-S1-T2` — Normalize inherited local-task statuses and historical disposition
   semantics.
 - `W34-E8-S2-T1` — Replace stale planned/completed-wave architecture wording with
@@ -77,6 +75,28 @@ slice, and local task.
   queue-restoration policy in `docs/backlog/roadmap.md` (`W8-E3-S1`).
 
 ## Current reconciliation
+
+- `2026-07-16` `W34-E3-S4-T4`, slice `W34-E3-S4`, and Epic `W34-E3` are complete:
+  next-flow mutations remain in the compatible controller asset while terminal,
+  lineage/history, wizard, readiness/error, and next-action presentation now live in
+  a separately packaged view asset loaded before the remaining UI wiring.
+  `W34-E7-S3-T1` is promoted from Parking lot to `Next`; `Soon` remains empty.
+
+- `2026-07-16` `W34-E3-S4-T3` is complete: dashboard filesystem/read-model collection
+  now produces one immutable evidence snapshot with request-local source caching, while
+  a pure reducer projects that evidence into the unchanged serialized dashboard view.
+  `S4-T4` is promoted to `Next`; `Soon` is empty.
+
+- `2026-07-16` `W34-E3-S4-T2` is complete: exact and dynamic route dispatch, static
+  assets, query/body handling, HTTP exception mapping, and the server handler now live
+  behind a thin router while `OperatorUiService` retains business state and compatible
+  `handle_get`/`handle_post` facades. `S4-T3` is promoted to `Next`; `S4-T4` is in
+  `Soon`.
+
+- `2026-07-16` `W34-E3-S4-T1` is complete: normalized characterization fixtures now
+  pin route responses, mutation conflicts, approval CAS, cancellation, retention, and
+  running/blocked/failed/stale/terminal dashboard states. `S4-T2` is promoted to
+  `Next`; `S4-T3` is in `Soon`.
 
 - `2026-07-16` `W34-E6-S2-T3`, slice `W34-E6-S2`, and Epic `W34-E6` are complete:
   maintained checkout, Python setup, uv setup, artifact download, and Scorecard actions
