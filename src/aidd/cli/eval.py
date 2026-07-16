@@ -9,8 +9,13 @@ from rich.table import Table
 from aidd.cli.doctor import _runtime_probe_report
 from aidd.cli.support import console
 from aidd.evals.reporting import resolve_latest_eval_summary_report_path
+from aidd.harness.deterministic_eval import (
+    DeterministicEvalInputError,
+    DeterministicEvalRequest,
+    execute_deterministic_eval,
+)
 from aidd.harness.live_runtime_config import validate_live_runtime_command
-from aidd.harness.scenarios import load_scenario
+from aidd.harness.scenarios import ScenarioManifestError, load_scenario
 from aidd.runtime_catalog import get_runtime_definition
 
 
@@ -83,3 +88,32 @@ def eval_summary(
 
     console.print(f"Latest eval report: {summary_path.as_posix()}")
     console.print(summary_path.read_text(encoding="utf-8").rstrip())
+
+
+def eval_execute(
+    scenario: Annotated[str, typer.Argument(help="Deterministic scenario path")],
+    root: Annotated[
+        Path,
+        typer.Option("--root", help="Root AIDD storage directory."),
+    ] = Path(".aidd"),
+) -> None:
+    """Execute one local deterministic scenario and persist its evidence bundle."""
+    scenario_path = Path(scenario)
+    if not scenario_path.exists():
+        raise typer.BadParameter(f"Scenario not found: {scenario}")
+    try:
+        result = execute_deterministic_eval(
+            DeterministicEvalRequest(
+                scenario_path=scenario_path,
+                workspace_root=root,
+            )
+        )
+    except (DeterministicEvalInputError, ScenarioManifestError, ValueError) as exc:
+        raise typer.BadParameter(str(exc)) from exc
+
+    console.print(f"Scenario: {result.scenario_id}")
+    console.print(f"Run ID: {result.run_id}")
+    console.print(f"Status: {result.status}")
+    console.print(f"Evidence bundle: {result.bundle_root.as_posix()}")
+    if result.status != "pass":
+        raise typer.Exit(code=1)

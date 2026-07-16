@@ -9417,7 +9417,7 @@ Local tasks:
 - `W34-E5-S1-T1` (done) Repair stale CI-labelled smoke manifests and fixtures. [`BUG-11`]
   - Scope: deterministic scenarios and local fixtures.
   - Verification: each manifest passes from a freshly materialized fixture.
-- `W34-E5-S1-T2` Expose a deterministic local-only `aidd eval execute` entry point
+- `W34-E5-S1-T2` (done) Expose a deterministic local-only `aidd eval execute` entry point
   over the existing pipeline without restoring the removed legacy live-run command.
   [`TEST-01`, `DEAD-01`]
   - Scope: CLI and harness entry point.
