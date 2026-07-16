@@ -331,7 +331,14 @@ async function pollActiveJob() {
   try {
     const activeStatuses = new Set(["running", "waiting-for-operator", "cancelling"]);
     const logs = await api(`/api/jobs/${encodeURIComponent(state.activeJobId)}/logs?cursor=${state.activeJobCursor}`);
-    state.activeJobCursor = Number(logs.cursor || state.activeJobCursor);
+    if (logs.truncated) {
+      state.activeJobLogChunks.push({
+        stream: "system",
+        text: `[ui] Live log tail was truncated before cursor ${logs.oldest_cursor}; use the durable runtime log for complete evidence.\n`
+      });
+    }
+    const nextCursor = Number(logs.cursor);
+    if (Number.isFinite(nextCursor)) state.activeJobCursor = nextCursor;
     state.activeJobLogChunks.push(...(logs.chunks || []));
     state.activeJobStatus = await api(`/api/jobs/${encodeURIComponent(state.activeJobId)}`);
     renderActiveRunPanel();

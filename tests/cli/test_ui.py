@@ -9,6 +9,7 @@ import subprocess
 import sys
 import threading
 import time
+from datetime import UTC, datetime, timedelta
 from http import HTTPStatus
 from io import BytesIO
 from pathlib import Path
@@ -23,6 +24,7 @@ from aidd.cli.stage_run import StageInteractOptions, StageRunOptions
 from aidd.cli.ui import (
     OperatorUiService,
     UiRequestBodyTooLarge,
+    UiRunJobStore,
     UiServerOptions,
     _is_loopback_host,
     _read_json_body,
@@ -222,6 +224,104 @@ def _wait_job_status(
             return payload
         time.sleep(0.01)
     raise AssertionError(f"job did not reach {expected_status}: {job_id}")
+
+
+def test_ui_job_store_bounds_live_chunks_and_paginates_absolute_cursors() -> None:
+    store = UiRunJobStore(
+        max_live_log_bytes=48,
+        max_log_response_bytes=16,
+    )
+    job_id = store.create(kind="stage", stage="plan")
+    chunks = [f"chunk-{index:04d}\n" for index in range(10)]
+    for text in chunks:
+        store.append_chunk(job_id, stream="stdout", text=text)
+
+    view = store.view(job_id)
+    assert int(view["retained_live_log_bytes"]) <= 48
+    assert int(view["dropped_live_log_bytes"]) > 0
+
+    cursor = 0
+    collected = ""
+    page_count = 0
+    first_page = True
+    while True:
+        page = store.logs(job_id, cursor=cursor)
+        payload_bytes = sum(
+            len(str(chunk["text"]).encode("utf-8")) for chunk in page["chunks"]  # type: ignore[union-attr]
+        )
+        assert payload_bytes <= 16
+        if first_page:
+            assert page["truncated"] is True
+            assert int(page["oldest_cursor"]) > 0
+            first_page = False
+        next_cursor = int(page["cursor"])
+        assert next_cursor > cursor
+        collected += "".join(
+            str(chunk["text"]) for chunk in page["chunks"]  # type: ignore[union-attr]
+        )
+        page_count += 1
+        cursor = next_cursor
+        if not page["has_more"]:
+            break
+
+    assert page_count > 1
+    assert collected == "".join(chunks[-4:])
+
+
+def test_ui_job_store_truncates_oversized_unicode_chunk_by_tail() -> None:
+    store = UiRunJobStore(
+        max_live_log_bytes=16,
+        max_log_response_bytes=8,
+    )
+    job_id = store.create(kind="stage", stage="plan")
+    store.append_chunk(job_id, stream="stdout", text="🙂" * 10)
+
+    first = store.logs(job_id, cursor=0)
+    assert first["oldest_cursor"] == 24
+    assert first["truncated"] is True
+    assert first["dropped_bytes"] == 24
+    assert first["has_more"] is True
+    assert first["chunks"][0]["sequence"] == 1  # type: ignore[index]
+    assert first["chunks"][0]["truncated"] is True  # type: ignore[index]
+    assert first["chunks"][0]["dropped_bytes"] == 24  # type: ignore[index]
+    assert first["chunks"][0]["text"] == "🙂🙂"  # type: ignore[index]
+
+    second = store.logs(job_id, cursor=int(first["cursor"]))
+    assert second["chunks"][0]["text"] == "🙂🙂"  # type: ignore[index]
+    assert second["has_more"] is False
+
+
+def test_ui_job_store_evicts_terminal_jobs_by_ttl_and_count() -> None:
+    now = [datetime(2026, 7, 16, tzinfo=UTC)]
+    store = UiRunJobStore(
+        max_terminal_jobs=2,
+        terminal_job_ttl_seconds=3600,
+        now=lambda: now[0],
+    )
+
+    first = store.create(kind="stage", stage="idea")
+    store.complete(first, result={}, exit_code=0, message="completed")
+    now[0] += timedelta(seconds=1)
+    second = store.create(kind="stage", stage="research")
+    store.complete(second, result={}, exit_code=0, message="completed")
+    now[0] += timedelta(seconds=1)
+    active = store.create(kind="stage", stage="plan")
+    now[0] += timedelta(seconds=1)
+    third = store.create(kind="stage", stage="review")
+    store.complete(third, result={}, exit_code=0, message="completed")
+
+    with pytest.raises(ValueError, match="Unknown UI job"):
+        store.view(first)
+    assert store.view(active)["status"] == "running"
+    assert store.view(second)["status"] == "completed"
+    assert store.view(third)["status"] == "completed"
+
+    now[0] += timedelta(seconds=3601)
+    assert store.view(active)["status"] == "running"
+    with pytest.raises(ValueError, match="Unknown UI job"):
+        store.view(second)
+    with pytest.raises(ValueError, match="Unknown UI job"):
+        store.view(third)
 
 
 class _BodyHandler:

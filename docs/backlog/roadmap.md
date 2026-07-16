@@ -9205,7 +9205,7 @@ Exit evidence:
 - runtime behavior and durable approval history cannot disagree;
 - cancelled jobs retain no live decision-wait thread.
 
-#### Slice W34-E3-S3 — bounded local UI retention (`next`)
+#### Slice W34-E3-S3 — bounded local UI retention (`done`)
 Goal: keep a long-lived local server within explicit memory and response budgets.
 
 Dependencies:
@@ -9214,7 +9214,7 @@ Dependencies:
 
 Local tasks:
 
-- `W34-E3-S3-T1` (next) Store live chunks in a byte-bounded ring, cap responses, and evict
+- `W34-E3-S3-T1` (done) Store live chunks in a byte-bounded ring, cap responses, and evict
   terminal jobs by TTL/count. [`PERF-01`]
   - Scope: UI job registry.
   - Verification: a high-volume stress fixture stays within fixed memory and response

@@ -7,8 +7,6 @@ slice, and local task.
 
 ## Next
 
-- `W34-E3-S3-T1` — Store live chunks in a byte-bounded ring, cap responses, and evict
-  terminal jobs by TTL/count.
 
 ## Soon
 
@@ -91,7 +89,7 @@ slice, and local task.
 
 ## Current reconciliation
 
-- `2026-07-16` `W34-E3-S2` is complete: approval decisions now have one immutable
-  durable winner and cancellation terminates operator waiters without post-terminal
-  continuation. Bounded UI retention is now `Next`; UI characterization remains parked
-  behind executable frontend tests.
+- `2026-07-16` `W34-E3-S2` and `W34-E3-S3` are complete: approval decisions are
+  terminal-safe and the local UI now bounds live-log memory, response size, and terminal
+  job retention. `W34-E3-S4-T1` remains parked until executable frontend tests from
+  `W34-E5-S3` satisfy its slice dependency.
