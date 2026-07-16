@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import os
 import sys
 import time
 from collections.abc import Callable
@@ -8,7 +9,8 @@ from pathlib import Path
 
 import pytest
 
-from aidd.adapters.runtime_execution import StageRuntimeRequest
+from aidd.adapters.process_supervisor import OwnedProcessSupervisor
+from aidd.adapters.runtime_execution import RuntimeSubprocessSpec, StageRuntimeRequest
 from aidd.adapters.surface import get_runtime_adapter_surface
 from aidd.core.runtime_operator import (
     RuntimeOperatorDecision,
@@ -114,14 +116,31 @@ def _request(
     )
 
 
-def _fake_codex(tmp_path: Path, *, scenario: str = "command") -> Path:
+def _fake_codex(
+    tmp_path: Path,
+    *,
+    scenario: str = "command",
+    descendant_signal_path: Path | None = None,
+) -> Path:
     bin_dir = tmp_path / "bin"
     bin_dir.mkdir(exist_ok=True)
     script = bin_dir / "codex"
     script.write_text(
         f"#!{sys.executable}\n"
         f"scenario = {scenario!r}\n"
-        "import json, sys, time\n"
+        f"descendant_signal_path = {str(descendant_signal_path)!r}\n"
+        "import json, os, subprocess, sys, time\n"
+        "if descendant_signal_path and '--help' not in sys.argv:\n"
+        "    ready_path = descendant_signal_path + '.ready'\n"
+        "    pid_path = descendant_signal_path + '.pid'\n"
+        "    child = \"import pathlib,signal,sys,time; "
+        "signal.signal(signal.SIGTERM, lambda s,f: "
+        "(pathlib.Path(sys.argv[1]).write_text(str(s)), sys.exit(0))); "
+        "pathlib.Path(sys.argv[2]).write_text(str(__import__('os').getpid())); "
+        "pathlib.Path(sys.argv[3]).write_text('ready'); time.sleep(30)\"\n"
+        "    subprocess.Popen([sys.executable, '-c', child, descendant_signal_path, "
+        "pid_path, ready_path])\n"
+        "    while not os.path.exists(ready_path): time.sleep(0.01)\n"
         "def emit(payload):\n"
         "    print(json.dumps(payload), flush=True)\n"
         "if sys.argv[1:3] == ['app-server', '--help']:\n"
@@ -419,3 +438,61 @@ def test_codex_live_transport_enriches_file_change_from_cached_item(
         / "stage-result.md",
     )
     assert provider.requests == []
+
+
+@pytest.mark.skipif(os.name == "nt", reason="process groups are POSIX-specific")
+@pytest.mark.parametrize(
+    ("scenario", "action", "cancel"),
+    (
+        ("timeout", RuntimeOperatorDecisionAction.ALLOW_ONCE, False),
+        ("command", RuntimeOperatorDecisionAction.DENY, False),
+        ("active_wait", RuntimeOperatorDecisionAction.ALLOW_ONCE, True),
+    ),
+)
+def test_codex_live_terminal_paths_stop_descendants(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    scenario: str,
+    action: RuntimeOperatorDecisionAction,
+    cancel: bool,
+) -> None:
+    signal_path = tmp_path / "descendant-signal.txt"
+    started_at = time.monotonic()
+    launched: list[OwnedProcessSupervisor] = []
+    original_launch = OwnedProcessSupervisor.launch.__func__
+
+    def capture_launch(
+        cls: type[OwnedProcessSupervisor],
+        spec: RuntimeSubprocessSpec,
+    ) -> OwnedProcessSupervisor:
+        supervisor = original_launch(cls, spec)
+        launched.append(supervisor)
+        return supervisor
+
+    monkeypatch.setattr(
+        OwnedProcessSupervisor,
+        "launch",
+        classmethod(capture_launch),
+    )
+
+    def cancel_requested() -> bool:
+        return cancel and time.monotonic() - started_at >= 0.1
+
+    result = get_runtime_adapter_surface("codex").execute_stage_request(
+        configured_command=(
+            f"{_fake_codex(tmp_path, scenario=scenario, descendant_signal_path=signal_path)} "
+            "exec --json -"
+        ),
+        request=_request(
+            tmp_path,
+            timeout_seconds=0.2 if scenario == "timeout" else 5.0,
+            cancel_requested=cancel_requested if cancel else None,
+        ),
+        attempt_path=tmp_path / "attempt",
+        base_env={},
+        operator_decision_provider=_DecisionProvider(action),
+    )
+
+    assert result.resolved_status is AdapterExecutionStatus.FAILED
+    assert len(launched) == 1
+    assert launched[0].process_group_exists() is False

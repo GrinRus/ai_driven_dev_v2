@@ -24,8 +24,9 @@ from aidd.adapters.live_transport import (
     append_jsonl,
     run_help_text,
     split_command,
-    terminate_process,
 )
+from aidd.adapters.process_supervisor import OwnedProcessSupervisor
+from aidd.adapters.runtime_execution import RuntimeSubprocessSpec
 from aidd.core.runtime_operator import (
     RuntimeOperatorBroker,
     RuntimeOperatorDecision,
@@ -75,6 +76,7 @@ class _JsonRpcLineClient:
         self._stderr_lines: list[str] = []
         self._item_cache: dict[str, dict[str, Any]] = {}
         self._threads: list[threading.Thread] = []
+        self._errors: list[BaseException] = []
         self._next_id = 1
 
     @property
@@ -88,6 +90,14 @@ class _JsonRpcLineClient:
     @property
     def runtime_log_text(self) -> str:
         return self.stdout_text + self.stderr_text
+
+    @property
+    def reader_threads(self) -> tuple[threading.Thread, ...]:
+        return tuple(self._threads)
+
+    @property
+    def error(self) -> BaseException | None:
+        return self._errors[0] if self._errors else None
 
     def cached_item(self, item_id: object) -> Mapping[str, Any] | None:
         normalized_item_id = str(item_id or "").strip()
@@ -152,6 +162,8 @@ class _JsonRpcLineClient:
                     )
                     self._remember_item(message)
                     self._messages.put(message)
+        except BaseException as exc:
+            self._errors.append(exc)
         finally:
             self.process.stdout.close()
 
@@ -162,6 +174,8 @@ class _JsonRpcLineClient:
                 self._stderr_lines.append(line)
                 if self._on_stderr is not None:
                     self._on_stderr(line)
+        except BaseException as exc:
+            self._errors.append(exc)
         finally:
             self.process.stderr.close()
 
@@ -226,16 +240,15 @@ def execute_codex_live_transport(
     )
     attempt_path.mkdir(parents=True, exist_ok=True)
     transcript_path = attempt_path / _CODEX_TRANSCRIPT_FILENAME
-    process = subprocess.Popen(
-        (tokens[0], "app-server", "--listen", "stdio://"),
-        cwd=repository_root,
-        env=spec.env,
-        stdin=subprocess.PIPE,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
-        text=True,
-        bufsize=1,
+    supervisor = OwnedProcessSupervisor.launch(
+        RuntimeSubprocessSpec(
+            command=(tokens[0], "app-server", "--listen", "stdio://"),
+            cwd=repository_root,
+            env=spec.env,
+            stdin_text="",
+        )
     )
+    process = supervisor.process
     client = _JsonRpcLineClient(
         process=process,
         transcript_path=transcript_path,
@@ -257,6 +270,7 @@ def execute_codex_live_transport(
         response_id=initialize_id,
         deadline=deadline,
         cancel_requested=cancel_requested,
+        supervisor=supervisor,
         repository_root=repository_root,
         context=context,
         broker=broker,
@@ -275,6 +289,7 @@ def execute_codex_live_transport(
             transcript_path=transcript_path,
             broker=broker,
             stop_reason=stop_reason,
+            supervisor=supervisor,
         )
 
     client.notify("initialized")
@@ -295,6 +310,7 @@ def execute_codex_live_transport(
         response_id=thread_start_id,
         deadline=deadline,
         cancel_requested=cancel_requested,
+        supervisor=supervisor,
         repository_root=repository_root,
         context=context,
         broker=broker,
@@ -313,6 +329,7 @@ def execute_codex_live_transport(
             transcript_path=transcript_path,
             broker=broker,
             stop_reason=stop_reason,
+            supervisor=supervisor,
         )
 
     thread_id = _thread_id_from_transcript_response(
@@ -320,8 +337,7 @@ def execute_codex_live_transport(
         response_id=thread_start_id,
     )
     if thread_id is None:
-        terminate_process(process)
-        client.join()
+        _stop_client(supervisor=supervisor, client=client)
         return _failed_result(
             client=client,
             process=process,
@@ -345,8 +361,7 @@ def execute_codex_live_transport(
     pending_request_id = None
     while process.poll() is None and not completed:
         if cancel_requested is not None and cancel_requested():
-            terminate_process(process)
-            client.join()
+            _stop_client(supervisor=supervisor, client=client)
             run_result = _run_result(
                 process=process,
                 client=client,
@@ -359,8 +374,7 @@ def execute_codex_live_transport(
                 events_jsonl_path=transcript_path,
             )
         if deadline is not None and time.monotonic() >= deadline:
-            terminate_process(process)
-            client.join()
+            _stop_client(supervisor=supervisor, client=client)
             run_result = _run_result(
                 process=process,
                 client=client,
@@ -373,6 +387,11 @@ def execute_codex_live_transport(
                 events_jsonl_path=transcript_path,
             )
         message = client.next_message(timeout_seconds=0.1)
+        if client.error is not None:
+            client_error = client.error
+            _stop_client(supervisor=supervisor, client=client)
+            assert client_error is not None
+            raise client_error
         if message is None:
             continue
         if message.get("id") == turn_start_id and "error" in message:
@@ -403,6 +422,7 @@ def execute_codex_live_transport(
             transcript_path=transcript_path,
             broker=broker,
             stop_reason=CodexExitClassification.CANCELLED,
+            supervisor=supervisor,
         )
     if pending_request_id is not None or denied_reason is not None:
         return _early_stop_result(
@@ -413,10 +433,10 @@ def execute_codex_live_transport(
             transcript_path=transcript_path,
             broker=broker,
             stop_reason=None,
+            supervisor=supervisor,
         )
 
-    terminate_process(process)
-    client.join()
+    _stop_client(supervisor=supervisor, client=client)
     run_result = _run_result(process=process, client=client, stop_reason=None)
     status = (
         AdapterExecutionStatus.SUCCEEDED
@@ -444,6 +464,7 @@ def _drain_until_response(
     response_id: int,
     deadline: float | None,
     cancel_requested: Callable[[], bool] | None,
+    supervisor: OwnedProcessSupervisor,
     repository_root: Path,
     context: CodexCommandContext,
     broker: RuntimeOperatorBroker,
@@ -451,12 +472,15 @@ def _drain_until_response(
 ) -> tuple[str | None, str | None, CodexExitClassification | None]:
     while client.process.poll() is None:
         if cancel_requested is not None and cancel_requested():
-            terminate_process(client.process)
             return None, None, CodexExitClassification.CANCELLED
         if deadline is not None and time.monotonic() >= deadline:
-            terminate_process(client.process)
             return None, "codex-live: timeout", None
         message = client.next_message(timeout_seconds=0.1)
+        if client.error is not None:
+            client_error = client.error
+            _stop_client(supervisor=supervisor, client=client)
+            assert client_error is not None
+            raise client_error
         if message is None:
             continue
         if message.get("id") == response_id:
@@ -583,9 +607,9 @@ def _early_stop_result(
     transcript_path: Path,
     broker: RuntimeOperatorBroker,
     stop_reason: CodexExitClassification | None,
+    supervisor: OwnedProcessSupervisor,
 ) -> LiveTransportResult[CodexExitClassification]:
-    terminate_process(process)
-    client.join()
+    _stop_client(supervisor=supervisor, client=client)
     if stop_reason is CodexExitClassification.CANCELLED:
         return LiveTransportResult(
             run_result=_run_result(process=process, client=client, stop_reason=stop_reason),
@@ -658,6 +682,15 @@ def _run_result(
         runtime_log_text=client.runtime_log_text,
         exit_classification=classification,
     )
+
+
+def _stop_client(
+    *,
+    supervisor: OwnedProcessSupervisor,
+    client: _JsonRpcLineClient,
+) -> None:
+    supervisor.request_stop()
+    supervisor.drain_streams(client.reader_threads)
 
 
 def _message_is_approval_request(message: Mapping[str, Any]) -> bool:

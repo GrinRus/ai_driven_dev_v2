@@ -9312,7 +9312,7 @@ Local tasks:
   - Scope: Qwen event reader.
   - Verification: a representative event is split at every byte boundary; malformed
     complete lines and duplicate IDs remain deterministic.
-- `W34-E4-S1-T9` Adopt the owned-process supervisor in Codex-live execution.
+- `W34-E4-S1-T9` (done) Adopt the owned-process supervisor in Codex-live execution.
   [`REL-05`, `REL-10`]
   - Dependencies: `W34-E4-S1-T4`, `W34-E4-S1-T5`.
   - Scope: Codex-live lifecycle integration only.

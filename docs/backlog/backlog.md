@@ -7,11 +7,11 @@ slice, and local task.
 
 ## Next
 
-- `W34-E4-S1-T9` — Adopt the owned-process supervisor in Codex-live execution.
+- `W34-E4-S1-T10` — Adopt the owned-process supervisor in Qwen-live execution.
 
 ## Soon
 
-- `W34-E4-S1-T10` — Adopt the owned-process supervisor in Qwen-live execution.
+- `W34-E4-S2-T1` — Define typed stop reasons and one runtime-evidence commit contract.
 
 ## Parking lot
 
