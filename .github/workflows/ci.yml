@@ -45,7 +45,7 @@ jobs:
       - name: Type check
         run: |
           set -euo pipefail
-          uv run --extra dev python -m mypy src
+          uv run --extra dev python -m mypy src scripts
 
       - name: Packaged JavaScript syntax
         run: |

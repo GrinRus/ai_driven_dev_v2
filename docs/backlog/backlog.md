@@ -7,13 +7,13 @@ slice, and local task.
 
 ## Next
 
-- `W34-E5-S3-T7` — Include release scripts in the strict mypy gate and fix their typed
-  boundary returns.
+- `W34-E5-S4-T1` — Extract durable flow-state and resume coordination from live
+  orchestration.
 
 ## Soon
 
-- `W34-E5-S4-T1` — Extract durable flow-state and resume coordination from live
-  orchestration.
+- `W34-E5-S4-T2` — Consolidate process/checkpoint coordination and
+  `BlackBoxCommandResult` behind the existing steps module.
 
 ## Parking lot
 
@@ -85,6 +85,9 @@ slice, and local task.
 
 ## Current reconciliation
 
+- `2026-07-16` `W34-E5-S3` is complete: local, CI, release, contributor, and configured
+  strict typing now all cover `src scripts`, with no release-script suppressions.
+  `S4-T1` is promoted to `Next`; `S4-T2` is in `Soon`.
 - `2026-07-16` `W34-E5-S3-T6` is complete: the resource smoke builds offline with a
   bounded command, imports directly from the extracted wheel under `UV_OFFLINE=1`, and
   performs no dependency resolution. `S3-T7` is promoted to `Next`; `S4-T1` is in

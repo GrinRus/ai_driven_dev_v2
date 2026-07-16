@@ -74,7 +74,7 @@ def test_release_workflow_runs_deterministic_quality_before_publish() -> None:
     quality_run_blocks = _job_run_blocks(quality_job)
     assert "uv sync --locked --extra dev" in quality_run_blocks
     assert "uv run --extra dev ruff check ." in quality_run_blocks
-    assert "uv run --extra dev python -m mypy src" in quality_run_blocks
+    assert "uv run --extra dev python -m mypy src scripts" in quality_run_blocks
     assert "uv run --extra dev pytest -q" in quality_run_blocks
 
     build_job = jobs["build"]

@@ -114,7 +114,7 @@ Before opening a PR, run the smallest relevant checks:
 
 ```bash
 uv run --extra dev ruff check .
-uv run --extra dev python -m mypy src
+uv run --extra dev python -m mypy src scripts
 uv run --extra dev pytest -q
 ```
 

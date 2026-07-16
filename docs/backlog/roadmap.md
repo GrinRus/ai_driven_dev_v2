@@ -9462,7 +9462,7 @@ Exit evidence:
 - completed bundles and checkpoint decisions remain stable under source mutation and
   concurrent stage transitions.
 
-#### Slice W34-E5-S3 — classification, release, and packaged-UI gates (`planned`)
+#### Slice W34-E5-S3 — classification, release, and packaged-UI gates (`done`)
 Goal: make automated classifications and release/package evidence reject ambiguous or
 non-executable claims.
 
@@ -9500,7 +9500,7 @@ Local tasks:
   - Scope: package resource smoke test only.
   - Verification: `UV_OFFLINE=1` package-resource tests pass using the built wheel and
     every subprocess has an explicit timeout.
-- `W34-E5-S3-T7` Include release scripts in the strict mypy gate and fix their typed
+- `W34-E5-S3-T7` (done) Include release scripts in the strict mypy gate and fix their typed
   boundary returns. [`TEST-06`]
   - Scope: release-script typing plus configured mypy commands.
   - Verification: `python -m mypy src scripts` passes through local, CI, and release
