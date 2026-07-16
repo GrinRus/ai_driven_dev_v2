@@ -63,6 +63,8 @@ class QwenExitClassification(StrEnum):
     NON_ZERO_EXIT = "non_zero_exit"
     TIMEOUT = "timeout"
     CANCELLED = "cancelled"
+    DENIED = "denied"
+    BLOCKED = "blocked"
 
 
 @dataclass(frozen=True, slots=True)

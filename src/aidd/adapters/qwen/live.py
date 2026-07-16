@@ -29,6 +29,7 @@ from aidd.adapters.qwen.runner import (
 from aidd.core.runtime_operator import RuntimeOperatorBroker, RuntimeOperatorDecisionProvider
 from aidd.core.stage_models import AdapterExecutionStatus
 from aidd.runtime_catalog import RuntimeExecutionMode
+from aidd.runtime_permissions import RuntimeOperatorDecisionAction
 
 _QWEN_EVENTS_FILENAME = "qwen-events.jsonl"
 _QWEN_INPUT_FILENAME = "qwen-input.jsonl"
@@ -70,7 +71,13 @@ def execute_qwen_live_transport(
 ) -> LiveTransportResult[QwenExitClassification]:
     if not qwen_live_transport_available(configured_command):
         return LiveTransportResult(
-            run_result=None,
+            run_result=QwenRunResult(
+                exit_code=None,
+                stdout_text="",
+                stderr_text="",
+                runtime_log_text="",
+                exit_classification=QwenExitClassification.BLOCKED,
+            ),
             status=AdapterExecutionStatus.BLOCKED_FOR_OPERATOR,
             details=(
                 "blocked_for_operator: qwen live broker requires managed native qwen "
@@ -103,6 +110,7 @@ def execute_qwen_live_transport(
     stop_reason: QwenExitClassification | None = None
     pending_request_id: str | None = None
     denied_reason: str | None = None
+    terminal_classification: QwenExitClassification | None = None
     read_offset = 0
     stdin_writer = ManagedStdinWriter.start(process.stdin, spec.stdin_text)
 
@@ -132,7 +140,12 @@ def execute_qwen_live_transport(
             stop_reason = QwenExitClassification.TIMEOUT
             break
 
-        read_offset, pending_request_id, denied_reason = _handle_new_events(
+        (
+            read_offset,
+            pending_request_id,
+            denied_reason,
+            terminal_classification,
+        ) = _handle_new_events(
             events_path=events_path,
             read_offset=read_offset,
             seen_request_ids=seen_request_ids,
@@ -159,7 +172,12 @@ def execute_qwen_live_transport(
         and pending_request_id is None
         and denied_reason is None
     ):
-        read_offset, pending_request_id, denied_reason = _handle_new_events(
+        (
+            read_offset,
+            pending_request_id,
+            denied_reason,
+            terminal_classification,
+        ) = _handle_new_events(
             events_path=events_path,
             read_offset=read_offset,
             seen_request_ids=seen_request_ids,
@@ -205,7 +223,11 @@ def execute_qwen_live_transport(
         )
     if pending_request_id is not None:
         return LiveTransportResult(
-            run_result=None,
+            run_result=_captured_run_result(
+                capture=capture,
+                exit_code=None,
+                exit_classification=QwenExitClassification.BLOCKED,
+            ),
             status=AdapterExecutionStatus.BLOCKED_FOR_OPERATOR,
             details="blocked_for_operator: qwen live approval request pending",
             runtime_jsonl_path=events_path if events_path.exists() else None,
@@ -217,10 +239,12 @@ def execute_qwen_live_transport(
             pending_operator_request_ids=(pending_request_id,),
         )
     if denied_reason is not None:
-        run_result = _run_result(
-            process=process,
+        run_result = _captured_run_result(
             capture=capture,
-            stop_reason=None,
+            exit_code=None,
+            exit_classification=(
+                terminal_classification or QwenExitClassification.DENIED
+            ),
         )
         return LiveTransportResult(
             run_result=run_result,
@@ -262,7 +286,12 @@ def _handle_new_events(
     broker: RuntimeOperatorBroker,
     operator_decision_provider: RuntimeOperatorDecisionProvider,
     input_path: Path,
-) -> tuple[int, str | None, str | None]:
+) -> tuple[
+    int,
+    str | None,
+    str | None,
+    QwenExitClassification | None,
+]:
     read_offset, lines = _read_complete_event_lines(
         events_path=events_path,
         read_offset=read_offset,
@@ -286,11 +315,20 @@ def _handle_new_events(
             decision_provider=operator_decision_provider,
         )
         if decision is None:
-            return read_offset, operator_request.id, None
+            return read_offset, operator_request.id, None, None
         append_jsonl(input_path, operator_decision_to_qwen_confirmation(decision))
         if not decision.is_approval:
-            return read_offset, None, f"permission-denied: {decision.action.value}"
-    return read_offset, None, None
+            return (
+                read_offset,
+                None,
+                f"permission-denied: {decision.action.value}",
+                (
+                    QwenExitClassification.CANCELLED
+                    if decision.action is RuntimeOperatorDecisionAction.CANCEL
+                    else QwenExitClassification.DENIED
+                ),
+            )
+    return read_offset, None, None, None
 
 
 def _read_complete_event_lines(
@@ -401,6 +439,21 @@ def _run_result(
         stderr_text=capture.stderr_text,
         runtime_log_text=capture.runtime_log_text,
         exit_classification=classification,
+    )
+
+
+def _captured_run_result(
+    *,
+    capture: StreamCapture,
+    exit_code: int | None,
+    exit_classification: QwenExitClassification,
+) -> QwenRunResult:
+    return QwenRunResult(
+        exit_code=exit_code,
+        stdout_text=capture.stdout_text,
+        stderr_text=capture.stderr_text,
+        runtime_log_text=capture.runtime_log_text,
+        exit_classification=exit_classification,
     )
 
 

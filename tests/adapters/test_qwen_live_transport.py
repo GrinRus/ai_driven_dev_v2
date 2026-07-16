@@ -331,17 +331,34 @@ def test_qwen_live_transport_deny_or_cancel_fails_stage(
 ) -> None:
     fake_qwen = _fake_qwen(tmp_path)
     provider = _DecisionProvider(action)
+    attempt_path = tmp_path / "attempt"
 
     result = get_runtime_adapter_surface("qwen").execute_stage_request(
         configured_command=str(fake_qwen),
         request=_request(tmp_path),
-        attempt_path=tmp_path / "attempt",
+        attempt_path=attempt_path,
         base_env={},
         operator_decision_provider=provider,
     )
 
     assert result.resolved_status is AdapterExecutionStatus.FAILED
     assert result.details == f"permission-denied: {action.value}"
+    exit_metadata = json.loads(
+        (attempt_path / "runtime-exit.json").read_text(encoding="utf-8")
+    )
+    expected_classification = (
+        "cancelled"
+        if action is RuntimeOperatorDecisionAction.CANCEL
+        else "denied"
+    )
+    expected_outcome = (
+        "cancellation"
+        if action is RuntimeOperatorDecisionAction.CANCEL
+        else "denial"
+    )
+    assert exit_metadata["exit_classification"] == expected_classification
+    assert exit_metadata["adapter_outcome"] == expected_outcome
+    assert exit_metadata["exit_code"] is None
 
 
 def test_qwen_live_transport_blocks_when_provider_has_no_decision(tmp_path: Path) -> None:
@@ -363,6 +380,13 @@ def test_qwen_live_transport_blocks_when_provider_has_no_decision(tmp_path: Path
     assert (attempt_path / "operator-requests.jsonl").exists()
     assert (attempt_path / "qwen-events.jsonl").exists()
     assert (attempt_path / "qwen-input.jsonl").read_text(encoding="utf-8") == ""
+    exit_metadata = json.loads(
+        (attempt_path / "runtime-exit.json").read_text(encoding="utf-8")
+    )
+    assert exit_metadata["exit_classification"] == "blocked"
+    assert exit_metadata["adapter_outcome"] == "blocked"
+    assert exit_metadata["exit_code"] is None
+    assert (attempt_path / "runtime.log").exists()
 
 
 def test_qwen_live_transport_timeout_fails_stage(tmp_path: Path) -> None:
@@ -378,6 +402,11 @@ def test_qwen_live_transport_timeout_fails_stage(tmp_path: Path) -> None:
 
     assert result.resolved_status is AdapterExecutionStatus.FAILED
     assert result.details == "qwen-live: timeout"
+    timeout_metadata = json.loads(
+        (tmp_path / "attempt" / "runtime-exit.json").read_text(encoding="utf-8")
+    )
+    assert timeout_metadata["exit_classification"] == "timeout"
+    assert timeout_metadata["adapter_outcome"] == "timeout"
 
 
 @pytest.mark.parametrize("phase", ("startup", "active", "approval"))
@@ -418,6 +447,8 @@ def test_qwen_live_transport_persists_cancelled_outcome(
     assert json.loads((attempt_path / "runtime-exit.json").read_text(encoding="utf-8"))[
         "exit_classification"
     ] == "cancelled"
+    assert result.adapter_outcome is not None
+    assert result.adapter_outcome.value == "cancellation"
     assert (attempt_path / "runtime.log").exists()
     if phase == "approval":
         assert (attempt_path / "qwen-input.jsonl").read_text(encoding="utf-8") == ""

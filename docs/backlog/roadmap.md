@@ -9350,7 +9350,7 @@ Local tasks:
   - Scope: Codex live path.
   - Verification: denial, startup-timeout, and blocked branches agree between outer
     status, raw log, and `runtime-exit.json`.
-- `W34-E4-S2-T3` Persist canonical Qwen blocked outcomes through the shared contract.
+- `W34-E4-S2-T3` (done) Persist canonical Qwen blocked outcomes through the shared contract.
   [`REL-11`]
   - Scope: Qwen live path.
   - Verification: a blocked attempt retains stdout/stderr, raw log, and blocked exit

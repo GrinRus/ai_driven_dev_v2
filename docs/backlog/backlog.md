@@ -7,11 +7,12 @@ slice, and local task.
 
 ## Next
 
-- `W34-E4-S2-T3` — Persist canonical Qwen blocked outcomes through the shared contract.
+- `W34-E4-S2-T4` — Normalize executable-launch failures for every registered runtime.
 
 ## Soon
 
-- `W34-E4-S2-T4` — Normalize executable-launch failures for every registered runtime.
+- `W34-E4-S2-T5` — Add a disk-backed runtime-log sink with bounded in-memory tails and
+  counters.
 
 ## Parking lot
 
@@ -101,3 +102,6 @@ slice, and local task.
 - `2026-07-16` `W34-E4-S2-T2` is complete: Codex live now distinguishes protocol
   completion from supervisor termination and commits truthful timeout, cancellation,
   denial, blocked, and protocol-failure evidence.
+- `2026-07-16` `W34-E4-S2-T3` is complete: pending Qwen approvals now retain a captured
+  blocked result, while denied, cancelled, timeout, and success paths publish one
+  consistent evidence envelope without fabricated confirmations.
