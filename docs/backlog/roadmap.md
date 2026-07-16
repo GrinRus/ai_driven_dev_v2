@@ -9613,7 +9613,7 @@ Dependencies:
 
 Local tasks:
 
-- `W34-E6-S2-T1` Close or supersede dependency update proposals that target removed
+- `W34-E6-S2-T1` (done) Close or supersede dependency update proposals that target removed
   packages. [`DEAD-05`, `DEAD-07`]
   - Scope: obsolete dependency-update pull requests only.
   - Verification: no open update proposal references a dependency absent from the
