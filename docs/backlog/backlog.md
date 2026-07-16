@@ -7,12 +7,11 @@ slice, and local task.
 
 ## Next
 
-- `W34-E6-S1-T4` — Remove the obsolete raw repository inventory `manifest.txt`.
+- `W34-E6-S1-T5` — Remove the dormant MkDocs documentation extra and lock/config
+  surface.
 
 ## Soon
 
-- `W34-E6-S1-T5` — Remove the dormant MkDocs documentation extra and lock/config
-  surface.
 
 ## Parking lot
 
@@ -81,6 +80,10 @@ slice, and local task.
   queue-restoration policy in `docs/backlog/roadmap.md` (`W8-E3-S1`).
 
 ## Current reconciliation
+
+- `2026-07-16` `W34-E6-S1-T4` is complete: the stale generated `manifest.txt` inventory
+  is removed, tracked cache/bytecode paths are rejected, and historical `MANIFEST.md`
+  remains available. `T5` is promoted to `Next`.
 
 - `2026-07-16` `W34-E6-S1-T3` is complete: `python-frontmatter`, `markdown-it-py`, and
   `pydantic` are no longer direct runtime requirements; wheel metadata retains PyYAML

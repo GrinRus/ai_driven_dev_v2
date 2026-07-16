@@ -9586,7 +9586,7 @@ Local tasks:
   lock. [`DEAD-05`]
   - Scope: project dependencies and lock only.
   - Verification: locked sync, wheel build/install, and package/validator tests pass.
-- `W34-E6-S1-T4` Remove the obsolete raw repository inventory `manifest.txt`.
+- `W34-E6-S1-T4` (done) Remove the obsolete raw repository inventory `manifest.txt`.
   [`DEAD-06`]
   - Scope: generated root inventory only.
   - Verification: tracked files contain no cache, bytecode, or removed-file inventory;
