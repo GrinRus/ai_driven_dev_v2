@@ -12,9 +12,6 @@ slice, and local task.
 
 ## Parking lot
 
-- `W34-E3-S2-T1` — Resolve each approval exactly once with compare-and-set semantics.
-- `W34-E3-S3-T1` — Store live chunks in a byte-bounded ring, cap responses, and evict
-  terminal jobs by TTL/count.
 - `W34-E3-S4-T1` — Add characterization fixtures for corrected routes, jobs, approvals,
   and dashboard states.
 - `W34-E4-S2-T1` — Define typed stop reasons and one runtime-evidence commit contract.
@@ -92,6 +89,7 @@ slice, and local task.
 
 ## Current reconciliation
 
-- `2026-07-16` `W34-E2` is complete: run identity, continuation, immutable archive
-  overlays, and per-attempt prompt accountability now share canonical core evidence. The next
-  bounded queue requires a separate reconciliation.
+- `2026-07-16` `W34-E3-S2` and `W34-E3-S3` are complete: approval decisions are
+  terminal-safe and the local UI now bounds live-log memory, response size, and terminal
+  job retention. `W34-E3-S4-T1` remains parked until executable frontend tests from
+  `W34-E5-S3` satisfy its slice dependency.

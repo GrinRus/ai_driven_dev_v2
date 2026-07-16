@@ -9,11 +9,13 @@ import subprocess
 import sys
 import threading
 import time
+from datetime import UTC, datetime, timedelta
 from http import HTTPStatus
 from io import BytesIO
 from pathlib import Path
 from typing import Any
 
+import pytest
 import typer
 
 from aidd.cli import main as cli_main
@@ -22,6 +24,7 @@ from aidd.cli.stage_run import StageInteractOptions, StageRunOptions
 from aidd.cli.ui import (
     OperatorUiService,
     UiRequestBodyTooLarge,
+    UiRunJobStore,
     UiServerOptions,
     _is_loopback_host,
     _read_json_body,
@@ -55,6 +58,7 @@ from aidd.core.runtime_operator import (
     RuntimeOperatorRequest,
     append_operator_decision,
     append_operator_request,
+    load_operator_decisions,
 )
 from aidd.core.runtime_readiness import RuntimeReadinessProbeReport
 from aidd.core.stage_runner import prepare_stage_bundle
@@ -220,6 +224,104 @@ def _wait_job_status(
             return payload
         time.sleep(0.01)
     raise AssertionError(f"job did not reach {expected_status}: {job_id}")
+
+
+def test_ui_job_store_bounds_live_chunks_and_paginates_absolute_cursors() -> None:
+    store = UiRunJobStore(
+        max_live_log_bytes=48,
+        max_log_response_bytes=16,
+    )
+    job_id = store.create(kind="stage", stage="plan")
+    chunks = [f"chunk-{index:04d}\n" for index in range(10)]
+    for text in chunks:
+        store.append_chunk(job_id, stream="stdout", text=text)
+
+    view = store.view(job_id)
+    assert int(view["retained_live_log_bytes"]) <= 48
+    assert int(view["dropped_live_log_bytes"]) > 0
+
+    cursor = 0
+    collected = ""
+    page_count = 0
+    first_page = True
+    while True:
+        page = store.logs(job_id, cursor=cursor)
+        payload_bytes = sum(
+            len(str(chunk["text"]).encode("utf-8")) for chunk in page["chunks"]  # type: ignore[union-attr]
+        )
+        assert payload_bytes <= 16
+        if first_page:
+            assert page["truncated"] is True
+            assert int(page["oldest_cursor"]) > 0
+            first_page = False
+        next_cursor = int(page["cursor"])
+        assert next_cursor > cursor
+        collected += "".join(
+            str(chunk["text"]) for chunk in page["chunks"]  # type: ignore[union-attr]
+        )
+        page_count += 1
+        cursor = next_cursor
+        if not page["has_more"]:
+            break
+
+    assert page_count > 1
+    assert collected == "".join(chunks[-4:])
+
+
+def test_ui_job_store_truncates_oversized_unicode_chunk_by_tail() -> None:
+    store = UiRunJobStore(
+        max_live_log_bytes=16,
+        max_log_response_bytes=8,
+    )
+    job_id = store.create(kind="stage", stage="plan")
+    store.append_chunk(job_id, stream="stdout", text="🙂" * 10)
+
+    first = store.logs(job_id, cursor=0)
+    assert first["oldest_cursor"] == 24
+    assert first["truncated"] is True
+    assert first["dropped_bytes"] == 24
+    assert first["has_more"] is True
+    assert first["chunks"][0]["sequence"] == 1  # type: ignore[index]
+    assert first["chunks"][0]["truncated"] is True  # type: ignore[index]
+    assert first["chunks"][0]["dropped_bytes"] == 24  # type: ignore[index]
+    assert first["chunks"][0]["text"] == "🙂🙂"  # type: ignore[index]
+
+    second = store.logs(job_id, cursor=int(first["cursor"]))
+    assert second["chunks"][0]["text"] == "🙂🙂"  # type: ignore[index]
+    assert second["has_more"] is False
+
+
+def test_ui_job_store_evicts_terminal_jobs_by_ttl_and_count() -> None:
+    now = [datetime(2026, 7, 16, tzinfo=UTC)]
+    store = UiRunJobStore(
+        max_terminal_jobs=2,
+        terminal_job_ttl_seconds=3600,
+        now=lambda: now[0],
+    )
+
+    first = store.create(kind="stage", stage="idea")
+    store.complete(first, result={}, exit_code=0, message="completed")
+    now[0] += timedelta(seconds=1)
+    second = store.create(kind="stage", stage="research")
+    store.complete(second, result={}, exit_code=0, message="completed")
+    now[0] += timedelta(seconds=1)
+    active = store.create(kind="stage", stage="plan")
+    now[0] += timedelta(seconds=1)
+    third = store.create(kind="stage", stage="review")
+    store.complete(third, result={}, exit_code=0, message="completed")
+
+    with pytest.raises(ValueError, match="Unknown UI job"):
+        store.view(first)
+    assert store.view(active)["status"] == "running"
+    assert store.view(second)["status"] == "completed"
+    assert store.view(third)["status"] == "completed"
+
+    now[0] += timedelta(seconds=3601)
+    assert store.view(active)["status"] == "running"
+    with pytest.raises(ValueError, match="Unknown UI job"):
+        store.view(second)
+    with pytest.raises(ValueError, match="Unknown UI job"):
+        store.view(third)
 
 
 class _BodyHandler:
@@ -3084,7 +3186,7 @@ def test_ui_job_operator_request_endpoints_record_decisions(tmp_path: Path) -> N
     assert decision_payload["audit_history"][0]["status"] == "approved"  # type: ignore[index]
     assert decision_payload["audit_history"][0]["decision_action"] == "allow_once"  # type: ignore[index]
     assert decision_payload["audit_history"][0]["decision_source"] == "ui"  # type: ignore[index]
-    assert (
+    decisions_path = (
         workspace_root
         / "reports"
         / "runs"
@@ -3095,7 +3197,25 @@ def test_ui_job_operator_request_endpoints_record_decisions(tmp_path: Path) -> N
         / "attempts"
         / "attempt-0001"
         / "operator-decisions.jsonl"
-    ).exists()
+    )
+    assert decisions_path.exists()
+
+    idempotent_payload = _payload(
+        service.handle_post(
+            f"/api/jobs/{job_id}/operator-requests/{request_id}/decision",
+            {"action": RuntimeOperatorDecisionAction.ALLOW_ONCE.value},
+        )
+    )
+    assert idempotent_payload["decisions"] == decision_payload["decisions"]
+    assert len(decisions_path.read_text(encoding="utf-8").splitlines()) == 1
+
+    conflict = service.handle_post(
+        f"/api/jobs/{job_id}/operator-requests/{request_id}/decision",
+        {"action": RuntimeOperatorDecisionAction.DENY.value},
+    )
+    conflict_payload = _payload_with_status(conflict, HTTPStatus.CONFLICT)
+    assert conflict_payload["winner"]["action"] == "allow_once"  # type: ignore[index]
+    assert len(decisions_path.read_text(encoding="utf-8").splitlines()) == 1
 
 
 def test_ui_operator_decision_endpoint_wakes_live_stage_job(tmp_path: Path) -> None:
@@ -3179,6 +3299,196 @@ def test_ui_operator_decision_endpoint_wakes_live_stage_job(tmp_path: Path) -> N
     assert isinstance(decision, RuntimeOperatorDecision)
     assert completed_payload["status"] == "completed"
     assert decision.action is RuntimeOperatorDecisionAction.ALLOW_ONCE
+
+
+def test_ui_cancellation_wakes_operator_waiter_and_rejects_late_decision(
+    tmp_path: Path,
+) -> None:
+    workspace_root = tmp_path / ".aidd"
+    request_ready = threading.Event()
+    captured: dict[str, RuntimeOperatorDecision | RuntimeOperatorRequest] = {}
+    continued = threading.Event()
+
+    def fake_stage_runner(options: StageRunOptions) -> None:
+        run_id = options.run_id or "run-ui-cancel-approval"
+        create_run_manifest(
+            workspace_root=workspace_root,
+            work_item="WI-UI",
+            run_id=run_id,
+            runtime_id=options.runtime,
+            stage_target=options.stage,
+            config_snapshot={"mode": "ui-cancel-approval-test"},
+        )
+        attempt_path = create_next_attempt_directory(
+            workspace_root=workspace_root,
+            work_item="WI-UI",
+            run_id=run_id,
+            stage=options.stage,
+        )
+        request = RuntimeOperatorRequest.create(
+            runtime_id=options.runtime,
+            stage=options.stage,
+            kind=RuntimeOperatorRequestKind.SHELL,
+            payload={"command": "python -m pytest -q"},
+            cwd=tmp_path,
+        )
+        captured["request"] = request
+        broker = RuntimeOperatorBroker(
+            policy=RuntimeOperatorPolicy(
+                permission_policy=RuntimePermissionPolicy.BROKERED,
+                auto_approval_preset=AutoApprovalPreset.OFF,
+                project_roots=(tmp_path,),
+                workspace_root=workspace_root,
+            ),
+            attempt_path=attempt_path,
+        )
+        request_ready.set()
+        decision = broker.handle_request(
+            request,
+            decision_provider=options.runtime_operator_decision_provider,
+        )
+        assert decision is not None
+        captured["decision"] = decision
+        if decision.is_approval:
+            continued.set()
+
+    service = _service(workspace_root, stage_runner=fake_stage_runner)
+    response = service.handle_post(
+        "/api/stage/run",
+        {"stage": "plan", "runtime": "codex", "run_id": "run-ui-cancel-approval"},
+    )
+    job_id = str(_payload(response)["job_id"])
+    assert request_ready.wait(timeout=2)
+    _wait_job_status(service, job_id, "waiting-for-operator")
+
+    cancel_payload = _payload(service.handle_post(f"/api/jobs/{job_id}/cancel", {}))
+
+    assert cancel_payload["status"] == "cancelled"
+    for _ in range(100):
+        if not service._operator_decisions.has_waiter(job_id):
+            break
+        time.sleep(0.01)
+    else:  # pragma: no cover - assertion guard
+        raise AssertionError("operator waiter did not exit")
+    decision = captured["decision"]
+    request = captured["request"]
+    assert isinstance(decision, RuntimeOperatorDecision)
+    assert isinstance(request, RuntimeOperatorRequest)
+    assert decision.action is RuntimeOperatorDecisionAction.CANCEL
+    assert not continued.is_set()
+
+    late = service.handle_post(
+        f"/api/jobs/{job_id}/operator-requests/{request.id}/decision",
+        {"action": RuntimeOperatorDecisionAction.ALLOW_ONCE.value},
+    )
+    assert late.status == HTTPStatus.CONFLICT
+    assert "terminal" in _error_payload(late)["error"]  # type: ignore[operator]
+
+
+@pytest.mark.parametrize(
+    "action",
+    [RuntimeOperatorDecisionAction.ALLOW_ONCE, RuntimeOperatorDecisionAction.DENY],
+)
+def test_ui_operator_decision_and_cancel_race_share_one_winner(
+    tmp_path: Path,
+    action: RuntimeOperatorDecisionAction,
+) -> None:
+    workspace_root = tmp_path / ".aidd"
+    request_ready = threading.Event()
+    release = threading.Event()
+    captured: dict[str, RuntimeOperatorDecision | RuntimeOperatorRequest | Path] = {}
+
+    def fake_stage_runner(options: StageRunOptions) -> None:
+        run_id = options.run_id or "run-ui-approval-race"
+        create_run_manifest(
+            workspace_root=workspace_root,
+            work_item="WI-UI",
+            run_id=run_id,
+            runtime_id=options.runtime,
+            stage_target=options.stage,
+            config_snapshot={"mode": "ui-approval-race-test"},
+        )
+        attempt_path = create_next_attempt_directory(
+            workspace_root=workspace_root,
+            work_item="WI-UI",
+            run_id=run_id,
+            stage=options.stage,
+        )
+        request = RuntimeOperatorRequest.create(
+            runtime_id=options.runtime,
+            stage=options.stage,
+            kind=RuntimeOperatorRequestKind.SHELL,
+            payload={"command": "python -m pytest -q"},
+            cwd=tmp_path,
+        )
+        captured.update(request=request, attempt_path=attempt_path)
+        broker = RuntimeOperatorBroker(
+            policy=RuntimeOperatorPolicy(
+                permission_policy=RuntimePermissionPolicy.BROKERED,
+                auto_approval_preset=AutoApprovalPreset.OFF,
+                project_roots=(tmp_path,),
+                workspace_root=workspace_root,
+            ),
+            attempt_path=attempt_path,
+        )
+        request_ready.set()
+        decision = broker.handle_request(
+            request,
+            decision_provider=options.runtime_operator_decision_provider,
+        )
+        assert decision is not None
+        captured["decision"] = decision
+        assert release.wait(timeout=2)
+
+    service = _service(workspace_root, stage_runner=fake_stage_runner)
+    job_id = str(
+        _payload(
+            service.handle_post(
+                "/api/stage/run",
+                {"stage": "plan", "runtime": "codex", "run_id": "run-ui-approval-race"},
+            )
+        )["job_id"]
+    )
+    assert request_ready.wait(timeout=2)
+    _wait_job_status(service, job_id, "waiting-for-operator")
+    request = captured["request"]
+    assert isinstance(request, RuntimeOperatorRequest)
+    barrier = threading.Barrier(2)
+    responses: list[Any] = []
+
+    def decide() -> None:
+        barrier.wait()
+        responses.append(
+            service.handle_post(
+                f"/api/jobs/{job_id}/operator-requests/{request.id}/decision",
+                {"action": action.value},
+            )
+        )
+
+    def cancel() -> None:
+        barrier.wait()
+        responses.append(service.handle_post(f"/api/jobs/{job_id}/cancel", {}))
+
+    threads = [threading.Thread(target=decide), threading.Thread(target=cancel)]
+    for thread in threads:
+        thread.start()
+    for thread in threads:
+        thread.join(timeout=2)
+    release.set()
+
+    assert all(not thread.is_alive() for thread in threads)
+    assert {response.status for response in responses}.issubset({200, HTTPStatus.CONFLICT})
+    attempt_path = captured["attempt_path"]
+    assert isinstance(attempt_path, Path)
+    winners = load_operator_decisions(attempt_path / OPERATOR_DECISIONS_FILENAME)
+    assert len(winners) == 1
+    for _ in range(100):
+        if "decision" in captured and not service._operator_decisions.has_waiter(job_id):
+            break
+        time.sleep(0.01)
+    decision = captured["decision"]
+    assert isinstance(decision, RuntimeOperatorDecision)
+    assert decision == winners[0]
 
 
 def test_ui_remote_mutations_require_loopback_host(tmp_path: Path) -> None:
