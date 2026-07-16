@@ -5,6 +5,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
+from aidd.core.run_archive import resolve_run_archive_decision
 from aidd.core.run_lookup import (
     ClosedRunError,
     CorruptedRunError,
@@ -152,9 +153,7 @@ def _load_runtime_id(
         run_id=run_id,
     )
     if not manifest.exists():
-        raise ValueError(
-            f"Run manifest is missing for work item '{work_item}', run '{run_id}'."
-        )
+        raise ValueError(f"Run manifest is missing for work item '{work_item}', run '{run_id}'.")
 
     try:
         payload = json.loads(manifest.read_text(encoding="utf-8"))
@@ -187,9 +186,7 @@ def _load_manifest_payload(
         run_id=run_id,
     )
     if not manifest.exists():
-        raise ValueError(
-            f"Run manifest is missing for work item '{work_item}', run '{run_id}'."
-        )
+        raise ValueError(f"Run manifest is missing for work item '{work_item}', run '{run_id}'.")
     try:
         payload = json.loads(manifest.read_text(encoding="utf-8"))
     except json.JSONDecodeError as exc:
@@ -299,9 +296,16 @@ def _lineage_summary(
     )
 
 
-def _archive_summary(manifest_payload: dict[str, Any]) -> RunArchiveSummary:
-    archive = manifest_payload.get("operator_archive")
-    if not isinstance(archive, dict):
+def _archive_summary(
+    *, workspace_root: Path, work_item: str, run_id: str, manifest_payload: dict[str, Any]
+) -> RunArchiveSummary:
+    archive = resolve_run_archive_decision(
+        workspace_root=workspace_root,
+        work_item=work_item,
+        run_id=run_id,
+        manifest_payload=manifest_payload,
+    )
+    if archive is None:
         return RunArchiveSummary(
             archived=False,
             archived_at_utc=None,
@@ -309,10 +313,10 @@ def _archive_summary(manifest_payload: dict[str, Any]) -> RunArchiveSummary:
             source=None,
         )
     return RunArchiveSummary(
-        archived=archive.get("archived") is True,
-        archived_at_utc=_optional_lineage_value(archive, "archived_at_utc"),
-        reason=_optional_lineage_value(archive, "reason"),
-        source=_optional_lineage_value(archive, "source"),
+        archived=True,
+        archived_at_utc=archive.archived_at_utc,
+        reason=archive.reason,
+        source=archive.source,
     )
 
 
@@ -368,9 +372,7 @@ def resolve_run_metadata_summary(
             sha256 = str(entry.get("sha256", "")).strip()
             if not path or not sha256:
                 continue
-            prompt_pack_provenance.append(
-                PromptPackProvenance(path=path, sha256=sha256)
-            )
+            prompt_pack_provenance.append(PromptPackProvenance(path=path, sha256=sha256))
     created_at_utc = str(manifest_payload.get("created_at_utc", "")).strip()
     updated_at_utc = str(manifest_payload.get("updated_at_utc", "")).strip()
 
@@ -423,7 +425,12 @@ def resolve_run_metadata_summary(
             manifest_payload=manifest_payload,
             work_item_payload=work_item_payload,
         ),
-        archive=_archive_summary(manifest_payload),
+        archive=_archive_summary(
+            workspace_root=workspace_root,
+            work_item=work_item,
+            run_id=selected_run_id,
+            manifest_payload=manifest_payload,
+        ),
         created_at_utc=created_at_utc,
         updated_at_utc=updated_at_utc,
         stages=tuple(stage_summaries),
@@ -476,9 +483,7 @@ def resolve_run_log_summary(
             f"'{work_item}', run '{selected_run_id}', stage '{stage}', attempt {selected_attempt}."
         )
     if not runtime_log_path.exists():
-        raise ValueError(
-            f"Runtime log file does not exist: {runtime_log_path.as_posix()}."
-        )
+        raise ValueError(f"Runtime log file does not exist: {runtime_log_path.as_posix()}.")
 
     return RunLogSummary(
         run_id=selected_run_id,

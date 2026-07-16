@@ -7,13 +7,10 @@ slice, and local task.
 
 ## Next
 
-- `W34-E2-S3-T1` — Move archive decisions to a separate append-only operator
-  overlay/index.
-
-## Soon
-
 - `W34-E2-S3-T2` — Aggregate immutable per-attempt prompt provenance across
   executed stages.
+
+## Soon
 
 ## Parking lot
 
@@ -97,6 +94,5 @@ slice, and local task.
 
 ## Current reconciliation
 
-- `2026-07-16` `W34-E2-S2` is complete: latest-run identity and explicit workflow
-  continuation are canonical. `W34-E2-S3-T1` is next, followed by per-attempt prompt
-  accountability.
+- `2026-07-16` archive intent is now an append-only operator overlay and completed-run
+  manifests remain immutable. `W34-E2-S3-T2` is next to complete run accountability.

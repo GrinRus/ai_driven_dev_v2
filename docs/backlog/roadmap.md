@@ -9137,7 +9137,7 @@ Dependencies:
 
 Local tasks:
 
-- `W34-E2-S3-T1` Move archive decisions to a separate append-only operator
+- `W34-E2-S3-T1` (done) Move archive decisions to a separate append-only operator
   overlay/index. [`ARCH-03`]
   - Scope: archive write/read model.
   - Verification: source manifest bytes and hash are identical before and after archive.

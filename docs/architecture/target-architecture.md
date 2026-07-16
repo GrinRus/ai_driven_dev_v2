@@ -220,6 +220,11 @@ separate unit:
 - an eval or scenario batch that records comparison evidence outside the completed run;
 - or an archive decision that freezes the run without creating downstream work.
 
+Archive intent is an append-only operator overlay under
+`reports/operator-overlays/<work-item>/run-archive/<run-id>/`; it is joined into run read
+models but never written into `run-manifest.json`. Legacy manifests that already contain
+`operator_archive` remain readable when no overlay exists.
+
 Lineage metadata must reference source runs and artifacts rather than rewriting completed
 artifacts. The core owns the source-run and baseline references; adapters only execute the
 runtime selected for the new flow.

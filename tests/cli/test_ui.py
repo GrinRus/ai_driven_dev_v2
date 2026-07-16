@@ -164,15 +164,7 @@ def _payload_with_status(response, status: int) -> dict[str, object]:
 
 
 def _seed_rich_tasklist(workspace_root: Path) -> None:
-    path = (
-        workspace_root
-        / "workitems"
-        / "WI-UI"
-        / "stages"
-        / "tasklist"
-        / "output"
-        / "tasklist.md"
-    )
+    path = workspace_root / "workitems" / "WI-UI" / "stages" / "tasklist" / "output" / "tasklist.md"
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(
         """# Tasklist
@@ -228,7 +220,6 @@ def _wait_job_status(
             return payload
         time.sleep(0.01)
     raise AssertionError(f"job did not reach {expected_status}: {job_id}")
-
 
 
 class _BodyHandler:
@@ -287,21 +278,15 @@ def _prepare_run(workspace_root: Path) -> None:
     stage_root = workspace_root / "workitems" / "WI-UI" / "stages" / "plan"
     stage_root.mkdir(parents=True, exist_ok=True)
     stage_root.joinpath("validator-report.md").write_text(
-        "# Validator Report\n\n"
-        "## Result\n\n"
-        "- Verdict: `fail`\n",
+        "# Validator Report\n\n## Result\n\n- Verdict: `fail`\n",
         encoding="utf-8",
     )
     stage_root.joinpath("stage-result.md").write_text(
-        "# Stage Result\n\n"
-        "## Summary\n\n"
-        "Blocked on clarification.\n",
+        "# Stage Result\n\n## Summary\n\nBlocked on clarification.\n",
         encoding="utf-8",
     )
     stage_root.joinpath("plan.md").write_text(
-        "# Plan\n\n"
-        "## Goals\n\n"
-        "- Keep stage primary output visible in the operator UI.\n",
+        "# Plan\n\n## Goals\n\n- Keep stage primary output visible in the operator UI.\n",
         encoding="utf-8",
     )
     stage_root.joinpath("repair-brief.md").write_text(
@@ -579,9 +564,7 @@ def test_ui_service_exposes_private_read_endpoints(tmp_path: Path) -> None:
     logs_payload = _payload(service.handle_get("/api/logs", {"stage": ["plan"]}))
     artifacts_payload = _payload(service.handle_get("/api/artifacts", {"stage": ["plan"]}))
     project_home_payload = _payload(service.handle_get("/api/project-home", {}))
-    resume_payload = _payload(
-        service.handle_get("/api/work-item/resume", {"work_item": ["WI-UI"]})
-    )
+    resume_payload = _payload(service.handle_get("/api/work-item/resume", {"work_item": ["WI-UI"]}))
 
     assert run_payload["metadata"]["runtime_id"] == "generic-cli"
     assert stage_payload["result"]["final_state"] == "blocked"
@@ -784,9 +767,7 @@ def test_ui_evidence_graph_endpoint_returns_graph_and_flat_table_fallback(
     }
     assert graph_payload["mode"] == "graph"
     assert nodes["document:plan"]["path"] == "workitems/WI-UI/stages/plan/plan.md"
-    assert nodes["mirror:output/plan.md"]["path"] == (
-        "workitems/WI-UI/stages/plan/output/plan.md"
-    )
+    assert nodes["mirror:output/plan.md"]["path"] == ("workitems/WI-UI/stages/plan/output/plan.md")
     assert nodes["event:1"]["detail"] == "Plan started"
     assert nodes[f"approval-request:{request.id}"]["status"] == "approved"
     assert ("attempt:1", "mirror:output/plan.md", "published-output") in edges
@@ -853,12 +834,8 @@ def test_ui_logs_endpoint_defaults_to_bounded_tail_and_accepts_limit_params(
     service = _service(workspace_root)
 
     default_payload = _payload(service.handle_get("/api/logs", {"stage": ["plan"]}))
-    tail_payload = _payload(
-        service.handle_get("/api/logs", {"stage": ["plan"], "tail": ["128"]})
-    )
-    limit_payload = _payload(
-        service.handle_get("/api/logs", {"stage": ["plan"], "limit": ["128"]})
-    )
+    tail_payload = _payload(service.handle_get("/api/logs", {"stage": ["plan"], "tail": ["128"]}))
+    limit_payload = _payload(service.handle_get("/api/logs", {"stage": ["plan"], "limit": ["128"]}))
     invalid_payload = service.handle_get(
         "/api/logs",
         {"stage": ["plan"], "tail": ["0"]},
@@ -1020,9 +997,7 @@ def test_ui_dashboard_endpoint_defaults_completed_flow_to_qa_when_stage_is_omitt
     context_root.joinpath("user-request.md").write_text("Ship the terminal UI.\n", encoding="utf-8")
     service = _service(workspace_root)
 
-    default_payload = _payload(
-        service.handle_get("/api/dashboard", {"run_id": ["run-ui"]})
-    )
+    default_payload = _payload(service.handle_get("/api/dashboard", {"run_id": ["run-ui"]}))
     explicit_payload = _payload(
         service.handle_get("/api/dashboard", {"stage": ["idea"], "run_id": ["run-ui"]})
     )
@@ -1067,9 +1042,7 @@ def test_ui_dashboard_endpoint_defaults_runtime_failure_to_failed_stage_when_sta
     )
     service = _service(workspace_root)
 
-    default_payload = _payload(
-        service.handle_get("/api/dashboard", {"run_id": ["run-ui"]})
-    )
+    default_payload = _payload(service.handle_get("/api/dashboard", {"run_id": ["run-ui"]}))
     explicit_payload = _payload(
         service.handle_get("/api/dashboard", {"stage": ["idea"], "run_id": ["run-ui"]})
     )
@@ -1141,9 +1114,7 @@ def test_ui_next_flow_source_findings_endpoint_groups_source_context(
     _prepare_completed_qa_run(workspace_root)
     service = _service(workspace_root)
 
-    payload = _payload(
-        service.handle_get("/api/next-flow/source-findings", {"run_id": ["run-ui"]})
-    )
+    payload = _payload(service.handle_get("/api/next-flow/source-findings", {"run_id": ["run-ui"]}))
 
     groups = {group["id"]: group for group in payload["groups"]}  # type: ignore[index]
     assert set(groups) == {
@@ -1245,8 +1216,7 @@ def test_ui_next_flow_follow_up_draft_create_endpoint_writes_core_draft(
             "title": "Fix QA follow-up from UI",
             "selected_source_ids": ["qa-finding:qa:qa_report"],
             "first_stage_input": (
-                "# Edited UI follow-up\n\n"
-                "Persist this edited first-stage input before launch."
+                "# Edited UI follow-up\n\nPersist this edited first-stage input before launch."
             ),
             "acceptance_criteria": ["Edited UI acceptance criterion"],
             "required_evidence": ["Edited UI evidence bundle"],
@@ -1264,26 +1234,18 @@ def test_ui_next_flow_follow_up_draft_create_endpoint_writes_core_draft(
     assert draft["inherited_context_lines"] == ["Source run lineage: run-ui"]
     assert "Persist this edited first-stage input" in draft["first_stage_input_preview"]
     assert created["work_item"] == "WI-UI-FOLLOW-UP"
-    assert created["request_path"] == (
-        "workitems/WI-UI-FOLLOW-UP/context/follow-up-request.md"
-    )
+    assert created["request_path"] == ("workitems/WI-UI-FOLLOW-UP/context/follow-up-request.md")
     request_path = workspace_root / created["request_path"]
     assert request_path.exists()
     request_text = request_path.read_text(encoding="utf-8")
     user_request_text = (
-        workspace_root
-        / "workitems"
-        / "WI-UI-FOLLOW-UP"
-        / "context"
-        / "user-request.md"
+        workspace_root / "workitems" / "WI-UI-FOLLOW-UP" / "context" / "user-request.md"
     ).read_text(encoding="utf-8")
     assert "Persist this edited first-stage input before launch." in user_request_text
     assert "Edited UI acceptance criterion" in request_text
     assert "Edited UI evidence bundle" in request_text
     assert "Source run lineage: run-ui" in request_text
-    assert "`workitems/WI-UI/stages/qa/qa-report.md`" in request_path.read_text(
-        encoding="utf-8"
-    )
+    assert "`workitems/WI-UI/stages/qa/qa-report.md`" in request_path.read_text(encoding="utf-8")
     assert created["context"]["user_request_path"] == (  # type: ignore[index]
         "workitems/WI-UI-FOLLOW-UP/context/user-request.md"
     )
@@ -1337,10 +1299,7 @@ def test_ui_next_flow_clone_draft_create_conflicts_for_existing_work_item(
     assert first_response.status == HTTPStatus.CREATED
     assert response.status == HTTPStatus.CONFLICT
     payload = _error_payload(response)
-    assert (
-        "Request context documents already exist for work item 'WI-UI-CLONE'"
-        in payload["error"]
-    )
+    assert "Request context documents already exist for work item 'WI-UI-CLONE'" in payload["error"]
 
 
 def test_ui_next_flow_follow_up_draft_create_conflicts_for_existing_work_item(
@@ -1405,9 +1364,7 @@ def test_ui_next_flow_draft_create_endpoints_return_deterministic_bad_requests(
     )
 
     assert malformed_follow_up.status == HTTPStatus.BAD_REQUEST
-    assert _error_payload(malformed_follow_up)["error"] == (
-        "selected_source_ids must be a list."
-    )
+    assert _error_payload(malformed_follow_up)["error"] == ("selected_source_ids must be a list.")
     assert malformed_editable_fields.status == HTTPStatus.BAD_REQUEST
     assert _error_payload(malformed_editable_fields)["error"] == (
         "acceptance_criteria must be a list."
@@ -1415,16 +1372,9 @@ def test_ui_next_flow_draft_create_endpoints_return_deterministic_bad_requests(
     assert manual_without_artifact.status == HTTPStatus.CREATED
     manual_payload = json.loads(manual_without_artifact.body.decode("utf-8"))
     assert manual_payload["created"]["source_artifact_paths"] == []
-    assert (
-        "- Source artifact: manual operator request only"
-        in (
-            workspace_root
-            / "workitems"
-            / "WI-UI-MANUAL-FOLLOW-UP"
-            / "context"
-            / "follow-up-request.md"
-        ).read_text(encoding="utf-8")
-    )
+    assert "- Source artifact: manual operator request only" in (
+        workspace_root / "workitems" / "WI-UI-MANUAL-FOLLOW-UP" / "context" / "follow-up-request.md"
+    ).read_text(encoding="utf-8")
     assert malformed_clone.status == HTTPStatus.BAD_REQUEST
     assert _error_payload(malformed_clone)["error"] == "source_run_id is required."
 
@@ -1514,17 +1464,17 @@ def test_ui_onboarding_mode_serves_setup_until_context_handoff(
     )
 
     assert created_payload["context"]["work_item"] == "WI-ONBOARD"  # type: ignore[index]
-    assert created_payload["context"]["workspace_root"] == (  # type: ignore[index]
-        project_root / ".aidd"
-    ).as_posix()
     assert (
-        project_root
-        / ".aidd"
-        / "workitems"
-        / "WI-ONBOARD"
-        / "context"
-        / "user-request.md"
-    ).read_text(encoding="utf-8").endswith("Implement UI onboarding smoke.\n")
+        created_payload["context"]["workspace_root"]
+        == (  # type: ignore[index]
+            project_root / ".aidd"
+        ).as_posix()
+    )
+    assert (
+        (project_root / ".aidd" / "workitems" / "WI-ONBOARD" / "context" / "user-request.md")
+        .read_text(encoding="utf-8")
+        .endswith("Implement UI onboarding smoke.\n")
+    )
 
     active_state_payload = _payload(service.handle_get("/api/onboarding/state", {}))
     dashboard_payload = _payload(service.handle_get("/api/dashboard", {}))
@@ -1752,13 +1702,16 @@ def test_ui_stage_endpoint_exposes_repair_and_explicit_stop_recovery_states(
         stage="plan",
         status="failed",
     )
-    events_path = run_attempt_root(
-        workspace_root=stopped_root,
-        work_item="WI-UI",
-        run_id="run-ui",
-        stage="plan",
-        attempt_number=1,
-    ) / RUN_EVENTS_JSONL_FILENAME
+    events_path = (
+        run_attempt_root(
+            workspace_root=stopped_root,
+            work_item="WI-UI",
+            run_id="run-ui",
+            stage="plan",
+            attempt_number=1,
+        )
+        / RUN_EVENTS_JSONL_FILENAME
+    )
     events_path.write_text(
         '{"timestamp":"2026-05-28T00:00:00Z","level":"error","event":"stopped",'
         '"message":"Workflow stopped at plan"}\n',
@@ -2058,10 +2011,10 @@ def test_ui_next_flow_archive_endpoint_records_decision_and_keeps_artifacts_read
 ) -> None:
     workspace_root = tmp_path / ".aidd"
     _prepare_completed_qa_run(workspace_root)
-    qa_report_path = (
-        workspace_root / "workitems" / "WI-UI" / "stages" / "qa" / "qa-report.md"
-    )
+    qa_report_path = workspace_root / "workitems" / "WI-UI" / "stages" / "qa" / "qa-report.md"
     original_qa_report = qa_report_path.read_text(encoding="utf-8")
+    manifest_path = run_manifest_path(workspace_root, "WI-UI", "run-ui")
+    manifest_before = manifest_path.read_bytes()
     service = _service(workspace_root)
 
     response = service.handle_post(
@@ -2073,9 +2026,6 @@ def test_ui_next_flow_archive_endpoint_records_decision_and_keeps_artifacts_read
     )
 
     payload = _payload(response)
-    manifest = json.loads(
-        run_manifest_path(workspace_root, "WI-UI", "run-ui").read_text(encoding="utf-8")
-    )
     artifact_payload = _payload(
         service.handle_get(
             "/api/artifacts/document",
@@ -2095,8 +2045,7 @@ def test_ui_next_flow_archive_endpoint_records_decision_and_keeps_artifacts_read
     assert payload["archive"]["reason"] == "Archive after QA acceptance."  # type: ignore[index]
     assert payload["dashboard"]["run"]["archive"]["archived"] is True  # type: ignore[index]
     assert payload["dashboard"]["run"]["archive"]["source"] == "ui"  # type: ignore[index]
-    assert manifest["operator_archive"]["archived"] is True
-    assert manifest["operator_archive"]["reason"] == "Archive after QA acceptance."
+    assert manifest_path.read_bytes() == manifest_before
     assert history_payload["dashboard"]["run"]["archive"]["archived"] is True  # type: ignore[index]
     assert artifact_payload["text"] == original_qa_report
     assert qa_report_path.read_text(encoding="utf-8") == original_qa_report
@@ -2125,9 +2074,7 @@ def test_ui_next_flow_archive_endpoint_rejects_malformed_or_non_terminal_request
     assert malformed.status == HTTPStatus.BAD_REQUEST
     assert _error_payload(malformed)["error"] == "reason must be a string."
     assert non_terminal.status == HTTPStatus.BAD_REQUEST
-    assert _error_payload(non_terminal)["error"] == (
-        "archive decision requires a terminal QA run."
-    )
+    assert _error_payload(non_terminal)["error"] == ("archive decision requires a terminal QA run.")
 
 
 def test_ui_completed_run_next_action_service_regression_sequence(
@@ -2136,6 +2083,7 @@ def test_ui_completed_run_next_action_service_regression_sequence(
     workspace_root = tmp_path / ".aidd"
     _prepare_completed_qa_run(workspace_root)
     source_manifest_path = run_manifest_path(workspace_root, "WI-UI", "run-ui")
+    source_manifest_before_bytes = source_manifest_path.read_bytes()
     source_manifest_before = json.loads(source_manifest_path.read_text(encoding="utf-8"))
     qa_report_path = workspace_root / "workitems" / "WI-UI" / "stages" / "qa" / "qa-report.md"
     qa_report_before = qa_report_path.read_text(encoding="utf-8")
@@ -2204,7 +2152,7 @@ def test_ui_completed_run_next_action_service_regression_sequence(
     assert preflight_payload["preflight"]["status"] == "pass"  # type: ignore[index]
     assert preflight_payload["preflight"]["can_launch"] is True  # type: ignore[index]
     assert archive_payload["dashboard"]["run"]["archive"]["archived"] is True  # type: ignore[index]
-    assert source_manifest_after["operator_archive"]["archived"] is True
+    assert source_manifest_path.read_bytes() == source_manifest_before_bytes
     assert source_manifest_after["run_id"] == source_manifest_before["run_id"]
     assert source_manifest_after["runtime_id"] == source_manifest_before["runtime_id"]
     assert source_manifest_after["stage_target"] == source_manifest_before["stage_target"]
@@ -2424,12 +2372,8 @@ def test_ui_operator_control_center_endpoints_return_structured_views(
             {"run_id": ["run-ui"], "stage": ["implement"]},
         )
     )
-    accountability = _payload(
-        service.handle_get("/api/run/accountability", {"run_id": ["run-ui"]})
-    )
-    implementation = _payload(
-        service.handle_get("/api/implement/evidence", {"run_id": ["run-ui"]})
-    )
+    accountability = _payload(service.handle_get("/api/run/accountability", {"run_id": ["run-ui"]}))
+    implementation = _payload(service.handle_get("/api/implement/evidence", {"run_id": ["run-ui"]}))
     review = _payload(service.handle_get("/api/review/findings", {"run_id": ["run-ui"]}))
     qa = _payload(service.handle_get("/api/qa/verdict", {"run_id": ["run-ui"]}))
 
@@ -2502,7 +2446,9 @@ def test_ui_run_comparison_endpoint_is_bounded_and_work_item_scoped(tmp_path: Pa
     assert payload["baseline"]["run_id"] == "run-a"  # type: ignore[index]
     assert payload["target"]["run_id"] == "run-b"  # type: ignore[index]
     stage_delta = next(
-        item for item in payload["stage_status_deltas"] if item["stage"] == "plan"  # type: ignore[index]
+        item
+        for item in payload["stage_status_deltas"]
+        if item["stage"] == "plan"  # type: ignore[index]
     )
     assert stage_delta["status"] == "changed"
     assert stage_delta["baseline_status"] == "blocked"
@@ -2536,9 +2482,7 @@ def test_ui_remediation_launch_requires_runtime_before_request_creation(
 
     assert response.status == HTTPStatus.BAD_REQUEST
     assert _error_payload(response)["error"] == "runtime is required."
-    requests = _payload(
-        service.handle_get("/api/remediation/requests", {"run_id": ["run-ui"]})
-    )
+    requests = _payload(service.handle_get("/api/remediation/requests", {"run_id": ["run-ui"]}))
     assert requests["requests"] == []
 
 
@@ -2606,9 +2550,7 @@ def test_ui_remediation_request_rejects_ids_missing_from_source_report(
 
     assert response.status == HTTPStatus.BAD_REQUEST
     assert "source_ids do not match review report" in _error_payload(response)["error"]
-    requests = _payload(
-        service.handle_get("/api/remediation/requests", {"run_id": ["run-ui"]})
-    )
+    requests = _payload(service.handle_get("/api/remediation/requests", {"run_id": ["run-ui"]}))
     assert requests["requests"] == []
 
 
@@ -2640,9 +2582,7 @@ def test_ui_remediation_launch_accepts_operator_audit_source_id_with_explicit_fl
 
     payload = _payload_with_status(response, HTTPStatus.ACCEPTED)
     completed = _wait_job(service, str(payload["job_id"]))
-    requests = _payload(
-        service.handle_get("/api/remediation/requests", {"run_id": ["run-ui"]})
-    )
+    requests = _payload(service.handle_get("/api/remediation/requests", {"run_id": ["run-ui"]}))
     assert completed["status"] == "failed"
     assert captured == []
     assert requests["requests"][0]["source_ids"] == ["OP-RV-1"]  # type: ignore[index]
@@ -2932,9 +2872,7 @@ def test_ui_job_cancel_endpoint_marks_running_job_cancelling_then_cancelled(
     assert running_payload["status"] == "running"
     assert running_payload["cancel_state"] == "none"
 
-    cancel_payload = _payload(
-        service.handle_post(f"/api/jobs/{job_id}/cancel", {})
-    )
+    cancel_payload = _payload(service.handle_post(f"/api/jobs/{job_id}/cancel", {}))
 
     assert cancel_payload["status"] == "cancelling"
     assert cancel_payload["cancel_state"] == "cancelling"
@@ -2970,9 +2908,7 @@ def test_ui_cancel_terminates_generic_cli_runtime_and_records_evidence(
     run_id = "run-ui-runtime-cancel"
     _materialize_plan_inputs(workspace_root=workspace_root, work_item="WI-UI")
     runtime_script = _write_long_running_runtime_script(tmp_path)
-    runtime_command = (
-        f"{shlex.quote(sys.executable)} {shlex.quote(runtime_script.as_posix())}"
-    )
+    runtime_command = f"{shlex.quote(sys.executable)} {shlex.quote(runtime_script.as_posix())}"
     config_path = _write_ui_runtime_config(
         tmp_path=tmp_path,
         runtime_command=runtime_command,
@@ -3030,8 +2966,7 @@ def test_ui_cancel_terminates_generic_cli_runtime_and_records_evidence(
             / "stages"
             / "plan"
             / "stage-metadata.json"
-        )
-        .read_text(encoding="utf-8")
+        ).read_text(encoding="utf-8")
     )
     assert runtime_exit["exit_classification"] == "cancelled"
     assert stage_metadata["status"] == "failed"
@@ -3074,9 +3009,7 @@ def test_ui_job_cancel_endpoint_reports_completed_job_as_already_finished(
     completed_payload = _wait_job(service, job_id)
     assert completed_payload["status"] == "completed"
 
-    cancel_payload = _payload(
-        service.handle_post(f"/api/jobs/{job_id}/cancel", {})
-    )
+    cancel_payload = _payload(service.handle_post(f"/api/jobs/{job_id}/cancel", {}))
 
     assert cancel_payload["status"] == "completed"
     assert cancel_payload["cancel_state"] == "already-finished"
@@ -3129,9 +3062,7 @@ def test_ui_job_operator_request_endpoints_record_decisions(tmp_path: Path) -> N
     assert job_payload["status"] == "waiting-for-operator"
 
     request_id = request_ref["request"].id
-    pending_payload = _payload(
-        service.handle_get(f"/api/jobs/{job_id}/operator-requests", {})
-    )
+    pending_payload = _payload(service.handle_get(f"/api/jobs/{job_id}/operator-requests", {}))
     assert pending_payload["pending_request_ids"] == [request_id]
     assert pending_payload["audit_history"][0]["request_id"] == request_id  # type: ignore[index]
     assert pending_payload["audit_history"][0]["status"] == "pending"  # type: ignore[index]
@@ -3231,9 +3162,7 @@ def test_ui_operator_decision_endpoint_wakes_live_stage_job(tmp_path: Path) -> N
 
     request = captured["request"]
     assert isinstance(request, RuntimeOperatorRequest)
-    pending_payload = _payload(
-        service.handle_get(f"/api/jobs/{job_id}/operator-requests", {})
-    )
+    pending_payload = _payload(service.handle_get(f"/api/jobs/{job_id}/operator-requests", {}))
     assert pending_payload["pending_request_ids"] == [request.id]
 
     decision_payload = _payload(
@@ -3443,9 +3372,7 @@ def test_ui_open_folder_endpoint_allows_workspace_stage_and_artifact_paths(
     opened: list[Path] = []
     service = _service(workspace_root, folder_opener=opened.append)
 
-    workspace_payload = _payload(
-        service.handle_post("/api/open-folder", {"target": "workspace"})
-    )
+    workspace_payload = _payload(service.handle_post("/api/open-folder", {"target": "workspace"}))
     stage_payload = _payload(
         service.handle_post("/api/open-folder", {"target": "stage", "stage": "plan"})
     )
@@ -3461,12 +3388,8 @@ def test_ui_open_folder_endpoint_allows_workspace_stage_and_artifact_paths(
     assert artifact_payload["target"] == "artifact"
     assert opened == [
         workspace_root.resolve(strict=False),
-        (workspace_root / "workitems" / "WI-UI" / "stages" / "plan").resolve(
-            strict=False
-        ),
-        (workspace_root / "workitems" / "WI-UI" / "stages" / "plan").resolve(
-            strict=False
-        ),
+        (workspace_root / "workitems" / "WI-UI" / "stages" / "plan").resolve(strict=False),
+        (workspace_root / "workitems" / "WI-UI" / "stages" / "plan").resolve(strict=False),
     ]
 
 
@@ -3701,20 +3624,17 @@ def test_operator_ui_local_project_e2e_lane_covers_core_operator_flow(
     assert 'class="tabs" role="tablist" aria-label="Stage cockpit views"' in html
     assert (
         'id="tab-work" data-tab="work" role="tab" aria-selected="true" '
-        'aria-controls="cockpitContent" tabindex="0"'
-        in html
+        'aria-controls="cockpitContent" tabindex="0"' in html
     )
     assert 'id="tab-recovery" data-tab="recovery" role="tab"' in html
     assert 'id="tab-evidence" data-tab="evidence" role="tab"' in html
     assert (
         'id="tab-history" data-tab="history" role="tab" aria-selected="false" '
-        'aria-controls="cockpitContent" tabindex="-1"'
-        in html
+        'aria-controls="cockpitContent" tabindex="-1"' in html
     )
     assert (
         'id="cockpitContent" class="cockpit-content" role="tabpanel" '
-        'aria-labelledby="tab-work" tabindex="0"'
-        in html
+        'aria-labelledby="tab-work" tabindex="0"' in html
     )
     assert 'id="nextActionButton"' not in html
 
@@ -3755,9 +3675,7 @@ def test_operator_ui_local_project_e2e_lane_covers_core_operator_flow(
     stage_payload = _payload(service.handle_get("/api/stage", {"stage": ["plan"]}))
 
     assert logs_payload["text"] == "runtime-line\n"
-    assert artifacts_payload["documents"]["plan"] == (
-        "workitems/WI-UI/stages/plan/plan.md"
-    )
+    assert artifacts_payload["documents"]["plan"] == ("workitems/WI-UI/stages/plan/plan.md")
     assert artifacts_payload["documents"]["stage_result"] == (
         "workitems/WI-UI/stages/plan/stage-result.md"
     )
@@ -3813,9 +3731,7 @@ def test_operator_ui_local_project_terminal_fixture_creates_follow_up_without_ru
 
     assert dashboard_payload["dashboard"]["terminal_handoff"]["status"] == "completed"  # type: ignore[index]
     assert payload["created"]["work_item"] == "WI-LOCAL-FOLLOW-UP"
-    assert payload["created"]["source_artifact_paths"] == [
-        "workitems/WI-UI/stages/qa/qa-report.md"
-    ]
+    assert payload["created"]["source_artifact_paths"] == ["workitems/WI-UI/stages/qa/qa-report.md"]
     assert any(
         item["id"] == "qa-finding:qa:qa_report"
         and item["source_path"] == "workitems/WI-UI/stages/qa/qa-report.md"
@@ -4047,7 +3963,6 @@ def test_ui_artifact_document_endpoint_rejects_non_utf8_documents(tmp_path: Path
 
     assert response.status == HTTPStatus.BAD_REQUEST
     assert "not UTF-8 text" in _error_payload(response)["error"]  # type: ignore[operator]
-
 
 
 def test_ui_json_body_reader_rejects_oversized_payload() -> None:

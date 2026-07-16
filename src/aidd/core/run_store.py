@@ -964,29 +964,16 @@ def persist_run_archive_decision(
     source: str = "ui",
     changed_at_utc: datetime | None = None,
 ) -> dict[str, Any]:
-    manifest_path = run_manifest_path(
+    from aidd.core.run_archive import persist_run_archive_decision as persist_overlay
+
+    return persist_overlay(
         workspace_root=workspace_root,
         work_item=work_item,
         run_id=run_id,
+        reason=reason,
+        source=source,
+        changed_at_utc=changed_at_utc,
     )
-    if not manifest_path.exists():
-        raise ValueError(f"Run manifest is missing for work item '{work_item}', run '{run_id}'.")
-    payload = json.loads(manifest_path.read_text(encoding="utf-8"))
-    if not isinstance(payload, dict):
-        raise ValueError(
-            f"Run manifest must be a JSON object for work item '{work_item}', run '{run_id}'."
-        )
-    timestamp = _format_utc_timestamp(changed_at_utc)
-    archive = {
-        "archived": True,
-        "archived_at_utc": timestamp,
-        "reason": reason.strip() if isinstance(reason, str) and reason.strip() else None,
-        "source": source.strip() or "ui",
-    }
-    payload["operator_archive"] = archive
-    payload["updated_at_utc"] = timestamp
-    _write_json_payload(manifest_path, payload)
-    return archive
 
 
 @dataclass(frozen=True)
