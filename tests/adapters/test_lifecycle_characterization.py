@@ -63,7 +63,7 @@ elif scenario == "parent-exit":
         "'import time; time.sleep(10)']); print('parent-exit', flush=True)"
     )
     stdin_text = None
-    timeout = 0.2
+    timeout = 1.0
     cancel = None
 elif scenario == "descendant-exit":
     child = (
@@ -139,7 +139,7 @@ def _observe_probe(scenario: str, tmp_path: Path) -> LifecycleObservation:
         ("bidirectional-io", None, False),
         ("timeout", "timeout", False),
         ("cancellation", "cancelled", False),
-        ("parent-exit", "timeout", False),
+        ("parent-exit", None, False),
         ("descendant-exit", None, False),
     ],
 )

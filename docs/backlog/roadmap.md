@@ -9293,7 +9293,7 @@ Local tasks:
   - Scope: adapter lifecycle primitive.
   - Verification: a disposable parent/child process-tree test proves bounded group
     shutdown.
-- `W34-E4-S1-T5` Adopt the owned-process supervisor in shared streamed execution.
+- `W34-E4-S1-T5` (done) Adopt the owned-process supervisor in shared streamed execution.
   [`REL-05`, `REL-10`]
   - Dependencies: `W34-E4-S1-T4`.
   - Scope: shared streamed transport lifecycle only.

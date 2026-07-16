@@ -1,8 +1,5 @@
 from __future__ import annotations
 
-import os
-import signal
-import subprocess
 import threading
 import time
 from collections import deque
@@ -13,6 +10,7 @@ from queue import Empty, Queue
 from typing import Literal, TextIO
 
 from aidd.adapters.process_io import ManagedStdinWriter
+from aidd.adapters.process_supervisor import OwnedProcessSupervisor
 from aidd.adapters.runtime_execution import RuntimeSubprocessSpec
 from aidd.runtime_budget import validate_runtime_budget
 
@@ -26,61 +24,6 @@ class StreamedSubprocessResult[ExitClassificationT: StrEnum]:
     stderr_text: str
     runtime_log_text: str
     stop_reason: ExitClassificationT | None
-
-
-def request_subprocess_stop(process: subprocess.Popen[str]) -> None:
-    process_group_terminated = _request_process_group_stop(process, signal.SIGTERM)
-    if process_group_terminated:
-        deadline = time.monotonic() + 0.5
-        while time.monotonic() < deadline:
-            if not _process_group_exists(process.pid):
-                return
-            time.sleep(0.05)
-        _request_process_group_stop(process, signal.SIGKILL)
-        if process.poll() is None:
-            try:
-                process.kill()
-            except (OSError, ProcessLookupError):
-                pass
-        return
-
-    if process.poll() is not None:
-        return
-
-    try:
-        process.terminate()
-    except (OSError, ProcessLookupError):
-        return
-
-    try:
-        process.wait(timeout=0.5)
-    except subprocess.TimeoutExpired:
-        try:
-            process.kill()
-        except (OSError, ProcessLookupError):
-            return
-
-
-def _request_process_group_stop(process: subprocess.Popen[str], sig: signal.Signals) -> bool:
-    if os.name == "nt":
-        return False
-    try:
-        os.killpg(process.pid, sig)
-    except (OSError, ProcessLookupError):
-        return False
-    return True
-
-
-def _process_group_exists(pid: int) -> bool:
-    if os.name == "nt":
-        return False
-    try:
-        os.killpg(pid, 0)
-    except ProcessLookupError:
-        return False
-    except PermissionError:
-        return True
-    return True
 
 
 def stream_reader(
@@ -121,17 +64,7 @@ def run_streamed_subprocess[ExitClassificationT: StrEnum](
         raise ValueError("completion_stop_reason is required when completion_requested is set.")
 
     try:
-        process = subprocess.Popen(
-            spec.command,
-            cwd=spec.cwd,
-            env=spec.env,
-            stdin=subprocess.PIPE if spec.stdin_text is not None else None,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
-            text=True,
-            bufsize=1,
-            start_new_session=os.name != "nt",
-        )
+        supervisor = OwnedProcessSupervisor.launch(spec)
     except (FileNotFoundError, PermissionError, OSError) as exc:
         if launch_failure_stop_reason is None:
             raise
@@ -143,6 +76,7 @@ def run_streamed_subprocess[ExitClassificationT: StrEnum](
             runtime_log_text=message,
             stop_reason=launch_failure_stop_reason,
         )
+    process = supervisor.process
 
     queue: Queue[tuple[StreamTarget, str | None]] = Queue()
     reader_threads = (
@@ -173,6 +107,7 @@ def run_streamed_subprocess[ExitClassificationT: StrEnum](
     runtime_log_chunks: deque[str] = deque()
     stream_done: dict[StreamTarget, bool] = {"stdout": False, "stderr": False}
     deadline = time.monotonic() + timeout_seconds if timeout_seconds is not None else None
+    parent_exit_drain_deadline: float | None = None
     stop_reason: ExitClassificationT | None = None
     stdin_writer = ManagedStdinWriter.start(process.stdin, spec.stdin_text)
 
@@ -182,15 +117,15 @@ def run_streamed_subprocess[ExitClassificationT: StrEnum](
             return
         if cancel_requested is not None and cancel_requested():
             stop_reason = cancel_stop_reason
-            request_subprocess_stop(process)
+            supervisor.request_stop()
             return
         if completion_requested is not None and completion_requested():
             stop_reason = completion_stop_reason
-            request_subprocess_stop(process)
+            supervisor.request_stop()
             return
         if deadline is not None and time.monotonic() >= deadline:
             stop_reason = timeout_stop_reason
-            request_subprocess_stop(process)
+            supervisor.request_stop()
 
     def _invoke_stream_callback(callback: Callable[[str], None] | None, chunk: str) -> None:
         if callback is None:
@@ -198,22 +133,31 @@ def run_streamed_subprocess[ExitClassificationT: StrEnum](
         try:
             callback(chunk)
         except BaseException:
-            request_subprocess_stop(process)
-            for thread in reader_threads:
-                thread.join(timeout=0.5)
+            supervisor.request_stop()
+            supervisor.drain_streams(reader_threads)
+            if stdin_writer is not None:
+                stdin_writer.join()
             raise
 
     while True:
         _maybe_request_stop()
+        if process.poll() is not None and parent_exit_drain_deadline is None:
+            parent_exit_drain_deadline = time.monotonic() + 0.2
+        if (
+            parent_exit_drain_deadline is not None
+            and time.monotonic() >= parent_exit_drain_deadline
+            and not all(stream_done.values())
+        ):
+            supervisor.request_stop()
+            parent_exit_drain_deadline = None
         if (
             stdin_writer is not None
             and stdin_writer.error is not None
             and stop_reason is None
         ):
             writer_error = stdin_writer.error
-            request_subprocess_stop(process)
-            for thread in reader_threads:
-                thread.join(timeout=0.5)
+            supervisor.request_stop()
+            supervisor.drain_streams(reader_threads)
             stdin_writer.join()
             assert writer_error is not None
             raise writer_error
@@ -239,8 +183,7 @@ def run_streamed_subprocess[ExitClassificationT: StrEnum](
         stderr_chunks.append(chunk)
         _invoke_stream_callback(on_stderr, chunk)
 
-    for thread in reader_threads:
-        thread.join(timeout=0.5)
+    supervisor.drain_streams(reader_threads)
     if stdin_writer is not None:
         stdin_writer.join()
         if stdin_writer.error is not None and stop_reason is None:
