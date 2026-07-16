@@ -6,6 +6,7 @@ from pathlib import Path
 
 import pytest
 
+from aidd.adapters.qwen.live import _parse_json_line, _read_complete_event_lines
 from aidd.adapters.runtime_execution import StageRuntimeRequest
 from aidd.adapters.surface import get_runtime_adapter_surface
 from aidd.core.runtime_operator import (
@@ -225,6 +226,65 @@ def test_qwen_live_transport_ignores_malformed_and_duplicate_events(
     ]
     assert len(confirmations) == 1
     assert confirmations[0]["request_id"] == "qwen-1"
+
+
+def test_qwen_event_reader_preserves_every_incomplete_byte_boundary(
+    tmp_path: Path,
+) -> None:
+    events_path = tmp_path / "qwen-events.jsonl"
+    event = {
+        "type": "control_request",
+        "payload": {
+            "request_id": "qwen-fragmented",
+            "kind": "shell",
+            "reason": "проверка",
+        },
+    }
+    encoded = (json.dumps(event, ensure_ascii=False) + "\n").encode()
+
+    for split_at in range(1, len(encoded)):
+        events_path.write_bytes(encoded[:split_at])
+        offset, lines = _read_complete_event_lines(
+            events_path=events_path,
+            read_offset=0,
+        )
+        assert offset == 0
+        assert lines == ()
+
+        with events_path.open("ab") as handle:
+            handle.write(encoded[split_at:])
+        offset, lines = _read_complete_event_lines(
+            events_path=events_path,
+            read_offset=offset,
+        )
+        assert offset == len(encoded)
+        assert len(lines) == 1
+        assert _parse_json_line(lines[0]) == event
+
+
+def test_qwen_event_reader_commits_malformed_complete_line_before_partial_tail(
+    tmp_path: Path,
+) -> None:
+    events_path = tmp_path / "qwen-events.jsonl"
+    events_path.write_bytes(b"{not-json}\n{\"type\":")
+
+    offset, lines = _read_complete_event_lines(
+        events_path=events_path,
+        read_offset=0,
+    )
+
+    assert offset == len(b"{not-json}\n")
+    assert len(lines) == 1
+    assert _parse_json_line(lines[0]) is None
+
+    with events_path.open("ab") as handle:
+        handle.write(b"\"message\"}\n")
+    offset, lines = _read_complete_event_lines(
+        events_path=events_path,
+        read_offset=offset,
+    )
+    assert offset == events_path.stat().st_size
+    assert _parse_json_line(lines[0]) == {"type": "message"}
 
 
 @pytest.mark.parametrize(

@@ -223,12 +223,10 @@ def _handle_new_events(
     operator_decision_provider: RuntimeOperatorDecisionProvider,
     input_path: Path,
 ) -> tuple[int, str | None, str | None]:
-    if not events_path.exists():
-        return read_offset, None, None
-    with events_path.open("r", encoding="utf-8") as handle:
-        handle.seek(read_offset)
-        lines = handle.readlines()
-        read_offset = handle.tell()
+    read_offset, lines = _read_complete_event_lines(
+        events_path=events_path,
+        read_offset=read_offset,
+    )
 
     for line in lines:
         event = _parse_json_line(line)
@@ -255,9 +253,34 @@ def _handle_new_events(
     return read_offset, None, None
 
 
-def _parse_json_line(line: str) -> Mapping[str, Any] | None:
+def _read_complete_event_lines(
+    *,
+    events_path: Path,
+    read_offset: int,
+) -> tuple[int, tuple[bytes, ...]]:
+    if not events_path.exists():
+        return read_offset, ()
+    with events_path.open("rb") as handle:
+        handle.seek(read_offset)
+        payload = handle.read()
+    last_newline = payload.rfind(b"\n")
+    if last_newline < 0:
+        return read_offset, ()
+    committed_payload = payload[: last_newline + 1]
+    return (
+        read_offset + len(committed_payload),
+        tuple(committed_payload.splitlines()),
+    )
+
+
+def _parse_json_line(line: str | bytes) -> Mapping[str, Any] | None:
     import json
 
+    if isinstance(line, bytes):
+        try:
+            line = line.decode("utf-8")
+        except UnicodeDecodeError:
+            return None
     stripped = line.strip()
     if not stripped:
         return None

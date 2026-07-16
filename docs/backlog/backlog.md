@@ -7,13 +7,14 @@ slice, and local task.
 
 ## Next
 
-- `W34-E4-S1-T8` — Preserve incomplete trailing Qwen JSONL frames until a complete record
-  arrives.
+- `W34-E4-S1-T6` — Propagate cancellation through Codex live startup, active turn, and
+  approval wait.
 
 ## Soon
 
-- `W34-E4-S1-T6` — Propagate cancellation through Codex live startup, active turn, and
+- `W34-E4-S1-T7` — Propagate cancellation through Qwen live startup, active turn, and
   approval wait.
+
 ## Parking lot
 
 - `W34-E3-S4-T1` — Add characterization fixtures for corrected routes, jobs, approvals,

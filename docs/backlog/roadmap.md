@@ -9307,7 +9307,7 @@ Local tasks:
   approval wait. [`REL-04`]
   - Scope: Qwen live transport.
   - Verification: three-state cancellation tests persist a cancelled outcome.
-- `W34-E4-S1-T8` Preserve incomplete trailing Qwen JSONL frames until a complete record
+- `W34-E4-S1-T8` (done) Preserve incomplete trailing Qwen JSONL frames until a complete record
   arrives. [`REL-06`]
   - Scope: Qwen event reader.
   - Verification: a representative event is split at every byte boundary; malformed
