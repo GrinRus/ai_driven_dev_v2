@@ -9022,7 +9022,7 @@ Exit evidence:
 - evidence is evaluated inside its authoritative item/section rather than borrowed from
   unrelated prose.
 
-#### Slice W34-E1-S5 — validator change isolation (`planned`)
+#### Slice W34-E1-S5 — validator change isolation (`done`)
 Goal: reduce contract synchronization cost after correctness behavior is characterized.
 
 Dependencies:
@@ -9052,7 +9052,7 @@ Local tasks:
   - Scope: validator dead surface only.
   - Verification: the pre-Wave-35 tasklist semantic pipeline and other unreachable
     surfaces are absent; import inventory and the complete validator suite pass.
-- `W34-E1-S5-T5` Remove the unused packaged `common/run-rules.md` fragment without
+- `W34-E1-S5-T5` (done) Remove the unused packaged `common/run-rules.md` fragment without
   changing active prompt composition. [`DEAD-02`]
   - Scope: packaged prompt resources.
   - Verification: wheel inventory passes and active prompt hashes remain unchanged.

@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import hashlib
+import json
 import os
 import shutil
 import subprocess
@@ -9,7 +11,11 @@ from pathlib import Path
 
 from aidd.cli.ui_assets import operator_static_asset_manifest
 from aidd.core.contracts import repo_root_from
+from aidd.core.stage_registry import resolve_prompt_pack_paths
 from aidd.core.stages import STAGES
+
+_ACTIVE_PROMPT_HASHES_PATH = Path("tests/fixtures/active_prompt_pack_hashes.json")
+_REMOVED_COMMON_PROMPT = "prompt-packs/common/run-rules.md"
 
 
 def _repo_root() -> Path:
@@ -18,6 +24,25 @@ def _repo_root() -> Path:
 
 def _uv_command() -> str:
     return os.environ.get("UV") or shutil.which("uv") or "uv"
+
+
+def _active_prompt_hashes() -> dict[str, str]:
+    root = _repo_root()
+    return {
+        prompt_path: hashlib.sha256((root / prompt_path).read_bytes()).hexdigest()
+        for stage in STAGES
+        for prompt_path in resolve_prompt_pack_paths(stage=stage)
+    }
+
+
+def test_active_prompt_pack_paths_and_hashes_match_the_removal_baseline() -> None:
+    expected = json.loads(
+        (_repo_root() / _ACTIVE_PROMPT_HASHES_PATH).read_text(encoding="utf-8")
+    )
+
+    assert _active_prompt_hashes() == expected
+    assert _REMOVED_COMMON_PROMPT not in expected
+    assert not (_repo_root() / _REMOVED_COMMON_PROMPT).exists()
 
 
 def test_built_wheel_includes_runtime_owned_contracts_and_prompt_packs(tmp_path: Path) -> None:
@@ -40,6 +65,9 @@ def test_built_wheel_includes_runtime_owned_contracts_and_prompt_packs(tmp_path:
         assert f"aidd/_resources/contracts/stages/{stage}.md" in archive_names
     assert "aidd/_resources/contracts/documents/stage-result.md" in archive_names
     assert "aidd/_resources/prompt-packs/stages/plan/system.md" in archive_names
+    for prompt_path in _active_prompt_hashes():
+        assert f"aidd/_resources/{prompt_path}" in archive_names
+    assert f"aidd/_resources/{_REMOVED_COMMON_PROMPT}" not in archive_names
     for asset in operator_static_asset_manifest():
         assert f"aidd/cli/static/{asset.filename}" in archive_names
 

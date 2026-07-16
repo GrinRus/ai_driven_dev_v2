@@ -7,8 +7,6 @@ slice, and local task.
 
 ## Next
 
-- `W34-E1-S5-T5` — Remove the unused packaged `common/run-rules.md` fragment without
-  changing active prompt composition.
 
 ## Soon
 
@@ -96,6 +94,6 @@ slice, and local task.
 
 ## Current reconciliation
 
-- `2026-07-16` unreachable validator helpers and unused pattern re-exports are absent while
-  canonical task-plan and cross-document surfaces remain. `W34-E1-S5-T5` is next for the
-  unused packaged prompt fragment removal.
+- `2026-07-16` `W34-E1-S5` is complete: contract fixtures use the production coordinator,
+  cross-document and semantic-test ownership is isolated, and confirmed dead validator and
+  prompt surfaces are absent. The next bounded queue requires a separate reconciliation.
