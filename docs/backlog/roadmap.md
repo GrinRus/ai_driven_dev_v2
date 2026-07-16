@@ -9441,7 +9441,7 @@ Dependencies:
 
 Local tasks:
 
-- `W34-E5-S2-T1` Apply one lifecycle budget and owned process groups to setup, run,
+- `W34-E5-S2-T1` (done) Apply one lifecycle budget and owned process groups to setup, run,
   verify, and teardown. [`REL-13`, `REF-01`]
   - Scope: deterministic harness runner.
   - Verification: timeout and descendant-exit tests cover every phase.
