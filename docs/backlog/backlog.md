@@ -7,19 +7,15 @@ slice, and local task.
 
 ## Next
 
-- `W34-E6-S2-T1` — Close dependency-update proposals that target packages removed by
-  the cleanup slice.
+- `W34-E3-S4-T1` — Add characterization fixtures for corrected routes, jobs, approvals,
+  and dashboard states.
 
 ## Soon
 
-- `W34-E6-S2-T2` — Rebase and apply compatible updates for retained Python runtime and
-  development dependencies.
+- `W34-E3-S4-T2` — Extract thin HTTP route handlers from `cli/ui.py`.
 
 ## Parking lot
 
-- `W34-E3-S4-T1` — Add characterization fixtures for corrected routes, jobs, approvals,
-  and dashboard states.
-- `W34-E6-S2-T3` — Rebase and apply compatible pinned GitHub Actions updates.
 - `W34-E7-S3-T1` — Reject ambiguous, unknown, or malformed safety-sensitive
   configuration.
 - `W34-E8-S1-T2` — Normalize inherited local-task statuses and historical disposition
@@ -81,6 +77,20 @@ slice, and local task.
   queue-restoration policy in `docs/backlog/roadmap.md` (`W8-E3-S1`).
 
 ## Current reconciliation
+
+- `2026-07-16` `W34-E6-S2-T3`, slice `W34-E6-S2`, and Epic `W34-E6` are complete:
+  maintained checkout, Python setup, uv setup, artifact download, and Scorecard actions
+  are pinned to their compatible current releases with workflow contracts intact.
+  `W34-E3-S4-T1` is promoted to `Next`; its direct successor `S4-T2` is in `Soon`.
+
+- `2026-07-16` `W34-E6-S2-T2` is complete: the retained lock now resolves Typer
+  0.27.0, pytest 9.1.1, Ruff 0.15.22, and mypy 2.3.0 without changing declared lower
+  bounds; CLI compatibility, locked sync, lint, strict typing, packaging smoke, and
+  1810 tests pass. `S2-T3` is promoted to `Next`.
+
+- `2026-07-16` `W34-E6-S2-T1` is complete: obsolete Dependabot proposals for removed
+  direct dependencies `pydantic`, `markdown-it-py`, and `python-frontmatter` are closed
+  with cleanup provenance. `S2-T2` is promoted to `Next`; `S2-T3` is in `Soon`.
 
 - `2026-07-16` `W34-E6-S1-T5` and slice `W34-E6-S1` are complete: the dormant docs
   extra, MkDocs lock subtree, and Dependabot pattern are removed, while wheel resources
