@@ -9404,7 +9404,7 @@ Exit evidence:
 ### Epic W34-E5 — executable automation, durable bundles, and release checks (`planned`)
 Linked stories: `US-07`, `US-09`, `US-10`, `US-11`
 
-#### Slice W34-E5-S1 — deterministic CI scenario lane (`planned`)
+#### Slice W34-E5-S1 — deterministic CI scenario lane (`done`)
 Goal: turn `automation_lane: ci` into an executable local-only contract without adding
 provider-live work to CI/CD.
 
@@ -9414,16 +9414,16 @@ Dependencies:
 
 Local tasks:
 
-- `W34-E5-S1-T1` Repair stale CI-labelled smoke manifests and fixtures. [`BUG-11`]
+- `W34-E5-S1-T1` (done) Repair stale CI-labelled smoke manifests and fixtures. [`BUG-11`]
   - Scope: deterministic scenarios and local fixtures.
   - Verification: each manifest passes from a freshly materialized fixture.
-- `W34-E5-S1-T2` Expose a deterministic local-only `aidd eval execute` entry point
+- `W34-E5-S1-T2` (done) Expose a deterministic local-only `aidd eval execute` entry point
   over the existing pipeline without restoring the removed legacy live-run command.
   [`TEST-01`, `DEAD-01`]
   - Scope: CLI and harness entry point.
   - Verification: one smoke covers prepare, execute, verify, teardown, and bundle
     persistence while rejecting live/provider-auth manifests.
-- `W34-E5-S1-T3` Execute every discovered CI-lane manifest in CI. [`TEST-01`]
+- `W34-E5-S1-T3` (done) Execute every discovered CI-lane manifest in CI. [`TEST-01`]
   - Scope: CI workflow integration.
   - Verification: discovered manifest IDs equal executed manifest IDs exactly.
 

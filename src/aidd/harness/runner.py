@@ -175,45 +175,15 @@ def _timeout_output_to_text(value: str | bytes | None) -> str:
     return value
 
 
-def invoke_aidd_run(
+def _invoke_aidd_process(
     *,
     scenario: Scenario,
     working_copy_path: Path,
     runtime_id: str,
     work_item: str,
-    aidd_command: tuple[str, ...] = ("uv", "run", "aidd"),
-    stage_start: str | None = None,
-    stage_end: str | None = None,
-    config_path: Path | None = None,
-    environment: Mapping[str, str] | None = None,
+    command: tuple[str, ...],
+    environment: Mapping[str, str] | None,
 ) -> HarnessAiddRunResult:
-    _validate_working_copy_path(working_copy_path)
-    if runtime_id not in scenario.runtime_targets:
-        supported = ", ".join(scenario.runtime_targets)
-        raise ValueError(
-            f"Runtime '{runtime_id}' is not allowed by scenario '{scenario.scenario_id}'. "
-            f"Supported runtime targets: {supported}."
-        )
-    if not work_item.strip():
-        raise ValueError("work_item must be non-empty.")
-    if not aidd_command:
-        raise ValueError("aidd_command must contain at least one token.")
-
-    command_parts: list[str] = [
-        *aidd_command,
-        "run",
-        "--work-item",
-        work_item,
-        "--runtime",
-        runtime_id,
-    ]
-    if stage_start is not None:
-        command_parts.extend(("--from-stage", stage_start))
-    if stage_end is not None:
-        command_parts.extend(("--to-stage", stage_end))
-    if config_path is not None:
-        command_parts.extend(("--config", config_path.resolve(strict=False).as_posix()))
-    command = tuple(command_parts)
     command_env = _command_environment(environment)
     command_env.update(
         {
@@ -222,7 +192,6 @@ def invoke_aidd_run(
             "AIDD_HARNESS_WORK_ITEM": work_item,
         }
     )
-
     timeout_seconds = (
         float(scenario.run.timeout_minutes * 60)
         if scenario.run.timeout_minutes is not None
@@ -275,6 +244,98 @@ def invoke_aidd_run(
         command_transcript=command_transcript,
         timed_out=timed_out,
         timeout_seconds=timeout_seconds,
+    )
+
+
+def invoke_aidd_run(
+    *,
+    scenario: Scenario,
+    working_copy_path: Path,
+    runtime_id: str,
+    work_item: str,
+    aidd_command: tuple[str, ...] = ("uv", "run", "aidd"),
+    stage_start: str | None = None,
+    stage_end: str | None = None,
+    config_path: Path | None = None,
+    environment: Mapping[str, str] | None = None,
+) -> HarnessAiddRunResult:
+    _validate_working_copy_path(working_copy_path)
+    if runtime_id not in scenario.runtime_targets:
+        supported = ", ".join(scenario.runtime_targets)
+        raise ValueError(
+            f"Runtime '{runtime_id}' is not allowed by scenario '{scenario.scenario_id}'. "
+            f"Supported runtime targets: {supported}."
+        )
+    if not work_item.strip():
+        raise ValueError("work_item must be non-empty.")
+    if not aidd_command:
+        raise ValueError("aidd_command must contain at least one token.")
+
+    command_parts: list[str] = [
+        *aidd_command,
+        "run",
+        "--work-item",
+        work_item,
+        "--runtime",
+        runtime_id,
+    ]
+    if stage_start is not None:
+        command_parts.extend(("--from-stage", stage_start))
+    if stage_end is not None:
+        command_parts.extend(("--to-stage", stage_end))
+    if config_path is not None:
+        command_parts.extend(("--config", config_path.resolve(strict=False).as_posix()))
+    return _invoke_aidd_process(
+        scenario=scenario,
+        working_copy_path=working_copy_path,
+        runtime_id=runtime_id,
+        work_item=work_item,
+        command=tuple(command_parts),
+        environment=environment,
+    )
+
+
+def invoke_aidd_stage(
+    *,
+    scenario: Scenario,
+    working_copy_path: Path,
+    runtime_id: str,
+    work_item: str,
+    stage: str,
+    aidd_command: tuple[str, ...] = ("uv", "run", "aidd"),
+    config_path: Path | None = None,
+    environment: Mapping[str, str] | None = None,
+) -> HarnessAiddRunResult:
+    _validate_working_copy_path(working_copy_path)
+    if runtime_id not in scenario.runtime_targets:
+        supported = ", ".join(scenario.runtime_targets)
+        raise ValueError(
+            f"Runtime '{runtime_id}' is not allowed by scenario '{scenario.scenario_id}'. "
+            f"Supported runtime targets: {supported}."
+        )
+    if not work_item.strip():
+        raise ValueError("work_item must be non-empty.")
+    if not aidd_command:
+        raise ValueError("aidd_command must contain at least one token.")
+    command_parts = [
+        *aidd_command,
+        "stage",
+        "run",
+        stage,
+        "--work-item",
+        work_item,
+        "--runtime",
+        runtime_id,
+    ]
+    if config_path is not None:
+        command_parts.extend(("--config", config_path.resolve(strict=False).as_posix()))
+    return _invoke_aidd_process(
+        scenario=scenario,
+        working_copy_path=working_copy_path,
+        runtime_id=runtime_id,
+        work_item=work_item,
+        command=tuple(command_parts),
+        environment=environment,
     )
 
 

@@ -394,7 +394,7 @@ def test_smoke_plan_stagepack_scenario_declares_cross_runtime_output_checks() ->
     assert scenario.feature_size == "medium"
     assert scenario.automation_lane == "ci"
     assert scenario.canonical_runtime == "opencode"
-    assert scenario.raw["aidd_invocation"]["command"] == ["uv", "run", "aidd", "run"]
+    assert "command" not in scenario.raw["aidd_invocation"]
     assert scenario.run.stage_start == "plan"
     assert scenario.run.stage_end == "plan"
     assert scenario.feature_source is not None
@@ -487,14 +487,20 @@ def test_installed_local_project_smoke_scenario_uses_source_install_and_local_fi
 
 def test_local_fixture_workflow_scenarios_use_workspace_relative_runtime_path() -> None:
     scenario_paths = (
-        Path("harness/scenarios/deterministic/project-set-plan-context.yaml"),
-        Path("harness/scenarios/smoke/installed-local-project-fixture.yaml"),
+        (
+            Path("harness/scenarios/deterministic/project-set-plan-context.yaml"),
+            'command = "python3 ../aidd_fixture_runtime.py"',
+        ),
+        (
+            Path("harness/scenarios/smoke/installed-local-project-fixture.yaml"),
+            'command = "python ../aidd_fixture_runtime.py"',
+        ),
     )
 
-    for scenario_path in scenario_paths:
+    for scenario_path, expected_command in scenario_paths:
         scenario = load_scenario(scenario_path)
         setup_commands = "\n".join(scenario.setup.commands)
-        assert 'command = "python ../aidd_fixture_runtime.py"' in setup_commands
+        assert expected_command in setup_commands
 
 
 def test_deterministic_workflow_scenarios_cover_medium_ci_and_large_manual_buckets() -> None:
@@ -514,7 +520,7 @@ def test_deterministic_workflow_scenarios_cover_medium_ci_and_large_manual_bucke
     assert medium_ci.feature_source.mode == "fixture-seed"
     assert medium_ci.feature_source.selection_policy == "fixture-owned"
     assert medium_ci.feature_source.fixture_path == "harness/fixtures/minimal-python"
-    assert medium_ci.run.stage_start == "plan"
+    assert medium_ci.run.stage_start == "idea"
     assert medium_ci.run.stage_end == "tasklist"
 
     assert large_manual.is_live is False
@@ -538,7 +544,7 @@ def test_task_execution_scenario_declares_incremental_full_flow_evidence() -> No
     assert scenario.feature_size == "medium"
     assert scenario.automation_lane == "ci"
     assert scenario.canonical_runtime == "generic-cli"
-    assert scenario.run.stage_start == "tasklist"
+    assert scenario.run.stage_start == "idea"
     assert scenario.run.stage_end == "qa"
     assert scenario.run.interview_required is True
     assert scenario.feature_source is not None
@@ -547,15 +553,13 @@ def test_task_execution_scenario_declares_incremental_full_flow_evidence() -> No
     assert "task-ledger.json" in verification
     assert "implementation-report.md" in verification
     assert "qa-report.md" in verification
-    assert "finalization/attempts/attempt-0002" in verification
-    assert "answers.md" in verification
-    assert "tasks/TL-2/attempts/attempt-0002/task-diff.json" in verification
-    assert "tasks/TL-3/attempts/attempt-0002/attempt-state.json" in verification
+    assert "finalization/attempts/attempt-0001" in verification
+    assert "tasks/TL-2/attempts/attempt-0001/task-diff.json" in verification
+    assert "tasks/TL-3/attempts/attempt-0001/attempt-state.json" in verification
     manifest = Path(
         "harness/scenarios/deterministic/minimal-python-task-execution.yaml"
     ).read_text(encoding="utf-8")
-    assert "entrypoints use the same task-aware execution boundary" in manifest
-    assert "cannot publish implement success" in manifest
+    assert "aggregate finalization succeed" in manifest
 
 
 def test_project_set_deterministic_scenario_declares_two_root_context_checks() -> None:

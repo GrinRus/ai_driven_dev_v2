@@ -261,44 +261,99 @@ def render_validator_report_source(
     teardown_error: BaseException | None,
 ) -> str:
     verdict = "pass" if status == "pass" else "fail"
-    lines = [
-        "# Validator report",
-        "",
-        "## Verdict",
-        f"- Verdict: `{verdict}`",
-    ]
     if status == "pass":
-        lines.extend(("", "## Findings", "- none", ""))
-        return "\n".join(lines)
+        return """# Validator Report
+
+## Summary
+
+- Total issues: 0
+- Blocking issues: no
+- Affected documents: none
+- Dominant failure categories: none
+
+## Structural checks
+
+- none
+
+## Semantic checks
+
+- none
+
+## Cross-document checks
+
+- none
+
+## Result
+
+- Verdict: `pass`
+- Repair required for progression: no
+"""
 
     if status == "blocked":
-        code = "HARNESS_INTERVIEW_BLOCKED"
+        code = "CROSS-BLOCKING-UNANSWERED"
         message = summary
         location = "verify"
+        finding_section = "Cross-document checks"
+        category = "cross-document checks"
     elif install_error is not None:
-        code = "HARNESS_INSTALL_FAILURE"
+        code = "STRUCT-MISSING-REQUIRED-DOCUMENT"
         message = str(install_error)
         location = "install"
+        finding_section = "Structural checks"
+        category = "structural checks"
     elif status == "infra-fail":
-        code = "HARNESS_INFRA_FAILURE"
+        code = "STRUCT-MISSING-REQUIRED-DOCUMENT"
         error = prep_error or setup_error or teardown_error
         message = str(error) if error is not None else summary
         location = "harness"
+        finding_section = "Structural checks"
+        category = "structural checks"
     else:
-        code = "HARNESS_SCENARIO_FAILURE"
+        code = "SEM-UNVERIFIABLE-CHECK-CLAIM"
         error = verification_error or run_error or setup_error
         message = str(error) if error is not None else summary
         location = "verify"
-
-    lines.extend(
+        finding_section = "Semantic checks"
+        category = "semantic checks"
+    safe_message = " ".join(message.splitlines())
+    sections = {
+        "Structural checks": ["- none"],
+        "Semantic checks": ["- none"],
+        "Cross-document checks": ["- none"],
+    }
+    sections[finding_section] = [
+        f"- `{code}` (`high`) in `{location}`: {safe_message}"
+    ]
+    return "\n".join(
         (
+            "# Validator Report",
             "",
-            "## Findings",
-            f"- `{code}` (`error`) in {location}: {message}",
+            "## Summary",
+            "",
+            "- Total issues: 1",
+            "- Blocking issues: yes",
+            f"- Affected documents: `{location}`",
+            f"- Dominant failure categories: {category}",
+            "",
+            "## Structural checks",
+            "",
+            *sections["Structural checks"],
+            "",
+            "## Semantic checks",
+            "",
+            *sections["Semantic checks"],
+            "",
+            "## Cross-document checks",
+            "",
+            *sections["Cross-document checks"],
+            "",
+            "## Result",
+            "",
+            f"- Verdict: `{verdict}`",
+            "- Repair required for progression: no",
             "",
         )
     )
-    return "\n".join(lines)
 
 
 def render_log_analysis_markdown(
