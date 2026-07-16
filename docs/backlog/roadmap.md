@@ -9511,7 +9511,7 @@ Exit evidence:
 - failure taxonomy, release evidence, and packaged browser behavior have executable
   negative-path gates.
 
-#### Slice W34-E5-S4 — live orchestration change isolation (`planned`)
+#### Slice W34-E5-S4 — live orchestration change isolation (`in-progress`)
 Goal: split the measured 8.6k-line live orchestration hotspot behind characterized typed
 boundaries after lifecycle and classification behavior is corrected.
 
@@ -9523,7 +9523,7 @@ Dependencies:
 
 Local tasks:
 
-- `W34-E5-S4-T1` Extract durable flow-state and resume coordination from live
+- `W34-E5-S4-T1` (done) Extract durable flow-state and resume coordination from live
   orchestration. [`REF-01`]
   - Scope: harness flow-state service.
   - Verification: deterministic resume and idempotency suites preserve bundle behavior.
