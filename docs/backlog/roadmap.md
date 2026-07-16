@@ -9033,7 +9033,7 @@ Dependencies:
 
 Local tasks:
 
-- `W34-E1-S5-T1` Add one production-equivalent full-stack contract fixture runner.
+- `W34-E1-S5-T1` (done) Add one production-equivalent full-stack contract fixture runner.
   [`REF-04`]
   - Scope: validator test infrastructure.
   - Verification: every stage example uses the same runner and production registry.

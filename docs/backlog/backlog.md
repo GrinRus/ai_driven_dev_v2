@@ -7,7 +7,8 @@ slice, and local task.
 
 ## Next
 
-- `W34-E1-S5-T1` — Add one production-equivalent full-stack contract fixture runner.
+- `W34-E1-S5-T2` — Split cross-document rules by invariant and stage behind the current
+  public facade.
 
 ## Soon
 
@@ -95,6 +96,6 @@ slice, and local task.
 
 ## Current reconciliation
 
-- `2026-07-15` validator-report protocol v1 now owns registry, renderer, contract,
-  stage-brief skeleton, repair guidance, and all production readers. `W34-E1-S3-T2`
-  is next for the separate eight-stage example and exact invalid/repair normalization.
+- `2026-07-16` the production-equivalent contract fixture runner now validates all stage
+  examples through the production coordinator. `W34-E1-S5-T2` is next for cross-document
+  rule isolation behind the existing facade.
