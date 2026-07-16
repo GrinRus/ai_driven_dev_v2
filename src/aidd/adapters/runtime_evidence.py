@@ -66,6 +66,7 @@ _CLASSIFICATION_OUTCOMES: dict[str, RuntimeAdapterOutcome] = {
     "non_zero_exit": RuntimeAdapterOutcome.RUNTIME_FAILURE,
     "runtime_non_zero_exit": RuntimeAdapterOutcome.RUNTIME_FAILURE,
     "provider_error": RuntimeAdapterOutcome.RUNTIME_FAILURE,
+    "protocol_failure": RuntimeAdapterOutcome.RUNTIME_FAILURE,
     "timeout": RuntimeAdapterOutcome.TIMEOUT,
     "cancelled": RuntimeAdapterOutcome.CANCELLATION,
     "user_cancelled": RuntimeAdapterOutcome.CANCELLATION,

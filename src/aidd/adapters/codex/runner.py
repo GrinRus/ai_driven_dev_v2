@@ -66,6 +66,9 @@ class CodexExitClassification(StrEnum):
     NON_ZERO_EXIT = "non_zero_exit"
     TIMEOUT = "timeout"
     CANCELLED = "cancelled"
+    DENIED = "denied"
+    BLOCKED = "blocked"
+    PROTOCOL_FAILURE = "protocol_failure"
 
 
 @dataclass(frozen=True, slots=True)

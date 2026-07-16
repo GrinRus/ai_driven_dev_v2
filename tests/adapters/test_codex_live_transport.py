@@ -157,6 +157,11 @@ def _fake_codex(
         "if scenario == 'startup_wait':\n"
         "    time.sleep(10)\n"
         "    raise SystemExit(3)\n"
+        "if scenario == 'protocol_failure':\n"
+        "    sys.stdout.buffer.write(b'\\xff\\n')\n"
+        "    sys.stdout.buffer.flush()\n"
+        "    time.sleep(1)\n"
+        "    raise SystemExit(3)\n"
         "thread_id = 'thread-1'\n"
         "for line in sys.stdin:\n"
         "    msg = json.loads(line)\n"
@@ -278,17 +283,26 @@ def test_codex_live_transport_resumes_after_provider_decision(tmp_path: Path) ->
 def test_codex_live_transport_denial_fails_stage(tmp_path: Path) -> None:
     fake_codex = _fake_codex(tmp_path)
     provider = _DecisionProvider(RuntimeOperatorDecisionAction.DENY)
+    attempt_path = tmp_path / "attempt"
 
     result = get_runtime_adapter_surface("codex").execute_stage_request(
         configured_command=f"{fake_codex} exec --json -",
         request=_request(tmp_path),
-        attempt_path=tmp_path / "attempt",
+        attempt_path=attempt_path,
         base_env={},
         operator_decision_provider=provider,
     )
 
     assert result.resolved_status is AdapterExecutionStatus.FAILED
     assert result.details == "permission-denied: deny"
+    assert result.runtime_log_path == attempt_path / "runtime.log"
+    assert result.runtime_exit_metadata_path == attempt_path / "runtime-exit.json"
+    exit_metadata = json.loads(
+        result.runtime_exit_metadata_path.read_text(encoding="utf-8")
+    )
+    assert exit_metadata["adapter_outcome"] == "denial"
+    assert exit_metadata["exit_classification"] == "denied"
+    assert exit_metadata["exit_code"] is None
 
 
 def test_codex_live_transport_blocks_when_provider_has_no_decision(tmp_path: Path) -> None:
@@ -309,6 +323,15 @@ def test_codex_live_transport_blocks_when_provider_has_no_decision(tmp_path: Pat
     assert provider.requests[0].id == "approval-1"
     assert (attempt_path / "operator-requests.jsonl").exists()
     assert (attempt_path / "codex-app-server.jsonl").exists()
+    exit_metadata = json.loads(
+        (attempt_path / "runtime-exit.json").read_text(encoding="utf-8")
+    )
+    assert exit_metadata["adapter_outcome"] == "blocked"
+    assert exit_metadata["exit_classification"] == "blocked"
+    assert exit_metadata["exit_code"] is None
+    assert "requestApproval" in (attempt_path / "runtime.log").read_text(
+        encoding="utf-8"
+    )
 
 
 def test_codex_live_transport_timeout_fails_stage(tmp_path: Path) -> None:
@@ -324,6 +347,11 @@ def test_codex_live_transport_timeout_fails_stage(tmp_path: Path) -> None:
 
     assert result.resolved_status is AdapterExecutionStatus.FAILED
     assert result.details == "codex-live: timeout"
+    exit_metadata = json.loads(
+        (tmp_path / "attempt" / "runtime-exit.json").read_text(encoding="utf-8")
+    )
+    assert exit_metadata["adapter_outcome"] == "timeout"
+    assert exit_metadata["exit_classification"] == "timeout"
 
 
 @pytest.mark.parametrize("phase", ("startup", "active", "approval"))
@@ -364,7 +392,34 @@ def test_codex_live_transport_persists_cancelled_outcome(
     assert json.loads((attempt_path / "runtime-exit.json").read_text(encoding="utf-8"))[
         "exit_classification"
     ] == "cancelled"
+    assert result.adapter_outcome is not None
+    assert result.adapter_outcome.value == "cancellation"
     assert (attempt_path / "runtime.log").exists()
+
+
+def test_codex_live_protocol_failure_commits_failed_evidence(tmp_path: Path) -> None:
+    attempt_path = tmp_path / "attempt"
+
+    result = get_runtime_adapter_surface("codex").execute_stage_request(
+        configured_command=(
+            f"{_fake_codex(tmp_path, scenario='protocol_failure')} exec --json -"
+        ),
+        request=_request(tmp_path),
+        attempt_path=attempt_path,
+        base_env={},
+        operator_decision_provider=_DecisionProvider(
+            RuntimeOperatorDecisionAction.ALLOW_ONCE
+        ),
+    )
+
+    assert result.resolved_status is AdapterExecutionStatus.FAILED
+    assert "protocol failure" in result.details
+    exit_metadata = json.loads(
+        (attempt_path / "runtime-exit.json").read_text(encoding="utf-8")
+    )
+    assert exit_metadata["adapter_outcome"] == "runtime_failure"
+    assert exit_metadata["exit_classification"] == "protocol_failure"
+    assert exit_metadata["exit_code"] is None
 
 
 def test_codex_live_transport_handles_file_and_permissions_requests(

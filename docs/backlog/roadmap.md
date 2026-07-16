@@ -9345,7 +9345,7 @@ Local tasks:
   - Scope: shared adapter result model.
   - Verification: a cross-adapter outcome table covers success, failure, timeout,
     cancellation, denial, blocked, and launch failure.
-- `W34-E4-S2-T2` Persist truthful Codex early-stop and blocked outcomes through the
+- `W34-E4-S2-T2` (done) Persist truthful Codex early-stop and blocked outcomes through the
   shared contract. [`BUG-09`, `REL-11`]
   - Scope: Codex live path.
   - Verification: denial, startup-timeout, and blocked branches agree between outer

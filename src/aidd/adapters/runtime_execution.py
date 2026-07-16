@@ -57,7 +57,7 @@ class RuntimeSubprocessSpec:
 
 @dataclass(frozen=True, slots=True)
 class RuntimeRunResult[ExitClassificationT]:
-    exit_code: int
+    exit_code: int | None
     stdout_text: str
     stderr_text: str
     runtime_log_text: str

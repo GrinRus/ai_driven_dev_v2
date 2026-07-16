@@ -222,7 +222,13 @@ def execute_codex_live_transport(
 ) -> LiveTransportResult[CodexExitClassification]:
     if not codex_live_transport_available(configured_command):
         return LiveTransportResult(
-            run_result=None,
+            run_result=CodexRunResult(
+                exit_code=None,
+                stdout_text="",
+                stderr_text="",
+                runtime_log_text="",
+                exit_classification=CodexExitClassification.BLOCKED,
+            ),
             status=AdapterExecutionStatus.BLOCKED_FOR_OPERATOR,
             details=(
                 "blocked_for_operator: codex live broker requires app-server "
@@ -358,6 +364,7 @@ def execute_codex_live_transport(
     )
     completed = False
     denied_reason = None
+    early_classification = None
     pending_request_id = None
     while process.poll() is None and not completed:
         if cancel_requested is not None and cancel_requested():
@@ -391,11 +398,21 @@ def execute_codex_live_transport(
             client_error = client.error
             _stop_client(supervisor=supervisor, client=client)
             assert client_error is not None
-            raise client_error
+            return LiveTransportResult(
+                run_result=_captured_run_result(
+                    client=client,
+                    exit_code=None,
+                    exit_classification=CodexExitClassification.PROTOCOL_FAILURE,
+                ),
+                status=AdapterExecutionStatus.FAILED,
+                details=f"codex-live: protocol failure: {client_error}",
+                events_jsonl_path=transcript_path,
+            )
         if message is None:
             continue
         if message.get("id") == turn_start_id and "error" in message:
             denied_reason = f"codex-live: turn/start failed: {message.get('error')}"
+            early_classification = CodexExitClassification.PROTOCOL_FAILURE
             break
         if _message_is_approval_request(message):
             pending_request_id, denied_reason = _handle_approval_request(
@@ -407,6 +424,8 @@ def execute_codex_live_transport(
                 operator_decision_provider=operator_decision_provider,
             )
             if pending_request_id is not None or denied_reason is not None:
+                if denied_reason is not None:
+                    early_classification = CodexExitClassification.DENIED
                 break
         if message.get("method") == "turn/completed":
             completed = True
@@ -432,12 +451,16 @@ def execute_codex_live_transport(
             denied_reason=denied_reason,
             transcript_path=transcript_path,
             broker=broker,
-            stop_reason=None,
+            stop_reason=early_classification,
             supervisor=supervisor,
         )
 
     _stop_client(supervisor=supervisor, client=client)
-    run_result = _run_result(process=process, client=client, stop_reason=None)
+    run_result = _run_result(
+        process=process,
+        client=client,
+        stop_reason=CodexExitClassification.SUCCESS if completed else None,
+    )
     status = (
         AdapterExecutionStatus.SUCCEEDED
         if completed and run_result.exit_classification is CodexExitClassification.SUCCESS
@@ -474,18 +497,26 @@ def _drain_until_response(
         if cancel_requested is not None and cancel_requested():
             return None, None, CodexExitClassification.CANCELLED
         if deadline is not None and time.monotonic() >= deadline:
-            return None, "codex-live: timeout", None
+            return None, "codex-live: timeout", CodexExitClassification.TIMEOUT
         message = client.next_message(timeout_seconds=0.1)
         if client.error is not None:
             client_error = client.error
             _stop_client(supervisor=supervisor, client=client)
             assert client_error is not None
-            raise client_error
+            return (
+                None,
+                f"codex-live: protocol failure: {client_error}",
+                CodexExitClassification.PROTOCOL_FAILURE,
+            )
         if message is None:
             continue
         if message.get("id") == response_id:
             if "error" in message:
-                return None, f"codex-live: request failed: {message.get('error')}", None
+                return (
+                    None,
+                    f"codex-live: request failed: {message.get('error')}",
+                    CodexExitClassification.PROTOCOL_FAILURE,
+                )
             return None, None, None
         if _message_is_approval_request(message):
             pending_request_id, denied_reason = _handle_approval_request(
@@ -499,8 +530,20 @@ def _drain_until_response(
             if pending_request_id is not None or denied_reason is not None:
                 if cancel_requested is not None and cancel_requested():
                     return None, None, CodexExitClassification.CANCELLED
-                return pending_request_id, denied_reason, None
-    return None, "codex-live: app-server exited before response", None
+                return (
+                    pending_request_id,
+                    denied_reason,
+                    (
+                        CodexExitClassification.DENIED
+                        if denied_reason is not None
+                        else None
+                    ),
+                )
+    return (
+        None,
+        "codex-live: app-server exited before response",
+        CodexExitClassification.PROTOCOL_FAILURE,
+    )
 
 
 def _handle_approval_request(
@@ -625,7 +668,11 @@ def _early_stop_result(
         )
     if pending_request_id is not None:
         return LiveTransportResult(
-            run_result=None,
+            run_result=_captured_run_result(
+                client=client,
+                exit_code=None,
+                exit_classification=CodexExitClassification.BLOCKED,
+            ),
             status=AdapterExecutionStatus.BLOCKED_FOR_OPERATOR,
             details="blocked_for_operator: codex live approval request pending",
             events_jsonl_path=transcript_path,
@@ -636,7 +683,21 @@ def _early_stop_result(
             pending_operator_request_ids=(pending_request_id,),
         )
     return LiveTransportResult(
-        run_result=_run_result(process=process, client=client, stop_reason=None),
+        run_result=_captured_run_result(
+            client=client,
+            exit_code=(
+                process.returncode
+                if stop_reason
+                in (
+                    CodexExitClassification.CANCELLED,
+                    CodexExitClassification.TIMEOUT,
+                )
+                else None
+            ),
+            exit_classification=(
+                stop_reason or CodexExitClassification.PROTOCOL_FAILURE
+            ),
+        ),
         status=AdapterExecutionStatus.FAILED,
         details=denied_reason or "codex-live: stopped",
         events_jsonl_path=transcript_path,
@@ -655,7 +716,11 @@ def _failed_result(
     details: str,
 ) -> LiveTransportResult[CodexExitClassification]:
     return LiveTransportResult(
-        run_result=_run_result(process=process, client=client, stop_reason=None),
+        run_result=_captured_run_result(
+            client=client,
+            exit_code=None,
+            exit_classification=CodexExitClassification.PROTOCOL_FAILURE,
+        ),
         status=AdapterExecutionStatus.FAILED,
         details=details,
         events_jsonl_path=transcript_path,
@@ -671,7 +736,7 @@ def _run_result(
     exit_code = process.returncode if process.returncode is not None else -1
     if stop_reason is not None:
         classification = stop_reason
-    elif exit_code in {0, -15}:
+    elif exit_code == 0:
         classification = CodexExitClassification.SUCCESS
     else:
         classification = CodexExitClassification.NON_ZERO_EXIT
@@ -681,6 +746,21 @@ def _run_result(
         stderr_text=client.stderr_text,
         runtime_log_text=client.runtime_log_text,
         exit_classification=classification,
+    )
+
+
+def _captured_run_result(
+    *,
+    client: _JsonRpcLineClient,
+    exit_code: int | None,
+    exit_classification: CodexExitClassification,
+) -> CodexRunResult:
+    return CodexRunResult(
+        exit_code=exit_code,
+        stdout_text=client.stdout_text,
+        stderr_text=client.stderr_text,
+        runtime_log_text=client.runtime_log_text,
+        exit_classification=exit_classification,
     )
 
 

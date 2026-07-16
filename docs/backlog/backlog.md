@@ -7,12 +7,11 @@ slice, and local task.
 
 ## Next
 
-- `W34-E4-S2-T2` — Persist truthful Codex early-stop and blocked outcomes through the
-  shared contract.
+- `W34-E4-S2-T3` — Persist canonical Qwen blocked outcomes through the shared contract.
 
 ## Soon
 
-- `W34-E4-S2-T3` — Persist canonical Qwen blocked outcomes through the shared contract.
+- `W34-E4-S2-T4` — Normalize executable-launch failures for every registered runtime.
 
 ## Parking lot
 
@@ -99,3 +98,6 @@ slice, and local task.
 - `2026-07-16` `W34-E4-S2-T1` is complete: adapters now publish one atomic runtime
   evidence envelope with a canonical outcome while retaining provider-specific exit
   classifications. Codex early-stop truthfulness is the next bounded slice.
+- `2026-07-16` `W34-E4-S2-T2` is complete: Codex live now distinguishes protocol
+  completion from supervisor termination and commits truthful timeout, cancellation,
+  denial, blocked, and protocol-failure evidence.
