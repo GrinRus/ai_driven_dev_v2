@@ -9540,7 +9540,7 @@ Local tasks:
   - Scope: live report writers only.
   - Verification: duplicate orchestration helpers are absent and golden JSON/Markdown
     bundles remain byte-stable.
-- `W34-E5-S4-T5` Replace the fake runtime's unconditional stage delay with an opt-in
+- `W34-E5-S4-T5` (done) Replace the fake runtime's unconditional stage delay with an opt-in
   transition barrier for checkpoint tests. [`TEST-04`]
   - Scope: live black-box test fixture only.
   - Verification: the same flow cases pass without fixed sleep outside explicit

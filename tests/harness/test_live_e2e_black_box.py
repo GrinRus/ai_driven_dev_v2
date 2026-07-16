@@ -122,6 +122,7 @@ def _write_fake_aidd(
 from __future__ import annotations
 
 import json
+import os
 import sys
 import time
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
@@ -145,6 +146,12 @@ STAGE_RESULT_GENERIC_NEXT_ACTION_STAGE = {stage_result_generic_next_action_stage
 STRAY_TOP_LEVEL_WORKITEMS_STAGE = {stray_top_level_workitems_stage!r}
 IGNORED_POLLUTION_STAGE = {ignored_pollution_stage!r}
 IMPLEMENT_UNTRACKED_PRODUCT_FILE = {implement_untracked_product_file!r}
+TRANSITION_BARRIER_STAGE = os.environ.get("AIDD_FAKE_RUNTIME_BARRIER_STAGE")
+TRANSITION_BARRIER_READY_PATH = os.environ.get("AIDD_FAKE_RUNTIME_BARRIER_READY_PATH")
+TRANSITION_BARRIER_RELEASE_PATH = os.environ.get("AIDD_FAKE_RUNTIME_BARRIER_RELEASE_PATH")
+TRANSITION_BARRIER_TIMEOUT_SECONDS = float(
+    os.environ.get("AIDD_FAKE_RUNTIME_BARRIER_TIMEOUT_SECONDS", "30")
+)
 
 
 def option(args: list[str], name: str, default: str = "") -> str:
@@ -158,7 +165,18 @@ def option(args: list[str], name: str, default: str = "") -> str:
 
 def write_stage_outputs(stage: str, work_item: str, run_id: str) -> None:
     write_executing_stage_metadata(stage, work_item, run_id)
-    time.sleep(0.75)
+    if stage == TRANSITION_BARRIER_STAGE:
+        if not TRANSITION_BARRIER_READY_PATH or not TRANSITION_BARRIER_RELEASE_PATH:
+            raise RuntimeError("transition barrier requires ready and release paths")
+        ready_path = Path(TRANSITION_BARRIER_READY_PATH)
+        release_path = Path(TRANSITION_BARRIER_RELEASE_PATH)
+        ready_path.parent.mkdir(parents=True, exist_ok=True)
+        ready_path.write_text("ready\\n")
+        deadline = time.monotonic() + TRANSITION_BARRIER_TIMEOUT_SECONDS
+        while not release_path.exists():
+            if time.monotonic() >= deadline:
+                raise TimeoutError("transition barrier release timed out")
+            time.sleep(0.01)
     output_root = Path(".aidd") / "workitems" / work_item / "stages" / stage / "output"
     output_root.mkdir(parents=True, exist_ok=True)
     root = output_root.parent
@@ -1150,6 +1168,81 @@ def _prepare_live_test(
         ),
     )
     return scenario_path, tmp_path / "work-root", tmp_path / ".aidd" / "reports" / "evals"
+
+
+def test_fake_runtime_success_has_no_unconditional_delay(tmp_path: Path) -> None:
+    fake_aidd = tmp_path / "fake-aidd"
+    working_copy = tmp_path / "working-copy"
+    working_copy.mkdir()
+    _write_fake_aidd(fake_aidd)
+
+    completed = subprocess.run(
+        (
+            fake_aidd.as_posix(),
+            "stage",
+            "run",
+            "idea",
+            "--work-item",
+            "WI-BARRIER",
+            "--run-id",
+            "run-barrier",
+        ),
+        cwd=working_copy,
+        capture_output=True,
+        text=True,
+        check=False,
+        timeout=5,
+    )
+
+    assert completed.returncode == 0
+    assert "time.sleep(0.75)" not in fake_aidd.read_text(encoding="utf-8")
+
+
+def test_fake_runtime_transition_barrier_is_explicit_and_bounded(tmp_path: Path) -> None:
+    fake_aidd = tmp_path / "fake-aidd"
+    working_copy = tmp_path / "working-copy"
+    working_copy.mkdir()
+    ready_path = tmp_path / "barrier.ready"
+    release_path = tmp_path / "barrier.release"
+    _write_fake_aidd(fake_aidd)
+    environment = dict(os.environ)
+    environment.update(
+        {
+            "AIDD_FAKE_RUNTIME_BARRIER_STAGE": "idea",
+            "AIDD_FAKE_RUNTIME_BARRIER_READY_PATH": ready_path.as_posix(),
+            "AIDD_FAKE_RUNTIME_BARRIER_RELEASE_PATH": release_path.as_posix(),
+            "AIDD_FAKE_RUNTIME_BARRIER_TIMEOUT_SECONDS": "2",
+        }
+    )
+
+    process = subprocess.Popen(
+        (
+            fake_aidd.as_posix(),
+            "stage",
+            "run",
+            "idea",
+            "--work-item",
+            "WI-BARRIER",
+            "--run-id",
+            "run-barrier",
+        ),
+        cwd=working_copy,
+        env=environment,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        text=True,
+    )
+    deadline = time.monotonic() + 2.0
+    while not ready_path.exists() and time.monotonic() < deadline:
+        time.sleep(0.01)
+
+    assert ready_path.exists()
+    assert process.poll() is None
+    release_path.write_text("release\n", encoding="utf-8")
+    stdout_text, stderr_text = process.communicate(timeout=2)
+
+    assert process.returncode == 0, stderr_text
+    assert "state=succeeded" in stdout_text
 
 
 def _write_stage_quality_audit(

@@ -7,19 +7,17 @@ slice, and local task.
 
 ## Next
 
-- `W34-E5-S4-T5` — Replace the fake runtime's unconditional stage delay with an opt-in
-  transition barrier for checkpoint tests.
+- `W34-E5-S2-T3` — Make the running-stage frontend checkpoint transition-aware.
 
 ## Soon
 
-- `W34-E5-S2-T3` — Make the running-stage frontend checkpoint transition-aware.
+- `W34-E5-S3-T1` — Replace divergent eval classifiers with one typed earliest-failure
+  classifier.
 
 ## Parking lot
 
 - `W34-E3-S4-T1` — Add characterization fixtures for corrected routes, jobs, approvals,
   and dashboard states.
-- `W34-E5-S3-T1` — Replace divergent eval classifiers with one typed earliest-failure
-  classifier.
 - `W34-E5-S4-T1` — Extract durable flow-state and resume coordination from live
   orchestration.
 - `W34-E6-S1-T1` — Remove superseded Claude question/resume code after a public-import
@@ -88,6 +86,9 @@ slice, and local task.
 
 ## Current reconciliation
 
+- `2026-07-16` `W34-E5-S4-T5` is complete: the fake runtime no longer delays every
+  successful stage and exposes a bounded ready/release barrier only when checkpoint tests
+  opt in. `S2-T3` is promoted to `Next`; classifier task `S3-T1` is in `Soon`.
 - `2026-07-16` `W34-E5-S2-T2` is complete: result artifacts are copied into verified
   staging files and published with ordered SHA-256 evidence plus an atomic commit marker;
   hard links are no longer used. Independent fixture task `S4-T5` is promoted to `Next`;
