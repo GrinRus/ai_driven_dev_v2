@@ -9288,7 +9288,7 @@ Local tasks:
   - Scope: shared streaming and Qwen prompt startup.
   - Verification: a large bidirectional fake runtime terminates under both timeout and
     explicit cancellation.
-- `W34-E4-S1-T4` Add a shared owned-process-group supervisor with bounded drain and
+- `W34-E4-S1-T4` (done) Add a shared owned-process-group supervisor with bounded drain and
   termination. [`REF-03`]
   - Scope: adapter lifecycle primitive.
   - Verification: a disposable parent/child process-tree test proves bounded group
