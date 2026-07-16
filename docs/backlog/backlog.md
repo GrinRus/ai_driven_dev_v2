@@ -7,12 +7,9 @@ slice, and local task.
 
 ## Next
 
-- `W34-E6-S2-T2` — Rebase and apply compatible updates for retained Python runtime and
-  development dependencies.
+- `W34-E6-S2-T3` — Rebase and apply compatible pinned GitHub Actions updates.
 
 ## Soon
-
-- `W34-E6-S2-T3` — Rebase and apply compatible pinned GitHub Actions updates.
 
 ## Parking lot
 
@@ -79,6 +76,11 @@ slice, and local task.
   queue-restoration policy in `docs/backlog/roadmap.md` (`W8-E3-S1`).
 
 ## Current reconciliation
+
+- `2026-07-16` `W34-E6-S2-T2` is complete: the retained lock now resolves Typer
+  0.27.0, pytest 9.1.1, Ruff 0.15.22, and mypy 2.3.0 without changing declared lower
+  bounds; CLI compatibility, locked sync, lint, strict typing, packaging smoke, and
+  1810 tests pass. `S2-T3` is promoted to `Next`.
 
 - `2026-07-16` `W34-E6-S2-T1` is complete: obsolete Dependabot proposals for removed
   direct dependencies `pydantic`, `markdown-it-py`, and `python-frontmatter` are closed

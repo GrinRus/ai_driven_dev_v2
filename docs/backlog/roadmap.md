@@ -9618,7 +9618,7 @@ Local tasks:
   - Scope: obsolete dependency-update pull requests only.
   - Verification: no open update proposal references a dependency absent from the
     canonical project configuration.
-- `W34-E6-S2-T2` Rebase and apply compatible updates for retained Python runtime and
+- `W34-E6-S2-T2` (done) Rebase and apply compatible updates for retained Python runtime and
   development dependencies. [`MAINT-01`]
   - Scope: retained Python dependency declarations and lock only.
   - Verification: locked sync, lint, strict typing, full tests, and wheel smoke pass.
