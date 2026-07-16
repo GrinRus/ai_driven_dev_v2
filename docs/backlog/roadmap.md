@@ -9490,7 +9490,7 @@ Local tasks:
   [`TEST-02`]
   - Scope: package and CI syntax gate.
   - Verification: asset discovery is exhaustive and an intentional syntax error fails.
-- `W34-E5-S3-T5` Add lightweight DOM-state tests for module ordering, stale responses,
+- `W34-E5-S3-T5` (done) Add lightweight DOM-state tests for module ordering, stale responses,
   cancellation, and error rendering. [`TEST-02`]
   - Scope: packaged frontend behavior tests.
   - Verification: out-of-order and rejected mocked responses exercise deterministic

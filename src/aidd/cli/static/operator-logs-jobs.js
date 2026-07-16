@@ -309,6 +309,7 @@ async function renderLogs() {
 
 async function cancelActiveJob() {
   if (!state.activeJobId) return;
+  state.activeJobPollGeneration += 1;
   const result = await postJson(`/api/jobs/${encodeURIComponent(state.activeJobId)}/cancel`, {});
   state.activeJobStatus = result;
   if (result.already_finished) {
@@ -328,9 +329,15 @@ async function cancelActiveJob() {
 
 async function pollActiveJob() {
   if (!state.activeJobId) return;
+  const jobId = state.activeJobId;
+  const pollGeneration = state.activeJobPollGeneration;
   try {
     const activeStatuses = new Set(["running", "waiting-for-operator", "cancelling"]);
-    const logs = await api(`/api/jobs/${encodeURIComponent(state.activeJobId)}/logs?cursor=${state.activeJobCursor}`);
+    const logs = await api(`/api/jobs/${encodeURIComponent(jobId)}/logs?cursor=${state.activeJobCursor}`);
+    if (
+      state.activeJobId !== jobId
+      || state.activeJobPollGeneration !== pollGeneration
+    ) return;
     if (logs.truncated) {
       state.activeJobLogChunks.push({
         stream: "system",
@@ -340,7 +347,12 @@ async function pollActiveJob() {
     const nextCursor = Number(logs.cursor);
     if (Number.isFinite(nextCursor)) state.activeJobCursor = nextCursor;
     state.activeJobLogChunks.push(...(logs.chunks || []));
-    state.activeJobStatus = await api(`/api/jobs/${encodeURIComponent(state.activeJobId)}`);
+    const status = await api(`/api/jobs/${encodeURIComponent(jobId)}`);
+    if (
+      state.activeJobId !== jobId
+      || state.activeJobPollGeneration !== pollGeneration
+    ) return;
+    state.activeJobStatus = status;
     renderActiveRunPanel();
     if (typeof renderNextActionPanel === "function") renderNextActionPanel();
     if (typeof renderGlobalNextActionStrip === "function") renderGlobalNextActionStrip();

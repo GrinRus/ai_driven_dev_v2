@@ -52,6 +52,11 @@ jobs:
           set -euo pipefail
           uv run --extra dev python scripts/check_packaged_javascript.py
 
+      - name: Packaged JavaScript DOM state
+        run: |
+          set -euo pipefail
+          node --test tests/frontend/*.test.mjs
+
       - name: Test
         run: |
           set -euo pipefail

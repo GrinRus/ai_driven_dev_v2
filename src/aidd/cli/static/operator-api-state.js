@@ -73,7 +73,9 @@ const NON_BLOCKING_VALIDATION_NOTICE_CODES = new Set([
 
 const state = {
   dashboard: null,
+  dashboardRequestGeneration: 0,
   projectHome: null,
+  projectHomeRequestGeneration: 0,
   readiness: null,
   readinessLoading: true,
   readinessError: "",
@@ -92,6 +94,7 @@ const state = {
   activeJobLogChunks: [],
   activeJobStatus: null,
   activeJobTimer: null,
+  activeJobPollGeneration: 0,
   pendingCockpitReveal: false,
   pendingNextFlowWizardReveal: false,
   runAccountability: null,
@@ -638,7 +641,9 @@ function sourceFindingsUrl() {
 }
 
 async function fetchDashboard() {
+  const requestGeneration = ++state.dashboardRequestGeneration;
   const payload = await api(dashboardUrl());
+  if (requestGeneration !== state.dashboardRequestGeneration) return false;
   state.dashboard = payload.dashboard;
   await recoverActiveJobFromDashboard(payload.active_job);
   const version = String(payload.app_version || "").trim();
@@ -674,13 +679,17 @@ async function fetchDashboard() {
     state.recoveryDetail = "summary";
     requestCockpitReveal();
   }
+  return true;
 }
 
 async function fetchProjectHome(workItem = "") {
+  const requestGeneration = ++state.projectHomeRequestGeneration;
   const payload = await api(projectHomeUrl(workItem));
+  if (requestGeneration !== state.projectHomeRequestGeneration) return false;
   state.projectHome = payload.project_home || null;
   const version = String(payload.app_version || "").trim();
   document.getElementById("appVersion").textContent = version.startsWith("v") ? version : `v${version || "dev"}`;
+  return true;
 }
 
 async function fetchOnboardingState() {

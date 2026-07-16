@@ -88,3 +88,5 @@ def test_ci_workflow_runs_packaged_javascript_syntax_gate() -> None:
 
     assert "Packaged JavaScript syntax" in workflow
     assert "python scripts/check_packaged_javascript.py" in workflow
+    assert "Packaged JavaScript DOM state" in workflow
+    assert "node --test tests/frontend/*.test.mjs" in workflow

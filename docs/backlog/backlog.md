@@ -7,13 +7,13 @@ slice, and local task.
 
 ## Next
 
-- `W34-E5-S3-T5` — Add lightweight DOM-state tests for module ordering, stale
-  responses, cancellation, and error rendering.
+- `W34-E5-S3-T6` — Make the built-wheel resource smoke offline-deterministic and
+  bounded.
 
 ## Soon
 
-- `W34-E5-S3-T6` — Make the built-wheel resource smoke offline-deterministic and
-  bounded.
+- `W34-E5-S3-T7` — Include release scripts in the strict mypy gate and fix their typed
+  boundary returns.
 
 ## Parking lot
 
@@ -87,6 +87,10 @@ slice, and local task.
 
 ## Current reconciliation
 
+- `2026-07-16` `W34-E5-S3-T5` is complete: provider-free `node:test` fixtures execute
+  real packaged modules for load ordering, stale dashboard suppression, poll invalidation
+  on cancellation, and escaped error rendering. `S3-T6` is promoted to `Next`; `S3-T7`
+  is in `Soon`.
 - `2026-07-16` `W34-E5-S3-T4` is complete: the manifest and filesystem JavaScript
   sets must match exactly, every packaged asset passes bounded `node --check`, and CI
   runs the executable syntax gate. `S3-T5` is promoted to `Next`; `S3-T6` is in `Soon`.
