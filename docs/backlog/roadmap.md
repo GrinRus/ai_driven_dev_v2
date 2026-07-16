@@ -9303,7 +9303,7 @@ Local tasks:
   approval wait. [`REL-04`]
   - Scope: Codex live transport.
   - Verification: three-state cancellation tests persist a cancelled outcome.
-- `W34-E4-S1-T7` Propagate cancellation through Qwen live startup, active turn, and
+- `W34-E4-S1-T7` (done) Propagate cancellation through Qwen live startup, active turn, and
   approval wait. [`REL-04`]
   - Scope: Qwen live transport.
   - Verification: three-state cancellation tests persist a cancelled outcome.

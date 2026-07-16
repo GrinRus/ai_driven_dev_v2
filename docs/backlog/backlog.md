@@ -7,12 +7,11 @@ slice, and local task.
 
 ## Next
 
-- `W34-E4-S1-T7` — Propagate cancellation through Qwen live startup, active turn, and
-  approval wait.
+- `W34-E4-S1-T9` — Adopt the owned-process supervisor in Codex-live execution.
 
 ## Soon
 
-- `W34-E4-S1-T9` — Adopt the owned-process supervisor in Codex-live execution.
+- `W34-E4-S1-T10` — Adopt the owned-process supervisor in Qwen-live execution.
 
 ## Parking lot
 

@@ -66,6 +66,7 @@ def execute_qwen_live_transport(
     on_stdout: Callable[[str], None] | None,
     on_stderr: Callable[[str], None] | None,
     timeout_seconds: float | None,
+    cancel_requested: Callable[[], bool] | None = None,
 ) -> LiveTransportResult[QwenExitClassification]:
     if not qwen_live_transport_available(configured_command):
         return LiveTransportResult(
@@ -114,6 +115,10 @@ def execute_qwen_live_transport(
     stdin_writer = ManagedStdinWriter.start(process.stdin, spec.stdin_text)
 
     while process.poll() is None:
+        if cancel_requested is not None and cancel_requested():
+            stop_reason = QwenExitClassification.CANCELLED
+            terminate_process(process)
+            break
         if stdin_writer is not None and stdin_writer.error is not None:
             writer_error = stdin_writer.error
             terminate_process(process)
@@ -137,6 +142,12 @@ def execute_qwen_live_transport(
             operator_decision_provider=operator_decision_provider,
             input_path=input_path,
         )
+        if cancel_requested is not None and cancel_requested():
+            stop_reason = QwenExitClassification.CANCELLED
+            pending_request_id = None
+            denied_reason = None
+            terminate_process(process)
+            break
         if pending_request_id is not None:
             terminate_process(process)
             break
@@ -145,7 +156,11 @@ def execute_qwen_live_transport(
             break
         time.sleep(0.05)
 
-    if pending_request_id is None and denied_reason is None:
+    if (
+        stop_reason is not QwenExitClassification.CANCELLED
+        and pending_request_id is None
+        and denied_reason is None
+    ):
         read_offset, pending_request_id, denied_reason = _handle_new_events(
             events_path=events_path,
             read_offset=read_offset,
@@ -163,6 +178,25 @@ def execute_qwen_live_transport(
         if stdin_writer.error is not None and stop_reason is None:
             raise stdin_writer.error
 
+    if stop_reason is QwenExitClassification.CANCELLED:
+        run_result = _run_result(
+            process=process,
+            capture=capture,
+            stop_reason=stop_reason,
+        )
+        return LiveTransportResult(
+            run_result=run_result,
+            status=AdapterExecutionStatus.FAILED,
+            details="qwen-live: cancelled",
+            runtime_jsonl_path=events_path if events_path.exists() else None,
+            events_jsonl_path=events_path if events_path.exists() else None,
+            operator_requests_path=(
+                broker.requests_path if broker.requests_path.exists() else None
+            ),
+            operator_decisions_path=(
+                broker.decisions_path if broker.decisions_path.exists() else None
+            ),
+        )
     if pending_request_id is not None:
         return LiveTransportResult(
             run_result=None,

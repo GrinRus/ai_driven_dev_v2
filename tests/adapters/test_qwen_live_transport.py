@@ -2,6 +2,8 @@ from __future__ import annotations
 
 import json
 import sys
+import time
+from collections.abc import Callable
 from pathlib import Path
 
 import pytest
@@ -63,11 +65,28 @@ class _NoDecisionProvider:
         return None
 
 
+class _CancelDuringDecisionProvider:
+    def __init__(self, cancel: list[bool]) -> None:
+        self.cancel = cancel
+
+    def request_decision(
+        self,
+        request: RuntimeOperatorRequest,
+        *,
+        requests_path: Path,
+        decisions_path: Path,
+    ) -> None:
+        _ = request, requests_path, decisions_path
+        self.cancel[0] = True
+        return None
+
+
 def _request(
     tmp_path: Path,
     *,
     timeout_seconds: float = 5.0,
     prompt_size: int = 0,
+    cancel_requested: Callable[[], bool] | None = None,
 ) -> StageRuntimeRequest:
     repo = tmp_path / "repo"
     workspace = tmp_path / ".aidd"
@@ -92,6 +111,7 @@ def _request(
         prompt_pack_paths=(prompt_pack,),
         repository_root=repo,
         project_roots=(repo,),
+        cancel_requested=cancel_requested,
     )
 
 
@@ -114,6 +134,10 @@ def _fake_qwen(tmp_path: Path, *, scenario: str = "approval") -> Path:
         "    sys.stdout.flush()\n"
         "    print(len(sys.stdin.read()))\n"
         "    raise SystemExit(0)\n"
+        "if scenario == 'active_wait':\n"
+        "    sys.stdin.read()\n"
+        "    time.sleep(10)\n"
+        "    raise SystemExit(3)\n"
         "json_file = sys.argv[sys.argv.index('--json-file') + 1]\n"
         "input_file = sys.argv[sys.argv.index('--input-file') + 1]\n"
         "event = {'type': 'control_request', 'payload': {'request_id': 'qwen-1', "
@@ -344,6 +368,49 @@ def test_qwen_live_transport_timeout_fails_stage(tmp_path: Path) -> None:
 
     assert result.resolved_status is AdapterExecutionStatus.FAILED
     assert result.details == "qwen-live: timeout"
+
+
+@pytest.mark.parametrize("phase", ("startup", "active", "approval"))
+def test_qwen_live_transport_persists_cancelled_outcome(
+    tmp_path: Path,
+    phase: str,
+) -> None:
+    cancel = [False]
+    started_at = time.monotonic()
+
+    def cancel_requested() -> bool:
+        if phase == "approval":
+            return cancel[0]
+        return time.monotonic() - started_at >= 0.1
+
+    scenario = {
+        "startup": "hang",
+        "active": "active_wait",
+        "approval": "approval",
+    }[phase]
+    provider = (
+        _CancelDuringDecisionProvider(cancel)
+        if phase == "approval"
+        else _DecisionProvider(RuntimeOperatorDecisionAction.ALLOW_ONCE)
+    )
+    attempt_path = tmp_path / "attempt"
+
+    result = get_runtime_adapter_surface("qwen").execute_stage_request(
+        configured_command=str(_fake_qwen(tmp_path, scenario=scenario)),
+        request=_request(tmp_path, cancel_requested=cancel_requested),
+        attempt_path=attempt_path,
+        base_env={},
+        operator_decision_provider=provider,
+    )
+
+    assert result.resolved_status is AdapterExecutionStatus.FAILED
+    assert result.details == "qwen-live: cancelled"
+    assert json.loads((attempt_path / "runtime-exit.json").read_text(encoding="utf-8"))[
+        "exit_classification"
+    ] == "cancelled"
+    assert (attempt_path / "runtime.log").exists()
+    if phase == "approval":
+        assert (attempt_path / "qwen-input.jsonl").read_text(encoding="utf-8") == ""
 
 
 def test_qwen_live_supervises_output_before_large_prompt_delivery(tmp_path: Path) -> None:
