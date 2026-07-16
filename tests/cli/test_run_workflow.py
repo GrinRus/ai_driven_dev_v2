@@ -533,6 +533,7 @@ def test_run_requires_explicit_run_id_for_non_first_start(tmp_path: Path) -> Non
             "--config",
             str(config_path),
         ],
+        terminal_width=160,
     )
 
     assert result.exit_code == 2
