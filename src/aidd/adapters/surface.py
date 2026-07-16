@@ -79,6 +79,15 @@ from aidd.adapters.runtime_events import (
     persist_adapter_question_events,
     persist_runtime_event_artifacts,
 )
+from aidd.adapters.runtime_evidence import (
+    RuntimeAdapterOutcome,
+    RuntimeEvidenceCommitRequest,
+    RuntimeEvidencePaths,
+    RuntimeStopReason,
+    adapter_outcome_for_classification,
+    commit_runtime_evidence,
+    runtime_evidence_paths,
+)
 from aidd.adapters.runtime_execution import StageRuntimeRequest
 from aidd.core.runtime_operator import (
     RuntimeOperatorBroker,
@@ -110,6 +119,9 @@ class RuntimeAdapterExecutionResult:
     succeeded: bool
     details: str
     status: AdapterExecutionStatus | None = None
+    adapter_outcome: RuntimeAdapterOutcome | None = None
+    runtime_log_path: Path | None = None
+    runtime_exit_metadata_path: Path | None = None
     runtime_jsonl_path: Path | None = None
     events_jsonl_path: Path | None = None
     questions_path: Path | None = None
@@ -167,6 +179,44 @@ def _success_result(exit_classification: StrEnum, success_value: StrEnum) -> boo
     return exit_classification is success_value
 
 
+def _cleanup_runtime_capture_sources(run_result: object) -> None:
+    for field_name in (
+        "runtime_log_source_path",
+        "structured_events_source_path",
+    ):
+        path = getattr(run_result, field_name, None)
+        if isinstance(path, Path):
+            path.unlink(missing_ok=True)
+
+
+def _commit_terminal_evidence(
+    *,
+    attempt_path: Path,
+    adapter_outcome: RuntimeAdapterOutcome,
+    exit_classification: str,
+    exit_code: int | None = None,
+    runtime_log_text: str = "",
+    stdout_text: str = "",
+    stderr_text: str = "",
+) -> RuntimeEvidencePaths:
+    return commit_runtime_evidence(
+        RuntimeEvidenceCommitRequest(
+            attempt_path=attempt_path,
+            adapter_outcome=adapter_outcome,
+            exit_classification=exit_classification,
+            exit_code=exit_code,
+            stdout_text=stdout_text,
+            stderr_text=stderr_text,
+            runtime_log_text=runtime_log_text,
+            stop_reason=(
+                None
+                if adapter_outcome is RuntimeAdapterOutcome.SUCCESS
+                else RuntimeStopReason(adapter_outcome.value)
+            ),
+        )
+    )
+
+
 def _permission_policy_block_result(
     *,
     request: StageRuntimeRequest,
@@ -204,17 +254,33 @@ def _permission_policy_block_result(
     _ = operator_decision_provider
     decision = broker.handle_request(operator_request)
     if decision is not None and not decision.is_approval:
+        evidence = _commit_terminal_evidence(
+            attempt_path=attempt_path,
+            adapter_outcome=RuntimeAdapterOutcome.DENIAL,
+            exit_classification="denied",
+        )
         return RuntimeAdapterExecutionResult(
             succeeded=False,
             status=AdapterExecutionStatus.FAILED,
             details=f"permission-denied: {decision.action.value}",
+            adapter_outcome=RuntimeAdapterOutcome.DENIAL,
+            runtime_log_path=evidence.runtime_log_path,
+            runtime_exit_metadata_path=evidence.runtime_exit_metadata_path,
             operator_requests_path=broker.requests_path,
             operator_decisions_path=broker.decisions_path,
         )
+    evidence = _commit_terminal_evidence(
+        attempt_path=attempt_path,
+        adapter_outcome=RuntimeAdapterOutcome.BLOCKED,
+        exit_classification="blocked",
+    )
     return RuntimeAdapterExecutionResult(
         succeeded=False,
         status=AdapterExecutionStatus.BLOCKED_FOR_OPERATOR,
         details="blocked_for_operator: runtime permission decision required",
+        adapter_outcome=RuntimeAdapterOutcome.BLOCKED,
+        runtime_log_path=evidence.runtime_log_path,
+        runtime_exit_metadata_path=evidence.runtime_exit_metadata_path,
         operator_requests_path=broker.requests_path,
         operator_decisions_path=broker.decisions_path if broker.decisions_path.exists() else None,
         pending_operator_request_ids=(operator_request.id,),
@@ -266,10 +332,18 @@ def _execute_generic_cli_live_conformance(
         ),
     )
     if decision is None:
+        evidence = _commit_terminal_evidence(
+            attempt_path=attempt_path,
+            adapter_outcome=RuntimeAdapterOutcome.BLOCKED,
+            exit_classification="blocked",
+        )
         return RuntimeAdapterExecutionResult(
             succeeded=False,
             status=AdapterExecutionStatus.BLOCKED_FOR_OPERATOR,
             details="blocked_for_operator: generic live conformance request pending",
+            adapter_outcome=RuntimeAdapterOutcome.BLOCKED,
+            runtime_log_path=evidence.runtime_log_path,
+            runtime_exit_metadata_path=evidence.runtime_exit_metadata_path,
             operator_requests_path=broker.requests_path,
             operator_decisions_path=(
                 broker.decisions_path if broker.decisions_path.exists() else None
@@ -277,17 +351,34 @@ def _execute_generic_cli_live_conformance(
             pending_operator_request_ids=(operator_request.id,),
         )
     if not decision.is_approval:
+        evidence = _commit_terminal_evidence(
+            attempt_path=attempt_path,
+            adapter_outcome=RuntimeAdapterOutcome.DENIAL,
+            exit_classification="denied",
+        )
         return RuntimeAdapterExecutionResult(
             succeeded=False,
             status=AdapterExecutionStatus.FAILED,
             details=f"permission-denied: {decision.action.value}",
+            adapter_outcome=RuntimeAdapterOutcome.DENIAL,
+            runtime_log_path=evidence.runtime_log_path,
+            runtime_exit_metadata_path=evidence.runtime_exit_metadata_path,
             operator_requests_path=broker.requests_path,
             operator_decisions_path=broker.decisions_path,
         )
+    evidence = _commit_terminal_evidence(
+        attempt_path=attempt_path,
+        adapter_outcome=RuntimeAdapterOutcome.SUCCESS,
+        exit_classification="success",
+        exit_code=0,
+    )
     return RuntimeAdapterExecutionResult(
         succeeded=True,
         status=AdapterExecutionStatus.SUCCEEDED,
         details="generic-live-conformance: approved",
+        adapter_outcome=RuntimeAdapterOutcome.SUCCESS,
+        runtime_log_path=evidence.runtime_log_path,
+        runtime_exit_metadata_path=evidence.runtime_exit_metadata_path,
         operator_requests_path=broker.requests_path,
         operator_decisions_path=broker.decisions_path,
     )
@@ -421,14 +512,23 @@ def _execute_generic_cli(
         on_stderr=on_stderr,
         timeout_seconds=request.timeout_seconds,
         cancel_requested=request.cancel_requested,
+        capture_directory=attempt_path,
     )
     persist_generic_cli_runtime_artifacts(attempt_path=attempt_path, run_result=run_result)
+    _cleanup_runtime_capture_sources(run_result)
+    evidence = runtime_evidence_paths(attempt_path)
+    adapter_outcome = adapter_outcome_for_classification(
+        run_result.exit_classification.value
+    )
     return RuntimeAdapterExecutionResult(
         succeeded=_success_result(
             run_result.exit_classification,
             GenericCliExitClassification.SUCCESS,
         ),
         details=run_result.exit_classification.value,
+        adapter_outcome=adapter_outcome,
+        runtime_log_path=evidence.runtime_log_path,
+        runtime_exit_metadata_path=evidence.runtime_exit_metadata_path,
     )
 
 
@@ -478,8 +578,13 @@ def _execute_claude_code(
         on_stderr=on_stderr,
         timeout_seconds=request.timeout_seconds,
         cancel_requested=request.cancel_requested,
+        capture_directory=attempt_path,
     )
     persist_claude_code_runtime_log(attempt_path=attempt_path, run_result=run_result)
+    evidence = runtime_evidence_paths(attempt_path)
+    adapter_outcome = adapter_outcome_for_classification(
+        run_result.exit_classification.value
+    )
     event_artifacts = persist_runtime_event_artifacts(
         attempt_path=attempt_path,
         run_result=run_result,
@@ -493,12 +598,16 @@ def _execute_claude_code(
         stage=request.stage,
         adapter_question_events=question_detection.question_events,
     )
+    _cleanup_runtime_capture_sources(run_result)
     return RuntimeAdapterExecutionResult(
         succeeded=_success_result(
             run_result.exit_classification,
             ClaudeCodeExitClassification.SUCCESS,
         ),
         details=run_result.exit_classification.value,
+        adapter_outcome=adapter_outcome,
+        runtime_log_path=evidence.runtime_log_path,
+        runtime_exit_metadata_path=evidence.runtime_exit_metadata_path,
         runtime_jsonl_path=event_artifacts.runtime_jsonl_path,
         events_jsonl_path=event_artifacts.events_jsonl_path,
         questions_path=questions_path,
@@ -553,6 +662,7 @@ def _execute_codex(
             on_stdout=on_stdout,
             on_stderr=on_stderr,
             timeout_seconds=request.timeout_seconds,
+            cancel_requested=request.cancel_requested,
         )
         if live_result.run_result is None:
             return RuntimeAdapterExecutionResult(
@@ -567,6 +677,10 @@ def _execute_codex(
             )
         codex_run_result = cast(CodexRunResult, live_result.run_result)
         persist_codex_runtime_log(attempt_path=attempt_path, run_result=codex_run_result)
+        evidence = runtime_evidence_paths(attempt_path)
+        adapter_outcome = adapter_outcome_for_classification(
+            codex_run_result.exit_classification.value
+        )
         question_detection = detect_question_or_pause_events(
             normalized_events=normalize_structured_events(run_result=codex_run_result),
         )
@@ -576,10 +690,14 @@ def _execute_codex(
             stage=request.stage,
             adapter_question_events=question_detection.question_events,
         )
+        _cleanup_runtime_capture_sources(codex_run_result)
         return RuntimeAdapterExecutionResult(
             succeeded=live_result.succeeded,
             status=live_result.status,
             details=live_result.details,
+            adapter_outcome=adapter_outcome,
+            runtime_log_path=evidence.runtime_log_path,
+            runtime_exit_metadata_path=evidence.runtime_exit_metadata_path,
             runtime_jsonl_path=live_result.runtime_jsonl_path,
             events_jsonl_path=live_result.events_jsonl_path,
             questions_path=questions_path,
@@ -608,8 +726,13 @@ def _execute_codex(
         on_stderr=on_stderr,
         timeout_seconds=request.timeout_seconds,
         cancel_requested=request.cancel_requested,
+        capture_directory=attempt_path,
     )
     persist_codex_runtime_log(attempt_path=attempt_path, run_result=run_result)
+    evidence = runtime_evidence_paths(attempt_path)
+    adapter_outcome = adapter_outcome_for_classification(
+        run_result.exit_classification.value
+    )
     event_artifacts = persist_runtime_event_artifacts(
         attempt_path=attempt_path,
         run_result=run_result,
@@ -623,9 +746,13 @@ def _execute_codex(
         stage=request.stage,
         adapter_question_events=question_detection.question_events,
     )
+    _cleanup_runtime_capture_sources(run_result)
     return RuntimeAdapterExecutionResult(
         succeeded=_success_result(run_result.exit_classification, CodexExitClassification.SUCCESS),
         details=run_result.exit_classification.value,
+        adapter_outcome=adapter_outcome,
+        runtime_log_path=evidence.runtime_log_path,
+        runtime_exit_metadata_path=evidence.runtime_exit_metadata_path,
         runtime_jsonl_path=event_artifacts.runtime_jsonl_path,
         events_jsonl_path=event_artifacts.events_jsonl_path,
         questions_path=questions_path,
@@ -679,8 +806,13 @@ def _execute_opencode(
         timeout_seconds=request.timeout_seconds,
         document_completion_paths=request.expected_output_documents,
         cancel_requested=request.cancel_requested,
+        capture_directory=attempt_path,
     )
     persist_opencode_runtime_log(attempt_path=attempt_path, run_result=run_result)
+    evidence = runtime_evidence_paths(attempt_path)
+    adapter_outcome = adapter_outcome_for_classification(
+        run_result.exit_classification.value
+    )
     event_artifacts = persist_runtime_event_artifacts(
         attempt_path=attempt_path,
         run_result=run_result,
@@ -694,6 +826,7 @@ def _execute_opencode(
         stage=request.stage,
         adapter_question_events=question_detection.question_events,
     )
+    _cleanup_runtime_capture_sources(run_result)
     return RuntimeAdapterExecutionResult(
         succeeded=run_result.exit_classification
         in (
@@ -701,6 +834,9 @@ def _execute_opencode(
             OpenCodeExitClassification.DOCUMENT_COMPLETE,
         ),
         details=run_result.exit_classification.value,
+        adapter_outcome=adapter_outcome,
+        runtime_log_path=evidence.runtime_log_path,
+        runtime_exit_metadata_path=evidence.runtime_exit_metadata_path,
         runtime_jsonl_path=event_artifacts.runtime_jsonl_path,
         events_jsonl_path=event_artifacts.events_jsonl_path,
         questions_path=questions_path,
@@ -752,6 +888,7 @@ def _execute_qwen(
             on_stdout=on_stdout,
             on_stderr=on_stderr,
             timeout_seconds=request.timeout_seconds,
+            cancel_requested=request.cancel_requested,
         )
         if live_result.run_result is None:
             return RuntimeAdapterExecutionResult(
@@ -766,6 +903,10 @@ def _execute_qwen(
             )
         qwen_run_result = cast(QwenRunResult, live_result.run_result)
         persist_qwen_runtime_log(attempt_path=attempt_path, run_result=qwen_run_result)
+        evidence = runtime_evidence_paths(attempt_path)
+        adapter_outcome = adapter_outcome_for_classification(
+            qwen_run_result.exit_classification.value
+        )
         question_detection = detect_question_or_pause_events(
             normalized_events=normalize_structured_events(run_result=qwen_run_result),
         )
@@ -775,10 +916,14 @@ def _execute_qwen(
             stage=request.stage,
             adapter_question_events=question_detection.question_events,
         )
+        _cleanup_runtime_capture_sources(qwen_run_result)
         return RuntimeAdapterExecutionResult(
             succeeded=live_result.succeeded,
             status=live_result.status,
             details=live_result.details,
+            adapter_outcome=adapter_outcome,
+            runtime_log_path=evidence.runtime_log_path,
+            runtime_exit_metadata_path=evidence.runtime_exit_metadata_path,
             runtime_jsonl_path=live_result.runtime_jsonl_path,
             events_jsonl_path=live_result.events_jsonl_path,
             questions_path=questions_path,
@@ -808,8 +953,13 @@ def _execute_qwen(
         timeout_seconds=request.timeout_seconds,
         document_completion_paths=request.expected_output_documents,
         cancel_requested=request.cancel_requested,
+        capture_directory=attempt_path,
     )
     persist_qwen_runtime_log(attempt_path=attempt_path, run_result=run_result)
+    evidence = runtime_evidence_paths(attempt_path)
+    adapter_outcome = adapter_outcome_for_classification(
+        run_result.exit_classification.value
+    )
     event_artifacts = persist_runtime_event_artifacts(
         attempt_path=attempt_path,
         run_result=run_result,
@@ -823,6 +973,7 @@ def _execute_qwen(
         stage=request.stage,
         adapter_question_events=question_detection.question_events,
     )
+    _cleanup_runtime_capture_sources(run_result)
     return RuntimeAdapterExecutionResult(
         succeeded=run_result.exit_classification
         in (
@@ -830,6 +981,9 @@ def _execute_qwen(
             QwenExitClassification.DOCUMENT_COMPLETE,
         ),
         details=run_result.exit_classification.value,
+        adapter_outcome=adapter_outcome,
+        runtime_log_path=evidence.runtime_log_path,
+        runtime_exit_metadata_path=evidence.runtime_exit_metadata_path,
         runtime_jsonl_path=event_artifacts.runtime_jsonl_path,
         events_jsonl_path=event_artifacts.events_jsonl_path,
         questions_path=questions_path,

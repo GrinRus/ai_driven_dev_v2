@@ -13,9 +13,9 @@ from aidd.adapters.live_transport import (
     append_jsonl,
     run_help_text,
     split_command,
-    terminate_process,
 )
 from aidd.adapters.process_io import ManagedStdinWriter
+from aidd.adapters.process_supervisor import OwnedProcessSupervisor
 from aidd.adapters.qwen.approvals import (
     operator_decision_to_qwen_confirmation,
     qwen_control_request_to_operator_request,
@@ -29,6 +29,7 @@ from aidd.adapters.qwen.runner import (
 from aidd.core.runtime_operator import RuntimeOperatorBroker, RuntimeOperatorDecisionProvider
 from aidd.core.stage_models import AdapterExecutionStatus
 from aidd.runtime_catalog import RuntimeExecutionMode
+from aidd.runtime_permissions import RuntimeOperatorDecisionAction
 
 _QWEN_EVENTS_FILENAME = "qwen-events.jsonl"
 _QWEN_INPUT_FILENAME = "qwen-input.jsonl"
@@ -66,10 +67,17 @@ def execute_qwen_live_transport(
     on_stdout: Callable[[str], None] | None,
     on_stderr: Callable[[str], None] | None,
     timeout_seconds: float | None,
+    cancel_requested: Callable[[], bool] | None = None,
 ) -> LiveTransportResult[QwenExitClassification]:
     if not qwen_live_transport_available(configured_command):
         return LiveTransportResult(
-            run_result=None,
+            run_result=QwenRunResult(
+                exit_code=None,
+                stdout_text="",
+                stderr_text="",
+                runtime_log_text="",
+                exit_classification=QwenExitClassification.BLOCKED,
+            ),
             status=AdapterExecutionStatus.BLOCKED_FOR_OPERATOR,
             details=(
                 "blocked_for_operator: qwen live broker requires managed native qwen "
@@ -93,40 +101,57 @@ def execute_qwen_live_transport(
         repository_root=repository_root,
         execution_mode=RuntimeExecutionMode.NATIVE,
     )
-    process = subprocess.Popen(
-        spec.command,
-        cwd=spec.cwd,
-        env=spec.env,
-        stdin=subprocess.PIPE if spec.stdin_text is not None else None,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
-        text=True,
-        bufsize=1,
+    supervisor = OwnedProcessSupervisor.launch(spec)
+    process = supervisor.process
+    capture = StreamCapture(
+        directory=attempt_path,
+        on_stdout=on_stdout,
+        on_stderr=on_stderr,
     )
-    capture = StreamCapture(on_stdout=on_stdout, on_stderr=on_stderr)
     capture.attach(process)
     seen_request_ids: set[str] = set()
     deadline = None if timeout_seconds is None else time.monotonic() + timeout_seconds
     stop_reason: QwenExitClassification | None = None
     pending_request_id: str | None = None
     denied_reason: str | None = None
+    terminal_classification: QwenExitClassification | None = None
     read_offset = 0
     stdin_writer = ManagedStdinWriter.start(process.stdin, spec.stdin_text)
 
     while process.poll() is None:
+        if cancel_requested is not None and cancel_requested():
+            stop_reason = QwenExitClassification.CANCELLED
+            break
+        if capture.error is not None:
+            capture_error = capture.error
+            _stop_qwen_process(
+                supervisor=supervisor,
+                capture=capture,
+                stdin_writer=stdin_writer,
+            )
+            assert capture_error is not None
+            capture.abort()
+            raise capture_error
         if stdin_writer is not None and stdin_writer.error is not None:
             writer_error = stdin_writer.error
-            terminate_process(process)
-            capture.join()
-            stdin_writer.join()
+            _stop_qwen_process(
+                supervisor=supervisor,
+                capture=capture,
+                stdin_writer=stdin_writer,
+            )
             assert writer_error is not None
+            capture.abort()
             raise writer_error
         if deadline is not None and time.monotonic() >= deadline:
             stop_reason = QwenExitClassification.TIMEOUT
-            terminate_process(process)
             break
 
-        read_offset, pending_request_id, denied_reason = _handle_new_events(
+        (
+            read_offset,
+            pending_request_id,
+            denied_reason,
+            terminal_classification,
+        ) = _handle_new_events(
             events_path=events_path,
             read_offset=read_offset,
             seen_request_ids=seen_request_ids,
@@ -137,16 +162,28 @@ def execute_qwen_live_transport(
             operator_decision_provider=operator_decision_provider,
             input_path=input_path,
         )
+        if cancel_requested is not None and cancel_requested():
+            stop_reason = QwenExitClassification.CANCELLED
+            pending_request_id = None
+            denied_reason = None
+            break
         if pending_request_id is not None:
-            terminate_process(process)
             break
         if denied_reason is not None:
-            terminate_process(process)
             break
         time.sleep(0.05)
 
-    if pending_request_id is None and denied_reason is None:
-        read_offset, pending_request_id, denied_reason = _handle_new_events(
+    if (
+        stop_reason is not QwenExitClassification.CANCELLED
+        and pending_request_id is None
+        and denied_reason is None
+    ):
+        (
+            read_offset,
+            pending_request_id,
+            denied_reason,
+            terminal_classification,
+        ) = _handle_new_events(
             events_path=events_path,
             read_offset=read_offset,
             seen_request_ids=seen_request_ids,
@@ -157,15 +194,48 @@ def execute_qwen_live_transport(
             operator_decision_provider=operator_decision_provider,
             input_path=input_path,
         )
-    capture.join()
-    if stdin_writer is not None:
-        stdin_writer.join()
-        if stdin_writer.error is not None and stop_reason is None:
-            raise stdin_writer.error
+    _stop_qwen_process(
+        supervisor=supervisor,
+        capture=capture,
+        stdin_writer=stdin_writer,
+    )
+    if capture.error is not None:
+        capture.abort()
+        raise capture.error
+    if (
+        stdin_writer is not None
+        and stdin_writer.error is not None
+        and stop_reason is None
+    ):
+        capture.abort()
+        raise stdin_writer.error
 
+    if stop_reason is QwenExitClassification.CANCELLED:
+        run_result = _run_result(
+            process=process,
+            capture=capture,
+            stop_reason=stop_reason,
+        )
+        return LiveTransportResult(
+            run_result=run_result,
+            status=AdapterExecutionStatus.FAILED,
+            details="qwen-live: cancelled",
+            runtime_jsonl_path=events_path if events_path.exists() else None,
+            events_jsonl_path=events_path if events_path.exists() else None,
+            operator_requests_path=(
+                broker.requests_path if broker.requests_path.exists() else None
+            ),
+            operator_decisions_path=(
+                broker.decisions_path if broker.decisions_path.exists() else None
+            ),
+        )
     if pending_request_id is not None:
         return LiveTransportResult(
-            run_result=None,
+            run_result=_captured_run_result(
+                capture=capture,
+                exit_code=None,
+                exit_classification=QwenExitClassification.BLOCKED,
+            ),
             status=AdapterExecutionStatus.BLOCKED_FOR_OPERATOR,
             details="blocked_for_operator: qwen live approval request pending",
             runtime_jsonl_path=events_path if events_path.exists() else None,
@@ -177,10 +247,12 @@ def execute_qwen_live_transport(
             pending_operator_request_ids=(pending_request_id,),
         )
     if denied_reason is not None:
-        run_result = _run_result(
-            process=process,
+        run_result = _captured_run_result(
             capture=capture,
-            stop_reason=None,
+            exit_code=None,
+            exit_classification=(
+                terminal_classification or QwenExitClassification.DENIED
+            ),
         )
         return LiveTransportResult(
             run_result=run_result,
@@ -222,7 +294,12 @@ def _handle_new_events(
     broker: RuntimeOperatorBroker,
     operator_decision_provider: RuntimeOperatorDecisionProvider,
     input_path: Path,
-) -> tuple[int, str | None, str | None]:
+) -> tuple[
+    int,
+    str | None,
+    str | None,
+    QwenExitClassification | None,
+]:
     read_offset, lines = _read_complete_event_lines(
         events_path=events_path,
         read_offset=read_offset,
@@ -246,11 +323,20 @@ def _handle_new_events(
             decision_provider=operator_decision_provider,
         )
         if decision is None:
-            return read_offset, operator_request.id, None
+            return read_offset, operator_request.id, None, None
         append_jsonl(input_path, operator_decision_to_qwen_confirmation(decision))
         if not decision.is_approval:
-            return read_offset, None, f"permission-denied: {decision.action.value}"
-    return read_offset, None, None
+            return (
+                read_offset,
+                None,
+                f"permission-denied: {decision.action.value}",
+                (
+                    QwenExitClassification.CANCELLED
+                    if decision.action is RuntimeOperatorDecisionAction.CANCEL
+                    else QwenExitClassification.DENIED
+                ),
+            )
+    return read_offset, None, None, None
 
 
 def _read_complete_event_lines(
@@ -355,13 +441,64 @@ def _run_result(
         classification = QwenExitClassification.SUCCESS
     else:
         classification = QwenExitClassification.NON_ZERO_EXIT
+    snapshot = capture.snapshot
     return QwenRunResult(
         exit_code=exit_code,
-        stdout_text=capture.stdout_text,
-        stderr_text=capture.stderr_text,
-        runtime_log_text=capture.runtime_log_text,
+        stdout_text=snapshot.stdout_text,
+        stderr_text=snapshot.stderr_text,
+        runtime_log_text=snapshot.runtime_log_text,
         exit_classification=classification,
+        runtime_log_source_path=snapshot.runtime_log_source_path,
+        structured_events_source_path=snapshot.structured_events_source_path,
+        stdout_byte_count=snapshot.stdout_byte_count,
+        stderr_byte_count=snapshot.stderr_byte_count,
+        runtime_log_byte_count=snapshot.runtime_log_byte_count,
+        stdout_char_count=snapshot.stdout_char_count,
+        stderr_char_count=snapshot.stderr_char_count,
+        runtime_log_char_count=snapshot.runtime_log_char_count,
+        stdout_truncated=snapshot.stdout_truncated,
+        stderr_truncated=snapshot.stderr_truncated,
+        runtime_log_truncated=snapshot.runtime_log_truncated,
     )
+
+
+def _captured_run_result(
+    *,
+    capture: StreamCapture,
+    exit_code: int | None,
+    exit_classification: QwenExitClassification,
+) -> QwenRunResult:
+    snapshot = capture.snapshot
+    return QwenRunResult(
+        exit_code=exit_code,
+        stdout_text=snapshot.stdout_text,
+        stderr_text=snapshot.stderr_text,
+        runtime_log_text=snapshot.runtime_log_text,
+        exit_classification=exit_classification,
+        runtime_log_source_path=snapshot.runtime_log_source_path,
+        structured_events_source_path=snapshot.structured_events_source_path,
+        stdout_byte_count=snapshot.stdout_byte_count,
+        stderr_byte_count=snapshot.stderr_byte_count,
+        runtime_log_byte_count=snapshot.runtime_log_byte_count,
+        stdout_char_count=snapshot.stdout_char_count,
+        stderr_char_count=snapshot.stderr_char_count,
+        runtime_log_char_count=snapshot.runtime_log_char_count,
+        stdout_truncated=snapshot.stdout_truncated,
+        stderr_truncated=snapshot.stderr_truncated,
+        runtime_log_truncated=snapshot.runtime_log_truncated,
+    )
+
+
+def _stop_qwen_process(
+    *,
+    supervisor: OwnedProcessSupervisor,
+    capture: StreamCapture,
+    stdin_writer: ManagedStdinWriter | None,
+) -> None:
+    supervisor.request_stop()
+    supervisor.drain_streams(capture.reader_threads)
+    if stdin_writer is not None:
+        stdin_writer.join()
 
 
 __all__ = [

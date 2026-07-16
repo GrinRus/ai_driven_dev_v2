@@ -1,10 +1,16 @@
 from __future__ import annotations
 
 import json
+import os
 import sys
+import time
+from collections.abc import Callable
 from pathlib import Path
 
-from aidd.adapters.runtime_execution import StageRuntimeRequest
+import pytest
+
+from aidd.adapters.process_supervisor import OwnedProcessSupervisor
+from aidd.adapters.runtime_execution import RuntimeSubprocessSpec, StageRuntimeRequest
 from aidd.adapters.surface import get_runtime_adapter_surface
 from aidd.core.runtime_operator import (
     RuntimeOperatorDecision,
@@ -61,7 +67,28 @@ class _NoDecisionProvider:
         return None
 
 
-def _request(tmp_path: Path, *, timeout_seconds: float = 5.0) -> StageRuntimeRequest:
+class _CancelDuringDecisionProvider:
+    def __init__(self, cancel: list[bool]) -> None:
+        self.cancel = cancel
+
+    def request_decision(
+        self,
+        request: RuntimeOperatorRequest,
+        *,
+        requests_path: Path,
+        decisions_path: Path,
+    ) -> None:
+        _ = request, requests_path, decisions_path
+        self.cancel[0] = True
+        return None
+
+
+def _request(
+    tmp_path: Path,
+    *,
+    timeout_seconds: float = 5.0,
+    cancel_requested: Callable[[], bool] | None = None,
+) -> StageRuntimeRequest:
     repo = tmp_path / "repo"
     workspace = tmp_path / ".aidd"
     repo.mkdir(exist_ok=True)
@@ -85,17 +112,35 @@ def _request(tmp_path: Path, *, timeout_seconds: float = 5.0) -> StageRuntimeReq
         prompt_pack_paths=(prompt_pack,),
         repository_root=repo,
         project_roots=(repo,),
+        cancel_requested=cancel_requested,
     )
 
 
-def _fake_codex(tmp_path: Path, *, scenario: str = "command") -> Path:
+def _fake_codex(
+    tmp_path: Path,
+    *,
+    scenario: str = "command",
+    descendant_signal_path: Path | None = None,
+) -> Path:
     bin_dir = tmp_path / "bin"
     bin_dir.mkdir(exist_ok=True)
     script = bin_dir / "codex"
     script.write_text(
         f"#!{sys.executable}\n"
         f"scenario = {scenario!r}\n"
-        "import json, sys, time\n"
+        f"descendant_signal_path = {str(descendant_signal_path)!r}\n"
+        "import json, os, subprocess, sys, time\n"
+        "if descendant_signal_path and '--help' not in sys.argv:\n"
+        "    ready_path = descendant_signal_path + '.ready'\n"
+        "    pid_path = descendant_signal_path + '.pid'\n"
+        "    child = \"import pathlib,signal,sys,time; "
+        "signal.signal(signal.SIGTERM, lambda s,f: "
+        "(pathlib.Path(sys.argv[1]).write_text(str(s)), sys.exit(0))); "
+        "pathlib.Path(sys.argv[2]).write_text(str(__import__('os').getpid())); "
+        "pathlib.Path(sys.argv[3]).write_text('ready'); time.sleep(30)\"\n"
+        "    subprocess.Popen([sys.executable, '-c', child, descendant_signal_path, "
+        "pid_path, ready_path])\n"
+        "    while not os.path.exists(ready_path): time.sleep(0.01)\n"
         "def emit(payload):\n"
         "    print(json.dumps(payload), flush=True)\n"
         "if sys.argv[1:3] == ['app-server', '--help']:\n"
@@ -108,6 +153,14 @@ def _fake_codex(tmp_path: Path, *, scenario: str = "command") -> Path:
         "    raise SystemExit(2)\n"
         "if scenario == 'timeout':\n"
         "    time.sleep(10)\n"
+        "    raise SystemExit(3)\n"
+        "if scenario == 'startup_wait':\n"
+        "    time.sleep(10)\n"
+        "    raise SystemExit(3)\n"
+        "if scenario == 'protocol_failure':\n"
+        "    sys.stdout.buffer.write(b'\\xff\\n')\n"
+        "    sys.stdout.buffer.flush()\n"
+        "    time.sleep(1)\n"
         "    raise SystemExit(3)\n"
         "thread_id = 'thread-1'\n"
         "for line in sys.stdin:\n"
@@ -125,6 +178,8 @@ def _fake_codex(tmp_path: Path, *, scenario: str = "command") -> Path:
         "'sandbox': {'type': 'workspaceWrite'}}})\n"
         "    elif method == 'turn/start':\n"
         "        emit({'id': msg['id'], 'result': {'turn': {'id': 'turn-1'}}})\n"
+        "        if scenario == 'active_wait':\n"
+        "            continue\n"
         "        if scenario == 'file_permissions':\n"
         "            print('not-json-from-server', flush=True)\n"
         "            emit({'id': 'file-approval', 'method': "
@@ -228,17 +283,26 @@ def test_codex_live_transport_resumes_after_provider_decision(tmp_path: Path) ->
 def test_codex_live_transport_denial_fails_stage(tmp_path: Path) -> None:
     fake_codex = _fake_codex(tmp_path)
     provider = _DecisionProvider(RuntimeOperatorDecisionAction.DENY)
+    attempt_path = tmp_path / "attempt"
 
     result = get_runtime_adapter_surface("codex").execute_stage_request(
         configured_command=f"{fake_codex} exec --json -",
         request=_request(tmp_path),
-        attempt_path=tmp_path / "attempt",
+        attempt_path=attempt_path,
         base_env={},
         operator_decision_provider=provider,
     )
 
     assert result.resolved_status is AdapterExecutionStatus.FAILED
     assert result.details == "permission-denied: deny"
+    assert result.runtime_log_path == attempt_path / "runtime.log"
+    assert result.runtime_exit_metadata_path == attempt_path / "runtime-exit.json"
+    exit_metadata = json.loads(
+        result.runtime_exit_metadata_path.read_text(encoding="utf-8")
+    )
+    assert exit_metadata["adapter_outcome"] == "denial"
+    assert exit_metadata["exit_classification"] == "denied"
+    assert exit_metadata["exit_code"] is None
 
 
 def test_codex_live_transport_blocks_when_provider_has_no_decision(tmp_path: Path) -> None:
@@ -259,6 +323,15 @@ def test_codex_live_transport_blocks_when_provider_has_no_decision(tmp_path: Pat
     assert provider.requests[0].id == "approval-1"
     assert (attempt_path / "operator-requests.jsonl").exists()
     assert (attempt_path / "codex-app-server.jsonl").exists()
+    exit_metadata = json.loads(
+        (attempt_path / "runtime-exit.json").read_text(encoding="utf-8")
+    )
+    assert exit_metadata["adapter_outcome"] == "blocked"
+    assert exit_metadata["exit_classification"] == "blocked"
+    assert exit_metadata["exit_code"] is None
+    assert "requestApproval" in (attempt_path / "runtime.log").read_text(
+        encoding="utf-8"
+    )
 
 
 def test_codex_live_transport_timeout_fails_stage(tmp_path: Path) -> None:
@@ -274,6 +347,79 @@ def test_codex_live_transport_timeout_fails_stage(tmp_path: Path) -> None:
 
     assert result.resolved_status is AdapterExecutionStatus.FAILED
     assert result.details == "codex-live: timeout"
+    exit_metadata = json.loads(
+        (tmp_path / "attempt" / "runtime-exit.json").read_text(encoding="utf-8")
+    )
+    assert exit_metadata["adapter_outcome"] == "timeout"
+    assert exit_metadata["exit_classification"] == "timeout"
+
+
+@pytest.mark.parametrize("phase", ("startup", "active", "approval"))
+def test_codex_live_transport_persists_cancelled_outcome(
+    tmp_path: Path,
+    phase: str,
+) -> None:
+    cancel = [False]
+    started_at = time.monotonic()
+
+    def cancel_requested() -> bool:
+        if phase == "approval":
+            return cancel[0]
+        return time.monotonic() - started_at >= 0.1
+
+    scenario = {
+        "startup": "startup_wait",
+        "active": "active_wait",
+        "approval": "command",
+    }[phase]
+    provider = (
+        _CancelDuringDecisionProvider(cancel)
+        if phase == "approval"
+        else _DecisionProvider(RuntimeOperatorDecisionAction.ALLOW_ONCE)
+    )
+    attempt_path = tmp_path / "attempt"
+
+    result = get_runtime_adapter_surface("codex").execute_stage_request(
+        configured_command=f"{_fake_codex(tmp_path, scenario=scenario)} exec --json -",
+        request=_request(tmp_path, cancel_requested=cancel_requested),
+        attempt_path=attempt_path,
+        base_env={},
+        operator_decision_provider=provider,
+    )
+
+    assert result.resolved_status is AdapterExecutionStatus.FAILED
+    assert result.details == "codex-live: cancelled"
+    assert json.loads((attempt_path / "runtime-exit.json").read_text(encoding="utf-8"))[
+        "exit_classification"
+    ] == "cancelled"
+    assert result.adapter_outcome is not None
+    assert result.adapter_outcome.value == "cancellation"
+    assert (attempt_path / "runtime.log").exists()
+
+
+def test_codex_live_protocol_failure_commits_failed_evidence(tmp_path: Path) -> None:
+    attempt_path = tmp_path / "attempt"
+
+    result = get_runtime_adapter_surface("codex").execute_stage_request(
+        configured_command=(
+            f"{_fake_codex(tmp_path, scenario='protocol_failure')} exec --json -"
+        ),
+        request=_request(tmp_path),
+        attempt_path=attempt_path,
+        base_env={},
+        operator_decision_provider=_DecisionProvider(
+            RuntimeOperatorDecisionAction.ALLOW_ONCE
+        ),
+    )
+
+    assert result.resolved_status is AdapterExecutionStatus.FAILED
+    assert "protocol failure" in result.details
+    exit_metadata = json.loads(
+        (attempt_path / "runtime-exit.json").read_text(encoding="utf-8")
+    )
+    assert exit_metadata["adapter_outcome"] == "runtime_failure"
+    assert exit_metadata["exit_classification"] == "protocol_failure"
+    assert exit_metadata["exit_code"] is None
 
 
 def test_codex_live_transport_handles_file_and_permissions_requests(
@@ -347,3 +493,61 @@ def test_codex_live_transport_enriches_file_change_from_cached_item(
         / "stage-result.md",
     )
     assert provider.requests == []
+
+
+@pytest.mark.skipif(os.name == "nt", reason="process groups are POSIX-specific")
+@pytest.mark.parametrize(
+    ("scenario", "action", "cancel"),
+    (
+        ("timeout", RuntimeOperatorDecisionAction.ALLOW_ONCE, False),
+        ("command", RuntimeOperatorDecisionAction.DENY, False),
+        ("active_wait", RuntimeOperatorDecisionAction.ALLOW_ONCE, True),
+    ),
+)
+def test_codex_live_terminal_paths_stop_descendants(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    scenario: str,
+    action: RuntimeOperatorDecisionAction,
+    cancel: bool,
+) -> None:
+    signal_path = tmp_path / "descendant-signal.txt"
+    started_at = time.monotonic()
+    launched: list[OwnedProcessSupervisor] = []
+    original_launch = OwnedProcessSupervisor.launch.__func__
+
+    def capture_launch(
+        cls: type[OwnedProcessSupervisor],
+        spec: RuntimeSubprocessSpec,
+    ) -> OwnedProcessSupervisor:
+        supervisor = original_launch(cls, spec)
+        launched.append(supervisor)
+        return supervisor
+
+    monkeypatch.setattr(
+        OwnedProcessSupervisor,
+        "launch",
+        classmethod(capture_launch),
+    )
+
+    def cancel_requested() -> bool:
+        return cancel and time.monotonic() - started_at >= 0.1
+
+    result = get_runtime_adapter_surface("codex").execute_stage_request(
+        configured_command=(
+            f"{_fake_codex(tmp_path, scenario=scenario, descendant_signal_path=signal_path)} "
+            "exec --json -"
+        ),
+        request=_request(
+            tmp_path,
+            timeout_seconds=0.2 if scenario == "timeout" else 5.0,
+            cancel_requested=cancel_requested if cancel else None,
+        ),
+        attempt_path=tmp_path / "attempt",
+        base_env={},
+        operator_decision_provider=_DecisionProvider(action),
+    )
+
+    assert result.resolved_status is AdapterExecutionStatus.FAILED
+    assert len(launched) == 1
+    assert launched[0].process_group_exists() is False

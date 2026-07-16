@@ -7,20 +7,17 @@ slice, and local task.
 
 ## Next
 
-- `W34-E4-S1-T6` — Propagate cancellation through Codex live startup, active turn, and
-  approval wait.
+- `W34-E4-S3-T1` — Propagate Qwen intervention mode and operator-request metadata.
 
 ## Soon
 
-- `W34-E4-S1-T7` — Propagate cancellation through Qwen live startup, active turn, and
-  approval wait.
+- `W34-E4-S3-T2` — Align Claude capability reporting with executable registered
+  transports.
 
 ## Parking lot
 
 - `W34-E3-S4-T1` — Add characterization fixtures for corrected routes, jobs, approvals,
   and dashboard states.
-- `W34-E4-S2-T1` — Define typed stop reasons and one runtime-evidence commit contract.
-- `W34-E4-S3-T1` — Propagate Qwen intervention mode and operator-request metadata.
 - `W34-E5-S1-T1` — Repair stale CI-labelled smoke manifests and fixtures.
 - `W34-E5-S2-T1` — Apply one lifecycle budget and owned process groups to setup, run,
   verify, and teardown.
@@ -98,3 +95,18 @@ slice, and local task.
   terminal-safe and the local UI now bounds live-log memory, response size, and terminal
   job retention. `W34-E3-S4-T1` remains parked until executable frontend tests from
   `W34-E5-S3` satisfy its slice dependency.
+- `2026-07-16` `W34-E4-S2-T1` is complete: adapters now publish one atomic runtime
+  evidence envelope with a canonical outcome while retaining provider-specific exit
+  classifications. Codex early-stop truthfulness is the next bounded slice.
+- `2026-07-16` `W34-E4-S2-T2` is complete: Codex live now distinguishes protocol
+  completion from supervisor termination and commits truthful timeout, cancellation,
+  denial, blocked, and protocol-failure evidence.
+- `2026-07-16` `W34-E4-S2-T3` is complete: pending Qwen approvals now retain a captured
+  blocked result, while denied, cancelled, timeout, and success paths publish one
+  consistent evidence envelope without fabricated confirmations.
+- `2026-07-16` `W34-E4-S2-T4` is complete: missing, non-executable, and OS-level launch
+  failures across all registered runtimes now fail before validation with a safe
+  diagnostic, `exit_code: null`, and canonical launch-failure evidence.
+- `2026-07-16` `W34-E4-S2` is complete: runtime capture is disk-backed, keeps bounded
+  UTF-8 tails with exact counters, preserves the full combined log, and incrementally
+  materializes structured events. `W34-E4-S3-T1`/`T2` are now the bounded next queue.

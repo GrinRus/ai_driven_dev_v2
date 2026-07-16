@@ -9262,7 +9262,7 @@ Exit evidence:
 ### Epic W34-E4 — bounded adapter lifecycle and truthful runtime evidence (`planned`)
 Linked stories: `US-01`, `US-06`, `US-08`, `US-10`
 
-#### Slice W34-E4-S1 — bounded process supervision (`planned`)
+#### Slice W34-E4-S1 — bounded process supervision (`done`)
 Goal: make every transport start supervision before blocking I/O and own its complete
 process lifecycle.
 
@@ -9299,11 +9299,11 @@ Local tasks:
   - Scope: shared streamed transport lifecycle only.
   - Verification: descendants exit after timeout, cancellation, parent exit, and
     inherited-pipe drain expiry.
-- `W34-E4-S1-T6` Propagate cancellation through Codex live startup, active turn, and
+- `W34-E4-S1-T6` (done) Propagate cancellation through Codex live startup, active turn, and
   approval wait. [`REL-04`]
   - Scope: Codex live transport.
   - Verification: three-state cancellation tests persist a cancelled outcome.
-- `W34-E4-S1-T7` Propagate cancellation through Qwen live startup, active turn, and
+- `W34-E4-S1-T7` (done) Propagate cancellation through Qwen live startup, active turn, and
   approval wait. [`REL-04`]
   - Scope: Qwen live transport.
   - Verification: three-state cancellation tests persist a cancelled outcome.
@@ -9312,13 +9312,13 @@ Local tasks:
   - Scope: Qwen event reader.
   - Verification: a representative event is split at every byte boundary; malformed
     complete lines and duplicate IDs remain deterministic.
-- `W34-E4-S1-T9` Adopt the owned-process supervisor in Codex-live execution.
+- `W34-E4-S1-T9` (done) Adopt the owned-process supervisor in Codex-live execution.
   [`REL-05`, `REL-10`]
   - Dependencies: `W34-E4-S1-T4`, `W34-E4-S1-T5`.
   - Scope: Codex-live lifecycle integration only.
   - Verification: Codex descendants exit after timeout, denial, cancellation, parent
     exit, and bounded drain expiry.
-- `W34-E4-S1-T10` Adopt the owned-process supervisor in Qwen-live execution.
+- `W34-E4-S1-T10` (done) Adopt the owned-process supervisor in Qwen-live execution.
   [`REL-05`, `REL-10`]
   - Dependencies: `W34-E4-S1-T4`, `W34-E4-S1-T5`.
   - Scope: Qwen-live lifecycle integration only.
@@ -9330,7 +9330,7 @@ Exit evidence:
 - configured timeout and cancellation cover prompt delivery, active execution, approval
   waits, pipe drain, and descendant shutdown.
 
-#### Slice W34-E4-S2 — runtime outcome and evidence truth (`planned`)
+#### Slice W34-E4-S2 — runtime outcome and evidence truth (`done`)
 Goal: make every blocked, failed, cancelled, or early-stopped runtime attempt leave one
 normalized and comparable evidence envelope.
 
@@ -9340,27 +9340,27 @@ Dependencies:
 
 Local tasks:
 
-- `W34-E4-S2-T1` Define typed stop reasons and one runtime-evidence commit contract.
+- `W34-E4-S2-T1` (done) Define typed stop reasons and one runtime-evidence commit contract.
   [`REF-03`]
   - Scope: shared adapter result model.
   - Verification: a cross-adapter outcome table covers success, failure, timeout,
     cancellation, denial, blocked, and launch failure.
-- `W34-E4-S2-T2` Persist truthful Codex early-stop and blocked outcomes through the
+- `W34-E4-S2-T2` (done) Persist truthful Codex early-stop and blocked outcomes through the
   shared contract. [`BUG-09`, `REL-11`]
   - Scope: Codex live path.
   - Verification: denial, startup-timeout, and blocked branches agree between outer
     status, raw log, and `runtime-exit.json`.
-- `W34-E4-S2-T3` Persist canonical Qwen blocked outcomes through the shared contract.
+- `W34-E4-S2-T3` (done) Persist canonical Qwen blocked outcomes through the shared contract.
   [`REL-11`]
   - Scope: Qwen live path.
   - Verification: a blocked attempt retains stdout/stderr, raw log, and blocked exit
     evidence.
-- `W34-E4-S2-T4` Normalize executable-launch failures for every registered runtime.
+- `W34-E4-S2-T4` (done) Normalize executable-launch failures for every registered runtime.
   [`REL-12`]
   - Scope: adapter surface.
   - Verification: a missing-executable conformance matrix produces equivalent durable
     evidence for every maintained runtime.
-- `W34-E4-S2-T5` Add a disk-backed runtime-log sink with bounded in-memory tails and
+- `W34-E4-S2-T5` (done) Add a disk-backed runtime-log sink with bounded in-memory tails and
   counters. [`PERF-02`]
   - Scope: shared runtime capture layer.
   - Verification: a high-volume fake runtime preserves the complete disk log within a

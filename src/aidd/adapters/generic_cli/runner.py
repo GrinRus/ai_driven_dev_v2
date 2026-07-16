@@ -64,6 +64,7 @@ class GenericCliExitClassification(StrEnum):
     NON_ZERO_EXIT = "non_zero_exit"
     TIMEOUT = "timeout"
     CANCELLED = "cancelled"
+    LAUNCH_FAILURE = "launch_failure"
 
 
 @dataclass(frozen=True, slots=True)
@@ -76,7 +77,7 @@ RUNTIME_EXIT_METADATA_FILENAME = _RUNTIME_EXIT_METADATA_FILENAME
 
 def _resolve_exit_classification(
     *,
-    exit_code: int,
+    exit_code: int | None,
     stop_reason: GenericCliExitClassification | None,
 ) -> GenericCliExitClassification:
     return resolve_exit_classification(
@@ -190,6 +191,7 @@ def run_subprocess_with_streaming(
     on_stderr: Callable[[str], None] | None = None,
     timeout_seconds: float | None = None,
     cancel_requested: Callable[[], bool] | None = None,
+    capture_directory: Path | None = None,
 ) -> GenericCliRunResult:
     streamed_result = run_streamed_subprocess(
         spec=spec,
@@ -199,6 +201,8 @@ def run_subprocess_with_streaming(
         cancel_requested=cancel_requested,
         timeout_stop_reason=GenericCliExitClassification.TIMEOUT,
         cancel_stop_reason=GenericCliExitClassification.CANCELLED,
+        launch_failure_stop_reason=GenericCliExitClassification.LAUNCH_FAILURE,
+        capture_directory=capture_directory,
     )
     exit_classification = _resolve_exit_classification(
         exit_code=streamed_result.exit_code,
@@ -210,6 +214,17 @@ def run_subprocess_with_streaming(
         stderr_text=streamed_result.stderr_text,
         runtime_log_text=streamed_result.runtime_log_text,
         exit_classification=exit_classification,
+        runtime_log_source_path=streamed_result.runtime_log_source_path,
+        structured_events_source_path=streamed_result.structured_events_source_path,
+        stdout_byte_count=streamed_result.stdout_byte_count,
+        stderr_byte_count=streamed_result.stderr_byte_count,
+        runtime_log_byte_count=streamed_result.runtime_log_byte_count,
+        stdout_char_count=streamed_result.stdout_char_count,
+        stderr_char_count=streamed_result.stderr_char_count,
+        runtime_log_char_count=streamed_result.runtime_log_char_count,
+        stdout_truncated=streamed_result.stdout_truncated,
+        stderr_truncated=streamed_result.stderr_truncated,
+        runtime_log_truncated=streamed_result.runtime_log_truncated,
     )
 
 
@@ -227,6 +242,16 @@ def persist_attempt_runtime_artifacts(
         stdout_text=run_result.stdout_text,
         stderr_text=run_result.stderr_text,
         runtime_log_text=run_result.runtime_log_text,
+        runtime_log_source_path=run_result.runtime_log_source_path,
+        stdout_byte_count=run_result.stdout_byte_count,
+        stderr_byte_count=run_result.stderr_byte_count,
+        runtime_log_byte_count=run_result.runtime_log_byte_count,
+        stdout_char_count=run_result.stdout_char_count,
+        stderr_char_count=run_result.stderr_char_count,
+        runtime_log_char_count=run_result.runtime_log_char_count,
+        stdout_truncated=run_result.stdout_truncated,
+        stderr_truncated=run_result.stderr_truncated,
+        runtime_log_truncated=run_result.runtime_log_truncated,
     )
 
     return GenericCliRuntimeArtifacts(

@@ -18,6 +18,7 @@ class StopReason(StrEnum):
     COMPLETE = "complete"
     TIMEOUT = "timeout"
     CANCELLED = "cancelled"
+    LAUNCH_FAILURE = "launch_failure"
 
 
 @pytest.mark.parametrize(
@@ -41,6 +42,37 @@ def test_streamed_subprocess_rejects_invalid_timeout_budget(
             timeout_stop_reason=StopReason.TIMEOUT,
             cancel_stop_reason=StopReason.CANCELLED,
         )
+
+
+def test_streamed_subprocess_normalizes_launch_oserror(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from aidd.adapters.process_supervisor import OwnedProcessSupervisor
+
+    def fail_launch(_spec: RuntimeSubprocessSpec) -> OwnedProcessSupervisor:
+        raise OSError("unsafe\nmultiline launch diagnostic")
+
+    monkeypatch.setattr(OwnedProcessSupervisor, "launch", fail_launch)
+    result = run_streamed_subprocess(
+        spec=RuntimeSubprocessSpec(
+            command=("runtime",),
+            cwd=tmp_path,
+            env={},
+        ),
+        timeout_seconds=None,
+        timeout_stop_reason=StopReason.TIMEOUT,
+        cancel_stop_reason=StopReason.CANCELLED,
+        launch_failure_stop_reason=StopReason.LAUNCH_FAILURE,
+    )
+
+    assert result.exit_code is None
+    assert result.stop_reason is StopReason.LAUNCH_FAILURE
+    assert result.stdout_text == ""
+    assert result.stderr_text == (
+        "[launch-failure] OSError: unsafe multiline launch diagnostic\n"
+    )
+    assert result.runtime_log_text == result.stderr_text
 
 
 def test_stream_callbacks_run_in_caller_thread(tmp_path: Path) -> None:

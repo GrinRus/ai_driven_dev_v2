@@ -10,6 +10,11 @@ from pathlib import Path
 from typing import Any, TypeVar
 
 from aidd.adapters.runtime_execution import RuntimeRunResult
+from aidd.adapters.runtime_log_capture import (
+    DiskBackedRuntimeLogSink,
+    RuntimeLogCaptureSnapshot,
+    StreamTarget,
+)
 from aidd.core.stage_models import AdapterExecutionStatus
 from aidd.runtime_catalog import RuntimeExecutionMode
 from aidd.runtime_permissions import RuntimeInteractionMode, RuntimePermissionPolicy
@@ -37,32 +42,53 @@ class StreamCapture:
     def __init__(
         self,
         *,
+        directory: Path,
         on_stdout: Callable[[str], None] | None = None,
         on_stderr: Callable[[str], None] | None = None,
     ) -> None:
-        self._stdout_lines: list[str] = []
-        self._stderr_lines: list[str] = []
+        self._sink = DiskBackedRuntimeLogSink(directory=directory)
         self._on_stdout = on_stdout
         self._on_stderr = on_stderr
         self._threads: list[threading.Thread] = []
+        self._errors: list[BaseException] = []
 
     @property
     def stdout_text(self) -> str:
-        return "".join(self._stdout_lines)
+        return self.snapshot.stdout_text
 
     @property
     def stderr_text(self) -> str:
-        return "".join(self._stderr_lines)
+        return self.snapshot.stderr_text
 
     @property
     def runtime_log_text(self) -> str:
-        return self.stdout_text + self.stderr_text
+        return self.snapshot.runtime_log_text
+
+    @property
+    def snapshot(self) -> RuntimeLogCaptureSnapshot:
+        return self._sink.finish()
+
+    def abort(self) -> None:
+        self._sink.abort()
+
+    @property
+    def reader_threads(self) -> tuple[threading.Thread, ...]:
+        return tuple(self._threads)
+
+    @property
+    def error(self) -> BaseException | None:
+        return self._errors[0] if self._errors else None
 
     def attach(self, process: subprocess.Popen[str]) -> None:
         if process.stdout is not None:
             thread = threading.Thread(
                 target=self._read_stream,
-                args=(process.stdout, self._stdout_lines, self._on_stdout),
+                args=(
+                    process.stdout,
+                    "stdout",
+                    self._on_stdout,
+                    self._errors,
+                ),
                 daemon=True,
             )
             thread.start()
@@ -70,7 +96,12 @@ class StreamCapture:
         if process.stderr is not None:
             thread = threading.Thread(
                 target=self._read_stream,
-                args=(process.stderr, self._stderr_lines, self._on_stderr),
+                args=(
+                    process.stderr,
+                    "stderr",
+                    self._on_stderr,
+                    self._errors,
+                ),
                 daemon=True,
             )
             thread.start()
@@ -80,17 +111,20 @@ class StreamCapture:
         for thread in self._threads:
             thread.join(timeout=timeout_seconds)
 
-    @staticmethod
     def _read_stream(
+        self,
         stream: Any,
-        destination: list[str],
+        target: StreamTarget,
         callback: Callable[[str], None] | None,
+        errors: list[BaseException],
     ) -> None:
         try:
             for line in stream:
-                destination.append(line)
+                self._sink.write(target, line)
                 if callback is not None:
                     callback(line)
+        except BaseException as exc:
+            errors.append(exc)
         finally:
             try:
                 stream.close()
@@ -140,17 +174,6 @@ def should_use_live_transport(
     )
 
 
-def terminate_process(process: subprocess.Popen[str]) -> None:
-    if process.poll() is not None:
-        return
-    process.terminate()
-    try:
-        process.wait(timeout=1.0)
-    except subprocess.TimeoutExpired:
-        process.kill()
-        process.wait(timeout=1.0)
-
-
 def run_help_text(command: tuple[str, ...], *, timeout_seconds: float = 5.0) -> str:
     try:
         result = subprocess.run(
@@ -173,5 +196,4 @@ __all__ = [
     "run_help_text",
     "should_use_live_transport",
     "split_command",
-    "terminate_process",
 ]

@@ -57,11 +57,22 @@ class RuntimeSubprocessSpec:
 
 @dataclass(frozen=True, slots=True)
 class RuntimeRunResult[ExitClassificationT]:
-    exit_code: int
+    exit_code: int | None
     stdout_text: str
     stderr_text: str
     runtime_log_text: str
     exit_classification: ExitClassificationT
+    runtime_log_source_path: Path | None = None
+    structured_events_source_path: Path | None = None
+    stdout_byte_count: int | None = None
+    stderr_byte_count: int | None = None
+    runtime_log_byte_count: int | None = None
+    stdout_char_count: int | None = None
+    stderr_char_count: int | None = None
+    runtime_log_char_count: int | None = None
+    stdout_truncated: bool = False
+    stderr_truncated: bool = False
+    runtime_log_truncated: bool = False
 
     @property
     def stdout(self) -> str:

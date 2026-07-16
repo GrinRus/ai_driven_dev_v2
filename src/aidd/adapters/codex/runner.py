@@ -66,6 +66,10 @@ class CodexExitClassification(StrEnum):
     NON_ZERO_EXIT = "non_zero_exit"
     TIMEOUT = "timeout"
     CANCELLED = "cancelled"
+    DENIED = "denied"
+    BLOCKED = "blocked"
+    PROTOCOL_FAILURE = "protocol_failure"
+    LAUNCH_FAILURE = "launch_failure"
 
 
 @dataclass(frozen=True, slots=True)
@@ -245,7 +249,7 @@ def build_subprocess_spec(
 
 def _resolve_exit_classification(
     *,
-    exit_code: int,
+    exit_code: int | None,
     stop_reason: CodexExitClassification | None,
 ) -> CodexExitClassification:
     return resolve_exit_classification(
@@ -263,6 +267,7 @@ def run_subprocess_with_streaming(
     on_stderr: Callable[[str], None] | None = None,
     timeout_seconds: float | None = None,
     cancel_requested: Callable[[], bool] | None = None,
+    capture_directory: Path | None = None,
 ) -> CodexRunResult:
     streamed_result = run_streamed_subprocess(
         spec=spec,
@@ -272,6 +277,8 @@ def run_subprocess_with_streaming(
         cancel_requested=cancel_requested,
         timeout_stop_reason=CodexExitClassification.TIMEOUT,
         cancel_stop_reason=CodexExitClassification.CANCELLED,
+        launch_failure_stop_reason=CodexExitClassification.LAUNCH_FAILURE,
+        capture_directory=capture_directory,
     )
     exit_classification = _resolve_exit_classification(
         exit_code=streamed_result.exit_code,
@@ -283,6 +290,17 @@ def run_subprocess_with_streaming(
         stderr_text=streamed_result.stderr_text,
         runtime_log_text=streamed_result.runtime_log_text,
         exit_classification=exit_classification,
+        runtime_log_source_path=streamed_result.runtime_log_source_path,
+        structured_events_source_path=streamed_result.structured_events_source_path,
+        stdout_byte_count=streamed_result.stdout_byte_count,
+        stderr_byte_count=streamed_result.stderr_byte_count,
+        runtime_log_byte_count=streamed_result.runtime_log_byte_count,
+        stdout_char_count=streamed_result.stdout_char_count,
+        stderr_char_count=streamed_result.stderr_char_count,
+        runtime_log_char_count=streamed_result.runtime_log_char_count,
+        stdout_truncated=streamed_result.stdout_truncated,
+        stderr_truncated=streamed_result.stderr_truncated,
+        runtime_log_truncated=streamed_result.runtime_log_truncated,
     )
 
 
@@ -299,6 +317,16 @@ def persist_attempt_runtime_log(
         stdout_text=run_result.stdout_text,
         stderr_text=run_result.stderr_text,
         runtime_log_text=run_result.runtime_log_text,
+        runtime_log_source_path=run_result.runtime_log_source_path,
+        stdout_byte_count=run_result.stdout_byte_count,
+        stderr_byte_count=run_result.stderr_byte_count,
+        runtime_log_byte_count=run_result.runtime_log_byte_count,
+        stdout_char_count=run_result.stdout_char_count,
+        stderr_char_count=run_result.stderr_char_count,
+        runtime_log_char_count=run_result.runtime_log_char_count,
+        stdout_truncated=run_result.stdout_truncated,
+        stderr_truncated=run_result.stderr_truncated,
+        runtime_log_truncated=run_result.runtime_log_truncated,
     )
     return paths.runtime_log_path
 
