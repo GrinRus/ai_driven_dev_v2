@@ -9278,22 +9278,22 @@ Local tasks:
   - Scope: cross-adapter tests only.
   - Verification: a startup, bidirectional-I/O, timeout, cancellation, parent-exit, and
     descendant-exit matrix runs without provider authentication.
-- `W34-E4-S1-T2` Reject non-finite runtime budgets at configuration and execution
+- `W34-E4-S1-T2` (done) Reject non-finite runtime budgets at configuration and execution
   boundaries. [`BUG-08`]
   - Scope: timeout contract.
   - Verification: parameterized tests cover non-finite values, booleans, zero,
     negatives, and valid finite values.
-- `W34-E4-S1-T3` Start readers, deadline, and cancellation supervision before managed
+- `W34-E4-S1-T3` (done) Start readers, deadline, and cancellation supervision before managed
   stdin delivery. [`REL-03`]
   - Scope: shared streaming and Qwen prompt startup.
   - Verification: a large bidirectional fake runtime terminates under both timeout and
     explicit cancellation.
-- `W34-E4-S1-T4` Add a shared owned-process-group supervisor with bounded drain and
+- `W34-E4-S1-T4` (done) Add a shared owned-process-group supervisor with bounded drain and
   termination. [`REF-03`]
   - Scope: adapter lifecycle primitive.
   - Verification: a disposable parent/child process-tree test proves bounded group
     shutdown.
-- `W34-E4-S1-T5` Adopt the owned-process supervisor in shared streamed execution.
+- `W34-E4-S1-T5` (done) Adopt the owned-process supervisor in shared streamed execution.
   [`REL-05`, `REL-10`]
   - Dependencies: `W34-E4-S1-T4`.
   - Scope: shared streamed transport lifecycle only.
@@ -9307,7 +9307,7 @@ Local tasks:
   approval wait. [`REL-04`]
   - Scope: Qwen live transport.
   - Verification: three-state cancellation tests persist a cancelled outcome.
-- `W34-E4-S1-T8` Preserve incomplete trailing Qwen JSONL frames until a complete record
+- `W34-E4-S1-T8` (done) Preserve incomplete trailing Qwen JSONL frames until a complete record
   arrives. [`REL-06`]
   - Scope: Qwen event reader.
   - Verification: a representative event is split at every byte boundary; malformed

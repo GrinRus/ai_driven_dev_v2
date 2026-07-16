@@ -8,6 +8,7 @@ from typing import Any
 
 from aidd.compatibility import should_upgrade_legacy_raw_provider_command
 from aidd.core.stages import STAGES, is_valid_stage
+from aidd.runtime_budget import validate_runtime_budget
 from aidd.runtime_catalog import (
     RuntimeExecutionMode,
     get_runtime_definition,
@@ -497,23 +498,20 @@ def _runtime_execution_mode(data: dict[str, Any], runtime_id: str) -> RuntimeExe
 
 
 def _runtime_timeout_seconds(data: dict[str, Any], runtime_id: str) -> float | None:
+    definition = get_runtime_definition(runtime_id)
     section = _runtime_section(data, runtime_id)
     raw_value = section.get("timeout_seconds")
     if raw_value is None:
         return None
     try:
-        timeout_seconds = float(raw_value)
-    except (TypeError, ValueError) as exc:
-        raise ValueError(
-            f"[runtime.{get_runtime_definition(runtime_id).config_section}] "
-            "timeout_seconds must be a number when provided."
-        ) from exc
-    if timeout_seconds <= 0:
-        raise ValueError(
-            f"[runtime.{get_runtime_definition(runtime_id).config_section}] "
-            "timeout_seconds must be greater than zero when provided."
+        return validate_runtime_budget(
+            raw_value,
+            label=f"[runtime.{definition.config_section}] timeout_seconds",
         )
-    return timeout_seconds
+    except ValueError as exc:
+        raise ValueError(
+            str(exc)
+        ) from exc
 
 
 def _runtime_stage_timeout_seconds(data: dict[str, Any], runtime_id: str) -> dict[str, float]:
@@ -538,17 +536,17 @@ def _runtime_stage_timeout_seconds(data: dict[str, Any], runtime_id: str) -> dic
                 f"unknown stage {stage!r}. Expected one of: {expected}."
             )
         try:
-            timeout_seconds = float(raw_value)
-        except (TypeError, ValueError) as exc:
-            raise ValueError(
-                f"[runtime.{definition.config_section}.stage_timeouts.{stage}] "
-                "timeout must be a number when provided."
-            ) from exc
-        if timeout_seconds <= 0:
-            raise ValueError(
-                f"[runtime.{definition.config_section}.stage_timeouts.{stage}] "
-                "timeout must be greater than zero when provided."
+            timeout_seconds = validate_runtime_budget(
+                raw_value,
+                label=(
+                    f"[runtime.{definition.config_section}.stage_timeouts.{stage}] timeout"
+                ),
             )
+        except ValueError as exc:
+            raise ValueError(
+                str(exc)
+            ) from exc
+        assert timeout_seconds is not None
         stage_timeouts[stage] = timeout_seconds
     return stage_timeouts
 

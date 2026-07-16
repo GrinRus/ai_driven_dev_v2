@@ -7,8 +7,13 @@ slice, and local task.
 
 ## Next
 
+- `W34-E4-S1-T6` — Propagate cancellation through Codex live startup, active turn, and
+  approval wait.
 
 ## Soon
+
+- `W34-E4-S1-T7` — Propagate cancellation through Qwen live startup, active turn, and
+  approval wait.
 
 ## Parking lot
 

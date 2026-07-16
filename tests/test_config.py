@@ -441,19 +441,36 @@ def test_load_config_rejects_invalid_scalar_config_values(
         load_config(config_path)
 
 
-def test_load_config_rejects_non_positive_runtime_timeout_seconds(tmp_path: Path) -> None:
+@pytest.mark.parametrize("runtime_section", ("claude_code", "codex", "opencode", "qwen"))
+@pytest.mark.parametrize("raw_value", ("false", "0", "-1", "nan", "inf", "-inf"))
+def test_load_config_rejects_invalid_runtime_timeout_seconds(
+    tmp_path: Path,
+    runtime_section: str,
+    raw_value: str,
+) -> None:
     config_path = tmp_path / "aidd.toml"
     config_path.write_text(
-        "\n".join(("[runtime.claude_code]", "timeout_seconds = 0")),
+        "\n".join((f"[runtime.{runtime_section}]", f"timeout_seconds = {raw_value}")),
         encoding="utf-8",
     )
 
-    try:
+    with pytest.raises(ValueError, match="finite number greater than zero"):
         load_config(config_path)
-    except ValueError as exc:
-        assert "timeout_seconds must be greater than zero" in str(exc)
-    else:  # pragma: no cover - assertion clarity
-        raise AssertionError("Expected ValueError for non-positive timeout_seconds")
+
+
+@pytest.mark.parametrize("raw_value", ("false", "0", "-1", "nan", "inf", "-inf"))
+def test_load_config_rejects_invalid_stage_timeout_seconds(
+    tmp_path: Path,
+    raw_value: str,
+) -> None:
+    config_path = tmp_path / "aidd.toml"
+    config_path.write_text(
+        "\n".join(("[runtime.codex.stage_timeouts]", f"plan = {raw_value}")),
+        encoding="utf-8",
+    )
+
+    with pytest.raises(ValueError, match="finite number greater than zero"):
+        load_config(config_path)
 
 
 def test_load_config_rejects_invalid_stage_timeout_key(tmp_path: Path) -> None:

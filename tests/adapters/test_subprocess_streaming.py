@@ -20,6 +20,29 @@ class StopReason(StrEnum):
     CANCELLED = "cancelled"
 
 
+@pytest.mark.parametrize(
+    "timeout_seconds",
+    (False, 0.0, -1.0, float("nan"), float("inf"), float("-inf")),
+)
+def test_streamed_subprocess_rejects_invalid_timeout_budget(
+    tmp_path: Path,
+    timeout_seconds: float,
+) -> None:
+    spec = RuntimeSubprocessSpec(
+        command=(sys.executable, "-c", "raise AssertionError('must not launch')"),
+        cwd=tmp_path,
+        env=dict(os.environ),
+    )
+
+    with pytest.raises(ValueError, match="finite number greater than zero"):
+        run_streamed_subprocess(
+            spec=spec,
+            timeout_seconds=timeout_seconds,
+            timeout_stop_reason=StopReason.TIMEOUT,
+            cancel_stop_reason=StopReason.CANCELLED,
+        )
+
+
 def test_stream_callbacks_run_in_caller_thread(tmp_path: Path) -> None:
     caller_thread_id = threading.get_ident()
     callback_thread_ids: list[int] = []
@@ -92,6 +115,42 @@ def test_timeout_is_enforced_while_process_is_streaming_output(tmp_path: Path) -
     assert result.stop_reason is StopReason.TIMEOUT
 
 
+@pytest.mark.parametrize("stop_mode", ("timeout", "cancellation"))
+def test_supervision_starts_before_blocked_stdin_delivery(
+    tmp_path: Path,
+    stop_mode: str,
+) -> None:
+    script = (
+        "import sys, time\n"
+        "sys.stdout.write('x' * 200000)\n"
+        "sys.stdout.flush()\n"
+        "time.sleep(10)\n"
+    )
+    spec = RuntimeSubprocessSpec(
+        command=(sys.executable, "-c", script),
+        cwd=tmp_path,
+        env=dict(os.environ),
+        stdin_text="y" * 2_000_000,
+    )
+    started_at = time.monotonic()
+
+    result = run_streamed_subprocess(
+        spec=spec,
+        timeout_seconds=0.2 if stop_mode == "timeout" else 2.0,
+        timeout_stop_reason=StopReason.TIMEOUT,
+        cancel_stop_reason=StopReason.CANCELLED,
+        cancel_requested=(
+            (lambda: time.monotonic() - started_at >= 0.2)
+            if stop_mode == "cancellation"
+            else None
+        ),
+    )
+
+    expected = StopReason.TIMEOUT if stop_mode == "timeout" else StopReason.CANCELLED
+    assert result.stop_reason is expected
+    assert time.monotonic() - started_at < 1.5
+
+
 def test_completion_request_stops_process_before_timeout(tmp_path: Path) -> None:
     spec = RuntimeSubprocessSpec(
         command=(sys.executable, "-c", "import time; print('ready', flush=True); time.sleep(5)"),
@@ -120,7 +179,7 @@ def test_completion_request_stops_process_before_timeout(tmp_path: Path) -> None
 
 
 @pytest.mark.skipif(os.name == "nt", reason="process groups are POSIX-specific")
-def test_timeout_stops_child_process_that_inherits_stream_pipe(tmp_path: Path) -> None:
+def test_parent_exit_stops_child_process_before_runtime_timeout(tmp_path: Path) -> None:
     signal_path = tmp_path / "child-signal.txt"
     ready_path = tmp_path / "child-ready.txt"
     child_script = (
@@ -172,6 +231,102 @@ def test_timeout_stops_child_process_that_inherits_stream_pipe(tmp_path: Path) -
         cancel_stop_reason=StopReason.CANCELLED,
     )
 
-    assert result.stop_reason is StopReason.TIMEOUT
+    assert result.stop_reason is None
     assert time.monotonic() - started_at < 2.0
     assert signal_path.read_text(encoding="utf-8") == str(signal.SIGTERM)
+
+
+@pytest.mark.skipif(os.name == "nt", reason="process groups are POSIX-specific")
+def test_parent_exit_bounds_inherited_pipe_drain_without_runtime_timeout(
+    tmp_path: Path,
+) -> None:
+    child_signal_path = tmp_path / "child-signal.txt"
+    child_ready_path = tmp_path / "child-ready.txt"
+    child_script = (
+        "import pathlib, signal, sys, time\n"
+        "signal_path = pathlib.Path(sys.argv[1])\n"
+        "ready_path = pathlib.Path(sys.argv[2])\n"
+        "def stop(signum, _frame):\n"
+        "    signal_path.write_text(str(signum), encoding='utf-8')\n"
+        "    raise SystemExit(0)\n"
+        "signal.signal(signal.SIGTERM, stop)\n"
+        "ready_path.write_text('ready', encoding='utf-8')\n"
+        "while True: time.sleep(1)\n"
+    )
+    parent_script = (
+        "import pathlib, subprocess, sys, time\n"
+        "ready_path = pathlib.Path(sys.argv[3])\n"
+        "subprocess.Popen([sys.executable, '-c', sys.argv[1], sys.argv[2], sys.argv[3]])\n"
+        "while not ready_path.exists(): time.sleep(0.01)\n"
+        "print('parent-exit', flush=True)\n"
+    )
+    spec = RuntimeSubprocessSpec(
+        command=(
+            sys.executable,
+            "-c",
+            parent_script,
+            child_script,
+            child_signal_path.as_posix(),
+            child_ready_path.as_posix(),
+        ),
+        cwd=tmp_path,
+        env=dict(os.environ),
+    )
+    started_at = time.monotonic()
+
+    result = run_streamed_subprocess(
+        spec=spec,
+        timeout_seconds=None,
+        timeout_stop_reason=StopReason.TIMEOUT,
+        cancel_stop_reason=StopReason.CANCELLED,
+    )
+
+    assert result.stop_reason is None
+    assert result.exit_code == 0
+    assert time.monotonic() - started_at < 1.5
+    assert child_signal_path.read_text(encoding="utf-8") == str(signal.SIGTERM)
+
+
+@pytest.mark.skipif(os.name == "nt", reason="process groups are POSIX-specific")
+@pytest.mark.parametrize("stop_mode", ("cancellation", "completion"))
+def test_requested_stop_terminates_descendants(
+    tmp_path: Path,
+    stop_mode: str,
+) -> None:
+    child_signal_path = tmp_path / f"{stop_mode}-signal.txt"
+    script = (
+        "import pathlib, signal, subprocess, sys, time\n"
+        "signal_path = pathlib.Path(sys.argv[1])\n"
+        "child = \"import pathlib,signal,sys,time; "
+        "signal.signal(signal.SIGTERM, lambda s,f: "
+        "(pathlib.Path(sys.argv[1]).write_text(str(s)), sys.exit(0))); "
+        "time.sleep(30)\"\n"
+        "subprocess.Popen([sys.executable, '-c', child, str(signal_path)])\n"
+        "print('ready', flush=True)\n"
+        "time.sleep(30)\n"
+    )
+    spec = RuntimeSubprocessSpec(
+        command=(sys.executable, "-c", script, child_signal_path.as_posix()),
+        cwd=tmp_path,
+        env=dict(os.environ),
+    )
+    started_at = time.monotonic()
+
+    def requested() -> bool:
+        return time.monotonic() - started_at >= 0.2
+
+    result = run_streamed_subprocess(
+        spec=spec,
+        timeout_seconds=2.0,
+        timeout_stop_reason=StopReason.TIMEOUT,
+        cancel_stop_reason=StopReason.CANCELLED,
+        cancel_requested=requested if stop_mode == "cancellation" else None,
+        completion_requested=requested if stop_mode == "completion" else None,
+        completion_stop_reason=(
+            StopReason.COMPLETE if stop_mode == "completion" else None
+        ),
+    )
+
+    expected = StopReason.CANCELLED if stop_mode == "cancellation" else StopReason.COMPLETE
+    assert result.stop_reason is expected
+    assert child_signal_path.read_text(encoding="utf-8") == str(signal.SIGTERM)
