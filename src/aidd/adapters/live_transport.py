@@ -45,6 +45,7 @@ class StreamCapture:
         self._on_stdout = on_stdout
         self._on_stderr = on_stderr
         self._threads: list[threading.Thread] = []
+        self._errors: list[BaseException] = []
 
     @property
     def stdout_text(self) -> str:
@@ -58,11 +59,24 @@ class StreamCapture:
     def runtime_log_text(self) -> str:
         return self.stdout_text + self.stderr_text
 
+    @property
+    def reader_threads(self) -> tuple[threading.Thread, ...]:
+        return tuple(self._threads)
+
+    @property
+    def error(self) -> BaseException | None:
+        return self._errors[0] if self._errors else None
+
     def attach(self, process: subprocess.Popen[str]) -> None:
         if process.stdout is not None:
             thread = threading.Thread(
                 target=self._read_stream,
-                args=(process.stdout, self._stdout_lines, self._on_stdout),
+                args=(
+                    process.stdout,
+                    self._stdout_lines,
+                    self._on_stdout,
+                    self._errors,
+                ),
                 daemon=True,
             )
             thread.start()
@@ -70,7 +84,12 @@ class StreamCapture:
         if process.stderr is not None:
             thread = threading.Thread(
                 target=self._read_stream,
-                args=(process.stderr, self._stderr_lines, self._on_stderr),
+                args=(
+                    process.stderr,
+                    self._stderr_lines,
+                    self._on_stderr,
+                    self._errors,
+                ),
                 daemon=True,
             )
             thread.start()
@@ -85,12 +104,15 @@ class StreamCapture:
         stream: Any,
         destination: list[str],
         callback: Callable[[str], None] | None,
+        errors: list[BaseException],
     ) -> None:
         try:
             for line in stream:
                 destination.append(line)
                 if callback is not None:
                     callback(line)
+        except BaseException as exc:
+            errors.append(exc)
         finally:
             try:
                 stream.close()
@@ -140,17 +162,6 @@ def should_use_live_transport(
     )
 
 
-def terminate_process(process: subprocess.Popen[str]) -> None:
-    if process.poll() is not None:
-        return
-    process.terminate()
-    try:
-        process.wait(timeout=1.0)
-    except subprocess.TimeoutExpired:
-        process.kill()
-        process.wait(timeout=1.0)
-
-
 def run_help_text(command: tuple[str, ...], *, timeout_seconds: float = 5.0) -> str:
     try:
         result = subprocess.run(
@@ -173,5 +184,4 @@ __all__ = [
     "run_help_text",
     "should_use_live_transport",
     "split_command",
-    "terminate_process",
 ]

@@ -9262,7 +9262,7 @@ Exit evidence:
 ### Epic W34-E4 — bounded adapter lifecycle and truthful runtime evidence (`planned`)
 Linked stories: `US-01`, `US-06`, `US-08`, `US-10`
 
-#### Slice W34-E4-S1 — bounded process supervision (`planned`)
+#### Slice W34-E4-S1 — bounded process supervision (`done`)
 Goal: make every transport start supervision before blocking I/O and own its complete
 process lifecycle.
 
@@ -9318,7 +9318,7 @@ Local tasks:
   - Scope: Codex-live lifecycle integration only.
   - Verification: Codex descendants exit after timeout, denial, cancellation, parent
     exit, and bounded drain expiry.
-- `W34-E4-S1-T10` Adopt the owned-process supervisor in Qwen-live execution.
+- `W34-E4-S1-T10` (done) Adopt the owned-process supervisor in Qwen-live execution.
   [`REL-05`, `REL-10`]
   - Dependencies: `W34-E4-S1-T4`, `W34-E4-S1-T5`.
   - Scope: Qwen-live lifecycle integration only.

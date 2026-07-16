@@ -13,9 +13,9 @@ from aidd.adapters.live_transport import (
     append_jsonl,
     run_help_text,
     split_command,
-    terminate_process,
 )
 from aidd.adapters.process_io import ManagedStdinWriter
+from aidd.adapters.process_supervisor import OwnedProcessSupervisor
 from aidd.adapters.qwen.approvals import (
     operator_decision_to_qwen_confirmation,
     qwen_control_request_to_operator_request,
@@ -94,16 +94,8 @@ def execute_qwen_live_transport(
         repository_root=repository_root,
         execution_mode=RuntimeExecutionMode.NATIVE,
     )
-    process = subprocess.Popen(
-        spec.command,
-        cwd=spec.cwd,
-        env=spec.env,
-        stdin=subprocess.PIPE if spec.stdin_text is not None else None,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
-        text=True,
-        bufsize=1,
-    )
+    supervisor = OwnedProcessSupervisor.launch(spec)
+    process = supervisor.process
     capture = StreamCapture(on_stdout=on_stdout, on_stderr=on_stderr)
     capture.attach(process)
     seen_request_ids: set[str] = set()
@@ -117,18 +109,27 @@ def execute_qwen_live_transport(
     while process.poll() is None:
         if cancel_requested is not None and cancel_requested():
             stop_reason = QwenExitClassification.CANCELLED
-            terminate_process(process)
             break
+        if capture.error is not None:
+            capture_error = capture.error
+            _stop_qwen_process(
+                supervisor=supervisor,
+                capture=capture,
+                stdin_writer=stdin_writer,
+            )
+            assert capture_error is not None
+            raise capture_error
         if stdin_writer is not None and stdin_writer.error is not None:
             writer_error = stdin_writer.error
-            terminate_process(process)
-            capture.join()
-            stdin_writer.join()
+            _stop_qwen_process(
+                supervisor=supervisor,
+                capture=capture,
+                stdin_writer=stdin_writer,
+            )
             assert writer_error is not None
             raise writer_error
         if deadline is not None and time.monotonic() >= deadline:
             stop_reason = QwenExitClassification.TIMEOUT
-            terminate_process(process)
             break
 
         read_offset, pending_request_id, denied_reason = _handle_new_events(
@@ -146,13 +147,10 @@ def execute_qwen_live_transport(
             stop_reason = QwenExitClassification.CANCELLED
             pending_request_id = None
             denied_reason = None
-            terminate_process(process)
             break
         if pending_request_id is not None:
-            terminate_process(process)
             break
         if denied_reason is not None:
-            terminate_process(process)
             break
         time.sleep(0.05)
 
@@ -172,11 +170,19 @@ def execute_qwen_live_transport(
             operator_decision_provider=operator_decision_provider,
             input_path=input_path,
         )
-    capture.join()
-    if stdin_writer is not None:
-        stdin_writer.join()
-        if stdin_writer.error is not None and stop_reason is None:
-            raise stdin_writer.error
+    _stop_qwen_process(
+        supervisor=supervisor,
+        capture=capture,
+        stdin_writer=stdin_writer,
+    )
+    if capture.error is not None:
+        raise capture.error
+    if (
+        stdin_writer is not None
+        and stdin_writer.error is not None
+        and stop_reason is None
+    ):
+        raise stdin_writer.error
 
     if stop_reason is QwenExitClassification.CANCELLED:
         run_result = _run_result(
@@ -396,6 +402,18 @@ def _run_result(
         runtime_log_text=capture.runtime_log_text,
         exit_classification=classification,
     )
+
+
+def _stop_qwen_process(
+    *,
+    supervisor: OwnedProcessSupervisor,
+    capture: StreamCapture,
+    stdin_writer: ManagedStdinWriter | None,
+) -> None:
+    supervisor.request_stop()
+    supervisor.drain_streams(capture.reader_threads)
+    if stdin_writer is not None:
+        stdin_writer.join()
 
 
 __all__ = [

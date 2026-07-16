@@ -7,17 +7,17 @@ slice, and local task.
 
 ## Next
 
-- `W34-E4-S1-T10` — Adopt the owned-process supervisor in Qwen-live execution.
+- `W34-E4-S2-T1` — Define typed stop reasons and one runtime-evidence commit contract.
 
 ## Soon
 
-- `W34-E4-S2-T1` — Define typed stop reasons and one runtime-evidence commit contract.
+- `W34-E4-S2-T2` — Persist truthful Codex early-stop and blocked outcomes through the
+  shared contract.
 
 ## Parking lot
 
 - `W34-E3-S4-T1` — Add characterization fixtures for corrected routes, jobs, approvals,
   and dashboard states.
-- `W34-E4-S2-T1` — Define typed stop reasons and one runtime-evidence commit contract.
 - `W34-E4-S3-T1` — Propagate Qwen intervention mode and operator-request metadata.
 - `W34-E5-S1-T1` — Repair stale CI-labelled smoke manifests and fixtures.
 - `W34-E5-S2-T1` — Apply one lifecycle budget and owned process groups to setup, run,
