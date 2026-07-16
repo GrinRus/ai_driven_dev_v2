@@ -9111,7 +9111,7 @@ Local tasks:
   - Scope: run manifest creation/reuse.
   - Verification: identical resume succeeds and every immutable-field mismatch is
     rejected explicitly.
-- `W34-E2-S2-T2` Use one latest-run resolver with sub-second identity and a shared tie
+- `W34-E2-S2-T2` (done) Use one latest-run resolver with sub-second identity and a shared tie
   policy. [`BUG-07`]
   - Scope: run lookup, inspection, and resume resolution.
   - Verification: two same-second manifests resolve identically through every public

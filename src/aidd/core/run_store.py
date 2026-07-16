@@ -46,7 +46,7 @@ RUN_ADAPTER_EXCEPTION_FILENAME = "adapter-exception.json"
 
 
 def _format_utc_timestamp(timestamp: datetime | None = None) -> str:
-    moment = (timestamp or datetime.now(UTC)).astimezone(UTC).replace(microsecond=0)
+    moment = (timestamp or datetime.now(UTC)).astimezone(UTC)
     return moment.isoformat().replace("+00:00", "Z")
 
 

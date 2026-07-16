@@ -7,6 +7,8 @@ slice, and local task.
 
 ## Next
 
+- `W34-E2-S2-T3` — Add explicit `--run-id` workflow continuation for non-first
+  `--from-stage` starts.
 
 ## Soon
 
@@ -94,6 +96,6 @@ slice, and local task.
 
 ## Current reconciliation
 
-- `2026-07-16` `W34-E1-S5` is complete: contract fixtures use the production coordinator,
-  cross-document and semantic-test ownership is isolated, and confirmed dead validator and
-  prompt surfaces are absent. The next bounded queue requires a separate reconciliation.
+- `2026-07-16` `W34-E2-S2-T2` is complete: all product consumers share fail-closed
+  latest-run selection with sub-second timestamps. `W34-E2-S2-T3` is next; immutable archive
+  overlays remain parked until the identity slice closes.
