@@ -9278,7 +9278,7 @@ Local tasks:
   - Scope: cross-adapter tests only.
   - Verification: a startup, bidirectional-I/O, timeout, cancellation, parent-exit, and
     descendant-exit matrix runs without provider authentication.
-- `W34-E4-S1-T2` Reject non-finite runtime budgets at configuration and execution
+- `W34-E4-S1-T2` (done) Reject non-finite runtime budgets at configuration and execution
   boundaries. [`BUG-08`]
   - Scope: timeout contract.
   - Verification: parameterized tests cover non-finite values, booleans, zero,

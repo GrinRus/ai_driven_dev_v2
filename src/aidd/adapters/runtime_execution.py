@@ -5,6 +5,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import TypeVar
 
+from aidd.runtime_budget import validate_runtime_budget
 from aidd.runtime_catalog import RuntimeExecutionMode
 from aidd.runtime_permissions import (
     AutoApprovalPreset,
@@ -41,6 +42,9 @@ class StageRuntimeRequest:
     operator_request_path: Path | None = None
     operator_request_markdown: str | None = None
     cancel_requested: Callable[[], bool] | None = None
+
+    def __post_init__(self) -> None:
+        validate_runtime_budget(self.timeout_seconds)
 
 
 @dataclass(frozen=True, slots=True)

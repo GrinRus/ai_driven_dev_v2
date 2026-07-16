@@ -20,6 +20,29 @@ class StopReason(StrEnum):
     CANCELLED = "cancelled"
 
 
+@pytest.mark.parametrize(
+    "timeout_seconds",
+    (False, 0.0, -1.0, float("nan"), float("inf"), float("-inf")),
+)
+def test_streamed_subprocess_rejects_invalid_timeout_budget(
+    tmp_path: Path,
+    timeout_seconds: float,
+) -> None:
+    spec = RuntimeSubprocessSpec(
+        command=(sys.executable, "-c", "raise AssertionError('must not launch')"),
+        cwd=tmp_path,
+        env=dict(os.environ),
+    )
+
+    with pytest.raises(ValueError, match="finite number greater than zero"):
+        run_streamed_subprocess(
+            spec=spec,
+            timeout_seconds=timeout_seconds,
+            timeout_stop_reason=StopReason.TIMEOUT,
+            cancel_stop_reason=StopReason.CANCELLED,
+        )
+
+
 def test_stream_callbacks_run_in_caller_thread(tmp_path: Path) -> None:
     caller_thread_id = threading.get_ident()
     callback_thread_ids: list[int] = []

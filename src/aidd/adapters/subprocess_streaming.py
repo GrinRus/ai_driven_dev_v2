@@ -13,6 +13,7 @@ from queue import Empty, Queue
 from typing import Literal, TextIO
 
 from aidd.adapters.runtime_execution import RuntimeSubprocessSpec
+from aidd.runtime_budget import validate_runtime_budget
 
 StreamTarget = Literal["stdout", "stderr"]
 
@@ -114,8 +115,7 @@ def run_streamed_subprocess[ExitClassificationT: StrEnum](
     queue_timeout_seconds: float = 0.1,
     launch_failure_stop_reason: ExitClassificationT | None = None,
 ) -> StreamedSubprocessResult[ExitClassificationT]:
-    if timeout_seconds is not None and timeout_seconds <= 0:
-        raise ValueError("timeout_seconds must be greater than zero when provided.")
+    timeout_seconds = validate_runtime_budget(timeout_seconds)
     if completion_requested is not None and completion_stop_reason is None:
         raise ValueError("completion_stop_reason is required when completion_requested is set.")
 
