@@ -7,11 +7,11 @@ slice, and local task.
 
 ## Next
 
-- `W34-E3-S4-T3` — Extract pure dashboard reducers and evidence collectors.
+- `W34-E3-S4-T4` — Split the next-flow browser hotspot into controller and view modules.
 
 ## Soon
 
-- `W34-E3-S4-T4` — Split the next-flow browser hotspot into controller and view modules.
+No tasks are queued in `Soon`.
 
 ## Parking lot
 
@@ -76,6 +76,11 @@ slice, and local task.
   queue-restoration policy in `docs/backlog/roadmap.md` (`W8-E3-S1`).
 
 ## Current reconciliation
+
+- `2026-07-16` `W34-E3-S4-T3` is complete: dashboard filesystem/read-model collection
+  now produces one immutable evidence snapshot with request-local source caching, while
+  a pure reducer projects that evidence into the unchanged serialized dashboard view.
+  `S4-T4` is promoted to `Next`; `Soon` is empty.
 
 - `2026-07-16` `W34-E3-S4-T2` is complete: exact and dynamic route dispatch, static
   assets, query/body handling, HTTP exception mapping, and the server handler now live

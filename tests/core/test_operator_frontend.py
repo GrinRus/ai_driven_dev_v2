@@ -6,7 +6,7 @@ from pathlib import Path
 import pytest
 
 from aidd.config import load_config
-from aidd.core import operator_frontend_dashboard as dashboard_module
+from aidd.core import operator_frontend_dashboard_evidence as dashboard_evidence_module
 from aidd.core.interview import AnswerResolution
 from aidd.core.operator_frontend import (
     persist_operator_answer,
@@ -1076,7 +1076,11 @@ def test_operator_dashboard_running_stage_uses_fast_metadata_path(
     def fail_stage_view(*args: object, **kwargs: object) -> object:
         raise AssertionError("running dashboard should not need full stage view")
 
-    monkeypatch.setattr(dashboard_module, "resolve_operator_stage_view", fail_stage_view)
+    monkeypatch.setattr(
+        dashboard_evidence_module,
+        "resolve_operator_stage_view",
+        fail_stage_view,
+    )
 
     dashboard = resolve_operator_dashboard_view(
         workspace_root=workspace_root,
