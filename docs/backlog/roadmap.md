@@ -9486,7 +9486,7 @@ Local tasks:
   exit status. [`BUG-12`]
   - Scope: release evidence collector.
   - Verification: unrelated hosts, prefix versions, and error-bearing transcripts fail.
-- `W34-E5-S3-T4` Run `node --check` for every packaged JavaScript asset in CI.
+- `W34-E5-S3-T4` (done) Run `node --check` for every packaged JavaScript asset in CI.
   [`TEST-02`]
   - Scope: package and CI syntax gate.
   - Verification: asset discovery is exhaustive and an intentional syntax error fails.

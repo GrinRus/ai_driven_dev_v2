@@ -7,12 +7,13 @@ slice, and local task.
 
 ## Next
 
-- `W34-E5-S3-T4` — Run `node --check` for every packaged JavaScript asset in CI.
+- `W34-E5-S3-T5` — Add lightweight DOM-state tests for module ordering, stale
+  responses, cancellation, and error rendering.
 
 ## Soon
 
-- `W34-E5-S3-T5` — Add lightweight DOM-state tests for module ordering, stale
-  responses, cancellation, and error rendering.
+- `W34-E5-S3-T6` — Make the built-wheel resource smoke offline-deterministic and
+  bounded.
 
 ## Parking lot
 
@@ -86,6 +87,9 @@ slice, and local task.
 
 ## Current reconciliation
 
+- `2026-07-16` `W34-E5-S3-T4` is complete: the manifest and filesystem JavaScript
+  sets must match exactly, every packaged asset passes bounded `node --check`, and CI
+  runs the executable syntax gate. `S3-T5` is promoted to `Next`; `S3-T6` is in `Soon`.
 - `2026-07-16` `W34-E5-S3-T3` is complete: release evidence requires canonical
   GitHub/PyPI identities, an exact canonical version line, and explicit successful command
   exit statuses; legacy payloads without status fail closed. `S3-T4` is promoted to

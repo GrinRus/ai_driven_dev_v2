@@ -47,6 +47,11 @@ jobs:
           set -euo pipefail
           uv run --extra dev python -m mypy src
 
+      - name: Packaged JavaScript syntax
+        run: |
+          set -euo pipefail
+          uv run --extra dev python scripts/check_packaged_javascript.py
+
       - name: Test
         run: |
           set -euo pipefail
