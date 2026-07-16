@@ -7,18 +7,17 @@ slice, and local task.
 
 ## Next
 
-- `W34-E4-S3-T1` — Propagate Qwen intervention mode and operator-request metadata.
+- `W34-E5-S1-T1` — Repair stale CI-labelled smoke manifests and fixtures.
 
 ## Soon
 
-- `W34-E4-S3-T2` — Align Claude capability reporting with executable registered
-  transports.
+- `W34-E5-S1-T2` — Expose a deterministic local-only `aidd eval execute` entry point
+  over the existing pipeline.
 
 ## Parking lot
 
 - `W34-E3-S4-T1` — Add characterization fixtures for corrected routes, jobs, approvals,
   and dashboard states.
-- `W34-E5-S1-T1` — Repair stale CI-labelled smoke manifests and fixtures.
 - `W34-E5-S2-T1` — Apply one lifecycle budget and owned process groups to setup, run,
   verify, and teardown.
 - `W34-E5-S3-T1` — Replace divergent eval classifiers with one typed earliest-failure
@@ -110,3 +109,12 @@ slice, and local task.
 - `2026-07-16` `W34-E4-S2` is complete: runtime capture is disk-backed, keeps bounded
   UTF-8 tails with exact counters, preserves the full combined log, and incrementally
   materializes structured events. `W34-E4-S3-T1`/`T2` are now the bounded next queue.
+- `2026-07-16` `W34-E4-S3-T1` is complete: Qwen now preserves intervention mode and
+  operator-request metadata in native prompts and both execution environments.
+  `W34-E4-S3-T2` is promoted to `Next`; `T3` is the direct successor in `Soon`.
+- `2026-07-16` `W34-E4-S3-T2` is complete: Claude capability reports now advertise
+  only the registered subprocess transport, while non-full permission policies continue
+  to block before launch. `W34-E4-S3-T3` is promoted to `Next`.
+- `2026-07-16` `W34-E4-S3` and Epic `W34-E4` are complete: Codex live preserves
+  supported model selection and rejects unsupported command options before launch.
+  `W34-E5-S1-T1` is promoted to `Next`; its direct successor `T2` is in `Soon`.

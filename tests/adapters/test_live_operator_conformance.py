@@ -1,7 +1,9 @@
 from __future__ import annotations
 
+from dataclasses import replace
 from pathlib import Path
 
+import aidd.adapters.surface as surface_module
 from aidd.adapters.runtime_execution import StageRuntimeRequest
 from aidd.adapters.surface import get_runtime_adapter_surface
 from aidd.core.runtime_operator import (
@@ -126,6 +128,39 @@ def test_standard_subprocess_path_stays_blocked_even_with_live_provider(
     assert result.pending_operator_request_ids
     assert provider.requests == []
     assert load_operator_decisions(attempt_path / "operator-decisions.jsonl") == ()
+
+
+def test_claude_claimed_subprocess_transport_blocks_non_full_policy_before_launch(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    provider = _DecisionProvider(RuntimeOperatorDecisionAction.ALLOW_ONCE)
+    request = replace(
+        _request(tmp_path),
+        runtime_id="claude-code",
+        execution_mode=RuntimeExecutionMode.NATIVE,
+    )
+
+    def unexpected_launch(**kwargs):
+        raise AssertionError(f"Claude subprocess launched unexpectedly: {kwargs}")
+
+    monkeypatch.setattr(
+        surface_module,
+        "run_claude_code_subprocess_with_streaming",
+        unexpected_launch,
+    )
+    result = get_runtime_adapter_surface("claude-code").execute_stage_request(
+        configured_command="claude",
+        request=request,
+        attempt_path=tmp_path / "attempt",
+        base_env={},
+        operator_decision_provider=provider,
+    )
+
+    assert result.resolved_status is AdapterExecutionStatus.BLOCKED_FOR_OPERATOR
+    assert result.adapter_outcome is not None
+    assert result.adapter_outcome.value == "blocked"
+    assert provider.requests == []
 
 
 def test_generic_live_conformance_fails_after_cancel_decision(tmp_path: Path) -> None:

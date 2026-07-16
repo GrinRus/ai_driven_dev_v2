@@ -88,7 +88,7 @@ def test_probe_handles_unexpected_version_output(tmp_path: Path) -> None:
     assert report.version_text == "???"
 
 
-def test_probe_keeps_live_decisions_false_without_permission_prompt_tool(
+def test_probe_does_not_advertise_unimplemented_live_transport(
     monkeypatch,
 ) -> None:
     probe_module = importlib.import_module("aidd.adapters.claude_code.probe")
@@ -97,10 +97,11 @@ def test_probe_keeps_live_decisions_false_without_permission_prompt_tool(
     monkeypatch.setattr(
         probe_module,
         "discover_help_text",
-        lambda _: "--permission-mode default --mcp-config",
+        lambda _: "--permission-mode default --permission-prompt-tool --mcp-config",
     )
 
     report = probe_module.probe("claude")
 
     assert report.supports_live_decisions is False
+    assert report.supports_permission_policy is True
     assert report.preferred_transport == "subprocess"

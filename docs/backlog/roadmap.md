@@ -9259,7 +9259,7 @@ Exit evidence:
 - UI routing, mutation ownership, read-model reduction, and browser next-flow behavior
   can change independently.
 
-### Epic W34-E4 — bounded adapter lifecycle and truthful runtime evidence (`planned`)
+### Epic W34-E4 — bounded adapter lifecycle and truthful runtime evidence (`done`)
 Linked stories: `US-01`, `US-06`, `US-08`, `US-10`
 
 #### Slice W34-E4-S1 — bounded process supervision (`done`)
@@ -9371,7 +9371,7 @@ Exit evidence:
 - runtime status, raw logs, and exit metadata agree for every terminal and blocked path;
 - verbose runtimes cannot force unbounded in-memory capture.
 
-#### Slice W34-E4-S3 — adapter context and capability compatibility (`planned`)
+#### Slice W34-E4-S3 — adapter context and capability compatibility (`done`)
 Goal: make advertised capabilities and configured execution context match what each
 adapter actually runs.
 
@@ -9382,15 +9382,15 @@ Dependencies:
 
 Local tasks:
 
-- `W34-E4-S3-T1` Propagate Qwen intervention mode and operator-request metadata.
+- `W34-E4-S3-T1` (done) Propagate Qwen intervention mode and operator-request metadata.
   [`COMPAT-04`]
   - Scope: Qwen context, environment, and native prompt assembly.
   - Verification: native and adapter-flags intervention fixtures preserve both fields.
-- `W34-E4-S3-T2` Align Claude capability reporting with executable registered
+- `W34-E4-S3-T2` (done) Align Claude capability reporting with executable registered
   transports. [`COMPAT-05`]
   - Scope: Claude probe and adapter surface.
   - Verification: probe-to-execution conformance covers every claimed live path.
-- `W34-E4-S3-T3` Preserve supported Codex live arguments and reject unsupported options
+- `W34-E4-S3-T3` (done) Preserve supported Codex live arguments and reject unsupported options
   explicitly. [`COMPAT-06`]
   - Scope: Codex live command/thread mapping.
   - Verification: one supported option is preserved and one unsupported option is

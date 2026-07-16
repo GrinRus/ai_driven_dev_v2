@@ -33,10 +33,13 @@ class QwenCommandContext:
     stage_brief_path: Path
     prompt_pack_paths: tuple[Path, ...]
     attempt_number: int = 1
+    attempt_mode: str | None = None
     repair_mode: bool = False
     input_bundle_path: Path | None = None
     repair_brief_path: Path | None = None
     repair_context_markdown: str | None = None
+    operator_request_path: Path | None = None
+    operator_request_markdown: str | None = None
 
     def __post_init__(self) -> None:
         validate_stage_command_context(
@@ -47,8 +50,10 @@ class QwenCommandContext:
             stage_brief_path=self.stage_brief_path,
             prompt_pack_paths=self.prompt_pack_paths,
             attempt_number=self.attempt_number,
+            attempt_mode=self.attempt_mode,
             input_bundle_path=self.input_bundle_path,
             repair_brief_path=self.repair_brief_path,
+            operator_request_path=self.operator_request_path,
         )
 
 
@@ -222,10 +227,13 @@ def _build_native_prompt_text(
         prompt_pack_paths=context.prompt_pack_paths,
         repository_root=repository_root,
         attempt_number=context.attempt_number,
+        attempt_mode=context.attempt_mode,
         repair_mode=context.repair_mode,
         input_bundle_path=context.input_bundle_path,
         repair_brief_path=context.repair_brief_path,
         repair_context_markdown=context.repair_context_markdown,
+        operator_request_path=context.operator_request_path,
+        operator_request_markdown=context.operator_request_markdown,
     )
 
 
@@ -265,9 +273,11 @@ def build_execution_environment(
         stage_brief_path=resolved_stage_brief_path,
         prompt_pack_paths=resolved_prompt_pack_paths,
         attempt_number=context.attempt_number,
+        attempt_mode=context.attempt_mode,
         repair_mode=context.repair_mode,
         input_bundle_path=context.input_bundle_path,
         repair_brief_path=context.repair_brief_path,
+        operator_request_path=context.operator_request_path,
     )
 
 

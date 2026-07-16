@@ -6,9 +6,11 @@ from pathlib import Path
 
 import aidd.adapters.surface as surface_module
 from aidd.adapters.qwen.runner import (
+    QwenCommandContext,
     QwenExitClassification,
     QwenRunResult,
     QwenSubprocessSpec,
+    build_subprocess_spec,
     run_subprocess_with_streaming,
 )
 from aidd.adapters.runtime_execution import StageRuntimeRequest
@@ -20,6 +22,60 @@ from aidd.runtime_permissions import (
     RuntimeInteractionMode,
     RuntimePermissionPolicy,
 )
+
+
+def test_qwen_intervention_metadata_reaches_native_prompt_and_all_environments(
+    tmp_path: Path,
+) -> None:
+    repository_root = tmp_path / "repo"
+    workspace = repository_root / ".aidd"
+    stage_root = workspace / "workitems" / "WI-QWEN" / "stages" / "plan"
+    stage_root.mkdir(parents=True)
+    stage_brief = stage_root / "stage-brief.md"
+    prompt_pack = repository_root / "prompt-packs" / "stages" / "plan" / "intervention.md"
+    operator_request = stage_root / "operator-requests" / "request-0001.md"
+    prompt_pack.parent.mkdir(parents=True)
+    operator_request.parent.mkdir(parents=True)
+    stage_brief.write_text("# Stage brief\n", encoding="utf-8")
+    prompt_pack.write_text("# Intervention prompt\n", encoding="utf-8")
+    operator_request.write_text(
+        "# Operator Request\n\nAdd rollback evidence.\n",
+        encoding="utf-8",
+    )
+    context = QwenCommandContext(
+        stage="plan",
+        work_item="WI-QWEN",
+        run_id="run-qwen",
+        workspace_root=workspace,
+        stage_brief_path=stage_brief,
+        prompt_pack_paths=(prompt_pack,),
+        attempt_number=2,
+        attempt_mode="intervention",
+        operator_request_path=operator_request,
+        operator_request_markdown="# Operator Request\n\nUse the requested scope only.\n",
+    )
+
+    native_spec = build_subprocess_spec(
+        configured_command="qwen",
+        context=context,
+        repository_root=repository_root,
+        execution_mode=RuntimeExecutionMode.NATIVE,
+    )
+    adapter_flags_spec = build_subprocess_spec(
+        configured_command="qwen-wrapper",
+        context=context,
+        repository_root=repository_root,
+        execution_mode=RuntimeExecutionMode.ADAPTER_FLAGS,
+    )
+
+    for spec in (native_spec, adapter_flags_spec):
+        assert spec.env["AIDD_ATTEMPT_MODE"] == "intervention"
+        assert spec.env["AIDD_OPERATOR_REQUEST_PATH"] == operator_request.as_posix()
+    assert native_spec.stdin_text is not None
+    assert "- Attempt mode: intervention" in native_spec.stdin_text
+    assert "## Operator request context" in native_spec.stdin_text
+    assert "Use the requested scope only." in native_spec.stdin_text
+    assert adapter_flags_spec.stdin_text is None
 
 
 def test_qwen_runner_completes_when_expected_documents_settle(tmp_path: Path) -> None:
@@ -94,9 +150,20 @@ def test_qwen_surface_treats_document_complete_as_success(
         (validator_report, "# Validator report\n\nNo validator output yet.\n"),
     ):
         path.write_text(text, encoding="utf-8")
+    operator_request = stage_root / "operator-requests" / "request-0001.md"
+    operator_request.parent.mkdir(parents=True)
+    operator_request.write_text(
+        "# Operator Request\n\nStrengthen release evidence.\n",
+        encoding="utf-8",
+    )
 
     def fake_run_qwen_subprocess_with_streaming(**kwargs):
         assert kwargs["document_completion_paths"] == (qa_report, stage_result, validator_report)
+        spec = kwargs["spec"]
+        assert spec.env["AIDD_ATTEMPT_MODE"] == "intervention"
+        assert spec.env["AIDD_OPERATOR_REQUEST_PATH"] == operator_request.as_posix()
+        assert "- Attempt mode: intervention" in spec.stdin_text
+        assert "Strengthen release evidence." in spec.stdin_text
         return QwenRunResult(
             exit_code=-15,
             stdout_text="documents-written\n",
@@ -124,6 +191,10 @@ def test_qwen_surface_treats_document_complete_as_success(
         stage_brief_path=stage_brief,
         prompt_pack_paths=(prompt_pack,),
         repository_root=repo,
+        attempt_number=2,
+        attempt_mode="intervention",
+        operator_request_path=operator_request,
+        operator_request_markdown=operator_request.read_text(encoding="utf-8"),
         expected_output_documents=(qa_report, stage_result, validator_report),
     )
 
