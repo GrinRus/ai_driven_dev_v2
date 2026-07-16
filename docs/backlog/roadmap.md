@@ -9047,7 +9047,7 @@ Local tasks:
   - Scope: validator tests only.
   - Verification: the same regression cases are collected with no duplicate fixture
     ownership.
-- `W34-E1-S5-T4` Remove unreachable validator scaffolds and unused constants after a
+- `W34-E1-S5-T4` (done) Remove unreachable validator scaffolds and unused constants after a
   public-import compatibility check. [`DEAD-02`]
   - Scope: validator dead surface only.
   - Verification: the pre-Wave-35 tasklist semantic pipeline and other unreachable
