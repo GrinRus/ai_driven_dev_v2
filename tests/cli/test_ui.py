@@ -3084,7 +3084,7 @@ def test_ui_job_operator_request_endpoints_record_decisions(tmp_path: Path) -> N
     assert decision_payload["audit_history"][0]["status"] == "approved"  # type: ignore[index]
     assert decision_payload["audit_history"][0]["decision_action"] == "allow_once"  # type: ignore[index]
     assert decision_payload["audit_history"][0]["decision_source"] == "ui"  # type: ignore[index]
-    assert (
+    decisions_path = (
         workspace_root
         / "reports"
         / "runs"
@@ -3095,7 +3095,25 @@ def test_ui_job_operator_request_endpoints_record_decisions(tmp_path: Path) -> N
         / "attempts"
         / "attempt-0001"
         / "operator-decisions.jsonl"
-    ).exists()
+    )
+    assert decisions_path.exists()
+
+    idempotent_payload = _payload(
+        service.handle_post(
+            f"/api/jobs/{job_id}/operator-requests/{request_id}/decision",
+            {"action": RuntimeOperatorDecisionAction.ALLOW_ONCE.value},
+        )
+    )
+    assert idempotent_payload["decisions"] == decision_payload["decisions"]
+    assert len(decisions_path.read_text(encoding="utf-8").splitlines()) == 1
+
+    conflict = service.handle_post(
+        f"/api/jobs/{job_id}/operator-requests/{request_id}/decision",
+        {"action": RuntimeOperatorDecisionAction.DENY.value},
+    )
+    conflict_payload = _payload_with_status(conflict, HTTPStatus.CONFLICT)
+    assert conflict_payload["winner"]["action"] == "allow_once"  # type: ignore[index]
+    assert len(decisions_path.read_text(encoding="utf-8").splitlines()) == 1
 
 
 def test_ui_operator_decision_endpoint_wakes_live_stage_job(tmp_path: Path) -> None:

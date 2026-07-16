@@ -117,11 +117,12 @@ from aidd.core.run_store import (
 from aidd.core.runtime_operator import (
     OPERATOR_DECISIONS_FILENAME,
     OPERATOR_REQUESTS_FILENAME,
+    OperatorDecisionConflict,
     RuntimeOperatorDecision,
     RuntimeOperatorRequest,
-    append_operator_decision,
     load_operator_decisions,
     load_operator_requests,
+    resolve_operator_decision,
     unapproved_operator_request_ids,
 )
 from aidd.core.runtime_readiness import (
@@ -2584,6 +2585,14 @@ class OperatorUiService:
                 return _json_response(self._request_server_stop())
         except FileExistsError as exc:
             return _error_response(str(exc), status=HTTPStatus.CONFLICT)
+        except OperatorDecisionConflict as exc:
+            return _json_response(
+                {
+                    "error": str(exc),
+                    "winner": exc.winner.to_dict(),
+                },
+                status=HTTPStatus.CONFLICT,
+            )
         except RunMutationConflict as exc:
             return _error_response(str(exc), status=HTTPStatus.CONFLICT)
         except ValueError as exc:
@@ -2739,11 +2748,11 @@ class OperatorUiService:
             source=RuntimeOperatorDecisionSource.UI,
             reason=None if payload.get("reason") is None else str(payload.get("reason")),
         )
-        append_operator_decision(
-            path=attempt_path / OPERATOR_DECISIONS_FILENAME,
+        winner = resolve_operator_decision(
+            attempt_path=attempt_path,
             decision=decision,
         )
-        self._deliver_operator_decision(decision)
+        self._deliver_operator_decision(winner)
         return _operator_request_view(attempt_path)
 
     def _start_stage_job(self, payload: dict[str, Any]) -> object:

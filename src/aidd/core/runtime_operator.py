@@ -4,6 +4,7 @@ import json
 import os
 import re
 import shlex
+import time
 from collections.abc import Iterable, Mapping
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
@@ -12,6 +13,7 @@ from pathlib import Path
 from typing import Any, Protocol
 from uuid import uuid4
 
+from aidd.core.mutation_lease import RunMutationConflict, acquire_run_mutation_lease
 from aidd.runtime_permissions import (
     AutoApprovalPreset,
     RuntimeOperatorDecisionAction,
@@ -23,6 +25,8 @@ from aidd.runtime_permissions import (
 
 OPERATOR_REQUESTS_FILENAME = "operator-requests.jsonl"
 OPERATOR_DECISIONS_FILENAME = "operator-decisions.jsonl"
+_OPERATOR_DECISION_LEASE_TIMEOUT_SECONDS = 2.0
+_OPERATOR_DECISION_LEASE_POLL_SECONDS = 0.01
 
 _WRITE_STAGES = frozenset({"implement", "review", "qa"})
 _AIDD_WORKSPACE_DIRNAME = ".aidd"
@@ -481,6 +485,22 @@ class RuntimeOperatorDecision:
             source=RuntimeOperatorDecisionSource(str(payload["source"])),
             reason=None if payload.get("reason") is None else str(payload["reason"]),
             created_at_utc=str(payload.get("created_at_utc", _utc_now())),
+        )
+
+
+class OperatorDecisionEvidenceError(ValueError):
+    """Raised when durable operator decisions disagree for one request."""
+
+
+class OperatorDecisionConflict(RuntimeError):
+    """Raised when a request already has a different durable decision."""
+
+    def __init__(self, *, requested: RuntimeOperatorDecision, winner: RuntimeOperatorDecision):
+        self.requested = requested
+        self.winner = winner
+        super().__init__(
+            f"Operator request '{requested.request_id}' is already resolved as "
+            f"'{winner.action.value}'."
         )
 
 
@@ -1301,7 +1321,88 @@ def load_operator_requests(path: Path) -> tuple[RuntimeOperatorRequest, ...]:
 
 
 def load_operator_decisions(path: Path) -> tuple[RuntimeOperatorDecision, ...]:
-    return tuple(RuntimeOperatorDecision.from_dict(payload) for payload in _load_jsonl(path))
+    return _canonical_operator_decisions(
+        RuntimeOperatorDecision.from_dict(payload) for payload in _load_jsonl(path)
+    )
+
+
+def resolve_operator_decision(
+    *,
+    attempt_path: Path,
+    decision: RuntimeOperatorDecision,
+) -> RuntimeOperatorDecision:
+    """Resolve an operator request once and return its durable winning decision."""
+
+    deadline = time.monotonic() + _OPERATOR_DECISION_LEASE_TIMEOUT_SECONDS
+    while True:
+        try:
+            with acquire_run_mutation_lease(
+                attempt_path,
+                operation=f"operator-decision:{decision.request_id}",
+            ):
+                decisions_path = attempt_path / OPERATOR_DECISIONS_FILENAME
+                existing = {
+                    item.request_id: item for item in load_operator_decisions(decisions_path)
+                }.get(decision.request_id)
+                if existing is not None:
+                    if _same_operator_decision(existing, decision):
+                        return existing
+                    raise OperatorDecisionConflict(requested=decision, winner=existing)
+                append_operator_decision(path=decisions_path, decision=decision)
+                return decision
+        except RunMutationConflict:
+            if time.monotonic() >= deadline:
+                raise OperatorDecisionConflict(
+                    requested=decision,
+                    winner=_operator_decision_winner(
+                        path=attempt_path / OPERATOR_DECISIONS_FILENAME,
+                        request_id=decision.request_id,
+                    ),
+                ) from None
+            time.sleep(_OPERATOR_DECISION_LEASE_POLL_SECONDS)
+
+
+def _canonical_operator_decisions(
+    decisions: Iterable[RuntimeOperatorDecision],
+) -> tuple[RuntimeOperatorDecision, ...]:
+    winners: dict[str, RuntimeOperatorDecision] = {}
+    ordered: list[RuntimeOperatorDecision] = []
+    for decision in decisions:
+        existing = winners.get(decision.request_id)
+        if existing is None:
+            winners[decision.request_id] = decision
+            ordered.append(decision)
+            continue
+        if not _same_operator_decision(existing, decision):
+            raise OperatorDecisionEvidenceError(
+                f"Operator request '{decision.request_id}' has conflicting durable decisions."
+            )
+    return tuple(ordered)
+
+
+def _same_operator_decision(
+    left: RuntimeOperatorDecision,
+    right: RuntimeOperatorDecision,
+) -> bool:
+    return (
+        left.request_id == right.request_id
+        and left.action is right.action
+        and left.source is right.source
+        and left.reason == right.reason
+    )
+
+
+def _operator_decision_winner(
+    *,
+    path: Path,
+    request_id: str,
+) -> RuntimeOperatorDecision:
+    for decision in load_operator_decisions(path):
+        if decision.request_id == request_id:
+            return decision
+    raise OperatorDecisionEvidenceError(
+        f"Operator request '{request_id}' could not resolve its durable decision winner."
+    )
 
 
 def pending_operator_request_ids(*, attempt_path: Path) -> tuple[str, ...]:
@@ -1349,6 +1450,8 @@ def _load_jsonl(path: Path) -> tuple[dict[str, Any], ...]:
 __all__ = [
     "OPERATOR_DECISIONS_FILENAME",
     "OPERATOR_REQUESTS_FILENAME",
+    "OperatorDecisionConflict",
+    "OperatorDecisionEvidenceError",
     "RUNTIME_OPERATOR_CAPABILITY_RULES",
     "RuntimeOperatorBroker",
     "RuntimeOperatorCapability",
@@ -1367,5 +1470,6 @@ __all__ = [
     "load_operator_decisions",
     "load_operator_requests",
     "pending_operator_request_ids",
+    "resolve_operator_decision",
     "unapproved_operator_request_ids",
 ]

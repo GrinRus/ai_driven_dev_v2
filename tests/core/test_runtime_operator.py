@@ -2,12 +2,16 @@ from __future__ import annotations
 
 import json
 import sys
+import threading
 from pathlib import Path
 
 import pytest
 
 from aidd.core.runtime_operator import (
+    OPERATOR_DECISIONS_FILENAME,
     RUNTIME_OPERATOR_CAPABILITY_RULES,
+    OperatorDecisionConflict,
+    OperatorDecisionEvidenceError,
     ProtectedRuntimePathKind,
     RuntimeOperatorBroker,
     RuntimeOperatorCapability,
@@ -19,6 +23,7 @@ from aidd.core.runtime_operator import (
     classify_protected_runtime_path,
     load_operator_decisions,
     load_operator_requests,
+    resolve_operator_decision,
 )
 from aidd.runtime_permissions import (
     AutoApprovalPreset,
@@ -40,6 +45,105 @@ def _policy(tmp_path: Path) -> RuntimeOperatorPolicy:
         workspace_root=tmp_path / ".aidd",
         configured_command_prefixes=("uv run --extra dev pytest",),
     )
+
+
+def test_operator_decision_compare_and_set_has_one_durable_winner(tmp_path: Path) -> None:
+    attempt_path = tmp_path / "attempt-0001"
+    barrier = threading.Barrier(2)
+    results: list[RuntimeOperatorDecision] = []
+    conflicts: list[OperatorDecisionConflict] = []
+
+    def decide(action: RuntimeOperatorDecisionAction) -> None:
+        decision = RuntimeOperatorDecision(
+            request_id="request-1",
+            action=action,
+            source=RuntimeOperatorDecisionSource.UI,
+        )
+        barrier.wait()
+        try:
+            results.append(
+                resolve_operator_decision(attempt_path=attempt_path, decision=decision)
+            )
+        except OperatorDecisionConflict as exc:
+            conflicts.append(exc)
+
+    threads = [
+        threading.Thread(target=decide, args=(RuntimeOperatorDecisionAction.ALLOW_ONCE,)),
+        threading.Thread(target=decide, args=(RuntimeOperatorDecisionAction.DENY,)),
+    ]
+    for thread in threads:
+        thread.start()
+    for thread in threads:
+        thread.join(timeout=2)
+
+    decisions = load_operator_decisions(attempt_path / OPERATOR_DECISIONS_FILENAME)
+    assert all(not thread.is_alive() for thread in threads)
+    assert len(results) == 1
+    assert len(conflicts) == 1
+    assert decisions == (results[0],)
+    assert conflicts[0].winner == results[0]
+
+
+def test_operator_decision_compare_and_set_is_idempotent(tmp_path: Path) -> None:
+    attempt_path = tmp_path / "attempt-0001"
+    first = RuntimeOperatorDecision(
+        request_id="request-1",
+        action=RuntimeOperatorDecisionAction.ALLOW_ONCE,
+        source=RuntimeOperatorDecisionSource.UI,
+        reason="bounded verification",
+    )
+    retry = RuntimeOperatorDecision(
+        request_id="request-1",
+        action=RuntimeOperatorDecisionAction.ALLOW_ONCE,
+        source=RuntimeOperatorDecisionSource.UI,
+        reason="bounded verification",
+    )
+
+    winner = resolve_operator_decision(attempt_path=attempt_path, decision=first)
+    repeated = resolve_operator_decision(attempt_path=attempt_path, decision=retry)
+
+    assert repeated == winner
+    assert load_operator_decisions(attempt_path / OPERATOR_DECISIONS_FILENAME) == (winner,)
+
+
+def test_operator_decision_reader_collapses_identical_legacy_duplicates(
+    tmp_path: Path,
+) -> None:
+    path = tmp_path / OPERATOR_DECISIONS_FILENAME
+    decision = RuntimeOperatorDecision(
+        request_id="request-1",
+        action=RuntimeOperatorDecisionAction.DENY,
+        source=RuntimeOperatorDecisionSource.UI,
+    )
+    path.write_text(
+        json.dumps(decision.to_dict()) + "\n" + json.dumps(decision.to_dict()) + "\n",
+        encoding="utf-8",
+    )
+
+    assert load_operator_decisions(path) == (decision,)
+
+
+def test_operator_decision_reader_rejects_conflicting_legacy_duplicates(
+    tmp_path: Path,
+) -> None:
+    path = tmp_path / OPERATOR_DECISIONS_FILENAME
+    first = RuntimeOperatorDecision(
+        request_id="request-1",
+        action=RuntimeOperatorDecisionAction.ALLOW_ONCE,
+        source=RuntimeOperatorDecisionSource.UI,
+    )
+    second = RuntimeOperatorDecision(
+        request_id="request-1",
+        action=RuntimeOperatorDecisionAction.DENY,
+        source=RuntimeOperatorDecisionSource.UI,
+    )
+    path.write_text(
+        json.dumps(first.to_dict()) + "\n" + json.dumps(second.to_dict()) + "\n",
+        encoding="utf-8",
+    )
+
+    with pytest.raises(OperatorDecisionEvidenceError, match="conflicting durable decisions"):
+        load_operator_decisions(path)
 
 
 def test_broad_policy_auto_allows_project_reads_writes_and_inspect_commands(

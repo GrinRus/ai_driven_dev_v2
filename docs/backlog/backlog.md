@@ -7,14 +7,16 @@ slice, and local task.
 
 ## Next
 
+- `W34-E3-S2-T2` — Wake decision waiters on cancellation and reject decisions for
+  terminal jobs.
 
 ## Soon
 
-## Parking lot
-
-- `W34-E3-S2-T1` — Resolve each approval exactly once with compare-and-set semantics.
 - `W34-E3-S3-T1` — Store live chunks in a byte-bounded ring, cap responses, and evict
   terminal jobs by TTL/count.
+
+## Parking lot
+
 - `W34-E3-S4-T1` — Add characterization fixtures for corrected routes, jobs, approvals,
   and dashboard states.
 - `W34-E4-S2-T1` — Define typed stop reasons and one runtime-evidence commit contract.
@@ -92,6 +94,6 @@ slice, and local task.
 
 ## Current reconciliation
 
-- `2026-07-16` `W34-E2` is complete: run identity, continuation, immutable archive
-  overlays, and per-attempt prompt accountability now share canonical core evidence. The next
-  bounded queue requires a separate reconciliation.
+- `2026-07-16` `W34-E3-S2-T1` closed with one core-owned compare-and-set decision
+  winner. Cancellation safety is now `Next`; bounded UI retention is its direct `Soon`
+  successor, while UI characterization remains parked behind executable frontend tests.

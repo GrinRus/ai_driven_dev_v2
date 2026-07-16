@@ -9180,7 +9180,7 @@ Exit evidence:
 - same-run mutations cannot race metadata, attempts, or publication;
 - non-conflicting runs remain independently executable.
 
-#### Slice W34-E3-S2 — terminal-safe operator decisions (`planned`)
+#### Slice W34-E3-S2 — terminal-safe operator decisions (`next`)
 Goal: keep runtime decisions immutable and make cancellation terminate all waiters.
 
 Dependencies:
@@ -9189,12 +9189,12 @@ Dependencies:
 
 Local tasks:
 
-- `W34-E3-S2-T1` Resolve each approval exactly once with compare-and-set semantics.
+- `W34-E3-S2-T1` (done) Resolve each approval exactly once with compare-and-set semantics.
   [`REL-09`, `REF-02`]
   - Scope: approval decision service.
   - Verification: concurrent opposite decisions yield one durable winner shared by the
     runtime and audit ledger.
-- `W34-E3-S2-T2` Wake decision waiters on cancellation and reject decisions for
+- `W34-E3-S2-T2` (next) Wake decision waiters on cancellation and reject decisions for
   terminal jobs. [`REL-08`, `REF-02`]
   - Scope: job/approval lifecycle.
   - Verification: the waiter exits within a bound and no post-cancel continuation is

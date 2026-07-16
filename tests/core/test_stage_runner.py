@@ -30,10 +30,11 @@ from aidd.core.run_store import (
     run_stage_metadata_path,
 )
 from aidd.core.runtime_operator import (
+    OperatorDecisionConflict,
     RuntimeOperatorDecision,
     RuntimeOperatorRequest,
-    append_operator_decision,
     append_operator_request,
+    resolve_operator_decision,
 )
 from aidd.core.stage_runner import (
     ATTEMPT_INPUT_BUNDLE_FILENAME,
@@ -3718,8 +3719,8 @@ def test_update_stage_unblock_state_keeps_stage_blocked_for_pending_operator_req
         stage="plan",
     )
 
-    append_operator_decision(
-        path=attempt_path / "operator-decisions.jsonl",
+    resolve_operator_decision(
+        attempt_path=attempt_path,
         decision=RuntimeOperatorDecision(
             request_id=request.id,
             action=RuntimeOperatorDecisionAction.DENY,
@@ -3733,16 +3734,17 @@ def test_update_stage_unblock_state_keeps_stage_blocked_for_pending_operator_req
         run_id="run-001",
         stage="plan",
     )
-    append_operator_decision(
-        path=attempt_path / "operator-decisions.jsonl",
-        decision=RuntimeOperatorDecision(
-            request_id=request.id,
-            action=RuntimeOperatorDecisionAction.ALLOW_ONCE,
-            source=RuntimeOperatorDecisionSource.UI,
-            reason="approved in test",
-        ),
-    )
-    unblocked_state = update_stage_unblock_state(
+    with pytest.raises(OperatorDecisionConflict, match="already resolved"):
+        resolve_operator_decision(
+            attempt_path=attempt_path,
+            decision=RuntimeOperatorDecision(
+                request_id=request.id,
+                action=RuntimeOperatorDecisionAction.ALLOW_ONCE,
+                source=RuntimeOperatorDecisionSource.UI,
+                reason="approved in test",
+            ),
+        )
+    immutable_denied_state = update_stage_unblock_state(
         workspace_root=workspace_root,
         work_item="WI-001",
         run_id="run-001",
@@ -3755,6 +3757,61 @@ def test_update_stage_unblock_state_keeps_stage_blocked_for_pending_operator_req
     assert denied_state.was_blocked is True
     assert denied_state.unblocked is False
     assert denied_state.next_state == StageState.BLOCKED
+    assert immutable_denied_state.was_blocked is True
+    assert immutable_denied_state.unblocked is False
+    assert immutable_denied_state.next_state == StageState.BLOCKED
+
+
+def test_update_stage_unblock_state_accepts_approved_operator_request(
+    tmp_path: Path,
+) -> None:
+    workspace_root = tmp_path / ".aidd"
+    create_run_manifest(
+        workspace_root=workspace_root,
+        work_item="WI-001",
+        run_id="run-001",
+        runtime_id="generic-cli",
+        stage_target="plan",
+        config_snapshot={"mode": "test"},
+    )
+    persist_stage_status(
+        workspace_root=workspace_root,
+        work_item="WI-001",
+        run_id="run-001",
+        stage="plan",
+        status=StageState.BLOCKED.value,
+    )
+    attempt_path = create_next_attempt_directory(
+        workspace_root=workspace_root,
+        work_item="WI-001",
+        run_id="run-001",
+        stage="plan",
+    )
+    request = RuntimeOperatorRequest.create(
+        runtime_id="generic-cli",
+        stage="plan",
+        kind=RuntimeOperatorRequestKind.SHELL,
+        payload={"command": "python -m pytest -q"},
+        cwd=tmp_path,
+    )
+    append_operator_request(path=attempt_path / "operator-requests.jsonl", request=request)
+    resolve_operator_decision(
+        attempt_path=attempt_path,
+        decision=RuntimeOperatorDecision(
+            request_id=request.id,
+            action=RuntimeOperatorDecisionAction.ALLOW_ONCE,
+            source=RuntimeOperatorDecisionSource.UI,
+            reason="approved in test",
+        ),
+    )
+
+    unblocked_state = update_stage_unblock_state(
+        workspace_root=workspace_root,
+        work_item="WI-001",
+        run_id="run-001",
+        stage="plan",
+    )
+
     assert unblocked_state.was_blocked is True
     assert unblocked_state.unblocked is True
     assert unblocked_state.next_state == StageState.PREPARING
