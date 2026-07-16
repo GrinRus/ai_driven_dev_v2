@@ -7,8 +7,8 @@ slice, and local task.
 
 ## Next
 
-- `W34-E6-S1-T1` — Remove superseded Claude question/resume code after a public-import
-  compatibility review.
+- `W34-E6-S1-T6` — Remove dead adapter-local prompt-read shims after confirming the
+  shared native-prompt owner.
 
 ## Soon
 
@@ -82,6 +82,11 @@ slice, and local task.
   queue-restoration policy in `docs/backlog/roadmap.md` (`W8-E3-S1`).
 
 ## Current reconciliation
+
+- `2026-07-16` `W34-E6-S1-T1` is complete: the Claude-only question detection,
+  persistence, fallback routing, and resume surface is removed; registered adapters
+  retain the shared `runtime_events` path. New cleanup task `W34-E6-S1-T6` is promoted
+  to `Next`; `T2` remains its direct successor in `Soon`.
 
 - `2026-07-16` `W34-E5-S4-T4`, slice `W34-E5-S4`, and Epic `W34-E5` are complete:
   atomic report writes, transcript serialization, flow-report rendering, and paired

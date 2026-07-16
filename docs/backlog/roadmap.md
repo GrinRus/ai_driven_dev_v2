@@ -9557,7 +9557,7 @@ Exit evidence:
 ### Epic W34-E6 — remaining confirmed dead surfaces (`planned`)
 Linked stories: `US-01`, `US-08`, `US-09`, `US-10`
 
-#### Slice W34-E6-S1 — compatibility-checked removal (`planned`)
+#### Slice W34-E6-S1 — compatibility-checked removal (`in-progress`)
 Goal: remove production and dependency surface that has no supported runtime,
 compatibility, registry, or resource entry point.
 
@@ -9569,10 +9569,15 @@ Dependencies:
 
 Local tasks:
 
-- `W34-E6-S1-T1` Remove superseded Claude question/resume code and
+- `W34-E6-S1-T1` (done) Remove superseded Claude question/resume code and
   implementation-only tests after a public-import compatibility review. [`DEAD-03`]
   - Scope: Claude adapter legacy surface.
   - Verification: registered adapter integration tests cover the retained shared path.
+- `W34-E6-S1-T6` Remove dead adapter-local prompt-read shims after confirming
+  `aidd.adapters.native_prompt` as the canonical owner. [`DEAD-03`]
+  - Scope: Claude, Codex, and OpenCode runner prompt helpers only.
+  - Verification: native prompt fixtures remain equivalent and an architecture test
+    excludes adapter-local prompt readers.
 - `W34-E6-S1-T2` Remove the unreferenced core interview capability helper after a
   public-import check. [`DEAD-04`]
   - Scope: core interview surface.
