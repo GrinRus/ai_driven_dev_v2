@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import re
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Literal
@@ -60,6 +61,13 @@ class FailureBoundarySelection:
     signal_source: str
     signal_line_number: int | None
     reason: str
+
+
+@dataclass(frozen=True, slots=True)
+class _FailureCandidate:
+    rank: int
+    source_order: int
+    selection: FailureBoundarySelection
 
 
 PROFILE_KEY_LABELS = {
@@ -434,17 +442,26 @@ def parse_stage_metadata_validation_failures(
 
 def _is_environment_signal(message: str) -> bool:
     normalized = message.lower().replace("_", " ").replace("-", " ")
-    return any(
+    return bool(
+        re.search(r"\b(?:http(?: status)?|status code)\s+[45]\d\d\b", normalized)
+    ) or any(
         token in normalized
         for token in (
+            "certificate verify failed",
+            "connection reset",
             "network unreachable",
             "connection refused",
             "no space left",
             "no such file or directory",
+            "executable not found",
             "not found",
             "dns",
+            "name resolution",
+            "temporary failure in name resolution",
+            "tls",
             "unable to resolve host",
             "timed out",
+            "timeout",
         )
     )
 
@@ -493,77 +510,21 @@ def classify_failure_taxonomy(
     aidd_exit_code: int | None = None,
     verification_exit_code: int | None = None,
 ) -> FailureTaxonomyResult:
-    for event in runtime_events:
-        if _is_environment_signal(event.message):
-            return FailureTaxonomyResult(
-                category="environment",
-                reason=f"runtime log signal: {event.message}",
-            )
-    for normalized_event in normalized_events:
-        if _is_environment_signal(normalized_event.event_kind):
-            return FailureTaxonomyResult(
-                category="environment",
-                reason=f"normalized event signal: {normalized_event.event_kind}",
-            )
-
-    for event in runtime_events:
-        if _is_adapter_signal(event.message):
-            return FailureTaxonomyResult(
-                category="adapter",
-                reason=f"runtime log signal: {event.message}",
-            )
-    for normalized_event in normalized_events:
-        if _is_adapter_signal(normalized_event.event_kind):
-            return FailureTaxonomyResult(
-                category="adapter",
-                reason=f"normalized event signal: {normalized_event.event_kind}",
-            )
-
-    for event in runtime_events:
-        if _is_noop_signal(event.message):
-            return FailureTaxonomyResult(
-                category="scenario-verification",
-                reason=f"no-op execution signal: {event.message}",
-            )
-    for normalized_event in normalized_events:
-        if _is_noop_signal(normalized_event.event_kind):
-            return FailureTaxonomyResult(
-                category="scenario-verification",
-                reason=f"no-op execution signal: {normalized_event.event_kind}",
-            )
-
-    validation_signals = (*stage_metadata_failures, *validator_failures)
-    if validation_signals:
-        return FailureTaxonomyResult(
-            category="validation",
-            reason=f"validation signal: {validation_signals[0].message}",
-        )
-
-    if aidd_exit_code not in (None, 0):
-        return FailureTaxonomyResult(
-            category="runtime",
-            reason=f"AIDD run exited with non-zero status {aidd_exit_code}.",
-        )
-    for event in runtime_events:
-        if event.category == "error":
-            return FailureTaxonomyResult(
-                category="runtime",
-                reason=f"runtime error signal: {event.message}",
-            )
-
-    if verification_exit_code not in (None, 0):
-        return FailureTaxonomyResult(
-            category="scenario-verification",
-            reason=f"verification exited with non-zero status {verification_exit_code}.",
-        )
-
+    selection = _select_failure_boundary(
+        runtime_events=runtime_events,
+        normalized_events=normalized_events,
+        validator_failures=validator_failures,
+        stage_metadata_failures=stage_metadata_failures,
+        aidd_exit_code=aidd_exit_code,
+        verification_exit_code=verification_exit_code,
+    )
     return FailureTaxonomyResult(
-        category="none",
-        reason="No failure signal detected.",
+        category=selection.category,
+        reason=_taxonomy_reason(selection),
     )
 
 
-def select_first_failure_boundary(
+def _failure_candidates(
     *,
     runtime_events: tuple[CoarseRuntimeEvent, ...] = (),
     normalized_events: tuple[NormalizedRuntimeEvent, ...] = (),
@@ -571,28 +532,29 @@ def select_first_failure_boundary(
     stage_metadata_failures: tuple[CoarseRuntimeEvent, ...] = (),
     aidd_exit_code: int | None = None,
     verification_exit_code: int | None = None,
-) -> FailureBoundarySelection:
-    ranked_candidates: list[tuple[int, int, FailureBoundarySelection]] = []
+) -> tuple[_FailureCandidate, ...]:
+    candidates: list[_FailureCandidate] = []
+    source_order = 0
 
     def _push_candidate(
         *,
         rank: int,
-        line_number: int | None,
         selection: FailureBoundarySelection,
     ) -> None:
-        ranked_candidates.append(
-            (
-                rank,
-                line_number if line_number is not None else 10**9,
-                selection,
+        nonlocal source_order
+        candidates.append(
+            _FailureCandidate(
+                rank=rank,
+                source_order=source_order,
+                selection=selection,
             )
         )
+        source_order += 1
 
     for event in runtime_events:
         if _is_environment_signal(event.message):
             _push_candidate(
                 rank=0,
-                line_number=event.line_number,
                 selection=FailureBoundarySelection(
                     category="environment",
                     signal_source="runtime.log",
@@ -603,7 +565,6 @@ def select_first_failure_boundary(
         elif _is_adapter_signal(event.message):
             _push_candidate(
                 rank=1,
-                line_number=event.line_number,
                 selection=FailureBoundarySelection(
                     category="adapter",
                     signal_source="runtime.log",
@@ -614,7 +575,6 @@ def select_first_failure_boundary(
         elif _is_noop_signal(event.message):
             _push_candidate(
                 rank=2,
-                line_number=event.line_number,
                 selection=FailureBoundarySelection(
                     category="scenario-verification",
                     signal_source="runtime.log",
@@ -625,7 +585,6 @@ def select_first_failure_boundary(
         elif event.category == "error":
             _push_candidate(
                 rank=4,
-                line_number=event.line_number,
                 selection=FailureBoundarySelection(
                     category="runtime",
                     signal_source="runtime.log",
@@ -638,7 +597,6 @@ def select_first_failure_boundary(
         if _is_environment_signal(normalized_event.event_kind):
             _push_candidate(
                 rank=0,
-                line_number=normalized_event.line_number,
                 selection=FailureBoundarySelection(
                     category="environment",
                     signal_source="events.jsonl",
@@ -649,7 +607,6 @@ def select_first_failure_boundary(
         elif _is_adapter_signal(normalized_event.event_kind):
             _push_candidate(
                 rank=1,
-                line_number=normalized_event.line_number,
                 selection=FailureBoundarySelection(
                     category="adapter",
                     signal_source="events.jsonl",
@@ -660,7 +617,6 @@ def select_first_failure_boundary(
         elif _is_noop_signal(normalized_event.event_kind):
             _push_candidate(
                 rank=2,
-                line_number=normalized_event.line_number,
                 selection=FailureBoundarySelection(
                     category="scenario-verification",
                     signal_source="events.jsonl",
@@ -674,7 +630,6 @@ def select_first_failure_boundary(
         ):
             _push_candidate(
                 rank=4,
-                line_number=normalized_event.line_number,
                 selection=FailureBoundarySelection(
                     category="runtime",
                     signal_source="events.jsonl",
@@ -685,8 +640,7 @@ def select_first_failure_boundary(
 
     for event in stage_metadata_failures:
         _push_candidate(
-            rank=2,
-            line_number=event.line_number,
+            rank=3,
             selection=FailureBoundarySelection(
                 category="validation",
                 signal_source="stage-metadata",
@@ -698,7 +652,6 @@ def select_first_failure_boundary(
     for event in validator_failures:
         _push_candidate(
             rank=3,
-            line_number=event.line_number,
             selection=FailureBoundarySelection(
                 category="validation",
                 signal_source="validator-report",
@@ -710,7 +663,6 @@ def select_first_failure_boundary(
     if aidd_exit_code not in (None, 0):
         _push_candidate(
             rank=4,
-            line_number=None,
             selection=FailureBoundarySelection(
                 category="runtime",
                 signal_source="aidd-exit-code",
@@ -722,7 +674,6 @@ def select_first_failure_boundary(
     if verification_exit_code not in (None, 0):
         _push_candidate(
             rank=5,
-            line_number=None,
             selection=FailureBoundarySelection(
                 category="scenario-verification",
                 signal_source="verification-exit-code",
@@ -731,7 +682,27 @@ def select_first_failure_boundary(
             ),
         )
 
-    if not ranked_candidates:
+    return tuple(candidates)
+
+
+def _select_failure_boundary(
+    *,
+    runtime_events: tuple[CoarseRuntimeEvent, ...] = (),
+    normalized_events: tuple[NormalizedRuntimeEvent, ...] = (),
+    validator_failures: tuple[CoarseRuntimeEvent, ...] = (),
+    stage_metadata_failures: tuple[CoarseRuntimeEvent, ...] = (),
+    aidd_exit_code: int | None = None,
+    verification_exit_code: int | None = None,
+) -> FailureBoundarySelection:
+    candidates = _failure_candidates(
+        runtime_events=runtime_events,
+        normalized_events=normalized_events,
+        validator_failures=validator_failures,
+        stage_metadata_failures=stage_metadata_failures,
+        aidd_exit_code=aidd_exit_code,
+        verification_exit_code=verification_exit_code,
+    )
+    if not candidates:
         return FailureBoundarySelection(
             category="none",
             signal_source="none",
@@ -739,8 +710,59 @@ def select_first_failure_boundary(
             reason="No failure signal detected.",
         )
 
-    ranked_candidates.sort(key=lambda item: (item[0], item[1]))
-    return ranked_candidates[0][2]
+    return min(
+        candidates,
+        key=lambda candidate: (
+            candidate.rank,
+            (
+                candidate.selection.signal_line_number
+                if candidate.selection.signal_line_number is not None
+                else 10**9
+            ),
+            candidate.source_order,
+        ),
+    ).selection
+
+
+def _taxonomy_reason(selection: FailureBoundarySelection) -> str:
+    if selection.signal_source == "none":
+        return selection.reason
+    if selection.signal_source == "aidd-exit-code":
+        exit_code = selection.reason.removeprefix("AIDD exited with ")
+        return f"AIDD run exited with non-zero status {exit_code}."
+    if selection.signal_source == "verification-exit-code":
+        exit_code = selection.reason.removeprefix("verification exited with ")
+        return f"verification exited with non-zero status {exit_code}."
+    if selection.signal_source == "stage-metadata":
+        return f"validation signal: {selection.reason}"
+    if selection.signal_source == "validator-report":
+        return f"validation signal: {selection.reason}"
+    if selection.category == "scenario-verification":
+        return f"no-op execution signal: {selection.reason}"
+    if selection.signal_source == "events.jsonl":
+        return f"normalized event signal: {selection.reason}"
+    if selection.category == "runtime":
+        return f"runtime error signal: {selection.reason}"
+    return f"runtime log signal: {selection.reason}"
+
+
+def select_first_failure_boundary(
+    *,
+    runtime_events: tuple[CoarseRuntimeEvent, ...] = (),
+    normalized_events: tuple[NormalizedRuntimeEvent, ...] = (),
+    validator_failures: tuple[CoarseRuntimeEvent, ...] = (),
+    stage_metadata_failures: tuple[CoarseRuntimeEvent, ...] = (),
+    aidd_exit_code: int | None = None,
+    verification_exit_code: int | None = None,
+) -> FailureBoundarySelection:
+    return _select_failure_boundary(
+        runtime_events=runtime_events,
+        normalized_events=normalized_events,
+        validator_failures=validator_failures,
+        stage_metadata_failures=stage_metadata_failures,
+        aidd_exit_code=aidd_exit_code,
+        verification_exit_code=verification_exit_code,
+    )
 
 
 def parse_runtime_log_text(runtime_log_text: str) -> tuple[CoarseRuntimeEvent, ...]:

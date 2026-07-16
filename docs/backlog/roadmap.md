@@ -9473,7 +9473,7 @@ Dependencies:
 
 Local tasks:
 
-- `W34-E5-S3-T1` Replace divergent eval classifiers with one typed earliest-failure
+- `W34-E5-S3-T1` (done) Replace divergent eval classifiers with one typed earliest-failure
   classifier. [`BUG-10`]
   - Scope: eval log analysis.
   - Verification: structured/text fixture tables cover assertions, HTTP errors, missing
