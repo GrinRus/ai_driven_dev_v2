@@ -553,6 +553,7 @@ def _execute_codex(
             on_stdout=on_stdout,
             on_stderr=on_stderr,
             timeout_seconds=request.timeout_seconds,
+            cancel_requested=request.cancel_requested,
         )
         if live_result.run_result is None:
             return RuntimeAdapterExecutionResult(

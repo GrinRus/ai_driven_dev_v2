@@ -2,7 +2,11 @@ from __future__ import annotations
 
 import json
 import sys
+import time
+from collections.abc import Callable
 from pathlib import Path
+
+import pytest
 
 from aidd.adapters.runtime_execution import StageRuntimeRequest
 from aidd.adapters.surface import get_runtime_adapter_surface
@@ -61,7 +65,28 @@ class _NoDecisionProvider:
         return None
 
 
-def _request(tmp_path: Path, *, timeout_seconds: float = 5.0) -> StageRuntimeRequest:
+class _CancelDuringDecisionProvider:
+    def __init__(self, cancel: list[bool]) -> None:
+        self.cancel = cancel
+
+    def request_decision(
+        self,
+        request: RuntimeOperatorRequest,
+        *,
+        requests_path: Path,
+        decisions_path: Path,
+    ) -> None:
+        _ = request, requests_path, decisions_path
+        self.cancel[0] = True
+        return None
+
+
+def _request(
+    tmp_path: Path,
+    *,
+    timeout_seconds: float = 5.0,
+    cancel_requested: Callable[[], bool] | None = None,
+) -> StageRuntimeRequest:
     repo = tmp_path / "repo"
     workspace = tmp_path / ".aidd"
     repo.mkdir(exist_ok=True)
@@ -85,6 +110,7 @@ def _request(tmp_path: Path, *, timeout_seconds: float = 5.0) -> StageRuntimeReq
         prompt_pack_paths=(prompt_pack,),
         repository_root=repo,
         project_roots=(repo,),
+        cancel_requested=cancel_requested,
     )
 
 
@@ -109,6 +135,9 @@ def _fake_codex(tmp_path: Path, *, scenario: str = "command") -> Path:
         "if scenario == 'timeout':\n"
         "    time.sleep(10)\n"
         "    raise SystemExit(3)\n"
+        "if scenario == 'startup_wait':\n"
+        "    time.sleep(10)\n"
+        "    raise SystemExit(3)\n"
         "thread_id = 'thread-1'\n"
         "for line in sys.stdin:\n"
         "    msg = json.loads(line)\n"
@@ -125,6 +154,8 @@ def _fake_codex(tmp_path: Path, *, scenario: str = "command") -> Path:
         "'sandbox': {'type': 'workspaceWrite'}}})\n"
         "    elif method == 'turn/start':\n"
         "        emit({'id': msg['id'], 'result': {'turn': {'id': 'turn-1'}}})\n"
+        "        if scenario == 'active_wait':\n"
+        "            continue\n"
         "        if scenario == 'file_permissions':\n"
         "            print('not-json-from-server', flush=True)\n"
         "            emit({'id': 'file-approval', 'method': "
@@ -274,6 +305,47 @@ def test_codex_live_transport_timeout_fails_stage(tmp_path: Path) -> None:
 
     assert result.resolved_status is AdapterExecutionStatus.FAILED
     assert result.details == "codex-live: timeout"
+
+
+@pytest.mark.parametrize("phase", ("startup", "active", "approval"))
+def test_codex_live_transport_persists_cancelled_outcome(
+    tmp_path: Path,
+    phase: str,
+) -> None:
+    cancel = [False]
+    started_at = time.monotonic()
+
+    def cancel_requested() -> bool:
+        if phase == "approval":
+            return cancel[0]
+        return time.monotonic() - started_at >= 0.1
+
+    scenario = {
+        "startup": "startup_wait",
+        "active": "active_wait",
+        "approval": "command",
+    }[phase]
+    provider = (
+        _CancelDuringDecisionProvider(cancel)
+        if phase == "approval"
+        else _DecisionProvider(RuntimeOperatorDecisionAction.ALLOW_ONCE)
+    )
+    attempt_path = tmp_path / "attempt"
+
+    result = get_runtime_adapter_surface("codex").execute_stage_request(
+        configured_command=f"{_fake_codex(tmp_path, scenario=scenario)} exec --json -",
+        request=_request(tmp_path, cancel_requested=cancel_requested),
+        attempt_path=attempt_path,
+        base_env={},
+        operator_decision_provider=provider,
+    )
+
+    assert result.resolved_status is AdapterExecutionStatus.FAILED
+    assert result.details == "codex-live: cancelled"
+    assert json.loads((attempt_path / "runtime-exit.json").read_text(encoding="utf-8"))[
+        "exit_classification"
+    ] == "cancelled"
+    assert (attempt_path / "runtime.log").exists()
 
 
 def test_codex_live_transport_handles_file_and_permissions_requests(

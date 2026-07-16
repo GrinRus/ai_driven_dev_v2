@@ -204,6 +204,7 @@ def execute_codex_live_transport(
     on_stdout: Callable[[str], None] | None,
     on_stderr: Callable[[str], None] | None,
     timeout_seconds: float | None,
+    cancel_requested: Callable[[], bool] | None = None,
 ) -> LiveTransportResult[CodexExitClassification]:
     if not codex_live_transport_available(configured_command):
         return LiveTransportResult(
@@ -251,16 +252,21 @@ def execute_codex_live_transport(
             "capabilities": {"experimentalApi": True},
         },
     )
-    pending_request_id, denied_reason = _drain_until_response(
+    pending_request_id, denied_reason, stop_reason = _drain_until_response(
         client=client,
         response_id=initialize_id,
         deadline=deadline,
+        cancel_requested=cancel_requested,
         repository_root=repository_root,
         context=context,
         broker=broker,
         operator_decision_provider=operator_decision_provider,
     )
-    if pending_request_id is not None or denied_reason is not None:
+    if (
+        pending_request_id is not None
+        or denied_reason is not None
+        or stop_reason is not None
+    ):
         return _early_stop_result(
             client=client,
             process=process,
@@ -268,6 +274,7 @@ def execute_codex_live_transport(
             denied_reason=denied_reason,
             transcript_path=transcript_path,
             broker=broker,
+            stop_reason=stop_reason,
         )
 
     client.notify("initialized")
@@ -283,16 +290,21 @@ def execute_codex_live_transport(
                 "baseInstructions": "Run the AIDD stage request exactly as provided.",
         },
     )
-    pending_request_id, denied_reason = _drain_until_response(
+    pending_request_id, denied_reason, stop_reason = _drain_until_response(
         client=client,
         response_id=thread_start_id,
         deadline=deadline,
+        cancel_requested=cancel_requested,
         repository_root=repository_root,
         context=context,
         broker=broker,
         operator_decision_provider=operator_decision_provider,
     )
-    if pending_request_id is not None or denied_reason is not None:
+    if (
+        pending_request_id is not None
+        or denied_reason is not None
+        or stop_reason is not None
+    ):
         return _early_stop_result(
             client=client,
             process=process,
@@ -300,6 +312,7 @@ def execute_codex_live_transport(
             denied_reason=denied_reason,
             transcript_path=transcript_path,
             broker=broker,
+            stop_reason=stop_reason,
         )
 
     thread_id = _thread_id_from_transcript_response(
@@ -331,6 +344,20 @@ def execute_codex_live_transport(
     denied_reason = None
     pending_request_id = None
     while process.poll() is None and not completed:
+        if cancel_requested is not None and cancel_requested():
+            terminate_process(process)
+            client.join()
+            run_result = _run_result(
+                process=process,
+                client=client,
+                stop_reason=CodexExitClassification.CANCELLED,
+            )
+            return LiveTransportResult(
+                run_result=run_result,
+                status=AdapterExecutionStatus.FAILED,
+                details="codex-live: cancelled",
+                events_jsonl_path=transcript_path,
+            )
         if deadline is not None and time.monotonic() >= deadline:
             terminate_process(process)
             client.join()
@@ -367,6 +394,16 @@ def execute_codex_live_transport(
         elif message.get("method") == "thread/status/changed" and _status_is_idle(message):
             completed = True
 
+    if cancel_requested is not None and cancel_requested():
+        return _early_stop_result(
+            client=client,
+            process=process,
+            pending_request_id=None,
+            denied_reason=None,
+            transcript_path=transcript_path,
+            broker=broker,
+            stop_reason=CodexExitClassification.CANCELLED,
+        )
     if pending_request_id is not None or denied_reason is not None:
         return _early_stop_result(
             client=client,
@@ -375,6 +412,7 @@ def execute_codex_live_transport(
             denied_reason=denied_reason,
             transcript_path=transcript_path,
             broker=broker,
+            stop_reason=None,
         )
 
     terminate_process(process)
@@ -405,22 +443,26 @@ def _drain_until_response(
     client: _JsonRpcLineClient,
     response_id: int,
     deadline: float | None,
+    cancel_requested: Callable[[], bool] | None,
     repository_root: Path,
     context: CodexCommandContext,
     broker: RuntimeOperatorBroker,
     operator_decision_provider: RuntimeOperatorDecisionProvider,
-) -> tuple[str | None, str | None]:
+) -> tuple[str | None, str | None, CodexExitClassification | None]:
     while client.process.poll() is None:
+        if cancel_requested is not None and cancel_requested():
+            terminate_process(client.process)
+            return None, None, CodexExitClassification.CANCELLED
         if deadline is not None and time.monotonic() >= deadline:
             terminate_process(client.process)
-            return None, "codex-live: timeout"
+            return None, "codex-live: timeout", None
         message = client.next_message(timeout_seconds=0.1)
         if message is None:
             continue
         if message.get("id") == response_id:
             if "error" in message:
-                return None, f"codex-live: request failed: {message.get('error')}"
-            return None, None
+                return None, f"codex-live: request failed: {message.get('error')}", None
+            return None, None, None
         if _message_is_approval_request(message):
             pending_request_id, denied_reason = _handle_approval_request(
                 message=message,
@@ -431,8 +473,10 @@ def _drain_until_response(
                 operator_decision_provider=operator_decision_provider,
             )
             if pending_request_id is not None or denied_reason is not None:
-                return pending_request_id, denied_reason
-    return None, "codex-live: app-server exited before response"
+                if cancel_requested is not None and cancel_requested():
+                    return None, None, CodexExitClassification.CANCELLED
+                return pending_request_id, denied_reason, None
+    return None, "codex-live: app-server exited before response", None
 
 
 def _handle_approval_request(
@@ -538,9 +582,23 @@ def _early_stop_result(
     denied_reason: str | None,
     transcript_path: Path,
     broker: RuntimeOperatorBroker,
+    stop_reason: CodexExitClassification | None,
 ) -> LiveTransportResult[CodexExitClassification]:
     terminate_process(process)
     client.join()
+    if stop_reason is CodexExitClassification.CANCELLED:
+        return LiveTransportResult(
+            run_result=_run_result(process=process, client=client, stop_reason=stop_reason),
+            status=AdapterExecutionStatus.FAILED,
+            details="codex-live: cancelled",
+            events_jsonl_path=transcript_path,
+            operator_requests_path=(
+                broker.requests_path if broker.requests_path.exists() else None
+            ),
+            operator_decisions_path=(
+                broker.decisions_path if broker.decisions_path.exists() else None
+            ),
+        )
     if pending_request_id is not None:
         return LiveTransportResult(
             run_result=None,

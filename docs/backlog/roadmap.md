@@ -9299,7 +9299,7 @@ Local tasks:
   - Scope: shared streamed transport lifecycle only.
   - Verification: descendants exit after timeout, cancellation, parent exit, and
     inherited-pipe drain expiry.
-- `W34-E4-S1-T6` Propagate cancellation through Codex live startup, active turn, and
+- `W34-E4-S1-T6` (done) Propagate cancellation through Codex live startup, active turn, and
   approval wait. [`REL-04`]
   - Scope: Codex live transport.
   - Verification: three-state cancellation tests persist a cancelled outcome.
