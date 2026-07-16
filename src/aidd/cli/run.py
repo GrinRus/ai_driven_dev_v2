@@ -231,9 +231,10 @@ def run_callback(
             f"Option '--from-stage' ({from_stage}) must not come after '--to-stage' ({to_stage})."
         )
     if from_stage != STAGES[0] and run_id is None:
-        raise typer.BadParameter(
-            f"Option '--run-id' is required when '--from-stage' is '{from_stage}'."
+        console.print(
+            f"Error: Option '--run-id' is required when '--from-stage' is '{from_stage}'."
         )
+        raise typer.Exit(code=2)
 
     if runtime not in _WORKFLOW_RUN_SUPPORTED_RUNTIMES:
         supported = ", ".join(_WORKFLOW_RUN_SUPPORTED_RUNTIMES)
