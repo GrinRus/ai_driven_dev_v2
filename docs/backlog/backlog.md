@@ -7,13 +7,12 @@ slice, and local task.
 
 ## Next
 
-- `W34-E5-S2-T2` — Materialize result bundles by copy, hash, and atomic replace instead
-  of hard links.
+- `W34-E5-S4-T5` — Replace the fake runtime's unconditional stage delay with an opt-in
+  transition barrier for checkpoint tests.
 
 ## Soon
 
-- `W34-E5-S4-T5` — Replace the fake runtime's unconditional stage delay with an opt-in
-  transition barrier for checkpoint tests.
+- `W34-E5-S2-T3` — Make the running-stage frontend checkpoint transition-aware.
 
 ## Parking lot
 
@@ -89,6 +88,10 @@ slice, and local task.
 
 ## Current reconciliation
 
+- `2026-07-16` `W34-E5-S2-T2` is complete: result artifacts are copied into verified
+  staging files and published with ordered SHA-256 evidence plus an atomic commit marker;
+  hard links are no longer used. Independent fixture task `S4-T5` is promoted to `Next`;
+  `S2-T3` is in `Soon`.
 - `2026-07-16` `W34-E5-S2-T1` is complete: deterministic setup, run, verification, and
   teardown now share one monotonic lifecycle budget and launch commands in owned process
   groups with bounded descendant cleanup. `S2-T2` is promoted to `Next`; independent

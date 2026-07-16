@@ -1,13 +1,15 @@
 from __future__ import annotations
 
+import hashlib
 import json
-import os
 import shutil
+import tempfile
+import warnings
 from collections.abc import Mapping
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 
 from aidd.core.workspace import WORKSPACE_REPORTS_DIRNAME, WORKSPACE_REPORTS_EVALS_DIRNAME
 from aidd.harness.install_artifact import HarnessInstallResult
@@ -39,6 +41,7 @@ SETUP_TRANSCRIPT_FILENAME = "setup-transcript.json"
 RUN_TRANSCRIPT_FILENAME = "run-transcript.json"
 VERIFY_TRANSCRIPT_FILENAME = "verify-transcript.json"
 TEARDOWN_TRANSCRIPT_FILENAME = "teardown-transcript.json"
+ARTIFACT_DIGESTS_FILENAME = "artifact-digests.json"
 
 
 @dataclass(frozen=True, slots=True)
@@ -63,6 +66,7 @@ class ResultBundleLayout:
     self_repair_matrix_path: Path
     grader_path: Path
     verdict_path: Path
+    artifact_digests_path: Path
 
 
 def _validate_run_id(run_id: str) -> str:
@@ -101,6 +105,7 @@ def build_result_bundle_layout(*, workspace_root: Path, run_id: str) -> ResultBu
         self_repair_matrix_path=run_root / SELF_REPAIR_MATRIX_FILENAME,
         grader_path=run_root / GRADER_FILENAME,
         verdict_path=run_root / VERDICT_FILENAME,
+        artifact_digests_path=run_root / ARTIFACT_DIGESTS_FILENAME,
     )
 
 
@@ -128,6 +133,7 @@ def build_result_bundle_layout_at_run_root(*, run_root: Path) -> ResultBundleLay
         self_repair_matrix_path=normalized_run_root / SELF_REPAIR_MATRIX_FILENAME,
         grader_path=normalized_run_root / GRADER_FILENAME,
         verdict_path=normalized_run_root / VERDICT_FILENAME,
+        artifact_digests_path=normalized_run_root / ARTIFACT_DIGESTS_FILENAME,
     )
 
 
@@ -346,17 +352,46 @@ def write_feature_selection(*, layout: ResultBundleLayout, payload: Mapping[str,
     return _write_json(layout.feature_selection_path, dict(payload))
 
 
-def _copy_or_link_file(*, source_path: Path, destination_path: Path) -> Path:
+def _sha256(path: Path) -> str:
+    digest = hashlib.sha256()
+    with path.open("rb") as stream:
+        for chunk in iter(lambda: stream.read(1024 * 1024), b""):
+            digest.update(chunk)
+    return digest.hexdigest()
+
+
+def _validate_artifact_source(source_path: Path) -> None:
     if not source_path.exists() or not source_path.is_file():
         raise ValueError(f"Artifact source file does not exist: {source_path.as_posix()}")
-    destination_path.parent.mkdir(parents=True, exist_ok=True)
-    if destination_path.exists():
-        destination_path.unlink()
+
+
+def _atomic_write_json(path: Path, payload: Any) -> Path:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    temporary_path = path.with_name(f".{path.name}.tmp")
     try:
-        os.link(source_path, destination_path)
-    except OSError:
-        shutil.copy2(source_path, destination_path)
-    return destination_path
+        temporary_path.write_text(
+            json.dumps(payload, indent=2, sort_keys=True) + "\n",
+            encoding="utf-8",
+        )
+        temporary_path.replace(path)
+    finally:
+        temporary_path.unlink(missing_ok=True)
+    return path
+
+
+def read_artifact_digests(*, layout: ResultBundleLayout) -> dict[str, Any] | None:
+    if not layout.artifact_digests_path.is_file():
+        warnings.warn(
+            "Result bundle has no artifact-digests.json; treating it as a legacy bundle.",
+            stacklevel=2,
+        )
+        return None
+    payload = json.loads(layout.artifact_digests_path.read_text(encoding="utf-8"))
+    if not isinstance(payload, dict):
+        raise ValueError("Result bundle artifact digest manifest is malformed.")
+    if payload.get("schema_version") != 1 or not isinstance(payload.get("artifacts"), list):
+        raise ValueError("Result bundle artifact digest manifest is malformed.")
+    return cast(dict[str, Any], payload)
 
 
 def copy_or_link_run_artifacts(
@@ -368,28 +403,71 @@ def copy_or_link_run_artifacts(
     runtime_jsonl_path: Path | None = None,
     events_jsonl_path: Path | None = None,
 ) -> dict[str, Path]:
-    copied: dict[str, Path] = {
-        "runtime_log": _copy_or_link_file(
-            source_path=runtime_log_path,
-            destination_path=layout.runtime_log_path,
-        ),
-        "validator_report": _copy_or_link_file(
-            source_path=validator_report_path,
-            destination_path=layout.validator_report_path,
-        ),
-        "verdict": _copy_or_link_file(
-            source_path=verdict_path,
-            destination_path=layout.verdict_path,
-        ),
+    sources: dict[str, tuple[Path, Path]] = {
+        "runtime_log": (runtime_log_path, layout.runtime_log_path),
+        "validator_report": (validator_report_path, layout.validator_report_path),
+        "verdict": (verdict_path, layout.verdict_path),
     }
     if runtime_jsonl_path is not None:
-        copied["runtime_jsonl"] = _copy_or_link_file(
-            source_path=runtime_jsonl_path,
-            destination_path=layout.runtime_jsonl_path,
-        )
+        sources["runtime_jsonl"] = (runtime_jsonl_path, layout.runtime_jsonl_path)
     if events_jsonl_path is not None:
-        copied["events_jsonl"] = _copy_or_link_file(
-            source_path=events_jsonl_path,
-            destination_path=layout.events_jsonl_path,
+        sources["events_jsonl"] = (events_jsonl_path, layout.events_jsonl_path)
+
+    for source_path, _destination_path in sources.values():
+        _validate_artifact_source(source_path)
+
+    layout.run_root.mkdir(parents=True, exist_ok=True)
+    layout.artifact_digests_path.unlink(missing_ok=True)
+    staging_root = Path(
+        tempfile.mkdtemp(prefix=".artifact-materialization-", dir=layout.run_root)
+    )
+    prepared: list[tuple[str, Path, Path, str, int]] = []
+    try:
+        for key, (source_path, destination_path) in sources.items():
+            staged_path = staging_root / destination_path.name
+            shutil.copyfile(source_path, staged_path)
+            source_digest = _sha256(source_path)
+            staged_digest = _sha256(staged_path)
+            if source_digest != staged_digest:
+                raise OSError(
+                    f"Artifact copy verification failed: {source_path.as_posix()}"
+                )
+            prepared.append(
+                (
+                    key,
+                    staged_path,
+                    destination_path,
+                    staged_digest,
+                    staged_path.stat().st_size,
+                )
+            )
+
+        for _key, staged_path, destination_path, _digest, _size in prepared:
+            destination_path.parent.mkdir(parents=True, exist_ok=True)
+            staged_path.replace(destination_path)
+
+        artifacts = [
+            {
+                "path": destination_path.relative_to(layout.run_root).as_posix(),
+                "sha256": digest,
+                "size_bytes": size,
+            }
+            for _key, _staged_path, destination_path, digest, size in sorted(
+                prepared,
+                key=lambda item: item[2].relative_to(layout.run_root).as_posix(),
+            )
+        ]
+        _atomic_write_json(
+            layout.artifact_digests_path,
+            {
+                "artifacts": artifacts,
+                "schema_version": 1,
+            },
         )
-    return copied
+    finally:
+        shutil.rmtree(staging_root, ignore_errors=True)
+
+    return {
+        key: destination_path
+        for key, (_source_path, destination_path) in sources.items()
+    }

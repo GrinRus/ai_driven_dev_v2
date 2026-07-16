@@ -9445,7 +9445,7 @@ Local tasks:
   verify, and teardown. [`REL-13`, `REF-01`]
   - Scope: deterministic harness runner.
   - Verification: timeout and descendant-exit tests cover every phase.
-- `W34-E5-S2-T2` Materialize result bundles by copy, hash, and atomic replace instead
+- `W34-E5-S2-T2` (done) Materialize result bundles by copy, hash, and atomic replace instead
   of hard links. [`REL-14`]
   - Scope: result bundle writer.
   - Verification: later source mutation cannot alter the destination and injected copy
