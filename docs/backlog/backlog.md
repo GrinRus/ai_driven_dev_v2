@@ -7,11 +7,11 @@ slice, and local task.
 
 ## Next
 
-- `W34-E3-S4-T2` — Extract thin HTTP route handlers from `cli/ui.py`.
+- `W34-E3-S4-T3` — Extract pure dashboard reducers and evidence collectors.
 
 ## Soon
 
-- `W34-E3-S4-T3` — Extract pure dashboard reducers and evidence collectors.
+- `W34-E3-S4-T4` — Split the next-flow browser hotspot into controller and view modules.
 
 ## Parking lot
 
@@ -76,6 +76,12 @@ slice, and local task.
   queue-restoration policy in `docs/backlog/roadmap.md` (`W8-E3-S1`).
 
 ## Current reconciliation
+
+- `2026-07-16` `W34-E3-S4-T2` is complete: exact and dynamic route dispatch, static
+  assets, query/body handling, HTTP exception mapping, and the server handler now live
+  behind a thin router while `OperatorUiService` retains business state and compatible
+  `handle_get`/`handle_post` facades. `S4-T3` is promoted to `Next`; `S4-T4` is in
+  `Soon`.
 
 - `2026-07-16` `W34-E3-S4-T1` is complete: normalized characterization fixtures now
   pin route responses, mutation conflicts, approval CAS, cancellation, retention, and

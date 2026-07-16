@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import inspect
 import json
 from datetime import UTC, datetime
 from importlib.resources import files
@@ -14,6 +15,7 @@ from test_ui import (
 )
 
 from aidd.cli.ui import OperatorUiService, UiRunJobStore
+from aidd.cli.ui_routing import OperatorUiRouter
 from aidd.core.mutation_lease import RunMutationConflict
 from aidd.core.remediation import mark_downstream_stale
 from aidd.core.run_store import (
@@ -82,6 +84,31 @@ def test_ui_route_contract_characterization(tmp_path: Path) -> None:
 
     assert actual == _EXPECTED["routing"]
     assert files("aidd.cli.static").joinpath("operator.js").read_bytes()
+
+
+def test_ui_router_declares_unique_routes_without_business_state(
+    tmp_path: Path,
+) -> None:
+    router = _service(tmp_path / ".aidd")._router
+
+    assert len(router.get_paths) == len(set(router.get_paths))
+    assert len(router.post_paths) == len(set(router.post_paths))
+    assert {
+        "/api/dashboard",
+        "/api/logs",
+        "/api/tasks",
+        "/api/artifacts/document",
+    }.issubset(router.get_paths)
+    assert {
+        "/api/workflow/run",
+        "/api/stage/run",
+        "/api/tasks/run",
+        "/api/next-flow/launch",
+    }.issubset(router.post_paths)
+    router_source = inspect.getsource(OperatorUiRouter)
+    assert "_jobs" not in router_source
+    assert "_operator_decisions" not in router_source
+    assert "resolve_operator_dashboard_view" not in router_source
 
 
 def test_ui_job_retention_and_cancellation_characterization() -> None:

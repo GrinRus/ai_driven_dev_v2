@@ -9242,7 +9242,7 @@ Local tasks:
   - Scope: UI tests.
   - Verification: API/state snapshots cover mutation conflicts, decisions,
     cancellation, retention, and terminal views.
-- `W34-E3-S4-T2` Extract thin HTTP route handlers from `cli/ui.py`. [`REF-02`]
+- `W34-E3-S4-T2` (done) Extract thin HTTP route handlers from `cli/ui.py`. [`REF-02`]
   - Scope: UI routing only.
   - Verification: endpoint contract fixtures remain unchanged.
 - `W34-E3-S4-T3` Extract pure dashboard reducers and evidence collectors. [`REF-02`]

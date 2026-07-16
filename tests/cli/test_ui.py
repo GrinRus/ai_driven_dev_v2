@@ -23,14 +23,13 @@ from aidd.cli import ui as ui_module
 from aidd.cli.stage_run import StageInteractOptions, StageRunOptions
 from aidd.cli.ui import (
     OperatorUiService,
-    UiRequestBodyTooLarge,
     UiRunJobStore,
     UiServerOptions,
     _is_loopback_host,
-    _read_json_body,
     ui_command,
 )
 from aidd.cli.ui_assets import operator_static_asset_for_route, operator_static_asset_manifest
+from aidd.cli.ui_http import UiRequestBodyTooLarge, _read_json_body
 from aidd.core.remediation import (
     create_remediation_request,
     mark_downstream_stale,

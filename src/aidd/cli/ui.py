@@ -12,13 +12,12 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from http import HTTPStatus
-from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+from http.server import ThreadingHTTPServer
 
 # ruff: noqa: E501
 from ipaddress import ip_address
 from pathlib import Path
 from typing import Annotated, Any, cast
-from urllib.parse import parse_qs, urlparse
 from uuid import uuid4
 
 import typer
@@ -41,12 +40,11 @@ from aidd.cli.support import (
 )
 from aidd.cli.ui_assets import operator_static_asset_for_route
 from aidd.cli.ui_http import (
-    UiRequestBodyTooLarge,
     UiResponse,
     _error_response,
     _json_response,
-    _read_json_body,
 )
+from aidd.cli.ui_routing import OperatorUiRouter, UiJobDecisionConflict, handler_for
 from aidd.config import AiddConfig, load_config
 from aidd.core.implementation_eligibility import implementation_finalization_blocker
 from aidd.core.implementation_service import (
@@ -57,7 +55,6 @@ from aidd.core.implementation_service import (
 )
 from aidd.core.interview import AnswerResolution
 from aidd.core.mutation_lease import (
-    RunMutationConflict,
     acquire_run_mutation_lease,
     acquire_run_mutation_lease_handle,
     release_run_mutation_lease,
@@ -646,10 +643,6 @@ class _UiOperatorDecisionWaiter:
     decision: RuntimeOperatorDecision | None = None
 
 
-class _UiJobDecisionConflict(RuntimeError):
-    """Raised when a terminal UI job can no longer accept a decision."""
-
-
 class _UiOperatorDecisionCoordinator:
     def __init__(
         self,
@@ -716,7 +709,7 @@ class _UiOperatorDecisionCoordinator:
         with self._lock:
             status = str(self._jobs.view(job_id)["status"])
             if status in _TERMINAL_JOB_STATUSES:
-                raise _UiJobDecisionConflict(
+                raise UiJobDecisionConflict(
                     f"UI job '{job_id}' is terminal and cannot accept operator decisions."
                 )
             try:
@@ -1785,6 +1778,20 @@ class OperatorUiService:
         self._recent_project_roots: list[Path] = (
             [project_root] if options.work_item is not None else []
         )
+        self._router = OperatorUiRouter(
+            get_routes=self._get_routes(),
+            post_routes=self._post_routes(),
+            static_route_resolver=operator_static_asset_for_route,
+            dynamic_get_route=lambda path, params: self._handle_job_get(
+                path=path,
+                params=params,
+            ),
+            dynamic_post_route=lambda path, payload: self._handle_job_post(
+                path=path,
+                payload=payload,
+            ),
+            remote_mutation_guard=self._remote_mutation_error,
+        )
 
     @property
     def workspace_root(self) -> Path:
@@ -2577,206 +2584,232 @@ class OperatorUiService:
         job["rerun_stage"] = stage
         return job
 
-    def handle_get(self, path: str, params: dict[str, list[str]]) -> UiResponse:
+    def _get_routes(self) -> dict[str, Callable[[dict[str, list[str]]], UiResponse]]:
+        return {
+            "/api/onboarding/state": lambda params: _json_response(
+                self._onboarding_state()
+            ),
+            "/api/project-home": lambda params: _json_response(
+                self._project_home(params)
+            ),
+            "/api/work-item/resume": lambda params: _json_response(
+                self._work_item_resume_context(params)
+            ),
+            "/api/run": self._get_run,
+            "/api/dashboard": self._get_dashboard,
+            "/api/run/timeline": lambda params: _json_response(
+                self._run_timeline(params)
+            ),
+            "/api/run/accountability": lambda params: _json_response(
+                self._run_accountability(params)
+            ),
+            "/api/run/comparison": lambda params: _json_response(
+                self._run_comparison(params)
+            ),
+            "/api/repository/diff": lambda params: _json_response(
+                self._repository_diff(params)
+            ),
+            "/api/implement/evidence": lambda params: _json_response(
+                self._implementation_evidence(params)
+            ),
+            "/api/tasks": lambda params: _json_response(self._task_view(params)),
+            "/api/review/findings": lambda params: _json_response(
+                self._review_findings(params)
+            ),
+            "/api/qa/verdict": lambda params: _json_response(
+                self._qa_verdict(params)
+            ),
+            "/api/remediation/requests": lambda params: _json_response(
+                self._remediation_requests(params)
+            ),
+            "/api/remediation/status": lambda params: _json_response(
+                self._remediation_status(params)
+            ),
+            "/api/next-flow/source-findings": self._get_next_flow_source_findings,
+            "/api/runtime-readiness": lambda params: _json_response(
+                self._runtime_readiness()
+            ),
+            "/api/stage": self._get_stage,
+            "/api/questions": self._get_questions,
+            "/api/logs": self._get_logs,
+            "/api/artifacts": self._get_artifacts,
+            "/api/stage/workbench": self._get_stage_workbench,
+            "/api/artifacts/evidence-graph": self._get_evidence_graph,
+            "/api/artifacts/document": self._get_artifact_document,
+        }
+
+    def _get_run(self, params: dict[str, list[str]]) -> UiResponse:
         try:
-            if static_asset := operator_static_asset_for_route(path):
-                return UiResponse(
-                    status=int(HTTPStatus.OK),
-                    content_type=static_asset.content_type,
-                    body=static_asset.text.encode("utf-8"),
-                )
-            if path == "/favicon.ico":
-                return UiResponse(
-                    status=int(HTTPStatus.NO_CONTENT),
-                    content_type="image/x-icon",
-                    body=b"",
-                )
-            if path == "/api/onboarding/state":
-                return _json_response(self._onboarding_state())
-            if path == "/api/project-home":
-                return _json_response(self._project_home(params))
-            if path == "/api/work-item/resume":
-                return _json_response(self._work_item_resume_context(params))
-            if path == "/api/run":
-                try:
-                    return _json_response(
-                        resolve_operator_run_view(
-                            workspace_root=self.workspace_root,
-                            work_item=self.work_item,
-                            run_id=_first_param(params, "run_id"),
-                        )
-                    )
-                except ValueError as exc:
-                    message = str(exc)
-                    if message.startswith("No runs found for work item "):
-                        return _json_response({"metadata": None, "message": message})
-                    raise
-            if path == "/api/dashboard":
-                requested_stage = _first_param(params, "stage")
-                stage = requested_stage or STAGES[0]
-                return _json_response(
-                    {
-                        "app_version": __version__,
-                        "active_job": self._jobs.active_job(),
-                        "dashboard": self._dashboard_view(
-                            stage=stage,
-                            run_id=_first_param(params, "run_id"),
-                            use_terminal_default=requested_stage is None,
-                        ),
-                    }
-                )
-            if path == "/api/run/timeline":
-                return _json_response(self._run_timeline(params))
-            if path == "/api/run/accountability":
-                return _json_response(self._run_accountability(params))
-            if path == "/api/run/comparison":
-                return _json_response(self._run_comparison(params))
-            if path == "/api/repository/diff":
-                return _json_response(self._repository_diff(params))
-            if path == "/api/implement/evidence":
-                return _json_response(self._implementation_evidence(params))
-            if path == "/api/tasks":
-                return _json_response(self._task_view(params))
-            if path == "/api/review/findings":
-                return _json_response(self._review_findings(params))
-            if path == "/api/qa/verdict":
-                return _json_response(self._qa_verdict(params))
-            if path == "/api/remediation/requests":
-                return _json_response(self._remediation_requests(params))
-            if path == "/api/remediation/status":
-                return _json_response(self._remediation_status(params))
-            if path == "/api/next-flow/source-findings":
-                dashboard = resolve_operator_dashboard_view(
+            return _json_response(
+                resolve_operator_run_view(
                     workspace_root=self.workspace_root,
                     work_item=self.work_item,
-                    active_stage="qa",
                     run_id=_first_param(params, "run_id"),
-                    project_root=self.project_root,
                 )
-                return _json_response(_next_flow_source_findings_payload(dashboard))
-            if path == "/api/runtime-readiness":
-                return _json_response(self._runtime_readiness())
-            if path == "/api/stage":
-                stage = _first_param(params, "stage") or STAGES[0]
+            )
+        except ValueError as exc:
+            message = str(exc)
+            if message.startswith("No runs found for work item "):
+                return _json_response({"metadata": None, "message": message})
+            raise
+
+    def _get_dashboard(self, params: dict[str, list[str]]) -> UiResponse:
+        requested_stage = _first_param(params, "stage")
+        stage = requested_stage or STAGES[0]
+        return _json_response(
+            {
+                "app_version": __version__,
+                "active_job": self._jobs.active_job(),
+                "dashboard": self._dashboard_view(
+                    stage=stage,
+                    run_id=_first_param(params, "run_id"),
+                    use_terminal_default=requested_stage is None,
+                ),
+            }
+        )
+
+    def _get_next_flow_source_findings(
+        self,
+        params: dict[str, list[str]],
+    ) -> UiResponse:
+        dashboard = resolve_operator_dashboard_view(
+            workspace_root=self.workspace_root,
+            work_item=self.work_item,
+            active_stage="qa",
+            run_id=_first_param(params, "run_id"),
+            project_root=self.project_root,
+        )
+        return _json_response(_next_flow_source_findings_payload(dashboard))
+
+    def _get_stage(self, params: dict[str, list[str]]) -> UiResponse:
+        stage = _first_param(params, "stage") or STAGES[0]
+        return _json_response(
+            resolve_operator_stage_view(
+                workspace_root=self.workspace_root,
+                work_item=self.work_item,
+                stage=stage,
+                run_id=_first_param(params, "run_id"),
+            )
+        )
+
+    def _get_questions(self, params: dict[str, list[str]]) -> UiResponse:
+        stage = _first_param(params, "stage") or STAGES[0]
+        return _json_response(
+            resolve_operator_questions_view(
+                workspace_root=self.workspace_root,
+                work_item=self.work_item,
+                stage=stage,
+            )
+        )
+
+    def _get_logs(self, params: dict[str, list[str]]) -> UiResponse:
+        stage = _first_param(params, "stage") or STAGES[0]
+        run_id = _first_param(params, "run_id")
+        attempt_number = _optional_attempt(params)
+        try:
+            summary = resolve_operator_run_log_view(
+                workspace_root=self.workspace_root,
+                work_item=self.work_item,
+                stage=stage,
+                run_id=run_id,
+                attempt_number=attempt_number,
+                tail_bytes=_optional_positive_int_param(params, "tail"),
+                limit_bytes=_optional_positive_int_param(params, "limit"),
+            )
+        except ValueError as exc:
+            message = str(exc)
+            if _is_runtime_log_not_available(message):
                 return _json_response(
-                    resolve_operator_stage_view(
-                        workspace_root=self.workspace_root,
-                        work_item=self.work_item,
-                        stage=stage,
-                        run_id=_first_param(params, "run_id"),
-                    )
-                )
-            if path == "/api/questions":
-                stage = _first_param(params, "stage") or STAGES[0]
-                return _json_response(
-                    resolve_operator_questions_view(
-                        workspace_root=self.workspace_root,
-                        work_item=self.work_item,
-                        stage=stage,
-                    )
-                )
-            if path == "/api/logs":
-                stage = _first_param(params, "stage") or STAGES[0]
-                run_id = _first_param(params, "run_id")
-                attempt_number = _optional_attempt(params)
-                try:
-                    summary = resolve_operator_run_log_view(
-                        workspace_root=self.workspace_root,
-                        work_item=self.work_item,
+                    _missing_runtime_log_payload(
                         stage=stage,
                         run_id=run_id,
                         attempt_number=attempt_number,
-                        tail_bytes=_optional_positive_int_param(params, "tail"),
-                        limit_bytes=_optional_positive_int_param(params, "limit"),
-                    )
-                except ValueError as exc:
-                    message = str(exc)
-                    if _is_runtime_log_not_available(message):
-                        return _json_response(
-                            _missing_runtime_log_payload(
-                                stage=stage,
-                                run_id=run_id,
-                                attempt_number=attempt_number,
-                                message="Runtime log is not available yet.",
-                            )
-                        )
-                    raise
-                return _json_response(
-                    {
-                        "summary": summary.summary,
-                        "text": summary.text,
-                        "byte_size": summary.byte_size,
-                        "start_byte": summary.start_byte,
-                        "end_byte": summary.end_byte,
-                        "requested_bytes": summary.requested_bytes,
-                        "max_bytes": summary.max_bytes,
-                        "truncated": summary.truncated,
-                        "truncated_head": summary.truncated_head,
-                        "truncated_tail": summary.truncated_tail,
-                        "available": True,
-                        "message": None,
-                    }
-                )
-            if path == "/api/jobs":
-                return _error_response("job id is required.", status=HTTPStatus.NOT_FOUND)
-            if path.startswith("/api/jobs/"):
-                return self._handle_job_get(path=path, params=params)
-            if path == "/api/artifacts":
-                stage = _first_param(params, "stage") or STAGES[0]
-                return _json_response(
-                    resolve_operator_artifacts_view(
-                        workspace_root=self.workspace_root,
-                        work_item=self.work_item,
-                        stage=stage,
-                        run_id=_first_param(params, "run_id"),
-                        attempt_number=_optional_attempt(params),
+                        message="Runtime log is not available yet.",
                     )
                 )
-            if path == "/api/stage/workbench":
-                stage = _first_param(params, "stage") or STAGES[0]
-                return _json_response(
-                    resolve_operator_stage_document_workbench(
-                        workspace_root=self.workspace_root,
-                        work_item=self.work_item,
-                        stage=stage,
-                        key=_first_param(params, "key"),
-                        run_id=_first_param(params, "run_id"),
-                        attempt_number=_optional_attempt(params),
-                        preview_limit_bytes=_optional_positive_int_param(params, "preview_limit"),
-                        source_limit_bytes=_optional_positive_int_param(params, "source_limit"),
-                    )
-                )
-            if path == "/api/artifacts/evidence-graph":
-                stage = _first_param(params, "stage") or STAGES[0]
-                return _json_response(
-                    resolve_operator_evidence_graph_view(
-                        workspace_root=self.workspace_root,
-                        work_item=self.work_item,
-                        stage=stage,
-                        run_id=_first_param(params, "run_id"),
-                        attempt_number=_optional_attempt(params),
-                    )
-                )
-            if path == "/api/artifacts/document":
-                stage = _first_param(params, "stage") or STAGES[0]
-                key = _first_param(params, "key")
-                if key is None:
-                    raise ValueError("key is required.")
-                return _json_response(
-                    resolve_operator_artifact_document_content(
-                        workspace_root=self.workspace_root,
-                        work_item=self.work_item,
-                        stage=stage,
-                        key=key,
-                        run_id=_first_param(params, "run_id"),
-                        attempt_number=_optional_attempt(params),
-                        mode=_first_param(params, "mode", "preview") or "preview",
-                        limit_bytes=_optional_positive_int_param(params, "limit"),
-                    )
-                )
-        except ValueError as exc:
-            return _error_response(str(exc))
-        return _error_response("not found", status=HTTPStatus.NOT_FOUND)
+            raise
+        return _json_response(
+            {
+                "summary": summary.summary,
+                "text": summary.text,
+                "byte_size": summary.byte_size,
+                "start_byte": summary.start_byte,
+                "end_byte": summary.end_byte,
+                "requested_bytes": summary.requested_bytes,
+                "max_bytes": summary.max_bytes,
+                "truncated": summary.truncated,
+                "truncated_head": summary.truncated_head,
+                "truncated_tail": summary.truncated_tail,
+                "available": True,
+                "message": None,
+            }
+        )
+
+    def _get_artifacts(self, params: dict[str, list[str]]) -> UiResponse:
+        stage = _first_param(params, "stage") or STAGES[0]
+        return _json_response(
+            resolve_operator_artifacts_view(
+                workspace_root=self.workspace_root,
+                work_item=self.work_item,
+                stage=stage,
+                run_id=_first_param(params, "run_id"),
+                attempt_number=_optional_attempt(params),
+            )
+        )
+
+    def _get_stage_workbench(self, params: dict[str, list[str]]) -> UiResponse:
+        stage = _first_param(params, "stage") or STAGES[0]
+        return _json_response(
+            resolve_operator_stage_document_workbench(
+                workspace_root=self.workspace_root,
+                work_item=self.work_item,
+                stage=stage,
+                key=_first_param(params, "key"),
+                run_id=_first_param(params, "run_id"),
+                attempt_number=_optional_attempt(params),
+                preview_limit_bytes=_optional_positive_int_param(
+                    params,
+                    "preview_limit",
+                ),
+                source_limit_bytes=_optional_positive_int_param(
+                    params,
+                    "source_limit",
+                ),
+            )
+        )
+
+    def _get_evidence_graph(self, params: dict[str, list[str]]) -> UiResponse:
+        stage = _first_param(params, "stage") or STAGES[0]
+        return _json_response(
+            resolve_operator_evidence_graph_view(
+                workspace_root=self.workspace_root,
+                work_item=self.work_item,
+                stage=stage,
+                run_id=_first_param(params, "run_id"),
+                attempt_number=_optional_attempt(params),
+            )
+        )
+
+    def _get_artifact_document(self, params: dict[str, list[str]]) -> UiResponse:
+        stage = _first_param(params, "stage") or STAGES[0]
+        key = _first_param(params, "key")
+        if key is None:
+            raise ValueError("key is required.")
+        return _json_response(
+            resolve_operator_artifact_document_content(
+                workspace_root=self.workspace_root,
+                work_item=self.work_item,
+                stage=stage,
+                key=key,
+                run_id=_first_param(params, "run_id"),
+                attempt_number=_optional_attempt(params),
+                mode=_first_param(params, "mode", "preview") or "preview",
+                limit_bytes=_optional_positive_int_param(params, "limit"),
+            )
+        )
+
+    def handle_get(self, path: str, params: dict[str, list[str]]) -> UiResponse:
+        return self._router.handle_get(path, params)
 
     def _dashboard_view(
         self,
@@ -2821,107 +2854,89 @@ class OperatorUiService:
             )
         return dashboard
 
-    def handle_post(self, path: str, payload: dict[str, Any]) -> UiResponse:
-        try:
-            remote_mutation_error = self._remote_mutation_error(path)
-            if remote_mutation_error is not None:
-                return remote_mutation_error
-            if path.startswith("/api/jobs/"):
-                return self._handle_job_post(path=path, payload=payload)
-            if path == "/api/onboarding/project":
-                return _json_response(self._inspect_onboarding_project(payload))
-            if path == "/api/onboarding/project-set":
-                return _json_response(self._validate_onboarding_project_set(payload))
-            if path == "/api/onboarding/work-item":
-                return _json_response(self._setup_onboarding_work_item(payload))
-            if path == "/api/answers":
-                stage = str(payload.get("stage", STAGES[0])).strip() or STAGES[0]
-                question_id = str(payload.get("question_id", "")).strip()
-                text = str(payload.get("text", "")).strip()
-                raw_resolution = str(payload.get("resolution", AnswerResolution.RESOLVED)).strip()
-                if not question_id:
-                    return _error_response("question_id is required.")
-                if not text:
-                    return _error_response("text is required.")
-                return _json_response(
-                    persist_operator_answer(
-                        workspace_root=self.workspace_root,
-                        work_item=self.work_item,
-                        stage=stage,
-                        question_id=question_id,
-                        text=text,
-                        resolution=AnswerResolution(raw_resolution),
-                    )
-                )
-            if path == "/api/stage/run":
-                return _json_response(self._start_stage_job(payload))
-            if path == "/api/stage/interact":
-                return _json_response(self._start_stage_interact_job(payload))
-            if path == "/api/tasks/run":
-                return _json_response(
-                    self._start_task_job(payload),
-                    status=HTTPStatus.ACCEPTED,
-                )
-            if path == "/api/tasks/finalize":
-                return _json_response(
-                    self._start_task_finalize_job(payload),
-                    status=HTTPStatus.ACCEPTED,
-                )
-            if path == "/api/remediation/request":
-                return _json_response(
-                    self._create_remediation_request(payload),
-                    status=HTTPStatus.CREATED,
-                )
-            if path == "/api/remediation/launch":
-                return _json_response(
-                    self._launch_remediation(payload),
-                    status=HTTPStatus.ACCEPTED,
-                )
-            if path == "/api/remediation/rerun-downstream":
-                return _json_response(
-                    self._rerun_stale_downstream(payload),
-                    status=HTTPStatus.ACCEPTED,
-                )
-            if path == "/api/remediation/rerun-stage":
-                return _json_response(
-                    self._rerun_remediation_stage(payload),
-                    status=HTTPStatus.ACCEPTED,
-                )
-            if path == "/api/next-flow/preflight":
-                return self._next_flow_preflight(payload)
-            if path == "/api/next-flow/follow-up-draft":
-                return self._next_flow_follow_up_draft(payload)
-            if path == "/api/next-flow/follow-up-draft/create":
-                return self._next_flow_create_follow_up_draft(payload)
-            if path == "/api/next-flow/clone-draft/create":
-                return self._next_flow_create_clone_draft(payload)
-            if path == "/api/next-flow/launch":
-                return self._next_flow_launch(payload)
-            if path == "/api/next-flow/archive":
-                return self._next_flow_archive(payload)
-            if path == "/api/workflow/run":
-                return _json_response(self._start_workflow_job(payload))
-            if path == "/api/open-folder":
-                return _json_response(self._open_folder(payload))
-            if path == "/api/server/stop":
-                return _json_response(self._request_server_stop())
-        except FileExistsError as exc:
-            return _error_response(str(exc), status=HTTPStatus.CONFLICT)
-        except OperatorDecisionConflict as exc:
-            return _json_response(
-                {
-                    "error": str(exc),
-                    "winner": exc.winner.to_dict(),
-                },
-                status=HTTPStatus.CONFLICT,
+    def _post_routes(self) -> dict[str, Callable[[dict[str, Any]], UiResponse]]:
+        return {
+            "/api/onboarding/project": lambda payload: _json_response(
+                self._inspect_onboarding_project(payload)
+            ),
+            "/api/onboarding/project-set": lambda payload: _json_response(
+                self._validate_onboarding_project_set(payload)
+            ),
+            "/api/onboarding/work-item": lambda payload: _json_response(
+                self._setup_onboarding_work_item(payload)
+            ),
+            "/api/answers": self._post_answer,
+            "/api/stage/run": lambda payload: _json_response(
+                self._start_stage_job(payload)
+            ),
+            "/api/stage/interact": lambda payload: _json_response(
+                self._start_stage_interact_job(payload)
+            ),
+            "/api/tasks/run": lambda payload: _json_response(
+                self._start_task_job(payload),
+                status=HTTPStatus.ACCEPTED,
+            ),
+            "/api/tasks/finalize": lambda payload: _json_response(
+                self._start_task_finalize_job(payload),
+                status=HTTPStatus.ACCEPTED,
+            ),
+            "/api/remediation/request": lambda payload: _json_response(
+                self._create_remediation_request(payload),
+                status=HTTPStatus.CREATED,
+            ),
+            "/api/remediation/launch": lambda payload: _json_response(
+                self._launch_remediation(payload),
+                status=HTTPStatus.ACCEPTED,
+            ),
+            "/api/remediation/rerun-downstream": lambda payload: _json_response(
+                self._rerun_stale_downstream(payload),
+                status=HTTPStatus.ACCEPTED,
+            ),
+            "/api/remediation/rerun-stage": lambda payload: _json_response(
+                self._rerun_remediation_stage(payload),
+                status=HTTPStatus.ACCEPTED,
+            ),
+            "/api/next-flow/preflight": self._next_flow_preflight,
+            "/api/next-flow/follow-up-draft": self._next_flow_follow_up_draft,
+            "/api/next-flow/follow-up-draft/create": self._next_flow_create_follow_up_draft,
+            "/api/next-flow/clone-draft/create": self._next_flow_create_clone_draft,
+            "/api/next-flow/launch": self._next_flow_launch,
+            "/api/next-flow/archive": self._next_flow_archive,
+            "/api/workflow/run": lambda payload: _json_response(
+                self._start_workflow_job(payload)
+            ),
+            "/api/open-folder": lambda payload: _json_response(
+                self._open_folder(payload)
+            ),
+            "/api/server/stop": lambda payload: _json_response(
+                self._request_server_stop()
+            ),
+        }
+
+    def _post_answer(self, payload: dict[str, Any]) -> UiResponse:
+        stage = str(payload.get("stage", STAGES[0])).strip() or STAGES[0]
+        question_id = str(payload.get("question_id", "")).strip()
+        text = str(payload.get("text", "")).strip()
+        raw_resolution = str(
+            payload.get("resolution", AnswerResolution.RESOLVED)
+        ).strip()
+        if not question_id:
+            return _error_response("question_id is required.")
+        if not text:
+            return _error_response("text is required.")
+        return _json_response(
+            persist_operator_answer(
+                workspace_root=self.workspace_root,
+                work_item=self.work_item,
+                stage=stage,
+                question_id=question_id,
+                text=text,
+                resolution=AnswerResolution(raw_resolution),
             )
-        except _UiJobDecisionConflict as exc:
-            return _error_response(str(exc), status=HTTPStatus.CONFLICT)
-        except RunMutationConflict as exc:
-            return _error_response(str(exc), status=HTTPStatus.CONFLICT)
-        except ValueError as exc:
-            return _error_response(str(exc))
-        return _error_response("not found", status=HTTPStatus.NOT_FOUND)
+        )
+
+    def handle_post(self, path: str, payload: dict[str, Any]) -> UiResponse:
+        return self._router.handle_post(path, payload)
 
     def consume_shutdown_requested(self) -> bool:
         if not self._shutdown_requested:
@@ -3733,46 +3748,12 @@ class OperatorUiService:
         }
 
 
-def _handler_for(service: OperatorUiService) -> type[BaseHTTPRequestHandler]:
-    class OperatorUiHandler(BaseHTTPRequestHandler):
-        def _send(self, response: UiResponse) -> None:
-            self.send_response(response.status)
-            self.send_header("Content-Type", response.content_type)
-            self.send_header("Content-Length", str(len(response.body)))
-            self.end_headers()
-            self.wfile.write(response.body)
-
-        def do_GET(self) -> None:
-            parsed = urlparse(self.path)
-            self._send(service.handle_get(parsed.path, parse_qs(parsed.query)))
-
-        def do_POST(self) -> None:
-            parsed = urlparse(self.path)
-            try:
-                payload = _read_json_body(self)
-            except UiRequestBodyTooLarge as exc:
-                self._send(_error_response(str(exc), status=HTTPStatus.REQUEST_ENTITY_TOO_LARGE))
-                return
-            except ValueError as exc:
-                self._send(_error_response(str(exc)))
-                return
-            self._send(service.handle_post(parsed.path, payload))
-            if service.consume_shutdown_requested():
-                threading.Thread(
-                    target=self.server.shutdown,
-                    name="aidd-ui-server-stop",
-                    daemon=True,
-                ).start()
-
-        def log_message(self, format: str, *args: object) -> None:
-            return
-
-    return OperatorUiHandler
-
-
 def run_ui_server(options: UiServerOptions) -> None:
     service = OperatorUiService(options)
-    server = ThreadingHTTPServer((options.host, options.port), _handler_for(service))
+    server = ThreadingHTTPServer(
+        (options.host, options.port),
+        handler_for(router=service._router, shutdown_service=service),
+    )
     host, port = cast(tuple[str, int], server.server_address[:2])
     _warn_if_non_loopback_host(options.host)
     console.print(f"AIDD UI: http://{host}:{port}/")
