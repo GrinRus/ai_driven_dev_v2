@@ -62,14 +62,19 @@ class _NoDecisionProvider:
         return None
 
 
-def _request(tmp_path: Path, *, timeout_seconds: float = 5.0) -> StageRuntimeRequest:
+def _request(
+    tmp_path: Path,
+    *,
+    timeout_seconds: float = 5.0,
+    prompt_size: int = 0,
+) -> StageRuntimeRequest:
     repo = tmp_path / "repo"
     workspace = tmp_path / ".aidd"
     repo.mkdir(exist_ok=True)
     workspace.mkdir(exist_ok=True)
     stage_brief = workspace / "stage-brief.md"
     prompt_pack = workspace / "prompt-pack.md"
-    stage_brief.write_text("# Stage brief\n", encoding="utf-8")
+    stage_brief.write_text("# Stage brief\n" + ("x" * prompt_size), encoding="utf-8")
     prompt_pack.write_text("# Prompt pack\n", encoding="utf-8")
     return StageRuntimeRequest(
         runtime_id="qwen",
@@ -103,6 +108,11 @@ def _fake_qwen(tmp_path: Path, *, scenario: str = "approval") -> Path:
         "if scenario == 'hang':\n"
         "    time.sleep(10)\n"
         "    raise SystemExit(3)\n"
+        "if scenario == 'bidirectional':\n"
+        "    sys.stdout.write('y' * 200000)\n"
+        "    sys.stdout.flush()\n"
+        "    print(len(sys.stdin.read()))\n"
+        "    raise SystemExit(0)\n"
         "json_file = sys.argv[sys.argv.index('--json-file') + 1]\n"
         "input_file = sys.argv[sys.argv.index('--input-file') + 1]\n"
         "event = {'type': 'control_request', 'payload': {'request_id': 'qwen-1', "
@@ -274,3 +284,19 @@ def test_qwen_live_transport_timeout_fails_stage(tmp_path: Path) -> None:
 
     assert result.resolved_status is AdapterExecutionStatus.FAILED
     assert result.details == "qwen-live: timeout"
+
+
+def test_qwen_live_supervises_output_before_large_prompt_delivery(tmp_path: Path) -> None:
+    fake_qwen = _fake_qwen(tmp_path, scenario="bidirectional")
+
+    result = get_runtime_adapter_surface("qwen").execute_stage_request(
+        configured_command=str(fake_qwen),
+        request=_request(tmp_path, prompt_size=2_000_000),
+        attempt_path=tmp_path / "attempt",
+        base_env={},
+        operator_decision_provider=_DecisionProvider(
+            RuntimeOperatorDecisionAction.ALLOW_ONCE
+        ),
+    )
+
+    assert result.resolved_status is AdapterExecutionStatus.SUCCEEDED

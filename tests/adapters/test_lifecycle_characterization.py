@@ -136,7 +136,7 @@ def _observe_probe(scenario: str, tmp_path: Path) -> LifecycleObservation:
     ("scenario", "expected_stop", "watchdog"),
     [
         ("startup", None, False),
-        ("bidirectional-io", None, True),
+        ("bidirectional-io", None, False),
         ("timeout", "timeout", False),
         ("cancellation", "cancelled", False),
         ("parent-exit", "timeout", False),

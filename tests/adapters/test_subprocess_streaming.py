@@ -115,6 +115,42 @@ def test_timeout_is_enforced_while_process_is_streaming_output(tmp_path: Path) -
     assert result.stop_reason is StopReason.TIMEOUT
 
 
+@pytest.mark.parametrize("stop_mode", ("timeout", "cancellation"))
+def test_supervision_starts_before_blocked_stdin_delivery(
+    tmp_path: Path,
+    stop_mode: str,
+) -> None:
+    script = (
+        "import sys, time\n"
+        "sys.stdout.write('x' * 200000)\n"
+        "sys.stdout.flush()\n"
+        "time.sleep(10)\n"
+    )
+    spec = RuntimeSubprocessSpec(
+        command=(sys.executable, "-c", script),
+        cwd=tmp_path,
+        env=dict(os.environ),
+        stdin_text="y" * 2_000_000,
+    )
+    started_at = time.monotonic()
+
+    result = run_streamed_subprocess(
+        spec=spec,
+        timeout_seconds=0.2 if stop_mode == "timeout" else 2.0,
+        timeout_stop_reason=StopReason.TIMEOUT,
+        cancel_stop_reason=StopReason.CANCELLED,
+        cancel_requested=(
+            (lambda: time.monotonic() - started_at >= 0.2)
+            if stop_mode == "cancellation"
+            else None
+        ),
+    )
+
+    expected = StopReason.TIMEOUT if stop_mode == "timeout" else StopReason.CANCELLED
+    assert result.stop_reason is expected
+    assert time.monotonic() - started_at < 1.5
+
+
 def test_completion_request_stops_process_before_timeout(tmp_path: Path) -> None:
     spec = RuntimeSubprocessSpec(
         command=(sys.executable, "-c", "import time; print('ready', flush=True); time.sleep(5)"),

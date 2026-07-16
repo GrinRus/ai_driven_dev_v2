@@ -7,13 +7,12 @@ slice, and local task.
 
 ## Next
 
-- `W34-E4-S1-T3` — Start readers, deadline, and cancellation supervision before managed
-  stdin delivery.
+- `W34-E4-S1-T4` — Add a shared owned-process-group supervisor with bounded drain and
+  termination.
 
 ## Soon
 
-- `W34-E4-S1-T4` — Add a shared owned-process-group supervisor with bounded drain and
-  termination.
+- `W34-E4-S1-T5` — Adopt the owned-process supervisor in shared streamed execution.
 ## Parking lot
 
 - `W34-E3-S4-T1` — Add characterization fixtures for corrected routes, jobs, approvals,

@@ -9283,7 +9283,7 @@ Local tasks:
   - Scope: timeout contract.
   - Verification: parameterized tests cover non-finite values, booleans, zero,
     negatives, and valid finite values.
-- `W34-E4-S1-T3` Start readers, deadline, and cancellation supervision before managed
+- `W34-E4-S1-T3` (done) Start readers, deadline, and cancellation supervision before managed
   stdin delivery. [`REL-03`]
   - Scope: shared streaming and Qwen prompt startup.
   - Verification: a large bidirectional fake runtime terminates under both timeout and

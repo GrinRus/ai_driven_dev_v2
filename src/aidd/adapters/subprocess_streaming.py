@@ -12,6 +12,7 @@ from enum import StrEnum
 from queue import Empty, Queue
 from typing import Literal, TextIO
 
+from aidd.adapters.process_io import ManagedStdinWriter
 from aidd.adapters.runtime_execution import RuntimeSubprocessSpec
 from aidd.runtime_budget import validate_runtime_budget
 
@@ -143,13 +144,6 @@ def run_streamed_subprocess[ExitClassificationT: StrEnum](
             stop_reason=launch_failure_stop_reason,
         )
 
-    if spec.stdin_text is not None and process.stdin is not None:
-        try:
-            process.stdin.write(spec.stdin_text)
-            process.stdin.close()
-        except BrokenPipeError:
-            pass
-
     queue: Queue[tuple[StreamTarget, str | None]] = Queue()
     reader_threads = (
         threading.Thread(
@@ -180,6 +174,7 @@ def run_streamed_subprocess[ExitClassificationT: StrEnum](
     stream_done: dict[StreamTarget, bool] = {"stdout": False, "stderr": False}
     deadline = time.monotonic() + timeout_seconds if timeout_seconds is not None else None
     stop_reason: ExitClassificationT | None = None
+    stdin_writer = ManagedStdinWriter.start(process.stdin, spec.stdin_text)
 
     def _maybe_request_stop() -> None:
         nonlocal stop_reason
@@ -210,6 +205,18 @@ def run_streamed_subprocess[ExitClassificationT: StrEnum](
 
     while True:
         _maybe_request_stop()
+        if (
+            stdin_writer is not None
+            and stdin_writer.error is not None
+            and stop_reason is None
+        ):
+            writer_error = stdin_writer.error
+            request_subprocess_stop(process)
+            for thread in reader_threads:
+                thread.join(timeout=0.5)
+            stdin_writer.join()
+            assert writer_error is not None
+            raise writer_error
         try:
             target, chunk = queue.get(timeout=queue_timeout_seconds)
         except Empty:
@@ -234,6 +241,10 @@ def run_streamed_subprocess[ExitClassificationT: StrEnum](
 
     for thread in reader_threads:
         thread.join(timeout=0.5)
+    if stdin_writer is not None:
+        stdin_writer.join()
+        if stdin_writer.error is not None and stop_reason is None:
+            raise stdin_writer.error
 
     return StreamedSubprocessResult(
         exit_code=process.wait(),

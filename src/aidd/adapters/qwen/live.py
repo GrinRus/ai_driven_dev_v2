@@ -15,6 +15,7 @@ from aidd.adapters.live_transport import (
     split_command,
     terminate_process,
 )
+from aidd.adapters.process_io import ManagedStdinWriter
 from aidd.adapters.qwen.approvals import (
     operator_decision_to_qwen_confirmation,
     qwen_control_request_to_operator_request,
@@ -102,10 +103,6 @@ def execute_qwen_live_transport(
         text=True,
         bufsize=1,
     )
-    if process.stdin is not None and spec.stdin_text is not None:
-        process.stdin.write(spec.stdin_text)
-        process.stdin.close()
-
     capture = StreamCapture(on_stdout=on_stdout, on_stderr=on_stderr)
     capture.attach(process)
     seen_request_ids: set[str] = set()
@@ -114,8 +111,16 @@ def execute_qwen_live_transport(
     pending_request_id: str | None = None
     denied_reason: str | None = None
     read_offset = 0
+    stdin_writer = ManagedStdinWriter.start(process.stdin, spec.stdin_text)
 
     while process.poll() is None:
+        if stdin_writer is not None and stdin_writer.error is not None:
+            writer_error = stdin_writer.error
+            terminate_process(process)
+            capture.join()
+            stdin_writer.join()
+            assert writer_error is not None
+            raise writer_error
         if deadline is not None and time.monotonic() >= deadline:
             stop_reason = QwenExitClassification.TIMEOUT
             terminate_process(process)
@@ -153,6 +158,10 @@ def execute_qwen_live_transport(
             input_path=input_path,
         )
     capture.join()
+    if stdin_writer is not None:
+        stdin_writer.join()
+        if stdin_writer.error is not None and stop_reason is None:
+            raise stdin_writer.error
 
     if pending_request_id is not None:
         return LiveTransportResult(
