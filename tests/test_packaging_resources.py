@@ -85,7 +85,23 @@ def test_built_wheel_includes_runtime_owned_contracts_and_prompt_packs(tmp_path:
     extracted_root = tmp_path / "wheel-root"
     with zipfile.ZipFile(wheel_paths[0]) as archive:
         archive_names = set(archive.namelist())
+        metadata_name = next(
+            name for name in archive_names if name.endswith(".dist-info/METADATA")
+        )
+        metadata_text = archive.read(metadata_name).decode("utf-8")
         archive.extractall(extracted_root)
+
+    requires_dist = tuple(
+        line.removeprefix("Requires-Dist: ").strip()
+        for line in metadata_text.splitlines()
+        if line.startswith("Requires-Dist: ")
+    )
+    normalized_requirements = tuple(requirement.lower() for requirement in requires_dist)
+    assert any(requirement.startswith("pyyaml") for requirement in normalized_requirements)
+    assert not any(
+        requirement.startswith(("python-frontmatter", "markdown-it-py", "pydantic"))
+        for requirement in normalized_requirements
+    )
 
     for stage in STAGES:
         assert f"aidd/_resources/contracts/stages/{stage}.md" in archive_names

@@ -9582,7 +9582,7 @@ Local tasks:
   public-import check. [`DEAD-04`]
   - Scope: core interview surface.
   - Verification: import inventory and the interview suite pass.
-- `W34-E6-S1-T3` Remove the three unused direct runtime dependencies and regenerate the
+- `W34-E6-S1-T3` (done) Remove the three unused direct runtime dependencies and regenerate the
   lock. [`DEAD-05`]
   - Scope: project dependencies and lock only.
   - Verification: locked sync, wheel build/install, and package/validator tests pass.
