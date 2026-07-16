@@ -10,15 +10,22 @@ objective: Keep a bounded deterministic workflow lane local by exercising a mult
 task: Run a deterministic bounded workflow against the local minimal fixture and
   verify the final tasklist-stage outputs are produced.
 stage_scope:
-  start: plan
+  start: idea
   end: tasklist
 setup:
   commands:
-  - uv sync --extra dev
+  - |-
+    cat > aidd.example.toml <<'TOML'
+    [workspace]
+    root = ".aidd"
+
+    [runtime.generic_cli]
+    command = "python3 ../aidd_fixture_runtime.py"
+    TOML
 aidd_invocation:
   work_item: WI-DETERMINISTIC-WORKFLOW
   expected_stage_scope:
-    start: plan
+    start: idea
     end: tasklist
 feature_source:
   mode: fixture-seed
@@ -32,8 +39,8 @@ verify:
   - test -f .aidd/workitems/WI-DETERMINISTIC-WORKFLOW/stages/tasklist/output/tasklist.md
   - test -f .aidd/workitems/WI-DETERMINISTIC-WORKFLOW/stages/tasklist/output/stage-result.md
   - test -f .aidd/workitems/WI-DETERMINISTIC-WORKFLOW/stages/tasklist/output/validator-report.md
-  - rg -n '^### (TL-[0-9]+|T[0-9]+) .+' .aidd/workitems/WI-DETERMINISTIC-WORKFLOW/stages/tasklist/output/tasklist.md
-  - rg -n 'Outcome:|Dominant deliverable:|In scope:|Acceptance criteria:' .aidd/workitems/WI-DETERMINISTIC-WORKFLOW/stages/tasklist/output/tasklist.md
+  - grep -En '^### (TL-[0-9]+|T[0-9]+) .+' .aidd/workitems/WI-DETERMINISTIC-WORKFLOW/stages/tasklist/output/tasklist.md
+  - grep -En 'Outcome:|Dominant deliverable:|In scope:|Acceptance criteria:' .aidd/workitems/WI-DETERMINISTIC-WORKFLOW/stages/tasklist/output/tasklist.md
   pass_conditions:
   - Required tasklist output documents exist.
   - Every task uses the rich task-card shape with task-local acceptance criteria.

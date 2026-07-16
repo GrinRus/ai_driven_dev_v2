@@ -14,7 +14,19 @@ stage_scope:
   end: plan
 setup:
   commands:
-  - uv sync --extra dev
+  - |-
+    cat > aidd.example.toml <<'TOML'
+    [workspace]
+    root = ".aidd"
+
+    [runtime.generic_cli]
+    command = "python3 ../aidd_fixture_runtime.py"
+    TOML
+aidd_invocation:
+  work_item: WI-SMOKE-PLAN
+  expected_stage_scope:
+    start: plan
+    end: plan
 feature_source:
   mode: fixture-seed
   selection_policy: fixture-owned
@@ -24,7 +36,10 @@ feature_source:
     deterministic lane reproducible and local.
 verify:
   commands:
-  - uv run pytest -q tests/test_cli_smoke.py
+  - test -f .aidd/workitems/WI-SMOKE-PLAN/stages/plan/output/plan.md
+  - test -f .aidd/workitems/WI-SMOKE-PLAN/stages/plan/output/stage-result.md
+  - test -f .aidd/workitems/WI-SMOKE-PLAN/stages/plan/output/validator-report.md
+  - PYTHONPATH=src python -m pytest -q tests/test_minimal_app.py
 limits:
   timeout_minutes: 5
 interview:

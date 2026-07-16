@@ -32,7 +32,7 @@ setup:
     root = ".aidd"
 
     [runtime.generic_cli]
-    command = "python ../aidd_fixture_runtime.py"
+    command = "python3 ../aidd_fixture_runtime.py"
 
     [[project_set.projects]]
     id = "api"

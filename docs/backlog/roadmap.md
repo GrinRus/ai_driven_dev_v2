@@ -9414,7 +9414,7 @@ Dependencies:
 
 Local tasks:
 
-- `W34-E5-S1-T1` Repair stale CI-labelled smoke manifests and fixtures. [`BUG-11`]
+- `W34-E5-S1-T1` (done) Repair stale CI-labelled smoke manifests and fixtures. [`BUG-11`]
   - Scope: deterministic scenarios and local fixtures.
   - Verification: each manifest passes from a freshly materialized fixture.
 - `W34-E5-S1-T2` Expose a deterministic local-only `aidd eval execute` entry point

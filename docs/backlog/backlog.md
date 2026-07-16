@@ -7,12 +7,12 @@ slice, and local task.
 
 ## Next
 
-- `W34-E5-S1-T1` — Repair stale CI-labelled smoke manifests and fixtures.
+- `W34-E5-S1-T2` — Expose a deterministic local-only `aidd eval execute` entry point
+  over the existing pipeline.
 
 ## Soon
 
-- `W34-E5-S1-T2` — Expose a deterministic local-only `aidd eval execute` entry point
-  over the existing pipeline.
+- `W34-E5-S1-T3` — Execute every discovered CI-lane manifest in CI.
 
 ## Parking lot
 
@@ -90,6 +90,9 @@ slice, and local task.
 
 ## Current reconciliation
 
+- `2026-07-16` `W34-E5-S1-T1` is complete: every CI-labelled manifest now uses a
+  provider-free fixture configuration and passes from a fresh materialized working copy.
+  `W34-E5-S1-T2` is promoted to `Next`; `T3` is its direct successor in `Soon`.
 - `2026-07-16` `W34-E3-S2` and `W34-E3-S3` are complete: approval decisions are
   terminal-safe and the local UI now bounds live-log memory, response size, and terminal
   job retention. `W34-E3-S4-T1` remains parked until executable frontend tests from

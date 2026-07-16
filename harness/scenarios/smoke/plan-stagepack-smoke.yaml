@@ -13,19 +13,19 @@ stage_scope:
   end: plan
 setup:
   commands:
-  - uv sync --extra dev
+  - |-
+    cat > aidd.example.toml <<'TOML'
+    [workspace]
+    root = ".aidd"
+
+    [runtime.generic_cli]
+    command = "python3 ../aidd_fixture_runtime.py"
+    TOML
   rationale:
-  - Install development dependencies before smoke execution.
-  - Keep the smoke lane reproducible in local contributor environments.
+  - Configure the local fixture runtime without provider authentication.
+  - Keep the smoke lane reproducible in isolated contributor environments.
 aidd_invocation:
-  command:
-  - uv
-  - run
-  - aidd
-  - run
   work_item: WI-STAGE-PLAN-SMOKE
-  work_item_flag: --work-item
-  runtime_flag: --runtime
   expected_stage_scope:
     start: plan
     end: plan
