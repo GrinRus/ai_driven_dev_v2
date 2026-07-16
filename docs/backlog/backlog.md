@@ -7,12 +7,12 @@ slice, and local task.
 
 ## Next
 
-- `W34-E5-S2-T3` — Make the running-stage frontend checkpoint transition-aware.
+- `W34-E5-S3-T1` — Replace divergent eval classifiers with one typed earliest-failure
+  classifier.
 
 ## Soon
 
-- `W34-E5-S3-T1` — Replace divergent eval classifiers with one typed earliest-failure
-  classifier.
+- `W34-E5-S3-T2` — Bound release preflight subprocess and network failures.
 
 ## Parking lot
 
@@ -86,6 +86,10 @@ slice, and local task.
 
 ## Current reconciliation
 
+- `2026-07-16` `W34-E5-S2` is complete: running-stage checkpoints re-read durable
+  state after UI startup, record terminal transitions explicitly, and defer successful
+  transitions to the normal post-stage checkpoint. `S3-T1` is promoted to `Next`;
+  `S3-T2` is in `Soon`.
 - `2026-07-16` `W34-E5-S4-T5` is complete: the fake runtime no longer delays every
   successful stage and exposes a bounded ready/release barrier only when checkpoint tests
   opt in. `S2-T3` is promoted to `Next`; classifier task `S3-T1` is in `Soon`.

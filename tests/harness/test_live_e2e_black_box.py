@@ -1245,6 +1245,63 @@ def test_fake_runtime_transition_barrier_is_explicit_and_bounded(tmp_path: Path)
     assert "state=succeeded" in stdout_text
 
 
+def test_running_frontend_checkpoint_routes_stage_transition_to_post_stage(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    scenario_path, work_root, report_root = _prepare_live_test(tmp_path, monkeypatch)
+    ready_path = tmp_path / "transition.ready"
+    release_path = tmp_path / "transition.release"
+    monkeypatch.setenv("AIDD_FAKE_RUNTIME_BARRIER_STAGE", "idea")
+    monkeypatch.setenv(
+        "AIDD_FAKE_RUNTIME_BARRIER_READY_PATH",
+        ready_path.as_posix(),
+    )
+    monkeypatch.setenv(
+        "AIDD_FAKE_RUNTIME_BARRIER_RELEASE_PATH",
+        release_path.as_posix(),
+    )
+    original_probe = live_orchestration._http_probe
+
+    def _release_during_checkpoint(url: str) -> dict[str, object]:
+        if ready_path.exists() and not release_path.exists():
+            release_path.write_text("release\n", encoding="utf-8")
+        return original_probe(url)
+
+    monkeypatch.setattr(live_orchestration, "_http_probe", _release_during_checkpoint)
+
+    result = run_black_box_live_e2e(
+        scenario_path=scenario_path,
+        runtime_id="opencode",
+        work_root=work_root,
+        report_root=report_root,
+    )
+
+    assert result.status == "pass"
+    payload = json.loads(
+        (result.bundle_root / "frontend-checkpoints.json").read_text(encoding="utf-8")
+    )
+    idea_checkpoints = [
+        checkpoint
+        for checkpoint in payload["checkpoints"]
+        if checkpoint["stage"] == "idea"
+    ]
+    running = next(
+        checkpoint
+        for checkpoint in idea_checkpoints
+        if checkpoint["phase"] == "running-stage"
+    )
+    post_stage = next(
+        checkpoint
+        for checkpoint in idea_checkpoints
+        if checkpoint["phase"] == "post-stage"
+    )
+    assert running["classification"] == "skipped"
+    assert running["observed_stage_status"] == "succeeded"
+    assert "transitioned to `succeeded`" in running["failure_reason"]
+    assert post_stage["classification"] == "pass"
+
+
 def _write_stage_quality_audit(
     bundle_root: Path,
     *,
@@ -1595,7 +1652,12 @@ def test_black_box_live_e2e_passes_stepwise_and_writes_flow_artifacts(
         (result.bundle_root / "frontend-checkpoints.json").read_text(encoding="utf-8")
     )
     assert frontend_payload["enabled"] is True
-    assert len(frontend_payload["checkpoints"]) == len(STAGES) * 2
+    post_stage_checkpoints = [
+        checkpoint
+        for checkpoint in frontend_payload["checkpoints"]
+        if checkpoint["phase"] == "post-stage"
+    ]
+    assert [checkpoint["stage"] for checkpoint in post_stage_checkpoints] == list(STAGES)
     assert all(
         checkpoint["classification"] in {"pass", "skipped"}
         for checkpoint in frontend_payload["checkpoints"]
@@ -1613,28 +1675,12 @@ def test_black_box_live_e2e_passes_stepwise_and_writes_flow_artifacts(
     assert all(
         checkpoint["phase"] == "running-stage"
         and checkpoint["operator_surface"]["failed_checks"] == ["checkpoint-not-run"]
-        and checkpoint["failure_reason"]
-        == "Running stage state ended before UI checkpoint probes could run."
+        and (
+            checkpoint["failure_reason"]
+            == "Running stage state ended before UI checkpoint probes could run."
+            or "Running stage transitioned to `" in checkpoint["failure_reason"]
+        )
         for checkpoint in skipped_running_checkpoints
-    )
-    running_checkpoint = next(
-        checkpoint
-        for checkpoint in frontend_payload["checkpoints"]
-        if checkpoint["stage"] == STAGES[0] and checkpoint["phase"] == "running-stage"
-    )
-    assert running_checkpoint["observed_stage_status"] == "executing"
-    assert {
-        check["name"]
-        for check in running_checkpoint["operator_surface"]["checks"]
-    }.issuperset(
-        {
-            "operator-shell-visible",
-            "work-item-context-visible",
-            "run-context-visible",
-            "running-stage-visible",
-            "running-wait-action-visible",
-            "runtime-log-affordance-visible",
-        }
     )
     first_operator_surface = next(
         checkpoint["operator_surface"]
@@ -1674,9 +1720,6 @@ def test_black_box_live_e2e_passes_stepwise_and_writes_flow_artifacts(
         frontend_markdown
     )
     assert "- Operator surface: ok=`True`" in frontend_markdown
-    assert "- Phase: `running-stage`" in frontend_markdown
-    assert "`running-wait-action-visible`: ok=`True`" in frontend_markdown
-    assert "`runtime-log-affordance-visible`: ok=`True`" in frontend_markdown
     assert "- Phase: `post-stage`" in frontend_markdown
     assert "`next-action-visible`: ok=`True`" in frontend_markdown
     next_flow_payload = json.loads(

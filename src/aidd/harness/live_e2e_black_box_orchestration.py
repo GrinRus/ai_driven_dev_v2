@@ -5330,14 +5330,20 @@ def _run_frontend_checkpoint(
 
         if failure_reason is None and phase == "running-stage":
             try:
-                current_status = _observed_running_stage_status(ctx, stage)
+                current_status = _observed_stage_status(ctx, stage)
             except (OSError, json.JSONDecodeError, ValueError):
                 current_status = None
-            if current_status is None:
+            if current_status not in RUNNING_STAGE_METADATA_STATUSES:
                 classification = "skipped"
                 failure_reason = (
                     "Running stage state ended before UI checkpoint probes could run."
+                    if current_status is None
+                    else (
+                        f"Running stage transitioned to `{current_status}` before "
+                        "UI checkpoint probes could run."
+                    )
                 )
+                observed_stage_status = current_status
             else:
                 observed_stage_status = current_status
 
@@ -5478,6 +5484,11 @@ def _run_frontend_checkpoint(
 
 
 def _observed_running_stage_status(ctx: FlowContext, stage: str) -> str | None:
+    status = _observed_stage_status(ctx, stage)
+    return status if status in RUNNING_STAGE_METADATA_STATUSES else None
+
+
+def _observed_stage_status(ctx: FlowContext, stage: str) -> str | None:
     working_copy = _require_working_copy(ctx)
     metadata = load_stage_metadata(
         workspace_root=working_copy / ".aidd",
@@ -5485,9 +5496,7 @@ def _observed_running_stage_status(ctx: FlowContext, stage: str) -> str | None:
         run_id=ctx.run_id,
         stage=stage,
     )
-    if metadata is None or metadata.status not in RUNNING_STAGE_METADATA_STATUSES:
-        return None
-    return metadata.status
+    return None if metadata is None else metadata.status
 
 
 def _combined_frontend_checkpoint_classification(

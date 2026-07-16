@@ -9432,7 +9432,7 @@ Exit evidence:
 - every CI-labelled scenario is executable and actually executed;
 - the deterministic pipeline has a supported product entry point.
 
-#### Slice W34-E5-S2 — bounded harness lifecycle and immutable bundles (`planned`)
+#### Slice W34-E5-S2 — bounded harness lifecycle and immutable bundles (`done`)
 Goal: bound the complete deterministic lifecycle and freeze completed evidence by value.
 
 Dependencies:
@@ -9450,7 +9450,7 @@ Local tasks:
   - Scope: result bundle writer.
   - Verification: later source mutation cannot alter the destination and injected copy
     failure leaves no partial bundle.
-- `W34-E5-S2-T3` Make the running-stage frontend checkpoint transition-aware.
+- `W34-E5-S2-T3` (done) Make the running-stage frontend checkpoint transition-aware.
   [`TEST-03`, `REF-01`]
   - Scope: black-box checkpoint probe.
   - Verification: a barrier test completes the stage during probing and routes to the
