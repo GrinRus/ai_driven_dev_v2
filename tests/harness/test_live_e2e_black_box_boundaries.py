@@ -4,6 +4,7 @@ import ast
 from pathlib import Path
 
 from aidd.harness import live_e2e_black_box_orchestration as orchestration
+from aidd.harness import live_e2e_black_box_reports as reports
 from aidd.harness import live_e2e_black_box_steps as steps
 
 
@@ -27,3 +28,9 @@ def test_orchestration_does_not_define_canonical_process_helpers() -> None:
     assert "LiveE2EInterrupted" not in defined_names
     assert "_run_black_box_command" not in defined_names
     assert "_terminate_process" not in defined_names
+
+
+def test_orchestration_uses_reports_owned_serialization_helpers() -> None:
+    assert orchestration._write_json is reports._write_json
+    assert orchestration._write_text_atomic is reports._write_text_atomic
+    assert orchestration._write_step_transcript is reports._write_step_transcript

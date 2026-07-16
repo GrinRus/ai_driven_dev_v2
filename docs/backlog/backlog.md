@@ -7,16 +7,18 @@ slice, and local task.
 
 ## Next
 
-- `W34-E5-S4-T4` — Make the reports module authoritative for live report rendering.
+- `W34-E6-S1-T1` — Remove superseded Claude question/resume code after a public-import
+  compatibility review.
 
 ## Soon
+
+- `W34-E6-S1-T2` — Remove the unreferenced core interview capability helper after a
+  compatibility review.
 
 ## Parking lot
 
 - `W34-E3-S4-T1` — Add characterization fixtures for corrected routes, jobs, approvals,
   and dashboard states.
-- `W34-E6-S1-T1` — Remove superseded Claude question/resume code after a public-import
-  compatibility review.
 - `W34-E6-S2-T1` — Close dependency-update proposals that target packages removed by
   the cleanup slice.
 - `W34-E7-S3-T1` — Reject ambiguous, unknown, or malformed safety-sensitive
@@ -80,6 +82,11 @@ slice, and local task.
   queue-restoration policy in `docs/backlog/roadmap.md` (`W8-E3-S1`).
 
 ## Current reconciliation
+
+- `2026-07-16` `W34-E5-S4-T4`, slice `W34-E5-S4`, and Epic `W34-E5` are complete:
+  atomic report writes, transcript serialization, flow-report rendering, and paired
+  JSON/Markdown bundle publication are reports-owned. `W34-E6-S1-T1` is promoted to
+  `Next`; `W34-E6-S1-T2` is in `Soon`.
 
 - `2026-07-16` `W34-E5-S4-T3` is complete: typed stage-audit and finding inputs now
   produce a pure quality decision with verdict, progression, action, and reason; the

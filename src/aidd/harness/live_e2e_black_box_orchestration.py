@@ -75,6 +75,31 @@ from aidd.harness.install_artifact import (
     HarnessInstallResult,
     prepare_local_wheel_install,
 )
+from aidd.harness.live_e2e_black_box_reports import (
+    _command_transcript_payload as _reports_command_transcript_payload,
+)
+from aidd.harness.live_e2e_black_box_reports import (
+    _read_json_object as _reports_read_json_object,
+)
+from aidd.harness.live_e2e_black_box_reports import (
+    _read_jsonl_objects as _reports_read_jsonl_objects,
+)
+from aidd.harness.live_e2e_black_box_reports import (
+    _transcript_duration as _reports_transcript_duration,
+)
+from aidd.harness.live_e2e_black_box_reports import (
+    _write_json as _reports_write_json,
+)
+from aidd.harness.live_e2e_black_box_reports import (
+    _write_step_transcript as _reports_write_step_transcript,
+)
+from aidd.harness.live_e2e_black_box_reports import (
+    _write_text_atomic as _reports_write_text_atomic,
+)
+from aidd.harness.live_e2e_black_box_reports import (
+    write_flow_report,
+    write_json_markdown_bundle,
+)
 from aidd.harness.live_e2e_black_box_steps import (
     BlackBoxCommandResult,
     LiveE2EInterrupted,
@@ -332,13 +357,13 @@ def _default_work_root() -> Path:
     return Path(tempfile.gettempdir()) / "aidd-live-e2e"
 
 
-def _write_json(path: Path, payload: object) -> Path:
+def _legacy_write_json(path: Path, payload: object) -> Path:
     path.parent.mkdir(parents=True, exist_ok=True)
     content = json.dumps(payload, indent=2, sort_keys=True) + "\n"
     return _write_text_atomic(path, content)
 
 
-def _write_text_atomic(path: Path, content: str) -> Path:
+def _legacy_write_text_atomic(path: Path, content: str) -> Path:
     path.parent.mkdir(parents=True, exist_ok=True)
     tmp_path = path.with_name(f".{path.name}.{os.getpid()}.{threading.get_ident()}.tmp")
     tmp_path.write_text(content, encoding="utf-8")
@@ -346,14 +371,14 @@ def _write_text_atomic(path: Path, content: str) -> Path:
     return path
 
 
-def _read_json_object(path: Path) -> dict[str, Any]:
+def _legacy_read_json_object(path: Path) -> dict[str, Any]:
     payload = json.loads(path.read_text(encoding="utf-8"))
     if not isinstance(payload, dict):
         raise ValueError(f"Expected JSON object in {path.as_posix()}.")
     return payload
 
 
-def _read_jsonl_objects(path: Path) -> list[dict[str, Any]]:
+def _legacy_read_jsonl_objects(path: Path) -> list[dict[str, Any]]:
     if not path.exists():
         return []
     objects: list[dict[str, Any]] = []
@@ -369,7 +394,9 @@ def _read_jsonl_objects(path: Path) -> list[dict[str, Any]]:
     return objects
 
 
-def _command_transcript_payload(transcript: HarnessCommandTranscript) -> dict[str, object]:
+def _legacy_command_transcript_payload(
+    transcript: HarnessCommandTranscript,
+) -> dict[str, object]:
     return {
         "command": transcript.command,
         "duration_seconds": transcript.duration_seconds,
@@ -381,11 +408,13 @@ def _command_transcript_payload(transcript: HarnessCommandTranscript) -> dict[st
     }
 
 
-def _transcript_duration(transcripts: tuple[HarnessCommandTranscript, ...]) -> float:
+def _legacy_transcript_duration(
+    transcripts: tuple[HarnessCommandTranscript, ...],
+) -> float:
     return sum(transcript.duration_seconds for transcript in transcripts)
 
 
-def _write_step_transcript(
+def _legacy_write_step_transcript(
     *,
     path: Path,
     step: str,
@@ -401,6 +430,15 @@ def _write_step_transcript(
     if extra:
         payload.update(extra)
     return _write_json(path, payload)
+
+
+_write_json = _reports_write_json
+_write_text_atomic = _reports_write_text_atomic
+_read_json_object = _reports_read_json_object
+_read_jsonl_objects = _reports_read_jsonl_objects
+_command_transcript_payload = _reports_command_transcript_payload
+_transcript_duration = _reports_transcript_duration
+_write_step_transcript = _reports_write_step_transcript
 
 
 def _steps_path(bundle_root: Path) -> Path:
@@ -1555,47 +1593,15 @@ def _write_flow_report(ctx: FlowContext) -> Path:
         if _state_path(ctx.bundle_root).exists()
         else {}
     )
-    steps = _load_steps(ctx.bundle_root)
-    lines = [
-        "# Black-Box Live E2E Flow Report",
-        "",
-        "## Run",
-        f"- Scenario: `{ctx.scenario.scenario_id}`",
-        f"- Runtime: `{ctx.runtime_id}`",
-        f"- Run ID: `{ctx.run_id}`",
-        f"- Work item: `{ctx.work_item}`",
-        f"- Status: `{state.get('status', 'running')}`",
-        f"- Next action: `{state.get('next_action', 'unknown')}`",
-        "",
-        "## Steps",
-    ]
-    if not steps:
-        lines.append("- No steps recorded yet.")
-    for step in steps:
-        stage = step.get("stage") or "n/a"
-        lines.extend(
-            (
-                "",
-                f"### {step.get('step_index', '?')}. {step.get('action', 'unknown')}",
-                f"- Stage: `{stage}`",
-                f"- Plan: {step.get('plan', '')}",
-                f"- Classification: `{step.get('classification', 'unknown')}`",
-                f"- Decision: {step.get('decision', '')}",
-            )
-        )
-        raw_commands = step.get("commands")
-        commands = raw_commands if isinstance(raw_commands, list) else []
-        for command in commands:
-            if not isinstance(command, dict):
-                continue
-            command_text = _command_text(
-                tuple(str(item) for item in command.get("command", []))
-                if isinstance(command.get("command"), list)
-                else tuple()
-            )
-            lines.append(f"- Command: `{command_text}` exit=`{command.get('exit_code', 'n/a')}`")
-    report_path = ctx.bundle_root / FLOW_REPORT_FILENAME
-    return _write_text_atomic(report_path, "\n".join(lines).rstrip() + "\n")
+    return write_flow_report(
+        path=ctx.bundle_root / FLOW_REPORT_FILENAME,
+        scenario_id=ctx.scenario.scenario_id,
+        runtime_id=ctx.runtime_id,
+        run_id=ctx.run_id,
+        work_item=ctx.work_item,
+        state=state,
+        steps=_load_steps(ctx.bundle_root),
+    )
 
 
 def _new_run_id(
@@ -2366,11 +2372,7 @@ def _quality_review_gate(ctx: FlowContext) -> StepClassification | None:
             audit_path=required_path,
         )
     decision = next(
-        (
-            audit.flow_decision
-            for audit in audits
-            if audit.stage_run_id == policy.stage_run_id
-        ),
+        (audit.flow_decision for audit in audits if audit.stage_run_id == policy.stage_run_id),
         None,
     )
     return _record_awaiting_quality_review(
@@ -2828,12 +2830,12 @@ def _write_product_evaluation_bundle_summary(ctx: FlowContext) -> tuple[Path, Pa
         return None
     json_path, markdown_path = _product_evaluation_bundle_summary_paths(ctx)
     payload = _product_evaluation_bundle_summary_payload(ctx)
-    _write_json(json_path, payload)
-    markdown_path.write_text(
-        _render_product_evaluation_bundle_summary_markdown(payload),
-        encoding="utf-8",
+    return write_json_markdown_bundle(
+        json_path=json_path,
+        markdown_path=markdown_path,
+        payload=payload,
+        markdown=_render_product_evaluation_bundle_summary_markdown(payload),
     )
-    return json_path, markdown_path
 
 
 def _quality_review_request_path_from_state(ctx: FlowContext) -> Path | None:

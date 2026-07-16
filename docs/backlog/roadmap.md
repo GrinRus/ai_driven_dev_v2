@@ -9401,7 +9401,7 @@ Exit evidence:
 - permission mode does not silently drop configured behavior;
 - doctor/capability output never promises an unimplemented execution path.
 
-### Epic W34-E5 — executable automation, durable bundles, and release checks (`planned`)
+### Epic W34-E5 — executable automation, durable bundles, and release checks (`done`)
 Linked stories: `US-07`, `US-09`, `US-10`, `US-11`
 
 #### Slice W34-E5-S1 — deterministic CI scenario lane (`done`)
@@ -9511,7 +9511,7 @@ Exit evidence:
 - failure taxonomy, release evidence, and packaged browser behavior have executable
   negative-path gates.
 
-#### Slice W34-E5-S4 — live orchestration change isolation (`in-progress`)
+#### Slice W34-E5-S4 — live orchestration change isolation (`done`)
 Goal: split the measured 8.6k-line live orchestration hotspot behind characterized typed
 boundaries after lifecycle and classification behavior is corrected.
 
@@ -9536,7 +9536,7 @@ Local tasks:
   [`REF-01`]
   - Scope: quality policy only.
   - Verification: existing fixture verdicts remain equivalent.
-- `W34-E5-S4-T4` Make the existing reports module authoritative for atomic report,
+- `W34-E5-S4-T4` (done) Make the existing reports module authoritative for atomic report,
   transcript, and bundle rendering. [`REF-01`, `REF-05`]
   - Scope: live report writers only.
   - Verification: duplicate orchestration helpers are absent and golden JSON/Markdown
