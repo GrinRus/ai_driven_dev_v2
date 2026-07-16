@@ -9404,7 +9404,7 @@ Exit evidence:
 ### Epic W34-E5 — executable automation, durable bundles, and release checks (`planned`)
 Linked stories: `US-07`, `US-09`, `US-10`, `US-11`
 
-#### Slice W34-E5-S1 — deterministic CI scenario lane (`planned`)
+#### Slice W34-E5-S1 — deterministic CI scenario lane (`done`)
 Goal: turn `automation_lane: ci` into an executable local-only contract without adding
 provider-live work to CI/CD.
 
@@ -9423,7 +9423,7 @@ Local tasks:
   - Scope: CLI and harness entry point.
   - Verification: one smoke covers prepare, execute, verify, teardown, and bundle
     persistence while rejecting live/provider-auth manifests.
-- `W34-E5-S1-T3` Execute every discovered CI-lane manifest in CI. [`TEST-01`]
+- `W34-E5-S1-T3` (done) Execute every discovered CI-lane manifest in CI. [`TEST-01`]
   - Scope: CI workflow integration.
   - Verification: discovered manifest IDs equal executed manifest IDs exactly.
 

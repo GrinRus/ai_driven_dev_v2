@@ -7,16 +7,18 @@ slice, and local task.
 
 ## Next
 
-- `W34-E5-S1-T3` — Execute every discovered CI-lane manifest in CI.
+- `W34-E5-S2-T1` — Apply one lifecycle budget and owned process groups to setup, run,
+  verify, and teardown.
 
 ## Soon
+
+- `W34-E5-S2-T2` — Materialize result bundles by copy, hash, and atomic replace instead
+  of hard links.
 
 ## Parking lot
 
 - `W34-E3-S4-T1` — Add characterization fixtures for corrected routes, jobs, approvals,
   and dashboard states.
-- `W34-E5-S2-T1` — Apply one lifecycle budget and owned process groups to setup, run,
-  verify, and teardown.
 - `W34-E5-S3-T1` — Replace divergent eval classifiers with one typed earliest-failure
   classifier.
 - `W34-E5-S4-T1` — Extract durable flow-state and resume coordination from live
@@ -87,6 +89,10 @@ slice, and local task.
 
 ## Current reconciliation
 
+- `2026-07-16` `W34-E5-S1` is complete: the standalone deterministic lane discovers
+  five CI manifests, executes all five through `aidd eval execute`, and verifies exact
+  discovered/executed ID parity. `W34-E5-S2-T1` is promoted to `Next`; `S2-T2` is in
+  `Soon`.
 - `2026-07-16` `W34-E5-S1-T2` is complete: `aidd eval execute` now runs one
   fixture-backed deterministic scenario through preparation, execution, verification,
   teardown, and durable bundle persistence while rejecting live/provider-only inputs.
