@@ -7,12 +7,13 @@ slice, and local task.
 
 ## Next
 
-- `W34-E4-S3-T1` — Propagate Qwen intervention mode and operator-request metadata.
+- `W34-E4-S3-T2` — Align Claude capability reporting with executable registered
+  transports.
 
 ## Soon
 
-- `W34-E4-S3-T2` — Align Claude capability reporting with executable registered
-  transports.
+- `W34-E4-S3-T3` — Preserve supported Codex live arguments and reject unsupported
+  options explicitly.
 
 ## Parking lot
 
@@ -110,3 +111,6 @@ slice, and local task.
 - `2026-07-16` `W34-E4-S2` is complete: runtime capture is disk-backed, keeps bounded
   UTF-8 tails with exact counters, preserves the full combined log, and incrementally
   materializes structured events. `W34-E4-S3-T1`/`T2` are now the bounded next queue.
+- `2026-07-16` `W34-E4-S3-T1` is complete: Qwen now preserves intervention mode and
+  operator-request metadata in native prompts and both execution environments.
+  `W34-E4-S3-T2` is promoted to `Next`; `T3` is the direct successor in `Soon`.

@@ -9382,7 +9382,7 @@ Dependencies:
 
 Local tasks:
 
-- `W34-E4-S3-T1` Propagate Qwen intervention mode and operator-request metadata.
+- `W34-E4-S3-T1` (done) Propagate Qwen intervention mode and operator-request metadata.
   [`COMPAT-04`]
   - Scope: Qwen context, environment, and native prompt assembly.
   - Verification: native and adapter-flags intervention fixtures preserve both fields.
