@@ -65,6 +65,7 @@ class QwenExitClassification(StrEnum):
     CANCELLED = "cancelled"
     DENIED = "denied"
     BLOCKED = "blocked"
+    LAUNCH_FAILURE = "launch_failure"
 
 
 @dataclass(frozen=True, slots=True)
@@ -316,7 +317,7 @@ def build_subprocess_spec(
 
 def _resolve_exit_classification(
     *,
-    exit_code: int,
+    exit_code: int | None,
     stop_reason: QwenExitClassification | None,
 ) -> QwenExitClassification:
     return resolve_exit_classification(
@@ -355,6 +356,7 @@ def run_subprocess_with_streaming(
         ),
         timeout_stop_reason=QwenExitClassification.TIMEOUT,
         cancel_stop_reason=QwenExitClassification.CANCELLED,
+        launch_failure_stop_reason=QwenExitClassification.LAUNCH_FAILURE,
     )
     exit_classification = _resolve_exit_classification(
         exit_code=streamed_result.exit_code,

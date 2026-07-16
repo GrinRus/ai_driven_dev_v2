@@ -329,7 +329,7 @@ def build_subprocess_spec(
 
 def _resolve_exit_classification(
     *,
-    exit_code: int,
+    exit_code: int | None,
     stop_reason: ClaudeCodeExitClassification | None,
 ) -> ClaudeCodeExitClassification:
     return resolve_exit_classification(

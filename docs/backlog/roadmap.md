@@ -9355,7 +9355,7 @@ Local tasks:
   - Scope: Qwen live path.
   - Verification: a blocked attempt retains stdout/stderr, raw log, and blocked exit
     evidence.
-- `W34-E4-S2-T4` Normalize executable-launch failures for every registered runtime.
+- `W34-E4-S2-T4` (done) Normalize executable-launch failures for every registered runtime.
   [`REL-12`]
   - Scope: adapter surface.
   - Verification: a missing-executable conformance matrix produces equivalent durable

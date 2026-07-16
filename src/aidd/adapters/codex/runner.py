@@ -69,6 +69,7 @@ class CodexExitClassification(StrEnum):
     DENIED = "denied"
     BLOCKED = "blocked"
     PROTOCOL_FAILURE = "protocol_failure"
+    LAUNCH_FAILURE = "launch_failure"
 
 
 @dataclass(frozen=True, slots=True)
@@ -248,7 +249,7 @@ def build_subprocess_spec(
 
 def _resolve_exit_classification(
     *,
-    exit_code: int,
+    exit_code: int | None,
     stop_reason: CodexExitClassification | None,
 ) -> CodexExitClassification:
     return resolve_exit_classification(
@@ -275,6 +276,7 @@ def run_subprocess_with_streaming(
         cancel_requested=cancel_requested,
         timeout_stop_reason=CodexExitClassification.TIMEOUT,
         cancel_stop_reason=CodexExitClassification.CANCELLED,
+        launch_failure_stop_reason=CodexExitClassification.LAUNCH_FAILURE,
     )
     exit_classification = _resolve_exit_classification(
         exit_code=streamed_result.exit_code,

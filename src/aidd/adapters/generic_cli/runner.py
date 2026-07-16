@@ -64,6 +64,7 @@ class GenericCliExitClassification(StrEnum):
     NON_ZERO_EXIT = "non_zero_exit"
     TIMEOUT = "timeout"
     CANCELLED = "cancelled"
+    LAUNCH_FAILURE = "launch_failure"
 
 
 @dataclass(frozen=True, slots=True)
@@ -76,7 +77,7 @@ RUNTIME_EXIT_METADATA_FILENAME = _RUNTIME_EXIT_METADATA_FILENAME
 
 def _resolve_exit_classification(
     *,
-    exit_code: int,
+    exit_code: int | None,
     stop_reason: GenericCliExitClassification | None,
 ) -> GenericCliExitClassification:
     return resolve_exit_classification(
@@ -199,6 +200,7 @@ def run_subprocess_with_streaming(
         cancel_requested=cancel_requested,
         timeout_stop_reason=GenericCliExitClassification.TIMEOUT,
         cancel_stop_reason=GenericCliExitClassification.CANCELLED,
+        launch_failure_stop_reason=GenericCliExitClassification.LAUNCH_FAILURE,
     )
     exit_classification = _resolve_exit_classification(
         exit_code=streamed_result.exit_code,

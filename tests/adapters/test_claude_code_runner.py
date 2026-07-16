@@ -344,8 +344,8 @@ def test_run_subprocess_with_streaming_classifies_adapter_failures(tmp_path: Pat
     result = run_subprocess_with_streaming(spec=spec)
 
     assert result.exit_classification is ClaudeCodeExitClassification.ADAPTER_FAILURE
-    assert result.exit_code == -1
-    assert "adapter-failure" in result.runtime_log_text
+    assert result.exit_code is None
+    assert "launch-failure" in result.runtime_log_text
 
 
 def test_run_subprocess_with_streaming_classifies_timeout(tmp_path: Path) -> None:

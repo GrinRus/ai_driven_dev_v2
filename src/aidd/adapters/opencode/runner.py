@@ -70,6 +70,7 @@ class OpenCodeExitClassification(StrEnum):
     NON_ZERO_EXIT = "non_zero_exit"
     TIMEOUT = "timeout"
     CANCELLED = "cancelled"
+    LAUNCH_FAILURE = "launch_failure"
 
 
 @dataclass(frozen=True, slots=True)
@@ -89,7 +90,7 @@ _TERMINAL_DOCUMENT_NAMES = {"stage-result.md", "validator-report.md"}
 
 def _resolve_exit_classification(
     *,
-    exit_code: int,
+    exit_code: int | None,
     stop_reason: OpenCodeExitClassification | None,
     stdout_text: str = "",
     stderr_text: str = "",
@@ -468,6 +469,7 @@ def run_subprocess_with_streaming(
         ),
         timeout_stop_reason=OpenCodeExitClassification.TIMEOUT,
         cancel_stop_reason=OpenCodeExitClassification.CANCELLED,
+        launch_failure_stop_reason=OpenCodeExitClassification.LAUNCH_FAILURE,
     )
     exit_classification = _resolve_exit_classification(
         exit_code=streamed_result.exit_code,

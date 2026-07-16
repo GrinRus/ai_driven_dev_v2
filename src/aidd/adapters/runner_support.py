@@ -82,7 +82,7 @@ def validate_stage_command_context(
 
 def resolve_exit_classification[ExitClassificationT: StrEnum](
     *,
-    exit_code: int,
+    exit_code: int | None,
     stop_reason: ExitClassificationT | None,
     success_value: ExitClassificationT,
     non_zero_value: ExitClassificationT,

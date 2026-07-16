@@ -19,7 +19,7 @@ StreamTarget = Literal["stdout", "stderr"]
 
 @dataclass(frozen=True, slots=True)
 class StreamedSubprocessResult[ExitClassificationT: StrEnum]:
-    exit_code: int
+    exit_code: int | None
     stdout_text: str
     stderr_text: str
     runtime_log_text: str
@@ -45,6 +45,11 @@ def stream_reader(
         queue.put((target, None))
 
 
+def safe_launch_failure_message(exc: OSError) -> str:
+    message = str(exc).replace("\r", " ").replace("\n", " ").strip()
+    return f"[launch-failure] {type(exc).__name__}: {message}\n"
+
+
 def run_streamed_subprocess[ExitClassificationT: StrEnum](
     *,
     spec: RuntimeSubprocessSpec,
@@ -68,9 +73,9 @@ def run_streamed_subprocess[ExitClassificationT: StrEnum](
     except (FileNotFoundError, PermissionError, OSError) as exc:
         if launch_failure_stop_reason is None:
             raise
-        message = f"[adapter-failure] {exc}\n"
+        message = safe_launch_failure_message(exc)
         return StreamedSubprocessResult(
-            exit_code=-1,
+            exit_code=None,
             stdout_text="",
             stderr_text=message,
             runtime_log_text=message,
