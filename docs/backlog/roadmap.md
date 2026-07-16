@@ -9554,10 +9554,10 @@ Exit evidence:
 - extracted report/step modules have production consumers and ordinary provider-free
   flows no longer pay a real-time checkpoint delay.
 
-### Epic W34-E6 — remaining confirmed dead surfaces (`planned`)
+### Epic W34-E6 — remaining confirmed dead surfaces (`in-progress`)
 Linked stories: `US-01`, `US-08`, `US-09`, `US-10`
 
-#### Slice W34-E6-S1 — compatibility-checked removal (`in-progress`)
+#### Slice W34-E6-S1 — compatibility-checked removal (`done`)
 Goal: remove production and dependency surface that has no supported runtime,
 compatibility, registry, or resource entry point.
 
@@ -9591,7 +9591,7 @@ Local tasks:
   - Scope: generated root inventory only.
   - Verification: tracked files contain no cache, bytecode, or removed-file inventory;
     the explicitly historical `MANIFEST.md` remains available.
-- `W34-E6-S1-T5` Remove the dormant MkDocs documentation extra and its lock/config
+- `W34-E6-S1-T5` (done) Remove the dormant MkDocs documentation extra and its lock/config
   surface. [`DEAD-07`]
   - Scope: project optional dependencies, lock, and Dependabot grouping only.
   - Verification: locked sync, wheel build, and documentation consistency pass without

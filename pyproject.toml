@@ -49,10 +49,6 @@ dev = [
   "ruff>=0.7.0",
   "mypy>=1.11.2",
 ]
-docs = [
-  "mkdocs>=1.6.1",
-  "mkdocs-material>=9.5.39",
-]
 
 [project.scripts]
 aidd = "aidd.cli.main:app"

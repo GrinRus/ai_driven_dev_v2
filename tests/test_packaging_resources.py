@@ -5,8 +5,11 @@ import json
 import os
 import subprocess
 import sys
+import tomllib
 import zipfile
 from pathlib import Path
+
+import yaml
 
 from aidd.cli.ui_assets import operator_static_asset_manifest
 from aidd.core.contracts import repo_root_from
@@ -102,6 +105,11 @@ def test_built_wheel_includes_runtime_owned_contracts_and_prompt_packs(tmp_path:
         requirement.startswith(("python-frontmatter", "markdown-it-py", "pydantic"))
         for requirement in normalized_requirements
     )
+    assert "Provides-Extra: docs" not in metadata_text
+    assert not any(
+        requirement.startswith(("mkdocs", "mkdocs-material"))
+        for requirement in normalized_requirements
+    )
 
     for stage in STAGES:
         assert f"aidd/_resources/contracts/stages/{stage}.md" in archive_names
@@ -152,3 +160,20 @@ def test_built_wheel_includes_runtime_owned_contracts_and_prompt_packs(tmp_path:
     )
 
     assert installed_check.returncode == 0, installed_check.stderr or installed_check.stdout
+
+
+def test_docs_extra_is_absent_from_active_package_and_dependency_update_surfaces() -> None:
+    pyproject = tomllib.loads((_repo_root() / "pyproject.toml").read_text(encoding="utf-8"))
+    optional_dependencies = pyproject["project"]["optional-dependencies"]
+    dependabot = yaml.safe_load(
+        (_repo_root() / ".github/dependabot.yml").read_text(encoding="utf-8")
+    )
+    grouped_patterns = {
+        pattern
+        for update in dependabot["updates"]
+        for group in update.get("groups", {}).values()
+        for pattern in group.get("patterns", ())
+    }
+
+    assert "docs" not in optional_dependencies
+    assert not any(pattern.startswith("mkdocs") for pattern in grouped_patterns)
