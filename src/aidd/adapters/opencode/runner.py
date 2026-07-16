@@ -217,13 +217,6 @@ def _split_configured_command(*, configured_command: str, runtime_label: str) ->
     )
 
 
-def _read_text_for_prompt(path: Path) -> str:
-    try:
-        return path.read_text(encoding="utf-8")
-    except FileNotFoundError:
-        return f"[missing file: {path.as_posix()}]\n"
-
-
 def _document_text_is_complete(path: Path) -> bool:
     try:
         text = path.read_text(encoding="utf-8").strip()

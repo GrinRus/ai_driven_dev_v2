@@ -10,7 +10,6 @@ updates:
           - "pytest*"
           - "ruff"
           - "mypy"
-          - "mkdocs*"
 
   - package-ecosystem: "github-actions"
     directory: "/"

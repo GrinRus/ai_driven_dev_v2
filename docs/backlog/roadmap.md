@@ -9554,10 +9554,10 @@ Exit evidence:
 - extracted report/step modules have production consumers and ordinary provider-free
   flows no longer pay a real-time checkpoint delay.
 
-### Epic W34-E6 — remaining confirmed dead surfaces (`planned`)
+### Epic W34-E6 — remaining confirmed dead surfaces (`in-progress`)
 Linked stories: `US-01`, `US-08`, `US-09`, `US-10`
 
-#### Slice W34-E6-S1 — compatibility-checked removal (`planned`)
+#### Slice W34-E6-S1 — compatibility-checked removal (`done`)
 Goal: remove production and dependency surface that has no supported runtime,
 compatibility, registry, or resource entry point.
 
@@ -9569,24 +9569,29 @@ Dependencies:
 
 Local tasks:
 
-- `W34-E6-S1-T1` Remove superseded Claude question/resume code and
+- `W34-E6-S1-T1` (done) Remove superseded Claude question/resume code and
   implementation-only tests after a public-import compatibility review. [`DEAD-03`]
   - Scope: Claude adapter legacy surface.
   - Verification: registered adapter integration tests cover the retained shared path.
-- `W34-E6-S1-T2` Remove the unreferenced core interview capability helper after a
+- `W34-E6-S1-T6` (done) Remove dead adapter-local prompt-read shims after confirming
+  `aidd.adapters.native_prompt` as the canonical owner. [`DEAD-03`]
+  - Scope: Claude, Codex, and OpenCode runner prompt helpers only.
+  - Verification: native prompt fixtures remain equivalent and an architecture test
+    excludes adapter-local prompt readers.
+- `W34-E6-S1-T2` (done) Remove the unreferenced core interview capability helper after a
   public-import check. [`DEAD-04`]
   - Scope: core interview surface.
   - Verification: import inventory and the interview suite pass.
-- `W34-E6-S1-T3` Remove the three unused direct runtime dependencies and regenerate the
+- `W34-E6-S1-T3` (done) Remove the three unused direct runtime dependencies and regenerate the
   lock. [`DEAD-05`]
   - Scope: project dependencies and lock only.
   - Verification: locked sync, wheel build/install, and package/validator tests pass.
-- `W34-E6-S1-T4` Remove the obsolete raw repository inventory `manifest.txt`.
+- `W34-E6-S1-T4` (done) Remove the obsolete raw repository inventory `manifest.txt`.
   [`DEAD-06`]
   - Scope: generated root inventory only.
   - Verification: tracked files contain no cache, bytecode, or removed-file inventory;
     the explicitly historical `MANIFEST.md` remains available.
-- `W34-E6-S1-T5` Remove the dormant MkDocs documentation extra and its lock/config
+- `W34-E6-S1-T5` (done) Remove the dormant MkDocs documentation extra and its lock/config
   surface. [`DEAD-07`]
   - Scope: project optional dependencies, lock, and Dependabot grouping only.
   - Verification: locked sync, wheel build, and documentation consistency pass without

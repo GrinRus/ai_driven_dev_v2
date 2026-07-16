@@ -548,7 +548,3 @@ def persist_answers_document(
     )
     answers_path.write_text(render_answers_markdown(merged), encoding="utf-8")
     return answers_path
-
-
-def interview_supported() -> bool:
-    return True

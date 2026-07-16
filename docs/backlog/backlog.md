@@ -7,20 +7,19 @@ slice, and local task.
 
 ## Next
 
-- `W34-E6-S1-T1` — Remove superseded Claude question/resume code after a public-import
-  compatibility review.
+- `W34-E6-S2-T1` — Close dependency-update proposals that target packages removed by
+  the cleanup slice.
 
 ## Soon
 
-- `W34-E6-S1-T2` — Remove the unreferenced core interview capability helper after a
-  compatibility review.
+- `W34-E6-S2-T2` — Rebase and apply compatible updates for retained Python runtime and
+  development dependencies.
 
 ## Parking lot
 
 - `W34-E3-S4-T1` — Add characterization fixtures for corrected routes, jobs, approvals,
   and dashboard states.
-- `W34-E6-S2-T1` — Close dependency-update proposals that target packages removed by
-  the cleanup slice.
+- `W34-E6-S2-T3` — Rebase and apply compatible pinned GitHub Actions updates.
 - `W34-E7-S3-T1` — Reject ambiguous, unknown, or malformed safety-sensitive
   configuration.
 - `W34-E8-S1-T2` — Normalize inherited local-task statuses and historical disposition
@@ -82,6 +81,33 @@ slice, and local task.
   queue-restoration policy in `docs/backlog/roadmap.md` (`W8-E3-S1`).
 
 ## Current reconciliation
+
+- `2026-07-16` `W34-E6-S1-T5` and slice `W34-E6-S1` are complete: the dormant docs
+  extra, MkDocs lock subtree, and Dependabot pattern are removed, while wheel resources
+  remain independently verified. `W34-E6-S2-T1` is promoted to `Next`, `S2-T2` to
+  `Soon`, and `S2-T3` remains parked.
+
+- `2026-07-16` `W34-E6-S1-T4` is complete: the stale generated `manifest.txt` inventory
+  is removed, tracked cache/bytecode paths are rejected, and historical `MANIFEST.md`
+  remains available. `T5` is promoted to `Next`.
+
+- `2026-07-16` `W34-E6-S1-T3` is complete: `python-frontmatter`, `markdown-it-py`, and
+  `pydantic` are no longer direct runtime requirements; wheel metadata retains PyYAML
+  and excludes the removed direct dependencies. `T4` is promoted to `Next`; `T5` is in
+  `Soon`.
+
+- `2026-07-16` `W34-E6-S1-T2` is complete: the unexported and unreferenced
+  `interview_supported()` helper is removed while parsing, persistence, and stage
+  routing remain unchanged. `T3` is promoted to `Next`; `T4` is in `Soon`.
+
+- `2026-07-16` `W34-E6-S1-T6` is complete: Claude, Codex, and OpenCode no longer define
+  dead prompt-read shims; `aidd.adapters.native_prompt` remains the sole owner.
+  `W34-E6-S1-T2` is promoted to `Next`; `T3` is in `Soon`.
+
+- `2026-07-16` `W34-E6-S1-T1` is complete: the Claude-only question detection,
+  persistence, fallback routing, and resume surface is removed; registered adapters
+  retain the shared `runtime_events` path. New cleanup task `W34-E6-S1-T6` is promoted
+  to `Next`; `T2` remains its direct successor in `Soon`.
 
 - `2026-07-16` `W34-E5-S4-T4`, slice `W34-E5-S4`, and Epic `W34-E5` are complete:
   atomic report writes, transcript serialization, flow-report rendering, and paired

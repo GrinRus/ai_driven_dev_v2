@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import json
-import re
 import shlex
 from collections.abc import Callable, Mapping
 from dataclasses import dataclass
@@ -22,17 +21,6 @@ from aidd.adapters.runner_support import (
 )
 from aidd.adapters.runtime_execution import RuntimeRunResult, RuntimeSubprocessSpec
 from aidd.adapters.subprocess_streaming import run_streamed_subprocess
-from aidd.core.adapter_interview import (
-    AdapterQuestionEvent,
-    QuestionPolicy,
-    load_answers_document,
-    load_questions_document,
-    persist_adapter_question_metadata,
-    persist_answers_document,
-    persist_questions_document,
-    resolved_question_ids,
-    unresolved_blocking_questions,
-)
 from aidd.runtime_catalog import RuntimeExecutionMode, normalize_execution_mode
 from aidd.runtime_logs.events import normalize_structured_events as normalize_runtime_log_events
 
@@ -125,7 +113,6 @@ class ClaudeCodeRunResult(RuntimeRunResult[ClaudeCodeExitClassification]):
 
 
 EVENTS_JSONL_FILENAME = "events.jsonl"
-QUESTION_ID_PATTERN = re.compile(r"^Q[\w-]*$")
 
 
 def _assemble_launch_flags(options: ClaudeCodeLaunchOptions | None) -> tuple[str, ...]:
@@ -198,13 +185,6 @@ def _split_configured_command(*, configured_command: str, runtime_label: str) ->
         configured_command=configured_command,
         runtime_label=runtime_label,
     )
-
-
-def _read_text_for_prompt(path: Path) -> str:
-    try:
-        return path.read_text(encoding="utf-8")
-    except FileNotFoundError:
-        return f"[missing file: {path.as_posix()}]\n"
 
 
 def _build_native_prompt_text(
@@ -419,274 +399,6 @@ def normalize_structured_events(
     run_result: ClaudeCodeRunResult,
 ) -> tuple[dict[str, object], ...]:
     return normalize_runtime_log_events(run_result=run_result)
-
-
-@dataclass(frozen=True, slots=True)
-class ClaudeCodeQuestionDetection:
-    question_events: tuple[AdapterQuestionEvent, ...]
-    pause_detected: bool
-
-
-@dataclass(frozen=True, slots=True)
-class ClaudeCodeQuestionRouting:
-    question_events: tuple[AdapterQuestionEvent, ...]
-    pause_detected: bool
-    used_file_fallback: bool
-
-
-@dataclass(frozen=True, slots=True)
-class ClaudeCodeQuestionPersistence:
-    questions_path: Path
-    stage_metadata_path: Path
-    unresolved_blocking_question_ids: tuple[str, ...]
-    metadata_updated: bool
-
-
-@dataclass(frozen=True, slots=True)
-class ClaudeCodeResumeDecision:
-    can_resume: bool
-    resume_command: tuple[str, ...] | None
-    unresolved_blocking_question_ids: tuple[str, ...]
-
-
-def _question_policy_from_runtime_event(event: Mapping[str, object]) -> QuestionPolicy:
-    policy_value = event.get("policy")
-    if isinstance(policy_value, str):
-        normalized = policy_value.strip().lower()
-        if normalized in {"non-blocking", "non_blocking", "nonblocking"}:
-            return QuestionPolicy.NON_BLOCKING
-        if normalized == "blocking":
-            return QuestionPolicy.BLOCKING
-
-    blocking_value = event.get("blocking")
-    if isinstance(blocking_value, bool):
-        return QuestionPolicy.BLOCKING if blocking_value else QuestionPolicy.NON_BLOCKING
-
-    return QuestionPolicy.BLOCKING
-
-
-def _question_id_from_runtime_event(event: Mapping[str, object]) -> str | None:
-    for field_name in ("question_id", "questionId", "id"):
-        raw_value = event.get(field_name)
-        if not isinstance(raw_value, str):
-            continue
-        candidate = raw_value.strip()
-        if QUESTION_ID_PATTERN.match(candidate):
-            return candidate
-    return None
-
-
-def _question_text_from_runtime_event(event: Mapping[str, object]) -> str | None:
-    for field_name in ("question", "text", "prompt", "message"):
-        raw_value = event.get(field_name)
-        if isinstance(raw_value, str) and raw_value.strip():
-            return raw_value.strip()
-    return None
-
-
-def detect_question_or_pause_events(
-    *,
-    normalized_events: tuple[dict[str, object], ...],
-) -> ClaudeCodeQuestionDetection:
-    question_events: list[AdapterQuestionEvent] = []
-    pause_detected = False
-
-    for event in normalized_events:
-        event_kind = str(event.get("event") or event.get("type") or "").strip().lower()
-        pause_flag = bool(event.get("paused", False))
-        is_question_kind = event_kind in {
-            "question",
-            "question_raised",
-            "question-raised",
-            "ask_user",
-            "ask-user",
-        }
-        is_pause_kind = event_kind in {
-            "pause",
-            "paused",
-            "awaiting_input",
-            "awaiting-input",
-            "input_required",
-            "input-required",
-        }
-        if not (is_question_kind or is_pause_kind or pause_flag):
-            continue
-
-        pause_detected = pause_detected or is_pause_kind or pause_flag
-        question_text = _question_text_from_runtime_event(event)
-        if question_text is None and pause_detected:
-            question_text = "Runtime paused and requires operator input."
-        if question_text is None:
-            continue
-
-        question_events.append(
-            AdapterQuestionEvent(
-                text=question_text,
-                policy=_question_policy_from_runtime_event(event),
-                question_id=_question_id_from_runtime_event(event),
-            )
-        )
-
-    return ClaudeCodeQuestionDetection(
-        question_events=tuple(question_events),
-        pause_detected=pause_detected,
-    )
-
-
-def route_questions_with_file_fallback(
-    *,
-    workspace_root: Path,
-    work_item: str,
-    stage: str,
-    runtime_detection: ClaudeCodeQuestionDetection,
-) -> ClaudeCodeQuestionRouting:
-    if runtime_detection.question_events or runtime_detection.pause_detected:
-        return ClaudeCodeQuestionRouting(
-            question_events=runtime_detection.question_events,
-            pause_detected=runtime_detection.pause_detected,
-            used_file_fallback=False,
-        )
-
-    questions = load_questions_document(
-        workspace_root=workspace_root,
-        work_item=work_item,
-        stage=stage,
-    )
-    answers = load_answers_document(
-        workspace_root=workspace_root,
-        work_item=work_item,
-        stage=stage,
-    )
-    unresolved = unresolved_blocking_questions(
-        questions=questions,
-        resolved_question_ids=resolved_question_ids(answers=answers),
-    )
-    fallback_events = tuple(
-        AdapterQuestionEvent(
-            question_id=question.question_id,
-            text=question.text,
-            policy=question.policy,
-        )
-        for question in unresolved
-    )
-    return ClaudeCodeQuestionRouting(
-        question_events=fallback_events,
-        pause_detected=bool(fallback_events),
-        used_file_fallback=bool(fallback_events),
-    )
-
-
-def persist_surfaced_questions(
-    *,
-    workspace_root: Path,
-    work_item: str,
-    run_id: str,
-    stage: str,
-    adapter_question_events: tuple[AdapterQuestionEvent, ...],
-    stage_output_questions_markdown: str | None = None,
-) -> ClaudeCodeQuestionPersistence:
-    questions_path = persist_questions_document(
-        workspace_root=workspace_root,
-        work_item=work_item,
-        stage=stage,
-        stage_output_questions_markdown=stage_output_questions_markdown,
-        adapter_question_events=adapter_question_events,
-    )
-    stage_root = workspace_root / "workitems" / work_item / "stages" / stage
-    answers_path = stage_root / "answers.md"
-    misplaced_answers_path = stage_root / "output" / "answers.md"
-    if not answers_path.exists() and not misplaced_answers_path.exists():
-        persist_answers_document(
-            workspace_root=workspace_root,
-            work_item=work_item,
-            stage=stage,
-        )
-    questions = load_questions_document(
-        workspace_root=workspace_root,
-        work_item=work_item,
-        stage=stage,
-    )
-    answers = load_answers_document(
-        workspace_root=workspace_root,
-        work_item=work_item,
-        stage=stage,
-    )
-    unresolved_ids = tuple(
-        question.question_id
-        for question in unresolved_blocking_questions(
-            questions=questions,
-            resolved_question_ids=resolved_question_ids(answers=answers),
-        )
-    )
-
-    metadata_persistence = persist_adapter_question_metadata(
-        workspace_root=workspace_root,
-        work_item=work_item,
-        run_id=run_id,
-        stage=stage,
-        metadata_key="claude_question_artifact",
-        questions_path=questions_path,
-        unresolved_blocking_question_ids=unresolved_ids,
-    )
-
-    return ClaudeCodeQuestionPersistence(
-        questions_path=questions_path,
-        stage_metadata_path=metadata_persistence.stage_metadata_path,
-        unresolved_blocking_question_ids=unresolved_ids,
-        metadata_updated=metadata_persistence.metadata_updated,
-    )
-
-
-def prepare_resume_after_answers(
-    *,
-    configured_command: str,
-    workspace_root: Path,
-    work_item: str,
-    stage: str,
-    run_id: str,
-) -> ClaudeCodeResumeDecision:
-    questions = load_questions_document(
-        workspace_root=workspace_root,
-        work_item=work_item,
-        stage=stage,
-    )
-    answers = load_answers_document(
-        workspace_root=workspace_root,
-        work_item=work_item,
-        stage=stage,
-    )
-    unresolved = unresolved_blocking_questions(
-        questions=questions,
-        resolved_question_ids=resolved_question_ids(answers=answers),
-    )
-    unresolved_ids = tuple(question.question_id for question in unresolved)
-    if unresolved_ids:
-        return ClaudeCodeResumeDecision(
-            can_resume=False,
-            resume_command=None,
-            unresolved_blocking_question_ids=unresolved_ids,
-        )
-
-    base_tokens = split_configured_command(
-        configured_command=configured_command,
-        runtime_label="claude-code",
-    )
-
-    resume_command = (
-        *base_tokens,
-        "resume",
-        "--run-id",
-        run_id,
-        "--stage",
-        stage,
-        "--work-item",
-        work_item,
-    )
-    return ClaudeCodeResumeDecision(
-        can_resume=True,
-        resume_command=resume_command,
-        unresolved_blocking_question_ids=(),
-    )
 
 
 def persist_normalized_events_jsonl(
