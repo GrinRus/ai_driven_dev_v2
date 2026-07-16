@@ -9554,7 +9554,7 @@ Exit evidence:
 - extracted report/step modules have production consumers and ordinary provider-free
   flows no longer pay a real-time checkpoint delay.
 
-### Epic W34-E6 — remaining confirmed dead surfaces (`in-progress`)
+### Epic W34-E6 — remaining confirmed dead surfaces (`done`)
 Linked stories: `US-01`, `US-08`, `US-09`, `US-10`
 
 #### Slice W34-E6-S1 — compatibility-checked removal (`done`)
@@ -9602,7 +9602,7 @@ Exit evidence:
 - every removed symbol/resource/dependency has a recorded compatibility exclusion and
   retained integration coverage.
 
-#### Slice W34-E6-S2 — dependency maintenance queue reconciliation (`planned`)
+#### Slice W34-E6-S2 — dependency maintenance queue reconciliation (`done`)
 Goal: retire obsolete update proposals and refresh only dependency surfaces still owned
 by the repository after dead packages are removed.
 
@@ -9622,7 +9622,7 @@ Local tasks:
   development dependencies. [`MAINT-01`]
   - Scope: retained Python dependency declarations and lock only.
   - Verification: locked sync, lint, strict typing, full tests, and wheel smoke pass.
-- `W34-E6-S2-T3` Rebase and apply compatible pinned GitHub Actions updates.
+- `W34-E6-S2-T3` (done) Rebase and apply compatible pinned GitHub Actions updates.
   [`MAINT-01`]
   - Scope: maintained workflow action pins only.
   - Verification: workflow validation and all required GitHub checks pass.
