@@ -1,3 +1,108 @@
+const GUIDED_SETUP_STEPS = ["project", "work-item", "runtime", "review-launch"];
+
+function initialGuidedSetupState() {
+  return Object.freeze({
+    step: "project",
+    projectStatus: "unvalidated",
+    workItemBranch: null,
+    workItem: "",
+    runtimeId: "",
+    launchReadiness: "unchecked",
+    error: ""
+  });
+}
+
+function guidedSetupCanContinue(guided) {
+  if (guided.step === "project") return guided.projectStatus === "valid";
+  if (guided.step === "work-item") {
+    return ["create", "resume"].includes(guided.workItemBranch) && Boolean(guided.workItem);
+  }
+  if (guided.step === "runtime") return Boolean(guided.runtimeId);
+  return false;
+}
+
+function reduceGuidedSetupState(current, event, payload = {}) {
+  const guided = {...initialGuidedSetupState(), ...(current || {})};
+  if (event === "reset") return initialGuidedSetupState();
+  if (event === "project-valid") {
+    return Object.freeze({
+      ...initialGuidedSetupState(),
+      step: "work-item",
+      projectStatus: "valid"
+    });
+  }
+  if (event === "project-invalid") {
+    return Object.freeze({
+      ...initialGuidedSetupState(),
+      projectStatus: "invalid",
+      error: String(payload.error || "Project validation failed.")
+    });
+  }
+  if (event === "work-item-selected") {
+    const branch = String(payload.branch || "");
+    const workItem = String(payload.workItem || "").trim();
+    if (guided.projectStatus !== "valid" || !["create", "resume"].includes(branch) || !workItem) {
+      return Object.freeze({...guided, error: "Select a valid create or resume work item."});
+    }
+    return Object.freeze({
+      ...guided,
+      step: "runtime",
+      workItemBranch: branch,
+      workItem,
+      runtimeId: "",
+      launchReadiness: "unchecked",
+      error: ""
+    });
+  }
+  if (event === "runtime-selected") {
+    const runtimeId = String(payload.runtimeId || "").trim();
+    if (guided.step !== "runtime" || !runtimeId) {
+      return Object.freeze({...guided, error: "Select a runtime before review."});
+    }
+    return Object.freeze({
+      ...guided,
+      step: "review-launch",
+      runtimeId,
+      launchReadiness: "unchecked",
+      error: ""
+    });
+  }
+  if (event === "launch-readiness") {
+    if (guided.step !== "review-launch") return Object.freeze(guided);
+    const ready = payload.ready === true;
+    return Object.freeze({
+      ...guided,
+      launchReadiness: ready ? "ready" : "blocked",
+      error: ready ? "" : String(payload.error || "Launch readiness is blocked.")
+    });
+  }
+  if (event === "back") {
+    const index = GUIDED_SETUP_STEPS.indexOf(guided.step);
+    if (index <= 0) return Object.freeze(guided);
+    const step = GUIDED_SETUP_STEPS[index - 1];
+    return Object.freeze({
+      ...guided,
+      step,
+      runtimeId: step === "runtime" ? guided.runtimeId : "",
+      launchReadiness: "unchecked",
+      error: ""
+    });
+  }
+  if (event === "continue") {
+    if (!guidedSetupCanContinue(guided)) {
+      return Object.freeze({...guided, error: "Complete the current setup step before continuing."});
+    }
+    const index = GUIDED_SETUP_STEPS.indexOf(guided.step);
+    return Object.freeze({...guided, step: GUIDED_SETUP_STEPS[index + 1], error: ""});
+  }
+  throw new Error(`Unknown Guided Setup transition: ${event}`);
+}
+
+function transitionGuidedSetup(event, payload = {}) {
+  state.onboarding.guided = reduceGuidedSetupState(state.onboarding.guided, event, payload);
+  return state.onboarding.guided;
+}
+
 function onboardingProject() {
   return state.onboarding.project || null;
 }
@@ -356,10 +461,12 @@ async function inspectOnboardingProject() {
     state.onboarding.recentProjects = payload.recent_projects || state.onboarding.recentProjects;
     state.readiness = payload.readiness || {runtimes: []};
     state.readinessError = "";
+    transitionGuidedSetup("project-valid");
   } catch (error) {
     state.onboarding.inspectError = error.message || "project validation failed";
     state.readiness = {runtimes: []};
     state.readinessError = "";
+    transitionGuidedSetup("project-invalid", {error: state.onboarding.inspectError});
   } finally {
     state.onboarding.inspecting = false;
     state.readinessLoading = false;

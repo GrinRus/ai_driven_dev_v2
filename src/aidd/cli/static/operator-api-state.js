@@ -177,7 +177,16 @@ const state = {
     projectSetError: "",
     projectSetLoading: false,
     createError: "",
-    creating: false
+    creating: false,
+    guided: {
+      step: "project",
+      projectStatus: "unvalidated",
+      workItemBranch: null,
+      workItem: "",
+      runtimeId: "",
+      launchReadiness: "unchecked",
+      error: ""
+    }
   },
   nextFlowWizard: {
     active: false,

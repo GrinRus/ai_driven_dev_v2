@@ -7,13 +7,13 @@ slice, and local task.
 
 ## Next
 
-- `W36-E4-S1-T1` — Add the Project -> Work item -> Runtime -> Review/Launch onboarding
-  state machine.
+- `W36-E4-S1-T2` — Render Create and Resume as sibling work-item branches and allow
+  inspection before runtime selection.
 
 ## Soon
 
-- `W36-E4-S1-T2` — Render Create and Resume as sibling work-item branches and allow
-  inspection before runtime selection.
+- `W36-E4-S1-T3` — Move project-set and configuration details behind an Advanced
+  disclosure.
 
 ## Parking lot
 
@@ -52,6 +52,11 @@ slice, and local task.
   queue-restoration policy in `docs/backlog/roadmap.md` (`W8-E3-S1`).
 
 ## Current reconciliation
+
+- `2026-07-17` `W36-E4-S1-T1` is complete: Guided Setup now has a pure four-step
+  Project -> Work item -> Runtime -> Review/Launch reducer with deterministic create,
+  resume, Back, Continue, validation, and launch-readiness transitions.
+  `W36-E4-S1-T2` is promoted to `Next` and `W36-E4-S1-T3` to `Soon`.
 
 - `2026-07-17` `W36-E4-S2-T2` is complete: readiness now includes the latest canonical
   attempt outcome per runtime with artifact-index timestamp and evidence path; legacy or

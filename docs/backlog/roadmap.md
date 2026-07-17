@@ -10704,17 +10704,17 @@ Dependencies:
 
 Local tasks:
 
-- `W36-E4-S1-T1` (next) Add an explicit Project -> Work item -> Runtime -> Review/Launch
+- `W36-E4-S1-T1` (done) Add an explicit Project -> Work item -> Runtime -> Review/Launch
   onboarding state machine with deterministic Back and Continue transitions.
   - Scope: `operator-onboarding.js` state controller.
   - Verification: a transition table covers validation success/failure, create, resume,
     runtime selection, backward navigation, and launch readiness.
-- `W36-E4-S1-T2` (soon) Render Create and Resume as sibling work-item branches and allow
+- `W36-E4-S1-T2` (next) Render Create and Resume as sibling work-item branches and allow
   inspection before runtime selection.
   - Scope: onboarding work-item step.
   - Verification: resume opens existing context without a runtime or launch request,
     while mutation actions remain runtime-gated.
-- `W36-E4-S1-T3` (planned) Move project-set and configuration details behind an Advanced
+- `W36-E4-S1-T3` (soon) Move project-set and configuration details behind an Advanced
   disclosure.
   - Scope: onboarding project/work-item layout.
   - Verification: create or resume remains inside the first setup viewport at `390x844`
