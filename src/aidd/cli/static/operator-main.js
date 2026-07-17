@@ -119,6 +119,7 @@ document.addEventListener("click", async (event) => {
       state.activeStageExplicit = true;
       state.activeArtifactKey = "";
       if (state.activeTab === "work") state.workDetail = "overview";
+      syncLocationState({historyMode: "push"});
       await fetchDashboard();
       await fetchProjectHome(state.dashboard?.work_item || "");
       await renderAll();
@@ -126,7 +127,7 @@ document.addEventListener("click", async (event) => {
     }
     const stageRecovery = event.target.closest("[data-stage-recovery]");
     if (stageRecovery) {
-      activateTab(stageRecovery.dataset.stageRecovery || "recovery");
+      activateTab(stageRecovery.dataset.stageRecovery || "recovery", {historyMode: "push"});
       renderProjectHomeRail();
       await renderCockpit();
       return;
@@ -143,14 +144,14 @@ document.addEventListener("click", async (event) => {
     }
     const tab = event.target.closest("[data-tab]")?.dataset.tab;
     if (tab) {
-      activateTab(tab);
+      activateTab(tab, {historyMode: "push"});
       renderProjectHomeRail();
       await renderCockpit();
       return;
     }
     const tabShortcut = event.target.closest("[data-tab-shortcut]")?.dataset.tabShortcut;
     if (tabShortcut) {
-      activateTab(tabShortcut);
+      activateTab(tabShortcut, {historyMode: "push"});
       renderProjectHomeRail();
       await renderCockpit();
       return;
@@ -593,4 +594,9 @@ document.addEventListener("submit", async (event) => {
 });
 
 initializeStateFromLocation();
+window.addEventListener("popstate", () => {
+  window.aiddRouteRestore = restoreOperatorRouteFromLocation().catch((error) => {
+    toast(error.message);
+  });
+});
 refresh();

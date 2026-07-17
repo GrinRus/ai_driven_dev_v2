@@ -7,13 +7,13 @@ slice, and local task.
 
 ## Next
 
-- `W36-E6-S1-T2` — Wire push, replace, popstate, and reload restoration through the URL
-  codec across Inbox, Studio, History, and contextual drawers.
+- `W36-E6-S1-T3` — Define shared route intents for Inbox work-item, historical-run,
+  parent, and child-lineage bindings without owning their vertical renderers.
 
 ## Soon
 
-- `W36-E6-S1-T3` — Define shared route intents for Inbox work-item, historical-run,
-  parent, and child-lineage bindings without owning their vertical renderers.
+- `W36-E6-S2-T1` — Define the scoped browser-session draft key, retention, and cleanup
+  contract.
 
 
 
@@ -42,8 +42,6 @@ slice, and local task.
   handoff read model.
 - `W36-E5-S10-T1` — Switch the default renderer to Studio only after all per-surface
   parity entries close.
-- `W36-E6-S2-T1` — Define the scoped browser-session draft key, retention, and cleanup
-  contract.
 - `W36-E6-S3-T1` — Replace terminal-on-error polling with cursor-preserving retry and
   bounded backoff.
 - `W36-E6-S4-T1` — Add a keyed client mutation guard with pending lock, duplicate
@@ -65,6 +63,12 @@ slice, and local task.
   queue-restoration policy in `docs/backlog/roadmap.md` (`W8-E3-S1`).
 
 ## Current reconciliation
+
+- `2026-07-17` `W36-E6-S1-T2` is complete: explicit transitions push canonical route
+  entries, derived renders replace them, and `popstate` plus reload restore the selected
+  Studio view, stage, run, and artifact through one read-only path. The real Chromium
+  Back/Forward/reload sequence is green. `W36-E6-S1-T3` is promoted to `Next` and
+  `W36-E6-S2-T1` to `Soon`.
 
 - `2026-07-17` `W36-E6-S1-T1` is complete: a pure packaged codec round-trips Inbox,
   Studio, and History context in stable query order, dual-reads the bounded legacy

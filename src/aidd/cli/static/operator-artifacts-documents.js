@@ -832,7 +832,7 @@ async function inspectArtifactReference({stage, key, path, kind}) {
   state.selectedEvidenceEdgeId = "";
   setOperatorMode(kind === "log" ? "logs" : "artifacts");
   await fetchDashboard();
-  activateTab(kind === "log" ? "logs" : "artifacts");
+  activateTab(kind === "log" ? "logs" : "artifacts", {historyMode: "push"});
   await renderAll();
   if (kind !== "log") focusArtifactWorkbench();
 }

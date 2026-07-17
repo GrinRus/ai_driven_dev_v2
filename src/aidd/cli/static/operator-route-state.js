@@ -1,4 +1,5 @@
 const OPERATOR_ROUTE_MODES = new Set(["inbox", "studio", "history"]);
+const OPERATOR_ROUTE_VIEWS = new Set(["overview", "recovery", "artifacts", "logs"]);
 const OPERATOR_ROUTE_STAGES = new Set([
   "idea",
   "research",
@@ -44,6 +45,16 @@ function inferredLegacyMode(params) {
   return "inbox";
 }
 
+function inferredLegacyView(params) {
+  const tab = String(params.get("tab") || "").trim();
+  if (["logs", "artifacts"].includes(tab)) return tab;
+  if (tab === "evidence") return "artifacts";
+  if (["questions", "validation", "approvals", "request", "recovery"].includes(tab)) {
+    return "recovery";
+  }
+  return "overview";
+}
+
 function decodeOperatorRoute(search, {knownWorkItems = null, knownRuns = null} = {}) {
   const params = new URLSearchParams(String(search || "").replace(/^\?/, ""));
   const warnings = [];
@@ -53,6 +64,12 @@ function decodeOperatorRoute(search, {knownWorkItems = null, knownRuns = null} =
   if (!OPERATOR_ROUTE_MODES.has(mode)) {
     warnings.push(routeWarning("invalid-value", "mode", mode));
     mode = "inbox";
+  }
+  const requestedView = String(params.get("view") || "").trim();
+  let view = requestedView || inferredLegacyView(params);
+  if (!OPERATOR_ROUTE_VIEWS.has(view)) {
+    warnings.push(routeWarning("invalid-value", "view", view));
+    view = "overview";
   }
   let workItem = routeIdentifier(params, "work_item", warnings);
   let runId = routeIdentifier(params, "run_id", warnings);
@@ -87,9 +104,11 @@ function decodeOperatorRoute(search, {knownWorkItems = null, knownRuns = null} =
     stage = "";
     artifact = "";
     attempt = null;
+    view = "overview";
   }
   const value = Object.freeze({
     mode,
+    view,
     workItem,
     runId,
     stage,
@@ -104,6 +123,8 @@ function encodeOperatorRoute(route) {
   const params = new URLSearchParams();
   const mode = OPERATOR_ROUTE_MODES.has(route?.mode) ? route.mode : "inbox";
   params.set("mode", mode);
+  const view = OPERATOR_ROUTE_VIEWS.has(route?.view) ? route.view : "overview";
+  if (mode !== "inbox" && view !== "overview") params.set("view", view);
   const fields = [
     ["work_item", OPERATOR_ROUTE_IDENTIFIER.test(route?.workItem || "") ? route.workItem : ""],
     ["run_id", OPERATOR_ROUTE_IDENTIFIER.test(route?.runId || "") ? route.runId : ""],

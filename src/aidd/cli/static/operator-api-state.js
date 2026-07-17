@@ -91,6 +91,9 @@ const state = {
   selectedRuntime: "",
   bottomDockUserCollapsed: null,
   activeRunId: "",
+  activeRouteWorkItem: "",
+  activeAttempt: null,
+  activeTaskAttempt: null,
   activeJobId: "",
   activeJobCursor: 0,
   activeJobLogChunks: [],
@@ -573,7 +576,7 @@ function setRunButtonState() {
   renderNextActionPanel();
 }
 
-function activateTab(tab, {preserveDetail = false} = {}) {
+function activateTab(tab, {preserveDetail = false, historyMode = "replace"} = {}) {
   const requested = String(tab || "work");
   if (!(preserveDetail && OPERATOR_MODES.includes(requested) && state.activeTab === requested)) {
     setOperatorMode(requested);
@@ -587,38 +590,76 @@ function activateTab(tab, {preserveDetail = false} = {}) {
   const content = document.getElementById("cockpitContent");
   if (content) content.setAttribute("aria-labelledby", `tab-${state.activeTab}`);
   applyOperatorModeBodyClass();
-  syncLocationState();
+  syncLocationState({historyMode});
+}
+
+function operatorRouteView() {
+  if (state.activeTab === "evidence") return state.evidenceDetail === "logs" ? "logs" : "artifacts";
+  if (state.activeTab === "recovery") return "recovery";
+  return "overview";
+}
+
+function operatorRouteSnapshot() {
+  return {
+    mode: state.activeTab === "history"
+      ? "history"
+      : state.activeRunId || state.activeRouteWorkItem || state.dashboard?.work_item
+        ? "studio"
+        : "inbox",
+    view: operatorRouteView(),
+    workItem: state.dashboard?.work_item || state.activeRouteWorkItem || "",
+    runId: state.activeRunId,
+    stage: state.activeStage,
+    attempt: state.activeAttempt,
+    taskAttempt: state.activeTaskAttempt,
+    artifact: state.activeArtifactKey
+  };
+}
+
+function applyOperatorRoute(route) {
+  state.activeRouteWorkItem = route.workItem || "";
+  state.activeRunId = route.runId || "";
+  state.activeAttempt = route.attempt;
+  state.activeTaskAttempt = route.taskAttempt;
+  state.activeArtifactKey = route.artifact || "";
+  if (route.stage && STAGES.includes(route.stage)) {
+    state.activeStage = route.stage;
+    state.activeStageExplicit = true;
+  }
+  if (route.mode === "history") {
+    setOperatorMode("history");
+  } else if (route.mode === "studio" && ["logs", "artifacts"].includes(route.view)) {
+    setOperatorMode(route.view);
+  } else if (route.mode === "studio" && route.view === "recovery") {
+    setOperatorMode("recovery");
+  } else {
+    setOperatorMode("work");
+  }
 }
 
 function initializeStateFromLocation() {
-  const params = new URLSearchParams(window.location.search);
-  const requestedStage = params.get("stage");
-  if (requestedStage && STAGES.includes(requestedStage)) {
-    state.activeStage = requestedStage;
-    state.activeStageExplicit = true;
-  }
-  const requestedRunId = String(params.get("run_id") || "").trim();
-  if (requestedRunId) {
-    state.activeRunId = requestedRunId;
-  }
-  const requestedTab = params.get("tab");
-  if (requestedTab && VALID_TABS.includes(requestedTab)) {
-    setOperatorMode(requestedTab);
+  applyOperatorRoute(decodeOperatorRoute(window.location.search).value);
+}
+
+let restoringOperatorRoute = false;
+
+function syncLocationState({historyMode = "replace"} = {}) {
+  if (restoringOperatorRoute) return;
+  const next = `${window.location.pathname}${encodeOperatorRoute(operatorRouteSnapshot())}`;
+  const current = `${window.location.pathname}${window.location.search}`;
+  if (next !== current) {
+    const method = historyMode === "push" ? "pushState" : "replaceState";
+    window.history[method]({aiddOperatorRoute: true}, "", next);
   }
 }
 
-function syncLocationState() {
-  const params = new URLSearchParams(window.location.search);
-  params.set("stage", state.activeStage);
-  if (state.activeRunId) params.set("run_id", state.activeRunId);
-  else params.delete("run_id");
-  if (state.activeTab && state.activeTab !== "work") params.set("tab", state.activeTab);
-  else params.delete("tab");
-  const query = params.toString();
-  const next = `${window.location.pathname}${query ? `?${query}` : ""}`;
-  const current = `${window.location.pathname}${window.location.search}`;
-  if (next !== current) {
-    window.history.replaceState(null, "", next);
+async function restoreOperatorRouteFromLocation() {
+  restoringOperatorRoute = true;
+  try {
+    applyOperatorRoute(decodeOperatorRoute(window.location.search).value);
+    await refresh();
+  } finally {
+    restoringOperatorRoute = false;
   }
 }
 

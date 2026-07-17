@@ -254,7 +254,8 @@ The local UI uses logical route intents rather than treating every recovery pane
 destination. The only route intents in this contract are `setup`, `inbox`, `studio`, and
 `history`. Recovery is a Studio context. The canonical query codec uses `mode=inbox`,
 `mode=studio`, or `mode=history`, followed in stable order by the optional keys
-`work_item`, `run_id`, `stage`, `attempt`, `task_attempt`, and `artifact`. Guided Setup is
+`view`, `work_item`, `run_id`, `stage`, `attempt`, `task_attempt`, and `artifact`.
+The Studio `view` is one of `overview`, `recovery`, `artifacts`, or `logs`. Guided Setup is
 server-owned state reached before a valid project/work-item context; it does not invent a
 fourth persisted browser mode. `artifact` stores a bounded artifact/document key, never an
 arbitrary path.

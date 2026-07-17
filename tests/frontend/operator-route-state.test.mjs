@@ -25,6 +25,7 @@ test("canonical route state round-trips every supported context key", async () =
   const context = await routeContext();
   const route = {
     mode: "studio",
+    view: "artifacts",
     workItem: "WI-001",
     runId: "run-20260717",
     stage: "implement",
@@ -40,6 +41,7 @@ test("missing and legacy routes resolve deterministically", async () => {
   const context = await routeContext();
   assert.deepEqual(decode(context, "").value, {
     mode: "inbox",
+    view: "overview",
     workItem: "",
     runId: "",
     stage: "",
@@ -50,6 +52,7 @@ test("missing and legacy routes resolve deterministically", async () => {
   const legacy = decode(context, "?tab=evidence&stage=qa&run_id=run-1&key=qa-report.md");
   assert.equal(legacy.source, "legacy");
   assert.equal(legacy.value.mode, "studio");
+  assert.equal(legacy.value.view, "artifacts");
   assert.equal(legacy.value.artifact, "qa-report.md");
 });
 
