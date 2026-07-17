@@ -7,13 +7,13 @@ slice, and local task.
 
 ## Next
 
-- `W34-E7-S2-T3` — Adopt the shared identifier boundary for scenario, eval-run, and
-  result-bundle paths.
+- `W34-E8-S1-T2` — Normalize inherited local-task statuses and historical disposition
+  semantics.
 
 ## Soon
 
-- `W34-E8-S1-T2` — Normalize inherited local-task statuses and historical disposition
-  semantics.
+- `W34-E8-S1-T3` — Replace wave-specific backlog assertions with generic
+  roadmap/backlog integrity checks.
 
 ## Parking lot
 
@@ -74,6 +74,11 @@ slice, and local task.
   queue-restoration policy in `docs/backlog/roadmap.md` (`W8-E3-S1`).
 
 ## Current reconciliation
+
+- `2026-07-17` `W34-E7-S2-T3`, slice `W34-E7-S2`, and Epic `W34-E7` are complete:
+  scenario, runtime, eval-run, and result-bundle identifiers now share the canonical
+  containment boundary without changing valid bundle layouts. `W34-E8-S1-T2` is
+  promoted to `Next` and `W34-E8-S1-T3` to `Soon`.
 
 - `2026-07-17` `W34-E7-S3-T1` and slice `W34-E7-S3` are complete: configuration now
   distinguishes absent defaults from explicit blanks and rejects unknown or malformed

@@ -9632,7 +9632,7 @@ Exit evidence:
 - the automated dependency queue contains only maintained surfaces and its compatible
   updates have current verification evidence.
 
-### Epic W34-E7 — defensive local trust boundaries (`planned`)
+### Epic W34-E7 — defensive local trust boundaries (`done`)
 Linked stories: `US-01`, `US-03`, `US-07`, `US-08`, `US-10`, `US-12`
 
 #### Slice W34-E7-S1 — typed runtime operator policy (`done`)
@@ -9663,7 +9663,7 @@ Exit evidence:
 - broadly capable or unknown operations cannot receive permissive approval from lexical
   inference alone.
 
-#### Slice W34-E7-S2 — shared identifier containment (`planned`)
+#### Slice W34-E7-S2 — shared identifier containment (`done`)
 Goal: make every user-controlled identifier resolve to one contained component before
 the first write.
 
@@ -9684,7 +9684,7 @@ Local tasks:
   - Scope: core workspace/work-item persisted paths only.
   - Verification: every workspace/work-item write-path family passes the shared
     containment matrix.
-- `W34-E7-S2-T3` Adopt the shared boundary for scenario, eval-run, and result-bundle
+- `W34-E7-S2-T3` (done) Adopt the shared boundary for scenario, eval-run, and result-bundle
   paths. [`SEC-03`]
   - Scope: harness and eval persisted paths.
   - Verification: every harness/bundle write-path family passes the same containment
@@ -9725,7 +9725,7 @@ Exit evidence:
 
 - malformed safety configuration cannot silently fall back to permissive behavior.
 
-#### Slice W34-E7-S4 — canonical allowed-write-scope boundary (`planned`)
+#### Slice W34-E7-S4 — canonical allowed-write-scope boundary (`done`)
 Goal: make validation, task execution, and Implement Review resolve one authoritative
 scope document with identical path-prefix semantics.
 

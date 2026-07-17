@@ -7,6 +7,7 @@ from typing import Any
 
 import yaml  # type: ignore[import-untyped]
 
+from aidd.core.identifiers import SafeIdentifier
 from aidd.core.stages import STAGES
 from aidd.runtime_catalog import runtime_ids
 
@@ -689,6 +690,10 @@ def load_scenario(
         raise ScenarioManifestError(f"Scenario manifest must be a mapping: {path.as_posix()}")
 
     scenario_id = _require_non_empty_string(payload=substituted, key="id")
+    try:
+        scenario_id = SafeIdentifier.parse(scenario_id, label="scenario id").value
+    except ValueError as exc:
+        raise ScenarioManifestError(str(exc)) from exc
     scenario_class = _require_choice(
         payload=substituted,
         key="scenario_class",

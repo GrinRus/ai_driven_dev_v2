@@ -5,6 +5,7 @@ from datetime import UTC, datetime
 from pathlib import Path
 
 from aidd.core.contracts import repo_root_from
+from aidd.core.identifiers import SafeIdentifier
 from aidd.core.resources import resolve_resource_layout
 from aidd.harness.eval_models import EvalRunPreparation
 from aidd.harness.repo_prep import prepare_workspace
@@ -13,10 +14,15 @@ from aidd.harness.scenarios import Scenario, ScenarioAuthoredTask, load_scenario
 
 
 def derive_run_id(*, scenario_id: str, runtime_id: str) -> str:
+    safe_scenario_id = SafeIdentifier.parse(scenario_id, label="scenario_id").value
+    safe_runtime_id = SafeIdentifier.parse(runtime_id, label="runtime_id").value
     suffix = datetime.now(UTC).strftime("%Y%m%dT%H%M%SZ")
-    normalized_scenario = scenario_id.strip().lower().replace("aidd-", "")
+    normalized_scenario = safe_scenario_id.lower().replace("aidd-", "")
     normalized_scenario = normalized_scenario.replace("_", "-")
-    return f"eval-{normalized_scenario}-{runtime_id}-{suffix}"
+    return SafeIdentifier.parse(
+        f"eval-{normalized_scenario}-{safe_runtime_id}-{suffix}",
+        label="eval run_id",
+    ).value
 
 
 def derive_aidd_command(scenario: Scenario) -> tuple[str, ...]:

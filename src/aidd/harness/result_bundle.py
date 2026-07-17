@@ -11,6 +11,7 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any, cast
 
+from aidd.core.identifiers import SafeIdentifier, contained_component_path
 from aidd.core.workspace import WORKSPACE_REPORTS_DIRNAME, WORKSPACE_REPORTS_EVALS_DIRNAME
 from aidd.harness.install_artifact import HarnessInstallResult
 from aidd.harness.runner import (
@@ -70,19 +71,21 @@ class ResultBundleLayout:
 
 
 def _validate_run_id(run_id: str) -> str:
-    normalized = run_id.strip()
-    if not normalized:
-        raise ValueError("run_id must be non-empty.")
-    return normalized
+    return SafeIdentifier.parse(run_id, label="run_id").value
 
 
 def build_result_bundle_layout(*, workspace_root: Path, run_id: str) -> ResultBundleLayout:
     normalized_run_id = _validate_run_id(run_id)
-    run_root = (
+    evals_root = (
         workspace_root
         / WORKSPACE_REPORTS_DIRNAME
         / WORKSPACE_REPORTS_EVALS_DIRNAME
-        / normalized_run_id
+    )
+    run_root = contained_component_path(
+        evals_root,
+        normalized_run_id,
+        boundary_root=workspace_root,
+        label="run_id",
     )
     return ResultBundleLayout(
         run_root=run_root,
@@ -149,7 +152,13 @@ def ensure_result_bundle_layout_at_report_root(
     run_id: str,
 ) -> ResultBundleLayout:
     normalized_run_id = _validate_run_id(run_id)
-    layout = build_result_bundle_layout_at_run_root(run_root=report_root / normalized_run_id)
+    run_root = contained_component_path(
+        report_root,
+        normalized_run_id,
+        boundary_root=report_root,
+        label="run_id",
+    )
+    layout = build_result_bundle_layout_at_run_root(run_root=run_root)
     layout.run_root.mkdir(parents=True, exist_ok=True)
     return layout
 
