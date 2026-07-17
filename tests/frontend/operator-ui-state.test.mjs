@@ -115,6 +115,7 @@ test("operator bootstrap loads modules in declared order", async () => {
   await load(context, "operator.js");
 
   assert.deepEqual(appended, [
+    "/operator-presentation.js",
     "/operator-api-state.js",
     "/operator-shell-rendering.js",
     "/operator-dashboard-actions.js",
@@ -129,6 +130,32 @@ test("operator bootstrap loads modules in declared order", async () => {
     "/operator-stage-cockpit.js",
     "/operator-main.js",
   ]);
+});
+
+test("presentation selector is browser-only and fails back to legacy", async () => {
+  const cases = [
+    {search: "", requested: "legacy", fallback: false},
+    {search: "?ui=legacy", requested: "legacy", fallback: false},
+    {search: "?ui=studio", requested: "studio", fallback: true},
+    {search: "?ui=unknown", requested: "legacy", fallback: false},
+  ];
+  for (const item of cases) {
+    const documentElement = {dataset: {}};
+    const window = {location: {search: item.search}};
+    const context = vm.createContext({
+      URLSearchParams,
+      document: {documentElement},
+      window,
+    });
+    await load(context, "operator-presentation.js");
+    assert.deepEqual({...window.aiddPresentation}, {
+      requested: item.requested,
+      effective: "legacy",
+      fallback: item.fallback,
+    });
+    assert.equal(documentElement.dataset.presentationRequested, item.requested);
+    assert.equal(documentElement.dataset.presentationEffective, "legacy");
+  }
 });
 
 test("late dashboard response cannot overwrite a newer request", async () => {

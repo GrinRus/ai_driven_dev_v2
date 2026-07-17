@@ -1,5 +1,6 @@
 (() => {
   const scripts = [
+    "/operator-presentation.js",
     "/operator-api-state.js",
     "/operator-shell-rendering.js",
     "/operator-dashboard-actions.js",

@@ -103,6 +103,7 @@ def test_operator_static_asset_manifest_preserves_compatibility_routes() -> None
         "operator.js",
     }.issubset(filenames)
     assert "operator-api-state.js" in filenames
+    assert "operator-presentation.js" in filenames
     assert "operator-dashboard-actions.js" in filenames
     assert "operator-main.js" in filenames
     assert routes["/"].filename == "index.html"
@@ -127,6 +128,32 @@ def test_operator_js_bootstrap_loads_manifested_browser_modules() -> None:
     assert module_routes
     for route in module_routes:
         assert f'"{route}"' in loader
+
+    assert loader.index('"/operator-presentation.js"') < loader.index(
+        '"/operator-api-state.js"'
+    )
+
+
+def test_operator_presentation_selector_is_browser_only_and_fail_closed() -> None:
+    presentation = _asset_text("/operator-presentation.js")
+    api_state = _asset_text("/operator-api-state.js")
+
+    _assert_contains_all(
+        presentation,
+        (
+            'new Set(["studio", "legacy"])',
+            'new URLSearchParams(search).get("ui")',
+            'return PRESENTATION_SELECTORS.has(requested) ? requested : "legacy";',
+            'effective: "legacy"',
+            'fallback: requested === "studio"',
+            "document.documentElement.dataset.presentationRequested",
+            "document.documentElement.dataset.presentationEffective",
+        ),
+    )
+    assert 'presentationSelector: window.aiddPresentation?.requested || "legacy"' in api_state
+    assert 'presentationEffective: window.aiddPresentation?.effective || "legacy"' in api_state
+    assert "fetch(" not in presentation
+    assert "postJson(" not in presentation
 
 
 def test_operator_css_loader_imports_manifested_layers() -> None:

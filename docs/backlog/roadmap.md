@@ -10514,20 +10514,20 @@ Local tasks:
   - Scope: packaged browser state/action seam only.
   - Verification: legacy fixtures produce equivalent requests and durable readback through
     the shared seam before any Studio renderer is enabled.
-- `W36-E2-S3-T2` (next) Add a temporary browser-only `ui=studio|legacy` presentation selector while
+- `W36-E2-S3-T2` (done) Add a temporary browser-only `ui=studio|legacy` presentation selector while
   keeping `/`, packaged asset URLs, `aidd ui`, and action endpoints stable.
   - Scope: browser bootstrap and renderer selection only.
   - Verification: an executable truth table covers `missing | studio | legacy` against
     `legacy_only | candidate | parity_closed`: before cutover missing uses legacy; `studio`
     renders candidate or closed Studio surfaces and falls back only for `legacy_only`; `legacy`
     forces every retained rollback renderer; invalid follows the current missing-value rule.
-- `W36-E2-S3-T3` (soon) Add a per-surface parity manifest with owning slice, rollout state
+- `W36-E2-S3-T3` (next) Add a per-surface parity manifest with owning slice, rollout state
   (`legacy_only | candidate | parity_closed`), rollback renderer, required fixture, browser
   journey, and legacy-removal gate.
   - Scope: packaged-browser migration metadata and tests.
   - Verification: every declared surface has exactly one owner and no surface can switch
     default before its required journey passes.
-- `W36-E2-S3-T4` (planned) Make the parity manifest drive per-surface renderer resolution so migrated
+- `W36-E2-S3-T4` (soon) Make the parity manifest drive per-surface renderer resolution so migrated
   Studio surfaces and unmigrated legacy fallbacks can coexist inside either bootstrap mode.
   - Scope: browser renderer resolver only.
   - Verification: mixed-state fixtures implement the selector/parity truth table, retain one

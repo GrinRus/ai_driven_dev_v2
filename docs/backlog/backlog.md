@@ -7,13 +7,13 @@ slice, and local task.
 
 ## Next
 
-- `W36-E2-S3-T2` — Add a temporary browser-only `ui=studio|legacy` presentation selector
-  while keeping service requests unchanged.
+- `W36-E2-S3-T3` — Add a per-surface parity manifest with ownership, rollout state,
+  rollback renderer, required fixture, journey, and removal gate.
 
 ## Soon
 
-- `W36-E2-S3-T3` — Add a per-surface parity manifest with ownership, rollout state,
-  rollback renderer, required fixture, journey, and removal gate.
+- `W36-E2-S3-T4` — Make the parity manifest drive per-surface renderer resolution and
+  deterministic legacy fallback.
 
 ## Parking lot
 
@@ -66,6 +66,12 @@ slice, and local task.
   queue-restoration policy in `docs/backlog/roadmap.md` (`W8-E3-S1`).
 
 ## Current reconciliation
+
+- `2026-07-17` `W36-E2-S3-T2` is complete: the packaged browser now accepts only
+  `ui=studio|legacy`, treats missing or invalid values as legacy, and records an explicit
+  legacy fallback for Studio while every surface is still legacy-only; service routes and
+  request payloads are unchanged. `W36-E2-S3-T3` is promoted to `Next` and
+  `W36-E2-S3-T4` to `Soon`.
 
 - `2026-07-17` `W36-E2-S3-T1` is complete: one packaged dashboard/action seam now owns
   non-next-flow loading, server-derived context reconciliation, and workflow/stage/task/

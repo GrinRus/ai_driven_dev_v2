@@ -72,6 +72,8 @@ const NON_BLOCKING_VALIDATION_NOTICE_CODES = new Set([
 ]);
 
 const state = {
+  presentationSelector: window.aiddPresentation?.requested || "legacy",
+  presentationEffective: window.aiddPresentation?.effective || "legacy",
   dashboard: null,
   dashboardRequestGeneration: 0,
   projectHome: null,
