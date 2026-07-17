@@ -7,11 +7,12 @@ slice, and local task.
 
 ## Next
 
-- `W36-E6-S4-T3` — Adopt the mutation guard for answer and intervention writes.
+- `W36-E6-S4-T4` — Adopt the mutation guard for next-flow draft, preflight, and launch.
 
 ## Soon
 
-- `W36-E6-S4-T4` — Adopt the mutation guard for next-flow draft, preflight, and launch.
+- `W36-E6-S4-T5` — Add approval reason capture and explicit confirmation for
+  `allow_for_session` with controls disabled while submitting.
 
 
 
@@ -57,6 +58,12 @@ slice, and local task.
   queue-restoration policy in `docs/backlog/roadmap.md` (`W8-E3-S1`).
 
 ## Current reconciliation
+
+- `2026-07-17` `W36-E6-S4-T3` is complete: answer and intervention submissions now
+  share bounded mutation keys, disable duplicate controls, retain drafts after failed
+  writes, clear them only after durable success or conflict reconciliation, and attach
+  intervention polling once. `W36-E6-S4-T4` is promoted to `Next` and
+  `W36-E6-S4-T5` to `Soon`.
 
 - `2026-07-17` `W36-E6-S4-T2` is complete: workflow, stage, task, finalization,
   stale-downstream, and remediation launches now share keyed in-flight work, disable

@@ -471,6 +471,8 @@ def test_operator_script_modules_own_static_ui_surfaces() -> None:
     assert "async function resumeAfterAnswers()" in questions
     assert "async function renderApprovals()" in approvals
     assert "async function submitIntervention()" in approvals
+    assert 'kind: "stage-interact"' in approvals
+    assert 'operatorMutationKey(\n    "answer"' in questions
     assert "async function renderLogs()" in logs
     assert "async function startJobPolling(job)" in logs
     assert "function renderOnboarding()" in onboarding

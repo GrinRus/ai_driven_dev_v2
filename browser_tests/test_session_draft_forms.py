@@ -30,9 +30,9 @@ def test_question_draft_survives_reload_and_clears_after_readback(tmp_path: Path
         page.route(
             "**/api/answers",
             lambda route: route.fulfill(
-                status=409,
+                status=500,
                 content_type="application/json",
-                body='{"error":"simulated conflict"}',
+                body='{"error":"simulated failure"}',
             ),
         )
         with page.expect_response(lambda response: response.url.endswith("/api/answers")):
@@ -40,24 +40,38 @@ def test_question_draft_survives_reload_and_clears_after_readback(tmp_path: Path
         assert page.evaluate("readOperatorDraft(questionDraftIdentity('Q1')) !== null")
         page.unroute("**/api/answers")
         expected_failures = [
-            item for item in browser_page.diagnostics.http_statuses if item[1] == 409
+            item for item in browser_page.diagnostics.http_statuses if item[1] == 500
         ]
         assert len(expected_failures) == 1
         browser_page.diagnostics.http_statuses = [
-            item for item in browser_page.diagnostics.http_statuses if item[1] != 409
+            item for item in browser_page.diagnostics.http_statuses if item[1] != 500
         ]
         expected_console = [
-            item for item in browser_page.diagnostics.console_errors if "409 (Conflict)" in item
+            item
+            for item in browser_page.diagnostics.console_errors
+            if "500 (Internal Server Error)" in item
         ]
         assert len(expected_console) == 1
         browser_page.diagnostics.console_errors = [
-            item for item in browser_page.diagnostics.console_errors if "409 (Conflict)" not in item
+            item
+            for item in browser_page.diagnostics.console_errors
+            if "500 (Internal Server Error)" not in item
         ]
 
-        page.locator('[data-save-answer="Q1"]').click()
+        answer_posts: list[str] = []
+
+        def record_answer_post(request: object) -> None:
+            if getattr(request, "method", None) == "POST" and str(
+                getattr(request, "url", "")
+            ).endswith("/api/answers"):
+                answer_posts.append(str(getattr(request, "url")))
+
+        page.on("request", record_answer_post)
+        page.evaluate("Promise.all([saveAnswer('Q1'), saveAnswer('Q1')])")
         page.wait_for_function(
             "readOperatorDraft(questionDraftIdentity('Q1')) === null"
         )
+        assert len(answer_posts) == 1
         assert restored.input_value() == "Preserve the public CLI boundary."
         browser_page.diagnostics.assert_clean()
 

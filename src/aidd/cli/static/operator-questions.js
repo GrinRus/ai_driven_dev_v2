@@ -272,24 +272,51 @@ async function saveAnswer(questionId) {
     toast("Answer text is required.");
     return false;
   }
-  await postJson("/api/answers", {
-    stage: state.activeStage,
-    question_id: questionId,
-    text,
-    resolution: resolution?.value || "resolved"
-  });
-  await fetchDashboard();
-  const readback = state.dashboard?.active_stage_view?.questions?.questions?.find(
-    (question) => question.question_id === questionId
+  const key = operatorMutationKey(
+    "answer",
+    state.dashboard?.work_item || state.activeRouteWorkItem || "no-work-item",
+    state.activeRunId || "no-run",
+    state.activeStage,
+    questionId
   );
-  if (
-    readback?.answer_text !== text
-    || readback?.answer_resolution !== (resolution?.value || "resolved")
-  ) {
-    toast("Answer was submitted but durable readback is not confirmed; draft retained.");
+  const controls = [
+    `[data-save-answer="${questionId}"]`,
+    `[data-answer-resume="${questionId}"]`
+  ];
+  const durableQuestion = async () => {
+    await fetchDashboard();
+    return state.dashboard?.active_stage_view?.questions?.questions?.find(
+      (question) => question.question_id === questionId
+    ) || null;
+  };
+  const guarded = await runGuardedMutation({
+    key,
+    execute: async () => {
+      await postJson("/api/answers", {
+        stage: state.activeStage,
+        question_id: questionId,
+        text,
+        resolution: resolution?.value || "resolved"
+      });
+      const readback = await durableQuestion();
+      if (
+        readback?.answer_text !== text
+        || readback?.answer_resolution !== (resolution?.value || "resolved")
+      ) {
+        throw new Error("Answer durable readback did not match the submitted value");
+      }
+      clearOperatorDraft(questionDraftIdentity(questionId));
+      return readback;
+    },
+    readWinner: durableQuestion,
+    onState: (mutation) => setMutationControlsPending(controls, mutation.status === "pending")
+  });
+  if (guarded.status === "conflict") {
+    clearOperatorDraft(questionDraftIdentity(questionId));
+    await renderAll();
+    toast("Another answer already won. Showing the durable answer.");
     return false;
   }
-  clearOperatorDraft(questionDraftIdentity(questionId));
   toast("Answer saved.");
   return true;
 }

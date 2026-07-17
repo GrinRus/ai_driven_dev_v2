@@ -11452,16 +11452,16 @@ Local tasks:
   - Scope: run mutation controls.
   - Verification: pending, same-run conflict, different-run concurrency, failure, and
     success states match server admission.
-- `W36-E6-S4-T3` (next) Adopt the mutation guard for answer and intervention writes.
+- `W36-E6-S4-T3` (done) Adopt the mutation guard for answer and intervention writes.
   - Scope: question/intervention mutation controls.
   - Verification: failed writes retain drafts, successful writes clear drafts, and
     duplicate submissions create one durable artifact.
-- `W36-E6-S4-T4` (soon) Adopt the mutation guard for next-flow draft, preflight, and launch.
+- `W36-E6-S4-T4` (next) Adopt the mutation guard for next-flow draft, preflight, and launch.
   - Dependencies: `W34-E3-S4-T4`.
   - Scope: next-flow browser controller.
   - Verification: repeated actions cannot create duplicate work items or runs and the
     source run remains unchanged after failure.
-- `W36-E6-S4-T5` (planned) Add approval reason capture and explicit confirmation for
+- `W36-E6-S4-T5` (soon) Add approval reason capture and explicit confirmation for
   `allow_for_session` with controls disabled while submitting.
   - Dependencies: `W34-E3-S2`.
   - Scope: approval decision UI.

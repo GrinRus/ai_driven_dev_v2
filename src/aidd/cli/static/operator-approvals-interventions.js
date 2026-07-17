@@ -583,11 +583,12 @@ async function submitIntervention() {
     log_follow: true
   };
   if (state.activeRunId) payload.run_id = state.activeRunId;
-  const job = await postJson("/api/stage/interact", payload);
-  const readback = await api(`/api/jobs/${encodeURIComponent(job.job_id)}`);
-  if (readback.job_id !== job.job_id) {
-    throw new Error("Intervention job readback did not confirm the durable submission");
-  }
+  const job = await guardedJobLaunch({
+    kind: "stage-interact",
+    components: [state.activeRunId || "no-run", state.activeStage],
+    controls: ["#submitInterventionButton"],
+    execute: () => postJson("/api/stage/interact", payload)
+  });
   clearOperatorDraft(interventionDraftIdentity());
-  await startJobPolling(job);
+  if (!job) toast("Another intervention already won. Showing the durable server state.");
 }
