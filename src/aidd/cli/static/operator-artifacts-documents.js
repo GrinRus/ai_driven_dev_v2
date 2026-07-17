@@ -409,13 +409,14 @@ function renderWorkbenchViewer(workbench) {
 }
 
 function renderWorkbenchEvidenceInspector(workbench) {
-  const visible = [
+  const inspectorItemCount = [
     workbench.requirements,
     workbench.validation_results,
     workbench.references,
     workbench.versions
-  ].some((items) => Array.isArray(items) && items.length > 0);
-  if (!visible) return "";
+  ].reduce((total, items) => total + (Array.isArray(items) ? items.length : 0), 0);
+  const visibility = resolveStudioEvidenceVisibility({inspectorItemCount});
+  if (!visibility.inspector) return "";
   return `
       <aside class="workbench-sidebar hierarchy-supporting evidence-inspector">
         <div class="surface-title evidence-inspector-title">Evidence Inspector</div>

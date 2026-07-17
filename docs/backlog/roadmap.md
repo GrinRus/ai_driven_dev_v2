@@ -10826,17 +10826,17 @@ Dependencies:
 
 Local tasks:
 
-- `W36-E5-S1-T1` (next) Add a visibility policy that hides a zero-value Evidence Inspector
+- `W36-E5-S1-T1` (done) Add a visibility policy that hides a zero-value Evidence Inspector
   and keeps secondary Filmstrip/log evidence collapsed until requested.
   - Scope: shell rendering policy.
   - Verification: no-run, healthy running, blocked, terminal, and history fixtures show
     only panels with current operator value.
-- `W36-E5-S1-T2` (soon) Consolidate duplicate recovery summaries into one Recovery Summary
+- `W36-E5-S1-T2` (next) Consolidate duplicate recovery summaries into one Recovery Summary
   inside the Studio Decision Bar with one Evidence link.
   - Scope: recovery rendering.
   - Verification: every blocker fixture exposes one recovery landmark, one primary
     action, and one supporting evidence path.
-- `W36-E5-S1-T3` (planned) Implement one policy-free primary-action slot for vertical surfaces to bind
+- `W36-E5-S1-T3` (soon) Implement one policy-free primary-action slot for vertical surfaces to bind
   to their own core/service-provided decision and compact metadata.
   - Scope: shared Decision Bar slot composition only.
   - Verification: surface fixtures can bind one action or an explicit no-action state, while

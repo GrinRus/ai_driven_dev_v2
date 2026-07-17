@@ -25,6 +25,20 @@ const VALID_TABS = [
   ...OPERATOR_MODES,
   ...Object.keys(LEGACY_TAB_TO_MODE)
 ];
+
+function resolveStudioEvidenceVisibility({
+  inspectorItemCount = 0,
+  filmstripFrameCount = 0,
+  logEvidenceAvailable = false,
+  requestedSurface = ""
+} = {}) {
+  return Object.freeze({
+    inspector: Number(inspectorItemCount) > 0,
+    filmstrip: Number(filmstripFrameCount) > 0 && requestedSurface === "history",
+    logs: Boolean(logEvidenceAvailable) && requestedSurface === "logs"
+  });
+}
+
 const RECOVERY_NEXT_ACTIONS = new Set([
   "answer-questions",
   "inspect-validation",

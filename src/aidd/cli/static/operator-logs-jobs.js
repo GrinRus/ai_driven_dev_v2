@@ -394,7 +394,21 @@ function renderLiveJobActions() {
 }
 
 async function renderLogs() {
-  if (state.activeJobId && liveJobMatchesStage() && (state.activeJobStatus?.status === "running" || state.activeJobStatus?.status === "waiting-for-operator" || state.activeJobStatus?.status === "cancelling" || state.activeJobLogChunks.length)) {
+  const item = activeStageItem();
+  const liveLogAvailable = Boolean(
+    state.activeJobId
+    && liveJobMatchesStage()
+    && (state.activeJobStatus?.status === "running" || state.activeJobStatus?.status === "waiting-for-operator" || state.activeJobStatus?.status === "cancelling" || state.activeJobLogChunks.length)
+  );
+  const visibility = resolveStudioEvidenceVisibility({
+    logEvidenceAvailable: liveLogAvailable || Number(item?.attempt_count || 0) > 0,
+    requestedSurface: "logs"
+  });
+  if (!visibility.logs) {
+    document.getElementById("cockpitContent").innerHTML = `<div class="empty-state">No runtime log for this stage yet.</div>`;
+    return;
+  }
+  if (liveLogAvailable) {
     const entries = logEntriesFromChunks(state.activeJobLogChunks);
     document.getElementById("cockpitContent").innerHTML = `${renderActiveJobConnectionSurface()}${renderLogPanel({
       title: `Live job ${state.activeJobId}`,
@@ -404,11 +418,6 @@ async function renderLogs() {
       emptyText: "Waiting for runtime output...",
       actions: renderLiveJobActions()
     })}`;
-    return;
-  }
-  const item = activeStageItem();
-  if (!item || Number(item.attempt_count || 0) <= 0) {
-    document.getElementById("cockpitContent").innerHTML = `<div class="empty-state">No runtime log for this stage yet.</div>`;
     return;
   }
   try {

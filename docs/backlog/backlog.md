@@ -7,12 +7,11 @@ slice, and local task.
 
 ## Next
 
-- `W36-E5-S1-T1` — Hide a zero-value Evidence Inspector and keep Filmstrip/log evidence
-  collapsed until requested.
+- `W36-E5-S1-T2` — Consolidate duplicate recovery summaries into one Recovery Summary.
 
 ## Soon
 
-- `W36-E5-S1-T2` — Consolidate duplicate recovery summaries into one Recovery Summary.
+- `W36-E5-S1-T3` — Add one policy-free primary-action slot for vertical surfaces.
 
 ## Parking lot
 
@@ -49,6 +48,11 @@ slice, and local task.
   queue-restoration policy in `docs/backlog/roadmap.md` (`W8-E3-S1`).
 
 ## Current reconciliation
+
+- `2026-07-17` `W36-E5-S1-T1` is complete: one value-aware visibility policy hides
+  an empty Evidence Inspector and keeps Filmstrip/runtime-log evidence undisclosed until
+  the operator requests History or Logs. `W36-E5-S1-T2` is promoted to `Next` and
+  `W36-E5-S1-T3` to `Soon`.
 
 - `2026-07-17` `W36-E4-S1-T6` is complete: Guided Review & Launch and legacy
   controls resolve through one task-aware workflow/stage dispatcher, keyed duplicate

@@ -857,7 +857,11 @@ function renderRunComparisonPanel() {
 
 function renderRunHistory() {
   const run = state.dashboard?.run || {};
-  if (!run.run_id) {
+  const visibility = resolveStudioEvidenceVisibility({
+    filmstripFrameCount: run.run_id ? 1 : 0,
+    requestedSurface: state.activeTab === "history" ? "history" : ""
+  });
+  if (!visibility.filmstrip) {
     return `<div class="empty-state">No run history is available before the first run starts.</div>`;
   }
   const lineage = run.lineage || {};
