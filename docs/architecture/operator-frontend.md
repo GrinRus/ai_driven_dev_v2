@@ -612,6 +612,62 @@ The accepted completed-flow outcomes remain:
 - **Run Eval / Scenario Batch** — comparison evidence outside the completed source run;
 - **Archive Run** — local operator intent without deleting evidence.
 
+#### 8.8.1 Action-to-service semantics
+
+Visible labels name their actual consequence. Guided Delivery and Studio dispatch the same
+endpoint/application service for the same action; presentation mode cannot select a different
+mutation path.
+
+| Visible action | Endpoint / application service | Durable outcome | Eligibility and conflict behavior |
+| --- | --- | --- | --- |
+| **Validate project** | `POST /api/onboarding/project` / canonical project validation | Validation result only; no workspace write | Invalid, blank, escaped, or inaccessible roots fail before mutation. |
+| **Create Work Item** | `POST /api/onboarding/work-item` / workspace bootstrap | New canonical work-item context | Requires a valid project and safe unused identifier; conflicts read back existing state instead of overwriting. |
+| **Resume Work Item** | `POST /api/onboarding/work-item` / existing-work-item selection | No new work-item evidence; selected durable context changes | Requires an existing valid work item; missing or stale identity returns a factual error. |
+| **Launch workflow** | `POST /api/workflow/run` / workflow execution service | Run manifest, stage attempts, and governed stage outputs | Requires explicit eligible runtime and bounds; duplicate launch is suppressed and conflicts reconcile to server state. |
+| **Run selected stage** | `POST /api/stage/run` / stage execution service | One governed stage attempt in the selected run | Requires stage eligibility, explicit runtime, and matching run identity; progression guards remain authoritative. |
+| **Start Follow-up Flow** | `POST /api/next-flow/follow-up-draft/create`, then preflight and `POST /api/next-flow/launch` | Independent child work item/run with source lineage | Requires terminal source evidence and selected sources; draft is noncanonical until launch, and launch conflicts preserve the durable winner. |
+| **Clone This Flow** | `POST /api/next-flow/clone-draft/create`, then preflight and `POST /api/next-flow/launch` | Independent run identity with declared baseline/source lineage | Requires a valid immutable source and launchable preflight; never mutates the source run. |
+| **Run Eval / Scenario Batch** | External/manual handoff to the supported harness/eval command surface | Eval evidence outside the completed run, if the operator executes it | No local operator-UI execution endpoint exists; render a handoff, never a successful local mutation. |
+| **Archive Run** | `POST /api/next-flow/archive` / append-only archive-overlay service | New immutable archive decision overlay | Requires terminal QA; retries follow durable overlay semantics and never edit the run manifest. |
+
+Draft, preflight, and launch are distinct actions because their consequences differ. The UI
+must not label them all **Continue**, and it must not show a draft or preflight response as a
+created work item or launched run.
+
+#### 8.8.2 Truthful state vocabulary
+
+Runtime presentation reports independent facts rather than one inferred `ready` badge:
+
+| Fact | Canonical presentation |
+| --- | --- |
+| Provider detection | `detected`, `not detected`, or `unknown`, based only on the probe result. |
+| Execution command | `configured and executable`, `configured but unavailable`, `not configured`, or `unknown`. |
+| Authentication evidence | `confirmed`, `not confirmed`, `failed`, or `unknown`, with the evidence source and observation time. Binary or config presence is not authentication evidence. |
+| Adapter capability | Named supported capabilities and transport from the adapter capability report; provider help text alone does not create an AIDD capability. |
+
+The UI may say an action is **eligible** only when the core read model confirms every required
+fact. It must not derive `ready` from binary detection or configuration alone.
+
+Safety-related facts are also separate and literal:
+
+- permission policy uses its configured value, such as `full_access`, `brokered`, or
+  `deny_unapproved`;
+- allowed-write scope shows the canonical path prefixes, `unrestricted` when the document is
+  absent by contract, or a malformed-state error;
+- approval breadth shows the actual request kind/capability and bounded preset or explicitly
+  says that operator review is required.
+
+The umbrella label `safe` is not a substitute for these facts.
+
+Connectivity has exactly four observable states: `online` after a successful current transport
+exchange, `reconnecting` while bounded retry is active, `offline` after observed transport
+failure, and `unknown` before evidence exists. Runtime success/failure is not inferred from
+browser connectivity.
+
+Every client mutation uses `idle`, `pending`, `conflict`, `succeeded`, `failed`, or `cancelled`.
+Optimistic state is never authoritative: after a conflict, retry, reconnect, or cancellation
+race, the durable server winner and its evidence determine the displayed result.
+
 Only one is promoted. Clean completed runs without blockers recommend **Create New Work
 Item**. Failed, blocked, or warning handoffs recommend **Start Follow-up Flow**. The remaining
 outcomes live under **Other next actions**, not an equal-weight card grid.

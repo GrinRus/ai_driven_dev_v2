@@ -105,6 +105,14 @@ def test_built_wheel_includes_runtime_owned_contracts_and_prompt_packs(tmp_path:
         requirement.startswith(("python-frontmatter", "markdown-it-py", "pydantic"))
         for requirement in normalized_requirements
     )
+    runtime_requirements = tuple(
+        requirement for requirement in normalized_requirements if "extra ==" not in requirement
+    )
+    assert not any(requirement.startswith("playwright") for requirement in runtime_requirements)
+    assert any(
+        requirement.startswith("playwright") and "extra == 'dev'" in requirement
+        for requirement in normalized_requirements
+    )
     assert "Provides-Extra: docs" not in metadata_text
     assert not any(
         requirement.startswith(("mkdocs", "mkdocs-material"))

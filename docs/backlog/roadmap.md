@@ -10347,10 +10347,10 @@ Story check:
 - this is implementation and acceptance detail inside existing product scope, so
   `docs/product/user-stories.md` does not require a scope update.
 
-### Epic W36-E1 — accepted UX contract and measurable hierarchy (`planned`)
+### Epic W36-E1 — accepted UX contract and measurable hierarchy (`done`)
 Linked stories: `US-05`, `US-06`, `US-09`, `US-11`, `US-12`
 
-#### Slice W36-E1-S1 — operator coherence contract (`planned`)
+#### Slice W36-E1-S1 — operator coherence contract (`done`)
 Goal: lock Inbox, Studio, History, and Guided Delivery semantics plus one primary-decision
 rule before changing the rendered shell.
 
@@ -10370,7 +10370,7 @@ Local tasks:
   - Scope: operator frontend architecture only.
   - Verification: the contract names the first-viewport action, maximum compact-header
     footprint, drill-down behavior, and required mobile jobs at every breakpoint.
-- `W36-E1-S1-T3` (next) Replace checklist-only navigation wording with a canonical operator
+- `W36-E1-S1-T3` (done) Replace checklist-only navigation wording with a canonical operator
   state/route matrix.
   - Scope: `docs/e2e/operator-ui-local-project.md` only.
   - Verification: Guided Setup, Inbox, active Studio, reconnecting, Question/Approval
@@ -10384,7 +10384,7 @@ Exit evidence:
 - mobile behavior is a deliberate product contract rather than an accumulation of
   state-specific CSS ordering rules.
 
-#### Slice W36-E1-S2 — truthful control and quality contract (`planned`)
+#### Slice W36-E1-S2 — truthful control and quality contract (`done`)
 Goal: make visible controls and quality claims correspond to distinct behavior and
 measurable evidence.
 
@@ -10394,17 +10394,17 @@ Dependencies:
 
 Local tasks:
 
-- `W36-E1-S2-T1` (soon) Define an action-to-service semantics table for setup, create,
+- `W36-E1-S2-T1` (done) Define an action-to-service semantics table for setup, create,
   resume, follow-up, clone, eval, archive, workflow, and stage actions.
   - Scope: operator frontend architecture only.
   - Verification: every visible selectable action has a distinct outcome and service
     path, or is explicitly removed.
-- `W36-E1-S2-T2` (planned) Define truthful UI vocabulary for runtime readiness, authentication
+- `W36-E1-S2-T2` (done) Define truthful UI vocabulary for runtime readiness, authentication
   evidence, safety/write scope, approval breadth, connectivity, and mutation state.
   - Scope: operator UX vocabulary in architecture docs.
   - Verification: ambiguous normative claims such as undifferentiated `ready` or
     `safe` are absent from the accepted vocabulary.
-- `W36-E1-S2-T3` (planned) Define measurable operator UX thresholds and evidence fields.
+- `W36-E1-S2-T3` (done) Define measurable operator UX thresholds and evidence fields.
   - Scope: local-project UI E2E acceptance docs.
   - Verification: the template records first-action visibility, header footprint,
     touch targets, focus entry, contrast, overflow, reconnect outcome, task completion,
@@ -10419,37 +10419,39 @@ Exit evidence:
 ### Epic W36-E2 — executable rendered-browser foundation (`planned`)
 Linked stories: `US-07`, `US-09`, `US-11`
 
-#### Slice W36-E2-S1 — deterministic packaged-UI browser harness (`planned`)
+#### Slice W36-E2-S1 — deterministic packaged-UI browser harness (`done`)
 Goal: execute the packaged local UI in a real browser against provider-free states with
 deterministic cleanup.
 
 Dependencies:
 
 - `W36-E1-S1`
+- `W36-E1-S2-T3`
 - `W34-E5-S3-T4`
 - `W34-E5-S3-T5`
 
 Local tasks:
 
-- `W36-E2-S1-T1` (parked) Select and document the maintained provider-free browser driver and
+- `W36-E2-S1-T1` (done) Select and document the maintained provider-free browser driver and
   packaging policy for served UI checks.
+  - Dependencies: `W36-E1-S2-T3`.
   - Scope: browser-test architecture and documentation policy only.
   - Verification: the decision preserves the no-Node/Vite product runtime, names the
     executable test command, and replaces the blanket no-browser-driver wording in the
     local-project lane.
-- `W36-E2-S1-T4` (planned) Add the selected browser driver as a development-only dependency and
+- `W36-E2-S1-T4` (done) Add the selected browser driver as a development-only dependency and
   lock its executable smoke command.
   - Dependencies: `W36-E2-S1-T1`.
   - Scope: development dependency, lock, and browser smoke command only.
   - Verification: locked sync and one provider-free packaged-UI launch pass without
     changing runtime package dependencies.
-- `W36-E2-S1-T2` (planned) Add a disposable seeded-project launcher and executable browser harness
+- `W36-E2-S1-T2` (done) Add a disposable seeded-project launcher and executable browser harness
   for packaged UI assets.
   - Dependencies: `W36-E2-S1-T4`.
   - Scope: UI browser test infrastructure.
   - Verification: one command serves a temporary project, opens every required viewport,
     records console/network state, and removes project-local `.aidd/` state on exit.
-- `W36-E2-S1-T3` (planned) Add provider-free fixture builders for setup, no-run, running,
+- `W36-E2-S1-T3` (done) Add provider-free fixture builders for setup, no-run, running,
   question, runtime-failure, approval, QA, remediation, and terminal states.
   - Dependencies: `W36-E2-S1-T2`.
   - Scope: deterministic UI fixtures only.
@@ -10472,13 +10474,15 @@ Dependencies:
 
 Local tasks:
 
-- `W36-E2-S2-T1` (planned) Add executable accessible-name, label, focus-order, contrast,
+- `W36-E2-S2-T1` (next) Add executable accessible-name, label, focus-order, contrast,
   target-size, and reduced-motion assertions.
+  - Dependencies: `W36-E2-S1-T3`.
   - Scope: browser assertion helpers.
   - Verification: one intentionally invalid fixture fails each accessibility rule with
     the owning selector and measured value.
-- `W36-E2-S2-T2` (planned) Add executable sticky-header, primary-action, clipping, overlap,
+- `W36-E2-S2-T2` (soon) Add executable sticky-header, primary-action, clipping, overlap,
   nested-scroll, and horizontal-overflow assertions.
+  - Dependencies: `W36-E2-S2-T1`.
   - Scope: browser geometry assertions.
   - Verification: intentionally bad header, offscreen CTA, clipped label, scroll-trap,
     and overflow fixtures fail at the expected viewport.

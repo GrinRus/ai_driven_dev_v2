@@ -762,6 +762,27 @@ def test_operator_ui_local_project_manual_browser_checklist_is_complete() -> Non
     ).read_text(encoding="utf-8")
 
     for expected in (
+        "## Canonical Operator State and Route Matrix",
+        "`setup`, `inbox`, `studio`, and",
+        "Recovery is a Studio context",
+        "`project`, `work_item`, `run`, `stage`, `document`, `attempt`",
+        "| Guided Setup | `setup` |",
+        "| Inbox | `inbox` |",
+        "| Active Studio | `studio` |",
+        "| Reconnecting Studio | `studio` |",
+        "| Question Recovery | `studio` |",
+        "| Approval Recovery | `studio` |",
+        "| Validation Recovery | `studio` |",
+        "| Quality Gate | `studio` |",
+        "| Flow Complete | `studio` |",
+        "| History | `history` |",
+        "falls back to the nearest valid",
+        "never creates, resumes, repairs, archives, or launches work",
+        "`W36-E6-S1-T1`",
+    ):
+        assert expected in operator_ui_lane
+
+    for expected in (
         "## Manual Browser Checklist",
         "### Dashboard Shell",
         "### Cockpit Tabs",
@@ -793,6 +814,74 @@ def test_operator_ui_local_project_manual_browser_checklist_is_complete() -> Non
         assert expected in operator_ui_lane
 
 
+def test_operator_frontend_actions_name_real_service_semantics() -> None:
+    contract = (
+        _repo_root() / "docs" / "architecture" / "operator-frontend.md"
+    ).read_text(encoding="utf-8")
+
+    for expected in (
+        "#### 8.8.1 Action-to-service semantics",
+        "`POST /api/onboarding/project`",
+        "`POST /api/onboarding/work-item`",
+        "`POST /api/workflow/run`",
+        "`POST /api/stage/run`",
+        "`POST /api/next-flow/follow-up-draft/create`",
+        "`POST /api/next-flow/clone-draft/create`",
+        "External/manual handoff",
+        "No local operator-UI execution endpoint exists",
+        "`POST /api/next-flow/archive`",
+        "must not label them all **Continue**",
+    ):
+        assert expected in contract
+
+
+def test_operator_frontend_uses_truthful_state_vocabulary() -> None:
+    contract = (
+        _repo_root() / "docs" / "architecture" / "operator-frontend.md"
+    ).read_text(encoding="utf-8")
+
+    for expected in (
+        "#### 8.8.2 Truthful state vocabulary",
+        "| Provider detection |",
+        "| Execution command |",
+        "| Authentication evidence |",
+        "| Adapter capability |",
+        "must not derive `ready` from binary detection",
+        "permission policy uses its configured value",
+        "allowed-write scope shows the canonical path prefixes",
+        "approval breadth shows the actual request kind/capability",
+        "umbrella label `safe` is not a substitute",
+        "`online` after a successful current transport",
+        "`reconnecting` while bounded retry is active",
+        "`offline` after observed transport",
+        "`unknown` before evidence exists",
+        "`idle`, `pending`, `conflict`, `succeeded`, `failed`, or `cancelled`",
+        "durable server winner",
+    ):
+        assert expected in contract
+
+
+def test_browser_testing_policy_is_dev_only_and_provider_free() -> None:
+    policy = (
+        _repo_root() / "docs" / "architecture" / "browser-testing.md"
+    ).read_text(encoding="utf-8")
+
+    for expected in (
+        "Python Playwright sync API",
+        "Chromium\nas its single initial browser target",
+        "uv run --extra dev python -m playwright install chromium",
+        "uv run --extra dev pytest -q browser_tests",
+        "outside the default\n`tests/` collection",
+        "only in the `dev` extra",
+        "must not appear as a runtime\n  `Requires-Dist`",
+        "external browser cache",
+        "No Node product\n  runtime, Vite build, npm dependency, or npm lockfile",
+        "actionable failure",
+        "not a silent skip",
+        "allows only the loopback origin",
+    ):
+        assert expected in policy
+
 def test_operator_ui_local_project_e2e_lane_requires_completed_flow_checks() -> None:
     operator_ui_lane = (
         _repo_root() / "docs" / "e2e" / "operator-ui-local-project.md"
@@ -822,6 +911,40 @@ def test_operator_ui_local_project_e2e_lane_requires_completed_flow_checks() -> 
         "record the Archive Run decision path",
     ):
         assert expected in operator_ui_lane
+
+
+def test_operator_ui_evidence_template_has_measurable_ux_gates() -> None:
+    lane = (_repo_root() / "docs" / "e2e" / "operator-ui-local-project.md").read_text(
+        encoding="utf-8"
+    )
+
+    for expected in (
+        "Initial scroll position:",
+        "Primary-action bounds:",
+        "Header footprint:",
+        "Smallest touch target:",
+        "Text contrast:",
+        "Control/focus contrast:",
+        "Focus order:",
+        "Overflow:",
+        "Clipping:",
+        "Overlap:",
+        "Scroll ownership:",
+        "at most `80 px`",
+        "at least `44x44 px`",
+        "at least `4.5:1`",
+        "at least `3:1`",
+        "primary decision is fully visible",
+        "no page-level horizontal overflow",
+        "Completion:",
+        "Elapsed time:",
+        "Wrong actions:",
+        "Assistance:",
+        "Operator confidence: `<1-5>`",
+        "First decisive confusion:",
+        "five-session\nrelease bar remains owned by `W36-E7-S3`",
+    ):
+        assert expected in lane
 
 
 def test_operator_ui_local_project_manual_smoke_template_records_required_evidence() -> None:
@@ -1299,7 +1422,7 @@ def test_wave29_real_provider_ui_e2e_docs_define_manual_codex_first_lane() -> No
     ):
         assert blocker in real_provider
     assert "must fail with `runtime is required`" in real_provider
-    assert "Do not add Playwright or Selenium dependencies" in operator_ui
+    assert "[`Browser Testing Policy`](../architecture/browser-testing.md)" in operator_ui
     assert "Codex-first" in operator_ui
     assert "Real-Provider UI E2E Lane" in handbook
     assert "Provider priority is Codex first" in scenario_matrix

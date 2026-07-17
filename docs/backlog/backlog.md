@@ -7,18 +7,16 @@ slice, and local task.
 
 ## Next
 
-- `W36-E1-S1-T3` — Replace checklist-only navigation wording with the canonical
-  Guided Setup / Inbox / Studio / History state-route matrix.
+- `W36-E2-S2-T1` — Add rendered accessible-name, label, focus-order, contrast,
+  target-size, and reduced-motion assertions.
 
 ## Soon
 
-- `W36-E1-S2-T1` — Define the action-to-service semantics table for setup, create,
-  resume, follow-up, clone, eval, archive, workflow, and stage actions.
+- `W36-E2-S2-T2` — Add rendered sticky-header, primary-action, clipping, overlap,
+  nested-scroll, and horizontal-overflow assertions.
 
 ## Parking lot
 
-- `W36-E2-S1-T1` — Select and document a maintained provider-free browser driver and
-  packaged-UI test policy.
 - `W36-E2-S3-T1` — Extract shared dashboard loading, context selection, and mutation
   dispatch from legacy renderer ownership.
 - `W36-E3-S1-T1` — Add semantic typography, spacing, radius, elevation, control-size,
@@ -70,6 +68,47 @@ slice, and local task.
   queue-restoration policy in `docs/backlog/roadmap.md` (`W8-E3-S1`).
 
 ## Current reconciliation
+
+- `2026-07-17` `W36-E2-S1-T3` and slice `W36-E2-S1` are complete: nine immutable,
+  provider-free descriptors now seed canonical setup, active, recovery, quality,
+  remediation, and terminal evidence through production persistence helpers and verify the
+  public loopback UI without external reads. `W36-E2-S2-T1` is promoted to `Next` and
+  `W36-E2-S2-T2` to `Soon`.
+
+- `2026-07-17` `W36-E2-S1-T2` is complete: the reusable browser harness starts the public
+  loopback CLI under one deadline, isolates all five contract viewports, captures browser
+  and network failures, and bounds server/process cleanup plus temporary workspace removal.
+  `W36-E2-S1-T3` is promoted to `Next` and `W36-E2-S2-T1` to `Soon`.
+
+- `2026-07-17` `W36-E2-S1-T4` is complete: Python Playwright is locked only in the dev
+  extra, the wheel remains runtime-clean, and a real loopback `aidd ui` Chromium smoke
+  fails with the maintained install command when the browser is missing.
+  `W36-E2-S1-T2` is promoted to `Next` and `W36-E2-S1-T3` to `Soon`.
+
+- `2026-07-17` `W36-E2-S1-T1` is complete: the provider-free browser policy selects the
+  Python Playwright sync API with one external-cache Chromium target, an isolated
+  `browser_tests/` lane, and no Node/Vite product runtime. `W36-E2-S1-T4` is promoted to
+  `Next` and `W36-E2-S1-T2` to `Soon`.
+
+- `2026-07-17` `W36-E1-S2-T3`, slice `W36-E1-S2`, and Epic `W36-E1` are complete:
+  local-project evidence now records viewport geometry, accessibility, scroll ownership,
+  completion, timing, wrong actions, assistance, confidence, and decisive confusion.
+  `W36-E2-S1-T1` is promoted to `Next` and `W36-E2-S1-T4` to `Soon`.
+
+- `2026-07-17` `W36-E1-S2-T2` is complete: runtime detection, command availability,
+  authentication evidence, capability, permission/write scope, approval breadth,
+  connectivity, and mutations now have separate observable vocabularies.
+  `W36-E1-S2-T3` is promoted to `Next` and `W36-E2-S1-T1` to `Soon`.
+
+- `2026-07-17` `W36-E1-S2-T1` is complete: every setup, execution, next-flow, and archive
+  action now names its real endpoint/service, durable result, and conflict boundary; eval is
+  explicitly an external/manual handoff. `W36-E1-S2-T2` is promoted to `Next` and
+  `W36-E1-S2-T3` to `Soon`.
+
+- `2026-07-17` `W36-E1-S1-T3` and slice `W36-E1-S1` are complete: the local-project
+  evidence contract now maps Guided Setup, Inbox, Studio recovery/quality states, Flow
+  Complete, and History to logical route intents and fail-closed context recovery.
+  `W36-E1-S2-T1` is promoted to `Next` and `W36-E1-S2-T2` to `Soon`.
 
 - `2026-07-17` `W34-E8-S2-T2`, slice `W34-E8-S2`, Epic `W34-E8`, and Wave 34 are
   complete: architecture now distinguishes live stdout/stderr forwarding from durable

@@ -200,6 +200,17 @@ these fields:
 - Child work item: `<created-or-previewed-follow-up-id, or none>`
 - Browser: `<browser name and version>`
 - Viewport: `<desktop/tablet/mobile dimensions>`
+- Initial scroll position: `<x, y>`
+- Primary-action bounds: `<x, y, width, height; fully in first viewport: yes | no>`
+- Header footprint: `<height in px>`
+- Smallest touch target: `<width x height in px; control name>`
+- Text contrast: `<minimum ratio; foreground/background pair>`
+- Control/focus contrast: `<minimum ratio; control/focus indicator>`
+- Focus order: `<ordered primary controls; first unexpected stop or none>`
+- Overflow: `<none | axis, element, measured overflow>`
+- Clipping: `<none | element and clipped content>`
+- Overlap: `<none | overlapping elements and bounds>`
+- Scroll ownership: `<page | named bounded region; nested-scroll issue or none>`
 - Runtime id: `<runtime selected in the UI>`
 - Flow Complete status: `<completed | completed-with-warning | failed | blocked>`
 - Start Next Flow result: `<source findings | follow-up draft | preflight status>`
@@ -207,6 +218,24 @@ these fields:
 - Archive decision: `<archived | intentionally not archived>`
 - Blockers: `<none, provider unavailable, missing fixture, manual operator blocker>`
 - Cleanup: `<fixture project removed | .aidd removed | retained outside git with reason>`
+
+Rendered evidence passes only when the mobile header is at most `80 px`, every touch target
+is at least `44x44 px`, body text contrast is at least `4.5:1`, control boundaries and focus
+indicators are at least `3:1`, the primary decision is fully visible in the initial viewport,
+and there is no page-level horizontal overflow, clipped primary label, or control overlap.
+The evidence must identify the owner of every intentional nested scroll region.
+
+For each observed operator journey, also record:
+
+- Completion: `<completed | not completed>`
+- Elapsed time: `<duration from entry to durable outcome or stop>`
+- Wrong actions: `<count and first wrong action>`
+- Assistance: `<none | type of assistance>`
+- Operator confidence: `<1-5>`
+- First decisive confusion: `<first confusion or none>`
+
+These human timing and confidence fields are evidence, not a release threshold. The five-session
+release bar remains owned by `W36-E7-S3`.
 
 Cleanup rules:
 
@@ -219,16 +248,49 @@ Cleanup rules:
 - if provider credentials or runtime binaries are unavailable, record the blocker
   instead of replacing the local-project smoke with public-repository live E2E.
 
+## Canonical Operator State and Route Matrix
+
+The local UI uses logical route intents rather than treating every recovery panel as a
+destination. The only route intents in this contract are `setup`, `inbox`, `studio`, and
+`history`. Recovery is a Studio context. The concrete URL codec is owned by
+`W36-E6-S1-T1`; until then, tests and evidence name intents and context keys instead of
+inventing query-string syntax.
+
+Canonical context keys are `project`, `work_item`, `run`, `stage`, `document`, `attempt`,
+`artifact`, `recovery_target`, and `history_frame`. A route uses only the keys that identify
+durable objects needed by its decision surface.
+
+| Operator state | Route intent | Required context keys | Primary decision surface |
+| --- | --- | --- | --- |
+| Guided Setup | `setup` | `project` when selected | Validate project, then create or resume a work item. |
+| Inbox | `inbox` | `project` | Select the highest-priority durable decision or ready work item. |
+| Active Studio | `studio` | `project`, `work_item`, `run`, `stage`, `document` when available | Observe the active attempt or perform the one eligible stage/task action. |
+| Reconnecting Studio | `studio` | `project`, `work_item`, `run`, `stage`, `attempt` when available | Reconnect while preserving the durable run and live-log cursor; do not infer termination. |
+| Question Recovery | `studio` | `project`, `work_item`, `run`, `stage`, `recovery_target` | Answer the blocking question through the canonical answer service. |
+| Approval Recovery | `studio` | `project`, `work_item`, `run`, `stage`, `attempt`, `recovery_target` | Resolve the durable approval request; the server-side winner is authoritative. |
+| Validation Recovery | `studio` | `project`, `work_item`, `run`, `stage`, `document`, `recovery_target` | Run eligible repair or request a scoped change while keeping findings visible. |
+| Quality Gate | `studio` | `project`, `work_item`, `run`, `stage`, `document`, `artifact` when cited | Decide from Review or QA evidence without bypassing progression guards. |
+| Flow Complete | `studio` | `project`, `work_item`, `run`, `stage`, `document` | Choose the recommended next-flow action while the completed run remains immutable. |
+| History | `history` | `project`, `work_item`, `run`, `history_frame`; optional `artifact` | Inspect a retained frame, lineage, comparison, logs, or artifacts without mutation. |
+
+Context restoration is fail-closed and non-mutating. If a selected document, attempt,
+artifact, recovery target, or history frame is stale, the UI falls back to the nearest valid
+Studio context for the same run. If the run or work item is missing, it falls back to Inbox;
+if the project itself is not valid, it falls back to Guided Setup. A fallback reports which
+context was unavailable and never creates, resumes, repairs, archives, or launches work.
+
 ## Manual Browser Checklist
 
 Run these checks in a real browser against the local URL printed by `aidd ui`. Use a
 disposable `.aidd/` workspace and record the AIDD version, runtime id, browser, viewport,
 and any blockers in roadmap evidence.
 
-Wave 29 browser evidence uses this manual checklist plus the Codex-first real-provider
-lane. Do not add Playwright or Selenium dependencies for this lane. Capture screenshots
-and API snapshots outside the repository unless they are deliberately curated as docs
-assets.
+Manual provider evidence uses this checklist plus the Codex-first real-provider lane. The
+provider-free executable browser lane follows
+[`Browser Testing Policy`](../architecture/browser-testing.md): Python Playwright with one
+Chromium target, development-only dependencies, and no Node/Vite product runtime. Capture
+manual screenshots and API snapshots outside the repository unless they are deliberately
+curated as docs assets.
 
 ### Dashboard Shell
 
