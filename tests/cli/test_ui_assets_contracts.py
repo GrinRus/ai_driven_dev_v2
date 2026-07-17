@@ -104,6 +104,7 @@ def test_operator_static_asset_manifest_preserves_compatibility_routes() -> None
     }.issubset(filenames)
     assert "operator-api-state.js" in filenames
     assert "operator-presentation.js" in filenames
+    assert "operator-surface-parity.js" in filenames
     assert "operator-dashboard-actions.js" in filenames
     assert "operator-main.js" in filenames
     assert routes["/"].filename == "index.html"
@@ -129,6 +130,9 @@ def test_operator_js_bootstrap_loads_manifested_browser_modules() -> None:
     for route in module_routes:
         assert f'"{route}"' in loader
 
+    assert loader.index('"/operator-surface-parity.js"') < loader.index(
+        '"/operator-presentation.js"'
+    )
     assert loader.index('"/operator-presentation.js"') < loader.index(
         '"/operator-api-state.js"'
     )
@@ -154,6 +158,31 @@ def test_operator_presentation_selector_is_browser_only_and_fail_closed() -> Non
     assert 'presentationEffective: window.aiddPresentation?.effective || "legacy"' in api_state
     assert "fetch(" not in presentation
     assert "postJson(" not in presentation
+
+
+def test_operator_surface_parity_manifest_is_complete_and_policy_free() -> None:
+    parity = _asset_text("/operator-surface-parity.js")
+
+    _assert_contains_all(
+        parity,
+        (
+            'new Set(["legacy_only", "candidate", "parity_closed"])',
+            "const SURFACE_PARITY_MANIFEST = Object.freeze([",
+            'id: "guided-setup"',
+            'id: "inbox"',
+            'id: "active-studio"',
+            'id: "question-recovery"',
+            'id: "runtime-validation-recovery"',
+            'id: "review-qa"',
+            'id: "history"',
+            'id: "flow-complete"',
+            'journey: "W36-E7-S1-T12"',
+            "function validateSurfaceParityManifest(",
+            "function surfaceParityEntry(surfaceId)",
+        ),
+    )
+    assert "fetch(" not in parity
+    assert "postJson(" not in parity
 
 
 def test_operator_css_loader_imports_manifested_layers() -> None:

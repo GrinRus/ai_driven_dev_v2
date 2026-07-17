@@ -1,5 +1,6 @@
 (() => {
   const scripts = [
+    "/operator-surface-parity.js",
     "/operator-presentation.js",
     "/operator-api-state.js",
     "/operator-shell-rendering.js",

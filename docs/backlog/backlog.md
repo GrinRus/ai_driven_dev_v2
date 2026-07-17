@@ -7,13 +7,10 @@ slice, and local task.
 
 ## Next
 
-- `W36-E2-S3-T3` — Add a per-surface parity manifest with ownership, rollout state,
-  rollback renderer, required fixture, journey, and removal gate.
-
-## Soon
-
 - `W36-E2-S3-T4` — Make the parity manifest drive per-surface renderer resolution and
   deterministic legacy fallback.
+
+## Soon
 
 ## Parking lot
 
@@ -66,6 +63,12 @@ slice, and local task.
   queue-restoration policy in `docs/backlog/roadmap.md` (`W8-E3-S1`).
 
 ## Current reconciliation
+
+- `2026-07-17` `W36-E2-S3-T3` is complete: a validated packaged manifest now assigns
+  each of the twelve journey-owned surfaces exactly one slice owner, rollout state,
+  rollback renderer, required fixture, browser journey, and removal gate; all entries
+  begin as `legacy_only`. `W36-E2-S3-T4` is promoted to `Next`; `Soon` remains empty
+  until the migration resolver is accepted.
 
 - `2026-07-17` `W36-E2-S3-T2` is complete: the packaged browser now accepts only
   `ui=studio|legacy`, treats missing or invalid values as legacy, and records an explicit

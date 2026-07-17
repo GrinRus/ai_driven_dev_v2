@@ -115,6 +115,7 @@ test("operator bootstrap loads modules in declared order", async () => {
   await load(context, "operator.js");
 
   assert.deepEqual(appended, [
+    "/operator-surface-parity.js",
     "/operator-presentation.js",
     "/operator-api-state.js",
     "/operator-shell-rendering.js",
@@ -130,6 +131,36 @@ test("operator bootstrap loads modules in declared order", async () => {
     "/operator-stage-cockpit.js",
     "/operator-main.js",
   ]);
+});
+
+test("surface parity manifest has one owner and journey per migration surface", async () => {
+  const context = vm.createContext({console});
+  await load(context, "operator-surface-parity.js");
+  const entries = JSON.parse(JSON.stringify(vm.runInContext(
+    "SURFACE_PARITY_MANIFEST.map((entry) => ({...entry}))",
+    context,
+  )));
+  assert.equal(entries.length, 12);
+  assert.equal(new Set(entries.map((entry) => entry.id)).size, entries.length);
+  assert.deepEqual(entries.map((entry) => entry.journey).sort(), [
+    "W36-E7-S1-T1",
+    "W36-E7-S1-T10",
+    "W36-E7-S1-T11",
+    "W36-E7-S1-T12",
+    "W36-E7-S1-T2",
+    "W36-E7-S1-T3",
+    "W36-E7-S1-T4",
+    "W36-E7-S1-T5",
+    "W36-E7-S1-T6",
+    "W36-E7-S1-T7",
+    "W36-E7-S1-T8",
+    "W36-E7-S1-T9",
+  ]);
+  assert.ok(entries.every((entry) => entry.rollout === "legacy_only"));
+  assert.ok(entries.every((entry) => entry.owner.startsWith("W36-")));
+  assert.ok(entries.every((entry) => entry.rollbackRenderer.startsWith("operator-")));
+  assert.ok(entries.every((entry) => entry.fixture));
+  assert.ok(entries.every((entry) => entry.removalGate.startsWith("W36-")));
 });
 
 test("presentation selector is browser-only and fails back to legacy", async () => {

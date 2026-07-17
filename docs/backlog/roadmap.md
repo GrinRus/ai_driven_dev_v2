@@ -10521,13 +10521,13 @@ Local tasks:
     `legacy_only | candidate | parity_closed`: before cutover missing uses legacy; `studio`
     renders candidate or closed Studio surfaces and falls back only for `legacy_only`; `legacy`
     forces every retained rollback renderer; invalid follows the current missing-value rule.
-- `W36-E2-S3-T3` (next) Add a per-surface parity manifest with owning slice, rollout state
+- `W36-E2-S3-T3` (done) Add a per-surface parity manifest with owning slice, rollout state
   (`legacy_only | candidate | parity_closed`), rollback renderer, required fixture, browser
   journey, and legacy-removal gate.
   - Scope: packaged-browser migration metadata and tests.
   - Verification: every declared surface has exactly one owner and no surface can switch
     default before its required journey passes.
-- `W36-E2-S3-T4` (soon) Make the parity manifest drive per-surface renderer resolution so migrated
+- `W36-E2-S3-T4` (next) Make the parity manifest drive per-surface renderer resolution so migrated
   Studio surfaces and unmigrated legacy fallbacks can coexist inside either bootstrap mode.
   - Scope: browser renderer resolver only.
   - Verification: mixed-state fixtures implement the selector/parity truth table, retain one

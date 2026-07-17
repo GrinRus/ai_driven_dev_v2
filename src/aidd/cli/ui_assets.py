@@ -33,6 +33,11 @@ _OPERATOR_STATIC_ASSET_MANIFEST = (
         content_type="text/javascript; charset=utf-8",
     ),
     OperatorStaticAsset(
+        route="/operator-surface-parity.js",
+        filename="operator-surface-parity.js",
+        content_type="text/javascript; charset=utf-8",
+    ),
+    OperatorStaticAsset(
         route="/operator-presentation.js",
         filename="operator-presentation.js",
         content_type="text/javascript; charset=utf-8",
