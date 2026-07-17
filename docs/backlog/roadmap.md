@@ -11441,18 +11441,18 @@ Dependencies:
 
 Local tasks:
 
-- `W36-E6-S4-T1` (next) Add a shared keyed client mutation guard with pending lock, duplicate
+- `W36-E6-S4-T1` (done) Add a shared keyed client mutation guard with pending lock, duplicate
   suppression, conflict readback, and retryable failure state.
   - Dependencies: `W36-E6-S3-T3`.
   - Scope: packaged API/state utility.
   - Verification: double-click and concurrent-control fixtures send one request per key
     and preserve a retry path after failure.
-- `W36-E6-S4-T2` (soon) Adopt the mutation guard for workflow, stage, and remediation launch
+- `W36-E6-S4-T2` (next) Adopt the mutation guard for workflow, stage, and remediation launch
   controls.
   - Scope: run mutation controls.
   - Verification: pending, same-run conflict, different-run concurrency, failure, and
     success states match server admission.
-- `W36-E6-S4-T3` (planned) Adopt the mutation guard for answer and intervention writes.
+- `W36-E6-S4-T3` (soon) Adopt the mutation guard for answer and intervention writes.
   - Scope: question/intervention mutation controls.
   - Verification: failed writes retain drafts, successful writes clear drafts, and
     duplicate submissions create one durable artifact.

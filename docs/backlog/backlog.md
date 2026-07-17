@@ -7,13 +7,12 @@ slice, and local task.
 
 ## Next
 
-- `W36-E6-S4-T1` — Add a keyed client mutation guard with pending lock, duplicate
-  suppression, conflict readback, and retryable failure state.
+- `W36-E6-S4-T2` — Adopt the mutation guard for workflow, stage, and remediation launch
+  controls.
 
 ## Soon
 
-- `W36-E6-S4-T2` — Adopt the mutation guard for workflow, stage, and remediation launch
-  controls.
+- `W36-E6-S4-T3` — Adopt the mutation guard for answer and intervention writes.
 
 
 
@@ -59,6 +58,11 @@ slice, and local task.
   queue-restoration policy in `docs/backlog/roadmap.md` (`W8-E3-S1`).
 
 ## Current reconciliation
+
+- `2026-07-17` `W36-E6-S4-T1` is complete: the packaged guard shares one in-flight
+  Promise per bounded key, permits different keys concurrently, resolves 409 through
+  durable winner readback, retains retryable failure state, and bounds terminal state
+  retention. `W36-E6-S4-T2` is promoted to `Next` and `W36-E6-S4-T3` to `Soon`.
 
 - `2026-07-17` `W36-E6-S3-T3` and slice `W36-E6-S3` are complete: recovery now
   re-reads server stage/run while retaining cursor/chunks, and terminal or evicted jobs
