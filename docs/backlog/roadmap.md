@@ -10842,17 +10842,17 @@ Local tasks:
   - Scope: recovery rendering.
   - Verification: every blocker fixture exposes one recovery landmark, one primary
     action, and one supporting evidence path.
-- `W36-E5-S1-T3` (next) Implement one policy-free primary-action slot for vertical surfaces to bind
+- `W36-E5-S1-T3` (done) Implement one policy-free primary-action slot for vertical surfaces to bind
   to their own core/service-provided decision and compact metadata.
   - Scope: shared Decision Bar slot composition only.
   - Verification: surface fixtures can bind one action or an explicit no-action state, while
     the shared layer contains no eligibility, priority, or terminal-recommendation policy.
-- `W36-E5-S1-T4` (soon) Move Refresh, Open `.aidd`, Stop server, and other maintenance commands
+- `W36-E5-S1-T4` (next) Move Refresh, Open `.aidd`, Stop server, and other maintenance commands
   into a labelled overflow surface.
   - Scope: shell maintenance controls.
   - Verification: service commands remain keyboard-accessible but no longer precede the
     primary operator task in focus or visual order.
-- `W36-E5-S1-T5` (planned) Establish one Studio content scroll owner so the inspector, drawers,
+- `W36-E5-S1-T5` (soon) Establish one Studio content scroll owner so the inspector, drawers,
   and Filmstrip create no nested scroll traps on supported desktop viewports.
   - Scope: desktop shell layout.
   - Verification: `1280x900` and `1440x900` fixtures expose one primary vertical scroll

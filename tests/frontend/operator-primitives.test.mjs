@@ -50,6 +50,26 @@ test("Decision Bar rejects unknown state instead of inferring policy", async () 
   );
 });
 
+test("primary action slot renders supplied decisions without policy", async () => {
+  const value = await primitivesContext();
+  const action = vm.runInContext(
+    'renderPrimaryActionSlot({primaryAction: {action: "service-owned", label: "Proceed", enabled: false}})',
+    value,
+  );
+  assert.match(action, /data-primary-slot/);
+  assert.match(action, /data-decision-action="service-owned"/);
+  assert.match(action, /disabled aria-disabled="true"/);
+  assert.doesNotMatch(action, /next_action|eligib|priority|terminal/i);
+
+  const noAction = vm.runInContext(
+    'renderPrimaryActionSlot({guidance: "No service-owned action for this state."})',
+    value,
+  );
+  assert.match(noAction, /data-primary-slot/);
+  assert.match(noAction, /No service-owned action for this state/);
+  assert.doesNotMatch(noAction, /<button/);
+});
+
 test("state surfaces expose consequence, recovery, and truthful live semantics", async () => {
   const context = await primitivesContext();
   const states = ["empty", "loading", "error", "reconnecting", "unavailable"];

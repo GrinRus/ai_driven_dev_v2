@@ -7,11 +7,11 @@ slice, and local task.
 
 ## Next
 
-- `W36-E5-S1-T3` — Add one policy-free primary-action slot for vertical surfaces.
+- `W36-E5-S1-T4` — Move maintenance commands into a labelled overflow surface.
 
 ## Soon
 
-- `W36-E5-S1-T4` — Move maintenance commands into a labelled overflow surface.
+- `W36-E5-S1-T5` — Establish one Studio content scroll owner on desktop.
 
 ## Parking lot
 
@@ -48,6 +48,10 @@ slice, and local task.
   queue-restoration policy in `docs/backlog/roadmap.md` (`W8-E3-S1`).
 
 ## Current reconciliation
+
+- `2026-07-17` `W36-E5-S1-T3` is complete: vertical surfaces share one
+  policy-free primary-action slot that renders only the supplied service action or an
+  explicit no-action explanation. `W36-E5-S1-T4` is promoted to `Next` and `T5` to `Soon`.
 
 - `2026-07-17` `W36-E4-S1-T8` is complete: project inspection now resolves runtime
   readiness without reading context-owned launch history before a work item exists; active
