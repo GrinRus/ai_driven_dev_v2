@@ -76,3 +76,14 @@ test("Create and Resume are sibling branches before runtime selection", async ()
   assert.match(source, /if \(action === "create" && !state\.selectedRuntime\)/);
   assert.match(source, /runtime selection and launch remain separate actions/);
 });
+
+test("project-set and config details are collapsed behind Advanced", async () => {
+  const source = await readFile(assetPath, "utf8");
+  assert.match(source, /<details class="onboarding-advanced">/);
+  assert.match(source, /<summary>Advanced configuration<\/summary>/);
+  const advancedStart = source.indexOf('function renderOnboardingAdvanced()');
+  const advancedEnd = source.indexOf('function onboardingCanCreate()', advancedStart);
+  const advanced = source.slice(advancedStart, advancedEnd);
+  assert.match(advanced, /<strong>Config<\/strong>/);
+  assert.match(advanced, /renderProjectSetEditor\(\)/);
+});

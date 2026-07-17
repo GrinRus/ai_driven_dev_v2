@@ -7,12 +7,11 @@ slice, and local task.
 
 ## Next
 
-- `W36-E4-S1-T3` — Move project-set and configuration details behind an Advanced
-  disclosure.
+- `W36-E4-S1-T4` — Remove no-run mode cards that do not change execution semantics.
 
 ## Soon
 
-- `W36-E4-S1-T4` — Remove no-run mode cards that do not change execution semantics.
+- `W36-E4-S1-T5` — Add the Guided Delivery preference and contextual explanation card.
 
 ## Parking lot
 
@@ -51,6 +50,11 @@ slice, and local task.
   queue-restoration policy in `docs/backlog/roadmap.md` (`W8-E3-S1`).
 
 ## Current reconciliation
+
+- `2026-07-17` `W36-E4-S1-T3` is complete: project-set editing, AIDD root, and config
+  details remain reachable inside a collapsed Advanced disclosure while the primary
+  Create/Resume decision stays visible. `W36-E4-S1-T4` is promoted to `Next` and
+  `W36-E4-S1-T5` to `Soon`.
 
 - `2026-07-17` `W36-E4-S1-T2` is complete: Create and Resume share one work-item
   decision surface before runtime selection; Resume opens saved context without runtime

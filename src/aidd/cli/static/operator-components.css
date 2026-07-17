@@ -612,6 +612,23 @@
   border-radius: var(--radius-surface);
   background: var(--color-bg-raised);
 }
+
+.onboarding-advanced {
+  border-top: 1px solid var(--color-border-muted);
+  padding-top: var(--space-4);
+}
+
+.onboarding-advanced > summary {
+  min-height: var(--control-height);
+  cursor: pointer;
+  font-weight: var(--type-weight-strong);
+}
+
+.onboarding-advanced-content {
+  display: grid;
+  gap: var(--space-6);
+  padding-top: var(--space-4);
+}
 .onboarding-panel {
   align-content: start;
   display: grid;

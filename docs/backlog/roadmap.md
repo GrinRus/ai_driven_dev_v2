@@ -10714,17 +10714,17 @@ Local tasks:
   - Scope: onboarding work-item step.
   - Verification: resume opens existing context without a runtime or launch request,
     while mutation actions remain runtime-gated.
-- `W36-E4-S1-T3` (next) Move project-set and configuration details behind an Advanced
+- `W36-E4-S1-T3` (done) Move project-set and configuration details behind an Advanced
   disclosure.
   - Scope: onboarding project/work-item layout.
   - Verification: create or resume remains inside the first setup viewport at `390x844`
     and `1440x900`, while advanced project-set validation remains reachable.
-- `W36-E4-S1-T4` (soon) Remove no-run mode cards that do not change execution semantics and
+- `W36-E4-S1-T4` (next) Remove no-run mode cards that do not change execution semantics and
   leave terminal follow-up, clone, eval, and archive presentation to `W36-E5-S9`.
   - Scope: Guided Setup presentation only; the legacy renderer remains available for rollback.
   - Verification: the setup action-to-service matrix proves each remaining selector has a
     distinct endpoint/outcome and no terminal disposition leaks into first-run setup.
-- `W36-E4-S1-T5` (planned) Add the Guided Delivery preference and contextual explanation card over
+- `W36-E4-S1-T5` (soon) Add the Guided Delivery preference and contextual explanation card over
   the same selected context and service actions used by Studio.
   - Scope: Guided Delivery browser presentation only.
   - Verification: toggling Guided Delivery preserves project, work item, run, stage,

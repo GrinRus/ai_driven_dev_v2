@@ -243,9 +243,7 @@ function onboardingProjectSummary() {
   return `
     <div class="panel-list">
       <div class="panel-item"><strong>Project root</strong>${pathLine(project.project_root, 86)}</div>
-      <div class="panel-item"><strong>AIDD root</strong>${pathLine(project.workspace_root, 86)}</div>
       <div class="panel-item"><strong>Workspace</strong><span>${project.workspace_exists ? "existing .aidd detected" : "new .aidd will be created"}</span></div>
-      <div class="panel-item"><strong>Config</strong>${pathLine(state.onboarding.configPath || "aidd.example.toml", 86)}</div>
     </div>
   `;
 }
@@ -319,6 +317,27 @@ function renderProjectSetEditor() {
   `;
 }
 
+function renderOnboardingAdvanced() {
+  const project = onboardingProject();
+  if (!project) return "";
+  return `
+    <details class="onboarding-advanced">
+      <summary>Advanced configuration</summary>
+      <div class="onboarding-advanced-content">
+        <div class="panel-list">
+          <div class="panel-item"><strong>AIDD root</strong>${pathLine(project.workspace_root, 86)}</div>
+          <div class="panel-item"><strong>Config</strong>${pathLine(state.onboarding.configPath || "aidd.example.toml", 86)}</div>
+        </div>
+        <div class="surface-title compact"><span>Project set</span><span class="small-badge">optional</span></div>
+        <div class="form-grid">
+          ${renderProjectSetEditor()}
+          ${onboardingProjectSetStatus()}
+        </div>
+      </div>
+    </details>
+  `;
+}
+
 function onboardingCanCreate() {
   return Boolean(
     onboardingProject()
@@ -383,6 +402,7 @@ function renderOnboarding() {
           </div>
         </form>
         ${onboardingProjectSummary()}
+        ${renderOnboardingAdvanced()}
       </section>
 
       <section class="surface onboarding-panel">
@@ -422,17 +442,6 @@ function renderOnboarding() {
           ${selectedRunner}
         </div>
         <div class="runner-card-grid">${onboardingRunnerCards()}</div>
-      </section>
-
-      <section class="surface onboarding-panel">
-        <div class="surface-title">
-          <span>Project set</span>
-          <span class="small-badge">optional</span>
-        </div>
-        <div class="form-grid">
-          ${renderProjectSetEditor()}
-          ${onboardingProjectSetStatus()}
-        </div>
       </section>
 
       <section class="surface onboarding-panel">

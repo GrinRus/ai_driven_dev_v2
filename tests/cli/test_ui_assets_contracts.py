@@ -679,6 +679,9 @@ def test_operator_onboarding_static_contract_syncs_create_action_state() -> None
         (
             "function onboardingCanCreate()",
             "function renderProjectSetEditor()",
+            "function renderOnboardingAdvanced()",
+            '<details class="onboarding-advanced">',
+            "<summary>Advanced configuration</summary>",
             "function updateProjectSetRow(index, field, value)",
             "function addProjectSetRow()",
             "function removeProjectSetRow(index)",
