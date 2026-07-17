@@ -10741,7 +10741,7 @@ Local tasks:
   - Scope: Guided Setup parity-manifest entry only.
   - Verification: the required journey passes in the Studio renderer and explicit rollback
     reaches the legacy setup through the same service path.
-- `W36-E4-S1-T8` (next) Restore runtime-readiness inspection before an onboarding work-item
+- `W36-E4-S1-T8` (done) Restore runtime-readiness inspection before an onboarding work-item
   context exists.
   - Scope: onboarding/readiness boundary only; launch-history projection remains unchanged
     after a work item is selected.
@@ -10842,12 +10842,12 @@ Local tasks:
   - Scope: recovery rendering.
   - Verification: every blocker fixture exposes one recovery landmark, one primary
     action, and one supporting evidence path.
-- `W36-E5-S1-T3` (planned) Implement one policy-free primary-action slot for vertical surfaces to bind
+- `W36-E5-S1-T3` (next) Implement one policy-free primary-action slot for vertical surfaces to bind
   to their own core/service-provided decision and compact metadata.
   - Scope: shared Decision Bar slot composition only.
   - Verification: surface fixtures can bind one action or an explicit no-action state, while
     the shared layer contains no eligibility, priority, or terminal-recommendation policy.
-- `W36-E5-S1-T4` (planned) Move Refresh, Open `.aidd`, Stop server, and other maintenance commands
+- `W36-E5-S1-T4` (soon) Move Refresh, Open `.aidd`, Stop server, and other maintenance commands
   into a labelled overflow surface.
   - Scope: shell maintenance controls.
   - Verification: service commands remain keyboard-accessible but no longer precede the

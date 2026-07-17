@@ -7,11 +7,11 @@ slice, and local task.
 
 ## Next
 
-- `W36-E4-S1-T8` — Restore runtime-readiness inspection before onboarding has an active
-  work-item context.
+- `W36-E5-S1-T3` — Add one policy-free primary-action slot for vertical surfaces.
 
 ## Soon
 
+- `W36-E5-S1-T4` — Move maintenance commands into a labelled overflow surface.
 
 ## Parking lot
 
@@ -48,6 +48,11 @@ slice, and local task.
   queue-restoration policy in `docs/backlog/roadmap.md` (`W8-E3-S1`).
 
 ## Current reconciliation
+
+- `2026-07-17` `W36-E4-S1-T8` is complete: project inspection now resolves runtime
+  readiness without reading context-owned launch history before a work item exists; active
+  contexts retain canonical launch outcomes. `W36-E5-S1-T3` is promoted to `Next` and
+  `W36-E5-S1-T4` to `Soon`.
 
 - `2026-07-17` `W36-E5-S1-T2` is complete: Studio recovery now has one Decision Bar
   Recovery Summary with one decisive failure, one primary action, and one Evidence link;

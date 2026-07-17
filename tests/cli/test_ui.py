@@ -1553,6 +1553,10 @@ def test_ui_onboarding_mode_serves_setup_until_context_handoff(
         runtime["runtime_id"]
         for runtime in inspect_payload["readiness"]["runtimes"]  # type: ignore[index]
     } >= {"codex", "claude-code", "opencode", "qwen", "generic-cli"}
+    assert all(
+        runtime["latest_launch"] is None
+        for runtime in inspect_payload["readiness"]["runtimes"]  # type: ignore[index]
+    )
 
     created_payload = _payload(
         service.handle_post(

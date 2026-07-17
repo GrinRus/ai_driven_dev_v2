@@ -3700,14 +3700,17 @@ class OperatorUiService:
 
     def _runtime_readiness_for_config(self, config_path: Path) -> object:
         cfg = load_config(config_path)
+        launch_history = None
+        if self._context is not None:
+            launch_history = resolve_runtime_launch_history(
+                workspace_root=self.workspace_root,
+                work_item=self.work_item,
+            )
         return resolve_runtime_readiness(
             config=cfg,
             probe_reports=self._readiness_probe_provider(cfg),
             command_sources=_runtime_command_sources_from_config(config_path),
-            launch_history=resolve_runtime_launch_history(
-                workspace_root=self.workspace_root,
-                work_item=self.work_item,
-            ),
+            launch_history=launch_history,
         )
 
     def _runtime_readiness(self) -> object:
