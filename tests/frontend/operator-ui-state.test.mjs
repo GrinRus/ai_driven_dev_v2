@@ -346,6 +346,70 @@ test("cancellation invalidates an in-flight job poll", async () => {
   assert.equal(requests.length, 2);
 });
 
+test("polling retries with a bounded cursor-preserving backoff and recovers", async () => {
+  const {context} = domContext();
+  const scheduled = [];
+  context.setTimeout = (callback, delay) => {
+    scheduled.push({callback, delay});
+    return scheduled.length;
+  };
+  context.clearTimeout = () => {};
+  let request = 0;
+  context.fetch = async (url) => {
+    request += 1;
+    if (request === 1) throw new Error("temporary offline");
+    if (url.includes("/logs?")) {
+      return response({cursor: 2, chunks: [{stream: "stdout", text: "once\n"}]});
+    }
+    return response({job_id: "job-1", status: "running"});
+  };
+  await load(context, "operator-api-state.js");
+  await load(context, "operator-logs-jobs.js");
+  vm.runInContext(
+    "state.activeJobId = 'job-1'; state.activeJobStatus = {status: 'running'};",
+    context,
+  );
+
+  await vm.runInContext("pollActiveJob()", context);
+  assert.equal(scheduled[0].delay, 500);
+  assert.equal(vm.runInContext("state.activeJobCursor", context), 0);
+  await scheduled.shift().callback();
+  await new Promise((resolve) => setImmediate(resolve));
+
+  assert.equal(vm.runInContext("state.activeJobCursor", context), 2);
+  assert.equal(vm.runInContext("state.activeJobLogChunks.filter((item) => item.text === 'once\\n').length", context), 1);
+  assert.equal(vm.runInContext("state.activeJobConnection.state", context), "online");
+  assert.equal(vm.runInContext("state.activeJobConnection.recovered", context), true);
+  assert.equal(scheduled.at(-1).delay, 1000);
+});
+
+test("repeated polling failures stop after the bounded retry budget", async () => {
+  const {context} = domContext();
+  const delays = [];
+  context.setTimeout = (_callback, delay) => {
+    delays.push(delay);
+    return delays.length;
+  };
+  context.clearTimeout = () => {};
+  context.fetch = async () => {
+    throw new Error("still offline");
+  };
+  await load(context, "operator-api-state.js");
+  await load(context, "operator-logs-jobs.js");
+  vm.runInContext(
+    "state.activeJobId = 'job-1'; state.activeJobStatus = {status: 'running'};",
+    context,
+  );
+
+  for (let attempt = 0; attempt < 5; attempt += 1) {
+    await vm.runInContext("pollActiveJob()", context);
+  }
+  assert.deepEqual(delays, [500, 1000, 2000, 4000]);
+  assert.equal(vm.runInContext("state.activeJobConnection.state", context), "offline");
+  assert.equal(vm.runInContext("state.activeJobConnection.failureCount", context), 5);
+  assert.equal(vm.runInContext("state.activeJobTimer", context), null);
+});
+
 test("rejected log request renders a deterministic escaped error", async () => {
   const {context, element} = domContext();
   context.fetch = async () => {

@@ -11406,18 +11406,18 @@ Dependencies:
 
 Local tasks:
 
-- `W36-E6-S3-T1` (next) Replace terminal-on-error interval polling with a cursor-preserving
+- `W36-E6-S3-T1` (done) Replace terminal-on-error interval polling with a cursor-preserving
   retry state machine and bounded exponential backoff.
   - Dependencies: `W36-E6-S2-T3`.
   - Scope: `operator-logs-jobs.js` polling controller.
   - Verification: failure -> retry -> recovery, repeated failure, cancellation, and
     terminal-job sequences produce no duplicate or skipped chunks.
-- `W36-E6-S3-T2` (soon) Render offline, reconnecting, recovered, expired-job, and manual
+- `W36-E6-S3-T2` (next) Render offline, reconnecting, recovered, expired-job, and manual
   Reconnect states.
   - Scope: live connection status surface.
   - Verification: each sequence names whether the runtime may still be running and
     offers the correct local recovery action.
-- `W36-E6-S3-T3` (planned) Reconcile active job, dashboard, logs, and selected stage after
+- `W36-E6-S3-T3` (soon) Reconcile active job, dashboard, logs, and selected stage after
   recovery or terminal-job eviction.
   - Scope: browser state reconciliation.
   - Verification: reconnect and eviction fixtures converge on the server-authoritative

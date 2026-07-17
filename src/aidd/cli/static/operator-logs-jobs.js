@@ -250,6 +250,43 @@ function activeJobIsTerminal() {
   return ["cancelled", "completed", "failed"].includes(state.activeJobStatus?.status || "");
 }
 
+const ACTIVE_JOB_POLL_INTERVAL_MS = 1000;
+const ACTIVE_JOB_RETRY_BASE_MS = 500;
+const ACTIVE_JOB_RETRY_MAX_MS = 8000;
+const ACTIVE_JOB_RETRY_LIMIT = 5;
+
+function clearActiveJobPollTimer() {
+  if (state.activeJobTimer) clearTimeout(state.activeJobTimer);
+  state.activeJobTimer = null;
+}
+
+function resetActiveJobConnection() {
+  state.activeJobConnection = {
+    state: "unknown",
+    failureCount: 0,
+    lastError: "",
+    retryDelayMs: null,
+    recovered: false
+  };
+}
+
+function scheduleActiveJobPoll(delayMs = ACTIVE_JOB_POLL_INTERVAL_MS) {
+  clearActiveJobPollTimer();
+  const generation = state.activeJobPollGeneration;
+  state.activeJobTimer = setTimeout(() => {
+    state.activeJobTimer = null;
+    if (generation !== state.activeJobPollGeneration) return;
+    void pollActiveJob();
+  }, delayMs);
+}
+
+function activeJobRetryDelay(failureCount) {
+  return Math.min(
+    ACTIVE_JOB_RETRY_BASE_MS * (2 ** Math.max(0, failureCount - 1)),
+    ACTIVE_JOB_RETRY_MAX_MS
+  );
+}
+
 function activeJobCancelLabel() {
   const status = state.activeJobStatus?.status || "running";
   if (status === "cancelling") return "Cancelling...";
@@ -310,6 +347,7 @@ async function renderLogs() {
 async function cancelActiveJob() {
   if (!state.activeJobId) return;
   state.activeJobPollGeneration += 1;
+  clearActiveJobPollTimer();
   const result = await postJson(`/api/jobs/${encodeURIComponent(state.activeJobId)}/cancel`, {});
   state.activeJobStatus = result;
   if (result.already_finished) {
@@ -322,9 +360,7 @@ async function cancelActiveJob() {
   renderActivityTable();
   if (activeModeIsEvidenceLog()) await renderLogs();
   const activeStatuses = new Set(["running", "waiting-for-operator", "cancelling"]);
-  if (!state.activeJobTimer && activeStatuses.has(result.status)) {
-    state.activeJobTimer = setInterval(pollActiveJob, 1000);
-  }
+  if (activeStatuses.has(result.status)) scheduleActiveJobPoll(0);
 }
 
 async function pollActiveJob() {
@@ -353,6 +389,14 @@ async function pollActiveJob() {
       || state.activeJobPollGeneration !== pollGeneration
     ) return;
     state.activeJobStatus = status;
+    const wasDisconnected = state.activeJobConnection.failureCount > 0;
+    state.activeJobConnection = {
+      state: "online",
+      failureCount: 0,
+      lastError: "",
+      retryDelayMs: null,
+      recovered: wasDisconnected
+    };
     renderActiveRunPanel();
     if (typeof renderNextActionPanel === "function") renderNextActionPanel();
     if (typeof renderGlobalNextActionStrip === "function") renderGlobalNextActionStrip();
@@ -363,22 +407,38 @@ async function pollActiveJob() {
       await renderApprovals();
     }
     if (!activeStatuses.has(state.activeJobStatus.status)) {
-      if (state.activeJobTimer) clearInterval(state.activeJobTimer);
-      state.activeJobTimer = null;
+      clearActiveJobPollTimer();
       await fetchDashboard();
       await fetchProjectHome(state.dashboard?.work_item || "");
       await renderAll();
+    } else {
+      scheduleActiveJobPoll();
     }
   } catch (error) {
+    if (
+      state.activeJobId !== jobId
+      || state.activeJobPollGeneration !== pollGeneration
+    ) return;
+    const failureCount = state.activeJobConnection.failureCount + 1;
+    const retryDelayMs = activeJobRetryDelay(failureCount);
+    state.activeJobConnection = {
+      state: failureCount >= ACTIVE_JOB_RETRY_LIMIT ? "offline" : "reconnecting",
+      failureCount,
+      lastError: error.message,
+      retryDelayMs: failureCount >= ACTIVE_JOB_RETRY_LIMIT ? null : retryDelayMs,
+      recovered: false
+    };
     state.activeJobLogChunks.push({stream: "system", text: `[ui] ${error.message}\n`});
-    if (state.activeJobTimer) clearInterval(state.activeJobTimer);
-    state.activeJobTimer = null;
     renderActivityTable();
     if (activeModeIsEvidenceLog()) await renderLogs();
+    if (failureCount < ACTIVE_JOB_RETRY_LIMIT) scheduleActiveJobPoll(retryDelayMs);
+    else clearActiveJobPollTimer();
   }
 }
 
 async function startJobPolling(job) {
+  clearActiveJobPollTimer();
+  state.activeJobPollGeneration += 1;
   state.activeJobId = job.job_id;
   state.activeJobCursor = 0;
   state.activeJobLogChunks = [];
@@ -389,12 +449,11 @@ async function startJobPolling(job) {
     status: "running",
     message: "job started"
   };
-  if (state.activeJobTimer) clearInterval(state.activeJobTimer);
+  resetActiveJobConnection();
   renderActiveRunPanel();
   if (typeof renderNextActionPanel === "function") renderNextActionPanel();
   if (typeof renderGlobalNextActionStrip === "function") renderGlobalNextActionStrip();
   activateTab("logs");
   await renderLogs();
   await pollActiveJob();
-  state.activeJobTimer = setInterval(pollActiveJob, 1000);
 }

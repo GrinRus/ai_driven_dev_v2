@@ -7,13 +7,13 @@ slice, and local task.
 
 ## Next
 
-- `W36-E6-S3-T1` — Replace terminal-on-error polling with cursor-preserving retry and
-  bounded backoff.
+- `W36-E6-S3-T2` — Render offline, reconnecting, recovered, expired-job, and manual
+  Reconnect states.
 
 ## Soon
 
-- `W36-E6-S3-T2` — Render offline, reconnecting, recovered, expired-job, and manual
-  Reconnect states.
+- `W36-E6-S3-T3` — Reconcile active job, dashboard, logs, and selected stage after
+  recovery or terminal-job eviction.
 
 
 
@@ -61,6 +61,11 @@ slice, and local task.
   queue-restoration policy in `docs/backlog/roadmap.md` (`W8-E3-S1`).
 
 ## Current reconciliation
+
+- `2026-07-17` `W36-E6-S3-T1` is complete: live polling now uses one generation-scoped
+  timeout, preserves the accepted cursor, retries at 0.5/1/2/4 seconds, caps at an
+  explicit offline state, and cannot append late chunks after cancellation or terminal
+  invalidation. `W36-E6-S3-T2` is promoted to `Next` and `W36-E6-S3-T3` to `Soon`.
 
 - `2026-07-17` `W36-E6-S2-T3` and slice `W36-E6-S2` are complete: follow-up and clone
   definitions merge the exact source-run session draft after Back/reload, preserve it

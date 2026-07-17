@@ -100,6 +100,13 @@ const state = {
   activeJobStatus: null,
   activeJobTimer: null,
   activeJobPollGeneration: 0,
+  activeJobConnection: {
+    state: "unknown",
+    failureCount: 0,
+    lastError: "",
+    retryDelayMs: null,
+    recovered: false
+  },
   pendingCockpitReveal: false,
   pendingNextFlowWizardReveal: false,
   runAccountability: null,
@@ -511,11 +518,10 @@ async function recoverActiveJobFromDashboard(job) {
   state.activeJobCursor = 0;
   state.activeJobLogChunks = [];
   state.activeJobStatus = job;
-  if (state.activeJobTimer) clearInterval(state.activeJobTimer);
+  clearActiveJobPollTimer();
+  state.activeJobPollGeneration += 1;
+  resetActiveJobConnection();
   await pollActiveJob();
-  if (activeJobPayloadIsLive(state.activeJobStatus)) {
-    state.activeJobTimer = setInterval(pollActiveJob, 1000);
-  }
 }
 
 function syncLiveJobBodyClass() {
