@@ -11319,7 +11319,7 @@ Exit evidence:
 ### Epic W36-E6 — durable navigation, drafts, reconnect, and action integrity (`planned`)
 Linked stories: `US-05`, `US-06`, `US-10`, `US-11`
 
-#### Slice W36-E6-S1 — URL-backed work-item and run navigation (`planned`)
+#### Slice W36-E6-S1 — URL-backed work-item and run navigation (`done`)
 Goal: make reload, Browser Back, deep links, and lineage navigation preserve the selected
 operator context.
 
@@ -11341,7 +11341,7 @@ Local tasks:
   - Scope: shell navigation controller.
   - Verification: a browser history sequence preserves Logs versus Artifacts, selected
     stage, selected run, and artifact drill-down across Back, Forward, and reload.
-- `W36-E6-S1-T3` (next) Define shared route intents for Inbox work-item, historical-run, parent, and
+- `W36-E6-S1-T3` (done) Define shared route intents for Inbox work-item, historical-run, parent, and
   child-lineage bindings without owning their vertical renderers.
   - Scope: URL/navigation intent controller only.
   - Verification: E5-owned Inbox and History fixtures bind each visible action to one distinct
@@ -11364,12 +11364,12 @@ Dependencies:
 
 Local tasks:
 
-- `W36-E6-S2-T1` (soon) Define the key, retention, and cleanup contract for noncanonical
+- `W36-E6-S2-T1` (next) Define the key, retention, and cleanup contract for noncanonical
   browser-session drafts.
   - Scope: operator frontend architecture only.
   - Verification: the contract isolates project, work item, run, stage, form, and source
     id and names exact submit/expiry cleanup behavior.
-- `W36-E6-S2-T4` (planned) Implement the scoped noncanonical browser-session draft store.
+- `W36-E6-S2-T4` (soon) Implement the scoped noncanonical browser-session draft store.
   - Dependencies: `W36-E6-S2-T1`.
   - Scope: shared packaged JavaScript state utility only.
   - Verification: contract fixtures isolate every key dimension and successful submit

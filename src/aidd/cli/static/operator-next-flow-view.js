@@ -694,6 +694,7 @@ function renderLineageCandidates(candidates) {
       <p>${escapeHtml(candidate.relationship || "child work item")}</p>
       <div class="panel-item"><strong>Work item</strong><span>${escapeHtml(candidate.work_item_id)}</span></div>
       <div class="panel-item"><strong>Source run</strong><span>${escapeHtml(candidate.source_run_id || state.dashboard?.run?.run_id || "not recorded")}</span></div>
+      <button data-operator-route-intent="child-work-item" data-route-work-item="${escapeHtml(candidate.work_item_id)}" type="button">Open child work item</button>
     </article>
   `).join("");
 }
@@ -908,6 +909,7 @@ function renderRunHistory() {
             <strong>${escapeHtml(sourceRun)}</strong>
             <p>${escapeHtml(sourceWorkItem)}</p>
             <div class="panel-item"><strong>Baseline</strong><span>${escapeHtml(baseline)}</span></div>
+            <button data-operator-route-intent="parent-run" data-route-work-item="${escapeHtml(sourceWorkItem)}" data-route-run-id="${escapeHtml(sourceRun)}" type="button">Inspect parent run</button>
           </article>
         ` : ""}
         <article class="lineage-node current" data-lineage-run-id="${escapeHtml(run.run_id)}">
@@ -916,6 +918,10 @@ function renderRunHistory() {
           <p>${escapeHtml(run.runtime_id || "runtime not recorded")}</p>
           <div class="panel-item"><strong>Status</strong><span>${escapeHtml(handoff?.status || state.dashboard?.next_action?.label || "in progress")}</span></div>
           <div class="panel-item"><strong>Archive</strong><span>${escapeHtml(archive.archived ? `${archive.archived_at_utc || "recorded"} / ${archive.reason || "no reason"}` : "open")}</span></div>
+          <div class="lineage-actions">
+            <button data-operator-route-intent="historical-run" data-route-work-item="${escapeHtml(state.dashboard?.work_item || "")}" data-route-run-id="${escapeHtml(run.run_id)}" type="button">Inspect run history</button>
+            <button data-operator-route-intent="run-artifacts" data-route-work-item="${escapeHtml(state.dashboard?.work_item || "")}" data-route-run-id="${escapeHtml(run.run_id)}" type="button">Inspect run artifacts</button>
+          </div>
         </article>
         <div class="lineage-children">
           ${renderLineageCandidates(candidates)}

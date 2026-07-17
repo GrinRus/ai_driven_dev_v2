@@ -83,6 +83,16 @@ document.addEventListener("keydown", async (event) => {
 
 document.addEventListener("click", async (event) => {
   try {
+    const routeTarget = event.target.closest("[data-operator-route-intent]");
+    if (routeTarget) {
+      await navigateOperatorRouteIntent(routeTarget.dataset.operatorRouteIntent, {
+        workItem: routeTarget.dataset.routeWorkItem,
+        runId: routeTarget.dataset.routeRunId,
+        stage: routeTarget.dataset.routeStage,
+        artifact: routeTarget.dataset.routeArtifact
+      });
+      return;
+    }
     const onboardingRecentProject = event.target.closest("[data-onboarding-recent-project]")?.dataset.onboardingRecentProject;
     if (onboardingRecentProject) {
       state.onboarding.projectRootInput = onboardingRecentProject;

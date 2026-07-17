@@ -7,13 +7,12 @@ slice, and local task.
 
 ## Next
 
-- `W36-E6-S1-T3` — Define shared route intents for Inbox work-item, historical-run,
-  parent, and child-lineage bindings without owning their vertical renderers.
+- `W36-E6-S2-T1` — Define the scoped browser-session draft key, retention, and cleanup
+  contract.
 
 ## Soon
 
-- `W36-E6-S2-T1` — Define the scoped browser-session draft key, retention, and cleanup
-  contract.
+- `W36-E6-S2-T4` — Implement the scoped noncanonical browser-session draft store.
 
 
 
@@ -63,6 +62,11 @@ slice, and local task.
   queue-restoration policy in `docs/backlog/roadmap.md` (`W8-E3-S1`).
 
 ## Current reconciliation
+
+- `2026-07-17` `W36-E6-S1-T3` and slice `W36-E6-S1` are complete: Inbox, historical
+  run, parent, child, and artifact inspection actions resolve through one fail-closed
+  intent registry, and archived runs retain both read-only inspection paths.
+  `W36-E6-S2-T1` is promoted to `Next` and `W36-E6-S2-T4` to `Soon`.
 
 - `2026-07-17` `W36-E6-S1-T2` is complete: explicit transitions push canonical route
   entries, derived renders replace them, and `popstate` plus reload restore the selected

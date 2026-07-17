@@ -623,8 +623,8 @@ function renderProjectHomeWorkItemCard(item) {
       </div>
       <div class="badge-row">${rootChips}${blockerBadge}</div>
       <div class="wizard-actions">
-        <button data-project-home-resume="${escapeHtml(item.work_item)}" type="button">${selected ? "Open workbench" : "Resume"}</button>
-        ${run.run_id ? `<button data-project-home-open-run="${escapeHtml(item.work_item)}" class="secondary" type="button">Open latest run</button>` : ""}
+        <button data-operator-route-intent="inbox-work-item" data-route-work-item="${escapeHtml(item.work_item)}" type="button">Open in Studio</button>
+        ${run.run_id ? `<button data-operator-route-intent="historical-run" data-route-work-item="${escapeHtml(item.work_item)}" data-route-run-id="${escapeHtml(run.run_id)}" class="secondary" type="button">Inspect run history</button>` : ""}
       </div>
     </article>
   `;

@@ -260,6 +260,13 @@ server-owned state reached before a valid project/work-item context; it does not
 fourth persisted browser mode. `artifact` stores a bounded artifact/document key, never an
 arbitrary path.
 
+Visible navigation uses one shared intent vocabulary: `Open in Studio` for an Inbox work
+item, `Inspect run history` for a recorded run, `Inspect parent run` for parent lineage,
+`Open child work item` for child lineage, and `Inspect run artifacts` for durable run
+evidence. Inbox and History renderers bind these intents; they do not construct local URL
+variants. Archived runs retain both history and artifact intents because navigation is
+read-only and does not alter the completed run.
+
 Writers emit only that canonical form. Readers temporarily accept legacy `tab` and `key`
 aliases, report the legacy source, and normalize them without mutation. Invalid identifiers,
 unknown stages, path-like artifact values, conflicting attempt/task-attempt detail, and stale

@@ -663,6 +663,19 @@ async function restoreOperatorRouteFromLocation() {
   }
 }
 
+async function navigateOperatorRouteIntent(intent, context) {
+  const resolved = resolveOperatorRouteIntent(intent, context);
+  const next = `${window.location.pathname}${encodeOperatorRoute(resolved.route)}`;
+  restoringOperatorRoute = true;
+  try {
+    window.history.pushState({aiddOperatorRoute: true, intent}, "", next);
+    applyOperatorRoute(resolved.route);
+    await refresh();
+  } finally {
+    restoringOperatorRoute = false;
+  }
+}
+
 function sourceFindingsUrl() {
   const params = new URLSearchParams();
   if (state.activeRunId) params.set("run_id", state.activeRunId);
