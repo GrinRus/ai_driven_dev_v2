@@ -7,10 +7,13 @@ slice, and local task.
 
 ## Next
 
-- `W36-E6-S4-T6` — Reconcile approval compare-and-set or terminal conflicts to the
-  durable winning decision and audit row.
+- `W36-E5-S0-T1` — Add one core-owned recommended outcome and rationale to the terminal
+  handoff read model.
 
 ## Soon
+
+- `W36-E5-S0-T2` — Expose the recommendation through the existing additive
+  terminal-handoff API contract with explicit legacy fallback semantics.
 
 ## Parking lot
 
@@ -32,8 +35,6 @@ slice, and local task.
   finalization inside Studio.
 - `W36-E5-S8-T1` — Implement the typed Filmstrip frame projection from durable attempts,
   task attempts, and finalization milestones.
-- `W36-E5-S0-T1` — Add one core-owned recommended outcome and rationale to the terminal
-  handoff read model.
 - `W36-E5-S10-T1` — Switch the default renderer to Studio only after all per-surface
   parity entries close.
 - `W36-E7-S1-T1` — Add the Guided Setup project validation, create/resume, runtime
@@ -53,6 +54,11 @@ slice, and local task.
   queue-restoration policy in `docs/backlog/roadmap.md` (`W8-E3-S1`).
 
 ## Current reconciliation
+
+- `2026-07-17` `W36-E6-S4-T6`, slice `W36-E6-S4`, and Epic `W36-E6` are complete:
+  approval decisions share one request-scoped guard, reconcile CAS and terminal 409s
+  through the durable decision/audit read model, and never leave stale pending controls.
+  `W36-E5-S0-T1` is promoted to `Next` and `W36-E5-S0-T2` to `Soon`.
 
 - `2026-07-17` `W36-E6-S4-T5` is complete: approval cards capture a decision reason,
   session-wide breadth is shown in an explicit confirmation preview, no

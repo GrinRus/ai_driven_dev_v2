@@ -6,10 +6,8 @@ import vm from "node:vm";
 import {fileURLToPath} from "node:url";
 
 const repositoryRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
-const assetPath = path.join(
-  repositoryRoot,
-  "src/aidd/cli/static/operator-approvals-interventions.js",
-);
+const staticRoot = path.join(repositoryRoot, "src/aidd/cli/static");
+const assetPath = path.join(staticRoot, "operator-approvals-interventions.js");
 
 function escapeHtml(value) {
   return String(value ?? "")
@@ -20,8 +18,9 @@ function escapeHtml(value) {
     .replaceAll("'", "&#039;");
 }
 
-async function approvalContext() {
+async function approvalContext({conflict = false, terminal = false} = {}) {
   const posts = [];
+  const toasts = [];
   const controls = Array.from({length: 6}, () => ({
     disabled: false,
     setAttribute(name, value) {
@@ -53,14 +52,31 @@ async function approvalContext() {
     postJson: async (url, payload) => {
       assert.ok(controls.every((control) => control.disabled));
       posts.push({url, payload});
-      return {};
+      if (conflict) {
+        const error = new Error("decision conflict");
+        error.status = 409;
+        throw error;
+      }
+      return {
+        decisions: [{request_id: "REQ-1", action: payload.action, reason: payload.reason}],
+        audit_history: [{request_id: "REQ-1", decision_action: payload.action}],
+      };
     },
-    toast: () => {},
+    api: async () => terminal ? {decisions: [], audit_history: []} : ({
+      decisions: [{request_id: "REQ-1", action: "allow_once", reason: "durable winner"}],
+      audit_history: [{request_id: "REQ-1", decision_action: "allow_once"}],
+    }),
+    toast: (message) => toasts.push(message),
     __posts: posts,
+    __toasts: toasts,
     __controls: controls,
     __confirmation: confirmation,
     __preview: preview,
   });
+  vm.runInContext(
+    await readFile(path.join(staticRoot, "operator-mutation-guard.js"), "utf8"),
+    context,
+  );
   vm.runInContext(await readFile(assetPath, "utf8"), context, {filename: assetPath});
   vm.runInContext("renderApprovals = async () => {}", context);
   return context;
@@ -95,4 +111,32 @@ test("session approval posts only after confirmation with visible reason", async
     url: "/api/jobs/job-1/operator-requests/REQ-1/decision",
     payload: {action: "allow_for_session", reason: "Bounded read-only inspection"},
   }]));
+  assert.equal(context.__toasts.at(-1), "Durable runtime decision: allow_for_session: Bounded read-only inspection");
+});
+
+test("opposite concurrent decisions render one durable winner", async () => {
+  const context = await approvalContext({conflict: true});
+  await vm.runInContext(
+    `Promise.all([
+      submitApproval("REQ-1", "allow_once"),
+      submitApproval("REQ-1", "deny")
+    ])`,
+    context,
+  );
+  assert.equal(context.__posts.length, 1);
+  assert.deepEqual(context.__toasts, [
+    "Durable runtime decision: allow_once: durable winner",
+    "Durable runtime decision: allow_once: durable winner",
+  ]);
+  assert.ok(context.__controls.every((control) => control.disabled === false));
+});
+
+test("terminal decision conflict refreshes audit state without stale controls", async () => {
+  const context = await approvalContext({conflict: true, terminal: true});
+  await vm.runInContext(`submitApproval("REQ-1", "deny")`, context);
+  assert.equal(
+    context.__toasts.at(-1),
+    "The approval job is terminal; showing the durable audit state.",
+  );
+  assert.ok(context.__controls.every((control) => control.disabled === false));
 });

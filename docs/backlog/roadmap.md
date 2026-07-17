@@ -10796,13 +10796,13 @@ Dependencies:
 
 Local tasks:
 
-- `W36-E5-S0-T1` (parked) Add one core-owned `recommended_outcome` and rationale to the terminal-run
+- `W36-E5-S0-T1` (next) Add one core-owned `recommended_outcome` and rationale to the terminal-run
   handoff read model without removing the complete allowed-outcomes list.
   - Scope: core terminal handoff recommendation policy only.
   - Verification: clean fresh terminal QA recommends Create New Work Item; fresh failed,
     blocked, or warning QA recommends Start Follow-up Flow; missing, stale, and nonterminal QA
     produce no Flow Complete recommendation.
-- `W36-E5-S0-T2` (planned) Expose the recommendation through the existing additive terminal-handoff API
+- `W36-E5-S0-T2` (soon) Expose the recommendation through the existing additive terminal-handoff API
   contract with explicit legacy fallback semantics.
   - Scope: local UI terminal-handoff response contract only.
   - Verification: endpoint fixtures preserve allowed outcomes and source identity while old
@@ -11316,7 +11316,7 @@ Exit evidence:
 - no duplicate renderer, action dispatcher, or dead legacy selector remains;
 - rollback evidence exists without retaining a permanent second frontend.
 
-### Epic W36-E6 — durable navigation, drafts, reconnect, and action integrity (`planned`)
+### Epic W36-E6 — durable navigation, drafts, reconnect, and action integrity (`done`)
 Linked stories: `US-05`, `US-06`, `US-10`, `US-11`
 
 #### Slice W36-E6-S1 — URL-backed work-item and run navigation (`done`)
@@ -11429,7 +11429,7 @@ Exit evidence:
 - reconnect and eviction states remain truthful about runtime ownership and durable
   evidence.
 
-#### Slice W36-E6-S4 — client mutation and approval integrity (`planned`)
+#### Slice W36-E6-S4 — client mutation and approval integrity (`done`)
 Goal: give every mutating control an immediate pending state and reconcile conflicts to
 the single durable server outcome.
 
@@ -11467,7 +11467,7 @@ Local tasks:
   - Scope: approval decision UI.
   - Verification: no session-wide approval POST occurs before confirmation and the
     submitted reason/breadth remain visible in the preview.
-- `W36-E6-S4-T6` (next) Reconcile approval compare-and-set or terminal conflicts to the durable
+- `W36-E6-S4-T6` (done) Reconcile approval compare-and-set or terminal conflicts to the durable
   winning decision and audit row.
   - Dependencies: `W34-E3-S2`.
   - Scope: approval conflict UI.

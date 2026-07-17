@@ -597,6 +597,13 @@ function setApprovalRequestPending(requestId, pending) {
     });
 }
 
+async function readApprovalWinner(jobId, requestId) {
+  const view = await api(`/api/jobs/${encodeURIComponent(jobId)}/operator-requests`);
+  const decision = (view.decisions || []).find((item) => item.request_id === requestId) || null;
+  const auditRow = (view.audit_history || []).find((item) => item.request_id === requestId) || null;
+  return {view, decision, auditRow};
+}
+
 async function submitApproval(requestId, action, {sessionConfirmed = false} = {}) {
   if (!state.activeJobId) return;
   if (action === "allow_for_session" && !sessionConfirmed) {
@@ -604,17 +611,28 @@ async function submitApproval(requestId, action, {sessionConfirmed = false} = {}
     return;
   }
   const reason = approvalReason(requestId);
-  setApprovalRequestPending(requestId, true);
-  try {
-    await postJson(`/api/jobs/${encodeURIComponent(state.activeJobId)}/operator-requests/${encodeURIComponent(requestId)}/decision`, {
-      action,
-      reason: reason || null
-    });
-    toast(`Runtime approval ${action}.`);
-    await renderApprovals();
-  } catch (error) {
-    setApprovalRequestPending(requestId, false);
-    throw error;
+  const jobId = state.activeJobId;
+  const guarded = await runGuardedMutation({
+    key: operatorMutationKey("approval", jobId, requestId),
+    execute: async () => {
+      const view = await postJson(`/api/jobs/${encodeURIComponent(jobId)}/operator-requests/${encodeURIComponent(requestId)}/decision`, {
+        action,
+        reason: reason || null
+      });
+      const decision = (view.decisions || []).find((item) => item.request_id === requestId) || null;
+      const auditRow = (view.audit_history || []).find((item) => item.request_id === requestId) || null;
+      return {view, decision, auditRow};
+    },
+    readWinner: () => readApprovalWinner(jobId, requestId),
+    onState: (mutation) => setApprovalRequestPending(requestId, mutation.status === "pending")
+  });
+  const winner = guarded.status === "conflict" ? guarded.winner : guarded.result;
+  await renderApprovals();
+  if (winner?.decision) {
+    const suffix = winner.decision.reason ? `: ${winner.decision.reason}` : "";
+    toast(`Durable runtime decision: ${winner.decision.action}${suffix}`);
+  } else {
+    toast("The approval job is terminal; showing the durable audit state.");
   }
 }
 
