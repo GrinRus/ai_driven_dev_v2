@@ -7,13 +7,13 @@ slice, and local task.
 
 ## Next
 
-- `W36-E3-S1-T1` — Add semantic typography, spacing, radius, elevation, control-size,
-  state, focus, and motion tokens.
+- `W36-E3-S1-T2` — Replace duplicate status and surface palettes with semantic color
+  roles.
 
 ## Soon
 
-- `W36-E3-S1-T2` — Replace duplicate status and surface palettes with semantic color
-  roles.
+- `W36-E3-S1-T3` — Define compact desktop and touch mobile density modes from shared
+  control tokens.
 
 ## Parking lot
 
@@ -64,6 +64,11 @@ slice, and local task.
   queue-restoration policy in `docs/backlog/roadmap.md` (`W8-E3-S1`).
 
 ## Current reconciliation
+
+- `2026-07-17` `W36-E3-S1-T1` is complete: `operator-tokens.css` now owns semantic
+  typography, spacing, radius, elevation, control-size, state, focus, and motion roles,
+  while an inventory test prevents the existing raw-value surface outside the token layer
+  from growing. `W36-E3-S1-T2` is promoted to `Next` and `W36-E3-S1-T3` to `Soon`.
 
 - `2026-07-17` `W36-E2-S3-T4`, slice `W36-E2-S3`, and Epic `W36-E2` are complete:
   one pure resolver now applies the selector/rollout truth table per surface, exposes
