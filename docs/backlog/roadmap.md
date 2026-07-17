@@ -10347,7 +10347,7 @@ Story check:
 - this is implementation and acceptance detail inside existing product scope, so
   `docs/product/user-stories.md` does not require a scope update.
 
-### Epic W36-E1 — accepted UX contract and measurable hierarchy (`planned`)
+### Epic W36-E1 — accepted UX contract and measurable hierarchy (`done`)
 Linked stories: `US-05`, `US-06`, `US-09`, `US-11`, `US-12`
 
 #### Slice W36-E1-S1 — operator coherence contract (`done`)
@@ -10384,7 +10384,7 @@ Exit evidence:
 - mobile behavior is a deliberate product contract rather than an accumulation of
   state-specific CSS ordering rules.
 
-#### Slice W36-E1-S2 — truthful control and quality contract (`planned`)
+#### Slice W36-E1-S2 — truthful control and quality contract (`done`)
 Goal: make visible controls and quality claims correspond to distinct behavior and
 measurable evidence.
 
@@ -10404,7 +10404,7 @@ Local tasks:
   - Scope: operator UX vocabulary in architecture docs.
   - Verification: ambiguous normative claims such as undifferentiated `ready` or
     `safe` are absent from the accepted vocabulary.
-- `W36-E1-S2-T3` (next) Define measurable operator UX thresholds and evidence fields.
+- `W36-E1-S2-T3` (done) Define measurable operator UX thresholds and evidence fields.
   - Scope: local-project UI E2E acceptance docs.
   - Verification: the template records first-action visibility, header footprint,
     touch targets, focus entry, contrast, overflow, reconnect outcome, task completion,
@@ -10432,14 +10432,14 @@ Dependencies:
 
 Local tasks:
 
-- `W36-E2-S1-T1` (soon) Select and document the maintained provider-free browser driver and
+- `W36-E2-S1-T1` (next) Select and document the maintained provider-free browser driver and
   packaging policy for served UI checks.
   - Dependencies: `W36-E1-S2-T3`.
   - Scope: browser-test architecture and documentation policy only.
   - Verification: the decision preserves the no-Node/Vite product runtime, names the
     executable test command, and replaces the blanket no-browser-driver wording in the
     local-project lane.
-- `W36-E2-S1-T4` (planned) Add the selected browser driver as a development-only dependency and
+- `W36-E2-S1-T4` (soon) Add the selected browser driver as a development-only dependency and
   lock its executable smoke command.
   - Dependencies: `W36-E2-S1-T1`.
   - Scope: development dependency, lock, and browser smoke command only.

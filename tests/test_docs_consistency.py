@@ -891,6 +891,40 @@ def test_operator_ui_local_project_e2e_lane_requires_completed_flow_checks() -> 
         assert expected in operator_ui_lane
 
 
+def test_operator_ui_evidence_template_has_measurable_ux_gates() -> None:
+    lane = (_repo_root() / "docs" / "e2e" / "operator-ui-local-project.md").read_text(
+        encoding="utf-8"
+    )
+
+    for expected in (
+        "Initial scroll position:",
+        "Primary-action bounds:",
+        "Header footprint:",
+        "Smallest touch target:",
+        "Text contrast:",
+        "Control/focus contrast:",
+        "Focus order:",
+        "Overflow:",
+        "Clipping:",
+        "Overlap:",
+        "Scroll ownership:",
+        "at most `80 px`",
+        "at least `44x44 px`",
+        "at least `4.5:1`",
+        "at least `3:1`",
+        "primary decision is fully visible",
+        "no page-level horizontal overflow",
+        "Completion:",
+        "Elapsed time:",
+        "Wrong actions:",
+        "Assistance:",
+        "Operator confidence: `<1-5>`",
+        "First decisive confusion:",
+        "five-session\nrelease bar remains owned by `W36-E7-S3`",
+    ):
+        assert expected in lane
+
+
 def test_operator_ui_local_project_manual_smoke_template_records_required_evidence() -> None:
     operator_ui_lane = (
         _repo_root() / "docs" / "e2e" / "operator-ui-local-project.md"

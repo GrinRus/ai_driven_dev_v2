@@ -200,6 +200,17 @@ these fields:
 - Child work item: `<created-or-previewed-follow-up-id, or none>`
 - Browser: `<browser name and version>`
 - Viewport: `<desktop/tablet/mobile dimensions>`
+- Initial scroll position: `<x, y>`
+- Primary-action bounds: `<x, y, width, height; fully in first viewport: yes | no>`
+- Header footprint: `<height in px>`
+- Smallest touch target: `<width x height in px; control name>`
+- Text contrast: `<minimum ratio; foreground/background pair>`
+- Control/focus contrast: `<minimum ratio; control/focus indicator>`
+- Focus order: `<ordered primary controls; first unexpected stop or none>`
+- Overflow: `<none | axis, element, measured overflow>`
+- Clipping: `<none | element and clipped content>`
+- Overlap: `<none | overlapping elements and bounds>`
+- Scroll ownership: `<page | named bounded region; nested-scroll issue or none>`
 - Runtime id: `<runtime selected in the UI>`
 - Flow Complete status: `<completed | completed-with-warning | failed | blocked>`
 - Start Next Flow result: `<source findings | follow-up draft | preflight status>`
@@ -207,6 +218,24 @@ these fields:
 - Archive decision: `<archived | intentionally not archived>`
 - Blockers: `<none, provider unavailable, missing fixture, manual operator blocker>`
 - Cleanup: `<fixture project removed | .aidd removed | retained outside git with reason>`
+
+Rendered evidence passes only when the mobile header is at most `80 px`, every touch target
+is at least `44x44 px`, body text contrast is at least `4.5:1`, control boundaries and focus
+indicators are at least `3:1`, the primary decision is fully visible in the initial viewport,
+and there is no page-level horizontal overflow, clipped primary label, or control overlap.
+The evidence must identify the owner of every intentional nested scroll region.
+
+For each observed operator journey, also record:
+
+- Completion: `<completed | not completed>`
+- Elapsed time: `<duration from entry to durable outcome or stop>`
+- Wrong actions: `<count and first wrong action>`
+- Assistance: `<none | type of assistance>`
+- Operator confidence: `<1-5>`
+- First decisive confusion: `<first confusion or none>`
+
+These human timing and confidence fields are evidence, not a release threshold. The five-session
+release bar remains owned by `W36-E7-S3`.
 
 Cleanup rules:
 
