@@ -676,6 +676,11 @@ Here, failed, blocked, or warning handoff means a fresh terminal QA verdict. Mis
 stale QA, and runs that have not reached terminal QA do not enter Flow Complete and receive no
 terminal recommendation.
 
+The additive terminal-handoff response exposes `recommended_outcome` and
+`recommendation_rationale` without removing `recommended_next_flow_actions` or source-run
+identity. A client reading an older payload without those fields must resolve it to the explicit
+`legacy-no-recommendation` compatibility state and must not infer priority from action order.
+
 Follow-up and cloned flows show source work item, source run, baseline, inherited artifacts,
 and audit preview before launch. They always receive new identities and never mutate the
 completed source run.

@@ -10760,12 +10760,12 @@ Dependencies:
 
 Local tasks:
 
-- `W36-E4-S2-T1` (planned) Expose binary, execution-command, authentication, and capability
+- `W36-E4-S2-T1` (next) Expose binary, execution-command, authentication, and capability
   readiness dimensions without inferring unavailable evidence.
   - Scope: core runtime readiness read model.
   - Verification: detected, unavailable, auth-verified, auth-failed, auth-unverified,
     and legacy fixtures produce typed dimensions with compatibility fields.
-- `W36-E4-S2-T2` (planned) Project the latest per-runtime launch outcome and timestamp from
+- `W36-E4-S2-T2` (soon) Project the latest per-runtime launch outcome and timestamp from
   canonical attempt evidence.
   - Scope: core operator runtime-history read model.
   - Verification: no-history, success, failure, blocked, cancelled, and legacy attempts
@@ -10785,7 +10785,7 @@ Exit evidence:
 ### Epic W36-E5 — Document & Evidence Studio vertical migration (`planned`)
 Linked stories: `US-02`, `US-03`, `US-05`, `US-06`, `US-10`, `US-11`, `US-13`
 
-#### Slice W36-E5-S0 — core operator decision foundations (`planned`)
+#### Slice W36-E5-S0 — core operator decision foundations (`done`)
 Goal: make terminal recommendation policy available to Inbox and Flow Complete before either
 renderer binds a primary action.
 
@@ -10802,7 +10802,7 @@ Local tasks:
   - Verification: clean fresh terminal QA recommends Create New Work Item; fresh failed,
     blocked, or warning QA recommends Start Follow-up Flow; missing, stale, and nonterminal QA
     produce no Flow Complete recommendation.
-- `W36-E5-S0-T2` (next) Expose the recommendation through the existing additive terminal-handoff API
+- `W36-E5-S0-T2` (done) Expose the recommendation through the existing additive terminal-handoff API
   contract with explicit legacy fallback semantics.
   - Scope: local UI terminal-handoff response contract only.
   - Verification: endpoint fixtures preserve allowed outcomes and source identity while old

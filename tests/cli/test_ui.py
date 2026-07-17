@@ -1065,6 +1065,8 @@ def test_ui_dashboard_endpoint_exposes_flow_complete_handoff(
     assert dashboard["run"]["runtime_id"] == "codex"  # type: ignore[index]
     assert handoff["status"] == "completed"  # type: ignore[index]
     assert handoff["final_qa_status"] == "ready"  # type: ignore[index]
+    assert handoff["recommended_outcome"] == "create-new-work-item"  # type: ignore[index]
+    assert "fresh and clean" in handoff["recommendation_rationale"]  # type: ignore[index]
     assert handoff["approval_counts"]["requested"] == 1  # type: ignore[index]
     assert handoff["approval_counts"]["approved"] == 1  # type: ignore[index]
     assert {artifact["key"] for artifact in handoff["final_artifacts"]} >= {  # type: ignore[index]

@@ -7,10 +7,13 @@ slice, and local task.
 
 ## Next
 
-- `W36-E5-S0-T2` — Expose the recommendation through the existing additive
-  terminal-handoff API contract with explicit legacy fallback semantics.
+- `W36-E4-S2-T1` — Expose binary, execution-command, authentication, and capability
+  dimensions as separate typed runtime-readiness fields.
 
 ## Soon
+
+- `W36-E4-S2-T2` — Project the latest per-runtime launch outcome and timestamp from
+  canonical attempt evidence.
 
 ## Parking lot
 
@@ -51,6 +54,12 @@ slice, and local task.
   queue-restoration policy in `docs/backlog/roadmap.md` (`W8-E3-S1`).
 
 ## Current reconciliation
+
+- `2026-07-17` `W36-E5-S0-T2` and slice `W36-E5-S0` are complete: the additive
+  terminal-handoff API preserves source identity and all allowed outcomes while exposing
+  the core recommendation; legacy or malformed payloads resolve to explicit
+  no-recommendation compatibility states. `W36-E4-S2-T1` is promoted to `Next` and
+  `W36-E4-S2-T2` to `Soon`.
 
 - `2026-07-17` `W36-E5-S0-T1` is complete: the core terminal handoff now recommends
   independent work only for fresh clean QA, recommends a lineage-preserving follow-up

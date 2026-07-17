@@ -142,6 +142,38 @@ test("operator bootstrap loads modules in declared order", async () => {
   ]);
 });
 
+test("terminal handoff recommendation fails closed for legacy and malformed payloads", async () => {
+  const {context} = domContext();
+  await load(context, "operator-api-state.js");
+  const recommendations = JSON.parse(JSON.stringify(vm.runInContext(`[
+    terminalHandoffRecommendation({recommended_next_flow_actions: []}),
+    terminalHandoffRecommendation({
+      recommended_outcome: null,
+      recommendation_rationale: null,
+      recommended_next_flow_actions: []
+    }),
+    terminalHandoffRecommendation({
+      recommended_outcome: "create-new-work-item",
+      recommendation_rationale: "QA is clean.",
+      recommended_next_flow_actions: [{action: "create-new-work-item"}]
+    }),
+    terminalHandoffRecommendation({
+      recommended_outcome: "unknown",
+      recommendation_rationale: "Bad action.",
+      recommended_next_flow_actions: [{action: "create-new-work-item"}]
+    })
+  ]`, context)));
+  assert.deepEqual(recommendations.map((item) => item.state), [
+    "legacy-no-recommendation",
+    "none",
+    "recommended",
+    "invalid-no-recommendation",
+  ]);
+  assert.equal(recommendations[2].outcome, "create-new-work-item");
+  assert.equal(recommendations[0].outcome, null);
+  assert.equal(recommendations[3].outcome, null);
+});
+
 test("surface parity manifest has one owner and journey per migration surface", async () => {
   const context = vm.createContext({console});
   await load(context, "operator-surface-parity.js");

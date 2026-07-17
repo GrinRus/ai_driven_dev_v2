@@ -71,6 +71,32 @@ const NON_BLOCKING_VALIDATION_NOTICE_CODES = new Set([
   "STRUCT-OUTPUT-PROMOTED"
 ]);
 
+function terminalHandoffRecommendation(handoff) {
+  if (!handoff || !Object.prototype.hasOwnProperty.call(handoff, "recommended_outcome")) {
+    return Object.freeze({
+      state: "legacy-no-recommendation",
+      outcome: null,
+      rationale: "This terminal handoff predates the recommendation contract. Choose from allowed outcomes."
+    });
+  }
+  const outcome = String(handoff.recommended_outcome || "").trim();
+  const rationale = String(handoff.recommendation_rationale || "").trim();
+  if (!outcome) {
+    return Object.freeze({state: "none", outcome: null, rationale: rationale || null});
+  }
+  const allowed = new Set(
+    (handoff.recommended_next_flow_actions || []).map((action) => String(action.action || ""))
+  );
+  if (!allowed.has(outcome) || !rationale) {
+    return Object.freeze({
+      state: "invalid-no-recommendation",
+      outcome: null,
+      rationale: "The recommendation is incomplete or not present in allowed outcomes."
+    });
+  }
+  return Object.freeze({state: "recommended", outcome, rationale});
+}
+
 const state = {
   presentationSelector: window.aiddPresentation?.requested || "legacy",
   presentationEffective: window.aiddPresentation?.effective || "legacy",
