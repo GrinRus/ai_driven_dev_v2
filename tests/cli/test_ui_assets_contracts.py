@@ -1436,7 +1436,7 @@ def test_operator_review_and_qa_decision_summaries_prioritize_next_actions() -> 
             "Accept complete is disabled while QA is not-ready.",
             "Send selected QA risks or issues back to implement, then rerun verification and QA.",
             "${renderQaCompletionGuard(view, Boolean(sourceItems.length))}",
-            'data-decision-summary="${escapeHtml(kind)}"',
+            "return renderDecisionBar({",
             "renderReviewDecisionSummary(view, findings)",
             "function renderQaDecisionSummary(view, risks, issues)",
             "QA not ready: send selected items back to implement",

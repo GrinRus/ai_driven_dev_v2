@@ -367,27 +367,17 @@ function countLabel(count, singular, plural = `${singular}s`) {
 }
 
 function renderDecisionSummary({kind, tone, badge, title, body, primary, metrics}) {
-  return `
-    <div class="decision-summary ${escapeHtml(tone)}" data-decision-summary="${escapeHtml(kind)}" role="status" aria-live="polite">
-      <div class="decision-summary-copy">
-        <span class="small-badge ${escapeHtml(tone)}">${escapeHtml(badge)}</span>
-        <strong>${escapeHtml(title)}</strong>
-        <p>${escapeHtml(body)}</p>
-        <small>${escapeHtml(primary)}</small>
-      </div>
-      <div class="decision-summary-metrics">
-        ${metrics.map((metric) => {
-          const metricClass = metric.tone ? ` ${escapeHtml(metric.tone)}` : "";
-          return `
-            <div class="decision-metric${metricClass}">
-              <span>${escapeHtml(metric.label)}</span>
-              <strong>${escapeHtml(metric.value)}</strong>
-            </div>
-          `;
-        }).join("")}
-      </div>
-    </div>
-  `;
+  const status = tone === "good" ? "complete" : tone === "bad" ? "blocked" : "pending";
+  return renderDecisionBar({
+    kind,
+    status,
+    statusLabel: badge,
+    title,
+    body,
+    guidance: primary,
+    metrics,
+    legacyTone: tone
+  }).replace("data-decision-bar=", "data-decision-summary=");
 }
 
 function renderReviewDecisionSummary(view, findings) {

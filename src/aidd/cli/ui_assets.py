@@ -58,6 +58,11 @@ _OPERATOR_STATIC_ASSET_MANIFEST = (
         content_type="text/javascript; charset=utf-8",
     ),
     OperatorStaticAsset(
+        route="/operator-primitives.js",
+        filename="operator-primitives.js",
+        content_type="text/javascript; charset=utf-8",
+    ),
+    OperatorStaticAsset(
         route="/operator-onboarding.js",
         filename="operator-onboarding.js",
         content_type="text/javascript; charset=utf-8",

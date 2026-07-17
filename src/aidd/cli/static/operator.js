@@ -5,6 +5,7 @@
     "/operator-api-state.js",
     "/operator-shell-rendering.js",
     "/operator-dashboard-actions.js",
+    "/operator-primitives.js",
     "/operator-onboarding.js",
     "/operator-artifacts-documents.js",
     "/operator-questions.js",

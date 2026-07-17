@@ -10620,16 +10620,16 @@ Dependencies:
 
 Local tasks:
 
-- `W36-E3-S3-T1` (next) Implement the shared Decision Bar and Status Marker anatomy.
+- `W36-E3-S3-T1` (done) Implement the shared Decision Bar and Status Marker anatomy.
   - Scope: packaged decision-surface primitives only.
   - Verification: action, pending, blocked, complete, stale, and no-action fixtures retain one
     primary slot plus non-color status text without owning surface-specific policy.
-- `W36-E3-S3-T2` (soon) Consolidate empty, loading, error, reconnecting, and unavailable
+- `W36-E3-S3-T2` (next) Consolidate empty, loading, error, reconnecting, and unavailable
   surfaces with local recovery actions.
   - Scope: packaged state-surface primitives.
   - Verification: every state exposes a title, consequence, recovery action when
     possible, and correct live-region or busy semantics.
-- `W36-E3-S3-T3` (planned) Establish the editorial hierarchy for Document Canvas, conditional
+- `W36-E3-S3-T3` (soon) Establish the editorial hierarchy for Document Canvas, conditional
   Evidence Inspector, and History without an equal-weight card wall.
   - Scope: panel/card layout classes.
   - Verification: rendered fixtures keep one framed primary surface per hierarchy level

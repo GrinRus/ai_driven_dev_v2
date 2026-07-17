@@ -73,6 +73,49 @@
   grid-template-columns: minmax(0, 1.1fr) minmax(260px, 0.9fr);
   padding: 12px;
 }
+.decision-bar-primary-slot {
+  align-items: center;
+  display: flex;
+  min-height: var(--control-height);
+}
+.decision-bar-primary-action {
+  min-width: min(100%, 180px);
+}
+.decision-bar-no-action {
+  color: var(--color-text-secondary);
+  font-size: var(--type-label-size);
+  font-weight: var(--type-weight-medium);
+}
+.status-marker {
+  align-items: center;
+  color: var(--color-text-primary);
+  display: inline-flex;
+  font-size: var(--type-label-size);
+  font-weight: var(--type-weight-strong);
+  gap: var(--space-3);
+  justify-self: start;
+  max-width: 100%;
+}
+.status-marker-symbol {
+  background: var(--color-state-info);
+  block-size: 10px;
+  border-radius: var(--radius-pill);
+  flex: 0 0 auto;
+  inline-size: 10px;
+}
+.status-marker[data-status="complete"] .status-marker-symbol {
+  background: var(--color-state-success);
+}
+.status-marker[data-status="pending"] .status-marker-symbol,
+.status-marker[data-status="stale"] .status-marker-symbol {
+  background: var(--color-state-warning);
+}
+.status-marker[data-status="blocked"] .status-marker-symbol {
+  background: var(--color-state-danger);
+}
+.status-marker[data-status="no-action"] .status-marker-symbol {
+  background: var(--color-text-secondary);
+}
 .decision-summary.good {
   background: var(--color-state-success-bg-strong);
   border-color: var(--color-state-success-border-strong);

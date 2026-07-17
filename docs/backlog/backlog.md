@@ -7,12 +7,13 @@ slice, and local task.
 
 ## Next
 
-- `W36-E3-S3-T1` — Implement the shared Decision Bar and Status Marker anatomy.
+- `W36-E3-S3-T2` — Consolidate empty, loading, error, reconnecting, and unavailable
+  surfaces with local recovery actions.
 
 ## Soon
 
-- `W36-E3-S3-T2` — Consolidate empty, loading, error, reconnecting, and unavailable
-  surfaces with local recovery actions.
+- `W36-E3-S3-T3` — Establish the editorial hierarchy for Document Canvas, conditional
+  Evidence Inspector, and History without an equal-weight card wall.
 
 
 ## Parking lot
@@ -64,6 +65,12 @@ slice, and local task.
   queue-restoration policy in `docs/backlog/roadmap.md` (`W8-E3-S1`).
 
 ## Current reconciliation
+
+- `2026-07-17` `W36-E3-S3-T1` is complete: a packaged Decision Bar now owns one
+  primary slot and a visible, non-color Status Marker for action, pending, blocked,
+  complete, stale, and no-action states without deriving journey policy. Existing
+  Review/QA summaries render through the primitive. `W36-E3-S3-T2` is promoted to
+  `Next` and `W36-E3-S3-T3` to `Soon`.
 
 - `2026-07-17` `W36-E3-S2-T3` and slice `W36-E3-S2` are complete: filters, document
   modes, radio-like setup/runtime cards, evidence selections, and current work-item rows
