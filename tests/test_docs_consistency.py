@@ -860,6 +860,28 @@ def test_operator_frontend_uses_truthful_state_vocabulary() -> None:
     ):
         assert expected in contract
 
+
+def test_browser_testing_policy_is_dev_only_and_provider_free() -> None:
+    policy = (
+        _repo_root() / "docs" / "architecture" / "browser-testing.md"
+    ).read_text(encoding="utf-8")
+
+    for expected in (
+        "Python Playwright sync API",
+        "Chromium\nas its single initial browser target",
+        "uv run --extra dev python -m playwright install chromium",
+        "uv run --extra dev pytest -q browser_tests",
+        "outside the default\n`tests/` collection",
+        "only in the `dev` extra",
+        "must not appear as a runtime\n  `Requires-Dist`",
+        "external browser cache",
+        "No Node product\n  runtime, Vite build, npm dependency, or npm lockfile",
+        "actionable failure",
+        "not a silent skip",
+        "allows only the loopback origin",
+    ):
+        assert expected in policy
+
 def test_operator_ui_local_project_e2e_lane_requires_completed_flow_checks() -> None:
     operator_ui_lane = (
         _repo_root() / "docs" / "e2e" / "operator-ui-local-project.md"
@@ -1400,7 +1422,7 @@ def test_wave29_real_provider_ui_e2e_docs_define_manual_codex_first_lane() -> No
     ):
         assert blocker in real_provider
     assert "must fail with `runtime is required`" in real_provider
-    assert "Do not add Playwright or Selenium dependencies" in operator_ui
+    assert "[`Browser Testing Policy`](../architecture/browser-testing.md)" in operator_ui
     assert "Codex-first" in operator_ui
     assert "Real-Provider UI E2E Lane" in handbook
     assert "Provider priority is Codex first" in scenario_matrix

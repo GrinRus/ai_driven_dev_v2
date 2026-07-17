@@ -285,10 +285,12 @@ Run these checks in a real browser against the local URL printed by `aidd ui`. U
 disposable `.aidd/` workspace and record the AIDD version, runtime id, browser, viewport,
 and any blockers in roadmap evidence.
 
-Wave 29 browser evidence uses this manual checklist plus the Codex-first real-provider
-lane. Do not add Playwright or Selenium dependencies for this lane. Capture screenshots
-and API snapshots outside the repository unless they are deliberately curated as docs
-assets.
+Manual provider evidence uses this checklist plus the Codex-first real-provider lane. The
+provider-free executable browser lane follows
+[`Browser Testing Policy`](../architecture/browser-testing.md): Python Playwright with one
+Chromium target, development-only dependencies, and no Node/Vite product runtime. Capture
+manual screenshots and API snapshots outside the repository unless they are deliberately
+curated as docs assets.
 
 ### Dashboard Shell
 
