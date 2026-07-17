@@ -178,14 +178,51 @@ test("presentation selector is browser-only and fails back to legacy", async () 
       document: {documentElement},
       window,
     });
+    await load(context, "operator-surface-parity.js");
     await load(context, "operator-presentation.js");
-    assert.deepEqual({...window.aiddPresentation}, {
-      requested: item.requested,
-      effective: "legacy",
-      fallback: item.fallback,
-    });
+    assert.equal(window.aiddPresentation.requested, item.requested);
+    assert.equal(window.aiddPresentation.effective, "legacy");
+    assert.equal(window.aiddPresentation.fallback, item.fallback);
+    assert.equal(Object.keys(window.aiddPresentation.surfaces).length, 12);
+    assert.ok(Object.values(window.aiddPresentation.surfaces).every(
+      (resolution) => resolution.presentation === "legacy",
+    ));
     assert.equal(documentElement.dataset.presentationRequested, item.requested);
     assert.equal(documentElement.dataset.presentationEffective, "legacy");
+  }
+});
+
+test("surface resolver implements selector and rollout truth table", async () => {
+  const documentElement = {dataset: {}};
+  const window = {location: {search: ""}};
+  const context = vm.createContext({
+    URLSearchParams,
+    document: {documentElement},
+    window,
+  });
+  await load(context, "operator-surface-parity.js");
+  await load(context, "operator-presentation.js");
+  const result = JSON.parse(JSON.stringify(vm.runInContext(
+    `
+      ["legacy_only", "candidate", "parity_closed"].flatMap((rollout) =>
+        ["legacy", "studio", "missing", "invalid"].map((selector) => {
+          const value = selector === "missing" ? "" : selector === "invalid" ? "other" : selector;
+          const resolution = resolveSurfaceRendererFor({
+            id: "fixture",
+            rollout,
+            rollbackRenderer: "operator-legacy"
+          }, value);
+          return {rollout, selector, ...resolution};
+        })
+      )
+    `,
+    context,
+  )));
+  for (const item of result) {
+    const studio = item.selector === "studio" && item.rollout !== "legacy_only";
+    assert.equal(item.presentation, studio ? "studio" : "legacy");
+    assert.equal(item.renderer, studio ? "studio:fixture" : "operator-legacy");
+    assert.equal(item.fallback, item.selector === "studio" && !studio);
   }
 });
 

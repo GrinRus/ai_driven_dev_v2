@@ -10416,7 +10416,7 @@ Exit evidence:
 - UI quality is evaluated by rendered and task-completion evidence rather than asset
   string presence alone.
 
-### Epic W36-E2 — executable rendered-browser foundation (`planned`)
+### Epic W36-E2 — executable rendered-browser foundation (`done`)
 Linked stories: `US-07`, `US-09`, `US-11`
 
 #### Slice W36-E2-S1 — deterministic packaged-UI browser harness (`done`)
@@ -10496,7 +10496,7 @@ Exit evidence:
 - the defects measured in the `2026-07-11` review are executable regressions rather
   than manual observations only.
 
-#### Slice W36-E2-S3 — presentation-only migration seam (`planned`)
+#### Slice W36-E2-S3 — presentation-only migration seam (`done`)
 Goal: migrate one rendered surface at a time while preserving one API client, one action
 dispatcher, stable package assets, and a bounded renderer rollback path.
 
@@ -10527,7 +10527,7 @@ Local tasks:
   - Scope: packaged-browser migration metadata and tests.
   - Verification: every declared surface has exactly one owner and no surface can switch
     default before its required journey passes.
-- `W36-E2-S3-T4` (next) Make the parity manifest drive per-surface renderer resolution so migrated
+- `W36-E2-S3-T4` (done) Make the parity manifest drive per-surface renderer resolution so migrated
   Studio surfaces and unmigrated legacy fallbacks can coexist inside either bootstrap mode.
   - Scope: browser renderer resolver only.
   - Verification: mixed-state fixtures implement the selector/parity truth table, retain one
@@ -10557,12 +10557,12 @@ Dependencies:
 
 Local tasks:
 
-- `W36-E3-S1-T1` (parked) Add semantic typography, spacing, radius, elevation, control-size,
+- `W36-E3-S1-T1` (next) Add semantic typography, spacing, radius, elevation, control-size,
   status, focus, and motion tokens.
   - Scope: `operator-tokens.css` only.
   - Verification: token inventory tests cover every accepted role and enforce a bounded
     raw-value budget outside the token layer.
-- `W36-E3-S1-T2` (planned) Replace duplicate status and surface palettes with semantic color
+- `W36-E3-S1-T2` (soon) Replace duplicate status and surface palettes with semantic color
   roles.
   - Scope: packaged CSS color consumption.
   - Verification: computed-style fixtures preserve state meaning and meet accepted

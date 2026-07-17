@@ -7,15 +7,16 @@ slice, and local task.
 
 ## Next
 
-- `W36-E2-S3-T4` — Make the parity manifest drive per-surface renderer resolution and
-  deterministic legacy fallback.
+- `W36-E3-S1-T1` — Add semantic typography, spacing, radius, elevation, control-size,
+  state, focus, and motion tokens.
 
 ## Soon
 
+- `W36-E3-S1-T2` — Replace duplicate status and surface palettes with semantic color
+  roles.
+
 ## Parking lot
 
-- `W36-E3-S1-T1` — Add semantic typography, spacing, radius, elevation, control-size,
-  state, focus, and motion tokens.
 - `W36-E4-S1-T1` — Add the Project -> Work item -> Runtime -> Review/Launch onboarding
   state machine.
 - `W36-E5-S1-T1` — Hide a zero-value Evidence Inspector and keep Filmstrip/log evidence
@@ -63,6 +64,12 @@ slice, and local task.
   queue-restoration policy in `docs/backlog/roadmap.md` (`W8-E3-S1`).
 
 ## Current reconciliation
+
+- `2026-07-17` `W36-E2-S3-T4`, slice `W36-E2-S3`, and Epic `W36-E2` are complete:
+  one pure resolver now applies the selector/rollout truth table per surface, exposes
+  mixed Studio/legacy resolution without changing shared service requests, and fails
+  unknown surfaces explicitly. `W36-E3-S1-T1` is promoted to `Next` and
+  `W36-E3-S1-T2` to `Soon`.
 
 - `2026-07-17` `W36-E2-S3-T3` is complete: a validated packaged manifest now assigns
   each of the twelve journey-owned surfaces exactly one slice owner, rollout state,
