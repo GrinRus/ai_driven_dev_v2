@@ -10729,13 +10729,13 @@ Local tasks:
   - Scope: Guided Delivery browser presentation only.
   - Verification: toggling Guided Delivery preserves project, work item, run, stage,
     runtime, request payload, and durable result for the same action.
-- `W36-E4-S1-T6` (next) Bind the new Review & Launch control to the shared mutation dispatcher only
+- `W36-E4-S1-T6` (done) Bind the new Review & Launch control to the shared mutation dispatcher only
   after task-aware workflow entrypoint integrity is restored.
   - Dependencies: `W35-E2-S8`, `W36-E6-S4-T1`.
   - Scope: Guided Setup launch binding only.
   - Verification: Guided and legacy launch controls dispatch an identical task-aware request,
     duplicate input creates at most one job, and durable readback selects one result.
-- `W36-E4-S1-T7` (soon) Promote the verified Guided Setup candidate to `parity_closed` while retaining
+- `W36-E4-S1-T7` (planned) Promote the verified Guided Setup candidate to `parity_closed` while retaining
   legacy setup for both missing/default and explicit rollback modes until cutover.
   - Dependencies: `W36-E4-S1-T6`, `W36-E7-S1-T1`.
   - Scope: Guided Setup parity-manifest entry only.
@@ -10826,12 +10826,12 @@ Dependencies:
 
 Local tasks:
 
-- `W36-E5-S1-T1` (parked) Add a visibility policy that hides a zero-value Evidence Inspector
+- `W36-E5-S1-T1` (next) Add a visibility policy that hides a zero-value Evidence Inspector
   and keeps secondary Filmstrip/log evidence collapsed until requested.
   - Scope: shell rendering policy.
   - Verification: no-run, healthy running, blocked, terminal, and history fixtures show
     only panels with current operator value.
-- `W36-E5-S1-T2` (planned) Consolidate duplicate recovery summaries into one Recovery Summary
+- `W36-E5-S1-T2` (soon) Consolidate duplicate recovery summaries into one Recovery Summary
   inside the Studio Decision Bar with one Evidence link.
   - Scope: recovery rendering.
   - Verification: every blocker fixture exposes one recovery landmark, one primary

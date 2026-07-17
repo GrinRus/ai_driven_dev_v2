@@ -95,15 +95,15 @@ function renderFirstLaunchState() {
   return `
     <section class="surface first-launch-state project-setup-state">
       <div class="surface-title">
-        <span>Project Setup</span>
+        <span>Review &amp; Launch</span>
         <span class="small-badge">Guided Setup</span>
       </div>
       <div class="project-setup-grid">
         <div class="setup-primary">
           <p>${escapeHtml(detail)}</p>
           <div class="setup-actions">
-            <button data-first-launch-run type="button" ${canRun ? "" : "disabled"}>Run workflow</button>
-            <button data-first-launch-stage type="button" class="secondary" ${canRun ? "" : "disabled"}>Run selected stage</button>
+            <button data-guided-launch="workflow" data-first-launch-run type="button" ${canRun ? "" : "disabled"}>Run workflow</button>
+            <button data-guided-launch="stage" data-first-launch-stage type="button" class="secondary" ${canRun ? "" : "disabled"}>Run selected stage</button>
             <span class="muted">Work item ${escapeHtml(state.dashboard?.work_item || "unknown")}</span>
           </div>
         </div>

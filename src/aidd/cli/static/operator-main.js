@@ -474,12 +474,17 @@ document.addEventListener("click", async (event) => {
       await handleNextAction();
       return;
     }
+    const guidedLaunch = event.target.closest("[data-guided-launch]")?.dataset.guidedLaunch;
+    if (guidedLaunch) {
+      await dispatchTaskAwareLaunch(guidedLaunch, state.activeStage);
+      return;
+    }
     if (event.target.closest("[data-first-launch-stage]")) {
-      await startStage(state.activeStage);
+      await dispatchTaskAwareLaunch("stage", state.activeStage);
       return;
     }
     if (event.target.closest("[data-first-launch-run]")) {
-      await startWorkflow();
+      await dispatchTaskAwareLaunch("workflow");
       return;
     }
     if (event.target.id === "submitInterventionButton") {

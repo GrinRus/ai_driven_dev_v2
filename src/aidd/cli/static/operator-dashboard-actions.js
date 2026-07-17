@@ -130,7 +130,7 @@ async function startWorkflow() {
   await guardedJobLaunch({
     kind: "workflow-run",
     components: [state.activeRunId || "new-run"],
-    controls: ["#nextActionButton", "#globalNextActionButton", "[data-first-launch-run]"],
+    controls: ["#nextActionButton", "#globalNextActionButton", "[data-first-launch-run]", '[data-guided-launch="workflow"]'],
     execute: () => postJson("/api/workflow/run", payload)
   });
 }
@@ -142,9 +142,15 @@ async function startStage(stage = state.activeStage) {
   await guardedJobLaunch({
     kind: "stage-run",
     components: [state.activeRunId || "new-run", stage],
-    controls: ["#nextActionButton", "#globalNextActionButton", `[data-proceed-stage="${stage}"]`, "[data-first-launch-stage]", "[data-run-repair]", "[data-rerun-implement]"],
+    controls: ["#nextActionButton", "#globalNextActionButton", `[data-proceed-stage="${stage}"]`, "[data-first-launch-stage]", '[data-guided-launch="stage"]', "[data-run-repair]", "[data-rerun-implement]"],
     execute: () => postJson("/api/stage/run", payload)
   });
+}
+
+async function dispatchTaskAwareLaunch(intent, stage = state.activeStage) {
+  if (intent === "workflow") return startWorkflow();
+  if (intent === "stage") return startStage(stage);
+  throw new Error(`Unsupported launch intent: ${intent || "missing"}`);
 }
 
 async function startImplementationTask(taskId) {

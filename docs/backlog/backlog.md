@@ -7,16 +7,15 @@ slice, and local task.
 
 ## Next
 
-- `W36-E4-S1-T6` — Bind the new Review & Launch control to the shared mutation dispatcher.
+- `W36-E5-S1-T1` — Hide a zero-value Evidence Inspector and keep Filmstrip/log evidence
+  collapsed until requested.
 
 ## Soon
 
-- `W36-E4-S1-T7` — Close Guided Setup renderer parity after its browser journey passes.
+- `W36-E5-S1-T2` — Consolidate duplicate recovery summaries into one Recovery Summary.
 
 ## Parking lot
 
-- `W36-E5-S1-T1` — Hide a zero-value Evidence Inspector and keep Filmstrip/log evidence
-  collapsed until requested.
 - `W36-E5-S2-T1` — Replace the measured `275px` mobile header with a compact
   context/status bar and maintenance overflow.
 - `W36-E5-S3-T1` — Implement the typed project-local Inbox projection and deterministic
@@ -50,6 +49,11 @@ slice, and local task.
   queue-restoration policy in `docs/backlog/roadmap.md` (`W8-E3-S1`).
 
 ## Current reconciliation
+
+- `2026-07-17` `W36-E4-S1-T6` is complete: Guided Review & Launch and legacy
+  controls resolve through one task-aware workflow/stage dispatcher, keyed duplicate
+  suppression, and durable winner readback. Guided Setup parity `W36-E4-S1-T7` remains
+  planned until `W36-E7-S1-T1`; `W36-E5-S1-T1` is promoted to `Next` and `T2` to `Soon`.
 
 - `2026-07-17` `W36-E4-S1-T5` is complete: Guided Delivery is a browser-only
   presentation preference with step-specific context; toggling it preserves project,

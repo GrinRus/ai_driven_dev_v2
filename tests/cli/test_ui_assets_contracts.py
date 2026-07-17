@@ -1865,7 +1865,7 @@ def test_operator_next_flow_asset_keeps_launch_resume_and_runtime_guard_contract
             "archive.archived",
             'data-lineage-run-id="${escapeHtml(sourceRun)}"',
             "${escapeHtml(candidate.label || candidate.work_item_id)}",
-            "Project Setup",
+            "Review &amp; Launch",
             "Flow Complete",
             "Start Next Flow",
             "Final artifacts",

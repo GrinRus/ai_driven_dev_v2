@@ -328,8 +328,8 @@ test("shared dashboard actions preserve workflow and stage request payloads", as
     context,
   );
 
-  await vm.runInContext("startWorkflow()", context);
-  await vm.runInContext("startStage()", context);
+  await vm.runInContext('dispatchTaskAwareLaunch("workflow")', context);
+  await vm.runInContext('dispatchTaskAwareLaunch("stage", "plan")', context);
 
   assert.deepEqual(requests.map(({url, options}) => ({
     url,
@@ -378,8 +378,8 @@ test("same stage launch is submitted and attached to polling once", async () => 
     state.readiness = {runtimes: [{runtime_id: "generic-cli", provider_available: true, execution_command_available: true}]};
   `, context);
 
-  const first = vm.runInContext("startStage()", context);
-  const duplicate = vm.runInContext("startStage()", context);
+  const first = vm.runInContext('dispatchTaskAwareLaunch("stage", "plan")', context);
+  const duplicate = vm.runInContext('dispatchTaskAwareLaunch("stage", "plan")', context);
   assert.equal(fetchCount, 1);
   request.resolve(response({job_id: "job-one", status: "running"}));
   await Promise.all([first, duplicate]);
