@@ -7,11 +7,11 @@ slice, and local task.
 
 ## Next
 
-- `W36-E4-S1-T5` — Add the Guided Delivery preference and contextual explanation card.
+- `W36-E4-S1-T6` — Bind the new Review & Launch control to the shared mutation dispatcher.
 
 ## Soon
 
-- `W36-E4-S1-T6` — Bind the new Review & Launch control to the shared mutation dispatcher.
+- `W36-E4-S1-T7` — Close Guided Setup renderer parity after its browser journey passes.
 
 ## Parking lot
 
@@ -50,6 +50,11 @@ slice, and local task.
   queue-restoration policy in `docs/backlog/roadmap.md` (`W8-E3-S1`).
 
 ## Current reconciliation
+
+- `2026-07-17` `W36-E4-S1-T5` is complete: Guided Delivery is a browser-only
+  presentation preference with step-specific context; toggling it preserves project,
+  work item, run, stage, runtime, request payload, and durable result. `W36-E4-S1-T6`
+  is promoted to `Next` and its parity successor `W36-E4-S1-T7` to `Soon`.
 
 - `2026-07-17` `W36-E4-S1-T4` is complete: first-run setup no longer presents mode
   cards whose selections share one service outcome; distinct run and stage launch controls

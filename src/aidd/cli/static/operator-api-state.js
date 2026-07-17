@@ -151,6 +151,7 @@ const state = {
     projectSetLoading: false,
     createError: "",
     creating: false,
+    guidedDelivery: true,
     guided: {
       step: "project",
       projectStatus: "unvalidated",

@@ -103,6 +103,46 @@ function transitionGuidedSetup(event, payload = {}) {
   return state.onboarding.guided;
 }
 
+function setGuidedDeliveryPreference(enabled) {
+  state.onboarding.guidedDelivery = Boolean(enabled);
+  renderOnboarding();
+}
+
+function guidedDeliveryExplanation(guided = state.onboarding.guided) {
+  const step = guided?.step || "project";
+  const explanations = {
+    project: ["Confirm the project boundary", "Validate the local workspace before choosing delivery context."],
+    "work-item": ["Choose durable work-item context", "Create a new request or resume saved evidence without launching runtime work."],
+    runtime: ["Choose the execution runtime", "Review observed runtime readiness before a launch request is dispatched."],
+    "review-launch": ["Review and launch", "Confirm the selected context, then use the same guarded service action as Studio."]
+  };
+  const [title, detail] = explanations[step] || explanations.project;
+  return Object.freeze({title, detail});
+}
+
+function renderGuidedDeliveryPreference() {
+  const enabled = state.onboarding.guidedDelivery !== false;
+  const explanation = guidedDeliveryExplanation();
+  return `
+    <section class="guided-delivery-preference" aria-labelledby="guidedDeliveryTitle">
+      <div>
+        <strong id="guidedDeliveryTitle">Guided Delivery</strong>
+        <p>Presentation guidance only; selected context, requests, and durable outcomes stay unchanged.</p>
+      </div>
+      <button type="button" class="secondary" data-guided-delivery-toggle aria-pressed="${enabled}">
+        ${enabled ? "Guidance on" : "Guidance off"}
+      </button>
+    </section>
+    ${enabled ? `
+      <aside class="guided-delivery-explanation" role="note">
+        <span class="small-badge">Current decision</span>
+        <strong>${escapeHtml(explanation.title)}</strong>
+        <p>${escapeHtml(explanation.detail)}</p>
+      </aside>
+    ` : ""}
+  `;
+}
+
 function onboardingProject() {
   return state.onboarding.project || null;
 }
@@ -389,6 +429,7 @@ function renderOnboarding() {
     : `<span class="small-badge warn">required</span>`;
   content.innerHTML = `
     <div class="onboarding-shell">
+      ${renderGuidedDeliveryPreference()}
       <section class="surface onboarding-panel">
         <div class="surface-title">
           <span>Project setup</span>

@@ -10724,18 +10724,18 @@ Local tasks:
   - Scope: Guided Setup presentation only; the legacy renderer remains available for rollback.
   - Verification: the setup action-to-service matrix proves each remaining selector has a
     distinct endpoint/outcome and no terminal disposition leaks into first-run setup.
-- `W36-E4-S1-T5` (next) Add the Guided Delivery preference and contextual explanation card over
+- `W36-E4-S1-T5` (done) Add the Guided Delivery preference and contextual explanation card over
   the same selected context and service actions used by Studio.
   - Scope: Guided Delivery browser presentation only.
   - Verification: toggling Guided Delivery preserves project, work item, run, stage,
     runtime, request payload, and durable result for the same action.
-- `W36-E4-S1-T6` (soon) Bind the new Review & Launch control to the shared mutation dispatcher only
+- `W36-E4-S1-T6` (next) Bind the new Review & Launch control to the shared mutation dispatcher only
   after task-aware workflow entrypoint integrity is restored.
   - Dependencies: `W35-E2-S8`, `W36-E6-S4-T1`.
   - Scope: Guided Setup launch binding only.
   - Verification: Guided and legacy launch controls dispatch an identical task-aware request,
     duplicate input creates at most one job, and durable readback selects one result.
-- `W36-E4-S1-T7` (planned) Promote the verified Guided Setup candidate to `parity_closed` while retaining
+- `W36-E4-S1-T7` (soon) Promote the verified Guided Setup candidate to `parity_closed` while retaining
   legacy setup for both missing/default and explicit rollback modes until cutover.
   - Dependencies: `W36-E4-S1-T6`, `W36-E7-S1-T1`.
   - Scope: Guided Setup parity-manifest entry only.

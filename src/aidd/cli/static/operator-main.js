@@ -102,6 +102,10 @@ document.addEventListener("click", async (event) => {
       });
       return;
     }
+    if (event.target.closest("[data-guided-delivery-toggle]")) {
+      setGuidedDeliveryPreference(state.onboarding.guidedDelivery === false);
+      return;
+    }
     const onboardingRecentProject = event.target.closest("[data-onboarding-recent-project]")?.dataset.onboardingRecentProject;
     if (onboardingRecentProject) {
       state.onboarding.projectRootInput = onboardingRecentProject;
