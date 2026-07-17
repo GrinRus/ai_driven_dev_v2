@@ -75,3 +75,27 @@ test("state surfaces expose consequence, recovery, and truthful live semantics",
     assert.match(html, new RegExp(`role="${state === "error" ? "alert" : "status"}"`));
   }
 });
+
+test("Inbox Item renders service-owned routes and actions without eligibility policy", async () => {
+  const context = await primitivesContext();
+  for (const state of ["blocking", "running", "ready", "terminal", "malformed"]) {
+    const html = vm.runInContext(
+      `renderInboxItem({
+        id: "item-${state}",
+        state: ${JSON.stringify(state)},
+        statusLabel: ${JSON.stringify(state)},
+        title: "Inbox title",
+        summary: "Inbox consequence",
+        route: "/studio?work_item=WI-001&state=${state}",
+        primaryAction: {action: "service-action-${state}", label: "Open", enabled: true},
+        metadata: [{label: "Stage", value: "implement"}]
+      })`,
+      context,
+    );
+    assert.match(html, new RegExp(`data-state="${state}"`));
+    assert.match(html, new RegExp(`data-inbox-action="service-action-${state}"`));
+    assert.match(html, /data-inbox-route="\/studio\?work_item=WI-001&amp;state=/);
+    assert.doesNotMatch(html, /disabled aria-disabled/);
+    assert.match(html, /<dt>Stage<\/dt><dd>implement<\/dd>/);
+  }
+});

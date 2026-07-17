@@ -7,12 +7,11 @@ slice, and local task.
 
 ## Next
 
-- `W36-E3-S3-T4` — Implement the shared Inbox Item anatomy without eligibility or
-  priority logic in the browser.
+- `W36-E3-S3-T5` — Implement the shared Guided Step anatomy.
 
 ## Soon
 
-- `W36-E3-S3-T5` — Implement the shared Guided Step anatomy.
+- `W36-E3-S3-T6` — Implement the shared Recovery Summary anatomy.
 
 
 ## Parking lot
@@ -64,6 +63,12 @@ slice, and local task.
   queue-restoration policy in `docs/backlog/roadmap.md` (`W8-E3-S1`).
 
 ## Current reconciliation
+
+- `2026-07-17` `W36-E3-S3-T4` is complete: the shared Inbox Item renders blocking,
+  running, ready, terminal, and malformed states while preserving the exact
+  service-owned route, action, and eligibility; visible status text and mobile action
+  geometry do not rely on color alone. `W36-E3-S3-T5` is promoted to `Next` and
+  `W36-E3-S3-T6` to `Soon`.
 
 - `2026-07-17` `W36-E3-S3-T3` is complete: Document Canvas is the single framed
   primary surface, Evidence Inspector is conditional and visually supporting, and

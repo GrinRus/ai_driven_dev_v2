@@ -13,6 +13,13 @@ const STATE_SURFACE_STATES = new Set([
   "reconnecting",
   "unavailable"
 ]);
+const INBOX_ITEM_STATES = new Set([
+  "blocking",
+  "running",
+  "ready",
+  "terminal",
+  "malformed"
+]);
 
 function decisionBarState(value) {
   const stateName = String(value || "").trim();
@@ -101,5 +108,44 @@ function renderStateSurface({kind, state: requestedState, title, consequence, re
       </div>
       ${recoveryAction ? `<div class="state-surface-action">${recoveryAction}</div>` : ""}
     </section>
+  `;
+}
+
+function renderInboxItem({
+  id,
+  state: requestedState,
+  statusLabel,
+  title,
+  summary,
+  route = "",
+  primaryAction = null,
+  metadata = []
+}) {
+  const stateName = String(requestedState || "").trim();
+  if (!INBOX_ITEM_STATES.has(stateName)) {
+    throw new Error(`Unknown Inbox Item state: ${stateName || "empty"}`);
+  }
+  const markerStatus = {
+    blocking: "blocked",
+    running: "pending",
+    ready: "action",
+    terminal: "complete",
+    malformed: "stale"
+  }[stateName];
+  const action = primaryAction && String(primaryAction.action || "").trim()
+    ? primaryAction
+    : null;
+  return `
+    <article class="inbox-item" data-inbox-item="${escapeHtml(id)}" data-state="${escapeHtml(stateName)}" data-inbox-route="${escapeHtml(route)}">
+      <div class="inbox-item-copy">
+        ${renderStatusMarker({status: markerStatus, label: statusLabel})}
+        <strong>${escapeHtml(title)}</strong>
+        <p>${escapeHtml(summary)}</p>
+        ${metadata.length ? `<dl>${metadata.map((entry) => `<div><dt>${escapeHtml(entry.label)}</dt><dd>${escapeHtml(entry.value)}</dd></div>`).join("")}</dl>` : ""}
+      </div>
+      <div class="inbox-item-action">
+        ${action ? `<button data-inbox-action="${escapeHtml(action.action)}" type="button" ${action.enabled === false ? 'disabled aria-disabled="true"' : ""}>${escapeHtml(action.label)}</button>` : '<span class="inbox-item-no-action">No action available</span>'}
+      </div>
+    </article>
   `;
 }
