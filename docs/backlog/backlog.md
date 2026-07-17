@@ -7,13 +7,13 @@ slice, and local task.
 
 ## Next
 
-- `W36-E2-S1-T2` — Add a disposable seeded-project launcher and reusable executable
-  browser harness for packaged UI assets.
+- `W36-E2-S1-T3` — Add provider-free canonical UI state fixture builders and browser
+  state-marker checks.
 
 ## Soon
 
-- `W36-E2-S1-T3` — Add provider-free canonical UI state fixture builders and browser
-  state-marker checks.
+- `W36-E2-S2-T1` — Add rendered accessible-name, label, focus-order, contrast,
+  target-size, and reduced-motion assertions.
 
 ## Parking lot
 
@@ -68,6 +68,11 @@ slice, and local task.
   queue-restoration policy in `docs/backlog/roadmap.md` (`W8-E3-S1`).
 
 ## Current reconciliation
+
+- `2026-07-17` `W36-E2-S1-T2` is complete: the reusable browser harness starts the public
+  loopback CLI under one deadline, isolates all five contract viewports, captures browser
+  and network failures, and bounds server/process cleanup plus temporary workspace removal.
+  `W36-E2-S1-T3` is promoted to `Next` and `W36-E2-S2-T1` to `Soon`.
 
 - `2026-07-17` `W36-E2-S1-T4` is complete: Python Playwright is locked only in the dev
   extra, the wheel remains runtime-clean, and a real loopback `aidd ui` Chromium smoke

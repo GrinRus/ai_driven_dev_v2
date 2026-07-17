@@ -10445,13 +10445,13 @@ Local tasks:
   - Scope: development dependency, lock, and browser smoke command only.
   - Verification: locked sync and one provider-free packaged-UI launch pass without
     changing runtime package dependencies.
-- `W36-E2-S1-T2` (next) Add a disposable seeded-project launcher and executable browser harness
+- `W36-E2-S1-T2` (done) Add a disposable seeded-project launcher and executable browser harness
   for packaged UI assets.
   - Dependencies: `W36-E2-S1-T4`.
   - Scope: UI browser test infrastructure.
   - Verification: one command serves a temporary project, opens every required viewport,
     records console/network state, and removes project-local `.aidd/` state on exit.
-- `W36-E2-S1-T3` (soon) Add provider-free fixture builders for setup, no-run, running,
+- `W36-E2-S1-T3` (next) Add provider-free fixture builders for setup, no-run, running,
   question, runtime-failure, approval, QA, remediation, and terminal states.
   - Dependencies: `W36-E2-S1-T2`.
   - Scope: deterministic UI fixtures only.
@@ -10474,8 +10474,9 @@ Dependencies:
 
 Local tasks:
 
-- `W36-E2-S2-T1` (planned) Add executable accessible-name, label, focus-order, contrast,
+- `W36-E2-S2-T1` (soon) Add executable accessible-name, label, focus-order, contrast,
   target-size, and reduced-motion assertions.
+  - Dependencies: `W36-E2-S1-T3`.
   - Scope: browser assertion helpers.
   - Verification: one intentionally invalid fixture fails each accessibility rule with
     the owning selector and measured value.
