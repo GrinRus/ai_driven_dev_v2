@@ -7,11 +7,11 @@ slice, and local task.
 
 ## Next
 
-- `W36-E5-S1-T2` — Consolidate duplicate recovery summaries into one Recovery Summary.
+- `W36-E4-S1-T8` — Restore runtime-readiness inspection before onboarding has an active
+  work-item context.
 
 ## Soon
 
-- `W36-E5-S1-T3` — Add one policy-free primary-action slot for vertical surfaces.
 
 ## Parking lot
 
@@ -48,6 +48,11 @@ slice, and local task.
   queue-restoration policy in `docs/backlog/roadmap.md` (`W8-E3-S1`).
 
 ## Current reconciliation
+
+- `2026-07-17` `W36-E5-S1-T2` is complete: Studio recovery now has one Decision Bar
+  Recovery Summary with one decisive failure, one primary action, and one Evidence link;
+  duplicate hero/sidebar/screen summaries are removed. A separately reviewable onboarding
+  readiness regression is recorded as `W36-E4-S1-T8` and promoted to `Next`.
 
 - `2026-07-17` `W36-E5-S1-T1` is complete: one value-aware visibility policy hides
   an empty Evidence Inspector and keeps Filmstrip/runtime-log evidence undisclosed until

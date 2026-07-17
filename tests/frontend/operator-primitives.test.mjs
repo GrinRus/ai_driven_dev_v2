@@ -152,6 +152,8 @@ test("Recovery Summary keeps one failure, evidence path, and primary action", as
     assert.equal((html.match(/data-decisive-failure/g) || []).length, 1);
     assert.equal((html.match(/data-evidence-path/g) || []).length, 1);
     assert.equal((html.match(/data-primary-recovery-slot/g) || []).length, 1);
+    assert.equal((html.match(/data-tab-shortcut="evidence"/g) || []).length, 1);
+    assert.match(html, /data-decision-bar="recovery"/);
     assert.match(html, new RegExp(`data-recovery-action="recover-${kind}"`));
   }
 });

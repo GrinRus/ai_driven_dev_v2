@@ -428,6 +428,10 @@ document.addEventListener("click", async (event) => {
       else if (action === "inspect-runtime-log") setOperatorMode("logs");
       else if (action === "review-findings") setOperatorMode("review-findings");
       else if (action === "qa-verdict") setOperatorMode("qa-verdict");
+      else if (action === "run-repair") {
+        await startStage(state.activeStage);
+        return;
+      }
       else if (action === "resume-stage") {
         await startStage(state.activeStage);
         return;

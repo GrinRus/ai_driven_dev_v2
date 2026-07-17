@@ -271,6 +271,7 @@ function recoveryPrimaryActionSpec(diagnostics) {
   const stage = action.stage || state.activeStage;
   if (isRuntimeFirstFailure(firstFailure) && runtimeAction) {
     return {
+      action: "inspect-runtime-log",
       label: runtimeAction.label || "Open logs",
       detail: runtimeAction.detail || "Inspect the saved runtime log, runtime-exit metadata, and readiness/config context before retrying.",
       attrs: `data-recovery-action="inspect-runtime-log" data-recovery-stage="${escapeHtml(runtimeAction.stage || stage)}"`
@@ -278,6 +279,7 @@ function recoveryPrimaryActionSpec(diagnostics) {
   }
   if (status === "repair-available") {
     return {
+      action: "run-repair",
       label: "Run Repair",
       detail: "Run the selected stage again with the latest repair brief and normal validation.",
       attrs: "data-run-repair"
@@ -285,6 +287,7 @@ function recoveryPrimaryActionSpec(diagnostics) {
   }
   if (status === "repair-exhausted" || status === "explicit-stop") {
     return {
+      action: "request-change",
       label: "Request Change",
       detail: "Create a durable stage-scoped intervention request before trying another attempt.",
       attrs: `data-recovery-action="request-change" data-recovery-stage="${escapeHtml(stage)}"`
@@ -292,6 +295,7 @@ function recoveryPrimaryActionSpec(diagnostics) {
   }
   if (action.action === "answer-questions") {
     return {
+      action: "answer-questions",
       label: action.label || "Answer questions",
       detail: action.detail || "Resolve blocking questions before resuming execution.",
       attrs: `data-recovery-action="answer-questions" data-recovery-stage="${escapeHtml(stage)}"`
@@ -299,12 +303,14 @@ function recoveryPrimaryActionSpec(diagnostics) {
   }
   if (action.action === "inspect-runtime-log") {
     return {
+      action: "inspect-runtime-log",
       label: action.label || "Open logs",
       detail: action.detail || "Inspect the saved runtime log, runtime-exit metadata, and readiness/config context before retrying.",
       attrs: `data-recovery-action="inspect-runtime-log" data-recovery-stage="${escapeHtml(stage)}"`
     };
   }
   return {
+    action: action.action || "inspect-blocker",
     label: action.label || "Review recovery",
     detail: action.detail || "Review the active blocker and supporting evidence.",
     attrs: `data-recovery-action="${escapeHtml(action.action || "inspect-blocker")}" data-recovery-stage="${escapeHtml(stage)}" ${action.enabled === false ? "disabled" : ""}`
@@ -378,7 +384,6 @@ function renderRecoveryWorkbench() {
   const selectedStage = activeStageItem();
   const selectedStageLabel = stageTitle(state.activeStage);
   const runtimeFailure = isRuntimeFirstFailure(firstFailure);
-  const runtimeLogPath = runtimeLogEvidencePath(diagnostics);
   const selectedReason = runtimeFailure
     ? firstFailure.detail || primary.detail
     : diagnostics.stopped?.detail
@@ -388,7 +393,7 @@ function renderRecoveryWorkbench() {
       : primary.detail);
   const evidencePath = runtimeFailure
     ? runtimeFailureEvidencePath(firstFailure, diagnostics)
-    : finding ? validationFindingLocation(finding) : validation.validator_report_path || diagnostics.raw_log?.path || "";
+    : finding ? validationFindingLocation(finding) : validation.validator_report_path || diagnostics.raw_log?.path || diagnostics.blocking_questions?.answers_path || state.dashboard?.evidence_refs?.[0]?.path || "Evidence not yet persisted";
   const globalBlockerDetail = globalAction.detail || firstFailure?.detail || "Resolve the run-global blocker before progressing the flow.";
   const globalBlockerLabel = globalAction.label || firstFailure?.title || "Run blocker";
   const repairAttempts = validation.repair_attempts || [];
@@ -400,36 +405,28 @@ function renderRecoveryWorkbench() {
     || actionableFindings.length
   );
   const hasValidationRecovery = hasValidationFindings || hasRepairAttempts;
+  const recoveryKind = runtimeFailure
+    ? "runtime"
+    : unresolvedQuestions.length
+      ? "question"
+      : hasValidationRecovery
+        ? "validation"
+        : "intervention";
   return `
     <section class="recovery-workbench">
-      <div class="recovery-hero">
-        <div class="recovery-hero-copy">
-          <p class="eyebrow">Selected stage recovery</p>
-          <h2>${escapeHtml(recoveryFailureTitle(firstFailure, diagnostics))}</h2>
-          <p>${escapeHtml(selectedReason)}</p>
-          <div class="recovery-facts">
-            <span><strong>Selected stage</strong>${escapeHtml(selectedStageLabel)}</span>
-            <span><strong>Selected-stage status</strong>${escapeHtml(selectedStage?.status || status)}</span>
-            <span><strong>Selected-stage evidence</strong>${escapeHtml(compactPath(evidencePath || "not available", 86))}</span>
-            ${runtimeFailure ? `<span><strong>Runtime log</strong>${escapeHtml(compactPath(runtimeLogPath || "not available", 86))}</span>` : ""}
-          </div>
-        </div>
-        <div class="recovery-primary-actions">
-          <button id="recoveryPrimaryActionButton" class="next-button" type="button" ${primary.attrs}>${escapeHtml(primary.label)}</button>
-          <button class="secondary" data-tab-shortcut="evidence" type="button">Open Evidence</button>
-        </div>
-        ${finding ? `<div class="recovery-hero-finding">${renderValidationFindingSummary(finding)}</div>` : ""}
-        ${hasGlobalBlocker ? `
-          <div class="run-global-blocker-banner">
-            <span class="small-badge warn">Run-global blocker</span>
-            <div>
-              <strong>${escapeHtml(globalBlockerLabel)}</strong>
-              <span>Stage ${escapeHtml(stageTitle(globalStage))}</span>
-              <p>${escapeHtml(globalBlockerDetail)}</p>
-            </div>
-          </div>
-        ` : ""}
-      </div>
+      ${renderRecoverySummary({
+        kind: recoveryKind,
+        status: "blocked",
+        statusLabel: selectedStage?.status || status || "blocked",
+        title: recoveryFailureTitle(firstFailure, diagnostics),
+        consequence: selectedReason,
+        decisiveFailure: {
+          label: hasGlobalBlocker ? `Run-global blocker: ${globalBlockerLabel}` : `Selected stage: ${selectedStageLabel}`,
+          detail: hasGlobalBlocker ? globalBlockerDetail : selectedReason
+        },
+        evidence: {label: runtimeFailure ? "Runtime log" : "Supporting evidence", path: evidencePath},
+        primaryAction: {action: primary.action, label: primary.label, enabled: !primary.attrs.includes("disabled")}
+      })}
       ${renderRuntimePartialEvidence(firstFailure)}
       ${unresolvedQuestions.length || (questions.questions || []).length ? `
         <section class="surface recovery-section">
@@ -691,47 +688,6 @@ function renderProjectHome() {
   `;
 }
 
-function renderRecoveryScreen() {
-  const firstFailure = state.dashboard?.first_failure || null;
-  const actions = state.dashboard?.recovery_actions || [];
-  const finding = firstFailure?.kind === "validation-failed" ? primaryValidationFinding() : null;
-  return `
-    <section class="recovery-assistant-screen">
-      <div class="surface">
-        <div class="surface-title">
-          <span>Recovery Assistant</span>
-          <span class="small-badge">${escapeHtml(actions.length)} suggestions</span>
-        </div>
-        ${firstFailure ? `
-          <article class="recovery-card failure">
-            <div class="question-head">
-              <strong>${escapeHtml(firstFailure.title)}</strong>
-              <span class="small-badge bad">${escapeHtml(firstFailure.kind)}</span>
-            </div>
-            <p>${escapeHtml(firstFailure.detail)}</p>
-            ${renderValidationFindingSummary(finding)}
-            ${firstFailure.path ? pathLine(firstFailure.path, 88) : ""}
-          </article>
-        ` : `<div class="empty-state">No decisive failure signal detected.</div>`}
-        <div class="project-work-item-grid">
-          ${actions.length ? actions.map((action) => `
-            <article class="project-work-item-card">
-              <div class="surface-title compact">
-                <span>${escapeHtml(action.label)}</span>
-                <span class="small-badge">${escapeHtml(action.action)}</span>
-              </div>
-              <p>${escapeHtml(action.detail)}</p>
-              <div class="wizard-actions">
-                <button data-recovery-action="${escapeHtml(action.action)}" data-recovery-stage="${escapeHtml(action.stage || state.activeStage)}" type="button" ${action.enabled ? "" : "disabled"}>Open</button>
-              </div>
-            </article>
-          `).join("") : `<div class="empty-state">No guided recovery actions for this state.</div>`}
-        </div>
-      </div>
-    </section>
-  `;
-}
-
 function renderBlockersPanel() {
   const blockers = state.dashboard?.blockers || [];
   const body = blockers.length ? blockers.map((blocker) => `
@@ -772,31 +728,8 @@ function renderRecoveryAssistantPanel() {
   if (!host) return;
   const firstFailure = state.dashboard?.first_failure || null;
   const actions = state.dashboard?.recovery_actions || [];
-  const finding = firstFailure?.kind === "validation-failed" ? primaryValidationFinding() : null;
   const questionCount = (state.dashboard?.stages || []).reduce((total, item) => total + Number(item.unresolved_blocking_count || 0), 0);
   const failureCount = firstFailure ? 1 : 0;
-  const actionRows = actions.length ? actions.map((action) => `
-    <button class="artifact-row" data-recovery-action="${escapeHtml(action.action)}" data-recovery-stage="${escapeHtml(action.stage || state.activeStage)}" type="button" ${action.enabled ? "" : "disabled"}>
-      <span>
-        <strong>${escapeHtml(action.label)}</strong>
-        <span>${escapeHtml(action.detail)}</span>
-      </span>
-      <span class="small-badge">${escapeHtml(action.action)}</span>
-    </button>
-  `).join("") : firstFailure
-    ? `<div class="empty-state compact">No guided recovery action is available. Inspect the failure evidence before retrying.</div>`
-    : `<div class="empty-state compact">No recovery action needed for the current state.</div>`;
-  const failure = firstFailure ? `
-    <article class="recovery-card failure">
-      <div class="question-head">
-        <strong>${escapeHtml(firstFailure.title)}</strong>
-        <span class="small-badge bad">${escapeHtml(firstFailure.kind)}</span>
-      </div>
-      <p>${escapeHtml(firstFailure.detail)}</p>
-      ${renderValidationFindingSummary(finding, {compact: true})}
-      ${firstFailure.path ? pathLine(firstFailure.path, 72) : ""}
-    </article>
-  ` : `<div class="empty-state compact">No decisive failure signal detected.</div>`;
   host.innerHTML = `
     <div class="panel-title">Recovery Assistant</div>
     <div class="filter-row compact">
@@ -804,8 +737,7 @@ function renderRecoveryAssistantPanel() {
       <span class="small-badge ${failureCount ? "bad" : ""}">Failures ${escapeHtml(failureCount)}</span>
       <span class="small-badge">Suggestions ${escapeHtml(actions.length)}</span>
     </div>
-    ${failure}
-    <div class="panel-list">${actionRows}</div>
+    <button class="secondary" data-tab-shortcut="recovery" type="button" ${firstFailure || questionCount || actions.length ? "" : "disabled"}>Open Recovery Summary</button>
   `;
 }
 

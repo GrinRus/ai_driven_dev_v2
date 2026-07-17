@@ -242,7 +242,7 @@ function renderRecoverySummary({
     throw new Error("Recovery Summary requires one primary recovery action");
   }
   return `
-    <section class="recovery-summary" data-recovery-summary="${escapeHtml(kind)}">
+    <section class="decision-bar recovery-summary" data-decision-bar="recovery" data-recovery-summary="${escapeHtml(kind)}">
       <header class="recovery-summary-header">
         ${renderStatusMarker({status, label: statusLabel})}
         <h2>${escapeHtml(title)}</h2>
@@ -255,6 +255,7 @@ function renderRecoverySummary({
       <div class="recovery-summary-evidence" data-evidence-path="${escapeHtml(evidence.path)}">
         <span>${escapeHtml(evidence.label || "Evidence")}</span>
         <code>${escapeHtml(evidence.path)}</code>
+        <button class="secondary" data-tab-shortcut="evidence" type="button">Open Evidence</button>
       </div>
       <div class="recovery-summary-primary" data-primary-recovery-slot>
         <button data-recovery-action="${escapeHtml(primaryAction.action)}" type="button" ${primaryAction.enabled === false ? 'disabled aria-disabled="true"' : ""}>${escapeHtml(primaryAction.label)}</button>
