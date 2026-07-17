@@ -1744,6 +1744,10 @@ def test_operator_next_flow_asset_keeps_launch_resume_and_runtime_guard_contract
             "async function createFollowUpDraftForLaunch(draft)",
             "async function refreshRuntimeReadinessForLaunch()",
             "function resetLaunchReadiness(wizard = state.nextFlowWizard)",
+            "function nextFlowBrowserDraftIdentity(action = state.nextFlowWizard.action)",
+            "function mergeNextFlowBrowserDraft(serverDraft, action = state.nextFlowWizard.action)",
+            "function persistNextFlowBrowserDraft()",
+            "clearOperatorDraft(nextFlowBrowserDraftIdentity());",
             "function invalidateFollowUpDraftPreview()",
             (
                 'document.querySelectorAll("[data-follow-up-definition-error], '

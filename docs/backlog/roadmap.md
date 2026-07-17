@@ -11352,7 +11352,7 @@ Exit evidence:
 - operator location survives reload and browser navigation;
 - Inbox and History no longer expose different labels for the same action.
 
-#### Slice W36-E6-S2 — browser-session draft and dirty-state safety (`planned`)
+#### Slice W36-E6-S2 — browser-session draft and dirty-state safety (`done`)
 Goal: preserve unsaved operator input across UI navigation without treating drafts as
 canonical workflow evidence.
 
@@ -11380,7 +11380,7 @@ Local tasks:
   - Scope: question/intervention browser modules.
   - Verification: stage/tab switch, reload, failed submit, and successful submit preserve
     or clear the expected draft only.
-- `W36-E6-S2-T3` (next) Adopt draft restore and leave-warning behavior for follow-up and clone
+- `W36-E6-S2-T3` (done) Adopt draft restore and leave-warning behavior for follow-up and clone
   definition forms.
   - Dependencies: `W36-E6-S2-T4`.
   - Scope: next-flow browser controller.
@@ -11406,13 +11406,13 @@ Dependencies:
 
 Local tasks:
 
-- `W36-E6-S3-T1` (soon) Replace terminal-on-error interval polling with a cursor-preserving
+- `W36-E6-S3-T1` (next) Replace terminal-on-error interval polling with a cursor-preserving
   retry state machine and bounded exponential backoff.
   - Dependencies: `W36-E6-S2-T3`.
   - Scope: `operator-logs-jobs.js` polling controller.
   - Verification: failure -> retry -> recovery, repeated failure, cancellation, and
     terminal-job sequences produce no duplicate or skipped chunks.
-- `W36-E6-S3-T2` (planned) Render offline, reconnecting, recovered, expired-job, and manual
+- `W36-E6-S3-T2` (soon) Render offline, reconnecting, recovered, expired-job, and manual
   Reconnect states.
   - Scope: live connection status surface.
   - Verification: each sequence names whether the runtime may still be running and

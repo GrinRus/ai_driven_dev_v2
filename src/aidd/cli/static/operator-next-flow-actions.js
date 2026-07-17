@@ -186,6 +186,52 @@ function resetLaunchReadiness(wizard = state.nextFlowWizard) {
   wizard.launchReadinessError = "";
 }
 
+function nextFlowDraftForm(action = state.nextFlowWizard.action) {
+  return action === "clone-flow" ? "clone" : "follow-up";
+}
+
+function nextFlowBrowserDraftIdentity(action = state.nextFlowWizard.action) {
+  return operatorDraftIdentity(nextFlowDraftForm(action), nextFlowSourceRunId());
+}
+
+function editableNextFlowDraftValue(draft) {
+  if (!draft) return null;
+  return {
+    new_work_item: draft.new_work_item || "",
+    title: draft.title || "",
+    first_stage_input_preview: draft.first_stage_input_preview || "",
+    acceptance_criteria: draft.acceptance_criteria || [],
+    acceptance_criteria_all: draft.acceptance_criteria_all || null,
+    required_evidence: draft.required_evidence || [],
+    required_evidence_all: draft.required_evidence_all || null,
+    inherited_context_lines: draft.inherited_context_lines || null,
+    selected_source_ids: [...(state.nextFlowWizard.selectedSourceIds || [])]
+  };
+}
+
+function mergeNextFlowBrowserDraft(serverDraft, action = state.nextFlowWizard.action) {
+  const restored = readOperatorDraft(nextFlowBrowserDraftIdentity(action))?.value;
+  if (!restored) return serverDraft;
+  state.nextFlowWizard.selectedSourceIds = restored.selected_source_ids
+    || state.nextFlowWizard.selectedSourceIds;
+  return {
+    ...serverDraft,
+    ...restored,
+    source_work_item: serverDraft.source_work_item,
+    source_run_id: serverDraft.source_run_id,
+    inherited_context: serverDraft.inherited_context,
+    created: serverDraft.created
+  };
+}
+
+function persistNextFlowBrowserDraft() {
+  if (!["start-follow-up-flow", "clone-flow"].includes(state.nextFlowWizard.action)) return;
+  const draft = readFollowUpDraftForm() || state.nextFlowWizard.followUpDraft;
+  const value = editableNextFlowDraftValue(draft);
+  if (!value) return;
+  writeOperatorDraft(nextFlowBrowserDraftIdentity(), value);
+}
+
 async function openNextFlowWizard(action) {
   const sourceRunId = nextFlowSourceRunId();
   const canReuseSourceFindings = (
@@ -331,7 +377,7 @@ async function openCloneFlowDraft() {
       new_work_item: nextFlowDefaultWorkItem("CLONE"),
       title: `Clone ${nextFlowSourceWorkItem()} from ${nextFlowSourceRunId()}`
     });
-    wizard.followUpDraft = cloneDraftFromPayload(payload);
+    wizard.followUpDraft = mergeNextFlowBrowserDraft(cloneDraftFromPayload(payload), "clone-flow");
     wizard.createdDraft = payload.created;
     toast("Clone draft created for launch review.");
     await loadLaunchConfirmation();
@@ -351,6 +397,7 @@ async function loadLaunchConfirmation() {
     await renderNextFlowWizardStep();
     return;
   }
+  persistNextFlowBrowserDraft();
   const definitionErrors = followUpDraftValidationErrors(draft);
   const definitionError = definitionErrors[0] || "";
   if (definitionError) {
@@ -565,6 +612,7 @@ async function launchNextFlowNow() {
     toast("No next-flow draft is ready to launch.");
     return;
   }
+  persistNextFlowBrowserDraft();
   wizard.launchError = "";
   resetLaunchReadiness(wizard);
   if (!(await refreshRuntimeReadinessForLaunch())) return;
@@ -585,6 +633,11 @@ async function launchNextFlowNow() {
       to_stage: "qa",
       log_follow: true
     });
+    const readback = await api(`/api/jobs/${encodeURIComponent(job.job_id)}`);
+    if (readback.job_id !== job.job_id) {
+      throw new Error("Next-flow job readback did not confirm the durable launch");
+    }
+    clearOperatorDraft(nextFlowBrowserDraftIdentity());
     wizard.active = false;
     toast(`Launching ${draft.new_work_item}.`);
     await startJobPolling(job);
@@ -609,7 +662,7 @@ async function loadFollowUpDraft() {
       source_run_id: state.activeRunId,
       selected_source_ids: wizard.selectedSourceIds
     });
-    wizard.followUpDraft = payload.draft;
+    wizard.followUpDraft = mergeNextFlowBrowserDraft(payload.draft, "start-follow-up-flow");
   } catch (error) {
     wizard.followUpDraftError = error.message;
   } finally {

@@ -227,6 +227,7 @@ document.addEventListener("click", async (event) => {
       return;
     }
     if (event.target.closest("[data-next-flow-back-to-sources]")) {
+      persistNextFlowBrowserDraft();
       state.nextFlowWizard.step = "sources";
       requestNextFlowWizardReveal();
       await renderCockpit();
@@ -241,6 +242,7 @@ document.addEventListener("click", async (event) => {
       return;
     }
     if (event.target.closest("[data-next-flow-back-to-definition]")) {
+      persistNextFlowBrowserDraft();
       state.nextFlowWizard.step = state.nextFlowWizard.action === "clone-flow" ? "sources" : "definition";
       if (state.nextFlowWizard.action === "clone-flow") {
         state.nextFlowWizard.active = false;
@@ -545,6 +547,7 @@ document.addEventListener("change", async (event) => {
     || event.target.closest("[data-inherited-context]")
   ) {
     invalidateFollowUpDraftPreview();
+    persistNextFlowBrowserDraft();
   }
 });
 
@@ -583,6 +586,7 @@ document.addEventListener("input", (event) => {
     || event.target.closest("[data-follow-up-list-text]")
   ) {
     invalidateFollowUpDraftPreview();
+    persistNextFlowBrowserDraft();
   }
 });
 

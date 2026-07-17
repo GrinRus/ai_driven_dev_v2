@@ -7,13 +7,13 @@ slice, and local task.
 
 ## Next
 
-- `W36-E6-S2-T3` — Adopt draft restore and leave-warning behavior for follow-up and
-  clone definition forms.
+- `W36-E6-S3-T1` — Replace terminal-on-error polling with cursor-preserving retry and
+  bounded backoff.
 
 ## Soon
 
-- `W36-E6-S3-T1` — Replace terminal-on-error polling with cursor-preserving retry and
-  bounded backoff.
+- `W36-E6-S3-T2` — Render offline, reconnecting, recovered, expired-job, and manual
+  Reconnect states.
 
 
 
@@ -61,6 +61,11 @@ slice, and local task.
   queue-restoration policy in `docs/backlog/roadmap.md` (`W8-E3-S1`).
 
 ## Current reconciliation
+
+- `2026-07-17` `W36-E6-S2-T3` and slice `W36-E6-S2` are complete: follow-up and clone
+  definitions merge the exact source-run session draft after Back/reload, preserve it
+  through preflight and launch failure, and clear it only after authoritative launch-job
+  readback. `W36-E6-S3-T1` is promoted to `Next` and `W36-E6-S3-T2` to `Soon`.
 
 - `2026-07-17` `W36-E6-S2-T2` is complete: question and intervention edits persist per
   project/work-item/run/stage/source, restore after rerender and reload, raise a dirty
