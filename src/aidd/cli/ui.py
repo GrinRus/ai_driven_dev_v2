@@ -125,6 +125,7 @@ from aidd.core.runtime_operator import (
     unapproved_operator_request_ids,
 )
 from aidd.core.runtime_readiness import (
+    RuntimeCapabilityProbeReport,
     RuntimeCommandSource,
     RuntimeReadinessProbeReport,
     resolve_runtime_readiness,
@@ -1724,6 +1725,18 @@ def _collect_runtime_readiness_probe_reports(
                 execution_command_available=_execution_command_available(runtime_config.command),
                 provider_version=provider_report.version_text,
                 provider_command=provider_report.command,
+                capabilities=RuntimeCapabilityProbeReport(
+                    supports_raw_log_stream=provider_report.supports_raw_log_stream,
+                    supports_structured_log_stream=(
+                        provider_report.supports_structured_log_stream
+                    ),
+                    supports_questions=provider_report.supports_questions,
+                    supports_resume=provider_report.supports_resume,
+                    supports_subagents=provider_report.supports_subagents,
+                    supports_permission_policy=provider_report.supports_permission_policy,
+                    supports_live_decisions=provider_report.supports_live_decisions,
+                    preferred_transport=provider_report.preferred_transport,
+                ),
             ),
         )
 

@@ -3835,6 +3835,14 @@ def test_ui_runtime_readiness_endpoint_exposes_probe_and_config_data(
     assert generic_cli["provider_version"] == "Python <3>"
     assert generic_cli["provider_command"] == "/usr/bin/python"
     assert generic_cli["execution_command_available"] is False
+    assert generic_cli["binary"] == {
+        "command": "/usr/bin/python",
+        "status": "detected",
+        "version": "Python <3>",
+    }
+    assert generic_cli["execution_command"]["status"] == "unavailable"
+    assert generic_cli["authentication"] == {"detail": None, "status": "unverified"}
+    assert generic_cli["capabilities"]["status"] == "unknown"
     assert generic_cli["default_timeout_seconds"] == 42
     assert generic_cli["stage_timeout_seconds"] == {"plan": 90}
     assert runtimes["codex"]["command_source"] == "default"

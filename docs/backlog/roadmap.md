@@ -10760,12 +10760,12 @@ Dependencies:
 
 Local tasks:
 
-- `W36-E4-S2-T1` (next) Expose binary, execution-command, authentication, and capability
+- `W36-E4-S2-T1` (done) Expose binary, execution-command, authentication, and capability
   readiness dimensions without inferring unavailable evidence.
   - Scope: core runtime readiness read model.
   - Verification: detected, unavailable, auth-verified, auth-failed, auth-unverified,
     and legacy fixtures produce typed dimensions with compatibility fields.
-- `W36-E4-S2-T2` (soon) Project the latest per-runtime launch outcome and timestamp from
+- `W36-E4-S2-T2` (next) Project the latest per-runtime launch outcome and timestamp from
   canonical attempt evidence.
   - Scope: core operator runtime-history read model.
   - Verification: no-history, success, failure, blocked, cancelled, and legacy attempts

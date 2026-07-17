@@ -659,6 +659,13 @@ Safety-related facts are also separate and literal:
 
 The umbrella label `safe` is not a substitute for these facts.
 
+Runtime readiness is likewise dimensioned: binary detection is
+`detected`/`unavailable`/`unknown`, execution-command availability is
+`available`/`unavailable`/`unknown`, authentication is
+`verified`/`failed`/`unverified`, and adapter capabilities are `known` or `unknown` with
+their individual flags. The legacy provider/command booleans remain compatibility fields and
+must not be combined into an inferred authentication or overall-ready claim.
+
 Connectivity has exactly four observable states: `online` after a successful current transport
 exchange, `reconnecting` while bounded retry is active, `offline` after observed transport
 failure, and `unknown` before evidence exists. Runtime success/failure is not inferred from

@@ -48,6 +48,7 @@ from aidd.core.runtime_operator import (
     append_operator_request,
 )
 from aidd.core.runtime_readiness import (
+    RuntimeCapabilityProbeReport,
     RuntimeReadinessProbeReport,
     resolve_runtime_readiness,
 )
@@ -2608,6 +2609,24 @@ def test_runtime_readiness_view_uses_config_and_passed_probe_reports(
                 execution_command_available=False,
                 provider_version="Python 3.12.0",
                 provider_command="/usr/bin/python",
+                authentication_status="verified",
+                authentication_detail="credential probe succeeded",
+                capabilities=RuntimeCapabilityProbeReport(
+                    supports_raw_log_stream=True,
+                    supports_structured_log_stream=False,
+                    supports_questions=False,
+                    supports_resume=False,
+                    supports_subagents=False,
+                    supports_permission_policy=False,
+                    supports_live_decisions=False,
+                    preferred_transport="subprocess",
+                ),
+            ),
+            "codex": RuntimeReadinessProbeReport(
+                provider_available=False,
+                execution_command_available=False,
+                authentication_status="failed",
+                authentication_detail="credential probe failed",
             )
         },
         command_sources={
@@ -2628,7 +2647,20 @@ def test_runtime_readiness_view_uses_config_and_passed_probe_reports(
     assert generic_cli.provider_version == "Python 3.12.0"
     assert generic_cli.provider_command == "/usr/bin/python"
     assert generic_cli.execution_command_available is False
+    assert generic_cli.binary.status == "detected"
+    assert generic_cli.binary.command == "/usr/bin/python"
+    assert generic_cli.execution_command.status == "unavailable"
+    assert generic_cli.execution_command.source == "config"
+    assert generic_cli.authentication.status == "verified"
+    assert generic_cli.authentication.detail == "credential probe succeeded"
+    assert generic_cli.capabilities.status == "known"
+    assert generic_cli.capabilities.preferred_transport == "subprocess"
     assert generic_cli.default_timeout_seconds == 42
     assert generic_cli.stage_timeout_seconds == {"plan": 90}
     assert runtimes["codex"].provider_available is False
+    assert runtimes["codex"].binary.status == "unavailable"
+    assert runtimes["codex"].authentication.status == "failed"
+    assert runtimes["codex"].capabilities.status == "unknown"
+    assert runtimes["claude-code"].binary.status == "unknown"
+    assert runtimes["claude-code"].authentication.status == "unverified"
     assert runtimes["codex"].command_source == "default"

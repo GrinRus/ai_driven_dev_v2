@@ -7,13 +7,10 @@ slice, and local task.
 
 ## Next
 
-- `W36-E4-S2-T1` — Expose binary, execution-command, authentication, and capability
-  dimensions as separate typed runtime-readiness fields.
-
-## Soon
-
 - `W36-E4-S2-T2` — Project the latest per-runtime launch outcome and timestamp from
   canonical attempt evidence.
+
+## Soon
 
 ## Parking lot
 
@@ -54,6 +51,12 @@ slice, and local task.
   queue-restoration policy in `docs/backlog/roadmap.md` (`W8-E3-S1`).
 
 ## Current reconciliation
+
+- `2026-07-17` `W36-E4-S2-T1` is complete: binary, execution command,
+  authentication, and adapter capability evidence now have independent typed statuses;
+  legacy provider/command booleans remain additive compatibility fields and no overall
+  readiness is inferred. `W36-E4-S2-T2` is promoted to `Next`; no task is placed in
+  `Soon` because readiness rendering remains blocked on the Guided Setup/Studio shells.
 
 - `2026-07-17` `W36-E5-S0-T2` and slice `W36-E5-S0` are complete: the additive
   terminal-handoff API preserves source identity and all allowed outcomes while exposing
