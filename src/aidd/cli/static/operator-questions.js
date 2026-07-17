@@ -25,6 +25,24 @@ function questionRequiresResolvedResume(question) {
   return question?.policy === "blocking";
 }
 
+function questionDraftIdentity(questionId) {
+  return operatorDraftIdentity("question", questionId);
+}
+
+function questionDraft(questionId) {
+  return readOperatorDraft(questionDraftIdentity(questionId));
+}
+
+function persistQuestionDraft(questionId) {
+  const textarea = document.querySelector(`[data-question-text="${CSS.escape(questionId)}"]`);
+  const resolution = document.querySelector(`[data-question-resolution="${CSS.escape(questionId)}"]`);
+  if (!textarea) return;
+  writeOperatorDraft(questionDraftIdentity(questionId), {
+    text: textarea.value,
+    resolution: resolution?.value || "resolved"
+  });
+}
+
 function updateQuestionResumeButtonState(questionId) {
   const button = document.querySelector(`[data-answer-resume="${CSS.escape(questionId)}"]`);
   if (!button || button.dataset.requiresResolvedResume !== "true") return;
@@ -180,8 +198,9 @@ function renderQuestionCards({showResume}) {
         const savedAnswer = question.answer_resolution
           ? `<div class="saved-answer"><span class="saved-answer-label">Saved ${escapeHtml(question.answer_resolution)} answer</span><span class="saved-answer-text">${escapeHtml(question.answer_text || "Answer recorded in answers.md; blocking question still requires a resolved answer.")}</span></div>`
           : "";
-        const answerText = question.answer_text || "";
-        const resolutionValue = question.answer_resolution || "resolved";
+        const draft = questionDraft(question.question_id)?.value || null;
+        const answerText = draft?.text ?? question.answer_text ?? "";
+        const resolutionValue = draft?.resolution || question.answer_resolution || "resolved";
         const resumeNeedsResolved = questionRequiresResolvedResume(question);
         const resumeDisabled = resumeNeedsResolved && resolutionValue !== "resolved";
         const resumeLabel = resumeDisabled
@@ -259,6 +278,18 @@ async function saveAnswer(questionId) {
     text,
     resolution: resolution?.value || "resolved"
   });
+  await fetchDashboard();
+  const readback = state.dashboard?.active_stage_view?.questions?.questions?.find(
+    (question) => question.question_id === questionId
+  );
+  if (
+    readback?.answer_text !== text
+    || readback?.answer_resolution !== (resolution?.value || "resolved")
+  ) {
+    toast("Answer was submitted but durable readback is not confirmed; draft retained.");
+    return false;
+  }
+  clearOperatorDraft(questionDraftIdentity(questionId));
   toast("Answer saved.");
   return true;
 }

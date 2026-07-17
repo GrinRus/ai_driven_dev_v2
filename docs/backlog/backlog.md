@@ -7,13 +7,13 @@ slice, and local task.
 
 ## Next
 
-- `W36-E6-S2-T2` — Adopt draft restore and leave-warning behavior for question and
-  intervention forms.
+- `W36-E6-S2-T3` — Adopt draft restore and leave-warning behavior for follow-up and
+  clone definition forms.
 
 ## Soon
 
-- `W36-E6-S2-T3` — Adopt draft restore and leave-warning behavior for follow-up and
-  clone definition forms.
+- `W36-E6-S3-T1` — Replace terminal-on-error polling with cursor-preserving retry and
+  bounded backoff.
 
 
 
@@ -42,8 +42,6 @@ slice, and local task.
   handoff read model.
 - `W36-E5-S10-T1` — Switch the default renderer to Studio only after all per-surface
   parity entries close.
-- `W36-E6-S3-T1` — Replace terminal-on-error polling with cursor-preserving retry and
-  bounded backoff.
 - `W36-E6-S4-T1` — Add a keyed client mutation guard with pending lock, duplicate
   suppression, conflict readback, and retryable failure state.
 - `W36-E7-S1-T1` — Add the Guided Setup project validation, create/resume, runtime
@@ -63,6 +61,11 @@ slice, and local task.
   queue-restoration policy in `docs/backlog/roadmap.md` (`W8-E3-S1`).
 
 ## Current reconciliation
+
+- `2026-07-17` `W36-E6-S2-T2` is complete: question and intervention edits persist per
+  project/work-item/run/stage/source, restore after rerender and reload, raise a dirty
+  leave warning, survive failed submission, and clear only after authoritative durable
+  readback. `W36-E6-S2-T3` is promoted to `Next` and `W36-E6-S3-T1` to `Soon`.
 
 - `2026-07-17` `W36-E6-S2-T4` is complete: the shared packaged session store validates
   all six key dimensions, purges malformed/expired records, enforces the 32-entry and

@@ -11374,13 +11374,13 @@ Local tasks:
   - Scope: shared packaged JavaScript state utility only.
   - Verification: contract fixtures isolate every key dimension and successful submit
     clears only the owning draft.
-- `W36-E6-S2-T2` (next) Adopt draft restore and leave-warning behavior for question and
+- `W36-E6-S2-T2` (done) Adopt draft restore and leave-warning behavior for question and
   intervention forms.
   - Dependencies: `W36-E6-S2-T4`.
   - Scope: question/intervention browser modules.
   - Verification: stage/tab switch, reload, failed submit, and successful submit preserve
     or clear the expected draft only.
-- `W36-E6-S2-T3` (soon) Adopt draft restore and leave-warning behavior for follow-up and clone
+- `W36-E6-S2-T3` (next) Adopt draft restore and leave-warning behavior for follow-up and clone
   definition forms.
   - Dependencies: `W36-E6-S2-T4`.
   - Scope: next-flow browser controller.
@@ -11406,8 +11406,9 @@ Dependencies:
 
 Local tasks:
 
-- `W36-E6-S3-T1` (parked) Replace terminal-on-error interval polling with a cursor-preserving
+- `W36-E6-S3-T1` (soon) Replace terminal-on-error interval polling with a cursor-preserving
   retry state machine and bounded exponential backoff.
+  - Dependencies: `W36-E6-S2-T3`.
   - Scope: `operator-logs-jobs.js` polling controller.
   - Verification: failure -> retry -> recovery, repeated failure, cancellation, and
     terminal-job sequences produce no duplicate or skipped chunks.

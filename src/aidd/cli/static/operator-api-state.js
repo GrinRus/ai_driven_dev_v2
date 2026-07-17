@@ -682,6 +682,26 @@ function sourceFindingsUrl() {
   return `/api/next-flow/source-findings?${params.toString()}`;
 }
 
+function operatorDraftIdentity(form, sourceId) {
+  return {
+    project: String(
+      state.dashboard?.project_root
+      || state.projectHome?.project_root
+      || state.onboarding.projectRootInput
+      || "none"
+    ),
+    workItem: String(state.dashboard?.work_item || state.activeRouteWorkItem || "none"),
+    run: String(state.activeRunId || "none"),
+    stage: String(state.activeStage || "none"),
+    form,
+    sourceId: String(sourceId || "none")
+  };
+}
+
+function currentOperatorDraftProject() {
+  return operatorDraftIdentity("question", "current-project").project;
+}
+
 async function fetchOnboardingState() {
   state.onboarding.loading = true;
   state.onboarding.error = "";

@@ -527,9 +527,11 @@ document.addEventListener("change", async (event) => {
   }
   const questionResolution = event.target.closest("[data-question-resolution]")?.dataset.questionResolution;
   if (questionResolution) {
+    persistQuestionDraft(questionResolution);
     updateQuestionResumeButtonState(questionResolution);
   }
   if (event.target.closest("[data-intervention-target]")) {
+    persistInterventionDraft();
     updateInterventionPreview();
   }
   const sourceSelection = event.target.closest("[data-source-selection-id]");
@@ -566,8 +568,11 @@ document.addEventListener("input", (event) => {
     syncOnboardingCreateActionState();
   }
   if (event.target.id === "operatorRequestText") {
+    persistInterventionDraft();
     updateInterventionPreview();
   }
+  const questionText = event.target.closest("[data-question-text]")?.dataset.questionText;
+  if (questionText) persistQuestionDraft(questionText);
   if (event.target.id === "runComparisonBaseline") {
     state.runComparisonBaselineInput = event.target.value;
     state.runComparison = null;
@@ -608,5 +613,10 @@ window.addEventListener("popstate", () => {
   window.aiddRouteRestore = restoreOperatorRouteFromLocation().catch((error) => {
     toast(error.message);
   });
+});
+window.addEventListener("beforeunload", (event) => {
+  if (!hasDirtyOperatorDraft(currentOperatorDraftProject())) return;
+  event.preventDefault();
+  event.returnValue = "";
 });
 refresh();
