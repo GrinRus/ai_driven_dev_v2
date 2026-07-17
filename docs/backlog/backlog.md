@@ -7,17 +7,15 @@ slice, and local task.
 
 ## Next
 
-- `W36-E1-S2-T2` — Define truthful UI vocabulary for runtime readiness, authentication,
-  safety/write scope, approval breadth, connectivity, and mutation state.
+- `W36-E1-S2-T3` — Define measurable operator UX thresholds and evidence fields.
 
 ## Soon
 
-- `W36-E1-S2-T3` — Define measurable operator UX thresholds and evidence fields.
+- `W36-E2-S1-T1` — Select and document a maintained provider-free browser driver and
+  packaged-UI test policy.
 
 ## Parking lot
 
-- `W36-E2-S1-T1` — Select and document a maintained provider-free browser driver and
-  packaged-UI test policy.
 - `W36-E2-S3-T1` — Extract shared dashboard loading, context selection, and mutation
   dispatch from legacy renderer ownership.
 - `W36-E3-S1-T1` — Add semantic typography, spacing, radius, elevation, control-size,
@@ -69,6 +67,11 @@ slice, and local task.
   queue-restoration policy in `docs/backlog/roadmap.md` (`W8-E3-S1`).
 
 ## Current reconciliation
+
+- `2026-07-17` `W36-E1-S2-T2` is complete: runtime detection, command availability,
+  authentication evidence, capability, permission/write scope, approval breadth,
+  connectivity, and mutations now have separate observable vocabularies.
+  `W36-E1-S2-T3` is promoted to `Next` and `W36-E2-S1-T1` to `Soon`.
 
 - `2026-07-17` `W36-E1-S2-T1` is complete: every setup, execution, next-flow, and archive
   action now names its real endpoint/service, durable result, and conflict boundary; eval is

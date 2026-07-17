@@ -834,6 +834,32 @@ def test_operator_frontend_actions_name_real_service_semantics() -> None:
     ):
         assert expected in contract
 
+
+def test_operator_frontend_uses_truthful_state_vocabulary() -> None:
+    contract = (
+        _repo_root() / "docs" / "architecture" / "operator-frontend.md"
+    ).read_text(encoding="utf-8")
+
+    for expected in (
+        "#### 8.8.2 Truthful state vocabulary",
+        "| Provider detection |",
+        "| Execution command |",
+        "| Authentication evidence |",
+        "| Adapter capability |",
+        "must not derive `ready` from binary detection",
+        "permission policy uses its configured value",
+        "allowed-write scope shows the canonical path prefixes",
+        "approval breadth shows the actual request kind/capability",
+        "umbrella label `safe` is not a substitute",
+        "`online` after a successful current transport",
+        "`reconnecting` while bounded retry is active",
+        "`offline` after observed transport",
+        "`unknown` before evidence exists",
+        "`idle`, `pending`, `conflict`, `succeeded`, `failed`, or `cancelled`",
+        "durable server winner",
+    ):
+        assert expected in contract
+
 def test_operator_ui_local_project_e2e_lane_requires_completed_flow_checks() -> None:
     operator_ui_lane = (
         _repo_root() / "docs" / "e2e" / "operator-ui-local-project.md"

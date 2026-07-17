@@ -634,6 +634,40 @@ Draft, preflight, and launch are distinct actions because their consequences dif
 must not label them all **Continue**, and it must not show a draft or preflight response as a
 created work item or launched run.
 
+#### 8.8.2 Truthful state vocabulary
+
+Runtime presentation reports independent facts rather than one inferred `ready` badge:
+
+| Fact | Canonical presentation |
+| --- | --- |
+| Provider detection | `detected`, `not detected`, or `unknown`, based only on the probe result. |
+| Execution command | `configured and executable`, `configured but unavailable`, `not configured`, or `unknown`. |
+| Authentication evidence | `confirmed`, `not confirmed`, `failed`, or `unknown`, with the evidence source and observation time. Binary or config presence is not authentication evidence. |
+| Adapter capability | Named supported capabilities and transport from the adapter capability report; provider help text alone does not create an AIDD capability. |
+
+The UI may say an action is **eligible** only when the core read model confirms every required
+fact. It must not derive `ready` from binary detection or configuration alone.
+
+Safety-related facts are also separate and literal:
+
+- permission policy uses its configured value, such as `full_access`, `brokered`, or
+  `deny_unapproved`;
+- allowed-write scope shows the canonical path prefixes, `unrestricted` when the document is
+  absent by contract, or a malformed-state error;
+- approval breadth shows the actual request kind/capability and bounded preset or explicitly
+  says that operator review is required.
+
+The umbrella label `safe` is not a substitute for these facts.
+
+Connectivity has exactly four observable states: `online` after a successful current transport
+exchange, `reconnecting` while bounded retry is active, `offline` after observed transport
+failure, and `unknown` before evidence exists. Runtime success/failure is not inferred from
+browser connectivity.
+
+Every client mutation uses `idle`, `pending`, `conflict`, `succeeded`, `failed`, or `cancelled`.
+Optimistic state is never authoritative: after a conflict, retry, reconnect, or cancellation
+race, the durable server winner and its evidence determine the displayed result.
+
 Only one is promoted. Clean completed runs without blockers recommend **Create New Work
 Item**. Failed, blocked, or warning handoffs recommend **Start Follow-up Flow**. The remaining
 outcomes live under **Other next actions**, not an equal-weight card grid.

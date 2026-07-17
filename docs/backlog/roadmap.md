@@ -10399,12 +10399,12 @@ Local tasks:
   - Scope: operator frontend architecture only.
   - Verification: every visible selectable action has a distinct outcome and service
     path, or is explicitly removed.
-- `W36-E1-S2-T2` (next) Define truthful UI vocabulary for runtime readiness, authentication
+- `W36-E1-S2-T2` (done) Define truthful UI vocabulary for runtime readiness, authentication
   evidence, safety/write scope, approval breadth, connectivity, and mutation state.
   - Scope: operator UX vocabulary in architecture docs.
   - Verification: ambiguous normative claims such as undifferentiated `ready` or
     `safe` are absent from the accepted vocabulary.
-- `W36-E1-S2-T3` (soon) Define measurable operator UX thresholds and evidence fields.
+- `W36-E1-S2-T3` (next) Define measurable operator UX thresholds and evidence fields.
   - Scope: local-project UI E2E acceptance docs.
   - Verification: the template records first-action visibility, header footprint,
     touch targets, focus entry, contrast, overflow, reconnect outcome, task completion,
@@ -10426,13 +10426,15 @@ deterministic cleanup.
 Dependencies:
 
 - `W36-E1-S1`
+- `W36-E1-S2-T3`
 - `W34-E5-S3-T4`
 - `W34-E5-S3-T5`
 
 Local tasks:
 
-- `W36-E2-S1-T1` (parked) Select and document the maintained provider-free browser driver and
+- `W36-E2-S1-T1` (soon) Select and document the maintained provider-free browser driver and
   packaging policy for served UI checks.
+  - Dependencies: `W36-E1-S2-T3`.
   - Scope: browser-test architecture and documentation policy only.
   - Verification: the decision preserves the no-Node/Vite product runtime, names the
     executable test command, and replaces the blanket no-browser-driver wording in the
