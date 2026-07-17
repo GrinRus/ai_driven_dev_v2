@@ -288,6 +288,53 @@ function activeJobRetryDelay(failureCount) {
   );
 }
 
+function clearReconciledActiveJob({preserveConnection = true} = {}) {
+  clearActiveJobPollTimer();
+  state.activeJobPollGeneration += 1;
+  state.activeJobId = "";
+  state.activeJobStatus = null;
+  state.activeJobCursor = 0;
+  state.activeJobLogChunks = [];
+  if (!preserveConnection) resetActiveJobConnection();
+}
+
+async function reconcileRecoveredActiveJob(jobId, status) {
+  if (status?.stage && STAGES.includes(status.stage)) {
+    state.activeStage = status.stage;
+    state.activeStageExplicit = true;
+  }
+  const cursor = state.activeJobCursor;
+  const chunks = state.activeJobLogChunks;
+  await fetchDashboard();
+  if (state.activeJobId === jobId) {
+    state.activeJobCursor = cursor;
+    state.activeJobLogChunks = chunks;
+  }
+  await fetchProjectHome(state.dashboard?.work_item || "");
+}
+
+async function reconcileExpiredActiveJob(jobId) {
+  try {
+    await fetchDashboard();
+    if (state.dashboardActiveJob?.job_id === jobId) return false;
+    if (!state.dashboardActiveJob) clearReconciledActiveJob({preserveConnection: true});
+    await fetchProjectHome(state.dashboard?.work_item || "");
+    await renderAll();
+    return true;
+  } catch (_error) {
+    return false;
+  }
+}
+
+async function reconcileTerminalActiveJob(jobId) {
+  await fetchDashboard();
+  if (!state.dashboardActiveJob || state.dashboardActiveJob.job_id === jobId) {
+    clearReconciledActiveJob({preserveConnection: false});
+  }
+  await fetchProjectHome(state.dashboard?.work_item || "");
+  await renderAll();
+}
+
 function renderActiveJobConnectionSurface() {
   const connection = state.activeJobConnection;
   if (!connection || connection.state === "unknown" || (
@@ -371,14 +418,14 @@ async function renderLogs() {
     state.savedLogText = view.text || "";
     const summary = view.summary || {};
     const logAvailable = view.available !== false;
-    document.getElementById("cockpitContent").innerHTML = renderLogPanel({
+    document.getElementById("cockpitContent").innerHTML = `${renderActiveJobConnectionSurface()}${renderLogPanel({
       title: logAvailable ? "Saved runtime.log" : "Saved runtime.log (pending)",
       meta: [summary.run_id ? `run ${summary.run_id}` : "", summary.stage ? `stage ${summary.stage}` : "", summary.attempt_number ? `attempt ${summary.attempt_number}` : ""],
       entries: logEntriesFromText(state.savedLogText),
       rawText: state.savedLogText,
       emptyText: logAvailable ? "Saved runtime log is empty" : (view.message || "Runtime log is not available yet."),
       truncation: view
-    });
+    })}`;
   } catch (error) {
     document.getElementById("cockpitContent").innerHTML = `<div class="empty-state">${escapeHtml(error.message)}</div>`;
   }
@@ -448,6 +495,7 @@ async function pollActiveJob() {
       recovered: wasDisconnected,
       expired: false
     };
+    if (wasDisconnected) await reconcileRecoveredActiveJob(jobId, status);
     renderActiveRunPanel();
     if (typeof renderNextActionPanel === "function") renderNextActionPanel();
     if (typeof renderGlobalNextActionStrip === "function") renderGlobalNextActionStrip();
@@ -459,9 +507,7 @@ async function pollActiveJob() {
     }
     if (!activeStatuses.has(state.activeJobStatus.status)) {
       clearActiveJobPollTimer();
-      await fetchDashboard();
-      await fetchProjectHome(state.dashboard?.work_item || "");
-      await renderAll();
+      await reconcileTerminalActiveJob(jobId);
     } else {
       scheduleActiveJobPoll();
     }
@@ -484,6 +530,7 @@ async function pollActiveJob() {
     state.activeJobLogChunks.push({stream: "system", text: `[ui] ${error.message}\n`});
     renderActivityTable();
     if (activeModeIsEvidenceLog()) await renderLogs();
+    if (expired && await reconcileExpiredActiveJob(jobId)) return;
     if (!expired && failureCount < ACTIVE_JOB_RETRY_LIMIT) scheduleActiveJobPoll(retryDelayMs);
     else clearActiveJobPollTimer();
   }

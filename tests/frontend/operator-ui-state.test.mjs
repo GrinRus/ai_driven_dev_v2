@@ -49,6 +49,8 @@ function domContext() {
     fetch: async () => {
       throw new Error("fetch double was not configured");
     },
+    fetchDashboard: async () => {},
+    fetchProjectHome: async () => {},
     history: {replaceState() {}},
     location: {pathname: "/", search: ""},
     renderActivityTable() {},
@@ -362,7 +364,7 @@ test("polling retries with a bounded cursor-preserving backoff and recovers", as
     if (url.includes("/logs?")) {
       return response({cursor: 2, chunks: [{stream: "stdout", text: "once\n"}]});
     }
-    return response({job_id: "job-1", status: "running"});
+    return response({job_id: "job-1", stage: "plan", status: "running"});
   };
   await load(context, "operator-api-state.js");
   await load(context, "operator-logs-jobs.js");
@@ -381,6 +383,7 @@ test("polling retries with a bounded cursor-preserving backoff and recovers", as
   assert.equal(vm.runInContext("state.activeJobLogChunks.filter((item) => item.text === 'once\\n').length", context), 1);
   assert.equal(vm.runInContext("state.activeJobConnection.state", context), "online");
   assert.equal(vm.runInContext("state.activeJobConnection.recovered", context), true);
+  assert.equal(vm.runInContext("state.activeStage", context), "plan");
   assert.equal(scheduled.at(-1).delay, 1000);
 });
 
@@ -433,7 +436,7 @@ test("live connection surface names reconnecting, recovered, offline, and expire
   }
 });
 
-test("expired jobs fail closed without retry and manual reconnect preserves the cursor", async () => {
+test("expired jobs reconcile to durable state and manual reconnect preserves the cursor", async () => {
   const {context} = domContext();
   const scheduled = [];
   context.setTimeout = (callback, delay) => {
@@ -458,14 +461,50 @@ test("expired jobs fail closed without retry and manual reconnect preserves the 
   await vm.runInContext("pollActiveJob()", context);
   assert.equal(vm.runInContext("state.activeJobConnection.expired", context), true);
   assert.equal(scheduled.length, 0);
-  assert.equal(vm.runInContext("state.activeJobCursor", context), 4);
+  assert.equal(vm.runInContext("state.activeJobId", context), "");
+  assert.equal(vm.runInContext("state.activeJobCursor", context), 0);
 
   expired = false;
+  vm.runInContext(`
+    state.activeJobId = "job-2";
+    state.activeJobCursor = 4;
+    state.activeJobStatus = {job_id: "job-2", status: "running"};
+    state.activeJobConnection = {state: "offline", failureCount: 5, lastError: "offline", retryDelayMs: null, recovered: false, expired: false};
+  `, context);
   vm.runInContext("renderLogs = async () => {}", context);
   await vm.runInContext("reconnectActiveJob()", context);
   assert.equal(vm.runInContext("state.activeJobConnection.state", context), "online");
   assert.equal(vm.runInContext("state.activeJobCursor", context), 7);
   assert.equal(scheduled.at(-1).delay, 1000);
+});
+
+test("terminal polling releases volatile buffers after durable dashboard readback", async () => {
+  const {context} = domContext();
+  let request = 0;
+  context.fetch = async () => {
+    request += 1;
+    return request === 1
+      ? response({cursor: 9, chunks: [{stream: "stdout", text: "terminal\n"}]})
+      : response({job_id: "job-1", stage: "qa", status: "completed"});
+  };
+  context.fetchDashboard = async () => {
+    vm.runInContext(
+      "state.dashboard = {work_item: 'WI-1', active_stage: 'qa'}; state.dashboardActiveJob = null; state.activeStage = 'qa';",
+      context,
+    );
+  };
+  await load(context, "operator-api-state.js");
+  await load(context, "operator-logs-jobs.js");
+  vm.runInContext(
+    "state.activeJobId = 'job-1'; state.activeJobStatus = {status: 'running'};",
+    context,
+  );
+
+  await vm.runInContext("pollActiveJob()", context);
+  assert.equal(vm.runInContext("state.activeJobId", context), "");
+  assert.equal(vm.runInContext("state.activeJobStatus", context), null);
+  assert.equal(vm.runInContext("state.activeJobLogChunks.length", context), 0);
+  assert.equal(vm.runInContext("state.activeStage", context), "qa");
 });
 
 test("rejected log request renders a deterministic escaped error", async () => {

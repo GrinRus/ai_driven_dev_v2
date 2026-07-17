@@ -11394,7 +11394,7 @@ Exit evidence:
 - draft state never becomes canonical `answers.md`, intervention, or next-flow evidence
   before explicit submission.
 
-#### Slice W36-E6-S3 — reconnecting live observation (`planned`)
+#### Slice W36-E6-S3 — reconnecting live observation (`done`)
 Goal: recover live monitoring after transient API failure without losing log position or
 misrepresenting the runtime as stopped.
 
@@ -11417,7 +11417,7 @@ Local tasks:
   - Scope: live connection status surface.
   - Verification: each sequence names whether the runtime may still be running and
     offers the correct local recovery action.
-- `W36-E6-S3-T3` (next) Reconcile active job, dashboard, logs, and selected stage after
+- `W36-E6-S3-T3` (done) Reconcile active job, dashboard, logs, and selected stage after
   recovery or terminal-job eviction.
   - Scope: browser state reconciliation.
   - Verification: reconnect and eviction fixtures converge on the server-authoritative
@@ -11441,13 +11441,13 @@ Dependencies:
 
 Local tasks:
 
-- `W36-E6-S4-T1` (soon) Add a shared keyed client mutation guard with pending lock, duplicate
+- `W36-E6-S4-T1` (next) Add a shared keyed client mutation guard with pending lock, duplicate
   suppression, conflict readback, and retryable failure state.
   - Dependencies: `W36-E6-S3-T3`.
   - Scope: packaged API/state utility.
   - Verification: double-click and concurrent-control fixtures send one request per key
     and preserve a retry path after failure.
-- `W36-E6-S4-T2` (planned) Adopt the mutation guard for workflow, stage, and remediation launch
+- `W36-E6-S4-T2` (soon) Adopt the mutation guard for workflow, stage, and remediation launch
   controls.
   - Scope: run mutation controls.
   - Verification: pending, same-run conflict, different-run concurrency, failure, and

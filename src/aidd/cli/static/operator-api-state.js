@@ -75,6 +75,7 @@ const state = {
   presentationSelector: window.aiddPresentation?.requested || "legacy",
   presentationEffective: window.aiddPresentation?.effective || "legacy",
   dashboard: null,
+  dashboardActiveJob: null,
   dashboardRequestGeneration: 0,
   projectHome: null,
   projectHomeRequestGeneration: 0,

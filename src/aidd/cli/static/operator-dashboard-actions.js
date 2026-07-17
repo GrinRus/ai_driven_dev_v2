@@ -17,6 +17,7 @@ async function fetchDashboard() {
   const payload = await api(dashboardUrl());
   if (requestGeneration !== state.dashboardRequestGeneration) return false;
   state.dashboard = payload.dashboard;
+  state.dashboardActiveJob = payload.active_job || null;
   await recoverActiveJobFromDashboard(payload.active_job);
   const version = String(payload.app_version || "").trim();
   document.getElementById("appVersion").textContent = version.startsWith("v")

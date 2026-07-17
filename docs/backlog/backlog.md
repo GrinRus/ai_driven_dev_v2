@@ -7,13 +7,13 @@ slice, and local task.
 
 ## Next
 
-- `W36-E6-S3-T3` — Reconcile active job, dashboard, logs, and selected stage after
-  recovery or terminal-job eviction.
+- `W36-E6-S4-T1` — Add a keyed client mutation guard with pending lock, duplicate
+  suppression, conflict readback, and retryable failure state.
 
 ## Soon
 
-- `W36-E6-S4-T1` — Add a keyed client mutation guard with pending lock, duplicate
-  suppression, conflict readback, and retryable failure state.
+- `W36-E6-S4-T2` — Adopt the mutation guard for workflow, stage, and remediation launch
+  controls.
 
 
 
@@ -59,6 +59,12 @@ slice, and local task.
   queue-restoration policy in `docs/backlog/roadmap.md` (`W8-E3-S1`).
 
 ## Current reconciliation
+
+- `2026-07-17` `W36-E6-S3-T3` and slice `W36-E6-S3` are complete: recovery now
+  re-reads server stage/run while retaining cursor/chunks, and terminal or evicted jobs
+  release volatile live buffers only after dashboard reconciliation so saved logs and
+  artifacts remain authoritative. `W36-E6-S4-T1` is promoted to `Next` and
+  `W36-E6-S4-T2` to `Soon`.
 
 - `2026-07-17` `W36-E6-S3-T2` is complete: live observation names reconnecting,
   recovered, offline, and expired-job states, preserves the nonterminal runtime claim,
