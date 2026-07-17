@@ -9705,7 +9705,7 @@ Exit evidence:
 
 - core and harness identifiers share one fail-closed containment contract.
 
-#### Slice W34-E7-S3 — fail-closed safety configuration (`planned`)
+#### Slice W34-E7-S3 — fail-closed safety configuration (`done`)
 Goal: reject ambiguous or unknown safety-sensitive configuration before runtime
 execution.
 
@@ -9715,7 +9715,7 @@ Dependencies:
 
 Local tasks:
 
-- `W34-E7-S3-T1` Distinguish missing from blank values, validate known safety keys, and
+- `W34-E7-S3-T1` (done) Distinguish missing from blank values, validate known safety keys, and
   reject unknown or malformed safety fields. [`SEC-04`]
   - Scope: configuration loading and validation.
   - Verification: a defensive config matrix covers absent defaults, blank values,

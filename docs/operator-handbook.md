@@ -142,6 +142,12 @@ mode = "both"
 max_attempts = 2
 ```
 
+Configuration loading is fail-closed. Omitting a documented key selects its default, but
+an explicitly blank workspace, logging, command, execution-mode, permission-policy,
+interaction-mode, or auto-approval value is invalid. Unknown top-level sections, runtime
+sections, section keys, project fields, runtime ids, and stage-timeout names are rejected
+before any runtime process or persisted run state is created.
+
 Claude Code, Codex, and OpenCode native mode adapt AIDD stage briefs and prompt
 packs to the raw provider CLI. Use `mode = "adapter-flags"` only for wrapper
 commands that accept AIDD adapter flags directly.

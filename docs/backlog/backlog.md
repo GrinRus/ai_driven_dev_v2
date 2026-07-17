@@ -7,17 +7,16 @@ slice, and local task.
 
 ## Next
 
-- `W34-E7-S3-T1` — Reject ambiguous, unknown, or malformed safety-sensitive
-  configuration.
+- `W34-E7-S2-T3` — Adopt the shared identifier boundary for scenario, eval-run, and
+  result-bundle paths.
 
 ## Soon
 
-No tasks are queued in `Soon`.
+- `W34-E8-S1-T2` — Normalize inherited local-task statuses and historical disposition
+  semantics.
 
 ## Parking lot
 
-- `W34-E8-S1-T2` — Normalize inherited local-task statuses and historical disposition
-  semantics.
 - `W34-E8-S2-T1` — Replace stale planned/completed-wave architecture wording with
   stable implemented ownership boundaries.
 - `W36-E1-S1-T3` — Replace checklist-only navigation wording with the canonical
@@ -75,6 +74,11 @@ No tasks are queued in `Soon`.
   queue-restoration policy in `docs/backlog/roadmap.md` (`W8-E3-S1`).
 
 ## Current reconciliation
+
+- `2026-07-17` `W34-E7-S3-T1` and slice `W34-E7-S3` are complete: configuration now
+  distinguishes absent defaults from explicit blanks and rejects unknown or malformed
+  keys before runtime execution. `W34-E7-S2-T3` is promoted to `Next` and
+  `W34-E8-S1-T2` to `Soon`.
 
 - `2026-07-16` `W34-E3-S4-T4`, slice `W34-E3-S4`, and Epic `W34-E3` are complete:
   next-flow mutations remain in the compatible controller asset while terminal,
