@@ -7,10 +7,13 @@ slice, and local task.
 
 ## Next
 
-- `W36-E3-S4-T3` — Raise borderline contrast, readable minimums, and tabular numeric
-  treatment.
+- `W36-E6-S1-T1` — Add a URL-state codec for Inbox / Studio / History mode, work item,
+  run, stage, attempt or task-attempt detail, and artifact selection.
 
 ## Soon
+
+- `W36-E6-S1-T2` — Wire push, replace, popstate, and reload restoration through the URL
+  codec across Inbox, Studio, History, and contextual drawers.
 
 
 
@@ -39,8 +42,6 @@ slice, and local task.
   handoff read model.
 - `W36-E5-S10-T1` — Switch the default renderer to Studio only after all per-surface
   parity entries close.
-- `W36-E6-S1-T1` — Add a URL-state codec for Inbox / Studio / History, work item, run,
-  stage, attempt/task-attempt detail, and artifact selection.
 - `W36-E6-S2-T1` — Define the scoped browser-session draft key, retention, and cleanup
   contract.
 - `W36-E6-S3-T1` — Replace terminal-on-error polling with cursor-preserving retry and
@@ -64,6 +65,12 @@ slice, and local task.
   queue-restoration policy in `docs/backlog/roadmap.md` (`W8-E3-S1`).
 
 ## Current reconciliation
+
+- `2026-07-17` `W36-E3-S4-T3`, slice `W36-E3-S4`, and Epic `W36-E3` are complete:
+  microcopy has a `12px` readable floor and stronger secondary contrast, while timers,
+  attempts, counts, and status metrics use tabular numerals for stable scanning. The
+  rendered contrast gate is green. `W36-E6-S1-T1` is promoted to `Next` and
+  `W36-E6-S1-T2` to `Soon`.
 
 - `2026-07-17` `W36-E3-S4-T2` is complete: all eight stage controls derive their
   accessible name from the visible stage label plus explicit status, and dynamic

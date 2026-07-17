@@ -10,7 +10,7 @@
   --line-strong: #ccd5ce;
   --text: #17201b;
   --ink: var(--text);
-  --muted: #66726a;
+  --muted: #58645c;
   --surface-active: #eaf5f3;
   --surface-active-strong: #e7f3f1;
   --surface-success: #edf8f1;
@@ -93,7 +93,7 @@
   --type-heading-size: 14px;
   --type-body-size: 13px;
   --type-label-size: 12px;
-  --type-caption-size: 11px;
+  --type-caption-size: 12px;
   --type-display-line: 1.15;
   --type-title-line: 1.25;
   --type-body-line: 1.5;

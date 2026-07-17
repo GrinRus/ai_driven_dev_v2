@@ -10543,7 +10543,7 @@ Exit evidence:
   parity closes, until the bounded cutover task removes the rollback path;
 - the migration can cut over one surface without requiring all other surfaces to be ready.
 
-### Epic W36-E3 — semantic design system and accessibility (`planned`)
+### Epic W36-E3 — semantic design system and accessibility (`done`)
 Linked stories: `US-02`, `US-05`, `US-06`, `US-11`
 
 #### Slice W36-E3-S1 — semantic tokens and density (`done`)
@@ -10654,7 +10654,7 @@ Exit evidence:
   spotlight families;
 - default work screens no longer give every metadata group equal card weight.
 
-#### Slice W36-E3-S4 — keyboard and readable semantics (`planned`)
+#### Slice W36-E3-S4 — keyboard and readable semantics (`done`)
 Goal: close the measured accessible-name, focus-entry, contrast, and numerical scanning
 gaps.
 
@@ -10675,7 +10675,7 @@ Local tasks:
   - Scope: rendered accessibility markup.
   - Verification: all eight stage buttons pass label-content-name matching and every
     generated form field has a stable id, name, and associated label.
-- `W36-E3-S4-T3` (next) Raise borderline contrast, readable minimums, and tabular numeric
+- `W36-E3-S4-T3` (done) Raise borderline contrast, readable minimums, and tabular numeric
   treatment.
   - Scope: typography and color CSS.
   - Verification: automated contrast checks pass and timers, attempts, counts, and
@@ -11331,12 +11331,12 @@ Dependencies:
 
 Local tasks:
 
-- `W36-E6-S1-T1` (parked) Add a URL-state codec for Inbox / Studio / History mode, work item,
+- `W36-E6-S1-T1` (next) Add a URL-state codec for Inbox / Studio / History mode, work item,
   run, stage, attempt or task-attempt detail, and artifact selection.
   - Scope: packaged browser state module.
   - Verification: round-trip, missing, legacy, stale, and invalid-value cases resolve to
     safe deterministic state.
-- `W36-E6-S1-T2` (planned) Wire push, replace, popstate, and reload restoration through the URL
+- `W36-E6-S1-T2` (soon) Wire push, replace, popstate, and reload restoration through the URL
   codec across Inbox, Studio, History, and contextual drawers.
   - Scope: shell navigation controller.
   - Verification: a browser history sequence preserves Logs versus Artifacts, selected

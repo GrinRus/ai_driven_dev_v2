@@ -423,7 +423,7 @@
     max-width: 100%;
   }
   .next-flow-action-card p {
-    font-size: 11px;
+    font-size: var(--type-caption-size);
   }
   .evidence-artifact-browser,
   .artifact-inspector {

@@ -79,7 +79,7 @@
   border-radius: 999px;
   color: var(--muted);
   display: inline-flex;
-  font-size: 11px;
+  font-size: var(--type-caption-size);
   font-weight: 700;
   line-height: 1;
   padding: 4px 7px;
@@ -91,7 +91,7 @@
   border-radius: 999px;
   color: var(--muted);
   display: inline-flex;
-  font-size: 11px;
+  font-size: var(--type-caption-size);
   font-weight: 700;
   line-height: 1;
   min-height: 0;
@@ -166,7 +166,7 @@
 }
 .runtime-picker span {
   color: var(--topbar-muted);
-  font-size: 11px;
+  font-size: var(--type-caption-size);
   font-weight: 750;
   text-transform: uppercase;
 }
@@ -268,7 +268,7 @@ body.setup-active .cockpit {
   align-items: center;
   color: var(--color-text-tertiary);
   display: flex;
-  font-size: 11px;
+  font-size: var(--type-caption-size);
   font-weight: 800;
   justify-content: space-between;
   letter-spacing: 0.02em;
@@ -339,7 +339,7 @@ body.setup-active .cockpit {
 .stage-subtitle {
   color: var(--muted);
   display: block;
-  font-size: 11px;
+  font-size: var(--type-caption-size);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -386,7 +386,7 @@ button.quick-link {
 }
 .eyebrow {
   color: var(--muted);
-  font-size: 11px;
+  font-size: var(--type-caption-size);
   font-weight: 800;
   letter-spacing: 0.04em;
   margin: 0 0 4px;
