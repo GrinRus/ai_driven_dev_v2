@@ -7,11 +7,10 @@ slice, and local task.
 
 ## Next
 
-- `W36-E3-S3-T5` — Implement the shared Guided Step anatomy.
+- `W36-E3-S3-T6` — Implement the shared Recovery Summary anatomy.
 
 ## Soon
 
-- `W36-E3-S3-T6` — Implement the shared Recovery Summary anatomy.
 
 
 ## Parking lot
@@ -63,6 +62,12 @@ slice, and local task.
   queue-restoration policy in `docs/backlog/roadmap.md` (`W8-E3-S1`).
 
 ## Current reconciliation
+
+- `2026-07-17` `W36-E3-S3-T5` is complete: current, complete, invalid, optional, and
+  disabled Guided Steps retain the same explanation, labelled input group, one primary
+  action, Back action, and Advanced disclosure, with mobile control geometry verified.
+  `W36-E3-S3-T6` is promoted to `Next`; `Soon` remains empty until the surface slice
+  closes.
 
 - `2026-07-17` `W36-E3-S3-T4` is complete: the shared Inbox Item renders blocking,
   running, ready, terminal, and malformed states while preserving the exact

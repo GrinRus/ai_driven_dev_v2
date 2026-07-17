@@ -99,3 +99,28 @@ test("Inbox Item renders service-owned routes and actions without eligibility po
     assert.match(html, /<dt>Stage<\/dt><dd>implement<\/dd>/);
   }
 });
+
+test("Guided Step keeps one complete anatomy across every state", async () => {
+  const context = await primitivesContext();
+  for (const state of ["current", "complete", "invalid", "optional", "disabled"]) {
+    const html = vm.runInContext(
+      `renderGuidedStep({
+        id: "runtime",
+        state: ${JSON.stringify(state)},
+        title: "Choose runtime",
+        explanation: "Select the command that will execute this work item.",
+        fields: [{id: "runtime", label: "Runtime", type: "select", value: "generic-cli", options: [{value: "generic-cli", label: "Generic CLI"}]}],
+        primaryAction: {action: "continue", label: "Continue", enabled: ${state !== "disabled"}},
+        backAction: {action: "back", label: "Back", enabled: true},
+        advanced: ["Permission policy is inherited."]
+      })`,
+      context,
+    );
+    assert.match(html, new RegExp(`data-state="${state}"`));
+    assert.match(html, /<p>Select the command that will execute this work item\.<\/p>/);
+    assert.match(html, /<label for="guided-runtime-runtime">Runtime<\/label>/);
+    assert.equal((html.match(/data-guided-action="continue"/g) || []).length, 1);
+    assert.equal((html.match(/data-guided-action="back"/g) || []).length, 1);
+    assert.match(html, /<summary>Advanced<\/summary>/);
+  }
+});

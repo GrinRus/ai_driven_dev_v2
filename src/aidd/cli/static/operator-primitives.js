@@ -20,6 +20,13 @@ const INBOX_ITEM_STATES = new Set([
   "terminal",
   "malformed"
 ]);
+const GUIDED_STEP_STATES = new Set([
+  "current",
+  "complete",
+  "invalid",
+  "optional",
+  "disabled"
+]);
 
 function decisionBarState(value) {
   const stateName = String(value || "").trim();
@@ -147,5 +154,60 @@ function renderInboxItem({
         ${action ? `<button data-inbox-action="${escapeHtml(action.action)}" type="button" ${action.enabled === false ? 'disabled aria-disabled="true"' : ""}>${escapeHtml(action.label)}</button>` : '<span class="inbox-item-no-action">No action available</span>'}
       </div>
     </article>
+  `;
+}
+
+function renderGuidedField(stepId, field) {
+  const fieldId = `guided-${stepId}-${field.id}`;
+  if (field.type === "select") {
+    return `
+      <label for="${escapeHtml(fieldId)}">${escapeHtml(field.label)}</label>
+      <select id="${escapeHtml(fieldId)}" name="${escapeHtml(field.id)}">
+        ${(field.options || []).map((option) => `<option value="${escapeHtml(option.value)}" ${option.value === field.value ? "selected" : ""}>${escapeHtml(option.label)}</option>`).join("")}
+      </select>
+    `;
+  }
+  return `
+    <label for="${escapeHtml(fieldId)}">${escapeHtml(field.label)}</label>
+    <input id="${escapeHtml(fieldId)}" name="${escapeHtml(field.id)}" type="${escapeHtml(field.type || "text")}" value="${escapeHtml(field.value || "")}" ${field.invalid ? 'aria-invalid="true"' : ""}>
+  `;
+}
+
+function renderGuidedStep({
+  id,
+  state: requestedState,
+  title,
+  explanation,
+  fields,
+  primaryAction,
+  backAction,
+  advanced = []
+}) {
+  const stateName = String(requestedState || "").trim();
+  if (!GUIDED_STEP_STATES.has(stateName)) {
+    throw new Error(`Unknown Guided Step state: ${stateName || "empty"}`);
+  }
+  if (!primaryAction?.action || !backAction?.action) {
+    throw new Error("Guided Step requires explicit primary and Back actions");
+  }
+  return `
+    <section class="guided-step" data-guided-step="${escapeHtml(id)}" data-state="${escapeHtml(stateName)}">
+      <header class="guided-step-header">
+        ${renderStatusMarker({status: stateName === "complete" ? "complete" : stateName === "invalid" ? "blocked" : stateName === "disabled" ? "no-action" : "action", label: stateName})}
+        <h2>${escapeHtml(title)}</h2>
+        <p>${escapeHtml(explanation)}</p>
+      </header>
+      <div class="guided-step-inputs">
+        ${(fields || []).map((field) => `<div class="guided-step-field">${renderGuidedField(id, field)}</div>`).join("")}
+      </div>
+      <div class="guided-step-actions">
+        <button class="secondary" data-guided-action="${escapeHtml(backAction.action)}" type="button" ${backAction.enabled === false ? 'disabled aria-disabled="true"' : ""}>${escapeHtml(backAction.label || "Back")}</button>
+        <button data-guided-action="${escapeHtml(primaryAction.action)}" type="button" ${primaryAction.enabled === false ? 'disabled aria-disabled="true"' : ""}>${escapeHtml(primaryAction.label)}</button>
+      </div>
+      <details class="guided-step-advanced">
+        <summary>Advanced</summary>
+        <div>${advanced.map((item) => `<p>${escapeHtml(item)}</p>`).join("") || "<p>No advanced settings for this step.</p>"}</div>
+      </details>
+    </section>
   `;
 }

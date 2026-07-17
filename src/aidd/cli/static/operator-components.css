@@ -213,6 +213,76 @@
   align-items: center;
   display: flex;
 }
+.guided-step {
+  background: var(--color-bg-surface);
+  border: var(--control-border-width) solid var(--color-border-default);
+  border-radius: var(--radius-panel);
+  display: grid;
+  gap: var(--space-8);
+  padding: var(--space-10);
+}
+.guided-step[data-state="current"] {
+  border-color: var(--color-border-accent);
+  box-shadow: var(--elevation-surface);
+}
+.guided-step[data-state="complete"] {
+  border-color: var(--color-state-success-border);
+}
+.guided-step[data-state="invalid"] {
+  border-color: var(--color-state-danger-border);
+}
+.guided-step[data-state="optional"] {
+  background: var(--color-bg-subtle);
+}
+.guided-step[data-state="disabled"] {
+  background: var(--color-bg-disabled);
+  opacity: var(--control-disabled-opacity);
+}
+.guided-step-header {
+  display: grid;
+  gap: var(--space-3);
+}
+.guided-step-header h2 {
+  font-size: var(--type-title-size);
+}
+.guided-step-header p {
+  color: var(--color-text-secondary);
+  font-size: var(--type-body-size);
+  line-height: var(--type-body-line);
+}
+.guided-step-inputs {
+  display: grid;
+  gap: var(--space-6);
+}
+.guided-step-field {
+  display: grid;
+  gap: var(--space-3);
+}
+.guided-step-field > label {
+  color: var(--color-text-secondary);
+  font-size: var(--type-label-size);
+  font-weight: var(--type-weight-medium);
+}
+.guided-step-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-4);
+  justify-content: space-between;
+}
+.guided-step-advanced {
+  border-top: var(--control-border-width) solid var(--color-border-default);
+  padding-top: var(--space-6);
+}
+.guided-step-advanced summary {
+  cursor: pointer;
+  font-size: var(--type-label-size);
+  font-weight: var(--type-weight-medium);
+}
+.guided-step-advanced p {
+  color: var(--color-text-secondary);
+  font-size: var(--type-label-size);
+  margin-top: var(--space-4);
+}
 .decision-summary.good {
   background: var(--color-state-success-bg-strong);
   border-color: var(--color-state-success-border-strong);

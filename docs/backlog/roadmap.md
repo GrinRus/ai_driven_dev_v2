@@ -10639,11 +10639,11 @@ Local tasks:
   - Scope: packaged Inbox item primitive only.
   - Verification: blocking, running, ready, terminal, and malformed fixtures render the
     core/service-provided route and action without recomputing either.
-- `W36-E3-S3-T5` (next) Implement the shared Guided Step anatomy.
+- `W36-E3-S3-T5` (done) Implement the shared Guided Step anatomy.
   - Scope: packaged Guided Delivery primitive only.
   - Verification: current, complete, invalid, optional, and disabled step fixtures retain one
     explanation, input group, primary action, Back action, and advanced disclosure.
-- `W36-E3-S3-T6` (soon) Implement the shared Recovery Summary anatomy.
+- `W36-E3-S3-T6` (next) Implement the shared Recovery Summary anatomy.
   - Scope: packaged Recovery primitive only.
   - Verification: question, approval, runtime, validation, intervention, and quality-gate
     fixtures retain one decisive failure, one evidence path, and one primary recovery slot.
