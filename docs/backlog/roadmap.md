@@ -4420,7 +4420,7 @@ Local tasks:
 
 - `W19-E4-S1-T1` (done) Align CI compatibility checks with the documented Python 3.12 through 3.14 support window.
 - `W19-E4-S1-T2` (done) Preserve installed-package smoke proof coverage through existing release and release-live-proof tests without adding a live provider CI gate.
-- `W19-E4-S2-T1` (done) Keep manual live E2E evidence separated from provider/env blockers through the existing manual live workflow and runtime preflight tests.
+- `W19-E4-S1-T3` (done) Keep manual live E2E evidence separated from provider/env blockers through the existing manual live workflow and runtime preflight tests.
 
 Exit evidence:
 
@@ -9769,7 +9769,7 @@ Exit evidence:
 ### Epic W34-E8 — planning and architecture source-of-truth hygiene (`planned`)
 Linked stories: `US-06`, `US-10`, `US-11`, `US-12`
 
-#### Slice W34-E8-S1 — bounded canonical planning queue (`planned`)
+#### Slice W34-E8-S1 — bounded canonical planning queue (`done`)
 Goal: keep roadmap status authoritative and backlog limited to current execution intent.
 
 Dependencies:
@@ -9788,7 +9788,7 @@ Local tasks:
   - Scope: planning status model only.
   - Verification: `Next` tasks are explicitly `next`, queued tasks are non-terminal,
     and every marker follows the documented vocabulary.
-- `W34-E8-S1-T3` (next) Replace wave-specific backlog assertions with generic roadmap/backlog
+- `W34-E8-S1-T3` (done) Replace wave-specific backlog assertions with generic roadmap/backlog
   integrity checks. [`PLAN-02`]
   - Scope: planning documentation tests only.
   - Verification: synthetic orphan, duplicate, queued-done, non-local, status-mismatch,
@@ -9809,12 +9809,12 @@ Dependencies:
 
 Local tasks:
 
-- `W34-E8-S2-T1` (soon) Replace stale planned frontend/project-set and completed-wave wording
+- `W34-E8-S2-T1` (next) Replace stale planned frontend/project-set and completed-wave wording
   with stable implemented ownership boundaries. [`ARCH-07`]
   - Scope: target architecture and matching documentation assertions only.
   - Verification: architecture docs describe current ownership without Wave 29 policy
     text or contradicting the planned browser-driver decision.
-- `W34-E8-S2-T2` (planned) Reconcile the CLI runtime-log contract with `US-06` and current CLI
+- `W34-E8-S2-T2` (soon) Reconcile the CLI runtime-log contract with `US-06` and current CLI
   behavior. [`ARCH-07`]
   - Scope: product/architecture documentation decision only.
   - Verification: docs consistently specify raw logs and structured evidence; any new

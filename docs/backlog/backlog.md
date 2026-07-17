@@ -7,13 +7,13 @@ slice, and local task.
 
 ## Next
 
-- `W34-E8-S1-T3` — Replace wave-specific backlog assertions with generic
-  roadmap/backlog integrity checks.
+- `W34-E8-S2-T1` — Replace stale planned/completed-wave architecture wording with
+  stable implemented ownership boundaries.
 
 ## Soon
 
-- `W34-E8-S2-T1` — Replace stale planned/completed-wave architecture wording with
-  stable implemented ownership boundaries.
+- `W34-E8-S2-T2` — Reconcile the CLI runtime-log contract with `US-06` and current
+  CLI behavior.
 
 ## Parking lot
 
@@ -72,6 +72,11 @@ slice, and local task.
   queue-restoration policy in `docs/backlog/roadmap.md` (`W8-E3-S1`).
 
 ## Current reconciliation
+
+- `2026-07-17` `W34-E8-S1-T3` and slice `W34-E8-S1` are complete: one generic
+  roadmap/backlog parser now enforces hierarchy, unique local tasks, queue/status parity,
+  terminal exclusion, and direct or explicit `Soon` succession. `W34-E8-S2-T1` is
+  promoted to `Next` and `W34-E8-S2-T2` to `Soon`.
 
 - `2026-07-17` `W34-E8-S1-T2` is complete: planning entities now use a canonical
   level-specific status vocabulary, backlog placement projects exact local-task status,

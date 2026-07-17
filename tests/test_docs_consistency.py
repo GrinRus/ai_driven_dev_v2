@@ -439,9 +439,6 @@ def test_operator_ui_docs_and_backlog_queue_stay_synchronized() -> None:
     operator_frontend = (
         repo_root / "docs" / "architecture" / "operator-frontend.md"
     ).read_text(encoding="utf-8")
-    backlog = (repo_root / "docs" / "backlog" / "backlog.md").read_text(
-        encoding="utf-8"
-    )
     w24_s1 = roadmap.split("#### Slice W24-E1-S1", 1)[1].split(
         "#### Slice W24-E1-S2",
         1,
@@ -449,9 +446,6 @@ def test_operator_ui_docs_and_backlog_queue_stay_synchronized() -> None:
     w24_s2 = roadmap.split("#### Slice W24-E1-S2", 1)[1].split("## Wave", 1)[0]
     w26 = roadmap.split("## Wave 26", 1)[1]
     w36 = roadmap.split("## Wave 36", 1)[1].split("## Wave 37", 1)[0]
-    backlog_next = backlog.split("## Next", 1)[1].split("## Soon", 1)[0]
-    backlog_soon = backlog.split("## Soon", 1)[1].split("## Parking lot", 1)[0]
-    backlog_parking = backlog.split("## Parking lot", 1)[1].split("## Update rules", 1)[0]
 
     assert (
         "The UI can write question answers as `[resolved]`, `[partial]`, or "
@@ -528,110 +522,6 @@ def test_operator_ui_docs_and_backlog_queue_stay_synchronized() -> None:
     assert "### Epic W26-E5 — operator documentation and rollout clarity (`done`)" in w26
     assert "#### Slice W26-E5-S1 — completed-flow operator documentation (`done`)" in w26
     assert "`W26-E5-S1-T1` (done) Document completed-run handoff" in w26
-    assert "`W26-E5-S1-T1`" not in backlog_next
-    assert "`W26-E1-S1-T1`" not in backlog_next
-    assert "`W26-E1-S1-T2`" not in backlog_next
-    assert "`W26-E1-S2-T1`" not in backlog_next
-    assert "`W26-E1-S2-T2`" not in backlog_next
-    assert "`W26-E1-S2-T3`" not in backlog_next
-    assert "`W26-E2-S0-T1`" not in backlog_next
-    assert "`W26-E2-S0-T2`" not in backlog_next
-    assert "`W26-E2-S0-T3`" not in backlog_next
-    assert "`W26-E2-S0-T4`" not in backlog_next
-    assert "`W26-E1-S3-T1`" not in backlog_next
-    assert "`W26-E1-S3-T2`" not in backlog_next
-    assert "`W26-E1-S3-T3`" not in backlog_next
-    assert "`W26-E2-S1-T1`" not in backlog_next
-    assert "`W26-E2-S1-T2`" not in backlog_next
-    assert "`W26-E2-S1-T3`" not in backlog_next
-    assert "`W26-E2-S2-T1`" not in backlog_next
-    assert "`W26-E2-S2-T2`" not in backlog_next
-    assert "`W26-E2-S2-T3`" not in backlog_next
-    assert "`W26-E2-S3-T1`" not in backlog_next
-    assert "`W26-E2-S3-T2`" not in backlog_next
-    assert "`W26-E2-S3-T3`" not in backlog_next
-    assert "`W26-E2-S3-T4`" not in backlog_next
-    assert "`W26-E3-S1-T1`" not in backlog_next
-    assert "`W26-E3-S1-T2`" not in backlog_next
-    assert "`W26-E3-S1-T3`" not in backlog_next
-    assert "`W26-E3-S2-T1`" not in backlog_next
-    assert "`W26-E3-S2-T2`" not in backlog_next
-    assert "`W26-E3-S2-T3`" not in backlog_next
-    assert "`W26-E4-S1-T1`" not in backlog_next
-    assert "`W26-E4-S1-T2`" not in backlog_next
-    assert "`W26-E4-S1-T3`" not in backlog_next
-    assert "`W26-E4-S2-T1`" not in backlog_next
-    assert "`W26-E4-S2-T2`" not in backlog_next
-    assert "`W26-E4-S2-T3`" not in backlog_next
-    assert "`W26-E1-S3-T1`" not in backlog_soon
-    assert "`W26-E1-S1-T2`" not in backlog_soon
-    assert "`W26-E1-S2-T1`" not in backlog_soon
-    assert "`W26-E1-S2-T2`" not in backlog_soon
-    assert "`W26-E1-S2-T3`" not in backlog_soon
-    assert "`W26-E2-S0-T1`" not in backlog_soon
-    assert "`W26-E2-S0-T2`" not in backlog_soon
-    assert "`W26-E2-S0-T3`" not in backlog_soon
-    assert "`W26-E2-S0-T4`" not in backlog_soon
-    assert "`W26-E1-S3-T2`" not in backlog_soon
-    assert "`W26-E1-S3-T3`" not in backlog_soon
-    assert "`W26-E2-S1-T1`" not in backlog_soon
-    assert "`W26-E2-S1-T2`" not in backlog_soon
-    assert "`W26-E2-S1-T3`" not in backlog_soon
-    assert "`W26-E2-S2-T1`" not in backlog_soon
-    assert "`W26-E2-S2-T2`" not in backlog_soon
-    assert "`W26-E2-S2-T3`" not in backlog_soon
-    assert "`W26-E2-S3-T1`" not in backlog_soon
-    assert "`W26-E2-S3-T2`" not in backlog_soon
-    assert "`W26-E2-S3-T3`" not in backlog_soon
-    assert "`W26-E2-S3-T4`" not in backlog_soon
-    assert "`W26-E3-S1-T1`" not in backlog_soon
-    assert "`W26-E3-S1-T2`" not in backlog_soon
-    assert "`W26-E3-S1-T3`" not in backlog_soon
-    assert "`W26-E3-S2-T1`" not in backlog_soon
-    assert "`W26-E3-S2-T2`" not in backlog_soon
-    assert "`W26-E3-S2-T3`" not in backlog_soon
-    assert "`W26-E4-S1-T1`" not in backlog_soon
-    assert "`W26-E4-S1-T2`" not in backlog_soon
-    assert "`W26-E4-S1-T3`" not in backlog_soon
-    assert "`W26-E4-S2-T1`" not in backlog_soon
-    assert "`W26-E4-S2-T2`" not in backlog_soon
-    assert "`W26-E4-S2-T3`" not in backlog_soon
-    assert "`W26-E5-S1-T1`" not in backlog_soon
-    assert "`W26-E2-S0-T3`" not in backlog_parking
-    assert "`W26-E2-S0-T4`" not in backlog_parking
-    assert "`W26-E1-S3-T1`" not in backlog_parking
-    assert "`W26-E1-S3-T2`" not in backlog_parking
-    assert "`W26-E1-S3-T3`" not in backlog_parking
-    assert "`W26-E2-S1-T1`" not in backlog_parking
-    assert "`W26-E2-S1-T2`" not in backlog_parking
-    assert "`W26-E2-S1-T3`" not in backlog_parking
-    assert "`W26-E2-S2-T1`" not in backlog_parking
-    assert "`W26-E2-S2-T2`" not in backlog_parking
-    assert "`W26-E2-S2-T3`" not in backlog_parking
-    assert "`W26-E2-S3-T1`" not in backlog_parking
-    assert "`W26-E2-S3-T2`" not in backlog_parking
-    assert "`W26-E2-S3-T3`" not in backlog_parking
-    assert "`W26-E2-S3-T4`" not in backlog_parking
-    assert "`W26-E3-S1-T1`" not in backlog_parking
-    assert "`W26-E3-S1-T2`" not in backlog_parking
-    assert "`W26-E3-S1-T3`" not in backlog_parking
-    assert "`W26-E3-S2-T1`" not in backlog_parking
-    assert "`W26-E3-S2-T2`" not in backlog_parking
-    assert "`W26-E3-S2-T3`" not in backlog_parking
-    assert "`W26-E4-S1-T1`" not in backlog_parking
-    assert "`W26-E4-S1-T2`" not in backlog_parking
-    assert "`W26-E4-S1-T3`" not in backlog_parking
-    assert "`W26-E4-S2-T1`" not in backlog_parking
-    assert "`W26-E4-S2-T2`" not in backlog_parking
-    assert "`W26-E4-S2-T3`" not in backlog_parking
-    assert "`W26-E5-S1-T1`" not in backlog_parking
-    assert "`W36-E1-S1-T1`" not in backlog_next
-    assert "`W36-E1-S1-T1`" not in backlog_soon
-    assert "`W36-E1-S1-T1`" not in backlog_parking
-    assert "`W36-E1-S1-T2`" not in backlog_next
-    assert "`W36-E1-S1-T2`" not in backlog_soon
-    assert "`W36-E1-S1-T2`" not in backlog_parking
-    assert "`W36-E1-S1-T3`" in backlog_parking
     assert "Document & Evidence Studio migration (`planned`)" in w36
     assert "legacy_only | candidate | parity_closed" in w36
     assert "three destinations and one presentation preference" in operator_frontend
