@@ -9809,12 +9809,12 @@ Dependencies:
 
 Local tasks:
 
-- `W34-E8-S2-T1` (next) Replace stale planned frontend/project-set and completed-wave wording
+- `W34-E8-S2-T1` (done) Replace stale planned frontend/project-set and completed-wave wording
   with stable implemented ownership boundaries. [`ARCH-07`]
   - Scope: target architecture and matching documentation assertions only.
   - Verification: architecture docs describe current ownership without Wave 29 policy
     text or contradicting the planned browser-driver decision.
-- `W34-E8-S2-T2` (soon) Reconcile the CLI runtime-log contract with `US-06` and current CLI
+- `W34-E8-S2-T2` (next) Reconcile the CLI runtime-log contract with `US-06` and current CLI
   behavior. [`ARCH-07`]
   - Scope: product/architecture documentation decision only.
   - Verification: docs consistently specify raw logs and structured evidence; any new

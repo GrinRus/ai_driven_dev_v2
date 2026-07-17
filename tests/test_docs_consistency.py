@@ -1305,7 +1305,7 @@ def test_wave29_real_provider_ui_e2e_docs_define_manual_codex_first_lane() -> No
     assert "Provider priority is Codex first" in scenario_matrix
 
 
-def test_wave29_operator_hardening_docs_cover_beta_contracts() -> None:
+def test_operator_ownership_docs_cover_stable_beta_contracts() -> None:
     repo_root = _repo_root()
     operator_frontend = (
         repo_root / "docs" / "architecture" / "operator-frontend.md"
@@ -1339,13 +1339,19 @@ def test_wave29_operator_hardening_docs_cover_beta_contracts() -> None:
     assert "unrelated repositories must be opened through separate UI sessions" in project_set
 
     for needle in (
-        "Manual+Browser evidence",
-        "Codex-first",
+        "The implemented operator frontend and project-set workflow support",
         "project-set UI grouping is a read model",
         "prompt/workflow accountability is read-only provenance",
         "runtime approval audit is a bounded read surface",
+        "completed run is immutable evidence",
     ):
         assert needle in target_architecture
+    for stale_wording in (
+        "Planned operator frontend",
+        "Wave 29 beta-hardening",
+        "new Playwright/Selenium dependency",
+    ):
+        assert stale_wording not in target_architecture
 
     assert "## Future beta readiness gate" in user_stories
     assert "Beta readiness is a future evidence gate" in readme

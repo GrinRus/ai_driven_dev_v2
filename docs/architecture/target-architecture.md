@@ -189,27 +189,21 @@ The exact layout may evolve, but the model is fixed:
 - eval lanes derive additional timing and quality reports from those run artifacts and scenario
   execution evidence.
 
-Planned operator frontend and project-set workflow support must preserve this ownership model:
+The implemented operator frontend and project-set workflow support preserve this ownership model:
 
 - the frontend is an operator surface over the same core workflow and artifacts, not a separate
   workflow engine;
 - project-set flows use declared local project roots while keeping one governed `.aidd/`
-  workspace and traceable per-project evidence.
-
-Detailed contracts live in `operator-frontend.md` and `project-set-workspace.md`.
-
-Wave 29 beta-hardening keeps the same boundary:
-
-- browser evidence is Manual+Browser evidence, not a new Playwright/Selenium dependency;
-- real-provider UI smokes are Codex-first, then Claude Code and OpenCode, with Qwen
-  optional while experimental authentication and transport behavior stabilize;
+  workspace and traceable per-project evidence;
 - project-set UI grouping is a read model over declared related roots inside one selected
   project-local `.aidd/`, not concurrent unrelated multi-project execution;
 - prompt/workflow accountability is read-only provenance over run manifests, config snapshots,
-  runtime id, Git SHA, and the canonical stage graph, plus ordered per-attempt prompt hashes and
-  the actual `initial`, `repair`, or `intervention` execution mode from each artifact index;
+  runtime id, Git SHA, the canonical stage graph, ordered per-attempt prompt hashes, and the
+  actual `initial`, `repair`, or `intervention` execution mode from each artifact index;
 - runtime approval audit is a bounded read surface over existing request/decision ledgers,
   not a replacement permission engine.
+
+Detailed contracts live in `operator-frontend.md` and `project-set-workspace.md`.
 
 Completed-flow handoff must preserve the same ownership model. When a run reaches a terminal
 state after `qa`, the completed run is immutable evidence. Any next action creates or prepares a

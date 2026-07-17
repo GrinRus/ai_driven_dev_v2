@@ -7,13 +7,10 @@ slice, and local task.
 
 ## Next
 
-- `W34-E8-S2-T1` — Replace stale planned/completed-wave architecture wording with
-  stable implemented ownership boundaries.
-
-## Soon
-
 - `W34-E8-S2-T2` — Reconcile the CLI runtime-log contract with `US-06` and current
   CLI behavior.
+
+## Soon
 
 ## Parking lot
 
@@ -72,6 +69,11 @@ slice, and local task.
   queue-restoration policy in `docs/backlog/roadmap.md` (`W8-E3-S1`).
 
 ## Current reconciliation
+
+- `2026-07-17` `W34-E8-S2-T1` is complete: target architecture now states stable
+  implemented frontend, project-set, provenance, approval-audit, and immutable-run
+  ownership without using a completed wave or an undecided browser driver as policy.
+  `W34-E8-S2-T2` is promoted to `Next`; `Soon` is empty.
 
 - `2026-07-17` `W34-E8-S1-T3` and slice `W34-E8-S1` are complete: one generic
   roadmap/backlog parser now enforces hierarchy, unique local tasks, queue/status parity,
