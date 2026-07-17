@@ -7,12 +7,13 @@ slice, and local task.
 
 ## Next
 
-- `W36-E6-S2-T4` — Implement the scoped noncanonical browser-session draft store.
+- `W36-E6-S2-T2` — Adopt draft restore and leave-warning behavior for question and
+  intervention forms.
 
 ## Soon
 
-- `W36-E6-S2-T2` — Adopt draft restore and leave-warning behavior for question and
-  intervention forms.
+- `W36-E6-S2-T3` — Adopt draft restore and leave-warning behavior for follow-up and
+  clone definition forms.
 
 
 
@@ -62,6 +63,11 @@ slice, and local task.
   queue-restoration policy in `docs/backlog/roadmap.md` (`W8-E3-S1`).
 
 ## Current reconciliation
+
+- `2026-07-17` `W36-E6-S2-T4` is complete: the shared packaged session store validates
+  all six key dimensions, purges malformed/expired records, enforces the 32-entry and
+  byte budgets, rejects secret-shaped values, and clears only an exact owner key.
+  `W36-E6-S2-T2` is promoted to `Next` and `W36-E6-S2-T3` to `Soon`.
 
 - `2026-07-17` `W36-E6-S2-T1` is complete: the architecture fixes the six-dimensional
   session key, schema-v1 value, 24-hour expiry, bounded eviction, dirty warning, and exact

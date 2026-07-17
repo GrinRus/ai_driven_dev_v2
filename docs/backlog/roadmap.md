@@ -11369,18 +11369,18 @@ Local tasks:
   - Scope: operator frontend architecture only.
   - Verification: the contract isolates project, work item, run, stage, form, and source
     id and names exact submit/expiry cleanup behavior.
-- `W36-E6-S2-T4` (next) Implement the scoped noncanonical browser-session draft store.
+- `W36-E6-S2-T4` (done) Implement the scoped noncanonical browser-session draft store.
   - Dependencies: `W36-E6-S2-T1`.
   - Scope: shared packaged JavaScript state utility only.
   - Verification: contract fixtures isolate every key dimension and successful submit
     clears only the owning draft.
-- `W36-E6-S2-T2` (soon) Adopt draft restore and leave-warning behavior for question and
+- `W36-E6-S2-T2` (next) Adopt draft restore and leave-warning behavior for question and
   intervention forms.
   - Dependencies: `W36-E6-S2-T4`.
   - Scope: question/intervention browser modules.
   - Verification: stage/tab switch, reload, failed submit, and successful submit preserve
     or clear the expected draft only.
-- `W36-E6-S2-T3` (planned) Adopt draft restore and leave-warning behavior for follow-up and clone
+- `W36-E6-S2-T3` (soon) Adopt draft restore and leave-warning behavior for follow-up and clone
   definition forms.
   - Dependencies: `W36-E6-S2-T4`.
   - Scope: next-flow browser controller.

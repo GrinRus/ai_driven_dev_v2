@@ -119,6 +119,7 @@ test("operator bootstrap loads modules in declared order", async () => {
     "/operator-presentation.js",
     "/operator-route-state.js",
     "/operator-route-intents.js",
+    "/operator-draft-store.js",
     "/operator-api-state.js",
     "/operator-shell-rendering.js",
     "/operator-dashboard-actions.js",
