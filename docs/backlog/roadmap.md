@@ -11364,17 +11364,17 @@ Dependencies:
 
 Local tasks:
 
-- `W36-E6-S2-T1` (next) Define the key, retention, and cleanup contract for noncanonical
+- `W36-E6-S2-T1` (done) Define the key, retention, and cleanup contract for noncanonical
   browser-session drafts.
   - Scope: operator frontend architecture only.
   - Verification: the contract isolates project, work item, run, stage, form, and source
     id and names exact submit/expiry cleanup behavior.
-- `W36-E6-S2-T4` (soon) Implement the scoped noncanonical browser-session draft store.
+- `W36-E6-S2-T4` (next) Implement the scoped noncanonical browser-session draft store.
   - Dependencies: `W36-E6-S2-T1`.
   - Scope: shared packaged JavaScript state utility only.
   - Verification: contract fixtures isolate every key dimension and successful submit
     clears only the owning draft.
-- `W36-E6-S2-T2` (planned) Adopt draft restore and leave-warning behavior for question and
+- `W36-E6-S2-T2` (soon) Adopt draft restore and leave-warning behavior for question and
   intervention forms.
   - Dependencies: `W36-E6-S2-T4`.
   - Scope: question/intervention browser modules.

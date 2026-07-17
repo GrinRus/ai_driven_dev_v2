@@ -7,12 +7,12 @@ slice, and local task.
 
 ## Next
 
-- `W36-E6-S2-T1` — Define the scoped browser-session draft key, retention, and cleanup
-  contract.
+- `W36-E6-S2-T4` — Implement the scoped noncanonical browser-session draft store.
 
 ## Soon
 
-- `W36-E6-S2-T4` — Implement the scoped noncanonical browser-session draft store.
+- `W36-E6-S2-T2` — Adopt draft restore and leave-warning behavior for question and
+  intervention forms.
 
 
 
@@ -62,6 +62,11 @@ slice, and local task.
   queue-restoration policy in `docs/backlog/roadmap.md` (`W8-E3-S1`).
 
 ## Current reconciliation
+
+- `2026-07-17` `W36-E6-S2-T1` is complete: the architecture fixes the six-dimensional
+  session key, schema-v1 value, 24-hour expiry, bounded eviction, dirty warning, and exact
+  owner-only cleanup after durable readback; browser drafts never enter `.aidd/`.
+  `W36-E6-S2-T4` is promoted to `Next` and `W36-E6-S2-T2` to `Soon`.
 
 - `2026-07-17` `W36-E6-S1-T3` and slice `W36-E6-S1` are complete: Inbox, historical
   run, parent, child, and artifact inspection actions resolve through one fail-closed
