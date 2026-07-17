@@ -762,6 +762,27 @@ def test_operator_ui_local_project_manual_browser_checklist_is_complete() -> Non
     ).read_text(encoding="utf-8")
 
     for expected in (
+        "## Canonical Operator State and Route Matrix",
+        "`setup`, `inbox`, `studio`, and",
+        "Recovery is a Studio context",
+        "`project`, `work_item`, `run`, `stage`, `document`, `attempt`",
+        "| Guided Setup | `setup` |",
+        "| Inbox | `inbox` |",
+        "| Active Studio | `studio` |",
+        "| Reconnecting Studio | `studio` |",
+        "| Question Recovery | `studio` |",
+        "| Approval Recovery | `studio` |",
+        "| Validation Recovery | `studio` |",
+        "| Quality Gate | `studio` |",
+        "| Flow Complete | `studio` |",
+        "| History | `history` |",
+        "falls back to the nearest valid",
+        "never creates, resumes, repairs, archives, or launches work",
+        "`W36-E6-S1-T1`",
+    ):
+        assert expected in operator_ui_lane
+
+    for expected in (
         "## Manual Browser Checklist",
         "### Dashboard Shell",
         "### Cockpit Tabs",

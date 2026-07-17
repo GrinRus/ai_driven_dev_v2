@@ -219,6 +219,37 @@ Cleanup rules:
 - if provider credentials or runtime binaries are unavailable, record the blocker
   instead of replacing the local-project smoke with public-repository live E2E.
 
+## Canonical Operator State and Route Matrix
+
+The local UI uses logical route intents rather than treating every recovery panel as a
+destination. The only route intents in this contract are `setup`, `inbox`, `studio`, and
+`history`. Recovery is a Studio context. The concrete URL codec is owned by
+`W36-E6-S1-T1`; until then, tests and evidence name intents and context keys instead of
+inventing query-string syntax.
+
+Canonical context keys are `project`, `work_item`, `run`, `stage`, `document`, `attempt`,
+`artifact`, `recovery_target`, and `history_frame`. A route uses only the keys that identify
+durable objects needed by its decision surface.
+
+| Operator state | Route intent | Required context keys | Primary decision surface |
+| --- | --- | --- | --- |
+| Guided Setup | `setup` | `project` when selected | Validate project, then create or resume a work item. |
+| Inbox | `inbox` | `project` | Select the highest-priority durable decision or ready work item. |
+| Active Studio | `studio` | `project`, `work_item`, `run`, `stage`, `document` when available | Observe the active attempt or perform the one eligible stage/task action. |
+| Reconnecting Studio | `studio` | `project`, `work_item`, `run`, `stage`, `attempt` when available | Reconnect while preserving the durable run and live-log cursor; do not infer termination. |
+| Question Recovery | `studio` | `project`, `work_item`, `run`, `stage`, `recovery_target` | Answer the blocking question through the canonical answer service. |
+| Approval Recovery | `studio` | `project`, `work_item`, `run`, `stage`, `attempt`, `recovery_target` | Resolve the durable approval request; the server-side winner is authoritative. |
+| Validation Recovery | `studio` | `project`, `work_item`, `run`, `stage`, `document`, `recovery_target` | Run eligible repair or request a scoped change while keeping findings visible. |
+| Quality Gate | `studio` | `project`, `work_item`, `run`, `stage`, `document`, `artifact` when cited | Decide from Review or QA evidence without bypassing progression guards. |
+| Flow Complete | `studio` | `project`, `work_item`, `run`, `stage`, `document` | Choose the recommended next-flow action while the completed run remains immutable. |
+| History | `history` | `project`, `work_item`, `run`, `history_frame`; optional `artifact` | Inspect a retained frame, lineage, comparison, logs, or artifacts without mutation. |
+
+Context restoration is fail-closed and non-mutating. If a selected document, attempt,
+artifact, recovery target, or history frame is stale, the UI falls back to the nearest valid
+Studio context for the same run. If the run or work item is missing, it falls back to Inbox;
+if the project itself is not valid, it falls back to Guided Setup. A fallback reports which
+context was unavailable and never creates, resumes, repairs, archives, or launches work.
+
 ## Manual Browser Checklist
 
 Run these checks in a real browser against the local URL printed by `aidd ui`. Use a

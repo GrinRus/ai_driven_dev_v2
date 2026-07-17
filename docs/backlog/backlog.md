@@ -7,13 +7,13 @@ slice, and local task.
 
 ## Next
 
-- `W36-E1-S1-T3` — Replace checklist-only navigation wording with the canonical
-  Guided Setup / Inbox / Studio / History state-route matrix.
+- `W36-E1-S2-T1` — Define the action-to-service semantics table for setup, create,
+  resume, follow-up, clone, eval, archive, workflow, and stage actions.
 
 ## Soon
 
-- `W36-E1-S2-T1` — Define the action-to-service semantics table for setup, create,
-  resume, follow-up, clone, eval, archive, workflow, and stage actions.
+- `W36-E1-S2-T2` — Define truthful UI vocabulary for runtime readiness, authentication,
+  safety/write scope, approval breadth, connectivity, and mutation state.
 
 ## Parking lot
 
@@ -70,6 +70,11 @@ slice, and local task.
   queue-restoration policy in `docs/backlog/roadmap.md` (`W8-E3-S1`).
 
 ## Current reconciliation
+
+- `2026-07-17` `W36-E1-S1-T3` and slice `W36-E1-S1` are complete: the local-project
+  evidence contract now maps Guided Setup, Inbox, Studio recovery/quality states, Flow
+  Complete, and History to logical route intents and fail-closed context recovery.
+  `W36-E1-S2-T1` is promoted to `Next` and `W36-E1-S2-T2` to `Soon`.
 
 - `2026-07-17` `W34-E8-S2-T2`, slice `W34-E8-S2`, Epic `W34-E8`, and Wave 34 are
   complete: architecture now distinguishes live stdout/stderr forwarding from durable

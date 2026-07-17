@@ -10350,7 +10350,7 @@ Story check:
 ### Epic W36-E1 — accepted UX contract and measurable hierarchy (`planned`)
 Linked stories: `US-05`, `US-06`, `US-09`, `US-11`, `US-12`
 
-#### Slice W36-E1-S1 — operator coherence contract (`planned`)
+#### Slice W36-E1-S1 — operator coherence contract (`done`)
 Goal: lock Inbox, Studio, History, and Guided Delivery semantics plus one primary-decision
 rule before changing the rendered shell.
 
@@ -10370,7 +10370,7 @@ Local tasks:
   - Scope: operator frontend architecture only.
   - Verification: the contract names the first-viewport action, maximum compact-header
     footprint, drill-down behavior, and required mobile jobs at every breakpoint.
-- `W36-E1-S1-T3` (next) Replace checklist-only navigation wording with a canonical operator
+- `W36-E1-S1-T3` (done) Replace checklist-only navigation wording with a canonical operator
   state/route matrix.
   - Scope: `docs/e2e/operator-ui-local-project.md` only.
   - Verification: Guided Setup, Inbox, active Studio, reconnecting, Question/Approval
@@ -10394,12 +10394,12 @@ Dependencies:
 
 Local tasks:
 
-- `W36-E1-S2-T1` (soon) Define an action-to-service semantics table for setup, create,
+- `W36-E1-S2-T1` (next) Define an action-to-service semantics table for setup, create,
   resume, follow-up, clone, eval, archive, workflow, and stage actions.
   - Scope: operator frontend architecture only.
   - Verification: every visible selectable action has a distinct outcome and service
     path, or is explicitly removed.
-- `W36-E1-S2-T2` (planned) Define truthful UI vocabulary for runtime readiness, authentication
+- `W36-E1-S2-T2` (soon) Define truthful UI vocabulary for runtime readiness, authentication
   evidence, safety/write scope, approval breadth, connectivity, and mutation state.
   - Scope: operator UX vocabulary in architecture docs.
   - Verification: ambiguous normative claims such as undifferentiated `ready` or
