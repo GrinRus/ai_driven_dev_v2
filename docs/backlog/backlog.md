@@ -7,13 +7,10 @@ slice, and local task.
 
 ## Next
 
-- `W36-E5-S0-T1` — Add one core-owned recommended outcome and rationale to the terminal
-  handoff read model.
-
-## Soon
-
 - `W36-E5-S0-T2` — Expose the recommendation through the existing additive
   terminal-handoff API contract with explicit legacy fallback semantics.
+
+## Soon
 
 ## Parking lot
 
@@ -54,6 +51,11 @@ slice, and local task.
   queue-restoration policy in `docs/backlog/roadmap.md` (`W8-E3-S1`).
 
 ## Current reconciliation
+
+- `2026-07-17` `W36-E5-S0-T1` is complete: the core terminal handoff now recommends
+  independent work only for fresh clean QA, recommends a lineage-preserving follow-up
+  for failed/blocked/risk-bearing QA, and emits no recommendation for missing, stale, or
+  nonterminal evidence. `W36-E5-S0-T2` is promoted to `Next`.
 
 - `2026-07-17` `W36-E6-S4-T6`, slice `W36-E6-S4`, and Epic `W36-E6` are complete:
   approval decisions share one request-scoped guard, reconcile CAS and terminal 409s

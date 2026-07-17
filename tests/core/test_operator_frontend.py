@@ -1191,6 +1191,8 @@ def test_operator_dashboard_next_action_marks_completed_flow(tmp_path: Path) -> 
     assert dashboard.terminal_handoff.approval_counts.approved == 1
     assert dashboard.terminal_handoff.questions_answered_count == 1
     assert dashboard.terminal_handoff.questions_total_count == 2
+    assert dashboard.terminal_handoff.recommended_outcome == "create-new-work-item"
+    assert "fresh and clean" in dashboard.terminal_handoff.recommendation_rationale
     assert {artifact.key for artifact in dashboard.terminal_handoff.final_artifacts} >= {
         "qa_report",
         "stage_result",
@@ -1280,6 +1282,10 @@ def test_operator_dashboard_next_action_surfaces_succeeded_not_ready_qa(
     assert dashboard.terminal_handoff is not None
     assert dashboard.terminal_handoff.status == "failed"
     assert dashboard.terminal_handoff.final_qa_status == "not-ready"
+    assert dashboard.terminal_handoff.recommended_outcome == "start-follow-up-flow"
+    assert "blockers, failure, or accepted risk" in (
+        dashboard.terminal_handoff.recommendation_rationale or ""
+    )
 
 
 def test_operator_dashboard_does_not_block_on_historical_validator_failure_after_success(
@@ -1421,6 +1427,7 @@ def test_operator_dashboard_terminal_handoff_reports_completed_with_warning(
     assert dashboard.terminal_handoff.status == "completed-with-warning"
     assert dashboard.terminal_handoff.final_qa_status == "ready-with-risks"
     assert dashboard.terminal_handoff.qa_stage_state == "succeeded"
+    assert dashboard.terminal_handoff.recommended_outcome == "start-follow-up-flow"
     assert [blocker.kind for blocker in dashboard.terminal_handoff.blockers] == [
         "qa-ready-with-risks"
     ]
@@ -1454,6 +1461,8 @@ def test_operator_dashboard_terminal_handoff_blocks_missing_required_evidence(
     assert dashboard.terminal_handoff is not None
     assert dashboard.terminal_handoff.status == "blocked"
     assert dashboard.terminal_handoff.final_qa_status == "evidence-incomplete"
+    assert dashboard.terminal_handoff.recommended_outcome is None
+    assert dashboard.terminal_handoff.recommendation_rationale is None
     missing_blocker = next(
         blocker
         for blocker in dashboard.terminal_handoff.blockers

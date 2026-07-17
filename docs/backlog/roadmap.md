@@ -10796,13 +10796,13 @@ Dependencies:
 
 Local tasks:
 
-- `W36-E5-S0-T1` (next) Add one core-owned `recommended_outcome` and rationale to the terminal-run
+- `W36-E5-S0-T1` (done) Add one core-owned `recommended_outcome` and rationale to the terminal-run
   handoff read model without removing the complete allowed-outcomes list.
   - Scope: core terminal handoff recommendation policy only.
   - Verification: clean fresh terminal QA recommends Create New Work Item; fresh failed,
     blocked, or warning QA recommends Start Follow-up Flow; missing, stale, and nonterminal QA
     produce no Flow Complete recommendation.
-- `W36-E5-S0-T2` (soon) Expose the recommendation through the existing additive terminal-handoff API
+- `W36-E5-S0-T2` (next) Expose the recommendation through the existing additive terminal-handoff API
   contract with explicit legacy fallback semantics.
   - Scope: local UI terminal-handoff response contract only.
   - Verification: endpoint fixtures preserve allowed outcomes and source identity while old
