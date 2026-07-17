@@ -10394,17 +10394,17 @@ Dependencies:
 
 Local tasks:
 
-- `W36-E1-S2-T1` (next) Define an action-to-service semantics table for setup, create,
+- `W36-E1-S2-T1` (done) Define an action-to-service semantics table for setup, create,
   resume, follow-up, clone, eval, archive, workflow, and stage actions.
   - Scope: operator frontend architecture only.
   - Verification: every visible selectable action has a distinct outcome and service
     path, or is explicitly removed.
-- `W36-E1-S2-T2` (soon) Define truthful UI vocabulary for runtime readiness, authentication
+- `W36-E1-S2-T2` (next) Define truthful UI vocabulary for runtime readiness, authentication
   evidence, safety/write scope, approval breadth, connectivity, and mutation state.
   - Scope: operator UX vocabulary in architecture docs.
   - Verification: ambiguous normative claims such as undifferentiated `ready` or
     `safe` are absent from the accepted vocabulary.
-- `W36-E1-S2-T3` (planned) Define measurable operator UX thresholds and evidence fields.
+- `W36-E1-S2-T3` (soon) Define measurable operator UX thresholds and evidence fields.
   - Scope: local-project UI E2E acceptance docs.
   - Verification: the template records first-action visibility, header footprint,
     touch targets, focus entry, contrast, overflow, reconnect outcome, task completion,

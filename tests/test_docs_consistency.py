@@ -814,6 +814,26 @@ def test_operator_ui_local_project_manual_browser_checklist_is_complete() -> Non
         assert expected in operator_ui_lane
 
 
+def test_operator_frontend_actions_name_real_service_semantics() -> None:
+    contract = (
+        _repo_root() / "docs" / "architecture" / "operator-frontend.md"
+    ).read_text(encoding="utf-8")
+
+    for expected in (
+        "#### 8.8.1 Action-to-service semantics",
+        "`POST /api/onboarding/project`",
+        "`POST /api/onboarding/work-item`",
+        "`POST /api/workflow/run`",
+        "`POST /api/stage/run`",
+        "`POST /api/next-flow/follow-up-draft/create`",
+        "`POST /api/next-flow/clone-draft/create`",
+        "External/manual handoff",
+        "No local operator-UI execution endpoint exists",
+        "`POST /api/next-flow/archive`",
+        "must not label them all **Continue**",
+    ):
+        assert expected in contract
+
 def test_operator_ui_local_project_e2e_lane_requires_completed_flow_checks() -> None:
     operator_ui_lane = (
         _repo_root() / "docs" / "e2e" / "operator-ui-local-project.md"

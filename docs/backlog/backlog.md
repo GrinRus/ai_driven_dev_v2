@@ -7,13 +7,12 @@ slice, and local task.
 
 ## Next
 
-- `W36-E1-S2-T1` — Define the action-to-service semantics table for setup, create,
-  resume, follow-up, clone, eval, archive, workflow, and stage actions.
+- `W36-E1-S2-T2` — Define truthful UI vocabulary for runtime readiness, authentication,
+  safety/write scope, approval breadth, connectivity, and mutation state.
 
 ## Soon
 
-- `W36-E1-S2-T2` — Define truthful UI vocabulary for runtime readiness, authentication,
-  safety/write scope, approval breadth, connectivity, and mutation state.
+- `W36-E1-S2-T3` — Define measurable operator UX thresholds and evidence fields.
 
 ## Parking lot
 
@@ -70,6 +69,11 @@ slice, and local task.
   queue-restoration policy in `docs/backlog/roadmap.md` (`W8-E3-S1`).
 
 ## Current reconciliation
+
+- `2026-07-17` `W36-E1-S2-T1` is complete: every setup, execution, next-flow, and archive
+  action now names its real endpoint/service, durable result, and conflict boundary; eval is
+  explicitly an external/manual handoff. `W36-E1-S2-T2` is promoted to `Next` and
+  `W36-E1-S2-T3` to `Soon`.
 
 - `2026-07-17` `W36-E1-S1-T3` and slice `W36-E1-S1` are complete: the local-project
   evidence contract now maps Guided Setup, Inbox, Studio recovery/quality states, Flow
