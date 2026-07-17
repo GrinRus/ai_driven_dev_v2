@@ -7,21 +7,16 @@ slice, and local task.
 
 ## Next
 
-- `W34-E7-S3-T1` — Reject ambiguous, unknown, or malformed safety-sensitive
-  configuration.
+- `W36-E1-S1-T3` — Replace checklist-only navigation wording with the canonical
+  Guided Setup / Inbox / Studio / History state-route matrix.
 
 ## Soon
 
-No tasks are queued in `Soon`.
+- `W36-E1-S2-T1` — Define the action-to-service semantics table for setup, create,
+  resume, follow-up, clone, eval, archive, workflow, and stage actions.
 
 ## Parking lot
 
-- `W34-E8-S1-T2` — Normalize inherited local-task statuses and historical disposition
-  semantics.
-- `W34-E8-S2-T1` — Replace stale planned/completed-wave architecture wording with
-  stable implemented ownership boundaries.
-- `W36-E1-S1-T3` — Replace checklist-only navigation wording with the canonical
-  Guided Setup / Inbox / Studio / History state-route matrix.
 - `W36-E2-S1-T1` — Select and document a maintained provider-free browser driver and
   packaged-UI test policy.
 - `W36-E2-S3-T1` — Extract shared dashboard loading, context selection, and mutation
@@ -75,6 +70,36 @@ No tasks are queued in `Soon`.
   queue-restoration policy in `docs/backlog/roadmap.md` (`W8-E3-S1`).
 
 ## Current reconciliation
+
+- `2026-07-17` `W34-E8-S2-T2`, slice `W34-E8-S2`, Epic `W34-E8`, and Wave 34 are
+  complete: architecture now distinguishes live stdout/stderr forwarding from durable
+  `runtime.log` persistence and documents full/tail replay plus separate structured audit
+  evidence. `W36-E1-S1-T3` is promoted to `Next` and `W36-E1-S2-T1` to `Soon`.
+
+- `2026-07-17` `W34-E8-S2-T1` is complete: target architecture now states stable
+  implemented frontend, project-set, provenance, approval-audit, and immutable-run
+  ownership without using a completed wave or an undecided browser driver as policy.
+  `W34-E8-S2-T2` is promoted to `Next`; `Soon` is empty.
+
+- `2026-07-17` `W34-E8-S1-T3` and slice `W34-E8-S1` are complete: one generic
+  roadmap/backlog parser now enforces hierarchy, unique local tasks, queue/status parity,
+  terminal exclusion, and direct or explicit `Soon` succession. `W34-E8-S2-T1` is
+  promoted to `Next` and `W34-E8-S2-T2` to `Soon`.
+
+- `2026-07-17` `W34-E8-S1-T2` is complete: planning entities now use a canonical
+  level-specific status vocabulary, backlog placement projects exact local-task status,
+  and historical outcomes are ordinary disposition notes. `W34-E8-S1-T3` is promoted
+  to `Next` and `W34-E8-S2-T1` to `Soon`.
+
+- `2026-07-17` `W34-E7-S2-T3`, slice `W34-E7-S2`, and Epic `W34-E7` are complete:
+  scenario, runtime, eval-run, and result-bundle identifiers now share the canonical
+  containment boundary without changing valid bundle layouts. `W34-E8-S1-T2` is
+  promoted to `Next` and `W34-E8-S1-T3` to `Soon`.
+
+- `2026-07-17` `W34-E7-S3-T1` and slice `W34-E7-S3` are complete: configuration now
+  distinguishes absent defaults from explicit blanks and rejects unknown or malformed
+  keys before runtime execution. `W34-E7-S2-T3` is promoted to `Next` and
+  `W34-E8-S1-T2` to `Soon`.
 
 - `2026-07-16` `W34-E3-S4-T4`, slice `W34-E3-S4`, and Epic `W34-E3` are complete:
   next-flow mutations remain in the compatible controller asset while terminal,

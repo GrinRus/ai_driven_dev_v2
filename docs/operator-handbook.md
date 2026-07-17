@@ -142,6 +142,12 @@ mode = "both"
 max_attempts = 2
 ```
 
+Configuration loading is fail-closed. Omitting a documented key selects its default, but
+an explicitly blank workspace, logging, command, execution-mode, permission-policy,
+interaction-mode, or auto-approval value is invalid. Unknown top-level sections, runtime
+sections, section keys, project fields, runtime ids, and stage-timeout names are rejected
+before any runtime process or persisted run state is created.
+
 Claude Code, Codex, and OpenCode native mode adapt AIDD stage briefs and prompt
 packs to the raw provider CLI. Use `mode = "adapter-flags"` only for wrapper
 commands that accept AIDD adapter flags directly.
@@ -345,6 +351,11 @@ runtime stdout/stderr callbacks. After completion, `aidd run logs` and the UI pe
 log view read the durable attempt `runtime.log`. The **Artifacts** tab renders known
 stage document keys from the artifact index as read-only Markdown preview/source views;
 it does not allow arbitrary path reads.
+
+For CLI execution, `--log-follow` and `--no-log-follow` control only live forwarding of
+available stdout/stderr. Durable `runtime.log` persistence is unchanged. `aidd run logs`
+prints the full persisted log by default, or its last `N` lines with `--tail --lines N`;
+structured provider and normalized event JSONL remain separate audit artifacts.
 
 For long-running UI jobs, use the right-side **Active Run** panel and the **Timeline** tab.
 They show job id, active stage, runner, elapsed time, last output age, stage timeout

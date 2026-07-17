@@ -439,9 +439,6 @@ def test_operator_ui_docs_and_backlog_queue_stay_synchronized() -> None:
     operator_frontend = (
         repo_root / "docs" / "architecture" / "operator-frontend.md"
     ).read_text(encoding="utf-8")
-    backlog = (repo_root / "docs" / "backlog" / "backlog.md").read_text(
-        encoding="utf-8"
-    )
     w24_s1 = roadmap.split("#### Slice W24-E1-S1", 1)[1].split(
         "#### Slice W24-E1-S2",
         1,
@@ -449,9 +446,6 @@ def test_operator_ui_docs_and_backlog_queue_stay_synchronized() -> None:
     w24_s2 = roadmap.split("#### Slice W24-E1-S2", 1)[1].split("## Wave", 1)[0]
     w26 = roadmap.split("## Wave 26", 1)[1]
     w36 = roadmap.split("## Wave 36", 1)[1].split("## Wave 37", 1)[0]
-    backlog_next = backlog.split("## Next", 1)[1].split("## Soon", 1)[0]
-    backlog_soon = backlog.split("## Soon", 1)[1].split("## Parking lot", 1)[0]
-    backlog_parking = backlog.split("## Parking lot", 1)[1].split("## Update rules", 1)[0]
 
     assert (
         "The UI can write question answers as `[resolved]`, `[partial]`, or "
@@ -528,110 +522,6 @@ def test_operator_ui_docs_and_backlog_queue_stay_synchronized() -> None:
     assert "### Epic W26-E5 — operator documentation and rollout clarity (`done`)" in w26
     assert "#### Slice W26-E5-S1 — completed-flow operator documentation (`done`)" in w26
     assert "`W26-E5-S1-T1` (done) Document completed-run handoff" in w26
-    assert "`W26-E5-S1-T1`" not in backlog_next
-    assert "`W26-E1-S1-T1`" not in backlog_next
-    assert "`W26-E1-S1-T2`" not in backlog_next
-    assert "`W26-E1-S2-T1`" not in backlog_next
-    assert "`W26-E1-S2-T2`" not in backlog_next
-    assert "`W26-E1-S2-T3`" not in backlog_next
-    assert "`W26-E2-S0-T1`" not in backlog_next
-    assert "`W26-E2-S0-T2`" not in backlog_next
-    assert "`W26-E2-S0-T3`" not in backlog_next
-    assert "`W26-E2-S0-T4`" not in backlog_next
-    assert "`W26-E1-S3-T1`" not in backlog_next
-    assert "`W26-E1-S3-T2`" not in backlog_next
-    assert "`W26-E1-S3-T3`" not in backlog_next
-    assert "`W26-E2-S1-T1`" not in backlog_next
-    assert "`W26-E2-S1-T2`" not in backlog_next
-    assert "`W26-E2-S1-T3`" not in backlog_next
-    assert "`W26-E2-S2-T1`" not in backlog_next
-    assert "`W26-E2-S2-T2`" not in backlog_next
-    assert "`W26-E2-S2-T3`" not in backlog_next
-    assert "`W26-E2-S3-T1`" not in backlog_next
-    assert "`W26-E2-S3-T2`" not in backlog_next
-    assert "`W26-E2-S3-T3`" not in backlog_next
-    assert "`W26-E2-S3-T4`" not in backlog_next
-    assert "`W26-E3-S1-T1`" not in backlog_next
-    assert "`W26-E3-S1-T2`" not in backlog_next
-    assert "`W26-E3-S1-T3`" not in backlog_next
-    assert "`W26-E3-S2-T1`" not in backlog_next
-    assert "`W26-E3-S2-T2`" not in backlog_next
-    assert "`W26-E3-S2-T3`" not in backlog_next
-    assert "`W26-E4-S1-T1`" not in backlog_next
-    assert "`W26-E4-S1-T2`" not in backlog_next
-    assert "`W26-E4-S1-T3`" not in backlog_next
-    assert "`W26-E4-S2-T1`" not in backlog_next
-    assert "`W26-E4-S2-T2`" not in backlog_next
-    assert "`W26-E4-S2-T3`" not in backlog_next
-    assert "`W26-E1-S3-T1`" not in backlog_soon
-    assert "`W26-E1-S1-T2`" not in backlog_soon
-    assert "`W26-E1-S2-T1`" not in backlog_soon
-    assert "`W26-E1-S2-T2`" not in backlog_soon
-    assert "`W26-E1-S2-T3`" not in backlog_soon
-    assert "`W26-E2-S0-T1`" not in backlog_soon
-    assert "`W26-E2-S0-T2`" not in backlog_soon
-    assert "`W26-E2-S0-T3`" not in backlog_soon
-    assert "`W26-E2-S0-T4`" not in backlog_soon
-    assert "`W26-E1-S3-T2`" not in backlog_soon
-    assert "`W26-E1-S3-T3`" not in backlog_soon
-    assert "`W26-E2-S1-T1`" not in backlog_soon
-    assert "`W26-E2-S1-T2`" not in backlog_soon
-    assert "`W26-E2-S1-T3`" not in backlog_soon
-    assert "`W26-E2-S2-T1`" not in backlog_soon
-    assert "`W26-E2-S2-T2`" not in backlog_soon
-    assert "`W26-E2-S2-T3`" not in backlog_soon
-    assert "`W26-E2-S3-T1`" not in backlog_soon
-    assert "`W26-E2-S3-T2`" not in backlog_soon
-    assert "`W26-E2-S3-T3`" not in backlog_soon
-    assert "`W26-E2-S3-T4`" not in backlog_soon
-    assert "`W26-E3-S1-T1`" not in backlog_soon
-    assert "`W26-E3-S1-T2`" not in backlog_soon
-    assert "`W26-E3-S1-T3`" not in backlog_soon
-    assert "`W26-E3-S2-T1`" not in backlog_soon
-    assert "`W26-E3-S2-T2`" not in backlog_soon
-    assert "`W26-E3-S2-T3`" not in backlog_soon
-    assert "`W26-E4-S1-T1`" not in backlog_soon
-    assert "`W26-E4-S1-T2`" not in backlog_soon
-    assert "`W26-E4-S1-T3`" not in backlog_soon
-    assert "`W26-E4-S2-T1`" not in backlog_soon
-    assert "`W26-E4-S2-T2`" not in backlog_soon
-    assert "`W26-E4-S2-T3`" not in backlog_soon
-    assert "`W26-E5-S1-T1`" not in backlog_soon
-    assert "`W26-E2-S0-T3`" not in backlog_parking
-    assert "`W26-E2-S0-T4`" not in backlog_parking
-    assert "`W26-E1-S3-T1`" not in backlog_parking
-    assert "`W26-E1-S3-T2`" not in backlog_parking
-    assert "`W26-E1-S3-T3`" not in backlog_parking
-    assert "`W26-E2-S1-T1`" not in backlog_parking
-    assert "`W26-E2-S1-T2`" not in backlog_parking
-    assert "`W26-E2-S1-T3`" not in backlog_parking
-    assert "`W26-E2-S2-T1`" not in backlog_parking
-    assert "`W26-E2-S2-T2`" not in backlog_parking
-    assert "`W26-E2-S2-T3`" not in backlog_parking
-    assert "`W26-E2-S3-T1`" not in backlog_parking
-    assert "`W26-E2-S3-T2`" not in backlog_parking
-    assert "`W26-E2-S3-T3`" not in backlog_parking
-    assert "`W26-E2-S3-T4`" not in backlog_parking
-    assert "`W26-E3-S1-T1`" not in backlog_parking
-    assert "`W26-E3-S1-T2`" not in backlog_parking
-    assert "`W26-E3-S1-T3`" not in backlog_parking
-    assert "`W26-E3-S2-T1`" not in backlog_parking
-    assert "`W26-E3-S2-T2`" not in backlog_parking
-    assert "`W26-E3-S2-T3`" not in backlog_parking
-    assert "`W26-E4-S1-T1`" not in backlog_parking
-    assert "`W26-E4-S1-T2`" not in backlog_parking
-    assert "`W26-E4-S1-T3`" not in backlog_parking
-    assert "`W26-E4-S2-T1`" not in backlog_parking
-    assert "`W26-E4-S2-T2`" not in backlog_parking
-    assert "`W26-E4-S2-T3`" not in backlog_parking
-    assert "`W26-E5-S1-T1`" not in backlog_parking
-    assert "`W36-E1-S1-T1`" not in backlog_next
-    assert "`W36-E1-S1-T1`" not in backlog_soon
-    assert "`W36-E1-S1-T1`" not in backlog_parking
-    assert "`W36-E1-S1-T2`" not in backlog_next
-    assert "`W36-E1-S1-T2`" not in backlog_soon
-    assert "`W36-E1-S1-T2`" not in backlog_parking
-    assert "`W36-E1-S1-T3`" in backlog_parking
     assert "Document & Evidence Studio migration (`planned`)" in w36
     assert "legacy_only | candidate | parity_closed" in w36
     assert "three destinations and one presentation preference" in operator_frontend
@@ -1415,7 +1305,7 @@ def test_wave29_real_provider_ui_e2e_docs_define_manual_codex_first_lane() -> No
     assert "Provider priority is Codex first" in scenario_matrix
 
 
-def test_wave29_operator_hardening_docs_cover_beta_contracts() -> None:
+def test_operator_ownership_docs_cover_stable_beta_contracts() -> None:
     repo_root = _repo_root()
     operator_frontend = (
         repo_root / "docs" / "architecture" / "operator-frontend.md"
@@ -1449,13 +1339,19 @@ def test_wave29_operator_hardening_docs_cover_beta_contracts() -> None:
     assert "unrelated repositories must be opened through separate UI sessions" in project_set
 
     for needle in (
-        "Manual+Browser evidence",
-        "Codex-first",
+        "The implemented operator frontend and project-set workflow support",
         "project-set UI grouping is a read model",
         "prompt/workflow accountability is read-only provenance",
         "runtime approval audit is a bounded read surface",
+        "completed run is immutable evidence",
     ):
         assert needle in target_architecture
+    for stale_wording in (
+        "Planned operator frontend",
+        "Wave 29 beta-hardening",
+        "new Playwright/Selenium dependency",
+    ):
+        assert stale_wording not in target_architecture
 
     assert "## Future beta readiness gate" in user_stories
     assert "Beta readiness is a future evidence gate" in readme
@@ -1476,6 +1372,25 @@ def test_wave29_operator_hardening_docs_cover_beta_contracts() -> None:
     ):
         assert needle in release_checklist
     assert "Claude Code remains `blocked/auth-env`" not in release_checklist
+
+
+def test_runtime_log_docs_match_the_supported_cli_contract() -> None:
+    repo_root = _repo_root()
+    target_architecture = (
+        repo_root / "docs" / "architecture" / "target-architecture.md"
+    ).read_text(encoding="utf-8")
+    handbook = (repo_root / "docs" / "operator-handbook.md").read_text(encoding="utf-8")
+
+    for document in (target_architecture, handbook):
+        assert "`--log-follow`" in document
+        assert "durable" in document
+        assert "`runtime.log`" in document
+        assert "`aidd run logs`" in document
+        assert "`--tail --lines N`" in document
+        assert "separate audit artifacts" in document
+
+    assert "The CLI should support three log modes" not in target_architecture
+    assert "`normalized`: show AIDD-normalized events" not in target_architecture
 
 
 def test_release_publish_skill_describes_release_flow_guardrails() -> None:

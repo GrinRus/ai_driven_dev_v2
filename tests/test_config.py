@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import re
 from dataclasses import fields
 from pathlib import Path
 
@@ -79,6 +80,89 @@ def test_load_config_defaults_native_providers_to_native(tmp_path: Path) -> None
     assert cfg.runtime_config("codex").permission_policy is RuntimePermissionPolicy.FULL_ACCESS
     assert cfg.runtime_config("codex").interaction_mode is RuntimeInteractionMode.BATCH
     assert cfg.runtime_config("codex").auto_approval_preset is AutoApprovalPreset.BROAD
+
+
+@pytest.mark.parametrize(
+    ("config_text", "expected_message"),
+    (
+        ("unexpected = true", "unknown top-level keys: unexpected"),
+        ("[workspace]\nroots = '.aidd'", "[workspace] contains unknown keys: roots"),
+        ("[runtime.unknown]\ncommand = 'tool'", "unknown runtime sections: unknown"),
+        (
+            "[runtime.codex]\napproval_policy = 'never'",
+            "[runtime.codex] contains unknown keys: approval_policy",
+        ),
+        ("[logging]\nformat = 'text'", "[logging] contains unknown keys: format"),
+        ("[repair]\nretries = 2", "[repair] contains unknown keys: retries"),
+        ("[project_set]\nproject = []", "[project_set] contains unknown keys: project"),
+        (
+            "[[project_set.projects]]\nid = 'api'\nroot = 'api'\nowner = 'team'",
+            "[project_set.projects[1]] contains unknown keys: owner",
+        ),
+    ),
+)
+def test_load_config_rejects_unknown_keys(
+    tmp_path: Path,
+    config_text: str,
+    expected_message: str,
+) -> None:
+    config_path = tmp_path / "aidd.toml"
+    config_path.write_text(config_text, encoding="utf-8")
+
+    with pytest.raises(ValueError, match=re.escape(expected_message)):
+        load_config(config_path)
+
+
+@pytest.mark.parametrize(
+    "config_text",
+    (
+        "[workspace]\nroot = '   '",
+        "[logging]\nmode = ''",
+        "[runtime.codex]\ncommand = '   '",
+        "[runtime.codex]\nmode = ''",
+        "[runtime.codex]\npermission_policy = ''",
+        "[runtime.codex]\ninteraction_mode = '   '",
+        "[runtime.codex]\nauto_approval_preset = ''",
+    ),
+)
+def test_load_config_rejects_explicit_blank_safety_values(
+    tmp_path: Path,
+    config_text: str,
+) -> None:
+    config_path = tmp_path / "aidd.toml"
+    config_path.write_text(config_text, encoding="utf-8")
+
+    with pytest.raises(ValueError, match="must not be blank when provided"):
+        load_config(config_path)
+
+
+@pytest.mark.parametrize(
+    "runtime_section",
+    ("generic_cli", "claude_code", "codex", "opencode", "qwen"),
+)
+def test_load_config_accepts_explicit_valid_safety_values_for_every_runtime(
+    tmp_path: Path,
+    runtime_section: str,
+) -> None:
+    config_path = tmp_path / "aidd.toml"
+    config_path.write_text(
+        "\n".join(
+            (
+                f"[runtime.{runtime_section}]",
+                'permission_policy = "brokered"',
+                'interaction_mode = "batch"',
+                'auto_approval_preset = "conservative"',
+                "timeout_seconds = 30",
+            )
+        ),
+        encoding="utf-8",
+    )
+
+    config = load_config(config_path)
+    runtime_id = runtime_section.replace("_", "-")
+
+    assert config.runtime_config(runtime_id).permission_policy is RuntimePermissionPolicy.BROKERED
+    assert config.runtime_config(runtime_id).timeout_seconds == 30
 
 
 def test_runtime_configs_are_primary_config_storage(tmp_path: Path) -> None:

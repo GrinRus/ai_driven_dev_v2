@@ -4,6 +4,7 @@ from pathlib import Path
 
 import pytest
 
+from aidd.harness.eval_preparation import derive_run_id
 from aidd.harness.result_bundle import (
     EVENTS_JSONL_FILENAME,
     FEATURE_SELECTION_FILENAME,
@@ -21,6 +22,7 @@ from aidd.harness.result_bundle import (
     VERIFY_TRANSCRIPT_FILENAME,
     build_result_bundle_layout,
     ensure_result_bundle_layout,
+    ensure_result_bundle_layout_at_report_root,
 )
 
 
@@ -52,6 +54,56 @@ def test_ensure_result_bundle_layout_creates_run_directory(tmp_path: Path) -> No
     assert layout.run_root.is_dir()
 
 
-def test_build_result_bundle_layout_rejects_empty_run_id(tmp_path: Path) -> None:
-    with pytest.raises(ValueError, match="run_id must be non-empty"):
-        build_result_bundle_layout(workspace_root=tmp_path, run_id="   ")
+@pytest.mark.parametrize(
+    "run_id",
+    ("", " ", ".", "..", "../escape", "/absolute", "nested/run", "nested\\run", "x" * 129),
+)
+def test_result_bundle_layout_rejects_unsafe_run_ids_without_partial_state(
+    tmp_path: Path,
+    run_id: str,
+) -> None:
+    with pytest.raises(ValueError, match="plain path component"):
+        ensure_result_bundle_layout(workspace_root=tmp_path, run_id=run_id)
+
+    assert not (tmp_path / "reports").exists()
+
+
+@pytest.mark.parametrize(
+    ("scenario_id", "runtime_id"),
+    (("../scenario", "codex"), ("AIDD-SCENARIO", "../runtime"), ("x" * 129, "codex")),
+)
+def test_derive_run_id_rejects_unsafe_source_identifiers(
+    scenario_id: str,
+    runtime_id: str,
+) -> None:
+    with pytest.raises(ValueError, match="plain path component"):
+        derive_run_id(scenario_id=scenario_id, runtime_id=runtime_id)
+
+
+def test_result_bundle_layout_rejects_workspace_symlink_escape(tmp_path: Path) -> None:
+    workspace_root = tmp_path / "workspace"
+    outside_root = tmp_path / "outside"
+    workspace_root.mkdir()
+    outside_root.mkdir()
+    (workspace_root / "reports").symlink_to(outside_root, target_is_directory=True)
+
+    with pytest.raises(ValueError, match="owning root must stay inside"):
+        ensure_result_bundle_layout(workspace_root=workspace_root, run_id="eval-run")
+
+    assert not (outside_root / "evals" / "eval-run").exists()
+
+
+def test_explicit_report_root_rejects_run_symlink_escape(tmp_path: Path) -> None:
+    report_root = tmp_path / "reports"
+    outside_root = tmp_path / "outside"
+    report_root.mkdir()
+    outside_root.mkdir()
+    (report_root / "eval-run").symlink_to(outside_root, target_is_directory=True)
+
+    with pytest.raises(ValueError, match="resolve directly below"):
+        ensure_result_bundle_layout_at_report_root(
+            report_root=report_root,
+            run_id="eval-run",
+        )
+
+    assert tuple(outside_root.iterdir()) == ()

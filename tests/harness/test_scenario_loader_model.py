@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import re
 from pathlib import Path
 
 import pytest
@@ -7,6 +8,26 @@ import yaml
 
 from aidd.core.stages import STAGES
 from aidd.harness.scenarios import ScenarioManifestError, load_scenario
+
+
+@pytest.mark.parametrize("scenario_id", ("../escape", "nested/id", "nested\\id", "x" * 129))
+def test_scenario_loader_rejects_unsafe_scenario_id(
+    tmp_path: Path,
+    scenario_id: str,
+) -> None:
+    source = Path("harness/scenarios/deterministic/minimal-python-bounded-workflow.yaml")
+    manifest = re.sub(
+        r"^id:\s*.*$",
+        f"id: {scenario_id!r}",
+        source.read_text(encoding="utf-8"),
+        count=1,
+        flags=re.MULTILINE,
+    )
+    scenario_path = tmp_path / "scenario.yaml"
+    scenario_path.write_text(manifest, encoding="utf-8")
+
+    with pytest.raises(ScenarioManifestError, match="plain path component"):
+        load_scenario(scenario_path)
 
 
 def _assert_live_contract(scenario) -> None:

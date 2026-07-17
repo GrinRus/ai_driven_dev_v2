@@ -27,6 +27,28 @@ from aidd.runtime_permissions import (
 
 _PROJECT_ID_PATTERN = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_-]*$")
 
+_TOP_LEVEL_CONFIG_KEYS = frozenset(
+    {"workspace", "runtime", "logging", "repair", "project_set"}
+)
+_CONFIG_SECTION_KEYS: dict[str, frozenset[str]] = {
+    "workspace": frozenset({"root"}),
+    "logging": frozenset({"mode"}),
+    "repair": frozenset({"max_attempts"}),
+    "project_set": frozenset({"projects"}),
+}
+_RUNTIME_CONFIG_KEYS = frozenset(
+    {
+        "command",
+        "mode",
+        "timeout_seconds",
+        "stage_timeouts",
+        "permission_policy",
+        "interaction_mode",
+        "auto_approval_preset",
+    }
+)
+_PROJECT_CONFIG_KEYS = frozenset({"id", "root", "role"})
+
 
 @dataclass(frozen=True)
 class RuntimeConfig:
@@ -275,11 +297,57 @@ def _string_config_value(
     section_label: str,
     field_name: str,
     default: str,
+    reject_blank: bool = False,
 ) -> str:
     raw_value = section.get(field_name, default)
     if not isinstance(raw_value, str):
         raise ValueError(f"[{section_label}.{field_name}] must be a string when provided.")
+    if reject_blank and field_name in section and not raw_value.strip():
+        raise ValueError(f"[{section_label}.{field_name}] must not be blank when provided.")
     return raw_value
+
+
+def _reject_unknown_keys(
+    values: dict[str, Any],
+    *,
+    allowed: frozenset[str],
+    label: str,
+) -> None:
+    unknown = sorted(set(values) - allowed)
+    if unknown:
+        raise ValueError(f"[{label}] contains unknown keys: {', '.join(unknown)}.")
+
+
+def _validate_known_config_keys(data: dict[str, Any]) -> None:
+    unknown_top_level = sorted(set(data) - _TOP_LEVEL_CONFIG_KEYS)
+    if unknown_top_level:
+        raise ValueError(
+            "Configuration contains unknown top-level keys: "
+            f"{', '.join(unknown_top_level)}."
+        )
+
+    for section_name, allowed_keys in _CONFIG_SECTION_KEYS.items():
+        section = _config_table(data, section_name)
+        _reject_unknown_keys(section, allowed=allowed_keys, label=section_name)
+
+    runtime = _config_table(data, "runtime")
+    runtime_sections = {
+        get_runtime_definition(runtime_id).config_section for runtime_id in runtime_ids()
+    }
+    unknown_runtime_sections = sorted(set(runtime) - runtime_sections)
+    if unknown_runtime_sections:
+        raise ValueError(
+            "[runtime] contains unknown runtime sections: "
+            f"{', '.join(unknown_runtime_sections)}."
+        )
+    for runtime_id in runtime_ids():
+        definition = get_runtime_definition(runtime_id)
+        section = _runtime_section(data, runtime_id)
+        _reject_unknown_keys(
+            section,
+            allowed=_RUNTIME_CONFIG_KEYS,
+            label=f"runtime.{definition.config_section}",
+        )
 
 
 def _integer_config_value(
@@ -432,6 +500,7 @@ def _runtime_command(
         section_label=f"runtime.{definition.config_section}",
         field_name="command",
         default=definition.default_command,
+        reject_blank=True,
     ).strip()
     is_default_managed_command = command == definition.default_command
     if (
@@ -477,6 +546,7 @@ def _runtime_execution_mode(data: dict[str, Any], runtime_id: str) -> RuntimeExe
             section_label=f"runtime.{definition.config_section}",
             field_name="mode",
             default="",
+            reject_blank=True,
         )
         return normalize_execution_mode(runtime_id=runtime_id, value=mode)
 
@@ -561,7 +631,8 @@ def _runtime_permission_policy(
         section,
         section_label=f"runtime.{definition.config_section}",
         field_name="permission_policy",
-        default="",
+        default=RuntimePermissionPolicy.FULL_ACCESS.value,
+        reject_blank=True,
     )
     try:
         return normalize_permission_policy(raw_policy)
@@ -581,7 +652,8 @@ def _runtime_interaction_mode(
         section,
         section_label=f"runtime.{definition.config_section}",
         field_name="interaction_mode",
-        default="",
+        default=RuntimeInteractionMode.BATCH.value,
+        reject_blank=True,
     )
     try:
         return normalize_interaction_mode(raw_mode)
@@ -601,7 +673,8 @@ def _runtime_auto_approval_preset(
         section,
         section_label=f"runtime.{definition.config_section}",
         field_name="auto_approval_preset",
-        default="",
+        default=AutoApprovalPreset.BROAD.value,
+        reject_blank=True,
     )
     try:
         return normalize_auto_approval_preset(raw_preset)
@@ -631,6 +704,11 @@ def _parse_project_set(data: dict[str, Any]) -> ProjectSetConfig:
             raise ValueError(
                 f"project_set.projects[{index}] must be a table when provided."
             )
+        _reject_unknown_keys(
+            raw_project,
+            allowed=_PROJECT_CONFIG_KEYS,
+            label=f"project_set.projects[{index}]",
+        )
         project_id = str(raw_project.get("id", "")).strip()
         if not project_id:
             raise ValueError(f"project_set.projects[{index}].id is required.")
@@ -666,12 +744,15 @@ def load_config(path: Path) -> AiddConfig:
         with path.open("rb") as file_obj:
             data = tomllib.load(file_obj)
 
+    _validate_known_config_keys(data)
+
     workspace_root = Path(
         _string_config_value(
             _config_table(data, "workspace"),
             section_label="workspace",
             field_name="root",
             default=".aidd",
+            reject_blank=True,
         )
     )
     runtime_configs: dict[str, RuntimeConfig] = {}
@@ -691,6 +772,7 @@ def load_config(path: Path) -> AiddConfig:
         section_label="logging",
         field_name="mode",
         default="both",
+        reject_blank=True,
     )
     max_repair_attempts = _integer_config_value(
         _config_table(data, "repair"),

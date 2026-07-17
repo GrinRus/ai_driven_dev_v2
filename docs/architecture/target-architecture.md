@@ -189,27 +189,21 @@ The exact layout may evolve, but the model is fixed:
 - eval lanes derive additional timing and quality reports from those run artifacts and scenario
   execution evidence.
 
-Planned operator frontend and project-set workflow support must preserve this ownership model:
+The implemented operator frontend and project-set workflow support preserve this ownership model:
 
 - the frontend is an operator surface over the same core workflow and artifacts, not a separate
   workflow engine;
 - project-set flows use declared local project roots while keeping one governed `.aidd/`
-  workspace and traceable per-project evidence.
-
-Detailed contracts live in `operator-frontend.md` and `project-set-workspace.md`.
-
-Wave 29 beta-hardening keeps the same boundary:
-
-- browser evidence is Manual+Browser evidence, not a new Playwright/Selenium dependency;
-- real-provider UI smokes are Codex-first, then Claude Code and OpenCode, with Qwen
-  optional while experimental authentication and transport behavior stabilize;
+  workspace and traceable per-project evidence;
 - project-set UI grouping is a read model over declared related roots inside one selected
   project-local `.aidd/`, not concurrent unrelated multi-project execution;
 - prompt/workflow accountability is read-only provenance over run manifests, config snapshots,
-  runtime id, Git SHA, and the canonical stage graph, plus ordered per-attempt prompt hashes and
-  the actual `initial`, `repair`, or `intervention` execution mode from each artifact index;
+  runtime id, Git SHA, the canonical stage graph, ordered per-attempt prompt hashes, and the
+  actual `initial`, `repair`, or `intervention` execution mode from each artifact index;
 - runtime approval audit is a bounded read surface over existing request/decision ledgers,
   not a replacement permission engine.
+
+Detailed contracts live in `operator-frontend.md` and `project-set-workspace.md`.
 
 Completed-flow handoff must preserve the same ownership model. When a run reaches a terminal
 state after `qa`, the completed run is immutable evidence. Any next action creates or prepares a
@@ -474,17 +468,20 @@ Adapters are **not** responsible for:
 
 ## 15. Runtime log architecture
 
-The CLI should support three log modes:
+`--log-follow` controls only whether available runtime stdout/stderr is forwarded to the
+operator while an attempt is running. It does not enable or disable durable evidence:
+`--no-log-follow` suppresses live forwarding while the attempt still persists its complete raw
+`runtime.log` through the same evidence commit path.
 
-- `native`: show raw runtime output as closely as possible,
-- `normalized`: show AIDD-normalized events,
-- `both`: show normalized summaries while storing raw logs.
+`aidd run logs` reads that persisted `runtime.log`. By default it prints the full selected
+attempt log; `--tail --lines N` prints its last `N` lines. This replay command is independent
+of the live-forwarding choice used when the attempt ran.
 
-Every run stores:
+Runtime evidence stores:
 
 - raw runtime text log,
-- structured runtime log when the adapter observes JSONL runtime output,
-- normalized events when structured runtime events are emitted,
+- structured provider JSONL and normalized event JSONL as separate audit artifacts when the
+  adapter observes or emits them,
 - per-attempt runtime exit metadata,
 - validation state and validator reports,
 - repair context and repair history when repair is used.

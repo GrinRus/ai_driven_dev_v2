@@ -4,16 +4,19 @@ This file is the canonical implementation plan for AIDD.
 
 ## Status vocabulary
 
-- `done` — completed in the repo
-- `blocked` — accepted but currently stopped by an explicit dependency gap
-- `next` — the preferred immediate target
-- `planned` — accepted but not active
-- `later` — useful but intentionally deferred
+Waves, epics, and slices use exactly `planned` or `done`. Local tasks use exactly:
 
-Status markers apply to waves, epics, slices, and local tasks. An unmarked local task
-inherits the nearest enclosing status. A task promoted to the active `Next`
-queue must be marked `next` explicitly. Historical disposition notes such as
-`superseded by ...` may follow a terminal status, but are not additional active states.
+- `planned` — accepted but not in the actionable queue;
+- `next` — the preferred immediate target in backlog `Next`;
+- `soon` — a direct successor in backlog `Soon`;
+- `parked` — consciously deferred in backlog `Parking lot`;
+- `blocked` — accepted but stopped by an explicit dependency gap;
+- `done` — completed in the repository and absent from backlog.
+
+Every planning entity has an explicit marker. Backlog placement is an exact projection
+of local-task status: `Next` maps to `next`, `Soon` to `soon`, and `Parking lot` to
+`parked`. Historical outcomes such as `superseded`, `legacy`, or `not applicable` are
+ordinary disposition notes, not status values.
 
 ## Planning model
 
@@ -52,20 +55,20 @@ Goal: provide a clear project overview and contributor entrypoint.
 
 Local tasks:
 
-- `W0-E1-S1-T1` Write `README.md`.
-- `W0-E1-S1-T2` Write lightweight root `AGENTS.md`.
-- `W0-E1-S1-T3` Add `CLAUDE.md` as a compatibility entrypoint.
+- `W0-E1-S1-T1` (done) Write `README.md`.
+- `W0-E1-S1-T2` (done) Write lightweight root `AGENTS.md`.
+- `W0-E1-S1-T3` (done) Add `CLAUDE.md` as a compatibility entrypoint.
 
 #### Slice W0-E1-S2 — architecture baseline (`done`)
 Goal: fix the initial architecture and protocol decisions.
 
 Local tasks:
 
-- `W0-E1-S2-T1` Write target architecture.
-- `W0-E1-S2-T2` Write adapter protocol.
-- `W0-E1-S2-T3` Write document contract rules.
-- `W0-E1-S2-T4` Write eval/harness integration.
-- `W0-E1-S2-T5` Write runtime matrix and distribution notes.
+- `W0-E1-S2-T1` (done) Write target architecture.
+- `W0-E1-S2-T2` (done) Write adapter protocol.
+- `W0-E1-S2-T3` (done) Write document contract rules.
+- `W0-E1-S2-T4` (done) Write eval/harness integration.
+- `W0-E1-S2-T5` (done) Write runtime matrix and distribution notes.
 
 ### Epic W0-E2 — planning system and agent ergonomics (`done`)
 Linked stories: `US-10`
@@ -75,18 +78,18 @@ Goal: make work selection explicit and hierarchical.
 
 Local tasks:
 
-- `W0-E2-S1-T1` Define wave/epic/slice/local-task planning.
-- `W0-E2-S1-T2` Write the canonical roadmap.
-- `W0-E2-S1-T3` Write the short backlog queue.
+- `W0-E2-S1-T1` (done) Define wave/epic/slice/local-task planning.
+- `W0-E2-S1-T2` (done) Write the canonical roadmap.
+- `W0-E2-S1-T3` (done) Write the short backlog queue.
 
 #### Slice W0-E2-S2 — agent ergonomics (`done`)
 Goal: reduce repeated prompting for coding agents.
 
 Local tasks:
 
-- `W0-E2-S2-T1` Add nested `AGENTS.md` files.
-- `W0-E2-S2-T2` Move team skills into `.agents/skills/`.
-- `W0-E2-S2-T3` Add root skills for navigation, backlog work, story checks, live E2E, and log triage.
+- `W0-E2-S2-T1` (done) Add nested `AGENTS.md` files.
+- `W0-E2-S2-T2` (done) Move team skills into `.agents/skills/`.
+- `W0-E2-S2-T3` (done) Add root skills for navigation, backlog work, story checks, live E2E, and log triage.
 
 ### Epic W0-E3 — live E2E discovery (`done`)
 Linked stories: `US-07`
@@ -96,9 +99,9 @@ Goal: define a first public-repo live E2E set.
 
 Local tasks:
 
-- `W0-E3-S1-T1` Select public repositories.
-- `W0-E3-S1-T2` Define starter scenarios.
-- `W0-E3-S1-T3` Add starter scenario manifests.
+- `W0-E3-S1-T1` (done) Select public repositories.
+- `W0-E3-S1-T2` (done) Define starter scenarios.
+- `W0-E3-S1-T3` (done) Add starter scenario manifests.
 
 ---
 
@@ -112,19 +115,19 @@ Goal: make the repo runnable from source with a real console entrypoint.
 
 Local tasks:
 
-- `W1-E1-S1-T1` Add `pyproject.toml`.
-- `W1-E1-S1-T2` Add `src/aidd/__init__.py`.
-- `W1-E1-S1-T3` Add a working CLI scaffold.
-- `W1-E1-S1-T4` Add CLI smoke tests.
+- `W1-E1-S1-T1` (done) Add `pyproject.toml`.
+- `W1-E1-S1-T2` (done) Add `src/aidd/__init__.py`.
+- `W1-E1-S1-T3` (done) Add a working CLI scaffold.
+- `W1-E1-S1-T4` (done) Add CLI smoke tests.
 
 #### Slice W1-E1-S2 — local workspace bootstrap (`done`)
 Goal: provide a minimal useful local command.
 
 Local tasks:
 
-- `W1-E1-S2-T1` Implement `aidd doctor`.
-- `W1-E1-S2-T2` Implement `aidd init`.
-- `W1-E1-S2-T3` Add a sample config file.
+- `W1-E1-S2-T1` (done) Implement `aidd doctor`.
+- `W1-E1-S2-T2` (done) Implement `aidd init`.
+- `W1-E1-S2-T3` (done) Add a sample config file.
 
 ### Epic W1-E2 — repository health files (`done`)
 Linked stories: `US-09`, `US-10`
@@ -134,18 +137,18 @@ Goal: make the repo ready for external contributors.
 
 Local tasks:
 
-- `W1-E2-S1-T1` Write `CONTRIBUTING.md`.
-- `W1-E2-S1-T2` Add `LICENSE`.
-- `W1-E2-S1-T3` Add a PR template.
+- `W1-E2-S1-T1` (done) Write `CONTRIBUTING.md`.
+- `W1-E2-S1-T2` (done) Add `LICENSE`.
+- `W1-E2-S1-T3` (done) Add a PR template.
 
 #### Slice W1-E2-S2 — CI and release scaffolding (`done`)
 Goal: prepare standard automation for a Python CLI project.
 
 Local tasks:
 
-- `W1-E2-S2-T1` Add CI workflow.
-- `W1-E2-S2-T2` Add release workflow.
-- `W1-E2-S2-T3` Add `Makefile` and `.gitignore`.
+- `W1-E2-S2-T1` (done) Add CI workflow.
+- `W1-E2-S2-T2` (done) Add release workflow.
+- `W1-E2-S2-T3` (done) Add `Makefile` and `.gitignore`.
 
 ---
 
@@ -2211,8 +2214,8 @@ Dependencies:
 Local tasks:
 
 - `W7-E2-S3-T1` (done) Select the minimum parity scenario set for OpenCode.
-- `W7-E2-S3-T2` (done; reference run `eval-live-005-opencode-20260422T142733Z`, status `harness_pass`) Run OpenCode on the smoke lane and capture reference bundles.
-- `W7-E2-S3-T3` (done; reference run `eval-live-006-opencode-20260422T142812Z`, status `harness_blocked`) Run OpenCode on at least one interview lane and capture reference bundles.
+- `W7-E2-S3-T2` (done) Evidence: reference run `eval-live-005-opencode-20260422T142733Z` recorded `harness_pass`. Run OpenCode on the smoke lane and capture reference bundles.
+- `W7-E2-S3-T3` (done) Evidence: reference run `eval-live-006-opencode-20260422T142812Z` recorded `harness_blocked`. Run OpenCode on at least one interview lane and capture reference bundles.
 - `W7-E2-S3-T4` (done) Document known parity gaps and adapter-specific limitations.
 
 Exit evidence:
@@ -2658,7 +2661,7 @@ Local tasks:
 
 - `W10-E1-S1-T1` (done) Add a post-publish PyPI verification job to the `release` workflow that retries up to 10 times with 30-second backoff until the tagged version is installable via `pipx`, then runs `aidd --version` and `aidd doctor`.
 - `W10-E1-S1-T2` (done) Add a post-publish `uv tool install` verification job that retries up to 10 times with 30-second backoff until the tagged version is installable, then runs `aidd --version` and `aidd doctor`.
-- `W10-E1-S1-T3` (done, historical) Add a post-publish GHCR verification job to the `release` workflow that retries up to 10 times with 30-second backoff until the tagged image is pullable, then runs `aidd --version` and `aidd doctor` in the container.
+- `W10-E1-S1-T3` (done) Disposition: historical. Add a post-publish GHCR verification job to the `release` workflow that retries up to 10 times with 30-second backoff until the tagged image is pullable, then runs `aidd --version` and `aidd doctor` in the container.
 - `W10-E1-S1-T4` (done) Update release documentation so the three verification jobs are required release evidence for tagged builds.
 
 Sync notes:
@@ -3060,7 +3063,7 @@ Dependencies:
 
 Local tasks:
 
-- `W12-E2-S2-T1` (done, legacy) Run the old live quality command block after verification, capture the legacy quality transcript artifact, and feed the results into the removed live quality scorer.
+- `W12-E2-S2-T1` (done) Disposition: legacy. Run the old live quality command block after verification, capture the legacy quality transcript artifact, and feed the results into the removed live quality scorer.
 - `W12-E2-S2-T2` (done) Require full-stage validated outputs plus quality artifacts before a live run is considered clean, and add regression coverage for weak code or weak artifacts escaping execution pass.
 
 Exit evidence:
@@ -4417,7 +4420,7 @@ Local tasks:
 
 - `W19-E4-S1-T1` (done) Align CI compatibility checks with the documented Python 3.12 through 3.14 support window.
 - `W19-E4-S1-T2` (done) Preserve installed-package smoke proof coverage through existing release and release-live-proof tests without adding a live provider CI gate.
-- `W19-E4-S2-T1` (done) Keep manual live E2E evidence separated from provider/env blockers through the existing manual live workflow and runtime preflight tests.
+- `W19-E4-S1-T3` (done) Keep manual live E2E evidence separated from provider/env blockers through the existing manual live workflow and runtime preflight tests.
 
 Exit evidence:
 
@@ -4607,7 +4610,7 @@ Local tasks:
 
 - `W20-E1-S4-T1` (done) Update generated live runtime config so OpenCode has an explicit timeout profile: `timeout_seconds = 1200`, `idea = 1500`, `research = 1500`, `plan = 1500`, `review-spec = 1500`, `tasklist = 1800`, `implement = 1800`, `review = 1800`, and `qa = 1800`.
 - `W20-E1-S4-T2` (done) Rerun `AIDD-LIVE-005` on OpenCode after the timeout-profile fix and record run id, verdict, quality gate, first failure boundary, and bundle path.
-- `W20-E1-S4-T3` (done; not applicable) Rerun `AIDD-LIVE-005` on canonical Codex only if OpenCode remains provider/runtime timeout blocked without an AIDD-owned defect.
+- `W20-E1-S4-T3` (done) Disposition: not applicable. Rerun `AIDD-LIVE-005` on canonical Codex only if OpenCode remains provider/runtime timeout blocked without an AIDD-owned defect.
 
 Evidence:
 
@@ -7067,7 +7070,7 @@ Local tasks:
   - Scope: local UI command options, server options, and setup-mode routing.
   - Verification: CLI UI tests prove no-work-item launch serves setup mode and existing
     `--work-item` launch still opens the command center.
-- `W27-E2-S1-T2` (done; superseded) Add an explicit onboarding launcher only after the contract preserves bare
+- `W27-E2-S1-T2` (done) Disposition: superseded. Add an explicit onboarding launcher only after the contract preserves bare
   `aidd`, `aidd --help`, and existing subcommand behavior.
   - Decision: no separate launcher is needed for the accepted path. `aidd ui` without
     `--work-item` is the supported UI-first setup entrypoint, while bare `aidd` and
@@ -7213,7 +7216,7 @@ Local tasks:
   - Scope: onboarding UI and project-set config/write path.
   - Verification: tests cover stable ids, duplicate ids, duplicate roots, missing roots,
     parent escapes, symlink escapes, and `project-set.md` context persistence.
-- `W27-E4-S1-T2` (done; superseded) Add a recent-project switcher as noncanonical UI cache while keeping
+- `W27-E4-S1-T2` (done) Disposition: superseded. Add a recent-project switcher as noncanonical UI cache while keeping
   each active workflow, job, and `.aidd` workspace scoped to one selected project.
   - Decision: recent unrelated project switching remains deferred. The shipped UI keeps
     one active selected project/workspace per process and uses project-set declarations
@@ -7442,7 +7445,7 @@ Local tasks:
   - Verification: smoke notes show terminal job cleanup, real timeline milestones,
     source diff separated from `.aidd` artifacts, parsed review/QA summaries, stale
     downstream badges, and explicit rerun of `review -> qa`.
-- `W28-E3-S1-T2` (done; superseded) Fix the first confirmed source-only operator-control-center defect from
+- `W28-E3-S1-T2` (done) Disposition: superseded. Fix the first confirmed source-only operator-control-center defect from
   the W28 smoke.
   - Decision: the W28 source smoke and focused deterministic checks found no source-only
     operator-control-center defect requiring a fix task.
@@ -7712,7 +7715,7 @@ Local tasks:
   - Scope: manual/browser evidence outside generated source artifacts.
   - Verification: evidence includes onboarding, command center, logs/timeline, artifacts,
     implement diff, review findings, QA verdict, remediation, and stale downstream states.
-- `W29-E2-S1-T4` (done; superseded) Convert the first repeatable browser UX defect into a targeted
+- `W29-E2-S1-T4` (done) Disposition: superseded. Convert the first repeatable browser UX defect into a targeted
   fix task after evidence exists.
   - Scope: planning documents only.
   - Verification: superseded for this evidence pass because the Manual+Browser smoke found
@@ -8153,7 +8156,7 @@ Dependencies:
 
 Local tasks:
 
-- `W30-E3-S1-T1` (done; superseded by accepted release evidence) Close the stale
+- `W30-E3-S1-T1` (done) Disposition: superseded by accepted release evidence. Close the stale
   `v0.1.0a9` release-prep blocker without creating a new release branch, tag, draft
   release, or PyPI publish.
   - Scope: planning documentation only.
@@ -8235,13 +8238,13 @@ Dependencies:
 
 Local tasks:
 
-- `W31-E1-S1-T1` Define the integrated operator workbench information architecture from
+- `W31-E1-S1-T1` (done) Define the integrated operator workbench information architecture from
   `13-integrated-operator-workbench.png`.
   - Scope: architecture documentation only.
   - Verification: docs name the required hierarchy: project/work-item context, one
     run-global next action, document workbench, timeline/log diagnostics, and guided
     recovery cards.
-- `W31-E1-S1-T2` Update the local-project UI checklist for the redesigned workbench
+- `W31-E1-S1-T2` (done) Update the local-project UI checklist for the redesigned workbench
   surfaces.
   - Scope: E2E documentation only.
   - Verification: checklist covers Project Home, Work Item Console, Document Workbench,
@@ -8279,12 +8282,12 @@ Dependencies:
 
 Local tasks:
 
-- `W31-E2-S1-T1` Expose a project home read model for selected project root, `.aidd`
+- `W31-E2-S1-T1` (done) Expose a project home read model for selected project root, `.aidd`
   root, discovered work items, latest run, stage progress, blockers, and terminal state.
   - Scope: core read model only.
   - Verification: core tests cover empty project, multiple work items, blocked run,
     completed run, and stale/missing run metadata.
-- `W31-E2-S1-T2` Add private UI endpoints for project home and work-item resume context.
+- `W31-E2-S1-T2` (done) Add private UI endpoints for project home and work-item resume context.
   - Scope: CLI UI API only.
   - Verification: CLI tests prove endpoint payload shape, project scoping, missing
     workspace behavior, and no cross-project state mixing.
@@ -8315,12 +8318,12 @@ Dependencies:
 
 Local tasks:
 
-- `W31-E2-S2-T1` Render the Project Home and Work Item Board shell from the project home
+- `W31-E2-S2-T1` (done) Render the Project Home and Work Item Board shell from the project home
   endpoint.
   - Scope: packaged static UI assets only.
   - Verification: static UI tests prove work-item cards, status groups, latest run chips,
     resume actions, and empty states render with escaped dynamic values.
-- `W31-E2-S2-T2` Replace raw project-set JSON onboarding with a structured project-root
+- `W31-E2-S2-T2` (done) Replace raw project-set JSON onboarding with a structured project-root
   editor.
   - Scope: packaged static UI assets only.
   - Verification: static UI tests prove add/remove root rows, id/root/role fields,
@@ -8356,17 +8359,17 @@ Dependencies:
 
 Local tasks:
 
-- `W31-E3-S1-T1` Fix first-run Next Action copy when a runtime is already selected and
+- `W31-E3-S1-T1` (done) Fix first-run Next Action copy when a runtime is already selected and
   ready.
   - Scope: packaged static UI assets only.
   - Verification: static/UI tests prove selected-ready runtime shows runnable copy rather
     than `Choose a runtime before starting the workflow`.
-- `W31-E3-S1-T2` Render a primary run-global Next Action strip above the selected-stage
+- `W31-E3-S1-T2` (done) Render a primary run-global Next Action strip above the selected-stage
   workbench.
   - Scope: packaged static UI assets only.
   - Verification: static tests prove the strip renders one primary action, demotes
     duplicate run buttons, and preserves disabled/runtime-required states.
-- `W31-E3-S1-T3` Reorder the compact viewport so Next Action appears before logs,
+- `W31-E3-S1-T3` (done) Reorder the compact viewport so Next Action appears before logs,
   artifacts, and secondary evidence.
   - Scope: packaged static UI CSS/assets only.
   - Verification: static responsive tests and manual browser checklist prove primary
@@ -8403,12 +8406,12 @@ Dependencies:
 
 Local tasks:
 
-- `W31-E4-S1-T1` Define artifact categories for canonical stage documents, runtime
+- `W31-E4-S1-T1` (done) Define artifact categories for canonical stage documents, runtime
   inputs, validation evidence, runtime evidence, project evidence, and lineage evidence.
   - Scope: core artifact read model only.
   - Verification: core tests prove category, stage, attempt, canonical/latest, stale, and
     source/generated flags for representative artifacts.
-- `W31-E4-S1-T2` Expose workbench document metadata for preview/source/diff selection
+- `W31-E4-S1-T2` (done) Expose workbench document metadata for preview/source/diff selection
   without arbitrary path reads.
   - Scope: core document workbench read model only.
   - Verification: core tests cover known document keys, missing documents, large
@@ -8439,12 +8442,12 @@ Dependencies:
 
 Local tasks:
 
-- `W31-E4-S2-T1` Render the central Document Workbench with category tree and selected
+- `W31-E4-S2-T1` (done) Render the central Document Workbench with category tree and selected
   Markdown preview/source/diff.
   - Scope: packaged static UI assets only.
   - Verification: static tests prove category groups, selected document state, preview
     and source controls, diff mode, truncation notices, and empty states.
-- `W31-E4-S2-T2` Render document contract and validation context beside the selected
+- `W31-E4-S2-T2` (done) Render document contract and validation context beside the selected
   artifact.
   - Scope: packaged static UI assets only.
   - Verification: static tests prove required document status, validator counts,
@@ -8480,12 +8483,12 @@ Dependencies:
 
 Local tasks:
 
-- `W31-E5-S1-T1` Expose the first decisive failure signal from runtime exit metadata,
+- `W31-E5-S1-T1` (done) Expose the first decisive failure signal from runtime exit metadata,
   validator reports, blocking questions, repair exhaustion, and stopped events.
   - Scope: core dashboard/timeline read models only.
   - Verification: core tests cover runtime non-zero exit, timeout/provider error,
     validation failure, blocking questions, repair exhausted, and explicit stop.
-- `W31-E5-S1-T2` Convert runtime and configuration failures into visible blockers and
+- `W31-E5-S1-T2` (done) Convert runtime and configuration failures into visible blockers and
   recovery-oriented next actions.
   - Scope: core dashboard next-action/blocker read model only.
   - Verification: core tests prove failed runtime attempts do not show `Blockers 0` while
@@ -8519,16 +8522,16 @@ Dependencies:
 
 Local tasks:
 
-- `W31-E5-S2-T1` Render the Run Diagnostics panel with pipeline, attempts, repairs,
+- `W31-E5-S2-T1` (done) Render the Run Diagnostics panel with pipeline, attempts, repairs,
   question markers, and first-failure summary.
   - Scope: packaged static UI assets only.
   - Verification: static tests prove timeline nodes, attempt markers, repair markers,
     question markers, first-failure callout, and empty states render safely.
-- `W31-E5-S2-T2` Split logs into Summary, Timeline, and Raw Runtime Log views.
+- `W31-E5-S2-T2` (done) Split logs into Summary, Timeline, and Raw Runtime Log views.
   - Scope: packaged static UI assets only.
   - Verification: static/UI tests prove raw stdout/stderr/system filters, truncation
     notices, saved-log fallback, and summary/timeline navigation.
-- `W31-E5-S2-T3` Render Recovery Assistant cards for questions, validation failures,
+- `W31-E5-S2-T3` (done) Render Recovery Assistant cards for questions, validation failures,
   repair, request change, and remediation.
   - Scope: packaged static UI assets only.
   - Verification: static/UI tests prove answer, rerun, request change, repair, and
@@ -8566,18 +8569,18 @@ Dependencies:
 
 Local tasks:
 
-- `W31-E6-S1-T1` Render contextual navigation rules for stage-specific tabs and
+- `W31-E6-S1-T1` (done) Render contextual navigation rules for stage-specific tabs and
   secondary evidence surfaces.
   - Scope: packaged static UI assets only.
   - Verification: static tests prove implement/review/QA tabs appear only when relevant
     while Documents, Logs, Timeline, and Recovery remain reachable.
-- `W31-E6-S1-T2` Add service and static regression coverage for the integrated workbench
+- `W31-E6-S1-T2` (done) Add service and static regression coverage for the integrated workbench
   hierarchy.
   - Scope: UI tests only.
   - Verification: tests prove Project Home, Next Action strip, Document Workbench,
     Run Diagnostics, Recovery Assistant, and Evidence/Logs drill-down render from seeded
     workspaces.
-- `W31-E6-S1-T3` Record a deterministic browser smoke for the redesigned workbench.
+- `W31-E6-S1-T3` (done) Record a deterministic browser smoke for the redesigned workbench.
   - Scope: manual browser evidence outside the repository plus checklist note.
   - Verification: evidence records clean onboarding, project/work-item selection,
     selected-stage run, document workbench, diagnostics, recovery, raw logs, compact
@@ -8828,7 +8831,7 @@ Sync notes:
 
 ---
 
-## Wave 34 — codebase audit remediation (`planned`)
+## Wave 34 — codebase audit remediation (`done`)
 
 Goal: remediate the confirmed correctness, reliability, compatibility, testability,
 maintainability, and defensive-boundary findings in
@@ -9632,7 +9635,7 @@ Exit evidence:
 - the automated dependency queue contains only maintained surfaces and its compatible
   updates have current verification evidence.
 
-### Epic W34-E7 — defensive local trust boundaries (`planned`)
+### Epic W34-E7 — defensive local trust boundaries (`done`)
 Linked stories: `US-01`, `US-03`, `US-07`, `US-08`, `US-10`, `US-12`
 
 #### Slice W34-E7-S1 — typed runtime operator policy (`done`)
@@ -9663,7 +9666,7 @@ Exit evidence:
 - broadly capable or unknown operations cannot receive permissive approval from lexical
   inference alone.
 
-#### Slice W34-E7-S2 — shared identifier containment (`planned`)
+#### Slice W34-E7-S2 — shared identifier containment (`done`)
 Goal: make every user-controlled identifier resolve to one contained component before
 the first write.
 
@@ -9684,7 +9687,7 @@ Local tasks:
   - Scope: core workspace/work-item persisted paths only.
   - Verification: every workspace/work-item write-path family passes the shared
     containment matrix.
-- `W34-E7-S2-T3` Adopt the shared boundary for scenario, eval-run, and result-bundle
+- `W34-E7-S2-T3` (done) Adopt the shared boundary for scenario, eval-run, and result-bundle
   paths. [`SEC-03`]
   - Scope: harness and eval persisted paths.
   - Verification: every harness/bundle write-path family passes the same containment
@@ -9705,7 +9708,7 @@ Exit evidence:
 
 - core and harness identifiers share one fail-closed containment contract.
 
-#### Slice W34-E7-S3 — fail-closed safety configuration (`planned`)
+#### Slice W34-E7-S3 — fail-closed safety configuration (`done`)
 Goal: reject ambiguous or unknown safety-sensitive configuration before runtime
 execution.
 
@@ -9715,7 +9718,7 @@ Dependencies:
 
 Local tasks:
 
-- `W34-E7-S3-T1` Distinguish missing from blank values, validate known safety keys, and
+- `W34-E7-S3-T1` (done) Distinguish missing from blank values, validate known safety keys, and
   reject unknown or malformed safety fields. [`SEC-04`]
   - Scope: configuration loading and validation.
   - Verification: a defensive config matrix covers absent defaults, blank values,
@@ -9725,7 +9728,7 @@ Exit evidence:
 
 - malformed safety configuration cannot silently fall back to permissive behavior.
 
-#### Slice W34-E7-S4 — canonical allowed-write-scope boundary (`planned`)
+#### Slice W34-E7-S4 — canonical allowed-write-scope boundary (`done`)
 Goal: make validation, task execution, and Implement Review resolve one authoritative
 scope document with identical path-prefix semantics.
 
@@ -9763,10 +9766,10 @@ Exit evidence:
 - validator, task execution, and Implement Review classify the same canonical parity
   table; no supported consumer reads a stage-local shadow scope or private path grammar.
 
-### Epic W34-E8 — planning and architecture source-of-truth hygiene (`planned`)
+### Epic W34-E8 — planning and architecture source-of-truth hygiene (`done`)
 Linked stories: `US-06`, `US-10`, `US-11`, `US-12`
 
-#### Slice W34-E8-S1 — bounded canonical planning queue (`planned`)
+#### Slice W34-E8-S1 — bounded canonical planning queue (`done`)
 Goal: keep roadmap status authoritative and backlog limited to current execution intent.
 
 Dependencies:
@@ -9780,12 +9783,12 @@ Local tasks:
   - Scope: backlog queue and restoration policy only.
   - Verification: the active queue is preserved, every queued ID resolves in roadmap,
     and backlog contains one current reconciliation note.
-- `W34-E8-S1-T2` Normalize inherited local-task status and historical disposition
+- `W34-E8-S1-T2` (done) Normalize inherited local-task status and historical disposition
   semantics across roadmap and backlog placement. [`PLAN-01`]
   - Scope: planning status model only.
   - Verification: `Next` tasks are explicitly `next`, queued tasks are non-terminal,
     and every marker follows the documented vocabulary.
-- `W34-E8-S1-T3` Replace wave-specific backlog assertions with generic roadmap/backlog
+- `W34-E8-S1-T3` (done) Replace wave-specific backlog assertions with generic roadmap/backlog
   integrity checks. [`PLAN-02`]
   - Scope: planning documentation tests only.
   - Verification: synthetic orphan, duplicate, queued-done, non-local, status-mismatch,
@@ -9796,7 +9799,7 @@ Exit evidence:
 - backlog is a bounded execution queue rather than a second historical source;
 - generic checks enforce ID, status, and dependency invariants for future waves.
 
-#### Slice W34-E8-S2 — stable target-architecture wording (`planned`)
+#### Slice W34-E8-S2 — stable target-architecture wording (`done`)
 Goal: describe implemented ownership and supported behavior without completed-wave or
 unimplemented-mode claims.
 
@@ -9806,12 +9809,12 @@ Dependencies:
 
 Local tasks:
 
-- `W34-E8-S2-T1` Replace stale planned frontend/project-set and completed-wave wording
+- `W34-E8-S2-T1` (done) Replace stale planned frontend/project-set and completed-wave wording
   with stable implemented ownership boundaries. [`ARCH-07`]
   - Scope: target architecture and matching documentation assertions only.
   - Verification: architecture docs describe current ownership without Wave 29 policy
     text or contradicting the planned browser-driver decision.
-- `W34-E8-S2-T2` Reconcile the CLI runtime-log contract with `US-06` and current CLI
+- `W34-E8-S2-T2` (done) Reconcile the CLI runtime-log contract with `US-06` and current CLI
   behavior. [`ARCH-07`]
   - Scope: product/architecture documentation decision only.
   - Verification: docs consistently specify raw logs and structured evidence; any new
@@ -10367,7 +10370,7 @@ Local tasks:
   - Scope: operator frontend architecture only.
   - Verification: the contract names the first-viewport action, maximum compact-header
     footprint, drill-down behavior, and required mobile jobs at every breakpoint.
-- `W36-E1-S1-T3` Replace checklist-only navigation wording with a canonical operator
+- `W36-E1-S1-T3` (next) Replace checklist-only navigation wording with a canonical operator
   state/route matrix.
   - Scope: `docs/e2e/operator-ui-local-project.md` only.
   - Verification: Guided Setup, Inbox, active Studio, reconnecting, Question/Approval
@@ -10391,17 +10394,17 @@ Dependencies:
 
 Local tasks:
 
-- `W36-E1-S2-T1` Define an action-to-service semantics table for setup, create,
+- `W36-E1-S2-T1` (soon) Define an action-to-service semantics table for setup, create,
   resume, follow-up, clone, eval, archive, workflow, and stage actions.
   - Scope: operator frontend architecture only.
   - Verification: every visible selectable action has a distinct outcome and service
     path, or is explicitly removed.
-- `W36-E1-S2-T2` Define truthful UI vocabulary for runtime readiness, authentication
+- `W36-E1-S2-T2` (planned) Define truthful UI vocabulary for runtime readiness, authentication
   evidence, safety/write scope, approval breadth, connectivity, and mutation state.
   - Scope: operator UX vocabulary in architecture docs.
   - Verification: ambiguous normative claims such as undifferentiated `ready` or
     `safe` are absent from the accepted vocabulary.
-- `W36-E1-S2-T3` Define measurable operator UX thresholds and evidence fields.
+- `W36-E1-S2-T3` (planned) Define measurable operator UX thresholds and evidence fields.
   - Scope: local-project UI E2E acceptance docs.
   - Verification: the template records first-action visibility, header footprint,
     touch targets, focus entry, contrast, overflow, reconnect outcome, task completion,
@@ -10428,25 +10431,25 @@ Dependencies:
 
 Local tasks:
 
-- `W36-E2-S1-T1` Select and document the maintained provider-free browser driver and
+- `W36-E2-S1-T1` (parked) Select and document the maintained provider-free browser driver and
   packaging policy for served UI checks.
   - Scope: browser-test architecture and documentation policy only.
   - Verification: the decision preserves the no-Node/Vite product runtime, names the
     executable test command, and replaces the blanket no-browser-driver wording in the
     local-project lane.
-- `W36-E2-S1-T4` Add the selected browser driver as a development-only dependency and
+- `W36-E2-S1-T4` (planned) Add the selected browser driver as a development-only dependency and
   lock its executable smoke command.
   - Dependencies: `W36-E2-S1-T1`.
   - Scope: development dependency, lock, and browser smoke command only.
   - Verification: locked sync and one provider-free packaged-UI launch pass without
     changing runtime package dependencies.
-- `W36-E2-S1-T2` Add a disposable seeded-project launcher and executable browser harness
+- `W36-E2-S1-T2` (planned) Add a disposable seeded-project launcher and executable browser harness
   for packaged UI assets.
   - Dependencies: `W36-E2-S1-T4`.
   - Scope: UI browser test infrastructure.
   - Verification: one command serves a temporary project, opens every required viewport,
     records console/network state, and removes project-local `.aidd/` state on exit.
-- `W36-E2-S1-T3` Add provider-free fixture builders for setup, no-run, running,
+- `W36-E2-S1-T3` (planned) Add provider-free fixture builders for setup, no-run, running,
   question, runtime-failure, approval, QA, remediation, and terminal states.
   - Dependencies: `W36-E2-S1-T2`.
   - Scope: deterministic UI fixtures only.
@@ -10469,17 +10472,17 @@ Dependencies:
 
 Local tasks:
 
-- `W36-E2-S2-T1` Add executable accessible-name, label, focus-order, contrast,
+- `W36-E2-S2-T1` (planned) Add executable accessible-name, label, focus-order, contrast,
   target-size, and reduced-motion assertions.
   - Scope: browser assertion helpers.
   - Verification: one intentionally invalid fixture fails each accessibility rule with
     the owning selector and measured value.
-- `W36-E2-S2-T2` Add executable sticky-header, primary-action, clipping, overlap,
+- `W36-E2-S2-T2` (planned) Add executable sticky-header, primary-action, clipping, overlap,
   nested-scroll, and horizontal-overflow assertions.
   - Scope: browser geometry assertions.
   - Verification: intentionally bad header, offscreen CTA, clipped label, scroll-trap,
     and overflow fixtures fail at the expected viewport.
-- `W36-E2-S2-T3` Add deterministic screenshot and DOM-measure evidence output.
+- `W36-E2-S2-T3` (planned) Add deterministic screenshot and DOM-measure evidence output.
   - Scope: browser evidence writer.
   - Verification: each run produces bounded viewport metadata, screenshot paths,
     console/network summaries, accessibility results, and cleanup status.
@@ -10501,26 +10504,26 @@ Dependencies:
 
 Local tasks:
 
-- `W36-E2-S3-T1` Extract shared non-next-flow dashboard loading, context selection, and
+- `W36-E2-S3-T1` (parked) Extract shared non-next-flow dashboard loading, context selection, and
   mutation dispatch from legacy render ownership; next-flow splitting remains owned by
   `W34-E3-S4-T4` until that task closes.
   - Scope: packaged browser state/action seam only.
   - Verification: legacy fixtures produce equivalent requests and durable readback through
     the shared seam before any Studio renderer is enabled.
-- `W36-E2-S3-T2` Add a temporary browser-only `ui=studio|legacy` presentation selector while
+- `W36-E2-S3-T2` (planned) Add a temporary browser-only `ui=studio|legacy` presentation selector while
   keeping `/`, packaged asset URLs, `aidd ui`, and action endpoints stable.
   - Scope: browser bootstrap and renderer selection only.
   - Verification: an executable truth table covers `missing | studio | legacy` against
     `legacy_only | candidate | parity_closed`: before cutover missing uses legacy; `studio`
     renders candidate or closed Studio surfaces and falls back only for `legacy_only`; `legacy`
     forces every retained rollback renderer; invalid follows the current missing-value rule.
-- `W36-E2-S3-T3` Add a per-surface parity manifest with owning slice, rollout state
+- `W36-E2-S3-T3` (planned) Add a per-surface parity manifest with owning slice, rollout state
   (`legacy_only | candidate | parity_closed`), rollback renderer, required fixture, browser
   journey, and legacy-removal gate.
   - Scope: packaged-browser migration metadata and tests.
   - Verification: every declared surface has exactly one owner and no surface can switch
     default before its required journey passes.
-- `W36-E2-S3-T4` Make the parity manifest drive per-surface renderer resolution so migrated
+- `W36-E2-S3-T4` (planned) Make the parity manifest drive per-surface renderer resolution so migrated
   Studio surfaces and unmigrated legacy fallbacks can coexist inside either bootstrap mode.
   - Scope: browser renderer resolver only.
   - Verification: mixed-state fixtures implement the selector/parity truth table, retain one
@@ -10550,17 +10553,17 @@ Dependencies:
 
 Local tasks:
 
-- `W36-E3-S1-T1` Add semantic typography, spacing, radius, elevation, control-size,
+- `W36-E3-S1-T1` (parked) Add semantic typography, spacing, radius, elevation, control-size,
   status, focus, and motion tokens.
   - Scope: `operator-tokens.css` only.
   - Verification: token inventory tests cover every accepted role and enforce a bounded
     raw-value budget outside the token layer.
-- `W36-E3-S1-T2` Replace duplicate status and surface palettes with semantic color
+- `W36-E3-S1-T2` (planned) Replace duplicate status and surface palettes with semantic color
   roles.
   - Scope: packaged CSS color consumption.
   - Verification: computed-style fixtures preserve state meaning and meet accepted
     contrast thresholds.
-- `W36-E3-S1-T3` Define compact desktop and touch mobile density modes from shared
+- `W36-E3-S1-T3` (planned) Define compact desktop and touch mobile density modes from shared
   control tokens.
   - Scope: token and responsive density rules.
   - Verification: measured controls meet the compact desktop contract and the `44px`
@@ -10581,17 +10584,17 @@ Dependencies:
 
 Local tasks:
 
-- `W36-E3-S2-T1` Normalize button, text-input, select, textarea, and checkbox anatomy
+- `W36-E3-S2-T1` (planned) Normalize button, text-input, select, textarea, and checkbox anatomy
   and typography.
   - Scope: base control CSS.
   - Verification: onboarding, question, intervention, comparison, and next-flow forms
     share computed height, font, border, radius, and focus roles.
-- `W36-E3-S2-T2` Add shared hover, active, focus-visible, disabled, invalid, pending,
+- `W36-E3-S2-T2` (planned) Add shared hover, active, focus-visible, disabled, invalid, pending,
   selected, and loading states.
   - Scope: interactive control states.
   - Verification: one browser fixture exercises every state with pointer, keyboard,
     and touch-density assertions.
-- `W36-E3-S2-T3` Normalize segmented filters, radio-like selectors, clickable rows,
+- `W36-E3-S2-T3` (planned) Normalize segmented filters, radio-like selectors, clickable rows,
   and pressed/selected ARIA state.
   - Scope: composite browser controls.
   - Verification: log filters, viewer modes, runtime cards, artifact rows, and evidence
@@ -10613,30 +10616,30 @@ Dependencies:
 
 Local tasks:
 
-- `W36-E3-S3-T1` Implement the shared Decision Bar and Status Marker anatomy.
+- `W36-E3-S3-T1` (planned) Implement the shared Decision Bar and Status Marker anatomy.
   - Scope: packaged decision-surface primitives only.
   - Verification: action, pending, blocked, complete, stale, and no-action fixtures retain one
     primary slot plus non-color status text without owning surface-specific policy.
-- `W36-E3-S3-T2` Consolidate empty, loading, error, reconnecting, and unavailable
+- `W36-E3-S3-T2` (planned) Consolidate empty, loading, error, reconnecting, and unavailable
   surfaces with local recovery actions.
   - Scope: packaged state-surface primitives.
   - Verification: every state exposes a title, consequence, recovery action when
     possible, and correct live-region or busy semantics.
-- `W36-E3-S3-T3` Establish the editorial hierarchy for Document Canvas, conditional
+- `W36-E3-S3-T3` (planned) Establish the editorial hierarchy for Document Canvas, conditional
   Evidence Inspector, and History without an equal-weight card wall.
   - Scope: panel/card layout classes.
   - Verification: rendered fixtures keep one framed primary surface per hierarchy level
     and preserve clear primary/supporting visual weight.
-- `W36-E3-S3-T4` Implement the shared Inbox Item anatomy without eligibility or priority
+- `W36-E3-S3-T4` (planned) Implement the shared Inbox Item anatomy without eligibility or priority
   logic in the browser.
   - Scope: packaged Inbox item primitive only.
   - Verification: blocking, running, ready, terminal, and malformed fixtures render the
     core/service-provided route and action without recomputing either.
-- `W36-E3-S3-T5` Implement the shared Guided Step anatomy.
+- `W36-E3-S3-T5` (planned) Implement the shared Guided Step anatomy.
   - Scope: packaged Guided Delivery primitive only.
   - Verification: current, complete, invalid, optional, and disabled step fixtures retain one
     explanation, input group, primary action, Back action, and advanced disclosure.
-- `W36-E3-S3-T6` Implement the shared Recovery Summary anatomy.
+- `W36-E3-S3-T6` (planned) Implement the shared Recovery Summary anatomy.
   - Scope: packaged Recovery primitive only.
   - Verification: question, approval, runtime, validation, intervention, and quality-gate
     fixtures retain one decisive failure, one evidence path, and one primary recovery slot.
@@ -10658,17 +10661,17 @@ Dependencies:
 
 Local tasks:
 
-- `W36-E3-S4-T1` Add a skip-to-current-decision path and deterministic focus entry/return for
+- `W36-E3-S4-T1` (planned) Add a skip-to-current-decision path and deterministic focus entry/return for
   top-level modes and detail surfaces.
   - Scope: shell markup and focus controller.
   - Verification: keyboard-only traversal reaches the primary action before maintenance
     controls and returns focus after dialogs, drill-downs, and recovery actions.
-- `W36-E3-S4-T2` Fix stage accessible names and dynamic onboarding/form label
+- `W36-E3-S4-T2` (planned) Fix stage accessible names and dynamic onboarding/form label
   associations.
   - Scope: rendered accessibility markup.
   - Verification: all eight stage buttons pass label-content-name matching and every
     generated form field has a stable id, name, and associated label.
-- `W36-E3-S4-T3` Raise borderline contrast, readable minimums, and tabular numeric
+- `W36-E3-S4-T3` (planned) Raise borderline contrast, readable minimums, and tabular numeric
   treatment.
   - Scope: typography and color CSS.
   - Verification: automated contrast checks pass and timers, attempts, counts, and
@@ -10697,38 +10700,38 @@ Dependencies:
 
 Local tasks:
 
-- `W36-E4-S1-T1` Add an explicit Project -> Work item -> Runtime -> Review/Launch
+- `W36-E4-S1-T1` (parked) Add an explicit Project -> Work item -> Runtime -> Review/Launch
   onboarding state machine with deterministic Back and Continue transitions.
   - Scope: `operator-onboarding.js` state controller.
   - Verification: a transition table covers validation success/failure, create, resume,
     runtime selection, backward navigation, and launch readiness.
-- `W36-E4-S1-T2` Render Create and Resume as sibling work-item branches and allow
+- `W36-E4-S1-T2` (planned) Render Create and Resume as sibling work-item branches and allow
   inspection before runtime selection.
   - Scope: onboarding work-item step.
   - Verification: resume opens existing context without a runtime or launch request,
     while mutation actions remain runtime-gated.
-- `W36-E4-S1-T3` Move project-set and configuration details behind an Advanced
+- `W36-E4-S1-T3` (planned) Move project-set and configuration details behind an Advanced
   disclosure.
   - Scope: onboarding project/work-item layout.
   - Verification: create or resume remains inside the first setup viewport at `390x844`
     and `1440x900`, while advanced project-set validation remains reachable.
-- `W36-E4-S1-T4` Remove no-run mode cards that do not change execution semantics and
+- `W36-E4-S1-T4` (planned) Remove no-run mode cards that do not change execution semantics and
   leave terminal follow-up, clone, eval, and archive presentation to `W36-E5-S9`.
   - Scope: Guided Setup presentation only; the legacy renderer remains available for rollback.
   - Verification: the setup action-to-service matrix proves each remaining selector has a
     distinct endpoint/outcome and no terminal disposition leaks into first-run setup.
-- `W36-E4-S1-T5` Add the Guided Delivery preference and contextual explanation card over
+- `W36-E4-S1-T5` (planned) Add the Guided Delivery preference and contextual explanation card over
   the same selected context and service actions used by Studio.
   - Scope: Guided Delivery browser presentation only.
   - Verification: toggling Guided Delivery preserves project, work item, run, stage,
     runtime, request payload, and durable result for the same action.
-- `W36-E4-S1-T6` Bind the new Review & Launch control to the shared mutation dispatcher only
+- `W36-E4-S1-T6` (planned) Bind the new Review & Launch control to the shared mutation dispatcher only
   after task-aware workflow entrypoint integrity is restored.
   - Dependencies: `W35-E2-S8`, `W36-E6-S4-T1`.
   - Scope: Guided Setup launch binding only.
   - Verification: Guided and legacy launch controls dispatch an identical task-aware request,
     duplicate input creates at most one job, and durable readback selects one result.
-- `W36-E4-S1-T7` Promote the verified Guided Setup candidate to `parity_closed` while retaining
+- `W36-E4-S1-T7` (planned) Promote the verified Guided Setup candidate to `parity_closed` while retaining
   legacy setup for both missing/default and explicit rollback modes until cutover.
   - Dependencies: `W36-E4-S1-T6`, `W36-E7-S1-T1`.
   - Scope: Guided Setup parity-manifest entry only.
@@ -10753,17 +10756,17 @@ Dependencies:
 
 Local tasks:
 
-- `W36-E4-S2-T1` Expose binary, execution-command, authentication, and capability
+- `W36-E4-S2-T1` (planned) Expose binary, execution-command, authentication, and capability
   readiness dimensions without inferring unavailable evidence.
   - Scope: core runtime readiness read model.
   - Verification: detected, unavailable, auth-verified, auth-failed, auth-unverified,
     and legacy fixtures produce typed dimensions with compatibility fields.
-- `W36-E4-S2-T2` Project the latest per-runtime launch outcome and timestamp from
+- `W36-E4-S2-T2` (planned) Project the latest per-runtime launch outcome and timestamp from
   canonical attempt evidence.
   - Scope: core operator runtime-history read model.
   - Verification: no-history, success, failure, blocked, cancelled, and legacy attempts
     resolve deterministically without reading outside `.aidd/`.
-- `W36-E4-S2-T3` Render dimensioned readiness, protected write scope, and last-launch
+- `W36-E4-S2-T3` (planned) Render dimensioned readiness, protected write scope, and last-launch
   evidence in Guided Setup and the Studio launch context.
   - Scope: packaged runtime/safety UI.
   - Verification: truth-copy fixtures contain no undifferentiated authentication claim
@@ -10789,13 +10792,13 @@ Dependencies:
 
 Local tasks:
 
-- `W36-E5-S0-T1` Add one core-owned `recommended_outcome` and rationale to the terminal-run
+- `W36-E5-S0-T1` (parked) Add one core-owned `recommended_outcome` and rationale to the terminal-run
   handoff read model without removing the complete allowed-outcomes list.
   - Scope: core terminal handoff recommendation policy only.
   - Verification: clean fresh terminal QA recommends Create New Work Item; fresh failed,
     blocked, or warning QA recommends Start Follow-up Flow; missing, stale, and nonterminal QA
     produce no Flow Complete recommendation.
-- `W36-E5-S0-T2` Expose the recommendation through the existing additive terminal-handoff API
+- `W36-E5-S0-T2` (planned) Expose the recommendation through the existing additive terminal-handoff API
   contract with explicit legacy fallback semantics.
   - Scope: local UI terminal-handoff response contract only.
   - Verification: endpoint fixtures preserve allowed outcomes and source identity while old
@@ -10819,27 +10822,27 @@ Dependencies:
 
 Local tasks:
 
-- `W36-E5-S1-T1` Add a visibility policy that hides a zero-value Evidence Inspector
+- `W36-E5-S1-T1` (parked) Add a visibility policy that hides a zero-value Evidence Inspector
   and keeps secondary Filmstrip/log evidence collapsed until requested.
   - Scope: shell rendering policy.
   - Verification: no-run, healthy running, blocked, terminal, and history fixtures show
     only panels with current operator value.
-- `W36-E5-S1-T2` Consolidate duplicate recovery summaries into one Recovery Summary
+- `W36-E5-S1-T2` (planned) Consolidate duplicate recovery summaries into one Recovery Summary
   inside the Studio Decision Bar with one Evidence link.
   - Scope: recovery rendering.
   - Verification: every blocker fixture exposes one recovery landmark, one primary
     action, and one supporting evidence path.
-- `W36-E5-S1-T3` Implement one policy-free primary-action slot for vertical surfaces to bind
+- `W36-E5-S1-T3` (planned) Implement one policy-free primary-action slot for vertical surfaces to bind
   to their own core/service-provided decision and compact metadata.
   - Scope: shared Decision Bar slot composition only.
   - Verification: surface fixtures can bind one action or an explicit no-action state, while
     the shared layer contains no eligibility, priority, or terminal-recommendation policy.
-- `W36-E5-S1-T4` Move Refresh, Open `.aidd`, Stop server, and other maintenance commands
+- `W36-E5-S1-T4` (planned) Move Refresh, Open `.aidd`, Stop server, and other maintenance commands
   into a labelled overflow surface.
   - Scope: shell maintenance controls.
   - Verification: service commands remain keyboard-accessible but no longer precede the
     primary operator task in focus or visual order.
-- `W36-E5-S1-T5` Establish one Studio content scroll owner so the inspector, drawers,
+- `W36-E5-S1-T5` (planned) Establish one Studio content scroll owner so the inspector, drawers,
   and Filmstrip create no nested scroll traps on supported desktop viewports.
   - Scope: desktop shell layout.
   - Verification: `1280x900` and `1440x900` fixtures expose one primary vertical scroll
@@ -10866,23 +10869,23 @@ Dependencies:
 
 Local tasks:
 
-- `W36-E5-S2-T1` Replace the measured `275px` sticky mobile header with a compact
+- `W36-E5-S2-T1` (parked) Replace the measured `275px` sticky mobile header with a compact
   context/status bar and maintenance overflow.
   - Scope: topbar markup and responsive CSS.
   - Verification: `320x568` and `390x844` fixtures meet the accepted header budget and
     never cover the mode tabs or primary action.
-- `W36-E5-S2-T2` Keep the current Decision Bar or Inbox action in the first mobile
+- `W36-E5-S2-T2` (planned) Keep the current Decision Bar or Inbox action in the first mobile
   viewport and move dense evidence to explicit drill-down.
   - Scope: responsive workbench ordering.
   - Verification: no-run Inbox, post-stage, and active Studio fixtures expose the accepted
     primary decision without initial scrolling; vertical Recovery/History/terminal slices own
     their state-specific mobile parity.
-- `W36-E5-S2-T3` Replace repeated per-body-mode ordering selectors with one mobile
+- `W36-E5-S2-T3` (planned) Replace repeated per-body-mode ordering selectors with one mobile
   priority layout contract: context -> decision -> document -> evidence/history drill-down.
   - Scope: responsive shell state classes.
   - Verification: every declared operator state maps to the same context -> decision ->
     document -> evidence/history drill-down ordering rule.
-- `W36-E5-S2-T4` Keep compact stage navigation and primary labels legible at `320px` and
+- `W36-E5-S2-T4` (planned) Keep compact stage navigation and primary labels legible at `320px` and
   `390px` without rendering the desktop stage rail as a tiny grid.
   - Scope: responsive stage rail and label wrapping.
   - Verification: shared touch targets pass, no active stage or primary label clips,
@@ -10910,28 +10913,28 @@ Dependencies:
 
 Local tasks:
 
-- `W36-E5-S3-T1` Implement a typed core-owned durable Inbox projection with Needs your
+- `W36-E5-S3-T1` (parked) Implement a typed core-owned durable Inbox projection with Needs your
   decision, Ready to continue, and Flow complete sections.
   - Scope: core operator frontend read models only.
   - Verification: provider-free fixtures prove deterministic priority, exact work-item/run/stage
     references, one core-approved action, and no frontend-derived eligibility or live-job claim.
-- `W36-E5-S3-T2` Add typed work-item/run/stage correlation to bounded UI job summaries and
+- `W36-E5-S3-T2` (planned) Add typed work-item/run/stage correlation to bounded UI job summaries and
   compose the project-local Running now overlay without changing durable Inbox eligibility.
   - Dependencies: `W34-E3-S3-T1`.
   - Scope: CLI UI job summary and Inbox composition service only.
   - Verification: zero, one, concurrent, terminal, evicted, and legacy job fixtures produce a
     bounded Running now section whose references agree with durable run state.
-- `W36-E5-S3-T3` Expose the composed Inbox through an additive local UI read endpoint with
+- `W36-E5-S3-T3` (planned) Expose the composed Inbox through an additive local UI read endpoint with
   bounded project-local data.
   - Scope: CLI UI read route and response contract only.
   - Verification: endpoint tests cover empty, blocking, running, ready, terminal, legacy, and
     malformed evidence without arbitrary path access.
-- `W36-E5-S3-T4` Render Inbox sections and route each item to the exact Studio context through
+- `W36-E5-S3-T4` (planned) Render Inbox sections and route each item to the exact Studio context through
   the shared action/state seam.
   - Scope: packaged Inbox renderer only.
   - Verification: one browser fixture per section opens the expected work item, run, stage,
     artifact/evidence detail, and primary action.
-- `W36-E5-S3-T5` Promote the verified Inbox candidate to `parity_closed` while retaining legacy
+- `W36-E5-S3-T5` (planned) Promote the verified Inbox candidate to `parity_closed` while retaining legacy
   Project Home for both missing/default and explicit rollback modes until cutover.
   - Dependencies: `W36-E7-S1-T12`.
   - Scope: Inbox parity-manifest entry only.
@@ -10960,28 +10963,28 @@ Dependencies:
 
 Local tasks:
 
-- `W36-E5-S4-T1` Compose the active Studio view from shared mode navigation, compact context
+- `W36-E5-S4-T1` (parked) Compose the active Studio view from shared mode navigation, compact context
   bar, canonical stage navigation, and Decision Bar slots.
   - Scope: packaged active-Studio markup and renderer only.
   - Verification: no-run, active, blocked, and terminal fixtures preserve context and expose
     exactly one primary action across supported desktop viewports.
-- `W36-E5-S4-T2` Render the read-only Document Canvas with Preview, Source, and Diff over the
+- `W36-E5-S4-T2` (planned) Render the read-only Document Canvas with Preview, Source, and Diff over the
   existing safe workbench/document endpoints.
   - Scope: packaged document renderer only.
   - Verification: Markdown, source, diff, missing, malformed, and truncated fixtures retain
     semantics, copyability, safe keys, and document-first visual priority.
-- `W36-E5-S4-T3` Render the conditional Evidence Inspector with finding, provenance, related
+- `W36-E5-S4-T3` (planned) Render the conditional Evidence Inspector with finding, provenance, related
   artifact, and exact source-reference variants.
   - Scope: packaged evidence renderer only.
   - Verification: zero-value evidence hides the inspector while validator, provenance,
     implementation, and legacy fixtures show only retained evidence.
-- `W36-E5-S4-T4` Integrate live elapsed time, last-output age, real milestones, silence state,
+- `W36-E5-S4-T4` (planned) Integrate live elapsed time, last-output age, real milestones, silence state,
   and Open live output into Studio without embedding raw logs in the default viewport.
   - Dependencies: `W36-E6-S3`.
   - Scope: active Studio observation renderer only.
   - Verification: running, silent, cancelling, completed, and externally completed jobs show no
     fake progress and agree with persisted runtime evidence.
-- `W36-E5-S4-T5` Promote the verified active-Studio candidate to `parity_closed` while retaining
+- `W36-E5-S4-T5` (planned) Promote the verified active-Studio candidate to `parity_closed` while retaining
   the legacy cockpit/sidebar renderer for missing/default and explicit rollback until cutover.
   - Dependencies: `W36-E7-S1-T2`, `W36-E7-S1-T7`.
   - Scope: active-Studio parity-manifest entry only.
@@ -11007,40 +11010,40 @@ Dependencies:
 
 Local tasks:
 
-- `W36-E5-S5-T1` Render blocking questions with exact QID, resolved/partial/deferred status,
+- `W36-E5-S5-T1` (parked) Render blocking questions with exact QID, resolved/partial/deferred status,
   draft recovery, and answer-and-resume behavior.
   - Scope: question Recovery renderer only.
   - Verification: resolved unblocks, partial/deferred remain blocking when required, failed
     submit preserves the draft, and durable `answers.md` readback wins.
-- `W36-E5-S5-T2` Render Request Change and intervention context as durable stage-scoped input,
+- `W36-E5-S5-T2` (planned) Render Request Change and intervention context as durable stage-scoped input,
   including downstream-success rejection and remediation routing.
   - Scope: intervention Recovery renderer only.
   - Verification: allowed submit creates one operator-request document and blocked intervention
     creates none while preserving the selected stage/run.
-- `W36-E5-S5-T3` Render runtime approval scope, breadth, reason, risk, pending state, session
+- `W36-E5-S5-T3` (planned) Render runtime approval scope, breadth, reason, risk, pending state, session
   confirmation, and durable winning decision separately from product questions.
   - Scope: approval Recovery renderer only.
   - Verification: allow/deny/cancel/conflict fixtures agree with the compare-and-set audit row and
     no broad approval posts before confirmation.
-- `W36-E5-S5-T4` Implement the decision-first mobile question and approval layouts with compact
+- `W36-E5-S5-T4` (planned) Implement the decision-first mobile question and approval layouts with compact
   context, 44px controls, and evidence drill-down.
   - Dependencies: `W36-E5-S2`.
   - Scope: human-decision responsive presentation only.
   - Verification: `320x568` and `390x844` keyboard/touch journeys expose the full decision and
     primary submit without horizontal overflow or initial scroll.
-- `W36-E5-S5-T5` Promote the verified question candidate to `parity_closed` while retaining the
+- `W36-E5-S5-T5` (planned) Promote the verified question candidate to `parity_closed` while retaining the
   legacy question renderer for missing/default and explicit rollback.
   - Dependencies: `W36-E7-S1-T6`.
   - Scope: question parity-manifest entry only.
   - Verification: the question fixture closes independently and durable answer/resume behavior
     is equivalent in `ui=studio`, missing/default, and `ui=legacy` modes.
-- `W36-E5-S5-T6` Promote the verified intervention candidate to `parity_closed` while retaining
+- `W36-E5-S5-T6` (planned) Promote the verified intervention candidate to `parity_closed` while retaining
   the legacy intervention renderer for missing/default and explicit rollback.
   - Dependencies: `W36-E7-S1-T10`.
   - Scope: intervention parity-manifest entry only.
   - Verification: allowed and blocked intervention fixtures close independently with identical
     durable request behavior.
-- `W36-E5-S5-T7` Promote the verified approval candidate to `parity_closed` while retaining the
+- `W36-E5-S5-T7` (planned) Promote the verified approval candidate to `parity_closed` while retaining the
   legacy approval renderer for missing/default and explicit rollback.
   - Dependencies: `W36-E7-S1-T11`.
   - Scope: approval parity-manifest entry only.
@@ -11065,33 +11068,33 @@ Dependencies:
 
 Local tasks:
 
-- `W36-E5-S6-T1` Render runtime/provider failure, stopped state, last durable signal, and
+- `W36-E5-S6-T1` (parked) Render runtime/provider failure, stopped state, last durable signal, and
   eligible retry without consuming or implying validation repair budget.
   - Scope: runtime-failure Recovery renderer only.
   - Verification: unavailable executable, authentication, timeout, cancellation, no-progress,
     and legacy fixtures show the typed outcome and correct safe action.
-- `W36-E5-S6-T2` Render transient offline, reconnecting, recovered, expired-job, and manual
+- `W36-E5-S6-T2` (planned) Render transient offline, reconnecting, recovered, expired-job, and manual
   Reconnect states while preserving durable log/artifact access.
   - Scope: connection Recovery renderer only.
   - Verification: cursor-preserving failure/recovery fixtures show no skipped or duplicated
     chunks and never claim runtime termination without server evidence.
-- `W36-E5-S6-T3` Render validation findings with exact document/line/rule/provenance and make
+- `W36-E5-S6-T3` (planned) Render validation findings with exact document/line/rule/provenance and make
   Run Repair primary only when the backend reports repair available.
   - Scope: validation Recovery renderer only.
   - Verification: repair-available, repaired, exhausted, explicit-stop, stale-artifact, and
     malformed-report fixtures choose the correct action and evidence.
-- `W36-E5-S6-T4` Render Request Change as primary after repair exhaustion/explicit stop and keep
+- `W36-E5-S6-T4` (planned) Render Request Change as primary after repair exhaustion/explicit stop and keep
   raw logs/attempt history as secondary drill-down.
   - Scope: repair-exhaustion Recovery renderer only.
   - Verification: no exhausted state exposes an enabled Run Repair and the intervention request
     retains the selected run/stage context.
-- `W36-E5-S6-T5` Implement decision-first mobile runtime and validation Recovery layouts over
+- `W36-E5-S6-T5` (planned) Implement decision-first mobile runtime and validation Recovery layouts over
   the shared compact shell.
   - Dependencies: `W36-E5-S2`.
   - Scope: failure/recovery responsive presentation only.
   - Verification: `320x568` and `390x844` show the typed failure, one eligible recovery action,
     and evidence drill-down without horizontal overflow or initial decision scroll.
-- `W36-E5-S6-T6` Promote the verified runtime/validation candidates to `parity_closed` while
+- `W36-E5-S6-T6` (planned) Promote the verified runtime/validation candidates to `parity_closed` while
   retaining legacy failure cards for missing/default and explicit rollback.
   - Dependencies: `W36-E7-S1-T3`.
   - Scope: runtime/validation parity-manifest entries only.
@@ -11116,27 +11119,27 @@ Dependencies:
 
 Local tasks:
 
-- `W36-E5-S7-T1` Render dependency-ready tasks, task attempts, blocked/failed recovery, and
+- `W36-E5-S7-T1` (parked) Render dependency-ready tasks, task attempts, blocked/failed recovery, and
   aggregate finalization inside Studio from the canonical task read model.
   - Scope: implement task workspace renderer only.
   - Verification: run/resume/fail/recover/finalize fixtures preserve successful tasks and never
     enable Review before successful aggregate finalization.
-- `W36-E5-S7-T2` Render the real repository diff, untracked/deleted files, `.aidd/` separation,
+- `W36-E5-S7-T2` (planned) Render the real repository diff, untracked/deleted files, `.aidd/` separation,
   scope status, and implementation-report claim mismatch in the Document Canvas.
   - Scope: implement evidence renderer only.
   - Verification: repository-diff fixtures match core evidence and use textual added/removed/
     changed meaning in addition to color.
-- `W36-E5-S7-T3` Render structured Review findings and QA verdict, residual risks, known issues,
+- `W36-E5-S7-T3` (planned) Render structured Review findings and QA verdict, residual risks, known issues,
   acceptance ids, and evidence links.
   - Scope: Review/QA quality-gate renderer only.
   - Verification: approval/rejection/not-ready/blocked/missing-evidence fixtures agree with the
     canonical reports and validators.
-- `W36-E5-S7-T4` Render selected remediation to `implement`, pending readback, and explicit
+- `W36-E5-S7-T4` (planned) Render selected remediation to `implement`, pending readback, and explicit
   downstream Review/QA stale rerun.
   - Scope: quality-gate remediation renderer only.
   - Verification: one durable remediation request is created, fresh downstream stages become
     stale, stale QA never becomes terminal, and rerun uses the selected runtime.
-- `W36-E5-S7-T5` Promote the verified implement/Review/QA candidates to `parity_closed` while
+- `W36-E5-S7-T5` (planned) Promote the verified implement/Review/QA candidates to `parity_closed` while
   retaining legacy surfaces for missing/default and explicit rollback.
   - Dependencies: `W36-E7-S1-T4`, `W36-E7-S1-T9`.
   - Scope: task/quality-gate parity-manifest entries only.
@@ -11162,37 +11165,37 @@ Dependencies:
 
 Local tasks:
 
-- `W36-E5-S8-T1` Implement a typed Filmstrip frame projection for stage attempts, task
+- `W36-E5-S8-T1` (parked) Implement a typed Filmstrip frame projection for stage attempts, task
   attempts, and aggregate finalization milestones with events as markers.
   - Scope: core operator timeline/read model only.
   - Verification: normal, repair, intervention, remediation, task, finalization, live, and
     legacy fixtures produce stable frame identity and retain the first decisive failure.
-- `W36-E5-S8-T2` Render the collapsed Studio Filmstrip and expanded History timeline with
+- `W36-E5-S8-T2` (planned) Render the collapsed Studio Filmstrip and expanded History timeline with
   selected artifact/log evidence and Return to live behavior.
   - Scope: packaged Filmstrip/History renderer only.
   - Verification: frame selection, historical auto-follow pause, exact log range, missing
     snapshot, and current-live return behave deterministically.
-- `W36-E5-S8-T3` Render run comparison plus retained prompt, artifact, stage, and validator
+- `W36-E5-S8-T3` (planned) Render run comparison plus retained prompt, artifact, stage, and validator
   deltas.
   - Scope: History comparison renderer only.
   - Verification: Back/reload restores both runs and every displayed delta links to retained
     source evidence or an explicit unavailable-snapshot state.
-- `W36-E5-S8-T4` Render parent, source, and child run lineage without presenting lineage as
+- `W36-E5-S8-T4` (planned) Render parent, source, and child run lineage without presenting lineage as
   mutable workflow state.
   - Scope: History lineage renderer only.
   - Verification: every routable relation resolves through canonical run identity and opening a
     relation leaves both source and target manifests byte-identical.
-- `W36-E5-S8-T5` Render archive state as the append-only overlay owned by `W34-E2-S3-T1`.
+- `W36-E5-S8-T5` (planned) Render archive state as the append-only overlay owned by `W34-E2-S3-T1`.
   - Scope: History archive-state renderer only.
   - Verification: archive inspection changes no completed-run bytes/hashes and all retained
     documents, logs, comparison, and lineage remain inspectable.
-- `W36-E5-S8-T6` Render Filmstrip as a vertical chronological mobile drill-down rather than a
+- `W36-E5-S8-T6` (planned) Render Filmstrip as a vertical chronological mobile drill-down rather than a
   horizontal scroll trap.
   - Dependencies: `W36-E5-S2`.
   - Scope: History responsive presentation only.
   - Verification: `320x568` and `390x844` expose frame status, evidence action, and return path
     without page-level horizontal overflow.
-- `W36-E5-S8-T7` Promote the verified History candidate to `parity_closed` while retaining the
+- `W36-E5-S8-T7` (planned) Promote the verified History candidate to `parity_closed` while retaining the
   legacy timeline/history renderer for missing/default and explicit rollback.
   - Dependencies: `W36-E7-S1-T5`.
   - Scope: History parity-manifest entry only.
@@ -11220,38 +11223,38 @@ Dependencies:
 
 Local tasks:
 
-- `W36-E5-S9-T3` Render immutable Flow Complete evidence, the core recommendation, and Other next
+- `W36-E5-S9-T3` (planned) Render immutable Flow Complete evidence, the core recommendation, and Other next
   actions only for fresh eligible terminal QA.
   - Scope: terminal handoff renderer only.
   - Verification: clean, failed, blocked, and warning fresh terminal fixtures show the exact
     core recommendation; missing, stale, and nonterminal QA do not render Flow Complete.
-- `W36-E5-S9-T4` Render follow-up definition, inherited context, source evidence, preflight, and
+- `W36-E5-S9-T4` (planned) Render follow-up definition, inherited context, source evidence, preflight, and
   launch through the shared draft/mutation seams.
   - Scope: follow-up next-flow renderer only.
   - Verification: Back/reload/failure/retry preserve the follow-up draft, successful launch
     creates one new work-item/run identity, and the source run remains byte-identical.
-- `W36-E5-S9-T5` Render clone definition, inherited context, source evidence, preflight, and
+- `W36-E5-S9-T5` (planned) Render clone definition, inherited context, source evidence, preflight, and
   launch through the shared draft/mutation seams.
   - Scope: clone next-flow renderer only.
   - Verification: Back/reload/failure/retry preserve the clone draft, successful launch creates
     one independent identity, and the source run remains byte-identical.
-- `W36-E5-S9-T6` Render the existing Run Eval / Scenario Batch manual handoff as a non-repair
+- `W36-E5-S9-T6` (planned) Render the existing Run Eval / Scenario Batch manual handoff as a non-repair
   comparison disposition under Other next actions.
   - Scope: terminal eval handoff renderer only; no new mutation endpoint.
   - Verification: the action opens exact source/version/scenario context and operator commands,
     sends no workflow mutation request, and leaves source-run evidence unchanged.
-- `W36-E5-S9-T7` Render Archive Run as an append-only visibility disposition under Other next
+- `W36-E5-S9-T7` (planned) Render Archive Run as an append-only visibility disposition under Other next
   actions.
   - Scope: terminal archive disposition renderer only.
   - Verification: archive writes only the owned overlay and completed documents, artifacts,
     logs, comparison, and lineage remain inspectable.
-- `W36-E5-S9-T8` Render the recommended next decision and Other next actions as a compact mobile
+- `W36-E5-S9-T8` (planned) Render the recommended next decision and Other next actions as a compact mobile
   drill-down over the shared responsive shell.
   - Dependencies: `W36-E5-S2`.
   - Scope: Flow Complete responsive presentation only.
   - Verification: `320x568` and `390x844` show final status, one recommendation, and a reachable
     secondary-outcomes disclosure without horizontal overflow or initial decision scroll.
-- `W36-E5-S9-T9` Promote the verified Flow Complete candidate to `parity_closed` while retaining
+- `W36-E5-S9-T9` (planned) Promote the verified Flow Complete candidate to `parity_closed` while retaining
   the equal-weight legacy action grid/wizard for missing/default and explicit rollback.
   - Dependencies: `W36-E7-S1-T8`.
   - Scope: terminal/next-flow parity-manifest entry only.
@@ -11277,27 +11280,27 @@ Dependencies:
 
 Local tasks:
 
-- `W36-E5-S10-T1` Switch the missing/default presentation selector to Studio after every
+- `W36-E5-S10-T1` (parked) Switch the missing/default presentation selector to Studio after every
   per-surface parity entry is closed while retaining explicit `ui=legacy` rollback.
   - Scope: packaged renderer default only.
   - Verification: the full provider-free browser command passes in default Studio mode and the
     explicit rollback renderer still dispatches identical service actions.
-- `W36-E5-S10-T2` Record one source-installed rollback-window pass while both presentation
+- `W36-E5-S10-T2` (planned) Record one source-installed rollback-window pass while both presentation
   selectors remain supported.
   - Scope: cutover evidence only.
   - Verification: isolated fixture copies prove equivalent endpoint/payload semantics and
     normalized outcomes in default and rollback modes; immutable source-run evidence remains
     byte-identical where the journey contract requires it.
-- `W36-E5-S10-T3` Remove the temporary legacy selector when no accepted journey requires it.
+- `W36-E5-S10-T3` (planned) Remove the temporary legacy selector when no accepted journey requires it.
   - Scope: browser bootstrap selector only.
   - Verification: missing, invalid, and former legacy selector values resolve to Studio without
     changing packaged URLs, service requests, or durable state.
-- `W36-E5-S10-T4` Remove unreferenced legacy render modules, selectors, body-mode ordering,
+- `W36-E5-S10-T4` (planned) Remove unreferenced legacy render modules, selectors, body-mode ordering,
   package resources, and compatibility tests that no longer protect a supported contract.
   - Scope: packaged frontend cleanup only.
   - Verification: exhaustive asset discovery, JavaScript syntax, package-resource, DOM, and
     browser suites pass with no legacy renderer references.
-- `W36-E5-S10-T5` Reconcile operator docs and screenshots to the Studio-only surface after
+- `W36-E5-S10-T5` (planned) Reconcile operator docs and screenshots to the Studio-only surface after
   implementation parity.
   - Scope: README, handbook, local-project E2E, and architecture implementation-status text.
   - Verification: docs consistency finds no current-behavior claim or image that points to the
@@ -11324,17 +11327,17 @@ Dependencies:
 
 Local tasks:
 
-- `W36-E6-S1-T1` Add a URL-state codec for Inbox / Studio / History mode, work item,
+- `W36-E6-S1-T1` (parked) Add a URL-state codec for Inbox / Studio / History mode, work item,
   run, stage, attempt or task-attempt detail, and artifact selection.
   - Scope: packaged browser state module.
   - Verification: round-trip, missing, legacy, stale, and invalid-value cases resolve to
     safe deterministic state.
-- `W36-E6-S1-T2` Wire push, replace, popstate, and reload restoration through the URL
+- `W36-E6-S1-T2` (planned) Wire push, replace, popstate, and reload restoration through the URL
   codec across Inbox, Studio, History, and contextual drawers.
   - Scope: shell navigation controller.
   - Verification: a browser history sequence preserves Logs versus Artifacts, selected
     stage, selected run, and artifact drill-down across Back, Forward, and reload.
-- `W36-E6-S1-T3` Define shared route intents for Inbox work-item, historical-run, parent, and
+- `W36-E6-S1-T3` (planned) Define shared route intents for Inbox work-item, historical-run, parent, and
   child-lineage bindings without owning their vertical renderers.
   - Scope: URL/navigation intent controller only.
   - Verification: E5-owned Inbox and History fixtures bind each visible action to one distinct
@@ -11357,23 +11360,23 @@ Dependencies:
 
 Local tasks:
 
-- `W36-E6-S2-T1` Define the key, retention, and cleanup contract for noncanonical
+- `W36-E6-S2-T1` (parked) Define the key, retention, and cleanup contract for noncanonical
   browser-session drafts.
   - Scope: operator frontend architecture only.
   - Verification: the contract isolates project, work item, run, stage, form, and source
     id and names exact submit/expiry cleanup behavior.
-- `W36-E6-S2-T4` Implement the scoped noncanonical browser-session draft store.
+- `W36-E6-S2-T4` (planned) Implement the scoped noncanonical browser-session draft store.
   - Dependencies: `W36-E6-S2-T1`.
   - Scope: shared packaged JavaScript state utility only.
   - Verification: contract fixtures isolate every key dimension and successful submit
     clears only the owning draft.
-- `W36-E6-S2-T2` Adopt draft restore and leave-warning behavior for question and
+- `W36-E6-S2-T2` (planned) Adopt draft restore and leave-warning behavior for question and
   intervention forms.
   - Dependencies: `W36-E6-S2-T4`.
   - Scope: question/intervention browser modules.
   - Verification: stage/tab switch, reload, failed submit, and successful submit preserve
     or clear the expected draft only.
-- `W36-E6-S2-T3` Adopt draft restore and leave-warning behavior for follow-up and clone
+- `W36-E6-S2-T3` (planned) Adopt draft restore and leave-warning behavior for follow-up and clone
   definition forms.
   - Dependencies: `W36-E6-S2-T4`.
   - Scope: next-flow browser controller.
@@ -11399,17 +11402,17 @@ Dependencies:
 
 Local tasks:
 
-- `W36-E6-S3-T1` Replace terminal-on-error interval polling with a cursor-preserving
+- `W36-E6-S3-T1` (parked) Replace terminal-on-error interval polling with a cursor-preserving
   retry state machine and bounded exponential backoff.
   - Scope: `operator-logs-jobs.js` polling controller.
   - Verification: failure -> retry -> recovery, repeated failure, cancellation, and
     terminal-job sequences produce no duplicate or skipped chunks.
-- `W36-E6-S3-T2` Render offline, reconnecting, recovered, expired-job, and manual
+- `W36-E6-S3-T2` (planned) Render offline, reconnecting, recovered, expired-job, and manual
   Reconnect states.
   - Scope: live connection status surface.
   - Verification: each sequence names whether the runtime may still be running and
     offers the correct local recovery action.
-- `W36-E6-S3-T3` Reconcile active job, dashboard, logs, and selected stage after
+- `W36-E6-S3-T3` (planned) Reconcile active job, dashboard, logs, and selected stage after
   recovery or terminal-job eviction.
   - Scope: browser state reconciliation.
   - Verification: reconnect and eviction fixtures converge on the server-authoritative
@@ -11433,32 +11436,32 @@ Dependencies:
 
 Local tasks:
 
-- `W36-E6-S4-T1` Add a shared keyed client mutation guard with pending lock, duplicate
+- `W36-E6-S4-T1` (parked) Add a shared keyed client mutation guard with pending lock, duplicate
   suppression, conflict readback, and retryable failure state.
   - Scope: packaged API/state utility.
   - Verification: double-click and concurrent-control fixtures send one request per key
     and preserve a retry path after failure.
-- `W36-E6-S4-T2` Adopt the mutation guard for workflow, stage, and remediation launch
+- `W36-E6-S4-T2` (planned) Adopt the mutation guard for workflow, stage, and remediation launch
   controls.
   - Scope: run mutation controls.
   - Verification: pending, same-run conflict, different-run concurrency, failure, and
     success states match server admission.
-- `W36-E6-S4-T3` Adopt the mutation guard for answer and intervention writes.
+- `W36-E6-S4-T3` (planned) Adopt the mutation guard for answer and intervention writes.
   - Scope: question/intervention mutation controls.
   - Verification: failed writes retain drafts, successful writes clear drafts, and
     duplicate submissions create one durable artifact.
-- `W36-E6-S4-T4` Adopt the mutation guard for next-flow draft, preflight, and launch.
+- `W36-E6-S4-T4` (planned) Adopt the mutation guard for next-flow draft, preflight, and launch.
   - Dependencies: `W34-E3-S4-T4`.
   - Scope: next-flow browser controller.
   - Verification: repeated actions cannot create duplicate work items or runs and the
     source run remains unchanged after failure.
-- `W36-E6-S4-T5` Add approval reason capture and explicit confirmation for
+- `W36-E6-S4-T5` (planned) Add approval reason capture and explicit confirmation for
   `allow_for_session` with controls disabled while submitting.
   - Dependencies: `W34-E3-S2`.
   - Scope: approval decision UI.
   - Verification: no session-wide approval POST occurs before confirmation and the
     submitted reason/breadth remain visible in the preview.
-- `W36-E6-S4-T6` Reconcile approval compare-and-set or terminal conflicts to the durable
+- `W36-E6-S4-T6` (planned) Reconcile approval compare-and-set or terminal conflicts to the durable
   winning decision and audit row.
   - Dependencies: `W34-E3-S2`.
   - Scope: approval conflict UI.
@@ -11485,72 +11488,72 @@ Dependencies:
 
 Local tasks:
 
-- `W36-E7-S1-T1` Add the Guided Setup project validation, create/resume, runtime review,
+- `W36-E7-S1-T1` (parked) Add the Guided Setup project validation, create/resume, runtime review,
   first launch, and resulting Inbox entry browser journey.
   - Dependencies: `W36-E4-S1-T1..T6`, `W36-E4-S2`, `W36-E5-S2`,
     `W36-E5-S3-T1..T4`.
   - Scope: onboarding browser scenario family.
   - Verification: every required viewport completes create or resume with one primary
     action, no geometry/accessibility failure, and no provider authentication.
-- `W36-E7-S1-T2` Add the active Studio running, silence, cancellation, transient
+- `W36-E7-S1-T2` (planned) Add the active Studio running, silence, cancellation, transient
   reconnect, and return-to-live browser journey.
   - Dependencies: `W36-E5-S2`, `W36-E5-S4-T1..T4`, `W36-E6-S3`.
   - Scope: live Studio browser scenario family.
   - Verification: real milestones, last output, cursor recovery, cancel lifecycle, and
     durable logs pass without console/network ambiguity or fake progress.
-- `W36-E7-S1-T3` Add the Runtime/Validation Recovery Studio repair/exhaustion browser
+- `W36-E7-S1-T3` (planned) Add the Runtime/Validation Recovery Studio repair/exhaustion browser
   journey.
   - Dependencies: `W36-E5-S6-T1..T5`.
   - Scope: runtime/validation recovery scenario family.
   - Verification: each failure exposes the correct first evidence, one primary recovery
     action, and a truthful stopped/running state.
-- `W36-E7-S1-T4` Add the Review/QA quality-gate, remediation, and stale downstream
+- `W36-E7-S1-T4` (planned) Add the Review/QA quality-gate, remediation, and stale downstream
   browser journey.
   - Dependencies: `W35-E2-S8`, `W36-E5-S7-T2..T4`.
   - Scope: delivery-decision browser scenario family.
   - Verification: unsafe completion remains blocked, remediation/rerun is explicit, and stale
     QA keeps Flow Complete absent until a later fresh-QA journey proves terminal eligibility.
-- `W36-E7-S1-T5` Add the History Filmstrip, comparison, lineage, and archive browser
+- `W36-E7-S1-T5` (planned) Add the History Filmstrip, comparison, lineage, and archive browser
   journey.
   - Dependencies: `W36-E5-S8-T1..T6`.
   - Scope: history and continuation browser scenario family.
   - Verification: Back/reload/deep links preserve run identity and completed source-run
     artifacts remain immutable and inspectable.
-- `W36-E7-S1-T6` Add the blocking-question answer/resume Recovery Studio browser journey.
+- `W36-E7-S1-T6` (planned) Add the blocking-question answer/resume Recovery Studio browser journey.
   - Dependencies: `W36-E5-S5-T1`, `W36-E5-S5-T4`.
   - Scope: product-question browser scenario family.
   - Verification: draft restore, resolved/partial/deferred state, failed/successful durable
     readback, answer/resume, and current run/stage context pass on desktop and mobile.
-- `W36-E7-S1-T7` Add the Document Canvas and Evidence Inspector browser journey.
+- `W36-E7-S1-T7` (planned) Add the Document Canvas and Evidence Inspector browser journey.
   - Dependencies: `W36-E5-S4-T2..T3`.
   - Scope: document/evidence browser scenario family.
   - Verification: Preview/Source/Diff, safe artifact selection, validator provenance,
     missing evidence, zero-value hiding, and raw-log drill-down pass without arbitrary
     path reads.
-- `W36-E7-S1-T8` Add the Flow Complete, follow-up, clone, eval, and archive disposition
+- `W36-E7-S1-T8` (planned) Add the Flow Complete, follow-up, clone, eval, and archive disposition
   browser journey.
   - Dependencies: `W36-E5-S0`, `W36-E5-S9-T3..T8`.
   - Scope: terminal and next-outcome browser scenario family.
   - Verification: clean versus failed/blocked/warning fresh QA, stale/nonterminal exclusion,
     one core-recommended action, drafts/preflight, independent identities, truthful manual eval
     handoff, archive overlay, and byte-identical source-run evidence all pass.
-- `W36-E7-S1-T9` Add the implement task run/resume, failed-attempt recovery, repository
+- `W36-E7-S1-T9` (planned) Add the implement task run/resume, failed-attempt recovery, repository
   evidence, and aggregate-finalization browser journey.
   - Dependencies: `W35-E2-S8`, `W36-E5-S7-T1..T4`.
   - Scope: task-aware implement browser scenario family.
   - Verification: dependency readiness, preserved successes, diff/scope evidence,
     finalization recovery, and Review eligibility agree with the canonical task ledger.
-- `W36-E7-S1-T10` Add the Request Change/intervention Recovery Studio browser journey.
+- `W36-E7-S1-T10` (planned) Add the Request Change/intervention Recovery Studio browser journey.
   - Dependencies: `W36-E5-S5-T2`, `W36-E5-S5-T4`.
   - Scope: intervention browser scenario family.
   - Verification: draft restore, allowed request, downstream-success rejection, one durable
     operator request, remediation routing, and current run/stage context pass.
-- `W36-E7-S1-T11` Add the runtime-approval Recovery Studio browser journey.
+- `W36-E7-S1-T11` (planned) Add the runtime-approval Recovery Studio browser journey.
   - Dependencies: `W36-E5-S5-T3`, `W36-E5-S5-T4`.
   - Scope: runtime-approval browser scenario family.
   - Verification: allow, deny, cancel, session confirmation, pending state, compare-and-set
     conflict, durable winner, and current run/stage context pass on desktop and mobile.
-- `W36-E7-S1-T12` Add the project-local Inbox priority and routing browser journey.
+- `W36-E7-S1-T12` (planned) Add the project-local Inbox priority and routing browser journey.
   - Dependencies: `W36-E5-S0`, `W36-E5-S2`, `W36-E5-S3-T1..T4`.
   - Scope: Inbox browser scenario family.
   - Verification: Needs your decision, Running now, Ready to continue, and Flow complete
@@ -11574,27 +11577,27 @@ Dependencies:
 
 Local tasks:
 
-- `W36-E7-S2-T1` Add one command that discovers and executes every declared packaged-UI
+- `W36-E7-S2-T1` (planned) Add one command that discovers and executes every declared packaged-UI
   browser scenario.
   - Scope: local/CI UI test entry point.
   - Verification: discovered scenario ids equal executed scenario ids exactly and live
     provider manifests are rejected.
-- `W36-E7-S2-T2` Add the packaged-UI browser command to CI.
+- `W36-E7-S2-T2` (planned) Add the packaged-UI browser command to CI.
   - Dependencies: `W36-E7-S2-T1`.
   - Scope: deterministic CI integration only.
   - Verification: an intentional geometry, accessibility, console, or journey failure
     blocks CI while provider credentials remain unnecessary.
-- `W36-E7-S2-T3` Update the local-project UI evidence template for full browser passes.
+- `W36-E7-S2-T3` (planned) Update the local-project UI evidence template for full browser passes.
   - Dependencies: `W36-E7-S2-T1`.
   - Scope: operator E2E documentation only.
   - Verification: docs consistency and the evidence checklist record version, fixture,
     viewports, journeys, accessibility, console/network state, and cleanup.
-- `W36-E7-S2-T4` Add the packaged-UI browser command to release preflight.
+- `W36-E7-S2-T4` (planned) Add the packaged-UI browser command to release preflight.
   - Dependencies: `W36-E7-S2-T2`.
   - Scope: deterministic release-preflight integration only.
   - Verification: an intentional browser journey failure blocks release preparation
     without provider credentials.
-- `W36-E7-S2-T5` Record one source-installed full provider-free browser pass.
+- `W36-E7-S2-T5` (planned) Record one source-installed full provider-free browser pass.
   - Dependencies: `W36-E7-S2-T1`, `W36-E7-S2-T3`.
   - Scope: manual operator browser evidence only.
   - Verification: one completed template records version, fixtures, viewports, journeys,
@@ -11616,18 +11619,18 @@ Dependencies:
 
 Local tasks:
 
-- `W36-E7-S3-T1` Write the observed operator task script and scoring template for
+- `W36-E7-S3-T1` (planned) Write the observed operator task script and scoring template for
   Guided Setup, Inbox triage, active Studio monitoring, question recovery, runtime
   failure, QA remediation, History inspection, and terminal continuation.
   - Scope: operator acceptance documentation.
   - Verification: every task records completion, elapsed time, wrong actions, assistance,
     confidence, and first decisive confusion.
-- `W36-E7-S3-T2` Record five first-time-operator sessions against the source-installed
+- `W36-E7-S3-T2` (planned) Record five first-time-operator sessions against the source-installed
   packaged UI.
   - Scope: manual operator acceptance evidence.
   - Verification: one anonymized report contains all required task metrics, browser and
     viewport context, blockers, and no sensitive project/runtime evidence.
-- `W36-E7-S3-T3` Reconcile accepted session findings into roadmap tasks and beta-readiness
+- `W36-E7-S3-T3` (planned) Reconcile accepted session findings into roadmap tasks and beta-readiness
   evidence.
   - Scope: planning and product-readiness docs.
   - Verification: every reportable finding is closed, deferred with rationale, or mapped
