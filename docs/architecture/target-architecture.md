@@ -468,17 +468,20 @@ Adapters are **not** responsible for:
 
 ## 15. Runtime log architecture
 
-The CLI should support three log modes:
+`--log-follow` controls only whether available runtime stdout/stderr is forwarded to the
+operator while an attempt is running. It does not enable or disable durable evidence:
+`--no-log-follow` suppresses live forwarding while the attempt still persists its complete raw
+`runtime.log` through the same evidence commit path.
 
-- `native`: show raw runtime output as closely as possible,
-- `normalized`: show AIDD-normalized events,
-- `both`: show normalized summaries while storing raw logs.
+`aidd run logs` reads that persisted `runtime.log`. By default it prints the full selected
+attempt log; `--tail --lines N` prints its last `N` lines. This replay command is independent
+of the live-forwarding choice used when the attempt ran.
 
-Every run stores:
+Runtime evidence stores:
 
 - raw runtime text log,
-- structured runtime log when the adapter observes JSONL runtime output,
-- normalized events when structured runtime events are emitted,
+- structured provider JSONL and normalized event JSONL as separate audit artifacts when the
+  adapter observes or emits them,
 - per-attempt runtime exit metadata,
 - validation state and validator reports,
 - repair context and repair history when repair is used.

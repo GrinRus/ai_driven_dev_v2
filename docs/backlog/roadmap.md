@@ -8831,7 +8831,7 @@ Sync notes:
 
 ---
 
-## Wave 34 — codebase audit remediation (`planned`)
+## Wave 34 — codebase audit remediation (`done`)
 
 Goal: remediate the confirmed correctness, reliability, compatibility, testability,
 maintainability, and defensive-boundary findings in
@@ -9766,7 +9766,7 @@ Exit evidence:
 - validator, task execution, and Implement Review classify the same canonical parity
   table; no supported consumer reads a stage-local shadow scope or private path grammar.
 
-### Epic W34-E8 — planning and architecture source-of-truth hygiene (`planned`)
+### Epic W34-E8 — planning and architecture source-of-truth hygiene (`done`)
 Linked stories: `US-06`, `US-10`, `US-11`, `US-12`
 
 #### Slice W34-E8-S1 — bounded canonical planning queue (`done`)
@@ -9799,7 +9799,7 @@ Exit evidence:
 - backlog is a bounded execution queue rather than a second historical source;
 - generic checks enforce ID, status, and dependency invariants for future waves.
 
-#### Slice W34-E8-S2 — stable target-architecture wording (`planned`)
+#### Slice W34-E8-S2 — stable target-architecture wording (`done`)
 Goal: describe implemented ownership and supported behavior without completed-wave or
 unimplemented-mode claims.
 
@@ -9814,7 +9814,7 @@ Local tasks:
   - Scope: target architecture and matching documentation assertions only.
   - Verification: architecture docs describe current ownership without Wave 29 policy
     text or contradicting the planned browser-driver decision.
-- `W34-E8-S2-T2` (next) Reconcile the CLI runtime-log contract with `US-06` and current CLI
+- `W34-E8-S2-T2` (done) Reconcile the CLI runtime-log contract with `US-06` and current CLI
   behavior. [`ARCH-07`]
   - Scope: product/architecture documentation decision only.
   - Verification: docs consistently specify raw logs and structured evidence; any new
@@ -10370,7 +10370,7 @@ Local tasks:
   - Scope: operator frontend architecture only.
   - Verification: the contract names the first-viewport action, maximum compact-header
     footprint, drill-down behavior, and required mobile jobs at every breakpoint.
-- `W36-E1-S1-T3` (parked) Replace checklist-only navigation wording with a canonical operator
+- `W36-E1-S1-T3` (next) Replace checklist-only navigation wording with a canonical operator
   state/route matrix.
   - Scope: `docs/e2e/operator-ui-local-project.md` only.
   - Verification: Guided Setup, Inbox, active Studio, reconnecting, Question/Approval
@@ -10394,7 +10394,7 @@ Dependencies:
 
 Local tasks:
 
-- `W36-E1-S2-T1` (planned) Define an action-to-service semantics table for setup, create,
+- `W36-E1-S2-T1` (soon) Define an action-to-service semantics table for setup, create,
   resume, follow-up, clone, eval, archive, workflow, and stage actions.
   - Scope: operator frontend architecture only.
   - Verification: every visible selectable action has a distinct outcome and service

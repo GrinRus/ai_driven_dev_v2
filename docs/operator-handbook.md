@@ -352,6 +352,11 @@ log view read the durable attempt `runtime.log`. The **Artifacts** tab renders k
 stage document keys from the artifact index as read-only Markdown preview/source views;
 it does not allow arbitrary path reads.
 
+For CLI execution, `--log-follow` and `--no-log-follow` control only live forwarding of
+available stdout/stderr. Durable `runtime.log` persistence is unchanged. `aidd run logs`
+prints the full persisted log by default, or its last `N` lines with `--tail --lines N`;
+structured provider and normalized event JSONL remain separate audit artifacts.
+
 For long-running UI jobs, use the right-side **Active Run** panel and the **Timeline** tab.
 They show job id, active stage, runner, elapsed time, last output age, stage timeout
 summary, runner command, cancel action, live logs shortcut, and real milestones from

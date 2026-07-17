@@ -7,15 +7,16 @@ slice, and local task.
 
 ## Next
 
-- `W34-E8-S2-T2` — Reconcile the CLI runtime-log contract with `US-06` and current
-  CLI behavior.
+- `W36-E1-S1-T3` — Replace checklist-only navigation wording with the canonical
+  Guided Setup / Inbox / Studio / History state-route matrix.
 
 ## Soon
 
+- `W36-E1-S2-T1` — Define the action-to-service semantics table for setup, create,
+  resume, follow-up, clone, eval, archive, workflow, and stage actions.
+
 ## Parking lot
 
-- `W36-E1-S1-T3` — Replace checklist-only navigation wording with the canonical
-  Guided Setup / Inbox / Studio / History state-route matrix.
 - `W36-E2-S1-T1` — Select and document a maintained provider-free browser driver and
   packaged-UI test policy.
 - `W36-E2-S3-T1` — Extract shared dashboard loading, context selection, and mutation
@@ -69,6 +70,11 @@ slice, and local task.
   queue-restoration policy in `docs/backlog/roadmap.md` (`W8-E3-S1`).
 
 ## Current reconciliation
+
+- `2026-07-17` `W34-E8-S2-T2`, slice `W34-E8-S2`, Epic `W34-E8`, and Wave 34 are
+  complete: architecture now distinguishes live stdout/stderr forwarding from durable
+  `runtime.log` persistence and documents full/tail replay plus separate structured audit
+  evidence. `W36-E1-S1-T3` is promoted to `Next` and `W36-E1-S2-T1` to `Soon`.
 
 - `2026-07-17` `W34-E8-S2-T1` is complete: target architecture now states stable
   implemented frontend, project-set, provenance, approval-audit, and immutable-run

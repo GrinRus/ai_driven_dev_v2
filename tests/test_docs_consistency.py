@@ -1374,6 +1374,25 @@ def test_operator_ownership_docs_cover_stable_beta_contracts() -> None:
     assert "Claude Code remains `blocked/auth-env`" not in release_checklist
 
 
+def test_runtime_log_docs_match_the_supported_cli_contract() -> None:
+    repo_root = _repo_root()
+    target_architecture = (
+        repo_root / "docs" / "architecture" / "target-architecture.md"
+    ).read_text(encoding="utf-8")
+    handbook = (repo_root / "docs" / "operator-handbook.md").read_text(encoding="utf-8")
+
+    for document in (target_architecture, handbook):
+        assert "`--log-follow`" in document
+        assert "durable" in document
+        assert "`runtime.log`" in document
+        assert "`aidd run logs`" in document
+        assert "`--tail --lines N`" in document
+        assert "separate audit artifacts" in document
+
+    assert "The CLI should support three log modes" not in target_architecture
+    assert "`normalized`: show AIDD-normalized events" not in target_architecture
+
+
 def test_release_publish_skill_describes_release_flow_guardrails() -> None:
     skill = (
         _repo_root() / ".agents" / "skills" / "release-publish" / "SKILL.md"
