@@ -896,7 +896,7 @@ function renderRunHistory() {
   const sourceWorkItem = lineageValue(lineage.source_work_item_id, state.dashboard?.work_item || "not recorded");
   const baseline = lineageValue(lineage.baseline_label || lineage.baseline_id, "current run");
   return `
-    <section class="surface run-history-state">
+    <section class="surface run-history-state hierarchy-primary history-filmstrip">
       <div class="surface-title">
         <span>Run History / Lineage</span>
         <span class="small-badge">${escapeHtml(run.run_id)}</span>

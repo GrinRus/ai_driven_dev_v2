@@ -10629,17 +10629,17 @@ Local tasks:
   - Scope: packaged state-surface primitives.
   - Verification: every state exposes a title, consequence, recovery action when
     possible, and correct live-region or busy semantics.
-- `W36-E3-S3-T3` (next) Establish the editorial hierarchy for Document Canvas, conditional
+- `W36-E3-S3-T3` (done) Establish the editorial hierarchy for Document Canvas, conditional
   Evidence Inspector, and History without an equal-weight card wall.
   - Scope: panel/card layout classes.
   - Verification: rendered fixtures keep one framed primary surface per hierarchy level
     and preserve clear primary/supporting visual weight.
-- `W36-E3-S3-T4` (soon) Implement the shared Inbox Item anatomy without eligibility or priority
+- `W36-E3-S3-T4` (next) Implement the shared Inbox Item anatomy without eligibility or priority
   logic in the browser.
   - Scope: packaged Inbox item primitive only.
   - Verification: blocking, running, ready, terminal, and malformed fixtures render the
     core/service-provided route and action without recomputing either.
-- `W36-E3-S3-T5` (planned) Implement the shared Guided Step anatomy.
+- `W36-E3-S3-T5` (soon) Implement the shared Guided Step anatomy.
   - Scope: packaged Guided Delivery primitive only.
   - Verification: current, complete, invalid, optional, and disabled step fixtures retain one
     explanation, input group, primary action, Back action, and advanced disclosure.

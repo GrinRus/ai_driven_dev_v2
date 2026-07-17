@@ -7,13 +7,12 @@ slice, and local task.
 
 ## Next
 
-- `W36-E3-S3-T3` — Establish the editorial hierarchy for Document Canvas, conditional
-  Evidence Inspector, and History without an equal-weight card wall.
+- `W36-E3-S3-T4` — Implement the shared Inbox Item anatomy without eligibility or
+  priority logic in the browser.
 
 ## Soon
 
-- `W36-E3-S3-T4` — Implement the shared Inbox Item anatomy without eligibility or
-  priority logic in the browser.
+- `W36-E3-S3-T5` — Implement the shared Guided Step anatomy.
 
 
 ## Parking lot
@@ -65,6 +64,12 @@ slice, and local task.
   queue-restoration policy in `docs/backlog/roadmap.md` (`W8-E3-S1`).
 
 ## Current reconciliation
+
+- `2026-07-17` `W36-E3-S3-T3` is complete: Document Canvas is the single framed
+  primary surface, Evidence Inspector is conditional and visually supporting, and
+  History separates its primary filmstrip from supporting events. Desktop/mobile
+  geometry proves the hierarchy without overflow or empty peer frames. `W36-E3-S3-T4`
+  is promoted to `Next` and `W36-E3-S3-T5` to `Soon`.
 
 - `2026-07-17` `W36-E3-S3-T2` is complete: empty, loading, error, reconnecting, and
   unavailable states now share a title/consequence/recovery anatomy with truthful

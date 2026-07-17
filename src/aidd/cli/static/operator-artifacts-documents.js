@@ -379,6 +379,7 @@ function renderWorkbenchViewer(workbench) {
   const sourceActive = state.artifactViewMode === "source" ? " active" : "";
   const diffActive = state.artifactViewMode === "diff" ? " active" : "";
   const documentView = workbench.document || {};
+  const evidenceInspector = renderWorkbenchEvidenceInspector(workbench);
   return `
     <div class="viewer-header">
       <div>
@@ -397,12 +398,27 @@ function renderWorkbenchViewer(workbench) {
       kind: "document",
       path: documentView.path || ""
     })}
-    <div class="workbench-main">
-      <section class="workbench-document-pane">
+    <div class="workbench-main" data-evidence-inspector="${evidenceInspector ? "present" : "absent"}">
+      <section class="workbench-document-pane hierarchy-primary document-canvas">
         ${renderWorkbenchTableOfContents(workbench)}
         ${renderWorkbenchDocumentBody(workbench)}
       </section>
-      <aside class="workbench-sidebar">
+      ${evidenceInspector}
+    </div>
+  `;
+}
+
+function renderWorkbenchEvidenceInspector(workbench) {
+  const visible = [
+    workbench.requirements,
+    workbench.validation_results,
+    workbench.references,
+    workbench.versions
+  ].some((items) => Array.isArray(items) && items.length > 0);
+  if (!visible) return "";
+  return `
+      <aside class="workbench-sidebar hierarchy-supporting evidence-inspector">
+        <div class="surface-title evidence-inspector-title">Evidence Inspector</div>
         <section class="surface">
           <div class="surface-title">Contract requirements</div>
           ${renderRequirementList(workbench.requirements)}
@@ -424,7 +440,6 @@ function renderWorkbenchViewer(workbench) {
           <div class="recent-artifacts">${renderVersionHistory(workbench.versions)}</div>
         </section>
       </aside>
-    </div>
   `;
 }
 

@@ -971,9 +971,9 @@ function renderActivityTable() {
 
 function renderHistoryMode() {
   return `
-    <div class="history-mode">
+    <div class="history-mode hierarchy-sequence">
       ${renderRunHistory()}
-      <section class="surface">
+      <section class="surface hierarchy-supporting history-events">
         <div class="surface-title">
           <span>Activity / Events</span>
           <span class="small-badge">${escapeHtml(activityEvents().length)} events</span>

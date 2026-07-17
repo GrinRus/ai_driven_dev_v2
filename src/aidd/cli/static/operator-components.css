@@ -2855,13 +2855,17 @@
 .workbench-main {
   display: grid;
   gap: 12px;
-  grid-template-columns: minmax(0, 1fr);
+  grid-template-columns: minmax(0, 1fr) minmax(260px, 320px);
   min-width: 0;
 }
 .workbench-document-pane {
+  background: var(--color-bg-surface);
+  border: var(--control-border-width) solid var(--color-border-default);
+  border-radius: var(--radius-surface);
   display: grid;
   gap: 10px;
   min-width: 0;
+  padding: var(--space-8);
 }
 .workbench-toc {
   background: var(--color-bg-raised);
@@ -2894,7 +2898,29 @@
 .workbench-sidebar {
   display: grid;
   gap: 10px;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: minmax(0, 1fr);
+}
+.evidence-inspector-title {
+  margin: 0;
+}
+.hierarchy-supporting > .surface {
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+  border-top: var(--control-border-width) solid var(--color-border-default);
+  padding: var(--space-6) 0 0;
+}
+.hierarchy-sequence {
+  display: grid;
+  gap: var(--space-8);
+}
+.history-filmstrip {
+  border-color: var(--color-border-strong);
+  box-shadow: var(--elevation-surface);
+}
+.history-events {
+  background: var(--color-bg-subtle);
+  border-color: var(--color-border-default);
 }
 .workbench-side-row {
   border-bottom: 1px solid var(--line);
@@ -2967,6 +2993,12 @@
   }
   .workbench-sidebar {
     grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 1120px) {
+  .workbench-main {
+    grid-template-columns: minmax(0, 1fr);
   }
 }
 .viewer-header {

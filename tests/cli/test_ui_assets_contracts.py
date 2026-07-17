@@ -1997,7 +1997,7 @@ def test_operator_static_screen_landmarks_cover_accepted_mission_control_surface
         next_flow,
         (
             '<section class="surface flow-complete-state">',
-            '<section class="surface run-history-state">',
+            '<section class="surface run-history-state hierarchy-primary history-filmstrip">',
             '<section class="surface next-flow-wizard">',
             'sectionClass: "next-flow-wizard follow-up-definition"',
             'sectionClass: "next-flow-wizard launch-confirmation"',
