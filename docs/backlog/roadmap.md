@@ -11331,17 +11331,17 @@ Dependencies:
 
 Local tasks:
 
-- `W36-E6-S1-T1` (next) Add a URL-state codec for Inbox / Studio / History mode, work item,
+- `W36-E6-S1-T1` (done) Add a URL-state codec for Inbox / Studio / History mode, work item,
   run, stage, attempt or task-attempt detail, and artifact selection.
   - Scope: packaged browser state module.
   - Verification: round-trip, missing, legacy, stale, and invalid-value cases resolve to
     safe deterministic state.
-- `W36-E6-S1-T2` (soon) Wire push, replace, popstate, and reload restoration through the URL
+- `W36-E6-S1-T2` (next) Wire push, replace, popstate, and reload restoration through the URL
   codec across Inbox, Studio, History, and contextual drawers.
   - Scope: shell navigation controller.
   - Verification: a browser history sequence preserves Logs versus Artifacts, selected
     stage, selected run, and artifact drill-down across Back, Forward, and reload.
-- `W36-E6-S1-T3` (planned) Define shared route intents for Inbox work-item, historical-run, parent, and
+- `W36-E6-S1-T3` (soon) Define shared route intents for Inbox work-item, historical-run, parent, and
   child-lineage bindings without owning their vertical renderers.
   - Scope: URL/navigation intent controller only.
   - Verification: E5-owned Inbox and History fixtures bind each visible action to one distinct

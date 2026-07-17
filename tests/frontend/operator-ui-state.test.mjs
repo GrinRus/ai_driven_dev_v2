@@ -117,6 +117,7 @@ test("operator bootstrap loads modules in declared order", async () => {
   assert.deepEqual(appended, [
     "/operator-surface-parity.js",
     "/operator-presentation.js",
+    "/operator-route-state.js",
     "/operator-api-state.js",
     "/operator-shell-rendering.js",
     "/operator-dashboard-actions.js",

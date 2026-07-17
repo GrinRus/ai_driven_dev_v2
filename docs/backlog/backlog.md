@@ -7,13 +7,13 @@ slice, and local task.
 
 ## Next
 
-- `W36-E6-S1-T1` — Add a URL-state codec for Inbox / Studio / History mode, work item,
-  run, stage, attempt or task-attempt detail, and artifact selection.
+- `W36-E6-S1-T2` — Wire push, replace, popstate, and reload restoration through the URL
+  codec across Inbox, Studio, History, and contextual drawers.
 
 ## Soon
 
-- `W36-E6-S1-T2` — Wire push, replace, popstate, and reload restoration through the URL
-  codec across Inbox, Studio, History, and contextual drawers.
+- `W36-E6-S1-T3` — Define shared route intents for Inbox work-item, historical-run,
+  parent, and child-lineage bindings without owning their vertical renderers.
 
 
 
@@ -65,6 +65,11 @@ slice, and local task.
   queue-restoration policy in `docs/backlog/roadmap.md` (`W8-E3-S1`).
 
 ## Current reconciliation
+
+- `2026-07-17` `W36-E6-S1-T1` is complete: a pure packaged codec round-trips Inbox,
+  Studio, and History context in stable query order, dual-reads the bounded legacy
+  aliases, and drops invalid, stale, path-like, or ambiguous detail with stable warnings.
+  `W36-E6-S1-T2` is promoted to `Next` and `W36-E6-S1-T3` to `Soon`.
 
 - `2026-07-17` `W36-E3-S4-T3`, slice `W36-E3-S4`, and Epic `W36-E3` are complete:
   microcopy has a `12px` readable floor and stronger secondary contrast, while timers,

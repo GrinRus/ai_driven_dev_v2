@@ -778,7 +778,9 @@ def test_operator_ui_local_project_manual_browser_checklist_is_complete() -> Non
         "| History | `history` |",
         "falls back to the nearest valid",
         "never creates, resumes, repairs, archives, or launches work",
-        "`W36-E6-S1-T1`",
+        "`mode=studio`",
+        "`task_attempt`",
+        "Writers emit only that canonical form",
     ):
         assert expected in operator_ui_lane
 
