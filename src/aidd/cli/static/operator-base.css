@@ -20,7 +20,7 @@ button {
   background: var(--teal);
   border: 1px solid var(--teal);
   border-radius: 6px;
-  color: #ffffff;
+  color: var(--color-text-inverse);
   cursor: pointer;
   display: inline-flex;
   font-weight: 650;
@@ -31,8 +31,8 @@ button {
   padding: 6px 10px;
 }
 button:disabled {
-  background: #b7c0ba;
-  border-color: #b7c0ba;
+  background: var(--color-border-disabled);
+  border-color: var(--color-border-disabled);
   cursor: not-allowed;
 }
 button.secondary,
@@ -53,9 +53,9 @@ button.quick-link:hover,
   color: var(--teal-dark);
 }
 button.danger {
-  background: #fff8f7;
-  border-color: #e3b4ae;
-  color: var(--red);
+  background: var(--color-state-danger-bg-subtle);
+  border-color: var(--color-state-danger-border-muted);
+  color: var(--color-state-danger-text);
 }
 button.link-button {
   background: transparent;

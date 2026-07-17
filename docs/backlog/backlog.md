@@ -7,13 +7,10 @@ slice, and local task.
 
 ## Next
 
-- `W36-E3-S1-T2` — Replace duplicate status and surface palettes with semantic color
-  roles.
-
-## Soon
-
 - `W36-E3-S1-T3` — Define compact desktop and touch mobile density modes from shared
   control tokens.
+
+## Soon
 
 ## Parking lot
 
@@ -64,6 +61,12 @@ slice, and local task.
   queue-restoration policy in `docs/backlog/roadmap.md` (`W8-E3-S1`).
 
 ## Current reconciliation
+
+- `2026-07-17` `W36-E3-S1-T2` is complete: repeated status and surface colors now
+  resolve through semantic roles, raw duplicate palettes outside the token layer are
+  rejected, and rendered success/warning/danger/info fixtures meet accepted text contrast.
+  `W36-E3-S1-T3` is promoted to `Next`; `Soon` remains empty until density modes close
+  the token slice.
 
 - `2026-07-17` `W36-E3-S1-T1` is complete: `operator-tokens.css` now owns semantic
   typography, spacing, radius, elevation, control-size, state, focus, and motion roles,

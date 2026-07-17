@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import re
+from collections import Counter
 
 from aidd.cli.ui_assets import operator_static_asset_for_route
 
@@ -26,6 +27,14 @@ def test_operator_token_inventory_covers_accepted_semantic_roles() -> None:
         "--color-state-success",
         "--color-state-warning",
         "--color-state-danger",
+        "--color-state-danger-bg",
+        "--color-state-danger-border",
+        "--color-state-info-bg",
+        "--color-state-info-border",
+        "--color-state-success-bg",
+        "--color-state-success-border",
+        "--color-state-warning-bg",
+        "--color-state-warning-border",
         "--color-focus",
         "--font-sans",
         "--font-mono",
@@ -80,3 +89,11 @@ def test_raw_value_inventory_outside_token_layer_cannot_grow() -> None:
     assert len(colors) <= 89
     assert len(lengths) <= 83
     assert len(motion) <= 1
+    color_counts = Counter(
+        re.findall(r"#[0-9a-fA-F]{3,8}\b|rgba?\([^)]*\)", styles)
+    )
+    assert not {
+        color: count
+        for color, count in color_counts.items()
+        if count > 1
+    }

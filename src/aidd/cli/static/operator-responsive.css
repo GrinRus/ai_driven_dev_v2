@@ -258,8 +258,8 @@
     grid-template-columns: 1fr;
   }
   .mode-decision-peek {
-    background: #ffffff;
-    border: 1px solid #cfe3e0;
+    background: var(--color-bg-surface);
+    border: 1px solid var(--color-state-info-border);
     border-radius: 6px;
     display: grid;
     gap: 4px;
@@ -267,15 +267,15 @@
     padding: 8px;
   }
   .mode-decision-peek.good {
-    border-color: #aacfb9;
+    border-color: var(--color-state-success-border-strong);
     box-shadow: inset 3px 0 0 var(--green);
   }
   .mode-decision-peek.warn {
-    border-color: #e4c783;
+    border-color: var(--color-state-warning-border);
     box-shadow: inset 3px 0 0 var(--amber);
   }
   .mode-decision-peek.bad {
-    border-color: #ebb6b1;
+    border-color: var(--color-state-danger-border);
     box-shadow: inset 3px 0 0 var(--red);
   }
   .mode-decision-peek .small-badge {

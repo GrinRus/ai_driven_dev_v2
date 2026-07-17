@@ -10562,12 +10562,12 @@ Local tasks:
   - Scope: `operator-tokens.css` only.
   - Verification: token inventory tests cover every accepted role and enforce a bounded
     raw-value budget outside the token layer.
-- `W36-E3-S1-T2` (next) Replace duplicate status and surface palettes with semantic color
+- `W36-E3-S1-T2` (done) Replace duplicate status and surface palettes with semantic color
   roles.
   - Scope: packaged CSS color consumption.
   - Verification: computed-style fixtures preserve state meaning and meet accepted
     contrast thresholds.
-- `W36-E3-S1-T3` (soon) Define compact desktop and touch mobile density modes from shared
+- `W36-E3-S1-T3` (next) Define compact desktop and touch mobile density modes from shared
   control tokens.
   - Scope: token and responsive density rules.
   - Verification: measured controls meet the compact desktop contract and the `44px`
