@@ -10439,19 +10439,19 @@ Local tasks:
   - Verification: the decision preserves the no-Node/Vite product runtime, names the
     executable test command, and replaces the blanket no-browser-driver wording in the
     local-project lane.
-- `W36-E2-S1-T4` (next) Add the selected browser driver as a development-only dependency and
+- `W36-E2-S1-T4` (done) Add the selected browser driver as a development-only dependency and
   lock its executable smoke command.
   - Dependencies: `W36-E2-S1-T1`.
   - Scope: development dependency, lock, and browser smoke command only.
   - Verification: locked sync and one provider-free packaged-UI launch pass without
     changing runtime package dependencies.
-- `W36-E2-S1-T2` (soon) Add a disposable seeded-project launcher and executable browser harness
+- `W36-E2-S1-T2` (next) Add a disposable seeded-project launcher and executable browser harness
   for packaged UI assets.
   - Dependencies: `W36-E2-S1-T4`.
   - Scope: UI browser test infrastructure.
   - Verification: one command serves a temporary project, opens every required viewport,
     records console/network state, and removes project-local `.aidd/` state on exit.
-- `W36-E2-S1-T3` (planned) Add provider-free fixture builders for setup, no-run, running,
+- `W36-E2-S1-T3` (soon) Add provider-free fixture builders for setup, no-run, running,
   question, runtime-failure, approval, QA, remediation, and terminal states.
   - Dependencies: `W36-E2-S1-T2`.
   - Scope: deterministic UI fixtures only.

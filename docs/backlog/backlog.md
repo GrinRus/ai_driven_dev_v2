@@ -7,13 +7,13 @@ slice, and local task.
 
 ## Next
 
-- `W36-E2-S1-T4` — Add Python Playwright as a development-only dependency and lock an
-  executable packaged-UI Chromium smoke.
+- `W36-E2-S1-T2` — Add a disposable seeded-project launcher and reusable executable
+  browser harness for packaged UI assets.
 
 ## Soon
 
-- `W36-E2-S1-T2` — Add a disposable seeded-project launcher and reusable executable
-  browser harness for packaged UI assets.
+- `W36-E2-S1-T3` — Add provider-free canonical UI state fixture builders and browser
+  state-marker checks.
 
 ## Parking lot
 
@@ -68,6 +68,11 @@ slice, and local task.
   queue-restoration policy in `docs/backlog/roadmap.md` (`W8-E3-S1`).
 
 ## Current reconciliation
+
+- `2026-07-17` `W36-E2-S1-T4` is complete: Python Playwright is locked only in the dev
+  extra, the wheel remains runtime-clean, and a real loopback `aidd ui` Chromium smoke
+  fails with the maintained install command when the browser is missing.
+  `W36-E2-S1-T2` is promoted to `Next` and `W36-E2-S1-T3` to `Soon`.
 
 - `2026-07-17` `W36-E2-S1-T1` is complete: the provider-free browser policy selects the
   Python Playwright sync API with one external-cache Chromium target, an isolated
