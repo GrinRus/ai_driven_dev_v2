@@ -1,29 +1,3 @@
-function renderSetupModeSelector(context) {
-  const activeMode = setupModeView(context);
-  return `
-    <div class="setup-mode-grid" role="radiogroup" aria-label="Execution mode">
-      ${SETUP_MODES.map((mode) => {
-        const selected = mode.id === activeMode.id;
-        const blocked = mode.requiresPreviousRun && !context.available;
-        return `
-          <button
-            class="setup-mode-card${selected ? " selected" : ""}"
-            data-setup-mode="${escapeHtml(mode.id)}"
-            type="button"
-            role="radio"
-            aria-checked="${selected ? "true" : "false"}"
-            ${blocked ? 'aria-disabled="true" disabled' : ""}
-          >
-            <strong>${escapeHtml(mode.label)}</strong>
-            <span>${escapeHtml(mode.detail)}</span>
-            <em>${blocked ? "needs previous run" : selected ? "selected" : "available"}</em>
-          </button>
-        `;
-      }).join("")}
-    </div>
-  `;
-}
-
 function renderPreviousRunContext(context) {
   if (!context.available) {
     return `
@@ -110,7 +84,6 @@ function renderFirstLaunchState() {
   const ready = selectedRuntimeReady();
   const hasWorkItemContext = Boolean(state.dashboard?.work_item);
   const context = setupPreviousRunContext();
-  const mode = setupModeView(context);
   const detail = !hasWorkItemContext
     ? "Create or resume a work item before starting the governed workflow."
     : !state.selectedRuntime
@@ -123,12 +96,11 @@ function renderFirstLaunchState() {
     <section class="surface first-launch-state project-setup-state">
       <div class="surface-title">
         <span>Project Setup</span>
-        <span class="small-badge">${escapeHtml(mode.label)}</span>
+        <span class="small-badge">Guided Setup</span>
       </div>
       <div class="project-setup-grid">
         <div class="setup-primary">
           <p>${escapeHtml(detail)}</p>
-          ${renderSetupModeSelector(context)}
           <div class="setup-actions">
             <button data-first-launch-run type="button" ${canRun ? "" : "disabled"}>Run workflow</button>
             <button data-first-launch-stage type="button" class="secondary" ${canRun ? "" : "disabled"}>Run selected stage</button>

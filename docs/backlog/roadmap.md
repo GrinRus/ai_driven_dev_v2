@@ -10719,17 +10719,17 @@ Local tasks:
   - Scope: onboarding project/work-item layout.
   - Verification: create or resume remains inside the first setup viewport at `390x844`
     and `1440x900`, while advanced project-set validation remains reachable.
-- `W36-E4-S1-T4` (next) Remove no-run mode cards that do not change execution semantics and
+- `W36-E4-S1-T4` (done) Remove no-run mode cards that do not change execution semantics and
   leave terminal follow-up, clone, eval, and archive presentation to `W36-E5-S9`.
   - Scope: Guided Setup presentation only; the legacy renderer remains available for rollback.
   - Verification: the setup action-to-service matrix proves each remaining selector has a
     distinct endpoint/outcome and no terminal disposition leaks into first-run setup.
-- `W36-E4-S1-T5` (soon) Add the Guided Delivery preference and contextual explanation card over
+- `W36-E4-S1-T5` (next) Add the Guided Delivery preference and contextual explanation card over
   the same selected context and service actions used by Studio.
   - Scope: Guided Delivery browser presentation only.
   - Verification: toggling Guided Delivery preserves project, work item, run, stage,
     runtime, request payload, and durable result for the same action.
-- `W36-E4-S1-T6` (planned) Bind the new Review & Launch control to the shared mutation dispatcher only
+- `W36-E4-S1-T6` (soon) Bind the new Review & Launch control to the shared mutation dispatcher only
   after task-aware workflow entrypoint integrity is restored.
   - Dependencies: `W35-E2-S8`, `W36-E6-S4-T1`.
   - Scope: Guided Setup launch binding only.

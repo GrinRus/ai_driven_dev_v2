@@ -20,12 +20,6 @@ function setupPreviousRunContext() {
   };
 }
 
-function setupModeView(context = null) {
-  const mode = SETUP_MODES.find((candidate) => candidate.id === state.setupMode) || SETUP_MODES[0];
-  if (context && mode.requiresPreviousRun && !context.available) return SETUP_MODES[0];
-  return mode;
-}
-
 function terminalHandoffNeedsRecovery(handoff) {
   return Boolean(handoff && (handoff.status !== "completed" || (handoff.blockers || []).length));
 }

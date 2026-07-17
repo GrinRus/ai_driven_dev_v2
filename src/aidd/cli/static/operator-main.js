@@ -181,15 +181,6 @@ document.addEventListener("click", async (event) => {
       renderBottomDock();
       return;
     }
-    const setupModeCard = event.target.closest("[data-setup-mode]");
-    if (setupModeCard) {
-      const requestedMode = SETUP_MODES.find((mode) => mode.id === setupModeCard.dataset.setupMode);
-      if (!requestedMode) return;
-      if (requestedMode.requiresPreviousRun && !setupPreviousRunContext().available) return;
-      state.setupMode = requestedMode.id;
-      await renderCockpit();
-      return;
-    }
     const nextFlowAction = event.target.closest("[data-next-flow-action]");
     if (nextFlowAction) {
       const action = nextFlowAction.dataset.nextFlowAction;

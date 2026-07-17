@@ -275,7 +275,6 @@ def test_operator_css_layers_own_static_ui_surfaces() -> None:
     assert ".validation-repair-center" in components
     assert ".repair-action-band" in components
     assert ".project-setup-grid" in components
-    assert ".setup-mode-card.selected" in components
     assert ".setup-readiness-checklist" in components
     assert ".flow-complete-state" in components
     assert ".flow-complete-mark" in components
@@ -313,7 +312,6 @@ def test_operator_css_layers_own_static_ui_surfaces() -> None:
     assert ".live-progress-meta" in responsive
     assert ".run-progress-meta" in responsive
     assert ".project-home-grid" in responsive
-    assert ".setup-mode-grid" in responsive
     assert ".handoff-metric-grid" in responsive
     assert ".lineage-flow" in responsive
     assert ".next-flow-wizard-frame" in responsive
@@ -551,21 +549,11 @@ def test_operator_state_and_dashboard_assets_keep_runtime_and_tab_contracts() ->
         (
             'const STAGES = ["idea", "research", "plan", "review-spec", "tasklist", '
             '"implement", "review", "qa"];',
-            "const SETUP_MODES = [",
-            'id: "new-work-item"',
-            'label: "New Work Item"',
-            'id: "follow-up-flow"',
-            'label: "Follow-up Flow"',
-            'id: "clone-previous-flow"',
-            'label: "Clone Previous Flow"',
-            'id: "eval-scenario-batch"',
-            'label: "Eval / Scenario Batch"',
             "const NON_BLOCKING_VALIDATION_NOTICE_CODES = new Set(",
             '"STRUCT-OUTPUT-PROMOTED"',
             'activeRunId: ""',
             'selectedEvidenceNodeId: ""',
             'selectedEvidenceEdgeId: ""',
-            'setupMode: "new-work-item"',
             "nextFlowWizard: {",
             'step: "sources"',
             "sourceFindings: null",
@@ -1729,11 +1717,9 @@ def test_operator_next_flow_asset_keeps_launch_resume_and_runtime_guard_contract
         (
             "function renderFirstLaunchState()",
             "function setupPreviousRunContext()",
-            "function renderSetupModeSelector(context)",
             "function renderPreviousRunContext(context)",
             "function renderSetupReadinessChecklist({ready, context})",
             "Readiness Checklist",
-            'aria-disabled="true" disabled',
             "function renderFlowCompleteState()",
             "function renderNextFlowActions(handoff)",
             "function renderTerminalArtifacts(artifacts)",
@@ -1886,7 +1872,6 @@ def test_operator_next_flow_asset_keeps_launch_resume_and_runtime_guard_contract
             "Blockers / safety",
             "Runtime fallback",
             "Previous-run context",
-            "data-setup-mode",
             "data-next-flow-action",
             "Select a runtime to start the first governed workflow run.",
             "Create or resume a work item before starting the governed workflow.",
@@ -2360,9 +2345,6 @@ def test_operator_main_asset_keeps_refresh_order_and_event_routing_contracts() -
             'event.target.closest("[data-first-launch-run]")',
             'event.target.closest("[data-first-launch-stage]")',
             "await startStage(state.activeStage);",
-            'closest("[data-setup-mode]")',
-            "requestedMode.requiresPreviousRun",
-            "setupPreviousRunContext().available",
             'closest("[data-next-flow-action]")',
             'action === "start-follow-up-flow"',
             "await openNextFlowWizard(action)",
@@ -2543,7 +2525,6 @@ def test_operator_css_keeps_focus_and_screen_reader_contracts() -> None:
     assert ".evidence-artifact-table" in css
     assert ".saved-answer" in css
     assert ".saved-answer-text" in css
-    assert ".setup-mode-card" in css
     assert ".previous-run-context" in css
     assert ".flow-complete-state" in css
     assert ".terminal-attention-spotlight" in css

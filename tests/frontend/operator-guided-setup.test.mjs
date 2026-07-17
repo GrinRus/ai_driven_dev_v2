@@ -87,3 +87,17 @@ test("project-set and config details are collapsed behind Advanced", async () =>
   assert.match(advanced, /<strong>Config<\/strong>/);
   assert.match(advanced, /renderProjectSetEditor\(\)/);
 });
+
+test("first-run setup has no mode selector with duplicate service semantics", async () => {
+  const assets = await Promise.all([
+    "operator-api-state.js",
+    "operator-next-flow-actions.js",
+    "operator-next-flow-view.js",
+    "operator-main.js",
+  ].map((name) => readFile(path.join(path.dirname(assetPath), name), "utf8")));
+  const source = assets.join("\n");
+  assert.doesNotMatch(source, /SETUP_MODES|data-setup-mode|setupModeView/);
+  assert.match(source, /data-first-launch-run/);
+  assert.match(source, /data-first-launch-stage/);
+  assert.match(source, /data-next-flow-action="start-follow-up-flow"/);
+});

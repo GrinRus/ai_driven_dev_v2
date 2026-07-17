@@ -31,32 +31,6 @@ const RECOVERY_NEXT_ACTIONS = new Set([
   "review-intervention",
   "inspect-runtime-log"
 ]);
-const SETUP_MODES = [
-  {
-    id: "new-work-item",
-    label: "New Work Item",
-    detail: "Start without inherited run context.",
-    requiresPreviousRun: false
-  },
-  {
-    id: "follow-up-flow",
-    label: "Follow-up Flow",
-    detail: "Continue from source findings and final QA evidence.",
-    requiresPreviousRun: true
-  },
-  {
-    id: "clone-previous-flow",
-    label: "Clone Previous Flow",
-    detail: "Reuse runtime, prompt pack, contracts, branch, and baseline.",
-    requiresPreviousRun: true
-  },
-  {
-    id: "eval-scenario-batch",
-    label: "Eval / Scenario Batch",
-    detail: "Compare completed-run evidence across scenario executions.",
-    requiresPreviousRun: true
-  }
-];
 const STAGE_COPY = {
   "idea": ["Idea", "Clarify the request"],
   "research": ["Research", "Gather context"],
@@ -157,7 +131,6 @@ const state = {
   logViewMode: "summary",
   rawLogMode: false,
   savedLogText: "",
-  setupMode: "new-work-item",
   onboarding: {
     setupRequired: false,
     loading: true,
