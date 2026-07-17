@@ -10474,19 +10474,19 @@ Dependencies:
 
 Local tasks:
 
-- `W36-E2-S2-T1` (next) Add executable accessible-name, label, focus-order, contrast,
+- `W36-E2-S2-T1` (done) Add executable accessible-name, label, focus-order, contrast,
   target-size, and reduced-motion assertions.
   - Dependencies: `W36-E2-S1-T3`.
   - Scope: browser assertion helpers.
   - Verification: one intentionally invalid fixture fails each accessibility rule with
     the owning selector and measured value.
-- `W36-E2-S2-T2` (soon) Add executable sticky-header, primary-action, clipping, overlap,
+- `W36-E2-S2-T2` (next) Add executable sticky-header, primary-action, clipping, overlap,
   nested-scroll, and horizontal-overflow assertions.
   - Dependencies: `W36-E2-S2-T1`.
   - Scope: browser geometry assertions.
   - Verification: intentionally bad header, offscreen CTA, clipped label, scroll-trap,
     and overflow fixtures fail at the expected viewport.
-- `W36-E2-S2-T3` (planned) Add deterministic screenshot and DOM-measure evidence output.
+- `W36-E2-S2-T3` (soon) Add deterministic screenshot and DOM-measure evidence output.
   - Scope: browser evidence writer.
   - Verification: each run produces bounded viewport metadata, screenshot paths,
     console/network summaries, accessibility results, and cleanup status.

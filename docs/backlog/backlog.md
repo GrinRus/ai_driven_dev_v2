@@ -7,13 +7,12 @@ slice, and local task.
 
 ## Next
 
-- `W36-E2-S2-T1` — Add rendered accessible-name, label, focus-order, contrast,
-  target-size, and reduced-motion assertions.
+- `W36-E2-S2-T2` — Add rendered sticky-header, primary-action, clipping, overlap,
+  nested-scroll, and horizontal-overflow assertions.
 
 ## Soon
 
-- `W36-E2-S2-T2` — Add rendered sticky-header, primary-action, clipping, overlap,
-  nested-scroll, and horizontal-overflow assertions.
+- `W36-E2-S2-T3` — Add deterministic screenshot and DOM-measure evidence output.
 
 ## Parking lot
 
@@ -68,6 +67,11 @@ slice, and local task.
   queue-restoration policy in `docs/backlog/roadmap.md` (`W8-E3-S1`).
 
 ## Current reconciliation
+
+- `2026-07-17` `W36-E2-S2-T1` is complete: the browser assertion layer now reports
+  accessible-name, label, focus-order, contrast, target-size, and reduced-motion failures
+  with the owning selector and measured value. `W36-E2-S2-T2` is promoted to `Next` and
+  `W36-E2-S2-T3` to `Soon`.
 
 - `2026-07-17` `W36-E2-S1-T3` and slice `W36-E2-S1` are complete: nine immutable,
   provider-free descriptors now seed canonical setup, active, recovery, quality,
