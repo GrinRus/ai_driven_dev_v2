@@ -11456,18 +11456,18 @@ Local tasks:
   - Scope: question/intervention mutation controls.
   - Verification: failed writes retain drafts, successful writes clear drafts, and
     duplicate submissions create one durable artifact.
-- `W36-E6-S4-T4` (next) Adopt the mutation guard for next-flow draft, preflight, and launch.
+- `W36-E6-S4-T4` (done) Adopt the mutation guard for next-flow draft, preflight, and launch.
   - Dependencies: `W34-E3-S4-T4`.
   - Scope: next-flow browser controller.
   - Verification: repeated actions cannot create duplicate work items or runs and the
     source run remains unchanged after failure.
-- `W36-E6-S4-T5` (soon) Add approval reason capture and explicit confirmation for
+- `W36-E6-S4-T5` (next) Add approval reason capture and explicit confirmation for
   `allow_for_session` with controls disabled while submitting.
   - Dependencies: `W34-E3-S2`.
   - Scope: approval decision UI.
   - Verification: no session-wide approval POST occurs before confirmation and the
     submitted reason/breadth remain visible in the preview.
-- `W36-E6-S4-T6` (planned) Reconcile approval compare-and-set or terminal conflicts to the durable
+- `W36-E6-S4-T6` (soon) Reconcile approval compare-and-set or terminal conflicts to the durable
   winning decision and audit row.
   - Dependencies: `W34-E3-S2`.
   - Scope: approval conflict UI.
