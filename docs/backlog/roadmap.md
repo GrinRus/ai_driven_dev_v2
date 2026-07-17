@@ -10463,7 +10463,7 @@ Exit evidence:
 - packaged browser behavior is executable and repeatable without a provider runtime;
 - fixture state and screenshots never leak into the repository worktree.
 
-#### Slice W36-E2-S2 — rendered geometry and accessibility assertions (`planned`)
+#### Slice W36-E2-S2 — rendered geometry and accessibility assertions (`done`)
 Goal: fail deterministically when the rendered UI loses first-viewport priority,
 accessibility semantics, or viewport containment.
 
@@ -10486,7 +10486,7 @@ Local tasks:
   - Scope: browser geometry assertions.
   - Verification: intentionally bad header, offscreen CTA, clipped label, scroll-trap,
     and overflow fixtures fail at the expected viewport.
-- `W36-E2-S2-T3` (next) Add deterministic screenshot and DOM-measure evidence output.
+- `W36-E2-S2-T3` (done) Add deterministic screenshot and DOM-measure evidence output.
   - Scope: browser evidence writer.
   - Verification: each run produces bounded viewport metadata, screenshot paths,
     console/network summaries, accessibility results, and cleanup status.
@@ -10508,13 +10508,13 @@ Dependencies:
 
 Local tasks:
 
-- `W36-E2-S3-T1` (soon) Extract shared non-next-flow dashboard loading, context selection, and
+- `W36-E2-S3-T1` (next) Extract shared non-next-flow dashboard loading, context selection, and
   mutation dispatch from legacy render ownership; next-flow splitting remains owned by
   `W34-E3-S4-T4` until that task closes.
   - Scope: packaged browser state/action seam only.
   - Verification: legacy fixtures produce equivalent requests and durable readback through
     the shared seam before any Studio renderer is enabled.
-- `W36-E2-S3-T2` (planned) Add a temporary browser-only `ui=studio|legacy` presentation selector while
+- `W36-E2-S3-T2` (soon) Add a temporary browser-only `ui=studio|legacy` presentation selector while
   keeping `/`, packaged asset URLs, `aidd ui`, and action endpoints stable.
   - Scope: browser bootstrap and renderer selection only.
   - Verification: an executable truth table covers `missing | studio | legacy` against

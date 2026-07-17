@@ -7,12 +7,13 @@ slice, and local task.
 
 ## Next
 
-- `W36-E2-S2-T3` — Add deterministic screenshot and DOM-measure evidence output.
+- `W36-E2-S3-T1` — Extract shared dashboard loading, context selection, and mutation
+  dispatch from legacy renderer ownership.
 
 ## Soon
 
-- `W36-E2-S3-T1` — Extract shared dashboard loading, context selection, and mutation
-  dispatch from legacy renderer ownership.
+- `W36-E2-S3-T2` — Add a temporary browser-only `ui=studio|legacy` presentation selector
+  while keeping service requests unchanged.
 
 ## Parking lot
 
@@ -65,6 +66,12 @@ slice, and local task.
   queue-restoration policy in `docs/backlog/roadmap.md` (`W8-E3-S1`).
 
 ## Current reconciliation
+
+- `2026-07-17` `W36-E2-S2-T3` and slice `W36-E2-S2` are complete: schema-v1 browser
+  evidence now atomically records bounded viewport metadata, screenshots, DOM measures,
+  console/network summaries, accessibility/geometry results, and cleanup status outside
+  the repository worktree. `W36-E2-S3-T1` is promoted to `Next` and `W36-E2-S3-T2` to
+  `Soon`.
 
 - `2026-07-17` `W36-E2-S2-T2` is complete: browser geometry assertions now diagnose
   sticky-header budget, first-viewport primary action, clipping, overlap, nested scroll,
