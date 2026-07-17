@@ -666,6 +666,11 @@ Runtime readiness is likewise dimensioned: binary detection is
 their individual flags. The legacy provider/command booleans remain compatibility fields and
 must not be combined into an inferred authentication or overall-ready claim.
 
+Each runtime may also carry one `latest_launch` projection resolved from canonical
+`runtime-exit.json` plus its attempt artifact index. The index owns the displayed timestamp;
+legacy evidence without it keeps the normalized outcome with a null timestamp and warning,
+while corrupt evidence is reported as `unknown` rather than fabricated provenance.
+
 Connectivity has exactly four observable states: `online` after a successful current transport
 exchange, `reconnecting` while bounded retry is active, `offline` after observed transport
 failure, and `unknown` before evidence exists. Runtime success/failure is not inferred from

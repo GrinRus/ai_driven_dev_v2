@@ -5,6 +5,7 @@ from dataclasses import dataclass
 from typing import Literal
 
 from aidd.config import AiddConfig
+from aidd.core.runtime_launch_history import RuntimeLaunchOutcome
 from aidd.runtime_catalog import runtime_definitions
 
 RuntimeCommandSource = Literal["default", "config"]
@@ -90,6 +91,7 @@ class RuntimeReadinessItem:
     execution_command: RuntimeExecutionCommandReadiness
     authentication: RuntimeAuthenticationReadiness
     capabilities: RuntimeCapabilityReadiness
+    latest_launch: RuntimeLaunchOutcome | None
 
 
 @dataclass(frozen=True, slots=True)
@@ -102,6 +104,7 @@ def resolve_runtime_readiness(
     config: AiddConfig,
     probe_reports: Mapping[str, RuntimeReadinessProbeReport],
     command_sources: Mapping[str, RuntimeCommandSource] | None = None,
+    launch_history: Mapping[str, RuntimeLaunchOutcome] | None = None,
 ) -> RuntimeReadinessView:
     runtimes: list[RuntimeReadinessItem] = []
     for definition in runtime_definitions():
@@ -164,6 +167,11 @@ def resolve_runtime_readiness(
                     detail=None if probe_report is None else probe_report.authentication_detail,
                 ),
                 capabilities=_capability_readiness(probe_report),
+                latest_launch=(
+                    None
+                    if launch_history is None
+                    else launch_history.get(definition.runtime_id)
+                ),
             )
         )
     return RuntimeReadinessView(runtimes=tuple(runtimes))

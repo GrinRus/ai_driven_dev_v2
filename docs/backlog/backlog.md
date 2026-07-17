@@ -7,15 +7,16 @@ slice, and local task.
 
 ## Next
 
-- `W36-E4-S2-T2` — Project the latest per-runtime launch outcome and timestamp from
-  canonical attempt evidence.
+- `W36-E4-S1-T1` — Add the Project -> Work item -> Runtime -> Review/Launch onboarding
+  state machine.
 
 ## Soon
 
+- `W36-E4-S1-T2` — Render Create and Resume as sibling work-item branches and allow
+  inspection before runtime selection.
+
 ## Parking lot
 
-- `W36-E4-S1-T1` — Add the Project -> Work item -> Runtime -> Review/Launch onboarding
-  state machine.
 - `W36-E5-S1-T1` — Hide a zero-value Evidence Inspector and keep Filmstrip/log evidence
   collapsed until requested.
 - `W36-E5-S2-T1` — Replace the measured `275px` mobile header with a compact
@@ -51,6 +52,12 @@ slice, and local task.
   queue-restoration policy in `docs/backlog/roadmap.md` (`W8-E3-S1`).
 
 ## Current reconciliation
+
+- `2026-07-17` `W36-E4-S2-T2` is complete: readiness now includes the latest canonical
+  attempt outcome per runtime with artifact-index timestamp and evidence path; legacy or
+  malformed attempts degrade explicitly without fabricated provenance. `W36-E4-S1-T1`
+  is promoted to `Next` and `W36-E4-S1-T2` to `Soon`; readiness rendering `S2-T3`
+  remains deferred until Guided Setup and the active Studio shell exist.
 
 - `2026-07-17` `W36-E4-S2-T1` is complete: binary, execution command,
   authentication, and adapter capability evidence now have independent typed statuses;

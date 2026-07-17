@@ -3843,6 +3843,7 @@ def test_ui_runtime_readiness_endpoint_exposes_probe_and_config_data(
     assert generic_cli["execution_command"]["status"] == "unavailable"
     assert generic_cli["authentication"] == {"detail": None, "status": "unverified"}
     assert generic_cli["capabilities"]["status"] == "unknown"
+    assert generic_cli["latest_launch"] is None
     assert generic_cli["default_timeout_seconds"] == 42
     assert generic_cli["stage_timeout_seconds"] == {"plan": 90}
     assert runtimes["codex"]["command_source"] == "default"

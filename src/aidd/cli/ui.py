@@ -112,6 +112,7 @@ from aidd.core.run_store import (
     run_manifest_path,
     run_root,
 )
+from aidd.core.runtime_launch_history import resolve_runtime_launch_history
 from aidd.core.runtime_operator import (
     OPERATOR_DECISIONS_FILENAME,
     OPERATOR_REQUESTS_FILENAME,
@@ -3703,6 +3704,10 @@ class OperatorUiService:
             config=cfg,
             probe_reports=self._readiness_probe_provider(cfg),
             command_sources=_runtime_command_sources_from_config(config_path),
+            launch_history=resolve_runtime_launch_history(
+                workspace_root=self.workspace_root,
+                work_item=self.work_item,
+            ),
         )
 
     def _runtime_readiness(self) -> object:
