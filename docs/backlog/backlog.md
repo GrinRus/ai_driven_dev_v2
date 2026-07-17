@@ -7,10 +7,13 @@ slice, and local task.
 
 ## Next
 
-- `W36-E3-S1-T3` — Define compact desktop and touch mobile density modes from shared
-  control tokens.
+- `W36-E3-S2-T1` — Normalize button, text-input, select, textarea, and checkbox anatomy
+  and typography.
 
 ## Soon
+
+- `W36-E3-S2-T2` — Add shared hover, active, focus-visible, disabled, invalid, pending,
+  selected, and loading states.
 
 ## Parking lot
 
@@ -61,6 +64,11 @@ slice, and local task.
   queue-restoration policy in `docs/backlog/roadmap.md` (`W8-E3-S1`).
 
 ## Current reconciliation
+
+- `2026-07-17` `W36-E3-S1-T3` and slice `W36-E3-S1` are complete: desktop and mobile
+  controls now resolve a shared density token to `32px` and `44px` respectively, with
+  rendered Chromium coverage proving the token-driven switch. `W36-E3-S2-T1` is
+  promoted to `Next` and its direct successor `W36-E3-S2-T2` to `Soon`.
 
 - `2026-07-17` `W36-E3-S1-T2` is complete: repeated status and surface colors now
   resolve through semantic roles, raw duplicate palettes outside the token layer are

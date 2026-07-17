@@ -43,6 +43,11 @@
   }
 }
 @media (max-width: 760px) {
+  :root {
+    --control-height: var(--control-height-touch);
+    --control-padding-block: 8px;
+  }
+
   .brand-meta {
     align-items: flex-start;
     white-space: normal;

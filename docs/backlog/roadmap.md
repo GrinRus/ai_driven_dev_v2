@@ -10546,7 +10546,7 @@ Exit evidence:
 ### Epic W36-E3 — semantic design system and accessibility (`planned`)
 Linked stories: `US-02`, `US-05`, `US-06`, `US-11`
 
-#### Slice W36-E3-S1 — semantic tokens and density (`planned`)
+#### Slice W36-E3-S1 — semantic tokens and density (`done`)
 Goal: make repeated visual decisions come from one semantic token contract.
 
 Dependencies:
@@ -10567,7 +10567,7 @@ Local tasks:
   - Scope: packaged CSS color consumption.
   - Verification: computed-style fixtures preserve state meaning and meet accepted
     contrast thresholds.
-- `W36-E3-S1-T3` (next) Define compact desktop and touch mobile density modes from shared
+- `W36-E3-S1-T3` (done) Define compact desktop and touch mobile density modes from shared
   control tokens.
   - Scope: token and responsive density rules.
   - Verification: measured controls meet the compact desktop contract and the `44px`
@@ -10588,12 +10588,12 @@ Dependencies:
 
 Local tasks:
 
-- `W36-E3-S2-T1` (planned) Normalize button, text-input, select, textarea, and checkbox anatomy
+- `W36-E3-S2-T1` (next) Normalize button, text-input, select, textarea, and checkbox anatomy
   and typography.
   - Scope: base control CSS.
   - Verification: onboarding, question, intervention, comparison, and next-flow forms
     share computed height, font, border, radius, and focus roles.
-- `W36-E3-S2-T2` (planned) Add shared hover, active, focus-visible, disabled, invalid, pending,
+- `W36-E3-S2-T2` (soon) Add shared hover, active, focus-visible, disabled, invalid, pending,
   selected, and loading states.
   - Scope: interactive control states.
   - Verification: one browser fixture exercises every state with pointer, keyboard,

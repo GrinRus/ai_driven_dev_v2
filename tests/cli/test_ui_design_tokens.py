@@ -61,6 +61,9 @@ def test_operator_token_inventory_covers_accepted_semantic_roles() -> None:
         "--control-height-compact",
         "--control-height-default",
         "--control-height-touch",
+        "--control-height",
+        "--control-padding-block",
+        "--control-padding-inline",
         "--focus-width",
         "--focus-offset",
         "--focus-shadow",
@@ -97,3 +100,15 @@ def test_raw_value_inventory_outside_token_layer_cannot_grow() -> None:
         for color, count in color_counts.items()
         if count > 1
     }
+
+
+def test_density_mode_changes_shared_tokens_instead_of_component_rules() -> None:
+    tokens = _asset("/operator-tokens.css")
+    base = _asset("/operator-base.css")
+    responsive = _asset("/operator-responsive.css")
+
+    assert "--control-height: var(--control-height-compact);" in tokens
+    assert "min-height: var(--control-height);" in base
+    assert "padding: var(--control-padding-block) var(--control-padding-inline);" in base
+    assert "--control-height: var(--control-height-touch);" in responsive
+    assert not re.search(r"(?:button|input|select)[^{]*\{[^}]*min-height:\s*44px", responsive)

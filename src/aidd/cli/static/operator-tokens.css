@@ -128,6 +128,8 @@
   --control-height-compact: 32px;
   --control-height-default: 36px;
   --control-height-touch: 44px;
+  --control-height: var(--control-height-compact);
+  --control-padding-block: 6px;
   --control-padding-inline: 12px;
   --control-icon-size: 20px;
 
