@@ -7,13 +7,11 @@ slice, and local task.
 
 ## Next
 
-- `W36-E3-S4-T2` — Fix stage accessible names and dynamic onboarding/form label
-  associations.
+- `W36-E3-S4-T3` — Raise borderline contrast, readable minimums, and tabular numeric
+  treatment.
 
 ## Soon
 
-- `W36-E3-S4-T3` — Raise borderline contrast, readable minimums, and tabular numeric
-  treatment.
 
 
 
@@ -66,6 +64,12 @@ slice, and local task.
   queue-restoration policy in `docs/backlog/roadmap.md` (`W8-E3-S1`).
 
 ## Current reconciliation
+
+- `2026-07-17` `W36-E3-S4-T2` is complete: all eight stage controls derive their
+  accessible name from the visible stage label plus explicit status, and dynamic
+  onboarding, remediation, intervention, comparison, source-selection, and follow-up
+  fields now have stable ids, names, and associated labels. `W36-E3-S4-T3` is promoted
+  to `Next`; `Soon` remains empty until the accessibility slice closes.
 
 - `2026-07-17` `W36-E3-S4-T1` is complete: a first-focus skip link resolves the
   currently rendered primary decision before maintenance controls, detail navigation

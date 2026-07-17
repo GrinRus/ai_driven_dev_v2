@@ -150,16 +150,19 @@ function renderStageRail() {
       attemptCount ? `<span class="small-badge ${retry ? "retried" : ""}" title="${escapeHtml(attemptTitle)}">${retry ? `retry ${escapeHtml(attemptCount)}x` : `${escapeHtml(attemptCount)}x`}</span>` : ""
     ].filter(Boolean).join("");
     const retryAria = retry ? `, ${retry.retryCount === 1 ? "1 retry" : `${retry.retryCount} retries`} recorded` : "";
+    const nameId = `stage-${item.stage}-name`;
+    const statusId = `stage-${item.stage}-status`;
     return `
-      <button class="stage-card${active}${retry ? " retried" : ""}" data-stage="${escapeHtml(item.stage)}" type="button" aria-current="${isActive ? "step" : "false"}" aria-label="${escapeHtml(`${item.title}: ${item.status}${retryAria}`)}">
+      <button class="stage-card${active}${retry ? " retried" : ""}" data-stage="${escapeHtml(item.stage)}" type="button" aria-current="${isActive ? "step" : "false"}" aria-labelledby="${escapeHtml(nameId)} ${escapeHtml(statusId)}">
         <span class="stage-index">${index + 1}</span>
         <span class="stage-copy">
-          <span class="stage-name">${escapeHtml(item.title)}</span>
+          <span id="${escapeHtml(nameId)}" class="stage-name">${escapeHtml(item.title)}</span>
           <span class="stage-subtitle">${escapeHtml(item.subtitle)}</span>
         </span>
         <span class="stage-markers">
           <span class="marker-dot ${escapeHtml(status)}" title="${escapeHtml(item.status)}"></span>
           ${markers}
+          <span id="${escapeHtml(statusId)}" class="sr-only">${escapeHtml(`${item.status}${retryAria}`)}</span>
         </span>
       </button>
     `;

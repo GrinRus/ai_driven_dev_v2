@@ -799,9 +799,9 @@ function renderRunComparisonPanel() {
         <span class="small-badge">${escapeHtml(baselineRunId || "baseline")} -> ${escapeHtml(targetRunId || "target")}</span>
       </div>
       <div class="comparison-controls">
-        <label>
+        <label for="runComparisonBaseline">
           <span>Baseline run id</span>
-          <input id="runComparisonBaseline" type="text" value="${escapeHtml(baselineRunId)}" placeholder="run-..." autocomplete="off">
+          <input id="runComparisonBaseline" name="comparison_baseline_run" type="text" value="${escapeHtml(baselineRunId)}" placeholder="run-..." autocomplete="off">
         </label>
         <button data-run-comparison-refresh type="button" ${loading ? "disabled" : ""}>Refresh comparison</button>
       </div>
@@ -988,6 +988,7 @@ function renderArchiveConfirmation() {
 
 function renderSourceFindingItem(group, item) {
   const checked = sourceFindingSelected(item.id);
+  const selectionId = `source-selection-${item.id}`;
   const recommended = item.recommended ? '<span class="small-badge good">recommended</span>' : "";
   const supporting = item.collapsible ? '<span class="small-badge">supporting</span>' : "";
   const artifactButton = item.source_path
@@ -1000,8 +1001,8 @@ function renderSourceFindingItem(group, item) {
     : `<div class="empty-state">Manual request text will be captured in the next wizard step.</div>`;
   return `
     <article class="source-finding-card${item.recommended ? " recommended" : ""}${item.collapsible ? " supporting" : ""}">
-      <label>
-        <input data-source-selection-id="${escapeHtml(item.id)}" type="checkbox" ${checked ? "checked" : ""}>
+      <label for="${escapeHtml(selectionId)}">
+        <input id="${escapeHtml(selectionId)}" name="source_selection" data-source-selection-id="${escapeHtml(item.id)}" type="checkbox" ${checked ? "checked" : ""}>
         <span>
           <strong>${escapeHtml(sourceFindingDisplayLabel(item))}</strong>
           <small>${escapeHtml(group.label)} / ${escapeHtml(item.kind)} ${recommended}${supporting}</small>
@@ -1531,24 +1532,33 @@ function renderLaunchConfirmation() {
 
 function renderEditableList(name, items, selectedItems = null) {
   const selected = selectedItems ? new Set(selectedItems.map((item) => String(item))) : null;
-  return (items || []).map((item, index) => `
-    <div class="editable-list-row">
-      <input data-follow-up-list="${escapeHtml(name)}" data-follow-up-index="${escapeHtml(index)}" type="checkbox" ${!selected || selected.has(String(item)) ? "checked" : ""} aria-label="Include ${escapeHtml(item || name)}">
-      <input data-follow-up-list-text="${escapeHtml(name)}" data-follow-up-index="${escapeHtml(index)}" type="text" value="${escapeHtml(item)}">
-    </div>
-  `).join("") || `<div class="empty-state">No ${escapeHtml(name)} generated.</div>`;
+  return (items || []).map((item, index) => {
+    const includeId = `follow-up-${name}-${index}-include`;
+    const textId = `follow-up-${name}-${index}-text`;
+    return `
+      <div class="editable-list-row">
+        <input id="${escapeHtml(includeId)}" name="${escapeHtml(name)}_included" data-follow-up-list="${escapeHtml(name)}" data-follow-up-index="${escapeHtml(index)}" type="checkbox" ${!selected || selected.has(String(item)) ? "checked" : ""}>
+        <label class="sr-only" for="${escapeHtml(includeId)}">Include ${escapeHtml(item || name)}</label>
+        <label class="sr-only" for="${escapeHtml(textId)}">${escapeHtml(name)} item ${index + 1}</label>
+        <input id="${escapeHtml(textId)}" name="${escapeHtml(name)}_text" data-follow-up-list-text="${escapeHtml(name)}" data-follow-up-index="${escapeHtml(index)}" type="text" value="${escapeHtml(item)}">
+      </div>
+    `;
+  }).join("") || `<div class="empty-state">No ${escapeHtml(name)} generated.</div>`;
 }
 
 function renderInheritedContextToggles(items) {
-  return (items || []).map((item) => `
-    <label class="inherited-context-toggle">
-      <input data-inherited-context="${escapeHtml(item.id)}" type="checkbox" ${item.enabled ? "checked" : ""}>
-      <span>
-        <strong>${escapeHtml(item.label)}</strong>
-        <small>${escapeHtml(item.detail)}</small>
-      </span>
-    </label>
-  `).join("");
+  return (items || []).map((item, index) => {
+    const inputId = `inherited-context-${index}`;
+    return `
+      <label class="inherited-context-toggle" for="${inputId}">
+        <input id="${inputId}" name="inherited_context" data-inherited-context="${escapeHtml(item.id)}" type="checkbox" ${item.enabled ? "checked" : ""}>
+        <span>
+          <strong>${escapeHtml(item.label)}</strong>
+          <small>${escapeHtml(item.detail)}</small>
+        </span>
+      </label>
+    `;
+  }).join("");
 }
 
 function renderFollowUpDefinitionErrorSummary(errors) {
@@ -1608,17 +1618,17 @@ function renderFollowUpDefinition() {
       </div>
       <div class="follow-up-definition-grid">
         <section class="definition-form">
-          <label class="form-field">
+          <label class="form-field" for="followUpWorkItem">
             <span>Work item id</span>
-            <input data-follow-up-field="new_work_item" type="text" value="${escapeHtml(draft.new_work_item)}">
+            <input id="followUpWorkItem" name="new_work_item" data-follow-up-field="new_work_item" type="text" value="${escapeHtml(draft.new_work_item)}">
           </label>
-          <label class="form-field">
+          <label class="form-field" for="followUpTitle">
             <span>Title</span>
-            <input data-follow-up-field="title" type="text" value="${escapeHtml(draft.title)}">
+            <input id="followUpTitle" name="title" data-follow-up-field="title" type="text" value="${escapeHtml(draft.title)}">
           </label>
-          <label class="form-field">
+          <label class="form-field" for="followUpInputPreview">
             <span>First-stage input preview</span>
-            <textarea data-follow-up-field="first_stage_input_preview" rows="10">${escapeHtml(draft.first_stage_input_preview)}</textarea>
+            <textarea id="followUpInputPreview" name="first_stage_input_preview" data-follow-up-field="first_stage_input_preview" rows="10">${escapeHtml(draft.first_stage_input_preview)}</textarea>
           </label>
         </section>
         <aside class="definition-side">

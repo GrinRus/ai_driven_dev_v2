@@ -199,9 +199,9 @@ function renderProjectSetEditor() {
         const duplicate = duplicates.has(String(row.root || "").trim());
         return `
           <div class="project-set-row ${duplicate ? "duplicate" : ""}">
-            <input data-project-set-field="id" data-project-set-index="${index}" type="text" value="${escapeHtml(row.id || "")}" placeholder="api" autocomplete="off" spellcheck="false" aria-label="Project id ${index + 1}">
-            <input data-project-set-field="root" data-project-set-index="${index}" type="text" value="${escapeHtml(row.root || "")}" placeholder="services/api" autocomplete="off" spellcheck="false" aria-label="Project root ${index + 1}">
-            <input data-project-set-field="role" data-project-set-index="${index}" type="text" value="${escapeHtml(row.role || "")}" placeholder="owner" autocomplete="off" spellcheck="false" aria-label="Project role ${index + 1}">
+            <input id="project-set-${index}-id" name="project_set_${index}_id" data-project-set-field="id" data-project-set-index="${index}" type="text" value="${escapeHtml(row.id || "")}" placeholder="api" autocomplete="off" spellcheck="false" aria-label="Project id ${index + 1}">
+            <input id="project-set-${index}-root" name="project_set_${index}_root" data-project-set-field="root" data-project-set-index="${index}" type="text" value="${escapeHtml(row.root || "")}" placeholder="services/api" autocomplete="off" spellcheck="false" aria-label="Project root ${index + 1}">
+            <input id="project-set-${index}-role" name="project_set_${index}_role" data-project-set-field="role" data-project-set-index="${index}" type="text" value="${escapeHtml(row.role || "")}" placeholder="owner" autocomplete="off" spellcheck="false" aria-label="Project role ${index + 1}">
             <button data-project-set-remove="${index}" class="secondary" type="button" ${rows.length <= 1 ? "disabled" : ""}>Remove</button>
             ${duplicate ? `<span class="form-error">Duplicate root</span>` : ""}
           </div>
@@ -274,7 +274,7 @@ function renderOnboarding() {
         <form id="onboardingProjectForm" class="form-grid">
           <label class="field-label" for="onboardingProjectRoot">Project root</label>
           <div class="inline-form-row">
-            <input id="onboardingProjectRoot" type="text" value="${escapeHtml(state.onboarding.projectRootInput)}" autocomplete="off" spellcheck="false">
+            <input id="onboardingProjectRoot" name="project_root" type="text" value="${escapeHtml(state.onboarding.projectRootInput)}" autocomplete="off" spellcheck="false">
             <button type="submit" class="secondary" ${state.onboarding.inspecting ? "disabled" : ""}>Validate</button>
           </div>
         </form>
@@ -296,11 +296,11 @@ function renderOnboarding() {
         </div>
         <form id="onboardingCreateForm" class="form-grid">
           <label class="field-label" for="onboardingWorkItem">Work item id</label>
-          <input id="onboardingWorkItem" type="text" maxlength="120" value="${escapeHtml(state.onboarding.workItemInput)}" autocomplete="off" spellcheck="false">
+          <input id="onboardingWorkItem" name="work_item" type="text" maxlength="120" value="${escapeHtml(state.onboarding.workItemInput)}" autocomplete="off" spellcheck="false">
           <label class="field-label" for="onboardingRequest">Request</label>
-          <textarea id="onboardingRequest" rows="7" maxlength="20000">${escapeHtml(state.onboarding.requestText)}</textarea>
-          <label class="checkbox-row">
-            <input id="onboardingForceContext" type="checkbox" ${state.onboarding.forceContext ? "checked" : ""}>
+          <textarea id="onboardingRequest" name="request" rows="7" maxlength="20000">${escapeHtml(state.onboarding.requestText)}</textarea>
+          <label class="checkbox-row" for="onboardingForceContext">
+            <input id="onboardingForceContext" name="force_context" type="checkbox" ${state.onboarding.forceContext ? "checked" : ""}>
             <span>Overwrite existing request context</span>
           </label>
           <div class="setup-actions">

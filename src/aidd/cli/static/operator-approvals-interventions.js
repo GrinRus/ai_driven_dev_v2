@@ -164,9 +164,9 @@ async function renderRequestChange() {
     }
   }
   const targets = requestChangeTargetEntries(documents, context);
-  const targetBody = targets.length ? targets.map(([key, path]) => `
-    <label class="target-option">
-      <input type="checkbox" data-intervention-target="${escapeHtml(path)}">
+  const targetBody = targets.length ? targets.map(([key, path], index) => `
+    <label class="target-option" for="intervention-target-${index}">
+      <input id="intervention-target-${index}" name="intervention_target" type="checkbox" data-intervention-target="${escapeHtml(path)}">
       <span><strong>${escapeHtml(interventionTargetLabel(key))}</strong>${pathLine(path, 82)}</span>
     </label>
   `).join("") : `<div class="empty-state">No current-stage target documents available yet. The request can still run against the stage scope.</div>`;
@@ -182,7 +182,7 @@ async function renderRequestChange() {
           <div class="intervention-form">
             <div class="form-field">
               <label for="operatorRequestText">Operator request</label>
-              <textarea id="operatorRequestText" placeholder="Add rollback risks to the plan and update stage-result evidence."></textarea>
+              <textarea id="operatorRequestText" name="operator_request" placeholder="Add rollback risks to the plan and update stage-result evidence."></textarea>
             </div>
             <div class="form-field">
               <div class="target-documents-title">Target documents</div>

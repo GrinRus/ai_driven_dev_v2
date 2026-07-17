@@ -528,9 +528,12 @@ async function renderReviewFindings() {
           <table class="activity-table">
             <thead><tr><th>Select</th><th>ID</th><th>Severity</th><th>Disposition</th><th>Evidence</th><th>Summary</th></tr></thead>
             <tbody>
-              ${findings.length ? findings.map((finding) => `
+              ${findings.length ? findings.map((finding, index) => `
                 <tr>
-                  <td><input data-remediation-source="review" type="checkbox" value="${escapeHtml(finding.finding_id)}" ${finding.disposition === "must-fix" ? "checked" : ""}></td>
+                  <td>
+                    <input id="review-remediation-${index}" name="review_remediation" data-remediation-source="review" type="checkbox" value="${escapeHtml(finding.finding_id)}" ${finding.disposition === "must-fix" ? "checked" : ""}>
+                    <label class="sr-only" for="review-remediation-${index}">Select ${escapeHtml(finding.finding_id)}</label>
+                  </td>
                   <td>${escapeHtml(finding.finding_id)}</td>
                   <td><span class="small-badge ${finding.severity === "high" || finding.severity === "critical" ? "bad" : finding.severity === "medium" ? "warn" : ""}">${escapeHtml(finding.severity || "-")}</span></td>
                   <td>${escapeHtml(finding.disposition || "-")}</td>
@@ -541,9 +544,9 @@ async function renderReviewFindings() {
             </tbody>
           </table>
         </div>
-        <label class="form-field">
+        <label class="form-field" for="reviewRemediationNote">
           <span>Operator note for implement</span>
-          <textarea data-remediation-note="review" rows="4">Fix the selected review finding(s), update implementation-report.md, and preserve unrelated changes.</textarea>
+          <textarea id="reviewRemediationNote" name="review_remediation_note" data-remediation-note="review" rows="4">Fix the selected review finding(s), update implementation-report.md, and preserve unrelated changes.</textarea>
         </label>
         ${renderRemediationRuntimeGuard("review", Boolean(findings.length))}
         <div class="wizard-actions">
@@ -591,9 +594,12 @@ async function renderQaVerdict() {
           <table class="activity-table">
             <thead><tr><th>Select</th><th>Type</th><th>Item</th></tr></thead>
             <tbody>
-              ${sourceItems.length ? sourceItems.map((item) => `
+              ${sourceItems.length ? sourceItems.map((item, index) => `
                 <tr>
-                  <td><input data-remediation-source="qa" type="checkbox" value="${escapeHtml(item.id)}" ${view.quality_verdict === "not-ready" ? "checked" : ""}></td>
+                  <td>
+                    <input id="qa-remediation-${index}" name="qa_remediation" data-remediation-source="qa" type="checkbox" value="${escapeHtml(item.id)}" ${view.quality_verdict === "not-ready" ? "checked" : ""}>
+                    <label class="sr-only" for="qa-remediation-${index}">Select ${escapeHtml(item.id)}</label>
+                  </td>
                   <td>${escapeHtml(item.kind)}</td>
                   <td>${escapeHtml(item.label)}</td>
                 </tr>
@@ -601,9 +607,9 @@ async function renderQaVerdict() {
             </tbody>
           </table>
         </div>
-        <label class="form-field">
+        <label class="form-field" for="qaRemediationNote">
           <span>Operator note for implement</span>
-          <textarea data-remediation-note="qa" rows="4">Fix the selected QA risk(s) or issue(s), rerun verification, and update implementation-report.md.</textarea>
+          <textarea id="qaRemediationNote" name="qa_remediation_note" data-remediation-note="qa" rows="4">Fix the selected QA risk(s) or issue(s), rerun verification, and update implementation-report.md.</textarea>
         </label>
         ${renderRemediationRuntimeGuard("qa", Boolean(sourceItems.length))}
         ${renderQaCompletionGuard(view, Boolean(sourceItems.length))}
