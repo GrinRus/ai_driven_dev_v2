@@ -7,12 +7,11 @@ slice, and local task.
 
 ## Next
 
-- `W36-E6-S4-T2` — Adopt the mutation guard for workflow, stage, and remediation launch
-  controls.
+- `W36-E6-S4-T3` — Adopt the mutation guard for answer and intervention writes.
 
 ## Soon
 
-- `W36-E6-S4-T3` — Adopt the mutation guard for answer and intervention writes.
+- `W36-E6-S4-T4` — Adopt the mutation guard for next-flow draft, preflight, and launch.
 
 
 
@@ -58,6 +57,12 @@ slice, and local task.
   queue-restoration policy in `docs/backlog/roadmap.md` (`W8-E3-S1`).
 
 ## Current reconciliation
+
+- `2026-07-17` `W36-E6-S4-T2` is complete: workflow, stage, task, finalization,
+  stale-downstream, and remediation launches now share keyed in-flight work, disable
+  their duplicate controls immediately, start polling once, and resolve 409 by rendering
+  the durable dashboard winner. `W36-E6-S4-T3` is promoted to `Next` and
+  `W36-E6-S4-T4` to `Soon`.
 
 - `2026-07-17` `W36-E6-S4-T1` is complete: the packaged guard shares one in-flight
   Promise per bounded key, permits different keys concurrently, resolves 409 through

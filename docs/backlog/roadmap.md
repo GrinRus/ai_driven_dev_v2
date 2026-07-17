@@ -11447,16 +11447,16 @@ Local tasks:
   - Scope: packaged API/state utility.
   - Verification: double-click and concurrent-control fixtures send one request per key
     and preserve a retry path after failure.
-- `W36-E6-S4-T2` (next) Adopt the mutation guard for workflow, stage, and remediation launch
+- `W36-E6-S4-T2` (done) Adopt the mutation guard for workflow, stage, and remediation launch
   controls.
   - Scope: run mutation controls.
   - Verification: pending, same-run conflict, different-run concurrency, failure, and
     success states match server admission.
-- `W36-E6-S4-T3` (soon) Adopt the mutation guard for answer and intervention writes.
+- `W36-E6-S4-T3` (next) Adopt the mutation guard for answer and intervention writes.
   - Scope: question/intervention mutation controls.
   - Verification: failed writes retain drafts, successful writes clear drafts, and
     duplicate submissions create one durable artifact.
-- `W36-E6-S4-T4` (planned) Adopt the mutation guard for next-flow draft, preflight, and launch.
+- `W36-E6-S4-T4` (soon) Adopt the mutation guard for next-flow draft, preflight, and launch.
   - Dependencies: `W34-E3-S4-T4`.
   - Scope: next-flow browser controller.
   - Verification: repeated actions cannot create duplicate work items or runs and the

@@ -276,6 +276,7 @@ test("shared dashboard actions preserve workflow and stage request payloads", as
   };
   context.startJobPolling = async (job) => jobs.push(job);
   await load(context, "operator-api-state.js");
+  await load(context, "operator-mutation-guard.js");
   await load(context, "operator-shell-rendering.js");
   await load(context, "operator-dashboard-actions.js");
   vm.runInContext(
@@ -318,6 +319,39 @@ test("shared dashboard actions preserve workflow and stage request payloads", as
     {job_id: "job-1", status: "running"},
     {job_id: "job-2", status: "running"},
   ]);
+});
+
+test("same stage launch is submitted and attached to polling once", async () => {
+  const {context} = domContext();
+  const request = deferred();
+  let fetchCount = 0;
+  let pollCount = 0;
+  context.fetch = async () => {
+    fetchCount += 1;
+    return request.promise;
+  };
+  context.startJobPolling = async () => {
+    pollCount += 1;
+  };
+  await load(context, "operator-api-state.js");
+  await load(context, "operator-mutation-guard.js");
+  await load(context, "operator-shell-rendering.js");
+  await load(context, "operator-dashboard-actions.js");
+  vm.runInContext(`
+    state.dashboard = {work_item: "WI-UI"};
+    state.activeRunId = "run-ui";
+    state.activeStage = "plan";
+    state.selectedRuntime = "generic-cli";
+    state.readinessLoading = false;
+    state.readiness = {runtimes: [{runtime_id: "generic-cli", provider_available: true, execution_command_available: true}]};
+  `, context);
+
+  const first = vm.runInContext("startStage()", context);
+  const duplicate = vm.runInContext("startStage()", context);
+  assert.equal(fetchCount, 1);
+  request.resolve(response({job_id: "job-one", status: "running"}));
+  await Promise.all([first, duplicate]);
+  assert.equal(pollCount, 1);
 });
 
 test("cancellation invalidates an in-flight job poll", async () => {

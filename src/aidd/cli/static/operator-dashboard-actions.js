@@ -70,6 +70,55 @@ async function fetchProjectHome(workItem = "") {
   return true;
 }
 
+function setMutationControlsPending(selectors, pending) {
+  document.querySelectorAll(selectors.join(",")).forEach((control) => {
+    if (pending) {
+      control.dataset.mutationWasDisabled = control.disabled ? "true" : "false";
+      control.disabled = true;
+      control.setAttribute("aria-busy", "true");
+      return;
+    }
+    if (control.dataset.mutationWasDisabled === "false") control.disabled = false;
+    delete control.dataset.mutationWasDisabled;
+    control.removeAttribute("aria-busy");
+  });
+}
+
+async function readRunMutationWinner() {
+  await fetchDashboard();
+  await fetchProjectHome(state.dashboard?.work_item || "");
+  await renderAll();
+  return {
+    work_item: state.dashboard?.work_item || "",
+    run_id: state.dashboard?.run?.run_id || "",
+    active_stage: state.dashboard?.active_stage || "",
+    next_action: state.dashboard?.next_action || null
+  };
+}
+
+async function guardedJobLaunch({kind, components, controls, execute}) {
+  const key = operatorMutationKey(
+    kind,
+    state.dashboard?.work_item || state.activeRouteWorkItem || "no-work-item",
+    ...components
+  );
+  const guarded = await runGuardedMutation({
+    key,
+    execute: async () => {
+      const job = await execute();
+      await startJobPolling(job);
+      return job;
+    },
+    readWinner: readRunMutationWinner,
+    onState: (mutation) => setMutationControlsPending(controls, mutation.status === "pending")
+  });
+  if (guarded.status === "conflict") {
+    toast("Another request already won. Showing the durable server state.");
+    return null;
+  }
+  return guarded.result;
+}
+
 async function startWorkflow() {
   if (state.onboarding?.setupRequired || !state.dashboard?.work_item) {
     toast("Create or resume a work item before starting the workflow.");
@@ -78,16 +127,24 @@ async function startWorkflow() {
   if (!ensureRunnableRuntime()) return;
   const payload = {runtime: state.selectedRuntime, log_follow: true};
   if (state.activeRunId) payload.run_id = state.activeRunId;
-  const job = await postJson("/api/workflow/run", payload);
-  await startJobPolling(job);
+  await guardedJobLaunch({
+    kind: "workflow-run",
+    components: [state.activeRunId || "new-run"],
+    controls: ["#nextActionButton", "#globalNextActionButton", "[data-first-launch-run]"],
+    execute: () => postJson("/api/workflow/run", payload)
+  });
 }
 
 async function startStage(stage = state.activeStage) {
   if (!ensureRunnableRuntime()) return;
   const payload = {stage, runtime: state.selectedRuntime, log_follow: true};
   if (state.activeRunId) payload.run_id = state.activeRunId;
-  const job = await postJson("/api/stage/run", payload);
-  await startJobPolling(job);
+  await guardedJobLaunch({
+    kind: "stage-run",
+    components: [state.activeRunId || "new-run", stage],
+    controls: ["#nextActionButton", "#globalNextActionButton", `[data-proceed-stage="${stage}"]`, "[data-first-launch-stage]", "[data-run-repair]", "[data-rerun-implement]"],
+    execute: () => postJson("/api/stage/run", payload)
+  });
 }
 
 async function startImplementationTask(taskId) {
@@ -96,12 +153,16 @@ async function startImplementationTask(taskId) {
     toast("No run selected.");
     return;
   }
-  const job = await postJson("/api/tasks/run", {
-    task_id: taskId,
-    run_id: state.activeRunId,
-    runtime: state.selectedRuntime
+  await guardedJobLaunch({
+    kind: "task-run",
+    components: [state.activeRunId, taskId],
+    controls: [`[data-run-task="${taskId}"]`],
+    execute: () => postJson("/api/tasks/run", {
+      task_id: taskId,
+      run_id: state.activeRunId,
+      runtime: state.selectedRuntime
+    })
   });
-  await startJobPolling(job);
 }
 
 async function startTaskFinalization() {
@@ -110,11 +171,15 @@ async function startTaskFinalization() {
     toast("No run selected.");
     return;
   }
-  const job = await postJson("/api/tasks/finalize", {
-    run_id: state.activeRunId,
-    runtime: state.selectedRuntime
+  await guardedJobLaunch({
+    kind: "task-finalize",
+    components: [state.activeRunId, "aggregate"],
+    controls: ["[data-finalize-tasks]"],
+    execute: () => postJson("/api/tasks/finalize", {
+      run_id: state.activeRunId,
+      runtime: state.selectedRuntime
+    })
   });
-  await startJobPolling(job);
 }
 
 async function rerunStaleDownstream() {
@@ -123,12 +188,16 @@ async function rerunStaleDownstream() {
     toast("No run selected.");
     return;
   }
-  const job = await postJson("/api/remediation/rerun-downstream", {
-    runtime: state.selectedRuntime,
-    run_id: state.activeRunId,
-    log_follow: true
+  await guardedJobLaunch({
+    kind: "remediation-rerun",
+    components: [state.activeRunId, "stale-downstream"],
+    controls: ["#nextActionButton", "#globalNextActionButton", '[data-recovery-action="rerun-stale-downstream"]'],
+    execute: () => postJson("/api/remediation/rerun-downstream", {
+      runtime: state.selectedRuntime,
+      run_id: state.activeRunId,
+      log_follow: true
+    })
   });
-  await startJobPolling(job);
 }
 
 async function handleNextAction() {

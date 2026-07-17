@@ -502,9 +502,13 @@ async function launchRemediation(sourceStage) {
     run_id: state.activeRunId,
     log_follow: true
   };
-  const job = await postJson("/api/remediation/launch", payload);
-  toast("Remediation implement run started.");
-  await startJobPolling(job);
+  const job = await guardedJobLaunch({
+    kind: "remediation-launch",
+    components: [state.activeRunId, sourceStage, ids.slice().sort().join("+")],
+    controls: [`[data-remediation-launch="${sourceStage}"]`],
+    execute: () => postJson("/api/remediation/launch", payload)
+  });
+  if (job) toast("Remediation implement run started.");
 }
 
 async function renderReviewFindings() {

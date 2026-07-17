@@ -432,6 +432,7 @@ def test_operator_script_modules_own_static_ui_surfaces() -> None:
     approvals = _asset_text("/operator-approvals-interventions.js")
     logs = _asset_text("/operator-logs-jobs.js")
     next_flow_view = _asset_text("/operator-next-flow-view.js")
+    control_center = _asset_text("/operator-control-center.js")
     onboarding = _asset_text("/operator-onboarding.js")
     cockpit = _asset_text("/operator-stage-cockpit.js")
     main = _asset_text("/operator-main.js")
@@ -477,6 +478,10 @@ def test_operator_script_modules_own_static_ui_surfaces() -> None:
     assert "async function fetchDashboard()" in dashboard_actions
     assert "async function fetchProjectHome(workItem = \"\")" in dashboard_actions
     assert "async function startWorkflow()" in dashboard_actions
+    assert "async function guardedJobLaunch({kind, components, controls, execute})" in dashboard_actions
+    assert "readWinner: readRunMutationWinner" in dashboard_actions
+    assert 'kind: "remediation-rerun"' in dashboard_actions
+    assert 'kind: "remediation-launch"' in control_center
     assert "async function handleNextAction()" in dashboard_actions
     assert "function renderFlowCompleteState()" in next_flow_view
     assert "function renderRunHistory()" in next_flow_view
