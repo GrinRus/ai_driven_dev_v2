@@ -7,17 +7,15 @@ slice, and local task.
 
 ## Next
 
-- `W36-E2-S2-T2` — Add rendered sticky-header, primary-action, clipping, overlap,
-  nested-scroll, and horizontal-overflow assertions.
+- `W36-E2-S2-T3` — Add deterministic screenshot and DOM-measure evidence output.
 
 ## Soon
 
-- `W36-E2-S2-T3` — Add deterministic screenshot and DOM-measure evidence output.
+- `W36-E2-S3-T1` — Extract shared dashboard loading, context selection, and mutation
+  dispatch from legacy renderer ownership.
 
 ## Parking lot
 
-- `W36-E2-S3-T1` — Extract shared dashboard loading, context selection, and mutation
-  dispatch from legacy renderer ownership.
 - `W36-E3-S1-T1` — Add semantic typography, spacing, radius, elevation, control-size,
   state, focus, and motion tokens.
 - `W36-E4-S1-T1` — Add the Project -> Work item -> Runtime -> Review/Launch onboarding
@@ -67,6 +65,11 @@ slice, and local task.
   queue-restoration policy in `docs/backlog/roadmap.md` (`W8-E3-S1`).
 
 ## Current reconciliation
+
+- `2026-07-17` `W36-E2-S2-T2` is complete: browser geometry assertions now diagnose
+  sticky-header budget, first-viewport primary action, clipping, overlap, nested scroll,
+  and horizontal overflow at the owning viewport and selector. `W36-E2-S2-T3` is promoted
+  to `Next` and `W36-E2-S3-T1` to `Soon`.
 
 - `2026-07-17` `W36-E2-S2-T1` is complete: the browser assertion layer now reports
   accessible-name, label, focus-order, contrast, target-size, and reduced-motion failures

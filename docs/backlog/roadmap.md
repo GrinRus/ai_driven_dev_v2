@@ -10480,13 +10480,13 @@ Local tasks:
   - Scope: browser assertion helpers.
   - Verification: one intentionally invalid fixture fails each accessibility rule with
     the owning selector and measured value.
-- `W36-E2-S2-T2` (next) Add executable sticky-header, primary-action, clipping, overlap,
+- `W36-E2-S2-T2` (done) Add executable sticky-header, primary-action, clipping, overlap,
   nested-scroll, and horizontal-overflow assertions.
   - Dependencies: `W36-E2-S2-T1`.
   - Scope: browser geometry assertions.
   - Verification: intentionally bad header, offscreen CTA, clipped label, scroll-trap,
     and overflow fixtures fail at the expected viewport.
-- `W36-E2-S2-T3` (soon) Add deterministic screenshot and DOM-measure evidence output.
+- `W36-E2-S2-T3` (next) Add deterministic screenshot and DOM-measure evidence output.
   - Scope: browser evidence writer.
   - Verification: each run produces bounded viewport metadata, screenshot paths,
     console/network summaries, accessibility results, and cleanup status.
@@ -10508,7 +10508,7 @@ Dependencies:
 
 Local tasks:
 
-- `W36-E2-S3-T1` (parked) Extract shared non-next-flow dashboard loading, context selection, and
+- `W36-E2-S3-T1` (soon) Extract shared non-next-flow dashboard loading, context selection, and
   mutation dispatch from legacy render ownership; next-flow splitting remains owned by
   `W34-E3-S4-T4` until that task closes.
   - Scope: packaged browser state/action seam only.
