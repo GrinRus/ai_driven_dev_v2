@@ -10609,7 +10609,7 @@ Exit evidence:
 - native text inputs no longer fall outside the product control system;
 - pointer, keyboard, and assistive-technology state agree for every control family.
 
-#### Slice W36-E3-S3 — reusable decision and state surfaces (`planned`)
+#### Slice W36-E3-S3 — reusable decision and state surfaces (`done`)
 Goal: replace locally duplicated card variants with a small shared product-surface
 anatomy.
 
@@ -10643,7 +10643,7 @@ Local tasks:
   - Scope: packaged Guided Delivery primitive only.
   - Verification: current, complete, invalid, optional, and disabled step fixtures retain one
     explanation, input group, primary action, Back action, and advanced disclosure.
-- `W36-E3-S3-T6` (next) Implement the shared Recovery Summary anatomy.
+- `W36-E3-S3-T6` (done) Implement the shared Recovery Summary anatomy.
   - Scope: packaged Recovery primitive only.
   - Verification: question, approval, runtime, validation, intervention, and quality-gate
     fixtures retain one decisive failure, one evidence path, and one primary recovery slot.
@@ -10665,12 +10665,12 @@ Dependencies:
 
 Local tasks:
 
-- `W36-E3-S4-T1` (planned) Add a skip-to-current-decision path and deterministic focus entry/return for
+- `W36-E3-S4-T1` (next) Add a skip-to-current-decision path and deterministic focus entry/return for
   top-level modes and detail surfaces.
   - Scope: shell markup and focus controller.
   - Verification: keyboard-only traversal reaches the primary action before maintenance
     controls and returns focus after dialogs, drill-downs, and recovery actions.
-- `W36-E3-S4-T2` (planned) Fix stage accessible names and dynamic onboarding/form label
+- `W36-E3-S4-T2` (soon) Fix stage accessible names and dynamic onboarding/form label
   associations.
   - Scope: rendered accessibility markup.
   - Verification: all eight stage buttons pass label-content-name matching and every

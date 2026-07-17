@@ -27,6 +27,14 @@ const GUIDED_STEP_STATES = new Set([
   "optional",
   "disabled"
 ]);
+const RECOVERY_SUMMARY_KINDS = new Set([
+  "question",
+  "approval",
+  "runtime",
+  "validation",
+  "intervention",
+  "quality-gate"
+]);
 
 function decisionBarState(value) {
   const stateName = String(value || "").trim();
@@ -208,6 +216,49 @@ function renderGuidedStep({
         <summary>Advanced</summary>
         <div>${advanced.map((item) => `<p>${escapeHtml(item)}</p>`).join("") || "<p>No advanced settings for this step.</p>"}</div>
       </details>
+    </section>
+  `;
+}
+
+function renderRecoverySummary({
+  kind: requestedKind,
+  status,
+  statusLabel,
+  title,
+  consequence,
+  decisiveFailure,
+  evidence,
+  primaryAction
+}) {
+  const kind = String(requestedKind || "").trim();
+  if (!RECOVERY_SUMMARY_KINDS.has(kind)) {
+    throw new Error(`Unknown Recovery Summary kind: ${kind || "empty"}`);
+  }
+  if (!decisiveFailure?.label || !decisiveFailure?.detail) {
+    throw new Error("Recovery Summary requires one decisive failure");
+  }
+  if (!evidence?.path) throw new Error("Recovery Summary requires one evidence path");
+  if (!primaryAction?.action || !primaryAction?.label) {
+    throw new Error("Recovery Summary requires one primary recovery action");
+  }
+  return `
+    <section class="recovery-summary" data-recovery-summary="${escapeHtml(kind)}">
+      <header class="recovery-summary-header">
+        ${renderStatusMarker({status, label: statusLabel})}
+        <h2>${escapeHtml(title)}</h2>
+        <p>${escapeHtml(consequence)}</p>
+      </header>
+      <div class="recovery-summary-failure" data-decisive-failure>
+        <span>${escapeHtml(decisiveFailure.label)}</span>
+        <strong>${escapeHtml(decisiveFailure.detail)}</strong>
+      </div>
+      <div class="recovery-summary-evidence" data-evidence-path="${escapeHtml(evidence.path)}">
+        <span>${escapeHtml(evidence.label || "Evidence")}</span>
+        <code>${escapeHtml(evidence.path)}</code>
+      </div>
+      <div class="recovery-summary-primary" data-primary-recovery-slot>
+        <button data-recovery-action="${escapeHtml(primaryAction.action)}" type="button" ${primaryAction.enabled === false ? 'disabled aria-disabled="true"' : ""}>${escapeHtml(primaryAction.label)}</button>
+      </div>
     </section>
   `;
 }

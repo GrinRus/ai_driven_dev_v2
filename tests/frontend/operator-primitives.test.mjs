@@ -124,3 +124,34 @@ test("Guided Step keeps one complete anatomy across every state", async () => {
     assert.match(html, /<summary>Advanced<\/summary>/);
   }
 });
+
+test("Recovery Summary keeps one failure, evidence path, and primary action", async () => {
+  const context = await primitivesContext();
+  const kinds = [
+    "question",
+    "approval",
+    "runtime",
+    "validation",
+    "intervention",
+    "quality-gate",
+  ];
+  for (const kind of kinds) {
+    const html = vm.runInContext(
+      `renderRecoverySummary({
+        kind: ${JSON.stringify(kind)},
+        status: "blocked",
+        statusLabel: "blocked",
+        title: "Recovery required",
+        consequence: "Progression is closed until the operator resolves this state.",
+        decisiveFailure: {label: "First failure", detail: "${kind} requires attention"},
+        evidence: {label: "Evidence", path: ".aidd/reports/${kind}.json"},
+        primaryAction: {action: "recover-${kind}", label: "Resolve", enabled: true}
+      })`,
+      context,
+    );
+    assert.equal((html.match(/data-decisive-failure/g) || []).length, 1);
+    assert.equal((html.match(/data-evidence-path/g) || []).length, 1);
+    assert.equal((html.match(/data-primary-recovery-slot/g) || []).length, 1);
+    assert.match(html, new RegExp(`data-recovery-action="recover-${kind}"`));
+  }
+});

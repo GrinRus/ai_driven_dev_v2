@@ -7,9 +7,13 @@ slice, and local task.
 
 ## Next
 
-- `W36-E3-S3-T6` — Implement the shared Recovery Summary anatomy.
+- `W36-E3-S4-T1` — Add a skip-to-current-decision path and deterministic focus
+  entry/return for top-level modes and detail surfaces.
 
 ## Soon
+
+- `W36-E3-S4-T2` — Fix stage accessible names and dynamic onboarding/form label
+  associations.
 
 
 
@@ -62,6 +66,12 @@ slice, and local task.
   queue-restoration policy in `docs/backlog/roadmap.md` (`W8-E3-S1`).
 
 ## Current reconciliation
+
+- `2026-07-17` `W36-E3-S3-T6` and slice `W36-E3-S3` are complete: question,
+  approval, runtime, validation, intervention, and quality-gate Recovery Summaries keep
+  exactly one decisive failure, one evidence path, and one primary recovery slot, with a
+  single-column touch-safe mobile layout. `W36-E3-S4-T1` is promoted to `Next` and
+  `W36-E3-S4-T2` to `Soon`.
 
 - `2026-07-17` `W36-E3-S3-T5` is complete: current, complete, invalid, optional, and
   disabled Guided Steps retain the same explanation, labelled input group, one primary
