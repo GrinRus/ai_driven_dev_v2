@@ -222,9 +222,8 @@ function onboardingWorkItems() {
   const items = project?.work_items || [];
   if (!project) return `<div class="empty-state">Validate a project to discover work items.</div>`;
   if (!items.length) return `<div class="empty-state">No work items in this project yet.</div>`;
-  const canResume = Boolean(state.selectedRuntime);
   return items.map((item) => `
-    <button class="artifact-row" data-onboarding-resume="${escapeHtml(item.work_item)}" type="button" ${canResume ? "" : "disabled"}>
+    <button class="artifact-row" data-onboarding-resume="${escapeHtml(item.work_item)}" type="button">
       <span>
         <strong>${escapeHtml(item.work_item)}</strong>
         <span class="muted">${item.has_request_context ? "request context present" : "no request context"}</span>
@@ -388,39 +387,41 @@ function renderOnboarding() {
 
       <section class="surface onboarding-panel">
         <div class="surface-title">
+          <span>Work item</span>
+          <span class="small-badge">create or resume</span>
+        </div>
+        <div class="onboarding-work-item-branches">
+          <article class="onboarding-work-item-branch" data-onboarding-work-item-branch="create">
+            <div class="surface-title compact"><span>Create</span><span class="small-badge">new context</span></div>
+            <form id="onboardingCreateForm" class="form-grid">
+              <label class="field-label" for="onboardingWorkItem">Work item id</label>
+              <input id="onboardingWorkItem" name="work_item" type="text" maxlength="120" value="${escapeHtml(state.onboarding.workItemInput)}" autocomplete="off" spellcheck="false">
+              <label class="field-label" for="onboardingRequest">Request</label>
+              <textarea id="onboardingRequest" name="request" rows="7" maxlength="20000">${escapeHtml(state.onboarding.requestText)}</textarea>
+              <label class="checkbox-row" for="onboardingForceContext">
+                <input id="onboardingForceContext" name="force_context" type="checkbox" ${state.onboarding.forceContext ? "checked" : ""}>
+                <span>Overwrite existing request context</span>
+              </label>
+              <div class="setup-actions">
+                <button type="submit" ${onboardingCanCreate() && !state.onboarding.creating ? "" : "disabled"}>${state.onboarding.creating ? "Creating..." : "Create and open command center"}</button>
+                ${state.onboarding.createError ? `<span class="form-error">${escapeHtml(state.onboarding.createError)}</span>` : ""}
+              </div>
+            </form>
+          </article>
+          <article class="onboarding-work-item-branch" data-onboarding-work-item-branch="resume">
+            <div class="surface-title compact"><span>Resume</span><span class="small-badge">inspect context</span></div>
+            <p class="muted">Open saved work-item context now; runtime selection and launch remain separate actions.</p>
+            <div class="panel-list">${onboardingWorkItems()}</div>
+          </article>
+        </div>
+      </section>
+
+      <section class="surface onboarding-panel">
+        <div class="surface-title">
           <span>Runner</span>
           ${selectedRunner}
         </div>
         <div class="runner-card-grid">${onboardingRunnerCards()}</div>
-      </section>
-
-      <section class="surface onboarding-panel">
-        <div class="surface-title">
-          <span>Create work item</span>
-          <span class="small-badge">${state.selectedRuntime ? "runner selected" : "select runner"}</span>
-        </div>
-        <form id="onboardingCreateForm" class="form-grid">
-          <label class="field-label" for="onboardingWorkItem">Work item id</label>
-          <input id="onboardingWorkItem" name="work_item" type="text" maxlength="120" value="${escapeHtml(state.onboarding.workItemInput)}" autocomplete="off" spellcheck="false">
-          <label class="field-label" for="onboardingRequest">Request</label>
-          <textarea id="onboardingRequest" name="request" rows="7" maxlength="20000">${escapeHtml(state.onboarding.requestText)}</textarea>
-          <label class="checkbox-row" for="onboardingForceContext">
-            <input id="onboardingForceContext" name="force_context" type="checkbox" ${state.onboarding.forceContext ? "checked" : ""}>
-            <span>Overwrite existing request context</span>
-          </label>
-          <div class="setup-actions">
-            <button type="submit" ${onboardingCanCreate() && !state.onboarding.creating ? "" : "disabled"}>${state.onboarding.creating ? "Creating..." : "Create and open command center"}</button>
-            ${state.onboarding.createError ? `<span class="form-error">${escapeHtml(state.onboarding.createError)}</span>` : ""}
-          </div>
-        </form>
-      </section>
-
-      <section class="surface onboarding-panel">
-        <div class="surface-title">
-          <span>Resume existing</span>
-          <span class="small-badge">${(onboardingProject()?.work_items || []).length}</span>
-        </div>
-        <div class="panel-list">${onboardingWorkItems()}</div>
       </section>
 
       <section class="surface onboarding-panel">
@@ -541,9 +542,13 @@ async function validateOnboardingProjectSet() {
 }
 
 async function completeOnboardingWorkItem(action, workItem) {
-  if (!state.selectedRuntime) {
+  if (action === "create" && !state.selectedRuntime) {
     toast("Select runner first.");
     return;
+  }
+  transitionGuidedSetup("work-item-selected", {branch: action, workItem});
+  if (action === "create") {
+    transitionGuidedSetup("runtime-selected", {runtimeId: state.selectedRuntime});
   }
   state.onboarding.creating = true;
   state.onboarding.createError = "";

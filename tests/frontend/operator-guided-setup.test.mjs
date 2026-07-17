@@ -65,3 +65,14 @@ test("Guided Setup fails closed on validation, incomplete continue, and blocked 
   assert.equal(state.launchReadiness, "blocked");
   assert.equal(state.error, "command unavailable");
 });
+
+test("Create and Resume are sibling branches before runtime selection", async () => {
+  const source = await readFile(assetPath, "utf8");
+  const create = source.indexOf('data-onboarding-work-item-branch="create"');
+  const resume = source.indexOf('data-onboarding-work-item-branch="resume"');
+  const runtime = source.indexOf("<span>Runner</span>", resume);
+  assert.ok(create >= 0 && resume > create && runtime > resume);
+  assert.doesNotMatch(source, /const canResume = Boolean\(state\.selectedRuntime\)/);
+  assert.match(source, /if \(action === "create" && !state\.selectedRuntime\)/);
+  assert.match(source, /runtime selection and launch remain separate actions/);
+});

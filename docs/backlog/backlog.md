@@ -7,13 +7,12 @@ slice, and local task.
 
 ## Next
 
-- `W36-E4-S1-T2` — Render Create and Resume as sibling work-item branches and allow
-  inspection before runtime selection.
+- `W36-E4-S1-T3` — Move project-set and configuration details behind an Advanced
+  disclosure.
 
 ## Soon
 
-- `W36-E4-S1-T3` — Move project-set and configuration details behind an Advanced
-  disclosure.
+- `W36-E4-S1-T4` — Remove no-run mode cards that do not change execution semantics.
 
 ## Parking lot
 
@@ -52,6 +51,11 @@ slice, and local task.
   queue-restoration policy in `docs/backlog/roadmap.md` (`W8-E3-S1`).
 
 ## Current reconciliation
+
+- `2026-07-17` `W36-E4-S1-T2` is complete: Create and Resume share one work-item
+  decision surface before runtime selection; Resume opens saved context without runtime
+  or launch, while Create retains the runtime gate before its mutation.
+  `W36-E4-S1-T3` is promoted to `Next` and `W36-E4-S1-T4` to `Soon`.
 
 - `2026-07-17` `W36-E4-S1-T1` is complete: Guided Setup now has a pure four-step
   Project -> Work item -> Runtime -> Review/Launch reducer with deterministic create,

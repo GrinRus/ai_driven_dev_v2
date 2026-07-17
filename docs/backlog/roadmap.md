@@ -10709,17 +10709,17 @@ Local tasks:
   - Scope: `operator-onboarding.js` state controller.
   - Verification: a transition table covers validation success/failure, create, resume,
     runtime selection, backward navigation, and launch readiness.
-- `W36-E4-S1-T2` (next) Render Create and Resume as sibling work-item branches and allow
+- `W36-E4-S1-T2` (done) Render Create and Resume as sibling work-item branches and allow
   inspection before runtime selection.
   - Scope: onboarding work-item step.
   - Verification: resume opens existing context without a runtime or launch request,
     while mutation actions remain runtime-gated.
-- `W36-E4-S1-T3` (soon) Move project-set and configuration details behind an Advanced
+- `W36-E4-S1-T3` (next) Move project-set and configuration details behind an Advanced
   disclosure.
   - Scope: onboarding project/work-item layout.
   - Verification: create or resume remains inside the first setup viewport at `390x844`
     and `1440x900`, while advanced project-set validation remains reachable.
-- `W36-E4-S1-T4` (planned) Remove no-run mode cards that do not change execution semantics and
+- `W36-E4-S1-T4` (soon) Remove no-run mode cards that do not change execution semantics and
   leave terminal follow-up, clone, eval, and archive presentation to `W36-E5-S9`.
   - Scope: Guided Setup presentation only; the legacy renderer remains available for rollback.
   - Verification: the setup action-to-service matrix proves each remaining selector has a
