@@ -38,6 +38,7 @@ function onboardingRunnerGuidance(runtimes) {
       <span>Native provider runners remain available for real model execution; every launch still requires an explicit runner selection.</span>
     </div>
   `;
+  syncCurrentDecisionTarget();
 }
 
 function onboardingRunnerCards() {

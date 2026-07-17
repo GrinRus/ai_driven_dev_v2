@@ -7,13 +7,13 @@ slice, and local task.
 
 ## Next
 
-- `W36-E3-S4-T1` — Add a skip-to-current-decision path and deterministic focus
-  entry/return for top-level modes and detail surfaces.
+- `W36-E3-S4-T2` — Fix stage accessible names and dynamic onboarding/form label
+  associations.
 
 ## Soon
 
-- `W36-E3-S4-T2` — Fix stage accessible names and dynamic onboarding/form label
-  associations.
+- `W36-E3-S4-T3` — Raise borderline contrast, readable minimums, and tabular numeric
+  treatment.
 
 
 
@@ -66,6 +66,12 @@ slice, and local task.
   queue-restoration policy in `docs/backlog/roadmap.md` (`W8-E3-S1`).
 
 ## Current reconciliation
+
+- `2026-07-17` `W36-E3-S4-T1` is complete: a first-focus skip link resolves the
+  currently rendered primary decision before maintenance controls, detail navigation
+  enters the cockpit deterministically, and Escape returns to the connected trigger or
+  selected mode fallback. `W36-E3-S4-T2` is promoted to `Next` and `W36-E3-S4-T3` to
+  `Soon`.
 
 - `2026-07-17` `W36-E3-S3-T6` and slice `W36-E3-S3` are complete: question,
   approval, runtime, validation, intervention, and quality-gate Recovery Summaries keep

@@ -10665,17 +10665,17 @@ Dependencies:
 
 Local tasks:
 
-- `W36-E3-S4-T1` (next) Add a skip-to-current-decision path and deterministic focus entry/return for
+- `W36-E3-S4-T1` (done) Add a skip-to-current-decision path and deterministic focus entry/return for
   top-level modes and detail surfaces.
   - Scope: shell markup and focus controller.
   - Verification: keyboard-only traversal reaches the primary action before maintenance
     controls and returns focus after dialogs, drill-downs, and recovery actions.
-- `W36-E3-S4-T2` (soon) Fix stage accessible names and dynamic onboarding/form label
+- `W36-E3-S4-T2` (next) Fix stage accessible names and dynamic onboarding/form label
   associations.
   - Scope: rendered accessibility markup.
   - Verification: all eight stage buttons pass label-content-name matching and every
     generated form field has a stable id, name, and associated label.
-- `W36-E3-S4-T3` (planned) Raise borderline contrast, readable minimums, and tabular numeric
+- `W36-E3-S4-T3` (soon) Raise borderline contrast, readable minimums, and tabular numeric
   treatment.
   - Scope: typography and color CSS.
   - Verification: automated contrast checks pass and timers, attempts, counts, and

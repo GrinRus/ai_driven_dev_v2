@@ -530,7 +530,7 @@ function renderValidation() {
   `;
 }
 
-async function renderCockpit() {
+async function renderCockpitContent() {
   const content = document.getElementById("cockpitContent");
   if (state.activeTab === "work") {
     if (state.workDetail === "project-home") {
@@ -590,6 +590,14 @@ async function renderCockpit() {
   if (state.activeTab === "history") {
     content.innerHTML = renderHistoryMode();
     void loadRunComparisonPanel();
+  }
+}
+
+async function renderCockpit() {
+  try {
+    await renderCockpitContent();
+  } finally {
+    syncCurrentDecisionTarget();
   }
 }
 
