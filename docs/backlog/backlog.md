@@ -7,13 +7,13 @@ slice, and local task.
 
 ## Next
 
-- `W36-E2-S1-T3` — Add provider-free canonical UI state fixture builders and browser
-  state-marker checks.
+- `W36-E2-S2-T1` — Add rendered accessible-name, label, focus-order, contrast,
+  target-size, and reduced-motion assertions.
 
 ## Soon
 
-- `W36-E2-S2-T1` — Add rendered accessible-name, label, focus-order, contrast,
-  target-size, and reduced-motion assertions.
+- `W36-E2-S2-T2` — Add rendered sticky-header, primary-action, clipping, overlap,
+  nested-scroll, and horizontal-overflow assertions.
 
 ## Parking lot
 
@@ -68,6 +68,12 @@ slice, and local task.
   queue-restoration policy in `docs/backlog/roadmap.md` (`W8-E3-S1`).
 
 ## Current reconciliation
+
+- `2026-07-17` `W36-E2-S1-T3` and slice `W36-E2-S1` are complete: nine immutable,
+  provider-free descriptors now seed canonical setup, active, recovery, quality,
+  remediation, and terminal evidence through production persistence helpers and verify the
+  public loopback UI without external reads. `W36-E2-S2-T1` is promoted to `Next` and
+  `W36-E2-S2-T2` to `Soon`.
 
 - `2026-07-17` `W36-E2-S1-T2` is complete: the reusable browser harness starts the public
   loopback CLI under one deadline, isolates all five contract viewports, captures browser

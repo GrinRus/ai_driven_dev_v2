@@ -10419,7 +10419,7 @@ Exit evidence:
 ### Epic W36-E2 — executable rendered-browser foundation (`planned`)
 Linked stories: `US-07`, `US-09`, `US-11`
 
-#### Slice W36-E2-S1 — deterministic packaged-UI browser harness (`planned`)
+#### Slice W36-E2-S1 — deterministic packaged-UI browser harness (`done`)
 Goal: execute the packaged local UI in a real browser against provider-free states with
 deterministic cleanup.
 
@@ -10451,7 +10451,7 @@ Local tasks:
   - Scope: UI browser test infrastructure.
   - Verification: one command serves a temporary project, opens every required viewport,
     records console/network state, and removes project-local `.aidd/` state on exit.
-- `W36-E2-S1-T3` (next) Add provider-free fixture builders for setup, no-run, running,
+- `W36-E2-S1-T3` (done) Add provider-free fixture builders for setup, no-run, running,
   question, runtime-failure, approval, QA, remediation, and terminal states.
   - Dependencies: `W36-E2-S1-T2`.
   - Scope: deterministic UI fixtures only.
@@ -10474,14 +10474,15 @@ Dependencies:
 
 Local tasks:
 
-- `W36-E2-S2-T1` (soon) Add executable accessible-name, label, focus-order, contrast,
+- `W36-E2-S2-T1` (next) Add executable accessible-name, label, focus-order, contrast,
   target-size, and reduced-motion assertions.
   - Dependencies: `W36-E2-S1-T3`.
   - Scope: browser assertion helpers.
   - Verification: one intentionally invalid fixture fails each accessibility rule with
     the owning selector and measured value.
-- `W36-E2-S2-T2` (planned) Add executable sticky-header, primary-action, clipping, overlap,
+- `W36-E2-S2-T2` (soon) Add executable sticky-header, primary-action, clipping, overlap,
   nested-scroll, and horizontal-overflow assertions.
+  - Dependencies: `W36-E2-S2-T1`.
   - Scope: browser geometry assertions.
   - Verification: intentionally bad header, offscreen CTA, clipped label, scroll-trap,
     and overflow fixtures fail at the expected viewport.
