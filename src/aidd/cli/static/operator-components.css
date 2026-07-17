@@ -116,6 +116,43 @@
 .status-marker[data-status="no-action"] .status-marker-symbol {
   background: var(--color-text-secondary);
 }
+.state-surface {
+  align-items: center;
+  background: var(--color-bg-subtle);
+  border: var(--control-border-width) solid var(--color-border-default);
+  border-radius: var(--radius-surface);
+  display: grid;
+  gap: var(--space-8);
+  grid-template-columns: minmax(0, 1fr) auto;
+  padding: var(--space-8);
+}
+.state-surface[data-state="error"] {
+  background: var(--color-state-danger-bg);
+  border-color: var(--color-state-danger-border);
+}
+.state-surface[data-state="reconnecting"],
+.state-surface[data-state="unavailable"] {
+  background: var(--color-state-warning-bg);
+  border-color: var(--color-state-warning-border);
+}
+.state-surface-copy {
+  display: grid;
+  gap: var(--space-3);
+  min-width: 0;
+}
+.state-surface-copy > strong {
+  color: var(--color-text-primary);
+  font-size: var(--type-heading-size);
+}
+.state-surface-copy > p {
+  color: var(--color-text-secondary);
+  font-size: var(--type-body-size);
+  line-height: var(--type-body-line);
+}
+.state-surface-action {
+  align-items: center;
+  display: flex;
+}
 .decision-summary.good {
   background: var(--color-state-success-bg-strong);
   border-color: var(--color-state-success-border-strong);

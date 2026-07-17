@@ -6,6 +6,13 @@ const DECISION_BAR_STATES = new Set([
   "stale",
   "no-action"
 ]);
+const STATE_SURFACE_STATES = new Set([
+  "empty",
+  "loading",
+  "error",
+  "reconnecting",
+  "unavailable"
+]);
 
 function decisionBarState(value) {
   const stateName = String(value || "").trim();
@@ -65,6 +72,34 @@ function renderDecisionBar({
           `;
         }).join("")}
       </div>
+    </section>
+  `;
+}
+
+function renderStateSurface({kind, state: requestedState, title, consequence, recovery = null}) {
+  const stateName = String(requestedState || "").trim();
+  if (!STATE_SURFACE_STATES.has(stateName)) {
+    throw new Error(`Unknown state surface: ${stateName || "empty"}`);
+  }
+  const visibleTitle = String(title || "").trim();
+  const visibleConsequence = String(consequence || "").trim();
+  if (!visibleTitle || !visibleConsequence) {
+    throw new Error("State surface requires a title and consequence");
+  }
+  const waiting = stateName === "loading" || stateName === "reconnecting";
+  const role = stateName === "error" ? "alert" : "status";
+  const live = stateName === "error" ? "assertive" : "polite";
+  const recoveryAction = recovery && String(recovery.action || "").trim()
+    ? `<button data-state-recovery="${escapeHtml(recovery.action)}" type="button" ${recovery.enabled === false ? 'disabled aria-disabled="true"' : ""}>${escapeHtml(recovery.label)}</button>`
+    : "";
+  return `
+    <section class="state-surface" data-state-surface="${escapeHtml(kind)}" data-state="${escapeHtml(stateName)}" role="${role}" aria-live="${live}" aria-busy="${waiting ? "true" : "false"}">
+      <div class="state-surface-copy">
+        ${renderStatusMarker({status: stateName === "error" ? "blocked" : waiting ? "pending" : "no-action", label: stateName})}
+        <strong>${escapeHtml(visibleTitle)}</strong>
+        <p>${escapeHtml(visibleConsequence)}</p>
+      </div>
+      ${recoveryAction ? `<div class="state-surface-action">${recoveryAction}</div>` : ""}
     </section>
   `;
 }

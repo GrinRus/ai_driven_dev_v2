@@ -49,3 +49,29 @@ test("Decision Bar rejects unknown state instead of inferring policy", async () 
     /Unknown decision bar state/,
   );
 });
+
+test("state surfaces expose consequence, recovery, and truthful live semantics", async () => {
+  const context = await primitivesContext();
+  const states = ["empty", "loading", "error", "reconnecting", "unavailable"];
+  for (const state of states) {
+    const html = vm.runInContext(
+      `renderStateSurface({
+        kind: "fixture",
+        state: ${JSON.stringify(state)},
+        title: "Visible title",
+        consequence: "Visible consequence",
+        recovery: {action: "retry", label: "Retry"}
+      })`,
+      context,
+    );
+    assert.match(html, /Visible title/);
+    assert.match(html, /Visible consequence/);
+    assert.match(html, /data-state-recovery="retry"/);
+    assert.match(html, new RegExp(`data-state="${state}"`));
+    assert.match(
+      html,
+      new RegExp(`aria-busy="${["loading", "reconnecting"].includes(state)}"`),
+    );
+    assert.match(html, new RegExp(`role="${state === "error" ? "alert" : "status"}"`));
+  }
+});

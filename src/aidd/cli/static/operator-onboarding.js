@@ -42,16 +42,38 @@ function onboardingRunnerGuidance(runtimes) {
 
 function onboardingRunnerCards() {
   if (!onboardingProject()) {
-    return `<div class="empty-state">Validate a project before selecting a runner.</div>`;
+    return renderStateSurface({
+      kind: "runtime-readiness",
+      state: "empty",
+      title: "Validate a project",
+      consequence: "Runtime selection becomes available after project validation."
+    });
   }
   if (state.readinessLoading) {
-    return `<div class="empty-state loading-state">Checking runner readiness...</div>`;
+    return renderStateSurface({
+      kind: "runtime-readiness",
+      state: "loading",
+      title: "Checking runtime readiness",
+      consequence: "Selection remains unavailable until the local readiness check completes."
+    });
   }
   if (state.readinessError) {
-    return `<div class="empty-state">Runner readiness unavailable: ${escapeHtml(state.readinessError)}</div>`;
+    return renderStateSurface({
+      kind: "runtime-readiness",
+      state: "unavailable",
+      title: "Runtime readiness unavailable",
+      consequence: state.readinessError
+    });
   }
   const runtimes = state.readiness?.runtimes || [];
-  if (!runtimes.length) return `<div class="empty-state">No runtimes are configured.</div>`;
+  if (!runtimes.length) {
+    return renderStateSurface({
+      kind: "runtime-readiness",
+      state: "unavailable",
+      title: "No runtimes configured",
+      consequence: "Configure a supported local runtime before launching delivery."
+    });
+  }
   const cards = runtimes.map((runtime) => {
     const runtimeId = String(runtime.runtime_id || "");
     const ready = runtime.provider_available && runtime.execution_command_available;

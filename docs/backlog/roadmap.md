@@ -10624,17 +10624,17 @@ Local tasks:
   - Scope: packaged decision-surface primitives only.
   - Verification: action, pending, blocked, complete, stale, and no-action fixtures retain one
     primary slot plus non-color status text without owning surface-specific policy.
-- `W36-E3-S3-T2` (next) Consolidate empty, loading, error, reconnecting, and unavailable
+- `W36-E3-S3-T2` (done) Consolidate empty, loading, error, reconnecting, and unavailable
   surfaces with local recovery actions.
   - Scope: packaged state-surface primitives.
   - Verification: every state exposes a title, consequence, recovery action when
     possible, and correct live-region or busy semantics.
-- `W36-E3-S3-T3` (soon) Establish the editorial hierarchy for Document Canvas, conditional
+- `W36-E3-S3-T3` (next) Establish the editorial hierarchy for Document Canvas, conditional
   Evidence Inspector, and History without an equal-weight card wall.
   - Scope: panel/card layout classes.
   - Verification: rendered fixtures keep one framed primary surface per hierarchy level
     and preserve clear primary/supporting visual weight.
-- `W36-E3-S3-T4` (planned) Implement the shared Inbox Item anatomy without eligibility or priority
+- `W36-E3-S3-T4` (soon) Implement the shared Inbox Item anatomy without eligibility or priority
   logic in the browser.
   - Scope: packaged Inbox item primitive only.
   - Verification: blocking, running, ready, terminal, and malformed fixtures render the

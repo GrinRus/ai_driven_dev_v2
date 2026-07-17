@@ -7,13 +7,13 @@ slice, and local task.
 
 ## Next
 
-- `W36-E3-S3-T2` — Consolidate empty, loading, error, reconnecting, and unavailable
-  surfaces with local recovery actions.
+- `W36-E3-S3-T3` — Establish the editorial hierarchy for Document Canvas, conditional
+  Evidence Inspector, and History without an equal-weight card wall.
 
 ## Soon
 
-- `W36-E3-S3-T3` — Establish the editorial hierarchy for Document Canvas, conditional
-  Evidence Inspector, and History without an equal-weight card wall.
+- `W36-E3-S3-T4` — Implement the shared Inbox Item anatomy without eligibility or
+  priority logic in the browser.
 
 
 ## Parking lot
@@ -65,6 +65,11 @@ slice, and local task.
   queue-restoration policy in `docs/backlog/roadmap.md` (`W8-E3-S1`).
 
 ## Current reconciliation
+
+- `2026-07-17` `W36-E3-S3-T2` is complete: empty, loading, error, reconnecting, and
+  unavailable states now share a title/consequence/recovery anatomy with truthful
+  `role`, live-region, and busy semantics; Guided Setup readiness uses the primitive.
+  `W36-E3-S3-T3` is promoted to `Next` and `W36-E3-S3-T4` to `Soon`.
 
 - `2026-07-17` `W36-E3-S3-T1` is complete: a packaged Decision Bar now owns one
   primary slot and a visible, non-color Status Marker for action, pending, blocked,
