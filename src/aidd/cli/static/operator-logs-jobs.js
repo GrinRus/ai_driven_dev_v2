@@ -163,14 +163,14 @@ function renderLogPanel({title, meta, entries, rawText, emptyText, actions = "",
   const rawBody = state.logFilter === "all" && rawText ? rawText : rawTextFromEntries(filtered);
   const sourceLabel = truncation ? "saved runtime.log" : "live console";
   const filterButtons = ["all", "stdout", "stderr", "system"].map((filter) => (
-    `<button data-log-filter="${filter}" class="${state.logFilter === filter ? "active" : ""}" type="button" aria-label="Show ${filter} source filter">${filter}</button>`
+    `<button data-log-filter="${filter}" class="${state.logFilter === filter ? "active" : ""}" type="button" aria-pressed="${state.logFilter === filter ? "true" : "false"}" aria-label="Show ${filter} source filter">${filter}</button>`
   )).join("");
   const viewButtons = [
     ["summary", "Summary"],
     ["timeline", "Timeline"],
     ["raw", "Raw Runtime Log"]
   ].map(([mode, label]) => (
-    `<button data-log-view="${mode}" class="${state.logViewMode === mode ? "active" : ""}" type="button">${label}</button>`
+    `<button data-log-view="${mode}" class="${state.logViewMode === mode ? "active" : ""}" type="button" aria-pressed="${state.logViewMode === mode ? "true" : "false"}">${label}</button>`
   )).join("");
   const rows = state.rawLogMode
     ? `<pre>${escapeHtml(rawBody)}</pre>`
@@ -207,9 +207,9 @@ function renderLogPanel({title, meta, entries, rawText, emptyText, actions = "",
         </div>
         <div class="log-actions">
           ${actions}
-          <div class="log-filter">
+          <div class="log-filter" role="group" aria-label="Log source filter">
             ${filterButtons}
-            <button data-log-raw="toggle" class="${state.rawLogMode ? "active" : ""}" type="button">Raw</button>
+            <button data-log-raw="toggle" class="${state.rawLogMode ? "active" : ""}" type="button" aria-pressed="${state.rawLogMode ? "true" : "false"}">Raw</button>
           </div>
         </div>
       </div>
@@ -229,7 +229,7 @@ function renderLogPanel({title, meta, entries, rawText, emptyText, actions = "",
         <span class="small-badge">${escapeHtml(sourceLabel)}</span>
       </div>
       ${renderLogSourceStrip(entries, truncation)}
-      <div class="filter-row log-view-tabs">${viewButtons}</div>
+      <div class="filter-row log-view-tabs" role="group" aria-label="Log presentation">${viewButtons}</div>
       ${modeBody}
     </section>
   `;

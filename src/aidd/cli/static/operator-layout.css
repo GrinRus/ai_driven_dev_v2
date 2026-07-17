@@ -414,8 +414,12 @@ h1, h2, h3, p {
   padding-bottom: 8px;
 }
 .tabs button.active,
+.tabs button[aria-selected="true"],
 .log-filter button.active,
-.viewer-modes button.active {
+.log-filter button[aria-pressed="true"],
+.viewer-modes button.active,
+.viewer-modes button[aria-pressed="true"] {
+  background: var(--color-bg-selected);
   border-color: var(--teal);
   color: var(--teal-dark);
 }

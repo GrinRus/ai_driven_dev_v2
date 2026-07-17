@@ -200,7 +200,7 @@ function renderWorkbenchTree(workbench) {
             : `data-open-artifact="${escapeHtml(ref.path)}"`;
           const badge = artifactOwnershipBadge(ref);
           return `
-            <button class="artifact-doc ${ref.label === workbench.selected_key ? "active" : ""}" ${actionAttr} type="button">
+            <button class="artifact-doc ${ref.label === workbench.selected_key ? "active" : ""}" ${actionAttr} type="button" aria-pressed="${ref.label === workbench.selected_key ? "true" : "false"}">
               <span class="artifact-doc-title">
                 <strong>${escapeHtml(ref.label)}</strong>
                 <span class="small-badge ${escapeHtml(badge.tone)}">${escapeHtml(badge.label)}</span>
@@ -385,10 +385,10 @@ function renderWorkbenchViewer(workbench) {
         <strong>${escapeHtml(documentView.key || workbench.selected_key)}</strong>
         ${pathLine(`${documentView.path || "path unavailable"} / ${documentView.byte_size ?? "unknown"} bytes`, 78)}
       </div>
-      <div class="viewer-modes">
-        <button data-artifact-mode="preview" class="${previewActive}" type="button">Preview</button>
-        <button data-artifact-mode="source" class="${sourceActive}" type="button">Source</button>
-        <button data-artifact-mode="diff" class="${diffActive}" type="button">Diff</button>
+      <div class="viewer-modes" role="group" aria-label="Document presentation">
+        <button data-artifact-mode="preview" class="${previewActive}" type="button" aria-pressed="${state.artifactViewMode === "preview" ? "true" : "false"}">Preview</button>
+        <button data-artifact-mode="source" class="${sourceActive}" type="button" aria-pressed="${state.artifactViewMode === "source" ? "true" : "false"}">Source</button>
+        <button data-artifact-mode="diff" class="${diffActive}" type="button" aria-pressed="${state.artifactViewMode === "diff" ? "true" : "false"}">Diff</button>
         ${documentView.path ? `<button data-open-artifact="${escapeHtml(documentView.path)}" class="secondary" type="button">Open folder</button>` : ""}
       </div>
     </div>
@@ -515,7 +515,7 @@ function renderEvidenceGraphBrowser(view, selection) {
     const label = item.label || item.key || "artifact";
     const status = item.status || "present";
     return `
-      <button class="artifact-doc evidence-browser-row ${selected ? "active" : ""}" data-evidence-node="${escapeHtml(nodeId)}" type="button">
+      <button class="artifact-doc evidence-browser-row ${selected ? "active" : ""}" data-evidence-node="${escapeHtml(nodeId)}" type="button" aria-pressed="${selected ? "true" : "false"}">
         <span>
           <strong>${escapeHtml(label)}</strong>
           <small>${escapeHtml(item.kind || "artifact")} / ${escapeHtml(status)}</small>

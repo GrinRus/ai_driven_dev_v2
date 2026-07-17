@@ -156,9 +156,9 @@ function renderDiffFilters(files) {
     ["not-mentioned", "Not mentioned"]
   ];
   return `
-    <div class="filter-row">
+    <div class="filter-row" role="group" aria-label="Implementation diff filter">
       ${filters.map(([id, label]) => `
-        <button data-implement-diff-filter="${escapeHtml(id)}" class="${state.implementDiffFilter === id ? "active" : ""}" type="button">${escapeHtml(label)} ${escapeHtml(filteredDiffFiles(files).length && id === state.implementDiffFilter ? filteredDiffFiles(files).length : "")}</button>
+        <button data-implement-diff-filter="${escapeHtml(id)}" class="${state.implementDiffFilter === id ? "active" : ""}" type="button" aria-pressed="${state.implementDiffFilter === id ? "true" : "false"}">${escapeHtml(label)} ${escapeHtml(filteredDiffFiles(files).length && id === state.implementDiffFilter ? filteredDiffFiles(files).length : "")}</button>
       `).join("")}
     </div>
   `;

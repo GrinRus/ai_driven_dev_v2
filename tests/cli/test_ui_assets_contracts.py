@@ -2278,9 +2278,9 @@ def test_operator_focus_visible_contract_covers_keyboard_reachable_surfaces() ->
             "select:focus-visible",
             "textarea:focus-visible",
             "[tabindex]:focus-visible",
-            "box-shadow: 0 0 0 4px var(--focus-ring-soft)",
-            "outline: 3px solid var(--focus-ring)",
-            "outline-offset: 2px",
+            "box-shadow: var(--focus-shadow)",
+            "outline: var(--focus-width) solid var(--color-focus)",
+            "outline-offset: var(--focus-offset)",
             "--focus-ring:",
             "--focus-ring-soft:",
         ),
@@ -2456,8 +2456,8 @@ def test_operator_css_keeps_focus_and_screen_reader_contracts() -> None:
     assert "position: absolute" in css
     assert "button:focus-visible" in css
     assert "--focus-ring:" in css
-    assert "outline: 3px solid var(--focus-ring)" in css
-    assert "box-shadow: 0 0 0 4px var(--focus-ring-soft)" in css
+    assert "outline: var(--focus-width) solid var(--color-focus)" in css
+    assert "box-shadow: var(--focus-shadow)" in css
     assert ".status-badge.cancelled" in css
     assert ".small-badge.running" in css
     assert ".small-badge.cancelling" in css

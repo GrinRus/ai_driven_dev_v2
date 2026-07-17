@@ -7,10 +7,12 @@ slice, and local task.
 
 ## Next
 
-- `W36-E3-S2-T3` — Normalize segmented filters, radio-like selectors, clickable rows,
-  and pressed/selected ARIA state.
+- `W36-E3-S3-T1` — Implement the shared Decision Bar and Status Marker anatomy.
 
 ## Soon
+
+- `W36-E3-S3-T2` — Consolidate empty, loading, error, reconnecting, and unavailable
+  surfaces with local recovery actions.
 
 
 ## Parking lot
@@ -62,6 +64,12 @@ slice, and local task.
   queue-restoration policy in `docs/backlog/roadmap.md` (`W8-E3-S1`).
 
 ## Current reconciliation
+
+- `2026-07-17` `W36-E3-S2-T3` and slice `W36-E3-S2` are complete: filters, document
+  modes, radio-like setup/runtime cards, evidence selections, and current work-item rows
+  now expose the same selected state visually and through `aria-pressed`, `aria-checked`,
+  or `aria-current`; mobile rows retain the shared touch density. `W36-E3-S3-T1` is
+  promoted to `Next` and `W36-E3-S3-T2` to `Soon`.
 
 - `2026-07-17` `W36-E3-S2-T2` is complete: shared native-control states now cover
   pointer hover/active, keyboard focus, disabled, invalid, pending/loading, and selected

@@ -243,7 +243,7 @@ function renderProjectHomeRail() {
     </div>
     <div class="work-item-board-rail">
       ${items.length ? items.slice(0, 6).map((item) => `
-        <button class="work-item-card ${item.work_item === current?.work_item ? "active" : ""}" data-project-home-resume="${escapeHtml(item.work_item)}" type="button">
+        <button class="work-item-card ${item.work_item === current?.work_item ? "active" : ""}" data-project-home-resume="${escapeHtml(item.work_item)}" type="button" aria-current="${item.work_item === current?.work_item ? "true" : "false"}">
           <span>
             <strong>${escapeHtml(item.work_item)}</strong>
             <small>${escapeHtml(workItemProgressText(item))}</small>

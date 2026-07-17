@@ -10578,7 +10578,7 @@ Exit evidence:
 - type, spacing, radius, color, focus, motion, and control size have one source of truth;
 - responsive density does not depend on ad hoc component overrides.
 
-#### Slice W36-E3-S2 — complete form and interaction controls (`planned`)
+#### Slice W36-E3-S2 — complete form and interaction controls (`done`)
 Goal: make every input and clickable surface visually consistent and state-complete.
 
 Dependencies:
@@ -10598,7 +10598,7 @@ Local tasks:
   - Scope: interactive control states.
   - Verification: one browser fixture exercises every state with pointer, keyboard,
     and touch-density assertions.
-- `W36-E3-S2-T3` (next) Normalize segmented filters, radio-like selectors, clickable rows,
+- `W36-E3-S2-T3` (done) Normalize segmented filters, radio-like selectors, clickable rows,
   and pressed/selected ARIA state.
   - Scope: composite browser controls.
   - Verification: log filters, viewer modes, runtime cards, artifact rows, and evidence
@@ -10620,11 +10620,11 @@ Dependencies:
 
 Local tasks:
 
-- `W36-E3-S3-T1` (planned) Implement the shared Decision Bar and Status Marker anatomy.
+- `W36-E3-S3-T1` (next) Implement the shared Decision Bar and Status Marker anatomy.
   - Scope: packaged decision-surface primitives only.
   - Verification: action, pending, blocked, complete, stale, and no-action fixtures retain one
     primary slot plus non-color status text without owning surface-specific policy.
-- `W36-E3-S3-T2` (planned) Consolidate empty, loading, error, reconnecting, and unavailable
+- `W36-E3-S3-T2` (soon) Consolidate empty, loading, error, reconnecting, and unavailable
   surfaces with local recovery actions.
   - Scope: packaged state-surface primitives.
   - Verification: every state exposes a title, consequence, recovery action when
