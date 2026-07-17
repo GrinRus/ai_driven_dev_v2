@@ -7,16 +7,10 @@ slice, and local task.
 
 ## Next
 
-- `W36-E6-S4-T5` — Add approval reason capture and explicit confirmation for
-  `allow_for_session` with controls disabled while submitting.
-
-## Soon
-
 - `W36-E6-S4-T6` — Reconcile approval compare-and-set or terminal conflicts to the
   durable winning decision and audit row.
 
-
-
+## Soon
 
 ## Parking lot
 
@@ -59,6 +53,11 @@ slice, and local task.
   queue-restoration policy in `docs/backlog/roadmap.md` (`W8-E3-S1`).
 
 ## Current reconciliation
+
+- `2026-07-17` `W36-E6-S4-T5` is complete: approval cards capture a decision reason,
+  session-wide breadth is shown in an explicit confirmation preview, no
+  `allow_for_session` POST occurs before confirmation, and request controls remain
+  disabled while the decision is submitted. `W36-E6-S4-T6` is promoted to `Next`.
 
 - `2026-07-17` `W36-E6-S4-T4` is complete: clone/follow-up draft materialization,
   preflight, and launch now use source/target-scoped mutation keys; repeated launch

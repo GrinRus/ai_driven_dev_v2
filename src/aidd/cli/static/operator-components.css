@@ -1642,6 +1642,35 @@
   flex-wrap: wrap;
   gap: 7px;
 }
+
+.approval-reason-field,
+.approval-session-confirmation {
+  flex: 1 1 100%;
+}
+
+.approval-reason-field {
+  display: grid;
+  gap: var(--space-2);
+}
+
+.approval-session-confirmation {
+  display: grid;
+  gap: var(--space-3);
+  padding: var(--space-4);
+  border: 1px solid var(--color-state-warning-border);
+  border-radius: var(--radius-surface);
+  background: var(--color-state-warning-bg-subtle);
+}
+
+.approval-session-confirmation[hidden] {
+  display: none;
+}
+
+.approval-confirmation-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
 .payload-preview {
   max-height: 240px;
 }

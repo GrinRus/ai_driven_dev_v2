@@ -321,6 +321,16 @@ document.addEventListener("click", async (event) => {
       await openNextFlowWizard("start-follow-up-flow");
       return;
     }
+    const approvalConfirmation = event.target.closest("[data-approval-confirm-session]")?.dataset.approvalConfirmSession;
+    if (approvalConfirmation) {
+      await submitApproval(approvalConfirmation, "allow_for_session", {sessionConfirmed: true});
+      return;
+    }
+    const approvalCancellation = event.target.closest("[data-approval-cancel-session]")?.dataset.approvalCancelSession;
+    if (approvalCancellation) {
+      closeApprovalSessionConfirmation(approvalCancellation);
+      return;
+    }
     const approvalButton = event.target.closest("[data-operator-request][data-operator-action]");
     if (approvalButton) {
       await submitApproval(approvalButton.dataset.operatorRequest, approvalButton.dataset.operatorAction);
@@ -585,6 +595,8 @@ document.addEventListener("input", (event) => {
   }
   const questionText = event.target.closest("[data-question-text]")?.dataset.questionText;
   if (questionText) persistQuestionDraft(questionText);
+  const approvalReasonId = event.target.closest("[data-approval-reason]")?.dataset.approvalReason;
+  if (approvalReasonId) updateApprovalConfirmationPreview(approvalReasonId);
   if (event.target.id === "runComparisonBaseline") {
     state.runComparisonBaselineInput = event.target.value;
     state.runComparison = null;

@@ -11461,13 +11461,13 @@ Local tasks:
   - Scope: next-flow browser controller.
   - Verification: repeated actions cannot create duplicate work items or runs and the
     source run remains unchanged after failure.
-- `W36-E6-S4-T5` (next) Add approval reason capture and explicit confirmation for
+- `W36-E6-S4-T5` (done) Add approval reason capture and explicit confirmation for
   `allow_for_session` with controls disabled while submitting.
   - Dependencies: `W34-E3-S2`.
   - Scope: approval decision UI.
   - Verification: no session-wide approval POST occurs before confirmation and the
     submitted reason/breadth remain visible in the preview.
-- `W36-E6-S4-T6` (soon) Reconcile approval compare-and-set or terminal conflicts to the durable
+- `W36-E6-S4-T6` (next) Reconcile approval compare-and-set or terminal conflicts to the durable
   winning decision and audit row.
   - Dependencies: `W34-E3-S2`.
   - Scope: approval conflict UI.

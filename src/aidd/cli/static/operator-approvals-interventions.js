@@ -377,10 +377,23 @@ function renderApprovalRequestCard(request, decision, pendingIds) {
     : `<span class="muted">No normalized paths</span>`;
   const actions = pending ? `
     <div class="approval-actions">
+      <label class="approval-reason-field" for="approval-reason-${escapeHtml(request.id)}">
+        <span>Decision reason</span>
+        <input id="approval-reason-${escapeHtml(request.id)}" data-approval-reason="${escapeHtml(request.id)}" type="text" placeholder="Why is this decision appropriate?">
+      </label>
       <button data-operator-request="${escapeHtml(request.id)}" data-operator-action="allow_once" type="button">Allow once</button>
       <button data-operator-request="${escapeHtml(request.id)}" data-operator-action="allow_for_session" type="button">Allow session</button>
       <button data-operator-request="${escapeHtml(request.id)}" data-operator-action="deny" class="secondary" type="button">Deny</button>
       <button data-operator-request="${escapeHtml(request.id)}" data-operator-action="cancel" class="danger" type="button">Cancel</button>
+      <div class="approval-session-confirmation" data-approval-session-confirmation="${escapeHtml(request.id)}" hidden role="alertdialog" aria-labelledby="approval-confirm-title-${escapeHtml(request.id)}">
+        <strong id="approval-confirm-title-${escapeHtml(request.id)}">Confirm session-wide approval</strong>
+        <span><b>Breadth:</b> all matching requests in the current runtime approval session</span>
+        <span><b>Reason:</b> <span data-approval-reason-preview="${escapeHtml(request.id)}">No reason provided</span></span>
+        <div class="approval-confirmation-actions">
+          <button data-approval-confirm-session="${escapeHtml(request.id)}" type="button">Confirm allow session</button>
+          <button data-approval-cancel-session="${escapeHtml(request.id)}" type="button" class="secondary">Back</button>
+        </div>
+      </div>
     </div>
   ` : "";
   return `
@@ -553,11 +566,56 @@ async function renderApprovals() {
   }
 }
 
-async function submitApproval(requestId, action) {
+function approvalReason(requestId) {
+  return document.querySelector(`[data-approval-reason="${requestId}"]`)?.value?.trim() || "";
+}
+
+function updateApprovalConfirmationPreview(requestId) {
+  const preview = document.querySelector(`[data-approval-reason-preview="${requestId}"]`);
+  if (preview) preview.textContent = approvalReason(requestId) || "No reason provided";
+}
+
+function openApprovalSessionConfirmation(requestId) {
+  const confirmation = document.querySelector(`[data-approval-session-confirmation="${requestId}"]`);
+  if (!confirmation) return;
+  updateApprovalConfirmationPreview(requestId);
+  confirmation.hidden = false;
+  confirmation.querySelector(`[data-approval-confirm-session="${requestId}"]`)?.focus();
+}
+
+function closeApprovalSessionConfirmation(requestId) {
+  const confirmation = document.querySelector(`[data-approval-session-confirmation="${requestId}"]`);
+  if (confirmation) confirmation.hidden = true;
+  document.querySelector(`[data-operator-request="${requestId}"][data-operator-action="allow_for_session"]`)?.focus();
+}
+
+function setApprovalRequestPending(requestId, pending) {
+  document.querySelectorAll(`[data-operator-request="${requestId}"], [data-approval-confirm-session="${requestId}"], [data-approval-cancel-session="${requestId}"], [data-approval-reason="${requestId}"]`)
+    .forEach((control) => {
+      control.disabled = pending;
+      control.setAttribute("aria-busy", pending ? "true" : "false");
+    });
+}
+
+async function submitApproval(requestId, action, {sessionConfirmed = false} = {}) {
   if (!state.activeJobId) return;
-  await postJson(`/api/jobs/${encodeURIComponent(state.activeJobId)}/operator-requests/${encodeURIComponent(requestId)}/decision`, {action});
-  toast(`Runtime approval ${action}.`);
-  await renderApprovals();
+  if (action === "allow_for_session" && !sessionConfirmed) {
+    openApprovalSessionConfirmation(requestId);
+    return;
+  }
+  const reason = approvalReason(requestId);
+  setApprovalRequestPending(requestId, true);
+  try {
+    await postJson(`/api/jobs/${encodeURIComponent(state.activeJobId)}/operator-requests/${encodeURIComponent(requestId)}/decision`, {
+      action,
+      reason: reason || null
+    });
+    toast(`Runtime approval ${action}.`);
+    await renderApprovals();
+  } catch (error) {
+    setApprovalRequestPending(requestId, false);
+    throw error;
+  }
 }
 
 async function submitIntervention() {
