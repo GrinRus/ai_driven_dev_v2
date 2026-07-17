@@ -136,6 +136,8 @@
   --control-padding-inline: 12px;
   --control-icon-size: 20px;
   --control-checkbox-size: 18px;
+  --control-disabled-opacity: 0.68;
+  --control-pending-opacity: 0.78;
 
   /* Focus and meaningful transition roles. */
   --focus-width: 3px;

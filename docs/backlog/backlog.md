@@ -7,13 +7,11 @@ slice, and local task.
 
 ## Next
 
-- `W36-E3-S2-T2` — Add shared hover, active, focus-visible, disabled, invalid, pending,
-  selected, and loading states.
+- `W36-E3-S2-T3` — Normalize segmented filters, radio-like selectors, clickable rows,
+  and pressed/selected ARIA state.
 
 ## Soon
 
-- `W36-E3-S2-T3` — Normalize segmented filters, radio-like selectors, clickable rows,
-  and pressed/selected ARIA state.
 
 ## Parking lot
 
@@ -64,6 +62,11 @@ slice, and local task.
   queue-restoration policy in `docs/backlog/roadmap.md` (`W8-E3-S1`).
 
 ## Current reconciliation
+
+- `2026-07-17` `W36-E3-S2-T2` is complete: shared native-control states now cover
+  pointer hover/active, keyboard focus, disabled, invalid, pending/loading, and selected
+  semantics while retaining the mobile touch target. `W36-E3-S2-T3` is promoted to
+  `Next`; `Soon` is empty until the control slice closes.
 
 - `2026-07-17` `W36-E3-S2-T1` is complete: button, text input, select, textarea, and
   checkbox anatomy now share typography, border, radius, focus, sizing, and accent roles;

@@ -31,11 +31,25 @@ button {
   justify-content: center;
   min-height: var(--control-height);
   padding: var(--control-padding-block) var(--control-padding-inline);
+  transition:
+    background-color var(--motion-duration-fast) var(--motion-ease-standard),
+    border-color var(--motion-duration-fast) var(--motion-ease-standard),
+    color var(--motion-duration-fast) var(--motion-ease-standard),
+    transform var(--motion-duration-fast) var(--motion-ease-standard);
 }
-button:disabled {
+button:not(:disabled):not([aria-disabled="true"]):hover {
+  background: var(--color-action-primary-hover);
+  border-color: var(--color-action-primary-hover);
+}
+button:disabled,
+button[aria-disabled="true"],
+input:disabled,
+select:disabled,
+textarea:disabled {
   background: var(--color-border-disabled);
   border-color: var(--color-border-disabled);
   cursor: not-allowed;
+  opacity: var(--control-disabled-opacity);
 }
 button.secondary,
 button.quick-link,
@@ -51,6 +65,7 @@ button.quick-link:hover,
 .tabs button:hover,
 .log-filter button:hover,
 .viewer-modes button:hover {
+  background: var(--color-bg-selected);
   border-color: var(--teal);
   color: var(--teal-dark);
 }
@@ -86,6 +101,33 @@ textarea {
   resize: vertical;
   width: 100%;
 }
+input:not([type="checkbox"]):not([type="radio"]):hover:not(:disabled),
+select:hover:not(:disabled),
+textarea:hover:not(:disabled) {
+  border-color: var(--color-border-accent);
+}
+input:not([type="checkbox"]):not([type="radio"])[aria-invalid="true"],
+select[aria-invalid="true"],
+textarea[aria-invalid="true"] {
+  border-color: var(--color-state-danger);
+  box-shadow: 0 0 0 1px var(--color-state-danger);
+}
+button[aria-busy="true"],
+button[data-state="pending"],
+button[data-state="loading"] {
+  cursor: progress;
+  opacity: var(--control-pending-opacity);
+}
+button.secondary[aria-pressed="true"],
+button.secondary[aria-selected="true"],
+button.secondary[data-state="selected"] {
+  background: var(--color-bg-selected);
+  border-color: var(--color-action-primary);
+  color: var(--color-action-primary-hover);
+}
+button:not(:disabled):not([aria-disabled="true"]):active {
+  transform: translateY(1px);
+}
 input[type="checkbox"],
 input[type="radio"] {
   accent-color: var(--color-action-primary);
@@ -110,4 +152,10 @@ code {
   border-radius: 4px;
   font-family: var(--mono);
   padding: 1px 4px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  button {
+    transition: none;
+  }
 }

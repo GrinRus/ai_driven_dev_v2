@@ -68,6 +68,8 @@ def test_operator_token_inventory_covers_accepted_semantic_roles() -> None:
         "--control-padding-block",
         "--control-padding-inline",
         "--control-checkbox-size",
+        "--control-disabled-opacity",
+        "--control-pending-opacity",
         "--focus-width",
         "--focus-offset",
         "--focus-shadow",
