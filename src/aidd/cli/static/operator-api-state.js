@@ -105,7 +105,8 @@ const state = {
     failureCount: 0,
     lastError: "",
     retryDelayMs: null,
-    recovered: false
+    recovered: false,
+    expired: false
   },
   pendingCockpitReveal: false,
   pendingNextFlowWizardReveal: false,
@@ -269,7 +270,11 @@ function primaryValidationFinding() {
 async function api(path, options = {}) {
   const response = await fetch(path, options);
   const payload = await response.json();
-  if (!response.ok || payload.error) throw new Error(payload.error || response.statusText);
+  if (!response.ok || payload.error) {
+    const error = new Error(payload.error || response.statusText);
+    error.status = response.status;
+    throw error;
+  }
   return payload;
 }
 

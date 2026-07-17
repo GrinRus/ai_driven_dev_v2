@@ -77,9 +77,10 @@ async function load(context, filename) {
   vm.runInContext(source, context, {filename});
 }
 
-function response(payload, {ok = true, statusText = "OK"} = {}) {
+function response(payload, {ok = true, status = ok ? 200 : 500, statusText = "OK"} = {}) {
   return {
     ok,
+    status,
     statusText,
     async json() {
       return payload;
@@ -408,6 +409,63 @@ test("repeated polling failures stop after the bounded retry budget", async () =
   assert.equal(vm.runInContext("state.activeJobConnection.state", context), "offline");
   assert.equal(vm.runInContext("state.activeJobConnection.failureCount", context), 5);
   assert.equal(vm.runInContext("state.activeJobTimer", context), null);
+});
+
+test("live connection surface names reconnecting, recovered, offline, and expired states", async () => {
+  const {context} = domContext();
+  await load(context, "operator-api-state.js");
+  await load(context, "operator-primitives.js");
+  await load(context, "operator-logs-jobs.js");
+  const cases = [
+    [{state: "reconnecting", failureCount: 2, retryDelayMs: 1000}, "reconnecting", "Reconnecting to live output"],
+    [{state: "online", recovered: true}, "recovered", "Live connection recovered"],
+    [{state: "offline", failureCount: 5}, "offline", "Reconnect"],
+    [{state: "offline", expired: true}, "expired-job", "Refresh durable state"],
+  ];
+  for (const [connection, marker, copy] of cases) {
+    context.connectionFixture = connection;
+    const html = vm.runInContext(
+      "state.activeJobConnection = connectionFixture; renderActiveJobConnectionSurface()",
+      context,
+    );
+    assert.match(html, new RegExp(`data-connection-state="${marker}"`));
+    assert.match(html, new RegExp(copy));
+  }
+});
+
+test("expired jobs fail closed without retry and manual reconnect preserves the cursor", async () => {
+  const {context} = domContext();
+  const scheduled = [];
+  context.setTimeout = (callback, delay) => {
+    scheduled.push({callback, delay});
+    return scheduled.length;
+  };
+  context.clearTimeout = () => {};
+  let expired = true;
+  context.fetch = async (url) => {
+    if (expired) return response({error: "Unknown UI job"}, {ok: false, status: 404});
+    if (url.includes("/logs?")) return response({cursor: 7, chunks: []});
+    return response({job_id: "job-1", status: "running"});
+  };
+  await load(context, "operator-api-state.js");
+  await load(context, "operator-primitives.js");
+  await load(context, "operator-logs-jobs.js");
+  vm.runInContext(
+    "state.activeJobId = 'job-1'; state.activeJobCursor = 4; state.activeJobStatus = {status: 'running'};",
+    context,
+  );
+
+  await vm.runInContext("pollActiveJob()", context);
+  assert.equal(vm.runInContext("state.activeJobConnection.expired", context), true);
+  assert.equal(scheduled.length, 0);
+  assert.equal(vm.runInContext("state.activeJobCursor", context), 4);
+
+  expired = false;
+  vm.runInContext("renderLogs = async () => {}", context);
+  await vm.runInContext("reconnectActiveJob()", context);
+  assert.equal(vm.runInContext("state.activeJobConnection.state", context), "online");
+  assert.equal(vm.runInContext("state.activeJobCursor", context), 7);
+  assert.equal(scheduled.at(-1).delay, 1000);
 });
 
 test("rejected log request renders a deterministic escaped error", async () => {

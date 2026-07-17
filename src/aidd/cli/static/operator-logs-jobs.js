@@ -266,7 +266,8 @@ function resetActiveJobConnection() {
     failureCount: 0,
     lastError: "",
     retryDelayMs: null,
-    recovered: false
+    recovered: false,
+    expired: false
   };
 }
 
@@ -285,6 +286,45 @@ function activeJobRetryDelay(failureCount) {
     ACTIVE_JOB_RETRY_BASE_MS * (2 ** Math.max(0, failureCount - 1)),
     ACTIVE_JOB_RETRY_MAX_MS
   );
+}
+
+function renderActiveJobConnectionSurface() {
+  const connection = state.activeJobConnection;
+  if (!connection || connection.state === "unknown" || (
+    connection.state === "online" && !connection.recovered
+  )) return "";
+  if (connection.state === "online" && connection.recovered) {
+    return `<div data-connection-state="recovered">${renderStateSurface({
+      kind: "live-connection",
+      state: "empty",
+      title: "Live connection recovered",
+      consequence: "Polling resumed from the last accepted log cursor; runtime state remained server-authoritative."
+    })}</div>`;
+  }
+  if (connection.expired) {
+    return `<div data-connection-state="expired-job">${renderStateSurface({
+      kind: "live-connection",
+      state: "unavailable",
+      title: "Live job is no longer retained",
+      consequence: "The UI job record expired. Refresh durable dashboard and runtime.log evidence; this does not mean the runtime failed.",
+      recovery: {action: "refresh-expired-job", label: "Refresh durable state"}
+    })}</div>`;
+  }
+  if (connection.state === "offline") {
+    return `<div data-connection-state="offline">${renderStateSurface({
+      kind: "live-connection",
+      state: "unavailable",
+      title: "Live connection is offline",
+      consequence: "The runtime may still be running. No terminal status was observed and the log cursor is preserved.",
+      recovery: {action: "reconnect-live-job", label: "Reconnect"}
+    })}</div>`;
+  }
+  return `<div data-connection-state="reconnecting">${renderStateSurface({
+    kind: "live-connection",
+    state: "reconnecting",
+    title: "Reconnecting to live output",
+    consequence: `Attempt ${connection.failureCount} failed; retrying in ${connection.retryDelayMs} ms from the preserved cursor.`
+  })}</div>`;
 }
 
 function activeJobCancelLabel() {
@@ -309,14 +349,14 @@ function renderLiveJobActions() {
 async function renderLogs() {
   if (state.activeJobId && liveJobMatchesStage() && (state.activeJobStatus?.status === "running" || state.activeJobStatus?.status === "waiting-for-operator" || state.activeJobStatus?.status === "cancelling" || state.activeJobLogChunks.length)) {
     const entries = logEntriesFromChunks(state.activeJobLogChunks);
-    document.getElementById("cockpitContent").innerHTML = renderLogPanel({
+    document.getElementById("cockpitContent").innerHTML = `${renderActiveJobConnectionSurface()}${renderLogPanel({
       title: `Live job ${state.activeJobId}`,
       meta: [state.activeJobStatus?.status || "running", state.activeJobStatus?.stage || "workflow"],
       entries,
       rawText: rawTextFromEntries(entries),
       emptyText: "Waiting for runtime output...",
       actions: renderLiveJobActions()
-    });
+    })}`;
     return;
   }
   const item = activeStageItem();
@@ -363,6 +403,16 @@ async function cancelActiveJob() {
   if (activeStatuses.has(result.status)) scheduleActiveJobPoll(0);
 }
 
+async function reconnectActiveJob() {
+  if (!state.activeJobId || activeJobIsTerminal()) return;
+  state.activeJobPollGeneration += 1;
+  clearActiveJobPollTimer();
+  resetActiveJobConnection();
+  state.activeJobConnection.state = "reconnecting";
+  await renderLogs();
+  await pollActiveJob();
+}
+
 async function pollActiveJob() {
   if (!state.activeJobId) return;
   const jobId = state.activeJobId;
@@ -395,7 +445,8 @@ async function pollActiveJob() {
       failureCount: 0,
       lastError: "",
       retryDelayMs: null,
-      recovered: wasDisconnected
+      recovered: wasDisconnected,
+      expired: false
     };
     renderActiveRunPanel();
     if (typeof renderNextActionPanel === "function") renderNextActionPanel();
@@ -419,19 +470,21 @@ async function pollActiveJob() {
       state.activeJobId !== jobId
       || state.activeJobPollGeneration !== pollGeneration
     ) return;
+    const expired = error.status === 404 || error.status === 410;
     const failureCount = state.activeJobConnection.failureCount + 1;
     const retryDelayMs = activeJobRetryDelay(failureCount);
     state.activeJobConnection = {
-      state: failureCount >= ACTIVE_JOB_RETRY_LIMIT ? "offline" : "reconnecting",
+      state: expired || failureCount >= ACTIVE_JOB_RETRY_LIMIT ? "offline" : "reconnecting",
       failureCount,
       lastError: error.message,
-      retryDelayMs: failureCount >= ACTIVE_JOB_RETRY_LIMIT ? null : retryDelayMs,
-      recovered: false
+      retryDelayMs: expired || failureCount >= ACTIVE_JOB_RETRY_LIMIT ? null : retryDelayMs,
+      recovered: false,
+      expired
     };
     state.activeJobLogChunks.push({stream: "system", text: `[ui] ${error.message}\n`});
     renderActivityTable();
     if (activeModeIsEvidenceLog()) await renderLogs();
-    if (failureCount < ACTIVE_JOB_RETRY_LIMIT) scheduleActiveJobPoll(retryDelayMs);
+    if (!expired && failureCount < ACTIVE_JOB_RETRY_LIMIT) scheduleActiveJobPoll(retryDelayMs);
     else clearActiveJobPollTimer();
   }
 }

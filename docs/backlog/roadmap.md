@@ -11412,12 +11412,12 @@ Local tasks:
   - Scope: `operator-logs-jobs.js` polling controller.
   - Verification: failure -> retry -> recovery, repeated failure, cancellation, and
     terminal-job sequences produce no duplicate or skipped chunks.
-- `W36-E6-S3-T2` (next) Render offline, reconnecting, recovered, expired-job, and manual
+- `W36-E6-S3-T2` (done) Render offline, reconnecting, recovered, expired-job, and manual
   Reconnect states.
   - Scope: live connection status surface.
   - Verification: each sequence names whether the runtime may still be running and
     offers the correct local recovery action.
-- `W36-E6-S3-T3` (soon) Reconcile active job, dashboard, logs, and selected stage after
+- `W36-E6-S3-T3` (next) Reconcile active job, dashboard, logs, and selected stage after
   recovery or terminal-job eviction.
   - Scope: browser state reconciliation.
   - Verification: reconnect and eviction fixtures converge on the server-authoritative
@@ -11441,8 +11441,9 @@ Dependencies:
 
 Local tasks:
 
-- `W36-E6-S4-T1` (parked) Add a shared keyed client mutation guard with pending lock, duplicate
+- `W36-E6-S4-T1` (soon) Add a shared keyed client mutation guard with pending lock, duplicate
   suppression, conflict readback, and retryable failure state.
+  - Dependencies: `W36-E6-S3-T3`.
   - Scope: packaged API/state utility.
   - Verification: double-click and concurrent-control fixtures send one request per key
     and preserve a retry path after failure.

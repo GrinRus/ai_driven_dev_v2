@@ -1653,8 +1653,15 @@ def test_operator_logs_asset_keeps_filter_raw_cancel_and_polling_contracts() -> 
             "async function cancelActiveJob()",
             "function scheduleActiveJobPoll(delayMs = ACTIVE_JOB_POLL_INTERVAL_MS)",
             "function activeJobRetryDelay(failureCount)",
+            "function renderActiveJobConnectionSurface()",
+            "function reconnectActiveJob()",
+            'data-connection-state="reconnecting"',
+            'data-connection-state="offline"',
+            'data-connection-state="expired-job"',
+            'data-connection-state="recovered"',
+            'recovery: {action: "reconnect-live-job", label: "Reconnect"}',
             "ACTIVE_JOB_RETRY_LIMIT = 5",
-            'state: failureCount >= ACTIVE_JOB_RETRY_LIMIT ? "offline" : "reconnecting"',
+            'state: expired || failureCount >= ACTIVE_JOB_RETRY_LIMIT ? "offline" : "reconnecting"',
             "data-cancel-job",
             "Cancel job",
             "Cancelling...",
@@ -1679,6 +1686,14 @@ def test_operator_logs_asset_keeps_filter_raw_cancel_and_polling_contracts() -> 
             "renderNextActionPanel();",
             "renderGlobalNextActionStrip();",
             "renderActivityTable();",
+        ),
+    )
+    _assert_contains_all(
+        _asset_text("/operator-main.js"),
+        (
+            'stateRecovery === "reconnect-live-job"',
+            "await reconnectActiveJob();",
+            'stateRecovery === "refresh-expired-job"',
         ),
     )
 

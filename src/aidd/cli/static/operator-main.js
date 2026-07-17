@@ -83,6 +83,15 @@ document.addEventListener("keydown", async (event) => {
 
 document.addEventListener("click", async (event) => {
   try {
+    const stateRecovery = event.target.closest("[data-state-recovery]")?.dataset.stateRecovery;
+    if (stateRecovery === "reconnect-live-job") {
+      await reconnectActiveJob();
+      return;
+    }
+    if (stateRecovery === "refresh-expired-job") {
+      await refresh();
+      return;
+    }
     const routeTarget = event.target.closest("[data-operator-route-intent]");
     if (routeTarget) {
       await navigateOperatorRouteIntent(routeTarget.dataset.operatorRouteIntent, {

@@ -7,13 +7,13 @@ slice, and local task.
 
 ## Next
 
-- `W36-E6-S3-T2` — Render offline, reconnecting, recovered, expired-job, and manual
-  Reconnect states.
+- `W36-E6-S3-T3` — Reconcile active job, dashboard, logs, and selected stage after
+  recovery or terminal-job eviction.
 
 ## Soon
 
-- `W36-E6-S3-T3` — Reconcile active job, dashboard, logs, and selected stage after
-  recovery or terminal-job eviction.
+- `W36-E6-S4-T1` — Add a keyed client mutation guard with pending lock, duplicate
+  suppression, conflict readback, and retryable failure state.
 
 
 
@@ -42,8 +42,6 @@ slice, and local task.
   handoff read model.
 - `W36-E5-S10-T1` — Switch the default renderer to Studio only after all per-surface
   parity entries close.
-- `W36-E6-S4-T1` — Add a keyed client mutation guard with pending lock, duplicate
-  suppression, conflict readback, and retryable failure state.
 - `W36-E7-S1-T1` — Add the Guided Setup project validation, create/resume, runtime
   review, first-launch, and resulting Inbox browser journey.
 
@@ -61,6 +59,11 @@ slice, and local task.
   queue-restoration policy in `docs/backlog/roadmap.md` (`W8-E3-S1`).
 
 ## Current reconciliation
+
+- `2026-07-17` `W36-E6-S3-T2` is complete: live observation names reconnecting,
+  recovered, offline, and expired-job states, preserves the nonterminal runtime claim,
+  and offers bounded Reconnect or durable-state refresh actions. `W36-E6-S3-T3` is
+  promoted to `Next` and `W36-E6-S4-T1` to `Soon`.
 
 - `2026-07-17` `W36-E6-S3-T1` is complete: live polling now uses one generation-scoped
   timeout, preserves the accepted cursor, retries at 0.5/1/2/4 seconds, caps at an
