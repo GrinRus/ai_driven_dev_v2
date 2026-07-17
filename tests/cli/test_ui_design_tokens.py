@@ -62,8 +62,12 @@ def test_operator_token_inventory_covers_accepted_semantic_roles() -> None:
         "--control-height-default",
         "--control-height-touch",
         "--control-height",
+        "--control-border-width",
+        "--control-font-size",
+        "--control-line-height",
         "--control-padding-block",
         "--control-padding-inline",
+        "--control-checkbox-size",
         "--focus-width",
         "--focus-offset",
         "--focus-shadow",
@@ -112,3 +116,14 @@ def test_density_mode_changes_shared_tokens_instead_of_component_rules() -> None
     assert "padding: var(--control-padding-block) var(--control-padding-inline);" in base
     assert "--control-height: var(--control-height-touch);" in responsive
     assert not re.search(r"(?:button|input|select)[^{]*\{[^}]*min-height:\s*44px", responsive)
+
+
+def test_native_controls_share_token_driven_anatomy() -> None:
+    base = _asset("/operator-base.css")
+
+    shared_rule = re.search(r"button, input, select, textarea\s*\{(?P<body>[^}]*)\}", base)
+    assert shared_rule is not None
+    assert "font-size: var(--control-font-size);" in shared_rule.group("body")
+    assert "line-height: var(--control-line-height);" in shared_rule.group("body")
+    assert "border-radius: var(--radius-control);" in base
+    assert "border: var(--control-border-width) solid" in base

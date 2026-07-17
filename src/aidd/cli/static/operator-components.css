@@ -1155,13 +1155,10 @@
 }
 .editable-list-row input[type="checkbox"],
 .inherited-context-toggle input {
-  height: 16px;
   margin-top: 2px;
-  width: 16px;
 }
 .editable-list-row input[type="text"] {
   margin: 0;
-  min-height: 32px;
   width: 100%;
 }
 .editable-list-row span,
@@ -1595,9 +1592,7 @@
   padding: 8px;
 }
 .target-option input {
-  height: 16px;
   margin: 0;
-  width: 16px;
 }
 .target-option span {
   min-width: 0;

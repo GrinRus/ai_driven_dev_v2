@@ -7,13 +7,13 @@ slice, and local task.
 
 ## Next
 
-- `W36-E3-S2-T1` — Normalize button, text-input, select, textarea, and checkbox anatomy
-  and typography.
+- `W36-E3-S2-T2` — Add shared hover, active, focus-visible, disabled, invalid, pending,
+  selected, and loading states.
 
 ## Soon
 
-- `W36-E3-S2-T2` — Add shared hover, active, focus-visible, disabled, invalid, pending,
-  selected, and loading states.
+- `W36-E3-S2-T3` — Normalize segmented filters, radio-like selectors, clickable rows,
+  and pressed/selected ARIA state.
 
 ## Parking lot
 
@@ -64,6 +64,11 @@ slice, and local task.
   queue-restoration policy in `docs/backlog/roadmap.md` (`W8-E3-S1`).
 
 ## Current reconciliation
+
+- `2026-07-17` `W36-E3-S2-T1` is complete: button, text input, select, textarea, and
+  checkbox anatomy now share typography, border, radius, focus, sizing, and accent roles;
+  journey-form computed styles prove the common contract. `W36-E3-S2-T2` is promoted
+  to `Next` and `W36-E3-S2-T3` to `Soon`.
 
 - `2026-07-17` `W36-E3-S1-T3` and slice `W36-E3-S1` are complete: desktop and mobile
   controls now resolve a shared density token to `32px` and `44px` respectively, with

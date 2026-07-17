@@ -129,9 +129,13 @@
   --control-height-default: 36px;
   --control-height-touch: 44px;
   --control-height: var(--control-height-compact);
+  --control-border-width: 1px;
+  --control-font-size: var(--type-label-size);
+  --control-line-height: var(--type-compact-line);
   --control-padding-block: 6px;
   --control-padding-inline: 12px;
   --control-icon-size: 20px;
+  --control-checkbox-size: 18px;
 
   /* Focus and meaningful transition roles. */
   --focus-width: 3px;

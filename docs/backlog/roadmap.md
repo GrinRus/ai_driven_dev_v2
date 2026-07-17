@@ -10588,17 +10588,17 @@ Dependencies:
 
 Local tasks:
 
-- `W36-E3-S2-T1` (next) Normalize button, text-input, select, textarea, and checkbox anatomy
+- `W36-E3-S2-T1` (done) Normalize button, text-input, select, textarea, and checkbox anatomy
   and typography.
   - Scope: base control CSS.
   - Verification: onboarding, question, intervention, comparison, and next-flow forms
     share computed height, font, border, radius, and focus roles.
-- `W36-E3-S2-T2` (soon) Add shared hover, active, focus-visible, disabled, invalid, pending,
+- `W36-E3-S2-T2` (next) Add shared hover, active, focus-visible, disabled, invalid, pending,
   selected, and loading states.
   - Scope: interactive control states.
   - Verification: one browser fixture exercises every state with pointer, keyboard,
     and touch-density assertions.
-- `W36-E3-S2-T3` (planned) Normalize segmented filters, radio-like selectors, clickable rows,
+- `W36-E3-S2-T3` (soon) Normalize segmented filters, radio-like selectors, clickable rows,
   and pressed/selected ARIA state.
   - Scope: composite browser controls.
   - Verification: log filters, viewer modes, runtime cards, artifact rows, and evidence

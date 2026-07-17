@@ -6,28 +6,29 @@ body {
 }
 button, input, select, textarea {
   font: inherit;
+  font-size: var(--control-font-size);
+  line-height: var(--control-line-height);
 }
 button:focus-visible,
 input:focus-visible,
 select:focus-visible,
 textarea:focus-visible,
 [tabindex]:focus-visible {
-  box-shadow: 0 0 0 4px var(--focus-ring-soft);
-  outline: 3px solid var(--focus-ring);
-  outline-offset: 2px;
+  box-shadow: var(--focus-shadow);
+  outline: var(--focus-width) solid var(--color-focus);
+  outline-offset: var(--focus-offset);
 }
 button {
   align-items: center;
   background: var(--teal);
-  border: 1px solid var(--teal);
-  border-radius: 6px;
+  border: var(--control-border-width) solid var(--color-action-primary);
+  border-radius: var(--radius-control);
   color: var(--color-text-inverse);
   cursor: pointer;
   display: inline-flex;
-  font-weight: 650;
+  font-weight: var(--type-weight-medium);
   gap: 6px;
   justify-content: center;
-  font-size: 12px;
   min-height: var(--control-height);
   padding: var(--control-padding-block) var(--control-padding-inline);
 }
@@ -69,8 +70,8 @@ input:not([type="checkbox"]):not([type="radio"]),
 select,
 textarea {
   background: var(--surface);
-  border: 1px solid var(--line-strong);
-  border-radius: 6px;
+  border: var(--control-border-width) solid var(--color-border-strong);
+  border-radius: var(--radius-control);
   color: var(--text);
 }
 input:not([type="checkbox"]):not([type="radio"]),
@@ -80,11 +81,17 @@ select {
   padding: var(--control-padding-block) var(--control-padding-inline);
 }
 textarea {
-  line-height: 1.45;
   min-height: 84px;
-  padding: 9px 10px;
+  padding: var(--control-padding-block) var(--control-padding-inline);
   resize: vertical;
   width: 100%;
+}
+input[type="checkbox"],
+input[type="radio"] {
+  accent-color: var(--color-action-primary);
+  block-size: var(--control-checkbox-size);
+  inline-size: var(--control-checkbox-size);
+  margin: 0;
 }
 .sr-only {
   border: 0;
