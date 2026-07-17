@@ -2,6 +2,7 @@
   const scripts = [
     "/operator-api-state.js",
     "/operator-shell-rendering.js",
+    "/operator-dashboard-actions.js",
     "/operator-onboarding.js",
     "/operator-artifacts-documents.js",
     "/operator-questions.js",

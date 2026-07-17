@@ -117,6 +117,7 @@ test("operator bootstrap loads modules in declared order", async () => {
   assert.deepEqual(appended, [
     "/operator-api-state.js",
     "/operator-shell-rendering.js",
+    "/operator-dashboard-actions.js",
     "/operator-onboarding.js",
     "/operator-artifacts-documents.js",
     "/operator-questions.js",
@@ -139,6 +140,7 @@ test("late dashboard response cannot overwrite a newer request", async () => {
     return pending.promise;
   };
   await load(context, "operator-api-state.js");
+  await load(context, "operator-dashboard-actions.js");
 
   const first = vm.runInContext("fetchDashboard()", context);
   const second = vm.runInContext("fetchDashboard()", context);
@@ -158,6 +160,60 @@ test("late dashboard response cannot overwrite a newer request", async () => {
   await first;
 
   assert.equal(vm.runInContext("state.dashboard.marker", context), "new");
+});
+
+test("shared dashboard actions preserve workflow and stage request payloads", async () => {
+  const {context} = domContext();
+  const requests = [];
+  const jobs = [];
+  context.fetch = async (url, options = {}) => {
+    requests.push({url, options});
+    return response({job_id: `job-${requests.length}`, status: "running"});
+  };
+  context.startJobPolling = async (job) => jobs.push(job);
+  await load(context, "operator-api-state.js");
+  await load(context, "operator-shell-rendering.js");
+  await load(context, "operator-dashboard-actions.js");
+  vm.runInContext(
+    `
+      state.onboarding.setupRequired = false;
+      state.dashboard = {work_item: "WI-UI"};
+      state.activeRunId = "run-ui";
+      state.activeStage = "plan";
+      state.selectedRuntime = "generic-cli";
+      state.readinessLoading = false;
+      state.readiness = {runtimes: [{
+        runtime_id: "generic-cli",
+        provider_available: true,
+        execution_command_available: true
+      }]};
+    `,
+    context,
+  );
+
+  await vm.runInContext("startWorkflow()", context);
+  await vm.runInContext("startStage()", context);
+
+  assert.deepEqual(requests.map(({url, options}) => ({
+    url,
+    method: options.method,
+    body: JSON.parse(options.body),
+  })), [
+    {
+      url: "/api/workflow/run",
+      method: "POST",
+      body: {runtime: "generic-cli", log_follow: true, run_id: "run-ui"},
+    },
+    {
+      url: "/api/stage/run",
+      method: "POST",
+      body: {stage: "plan", runtime: "generic-cli", log_follow: true, run_id: "run-ui"},
+    },
+  ]);
+  assert.deepEqual(jobs, [
+    {job_id: "job-1", status: "running"},
+    {job_id: "job-2", status: "running"},
+  ]);
 });
 
 test("cancellation invalidates an in-flight job poll", async () => {

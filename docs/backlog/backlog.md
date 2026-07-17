@@ -7,13 +7,13 @@ slice, and local task.
 
 ## Next
 
-- `W36-E2-S3-T1` — Extract shared dashboard loading, context selection, and mutation
-  dispatch from legacy renderer ownership.
+- `W36-E2-S3-T2` — Add a temporary browser-only `ui=studio|legacy` presentation selector
+  while keeping service requests unchanged.
 
 ## Soon
 
-- `W36-E2-S3-T2` — Add a temporary browser-only `ui=studio|legacy` presentation selector
-  while keeping service requests unchanged.
+- `W36-E2-S3-T3` — Add a per-surface parity manifest with ownership, rollout state,
+  rollback renderer, required fixture, journey, and removal gate.
 
 ## Parking lot
 
@@ -66,6 +66,12 @@ slice, and local task.
   queue-restoration policy in `docs/backlog/roadmap.md` (`W8-E3-S1`).
 
 ## Current reconciliation
+
+- `2026-07-17` `W36-E2-S3-T1` is complete: one packaged dashboard/action seam now owns
+  non-next-flow loading, server-derived context reconciliation, and workflow/stage/task/
+  remediation dispatch, while legacy rendering and next-flow behavior retain equivalent
+  requests and durable readback. `W36-E2-S3-T2` is promoted to `Next` and
+  `W36-E2-S3-T3` to `Soon`.
 
 - `2026-07-17` `W36-E2-S2-T3` and slice `W36-E2-S2` are complete: schema-v1 browser
   evidence now atomically records bounded viewport metadata, screenshots, DOM measures,

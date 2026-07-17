@@ -10508,20 +10508,20 @@ Dependencies:
 
 Local tasks:
 
-- `W36-E2-S3-T1` (next) Extract shared non-next-flow dashboard loading, context selection, and
+- `W36-E2-S3-T1` (done) Extract shared non-next-flow dashboard loading, context selection, and
   mutation dispatch from legacy render ownership; next-flow splitting remains owned by
   `W34-E3-S4-T4` until that task closes.
   - Scope: packaged browser state/action seam only.
   - Verification: legacy fixtures produce equivalent requests and durable readback through
     the shared seam before any Studio renderer is enabled.
-- `W36-E2-S3-T2` (soon) Add a temporary browser-only `ui=studio|legacy` presentation selector while
+- `W36-E2-S3-T2` (next) Add a temporary browser-only `ui=studio|legacy` presentation selector while
   keeping `/`, packaged asset URLs, `aidd ui`, and action endpoints stable.
   - Scope: browser bootstrap and renderer selection only.
   - Verification: an executable truth table covers `missing | studio | legacy` against
     `legacy_only | candidate | parity_closed`: before cutover missing uses legacy; `studio`
     renders candidate or closed Studio surfaces and falls back only for `legacy_only`; `legacy`
     forces every retained rollback renderer; invalid follows the current missing-value rule.
-- `W36-E2-S3-T3` (planned) Add a per-surface parity manifest with owning slice, rollout state
+- `W36-E2-S3-T3` (soon) Add a per-surface parity manifest with owning slice, rollout state
   (`legacy_only | candidate | parity_closed`), rollback renderer, required fixture, browser
   journey, and legacy-removal gate.
   - Scope: packaged-browser migration metadata and tests.

@@ -43,6 +43,11 @@ _OPERATOR_STATIC_ASSET_MANIFEST = (
         content_type="text/javascript; charset=utf-8",
     ),
     OperatorStaticAsset(
+        route="/operator-dashboard-actions.js",
+        filename="operator-dashboard-actions.js",
+        content_type="text/javascript; charset=utf-8",
+    ),
+    OperatorStaticAsset(
         route="/operator-onboarding.js",
         filename="operator-onboarding.js",
         content_type="text/javascript; charset=utf-8",

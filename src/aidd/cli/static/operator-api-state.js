@@ -620,76 +620,10 @@ function syncLocationState() {
   }
 }
 
-function dashboardUrl() {
-  const params = new URLSearchParams();
-  if (state.activeStageExplicit) params.set("stage", state.activeStage);
-  if (state.activeRunId) params.set("run_id", state.activeRunId);
-  return `/api/dashboard?${params.toString()}`;
-}
-
-function projectHomeUrl(workItem = "") {
-  const params = new URLSearchParams();
-  if (workItem) params.set("work_item", workItem);
-  const query = params.toString();
-  return `/api/project-home${query ? `?${query}` : ""}`;
-}
-
 function sourceFindingsUrl() {
   const params = new URLSearchParams();
   if (state.activeRunId) params.set("run_id", state.activeRunId);
   return `/api/next-flow/source-findings?${params.toString()}`;
-}
-
-async function fetchDashboard() {
-  const requestGeneration = ++state.dashboardRequestGeneration;
-  const payload = await api(dashboardUrl());
-  if (requestGeneration !== state.dashboardRequestGeneration) return false;
-  state.dashboard = payload.dashboard;
-  await recoverActiveJobFromDashboard(payload.active_job);
-  const version = String(payload.app_version || "").trim();
-  document.getElementById("appVersion").textContent = version.startsWith("v") ? version : `v${version || "dev"}`;
-  const viewedStage = state.dashboard.active_stage_view?.stage || state.dashboard.active_stage;
-  if (viewedStage && STAGES.includes(viewedStage)) {
-    state.activeStage = viewedStage;
-  }
-  const previousRunId = state.activeRunId;
-  state.activeRunId = state.dashboard.run?.run_id || "";
-  if (state.activeRunId !== previousRunId) {
-    state.reviewFindingsView = null;
-    state.reviewFindingsRunId = "";
-    state.qaVerdictView = null;
-    state.qaVerdictRunId = "";
-  }
-  if (!state.selectedRuntime && state.dashboard.run?.runtime_id) {
-    state.selectedRuntime = state.dashboard.run.runtime_id;
-  }
-  const nextAction = state.dashboard.next_action?.action || "";
-  if (isRecoveryNextAction(nextAction) && state.activeTab === "work") {
-    state.activeTab = "recovery";
-    if (nextAction === "answer-questions") state.recoveryDetail = "questions";
-    else if (nextAction === "inspect-validation" || nextAction === "review-intervention") state.recoveryDetail = "validation";
-    else if (nextAction === "inspect-runtime-log") state.recoveryDetail = "logs";
-    requestCockpitReveal();
-  } else if (
-    state.activeTab === "work"
-    && state.dashboard.first_failure
-    && dashboardRuntimeRecoveryAction()
-  ) {
-    state.activeTab = "recovery";
-    state.recoveryDetail = "summary";
-    requestCockpitReveal();
-  }
-  return true;
-}
-
-async function fetchProjectHome(workItem = "") {
-  const requestGeneration = ++state.projectHomeRequestGeneration;
-  const payload = await api(projectHomeUrl(workItem));
-  if (requestGeneration !== state.projectHomeRequestGeneration) return false;
-  state.projectHome = payload.project_home || null;
-  const version = String(payload.app_version || "").trim();
-  document.getElementById("appVersion").textContent = version.startsWith("v") ? version : `v${version || "dev"}`;
-  return true;
 }
 
 async function fetchOnboardingState() {

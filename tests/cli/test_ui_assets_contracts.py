@@ -52,6 +52,10 @@ def _next_flow_assets() -> str:
     )
 
 
+def _dashboard_actions() -> str:
+    return _asset_text("/operator-dashboard-actions.js")
+
+
 def _assert_contains_all(text: str, expected: tuple[str, ...]) -> None:
     missing = [item for item in expected if item not in text]
     assert not missing
@@ -99,6 +103,7 @@ def test_operator_static_asset_manifest_preserves_compatibility_routes() -> None
         "operator.js",
     }.issubset(filenames)
     assert "operator-api-state.js" in filenames
+    assert "operator-dashboard-actions.js" in filenames
     assert "operator-main.js" in filenames
     assert routes["/"].filename == "index.html"
     assert routes["/operator.js"].content_type == "text/javascript; charset=utf-8"
@@ -360,12 +365,12 @@ def test_operator_responsive_css_prevents_activity_table_mobile_overflow() -> No
 def test_operator_script_modules_own_static_ui_surfaces() -> None:
     loader = _asset_text("/operator.js")
     api_state = _asset_text("/operator-api-state.js")
+    dashboard_actions = _dashboard_actions()
     shell = _asset_text("/operator-shell-rendering.js")
     artifacts = _asset_text("/operator-artifacts-documents.js")
     questions = _asset_text("/operator-questions.js")
     approvals = _asset_text("/operator-approvals-interventions.js")
     logs = _asset_text("/operator-logs-jobs.js")
-    next_flow_controller = _asset_text("/operator-next-flow-actions.js")
     next_flow_view = _asset_text("/operator-next-flow-view.js")
     onboarding = _asset_text("/operator-onboarding.js")
     cockpit = _asset_text("/operator-stage-cockpit.js")
@@ -409,8 +414,10 @@ def test_operator_script_modules_own_static_ui_surfaces() -> None:
     assert "async function startJobPolling(job)" in logs
     assert "function renderOnboarding()" in onboarding
     assert "function syncOnboardingCreateActionState()" in onboarding
-    assert "async function startWorkflow()" in next_flow_controller
-    assert "async function handleNextAction()" in next_flow_controller
+    assert "async function fetchDashboard()" in dashboard_actions
+    assert "async function fetchProjectHome(workItem = \"\")" in dashboard_actions
+    assert "async function startWorkflow()" in dashboard_actions
+    assert "async function handleNextAction()" in dashboard_actions
     assert "function renderFlowCompleteState()" in next_flow_view
     assert "function renderRunHistory()" in next_flow_view
     assert "async function renderCockpit()" in cockpit
@@ -431,6 +438,7 @@ def test_operator_script_modules_own_static_ui_surfaces() -> None:
 
 def test_operator_next_flow_controller_and_view_keep_separate_boundaries() -> None:
     controller = _asset_text("/operator-next-flow-actions.js")
+    dashboard_actions = _dashboard_actions()
     view = _asset_text("/operator-next-flow-view.js")
     loader = _asset_text("/operator.js")
 
@@ -438,8 +446,10 @@ def test_operator_next_flow_controller_and_view_keep_separate_boundaries() -> No
     assert "innerHTML =" not in controller
     assert "function renderFlowCompleteState()" not in controller
     assert "function renderNextFlowWizardShell(" not in controller
-    assert "async function startWorkflow()" in controller
-    assert "async function handleNextAction()" in controller
+    assert "async function startWorkflow()" not in controller
+    assert "async function handleNextAction()" not in controller
+    assert "async function startWorkflow()" in dashboard_actions
+    assert "async function handleNextAction()" in dashboard_actions
 
     assert "function renderFlowCompleteState()" in view
     assert "function renderRunHistory()" in view
@@ -449,6 +459,9 @@ def test_operator_next_flow_controller_and_view_keep_separate_boundaries() -> No
     assert "fetch(" not in view
     assert "postJson(" not in view
 
+    assert loader.index('"/operator-dashboard-actions.js"') < loader.index(
+        '"/operator-next-flow-actions.js"'
+    )
     assert loader.index('"/operator-next-flow-actions.js"') < loader.index(
         '"/operator-next-flow-view.js"'
     )
@@ -463,8 +476,8 @@ def test_operator_next_flow_controller_and_view_keep_separate_boundaries() -> No
     )
 
 
-def test_operator_api_state_asset_keeps_dashboard_runtime_and_tab_contracts() -> None:
-    api_state = _asset_text("/operator-api-state.js")
+def test_operator_state_and_dashboard_assets_keep_runtime_and_tab_contracts() -> None:
+    api_state = "\n".join((_asset_text("/operator-api-state.js"), _dashboard_actions()))
 
     _assert_contains_all(
         api_state,
@@ -1606,7 +1619,7 @@ def test_operator_logs_asset_keeps_filter_raw_cancel_and_polling_contracts() -> 
 
 
 def test_operator_next_flow_asset_keeps_launch_resume_and_runtime_guard_contracts() -> None:
-    next_flow = _next_flow_assets()
+    next_flow = "\n".join((_dashboard_actions(), _next_flow_assets()))
 
     _assert_contains_all(
         next_flow,
