@@ -1482,6 +1482,10 @@ def test_studio_review_qa_gates_render_exact_identity_and_blocker_contracts() ->
             "Residual risk ·",
             "Known issue ·",
             "data-quality-gate-blocker",
+            "function studioRemediationReadback(sourceStage)",
+            'data-remediation-readback=',
+            'data-recovery-action="rerun-stale-downstream"',
+            "Terminal handoff stays blocked",
         ),
     )
     _assert_contains_all(

@@ -11145,7 +11145,7 @@ Local tasks:
   - Scope: Review/QA quality-gate renderer only.
   - Verification: approval/rejection/not-ready/blocked/missing-evidence fixtures agree with the
     canonical reports and validators.
-- `W36-E5-S7-T4` (next) Render selected remediation to `implement`, pending readback, and explicit
+- `W36-E5-S7-T4` (done) Render selected remediation to `implement`, pending readback, and explicit
   downstream Review/QA stale rerun.
   - Scope: quality-gate remediation renderer only.
   - Verification: one durable remediation request is created, fresh downstream stages become
@@ -11520,9 +11520,10 @@ Local tasks:
   - Scope: runtime/validation recovery scenario family.
   - Verification: each failure exposes the correct first evidence, one primary recovery
     action, and a truthful stopped/running state.
-- `W36-E7-S1-T4` (planned) Add the Review/QA quality-gate, remediation, and stale downstream
+- `W36-E7-S1-T4` (soon) Add the Review/QA quality-gate, remediation, and stale downstream
   browser journey.
-  - Dependencies: `W35-E2-S8`, `W36-E5-S7-T2..T4`.
+  - Dependencies: `W35-E2-S8`, `W36-E5-S7-T2..T4`, `W36-E7-S1-T9` as the direct
+    queue predecessor.
   - Scope: delivery-decision browser scenario family.
   - Verification: unsafe completion remains blocked, remediation/rerun is explicit, and stale
     QA keeps Flow Complete absent until a later fresh-QA journey proves terminal eligibility.
@@ -11550,7 +11551,7 @@ Local tasks:
   - Verification: clean versus failed/blocked/warning fresh QA, stale/nonterminal exclusion,
     one core-recommended action, drafts/preflight, independent identities, truthful manual eval
     handoff, archive overlay, and byte-identical source-run evidence all pass.
-- `W36-E7-S1-T9` (soon) Add the implement task run/resume, failed-attempt recovery, repository
+- `W36-E7-S1-T9` (next) Add the implement task run/resume, failed-attempt recovery, repository
   evidence, and aggregate-finalization browser journey.
   - Dependencies: `W35-E2-S8`, `W36-E5-S7-T1..T4`, `W36-E5-S7-T4` as the direct
     queue predecessor.

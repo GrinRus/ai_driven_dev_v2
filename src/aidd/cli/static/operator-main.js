@@ -454,6 +454,10 @@ document.addEventListener("click", async (event) => {
         await startStage(state.activeStage);
         return;
       }
+      else if (action === "rerun-stale-downstream") {
+        await rerunStaleDownstream();
+        return;
+      }
       requestCockpitReveal();
       await fetchDashboard();
       await fetchProjectHome(state.dashboard?.work_item || "");

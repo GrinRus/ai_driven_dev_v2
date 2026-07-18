@@ -7,13 +7,12 @@ slice, and local task.
 
 ## Next
 
-- `W36-E5-S7-T4` — Render remediation readback and explicit stale Review/QA state in
-  Studio.
+- `W36-E7-S1-T9` — Add the provider-free Implement/finalization/repository browser
+  journey.
 
 ## Soon
 
-- `W36-E7-S1-T9` — Add the provider-free Implement/finalization/repository browser
-  journey.
+- `W36-E7-S1-T4` — Add the provider-free Review/QA/remediation browser journey.
 
 ## Parking lot
 
@@ -36,6 +35,12 @@ slice, and local task.
   queue-restoration policy in `docs/backlog/roadmap.md` (`W8-E3-S1`).
 
 ## Current reconciliation
+
+- `2026-07-18` `W36-E5-S7-T4` is complete: selected Review/QA identities still launch
+  the guarded canonical remediation service, while Studio now exposes pending implement
+  readback, exact stale Review/QA stages and invalidator identity, and the existing guarded
+  downstream rerun. Terminal handoff remains explicitly blocked while stale evidence exists.
+  Implement journey `W36-E7-S1-T9` is promoted to `Next`, followed by Review/QA journey `T4`.
 
 - `2026-07-18` `W36-E5-S7-T3` is complete: Studio Review/QA gates render exact
   finding identities, severity/disposition, acceptance and evidence references, residual

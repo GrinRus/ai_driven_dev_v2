@@ -4,6 +4,31 @@ function studioTaskStatusClass(status) {
   return "warn";
 }
 
+function studioRemediationReadback(sourceStage) {
+  const job = state.activeJobStatus || {};
+  const pending = job.kind === "remediation" && job.stage === "implement"
+    && !["completed", "failed", "cancelled"].includes(job.status || "running");
+  const staleStages = (state.dashboard?.stages || []).filter((item) => item.stale);
+  if (!pending && !staleStages.length) return "";
+  const staleLabels = staleStages.map((item) => stageTitle(item.stage)).join(" → ");
+  const invalidators = [...new Set(staleStages.map((item) => item.stale_invalidated_by).filter(Boolean))];
+  return `
+    <aside class="panel-item studio-remediation-readback" data-remediation-readback="${escapeHtml(sourceStage)}" aria-live="polite">
+      <div class="surface-title compact">
+        <strong>Remediation readback</strong>
+        <span class="small-badge ${pending ? "warn" : "bad"}">${pending ? "implement pending" : "downstream stale"}</span>
+      </div>
+      ${pending ? `<span>Implement remediation is running for ${escapeHtml(state.activeRunId || "the selected run")}. Durable task and finalization evidence remains authoritative.</span>` : ""}
+      ${staleStages.length ? `
+        <span>Stale stages: ${escapeHtml(staleLabels)}.</span>
+        <span>Invalidated by: ${escapeHtml(invalidators.join(", ") || "durable remediation status")}.</span>
+        <span class="form-error">Terminal handoff stays blocked until Review and QA are rerun from fresh evidence.</span>
+        <button data-recovery-action="rerun-stale-downstream" type="button" ${selectedRuntimeReady() ? "" : "disabled aria-disabled=\"true\""}>Rerun stale downstream</button>
+      ` : ""}
+    </aside>
+  `;
+}
+
 function renderStudioImplementationTask(task) {
   const attempts = task.attempts || [];
   const runnable = task.ready && task.status !== "succeeded";
@@ -141,6 +166,7 @@ function renderStudioReviewQualityGate(view) {
         <span class="small-badge ${status === "approved" ? "good" : "bad"}">${escapeHtml(status)}</span>
       </div>
       ${renderWarnings(view?.warnings || [])}
+      ${studioRemediationReadback("review")}
       ${blocked ? `<div class="next-action-blocker" data-quality-gate-blocker>Review is ${escapeHtml(status)}; QA progression remains blocked by the canonical report.</div>` : ""}
       <div class="compact-list" data-review-findings>
         ${findings.length ? findings.map((finding, index) => `
@@ -184,6 +210,7 @@ function renderStudioQaQualityGate(view, sourceItems) {
         <span class="small-badge ${blocked ? "bad" : risks.length || issues.length ? "warn" : "good"}">${escapeHtml(verdict)}</span>
       </div>
       ${renderWarnings(view?.warnings || [])}
+      ${studioRemediationReadback("qa")}
       ${blocked ? `<div class="next-action-blocker" data-quality-gate-blocker>QA verdict is ${escapeHtml(verdict)}; terminal progression remains blocked by the canonical report.</div>` : ""}
       <div class="metric-grid">
         <div class="metric"><span>Recommendation</span><strong>${escapeHtml(view?.release_recommendation || "missing")}</strong></div>

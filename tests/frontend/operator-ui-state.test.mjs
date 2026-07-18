@@ -343,8 +343,16 @@ test("Studio repository evidence names change kinds scope and claim mismatches",
 
 test("Studio Review and QA gates render exact upstream identities and blockers", async () => {
   const context = vm.createContext({
+    state: {
+      activeRunId: "run-quality",
+      activeJobStatus: null,
+      dashboard: {stages: []}
+    },
     escapeHtml(value) {
       return String(value);
+    },
+    stageTitle(value) {
+      return String(value).toUpperCase();
     },
     renderQaCompletionGuard() {
       return "";
@@ -394,6 +402,21 @@ test("Studio Review and QA gates render exact upstream identities and blockers",
   assert.match(qa, /Residual risk · Retry remains unverified/);
   assert.match(qa, /Known issue · QAI-1/);
   assert.match(qa, /data-accept-qa[^>]*disabled/);
+
+  context.state.activeJobStatus = {kind: "remediation", stage: "implement", status: "running"};
+  let readback = vm.runInContext('studioRemediationReadback("review")', context);
+  assert.match(readback, /data-remediation-readback="review"/);
+  assert.match(readback, /implement pending/);
+  context.state.activeJobStatus = {kind: "remediation", stage: "implement", status: "completed"};
+  context.state.dashboard.stages = [
+    {stage: "review", stale: true, stale_invalidated_by: "remediation-4"},
+    {stage: "qa", stale: true, stale_invalidated_by: "remediation-4"}
+  ];
+  readback = vm.runInContext('studioRemediationReadback("qa")', context);
+  assert.match(readback, /REVIEW → QA/);
+  assert.match(readback, /remediation-4/);
+  assert.match(readback, /Terminal handoff stays blocked/);
+  assert.match(readback, /data-recovery-action="rerun-stale-downstream"/);
 });
 
 test("presentation selector is browser-only and fails back to legacy", async () => {
