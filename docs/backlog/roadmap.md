@@ -11035,7 +11035,7 @@ Local tasks:
   - Scope: approval Recovery renderer only.
   - Verification: allow/deny/cancel/conflict fixtures agree with the compare-and-set audit row and
     no broad approval posts before confirmation.
-- `W36-E5-S5-T4` (next) Implement the decision-first mobile question and approval layouts with compact
+- `W36-E5-S5-T4` (done) Implement the decision-first mobile question and approval layouts with compact
   context, 44px controls, and evidence drill-down.
   - Dependencies: `W36-E5-S2`.
   - Scope: human-decision responsive presentation only.
@@ -11531,7 +11531,7 @@ Local tasks:
   - Scope: history and continuation browser scenario family.
   - Verification: Back/reload/deep links preserve run identity and completed source-run
     artifacts remain immutable and inspectable.
-- `W36-E7-S1-T6` (soon) Add the blocking-question answer/resume Recovery Studio browser journey.
+- `W36-E7-S1-T6` (next) Add the blocking-question answer/resume Recovery Studio browser journey.
   - Dependencies: `W36-E5-S5-T1`, `W36-E5-S5-T4`.
   - Scope: product-question browser scenario family.
   - Verification: draft restore, resolved/partial/deferred state, failed/successful durable
@@ -11555,8 +11555,8 @@ Local tasks:
   - Scope: task-aware implement browser scenario family.
   - Verification: dependency readiness, preserved successes, diff/scope evidence,
     finalization recovery, and Review eligibility agree with the canonical task ledger.
-- `W36-E7-S1-T10` (planned) Add the Request Change/intervention Recovery Studio browser journey.
-  - Dependencies: `W36-E5-S5-T2`, `W36-E5-S5-T4`.
+- `W36-E7-S1-T10` (soon) Add the Request Change/intervention Recovery Studio browser journey.
+  - Dependencies: `W36-E5-S5-T2`, `W36-E5-S5-T4`, `W36-E7-S1-T6`.
   - Scope: intervention browser scenario family.
   - Verification: draft restore, allowed request, downstream-success rejection, one durable
     operator request, remediation routing, and current run/stage context pass.

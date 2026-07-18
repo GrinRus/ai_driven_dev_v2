@@ -250,7 +250,7 @@ function renderQuestionCards({showResume}) {
 function renderQuestions() {
   const view = activeStageView()?.questions;
   return `
-    <div class="interview-loop-screen">
+    <div class="interview-loop-screen" data-human-decision-surface="question">
       <section class="surface">
         <div class="surface-title">
           <span>Questions / Interview Loop</span>

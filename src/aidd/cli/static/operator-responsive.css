@@ -460,4 +460,89 @@
   .workbench-toc-list {
     columns: 1;
   }
+  [data-human-decision-surface] {
+    min-width: 0;
+    width: 100%;
+  }
+  [data-human-decision-surface] > .surface {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    padding: var(--space-3);
+  }
+  body:has([data-human-decision-surface]) .cockpit-header,
+  body:has([data-human-decision-surface]) .tabs,
+  body:has([data-human-decision-surface]) .global-next-action-strip {
+    display: none;
+  }
+  body:has([data-human-decision-surface]) .cockpit {
+    padding: var(--space-2);
+  }
+  [data-human-decision-surface] .surface-title {
+    align-items: flex-start;
+    gap: var(--space-2);
+  }
+  [data-human-decision-surface] button,
+  [data-human-decision-surface] input,
+  [data-human-decision-surface] select,
+  [data-human-decision-surface] summary {
+    min-height: var(--control-height-touch);
+  }
+  [data-human-decision-surface] textarea,
+  [data-human-decision-surface] input,
+  [data-human-decision-surface] select {
+    max-width: 100%;
+    width: 100%;
+  }
+  [data-human-decision-surface] .interview-summary,
+  [data-human-decision-surface] .approval-summary-grid {
+    display: none;
+  }
+  [data-human-decision-surface="question"] .question-list,
+  [data-human-decision-surface="intervention"] .request-change-grid,
+  [data-human-decision-surface="approval"] .approval-queue {
+    order: 1;
+  }
+  [data-human-decision-surface="question"] .interview-decision-spotlight,
+  [data-human-decision-surface="intervention"] .latest-request-summary,
+  [data-human-decision-surface="approval"] .approval-decision-spotlight {
+    order: 2;
+  }
+  [data-human-decision-surface="question"] .interview-context-panel,
+  [data-human-decision-surface="intervention"] .intervention-preview-column,
+  [data-human-decision-surface="approval"] .approval-audit-wrap,
+  [data-human-decision-surface="approval"] .approval-ledger-paths {
+    order: 3;
+  }
+  [data-human-decision-surface="question"] .question-card,
+  [data-human-decision-surface="approval"] .approval-card {
+    gap: var(--space-2);
+    padding: var(--space-3);
+  }
+  [data-human-decision-surface="question"] .question-meta,
+  [data-human-decision-surface="approval"] .approval-meta-grid,
+  [data-human-decision-surface="approval"] .panel-list,
+  [data-human-decision-surface="approval"] .approval-diff-preview {
+    order: 3;
+  }
+  [data-human-decision-surface="question"] .question-actions,
+  [data-human-decision-surface="intervention"] .question-actions,
+  [data-human-decision-surface="approval"] .approval-actions {
+    align-items: stretch;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    width: 100%;
+  }
+  [data-human-decision-surface="question"] [data-primary-action],
+  [data-human-decision-surface="intervention"] #submitInterventionButton,
+  [data-human-decision-surface="approval"] [data-operator-action="allow_once"] {
+    order: -1;
+    width: 100%;
+  }
+  [data-human-decision-surface="approval"] .approval-actions {
+    order: 2;
+  }
+  [data-human-decision-surface="approval"] .approval-session-confirmation {
+    max-width: 100%;
+  }
 }

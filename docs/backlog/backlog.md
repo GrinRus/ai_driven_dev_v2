@@ -7,13 +7,13 @@ slice, and local task.
 
 ## Next
 
-- `W36-E5-S5-T4` — Implement decision-first mobile question, intervention, and approval
-  layouts with compact context and evidence drill-down.
+- `W36-E7-S1-T6` — Add the blocking-question answer/resume Recovery Studio browser
+  journey across desktop and mobile viewports.
 
 ## Soon
 
-- `W36-E7-S1-T6` — Add the blocking-question answer/resume Recovery Studio browser
-  journey across desktop and mobile viewports.
+- `W36-E7-S1-T10` — Add the Request Change/intervention Recovery Studio browser
+  journey, including allowed and downstream-blocked paths.
 
 ## Parking lot
 
@@ -40,6 +40,13 @@ slice, and local task.
   queue-restoration policy in `docs/backlog/roadmap.md` (`W8-E3-S1`).
 
 ## Current reconciliation
+
+- `2026-07-18` `W36-E5-S5-T4` is complete: question, intervention, and approval
+  Recovery share a decision-first mobile contract at `320x568` and `390x844`. Compact
+  surfaces remove competing shell chrome, keep the primary control in the initial viewport,
+  enforce 44px visible controls, place evidence after the decision, and avoid page-level
+  horizontal overflow. Question journey `W36-E7-S1-T6` is promoted to `Next` and the
+  intervention journey `T10` to `Soon`.
 
 - `2026-07-18` `W36-E5-S5-T3` is complete: approval Recovery is a Studio candidate
   with explicit request scope, breadth, risk, pending status, reason capture, session-wide
