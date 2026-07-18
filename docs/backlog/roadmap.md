@@ -10923,18 +10923,18 @@ Dependencies:
 
 Local tasks:
 
-- `W36-E5-S3-T1` (next) Implement a typed core-owned durable Inbox projection with Needs your
+- `W36-E5-S3-T1` (done) Implement a typed core-owned durable Inbox projection with Needs your
   decision, Ready to continue, and Flow complete sections.
   - Scope: core operator frontend read models only.
   - Verification: provider-free fixtures prove deterministic priority, exact work-item/run/stage
     references, one core-approved action, and no frontend-derived eligibility or live-job claim.
-- `W36-E5-S3-T2` (soon) Add typed work-item/run/stage correlation to bounded UI job summaries and
+- `W36-E5-S3-T2` (next) Add typed work-item/run/stage correlation to bounded UI job summaries and
   compose the project-local Running now overlay without changing durable Inbox eligibility.
   - Dependencies: `W34-E3-S3-T1`.
   - Scope: CLI UI job summary and Inbox composition service only.
   - Verification: zero, one, concurrent, terminal, evicted, and legacy job fixtures produce a
     bounded Running now section whose references agree with durable run state.
-- `W36-E5-S3-T3` (planned) Expose the composed Inbox through an additive local UI read endpoint with
+- `W36-E5-S3-T3` (soon) Expose the composed Inbox through an additive local UI read endpoint with
   bounded project-local data.
   - Scope: CLI UI read route and response contract only.
   - Verification: endpoint tests cover empty, blocking, running, ready, terminal, legacy, and

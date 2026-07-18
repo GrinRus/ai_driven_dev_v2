@@ -7,13 +7,13 @@ slice, and local task.
 
 ## Next
 
-- `W36-E5-S3-T1` — Implement the typed project-local Inbox projection and deterministic
-  priority sections.
+- `W36-E5-S3-T2` — Add durable work-item/run/stage correlation to bounded UI job
+  summaries and compose the Running now overlay.
 
 ## Soon
 
-- `W36-E5-S3-T2` — Add durable work-item/run/stage correlation to bounded UI job
-  summaries and compose the Running now overlay.
+- `W36-E5-S3-T3` — Expose the composed Inbox through an additive bounded local UI
+  read endpoint.
 
 ## Parking lot
 
@@ -48,6 +48,11 @@ slice, and local task.
   queue-restoration policy in `docs/backlog/roadmap.md` (`W8-E3-S1`).
 
 ## Current reconciliation
+
+- `2026-07-18` `W36-E5-S3-T1` is complete: immutable core Inbox sections now
+  project durable work-item/run/stage identity and the existing core-approved next action
+  in deterministic order without inventing live-job state. `W36-E5-S3-T2` is promoted to
+  `Next` and `T3` to `Soon`.
 
 - `2026-07-18` `W36-E5-S1-T5` and slice `W36-E5-S1` are complete: the desktop
   Studio shell owns the single primary vertical scroll path, while stage navigation,

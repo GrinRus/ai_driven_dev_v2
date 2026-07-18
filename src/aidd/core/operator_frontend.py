@@ -25,6 +25,10 @@ from aidd.core.operator_frontend_models import (
     OperatorEvidenceGraphView,
     OperatorEvidenceRef,
     OperatorFirstFailure,
+    OperatorInboxItem,
+    OperatorInboxRoute,
+    OperatorInboxSection,
+    OperatorInboxView,
     OperatorNextAction,
     OperatorNextFlowRecommendation,
     OperatorPrimaryArtifact,
@@ -64,6 +68,7 @@ from aidd.core.operator_frontend_questions import (
     resolve_operator_questions_view,
     resolve_operator_stage_view,
 )
+from aidd.core.operator_inbox import resolve_operator_inbox_view
 
 __all__ = [
     "OperatorActivityEvent",
@@ -80,6 +85,10 @@ __all__ = [
     "OperatorEvidenceGraphView",
     "OperatorNextAction",
     "OperatorFirstFailure",
+    "OperatorInboxItem",
+    "OperatorInboxRoute",
+    "OperatorInboxSection",
+    "OperatorInboxView",
     "OperatorNextFlowRecommendation",
     "OperatorPrimaryArtifact",
     "OperatorProjectHomeView",
@@ -116,6 +125,7 @@ __all__ = [
     "resolve_operator_artifacts_view",
     "resolve_operator_evidence_graph_view",
     "resolve_operator_dashboard_view",
+    "resolve_operator_inbox_view",
     "resolve_operator_project_home_view",
     "resolve_operator_questions_view",
     "resolve_operator_run_log_view",
