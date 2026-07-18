@@ -61,6 +61,85 @@ function renderHistoryEvidence(frame) {
   `).join("");
 }
 
+function historyComparisonReference(path, label) {
+  return path
+    ? `<span data-comparison-evidence-path="${escapeHtml(path)}">${escapeHtml(path)}</span>`
+    : `<span class="small-badge warn">${escapeHtml(label)} snapshot unavailable</span>`;
+}
+
+function renderStudioComparisonDelta(kind, item) {
+  if (kind === "prompt") {
+    return `<span><strong>${escapeHtml(item.path)}</strong> · ${escapeHtml(item.status)}</span>`;
+  }
+  if (kind === "stage") {
+    return `
+      <span><strong>${escapeHtml(stageTitle(item.stage))}</strong> · ${escapeHtml(item.status)}</span>
+      ${historyComparisonReference(null, item.baseline_status ? "stage evidence" : "baseline")}
+      ${historyComparisonReference(null, item.target_status ? "stage evidence" : "target")}
+    `;
+  }
+  const baselinePath = item.baseline_path || null;
+  const targetPath = item.target_path || null;
+  return `
+    <span><strong>${escapeHtml(item.key || item.stage)}</strong> · ${escapeHtml(item.status)}</span>
+    ${historyComparisonReference(baselinePath, "baseline")}
+    ${historyComparisonReference(targetPath, "target")}
+  `;
+}
+
+function renderStudioComparisonGroup(label, kind, items) {
+  const deltas = (items || []).filter((item) => item.status !== "same");
+  return `
+    <section data-comparison-group="${escapeHtml(kind)}">
+      <div class="surface-title compact">${escapeHtml(label)}</div>
+      <div class="compact-list">
+        ${deltas.length
+          ? deltas.map((item) => `<article class="panel-item">${renderStudioComparisonDelta(kind, item)}</article>`).join("")
+          : `<span>No retained ${escapeHtml(label.toLowerCase())} delta.</span>`}
+      </div>
+    </section>
+  `;
+}
+
+function renderStudioRunComparisonPanel() {
+  const run = state.dashboard?.run || {};
+  if (!run.run_id) return "";
+  const lineage = run.lineage || {};
+  const baselineRunId = comparisonBaselineRunId(run, lineage);
+  const comparison = state.runComparison;
+  return `
+    <section id="runComparisonPanel" class="surface studio-run-comparison" data-studio-run-comparison>
+      <div class="surface-title">
+        <span>Retained-evidence comparison</span>
+        <span class="small-badge">${escapeHtml(baselineRunId || "baseline missing")} → ${escapeHtml(run.run_id)}</span>
+      </div>
+      <div class="comparison-controls">
+        <label for="runComparisonBaseline"><span>Baseline run id</span><input id="runComparisonBaseline" name="comparison_baseline_run" type="text" value="${escapeHtml(baselineRunId)}"></label>
+        <button data-run-comparison-refresh type="button" ${state.runComparisonLoading ? "disabled" : ""}>Refresh comparison</button>
+      </div>
+      ${state.runComparisonError ? `<div class="empty-state bad">${escapeHtml(state.runComparisonError)}. Snapshot unavailable; History will not reconstruct it.</div>` : ""}
+      ${state.runComparisonLoading ? `<div class="empty-state loading-state">Loading retained comparison...</div>` : ""}
+      ${comparison ? `
+        ${renderWarnings(comparison.warnings || [])}
+        <div class="terminal-summary-grid">
+          ${renderStudioComparisonGroup("Prompt evidence", "prompt", comparison.prompt_hash_deltas)}
+          ${renderStudioComparisonGroup("Stage evidence", "stage", comparison.stage_status_deltas)}
+          ${renderStudioComparisonGroup("Artifact evidence", "artifact", comparison.artifact_hash_deltas)}
+          ${renderStudioComparisonGroup("Validator evidence", "validator", comparison.validator_outcome_deltas)}
+        </div>
+      ` : !state.runComparisonLoading && !state.runComparisonError
+        ? `<div class="empty-state">Choose a retained baseline; no snapshot is reconstructed.</div>`
+        : ""}
+    </section>
+  `;
+}
+
+function renderActiveRunComparisonPanel() {
+  return resolveSurfaceRenderer("history").presentation === "studio"
+    ? renderStudioRunComparisonPanel()
+    : renderRunComparisonPanel();
+}
+
 function renderStudioHistory(timeline) {
   const frames = timeline?.frames || [];
   if (!frames.length) {
@@ -85,5 +164,6 @@ function renderStudioHistory(timeline) {
         <div class="recent-artifacts">${renderHistoryEvidence(selected)}</div>
       </div>
     </section>
+    ${renderStudioRunComparisonPanel()}
   `;
 }

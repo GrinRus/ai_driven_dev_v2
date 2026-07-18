@@ -128,12 +128,12 @@ async function loadRunComparisonPanel() {
   if (!baselineRunId || !targetRunId) {
     state.runComparison = null;
     state.runComparisonError = "baseline and target run ids are required";
-    panel.outerHTML = renderRunComparisonPanel();
+    panel.outerHTML = renderActiveRunComparisonPanel();
     return;
   }
   state.runComparisonLoading = true;
   state.runComparisonError = "";
-  panel.outerHTML = renderRunComparisonPanel();
+  panel.outerHTML = renderActiveRunComparisonPanel();
   const params = new URLSearchParams({
     baseline_run_id: baselineRunId,
     target_run_id: targetRunId
@@ -147,7 +147,7 @@ async function loadRunComparisonPanel() {
   } finally {
     state.runComparisonLoading = false;
     const updatedPanel = document.getElementById("runComparisonPanel");
-    if (updatedPanel) updatedPanel.outerHTML = renderRunComparisonPanel();
+    if (updatedPanel) updatedPanel.outerHTML = renderActiveRunComparisonPanel();
   }
 }
 

@@ -431,6 +431,10 @@ test("Studio History renders typed frames and pauses only browser auto-follow", 
       historyTimeline: null,
       historySelectedFrame: "",
       historyAutoFollow: true,
+      runComparison: null,
+      runComparisonError: "",
+      runComparisonLoading: false,
+      dashboard: {run: {run_id: "run-history", lineage: {}}},
     },
     escapeHtml(value) {
       return String(value);
@@ -440,6 +444,18 @@ test("Studio History renders typed frames and pauses only browser auto-follow", 
     },
     runScopedQuery() {
       return "run_id=run-history";
+    },
+    comparisonBaselineRunId(run) {
+      return run.run_id;
+    },
+    renderWarnings() {
+      return "";
+    },
+    resolveSurfaceRenderer() {
+      return {presentation: "studio"};
+    },
+    renderRunComparisonPanel() {
+      return "";
     },
     async api() {
       return {
@@ -476,6 +492,18 @@ test("Studio History renders typed frames and pauses only browser auto-follow", 
   assert.match(html, /Aggregate finalization · attempt 2/);
   assert.match(html, /Return to live/);
   assert.match(html, /active runtime is not stopped/);
+  context.state.runComparison = {
+    warnings: [],
+    prompt_hash_deltas: [{path: "prompt.md", status: "changed"}],
+    stage_status_deltas: [{stage: "qa", status: "removed", baseline_status: "succeeded", target_status: null}],
+    artifact_hash_deltas: [{key: "qa_report", status: "changed", baseline_path: "runs/a/qa.md", target_path: "runs/b/qa.md"}],
+    validator_outcome_deltas: [{stage: "qa", status: "removed", baseline_path: "runs/a/validator.md", target_path: null}]
+  };
+  const comparison = vm.runInContext("renderStudioRunComparisonPanel()", context);
+  assert.match(comparison, /data-comparison-group="prompt"/);
+  assert.match(comparison, /runs\/a\/qa.md/);
+  assert.match(comparison, /target snapshot unavailable/);
+  assert.match(comparison, /History will not reconstruct it|no snapshot is reconstructed|snapshot unavailable/);
 });
 
 test("presentation selector is browser-only and fails back to legacy", async () => {

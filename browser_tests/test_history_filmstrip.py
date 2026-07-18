@@ -26,6 +26,9 @@ def test_studio_history_selects_durable_frame_and_returns_to_live(tmp_path: Path
         )
         history = page.locator("[data-studio-history]")
         history.wait_for(state="visible")
+        comparison = page.locator("[data-studio-run-comparison]")
+        comparison.wait_for(state="visible")
+        assert "retained-evidence comparison" in comparison.inner_text().lower()
         frames = history.locator("[data-history-frame]")
         assert frames.count() >= 3
         assert "TL-1 · attempt 1" in history.inner_text()

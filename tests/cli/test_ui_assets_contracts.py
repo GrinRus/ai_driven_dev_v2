@@ -561,17 +561,25 @@ def test_studio_history_uses_typed_frames_without_runtime_mutation() -> None:
             "async function loadStudioHistoryTimeline()",
             "timeline.frames",
             "function renderStudioHistory(timeline)",
+            "function renderStudioRunComparisonPanel()",
+            "function renderActiveRunComparisonPanel()",
             'data-studio-history',
             'data-history-frame=',
             'data-history-return-live',
             'data-history-evidence-path=',
             "active runtime is not stopped",
+            'data-comparison-evidence-path=',
+            "snapshot unavailable",
+            "History will not reconstruct it",
         ),
     )
     assert "postJson(" not in history
     assert 'selectSurfaceRenderer("history"' in cockpit
     assert 'state.historyAutoFollow = false' in main
     assert 'state.historyAutoFollow = true' in main
+    assert "renderActiveRunComparisonPanel()" in _asset_text(
+        "/operator-next-flow-actions.js"
+    )
 
 
 def test_operator_state_and_dashboard_assets_keep_runtime_and_tab_contracts() -> None:

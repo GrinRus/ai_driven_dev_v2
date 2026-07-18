@@ -7,11 +7,11 @@ slice, and local task.
 
 ## Next
 
-- `W36-E5-S8-T3` — Render retained-evidence run comparison in History.
+- `W36-E5-S8-T4` — Render immutable parent/source/child History lineage.
 
 ## Soon
 
-- `W36-E5-S8-T4` — Render immutable parent/source/child History lineage.
+- `W36-E5-S8-T5` — Render append-only archive disposition in History.
 
 ## Parking lot
 
@@ -32,6 +32,12 @@ slice, and local task.
   queue-restoration policy in `docs/backlog/roadmap.md` (`W8-E3-S1`).
 
 ## Current reconciliation
+
+- `2026-07-18` `W36-E5-S8-T3` is complete: Studio History reuses the canonical bounded
+  run-comparison endpoint and renders prompt, stage, artifact, and validator deltas only with
+  retained baseline/target paths. Missing paths and snapshots are explicit unavailable states;
+  no historical content is reconstructed. Legacy comparison remains unchanged. Immutable
+  lineage `T4` is promoted to `Next`, followed by archive overlay `T5`.
 
 - `2026-07-18` `W36-E5-S8-T2` is complete: a separate packaged Studio History
   renderer consumes typed frames, exposes a collapsed Filmstrip and selected-frame evidence,
