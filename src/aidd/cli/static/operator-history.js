@@ -189,6 +189,34 @@ function renderStudioHistoryLineage() {
   `;
 }
 
+function renderStudioHistoryArchive() {
+  const run = state.dashboard?.run || {};
+  const archive = run.archive || {};
+  const workItem = state.dashboard?.work_item || "";
+  return `
+    <section class="surface studio-history-archive" data-studio-history-archive data-archive-state="${archive.archived ? "archived" : "current"}">
+      <div class="surface-title">
+        <span>Archive disposition</span>
+        <span class="small-badge ${archive.archived ? "warn" : "good"}">${archive.archived ? "archived" : "current"}</span>
+      </div>
+      ${archive.archived ? `
+        <div class="terminal-summary-grid">
+          <div class="panel-item"><strong>Recorded</strong><span>${escapeHtml(archive.archived_at_utc || "timestamp unavailable")}</span></div>
+          <div class="panel-item"><strong>Reason</strong><span>${escapeHtml(archive.reason || "no reason recorded")}</span></div>
+          <div class="panel-item"><strong>Source</strong><span>${escapeHtml(archive.source || "legacy manifest fallback")}</span></div>
+        </div>
+        <p>Archive is an append-only visibility disposition. Completed run evidence and lineage remain immutable and inspectable.</p>
+      ` : `<p>No archive overlay is recorded for this run.</p>`}
+      ${run.run_id ? `
+        <div class="lineage-actions">
+          <button data-operator-route-intent="historical-run" data-route-work-item="${escapeHtml(workItem)}" data-route-run-id="${escapeHtml(run.run_id)}" type="button">Inspect retained History</button>
+          <button data-operator-route-intent="run-artifacts" data-route-work-item="${escapeHtml(workItem)}" data-route-run-id="${escapeHtml(run.run_id)}" type="button" class="secondary">Inspect retained artifacts and logs</button>
+        </div>
+      ` : ""}
+    </section>
+  `;
+}
+
 function renderStudioHistory(timeline) {
   const frames = timeline?.frames || [];
   if (!frames.length) {
@@ -215,5 +243,6 @@ function renderStudioHistory(timeline) {
     </section>
     ${renderStudioRunComparisonPanel()}
     ${renderStudioHistoryLineage()}
+    ${renderStudioHistoryArchive()}
   `;
 }

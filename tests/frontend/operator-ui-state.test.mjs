@@ -449,6 +449,12 @@ test("Studio History renders typed frames and pauses only browser auto-follow", 
               source_run_id: "run-history",
             }],
           },
+          archive: {
+            archived: true,
+            archived_at_utc: "2026-07-18T12:00:00Z",
+            reason: "Accepted terminal evidence",
+            source: "ui",
+          },
         },
       },
     },
@@ -514,6 +520,11 @@ test("Studio History renders typed frames and pauses only browser auto-follow", 
   assert.match(html, /data-history-lineage-current="run-history"/);
   assert.match(html, /data-history-lineage-child="WI-003"/);
   assert.match(html, /data-operator-route-intent="child-work-item"/);
+  assert.match(html, /data-studio-history-archive/);
+  assert.match(html, /data-archive-state="archived"/);
+  assert.match(html, /Accepted terminal evidence/);
+  assert.match(html, /append-only visibility disposition/);
+  assert.match(html, /Inspect retained artifacts and logs/);
   context.state.runComparison = {
     warnings: [],
     prompt_hash_deltas: [{path: "prompt.md", status: "changed"}],

@@ -7,11 +7,11 @@ slice, and local task.
 
 ## Next
 
-- `W36-E5-S8-T5` — Render append-only archive disposition in History.
+- `W36-E5-S8-T6` — Render mobile chronological History drill-down.
 
 ## Soon
 
-- `W36-E5-S8-T6` — Render mobile chronological History drill-down.
+- `W36-E7-S1-T5` — Add the History comparison, lineage, archive browser journey.
 
 ## Parking lot
 
@@ -32,6 +32,11 @@ slice, and local task.
   queue-restoration policy in `docs/backlog/roadmap.md` (`W8-E3-S1`).
 
 ## Current reconciliation
+
+- `2026-07-18` `W36-E5-S8-T5` is complete: Studio History renders the canonical
+  append-only archive disposition with legacy-fallback source labeling and retains direct
+  navigation to run History, artifacts, and logs. The renderer does not mutate completed-run
+  evidence. Mobile chronological History `T6` is promoted to `Next`, followed by journey `T5`.
 
 - `2026-07-18` `W36-E5-S8-T4` is complete: Studio History renders the canonical
   parent/current/child lineage projection and routes every retained relation through the shared

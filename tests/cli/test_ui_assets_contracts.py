@@ -575,6 +575,10 @@ def test_studio_history_uses_typed_frames_without_runtime_mutation() -> None:
             "data-studio-history-lineage",
             'data-operator-route-intent="parent-run"',
             'data-operator-route-intent="child-work-item"',
+            "function renderStudioHistoryArchive()",
+            "data-studio-history-archive",
+            "append-only visibility disposition",
+            'data-operator-route-intent="run-artifacts"',
         ),
     )
     assert "postJson(" not in history
