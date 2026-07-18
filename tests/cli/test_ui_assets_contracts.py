@@ -2446,7 +2446,10 @@ def test_desktop_studio_shell_owns_primary_vertical_scrolling() -> None:
     components = _asset_text("/operator-components.css")
     responsive = _asset_text("/operator-responsive.css")
 
-    assert 'class="operator-shell" data-aidd-scroll-owner="studio"' in html
+    assert (
+        'class="operator-shell" aria-label="Operator workspace" '
+        'data-aidd-scroll-owner="studio"'
+    ) in html
     shell_rule = layout.split(".operator-shell {", 1)[1].split("}", 1)[0]
     assert "max-height: calc(100vh - 52px);" in shell_rule
     assert "overflow-y: auto;" in shell_rule

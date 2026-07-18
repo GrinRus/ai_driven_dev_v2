@@ -7,13 +7,13 @@ slice, and local task.
 
 ## Next
 
-- `W36-E5-S3-T2` — Add durable work-item/run/stage correlation to bounded UI job
-  summaries and compose the Running now overlay.
+- `W36-E5-S3-T3` — Expose the composed Inbox through an additive bounded local UI
+  read endpoint.
 
 ## Soon
 
-- `W36-E5-S3-T3` — Expose the composed Inbox through an additive bounded local UI
-  read endpoint.
+- `W36-E5-S3-T4` — Render Inbox sections and route each item to its exact Studio
+  context through the shared route/action seam.
 
 ## Parking lot
 
@@ -48,6 +48,11 @@ slice, and local task.
   queue-restoration policy in `docs/backlog/roadmap.md` (`W8-E3-S1`).
 
 ## Current reconciliation
+
+- `2026-07-18` `W36-E5-S3-T2` is complete: bounded UI job summaries now carry
+  monotonic work-item/run/stage identity, and the Running now composition filters terminal
+  jobs, retains explicit legacy-identity gaps, and leaves durable Inbox eligibility intact.
+  `W36-E5-S3-T3` is promoted to `Next` and `T4` to `Soon`.
 
 - `2026-07-18` `W36-E5-S3-T1` is complete: immutable core Inbox sections now
   project durable work-item/run/stage identity and the existing core-approved next action
