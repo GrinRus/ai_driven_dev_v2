@@ -124,6 +124,7 @@ class OperatorRuntimeApprovalQueueDiagnostics:
 @dataclass(frozen=True, slots=True)
 class OperatorRequestChangeContext:
     status: str
+    eligible: bool
     latest_request_id: str | None
     latest_request_path: str | None
     latest_request_excerpt: str | None

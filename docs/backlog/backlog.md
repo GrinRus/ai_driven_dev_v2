@@ -7,13 +7,13 @@ slice, and local task.
 
 ## Next
 
-- `W36-E5-S5-T2` — Render Request Change as a distinct durable intervention path with
-  downstream-success rejection and remediation routing.
+- `W36-E5-S5-T3` — Render runtime approval scope, breadth, reason, risk, pending state,
+  session confirmation, and durable compare-and-set winner.
 
 ## Soon
 
-- `W36-E5-S5-T3` — Render runtime approval scope, breadth, reason, risk, pending state,
-  session confirmation, and durable compare-and-set winner.
+- `W36-E5-S5-T4` — Implement decision-first mobile question, intervention, and approval
+  layouts with compact context and evidence drill-down.
 
 ## Parking lot
 
@@ -40,6 +40,13 @@ slice, and local task.
   queue-restoration policy in `docs/backlog/roadmap.md` (`W8-E3-S1`).
 
 ## Current reconciliation
+
+- `2026-07-18` `W36-E5-S5-T2` is complete: intervention Recovery is a Studio
+  candidate with explicit work-item/run/stage identity, core-owned eligibility, session
+  draft preservation, and one guarded `/api/stage/interact` path. Allowed submit creates one
+  stage-scoped operator request; succeeded downstream evidence disables submit, routes the
+  operator toward existing remediation/follow-up surfaces, and creates no request. Approval
+  `T3` is promoted to `Next` and decision-first mobile layout `T4` to `Soon`.
 
 - `2026-07-18` `W36-E5-S5-T1` is complete: question Recovery is a Studio candidate
   with exact durable QID, resolved/partial/deferred status markers, explicit editor

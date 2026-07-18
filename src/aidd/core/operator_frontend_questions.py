@@ -29,7 +29,10 @@ from aidd.core.operator_frontend_models import (
     OperatorValidationRepairDiagnostics,
 )
 from aidd.core.operator_frontend_validation import load_validator_report_findings
-from aidd.core.operator_intervention import latest_operator_intervention_request
+from aidd.core.operator_intervention import (
+    ensure_intervention_allowed_for_downstream,
+    latest_operator_intervention_request,
+)
 from aidd.core.run_inspection import StageResultSummary, resolve_stage_result_summary
 from aidd.core.run_lookup import latest_attempt_number
 from aidd.core.run_store import (
@@ -449,11 +452,36 @@ def _request_change_context(
         stage=stage,
         run_id=run_id,
     )
+    eligible = True
+    eligibility_reason: str | None = None
+    try:
+        ensure_intervention_allowed_for_downstream(
+            workspace_root=workspace_root,
+            work_item=work_item,
+            run_id=run_id,
+            stage=stage,
+        )
+    except ValueError as exc:
+        eligible = False
+        eligibility_reason = str(exc)
     status = "ready" if target_documents else "stage-scope-only"
-    if latest_request is not None:
+    if not eligible:
+        status = "blocked-downstream-succeeded"
+    elif latest_request is not None:
         status = "has-request"
+    reason = (
+        eligibility_reason
+        or (
+            "Latest operator request is available."
+            if latest_request is not None
+            else "Target documents are available."
+            if target_documents
+            else "No current-stage writable target documents are indexed yet."
+        )
+    )
     return OperatorRequestChangeContext(
         status=status,
+        eligible=eligible,
         latest_request_id=latest_request.request_id if latest_request else None,
         latest_request_path=(
             workspace_relative_path(workspace_root, latest_request.request_path)
@@ -466,13 +494,7 @@ def _request_change_context(
             else None
         ),
         target_documents=target_documents,
-        reason=(
-            "Latest operator request is available."
-            if latest_request is not None
-            else "Target documents are available."
-            if target_documents
-            else "No current-stage writable target documents are indexed yet."
-        ),
+        reason=reason,
     )
 
 

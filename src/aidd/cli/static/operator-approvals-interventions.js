@@ -66,7 +66,10 @@ function updateSubmitInterventionState() {
   const textarea = document.getElementById("operatorRequestText");
   const button = document.getElementById("submitInterventionButton");
   const note = document.getElementById("interventionReadinessNote");
-  const readinessReason = runtimeReadinessMessage();
+  const eligibilityReason = button?.dataset.interventionEligible === "false"
+    ? button.dataset.interventionReason
+    : "";
+  const readinessReason = eligibilityReason || runtimeReadinessMessage();
   if (note) {
     note.textContent = readinessReason;
     note.hidden = !readinessReason;
@@ -183,6 +186,7 @@ async function renderRequestChange() {
   const targets = requestChangeTargetEntries(documents, context);
   const restoredDraft = interventionDraft()?.value || {};
   const restoredTargets = new Set(restoredDraft.targetDocuments || []);
+  const interventionEligible = context.eligible !== false;
   const targetBody = targets.length ? targets.map(([key, path], index) => `
     <label class="target-option" for="intervention-target-${index}">
       <input id="intervention-target-${index}" name="intervention_target" type="checkbox" data-intervention-target="${escapeHtml(path)}" ${restoredTargets.has(path) ? "checked" : ""}>
@@ -190,13 +194,19 @@ async function renderRequestChange() {
     </label>
   `).join("") : `<div class="empty-state">No current-stage target documents available yet. The request can still run against the stage scope.</div>`;
   document.getElementById("cockpitContent").innerHTML = `
-    <section class="request-change-screen">
+    <section class="request-change-screen" data-intervention-eligible="${interventionEligible ? "true" : "false"}" data-intervention-stage="${escapeHtml(state.activeStage)}" data-intervention-run="${escapeHtml(state.activeRunId || "")}">
       <section class="surface">
         <div class="surface-title">
           <span>Request Change / Intervention Composer</span>
           <span class="small-badge">${escapeHtml(context.status || state.activeStage)}</span>
         </div>
         ${renderLatestRequestSummary(context)}
+        ${interventionEligible ? "" : renderStateSurface({
+          kind: "intervention",
+          state: "unavailable",
+          title: "Request Change requires remediation routing",
+          consequence: `${context.reason} Use the existing Review/QA remediation or follow-up flow; this stage-scoped path will not create an operator request.`
+        })}
         <div class="request-change-grid">
           <div class="intervention-form">
             <div class="form-field">
@@ -208,7 +218,7 @@ async function renderRequestChange() {
               <div class="target-documents">${targetBody}</div>
             </div>
             <div class="question-actions">
-              <button id="submitInterventionButton" type="button">Submit & run</button>
+              <button id="submitInterventionButton" type="button" data-intervention-eligible="${interventionEligible ? "true" : "false"}" data-intervention-reason="${escapeHtml(context.reason || "Intervention is not eligible.")}">Submit & run</button>
               <p id="interventionReadinessNote" class="form-readiness-note" role="status"></p>
             </div>
           </div>
@@ -637,6 +647,12 @@ async function submitApproval(requestId, action, {sessionConfirmed = false} = {}
 }
 
 async function submitIntervention() {
+  const context = activeStageView()?.diagnostics?.request_change || {};
+  if (context.eligible === false) {
+    updateSubmitInterventionState();
+    toast(context.reason || "Request Change is not eligible for this run.");
+    return;
+  }
   const readinessReason = runtimeReadinessMessage();
   if (readinessReason) {
     updateSubmitInterventionState();

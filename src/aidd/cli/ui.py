@@ -136,6 +136,7 @@ from aidd.core.runtime_readiness import (
     RuntimeCapabilityProbeReport,
     RuntimeCommandSource,
     RuntimeReadinessProbeReport,
+    RuntimeReadinessView,
     resolve_runtime_readiness,
 )
 from aidd.core.stage_paths import workspace_relative_path
@@ -3919,7 +3920,7 @@ class OperatorUiService:
             ),
         )
 
-    def _runtime_readiness_for_config(self, config_path: Path) -> object:
+    def _runtime_readiness_for_config(self, config_path: Path) -> RuntimeReadinessView:
         cfg = load_config(config_path)
         launch_history = None
         if self._context is not None:

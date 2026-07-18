@@ -2008,6 +2008,7 @@ def test_operator_stage_view_diagnostics_exposes_request_change_context(
     )
 
     request_change = stage_view.diagnostics.request_change
+    assert request_change.eligible is True
     assert request_change.status == "has-request"
     assert request_change.latest_request_id == request.request_id
     assert request_change.latest_request_path == (
@@ -2015,6 +2016,33 @@ def test_operator_stage_view_diagnostics_exposes_request_change_context(
     )
     assert request_change.latest_request_excerpt == "Add rollback risk coverage to the plan."
     assert request_change.target_documents == ("workitems/WI-UI/stages/plan/plan.md",)
+
+
+def test_operator_stage_view_blocks_intervention_after_downstream_success(
+    tmp_path: Path,
+) -> None:
+    workspace_root = tmp_path / ".aidd"
+    _prepare_run(workspace_root)
+    persist_stage_status(
+        workspace_root=workspace_root,
+        work_item="WI-UI",
+        run_id="run-ui",
+        stage="review-spec",
+        status="succeeded",
+    )
+
+    stage_view = resolve_operator_stage_view(
+        workspace_root=workspace_root,
+        work_item="WI-UI",
+        stage="plan",
+        run_id="run-ui",
+    )
+
+    request_change = stage_view.diagnostics.request_change
+    assert request_change.eligible is False
+    assert request_change.status == "blocked-downstream-succeeded"
+    assert "downstream stages already succeeded" in request_change.reason
+    assert request_change.latest_request_id is None
 
 
 def test_operator_run_log_view_returns_bounded_text_with_metadata(tmp_path: Path) -> None:

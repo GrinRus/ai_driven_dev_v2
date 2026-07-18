@@ -200,7 +200,7 @@ test("surface parity manifest has one owner and journey per migration surface", 
     "W36-E7-S1-T8",
     "W36-E7-S1-T9",
   ]);
-  const candidates = new Set(["question-recovery"]);
+  const candidates = new Set(["question-recovery", "intervention-recovery"]);
   assert.ok(entries.filter((entry) => candidates.has(entry.id)).every(
     (entry) => entry.rollout === "candidate",
   ));
@@ -242,7 +242,8 @@ test("presentation selector is browser-only and fails back to legacy", async () 
     assert.equal(window.aiddPresentation.fallback, item.fallback);
     assert.equal(Object.keys(window.aiddPresentation.surfaces).length, 12);
     for (const surface of [
-      "guided-setup", "active-studio", "document-evidence", "question-recovery", "inbox",
+      "guided-setup", "active-studio", "document-evidence", "question-recovery",
+      "intervention-recovery", "inbox",
     ]) {
       assert.equal(
         window.aiddPresentation.surfaces[surface].presentation,
@@ -251,7 +252,8 @@ test("presentation selector is browser-only and fails back to legacy", async () 
     }
     assert.ok(Object.entries(window.aiddPresentation.surfaces)
       .filter(([surface]) => ![
-        "guided-setup", "active-studio", "document-evidence", "question-recovery", "inbox",
+        "guided-setup", "active-studio", "document-evidence", "question-recovery",
+        "intervention-recovery", "inbox",
       ].includes(surface))
       .every(([, resolution]) => resolution.presentation === "legacy"));
     assert.equal(documentElement.dataset.presentationRequested, item.requested);
