@@ -647,3 +647,15 @@ async function resumeProjectHomeWorkItem(workItem, options = {}) {
   await fetchInbox();
   await renderAll();
 }
+
+async function activateInboxWorkItemRoute(context) {
+  if (state.dashboard?.work_item !== context.workItem) {
+    await postJson("/api/onboarding/work-item", {
+      action: "resume",
+      project_root: state.projectHome?.project_root || state.onboarding.projectRootInput || ".",
+      work_item: context.workItem
+    });
+    state.onboarding.setupRequired = false;
+  }
+  await navigateOperatorRouteIntent("inbox-work-item", context);
+}

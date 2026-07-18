@@ -10735,7 +10735,7 @@ Local tasks:
   - Scope: Guided Setup launch binding only.
   - Verification: Guided and legacy launch controls dispatch an identical task-aware request,
     duplicate input creates at most one job, and durable readback selects one result.
-- `W36-E4-S1-T7` (planned) Promote the verified Guided Setup candidate to `parity_closed` while retaining
+- `W36-E4-S1-T7` (next) Promote the verified Guided Setup candidate to `parity_closed` while retaining
   legacy setup for both missing/default and explicit rollback modes until cutover.
   - Dependencies: `W36-E4-S1-T6`, `W36-E7-S1-T1`.
   - Scope: Guided Setup parity-manifest entry only.
@@ -11565,7 +11565,7 @@ Local tasks:
   - Scope: runtime-approval browser scenario family.
   - Verification: allow, deny, cancel, session confirmation, pending state, compare-and-set
     conflict, durable winner, and current run/stage context pass on desktop and mobile.
-- `W36-E7-S1-T12` (next) Add the project-local Inbox priority and routing browser journey.
+- `W36-E7-S1-T12` (done) Add the project-local Inbox priority and routing browser journey.
   - Dependencies: `W36-E5-S0`, `W36-E5-S2`, `W36-E5-S3-T1..T4`.
   - Scope: Inbox browser scenario family.
   - Verification: Needs your decision, Running now, Ready to continue, and Flow complete

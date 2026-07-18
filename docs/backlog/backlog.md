@@ -7,13 +7,13 @@ slice, and local task.
 
 ## Next
 
-- `W36-E7-S1-T12` — Add the project-local Inbox priority and routing browser journey.
+- `W36-E4-S1-T7` — Promote the verified Guided Setup candidate to `parity_closed`
+  while retaining explicit legacy rollback until cutover.
 
 ## Soon
 
-No task is currently queued here. The first parity closure after the Inbox journey
-belongs to a separate already-complete dependency chain rather than being its direct
-successor.
+No task is currently queued here. The ordered parity series moves from Guided Setup to
+Inbox, which is dependency-ready but is not a direct successor of the task in `Next`.
 
 ## Parking lot
 
@@ -42,6 +42,14 @@ successor.
   queue-restoration policy in `docs/backlog/roadmap.md` (`W8-E3-S1`).
 
 ## Current reconciliation
+
+- `2026-07-18` `W36-E7-S1-T12` is complete: all five viewports verify durable Inbox
+  priority, bounded Running now correlation, exact work-item/run/stage routing, a single
+  core-approved action, first-viewport visibility, keyboard activation, reload restoration,
+  and blocking-item non-dismissal. Cross-work-item routing reuses the canonical resume
+  service before browser navigation, and intentional navigation aborts are distinguished
+  from request failures. Guided Setup parity `W36-E4-S1-T7` is promoted to `Next`;
+  `Soon` remains empty until the ordered parity series reaches Inbox.
 
 - `2026-07-18` `W36-E7-S1-T7` is complete: all five viewports exercise bounded
   Preview/Source/Diff, exact validator/source/provenance evidence, explicit missing

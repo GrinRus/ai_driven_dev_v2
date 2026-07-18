@@ -59,6 +59,35 @@ test("reload restores selected stage, run, artifact, and logs view", async () =>
   });
 });
 
+test("Inbox route restores the project-home surface", async () => {
+  const {context} = await navigationContext("?mode=inbox&ui=studio");
+  vm.runInContext("initializeStateFromLocation()", context);
+  assert.deepEqual(value(context, `({tab: state.activeTab, detail: state.workDetail})`), {
+    tab: "work",
+    detail: "project-home",
+  });
+});
+
+test("bare route preserves the context-aware Studio fallback", async () => {
+  const {context} = await navigationContext();
+  vm.runInContext("initializeStateFromLocation()", context);
+  assert.deepEqual(value(context, `({tab: state.activeTab, detail: state.workDetail})`), {
+    tab: "work",
+    detail: "overview",
+  });
+});
+
+test("project-home navigation writes a context-free Inbox route", async () => {
+  const {context, writes} = await navigationContext("?mode=studio");
+  vm.runInContext(`Object.assign(state, {
+    activeRunId: "run-1", activeStage: "qa", activeArtifactKey: "qa_report",
+    dashboard: {work_item: "WI-001"}
+  })`, context);
+  vm.runInContext("setOperatorMode('project-home'); syncLocationState({historyMode: 'push'})", context);
+  assert.equal(writes[0].kind, "push");
+  assert.equal(writes[0].value, "/?mode=inbox");
+});
+
 test("navigation writes explicit transitions and replaces derived state", async () => {
   const {context, writes} = await navigationContext("?mode=inbox");
   vm.runInContext(`applyOperatorRoute({

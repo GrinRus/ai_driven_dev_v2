@@ -96,3 +96,15 @@ test("Running-now identity gaps stay visible and cannot navigate", async () => {
   assert.match(html, /Durable identity unavailable/);
   assert.doesNotMatch(html, /data-route-work-item/);
 });
+
+test("Inbox route activation resumes server context before browser navigation", async () => {
+  const onboarding = await readFile(
+    path.join(staticRoot, "operator-onboarding.js"),
+    "utf8",
+  );
+  const main = await readFile(path.join(staticRoot, "operator-main.js"), "utf8");
+  assert.match(onboarding, /postJson\("\/api\/onboarding\/work-item"/);
+  assert.match(onboarding, /navigateOperatorRouteIntent\("inbox-work-item", context\)/);
+  assert.match(main, /intent === "inbox-work-item"/);
+  assert.match(main, /activateInboxWorkItemRoute\(context\)/);
+});

@@ -641,19 +641,23 @@ function operatorRouteView() {
 }
 
 function operatorRouteSnapshot() {
-  return {
-    mode: state.activeTab === "history"
+  const inbox = state.activeTab === "work" && state.workDetail === "project-home";
+  const mode = inbox
+    ? "inbox"
+    : state.activeTab === "history"
       ? "history"
       : state.activeRunId || state.activeRouteWorkItem || state.dashboard?.work_item
         ? "studio"
-        : "inbox",
-    view: operatorRouteView(),
-    workItem: state.dashboard?.work_item || state.activeRouteWorkItem || "",
-    runId: state.activeRunId,
-    stage: state.activeStage,
-    attempt: state.activeAttempt,
-    taskAttempt: state.activeTaskAttempt,
-    artifact: state.activeArtifactKey
+        : "inbox";
+  return {
+    mode,
+    view: inbox ? "overview" : operatorRouteView(),
+    workItem: inbox ? "" : state.dashboard?.work_item || state.activeRouteWorkItem || "",
+    runId: inbox ? "" : state.activeRunId,
+    stage: inbox ? "" : state.activeStage,
+    attempt: inbox ? null : state.activeAttempt,
+    taskAttempt: inbox ? null : state.activeTaskAttempt,
+    artifact: inbox ? "" : state.activeArtifactKey
   };
 }
 
@@ -675,7 +679,9 @@ function applyOperatorRoute(route) {
     state.activeStage = route.stage;
     state.activeStageExplicit = true;
   }
-  if (route.mode === "history") {
+  if (route.mode === "inbox") {
+    setOperatorMode("project-home");
+  } else if (route.mode === "history") {
     setOperatorMode("history");
   } else if (route.mode === "studio" && ["logs", "artifacts"].includes(route.view)) {
     setOperatorMode(route.view);
@@ -687,7 +693,13 @@ function applyOperatorRoute(route) {
 }
 
 function initializeStateFromLocation() {
-  applyOperatorRoute(decodeOperatorRoute(window.location.search).value);
+  const params = new URLSearchParams(window.location.search);
+  const route = decodeOperatorRoute(window.location.search).value;
+  if (!params.has("mode") && route.mode === "inbox") {
+    setOperatorMode("work");
+    return;
+  }
+  applyOperatorRoute(route);
 }
 
 let restoringOperatorRoute = false;
