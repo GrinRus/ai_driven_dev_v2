@@ -38,11 +38,6 @@ _OPERATOR_STATIC_ASSET_MANIFEST = (
         content_type="text/javascript; charset=utf-8",
     ),
     OperatorStaticAsset(
-        route="/operator-presentation.js",
-        filename="operator-presentation.js",
-        content_type="text/javascript; charset=utf-8",
-    ),
-    OperatorStaticAsset(
         route="/operator-route-state.js",
         filename="operator-route-state.js",
         content_type="text/javascript; charset=utf-8",

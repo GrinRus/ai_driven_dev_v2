@@ -82,9 +82,6 @@ def test_inbox_ignores_retired_presentation_selector(
     ) as harness, harness.open_page((1280, 900)) as browser_page:
         page = browser_page.page
         page.goto(f"{harness.url}{query}", wait_until="networkidle")
-        assert page.evaluate(
-            "window.aiddPresentation.surfaces.inbox.presentation"
-        ) == "studio"
         page.locator('[data-tab-shortcut="project-home"]').first.click()
         page.locator(".studio-inbox").wait_for(state="visible")
         assert page.locator(".project-home-screen").count() == 0

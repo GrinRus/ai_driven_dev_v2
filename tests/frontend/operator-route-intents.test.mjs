@@ -86,10 +86,9 @@ test("unsafe and incomplete route intents fail closed", async () => {
 });
 
 test("Inbox and History renderers bind their visible actions to shared intents", async () => {
-  const cockpit = await readFile(path.join(staticRoot, "operator-stage-cockpit.js"), "utf8");
-  const history = await readFile(path.join(staticRoot, "operator-next-flow-view.js"), "utf8");
-  assert.match(cockpit, /data-operator-route-intent="inbox-work-item"/);
-  assert.match(cockpit, /data-operator-route-intent="historical-run"/);
+  const inbox = await readFile(path.join(staticRoot, "operator-inbox.js"), "utf8");
+  const history = await readFile(path.join(staticRoot, "operator-history.js"), "utf8");
+  assert.match(inbox, /data-operator-route-intent="\$\{escapeHtml\(route.intent\)\}"/);
   for (const intent of ["parent-run", "child-work-item", "run-artifacts"]) {
     assert.match(history, new RegExp(`data-operator-route-intent="${intent}"`));
   }

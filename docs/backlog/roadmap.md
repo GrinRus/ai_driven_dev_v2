@@ -11314,13 +11314,13 @@ Local tasks:
   - Scope: browser bootstrap selector only.
   - Verification: missing, invalid, and former legacy selector values resolve to Studio without
     changing packaged URLs, service requests, or durable state.
-- `W36-E5-S10-T4` (next) Remove unreferenced legacy render modules, selectors, body-mode ordering,
+- `W36-E5-S10-T4` (done) Remove unreferenced legacy render modules, selectors, body-mode ordering,
   package resources, and compatibility tests that no longer protect a supported contract.
   - Dependencies: `W36-E5-S10-T3` as the direct queue predecessor.
   - Scope: packaged frontend cleanup only.
   - Verification: exhaustive asset discovery, JavaScript syntax, package-resource, DOM, and
     browser suites pass with no legacy renderer references.
-- `W36-E5-S10-T5` (soon) Reconcile operator docs and screenshots to the Studio-only surface after
+- `W36-E5-S10-T5` (next) Reconcile operator docs and screenshots to the Studio-only surface after
   implementation parity.
   - Dependencies: `W36-E5-S10-T4` as the direct queue predecessor.
   - Scope: README, handbook, local-project E2E, and architecture implementation-status text.
@@ -11609,7 +11609,8 @@ Local tasks:
   - Scope: local/CI UI test entry point.
   - Verification: discovered scenario ids equal executed scenario ids exactly and live
     provider manifests are rejected.
-- `W36-E7-S2-T2` (planned) Add the packaged-UI browser command to CI.
+- `W36-E7-S2-T2` (soon) Add the packaged-UI browser command to CI.
+  - Dependencies: `W36-E5-S10-T5` as the direct queue predecessor.
   - Dependencies: `W36-E7-S2-T1`.
   - Scope: deterministic CI integration only.
   - Verification: an intentional geometry, accessibility, console, or journey failure

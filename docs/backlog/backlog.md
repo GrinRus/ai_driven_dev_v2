@@ -7,11 +7,11 @@ slice, and local task.
 
 ## Next
 
-- `W36-E5-S10-T4` — Remove the legacy renderer.
+- `W36-E5-S10-T5` — Reconcile Studio-only operator documentation.
 
 ## Soon
 
-- `W36-E5-S10-T5` — Reconcile Studio-only operator documentation.
+- `W36-E7-S2-T2` — Enforce the packaged-UI browser runner in CI.
 
 ## Parking lot
 
@@ -29,6 +29,12 @@ slice, and local task.
   queue-restoration policy in `docs/backlog/roadmap.md` (`W8-E3-S1`).
 
 ## Current reconciliation
+
+- `2026-07-18` `W36-E5-S10-T4` is complete: the packaged UI no longer ships the
+  presentation selector or legacy renderer branches. Studio renderers are called directly, dead
+  rollback templates and CSS selectors are removed, and an asset-boundary test prevents their
+  return. Studio-only documentation reconciliation `T5` is promoted to `Next`, followed by the
+  packaged browser CI gate `E7-S2-T2`.
 
 - `2026-07-18` `W36-E5-S10-T3` is complete: the temporary browser presentation
   selector no longer branches renderer selection. Missing, invalid, `ui=studio`, and the former

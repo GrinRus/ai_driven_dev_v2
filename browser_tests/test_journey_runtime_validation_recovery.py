@@ -160,10 +160,6 @@ def test_runtime_validation_recovery_parity_preserves_durable_read_models(
                     stage,
                 )
                 _open_recovery(page)
-                assert page.evaluate(
-                    "window.aiddPresentation.surfaces"
-                    "['runtime-validation-recovery'].presentation"
-                ) == "studio"
                 snapshots.append(
                     page.evaluate(
                         "() => {"

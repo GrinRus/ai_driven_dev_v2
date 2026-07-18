@@ -160,11 +160,7 @@ function renderActiveStudio() {
   if (state.dashboard?.terminal_handoff) {
     const {eligible} = studioFlowCompleteEligibility();
     if (eligible) {
-      const {renderer} = selectSurfaceRenderer("flow-complete", {
-        legacy: renderFlowCompleteState,
-        studio: renderStudioFlowCompleteState
-      });
-      return renderer();
+      return renderStudioFlowCompleteState();
     }
   }
   const item = activeStageItem();
@@ -184,12 +180,10 @@ function renderActiveStudio() {
 }
 
 function applyActiveStudioShellPresentation() {
-  const resolution = resolveSurfaceRenderer("active-studio");
-  const studio = resolution.presentation === "studio";
   const cockpit = document.querySelector(".cockpit");
   const stageRail = document.getElementById("stageRail");
   const decision = document.getElementById("globalNextActionStrip");
-  if (cockpit) cockpit.dataset.activeStudio = studio ? "true" : "false";
-  if (stageRail) stageRail.dataset.studioStageNavigation = studio ? "true" : "false";
-  if (decision) decision.dataset.studioDecisionSlot = studio ? "true" : "false";
+  if (cockpit) cockpit.dataset.activeStudio = "true";
+  if (stageRail) stageRail.dataset.studioStageNavigation = "true";
+  if (decision) decision.dataset.studioDecisionSlot = "true";
 }

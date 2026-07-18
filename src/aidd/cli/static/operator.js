@@ -1,7 +1,6 @@
 (() => {
   const scripts = [
     "/operator-surface-parity.js",
-    "/operator-presentation.js",
     "/operator-route-state.js",
     "/operator-route-intents.js",
     "/operator-draft-store.js",

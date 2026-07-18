@@ -120,7 +120,6 @@ test("operator bootstrap loads modules in declared order", async () => {
 
   assert.deepEqual(appended, [
     "/operator-surface-parity.js",
-    "/operator-presentation.js",
     "/operator-route-state.js",
     "/operator-route-intents.js",
     "/operator-draft-store.js",
@@ -202,10 +201,6 @@ test("surface parity manifest has one owner and journey per migration surface", 
     "W36-E7-S1-T8",
     "W36-E7-S1-T9",
   ]);
-  const candidates = new Set([]);
-  assert.ok(entries.filter((entry) => candidates.has(entry.id)).every(
-    (entry) => entry.rollout === "candidate",
-  ));
   const parityClosed = new Set([
     "guided-setup", "active-studio", "document-evidence", "inbox", "question-recovery",
     "intervention-recovery",
@@ -216,11 +211,8 @@ test("surface parity manifest has one owner and journey per migration surface", 
   assert.ok(entries.filter((entry) => parityClosed.has(entry.id)).every(
     (entry) => entry.rollout === "parity_closed",
   ));
-  assert.ok(entries.filter(
-    (entry) => !candidates.has(entry.id) && !parityClosed.has(entry.id),
-  ).every((entry) => entry.rollout === "legacy_only"));
+  assert.equal(entries.length, parityClosed.size);
   assert.ok(entries.every((entry) => entry.owner.startsWith("W36-")));
-  assert.ok(entries.every((entry) => entry.rollbackRenderer.startsWith("operator-")));
   assert.ok(entries.every((entry) => entry.fixture));
   assert.ok(entries.every((entry) => entry.removalGate.startsWith("W36-")));
 });
@@ -536,85 +528,6 @@ test("Studio History renders typed frames and pauses only browser auto-follow", 
   assert.match(comparison, /runs\/a\/qa.md/);
   assert.match(comparison, /target snapshot unavailable/);
   assert.match(comparison, /History will not reconstruct it|no snapshot is reconstructed|snapshot unavailable/);
-});
-
-test("retired presentation selector always resolves Studio", async () => {
-  const cases = [
-    {search: "", requested: "studio", fallback: false},
-    {search: "?ui=legacy", requested: "studio", fallback: false},
-    {search: "?ui=studio", requested: "studio", fallback: false},
-    {search: "?ui=unknown", requested: "studio", fallback: false},
-  ];
-  for (const item of cases) {
-    const documentElement = {dataset: {}};
-    const window = {location: {search: item.search}};
-    const context = vm.createContext({
-      URLSearchParams,
-      document: {documentElement},
-      window,
-    });
-    await load(context, "operator-surface-parity.js");
-    await load(context, "operator-presentation.js");
-    assert.equal(window.aiddPresentation.requested, item.requested);
-    assert.equal(window.aiddPresentation.effective, "studio");
-    assert.equal(window.aiddPresentation.fallback, item.fallback);
-    assert.equal(Object.keys(window.aiddPresentation.surfaces).length, 12);
-    for (const surface of [
-      "guided-setup", "active-studio", "document-evidence", "question-recovery",
-      "intervention-recovery", "approval-recovery", "runtime-validation-recovery", "inbox",
-    "implement", "review-qa", "history",
-    ]) {
-      assert.equal(
-        window.aiddPresentation.surfaces[surface].presentation,
-        "studio",
-      );
-    }
-    assert.ok(Object.entries(window.aiddPresentation.surfaces)
-      .filter(([surface]) => ![
-        "guided-setup", "active-studio", "document-evidence", "question-recovery",
-        "intervention-recovery", "approval-recovery", "runtime-validation-recovery", "inbox",
-        "implement", "review-qa", "history", "flow-complete",
-      ].includes(surface))
-      .every(([, resolution]) => resolution.presentation === "studio"));
-    assert.equal(documentElement.dataset.presentationRequested, item.requested);
-    assert.equal(
-      documentElement.dataset.presentationEffective,
-      "studio",
-    );
-  }
-});
-
-test("surface resolver ignores retired selector and rollout values", async () => {
-  const documentElement = {dataset: {}};
-  const window = {location: {search: ""}};
-  const context = vm.createContext({
-    URLSearchParams,
-    document: {documentElement},
-    window,
-  });
-  await load(context, "operator-surface-parity.js");
-  await load(context, "operator-presentation.js");
-  const result = JSON.parse(JSON.stringify(vm.runInContext(
-    `
-      ["legacy_only", "candidate", "parity_closed"].flatMap((rollout) =>
-        ["legacy", "studio", "missing", "invalid"].map((selector) => {
-          const value = selector === "missing" ? "" : selector === "invalid" ? "other" : selector;
-          const resolution = resolveSurfaceRendererFor({
-            id: "fixture",
-            rollout,
-            rollbackRenderer: "operator-legacy"
-          }, value);
-          return {rollout, selector, ...resolution};
-        })
-      )
-    `,
-    context,
-  )));
-  for (const item of result) {
-    assert.equal(item.presentation, "studio");
-    assert.equal(item.renderer, "studio:fixture");
-    assert.equal(item.fallback, false);
-  }
 });
 
 test("question Recovery renders exact durable ids and resolution states", async () => {
@@ -1028,11 +941,8 @@ test("next-flow view renders terminal and readiness states without network mutat
     context,
   );
 
-  const terminalHtml = vm.runInContext("renderFlowCompleteState()", context);
   const studioTerminalHtml = vm.runInContext("renderStudioFlowCompleteState()", context);
 
-  assert.match(terminalHtml, /Flow Complete/);
-  assert.match(terminalHtml, /QA terminal handoff/);
   assert.match(studioTerminalHtml, /data-studio-flow-complete/);
   assert.match(studioTerminalHtml, /data-core-recommended-outcome="create-new-work-item"/);
   assert.match(studioTerminalHtml, /QA is clean and terminal evidence is fresh/);

@@ -41,12 +41,6 @@ def test_implementation_and_review_qa_modes_share_canonical_read_models(
                     ),
                     wait_until="networkidle",
                 )
-                assert page.evaluate(
-                    "window.aiddPresentation.surfaces.implement.presentation"
-                ) == "studio"
-                assert page.evaluate(
-                    "window.aiddPresentation.surfaces['review-qa'].presentation"
-                ) == "studio"
                 snapshots.append(
                     page.evaluate(
                         "async () => {"

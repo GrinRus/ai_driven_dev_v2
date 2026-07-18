@@ -49,9 +49,6 @@ def test_intervention_parity_preserves_allowed_and_blocked_service_paths(
     ) as harness, harness.open_page((1280, 900)) as browser_page:
         page = browser_page.page
         page.goto(f"{harness.url}?ui={selector}", wait_until="networkidle")
-        assert page.evaluate(
-            "window.aiddPresentation.surfaces['intervention-recovery'].presentation"
-        ) == "studio"
         if blocked:
             page.evaluate(
                 "state.activeStage = 'plan'; state.activeStageExplicit = true; fetchDashboard()"

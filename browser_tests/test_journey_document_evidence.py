@@ -51,12 +51,6 @@ def test_studio_workbench_ignores_retired_presentation_selector(
         page.goto(
             f"{harness.url}?{selector}{separator}{context}", wait_until="networkidle"
         )
-        assert page.evaluate(
-            "window.aiddPresentation.surfaces['active-studio'].presentation"
-        ) == "studio"
-        assert page.evaluate(
-            "window.aiddPresentation.surfaces['document-evidence'].presentation"
-        ) == "studio"
         page.locator(".active-studio").wait_for(state="visible")
         assert page.locator(".active-studio").count() == 1
         assert page.locator("#studioDocumentCanvas").count() == 1

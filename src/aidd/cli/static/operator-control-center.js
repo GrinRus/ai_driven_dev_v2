@@ -4,7 +4,6 @@ function runScopedQuery(stage = null) {
   if (stage) params.set("stage", stage);
   return params.toString();
 }
-
 function renderRunningStageNotice(job) {
   const status = String(job?.status || "running");
   const stage = job?.stage || "workflow";
@@ -244,111 +243,17 @@ function renderImplementationSummary(implementation) {
   `;
 }
 
-function renderTaskProgress(taskView) {
-  const tasks = taskView?.tasks || [];
-  if (!tasks.length) return "";
-  const finalization = taskView?.finalization || {status: "pending", attempts: []};
-  return `
-    <section class="surface">
-      <div class="surface-title">
-        <span>Implementation tasks</span>
-        <span class="small-badge">${escapeHtml(tasks.filter((task) => task.status === "succeeded").length)} / ${escapeHtml(tasks.length)}</span>
-      </div>
-      <div class="compact-list">
-        ${tasks.map((task) => `
-          <article class="panel-item">
-            <strong>${escapeHtml(task.id)} · ${escapeHtml(task.title)}</strong>
-            <span>${escapeHtml(task.status)} · dependencies: ${escapeHtml((task.dependencies || []).join(", ") || "none")} · attempts: ${escapeHtml(task.attempt_count || 0)}</span>
-            <span>${escapeHtml(task.outcome || "")}</span>
-            <span>Deliverable: ${escapeHtml(task.dominant_deliverable || "")}</span>
-            <span>Scope: ${escapeHtml(task.in_scope || "")}</span>
-            <span>Verification: ${escapeHtml(task.verification || "")}</span>
-            <span>${(task.acceptance_criteria || []).map((item) => `${escapeHtml(item.id)}: ${escapeHtml(item.text || "")}`).join(" · ")}</span>
-            ${(task.attempts || []).map((attempt) => `<span>Attempt ${escapeHtml(attempt.number)} · ${escapeHtml(attempt.status)} · ${escapeHtml(attempt.path)}</span>`).join("")}
-            ${task.blocker ? `<span class="form-error">Blocker: ${escapeHtml(task.blocker)}</span>` : ""}
-            ${task.status !== "succeeded" ? `<button data-run-task="${escapeHtml(task.id)}" type="button" ${task.ready && selectedRuntimeReady() ? "" : "disabled"}>${task.status === "pending" ? "Run" : "Resume"}</button>` : ""}
-          </article>
-        `).join("")}
-        <article class="panel-item">
-          <strong>Aggregate publication · ${escapeHtml(finalization.status || "pending")}</strong>
-          <span>Attempts: ${escapeHtml(finalization.attempt_count || 0)}</span>
-          ${(finalization.attempts || []).map((attempt) => `<span>Finalize ${escapeHtml(attempt.number)} · ${escapeHtml(attempt.status)} · ${escapeHtml(attempt.path)}</span>`).join("")}
-          ${finalization.blocker ? `<span class="form-error">Blocker: ${escapeHtml(finalization.blocker)}</span>` : ""}
-          ${taskView.all_succeeded && finalization.status !== "succeeded" ? `<button data-finalize-tasks type="button" ${selectedRuntimeReady() ? "" : "disabled"}>${finalization.status === "failed" ? "Resume publication" : "Finalize"}</button>` : ""}
-        </article>
-      </div>
-    </section>
-  `;
-}
-
 function renderImplementationTaskGate(taskView) {
-  return selectSurfaceRenderer("implement", {
-    legacy: () => renderTaskProgress(taskView),
-    studio: () => renderStudioImplementationQualityGate(taskView)
-  }).renderer();
-}
-
-function renderLegacyImplementationRepository({
-  diffView, evidence, taskView, files, visible, selected, unchanged, verificationReady
-}) {
-  return `
-    <section class="surface">
-      <div class="surface-title">
-        <span>Repository diff</span>
-        <span class="small-badge">${escapeHtml(files.length)} source changes</span>
-      </div>
-      ${diffView.project_set_roots?.length ? `
-        <div class="compact-list">
-          ${diffView.project_set_roots.map((root) => `<span>${escapeHtml(root.root_id)}: ${escapeHtml(root.relative_root)}</span>`).join("")}
-        </div>
-      ` : ""}
-      ${renderWarnings([...(diffView.warnings || []), ...unchanged.map((path) => `Mentioned but unchanged: ${path}`)])}
-      ${renderDiffFilters(files)}
-      <div class="diff-review-layout">
-        <aside class="diff-file-list">
-          ${visible.length ? visible.map((file) => {
-            const selectedClass = selected && selected.path === file.path ? " selected" : "";
-            const warnings = diffFileWarning(file);
-            return `
-              <button data-open-diff-file="${escapeHtml(file.path)}" class="diff-file-card${selectedClass}" type="button">
-                <strong>${escapeHtml(file.path)}</strong>
-                <span>${escapeHtml(file.status)} / ${escapeHtml(file.allowed_scope_status)} / ${escapeHtml(file.scope_status || "single-project")}</span>
-                ${file.root_id ? `<span class="small-badge">${escapeHtml(file.root_label || file.root_id)} ${escapeHtml(file.root_relative_root || "")}</span>` : ""}
-                <span>${warnings.map((item) => `<span class="small-badge warn">${escapeHtml(item)}</span>`).join("")}</span>
-              </button>
-            `;
-          }).join("") : `<div class="empty-state">No files match this filter.</div>`}
-        </aside>
-        <section class="diff-viewer">
-          ${selected ? `
-            <div class="surface-title compact">
-              <span>${escapeHtml(selected.path)}</span>
-              <span class="small-badge">${escapeHtml(selected.status)}</span>
-            </div>
-            <pre class="diff-pre">${escapeHtml(selected.diff || "No textual diff available.")}</pre>
-          ` : `<div class="empty-state">No source diff available.</div>`}
-        </section>
-      </div>
-      ${renderImplementationProceedGuard(evidence)}
-      <div class="wizard-actions">
-        <button data-proceed-stage="review" type="button" ${verificationReady && taskView.review_eligible && selectedRuntimeReady() ? "" : "disabled"}>Proceed to review</button>
-        <button data-rerun-implement type="button" class="secondary" ${selectedRuntimeReady() ? "" : "disabled"}>Rerun implement</button>
-        <button data-open-request-tab type="button" class="secondary">Request intervention</button>
-      </div>
-    </section>
-  `;
+  return renderStudioImplementationQualityGate(taskView);
 }
 
 function renderImplementationRepositoryGate(context) {
-  return selectSurfaceRenderer("implement", {
-    legacy: () => renderLegacyImplementationRepository(context),
-    studio: () => renderStudioRepositoryEvidence({
-      ...context,
-      reviewEnabled: context.verificationReady
-        && context.taskView.review_eligible
-        && selectedRuntimeReady()
-    })
-  }).renderer();
+  return renderStudioRepositoryEvidence({
+    ...context,
+    reviewEnabled: context.verificationReady
+      && context.taskView.review_eligible
+      && selectedRuntimeReady()
+  });
 }
 
 async function renderImplementReview() {
@@ -393,102 +298,6 @@ function checkedRemediationIds(sourceStage) {
 
 function countLabel(count, singular, plural = `${singular}s`) {
   return `${count} ${count === 1 ? singular : plural}`;
-}
-
-function renderDecisionSummary({kind, tone, badge, title, body, primary, metrics}) {
-  const status = tone === "good" ? "complete" : tone === "bad" ? "blocked" : "pending";
-  return renderDecisionBar({
-    kind,
-    status,
-    statusLabel: badge,
-    title,
-    body,
-    guidance: primary,
-    metrics,
-    legacyTone: tone
-  }).replace("data-decision-bar=", "data-decision-summary=");
-}
-
-function renderReviewDecisionSummary(view, findings) {
-  const status = view.approval_status || "not detected";
-  const mustFix = findings.filter((finding) => finding.disposition === "must-fix").length;
-  const selected = mustFix;
-  const total = findings.length;
-  let tone = "warn";
-  let title = "Review status needs operator confirmation";
-  let body = "The review report did not publish a clear approved/rejected status. Inspect the report or request intervention before progressing.";
-  let primary = "Primary action: Request review intervention";
-  if (status === "rejected") {
-    tone = "bad";
-    title = "Review rejected: fix blocking findings before QA";
-    body = mustFix
-      ? `${countLabel(mustFix, "must-fix finding")} selected for implement remediation. Send them back, then rerun review before QA.`
-      : "Review rejected, but no must-fix items were parsed. Inspect the review report or request intervention before QA.";
-    primary = "Primary action: Send selected to implement";
-  } else if (status === "approved") {
-    tone = "good";
-    title = "Review approved: QA can start";
-    body = total
-      ? `${countLabel(total, "finding")} remain documented for traceability. QA can start when runtime readiness is green.`
-      : "No structured review findings were detected. QA can start when runtime readiness is green.";
-    primary = "Primary action: Proceed to QA";
-  }
-  return renderDecisionSummary({
-    kind: "review",
-    tone,
-    badge: status,
-    title,
-    body,
-    primary,
-    metrics: [
-      {label: "Approval", value: status, tone},
-      {label: "Findings", value: String(total)},
-      {label: "Must fix", value: String(mustFix), tone: mustFix ? "bad" : "good"},
-      {label: "Selected", value: String(selected)}
-    ]
-  });
-}
-
-function renderQaDecisionSummary(view, risks, issues) {
-  const verdict = view.quality_verdict || "not detected";
-  const recommendation = view.release_recommendation || "not detected";
-  const total = risks.length + issues.length;
-  let tone = "warn";
-  let title = "QA verdict needs operator confirmation";
-  let body = "The QA report did not publish a clear ready/not-ready verdict. Inspect the report before accepting or launching follow-up work.";
-  let primary = "Primary action: Start follow-up or request intervention";
-  if (verdict === "not-ready") {
-    tone = "bad";
-    title = "QA not ready: send selected items back to implement";
-    body = total
-      ? `${countLabel(total, "risk or issue", "risks or issues")} are selected for implement remediation. Rerun verification after fixes before accepting the run.`
-      : "QA is not ready, but no structured risks or issues were parsed. Inspect the QA report before accepting.";
-    primary = "Primary action: Send selected to implement";
-  } else if (verdict === "ready" && total) {
-    tone = "warn";
-    title = "QA ready with follow-up context";
-    body = `${countLabel(total, "risk or issue", "risks or issues")} remain documented. Accept only if they are acceptable for this work item, or start a follow-up from the final handoff.`;
-    primary = "Primary action: Accept complete or start follow-up";
-  } else if (verdict === "ready") {
-    tone = "good";
-    title = "QA ready: run can be accepted";
-    body = "No structured QA risks or known issues were detected. Accept complete to finish the governed run.";
-    primary = "Primary action: Accept complete";
-  }
-  return renderDecisionSummary({
-    kind: "qa",
-    tone,
-    badge: verdict,
-    title,
-    body,
-    primary,
-    metrics: [
-      {label: "Verdict", value: verdict, tone},
-      {label: "Recommendation", value: recommendation},
-      {label: "Residual risks", value: String(risks.length), tone: risks.length ? "warn" : "good"},
-      {label: "Known issues", value: String(issues.length), tone: issues.length ? "warn" : "good"}
-    ]
-  });
 }
 
 function renderRemediationRuntimeGuard(sourceStage, hasRemediationItems) {
@@ -548,51 +357,7 @@ async function renderReviewFindings() {
     state.reviewFindingsView = view;
     state.reviewFindingsRunId = state.activeRunId;
     if (typeof renderGlobalNextActionStrip === "function") renderGlobalNextActionStrip();
-    const findings = view.findings || [];
-    const legacyRenderer = () => `
-      <section class="surface findings-screen">
-        <div class="surface-title">
-          <span>Review Findings</span>
-          <span class="small-badge ${view.approval_status === "rejected" ? "bad" : view.approval_status === "approved" ? "good" : "warn"}">${escapeHtml(view.approval_status || "not detected")}</span>
-        </div>
-        ${renderWarnings(view.warnings)}
-        ${renderReviewDecisionSummary(view, findings)}
-        <div class="table-wrap">
-          <table class="activity-table">
-            <thead><tr><th>Select</th><th>ID</th><th>Severity</th><th>Disposition</th><th>Evidence</th><th>Summary</th></tr></thead>
-            <tbody>
-              ${findings.length ? findings.map((finding, index) => `
-                <tr>
-                  <td>
-                    <input id="review-remediation-${index}" name="review_remediation" data-remediation-source="review" type="checkbox" value="${escapeHtml(finding.finding_id)}" ${finding.disposition === "must-fix" ? "checked" : ""}>
-                    <label class="sr-only" for="review-remediation-${index}">Select ${escapeHtml(finding.finding_id)}</label>
-                  </td>
-                  <td>${escapeHtml(finding.finding_id)}</td>
-                  <td><span class="small-badge ${finding.severity === "high" || finding.severity === "critical" ? "bad" : finding.severity === "medium" ? "warn" : ""}">${escapeHtml(finding.severity || "-")}</span></td>
-                  <td>${escapeHtml(finding.disposition || "-")}</td>
-                  <td>${escapeHtml((finding.evidence || []).join(", ") || "-")}</td>
-                  <td>${escapeHtml(finding.summary || "")}</td>
-                </tr>
-              `).join("") : `<tr><td colspan="6">No structured review findings detected.</td></tr>`}
-            </tbody>
-          </table>
-        </div>
-        <label class="form-field" for="reviewRemediationNote">
-          <span>Operator note for implement</span>
-          <textarea id="reviewRemediationNote" name="review_remediation_note" data-remediation-note="review" rows="4">Fix the selected review finding(s), update implementation-report.md, and preserve unrelated changes.</textarea>
-        </label>
-        ${renderRemediationRuntimeGuard("review", Boolean(findings.length))}
-        <div class="wizard-actions">
-          <button data-proceed-stage="qa" type="button" ${view.approval_status === "rejected" || !selectedRuntimeReady() ? "disabled" : ""}>Proceed to QA</button>
-          <button data-remediation-launch="review" type="button" ${findings.length && selectedRuntimeReady() ? "" : "disabled"}>Send selected to implement</button>
-          <button data-open-request-tab type="button" class="secondary">Request review intervention</button>
-        </div>
-      </section>
-    `;
-    content.innerHTML = selectSurfaceRenderer("review-qa", {
-      legacy: legacyRenderer,
-      studio: () => renderStudioReviewQualityGate(view)
-    }).renderer();
+    content.innerHTML = renderStudioReviewQualityGate(view);
   } catch (error) {
     content.innerHTML = `<div class="empty-state">${escapeHtml(error.message)}</div>`;
   }
@@ -612,56 +377,7 @@ async function renderQaVerdict() {
       ...risks.map((item, index) => ({id: `risk-${index + 1}`, label: item, kind: "risk"})),
       ...issues.map((item, index) => ({id: `issue-${index + 1}`, label: item, kind: "issue"}))
     ];
-    const verdictClass = view.quality_verdict === "ready" ? "good" : view.quality_verdict === "not-ready" ? "bad" : "warn";
-    const legacyRenderer = () => `
-      <section class="surface verdict-screen">
-        <div class="surface-title">
-          <span>QA Verdict</span>
-          <span class="small-badge ${verdictClass}">${escapeHtml(view.quality_verdict || "not detected")}</span>
-        </div>
-        ${renderWarnings(view.warnings)}
-        ${renderQaDecisionSummary(view, risks, issues)}
-        <div class="metric-grid">
-          <div class="metric"><span>Release recommendation</span><strong>${escapeHtml(view.release_recommendation || "not detected")}</strong></div>
-          <div class="metric"><span>Evidence IDs</span><strong>${escapeHtml((view.evidence_ids || []).length)}</strong></div>
-          <div class="metric"><span>Residual risks</span><strong>${escapeHtml(risks.length)}</strong></div>
-          <div class="metric"><span>Known issues</span><strong>${escapeHtml(issues.length)}</strong></div>
-        </div>
-        <div class="table-wrap">
-          <table class="activity-table">
-            <thead><tr><th>Select</th><th>Type</th><th>Item</th></tr></thead>
-            <tbody>
-              ${sourceItems.length ? sourceItems.map((item, index) => `
-                <tr>
-                  <td>
-                    <input id="qa-remediation-${index}" name="qa_remediation" data-remediation-source="qa" type="checkbox" value="${escapeHtml(item.id)}" ${view.quality_verdict === "not-ready" ? "checked" : ""}>
-                    <label class="sr-only" for="qa-remediation-${index}">Select ${escapeHtml(item.id)}</label>
-                  </td>
-                  <td>${escapeHtml(item.kind)}</td>
-                  <td>${escapeHtml(item.label)}</td>
-                </tr>
-              `).join("") : `<tr><td colspan="3">No structured QA risks or issues detected.</td></tr>`}
-            </tbody>
-          </table>
-        </div>
-        <label class="form-field" for="qaRemediationNote">
-          <span>Operator note for implement</span>
-          <textarea id="qaRemediationNote" name="qa_remediation_note" data-remediation-note="qa" rows="4">Fix the selected QA risk(s) or issue(s), rerun verification, and update implementation-report.md.</textarea>
-        </label>
-        ${renderRemediationRuntimeGuard("qa", Boolean(sourceItems.length))}
-        ${renderQaCompletionGuard(view, Boolean(sourceItems.length))}
-        <div class="wizard-actions">
-          <button data-accept-qa type="button" ${view.quality_verdict === "not-ready" ? "disabled" : ""}>Accept complete</button>
-          <button data-remediation-launch="qa" type="button" ${sourceItems.length && selectedRuntimeReady() ? "" : "disabled"}>Send selected to implement</button>
-          <button data-next-flow-start type="button" class="secondary">Start follow-up</button>
-          <button data-next-flow-action="archive-run" type="button" class="secondary" ${state.dashboard?.terminal_handoff ? "" : "disabled"}>Archive</button>
-        </div>
-      </section>
-    `;
-    content.innerHTML = selectSurfaceRenderer("review-qa", {
-      legacy: legacyRenderer,
-      studio: () => renderStudioQaQualityGate(view, sourceItems)
-    }).renderer();
+    content.innerHTML = renderStudioQaQualityGate(view, sourceItems);
   } catch (error) {
     content.innerHTML = `<div class="empty-state">${escapeHtml(error.message)}</div>`;
   }

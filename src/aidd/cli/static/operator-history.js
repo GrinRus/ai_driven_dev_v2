@@ -135,9 +135,7 @@ function renderStudioRunComparisonPanel() {
 }
 
 function renderActiveRunComparisonPanel() {
-  return resolveSurfaceRenderer("history").presentation === "studio"
-    ? renderStudioRunComparisonPanel()
-    : renderRunComparisonPanel();
+  return renderStudioRunComparisonPanel();
 }
 
 function renderStudioHistoryLineageCandidate(candidate, currentRunId) {

@@ -144,13 +144,9 @@ test("Guided Delivery explains the current decision and shared service semantics
 test("Review and Launch uses the shared task-aware mutation dispatcher", async () => {
   const assets = await Promise.all([
     "operator-dashboard-actions.js",
-    "operator-next-flow-view.js",
     "operator-main.js",
   ].map((name) => readFile(path.join(path.dirname(assetPath), name), "utf8")));
-  const [actions, view, main] = assets;
-  assert.match(view, /<span>Review &amp; Launch<\/span>/);
-  assert.match(view, /data-guided-launch="workflow" data-first-launch-run/);
-  assert.match(view, /data-guided-launch="stage" data-first-launch-stage/);
+  const [actions, main] = assets;
   assert.match(actions, /async function dispatchTaskAwareLaunch\(intent, stage = state\.activeStage\)/);
   assert.match(actions, /if \(intent === "workflow"\) return startWorkflow\(\)/);
   assert.match(actions, /if \(intent === "stage"\) return startStage\(stage\)/);

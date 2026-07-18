@@ -86,8 +86,6 @@ function terminalHandoffRecommendation(handoff) {
 }
 
 const state = {
-  presentationSelector: window.aiddPresentation?.requested || "studio",
-  presentationEffective: window.aiddPresentation?.effective || "studio",
   dashboard: null,
   dashboardActiveJob: null,
   dashboardRequestGeneration: 0,
@@ -670,11 +668,7 @@ function operatorRouteSnapshot() {
 }
 
 function encodeCurrentOperatorRoute(route) {
-  const encoded = encodeOperatorRoute(route);
-  if (state.presentationSelector !== "studio") return encoded;
-  const params = new URLSearchParams(encoded.replace(/^\?/, ""));
-  params.set("ui", "studio");
-  return `?${params.toString()}`;
+  return encodeOperatorRoute(route);
 }
 
 function applyOperatorRoute(route) {

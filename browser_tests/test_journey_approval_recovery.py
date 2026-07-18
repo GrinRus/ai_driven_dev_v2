@@ -61,9 +61,6 @@ def test_approval_recovery_parity_preserves_durable_decision_service(
     ) as harness, harness.open_page((1280, 900)) as browser_page:
         page = browser_page.page
         page.goto(f"{harness.url}?ui={selector}", wait_until="networkidle")
-        assert page.evaluate(
-            "window.aiddPresentation.surfaces['approval-recovery'].presentation"
-        ) == "studio"
         job = page.evaluate(
             """async () => {
               const launched = await postJson('/api/stage/run', {
