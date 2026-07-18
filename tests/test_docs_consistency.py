@@ -995,6 +995,36 @@ def test_operator_ui_local_project_manual_smoke_template_records_required_eviden
         assert expected in operator_ui_lane
 
 
+def test_operator_ui_provider_free_browser_pass_template_is_complete() -> None:
+    operator_ui_lane = (
+        _repo_root() / "docs" / "e2e" / "operator-ui-local-project.md"
+    ).read_text(encoding="utf-8")
+
+    for expected in (
+        "## Provider-Free Full Browser Pass Evidence Template",
+        "provider-free-browser-pass-v1",
+        "scripts/run_packaged_ui_scenarios.py",
+        "AIDD version:",
+        "Fixture family:",
+        "320x568, 390x844, 768x1024, 1280x900, 1440x900",
+        "W36-E7-S1-T1..T12",
+        "Discovered journey ids:",
+        "Executed journey ids:",
+        "Journey results:",
+        "Accessibility:",
+        "Geometry:",
+        "Console/page errors:",
+        "Failed requests:",
+        "Network boundary:",
+        "Cleanup:",
+        "Overall result:",
+        "Browser or infrastructure absence\nis a blocker, never a skip",
+        "must not contain human elapsed time",
+        "observed first-time-operator acceptance owned by `W36-E7-S3`",
+    ):
+        assert expected in operator_ui_lane
+
+
 def test_readme_quickstart_uses_request_context_and_real_runtime_first() -> None:
     readme = (_repo_root() / "README.md").read_text(encoding="utf-8")
 

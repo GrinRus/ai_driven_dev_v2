@@ -235,6 +235,37 @@ For each observed operator journey, also record:
 These human timing and confidence fields are evidence, not a release threshold. The five-session
 release bar remains owned by `W36-E7-S3`.
 
+## Provider-Free Full Browser Pass Evidence Template
+
+Use this template for the automated source-installed packaged-UI gate. It records rendered
+browser conformance separately from the human timing and confidence evidence above.
+
+- Evidence schema: `provider-free-browser-pass-v1`
+- AIDD version: `<package version and source commit>`
+- Execution command: `uv run --extra dev python scripts/run_packaged_ui_scenarios.py`
+- Browser: `<Chromium version>`
+- Fixture family: `<canonical provider-free fixture builder version or commit>`
+- Viewports: `320x568, 390x844, 768x1024, 1280x900, 1440x900`
+- Journey ids: `W36-E7-S1-T1..T12`
+- Discovered journey ids: `<ordered ids>`
+- Executed journey ids: `<ordered ids; must exactly equal discovered ids>`
+- Journey results: `<ordered id -> passed | failed with first decisive failure>`
+- Accessibility: `<accessible names, labels, focus order, contrast, touch size, reduced motion>`
+- Geometry: `<header footprint, primary-action visibility, clipping, overlap, scroll ownership, horizontal overflow>`
+- Console/page errors: `<none | ordered non-sensitive summary>`
+- Failed requests: `<none | method, loopback route, status/failure>`
+- Network boundary: `<loopback-only passed | violation>`
+- Cleanup: `<browser/context/page closed; UI process group stopped; fixture and .aidd removed>`
+- Overall result: `<passed | failed | infrastructure-blocked>`
+- Blocker: `<none | missing Chromium | startup timeout | cleanup failure | other structured blocker>`
+
+A pass requires the exact equality of discovered and executed journey ids, all five viewports,
+all declared accessibility and geometry checks, no unexplained console/page/request failures,
+loopback-only network access, and successful bounded cleanup. Browser or infrastructure absence
+is a blocker, never a skip or a passing result. This record must not contain human elapsed time,
+wrong-action counts, assistance, confidence, or first-confusion ratings; those belong only to the
+observed first-time-operator acceptance owned by `W36-E7-S3`.
+
 Cleanup rules:
 
 - keep generated `.aidd/` state inside the disposable local fixture project;

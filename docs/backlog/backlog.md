@@ -7,11 +7,11 @@ slice, and local task.
 
 ## Next
 
-- `W36-E7-S2-T3` — Update the full browser-pass evidence template.
+- `W36-E7-S2-T4` — Enforce the packaged-UI browser runner in release preflight.
 
 ## Soon
 
-- `W36-E7-S2-T4` — Enforce the packaged-UI browser runner in release preflight.
+- `W36-E7-S2-T5` — Record one full source-installed provider-free browser pass.
 
 ## Parking lot
 
@@ -29,6 +29,13 @@ slice, and local task.
   queue-restoration policy in `docs/backlog/roadmap.md` (`W8-E3-S1`).
 
 ## Current reconciliation
+
+- `2026-07-18` `W36-E7-S2-T3` is complete: the local-project contract now has a
+  schema-v1 provider-free browser-pass template covering source version, fixture, all five
+  viewports, the 12 discovered/executed journeys, accessibility, geometry, console/network
+  diagnostics, and bounded cleanup. Human timing and confidence remain a separate acceptance
+  record. Release-preflight enforcement `T4` is promoted to `Next`, followed by the full pass
+  `T5`.
 
 - `2026-07-18` `W36-E7-S2-T2` is complete: CI now runs the shared packaged-UI
   journey command in a dedicated provider-free Python 3.12 job with a pinned Chromium cache,
