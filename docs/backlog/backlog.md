@@ -7,12 +7,12 @@ slice, and local task.
 
 ## Next
 
-- `W36-E5-S5-T5` — Close question Recovery parity after the complete human-decision
-  journey set is verified.
+- `W36-E5-S5-T6` — Close intervention Recovery parity after the verified provider-free
+  journey.
 
 ## Soon
 
-- `W36-E5-S5-T6` — Close intervention Recovery parity after the verified provider-free
+- `W36-E5-S5-T7` — Close runtime approval Recovery parity after the verified CAS
   journey.
 
 ## Parking lot
@@ -40,6 +40,11 @@ slice, and local task.
   queue-restoration policy in `docs/backlog/roadmap.md` (`W8-E3-S1`).
 
 ## Current reconciliation
+
+- `2026-07-18` `W36-E5-S5-T5` is complete: question Recovery is `parity_closed`.
+  Studio and explicit legacy presentation both submit the exact same `/api/answers` payload,
+  persist the same resolved answer, and clear only the owning session draft. Intervention
+  parity `T6` is promoted to `Next` and approval parity `T7` to `Soon`.
 
 - `2026-07-18` `W36-E7-S1-T11` is complete: a real provider-free live approval job
   exercises scope, risk, pending state, allow, deny, cancel, explicit session confirmation,

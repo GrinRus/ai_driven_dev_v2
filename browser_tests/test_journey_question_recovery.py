@@ -42,6 +42,52 @@ def _discard_expected_answer_failure(browser_page: object) -> None:
     ]
 
 
+@pytest.mark.parametrize("selector", ("studio", "legacy"))
+def test_question_recovery_parity_preserves_answer_service_path(
+    tmp_path: Path,
+    selector: str,
+) -> None:
+    fixture = build_browser_state_fixture(
+        tmp_path / f"question-parity-{selector}",
+        "blocking-question",
+    )
+    with sync_playwright() as playwright, operator_browser_harness(
+        fixture.project_root,
+        playwright,
+        work_item=fixture.work_item,
+    ) as harness, harness.open_page((1280, 900)) as browser_page:
+        page = browser_page.page
+        page.goto(f"{harness.url}?ui={selector}", wait_until="networkidle")
+        assert page.evaluate(
+            "window.aiddPresentation.surfaces['question-recovery'].presentation"
+        ) == selector
+        page.locator('[data-question-text="Q1"]').fill(
+            "Use the same durable answer service path."
+        )
+        page.locator('[data-question-resolution="Q1"]').select_option("resolved")
+        with page.expect_response(
+            lambda response: response.url.endswith("/api/answers")
+        ) as saved:
+            page.locator('[data-save-answer="Q1"]').click()
+        assert saved.value.status == 200
+        assert saved.value.request.post_data_json == {
+            "stage": "idea",
+            "question_id": "Q1",
+            "text": "Use the same durable answer service path.",
+            "resolution": "resolved",
+        }
+        page.wait_for_function("readOperatorDraft(questionDraftIdentity('Q1')) === null")
+        assert "Use the same durable answer service path." in (
+            fixture.workspace_root
+            / "workitems"
+            / fixture.work_item
+            / "stages"
+            / "idea"
+            / "answers.md"
+        ).read_text(encoding="utf-8")
+        browser_page.diagnostics.assert_clean()
+
+
 @pytest.mark.parametrize("viewport", VIEWPORTS)
 def test_question_recovery_restores_draft_and_resumes_from_durable_answer(
     tmp_path: Path,

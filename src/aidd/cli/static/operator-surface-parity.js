@@ -49,7 +49,7 @@ const SURFACE_PARITY_MANIFEST = Object.freeze([
   {
     id: "question-recovery",
     owner: "W36-E5-S5",
-    rollout: "candidate",
+    rollout: "parity_closed",
     rollbackRenderer: "operator-questions",
     fixture: "blocking-question",
     journey: "W36-E7-S1-T6",

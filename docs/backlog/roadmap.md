@@ -11041,21 +11041,21 @@ Local tasks:
   - Scope: human-decision responsive presentation only.
   - Verification: `320x568` and `390x844` keyboard/touch journeys expose the full decision and
     primary submit without horizontal overflow or initial scroll.
-- `W36-E5-S5-T5` (next) Promote the verified question candidate to `parity_closed` while retaining the
+- `W36-E5-S5-T5` (done) Promote the verified question candidate to `parity_closed` while retaining the
   legacy question renderer for missing/default and explicit rollback.
   - Dependencies: `W36-E7-S1-T6`, `W36-E7-S1-T11`.
   - Scope: question parity-manifest entry only.
   - Verification: the question fixture closes independently and durable answer/resume behavior
     is equivalent in `ui=studio`, missing/default, and `ui=legacy` modes.
-- `W36-E5-S5-T6` (soon) Promote the verified intervention candidate to `parity_closed` while retaining
+- `W36-E5-S5-T6` (next) Promote the verified intervention candidate to `parity_closed` while retaining
   the legacy intervention renderer for missing/default and explicit rollback.
   - Dependencies: `W36-E7-S1-T10`, `W36-E5-S5-T5`.
   - Scope: intervention parity-manifest entry only.
   - Verification: allowed and blocked intervention fixtures close independently with identical
     durable request behavior.
-- `W36-E5-S5-T7` (planned) Promote the verified approval candidate to `parity_closed` while retaining the
+- `W36-E5-S5-T7` (soon) Promote the verified approval candidate to `parity_closed` while retaining the
   legacy approval renderer for missing/default and explicit rollback.
-  - Dependencies: `W36-E7-S1-T11`.
+  - Dependencies: `W36-E7-S1-T11`, `W36-E5-S5-T6`.
   - Scope: approval parity-manifest entry only.
   - Verification: allow, deny, cancel, session, and conflict fixtures close independently and
     preserve the same compare-and-set winner.

@@ -201,13 +201,13 @@ test("surface parity manifest has one owner and journey per migration surface", 
     "W36-E7-S1-T9",
   ]);
   const candidates = new Set([
-    "question-recovery", "intervention-recovery", "approval-recovery",
+    "intervention-recovery", "approval-recovery",
   ]);
   assert.ok(entries.filter((entry) => candidates.has(entry.id)).every(
     (entry) => entry.rollout === "candidate",
   ));
   const parityClosed = new Set([
-    "guided-setup", "active-studio", "document-evidence", "inbox",
+    "guided-setup", "active-studio", "document-evidence", "inbox", "question-recovery",
   ]);
   assert.ok(entries.filter((entry) => parityClosed.has(entry.id)).every(
     (entry) => entry.rollout === "parity_closed",
