@@ -29,7 +29,7 @@ The local-project UI lane follows the product operator path:
    root, create or resume a work item, seed the request, inspect runner readiness, and
    select a runtime explicitly.
 5. Use **Run workflow** for full progression or **Run selected stage** for a bounded
-   active-stage run from the command center.
+   active-stage run from Studio.
 6. For scripted setup, `aidd init --work-item <id> --request "<task>" --root .aidd`
    remains supported before opening `aidd ui --work-item <id>`.
 7. Run a single selected stage through the UI or `aidd stage run <stage>` when the
@@ -46,11 +46,9 @@ The local-project UI lane follows the product operator path:
 
 The maintained operator UI lane covers:
 
-- page load for the local operator-console shell with top status bar, stage rail,
-  stage cockpit, and the four top-level modes: Work, Recovery, Evidence, and History;
-- recovery-first layout for blocked-question, failed-validation, intervention-review,
-  and runtime-log states, with one visible primary recovery action and raw
-  logs/evidence/activity demoted behind Evidence or History;
+- page load for Guided Setup plus the three destinations Inbox, Studio, and History;
+- decision-first Recovery inside Studio for blocked questions, runtime or validation failure,
+  intervention, approval, and remediation, with one server-authoritative primary action;
 - dashboard read-model payload shape through `/api/dashboard`, including selected
   stage, next action, blockers, evidence refs, recent activity, and recent artifacts;
 - global next-action classification that routes operators to blocked questions or
@@ -60,8 +58,8 @@ The maintained operator UI lane covers:
   questions, and recommended next-flow actions;
 - Start Next Flow source selection, follow-up draft definition, launch preflight, and
   archive decision surfaces without continuing or mutating the completed source run;
-- Run History / Lineage visibility for source run, current run, baseline, child work
-  item candidates, archive state, linked artifacts, and run actions;
+- typed History Filmstrip visibility for stage/task/finalization attempts, comparison, lineage,
+  append-only archive state, linked artifacts, and return-to-live navigation;
 - workflow-run request delegation through the same core service used by the CLI;
 - selected-stage run request delegation through the same stage execution path used by
   `aidd stage run`;
@@ -113,9 +111,9 @@ Current deterministic coverage lives in:
 - `tests/cli/test_ui.py::test_ui_completed_run_next_action_service_regression_sequence`
 - `tests/cli/test_ui.py::test_operator_ui_local_project_terminal_fixture_creates_follow_up_without_runtime`
 - `tests/core/test_operator_frontend.py::test_operator_terminal_handoff_next_action_contract_survives_archive_decision`
-- `tests/cli/test_ui_assets_contracts.py::test_operator_flow_complete_static_contract_covers_terminal_handoff_actions`
+- `tests/cli/test_ui_assets_contracts.py::test_studio_flow_complete_uses_only_core_recommendation`
 - `tests/cli/test_ui_assets_contracts.py::test_operator_next_flow_wizard_static_contract_covers_controls_and_preflight`
-- `tests/cli/test_ui_assets_contracts.py::test_operator_run_history_static_contract_covers_lineage_and_archive_labels`
+- `tests/cli/test_ui_assets_contracts.py::test_studio_history_uses_typed_frames_without_runtime_mutation`
 - `tests/core/test_operator_frontend.py`
 
 These tests exercise `OperatorUiService` and the runtime-agnostic operator read/write

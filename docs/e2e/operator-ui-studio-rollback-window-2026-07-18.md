@@ -1,5 +1,8 @@
 # Operator UI Studio rollback-window evidence — 2026-07-18
 
+> Historical, non-normative evidence: the selector and rollback renderer described here were
+> removed after this bounded check passed. Current installations expose Studio only.
+
 This record captures the bounded source-installed rollback check required before removing the
 temporary Operator UI presentation selector. It is automated presentation-parity evidence, not a
 substitute for the first-time-operator sessions required by `W36-E7-S3`.

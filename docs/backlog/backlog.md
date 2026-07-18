@@ -7,11 +7,11 @@ slice, and local task.
 
 ## Next
 
-- `W36-E5-S10-T5` — Reconcile Studio-only operator documentation.
+- `W36-E7-S2-T2` — Enforce the packaged-UI browser runner in CI.
 
 ## Soon
 
-- `W36-E7-S2-T2` — Enforce the packaged-UI browser runner in CI.
+- `W36-E7-S2-T3` — Update the full browser-pass evidence template.
 
 ## Parking lot
 
@@ -29,6 +29,11 @@ slice, and local task.
   queue-restoration policy in `docs/backlog/roadmap.md` (`W8-E3-S1`).
 
 ## Current reconciliation
+
+- `2026-07-18` `W36-E5-S10-T5` is complete: README, operator handbook, local-project
+  E2E, and frontend architecture now describe the shipped Studio-only surface. The accepted
+  rollback record is explicitly historical and non-normative. Packaged browser CI `E7-S2-T2` is
+  promoted to `Next`, followed by the full-pass evidence template `T3`.
 
 - `2026-07-18` `W36-E5-S10-T4` is complete: the packaged UI no longer ships the
   presentation selector or legacy renderer branches. Studio renderers are called directly, dead

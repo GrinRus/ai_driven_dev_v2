@@ -896,13 +896,13 @@ def test_operator_ui_local_project_e2e_lane_requires_completed_flow_checks() -> 
         "must not use public-repository live E2E as a substitute",
         "completed-run Flow Complete handoff state after terminal `qa`",
         "Start Next Flow source selection, follow-up draft definition, launch preflight",
-        "Run History / Lineage visibility",
+        "typed History Filmstrip visibility",
         "test_ui_completed_run_next_action_service_regression_sequence",
         "test_operator_ui_local_project_terminal_fixture_creates_follow_up_without_runtime",
         "test_operator_terminal_handoff_next_action_contract_survives_archive_decision",
-        "test_operator_flow_complete_static_contract_covers_terminal_handoff_actions",
+        "test_studio_flow_complete_uses_only_core_recommendation",
         "test_operator_next_flow_wizard_static_contract_covers_controls_and_preflight",
-        "test_operator_run_history_static_contract_covers_lineage_and_archive_labels",
+        "test_studio_history_uses_typed_frames_without_runtime_mutation",
         "reach or seed a terminal `qa` run",
         "inspect final QA artifacts",
         "source findings include QA findings",
@@ -913,6 +913,24 @@ def test_operator_ui_local_project_e2e_lane_requires_completed_flow_checks() -> 
         "record the Archive Run decision path",
     ):
         assert expected in operator_ui_lane
+
+
+def test_operator_ui_current_docs_are_studio_only() -> None:
+    root = _repo_root()
+    readme = (root / "README.md").read_text(encoding="utf-8")
+    handbook = (root / "docs" / "operator-handbook.md").read_text(encoding="utf-8")
+    architecture = (root / "docs" / "architecture" / "operator-frontend.md").read_text(
+        encoding="utf-8"
+    )
+    rollback = (
+        root / "docs" / "e2e" / "operator-ui-studio-rollback-window-2026-07-18.md"
+    ).read_text(encoding="utf-8")
+
+    assert "Document & Evidence Studio" in readme
+    assert "Document & Evidence Studio" in handbook
+    assert "## 8. Implemented Document & Evidence Studio" in architecture
+    assert "Accepted next-generation UX direction" not in architecture
+    assert "Historical, non-normative evidence" in rollback
 
 
 def test_operator_ui_evidence_template_has_measurable_ux_gates() -> None:

@@ -11320,7 +11320,7 @@ Local tasks:
   - Scope: packaged frontend cleanup only.
   - Verification: exhaustive asset discovery, JavaScript syntax, package-resource, DOM, and
     browser suites pass with no legacy renderer references.
-- `W36-E5-S10-T5` (next) Reconcile operator docs and screenshots to the Studio-only surface after
+- `W36-E5-S10-T5` (done) Reconcile operator docs and screenshots to the Studio-only surface after
   implementation parity.
   - Dependencies: `W36-E5-S10-T4` as the direct queue predecessor.
   - Scope: README, handbook, local-project E2E, and architecture implementation-status text.
@@ -11609,13 +11609,14 @@ Local tasks:
   - Scope: local/CI UI test entry point.
   - Verification: discovered scenario ids equal executed scenario ids exactly and live
     provider manifests are rejected.
-- `W36-E7-S2-T2` (soon) Add the packaged-UI browser command to CI.
+- `W36-E7-S2-T2` (next) Add the packaged-UI browser command to CI.
   - Dependencies: `W36-E5-S10-T5` as the direct queue predecessor.
   - Dependencies: `W36-E7-S2-T1`.
   - Scope: deterministic CI integration only.
   - Verification: an intentional geometry, accessibility, console, or journey failure
     blocks CI while provider credentials remain unnecessary.
-- `W36-E7-S2-T3` (planned) Update the local-project UI evidence template for full browser passes.
+- `W36-E7-S2-T3` (soon) Update the local-project UI evidence template for full browser passes.
+  - Dependencies: `W36-E7-S2-T2` as the direct queue predecessor.
   - Dependencies: `W36-E7-S2-T1`.
   - Scope: operator E2E documentation only.
   - Verification: docs consistency and the evidence checklist record version, fixture,
