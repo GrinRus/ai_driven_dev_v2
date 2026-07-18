@@ -610,7 +610,7 @@ async function renderCockpitContent() {
     return;
   }
   if (state.activeTab === "history") {
-    content.innerHTML = renderHistoryMode();
+    content.innerHTML = await renderHistoryMode();
     void loadRunComparisonPanel();
   }
 }
@@ -938,8 +938,8 @@ function renderActivityTable() {
   host.innerHTML = renderActivityTableMarkup(activityEvents());
 }
 
-function renderHistoryMode() {
-  return `
+async function renderHistoryMode() {
+  const legacyRenderer = () => `
     <div class="history-mode hierarchy-sequence">
       ${renderRunHistory()}
       <section class="surface hierarchy-supporting history-events">
@@ -951,6 +951,11 @@ function renderHistoryMode() {
       </section>
     </div>
   `;
+  const resolution = selectSurfaceRenderer("history", {
+    legacy: legacyRenderer,
+    studio: async () => renderStudioHistory(await loadStudioHistoryTimeline())
+  });
+  return resolution.renderer();
 }
 
 function renderRecentArtifacts() {

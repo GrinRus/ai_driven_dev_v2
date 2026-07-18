@@ -139,6 +139,7 @@ test("operator bootstrap loads modules in declared order", async () => {
     "/operator-logs-jobs.js",
     "/operator-next-flow-actions.js",
     "/operator-next-flow-view.js",
+    "/operator-history.js",
     "/operator-quality-gates.js",
     "/operator-control-center.js",
     "/operator-stage-cockpit.js",
@@ -201,7 +202,7 @@ test("surface parity manifest has one owner and journey per migration surface", 
     "W36-E7-S1-T8",
     "W36-E7-S1-T9",
   ]);
-  const candidates = new Set([]);
+  const candidates = new Set(["history"]);
   assert.ok(entries.filter((entry) => candidates.has(entry.id)).every(
     (entry) => entry.rollout === "candidate",
   ));
@@ -421,6 +422,62 @@ test("Studio Review and QA gates render exact upstream identities and blockers",
   assert.match(readback, /data-recovery-action="rerun-stale-downstream"/);
 });
 
+test("Studio History renders typed frames and pauses only browser auto-follow", async () => {
+  const context = vm.createContext({
+    state: {
+      activeRunId: "run-history",
+      activeStage: "implement",
+      activeTab: "history",
+      historyTimeline: null,
+      historySelectedFrame: "",
+      historyAutoFollow: true,
+    },
+    escapeHtml(value) {
+      return String(value);
+    },
+    stageTitle(value) {
+      return String(value).toUpperCase();
+    },
+    runScopedQuery() {
+      return "run_id=run-history";
+    },
+    async api() {
+      return {
+        frames: [
+          {
+            identity: "task:TL-1:attempt:0001",
+            kind: "task-attempt",
+            stage: "implement",
+            task_id: "TL-1",
+            attempt_number: 1,
+            status: "failed",
+            time_utc: "2026-07-18T00:00:00Z",
+            evidence_refs: ["reports/runtime.log"]
+          },
+          {
+            identity: "finalization:implement:attempt:0002",
+            kind: "finalization-attempt",
+            stage: "implement",
+            attempt_number: 2,
+            status: "succeeded",
+            evidence_refs: ["reports/finalization-state.json"]
+          }
+        ]
+      };
+    }
+  });
+  await load(context, "operator-history.js");
+  const timeline = await vm.runInContext("loadStudioHistoryTimeline()", context);
+  const html = vm.runInContext("renderStudioHistory(state.historyTimeline)", context);
+  assert.equal(timeline.frames.length, 2);
+  assert.equal(context.state.historySelectedFrame, "finalization:implement:attempt:0002");
+  assert.match(html, /data-studio-history/);
+  assert.match(html, /task:TL-1:attempt:0001/);
+  assert.match(html, /Aggregate finalization · attempt 2/);
+  assert.match(html, /Return to live/);
+  assert.match(html, /active runtime is not stopped/);
+});
+
 test("presentation selector is browser-only and fails back to legacy", async () => {
   const cases = [
     {search: "", requested: "legacy", fallback: false},
@@ -446,7 +503,7 @@ test("presentation selector is browser-only and fails back to legacy", async () 
     for (const surface of [
       "guided-setup", "active-studio", "document-evidence", "question-recovery",
       "intervention-recovery", "approval-recovery", "runtime-validation-recovery", "inbox",
-      "implement", "review-qa",
+      "implement", "review-qa", "history",
     ]) {
       assert.equal(
         window.aiddPresentation.surfaces[surface].presentation,
@@ -457,7 +514,7 @@ test("presentation selector is browser-only and fails back to legacy", async () 
       .filter(([surface]) => ![
         "guided-setup", "active-studio", "document-evidence", "question-recovery",
         "intervention-recovery", "approval-recovery", "runtime-validation-recovery", "inbox",
-        "implement", "review-qa",
+        "implement", "review-qa", "history",
       ].includes(surface))
       .every(([, resolution]) => resolution.presentation === "legacy"));
     assert.equal(documentElement.dataset.presentationRequested, item.requested);

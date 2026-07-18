@@ -7,11 +7,11 @@ slice, and local task.
 
 ## Next
 
-- `W36-E5-S8-T2` — Render collapsed Filmstrip and expanded History from typed frames.
+- `W36-E5-S8-T3` — Render retained-evidence run comparison in History.
 
 ## Soon
 
-- `W36-E5-S8-T3` — Render retained-evidence run comparison in History.
+- `W36-E5-S8-T4` — Render immutable parent/source/child History lineage.
 
 ## Parking lot
 
@@ -32,6 +32,12 @@ slice, and local task.
   queue-restoration policy in `docs/backlog/roadmap.md` (`W8-E3-S1`).
 
 ## Current reconciliation
+
+- `2026-07-18` `W36-E5-S8-T2` is complete: a separate packaged Studio History
+  renderer consumes typed frames, exposes a collapsed Filmstrip and selected-frame evidence,
+  pauses only browser auto-follow for historical selection, and returns to live without a
+  runtime mutation. Legacy History remains the rollback renderer and the surface is now a
+  reachable `candidate`. Retained-evidence comparison `T3` is promoted to `Next`.
 
 - `2026-07-18` `W36-E5-S8-T1` is complete: `/api/run/timeline` retains its existing
   `events` and warnings and additively exposes immutable stage-attempt, task-attempt,

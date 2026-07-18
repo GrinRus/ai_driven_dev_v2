@@ -20,6 +20,7 @@
     "/operator-logs-jobs.js",
     "/operator-next-flow-actions.js",
     "/operator-next-flow-view.js",
+    "/operator-history.js",
     "/operator-quality-gates.js",
     "/operator-control-center.js",
     "/operator-stage-cockpit.js",

@@ -11181,17 +11181,17 @@ Local tasks:
   - Scope: core operator timeline/read model only.
   - Verification: normal, repair, intervention, remediation, task, finalization, live, and
     legacy fixtures produce stable frame identity and retain the first decisive failure.
-- `W36-E5-S8-T2` (next) Render the collapsed Studio Filmstrip and expanded History timeline with
+- `W36-E5-S8-T2` (done) Render the collapsed Studio Filmstrip and expanded History timeline with
   selected artifact/log evidence and Return to live behavior.
   - Scope: packaged Filmstrip/History renderer only.
   - Verification: frame selection, historical auto-follow pause, exact log range, missing
     snapshot, and current-live return behave deterministically.
-- `W36-E5-S8-T3` (soon) Render run comparison plus retained prompt, artifact, stage, and validator
+- `W36-E5-S8-T3` (next) Render run comparison plus retained prompt, artifact, stage, and validator
   deltas.
   - Scope: History comparison renderer only.
   - Verification: Back/reload restores both runs and every displayed delta links to retained
     source evidence or an explicit unavailable-snapshot state.
-- `W36-E5-S8-T4` (planned) Render parent, source, and child run lineage without presenting lineage as
+- `W36-E5-S8-T4` (soon) Render parent, source, and child run lineage without presenting lineage as
   mutable workflow state.
   - Scope: History lineage renderer only.
   - Verification: every routable relation resolves through canonical run identity and opening a
