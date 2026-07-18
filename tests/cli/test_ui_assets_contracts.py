@@ -620,6 +620,16 @@ def test_studio_flow_complete_uses_only_core_recommendation() -> None:
     assert 'selectSurfaceRenderer("flow-complete"' in studio
     assert 'id: "flow-complete"' in parity
     assert 'rollout: "candidate"' in parity
+    _assert_contains_all(
+        view,
+        (
+            "function renderStudioNextFlowWizard()",
+            "renderNextFlowSourceSelection()",
+            "data-studio-next-flow-action",
+        ),
+    )
+    assert "state.nextFlowWizard.active" in studio
+    assert "renderStudioNextFlowWizard()" in studio
 
 
 def test_operator_state_and_dashboard_assets_keep_runtime_and_tab_contracts() -> None:

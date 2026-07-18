@@ -154,6 +154,9 @@ function updateStudioLiveObservation() {
 }
 
 function renderActiveStudio() {
+  if (state.nextFlowWizard.active) {
+    return renderStudioNextFlowWizard();
+  }
   if (state.dashboard?.terminal_handoff) {
     const {eligible} = studioFlowCompleteEligibility();
     if (eligible) {

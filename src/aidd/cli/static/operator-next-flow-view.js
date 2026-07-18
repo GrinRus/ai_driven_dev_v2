@@ -1257,6 +1257,15 @@ function renderNextFlowSourceSelection() {
   });
 }
 
+function renderStudioNextFlowWizard() {
+  const action = state.nextFlowWizard.action || "next-flow";
+  return `
+    <div class="studio-next-flow-host" data-studio-next-flow-action="${escapeHtml(action)}">
+      ${renderNextFlowSourceSelection()}
+    </div>
+  `;
+}
+
 function renderNewWorkItemHandoff() {
   const sourceRun = nextFlowSourceRunId() || "not recorded";
   const sourceWorkItem = nextFlowSourceWorkItem() || "not recorded";

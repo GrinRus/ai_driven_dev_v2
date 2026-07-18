@@ -1042,6 +1042,25 @@ test("next-flow view renders terminal and readiness states without network mutat
   assert.doesNotMatch(studioTerminalHtml, /recommendedNextFlowDecision/);
   vm.runInContext("state.dashboard.terminal_handoff.recommended_outcome = null", context);
   assert.equal(vm.runInContext("renderStudioFlowCompleteState()", context), "");
+  vm.runInContext(`
+    state.nextFlowWizard.active = true;
+    state.nextFlowWizard.action = "start-follow-up-flow";
+    state.nextFlowWizard.step = "sources";
+    state.nextFlowWizard.loading = false;
+    state.nextFlowWizard.error = "";
+    state.nextFlowWizard.selectedSourceIds = ["QA-RISK-1"];
+    state.nextFlowWizard.sourceFindings = {
+      source_run_id: "run-ui",
+      source_work_item: "WI-UI",
+      counts: {total_items: 1, recommended_items: 1, source_artifact_links: 1},
+      recommendation: "Carry the retained QA risk.",
+      groups: []
+    };
+  `, context);
+  const followUpHtml = vm.runInContext("renderStudioNextFlowWizard()", context);
+  assert.match(followUpHtml, /data-studio-next-flow-action="start-follow-up-flow"/);
+  assert.match(followUpHtml, /run-ui/);
+  assert.match(followUpHtml, /Continue to Define Work Item/);
   assert.match(element("nextActionPanel").innerHTML, /Review handoff/);
   assert.equal(fetchCount, 0);
 });

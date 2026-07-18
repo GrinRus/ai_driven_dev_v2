@@ -7,11 +7,11 @@ slice, and local task.
 
 ## Next
 
-- `W36-E5-S9-T4` — Render follow-up through shared draft and launch seams.
+- `W36-E5-S9-T5` — Render clone through shared draft and launch seams.
 
 ## Soon
 
-- `W36-E5-S9-T5` — Render clone through shared draft and launch seams.
+- `W36-E5-S9-T6` — Render manual eval handoff without workflow mutation.
 
 ## Parking lot
 
@@ -32,6 +32,12 @@ slice, and local task.
   queue-restoration policy in `docs/backlog/roadmap.md` (`W8-E3-S1`).
 
 ## Current reconciliation
+
+- `2026-07-18` `W36-E5-S9-T4` is complete: Studio hosts the existing follow-up
+  source-selection, session-draft, definition, preflight, guarded mutation, and launch sequence
+  instead of introducing a second wizard or service path. The source run remains read-only and
+  matching durable success remains the only draft-clear boundary. Clone `T5` is promoted to
+  `Next`, followed by manual eval handoff `T6`.
 
 - `2026-07-18` `W36-E5-S9-T3` is complete: Studio Flow Complete renders only when
   the additive terminal-handoff contract carries a valid core-owned recommendation. Its primary
