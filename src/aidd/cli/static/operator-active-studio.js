@@ -72,6 +72,74 @@ function renderActiveStudioStageSummary(item) {
   `;
 }
 
+function studioObservationModel(job = state.activeJobStatus, item = activeStageItem()) {
+  const attemptCount = Number(item?.attempt_count || 0);
+  if (!job && !attemptCount && !["executing", "preparing", "validating"].includes(item?.status)) {
+    return null;
+  }
+  if (job) {
+    const cancelling = job.status === "cancelling" || job.cancel_state === "cancelling";
+    return {
+      source: "ui-job",
+      status: job.status || "running",
+      stage: job.stage || state.activeStage,
+      elapsed: secondsLabel(job.elapsed_seconds),
+      outputAge: runtimeOutputFreshnessLabel(job),
+      milestone: `${stageTitle(job.stage || state.activeStage)} / ${item?.status || job.status || "running"}`,
+      notice: cancelling
+        ? "Cancellation requested; waiting for terminal runtime evidence."
+        : job.silence_warning
+          ? runtimeOutputMissingLabel(job)
+          : "Live runtime evidence is updating.",
+      tone: cancelling || job.silence_warning ? "warn" : "good",
+      actionLabel: "Open live output"
+    };
+  }
+  const externallyRunning = ["executing", "preparing", "validating"].includes(item?.status);
+  return {
+    source: externallyRunning ? "durable-external" : "durable-attempt",
+    status: item?.status || "recorded",
+    stage: item?.stage || state.activeStage,
+    elapsed: "not available",
+    outputAge: attemptCount ? "Persisted runtime evidence available" : "No output evidence recorded",
+    milestone: `${stageTitle(item?.stage || state.activeStage)} / ${item?.status || "recorded"} / attempt ${attemptCount || "pending"}`,
+    notice: externallyRunning
+      ? "The stage is executing outside this browser session; durable state is authoritative."
+      : "The latest terminal stage state is reconstructed from persisted evidence.",
+    tone: ["failed", "blocked", "cancelled"].includes(item?.status) ? "warn" : "good",
+    actionLabel: "Open persisted logs"
+  };
+}
+
+function renderStudioLiveObservation() {
+  const observation = studioObservationModel();
+  if (!observation) return "";
+  return `
+    <section class="surface studio-live-observation" data-studio-observation="${escapeHtml(observation.source)}" role="status" aria-live="polite">
+      <div class="surface-title">
+        <span>Runtime observation</span>
+        <span class="small-badge ${escapeHtml(observation.tone)}">${escapeHtml(observation.status)}</span>
+      </div>
+      <div class="metric-grid compact">
+        <div class="metric"><span>Elapsed</span><strong>${escapeHtml(observation.elapsed)}</strong></div>
+        <div class="metric"><span>Last output</span><strong>${escapeHtml(observation.outputAge)}</strong></div>
+        <div class="metric"><span>Milestone</span><strong>${escapeHtml(observation.milestone)}</strong></div>
+        <div class="metric"><span>Connection</span><strong>${escapeHtml(state.activeJobConnection?.state || "durable")}</strong></div>
+      </div>
+      <p>${escapeHtml(observation.notice)}</p>
+      <button data-tab-shortcut="logs" type="button" class="secondary">${escapeHtml(observation.actionLabel)}</button>
+    </section>
+  `;
+}
+
+function updateStudioLiveObservation() {
+  const host = document.getElementById("studioLiveObservation");
+  if (!host) return;
+  const markup = renderStudioLiveObservation();
+  host.hidden = !markup;
+  host.innerHTML = markup;
+}
+
 function renderActiveStudio() {
   const item = activeStageItem();
   const studioState = activeStudioState();
@@ -82,6 +150,7 @@ function renderActiveStudio() {
         ${renderActiveStudioDocumentSlot(studioState)}
         ${renderActiveStudioStageSummary(item)}
       </div>
+      <div id="studioLiveObservation">${renderStudioLiveObservation()}</div>
       <aside id="studioEvidenceInspector" class="surface studio-evidence-inspector" hidden></aside>
     </section>
   `;

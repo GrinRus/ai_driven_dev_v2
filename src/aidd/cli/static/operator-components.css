@@ -3623,6 +3623,25 @@ pre {
   gap: var(--space-2);
 }
 
+.studio-live-observation {
+  display: grid;
+  gap: var(--space-3);
+}
+
+.studio-live-observation .metric-grid {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.studio-live-observation > button {
+  justify-self: start;
+}
+
+@media (max-width: 900px) {
+  .studio-live-observation .metric-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
 @media (max-width: 900px) {
   .active-studio-grid,
   .studio-context-identity {

@@ -457,6 +457,7 @@ async function cancelActiveJob() {
     toast("Cancel requested.");
   }
   renderActivityTable();
+  if (typeof updateStudioLiveObservation === "function") updateStudioLiveObservation();
   if (activeModeIsEvidenceLog()) await renderLogs();
   const activeStatuses = new Set(["running", "waiting-for-operator", "cancelling"]);
   if (activeStatuses.has(result.status)) scheduleActiveJobPoll(0);
@@ -511,6 +512,7 @@ async function pollActiveJob() {
     renderActiveRunPanel();
     if (typeof renderNextActionPanel === "function") renderNextActionPanel();
     if (typeof renderGlobalNextActionStrip === "function") renderGlobalNextActionStrip();
+    if (typeof updateStudioLiveObservation === "function") updateStudioLiveObservation();
     renderActivityTable();
     if (activeModeIsEvidenceLog()) await renderLogs();
     if (state.activeJobStatus.status === "waiting-for-operator") {
