@@ -7,18 +7,16 @@ slice, and local task.
 
 ## Next
 
-- `W36-E5-S4-T5` — Promote active Studio and Document/Evidence surfaces to
-  `parity_closed` while retaining explicit legacy rollback until cutover.
+- `W36-E5-S5-T1` — Render blocking questions with exact QID, durable resolution state,
+  session draft recovery, and answer-and-resume behavior.
 
 ## Soon
 
-No task is currently queued here. Human-decision Recovery follows active Studio parity in
-the delivery order, but belongs to a separate surface slice rather than being its direct successor.
+- `W36-E5-S5-T2` — Render Request Change as a distinct durable intervention path with
+  downstream-success rejection and remediation routing.
 
 ## Parking lot
 
-- `W36-E5-S5-T1` — Render blocking questions with durable resolution and draft-recovery
-  semantics in Recovery Studio.
 - `W36-E5-S6-T1` — Render typed runtime failure and the eligible recovery action without
   conflating validation repair.
 - `W36-E5-S7-T1` — Render canonical implement tasks, attempts, recovery, and aggregate
@@ -42,6 +40,13 @@ the delivery order, but belongs to a separate surface slice rather than being it
   queue-restoration policy in `docs/backlog/roadmap.md` (`W8-E3-S1`).
 
 ## Current reconciliation
+
+- `2026-07-18` `W36-E5-S4-T5` is complete: active Studio and Document/Evidence are
+  `parity_closed`; `ui=studio` renders one workbench and one bounded Document Canvas, while
+  missing/default and `ui=legacy` retain the legacy cockpit plus Recovery, Evidence, and
+  persisted-log reachability. The accepted active/reconnect and Document/Evidence journeys
+  continue to own their five-viewport evidence. Slice `W36-E5-S4` is closed; question
+  Recovery `W36-E5-S5-T1` is promoted to `Next` and intervention `T2` to `Soon`.
 
 - `2026-07-18` `W36-E5-S3-T5` is complete: Inbox is `parity_closed`; explicit
   `ui=studio` renders one Studio Inbox, while missing/default and `ui=legacy` retain one

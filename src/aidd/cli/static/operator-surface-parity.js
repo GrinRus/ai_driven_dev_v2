@@ -13,7 +13,7 @@ const SURFACE_PARITY_MANIFEST = Object.freeze([
   {
     id: "active-studio",
     owner: "W36-E5-S4",
-    rollout: "candidate",
+    rollout: "parity_closed",
     rollbackRenderer: "operator-stage-cockpit",
     fixture: "running",
     journey: "W36-E7-S1-T2",
@@ -58,7 +58,7 @@ const SURFACE_PARITY_MANIFEST = Object.freeze([
   {
     id: "document-evidence",
     owner: "W36-E5-S4",
-    rollout: "legacy_only",
+    rollout: "parity_closed",
     rollbackRenderer: "operator-artifacts-documents",
     fixture: "qa-decision",
     journey: "W36-E7-S1-T7",

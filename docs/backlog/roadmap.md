@@ -10957,7 +10957,7 @@ Exit evidence:
 - Inbox is a rebuildable read model and cannot become a second workflow engine;
 - blocking items cannot be hidden by presentation-only dismissal.
 
-#### Slice W36-E5-S4 — active Document & Evidence Studio (`planned`)
+#### Slice W36-E5-S4 — active Document & Evidence Studio (`done`)
 Goal: make context, one Decision Bar, the selected Markdown document, and bounded evidence the
 default active-run workspace.
 
@@ -10994,7 +10994,7 @@ Local tasks:
   - Scope: active Studio observation renderer only.
   - Verification: running, silent, cancelling, completed, and externally completed jobs show no
     fake progress and agree with persisted runtime evidence.
-- `W36-E5-S4-T5` (next) Promote the verified active-Studio candidate to `parity_closed` while retaining
+- `W36-E5-S4-T5` (done) Promote the verified active-Studio candidate to `parity_closed` while retaining
   the legacy cockpit/sidebar renderer for missing/default and explicit rollback until cutover.
   - Dependencies: `W36-E7-S1-T2`, `W36-E7-S1-T7`.
   - Scope: active-Studio parity-manifest entry only.
@@ -11020,12 +11020,12 @@ Dependencies:
 
 Local tasks:
 
-- `W36-E5-S5-T1` (parked) Render blocking questions with exact QID, resolved/partial/deferred status,
+- `W36-E5-S5-T1` (next) Render blocking questions with exact QID, resolved/partial/deferred status,
   draft recovery, and answer-and-resume behavior.
   - Scope: question Recovery renderer only.
   - Verification: resolved unblocks, partial/deferred remain blocking when required, failed
     submit preserves the draft, and durable `answers.md` readback wins.
-- `W36-E5-S5-T2` (planned) Render Request Change and intervention context as durable stage-scoped input,
+- `W36-E5-S5-T2` (soon) Render Request Change and intervention context as durable stage-scoped input,
   including downstream-success rejection and remediation routing.
   - Scope: intervention Recovery renderer only.
   - Verification: allowed submit creates one operator-request document and blocked intervention

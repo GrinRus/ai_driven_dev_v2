@@ -200,11 +200,13 @@ test("surface parity manifest has one owner and journey per migration surface", 
     "W36-E7-S1-T8",
     "W36-E7-S1-T9",
   ]);
-  const candidates = new Set(["active-studio"]);
+  const candidates = new Set();
   assert.ok(entries.filter((entry) => candidates.has(entry.id)).every(
     (entry) => entry.rollout === "candidate",
   ));
-  const parityClosed = new Set(["guided-setup", "inbox"]);
+  const parityClosed = new Set([
+    "guided-setup", "active-studio", "document-evidence", "inbox",
+  ]);
   assert.ok(entries.filter((entry) => parityClosed.has(entry.id)).every(
     (entry) => entry.rollout === "parity_closed",
   ));
@@ -239,14 +241,18 @@ test("presentation selector is browser-only and fails back to legacy", async () 
     assert.equal(window.aiddPresentation.effective, studioRequested ? "mixed" : "legacy");
     assert.equal(window.aiddPresentation.fallback, item.fallback);
     assert.equal(Object.keys(window.aiddPresentation.surfaces).length, 12);
-    for (const surface of ["guided-setup", "active-studio", "inbox"]) {
+    for (const surface of [
+      "guided-setup", "active-studio", "document-evidence", "inbox",
+    ]) {
       assert.equal(
         window.aiddPresentation.surfaces[surface].presentation,
         studioRequested ? "studio" : "legacy",
       );
     }
     assert.ok(Object.entries(window.aiddPresentation.surfaces)
-      .filter(([surface]) => !["guided-setup", "active-studio", "inbox"].includes(surface))
+      .filter(([surface]) => ![
+        "guided-setup", "active-studio", "document-evidence", "inbox",
+      ].includes(surface))
       .every(([, resolution]) => resolution.presentation === "legacy"));
     assert.equal(documentElement.dataset.presentationRequested, item.requested);
     assert.equal(

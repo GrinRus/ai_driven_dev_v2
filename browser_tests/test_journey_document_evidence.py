@@ -19,6 +19,61 @@ def _assert_rendered_gate(page: Page, viewport: tuple[int, int]) -> None:
     assert_rendered_geometry(page)
 
 
+@pytest.mark.parametrize(
+    ("query", "expected_presentation"),
+    (("", "legacy"), ("?ui=legacy", "legacy"), ("?ui=studio", "studio")),
+)
+def test_studio_workbench_parity_retains_explicit_legacy_reachability(
+    tmp_path: Path,
+    query: str,
+    expected_presentation: str,
+) -> None:
+    fixture = build_browser_state_fixture(
+        tmp_path / expected_presentation,
+        "qa-decision",
+    )
+
+    with sync_playwright() as playwright, operator_browser_harness(
+        fixture.project_root,
+        playwright,
+        work_item=fixture.work_item,
+    ) as harness, harness.open_page((1280, 900)) as browser_page:
+        page = browser_page.page
+        page.goto(f"{harness.url}{query}", wait_until="networkidle")
+        assert page.evaluate(
+            "window.aiddPresentation.surfaces['active-studio'].presentation"
+        ) == expected_presentation
+        assert page.evaluate(
+            "window.aiddPresentation.surfaces['document-evidence'].presentation"
+        ) == expected_presentation
+        if expected_presentation == "studio":
+            page.locator(".active-studio").wait_for(state="visible")
+            assert page.locator(".active-studio").count() == 1
+            assert page.locator("#studioDocumentCanvas").count() == 1
+            assert page.locator(".overview-grid").count() == 0
+        else:
+            page.locator("#cockpitContent .surface").first.wait_for(state="visible")
+            assert page.locator(".active-studio").count() == 0
+            assert page.locator("#tab-recovery").is_visible()
+            assert page.locator("#tab-evidence").is_visible()
+            if query:
+                legacy_logs = urlencode(
+                    {
+                        "ui": "legacy",
+                        "mode": "studio",
+                        "view": "logs",
+                        "work_item": fixture.work_item,
+                        "run_id": fixture.run_id,
+                        "stage": "qa",
+                    }
+                )
+                page.goto(f"{harness.url}?{legacy_logs}", wait_until="networkidle")
+                page.locator("#cockpitContent").get_by_text(
+                    "Saved runtime.log", exact=False
+                ).first.wait_for(state="visible")
+        browser_page.diagnostics.assert_clean()
+
+
 @pytest.mark.parametrize("viewport", VIEWPORTS)
 def test_document_canvas_and_evidence_inspector_preserve_safe_context(
     tmp_path: Path,
