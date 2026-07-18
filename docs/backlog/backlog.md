@@ -7,18 +7,16 @@ slice, and local task.
 
 ## Next
 
-- `W36-E5-S5-T6` — Close intervention Recovery parity after the verified provider-free
+- `W36-E5-S5-T7` — Close runtime approval Recovery parity after the verified CAS
   journey.
 
 ## Soon
 
-- `W36-E5-S5-T7` — Close runtime approval Recovery parity after the verified CAS
-  journey.
+- `W36-E5-S6-T1` — Render typed runtime failure and the eligible recovery action without
+  conflating validation repair.
 
 ## Parking lot
 
-- `W36-E5-S6-T1` — Render typed runtime failure and the eligible recovery action without
-  conflating validation repair.
 - `W36-E5-S7-T1` — Render canonical implement tasks, attempts, recovery, and aggregate
   finalization inside Studio.
 - `W36-E5-S8-T1` — Implement the typed Filmstrip frame projection from durable attempts,
@@ -40,6 +38,12 @@ slice, and local task.
   queue-restoration policy in `docs/backlog/roadmap.md` (`W8-E3-S1`).
 
 ## Current reconciliation
+
+- `2026-07-18` `W36-E5-S5-T6` is complete: intervention Recovery is
+  `parity_closed`. Studio and explicit legacy presentation both use the same guarded
+  stage-interact service: allowed fixtures create one durable request and downstream-blocked
+  fixtures create none. Approval parity `T7` is promoted to `Next`; runtime-failure Recovery
+  `W36-E5-S6-T1` waits in `Soon`.
 
 - `2026-07-18` `W36-E5-S5-T5` is complete: question Recovery is `parity_closed`.
   Studio and explicit legacy presentation both submit the exact same `/api/answers` payload,

@@ -11047,13 +11047,13 @@ Local tasks:
   - Scope: question parity-manifest entry only.
   - Verification: the question fixture closes independently and durable answer/resume behavior
     is equivalent in `ui=studio`, missing/default, and `ui=legacy` modes.
-- `W36-E5-S5-T6` (next) Promote the verified intervention candidate to `parity_closed` while retaining
+- `W36-E5-S5-T6` (done) Promote the verified intervention candidate to `parity_closed` while retaining
   the legacy intervention renderer for missing/default and explicit rollback.
   - Dependencies: `W36-E7-S1-T10`, `W36-E5-S5-T5`.
   - Scope: intervention parity-manifest entry only.
   - Verification: allowed and blocked intervention fixtures close independently with identical
     durable request behavior.
-- `W36-E5-S5-T7` (soon) Promote the verified approval candidate to `parity_closed` while retaining the
+- `W36-E5-S5-T7` (next) Promote the verified approval candidate to `parity_closed` while retaining the
   legacy approval renderer for missing/default and explicit rollback.
   - Dependencies: `W36-E7-S1-T11`, `W36-E5-S5-T6`.
   - Scope: approval parity-manifest entry only.
@@ -11078,8 +11078,9 @@ Dependencies:
 
 Local tasks:
 
-- `W36-E5-S6-T1` (parked) Render runtime/provider failure, stopped state, last durable signal, and
+- `W36-E5-S6-T1` (soon) Render runtime/provider failure, stopped state, last durable signal, and
   eligible retry without consuming or implying validation repair budget.
+  - Dependencies: `W36-E5-S5-T7`.
   - Scope: runtime-failure Recovery renderer only.
   - Verification: unavailable executable, authentication, timeout, cancellation, no-progress,
     and legacy fixtures show the typed outcome and correct safe action.

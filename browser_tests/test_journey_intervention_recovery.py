@@ -20,6 +20,77 @@ def _assert_rendered_gate(page: Page, viewport: tuple[int, int]) -> None:
     assert_rendered_geometry(page)
 
 
+@pytest.mark.parametrize("selector", ("studio", "legacy"))
+@pytest.mark.parametrize("blocked", (False, True))
+def test_intervention_parity_preserves_allowed_and_blocked_service_paths(
+    tmp_path: Path,
+    selector: str,
+    blocked: bool,
+) -> None:
+    fixture = build_browser_state_fixture(
+        tmp_path / f"intervention-parity-{selector}-{blocked}",
+        "qa-decision" if blocked else "blocking-question",
+    )
+    if not blocked:
+        configure_sleeping_fixture_runtime(fixture.project_root, sleep_seconds=20)
+    stage = "plan" if blocked else "idea"
+    request_root = (
+        fixture.workspace_root
+        / "workitems"
+        / fixture.work_item
+        / "stages"
+        / stage
+        / "operator-requests"
+    )
+    with sync_playwright() as playwright, operator_browser_harness(
+        fixture.project_root,
+        playwright,
+        work_item=fixture.work_item,
+    ) as harness, harness.open_page((1280, 900)) as browser_page:
+        page = browser_page.page
+        page.goto(f"{harness.url}?ui={selector}", wait_until="networkidle")
+        assert page.evaluate(
+            "window.aiddPresentation.surfaces['intervention-recovery'].presentation"
+        ) == selector
+        if blocked:
+            page.evaluate(
+                "state.activeStage = 'plan'; state.activeStageExplicit = true; fetchDashboard()"
+            )
+        else:
+            page.locator("#runtimeSelect").select_option("generic-cli")
+            page.wait_for_function("eval('selectedRuntimeReady()')", timeout=15_000)
+        page.evaluate("renderRequestChange()")
+        eligible = page.locator(
+            f'[data-intervention-eligible="{"false" if blocked else "true"}"]'
+        ).first
+        eligible.wait_for(state="visible")
+
+        if blocked:
+            assert page.locator("#submitInterventionButton").is_disabled()
+            page.evaluate("submitIntervention()")
+            page.wait_for_timeout(100)
+            assert not request_root.exists()
+        else:
+            page.locator("#operatorRequestText").fill(
+                "Use the same durable intervention service path."
+            )
+            page.locator("#submitInterventionButton").click()
+            deadline = time.monotonic() + 5
+            while time.monotonic() < deadline and not list(request_root.glob("request-*.md")):
+                time.sleep(0.05)
+            requests = list(request_root.glob("request-*.md"))
+            assert len(requests) == 1
+            assert "same durable intervention service path" in requests[0].read_text(
+                encoding="utf-8"
+            )
+            job_id = page.evaluate("eval('state.activeJobId')")
+            if job_id:
+                assert page.request.post(
+                    f"{harness.url}api/jobs/{job_id}/cancel"
+                ).status == 200
+        browser_page.diagnostics.assert_clean()
+
+
 @pytest.mark.parametrize("viewport", VIEWPORTS)
 def test_allowed_intervention_restores_draft_and_creates_one_request(
     tmp_path: Path,
