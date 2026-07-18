@@ -33,6 +33,36 @@ _OPERATOR_STATIC_ASSET_MANIFEST = (
         content_type="text/javascript; charset=utf-8",
     ),
     OperatorStaticAsset(
+        route="/operator-surface-parity.js",
+        filename="operator-surface-parity.js",
+        content_type="text/javascript; charset=utf-8",
+    ),
+    OperatorStaticAsset(
+        route="/operator-presentation.js",
+        filename="operator-presentation.js",
+        content_type="text/javascript; charset=utf-8",
+    ),
+    OperatorStaticAsset(
+        route="/operator-route-state.js",
+        filename="operator-route-state.js",
+        content_type="text/javascript; charset=utf-8",
+    ),
+    OperatorStaticAsset(
+        route="/operator-route-intents.js",
+        filename="operator-route-intents.js",
+        content_type="text/javascript; charset=utf-8",
+    ),
+    OperatorStaticAsset(
+        route="/operator-draft-store.js",
+        filename="operator-draft-store.js",
+        content_type="text/javascript; charset=utf-8",
+    ),
+    OperatorStaticAsset(
+        route="/operator-mutation-guard.js",
+        filename="operator-mutation-guard.js",
+        content_type="text/javascript; charset=utf-8",
+    ),
+    OperatorStaticAsset(
         route="/operator-api-state.js",
         filename="operator-api-state.js",
         content_type="text/javascript; charset=utf-8",
@@ -40,6 +70,21 @@ _OPERATOR_STATIC_ASSET_MANIFEST = (
     OperatorStaticAsset(
         route="/operator-shell-rendering.js",
         filename="operator-shell-rendering.js",
+        content_type="text/javascript; charset=utf-8",
+    ),
+    OperatorStaticAsset(
+        route="/operator-dashboard-actions.js",
+        filename="operator-dashboard-actions.js",
+        content_type="text/javascript; charset=utf-8",
+    ),
+    OperatorStaticAsset(
+        route="/operator-primitives.js",
+        filename="operator-primitives.js",
+        content_type="text/javascript; charset=utf-8",
+    ),
+    OperatorStaticAsset(
+        route="/operator-focus.js",
+        filename="operator-focus.js",
         content_type="text/javascript; charset=utf-8",
     ),
     OperatorStaticAsset(

@@ -48,6 +48,7 @@ from aidd.core.runtime_operator import (
     append_operator_request,
 )
 from aidd.core.runtime_readiness import (
+    RuntimeCapabilityProbeReport,
     RuntimeReadinessProbeReport,
     resolve_runtime_readiness,
 )
@@ -1191,6 +1192,8 @@ def test_operator_dashboard_next_action_marks_completed_flow(tmp_path: Path) -> 
     assert dashboard.terminal_handoff.approval_counts.approved == 1
     assert dashboard.terminal_handoff.questions_answered_count == 1
     assert dashboard.terminal_handoff.questions_total_count == 2
+    assert dashboard.terminal_handoff.recommended_outcome == "create-new-work-item"
+    assert "fresh and clean" in dashboard.terminal_handoff.recommendation_rationale
     assert {artifact.key for artifact in dashboard.terminal_handoff.final_artifacts} >= {
         "qa_report",
         "stage_result",
@@ -1280,6 +1283,10 @@ def test_operator_dashboard_next_action_surfaces_succeeded_not_ready_qa(
     assert dashboard.terminal_handoff is not None
     assert dashboard.terminal_handoff.status == "failed"
     assert dashboard.terminal_handoff.final_qa_status == "not-ready"
+    assert dashboard.terminal_handoff.recommended_outcome == "start-follow-up-flow"
+    assert "blockers, failure, or accepted risk" in (
+        dashboard.terminal_handoff.recommendation_rationale or ""
+    )
 
 
 def test_operator_dashboard_does_not_block_on_historical_validator_failure_after_success(
@@ -1421,6 +1428,7 @@ def test_operator_dashboard_terminal_handoff_reports_completed_with_warning(
     assert dashboard.terminal_handoff.status == "completed-with-warning"
     assert dashboard.terminal_handoff.final_qa_status == "ready-with-risks"
     assert dashboard.terminal_handoff.qa_stage_state == "succeeded"
+    assert dashboard.terminal_handoff.recommended_outcome == "start-follow-up-flow"
     assert [blocker.kind for blocker in dashboard.terminal_handoff.blockers] == [
         "qa-ready-with-risks"
     ]
@@ -1454,6 +1462,8 @@ def test_operator_dashboard_terminal_handoff_blocks_missing_required_evidence(
     assert dashboard.terminal_handoff is not None
     assert dashboard.terminal_handoff.status == "blocked"
     assert dashboard.terminal_handoff.final_qa_status == "evidence-incomplete"
+    assert dashboard.terminal_handoff.recommended_outcome is None
+    assert dashboard.terminal_handoff.recommendation_rationale is None
     missing_blocker = next(
         blocker
         for blocker in dashboard.terminal_handoff.blockers
@@ -2599,6 +2609,24 @@ def test_runtime_readiness_view_uses_config_and_passed_probe_reports(
                 execution_command_available=False,
                 provider_version="Python 3.12.0",
                 provider_command="/usr/bin/python",
+                authentication_status="verified",
+                authentication_detail="credential probe succeeded",
+                capabilities=RuntimeCapabilityProbeReport(
+                    supports_raw_log_stream=True,
+                    supports_structured_log_stream=False,
+                    supports_questions=False,
+                    supports_resume=False,
+                    supports_subagents=False,
+                    supports_permission_policy=False,
+                    supports_live_decisions=False,
+                    preferred_transport="subprocess",
+                ),
+            ),
+            "codex": RuntimeReadinessProbeReport(
+                provider_available=False,
+                execution_command_available=False,
+                authentication_status="failed",
+                authentication_detail="credential probe failed",
             )
         },
         command_sources={
@@ -2619,7 +2647,20 @@ def test_runtime_readiness_view_uses_config_and_passed_probe_reports(
     assert generic_cli.provider_version == "Python 3.12.0"
     assert generic_cli.provider_command == "/usr/bin/python"
     assert generic_cli.execution_command_available is False
+    assert generic_cli.binary.status == "detected"
+    assert generic_cli.binary.command == "/usr/bin/python"
+    assert generic_cli.execution_command.status == "unavailable"
+    assert generic_cli.execution_command.source == "config"
+    assert generic_cli.authentication.status == "verified"
+    assert generic_cli.authentication.detail == "credential probe succeeded"
+    assert generic_cli.capabilities.status == "known"
+    assert generic_cli.capabilities.preferred_transport == "subprocess"
     assert generic_cli.default_timeout_seconds == 42
     assert generic_cli.stage_timeout_seconds == {"plan": 90}
     assert runtimes["codex"].provider_available is False
+    assert runtimes["codex"].binary.status == "unavailable"
+    assert runtimes["codex"].authentication.status == "failed"
+    assert runtimes["codex"].capabilities.status == "unknown"
+    assert runtimes["claude-code"].binary.status == "unknown"
+    assert runtimes["claude-code"].authentication.status == "unverified"
     assert runtimes["codex"].command_source == "default"

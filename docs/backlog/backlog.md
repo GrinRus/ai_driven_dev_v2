@@ -7,24 +7,14 @@ slice, and local task.
 
 ## Next
 
-- `W36-E2-S2-T1` — Add rendered accessible-name, label, focus-order, contrast,
-  target-size, and reduced-motion assertions.
+- `W36-E5-S1-T4` — Move maintenance commands into a labelled overflow surface.
 
 ## Soon
 
-- `W36-E2-S2-T2` — Add rendered sticky-header, primary-action, clipping, overlap,
-  nested-scroll, and horizontal-overflow assertions.
+- `W36-E5-S1-T5` — Establish one Studio content scroll owner on desktop.
 
 ## Parking lot
 
-- `W36-E2-S3-T1` — Extract shared dashboard loading, context selection, and mutation
-  dispatch from legacy renderer ownership.
-- `W36-E3-S1-T1` — Add semantic typography, spacing, radius, elevation, control-size,
-  state, focus, and motion tokens.
-- `W36-E4-S1-T1` — Add the Project -> Work item -> Runtime -> Review/Launch onboarding
-  state machine.
-- `W36-E5-S1-T1` — Hide a zero-value Evidence Inspector and keep Filmstrip/log evidence
-  collapsed until requested.
 - `W36-E5-S2-T1` — Replace the measured `275px` mobile header with a compact
   context/status bar and maintenance overflow.
 - `W36-E5-S3-T1` — Implement the typed project-local Inbox projection and deterministic
@@ -39,18 +29,8 @@ slice, and local task.
   finalization inside Studio.
 - `W36-E5-S8-T1` — Implement the typed Filmstrip frame projection from durable attempts,
   task attempts, and finalization milestones.
-- `W36-E5-S0-T1` — Add one core-owned recommended outcome and rationale to the terminal
-  handoff read model.
 - `W36-E5-S10-T1` — Switch the default renderer to Studio only after all per-surface
   parity entries close.
-- `W36-E6-S1-T1` — Add a URL-state codec for Inbox / Studio / History, work item, run,
-  stage, attempt/task-attempt detail, and artifact selection.
-- `W36-E6-S2-T1` — Define the scoped browser-session draft key, retention, and cleanup
-  contract.
-- `W36-E6-S3-T1` — Replace terminal-on-error polling with cursor-preserving retry and
-  bounded backoff.
-- `W36-E6-S4-T1` — Add a keyed client mutation guard with pending lock, duplicate
-  suppression, conflict readback, and retryable failure state.
 - `W36-E7-S1-T1` — Add the Guided Setup project validation, create/resume, runtime
   review, first-launch, and resulting Inbox browser journey.
 
@@ -68,6 +48,288 @@ slice, and local task.
   queue-restoration policy in `docs/backlog/roadmap.md` (`W8-E3-S1`).
 
 ## Current reconciliation
+
+- `2026-07-17` `W36-E5-S1-T3` is complete: vertical surfaces share one
+  policy-free primary-action slot that renders only the supplied service action or an
+  explicit no-action explanation. `W36-E5-S1-T4` is promoted to `Next` and `T5` to `Soon`.
+
+- `2026-07-17` `W36-E4-S1-T8` is complete: project inspection now resolves runtime
+  readiness without reading context-owned launch history before a work item exists; active
+  contexts retain canonical launch outcomes. `W36-E5-S1-T3` is promoted to `Next` and
+  `W36-E5-S1-T4` to `Soon`.
+
+- `2026-07-17` `W36-E5-S1-T2` is complete: Studio recovery now has one Decision Bar
+  Recovery Summary with one decisive failure, one primary action, and one Evidence link;
+  duplicate hero/sidebar/screen summaries are removed. A separately reviewable onboarding
+  readiness regression is recorded as `W36-E4-S1-T8` and promoted to `Next`.
+
+- `2026-07-17` `W36-E5-S1-T1` is complete: one value-aware visibility policy hides
+  an empty Evidence Inspector and keeps Filmstrip/runtime-log evidence undisclosed until
+  the operator requests History or Logs. `W36-E5-S1-T2` is promoted to `Next` and
+  `W36-E5-S1-T3` to `Soon`.
+
+- `2026-07-17` `W36-E4-S1-T6` is complete: Guided Review & Launch and legacy
+  controls resolve through one task-aware workflow/stage dispatcher, keyed duplicate
+  suppression, and durable winner readback. Guided Setup parity `W36-E4-S1-T7` remains
+  planned until `W36-E7-S1-T1`; `W36-E5-S1-T1` is promoted to `Next` and `T2` to `Soon`.
+
+- `2026-07-17` `W36-E4-S1-T5` is complete: Guided Delivery is a browser-only
+  presentation preference with step-specific context; toggling it preserves project,
+  work item, run, stage, runtime, request payload, and durable result. `W36-E4-S1-T6`
+  is promoted to `Next` and its parity successor `W36-E4-S1-T7` to `Soon`.
+
+- `2026-07-17` `W36-E4-S1-T4` is complete: first-run setup no longer presents mode
+  cards whose selections share one service outcome; distinct run and stage launch controls
+  remain, while terminal follow-up, clone, eval, and archive stay outside Guided Setup.
+  `W36-E4-S1-T5` is promoted to `Next` and `W36-E4-S1-T6` to `Soon`.
+
+- `2026-07-17` `W36-E4-S1-T3` is complete: project-set editing, AIDD root, and config
+  details remain reachable inside a collapsed Advanced disclosure while the primary
+  Create/Resume decision stays visible. `W36-E4-S1-T4` is promoted to `Next` and
+  `W36-E4-S1-T5` to `Soon`.
+
+- `2026-07-17` `W36-E4-S1-T2` is complete: Create and Resume share one work-item
+  decision surface before runtime selection; Resume opens saved context without runtime
+  or launch, while Create retains the runtime gate before its mutation.
+  `W36-E4-S1-T3` is promoted to `Next` and `W36-E4-S1-T4` to `Soon`.
+
+- `2026-07-17` `W36-E4-S1-T1` is complete: Guided Setup now has a pure four-step
+  Project -> Work item -> Runtime -> Review/Launch reducer with deterministic create,
+  resume, Back, Continue, validation, and launch-readiness transitions.
+  `W36-E4-S1-T2` is promoted to `Next` and `W36-E4-S1-T3` to `Soon`.
+
+- `2026-07-17` `W36-E4-S2-T2` is complete: readiness now includes the latest canonical
+  attempt outcome per runtime with artifact-index timestamp and evidence path; legacy or
+  malformed attempts degrade explicitly without fabricated provenance. `W36-E4-S1-T1`
+  is promoted to `Next` and `W36-E4-S1-T2` to `Soon`; readiness rendering `S2-T3`
+  remains deferred until Guided Setup and the active Studio shell exist.
+
+- `2026-07-17` `W36-E4-S2-T1` is complete: binary, execution command,
+  authentication, and adapter capability evidence now have independent typed statuses;
+  legacy provider/command booleans remain additive compatibility fields and no overall
+  readiness is inferred. `W36-E4-S2-T2` is promoted to `Next`; no task is placed in
+  `Soon` because readiness rendering remains blocked on the Guided Setup/Studio shells.
+
+- `2026-07-17` `W36-E5-S0-T2` and slice `W36-E5-S0` are complete: the additive
+  terminal-handoff API preserves source identity and all allowed outcomes while exposing
+  the core recommendation; legacy or malformed payloads resolve to explicit
+  no-recommendation compatibility states. `W36-E4-S2-T1` is promoted to `Next` and
+  `W36-E4-S2-T2` to `Soon`.
+
+- `2026-07-17` `W36-E5-S0-T1` is complete: the core terminal handoff now recommends
+  independent work only for fresh clean QA, recommends a lineage-preserving follow-up
+  for failed/blocked/risk-bearing QA, and emits no recommendation for missing, stale, or
+  nonterminal evidence. `W36-E5-S0-T2` is promoted to `Next`.
+
+- `2026-07-17` `W36-E6-S4-T6`, slice `W36-E6-S4`, and Epic `W36-E6` are complete:
+  approval decisions share one request-scoped guard, reconcile CAS and terminal 409s
+  through the durable decision/audit read model, and never leave stale pending controls.
+  `W36-E5-S0-T1` is promoted to `Next` and `W36-E5-S0-T2` to `Soon`.
+
+- `2026-07-17` `W36-E6-S4-T5` is complete: approval cards capture a decision reason,
+  session-wide breadth is shown in an explicit confirmation preview, no
+  `allow_for_session` POST occurs before confirmation, and request controls remain
+  disabled while the decision is submitted. `W36-E6-S4-T6` is promoted to `Next`.
+
+- `2026-07-17` `W36-E6-S4-T4` is complete: clone/follow-up draft materialization,
+  preflight, and launch now use source/target-scoped mutation keys; repeated launch
+  input creates and polls one job, failures preserve the browser draft, and source-run
+  evidence remains unchanged. `W36-E6-S4-T5` is promoted to `Next` and
+  `W36-E6-S4-T6` to `Soon`.
+
+- `2026-07-17` `W36-E6-S4-T3` is complete: answer and intervention submissions now
+  share bounded mutation keys, disable duplicate controls, retain drafts after failed
+  writes, clear them only after durable success or conflict reconciliation, and attach
+  intervention polling once. `W36-E6-S4-T4` is promoted to `Next` and
+  `W36-E6-S4-T5` to `Soon`.
+
+- `2026-07-17` `W36-E6-S4-T2` is complete: workflow, stage, task, finalization,
+  stale-downstream, and remediation launches now share keyed in-flight work, disable
+  their duplicate controls immediately, start polling once, and resolve 409 by rendering
+  the durable dashboard winner. `W36-E6-S4-T3` is promoted to `Next` and
+  `W36-E6-S4-T4` to `Soon`.
+
+- `2026-07-17` `W36-E6-S4-T1` is complete: the packaged guard shares one in-flight
+  Promise per bounded key, permits different keys concurrently, resolves 409 through
+  durable winner readback, retains retryable failure state, and bounds terminal state
+  retention. `W36-E6-S4-T2` is promoted to `Next` and `W36-E6-S4-T3` to `Soon`.
+
+- `2026-07-17` `W36-E6-S3-T3` and slice `W36-E6-S3` are complete: recovery now
+  re-reads server stage/run while retaining cursor/chunks, and terminal or evicted jobs
+  release volatile live buffers only after dashboard reconciliation so saved logs and
+  artifacts remain authoritative. `W36-E6-S4-T1` is promoted to `Next` and
+  `W36-E6-S4-T2` to `Soon`.
+
+- `2026-07-17` `W36-E6-S3-T2` is complete: live observation names reconnecting,
+  recovered, offline, and expired-job states, preserves the nonterminal runtime claim,
+  and offers bounded Reconnect or durable-state refresh actions. `W36-E6-S3-T3` is
+  promoted to `Next` and `W36-E6-S4-T1` to `Soon`.
+
+- `2026-07-17` `W36-E6-S3-T1` is complete: live polling now uses one generation-scoped
+  timeout, preserves the accepted cursor, retries at 0.5/1/2/4 seconds, caps at an
+  explicit offline state, and cannot append late chunks after cancellation or terminal
+  invalidation. `W36-E6-S3-T2` is promoted to `Next` and `W36-E6-S3-T3` to `Soon`.
+
+- `2026-07-17` `W36-E6-S2-T3` and slice `W36-E6-S2` are complete: follow-up and clone
+  definitions merge the exact source-run session draft after Back/reload, preserve it
+  through preflight and launch failure, and clear it only after authoritative launch-job
+  readback. `W36-E6-S3-T1` is promoted to `Next` and `W36-E6-S3-T2` to `Soon`.
+
+- `2026-07-17` `W36-E6-S2-T2` is complete: question and intervention edits persist per
+  project/work-item/run/stage/source, restore after rerender and reload, raise a dirty
+  leave warning, survive failed submission, and clear only after authoritative durable
+  readback. `W36-E6-S2-T3` is promoted to `Next` and `W36-E6-S3-T1` to `Soon`.
+
+- `2026-07-17` `W36-E6-S2-T4` is complete: the shared packaged session store validates
+  all six key dimensions, purges malformed/expired records, enforces the 32-entry and
+  byte budgets, rejects secret-shaped values, and clears only an exact owner key.
+  `W36-E6-S2-T2` is promoted to `Next` and `W36-E6-S2-T3` to `Soon`.
+
+- `2026-07-17` `W36-E6-S2-T1` is complete: the architecture fixes the six-dimensional
+  session key, schema-v1 value, 24-hour expiry, bounded eviction, dirty warning, and exact
+  owner-only cleanup after durable readback; browser drafts never enter `.aidd/`.
+  `W36-E6-S2-T4` is promoted to `Next` and `W36-E6-S2-T2` to `Soon`.
+
+- `2026-07-17` `W36-E6-S1-T3` and slice `W36-E6-S1` are complete: Inbox, historical
+  run, parent, child, and artifact inspection actions resolve through one fail-closed
+  intent registry, and archived runs retain both read-only inspection paths.
+  `W36-E6-S2-T1` is promoted to `Next` and `W36-E6-S2-T4` to `Soon`.
+
+- `2026-07-17` `W36-E6-S1-T2` is complete: explicit transitions push canonical route
+  entries, derived renders replace them, and `popstate` plus reload restore the selected
+  Studio view, stage, run, and artifact through one read-only path. The real Chromium
+  Back/Forward/reload sequence is green. `W36-E6-S1-T3` is promoted to `Next` and
+  `W36-E6-S2-T1` to `Soon`.
+
+- `2026-07-17` `W36-E6-S1-T1` is complete: a pure packaged codec round-trips Inbox,
+  Studio, and History context in stable query order, dual-reads the bounded legacy
+  aliases, and drops invalid, stale, path-like, or ambiguous detail with stable warnings.
+  `W36-E6-S1-T2` is promoted to `Next` and `W36-E6-S1-T3` to `Soon`.
+
+- `2026-07-17` `W36-E3-S4-T3`, slice `W36-E3-S4`, and Epic `W36-E3` are complete:
+  microcopy has a `12px` readable floor and stronger secondary contrast, while timers,
+  attempts, counts, and status metrics use tabular numerals for stable scanning. The
+  rendered contrast gate is green. `W36-E6-S1-T1` is promoted to `Next` and
+  `W36-E6-S1-T2` to `Soon`.
+
+- `2026-07-17` `W36-E3-S4-T2` is complete: all eight stage controls derive their
+  accessible name from the visible stage label plus explicit status, and dynamic
+  onboarding, remediation, intervention, comparison, source-selection, and follow-up
+  fields now have stable ids, names, and associated labels. `W36-E3-S4-T3` is promoted
+  to `Next`; `Soon` remains empty until the accessibility slice closes.
+
+- `2026-07-17` `W36-E3-S4-T1` is complete: a first-focus skip link resolves the
+  currently rendered primary decision before maintenance controls, detail navigation
+  enters the cockpit deterministically, and Escape returns to the connected trigger or
+  selected mode fallback. `W36-E3-S4-T2` is promoted to `Next` and `W36-E3-S4-T3` to
+  `Soon`.
+
+- `2026-07-17` `W36-E3-S3-T6` and slice `W36-E3-S3` are complete: question,
+  approval, runtime, validation, intervention, and quality-gate Recovery Summaries keep
+  exactly one decisive failure, one evidence path, and one primary recovery slot, with a
+  single-column touch-safe mobile layout. `W36-E3-S4-T1` is promoted to `Next` and
+  `W36-E3-S4-T2` to `Soon`.
+
+- `2026-07-17` `W36-E3-S3-T5` is complete: current, complete, invalid, optional, and
+  disabled Guided Steps retain the same explanation, labelled input group, one primary
+  action, Back action, and Advanced disclosure, with mobile control geometry verified.
+  `W36-E3-S3-T6` is promoted to `Next`; `Soon` remains empty until the surface slice
+  closes.
+
+- `2026-07-17` `W36-E3-S3-T4` is complete: the shared Inbox Item renders blocking,
+  running, ready, terminal, and malformed states while preserving the exact
+  service-owned route, action, and eligibility; visible status text and mobile action
+  geometry do not rely on color alone. `W36-E3-S3-T5` is promoted to `Next` and
+  `W36-E3-S3-T6` to `Soon`.
+
+- `2026-07-17` `W36-E3-S3-T3` is complete: Document Canvas is the single framed
+  primary surface, Evidence Inspector is conditional and visually supporting, and
+  History separates its primary filmstrip from supporting events. Desktop/mobile
+  geometry proves the hierarchy without overflow or empty peer frames. `W36-E3-S3-T4`
+  is promoted to `Next` and `W36-E3-S3-T5` to `Soon`.
+
+- `2026-07-17` `W36-E3-S3-T2` is complete: empty, loading, error, reconnecting, and
+  unavailable states now share a title/consequence/recovery anatomy with truthful
+  `role`, live-region, and busy semantics; Guided Setup readiness uses the primitive.
+  `W36-E3-S3-T3` is promoted to `Next` and `W36-E3-S3-T4` to `Soon`.
+
+- `2026-07-17` `W36-E3-S3-T1` is complete: a packaged Decision Bar now owns one
+  primary slot and a visible, non-color Status Marker for action, pending, blocked,
+  complete, stale, and no-action states without deriving journey policy. Existing
+  Review/QA summaries render through the primitive. `W36-E3-S3-T2` is promoted to
+  `Next` and `W36-E3-S3-T3` to `Soon`.
+
+- `2026-07-17` `W36-E3-S2-T3` and slice `W36-E3-S2` are complete: filters, document
+  modes, radio-like setup/runtime cards, evidence selections, and current work-item rows
+  now expose the same selected state visually and through `aria-pressed`, `aria-checked`,
+  or `aria-current`; mobile rows retain the shared touch density. `W36-E3-S3-T1` is
+  promoted to `Next` and `W36-E3-S3-T2` to `Soon`.
+
+- `2026-07-17` `W36-E3-S2-T2` is complete: shared native-control states now cover
+  pointer hover/active, keyboard focus, disabled, invalid, pending/loading, and selected
+  semantics while retaining the mobile touch target. `W36-E3-S2-T3` is promoted to
+  `Next`; `Soon` is empty until the control slice closes.
+
+- `2026-07-17` `W36-E3-S2-T1` is complete: button, text input, select, textarea, and
+  checkbox anatomy now share typography, border, radius, focus, sizing, and accent roles;
+  journey-form computed styles prove the common contract. `W36-E3-S2-T2` is promoted
+  to `Next` and `W36-E3-S2-T3` to `Soon`.
+
+- `2026-07-17` `W36-E3-S1-T3` and slice `W36-E3-S1` are complete: desktop and mobile
+  controls now resolve a shared density token to `32px` and `44px` respectively, with
+  rendered Chromium coverage proving the token-driven switch. `W36-E3-S2-T1` is
+  promoted to `Next` and its direct successor `W36-E3-S2-T2` to `Soon`.
+
+- `2026-07-17` `W36-E3-S1-T2` is complete: repeated status and surface colors now
+  resolve through semantic roles, raw duplicate palettes outside the token layer are
+  rejected, and rendered success/warning/danger/info fixtures meet accepted text contrast.
+  `W36-E3-S1-T3` is promoted to `Next`; `Soon` remains empty until density modes close
+  the token slice.
+
+- `2026-07-17` `W36-E3-S1-T1` is complete: `operator-tokens.css` now owns semantic
+  typography, spacing, radius, elevation, control-size, state, focus, and motion roles,
+  while an inventory test prevents the existing raw-value surface outside the token layer
+  from growing. `W36-E3-S1-T2` is promoted to `Next` and `W36-E3-S1-T3` to `Soon`.
+
+- `2026-07-17` `W36-E2-S3-T4`, slice `W36-E2-S3`, and Epic `W36-E2` are complete:
+  one pure resolver now applies the selector/rollout truth table per surface, exposes
+  mixed Studio/legacy resolution without changing shared service requests, and fails
+  unknown surfaces explicitly. `W36-E3-S1-T1` is promoted to `Next` and
+  `W36-E3-S1-T2` to `Soon`.
+
+- `2026-07-17` `W36-E2-S3-T3` is complete: a validated packaged manifest now assigns
+  each of the twelve journey-owned surfaces exactly one slice owner, rollout state,
+  rollback renderer, required fixture, browser journey, and removal gate; all entries
+  begin as `legacy_only`. `W36-E2-S3-T4` is promoted to `Next`; `Soon` remains empty
+  until the migration resolver is accepted.
+
+- `2026-07-17` `W36-E2-S3-T2` is complete: the packaged browser now accepts only
+  `ui=studio|legacy`, treats missing or invalid values as legacy, and records an explicit
+  legacy fallback for Studio while every surface is still legacy-only; service routes and
+  request payloads are unchanged. `W36-E2-S3-T3` is promoted to `Next` and
+  `W36-E2-S3-T4` to `Soon`.
+
+- `2026-07-17` `W36-E2-S3-T1` is complete: one packaged dashboard/action seam now owns
+  non-next-flow loading, server-derived context reconciliation, and workflow/stage/task/
+  remediation dispatch, while legacy rendering and next-flow behavior retain equivalent
+  requests and durable readback. `W36-E2-S3-T2` is promoted to `Next` and
+  `W36-E2-S3-T3` to `Soon`.
+
+- `2026-07-17` `W36-E2-S2-T3` and slice `W36-E2-S2` are complete: schema-v1 browser
+  evidence now atomically records bounded viewport metadata, screenshots, DOM measures,
+  console/network summaries, accessibility/geometry results, and cleanup status outside
+  the repository worktree. `W36-E2-S3-T1` is promoted to `Next` and `W36-E2-S3-T2` to
+  `Soon`.
+
+- `2026-07-17` `W36-E2-S2-T2` is complete: browser geometry assertions now diagnose
+  sticky-header budget, first-viewport primary action, clipping, overlap, nested scroll,
+  and horizontal overflow at the owning viewport and selector. `W36-E2-S2-T3` is promoted
+  to `Next` and `W36-E2-S3-T1` to `Soon`.
+
+- `2026-07-17` `W36-E2-S2-T1` is complete: the browser assertion layer now reports
+  accessible-name, label, focus-order, contrast, target-size, and reduced-motion failures
+  with the owning selector and measured value. `W36-E2-S2-T2` is promoted to `Next` and
+  `W36-E2-S2-T3` to `Soon`.
 
 - `2026-07-17` `W36-E2-S1-T3` and slice `W36-E2-S1` are complete: nine immutable,
   provider-free descriptors now seed canonical setup, active, recovery, quality,

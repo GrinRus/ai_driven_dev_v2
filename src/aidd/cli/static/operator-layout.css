@@ -24,7 +24,7 @@
   background: var(--teal);
   border: 1px solid #2fc4bd;
   border-radius: 5px;
-  color: #ffffff;
+  color: var(--color-text-inverse);
   display: flex;
   font-weight: 800;
   height: 28px;
@@ -79,7 +79,7 @@
   border-radius: 999px;
   color: var(--muted);
   display: inline-flex;
-  font-size: 11px;
+  font-size: var(--type-caption-size);
   font-weight: 700;
   line-height: 1;
   padding: 4px 7px;
@@ -91,7 +91,7 @@
   border-radius: 999px;
   color: var(--muted);
   display: inline-flex;
-  font-size: 11px;
+  font-size: var(--type-caption-size);
   font-weight: 700;
   line-height: 1;
   min-height: 0;
@@ -105,9 +105,9 @@
 .status-chip.good,
 .status-badge.succeeded,
 .small-badge.good {
-  background: #edf8f1;
-  border-color: #a9d6b7;
-  color: var(--green);
+  background: var(--color-state-success-bg);
+  border-color: var(--color-state-success-border);
+  color: var(--color-state-success-text);
 }
 .status-badge.blocked,
 .status-badge.repair-needed,
@@ -117,30 +117,30 @@
 .status-badge.retried,
 .badge-button.retried,
 .small-badge.warn {
-  background: #fff8e7;
-  border-color: #e8ce8f;
-  color: var(--amber);
+  background: var(--color-state-warning-bg-soft);
+  border-color: var(--color-state-warning-border-soft);
+  color: var(--color-state-warning-text);
 }
 .status-badge.failed,
 .small-badge.bad {
-  background: #fff1f0;
-  border-color: #ebb6b1;
-  color: var(--red);
+  background: var(--color-state-danger-bg-strong);
+  border-color: var(--color-state-danger-border);
+  color: var(--color-state-danger-text);
 }
 .status-badge.cancelled,
 .small-badge.cancelled {
-  background: #fff1f0;
-  border-color: #ebb6b1;
-  color: var(--red);
+  background: var(--color-state-danger-bg-strong);
+  border-color: var(--color-state-danger-border);
+  color: var(--color-state-danger-text);
 }
 .status-badge.running,
 .small-badge.running,
 .status-badge.ready,
 .status-badge.cancelling,
 .small-badge.cancelling {
-  background: #ebf6ff;
+  background: var(--color-state-info-bg);
   border-color: #b5d2ee;
-  color: var(--blue);
+  color: var(--color-state-info-text);
 }
 .top-status {
   align-items: center;
@@ -166,7 +166,7 @@
 }
 .runtime-picker span {
   color: var(--topbar-muted);
-  font-size: 11px;
+  font-size: var(--type-caption-size);
   font-weight: 750;
   text-transform: uppercase;
 }
@@ -254,7 +254,7 @@ body.setup-active .cockpit {
   grid-row: 1;
 }
 .stage-rail {
-  background: #f6f8f5;
+  background: var(--color-bg-disabled);
   border-right: 1px solid var(--line);
   display: flex;
   flex-direction: column;
@@ -266,9 +266,9 @@ body.setup-active .cockpit {
 .rail-header,
 .dock-header {
   align-items: center;
-  color: #46524a;
+  color: var(--color-text-tertiary);
   display: flex;
-  font-size: 11px;
+  font-size: var(--type-caption-size);
   font-weight: 800;
   justify-content: space-between;
   letter-spacing: 0.02em;
@@ -298,7 +298,7 @@ body.setup-active .cockpit {
 }
 .stage-card.active {
   background: #e7f3f1;
-  border-color: #a6ccc7;
+  border-color: var(--color-border-accent);
 }
 .stage-card.retried {
   box-shadow: inset 3px 0 0 rgba(154, 106, 18, 0.28);
@@ -321,7 +321,7 @@ body.setup-active .cockpit {
 .stage-card.active .stage-index {
   background: var(--teal);
   border-color: var(--teal);
-  color: #ffffff;
+  color: var(--color-text-inverse);
 }
 .stage-copy {
   display: grid;
@@ -339,7 +339,7 @@ body.setup-active .cockpit {
 .stage-subtitle {
   color: var(--muted);
   display: block;
-  font-size: 11px;
+  font-size: var(--type-caption-size);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -356,11 +356,11 @@ body.setup-active .cockpit {
   height: 10px;
   width: 10px;
 }
-.marker-dot.succeeded { background: var(--green); border-color: var(--green); }
+.marker-dot.succeeded { background: var(--green); border-color: var(--color-state-success-text); }
 .marker-dot.blocked,
-.marker-dot.repair-needed { background: var(--amber); border-color: var(--amber); }
-.marker-dot.failed { background: var(--red); border-color: var(--red); }
-.marker-dot.running { background: var(--blue); border-color: var(--blue); }
+.marker-dot.repair-needed { background: var(--amber); border-color: var(--color-state-warning-text); }
+.marker-dot.failed { background: var(--red); border-color: var(--color-state-danger-text); }
+.marker-dot.running { background: var(--blue); border-color: var(--color-state-info-text); }
 .quick-links {
   border-top: 1px solid var(--line);
   display: grid;
@@ -386,7 +386,7 @@ button.quick-link {
 }
 .eyebrow {
   color: var(--muted);
-  font-size: 11px;
+  font-size: var(--type-caption-size);
   font-weight: 800;
   letter-spacing: 0.04em;
   margin: 0 0 4px;
@@ -414,8 +414,12 @@ h1, h2, h3, p {
   padding-bottom: 8px;
 }
 .tabs button.active,
+.tabs button[aria-selected="true"],
 .log-filter button.active,
-.viewer-modes button.active {
+.log-filter button[aria-pressed="true"],
+.viewer-modes button.active,
+.viewer-modes button[aria-pressed="true"] {
+  background: var(--color-bg-selected);
   border-color: var(--teal);
   color: var(--teal-dark);
 }

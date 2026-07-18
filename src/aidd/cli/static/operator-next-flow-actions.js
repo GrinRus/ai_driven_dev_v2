@@ -20,12 +20,6 @@ function setupPreviousRunContext() {
   };
 }
 
-function setupModeView(context = null) {
-  const mode = SETUP_MODES.find((candidate) => candidate.id === state.setupMode) || SETUP_MODES[0];
-  if (context && mode.requiresPreviousRun && !context.available) return SETUP_MODES[0];
-  return mode;
-}
-
 function terminalHandoffNeedsRecovery(handoff) {
   return Boolean(handoff && (handoff.status !== "completed" || (handoff.blockers || []).length));
 }
@@ -45,6 +39,20 @@ function nextFlowDefaultWorkItem(suffix) {
 
 function nextFlowRuntimeId() {
   return state.selectedRuntime || state.dashboard?.run?.runtime_id || "";
+}
+
+function nextFlowMutationKey(kind, draft = null) {
+  return operatorMutationKey(
+    `next-flow-${kind}`,
+    draft?.source_work_item || nextFlowSourceWorkItem() || "no-work-item",
+    draft?.source_run_id || nextFlowSourceRunId() || "no-run",
+    draft?.new_work_item || nextFlowDefaultWorkItem("PENDING"),
+    state.nextFlowWizard.action || "handoff"
+  );
+}
+
+function nextFlowMutationState(selectors) {
+  return (mutation) => setMutationControlsPending(selectors, mutation.status === "pending");
 }
 
 const TERMINAL_EVIDENCE_REQUIREMENTS = [
@@ -186,6 +194,52 @@ function resetLaunchReadiness(wizard = state.nextFlowWizard) {
   wizard.launchReadinessError = "";
 }
 
+function nextFlowDraftForm(action = state.nextFlowWizard.action) {
+  return action === "clone-flow" ? "clone" : "follow-up";
+}
+
+function nextFlowBrowserDraftIdentity(action = state.nextFlowWizard.action) {
+  return operatorDraftIdentity(nextFlowDraftForm(action), nextFlowSourceRunId());
+}
+
+function editableNextFlowDraftValue(draft) {
+  if (!draft) return null;
+  return {
+    new_work_item: draft.new_work_item || "",
+    title: draft.title || "",
+    first_stage_input_preview: draft.first_stage_input_preview || "",
+    acceptance_criteria: draft.acceptance_criteria || [],
+    acceptance_criteria_all: draft.acceptance_criteria_all || null,
+    required_evidence: draft.required_evidence || [],
+    required_evidence_all: draft.required_evidence_all || null,
+    inherited_context_lines: draft.inherited_context_lines || null,
+    selected_source_ids: [...(state.nextFlowWizard.selectedSourceIds || [])]
+  };
+}
+
+function mergeNextFlowBrowserDraft(serverDraft, action = state.nextFlowWizard.action) {
+  const restored = readOperatorDraft(nextFlowBrowserDraftIdentity(action))?.value;
+  if (!restored) return serverDraft;
+  state.nextFlowWizard.selectedSourceIds = restored.selected_source_ids
+    || state.nextFlowWizard.selectedSourceIds;
+  return {
+    ...serverDraft,
+    ...restored,
+    source_work_item: serverDraft.source_work_item,
+    source_run_id: serverDraft.source_run_id,
+    inherited_context: serverDraft.inherited_context,
+    created: serverDraft.created
+  };
+}
+
+function persistNextFlowBrowserDraft() {
+  if (!["start-follow-up-flow", "clone-flow"].includes(state.nextFlowWizard.action)) return;
+  const draft = readFollowUpDraftForm() || state.nextFlowWizard.followUpDraft;
+  const value = editableNextFlowDraftValue(draft);
+  if (!value) return;
+  writeOperatorDraft(nextFlowBrowserDraftIdentity(), value);
+}
+
 async function openNextFlowWizard(action) {
   const sourceRunId = nextFlowSourceRunId();
   const canReuseSourceFindings = (
@@ -325,13 +379,25 @@ async function openCloneFlowDraft() {
   activateTab("overview");
   await renderNextFlowWizardStep();
   try {
-    const payload = await postJson("/api/next-flow/clone-draft/create", {
+    const draftRequest = {
       source_work_item: nextFlowSourceWorkItem(),
       source_run_id: nextFlowSourceRunId(),
-      new_work_item: nextFlowDefaultWorkItem("CLONE"),
-      title: `Clone ${nextFlowSourceWorkItem()} from ${nextFlowSourceRunId()}`
+      new_work_item: nextFlowDefaultWorkItem("CLONE")
+    };
+    const guarded = await runGuardedMutation({
+      key: nextFlowMutationKey("clone-draft", draftRequest),
+      execute: () => postJson("/api/next-flow/clone-draft/create", {
+        ...draftRequest,
+        title: `Clone ${nextFlowSourceWorkItem()} from ${nextFlowSourceRunId()}`
+      }),
+      readWinner: async () => null,
+      onState: nextFlowMutationState(['[data-next-flow-action="clone-flow"]'])
     });
-    wizard.followUpDraft = cloneDraftFromPayload(payload);
+    if (guarded.status === "conflict") {
+      throw new Error(`A clone draft or work item already exists for ${draftRequest.new_work_item}.`);
+    }
+    const payload = guarded.result;
+    wizard.followUpDraft = mergeNextFlowBrowserDraft(cloneDraftFromPayload(payload), "clone-flow");
     wizard.createdDraft = payload.created;
     toast("Clone draft created for launch review.");
     await loadLaunchConfirmation();
@@ -351,6 +417,7 @@ async function loadLaunchConfirmation() {
     await renderNextFlowWizardStep();
     return;
   }
+  persistNextFlowBrowserDraft();
   const definitionErrors = followUpDraftValidationErrors(draft);
   const definitionError = definitionErrors[0] || "";
   if (definitionError) {
@@ -375,12 +442,19 @@ async function loadLaunchConfirmation() {
       runtime: state.selectedRuntime || state.dashboard?.run?.runtime_id || "",
       baseline_id: state.dashboard?.run?.lineage?.baseline_id || draft.source_run_id
     };
-    const response = await fetch("/api/next-flow/preflight", {
-      method: "POST",
-      headers: {"Content-Type": "application/json"},
-      body: JSON.stringify(payload)
+    const guarded = await runGuardedMutation({
+      key: nextFlowMutationKey("preflight", draft),
+      execute: async () => {
+        const response = await fetch("/api/next-flow/preflight", {
+          method: "POST",
+          headers: {"Content-Type": "application/json"},
+          body: JSON.stringify(payload)
+        });
+        return {response, result: await response.json()};
+      },
+      onState: nextFlowMutationState(["[data-next-flow-confirm-preview]"])
     });
-    const result = await response.json();
+    const {response, result} = guarded.result;
     if (response.ok) {
       wizard.preflight = result.preflight;
     } else if (result.status === "blocked") {
@@ -511,17 +585,26 @@ function invalidateFollowUpDraftPreview() {
 
 async function createFollowUpDraftForLaunch(draft) {
   if (state.nextFlowWizard.createdDraft) return state.nextFlowWizard.createdDraft;
-  const payload = await postJson("/api/next-flow/follow-up-draft/create", {
-    source_work_item: draft.source_work_item,
-    source_run_id: draft.source_run_id,
-    selected_source_ids: state.nextFlowWizard.selectedSourceIds,
-    new_work_item: draft.new_work_item,
-    title: draft.title,
-    first_stage_input: draft.first_stage_input_preview,
-    acceptance_criteria: draft.acceptance_criteria || [],
-    required_evidence: draft.required_evidence || [],
-    inherited_context: draft.inherited_context_lines || inheritedContextLinesFromItems(draft.inherited_context)
+  const guarded = await runGuardedMutation({
+    key: nextFlowMutationKey("follow-up-draft", draft),
+    execute: () => postJson("/api/next-flow/follow-up-draft/create", {
+      source_work_item: draft.source_work_item,
+      source_run_id: draft.source_run_id,
+      selected_source_ids: state.nextFlowWizard.selectedSourceIds,
+      new_work_item: draft.new_work_item,
+      title: draft.title,
+      first_stage_input: draft.first_stage_input_preview,
+      acceptance_criteria: draft.acceptance_criteria || [],
+      required_evidence: draft.required_evidence || [],
+      inherited_context: draft.inherited_context_lines || inheritedContextLinesFromItems(draft.inherited_context)
+    }),
+    readWinner: async () => null,
+    onState: nextFlowMutationState(["[data-launch-flow-now]"])
   });
+  if (guarded.status === "conflict") {
+    throw new Error(`A follow-up draft or work item already exists for ${draft.new_work_item}.`);
+  }
+  const payload = guarded.result;
   state.nextFlowWizard.createdDraft = payload.created;
   return payload.created;
 }
@@ -565,6 +648,7 @@ async function launchNextFlowNow() {
     toast("No next-flow draft is ready to launch.");
     return;
   }
+  persistNextFlowBrowserDraft();
   wizard.launchError = "";
   resetLaunchReadiness(wizard);
   if (!(await refreshRuntimeReadinessForLaunch())) return;
@@ -574,20 +658,36 @@ async function launchNextFlowNow() {
     if (wizard.action === "start-follow-up-flow") {
       await createFollowUpDraftForLaunch(draft);
     }
-    const job = await postJson("/api/next-flow/launch", {
-      source_work_item: draft.source_work_item,
-      source_run_id: draft.source_run_id,
-      new_work_item: draft.new_work_item,
-      runtime: nextFlowRuntimeId(),
-      baseline_id: state.nextFlowWizard.preflight?.resolved_baseline_id || draft.source_run_id,
-      relationship: wizard.action === "clone-flow" ? "clone" : "follow-up",
-      from_stage: "idea",
-      to_stage: "qa",
-      log_follow: true
+    const guarded = await runGuardedMutation({
+      key: nextFlowMutationKey("launch", draft),
+      execute: async () => {
+        const job = await postJson("/api/next-flow/launch", {
+          source_work_item: draft.source_work_item,
+          source_run_id: draft.source_run_id,
+          new_work_item: draft.new_work_item,
+          runtime: nextFlowRuntimeId(),
+          baseline_id: state.nextFlowWizard.preflight?.resolved_baseline_id || draft.source_run_id,
+          relationship: wizard.action === "clone-flow" ? "clone" : "follow-up",
+          from_stage: "idea",
+          to_stage: "qa",
+          log_follow: true
+        });
+        const readback = await api(`/api/jobs/${encodeURIComponent(job.job_id)}`);
+        if (readback.job_id !== job.job_id) {
+          throw new Error("Next-flow job readback did not confirm the durable launch");
+        }
+        await startJobPolling(job);
+        return job;
+      },
+      readWinner: async () => null,
+      onState: nextFlowMutationState(["[data-launch-flow-now]"])
     });
+    if (guarded.status === "conflict") {
+      throw new Error("Another next-flow launch already won; refresh durable state before retrying.");
+    }
+    clearOperatorDraft(nextFlowBrowserDraftIdentity());
     wizard.active = false;
     toast(`Launching ${draft.new_work_item}.`);
-    await startJobPolling(job);
   } catch (error) {
     wizard.launchError = error.message;
     toast(error.message);
@@ -609,7 +709,7 @@ async function loadFollowUpDraft() {
       source_run_id: state.activeRunId,
       selected_source_ids: wizard.selectedSourceIds
     });
-    wizard.followUpDraft = payload.draft;
+    wizard.followUpDraft = mergeNextFlowBrowserDraft(payload.draft, "start-follow-up-flow");
   } catch (error) {
     wizard.followUpDraftError = error.message;
   } finally {
@@ -725,143 +825,4 @@ function globalNextActionStripProvidesPrimary() {
   if (state.activeTab === "recovery") return false;
   if (workDetailOwnsPrimarySurface()) return false;
   return !document.body.classList.contains("evidence-log-mode");
-}
-
-async function startWorkflow() {
-  if (state.onboarding?.setupRequired || !state.dashboard?.work_item) {
-    toast("Create or resume a work item before starting the workflow.");
-    return;
-  }
-  if (!ensureRunnableRuntime()) return;
-  const payload = {runtime: state.selectedRuntime, log_follow: true};
-  if (state.activeRunId) payload.run_id = state.activeRunId;
-  const job = await postJson("/api/workflow/run", payload);
-  await startJobPolling(job);
-}
-
-async function startStage(stage = state.activeStage) {
-  if (!ensureRunnableRuntime()) return;
-  const payload = {stage, runtime: state.selectedRuntime, log_follow: true};
-  if (state.activeRunId) payload.run_id = state.activeRunId;
-  const job = await postJson("/api/stage/run", payload);
-  await startJobPolling(job);
-}
-
-async function startImplementationTask(taskId) {
-  if (!ensureRunnableRuntime()) return;
-  if (!state.activeRunId) {
-    toast("No run selected.");
-    return;
-  }
-  const job = await postJson("/api/tasks/run", {
-    task_id: taskId,
-    run_id: state.activeRunId,
-    runtime: state.selectedRuntime
-  });
-  await startJobPolling(job);
-}
-
-async function startTaskFinalization() {
-  if (!ensureRunnableRuntime()) return;
-  if (!state.activeRunId) {
-    toast("No run selected.");
-    return;
-  }
-  const job = await postJson("/api/tasks/finalize", {
-    run_id: state.activeRunId,
-    runtime: state.selectedRuntime
-  });
-  await startJobPolling(job);
-}
-
-async function rerunStaleDownstream() {
-  if (!ensureRunnableRuntime()) return;
-  if (!state.activeRunId) {
-    toast("No run selected.");
-    return;
-  }
-  const job = await postJson("/api/remediation/rerun-downstream", {
-    runtime: state.selectedRuntime,
-    run_id: state.activeRunId,
-    log_follow: true
-  });
-  await startJobPolling(job);
-}
-
-async function handleNextAction() {
-  const action = state.dashboard?.next_action || {action: "choose-runtime"};
-  if (activeJobBlocksNextAction(action)) {
-    activateTab("logs");
-    await renderCockpit();
-    toast("Current job is still running. Inspect logs before starting another action.");
-    return;
-  }
-  if (action.action === "choose-runtime") {
-    if (state.selectedRuntime) {
-      await startWorkflow();
-    } else {
-      document.getElementById("runtimeSelect").focus();
-      toast("Select runtime first.");
-    }
-    return;
-  }
-  if (action.action === "run-workflow") {
-    await startWorkflow();
-    return;
-  }
-  if (action.action === "run-stage" || action.action === "resume-stage") {
-    if (action.stage && action.stage !== state.activeStage) {
-      state.activeStage = action.stage;
-      state.activeStageExplicit = true;
-      state.activeArtifactKey = "";
-      await fetchDashboard();
-      await renderAll();
-    }
-    await startStage(action.stage || state.activeStage);
-    return;
-  }
-  if (action.action === "rerun-stale-downstream") {
-    await rerunStaleDownstream();
-    return;
-  }
-  if (action.action === "answer-questions") {
-    if (action.stage && action.stage !== state.activeStage) {
-      state.activeStage = action.stage;
-      state.activeStageExplicit = true;
-      state.activeArtifactKey = "";
-      await fetchDashboard();
-      await renderAll();
-    }
-    activateTab("questions");
-    await renderCockpit();
-    return;
-  }
-  if (action.action === "inspect-validation" || action.action === "review-intervention") {
-    if (action.stage && action.stage !== state.activeStage) {
-      state.activeStage = action.stage;
-      state.activeStageExplicit = true;
-      state.activeArtifactKey = "";
-      await fetchDashboard();
-      await renderAll();
-    }
-    activateTab("validation");
-    await renderCockpit();
-    return;
-  }
-  if (action.action === "review-findings" || action.action === "qa-verdict") {
-    if (action.stage && action.stage !== state.activeStage) {
-      state.activeStage = action.stage;
-      state.activeStageExplicit = true;
-      state.activeArtifactKey = "";
-      await fetchDashboard();
-      await renderAll();
-    }
-    activateTab(action.action);
-    await renderCockpit();
-    return;
-  }
-  if (action.action === "review-complete") {
-    activateTab("artifacts");
-    await renderCockpit();
-  }
 }

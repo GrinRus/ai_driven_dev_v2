@@ -252,9 +252,26 @@ Cleanup rules:
 
 The local UI uses logical route intents rather than treating every recovery panel as a
 destination. The only route intents in this contract are `setup`, `inbox`, `studio`, and
-`history`. Recovery is a Studio context. The concrete URL codec is owned by
-`W36-E6-S1-T1`; until then, tests and evidence name intents and context keys instead of
-inventing query-string syntax.
+`history`. Recovery is a Studio context. The canonical query codec uses `mode=inbox`,
+`mode=studio`, or `mode=history`, followed in stable order by the optional keys
+`view`, `work_item`, `run_id`, `stage`, `attempt`, `task_attempt`, and `artifact`.
+The Studio `view` is one of `overview`, `recovery`, `artifacts`, or `logs`. Guided Setup is
+server-owned state reached before a valid project/work-item context; it does not invent a
+fourth persisted browser mode. `artifact` stores a bounded artifact/document key, never an
+arbitrary path.
+
+Visible navigation uses one shared intent vocabulary: `Open in Studio` for an Inbox work
+item, `Inspect run history` for a recorded run, `Inspect parent run` for parent lineage,
+`Open child work item` for child lineage, and `Inspect run artifacts` for durable run
+evidence. Inbox and History renderers bind these intents; they do not construct local URL
+variants. Archived runs retain both history and artifact intents because navigation is
+read-only and does not alter the completed run.
+
+Writers emit only that canonical form. Readers temporarily accept legacy `tab` and `key`
+aliases, report the legacy source, and normalize them without mutation. Invalid identifiers,
+unknown stages, path-like artifact values, conflicting attempt/task-attempt detail, and stale
+known work-item/run ids are dropped with stable warnings. History without a valid run falls
+back to Studio when the work item survives and otherwise to Inbox.
 
 Canonical context keys are `project`, `work_item`, `run`, `stage`, `document`, `attempt`,
 `artifact`, `recovery_target`, and `history_frame`. A route uses only the keys that identify

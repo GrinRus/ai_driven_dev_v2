@@ -45,6 +45,23 @@ function selectedInterventionTargets() {
     .filter(Boolean);
 }
 
+function interventionDraftIdentity() {
+  return operatorDraftIdentity("intervention", state.activeStage);
+}
+
+function interventionDraft() {
+  return readOperatorDraft(interventionDraftIdentity());
+}
+
+function persistInterventionDraft() {
+  const textarea = document.getElementById("operatorRequestText");
+  if (!textarea) return;
+  writeOperatorDraft(interventionDraftIdentity(), {
+    text: textarea.value,
+    targetDocuments: selectedInterventionTargets()
+  });
+}
+
 function updateSubmitInterventionState() {
   const textarea = document.getElementById("operatorRequestText");
   const button = document.getElementById("submitInterventionButton");
@@ -164,9 +181,11 @@ async function renderRequestChange() {
     }
   }
   const targets = requestChangeTargetEntries(documents, context);
-  const targetBody = targets.length ? targets.map(([key, path]) => `
-    <label class="target-option">
-      <input type="checkbox" data-intervention-target="${escapeHtml(path)}">
+  const restoredDraft = interventionDraft()?.value || {};
+  const restoredTargets = new Set(restoredDraft.targetDocuments || []);
+  const targetBody = targets.length ? targets.map(([key, path], index) => `
+    <label class="target-option" for="intervention-target-${index}">
+      <input id="intervention-target-${index}" name="intervention_target" type="checkbox" data-intervention-target="${escapeHtml(path)}" ${restoredTargets.has(path) ? "checked" : ""}>
       <span><strong>${escapeHtml(interventionTargetLabel(key))}</strong>${pathLine(path, 82)}</span>
     </label>
   `).join("") : `<div class="empty-state">No current-stage target documents available yet. The request can still run against the stage scope.</div>`;
@@ -182,7 +201,7 @@ async function renderRequestChange() {
           <div class="intervention-form">
             <div class="form-field">
               <label for="operatorRequestText">Operator request</label>
-              <textarea id="operatorRequestText" placeholder="Add rollback risks to the plan and update stage-result evidence."></textarea>
+              <textarea id="operatorRequestText" name="operator_request" placeholder="Add rollback risks to the plan and update stage-result evidence.">${escapeHtml(restoredDraft.text || "")}</textarea>
             </div>
             <div class="form-field">
               <div class="target-documents-title">Target documents</div>
@@ -358,10 +377,23 @@ function renderApprovalRequestCard(request, decision, pendingIds) {
     : `<span class="muted">No normalized paths</span>`;
   const actions = pending ? `
     <div class="approval-actions">
+      <label class="approval-reason-field" for="approval-reason-${escapeHtml(request.id)}">
+        <span>Decision reason</span>
+        <input id="approval-reason-${escapeHtml(request.id)}" data-approval-reason="${escapeHtml(request.id)}" type="text" placeholder="Why is this decision appropriate?">
+      </label>
       <button data-operator-request="${escapeHtml(request.id)}" data-operator-action="allow_once" type="button">Allow once</button>
       <button data-operator-request="${escapeHtml(request.id)}" data-operator-action="allow_for_session" type="button">Allow session</button>
       <button data-operator-request="${escapeHtml(request.id)}" data-operator-action="deny" class="secondary" type="button">Deny</button>
       <button data-operator-request="${escapeHtml(request.id)}" data-operator-action="cancel" class="danger" type="button">Cancel</button>
+      <div class="approval-session-confirmation" data-approval-session-confirmation="${escapeHtml(request.id)}" hidden role="alertdialog" aria-labelledby="approval-confirm-title-${escapeHtml(request.id)}">
+        <strong id="approval-confirm-title-${escapeHtml(request.id)}">Confirm session-wide approval</strong>
+        <span><b>Breadth:</b> all matching requests in the current runtime approval session</span>
+        <span><b>Reason:</b> <span data-approval-reason-preview="${escapeHtml(request.id)}">No reason provided</span></span>
+        <div class="approval-confirmation-actions">
+          <button data-approval-confirm-session="${escapeHtml(request.id)}" type="button">Confirm allow session</button>
+          <button data-approval-cancel-session="${escapeHtml(request.id)}" type="button" class="secondary">Back</button>
+        </div>
+      </div>
     </div>
   ` : "";
   return `
@@ -534,11 +566,74 @@ async function renderApprovals() {
   }
 }
 
-async function submitApproval(requestId, action) {
+function approvalReason(requestId) {
+  return document.querySelector(`[data-approval-reason="${requestId}"]`)?.value?.trim() || "";
+}
+
+function updateApprovalConfirmationPreview(requestId) {
+  const preview = document.querySelector(`[data-approval-reason-preview="${requestId}"]`);
+  if (preview) preview.textContent = approvalReason(requestId) || "No reason provided";
+}
+
+function openApprovalSessionConfirmation(requestId) {
+  const confirmation = document.querySelector(`[data-approval-session-confirmation="${requestId}"]`);
+  if (!confirmation) return;
+  updateApprovalConfirmationPreview(requestId);
+  confirmation.hidden = false;
+  confirmation.querySelector(`[data-approval-confirm-session="${requestId}"]`)?.focus();
+}
+
+function closeApprovalSessionConfirmation(requestId) {
+  const confirmation = document.querySelector(`[data-approval-session-confirmation="${requestId}"]`);
+  if (confirmation) confirmation.hidden = true;
+  document.querySelector(`[data-operator-request="${requestId}"][data-operator-action="allow_for_session"]`)?.focus();
+}
+
+function setApprovalRequestPending(requestId, pending) {
+  document.querySelectorAll(`[data-operator-request="${requestId}"], [data-approval-confirm-session="${requestId}"], [data-approval-cancel-session="${requestId}"], [data-approval-reason="${requestId}"]`)
+    .forEach((control) => {
+      control.disabled = pending;
+      control.setAttribute("aria-busy", pending ? "true" : "false");
+    });
+}
+
+async function readApprovalWinner(jobId, requestId) {
+  const view = await api(`/api/jobs/${encodeURIComponent(jobId)}/operator-requests`);
+  const decision = (view.decisions || []).find((item) => item.request_id === requestId) || null;
+  const auditRow = (view.audit_history || []).find((item) => item.request_id === requestId) || null;
+  return {view, decision, auditRow};
+}
+
+async function submitApproval(requestId, action, {sessionConfirmed = false} = {}) {
   if (!state.activeJobId) return;
-  await postJson(`/api/jobs/${encodeURIComponent(state.activeJobId)}/operator-requests/${encodeURIComponent(requestId)}/decision`, {action});
-  toast(`Runtime approval ${action}.`);
+  if (action === "allow_for_session" && !sessionConfirmed) {
+    openApprovalSessionConfirmation(requestId);
+    return;
+  }
+  const reason = approvalReason(requestId);
+  const jobId = state.activeJobId;
+  const guarded = await runGuardedMutation({
+    key: operatorMutationKey("approval", jobId, requestId),
+    execute: async () => {
+      const view = await postJson(`/api/jobs/${encodeURIComponent(jobId)}/operator-requests/${encodeURIComponent(requestId)}/decision`, {
+        action,
+        reason: reason || null
+      });
+      const decision = (view.decisions || []).find((item) => item.request_id === requestId) || null;
+      const auditRow = (view.audit_history || []).find((item) => item.request_id === requestId) || null;
+      return {view, decision, auditRow};
+    },
+    readWinner: () => readApprovalWinner(jobId, requestId),
+    onState: (mutation) => setApprovalRequestPending(requestId, mutation.status === "pending")
+  });
+  const winner = guarded.status === "conflict" ? guarded.winner : guarded.result;
   await renderApprovals();
+  if (winner?.decision) {
+    const suffix = winner.decision.reason ? `: ${winner.decision.reason}` : "";
+    toast(`Durable runtime decision: ${winner.decision.action}${suffix}`);
+  } else {
+    toast("The approval job is terminal; showing the durable audit state.");
+  }
 }
 
 async function submitIntervention() {
@@ -564,6 +659,12 @@ async function submitIntervention() {
     log_follow: true
   };
   if (state.activeRunId) payload.run_id = state.activeRunId;
-  const job = await postJson("/api/stage/interact", payload);
-  await startJobPolling(job);
+  const job = await guardedJobLaunch({
+    kind: "stage-interact",
+    components: [state.activeRunId || "no-run", state.activeStage],
+    controls: ["#submitInterventionButton"],
+    execute: () => postJson("/api/stage/interact", payload)
+  });
+  clearOperatorDraft(interventionDraftIdentity());
+  if (!job) toast("Another intervention already won. Showing the durable server state.");
 }

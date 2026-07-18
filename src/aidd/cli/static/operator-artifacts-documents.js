@@ -200,7 +200,7 @@ function renderWorkbenchTree(workbench) {
             : `data-open-artifact="${escapeHtml(ref.path)}"`;
           const badge = artifactOwnershipBadge(ref);
           return `
-            <button class="artifact-doc ${ref.label === workbench.selected_key ? "active" : ""}" ${actionAttr} type="button">
+            <button class="artifact-doc ${ref.label === workbench.selected_key ? "active" : ""}" ${actionAttr} type="button" aria-pressed="${ref.label === workbench.selected_key ? "true" : "false"}">
               <span class="artifact-doc-title">
                 <strong>${escapeHtml(ref.label)}</strong>
                 <span class="small-badge ${escapeHtml(badge.tone)}">${escapeHtml(badge.label)}</span>
@@ -379,16 +379,17 @@ function renderWorkbenchViewer(workbench) {
   const sourceActive = state.artifactViewMode === "source" ? " active" : "";
   const diffActive = state.artifactViewMode === "diff" ? " active" : "";
   const documentView = workbench.document || {};
+  const evidenceInspector = renderWorkbenchEvidenceInspector(workbench);
   return `
     <div class="viewer-header">
       <div>
         <strong>${escapeHtml(documentView.key || workbench.selected_key)}</strong>
         ${pathLine(`${documentView.path || "path unavailable"} / ${documentView.byte_size ?? "unknown"} bytes`, 78)}
       </div>
-      <div class="viewer-modes">
-        <button data-artifact-mode="preview" class="${previewActive}" type="button">Preview</button>
-        <button data-artifact-mode="source" class="${sourceActive}" type="button">Source</button>
-        <button data-artifact-mode="diff" class="${diffActive}" type="button">Diff</button>
+      <div class="viewer-modes" role="group" aria-label="Document presentation">
+        <button data-artifact-mode="preview" class="${previewActive}" type="button" aria-pressed="${state.artifactViewMode === "preview" ? "true" : "false"}">Preview</button>
+        <button data-artifact-mode="source" class="${sourceActive}" type="button" aria-pressed="${state.artifactViewMode === "source" ? "true" : "false"}">Source</button>
+        <button data-artifact-mode="diff" class="${diffActive}" type="button" aria-pressed="${state.artifactViewMode === "diff" ? "true" : "false"}">Diff</button>
         ${documentView.path ? `<button data-open-artifact="${escapeHtml(documentView.path)}" class="secondary" type="button">Open folder</button>` : ""}
       </div>
     </div>
@@ -397,12 +398,28 @@ function renderWorkbenchViewer(workbench) {
       kind: "document",
       path: documentView.path || ""
     })}
-    <div class="workbench-main">
-      <section class="workbench-document-pane">
+    <div class="workbench-main" data-evidence-inspector="${evidenceInspector ? "present" : "absent"}">
+      <section class="workbench-document-pane hierarchy-primary document-canvas">
         ${renderWorkbenchTableOfContents(workbench)}
         ${renderWorkbenchDocumentBody(workbench)}
       </section>
-      <aside class="workbench-sidebar">
+      ${evidenceInspector}
+    </div>
+  `;
+}
+
+function renderWorkbenchEvidenceInspector(workbench) {
+  const inspectorItemCount = [
+    workbench.requirements,
+    workbench.validation_results,
+    workbench.references,
+    workbench.versions
+  ].reduce((total, items) => total + (Array.isArray(items) ? items.length : 0), 0);
+  const visibility = resolveStudioEvidenceVisibility({inspectorItemCount});
+  if (!visibility.inspector) return "";
+  return `
+      <aside class="workbench-sidebar hierarchy-supporting evidence-inspector">
+        <div class="surface-title evidence-inspector-title">Evidence Inspector</div>
         <section class="surface">
           <div class="surface-title">Contract requirements</div>
           ${renderRequirementList(workbench.requirements)}
@@ -424,7 +441,6 @@ function renderWorkbenchViewer(workbench) {
           <div class="recent-artifacts">${renderVersionHistory(workbench.versions)}</div>
         </section>
       </aside>
-    </div>
   `;
 }
 
@@ -515,7 +531,7 @@ function renderEvidenceGraphBrowser(view, selection) {
     const label = item.label || item.key || "artifact";
     const status = item.status || "present";
     return `
-      <button class="artifact-doc evidence-browser-row ${selected ? "active" : ""}" data-evidence-node="${escapeHtml(nodeId)}" type="button">
+      <button class="artifact-doc evidence-browser-row ${selected ? "active" : ""}" data-evidence-node="${escapeHtml(nodeId)}" type="button" aria-pressed="${selected ? "true" : "false"}">
         <span>
           <strong>${escapeHtml(label)}</strong>
           <small>${escapeHtml(item.kind || "artifact")} / ${escapeHtml(status)}</small>
@@ -817,7 +833,7 @@ async function inspectArtifactReference({stage, key, path, kind}) {
   state.selectedEvidenceEdgeId = "";
   setOperatorMode(kind === "log" ? "logs" : "artifacts");
   await fetchDashboard();
-  activateTab(kind === "log" ? "logs" : "artifacts");
+  activateTab(kind === "log" ? "logs" : "artifacts", {historyMode: "push"});
   await renderAll();
   if (kind !== "log") focusArtifactWorkbench();
 }

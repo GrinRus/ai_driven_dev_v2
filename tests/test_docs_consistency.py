@@ -778,7 +778,9 @@ def test_operator_ui_local_project_manual_browser_checklist_is_complete() -> Non
         "| History | `history` |",
         "falls back to the nearest valid",
         "never creates, resumes, repairs, archives, or launches work",
-        "`W36-E6-S1-T1`",
+        "`mode=studio`",
+        "`task_attempt`",
+        "Writers emit only that canonical form",
     ):
         assert expected in operator_ui_lane
 
@@ -1514,6 +1516,25 @@ def test_runtime_log_docs_match_the_supported_cli_contract() -> None:
 
     assert "The CLI should support three log modes" not in target_architecture
     assert "`normalized`: show AIDD-normalized events" not in target_architecture
+
+
+def test_operator_frontend_defines_scoped_browser_draft_contract() -> None:
+    operator_frontend = (
+        _repo_root() / "docs" / "architecture" / "operator-frontend.md"
+    ).read_text(encoding="utf-8")
+
+    for needle in (
+        "`aidd.operator.drafts.v1`",
+        "`project / work-item / run / stage / form / source-id`",
+        "`form` is one of `question`, `intervention`, `follow-up`",
+        "exactly 24 hours",
+        "at most 32 drafts",
+        "64 KiB",
+        "256 KiB total",
+        "never written to `.aidd/`",
+        "Only a successful durable submit and authoritative readback clear that exact owning key",
+    ):
+        assert needle in operator_frontend
 
 
 def test_release_publish_skill_describes_release_flow_guardrails() -> None:

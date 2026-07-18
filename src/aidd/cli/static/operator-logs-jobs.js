@@ -163,14 +163,14 @@ function renderLogPanel({title, meta, entries, rawText, emptyText, actions = "",
   const rawBody = state.logFilter === "all" && rawText ? rawText : rawTextFromEntries(filtered);
   const sourceLabel = truncation ? "saved runtime.log" : "live console";
   const filterButtons = ["all", "stdout", "stderr", "system"].map((filter) => (
-    `<button data-log-filter="${filter}" class="${state.logFilter === filter ? "active" : ""}" type="button" aria-label="Show ${filter} source filter">${filter}</button>`
+    `<button data-log-filter="${filter}" class="${state.logFilter === filter ? "active" : ""}" type="button" aria-pressed="${state.logFilter === filter ? "true" : "false"}" aria-label="Show ${filter} source filter">${filter}</button>`
   )).join("");
   const viewButtons = [
     ["summary", "Summary"],
     ["timeline", "Timeline"],
     ["raw", "Raw Runtime Log"]
   ].map(([mode, label]) => (
-    `<button data-log-view="${mode}" class="${state.logViewMode === mode ? "active" : ""}" type="button">${label}</button>`
+    `<button data-log-view="${mode}" class="${state.logViewMode === mode ? "active" : ""}" type="button" aria-pressed="${state.logViewMode === mode ? "true" : "false"}">${label}</button>`
   )).join("");
   const rows = state.rawLogMode
     ? `<pre>${escapeHtml(rawBody)}</pre>`
@@ -207,9 +207,9 @@ function renderLogPanel({title, meta, entries, rawText, emptyText, actions = "",
         </div>
         <div class="log-actions">
           ${actions}
-          <div class="log-filter">
+          <div class="log-filter" role="group" aria-label="Log source filter">
             ${filterButtons}
-            <button data-log-raw="toggle" class="${state.rawLogMode ? "active" : ""}" type="button">Raw</button>
+            <button data-log-raw="toggle" class="${state.rawLogMode ? "active" : ""}" type="button" aria-pressed="${state.rawLogMode ? "true" : "false"}">Raw</button>
           </div>
         </div>
       </div>
@@ -229,7 +229,7 @@ function renderLogPanel({title, meta, entries, rawText, emptyText, actions = "",
         <span class="small-badge">${escapeHtml(sourceLabel)}</span>
       </div>
       ${renderLogSourceStrip(entries, truncation)}
-      <div class="filter-row log-view-tabs">${viewButtons}</div>
+      <div class="filter-row log-view-tabs" role="group" aria-label="Log presentation">${viewButtons}</div>
       ${modeBody}
     </section>
   `;
@@ -248,6 +248,130 @@ function activeJobStatusClass() {
 
 function activeJobIsTerminal() {
   return ["cancelled", "completed", "failed"].includes(state.activeJobStatus?.status || "");
+}
+
+const ACTIVE_JOB_POLL_INTERVAL_MS = 1000;
+const ACTIVE_JOB_RETRY_BASE_MS = 500;
+const ACTIVE_JOB_RETRY_MAX_MS = 8000;
+const ACTIVE_JOB_RETRY_LIMIT = 5;
+
+function clearActiveJobPollTimer() {
+  if (state.activeJobTimer) clearTimeout(state.activeJobTimer);
+  state.activeJobTimer = null;
+}
+
+function resetActiveJobConnection() {
+  state.activeJobConnection = {
+    state: "unknown",
+    failureCount: 0,
+    lastError: "",
+    retryDelayMs: null,
+    recovered: false,
+    expired: false
+  };
+}
+
+function scheduleActiveJobPoll(delayMs = ACTIVE_JOB_POLL_INTERVAL_MS) {
+  clearActiveJobPollTimer();
+  const generation = state.activeJobPollGeneration;
+  state.activeJobTimer = setTimeout(() => {
+    state.activeJobTimer = null;
+    if (generation !== state.activeJobPollGeneration) return;
+    void pollActiveJob();
+  }, delayMs);
+}
+
+function activeJobRetryDelay(failureCount) {
+  return Math.min(
+    ACTIVE_JOB_RETRY_BASE_MS * (2 ** Math.max(0, failureCount - 1)),
+    ACTIVE_JOB_RETRY_MAX_MS
+  );
+}
+
+function clearReconciledActiveJob({preserveConnection = true} = {}) {
+  clearActiveJobPollTimer();
+  state.activeJobPollGeneration += 1;
+  state.activeJobId = "";
+  state.activeJobStatus = null;
+  state.activeJobCursor = 0;
+  state.activeJobLogChunks = [];
+  if (!preserveConnection) resetActiveJobConnection();
+}
+
+async function reconcileRecoveredActiveJob(jobId, status) {
+  if (status?.stage && STAGES.includes(status.stage)) {
+    state.activeStage = status.stage;
+    state.activeStageExplicit = true;
+  }
+  const cursor = state.activeJobCursor;
+  const chunks = state.activeJobLogChunks;
+  await fetchDashboard();
+  if (state.activeJobId === jobId) {
+    state.activeJobCursor = cursor;
+    state.activeJobLogChunks = chunks;
+  }
+  await fetchProjectHome(state.dashboard?.work_item || "");
+}
+
+async function reconcileExpiredActiveJob(jobId) {
+  try {
+    await fetchDashboard();
+    if (state.dashboardActiveJob?.job_id === jobId) return false;
+    if (!state.dashboardActiveJob) clearReconciledActiveJob({preserveConnection: true});
+    await fetchProjectHome(state.dashboard?.work_item || "");
+    await renderAll();
+    return true;
+  } catch (_error) {
+    return false;
+  }
+}
+
+async function reconcileTerminalActiveJob(jobId) {
+  await fetchDashboard();
+  if (!state.dashboardActiveJob || state.dashboardActiveJob.job_id === jobId) {
+    clearReconciledActiveJob({preserveConnection: false});
+  }
+  await fetchProjectHome(state.dashboard?.work_item || "");
+  await renderAll();
+}
+
+function renderActiveJobConnectionSurface() {
+  const connection = state.activeJobConnection;
+  if (!connection || connection.state === "unknown" || (
+    connection.state === "online" && !connection.recovered
+  )) return "";
+  if (connection.state === "online" && connection.recovered) {
+    return `<div data-connection-state="recovered">${renderStateSurface({
+      kind: "live-connection",
+      state: "empty",
+      title: "Live connection recovered",
+      consequence: "Polling resumed from the last accepted log cursor; runtime state remained server-authoritative."
+    })}</div>`;
+  }
+  if (connection.expired) {
+    return `<div data-connection-state="expired-job">${renderStateSurface({
+      kind: "live-connection",
+      state: "unavailable",
+      title: "Live job is no longer retained",
+      consequence: "The UI job record expired. Refresh durable dashboard and runtime.log evidence; this does not mean the runtime failed.",
+      recovery: {action: "refresh-expired-job", label: "Refresh durable state"}
+    })}</div>`;
+  }
+  if (connection.state === "offline") {
+    return `<div data-connection-state="offline">${renderStateSurface({
+      kind: "live-connection",
+      state: "unavailable",
+      title: "Live connection is offline",
+      consequence: "The runtime may still be running. No terminal status was observed and the log cursor is preserved.",
+      recovery: {action: "reconnect-live-job", label: "Reconnect"}
+    })}</div>`;
+  }
+  return `<div data-connection-state="reconnecting">${renderStateSurface({
+    kind: "live-connection",
+    state: "reconnecting",
+    title: "Reconnecting to live output",
+    consequence: `Attempt ${connection.failureCount} failed; retrying in ${connection.retryDelayMs} ms from the preserved cursor.`
+  })}</div>`;
 }
 
 function activeJobCancelLabel() {
@@ -270,21 +394,30 @@ function renderLiveJobActions() {
 }
 
 async function renderLogs() {
-  if (state.activeJobId && liveJobMatchesStage() && (state.activeJobStatus?.status === "running" || state.activeJobStatus?.status === "waiting-for-operator" || state.activeJobStatus?.status === "cancelling" || state.activeJobLogChunks.length)) {
+  const item = activeStageItem();
+  const liveLogAvailable = Boolean(
+    state.activeJobId
+    && liveJobMatchesStage()
+    && (state.activeJobStatus?.status === "running" || state.activeJobStatus?.status === "waiting-for-operator" || state.activeJobStatus?.status === "cancelling" || state.activeJobLogChunks.length)
+  );
+  const visibility = resolveStudioEvidenceVisibility({
+    logEvidenceAvailable: liveLogAvailable || Number(item?.attempt_count || 0) > 0,
+    requestedSurface: "logs"
+  });
+  if (!visibility.logs) {
+    document.getElementById("cockpitContent").innerHTML = `<div class="empty-state">No runtime log for this stage yet.</div>`;
+    return;
+  }
+  if (liveLogAvailable) {
     const entries = logEntriesFromChunks(state.activeJobLogChunks);
-    document.getElementById("cockpitContent").innerHTML = renderLogPanel({
+    document.getElementById("cockpitContent").innerHTML = `${renderActiveJobConnectionSurface()}${renderLogPanel({
       title: `Live job ${state.activeJobId}`,
       meta: [state.activeJobStatus?.status || "running", state.activeJobStatus?.stage || "workflow"],
       entries,
       rawText: rawTextFromEntries(entries),
       emptyText: "Waiting for runtime output...",
       actions: renderLiveJobActions()
-    });
-    return;
-  }
-  const item = activeStageItem();
-  if (!item || Number(item.attempt_count || 0) <= 0) {
-    document.getElementById("cockpitContent").innerHTML = `<div class="empty-state">No runtime log for this stage yet.</div>`;
+    })}`;
     return;
   }
   try {
@@ -294,14 +427,14 @@ async function renderLogs() {
     state.savedLogText = view.text || "";
     const summary = view.summary || {};
     const logAvailable = view.available !== false;
-    document.getElementById("cockpitContent").innerHTML = renderLogPanel({
+    document.getElementById("cockpitContent").innerHTML = `${renderActiveJobConnectionSurface()}${renderLogPanel({
       title: logAvailable ? "Saved runtime.log" : "Saved runtime.log (pending)",
       meta: [summary.run_id ? `run ${summary.run_id}` : "", summary.stage ? `stage ${summary.stage}` : "", summary.attempt_number ? `attempt ${summary.attempt_number}` : ""],
       entries: logEntriesFromText(state.savedLogText),
       rawText: state.savedLogText,
       emptyText: logAvailable ? "Saved runtime log is empty" : (view.message || "Runtime log is not available yet."),
       truncation: view
-    });
+    })}`;
   } catch (error) {
     document.getElementById("cockpitContent").innerHTML = `<div class="empty-state">${escapeHtml(error.message)}</div>`;
   }
@@ -310,6 +443,7 @@ async function renderLogs() {
 async function cancelActiveJob() {
   if (!state.activeJobId) return;
   state.activeJobPollGeneration += 1;
+  clearActiveJobPollTimer();
   const result = await postJson(`/api/jobs/${encodeURIComponent(state.activeJobId)}/cancel`, {});
   state.activeJobStatus = result;
   if (result.already_finished) {
@@ -322,9 +456,17 @@ async function cancelActiveJob() {
   renderActivityTable();
   if (activeModeIsEvidenceLog()) await renderLogs();
   const activeStatuses = new Set(["running", "waiting-for-operator", "cancelling"]);
-  if (!state.activeJobTimer && activeStatuses.has(result.status)) {
-    state.activeJobTimer = setInterval(pollActiveJob, 1000);
-  }
+  if (activeStatuses.has(result.status)) scheduleActiveJobPoll(0);
+}
+
+async function reconnectActiveJob() {
+  if (!state.activeJobId || activeJobIsTerminal()) return;
+  state.activeJobPollGeneration += 1;
+  clearActiveJobPollTimer();
+  resetActiveJobConnection();
+  state.activeJobConnection.state = "reconnecting";
+  await renderLogs();
+  await pollActiveJob();
 }
 
 async function pollActiveJob() {
@@ -353,6 +495,16 @@ async function pollActiveJob() {
       || state.activeJobPollGeneration !== pollGeneration
     ) return;
     state.activeJobStatus = status;
+    const wasDisconnected = state.activeJobConnection.failureCount > 0;
+    state.activeJobConnection = {
+      state: "online",
+      failureCount: 0,
+      lastError: "",
+      retryDelayMs: null,
+      recovered: wasDisconnected,
+      expired: false
+    };
+    if (wasDisconnected) await reconcileRecoveredActiveJob(jobId, status);
     renderActiveRunPanel();
     if (typeof renderNextActionPanel === "function") renderNextActionPanel();
     if (typeof renderGlobalNextActionStrip === "function") renderGlobalNextActionStrip();
@@ -363,22 +515,39 @@ async function pollActiveJob() {
       await renderApprovals();
     }
     if (!activeStatuses.has(state.activeJobStatus.status)) {
-      if (state.activeJobTimer) clearInterval(state.activeJobTimer);
-      state.activeJobTimer = null;
-      await fetchDashboard();
-      await fetchProjectHome(state.dashboard?.work_item || "");
-      await renderAll();
+      clearActiveJobPollTimer();
+      await reconcileTerminalActiveJob(jobId);
+    } else {
+      scheduleActiveJobPoll();
     }
   } catch (error) {
+    if (
+      state.activeJobId !== jobId
+      || state.activeJobPollGeneration !== pollGeneration
+    ) return;
+    const expired = error.status === 404 || error.status === 410;
+    const failureCount = state.activeJobConnection.failureCount + 1;
+    const retryDelayMs = activeJobRetryDelay(failureCount);
+    state.activeJobConnection = {
+      state: expired || failureCount >= ACTIVE_JOB_RETRY_LIMIT ? "offline" : "reconnecting",
+      failureCount,
+      lastError: error.message,
+      retryDelayMs: expired || failureCount >= ACTIVE_JOB_RETRY_LIMIT ? null : retryDelayMs,
+      recovered: false,
+      expired
+    };
     state.activeJobLogChunks.push({stream: "system", text: `[ui] ${error.message}\n`});
-    if (state.activeJobTimer) clearInterval(state.activeJobTimer);
-    state.activeJobTimer = null;
     renderActivityTable();
     if (activeModeIsEvidenceLog()) await renderLogs();
+    if (expired && await reconcileExpiredActiveJob(jobId)) return;
+    if (!expired && failureCount < ACTIVE_JOB_RETRY_LIMIT) scheduleActiveJobPoll(retryDelayMs);
+    else clearActiveJobPollTimer();
   }
 }
 
 async function startJobPolling(job) {
+  clearActiveJobPollTimer();
+  state.activeJobPollGeneration += 1;
   state.activeJobId = job.job_id;
   state.activeJobCursor = 0;
   state.activeJobLogChunks = [];
@@ -389,12 +558,11 @@ async function startJobPolling(job) {
     status: "running",
     message: "job started"
   };
-  if (state.activeJobTimer) clearInterval(state.activeJobTimer);
+  resetActiveJobConnection();
   renderActiveRunPanel();
   if (typeof renderNextActionPanel === "function") renderNextActionPanel();
   if (typeof renderGlobalNextActionStrip === "function") renderGlobalNextActionStrip();
   activateTab("logs");
   await renderLogs();
   await pollActiveJob();
-  state.activeJobTimer = setInterval(pollActiveJob, 1000);
 }

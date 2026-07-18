@@ -1065,6 +1065,8 @@ def test_ui_dashboard_endpoint_exposes_flow_complete_handoff(
     assert dashboard["run"]["runtime_id"] == "codex"  # type: ignore[index]
     assert handoff["status"] == "completed"  # type: ignore[index]
     assert handoff["final_qa_status"] == "ready"  # type: ignore[index]
+    assert handoff["recommended_outcome"] == "create-new-work-item"  # type: ignore[index]
+    assert "fresh and clean" in handoff["recommendation_rationale"]  # type: ignore[index]
     assert handoff["approval_counts"]["requested"] == 1  # type: ignore[index]
     assert handoff["approval_counts"]["approved"] == 1  # type: ignore[index]
     assert {artifact["key"] for artifact in handoff["final_artifacts"]} >= {  # type: ignore[index]
@@ -1551,6 +1553,10 @@ def test_ui_onboarding_mode_serves_setup_until_context_handoff(
         runtime["runtime_id"]
         for runtime in inspect_payload["readiness"]["runtimes"]  # type: ignore[index]
     } >= {"codex", "claude-code", "opencode", "qwen", "generic-cli"}
+    assert all(
+        runtime["latest_launch"] is None
+        for runtime in inspect_payload["readiness"]["runtimes"]  # type: ignore[index]
+    )
 
     created_payload = _payload(
         service.handle_post(
@@ -3833,6 +3839,15 @@ def test_ui_runtime_readiness_endpoint_exposes_probe_and_config_data(
     assert generic_cli["provider_version"] == "Python <3>"
     assert generic_cli["provider_command"] == "/usr/bin/python"
     assert generic_cli["execution_command_available"] is False
+    assert generic_cli["binary"] == {
+        "command": "/usr/bin/python",
+        "status": "detected",
+        "version": "Python <3>",
+    }
+    assert generic_cli["execution_command"]["status"] == "unavailable"
+    assert generic_cli["authentication"] == {"detail": None, "status": "unverified"}
+    assert generic_cli["capabilities"]["status"] == "unknown"
+    assert generic_cli["latest_launch"] is None
     assert generic_cli["default_timeout_seconds"] == 42
     assert generic_cli["stage_timeout_seconds"] == {"plan": 90}
     assert runtimes["codex"]["command_source"] == "default"

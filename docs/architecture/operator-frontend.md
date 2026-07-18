@@ -659,6 +659,18 @@ Safety-related facts are also separate and literal:
 
 The umbrella label `safe` is not a substitute for these facts.
 
+Runtime readiness is likewise dimensioned: binary detection is
+`detected`/`unavailable`/`unknown`, execution-command availability is
+`available`/`unavailable`/`unknown`, authentication is
+`verified`/`failed`/`unverified`, and adapter capabilities are `known` or `unknown` with
+their individual flags. The legacy provider/command booleans remain compatibility fields and
+must not be combined into an inferred authentication or overall-ready claim.
+
+Each runtime may also carry one `latest_launch` projection resolved from canonical
+`runtime-exit.json` plus its attempt artifact index. The index owns the displayed timestamp;
+legacy evidence without it keeps the normalized outcome with a null timestamp and warning,
+while corrupt evidence is reported as `unknown` rather than fabricated provenance.
+
 Connectivity has exactly four observable states: `online` after a successful current transport
 exchange, `reconnecting` while bounded retry is active, `offline` after observed transport
 failure, and `unknown` before evidence exists. Runtime success/failure is not inferred from
@@ -675,6 +687,11 @@ outcomes live under **Other next actions**, not an equal-weight card grid.
 Here, failed, blocked, or warning handoff means a fresh terminal QA verdict. Missing QA,
 stale QA, and runs that have not reached terminal QA do not enter Flow Complete and receive no
 terminal recommendation.
+
+The additive terminal-handoff response exposes `recommended_outcome` and
+`recommendation_rationale` without removing `recommended_next_flow_actions` or source-run
+identity. A client reading an older payload without those fields must resolve it to the explicit
+`legacy-no-recommendation` compatibility state and must not infer priority from action order.
 
 Follow-up and cloned flows show source work item, source run, baseline, inherited artifacts,
 and audit preview before launch. They always receive new identities and never mutate the
@@ -737,6 +754,37 @@ Document and evidence behavior is fixed:
 - raw logs are an explicit drill-down with native/system/normalized filters and visible
   truncation state;
 - no surface may read arbitrary paths or rewrite generated evidence inline.
+
+#### Browser-session draft contract
+
+Operator form drafts are noncanonical presentation state stored only in `sessionStorage` under
+the versioned namespace `aidd.operator.drafts.v1`. They are never sent to a server until an
+explicit submit, never written to `.aidd/`, and never copied to `localStorage`, cookies, a URL,
+or a durable evidence artifact.
+
+Every draft key is the ordered tuple `project / work-item / run / stage / form / source-id`.
+The project dimension is the normalized project root reported by the local UI context;
+work-item, run, and stage use their canonical identifiers or the explicit sentinel `none` when
+that dimension does not apply. `form` is one of `question`, `intervention`, `follow-up`, or
+`clone`. `source-id` is the question id, intervention target id, or source run id that owns the
+form. Each component is encoded as data rather than concatenated as an unchecked path. Changing
+any one dimension selects a different draft.
+
+The schema-v1 value contains the same six identity fields, the form value, `dirty: true`,
+`updated_at_ms`, and `expires_at_ms`. A draft expires exactly 24 hours after its last accepted
+edit. Readers purge expired, malformed, wrong-version, or identity-mismatched entries before
+returning state. The store accepts at most 32 drafts, 64 KiB of UTF-8 JSON per draft, and
+256 KiB total; when bounded cleanup is necessary it removes expired entries first and then the
+oldest `updated_at_ms`. Credentials, provider tokens, and runtime secrets are forbidden values.
+
+Navigation between stage, mode, run, or wizard step preserves the owning draft. Leaving or
+reloading the local UI uses the browser dirty-state warning while any current-project draft is
+dirty. A failed request, timeout, preflight rejection, or mutation conflict retains the draft.
+Only a successful durable submit and authoritative readback clear that exact owning key; sibling
+questions, forms, stages, runs, work items, and projects remain untouched. Explicit operator
+discard and 24-hour expiry are the only other cleanup paths. Server evidence always wins after
+successful readback, and restoring a browser draft never creates `answers.md`, an intervention
+request, or next-flow lineage by itself.
 
 ### 8.11 Responsive and accessibility contract
 

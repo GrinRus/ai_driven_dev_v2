@@ -1719,6 +1719,28 @@ def _terminal_handoff_status(*, qa_stage_state: str, final_qa_status: str) -> st
     return qa_stage_state
 
 
+def _terminal_recommended_outcome(
+    *,
+    handoff_status: str,
+    final_qa_status: str,
+) -> tuple[str | None, str | None]:
+    if handoff_status == "completed" and final_qa_status == "ready":
+        return (
+            "create-new-work-item",
+            "Terminal QA is fresh and clean; start independent work without changing "
+            "the completed run.",
+        )
+    if final_qa_status == "evidence-incomplete":
+        return None, None
+    if handoff_status in {"failed", "blocked", "completed-with-warning"}:
+        return (
+            "start-follow-up-flow",
+            "Terminal QA has blockers, failure, or accepted risk; preserve lineage in a "
+            "follow-up flow.",
+        )
+    return None, None
+
+
 def _terminal_final_artifacts(
     *,
     workspace_root: Path,
@@ -2093,6 +2115,10 @@ def _terminal_handoff(
         workspace_root=workspace_root,
         work_item=work_item,
     )
+    recommended_outcome, recommendation_rationale = _terminal_recommended_outcome(
+        handoff_status=handoff_status,
+        final_qa_status=final_qa_status,
+    )
     return OperatorTerminalRunHandoff(
         status=handoff_status,
         final_qa_status=final_qa_status,
@@ -2116,6 +2142,8 @@ def _terminal_handoff(
         ),
         questions_answered_count=questions_answered,
         questions_total_count=questions_total,
+        recommended_outcome=recommended_outcome,
+        recommendation_rationale=recommendation_rationale,
         recommended_next_flow_actions=_next_flow_recommendations(
             status=handoff_status,
             runtime_id=metadata.runtime_id,

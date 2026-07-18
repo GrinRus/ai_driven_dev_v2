@@ -25,38 +25,26 @@ const VALID_TABS = [
   ...OPERATOR_MODES,
   ...Object.keys(LEGACY_TAB_TO_MODE)
 ];
+
+function resolveStudioEvidenceVisibility({
+  inspectorItemCount = 0,
+  filmstripFrameCount = 0,
+  logEvidenceAvailable = false,
+  requestedSurface = ""
+} = {}) {
+  return Object.freeze({
+    inspector: Number(inspectorItemCount) > 0,
+    filmstrip: Number(filmstripFrameCount) > 0 && requestedSurface === "history",
+    logs: Boolean(logEvidenceAvailable) && requestedSurface === "logs"
+  });
+}
+
 const RECOVERY_NEXT_ACTIONS = new Set([
   "answer-questions",
   "inspect-validation",
   "review-intervention",
   "inspect-runtime-log"
 ]);
-const SETUP_MODES = [
-  {
-    id: "new-work-item",
-    label: "New Work Item",
-    detail: "Start without inherited run context.",
-    requiresPreviousRun: false
-  },
-  {
-    id: "follow-up-flow",
-    label: "Follow-up Flow",
-    detail: "Continue from source findings and final QA evidence.",
-    requiresPreviousRun: true
-  },
-  {
-    id: "clone-previous-flow",
-    label: "Clone Previous Flow",
-    detail: "Reuse runtime, prompt pack, contracts, branch, and baseline.",
-    requiresPreviousRun: true
-  },
-  {
-    id: "eval-scenario-batch",
-    label: "Eval / Scenario Batch",
-    detail: "Compare completed-run evidence across scenario executions.",
-    requiresPreviousRun: true
-  }
-];
 const STAGE_COPY = {
   "idea": ["Idea", "Clarify the request"],
   "research": ["Research", "Gather context"],
@@ -71,8 +59,37 @@ const NON_BLOCKING_VALIDATION_NOTICE_CODES = new Set([
   "STRUCT-OUTPUT-PROMOTED"
 ]);
 
+function terminalHandoffRecommendation(handoff) {
+  if (!handoff || !Object.prototype.hasOwnProperty.call(handoff, "recommended_outcome")) {
+    return Object.freeze({
+      state: "legacy-no-recommendation",
+      outcome: null,
+      rationale: "This terminal handoff predates the recommendation contract. Choose from allowed outcomes."
+    });
+  }
+  const outcome = String(handoff.recommended_outcome || "").trim();
+  const rationale = String(handoff.recommendation_rationale || "").trim();
+  if (!outcome) {
+    return Object.freeze({state: "none", outcome: null, rationale: rationale || null});
+  }
+  const allowed = new Set(
+    (handoff.recommended_next_flow_actions || []).map((action) => String(action.action || ""))
+  );
+  if (!allowed.has(outcome) || !rationale) {
+    return Object.freeze({
+      state: "invalid-no-recommendation",
+      outcome: null,
+      rationale: "The recommendation is incomplete or not present in allowed outcomes."
+    });
+  }
+  return Object.freeze({state: "recommended", outcome, rationale});
+}
+
 const state = {
+  presentationSelector: window.aiddPresentation?.requested || "legacy",
+  presentationEffective: window.aiddPresentation?.effective || "legacy",
   dashboard: null,
+  dashboardActiveJob: null,
   dashboardRequestGeneration: 0,
   projectHome: null,
   projectHomeRequestGeneration: 0,
@@ -89,12 +106,23 @@ const state = {
   selectedRuntime: "",
   bottomDockUserCollapsed: null,
   activeRunId: "",
+  activeRouteWorkItem: "",
+  activeAttempt: null,
+  activeTaskAttempt: null,
   activeJobId: "",
   activeJobCursor: 0,
   activeJobLogChunks: [],
   activeJobStatus: null,
   activeJobTimer: null,
   activeJobPollGeneration: 0,
+  activeJobConnection: {
+    state: "unknown",
+    failureCount: 0,
+    lastError: "",
+    retryDelayMs: null,
+    recovered: false,
+    expired: false
+  },
   pendingCockpitReveal: false,
   pendingNextFlowWizardReveal: false,
   runAccountability: null,
@@ -117,7 +145,6 @@ const state = {
   logViewMode: "summary",
   rawLogMode: false,
   savedLogText: "",
-  setupMode: "new-work-item",
   onboarding: {
     setupRequired: false,
     loading: true,
@@ -137,7 +164,17 @@ const state = {
     projectSetError: "",
     projectSetLoading: false,
     createError: "",
-    creating: false
+    creating: false,
+    guidedDelivery: true,
+    guided: {
+      step: "project",
+      projectStatus: "unvalidated",
+      workItemBranch: null,
+      workItem: "",
+      runtimeId: "",
+      launchReadiness: "unchecked",
+      error: ""
+    }
   },
   nextFlowWizard: {
     active: false,
@@ -257,7 +294,11 @@ function primaryValidationFinding() {
 async function api(path, options = {}) {
   const response = await fetch(path, options);
   const payload = await response.json();
-  if (!response.ok || payload.error) throw new Error(payload.error || response.statusText);
+  if (!response.ok || payload.error) {
+    const error = new Error(payload.error || response.statusText);
+    error.status = response.status;
+    throw error;
+  }
   return payload;
 }
 
@@ -506,11 +547,10 @@ async function recoverActiveJobFromDashboard(job) {
   state.activeJobCursor = 0;
   state.activeJobLogChunks = [];
   state.activeJobStatus = job;
-  if (state.activeJobTimer) clearInterval(state.activeJobTimer);
+  clearActiveJobPollTimer();
+  state.activeJobPollGeneration += 1;
+  resetActiveJobConnection();
   await pollActiveJob();
-  if (activeJobPayloadIsLive(state.activeJobStatus)) {
-    state.activeJobTimer = setInterval(pollActiveJob, 1000);
-  }
 }
 
 function syncLiveJobBodyClass() {
@@ -571,7 +611,7 @@ function setRunButtonState() {
   renderNextActionPanel();
 }
 
-function activateTab(tab, {preserveDetail = false} = {}) {
+function activateTab(tab, {preserveDetail = false, historyMode = "replace"} = {}) {
   const requested = String(tab || "work");
   if (!(preserveDetail && OPERATOR_MODES.includes(requested) && state.activeTab === requested)) {
     setOperatorMode(requested);
@@ -585,53 +625,90 @@ function activateTab(tab, {preserveDetail = false} = {}) {
   const content = document.getElementById("cockpitContent");
   if (content) content.setAttribute("aria-labelledby", `tab-${state.activeTab}`);
   applyOperatorModeBodyClass();
-  syncLocationState();
+  syncLocationState({historyMode});
+}
+
+function operatorRouteView() {
+  if (state.activeTab === "evidence") return state.evidenceDetail === "logs" ? "logs" : "artifacts";
+  if (state.activeTab === "recovery") return "recovery";
+  return "overview";
+}
+
+function operatorRouteSnapshot() {
+  return {
+    mode: state.activeTab === "history"
+      ? "history"
+      : state.activeRunId || state.activeRouteWorkItem || state.dashboard?.work_item
+        ? "studio"
+        : "inbox",
+    view: operatorRouteView(),
+    workItem: state.dashboard?.work_item || state.activeRouteWorkItem || "",
+    runId: state.activeRunId,
+    stage: state.activeStage,
+    attempt: state.activeAttempt,
+    taskAttempt: state.activeTaskAttempt,
+    artifact: state.activeArtifactKey
+  };
+}
+
+function applyOperatorRoute(route) {
+  state.activeRouteWorkItem = route.workItem || "";
+  state.activeRunId = route.runId || "";
+  state.activeAttempt = route.attempt;
+  state.activeTaskAttempt = route.taskAttempt;
+  state.activeArtifactKey = route.artifact || "";
+  if (route.stage && STAGES.includes(route.stage)) {
+    state.activeStage = route.stage;
+    state.activeStageExplicit = true;
+  }
+  if (route.mode === "history") {
+    setOperatorMode("history");
+  } else if (route.mode === "studio" && ["logs", "artifacts"].includes(route.view)) {
+    setOperatorMode(route.view);
+  } else if (route.mode === "studio" && route.view === "recovery") {
+    setOperatorMode("recovery");
+  } else {
+    setOperatorMode("work");
+  }
 }
 
 function initializeStateFromLocation() {
-  const params = new URLSearchParams(window.location.search);
-  const requestedStage = params.get("stage");
-  if (requestedStage && STAGES.includes(requestedStage)) {
-    state.activeStage = requestedStage;
-    state.activeStageExplicit = true;
-  }
-  const requestedRunId = String(params.get("run_id") || "").trim();
-  if (requestedRunId) {
-    state.activeRunId = requestedRunId;
-  }
-  const requestedTab = params.get("tab");
-  if (requestedTab && VALID_TABS.includes(requestedTab)) {
-    setOperatorMode(requestedTab);
-  }
+  applyOperatorRoute(decodeOperatorRoute(window.location.search).value);
 }
 
-function syncLocationState() {
-  const params = new URLSearchParams(window.location.search);
-  params.set("stage", state.activeStage);
-  if (state.activeRunId) params.set("run_id", state.activeRunId);
-  else params.delete("run_id");
-  if (state.activeTab && state.activeTab !== "work") params.set("tab", state.activeTab);
-  else params.delete("tab");
-  const query = params.toString();
-  const next = `${window.location.pathname}${query ? `?${query}` : ""}`;
+let restoringOperatorRoute = false;
+
+function syncLocationState({historyMode = "replace"} = {}) {
+  if (restoringOperatorRoute) return;
+  const next = `${window.location.pathname}${encodeOperatorRoute(operatorRouteSnapshot())}`;
   const current = `${window.location.pathname}${window.location.search}`;
   if (next !== current) {
-    window.history.replaceState(null, "", next);
+    const method = historyMode === "push" ? "pushState" : "replaceState";
+    window.history[method]({aiddOperatorRoute: true}, "", next);
   }
 }
 
-function dashboardUrl() {
-  const params = new URLSearchParams();
-  if (state.activeStageExplicit) params.set("stage", state.activeStage);
-  if (state.activeRunId) params.set("run_id", state.activeRunId);
-  return `/api/dashboard?${params.toString()}`;
+async function restoreOperatorRouteFromLocation() {
+  restoringOperatorRoute = true;
+  try {
+    applyOperatorRoute(decodeOperatorRoute(window.location.search).value);
+    await refresh();
+  } finally {
+    restoringOperatorRoute = false;
+  }
 }
 
-function projectHomeUrl(workItem = "") {
-  const params = new URLSearchParams();
-  if (workItem) params.set("work_item", workItem);
-  const query = params.toString();
-  return `/api/project-home${query ? `?${query}` : ""}`;
+async function navigateOperatorRouteIntent(intent, context) {
+  const resolved = resolveOperatorRouteIntent(intent, context);
+  const next = `${window.location.pathname}${encodeOperatorRoute(resolved.route)}`;
+  restoringOperatorRoute = true;
+  try {
+    window.history.pushState({aiddOperatorRoute: true, intent}, "", next);
+    applyOperatorRoute(resolved.route);
+    await refresh();
+  } finally {
+    restoringOperatorRoute = false;
+  }
 }
 
 function sourceFindingsUrl() {
@@ -640,56 +717,24 @@ function sourceFindingsUrl() {
   return `/api/next-flow/source-findings?${params.toString()}`;
 }
 
-async function fetchDashboard() {
-  const requestGeneration = ++state.dashboardRequestGeneration;
-  const payload = await api(dashboardUrl());
-  if (requestGeneration !== state.dashboardRequestGeneration) return false;
-  state.dashboard = payload.dashboard;
-  await recoverActiveJobFromDashboard(payload.active_job);
-  const version = String(payload.app_version || "").trim();
-  document.getElementById("appVersion").textContent = version.startsWith("v") ? version : `v${version || "dev"}`;
-  const viewedStage = state.dashboard.active_stage_view?.stage || state.dashboard.active_stage;
-  if (viewedStage && STAGES.includes(viewedStage)) {
-    state.activeStage = viewedStage;
-  }
-  const previousRunId = state.activeRunId;
-  state.activeRunId = state.dashboard.run?.run_id || "";
-  if (state.activeRunId !== previousRunId) {
-    state.reviewFindingsView = null;
-    state.reviewFindingsRunId = "";
-    state.qaVerdictView = null;
-    state.qaVerdictRunId = "";
-  }
-  if (!state.selectedRuntime && state.dashboard.run?.runtime_id) {
-    state.selectedRuntime = state.dashboard.run.runtime_id;
-  }
-  const nextAction = state.dashboard.next_action?.action || "";
-  if (isRecoveryNextAction(nextAction) && state.activeTab === "work") {
-    state.activeTab = "recovery";
-    if (nextAction === "answer-questions") state.recoveryDetail = "questions";
-    else if (nextAction === "inspect-validation" || nextAction === "review-intervention") state.recoveryDetail = "validation";
-    else if (nextAction === "inspect-runtime-log") state.recoveryDetail = "logs";
-    requestCockpitReveal();
-  } else if (
-    state.activeTab === "work"
-    && state.dashboard.first_failure
-    && dashboardRuntimeRecoveryAction()
-  ) {
-    state.activeTab = "recovery";
-    state.recoveryDetail = "summary";
-    requestCockpitReveal();
-  }
-  return true;
+function operatorDraftIdentity(form, sourceId) {
+  return {
+    project: String(
+      state.dashboard?.project_root
+      || state.projectHome?.project_root
+      || state.onboarding.projectRootInput
+      || "none"
+    ),
+    workItem: String(state.dashboard?.work_item || state.activeRouteWorkItem || "none"),
+    run: String(state.activeRunId || "none"),
+    stage: String(state.activeStage || "none"),
+    form,
+    sourceId: String(sourceId || "none")
+  };
 }
 
-async function fetchProjectHome(workItem = "") {
-  const requestGeneration = ++state.projectHomeRequestGeneration;
-  const payload = await api(projectHomeUrl(workItem));
-  if (requestGeneration !== state.projectHomeRequestGeneration) return false;
-  state.projectHome = payload.project_home || null;
-  const version = String(payload.app_version || "").trim();
-  document.getElementById("appVersion").textContent = version.startsWith("v") ? version : `v${version || "dev"}`;
-  return true;
+function currentOperatorDraftProject() {
+  return operatorDraftIdentity("question", "current-project").project;
 }
 
 async function fetchOnboardingState() {

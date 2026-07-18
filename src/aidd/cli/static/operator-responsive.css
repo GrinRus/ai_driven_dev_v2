@@ -43,6 +43,11 @@
   }
 }
 @media (max-width: 760px) {
+  :root {
+    --control-height: var(--control-height-touch);
+    --control-padding-block: 8px;
+  }
+
   .brand-meta {
     align-items: flex-start;
     white-space: normal;
@@ -258,8 +263,8 @@
     grid-template-columns: 1fr;
   }
   .mode-decision-peek {
-    background: #ffffff;
-    border: 1px solid #cfe3e0;
+    background: var(--color-bg-surface);
+    border: 1px solid var(--color-state-info-border);
     border-radius: 6px;
     display: grid;
     gap: 4px;
@@ -267,15 +272,15 @@
     padding: 8px;
   }
   .mode-decision-peek.good {
-    border-color: #aacfb9;
+    border-color: var(--color-state-success-border-strong);
     box-shadow: inset 3px 0 0 var(--green);
   }
   .mode-decision-peek.warn {
-    border-color: #e4c783;
+    border-color: var(--color-state-warning-border);
     box-shadow: inset 3px 0 0 var(--amber);
   }
   .mode-decision-peek.bad {
-    border-color: #ebb6b1;
+    border-color: var(--color-state-danger-border);
     box-shadow: inset 3px 0 0 var(--red);
   }
   .mode-decision-peek .small-badge {
@@ -337,13 +342,13 @@
   .project-home-grid,
   .project-set-row,
   .onboarding-shell,
+  .onboarding-work-item-branches,
   .inline-form-row,
   .artifact-layout,
   .workbench-main,
   .workbench-sidebar,
   .artifact-ownership-note,
   .project-setup-grid,
-  .setup-mode-grid,
   .flow-complete-hero,
   .terminal-attention-spotlight,
   .terminal-evidence-spotlight,
@@ -418,7 +423,7 @@
     max-width: 100%;
   }
   .next-flow-action-card p {
-    font-size: 11px;
+    font-size: var(--type-caption-size);
   }
   .evidence-artifact-browser,
   .artifact-inspector {

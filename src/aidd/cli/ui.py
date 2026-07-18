@@ -112,6 +112,7 @@ from aidd.core.run_store import (
     run_manifest_path,
     run_root,
 )
+from aidd.core.runtime_launch_history import resolve_runtime_launch_history
 from aidd.core.runtime_operator import (
     OPERATOR_DECISIONS_FILENAME,
     OPERATOR_REQUESTS_FILENAME,
@@ -125,6 +126,7 @@ from aidd.core.runtime_operator import (
     unapproved_operator_request_ids,
 )
 from aidd.core.runtime_readiness import (
+    RuntimeCapabilityProbeReport,
     RuntimeCommandSource,
     RuntimeReadinessProbeReport,
     resolve_runtime_readiness,
@@ -1724,6 +1726,18 @@ def _collect_runtime_readiness_probe_reports(
                 execution_command_available=_execution_command_available(runtime_config.command),
                 provider_version=provider_report.version_text,
                 provider_command=provider_report.command,
+                capabilities=RuntimeCapabilityProbeReport(
+                    supports_raw_log_stream=provider_report.supports_raw_log_stream,
+                    supports_structured_log_stream=(
+                        provider_report.supports_structured_log_stream
+                    ),
+                    supports_questions=provider_report.supports_questions,
+                    supports_resume=provider_report.supports_resume,
+                    supports_subagents=provider_report.supports_subagents,
+                    supports_permission_policy=provider_report.supports_permission_policy,
+                    supports_live_decisions=provider_report.supports_live_decisions,
+                    preferred_transport=provider_report.preferred_transport,
+                ),
             ),
         )
 
@@ -3686,10 +3700,17 @@ class OperatorUiService:
 
     def _runtime_readiness_for_config(self, config_path: Path) -> object:
         cfg = load_config(config_path)
+        launch_history = None
+        if self._context is not None:
+            launch_history = resolve_runtime_launch_history(
+                workspace_root=self.workspace_root,
+                work_item=self.work_item,
+            )
         return resolve_runtime_readiness(
             config=cfg,
             probe_reports=self._readiness_probe_provider(cfg),
             command_sources=_runtime_command_sources_from_config(config_path),
+            launch_history=launch_history,
         )
 
     def _runtime_readiness(self) -> object:

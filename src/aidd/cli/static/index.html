@@ -7,6 +7,7 @@
   <link rel="stylesheet" href="/operator.css">
 </head>
 <body>
+  <a id="skipToDecision" class="skip-link" href="#currentDecision">Skip to current decision</a>
   <header class="topbar" aria-label="Operator controls">
     <div class="brand">
       <div class="brand-mark">AI</div>
@@ -23,7 +24,7 @@
     <div class="top-actions">
       <label class="runtime-picker" for="runtimeSelect">
         <span>Runtime</span>
-        <select id="runtimeSelect">
+        <select id="runtimeSelect" name="runtime">
           <option value="">Select runtime</option>
         </select>
       </label>

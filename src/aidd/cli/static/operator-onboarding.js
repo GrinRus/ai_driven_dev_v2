@@ -1,3 +1,148 @@
+const GUIDED_SETUP_STEPS = ["project", "work-item", "runtime", "review-launch"];
+
+function initialGuidedSetupState() {
+  return Object.freeze({
+    step: "project",
+    projectStatus: "unvalidated",
+    workItemBranch: null,
+    workItem: "",
+    runtimeId: "",
+    launchReadiness: "unchecked",
+    error: ""
+  });
+}
+
+function guidedSetupCanContinue(guided) {
+  if (guided.step === "project") return guided.projectStatus === "valid";
+  if (guided.step === "work-item") {
+    return ["create", "resume"].includes(guided.workItemBranch) && Boolean(guided.workItem);
+  }
+  if (guided.step === "runtime") return Boolean(guided.runtimeId);
+  return false;
+}
+
+function reduceGuidedSetupState(current, event, payload = {}) {
+  const guided = {...initialGuidedSetupState(), ...(current || {})};
+  if (event === "reset") return initialGuidedSetupState();
+  if (event === "project-valid") {
+    return Object.freeze({
+      ...initialGuidedSetupState(),
+      step: "work-item",
+      projectStatus: "valid"
+    });
+  }
+  if (event === "project-invalid") {
+    return Object.freeze({
+      ...initialGuidedSetupState(),
+      projectStatus: "invalid",
+      error: String(payload.error || "Project validation failed.")
+    });
+  }
+  if (event === "work-item-selected") {
+    const branch = String(payload.branch || "");
+    const workItem = String(payload.workItem || "").trim();
+    if (guided.projectStatus !== "valid" || !["create", "resume"].includes(branch) || !workItem) {
+      return Object.freeze({...guided, error: "Select a valid create or resume work item."});
+    }
+    return Object.freeze({
+      ...guided,
+      step: "runtime",
+      workItemBranch: branch,
+      workItem,
+      runtimeId: "",
+      launchReadiness: "unchecked",
+      error: ""
+    });
+  }
+  if (event === "runtime-selected") {
+    const runtimeId = String(payload.runtimeId || "").trim();
+    if (guided.step !== "runtime" || !runtimeId) {
+      return Object.freeze({...guided, error: "Select a runtime before review."});
+    }
+    return Object.freeze({
+      ...guided,
+      step: "review-launch",
+      runtimeId,
+      launchReadiness: "unchecked",
+      error: ""
+    });
+  }
+  if (event === "launch-readiness") {
+    if (guided.step !== "review-launch") return Object.freeze(guided);
+    const ready = payload.ready === true;
+    return Object.freeze({
+      ...guided,
+      launchReadiness: ready ? "ready" : "blocked",
+      error: ready ? "" : String(payload.error || "Launch readiness is blocked.")
+    });
+  }
+  if (event === "back") {
+    const index = GUIDED_SETUP_STEPS.indexOf(guided.step);
+    if (index <= 0) return Object.freeze(guided);
+    const step = GUIDED_SETUP_STEPS[index - 1];
+    return Object.freeze({
+      ...guided,
+      step,
+      runtimeId: step === "runtime" ? guided.runtimeId : "",
+      launchReadiness: "unchecked",
+      error: ""
+    });
+  }
+  if (event === "continue") {
+    if (!guidedSetupCanContinue(guided)) {
+      return Object.freeze({...guided, error: "Complete the current setup step before continuing."});
+    }
+    const index = GUIDED_SETUP_STEPS.indexOf(guided.step);
+    return Object.freeze({...guided, step: GUIDED_SETUP_STEPS[index + 1], error: ""});
+  }
+  throw new Error(`Unknown Guided Setup transition: ${event}`);
+}
+
+function transitionGuidedSetup(event, payload = {}) {
+  state.onboarding.guided = reduceGuidedSetupState(state.onboarding.guided, event, payload);
+  return state.onboarding.guided;
+}
+
+function setGuidedDeliveryPreference(enabled) {
+  state.onboarding.guidedDelivery = Boolean(enabled);
+  renderOnboarding();
+}
+
+function guidedDeliveryExplanation(guided = state.onboarding.guided) {
+  const step = guided?.step || "project";
+  const explanations = {
+    project: ["Confirm the project boundary", "Validate the local workspace before choosing delivery context."],
+    "work-item": ["Choose durable work-item context", "Create a new request or resume saved evidence without launching runtime work."],
+    runtime: ["Choose the execution runtime", "Review observed runtime readiness before a launch request is dispatched."],
+    "review-launch": ["Review and launch", "Confirm the selected context, then use the same guarded service action as Studio."]
+  };
+  const [title, detail] = explanations[step] || explanations.project;
+  return Object.freeze({title, detail});
+}
+
+function renderGuidedDeliveryPreference() {
+  const enabled = state.onboarding.guidedDelivery !== false;
+  const explanation = guidedDeliveryExplanation();
+  return `
+    <section class="guided-delivery-preference" aria-labelledby="guidedDeliveryTitle">
+      <div>
+        <strong id="guidedDeliveryTitle">Guided Delivery</strong>
+        <p>Presentation guidance only; selected context, requests, and durable outcomes stay unchanged.</p>
+      </div>
+      <button type="button" class="secondary" data-guided-delivery-toggle aria-pressed="${enabled}">
+        ${enabled ? "Guidance on" : "Guidance off"}
+      </button>
+    </section>
+    ${enabled ? `
+      <aside class="guided-delivery-explanation" role="note">
+        <span class="small-badge">Current decision</span>
+        <strong>${escapeHtml(explanation.title)}</strong>
+        <p>${escapeHtml(explanation.detail)}</p>
+      </aside>
+    ` : ""}
+  `;
+}
+
 function onboardingProject() {
   return state.onboarding.project || null;
 }
@@ -38,20 +183,43 @@ function onboardingRunnerGuidance(runtimes) {
       <span>Native provider runners remain available for real model execution; every launch still requires an explicit runner selection.</span>
     </div>
   `;
+  syncCurrentDecisionTarget();
 }
 
 function onboardingRunnerCards() {
   if (!onboardingProject()) {
-    return `<div class="empty-state">Validate a project before selecting a runner.</div>`;
+    return renderStateSurface({
+      kind: "runtime-readiness",
+      state: "empty",
+      title: "Validate a project",
+      consequence: "Runtime selection becomes available after project validation."
+    });
   }
   if (state.readinessLoading) {
-    return `<div class="empty-state loading-state">Checking runner readiness...</div>`;
+    return renderStateSurface({
+      kind: "runtime-readiness",
+      state: "loading",
+      title: "Checking runtime readiness",
+      consequence: "Selection remains unavailable until the local readiness check completes."
+    });
   }
   if (state.readinessError) {
-    return `<div class="empty-state">Runner readiness unavailable: ${escapeHtml(state.readinessError)}</div>`;
+    return renderStateSurface({
+      kind: "runtime-readiness",
+      state: "unavailable",
+      title: "Runtime readiness unavailable",
+      consequence: state.readinessError
+    });
   }
   const runtimes = state.readiness?.runtimes || [];
-  if (!runtimes.length) return `<div class="empty-state">No runtimes are configured.</div>`;
+  if (!runtimes.length) {
+    return renderStateSurface({
+      kind: "runtime-readiness",
+      state: "unavailable",
+      title: "No runtimes configured",
+      consequence: "Configure a supported local runtime before launching delivery."
+    });
+  }
   const cards = runtimes.map((runtime) => {
     const runtimeId = String(runtime.runtime_id || "");
     const ready = runtime.provider_available && runtime.execution_command_available;
@@ -94,9 +262,8 @@ function onboardingWorkItems() {
   const items = project?.work_items || [];
   if (!project) return `<div class="empty-state">Validate a project to discover work items.</div>`;
   if (!items.length) return `<div class="empty-state">No work items in this project yet.</div>`;
-  const canResume = Boolean(state.selectedRuntime);
   return items.map((item) => `
-    <button class="artifact-row" data-onboarding-resume="${escapeHtml(item.work_item)}" type="button" ${canResume ? "" : "disabled"}>
+    <button class="artifact-row" data-onboarding-resume="${escapeHtml(item.work_item)}" type="button">
       <span>
         <strong>${escapeHtml(item.work_item)}</strong>
         <span class="muted">${item.has_request_context ? "request context present" : "no request context"}</span>
@@ -116,9 +283,7 @@ function onboardingProjectSummary() {
   return `
     <div class="panel-list">
       <div class="panel-item"><strong>Project root</strong>${pathLine(project.project_root, 86)}</div>
-      <div class="panel-item"><strong>AIDD root</strong>${pathLine(project.workspace_root, 86)}</div>
       <div class="panel-item"><strong>Workspace</strong><span>${project.workspace_exists ? "existing .aidd detected" : "new .aidd will be created"}</span></div>
-      <div class="panel-item"><strong>Config</strong>${pathLine(state.onboarding.configPath || "aidd.example.toml", 86)}</div>
     </div>
   `;
 }
@@ -176,9 +341,9 @@ function renderProjectSetEditor() {
         const duplicate = duplicates.has(String(row.root || "").trim());
         return `
           <div class="project-set-row ${duplicate ? "duplicate" : ""}">
-            <input data-project-set-field="id" data-project-set-index="${index}" type="text" value="${escapeHtml(row.id || "")}" placeholder="api" autocomplete="off" spellcheck="false" aria-label="Project id ${index + 1}">
-            <input data-project-set-field="root" data-project-set-index="${index}" type="text" value="${escapeHtml(row.root || "")}" placeholder="services/api" autocomplete="off" spellcheck="false" aria-label="Project root ${index + 1}">
-            <input data-project-set-field="role" data-project-set-index="${index}" type="text" value="${escapeHtml(row.role || "")}" placeholder="owner" autocomplete="off" spellcheck="false" aria-label="Project role ${index + 1}">
+            <input id="project-set-${index}-id" name="project_set_${index}_id" data-project-set-field="id" data-project-set-index="${index}" type="text" value="${escapeHtml(row.id || "")}" placeholder="api" autocomplete="off" spellcheck="false" aria-label="Project id ${index + 1}">
+            <input id="project-set-${index}-root" name="project_set_${index}_root" data-project-set-field="root" data-project-set-index="${index}" type="text" value="${escapeHtml(row.root || "")}" placeholder="services/api" autocomplete="off" spellcheck="false" aria-label="Project root ${index + 1}">
+            <input id="project-set-${index}-role" name="project_set_${index}_role" data-project-set-field="role" data-project-set-index="${index}" type="text" value="${escapeHtml(row.role || "")}" placeholder="owner" autocomplete="off" spellcheck="false" aria-label="Project role ${index + 1}">
             <button data-project-set-remove="${index}" class="secondary" type="button" ${rows.length <= 1 ? "disabled" : ""}>Remove</button>
             ${duplicate ? `<span class="form-error">Duplicate root</span>` : ""}
           </div>
@@ -189,6 +354,27 @@ function renderProjectSetEditor() {
         <button id="onboardingValidateProjectSet" class="secondary" type="button" ${onboardingProject() ? "" : "disabled"}>Validate project set</button>
       </div>
     </div>
+  `;
+}
+
+function renderOnboardingAdvanced() {
+  const project = onboardingProject();
+  if (!project) return "";
+  return `
+    <details class="onboarding-advanced">
+      <summary>Advanced configuration</summary>
+      <div class="onboarding-advanced-content">
+        <div class="panel-list">
+          <div class="panel-item"><strong>AIDD root</strong>${pathLine(project.workspace_root, 86)}</div>
+          <div class="panel-item"><strong>Config</strong>${pathLine(state.onboarding.configPath || "aidd.example.toml", 86)}</div>
+        </div>
+        <div class="surface-title compact"><span>Project set</span><span class="small-badge">optional</span></div>
+        <div class="form-grid">
+          ${renderProjectSetEditor()}
+          ${onboardingProjectSetStatus()}
+        </div>
+      </div>
+    </details>
   `;
 }
 
@@ -243,6 +429,7 @@ function renderOnboarding() {
     : `<span class="small-badge warn">required</span>`;
   content.innerHTML = `
     <div class="onboarding-shell">
+      ${renderGuidedDeliveryPreference()}
       <section class="surface onboarding-panel">
         <div class="surface-title">
           <span>Project setup</span>
@@ -251,11 +438,43 @@ function renderOnboarding() {
         <form id="onboardingProjectForm" class="form-grid">
           <label class="field-label" for="onboardingProjectRoot">Project root</label>
           <div class="inline-form-row">
-            <input id="onboardingProjectRoot" type="text" value="${escapeHtml(state.onboarding.projectRootInput)}" autocomplete="off" spellcheck="false">
+            <input id="onboardingProjectRoot" name="project_root" type="text" value="${escapeHtml(state.onboarding.projectRootInput)}" autocomplete="off" spellcheck="false">
             <button type="submit" class="secondary" ${state.onboarding.inspecting ? "disabled" : ""}>Validate</button>
           </div>
         </form>
         ${onboardingProjectSummary()}
+        ${renderOnboardingAdvanced()}
+      </section>
+
+      <section class="surface onboarding-panel">
+        <div class="surface-title">
+          <span>Work item</span>
+          <span class="small-badge">create or resume</span>
+        </div>
+        <div class="onboarding-work-item-branches">
+          <article class="onboarding-work-item-branch" data-onboarding-work-item-branch="create">
+            <div class="surface-title compact"><span>Create</span><span class="small-badge">new context</span></div>
+            <form id="onboardingCreateForm" class="form-grid">
+              <label class="field-label" for="onboardingWorkItem">Work item id</label>
+              <input id="onboardingWorkItem" name="work_item" type="text" maxlength="120" value="${escapeHtml(state.onboarding.workItemInput)}" autocomplete="off" spellcheck="false">
+              <label class="field-label" for="onboardingRequest">Request</label>
+              <textarea id="onboardingRequest" name="request" rows="7" maxlength="20000">${escapeHtml(state.onboarding.requestText)}</textarea>
+              <label class="checkbox-row" for="onboardingForceContext">
+                <input id="onboardingForceContext" name="force_context" type="checkbox" ${state.onboarding.forceContext ? "checked" : ""}>
+                <span>Overwrite existing request context</span>
+              </label>
+              <div class="setup-actions">
+                <button type="submit" ${onboardingCanCreate() && !state.onboarding.creating ? "" : "disabled"}>${state.onboarding.creating ? "Creating..." : "Create and open command center"}</button>
+                ${state.onboarding.createError ? `<span class="form-error">${escapeHtml(state.onboarding.createError)}</span>` : ""}
+              </div>
+            </form>
+          </article>
+          <article class="onboarding-work-item-branch" data-onboarding-work-item-branch="resume">
+            <div class="surface-title compact"><span>Resume</span><span class="small-badge">inspect context</span></div>
+            <p class="muted">Open saved work-item context now; runtime selection and launch remain separate actions.</p>
+            <div class="panel-list">${onboardingWorkItems()}</div>
+          </article>
+        </div>
       </section>
 
       <section class="surface onboarding-panel">
@@ -264,46 +483,6 @@ function renderOnboarding() {
           ${selectedRunner}
         </div>
         <div class="runner-card-grid">${onboardingRunnerCards()}</div>
-      </section>
-
-      <section class="surface onboarding-panel">
-        <div class="surface-title">
-          <span>Create work item</span>
-          <span class="small-badge">${state.selectedRuntime ? "runner selected" : "select runner"}</span>
-        </div>
-        <form id="onboardingCreateForm" class="form-grid">
-          <label class="field-label" for="onboardingWorkItem">Work item id</label>
-          <input id="onboardingWorkItem" type="text" maxlength="120" value="${escapeHtml(state.onboarding.workItemInput)}" autocomplete="off" spellcheck="false">
-          <label class="field-label" for="onboardingRequest">Request</label>
-          <textarea id="onboardingRequest" rows="7" maxlength="20000">${escapeHtml(state.onboarding.requestText)}</textarea>
-          <label class="checkbox-row">
-            <input id="onboardingForceContext" type="checkbox" ${state.onboarding.forceContext ? "checked" : ""}>
-            <span>Overwrite existing request context</span>
-          </label>
-          <div class="setup-actions">
-            <button type="submit" ${onboardingCanCreate() && !state.onboarding.creating ? "" : "disabled"}>${state.onboarding.creating ? "Creating..." : "Create and open command center"}</button>
-            ${state.onboarding.createError ? `<span class="form-error">${escapeHtml(state.onboarding.createError)}</span>` : ""}
-          </div>
-        </form>
-      </section>
-
-      <section class="surface onboarding-panel">
-        <div class="surface-title">
-          <span>Resume existing</span>
-          <span class="small-badge">${(onboardingProject()?.work_items || []).length}</span>
-        </div>
-        <div class="panel-list">${onboardingWorkItems()}</div>
-      </section>
-
-      <section class="surface onboarding-panel">
-        <div class="surface-title">
-          <span>Project set</span>
-          <span class="small-badge">optional</span>
-        </div>
-        <div class="form-grid">
-          ${renderProjectSetEditor()}
-          ${onboardingProjectSetStatus()}
-        </div>
       </section>
 
       <section class="surface onboarding-panel">
@@ -333,10 +512,12 @@ async function inspectOnboardingProject() {
     state.onboarding.recentProjects = payload.recent_projects || state.onboarding.recentProjects;
     state.readiness = payload.readiness || {runtimes: []};
     state.readinessError = "";
+    transitionGuidedSetup("project-valid");
   } catch (error) {
     state.onboarding.inspectError = error.message || "project validation failed";
     state.readiness = {runtimes: []};
     state.readinessError = "";
+    transitionGuidedSetup("project-invalid", {error: state.onboarding.inspectError});
   } finally {
     state.onboarding.inspecting = false;
     state.readinessLoading = false;
@@ -411,9 +592,13 @@ async function validateOnboardingProjectSet() {
 }
 
 async function completeOnboardingWorkItem(action, workItem) {
-  if (!state.selectedRuntime) {
+  if (action === "create" && !state.selectedRuntime) {
     toast("Select runner first.");
     return;
+  }
+  transitionGuidedSetup("work-item-selected", {branch: action, workItem});
+  if (action === "create") {
+    transitionGuidedSetup("runtime-selected", {runtimeId: state.selectedRuntime});
   }
   state.onboarding.creating = true;
   state.onboarding.createError = "";

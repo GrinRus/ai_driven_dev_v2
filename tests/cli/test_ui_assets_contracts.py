@@ -52,6 +52,10 @@ def _next_flow_assets() -> str:
     )
 
 
+def _dashboard_actions() -> str:
+    return _asset_text("/operator-dashboard-actions.js")
+
+
 def _assert_contains_all(text: str, expected: tuple[str, ...]) -> None:
     missing = [item for item in expected if item not in text]
     assert not missing
@@ -99,6 +103,9 @@ def test_operator_static_asset_manifest_preserves_compatibility_routes() -> None
         "operator.js",
     }.issubset(filenames)
     assert "operator-api-state.js" in filenames
+    assert "operator-presentation.js" in filenames
+    assert "operator-surface-parity.js" in filenames
+    assert "operator-dashboard-actions.js" in filenames
     assert "operator-main.js" in filenames
     assert routes["/"].filename == "index.html"
     assert routes["/operator.js"].content_type == "text/javascript; charset=utf-8"
@@ -122,6 +129,64 @@ def test_operator_js_bootstrap_loads_manifested_browser_modules() -> None:
     assert module_routes
     for route in module_routes:
         assert f'"{route}"' in loader
+
+    assert loader.index('"/operator-surface-parity.js"') < loader.index(
+        '"/operator-presentation.js"'
+    )
+    assert loader.index('"/operator-presentation.js"') < loader.index(
+        '"/operator-api-state.js"'
+    )
+
+
+def test_operator_presentation_selector_is_browser_only_and_fail_closed() -> None:
+    presentation = _asset_text("/operator-presentation.js")
+    api_state = _asset_text("/operator-api-state.js")
+
+    _assert_contains_all(
+        presentation,
+        (
+            'new Set(["studio", "legacy"])',
+            'new URLSearchParams(search).get("ui")',
+            'return PRESENTATION_SELECTORS.has(requested) ? requested : "legacy";',
+            "function resolveSurfaceRendererFor(entry, selector)",
+            'presentation === "studio" ? `studio:${entry.id}` : entry.rollbackRenderer',
+            "function resolveSurfaceRenderer(surfaceId",
+            "function selectSurfaceRenderer(surfaceId, renderers)",
+            'const effective = presentations.size === 1 ? [...presentations][0] : "mixed";',
+            "SURFACE_PARITY_MANIFEST.map((entry)",
+            "document.documentElement.dataset.presentationRequested",
+            "document.documentElement.dataset.presentationEffective",
+        ),
+    )
+    assert 'presentationSelector: window.aiddPresentation?.requested || "legacy"' in api_state
+    assert 'presentationEffective: window.aiddPresentation?.effective || "legacy"' in api_state
+    assert "fetch(" not in presentation
+    assert "postJson(" not in presentation
+
+
+def test_operator_surface_parity_manifest_is_complete_and_policy_free() -> None:
+    parity = _asset_text("/operator-surface-parity.js")
+
+    _assert_contains_all(
+        parity,
+        (
+            'new Set(["legacy_only", "candidate", "parity_closed"])',
+            "const SURFACE_PARITY_MANIFEST = Object.freeze([",
+            'id: "guided-setup"',
+            'id: "inbox"',
+            'id: "active-studio"',
+            'id: "question-recovery"',
+            'id: "runtime-validation-recovery"',
+            'id: "review-qa"',
+            'id: "history"',
+            'id: "flow-complete"',
+            'journey: "W36-E7-S1-T12"',
+            "function validateSurfaceParityManifest(",
+            "function surfaceParityEntry(surfaceId)",
+        ),
+    )
+    assert "fetch(" not in parity
+    assert "postJson(" not in parity
 
 
 def test_operator_css_loader_imports_manifested_layers() -> None:
@@ -210,7 +275,6 @@ def test_operator_css_layers_own_static_ui_surfaces() -> None:
     assert ".validation-repair-center" in components
     assert ".repair-action-band" in components
     assert ".project-setup-grid" in components
-    assert ".setup-mode-card.selected" in components
     assert ".setup-readiness-checklist" in components
     assert ".flow-complete-state" in components
     assert ".flow-complete-mark" in components
@@ -248,7 +312,6 @@ def test_operator_css_layers_own_static_ui_surfaces() -> None:
     assert ".live-progress-meta" in responsive
     assert ".run-progress-meta" in responsive
     assert ".project-home-grid" in responsive
-    assert ".setup-mode-grid" in responsive
     assert ".handoff-metric-grid" in responsive
     assert ".lineage-flow" in responsive
     assert ".next-flow-wizard-frame" in responsive
@@ -360,13 +423,14 @@ def test_operator_responsive_css_prevents_activity_table_mobile_overflow() -> No
 def test_operator_script_modules_own_static_ui_surfaces() -> None:
     loader = _asset_text("/operator.js")
     api_state = _asset_text("/operator-api-state.js")
+    dashboard_actions = _dashboard_actions()
     shell = _asset_text("/operator-shell-rendering.js")
     artifacts = _asset_text("/operator-artifacts-documents.js")
     questions = _asset_text("/operator-questions.js")
     approvals = _asset_text("/operator-approvals-interventions.js")
     logs = _asset_text("/operator-logs-jobs.js")
-    next_flow_controller = _asset_text("/operator-next-flow-actions.js")
     next_flow_view = _asset_text("/operator-next-flow-view.js")
+    control_center = _asset_text("/operator-control-center.js")
     onboarding = _asset_text("/operator-onboarding.js")
     cockpit = _asset_text("/operator-stage-cockpit.js")
     main = _asset_text("/operator-main.js")
@@ -405,12 +469,23 @@ def test_operator_script_modules_own_static_ui_surfaces() -> None:
     assert "async function resumeAfterAnswers()" in questions
     assert "async function renderApprovals()" in approvals
     assert "async function submitIntervention()" in approvals
+    assert 'kind: "stage-interact"' in approvals
+    assert 'operatorMutationKey(\n    "answer"' in questions
     assert "async function renderLogs()" in logs
     assert "async function startJobPolling(job)" in logs
     assert "function renderOnboarding()" in onboarding
     assert "function syncOnboardingCreateActionState()" in onboarding
-    assert "async function startWorkflow()" in next_flow_controller
-    assert "async function handleNextAction()" in next_flow_controller
+    assert "async function fetchDashboard()" in dashboard_actions
+    assert "async function fetchProjectHome(workItem = \"\")" in dashboard_actions
+    assert "async function startWorkflow()" in dashboard_actions
+    assert (
+        "async function guardedJobLaunch({kind, components, controls, execute})"
+        in dashboard_actions
+    )
+    assert "readWinner: readRunMutationWinner" in dashboard_actions
+    assert 'kind: "remediation-rerun"' in dashboard_actions
+    assert 'kind: "remediation-launch"' in control_center
+    assert "async function handleNextAction()" in dashboard_actions
     assert "function renderFlowCompleteState()" in next_flow_view
     assert "function renderRunHistory()" in next_flow_view
     assert "async function renderCockpit()" in cockpit
@@ -431,6 +506,7 @@ def test_operator_script_modules_own_static_ui_surfaces() -> None:
 
 def test_operator_next_flow_controller_and_view_keep_separate_boundaries() -> None:
     controller = _asset_text("/operator-next-flow-actions.js")
+    dashboard_actions = _dashboard_actions()
     view = _asset_text("/operator-next-flow-view.js")
     loader = _asset_text("/operator.js")
 
@@ -438,8 +514,10 @@ def test_operator_next_flow_controller_and_view_keep_separate_boundaries() -> No
     assert "innerHTML =" not in controller
     assert "function renderFlowCompleteState()" not in controller
     assert "function renderNextFlowWizardShell(" not in controller
-    assert "async function startWorkflow()" in controller
-    assert "async function handleNextAction()" in controller
+    assert "async function startWorkflow()" not in controller
+    assert "async function handleNextAction()" not in controller
+    assert "async function startWorkflow()" in dashboard_actions
+    assert "async function handleNextAction()" in dashboard_actions
 
     assert "function renderFlowCompleteState()" in view
     assert "function renderRunHistory()" in view
@@ -449,6 +527,9 @@ def test_operator_next_flow_controller_and_view_keep_separate_boundaries() -> No
     assert "fetch(" not in view
     assert "postJson(" not in view
 
+    assert loader.index('"/operator-dashboard-actions.js"') < loader.index(
+        '"/operator-next-flow-actions.js"'
+    )
     assert loader.index('"/operator-next-flow-actions.js"') < loader.index(
         '"/operator-next-flow-view.js"'
     )
@@ -463,29 +544,19 @@ def test_operator_next_flow_controller_and_view_keep_separate_boundaries() -> No
     )
 
 
-def test_operator_api_state_asset_keeps_dashboard_runtime_and_tab_contracts() -> None:
-    api_state = _asset_text("/operator-api-state.js")
+def test_operator_state_and_dashboard_assets_keep_runtime_and_tab_contracts() -> None:
+    api_state = "\n".join((_asset_text("/operator-api-state.js"), _dashboard_actions()))
 
     _assert_contains_all(
         api_state,
         (
             'const STAGES = ["idea", "research", "plan", "review-spec", "tasklist", '
             '"implement", "review", "qa"];',
-            "const SETUP_MODES = [",
-            'id: "new-work-item"',
-            'label: "New Work Item"',
-            'id: "follow-up-flow"',
-            'label: "Follow-up Flow"',
-            'id: "clone-previous-flow"',
-            'label: "Clone Previous Flow"',
-            'id: "eval-scenario-batch"',
-            'label: "Eval / Scenario Batch"',
             "const NON_BLOCKING_VALIDATION_NOTICE_CODES = new Set(",
             '"STRUCT-OUTPUT-PROMOTED"',
             'activeRunId: ""',
             'selectedEvidenceNodeId: ""',
             'selectedEvidenceEdgeId: ""',
-            'setupMode: "new-work-item"',
             "nextFlowWizard: {",
             'step: "sources"',
             "sourceFindings: null",
@@ -529,13 +600,13 @@ def test_operator_api_state_asset_keeps_dashboard_runtime_and_tab_contracts() ->
             "terminal-handoff-mode",
             "terminal-repair-mode",
             "function initializeStateFromLocation()",
-            "new URLSearchParams(window.location.search)",
-            "STAGES.includes(requestedStage)",
+            "decodeOperatorRoute(window.location.search).value",
+            "function applyOperatorRoute(route)",
+            "STAGES.includes(route.stage)",
             "state.activeStageExplicit = true;",
-            "VALID_TABS.includes(requestedTab)",
-            "setOperatorMode(requestedTab);",
-            "function syncLocationState()",
-            "window.history.replaceState(null, \"\", next);",
+            "function operatorRouteSnapshot()",
+            "function syncLocationState({historyMode = \"replace\"} = {})",
+            'window.history[method]({aiddOperatorRoute: true}, "", next);',
             "function sourceFindingsUrl()",
             "function projectHomeUrl(workItem = \"\")",
             "/api/next-flow/source-findings",
@@ -599,6 +670,9 @@ def test_operator_onboarding_static_contract_syncs_create_action_state() -> None
         (
             "function onboardingCanCreate()",
             "function renderProjectSetEditor()",
+            "function renderOnboardingAdvanced()",
+            '<details class="onboarding-advanced">',
+            "<summary>Advanced configuration</summary>",
             "function updateProjectSetRow(index, field, value)",
             "function addProjectSetRow()",
             "function removeProjectSetRow(index)",
@@ -613,6 +687,10 @@ def test_operator_onboarding_static_contract_syncs_create_action_state() -> None
             'id="onboardingWorkItem"',
             'id="onboardingRequest"',
             'id="onboardingCreateForm"',
+            'data-onboarding-work-item-branch="create"',
+            'data-onboarding-work-item-branch="resume"',
+            'if (action === "create" && !state.selectedRuntime)',
+            "runtime selection and launch remain separate actions",
             'data-project-set-field="id"',
             "Duplicate root",
         ),
@@ -792,7 +870,8 @@ def test_operator_stage_retry_affordance_links_to_recovery_history() -> None:
         main,
         (
             'closest("[data-stage-recovery]")',
-            'activateTab(stageRecovery.dataset.stageRecovery || "recovery");',
+            'activateTab(stageRecovery.dataset.stageRecovery || "recovery", '
+            '{historyMode: "push"});',
         ),
     )
 
@@ -811,12 +890,12 @@ def test_operator_cockpit_asset_keeps_overview_sidebar_and_activity_contracts() 
             "updateQuestionResumeButtonStates();",
             'state.recoveryDetail === "validation"',
             "content.innerHTML = renderValidation();",
-            "Selected stage recovery",
             "Run-global blocker",
-            "Selected-stage status",
-            "Selected-stage evidence",
+            "renderRecoverySummary({",
+            'evidence: {label: runtimeFailure ? "Runtime log" : '
+            '"Supporting evidence", path: evidencePath}',
             'item.action === "inspect-runtime-log"',
-            "No guided recovery action is available. Inspect the failure evidence before retrying.",
+            "Open Recovery Summary",
             "function bottomDockDefaultCollapsed()",
             "function bottomDockIsCollapsed()",
             "data-bottom-dock-toggle",
@@ -840,7 +919,7 @@ def test_operator_cockpit_asset_keeps_overview_sidebar_and_activity_contracts() 
             "function renderActivityTableMarkup(events)",
             "function renderActivityTable()",
             "function renderRecoveryWorkbench()",
-            "id=\"recoveryPrimaryActionButton\"",
+            "primaryAction: {action: primary.action, label: primary.label",
             "function renderHistoryMode()",
             "renderRuntimeSelector();",
             "await renderCockpit();",
@@ -1121,8 +1200,10 @@ def test_operator_questions_asset_keeps_answer_resolution_and_saved_answer_contr
             "Required answers",
             "Blocked stage",
             'const savedAnswer = question.answer_resolution',
-            "const answerText = question.answer_text || \"\";",
-            "const resolutionValue = question.answer_resolution || \"resolved\";",
+            "const draft = questionDraft(question.question_id)?.value || null;",
+            'const answerText = draft?.text ?? question.answer_text ?? "";',
+            'const resolutionValue = draft?.resolution || question.answer_resolution || '
+            '"resolved";',
             'class="saved-answer"',
             "Saved ${escapeHtml(question.answer_resolution)} answer",
             "Answer recorded in answers.md",
@@ -1363,7 +1444,7 @@ def test_operator_review_and_qa_decision_summaries_prioritize_next_actions() -> 
             "Accept complete is disabled while QA is not-ready.",
             "Send selected QA risks or issues back to implement, then rerun verification and QA.",
             "${renderQaCompletionGuard(view, Boolean(sourceItems.length))}",
-            'data-decision-summary="${escapeHtml(kind)}"',
+            "return renderDecisionBar({",
             "renderReviewDecisionSummary(view, findings)",
             "function renderQaDecisionSummary(view, risks, issues)",
             "QA not ready: send selected items back to implement",
@@ -1465,7 +1546,7 @@ def test_operator_approvals_asset_keeps_request_and_intervention_contracts() -> 
         (
             "async function renderRequestChange()",
             "async function renderApprovals()",
-            "async function submitApproval(requestId, action)",
+            "async function submitApproval(requestId, action, {sessionConfirmed = false} = {})",
             "async function submitIntervention()",
             "function requestChangeTargetEntries(documents, context)",
             "function selectedInterventionTargets()",
@@ -1488,6 +1569,11 @@ def test_operator_approvals_asset_keeps_request_and_intervention_contracts() -> 
             ),
             "function renderApprovalsSurface({view, diagnostics, requests, decisions, pendingIds})",
             "data-approval-decision-spotlight",
+            "data-approval-reason",
+            "data-approval-session-confirmation",
+            "Confirm session-wide approval",
+            "all matching requests in the current runtime approval session",
+            "function setApprovalRequestPending(requestId, pending)",
             "Runtime approval required",
             "Runtime request blocked by policy",
             "Runtime approval stopped",
@@ -1577,6 +1663,21 @@ def test_operator_logs_asset_keeps_filter_raw_cancel_and_polling_contracts() -> 
             "function renderLiveJobActions()",
             "function activeJobCancelLabel()",
             "async function cancelActiveJob()",
+            "function scheduleActiveJobPoll(delayMs = ACTIVE_JOB_POLL_INTERVAL_MS)",
+            "function activeJobRetryDelay(failureCount)",
+            "function renderActiveJobConnectionSurface()",
+            "function reconnectActiveJob()",
+            "function clearReconciledActiveJob({preserveConnection = true} = {})",
+            "async function reconcileRecoveredActiveJob(jobId, status)",
+            "async function reconcileExpiredActiveJob(jobId)",
+            "async function reconcileTerminalActiveJob(jobId)",
+            'data-connection-state="reconnecting"',
+            'data-connection-state="offline"',
+            'data-connection-state="expired-job"',
+            'data-connection-state="recovered"',
+            'recovery: {action: "reconnect-live-job", label: "Reconnect"}',
+            "ACTIVE_JOB_RETRY_LIMIT = 5",
+            'state: expired || failureCount >= ACTIVE_JOB_RETRY_LIMIT ? "offline" : "reconnecting"',
             "data-cancel-job",
             "Cancel job",
             "Cancelling...",
@@ -1603,21 +1704,27 @@ def test_operator_logs_asset_keeps_filter_raw_cancel_and_polling_contracts() -> 
             "renderActivityTable();",
         ),
     )
+    _assert_contains_all(
+        _asset_text("/operator-main.js"),
+        (
+            'stateRecovery === "reconnect-live-job"',
+            "await reconnectActiveJob();",
+            'stateRecovery === "refresh-expired-job"',
+        ),
+    )
 
 
 def test_operator_next_flow_asset_keeps_launch_resume_and_runtime_guard_contracts() -> None:
-    next_flow = _next_flow_assets()
+    next_flow = "\n".join((_dashboard_actions(), _next_flow_assets()))
 
     _assert_contains_all(
         next_flow,
         (
             "function renderFirstLaunchState()",
             "function setupPreviousRunContext()",
-            "function renderSetupModeSelector(context)",
             "function renderPreviousRunContext(context)",
             "function renderSetupReadinessChecklist({ready, context})",
             "Readiness Checklist",
-            'aria-disabled="true" disabled',
             "function renderFlowCompleteState()",
             "function renderNextFlowActions(handoff)",
             "function renderTerminalArtifacts(artifacts)",
@@ -1670,6 +1777,10 @@ def test_operator_next_flow_asset_keeps_launch_resume_and_runtime_guard_contract
             "async function createFollowUpDraftForLaunch(draft)",
             "async function refreshRuntimeReadinessForLaunch()",
             "function resetLaunchReadiness(wizard = state.nextFlowWizard)",
+            "function nextFlowBrowserDraftIdentity(action = state.nextFlowWizard.action)",
+            "function mergeNextFlowBrowserDraft(serverDraft, action = state.nextFlowWizard.action)",
+            "function persistNextFlowBrowserDraft()",
+            "clearOperatorDraft(nextFlowBrowserDraftIdentity());",
             "function invalidateFollowUpDraftPreview()",
             (
                 'document.querySelectorAll("[data-follow-up-definition-error], '
@@ -1759,14 +1870,13 @@ def test_operator_next_flow_asset_keeps_launch_resume_and_runtime_guard_contract
             "archive.archived",
             'data-lineage-run-id="${escapeHtml(sourceRun)}"',
             "${escapeHtml(candidate.label || candidate.work_item_id)}",
-            "Project Setup",
+            "Review &amp; Launch",
             "Flow Complete",
             "Start Next Flow",
             "Final artifacts",
             "Blockers / safety",
             "Runtime fallback",
             "Previous-run context",
-            "data-setup-mode",
             "data-next-flow-action",
             "Select a runtime to start the first governed workflow run.",
             "Create or resume a work item before starting the governed workflow.",
@@ -1924,7 +2034,7 @@ def test_operator_static_screen_landmarks_cover_accepted_mission_control_surface
         next_flow,
         (
             '<section class="surface flow-complete-state">',
-            '<section class="surface run-history-state">',
+            '<section class="surface run-history-state hierarchy-primary history-filmstrip">',
             '<section class="surface next-flow-wizard">',
             'sectionClass: "next-flow-wizard follow-up-definition"',
             'sectionClass: "next-flow-wizard launch-confirmation"',
@@ -2205,9 +2315,9 @@ def test_operator_focus_visible_contract_covers_keyboard_reachable_surfaces() ->
             "select:focus-visible",
             "textarea:focus-visible",
             "[tabindex]:focus-visible",
-            "box-shadow: 0 0 0 4px var(--focus-ring-soft)",
-            "outline: 3px solid var(--focus-ring)",
-            "outline-offset: 2px",
+            "box-shadow: var(--focus-shadow)",
+            "outline: var(--focus-width) solid var(--color-focus)",
+            "outline-offset: var(--focus-offset)",
             "--focus-ring:",
             "--focus-ring-soft:",
         ),
@@ -2240,9 +2350,6 @@ def test_operator_main_asset_keeps_refresh_order_and_event_routing_contracts() -
             'event.target.closest("[data-first-launch-run]")',
             'event.target.closest("[data-first-launch-stage]")',
             "await startStage(state.activeStage);",
-            'closest("[data-setup-mode]")',
-            "requestedMode.requiresPreviousRun",
-            "setupPreviousRunContext().available",
             'closest("[data-next-flow-action]")',
             'action === "start-follow-up-flow"',
             "await openNextFlowWizard(action)",
@@ -2383,8 +2490,8 @@ def test_operator_css_keeps_focus_and_screen_reader_contracts() -> None:
     assert "position: absolute" in css
     assert "button:focus-visible" in css
     assert "--focus-ring:" in css
-    assert "outline: 3px solid var(--focus-ring)" in css
-    assert "box-shadow: 0 0 0 4px var(--focus-ring-soft)" in css
+    assert "outline: var(--focus-width) solid var(--color-focus)" in css
+    assert "box-shadow: var(--focus-shadow)" in css
     assert ".status-badge.cancelled" in css
     assert ".small-badge.running" in css
     assert ".small-badge.cancelling" in css
@@ -2423,7 +2530,6 @@ def test_operator_css_keeps_focus_and_screen_reader_contracts() -> None:
     assert ".evidence-artifact-table" in css
     assert ".saved-answer" in css
     assert ".saved-answer-text" in css
-    assert ".setup-mode-card" in css
     assert ".previous-run-context" in css
     assert ".flow-complete-state" in css
     assert ".terminal-attention-spotlight" in css

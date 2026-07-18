@@ -1,29 +1,3 @@
-function renderSetupModeSelector(context) {
-  const activeMode = setupModeView(context);
-  return `
-    <div class="setup-mode-grid" role="radiogroup" aria-label="Execution mode">
-      ${SETUP_MODES.map((mode) => {
-        const selected = mode.id === activeMode.id;
-        const blocked = mode.requiresPreviousRun && !context.available;
-        return `
-          <button
-            class="setup-mode-card${selected ? " selected" : ""}"
-            data-setup-mode="${escapeHtml(mode.id)}"
-            type="button"
-            role="radio"
-            aria-checked="${selected ? "true" : "false"}"
-            ${blocked ? 'aria-disabled="true" disabled' : ""}
-          >
-            <strong>${escapeHtml(mode.label)}</strong>
-            <span>${escapeHtml(mode.detail)}</span>
-            <em>${blocked ? "needs previous run" : selected ? "selected" : "available"}</em>
-          </button>
-        `;
-      }).join("")}
-    </div>
-  `;
-}
-
 function renderPreviousRunContext(context) {
   if (!context.available) {
     return `
@@ -110,7 +84,6 @@ function renderFirstLaunchState() {
   const ready = selectedRuntimeReady();
   const hasWorkItemContext = Boolean(state.dashboard?.work_item);
   const context = setupPreviousRunContext();
-  const mode = setupModeView(context);
   const detail = !hasWorkItemContext
     ? "Create or resume a work item before starting the governed workflow."
     : !state.selectedRuntime
@@ -122,16 +95,15 @@ function renderFirstLaunchState() {
   return `
     <section class="surface first-launch-state project-setup-state">
       <div class="surface-title">
-        <span>Project Setup</span>
-        <span class="small-badge">${escapeHtml(mode.label)}</span>
+        <span>Review &amp; Launch</span>
+        <span class="small-badge">Guided Setup</span>
       </div>
       <div class="project-setup-grid">
         <div class="setup-primary">
           <p>${escapeHtml(detail)}</p>
-          ${renderSetupModeSelector(context)}
           <div class="setup-actions">
-            <button data-first-launch-run type="button" ${canRun ? "" : "disabled"}>Run workflow</button>
-            <button data-first-launch-stage type="button" class="secondary" ${canRun ? "" : "disabled"}>Run selected stage</button>
+            <button data-guided-launch="workflow" data-first-launch-run type="button" ${canRun ? "" : "disabled"}>Run workflow</button>
+            <button data-guided-launch="stage" data-first-launch-stage type="button" class="secondary" ${canRun ? "" : "disabled"}>Run selected stage</button>
             <span class="muted">Work item ${escapeHtml(state.dashboard?.work_item || "unknown")}</span>
           </div>
         </div>
@@ -694,6 +666,7 @@ function renderLineageCandidates(candidates) {
       <p>${escapeHtml(candidate.relationship || "child work item")}</p>
       <div class="panel-item"><strong>Work item</strong><span>${escapeHtml(candidate.work_item_id)}</span></div>
       <div class="panel-item"><strong>Source run</strong><span>${escapeHtml(candidate.source_run_id || state.dashboard?.run?.run_id || "not recorded")}</span></div>
+      <button data-operator-route-intent="child-work-item" data-route-work-item="${escapeHtml(candidate.work_item_id)}" type="button">Open child work item</button>
     </article>
   `).join("");
 }
@@ -799,9 +772,9 @@ function renderRunComparisonPanel() {
         <span class="small-badge">${escapeHtml(baselineRunId || "baseline")} -> ${escapeHtml(targetRunId || "target")}</span>
       </div>
       <div class="comparison-controls">
-        <label>
+        <label for="runComparisonBaseline">
           <span>Baseline run id</span>
-          <input id="runComparisonBaseline" type="text" value="${escapeHtml(baselineRunId)}" placeholder="run-..." autocomplete="off">
+          <input id="runComparisonBaseline" name="comparison_baseline_run" type="text" value="${escapeHtml(baselineRunId)}" placeholder="run-..." autocomplete="off">
         </label>
         <button data-run-comparison-refresh type="button" ${loading ? "disabled" : ""}>Refresh comparison</button>
       </div>
@@ -884,7 +857,11 @@ function renderRunComparisonPanel() {
 
 function renderRunHistory() {
   const run = state.dashboard?.run || {};
-  if (!run.run_id) {
+  const visibility = resolveStudioEvidenceVisibility({
+    filmstripFrameCount: run.run_id ? 1 : 0,
+    requestedSurface: state.activeTab === "history" ? "history" : ""
+  });
+  if (!visibility.filmstrip) {
     return `<div class="empty-state">No run history is available before the first run starts.</div>`;
   }
   const lineage = run.lineage || {};
@@ -896,7 +873,7 @@ function renderRunHistory() {
   const sourceWorkItem = lineageValue(lineage.source_work_item_id, state.dashboard?.work_item || "not recorded");
   const baseline = lineageValue(lineage.baseline_label || lineage.baseline_id, "current run");
   return `
-    <section class="surface run-history-state">
+    <section class="surface run-history-state hierarchy-primary history-filmstrip">
       <div class="surface-title">
         <span>Run History / Lineage</span>
         <span class="small-badge">${escapeHtml(run.run_id)}</span>
@@ -908,6 +885,7 @@ function renderRunHistory() {
             <strong>${escapeHtml(sourceRun)}</strong>
             <p>${escapeHtml(sourceWorkItem)}</p>
             <div class="panel-item"><strong>Baseline</strong><span>${escapeHtml(baseline)}</span></div>
+            <button data-operator-route-intent="parent-run" data-route-work-item="${escapeHtml(sourceWorkItem)}" data-route-run-id="${escapeHtml(sourceRun)}" type="button">Inspect parent run</button>
           </article>
         ` : ""}
         <article class="lineage-node current" data-lineage-run-id="${escapeHtml(run.run_id)}">
@@ -916,6 +894,10 @@ function renderRunHistory() {
           <p>${escapeHtml(run.runtime_id || "runtime not recorded")}</p>
           <div class="panel-item"><strong>Status</strong><span>${escapeHtml(handoff?.status || state.dashboard?.next_action?.label || "in progress")}</span></div>
           <div class="panel-item"><strong>Archive</strong><span>${escapeHtml(archive.archived ? `${archive.archived_at_utc || "recorded"} / ${archive.reason || "no reason"}` : "open")}</span></div>
+          <div class="lineage-actions">
+            <button data-operator-route-intent="historical-run" data-route-work-item="${escapeHtml(state.dashboard?.work_item || "")}" data-route-run-id="${escapeHtml(run.run_id)}" type="button">Inspect run history</button>
+            <button data-operator-route-intent="run-artifacts" data-route-work-item="${escapeHtml(state.dashboard?.work_item || "")}" data-route-run-id="${escapeHtml(run.run_id)}" type="button">Inspect run artifacts</button>
+          </div>
         </article>
         <div class="lineage-children">
           ${renderLineageCandidates(candidates)}
@@ -988,6 +970,7 @@ function renderArchiveConfirmation() {
 
 function renderSourceFindingItem(group, item) {
   const checked = sourceFindingSelected(item.id);
+  const selectionId = `source-selection-${item.id}`;
   const recommended = item.recommended ? '<span class="small-badge good">recommended</span>' : "";
   const supporting = item.collapsible ? '<span class="small-badge">supporting</span>' : "";
   const artifactButton = item.source_path
@@ -1000,8 +983,8 @@ function renderSourceFindingItem(group, item) {
     : `<div class="empty-state">Manual request text will be captured in the next wizard step.</div>`;
   return `
     <article class="source-finding-card${item.recommended ? " recommended" : ""}${item.collapsible ? " supporting" : ""}">
-      <label>
-        <input data-source-selection-id="${escapeHtml(item.id)}" type="checkbox" ${checked ? "checked" : ""}>
+      <label for="${escapeHtml(selectionId)}">
+        <input id="${escapeHtml(selectionId)}" name="source_selection" data-source-selection-id="${escapeHtml(item.id)}" type="checkbox" ${checked ? "checked" : ""}>
         <span>
           <strong>${escapeHtml(sourceFindingDisplayLabel(item))}</strong>
           <small>${escapeHtml(group.label)} / ${escapeHtml(item.kind)} ${recommended}${supporting}</small>
@@ -1531,24 +1514,33 @@ function renderLaunchConfirmation() {
 
 function renderEditableList(name, items, selectedItems = null) {
   const selected = selectedItems ? new Set(selectedItems.map((item) => String(item))) : null;
-  return (items || []).map((item, index) => `
-    <div class="editable-list-row">
-      <input data-follow-up-list="${escapeHtml(name)}" data-follow-up-index="${escapeHtml(index)}" type="checkbox" ${!selected || selected.has(String(item)) ? "checked" : ""} aria-label="Include ${escapeHtml(item || name)}">
-      <input data-follow-up-list-text="${escapeHtml(name)}" data-follow-up-index="${escapeHtml(index)}" type="text" value="${escapeHtml(item)}">
-    </div>
-  `).join("") || `<div class="empty-state">No ${escapeHtml(name)} generated.</div>`;
+  return (items || []).map((item, index) => {
+    const includeId = `follow-up-${name}-${index}-include`;
+    const textId = `follow-up-${name}-${index}-text`;
+    return `
+      <div class="editable-list-row">
+        <input id="${escapeHtml(includeId)}" name="${escapeHtml(name)}_included" data-follow-up-list="${escapeHtml(name)}" data-follow-up-index="${escapeHtml(index)}" type="checkbox" ${!selected || selected.has(String(item)) ? "checked" : ""}>
+        <label class="sr-only" for="${escapeHtml(includeId)}">Include ${escapeHtml(item || name)}</label>
+        <label class="sr-only" for="${escapeHtml(textId)}">${escapeHtml(name)} item ${index + 1}</label>
+        <input id="${escapeHtml(textId)}" name="${escapeHtml(name)}_text" data-follow-up-list-text="${escapeHtml(name)}" data-follow-up-index="${escapeHtml(index)}" type="text" value="${escapeHtml(item)}">
+      </div>
+    `;
+  }).join("") || `<div class="empty-state">No ${escapeHtml(name)} generated.</div>`;
 }
 
 function renderInheritedContextToggles(items) {
-  return (items || []).map((item) => `
-    <label class="inherited-context-toggle">
-      <input data-inherited-context="${escapeHtml(item.id)}" type="checkbox" ${item.enabled ? "checked" : ""}>
-      <span>
-        <strong>${escapeHtml(item.label)}</strong>
-        <small>${escapeHtml(item.detail)}</small>
-      </span>
-    </label>
-  `).join("");
+  return (items || []).map((item, index) => {
+    const inputId = `inherited-context-${index}`;
+    return `
+      <label class="inherited-context-toggle" for="${inputId}">
+        <input id="${inputId}" name="inherited_context" data-inherited-context="${escapeHtml(item.id)}" type="checkbox" ${item.enabled ? "checked" : ""}>
+        <span>
+          <strong>${escapeHtml(item.label)}</strong>
+          <small>${escapeHtml(item.detail)}</small>
+        </span>
+      </label>
+    `;
+  }).join("");
 }
 
 function renderFollowUpDefinitionErrorSummary(errors) {
@@ -1608,17 +1600,17 @@ function renderFollowUpDefinition() {
       </div>
       <div class="follow-up-definition-grid">
         <section class="definition-form">
-          <label class="form-field">
+          <label class="form-field" for="followUpWorkItem">
             <span>Work item id</span>
-            <input data-follow-up-field="new_work_item" type="text" value="${escapeHtml(draft.new_work_item)}">
+            <input id="followUpWorkItem" name="new_work_item" data-follow-up-field="new_work_item" type="text" value="${escapeHtml(draft.new_work_item)}">
           </label>
-          <label class="form-field">
+          <label class="form-field" for="followUpTitle">
             <span>Title</span>
-            <input data-follow-up-field="title" type="text" value="${escapeHtml(draft.title)}">
+            <input id="followUpTitle" name="title" data-follow-up-field="title" type="text" value="${escapeHtml(draft.title)}">
           </label>
-          <label class="form-field">
+          <label class="form-field" for="followUpInputPreview">
             <span>First-stage input preview</span>
-            <textarea data-follow-up-field="first_stage_input_preview" rows="10">${escapeHtml(draft.first_stage_input_preview)}</textarea>
+            <textarea id="followUpInputPreview" name="first_stage_input_preview" data-follow-up-field="first_stage_input_preview" rows="10">${escapeHtml(draft.first_stage_input_preview)}</textarea>
           </label>
         </section>
         <aside class="definition-side">

@@ -156,9 +156,9 @@ function renderDiffFilters(files) {
     ["not-mentioned", "Not mentioned"]
   ];
   return `
-    <div class="filter-row">
+    <div class="filter-row" role="group" aria-label="Implementation diff filter">
       ${filters.map(([id, label]) => `
-        <button data-implement-diff-filter="${escapeHtml(id)}" class="${state.implementDiffFilter === id ? "active" : ""}" type="button">${escapeHtml(label)} ${escapeHtml(filteredDiffFiles(files).length && id === state.implementDiffFilter ? filteredDiffFiles(files).length : "")}</button>
+        <button data-implement-diff-filter="${escapeHtml(id)}" class="${state.implementDiffFilter === id ? "active" : ""}" type="button" aria-pressed="${state.implementDiffFilter === id ? "true" : "false"}">${escapeHtml(label)} ${escapeHtml(filteredDiffFiles(files).length && id === state.implementDiffFilter ? filteredDiffFiles(files).length : "")}</button>
       `).join("")}
     </div>
   `;
@@ -367,27 +367,17 @@ function countLabel(count, singular, plural = `${singular}s`) {
 }
 
 function renderDecisionSummary({kind, tone, badge, title, body, primary, metrics}) {
-  return `
-    <div class="decision-summary ${escapeHtml(tone)}" data-decision-summary="${escapeHtml(kind)}" role="status" aria-live="polite">
-      <div class="decision-summary-copy">
-        <span class="small-badge ${escapeHtml(tone)}">${escapeHtml(badge)}</span>
-        <strong>${escapeHtml(title)}</strong>
-        <p>${escapeHtml(body)}</p>
-        <small>${escapeHtml(primary)}</small>
-      </div>
-      <div class="decision-summary-metrics">
-        ${metrics.map((metric) => {
-          const metricClass = metric.tone ? ` ${escapeHtml(metric.tone)}` : "";
-          return `
-            <div class="decision-metric${metricClass}">
-              <span>${escapeHtml(metric.label)}</span>
-              <strong>${escapeHtml(metric.value)}</strong>
-            </div>
-          `;
-        }).join("")}
-      </div>
-    </div>
-  `;
+  const status = tone === "good" ? "complete" : tone === "bad" ? "blocked" : "pending";
+  return renderDecisionBar({
+    kind,
+    status,
+    statusLabel: badge,
+    title,
+    body,
+    guidance: primary,
+    metrics,
+    legacyTone: tone
+  }).replace("data-decision-bar=", "data-decision-summary=");
 }
 
 function renderReviewDecisionSummary(view, findings) {
@@ -512,9 +502,13 @@ async function launchRemediation(sourceStage) {
     run_id: state.activeRunId,
     log_follow: true
   };
-  const job = await postJson("/api/remediation/launch", payload);
-  toast("Remediation implement run started.");
-  await startJobPolling(job);
+  const job = await guardedJobLaunch({
+    kind: "remediation-launch",
+    components: [state.activeRunId, sourceStage, ids.slice().sort().join("+")],
+    controls: [`[data-remediation-launch="${sourceStage}"]`],
+    execute: () => postJson("/api/remediation/launch", payload)
+  });
+  if (job) toast("Remediation implement run started.");
 }
 
 async function renderReviewFindings() {
@@ -538,9 +532,12 @@ async function renderReviewFindings() {
           <table class="activity-table">
             <thead><tr><th>Select</th><th>ID</th><th>Severity</th><th>Disposition</th><th>Evidence</th><th>Summary</th></tr></thead>
             <tbody>
-              ${findings.length ? findings.map((finding) => `
+              ${findings.length ? findings.map((finding, index) => `
                 <tr>
-                  <td><input data-remediation-source="review" type="checkbox" value="${escapeHtml(finding.finding_id)}" ${finding.disposition === "must-fix" ? "checked" : ""}></td>
+                  <td>
+                    <input id="review-remediation-${index}" name="review_remediation" data-remediation-source="review" type="checkbox" value="${escapeHtml(finding.finding_id)}" ${finding.disposition === "must-fix" ? "checked" : ""}>
+                    <label class="sr-only" for="review-remediation-${index}">Select ${escapeHtml(finding.finding_id)}</label>
+                  </td>
                   <td>${escapeHtml(finding.finding_id)}</td>
                   <td><span class="small-badge ${finding.severity === "high" || finding.severity === "critical" ? "bad" : finding.severity === "medium" ? "warn" : ""}">${escapeHtml(finding.severity || "-")}</span></td>
                   <td>${escapeHtml(finding.disposition || "-")}</td>
@@ -551,9 +548,9 @@ async function renderReviewFindings() {
             </tbody>
           </table>
         </div>
-        <label class="form-field">
+        <label class="form-field" for="reviewRemediationNote">
           <span>Operator note for implement</span>
-          <textarea data-remediation-note="review" rows="4">Fix the selected review finding(s), update implementation-report.md, and preserve unrelated changes.</textarea>
+          <textarea id="reviewRemediationNote" name="review_remediation_note" data-remediation-note="review" rows="4">Fix the selected review finding(s), update implementation-report.md, and preserve unrelated changes.</textarea>
         </label>
         ${renderRemediationRuntimeGuard("review", Boolean(findings.length))}
         <div class="wizard-actions">
@@ -601,9 +598,12 @@ async function renderQaVerdict() {
           <table class="activity-table">
             <thead><tr><th>Select</th><th>Type</th><th>Item</th></tr></thead>
             <tbody>
-              ${sourceItems.length ? sourceItems.map((item) => `
+              ${sourceItems.length ? sourceItems.map((item, index) => `
                 <tr>
-                  <td><input data-remediation-source="qa" type="checkbox" value="${escapeHtml(item.id)}" ${view.quality_verdict === "not-ready" ? "checked" : ""}></td>
+                  <td>
+                    <input id="qa-remediation-${index}" name="qa_remediation" data-remediation-source="qa" type="checkbox" value="${escapeHtml(item.id)}" ${view.quality_verdict === "not-ready" ? "checked" : ""}>
+                    <label class="sr-only" for="qa-remediation-${index}">Select ${escapeHtml(item.id)}</label>
+                  </td>
                   <td>${escapeHtml(item.kind)}</td>
                   <td>${escapeHtml(item.label)}</td>
                 </tr>
@@ -611,9 +611,9 @@ async function renderQaVerdict() {
             </tbody>
           </table>
         </div>
-        <label class="form-field">
+        <label class="form-field" for="qaRemediationNote">
           <span>Operator note for implement</span>
-          <textarea data-remediation-note="qa" rows="4">Fix the selected QA risk(s) or issue(s), rerun verification, and update implementation-report.md.</textarea>
+          <textarea id="qaRemediationNote" name="qa_remediation_note" data-remediation-note="qa" rows="4">Fix the selected QA risk(s) or issue(s), rerun verification, and update implementation-report.md.</textarea>
         </label>
         ${renderRemediationRuntimeGuard("qa", Boolean(sourceItems.length))}
         ${renderQaCompletionGuard(view, Boolean(sourceItems.length))}

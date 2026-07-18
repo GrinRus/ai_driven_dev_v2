@@ -25,6 +25,24 @@ function questionRequiresResolvedResume(question) {
   return question?.policy === "blocking";
 }
 
+function questionDraftIdentity(questionId) {
+  return operatorDraftIdentity("question", questionId);
+}
+
+function questionDraft(questionId) {
+  return readOperatorDraft(questionDraftIdentity(questionId));
+}
+
+function persistQuestionDraft(questionId) {
+  const textarea = document.querySelector(`[data-question-text="${CSS.escape(questionId)}"]`);
+  const resolution = document.querySelector(`[data-question-resolution="${CSS.escape(questionId)}"]`);
+  if (!textarea) return;
+  writeOperatorDraft(questionDraftIdentity(questionId), {
+    text: textarea.value,
+    resolution: resolution?.value || "resolved"
+  });
+}
+
 function updateQuestionResumeButtonState(questionId) {
   const button = document.querySelector(`[data-answer-resume="${CSS.escape(questionId)}"]`);
   if (!button || button.dataset.requiresResolvedResume !== "true") return;
@@ -180,8 +198,9 @@ function renderQuestionCards({showResume}) {
         const savedAnswer = question.answer_resolution
           ? `<div class="saved-answer"><span class="saved-answer-label">Saved ${escapeHtml(question.answer_resolution)} answer</span><span class="saved-answer-text">${escapeHtml(question.answer_text || "Answer recorded in answers.md; blocking question still requires a resolved answer.")}</span></div>`
           : "";
-        const answerText = question.answer_text || "";
-        const resolutionValue = question.answer_resolution || "resolved";
+        const draft = questionDraft(question.question_id)?.value || null;
+        const answerText = draft?.text ?? question.answer_text ?? "";
+        const resolutionValue = draft?.resolution || question.answer_resolution || "resolved";
         const resumeNeedsResolved = questionRequiresResolvedResume(question);
         const resumeDisabled = resumeNeedsResolved && resolutionValue !== "resolved";
         const resumeLabel = resumeDisabled
@@ -253,12 +272,51 @@ async function saveAnswer(questionId) {
     toast("Answer text is required.");
     return false;
   }
-  await postJson("/api/answers", {
-    stage: state.activeStage,
-    question_id: questionId,
-    text,
-    resolution: resolution?.value || "resolved"
+  const key = operatorMutationKey(
+    "answer",
+    state.dashboard?.work_item || state.activeRouteWorkItem || "no-work-item",
+    state.activeRunId || "no-run",
+    state.activeStage,
+    questionId
+  );
+  const controls = [
+    `[data-save-answer="${questionId}"]`,
+    `[data-answer-resume="${questionId}"]`
+  ];
+  const durableQuestion = async () => {
+    await fetchDashboard();
+    return state.dashboard?.active_stage_view?.questions?.questions?.find(
+      (question) => question.question_id === questionId
+    ) || null;
+  };
+  const guarded = await runGuardedMutation({
+    key,
+    execute: async () => {
+      await postJson("/api/answers", {
+        stage: state.activeStage,
+        question_id: questionId,
+        text,
+        resolution: resolution?.value || "resolved"
+      });
+      const readback = await durableQuestion();
+      if (
+        readback?.answer_text !== text
+        || readback?.answer_resolution !== (resolution?.value || "resolved")
+      ) {
+        throw new Error("Answer durable readback did not match the submitted value");
+      }
+      clearOperatorDraft(questionDraftIdentity(questionId));
+      return readback;
+    },
+    readWinner: durableQuestion,
+    onState: (mutation) => setMutationControlsPending(controls, mutation.status === "pending")
   });
+  if (guarded.status === "conflict") {
+    clearOperatorDraft(questionDraftIdentity(questionId));
+    await renderAll();
+    toast("Another answer already won. Showing the durable answer.");
+    return false;
+  }
   toast("Answer saved.");
   return true;
 }

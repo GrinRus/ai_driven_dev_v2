@@ -83,6 +83,29 @@ document.addEventListener("keydown", async (event) => {
 
 document.addEventListener("click", async (event) => {
   try {
+    const stateRecovery = event.target.closest("[data-state-recovery]")?.dataset.stateRecovery;
+    if (stateRecovery === "reconnect-live-job") {
+      await reconnectActiveJob();
+      return;
+    }
+    if (stateRecovery === "refresh-expired-job") {
+      await refresh();
+      return;
+    }
+    const routeTarget = event.target.closest("[data-operator-route-intent]");
+    if (routeTarget) {
+      await navigateOperatorRouteIntent(routeTarget.dataset.operatorRouteIntent, {
+        workItem: routeTarget.dataset.routeWorkItem,
+        runId: routeTarget.dataset.routeRunId,
+        stage: routeTarget.dataset.routeStage,
+        artifact: routeTarget.dataset.routeArtifact
+      });
+      return;
+    }
+    if (event.target.closest("[data-guided-delivery-toggle]")) {
+      setGuidedDeliveryPreference(state.onboarding.guidedDelivery === false);
+      return;
+    }
     const onboardingRecentProject = event.target.closest("[data-onboarding-recent-project]")?.dataset.onboardingRecentProject;
     if (onboardingRecentProject) {
       state.onboarding.projectRootInput = onboardingRecentProject;
@@ -119,6 +142,7 @@ document.addEventListener("click", async (event) => {
       state.activeStageExplicit = true;
       state.activeArtifactKey = "";
       if (state.activeTab === "work") state.workDetail = "overview";
+      syncLocationState({historyMode: "push"});
       await fetchDashboard();
       await fetchProjectHome(state.dashboard?.work_item || "");
       await renderAll();
@@ -126,7 +150,7 @@ document.addEventListener("click", async (event) => {
     }
     const stageRecovery = event.target.closest("[data-stage-recovery]");
     if (stageRecovery) {
-      activateTab(stageRecovery.dataset.stageRecovery || "recovery");
+      activateTab(stageRecovery.dataset.stageRecovery || "recovery", {historyMode: "push"});
       renderProjectHomeRail();
       await renderCockpit();
       return;
@@ -143,14 +167,14 @@ document.addEventListener("click", async (event) => {
     }
     const tab = event.target.closest("[data-tab]")?.dataset.tab;
     if (tab) {
-      activateTab(tab);
+      activateTab(tab, {historyMode: "push"});
       renderProjectHomeRail();
       await renderCockpit();
       return;
     }
     const tabShortcut = event.target.closest("[data-tab-shortcut]")?.dataset.tabShortcut;
     if (tabShortcut) {
-      activateTab(tabShortcut);
+      activateTab(tabShortcut, {historyMode: "push"});
       renderProjectHomeRail();
       await renderCockpit();
       return;
@@ -159,15 +183,6 @@ document.addEventListener("click", async (event) => {
     if (bottomDockToggle) {
       state.bottomDockUserCollapsed = !bottomDockIsCollapsed();
       renderBottomDock();
-      return;
-    }
-    const setupModeCard = event.target.closest("[data-setup-mode]");
-    if (setupModeCard) {
-      const requestedMode = SETUP_MODES.find((mode) => mode.id === setupModeCard.dataset.setupMode);
-      if (!requestedMode) return;
-      if (requestedMode.requiresPreviousRun && !setupPreviousRunContext().available) return;
-      state.setupMode = requestedMode.id;
-      await renderCockpit();
       return;
     }
     const nextFlowAction = event.target.closest("[data-next-flow-action]");
@@ -216,6 +231,7 @@ document.addEventListener("click", async (event) => {
       return;
     }
     if (event.target.closest("[data-next-flow-back-to-sources]")) {
+      persistNextFlowBrowserDraft();
       state.nextFlowWizard.step = "sources";
       requestNextFlowWizardReveal();
       await renderCockpit();
@@ -230,6 +246,7 @@ document.addEventListener("click", async (event) => {
       return;
     }
     if (event.target.closest("[data-next-flow-back-to-definition]")) {
+      persistNextFlowBrowserDraft();
       state.nextFlowWizard.step = state.nextFlowWizard.action === "clone-flow" ? "sources" : "definition";
       if (state.nextFlowWizard.action === "clone-flow") {
         state.nextFlowWizard.active = false;
@@ -297,6 +314,16 @@ document.addEventListener("click", async (event) => {
     }
     if (event.target.closest("[data-next-flow-start]")) {
       await openNextFlowWizard("start-follow-up-flow");
+      return;
+    }
+    const approvalConfirmation = event.target.closest("[data-approval-confirm-session]")?.dataset.approvalConfirmSession;
+    if (approvalConfirmation) {
+      await submitApproval(approvalConfirmation, "allow_for_session", {sessionConfirmed: true});
+      return;
+    }
+    const approvalCancellation = event.target.closest("[data-approval-cancel-session]")?.dataset.approvalCancelSession;
+    if (approvalCancellation) {
+      closeApprovalSessionConfirmation(approvalCancellation);
       return;
     }
     const approvalButton = event.target.closest("[data-operator-request][data-operator-action]");
@@ -401,6 +428,10 @@ document.addEventListener("click", async (event) => {
       else if (action === "inspect-runtime-log") setOperatorMode("logs");
       else if (action === "review-findings") setOperatorMode("review-findings");
       else if (action === "qa-verdict") setOperatorMode("qa-verdict");
+      else if (action === "run-repair") {
+        await startStage(state.activeStage);
+        return;
+      }
       else if (action === "resume-stage") {
         await startStage(state.activeStage);
         return;
@@ -447,12 +478,17 @@ document.addEventListener("click", async (event) => {
       await handleNextAction();
       return;
     }
+    const guidedLaunch = event.target.closest("[data-guided-launch]")?.dataset.guidedLaunch;
+    if (guidedLaunch) {
+      await dispatchTaskAwareLaunch(guidedLaunch, state.activeStage);
+      return;
+    }
     if (event.target.closest("[data-first-launch-stage]")) {
-      await startStage(state.activeStage);
+      await dispatchTaskAwareLaunch("stage", state.activeStage);
       return;
     }
     if (event.target.closest("[data-first-launch-run]")) {
-      await startWorkflow();
+      await dispatchTaskAwareLaunch("workflow");
       return;
     }
     if (event.target.id === "submitInterventionButton") {
@@ -516,9 +552,11 @@ document.addEventListener("change", async (event) => {
   }
   const questionResolution = event.target.closest("[data-question-resolution]")?.dataset.questionResolution;
   if (questionResolution) {
+    persistQuestionDraft(questionResolution);
     updateQuestionResumeButtonState(questionResolution);
   }
   if (event.target.closest("[data-intervention-target]")) {
+    persistInterventionDraft();
     updateInterventionPreview();
   }
   const sourceSelection = event.target.closest("[data-source-selection-id]");
@@ -532,6 +570,7 @@ document.addEventListener("change", async (event) => {
     || event.target.closest("[data-inherited-context]")
   ) {
     invalidateFollowUpDraftPreview();
+    persistNextFlowBrowserDraft();
   }
 });
 
@@ -555,8 +594,13 @@ document.addEventListener("input", (event) => {
     syncOnboardingCreateActionState();
   }
   if (event.target.id === "operatorRequestText") {
+    persistInterventionDraft();
     updateInterventionPreview();
   }
+  const questionText = event.target.closest("[data-question-text]")?.dataset.questionText;
+  if (questionText) persistQuestionDraft(questionText);
+  const approvalReasonId = event.target.closest("[data-approval-reason]")?.dataset.approvalReason;
+  if (approvalReasonId) updateApprovalConfirmationPreview(approvalReasonId);
   if (event.target.id === "runComparisonBaseline") {
     state.runComparisonBaselineInput = event.target.value;
     state.runComparison = null;
@@ -567,6 +611,7 @@ document.addEventListener("input", (event) => {
     || event.target.closest("[data-follow-up-list-text]")
   ) {
     invalidateFollowUpDraftPreview();
+    persistNextFlowBrowserDraft();
   }
 });
 
@@ -593,4 +638,14 @@ document.addEventListener("submit", async (event) => {
 });
 
 initializeStateFromLocation();
+window.addEventListener("popstate", () => {
+  window.aiddRouteRestore = restoreOperatorRouteFromLocation().catch((error) => {
+    toast(error.message);
+  });
+});
+window.addEventListener("beforeunload", (event) => {
+  if (!hasDirtyOperatorDraft(currentOperatorDraftProject())) return;
+  event.preventDefault();
+  event.returnValue = "";
+});
 refresh();

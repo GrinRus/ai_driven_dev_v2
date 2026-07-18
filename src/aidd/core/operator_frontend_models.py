@@ -376,6 +376,8 @@ class OperatorTerminalRunHandoff:
     approval_counts: OperatorApprovalCounts
     questions_answered_count: int
     questions_total_count: int
+    recommended_outcome: str | None
+    recommendation_rationale: str | None
     recommended_next_flow_actions: tuple[OperatorNextFlowRecommendation, ...]
 
 
