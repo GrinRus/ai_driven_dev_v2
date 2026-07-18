@@ -30,6 +30,41 @@ def _assert_rendered_gate(page: Page, viewport: tuple[int, int]) -> None:
     assert_rendered_geometry(page)
 
 
+def test_guided_setup_parity_preserves_explicit_legacy_service_path(tmp_path: Path) -> None:
+    project_root = tmp_path / "guided-parity"
+    project_root.mkdir()
+
+    with sync_playwright() as playwright, operator_browser_harness(
+        project_root,
+        playwright,
+    ) as harness:
+        for selector, expected_presentation in (
+            ("studio", "studio"),
+            ("legacy", "legacy"),
+        ):
+            with harness.open_page((1280, 900)) as browser_page:
+                page = browser_page.page
+                page.goto(f"{harness.url}?ui={selector}", wait_until="networkidle")
+                assert page.evaluate(
+                    "window.aiddPresentation.surfaces['guided-setup'].presentation"
+                ) == expected_presentation
+                page.locator("#onboardingProjectRoot").fill(project_root.as_posix())
+                with page.expect_response(
+                    lambda response: response.url.endswith("/api/onboarding/project")
+                ) as inspection:
+                    page.locator("#onboardingProjectForm").evaluate(
+                        "form => form.requestSubmit()"
+                    )
+                assert inspection.value.status == 200
+                assert inspection.value.request.post_data_json == {
+                    "project_root": project_root.as_posix()
+                }
+                page.locator('[data-onboarding-runtime="generic-cli"]').wait_for(
+                    state="visible"
+                )
+                browser_page.diagnostics.assert_clean()
+
+
 @pytest.mark.parametrize("viewport", VIEWPORTS)
 def test_guided_setup_create_or_resume_launches_into_inbox(
     tmp_path: Path,

@@ -10688,10 +10688,10 @@ Exit evidence:
 - keyboard users can enter the operator job without traversing the complete service
   toolbar first.
 
-### Epic W36-E4 — progressive onboarding and truthful runtime context (`planned`)
+### Epic W36-E4 — progressive onboarding and truthful runtime context (`done`)
 Linked stories: `US-01`, `US-09`, `US-11`, `US-12`
 
-#### Slice W36-E4-S1 — branching setup flow (`planned`)
+#### Slice W36-E4-S1 — branching setup flow (`done`)
 Goal: make project, work-item, runtime, and launch decisions sequential and truthful
 instead of six equally weighted setup panels.
 
@@ -10735,7 +10735,7 @@ Local tasks:
   - Scope: Guided Setup launch binding only.
   - Verification: Guided and legacy launch controls dispatch an identical task-aware request,
     duplicate input creates at most one job, and durable readback selects one result.
-- `W36-E4-S1-T7` (next) Promote the verified Guided Setup candidate to `parity_closed` while retaining
+- `W36-E4-S1-T7` (done) Promote the verified Guided Setup candidate to `parity_closed` while retaining
   legacy setup for both missing/default and explicit rollback modes until cutover.
   - Dependencies: `W36-E4-S1-T6`, `W36-E7-S1-T1`.
   - Scope: Guided Setup parity-manifest entry only.
@@ -10944,7 +10944,7 @@ Local tasks:
   - Scope: packaged Inbox renderer only.
   - Verification: one browser fixture per section opens the expected work item, run, stage,
     artifact/evidence detail, and primary action.
-- `W36-E5-S3-T5` (planned) Promote the verified Inbox candidate to `parity_closed` while retaining legacy
+- `W36-E5-S3-T5` (next) Promote the verified Inbox candidate to `parity_closed` while retaining legacy
   Project Home for both missing/default and explicit rollback modes until cutover.
   - Dependencies: `W36-E7-S1-T12`.
   - Scope: Inbox parity-manifest entry only.

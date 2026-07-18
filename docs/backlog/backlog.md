@@ -7,13 +7,13 @@ slice, and local task.
 
 ## Next
 
-- `W36-E4-S1-T7` — Promote the verified Guided Setup candidate to `parity_closed`
-  while retaining explicit legacy rollback until cutover.
+- `W36-E5-S3-T5` — Promote the verified Inbox candidate to `parity_closed` while
+  retaining explicit legacy rollback until cutover.
 
 ## Soon
 
-No task is currently queued here. The ordered parity series moves from Guided Setup to
-Inbox, which is dependency-ready but is not a direct successor of the task in `Next`.
+No task is currently queued here. Active Studio parity follows this Inbox closure in the
+delivery order, but belongs to a separate surface slice rather than being its direct successor.
 
 ## Parking lot
 
@@ -42,6 +42,13 @@ Inbox, which is dependency-ready but is not a direct successor of the task in `N
   queue-restoration policy in `docs/backlog/roadmap.md` (`W8-E3-S1`).
 
 ## Current reconciliation
+
+- `2026-07-18` `W36-E4-S1-T7` is complete: Guided Setup is `parity_closed`; the full
+  five-viewport Studio journey remains green, while an explicit `ui=legacy` browser check
+  reaches the rollback presentation through the same `/api/onboarding/project` service and
+  identical project-root payload. Slice `W36-E4-S1` and Epic `W36-E4` are closed. Inbox
+  parity `W36-E5-S3-T5` is promoted to `Next`; `Soon` remains empty until the ordered
+  cross-slice parity series advances.
 
 - `2026-07-18` `W36-E7-S1-T12` is complete: all five viewports verify durable Inbox
   priority, bounded Running now correlation, exact work-item/run/stage routing, a single

@@ -4,7 +4,7 @@ const SURFACE_PARITY_MANIFEST = Object.freeze([
   {
     id: "guided-setup",
     owner: "W36-E4-S1",
-    rollout: "legacy_only",
+    rollout: "parity_closed",
     rollbackRenderer: "operator-onboarding",
     fixture: "setup",
     journey: "W36-E7-S1-T1",
