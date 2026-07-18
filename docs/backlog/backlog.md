@@ -7,11 +7,11 @@ slice, and local task.
 
 ## Next
 
-- `W36-E7-S1-T5` — Add the History comparison, lineage, archive browser journey.
+- `W36-E5-S8-T7` — Close History presentation parity.
 
 ## Soon
 
-- `W36-E5-S8-T7` — Close History presentation parity.
+- `W36-E5-S9-T3` — Render fresh terminal Flow Complete handoff.
 
 ## Parking lot
 
@@ -32,6 +32,12 @@ slice, and local task.
   queue-restoration policy in `docs/backlog/roadmap.md` (`W8-E3-S1`).
 
 ## Current reconciliation
+
+- `2026-07-18` `W36-E7-S1-T5` is complete: the provider-free History journey passes
+  all five viewports with typed frames, retained comparison, parent deep-link navigation,
+  Back/reload restoration, archive readback, clean browser diagnostics, and byte-identical
+  current/source manifests. History parity closure `S8-T7` is promoted to `Next`, followed by
+  Flow Complete renderer `S9-T3`.
 
 - `2026-07-18` `W36-E5-S8-T6` is complete: at `320x568` and `390x844`, Studio
   History uses a single-column chronological drill-down with full-width touch controls, visible

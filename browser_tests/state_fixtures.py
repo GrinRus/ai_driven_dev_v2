@@ -14,6 +14,7 @@ from aidd.adapters.runtime_evidence import (
 from aidd.core.interview import AdapterQuestionEvent, QuestionPolicy, persist_questions_document
 from aidd.core.remediation import create_remediation_request, mark_downstream_stale
 from aidd.core.repair import persist_repair_history_snapshot
+from aidd.core.run_archive import persist_run_archive_decision
 from aidd.core.run_store import (
     OPERATOR_REQUESTS_FILENAME,
     create_next_attempt_directory,
@@ -142,6 +143,7 @@ def _create_run(
     work_item: str,
     run_id: str,
     stage_target: str = "qa",
+    lineage: dict[str, object] | None = None,
 ) -> None:
     create_run_manifest(
         workspace_root=workspace_root,
@@ -152,6 +154,7 @@ def _create_run(
         config_snapshot={"mode": "browser-fixture"},
         workflow_stage_start="idea",
         workflow_stage_end="qa",
+        lineage=lineage,
     )
 
 
@@ -485,7 +488,78 @@ def build_browser_state_fixture(
             with_run=False,
         )
 
-    _create_run(workspace_root, work_item=work_item, run_id=run_id)
+    lineage: dict[str, object] | None = None
+    if state == "history":
+        source_work_item = work_item
+        source_run_id = "run-source"
+        child_work_item = "WI-CHILD"
+        _create_run(
+            workspace_root,
+            work_item=source_work_item,
+            run_id=source_run_id,
+        )
+        _attempt(
+            workspace_root,
+            "implement",
+            work_item=source_work_item,
+            run_id=source_run_id,
+        )
+        persist_stage_status(
+            workspace_root,
+            source_work_item,
+            source_run_id,
+            "implement",
+            "succeeded",
+        )
+        write_attempt_artifact_index(
+            workspace_root,
+            source_work_item,
+            source_run_id,
+            "implement",
+            1,
+        )
+        _bootstrap(project_root, work_item=child_work_item)
+        lineage = {
+            "source_run_id": source_run_id,
+            "source_work_item_id": source_work_item,
+            "baseline_id": source_run_id,
+            "baseline_label": "retained source run",
+            "child_work_item_candidates": [
+                {
+                    "work_item_id": child_work_item,
+                    "label": "Retained follow-up",
+                    "relationship": "follow-up",
+                    "source_run_id": run_id,
+                }
+            ],
+        }
+    _create_run(workspace_root, work_item=work_item, run_id=run_id, lineage=lineage)
+    if state == "history":
+        _implementation_fixture(
+            project_root=project_root,
+            workspace_root=workspace_root,
+            work_item=work_item,
+            run_id=run_id,
+            state="implementation-finalization-failed",
+        )
+        persist_run_archive_decision(
+            workspace_root=workspace_root,
+            work_item=work_item,
+            run_id=run_id,
+            reason="Retained after History acceptance.",
+            source="browser-fixture",
+        )
+        return _descriptor(
+            name=state,
+            project_root=project_root,
+            route="history",
+            context_keys=("project", "work_item", "run", "stage", "attempt", "history_frame"),
+            surface="History Filmstrip",
+            action="Inspect retained evidence",
+            marker="history-retained-evidence",
+            work_item=work_item,
+            run_id=run_id,
+        )
     if state in {"review-qa-rejected", "review-qa-approved"}:
         _succeed_through(
             workspace_root,
