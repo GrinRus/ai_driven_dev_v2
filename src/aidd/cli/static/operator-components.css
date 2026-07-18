@@ -3556,6 +3556,13 @@ pre {
   overflow: visible;
 }
 
+.active-studio .markdown-preview,
+.active-studio pre,
+.operator-shell #recentArtifacts {
+  max-height: none;
+  overflow: visible;
+}
+
 .studio-live-observation {
   display: grid;
   gap: var(--space-3);

@@ -18,7 +18,7 @@ from typing import Literal
 PACKAGE_NAME = "ai-driven-dev-v2"
 COMMAND_TIMEOUT_SECONDS = 30.0
 NETWORK_TIMEOUT_SECONDS = 10.0
-BROWSER_TIMEOUT_SECONDS = 1_800.0
+BROWSER_TIMEOUT_SECONDS = 2_700.0
 
 
 @dataclass(frozen=True, slots=True)

@@ -11627,8 +11627,15 @@ Local tasks:
   - Scope: deterministic release-preflight integration only.
   - Verification: an intentional browser journey failure blocks release preparation
     without provider credentials.
-- `W36-E7-S2-T5` (next) Record one source-installed full provider-free browser pass.
+- `W36-E7-S2-T6` (done) Restore deterministic canonical-route coverage uncovered by the full
+  packaged-UI pass.
   - Dependencies: `W36-E7-S2-T4` as the direct queue predecessor.
+  - Scope: packaged browser journey contracts only.
+  - Verification: Document/Evidence opens through canonical Studio route context and the
+    intervention draft survives History/Back without a readiness-rerender race; the complete
+    packaged-UI runner has no failed journey ids.
+- `W36-E7-S2-T5` (next) Record one source-installed full provider-free browser pass.
+  - Dependencies: `W36-E7-S2-T6` as the direct queue predecessor.
   - Dependencies: `W36-E7-S2-T1`, `W36-E7-S2-T3`.
   - Scope: manual operator browser evidence only.
   - Verification: one completed template records version, fixtures, viewports, journeys,

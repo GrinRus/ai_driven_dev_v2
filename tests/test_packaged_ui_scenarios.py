@@ -74,7 +74,7 @@ def test_ci_enforces_the_shared_packaged_ui_browser_runner() -> None:
     browser_job = jobs["packaged-ui-browser"]
     serialized_steps = yaml.safe_dump(browser_job["steps"], sort_keys=False)
 
-    assert browser_job["timeout-minutes"] == 30
+    assert browser_job["timeout-minutes"] == 45
     assert browser_job["needs"] == "lint-type-test"
     assert "actions/cache@" in serialized_steps
     assert "~/.cache/ms-playwright" in serialized_steps

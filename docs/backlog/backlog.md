@@ -30,6 +30,19 @@ slice, and local task.
 
 ## Current reconciliation
 
+- `2026-07-18` `W36-E7-S2-T6` is complete: Document/Evidence now uses canonical
+  Studio route context against a nonterminal stale fixture, the intervention journey keeps its
+  canonical recovery mode through History/Back and readiness refresh, and Studio removes nested
+  document/recent-artifact scroll owners. Measured CI and release timeouts remain bounded at 45
+  minutes. The complete runner discovered and executed all 12 journeys with no failed ids; the
+  formal evidence record `T5` returns to `Next`, followed by observed-operator scripting `S3-T1`.
+
+- `2026-07-18` the first full `W36-E7-S2-T5` attempt discovered and executed all 12
+  declared journeys but exposed two browser-contract regressions after selector retirement:
+  Document/Evidence used a presentation-only query without canonical Studio context, and an
+  intervention History/Back case could race a readiness rerender. Bounded regression task
+  `W36-E7-S2-T6` is inserted in `Next`; the evidence pass remains unaccepted in `Soon`.
+
 - `2026-07-18` `W36-E7-S2-T4` is complete: release preflight now invokes the same
   packaged-UI journey runner used locally and in CI. Journey failures, runner/preflight errors,
   browser absence, launch infrastructure errors, and timeout produce explicit failing checks;

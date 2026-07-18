@@ -56,7 +56,7 @@ def test_intervention_parity_preserves_allowed_and_blocked_service_paths(
         else:
             page.locator("#runtimeSelect").select_option("generic-cli")
             page.wait_for_function("eval('selectedRuntimeReady()')", timeout=15_000)
-        page.evaluate("renderRequestChange()")
+        page.evaluate("setOperatorMode('request'); renderCockpitContent()")
         eligible = page.locator(
             f'[data-intervention-eligible="{"false" if blocked else "true"}"]'
         ).first
@@ -116,7 +116,7 @@ def test_allowed_intervention_restores_draft_and_creates_one_request(
         page.goto(f"{harness.url}?ui=studio", wait_until="networkidle")
         page.locator("#runtimeSelect").select_option("generic-cli")
         page.wait_for_function("eval('selectedRuntimeReady()')", timeout=15_000)
-        page.evaluate("renderRequestChange()")
+        page.evaluate("setOperatorMode('request'); renderCockpitContent()")
         surface = page.locator('[data-human-decision-surface="intervention"]')
         surface.wait_for(state="visible")
         assert surface.get_attribute("data-intervention-stage") == "idea"
@@ -126,7 +126,7 @@ def test_allowed_intervention_restores_draft_and_creates_one_request(
         request = page.locator("#operatorRequestText")
         request.fill("Update only the current stage evidence and preserve public contracts.")
         page.reload(wait_until="networkidle")
-        page.evaluate("renderRequestChange()")
+        page.evaluate("setOperatorMode('request'); renderCockpitContent()")
         request = page.locator("#operatorRequestText")
         request.wait_for(state="visible")
         assert request.input_value().startswith("Update only the current stage")
@@ -143,7 +143,7 @@ def test_allowed_intervention_restores_draft_and_creates_one_request(
         page.go_back(wait_until="networkidle")
         page.locator("#runtimeSelect").select_option("generic-cli")
         page.wait_for_function("eval('selectedRuntimeReady()')", timeout=15_000)
-        page.evaluate("renderRequestChange()")
+        page.evaluate("setOperatorMode('request'); renderCockpitContent()")
         request = page.locator("#operatorRequestText")
         assert request.input_value().startswith("Update only the current stage")
 
@@ -204,7 +204,7 @@ def test_downstream_success_blocks_intervention_without_creating_request(
         page.evaluate(
             "state.activeStage = 'plan'; state.activeStageExplicit = true; fetchDashboard()"
         )
-        page.evaluate("renderRequestChange()")
+        page.evaluate("setOperatorMode('request'); renderCockpitContent()")
         blocked = page.locator('[data-intervention-eligible="false"]').first
         blocked.wait_for(state="visible")
         surface = page.locator('[data-human-decision-surface="intervention"]')

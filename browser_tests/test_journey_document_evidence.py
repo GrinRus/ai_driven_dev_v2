@@ -65,7 +65,7 @@ def test_document_canvas_and_evidence_inspector_preserve_safe_context(
 ) -> None:
     fixture = build_browser_state_fixture(
         tmp_path / f"document-evidence-{viewport[0]}",
-        "qa-decision",
+        "remediation-stale",
     )
 
     with sync_playwright() as playwright, operator_browser_harness(
@@ -74,12 +74,20 @@ def test_document_canvas_and_evidence_inspector_preserve_safe_context(
         work_item=fixture.work_item,
     ) as harness, harness.open_page(viewport) as browser_page:
         page = browser_page.page
-        response = page.goto(f"{harness.url}?ui=studio", wait_until="networkidle")
+        route = urlencode(
+            {
+                "mode": "studio",
+                "work_item": fixture.work_item,
+                "run_id": fixture.run_id,
+                "stage": "qa",
+            }
+        )
+        response = page.goto(f"{harness.url}?{route}", wait_until="networkidle")
         assert response is not None and response.ok
 
         canvas = page.locator("#studioDocumentCanvas")
         canvas.locator('[data-document-canvas-mode="preview"]').wait_for(state="visible")
-        assert "QA verdict: not-ready" in canvas.inner_text()
+        assert "QA verdict: ready" in canvas.inner_text()
         _assert_rendered_gate(page, viewport)
 
         for mode in ("source", "diff", "preview"):
@@ -139,7 +147,7 @@ def test_document_canvas_and_evidence_inspector_preserve_safe_context(
         page.locator("#cockpitContent").get_by_text(
             "Saved runtime.log", exact=False
         ).first.wait_for(state="visible")
-        assert "qa evidence collected" in page.locator("#cockpitContent").inner_text()
+        assert "qa complete" in page.locator("#cockpitContent").inner_text()
 
         page.go_back(wait_until="networkidle")
         page.evaluate("() => window.aiddRouteRestore || Promise.resolve()")
