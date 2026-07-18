@@ -657,6 +657,14 @@ function operatorRouteSnapshot() {
   };
 }
 
+function encodeCurrentOperatorRoute(route) {
+  const encoded = encodeOperatorRoute(route);
+  if (state.presentationSelector !== "studio") return encoded;
+  const params = new URLSearchParams(encoded.replace(/^\?/, ""));
+  params.set("ui", "studio");
+  return `?${params.toString()}`;
+}
+
 function applyOperatorRoute(route) {
   state.activeRouteWorkItem = route.workItem || "";
   state.activeRunId = route.runId || "";
@@ -686,7 +694,7 @@ let restoringOperatorRoute = false;
 
 function syncLocationState({historyMode = "replace"} = {}) {
   if (restoringOperatorRoute) return;
-  const next = `${window.location.pathname}${encodeOperatorRoute(operatorRouteSnapshot())}`;
+  const next = `${window.location.pathname}${encodeCurrentOperatorRoute(operatorRouteSnapshot())}`;
   const current = `${window.location.pathname}${window.location.search}`;
   if (next !== current) {
     const method = historyMode === "push" ? "pushState" : "replaceState";
@@ -706,7 +714,7 @@ async function restoreOperatorRouteFromLocation() {
 
 async function navigateOperatorRouteIntent(intent, context) {
   const resolved = resolveOperatorRouteIntent(intent, context);
-  const next = `${window.location.pathname}${encodeOperatorRoute(resolved.route)}`;
+  const next = `${window.location.pathname}${encodeCurrentOperatorRoute(resolved.route)}`;
   restoringOperatorRoute = true;
   try {
     window.history.pushState({aiddOperatorRoute: true, intent}, "", next);

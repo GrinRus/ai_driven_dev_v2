@@ -7,12 +7,13 @@ slice, and local task.
 
 ## Next
 
-- `W36-E7-S1-T7` — Add the Document Canvas and Evidence Inspector browser journey.
+- `W36-E7-S1-T12` — Add the project-local Inbox priority and routing browser journey.
 
 ## Soon
 
-No task is currently queued here. The next planned Inbox journey (`W36-E7-S1-T12`)
-is not a direct dependency successor of the active task.
+No task is currently queued here. The first parity closure after the Inbox journey
+belongs to a separate already-complete dependency chain rather than being its direct
+successor.
 
 ## Parking lot
 
@@ -41,6 +42,15 @@ is not a direct dependency successor of the active task.
   queue-restoration policy in `docs/backlog/roadmap.md` (`W8-E3-S1`).
 
 ## Current reconciliation
+
+- `2026-07-18` `W36-E7-S1-T7` is complete: all five viewports exercise bounded
+  Preview/Source/Diff, exact validator/source/provenance evidence, explicit missing
+  requirements, safe artifact-key selection, reload and Back restoration, and persisted
+  runtime-log drill-down. The browser boundary rejects traversal-like keys without reading
+  arbitrary paths, zero-value Inspector behavior remains covered, Studio presentation now
+  survives canonical navigation, and mobile evidence controls satisfy the shared touch and
+  scroll-owner gates. Inbox journey `S1-T12` is promoted to `Next`; `Soon` remains empty
+  until the ordered parity-closure series begins.
 
 - `2026-07-18` `W36-E7-S1-T2` is complete: all five viewports exercise a real
   provider-free UI job through measured output, explicit silence, one intentional

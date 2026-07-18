@@ -360,6 +360,10 @@
   .next-action-evidence-actions button,
   .wizard-actions button {
     flex: 1 1 150px;
+    min-height: var(--control-height-touch);
+  }
+  .artifact-row {
+    min-height: var(--control-height-touch);
   }
   .next-flow-action-card {
     min-height: 0;

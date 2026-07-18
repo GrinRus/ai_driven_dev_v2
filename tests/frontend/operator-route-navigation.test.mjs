@@ -74,6 +74,19 @@ test("navigation writes explicit transitions and replaces derived state", async 
   assert.match(writes[1].value, /stage=review/);
 });
 
+test("studio presentation selector survives canonical navigation and reload URLs", async () => {
+  const {context, writes} = await navigationContext("?ui=studio&mode=studio");
+  vm.runInContext("state.presentationSelector = 'studio'", context);
+  vm.runInContext(`applyOperatorRoute({
+    mode: "studio", view: "artifacts", workItem: "WI-001", runId: "run-1",
+    stage: "qa", attempt: null, taskAttempt: null, artifact: "qa_report"
+  })`, context);
+  vm.runInContext("syncLocationState({historyMode: 'push'})", context);
+  assert.equal(writes[0].kind, "push");
+  assert.match(writes[0].value, /ui=studio/);
+  assert.match(writes[0].value, /artifact=qa_report/);
+});
+
 test("main wiring restores browser history through the read-only route path", async () => {
   const source = await readFile(path.join(staticRoot, "operator-main.js"), "utf8");
   assert.match(source, /addEventListener\("popstate"/);

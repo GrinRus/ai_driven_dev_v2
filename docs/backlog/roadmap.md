@@ -11536,7 +11536,7 @@ Local tasks:
   - Scope: product-question browser scenario family.
   - Verification: draft restore, resolved/partial/deferred state, failed/successful durable
     readback, answer/resume, and current run/stage context pass on desktop and mobile.
-- `W36-E7-S1-T7` (next) Add the Document Canvas and Evidence Inspector browser journey.
+- `W36-E7-S1-T7` (done) Add the Document Canvas and Evidence Inspector browser journey.
   - Dependencies: `W36-E5-S4-T2..T3`.
   - Scope: document/evidence browser scenario family.
   - Verification: Preview/Source/Diff, safe artifact selection, validator provenance,
@@ -11565,7 +11565,7 @@ Local tasks:
   - Scope: runtime-approval browser scenario family.
   - Verification: allow, deny, cancel, session confirmation, pending state, compare-and-set
     conflict, durable winner, and current run/stage context pass on desktop and mobile.
-- `W36-E7-S1-T12` (planned) Add the project-local Inbox priority and routing browser journey.
+- `W36-E7-S1-T12` (next) Add the project-local Inbox priority and routing browser journey.
   - Dependencies: `W36-E5-S0`, `W36-E5-S2`, `W36-E5-S3-T1..T4`.
   - Scope: Inbox browser scenario family.
   - Verification: Needs your decision, Running now, Ready to continue, and Flow complete
