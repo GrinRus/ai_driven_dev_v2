@@ -154,6 +154,16 @@ function updateStudioLiveObservation() {
 }
 
 function renderActiveStudio() {
+  if (state.dashboard?.terminal_handoff) {
+    const {eligible} = studioFlowCompleteEligibility();
+    if (eligible) {
+      const {renderer} = selectSurfaceRenderer("flow-complete", {
+        legacy: renderFlowCompleteState,
+        studio: renderStudioFlowCompleteState
+      });
+      return renderer();
+    }
+  }
   const item = activeStageItem();
   const studioState = activeStudioState();
   return `

@@ -605,6 +605,63 @@ function renderFlowCompleteState() {
   `;
 }
 
+function studioFlowCompleteEligibility(handoff = state.dashboard?.terminal_handoff) {
+  const recommendation = terminalHandoffRecommendation(handoff);
+  return Object.freeze({
+    eligible: Boolean(handoff && recommendation.state === "recommended"),
+    recommendation
+  });
+}
+
+function renderStudioFlowCompleteAction(action, {primary = false} = {}) {
+  return `
+    <button data-next-flow-action="${escapeHtml(action.action)}" type="button" class="${primary ? "primary" : "secondary"}" ${action.enabled === false ? 'disabled aria-disabled="true"' : ""}>
+      ${escapeHtml(action.label || nextFlowButtonLabel(action))}
+    </button>
+  `;
+}
+
+function renderStudioFlowCompleteState() {
+  const handoff = state.dashboard?.terminal_handoff;
+  const eligibility = studioFlowCompleteEligibility(handoff);
+  if (!eligibility.eligible) return "";
+  const recommendation = eligibility.recommendation;
+  const actions = handoff.recommended_next_flow_actions || [];
+  const primary = actions.find((action) => action.action === recommendation.outcome);
+  if (!primary) return "";
+  const others = actions.filter((action) => action.action !== recommendation.outcome);
+  return `
+    <section class="surface studio-flow-complete" data-studio-flow-complete data-terminal-status="${escapeHtml(handoff.status)}">
+      <div class="flow-complete-hero">
+        <div>
+          <p class="eyebrow">Fresh terminal QA</p>
+          <h2>Flow Complete</h2>
+          <p>${escapeHtml(handoff.final_qa_status)}</p>
+        </div>
+        <span class="small-badge ${terminalHandoffTone(handoff.status)}">${escapeHtml(handoff.status)}</span>
+      </div>
+      ${renderTerminalAttentionSpotlight(handoff)}
+      ${renderTerminalEvidenceSpotlight(handoff)}
+      <section class="next-flow-decision-spotlight" data-core-recommended-outcome="${escapeHtml(recommendation.outcome)}">
+        <div>
+          <span class="small-badge good">core recommendation</span>
+          <strong>${escapeHtml(primary.label || nextFlowButtonLabel(primary))}</strong>
+          <p>${escapeHtml(recommendation.rationale)}</p>
+        </div>
+        ${renderStudioFlowCompleteAction(primary, {primary: true})}
+      </section>
+      ${others.length ? `
+        <details class="studio-flow-complete-other">
+          <summary>Other next actions</summary>
+          <div class="next-flow-actions-grid">
+            ${others.map((action) => `<article class="next-flow-action-card"><strong>${escapeHtml(action.label)}</strong><p>${escapeHtml(action.detail || "")}</p>${renderStudioFlowCompleteAction(action)}</article>`).join("")}
+          </div>
+        </details>
+      ` : ""}
+    </section>
+  `;
+}
+
 function lineageValue(value, fallback = "not recorded") {
   const normalized = String(value || "").trim();
   return normalized || fallback;

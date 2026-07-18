@@ -601,6 +601,27 @@ def test_studio_history_uses_typed_frames_without_runtime_mutation() -> None:
     )
 
 
+def test_studio_flow_complete_uses_only_core_recommendation() -> None:
+    view = _asset_text("/operator-next-flow-view.js")
+    studio = _asset_text("/operator-active-studio.js")
+    parity = _asset_text("/operator-surface-parity.js")
+
+    _assert_contains_all(
+        view,
+        (
+            "function studioFlowCompleteEligibility",
+            "terminalHandoffRecommendation(handoff)",
+            "function renderStudioFlowCompleteState()",
+            "data-studio-flow-complete",
+            "data-core-recommended-outcome",
+            "Other next actions",
+        ),
+    )
+    assert 'selectSurfaceRenderer("flow-complete"' in studio
+    assert 'id: "flow-complete"' in parity
+    assert 'rollout: "candidate"' in parity
+
+
 def test_operator_state_and_dashboard_assets_keep_runtime_and_tab_contracts() -> None:
     api_state = "\n".join((_asset_text("/operator-api-state.js"), _dashboard_actions()))
 

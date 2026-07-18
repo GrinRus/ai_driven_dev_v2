@@ -202,7 +202,7 @@ test("surface parity manifest has one owner and journey per migration surface", 
     "W36-E7-S1-T8",
     "W36-E7-S1-T9",
   ]);
-  const candidates = new Set([]);
+  const candidates = new Set(["flow-complete"]);
   assert.ok(entries.filter((entry) => candidates.has(entry.id)).every(
     (entry) => entry.rollout === "candidate",
   ));
@@ -542,7 +542,7 @@ test("presentation selector is browser-only and fails back to legacy", async () 
   const cases = [
     {search: "", requested: "legacy", fallback: false},
     {search: "?ui=legacy", requested: "legacy", fallback: false},
-    {search: "?ui=studio", requested: "studio", fallback: true},
+    {search: "?ui=studio", requested: "studio", fallback: false},
     {search: "?ui=unknown", requested: "legacy", fallback: false},
   ];
   for (const item of cases) {
@@ -557,7 +557,7 @@ test("presentation selector is browser-only and fails back to legacy", async () 
     await load(context, "operator-presentation.js");
     assert.equal(window.aiddPresentation.requested, item.requested);
     const studioRequested = item.requested === "studio";
-    assert.equal(window.aiddPresentation.effective, studioRequested ? "mixed" : "legacy");
+    assert.equal(window.aiddPresentation.effective, studioRequested ? "studio" : "legacy");
     assert.equal(window.aiddPresentation.fallback, item.fallback);
     assert.equal(Object.keys(window.aiddPresentation.surfaces).length, 12);
     for (const surface of [
@@ -574,13 +574,13 @@ test("presentation selector is browser-only and fails back to legacy", async () 
       .filter(([surface]) => ![
         "guided-setup", "active-studio", "document-evidence", "question-recovery",
         "intervention-recovery", "approval-recovery", "runtime-validation-recovery", "inbox",
-        "implement", "review-qa", "history",
+        "implement", "review-qa", "history", "flow-complete",
       ].includes(surface))
       .every(([, resolution]) => resolution.presentation === "legacy"));
     assert.equal(documentElement.dataset.presentationRequested, item.requested);
     assert.equal(
       documentElement.dataset.presentationEffective,
-      studioRequested ? "mixed" : "legacy",
+      studioRequested ? "studio" : "legacy",
     );
   }
 });
@@ -1017,7 +1017,12 @@ test("next-flow view renders terminal and readiness states without network mutat
           approval_counts: {requested: 0, approved: 0, denied: 0, cancelled: 0, pending: 0},
           questions_answered_count: 0,
           questions_total_count: 0,
-          recommended_next_flow_actions: []
+          recommended_outcome: "create-new-work-item",
+          recommendation_rationale: "QA is clean and terminal evidence is fresh.",
+          recommended_next_flow_actions: [
+            {action: "create-new-work-item", label: "Create New Work Item", detail: "Start unrelated work.", enabled: true},
+            {action: "start-follow-up-flow", label: "Start Follow-up Flow", detail: "Carry findings forward.", enabled: true},
+          ]
         }
       };
       renderNextActionPanel();
@@ -1026,9 +1031,17 @@ test("next-flow view renders terminal and readiness states without network mutat
   );
 
   const terminalHtml = vm.runInContext("renderFlowCompleteState()", context);
+  const studioTerminalHtml = vm.runInContext("renderStudioFlowCompleteState()", context);
 
   assert.match(terminalHtml, /Flow Complete/);
   assert.match(terminalHtml, /QA terminal handoff/);
+  assert.match(studioTerminalHtml, /data-studio-flow-complete/);
+  assert.match(studioTerminalHtml, /data-core-recommended-outcome="create-new-work-item"/);
+  assert.match(studioTerminalHtml, /QA is clean and terminal evidence is fresh/);
+  assert.match(studioTerminalHtml, /Other next actions/);
+  assert.doesNotMatch(studioTerminalHtml, /recommendedNextFlowDecision/);
+  vm.runInContext("state.dashboard.terminal_handoff.recommended_outcome = null", context);
+  assert.equal(vm.runInContext("renderStudioFlowCompleteState()", context), "");
   assert.match(element("nextActionPanel").innerHTML, /Review handoff/);
   assert.equal(fetchCount, 0);
 });

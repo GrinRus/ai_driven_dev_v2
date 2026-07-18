@@ -7,11 +7,11 @@ slice, and local task.
 
 ## Next
 
-- `W36-E5-S9-T3` — Render fresh terminal Flow Complete handoff.
+- `W36-E5-S9-T4` — Render follow-up through shared draft and launch seams.
 
 ## Soon
 
-- `W36-E5-S9-T4` — Render follow-up through shared draft and launch seams.
+- `W36-E5-S9-T5` — Render clone through shared draft and launch seams.
 
 ## Parking lot
 
@@ -32,6 +32,12 @@ slice, and local task.
   queue-restoration policy in `docs/backlog/roadmap.md` (`W8-E3-S1`).
 
 ## Current reconciliation
+
+- `2026-07-18` `W36-E5-S9-T3` is complete: Studio Flow Complete renders only when
+  the additive terminal-handoff contract carries a valid core-owned recommendation. Its primary
+  action and rationale are read directly from that contract; alternative allowed outcomes remain
+  under Other next actions. Missing, stale, malformed, and nonterminal QA do not render the
+  surface. Follow-up `T4` is promoted to `Next`, followed by clone `T5`.
 
 - `2026-07-18` `W36-E5-S8-T7` is complete: the History surface is now
   `parity_closed` after the five-viewport journey proved canonical timeline, comparison,

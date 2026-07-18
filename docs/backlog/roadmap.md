@@ -11234,20 +11234,21 @@ Dependencies:
 
 Local tasks:
 
-- `W36-E5-S9-T3` (next) Render immutable Flow Complete evidence, the core recommendation, and Other next
+- `W36-E5-S9-T3` (done) Render immutable Flow Complete evidence, the core recommendation, and Other next
   actions only for fresh eligible terminal QA.
   - Dependencies: `W36-E5-S8-T7` as the direct queue predecessor.
   - Scope: terminal handoff renderer only.
   - Verification: clean, failed, blocked, and warning fresh terminal fixtures show the exact
     core recommendation; missing, stale, and nonterminal QA do not render Flow Complete.
-- `W36-E5-S9-T4` (soon) Render follow-up definition, inherited context, source evidence, preflight, and
+- `W36-E5-S9-T4` (next) Render follow-up definition, inherited context, source evidence, preflight, and
   launch through the shared draft/mutation seams.
   - Dependencies: `W36-E5-S9-T3` as the direct queue predecessor.
   - Scope: follow-up next-flow renderer only.
   - Verification: Back/reload/failure/retry preserve the follow-up draft, successful launch
     creates one new work-item/run identity, and the source run remains byte-identical.
-- `W36-E5-S9-T5` (planned) Render clone definition, inherited context, source evidence, preflight, and
+- `W36-E5-S9-T5` (soon) Render clone definition, inherited context, source evidence, preflight, and
   launch through the shared draft/mutation seams.
+  - Dependencies: `W36-E5-S9-T4` as the direct queue predecessor.
   - Scope: clone next-flow renderer only.
   - Verification: Back/reload/failure/retry preserve the clone draft, successful launch creates
     one independent identity, and the source run remains byte-identical.
