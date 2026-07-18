@@ -7,11 +7,11 @@ slice, and local task.
 
 ## Next
 
-- `W36-E5-S8-T7` — Close History presentation parity.
+- `W36-E5-S9-T3` — Render fresh terminal Flow Complete handoff.
 
 ## Soon
 
-- `W36-E5-S9-T3` — Render fresh terminal Flow Complete handoff.
+- `W36-E5-S9-T4` — Render follow-up through shared draft and launch seams.
 
 ## Parking lot
 
@@ -32,6 +32,12 @@ slice, and local task.
   queue-restoration policy in `docs/backlog/roadmap.md` (`W8-E3-S1`).
 
 ## Current reconciliation
+
+- `2026-07-18` `W36-E5-S8-T7` is complete: the History surface is now
+  `parity_closed` after the five-viewport journey proved canonical timeline, comparison,
+  lineage, archive, and evidence reachability. Default and explicit legacy renderers remain
+  available as rollback presentations until cutover. Slice `W36-E5-S8` is closed; Flow Complete
+  `S9-T3` is promoted to `Next`, followed by follow-up `S9-T4`.
 
 - `2026-07-18` `W36-E7-S1-T5` is complete: the provider-free History journey passes
   all five viewports with typed frames, retained comparison, parent deep-link navigation,

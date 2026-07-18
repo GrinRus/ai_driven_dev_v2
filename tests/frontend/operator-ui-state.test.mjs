@@ -202,7 +202,7 @@ test("surface parity manifest has one owner and journey per migration surface", 
     "W36-E7-S1-T8",
     "W36-E7-S1-T9",
   ]);
-  const candidates = new Set(["history"]);
+  const candidates = new Set([]);
   assert.ok(entries.filter((entry) => candidates.has(entry.id)).every(
     (entry) => entry.rollout === "candidate",
   ));
@@ -211,8 +211,7 @@ test("surface parity manifest has one owner and journey per migration surface", 
     "intervention-recovery",
     "approval-recovery",
     "runtime-validation-recovery",
-    "implement",
-    "review-qa",
+    "implement", "review-qa", "history",
   ]);
   assert.ok(entries.filter((entry) => parityClosed.has(entry.id)).every(
     (entry) => entry.rollout === "parity_closed",
@@ -564,7 +563,7 @@ test("presentation selector is browser-only and fails back to legacy", async () 
     for (const surface of [
       "guided-setup", "active-studio", "document-evidence", "question-recovery",
       "intervention-recovery", "approval-recovery", "runtime-validation-recovery", "inbox",
-      "implement", "review-qa", "history",
+    "implement", "review-qa", "history",
     ]) {
       assert.equal(
         window.aiddPresentation.surfaces[surface].presentation,

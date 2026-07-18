@@ -11162,7 +11162,7 @@ Exit evidence:
 - every Review/QA claim remains bound to task and repository evidence;
 - no UI entrypoint bypasses the task ledger or aggregate finalization gate.
 
-#### Slice W36-E5-S8 — History Filmstrip and retained evidence (`planned`)
+#### Slice W36-E5-S8 — History Filmstrip and retained evidence (`done`)
 Goal: expose causal attempt/task history, comparison, lineage, and archive state using only
 durably retained evidence.
 
@@ -11206,7 +11206,7 @@ Local tasks:
   - Scope: History responsive presentation only.
   - Verification: `320x568` and `390x844` expose frame status, evidence action, and return path
     without page-level horizontal overflow.
-- `W36-E5-S8-T7` (next) Promote the verified History candidate to `parity_closed` while retaining the
+- `W36-E5-S8-T7` (done) Promote the verified History candidate to `parity_closed` while retaining the
   legacy timeline/history renderer for missing/default and explicit rollback.
   - Dependencies: `W36-E7-S1-T5`.
   - Scope: History parity-manifest entry only.
@@ -11234,14 +11234,15 @@ Dependencies:
 
 Local tasks:
 
-- `W36-E5-S9-T3` (soon) Render immutable Flow Complete evidence, the core recommendation, and Other next
+- `W36-E5-S9-T3` (next) Render immutable Flow Complete evidence, the core recommendation, and Other next
   actions only for fresh eligible terminal QA.
   - Dependencies: `W36-E5-S8-T7` as the direct queue predecessor.
   - Scope: terminal handoff renderer only.
   - Verification: clean, failed, blocked, and warning fresh terminal fixtures show the exact
     core recommendation; missing, stale, and nonterminal QA do not render Flow Complete.
-- `W36-E5-S9-T4` (planned) Render follow-up definition, inherited context, source evidence, preflight, and
+- `W36-E5-S9-T4` (soon) Render follow-up definition, inherited context, source evidence, preflight, and
   launch through the shared draft/mutation seams.
+  - Dependencies: `W36-E5-S9-T3` as the direct queue predecessor.
   - Scope: follow-up next-flow renderer only.
   - Verification: Back/reload/failure/retry preserve the follow-up draft, successful launch
     creates one new work-item/run identity, and the source run remains byte-identical.
