@@ -7,13 +7,13 @@ slice, and local task.
 
 ## Next
 
-- `W36-E5-S2-T2` — Keep the current Decision Bar or Inbox action in the first mobile
-  viewport and move dense evidence to explicit drill-down.
+- `W36-E5-S2-T3` — Replace repeated per-body-mode ordering selectors with one mobile
+  context → decision → document → evidence/history drill-down contract.
 
 ## Soon
 
-- `W36-E5-S2-T3` — Replace repeated per-body-mode ordering selectors with one mobile
-  context → decision → document → evidence/history drill-down contract.
+- `W36-E5-S2-T4` — Keep compact stage navigation and primary labels legible at `320px`
+  and `390px` without hiding stage identity or status.
 
 ## Parking lot
 
@@ -44,6 +44,12 @@ slice, and local task.
   queue-restoration policy in `docs/backlog/roadmap.md` (`W8-E3-S1`).
 
 ## Current reconciliation
+
+- `2026-07-18` `W36-E5-S2-T2` is complete: no-run Studio, durable-running Studio, and
+  Inbox place their actual primary control inside the initial `320x568` and `390x844`
+  viewport. The mobile presentation puts decision controls before supporting progress,
+  hides empty Inbox sections, and keeps sidebar/evidence surfaces below the decision.
+  `S2-T3` is promoted to `Next` and `S2-T4` to `Soon`.
 
 - `2026-07-18` `W36-E5-S2-T1` is complete: the Studio mobile header is bounded to 80px
   at `320x568` and `390x844`, retains compact work-item/run context and runtime selection,

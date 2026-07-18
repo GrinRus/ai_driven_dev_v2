@@ -36,7 +36,9 @@ function scrollActiveStageIntoView() {
   if (document.body.classList.contains("terminal-repair-mode")) return;
   if (document.body.classList.contains("post-stage-next-action-mode")) return;
   const active = rail.querySelector(`[data-stage="${CSS.escape(state.activeStage)}"]`);
-  active?.scrollIntoView({behavior: "auto", block: "nearest", inline: "center"});
+  if (!active || rail.scrollWidth <= rail.clientWidth) return;
+  const left = active.offsetLeft - (rail.clientWidth - active.clientWidth) / 2;
+  rail.scrollTo({behavior: "auto", left: Math.max(0, left)});
 }
 
 function selectedRuntimeView() {

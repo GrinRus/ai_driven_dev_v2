@@ -84,6 +84,7 @@ function renderStudioInbox() {
   }
   const sections = studioInboxSections(state.inbox);
   const count = sections.reduce((total, section) => total + section.items.length, 0);
+  const visibleSections = sections.filter((section) => section.items.length);
   return `
     <section class="studio-inbox" data-studio-surface="inbox">
       <header class="surface studio-inbox-header">
@@ -95,19 +96,22 @@ function renderStudioInbox() {
         <span class="small-badge">${escapeHtml(count)} items</span>
       </header>
       <div class="studio-inbox-sections">
-        ${sections.map((section) => `
+        ${visibleSections.length ? visibleSections.map((section) => `
           <section class="surface inbox-section" data-inbox-section="${escapeHtml(section.key)}">
             <div class="surface-title">
               <span>${escapeHtml(section.label)}</span>
               <span class="small-badge">${escapeHtml(section.items.length)}</span>
             </div>
             <div class="inbox-section-items">
-              ${section.items.length
-                ? section.items.map(renderStudioInboxItem).join("")
-                : '<p class="empty-state compact">No items in this section.</p>'}
+              ${section.items.map(renderStudioInboxItem).join("")}
             </div>
           </section>
-        `).join("")}
+        `).join("") : renderStateSurface({
+          kind: "inbox",
+          state: "empty",
+          title: "Inbox is clear",
+          consequence: "No durable operator decision is waiting in this project."
+        })}
       </div>
     </section>
   `;

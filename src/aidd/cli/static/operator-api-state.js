@@ -592,6 +592,7 @@ function applyOperatorModeBodyClass() {
   const evidenceLogActive = activeModeIsEvidenceLog();
   const decisionDetailActive = state.activeTab === "work"
     && ["review-findings", "qa-verdict"].includes(state.workDetail);
+  const inboxDetailActive = state.activeTab === "work" && state.workDetail === "project-home";
   const staleDownstreamActive = state.dashboard?.next_action?.action === "rerun-stale-downstream"
     || (state.dashboard?.stages || []).some((item) => item.stale);
   const terminalRepairActive = Boolean(
@@ -602,6 +603,7 @@ function applyOperatorModeBodyClass() {
   document.body.classList.toggle("recovery-mode", recoveryActive);
   document.body.classList.toggle("evidence-log-mode", evidenceLogActive);
   document.body.classList.toggle("decision-detail-mode", decisionDetailActive);
+  document.body.classList.toggle("inbox-detail-mode", inboxDetailActive);
   document.body.classList.toggle("stale-downstream-mode", staleDownstreamActive);
   document.body.classList.toggle("terminal-handoff-mode", terminalHandoffActive);
   document.body.classList.toggle("terminal-repair-mode", terminalRepairActive);
