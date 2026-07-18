@@ -262,7 +262,7 @@ function renderRecoverySummary({
         <button class="secondary" data-tab-shortcut="evidence" type="button">Open Evidence</button>
       </div>
       <div class="recovery-summary-primary" data-primary-recovery-slot>
-        <button data-recovery-action="${escapeHtml(primaryAction.action)}" type="button" ${primaryAction.enabled === false ? 'disabled aria-disabled="true"' : ""}>${escapeHtml(primaryAction.label)}</button>
+        <button data-primary-action data-recovery-action="${escapeHtml(primaryAction.action)}" type="button" ${primaryAction.enabled === false ? 'disabled aria-disabled="true"' : ""}>${escapeHtml(primaryAction.label)}</button>
       </div>
     </section>
   `;

@@ -7,13 +7,13 @@ slice, and local task.
 
 ## Next
 
-- `W36-E5-S4-T1` — Compose the active Studio view from shared mode navigation, compact
-  context bar, stage navigation, and Decision Bar slots.
+- `W36-E5-S4-T2` — Render the read-only Document Canvas with Preview, Source, and Diff
+  through the existing safe document endpoints.
 
 ## Soon
 
-- `W36-E5-S4-T2` — Render the read-only Document Canvas with Preview, Source, and Diff
-  through the existing safe document endpoints.
+- `W36-E5-S4-T3` — Render the conditional Evidence Inspector with findings, provenance,
+  related artifacts, and exact source references.
 
 ## Parking lot
 
@@ -46,6 +46,12 @@ slice, and local task.
   queue-restoration policy in `docs/backlog/roadmap.md` (`W8-E3-S1`).
 
 ## Current reconciliation
+
+- `2026-07-18` `W36-E5-S4-T1` is complete: the active-Studio candidate composes the
+  existing mode navigation, compact durable context, canonical stage rail, one authoritative
+  decision slot, and a read-only stage summary without duplicating service actions. No-run,
+  active, blocked, and terminal Chromium fixtures retain context and one marked primary action.
+  `S4-T2` is promoted to `Next` and `S4-T3` to `Soon`.
 
 - `2026-07-18` `W36-E5-S3-T4` is complete: `ui=studio` renders the four ordered Inbox
   sections from the additive read model, preserves server-owned actions and exact

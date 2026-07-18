@@ -10973,17 +10973,17 @@ Dependencies:
 
 Local tasks:
 
-- `W36-E5-S4-T1` (next) Compose the active Studio view from shared mode navigation, compact context
+- `W36-E5-S4-T1` (done) Compose the active Studio view from shared mode navigation, compact context
   bar, canonical stage navigation, and Decision Bar slots.
   - Scope: packaged active-Studio markup and renderer only.
   - Verification: no-run, active, blocked, and terminal fixtures preserve context and expose
     exactly one primary action across supported desktop viewports.
-- `W36-E5-S4-T2` (soon) Render the read-only Document Canvas with Preview, Source, and Diff over the
+- `W36-E5-S4-T2` (next) Render the read-only Document Canvas with Preview, Source, and Diff over the
   existing safe workbench/document endpoints.
   - Scope: packaged document renderer only.
   - Verification: Markdown, source, diff, missing, malformed, and truncated fixtures retain
     semantics, copyability, safe keys, and document-first visual priority.
-- `W36-E5-S4-T3` (planned) Render the conditional Evidence Inspector with finding, provenance, related
+- `W36-E5-S4-T3` (soon) Render the conditional Evidence Inspector with finding, provenance, related
   artifact, and exact source-reference variants.
   - Scope: packaged evidence renderer only.
   - Verification: zero-value evidence hides the inspector while validator, provenance,

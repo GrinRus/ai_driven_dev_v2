@@ -2027,7 +2027,7 @@ function renderGlobalNextActionStrip() {
         <span><strong>Run</strong>${escapeHtml(run)}</span>
       </div>
       <div class="next-action-button-stack">
-        <button id="globalNextActionButton" class="next-button" type="button" ${disabled ? "disabled" : ""}>${escapeHtml(label)}</button>
+        <button id="globalNextActionButton" class="next-button" data-primary-action type="button" ${disabled ? "disabled" : ""}>${escapeHtml(label)}</button>
         ${renderNextActionBlocker(blockerMessage)}
       </div>
     </div>

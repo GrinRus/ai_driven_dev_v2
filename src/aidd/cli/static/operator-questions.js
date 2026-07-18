@@ -228,7 +228,7 @@ function renderQuestionCards({showResume}) {
                 <option value="deferred" ${resolutionValue === "deferred" ? "selected" : ""}>deferred</option>
               </select>
               <button data-save-answer="${escapeHtml(question.question_id)}" type="button">${displayStatus === "resolved" ? "Update answer" : "Save answer"}</button>
-              ${showResume ? `<button data-answer-resume="${escapeHtml(question.question_id)}" data-requires-resolved-resume="${resumeNeedsResolved ? "true" : "false"}" data-resume-ready-label="${displayStatus === "resolved" ? "Update & resume" : "Answer & resume"}" type="button" ${resumeDisabled ? 'disabled title="Blocking questions must be saved as resolved before resume."' : ""}>${escapeHtml(resumeLabel)}</button>` : ""}
+              ${showResume ? `<button data-primary-action data-answer-resume="${escapeHtml(question.question_id)}" data-requires-resolved-resume="${resumeNeedsResolved ? "true" : "false"}" data-resume-ready-label="${displayStatus === "resolved" ? "Update & resume" : "Answer & resume"}" type="button" ${resumeDisabled ? 'disabled title="Blocking questions must be saved as resolved before resume."' : ""}>${escapeHtml(resumeLabel)}</button>` : ""}
             </div>
           </article>
         `;

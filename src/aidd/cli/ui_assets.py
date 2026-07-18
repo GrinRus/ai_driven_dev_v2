@@ -88,6 +88,11 @@ _OPERATOR_STATIC_ASSET_MANIFEST = (
         content_type="text/javascript; charset=utf-8",
     ),
     OperatorStaticAsset(
+        route="/operator-active-studio.js",
+        filename="operator-active-studio.js",
+        content_type="text/javascript; charset=utf-8",
+    ),
+    OperatorStaticAsset(
         route="/operator-focus.js",
         filename="operator-focus.js",
         content_type="text/javascript; charset=utf-8",

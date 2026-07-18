@@ -13,7 +13,7 @@ const SURFACE_PARITY_MANIFEST = Object.freeze([
   {
     id: "active-studio",
     owner: "W36-E5-S4",
-    rollout: "legacy_only",
+    rollout: "candidate",
     rollbackRenderer: "operator-stage-cockpit",
     fixture: "running",
     journey: "W36-E7-S1-T2",

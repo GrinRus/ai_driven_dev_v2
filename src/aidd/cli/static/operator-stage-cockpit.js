@@ -28,7 +28,7 @@ function runtimeFailureEvidencePath(firstFailure, diagnostics) {
   return firstFailure?.path || runtimeLogEvidencePath(diagnostics) || "";
 }
 
-function renderOverview() {
+function renderLegacyOverview() {
   if (!state.dashboard?.run?.run_id) {
     return renderFirstLaunchState();
   }
@@ -84,6 +84,14 @@ function renderOverview() {
       </section>
     </div>
   `;
+}
+
+function renderOverviewSurface() {
+  const {renderer} = selectSurfaceRenderer("active-studio", {
+    legacy: renderLegacyOverview,
+    studio: renderActiveStudio
+  });
+  return renderer();
 }
 
 function renderRunAccountabilityCard() {
@@ -546,7 +554,7 @@ async function renderCockpitContent() {
       await renderQaVerdict();
       return;
     }
-    content.innerHTML = renderOverview();
+    content.innerHTML = renderOverviewSurface();
     void loadRunAccountabilityCard();
     revealNextFlowWizardOnMobile();
     return;
@@ -1003,6 +1011,7 @@ async function renderAll() {
   renderProjectHomeRail();
   renderStageRail();
   renderStageHeader();
+  applyActiveStudioShellPresentation();
   renderGlobalNextActionStrip();
   updateContextualTabs();
   renderSidebar();

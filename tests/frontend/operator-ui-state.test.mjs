@@ -130,6 +130,7 @@ test("operator bootstrap loads modules in declared order", async () => {
     "/operator-dashboard-actions.js",
     "/operator-primitives.js",
     "/operator-inbox.js",
+    "/operator-active-studio.js",
     "/operator-focus.js",
     "/operator-onboarding.js",
     "/operator-artifacts-documents.js",
@@ -199,8 +200,11 @@ test("surface parity manifest has one owner and journey per migration surface", 
     "W36-E7-S1-T8",
     "W36-E7-S1-T9",
   ]);
-  assert.equal(entries.find((entry) => entry.id === "inbox")?.rollout, "candidate");
-  assert.ok(entries.filter((entry) => entry.id !== "inbox").every(
+  const candidates = new Set(["active-studio", "inbox"]);
+  assert.ok(entries.filter((entry) => candidates.has(entry.id)).every(
+    (entry) => entry.rollout === "candidate",
+  ));
+  assert.ok(entries.filter((entry) => !candidates.has(entry.id)).every(
     (entry) => entry.rollout === "legacy_only",
   ));
   assert.ok(entries.every((entry) => entry.owner.startsWith("W36-")));
@@ -231,12 +235,14 @@ test("presentation selector is browser-only and fails back to legacy", async () 
     assert.equal(window.aiddPresentation.effective, studioRequested ? "mixed" : "legacy");
     assert.equal(window.aiddPresentation.fallback, item.fallback);
     assert.equal(Object.keys(window.aiddPresentation.surfaces).length, 12);
-    assert.equal(
-      window.aiddPresentation.surfaces.inbox.presentation,
-      studioRequested ? "studio" : "legacy",
-    );
+    for (const surface of ["active-studio", "inbox"]) {
+      assert.equal(
+        window.aiddPresentation.surfaces[surface].presentation,
+        studioRequested ? "studio" : "legacy",
+      );
+    }
     assert.ok(Object.entries(window.aiddPresentation.surfaces)
-      .filter(([surface]) => surface !== "inbox")
+      .filter(([surface]) => !["active-studio", "inbox"].includes(surface))
       .every(([, resolution]) => resolution.presentation === "legacy"));
     assert.equal(documentElement.dataset.presentationRequested, item.requested);
     assert.equal(
