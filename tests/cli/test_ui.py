@@ -4504,7 +4504,7 @@ def test_ui_tasks_endpoint_returns_rich_task_state(tmp_path: Path) -> None:
     assert finalization["attempts"] == []
     assert payload["finalization_eligible"] is False
     assert payload["review_eligible"] is False
-    assert "every task" in str(payload["review_blocker"])
+    assert payload["review_blocker"] == "No implementation run is selected."
 
 
 def test_ui_task_run_requires_explicit_run_id(tmp_path: Path) -> None:

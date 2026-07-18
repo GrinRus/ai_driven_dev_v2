@@ -426,7 +426,7 @@ def test_studio_history_uses_typed_frames_without_runtime_mutation() -> None:
             "grid-template-columns: minmax(0, 1fr)",
             ".history-frame",
             "overflow: visible",
-            "min-height: 44px",
+            "min-height: var(--control-height)",
         ),
     )
     assert "return renderStudioHistory(await loadStudioHistoryTimeline());" in cockpit
@@ -463,7 +463,7 @@ def test_studio_flow_complete_uses_only_core_recommendation() -> None:
         (
             ".studio-flow-complete",
             ".studio-flow-complete-other > summary",
-            "min-height: 44px",
+            "min-height: var(--control-height)",
         ),
     )
     _assert_contains_all(

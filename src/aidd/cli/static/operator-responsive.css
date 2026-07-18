@@ -55,7 +55,7 @@
   }
   .history-frame {
     flex: none;
-    min-height: 44px;
+    min-height: var(--control-height);
     width: 100%;
   }
   .history-selection .surface-title,
@@ -69,7 +69,7 @@
   .history-selection button,
   .studio-run-comparison button,
   .studio-history-archive button {
-    min-height: 44px;
+    min-height: var(--control-height);
     width: 100%;
   }
   .studio-run-comparison label,
@@ -98,7 +98,7 @@
   .studio-flow-complete .next-flow-decision-spotlight button,
   .studio-flow-complete-other > summary,
   .studio-flow-complete-other button {
-    min-height: 44px;
+    min-height: var(--control-height);
     width: 100%;
   }
   .studio-flow-complete-other > summary {

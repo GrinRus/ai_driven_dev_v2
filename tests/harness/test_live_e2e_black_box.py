@@ -1788,7 +1788,7 @@ def test_black_box_live_e2e_imports_manual_frontend_evidence_without_gating(
         (result.bundle_root / "frontend-checkpoints.json").read_text(encoding="utf-8")
     )
     assert all(
-        checkpoint["classification"] == "pass"
+        checkpoint["classification"] in {"pass", "skipped"}
         for checkpoint in frontend_payload["checkpoints"]
     )
     manual_payload = frontend_payload["manual_visual_evidence"]

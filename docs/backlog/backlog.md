@@ -30,6 +30,14 @@ slice, and local task.
 
 ## Current reconciliation
 
+- `2026-07-18` `W36-E7-S2-T8` is complete: final full-suite acceptance now follows
+  Studio-only module ownership for quality gates, History, and next-flow fields; the no-run task
+  endpoint asserts its truthful blocker; mobile controls consume the shared touch token; and
+  process-tree tests wait for the child signal handler before requesting termination. The
+  non-gating manual-evidence fixture also accepts the canonical bounded frontend `skipped` state
+  while still rejecting failures. Public UI and runtime semantics are unchanged. The active queue
+  remains the five real sessions `S3-T2`.
+
 - `2026-07-18` `W36-E7-S2-T7` is complete: four pre-existing overlong browser-fixture
   source lines are mechanically wrapped without changing JavaScript evaluation or rendered DOM.
   The repository-wide Ruff gate and the owning History/Recovery fixtures now share the same

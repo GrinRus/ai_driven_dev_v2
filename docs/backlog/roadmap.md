@@ -11640,6 +11640,12 @@ Local tasks:
   - Scope: browser-test source formatting only.
   - Verification: repository-wide Ruff and the affected History/Recovery browser fixtures pass
     without changing rendered DOM semantics.
+- `W36-E7-S2-T8` (done) Reconcile repository-wide tests with the Studio-only asset ownership and
+  deterministic process-fixture readiness exposed by final acceptance.
+  - Dependencies: `W36-E7-S2-T7`.
+  - Scope: test contracts and token-driven responsive control height only.
+  - Verification: the process supervisor fixtures, UI asset ownership contracts, full pytest,
+    Ruff, and mypy pass without changing public runtime or UI semantics.
 - `W36-E7-S2-T5` (done) Record one source-installed full provider-free browser pass.
   - Dependencies: `W36-E7-S2-T6` as the direct queue predecessor.
   - Dependencies: `W36-E7-S2-T1`, `W36-E7-S2-T3`.
