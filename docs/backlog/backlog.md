@@ -30,6 +30,11 @@ slice, and local task.
 
 ## Current reconciliation
 
+- `2026-07-18` `W36-E7-S2-T7` is complete: four pre-existing overlong browser-fixture
+  source lines are mechanically wrapped without changing JavaScript evaluation or rendered DOM.
+  The repository-wide Ruff gate and the owning History/Recovery fixtures now share the same
+  maintained formatting boundary. The active queue remains the real-session task `E7-S3-T2`.
+
 - `2026-07-18` `W36-E7-S3-T1` is complete: the observed-acceptance contract defines
   eight bounded first-time-operator tasks for Setup, Inbox, monitoring, question/runtime
   recovery, QA remediation, History, and terminal continuation. Every task records completion,

@@ -83,7 +83,8 @@ def test_studio_history_is_a_vertical_mobile_drill_down(
             """element => ({
               display: getComputedStyle(element).display,
               overflowX: getComputedStyle(element).overflowX,
-              frameWidths: Array.from(element.children).map(child => child.getBoundingClientRect().width),
+              frameWidths: Array.from(element.children)
+                .map(child => child.getBoundingClientRect().width),
               width: element.getBoundingClientRect().width
             })"""
         )
@@ -96,8 +97,18 @@ def test_studio_history_is_a_vertical_mobile_drill_down(
               documentWidth: document.documentElement.scrollWidth,
               viewportWidth: window.innerWidth,
               offenders: Array.from(document.querySelectorAll('body *'))
-                .map(element => ({selector: element.id || element.className || element.tagName, left: element.getBoundingClientRect().left, right: element.getBoundingClientRect().right, width: element.getBoundingClientRect().width, scrollWidth: element.scrollWidth}))
-                .filter(item => item.right > window.innerWidth + 0.5 || item.left < -0.5 || item.scrollWidth > Math.ceil(item.width) + 1)
+                .map(element => ({
+                  selector: element.id || element.className || element.tagName,
+                  left: element.getBoundingClientRect().left,
+                  right: element.getBoundingClientRect().right,
+                  width: element.getBoundingClientRect().width,
+                  scrollWidth: element.scrollWidth
+                }))
+                .filter(item => (
+                  item.right > window.innerWidth + 0.5
+                  || item.left < -0.5
+                  || item.scrollWidth > Math.ceil(item.width) + 1
+                ))
                 .slice(0, 30)
             })"""
         )

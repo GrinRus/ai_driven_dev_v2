@@ -40,7 +40,8 @@ def test_mobile_recovery_prioritizes_failure_then_decision_then_evidence(
                       <p>Progression is closed until the selected recovery path completes.</p>
                     </header>
                     <div class="recovery-summary-failure" data-decisive-failure>
-                      <span>First failure</span><strong>Required stage evidence is unavailable</strong>
+                      <span>First failure</span>
+                      <strong>Required stage evidence is unavailable</strong>
                     </div>
                     <div class="recovery-summary-evidence" data-evidence-path="validator-report.md">
                       <span>Evidence</span><code>validator-report.md</code>

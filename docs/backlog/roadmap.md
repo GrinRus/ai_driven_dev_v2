@@ -11634,6 +11634,12 @@ Local tasks:
   - Verification: Document/Evidence opens through canonical Studio route context and the
     intervention draft survives History/Back without a readiness-rerender race; the complete
     packaged-UI runner has no failed journey ids.
+- `W36-E7-S2-T7` (done) Normalize packaged browser fixture source for the repository-wide lint
+  gate after the full browser pass.
+  - Dependencies: `W36-E7-S2-T5`.
+  - Scope: browser-test source formatting only.
+  - Verification: repository-wide Ruff and the affected History/Recovery browser fixtures pass
+    without changing rendered DOM semantics.
 - `W36-E7-S2-T5` (done) Record one source-installed full provider-free browser pass.
   - Dependencies: `W36-E7-S2-T6` as the direct queue predecessor.
   - Dependencies: `W36-E7-S2-T1`, `W36-E7-S2-T3`.
