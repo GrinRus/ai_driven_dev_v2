@@ -38,16 +38,13 @@ def test_guided_setup_parity_preserves_explicit_legacy_service_path(tmp_path: Pa
         project_root,
         playwright,
     ) as harness:
-        for selector, expected_presentation in (
-            ("studio", "studio"),
-            ("legacy", "legacy"),
-        ):
+        for selector in ("studio", "legacy", "unknown"):
             with harness.open_page((1280, 900)) as browser_page:
                 page = browser_page.page
                 page.goto(f"{harness.url}?ui={selector}", wait_until="networkidle")
                 assert page.evaluate(
                     "window.aiddPresentation.surfaces['guided-setup'].presentation"
-                ) == expected_presentation
+                ) == "studio"
                 page.locator("#onboardingProjectRoot").fill(project_root.as_posix())
                 with page.expect_response(
                     lambda response: response.url.endswith("/api/onboarding/project")

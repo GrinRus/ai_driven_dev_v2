@@ -538,12 +538,12 @@ test("Studio History renders typed frames and pauses only browser auto-follow", 
   assert.match(comparison, /History will not reconstruct it|no snapshot is reconstructed|snapshot unavailable/);
 });
 
-test("presentation selector is browser-only and fails back to legacy", async () => {
+test("retired presentation selector always resolves Studio", async () => {
   const cases = [
     {search: "", requested: "studio", fallback: false},
-    {search: "?ui=legacy", requested: "legacy", fallback: false},
+    {search: "?ui=legacy", requested: "studio", fallback: false},
     {search: "?ui=studio", requested: "studio", fallback: false},
-    {search: "?ui=unknown", requested: "legacy", fallback: false},
+    {search: "?ui=unknown", requested: "studio", fallback: false},
   ];
   for (const item of cases) {
     const documentElement = {dataset: {}};
@@ -556,8 +556,7 @@ test("presentation selector is browser-only and fails back to legacy", async () 
     await load(context, "operator-surface-parity.js");
     await load(context, "operator-presentation.js");
     assert.equal(window.aiddPresentation.requested, item.requested);
-    const studioRequested = item.requested === "studio";
-    assert.equal(window.aiddPresentation.effective, studioRequested ? "studio" : "legacy");
+    assert.equal(window.aiddPresentation.effective, "studio");
     assert.equal(window.aiddPresentation.fallback, item.fallback);
     assert.equal(Object.keys(window.aiddPresentation.surfaces).length, 12);
     for (const surface of [
@@ -567,7 +566,7 @@ test("presentation selector is browser-only and fails back to legacy", async () 
     ]) {
       assert.equal(
         window.aiddPresentation.surfaces[surface].presentation,
-        studioRequested ? "studio" : "legacy",
+        "studio",
       );
     }
     assert.ok(Object.entries(window.aiddPresentation.surfaces)
@@ -576,16 +575,16 @@ test("presentation selector is browser-only and fails back to legacy", async () 
         "intervention-recovery", "approval-recovery", "runtime-validation-recovery", "inbox",
         "implement", "review-qa", "history", "flow-complete",
       ].includes(surface))
-      .every(([, resolution]) => resolution.presentation === "legacy"));
+      .every(([, resolution]) => resolution.presentation === "studio"));
     assert.equal(documentElement.dataset.presentationRequested, item.requested);
     assert.equal(
       documentElement.dataset.presentationEffective,
-      studioRequested ? "studio" : "legacy",
+      "studio",
     );
   }
 });
 
-test("surface resolver implements selector and rollout truth table", async () => {
+test("surface resolver ignores retired selector and rollout values", async () => {
   const documentElement = {dataset: {}};
   const window = {location: {search: ""}};
   const context = vm.createContext({
@@ -612,10 +611,9 @@ test("surface resolver implements selector and rollout truth table", async () =>
     context,
   )));
   for (const item of result) {
-    const studio = item.selector === "studio" && item.rollout !== "legacy_only";
-    assert.equal(item.presentation, studio ? "studio" : "legacy");
-    assert.equal(item.renderer, studio ? "studio:fixture" : "operator-legacy");
-    assert.equal(item.fallback, item.selector === "studio" && !studio);
+    assert.equal(item.presentation, "studio");
+    assert.equal(item.renderer, "studio:fixture");
+    assert.equal(item.fallback, false);
   }
 });
 

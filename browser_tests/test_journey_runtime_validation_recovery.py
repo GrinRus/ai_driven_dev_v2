@@ -147,11 +147,7 @@ def test_runtime_validation_recovery_parity_preserves_durable_read_models(
         playwright,
         work_item=fixture.work_item,
     ) as harness:
-        for selector, expected_presentation in (
-            ("", "legacy"),
-            ("?ui=legacy", "legacy"),
-            ("?ui=studio", "studio"),
-        ):
+        for selector in ("", "?ui=legacy", "?ui=studio", "?ui=unknown"):
             with harness.open_page((1280, 900)) as browser_page:
                 page = browser_page.page
                 page.goto(f"{harness.url}{selector}", wait_until="networkidle")
@@ -167,7 +163,7 @@ def test_runtime_validation_recovery_parity_preserves_durable_read_models(
                 assert page.evaluate(
                     "window.aiddPresentation.surfaces"
                     "['runtime-validation-recovery'].presentation"
-                ) == expected_presentation
+                ) == "studio"
                 snapshots.append(
                     page.evaluate(
                         "() => {"
@@ -192,4 +188,4 @@ def test_runtime_validation_recovery_parity_preserves_durable_read_models(
                 )
                 browser_page.diagnostics.assert_clean()
 
-    assert snapshots[1:] == snapshots[:1] * 2
+    assert snapshots[1:] == snapshots[:1] * 3

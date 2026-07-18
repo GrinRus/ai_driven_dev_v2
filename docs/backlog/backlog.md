@@ -7,11 +7,11 @@ slice, and local task.
 
 ## Next
 
-- `W36-E5-S10-T3` — Remove the temporary presentation selector.
+- `W36-E5-S10-T4` — Remove the legacy renderer.
 
 ## Soon
 
-- `W36-E5-S10-T4` — Remove the legacy renderer.
+- `W36-E5-S10-T5` — Reconcile Studio-only operator documentation.
 
 ## Parking lot
 
@@ -29,6 +29,11 @@ slice, and local task.
   queue-restoration policy in `docs/backlog/roadmap.md` (`W8-E3-S1`).
 
 ## Current reconciliation
+
+- `2026-07-18` `W36-E5-S10-T3` is complete: the temporary browser presentation
+  selector no longer branches renderer selection. Missing, invalid, `ui=studio`, and the former
+  `ui=legacy` value all resolve to Studio without changing API requests or durable state. Legacy
+  asset removal `T4` is promoted to `Next`, followed by Studio-only docs reconciliation `T5`.
 
 - `2026-07-18` `W36-E5-S10-T2` is complete: a source-installed Chromium check proved
   exact dashboard/timeline payload parity and identical guarded action availability between the

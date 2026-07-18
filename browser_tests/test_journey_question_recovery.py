@@ -60,7 +60,7 @@ def test_question_recovery_parity_preserves_answer_service_path(
         page.goto(f"{harness.url}?ui={selector}", wait_until="networkidle")
         assert page.evaluate(
             "window.aiddPresentation.surfaces['question-recovery'].presentation"
-        ) == selector
+        ) == "studio"
         page.locator('[data-question-text="Q1"]').fill(
             "Use the same durable answer service path."
         )

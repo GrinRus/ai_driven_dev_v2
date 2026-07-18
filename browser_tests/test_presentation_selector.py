@@ -10,18 +10,17 @@ from browser_tests.browser_harness import operator_browser_harness
 
 
 @pytest.mark.parametrize(
-    ("query", "requested"),
+    "query",
     (
-        ("", "studio"),
-        ("?ui=legacy", "legacy"),
-        ("?ui=studio", "studio"),
-        ("?ui=unknown", "legacy"),
+        "",
+        "?ui=legacy",
+        "?ui=studio",
+        "?ui=unknown",
     ),
 )
-def test_presentation_selector_preserves_shared_service_surface(
+def test_retired_presentation_selector_always_resolves_studio(
     tmp_path: Path,
     query: str,
-    requested: str,
 ) -> None:
     with sync_playwright() as playwright, operator_browser_harness(
         tmp_path,
@@ -31,9 +30,8 @@ def test_presentation_selector_preserves_shared_service_surface(
         assert response is not None and response.ok
         browser_page.page.locator("#onboardingProjectForm").wait_for(state="visible")
         root = browser_page.page.locator("html")
-        assert root.get_attribute("data-presentation-requested") == requested
-        expected_effective = "studio" if requested == "studio" else "legacy"
-        assert root.get_attribute("data-presentation-effective") == expected_effective
+        assert root.get_attribute("data-presentation-requested") == "studio"
+        assert root.get_attribute("data-presentation-effective") == "studio"
         requested_paths = {
             urlsplit(response_url).path
             for response_url, _ in browser_page.diagnostics.http_statuses

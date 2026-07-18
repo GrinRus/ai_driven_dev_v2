@@ -1,22 +1,14 @@
-const PRESENTATION_SELECTORS = new Set(["studio", "legacy"]);
-
-function presentationSelectorFromSearch(search = window.location.search) {
-  const params = new URLSearchParams(search);
-  if (!params.has("ui")) return "studio";
-  const requested = params.get("ui") || "";
-  return PRESENTATION_SELECTORS.has(requested) ? requested : "legacy";
+function presentationSelectorFromSearch(_search = window.location.search) {
+  return "studio";
 }
 
-function resolveSurfaceRendererFor(entry, selector) {
-  const requested = PRESENTATION_SELECTORS.has(selector) ? selector : "legacy";
-  const studioEligible = ["candidate", "parity_closed"].includes(entry.rollout);
-  const presentation = requested === "studio" && studioEligible ? "studio" : "legacy";
+function resolveSurfaceRendererFor(entry, _selector) {
   return Object.freeze({
     surface: entry.id,
-    presentation,
-    renderer: presentation === "studio" ? `studio:${entry.id}` : entry.rollbackRenderer,
+    presentation: "studio",
+    renderer: `studio:${entry.id}`,
     rollout: entry.rollout,
-    fallback: requested === "studio" && presentation === "legacy"
+    fallback: false
   });
 }
 

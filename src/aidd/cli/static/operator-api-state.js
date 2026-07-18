@@ -86,8 +86,8 @@ function terminalHandoffRecommendation(handoff) {
 }
 
 const state = {
-  presentationSelector: window.aiddPresentation?.requested || "legacy",
-  presentationEffective: window.aiddPresentation?.effective || "legacy",
+  presentationSelector: window.aiddPresentation?.requested || "studio",
+  presentationEffective: window.aiddPresentation?.effective || "studio",
   dashboard: null,
   dashboardActiveJob: null,
   dashboardRequestGeneration: 0,
