@@ -379,6 +379,8 @@ function renderApprovalRequestCard(request, decision, pendingIds) {
   const command = payload.command || payload.cmd || "";
   const paths = request.paths || [];
   const pending = pendingIds.has(request.id);
+  const approvalStatus = decision?.action || (pending ? "pending" : "recorded");
+  const approvalScope = [request.cwd, ...paths].filter(Boolean).join(" / ") || "runtime request payload";
   const decisionBadge = decision
     ? `<span class="small-badge ${decision.action === "deny" || decision.action === "cancel" ? "bad" : "good"}">${escapeHtml(decision.action)}</span>`
     : pending ? `<span class="small-badge warn">pending</span>` : `<span class="small-badge">recorded</span>`;
@@ -407,7 +409,13 @@ function renderApprovalRequestCard(request, decision, pendingIds) {
     </div>
   ` : "";
   return `
-    <article class="approval-card ${pending ? "pending" : ""}">
+    <article class="approval-card ${pending ? "pending" : ""}"
+      data-approval-request-id="${escapeHtml(request.id)}"
+      data-approval-status="${escapeHtml(approvalStatus)}"
+      data-approval-risk="${escapeHtml(request.risk || "unknown")}"
+      data-approval-scope="${escapeHtml(approvalScope)}"
+      data-approval-breadth="${decision?.action === "allow_for_session" ? "session" : "single-request"}"
+      data-approval-winner="${escapeHtml(decision?.action || "")}">
       <div class="question-head">
         <strong>${escapeHtml(request.kind || "unknown")} / ${escapeHtml(request.tool_name || "runtime")}</strong>
         ${decisionBadge}
@@ -416,6 +424,8 @@ function renderApprovalRequestCard(request, decision, pendingIds) {
         <div><span>Risk</span><strong>${escapeHtml(request.risk || "unknown")}</strong></div>
         <div><span>Created</span><strong>${escapeHtml(request.created_at_utc || "-")}</strong></div>
         <div><span>Suggestions</span><strong>${escapeHtml((request.suggestions || []).join(", ") || "operator decision")}</strong></div>
+        <div><span>Scope</span><strong>${escapeHtml(approvalScope)}</strong></div>
+        <div><span>Breadth</span><strong>${decision?.action === "allow_for_session" ? "Current runtime approval session" : "This request only unless session approval is explicitly confirmed"}</strong></div>
       </div>
       <div class="panel-list">
         <div class="panel-item"><strong>Request</strong><span>${escapeHtml(request.id)}</span></div>
@@ -424,7 +434,7 @@ function renderApprovalRequestCard(request, decision, pendingIds) {
         <div class="panel-item"><strong>CWD</strong>${pathLine(request.cwd || "not provided", 86)}</div>
         <div class="panel-item"><strong>Paths</strong><span>${pathBody}</span></div>
         <div class="panel-item"><strong>Payload</strong><pre class="payload-preview">${escapeHtml(JSON.stringify(payload, null, 2))}</pre></div>
-        ${decision ? `<div class="panel-item"><strong>Decision</strong><span>${escapeHtml(decision.source)} / ${escapeHtml(decision.reason || "no reason")}</span></div>` : ""}
+        ${decision ? `<div class="panel-item" data-approval-durable-winner="${escapeHtml(decision.action)}"><strong>Durable winner</strong><span>${escapeHtml(decision.action)} by ${escapeHtml(decision.source)} / ${escapeHtml(decision.reason || "no reason")}</span></div>` : ""}
       </div>
       ${renderApprovalDiffPreview(request)}
       ${actions}

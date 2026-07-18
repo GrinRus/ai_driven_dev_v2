@@ -7,13 +7,13 @@ slice, and local task.
 
 ## Next
 
-- `W36-E5-S5-T3` — Render runtime approval scope, breadth, reason, risk, pending state,
-  session confirmation, and durable compare-and-set winner.
+- `W36-E5-S5-T4` — Implement decision-first mobile question, intervention, and approval
+  layouts with compact context and evidence drill-down.
 
 ## Soon
 
-- `W36-E5-S5-T4` — Implement decision-first mobile question, intervention, and approval
-  layouts with compact context and evidence drill-down.
+- `W36-E7-S1-T6` — Add the blocking-question answer/resume Recovery Studio browser
+  journey across desktop and mobile viewports.
 
 ## Parking lot
 
@@ -40,6 +40,13 @@ slice, and local task.
   queue-restoration policy in `docs/backlog/roadmap.md` (`W8-E3-S1`).
 
 ## Current reconciliation
+
+- `2026-07-18` `W36-E5-S5-T3` is complete: approval Recovery is a Studio candidate
+  with explicit request scope, breadth, risk, pending status, reason capture, session-wide
+  confirmation, and durable-winner markers. The existing guarded decision endpoint remains
+  authoritative: allow/deny/cancel are idempotent, conflicts render the compare-and-set winner,
+  and session approval cannot post before confirmation. Human-decision mobile layout `T4` is
+  promoted to `Next` and the question journey `W36-E7-S1-T6` to `Soon`.
 
 - `2026-07-18` `W36-E5-S5-T2` is complete: intervention Recovery is a Studio
   candidate with explicit work-item/run/stage identity, core-owned eligibility, session

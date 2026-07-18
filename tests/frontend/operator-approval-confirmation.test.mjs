@@ -94,6 +94,30 @@ test("approval card exposes reason capture and explicit session breadth", async 
   assert.match(html, /data-approval-reason="REQ-1"/);
   assert.match(html, /Confirm session-wide approval/);
   assert.match(html, /all matching requests in the current runtime approval session/);
+  assert.match(html, /data-approval-request-id="REQ-1"/);
+  assert.match(html, /data-approval-status="pending"/);
+  assert.match(html, /data-approval-risk="unknown"/);
+  assert.match(html, /data-approval-scope="runtime request payload"/);
+  assert.match(html, /data-approval-breadth="single-request"/);
+});
+
+test("resolved approval card exposes the durable winner and session breadth", async () => {
+  const context = await approvalContext();
+  const html = vm.runInContext(
+    `renderApprovalRequestCard({
+      id: "REQ-1", kind: "shell", runtime_id: "generic-cli", stage: "idea",
+      cwd: "/workspace", paths: ["src"], risk: "medium",
+      payload: {command: "python -m pytest -q"}
+    }, {action: "allow_for_session", source: "ui", reason: "bounded"}, new Set())`,
+    context,
+  );
+  assert.match(html, /data-approval-status="allow_for_session"/);
+  assert.match(html, /data-approval-risk="medium"/);
+  assert.match(html, /data-approval-scope="\/workspace \/ src"/);
+  assert.match(html, /data-approval-breadth="session"/);
+  assert.match(html, /data-approval-winner="allow_for_session"/);
+  assert.match(html, /data-approval-durable-winner="allow_for_session"/);
+  assert.match(html, /Durable winner/);
 });
 
 test("session approval posts only after confirmation with visible reason", async () => {

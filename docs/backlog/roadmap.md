@@ -11030,12 +11030,12 @@ Local tasks:
   - Scope: intervention Recovery renderer only.
   - Verification: allowed submit creates one operator-request document and blocked intervention
     creates none while preserving the selected stage/run.
-- `W36-E5-S5-T3` (next) Render runtime approval scope, breadth, reason, risk, pending state, session
+- `W36-E5-S5-T3` (done) Render runtime approval scope, breadth, reason, risk, pending state, session
   confirmation, and durable winning decision separately from product questions.
   - Scope: approval Recovery renderer only.
   - Verification: allow/deny/cancel/conflict fixtures agree with the compare-and-set audit row and
     no broad approval posts before confirmation.
-- `W36-E5-S5-T4` (soon) Implement the decision-first mobile question and approval layouts with compact
+- `W36-E5-S5-T4` (next) Implement the decision-first mobile question and approval layouts with compact
   context, 44px controls, and evidence drill-down.
   - Dependencies: `W36-E5-S2`.
   - Scope: human-decision responsive presentation only.
@@ -11531,7 +11531,7 @@ Local tasks:
   - Scope: history and continuation browser scenario family.
   - Verification: Back/reload/deep links preserve run identity and completed source-run
     artifacts remain immutable and inspectable.
-- `W36-E7-S1-T6` (planned) Add the blocking-question answer/resume Recovery Studio browser journey.
+- `W36-E7-S1-T6` (soon) Add the blocking-question answer/resume Recovery Studio browser journey.
   - Dependencies: `W36-E5-S5-T1`, `W36-E5-S5-T4`.
   - Scope: product-question browser scenario family.
   - Verification: draft restore, resolved/partial/deferred state, failed/successful durable
