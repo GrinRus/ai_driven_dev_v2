@@ -64,15 +64,16 @@ def _seed_inbox_states(project_root: Path) -> None:
 
 
 @pytest.mark.parametrize(
-    ("query", "expected_presentation"),
-    (("", "legacy"), ("?ui=legacy", "legacy"), ("?ui=studio", "studio")),
+    "query",
+    ("", "?ui=legacy", "?ui=studio", "?ui=unknown"),
 )
-def test_inbox_parity_retains_explicit_project_home_rollback(
+def test_inbox_ignores_retired_presentation_selector(
     tmp_path: Path,
     query: str,
-    expected_presentation: str,
 ) -> None:
-    fixture = build_browser_state_fixture(tmp_path / expected_presentation, "no-run")
+    fixture = build_browser_state_fixture(
+        tmp_path / (query.removeprefix("?ui=") or "missing"), "no-run"
+    )
 
     with sync_playwright() as playwright, operator_browser_harness(
         fixture.project_root,
@@ -81,16 +82,9 @@ def test_inbox_parity_retains_explicit_project_home_rollback(
     ) as harness, harness.open_page((1280, 900)) as browser_page:
         page = browser_page.page
         page.goto(f"{harness.url}{query}", wait_until="networkidle")
-        assert page.evaluate(
-            "window.aiddPresentation.surfaces.inbox.presentation"
-        ) == expected_presentation
         page.locator('[data-tab-shortcut="project-home"]').first.click()
-        if expected_presentation == "studio":
-            page.locator(".studio-inbox").wait_for(state="visible")
-            assert page.locator(".project-home-screen").count() == 0
-        else:
-            page.locator(".project-home-screen").wait_for(state="visible")
-            assert page.locator(".studio-inbox").count() == 0
+        page.locator(".studio-inbox").wait_for(state="visible")
+        assert page.locator(".project-home-screen").count() == 0
         assert page.locator("[data-inbox-dismiss]").count() == 0
         browser_page.diagnostics.assert_clean()
 

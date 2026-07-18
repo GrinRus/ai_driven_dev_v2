@@ -896,13 +896,13 @@ def test_operator_ui_local_project_e2e_lane_requires_completed_flow_checks() -> 
         "must not use public-repository live E2E as a substitute",
         "completed-run Flow Complete handoff state after terminal `qa`",
         "Start Next Flow source selection, follow-up draft definition, launch preflight",
-        "Run History / Lineage visibility",
+        "typed History Filmstrip visibility",
         "test_ui_completed_run_next_action_service_regression_sequence",
         "test_operator_ui_local_project_terminal_fixture_creates_follow_up_without_runtime",
         "test_operator_terminal_handoff_next_action_contract_survives_archive_decision",
-        "test_operator_flow_complete_static_contract_covers_terminal_handoff_actions",
+        "test_studio_flow_complete_uses_only_core_recommendation",
         "test_operator_next_flow_wizard_static_contract_covers_controls_and_preflight",
-        "test_operator_run_history_static_contract_covers_lineage_and_archive_labels",
+        "test_studio_history_uses_typed_frames_without_runtime_mutation",
         "reach or seed a terminal `qa` run",
         "inspect final QA artifacts",
         "source findings include QA findings",
@@ -913,6 +913,24 @@ def test_operator_ui_local_project_e2e_lane_requires_completed_flow_checks() -> 
         "record the Archive Run decision path",
     ):
         assert expected in operator_ui_lane
+
+
+def test_operator_ui_current_docs_are_studio_only() -> None:
+    root = _repo_root()
+    readme = (root / "README.md").read_text(encoding="utf-8")
+    handbook = (root / "docs" / "operator-handbook.md").read_text(encoding="utf-8")
+    architecture = (root / "docs" / "architecture" / "operator-frontend.md").read_text(
+        encoding="utf-8"
+    )
+    rollback = (
+        root / "docs" / "e2e" / "operator-ui-studio-rollback-window-2026-07-18.md"
+    ).read_text(encoding="utf-8")
+
+    assert "Document & Evidence Studio" in readme
+    assert "Document & Evidence Studio" in handbook
+    assert "## 8. Implemented Document & Evidence Studio" in architecture
+    assert "Accepted next-generation UX direction" not in architecture
+    assert "Historical, non-normative evidence" in rollback
 
 
 def test_operator_ui_evidence_template_has_measurable_ux_gates() -> None:
@@ -975,6 +993,102 @@ def test_operator_ui_local_project_manual_smoke_template_records_required_eviden
         "public-repository live E2E",
     ):
         assert expected in operator_ui_lane
+
+
+def test_operator_ui_provider_free_browser_pass_template_is_complete() -> None:
+    operator_ui_lane = (
+        _repo_root() / "docs" / "e2e" / "operator-ui-local-project.md"
+    ).read_text(encoding="utf-8")
+
+    for expected in (
+        "## Provider-Free Full Browser Pass Evidence Template",
+        "provider-free-browser-pass-v1",
+        "scripts/run_packaged_ui_scenarios.py",
+        "AIDD version:",
+        "Fixture family:",
+        "320x568, 390x844, 768x1024, 1280x900, 1440x900",
+        "W36-E7-S1-T1..T12",
+        "Discovered journey ids:",
+        "Executed journey ids:",
+        "Journey results:",
+        "Accessibility:",
+        "Geometry:",
+        "Console/page errors:",
+        "Failed requests:",
+        "Network boundary:",
+        "Cleanup:",
+        "Overall result:",
+        "Browser or infrastructure absence\nis a blocker, never a skip",
+        "must not contain human elapsed time",
+        "observed first-time-operator acceptance owned by `W36-E7-S3`",
+    ):
+        assert expected in operator_ui_lane
+
+
+def test_operator_ui_provider_free_browser_pass_record_is_complete() -> None:
+    record = (
+        _repo_root()
+        / "docs"
+        / "e2e"
+        / "operator-ui-provider-free-browser-pass-2026-07-18.md"
+    ).read_text(encoding="utf-8")
+
+    for expected in (
+        "provider-free-browser-pass-v1",
+        "0.1.0a16.dev0",
+        "28f8e26bf07e3dc4a1340bc9541e3e93ce2b6405",
+        "scripts/run_packaged_ui_scenarios.py",
+        "Chromium 149.0.7827.55",
+        "browser_tests.state_fixtures",
+        "320x568, 390x844, 768x1024, 1280x900, 1440x900",
+        "W36-E7-S1-T1..T12",
+        "all 12 passed; `failed_ids: []`",
+        "Network boundary: loopback-only passed",
+        "temporary fixture\n  projects and generated `.aidd/` workspaces removed",
+        "Overall result: `passed`",
+        "Blocker: `none`",
+        "Human elapsed time",
+        "`W36-E7-S3`",
+    ):
+        assert expected in record
+
+
+def test_observed_operator_acceptance_script_and_template_are_complete() -> None:
+    contract = (
+        _repo_root() / "docs" / "e2e" / "operator-ui-observed-acceptance.md"
+    ).read_text(encoding="utf-8")
+
+    for task_id, title in (
+        ("O1", "Guided Setup and first launch"),
+        ("O2", "Inbox triage"),
+        ("O3", "Active Studio monitoring"),
+        ("O4", "Blocking question recovery"),
+        ("O5", "Runtime and validation recovery"),
+        ("O6", "Review/QA remediation"),
+        ("O7", "History inspection"),
+        ("O8", "Terminal continuation"),
+    ):
+        assert f"### {task_id} — {title}" in contract
+    for expected in (
+        "must not\nhave implemented, reviewed, or previously operated this UI",
+        "Completion: <completed | not-completed | stopped-for-safety>",
+        "Elapsed time: <mm:ss>",
+        "Wrong actions: <count>",
+        (
+            "Assistance: <none | facilitator restatement | navigation hint | "
+            "product explanation | safety stop>"
+        ),
+        "Operator confidence: <1-5>",
+        "First decisive confusion:",
+        "Durable outcome observed:",
+        "Session id: <anonymous S1..S5>",
+        "Participant eligibility: <first-time operator confirmed>",
+        "Sensitive-data review: <passed | failed>",
+        "must not average away a decisive confusion",
+        "`W36-E7-S3-T3`",
+        "reviewable roadmap task",
+    ):
+        assert expected in contract
 
 
 def test_readme_quickstart_uses_request_context_and_real_runtime_first() -> None:

@@ -21,12 +21,12 @@ def test_document_canvas_is_primary_and_evidence_inspector_is_conditional() -> N
 
 
 def test_history_uses_primary_filmstrip_and_supporting_event_hierarchy() -> None:
-    history = _asset("/operator-next-flow-view.js")
+    history = _asset("/operator-history.js")
     cockpit = _asset("/operator-stage-cockpit.js")
 
-    assert "hierarchy-primary history-filmstrip" in history
-    assert "history-mode hierarchy-sequence" in cockpit
-    assert "hierarchy-supporting history-events" in cockpit
+    assert "surface studio-history" in history
+    assert "history-filmstrip-frames" in history
+    assert "return renderStudioHistory(await loadStudioHistoryTimeline())" in cockpit
 
 
 def test_supporting_hierarchy_cannot_restore_an_equal_weight_card_wall() -> None:

@@ -34,70 +34,8 @@ function runtimeFailureEvidencePath(firstFailure, diagnostics) {
   return firstFailure?.path || runtimeLogEvidencePath(diagnostics) || "";
 }
 
-function renderLegacyOverview() {
-  if (!state.dashboard?.run?.run_id) {
-    return renderFirstLaunchState();
-  }
-  if (state.nextFlowWizard.active) {
-    return renderNextFlowSourceSelection();
-  }
-  if (state.dashboard?.terminal_handoff) {
-    return renderFlowCompleteState();
-  }
-  const item = activeStageItem();
-  const view = activeStageView();
-  const unresolved = view?.questions?.unresolved_blocking_question_ids || [];
-  if (unresolved.length) {
-    return `
-      <section class="surface">
-        <div class="surface-title">
-          <span>Blocking questions</span>
-          <span class="small-badge warn">${escapeHtml(unresolved.length)} blocking</span>
-        </div>
-        ${renderQuestionCards({showResume: true})}
-      </section>
-    `;
-  }
-  const result = view?.result;
-  return `
-    <div class="overview-grid">
-      <section class="surface">
-        <div class="surface-title">
-          <span>Primary artifact</span>
-          <span class="small-badge">${escapeHtml(state.activeStage)}</span>
-        </div>
-        ${renderPrimaryArtifact()}
-      </section>
-      <aside class="surface">
-        <div class="surface-title">Stage health</div>
-        <div class="metric-grid">
-          <div class="metric"><span>State</span><strong>${escapeHtml(item?.status || "pending")}</strong></div>
-          <div class="metric"><span>Attempts</span><strong>${escapeHtml(item?.attempt_count || 0)}</strong></div>
-          <div class="metric"><span>Questions</span><strong>${escapeHtml(item?.unresolved_blocking_count || 0)}/${escapeHtml(item?.question_count || 0)}</strong></div>
-          <div class="metric"><span>Validation</span><strong>${escapeHtml(item?.validator_pass_count || 0)}/${escapeHtml(item?.validator_fail_count || 0)}</strong></div>
-        </div>
-        <div class="panel-item">
-          <strong>Eligibility</strong>
-          <span>${escapeHtml(item?.reason || "not started")}</span>
-        </div>
-        <div class="panel-item">
-          <strong>Validator report</strong>
-          ${pathLine(result?.validator_report_path || "not available")}
-        </div>
-      </aside>
-      <section id="runAccountabilityCard" class="surface run-accountability-card">
-        ${renderRunAccountabilityCard()}
-      </section>
-    </div>
-  `;
-}
-
 function renderOverviewSurface() {
-  const {renderer} = selectSurfaceRenderer("active-studio", {
-    legacy: renderLegacyOverview,
-    studio: renderActiveStudio
-  });
-  return renderer();
+  return renderActiveStudio();
 }
 
 function renderRunAccountabilityCard() {
@@ -183,8 +121,8 @@ function renderRecoveryActionBand(diagnostics) {
         ${renderValidationFindingSummary(finding)}
       </div>
       <div class="repair-actions">
-        ${requestPrimary ? `<button data-tab-shortcut="request" type="button">Request Change</button>` : `<button data-run-repair type="button" ${repairAvailable ? "" : "disabled"}>Run Repair</button>`}
-        ${requestPrimary ? `<button data-run-repair type="button" class="secondary" disabled>Repair exhausted</button>` : `<button data-tab-shortcut="request" type="button" class="secondary">Request Change</button>`}
+        ${requestPrimary ? `<button data-recovery-action="request-change" data-recovery-stage="${escapeHtml(state.activeStage)}" type="button">Request Change</button>` : `<button data-run-repair type="button" ${repairAvailable ? "" : "disabled"}>Run Repair</button>`}
+        ${requestPrimary ? `<button type="button" class="secondary" disabled aria-disabled="true">${status === "explicit-stop" ? "Repair unavailable" : "Repair exhausted"}</button>` : `<button data-tab-shortcut="request" type="button" class="secondary">Request Change</button>`}
         <button data-stop-run type="button" class="danger">Stop Run</button>
       </div>
     </section>
@@ -442,7 +380,12 @@ function renderRecoveryWorkbench() {
           detail: hasGlobalBlocker ? globalBlockerDetail : selectedReason
         },
         evidence: {label: runtimeFailure ? "Runtime log" : "Supporting evidence", path: evidencePath},
-        primaryAction: {action: primary.action, label: primary.label, enabled: !primary.attrs.includes("disabled")}
+        primaryAction: {
+          action: primary.action,
+          label: primary.label,
+          stage: state.activeStage,
+          enabled: !primary.attrs.includes("disabled")
+        }
       })}
       ${renderRuntimePartialEvidence(firstFailure)}
       ${unresolvedQuestions.length || (questions.questions || []).length ? `
@@ -605,7 +548,7 @@ async function renderCockpitContent() {
     return;
   }
   if (state.activeTab === "history") {
-    content.innerHTML = renderHistoryMode();
+    content.innerHTML = await renderHistoryMode();
     void loadRunComparisonPanel();
   }
 }
@@ -618,102 +561,8 @@ async function renderCockpit() {
   }
 }
 
-function renderProjectHomeWorkItemCard(item) {
-  const selected = item.work_item === state.dashboard?.work_item;
-  const run = item.latest_run || {};
-  const rootChips = renderProjectSetRootChips(item);
-  const blockerBadge = item.blocker_count
-    ? `<span class="small-badge warn">${escapeHtml(item.blocker_count)} blocker${item.blocker_count === 1 ? "" : "s"}</span>`
-    : `<span class="small-badge good">clear</span>`;
-  return `
-    <article class="project-work-item-card ${selected ? "selected" : ""}">
-      <div class="surface-title compact">
-        <span>${escapeHtml(item.work_item)}</span>
-        <span class="small-badge ${workItemStatusClass(item)}">${escapeHtml(item.terminal_state)}</span>
-      </div>
-      <p>${escapeHtml(item.has_request_context ? "Request context ready" : "Request context missing")}</p>
-      <div class="metric-grid compact">
-        <div class="metric"><span>Stage</span><strong>${escapeHtml(item.active_stage)}</strong></div>
-        <div class="metric"><span>Progress</span><strong>${escapeHtml(item.stage_progress_label)}</strong></div>
-        <div class="metric"><span>Run</span><strong>${escapeHtml(run.run_id || "none")}</strong></div>
-        <div class="metric"><span>Runtime</span><strong>${escapeHtml(run.runtime_id || "not selected")}</strong></div>
-      </div>
-      <div class="badge-row">${rootChips}${blockerBadge}</div>
-      <div class="wizard-actions">
-        <button data-operator-route-intent="inbox-work-item" data-route-work-item="${escapeHtml(item.work_item)}" type="button">Open in Studio</button>
-        ${run.run_id ? `<button data-operator-route-intent="historical-run" data-route-work-item="${escapeHtml(item.work_item)}" data-route-run-id="${escapeHtml(run.run_id)}" class="secondary" type="button">Inspect run history</button>` : ""}
-      </div>
-    </article>
-  `;
-}
-
-function renderLegacyProjectHome() {
-  const home = state.projectHome;
-  if (!home) return `<div class="empty-state loading-state">Loading Project Home...</div>`;
-  const items = projectHomeWorkItems();
-  const selected = currentWorkItemSummary();
-  const blocked = items.filter((item) => item.blocker_count);
-  const running = items.filter((item) => item.terminal_state === "running");
-  const complete = items.filter((item) => item.terminal_state === "completed");
-  return `
-    <section class="project-home-screen">
-      <div class="surface project-home-hero">
-        <div>
-          <p class="eyebrow">Project Home</p>
-          <h2>Work item console</h2>
-          <p class="muted">Project, work item, run, stage progress, blockers, and project-set roots are rebuilt from the selected local <code>.aidd</code> workspace.</p>
-        </div>
-        <div class="panel-list compact">
-          <div class="panel-item"><strong>Project root</strong>${pathLine(home.project_root, 82)}</div>
-          <div class="panel-item"><strong>.aidd root</strong>${pathLine(home.workspace_root, 82)}</div>
-          <div class="panel-item"><strong>Selected</strong><span>${escapeHtml(selected?.work_item || "none")}</span></div>
-        </div>
-      </div>
-      <div class="project-home-grid">
-        <section class="surface">
-          <div class="surface-title">
-            <span>Work Item Board</span>
-            <span class="small-badge">${escapeHtml(items.length)} total</span>
-          </div>
-          <div class="metric-grid compact">
-            <div class="metric"><span>Running</span><strong>${escapeHtml(running.length)}</strong></div>
-            <div class="metric"><span>Blocked</span><strong>${escapeHtml(blocked.length)}</strong></div>
-            <div class="metric"><span>Done</span><strong>${escapeHtml(complete.length)}</strong></div>
-            <div class="metric"><span>Workspace</span><strong>${home.workspace_exists ? "exists" : "new"}</strong></div>
-          </div>
-          <div class="project-work-item-grid">
-            ${items.length ? items.map(renderProjectHomeWorkItemCard).join("") : `<div class="empty-state">No work items in this project yet.</div>`}
-          </div>
-        </section>
-        <aside class="surface">
-          <div class="surface-title">
-            <span>Resume context</span>
-            <span class="small-badge">${escapeHtml(selected?.terminal_state || "none")}</span>
-          </div>
-          ${selected ? `
-            <div class="panel-list">
-              <div class="panel-item"><strong>Work item</strong><span>${escapeHtml(selected.work_item)}</span></div>
-              <div class="panel-item"><strong>Latest run</strong><span>${escapeHtml(selected.latest_run?.run_id || "none")}</span></div>
-              <div class="panel-item"><strong>Next stage</strong><span>${escapeHtml(selected.active_stage)}</span></div>
-              <div class="panel-item"><strong>Blockers</strong><span>${escapeHtml(selected.blocker_count)}</span></div>
-            </div>
-            <div class="surface-title compact">Project-set roots</div>
-            <div class="compact-list">
-              ${(selected.project_set_roots || []).map((root) => `<span title="${escapeHtml(root.root)}">${escapeHtml(root.root_id)} / ${escapeHtml(root.relative_root)}${root.role ? ` / ${escapeHtml(root.role)}` : ""}</span>`).join("") || "<span>Single project root</span>"}
-            </div>
-          ` : `<div class="empty-state">Select a work item to inspect resume context.</div>`}
-        </aside>
-      </div>
-    </section>
-  `;
-}
-
 function renderInboxSurface() {
-  const {renderer} = selectSurfaceRenderer("inbox", {
-    legacy: renderLegacyProjectHome,
-    studio: renderStudioInbox
-  });
-  return renderer();
+  return renderStudioInbox();
 }
 
 function renderBlockersPanel() {
@@ -933,19 +782,8 @@ function renderActivityTable() {
   host.innerHTML = renderActivityTableMarkup(activityEvents());
 }
 
-function renderHistoryMode() {
-  return `
-    <div class="history-mode hierarchy-sequence">
-      ${renderRunHistory()}
-      <section class="surface hierarchy-supporting history-events">
-        <div class="surface-title">
-          <span>Activity / Events</span>
-          <span class="small-badge">${escapeHtml(activityEvents().length)} events</span>
-        </div>
-        <div class="table-wrap">${renderActivityTableMarkup(activityEvents())}</div>
-      </section>
-    </div>
-  `;
+async function renderHistoryMode() {
+  return renderStudioHistory(await loadStudioHistoryTimeline());
 }
 
 function renderRecentArtifacts() {

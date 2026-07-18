@@ -26,8 +26,9 @@ Today:
 - `aidd stage run` executes stage orchestration for `generic-cli`, `claude-code`, `codex`, `opencode`, and experimental `qwen`;
 - `aidd stage interact` records a stage-scoped operator request and runs an
   intervention attempt in the current run through the same adapter boundary;
-- `aidd ui` opens local setup mode or the command center with explicit runtime selection,
-  long-run visibility, Implement Review diff, structured review/QA tabs, and
+- `aidd ui` opens Guided Setup or Document & Evidence Studio with explicit runtime selection,
+  decision-first Inbox, active-run visibility, implementation repository evidence, exact
+  Review/QA gates, History, and
   review/QA remediation back to `implement`;
 - manual external eval policies and runbooks live under `docs/e2e/`.
 
@@ -220,7 +221,7 @@ operator to select a runtime before any workflow or stage execution starts. It u
 same workspace creation and request seeding behavior as `aidd init`; it does not
 introduce a second workflow engine or a hidden `generic-cli` fallback.
 
-After setup completes, the first command-center screen exposes both **Run workflow** for
+After setup completes, Studio exposes both **Run workflow** for
 normal full progression and **Run selected stage** for a bounded active-stage smoke or
 retry. Successful UI jobs report `/api/jobs/<job_id>` status `completed`; the stage rail
 reports the completed stage state as `succeeded`.

@@ -326,26 +326,34 @@ def test_requested_stop_terminates_descendants(
     stop_mode: str,
 ) -> None:
     child_signal_path = tmp_path / f"{stop_mode}-signal.txt"
+    child_ready_path = tmp_path / f"{stop_mode}-ready.txt"
     script = (
         "import pathlib, signal, subprocess, sys, time\n"
         "signal_path = pathlib.Path(sys.argv[1])\n"
-        "child = \"import pathlib,signal,sys,time; "
+        "child = \"import pathlib,signal,sys,time; ready=pathlib.Path(sys.argv[2]); "
         "signal.signal(signal.SIGTERM, lambda s,f: "
         "(pathlib.Path(sys.argv[1]).write_text(str(s)), sys.exit(0))); "
+        "ready.write_text('ready'); "
         "time.sleep(30)\"\n"
-        "subprocess.Popen([sys.executable, '-c', child, str(signal_path)])\n"
+        "subprocess.Popen([sys.executable, '-c', child, str(signal_path), sys.argv[2]])\n"
         "print('ready', flush=True)\n"
         "time.sleep(30)\n"
     )
     spec = RuntimeSubprocessSpec(
-        command=(sys.executable, "-c", script, child_signal_path.as_posix()),
+        command=(
+            sys.executable,
+            "-c",
+            script,
+            child_signal_path.as_posix(),
+            child_ready_path.as_posix(),
+        ),
         cwd=tmp_path,
         env=dict(os.environ),
     )
     started_at = time.monotonic()
 
     def requested() -> bool:
-        return time.monotonic() - started_at >= 0.2
+        return child_ready_path.exists() and time.monotonic() - started_at >= 0.2
 
     result = run_streamed_subprocess(
         spec=spec,

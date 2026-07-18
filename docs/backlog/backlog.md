@@ -7,22 +7,13 @@ slice, and local task.
 
 ## Next
 
-- `W36-E5-S6-T4` — Make Request Change primary after repair exhaustion or explicit
-  stop while retaining evidence drill-down.
+- `W36-E7-S3-T2` — Record five first-time-operator sessions.
 
 ## Soon
 
-- `W36-E5-S6-T5` — Implement decision-first mobile runtime and validation Recovery
-  layouts over the compact shell.
+- `W36-E7-S3-T3` — Reconcile observed session findings before beta readiness.
 
 ## Parking lot
-
-- `W36-E5-S7-T1` — Render canonical implement tasks, attempts, recovery, and aggregate
-  finalization inside Studio.
-- `W36-E5-S8-T1` — Implement the typed Filmstrip frame projection from durable attempts,
-  task attempts, and finalization milestones.
-- `W36-E5-S10-T1` — Switch the default renderer to Studio only after all per-surface
-  parity entries close.
 
 ## Update rules
 
@@ -38,6 +29,262 @@ slice, and local task.
   queue-restoration policy in `docs/backlog/roadmap.md` (`W8-E3-S1`).
 
 ## Current reconciliation
+
+- `2026-07-18` `W36-E7-S2-T8` is complete: final full-suite acceptance now follows
+  Studio-only module ownership for quality gates, History, and next-flow fields; the no-run task
+  endpoint asserts its truthful blocker; mobile controls consume the shared touch token; and
+  process-tree tests wait for the child signal handler before requesting termination. The
+  non-gating manual-evidence fixture also accepts the canonical bounded frontend `skipped` state
+  while still rejecting failures. Public UI and runtime semantics are unchanged. The active queue
+  remains the five real sessions `S3-T2`.
+
+- `2026-07-18` `W36-E7-S2-T7` is complete: four pre-existing overlong browser-fixture
+  source lines are mechanically wrapped without changing JavaScript evaluation or rendered DOM.
+  The repository-wide Ruff gate and the owning History/Recovery fixtures now share the same
+  maintained formatting boundary. The active queue remains the real-session task `E7-S3-T2`.
+
+- `2026-07-18` `W36-E7-S3-T1` is complete: the observed-acceptance contract defines
+  eight bounded first-time-operator tasks for Setup, Inbox, monitoring, question/runtime
+  recovery, QA remediation, History, and terminal continuation. Every task records completion,
+  time, wrong actions, assistance, confidence, first decisive confusion, durable outcome, and a
+  stable finding id; the session summary is anonymized and explicitly separate from automation.
+  The five real sessions `T2` are promoted to `Next`, followed by reconciliation `T3`.
+
+- `2026-07-18` `W36-E7-S2-T5` and slice `W36-E7-S2` are complete: commit
+  `28f8e26` passed the source-installed packaged-UI runner with Chromium `149.0.7827.55`,
+  exact discovery/execution of all 12 journeys, all five viewports, clean browser diagnostics,
+  loopback-only requests, and bounded cleanup. The accepted schema-v1 record contains no
+  generated workspace or human-session data. Browser rollout also closes `W36-E7-S1`, the
+  Studio cutover slice `W36-E5-S10`, and Epic `W36-E5`. Observed-operator scripting `S3-T1`
+  is promoted to `Next`, followed by the five-session task `T2`.
+
+- `2026-07-18` `W36-E7-S2-T6` is complete: Document/Evidence now uses canonical
+  Studio route context against a nonterminal stale fixture, the intervention journey keeps its
+  canonical recovery mode through History/Back and readiness refresh, and Studio removes nested
+  document/recent-artifact scroll owners. Measured CI and release timeouts remain bounded at 45
+  minutes. The complete runner discovered and executed all 12 journeys with no failed ids; the
+  formal evidence record `T5` returns to `Next`, followed by observed-operator scripting `S3-T1`.
+
+- `2026-07-18` the first full `W36-E7-S2-T5` attempt discovered and executed all 12
+  declared journeys but exposed two browser-contract regressions after selector retirement:
+  Document/Evidence used a presentation-only query without canonical Studio context, and an
+  intervention History/Back case could race a readiness rerender. Bounded regression task
+  `W36-E7-S2-T6` is inserted in `Next`; the evidence pass remains unaccepted in `Soon`.
+
+- `2026-07-18` `W36-E7-S2-T4` is complete: release preflight now invokes the same
+  packaged-UI journey runner used locally and in CI. Journey failures, runner/preflight errors,
+  browser absence, launch infrastructure errors, and timeout produce explicit failing checks;
+  none are treated as skips. The source-installed full pass `T5` is promoted to `Next`, followed
+  by the observed-operator script `S3-T1`.
+
+- `2026-07-18` `W36-E7-S2-T3` is complete: the local-project contract now has a
+  schema-v1 provider-free browser-pass template covering source version, fixture, all five
+  viewports, the 12 discovered/executed journeys, accessibility, geometry, console/network
+  diagnostics, and bounded cleanup. Human timing and confidence remain a separate acceptance
+  record. Release-preflight enforcement `T4` is promoted to `Next`, followed by the full pass
+  `T5`.
+
+- `2026-07-18` `W36-E7-S2-T2` is complete: CI now runs the shared packaged-UI
+  journey command in a dedicated provider-free Python 3.12 job with a pinned Chromium cache,
+  bounded timeout, and an explicit build dependency. The full-pass evidence template `T3` is
+  promoted to `Next`, followed by release-preflight enforcement `T4`.
+
+- `2026-07-18` `W36-E5-S10-T5` is complete: README, operator handbook, local-project
+  E2E, and frontend architecture now describe the shipped Studio-only surface. The accepted
+  rollback record is explicitly historical and non-normative. Packaged browser CI `E7-S2-T2` is
+  promoted to `Next`, followed by the full-pass evidence template `T3`.
+
+- `2026-07-18` `W36-E5-S10-T4` is complete: the packaged UI no longer ships the
+  presentation selector or legacy renderer branches. Studio renderers are called directly, dead
+  rollback templates and CSS selectors are removed, and an asset-boundary test prevents their
+  return. Studio-only documentation reconciliation `T5` is promoted to `Next`, followed by the
+  packaged browser CI gate `E7-S2-T2`.
+
+- `2026-07-18` `W36-E5-S10-T3` is complete: the temporary browser presentation
+  selector no longer branches renderer selection. Missing, invalid, `ui=studio`, and the former
+  `ui=legacy` value all resolve to Studio without changing API requests or durable state. Legacy
+  asset removal `T4` is promoted to `Next`, followed by Studio-only docs reconciliation `T5`.
+
+- `2026-07-18` `W36-E5-S10-T2` is complete: a source-installed Chromium check proved
+  exact dashboard/timeline payload parity and identical guarded action availability between the
+  default Studio and explicit legacy presentations. The completed source manifest remained
+  byte-identical and browser diagnostics were clean. Selector removal `T3` is promoted to `Next`,
+  followed by legacy renderer removal `T4`.
+
+- `2026-07-18` `W36-E5-S10-T1` is complete: an absent presentation selector now
+  resolves all parity-closed surfaces to Studio, while explicit `ui=legacy` remains the supported
+  rollback path and invalid explicit values still fail back to legacy. Both presentations use
+  the same API and mutation services. Rollback-window evidence `T2` is promoted to `Next`,
+  followed by selector removal `T3`.
+
+- `2026-07-18` `W36-E7-S2-T1` is complete: the developer-facing packaged-UI
+  runner evaluates the packaged parity manifest through bounded Node `vm`, validates an explicit
+  Python pytest-node registry, rejects duplicate/missing/live-provider entries before execution,
+  runs all 12 journeys in stable numeric order, continues after failures, and verifies exact
+  discovered/executed identity. Studio-default cutover `E5-S10-T1` is promoted to `Next`,
+  followed by rollback-window evidence `T2`.
+
+- `2026-07-18` `W36-E5-S9-T9` is complete: Flow Complete is now
+  `parity_closed` after the full terminal journey proved core recommendation, drafts, independent
+  clone identity, manual eval, archive readback, stale exclusion, and immutable source evidence.
+  Legacy remains an explicit rollback presentation until cutover. Slice `W36-E5-S9` is closed;
+  packaged-UI runner `E7-S2-T1` is promoted to `Next`, followed by default cutover `E5-S10-T1`.
+
+- `2026-07-18` `W36-E7-S1-T8` is complete: all five viewports exercise the
+  core-recommended terminal decision, session follow-up draft, independent clone identity,
+  non-mutating eval handoff, and append-only archive readback while preserving the completed
+  source manifest hash. Clean, warning, failed, and blocked fresh QA use the exact core outcome;
+  stale QA has no Flow Complete. Parity closure `S9-T9` is promoted to `Next`, followed by the
+  packaged-UI runner `E7-S2-T1`.
+
+- `2026-07-18` `W36-E5-S9-T8` is complete: mobile Flow Complete removes redundant
+  cockpit chrome, places final QA status and the core recommendation before supporting evidence,
+  keeps the primary control touch-sized, and leaves secondary outcomes in a keyboard-accessible
+  disclosure without horizontal overflow at `320x568` or `390x844`. Terminal journey
+  `W36-E7-S1-T8` is promoted to `Next`, followed by parity closure `S9-T9`.
+
+- `2026-07-18` `W36-E5-S9-T7` is complete: Studio archive confirmation and durable
+  readback use the existing append-only archive endpoint. The presentation names the operation
+  as visibility metadata, keeps the completed source run immutable, and returns canonical
+  dashboard state without hiding retained evidence. Mobile terminal presentation `T8` is
+  promoted to `Next`, followed by terminal journey `W36-E7-S1-T8`.
+
+- `2026-07-18` `W36-E5-S9-T6` is complete: Studio's manual eval handoff names
+  the exact source work item/run, installed AIDD version, operator-selected scenario source, and
+  supported `aidd eval execute` command. Opening it changes browser presentation state only and
+  sends no workflow, repair, or eval mutation. Archive disposition `T7` is promoted to `Next`,
+  followed by mobile terminal composition `T8`.
+
+- `2026-07-18` `W36-E5-S9-T5` is complete: Studio clone uses the shared wizard host
+  but remains bound to the existing clone-draft and clone-preflight services, with an explicit
+  clone lineage relationship and independent work-item/run identity. No source-run mutation or
+  follow-up payload alias was introduced. Manual eval handoff `T6` is promoted to `Next`,
+  followed by archive disposition `T7`.
+
+- `2026-07-18` `W36-E5-S9-T4` is complete: Studio hosts the existing follow-up
+  source-selection, session-draft, definition, preflight, guarded mutation, and launch sequence
+  instead of introducing a second wizard or service path. The source run remains read-only and
+  matching durable success remains the only draft-clear boundary. Clone `T5` is promoted to
+  `Next`, followed by manual eval handoff `T6`.
+
+- `2026-07-18` `W36-E5-S9-T3` is complete: Studio Flow Complete renders only when
+  the additive terminal-handoff contract carries a valid core-owned recommendation. Its primary
+  action and rationale are read directly from that contract; alternative allowed outcomes remain
+  under Other next actions. Missing, stale, malformed, and nonterminal QA do not render the
+  surface. Follow-up `T4` is promoted to `Next`, followed by clone `T5`.
+
+- `2026-07-18` `W36-E5-S8-T7` is complete: the History surface is now
+  `parity_closed` after the five-viewport journey proved canonical timeline, comparison,
+  lineage, archive, and evidence reachability. Default and explicit legacy renderers remain
+  available as rollback presentations until cutover. Slice `W36-E5-S8` is closed; Flow Complete
+  `S9-T3` is promoted to `Next`, followed by follow-up `S9-T4`.
+
+- `2026-07-18` `W36-E7-S1-T5` is complete: the provider-free History journey passes
+  all five viewports with typed frames, retained comparison, parent deep-link navigation,
+  Back/reload restoration, archive readback, clean browser diagnostics, and byte-identical
+  current/source manifests. History parity closure `S8-T7` is promoted to `Next`, followed by
+  Flow Complete renderer `S9-T3`.
+
+- `2026-07-18` `W36-E5-S8-T6` is complete: at `320x568` and `390x844`, Studio
+  History uses a single-column chronological drill-down with full-width touch controls, visible
+  overflow, and no nested horizontal Filmstrip. The History browser journey `W36-E7-S1-T5` is
+  promoted to `Next`, followed by parity closure `S8-T7`.
+
+- `2026-07-18` `W36-E5-S8-T5` is complete: Studio History renders the canonical
+  append-only archive disposition with legacy-fallback source labeling and retains direct
+  navigation to run History, artifacts, and logs. The renderer does not mutate completed-run
+  evidence. Mobile chronological History `T6` is promoted to `Next`, followed by journey `T5`.
+
+- `2026-07-18` `W36-E5-S8-T4` is complete: Studio History renders the canonical
+  parent/current/child lineage projection and routes every retained relation through the shared
+  safe route-intent codec. The renderer is navigation-only and owns no workflow mutation or
+  lineage persistence. Append-only archive disposition `T5` is promoted to `Next`, followed by
+  the mobile chronological presentation `T6`.
+
+- `2026-07-18` `W36-E5-S8-T3` is complete: Studio History reuses the canonical bounded
+  run-comparison endpoint and renders prompt, stage, artifact, and validator deltas only with
+  retained baseline/target paths. Missing paths and snapshots are explicit unavailable states;
+  no historical content is reconstructed. Legacy comparison remains unchanged. Immutable
+  lineage `T4` is promoted to `Next`, followed by archive overlay `T5`.
+
+- `2026-07-18` `W36-E5-S8-T2` is complete: a separate packaged Studio History
+  renderer consumes typed frames, exposes a collapsed Filmstrip and selected-frame evidence,
+  pauses only browser auto-follow for historical selection, and returns to live without a
+  runtime mutation. Legacy History remains the rollback renderer and the surface is now a
+  reachable `candidate`. Retained-evidence comparison `T3` is promoted to `Next`.
+
+- `2026-07-18` `W36-E5-S8-T1` is complete: `/api/run/timeline` retains its existing
+  `events` and warnings and additively exposes immutable stage-attempt, task-attempt,
+  finalization-attempt, and event-marker frames. Every frame has a stable durable identity,
+  status, stage/task/attempt coordinates, timestamp when authored, and only retained evidence
+  references. Filmstrip renderer `T2` is promoted to `Next`, followed by comparison `T3`.
+
+- `2026-07-18` `W36-E5-S7-T5` and slice `W36-E5-S7` are complete: Implement and
+  Review/QA are `parity_closed`. Default legacy, explicit legacy, and Studio consume
+  byte-equivalent canonical task, implementation, Review, and QA read models, while keeping
+  the same task/finalization and remediation mutation hooks. History frame projection
+  `W36-E5-S8-T1` is promoted to `Next`, followed by its renderer `T2`.
+
+- `2026-07-18` `W36-E7-S1-T4` is complete: provider-free Review/QA fixtures render
+  exact finding, acceptance, evidence, risk, and issue identities across all five viewports;
+  rejected/not-ready QA stays nonterminal. One selected Review finding creates one durable
+  stage-scoped remediation request, while stale QA survives reload and requires the guarded
+  downstream rerun. Journey accessibility also fixes Decision Bar and QA-choice target sizes.
+  Parity closure `W36-E5-S7-T5` is promoted to `Next`, followed by History frame projection.
+
+- `2026-07-18` `W36-E7-S1-T9` is complete: provider-free Chromium fixtures preserve a
+  succeeded dependency when the next task fails, expose Resume and finalization retry, render
+  modified/untracked/deleted repository evidence with canonical scope, and open Review only
+  after successful aggregate finalization. The journey also promotes the implemented
+  Implement and Review/QA renderers to reachable `candidate` status. Review/QA journey `T4`
+  is promoted to `Next`, followed by parity closure `W36-E5-S7-T5`.
+
+- `2026-07-18` `W36-E5-S7-T4` is complete: selected Review/QA identities still launch
+  the guarded canonical remediation service, while Studio now exposes pending implement
+  readback, exact stale Review/QA stages and invalidator identity, and the existing guarded
+  downstream rerun. Terminal handoff remains explicitly blocked while stale evidence exists.
+  Implement journey `W36-E7-S1-T9` is promoted to `Next`, followed by Review/QA journey `T4`.
+
+- `2026-07-18` `W36-E5-S7-T3` is complete: Studio Review/QA gates render exact
+  finding identities, severity/disposition, acceptance and evidence references, residual
+  risks, known issues, and explicit missing/rejected/not-ready blockers. Existing API fields
+  remain compatible; acceptance and evidence-reference fields are additive. Remediation and
+  stale state `T4` is promoted to `Next`, Implement journey `W36-E7-S1-T9` to `Soon`.
+
+- `2026-07-18` `W36-E5-S7-T2` is complete: Studio renders canonical repository and
+  implementation evidence in a Document Canvas with textual Added/Removed/Changed markers,
+  allowed/project scope, `.aidd/` separation, and explicit report/repository claim mismatch.
+  The legacy diff renderer remains unchanged. Review/QA gate `T3` is promoted to `Next` and
+  remediation/stale state `T4` to `Soon`.
+
+- `2026-07-18` `W36-E5-S7-T1` is complete: Studio has a separate implementation
+  quality-gate renderer over canonical `/api/tasks`; dependency readiness, task attempts,
+  blockers, finalization eligibility, and Review progression remain core-owned. The legacy
+  control-center renderer remains available for rollback. Repository evidence `T2` is
+  promoted to `Next` and Review/QA gate `T3` to `Soon`.
+
+- `2026-07-18` `W36-E5-S6-T6` is complete: runtime/validation Recovery is
+  `parity_closed`; Studio, default legacy, and explicit legacy resolve identical durable
+  first-failure, repair-history, raw-log, evidence-path, and intervention read models.
+  Slice `W36-E5-S6` is closed. Implement Studio `W36-E5-S7-T1` is promoted to `Next`
+  and repository evidence `T2` to `Soon`.
+
+- `2026-07-18` `W36-E7-S1-T3` is complete: launch, authentication, timeout,
+  cancellation, no-progress, repair-available, and repair-exhausted durable fixtures pass
+  the five-viewport Studio journey with exact first-failure evidence, truthful stopped state,
+  no implicit mutation, and bounded browser/UI cleanup. Recovery parity `W36-E5-S6-T6`
+  is promoted to `Next` and Implement Studio `W36-E5-S7-T1` to `Soon`.
+
+- `2026-07-18` `W36-E5-S6-T5` is complete: mobile runtime failure, repair-available,
+  and repair-exhausted Recovery order failure, one primary decision, then evidence;
+  both target mobile viewports retain 44px controls, one scroll owner, and no horizontal
+  overflow. Recovery journey `W36-E7-S1-T3` is promoted to `Next` and parity closure
+  `W36-E5-S6-T6` to `Soon`.
+
+- `2026-07-18` `W36-E5-S6-T4` is complete: repair-exhausted and explicit-stop
+  Recovery expose one stage-scoped `Request Change` primary action, retain supporting
+  evidence, and contain no enabled repair mutation. Mobile Recovery `T5` is promoted to
+  `Next` and the provider-free Recovery journey `W36-E7-S1-T3` to `Soon`.
 
 - `2026-07-18` `W36-E5-S6-T3` is complete: every rendered validator finding exposes
   its exact code/rule, category, document path, line, severity, occurrence count, and

@@ -1,184 +1,8 @@
-function renderPreviousRunContext(context) {
-  if (!context.available) {
-    return `
-      <div class="empty-state previous-run-context">
-        No previous-run context selected for this workspace.
-      </div>
-    `;
-  }
-  const artifacts = context.finalArtifacts.slice(0, 4).map((artifact) => `
-    <button class="artifact-row" data-artifact-stage="${escapeHtml(artifact.stage)}" data-artifact-key="${escapeHtml(artifact.key)}" data-artifact-kind="${escapeHtml(artifact.kind)}" type="button">
-      <span><strong>${escapeHtml(artifact.key)}</strong>${pathLine(artifact.path)}</span>
-      <span class="small-badge">${escapeHtml(artifact.kind)}</span>
-    </button>
-  `).join("");
-  const approvals = context.approvalCounts
-    ? `${context.approvalCounts.approved}/${context.approvalCounts.requested} approved`
-    : "not recorded";
-  return `
-    <div class="previous-run-context">
-      <div class="panel-item"><strong>Source run</strong><span>${escapeHtml(context.sourceRunId || "not recorded")}</span></div>
-      <div class="panel-item"><strong>Source work item</strong><span>${escapeHtml(context.sourceWorkItem || "not recorded")}</span></div>
-      <div class="panel-item"><strong>Baseline</strong><span>${escapeHtml(context.baseline || "source run")}</span></div>
-      <div class="panel-item"><strong>Approval evidence</strong><span>${escapeHtml(approvals)}</span></div>
-      <div class="panel-item"><strong>Blockers</strong><span>${escapeHtml(context.blockers.length)}</span></div>
-      <div class="recent-artifacts">${artifacts || '<div class="empty-state">No final artifacts recorded.</div>'}</div>
-    </div>
-  `;
-}
-
-function renderSetupReadinessChecklist({ready, context}) {
-  const checklist = [
-    {
-      label: "Runtime adapter",
-      status: state.readinessLoading
-        ? "checking"
-        : state.selectedRuntime
-          ? ready
-            ? "ready"
-            : "needs check"
-          : "not selected",
-      tone: ready ? "good" : state.selectedRuntime || state.readinessLoading ? "warn" : ""
-    },
-    {
-      label: "Contracts path",
-      status: "local contract surface",
-      tone: "good"
-    },
-    {
-      label: "Validators",
-      status: "enforced before progression",
-      tone: "good"
-    },
-    {
-      label: "Previous-run context",
-      status: context.available ? "available" : "none selected",
-      tone: context.available ? "good" : ""
-    },
-    {
-      label: "Log stream",
-      status: "enabled for workflow runs",
-      tone: "good"
-    }
-  ];
-  return `
-    <section class="setup-readiness-checklist" aria-label="Readiness Checklist">
-      <div class="surface-title compact">
-        <span>Readiness Checklist</span>
-        <span class="small-badge ${ready ? "good" : "warn"}">${ready ? "runnable" : "review"}</span>
-      </div>
-      <div class="setup-readiness-list">
-        ${checklist.map((item) => `
-          <div class="setup-readiness-item">
-            <span class="small-badge ${escapeHtml(item.tone)}">${escapeHtml(item.tone === "good" ? "pass" : item.tone === "warn" ? "check" : "info")}</span>
-            <span><strong>${escapeHtml(item.label)}</strong><small>${escapeHtml(item.status)}</small></span>
-          </div>
-        `).join("")}
-      </div>
-    </section>
-  `;
-}
-
-function renderFirstLaunchState() {
-  const runtime = selectedRuntimeView();
-  const ready = selectedRuntimeReady();
-  const hasWorkItemContext = Boolean(state.dashboard?.work_item);
-  const context = setupPreviousRunContext();
-  const detail = !hasWorkItemContext
-    ? "Create or resume a work item before starting the governed workflow."
-    : !state.selectedRuntime
-    ? "Select a runtime to start the first governed workflow run."
-    : ready
-      ? `${state.selectedRuntime} is ready to start the workflow.`
-      : `${state.selectedRuntime} needs a passing readiness check before the first run.`;
-  const canRun = hasWorkItemContext && ready && runtime;
-  return `
-    <section class="surface first-launch-state project-setup-state">
-      <div class="surface-title">
-        <span>Review &amp; Launch</span>
-        <span class="small-badge">Guided Setup</span>
-      </div>
-      <div class="project-setup-grid">
-        <div class="setup-primary">
-          <p>${escapeHtml(detail)}</p>
-          <div class="setup-actions">
-            <button data-guided-launch="workflow" data-first-launch-run type="button" ${canRun ? "" : "disabled"}>Run workflow</button>
-            <button data-guided-launch="stage" data-first-launch-stage type="button" class="secondary" ${canRun ? "" : "disabled"}>Run selected stage</button>
-            <span class="muted">Work item ${escapeHtml(state.dashboard?.work_item || "unknown")}</span>
-          </div>
-        </div>
-        <aside class="setup-context" aria-label="Previous-run context">
-          <div class="surface-title">
-            <span>Previous-run context</span>
-            <span class="small-badge ${context.available ? "good" : ""}">${context.available ? "available" : "none"}</span>
-          </div>
-          ${renderPreviousRunContext(context)}
-          ${renderSetupReadinessChecklist({ready, context})}
-        </aside>
-      </div>
-    </section>
-  `;
-}
-
 function terminalHandoffTone(status) {
   if (status === "completed") return "good";
   if (status === "completed-with-warning" || status === "blocked") return "warn";
   if (status === "failed") return "bad";
   return "";
-}
-
-function terminalHandoffTitle(handoff) {
-  if (handoff.status === "completed" || handoff.status === "completed-with-warning") {
-    return "Flow Complete";
-  }
-  return "Flow Needs Attention";
-}
-
-function terminalHandoffMark(handoff) {
-  if (handoff.status === "failed" || handoff.status === "blocked") return "!";
-  if (handoff.status === "completed-with-warning") return "!";
-  return "OK";
-}
-
-function terminalHandoffMessage(handoff) {
-  if (handoff.status === "failed") {
-    return "QA did not clear this run. Review blockers and final evidence before starting follow-up remediation.";
-  }
-  if (handoff.status === "blocked") {
-    return "The terminal handoff is blocked. Resolve blockers or carry them into follow-up work before starting new scope.";
-  }
-  if (handoff.status === "completed-with-warning") {
-    return "QA completed with recorded risks. Review risk evidence before selecting the next flow.";
-  }
-  return "The QA terminal handoff is ready for operator review and next-flow selection.";
-}
-
-function renderHandoffMetric({label, value, detail, tone = ""}) {
-  return `
-    <div class="metric handoff-metric">
-      <span>${escapeHtml(label)}</span>
-      <strong class="${tone ? `metric-${tone}` : ""}">${escapeHtml(value)}</strong>
-      <small>${escapeHtml(detail)}</small>
-    </div>
-  `;
-}
-
-function approvalSummary(counts) {
-  if (!counts) return {value: "0 / 0", detail: "No approvals requested."};
-  const value = `${counts.approved || 0} / ${counts.requested || 0}`;
-  const details = [];
-  if (counts.pending) details.push(`${counts.pending} pending`);
-  if (counts.denied) details.push(`${counts.denied} denied`);
-  if (counts.cancelled) details.push(`${counts.cancelled} cancelled`);
-  return {value, detail: details.length ? details.join(", ") : "All requested approvals resolved."};
-}
-
-function repairSummary(counts) {
-  if (!counts) return {value: "0", detail: "No repair attempts recorded."};
-  const details = [];
-  if (counts.succeeded) details.push(`${counts.succeeded} succeeded`);
-  if (counts.failed) details.push(`${counts.failed} failed`);
-  return {value: counts.attempts || 0, detail: details.length ? details.join(", ") : "No repairs applied."};
 }
 
 function nextFlowButtonLabel(action) {
@@ -188,80 +12,6 @@ function nextFlowButtonLabel(action) {
   if (action.action === "run-eval-batch") return "Run Batch";
   if (action.action === "archive-run") return "Archive Run";
   return action.label;
-}
-
-function recommendedNextFlowAction(handoff) {
-  if (handoff.status === "completed" && !handoff.blockers?.length) {
-    return "create-new-work-item";
-  }
-  return "start-follow-up-flow";
-}
-
-function recommendedNextFlowDecision(handoff) {
-  const actionId = recommendedNextFlowAction(handoff);
-  const actions = handoff.recommended_next_flow_actions || [];
-  const action = actions.find((candidate) => candidate.action === actionId) || actions[0] || {};
-  const blockerCount = (handoff.blockers || []).length;
-  const finalStatus = handoff.status || "unknown";
-  const missingTerminalEvidence = handoffMissingTerminalEvidence(handoff);
-  let reason = "Use this path before choosing a less common next-flow option.";
-  if (missingTerminalEvidence) {
-    reason = "Required terminal evidence is missing; restore artifacts before starting any next flow.";
-  } else if (actionId === "create-new-work-item") {
-    reason = "QA is ready and no open blockers are recorded; start unrelated work only after reviewing final evidence.";
-  } else if (finalStatus === "failed") {
-    reason = "Terminal QA failed; carry failed evidence into a follow-up instead of treating this run as done.";
-  } else if (blockerCount) {
-    reason = `${blockerCount} blocker${blockerCount === 1 ? "" : "s"} remain; carry them into follow-up work before starting new scope.`;
-  } else {
-    reason = "The terminal handoff still needs attention; carry the current findings into follow-up work first.";
-  }
-  return {
-    action: actionId,
-    label: action.label || nextFlowButtonLabel({action: actionId, label: "Start Follow-up"}),
-    detail: action.detail || "",
-    enabled: action.enabled !== false,
-    reason
-  };
-}
-
-function renderRecommendedNextFlowDecision(handoff) {
-  const decision = recommendedNextFlowDecision(handoff);
-  const badgeTone = decision.enabled ? "good" : "warn";
-  const badgeLabel = decision.enabled ? "recommended next decision" : "next decision blocked";
-  return `
-    <div class="next-flow-decision-spotlight">
-      <div>
-        <span class="small-badge ${badgeTone}">${badgeLabel}</span>
-        <strong>${escapeHtml(decision.label)}</strong>
-        <p>${escapeHtml(decision.reason)}</p>
-        ${decision.detail ? `<small>${escapeHtml(decision.detail)}</small>` : ""}
-      </div>
-      <button data-next-flow-action="${escapeHtml(decision.action)}" type="button" ${decision.enabled ? "" : 'disabled aria-disabled="true"'}>
-        ${escapeHtml(nextFlowButtonLabel(decision))}
-      </button>
-    </div>
-  `;
-}
-
-function terminalNextFlowSafetyNote(handoff, action) {
-  if (!terminalHandoffNeedsRecovery(handoff)) return "";
-  if (action.action === "start-follow-up-flow") {
-    return "Recovery path: carries QA findings, blockers, or manual notes into new scoped work.";
-  }
-  if (action.action === "archive-run") {
-    return "Navigation only: does not resolve QA blockers or carry findings into remediation.";
-  }
-  if (action.action === "create-new-work-item") {
-    return "Separate scope: does not inherit this failed QA evidence.";
-  }
-  if (action.action === "clone-flow") {
-    return "Clone only: creates a new run identity but does not clear this QA decision.";
-  }
-  if (action.action === "run-eval-batch") {
-    return "Comparison only: does not repair or complete this terminal handoff.";
-  }
-  return "Secondary path: confirm it does not bypass unresolved terminal evidence.";
 }
 
 function separateScopeHandoffMessage(handoff) {
@@ -278,41 +28,6 @@ function evalBatchHandoffMessage(handoff) {
   return "This uses terminal handoff evidence for review, but it does not repair, complete, or archive the failed source run. Use Start Follow-up Flow for remediation.";
 }
 
-function renderNextFlowActions(handoff) {
-  const recommended = recommendedNextFlowAction(handoff);
-  const actions = handoff.recommended_next_flow_actions || [];
-  return `
-    <div class="next-flow-actions-grid">
-      ${actions.map((action) => {
-        const isRecommended = action.action === recommended;
-        const safetyNote = terminalNextFlowSafetyNote(handoff, action);
-        const recommendationBadge = isRecommended
-          ? action.enabled
-            ? '<span class="small-badge good">recommended</span>'
-            : '<span class="small-badge warn">recommended after restore</span>'
-          : "";
-        const availabilityBadge = !action.enabled && !isRecommended
-          ? '<span class="small-badge warn">unavailable</span>'
-          : "";
-        return `
-          <article class="next-flow-action-card${isRecommended ? " recommended" : ""}${action.enabled ? "" : " disabled"}">
-            <div class="action-card-title">
-              <strong>${escapeHtml(action.label)}</strong>
-              ${recommendationBadge}
-              ${availabilityBadge}
-            </div>
-            <p>${escapeHtml(action.detail)}</p>
-            ${safetyNote ? `<small class="next-flow-safety-note">${escapeHtml(safetyNote)}</small>` : ""}
-            <button data-next-flow-action="${escapeHtml(action.action)}" type="button" ${action.enabled ? "" : 'disabled aria-disabled="true"'}>
-              ${escapeHtml(nextFlowButtonLabel(action))}
-            </button>
-          </article>
-        `;
-      }).join("")}
-    </div>
-  `;
-}
-
 function renderArchiveHandoffWarning(handoff) {
   if (!terminalHandoffNeedsRecovery(handoff)) return "";
   const blockerCount = (handoff.blockers || []).length;
@@ -326,7 +41,6 @@ function renderArchiveHandoffWarning(handoff) {
     </div>
   `;
 }
-
 function renderTerminalRecoveryWizardAction(handoff) {
   if (!terminalHandoffNeedsRecovery(handoff)) return "";
   return `<button data-next-flow-action="start-follow-up-flow" type="button">Start Follow-up Flow</button>`;
@@ -490,117 +204,59 @@ function renderTerminalRepairHighlights(highlights) {
   `;
 }
 
-function renderFollowUpCandidates(handoff) {
-  const blockerCandidates = (handoff.blockers || []).map((blocker) => ({
-    label: blocker.title,
-    detail: blocker.detail,
-    tone: blocker.severity === "error" ? "bad" : "warn"
-  }));
-  const statusCandidate = handoff.status !== "completed"
-    ? [{
-        label: "Final QA needs follow-up",
-        detail: `Terminal status ${handoff.status}; carry source findings into a new work item.`,
-        tone: handoff.status === "failed" ? "bad" : "warn"
-      }]
-    : [];
-  const candidates = [...blockerCandidates, ...statusCandidate];
-  if (!candidates.length) {
-    return `<div class="panel-item"><strong>No forced follow-up</strong><span>Create New Work Item is recommended unless the operator selects manual scope.</span></div>`;
-  }
-  return candidates.slice(0, 4).map((candidate) => `
-    <div class="panel-item">
-      <strong>${escapeHtml(candidate.label)}</strong>
-      <span>${escapeHtml(candidate.detail)}</span>
-      <span class="small-badge ${escapeHtml(candidate.tone)}">candidate</span>
-    </div>
-  `).join("");
+function studioFlowCompleteEligibility(handoff = state.dashboard?.terminal_handoff) {
+  const recommendation = terminalHandoffRecommendation(handoff);
+  return Object.freeze({
+    eligible: Boolean(handoff && recommendation.state === "recommended"),
+    recommendation
+  });
 }
 
-function renderBaselineSnapshot() {
-  const run = state.dashboard?.run || {};
-  const lineage = run.lineage || {};
-  const baseline = lineage.baseline_label || lineage.baseline_id || run.run_id || "current run";
+function renderStudioFlowCompleteAction(action, {primary = false} = {}) {
   return `
-    <div class="panel-list">
-      <div class="panel-item"><strong>Source run</strong><span>${escapeHtml(lineage.source_run_id || run.run_id || "not recorded")}</span></div>
-      <div class="panel-item"><strong>Source work item</strong><span>${escapeHtml(lineage.source_work_item_id || state.dashboard?.work_item || "not recorded")}</span></div>
-      <div class="panel-item"><strong>Baseline</strong><span>${escapeHtml(baseline)}</span></div>
-      <div class="panel-item"><strong>Safety</strong><span>Follow-up, clone, and eval actions create independent work and keep source artifacts read-only.</span></div>
-    </div>
+    <button data-next-flow-action="${escapeHtml(action.action)}" type="button" class="${primary ? "primary" : "secondary"}" ${action.enabled === false ? 'disabled aria-disabled="true"' : ""}>
+      ${escapeHtml(action.label || nextFlowButtonLabel(action))}
+    </button>
   `;
 }
 
-function renderFlowCompleteState() {
+function renderStudioFlowCompleteState() {
   const handoff = state.dashboard?.terminal_handoff;
-  if (!handoff) return "";
-  const approvals = approvalSummary(handoff.approval_counts);
-  const repairs = repairSummary(handoff.repair_counts);
-  const questionsValue = `${handoff.questions_answered_count || 0} / ${handoff.questions_total_count || 0}`;
-  const artifactCount = (handoff.final_artifacts || []).length;
-  const blockerCount = (handoff.blockers || []).length;
-  const evidenceCount = (state.dashboard?.evidence_refs || []).length;
-  const runtimeId = state.dashboard?.run?.runtime_id || "not recorded";
+  const eligibility = studioFlowCompleteEligibility(handoff);
+  if (!eligibility.eligible) return "";
+  const recommendation = eligibility.recommendation;
+  const actions = handoff.recommended_next_flow_actions || [];
+  const primary = actions.find((action) => action.action === recommendation.outcome);
+  if (!primary) return "";
+  const others = actions.filter((action) => action.action !== recommendation.outcome);
   return `
-    <section class="surface flow-complete-state">
+    <section class="surface studio-flow-complete" data-studio-flow-complete data-terminal-status="${escapeHtml(handoff.status)}">
       <div class="flow-complete-hero">
-        <div class="flow-complete-title-row">
-          <span class="flow-complete-mark ${terminalHandoffTone(handoff.status)}" aria-hidden="true">${escapeHtml(terminalHandoffMark(handoff))}</span>
-          <div>
-          <div class="surface-title">
-            <span>${escapeHtml(terminalHandoffTitle(handoff))}</span>
-            <span class="small-badge ${terminalHandoffTone(handoff.status)}">${escapeHtml(handoff.status)}</span>
-          </div>
-          <h2>${escapeHtml(handoff.final_qa_status)}</h2>
-          <p>${escapeHtml(terminalHandoffMessage(handoff))}</p>
-          </div>
+        <div>
+          <p class="eyebrow">Fresh terminal QA</p>
+          <h2>Flow Complete</h2>
+          <p>${escapeHtml(handoff.final_qa_status)}</p>
         </div>
-        <div class="handoff-runtime">
-          <strong>Runtime</strong>
-          <span>${escapeHtml(runtimeId)}</span>
-        </div>
+        <span class="small-badge ${terminalHandoffTone(handoff.status)}">${escapeHtml(handoff.status)}</span>
       </div>
+      <section class="next-flow-decision-spotlight" data-core-recommended-outcome="${escapeHtml(recommendation.outcome)}">
+        <div>
+          <span class="small-badge good">core recommendation</span>
+          <strong>${escapeHtml(primary.label || nextFlowButtonLabel(primary))}</strong>
+          <p>${escapeHtml(recommendation.rationale)}</p>
+        </div>
+        ${renderStudioFlowCompleteAction(primary, {primary: true})}
+      </section>
       ${renderTerminalAttentionSpotlight(handoff)}
       ${renderTerminalEvidenceSpotlight(handoff)}
-      ${renderTerminalRepairHighlights(handoff.repair_highlights || [])}
-      <div class="handoff-metric-grid">
-        ${renderHandoffMetric({label: "Final artifacts", value: artifactCount, detail: "QA documents and logs available.", tone: artifactCount ? "good" : "warn"})}
-        ${renderHandoffMetric({label: "Open blockers", value: blockerCount, detail: blockerCount ? "Inspect before launch." : "No blockers detected.", tone: blockerCount ? "bad" : "good"})}
-        ${renderHandoffMetric({label: "Evidence refs", value: evidenceCount, detail: "Linked stage evidence references.", tone: evidenceCount ? "good" : "warn"})}
-        ${renderHandoffMetric({label: "Repair attempts", value: repairs.value, detail: repairs.detail, tone: handoff.repair_counts?.failed ? "warn" : ""})}
-        ${renderHandoffMetric({label: "Approvals", value: approvals.value, detail: approvals.detail, tone: handoff.approval_counts?.pending ? "warn" : "good"})}
-        ${renderHandoffMetric({label: "Questions answered", value: questionsValue, detail: "Resolved product interview questions.", tone: "good"})}
-      </div>
-      <div class="start-next-flow-band">
-        <div class="surface-title">
-          <span>Start Next Flow</span>
-          <span class="small-badge">terminal handoff</span>
-        </div>
-        <p>Choose the next operator action without mutating the completed source run.</p>
-        ${renderRecommendedNextFlowDecision(handoff)}
-        ${renderNextFlowActions(handoff)}
-      </div>
-      <div class="terminal-summary-grid">
-        <section>
-          <div class="surface-title">Final artifacts</div>
-          <div class="recent-artifacts">${renderTerminalArtifacts(handoff.final_artifacts || [])}</div>
-        </section>
-        <section>
-          <div class="surface-title">Blockers / safety</div>
-          <div class="panel-list">
-            ${renderTerminalBlockers(handoff.blockers || [])}
-            <div class="panel-item"><strong>Source run policy</strong><span>Next-flow actions create new work or navigation decisions; they do not continue the terminal run.</span></div>
-            <div class="panel-item"><strong>Runtime fallback</strong><span>Uses recorded runtime ${escapeHtml(runtimeId)}; no generic runtime fallback is hidden in the UI.</span></div>
+      ${others.length ? `
+        <details class="studio-flow-complete-other">
+          <summary>Other next actions</summary>
+          <div class="next-flow-actions-grid">
+            ${others.map((action) => `<article class="next-flow-action-card"><strong>${escapeHtml(action.label)}</strong><p>${escapeHtml(action.detail || "")}</p>${renderStudioFlowCompleteAction(action)}</article>`).join("")}
           </div>
-        </section>
-        <section>
-          <div class="surface-title">Follow-up candidates</div>
-          <div class="panel-list">${renderFollowUpCandidates(handoff)}</div>
-        </section>
-        <section>
-          <div class="surface-title">Baseline snapshot</div>
-          ${renderBaselineSnapshot()}
-        </section>
-      </div>
+        </details>
+      ` : ""}
     </section>
   `;
 }
@@ -712,211 +368,6 @@ function renderLineageRows({run, lineage, candidates}) {
         `}
       </tbody>
     </table>
-  `;
-}
-
-function comparisonDeltasByStatus(items) {
-  const counts = {changed: 0, added: 0, removed: 0, same: 0};
-  (items || []).forEach((item) => {
-    const status = item.status || "same";
-    counts[status] = (counts[status] || 0) + 1;
-  });
-  return counts;
-}
-
-function renderComparisonStatusBadge(status) {
-  const normalized = status || "same";
-  const tone = normalized === "same" ? "good" : normalized === "changed" ? "warn" : "bad";
-  return `<span class="small-badge ${tone}">${escapeHtml(normalized)}</span>`;
-}
-
-function renderComparisonHash(value) {
-  return value ? escapeHtml(value.slice(0, 12)) : "not present";
-}
-
-function renderRunComparisonRows(items, mapper, emptyMessage) {
-  const rows = (items || []).filter((item) => item.status !== "same").slice(0, 8);
-  if (!rows.length) return `<div class="empty-state">${escapeHtml(emptyMessage)}</div>`;
-  return `
-    <table class="activity-table comparison-table">
-      <thead><tr><th>Item</th><th>Baseline</th><th>Target</th><th>Status</th></tr></thead>
-      <tbody>
-        ${rows.map(mapper).join("")}
-      </tbody>
-    </table>
-  `;
-}
-
-function renderRunComparisonPanel() {
-  const run = state.dashboard?.run || {};
-  if (!run.run_id) return "";
-  const lineage = run.lineage || {};
-  const baselineRunId = comparisonBaselineRunId(run, lineage);
-  const targetRunId = run.run_id || "";
-  const loadedComparison = state.runComparison;
-  const comparison = loadedComparison
-    && loadedComparison.baseline?.run_id === baselineRunId
-    && loadedComparison.target?.run_id === targetRunId
-      ? loadedComparison
-      : null;
-  const error = state.runComparisonError;
-  const loading = state.runComparisonLoading;
-  const promptCounts = comparisonDeltasByStatus(comparison?.prompt_hash_deltas);
-  const stageCounts = comparisonDeltasByStatus(comparison?.stage_status_deltas);
-  const artifactCounts = comparisonDeltasByStatus(comparison?.artifact_hash_deltas);
-  const validatorCounts = comparisonDeltasByStatus(comparison?.validator_outcome_deltas);
-  return `
-    <section id="runComparisonPanel" class="surface run-comparison-panel">
-      <div class="surface-title">
-        <span>Run comparison</span>
-        <span class="small-badge">${escapeHtml(baselineRunId || "baseline")} -> ${escapeHtml(targetRunId || "target")}</span>
-      </div>
-      <div class="comparison-controls">
-        <label for="runComparisonBaseline">
-          <span>Baseline run id</span>
-          <input id="runComparisonBaseline" name="comparison_baseline_run" type="text" value="${escapeHtml(baselineRunId)}" placeholder="run-..." autocomplete="off">
-        </label>
-        <button data-run-comparison-refresh type="button" ${loading ? "disabled" : ""}>Refresh comparison</button>
-      </div>
-      ${error ? `<div class="empty-state bad">${escapeHtml(error)}</div>` : ""}
-      ${loading ? `<div class="empty-state loading-state">Loading run comparison...</div>` : ""}
-      ${comparison ? `
-        ${renderWarnings(comparison.warnings)}
-        <div class="metric-grid">
-          <div class="metric"><span>Prompt drift</span><strong>${escapeHtml(promptCounts.changed + promptCounts.added + promptCounts.removed)}</strong></div>
-          <div class="metric"><span>Stage status drift</span><strong>${escapeHtml(stageCounts.changed + stageCounts.added + stageCounts.removed)}</strong></div>
-          <div class="metric"><span>Artifact drift</span><strong>${escapeHtml(artifactCounts.changed + artifactCounts.added + artifactCounts.removed)}</strong></div>
-          <div class="metric"><span>Validator drift</span><strong>${escapeHtml(validatorCounts.changed + validatorCounts.added + validatorCounts.removed)}</strong></div>
-        </div>
-        <div class="terminal-summary-grid">
-          <section>
-            <div class="surface-title compact">Prompt hash deltas</div>
-            ${renderRunComparisonRows(
-              comparison.prompt_hash_deltas,
-              (item) => `
-                <tr>
-                  <td>${escapeHtml(item.path)}</td>
-                  <td>${renderComparisonHash(item.baseline_sha256)}</td>
-                  <td>${renderComparisonHash(item.target_sha256)}</td>
-                  <td>${renderComparisonStatusBadge(item.status)}</td>
-                </tr>
-              `,
-              "No prompt hash drift detected."
-            )}
-          </section>
-          <section>
-            <div class="surface-title compact">Stage status deltas</div>
-            ${renderRunComparisonRows(
-              comparison.stage_status_deltas,
-              (item) => `
-                <tr>
-                  <td>${escapeHtml(item.stage)}</td>
-                  <td>${escapeHtml(item.baseline_status || "missing")}</td>
-                  <td>${escapeHtml(item.target_status || "missing")}</td>
-                  <td>${renderComparisonStatusBadge(item.status)}</td>
-                </tr>
-              `,
-              "No stage status drift detected."
-            )}
-          </section>
-          <section>
-            <div class="surface-title compact">Artifact hash deltas</div>
-            ${renderRunComparisonRows(
-              comparison.artifact_hash_deltas,
-              (item) => `
-                <tr>
-                  <td>${escapeHtml(`${item.stage}/${item.kind}/${item.key}`)}</td>
-                  <td>${renderComparisonHash(item.baseline_sha256)}${item.baseline_truncated ? " truncated" : ""}</td>
-                  <td>${renderComparisonHash(item.target_sha256)}${item.target_truncated ? " truncated" : ""}</td>
-                  <td>${renderComparisonStatusBadge(item.status)}</td>
-                </tr>
-              `,
-              "No artifact hash drift detected."
-            )}
-          </section>
-          <section>
-            <div class="surface-title compact">Validator outcome deltas</div>
-            ${renderRunComparisonRows(
-              comparison.validator_outcome_deltas,
-              (item) => `
-                <tr>
-                  <td>${escapeHtml(item.stage)}</td>
-                  <td>${escapeHtml(item.baseline_verdict || "missing")}</td>
-                  <td>${escapeHtml(item.target_verdict || "missing")}</td>
-                  <td>${renderComparisonStatusBadge(item.status)}</td>
-                </tr>
-              `,
-              "No validator outcome drift detected."
-            )}
-          </section>
-        </div>
-      ` : !loading && !error ? `<div class="empty-state">Run comparison has not loaded yet.</div>` : ""}
-    </section>
-  `;
-}
-
-function renderRunHistory() {
-  const run = state.dashboard?.run || {};
-  const visibility = resolveStudioEvidenceVisibility({
-    filmstripFrameCount: run.run_id ? 1 : 0,
-    requestedSurface: state.activeTab === "history" ? "history" : ""
-  });
-  if (!visibility.filmstrip) {
-    return `<div class="empty-state">No run history is available before the first run starts.</div>`;
-  }
-  const lineage = run.lineage || {};
-  const candidates = lineage.child_work_item_candidates || [];
-  const handoff = state.dashboard?.terminal_handoff || null;
-  const archive = run.archive || {};
-  const hasParentRun = Boolean(lineage.source_run_id && lineage.source_run_id !== run.run_id);
-  const sourceRun = lineageValue(lineage.source_run_id, "not recorded");
-  const sourceWorkItem = lineageValue(lineage.source_work_item_id, state.dashboard?.work_item || "not recorded");
-  const baseline = lineageValue(lineage.baseline_label || lineage.baseline_id, "current run");
-  return `
-    <section class="surface run-history-state hierarchy-primary history-filmstrip">
-      <div class="surface-title">
-        <span>Run History / Lineage</span>
-        <span class="small-badge">${escapeHtml(run.run_id)}</span>
-      </div>
-      <div class="lineage-flow">
-        ${hasParentRun ? `
-          <article class="lineage-node parent" data-lineage-run-id="${escapeHtml(sourceRun)}">
-            <span class="small-badge">parent run</span>
-            <strong>${escapeHtml(sourceRun)}</strong>
-            <p>${escapeHtml(sourceWorkItem)}</p>
-            <div class="panel-item"><strong>Baseline</strong><span>${escapeHtml(baseline)}</span></div>
-            <button data-operator-route-intent="parent-run" data-route-work-item="${escapeHtml(sourceWorkItem)}" data-route-run-id="${escapeHtml(sourceRun)}" type="button">Inspect parent run</button>
-          </article>
-        ` : ""}
-        <article class="lineage-node current" data-lineage-run-id="${escapeHtml(run.run_id)}">
-          <span class="small-badge ${archive.archived ? "warn" : "good"}">${archive.archived ? "archived" : "current run"}</span>
-          <strong>${escapeHtml(run.run_id)}</strong>
-          <p>${escapeHtml(run.runtime_id || "runtime not recorded")}</p>
-          <div class="panel-item"><strong>Status</strong><span>${escapeHtml(handoff?.status || state.dashboard?.next_action?.label || "in progress")}</span></div>
-          <div class="panel-item"><strong>Archive</strong><span>${escapeHtml(archive.archived ? `${archive.archived_at_utc || "recorded"} / ${archive.reason || "no reason"}` : "open")}</span></div>
-          <div class="lineage-actions">
-            <button data-operator-route-intent="historical-run" data-route-work-item="${escapeHtml(state.dashboard?.work_item || "")}" data-route-run-id="${escapeHtml(run.run_id)}" type="button">Inspect run history</button>
-            <button data-operator-route-intent="run-artifacts" data-route-work-item="${escapeHtml(state.dashboard?.work_item || "")}" data-route-run-id="${escapeHtml(run.run_id)}" type="button">Inspect run artifacts</button>
-          </div>
-        </article>
-        <div class="lineage-children">
-          ${renderLineageCandidates(candidates)}
-        </div>
-      </div>
-      <div class="terminal-summary-grid">
-        <section>
-          <div class="surface-title">Lineage rows</div>
-          ${renderLineageRows({run, lineage, candidates})}
-        </section>
-        <section>
-          <div class="surface-title">Run actions</div>
-          ${renderLineageActions(handoff)}
-          <div class="surface-title compact">Linked artifacts</div>
-          <div class="recent-artifacts">${renderLineageArtifactRefs()}</div>
-        </section>
-      </div>
-    </section>
-    ${renderRunComparisonPanel()}
   `;
 }
 
@@ -1200,6 +651,15 @@ function renderNextFlowSourceSelection() {
   });
 }
 
+function renderStudioNextFlowWizard() {
+  const action = state.nextFlowWizard.action || "next-flow";
+  return `
+    <div class="studio-next-flow-host" data-studio-next-flow-action="${escapeHtml(action)}">
+      ${renderNextFlowSourceSelection()}
+    </div>
+  `;
+}
+
 function renderNewWorkItemHandoff() {
   const sourceRun = nextFlowSourceRunId() || "not recorded";
   const sourceWorkItem = nextFlowSourceWorkItem() || "not recorded";
@@ -1236,6 +696,8 @@ function renderEvalBatchHandoff() {
   const artifacts = handoff?.final_artifacts || [];
   const needsRecovery = terminalHandoffNeedsRecovery(handoff);
   const historyActionClass = needsRecovery ? ' class="secondary"' : "";
+  const appVersion = document.getElementById("appVersion")?.textContent || "version not recorded";
+  const scenarioCommand = "uv run aidd eval execute <scenario-path> --root .aidd";
   return `
     <section class="surface next-flow-wizard">
       <div class="surface-title">
@@ -1245,14 +707,19 @@ function renderEvalBatchHandoff() {
       <div class="wizard-context-grid">
         <div class="panel-item"><strong>Source run</strong><span>${escapeHtml(sourceRun)}</span></div>
         <div class="panel-item"><strong>Source work item</strong><span>${escapeHtml(sourceWorkItem)}</span></div>
+        <div class="panel-item"><strong>AIDD version</strong><span>${escapeHtml(appVersion)}</span></div>
         <div class="panel-item"><strong>Final artifacts</strong><span>${escapeHtml(artifacts.length)}</span></div>
-        <div class="panel-item"><strong>Scenario checkpoint</strong><span>manual checkpoint only</span></div>
+        <div class="panel-item"><strong>Scenario source</strong><span>operator-selected local manifest</span></div>
       </div>
       <div class="truncation-notice" role="status">
         <strong>${needsRecovery ? "Comparison only" : "Eval batch handoff only"}</strong>
         <span>${escapeHtml(evalBatchHandoffMessage(handoff))}</span>
       </div>
       <div class="recent-artifacts">${renderTerminalArtifacts(artifacts)}</div>
+      <div class="panel-item" data-eval-handoff-command>
+        <strong>Operator command</strong>
+        <code>${escapeHtml(scenarioCommand)}</code>
+      </div>
       ${needsRecovery ? `<div class="wizard-action-guard">History is review-only; remediation starts with Start Follow-up Flow.</div>` : ""}
       <div class="wizard-actions">
         ${renderTerminalRecoveryWizardAction(handoff)}

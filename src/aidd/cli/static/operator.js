@@ -1,7 +1,6 @@
 (() => {
   const scripts = [
     "/operator-surface-parity.js",
-    "/operator-presentation.js",
     "/operator-route-state.js",
     "/operator-route-intents.js",
     "/operator-draft-store.js",
@@ -20,6 +19,8 @@
     "/operator-logs-jobs.js",
     "/operator-next-flow-actions.js",
     "/operator-next-flow-view.js",
+    "/operator-history.js",
+    "/operator-quality-gates.js",
     "/operator-control-center.js",
     "/operator-stage-cockpit.js",
     "/operator-main.js"

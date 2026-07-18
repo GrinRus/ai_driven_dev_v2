@@ -86,8 +86,6 @@ function terminalHandoffRecommendation(handoff) {
 }
 
 const state = {
-  presentationSelector: window.aiddPresentation?.requested || "legacy",
-  presentationEffective: window.aiddPresentation?.effective || "legacy",
   dashboard: null,
   dashboardActiveJob: null,
   dashboardRequestGeneration: 0,
@@ -105,6 +103,9 @@ const state = {
   recoveryDetail: "summary",
   evidenceDetail: "artifacts",
   historyDetail: "history",
+  historyTimeline: null,
+  historySelectedFrame: "",
+  historyAutoFollow: true,
   selectedRuntime: "",
   bottomDockUserCollapsed: null,
   activeRunId: "",
@@ -667,11 +668,7 @@ function operatorRouteSnapshot() {
 }
 
 function encodeCurrentOperatorRoute(route) {
-  const encoded = encodeOperatorRoute(route);
-  if (state.presentationSelector !== "studio") return encoded;
-  const params = new URLSearchParams(encoded.replace(/^\?/, ""));
-  params.set("ui", "studio");
-  return `?${params.toString()}`;
+  return encodeOperatorRoute(route);
 }
 
 function applyOperatorRoute(route) {

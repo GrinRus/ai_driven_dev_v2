@@ -12,7 +12,6 @@
   .operator-shell {
     grid-template-columns: 210px minmax(0, 1fr);
   }
-  .handoff-metric-grid,
   .next-flow-actions-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
@@ -43,6 +42,87 @@
   }
 }
 @media (max-width: 760px) {
+  .studio-history,
+  .studio-run-comparison,
+  .studio-history-lineage,
+  .studio-history-archive {
+    min-width: 0;
+  }
+  .history-filmstrip-frames {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    overflow: visible;
+  }
+  .history-frame {
+    flex: none;
+    min-height: var(--control-height);
+    width: 100%;
+  }
+  .history-selection .surface-title,
+  .studio-run-comparison .surface-title,
+  .studio-run-comparison .comparison-controls,
+  .studio-history-archive .lineage-actions {
+    align-items: stretch;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .history-selection button,
+  .studio-run-comparison button,
+  .studio-history-archive button {
+    min-height: var(--control-height);
+    width: 100%;
+  }
+  .studio-run-comparison label,
+  .studio-run-comparison input,
+  .studio-run-comparison .small-badge {
+    max-width: 100%;
+    min-width: 0;
+    overflow-wrap: anywhere;
+    white-space: normal;
+    width: 100%;
+  }
+  .studio-flow-complete {
+    display: grid;
+    gap: var(--space-3);
+    min-width: 0;
+  }
+  .studio-flow-complete .flow-complete-hero,
+  .studio-flow-complete .next-flow-decision-spotlight {
+    gap: var(--space-2);
+    margin: 0;
+    padding: var(--space-3);
+  }
+  .studio-flow-complete .flow-complete-hero h2 {
+    font-size: var(--type-title-size);
+  }
+  .studio-flow-complete .next-flow-decision-spotlight button,
+  .studio-flow-complete-other > summary,
+  .studio-flow-complete-other button {
+    min-height: var(--control-height);
+    width: 100%;
+  }
+  .studio-flow-complete-other > summary {
+    align-items: center;
+    display: flex;
+  }
+  .stage-card > * {
+    min-width: 0;
+  }
+  .stage-card .stage-subtitle,
+  .stage-card .small-badge {
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .operator-shell[data-mobile-priority-layout="context-decision-document-drilldown"] .stage-rail,
+  .operator-shell[data-mobile-priority-layout="context-decision-document-drilldown"] .stage-list {
+    max-width: 100%;
+    min-width: 0;
+    width: 100%;
+  }
+  .operator-shell[data-mobile-priority-layout="context-decision-document-drilldown"] .stage-rail {
+    overflow-x: clip;
+  }
   :root {
     --control-height: var(--control-height-touch);
     --control-padding-block: 8px;
@@ -185,6 +265,40 @@
   body.recovery-mode .project-home-rail {
     display: none;
   }
+  body.recovery-mode .cockpit {
+    min-width: 0;
+    padding: var(--space-2);
+  }
+  body.recovery-mode .recovery-workbench {
+    min-width: 0;
+    overflow: visible;
+  }
+  body.recovery-mode .recovery-summary {
+    gap: var(--space-4);
+    padding: var(--space-4);
+  }
+  body.recovery-mode .recovery-summary-header {
+    gap: var(--space-2);
+    order: 1;
+  }
+  body.recovery-mode .recovery-summary-failure {
+    order: 2;
+  }
+  body.recovery-mode .recovery-summary-primary {
+    order: 3;
+  }
+  body.recovery-mode .recovery-summary-evidence {
+    order: 4;
+  }
+  body.recovery-mode .recovery-summary-failure,
+  body.recovery-mode .recovery-summary-evidence {
+    padding: var(--space-4);
+  }
+  body.recovery-mode .recovery-summary button,
+  body.recovery-mode .recovery-section button,
+  body.recovery-mode .recovery-section summary {
+    min-height: var(--control-height-touch);
+  }
   body.evidence-log-mode .project-home-rail {
     display: none;
   }
@@ -204,6 +318,14 @@
   body.inbox-detail-mode .tabs,
   body.inbox-detail-mode .global-next-action-strip {
     display: none;
+  }
+  body.terminal-handoff-mode .cockpit-header,
+  body.terminal-handoff-mode .tabs,
+  body.terminal-handoff-mode .global-next-action-strip {
+    display: none;
+  }
+  body.terminal-handoff-mode .cockpit {
+    padding: var(--space-2);
   }
   body.inbox-detail-mode .studio-inbox-header {
     padding: var(--space-4);
@@ -297,9 +419,6 @@
     justify-content: center;
     white-space: nowrap;
   }
-  .overview-grid,
-  .project-home-hero,
-  .project-home-grid,
   .project-set-row,
   .onboarding-shell,
   .onboarding-work-item-branches,
@@ -317,7 +436,6 @@
   .decision-summary-metrics,
   .stale-downstream-summary,
   .stale-downstream-facts,
-  .handoff-metric-grid,
   .repair-highlight-card,
   .next-flow-actions-grid,
   .terminal-summary-grid,

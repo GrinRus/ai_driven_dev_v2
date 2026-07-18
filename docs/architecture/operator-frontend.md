@@ -3,12 +3,12 @@
 Document status:
 
 - sections 1 through 7 define workflow invariants, write boundaries, compatibility surfaces,
-  and the currently implemented packaged frontend baseline;
-- sections 8 and 9 define the accepted target information architecture, presentation contract,
-  reference screens, and migration acceptance criteria;
-- when presentation terminology conflicts, sections 8 and 9 supersede earlier references to
-  Mission Control, cockpit, right-rail, bottom-dock, or Work / Recovery / Evidence / History
-  navigation; the earlier service, artifact, safety, and workflow semantics remain binding.
+  and the shared application-service boundary;
+- sections 8 and 9 define the implemented Document & Evidence Studio information architecture,
+  presentation contract, reference screens, and acceptance criteria;
+- Mission Control, cockpit, right-rail, bottom-dock, and Work / Recovery / Evidence / History
+  presentation terminology is historical and non-normative. Its service, artifact, safety, and
+  workflow invariants remain binding where explicitly retained below.
 
 ## 1. Purpose
 
@@ -407,12 +407,11 @@ existing declared `project_set` model. Unrelated repositories must not be combin
 governed `.aidd/` workspace unless a future architecture decision introduces a multi-context
 job registry.
 
-## 8. Accepted next-generation UX direction
+## 8. Implemented Document & Evidence Studio
 
-The accepted direction is **Document & Evidence Studio**: a document-centered operator
-experience with four coordinated modes and one shared workflow authority. It replaces the
-previous Mission Control visual hierarchy as the target for future frontend work. The old
-reference assets remain historical implementation context; they are not the target design.
+**Document & Evidence Studio** is the only supported packaged renderer: a document-centered
+operator experience with four coordinated modes and one shared workflow authority. The previous
+Mission Control reference assets are historical implementation context, not supported UI.
 
 The concept uses one mental model:
 
@@ -845,7 +844,7 @@ Semantic token direction:
 
 Implementation should introduce these semantic aliases rather than spreading raw hex values.
 Compatibility mappings may preserve existing `--teal`, `--green`, `--amber`, `--red`, and
-`--blue` variables during migration.
+`--blue` compatibility aliases in shared semantic tokens.
 
 Typography uses the existing Inter/system stack for UI and the existing monospace stack for
 paths, source, logs, hashes, and ids. Reference roles are 32/40 for a guided page title, 24/32

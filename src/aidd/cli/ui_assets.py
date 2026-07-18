@@ -38,11 +38,6 @@ _OPERATOR_STATIC_ASSET_MANIFEST = (
         content_type="text/javascript; charset=utf-8",
     ),
     OperatorStaticAsset(
-        route="/operator-presentation.js",
-        filename="operator-presentation.js",
-        content_type="text/javascript; charset=utf-8",
-    ),
-    OperatorStaticAsset(
         route="/operator-route-state.js",
         filename="operator-route-state.js",
         content_type="text/javascript; charset=utf-8",
@@ -130,6 +125,16 @@ _OPERATOR_STATIC_ASSET_MANIFEST = (
     OperatorStaticAsset(
         route="/operator-next-flow-view.js",
         filename="operator-next-flow-view.js",
+        content_type="text/javascript; charset=utf-8",
+    ),
+    OperatorStaticAsset(
+        route="/operator-history.js",
+        filename="operator-history.js",
+        content_type="text/javascript; charset=utf-8",
+    ),
+    OperatorStaticAsset(
+        route="/operator-quality-gates.js",
+        filename="operator-quality-gates.js",
         content_type="text/javascript; charset=utf-8",
     ),
     OperatorStaticAsset(

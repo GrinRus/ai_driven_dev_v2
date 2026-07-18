@@ -10,20 +10,18 @@ def _asset(route: str) -> str:
 
 
 def test_dynamic_remediation_and_intervention_fields_have_stable_form_identity() -> None:
-    control = _asset("/operator-control-center.js")
+    quality_gates = _asset("/operator-quality-gates.js")
     intervention = _asset("/operator-approvals-interventions.js")
 
     for expected in (
-        'id="review-remediation-${index}" name="review_remediation"',
-        'for="review-remediation-${index}"',
+        'id="studio-review-remediation-${index}" name="review_remediation"',
         'id="reviewRemediationNote" name="review_remediation_note"',
         'for="reviewRemediationNote"',
-        'id="qa-remediation-${index}" name="qa_remediation"',
-        'for="qa-remediation-${index}"',
+        'id="studio-qa-remediation-${index}" name="qa_remediation"',
         'id="qaRemediationNote" name="qa_remediation_note"',
         'for="qaRemediationNote"',
     ):
-        assert expected in control
+        assert expected in quality_gates
     for expected in (
         'id="intervention-target-${index}" name="intervention_target"',
         'for="intervention-target-${index}"',
@@ -35,6 +33,7 @@ def test_dynamic_remediation_and_intervention_fields_have_stable_form_identity()
 
 def test_onboarding_and_follow_up_fields_have_id_name_and_associated_labels() -> None:
     onboarding = _asset("/operator-onboarding.js")
+    history = _asset("/operator-history.js")
     follow_up = _asset("/operator-next-flow-view.js")
 
     for field_id, name in (
@@ -45,8 +44,10 @@ def test_onboarding_and_follow_up_fields_have_id_name_and_associated_labels() ->
     ):
         assert f'id="{field_id}" name="{name}"' in onboarding
         assert f'for="{field_id}"' in onboarding
+    for field_id, name in (("runComparisonBaseline", "comparison_baseline_run"),):
+        assert f'id="{field_id}" name="{name}"' in history
+        assert f'for="{field_id}"' in history
     for field_id, name in (
-        ("runComparisonBaseline", "comparison_baseline_run"),
         ("followUpWorkItem", "new_work_item"),
         ("followUpTitle", "title"),
         ("followUpInputPreview", "first_stage_input_preview"),

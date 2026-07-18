@@ -2607,6 +2607,7 @@ def test_ui_operator_control_center_endpoints_return_structured_views(
     qa = _payload(service.handle_get("/api/qa/verdict", {"run_id": ["run-ui"]}))
 
     assert timeline["events"]
+    assert timeline["frames"]
     assert accountability["runtime_id"] == "codex"
     assert accountability["stage_graph"][:3] == ["idea", "research", "plan"]
     assert "config_snapshot" in accountability
@@ -4501,6 +4502,9 @@ def test_ui_tasks_endpoint_returns_rich_task_state(tmp_path: Path) -> None:
     assert isinstance(finalization, dict)
     assert finalization["status"] == "pending"
     assert finalization["attempts"] == []
+    assert payload["finalization_eligible"] is False
+    assert payload["review_eligible"] is False
+    assert payload["review_blocker"] == "No implementation run is selected."
 
 
 def test_ui_task_run_requires_explicit_run_id(tmp_path: Path) -> None:

@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
+from aidd.core.implementation_eligibility import implementation_finalization_blocker
 from aidd.core.run_store import run_stage_root
 from aidd.core.task_attempt_evidence import resolve_task_attempt_evidence
 from aidd.core.task_attempt_lifecycle import load_task_execution_plan
@@ -123,10 +124,22 @@ def resolve_task_read_model(
             / "attempts",
             workspace_root=workspace_root,
         )
+    finalization_blocker = (
+        implementation_finalization_blocker(
+            workspace_root=workspace_root,
+            work_item=work_item,
+            run_id=run_id,
+        )
+        if run_id is not None
+        else "No implementation run is selected."
+    )
     return {
         "run_id": run_id,
         "source_tasklist_sha256": ledger.source_tasklist_sha256,
         "all_succeeded": ledger.all_succeeded(),
+        "finalization_eligible": ledger.all_succeeded(),
+        "review_eligible": finalization_blocker is None,
+        "review_blocker": finalization_blocker,
         "tasks": tasks,
         "finalization": {
             **ledger.finalization.to_dict(),

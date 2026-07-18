@@ -120,7 +120,6 @@ test("operator bootstrap loads modules in declared order", async () => {
 
   assert.deepEqual(appended, [
     "/operator-surface-parity.js",
-    "/operator-presentation.js",
     "/operator-route-state.js",
     "/operator-route-intents.js",
     "/operator-draft-store.js",
@@ -139,6 +138,8 @@ test("operator bootstrap loads modules in declared order", async () => {
     "/operator-logs-jobs.js",
     "/operator-next-flow-actions.js",
     "/operator-next-flow-view.js",
+    "/operator-history.js",
+    "/operator-quality-gates.js",
     "/operator-control-center.js",
     "/operator-stage-cockpit.js",
     "/operator-main.js",
@@ -200,104 +201,333 @@ test("surface parity manifest has one owner and journey per migration surface", 
     "W36-E7-S1-T8",
     "W36-E7-S1-T9",
   ]);
-  const candidates = new Set(["runtime-validation-recovery"]);
-  assert.ok(entries.filter((entry) => candidates.has(entry.id)).every(
-    (entry) => entry.rollout === "candidate",
-  ));
   const parityClosed = new Set([
     "guided-setup", "active-studio", "document-evidence", "inbox", "question-recovery",
     "intervention-recovery",
     "approval-recovery",
+    "runtime-validation-recovery",
+    "implement", "review-qa", "history", "flow-complete",
   ]);
   assert.ok(entries.filter((entry) => parityClosed.has(entry.id)).every(
     (entry) => entry.rollout === "parity_closed",
   ));
-  assert.ok(entries.filter(
-    (entry) => !candidates.has(entry.id) && !parityClosed.has(entry.id),
-  ).every((entry) => entry.rollout === "legacy_only"));
+  assert.equal(entries.length, parityClosed.size);
   assert.ok(entries.every((entry) => entry.owner.startsWith("W36-")));
-  assert.ok(entries.every((entry) => entry.rollbackRenderer.startsWith("operator-")));
   assert.ok(entries.every((entry) => entry.fixture));
   assert.ok(entries.every((entry) => entry.removalGate.startsWith("W36-")));
 });
 
-test("presentation selector is browser-only and fails back to legacy", async () => {
-  const cases = [
-    {search: "", requested: "legacy", fallback: false},
-    {search: "?ui=legacy", requested: "legacy", fallback: false},
-    {search: "?ui=studio", requested: "studio", fallback: true},
-    {search: "?ui=unknown", requested: "legacy", fallback: false},
-  ];
-  for (const item of cases) {
-    const documentElement = {dataset: {}};
-    const window = {location: {search: item.search}};
+test("exhausted and explicitly stopped recovery route only to the stage intervention", async () => {
+  for (const diagnostics of [
+    {validation: {status: "repair-exhausted"}},
+    {validation: {status: "repair-available"}, stopped: {stopped: true}},
+  ]) {
     const context = vm.createContext({
-      URLSearchParams,
-      document: {documentElement},
-      window,
+      RECOVERY_SUMMARY_KINDS: new Set(["validation", "intervention"]),
+      escapeHtml(value) {
+        return String(value);
+      },
+      isRuntimeFirstFailure() {
+        return false;
+      },
+      state: {
+        activeStage: "implement",
+        dashboard: {recovery_actions: [], next_action: {}},
+      },
     });
-    await load(context, "operator-surface-parity.js");
-    await load(context, "operator-presentation.js");
-    assert.equal(window.aiddPresentation.requested, item.requested);
-    const studioRequested = item.requested === "studio";
-    assert.equal(window.aiddPresentation.effective, studioRequested ? "mixed" : "legacy");
-    assert.equal(window.aiddPresentation.fallback, item.fallback);
-    assert.equal(Object.keys(window.aiddPresentation.surfaces).length, 12);
-    for (const surface of [
-      "guided-setup", "active-studio", "document-evidence", "question-recovery",
-      "intervention-recovery", "approval-recovery", "runtime-validation-recovery", "inbox",
-    ]) {
-      assert.equal(
-        window.aiddPresentation.surfaces[surface].presentation,
-        studioRequested ? "studio" : "legacy",
-      );
-    }
-    assert.ok(Object.entries(window.aiddPresentation.surfaces)
-      .filter(([surface]) => ![
-        "guided-setup", "active-studio", "document-evidence", "question-recovery",
-        "intervention-recovery", "approval-recovery", "runtime-validation-recovery", "inbox",
-      ].includes(surface))
-      .every(([, resolution]) => resolution.presentation === "legacy"));
-    assert.equal(documentElement.dataset.presentationRequested, item.requested);
-    assert.equal(
-      documentElement.dataset.presentationEffective,
-      studioRequested ? "mixed" : "legacy",
-    );
+    await load(context, "operator-primitives.js");
+    await load(context, "operator-stage-cockpit.js");
+    const result = JSON.parse(JSON.stringify(vm.runInContext(`(() => {
+      const action = recoveryPrimaryActionSpec(${JSON.stringify(diagnostics)});
+      const html = renderRecoverySummary({
+        kind: "validation",
+        status: "blocked",
+        statusLabel: "blocked",
+        title: "Repair stopped",
+        consequence: action.detail,
+        decisiveFailure: {label: "Selected stage", detail: "implement"},
+        evidence: {path: "validator-report.md"},
+        primaryAction: {...action, stage: "implement"}
+      });
+      return {action, html};
+    })()`, context)));
+    assert.equal(result.action.action, "request-change");
+    assert.match(result.html, /data-recovery-action="request-change"/);
+    assert.match(result.html, /data-recovery-stage="implement"/);
+    assert.doesNotMatch(result.html, /data-run-repair/);
   }
 });
 
-test("surface resolver implements selector and rollout truth table", async () => {
-  const documentElement = {dataset: {}};
-  const window = {location: {search: ""}};
+test("Studio implementation gate preserves canonical readiness and finalization guards", async () => {
   const context = vm.createContext({
-    URLSearchParams,
-    document: {documentElement},
-    window,
+    escapeHtml(value) {
+      return String(value);
+    },
+    selectedRuntimeReady() {
+      return true;
+    },
   });
-  await load(context, "operator-surface-parity.js");
-  await load(context, "operator-presentation.js");
-  const result = JSON.parse(JSON.stringify(vm.runInContext(
-    `
-      ["legacy_only", "candidate", "parity_closed"].flatMap((rollout) =>
-        ["legacy", "studio", "missing", "invalid"].map((selector) => {
-          const value = selector === "missing" ? "" : selector === "invalid" ? "other" : selector;
-          const resolution = resolveSurfaceRendererFor({
-            id: "fixture",
-            rollout,
-            rollbackRenderer: "operator-legacy"
-          }, value);
-          return {rollout, selector, ...resolution};
-        })
-      )
-    `,
-    context,
-  )));
-  for (const item of result) {
-    const studio = item.selector === "studio" && item.rollout !== "legacy_only";
-    assert.equal(item.presentation, studio ? "studio" : "legacy");
-    assert.equal(item.renderer, studio ? "studio:fixture" : "operator-legacy");
-    assert.equal(item.fallback, item.selector === "studio" && !studio);
-  }
+  await load(context, "operator-quality-gates.js");
+  const html = vm.runInContext(`renderStudioImplementationQualityGate({
+    tasks: [
+      {id: "TL-1", title: "First", status: "pending", ready: true, dependencies: [], attempts: []},
+      {id: "TL-2", title: "Second", status: "pending", ready: false, dependencies: ["TL-1"], attempts: [], blocker: "TL-1 is pending"}
+    ],
+    all_succeeded: false,
+    finalization_eligible: false,
+    review_eligible: false,
+    review_blocker: "Implementation task ledger does not record success for every task.",
+    finalization: {status: "pending", attempts: []}
+  })`, context);
+  assert.match(html, /data-run-task="TL-1"/);
+  assert.doesNotMatch(html, /data-run-task="TL-2"/);
+  assert.doesNotMatch(html, /data-finalize-tasks/);
+  assert.match(html, /data-implementation-review-blocker/);
+  assert.match(html, /does not record success for every task/);
+});
+
+test("Studio repository evidence names change kinds scope and claim mismatches", async () => {
+  const context = vm.createContext({
+    escapeHtml(value) {
+      return String(value);
+    },
+    diffFileWarning(file) {
+      return file.allowed_scope_status === "outside" ? ["outside scope"] : [];
+    },
+    renderDiffFilters() {
+      return '<div data-test="filters"></div>';
+    },
+    renderImplementationProceedGuard() {
+      return "";
+    },
+    renderWarnings(items) {
+      return `<div data-test="warnings">${items.join("|")}</div>`;
+    },
+    selectedRuntimeReady() {
+      return true;
+    },
+  });
+  await load(context, "operator-quality-gates.js");
+  const html = vm.runInContext(`renderStudioRepositoryEvidence({
+    diffView: {aidd_artifacts: [{path: ".aidd/report"}], warnings: []},
+    evidence: {selected_task_id: "TL-1", touched_files: ["src/changed.py"]},
+    files: [
+      {path: "src/new.py", status: "untracked", allowed_scope_status: "inside", mentioned_in_report: true},
+      {path: "src/old.py", status: "deleted", allowed_scope_status: "outside", mentioned_in_report: true},
+      {path: "src/changed.py", status: "modified", allowed_scope_status: "inside", mentioned_in_report: false}
+    ],
+    visible: [
+      {path: "src/new.py", status: "untracked", allowed_scope_status: "inside", mentioned_in_report: true},
+      {path: "src/old.py", status: "deleted", allowed_scope_status: "outside", mentioned_in_report: true},
+      {path: "src/changed.py", status: "modified", allowed_scope_status: "inside", mentioned_in_report: false}
+    ],
+    selected: {path: "src/changed.py", status: "modified", diff: "+new line"},
+    unchanged: ["src/claimed.py"],
+    reviewEnabled: false
+  })`, context);
+  assert.match(html, /data-document-canvas="implementation-evidence"/);
+  assert.match(html, /Added · untracked/);
+  assert.match(html, /Removed · deleted/);
+  assert.match(html, /Changed · modified/);
+  assert.match(html, /Allowed scope: outside/);
+  assert.match(html, /core-owned <code>\.aidd\/<\/code> evidence/);
+  assert.match(html, /Claim mismatch: src\/claimed.py was mentioned but unchanged/);
+  assert.match(html, /src\/changed.py changed but is absent/);
+});
+
+test("Studio Review and QA gates render exact upstream identities and blockers", async () => {
+  const context = vm.createContext({
+    state: {
+      activeRunId: "run-quality",
+      activeJobStatus: null,
+      dashboard: {stages: []}
+    },
+    escapeHtml(value) {
+      return String(value);
+    },
+    stageTitle(value) {
+      return String(value).toUpperCase();
+    },
+    renderQaCompletionGuard() {
+      return "";
+    },
+    renderRemediationRuntimeGuard() {
+      return "";
+    },
+    renderWarnings(items) {
+      return items.length ? `<div>${items.join("|")}</div>` : "";
+    },
+    selectedRuntimeReady() {
+      return true;
+    },
+  });
+  await load(context, "operator-quality-gates.js");
+  const review = vm.runInContext(`renderStudioReviewQualityGate({
+    approval_status: "rejected",
+    warnings: [],
+    findings: [{
+      finding_id: "RV-7",
+      severity: "high",
+      disposition: "must-fix",
+      summary: "Missing boundary proof",
+      acceptance_ids: ["AC-2"],
+      evidence: ["EV-4", "implementation-report.md"],
+      related_paths: ["src/app.py"]
+    }]
+  })`, context);
+  assert.match(review, /data-review-finding="RV-7"/);
+  assert.match(review, /Acceptance: AC-2/);
+  assert.match(review, /Evidence: EV-4 · implementation-report.md/);
+  assert.match(review, /data-quality-gate-blocker/);
+  assert.match(review, /data-proceed-stage="qa"[^>]*disabled/);
+
+  const qa = vm.runInContext(`renderStudioQaQualityGate({
+    quality_verdict: "not-ready",
+    release_recommendation: "hold",
+    residual_risks: ["Retry remains unverified"],
+    known_issues: ["QAI-1"],
+    acceptance_ids: ["AC-2"],
+    evidence_references: ["EV-4", "verification.md"],
+    warnings: []
+  }, [{id: "risk-1", kind: "risk", label: "Retry remains unverified"}])`, context);
+  assert.match(qa, /data-qa-verdict="not-ready"/);
+  assert.match(qa, /Acceptance: AC-2/);
+  assert.match(qa, /Evidence: EV-4, verification.md/);
+  assert.match(qa, /Residual risk · Retry remains unverified/);
+  assert.match(qa, /Known issue · QAI-1/);
+  assert.match(qa, /data-accept-qa[^>]*disabled/);
+
+  context.state.activeJobStatus = {kind: "remediation", stage: "implement", status: "running"};
+  let readback = vm.runInContext('studioRemediationReadback("review")', context);
+  assert.match(readback, /data-remediation-readback="review"/);
+  assert.match(readback, /implement pending/);
+  context.state.activeJobStatus = {kind: "remediation", stage: "implement", status: "completed"};
+  context.state.dashboard.stages = [
+    {stage: "review", stale: true, stale_invalidated_by: "remediation-4"},
+    {stage: "qa", stale: true, stale_invalidated_by: "remediation-4"}
+  ];
+  readback = vm.runInContext('studioRemediationReadback("qa")', context);
+  assert.match(readback, /REVIEW → QA/);
+  assert.match(readback, /remediation-4/);
+  assert.match(readback, /Terminal handoff stays blocked/);
+  assert.match(readback, /data-recovery-action="rerun-stale-downstream"/);
+});
+
+test("Studio History renders typed frames and pauses only browser auto-follow", async () => {
+  const context = vm.createContext({
+    state: {
+      activeRunId: "run-history",
+      activeStage: "implement",
+      activeTab: "history",
+      historyTimeline: null,
+      historySelectedFrame: "",
+      historyAutoFollow: true,
+      runComparison: null,
+      runComparisonError: "",
+      runComparisonLoading: false,
+      dashboard: {
+        work_item: "WI-002",
+        run: {
+          run_id: "run-history",
+          lineage: {
+            source_run_id: "run-source",
+            source_work_item_id: "WI-001",
+            baseline_label: "accepted source",
+            child_work_item_candidates: [{
+              work_item_id: "WI-003",
+              label: "Follow-up",
+              relationship: "follow-up",
+              source_run_id: "run-history",
+            }],
+          },
+          archive: {
+            archived: true,
+            archived_at_utc: "2026-07-18T12:00:00Z",
+            reason: "Accepted terminal evidence",
+            source: "ui",
+          },
+        },
+      },
+    },
+    escapeHtml(value) {
+      return String(value);
+    },
+    stageTitle(value) {
+      return String(value).toUpperCase();
+    },
+    runScopedQuery() {
+      return "run_id=run-history";
+    },
+    comparisonBaselineRunId(run) {
+      return run.run_id;
+    },
+    renderWarnings() {
+      return "";
+    },
+    resolveSurfaceRenderer() {
+      return {presentation: "studio"};
+    },
+    renderRunComparisonPanel() {
+      return "";
+    },
+    async api() {
+      return {
+        frames: [
+          {
+            identity: "task:TL-1:attempt:0001",
+            kind: "task-attempt",
+            stage: "implement",
+            task_id: "TL-1",
+            attempt_number: 1,
+            status: "failed",
+            time_utc: "2026-07-18T00:00:00Z",
+            evidence_refs: ["reports/runtime.log"]
+          },
+          {
+            identity: "finalization:implement:attempt:0002",
+            kind: "finalization-attempt",
+            stage: "implement",
+            attempt_number: 2,
+            status: "succeeded",
+            evidence_refs: ["reports/finalization-state.json"]
+          }
+        ]
+      };
+    }
+  });
+  await load(context, "operator-history.js");
+  const timeline = await vm.runInContext("loadStudioHistoryTimeline()", context);
+  const html = vm.runInContext("renderStudioHistory(state.historyTimeline)", context);
+  assert.equal(timeline.frames.length, 2);
+  assert.equal(context.state.historySelectedFrame, "finalization:implement:attempt:0002");
+  assert.match(html, /data-studio-history/);
+  assert.match(html, /task:TL-1:attempt:0001/);
+  assert.match(html, /Aggregate finalization · attempt 2/);
+  assert.match(html, /Return to live/);
+  assert.match(html, /active runtime is not stopped/);
+  assert.match(html, /Immutable run lineage/);
+  assert.match(html, /data-history-lineage-parent="run-source"/);
+  assert.match(html, /data-route-work-item="WI-001"/);
+  assert.match(html, /data-history-lineage-current="run-history"/);
+  assert.match(html, /data-history-lineage-child="WI-003"/);
+  assert.match(html, /data-operator-route-intent="child-work-item"/);
+  assert.match(html, /data-studio-history-archive/);
+  assert.match(html, /data-archive-state="archived"/);
+  assert.match(html, /Accepted terminal evidence/);
+  assert.match(html, /append-only visibility disposition/);
+  assert.match(html, /Inspect retained artifacts and logs/);
+  context.state.runComparison = {
+    warnings: [],
+    prompt_hash_deltas: [{path: "prompt.md", status: "changed"}],
+    stage_status_deltas: [{stage: "qa", status: "removed", baseline_status: "succeeded", target_status: null}],
+    artifact_hash_deltas: [{key: "qa_report", status: "changed", baseline_path: "runs/a/qa.md", target_path: "runs/b/qa.md"}],
+    validator_outcome_deltas: [{stage: "qa", status: "removed", baseline_path: "runs/a/validator.md", target_path: null}]
+  };
+  const comparison = vm.runInContext("renderStudioRunComparisonPanel()", context);
+  assert.match(comparison, /data-comparison-group="prompt"/);
+  assert.match(comparison, /runs\/a\/qa.md/);
+  assert.match(comparison, /target snapshot unavailable/);
+  assert.match(comparison, /History will not reconstruct it|no snapshot is reconstructed|snapshot unavailable/);
 });
 
 test("question Recovery renders exact durable ids and resolution states", async () => {
@@ -698,7 +928,12 @@ test("next-flow view renders terminal and readiness states without network mutat
           approval_counts: {requested: 0, approved: 0, denied: 0, cancelled: 0, pending: 0},
           questions_answered_count: 0,
           questions_total_count: 0,
-          recommended_next_flow_actions: []
+          recommended_outcome: "create-new-work-item",
+          recommendation_rationale: "QA is clean and terminal evidence is fresh.",
+          recommended_next_flow_actions: [
+            {action: "create-new-work-item", label: "Create New Work Item", detail: "Start unrelated work.", enabled: true},
+            {action: "start-follow-up-flow", label: "Start Follow-up Flow", detail: "Carry findings forward.", enabled: true},
+          ]
         }
       };
       renderNextActionPanel();
@@ -706,10 +941,61 @@ test("next-flow view renders terminal and readiness states without network mutat
     context,
   );
 
-  const terminalHtml = vm.runInContext("renderFlowCompleteState()", context);
+  const studioTerminalHtml = vm.runInContext("renderStudioFlowCompleteState()", context);
 
-  assert.match(terminalHtml, /Flow Complete/);
-  assert.match(terminalHtml, /QA terminal handoff/);
+  assert.match(studioTerminalHtml, /data-studio-flow-complete/);
+  assert.match(studioTerminalHtml, /data-core-recommended-outcome="create-new-work-item"/);
+  assert.match(studioTerminalHtml, /QA is clean and terminal evidence is fresh/);
+  assert.match(studioTerminalHtml, /Other next actions/);
+  assert.doesNotMatch(studioTerminalHtml, /recommendedNextFlowDecision/);
+  vm.runInContext("state.dashboard.terminal_handoff.recommended_outcome = null", context);
+  assert.equal(vm.runInContext("renderStudioFlowCompleteState()", context), "");
+  vm.runInContext(`
+    state.nextFlowWizard.active = true;
+    state.nextFlowWizard.action = "start-follow-up-flow";
+    state.nextFlowWizard.step = "sources";
+    state.nextFlowWizard.loading = false;
+    state.nextFlowWizard.error = "";
+    state.nextFlowWizard.selectedSourceIds = ["QA-RISK-1"];
+    state.nextFlowWizard.sourceFindings = {
+      source_run_id: "run-ui",
+      source_work_item: "WI-UI",
+      counts: {total_items: 1, recommended_items: 1, source_artifact_links: 1},
+      recommendation: "Carry the retained QA risk.",
+      groups: []
+    };
+  `, context);
+  const followUpHtml = vm.runInContext("renderStudioNextFlowWizard()", context);
+  assert.match(followUpHtml, /data-studio-next-flow-action="start-follow-up-flow"/);
+  assert.match(followUpHtml, /run-ui/);
+  assert.match(followUpHtml, /Continue to Define Work Item/);
+  vm.runInContext('state.nextFlowWizard.action = "clone-flow"', context);
+  const cloneHtml = vm.runInContext("renderStudioNextFlowWizard()", context);
+  assert.match(cloneHtml, /data-studio-next-flow-action="clone-flow"/);
+  assert.match(cloneHtml, /Clone This Flow/);
+  assert.match(cloneHtml, /source run stays immutable/i);
+  vm.runInContext(`
+    state.nextFlowWizard.action = "run-eval-batch";
+    state.nextFlowWizard.step = "eval-batch";
+    document.getElementById("appVersion").textContent = "v0.9.0";
+  `, context);
+  const evalHtml = vm.runInContext("renderStudioNextFlowWizard()", context);
+  assert.match(evalHtml, /data-studio-next-flow-action="run-eval-batch"/);
+  assert.match(evalHtml, /v0.9.0/);
+  assert.match(evalHtml, /operator-selected local manifest/);
+  assert.match(evalHtml, /aidd eval execute &lt;scenario-path&gt; --root .aidd/);
+  assert.doesNotMatch(evalHtml, /data-repair/);
+  vm.runInContext(`
+    state.nextFlowWizard.action = "archive-run";
+    state.nextFlowWizard.step = "archive-confirm";
+    state.nextFlowWizard.archiveRunId = "run-ui";
+    state.nextFlowWizard.archiveReason = "Retain completed evidence outside the active inbox.";
+  `, context);
+  const archiveHtml = vm.runInContext("renderStudioNextFlowWizard()", context);
+  assert.match(archiveHtml, /data-studio-next-flow-action="archive-run"/);
+  assert.match(archiveHtml, /Retain completed evidence outside the active inbox/);
+  assert.match(archiveHtml, /source[- ]run.*stays immutable/i);
+  assert.match(archiveHtml, /archive metadata only/i);
   assert.match(element("nextActionPanel").innerHTML, /Review handoff/);
   assert.equal(fetchCount, 0);
 });

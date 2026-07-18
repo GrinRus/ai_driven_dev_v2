@@ -11,7 +11,7 @@ const staticRoot = path.join(repositoryRoot, "src/aidd/cli/static");
 async function contextFor(dashboard) {
   const context = vm.createContext({
     console,
-    state: {dashboard, activeStage: "idea"},
+    state: {dashboard, activeStage: "idea", nextFlowWizard: {active: false}},
     escapeHtml(value) { return String(value ?? ""); },
     stageTitle(stage) { return stage.toUpperCase(); },
     stageSubtitle() { return "Clarify the request"; },
@@ -23,6 +23,7 @@ async function contextFor(dashboard) {
     pathLine(value) { return `<code>${value}</code>`; },
     renderPrimaryArtifact() { return "<div data-document>document</div>"; },
     renderStateSurface({title}) { return `<div data-state-surface>${title}</div>`; },
+    studioFlowCompleteEligibility() { return {eligible: false}; },
   });
   const source = await readFile(path.join(staticRoot, "operator-active-studio.js"), "utf8");
   vm.runInContext(source, context, {filename: "operator-active-studio.js"});

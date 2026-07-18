@@ -229,6 +229,27 @@ document.addEventListener("click", async (event) => {
       toast("Unsupported next-flow action.");
       return;
     }
+    const historyFrame = event.target.closest("[data-history-frame]")?.dataset.historyFrame;
+    if (historyFrame) {
+      state.historySelectedFrame = historyFrame;
+      state.historyAutoFollow = false;
+      await renderCockpit();
+      return;
+    }
+    if (event.target.closest("[data-history-return-live]")) {
+      state.historySelectedFrame = "";
+      state.historyAutoFollow = true;
+      await renderCockpit();
+      return;
+    }
+    const historyEvidence = event.target.closest("[data-history-evidence-path]");
+    if (historyEvidence) {
+      state.activeStage = historyEvidence.dataset.historyEvidenceStage || state.activeStage;
+      const path = historyEvidence.dataset.historyEvidencePath || "";
+      activateTab(path.endsWith("runtime.log") ? "logs" : "artifacts");
+      await renderCockpit();
+      return;
+    }
     const sourceSelectionMode = event.target.closest("[data-source-selection-mode]")?.dataset.sourceSelectionMode;
     if (sourceSelectionMode) {
       selectSourceFindings(sourceSelectionMode);
@@ -452,6 +473,10 @@ document.addEventListener("click", async (event) => {
       }
       else if (action === "resume-stage") {
         await startStage(state.activeStage);
+        return;
+      }
+      else if (action === "rerun-stale-downstream") {
+        await rerunStaleDownstream();
         return;
       }
       requestCockpitReveal();

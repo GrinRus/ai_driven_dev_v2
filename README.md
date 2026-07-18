@@ -209,26 +209,27 @@ aidd ui --work-item WI-001 --root .aidd
 
 Without `--work-item`, the UI validates the selected project root, resolves `.aidd/`,
 discovers existing work items, and creates new work items through the same bootstrap path as
-`aidd init`. With `--work-item`, it opens the existing command center directly.
+`aidd init`. With `--work-item`, it opens Document & Evidence Studio directly.
 
-The UI reads the same `.aidd/` state as the CLI. It can show stage status, render stage
+The Studio UI reads the same `.aidd/` state as the CLI. Its Inbox prioritizes durable
+decisions, Studio keeps the canonical document and current action together, and History
+renders retained attempts, comparison, lineage, and archive disposition. It can render stage
 Markdown artifacts, show runtime logs, answer questions, show repair history, submit
 stage-scoped operator intervention requests, and display runtime readiness details without
 introducing a separate workflow engine. Operators can run the full workflow, run or resume
 the next eligible stage, run the active stage with **Run selected stage**, or submit
 **Request change -> Submit & run** from the selected
-stage cockpit; these actions require an explicit runtime selection and there is no hidden
+Studio context; these actions require an explicit runtime selection and there is no hidden
 `generic-cli` fallback. New UI launches stream live job logs while the process runs, and
 the saved `runtime.log` remains available afterward through the normal log view and CLI.
 Successful UI jobs report `/api/jobs/<job_id>` status `completed`; successful stage
 progress remains visible as stage state `succeeded` in the rail and artifacts.
-The command center also shows an Active Run panel and Timeline tab for long-running jobs:
+Active Studio and History also show long-running job evidence:
 elapsed time, last output age, runner command, stage timeout summary, cancel action, and
 real stage milestones are shown without fake progress percentages.
 When a UI-started job is live, the central next-action strip switches to a live progress
 summary with elapsed time, last runtime output, live log chunk count, an Open live logs
-shortcut, and the cancel action; on mobile that monitoring cockpit is shown before the
-stage rail.
+shortcut, and the cancel action; on mobile the current decision precedes supporting evidence.
 The UI can write question answers as `[resolved]`, `[partial]`, or `[deferred]` entries
 in the standard `answers.md`; only `[resolved]` answers unblock blocking questions, then
 rerun the selected stage or workflow after answering. Intervention requests are stored as

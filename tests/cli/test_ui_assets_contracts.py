@@ -107,7 +107,7 @@ def test_operator_static_asset_manifest_preserves_compatibility_routes() -> None
         "operator.js",
     }.issubset(filenames)
     assert "operator-api-state.js" in filenames
-    assert "operator-presentation.js" in filenames
+    assert "operator-presentation.js" not in filenames
     assert "operator-surface-parity.js" in filenames
     assert "operator-dashboard-actions.js" in filenames
     assert "operator-main.js" in filenames
@@ -135,37 +135,23 @@ def test_operator_js_bootstrap_loads_manifested_browser_modules() -> None:
         assert f'"{route}"' in loader
 
     assert loader.index('"/operator-surface-parity.js"') < loader.index(
-        '"/operator-presentation.js"'
-    )
-    assert loader.index('"/operator-presentation.js"') < loader.index(
         '"/operator-api-state.js"'
     )
 
 
-def test_operator_presentation_selector_is_browser_only_and_fail_closed() -> None:
-    presentation = _asset_text("/operator-presentation.js")
-    api_state = _asset_text("/operator-api-state.js")
-
-    _assert_contains_all(
-        presentation,
-        (
-            'new Set(["studio", "legacy"])',
-            'new URLSearchParams(search).get("ui")',
-            'return PRESENTATION_SELECTORS.has(requested) ? requested : "legacy";',
-            "function resolveSurfaceRendererFor(entry, selector)",
-            'presentation === "studio" ? `studio:${entry.id}` : entry.rollbackRenderer',
-            "function resolveSurfaceRenderer(surfaceId",
-            "function selectSurfaceRenderer(surfaceId, renderers)",
-            'const effective = presentations.size === 1 ? [...presentations][0] : "mixed";',
-            "SURFACE_PARITY_MANIFEST.map((entry)",
-            "document.documentElement.dataset.presentationRequested",
-            "document.documentElement.dataset.presentationEffective",
-        ),
-    )
-    assert 'presentationSelector: window.aiddPresentation?.requested || "legacy"' in api_state
-    assert 'presentationEffective: window.aiddPresentation?.effective || "legacy"' in api_state
-    assert "fetch(" not in presentation
-    assert "postJson(" not in presentation
+def test_operator_assets_have_no_legacy_renderer_boundary() -> None:
+    bundle = _js_bundle()
+    assert "operator-presentation.js" not in _OPERATOR_JS
+    for obsolete in (
+        "selectSurfaceRenderer",
+        "resolveSurfaceRenderer",
+        "rollbackRenderer",
+        "renderLegacy",
+        "aiddPresentation",
+        "presentationSelector",
+        "presentationEffective",
+    ):
+        assert obsolete not in bundle
 
 
 def test_operator_surface_parity_manifest_is_complete_and_policy_free() -> None:
@@ -174,7 +160,7 @@ def test_operator_surface_parity_manifest_is_complete_and_policy_free() -> None:
     _assert_contains_all(
         parity,
         (
-            'new Set(["legacy_only", "candidate", "parity_closed"])',
+            'new Set(["parity_closed"])',
             "const SURFACE_PARITY_MANIFEST = Object.freeze([",
             'id: "guided-setup"',
             'id: "inbox"',
@@ -186,7 +172,6 @@ def test_operator_surface_parity_manifest_is_complete_and_policy_free() -> None:
             'id: "flow-complete"',
             'journey: "W36-E7-S1-T12"',
             "function validateSurfaceParityManifest(",
-            "function surfaceParityEntry(surfaceId)",
         ),
     )
     assert "fetch(" not in parity
@@ -228,109 +213,6 @@ def test_operator_html_exposes_four_mode_navigation_without_quick_links() -> Non
     ):
         assert f'data-tab="{legacy_tab}"' not in _INDEX_HTML
     assert 'class="quick-link"' not in _INDEX_HTML
-
-
-def test_operator_css_layers_own_static_ui_surfaces() -> None:
-    tokens = _asset_text("/operator-tokens.css")
-    base = _asset_text("/operator-base.css")
-    layout = _asset_text("/operator-layout.css")
-    components = _asset_text("/operator-components.css")
-    responsive = _asset_text("/operator-responsive.css")
-
-    assert ":root {" in tokens
-    assert "--focus-ring:" in tokens
-    assert "button:focus-visible" in base
-    assert ".sr-only" in base
-    assert "textarea {" in base
-    assert ".operator-shell" in layout
-    assert ".stage-rail" in layout
-    assert ".cockpit" in layout
-    assert ".brand-title" in layout
-    assert "min-width: 0;" in layout
-    assert ".topbar #runChip" in layout
-    assert ".topbar #workItemChip" in layout
-    assert "text-overflow: ellipsis;" in layout
-    assert "body.evidence-log-mode .global-next-action-strip" in layout
-    assert ".truncation-notice" in components
-    assert ".definition-list-warning" in components
-    assert ".truncation-notice ul" in components
-    assert ".saved-answer" in components
-    assert ".activity-detail" in components
-    assert ".artifact-row" in components
-    assert ".stage-document-workbench" in components
-    assert ".workbench-side-row" in components
-    assert ".project-home-rail" in components
-    assert ".project-work-item-card" in components
-    assert ".project-set-row" in components
-    assert ".global-next-action-strip" in components
-    assert ".global-next-action-strip.live-progress-active" in components
-    assert ".live-progress-strip" in components
-    assert ".live-progress-actions" in components
-    assert ".run-progress-notice" in components
-    assert ".run-progress-meta" in components
-    assert ".recovery-card" in components
-    assert ".recovery-workbench" in components
-    assert ".recovery-hero" in components
-    assert ".repair-resolved-summary" in components
-    assert ".output-mirror-notice-list" in components
-    assert ".validation-finding-summary.notice" in components
-    assert ".evidence-drilldown" in components
-    assert ".interview-loop-screen" in components
-    assert ".validation-repair-center" in components
-    assert ".repair-action-band" in components
-    assert ".project-setup-grid" in components
-    assert ".setup-readiness-checklist" in components
-    assert ".flow-complete-state" in components
-    assert ".flow-complete-mark" in components
-    assert ".next-flow-action-card.recommended" in components
-    assert ".terminal-summary-grid" in components
-    assert ".run-history-state" in components
-    assert ".lineage-node.current" in components
-    assert ".next-flow-wizard" in components
-    assert ".next-flow-wizard-frame" in components
-    assert ".next-flow-stepper" in components
-    assert ".source-finding-groups" in components
-    assert ".source-selection-summary" in components
-    assert ".source-finding-supporting" in components
-    assert ".archive-confirmation" in components
-    assert ".evidence-screen-stack" in components
-    assert ".evidence-workbench-grid" in components
-    assert ".workbench-toc" in components
-    assert ".follow-up-definition-grid" in components
-    assert '.editable-list-row input[type="text"]' in components
-    assert ".inherited-context-toggle" in components
-    assert ".launch-confirmation-grid" in components
-    assert ".preflight-check" in components
-    assert ".preflight-blocker-summary" in components
-    assert ".launch-readiness-summary" in components
-    assert ".clone-launch-summary" in components
-    assert ".clone-draft-error-summary" in components
-    assert ".launch-failure-summary" in components
-    assert ".wizard-action-guard" in components
-    assert ".log-panel" in components
-    assert "@media (max-width: 760px)" in responsive
-    assert ".workbench-main" in responsive
-    assert ".global-next-action-strip" in responsive
-    assert ".live-progress-strip" in responsive
-    assert ".live-progress-actions" in responsive
-    assert ".live-progress-meta" in responsive
-    assert ".run-progress-meta" in responsive
-    assert ".project-home-grid" in responsive
-    assert ".handoff-metric-grid" in responsive
-    assert ".lineage-flow" in responsive
-    assert ".next-flow-wizard-frame" in responsive
-    assert ".source-finding-groups" in responsive
-    assert ".follow-up-definition-grid" in responsive
-    assert ".launch-confirmation-grid" in responsive
-    assert ".interview-loop-screen" in responsive
-    assert ".validation-repair-center" in responsive
-    assert 'data-mobile-priority-layout="context-decision-document-drilldown"' in _INDEX_HTML
-    assert _MOBILE_PRIORITY_SELECTOR in responsive
-    assert 'body.live-job-mode .operator-shell {' not in responsive
-    assert 'body.recovery-mode .operator-shell {' not in responsive
-    assert ".recovery-hero," in responsive
-    assert ".workbench-toc-list" in responsive
-    assert "scroll-padding-inline: 10px" in responsive
 
 
 def test_operator_responsive_css_prevents_artifact_graph_mobile_overflow() -> None:
@@ -486,14 +368,14 @@ def test_operator_script_modules_own_static_ui_surfaces() -> None:
     assert 'kind: "remediation-rerun"' in dashboard_actions
     assert 'kind: "remediation-launch"' in control_center
     assert "async function handleNextAction()" in dashboard_actions
-    assert "function renderFlowCompleteState()" in next_flow_view
-    assert "function renderRunHistory()" in next_flow_view
+    assert "function renderStudioFlowCompleteState()" in next_flow_view
+    assert "function renderStudioHistory(timeline)" in _asset_text("/operator-history.js")
     assert "async function renderCockpit()" in cockpit
     assert "function renderRecoveryActionBand(diagnostics)" in cockpit
     assert "function renderRepairTimeline(validation)" in cockpit
     assert "function renderResolvedRepairSummary(validation)" in cockpit
     assert "function renderRuntimePartialEvidence(firstFailure)" in cockpit
-    assert "return renderFlowCompleteState();" in cockpit
+    assert "return renderActiveStudio();" in cockpit
     assert 'state.activeTab === "history"' in cockpit
     assert "function renderActivityTable()" in cockpit
     assert "revealCockpitOnMobile();" in cockpit
@@ -504,43 +386,135 @@ def test_operator_script_modules_own_static_ui_surfaces() -> None:
     assert "refresh();" in main
 
 
-def test_operator_next_flow_controller_and_view_keep_separate_boundaries() -> None:
-    controller = _asset_text("/operator-next-flow-actions.js")
-    dashboard_actions = _dashboard_actions()
+def test_studio_history_uses_typed_frames_without_runtime_mutation() -> None:
+    history = _asset_text("/operator-history.js")
+    responsive = _asset_text("/operator-responsive.css")
+    cockpit = _asset_text("/operator-stage-cockpit.js")
+    main = _asset_text("/operator-main.js")
+
+    _assert_contains_all(
+        history,
+        (
+            "async function loadStudioHistoryTimeline()",
+            "timeline.frames",
+            "function renderStudioHistory(timeline)",
+            "function renderStudioRunComparisonPanel()",
+            "function renderActiveRunComparisonPanel()",
+            'data-studio-history',
+            'data-history-frame=',
+            'data-history-return-live',
+            'data-history-evidence-path=',
+            "active runtime is not stopped",
+            'data-comparison-evidence-path=',
+            "snapshot unavailable",
+            "History will not reconstruct it",
+            "function renderStudioHistoryLineage()",
+            "data-studio-history-lineage",
+            'data-operator-route-intent="parent-run"',
+            'data-operator-route-intent="child-work-item"',
+            "function renderStudioHistoryArchive()",
+            "data-studio-history-archive",
+            "append-only visibility disposition",
+            'data-operator-route-intent="run-artifacts"',
+        ),
+    )
+    assert "postJson(" not in history
+    _assert_contains_all(
+        responsive,
+        (
+            ".history-filmstrip-frames",
+            "grid-template-columns: minmax(0, 1fr)",
+            ".history-frame",
+            "overflow: visible",
+            "min-height: var(--control-height)",
+        ),
+    )
+    assert "return renderStudioHistory(await loadStudioHistoryTimeline());" in cockpit
+    assert 'state.historyAutoFollow = false' in main
+    assert 'state.historyAutoFollow = true' in main
+    assert "renderActiveRunComparisonPanel()" in _asset_text(
+        "/operator-next-flow-actions.js"
+    )
+
+
+def test_studio_flow_complete_uses_only_core_recommendation() -> None:
     view = _asset_text("/operator-next-flow-view.js")
-    loader = _asset_text("/operator.js")
+    studio = _asset_text("/operator-active-studio.js")
+    parity = _asset_text("/operator-surface-parity.js")
+    responsive = _asset_text("/operator-responsive.css")
 
-    assert controller.count("return `") <= 1
-    assert "innerHTML =" not in controller
-    assert "function renderFlowCompleteState()" not in controller
-    assert "function renderNextFlowWizardShell(" not in controller
-    assert "async function startWorkflow()" not in controller
-    assert "async function handleNextAction()" not in controller
-    assert "async function startWorkflow()" in dashboard_actions
-    assert "async function handleNextAction()" in dashboard_actions
-
-    assert "function renderFlowCompleteState()" in view
-    assert "function renderRunHistory()" in view
-    assert "function renderNextFlowWizardShell(" in view
-    assert "function renderLaunchConfirmation()" in view
-    assert "function renderNextActionPanel()" in view
-    assert "fetch(" not in view
-    assert "postJson(" not in view
-
-    assert loader.index('"/operator-dashboard-actions.js"') < loader.index(
-        '"/operator-next-flow-actions.js"'
+    _assert_contains_all(
+        view,
+        (
+            "function studioFlowCompleteEligibility",
+            "terminalHandoffRecommendation(handoff)",
+            "function renderStudioFlowCompleteState()",
+            "data-studio-flow-complete",
+            "data-core-recommended-outcome",
+            "Other next actions",
+        ),
     )
-    assert loader.index('"/operator-next-flow-actions.js"') < loader.index(
-        '"/operator-next-flow-view.js"'
+    assert "return renderStudioFlowCompleteState();" in studio
+    assert 'id: "flow-complete"' in parity
+    flow_entry = parity.split('id: "flow-complete"', 1)[1].split("},", 1)[0]
+    assert 'rollout: "parity_closed"' in flow_entry
+    _assert_contains_all(
+        responsive,
+        (
+            ".studio-flow-complete",
+            ".studio-flow-complete-other > summary",
+            "min-height: var(--control-height)",
+        ),
     )
-    assert loader.index('"/operator-next-flow-view.js"') < loader.index(
-        '"/operator-control-center.js"'
+    _assert_contains_all(
+        view,
+        (
+            "function renderStudioNextFlowWizard()",
+            "renderNextFlowSourceSelection()",
+            "data-studio-next-flow-action",
+        ),
     )
-    assert loader.index('"/operator-control-center.js"') < loader.index(
-        '"/operator-stage-cockpit.js"'
+    assert "state.nextFlowWizard.active" in studio
+    assert "renderStudioNextFlowWizard()" in studio
+    actions = _asset_text("/operator-next-flow-actions.js")
+    _assert_contains_all(
+        actions,
+        (
+            'action === "clone-flow"',
+            'postJson("/api/next-flow/clone-draft/create"',
+            'fetch("/api/next-flow/preflight"',
+            'relationship: wizard.action === "clone-flow" ? "clone" : "follow-up"',
+        ),
     )
-    assert loader.index('"/operator-stage-cockpit.js"') < loader.index(
-        '"/operator-main.js"'
+    _assert_contains_all(
+        view,
+        (
+            "function renderEvalBatchHandoff()",
+            "operator-selected local manifest",
+            "uv run aidd eval execute <scenario-path> --root .aidd",
+            "data-eval-handoff-command",
+        ),
+    )
+    eval_action = actions.split("async function openEvalBatchHandoff()", 1)[1].split(
+        "function cloneDraftFromPayload", 1
+    )[0]
+    assert "postJson(" not in eval_action
+    _assert_contains_all(
+        actions,
+        (
+            "async function archiveCompletedRun()",
+            'postJson("/api/next-flow/archive"',
+            "state.dashboard = payload.dashboard",
+        ),
+    )
+    _assert_contains_all(
+        view,
+        (
+            "function renderArchiveConfirmation()",
+            "archive metadata only",
+            "The terminal run stays immutable",
+            "Confirm Archive Run",
+        ),
     )
 
 
@@ -889,7 +863,6 @@ def test_operator_cockpit_asset_keeps_overview_sidebar_and_activity_contracts() 
         cockpit,
         (
             "async function renderCockpit()",
-            "renderFirstLaunchState();",
             "renderQuestionCards({showResume: true})",
             'state.recoveryDetail === "questions"',
             "content.innerHTML = renderQuestions();",
@@ -925,7 +898,7 @@ def test_operator_cockpit_asset_keeps_overview_sidebar_and_activity_contracts() 
             "function renderActivityTableMarkup(events)",
             "function renderActivityTable()",
             "function renderRecoveryWorkbench()",
-            "primaryAction: {action: primary.action, label: primary.label",
+            "stage: state.activeStage,",
             "function renderHistoryMode()",
             "renderRuntimeSelector();",
             "await renderCockpit();",
@@ -1252,6 +1225,7 @@ def test_operator_questions_asset_keeps_answer_resolution_and_saved_answer_contr
 
 def test_operator_recovery_assets_keep_repair_center_contracts() -> None:
     cockpit = _asset_text("/operator-stage-cockpit.js")
+    responsive = _asset_text("/operator-responsive.css")
 
     _assert_contains_all(
         cockpit,
@@ -1278,6 +1252,8 @@ def test_operator_recovery_assets_keep_repair_center_contracts() -> None:
             "Run Repair",
             "Stop Run",
             "Request Change",
+            'data-recovery-action="request-change"',
+            'data-recovery-stage="${escapeHtml(state.activeStage)}"',
             "Validation attempt timeline",
             "Auto-promoted output mirrors",
             "output/ handoff mirrors",
@@ -1288,6 +1264,16 @@ def test_operator_recovery_assets_keep_repair_center_contracts() -> None:
             "data-run-repair",
             "data-stop-run",
             'data-tab-shortcut="request"',
+        ),
+    )
+    _assert_contains_all(
+        responsive,
+        (
+            "body.recovery-mode .recovery-summary-failure",
+            "body.recovery-mode .recovery-summary-primary",
+            "body.recovery-mode .recovery-summary-evidence",
+            "min-height: var(--control-height-touch);",
+            "overflow: visible;",
         ),
     )
 
@@ -1344,63 +1330,116 @@ def test_operator_overview_static_contract_covers_run_accountability_card() -> N
             "repository_git_sha",
             "resource_revision",
             "stage_graph",
-            'id="runAccountabilityCard"',
         ),
     )
     assert "runAccountability" in api_state
     assert "runAccountabilityError" in api_state
 
 
-def test_operator_run_history_static_contract_covers_run_comparison_panel() -> None:
-    cockpit = _asset_text("/operator-stage-cockpit.js")
-    next_flow = _next_flow_assets()
-    api_state = _asset_text("/operator-api-state.js")
-
-    _assert_contains_all(
-        next_flow,
-        (
-            "function renderRunComparisonPanel()",
-            "async function loadRunComparisonPanel()",
-            "/api/run/comparison",
-            "baseline_run_id",
-            "target_run_id",
-            "Run comparison",
-            "Prompt hash deltas",
-            "Stage status deltas",
-            "Artifact hash deltas",
-            "Validator outcome deltas",
-            'id="runComparisonBaseline"',
-            "data-run-comparison-refresh",
-        ),
-    )
-    assert "void loadRunComparisonPanel()" in cockpit
-    assert "runComparison" in api_state
-    assert "runComparisonBaselineInput" in api_state
-
-
 def test_operator_implement_review_static_contract_covers_project_set_grouping() -> None:
+    quality_gate = _asset_text("/operator-quality-gates.js")
     control = _asset_text("/operator-control-center.js")
 
     _assert_contains_all(
-        control,
+        quality_gate + control,
         (
             "async function renderImplementReview()",
             "diffView.project_set_roots",
             "file.scope_status",
-            "outside-project-set",
-            "outside project set",
-            "file.root_id",
-            "file.root_label",
-            "file.root_relative_root",
+            "Project scope:",
+        ),
+    )
+
+
+def test_studio_implementation_gate_uses_canonical_task_actions_and_review_guard() -> None:
+    quality_gate = _asset_text("/operator-quality-gates.js")
+    control = _asset_text("/operator-control-center.js")
+
+    _assert_contains_all(
+        quality_gate,
+        (
+            "function renderStudioImplementationQualityGate(taskView)",
+            'data-studio-quality-gate="implement"',
+            'data-run-task="${escapeHtml(task.id)}"',
+            "task.ready && selectedRuntimeReady()",
+            "data-finalize-tasks",
+            "taskView.finalization_eligible",
+            "data-implementation-review-blocker",
+            "taskView.review_blocker",
+        ),
+    )
+    _assert_contains_all(
+        control,
+        (
+            "renderStudioImplementationQualityGate(taskView)",
+            "reviewEnabled: context.verificationReady",
+        ),
+    )
+
+
+def test_studio_repository_evidence_uses_textual_change_and_scope_contracts() -> None:
+    quality_gate = _asset_text("/operator-quality-gates.js")
+
+    _assert_contains_all(
+        quality_gate,
+        (
+            "function renderStudioRepositoryEvidence({",
+            'data-document-canvas="implementation-evidence"',
+            'return "Added"',
+            'return "Removed"',
+            'return "Changed"',
+            "Allowed scope:",
+            "Project scope:",
+            "core-owned <code>.aidd/</code> evidence",
+            "Claim mismatch:",
+            "mentioned but unchanged",
+            "absent from implementation-report.md",
+            "data-implementation-claims",
+        ),
+    )
+
+
+def test_studio_review_qa_gates_render_exact_identity_and_blocker_contracts() -> None:
+    quality_gate = _asset_text("/operator-quality-gates.js")
+    control = _asset_text("/operator-control-center.js")
+
+    _assert_contains_all(
+        quality_gate,
+        (
+            "function renderStudioReviewQualityGate(view)",
+            'data-studio-quality-gate="review"',
+            "finding.finding_id",
+            "finding.acceptance_ids",
+            "finding.evidence",
+            "finding.related_paths",
+            "function renderStudioQaQualityGate(view, sourceItems)",
+            'data-studio-quality-gate="qa"',
+            "view?.acceptance_ids",
+            "view?.evidence_references",
+            "Residual risk ·",
+            "Known issue ·",
+            "data-quality-gate-blocker",
+            "function studioRemediationReadback(sourceStage)",
+            'data-remediation-readback=',
+            'data-recovery-action="rerun-stale-downstream"',
+            "Terminal handoff stays blocked",
+        ),
+    )
+    _assert_contains_all(
+        control,
+        (
+            "renderStudioReviewQualityGate(view)",
+            "renderStudioQaQualityGate(view, sourceItems)",
         ),
     )
 
 
 def test_operator_implement_review_surfaces_missing_verification_evidence() -> None:
     control = _asset_text("/operator-control-center.js")
+    quality_gate = _asset_text("/operator-quality-gates.js")
 
     _assert_contains_all(
-        control,
+        control + quality_gate,
         (
             "function renderImplementationVerificationGap(implementation)",
             "implementation?.verification_commands || []",
@@ -1421,94 +1460,13 @@ def test_operator_implement_review_surfaces_missing_verification_evidence() -> N
                 "verification evidence."
             ),
             "const verificationReady = implementationVerificationReady(evidence);",
-            'verificationReady && selectedRuntimeReady() ? "" : "disabled"',
+            "reviewEnabled",
             "${renderImplementationProceedGuard(evidence)}",
             'kind: "implementation-verification"',
             'badge: "verification missing"',
             "${renderImplementationVerificationGap(implementation)}",
         ),
     )
-
-
-def test_operator_review_and_qa_decision_summaries_prioritize_next_actions() -> None:
-    api_state = _asset_text("/operator-api-state.js")
-    control = _asset_text("/operator-control-center.js")
-    next_flow = _next_flow_assets()
-    components = _asset_text("/operator-components.css")
-    responsive = _asset_text("/operator-responsive.css")
-
-    _assert_contains_all(
-        api_state,
-        (
-            "reviewFindingsView: null",
-            "reviewFindingsRunId: \"\"",
-            "qaVerdictView: null",
-            "qaVerdictRunId: \"\"",
-            "decision-detail-mode",
-            "[\"review-findings\", \"qa-verdict\"].includes(state.workDetail)",
-        ),
-    )
-    _assert_contains_all(
-        control,
-        (
-            "function renderDecisionSummary({kind, tone, badge, title, body, primary, metrics})",
-            "function renderReviewDecisionSummary(view, findings)",
-            "Review rejected: fix blocking findings before QA",
-            "Review approved: QA can start",
-            "Primary action: Send selected to implement",
-            "function renderRemediationRuntimeGuard(sourceStage, hasRemediationItems)",
-            "Runtime readiness is required before sending ${escapeHtml(label)} back to implement.",
-            "${renderRemediationRuntimeGuard(\"review\", Boolean(findings.length))}",
-            "function renderQaCompletionGuard(view, hasRemediationItems)",
-            "Accept complete is disabled while QA is not-ready.",
-            "Send selected QA risks or issues back to implement, then rerun verification and QA.",
-            "${renderQaCompletionGuard(view, Boolean(sourceItems.length))}",
-            "return renderDecisionBar({",
-            "renderReviewDecisionSummary(view, findings)",
-            "function renderQaDecisionSummary(view, risks, issues)",
-            "QA not ready: send selected items back to implement",
-            "QA ready: run can be accepted",
-            "QA ready with follow-up context",
-            "renderQaDecisionSummary(view, risks, issues)",
-            "${renderRemediationRuntimeGuard(\"qa\", Boolean(sourceItems.length))}",
-            "state.reviewFindingsView = view",
-            "state.qaVerdictView = view",
-        ),
-    )
-    _assert_contains_all(
-        next_flow,
-        (
-            "function activeModeDecisionPeek()",
-            "function renderModeDecisionPeek()",
-            "Review approved",
-            "Review rejected",
-            "QA ready",
-            "QA not ready",
-            "${renderModeDecisionPeek()}",
-            "mode-decision-peek",
-        ),
-    )
-    _assert_contains_all(
-        components,
-        (
-            ".decision-summary {",
-            "grid-template-columns: minmax(0, 1.1fr) minmax(260px, 0.9fr);",
-            ".decision-summary.good {",
-            ".decision-summary.warn {",
-            ".decision-summary.bad {",
-            ".decision-summary-metrics {",
-            "grid-template-columns: repeat(4, minmax(0, 1fr));",
-            ".decision-metric strong {",
-            ".mode-decision-peek {",
-            "display: none;",
-        ),
-    )
-    assert ".decision-summary," in responsive
-    assert ".decision-summary-metrics," in responsive
-    assert ".mode-decision-peek {" in responsive
-    assert _MOBILE_PRIORITY_SELECTOR in responsive
-    assert f"{_MOBILE_PRIORITY_SELECTOR} .cockpit" in responsive
-    assert f"{_MOBILE_PRIORITY_SELECTOR} .stage-rail" in responsive
 
 
 def test_operator_stale_downstream_summary_prioritizes_rerun_guidance() -> None:
@@ -1759,226 +1717,6 @@ def test_operator_logs_asset_keeps_filter_raw_cancel_and_polling_contracts() -> 
     )
 
 
-def test_operator_next_flow_asset_keeps_launch_resume_and_runtime_guard_contracts() -> None:
-    next_flow = "\n".join((_dashboard_actions(), _next_flow_assets()))
-
-    _assert_contains_all(
-        next_flow,
-        (
-            "function renderFirstLaunchState()",
-            "function setupPreviousRunContext()",
-            "function renderPreviousRunContext(context)",
-            "function renderSetupReadinessChecklist({ready, context})",
-            "Readiness Checklist",
-            "function renderFlowCompleteState()",
-            "function renderNextFlowActions(handoff)",
-            "function renderTerminalArtifacts(artifacts)",
-            "function renderTerminalBlockers(blockers)",
-            "function renderFollowUpCandidates(handoff)",
-            "function renderBaselineSnapshot()",
-            "Follow-up candidates",
-            "Baseline snapshot",
-            "function renderRunHistory()",
-            "function renderLineageRows({run, lineage, candidates})",
-            "function renderLineageCandidates(candidates)",
-            "async function openNextFlowWizard(action)",
-            "async function renderNextFlowWizardStep()",
-            "requestNextFlowWizardReveal();",
-            "async function archiveCompletedRun()",
-            "function renderNextFlowSourceSelection()",
-            "function renderFollowUpDefinition()",
-            "function renderLaunchConfirmation()",
-            "function renderNextFlowWizardProgress()",
-            (
-                "return state.dashboard?.work_item || "
-                'state.dashboard?.run?.lineage?.source_work_item_id || "";'
-            ),
-            (
-                "function renderNextFlowWizardShell({sectionClass = "
-                "\"next-flow-wizard\", title, badge, badgeTone = \"\", body})"
-            ),
-            "Flow Launch Wizard",
-            "Choose Flow Type",
-            "Select Source Findings",
-            "Define Work Item",
-            "Review Clone Draft",
-            "Confirm Launch",
-            "function renderPreflightChecks(preflight)",
-            "function blockingPreflightChecks(preflight)",
-            "function renderPreflightBlockedSummary(wizard, preflight, backLabel)",
-            "function renderLaunchFailureSummary(wizard, draft, backLabel)",
-            "function renderLaunchReadinessSummary(wizard)",
-            "function renderCloneLaunchSafetySummary(wizard)",
-            "function renderCloneDraftCreationError(wizard)",
-            "function cloneDraftCreationMessage(error, targetWorkItem)",
-            (
-                "function renderLaunchConfirmationActions({backPrimary, backLabel, "
-                "launchLabel, blocked, launchBusy})"
-            ),
-            "function renderLaunchConfirmationGuards({blocked, readinessBlocked, backLabel})",
-            "function renderAuditPreview(draft, preflight)",
-            "async function loadLaunchConfirmation()",
-            "async function launchNextFlowNow()",
-            "async function createFollowUpDraftForLaunch(draft)",
-            "async function refreshRuntimeReadinessForLaunch()",
-            "function resetLaunchReadiness(wizard = state.nextFlowWizard)",
-            "function nextFlowBrowserDraftIdentity(action = state.nextFlowWizard.action)",
-            "function mergeNextFlowBrowserDraft(serverDraft, action = state.nextFlowWizard.action)",
-            "function persistNextFlowBrowserDraft()",
-            "clearOperatorDraft(nextFlowBrowserDraftIdentity());",
-            "function invalidateFollowUpDraftPreview()",
-            (
-                'document.querySelectorAll("[data-follow-up-definition-error], '
-                '[data-follow-up-list-blocker]")'
-            ),
-            "data-follow-up-definition-error",
-            "definitionErrors",
-            "function followUpDraftValidationErrors(draft)",
-            "At least one acceptance criterion is required before preflight.",
-            "At least one required evidence item is required before preflight.",
-            "Fix these required launch inputs, then retry Continue to preflight.",
-            "data-follow-up-list-blocker",
-            "Required for preflight",
-            "async function openCloneFlowDraft()",
-            "function renderNewWorkItemHandoff()",
-            "function renderEvalBatchHandoff()",
-            "function selectedFollowUpListValues(name, fallbackItems = [])",
-            "function allFollowUpListValues(name, fallbackItems = [])",
-            "acceptance_criteria_all",
-            "required_evidence_all",
-            "selectedItems.map((item) => String(item))",
-            'document.querySelectorAll("[data-follow-up-list-text]")',
-            "textControl ? textControl.value : fallbackItems[index]",
-            "function inheritedContextLinesFromItems(items = [])",
-            "function selectedInheritedContextLines(items = [], fallbackLines = null)",
-            "function followUpDraftValidationError(draft)",
-            "function renderLaunchSourceLink(item)",
-            'result.status === "blocked"',
-            "wizard.preflightError = result.error",
-            "wizard.preflightError = definitionError",
-            "async function loadFollowUpDraft()",
-            "Define Follow-up Work Item",
-            "Definition needs attention",
-            "Confirm and Launch Next Flow",
-            "Preflight results",
-            "data-clone-launch-summary",
-            "Clone does not remediate this handoff",
-            "Clone creates a separate run identity",
-            "Clone reuses configuration in a new run identity",
-            "Clone reuses configuration and baseline; it does not select source findings.",
-            "not selected for clone",
-            "configuration only",
-            "Clone-only flow",
-            "without clearing QA status",
-            "data-clone-draft-error-summary",
-            "Clone Draft Needs Attention",
-            "Clone target is already in use",
-            "A clone draft or work item already exists",
-            "Open the existing work item from Active work items",
-            "Clone still does not remediate QA.",
-            "Preflight blocked before launch",
-            "Launch is disabled until blocking checks pass.",
-            "data-preflight-blocker-summary",
-            "Launch Flow Now is disabled because preflight returned blocking checks.",
-            "data-launch-readiness-summary",
-            "Checking runtime readiness before launch",
-            "Runtime readiness changed before launch",
-            "Launch was not started. Resolve runtime readiness",
-            "Checking Runtime...",
-            "Launch will re-check runtime readiness before starting.",
-            "data-launch-failure-summary",
-            "Launch did not start",
-            "Retry Launch",
-            "The source run remains unchanged.",
-            "Audit preview",
-            "Launch Flow Now",
-            "data-follow-up-field",
-            "newWorkItemField.value.trim()",
-            "titleField.value.trim()",
-            "data-follow-up-list-text",
-            "data-inherited-context",
-            "data-next-flow-back-to-sources",
-            "data-next-flow-confirm-preview",
-            "data-next-flow-back-to-definition",
-            "data-launch-flow-now",
-            "function renderSourceFindingGroup(group)",
-            "function renderSourceFindingItem(group, item)",
-            "data-source-selection-id",
-            "selectedSourceIds",
-            "first-launch-state",
-            "project-setup-state",
-            "flow-complete-state",
-            "run-history-state",
-            "Run History / Lineage",
-            "data-lineage-run-id",
-            "data-lineage-work-item",
-            "archive.archived",
-            'data-lineage-run-id="${escapeHtml(sourceRun)}"',
-            "${escapeHtml(candidate.label || candidate.work_item_id)}",
-            "Review &amp; Launch",
-            "Flow Complete",
-            "Start Next Flow",
-            "Final artifacts",
-            "Blockers / safety",
-            "Runtime fallback",
-            "Previous-run context",
-            "data-next-flow-action",
-            "Select a runtime to start the first governed workflow run.",
-            "Create or resume a work item before starting the governed workflow.",
-            "const hasWorkItemContext = Boolean(state.dashboard?.work_item);",
-            "const canRun = hasWorkItemContext && ready && runtime;",
-            "data-first-launch-run",
-            "data-first-launch-stage",
-            "Run selected stage",
-            "function activeJobBlocksNextAction(action)",
-            "function activeJobNextActionState(action)",
-            "function renderNextActionPanel()",
-            "function renderGlobalNextActionStrip()",
-            "state.onboarding?.setupRequired",
-            "Run Next Action",
-            "next-action-controls",
-            "primaryValidationFinding()",
-            "renderValidationFindingSummary(finding)",
-            "Resume workflow",
-            "Runtime selected and ready to start the governed workflow.",
-            "Runtime selected. Resolve readiness before starting the governed workflow.",
-            "Runtime selected. Start the workflow from the current work item.",
-            "Runtime selected. Resolve readiness before starting the workflow.",
-            "Continue with ${stageTitle(action.stage || state.activeStage)}",
-            "Checking runtime readiness.",
-            "Selected runtime is not ready.",
-            "Current job is still running. Inspect logs before starting another action.",
-            "Open Runtime Logs / Live Console for live output before starting another action.",
-            "async function startWorkflow()",
-            "Create or resume a work item before starting the workflow.",
-            "async function handleNextAction()",
-            "const payload = {runtime: state.selectedRuntime, log_follow: true};",
-            "const payload = {stage, runtime: state.selectedRuntime, log_follow: true};",
-            "if (state.activeRunId) payload.run_id = state.activeRunId;",
-            'postJson("/api/workflow/run", payload)',
-            'postJson("/api/stage/run", payload)',
-            'postJson("/api/next-flow/follow-up-draft/create", {',
-            'postJson("/api/next-flow/clone-draft/create", {',
-            'postJson("/api/next-flow/launch", {',
-            'postJson("/api/next-flow/archive", {',
-            "first_stage_input: draft.first_stage_input_preview",
-            "acceptance_criteria: draft.acceptance_criteria || []",
-            "required_evidence: draft.required_evidence || []",
-            "inherited_context: draft.inherited_context_lines",
-            "Run archived for operator navigation.",
-        ),
-    )
-    assert next_flow.index("${backPrimary ? actionRow : \"\"}") < next_flow.index(
-        '<div class="launch-confirmation-grid">'
-    )
-    assert next_flow.index("${backPrimary ? actionGuards : \"\"}") < next_flow.index(
-        '<div class="launch-confirmation-grid">'
-    )
-    assert next_flow.index('<div class="launch-confirmation-grid">') < next_flow.index(
-        "${backPrimary ? \"\" : actionRow}"
-    )
-
-
 def test_operator_next_action_explains_runtime_readiness_blocker_locally() -> None:
     next_flow = _next_flow_assets()
     components = _asset_text("/operator-components.css")
@@ -2053,217 +1791,6 @@ def test_operator_next_action_sidebar_is_status_mirror_when_global_cta_is_primar
     )
 
 
-def test_operator_static_screen_landmarks_cover_accepted_mission_control_surfaces() -> None:
-    html = _asset_text("/")
-    next_flow = _next_flow_assets()
-    artifacts = _asset_text("/operator-artifacts-documents.js")
-    cockpit = _asset_text("/operator-stage-cockpit.js")
-    questions = _asset_text("/operator-questions.js")
-    logs = _asset_text("/operator-logs-jobs.js")
-    approvals = _asset_text("/operator-approvals-interventions.js")
-
-    _assert_contains_all(
-        html,
-        (
-            'aria-label="Operator controls"',
-            'aria-label="Operator workspace"',
-            'aria-label="Workflow navigation"',
-            'aria-label="Stage cockpit"',
-            'aria-label="Run details"',
-            'aria-label="Activity and recent artifacts"',
-            'role="tablist" aria-label="Stage cockpit views"',
-            'role="tabpanel" aria-labelledby="tab-work" tabindex="0"',
-        ),
-    )
-    _assert_contains_all(
-        next_flow,
-        (
-            '<section class="surface flow-complete-state">',
-            '<section class="surface run-history-state hierarchy-primary history-filmstrip">',
-            '<section class="surface next-flow-wizard">',
-            'sectionClass: "next-flow-wizard follow-up-definition"',
-            'sectionClass: "next-flow-wizard launch-confirmation"',
-            '<aside class="next-flow-stepper" aria-label="Flow Launch Wizard">',
-            '<div class="source-finding-groups">',
-            '<div class="lineage-flow">',
-        ),
-    )
-    _assert_contains_all(
-        artifacts + cockpit + questions + logs + approvals,
-        (
-            "Artifacts / Evidence Graph",
-            "Stage Document Workbench",
-            "Questions / Interview Loop",
-            "Validation / Repair Center",
-            "Runtime Logs / Live Console",
-            "Approvals / Runtime Requests",
-            "Request Change / Intervention Composer",
-        ),
-    )
-
-
-def test_operator_flow_complete_static_contract_covers_terminal_handoff_actions() -> None:
-    shell = _asset_text("/operator-shell-rendering.js")
-    next_flow = _next_flow_assets()
-    components = _asset_text("/operator-components.css")
-    responsive = _asset_text("/operator-responsive.css")
-
-    _assert_contains_all(
-        next_flow,
-        (
-            "function renderFlowCompleteState()",
-            "terminalHandoffTitle(handoff)",
-            "terminalHandoffTone(handoff.status)",
-            "terminalHandoffMark(handoff)",
-            "terminalHandoffMessage(handoff)",
-            "handoff.final_qa_status",
-            "QA terminal handoff is ready for operator review",
-            "QA did not clear this run",
-            "The terminal handoff is blocked",
-            "QA completed with recorded risks",
-            "flow-complete-mark",
-            "Start Next Flow",
-            "terminal handoff",
-            "function recommendedNextFlowDecision(handoff)",
-            "function renderRecommendedNextFlowDecision(handoff)",
-            "function renderTerminalRepairHighlights(highlights)",
-            "function renderTerminalEvidenceSpotlight(handoff)",
-            "function renderTerminalAttentionSpotlight(handoff)",
-            "const TERMINAL_EVIDENCE_REQUIREMENTS",
-            "function terminalEvidenceArtifacts(artifacts)",
-            "function terminalEvidenceRequirement(key)",
-            "function terminalMissingEvidence(artifacts)",
-            "function handoffMissingTerminalEvidence(handoff)",
-            "function renderTerminalMissingEvidence(missing)",
-            "function renderGlobalTerminalEvidenceActions()",
-            "function terminalEvidenceActionLabel(artifact)",
-            "function terminalRepairDecisionPeek()",
-            "repair resolved",
-            "QA Did Not Clear",
-            "Recorded QA Risks",
-            "Terminal handoff blockers",
-            "Evidence First",
-            "Missing Evidence",
-            "Missing Terminal Evidence",
-            "Missing terminal evidence",
-            "Missing ${escapeHtml(item.label)}",
-            (
-                "Required terminal evidence is missing; restore artifacts before "
-                "starting any next flow."
-            ),
-            "Restore the required terminal evidence before choosing a next-flow action.",
-            "before next-flow",
-            "Terminal evidence shortcuts",
-            "Runtime log",
-            "QA report",
-            "Raw runtime output for the terminal QA attempt.",
-            "Final QA readiness and release recommendation.",
-            "Document validation result for the terminal QA stage.",
-            "Terminal stage status and handoff summary.",
-            "runtime_log",
-            "qa_report",
-            "validator_report",
-            "stage_result",
-            "recommended next decision",
-            "next decision blocked",
-            "Resolved Repairs",
-            "These validation issues were retried and resolved before QA handoff.",
-            "handoff.repair_highlights",
-            "renderTerminalAttentionSpotlight(handoff)",
-            "renderTerminalEvidenceSpotlight(handoff)",
-            "renderGlobalTerminalEvidenceActions()",
-            "data-open-artifact",
-            "QA is ready and no open blockers are recorded",
-            "Terminal QA failed; carry failed evidence into a follow-up",
-            "carry the current findings into follow-up work first",
-            "renderRecommendedNextFlowDecision(handoff)",
-            "function terminalHandoffNeedsRecovery(handoff)",
-            "function terminalNextFlowSafetyNote(handoff, action)",
-            "function separateScopeHandoffMessage(handoff)",
-            "function evalBatchHandoffMessage(handoff)",
-            "Recovery path: carries QA findings, blockers, or manual notes into new scoped work.",
-            "Navigation only: does not resolve QA blockers or carry findings into remediation.",
-            "Separate scope: does not inherit this failed QA evidence.",
-            "Comparison only: does not repair or complete this terminal handoff.",
-            "Separate scope only",
-            "This starts unrelated work only.",
-            "Use Start Follow-up Flow for remediation.",
-            "This uses terminal handoff evidence for review",
-            'blocker${blockerCount === 1 ? " remains" : "s remain"}',
-            "next-flow-safety-note",
-            "function renderArchiveHandoffWarning(handoff)",
-            "function renderTerminalRecoveryWizardAction(handoff)",
-            'data-next-flow-action="start-follow-up-flow"',
-            "Archive does not resolve this handoff",
-            "Use Start Follow-up Flow when QA evidence still needs remediation",
-            "Archive is navigation metadata only; remediation starts with Start Follow-up Flow.",
-            "History is review-only; remediation starts with Start Follow-up Flow.",
-            'const historyActionClass = needsRecovery ? \' class="secondary"\' : "";',
-            (
-                '<button data-tab-shortcut="history" type="button"${historyActionClass}>'
-                "Open Run History</button>"
-            ),
-            "renderTerminalRepairHighlights(handoff.repair_highlights || [])",
-            "renderNextFlowActions(handoff)",
-            "activeModeDecisionPeek() || terminalRepairDecisionPeek()",
-            "next-flow-action-card",
-            "recommended",
-            "recommended after restore",
-            "Final artifacts",
-            "Blockers / safety",
-            "Follow-up candidates",
-            "Baseline snapshot",
-            "Source run policy",
-            "Runtime fallback",
-            "No final artifacts recorded.",
-            "No blockers detected in the final QA handoff.",
-            'data-next-flow-action="${escapeHtml(action.action)}"',
-        ),
-    )
-    _assert_contains_all(
-        components,
-        (
-            ".next-flow-decision-spotlight {",
-            "grid-template-columns: minmax(0, 1fr) auto;",
-            ".next-flow-decision-spotlight .small-badge {",
-            "justify-self: start;",
-            "width: fit-content;",
-            ".next-flow-decision-spotlight button {",
-            "min-width: 156px;",
-            ".next-flow-safety-note {",
-            "font-weight: 800;",
-            ".repair-highlight-spotlight {",
-            "border-left: 4px solid var(--green);",
-            ".repair-highlight-card {",
-            "grid-template-columns: minmax(0, 1fr) auto;",
-            ".repair-highlight-evidence button {",
-            "white-space: nowrap;",
-            ".terminal-attention-spotlight {",
-            "border-left: 4px solid var(--red);",
-            ".terminal-missing-evidence {",
-            ".terminal-missing-row {",
-            ".archive-risk-notice {",
-            ".next-action-evidence-actions {",
-            "flex-wrap: wrap;",
-        ),
-    )
-    assert ".next-flow-decision-spotlight," in responsive
-    assert ".terminal-attention-spotlight," in responsive
-    assert ".repair-highlight-card," in responsive
-    assert ".repair-highlight-evidence," in responsive
-    assert ".next-action-evidence-actions," in responsive
-    assert _MOBILE_PRIORITY_SELECTOR in responsive
-    assert f"{_MOBILE_PRIORITY_SELECTOR} .cockpit" in responsive
-    assert f"{_MOBILE_PRIORITY_SELECTOR} .stage-rail" in responsive
-    assert "body.terminal-handoff-mode .project-home-rail" in responsive
-    assert _MOBILE_PRIORITY_SELECTOR in responsive
-    assert f"{_MOBILE_PRIORITY_SELECTOR} .cockpit" in responsive
-    assert f"{_MOBILE_PRIORITY_SELECTOR} .stage-rail" in responsive
-    assert "body.terminal-repair-mode .project-home-rail" in responsive
-    assert 'document.body.classList.contains("terminal-handoff-mode")' in shell
-    assert 'document.body.classList.contains("terminal-repair-mode")' in shell
-
-
 def test_operator_next_flow_wizard_static_contract_covers_controls_and_preflight() -> None:
     next_flow = _next_flow_assets()
 
@@ -2310,41 +1837,6 @@ def test_operator_next_flow_wizard_static_contract_covers_controls_and_preflight
             "renderArchiveHandoffWarning(handoff)",
             "renderTerminalRecoveryWizardAction(handoff)",
             "data-archive-confirm",
-        ),
-    )
-
-
-def test_operator_run_history_static_contract_covers_lineage_and_archive_labels() -> None:
-    next_flow = _next_flow_assets()
-
-    _assert_contains_all(
-        next_flow,
-        (
-            "function renderRunHistory()",
-            "Run History / Lineage",
-            "parent run",
-            (
-                "const hasParentRun = Boolean(lineage.source_run_id "
-                "&& lineage.source_run_id !== run.run_id);"
-            ),
-            "current run",
-            "next work item",
-            "not created",
-            "Lineage rows",
-            "Run actions",
-            "Linked artifacts",
-            "Relationship",
-            "Run / work item",
-            "Next action",
-            "Source",
-            "Baseline",
-            "Archive",
-            "archived",
-            "data-lineage-run-id",
-            "data-lineage-work-item",
-            "renderLineageActions(handoff)",
-            "renderLineageArtifactRefs()",
-            "renderLineageRows({run, lineage, candidates})",
         ),
     )
 
@@ -2572,77 +2064,6 @@ def test_operator_script_keeps_dynamic_accessibility_contracts() -> None:
     assert 'event.key === "End"' in operator_main
     assert "renderTruncationNotice(" in _asset_text("/operator-artifacts-documents.js")
     assert "function scrollActiveStageIntoView()" in _asset_text("/operator-shell-rendering.js")
-
-
-def test_operator_css_keeps_focus_and_screen_reader_contracts() -> None:
-    css = _css_bundle()
-
-    assert ".sr-only" in css
-    assert "clip-path: inset(50%)" in css
-    assert "position: absolute" in css
-    assert "button:focus-visible" in css
-    assert "--focus-ring:" in css
-    assert "outline: var(--focus-width) solid var(--color-focus)" in css
-    assert "box-shadow: var(--focus-shadow)" in css
-    assert ".status-badge.cancelled" in css
-    assert ".small-badge.running" in css
-    assert ".small-badge.cancelling" in css
-    assert ".small-badge.waiting-for-operator" in css
-    assert ".run-progress-notice" in css
-    assert ".run-progress-meta" in css
-    assert ".activity-detail" in css
-    assert ".log-actions" in css
-    assert ".truncation-notice" in css
-    assert ".stage-document-workbench" in css
-    assert ".workbench-main" in css
-    assert ".workbench-side-row" in css
-    assert ".interview-loop-screen" in css
-    assert ".validation-repair-center" in css
-    assert ".repair-action-band" in css
-    assert ".request-change-screen" in css
-    assert ".request-change-grid" in css
-    assert ".latest-request-summary" in css
-    assert ".form-readiness-note" in css
-    assert ".intervention-diff-preview" in css
-    assert ".approval-console-screen" in css
-    assert ".approval-summary-grid" in css
-    assert ".approval-meta-grid" in css
-    assert ".approval-audit-wrap" in css
-    assert ".log-console-screen" in css
-    assert ".log-source-strip" in css
-    assert ".bounded-log-notice" in css
-    assert ".audit-log-panel" in css
-    assert ".evidence-graph-screen" in css
-    assert ".evidence-artifact-browser" in css
-    assert ".evidence-graph-canvas" in css
-    assert ".evidence-node.selected" in css
-    assert ".evidence-edge.selected" in css
-    assert ".artifact-inspector" in css
-    assert ".artifact-action-row" in css
-    assert ".evidence-artifact-table" in css
-    assert ".saved-answer" in css
-    assert ".saved-answer-text" in css
-    assert ".previous-run-context" in css
-    assert ".flow-complete-state" in css
-    assert ".terminal-attention-spotlight" in css
-    assert ".terminal-evidence-spotlight" in css
-    assert ".terminal-missing-evidence" in css
-    assert ".next-flow-action-card" in css
-    assert ".next-flow-wizard" in css
-    assert ".source-selection-summary" in css
-    assert ".source-finding-card" in css
-    assert ".source-finding-supporting" in css
-    assert ".bottom-dock.collapsed" in css
-    assert ".bottom-dock-toggle-row" in css
-    assert "@media (prefers-reduced-motion: reduce)" in css
-    assert "overflow-wrap: normal" in css
-    assert ".archive-confirmation" in css
-    assert ".follow-up-definition-grid" in css
-    assert ".inherited-context-toggle" in css
-    assert ".launch-confirmation-grid" in css
-    assert ".preflight-check" in css
-    assert ".loading-state" in css
-    assert "scroll-padding-inline: 10px" in css
 
 
 def test_operator_css_custom_properties_are_resolved() -> None:
