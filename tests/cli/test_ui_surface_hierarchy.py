@@ -13,7 +13,8 @@ def test_document_canvas_is_primary_and_evidence_inspector_is_conditional() -> N
     artifacts = _asset("/operator-artifacts-documents.js")
 
     assert "function renderWorkbenchEvidenceInspector(workbench)" in artifacts
-    assert 'if (!visible) return "";' in artifacts
+    assert "resolveStudioEvidenceVisibility({inspectorItemCount})" in artifacts
+    assert 'if (!visibility.inspector) return "";' in artifacts
     assert "hierarchy-primary document-canvas" in artifacts
     assert "hierarchy-supporting evidence-inspector" in artifacts
     assert 'data-evidence-inspector="${evidenceInspector ? "present" : "absent"}"' in artifacts
