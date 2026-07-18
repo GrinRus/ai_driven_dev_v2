@@ -7,11 +7,11 @@ slice, and local task.
 
 ## Next
 
-- `W36-E5-S9-T7` — Render append-only terminal archive disposition.
+- `W36-E5-S9-T8` — Render compact mobile terminal decision.
 
 ## Soon
 
-- `W36-E5-S9-T8` — Render compact mobile terminal decision.
+- `W36-E7-S1-T8` — Add terminal follow-up, clone, eval, archive browser journey.
 
 ## Parking lot
 
@@ -32,6 +32,12 @@ slice, and local task.
   queue-restoration policy in `docs/backlog/roadmap.md` (`W8-E3-S1`).
 
 ## Current reconciliation
+
+- `2026-07-18` `W36-E5-S9-T7` is complete: Studio archive confirmation and durable
+  readback use the existing append-only archive endpoint. The presentation names the operation
+  as visibility metadata, keeps the completed source run immutable, and returns canonical
+  dashboard state without hiding retained evidence. Mobile terminal presentation `T8` is
+  promoted to `Next`, followed by terminal journey `W36-E7-S1-T8`.
 
 - `2026-07-18` `W36-E5-S9-T6` is complete: Studio's manual eval handoff names
   the exact source work item/run, installed AIDD version, operator-selected scenario source, and

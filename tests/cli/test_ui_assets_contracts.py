@@ -653,6 +653,23 @@ def test_studio_flow_complete_uses_only_core_recommendation() -> None:
         "function cloneDraftFromPayload", 1
     )[0]
     assert "postJson(" not in eval_action
+    _assert_contains_all(
+        actions,
+        (
+            "async function archiveCompletedRun()",
+            'postJson("/api/next-flow/archive"',
+            "state.dashboard = payload.dashboard",
+        ),
+    )
+    _assert_contains_all(
+        view,
+        (
+            "function renderArchiveConfirmation()",
+            "archive metadata only",
+            "The terminal run stays immutable",
+            "Confirm Archive Run",
+        ),
+    )
 
 
 def test_operator_state_and_dashboard_assets_keep_runtime_and_tab_contracts() -> None:

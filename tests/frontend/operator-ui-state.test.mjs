@@ -1077,6 +1077,17 @@ test("next-flow view renders terminal and readiness states without network mutat
   assert.match(evalHtml, /operator-selected local manifest/);
   assert.match(evalHtml, /aidd eval execute &lt;scenario-path&gt; --root .aidd/);
   assert.doesNotMatch(evalHtml, /data-repair/);
+  vm.runInContext(`
+    state.nextFlowWizard.action = "archive-run";
+    state.nextFlowWizard.step = "archive-confirm";
+    state.nextFlowWizard.archiveRunId = "run-ui";
+    state.nextFlowWizard.archiveReason = "Retain completed evidence outside the active inbox.";
+  `, context);
+  const archiveHtml = vm.runInContext("renderStudioNextFlowWizard()", context);
+  assert.match(archiveHtml, /data-studio-next-flow-action="archive-run"/);
+  assert.match(archiveHtml, /Retain completed evidence outside the active inbox/);
+  assert.match(archiveHtml, /source[- ]run.*stays immutable/i);
+  assert.match(archiveHtml, /archive metadata only/i);
   assert.match(element("nextActionPanel").innerHTML, /Review handoff/);
   assert.equal(fetchCount, 0);
 });

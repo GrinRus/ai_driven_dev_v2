@@ -11258,13 +11258,13 @@ Local tasks:
   - Scope: terminal eval handoff renderer only; no new mutation endpoint.
   - Verification: the action opens exact source/version/scenario context and operator commands,
     sends no workflow mutation request, and leaves source-run evidence unchanged.
-- `W36-E5-S9-T7` (next) Render Archive Run as an append-only visibility disposition under Other next
+- `W36-E5-S9-T7` (done) Render Archive Run as an append-only visibility disposition under Other next
   actions.
   - Dependencies: `W36-E5-S9-T6` as the direct queue predecessor.
   - Scope: terminal archive disposition renderer only.
   - Verification: archive writes only the owned overlay and completed documents, artifacts,
     logs, comparison, and lineage remain inspectable.
-- `W36-E5-S9-T8` (soon) Render the recommended next decision and Other next actions as a compact mobile
+- `W36-E5-S9-T8` (next) Render the recommended next decision and Other next actions as a compact mobile
   drill-down over the shared responsive shell.
   - Dependencies: `W36-E5-S2`, with `W36-E5-S9-T7` as the direct queue predecessor.
   - Scope: Flow Complete responsive presentation only.
@@ -11549,9 +11549,10 @@ Local tasks:
   - Verification: Preview/Source/Diff, safe artifact selection, validator provenance,
     missing evidence, zero-value hiding, and raw-log drill-down pass without arbitrary
     path reads.
-- `W36-E7-S1-T8` (planned) Add the Flow Complete, follow-up, clone, eval, and archive disposition
+- `W36-E7-S1-T8` (soon) Add the Flow Complete, follow-up, clone, eval, and archive disposition
   browser journey.
-  - Dependencies: `W36-E5-S0`, `W36-E5-S9-T3..T8`.
+  - Dependencies: `W36-E5-S0`, `W36-E5-S9-T3..T8`, with `W36-E5-S9-T8` as the direct
+    queue predecessor.
   - Scope: terminal and next-outcome browser scenario family.
   - Verification: clean versus failed/blocked/warning fresh QA, stale/nonterminal exclusion,
     one core-recommended action, drafts/preflight, independent identities, truthful manual eval
