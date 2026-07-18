@@ -1727,14 +1727,16 @@ def _terminal_recommended_outcome(
     if handoff_status == "completed" and final_qa_status == "ready":
         return (
             "create-new-work-item",
-            "Terminal QA is fresh and clean; start independent work without changing the completed run.",
+            "Terminal QA is fresh and clean; start independent work without changing "
+            "the completed run.",
         )
     if final_qa_status == "evidence-incomplete":
         return None, None
     if handoff_status in {"failed", "blocked", "completed-with-warning"}:
         return (
             "start-follow-up-flow",
-            "Terminal QA has blockers, failure, or accepted risk; preserve lineage in a follow-up flow.",
+            "Terminal QA has blockers, failure, or accepted risk; preserve lineage in a "
+            "follow-up flow.",
         )
     return None, None
 

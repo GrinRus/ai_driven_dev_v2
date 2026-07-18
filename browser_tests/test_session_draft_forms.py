@@ -64,7 +64,7 @@ def test_question_draft_survives_reload_and_clears_after_readback(tmp_path: Path
             if getattr(request, "method", None) == "POST" and str(
                 getattr(request, "url", "")
             ).endswith("/api/answers"):
-                answer_posts.append(str(getattr(request, "url")))
+                answer_posts.append(str(request.url))
 
         page.on("request", record_answer_post)
         page.evaluate("Promise.all([saveAnswer('Q1'), saveAnswer('Q1')])")

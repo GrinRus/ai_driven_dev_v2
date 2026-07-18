@@ -49,7 +49,8 @@ def test_back_forward_and_reload_restore_studio_detail(tmp_path: Path) -> None:
 
         page.reload(wait_until="networkidle")
         restored = page.evaluate(
-            "({stage: state.activeStage, run: state.activeRunId, artifact: state.activeArtifactKey})"
+            "({stage: state.activeStage, run: state.activeRunId, "
+            "artifact: state.activeArtifactKey})"
         )
         assert restored == {
             "stage": "implement",

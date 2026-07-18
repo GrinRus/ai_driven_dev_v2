@@ -478,7 +478,10 @@ def test_operator_script_modules_own_static_ui_surfaces() -> None:
     assert "async function fetchDashboard()" in dashboard_actions
     assert "async function fetchProjectHome(workItem = \"\")" in dashboard_actions
     assert "async function startWorkflow()" in dashboard_actions
-    assert "async function guardedJobLaunch({kind, components, controls, execute})" in dashboard_actions
+    assert (
+        "async function guardedJobLaunch({kind, components, controls, execute})"
+        in dashboard_actions
+    )
     assert "readWinner: readRunMutationWinner" in dashboard_actions
     assert 'kind: "remediation-rerun"' in dashboard_actions
     assert 'kind: "remediation-launch"' in control_center
@@ -867,7 +870,8 @@ def test_operator_stage_retry_affordance_links_to_recovery_history() -> None:
         main,
         (
             'closest("[data-stage-recovery]")',
-            'activateTab(stageRecovery.dataset.stageRecovery || "recovery", {historyMode: "push"});',
+            'activateTab(stageRecovery.dataset.stageRecovery || "recovery", '
+            '{historyMode: "push"});',
         ),
     )
 
@@ -888,7 +892,8 @@ def test_operator_cockpit_asset_keeps_overview_sidebar_and_activity_contracts() 
             "content.innerHTML = renderValidation();",
             "Run-global blocker",
             "renderRecoverySummary({",
-            'evidence: {label: runtimeFailure ? "Runtime log" : "Supporting evidence", path: evidencePath}',
+            'evidence: {label: runtimeFailure ? "Runtime log" : '
+            '"Supporting evidence", path: evidencePath}',
             'item.action === "inspect-runtime-log"',
             "Open Recovery Summary",
             "function bottomDockDefaultCollapsed()",
@@ -1197,7 +1202,8 @@ def test_operator_questions_asset_keeps_answer_resolution_and_saved_answer_contr
             'const savedAnswer = question.answer_resolution',
             "const draft = questionDraft(question.question_id)?.value || null;",
             'const answerText = draft?.text ?? question.answer_text ?? "";',
-            'const resolutionValue = draft?.resolution || question.answer_resolution || "resolved";',
+            'const resolutionValue = draft?.resolution || question.answer_resolution || '
+            '"resolved";',
             'class="saved-answer"',
             "Saved ${escapeHtml(question.answer_resolution)} answer",
             "Answer recorded in answers.md",
