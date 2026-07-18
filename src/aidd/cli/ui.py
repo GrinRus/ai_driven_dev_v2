@@ -46,6 +46,10 @@ from aidd.cli.ui_http import (
 )
 from aidd.cli.ui_routing import OperatorUiRouter, UiJobDecisionConflict, handler_for
 from aidd.config import AiddConfig, load_config
+from aidd.core.allowed_write_scope import (
+    AllowedWriteScopeError,
+    resolve_allowed_write_scope,
+)
 from aidd.core.implementation_eligibility import implementation_finalization_blocker
 from aidd.core.implementation_service import (
     AggregateFinalizer,
@@ -76,11 +80,14 @@ from aidd.core.onboarding import (
     OnboardingWorkItemSummary,
 )
 from aidd.core.operator_frontend import (
+    OperatorInboxRoute,
+    OperatorInboxView,
     persist_operator_answer,
     resolve_operator_artifact_document_content,
     resolve_operator_artifacts_view,
     resolve_operator_dashboard_view,
     resolve_operator_evidence_graph_view,
+    resolve_operator_inbox_view,
     resolve_operator_project_home_view,
     resolve_operator_questions_view,
     resolve_operator_run_log_view,
@@ -129,6 +136,7 @@ from aidd.core.runtime_readiness import (
     RuntimeCapabilityProbeReport,
     RuntimeCommandSource,
     RuntimeReadinessProbeReport,
+    RuntimeReadinessView,
     resolve_runtime_readiness,
 )
 from aidd.core.stage_paths import workspace_relative_path
@@ -187,6 +195,14 @@ class UiProjectContext:
     project_root: Path
 
 
+@dataclass(frozen=True, slots=True)
+class UiProtectedWriteScope:
+    status: str
+    prefixes: tuple[str, ...]
+    source_path: str | None
+    message: str
+
+
 @dataclass(slots=True)
 class _UiStoredChunk:
     sequence: int
@@ -208,6 +224,8 @@ class _UiRunJob:
     created_at_utc: str
     updated_at_utc: str
     ordinal: int
+    work_item: str | None = None
+    run_id: str | None = None
     exit_code: int | None = None
     message: str = ""
     result: object | None = None
@@ -224,6 +242,81 @@ class _UiRunJob:
     dropped_chunk_bytes: int = 0
     next_chunk_cursor: int = 0
     next_chunk_sequence: int = 1
+
+
+@dataclass(frozen=True, slots=True)
+class UiJobSummary:
+    job_id: str
+    kind: str
+    status: str
+    work_item: str | None
+    run_id: str | None
+    stage: str | None
+    created_at_utc: str
+    updated_at_utc: str
+    ordinal: int
+    message: str
+    last_output_at_utc: str | None
+    last_output_text: str | None
+
+
+@dataclass(frozen=True, slots=True)
+class UiRunningNowItem:
+    job_id: str
+    kind: str
+    status: str
+    identity_status: str
+    route: OperatorInboxRoute | None
+    created_at_utc: str
+    updated_at_utc: str
+    message: str
+    last_output_at_utc: str | None
+    last_output_text: str | None
+
+
+@dataclass(frozen=True, slots=True)
+class UiInboxComposition:
+    durable: OperatorInboxView
+    running_now: tuple[UiRunningNowItem, ...]
+
+
+def compose_operator_inbox_with_jobs(
+    inbox: OperatorInboxView,
+    jobs: tuple[UiJobSummary, ...],
+    *,
+    max_running_jobs: int = 32,
+) -> UiInboxComposition:
+    if max_running_jobs <= 0:
+        raise ValueError("Running-now job limit must be greater than zero.")
+    running: list[UiRunningNowItem] = []
+    for job in sorted(jobs, key=lambda item: item.ordinal):
+        if job.status in _TERMINAL_JOB_STATUSES:
+            continue
+        route = (
+            OperatorInboxRoute(
+                intent="inbox-work-item",
+                work_item=job.work_item,
+                run_id=job.run_id,
+                stage=job.stage or STAGES[0],
+            )
+            if job.work_item is not None and job.run_id is not None
+            else None
+        )
+        running.append(
+            UiRunningNowItem(
+                job_id=job.job_id,
+                kind=job.kind,
+                status=job.status,
+                identity_status="correlated" if route is not None else "unavailable",
+                route=route,
+                created_at_utc=job.created_at_utc,
+                updated_at_utc=job.updated_at_utc,
+                message=job.message,
+                last_output_at_utc=job.last_output_at_utc,
+                last_output_text=job.last_output_text,
+            )
+        )
+    return UiInboxComposition(durable=inbox, running_now=tuple(running[-max_running_jobs:]))
 
 
 class UiRunJobStore:
@@ -253,7 +346,14 @@ class UiRunJobStore:
         self._now = now or (lambda: datetime.now(UTC))
         self._next_job_ordinal = 1
 
-    def create(self, *, kind: str, stage: str | None) -> str:
+    def create(
+        self,
+        *,
+        kind: str,
+        stage: str | None,
+        work_item: str | None = None,
+        run_id: str | None = None,
+    ) -> str:
         job_id = f"job-{uuid4().hex}"
         with self._lock:
             now = self._now_utc()
@@ -267,6 +367,8 @@ class UiRunJobStore:
                 created_at_utc=timestamp,
                 updated_at_utc=timestamp,
                 ordinal=self._next_job_ordinal,
+                work_item=work_item,
+                run_id=run_id,
             )
             self._next_job_ordinal += 1
         return job_id
@@ -360,6 +462,31 @@ class UiRunJobStore:
         with self._lock:
             job = self._require_job(job_id)
             job.attempt_path = attempt_path.as_posix()
+            job.updated_at_utc = self._timestamp()
+
+    def correlate(
+        self,
+        job_id: str,
+        *,
+        work_item: str | None = None,
+        run_id: str | None = None,
+        stage: str | None = None,
+    ) -> None:
+        with self._lock:
+            job = self._require_job(job_id)
+            for name, current, proposed in (
+                ("work_item", job.work_item, work_item),
+                ("run_id", job.run_id, run_id),
+                ("stage", job.stage, stage),
+            ):
+                if current is not None and proposed is not None and current != proposed:
+                    raise ValueError(
+                        f"UI job '{job_id}' {name} identity cannot change from "
+                        f"'{current}' to '{proposed}'."
+                    )
+            job.work_item = job.work_item or work_item
+            job.run_id = job.run_id or run_id
+            job.stage = job.stage or stage
             job.updated_at_utc = self._timestamp()
 
     def cancel(self, job_id: str) -> dict[str, object]:
@@ -491,6 +618,11 @@ class UiRunJobStore:
                     return self._view_locked(job)
         return None
 
+    def summaries(self) -> tuple[UiJobSummary, ...]:
+        with self._lock:
+            self._evict_terminal_locked(self._now_utc())
+            return tuple(self._summary_locked(job) for job in self._jobs.values())
+
     def _require_job(self, job_id: str) -> _UiRunJob:
         try:
             return self._jobs[job_id]
@@ -566,6 +698,8 @@ class UiRunJobStore:
         return {
             "job_id": job.job_id,
             "kind": job.kind,
+            "work_item": job.work_item,
+            "run_id": job.run_id,
             "stage": job.stage,
             "status": job.status,
             "exit_code": job.exit_code,
@@ -593,6 +727,23 @@ class UiRunJobStore:
             "cancelled_at_utc": job.cancelled_at_utc,
             "cancel_state": cancel_state,
         }
+
+    @staticmethod
+    def _summary_locked(job: _UiRunJob) -> UiJobSummary:
+        return UiJobSummary(
+            job_id=job.job_id,
+            kind=job.kind,
+            status=job.status,
+            work_item=job.work_item,
+            run_id=job.run_id,
+            stage=job.stage,
+            created_at_utc=job.created_at_utc,
+            updated_at_utc=job.updated_at_utc,
+            ordinal=job.ordinal,
+            message=job.message,
+            last_output_at_utc=job.last_output_at_utc,
+            last_output_text=job.last_output_text,
+        )
 
     def _timestamp(self) -> str:
         return _format_utc_timestamp(self._now_utc())
@@ -1928,6 +2079,26 @@ class OperatorUiService:
             ),
         }
 
+    def _inbox(self, params: dict[str, list[str]]) -> object:
+        unexpected = tuple(sorted(key for key, values in params.items() if values))
+        if unexpected:
+            raise ValueError(
+                "Inbox does not accept project or path selectors: "
+                + ", ".join(unexpected)
+                + "."
+            )
+        durable = resolve_operator_inbox_view(
+            project_root=self.project_root,
+            workspace_root=self.workspace_root,
+        )
+        return {
+            "app_version": __version__,
+            "inbox": compose_operator_inbox_with_jobs(
+                durable,
+                self._jobs.summaries(),
+            ),
+        }
+
     def _task_view(self, params: dict[str, list[str]]) -> object:
         run_id = _first_param(params, "run_id")
         task_id = _first_param(params, "task_id")
@@ -1992,7 +2163,9 @@ class OperatorUiService:
             }
 
         try:
-            return self._start_job(kind="task", stage="implement", target=_target)
+            return self._start_job(
+                kind="task", stage="implement", target=_target, run_id=run_id
+            )
         except Exception:
             release_run_mutation_lease(lease)
             raise
@@ -2036,7 +2209,9 @@ class OperatorUiService:
             }
 
         try:
-            return self._start_job(kind="task-finalize", stage="implement", target=_target)
+            return self._start_job(
+                kind="task-finalize", stage="implement", target=_target, run_id=run_id
+            )
         except Exception:
             release_run_mutation_lease(lease)
             raise
@@ -2459,7 +2634,12 @@ class OperatorUiService:
 
         job = cast(
             dict[str, object],
-            self._start_job(kind="remediation", stage="implement", target=_target),
+            self._start_job(
+                kind="remediation",
+                stage="implement",
+                target=_target,
+                run_id=request.run_id,
+            ),
         )
         job["request"] = request
         job["run_id"] = request.run_id
@@ -2530,7 +2710,9 @@ class OperatorUiService:
 
         job = cast(
             dict[str, object],
-            self._start_job(kind="remediation-rerun", stage=None, target=_target),
+            self._start_job(
+                kind="remediation-rerun", stage=None, target=_target, run_id=run_id
+            ),
         )
         job["run_id"] = run_id
         job["runtime"] = runtime
@@ -2591,7 +2773,12 @@ class OperatorUiService:
 
         job = cast(
             dict[str, object],
-            self._start_job(kind="remediation-rerun-stage", stage=stage, target=_target),
+            self._start_job(
+                kind="remediation-rerun-stage",
+                stage=stage,
+                target=_target,
+                run_id=run_id,
+            ),
         )
         job["run_id"] = run_id
         job["runtime"] = runtime
@@ -2606,6 +2793,7 @@ class OperatorUiService:
             "/api/project-home": lambda params: _json_response(
                 self._project_home(params)
             ),
+            "/api/inbox": lambda params: _json_response(self._inbox(params)),
             "/api/work-item/resume": lambda params: _json_response(
                 self._work_item_resume_context(params)
             ),
@@ -3098,7 +3286,7 @@ class OperatorUiService:
                 job_id=job_id,
             )
 
-        return self._start_job(kind="stage", stage=stage, target=_target)
+        return self._start_job(kind="stage", stage=stage, target=_target, run_id=run_id)
 
     def _target_documents_from_payload(self, payload: dict[str, Any]) -> tuple[str, ...]:
         raw_targets = payload.get("target_documents", ())
@@ -3137,7 +3325,9 @@ class OperatorUiService:
                 job_id=job_id,
             )
 
-        return self._start_job(kind="intervention", stage=stage, target=_target)
+        return self._start_job(
+            kind="intervention", stage=stage, target=_target, run_id=run_id
+        )
 
     def _run_stage(
         self,
@@ -3292,7 +3482,9 @@ class OperatorUiService:
                 return self._run_workflow(prepared_payload, job_id=job_id)
 
         try:
-            return self._start_job(kind="workflow", stage=None, target=_target)
+            return self._start_job(
+                kind="workflow", stage=None, target=_target, run_id=run_id
+            )
         except Exception:
             release_run_mutation_lease(lease)
             raise
@@ -3518,7 +3710,12 @@ class OperatorUiService:
 
         job = cast(
             dict[str, object],
-            self._start_job(kind="next-flow-launch", stage=None, target=_target),
+            self._start_job(
+                kind="next-flow-launch",
+                stage=None,
+                target=_target,
+                work_item=new_work_item,
+            ),
         )
         job["work_item"] = new_work_item
         job["source_work_item"] = source_work_item
@@ -3572,8 +3769,15 @@ class OperatorUiService:
         kind: str,
         stage: str | None,
         target: Callable[[str], object],
+        work_item: str | None = None,
+        run_id: str | None = None,
     ) -> object:
-        job_id = self._jobs.create(kind=kind, stage=stage)
+        job_id = self._jobs.create(
+            kind=kind,
+            stage=stage,
+            work_item=work_item or self.work_item,
+            run_id=run_id,
+        )
 
         def _run() -> None:
             self._jobs.append_chunk(
@@ -3583,6 +3787,18 @@ class OperatorUiService:
             )
             try:
                 result = target(job_id)
+                if isinstance(result, Mapping):
+                    result_work_item = result.get("work_item")
+                    result_run_id = result.get("run_id")
+                    result_stage = result.get("stage")
+                    self._jobs.correlate(
+                        job_id,
+                        work_item=(
+                            result_work_item if isinstance(result_work_item, str) else None
+                        ),
+                        run_id=result_run_id if isinstance(result_run_id, str) else None,
+                        stage=result_stage if isinstance(result_stage, str) else None,
+                    )
                 exit_code = _exit_code_from_result(result)
                 if isinstance(result, Mapping) and bool(result.get("waiting_for_operator")):
                     self._jobs.wait_for_operator(
@@ -3607,7 +3823,13 @@ class OperatorUiService:
                 self._jobs.fail(job_id, message=str(exc), exit_code=1)
 
         threading.Thread(target=_run, name=f"aidd-ui-{kind}-{job_id}", daemon=True).start()
-        return {"job_id": job_id, "stage": stage, "kind": kind}
+        return {
+            "job_id": job_id,
+            "work_item": work_item or self.work_item,
+            "run_id": run_id,
+            "stage": stage,
+            "kind": kind,
+        }
 
     def _run_workflow(
         self,
@@ -3698,7 +3920,7 @@ class OperatorUiService:
             ),
         )
 
-    def _runtime_readiness_for_config(self, config_path: Path) -> object:
+    def _runtime_readiness_for_config(self, config_path: Path) -> RuntimeReadinessView:
         cfg = load_config(config_path)
         launch_history = None
         if self._context is not None:
@@ -3714,7 +3936,37 @@ class OperatorUiService:
         )
 
     def _runtime_readiness(self) -> object:
-        return self._runtime_readiness_for_config(self.config_path)
+        readiness = self._runtime_readiness_for_config(self.config_path)
+        try:
+            scope = resolve_allowed_write_scope(self.workspace_root, self.work_item)
+        except AllowedWriteScopeError as exc:
+            protected_scope = UiProtectedWriteScope(
+                status="invalid",
+                prefixes=(),
+                source_path=(
+                    f"workitems/{self.work_item}/context/allowed-write-scope.md"
+                ),
+                message=str(exc),
+            )
+        else:
+            protected_scope = UiProtectedWriteScope(
+                status="not-authored" if scope is None else "bounded",
+                prefixes=() if scope is None else scope.prefixes,
+                source_path=(
+                    None
+                    if scope is None
+                    else workspace_relative_path(self.workspace_root, scope.source_path)
+                ),
+                message=(
+                    "No allowed-write-scope document is authored for this work item."
+                    if scope is None
+                    else "Writes are bounded to the canonical repository-relative prefixes."
+                ),
+            )
+        return {
+            "runtimes": readiness.runtimes,
+            "protected_write_scope": protected_scope,
+        }
 
     def _ensure_local_only_action(self) -> None:
         if not _is_loopback_host(self.options.host):
@@ -3828,7 +4080,12 @@ def ui_command(
 
 __all__ = [
     "OperatorUiService",
+    "UiInboxComposition",
+    "UiJobSummary",
+    "UiRunJobStore",
+    "UiRunningNowItem",
     "UiServerOptions",
+    "compose_operator_inbox_with_jobs",
     "run_ui_server",
     "ui_command",
 ]

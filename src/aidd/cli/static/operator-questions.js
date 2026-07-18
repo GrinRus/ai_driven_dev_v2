@@ -207,7 +207,7 @@ function renderQuestionCards({showResume}) {
           ? "Select resolved to resume"
           : displayStatus === "resolved" ? "Update & resume" : "Answer & resume";
         return `
-          <article class="question-card">
+          <article class="question-card" data-question-id="${escapeHtml(question.question_id)}" data-question-status="${escapeHtml(displayStatus)}" data-answer-resolution="${escapeHtml(resolutionValue)}">
             <div class="question-head">
               <strong>${escapeHtml(question.question_id)}</strong>
               <span class="small-badge ${questionStatusClass(question)}">${escapeHtml(displayStatus)}</span>
@@ -218,6 +218,7 @@ function renderQuestionCards({showResume}) {
             </div>
             <p id="${questionTextId}">${escapeHtml(question.text)}</p>
             ${savedAnswer}
+            ${draft ? `<p class="muted question-draft-status" data-question-draft-restored="${escapeHtml(question.question_id)}">Restored unsent session draft.</p>` : ""}
             <label class="sr-only" for="${answerId}">Answer for ${escapeHtml(questionLabel)}</label>
             <textarea id="${answerId}" name="${answerId}" aria-describedby="${questionTextId}" data-question-text="${escapeHtml(question.question_id)}">${escapeHtml(answerText)}</textarea>
             <div class="question-actions">
@@ -228,7 +229,7 @@ function renderQuestionCards({showResume}) {
                 <option value="deferred" ${resolutionValue === "deferred" ? "selected" : ""}>deferred</option>
               </select>
               <button data-save-answer="${escapeHtml(question.question_id)}" type="button">${displayStatus === "resolved" ? "Update answer" : "Save answer"}</button>
-              ${showResume ? `<button data-answer-resume="${escapeHtml(question.question_id)}" data-requires-resolved-resume="${resumeNeedsResolved ? "true" : "false"}" data-resume-ready-label="${displayStatus === "resolved" ? "Update & resume" : "Answer & resume"}" type="button" ${resumeDisabled ? 'disabled title="Blocking questions must be saved as resolved before resume."' : ""}>${escapeHtml(resumeLabel)}</button>` : ""}
+              ${showResume ? `<button data-primary-action data-answer-resume="${escapeHtml(question.question_id)}" data-requires-resolved-resume="${resumeNeedsResolved ? "true" : "false"}" data-resume-ready-label="${displayStatus === "resolved" ? "Update & resume" : "Answer & resume"}" type="button" ${resumeDisabled ? 'disabled title="Blocking questions must be saved as resolved before resume."' : ""}>${escapeHtml(resumeLabel)}</button>` : ""}
             </div>
           </article>
         `;
@@ -249,7 +250,7 @@ function renderQuestionCards({showResume}) {
 function renderQuestions() {
   const view = activeStageView()?.questions;
   return `
-    <div class="interview-loop-screen">
+    <div class="interview-loop-screen" data-human-decision-surface="question">
       <section class="surface">
         <div class="surface-title">
           <span>Questions / Interview Loop</span>
@@ -337,6 +338,7 @@ async function answerAndResume(questionId) {
     toast("Answer saved; remaining blocking questions must be resolved before resume.");
     return;
   }
+  await fetchReadiness();
   await startStage(state.activeStage);
 }
 
@@ -348,5 +350,6 @@ async function resumeAfterAnswers() {
     toast("Resolve blocking questions before resume.");
     return;
   }
+  await fetchReadiness();
   await startStage(state.activeStage);
 }

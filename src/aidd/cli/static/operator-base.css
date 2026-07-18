@@ -75,26 +75,31 @@ button.quick-link,
   border-color: var(--line-strong);
   color: var(--text);
 }
-button.secondary:hover,
-button.quick-link:hover,
-.tabs button:hover,
-.log-filter button:hover,
-.viewer-modes button:hover {
+button.secondary:not(:disabled):not([aria-disabled="true"]):hover,
+button.quick-link:not(:disabled):not([aria-disabled="true"]):hover,
+.tabs button:not(:disabled):not([aria-disabled="true"]):hover,
+.log-filter button:not(:disabled):not([aria-disabled="true"]):hover,
+.viewer-modes button:not(:disabled):not([aria-disabled="true"]):hover {
   background: var(--color-bg-selected);
   border-color: var(--teal);
-  color: var(--teal-dark);
+  color: var(--color-text-primary);
 }
 button.danger {
   background: var(--color-state-danger-bg-subtle);
   border-color: var(--color-state-danger-border-muted);
   color: var(--color-state-danger-text);
 }
+button.danger:not(:disabled):not([aria-disabled="true"]):hover {
+  background: var(--color-state-danger-bg-strong);
+  border-color: var(--color-state-danger-border-strong);
+  color: var(--color-state-danger-text);
+}
 button.link-button {
   background: transparent;
   border: 0;
   color: var(--teal-dark);
-  min-height: 0;
-  padding: 0;
+  min-height: var(--control-height);
+  padding: 0 var(--space-2);
 }
 input:not([type="checkbox"]):not([type="radio"]),
 select,

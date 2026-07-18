@@ -4,7 +4,7 @@ const SURFACE_PARITY_MANIFEST = Object.freeze([
   {
     id: "guided-setup",
     owner: "W36-E4-S1",
-    rollout: "legacy_only",
+    rollout: "parity_closed",
     rollbackRenderer: "operator-onboarding",
     fixture: "setup",
     journey: "W36-E7-S1-T1",
@@ -13,7 +13,7 @@ const SURFACE_PARITY_MANIFEST = Object.freeze([
   {
     id: "active-studio",
     owner: "W36-E5-S4",
-    rollout: "legacy_only",
+    rollout: "parity_closed",
     rollbackRenderer: "operator-stage-cockpit",
     fixture: "running",
     journey: "W36-E7-S1-T2",
@@ -22,7 +22,7 @@ const SURFACE_PARITY_MANIFEST = Object.freeze([
   {
     id: "runtime-validation-recovery",
     owner: "W36-E5-S6",
-    rollout: "legacy_only",
+    rollout: "candidate",
     rollbackRenderer: "operator-stage-cockpit",
     fixture: "runtime-failure",
     journey: "W36-E7-S1-T3",
@@ -49,7 +49,7 @@ const SURFACE_PARITY_MANIFEST = Object.freeze([
   {
     id: "question-recovery",
     owner: "W36-E5-S5",
-    rollout: "legacy_only",
+    rollout: "parity_closed",
     rollbackRenderer: "operator-questions",
     fixture: "blocking-question",
     journey: "W36-E7-S1-T6",
@@ -58,7 +58,7 @@ const SURFACE_PARITY_MANIFEST = Object.freeze([
   {
     id: "document-evidence",
     owner: "W36-E5-S4",
-    rollout: "legacy_only",
+    rollout: "parity_closed",
     rollbackRenderer: "operator-artifacts-documents",
     fixture: "qa-decision",
     journey: "W36-E7-S1-T7",
@@ -85,7 +85,7 @@ const SURFACE_PARITY_MANIFEST = Object.freeze([
   {
     id: "intervention-recovery",
     owner: "W36-E5-S5",
-    rollout: "legacy_only",
+    rollout: "parity_closed",
     rollbackRenderer: "operator-approvals-interventions",
     fixture: "remediation-stale",
     journey: "W36-E7-S1-T10",
@@ -94,7 +94,7 @@ const SURFACE_PARITY_MANIFEST = Object.freeze([
   {
     id: "approval-recovery",
     owner: "W36-E5-S5",
-    rollout: "legacy_only",
+    rollout: "parity_closed",
     rollbackRenderer: "operator-approvals-interventions",
     fixture: "pending-approval",
     journey: "W36-E7-S1-T11",
@@ -103,7 +103,7 @@ const SURFACE_PARITY_MANIFEST = Object.freeze([
   {
     id: "inbox",
     owner: "W36-E5-S3",
-    rollout: "legacy_only",
+    rollout: "parity_closed",
     rollbackRenderer: "operator-control-center",
     fixture: "no-run",
     journey: "W36-E7-S1-T12",

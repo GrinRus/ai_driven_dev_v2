@@ -19,7 +19,12 @@ function resolveOperatorRouteIntent(intent, context = {}) {
   if (!definition) throw new Error(`Unknown operator route intent: ${intent || "empty"}`);
   const workItem = routeIntentIdentifier(context.workItem, "work item");
   const needsRun = ["historical-run", "parent-run", "run-artifacts"].includes(intent);
-  const runId = needsRun ? routeIntentIdentifier(context.runId, "run id") : "";
+  const acceptsRun = needsRun || intent === "inbox-work-item";
+  const runId = acceptsRun && context.runId
+    ? routeIntentIdentifier(context.runId, "run id")
+    : needsRun
+      ? routeIntentIdentifier(context.runId, "run id")
+      : "";
   const stage = OPERATOR_ROUTE_STAGES.has(context.stage) ? context.stage : "";
   const artifact = intent === "run-artifacts" && context.artifact
     ? routeIntentIdentifier(context.artifact, "artifact key")

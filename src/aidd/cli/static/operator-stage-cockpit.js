@@ -1,11 +1,17 @@
 const RUNTIME_FAILURE_KINDS = new Set([
   "cancelled",
+  "cancellation",
+  "authentication_failure",
+  "authentication-failure",
   "failed",
   "non_zero_exit",
   "non-zero-exit",
   "provider_error",
   "provider-no-progress",
   "runtime-error",
+  "runtime_failure",
+  "launch_failure",
+  "launch-failure",
   "runtime-exit-metadata-invalid",
   "runtime-failure",
   "stage-failed",
@@ -28,7 +34,7 @@ function runtimeFailureEvidencePath(firstFailure, diagnostics) {
   return firstFailure?.path || runtimeLogEvidencePath(diagnostics) || "";
 }
 
-function renderOverview() {
+function renderLegacyOverview() {
   if (!state.dashboard?.run?.run_id) {
     return renderFirstLaunchState();
   }
@@ -84,6 +90,14 @@ function renderOverview() {
       </section>
     </div>
   `;
+}
+
+function renderOverviewSurface() {
+  const {renderer} = selectSurfaceRenderer("active-studio", {
+    legacy: renderLegacyOverview,
+    studio: renderActiveStudio
+  });
+  return renderer();
 }
 
 function renderRunAccountabilityCard() {
@@ -264,17 +278,20 @@ function recoveryPrimaryActionSpec(diagnostics) {
         enabled: true
       }
       : null);
-  const guidedAction = runtimeAction || recoveryActions.find((item) => item.enabled !== false) || null;
+  const retryAction = recoveryActions.find((item) =>
+    item.action === "resume-stage" && item.enabled !== false
+  ) || null;
+  const guidedAction = retryAction || runtimeAction || recoveryActions.find((item) => item.enabled !== false) || null;
   const action = guidedAction || state.dashboard?.next_action || {};
   const validation = diagnostics?.validation;
   const status = repairCenterStatus(validation, diagnostics?.stopped);
   const stage = action.stage || state.activeStage;
-  if (isRuntimeFirstFailure(firstFailure) && runtimeAction) {
+  if (isRuntimeFirstFailure(firstFailure) && retryAction) {
     return {
-      action: "inspect-runtime-log",
-      label: runtimeAction.label || "Open logs",
-      detail: runtimeAction.detail || "Inspect the saved runtime log, runtime-exit metadata, and readiness/config context before retrying.",
-      attrs: `data-recovery-action="inspect-runtime-log" data-recovery-stage="${escapeHtml(runtimeAction.stage || stage)}"`
+      action: "resume-stage",
+      label: retryAction.label || "Retry stage",
+      detail: `${retryAction.detail || "Retry the stopped stage after inspecting the saved runtime evidence."} Runtime failure does not consume validation repair budget.`,
+      attrs: `data-recovery-action="resume-stage" data-recovery-stage="${escapeHtml(retryAction.stage || stage)}"`
     };
   }
   if (status === "repair-available") {
@@ -413,7 +430,7 @@ function renderRecoveryWorkbench() {
         ? "validation"
         : "intervention";
   return `
-    <section class="recovery-workbench">
+    <section class="recovery-workbench" data-runtime-failure-kind="${escapeHtml(runtimeFailure ? firstFailure.kind : "")}" data-runtime-stopped="${runtimeFailure ? "true" : "false"}" data-runtime-last-signal="${escapeHtml(runtimeFailure ? evidencePath : "")}" data-validation-repair-budget-consumed="false">
       ${renderRecoverySummary({
         kind: recoveryKind,
         status: "blocked",
@@ -531,7 +548,7 @@ async function renderCockpitContent() {
   const content = document.getElementById("cockpitContent");
   if (state.activeTab === "work") {
     if (state.workDetail === "project-home") {
-      content.innerHTML = renderProjectHome();
+      content.innerHTML = renderInboxSurface();
       return;
     }
     if (state.workDetail === "implement-review") {
@@ -546,7 +563,10 @@ async function renderCockpitContent() {
       await renderQaVerdict();
       return;
     }
-    content.innerHTML = renderOverview();
+    content.innerHTML = renderOverviewSurface();
+    if (document.getElementById("studioDocumentCanvas")) {
+      await loadArtifactDocument(state.activeArtifactKey);
+    }
     void loadRunAccountabilityCard();
     revealNextFlowWizardOnMobile();
     return;
@@ -627,7 +647,7 @@ function renderProjectHomeWorkItemCard(item) {
   `;
 }
 
-function renderProjectHome() {
+function renderLegacyProjectHome() {
   const home = state.projectHome;
   if (!home) return `<div class="empty-state loading-state">Loading Project Home...</div>`;
   const items = projectHomeWorkItems();
@@ -686,6 +706,14 @@ function renderProjectHome() {
       </div>
     </section>
   `;
+}
+
+function renderInboxSurface() {
+  const {renderer} = selectSurfaceRenderer("inbox", {
+    legacy: renderLegacyProjectHome,
+    studio: renderStudioInbox
+  });
+  return renderer();
 }
 
 function renderBlockersPanel() {
@@ -755,7 +783,6 @@ function renderRuntimeRootPanel() {
 
 function renderSafetyPanel() {
   const runtime = selectedRuntimeView();
-  const readinessClass = runtime && runtime.provider_available && runtime.execution_command_available ? "good" : runtime || state.readinessError ? "warn" : "";
   const badge = runtime
     ? runtime.runtime_id
     : state.readinessLoading
@@ -780,17 +807,14 @@ function renderSafetyPanel() {
       readinessDetail("Interaction mode", runtime.interaction_mode),
       readinessDetail("Auto approval", runtime.auto_approval_preset),
       readinessDetail("Timeouts", timeoutSummary(runtime), 96),
-      readinessDetail("Provider", runtime.provider_available ? "available" : "unavailable"),
-      readinessDetail("Provider version", runtime.provider_version),
-      readinessDetail("Provider command", runtime.provider_command, 86),
-      readinessDetail("Execution command", runtime.execution_command_available ? "available" : "unavailable")
+      renderRuntimeReadinessDimensions(runtime),
+      renderProtectedWriteScope()
     ].join("");
   }
   document.getElementById("safetyPanel").innerHTML = `
     <details class="secondary-drilldown" ${activeModeIsEvidenceLog() ? "open" : ""}>
-      <summary><span>Safety / Readiness</span><span class="small-badge ${readinessClass}">${escapeHtml(badge)}</span></summary>
+      <summary><span>Safety / Readiness</span><span class="small-badge">${escapeHtml(badge)}</span></summary>
       <div class="panel-list">
-        <div class="panel-item"><strong>No upstream write</strong><span>UI actions stay inside local AIDD workspace and normal runner boundaries.</span></div>
         ${details}
       </div>
     </details>
@@ -995,6 +1019,7 @@ async function renderAll() {
   renderProjectHomeRail();
   renderStageRail();
   renderStageHeader();
+  applyActiveStudioShellPresentation();
   renderGlobalNextActionStrip();
   updateContextualTabs();
   renderSidebar();

@@ -27,11 +27,19 @@ function currentDecisionTarget() {
 function syncCurrentDecisionTarget() {
   document.querySelectorAll('[data-current-decision-target="true"]').forEach((node) => {
     node.removeAttribute("data-current-decision-target");
-    if (node.id === "currentDecision") node.removeAttribute("id");
+    if (node.id === "currentDecision") {
+      const stableId = node.dataset.currentDecisionStableId || "";
+      if (stableId) node.id = stableId;
+      else node.removeAttribute("id");
+    }
+    delete node.dataset.currentDecisionStableId;
     if (node.getAttribute("tabindex") === "-1") node.removeAttribute("tabindex");
   });
   const target = currentDecisionTarget();
   if (target) {
+    if (target.id && target.id !== "currentDecision") {
+      target.dataset.currentDecisionStableId = target.id;
+    }
     target.id = "currentDecision";
     target.setAttribute("data-current-decision-target", "true");
     target.setAttribute("tabindex", "-1");

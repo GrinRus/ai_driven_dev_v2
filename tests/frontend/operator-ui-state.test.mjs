@@ -50,6 +50,7 @@ function domContext() {
       throw new Error("fetch double was not configured");
     },
     fetchDashboard: async () => {},
+    fetchInbox: async () => {},
     fetchProjectHome: async () => {},
     history: {replaceState() {}},
     location: {pathname: "/", search: ""},
@@ -128,6 +129,8 @@ test("operator bootstrap loads modules in declared order", async () => {
     "/operator-shell-rendering.js",
     "/operator-dashboard-actions.js",
     "/operator-primitives.js",
+    "/operator-inbox.js",
+    "/operator-active-studio.js",
     "/operator-focus.js",
     "/operator-onboarding.js",
     "/operator-artifacts-documents.js",
@@ -197,7 +200,21 @@ test("surface parity manifest has one owner and journey per migration surface", 
     "W36-E7-S1-T8",
     "W36-E7-S1-T9",
   ]);
-  assert.ok(entries.every((entry) => entry.rollout === "legacy_only"));
+  const candidates = new Set(["runtime-validation-recovery"]);
+  assert.ok(entries.filter((entry) => candidates.has(entry.id)).every(
+    (entry) => entry.rollout === "candidate",
+  ));
+  const parityClosed = new Set([
+    "guided-setup", "active-studio", "document-evidence", "inbox", "question-recovery",
+    "intervention-recovery",
+    "approval-recovery",
+  ]);
+  assert.ok(entries.filter((entry) => parityClosed.has(entry.id)).every(
+    (entry) => entry.rollout === "parity_closed",
+  ));
+  assert.ok(entries.filter(
+    (entry) => !candidates.has(entry.id) && !parityClosed.has(entry.id),
+  ).every((entry) => entry.rollout === "legacy_only"));
   assert.ok(entries.every((entry) => entry.owner.startsWith("W36-")));
   assert.ok(entries.every((entry) => entry.rollbackRenderer.startsWith("operator-")));
   assert.ok(entries.every((entry) => entry.fixture));
@@ -222,14 +239,30 @@ test("presentation selector is browser-only and fails back to legacy", async () 
     await load(context, "operator-surface-parity.js");
     await load(context, "operator-presentation.js");
     assert.equal(window.aiddPresentation.requested, item.requested);
-    assert.equal(window.aiddPresentation.effective, "legacy");
+    const studioRequested = item.requested === "studio";
+    assert.equal(window.aiddPresentation.effective, studioRequested ? "mixed" : "legacy");
     assert.equal(window.aiddPresentation.fallback, item.fallback);
     assert.equal(Object.keys(window.aiddPresentation.surfaces).length, 12);
-    assert.ok(Object.values(window.aiddPresentation.surfaces).every(
-      (resolution) => resolution.presentation === "legacy",
-    ));
+    for (const surface of [
+      "guided-setup", "active-studio", "document-evidence", "question-recovery",
+      "intervention-recovery", "approval-recovery", "runtime-validation-recovery", "inbox",
+    ]) {
+      assert.equal(
+        window.aiddPresentation.surfaces[surface].presentation,
+        studioRequested ? "studio" : "legacy",
+      );
+    }
+    assert.ok(Object.entries(window.aiddPresentation.surfaces)
+      .filter(([surface]) => ![
+        "guided-setup", "active-studio", "document-evidence", "question-recovery",
+        "intervention-recovery", "approval-recovery", "runtime-validation-recovery", "inbox",
+      ].includes(surface))
+      .every(([, resolution]) => resolution.presentation === "legacy"));
     assert.equal(documentElement.dataset.presentationRequested, item.requested);
-    assert.equal(documentElement.dataset.presentationEffective, "legacy");
+    assert.equal(
+      documentElement.dataset.presentationEffective,
+      studioRequested ? "mixed" : "legacy",
+    );
   }
 });
 
@@ -265,6 +298,31 @@ test("surface resolver implements selector and rollout truth table", async () =>
     assert.equal(item.renderer, studio ? "studio:fixture" : "operator-legacy");
     assert.equal(item.fallback, item.selector === "studio" && !studio);
   }
+});
+
+test("question Recovery renders exact durable ids and resolution states", async () => {
+  const {context} = domContext();
+  context.readOperatorDraft = () => null;
+  await load(context, "operator-api-state.js");
+  await load(context, "operator-questions.js");
+  vm.runInContext(`state.dashboard = {
+    project_root: "/project",
+    work_item: "WI-UI",
+    active_stage_view: {questions: {
+      unresolved_blocking_question_ids: ["Q-PARTIAL", "Q-DEFERRED"],
+      questions: [
+        {question_id: "Q-RESOLVED", text: "Resolved?", policy: "blocking", status: "resolved", answer_resolution: "resolved", answer_text: "Yes"},
+        {question_id: "Q-PARTIAL", text: "Partial?", policy: "blocking", status: "pending-blocking", answer_resolution: "partial", answer_text: "Some"},
+        {question_id: "Q-DEFERRED", text: "Deferred?", policy: "blocking", status: "pending-blocking", answer_resolution: "deferred", answer_text: "Later"}
+      ]
+    }}
+  }`, context);
+  const html = vm.runInContext("renderQuestionCards({showResume: true})", context);
+  assert.match(html, /data-question-id="Q-RESOLVED" data-question-status="resolved" data-answer-resolution="resolved"/);
+  assert.match(html, /data-question-id="Q-PARTIAL" data-question-status="partial" data-answer-resolution="partial"/);
+  assert.match(html, /data-question-id="Q-DEFERRED" data-question-status="deferred" data-answer-resolution="deferred"/);
+  assert.equal((html.match(/data-primary-action/g) || []).length, 3);
+  assert.match(html, /Select resolved to resume/);
 });
 
 test("late dashboard response cannot overwrite a newer request", async () => {
@@ -495,10 +553,13 @@ test("live connection surface names reconnecting, recovered, offline, and expire
   for (const [connection, marker, copy] of cases) {
     context.connectionFixture = connection;
     const html = vm.runInContext(
-      "state.activeJobConnection = connectionFixture; renderActiveJobConnectionSurface()",
+      "state.activeJobCursor = 17; state.activeJobConnection = connectionFixture; renderActiveJobConnectionSurface()",
       context,
     );
     assert.match(html, new RegExp(`data-connection-state="${marker}"`));
+    assert.match(html, /data-connection-cursor="17"/);
+    assert.match(html, /data-runtime-terminal-observed="false"/);
+    assert.match(html, /data-durable-log="runtime.log"/);
     assert.match(html, new RegExp(copy));
   }
 });

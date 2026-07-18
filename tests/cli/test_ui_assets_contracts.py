@@ -12,6 +12,10 @@ from aidd.cli.ui_assets import (
     operator_static_asset_manifest,
 )
 
+_MOBILE_PRIORITY_SELECTOR = (
+    '.operator-shell[data-mobile-priority-layout="context-decision-document-drilldown"]'
+)
+
 
 class _StartTagCollector(HTMLParser):
     def __init__(self) -> None:
@@ -320,13 +324,10 @@ def test_operator_css_layers_own_static_ui_surfaces() -> None:
     assert ".launch-confirmation-grid" in responsive
     assert ".interview-loop-screen" in responsive
     assert ".validation-repair-center" in responsive
-    assert "body.recovery-mode .cockpit" in responsive
-    assert "body.evidence-log-mode .operator-shell" in responsive
-    assert "body.evidence-log-mode .cockpit" in responsive
-    assert "body.evidence-log-mode .stage-rail" in responsive
-    assert "body.live-job-mode .operator-shell" in responsive
-    assert "body.live-job-mode .cockpit" in responsive
-    assert "body.live-job-mode .stage-rail" in responsive
+    assert 'data-mobile-priority-layout="context-decision-document-drilldown"' in _INDEX_HTML
+    assert _MOBILE_PRIORITY_SELECTOR in responsive
+    assert 'body.live-job-mode .operator-shell {' not in responsive
+    assert 'body.recovery-mode .operator-shell {' not in responsive
     assert ".recovery-hero," in responsive
     assert ".workbench-toc-list" in responsive
     assert "scroll-padding-inline: 10px" in responsive
@@ -350,7 +351,7 @@ def test_operator_responsive_css_keeps_mobile_topbar_status_readable() -> None:
     assert ".brand-meta {" in responsive
     assert ".brand-meta code {" in responsive
     assert ".top-status {" in responsive
-    assert "grid-template-columns: repeat(2, minmax(0, 1fr));" in responsive
+    assert "flex-wrap: nowrap;" in responsive
     assert ".top-actions {" in responsive
     assert ".runtime-picker {" in responsive
     assert ".runtime-picker select {" in responsive
@@ -361,7 +362,8 @@ def test_operator_responsive_css_keeps_mobile_topbar_status_readable() -> None:
     assert "white-space: normal;" in responsive
     assert "text-overflow: clip;" in responsive
     assert "overflow-wrap: anywhere;" in responsive
-    assert "grid-column: 1 / -1;" in responsive
+    assert ".right-sidebar .maintenance-overflow {" in responsive
+    assert "position: fixed;" in responsive
     assert ".path-line {" in responsive
 
 
@@ -381,9 +383,7 @@ def test_operator_responsive_css_keeps_mobile_stage_rail_inside_viewport() -> No
     assert ".global-next-action-strip .next-button {" in responsive
     assert "function postStageNextActionIsPrimary(" in api_state
     assert "post-stage-next-action-mode" in api_state
-    assert "body.post-stage-next-action-mode .operator-shell" in responsive
-    assert "body.post-stage-next-action-mode .cockpit" in responsive
-    assert "body.post-stage-next-action-mode .stage-rail" in responsive
+    assert _MOBILE_PRIORITY_SELECTOR in responsive
     assert 'document.body.classList.contains("post-stage-next-action-mode")' in shell
 
 
@@ -617,6 +617,11 @@ def test_operator_state_and_dashboard_assets_keep_runtime_and_tab_contracts() ->
             "function compactPath(value, maxLength = 56)",
             "function pathLine(value, maxLength = 56)",
             "function renderValidationFindingSummary(finding, {compact = false} = {})",
+            "data-finding-code",
+            "data-finding-category",
+            "data-finding-path",
+            "data-finding-line",
+            'data-finding-provenance="validator-report"',
             "function primaryValidationFinding()",
             "const occurrenceCount = Number(finding.occurrence_count || 1);",
             "validation-finding-hint",
@@ -787,7 +792,8 @@ def test_operator_shell_asset_keeps_runtime_readiness_navigation_and_markdown_co
             "function scrollActiveStageIntoView()",
             'window.matchMedia("(max-width: 760px)").matches',
             'rail.querySelector(`[data-stage="${CSS.escape(state.activeStage)}"]`)',
-            'active?.scrollIntoView({behavior: "auto", block: "nearest", inline: "center"});',
+            "rail.scrollWidth <= rail.clientWidth",
+            'rail.scrollTo({behavior: "auto", left: Math.max(0, left)});',
             "requestAnimationFrame(scrollActiveStageIntoView);",
             'aria-current="${isActive ? "step" : "false"}"',
             'class="stage-copy"',
@@ -910,8 +916,8 @@ def test_operator_cockpit_asset_keeps_overview_sidebar_and_activity_contracts() 
             "Permission policy",
             "Interaction mode",
             "Auto approval",
-            "Provider version",
-            "Provider command",
+            "renderRuntimeReadinessDimensions(runtime)",
+            "renderProtectedWriteScope()",
             "function liveJobActivityEvents()",
             "function activityEvents()",
             "function summarizeActivityDetails(details)",
@@ -1029,12 +1035,11 @@ def test_operator_global_next_action_surfaces_live_job_progress() -> None:
             ".live-progress-actions {",
             ".live-progress-actions button {",
             ".live-progress-meta,",
-            "body.live-job-mode .operator-shell {",
-            "body.external-running-stage-mode .operator-shell {",
-            "body.live-job-mode .cockpit {",
-            "body.external-running-stage-mode .cockpit {",
-            "body.live-job-mode .stage-rail {",
-            "body.external-running-stage-mode .stage-rail {",
+            f"{_MOBILE_PRIORITY_SELECTOR} {{",
+            f"{_MOBILE_PRIORITY_SELECTOR} .cockpit {{",
+            f"{_MOBILE_PRIORITY_SELECTOR} .stage-rail {{",
+            f"{_MOBILE_PRIORITY_SELECTOR} .right-sidebar {{",
+            f"{_MOBILE_PRIORITY_SELECTOR} .bottom-dock {{",
         ),
     )
 
@@ -1197,6 +1202,7 @@ def test_operator_questions_asset_keeps_answer_resolution_and_saved_answer_contr
             "function renderInterviewSummary(view)",
             "function renderBlockedStageContext(view)",
             "Questions / Interview Loop",
+            'data-human-decision-surface="question"',
             "Required answers",
             "Blocked stage",
             'const savedAnswer = question.answer_resolution',
@@ -1205,6 +1211,11 @@ def test_operator_questions_asset_keeps_answer_resolution_and_saved_answer_contr
             'const resolutionValue = draft?.resolution || question.answer_resolution || '
             '"resolved";',
             'class="saved-answer"',
+            'data-question-id="${escapeHtml(question.question_id)}"',
+            'data-question-status="${escapeHtml(displayStatus)}"',
+            'data-answer-resolution="${escapeHtml(resolutionValue)}"',
+            'data-question-draft-restored="${escapeHtml(question.question_id)}"',
+            "Restored unsent session draft.",
             "Saved ${escapeHtml(question.answer_resolution)} answer",
             "Answer recorded in answers.md",
             "${escapeHtml(answerText)}</textarea>",
@@ -1220,6 +1231,7 @@ def test_operator_questions_asset_keeps_answer_resolution_and_saved_answer_contr
             'option value="partial"',
             'option value="deferred"',
             "async function answerAndResume(questionId)",
+            "await fetchReadiness();",
             "async function resumeAfterAnswers()",
         ),
     )
@@ -1280,7 +1292,7 @@ def test_operator_recovery_assets_keep_repair_center_contracts() -> None:
     )
 
 
-def test_operator_recovery_assets_prioritize_runtime_log_recovery() -> None:
+def test_operator_recovery_assets_prioritize_eligible_runtime_retry() -> None:
     cockpit = _asset_text("/operator-stage-cockpit.js")
 
     _assert_contains_all(
@@ -1289,6 +1301,8 @@ def test_operator_recovery_assets_prioritize_runtime_log_recovery() -> None:
             "const RUNTIME_FAILURE_KINDS = new Set([",
             "runtime-exit-metadata-invalid",
             "provider-no-progress",
+            "launch_failure",
+            "authentication_failure",
             "function isRuntimeFirstFailure(firstFailure)",
             "function runtimeLogEvidencePath(diagnostics)",
             "function runtimeFailureEvidencePath(firstFailure, diagnostics)",
@@ -1299,13 +1313,18 @@ def test_operator_recovery_assets_prioritize_runtime_log_recovery() -> None:
             'action.action === "resume-stage"',
             'data-recovery-action="resume-stage"',
             "Retry stage",
-            'action: "inspect-runtime-log"',
-            "isRuntimeFirstFailure(firstFailure) && runtimeAction",
-            'label: runtimeAction.label || "Open logs"',
+            "isRuntimeFirstFailure(firstFailure) && retryAction",
+            'action: "resume-stage"',
+            'label: retryAction.label || "Retry stage"',
+            "Runtime failure does not consume validation repair budget.",
+            "data-runtime-failure-kind",
+            "data-runtime-stopped",
+            "data-runtime-last-signal",
+            "data-validation-repair-budget-consumed",
             "Runtime log",
         ),
     )
-    assert cockpit.index("isRuntimeFirstFailure(firstFailure) && runtimeAction") < cockpit.index(
+    assert cockpit.index("isRuntimeFirstFailure(firstFailure) && retryAction") < cockpit.index(
         'if (status === "repair-available")'
     )
 
@@ -1487,9 +1506,9 @@ def test_operator_review_and_qa_decision_summaries_prioritize_next_actions() -> 
     assert ".decision-summary," in responsive
     assert ".decision-summary-metrics," in responsive
     assert ".mode-decision-peek {" in responsive
-    assert "body.decision-detail-mode .operator-shell" in responsive
-    assert "body.decision-detail-mode .cockpit" in responsive
-    assert "body.decision-detail-mode .stage-rail" in responsive
+    assert _MOBILE_PRIORITY_SELECTOR in responsive
+    assert f"{_MOBILE_PRIORITY_SELECTOR} .cockpit" in responsive
+    assert f"{_MOBILE_PRIORITY_SELECTOR} .stage-rail" in responsive
 
 
 def test_operator_stale_downstream_summary_prioritizes_rerun_guidance() -> None:
@@ -1530,8 +1549,8 @@ def test_operator_stale_downstream_summary_prioritizes_rerun_guidance() -> None:
             "grid-template-columns: repeat(4, minmax(0, 1fr));",
         ),
     )
-    assert "body.stale-downstream-mode .operator-shell" in responsive
-    assert "body.stale-downstream-mode .cockpit" in responsive
+    assert _MOBILE_PRIORITY_SELECTOR in responsive
+    assert f"{_MOBILE_PRIORITY_SELECTOR} .cockpit" in responsive
     assert ".stale-downstream-summary," in responsive
     assert ".stale-downstream-facts," in responsive
 
@@ -1571,6 +1590,14 @@ def test_operator_approvals_asset_keeps_request_and_intervention_contracts() -> 
             "data-approval-decision-spotlight",
             "data-approval-reason",
             "data-approval-session-confirmation",
+            "data-approval-request-id",
+            "data-approval-status",
+            "data-approval-risk",
+            "data-approval-scope",
+            "data-approval-breadth",
+            "data-approval-winner",
+            "data-approval-durable-winner",
+            "This request only unless session approval is explicitly confirmed",
             "Confirm session-wide approval",
             "all matching requests in the current runtime approval session",
             "function setApprovalRequestPending(requestId, pending)",
@@ -1593,6 +1620,14 @@ def test_operator_approvals_asset_keeps_request_and_intervention_contracts() -> 
             "Saved approval ledger",
             'id="operatorRequestText"',
             'id="submitInterventionButton"',
+            "data-intervention-eligible",
+            'data-human-decision-surface="intervention"',
+            'data-human-decision-surface="approval"',
+            "data-intervention-stage",
+            "data-intervention-run",
+            "Request Change requires remediation routing",
+            "context.eligible === false",
+            "this stage-scoped path will not create an operator request",
             'id="interventionDiffPreview"',
             "data-intervention-target",
             '"validator_report"',
@@ -1625,6 +1660,13 @@ def test_operator_approvals_asset_keeps_request_and_intervention_contracts() -> 
     )
     assert ".approval-decision-spotlight," in responsive
     assert ".approval-decision-facts," in responsive
+    assert "[data-human-decision-surface] button," in responsive
+    assert '[data-human-decision-surface="question"] [data-primary-action]' in responsive
+    assert '[data-human-decision-surface="intervention"] #submitInterventionButton' in responsive
+    assert (
+        '[data-human-decision-surface="approval"] [data-operator-action="allow_once"]'
+        in responsive
+    )
 
 
 def test_operator_logs_asset_keeps_filter_raw_cancel_and_polling_contracts() -> None:
@@ -1675,6 +1717,9 @@ def test_operator_logs_asset_keeps_filter_raw_cancel_and_polling_contracts() -> 
             'data-connection-state="offline"',
             'data-connection-state="expired-job"',
             'data-connection-state="recovered"',
+            "data-connection-cursor",
+            'data-runtime-terminal-observed="false"',
+            'data-durable-log="runtime.log"',
             'recovery: {action: "reconnect-live-job", label: "Reconnect"}',
             "ACTIVE_JOB_RETRY_LIMIT = 5",
             'state: expired || failureCount >= ACTIVE_JOB_RETRY_LIMIT ? "offline" : "reconnecting"',
@@ -2207,13 +2252,13 @@ def test_operator_flow_complete_static_contract_covers_terminal_handoff_actions(
     assert ".repair-highlight-card," in responsive
     assert ".repair-highlight-evidence," in responsive
     assert ".next-action-evidence-actions," in responsive
-    assert "body.terminal-handoff-mode .operator-shell" in responsive
-    assert "body.terminal-handoff-mode .cockpit" in responsive
-    assert "body.terminal-handoff-mode .stage-rail" in responsive
+    assert _MOBILE_PRIORITY_SELECTOR in responsive
+    assert f"{_MOBILE_PRIORITY_SELECTOR} .cockpit" in responsive
+    assert f"{_MOBILE_PRIORITY_SELECTOR} .stage-rail" in responsive
     assert "body.terminal-handoff-mode .project-home-rail" in responsive
-    assert "body.terminal-repair-mode .operator-shell" in responsive
-    assert "body.terminal-repair-mode .cockpit" in responsive
-    assert "body.terminal-repair-mode .stage-rail" in responsive
+    assert _MOBILE_PRIORITY_SELECTOR in responsive
+    assert f"{_MOBILE_PRIORITY_SELECTOR} .cockpit" in responsive
+    assert f"{_MOBILE_PRIORITY_SELECTOR} .stage-rail" in responsive
     assert "body.terminal-repair-mode .project-home-rail" in responsive
     assert 'document.body.classList.contains("terminal-handoff-mode")' in shell
     assert 'document.body.classList.contains("terminal-repair-mode")' in shell
@@ -2418,6 +2463,53 @@ def test_operator_main_asset_keeps_refresh_order_and_event_routing_contracts() -
 def test_index_html_exposes_named_operator_landmarks() -> None:
     assert _attrs_for("header", **{"aria-label": "Operator controls"})
     assert _attrs_for("main", **{"aria-label": "Operator workspace"})
+
+
+def test_index_html_keeps_service_commands_in_labelled_maintenance_overflow() -> None:
+    html = _asset_text("/")
+
+    assert html.index('id="cockpitContent"') < html.index('class="maintenance-overflow"')
+    _assert_contains_all(
+        html,
+        (
+            '<summary data-aidd-focus-role="maintenance">Maintenance</summary>',
+            'role="group" aria-label="Service maintenance commands"',
+            'id="refreshButton"',
+            'id="openWorkspaceButton"',
+            'id="stopServerButton"',
+        ),
+    )
+    top_actions = html.split('<div class="top-actions">', 1)[1].split("</div>", 1)[0]
+    assert 'id="refreshButton"' not in top_actions
+    assert 'id="openWorkspaceButton"' not in top_actions
+    assert 'id="stopServerButton"' not in top_actions
+
+
+def test_desktop_studio_shell_owns_primary_vertical_scrolling() -> None:
+    html = _asset_text("/")
+    layout = _asset_text("/operator-layout.css")
+    components = _asset_text("/operator-components.css")
+    responsive = _asset_text("/operator-responsive.css")
+
+    assert (
+        'class="operator-shell" aria-label="Operator workspace" '
+        'data-aidd-scroll-owner="studio" data-mobile-priority-layout='
+    ) in html
+    shell_rule = layout.split(".operator-shell {", 1)[1].split("}", 1)[0]
+    assert "max-height: calc(100vh - 52px);" in shell_rule
+    assert "overflow-y: auto;" in shell_rule
+    stage_rule = layout.split("\n.stage-rail {", 1)[1].split("}", 1)[0]
+    cockpit_rule = layout.split("\n.cockpit {", 1)[1].split("}", 1)[0]
+    sidebar_rule = components.split("\n.right-sidebar {", 1)[1].split("}", 1)[0]
+    assert "overflow: visible;" in stage_rule
+    assert "overflow: visible;" in cockpit_rule
+    assert "overflow: visible;" in sidebar_rule
+    mobile_shell = responsive.split(
+        f"  {_MOBILE_PRIORITY_SELECTOR} {{",
+        1,
+    )[1].split("}", 1)[0]
+    assert "max-height: none;" in mobile_shell
+    assert "overflow: visible;" in mobile_shell
     assert _attrs_for("aside", **{"aria-label": "Workflow navigation"})
     assert _attrs_for("section", **{"aria-label": "Stage cockpit"})
     assert _attrs_for("aside", **{"aria-label": "Run details"})

@@ -23,13 +23,16 @@ from aidd.cli import ui as ui_module
 from aidd.cli.stage_run import StageInteractOptions, StageRunOptions
 from aidd.cli.ui import (
     OperatorUiService,
+    UiJobSummary,
     UiRunJobStore,
     UiServerOptions,
     _is_loopback_host,
+    compose_operator_inbox_with_jobs,
     ui_command,
 )
 from aidd.cli.ui_assets import operator_static_asset_for_route, operator_static_asset_manifest
 from aidd.cli.ui_http import UiRequestBodyTooLarge, _read_json_body
+from aidd.core.operator_inbox import resolve_operator_inbox_view
 from aidd.core.remediation import (
     create_remediation_request,
     mark_downstream_stale,
@@ -265,6 +268,125 @@ def test_ui_job_store_bounds_live_chunks_and_paginates_absolute_cursors() -> Non
 
     assert page_count > 1
     assert collected == "".join(chunks[-4:])
+
+
+def test_ui_job_summaries_preserve_identity_and_running_now_is_bounded(
+    tmp_path: Path,
+) -> None:
+    workspace_root = tmp_path / ".aidd"
+    seed_work_item_metadata(root=workspace_root, work_item="WI-UI")
+    inbox = resolve_operator_inbox_view(
+        project_root=tmp_path,
+        workspace_root=workspace_root,
+    )
+    store = UiRunJobStore(max_terminal_jobs=2)
+    first = store.create(
+        kind="stage",
+        stage="idea",
+        work_item="WI-UI",
+        run_id="run-one",
+    )
+    second = store.create(
+        kind="workflow",
+        stage=None,
+        work_item="WI-UI",
+        run_id="run-two",
+    )
+    legacy = store.create(kind="stage", stage="plan")
+    terminal = store.create(
+        kind="stage",
+        stage="qa",
+        work_item="WI-UI",
+        run_id="run-terminal",
+    )
+    store.complete(terminal, result={}, exit_code=0, message="completed")
+
+    summaries = store.summaries()
+    assert all(isinstance(summary, UiJobSummary) for summary in summaries)
+    composition = compose_operator_inbox_with_jobs(
+        inbox,
+        summaries,
+        max_running_jobs=2,
+    )
+
+    assert composition.durable is inbox
+    assert [item.job_id for item in composition.running_now] == [second, legacy]
+    assert composition.running_now[0].identity_status == "correlated"
+    assert composition.running_now[0].route is not None
+    assert composition.running_now[0].route.work_item == "WI-UI"
+    assert composition.running_now[0].route.run_id == "run-two"
+    assert composition.running_now[0].route.stage == "idea"
+    assert composition.running_now[1].identity_status == "unavailable"
+    assert composition.running_now[1].route is None
+    assert first not in {item.job_id for item in composition.running_now}
+    assert terminal not in {item.job_id for item in composition.running_now}
+
+
+def test_ui_job_identity_is_monotonic_and_visible_in_wire_view() -> None:
+    store = UiRunJobStore()
+    job_id = store.create(kind="stage", stage="plan", work_item="WI-UI")
+    store.correlate(job_id, run_id="run-ui")
+
+    view = store.view(job_id)
+    assert view["work_item"] == "WI-UI"
+    assert view["run_id"] == "run-ui"
+    assert view["stage"] == "plan"
+    with pytest.raises(ValueError, match="run_id identity cannot change"):
+        store.correlate(job_id, run_id="run-other")
+
+
+def test_ui_inbox_endpoint_composes_durable_and_running_state(tmp_path: Path) -> None:
+    workspace_root = tmp_path / ".aidd"
+    seed_work_item_metadata(root=workspace_root, work_item="WI-UI")
+    service = _service(workspace_root)
+
+    initial = _payload(service.handle_get("/api/inbox", {}))
+    inbox = initial["inbox"]
+    assert [section["key"] for section in inbox["durable"]["sections"]] == [  # type: ignore[index]
+        "needs-decision",
+        "ready-to-continue",
+        "flow-complete",
+    ]
+    assert inbox["running_now"] == []  # type: ignore[index]
+
+    job_id = service._jobs.create(  # noqa: SLF001 - bounded service fixture
+        kind="stage",
+        stage="idea",
+        work_item="WI-UI",
+        run_id="run-ui",
+    )
+    running = _payload(service.handle_get("/api/inbox", {}))["inbox"]
+    assert running["running_now"][0]["job_id"] == job_id  # type: ignore[index]
+    assert running["running_now"][0]["route"] == {  # type: ignore[index]
+        "intent": "inbox-work-item",
+        "work_item": "WI-UI",
+        "run_id": "run-ui",
+        "stage": "idea",
+    }
+
+    service._jobs.complete(  # noqa: SLF001 - bounded service fixture
+        job_id,
+        result={},
+        exit_code=0,
+        message="completed",
+    )
+    terminal = _payload(service.handle_get("/api/inbox", {}))["inbox"]
+    assert terminal["running_now"] == []  # type: ignore[index]
+
+
+def test_ui_inbox_endpoint_rejects_external_path_selectors(tmp_path: Path) -> None:
+    workspace_root = tmp_path / ".aidd"
+    seed_work_item_metadata(root=workspace_root, work_item="WI-UI")
+    service = _service(workspace_root)
+
+    response = service.handle_get(
+        "/api/inbox",
+        {"project_root": ["/tmp/other"], "workspace_root": ["../escape"]},
+    )
+
+    assert response.status == HTTPStatus.BAD_REQUEST
+    error = _error_payload(response)
+    assert error["error"].startswith("Inbox does not accept project or path selectors")
 
 
 def test_ui_job_store_truncates_oversized_unicode_chunk_by_tail() -> None:
@@ -3787,6 +3909,9 @@ def test_ui_runtime_readiness_endpoint_exposes_probe_and_config_data(
     tmp_path: Path,
 ) -> None:
     workspace_root = tmp_path / ".aidd"
+    scope_path = workspace_root / "workitems/WI-UI/context/allowed-write-scope.md"
+    scope_path.parent.mkdir(parents=True)
+    scope_path.write_text("# Allowed write scope\n\n- `src`\n- `tests`\n", encoding="utf-8")
     config_path = tmp_path / "aidd.toml"
     config_path.write_text(
         "\n".join(
@@ -3824,6 +3949,13 @@ def test_ui_runtime_readiness_endpoint_exposes_probe_and_config_data(
 
     payload = _payload(service.handle_get("/api/runtime-readiness", {}))
 
+    assert payload["protected_write_scope"] == {
+        "message": "Writes are bounded to the canonical repository-relative prefixes.",
+        "prefixes": ["src", "tests"],
+        "source_path": "workitems/WI-UI/context/allowed-write-scope.md",
+        "status": "bounded",
+    }
+
     runtimes = {
         str(runtime["runtime_id"]): runtime
         for runtime in payload["runtimes"]
@@ -3851,6 +3983,28 @@ def test_ui_runtime_readiness_endpoint_exposes_probe_and_config_data(
     assert generic_cli["default_timeout_seconds"] == 42
     assert generic_cli["stage_timeout_seconds"] == {"plan": 90}
     assert runtimes["codex"]["command_source"] == "default"
+
+
+def test_ui_runtime_readiness_reports_invalid_scope_without_claiming_no_scope(
+    tmp_path: Path,
+) -> None:
+    workspace_root = tmp_path / ".aidd"
+    scope_path = workspace_root / "workitems/WI-UI/context/allowed-write-scope.md"
+    scope_path.parent.mkdir(parents=True)
+    scope_path.write_text("# Allowed write scope\n\n- `../escape`\n", encoding="utf-8")
+    service = _service(
+        workspace_root,
+        readiness_probe_provider=lambda _cfg: {},
+    )
+
+    scope = _payload(service.handle_get("/api/runtime-readiness", {}))[
+        "protected_write_scope"
+    ]
+
+    assert scope["status"] == "invalid"
+    assert scope["prefixes"] == []
+    assert scope["source_path"] == "workitems/WI-UI/context/allowed-write-scope.md"
+    assert "Invalid allowed write scope" in scope["message"]
 
 
 def test_ui_runtime_readiness_is_not_workflow_source_of_truth(

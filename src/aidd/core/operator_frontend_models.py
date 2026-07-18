@@ -124,6 +124,7 @@ class OperatorRuntimeApprovalQueueDiagnostics:
 @dataclass(frozen=True, slots=True)
 class OperatorRequestChangeContext:
     status: str
+    eligible: bool
     latest_request_id: str | None
     latest_request_path: str | None
     latest_request_excerpt: str | None
@@ -227,6 +228,43 @@ class OperatorProjectHomeView:
     recent_project_roots: tuple[str, ...]
     selected_work_item: str | None
     selected_work_item_resume: OperatorWorkItemSummary | None
+
+
+@dataclass(frozen=True, slots=True)
+class OperatorInboxRoute:
+    intent: str
+    work_item: str
+    run_id: str | None
+    stage: str
+
+
+@dataclass(frozen=True, slots=True)
+class OperatorInboxItem:
+    item_id: str
+    state: str
+    status_label: str
+    title: str
+    summary: str
+    route: OperatorInboxRoute
+    primary_action: OperatorNextAction
+
+
+@dataclass(frozen=True, slots=True)
+class OperatorInboxSection:
+    key: str
+    label: str
+    items: tuple[OperatorInboxItem, ...]
+
+
+@dataclass(frozen=True, slots=True)
+class OperatorInboxView:
+    project_root: Path
+    workspace_root: Path
+    sections: tuple[OperatorInboxSection, ...]
+
+    @property
+    def item_count(self) -> int:
+        return sum(len(section.items) for section in self.sections)
 
 
 @dataclass(frozen=True, slots=True)
@@ -544,6 +582,10 @@ __all__ = [
     "OperatorNextAction",
     "OperatorNextFlowRecommendation",
     "OperatorFirstFailure",
+    "OperatorInboxItem",
+    "OperatorInboxRoute",
+    "OperatorInboxSection",
+    "OperatorInboxView",
     "OperatorPrimaryArtifact",
     "OperatorProjectHomeView",
     "OperatorProjectSetRootSummary",

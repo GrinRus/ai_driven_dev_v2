@@ -59,6 +59,35 @@ test("reload restores selected stage, run, artifact, and logs view", async () =>
   });
 });
 
+test("Inbox route restores the project-home surface", async () => {
+  const {context} = await navigationContext("?mode=inbox&ui=studio");
+  vm.runInContext("initializeStateFromLocation()", context);
+  assert.deepEqual(value(context, `({tab: state.activeTab, detail: state.workDetail})`), {
+    tab: "work",
+    detail: "project-home",
+  });
+});
+
+test("bare route preserves the context-aware Studio fallback", async () => {
+  const {context} = await navigationContext();
+  vm.runInContext("initializeStateFromLocation()", context);
+  assert.deepEqual(value(context, `({tab: state.activeTab, detail: state.workDetail})`), {
+    tab: "work",
+    detail: "overview",
+  });
+});
+
+test("project-home navigation writes a context-free Inbox route", async () => {
+  const {context, writes} = await navigationContext("?mode=studio");
+  vm.runInContext(`Object.assign(state, {
+    activeRunId: "run-1", activeStage: "qa", activeArtifactKey: "qa_report",
+    dashboard: {work_item: "WI-001"}
+  })`, context);
+  vm.runInContext("setOperatorMode('project-home'); syncLocationState({historyMode: 'push'})", context);
+  assert.equal(writes[0].kind, "push");
+  assert.equal(writes[0].value, "/?mode=inbox");
+});
+
 test("navigation writes explicit transitions and replaces derived state", async () => {
   const {context, writes} = await navigationContext("?mode=inbox");
   vm.runInContext(`applyOperatorRoute({
@@ -72,6 +101,19 @@ test("navigation writes explicit transitions and replaces derived state", async 
   assert.match(writes[0].value, /artifact=task-diff.json/);
   assert.equal(writes[1].kind, "replace");
   assert.match(writes[1].value, /stage=review/);
+});
+
+test("studio presentation selector survives canonical navigation and reload URLs", async () => {
+  const {context, writes} = await navigationContext("?ui=studio&mode=studio");
+  vm.runInContext("state.presentationSelector = 'studio'", context);
+  vm.runInContext(`applyOperatorRoute({
+    mode: "studio", view: "artifacts", workItem: "WI-001", runId: "run-1",
+    stage: "qa", attempt: null, taskAttempt: null, artifact: "qa_report"
+  })`, context);
+  vm.runInContext("syncLocationState({historyMode: 'push'})", context);
+  assert.equal(writes[0].kind, "push");
+  assert.match(writes[0].value, /ui=studio/);
+  assert.match(writes[0].value, /artifact=qa_report/);
 });
 
 test("main wiring restores browser history through the read-only route path", async () => {

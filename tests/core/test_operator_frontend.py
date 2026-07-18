@@ -700,6 +700,70 @@ def test_operator_dashboard_surfaces_provider_no_progress_as_runtime_recovery(
     assert any(action.action == "request-change" for action in dashboard.recovery_actions)
 
 
+@pytest.mark.parametrize(
+    ("outcome", "title", "detail_fragment"),
+    (
+        ("launch_failure", "Runtime launch failed", "execution-command readiness"),
+        ("authentication_failure", "Runtime authentication failed", "authentication evidence"),
+        ("timeout", "Runtime timeout", "configured timeout"),
+    ),
+)
+def test_operator_dashboard_types_runtime_failure_and_keeps_retry_separate_from_repair(
+    tmp_path: Path,
+    outcome: str,
+    title: str,
+    detail_fragment: str,
+) -> None:
+    workspace_root = tmp_path / ".aidd"
+    _prepare_run(workspace_root)
+    persist_stage_status(
+        workspace_root=workspace_root,
+        work_item="WI-UI",
+        run_id="run-ui",
+        stage="plan",
+        status="failed",
+    )
+    attempt_root = run_attempt_root(
+        workspace_root=workspace_root,
+        work_item="WI-UI",
+        run_id="run-ui",
+        stage="plan",
+        attempt_number=1,
+    )
+    attempt_root.joinpath(RUN_RUNTIME_EXIT_METADATA_FILENAME).write_text(
+        json.dumps(
+            {
+                "schema_version": 1,
+                "exit_code": None,
+                "exit_classification": outcome,
+                "adapter_outcome": outcome,
+                "completed_at_utc": "2026-07-18T00:00:00Z",
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    dashboard = resolve_operator_dashboard_view(
+        workspace_root=workspace_root,
+        work_item="WI-UI",
+        active_stage="plan",
+        run_id="run-ui",
+    )
+
+    assert dashboard.first_failure is not None
+    assert dashboard.first_failure.kind == outcome
+    assert dashboard.first_failure.title == title
+    assert detail_fragment in dashboard.first_failure.detail
+    assert any(
+        action.action == "resume-stage" and action.stage == "plan" and action.enabled
+        for action in dashboard.recovery_actions
+    )
+    assert not any(
+        action.action in {"run-repair", "inspect-validation"}
+        for action in dashboard.recovery_actions
+    )
+
+
 def test_operator_dashboard_surfaces_cancelled_runtime_exit_as_recovery_blocker(
     tmp_path: Path,
 ) -> None:
@@ -2008,6 +2072,7 @@ def test_operator_stage_view_diagnostics_exposes_request_change_context(
     )
 
     request_change = stage_view.diagnostics.request_change
+    assert request_change.eligible is True
     assert request_change.status == "has-request"
     assert request_change.latest_request_id == request.request_id
     assert request_change.latest_request_path == (
@@ -2015,6 +2080,33 @@ def test_operator_stage_view_diagnostics_exposes_request_change_context(
     )
     assert request_change.latest_request_excerpt == "Add rollback risk coverage to the plan."
     assert request_change.target_documents == ("workitems/WI-UI/stages/plan/plan.md",)
+
+
+def test_operator_stage_view_blocks_intervention_after_downstream_success(
+    tmp_path: Path,
+) -> None:
+    workspace_root = tmp_path / ".aidd"
+    _prepare_run(workspace_root)
+    persist_stage_status(
+        workspace_root=workspace_root,
+        work_item="WI-UI",
+        run_id="run-ui",
+        stage="review-spec",
+        status="succeeded",
+    )
+
+    stage_view = resolve_operator_stage_view(
+        workspace_root=workspace_root,
+        work_item="WI-UI",
+        stage="plan",
+        run_id="run-ui",
+    )
+
+    request_change = stage_view.diagnostics.request_change
+    assert request_change.eligible is False
+    assert request_change.status == "blocked-downstream-succeeded"
+    assert "downstream stages already succeeded" in request_change.reason
+    assert request_change.latest_request_id is None
 
 
 def test_operator_run_log_view_returns_bounded_text_with_metadata(tmp_path: Path) -> None:

@@ -12,6 +12,7 @@ async function refresh() {
     document.getElementById("openWorkspaceButton").disabled = false;
     await fetchDashboard();
     await fetchProjectHome(state.dashboard?.work_item || "");
+    await fetchInbox();
     await renderAll();
     void fetchReadiness().then(renderAll).catch((error) => {
       toast(error.message);
@@ -94,12 +95,15 @@ document.addEventListener("click", async (event) => {
     }
     const routeTarget = event.target.closest("[data-operator-route-intent]");
     if (routeTarget) {
-      await navigateOperatorRouteIntent(routeTarget.dataset.operatorRouteIntent, {
+      const intent = routeTarget.dataset.operatorRouteIntent;
+      const context = {
         workItem: routeTarget.dataset.routeWorkItem,
         runId: routeTarget.dataset.routeRunId,
         stage: routeTarget.dataset.routeStage,
         artifact: routeTarget.dataset.routeArtifact
-      });
+      };
+      if (intent === "inbox-work-item") await activateInboxWorkItemRoute(context);
+      else await navigateOperatorRouteIntent(intent, context);
       return;
     }
     if (event.target.closest("[data-guided-delivery-toggle]")) {
@@ -145,6 +149,7 @@ document.addEventListener("click", async (event) => {
       syncLocationState({historyMode: "push"});
       await fetchDashboard();
       await fetchProjectHome(state.dashboard?.work_item || "");
+      await fetchInbox();
       await renderAll();
       return;
     }
@@ -175,8 +180,21 @@ document.addEventListener("click", async (event) => {
     const tabShortcut = event.target.closest("[data-tab-shortcut]")?.dataset.tabShortcut;
     if (tabShortcut) {
       activateTab(tabShortcut, {historyMode: "push"});
+      if (tabShortcut === "project-home") await fetchInbox();
       renderProjectHomeRail();
       await renderCockpit();
+      if (tabShortcut === "project-home") {
+        const primaryInboxAction = document.querySelector(
+          '[data-inbox-section="needs-decision"] [data-inbox-action], [data-inbox-action]'
+        );
+        primaryInboxAction?.focus({preventScroll: true});
+        const revealInboxStart = () => {
+          document.querySelector(".operator-shell")?.scrollTo({top: 0, behavior: "auto"});
+          window.scrollTo({top: 0, behavior: "auto"});
+        };
+        revealInboxStart();
+        window.requestAnimationFrame(revealInboxStart);
+      }
       return;
     }
     const bottomDockToggle = event.target.closest("[data-bottom-dock-toggle]");
@@ -439,6 +457,7 @@ document.addEventListener("click", async (event) => {
       requestCockpitReveal();
       await fetchDashboard();
       await fetchProjectHome(state.dashboard?.work_item || "");
+      await fetchInbox();
       await renderAll();
       return;
     }

@@ -311,6 +311,7 @@ async function reconcileRecoveredActiveJob(jobId, status) {
     state.activeJobLogChunks = chunks;
   }
   await fetchProjectHome(state.dashboard?.work_item || "");
+  await fetchInbox();
 }
 
 async function reconcileExpiredActiveJob(jobId) {
@@ -319,6 +320,7 @@ async function reconcileExpiredActiveJob(jobId) {
     if (state.dashboardActiveJob?.job_id === jobId) return false;
     if (!state.dashboardActiveJob) clearReconciledActiveJob({preserveConnection: true});
     await fetchProjectHome(state.dashboard?.work_item || "");
+    await fetchInbox();
     await renderAll();
     return true;
   } catch (_error) {
@@ -332,6 +334,7 @@ async function reconcileTerminalActiveJob(jobId) {
     clearReconciledActiveJob({preserveConnection: false});
   }
   await fetchProjectHome(state.dashboard?.work_item || "");
+  await fetchInbox();
   await renderAll();
 }
 
@@ -341,7 +344,7 @@ function renderActiveJobConnectionSurface() {
     connection.state === "online" && !connection.recovered
   )) return "";
   if (connection.state === "online" && connection.recovered) {
-    return `<div data-connection-state="recovered">${renderStateSurface({
+    return `<div data-connection-state="recovered" data-connection-cursor="${escapeHtml(state.activeJobCursor)}" data-runtime-terminal-observed="false" data-durable-log="runtime.log">${renderStateSurface({
       kind: "live-connection",
       state: "empty",
       title: "Live connection recovered",
@@ -349,7 +352,7 @@ function renderActiveJobConnectionSurface() {
     })}</div>`;
   }
   if (connection.expired) {
-    return `<div data-connection-state="expired-job">${renderStateSurface({
+    return `<div data-connection-state="expired-job" data-connection-cursor="${escapeHtml(state.activeJobCursor)}" data-runtime-terminal-observed="false" data-durable-log="runtime.log">${renderStateSurface({
       kind: "live-connection",
       state: "unavailable",
       title: "Live job is no longer retained",
@@ -358,7 +361,7 @@ function renderActiveJobConnectionSurface() {
     })}</div>`;
   }
   if (connection.state === "offline") {
-    return `<div data-connection-state="offline">${renderStateSurface({
+    return `<div data-connection-state="offline" data-connection-cursor="${escapeHtml(state.activeJobCursor)}" data-runtime-terminal-observed="false" data-durable-log="runtime.log">${renderStateSurface({
       kind: "live-connection",
       state: "unavailable",
       title: "Live connection is offline",
@@ -366,7 +369,7 @@ function renderActiveJobConnectionSurface() {
       recovery: {action: "reconnect-live-job", label: "Reconnect"}
     })}</div>`;
   }
-  return `<div data-connection-state="reconnecting">${renderStateSurface({
+  return `<div data-connection-state="reconnecting" data-connection-cursor="${escapeHtml(state.activeJobCursor)}" data-runtime-terminal-observed="false" data-durable-log="runtime.log">${renderStateSurface({
     kind: "live-connection",
     state: "reconnecting",
     title: "Reconnecting to live output",
@@ -454,6 +457,7 @@ async function cancelActiveJob() {
     toast("Cancel requested.");
   }
   renderActivityTable();
+  if (typeof updateStudioLiveObservation === "function") updateStudioLiveObservation();
   if (activeModeIsEvidenceLog()) await renderLogs();
   const activeStatuses = new Set(["running", "waiting-for-operator", "cancelling"]);
   if (activeStatuses.has(result.status)) scheduleActiveJobPoll(0);
@@ -508,6 +512,7 @@ async function pollActiveJob() {
     renderActiveRunPanel();
     if (typeof renderNextActionPanel === "function") renderNextActionPanel();
     if (typeof renderGlobalNextActionStrip === "function") renderGlobalNextActionStrip();
+    if (typeof updateStudioLiveObservation === "function") updateStudioLiveObservation();
     renderActivityTable();
     if (activeModeIsEvidenceLog()) await renderLogs();
     if (state.activeJobStatus.status === "waiting-for-operator") {

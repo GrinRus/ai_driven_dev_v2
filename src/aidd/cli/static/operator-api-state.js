@@ -93,6 +93,8 @@ const state = {
   dashboardRequestGeneration: 0,
   projectHome: null,
   projectHomeRequestGeneration: 0,
+  inbox: null,
+  inboxRequestGeneration: 0,
   readiness: null,
   readinessLoading: true,
   readinessError: "",
@@ -136,6 +138,8 @@ const state = {
   qaVerdictView: null,
   qaVerdictRunId: "",
   activeArtifactKey: "",
+  activeStudioWorkbench: null,
+  activeStudioWorkbenchError: "",
   implementDiffFilter: "all",
   implementDiffPath: "",
   artifactViewMode: "preview",
@@ -268,7 +272,12 @@ function renderValidationFindingSummary(finding, {compact = false} = {}) {
     ? `<span class="validation-finding-hint"><strong>What to do</strong>${escapeHtml(finding.operator_hint)}</span>`
     : "";
   return `
-    <div class="validation-finding-summary ${compact ? "compact" : ""} ${notice ? "notice" : ""}">
+    <div class="validation-finding-summary ${compact ? "compact" : ""} ${notice ? "notice" : ""}"
+      data-finding-code="${escapeHtml(finding.code || "validation")}"
+      data-finding-category="${escapeHtml(finding.category || "unknown")}"
+      data-finding-path="${escapeHtml(finding.path || "")}"
+      data-finding-line="${escapeHtml(finding.line_number || "")}"
+      data-finding-provenance="validator-report">
       <span class="small-badge ${notice ? "good" : "bad"}">${escapeHtml(finding.code || "validation")}</span>
       <span class="small-badge">${escapeHtml(finding.severity || "issue")}</span>
       ${repeatBadge}
@@ -588,6 +597,7 @@ function applyOperatorModeBodyClass() {
   const evidenceLogActive = activeModeIsEvidenceLog();
   const decisionDetailActive = state.activeTab === "work"
     && ["review-findings", "qa-verdict"].includes(state.workDetail);
+  const inboxDetailActive = state.activeTab === "work" && state.workDetail === "project-home";
   const staleDownstreamActive = state.dashboard?.next_action?.action === "rerun-stale-downstream"
     || (state.dashboard?.stages || []).some((item) => item.stale);
   const terminalRepairActive = Boolean(
@@ -598,6 +608,7 @@ function applyOperatorModeBodyClass() {
   document.body.classList.toggle("recovery-mode", recoveryActive);
   document.body.classList.toggle("evidence-log-mode", evidenceLogActive);
   document.body.classList.toggle("decision-detail-mode", decisionDetailActive);
+  document.body.classList.toggle("inbox-detail-mode", inboxDetailActive);
   document.body.classList.toggle("stale-downstream-mode", staleDownstreamActive);
   document.body.classList.toggle("terminal-handoff-mode", terminalHandoffActive);
   document.body.classList.toggle("terminal-repair-mode", terminalRepairActive);
@@ -635,20 +646,32 @@ function operatorRouteView() {
 }
 
 function operatorRouteSnapshot() {
-  return {
-    mode: state.activeTab === "history"
+  const inbox = state.activeTab === "work" && state.workDetail === "project-home";
+  const mode = inbox
+    ? "inbox"
+    : state.activeTab === "history"
       ? "history"
       : state.activeRunId || state.activeRouteWorkItem || state.dashboard?.work_item
         ? "studio"
-        : "inbox",
-    view: operatorRouteView(),
-    workItem: state.dashboard?.work_item || state.activeRouteWorkItem || "",
-    runId: state.activeRunId,
-    stage: state.activeStage,
-    attempt: state.activeAttempt,
-    taskAttempt: state.activeTaskAttempt,
-    artifact: state.activeArtifactKey
+        : "inbox";
+  return {
+    mode,
+    view: inbox ? "overview" : operatorRouteView(),
+    workItem: inbox ? "" : state.dashboard?.work_item || state.activeRouteWorkItem || "",
+    runId: inbox ? "" : state.activeRunId,
+    stage: inbox ? "" : state.activeStage,
+    attempt: inbox ? null : state.activeAttempt,
+    taskAttempt: inbox ? null : state.activeTaskAttempt,
+    artifact: inbox ? "" : state.activeArtifactKey
   };
+}
+
+function encodeCurrentOperatorRoute(route) {
+  const encoded = encodeOperatorRoute(route);
+  if (state.presentationSelector !== "studio") return encoded;
+  const params = new URLSearchParams(encoded.replace(/^\?/, ""));
+  params.set("ui", "studio");
+  return `?${params.toString()}`;
 }
 
 function applyOperatorRoute(route) {
@@ -661,7 +684,9 @@ function applyOperatorRoute(route) {
     state.activeStage = route.stage;
     state.activeStageExplicit = true;
   }
-  if (route.mode === "history") {
+  if (route.mode === "inbox") {
+    setOperatorMode("project-home");
+  } else if (route.mode === "history") {
     setOperatorMode("history");
   } else if (route.mode === "studio" && ["logs", "artifacts"].includes(route.view)) {
     setOperatorMode(route.view);
@@ -673,14 +698,20 @@ function applyOperatorRoute(route) {
 }
 
 function initializeStateFromLocation() {
-  applyOperatorRoute(decodeOperatorRoute(window.location.search).value);
+  const params = new URLSearchParams(window.location.search);
+  const route = decodeOperatorRoute(window.location.search).value;
+  if (!params.has("mode") && route.mode === "inbox") {
+    setOperatorMode("work");
+    return;
+  }
+  applyOperatorRoute(route);
 }
 
 let restoringOperatorRoute = false;
 
 function syncLocationState({historyMode = "replace"} = {}) {
   if (restoringOperatorRoute) return;
-  const next = `${window.location.pathname}${encodeOperatorRoute(operatorRouteSnapshot())}`;
+  const next = `${window.location.pathname}${encodeCurrentOperatorRoute(operatorRouteSnapshot())}`;
   const current = `${window.location.pathname}${window.location.search}`;
   if (next !== current) {
     const method = historyMode === "push" ? "pushState" : "replaceState";
@@ -700,7 +731,7 @@ async function restoreOperatorRouteFromLocation() {
 
 async function navigateOperatorRouteIntent(intent, context) {
   const resolved = resolveOperatorRouteIntent(intent, context);
-  const next = `${window.location.pathname}${encodeOperatorRoute(resolved.route)}`;
+  const next = `${window.location.pathname}${encodeCurrentOperatorRoute(resolved.route)}`;
   restoringOperatorRoute = true;
   try {
     window.history.pushState({aiddOperatorRoute: true, intent}, "", next);

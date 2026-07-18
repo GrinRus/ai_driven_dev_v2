@@ -197,7 +197,7 @@
 .topbar button.danger,
 .topbar select {
   background: rgba(255, 255, 255, 0.08);
-  border-color: rgba(255, 255, 255, 0.22);
+  border-color: var(--topbar-control-line);
   color: var(--topbar-text);
 }
 .topbar button.secondary:hover {
@@ -208,14 +208,48 @@
   border-color: rgba(238, 144, 136, 0.55);
   color: #ffd3cf;
 }
+.maintenance-overflow {
+  border-top: 1px solid var(--line);
+  margin-top: auto;
+  padding: var(--space-3);
+}
+.maintenance-overflow summary {
+  align-items: center;
+  color: var(--muted);
+  cursor: pointer;
+  display: flex;
+  font-size: var(--type-caption-size);
+  font-weight: 750;
+  justify-content: space-between;
+  min-height: var(--control-height);
+  text-transform: uppercase;
+}
+.maintenance-overflow summary::after {
+  content: "+";
+  font-size: var(--type-body-size);
+}
+.maintenance-overflow[open] summary::after {
+  content: "−";
+}
+.maintenance-actions {
+  display: grid;
+  gap: var(--space-2);
+  padding-top: var(--space-2);
+}
+.maintenance-actions button {
+  justify-content: flex-start;
+  width: 100%;
+}
 .operator-shell {
   display: grid;
   grid-template-columns: 228px minmax(0, 1fr) 300px;
-  grid-template-rows: minmax(500px, calc(100vh - 252px)) minmax(200px, auto);
+  grid-template-rows: minmax(500px, auto) minmax(200px, auto);
+  max-height: calc(100vh - 52px);
   min-height: calc(100vh - 52px);
+  overflow-y: auto;
 }
 body.bottom-dock-collapsed .operator-shell {
-  grid-template-rows: minmax(500px, calc(100vh - 98px)) auto;
+  grid-template-rows: minmax(500px, auto) auto;
 }
 body.recovery-mode .operator-shell {
   grid-template-columns: 228px minmax(0, 1fr);
@@ -254,14 +288,17 @@ body.setup-active .cockpit {
   grid-row: 1;
 }
 .stage-rail {
+  align-self: start;
   background: var(--color-bg-disabled);
   border-right: 1px solid var(--line);
   display: flex;
   flex-direction: column;
   grid-row: 1 / span 2;
   min-height: 0;
-  overflow: auto;
+  overflow: visible;
   padding: 12px 10px;
+  position: sticky;
+  top: 0;
 }
 .rail-header,
 .dock-header {
@@ -299,6 +336,14 @@ body.setup-active .cockpit {
 .stage-card.active {
   background: #e7f3f1;
   border-color: var(--color-border-accent);
+}
+button.stage-card:not(:disabled):not([aria-disabled="true"]):hover {
+  background: var(--color-bg-selected);
+  border-color: var(--color-border-accent);
+  color: var(--text);
+}
+button.stage-card:not(:disabled):not([aria-disabled="true"]):hover .stage-subtitle {
+  color: var(--color-text-primary);
 }
 .stage-card.retried {
   box-shadow: inset 3px 0 0 rgba(154, 106, 18, 0.28);
@@ -374,7 +419,7 @@ button.quick-link {
 }
 .cockpit {
   min-width: 0;
-  overflow: auto;
+  overflow: visible;
   padding: 14px 16px;
 }
 .cockpit-header {

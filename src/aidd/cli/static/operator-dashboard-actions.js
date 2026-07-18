@@ -12,6 +12,14 @@ function projectHomeUrl(workItem = "") {
   return `/api/project-home${query ? `?${query}` : ""}`;
 }
 
+async function fetchInbox() {
+  const requestGeneration = ++state.inboxRequestGeneration;
+  const payload = await api("/api/inbox");
+  if (requestGeneration !== state.inboxRequestGeneration) return false;
+  state.inbox = payload.inbox || null;
+  return true;
+}
+
 async function fetchDashboard() {
   const requestGeneration = ++state.dashboardRequestGeneration;
   const payload = await api(dashboardUrl());
@@ -87,6 +95,7 @@ function setMutationControlsPending(selectors, pending) {
 async function readRunMutationWinner() {
   await fetchDashboard();
   await fetchProjectHome(state.dashboard?.work_item || "");
+  await fetchInbox();
   await renderAll();
   return {
     work_item: state.dashboard?.work_item || "",

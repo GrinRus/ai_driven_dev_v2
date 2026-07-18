@@ -51,14 +51,16 @@ def _descriptor(
     surface: str,
     action: str,
     marker: str,
+    work_item: str = WORK_ITEM,
+    run_id: str = RUN_ID,
     with_run: bool = True,
 ) -> BrowserStateFixture:
     return BrowserStateFixture(
         name=name,
         project_root=project_root,
         workspace_root=project_root / ".aidd",
-        work_item=WORK_ITEM if name != "setup" else None,
-        run_id=RUN_ID if with_run else None,
+        work_item=work_item if name != "setup" else None,
+        run_id=run_id if with_run else None,
         expected_route_intent=route,
         context_keys=context_keys,
         primary_surface=surface,
@@ -67,28 +69,34 @@ def _descriptor(
         api_path=(
             "/api/onboarding/state"
             if name == "setup"
-            else f"/api/dashboard?run_id={RUN_ID}" if with_run else "/api/dashboard"
+            else f"/api/dashboard?run_id={run_id}" if with_run else "/api/dashboard"
         ),
     )
 
 
-def _bootstrap(project_root: Path) -> Path:
+def _bootstrap(project_root: Path, *, work_item: str) -> Path:
     workspace_root = project_root / ".aidd"
     service = WorkspaceBootstrapService(root=workspace_root)
-    service.bootstrap_work_item(WORK_ITEM)
+    service.bootstrap_work_item(work_item)
     service.seed_request_context(
-        work_item=WORK_ITEM,
+        work_item=work_item,
         request_text="Exercise the provider-free operator browser state.",
         project_root=project_root,
     )
     return workspace_root
 
 
-def _create_run(workspace_root: Path, *, stage_target: str = "qa") -> None:
+def _create_run(
+    workspace_root: Path,
+    *,
+    work_item: str,
+    run_id: str,
+    stage_target: str = "qa",
+) -> None:
     create_run_manifest(
         workspace_root=workspace_root,
-        work_item=WORK_ITEM,
-        run_id=RUN_ID,
+        work_item=work_item,
+        run_id=run_id,
         runtime_id="generic-cli",
         stage_target=stage_target,
         config_snapshot={"mode": "browser-fixture"},
@@ -97,24 +105,24 @@ def _create_run(workspace_root: Path, *, stage_target: str = "qa") -> None:
     )
 
 
-def _attempt(workspace_root: Path, stage: str) -> Path:
+def _attempt(workspace_root: Path, stage: str, *, work_item: str, run_id: str) -> Path:
     create_next_attempt_directory(
         workspace_root=workspace_root,
-        work_item=WORK_ITEM,
-        run_id=RUN_ID,
+        work_item=work_item,
+        run_id=run_id,
         stage=stage,
     )
     return run_attempt_root(
         workspace_root=workspace_root,
-        work_item=WORK_ITEM,
-        run_id=RUN_ID,
+        work_item=work_item,
+        run_id=run_id,
         stage=stage,
         attempt_number=1,
     )
 
 
-def _write_qa_report(workspace_root: Path, verdict: str) -> None:
-    qa_root = workspace_root / "workitems" / WORK_ITEM / "stages" / "qa"
+def _write_qa_report(workspace_root: Path, verdict: str, *, work_item: str) -> None:
+    qa_root = workspace_root / "workitems" / work_item / "stages" / "qa"
     qa_root.joinpath("qa-report.md").write_text(
         "\n".join(
             (
@@ -138,9 +146,20 @@ def _write_qa_report(workspace_root: Path, verdict: str) -> None:
     )
 
 
-def _succeed_through(workspace_root: Path, final_stage: str) -> None:
+def _succeed_through(
+    workspace_root: Path,
+    final_stage: str,
+    *,
+    work_item: str,
+    run_id: str,
+) -> None:
     for stage in STAGES[: STAGES.index(final_stage) + 1]:
-        attempt_root = _attempt(workspace_root, stage)
+        attempt_root = _attempt(
+            workspace_root,
+            stage,
+            work_item=work_item,
+            run_id=run_id,
+        )
         commit_runtime_evidence(
             RuntimeEvidenceCommitRequest(
                 attempt_path=attempt_root,
@@ -152,10 +171,16 @@ def _succeed_through(workspace_root: Path, final_stage: str) -> None:
                 runtime_log_text=f"{stage} complete\n",
             )
         )
-        persist_stage_status(workspace_root, WORK_ITEM, RUN_ID, stage, "succeeded")
+        persist_stage_status(workspace_root, work_item, run_id, stage, "succeeded")
 
 
-def build_browser_state_fixture(project_root: Path, state: str) -> BrowserStateFixture:
+def build_browser_state_fixture(
+    project_root: Path,
+    state: str,
+    *,
+    work_item: str = WORK_ITEM,
+    run_id: str = RUN_ID,
+) -> BrowserStateFixture:
     project_root.mkdir(parents=True, exist_ok=True)
     if state == "setup":
         return _descriptor(
@@ -169,7 +194,7 @@ def build_browser_state_fixture(project_root: Path, state: str) -> BrowserStateF
             with_run=False,
         )
 
-    workspace_root = _bootstrap(project_root)
+    workspace_root = _bootstrap(project_root, work_item=work_item)
     if state == "no-run":
         return _descriptor(
             name=state,
@@ -179,13 +204,15 @@ def build_browser_state_fixture(project_root: Path, state: str) -> BrowserStateF
             surface="Studio",
             action="Run workflow",
             marker="no-run",
+            work_item=work_item,
+            run_id=run_id,
             with_run=False,
         )
 
-    _create_run(workspace_root)
+    _create_run(workspace_root, work_item=work_item, run_id=run_id)
     if state == "running":
-        _attempt(workspace_root, "idea")
-        persist_stage_status(workspace_root, WORK_ITEM, RUN_ID, "idea", "executing")
+        _attempt(workspace_root, "idea", work_item=work_item, run_id=run_id)
+        persist_stage_status(workspace_root, work_item, run_id, "idea", "executing")
         return _descriptor(
             name=state,
             project_root=project_root,
@@ -194,13 +221,15 @@ def build_browser_state_fixture(project_root: Path, state: str) -> BrowserStateF
             surface="Active Studio",
             action="Idea running",
             marker="wait-for-stage",
+            work_item=work_item,
+            run_id=run_id,
         )
     if state == "blocking-question":
-        _attempt(workspace_root, "idea")
-        persist_stage_status(workspace_root, WORK_ITEM, RUN_ID, "idea", "blocked")
+        _attempt(workspace_root, "idea", work_item=work_item, run_id=run_id)
+        persist_stage_status(workspace_root, work_item, run_id, "idea", "blocked")
         persist_questions_document(
             workspace_root=workspace_root,
-            work_item=WORK_ITEM,
+            work_item=work_item,
             stage="idea",
             adapter_question_events=(
                 AdapterQuestionEvent(
@@ -218,10 +247,17 @@ def build_browser_state_fixture(project_root: Path, state: str) -> BrowserStateF
             surface="Question Recovery",
             action="Answer required questions",
             marker="answer-questions",
+            work_item=work_item,
+            run_id=run_id,
         )
     if state == "runtime-failure":
-        attempt_root = _attempt(workspace_root, "idea")
-        persist_stage_status(workspace_root, WORK_ITEM, RUN_ID, "idea", "failed")
+        attempt_root = _attempt(
+            workspace_root,
+            "idea",
+            work_item=work_item,
+            run_id=run_id,
+        )
+        persist_stage_status(workspace_root, work_item, run_id, "idea", "failed")
         commit_runtime_evidence(
             RuntimeEvidenceCommitRequest(
                 attempt_path=attempt_root,
@@ -242,10 +278,17 @@ def build_browser_state_fixture(project_root: Path, state: str) -> BrowserStateF
             surface="Runtime Failure Recovery",
             action="Retry stage",
             marker="resume-stage",
+            work_item=work_item,
+            run_id=run_id,
         )
     if state == "pending-approval":
-        attempt_root = _attempt(workspace_root, "idea")
-        persist_stage_status(workspace_root, WORK_ITEM, RUN_ID, "idea", "blocked")
+        attempt_root = _attempt(
+            workspace_root,
+            "idea",
+            work_item=work_item,
+            run_id=run_id,
+        )
+        persist_stage_status(workspace_root, work_item, run_id, "idea", "blocked")
         request = RuntimeOperatorRequest.create(
             runtime_id="generic-cli",
             stage="idea",
@@ -265,10 +308,22 @@ def build_browser_state_fixture(project_root: Path, state: str) -> BrowserStateF
             surface="Approval Recovery",
             action="Resume stage",
             marker="approval-waiting",
+            work_item=work_item,
+            run_id=run_id,
         )
     if state == "qa-decision":
-        _succeed_through(workspace_root, "review")
-        attempt_root = _attempt(workspace_root, "qa")
+        _succeed_through(
+            workspace_root,
+            "review",
+            work_item=work_item,
+            run_id=run_id,
+        )
+        attempt_root = _attempt(
+            workspace_root,
+            "qa",
+            work_item=work_item,
+            run_id=run_id,
+        )
         commit_runtime_evidence(
             RuntimeEvidenceCommitRequest(
                 attempt_path=attempt_root,
@@ -280,8 +335,8 @@ def build_browser_state_fixture(project_root: Path, state: str) -> BrowserStateF
                 runtime_log_text="qa evidence collected\n",
             )
         )
-        persist_stage_status(workspace_root, WORK_ITEM, RUN_ID, "qa", "succeeded")
-        _write_qa_report(workspace_root, "not-ready")
+        persist_stage_status(workspace_root, work_item, run_id, "qa", "succeeded")
+        _write_qa_report(workspace_root, "not-ready", work_item=work_item)
         return _descriptor(
             name=state,
             project_root=project_root,
@@ -290,22 +345,29 @@ def build_browser_state_fixture(project_root: Path, state: str) -> BrowserStateF
             surface="Quality Gate",
             action="QA Verdict",
             marker="qa-report.md",
+            work_item=work_item,
+            run_id=run_id,
         )
     if state == "remediation-stale":
-        _succeed_through(workspace_root, "qa")
-        _write_qa_report(workspace_root, "ready")
+        _succeed_through(
+            workspace_root,
+            "qa",
+            work_item=work_item,
+            run_id=run_id,
+        )
+        _write_qa_report(workspace_root, "ready", work_item=work_item)
         request = create_remediation_request(
             workspace_root=workspace_root,
-            work_item=WORK_ITEM,
-            run_id=RUN_ID,
+            work_item=work_item,
+            run_id=run_id,
             source_stage="qa",
             source_ids=("QA-RISK-1",),
             operator_note="Re-run implementation evidence for the selected risk.",
         )
         mark_downstream_stale(
             workspace_root=workspace_root,
-            work_item=WORK_ITEM,
-            run_id=RUN_ID,
+            work_item=work_item,
+            run_id=run_id,
             invalidated_by=request.request_id,
         )
         return _descriptor(
@@ -316,10 +378,17 @@ def build_browser_state_fixture(project_root: Path, state: str) -> BrowserStateF
             surface="Remediation Recovery",
             action="Rerun stale downstream",
             marker="rerun-stale-downstream",
+            work_item=work_item,
+            run_id=run_id,
         )
     if state == "terminal-handoff":
-        _succeed_through(workspace_root, "qa")
-        _write_qa_report(workspace_root, "ready")
+        _succeed_through(
+            workspace_root,
+            "qa",
+            work_item=work_item,
+            run_id=run_id,
+        )
+        _write_qa_report(workspace_root, "ready", work_item=work_item)
         return _descriptor(
             name=state,
             project_root=project_root,
@@ -328,6 +397,8 @@ def build_browser_state_fixture(project_root: Path, state: str) -> BrowserStateF
             surface="Flow Complete",
             action="Start Next Flow",
             marker="review-complete",
+            work_item=work_item,
+            run_id=run_id,
         )
     raise ValueError(f"Unknown browser fixture state: {state}")
 

@@ -7,32 +7,22 @@ slice, and local task.
 
 ## Next
 
-- `W36-E5-S1-T4` — Move maintenance commands into a labelled overflow surface.
+- `W36-E5-S6-T4` — Make Request Change primary after repair exhaustion or explicit
+  stop while retaining evidence drill-down.
 
 ## Soon
 
-- `W36-E5-S1-T5` — Establish one Studio content scroll owner on desktop.
+- `W36-E5-S6-T5` — Implement decision-first mobile runtime and validation Recovery
+  layouts over the compact shell.
 
 ## Parking lot
 
-- `W36-E5-S2-T1` — Replace the measured `275px` mobile header with a compact
-  context/status bar and maintenance overflow.
-- `W36-E5-S3-T1` — Implement the typed project-local Inbox projection and deterministic
-  priority sections.
-- `W36-E5-S4-T1` — Compose the active Studio view from shared mode navigation, compact
-  context bar, stage navigation, and Decision Bar slots.
-- `W36-E5-S5-T1` — Render blocking questions with durable resolution and draft-recovery
-  semantics in Recovery Studio.
-- `W36-E5-S6-T1` — Render typed runtime failure and the eligible recovery action without
-  conflating validation repair.
 - `W36-E5-S7-T1` — Render canonical implement tasks, attempts, recovery, and aggregate
   finalization inside Studio.
 - `W36-E5-S8-T1` — Implement the typed Filmstrip frame projection from durable attempts,
   task attempts, and finalization milestones.
 - `W36-E5-S10-T1` — Switch the default renderer to Studio only after all per-surface
   parity entries close.
-- `W36-E7-S1-T1` — Add the Guided Setup project validation, create/resume, runtime
-  review, first-launch, and resulting Inbox browser journey.
 
 ## Update rules
 
@@ -48,6 +38,235 @@ slice, and local task.
   queue-restoration policy in `docs/backlog/roadmap.md` (`W8-E3-S1`).
 
 ## Current reconciliation
+
+- `2026-07-18` `W36-E5-S6-T3` is complete: every rendered validator finding exposes
+  its exact code/rule, category, document path, line, severity, occurrence count, and
+  validator-report provenance. `Run Repair` remains enabled only for the backend-owned
+  `repair-available` status. Repair-exhaustion Recovery `T4` is promoted to `Next` and mobile
+  Recovery layout `T5` to `Soon`.
+
+- `2026-07-18` `W36-E5-S6-T2` is complete: reconnecting, recovered, offline,
+  expired-job, and manual reconnect surfaces retain the absolute log cursor, state explicitly
+  that no terminal runtime evidence was observed, and route operators to durable `runtime.log`.
+  Existing bounded retry, expired-job reconciliation, and server-authoritative readback remain
+  unchanged. Validator Recovery `T3` is promoted to `Next` and repair-exhaustion Recovery `T4`
+  to `Soon`.
+
+- `2026-07-18` `W36-E5-S6-T1` is complete: runtime/validation Recovery enters
+  `candidate` rollout with typed launch, authentication, timeout, cancellation, provider,
+  no-progress, and legacy failures. The surface exposes stopped state and the exact last
+  durable signal; an eligible same-stage retry is primary while runtime failure explicitly
+  leaves validation repair budget untouched. Connection Recovery `T2` is promoted to `Next`
+  and validator Recovery `T3` to `Soon`.
+
+- `2026-07-18` `W36-E5-S5-T7` is complete: runtime approval Recovery is
+  `parity_closed`. Studio and explicit legacy presentation both launch the same provider-free
+  waiting job, post through the same decision endpoint, and render the same single durable
+  winner; the full action/conflict matrix remains covered by journey `W36-E7-S1-T11`.
+  Human-decision Recovery slice `W36-E5-S5` is closed. Runtime-failure Recovery `S6-T1` is
+  promoted to `Next` and connection Recovery `S6-T2` to `Soon`.
+
+- `2026-07-18` `W36-E5-S5-T6` is complete: intervention Recovery is
+  `parity_closed`. Studio and explicit legacy presentation both use the same guarded
+  stage-interact service: allowed fixtures create one durable request and downstream-blocked
+  fixtures create none. Approval parity `T7` is promoted to `Next`; runtime-failure Recovery
+  `W36-E5-S6-T1` waits in `Soon`.
+
+- `2026-07-18` `W36-E5-S5-T5` is complete: question Recovery is `parity_closed`.
+  Studio and explicit legacy presentation both submit the exact same `/api/answers` payload,
+  persist the same resolved answer, and clear only the owning session draft. Intervention
+  parity `T6` is promoted to `Next` and approval parity `T7` to `Soon`.
+
+- `2026-07-18` `W36-E7-S1-T11` is complete: a real provider-free live approval job
+  exercises scope, risk, pending state, allow, deny, cancel, explicit session confirmation,
+  and a concurrent opposite-decision conflict across the five browser viewports. Every case
+  resolves to one durable CAS winner and matching audit row with exact runtime/stage identity.
+  Question parity `W36-E5-S5-T5` is promoted to `Next` and intervention parity `T6` to
+  `Soon`.
+
+- `2026-07-18` `W36-E7-S1-T10` is complete: allowed and downstream-blocked
+  intervention journeys run provider-free across all five browser viewports. They prove
+  session draft restore across reload and Back, exact run/stage identity, one guarded
+  stage-interact request, successful draft cleanup, downstream-success remediation routing,
+  and zero durable requests when ineligible. Runtime approval journey `T11` is promoted to
+  `Next`; question parity closure `W36-E5-S5-T5` waits in `Soon` for the complete journey set.
+
+- `2026-07-18` `W36-E7-S1-T6` is complete: the question Recovery journey runs
+  provider-free across all five browser viewports and covers partial/deferred blocking,
+  session draft restore, reload and Back restoration, failed-answer preservation, successful
+  durable readback, and answer/resume through the existing stage service. The journey exposed
+  and closed a readiness-refresh race before resume. Intervention journey `T10` is promoted
+  to `Next` and approval journey `T11` to `Soon`.
+
+- `2026-07-18` `W36-E5-S5-T4` is complete: question, intervention, and approval
+  Recovery share a decision-first mobile contract at `320x568` and `390x844`. Compact
+  surfaces remove competing shell chrome, keep the primary control in the initial viewport,
+  enforce 44px visible controls, place evidence after the decision, and avoid page-level
+  horizontal overflow. Question journey `W36-E7-S1-T6` is promoted to `Next` and the
+  intervention journey `T10` to `Soon`.
+
+- `2026-07-18` `W36-E5-S5-T3` is complete: approval Recovery is a Studio candidate
+  with explicit request scope, breadth, risk, pending status, reason capture, session-wide
+  confirmation, and durable-winner markers. The existing guarded decision endpoint remains
+  authoritative: allow/deny/cancel are idempotent, conflicts render the compare-and-set winner,
+  and session approval cannot post before confirmation. Human-decision mobile layout `T4` is
+  promoted to `Next` and the question journey `W36-E7-S1-T6` to `Soon`.
+
+- `2026-07-18` `W36-E5-S5-T2` is complete: intervention Recovery is a Studio
+  candidate with explicit work-item/run/stage identity, core-owned eligibility, session
+  draft preservation, and one guarded `/api/stage/interact` path. Allowed submit creates one
+  stage-scoped operator request; succeeded downstream evidence disables submit, routes the
+  operator toward existing remediation/follow-up surfaces, and creates no request. Approval
+  `T3` is promoted to `Next` and decision-first mobile layout `T4` to `Soon`.
+
+- `2026-07-18` `W36-E5-S5-T1` is complete: question Recovery is a Studio candidate
+  with exact durable QID, resolved/partial/deferred status markers, explicit editor
+  resolution, and a visible restored-session-draft indicator. Existing guarded answer
+  submission still preserves failed drafts, clears only after matching durable readback,
+  and leaves partial/deferred blocking. Intervention `T2` is promoted to `Next` and
+  approval `T3` to `Soon`.
+
+- `2026-07-18` `W36-E5-S4-T5` is complete: active Studio and Document/Evidence are
+  `parity_closed`; `ui=studio` renders one workbench and one bounded Document Canvas, while
+  missing/default and `ui=legacy` retain the legacy cockpit plus Recovery, Evidence, and
+  persisted-log reachability. The accepted active/reconnect and Document/Evidence journeys
+  continue to own their five-viewport evidence. Slice `W36-E5-S4` is closed; question
+  Recovery `W36-E5-S5-T1` is promoted to `Next` and intervention `T2` to `Soon`.
+
+- `2026-07-18` `W36-E5-S3-T5` is complete: Inbox is `parity_closed`; explicit
+  `ui=studio` renders one Studio Inbox, while missing/default and `ui=legacy` retain one
+  Project Home with no presentation-only dismissal. The accepted five-viewport journey
+  continues to own priority, routing, and Running now evidence. Slice `W36-E5-S3` is closed;
+  active Studio parity `W36-E5-S4-T5` is promoted to `Next`, with `Soon` empty until the
+  ordered cross-slice series reaches Recovery.
+
+- `2026-07-18` `W36-E4-S1-T7` is complete: Guided Setup is `parity_closed`; the full
+  five-viewport Studio journey remains green, while an explicit `ui=legacy` browser check
+  reaches the rollback presentation through the same `/api/onboarding/project` service and
+  identical project-root payload. Slice `W36-E4-S1` and Epic `W36-E4` are closed. Inbox
+  parity `W36-E5-S3-T5` is promoted to `Next`; `Soon` remains empty until the ordered
+  cross-slice parity series advances.
+
+- `2026-07-18` `W36-E7-S1-T12` is complete: all five viewports verify durable Inbox
+  priority, bounded Running now correlation, exact work-item/run/stage routing, a single
+  core-approved action, first-viewport visibility, keyboard activation, reload restoration,
+  and blocking-item non-dismissal. Cross-work-item routing reuses the canonical resume
+  service before browser navigation, and intentional navigation aborts are distinguished
+  from request failures. Guided Setup parity `W36-E4-S1-T7` is promoted to `Next`;
+  `Soon` remains empty until the ordered parity series reaches Inbox.
+
+- `2026-07-18` `W36-E7-S1-T7` is complete: all five viewports exercise bounded
+  Preview/Source/Diff, exact validator/source/provenance evidence, explicit missing
+  requirements, safe artifact-key selection, reload and Back restoration, and persisted
+  runtime-log drill-down. The browser boundary rejects traversal-like keys without reading
+  arbitrary paths, zero-value Inspector behavior remains covered, Studio presentation now
+  survives canonical navigation, and mobile evidence controls satisfy the shared touch and
+  scroll-owner gates. Inbox journey `S1-T12` is promoted to `Next`; `Soon` remains empty
+  until the ordered parity-closure series begins.
+
+- `2026-07-18` `W36-E7-S1-T2` is complete: all five viewports exercise a real
+  provider-free UI job through measured output, explicit silence, one intentional
+  transient polling failure, cursor-preserving recovery, cancellation, terminal durable
+  readback, and persisted `runtime.log`. The journey also removed the remaining Activity
+  nested-scroll trap, corrected content-growing Studio rows and bounded long identities,
+  and fixed interactive hover contrast. Document/Evidence journey `S1-T7` is promoted to
+  `Next`; `Soon` remains empty because Inbox journey `T12` is not its direct dependency
+  successor.
+
+- `2026-07-18` `W36-E7-S1-T1` is complete: the provider-free Guided Setup journey now
+  validates both create and resume branches across all five viewports, preserves the
+  selected runtime through readiness refresh, launches the workflow through the shared
+  mutation seam, and exposes the correlated Running now Inbox item. The executable gates
+  also corrected stale Decision Bar rendering, Inbox refresh on navigation, touch-target
+  sizing, and hover contrast without changing service payloads. `S1-T2` is promoted to
+  `Next`; `Soon` remains empty because the following document journey is not its direct
+  dependency successor.
+
+- `2026-07-18` `W36-E5-S2-T4` is complete: all eight stage controls retain exact stage
+  identity, durable status in their accessible name, a touch-safe height, and unclipped
+  bounds at `320x568` and `390x844`. The existing compact two-column navigation already
+  met the contract, so the accepted change is its executable regression guard. `W36-E5-S2`
+  is closed; Guided Setup journey `W36-E7-S1-T1` is promoted to `Next` and active Studio
+  journey `T2` to `Soon`.
+
+- `2026-07-18` `W36-E5-S2-T3` is complete: one declarative mobile priority attribute now
+  orders every operator mode as cockpit/decision → stage context → sidebar evidence →
+  history/activity drill-down. The repeated recovery/live/terminal/stale ordering selectors
+  are removed, and the full eight-case mobile regression remains green. `S2-T4` is promoted
+  to `Next`; `Soon` stays empty until its cross-slice journey successor is selected.
+
+- `2026-07-18` `W36-E5-S2-T2` is complete: no-run Studio, durable-running Studio, and
+  Inbox place their actual primary control inside the initial `320x568` and `390x844`
+  viewport. The mobile presentation puts decision controls before supporting progress,
+  hides empty Inbox sections, and keeps sidebar/evidence surfaces below the decision.
+  `S2-T3` is promoted to `Next` and `S2-T4` to `Soon`.
+
+- `2026-07-18` `W36-E5-S2-T1` is complete: the Studio mobile header is bounded to 80px
+  at `320x568` and `390x844`, retains compact work-item/run context and runtime selection,
+  and visually places the existing keyboard-accessible maintenance overflow in the header
+  without moving it ahead of the primary decision in document/focus order. `S2-T2` is
+  promoted to `Next` and `S2-T3` to `Soon`.
+
+- `2026-07-18` `W36-E4-S2-T3` is complete: Guided Setup and Studio now present binary,
+  execution-command, authentication, capability, protected-write-scope, and latest-launch
+  evidence as separate dimensions. Malformed scope is explicit and the UI makes no generic
+  `ready` or `No upstream write` claim. `W36-E4-S2` is closed; compact mobile shell `S2-T1`
+  is promoted to `Next` and its direct successor `S2-T2` to `Soon`.
+
+- `2026-07-18` `W36-E5-S4-T4` is complete: Studio observation displays only measured
+  job elapsed/output age, durable stage milestones, backend silence/cancellation state,
+  and an explicit live-or-persisted log transition; it never renders synthetic percent
+  progress or embeds raw logs in the default viewport. `W36-E4-S2-T3` is promoted to
+  `Next`; the mobile shell remains parked until that standalone readiness task completes.
+
+- `2026-07-18` `W36-E5-S4-T3` is complete: Studio projects findings, exact contract
+  source references, version provenance, and related artifacts from the already loaded
+  workbench snapshot, while zero-value evidence keeps the Inspector absent. `S4-T4` is
+  promoted to `Next`; runtime-readiness presentation `W36-E4-S2-T3` remains parked until
+  the active-Studio implementation sequence completes.
+
+- `2026-07-18` `W36-E5-S4-T2` is complete: candidate Studio loads its Document Canvas
+  from the canonical bounded stage-workbench endpoint and switches Preview, Source, and
+  Diff over the same safe selected key. Missing, escaped, and truncated documents remain
+  explicit; no arbitrary path reader or duplicate document grammar was added. `S4-T3` is
+  promoted to `Next` and dependency-ready `S4-T4` to `Soon`.
+
+- `2026-07-18` `W36-E5-S4-T1` is complete: the active-Studio candidate composes the
+  existing mode navigation, compact durable context, canonical stage rail, one authoritative
+  decision slot, and a read-only stage summary without duplicating service actions. No-run,
+  active, blocked, and terminal Chromium fixtures retain context and one marked primary action.
+  `S4-T2` is promoted to `Next` and `S4-T3` to `Soon`.
+
+- `2026-07-18` `W36-E5-S3-T4` is complete: `ui=studio` renders the four ordered Inbox
+  sections from the additive read model, preserves server-owned actions and exact
+  work-item/run/stage routes, and keeps missing/default plus explicit legacy presentation
+  on Project Home. `W36-E5-S4-T1` is promoted to `Next` and `S4-T2` to `Soon`; Inbox
+  parity `S3-T5` remains gated by browser journey `W36-E7-S1-T12`.
+
+- `2026-07-18` `W36-E5-S3-T3` is complete: `GET /api/inbox` now exposes the
+  durable core projection plus bounded Running now state, rejects external project/path
+  selectors, and leaves all mutation endpoints unchanged. `W36-E5-S3-T4` is promoted to
+  `Next`; `Soon` remains empty until the Inbox implementation slice reaches its parity gate.
+
+- `2026-07-18` `W36-E5-S3-T2` is complete: bounded UI job summaries now carry
+  monotonic work-item/run/stage identity, and the Running now composition filters terminal
+  jobs, retains explicit legacy-identity gaps, and leaves durable Inbox eligibility intact.
+  `W36-E5-S3-T3` is promoted to `Next` and `T4` to `Soon`.
+
+- `2026-07-18` `W36-E5-S3-T1` is complete: immutable core Inbox sections now
+  project durable work-item/run/stage identity and the existing core-approved next action
+  in deterministic order without inventing live-job state. `W36-E5-S3-T2` is promoted to
+  `Next` and `T3` to `Soon`.
+
+- `2026-07-18` `W36-E5-S1-T5` and slice `W36-E5-S1` are complete: the desktop
+  Studio shell owns the single primary vertical scroll path, while stage navigation,
+  content, Inspector, drawers, and Filmstrip remain reachable without nested scroll traps.
+  `W36-E5-S3-T1` is promoted to `Next` and `T2` to `Soon`.
+
+- `2026-07-18` `W36-E5-S1-T4` is complete: Refresh, Open `.aidd`, Stop server, and
+  other service-maintenance controls now live in one labelled native overflow after the
+  current Studio decision in visual and keyboard order. `W36-E5-S1-T5` is promoted to
+  `Next`; `Soon` remains empty until the shell-foundation slice closes.
 
 - `2026-07-17` `W36-E5-S1-T3` is complete: vertical surfaces share one
   policy-free primary-action slot that renders only the supplied service action or an
