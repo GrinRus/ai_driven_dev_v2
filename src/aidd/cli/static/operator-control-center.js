@@ -281,6 +281,13 @@ function renderTaskProgress(taskView) {
   `;
 }
 
+function renderImplementationTaskGate(taskView) {
+  return selectSurfaceRenderer("implement", {
+    legacy: () => renderTaskProgress(taskView),
+    studio: () => renderStudioImplementationQualityGate(taskView)
+  }).renderer();
+}
+
 async function renderImplementReview() {
   const content = document.getElementById("cockpitContent");
   if (!state.activeRunId) {
@@ -304,7 +311,7 @@ async function renderImplementReview() {
     content.innerHTML = `
       <div class="implement-review-screen">
         ${renderImplementationSummary(evidence)}
-        ${renderTaskProgress(taskView)}
+        ${renderImplementationTaskGate(taskView)}
         <section class="surface">
           <div class="surface-title">
             <span>Repository diff</span>
@@ -344,7 +351,7 @@ async function renderImplementReview() {
           </div>
           ${renderImplementationProceedGuard(evidence)}
           <div class="wizard-actions">
-            <button data-proceed-stage="review" type="button" ${verificationReady && selectedRuntimeReady() ? "" : "disabled"}>Proceed to review</button>
+            <button data-proceed-stage="review" type="button" ${verificationReady && taskView.review_eligible && selectedRuntimeReady() ? "" : "disabled"}>Proceed to review</button>
             <button data-rerun-implement type="button" class="secondary" ${selectedRuntimeReady() ? "" : "disabled"}>Rerun implement</button>
             <button data-open-request-tab type="button" class="secondary">Request intervention</button>
           </div>

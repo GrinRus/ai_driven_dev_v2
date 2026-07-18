@@ -7,13 +7,13 @@ slice, and local task.
 
 ## Next
 
-- `W36-E5-S7-T1` — Render canonical implement tasks, attempts, recovery, and aggregate
-  finalization inside Studio.
+- `W36-E5-S7-T2` — Render repository diff and canonical implementation evidence in the
+  Studio Document Canvas.
 
 ## Soon
 
-- `W36-E5-S7-T2` — Render repository diff and canonical implementation evidence in the
-  Studio Document Canvas.
+- `W36-E5-S7-T3` — Render exact Review findings and QA verdict/evidence in the Studio
+  quality gate.
 
 ## Parking lot
 
@@ -36,6 +36,12 @@ slice, and local task.
   queue-restoration policy in `docs/backlog/roadmap.md` (`W8-E3-S1`).
 
 ## Current reconciliation
+
+- `2026-07-18` `W36-E5-S7-T1` is complete: Studio has a separate implementation
+  quality-gate renderer over canonical `/api/tasks`; dependency readiness, task attempts,
+  blockers, finalization eligibility, and Review progression remain core-owned. The legacy
+  control-center renderer remains available for rollback. Repository evidence `T2` is
+  promoted to `Next` and Review/QA gate `T3` to `Soon`.
 
 - `2026-07-18` `W36-E5-S6-T6` is complete: runtime/validation Recovery is
   `parity_closed`; Studio, default legacy, and explicit legacy resolve identical durable

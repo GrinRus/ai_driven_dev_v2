@@ -4501,6 +4501,9 @@ def test_ui_tasks_endpoint_returns_rich_task_state(tmp_path: Path) -> None:
     assert isinstance(finalization, dict)
     assert finalization["status"] == "pending"
     assert finalization["attempts"] == []
+    assert payload["finalization_eligible"] is False
+    assert payload["review_eligible"] is False
+    assert "every task" in str(payload["review_blocker"])
 
 
 def test_ui_task_run_requires_explicit_run_id(tmp_path: Path) -> None:

@@ -11130,17 +11130,17 @@ Dependencies:
 
 Local tasks:
 
-- `W36-E5-S7-T1` (next) Render dependency-ready tasks, task attempts, blocked/failed recovery, and
+- `W36-E5-S7-T1` (done) Render dependency-ready tasks, task attempts, blocked/failed recovery, and
   aggregate finalization inside Studio from the canonical task read model.
   - Scope: implement task workspace renderer only.
   - Verification: run/resume/fail/recover/finalize fixtures preserve successful tasks and never
     enable Review before successful aggregate finalization.
-- `W36-E5-S7-T2` (soon) Render the real repository diff, untracked/deleted files, `.aidd/` separation,
+- `W36-E5-S7-T2` (next) Render the real repository diff, untracked/deleted files, `.aidd/` separation,
   scope status, and implementation-report claim mismatch in the Document Canvas.
   - Scope: implement evidence renderer only.
   - Verification: repository-diff fixtures match core evidence and use textual added/removed/
     changed meaning in addition to color.
-- `W36-E5-S7-T3` (planned) Render structured Review findings and QA verdict, residual risks, known issues,
+- `W36-E5-S7-T3` (soon) Render structured Review findings and QA verdict, residual risks, known issues,
   acceptance ids, and evidence links.
   - Scope: Review/QA quality-gate renderer only.
   - Verification: approval/rejection/not-ready/blocked/missing-evidence fixtures agree with the

@@ -139,6 +139,7 @@ test("operator bootstrap loads modules in declared order", async () => {
     "/operator-logs-jobs.js",
     "/operator-next-flow-actions.js",
     "/operator-next-flow-view.js",
+    "/operator-quality-gates.js",
     "/operator-control-center.js",
     "/operator-stage-cockpit.js",
     "/operator-main.js",
@@ -261,6 +262,34 @@ test("exhausted and explicitly stopped recovery route only to the stage interven
     assert.match(result.html, /data-recovery-stage="implement"/);
     assert.doesNotMatch(result.html, /data-run-repair/);
   }
+});
+
+test("Studio implementation gate preserves canonical readiness and finalization guards", async () => {
+  const context = vm.createContext({
+    escapeHtml(value) {
+      return String(value);
+    },
+    selectedRuntimeReady() {
+      return true;
+    },
+  });
+  await load(context, "operator-quality-gates.js");
+  const html = vm.runInContext(`renderStudioImplementationQualityGate({
+    tasks: [
+      {id: "TL-1", title: "First", status: "pending", ready: true, dependencies: [], attempts: []},
+      {id: "TL-2", title: "Second", status: "pending", ready: false, dependencies: ["TL-1"], attempts: [], blocker: "TL-1 is pending"}
+    ],
+    all_succeeded: false,
+    finalization_eligible: false,
+    review_eligible: false,
+    review_blocker: "Implementation task ledger does not record success for every task.",
+    finalization: {status: "pending", attempts: []}
+  })`, context);
+  assert.match(html, /data-run-task="TL-1"/);
+  assert.doesNotMatch(html, /data-run-task="TL-2"/);
+  assert.doesNotMatch(html, /data-finalize-tasks/);
+  assert.match(html, /data-implementation-review-blocker/);
+  assert.match(html, /does not record success for every task/);
 });
 
 test("presentation selector is browser-only and fails back to legacy", async () => {

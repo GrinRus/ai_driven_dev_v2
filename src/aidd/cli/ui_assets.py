@@ -133,6 +133,11 @@ _OPERATOR_STATIC_ASSET_MANIFEST = (
         content_type="text/javascript; charset=utf-8",
     ),
     OperatorStaticAsset(
+        route="/operator-quality-gates.js",
+        filename="operator-quality-gates.js",
+        content_type="text/javascript; charset=utf-8",
+    ),
+    OperatorStaticAsset(
         route="/operator-control-center.js",
         filename="operator-control-center.js",
         content_type="text/javascript; charset=utf-8",

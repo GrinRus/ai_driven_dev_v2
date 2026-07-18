@@ -534,6 +534,9 @@ def test_operator_next_flow_controller_and_view_keep_separate_boundaries() -> No
         '"/operator-next-flow-view.js"'
     )
     assert loader.index('"/operator-next-flow-view.js"') < loader.index(
+        '"/operator-quality-gates.js"'
+    )
+    assert loader.index('"/operator-quality-gates.js"') < loader.index(
         '"/operator-control-center.js"'
     )
     assert loader.index('"/operator-control-center.js"') < loader.index(
@@ -1409,6 +1412,34 @@ def test_operator_implement_review_static_contract_covers_project_set_grouping()
     )
 
 
+def test_studio_implementation_gate_uses_canonical_task_actions_and_review_guard() -> None:
+    quality_gate = _asset_text("/operator-quality-gates.js")
+    control = _asset_text("/operator-control-center.js")
+
+    _assert_contains_all(
+        quality_gate,
+        (
+            "function renderStudioImplementationQualityGate(taskView)",
+            'data-studio-quality-gate="implement"',
+            'data-run-task="${escapeHtml(task.id)}"',
+            "task.ready && selectedRuntimeReady()",
+            "data-finalize-tasks",
+            "taskView.finalization_eligible",
+            "data-implementation-review-blocker",
+            "taskView.review_blocker",
+        ),
+    )
+    _assert_contains_all(
+        control,
+        (
+            'selectSurfaceRenderer("implement"',
+            "renderStudioImplementationQualityGate(taskView)",
+            "renderTaskProgress(taskView)",
+            "verificationReady && taskView.review_eligible && selectedRuntimeReady()",
+        ),
+    )
+
+
 def test_operator_implement_review_surfaces_missing_verification_evidence() -> None:
     control = _asset_text("/operator-control-center.js")
 
@@ -1434,7 +1465,7 @@ def test_operator_implement_review_surfaces_missing_verification_evidence() -> N
                 "verification evidence."
             ),
             "const verificationReady = implementationVerificationReady(evidence);",
-            'verificationReady && selectedRuntimeReady() ? "" : "disabled"',
+            "verificationReady && taskView.review_eligible && selectedRuntimeReady()",
             "${renderImplementationProceedGuard(evidence)}",
             'kind: "implementation-verification"',
             'badge: "verification missing"',
