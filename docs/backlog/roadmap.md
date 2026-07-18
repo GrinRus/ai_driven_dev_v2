@@ -11296,14 +11296,15 @@ Dependencies:
 
 Local tasks:
 
-- `W36-E5-S10-T1` (soon) Switch the missing/default presentation selector to Studio after every
+- `W36-E5-S10-T1` (next) Switch the missing/default presentation selector to Studio after every
   per-surface parity entry is closed while retaining explicit `ui=legacy` rollback.
   - Dependencies: `W36-E7-S2-T1` as the direct queue predecessor.
   - Scope: packaged renderer default only.
   - Verification: the full provider-free browser command passes in default Studio mode and the
     explicit rollback renderer still dispatches identical service actions.
-- `W36-E5-S10-T2` (planned) Record one source-installed rollback-window pass while both presentation
+- `W36-E5-S10-T2` (soon) Record one source-installed rollback-window pass while both presentation
   selectors remain supported.
+  - Dependencies: `W36-E5-S10-T1` as the direct queue predecessor.
   - Scope: cutover evidence only.
   - Verification: isolated fixture copies prove equivalent endpoint/payload semantics and
     normalized outcomes in default and rollback modes; immutable source-run evidence remains
@@ -11599,7 +11600,7 @@ Dependencies:
 
 Local tasks:
 
-- `W36-E7-S2-T1` (next) Add one command that discovers and executes every declared packaged-UI
+- `W36-E7-S2-T1` (done) Add one command that discovers and executes every declared packaged-UI
   browser scenario.
   - Dependencies: `W36-E5-S9-T9` as the direct queue predecessor.
   - Scope: local/CI UI test entry point.

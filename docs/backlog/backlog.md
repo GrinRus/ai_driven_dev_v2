@@ -7,11 +7,11 @@ slice, and local task.
 
 ## Next
 
-- `W36-E7-S2-T1` — Add the packaged-UI browser scenario runner.
+- `W36-E5-S10-T1` — Switch the default renderer to Studio with legacy rollback.
 
 ## Soon
 
-- `W36-E5-S10-T1` — Switch the default renderer to Studio with legacy rollback.
+- `W36-E5-S10-T2` — Record the source-installed rollback window.
 
 ## Parking lot
 
@@ -29,6 +29,13 @@ slice, and local task.
   queue-restoration policy in `docs/backlog/roadmap.md` (`W8-E3-S1`).
 
 ## Current reconciliation
+
+- `2026-07-18` `W36-E7-S2-T1` is complete: the developer-facing packaged-UI
+  runner evaluates the packaged parity manifest through bounded Node `vm`, validates an explicit
+  Python pytest-node registry, rejects duplicate/missing/live-provider entries before execution,
+  runs all 12 journeys in stable numeric order, continues after failures, and verifies exact
+  discovered/executed identity. Studio-default cutover `E5-S10-T1` is promoted to `Next`,
+  followed by rollback-window evidence `T2`.
 
 - `2026-07-18` `W36-E5-S9-T9` is complete: Flow Complete is now
   `parity_closed` after the full terminal journey proved core recommendation, drafts, independent
