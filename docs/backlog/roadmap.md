@@ -11099,13 +11099,13 @@ Local tasks:
   - Scope: repair-exhaustion Recovery renderer only.
   - Verification: no exhausted state exposes an enabled Run Repair and the intervention request
     retains the selected run/stage context.
-- `W36-E5-S6-T5` (next) Implement decision-first mobile runtime and validation Recovery layouts over
+- `W36-E5-S6-T5` (done) Implement decision-first mobile runtime and validation Recovery layouts over
   the shared compact shell.
   - Dependencies: `W36-E5-S2`.
   - Scope: failure/recovery responsive presentation only.
   - Verification: `320x568` and `390x844` show the typed failure, one eligible recovery action,
     and evidence drill-down without horizontal overflow or initial decision scroll.
-- `W36-E5-S6-T6` (planned) Promote the verified runtime/validation candidates to `parity_closed` while
+- `W36-E5-S6-T6` (soon) Promote the verified runtime/validation candidates to `parity_closed` while
   retaining legacy failure cards for missing/default and explicit rollback.
   - Dependencies: `W36-E7-S1-T3`.
   - Scope: runtime/validation parity-manifest entries only.
@@ -11514,7 +11514,7 @@ Local tasks:
   - Scope: live Studio browser scenario family.
   - Verification: real milestones, last output, cursor recovery, cancel lifecycle, and
     durable logs pass without console/network ambiguity or fake progress.
-- `W36-E7-S1-T3` (soon) Add the Runtime/Validation Recovery Studio repair/exhaustion browser
+- `W36-E7-S1-T3` (next) Add the Runtime/Validation Recovery Studio repair/exhaustion browser
   journey.
   - Dependencies: `W36-E5-S6-T1..T5`; direct queue predecessor `W36-E5-S6-T5`.
   - Scope: runtime/validation recovery scenario family.

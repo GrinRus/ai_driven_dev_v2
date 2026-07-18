@@ -1252,6 +1252,7 @@ def test_operator_questions_asset_keeps_answer_resolution_and_saved_answer_contr
 
 def test_operator_recovery_assets_keep_repair_center_contracts() -> None:
     cockpit = _asset_text("/operator-stage-cockpit.js")
+    responsive = _asset_text("/operator-responsive.css")
 
     _assert_contains_all(
         cockpit,
@@ -1290,6 +1291,16 @@ def test_operator_recovery_assets_keep_repair_center_contracts() -> None:
             "data-run-repair",
             "data-stop-run",
             'data-tab-shortcut="request"',
+        ),
+    )
+    _assert_contains_all(
+        responsive,
+        (
+            "body.recovery-mode .recovery-summary-failure",
+            "body.recovery-mode .recovery-summary-primary",
+            "body.recovery-mode .recovery-summary-evidence",
+            "min-height: var(--control-height-touch);",
+            "overflow: visible;",
         ),
     )
 

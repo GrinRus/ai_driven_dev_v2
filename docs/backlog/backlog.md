@@ -7,13 +7,13 @@ slice, and local task.
 
 ## Next
 
-- `W36-E5-S6-T5` — Implement decision-first mobile runtime and validation Recovery
-  layouts over the compact shell.
+- `W36-E7-S1-T3` — Add the provider-free Runtime/Validation Recovery browser journey
+  across the required viewport matrix.
 
 ## Soon
 
-- `W36-E7-S1-T3` — Add the provider-free Runtime/Validation Recovery browser journey
-  across the required viewport matrix.
+- `W36-E5-S6-T6` — Close runtime/validation Recovery presentation parity after the
+  provider-free journey passes.
 
 ## Parking lot
 
@@ -38,6 +38,12 @@ slice, and local task.
   queue-restoration policy in `docs/backlog/roadmap.md` (`W8-E3-S1`).
 
 ## Current reconciliation
+
+- `2026-07-18` `W36-E5-S6-T5` is complete: mobile runtime failure, repair-available,
+  and repair-exhausted Recovery order failure, one primary decision, then evidence;
+  both target mobile viewports retain 44px controls, one scroll owner, and no horizontal
+  overflow. Recovery journey `W36-E7-S1-T3` is promoted to `Next` and parity closure
+  `W36-E5-S6-T6` to `Soon`.
 
 - `2026-07-18` `W36-E5-S6-T4` is complete: repair-exhausted and explicit-stop
   Recovery expose one stage-scoped `Request Change` primary action, retain supporting
