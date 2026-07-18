@@ -7,13 +7,13 @@ slice, and local task.
 
 ## Next
 
-- `W36-E7-S1-T1` — Add the Guided Setup project validation, create/resume, runtime
-  review, first-launch, and resulting Inbox browser journey.
+- `W36-E7-S1-T2` — Add the active Studio running, silence, cancellation, reconnect,
+  and return-to-live browser journey.
 
 ## Soon
 
-- `W36-E7-S1-T2` — Add the active Studio running, silence, cancellation, reconnect,
-  and return-to-live browser journey.
+No task is currently queued here. The next planned browser journey (`W36-E7-S1-T7`)
+is not a direct dependency successor of the active task.
 
 ## Parking lot
 
@@ -42,6 +42,15 @@ slice, and local task.
   queue-restoration policy in `docs/backlog/roadmap.md` (`W8-E3-S1`).
 
 ## Current reconciliation
+
+- `2026-07-18` `W36-E7-S1-T1` is complete: the provider-free Guided Setup journey now
+  validates both create and resume branches across all five viewports, preserves the
+  selected runtime through readiness refresh, launches the workflow through the shared
+  mutation seam, and exposes the correlated Running now Inbox item. The executable gates
+  also corrected stale Decision Bar rendering, Inbox refresh on navigation, touch-target
+  sizing, and hover contrast without changing service payloads. `S1-T2` is promoted to
+  `Next`; `Soon` remains empty because the following document journey is not its direct
+  dependency successor.
 
 - `2026-07-18` `W36-E5-S2-T4` is complete: all eight stage controls retain exact stage
   identity, durable status in their accessible name, a touch-safe height, and unclipped

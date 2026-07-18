@@ -44,6 +44,7 @@ _ACCESSIBILITY_MEASUREMENTS = r"""
   const visible = (element) => {
     const style = getComputedStyle(element);
     const rect = element.getBoundingClientRect();
+    if (element.matches(".skip-link:not(:focus)")) return false;
     return style.display !== "none"
       && style.visibility !== "hidden"
       && rect.width > 0
@@ -85,7 +86,10 @@ _ACCESSIBILITY_MEASUREMENTS = r"""
     if (!accessibleName(element)) {
       add("accessible-name", element, "empty", "non-empty accessible name");
     }
-    const rect = element.getBoundingClientRect();
+    const visualTarget = ["checkbox", "radio"].includes(element.getAttribute("type"))
+      ? element.labels?.[0] || element
+      : element;
+    const rect = visualTarget.getBoundingClientRect();
     if (rect.width < targetSize || rect.height < targetSize) {
       add(
         "target-size",
@@ -147,13 +151,19 @@ _ACCESSIBILITY_MEASUREMENTS = r"""
     return {r: values[0], g: values[1], b: values[2], a: values.length > 3 ? values[3] : 1};
   };
   const backgroundFor = (element) => {
+    const layers = [];
     let current = element;
     while (current) {
       const color = parseRgb(getComputedStyle(current).backgroundColor);
-      if (color && color.a > 0.01) return color;
+      if (color && color.a > 0.01) layers.push(color);
       current = current.parentElement;
     }
-    return {r: 255, g: 255, b: 255, a: 1};
+    return layers.reverse().reduce((background, foreground) => ({
+      r: foreground.r * foreground.a + background.r * (1 - foreground.a),
+      g: foreground.g * foreground.a + background.g * (1 - foreground.a),
+      b: foreground.b * foreground.a + background.b * (1 - foreground.a),
+      a: 1,
+    }), {r: 255, g: 255, b: 255, a: 1});
   };
   const luminance = ({r, g, b}) => {
     const channel = (value) => {
@@ -164,6 +174,7 @@ _ACCESSIBILITY_MEASUREMENTS = r"""
   };
   const textElements = Array.from(document.querySelectorAll("body *")).filter((element) => {
     if (!visible(element)) return false;
+    if (element.matches(":disabled") || element.closest(":disabled")) return false;
     return Array.from(element.childNodes).some(
       (node) => node.nodeType === Node.TEXT_NODE && node.textContent.trim(),
     );

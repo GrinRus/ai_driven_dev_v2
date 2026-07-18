@@ -89,12 +89,17 @@ button.danger {
   border-color: var(--color-state-danger-border-muted);
   color: var(--color-state-danger-text);
 }
+button.danger:not(:disabled):not([aria-disabled="true"]):hover {
+  background: var(--color-state-danger-bg-strong);
+  border-color: var(--color-state-danger-border-strong);
+  color: var(--color-state-danger-text);
+}
 button.link-button {
   background: transparent;
   border: 0;
   color: var(--teal-dark);
-  min-height: 0;
-  padding: 0;
+  min-height: var(--control-height);
+  padding: 0 var(--space-2);
 }
 input:not([type="checkbox"]):not([type="radio"]),
 select,

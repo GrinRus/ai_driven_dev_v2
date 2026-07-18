@@ -337,6 +337,14 @@ body.setup-active .cockpit {
   background: #e7f3f1;
   border-color: var(--color-border-accent);
 }
+.stage-card:not(:disabled):hover {
+  background: var(--color-bg-selected);
+  border-color: var(--color-border-accent);
+  color: var(--text);
+}
+.stage-card:not(:disabled):hover .stage-subtitle {
+  color: var(--color-text-primary);
+}
 .stage-card.retried {
   box-shadow: inset 3px 0 0 rgba(154, 106, 18, 0.28);
 }

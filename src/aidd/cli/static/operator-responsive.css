@@ -126,13 +126,16 @@
     z-index: 7;
   }
   .right-sidebar .maintenance-overflow summary {
-    background: rgba(255, 255, 255, 0.08);
+    background: var(--topbar-bg);
     border: 1px solid rgba(255, 255, 255, 0.22);
     border-radius: 5px;
     color: var(--topbar-text);
     min-height: var(--control-height-touch);
     padding: 0 8px;
     text-transform: none;
+  }
+  .project-home-tabs button {
+    min-height: var(--control-height-touch);
   }
   .right-sidebar .maintenance-actions {
     background: var(--topbar-bg);

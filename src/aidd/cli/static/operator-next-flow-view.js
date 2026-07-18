@@ -1968,7 +1968,8 @@ function renderNextActionPanel() {
 }
 
 function renderGlobalNextActionStrip() {
-  const host = document.getElementById("globalNextActionStrip");
+  const host = document.getElementById("globalNextActionStrip")
+    || document.querySelector('[data-current-decision-stable-id="globalNextActionStrip"]');
   if (!host) return;
   syncLiveJobBodyClass();
   syncExternalRunningBodyClass();

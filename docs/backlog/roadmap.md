@@ -11500,14 +11500,14 @@ Dependencies:
 
 Local tasks:
 
-- `W36-E7-S1-T1` (next) Add the Guided Setup project validation, create/resume, runtime review,
+- `W36-E7-S1-T1` (done) Add the Guided Setup project validation, create/resume, runtime review,
   first launch, and resulting Inbox entry browser journey.
   - Dependencies: `W36-E4-S1-T1..T6`, `W36-E4-S2`, `W36-E5-S2`,
     `W36-E5-S3-T1..T4`.
   - Scope: onboarding browser scenario family.
   - Verification: every required viewport completes create or resume with one primary
     action, no geometry/accessibility failure, and no provider authentication.
-- `W36-E7-S1-T2` (soon) Add the active Studio running, silence, cancellation, transient
+- `W36-E7-S1-T2` (next) Add the active Studio running, silence, cancellation, transient
   reconnect, and return-to-live browser journey.
   - Dependencies: `W36-E5-S2`, `W36-E5-S4-T1..T4`, `W36-E6-S3`.
   - Scope: live Studio browser scenario family.

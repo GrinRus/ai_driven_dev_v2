@@ -177,6 +177,7 @@ document.addEventListener("click", async (event) => {
     const tabShortcut = event.target.closest("[data-tab-shortcut]")?.dataset.tabShortcut;
     if (tabShortcut) {
       activateTab(tabShortcut, {historyMode: "push"});
+      if (tabShortcut === "project-home") await fetchInbox();
       renderProjectHomeRail();
       await renderCockpit();
       return;
