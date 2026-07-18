@@ -244,7 +244,9 @@
   display: grid;
   grid-template-columns: 228px minmax(0, 1fr) 300px;
   grid-template-rows: minmax(500px, calc(100vh - 252px)) minmax(200px, auto);
+  max-height: calc(100vh - 52px);
   min-height: calc(100vh - 52px);
+  overflow-y: auto;
 }
 body.bottom-dock-collapsed .operator-shell {
   grid-template-rows: minmax(500px, calc(100vh - 98px)) auto;
@@ -286,14 +288,17 @@ body.setup-active .cockpit {
   grid-row: 1;
 }
 .stage-rail {
+  align-self: start;
   background: var(--color-bg-disabled);
   border-right: 1px solid var(--line);
   display: flex;
   flex-direction: column;
   grid-row: 1 / span 2;
   min-height: 0;
-  overflow: auto;
+  overflow: visible;
   padding: 12px 10px;
+  position: sticky;
+  top: 0;
 }
 .rail-header,
 .dock-header {
@@ -406,7 +411,7 @@ button.quick-link {
 }
 .cockpit {
   min-width: 0;
-  overflow: auto;
+  overflow: visible;
   padding: 14px 16px;
 }
 .cockpit-header {

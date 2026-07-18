@@ -7,17 +7,18 @@ slice, and local task.
 
 ## Next
 
-- `W36-E5-S1-T5` — Establish one Studio content scroll owner on desktop.
+- `W36-E5-S3-T1` — Implement the typed project-local Inbox projection and deterministic
+  priority sections.
 
 ## Soon
 
+- `W36-E5-S3-T2` — Add durable work-item/run/stage correlation to bounded UI job
+  summaries and compose the Running now overlay.
 
 ## Parking lot
 
 - `W36-E5-S2-T1` — Replace the measured `275px` mobile header with a compact
   context/status bar and maintenance overflow.
-- `W36-E5-S3-T1` — Implement the typed project-local Inbox projection and deterministic
-  priority sections.
 - `W36-E5-S4-T1` — Compose the active Studio view from shared mode navigation, compact
   context bar, stage navigation, and Decision Bar slots.
 - `W36-E5-S5-T1` — Render blocking questions with durable resolution and draft-recovery
@@ -47,6 +48,11 @@ slice, and local task.
   queue-restoration policy in `docs/backlog/roadmap.md` (`W8-E3-S1`).
 
 ## Current reconciliation
+
+- `2026-07-18` `W36-E5-S1-T5` and slice `W36-E5-S1` are complete: the desktop
+  Studio shell owns the single primary vertical scroll path, while stage navigation,
+  content, Inspector, drawers, and Filmstrip remain reachable without nested scroll traps.
+  `W36-E5-S3-T1` is promoted to `Next` and `T2` to `Soon`.
 
 - `2026-07-18` `W36-E5-S1-T4` is complete: Refresh, Open `.aidd`, Stop server, and
   other service-maintenance controls now live in one labelled native overflow after the

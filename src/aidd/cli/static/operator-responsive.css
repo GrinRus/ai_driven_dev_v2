@@ -101,6 +101,9 @@
   }
   .operator-shell {
     display: block;
+    max-height: none;
+    min-height: 0;
+    overflow: visible;
   }
   .maintenance-overflow {
     margin-top: var(--space-3);
@@ -311,9 +314,11 @@
     grid-template-columns: 1fr;
   }
   .stage-rail {
+    align-self: stretch;
     border-bottom: 1px solid var(--line);
     border-right: 0;
     padding: 10px;
+    position: static;
   }
   .stage-list {
     display: grid;

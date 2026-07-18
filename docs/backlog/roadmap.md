@@ -10819,7 +10819,7 @@ Exit evidence:
 - renderer code owns neither terminal eligibility nor recommendation priority;
 - Inbox and Flow Complete consume one stable, backward-compatible decision contract.
 
-#### Slice W36-E5-S1 — shared Studio hierarchy and progressive disclosure (`planned`)
+#### Slice W36-E5-S1 — shared Studio hierarchy and progressive disclosure (`done`)
 Goal: keep the current operator decision and primary document visible while demoting
 zero-value and secondary evidence.
 
@@ -10852,7 +10852,7 @@ Local tasks:
   - Scope: shell maintenance controls.
   - Verification: service commands remain keyboard-accessible but no longer precede the
     primary operator task in focus or visual order.
-- `W36-E5-S1-T5` (next) Establish one Studio content scroll owner so the inspector, drawers,
+- `W36-E5-S1-T5` (done) Establish one Studio content scroll owner so the inspector, drawers,
   and Filmstrip create no nested scroll traps on supported desktop viewports.
   - Scope: desktop shell layout.
   - Verification: `1280x900` and `1440x900` fixtures expose one primary vertical scroll
@@ -10923,12 +10923,12 @@ Dependencies:
 
 Local tasks:
 
-- `W36-E5-S3-T1` (parked) Implement a typed core-owned durable Inbox projection with Needs your
+- `W36-E5-S3-T1` (next) Implement a typed core-owned durable Inbox projection with Needs your
   decision, Ready to continue, and Flow complete sections.
   - Scope: core operator frontend read models only.
   - Verification: provider-free fixtures prove deterministic priority, exact work-item/run/stage
     references, one core-approved action, and no frontend-derived eligibility or live-job claim.
-- `W36-E5-S3-T2` (planned) Add typed work-item/run/stage correlation to bounded UI job summaries and
+- `W36-E5-S3-T2` (soon) Add typed work-item/run/stage correlation to bounded UI job summaries and
   compose the project-local Running now overlay without changing durable Inbox eligibility.
   - Dependencies: `W34-E3-S3-T1`.
   - Scope: CLI UI job summary and Inbox composition service only.

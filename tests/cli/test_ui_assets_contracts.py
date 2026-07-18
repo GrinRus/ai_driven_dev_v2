@@ -2438,6 +2438,27 @@ def test_index_html_keeps_service_commands_in_labelled_maintenance_overflow() ->
     assert 'id="refreshButton"' not in top_actions
     assert 'id="openWorkspaceButton"' not in top_actions
     assert 'id="stopServerButton"' not in top_actions
+
+
+def test_desktop_studio_shell_owns_primary_vertical_scrolling() -> None:
+    html = _asset_text("/")
+    layout = _asset_text("/operator-layout.css")
+    components = _asset_text("/operator-components.css")
+    responsive = _asset_text("/operator-responsive.css")
+
+    assert 'class="operator-shell" data-aidd-scroll-owner="studio"' in html
+    shell_rule = layout.split(".operator-shell {", 1)[1].split("}", 1)[0]
+    assert "max-height: calc(100vh - 52px);" in shell_rule
+    assert "overflow-y: auto;" in shell_rule
+    stage_rule = layout.split("\n.stage-rail {", 1)[1].split("}", 1)[0]
+    cockpit_rule = layout.split("\n.cockpit {", 1)[1].split("}", 1)[0]
+    sidebar_rule = components.split("\n.right-sidebar {", 1)[1].split("}", 1)[0]
+    assert "overflow: visible;" in stage_rule
+    assert "overflow: visible;" in cockpit_rule
+    assert "overflow: visible;" in sidebar_rule
+    mobile_shell = responsive.rsplit("  .operator-shell {", 1)[1].split("}", 1)[0]
+    assert "max-height: none;" in mobile_shell
+    assert "overflow: visible;" in mobile_shell
     assert _attrs_for("aside", **{"aria-label": "Workflow navigation"})
     assert _attrs_for("section", **{"aria-label": "Stage cockpit"})
     assert _attrs_for("aside", **{"aria-label": "Run details"})
