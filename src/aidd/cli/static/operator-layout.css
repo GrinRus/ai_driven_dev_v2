@@ -197,7 +197,7 @@
 .topbar button.danger,
 .topbar select {
   background: rgba(255, 255, 255, 0.08);
-  border-color: rgba(255, 255, 255, 0.22);
+  border-color: var(--topbar-control-line);
   color: var(--topbar-text);
 }
 .topbar button.secondary:hover {
