@@ -1663,7 +1663,10 @@ def test_operator_approvals_asset_keeps_request_and_intervention_contracts() -> 
     assert "[data-human-decision-surface] button," in responsive
     assert '[data-human-decision-surface="question"] [data-primary-action]' in responsive
     assert '[data-human-decision-surface="intervention"] #submitInterventionButton' in responsive
-    assert '[data-human-decision-surface="approval"] [data-operator-action="allow_once"]' in responsive
+    assert (
+        '[data-human-decision-surface="approval"] [data-operator-action="allow_once"]'
+        in responsive
+    )
 
 
 def test_operator_logs_asset_keeps_filter_raw_cancel_and_polling_contracts() -> None:
