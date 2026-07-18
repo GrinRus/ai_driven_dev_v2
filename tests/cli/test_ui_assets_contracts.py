@@ -552,6 +552,7 @@ def test_operator_next_flow_controller_and_view_keep_separate_boundaries() -> No
 
 def test_studio_history_uses_typed_frames_without_runtime_mutation() -> None:
     history = _asset_text("/operator-history.js")
+    responsive = _asset_text("/operator-responsive.css")
     cockpit = _asset_text("/operator-stage-cockpit.js")
     main = _asset_text("/operator-main.js")
 
@@ -582,6 +583,16 @@ def test_studio_history_uses_typed_frames_without_runtime_mutation() -> None:
         ),
     )
     assert "postJson(" not in history
+    _assert_contains_all(
+        responsive,
+        (
+            ".history-filmstrip-frames",
+            "grid-template-columns: minmax(0, 1fr)",
+            ".history-frame",
+            "overflow: visible",
+            "min-height: 44px",
+        ),
+    )
     assert 'selectSurfaceRenderer("history"' in cockpit
     assert 'state.historyAutoFollow = false' in main
     assert 'state.historyAutoFollow = true' in main

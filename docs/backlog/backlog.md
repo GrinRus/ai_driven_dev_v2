@@ -7,11 +7,11 @@ slice, and local task.
 
 ## Next
 
-- `W36-E5-S8-T6` — Render mobile chronological History drill-down.
+- `W36-E7-S1-T5` — Add the History comparison, lineage, archive browser journey.
 
 ## Soon
 
-- `W36-E7-S1-T5` — Add the History comparison, lineage, archive browser journey.
+- `W36-E5-S8-T7` — Close History presentation parity.
 
 ## Parking lot
 
@@ -32,6 +32,11 @@ slice, and local task.
   queue-restoration policy in `docs/backlog/roadmap.md` (`W8-E3-S1`).
 
 ## Current reconciliation
+
+- `2026-07-18` `W36-E5-S8-T6` is complete: at `320x568` and `390x844`, Studio
+  History uses a single-column chronological drill-down with full-width touch controls, visible
+  overflow, and no nested horizontal Filmstrip. The History browser journey `W36-E7-S1-T5` is
+  promoted to `Next`, followed by parity closure `S8-T7`.
 
 - `2026-07-18` `W36-E5-S8-T5` is complete: Studio History renders the canonical
   append-only archive disposition with legacy-fallback source labeling and retains direct

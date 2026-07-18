@@ -11200,13 +11200,13 @@ Local tasks:
   - Scope: History archive-state renderer only.
   - Verification: archive inspection changes no completed-run bytes/hashes and all retained
     documents, logs, comparison, and lineage remain inspectable.
-- `W36-E5-S8-T6` (next) Render Filmstrip as a vertical chronological mobile drill-down rather than a
+- `W36-E5-S8-T6` (done) Render Filmstrip as a vertical chronological mobile drill-down rather than a
   horizontal scroll trap.
   - Dependencies: `W36-E5-S2`.
   - Scope: History responsive presentation only.
   - Verification: `320x568` and `390x844` expose frame status, evidence action, and return path
     without page-level horizontal overflow.
-- `W36-E5-S8-T7` (planned) Promote the verified History candidate to `parity_closed` while retaining the
+- `W36-E5-S8-T7` (soon) Promote the verified History candidate to `parity_closed` while retaining the
   legacy timeline/history renderer for missing/default and explicit rollback.
   - Dependencies: `W36-E7-S1-T5`.
   - Scope: History parity-manifest entry only.
@@ -11527,7 +11527,7 @@ Local tasks:
   - Scope: delivery-decision browser scenario family.
   - Verification: unsafe completion remains blocked, remediation/rerun is explicit, and stale
     QA keeps Flow Complete absent until a later fresh-QA journey proves terminal eligibility.
-- `W36-E7-S1-T5` (soon) Add the History Filmstrip, comparison, lineage, and archive browser
+- `W36-E7-S1-T5` (next) Add the History Filmstrip, comparison, lineage, and archive browser
   journey.
   - Dependencies: `W36-E5-S8-T1..T6`, with `W36-E5-S8-T6` as the direct queue predecessor.
   - Scope: history and continuation browser scenario family.

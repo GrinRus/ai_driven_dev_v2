@@ -43,6 +43,63 @@
   }
 }
 @media (max-width: 760px) {
+  .studio-history,
+  .studio-run-comparison,
+  .studio-history-lineage,
+  .studio-history-archive {
+    min-width: 0;
+  }
+  .history-filmstrip-frames {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    overflow: visible;
+  }
+  .history-frame {
+    flex: none;
+    min-height: 44px;
+    width: 100%;
+  }
+  .history-selection .surface-title,
+  .studio-run-comparison .surface-title,
+  .studio-run-comparison .comparison-controls,
+  .studio-history-archive .lineage-actions {
+    align-items: stretch;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .history-selection button,
+  .studio-run-comparison button,
+  .studio-history-archive button {
+    min-height: 44px;
+    width: 100%;
+  }
+  .studio-run-comparison label,
+  .studio-run-comparison input,
+  .studio-run-comparison .small-badge {
+    max-width: 100%;
+    min-width: 0;
+    overflow-wrap: anywhere;
+    white-space: normal;
+    width: 100%;
+  }
+  .stage-card > * {
+    min-width: 0;
+  }
+  .stage-card .stage-subtitle,
+  .stage-card .small-badge {
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .operator-shell[data-mobile-priority-layout="context-decision-document-drilldown"] .stage-rail,
+  .operator-shell[data-mobile-priority-layout="context-decision-document-drilldown"] .stage-list {
+    max-width: 100%;
+    min-width: 0;
+    width: 100%;
+  }
+  .operator-shell[data-mobile-priority-layout="context-decision-document-drilldown"] .stage-rail {
+    overflow-x: clip;
+  }
   :root {
     --control-height: var(--control-height-touch);
     --control-padding-block: 8px;
