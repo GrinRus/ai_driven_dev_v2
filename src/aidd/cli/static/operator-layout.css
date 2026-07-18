@@ -208,6 +208,38 @@
   border-color: rgba(238, 144, 136, 0.55);
   color: #ffd3cf;
 }
+.maintenance-overflow {
+  border-top: 1px solid var(--line);
+  margin-top: auto;
+  padding: var(--space-3);
+}
+.maintenance-overflow summary {
+  align-items: center;
+  color: var(--muted);
+  cursor: pointer;
+  display: flex;
+  font-size: var(--type-caption-size);
+  font-weight: 750;
+  justify-content: space-between;
+  min-height: var(--control-height);
+  text-transform: uppercase;
+}
+.maintenance-overflow summary::after {
+  content: "+";
+  font-size: var(--type-body-size);
+}
+.maintenance-overflow[open] summary::after {
+  content: "−";
+}
+.maintenance-actions {
+  display: grid;
+  gap: var(--space-2);
+  padding-top: var(--space-2);
+}
+.maintenance-actions button {
+  justify-content: flex-start;
+  width: 100%;
+}
 .operator-shell {
   display: grid;
   grid-template-columns: 228px minmax(0, 1fr) 300px;

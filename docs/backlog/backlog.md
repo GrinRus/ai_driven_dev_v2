@@ -7,11 +7,10 @@ slice, and local task.
 
 ## Next
 
-- `W36-E5-S1-T4` — Move maintenance commands into a labelled overflow surface.
+- `W36-E5-S1-T5` — Establish one Studio content scroll owner on desktop.
 
 ## Soon
 
-- `W36-E5-S1-T5` — Establish one Studio content scroll owner on desktop.
 
 ## Parking lot
 
@@ -48,6 +47,11 @@ slice, and local task.
   queue-restoration policy in `docs/backlog/roadmap.md` (`W8-E3-S1`).
 
 ## Current reconciliation
+
+- `2026-07-18` `W36-E5-S1-T4` is complete: Refresh, Open `.aidd`, Stop server, and
+  other service-maintenance controls now live in one labelled native overflow after the
+  current Studio decision in visual and keyboard order. `W36-E5-S1-T5` is promoted to
+  `Next`; `Soon` remains empty until the shell-foundation slice closes.
 
 - `2026-07-17` `W36-E5-S1-T3` is complete: vertical surfaces share one
   policy-free primary-action slot that renders only the supplied service action or an

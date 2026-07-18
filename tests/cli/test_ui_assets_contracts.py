@@ -2418,6 +2418,26 @@ def test_operator_main_asset_keeps_refresh_order_and_event_routing_contracts() -
 def test_index_html_exposes_named_operator_landmarks() -> None:
     assert _attrs_for("header", **{"aria-label": "Operator controls"})
     assert _attrs_for("main", **{"aria-label": "Operator workspace"})
+
+
+def test_index_html_keeps_service_commands_in_labelled_maintenance_overflow() -> None:
+    html = _asset_text("/")
+
+    assert html.index('id="cockpitContent"') < html.index('class="maintenance-overflow"')
+    _assert_contains_all(
+        html,
+        (
+            '<summary data-aidd-focus-role="maintenance">Maintenance</summary>',
+            'role="group" aria-label="Service maintenance commands"',
+            'id="refreshButton"',
+            'id="openWorkspaceButton"',
+            'id="stopServerButton"',
+        ),
+    )
+    top_actions = html.split('<div class="top-actions">', 1)[1].split("</div>", 1)[0]
+    assert 'id="refreshButton"' not in top_actions
+    assert 'id="openWorkspaceButton"' not in top_actions
+    assert 'id="stopServerButton"' not in top_actions
     assert _attrs_for("aside", **{"aria-label": "Workflow navigation"})
     assert _attrs_for("section", **{"aria-label": "Stage cockpit"})
     assert _attrs_for("aside", **{"aria-label": "Run details"})

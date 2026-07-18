@@ -59,8 +59,7 @@
     white-space: normal;
   }
   .top-actions {
-    display: grid;
-    grid-template-columns: 1fr;
+    display: block;
     width: 100%;
   }
   .runtime-picker {
@@ -102,6 +101,9 @@
   }
   .operator-shell {
     display: block;
+  }
+  .maintenance-overflow {
+    margin-top: var(--space-3);
   }
   body.recovery-mode .operator-shell {
     display: flex;

@@ -28,9 +28,6 @@
           <option value="">Select runtime</option>
         </select>
       </label>
-      <button id="refreshButton" class="secondary" type="button">Refresh</button>
-      <button id="openWorkspaceButton" class="secondary" type="button">Open .aidd</button>
-      <button id="stopServerButton" class="danger" type="button">Stop server</button>
     </div>
   </header>
 
@@ -73,6 +70,14 @@
       <section class="panel" id="evidencePanel"></section>
       <section class="panel" id="runtimeRootPanel"></section>
       <section class="panel" id="safetyPanel"></section>
+      <details class="maintenance-overflow">
+        <summary data-aidd-focus-role="maintenance">Maintenance</summary>
+        <div class="maintenance-actions" role="group" aria-label="Service maintenance commands">
+          <button id="refreshButton" class="secondary" type="button">Refresh</button>
+          <button id="openWorkspaceButton" class="secondary" type="button">Open .aidd</button>
+          <button id="stopServerButton" class="danger" type="button">Stop server</button>
+        </div>
+      </details>
     </aside>
 
     <section class="bottom-dock" aria-label="Activity and recent artifacts">

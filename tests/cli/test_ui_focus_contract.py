@@ -14,6 +14,9 @@ def test_skip_link_precedes_maintenance_controls_and_targets_current_decision() 
     focus = _asset("/operator-focus.js")
 
     assert html.index('id="skipToDecision"') < html.index('class="topbar"')
+    assert html.index('id="cockpitContent"') < html.index('class="maintenance-overflow"')
+    assert '<summary data-aidd-focus-role="maintenance">Maintenance</summary>' in html
+    assert 'role="group" aria-label="Service maintenance commands"' in html
     assert 'href="#currentDecision"' in html
     assert 'target.id = "currentDecision";' in focus
     assert '"#cockpitContent [data-primary-recovery-slot]"' in focus
