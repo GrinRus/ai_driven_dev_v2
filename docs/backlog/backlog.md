@@ -7,13 +7,13 @@ slice, and local task.
 
 ## Next
 
-- `W36-E7-S1-T10` — Add the Request Change/intervention Recovery Studio browser
-  journey, including allowed and downstream-blocked paths.
+- `W36-E7-S1-T11` — Add the runtime-approval Recovery Studio browser journey,
+  including durable compare-and-set conflicts.
 
 ## Soon
 
-- `W36-E7-S1-T11` — Add the runtime-approval Recovery Studio browser journey,
-  including durable compare-and-set conflicts.
+- `W36-E5-S5-T5` — Close question Recovery parity after the complete human-decision
+  journey set is verified.
 
 ## Parking lot
 
@@ -40,6 +40,13 @@ slice, and local task.
   queue-restoration policy in `docs/backlog/roadmap.md` (`W8-E3-S1`).
 
 ## Current reconciliation
+
+- `2026-07-18` `W36-E7-S1-T10` is complete: allowed and downstream-blocked
+  intervention journeys run provider-free across all five browser viewports. They prove
+  session draft restore across reload and Back, exact run/stage identity, one guarded
+  stage-interact request, successful draft cleanup, downstream-success remediation routing,
+  and zero durable requests when ineligible. Runtime approval journey `T11` is promoted to
+  `Next`; question parity closure `W36-E5-S5-T5` waits in `Soon` for the complete journey set.
 
 - `2026-07-18` `W36-E7-S1-T6` is complete: the question Recovery journey runs
   provider-free across all five browser viewports and covers partial/deferred blocking,

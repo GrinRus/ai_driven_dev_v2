@@ -11041,9 +11041,9 @@ Local tasks:
   - Scope: human-decision responsive presentation only.
   - Verification: `320x568` and `390x844` keyboard/touch journeys expose the full decision and
     primary submit without horizontal overflow or initial scroll.
-- `W36-E5-S5-T5` (planned) Promote the verified question candidate to `parity_closed` while retaining the
+- `W36-E5-S5-T5` (soon) Promote the verified question candidate to `parity_closed` while retaining the
   legacy question renderer for missing/default and explicit rollback.
-  - Dependencies: `W36-E7-S1-T6`.
+  - Dependencies: `W36-E7-S1-T6`, `W36-E7-S1-T11`.
   - Scope: question parity-manifest entry only.
   - Verification: the question fixture closes independently and durable answer/resume behavior
     is equivalent in `ui=studio`, missing/default, and `ui=legacy` modes.
@@ -11555,12 +11555,12 @@ Local tasks:
   - Scope: task-aware implement browser scenario family.
   - Verification: dependency readiness, preserved successes, diff/scope evidence,
     finalization recovery, and Review eligibility agree with the canonical task ledger.
-- `W36-E7-S1-T10` (next) Add the Request Change/intervention Recovery Studio browser journey.
+- `W36-E7-S1-T10` (done) Add the Request Change/intervention Recovery Studio browser journey.
   - Dependencies: `W36-E5-S5-T2`, `W36-E5-S5-T4`, `W36-E7-S1-T6`.
   - Scope: intervention browser scenario family.
   - Verification: draft restore, allowed request, downstream-success rejection, one durable
     operator request, remediation routing, and current run/stage context pass.
-- `W36-E7-S1-T11` (soon) Add the runtime-approval Recovery Studio browser journey.
+- `W36-E7-S1-T11` (next) Add the runtime-approval Recovery Studio browser journey.
   - Dependencies: `W36-E5-S5-T3`, `W36-E5-S5-T4`, `W36-E7-S1-T10`.
   - Scope: runtime-approval browser scenario family.
   - Verification: allow, deny, cancel, session confirmation, pending state, compare-and-set
