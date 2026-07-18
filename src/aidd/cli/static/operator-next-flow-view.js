@@ -640,8 +640,6 @@ function renderStudioFlowCompleteState() {
         </div>
         <span class="small-badge ${terminalHandoffTone(handoff.status)}">${escapeHtml(handoff.status)}</span>
       </div>
-      ${renderTerminalAttentionSpotlight(handoff)}
-      ${renderTerminalEvidenceSpotlight(handoff)}
       <section class="next-flow-decision-spotlight" data-core-recommended-outcome="${escapeHtml(recommendation.outcome)}">
         <div>
           <span class="small-badge good">core recommendation</span>
@@ -650,6 +648,8 @@ function renderStudioFlowCompleteState() {
         </div>
         ${renderStudioFlowCompleteAction(primary, {primary: true})}
       </section>
+      ${renderTerminalAttentionSpotlight(handoff)}
+      ${renderTerminalEvidenceSpotlight(handoff)}
       ${others.length ? `
         <details class="studio-flow-complete-other">
           <summary>Other next actions</summary>

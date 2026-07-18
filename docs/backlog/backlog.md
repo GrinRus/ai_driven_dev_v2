@@ -7,11 +7,11 @@ slice, and local task.
 
 ## Next
 
-- `W36-E5-S9-T8` — Render compact mobile terminal decision.
+- `W36-E7-S1-T8` — Add terminal follow-up, clone, eval, archive browser journey.
 
 ## Soon
 
-- `W36-E7-S1-T8` — Add terminal follow-up, clone, eval, archive browser journey.
+- `W36-E5-S9-T9` — Close Flow Complete presentation parity.
 
 ## Parking lot
 
@@ -32,6 +32,12 @@ slice, and local task.
   queue-restoration policy in `docs/backlog/roadmap.md` (`W8-E3-S1`).
 
 ## Current reconciliation
+
+- `2026-07-18` `W36-E5-S9-T8` is complete: mobile Flow Complete removes redundant
+  cockpit chrome, places final QA status and the core recommendation before supporting evidence,
+  keeps the primary control touch-sized, and leaves secondary outcomes in a keyboard-accessible
+  disclosure without horizontal overflow at `320x568` or `390x844`. Terminal journey
+  `W36-E7-S1-T8` is promoted to `Next`, followed by parity closure `S9-T9`.
 
 - `2026-07-18` `W36-E5-S9-T7` is complete: Studio archive confirmation and durable
   readback use the existing append-only archive endpoint. The presentation names the operation

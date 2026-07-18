@@ -11264,13 +11264,13 @@ Local tasks:
   - Scope: terminal archive disposition renderer only.
   - Verification: archive writes only the owned overlay and completed documents, artifacts,
     logs, comparison, and lineage remain inspectable.
-- `W36-E5-S9-T8` (next) Render the recommended next decision and Other next actions as a compact mobile
+- `W36-E5-S9-T8` (done) Render the recommended next decision and Other next actions as a compact mobile
   drill-down over the shared responsive shell.
   - Dependencies: `W36-E5-S2`, with `W36-E5-S9-T7` as the direct queue predecessor.
   - Scope: Flow Complete responsive presentation only.
   - Verification: `320x568` and `390x844` show final status, one recommendation, and a reachable
     secondary-outcomes disclosure without horizontal overflow or initial decision scroll.
-- `W36-E5-S9-T9` (planned) Promote the verified Flow Complete candidate to `parity_closed` while retaining
+- `W36-E5-S9-T9` (soon) Promote the verified Flow Complete candidate to `parity_closed` while retaining
   the equal-weight legacy action grid/wizard for missing/default and explicit rollback.
   - Dependencies: `W36-E7-S1-T8`.
   - Scope: terminal/next-flow parity-manifest entry only.
@@ -11549,7 +11549,7 @@ Local tasks:
   - Verification: Preview/Source/Diff, safe artifact selection, validator provenance,
     missing evidence, zero-value hiding, and raw-log drill-down pass without arbitrary
     path reads.
-- `W36-E7-S1-T8` (soon) Add the Flow Complete, follow-up, clone, eval, and archive disposition
+- `W36-E7-S1-T8` (next) Add the Flow Complete, follow-up, clone, eval, and archive disposition
   browser journey.
   - Dependencies: `W36-E5-S0`, `W36-E5-S9-T3..T8`, with `W36-E5-S9-T8` as the direct
     queue predecessor.

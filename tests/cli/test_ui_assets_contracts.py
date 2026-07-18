@@ -605,6 +605,7 @@ def test_studio_flow_complete_uses_only_core_recommendation() -> None:
     view = _asset_text("/operator-next-flow-view.js")
     studio = _asset_text("/operator-active-studio.js")
     parity = _asset_text("/operator-surface-parity.js")
+    responsive = _asset_text("/operator-responsive.css")
 
     _assert_contains_all(
         view,
@@ -620,6 +621,14 @@ def test_studio_flow_complete_uses_only_core_recommendation() -> None:
     assert 'selectSurfaceRenderer("flow-complete"' in studio
     assert 'id: "flow-complete"' in parity
     assert 'rollout: "candidate"' in parity
+    _assert_contains_all(
+        responsive,
+        (
+            ".studio-flow-complete",
+            ".studio-flow-complete-other > summary",
+            "min-height: 44px",
+        ),
+    )
     _assert_contains_all(
         view,
         (

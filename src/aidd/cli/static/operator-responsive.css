@@ -82,6 +82,30 @@
     white-space: normal;
     width: 100%;
   }
+  .studio-flow-complete {
+    display: grid;
+    gap: var(--space-3);
+    min-width: 0;
+  }
+  .studio-flow-complete .flow-complete-hero,
+  .studio-flow-complete .next-flow-decision-spotlight {
+    gap: var(--space-2);
+    margin: 0;
+    padding: var(--space-3);
+  }
+  .studio-flow-complete .flow-complete-hero h2 {
+    font-size: var(--type-title-size);
+  }
+  .studio-flow-complete .next-flow-decision-spotlight button,
+  .studio-flow-complete-other > summary,
+  .studio-flow-complete-other button {
+    min-height: 44px;
+    width: 100%;
+  }
+  .studio-flow-complete-other > summary {
+    align-items: center;
+    display: flex;
+  }
   .stage-card > * {
     min-width: 0;
   }
@@ -295,6 +319,14 @@
   body.inbox-detail-mode .tabs,
   body.inbox-detail-mode .global-next-action-strip {
     display: none;
+  }
+  body.terminal-handoff-mode .cockpit-header,
+  body.terminal-handoff-mode .tabs,
+  body.terminal-handoff-mode .global-next-action-strip {
+    display: none;
+  }
+  body.terminal-handoff-mode .cockpit {
+    padding: var(--space-2);
   }
   body.inbox-detail-mode .studio-inbox-header {
     padding: var(--space-4);
