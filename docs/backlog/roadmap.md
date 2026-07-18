@@ -11507,7 +11507,7 @@ Local tasks:
   - Scope: onboarding browser scenario family.
   - Verification: every required viewport completes create or resume with one primary
     action, no geometry/accessibility failure, and no provider authentication.
-- `W36-E7-S1-T2` (next) Add the active Studio running, silence, cancellation, transient
+- `W36-E7-S1-T2` (done) Add the active Studio running, silence, cancellation, transient
   reconnect, and return-to-live browser journey.
   - Dependencies: `W36-E5-S2`, `W36-E5-S4-T1..T4`, `W36-E6-S3`.
   - Scope: live Studio browser scenario family.
@@ -11536,7 +11536,7 @@ Local tasks:
   - Scope: product-question browser scenario family.
   - Verification: draft restore, resolved/partial/deferred state, failed/successful durable
     readback, answer/resume, and current run/stage context pass on desktop and mobile.
-- `W36-E7-S1-T7` (planned) Add the Document Canvas and Evidence Inspector browser journey.
+- `W36-E7-S1-T7` (next) Add the Document Canvas and Evidence Inspector browser journey.
   - Dependencies: `W36-E5-S4-T2..T3`.
   - Scope: document/evidence browser scenario family.
   - Verification: Preview/Source/Diff, safe artifact selection, validator provenance,

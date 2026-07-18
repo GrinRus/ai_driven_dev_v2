@@ -7,12 +7,11 @@ slice, and local task.
 
 ## Next
 
-- `W36-E7-S1-T2` — Add the active Studio running, silence, cancellation, reconnect,
-  and return-to-live browser journey.
+- `W36-E7-S1-T7` — Add the Document Canvas and Evidence Inspector browser journey.
 
 ## Soon
 
-No task is currently queued here. The next planned browser journey (`W36-E7-S1-T7`)
+No task is currently queued here. The next planned Inbox journey (`W36-E7-S1-T12`)
 is not a direct dependency successor of the active task.
 
 ## Parking lot
@@ -42,6 +41,15 @@ is not a direct dependency successor of the active task.
   queue-restoration policy in `docs/backlog/roadmap.md` (`W8-E3-S1`).
 
 ## Current reconciliation
+
+- `2026-07-18` `W36-E7-S1-T2` is complete: all five viewports exercise a real
+  provider-free UI job through measured output, explicit silence, one intentional
+  transient polling failure, cursor-preserving recovery, cancellation, terminal durable
+  readback, and persisted `runtime.log`. The journey also removed the remaining Activity
+  nested-scroll trap, corrected content-growing Studio rows and bounded long identities,
+  and fixed interactive hover contrast. Document/Evidence journey `S1-T7` is promoted to
+  `Next`; `Soon` remains empty because Inbox journey `T12` is not its direct dependency
+  successor.
 
 - `2026-07-18` `W36-E7-S1-T1` is complete: the provider-free Guided Setup journey now
   validates both create and resume branches across all five viewports, preserves the

@@ -243,13 +243,13 @@
 .operator-shell {
   display: grid;
   grid-template-columns: 228px minmax(0, 1fr) 300px;
-  grid-template-rows: minmax(500px, calc(100vh - 252px)) minmax(200px, auto);
+  grid-template-rows: minmax(500px, auto) minmax(200px, auto);
   max-height: calc(100vh - 52px);
   min-height: calc(100vh - 52px);
   overflow-y: auto;
 }
 body.bottom-dock-collapsed .operator-shell {
-  grid-template-rows: minmax(500px, calc(100vh - 98px)) auto;
+  grid-template-rows: minmax(500px, auto) auto;
 }
 body.recovery-mode .operator-shell {
   grid-template-columns: 228px minmax(0, 1fr);
@@ -337,12 +337,12 @@ body.setup-active .cockpit {
   background: #e7f3f1;
   border-color: var(--color-border-accent);
 }
-.stage-card:not(:disabled):hover {
+button.stage-card:not(:disabled):not([aria-disabled="true"]):hover {
   background: var(--color-bg-selected);
   border-color: var(--color-border-accent);
   color: var(--text);
 }
-.stage-card:not(:disabled):hover .stage-subtitle {
+button.stage-card:not(:disabled):not([aria-disabled="true"]):hover .stage-subtitle {
   color: var(--color-text-primary);
 }
 .stage-card.retried {

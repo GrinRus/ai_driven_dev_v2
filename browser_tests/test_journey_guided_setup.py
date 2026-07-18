@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import sys
 from pathlib import Path
 
 import pytest
@@ -8,43 +7,12 @@ from playwright.sync_api import Page, sync_playwright
 
 from aidd.core.workspace import WorkspaceBootstrapService
 from browser_tests.browser_harness import VIEWPORTS, operator_browser_harness
+from browser_tests.journey_support import configure_sleeping_fixture_runtime
 from browser_tests.rendered_assertions import assert_accessible_render
 from browser_tests.rendered_geometry import assert_rendered_geometry
 
 JOURNEY_ID = "guided-setup"
 _CREATE_WIDTHS = {320, 768, 1440}
-
-
-def _configure_fixture_runtime(project_root: Path) -> None:
-    fixture_runtime = (
-        Path(__file__).parents[1]
-        / "harness/fixtures/minimal-python/aidd_fixture_runtime.py"
-    ).resolve()
-    wrapper = project_root / "guided_runtime.py"
-    wrapper.write_text(
-        "import runpy\n"
-        "import time\n"
-        "try:\n"
-        f"    runpy.run_path({fixture_runtime.as_posix()!r}, run_name='__main__')\n"
-        "except SystemExit as error:\n"
-        "    if error.code not in (None, 0):\n"
-        "        raise\n"
-        "time.sleep(20)\n",
-        encoding="utf-8",
-    )
-    project_root.joinpath("aidd.example.toml").write_text(
-        "[workspace]\n"
-        'root = ".aidd"\n\n'
-        "[runtime.generic_cli]\n"
-        f'command = "{sys.executable} {wrapper.as_posix()}"\n'
-        'mode = "adapter-flags"\n'
-        'permission_policy = "full-access"\n\n'
-        "[logging]\n"
-        'mode = "both"\n\n'
-        "[repair]\n"
-        "max_attempts = 2\n",
-        encoding="utf-8",
-    )
 
 
 def _seed_resume_work_item(project_root: Path, work_item: str) -> None:
@@ -71,7 +39,7 @@ def test_guided_setup_create_or_resume_launches_into_inbox(
     work_item = f"WI-GUIDED-{branch.upper()}"
     project_root = tmp_path / f"guided-{viewport[0]}"
     project_root.mkdir(parents=True)
-    _configure_fixture_runtime(project_root)
+    configure_sleeping_fixture_runtime(project_root, sleep_seconds=20)
     if branch == "resume":
         _seed_resume_work_item(project_root, work_item)
 

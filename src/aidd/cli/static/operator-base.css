@@ -75,14 +75,14 @@ button.quick-link,
   border-color: var(--line-strong);
   color: var(--text);
 }
-button.secondary:hover,
-button.quick-link:hover,
-.tabs button:hover,
-.log-filter button:hover,
-.viewer-modes button:hover {
+button.secondary:not(:disabled):not([aria-disabled="true"]):hover,
+button.quick-link:not(:disabled):not([aria-disabled="true"]):hover,
+.tabs button:not(:disabled):not([aria-disabled="true"]):hover,
+.log-filter button:not(:disabled):not([aria-disabled="true"]):hover,
+.viewer-modes button:not(:disabled):not([aria-disabled="true"]):hover {
   background: var(--color-bg-selected);
   border-color: var(--teal);
-  color: var(--teal-dark);
+  color: var(--color-text-primary);
 }
 button.danger {
   background: var(--color-state-danger-bg-subtle);
