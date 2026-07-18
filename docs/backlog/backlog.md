@@ -7,12 +7,12 @@ slice, and local task.
 
 ## Next
 
-- `W36-E5-S7-T5` — Close Implement and Review/QA presentation parity.
+- `W36-E5-S8-T1` — Implement the typed Filmstrip frame projection from durable attempts,
+  task attempts, and finalization milestones.
 
 ## Soon
 
-- `W36-E5-S8-T1` — Implement the typed Filmstrip frame projection from durable attempts,
-  task attempts, and finalization milestones.
+- `W36-E5-S8-T2` — Render collapsed Filmstrip and expanded History from typed frames.
 
 ## Parking lot
 
@@ -33,6 +33,12 @@ slice, and local task.
   queue-restoration policy in `docs/backlog/roadmap.md` (`W8-E3-S1`).
 
 ## Current reconciliation
+
+- `2026-07-18` `W36-E5-S7-T5` and slice `W36-E5-S7` are complete: Implement and
+  Review/QA are `parity_closed`. Default legacy, explicit legacy, and Studio consume
+  byte-equivalent canonical task, implementation, Review, and QA read models, while keeping
+  the same task/finalization and remediation mutation hooks. History frame projection
+  `W36-E5-S8-T1` is promoted to `Next`, followed by its renderer `T2`.
 
 - `2026-07-18` `W36-E7-S1-T4` is complete: provider-free Review/QA fixtures render
   exact finding, acceptance, evidence, risk, and issue identities across all five viewports;

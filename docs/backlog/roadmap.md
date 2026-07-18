@@ -11117,7 +11117,7 @@ Exit evidence:
 - runtime failure, validation repair, and human correction remain truthful distinct paths;
 - recovery never silently progresses or invents missing evidence.
 
-#### Slice W36-E5-S7 — implement, Review, and QA quality gates (`planned`)
+#### Slice W36-E5-S7 — implement, Review, and QA quality gates (`done`)
 Goal: migrate task execution, repository evidence, Review findings, QA verdict, remediation,
 and stale downstream recovery without weakening task-aware eligibility.
 
@@ -11150,7 +11150,7 @@ Local tasks:
   - Scope: quality-gate remediation renderer only.
   - Verification: one durable remediation request is created, fresh downstream stages become
     stale, stale QA never becomes terminal, and rerun uses the selected runtime.
-- `W36-E5-S7-T5` (next) Promote the verified implement/Review/QA candidates to `parity_closed` while
+- `W36-E5-S7-T5` (done) Promote the verified implement/Review/QA candidates to `parity_closed` while
   retaining legacy surfaces for missing/default and explicit rollback.
   - Dependencies: `W36-E7-S1-T4`, `W36-E7-S1-T9`.
   - Scope: task/quality-gate parity-manifest entries only.
@@ -11176,12 +11176,12 @@ Dependencies:
 
 Local tasks:
 
-- `W36-E5-S8-T1` (soon) Implement a typed Filmstrip frame projection for stage attempts, task
+- `W36-E5-S8-T1` (next) Implement a typed Filmstrip frame projection for stage attempts, task
   attempts, and aggregate finalization milestones with events as markers.
   - Scope: core operator timeline/read model only.
   - Verification: normal, repair, intervention, remediation, task, finalization, live, and
     legacy fixtures produce stable frame identity and retain the first decisive failure.
-- `W36-E5-S8-T2` (planned) Render the collapsed Studio Filmstrip and expanded History timeline with
+- `W36-E5-S8-T2` (soon) Render the collapsed Studio Filmstrip and expanded History timeline with
   selected artifact/log evidence and Return to live behavior.
   - Scope: packaged Filmstrip/History renderer only.
   - Verification: frame selection, historical auto-follow pause, exact log range, missing
