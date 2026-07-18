@@ -894,14 +894,47 @@ def build_browser_state_fixture(
             work_item=work_item,
             run_id=run_id,
         )
-    if state == "terminal-handoff":
-        _succeed_through(
-            workspace_root,
-            "qa",
-            work_item=work_item,
-            run_id=run_id,
-        )
-        _write_qa_report(workspace_root, "ready", work_item=work_item)
+    if state in {
+        "terminal-handoff",
+        "terminal-handoff-warning",
+        "terminal-handoff-failed",
+        "terminal-handoff-blocked",
+    }:
+        if state == "terminal-handoff-blocked":
+            _succeed_through(
+                workspace_root,
+                "review",
+                work_item=work_item,
+                run_id=run_id,
+            )
+            attempt_root = _attempt(workspace_root, "qa", work_item=work_item, run_id=run_id)
+            commit_runtime_evidence(
+                RuntimeEvidenceCommitRequest(
+                    attempt_path=attempt_root,
+                    adapter_outcome=RuntimeAdapterOutcome.BLOCKED,
+                    exit_classification="blocked",
+                    exit_code=None,
+                    stdout_text="",
+                    stderr_text="operator decision required\n",
+                    runtime_log_text="operator decision required\n",
+                    stop_reason=RuntimeStopReason.BLOCKED,
+                )
+            )
+            persist_stage_status(workspace_root, work_item, run_id, "qa", "blocked")
+            verdict = "ready-with-risks"
+        else:
+            _succeed_through(
+                workspace_root,
+                "qa",
+                work_item=work_item,
+                run_id=run_id,
+            )
+            verdict = {
+                "terminal-handoff": "ready",
+                "terminal-handoff-warning": "ready-with-risks",
+                "terminal-handoff-failed": "not-ready",
+            }[state]
+        _write_qa_report(workspace_root, verdict, work_item=work_item)
         return _descriptor(
             name=state,
             project_root=project_root,
@@ -933,4 +966,7 @@ BROWSER_FIXTURE_STATES = (
     "qa-decision",
     "remediation-stale",
     "terminal-handoff",
+    "terminal-handoff-warning",
+    "terminal-handoff-failed",
+    "terminal-handoff-blocked",
 )

@@ -11270,7 +11270,7 @@ Local tasks:
   - Scope: Flow Complete responsive presentation only.
   - Verification: `320x568` and `390x844` show final status, one recommendation, and a reachable
     secondary-outcomes disclosure without horizontal overflow or initial decision scroll.
-- `W36-E5-S9-T9` (soon) Promote the verified Flow Complete candidate to `parity_closed` while retaining
+- `W36-E5-S9-T9` (next) Promote the verified Flow Complete candidate to `parity_closed` while retaining
   the equal-weight legacy action grid/wizard for missing/default and explicit rollback.
   - Dependencies: `W36-E7-S1-T8`.
   - Scope: terminal/next-flow parity-manifest entry only.
@@ -11549,7 +11549,7 @@ Local tasks:
   - Verification: Preview/Source/Diff, safe artifact selection, validator provenance,
     missing evidence, zero-value hiding, and raw-log drill-down pass without arbitrary
     path reads.
-- `W36-E7-S1-T8` (next) Add the Flow Complete, follow-up, clone, eval, and archive disposition
+- `W36-E7-S1-T8` (done) Add the Flow Complete, follow-up, clone, eval, and archive disposition
   browser journey.
   - Dependencies: `W36-E5-S0`, `W36-E5-S9-T3..T8`, with `W36-E5-S9-T8` as the direct
     queue predecessor.
@@ -11598,8 +11598,9 @@ Dependencies:
 
 Local tasks:
 
-- `W36-E7-S2-T1` (planned) Add one command that discovers and executes every declared packaged-UI
+- `W36-E7-S2-T1` (soon) Add one command that discovers and executes every declared packaged-UI
   browser scenario.
+  - Dependencies: `W36-E5-S9-T9` as the direct queue predecessor.
   - Scope: local/CI UI test entry point.
   - Verification: discovered scenario ids equal executed scenario ids exactly and live
     provider manifests are rejected.
