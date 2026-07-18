@@ -10890,12 +10890,12 @@ Local tasks:
   - Verification: no-run Inbox, post-stage, and active Studio fixtures expose the accepted
     primary decision without initial scrolling; vertical Recovery/History/terminal slices own
     their state-specific mobile parity.
-- `W36-E5-S2-T3` (next) Replace repeated per-body-mode ordering selectors with one mobile
+- `W36-E5-S2-T3` (done) Replace repeated per-body-mode ordering selectors with one mobile
   priority layout contract: context -> decision -> document -> evidence/history drill-down.
   - Scope: responsive shell state classes.
   - Verification: every declared operator state maps to the same context -> decision ->
     document -> evidence/history drill-down ordering rule.
-- `W36-E5-S2-T4` (soon) Keep compact stage navigation and primary labels legible at `320px` and
+- `W36-E5-S2-T4` (next) Keep compact stage navigation and primary labels legible at `320px` and
   `390px` without rendering the desktop stage rail as a tiny grid.
   - Scope: responsive stage rail and label wrapping.
   - Verification: shared touch targets pass, no active stage or primary label clips,

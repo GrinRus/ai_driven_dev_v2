@@ -12,6 +12,10 @@ from aidd.cli.ui_assets import (
     operator_static_asset_manifest,
 )
 
+_MOBILE_PRIORITY_SELECTOR = (
+    '.operator-shell[data-mobile-priority-layout="context-decision-document-drilldown"]'
+)
+
 
 class _StartTagCollector(HTMLParser):
     def __init__(self) -> None:
@@ -320,13 +324,10 @@ def test_operator_css_layers_own_static_ui_surfaces() -> None:
     assert ".launch-confirmation-grid" in responsive
     assert ".interview-loop-screen" in responsive
     assert ".validation-repair-center" in responsive
-    assert "body.recovery-mode .cockpit" in responsive
-    assert "body.evidence-log-mode .operator-shell" in responsive
-    assert "body.evidence-log-mode .cockpit" in responsive
-    assert "body.evidence-log-mode .stage-rail" in responsive
-    assert "body.live-job-mode .operator-shell" in responsive
-    assert "body.live-job-mode .cockpit" in responsive
-    assert "body.live-job-mode .stage-rail" in responsive
+    assert 'data-mobile-priority-layout="context-decision-document-drilldown"' in _INDEX_HTML
+    assert _MOBILE_PRIORITY_SELECTOR in responsive
+    assert 'body.live-job-mode .operator-shell {' not in responsive
+    assert 'body.recovery-mode .operator-shell {' not in responsive
     assert ".recovery-hero," in responsive
     assert ".workbench-toc-list" in responsive
     assert "scroll-padding-inline: 10px" in responsive
@@ -382,9 +383,7 @@ def test_operator_responsive_css_keeps_mobile_stage_rail_inside_viewport() -> No
     assert ".global-next-action-strip .next-button {" in responsive
     assert "function postStageNextActionIsPrimary(" in api_state
     assert "post-stage-next-action-mode" in api_state
-    assert "body.post-stage-next-action-mode .operator-shell" in responsive
-    assert "body.post-stage-next-action-mode .cockpit" in responsive
-    assert "body.post-stage-next-action-mode .stage-rail" in responsive
+    assert _MOBILE_PRIORITY_SELECTOR in responsive
     assert 'document.body.classList.contains("post-stage-next-action-mode")' in shell
 
 
@@ -1031,12 +1030,11 @@ def test_operator_global_next_action_surfaces_live_job_progress() -> None:
             ".live-progress-actions {",
             ".live-progress-actions button {",
             ".live-progress-meta,",
-            "body.live-job-mode .operator-shell {",
-            "body.external-running-stage-mode .operator-shell {",
-            "body.live-job-mode .cockpit {",
-            "body.external-running-stage-mode .cockpit {",
-            "body.live-job-mode .stage-rail {",
-            "body.external-running-stage-mode .stage-rail {",
+            f"{_MOBILE_PRIORITY_SELECTOR} {{",
+            f"{_MOBILE_PRIORITY_SELECTOR} .cockpit {{",
+            f"{_MOBILE_PRIORITY_SELECTOR} .stage-rail {{",
+            f"{_MOBILE_PRIORITY_SELECTOR} .right-sidebar {{",
+            f"{_MOBILE_PRIORITY_SELECTOR} .bottom-dock {{",
         ),
     )
 
@@ -1489,9 +1487,9 @@ def test_operator_review_and_qa_decision_summaries_prioritize_next_actions() -> 
     assert ".decision-summary," in responsive
     assert ".decision-summary-metrics," in responsive
     assert ".mode-decision-peek {" in responsive
-    assert "body.decision-detail-mode .operator-shell" in responsive
-    assert "body.decision-detail-mode .cockpit" in responsive
-    assert "body.decision-detail-mode .stage-rail" in responsive
+    assert _MOBILE_PRIORITY_SELECTOR in responsive
+    assert f"{_MOBILE_PRIORITY_SELECTOR} .cockpit" in responsive
+    assert f"{_MOBILE_PRIORITY_SELECTOR} .stage-rail" in responsive
 
 
 def test_operator_stale_downstream_summary_prioritizes_rerun_guidance() -> None:
@@ -1532,8 +1530,8 @@ def test_operator_stale_downstream_summary_prioritizes_rerun_guidance() -> None:
             "grid-template-columns: repeat(4, minmax(0, 1fr));",
         ),
     )
-    assert "body.stale-downstream-mode .operator-shell" in responsive
-    assert "body.stale-downstream-mode .cockpit" in responsive
+    assert _MOBILE_PRIORITY_SELECTOR in responsive
+    assert f"{_MOBILE_PRIORITY_SELECTOR} .cockpit" in responsive
     assert ".stale-downstream-summary," in responsive
     assert ".stale-downstream-facts," in responsive
 
@@ -2209,13 +2207,13 @@ def test_operator_flow_complete_static_contract_covers_terminal_handoff_actions(
     assert ".repair-highlight-card," in responsive
     assert ".repair-highlight-evidence," in responsive
     assert ".next-action-evidence-actions," in responsive
-    assert "body.terminal-handoff-mode .operator-shell" in responsive
-    assert "body.terminal-handoff-mode .cockpit" in responsive
-    assert "body.terminal-handoff-mode .stage-rail" in responsive
+    assert _MOBILE_PRIORITY_SELECTOR in responsive
+    assert f"{_MOBILE_PRIORITY_SELECTOR} .cockpit" in responsive
+    assert f"{_MOBILE_PRIORITY_SELECTOR} .stage-rail" in responsive
     assert "body.terminal-handoff-mode .project-home-rail" in responsive
-    assert "body.terminal-repair-mode .operator-shell" in responsive
-    assert "body.terminal-repair-mode .cockpit" in responsive
-    assert "body.terminal-repair-mode .stage-rail" in responsive
+    assert _MOBILE_PRIORITY_SELECTOR in responsive
+    assert f"{_MOBILE_PRIORITY_SELECTOR} .cockpit" in responsive
+    assert f"{_MOBILE_PRIORITY_SELECTOR} .stage-rail" in responsive
     assert "body.terminal-repair-mode .project-home-rail" in responsive
     assert 'document.body.classList.contains("terminal-handoff-mode")' in shell
     assert 'document.body.classList.contains("terminal-repair-mode")' in shell
@@ -2450,7 +2448,7 @@ def test_desktop_studio_shell_owns_primary_vertical_scrolling() -> None:
 
     assert (
         'class="operator-shell" aria-label="Operator workspace" '
-        'data-aidd-scroll-owner="studio"'
+        'data-aidd-scroll-owner="studio" data-mobile-priority-layout='
     ) in html
     shell_rule = layout.split(".operator-shell {", 1)[1].split("}", 1)[0]
     assert "max-height: calc(100vh - 52px);" in shell_rule
@@ -2461,7 +2459,10 @@ def test_desktop_studio_shell_owns_primary_vertical_scrolling() -> None:
     assert "overflow: visible;" in stage_rule
     assert "overflow: visible;" in cockpit_rule
     assert "overflow: visible;" in sidebar_rule
-    mobile_shell = responsive.rsplit("  .operator-shell {", 1)[1].split("}", 1)[0]
+    mobile_shell = responsive.split(
+        f"  {_MOBILE_PRIORITY_SELECTOR} {{",
+        1,
+    )[1].split("}", 1)[0]
     assert "max-height: none;" in mobile_shell
     assert "overflow: visible;" in mobile_shell
     assert _attrs_for("aside", **{"aria-label": "Workflow navigation"})

@@ -7,13 +7,11 @@ slice, and local task.
 
 ## Next
 
-- `W36-E5-S2-T3` — Replace repeated per-body-mode ordering selectors with one mobile
-  context → decision → document → evidence/history drill-down contract.
+- `W36-E5-S2-T4` — Keep compact stage navigation and primary labels legible at `320px`
+  and `390px` without hiding stage identity or status.
 
 ## Soon
 
-- `W36-E5-S2-T4` — Keep compact stage navigation and primary labels legible at `320px`
-  and `390px` without hiding stage identity or status.
 
 ## Parking lot
 
@@ -44,6 +42,12 @@ slice, and local task.
   queue-restoration policy in `docs/backlog/roadmap.md` (`W8-E3-S1`).
 
 ## Current reconciliation
+
+- `2026-07-18` `W36-E5-S2-T3` is complete: one declarative mobile priority attribute now
+  orders every operator mode as cockpit/decision → stage context → sidebar evidence →
+  history/activity drill-down. The repeated recovery/live/terminal/stale ordering selectors
+  are removed, and the full eight-case mobile regression remains green. `S2-T4` is promoted
+  to `Next`; `Soon` stays empty until its cross-slice journey successor is selected.
 
 - `2026-07-18` `W36-E5-S2-T2` is complete: no-run Studio, durable-running Studio, and
   Inbox place their actual primary control inside the initial `320x568` and `390x844`

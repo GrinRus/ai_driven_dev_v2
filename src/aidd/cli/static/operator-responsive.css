@@ -151,180 +151,33 @@
     text-overflow: clip;
     white-space: normal;
   }
-  .operator-shell {
-    display: block;
+  .operator-shell[data-mobile-priority-layout="context-decision-document-drilldown"] {
+    display: flex;
+    flex-direction: column;
     max-height: none;
     min-height: 0;
     overflow: visible;
   }
-  body[data-operator-mode="work"] .operator-shell {
-    display: flex;
-    flex-direction: column;
-  }
-  body[data-operator-mode="work"] .cockpit {
+  .operator-shell[data-mobile-priority-layout="context-decision-document-drilldown"] .cockpit {
     order: 1;
   }
-  body[data-operator-mode="work"] .stage-rail {
+  .operator-shell[data-mobile-priority-layout="context-decision-document-drilldown"] .stage-rail {
     order: 2;
   }
-  body[data-operator-mode="work"] .right-sidebar {
+  .operator-shell[data-mobile-priority-layout="context-decision-document-drilldown"] .right-sidebar {
     order: 3;
   }
-  body[data-operator-mode="work"] .bottom-dock {
+  .operator-shell[data-mobile-priority-layout="context-decision-document-drilldown"] .bottom-dock {
     order: 4;
   }
   .maintenance-overflow {
     margin-top: var(--space-3);
-  }
-  body.recovery-mode .operator-shell {
-    display: flex;
-    flex-direction: column;
-  }
-  body.evidence-log-mode .operator-shell {
-    display: flex;
-    flex-direction: column;
-  }
-  body.recovery-mode .cockpit {
-    order: 1;
-  }
-  body.evidence-log-mode .cockpit {
-    order: 1;
-  }
-  body.recovery-mode .stage-rail {
-    order: 2;
-  }
-  body.evidence-log-mode .stage-rail {
-    order: 2;
-  }
-  body.recovery-mode .right-sidebar {
-    order: 3;
-  }
-  body.evidence-log-mode .right-sidebar {
-    order: 3;
-  }
-  body.recovery-mode .bottom-dock {
-    order: 4;
-  }
-  body.evidence-log-mode .bottom-dock {
-    order: 4;
   }
   body.recovery-mode .project-home-rail {
     display: none;
   }
   body.evidence-log-mode .project-home-rail {
     display: none;
-  }
-  body.live-job-mode .operator-shell {
-    display: flex;
-    flex-direction: column;
-  }
-  body.external-running-stage-mode .operator-shell {
-    display: flex;
-    flex-direction: column;
-  }
-  body.terminal-handoff-mode .operator-shell {
-    display: flex;
-    flex-direction: column;
-  }
-  body.decision-detail-mode .operator-shell {
-    display: flex;
-    flex-direction: column;
-  }
-  body.stale-downstream-mode .operator-shell {
-    display: flex;
-    flex-direction: column;
-  }
-  body.terminal-repair-mode .operator-shell {
-    display: flex;
-    flex-direction: column;
-  }
-  body.post-stage-next-action-mode .operator-shell {
-    display: flex;
-    flex-direction: column;
-  }
-  body.live-job-mode .cockpit {
-    order: 1;
-  }
-  body.external-running-stage-mode .cockpit {
-    order: 1;
-  }
-  body.terminal-handoff-mode .cockpit {
-    order: 1;
-  }
-  body.decision-detail-mode .cockpit {
-    order: 1;
-  }
-  body.stale-downstream-mode .cockpit {
-    order: 1;
-  }
-  body.terminal-repair-mode .cockpit {
-    order: 1;
-  }
-  body.post-stage-next-action-mode .cockpit {
-    order: 1;
-  }
-  body.live-job-mode .stage-rail {
-    order: 2;
-  }
-  body.external-running-stage-mode .stage-rail {
-    order: 2;
-  }
-  body.terminal-handoff-mode .stage-rail {
-    order: 2;
-  }
-  body.decision-detail-mode .stage-rail {
-    order: 2;
-  }
-  body.stale-downstream-mode .stage-rail {
-    order: 2;
-  }
-  body.terminal-repair-mode .stage-rail {
-    order: 2;
-  }
-  body.post-stage-next-action-mode .stage-rail {
-    order: 2;
-  }
-  body.live-job-mode .right-sidebar {
-    order: 3;
-  }
-  body.external-running-stage-mode .right-sidebar {
-    order: 3;
-  }
-  body.terminal-handoff-mode .right-sidebar {
-    order: 3;
-  }
-  body.decision-detail-mode .right-sidebar {
-    order: 3;
-  }
-  body.stale-downstream-mode .right-sidebar {
-    order: 3;
-  }
-  body.terminal-repair-mode .right-sidebar {
-    order: 3;
-  }
-  body.post-stage-next-action-mode .right-sidebar {
-    order: 3;
-  }
-  body.live-job-mode .bottom-dock {
-    order: 4;
-  }
-  body.external-running-stage-mode .bottom-dock {
-    order: 4;
-  }
-  body.terminal-handoff-mode .bottom-dock {
-    order: 4;
-  }
-  body.decision-detail-mode .bottom-dock {
-    order: 4;
-  }
-  body.stale-downstream-mode .bottom-dock {
-    order: 4;
-  }
-  body.terminal-repair-mode .bottom-dock {
-    order: 4;
-  }
-  body.post-stage-next-action-mode .bottom-dock {
-    order: 4;
   }
   body.live-job-mode .project-home-rail,
   body.external-running-stage-mode .project-home-rail,
