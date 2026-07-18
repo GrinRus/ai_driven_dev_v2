@@ -7,11 +7,13 @@ slice, and local task.
 
 ## Next
 
-- `W36-E5-S2-T4` — Keep compact stage navigation and primary labels legible at `320px`
-  and `390px` without hiding stage identity or status.
+- `W36-E7-S1-T1` — Add the Guided Setup project validation, create/resume, runtime
+  review, first-launch, and resulting Inbox browser journey.
 
 ## Soon
 
+- `W36-E7-S1-T2` — Add the active Studio running, silence, cancellation, reconnect,
+  and return-to-live browser journey.
 
 ## Parking lot
 
@@ -25,8 +27,6 @@ slice, and local task.
   task attempts, and finalization milestones.
 - `W36-E5-S10-T1` — Switch the default renderer to Studio only after all per-surface
   parity entries close.
-- `W36-E7-S1-T1` — Add the Guided Setup project validation, create/resume, runtime
-  review, first-launch, and resulting Inbox browser journey.
 
 ## Update rules
 
@@ -42,6 +42,13 @@ slice, and local task.
   queue-restoration policy in `docs/backlog/roadmap.md` (`W8-E3-S1`).
 
 ## Current reconciliation
+
+- `2026-07-18` `W36-E5-S2-T4` is complete: all eight stage controls retain exact stage
+  identity, durable status in their accessible name, a touch-safe height, and unclipped
+  bounds at `320x568` and `390x844`. The existing compact two-column navigation already
+  met the contract, so the accepted change is its executable regression guard. `W36-E5-S2`
+  is closed; Guided Setup journey `W36-E7-S1-T1` is promoted to `Next` and active Studio
+  journey `T2` to `Soon`.
 
 - `2026-07-18` `W36-E5-S2-T3` is complete: one declarative mobile priority attribute now
   orders every operator mode as cockpit/decision → stage context → sidebar evidence →

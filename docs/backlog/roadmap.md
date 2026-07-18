@@ -10864,7 +10864,7 @@ Exit evidence:
   Blockers, Recovery, Activity, and Evidence panels;
 - the first viewport communicates context, one decision, and the primary work surface.
 
-#### Slice W36-E5-S2 — compact mobile operator shell (`planned`)
+#### Slice W36-E5-S2 — compact mobile operator shell (`done`)
 Goal: keep the current decision visible on narrow viewports without pretending dense
 desktop evidence is a mobile-first surface.
 
@@ -10895,7 +10895,7 @@ Local tasks:
   - Scope: responsive shell state classes.
   - Verification: every declared operator state maps to the same context -> decision ->
     document -> evidence/history drill-down ordering rule.
-- `W36-E5-S2-T4` (next) Keep compact stage navigation and primary labels legible at `320px` and
+- `W36-E5-S2-T4` (done) Keep compact stage navigation and primary labels legible at `320px` and
   `390px` without rendering the desktop stage rail as a tiny grid.
   - Scope: responsive stage rail and label wrapping.
   - Verification: shared touch targets pass, no active stage or primary label clips,
@@ -11500,14 +11500,14 @@ Dependencies:
 
 Local tasks:
 
-- `W36-E7-S1-T1` (parked) Add the Guided Setup project validation, create/resume, runtime review,
+- `W36-E7-S1-T1` (next) Add the Guided Setup project validation, create/resume, runtime review,
   first launch, and resulting Inbox entry browser journey.
   - Dependencies: `W36-E4-S1-T1..T6`, `W36-E4-S2`, `W36-E5-S2`,
     `W36-E5-S3-T1..T4`.
   - Scope: onboarding browser scenario family.
   - Verification: every required viewport completes create or resume with one primary
     action, no geometry/accessibility failure, and no provider authentication.
-- `W36-E7-S1-T2` (planned) Add the active Studio running, silence, cancellation, transient
+- `W36-E7-S1-T2` (soon) Add the active Studio running, silence, cancellation, transient
   reconnect, and return-to-live browser journey.
   - Dependencies: `W36-E5-S2`, `W36-E5-S4-T1..T4`, `W36-E6-S3`.
   - Scope: live Studio browser scenario family.
