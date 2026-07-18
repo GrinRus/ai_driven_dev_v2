@@ -1,7 +1,9 @@
 const PRESENTATION_SELECTORS = new Set(["studio", "legacy"]);
 
 function presentationSelectorFromSearch(search = window.location.search) {
-  const requested = new URLSearchParams(search).get("ui") || "";
+  const params = new URLSearchParams(search);
+  if (!params.has("ui")) return "studio";
+  const requested = params.get("ui") || "";
   return PRESENTATION_SELECTORS.has(requested) ? requested : "legacy";
 }
 

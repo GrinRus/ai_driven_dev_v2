@@ -12,13 +12,13 @@ from browser_tests.browser_harness import operator_browser_harness
 @pytest.mark.parametrize(
     ("query", "requested"),
     (
-        ("", "legacy"),
+        ("", "studio"),
         ("?ui=legacy", "legacy"),
         ("?ui=studio", "studio"),
         ("?ui=unknown", "legacy"),
     ),
 )
-def test_presentation_selector_preserves_legacy_service_surface(
+def test_presentation_selector_preserves_shared_service_surface(
     tmp_path: Path,
     query: str,
     requested: str,
@@ -32,7 +32,7 @@ def test_presentation_selector_preserves_legacy_service_surface(
         browser_page.page.locator("#onboardingProjectForm").wait_for(state="visible")
         root = browser_page.page.locator("html")
         assert root.get_attribute("data-presentation-requested") == requested
-        expected_effective = "mixed" if requested == "studio" else "legacy"
+        expected_effective = "studio" if requested == "studio" else "legacy"
         assert root.get_attribute("data-presentation-effective") == expected_effective
         requested_paths = {
             urlsplit(response_url).path

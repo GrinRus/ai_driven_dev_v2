@@ -7,11 +7,11 @@ slice, and local task.
 
 ## Next
 
-- `W36-E5-S10-T1` — Switch the default renderer to Studio with legacy rollback.
+- `W36-E5-S10-T2` — Record the source-installed rollback window.
 
 ## Soon
 
-- `W36-E5-S10-T2` — Record the source-installed rollback window.
+- `W36-E5-S10-T3` — Remove the temporary presentation selector.
 
 ## Parking lot
 
@@ -29,6 +29,12 @@ slice, and local task.
   queue-restoration policy in `docs/backlog/roadmap.md` (`W8-E3-S1`).
 
 ## Current reconciliation
+
+- `2026-07-18` `W36-E5-S10-T1` is complete: an absent presentation selector now
+  resolves all parity-closed surfaces to Studio, while explicit `ui=legacy` remains the supported
+  rollback path and invalid explicit values still fail back to legacy. Both presentations use
+  the same API and mutation services. Rollback-window evidence `T2` is promoted to `Next`,
+  followed by selector removal `T3`.
 
 - `2026-07-18` `W36-E7-S2-T1` is complete: the developer-facing packaged-UI
   runner evaluates the packaged parity manifest through bounded Node `vm`, validates an explicit

@@ -540,7 +540,7 @@ test("Studio History renders typed frames and pauses only browser auto-follow", 
 
 test("presentation selector is browser-only and fails back to legacy", async () => {
   const cases = [
-    {search: "", requested: "legacy", fallback: false},
+    {search: "", requested: "studio", fallback: false},
     {search: "?ui=legacy", requested: "legacy", fallback: false},
     {search: "?ui=studio", requested: "studio", fallback: false},
     {search: "?ui=unknown", requested: "legacy", fallback: false},
