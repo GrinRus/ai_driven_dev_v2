@@ -272,7 +272,12 @@ function renderValidationFindingSummary(finding, {compact = false} = {}) {
     ? `<span class="validation-finding-hint"><strong>What to do</strong>${escapeHtml(finding.operator_hint)}</span>`
     : "";
   return `
-    <div class="validation-finding-summary ${compact ? "compact" : ""} ${notice ? "notice" : ""}">
+    <div class="validation-finding-summary ${compact ? "compact" : ""} ${notice ? "notice" : ""}"
+      data-finding-code="${escapeHtml(finding.code || "validation")}"
+      data-finding-category="${escapeHtml(finding.category || "unknown")}"
+      data-finding-path="${escapeHtml(finding.path || "")}"
+      data-finding-line="${escapeHtml(finding.line_number || "")}"
+      data-finding-provenance="validator-report">
       <span class="small-badge ${notice ? "good" : "bad"}">${escapeHtml(finding.code || "validation")}</span>
       <span class="small-badge">${escapeHtml(finding.severity || "issue")}</span>
       ${repeatBadge}

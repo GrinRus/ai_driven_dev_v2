@@ -7,13 +7,13 @@ slice, and local task.
 
 ## Next
 
-- `W36-E5-S6-T3` — Render exact validator findings and expose Run Repair only from
-  backend eligibility.
+- `W36-E5-S6-T4` — Make Request Change primary after repair exhaustion or explicit
+  stop while retaining evidence drill-down.
 
 ## Soon
 
-- `W36-E5-S6-T4` — Make Request Change primary after repair exhaustion or explicit
-  stop while retaining evidence drill-down.
+- `W36-E5-S6-T5` — Implement decision-first mobile runtime and validation Recovery
+  layouts over the compact shell.
 
 ## Parking lot
 
@@ -38,6 +38,12 @@ slice, and local task.
   queue-restoration policy in `docs/backlog/roadmap.md` (`W8-E3-S1`).
 
 ## Current reconciliation
+
+- `2026-07-18` `W36-E5-S6-T3` is complete: every rendered validator finding exposes
+  its exact code/rule, category, document path, line, severity, occurrence count, and
+  validator-report provenance. `Run Repair` remains enabled only for the backend-owned
+  `repair-available` status. Repair-exhaustion Recovery `T4` is promoted to `Next` and mobile
+  Recovery layout `T5` to `Soon`.
 
 - `2026-07-18` `W36-E5-S6-T2` is complete: reconnecting, recovered, offline,
   expired-job, and manual reconnect surfaces retain the absolute log cursor, state explicitly
