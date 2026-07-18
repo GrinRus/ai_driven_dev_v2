@@ -7,13 +7,13 @@ slice, and local task.
 
 ## Next
 
-- `W36-E5-S3-T5` — Promote the verified Inbox candidate to `parity_closed` while
-  retaining explicit legacy rollback until cutover.
+- `W36-E5-S4-T5` — Promote active Studio and Document/Evidence surfaces to
+  `parity_closed` while retaining explicit legacy rollback until cutover.
 
 ## Soon
 
-No task is currently queued here. Active Studio parity follows this Inbox closure in the
-delivery order, but belongs to a separate surface slice rather than being its direct successor.
+No task is currently queued here. Human-decision Recovery follows active Studio parity in
+the delivery order, but belongs to a separate surface slice rather than being its direct successor.
 
 ## Parking lot
 
@@ -42,6 +42,13 @@ delivery order, but belongs to a separate surface slice rather than being its di
   queue-restoration policy in `docs/backlog/roadmap.md` (`W8-E3-S1`).
 
 ## Current reconciliation
+
+- `2026-07-18` `W36-E5-S3-T5` is complete: Inbox is `parity_closed`; explicit
+  `ui=studio` renders one Studio Inbox, while missing/default and `ui=legacy` retain one
+  Project Home with no presentation-only dismissal. The accepted five-viewport journey
+  continues to own priority, routing, and Running now evidence. Slice `W36-E5-S3` is closed;
+  active Studio parity `W36-E5-S4-T5` is promoted to `Next`, with `Soon` empty until the
+  ordered cross-slice series reaches Recovery.
 
 - `2026-07-18` `W36-E4-S1-T7` is complete: Guided Setup is `parity_closed`; the full
   five-viewport Studio journey remains green, while an explicit `ui=legacy` browser check

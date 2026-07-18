@@ -200,16 +200,16 @@ test("surface parity manifest has one owner and journey per migration surface", 
     "W36-E7-S1-T8",
     "W36-E7-S1-T9",
   ]);
-  const candidates = new Set(["active-studio", "inbox"]);
+  const candidates = new Set(["active-studio"]);
   assert.ok(entries.filter((entry) => candidates.has(entry.id)).every(
     (entry) => entry.rollout === "candidate",
   ));
-  assert.equal(
-    entries.find((entry) => entry.id === "guided-setup").rollout,
-    "parity_closed",
-  );
+  const parityClosed = new Set(["guided-setup", "inbox"]);
+  assert.ok(entries.filter((entry) => parityClosed.has(entry.id)).every(
+    (entry) => entry.rollout === "parity_closed",
+  ));
   assert.ok(entries.filter(
-    (entry) => !candidates.has(entry.id) && entry.id !== "guided-setup",
+    (entry) => !candidates.has(entry.id) && !parityClosed.has(entry.id),
   ).every((entry) => entry.rollout === "legacy_only"));
   assert.ok(entries.every((entry) => entry.owner.startsWith("W36-")));
   assert.ok(entries.every((entry) => entry.rollbackRenderer.startsWith("operator-")));

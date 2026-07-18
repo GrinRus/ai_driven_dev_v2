@@ -10907,7 +10907,7 @@ Exit evidence:
   tasks;
 - dense diff, graph, and history views remain reachable through deliberate drill-downs.
 
-#### Slice W36-E5-S3 — project-local Inbox (`planned`)
+#### Slice W36-E5-S3 — project-local Inbox (`done`)
 Goal: replace Project Home/dashboard scanning with a core-owned, bounded decision queue for
 the selected project root.
 
@@ -10944,7 +10944,7 @@ Local tasks:
   - Scope: packaged Inbox renderer only.
   - Verification: one browser fixture per section opens the expected work item, run, stage,
     artifact/evidence detail, and primary action.
-- `W36-E5-S3-T5` (next) Promote the verified Inbox candidate to `parity_closed` while retaining legacy
+- `W36-E5-S3-T5` (done) Promote the verified Inbox candidate to `parity_closed` while retaining legacy
   Project Home for both missing/default and explicit rollback modes until cutover.
   - Dependencies: `W36-E7-S1-T12`.
   - Scope: Inbox parity-manifest entry only.
@@ -10994,7 +10994,7 @@ Local tasks:
   - Scope: active Studio observation renderer only.
   - Verification: running, silent, cancelling, completed, and externally completed jobs show no
     fake progress and agree with persisted runtime evidence.
-- `W36-E5-S4-T5` (planned) Promote the verified active-Studio candidate to `parity_closed` while retaining
+- `W36-E5-S4-T5` (next) Promote the verified active-Studio candidate to `parity_closed` while retaining
   the legacy cockpit/sidebar renderer for missing/default and explicit rollback until cutover.
   - Dependencies: `W36-E7-S1-T2`, `W36-E7-S1-T7`.
   - Scope: active-Studio parity-manifest entry only.
