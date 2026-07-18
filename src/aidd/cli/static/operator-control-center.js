@@ -549,7 +549,7 @@ async function renderReviewFindings() {
     state.reviewFindingsRunId = state.activeRunId;
     if (typeof renderGlobalNextActionStrip === "function") renderGlobalNextActionStrip();
     const findings = view.findings || [];
-    content.innerHTML = `
+    const legacyRenderer = () => `
       <section class="surface findings-screen">
         <div class="surface-title">
           <span>Review Findings</span>
@@ -589,6 +589,10 @@ async function renderReviewFindings() {
         </div>
       </section>
     `;
+    content.innerHTML = selectSurfaceRenderer("review-qa", {
+      legacy: legacyRenderer,
+      studio: () => renderStudioReviewQualityGate(view)
+    }).renderer();
   } catch (error) {
     content.innerHTML = `<div class="empty-state">${escapeHtml(error.message)}</div>`;
   }
@@ -609,7 +613,7 @@ async function renderQaVerdict() {
       ...issues.map((item, index) => ({id: `issue-${index + 1}`, label: item, kind: "issue"}))
     ];
     const verdictClass = view.quality_verdict === "ready" ? "good" : view.quality_verdict === "not-ready" ? "bad" : "warn";
-    content.innerHTML = `
+    const legacyRenderer = () => `
       <section class="surface verdict-screen">
         <div class="surface-title">
           <span>QA Verdict</span>
@@ -654,6 +658,10 @@ async function renderQaVerdict() {
         </div>
       </section>
     `;
+    content.innerHTML = selectSurfaceRenderer("review-qa", {
+      legacy: legacyRenderer,
+      studio: () => renderStudioQaQualityGate(view, sourceItems)
+    }).renderer();
   } catch (error) {
     content.innerHTML = `<div class="empty-state">${escapeHtml(error.message)}</div>`;
   }

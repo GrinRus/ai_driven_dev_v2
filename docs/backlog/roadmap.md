@@ -11140,12 +11140,12 @@ Local tasks:
   - Scope: implement evidence renderer only.
   - Verification: repository-diff fixtures match core evidence and use textual added/removed/
     changed meaning in addition to color.
-- `W36-E5-S7-T3` (next) Render structured Review findings and QA verdict, residual risks, known issues,
+- `W36-E5-S7-T3` (done) Render structured Review findings and QA verdict, residual risks, known issues,
   acceptance ids, and evidence links.
   - Scope: Review/QA quality-gate renderer only.
   - Verification: approval/rejection/not-ready/blocked/missing-evidence fixtures agree with the
     canonical reports and validators.
-- `W36-E5-S7-T4` (soon) Render selected remediation to `implement`, pending readback, and explicit
+- `W36-E5-S7-T4` (next) Render selected remediation to `implement`, pending readback, and explicit
   downstream Review/QA stale rerun.
   - Scope: quality-gate remediation renderer only.
   - Verification: one durable remediation request is created, fresh downstream stages become
@@ -11550,9 +11550,10 @@ Local tasks:
   - Verification: clean versus failed/blocked/warning fresh QA, stale/nonterminal exclusion,
     one core-recommended action, drafts/preflight, independent identities, truthful manual eval
     handoff, archive overlay, and byte-identical source-run evidence all pass.
-- `W36-E7-S1-T9` (planned) Add the implement task run/resume, failed-attempt recovery, repository
+- `W36-E7-S1-T9` (soon) Add the implement task run/resume, failed-attempt recovery, repository
   evidence, and aggregate-finalization browser journey.
-  - Dependencies: `W35-E2-S8`, `W36-E5-S7-T1..T4`.
+  - Dependencies: `W35-E2-S8`, `W36-E5-S7-T1..T4`, `W36-E5-S7-T4` as the direct
+    queue predecessor.
   - Scope: task-aware implement browser scenario family.
   - Verification: dependency readiness, preserved successes, diff/scope evidence,
     finalization recovery, and Review eligibility agree with the canonical task ledger.

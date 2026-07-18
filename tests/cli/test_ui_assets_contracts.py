@@ -1462,6 +1462,38 @@ def test_studio_repository_evidence_uses_textual_change_and_scope_contracts() ->
     )
 
 
+def test_studio_review_qa_gates_render_exact_identity_and_blocker_contracts() -> None:
+    quality_gate = _asset_text("/operator-quality-gates.js")
+    control = _asset_text("/operator-control-center.js")
+
+    _assert_contains_all(
+        quality_gate,
+        (
+            "function renderStudioReviewQualityGate(view)",
+            'data-studio-quality-gate="review"',
+            "finding.finding_id",
+            "finding.acceptance_ids",
+            "finding.evidence",
+            "finding.related_paths",
+            "function renderStudioQaQualityGate(view, sourceItems)",
+            'data-studio-quality-gate="qa"',
+            "view?.acceptance_ids",
+            "view?.evidence_references",
+            "Residual risk ·",
+            "Known issue ·",
+            "data-quality-gate-blocker",
+        ),
+    )
+    _assert_contains_all(
+        control,
+        (
+            'selectSurfaceRenderer("review-qa"',
+            "renderStudioReviewQualityGate(view)",
+            "renderStudioQaQualityGate(view, sourceItems)",
+        ),
+    )
+
+
 def test_operator_implement_review_surfaces_missing_verification_evidence() -> None:
     control = _asset_text("/operator-control-center.js")
 

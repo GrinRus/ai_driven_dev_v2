@@ -95,7 +95,7 @@ def test_parse_review_findings_extracts_severity_disposition_and_evidence() -> N
                 "- RV-1 Missing test guard",
                 "  - Severity: `high`",
                 "  - Disposition: `must-fix`",
-                "  - Evidence: EV-1 shows `src/app.py` lacks boundary handling.",
+                "  - Evidence: EV-1 shows `src/app.py` lacks AC-1 boundary handling.",
                 "",
                 "- RV-2 Cosmetic follow-up",
                 "  - Severity: `low`",
@@ -110,6 +110,7 @@ def test_parse_review_findings_extracts_severity_disposition_and_evidence() -> N
     assert view.findings[0].severity == "high"
     assert view.findings[0].disposition == "must-fix"
     assert "src/app.py" in view.findings[0].related_paths
+    assert view.findings[0].acceptance_ids == ("AC-1",)
 
 
 def test_parse_review_findings_extracts_inline_severity_and_disposition() -> None:
@@ -175,7 +176,7 @@ def test_parse_qa_verdict_extracts_risks_issues_and_evidence() -> None:
                 "",
                 "- Quality verdict: `not-ready`",
                 "- Release recommendation: `hold`",
-                "- Evidence: EV-1, EV-2",
+                "- Evidence: EV-1, EV-2, `verification.md`, AC-2",
                 "",
                 "## Residual risks",
                 "",
@@ -191,6 +192,8 @@ def test_parse_qa_verdict_extracts_risks_issues_and_evidence() -> None:
     assert view.quality_verdict == "not-ready"
     assert view.release_recommendation == "hold"
     assert view.evidence_ids == ("EV-1", "EV-2")
+    assert view.evidence_references == ("EV-1", "EV-2", "verification.md")
+    assert view.acceptance_ids == ("AC-2",)
     assert view.residual_risks == ("Retry path unverified.",)
     assert view.known_issues == ("QAI-1 missing production smoke.",)
 

@@ -341,6 +341,61 @@ test("Studio repository evidence names change kinds scope and claim mismatches",
   assert.match(html, /src\/changed.py changed but is absent/);
 });
 
+test("Studio Review and QA gates render exact upstream identities and blockers", async () => {
+  const context = vm.createContext({
+    escapeHtml(value) {
+      return String(value);
+    },
+    renderQaCompletionGuard() {
+      return "";
+    },
+    renderRemediationRuntimeGuard() {
+      return "";
+    },
+    renderWarnings(items) {
+      return items.length ? `<div>${items.join("|")}</div>` : "";
+    },
+    selectedRuntimeReady() {
+      return true;
+    },
+  });
+  await load(context, "operator-quality-gates.js");
+  const review = vm.runInContext(`renderStudioReviewQualityGate({
+    approval_status: "rejected",
+    warnings: [],
+    findings: [{
+      finding_id: "RV-7",
+      severity: "high",
+      disposition: "must-fix",
+      summary: "Missing boundary proof",
+      acceptance_ids: ["AC-2"],
+      evidence: ["EV-4", "implementation-report.md"],
+      related_paths: ["src/app.py"]
+    }]
+  })`, context);
+  assert.match(review, /data-review-finding="RV-7"/);
+  assert.match(review, /Acceptance: AC-2/);
+  assert.match(review, /Evidence: EV-4 · implementation-report.md/);
+  assert.match(review, /data-quality-gate-blocker/);
+  assert.match(review, /data-proceed-stage="qa"[^>]*disabled/);
+
+  const qa = vm.runInContext(`renderStudioQaQualityGate({
+    quality_verdict: "not-ready",
+    release_recommendation: "hold",
+    residual_risks: ["Retry remains unverified"],
+    known_issues: ["QAI-1"],
+    acceptance_ids: ["AC-2"],
+    evidence_references: ["EV-4", "verification.md"],
+    warnings: []
+  }, [{id: "risk-1", kind: "risk", label: "Retry remains unverified"}])`, context);
+  assert.match(qa, /data-qa-verdict="not-ready"/);
+  assert.match(qa, /Acceptance: AC-2/);
+  assert.match(qa, /Evidence: EV-4, verification.md/);
+  assert.match(qa, /Residual risk · Retry remains unverified/);
+  assert.match(qa, /Known issue · QAI-1/);
+  assert.match(qa, /data-accept-qa[^>]*disabled/);
+});
+
 test("presentation selector is browser-only and fails back to legacy", async () => {
   const cases = [
     {search: "", requested: "legacy", fallback: false},

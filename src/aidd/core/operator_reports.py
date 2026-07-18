@@ -13,6 +13,10 @@ _FINDING_START_PATTERN = re.compile(
     flags=re.IGNORECASE,
 )
 _EVIDENCE_ID_PATTERN = re.compile(r"\b(EV-\d+)\b", re.IGNORECASE)
+_ACCEPTANCE_ID_PATTERN = re.compile(
+    r"\b(?:AC-\d+|(?:TL|T)-\d+-AC\d+)\b",
+    re.IGNORECASE,
+)
 
 
 @dataclass(frozen=True, slots=True)
@@ -33,6 +37,7 @@ class ReviewFindingView:
     summary: str
     evidence: tuple[str, ...]
     related_paths: tuple[str, ...]
+    acceptance_ids: tuple[str, ...]
 
 
 @dataclass(frozen=True, slots=True)
@@ -49,6 +54,8 @@ class QaVerdictView:
     release_recommendation: str | None
     residual_risks: tuple[str, ...]
     evidence_ids: tuple[str, ...]
+    evidence_references: tuple[str, ...]
+    acceptance_ids: tuple[str, ...]
     known_issues: tuple[str, ...]
     warnings: tuple[str, ...]
 
@@ -307,6 +314,9 @@ def parse_review_report_text(text: str, warnings: tuple[str, ...] = ()) -> Revie
                 summary=first_line,
                 evidence=_extract_evidence(block),
                 related_paths=_extract_backtick_paths(tuple(block.splitlines())),
+                acceptance_ids=_unique(
+                    [match.group(0).upper() for match in _ACCEPTANCE_ID_PATTERN.finditer(block)]
+                ),
             )
         )
     if not findings and not _contains_none_marker(_section_lines(text, ("findings",))):
@@ -362,6 +372,9 @@ def parse_qa_report_text(text: str, warnings: tuple[str, ...] = ()) -> QaVerdict
     evidence_ids = _unique(
         [match.group(1).upper() for match in _EVIDENCE_ID_PATTERN.finditer(text)]
     )
+    evidence_references = _unique(
+        [*evidence_ids, *_extract_backtick_paths(tuple(text.splitlines()))]
+    )
     local_warnings = list(warnings)
     verdict = _qa_verdict(text)
     if verdict is None:
@@ -373,6 +386,10 @@ def parse_qa_report_text(text: str, warnings: tuple[str, ...] = ()) -> QaVerdict
             item for item in _extract_list_items(risk_lines) if not _is_none_marker(item)
         ),
         evidence_ids=evidence_ids,
+        evidence_references=evidence_references,
+        acceptance_ids=_unique(
+            [match.group(0).upper() for match in _ACCEPTANCE_ID_PATTERN.finditer(text)]
+        ),
         known_issues=tuple(
             item
             for item in _extract_list_items(known_issue_lines)

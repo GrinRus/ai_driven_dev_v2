@@ -7,13 +7,13 @@ slice, and local task.
 
 ## Next
 
-- `W36-E5-S7-T3` — Render exact Review findings and QA verdict/evidence in the Studio
-  quality gate.
+- `W36-E5-S7-T4` — Render remediation readback and explicit stale Review/QA state in
+  Studio.
 
 ## Soon
 
-- `W36-E5-S7-T4` — Render remediation readback and explicit stale Review/QA state in
-  Studio.
+- `W36-E7-S1-T9` — Add the provider-free Implement/finalization/repository browser
+  journey.
 
 ## Parking lot
 
@@ -36,6 +36,12 @@ slice, and local task.
   queue-restoration policy in `docs/backlog/roadmap.md` (`W8-E3-S1`).
 
 ## Current reconciliation
+
+- `2026-07-18` `W36-E5-S7-T3` is complete: Studio Review/QA gates render exact
+  finding identities, severity/disposition, acceptance and evidence references, residual
+  risks, known issues, and explicit missing/rejected/not-ready blockers. Existing API fields
+  remain compatible; acceptance and evidence-reference fields are additive. Remediation and
+  stale state `T4` is promoted to `Next`, Implement journey `W36-E7-S1-T9` to `Soon`.
 
 - `2026-07-18` `W36-E5-S7-T2` is complete: Studio renders canonical repository and
   implementation evidence in a Document Canvas with textual Added/Removed/Changed markers,

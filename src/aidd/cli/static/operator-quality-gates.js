@@ -129,3 +129,90 @@ function renderStudioRepositoryEvidence({
     </section>
   `;
 }
+
+function renderStudioReviewQualityGate(view) {
+  const findings = view?.findings || [];
+  const status = view?.approval_status || "missing";
+  const blocked = status !== "approved";
+  return `
+    <section class="surface studio-quality-gate" data-studio-quality-gate="review" data-review-status="${escapeHtml(status)}">
+      <div class="surface-title">
+        <span>Review quality gate</span>
+        <span class="small-badge ${status === "approved" ? "good" : "bad"}">${escapeHtml(status)}</span>
+      </div>
+      ${renderWarnings(view?.warnings || [])}
+      ${blocked ? `<div class="next-action-blocker" data-quality-gate-blocker>Review is ${escapeHtml(status)}; QA progression remains blocked by the canonical report.</div>` : ""}
+      <div class="compact-list" data-review-findings>
+        ${findings.length ? findings.map((finding, index) => `
+          <article class="panel-item" data-review-finding="${escapeHtml(finding.finding_id)}">
+            <div class="surface-title compact">
+              <strong>${escapeHtml(finding.finding_id)}</strong>
+              <span class="small-badge ${["critical", "high"].includes(finding.severity) ? "bad" : "warn"}">${escapeHtml(finding.severity || "missing severity")}</span>
+              <span class="small-badge">${escapeHtml(finding.disposition || "missing disposition")}</span>
+            </div>
+            <p>${escapeHtml(finding.summary || "Finding summary is missing.")}</p>
+            <span>Acceptance: ${escapeHtml((finding.acceptance_ids || []).join(", ") || "not referenced")}</span>
+            <span>Evidence: ${escapeHtml((finding.evidence || []).join(" · ") || "not referenced")}</span>
+            <span>Paths: ${escapeHtml((finding.related_paths || []).join(", ") || "not referenced")}</span>
+            <label><input id="studio-review-remediation-${index}" name="review_remediation" data-remediation-source="review" type="checkbox" value="${escapeHtml(finding.finding_id)}" ${finding.disposition === "must-fix" ? "checked" : ""}> Select for remediation</label>
+          </article>
+        `).join("") : `<div class="empty-state">No structured Review findings were published.</div>`}
+      </div>
+      <label class="form-field" for="reviewRemediationNote">
+        <span>Operator note for implement</span>
+        <textarea id="reviewRemediationNote" name="review_remediation_note" data-remediation-note="review" rows="4">Fix the selected review finding(s), update implementation-report.md, and preserve unrelated changes.</textarea>
+      </label>
+      ${renderRemediationRuntimeGuard("review", Boolean(findings.length))}
+      <div class="wizard-actions">
+        <button data-proceed-stage="qa" type="button" ${status === "approved" && selectedRuntimeReady() ? "" : "disabled aria-disabled=\"true\""}>Proceed to QA</button>
+        <button data-remediation-launch="review" type="button" ${findings.length && selectedRuntimeReady() ? "" : "disabled"}>Send selected to implement</button>
+        <button data-open-request-tab type="button" class="secondary">Request review intervention</button>
+      </div>
+    </section>
+  `;
+}
+
+function renderStudioQaQualityGate(view, sourceItems) {
+  const verdict = view?.quality_verdict || "missing";
+  const risks = view?.residual_risks || [];
+  const issues = view?.known_issues || [];
+  const blocked = !["ready", "ready-with-risks"].includes(verdict);
+  return `
+    <section class="surface studio-quality-gate" data-studio-quality-gate="qa" data-qa-verdict="${escapeHtml(verdict)}">
+      <div class="surface-title">
+        <span>QA quality gate</span>
+        <span class="small-badge ${blocked ? "bad" : risks.length || issues.length ? "warn" : "good"}">${escapeHtml(verdict)}</span>
+      </div>
+      ${renderWarnings(view?.warnings || [])}
+      ${blocked ? `<div class="next-action-blocker" data-quality-gate-blocker>QA verdict is ${escapeHtml(verdict)}; terminal progression remains blocked by the canonical report.</div>` : ""}
+      <div class="metric-grid">
+        <div class="metric"><span>Recommendation</span><strong>${escapeHtml(view?.release_recommendation || "missing")}</strong></div>
+        <div class="metric"><span>Residual risks</span><strong>${escapeHtml(risks.length)}</strong></div>
+        <div class="metric"><span>Known issues</span><strong>${escapeHtml(issues.length)}</strong></div>
+        <div class="metric"><span>Acceptance IDs</span><strong>${escapeHtml((view?.acceptance_ids || []).length)}</strong></div>
+      </div>
+      <div class="compact-list" data-qa-upstream-references>
+        <span>Acceptance: ${escapeHtml((view?.acceptance_ids || []).join(", ") || "not referenced")}</span>
+        <span>Evidence: ${escapeHtml((view?.evidence_references || view?.evidence_ids || []).join(", ") || "not referenced")}</span>
+      </div>
+      <div class="compact-list" data-qa-risks>
+        ${risks.map((risk) => `<span>Residual risk · ${escapeHtml(risk)}</span>`).join("") || "<span>No residual risks published.</span>"}
+        ${issues.map((issue) => `<span>Known issue · ${escapeHtml(issue)}</span>`).join("") || "<span>No known issues published.</span>"}
+      </div>
+      <div class="compact-list" data-qa-remediation-items>
+        ${sourceItems.map((item, index) => `<label><input id="studio-qa-remediation-${index}" name="qa_remediation" data-remediation-source="qa" type="checkbox" value="${escapeHtml(item.id)}" ${verdict === "not-ready" ? "checked" : ""}> ${escapeHtml(item.kind)} · ${escapeHtml(item.label)}</label>`).join("")}
+      </div>
+      <label class="form-field" for="qaRemediationNote">
+        <span>Operator note for implement</span>
+        <textarea id="qaRemediationNote" name="qa_remediation_note" data-remediation-note="qa" rows="4">Fix the selected QA risk(s) or issue(s), rerun verification, and update implementation-report.md.</textarea>
+      </label>
+      ${renderRemediationRuntimeGuard("qa", Boolean(sourceItems.length))}
+      ${renderQaCompletionGuard(view, Boolean(sourceItems.length))}
+      <div class="wizard-actions">
+        <button data-accept-qa type="button" ${blocked ? "disabled aria-disabled=\"true\"" : ""}>Accept complete</button>
+        <button data-remediation-launch="qa" type="button" ${sourceItems.length && selectedRuntimeReady() ? "" : "disabled"}>Send selected to implement</button>
+        <button data-next-flow-start type="button" class="secondary">Start follow-up</button>
+      </div>
+    </section>
+  `;
+}
