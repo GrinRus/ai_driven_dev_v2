@@ -630,6 +630,16 @@ def test_studio_flow_complete_uses_only_core_recommendation() -> None:
     )
     assert "state.nextFlowWizard.active" in studio
     assert "renderStudioNextFlowWizard()" in studio
+    actions = _asset_text("/operator-next-flow-actions.js")
+    _assert_contains_all(
+        actions,
+        (
+            'action === "clone-flow"',
+            'postJson("/api/next-flow/clone-draft/create"',
+            'fetch("/api/next-flow/preflight"',
+            'relationship: wizard.action === "clone-flow" ? "clone" : "follow-up"',
+        ),
+    )
 
 
 def test_operator_state_and_dashboard_assets_keep_runtime_and_tab_contracts() -> None:

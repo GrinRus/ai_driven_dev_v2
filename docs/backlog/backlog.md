@@ -7,11 +7,11 @@ slice, and local task.
 
 ## Next
 
-- `W36-E5-S9-T5` — Render clone through shared draft and launch seams.
+- `W36-E5-S9-T6` — Render manual eval handoff without workflow mutation.
 
 ## Soon
 
-- `W36-E5-S9-T6` — Render manual eval handoff without workflow mutation.
+- `W36-E5-S9-T7` — Render append-only terminal archive disposition.
 
 ## Parking lot
 
@@ -32,6 +32,12 @@ slice, and local task.
   queue-restoration policy in `docs/backlog/roadmap.md` (`W8-E3-S1`).
 
 ## Current reconciliation
+
+- `2026-07-18` `W36-E5-S9-T5` is complete: Studio clone uses the shared wizard host
+  but remains bound to the existing clone-draft and clone-preflight services, with an explicit
+  clone lineage relationship and independent work-item/run identity. No source-run mutation or
+  follow-up payload alias was introduced. Manual eval handoff `T6` is promoted to `Next`,
+  followed by archive disposition `T7`.
 
 - `2026-07-18` `W36-E5-S9-T4` is complete: Studio hosts the existing follow-up
   source-selection, session-draft, definition, preflight, guarded mutation, and launch sequence

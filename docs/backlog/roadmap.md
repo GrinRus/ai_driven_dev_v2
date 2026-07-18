@@ -11246,20 +11246,21 @@ Local tasks:
   - Scope: follow-up next-flow renderer only.
   - Verification: Back/reload/failure/retry preserve the follow-up draft, successful launch
     creates one new work-item/run identity, and the source run remains byte-identical.
-- `W36-E5-S9-T5` (next) Render clone definition, inherited context, source evidence, preflight, and
+- `W36-E5-S9-T5` (done) Render clone definition, inherited context, source evidence, preflight, and
   launch through the shared draft/mutation seams.
   - Dependencies: `W36-E5-S9-T4` as the direct queue predecessor.
   - Scope: clone next-flow renderer only.
   - Verification: Back/reload/failure/retry preserve the clone draft, successful launch creates
     one independent identity, and the source run remains byte-identical.
-- `W36-E5-S9-T6` (soon) Render the existing Run Eval / Scenario Batch manual handoff as a non-repair
+- `W36-E5-S9-T6` (next) Render the existing Run Eval / Scenario Batch manual handoff as a non-repair
   comparison disposition under Other next actions.
   - Dependencies: `W36-E5-S9-T5` as the direct queue predecessor.
   - Scope: terminal eval handoff renderer only; no new mutation endpoint.
   - Verification: the action opens exact source/version/scenario context and operator commands,
     sends no workflow mutation request, and leaves source-run evidence unchanged.
-- `W36-E5-S9-T7` (planned) Render Archive Run as an append-only visibility disposition under Other next
+- `W36-E5-S9-T7` (soon) Render Archive Run as an append-only visibility disposition under Other next
   actions.
+  - Dependencies: `W36-E5-S9-T6` as the direct queue predecessor.
   - Scope: terminal archive disposition renderer only.
   - Verification: archive writes only the owned overlay and completed documents, artifacts,
     logs, comparison, and lineage remain inspectable.

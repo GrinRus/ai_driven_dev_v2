@@ -1061,6 +1061,11 @@ test("next-flow view renders terminal and readiness states without network mutat
   assert.match(followUpHtml, /data-studio-next-flow-action="start-follow-up-flow"/);
   assert.match(followUpHtml, /run-ui/);
   assert.match(followUpHtml, /Continue to Define Work Item/);
+  vm.runInContext('state.nextFlowWizard.action = "clone-flow"', context);
+  const cloneHtml = vm.runInContext("renderStudioNextFlowWizard()", context);
+  assert.match(cloneHtml, /data-studio-next-flow-action="clone-flow"/);
+  assert.match(cloneHtml, /Clone This Flow/);
+  assert.match(cloneHtml, /source run stays immutable/i);
   assert.match(element("nextActionPanel").innerHTML, /Review handoff/);
   assert.equal(fetchCount, 0);
 });
