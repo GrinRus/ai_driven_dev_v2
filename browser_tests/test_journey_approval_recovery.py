@@ -44,6 +44,66 @@ def _assert_rendered_gate(page: Page, viewport: tuple[int, int]) -> None:
     assert_rendered_geometry(page)
 
 
+@pytest.mark.parametrize("selector", ("studio", "legacy"))
+def test_approval_recovery_parity_preserves_durable_decision_service(
+    tmp_path: Path,
+    selector: str,
+) -> None:
+    fixture = build_browser_state_fixture(
+        tmp_path / f"approval-parity-{selector}",
+        "no-run",
+    )
+    _configure_live_conformance(fixture.project_root)
+    with sync_playwright() as playwright, operator_browser_harness(
+        fixture.project_root,
+        playwright,
+        work_item=fixture.work_item,
+    ) as harness, harness.open_page((1280, 900)) as browser_page:
+        page = browser_page.page
+        page.goto(f"{harness.url}?ui={selector}", wait_until="networkidle")
+        assert page.evaluate(
+            "window.aiddPresentation.surfaces['approval-recovery'].presentation"
+        ) == selector
+        job = page.evaluate(
+            """async () => {
+              const launched = await postJson('/api/stage/run', {
+                stage: 'idea', runtime: 'generic-cli', log_follow: true
+              });
+              await startJobPolling(launched);
+              return launched;
+            }"""
+        )
+        job_id = job["job_id"]
+        page.wait_for_function(
+            "eval('state.activeJobStatus?.status') === 'waiting-for-operator'",
+            timeout=10_000,
+        )
+        page.evaluate("renderApprovals()")
+        card = page.locator('[data-approval-request-id]').first
+        card.wait_for(state="visible")
+        request_id = card.get_attribute("data-approval-request-id")
+        assert request_id
+        card.locator('[data-approval-reason]').fill("same durable decision path")
+        card.locator('[data-operator-action="allow_once"]').click()
+        page.locator('[data-approval-durable-winner="allow_once"]').wait_for(
+            state="visible",
+            timeout=10_000,
+        )
+
+        audit = page.request.get(
+            f"{harness.url}api/jobs/{job_id}/operator-requests"
+        )
+        assert audit.status == 200
+        payload = audit.json()
+        assert len(payload["decisions"]) == 1
+        decision = payload["decisions"][0]
+        assert decision["request_id"] == request_id
+        assert decision["action"] == "allow_once"
+        assert decision["source"] == "ui"
+        assert decision["reason"] == "same durable decision path"
+        browser_page.diagnostics.assert_clean()
+
+
 @pytest.mark.parametrize("viewport", VIEWPORTS)
 def test_runtime_approval_preserves_scope_confirmation_and_durable_winner(
     tmp_path: Path,

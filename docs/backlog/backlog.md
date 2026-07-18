@@ -7,13 +7,13 @@ slice, and local task.
 
 ## Next
 
-- `W36-E5-S5-T7` — Close runtime approval Recovery parity after the verified CAS
-  journey.
+- `W36-E5-S6-T1` — Render typed runtime failure and the eligible recovery action without
+  conflating validation repair.
 
 ## Soon
 
-- `W36-E5-S6-T1` — Render typed runtime failure and the eligible recovery action without
-  conflating validation repair.
+- `W36-E5-S6-T2` — Render reconnecting, recovered, expired-job, and manual reconnect
+  states without losing the log cursor.
 
 ## Parking lot
 
@@ -38,6 +38,13 @@ slice, and local task.
   queue-restoration policy in `docs/backlog/roadmap.md` (`W8-E3-S1`).
 
 ## Current reconciliation
+
+- `2026-07-18` `W36-E5-S5-T7` is complete: runtime approval Recovery is
+  `parity_closed`. Studio and explicit legacy presentation both launch the same provider-free
+  waiting job, post through the same decision endpoint, and render the same single durable
+  winner; the full action/conflict matrix remains covered by journey `W36-E7-S1-T11`.
+  Human-decision Recovery slice `W36-E5-S5` is closed. Runtime-failure Recovery `S6-T1` is
+  promoted to `Next` and connection Recovery `S6-T2` to `Soon`.
 
 - `2026-07-18` `W36-E5-S5-T6` is complete: intervention Recovery is
   `parity_closed`. Studio and explicit legacy presentation both use the same guarded

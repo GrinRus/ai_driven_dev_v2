@@ -11007,7 +11007,7 @@ Exit evidence:
 - generated evidence remains read-only and corrections retain durable audited paths;
 - stage progression and attempt history remain distinct concepts.
 
-#### Slice W36-E5-S5 — human-decision Recovery Studio (`planned`)
+#### Slice W36-E5-S5 — human-decision Recovery Studio (`done`)
 Goal: migrate questions, interventions, and runtime approvals into one contextual decision
 surface without conflating their durable semantics.
 
@@ -11053,7 +11053,7 @@ Local tasks:
   - Scope: intervention parity-manifest entry only.
   - Verification: allowed and blocked intervention fixtures close independently with identical
     durable request behavior.
-- `W36-E5-S5-T7` (next) Promote the verified approval candidate to `parity_closed` while retaining the
+- `W36-E5-S5-T7` (done) Promote the verified approval candidate to `parity_closed` while retaining the
   legacy approval renderer for missing/default and explicit rollback.
   - Dependencies: `W36-E7-S1-T11`, `W36-E5-S5-T6`.
   - Scope: approval parity-manifest entry only.
@@ -11078,13 +11078,13 @@ Dependencies:
 
 Local tasks:
 
-- `W36-E5-S6-T1` (soon) Render runtime/provider failure, stopped state, last durable signal, and
+- `W36-E5-S6-T1` (next) Render runtime/provider failure, stopped state, last durable signal, and
   eligible retry without consuming or implying validation repair budget.
   - Dependencies: `W36-E5-S5-T7`.
   - Scope: runtime-failure Recovery renderer only.
   - Verification: unavailable executable, authentication, timeout, cancellation, no-progress,
     and legacy fixtures show the typed outcome and correct safe action.
-- `W36-E5-S6-T2` (planned) Render transient offline, reconnecting, recovered, expired-job, and manual
+- `W36-E5-S6-T2` (soon) Render transient offline, reconnecting, recovered, expired-job, and manual
   Reconnect states while preserving durable log/artifact access.
   - Scope: connection Recovery renderer only.
   - Verification: cursor-preserving failure/recovery fixtures show no skipped or duplicated

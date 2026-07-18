@@ -94,7 +94,7 @@ const SURFACE_PARITY_MANIFEST = Object.freeze([
   {
     id: "approval-recovery",
     owner: "W36-E5-S5",
-    rollout: "candidate",
+    rollout: "parity_closed",
     rollbackRenderer: "operator-approvals-interventions",
     fixture: "pending-approval",
     journey: "W36-E7-S1-T11",
