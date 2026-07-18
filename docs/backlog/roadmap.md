@@ -11302,20 +11302,21 @@ Local tasks:
   - Scope: packaged renderer default only.
   - Verification: the full provider-free browser command passes in default Studio mode and the
     explicit rollback renderer still dispatches identical service actions.
-- `W36-E5-S10-T2` (next) Record one source-installed rollback-window pass while both presentation
+- `W36-E5-S10-T2` (done) Record one source-installed rollback-window pass while both presentation
   selectors remain supported.
   - Dependencies: `W36-E5-S10-T1` as the direct queue predecessor.
   - Scope: cutover evidence only.
   - Verification: isolated fixture copies prove equivalent endpoint/payload semantics and
     normalized outcomes in default and rollback modes; immutable source-run evidence remains
     byte-identical where the journey contract requires it.
-- `W36-E5-S10-T3` (soon) Remove the temporary legacy selector when no accepted journey requires it.
+- `W36-E5-S10-T3` (next) Remove the temporary legacy selector when no accepted journey requires it.
   - Dependencies: `W36-E5-S10-T2` as the direct queue predecessor.
   - Scope: browser bootstrap selector only.
   - Verification: missing, invalid, and former legacy selector values resolve to Studio without
     changing packaged URLs, service requests, or durable state.
-- `W36-E5-S10-T4` (planned) Remove unreferenced legacy render modules, selectors, body-mode ordering,
+- `W36-E5-S10-T4` (soon) Remove unreferenced legacy render modules, selectors, body-mode ordering,
   package resources, and compatibility tests that no longer protect a supported contract.
+  - Dependencies: `W36-E5-S10-T3` as the direct queue predecessor.
   - Scope: packaged frontend cleanup only.
   - Verification: exhaustive asset discovery, JavaScript syntax, package-resource, DOM, and
     browser suites pass with no legacy renderer references.

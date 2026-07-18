@@ -7,11 +7,11 @@ slice, and local task.
 
 ## Next
 
-- `W36-E5-S10-T2` — Record the source-installed rollback window.
+- `W36-E5-S10-T3` — Remove the temporary presentation selector.
 
 ## Soon
 
-- `W36-E5-S10-T3` — Remove the temporary presentation selector.
+- `W36-E5-S10-T4` — Remove the legacy renderer.
 
 ## Parking lot
 
@@ -29,6 +29,12 @@ slice, and local task.
   queue-restoration policy in `docs/backlog/roadmap.md` (`W8-E3-S1`).
 
 ## Current reconciliation
+
+- `2026-07-18` `W36-E5-S10-T2` is complete: a source-installed Chromium check proved
+  exact dashboard/timeline payload parity and identical guarded action availability between the
+  default Studio and explicit legacy presentations. The completed source manifest remained
+  byte-identical and browser diagnostics were clean. Selector removal `T3` is promoted to `Next`,
+  followed by legacy renderer removal `T4`.
 
 - `2026-07-18` `W36-E5-S10-T1` is complete: an absent presentation selector now
   resolves all parity-closed surfaces to Studio, while explicit `ui=legacy` remains the supported
