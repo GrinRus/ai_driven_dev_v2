@@ -11094,12 +11094,12 @@ Local tasks:
   - Scope: validation Recovery renderer only.
   - Verification: repair-available, repaired, exhausted, explicit-stop, stale-artifact, and
     malformed-report fixtures choose the correct action and evidence.
-- `W36-E5-S6-T4` (next) Render Request Change as primary after repair exhaustion/explicit stop and keep
+- `W36-E5-S6-T4` (done) Render Request Change as primary after repair exhaustion/explicit stop and keep
   raw logs/attempt history as secondary drill-down.
   - Scope: repair-exhaustion Recovery renderer only.
   - Verification: no exhausted state exposes an enabled Run Repair and the intervention request
     retains the selected run/stage context.
-- `W36-E5-S6-T5` (soon) Implement decision-first mobile runtime and validation Recovery layouts over
+- `W36-E5-S6-T5` (next) Implement decision-first mobile runtime and validation Recovery layouts over
   the shared compact shell.
   - Dependencies: `W36-E5-S2`.
   - Scope: failure/recovery responsive presentation only.
@@ -11514,9 +11514,9 @@ Local tasks:
   - Scope: live Studio browser scenario family.
   - Verification: real milestones, last output, cursor recovery, cancel lifecycle, and
     durable logs pass without console/network ambiguity or fake progress.
-- `W36-E7-S1-T3` (planned) Add the Runtime/Validation Recovery Studio repair/exhaustion browser
+- `W36-E7-S1-T3` (soon) Add the Runtime/Validation Recovery Studio repair/exhaustion browser
   journey.
-  - Dependencies: `W36-E5-S6-T1..T5`.
+  - Dependencies: `W36-E5-S6-T1..T5`; direct queue predecessor `W36-E5-S6-T5`.
   - Scope: runtime/validation recovery scenario family.
   - Verification: each failure exposes the correct first evidence, one primary recovery
     action, and a truthful stopped/running state.

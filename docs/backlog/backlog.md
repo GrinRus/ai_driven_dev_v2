@@ -7,13 +7,13 @@ slice, and local task.
 
 ## Next
 
-- `W36-E5-S6-T4` — Make Request Change primary after repair exhaustion or explicit
-  stop while retaining evidence drill-down.
+- `W36-E5-S6-T5` — Implement decision-first mobile runtime and validation Recovery
+  layouts over the compact shell.
 
 ## Soon
 
-- `W36-E5-S6-T5` — Implement decision-first mobile runtime and validation Recovery
-  layouts over the compact shell.
+- `W36-E7-S1-T3` — Add the provider-free Runtime/Validation Recovery browser journey
+  across the required viewport matrix.
 
 ## Parking lot
 
@@ -38,6 +38,11 @@ slice, and local task.
   queue-restoration policy in `docs/backlog/roadmap.md` (`W8-E3-S1`).
 
 ## Current reconciliation
+
+- `2026-07-18` `W36-E5-S6-T4` is complete: repair-exhausted and explicit-stop
+  Recovery expose one stage-scoped `Request Change` primary action, retain supporting
+  evidence, and contain no enabled repair mutation. Mobile Recovery `T5` is promoted to
+  `Next` and the provider-free Recovery journey `W36-E7-S1-T3` to `Soon`.
 
 - `2026-07-18` `W36-E5-S6-T3` is complete: every rendered validator finding exposes
   its exact code/rule, category, document path, line, severity, occurrence count, and

@@ -221,6 +221,47 @@ test("surface parity manifest has one owner and journey per migration surface", 
   assert.ok(entries.every((entry) => entry.removalGate.startsWith("W36-")));
 });
 
+test("exhausted and explicitly stopped recovery route only to the stage intervention", async () => {
+  for (const diagnostics of [
+    {validation: {status: "repair-exhausted"}},
+    {validation: {status: "repair-available"}, stopped: {stopped: true}},
+  ]) {
+    const context = vm.createContext({
+      RECOVERY_SUMMARY_KINDS: new Set(["validation", "intervention"]),
+      escapeHtml(value) {
+        return String(value);
+      },
+      isRuntimeFirstFailure() {
+        return false;
+      },
+      state: {
+        activeStage: "implement",
+        dashboard: {recovery_actions: [], next_action: {}},
+      },
+    });
+    await load(context, "operator-primitives.js");
+    await load(context, "operator-stage-cockpit.js");
+    const result = JSON.parse(JSON.stringify(vm.runInContext(`(() => {
+      const action = recoveryPrimaryActionSpec(${JSON.stringify(diagnostics)});
+      const html = renderRecoverySummary({
+        kind: "validation",
+        status: "blocked",
+        statusLabel: "blocked",
+        title: "Repair stopped",
+        consequence: action.detail,
+        decisiveFailure: {label: "Selected stage", detail: "implement"},
+        evidence: {path: "validator-report.md"},
+        primaryAction: {...action, stage: "implement"}
+      });
+      return {action, html};
+    })()`, context)));
+    assert.equal(result.action.action, "request-change");
+    assert.match(result.html, /data-recovery-action="request-change"/);
+    assert.match(result.html, /data-recovery-stage="implement"/);
+    assert.doesNotMatch(result.html, /data-run-repair/);
+  }
+});
+
 test("presentation selector is browser-only and fails back to legacy", async () => {
   const cases = [
     {search: "", requested: "legacy", fallback: false},

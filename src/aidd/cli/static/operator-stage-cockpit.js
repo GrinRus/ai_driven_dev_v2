@@ -183,8 +183,8 @@ function renderRecoveryActionBand(diagnostics) {
         ${renderValidationFindingSummary(finding)}
       </div>
       <div class="repair-actions">
-        ${requestPrimary ? `<button data-tab-shortcut="request" type="button">Request Change</button>` : `<button data-run-repair type="button" ${repairAvailable ? "" : "disabled"}>Run Repair</button>`}
-        ${requestPrimary ? `<button data-run-repair type="button" class="secondary" disabled>Repair exhausted</button>` : `<button data-tab-shortcut="request" type="button" class="secondary">Request Change</button>`}
+        ${requestPrimary ? `<button data-recovery-action="request-change" data-recovery-stage="${escapeHtml(state.activeStage)}" type="button">Request Change</button>` : `<button data-run-repair type="button" ${repairAvailable ? "" : "disabled"}>Run Repair</button>`}
+        ${requestPrimary ? `<button type="button" class="secondary" disabled aria-disabled="true">${status === "explicit-stop" ? "Repair unavailable" : "Repair exhausted"}</button>` : `<button data-tab-shortcut="request" type="button" class="secondary">Request Change</button>`}
         <button data-stop-run type="button" class="danger">Stop Run</button>
       </div>
     </section>
@@ -442,7 +442,12 @@ function renderRecoveryWorkbench() {
           detail: hasGlobalBlocker ? globalBlockerDetail : selectedReason
         },
         evidence: {label: runtimeFailure ? "Runtime log" : "Supporting evidence", path: evidencePath},
-        primaryAction: {action: primary.action, label: primary.label, enabled: !primary.attrs.includes("disabled")}
+        primaryAction: {
+          action: primary.action,
+          label: primary.label,
+          stage: state.activeStage,
+          enabled: !primary.attrs.includes("disabled")
+        }
       })}
       ${renderRuntimePartialEvidence(firstFailure)}
       ${unresolvedQuestions.length || (questions.questions || []).length ? `
