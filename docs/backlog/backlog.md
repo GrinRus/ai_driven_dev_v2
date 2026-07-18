@@ -7,11 +7,11 @@ slice, and local task.
 
 ## Next
 
-- `W36-E7-S2-T5` — Record one full source-installed provider-free browser pass.
+- `W36-E7-S3-T1` — Write the observed first-time-operator task and scoring template.
 
 ## Soon
 
-- `W36-E7-S3-T1` — Write the observed first-time-operator task and scoring template.
+- `W36-E7-S3-T2` — Record five first-time-operator sessions.
 
 ## Parking lot
 
@@ -29,6 +29,14 @@ slice, and local task.
   queue-restoration policy in `docs/backlog/roadmap.md` (`W8-E3-S1`).
 
 ## Current reconciliation
+
+- `2026-07-18` `W36-E7-S2-T5` and slice `W36-E7-S2` are complete: commit
+  `28f8e26` passed the source-installed packaged-UI runner with Chromium `149.0.7827.55`,
+  exact discovery/execution of all 12 journeys, all five viewports, clean browser diagnostics,
+  loopback-only requests, and bounded cleanup. The accepted schema-v1 record contains no
+  generated workspace or human-session data. Browser rollout also closes `W36-E7-S1`, the
+  Studio cutover slice `W36-E5-S10`, and Epic `W36-E5`. Observed-operator scripting `S3-T1`
+  is promoted to `Next`, followed by the five-session task `T2`.
 
 - `2026-07-18` `W36-E7-S2-T6` is complete: Document/Evidence now uses canonical
   Studio route context against a nonterminal stale fixture, the intervention journey keeps its

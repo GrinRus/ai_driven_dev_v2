@@ -1025,6 +1025,34 @@ def test_operator_ui_provider_free_browser_pass_template_is_complete() -> None:
         assert expected in operator_ui_lane
 
 
+def test_operator_ui_provider_free_browser_pass_record_is_complete() -> None:
+    record = (
+        _repo_root()
+        / "docs"
+        / "e2e"
+        / "operator-ui-provider-free-browser-pass-2026-07-18.md"
+    ).read_text(encoding="utf-8")
+
+    for expected in (
+        "provider-free-browser-pass-v1",
+        "0.1.0a16.dev0",
+        "28f8e26bf07e3dc4a1340bc9541e3e93ce2b6405",
+        "scripts/run_packaged_ui_scenarios.py",
+        "Chromium 149.0.7827.55",
+        "browser_tests.state_fixtures",
+        "320x568, 390x844, 768x1024, 1280x900, 1440x900",
+        "W36-E7-S1-T1..T12",
+        "all 12 passed; `failed_ids: []`",
+        "Network boundary: loopback-only passed",
+        "temporary fixture\n  projects and generated `.aidd/` workspaces removed",
+        "Overall result: `passed`",
+        "Blocker: `none`",
+        "Human elapsed time",
+        "`W36-E7-S3`",
+    ):
+        assert expected in record
+
+
 def test_readme_quickstart_uses_request_context_and_real_runtime_first() -> None:
     readme = (_repo_root() / "README.md").read_text(encoding="utf-8")
 

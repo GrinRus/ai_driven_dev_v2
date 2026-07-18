@@ -10788,7 +10788,7 @@ Exit evidence:
   previous launch outcome;
 - the operator sees the actual protected-data/write boundary before execution.
 
-### Epic W36-E5 — Document & Evidence Studio vertical migration (`planned`)
+### Epic W36-E5 — Document & Evidence Studio vertical migration (`done`)
 Linked stories: `US-02`, `US-03`, `US-05`, `US-06`, `US-10`, `US-11`, `US-13`
 
 #### Slice W36-E5-S0 — core operator decision foundations (`done`)
@@ -11282,7 +11282,7 @@ Exit evidence:
 - completed source runs remain immutable;
 - one recommended outcome leads, while all accepted independent outcomes remain reachable.
 
-#### Slice W36-E5-S10 — default cutover and legacy removal (`planned`)
+#### Slice W36-E5-S10 — default cutover and legacy removal (`done`)
 Goal: make Studio the only maintained renderer after a bounded rollback window and delete
 presentation code that no longer owns a supported surface.
 
@@ -11500,7 +11500,7 @@ Exit evidence:
 ### Epic W36-E7 — executable UX acceptance and rollout evidence (`planned`)
 Linked stories: `US-07`, `US-09`, `US-11`, `US-12`, `US-13`
 
-#### Slice W36-E7-S1 — canonical operator browser journeys (`planned`)
+#### Slice W36-E7-S1 — canonical operator browser journeys (`done`)
 Goal: prove the critical operator jobs through provider-free rendered journeys rather
 than isolated asset and endpoint assertions.
 
@@ -11592,7 +11592,7 @@ Exit evidence:
   viewports;
 - browser scenarios prove task completion, not only page/API reachability.
 
-#### Slice W36-E7-S2 — enforced packaged-UI gate (`planned`)
+#### Slice W36-E7-S2 — enforced packaged-UI gate (`done`)
 Goal: make every declared browser journey executable in the maintained deterministic
 quality lane.
 
@@ -11634,7 +11634,7 @@ Local tasks:
   - Verification: Document/Evidence opens through canonical Studio route context and the
     intervention draft survives History/Back without a readiness-rerender race; the complete
     packaged-UI runner has no failed journey ids.
-- `W36-E7-S2-T5` (next) Record one source-installed full provider-free browser pass.
+- `W36-E7-S2-T5` (done) Record one source-installed full provider-free browser pass.
   - Dependencies: `W36-E7-S2-T6` as the direct queue predecessor.
   - Dependencies: `W36-E7-S2-T1`, `W36-E7-S2-T3`.
   - Scope: manual operator browser evidence only.
@@ -11657,15 +11657,16 @@ Dependencies:
 
 Local tasks:
 
-- `W36-E7-S3-T1` (soon) Write the observed operator task script and scoring template for
+- `W36-E7-S3-T1` (next) Write the observed operator task script and scoring template for
   Guided Setup, Inbox triage, active Studio monitoring, question recovery, runtime
   failure, QA remediation, History inspection, and terminal continuation.
   - Dependencies: `W36-E7-S2-T5` as the direct queue predecessor.
   - Scope: operator acceptance documentation.
   - Verification: every task records completion, elapsed time, wrong actions, assistance,
     confidence, and first decisive confusion.
-- `W36-E7-S3-T2` (planned) Record five first-time-operator sessions against the source-installed
+- `W36-E7-S3-T2` (soon) Record five first-time-operator sessions against the source-installed
   packaged UI.
+  - Dependencies: `W36-E7-S3-T1` as the direct queue predecessor.
   - Scope: manual operator acceptance evidence.
   - Verification: one anonymized report contains all required task metrics, browser and
     viewport context, blockers, and no sensitive project/runtime evidence.
