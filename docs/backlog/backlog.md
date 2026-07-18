@@ -7,13 +7,13 @@ slice, and local task.
 
 ## Next
 
-- `W36-E7-S1-T11` — Add the runtime-approval Recovery Studio browser journey,
-  including durable compare-and-set conflicts.
+- `W36-E5-S5-T5` — Close question Recovery parity after the complete human-decision
+  journey set is verified.
 
 ## Soon
 
-- `W36-E5-S5-T5` — Close question Recovery parity after the complete human-decision
-  journey set is verified.
+- `W36-E5-S5-T6` — Close intervention Recovery parity after the verified provider-free
+  journey.
 
 ## Parking lot
 
@@ -40,6 +40,13 @@ slice, and local task.
   queue-restoration policy in `docs/backlog/roadmap.md` (`W8-E3-S1`).
 
 ## Current reconciliation
+
+- `2026-07-18` `W36-E7-S1-T11` is complete: a real provider-free live approval job
+  exercises scope, risk, pending state, allow, deny, cancel, explicit session confirmation,
+  and a concurrent opposite-decision conflict across the five browser viewports. Every case
+  resolves to one durable CAS winner and matching audit row with exact runtime/stage identity.
+  Question parity `W36-E5-S5-T5` is promoted to `Next` and intervention parity `T6` to
+  `Soon`.
 
 - `2026-07-18` `W36-E7-S1-T10` is complete: allowed and downstream-blocked
   intervention journeys run provider-free across all five browser viewports. They prove
