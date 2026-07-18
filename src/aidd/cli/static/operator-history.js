@@ -140,6 +140,55 @@ function renderActiveRunComparisonPanel() {
     : renderRunComparisonPanel();
 }
 
+function renderStudioHistoryLineageCandidate(candidate, currentRunId) {
+  return `
+    <article class="lineage-node child" data-history-lineage-child="${escapeHtml(candidate.work_item_id)}">
+      <span class="small-badge good">${escapeHtml(candidate.relationship || "child")}</span>
+      <strong>${escapeHtml(candidate.label || candidate.work_item_id)}</strong>
+      <span>Source run: ${escapeHtml(candidate.source_run_id || currentRunId || "not recorded")}</span>
+      <button data-operator-route-intent="child-work-item" data-route-work-item="${escapeHtml(candidate.work_item_id)}" type="button">Open child work item</button>
+    </article>
+  `;
+}
+
+function renderStudioHistoryLineage() {
+  const run = state.dashboard?.run || {};
+  const lineage = run.lineage || {};
+  const candidates = lineage.child_work_item_candidates || [];
+  const sourceRun = lineage.source_run_id || "";
+  const sourceWorkItem = lineage.source_work_item_id || state.dashboard?.work_item || "";
+  const hasParent = Boolean(sourceRun && sourceRun !== run.run_id);
+  return `
+    <section class="surface studio-history-lineage" data-studio-history-lineage>
+      <div class="surface-title">
+        <span>Immutable run lineage</span>
+        <span class="small-badge">navigation only</span>
+      </div>
+      <div class="lineage-flow">
+        ${hasParent ? `
+          <article class="lineage-node parent" data-history-lineage-parent="${escapeHtml(sourceRun)}">
+            <span class="small-badge">parent</span>
+            <strong>${escapeHtml(sourceRun)}</strong>
+            <span>${escapeHtml(lineage.baseline_label || lineage.baseline_id || "source run")}</span>
+            <button data-operator-route-intent="parent-run" data-route-work-item="${escapeHtml(sourceWorkItem)}" data-route-run-id="${escapeHtml(sourceRun)}" type="button">Inspect parent run</button>
+          </article>
+        ` : ""}
+        <article class="lineage-node current" data-history-lineage-current="${escapeHtml(run.run_id || "")}">
+          <span class="small-badge good">current</span>
+          <strong>${escapeHtml(run.run_id || "No selected run")}</strong>
+          <span>${escapeHtml(state.dashboard?.work_item || "work item not recorded")}</span>
+          ${run.run_id ? `<button data-operator-route-intent="historical-run" data-route-work-item="${escapeHtml(state.dashboard?.work_item || "")}" data-route-run-id="${escapeHtml(run.run_id)}" type="button">Inspect current run</button>` : ""}
+        </article>
+        <div class="lineage-children">
+          ${candidates.length
+            ? candidates.map((candidate) => renderStudioHistoryLineageCandidate(candidate, run.run_id)).join("")
+            : `<article class="lineage-node pending"><span class="small-badge warn">child</span><strong>No retained child relation</strong><span>History does not infer future lineage.</span></article>`}
+        </div>
+      </div>
+    </section>
+  `;
+}
+
 function renderStudioHistory(timeline) {
   const frames = timeline?.frames || [];
   if (!frames.length) {
@@ -165,5 +214,6 @@ function renderStudioHistory(timeline) {
       </div>
     </section>
     ${renderStudioRunComparisonPanel()}
+    ${renderStudioHistoryLineage()}
   `;
 }

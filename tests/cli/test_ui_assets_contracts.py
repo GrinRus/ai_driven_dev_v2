@@ -571,6 +571,10 @@ def test_studio_history_uses_typed_frames_without_runtime_mutation() -> None:
             'data-comparison-evidence-path=',
             "snapshot unavailable",
             "History will not reconstruct it",
+            "function renderStudioHistoryLineage()",
+            "data-studio-history-lineage",
+            'data-operator-route-intent="parent-run"',
+            'data-operator-route-intent="child-work-item"',
         ),
     )
     assert "postJson(" not in history

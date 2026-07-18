@@ -434,7 +434,23 @@ test("Studio History renders typed frames and pauses only browser auto-follow", 
       runComparison: null,
       runComparisonError: "",
       runComparisonLoading: false,
-      dashboard: {run: {run_id: "run-history", lineage: {}}},
+      dashboard: {
+        work_item: "WI-002",
+        run: {
+          run_id: "run-history",
+          lineage: {
+            source_run_id: "run-source",
+            source_work_item_id: "WI-001",
+            baseline_label: "accepted source",
+            child_work_item_candidates: [{
+              work_item_id: "WI-003",
+              label: "Follow-up",
+              relationship: "follow-up",
+              source_run_id: "run-history",
+            }],
+          },
+        },
+      },
     },
     escapeHtml(value) {
       return String(value);
@@ -492,6 +508,12 @@ test("Studio History renders typed frames and pauses only browser auto-follow", 
   assert.match(html, /Aggregate finalization · attempt 2/);
   assert.match(html, /Return to live/);
   assert.match(html, /active runtime is not stopped/);
+  assert.match(html, /Immutable run lineage/);
+  assert.match(html, /data-history-lineage-parent="run-source"/);
+  assert.match(html, /data-route-work-item="WI-001"/);
+  assert.match(html, /data-history-lineage-current="run-history"/);
+  assert.match(html, /data-history-lineage-child="WI-003"/);
+  assert.match(html, /data-operator-route-intent="child-work-item"/);
   context.state.runComparison = {
     warnings: [],
     prompt_hash_deltas: [{path: "prompt.md", status: "changed"}],

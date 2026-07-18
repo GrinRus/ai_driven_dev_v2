@@ -7,11 +7,11 @@ slice, and local task.
 
 ## Next
 
-- `W36-E5-S8-T4` — Render immutable parent/source/child History lineage.
+- `W36-E5-S8-T5` — Render append-only archive disposition in History.
 
 ## Soon
 
-- `W36-E5-S8-T5` — Render append-only archive disposition in History.
+- `W36-E5-S8-T6` — Render mobile chronological History drill-down.
 
 ## Parking lot
 
@@ -32,6 +32,12 @@ slice, and local task.
   queue-restoration policy in `docs/backlog/roadmap.md` (`W8-E3-S1`).
 
 ## Current reconciliation
+
+- `2026-07-18` `W36-E5-S8-T4` is complete: Studio History renders the canonical
+  parent/current/child lineage projection and routes every retained relation through the shared
+  safe route-intent codec. The renderer is navigation-only and owns no workflow mutation or
+  lineage persistence. Append-only archive disposition `T5` is promoted to `Next`, followed by
+  the mobile chronological presentation `T6`.
 
 - `2026-07-18` `W36-E5-S8-T3` is complete: Studio History reuses the canonical bounded
   run-comparison endpoint and renders prompt, stage, artifact, and validator deltas only with

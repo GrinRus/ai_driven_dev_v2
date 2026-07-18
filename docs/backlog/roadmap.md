@@ -11191,16 +11191,16 @@ Local tasks:
   - Scope: History comparison renderer only.
   - Verification: Back/reload restores both runs and every displayed delta links to retained
     source evidence or an explicit unavailable-snapshot state.
-- `W36-E5-S8-T4` (next) Render parent, source, and child run lineage without presenting lineage as
+- `W36-E5-S8-T4` (done) Render parent, source, and child run lineage without presenting lineage as
   mutable workflow state.
   - Scope: History lineage renderer only.
   - Verification: every routable relation resolves through canonical run identity and opening a
     relation leaves both source and target manifests byte-identical.
-- `W36-E5-S8-T5` (soon) Render archive state as the append-only overlay owned by `W34-E2-S3-T1`.
+- `W36-E5-S8-T5` (next) Render archive state as the append-only overlay owned by `W34-E2-S3-T1`.
   - Scope: History archive-state renderer only.
   - Verification: archive inspection changes no completed-run bytes/hashes and all retained
     documents, logs, comparison, and lineage remain inspectable.
-- `W36-E5-S8-T6` (planned) Render Filmstrip as a vertical chronological mobile drill-down rather than a
+- `W36-E5-S8-T6` (soon) Render Filmstrip as a vertical chronological mobile drill-down rather than a
   horizontal scroll trap.
   - Dependencies: `W36-E5-S2`.
   - Scope: History responsive presentation only.
