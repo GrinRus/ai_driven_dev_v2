@@ -1205,6 +1205,11 @@ def test_operator_questions_asset_keeps_answer_resolution_and_saved_answer_contr
             'const resolutionValue = draft?.resolution || question.answer_resolution || '
             '"resolved";',
             'class="saved-answer"',
+            'data-question-id="${escapeHtml(question.question_id)}"',
+            'data-question-status="${escapeHtml(displayStatus)}"',
+            'data-answer-resolution="${escapeHtml(resolutionValue)}"',
+            'data-question-draft-restored="${escapeHtml(question.question_id)}"',
+            "Restored unsent session draft.",
             "Saved ${escapeHtml(question.answer_resolution)} answer",
             "Answer recorded in answers.md",
             "${escapeHtml(answerText)}</textarea>",

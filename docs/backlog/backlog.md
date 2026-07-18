@@ -7,13 +7,13 @@ slice, and local task.
 
 ## Next
 
-- `W36-E5-S5-T1` — Render blocking questions with exact QID, durable resolution state,
-  session draft recovery, and answer-and-resume behavior.
+- `W36-E5-S5-T2` — Render Request Change as a distinct durable intervention path with
+  downstream-success rejection and remediation routing.
 
 ## Soon
 
-- `W36-E5-S5-T2` — Render Request Change as a distinct durable intervention path with
-  downstream-success rejection and remediation routing.
+- `W36-E5-S5-T3` — Render runtime approval scope, breadth, reason, risk, pending state,
+  session confirmation, and durable compare-and-set winner.
 
 ## Parking lot
 
@@ -40,6 +40,13 @@ slice, and local task.
   queue-restoration policy in `docs/backlog/roadmap.md` (`W8-E3-S1`).
 
 ## Current reconciliation
+
+- `2026-07-18` `W36-E5-S5-T1` is complete: question Recovery is a Studio candidate
+  with exact durable QID, resolved/partial/deferred status markers, explicit editor
+  resolution, and a visible restored-session-draft indicator. Existing guarded answer
+  submission still preserves failed drafts, clears only after matching durable readback,
+  and leaves partial/deferred blocking. Intervention `T2` is promoted to `Next` and
+  approval `T3` to `Soon`.
 
 - `2026-07-18` `W36-E5-S4-T5` is complete: active Studio and Document/Evidence are
   `parity_closed`; `ui=studio` renders one workbench and one bounded Document Canvas, while

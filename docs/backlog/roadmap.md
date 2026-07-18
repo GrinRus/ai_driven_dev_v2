@@ -11020,17 +11020,17 @@ Dependencies:
 
 Local tasks:
 
-- `W36-E5-S5-T1` (next) Render blocking questions with exact QID, resolved/partial/deferred status,
+- `W36-E5-S5-T1` (done) Render blocking questions with exact QID, resolved/partial/deferred status,
   draft recovery, and answer-and-resume behavior.
   - Scope: question Recovery renderer only.
   - Verification: resolved unblocks, partial/deferred remain blocking when required, failed
     submit preserves the draft, and durable `answers.md` readback wins.
-- `W36-E5-S5-T2` (soon) Render Request Change and intervention context as durable stage-scoped input,
+- `W36-E5-S5-T2` (next) Render Request Change and intervention context as durable stage-scoped input,
   including downstream-success rejection and remediation routing.
   - Scope: intervention Recovery renderer only.
   - Verification: allowed submit creates one operator-request document and blocked intervention
     creates none while preserving the selected stage/run.
-- `W36-E5-S5-T3` (planned) Render runtime approval scope, breadth, reason, risk, pending state, session
+- `W36-E5-S5-T3` (soon) Render runtime approval scope, breadth, reason, risk, pending state, session
   confirmation, and durable winning decision separately from product questions.
   - Scope: approval Recovery renderer only.
   - Verification: allow/deny/cancel/conflict fixtures agree with the compare-and-set audit row and

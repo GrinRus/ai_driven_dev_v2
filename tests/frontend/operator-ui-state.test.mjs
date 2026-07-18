@@ -200,7 +200,7 @@ test("surface parity manifest has one owner and journey per migration surface", 
     "W36-E7-S1-T8",
     "W36-E7-S1-T9",
   ]);
-  const candidates = new Set();
+  const candidates = new Set(["question-recovery"]);
   assert.ok(entries.filter((entry) => candidates.has(entry.id)).every(
     (entry) => entry.rollout === "candidate",
   ));
@@ -242,7 +242,7 @@ test("presentation selector is browser-only and fails back to legacy", async () 
     assert.equal(window.aiddPresentation.fallback, item.fallback);
     assert.equal(Object.keys(window.aiddPresentation.surfaces).length, 12);
     for (const surface of [
-      "guided-setup", "active-studio", "document-evidence", "inbox",
+      "guided-setup", "active-studio", "document-evidence", "question-recovery", "inbox",
     ]) {
       assert.equal(
         window.aiddPresentation.surfaces[surface].presentation,
@@ -251,7 +251,7 @@ test("presentation selector is browser-only and fails back to legacy", async () 
     }
     assert.ok(Object.entries(window.aiddPresentation.surfaces)
       .filter(([surface]) => ![
-        "guided-setup", "active-studio", "document-evidence", "inbox",
+        "guided-setup", "active-studio", "document-evidence", "question-recovery", "inbox",
       ].includes(surface))
       .every(([, resolution]) => resolution.presentation === "legacy"));
     assert.equal(documentElement.dataset.presentationRequested, item.requested);
@@ -294,6 +294,31 @@ test("surface resolver implements selector and rollout truth table", async () =>
     assert.equal(item.renderer, studio ? "studio:fixture" : "operator-legacy");
     assert.equal(item.fallback, item.selector === "studio" && !studio);
   }
+});
+
+test("question Recovery renders exact durable ids and resolution states", async () => {
+  const {context} = domContext();
+  context.readOperatorDraft = () => null;
+  await load(context, "operator-api-state.js");
+  await load(context, "operator-questions.js");
+  vm.runInContext(`state.dashboard = {
+    project_root: "/project",
+    work_item: "WI-UI",
+    active_stage_view: {questions: {
+      unresolved_blocking_question_ids: ["Q-PARTIAL", "Q-DEFERRED"],
+      questions: [
+        {question_id: "Q-RESOLVED", text: "Resolved?", policy: "blocking", status: "resolved", answer_resolution: "resolved", answer_text: "Yes"},
+        {question_id: "Q-PARTIAL", text: "Partial?", policy: "blocking", status: "pending-blocking", answer_resolution: "partial", answer_text: "Some"},
+        {question_id: "Q-DEFERRED", text: "Deferred?", policy: "blocking", status: "pending-blocking", answer_resolution: "deferred", answer_text: "Later"}
+      ]
+    }}
+  }`, context);
+  const html = vm.runInContext("renderQuestionCards({showResume: true})", context);
+  assert.match(html, /data-question-id="Q-RESOLVED" data-question-status="resolved" data-answer-resolution="resolved"/);
+  assert.match(html, /data-question-id="Q-PARTIAL" data-question-status="partial" data-answer-resolution="partial"/);
+  assert.match(html, /data-question-id="Q-DEFERRED" data-question-status="deferred" data-answer-resolution="deferred"/);
+  assert.equal((html.match(/data-primary-action/g) || []).length, 3);
+  assert.match(html, /Select resolved to resume/);
 });
 
 test("late dashboard response cannot overwrite a newer request", async () => {

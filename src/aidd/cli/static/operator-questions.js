@@ -207,7 +207,7 @@ function renderQuestionCards({showResume}) {
           ? "Select resolved to resume"
           : displayStatus === "resolved" ? "Update & resume" : "Answer & resume";
         return `
-          <article class="question-card">
+          <article class="question-card" data-question-id="${escapeHtml(question.question_id)}" data-question-status="${escapeHtml(displayStatus)}" data-answer-resolution="${escapeHtml(resolutionValue)}">
             <div class="question-head">
               <strong>${escapeHtml(question.question_id)}</strong>
               <span class="small-badge ${questionStatusClass(question)}">${escapeHtml(displayStatus)}</span>
@@ -218,6 +218,7 @@ function renderQuestionCards({showResume}) {
             </div>
             <p id="${questionTextId}">${escapeHtml(question.text)}</p>
             ${savedAnswer}
+            ${draft ? `<p class="muted question-draft-status" data-question-draft-restored="${escapeHtml(question.question_id)}">Restored unsent session draft.</p>` : ""}
             <label class="sr-only" for="${answerId}">Answer for ${escapeHtml(questionLabel)}</label>
             <textarea id="${answerId}" name="${answerId}" aria-describedby="${questionTextId}" data-question-text="${escapeHtml(question.question_id)}">${escapeHtml(answerText)}</textarea>
             <div class="question-actions">

@@ -26,6 +26,10 @@ def test_question_draft_survives_reload_and_clears_after_readback(tmp_path: Path
         restored = page.locator('[data-question-text="Q1"]')
         restored.wait_for(state="visible")
         assert restored.input_value() == "Preserve the public CLI boundary."
+        assert page.locator('[data-question-draft-restored="Q1"]').is_visible()
+        card = page.locator('[data-question-id="Q1"]')
+        assert card.get_attribute("data-question-status") == "pending-blocking"
+        assert card.get_attribute("data-answer-resolution") == "resolved"
 
         page.route(
             "**/api/answers",
