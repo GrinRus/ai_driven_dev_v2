@@ -11105,7 +11105,7 @@ Local tasks:
   - Scope: failure/recovery responsive presentation only.
   - Verification: `320x568` and `390x844` show the typed failure, one eligible recovery action,
     and evidence drill-down without horizontal overflow or initial decision scroll.
-- `W36-E5-S6-T6` (soon) Promote the verified runtime/validation candidates to `parity_closed` while
+- `W36-E5-S6-T6` (next) Promote the verified runtime/validation candidates to `parity_closed` while
   retaining legacy failure cards for missing/default and explicit rollback.
   - Dependencies: `W36-E7-S1-T3`.
   - Scope: runtime/validation parity-manifest entries only.
@@ -11130,7 +11130,7 @@ Dependencies:
 
 Local tasks:
 
-- `W36-E5-S7-T1` (parked) Render dependency-ready tasks, task attempts, blocked/failed recovery, and
+- `W36-E5-S7-T1` (soon) Render dependency-ready tasks, task attempts, blocked/failed recovery, and
   aggregate finalization inside Studio from the canonical task read model.
   - Scope: implement task workspace renderer only.
   - Verification: run/resume/fail/recover/finalize fixtures preserve successful tasks and never
@@ -11514,7 +11514,7 @@ Local tasks:
   - Scope: live Studio browser scenario family.
   - Verification: real milestones, last output, cursor recovery, cancel lifecycle, and
     durable logs pass without console/network ambiguity or fake progress.
-- `W36-E7-S1-T3` (next) Add the Runtime/Validation Recovery Studio repair/exhaustion browser
+- `W36-E7-S1-T3` (done) Add the Runtime/Validation Recovery Studio repair/exhaustion browser
   journey.
   - Dependencies: `W36-E5-S6-T1..T5`; direct queue predecessor `W36-E5-S6-T5`.
   - Scope: runtime/validation recovery scenario family.

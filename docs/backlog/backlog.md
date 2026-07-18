@@ -7,18 +7,16 @@ slice, and local task.
 
 ## Next
 
-- `W36-E7-S1-T3` — Add the provider-free Runtime/Validation Recovery browser journey
-  across the required viewport matrix.
-
-## Soon
-
 - `W36-E5-S6-T6` — Close runtime/validation Recovery presentation parity after the
   provider-free journey passes.
 
-## Parking lot
+## Soon
 
 - `W36-E5-S7-T1` — Render canonical implement tasks, attempts, recovery, and aggregate
   finalization inside Studio.
+
+## Parking lot
+
 - `W36-E5-S8-T1` — Implement the typed Filmstrip frame projection from durable attempts,
   task attempts, and finalization milestones.
 - `W36-E5-S10-T1` — Switch the default renderer to Studio only after all per-surface
@@ -38,6 +36,12 @@ slice, and local task.
   queue-restoration policy in `docs/backlog/roadmap.md` (`W8-E3-S1`).
 
 ## Current reconciliation
+
+- `2026-07-18` `W36-E7-S1-T3` is complete: launch, authentication, timeout,
+  cancellation, no-progress, repair-available, and repair-exhausted durable fixtures pass
+  the five-viewport Studio journey with exact first-failure evidence, truthful stopped state,
+  no implicit mutation, and bounded browser/UI cleanup. Recovery parity `W36-E5-S6-T6`
+  is promoted to `Next` and Implement Studio `W36-E5-S7-T1` to `Soon`.
 
 - `2026-07-18` `W36-E5-S6-T5` is complete: mobile runtime failure, repair-available,
   and repair-exhausted Recovery order failure, one primary decision, then evidence;

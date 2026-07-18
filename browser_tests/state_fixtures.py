@@ -11,6 +11,7 @@ from aidd.adapters.runtime_evidence import (
 )
 from aidd.core.interview import AdapterQuestionEvent, QuestionPolicy, persist_questions_document
 from aidd.core.remediation import create_remediation_request, mark_downstream_stale
+from aidd.core.repair import persist_repair_history_snapshot
 from aidd.core.run_store import (
     OPERATOR_REQUESTS_FILENAME,
     create_next_attempt_directory,
@@ -22,6 +23,8 @@ from aidd.core.runtime_operator import RuntimeOperatorRequest, append_operator_r
 from aidd.core.stages import STAGES
 from aidd.core.workspace import WorkspaceBootstrapService
 from aidd.runtime_permissions import RuntimeOperatorRequestKind, RuntimeOperatorRisk
+from aidd.validators.models import ValidationFinding, ValidationIssueLocation
+from aidd.validators.reports import write_validator_report
 
 WORK_ITEM = "WI-BROWSER"
 RUN_ID = "run-browser"
@@ -250,7 +253,46 @@ def build_browser_state_fixture(
             work_item=work_item,
             run_id=run_id,
         )
-    if state == "runtime-failure":
+    runtime_failures = {
+        "runtime-failure": (
+            RuntimeAdapterOutcome.RUNTIME_FAILURE,
+            RuntimeStopReason.RUNTIME_FAILURE,
+            "provider_error",
+            1,
+        ),
+        "runtime-launch-failure": (
+            RuntimeAdapterOutcome.LAUNCH_FAILURE,
+            RuntimeStopReason.LAUNCH_FAILURE,
+            "launch_failure",
+            None,
+        ),
+        "runtime-authentication-failure": (
+            RuntimeAdapterOutcome.RUNTIME_FAILURE,
+            RuntimeStopReason.RUNTIME_FAILURE,
+            "authentication_failure",
+            1,
+        ),
+        "runtime-timeout": (
+            RuntimeAdapterOutcome.TIMEOUT,
+            RuntimeStopReason.TIMEOUT,
+            "timeout",
+            124,
+        ),
+        "runtime-cancelled": (
+            RuntimeAdapterOutcome.CANCELLATION,
+            RuntimeStopReason.CANCELLATION,
+            "cancelled",
+            130,
+        ),
+        "runtime-no-progress": (
+            RuntimeAdapterOutcome.RUNTIME_FAILURE,
+            RuntimeStopReason.RUNTIME_FAILURE,
+            "provider-no-progress",
+            1,
+        ),
+    }
+    if state in runtime_failures:
+        outcome, stop_reason, classification, exit_code = runtime_failures[state]
         attempt_root = _attempt(
             workspace_root,
             "idea",
@@ -261,13 +303,13 @@ def build_browser_state_fixture(
         commit_runtime_evidence(
             RuntimeEvidenceCommitRequest(
                 attempt_path=attempt_root,
-                adapter_outcome=RuntimeAdapterOutcome.RUNTIME_FAILURE,
-                exit_classification="provider_error",
-                exit_code=1,
+                adapter_outcome=outcome,
+                exit_classification=classification,
+                exit_code=exit_code,
                 stdout_text="",
-                stderr_text="provider failed\n",
-                runtime_log_text="provider failed\n",
-                stop_reason=RuntimeStopReason.RUNTIME_FAILURE,
+                stderr_text=f"{classification}\n",
+                runtime_log_text=f"{classification}\n",
+                stop_reason=stop_reason,
             )
         )
         return _descriptor(
@@ -277,7 +319,72 @@ def build_browser_state_fixture(
             context_keys=("project", "work_item", "run", "stage", "attempt"),
             surface="Runtime Failure Recovery",
             action="Retry stage",
-            marker="resume-stage",
+            marker=classification.replace("_", "-"),
+            work_item=work_item,
+            run_id=run_id,
+        )
+    if state in {"validation-repair", "validation-repair-exhausted"}:
+        stage = "plan"
+        attempt_root = _attempt(
+            workspace_root,
+            stage,
+            work_item=work_item,
+            run_id=run_id,
+        )
+        persist_stage_status(
+            workspace_root,
+            work_item,
+            run_id,
+            stage,
+            "repair-needed" if state == "validation-repair" else "failed",
+        )
+        stage_root = workspace_root / "workitems" / work_item / "stages" / stage
+        validator_report = stage_root / "validator-report.md"
+        repair_brief = stage_root / "repair-brief.md"
+        write_validator_report(
+            path=validator_report,
+            findings=(
+                ValidationFinding(
+                    code="STRUCT-MISSING-REQUIRED-SECTION",
+                    message="Required verification section is missing.",
+                    location=ValidationIssueLocation(
+                        workspace_relative_path=(
+                            f"workitems/{work_item}/stages/{stage}/plan.md"
+                        ),
+                        line_number=3,
+                    ),
+                ),
+            ),
+        )
+        repair_brief.write_text(
+            "# Repair Brief\n\nRestore the required verification section.\n",
+            encoding="utf-8",
+        )
+        exhausted = state == "validation-repair-exhausted"
+        persist_repair_history_snapshot(
+            workspace_root=workspace_root,
+            work_item=work_item,
+            run_id=run_id,
+            stage=stage,
+            attempt_number=1,
+            trigger="repair",
+            outcome="repair budget exhausted" if exhausted else "failed validation",
+            stage_status="failed" if exhausted else "repair-needed",
+            validator_report_path=validator_report,
+            repair_brief_path=repair_brief,
+        )
+        attempt_root.joinpath("runtime.log").write_text(
+            "validation checkpoint reached\n",
+            encoding="utf-8",
+        )
+        return _descriptor(
+            name=state,
+            project_root=project_root,
+            route="studio",
+            context_keys=("project", "work_item", "run", "stage", "attempt"),
+            surface="Validation Recovery",
+            action="Request Change" if exhausted else "Run Repair",
+            marker="repair-exhausted" if exhausted else "repair-available",
             work_item=work_item,
             run_id=run_id,
         )
@@ -409,6 +516,13 @@ BROWSER_FIXTURE_STATES = (
     "running",
     "blocking-question",
     "runtime-failure",
+    "runtime-launch-failure",
+    "runtime-authentication-failure",
+    "runtime-timeout",
+    "runtime-cancelled",
+    "runtime-no-progress",
+    "validation-repair",
+    "validation-repair-exhausted",
     "pending-approval",
     "qa-decision",
     "remediation-stale",
