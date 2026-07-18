@@ -640,6 +640,19 @@ def test_studio_flow_complete_uses_only_core_recommendation() -> None:
             'relationship: wizard.action === "clone-flow" ? "clone" : "follow-up"',
         ),
     )
+    _assert_contains_all(
+        view,
+        (
+            "function renderEvalBatchHandoff()",
+            "operator-selected local manifest",
+            "uv run aidd eval execute <scenario-path> --root .aidd",
+            "data-eval-handoff-command",
+        ),
+    )
+    eval_action = actions.split("async function openEvalBatchHandoff()", 1)[1].split(
+        "function cloneDraftFromPayload", 1
+    )[0]
+    assert "postJson(" not in eval_action
 
 
 def test_operator_state_and_dashboard_assets_keep_runtime_and_tab_contracts() -> None:

@@ -1066,6 +1066,17 @@ test("next-flow view renders terminal and readiness states without network mutat
   assert.match(cloneHtml, /data-studio-next-flow-action="clone-flow"/);
   assert.match(cloneHtml, /Clone This Flow/);
   assert.match(cloneHtml, /source run stays immutable/i);
+  vm.runInContext(`
+    state.nextFlowWizard.action = "run-eval-batch";
+    state.nextFlowWizard.step = "eval-batch";
+    document.getElementById("appVersion").textContent = "v0.9.0";
+  `, context);
+  const evalHtml = vm.runInContext("renderStudioNextFlowWizard()", context);
+  assert.match(evalHtml, /data-studio-next-flow-action="run-eval-batch"/);
+  assert.match(evalHtml, /v0.9.0/);
+  assert.match(evalHtml, /operator-selected local manifest/);
+  assert.match(evalHtml, /aidd eval execute &lt;scenario-path&gt; --root .aidd/);
+  assert.doesNotMatch(evalHtml, /data-repair/);
   assert.match(element("nextActionPanel").innerHTML, /Review handoff/);
   assert.equal(fetchCount, 0);
 });

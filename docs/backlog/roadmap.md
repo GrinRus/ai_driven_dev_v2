@@ -11252,21 +11252,21 @@ Local tasks:
   - Scope: clone next-flow renderer only.
   - Verification: Back/reload/failure/retry preserve the clone draft, successful launch creates
     one independent identity, and the source run remains byte-identical.
-- `W36-E5-S9-T6` (next) Render the existing Run Eval / Scenario Batch manual handoff as a non-repair
+- `W36-E5-S9-T6` (done) Render the existing Run Eval / Scenario Batch manual handoff as a non-repair
   comparison disposition under Other next actions.
   - Dependencies: `W36-E5-S9-T5` as the direct queue predecessor.
   - Scope: terminal eval handoff renderer only; no new mutation endpoint.
   - Verification: the action opens exact source/version/scenario context and operator commands,
     sends no workflow mutation request, and leaves source-run evidence unchanged.
-- `W36-E5-S9-T7` (soon) Render Archive Run as an append-only visibility disposition under Other next
+- `W36-E5-S9-T7` (next) Render Archive Run as an append-only visibility disposition under Other next
   actions.
   - Dependencies: `W36-E5-S9-T6` as the direct queue predecessor.
   - Scope: terminal archive disposition renderer only.
   - Verification: archive writes only the owned overlay and completed documents, artifacts,
     logs, comparison, and lineage remain inspectable.
-- `W36-E5-S9-T8` (planned) Render the recommended next decision and Other next actions as a compact mobile
+- `W36-E5-S9-T8` (soon) Render the recommended next decision and Other next actions as a compact mobile
   drill-down over the shared responsive shell.
-  - Dependencies: `W36-E5-S2`.
+  - Dependencies: `W36-E5-S2`, with `W36-E5-S9-T7` as the direct queue predecessor.
   - Scope: Flow Complete responsive presentation only.
   - Verification: `320x568` and `390x844` show final status, one recommendation, and a reachable
     secondary-outcomes disclosure without horizontal overflow or initial decision scroll.

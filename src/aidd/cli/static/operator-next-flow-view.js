@@ -1302,6 +1302,8 @@ function renderEvalBatchHandoff() {
   const artifacts = handoff?.final_artifacts || [];
   const needsRecovery = terminalHandoffNeedsRecovery(handoff);
   const historyActionClass = needsRecovery ? ' class="secondary"' : "";
+  const appVersion = document.getElementById("appVersion")?.textContent || "version not recorded";
+  const scenarioCommand = "uv run aidd eval execute <scenario-path> --root .aidd";
   return `
     <section class="surface next-flow-wizard">
       <div class="surface-title">
@@ -1311,14 +1313,19 @@ function renderEvalBatchHandoff() {
       <div class="wizard-context-grid">
         <div class="panel-item"><strong>Source run</strong><span>${escapeHtml(sourceRun)}</span></div>
         <div class="panel-item"><strong>Source work item</strong><span>${escapeHtml(sourceWorkItem)}</span></div>
+        <div class="panel-item"><strong>AIDD version</strong><span>${escapeHtml(appVersion)}</span></div>
         <div class="panel-item"><strong>Final artifacts</strong><span>${escapeHtml(artifacts.length)}</span></div>
-        <div class="panel-item"><strong>Scenario checkpoint</strong><span>manual checkpoint only</span></div>
+        <div class="panel-item"><strong>Scenario source</strong><span>operator-selected local manifest</span></div>
       </div>
       <div class="truncation-notice" role="status">
         <strong>${needsRecovery ? "Comparison only" : "Eval batch handoff only"}</strong>
         <span>${escapeHtml(evalBatchHandoffMessage(handoff))}</span>
       </div>
       <div class="recent-artifacts">${renderTerminalArtifacts(artifacts)}</div>
+      <div class="panel-item" data-eval-handoff-command>
+        <strong>Operator command</strong>
+        <code>${escapeHtml(scenarioCommand)}</code>
+      </div>
       ${needsRecovery ? `<div class="wizard-action-guard">History is review-only; remediation starts with Start Follow-up Flow.</div>` : ""}
       <div class="wizard-actions">
         ${renderTerminalRecoveryWizardAction(handoff)}

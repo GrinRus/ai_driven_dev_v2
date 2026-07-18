@@ -7,11 +7,11 @@ slice, and local task.
 
 ## Next
 
-- `W36-E5-S9-T6` — Render manual eval handoff without workflow mutation.
+- `W36-E5-S9-T7` — Render append-only terminal archive disposition.
 
 ## Soon
 
-- `W36-E5-S9-T7` — Render append-only terminal archive disposition.
+- `W36-E5-S9-T8` — Render compact mobile terminal decision.
 
 ## Parking lot
 
@@ -32,6 +32,12 @@ slice, and local task.
   queue-restoration policy in `docs/backlog/roadmap.md` (`W8-E3-S1`).
 
 ## Current reconciliation
+
+- `2026-07-18` `W36-E5-S9-T6` is complete: Studio's manual eval handoff names
+  the exact source work item/run, installed AIDD version, operator-selected scenario source, and
+  supported `aidd eval execute` command. Opening it changes browser presentation state only and
+  sends no workflow, repair, or eval mutation. Archive disposition `T7` is promoted to `Next`,
+  followed by mobile terminal composition `T8`.
 
 - `2026-07-18` `W36-E5-S9-T5` is complete: Studio clone uses the shared wizard host
   but remains bound to the existing clone-draft and clone-preflight services, with an explicit
