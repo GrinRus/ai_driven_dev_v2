@@ -22,7 +22,7 @@ const SURFACE_PARITY_MANIFEST = Object.freeze([
   {
     id: "runtime-validation-recovery",
     owner: "W36-E5-S6",
-    rollout: "legacy_only",
+    rollout: "candidate",
     rollbackRenderer: "operator-stage-cockpit",
     fixture: "runtime-failure",
     journey: "W36-E7-S1-T3",

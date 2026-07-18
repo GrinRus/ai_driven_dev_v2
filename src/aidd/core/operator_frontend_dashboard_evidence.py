@@ -128,12 +128,18 @@ _RUNNING_STAGE_STATES = frozenset(
 _RUNTIME_FAILURE_KINDS = frozenset(
     {
         "cancelled",
+        "cancellation",
+        "authentication_failure",
+        "authentication-failure",
+        "launch_failure",
+        "launch-failure",
         "failed",
         "non_zero_exit",
         "non-zero-exit",
         "provider_error",
         "provider-no-progress",
         "runtime-error",
+        "runtime_failure",
         "runtime-exit-metadata-invalid",
         "runtime-failure",
         "stage-failed",
@@ -928,6 +934,11 @@ def _runtime_exit_signal(
         "provider_error": "Provider error",
         "provider-no-progress": "Provider no progress",
         "cancelled": "Runtime interrupted",
+        "cancellation": "Runtime interrupted",
+        "launch_failure": "Runtime launch failed",
+        "launch-failure": "Runtime launch failed",
+        "authentication_failure": "Runtime authentication failed",
+        "authentication-failure": "Runtime authentication failed",
     }.get(classification or adapter_outcome, "Runtime failure")
     metadata_parts = [
         f"exit_code={exit_code}" if exit_code is not None else "",
@@ -952,6 +963,22 @@ def _runtime_exit_signal(
         "provider_error": (
             "The provider reported an execution error before this stage completed. "
             "Inspect runtime.log and runtime-exit.json before retrying."
+        ),
+        "launch_failure": (
+            "The configured runtime command could not be launched. Inspect runtime.log, "
+            "runtime-exit.json, and the execution-command readiness dimension before retrying."
+        ),
+        "launch-failure": (
+            "The configured runtime command could not be launched. Inspect runtime.log, "
+            "runtime-exit.json, and the execution-command readiness dimension before retrying."
+        ),
+        "authentication_failure": (
+            "The runtime could not authenticate. Inspect runtime.log, runtime-exit.json, "
+            "and authentication evidence before retrying."
+        ),
+        "authentication-failure": (
+            "The runtime could not authenticate. Inspect runtime.log, runtime-exit.json, "
+            "and authentication evidence before retrying."
         ),
     }.get(outcome)
     detail = recovery_detail or metadata_detail or "Runtime exit failed."

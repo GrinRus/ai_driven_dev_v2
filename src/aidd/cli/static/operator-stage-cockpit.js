@@ -1,11 +1,17 @@
 const RUNTIME_FAILURE_KINDS = new Set([
   "cancelled",
+  "cancellation",
+  "authentication_failure",
+  "authentication-failure",
   "failed",
   "non_zero_exit",
   "non-zero-exit",
   "provider_error",
   "provider-no-progress",
   "runtime-error",
+  "runtime_failure",
+  "launch_failure",
+  "launch-failure",
   "runtime-exit-metadata-invalid",
   "runtime-failure",
   "stage-failed",
@@ -272,17 +278,20 @@ function recoveryPrimaryActionSpec(diagnostics) {
         enabled: true
       }
       : null);
-  const guidedAction = runtimeAction || recoveryActions.find((item) => item.enabled !== false) || null;
+  const retryAction = recoveryActions.find((item) =>
+    item.action === "resume-stage" && item.enabled !== false
+  ) || null;
+  const guidedAction = retryAction || runtimeAction || recoveryActions.find((item) => item.enabled !== false) || null;
   const action = guidedAction || state.dashboard?.next_action || {};
   const validation = diagnostics?.validation;
   const status = repairCenterStatus(validation, diagnostics?.stopped);
   const stage = action.stage || state.activeStage;
-  if (isRuntimeFirstFailure(firstFailure) && runtimeAction) {
+  if (isRuntimeFirstFailure(firstFailure) && retryAction) {
     return {
-      action: "inspect-runtime-log",
-      label: runtimeAction.label || "Open logs",
-      detail: runtimeAction.detail || "Inspect the saved runtime log, runtime-exit metadata, and readiness/config context before retrying.",
-      attrs: `data-recovery-action="inspect-runtime-log" data-recovery-stage="${escapeHtml(runtimeAction.stage || stage)}"`
+      action: "resume-stage",
+      label: retryAction.label || "Retry stage",
+      detail: `${retryAction.detail || "Retry the stopped stage after inspecting the saved runtime evidence."} Runtime failure does not consume validation repair budget.`,
+      attrs: `data-recovery-action="resume-stage" data-recovery-stage="${escapeHtml(retryAction.stage || stage)}"`
     };
   }
   if (status === "repair-available") {
@@ -421,7 +430,7 @@ function renderRecoveryWorkbench() {
         ? "validation"
         : "intervention";
   return `
-    <section class="recovery-workbench">
+    <section class="recovery-workbench" data-runtime-failure-kind="${escapeHtml(runtimeFailure ? firstFailure.kind : "")}" data-runtime-stopped="${runtimeFailure ? "true" : "false"}" data-runtime-last-signal="${escapeHtml(runtimeFailure ? evidencePath : "")}" data-validation-repair-budget-consumed="false">
       ${renderRecoverySummary({
         kind: recoveryKind,
         status: "blocked",

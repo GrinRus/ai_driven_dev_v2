@@ -11078,18 +11078,18 @@ Dependencies:
 
 Local tasks:
 
-- `W36-E5-S6-T1` (next) Render runtime/provider failure, stopped state, last durable signal, and
+- `W36-E5-S6-T1` (done) Render runtime/provider failure, stopped state, last durable signal, and
   eligible retry without consuming or implying validation repair budget.
   - Dependencies: `W36-E5-S5-T7`.
   - Scope: runtime-failure Recovery renderer only.
   - Verification: unavailable executable, authentication, timeout, cancellation, no-progress,
     and legacy fixtures show the typed outcome and correct safe action.
-- `W36-E5-S6-T2` (soon) Render transient offline, reconnecting, recovered, expired-job, and manual
+- `W36-E5-S6-T2` (next) Render transient offline, reconnecting, recovered, expired-job, and manual
   Reconnect states while preserving durable log/artifact access.
   - Scope: connection Recovery renderer only.
   - Verification: cursor-preserving failure/recovery fixtures show no skipped or duplicated
     chunks and never claim runtime termination without server evidence.
-- `W36-E5-S6-T3` (planned) Render validation findings with exact document/line/rule/provenance and make
+- `W36-E5-S6-T3` (soon) Render validation findings with exact document/line/rule/provenance and make
   Run Repair primary only when the backend reports repair available.
   - Scope: validation Recovery renderer only.
   - Verification: repair-available, repaired, exhausted, explicit-stop, stale-artifact, and

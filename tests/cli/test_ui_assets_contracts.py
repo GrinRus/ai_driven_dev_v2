@@ -1287,7 +1287,7 @@ def test_operator_recovery_assets_keep_repair_center_contracts() -> None:
     )
 
 
-def test_operator_recovery_assets_prioritize_runtime_log_recovery() -> None:
+def test_operator_recovery_assets_prioritize_eligible_runtime_retry() -> None:
     cockpit = _asset_text("/operator-stage-cockpit.js")
 
     _assert_contains_all(
@@ -1296,6 +1296,8 @@ def test_operator_recovery_assets_prioritize_runtime_log_recovery() -> None:
             "const RUNTIME_FAILURE_KINDS = new Set([",
             "runtime-exit-metadata-invalid",
             "provider-no-progress",
+            "launch_failure",
+            "authentication_failure",
             "function isRuntimeFirstFailure(firstFailure)",
             "function runtimeLogEvidencePath(diagnostics)",
             "function runtimeFailureEvidencePath(firstFailure, diagnostics)",
@@ -1306,13 +1308,18 @@ def test_operator_recovery_assets_prioritize_runtime_log_recovery() -> None:
             'action.action === "resume-stage"',
             'data-recovery-action="resume-stage"',
             "Retry stage",
-            'action: "inspect-runtime-log"',
-            "isRuntimeFirstFailure(firstFailure) && runtimeAction",
-            'label: runtimeAction.label || "Open logs"',
+            "isRuntimeFirstFailure(firstFailure) && retryAction",
+            'action: "resume-stage"',
+            'label: retryAction.label || "Retry stage"',
+            "Runtime failure does not consume validation repair budget.",
+            "data-runtime-failure-kind",
+            "data-runtime-stopped",
+            "data-runtime-last-signal",
+            "data-validation-repair-budget-consumed",
             "Runtime log",
         ),
     )
-    assert cockpit.index("isRuntimeFirstFailure(firstFailure) && runtimeAction") < cockpit.index(
+    assert cockpit.index("isRuntimeFirstFailure(firstFailure) && retryAction") < cockpit.index(
         'if (status === "repair-available")'
     )
 
