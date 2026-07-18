@@ -67,7 +67,7 @@ const SURFACE_PARITY_MANIFEST = Object.freeze([
   {
     id: "flow-complete",
     owner: "W36-E5-S9",
-    rollout: "candidate",
+    rollout: "parity_closed",
     rollbackRenderer: "operator-next-flow-view",
     fixture: "terminal-handoff",
     journey: "W36-E7-S1-T8",

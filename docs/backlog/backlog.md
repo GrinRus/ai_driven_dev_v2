@@ -7,16 +7,13 @@ slice, and local task.
 
 ## Next
 
-- `W36-E5-S9-T9` — Close Flow Complete presentation parity.
+- `W36-E7-S2-T1` — Add the packaged-UI browser scenario runner.
 
 ## Soon
 
-- `W36-E7-S2-T1` — Add the packaged-UI browser scenario runner.
+- `W36-E5-S10-T1` — Switch the default renderer to Studio with legacy rollback.
 
 ## Parking lot
-
-- `W36-E5-S10-T1` — Switch the default renderer to Studio only after all per-surface
-  parity entries close.
 
 ## Update rules
 
@@ -32,6 +29,12 @@ slice, and local task.
   queue-restoration policy in `docs/backlog/roadmap.md` (`W8-E3-S1`).
 
 ## Current reconciliation
+
+- `2026-07-18` `W36-E5-S9-T9` is complete: Flow Complete is now
+  `parity_closed` after the full terminal journey proved core recommendation, drafts, independent
+  clone identity, manual eval, archive readback, stale exclusion, and immutable source evidence.
+  Legacy remains an explicit rollback presentation until cutover. Slice `W36-E5-S9` is closed;
+  packaged-UI runner `E7-S2-T1` is promoted to `Next`, followed by default cutover `E5-S10-T1`.
 
 - `2026-07-18` `W36-E7-S1-T8` is complete: all five viewports exercise the
   core-recommended terminal decision, session follow-up draft, independent clone identity,

@@ -11218,7 +11218,7 @@ Exit evidence:
 - History never implies a document/repository snapshot that was not retained;
 - stage progression, causal attempts, and run lineage remain distinguishable and routable.
 
-#### Slice W36-E5-S9 — Flow Complete and independent next outcomes (`planned`)
+#### Slice W36-E5-S9 — Flow Complete and independent next outcomes (`done`)
 Goal: make fresh terminal QA produce an immutable handoff with one recommended disposition and
 all secondary outcomes behind progressive disclosure.
 
@@ -11270,7 +11270,7 @@ Local tasks:
   - Scope: Flow Complete responsive presentation only.
   - Verification: `320x568` and `390x844` show final status, one recommendation, and a reachable
     secondary-outcomes disclosure without horizontal overflow or initial decision scroll.
-- `W36-E5-S9-T9` (next) Promote the verified Flow Complete candidate to `parity_closed` while retaining
+- `W36-E5-S9-T9` (done) Promote the verified Flow Complete candidate to `parity_closed` while retaining
   the equal-weight legacy action grid/wizard for missing/default and explicit rollback.
   - Dependencies: `W36-E7-S1-T8`.
   - Scope: terminal/next-flow parity-manifest entry only.
@@ -11296,8 +11296,9 @@ Dependencies:
 
 Local tasks:
 
-- `W36-E5-S10-T1` (parked) Switch the missing/default presentation selector to Studio after every
+- `W36-E5-S10-T1` (soon) Switch the missing/default presentation selector to Studio after every
   per-surface parity entry is closed while retaining explicit `ui=legacy` rollback.
+  - Dependencies: `W36-E7-S2-T1` as the direct queue predecessor.
   - Scope: packaged renderer default only.
   - Verification: the full provider-free browser command passes in default Studio mode and the
     explicit rollback renderer still dispatches identical service actions.
@@ -11598,7 +11599,7 @@ Dependencies:
 
 Local tasks:
 
-- `W36-E7-S2-T1` (soon) Add one command that discovers and executes every declared packaged-UI
+- `W36-E7-S2-T1` (next) Add one command that discovers and executes every declared packaged-UI
   browser scenario.
   - Dependencies: `W36-E5-S9-T9` as the direct queue predecessor.
   - Scope: local/CI UI test entry point.

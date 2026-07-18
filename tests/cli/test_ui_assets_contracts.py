@@ -620,7 +620,8 @@ def test_studio_flow_complete_uses_only_core_recommendation() -> None:
     )
     assert 'selectSurfaceRenderer("flow-complete"' in studio
     assert 'id: "flow-complete"' in parity
-    assert 'rollout: "candidate"' in parity
+    flow_entry = parity.split('id: "flow-complete"', 1)[1].split("},", 1)[0]
+    assert 'rollout: "parity_closed"' in flow_entry
     _assert_contains_all(
         responsive,
         (
