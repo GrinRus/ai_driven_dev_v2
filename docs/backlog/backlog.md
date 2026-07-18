@@ -7,11 +7,11 @@ slice, and local task.
 
 ## Next
 
-- `W36-E7-S2-T2` — Enforce the packaged-UI browser runner in CI.
+- `W36-E7-S2-T3` — Update the full browser-pass evidence template.
 
 ## Soon
 
-- `W36-E7-S2-T3` — Update the full browser-pass evidence template.
+- `W36-E7-S2-T4` — Enforce the packaged-UI browser runner in release preflight.
 
 ## Parking lot
 
@@ -29,6 +29,11 @@ slice, and local task.
   queue-restoration policy in `docs/backlog/roadmap.md` (`W8-E3-S1`).
 
 ## Current reconciliation
+
+- `2026-07-18` `W36-E7-S2-T2` is complete: CI now runs the shared packaged-UI
+  journey command in a dedicated provider-free Python 3.12 job with a pinned Chromium cache,
+  bounded timeout, and an explicit build dependency. The full-pass evidence template `T3` is
+  promoted to `Next`, followed by release-preflight enforcement `T4`.
 
 - `2026-07-18` `W36-E5-S10-T5` is complete: README, operator handbook, local-project
   E2E, and frontend architecture now describe the shipped Studio-only surface. The accepted

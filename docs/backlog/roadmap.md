@@ -11609,19 +11609,20 @@ Local tasks:
   - Scope: local/CI UI test entry point.
   - Verification: discovered scenario ids equal executed scenario ids exactly and live
     provider manifests are rejected.
-- `W36-E7-S2-T2` (next) Add the packaged-UI browser command to CI.
+- `W36-E7-S2-T2` (done) Add the packaged-UI browser command to CI.
   - Dependencies: `W36-E5-S10-T5` as the direct queue predecessor.
   - Dependencies: `W36-E7-S2-T1`.
   - Scope: deterministic CI integration only.
   - Verification: an intentional geometry, accessibility, console, or journey failure
     blocks CI while provider credentials remain unnecessary.
-- `W36-E7-S2-T3` (soon) Update the local-project UI evidence template for full browser passes.
+- `W36-E7-S2-T3` (next) Update the local-project UI evidence template for full browser passes.
   - Dependencies: `W36-E7-S2-T2` as the direct queue predecessor.
   - Dependencies: `W36-E7-S2-T1`.
   - Scope: operator E2E documentation only.
   - Verification: docs consistency and the evidence checklist record version, fixture,
     viewports, journeys, accessibility, console/network state, and cleanup.
-- `W36-E7-S2-T4` (planned) Add the packaged-UI browser command to release preflight.
+- `W36-E7-S2-T4` (soon) Add the packaged-UI browser command to release preflight.
+  - Dependencies: `W36-E7-S2-T3` as the direct queue predecessor.
   - Dependencies: `W36-E7-S2-T2`.
   - Scope: deterministic release-preflight integration only.
   - Verification: an intentional browser journey failure blocks release preparation

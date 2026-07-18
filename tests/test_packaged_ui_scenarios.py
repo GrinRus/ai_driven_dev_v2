@@ -5,6 +5,7 @@ from pathlib import Path
 from typing import Any
 
 import pytest
+import yaml
 
 from scripts.run_packaged_ui_scenarios import (
     JOURNEY_NODE_IDS,
@@ -60,3 +61,26 @@ def test_packaged_ui_runner_continues_after_failure_and_preserves_order() -> Non
     )
     assert len(executed) == 12
     assert [result.return_code for result in results].count(1) == 1
+
+
+def test_ci_enforces_the_shared_packaged_ui_browser_runner() -> None:
+    repository_root = Path(__file__).resolve().parents[1]
+    workflow = yaml.safe_load(
+        (repository_root / ".github" / "workflows" / "ci.yml").read_text(
+            encoding="utf-8"
+        )
+    )
+    jobs = workflow["jobs"]
+    browser_job = jobs["packaged-ui-browser"]
+    serialized_steps = yaml.safe_dump(browser_job["steps"], sort_keys=False)
+
+    assert browser_job["timeout-minutes"] == 30
+    assert browser_job["needs"] == "lint-type-test"
+    assert "actions/cache@" in serialized_steps
+    assert "~/.cache/ms-playwright" in serialized_steps
+    assert "python -m playwright install-deps chromium" in serialized_steps
+    assert "python -m playwright install chromium" in serialized_steps
+    assert "python scripts/run_packaged_ui_scenarios.py" in serialized_steps
+    assert "AIDD_EVAL_" not in serialized_steps
+    assert "OPENAI_API_KEY" not in serialized_steps
+    assert "packaged-ui-browser" in jobs["build"]["needs"]
