@@ -129,3 +129,67 @@ def test_validation_recovery_exposes_one_eligible_primary_action(
                     assert primary.locator('[data-recovery-stage="plan"]').count() == 1
                 _assert_rendered_gate(page, viewport)
                 browser_page.diagnostics.assert_clean()
+
+
+@pytest.mark.parametrize(
+    ("fixture_state", "stage"),
+    (("runtime-failure", "idea"), ("validation-repair-exhausted", "plan")),
+)
+def test_runtime_validation_recovery_parity_preserves_durable_read_models(
+    tmp_path: Path,
+    fixture_state: str,
+    stage: str,
+) -> None:
+    fixture = build_browser_state_fixture(tmp_path / fixture_state, fixture_state)
+    snapshots: list[dict[str, object]] = []
+    with sync_playwright() as playwright, operator_browser_harness(
+        fixture.project_root,
+        playwright,
+        work_item=fixture.work_item,
+    ) as harness:
+        for selector, expected_presentation in (
+            ("", "legacy"),
+            ("?ui=legacy", "legacy"),
+            ("?ui=studio", "studio"),
+        ):
+            with harness.open_page((1280, 900)) as browser_page:
+                page = browser_page.page
+                page.goto(f"{harness.url}{selector}", wait_until="networkidle")
+                page.evaluate(
+                    "async (stage) => {"
+                    "  state.activeStage = stage;"
+                    "  state.activeStageExplicit = true;"
+                    "  await fetchDashboard();"
+                    "}",
+                    stage,
+                )
+                _open_recovery(page)
+                assert page.evaluate(
+                    "window.aiddPresentation.surfaces"
+                    "['runtime-validation-recovery'].presentation"
+                ) == expected_presentation
+                snapshots.append(
+                    page.evaluate(
+                        "() => {"
+                        "  const view = activeStageView();"
+                        "  const diagnostics = view?.diagnostics || {};"
+                        "  const primary = document.querySelector("
+                        "    '[data-primary-recovery-slot] button'"
+                        "  );"
+                        "  return {"
+                        "    first_failure: state.dashboard?.first_failure || null,"
+                        "    validation: diagnostics.validation || null,"
+                        "    raw_log: diagnostics.raw_log || null,"
+                        "    request_change: diagnostics.request_change || null,"
+                        "    evidence_path: document.querySelector("
+                        "      '[data-recovery-summary] [data-evidence-path]'"
+                        "    )?.dataset.evidencePath || null,"
+                        "    primary_action: primary?.dataset.recoveryAction || null,"
+                        "    primary_stage: primary?.dataset.recoveryStage || null"
+                        "  };"
+                        "}"
+                    )
+                )
+                browser_page.diagnostics.assert_clean()
+
+    assert snapshots[1:] == snapshots[:1] * 2

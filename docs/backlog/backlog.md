@@ -7,13 +7,13 @@ slice, and local task.
 
 ## Next
 
-- `W36-E5-S6-T6` — Close runtime/validation Recovery presentation parity after the
-  provider-free journey passes.
+- `W36-E5-S7-T1` — Render canonical implement tasks, attempts, recovery, and aggregate
+  finalization inside Studio.
 
 ## Soon
 
-- `W36-E5-S7-T1` — Render canonical implement tasks, attempts, recovery, and aggregate
-  finalization inside Studio.
+- `W36-E5-S7-T2` — Render repository diff and canonical implementation evidence in the
+  Studio Document Canvas.
 
 ## Parking lot
 
@@ -36,6 +36,12 @@ slice, and local task.
   queue-restoration policy in `docs/backlog/roadmap.md` (`W8-E3-S1`).
 
 ## Current reconciliation
+
+- `2026-07-18` `W36-E5-S6-T6` is complete: runtime/validation Recovery is
+  `parity_closed`; Studio, default legacy, and explicit legacy resolve identical durable
+  first-failure, repair-history, raw-log, evidence-path, and intervention read models.
+  Slice `W36-E5-S6` is closed. Implement Studio `W36-E5-S7-T1` is promoted to `Next`
+  and repository evidence `T2` to `Soon`.
 
 - `2026-07-18` `W36-E7-S1-T3` is complete: launch, authentication, timeout,
   cancellation, no-progress, repair-available, and repair-exhausted durable fixtures pass

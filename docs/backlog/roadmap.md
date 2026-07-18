@@ -11065,7 +11065,7 @@ Exit evidence:
 - question answers, runtime approvals, and intervention requests remain distinct durable paths;
 - every human blocker exposes one decision, one evidence path, and truthful readback.
 
-#### Slice W36-E5-S6 — runtime and validation Recovery Studio (`planned`)
+#### Slice W36-E5-S6 — runtime and validation Recovery Studio (`done`)
 Goal: surface the first decisive runtime or validation failure with the one eligible recovery
 action and exact retained evidence.
 
@@ -11105,7 +11105,7 @@ Local tasks:
   - Scope: failure/recovery responsive presentation only.
   - Verification: `320x568` and `390x844` show the typed failure, one eligible recovery action,
     and evidence drill-down without horizontal overflow or initial decision scroll.
-- `W36-E5-S6-T6` (next) Promote the verified runtime/validation candidates to `parity_closed` while
+- `W36-E5-S6-T6` (done) Promote the verified runtime/validation candidates to `parity_closed` while
   retaining legacy failure cards for missing/default and explicit rollback.
   - Dependencies: `W36-E7-S1-T3`.
   - Scope: runtime/validation parity-manifest entries only.
@@ -11130,12 +11130,12 @@ Dependencies:
 
 Local tasks:
 
-- `W36-E5-S7-T1` (soon) Render dependency-ready tasks, task attempts, blocked/failed recovery, and
+- `W36-E5-S7-T1` (next) Render dependency-ready tasks, task attempts, blocked/failed recovery, and
   aggregate finalization inside Studio from the canonical task read model.
   - Scope: implement task workspace renderer only.
   - Verification: run/resume/fail/recover/finalize fixtures preserve successful tasks and never
     enable Review before successful aggregate finalization.
-- `W36-E5-S7-T2` (planned) Render the real repository diff, untracked/deleted files, `.aidd/` separation,
+- `W36-E5-S7-T2` (soon) Render the real repository diff, untracked/deleted files, `.aidd/` separation,
   scope status, and implementation-report claim mismatch in the Document Canvas.
   - Scope: implement evidence renderer only.
   - Verification: repository-diff fixtures match core evidence and use textual added/removed/
