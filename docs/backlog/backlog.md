@@ -7,16 +7,15 @@ slice, and local task.
 
 ## Next
 
-- `W36-E7-S1-T4` — Add the provider-free Review/QA/remediation browser journey.
+- `W36-E5-S7-T5` — Close Implement and Review/QA presentation parity.
 
 ## Soon
 
-- `W36-E5-S7-T5` — Close Implement and Review/QA presentation parity.
+- `W36-E5-S8-T1` — Implement the typed Filmstrip frame projection from durable attempts,
+  task attempts, and finalization milestones.
 
 ## Parking lot
 
-- `W36-E5-S8-T1` — Implement the typed Filmstrip frame projection from durable attempts,
-  task attempts, and finalization milestones.
 - `W36-E5-S10-T1` — Switch the default renderer to Studio only after all per-surface
   parity entries close.
 
@@ -34,6 +33,13 @@ slice, and local task.
   queue-restoration policy in `docs/backlog/roadmap.md` (`W8-E3-S1`).
 
 ## Current reconciliation
+
+- `2026-07-18` `W36-E7-S1-T4` is complete: provider-free Review/QA fixtures render
+  exact finding, acceptance, evidence, risk, and issue identities across all five viewports;
+  rejected/not-ready QA stays nonterminal. One selected Review finding creates one durable
+  stage-scoped remediation request, while stale QA survives reload and requires the guarded
+  downstream rerun. Journey accessibility also fixes Decision Bar and QA-choice target sizes.
+  Parity closure `W36-E5-S7-T5` is promoted to `Next`, followed by History frame projection.
 
 - `2026-07-18` `W36-E7-S1-T9` is complete: provider-free Chromium fixtures preserve a
   succeeded dependency when the next task fails, expose Resume and finalization retry, render

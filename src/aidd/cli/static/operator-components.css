@@ -3688,9 +3688,28 @@ pre {
   font-size: var(--type-label-size);
 }
 
+[data-qa-remediation-items] label {
+  align-items: center;
+  display: flex;
+  gap: var(--space-2);
+  min-height: 44px;
+  padding-block: var(--space-2);
+}
+
+#currentDecision {
+  min-height: 32px;
+}
+
 @media (max-width: 900px) {
   .studio-live-observation .metric-grid {
     grid-template-columns: 1fr 1fr;
+  }
+}
+
+@media (max-width: 760px) {
+  #currentDecision {
+    align-items: center;
+    min-height: 44px;
   }
 }
 

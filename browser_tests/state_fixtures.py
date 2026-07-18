@@ -181,17 +181,54 @@ def _write_qa_report(workspace_root: Path, verdict: str, *, work_item: str) -> N
                 "## Readiness",
                 "",
                 f"- QA verdict: `{verdict}`.",
+                f"- Quality verdict: `{verdict}`.",
+                f"- Release recommendation: `{'proceed' if verdict == 'ready' else 'hold'}`.",
                 "",
                 "## Residual risks",
                 "",
-                "- None.",
+                "- `QA-RISK-1`: Retry evidence requires operator review.",
+                "  - Severity: `medium`.",
+                "  - Mitigation: rerun the retained verification command.",
+                "  - Owner: operator.",
+                "",
+                "## Known issues",
+                "",
+                "- `QA-ISSUE-1`: one retained issue is visible.",
                 "",
                 "## Verification",
                 "",
-                "- Evidence: `runtime.log`.",
+                "- `QA-CHECK-1`: `pytest -q` -> pass; evidence: `EV-1`, `runtime.log`.",
+                "- Acceptance: `TL-2-AC1`.",
                 "",
             )
         ),
+        encoding="utf-8",
+    )
+
+
+def _write_review_report(
+    workspace_root: Path,
+    approval: str,
+    *,
+    work_item: str,
+) -> None:
+    review_root = workspace_root / "workitems" / work_item / "stages" / "review"
+    review_root.mkdir(parents=True, exist_ok=True)
+    findings = (
+        "### RV-1 — Missing boundary proof\n\n"
+        "- Severity: `high`.\n"
+        "- Disposition: `must-fix`.\n"
+        "- Evidence: `EV-1`, `implementation-report.md`.\n"
+        "- Changed path: `src/changed.py`.\n"
+        "- Acceptance: `TL-2-AC1`.\n"
+        if approval == "rejected"
+        else "- None.\n"
+    )
+    review_root.joinpath("review-report.md").write_text(
+        "# Review Report\n\n"
+        f"- Approval status: `{approval}`.\n\n"
+        "## Findings\n\n"
+        + findings,
         encoding="utf-8",
     )
 
@@ -449,6 +486,35 @@ def build_browser_state_fixture(
         )
 
     _create_run(workspace_root, work_item=work_item, run_id=run_id)
+    if state in {"review-qa-rejected", "review-qa-approved"}:
+        _succeed_through(
+            workspace_root,
+            "qa",
+            work_item=work_item,
+            run_id=run_id,
+        )
+        approved = state == "review-qa-approved"
+        _write_review_report(
+            workspace_root,
+            "approved" if approved else "rejected",
+            work_item=work_item,
+        )
+        _write_qa_report(
+            workspace_root,
+            "ready" if approved else "not-ready",
+            work_item=work_item,
+        )
+        return _descriptor(
+            name=state,
+            project_root=project_root,
+            route="studio",
+            context_keys=("project", "work_item", "run", "stage", "document"),
+            surface="Review and QA quality gate",
+            action="Accept complete" if approved else "Send selected to implement",
+            marker=state,
+            work_item=work_item,
+            run_id=run_id,
+        )
     if state in {
         "implementation-task-failed",
         "implementation-finalization-failed",
@@ -728,6 +794,7 @@ def build_browser_state_fixture(
             run_id=run_id,
         )
         _write_qa_report(workspace_root, "ready", work_item=work_item)
+        _write_review_report(workspace_root, "approved", work_item=work_item)
         request = create_remediation_request(
             workspace_root=workspace_root,
             work_item=work_item,
