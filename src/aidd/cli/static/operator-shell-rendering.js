@@ -20,8 +20,9 @@ function renderRuntimeSelector() {
     ...runtimes.map((runtime) => {
       const runtimeId = String(runtime.runtime_id || "");
       const selected = runtimeId === state.selectedRuntime ? " selected" : "";
-      const ready = runtime.provider_available && runtime.execution_command_available;
-      const label = ready ? "ready" : "check";
+      const binary = runtime.binary?.status || "unknown";
+      const command = runtime.execution_command?.status || "unknown";
+      const label = `binary ${binary}; command ${command}`;
       return `<option value="${escapeHtml(runtimeId)}"${selected}>${escapeHtml(runtimeId)} (${label})</option>`;
     })
   ].join("");
@@ -54,6 +55,64 @@ function runtimeReadinessMessage() {
   if (state.readinessError) return `Runtime readiness unavailable: ${state.readinessError}`;
   if (!selectedRuntimeReady()) return "Selected runtime is not ready for execution.";
   return "";
+}
+
+function readinessBoolean(value) {
+  if (value === true) return "yes";
+  if (value === false) return "no";
+  return "unknown";
+}
+
+function runtimeCapabilitySummary(runtime) {
+  const capabilities = runtime?.capabilities || {};
+  if (capabilities.status !== "known") return "unknown";
+  return [
+    `transport ${readinessText(capabilities.preferred_transport, "unknown")}`,
+    `raw logs ${readinessBoolean(capabilities.supports_raw_log_stream)}`,
+    `questions ${readinessBoolean(capabilities.supports_questions)}`,
+    `permission policy ${readinessBoolean(capabilities.supports_permission_policy)}`,
+    `live decisions ${readinessBoolean(capabilities.supports_live_decisions)}`
+  ].join("; ");
+}
+
+function runtimeLatestLaunchSummary(runtime) {
+  const launch = runtime?.latest_launch;
+  if (!launch) return "No canonical launch evidence recorded";
+  return `${launch.outcome} / ${launch.recorded_at_utc || "timestamp unavailable"} / ${launch.stage} attempt ${launch.attempt_number}`;
+}
+
+function renderRuntimeReadinessDimensions(runtime, {compact = false} = {}) {
+  if (!runtime) return "";
+  const binary = runtime.binary || {status: "unknown"};
+  const command = runtime.execution_command || {status: "unknown", source: "default"};
+  const authentication = runtime.authentication || {status: "unverified"};
+  const rows = [
+    ["Binary", `${binary.status}${binary.version ? ` / ${binary.version}` : ""}`],
+    ["Execution command", `${command.status} / ${command.source || "unknown source"}`],
+    ["Authentication evidence", `${authentication.status}${authentication.detail ? ` / ${authentication.detail}` : ""}`],
+    ["Adapter capabilities", runtimeCapabilitySummary(runtime)],
+    ["Latest launch", runtimeLatestLaunchSummary(runtime)]
+  ];
+  return `
+    <span class="runtime-readiness-dimensions ${compact ? "compact" : ""}" data-runtime-readiness-dimensions>
+      ${rows.map(([label, value]) => `<span><strong>${escapeHtml(label)}</strong>${escapeHtml(value)}</span>`).join("")}
+    </span>
+  `;
+}
+
+function renderProtectedWriteScope(scope = state.readiness?.protected_write_scope) {
+  if (!scope) {
+    return `<div class="panel-item"><strong>Protected write scope</strong><span>Unavailable until a work item context is selected.</span></div>`;
+  }
+  const prefixes = (scope.prefixes || []).join(", ") || "none authored";
+  return `
+    <div class="panel-item" data-protected-write-scope="${escapeHtml(scope.status)}">
+      <strong>Protected write scope</strong>
+      <span>${escapeHtml(scope.status)} / ${escapeHtml(prefixes)}</span>
+      ${scope.source_path ? `<code>${escapeHtml(scope.source_path)}</code>` : ""}
+      <small>${escapeHtml(scope.message || "")}</small>
+    </div>
+  `;
 }
 
 function readinessText(value, fallback = "not reported") {
@@ -120,7 +179,9 @@ function renderTopbar() {
     return;
   }
   if (runtime) {
-    const localStatusLabel = `${state.selectedRuntime}: ${ready ? "ready" : "needs check"}`;
+    const binary = runtime.binary?.status || "unknown";
+    const command = runtime.execution_command?.status || "unknown";
+    const localStatusLabel = `${state.selectedRuntime}: binary ${binary}; command ${command}`;
     localStatus.textContent = localStatusLabel;
     localStatus.title = localStatusLabel;
     localStatus.className = ready ? "status-chip good" : "status-chip";

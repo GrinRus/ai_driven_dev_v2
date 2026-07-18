@@ -774,7 +774,6 @@ function renderRuntimeRootPanel() {
 
 function renderSafetyPanel() {
   const runtime = selectedRuntimeView();
-  const readinessClass = runtime && runtime.provider_available && runtime.execution_command_available ? "good" : runtime || state.readinessError ? "warn" : "";
   const badge = runtime
     ? runtime.runtime_id
     : state.readinessLoading
@@ -799,17 +798,14 @@ function renderSafetyPanel() {
       readinessDetail("Interaction mode", runtime.interaction_mode),
       readinessDetail("Auto approval", runtime.auto_approval_preset),
       readinessDetail("Timeouts", timeoutSummary(runtime), 96),
-      readinessDetail("Provider", runtime.provider_available ? "available" : "unavailable"),
-      readinessDetail("Provider version", runtime.provider_version),
-      readinessDetail("Provider command", runtime.provider_command, 86),
-      readinessDetail("Execution command", runtime.execution_command_available ? "available" : "unavailable")
+      renderRuntimeReadinessDimensions(runtime),
+      renderProtectedWriteScope()
     ].join("");
   }
   document.getElementById("safetyPanel").innerHTML = `
     <details class="secondary-drilldown" ${activeModeIsEvidenceLog() ? "open" : ""}>
-      <summary><span>Safety / Readiness</span><span class="small-badge ${readinessClass}">${escapeHtml(badge)}</span></summary>
+      <summary><span>Safety / Readiness</span><span class="small-badge">${escapeHtml(badge)}</span></summary>
       <div class="panel-list">
-        <div class="panel-item"><strong>No upstream write</strong><span>UI actions stay inside local AIDD workspace and normal runner boundaries.</span></div>
         ${details}
       </div>
     </details>

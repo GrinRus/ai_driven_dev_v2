@@ -3636,6 +3636,20 @@ pre {
   justify-self: start;
 }
 
+.runtime-readiness-dimensions {
+  display: grid;
+  gap: var(--space-2);
+}
+
+.runtime-readiness-dimensions > span {
+  display: grid;
+  gap: var(--space-1);
+}
+
+.runtime-readiness-dimensions.compact {
+  font-size: var(--type-label-size);
+}
+
 @media (max-width: 900px) {
   .studio-live-observation .metric-grid {
     grid-template-columns: 1fr 1fr;

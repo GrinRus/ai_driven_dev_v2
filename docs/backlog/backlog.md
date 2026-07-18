@@ -7,16 +7,16 @@ slice, and local task.
 
 ## Next
 
-- `W36-E4-S2-T3` — Render dimensioned runtime readiness, protected write scope, and
-  last-launch evidence in Guided Setup and Studio.
+- `W36-E5-S2-T1` — Replace the measured `275px` mobile header with a compact
+  context/status bar and maintenance overflow.
 
 ## Soon
 
+- `W36-E5-S2-T2` — Keep the current Decision Bar or Inbox action in the first mobile
+  viewport and move dense evidence to explicit drill-down.
 
 ## Parking lot
 
-- `W36-E5-S2-T1` — Replace the measured `275px` mobile header with a compact
-  context/status bar and maintenance overflow.
 - `W36-E5-S5-T1` — Render blocking questions with durable resolution and draft-recovery
   semantics in Recovery Studio.
 - `W36-E5-S6-T1` — Render typed runtime failure and the eligible recovery action without
@@ -44,6 +44,12 @@ slice, and local task.
   queue-restoration policy in `docs/backlog/roadmap.md` (`W8-E3-S1`).
 
 ## Current reconciliation
+
+- `2026-07-18` `W36-E4-S2-T3` is complete: Guided Setup and Studio now present binary,
+  execution-command, authentication, capability, protected-write-scope, and latest-launch
+  evidence as separate dimensions. Malformed scope is explicit and the UI makes no generic
+  `ready` or `No upstream write` claim. `W36-E4-S2` is closed; compact mobile shell `S2-T1`
+  is promoted to `Next` and its direct successor `S2-T2` to `Soon`.
 
 - `2026-07-18` `W36-E5-S4-T4` is complete: Studio observation displays only measured
   job elapsed/output age, durable stage milestones, backend silence/cancellation state,

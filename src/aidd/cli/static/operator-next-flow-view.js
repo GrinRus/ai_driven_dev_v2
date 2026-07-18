@@ -1915,6 +1915,9 @@ function renderNextActionSidebarMirror({label, statusMessage, tone}) {
 }
 
 function renderNextActionPanel() {
+  const panel = document.getElementById("nextActionPanel")
+    || document.querySelector('[data-current-decision-stable-id="nextActionPanel"]');
+  if (!panel) return;
   const action = state.dashboard?.next_action || {action: "choose-runtime", label: "Select runtime", detail: "Choose a runtime.", enabled: false};
   const noRunWithRuntime = action.action === "choose-runtime" && state.selectedRuntime;
   const runStageResume = action.action === "run-stage" && state.activeRunId && action.enabled;
@@ -1944,7 +1947,7 @@ function renderNextActionPanel() {
       ? "Primary action is not available yet."
       : "Primary action is ready in the stage cockpit.");
     const tone = disabled || blockerMessage ? "warn" : "good";
-    document.getElementById("nextActionPanel").innerHTML = `
+    panel.innerHTML = `
       <div class="panel-title">Next Action Status</div>
       <p>${escapeHtml(detail)}</p>
       ${renderValidationFindingSummary(finding, {compact: true})}
@@ -1953,7 +1956,7 @@ function renderNextActionPanel() {
     `;
     return;
   }
-  document.getElementById("nextActionPanel").innerHTML = `
+  panel.innerHTML = `
     <div class="panel-title">Run Next Action</div>
     <p>${escapeHtml(detail)}</p>
     ${renderValidationFindingSummary(finding, {compact: true})}

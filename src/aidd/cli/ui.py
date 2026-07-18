@@ -46,6 +46,10 @@ from aidd.cli.ui_http import (
 )
 from aidd.cli.ui_routing import OperatorUiRouter, UiJobDecisionConflict, handler_for
 from aidd.config import AiddConfig, load_config
+from aidd.core.allowed_write_scope import (
+    AllowedWriteScopeError,
+    resolve_allowed_write_scope,
+)
 from aidd.core.implementation_eligibility import implementation_finalization_blocker
 from aidd.core.implementation_service import (
     AggregateFinalizer,
@@ -188,6 +192,14 @@ class UiProjectContext:
     root: Path
     config: Path
     project_root: Path
+
+
+@dataclass(frozen=True, slots=True)
+class UiProtectedWriteScope:
+    status: str
+    prefixes: tuple[str, ...]
+    source_path: str | None
+    message: str
 
 
 @dataclass(slots=True)
@@ -3923,7 +3935,37 @@ class OperatorUiService:
         )
 
     def _runtime_readiness(self) -> object:
-        return self._runtime_readiness_for_config(self.config_path)
+        readiness = self._runtime_readiness_for_config(self.config_path)
+        try:
+            scope = resolve_allowed_write_scope(self.workspace_root, self.work_item)
+        except AllowedWriteScopeError as exc:
+            protected_scope = UiProtectedWriteScope(
+                status="invalid",
+                prefixes=(),
+                source_path=(
+                    f"workitems/{self.work_item}/context/allowed-write-scope.md"
+                ),
+                message=str(exc),
+            )
+        else:
+            protected_scope = UiProtectedWriteScope(
+                status="not-authored" if scope is None else "bounded",
+                prefixes=() if scope is None else scope.prefixes,
+                source_path=(
+                    None
+                    if scope is None
+                    else workspace_relative_path(self.workspace_root, scope.source_path)
+                ),
+                message=(
+                    "No allowed-write-scope document is authored for this work item."
+                    if scope is None
+                    else "Writes are bounded to the canonical repository-relative prefixes."
+                ),
+            )
+        return {
+            "runtimes": readiness.runtimes,
+            "protected_write_scope": protected_scope,
+        }
 
     def _ensure_local_only_action(self) -> None:
         if not _is_loopback_host(self.options.host):

@@ -10754,7 +10754,7 @@ Exit evidence:
   project-set configuration;
 - the UI contains no selectable execution mode that dispatches the same generic launch.
 
-#### Slice W36-E4-S2 — dimensioned runtime readiness and safety (`planned`)
+#### Slice W36-E4-S2 — dimensioned runtime readiness and safety (`done`)
 Goal: show only runtime readiness and write-scope claims backed by observable evidence.
 
 Dependencies:
@@ -10776,7 +10776,7 @@ Local tasks:
   - Scope: core operator runtime-history read model.
   - Verification: no-history, success, failure, blocked, cancelled, and legacy attempts
     resolve deterministically without reading outside `.aidd/`.
-- `W36-E4-S2-T3` (next) Render dimensioned readiness, protected write scope, and last-launch
+- `W36-E4-S2-T3` (done) Render dimensioned readiness, protected write scope, and last-launch
   evidence in Guided Setup and the Studio launch context.
   - Scope: packaged runtime/safety UI.
   - Verification: truth-copy fixtures contain no undifferentiated authentication claim
@@ -10879,12 +10879,12 @@ Dependencies:
 
 Local tasks:
 
-- `W36-E5-S2-T1` (parked) Replace the measured `275px` sticky mobile header with a compact
+- `W36-E5-S2-T1` (next) Replace the measured `275px` sticky mobile header with a compact
   context/status bar and maintenance overflow.
   - Scope: topbar markup and responsive CSS.
   - Verification: `320x568` and `390x844` fixtures meet the accepted header budget and
     never cover the mode tabs or primary action.
-- `W36-E5-S2-T2` (planned) Keep the current Decision Bar or Inbox action in the first mobile
+- `W36-E5-S2-T2` (soon) Keep the current Decision Bar or Inbox action in the first mobile
   viewport and move dense evidence to explicit drill-down.
   - Scope: responsive workbench ordering.
   - Verification: no-run Inbox, post-stage, and active Studio fixtures expose the accepted

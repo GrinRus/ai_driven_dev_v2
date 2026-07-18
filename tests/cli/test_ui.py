@@ -3909,6 +3909,9 @@ def test_ui_runtime_readiness_endpoint_exposes_probe_and_config_data(
     tmp_path: Path,
 ) -> None:
     workspace_root = tmp_path / ".aidd"
+    scope_path = workspace_root / "workitems/WI-UI/context/allowed-write-scope.md"
+    scope_path.parent.mkdir(parents=True)
+    scope_path.write_text("# Allowed write scope\n\n- `src`\n- `tests`\n", encoding="utf-8")
     config_path = tmp_path / "aidd.toml"
     config_path.write_text(
         "\n".join(
@@ -3946,6 +3949,13 @@ def test_ui_runtime_readiness_endpoint_exposes_probe_and_config_data(
 
     payload = _payload(service.handle_get("/api/runtime-readiness", {}))
 
+    assert payload["protected_write_scope"] == {
+        "message": "Writes are bounded to the canonical repository-relative prefixes.",
+        "prefixes": ["src", "tests"],
+        "source_path": "workitems/WI-UI/context/allowed-write-scope.md",
+        "status": "bounded",
+    }
+
     runtimes = {
         str(runtime["runtime_id"]): runtime
         for runtime in payload["runtimes"]
@@ -3973,6 +3983,28 @@ def test_ui_runtime_readiness_endpoint_exposes_probe_and_config_data(
     assert generic_cli["default_timeout_seconds"] == 42
     assert generic_cli["stage_timeout_seconds"] == {"plan": 90}
     assert runtimes["codex"]["command_source"] == "default"
+
+
+def test_ui_runtime_readiness_reports_invalid_scope_without_claiming_no_scope(
+    tmp_path: Path,
+) -> None:
+    workspace_root = tmp_path / ".aidd"
+    scope_path = workspace_root / "workitems/WI-UI/context/allowed-write-scope.md"
+    scope_path.parent.mkdir(parents=True)
+    scope_path.write_text("# Allowed write scope\n\n- `../escape`\n", encoding="utf-8")
+    service = _service(
+        workspace_root,
+        readiness_probe_provider=lambda _cfg: {},
+    )
+
+    scope = _payload(service.handle_get("/api/runtime-readiness", {}))[
+        "protected_write_scope"
+    ]
+
+    assert scope["status"] == "invalid"
+    assert scope["prefixes"] == []
+    assert scope["source_path"] == "workitems/WI-UI/context/allowed-write-scope.md"
+    assert "Invalid allowed write scope" in scope["message"]
 
 
 def test_ui_runtime_readiness_is_not_workflow_source_of_truth(

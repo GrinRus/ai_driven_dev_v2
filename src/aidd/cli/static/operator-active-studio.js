@@ -72,6 +72,19 @@ function renderActiveStudioStageSummary(item) {
   `;
 }
 
+function renderActiveStudioRuntimeReadiness() {
+  const runtime = selectedRuntimeView();
+  return `
+    <section class="surface studio-runtime-readiness" data-studio-runtime-readiness>
+      <div class="surface-title"><span>Runtime launch context</span><span class="small-badge">${escapeHtml(runtime?.runtime_id || "not selected")}</span></div>
+      ${runtime
+        ? renderRuntimeReadinessDimensions(runtime)
+        : '<p class="muted">Select a runtime to inspect launch dimensions.</p>'}
+      ${renderProtectedWriteScope()}
+    </section>
+  `;
+}
+
 function studioObservationModel(job = state.activeJobStatus, item = activeStageItem()) {
   const attemptCount = Number(item?.attempt_count || 0);
   if (!job && !attemptCount && !["executing", "preparing", "validating"].includes(item?.status)) {
@@ -151,6 +164,7 @@ function renderActiveStudio() {
         ${renderActiveStudioStageSummary(item)}
       </div>
       <div id="studioLiveObservation">${renderStudioLiveObservation()}</div>
+      ${renderActiveStudioRuntimeReadiness()}
       <aside id="studioEvidenceInspector" class="surface studio-evidence-inspector" hidden></aside>
     </section>
   `;

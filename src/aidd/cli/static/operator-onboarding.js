@@ -148,9 +148,10 @@ function onboardingProject() {
 }
 
 function onboardingRuntimeLabel(runtime) {
-  const provider = runtime.provider_available ? "provider ready" : "provider missing";
-  const command = runtime.execution_command_available ? "command ready" : "command missing";
-  return `${provider}; ${command}`;
+  const binary = runtime.binary?.status || "unknown";
+  const command = runtime.execution_command?.status || "unknown";
+  const authentication = runtime.authentication?.status || "unverified";
+  return `binary ${binary}; command ${command}; authentication ${authentication}`;
 }
 
 function onboardingRunnerProfile(runtime) {
@@ -222,7 +223,6 @@ function onboardingRunnerCards() {
   }
   const cards = runtimes.map((runtime) => {
     const runtimeId = String(runtime.runtime_id || "");
-    const ready = runtime.provider_available && runtime.execution_command_available;
     const selected = runtimeId === state.selectedRuntime;
     const profile = onboardingRunnerProfile(runtime);
     return `
@@ -231,7 +231,8 @@ function onboardingRunnerCards() {
           <strong>${escapeHtml(runtimeId)}</strong>
           <span class="runner-card-meta">
             <span class="small-badge ${profile.recommended ? "good" : ""}">${escapeHtml(profile.badge)}</span>
-            <span class="small-badge ${ready ? "good" : "warn"}">${ready ? "ready" : "check"}</span>
+            <span class="small-badge">binary ${escapeHtml(runtime.binary?.status || "unknown")}</span>
+            <span class="small-badge">command ${escapeHtml(runtime.execution_command?.status || "unknown")}</span>
           </span>
         </span>
         <span class="runner-card-guidance">
@@ -240,10 +241,11 @@ function onboardingRunnerCards() {
         </span>
         <span>${escapeHtml(onboardingRuntimeLabel(runtime))}</span>
         <span class="runner-command" title="${escapeHtml(readinessText(runtime.command))}">${escapeHtml(compactPath(readinessText(runtime.command), 64))}</span>
+        ${renderRuntimeReadinessDimensions(runtime, {compact: true})}
       </button>
     `;
   }).join("");
-  return `${onboardingRunnerGuidance(runtimes)}${cards}`;
+  return `${onboardingRunnerGuidance(runtimes)}${cards}${renderProtectedWriteScope()}`;
 }
 
 function onboardingRecentProjects() {
