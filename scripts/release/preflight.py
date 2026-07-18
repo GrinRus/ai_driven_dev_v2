@@ -18,6 +18,7 @@ from typing import Literal
 PACKAGE_NAME = "ai-driven-dev-v2"
 COMMAND_TIMEOUT_SECONDS = 30.0
 NETWORK_TIMEOUT_SECONDS = 10.0
+BROWSER_TIMEOUT_SECONDS = 1_800.0
 
 
 @dataclass(frozen=True, slots=True)
@@ -47,6 +48,7 @@ class PreflightResult:
 
 
 CommandRunner = Callable[[Sequence[str], Path], CommandResult]
+BrowserProbe = Callable[[Path], CommandResult]
 BinaryResolver = Callable[[str], str | None]
 PyPIProbeStatus = Literal["exists", "absent", "error"]
 
@@ -72,6 +74,7 @@ def run_preflight(
     command_runner: CommandRunner | None = None,
     binary_resolver: BinaryResolver | None = None,
     pypi_version_exists: PyPIVersionProbe | None = None,
+    packaged_ui_browser_probe: BrowserProbe | None = None,
 ) -> PreflightResult:
     root = project_root.resolve()
     runner = command_runner or _run_command
@@ -166,6 +169,9 @@ def run_preflight(
             )
         )
 
+    browser_probe = packaged_ui_browser_probe or _run_packaged_ui_browser
+    checks.append(_packaged_ui_browser_check(root, probe=browser_probe))
+
     return PreflightResult(
         version=candidate_version,
         success=all(check.status in {"pass", "skip"} for check in checks),
@@ -184,6 +190,95 @@ def _binary_check(
         name=f"{name}-binary",
         status="pass" if resolved else "fail",
         detail=resolved or f"{name} not found in PATH; pass --{name}-binary if installed elsewhere",
+    )
+
+
+def _packaged_ui_browser_check(
+    project_root: Path,
+    *,
+    probe: BrowserProbe,
+) -> PreflightCheck:
+    try:
+        result = probe(project_root)
+    except subprocess.TimeoutExpired as exc:
+        result = CommandResult(
+            returncode=124,
+            stderr=f"packaged UI browser runner timed out: {exc}",
+            failure_kind="timeout",
+        )
+    except OSError as exc:
+        result = CommandResult(
+            returncode=127,
+            stderr=f"{type(exc).__name__}: {exc}",
+            failure_kind="browser-infrastructure",
+        )
+    detail = result.stdout.strip() or result.stderr.strip()
+    if result.returncode == 0:
+        return PreflightCheck(
+            name="packaged-ui-browser",
+            status="pass",
+            detail=detail or "All declared packaged UI browser journeys passed.",
+        )
+    return PreflightCheck(
+        name="packaged-ui-browser",
+        status="fail",
+        detail=detail or f"Packaged UI browser runner exited {result.returncode}.",
+        blocker_kind=result.failure_kind or "browser-journey",
+    )
+
+
+def _run_packaged_ui_browser(project_root: Path) -> CommandResult:
+    runner_path = project_root / "scripts" / "run_packaged_ui_scenarios.py"
+    if not runner_path.is_file():
+        return CommandResult(
+            returncode=127,
+            stderr=f"Packaged UI browser runner is missing: {runner_path}",
+            failure_kind="browser-infrastructure",
+        )
+    try:
+        completed = subprocess.run(
+            (sys.executable, runner_path.as_posix()),
+            cwd=project_root,
+            check=False,
+            text=True,
+            capture_output=True,
+            timeout=BROWSER_TIMEOUT_SECONDS,
+        )
+    except subprocess.TimeoutExpired:
+        return CommandResult(
+            returncode=124,
+            stderr=(
+                "packaged UI browser runner timed out after "
+                f"{BROWSER_TIMEOUT_SECONDS:.0f}s"
+            ),
+            failure_kind="timeout",
+        )
+    except OSError as exc:
+        return CommandResult(
+            returncode=127,
+            stderr=f"{type(exc).__name__}: {exc}",
+            failure_kind="browser-infrastructure",
+        )
+    combined = f"{completed.stdout}\n{completed.stderr}".lower()
+    infrastructure_markers = (
+        "executable doesn't exist",
+        "playwright install chromium",
+        "browser type launch",
+    )
+    blocker_kind = (
+        "browser-infrastructure"
+        if any(marker in combined for marker in infrastructure_markers)
+        else "browser-preflight"
+        if completed.returncode == 2
+        else "browser-journey"
+        if completed.returncode != 0
+        else None
+    )
+    return CommandResult(
+        returncode=completed.returncode,
+        stdout=completed.stdout,
+        stderr=completed.stderr,
+        failure_kind=blocker_kind,
     )
 
 

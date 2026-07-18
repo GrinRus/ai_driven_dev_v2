@@ -7,11 +7,11 @@ slice, and local task.
 
 ## Next
 
-- `W36-E7-S2-T4` — Enforce the packaged-UI browser runner in release preflight.
+- `W36-E7-S2-T5` — Record one full source-installed provider-free browser pass.
 
 ## Soon
 
-- `W36-E7-S2-T5` — Record one full source-installed provider-free browser pass.
+- `W36-E7-S3-T1` — Write the observed first-time-operator task and scoring template.
 
 ## Parking lot
 
@@ -29,6 +29,12 @@ slice, and local task.
   queue-restoration policy in `docs/backlog/roadmap.md` (`W8-E3-S1`).
 
 ## Current reconciliation
+
+- `2026-07-18` `W36-E7-S2-T4` is complete: release preflight now invokes the same
+  packaged-UI journey runner used locally and in CI. Journey failures, runner/preflight errors,
+  browser absence, launch infrastructure errors, and timeout produce explicit failing checks;
+  none are treated as skips. The source-installed full pass `T5` is promoted to `Next`, followed
+  by the observed-operator script `S3-T1`.
 
 - `2026-07-18` `W36-E7-S2-T3` is complete: the local-project contract now has a
   schema-v1 provider-free browser-pass template covering source version, fixture, all five

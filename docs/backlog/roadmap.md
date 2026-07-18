@@ -11621,13 +11621,13 @@ Local tasks:
   - Scope: operator E2E documentation only.
   - Verification: docs consistency and the evidence checklist record version, fixture,
     viewports, journeys, accessibility, console/network state, and cleanup.
-- `W36-E7-S2-T4` (next) Add the packaged-UI browser command to release preflight.
+- `W36-E7-S2-T4` (done) Add the packaged-UI browser command to release preflight.
   - Dependencies: `W36-E7-S2-T3` as the direct queue predecessor.
   - Dependencies: `W36-E7-S2-T2`.
   - Scope: deterministic release-preflight integration only.
   - Verification: an intentional browser journey failure blocks release preparation
     without provider credentials.
-- `W36-E7-S2-T5` (soon) Record one source-installed full provider-free browser pass.
+- `W36-E7-S2-T5` (next) Record one source-installed full provider-free browser pass.
   - Dependencies: `W36-E7-S2-T4` as the direct queue predecessor.
   - Dependencies: `W36-E7-S2-T1`, `W36-E7-S2-T3`.
   - Scope: manual operator browser evidence only.
@@ -11650,9 +11650,10 @@ Dependencies:
 
 Local tasks:
 
-- `W36-E7-S3-T1` (planned) Write the observed operator task script and scoring template for
+- `W36-E7-S3-T1` (soon) Write the observed operator task script and scoring template for
   Guided Setup, Inbox triage, active Studio monitoring, question recovery, runtime
   failure, QA remediation, History inspection, and terminal continuation.
+  - Dependencies: `W36-E7-S2-T5` as the direct queue predecessor.
   - Scope: operator acceptance documentation.
   - Verification: every task records completion, elapsed time, wrong actions, assistance,
     confidence, and first decisive confusion.

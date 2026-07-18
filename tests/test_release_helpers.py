@@ -37,6 +37,13 @@ preflight_main = _PREFLIGHT.main
 collect_release_evidence = _EVIDENCE.collect_release_evidence
 
 
+def _passing_browser_probe(_root: Path) -> CommandResult:
+    return CommandResult(
+        returncode=0,
+        stdout='{"discovered_ids": [], "executed_ids": [], "failed_ids": []}',
+    )
+
+
 def test_release_preflight_passes_for_unpublished_release_branch(tmp_path: Path) -> None:
     _write_pyproject(tmp_path, "0.1.0a9")
 
@@ -52,10 +59,12 @@ def test_release_preflight_passes_for_unpublished_release_branch(tmp_path: Path)
         command_runner=runner,
         binary_resolver=lambda name: f"/usr/local/bin/{name}",
         pypi_version_exists=lambda _version: False,
+        packaged_ui_browser_probe=_passing_browser_probe,
     )
 
     assert result.success is True
     assert [check.status for check in result.checks] == [
+        "pass",
         "pass",
         "pass",
         "pass",
@@ -85,6 +94,7 @@ def test_release_preflight_reports_missing_binaries_existing_tag_and_pypi(
         command_runner=runner,
         binary_resolver=lambda _name: None,
         pypi_version_exists=lambda _version: True,
+        packaged_ui_browser_probe=_passing_browser_probe,
     )
 
     statuses = {check.name: check.status for check in result.checks}
@@ -112,6 +122,7 @@ def test_release_preflight_reports_mismatched_source_version(tmp_path: Path) -> 
         command_runner=runner,
         binary_resolver=lambda name: f"/usr/local/bin/{name}",
         pypi_version_exists=lambda _version: False,
+        packaged_ui_browser_probe=_passing_browser_probe,
     )
 
     source_version = next(
@@ -133,6 +144,7 @@ def test_release_preflight_normalizes_command_timeout(tmp_path: Path) -> None:
         command_runner=runner,
         binary_resolver=lambda name: f"/usr/local/bin/{name}",
         pypi_version_exists=lambda _version: False,
+        packaged_ui_browser_probe=_passing_browser_probe,
     )
 
     branch = next(check for check in result.checks if check.name == "branch")
@@ -176,12 +188,65 @@ def test_release_preflight_normalizes_registry_failures(
             command_runner=runner,
             binary_resolver=lambda name: f"/usr/local/bin/{name}",
             pypi_version_exists=_probe,
+            packaged_ui_browser_probe=_passing_browser_probe,
         )
         check = next(
             item for item in result.checks if item.name == "pypi-version-absence"
         )
         assert check.status == "fail"
         assert check.blocker_kind == expected_kind
+
+
+def test_release_preflight_blocks_browser_journey_failure(tmp_path: Path) -> None:
+    _write_pyproject(tmp_path, "0.1.0a9")
+
+    def runner(argv: Sequence[str], _cwd: Path) -> CommandResult:
+        if tuple(argv[:3]) == ("git", "rev-parse", "--abbrev-ref"):
+            return CommandResult(returncode=0, stdout="release/v0.1.0a9\n")
+        return CommandResult(returncode=0)
+
+    result = run_preflight(
+        project_root=tmp_path,
+        command_runner=runner,
+        binary_resolver=lambda name: f"/usr/local/bin/{name}",
+        pypi_version_exists=lambda _version: False,
+        packaged_ui_browser_probe=lambda _root: CommandResult(
+            returncode=1,
+            stdout='{"failed_ids": ["W36-E7-S1-T4"]}',
+            failure_kind="browser-journey",
+        ),
+    )
+
+    check = next(item for item in result.checks if item.name == "packaged-ui-browser")
+    assert result.success is False
+    assert check.status == "fail"
+    assert check.blocker_kind == "browser-journey"
+
+
+def test_release_preflight_blocks_missing_browser_infrastructure(tmp_path: Path) -> None:
+    _write_pyproject(tmp_path, "0.1.0a9")
+
+    def runner(argv: Sequence[str], _cwd: Path) -> CommandResult:
+        if tuple(argv[:3]) == ("git", "rev-parse", "--abbrev-ref"):
+            return CommandResult(returncode=0, stdout="release/v0.1.0a9\n")
+        return CommandResult(returncode=0)
+
+    result = run_preflight(
+        project_root=tmp_path,
+        command_runner=runner,
+        binary_resolver=lambda name: f"/usr/local/bin/{name}",
+        pypi_version_exists=lambda _version: False,
+        packaged_ui_browser_probe=lambda _root: CommandResult(
+            returncode=127,
+            stderr="Chromium executable doesn't exist; run playwright install chromium",
+            failure_kind="browser-infrastructure",
+        ),
+    )
+
+    check = next(item for item in result.checks if item.name == "packaged-ui-browser")
+    assert result.success is False
+    assert check.status == "fail"
+    assert check.blocker_kind == "browser-infrastructure"
 
 
 def test_release_preflight_main_emits_json_for_invalid_project(
