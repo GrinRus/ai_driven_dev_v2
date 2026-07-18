@@ -408,6 +408,35 @@ function renderWorkbenchViewer(workbench) {
   `;
 }
 
+function renderStudioDocumentCanvas(workbench) {
+  const previewActive = state.artifactViewMode === "preview" ? " active" : "";
+  const sourceActive = state.artifactViewMode === "source" ? " active" : "";
+  const diffActive = state.artifactViewMode === "diff" ? " active" : "";
+  const documentView = workbench.document || {};
+  return `
+    <div class="viewer-header">
+      <div>
+        <strong>${escapeHtml(documentView.key || workbench.selected_key || "No document selected")}</strong>
+        ${pathLine(`${documentView.path || "path unavailable"} / ${documentView.byte_size ?? "unknown"} bytes`, 78)}
+      </div>
+      <div class="viewer-modes" role="group" aria-label="Document presentation">
+        <button data-artifact-mode="preview" class="${previewActive}" type="button" aria-pressed="${state.artifactViewMode === "preview" ? "true" : "false"}">Preview</button>
+        <button data-artifact-mode="source" class="${sourceActive}" type="button" aria-pressed="${state.artifactViewMode === "source" ? "true" : "false"}">Source</button>
+        <button data-artifact-mode="diff" class="${diffActive}" type="button" aria-pressed="${state.artifactViewMode === "diff" ? "true" : "false"}">Diff</button>
+      </div>
+    </div>
+    ${documentView.path ? renderArtifactOwnershipNote({
+      key: documentView.key || workbench.selected_key,
+      kind: "document",
+      path: documentView.path
+    }) : ""}
+    <section class="workbench-document-pane hierarchy-primary document-canvas" data-document-canvas-mode="${escapeHtml(state.artifactViewMode)}">
+      ${renderWorkbenchTableOfContents(workbench)}
+      ${renderWorkbenchDocumentBody(workbench)}
+    </section>
+  `;
+}
+
 function renderWorkbenchEvidenceInspector(workbench) {
   const inspectorItemCount = [
     workbench.requirements,
@@ -446,8 +475,9 @@ function renderWorkbenchEvidenceInspector(workbench) {
 
 async function loadArtifactDocument(key) {
   const tree = document.getElementById("workbenchTree");
-  const viewer = document.getElementById("artifactViewer");
+  const viewer = document.getElementById("artifactViewer") || document.getElementById("studioDocumentCanvas");
   if (!viewer) return;
+  const studioCanvas = viewer.id === "studioDocumentCanvas";
   try {
     const params = new URLSearchParams({stage: state.activeStage});
     if (key) params.set("key", key);
@@ -455,9 +485,19 @@ async function loadArtifactDocument(key) {
     params.set("source_limit", String(MAX_ARTIFACT_READ_BYTES));
     const workbench = await api(`/api/stage/workbench?${params.toString()}`);
     state.activeArtifactKey = workbench.selected_key;
+    if (studioCanvas) {
+      state.activeStudioWorkbench = workbench;
+      state.activeStudioWorkbenchError = "";
+    }
     if (tree) tree.innerHTML = renderWorkbenchTree(workbench);
-    viewer.innerHTML = renderWorkbenchViewer(workbench);
+    viewer.innerHTML = studioCanvas
+      ? renderStudioDocumentCanvas(workbench)
+      : renderWorkbenchViewer(workbench);
   } catch (error) {
+    if (studioCanvas) {
+      state.activeStudioWorkbench = null;
+      state.activeStudioWorkbenchError = error.message || "Document Canvas unavailable";
+    }
     viewer.innerHTML = `<div class="empty-state">${escapeHtml(error.message)}</div>`;
   }
 }

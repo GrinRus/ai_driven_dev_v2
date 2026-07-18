@@ -45,20 +45,12 @@ function renderActiveStudioDocumentSlot(studioState) {
       consequence: "Use the single decision above to select a runtime or start the governed flow."
     });
   }
-  if (studioState === "terminal") {
-    const handoff = state.dashboard?.terminal_handoff || {};
-    return `
-      <section class="surface" data-studio-terminal-context>
-        <div class="surface-title"><span>Terminal QA context</span><span class="small-badge">${escapeHtml(handoff.status || "terminal")}</span></div>
-        <p>${escapeHtml(handoff.final_qa_status || "Terminal evidence is ready for inspection.")}</p>
-        <p class="muted">The dedicated Flow Complete surface owns continuation actions.</p>
-      </section>
-    `;
-  }
   return `
-    <section class="surface" data-studio-document-slot>
-      <div class="surface-title"><span>Current document</span><span class="small-badge">${escapeHtml(state.activeStage)}</span></div>
-      ${renderPrimaryArtifact()}
+    <section class="surface studio-document-canvas" data-studio-document-slot>
+      <div class="surface-title"><span>Document Canvas</span><span class="small-badge">${escapeHtml(state.activeStage)}</span></div>
+      <div id="studioDocumentCanvas" class="artifact-viewer" aria-live="polite">
+        <div class="empty-state loading-state">Loading bounded document view...</div>
+      </div>
     </section>
   `;
 }

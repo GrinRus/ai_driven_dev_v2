@@ -41,7 +41,7 @@ test("active Studio preserves work item, run, stage, and status context", async 
   assert.doesNotMatch(html, /data-primary-action/);
 });
 
-test("no-run, blocked, and terminal Studio states do not invent actions", async () => {
+test("no-run, blocked, and terminal Studio states do not invent primary actions", async () => {
   const dashboards = [
     {work_item: "WI-1", run: null, stages: []},
     {work_item: "WI-1", run: {run_id: "run-1"}, stages: [{status: "blocked"}]},
@@ -55,7 +55,7 @@ test("no-run, blocked, and terminal Studio states do not invent actions", async 
     const context = await contextFor(dashboard);
     const html = vm.runInContext("renderActiveStudio()", context);
     states.push(html.match(/data-state="([^"]+)"/)?.[1]);
-    assert.doesNotMatch(html, /<button/);
+    assert.doesNotMatch(html, /data-primary-action/);
   }
   assert.deepEqual(states, ["no-run", "blocked", "terminal"]);
 });

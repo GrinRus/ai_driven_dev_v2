@@ -138,6 +138,8 @@ const state = {
   qaVerdictView: null,
   qaVerdictRunId: "",
   activeArtifactKey: "",
+  activeStudioWorkbench: null,
+  activeStudioWorkbenchError: "",
   implementDiffFilter: "all",
   implementDiffPath: "",
   artifactViewMode: "preview",

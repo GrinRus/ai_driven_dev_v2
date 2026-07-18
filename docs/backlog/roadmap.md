@@ -10978,17 +10978,17 @@ Local tasks:
   - Scope: packaged active-Studio markup and renderer only.
   - Verification: no-run, active, blocked, and terminal fixtures preserve context and expose
     exactly one primary action across supported desktop viewports.
-- `W36-E5-S4-T2` (next) Render the read-only Document Canvas with Preview, Source, and Diff over the
+- `W36-E5-S4-T2` (done) Render the read-only Document Canvas with Preview, Source, and Diff over the
   existing safe workbench/document endpoints.
   - Scope: packaged document renderer only.
   - Verification: Markdown, source, diff, missing, malformed, and truncated fixtures retain
     semantics, copyability, safe keys, and document-first visual priority.
-- `W36-E5-S4-T3` (soon) Render the conditional Evidence Inspector with finding, provenance, related
+- `W36-E5-S4-T3` (next) Render the conditional Evidence Inspector with finding, provenance, related
   artifact, and exact source-reference variants.
   - Scope: packaged evidence renderer only.
   - Verification: zero-value evidence hides the inspector while validator, provenance,
     implementation, and legacy fixtures show only retained evidence.
-- `W36-E5-S4-T4` (planned) Integrate live elapsed time, last-output age, real milestones, silence state,
+- `W36-E5-S4-T4` (soon) Integrate live elapsed time, last-output age, real milestones, silence state,
   and Open live output into Studio without embedding raw logs in the default viewport.
   - Dependencies: `W36-E6-S3`.
   - Scope: active Studio observation renderer only.

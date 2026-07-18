@@ -555,6 +555,9 @@ async function renderCockpitContent() {
       return;
     }
     content.innerHTML = renderOverviewSurface();
+    if (document.getElementById("studioDocumentCanvas")) {
+      await loadArtifactDocument(state.activeArtifactKey);
+    }
     void loadRunAccountabilityCard();
     revealNextFlowWizardOnMobile();
     return;

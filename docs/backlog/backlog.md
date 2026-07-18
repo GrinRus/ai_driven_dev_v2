@@ -7,13 +7,13 @@ slice, and local task.
 
 ## Next
 
-- `W36-E5-S4-T2` — Render the read-only Document Canvas with Preview, Source, and Diff
-  through the existing safe document endpoints.
+- `W36-E5-S4-T3` — Render the conditional Evidence Inspector with findings, provenance,
+  related artifacts, and exact source references.
 
 ## Soon
 
-- `W36-E5-S4-T3` — Render the conditional Evidence Inspector with findings, provenance,
-  related artifacts, and exact source references.
+- `W36-E5-S4-T4` — Integrate live elapsed time, last-output age, real milestones,
+  silence state, and persisted-log access into Studio.
 
 ## Parking lot
 
@@ -46,6 +46,12 @@ slice, and local task.
   queue-restoration policy in `docs/backlog/roadmap.md` (`W8-E3-S1`).
 
 ## Current reconciliation
+
+- `2026-07-18` `W36-E5-S4-T2` is complete: candidate Studio loads its Document Canvas
+  from the canonical bounded stage-workbench endpoint and switches Preview, Source, and
+  Diff over the same safe selected key. Missing, escaped, and truncated documents remain
+  explicit; no arbitrary path reader or duplicate document grammar was added. `S4-T3` is
+  promoted to `Next` and dependency-ready `S4-T4` to `Soon`.
 
 - `2026-07-18` `W36-E5-S4-T1` is complete: the active-Studio candidate composes the
   existing mode navigation, compact durable context, canonical stage rail, one authoritative
