@@ -7,13 +7,13 @@ slice, and local task.
 
 ## Next
 
-- `W36-E7-S1-T6` — Add the blocking-question answer/resume Recovery Studio browser
-  journey across desktop and mobile viewports.
+- `W36-E7-S1-T10` — Add the Request Change/intervention Recovery Studio browser
+  journey, including allowed and downstream-blocked paths.
 
 ## Soon
 
-- `W36-E7-S1-T10` — Add the Request Change/intervention Recovery Studio browser
-  journey, including allowed and downstream-blocked paths.
+- `W36-E7-S1-T11` — Add the runtime-approval Recovery Studio browser journey,
+  including durable compare-and-set conflicts.
 
 ## Parking lot
 
@@ -40,6 +40,13 @@ slice, and local task.
   queue-restoration policy in `docs/backlog/roadmap.md` (`W8-E3-S1`).
 
 ## Current reconciliation
+
+- `2026-07-18` `W36-E7-S1-T6` is complete: the question Recovery journey runs
+  provider-free across all five browser viewports and covers partial/deferred blocking,
+  session draft restore, reload and Back restoration, failed-answer preservation, successful
+  durable readback, and answer/resume through the existing stage service. The journey exposed
+  and closed a readiness-refresh race before resume. Intervention journey `T10` is promoted
+  to `Next` and approval journey `T11` to `Soon`.
 
 - `2026-07-18` `W36-E5-S5-T4` is complete: question, intervention, and approval
   Recovery share a decision-first mobile contract at `320x568` and `390x844`. Compact

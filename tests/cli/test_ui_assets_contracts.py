@@ -1226,6 +1226,7 @@ def test_operator_questions_asset_keeps_answer_resolution_and_saved_answer_contr
             'option value="partial"',
             'option value="deferred"',
             "async function answerAndResume(questionId)",
+            "await fetchReadiness();",
             "async function resumeAfterAnswers()",
         ),
     )

@@ -338,6 +338,7 @@ async function answerAndResume(questionId) {
     toast("Answer saved; remaining blocking questions must be resolved before resume.");
     return;
   }
+  await fetchReadiness();
   await startStage(state.activeStage);
 }
 
@@ -349,5 +350,6 @@ async function resumeAfterAnswers() {
     toast("Resolve blocking questions before resume.");
     return;
   }
+  await fetchReadiness();
   await startStage(state.activeStage);
 }
