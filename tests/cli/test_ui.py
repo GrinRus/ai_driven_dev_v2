@@ -335,6 +335,60 @@ def test_ui_job_identity_is_monotonic_and_visible_in_wire_view() -> None:
         store.correlate(job_id, run_id="run-other")
 
 
+def test_ui_inbox_endpoint_composes_durable_and_running_state(tmp_path: Path) -> None:
+    workspace_root = tmp_path / ".aidd"
+    seed_work_item_metadata(root=workspace_root, work_item="WI-UI")
+    service = _service(workspace_root)
+
+    initial = _payload(service.handle_get("/api/inbox", {}))
+    inbox = initial["inbox"]
+    assert [section["key"] for section in inbox["durable"]["sections"]] == [  # type: ignore[index]
+        "needs-decision",
+        "ready-to-continue",
+        "flow-complete",
+    ]
+    assert inbox["running_now"] == []  # type: ignore[index]
+
+    job_id = service._jobs.create(  # noqa: SLF001 - bounded service fixture
+        kind="stage",
+        stage="idea",
+        work_item="WI-UI",
+        run_id="run-ui",
+    )
+    running = _payload(service.handle_get("/api/inbox", {}))["inbox"]
+    assert running["running_now"][0]["job_id"] == job_id  # type: ignore[index]
+    assert running["running_now"][0]["route"] == {  # type: ignore[index]
+        "intent": "inbox-work-item",
+        "work_item": "WI-UI",
+        "run_id": "run-ui",
+        "stage": "idea",
+    }
+
+    service._jobs.complete(  # noqa: SLF001 - bounded service fixture
+        job_id,
+        result={},
+        exit_code=0,
+        message="completed",
+    )
+    terminal = _payload(service.handle_get("/api/inbox", {}))["inbox"]
+    assert terminal["running_now"] == []  # type: ignore[index]
+
+
+def test_ui_inbox_endpoint_rejects_external_path_selectors(tmp_path: Path) -> None:
+    workspace_root = tmp_path / ".aidd"
+    seed_work_item_metadata(root=workspace_root, work_item="WI-UI")
+    service = _service(workspace_root)
+
+    response = service.handle_get(
+        "/api/inbox",
+        {"project_root": ["/tmp/other"], "workspace_root": ["../escape"]},
+    )
+
+    assert response.status == HTTPStatus.BAD_REQUEST
+    error = _error_payload(response)
+    assert error["error"].startswith("Inbox does not accept project or path selectors")
+
+
 def test_ui_job_store_truncates_oversized_unicode_chunk_by_tail() -> None:
     store = UiRunJobStore(
         max_live_log_bytes=16,

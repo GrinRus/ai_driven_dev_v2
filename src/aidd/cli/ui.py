@@ -83,6 +83,7 @@ from aidd.core.operator_frontend import (
     resolve_operator_artifacts_view,
     resolve_operator_dashboard_view,
     resolve_operator_evidence_graph_view,
+    resolve_operator_inbox_view,
     resolve_operator_project_home_view,
     resolve_operator_questions_view,
     resolve_operator_run_log_view,
@@ -2065,6 +2066,26 @@ class OperatorUiService:
             ),
         }
 
+    def _inbox(self, params: dict[str, list[str]]) -> object:
+        unexpected = tuple(sorted(key for key, values in params.items() if values))
+        if unexpected:
+            raise ValueError(
+                "Inbox does not accept project or path selectors: "
+                + ", ".join(unexpected)
+                + "."
+            )
+        durable = resolve_operator_inbox_view(
+            project_root=self.project_root,
+            workspace_root=self.workspace_root,
+        )
+        return {
+            "app_version": __version__,
+            "inbox": compose_operator_inbox_with_jobs(
+                durable,
+                self._jobs.summaries(),
+            ),
+        }
+
     def _task_view(self, params: dict[str, list[str]]) -> object:
         run_id = _first_param(params, "run_id")
         task_id = _first_param(params, "task_id")
@@ -2759,6 +2780,7 @@ class OperatorUiService:
             "/api/project-home": lambda params: _json_response(
                 self._project_home(params)
             ),
+            "/api/inbox": lambda params: _json_response(self._inbox(params)),
             "/api/work-item/resume": lambda params: _json_response(
                 self._work_item_resume_context(params)
             ),

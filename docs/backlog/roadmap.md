@@ -10934,12 +10934,12 @@ Local tasks:
   - Scope: CLI UI job summary and Inbox composition service only.
   - Verification: zero, one, concurrent, terminal, evicted, and legacy job fixtures produce a
     bounded Running now section whose references agree with durable run state.
-- `W36-E5-S3-T3` (next) Expose the composed Inbox through an additive local UI read endpoint with
+- `W36-E5-S3-T3` (done) Expose the composed Inbox through an additive local UI read endpoint with
   bounded project-local data.
   - Scope: CLI UI read route and response contract only.
   - Verification: endpoint tests cover empty, blocking, running, ready, terminal, legacy, and
     malformed evidence without arbitrary path access.
-- `W36-E5-S3-T4` (soon) Render Inbox sections and route each item to the exact Studio context through
+- `W36-E5-S3-T4` (next) Render Inbox sections and route each item to the exact Studio context through
   the shared action/state seam.
   - Scope: packaged Inbox renderer only.
   - Verification: one browser fixture per section opens the expected work item, run, stage,
