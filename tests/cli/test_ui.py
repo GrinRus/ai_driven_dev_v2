@@ -2607,6 +2607,7 @@ def test_ui_operator_control_center_endpoints_return_structured_views(
     qa = _payload(service.handle_get("/api/qa/verdict", {"run_id": ["run-ui"]}))
 
     assert timeline["events"]
+    assert timeline["frames"]
     assert accountability["runtime_id"] == "codex"
     assert accountability["stage_graph"][:3] == ["idea", "research", "plan"]
     assert "config_snapshot" in accountability

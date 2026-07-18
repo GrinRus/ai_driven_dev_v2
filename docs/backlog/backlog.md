@@ -7,12 +7,11 @@ slice, and local task.
 
 ## Next
 
-- `W36-E5-S8-T1` — Implement the typed Filmstrip frame projection from durable attempts,
-  task attempts, and finalization milestones.
+- `W36-E5-S8-T2` — Render collapsed Filmstrip and expanded History from typed frames.
 
 ## Soon
 
-- `W36-E5-S8-T2` — Render collapsed Filmstrip and expanded History from typed frames.
+- `W36-E5-S8-T3` — Render retained-evidence run comparison in History.
 
 ## Parking lot
 
@@ -33,6 +32,12 @@ slice, and local task.
   queue-restoration policy in `docs/backlog/roadmap.md` (`W8-E3-S1`).
 
 ## Current reconciliation
+
+- `2026-07-18` `W36-E5-S8-T1` is complete: `/api/run/timeline` retains its existing
+  `events` and warnings and additively exposes immutable stage-attempt, task-attempt,
+  finalization-attempt, and event-marker frames. Every frame has a stable durable identity,
+  status, stage/task/attempt coordinates, timestamp when authored, and only retained evidence
+  references. Filmstrip renderer `T2` is promoted to `Next`, followed by comparison `T3`.
 
 - `2026-07-18` `W36-E5-S7-T5` and slice `W36-E5-S7` are complete: Implement and
   Review/QA are `parity_closed`. Default legacy, explicit legacy, and Studio consume

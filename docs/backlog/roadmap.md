@@ -11176,17 +11176,17 @@ Dependencies:
 
 Local tasks:
 
-- `W36-E5-S8-T1` (next) Implement a typed Filmstrip frame projection for stage attempts, task
+- `W36-E5-S8-T1` (done) Implement a typed Filmstrip frame projection for stage attempts, task
   attempts, and aggregate finalization milestones with events as markers.
   - Scope: core operator timeline/read model only.
   - Verification: normal, repair, intervention, remediation, task, finalization, live, and
     legacy fixtures produce stable frame identity and retain the first decisive failure.
-- `W36-E5-S8-T2` (soon) Render the collapsed Studio Filmstrip and expanded History timeline with
+- `W36-E5-S8-T2` (next) Render the collapsed Studio Filmstrip and expanded History timeline with
   selected artifact/log evidence and Return to live behavior.
   - Scope: packaged Filmstrip/History renderer only.
   - Verification: frame selection, historical auto-follow pause, exact log range, missing
     snapshot, and current-live return behave deterministically.
-- `W36-E5-S8-T3` (planned) Render run comparison plus retained prompt, artifact, stage, and validator
+- `W36-E5-S8-T3` (soon) Render run comparison plus retained prompt, artifact, stage, and validator
   deltas.
   - Scope: History comparison renderer only.
   - Verification: Back/reload restores both runs and every displayed delta links to retained
