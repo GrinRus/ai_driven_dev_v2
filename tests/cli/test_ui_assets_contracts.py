@@ -350,7 +350,7 @@ def test_operator_responsive_css_keeps_mobile_topbar_status_readable() -> None:
     assert ".brand-meta {" in responsive
     assert ".brand-meta code {" in responsive
     assert ".top-status {" in responsive
-    assert "grid-template-columns: repeat(2, minmax(0, 1fr));" in responsive
+    assert "flex-wrap: nowrap;" in responsive
     assert ".top-actions {" in responsive
     assert ".runtime-picker {" in responsive
     assert ".runtime-picker select {" in responsive
@@ -361,7 +361,8 @@ def test_operator_responsive_css_keeps_mobile_topbar_status_readable() -> None:
     assert "white-space: normal;" in responsive
     assert "text-overflow: clip;" in responsive
     assert "overflow-wrap: anywhere;" in responsive
-    assert "grid-column: 1 / -1;" in responsive
+    assert ".right-sidebar .maintenance-overflow {" in responsive
+    assert "position: fixed;" in responsive
     assert ".path-line {" in responsive
 
 
@@ -910,8 +911,8 @@ def test_operator_cockpit_asset_keeps_overview_sidebar_and_activity_contracts() 
             "Permission policy",
             "Interaction mode",
             "Auto approval",
-            "Provider version",
-            "Provider command",
+            "renderRuntimeReadinessDimensions(runtime)",
+            "renderProtectedWriteScope()",
             "function liveJobActivityEvents()",
             "function activityEvents()",
             "function summarizeActivityDetails(details)",

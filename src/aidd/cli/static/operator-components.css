@@ -3598,7 +3598,7 @@ pre {
 }
 
 .studio-context-identity dt {
-  color: var(--color-text-muted);
+  color: var(--color-text-secondary);
   font-size: var(--type-label-size);
 }
 

@@ -10879,18 +10879,18 @@ Dependencies:
 
 Local tasks:
 
-- `W36-E5-S2-T1` (next) Replace the measured `275px` sticky mobile header with a compact
+- `W36-E5-S2-T1` (done) Replace the measured `275px` sticky mobile header with a compact
   context/status bar and maintenance overflow.
   - Scope: topbar markup and responsive CSS.
   - Verification: `320x568` and `390x844` fixtures meet the accepted header budget and
     never cover the mode tabs or primary action.
-- `W36-E5-S2-T2` (soon) Keep the current Decision Bar or Inbox action in the first mobile
+- `W36-E5-S2-T2` (next) Keep the current Decision Bar or Inbox action in the first mobile
   viewport and move dense evidence to explicit drill-down.
   - Scope: responsive workbench ordering.
   - Verification: no-run Inbox, post-stage, and active Studio fixtures expose the accepted
     primary decision without initial scrolling; vertical Recovery/History/terminal slices own
     their state-specific mobile parity.
-- `W36-E5-S2-T3` (planned) Replace repeated per-body-mode ordering selectors with one mobile
+- `W36-E5-S2-T3` (soon) Replace repeated per-body-mode ordering selectors with one mobile
   priority layout contract: context -> decision -> document -> evidence/history drill-down.
   - Scope: responsive shell state classes.
   - Verification: every declared operator state maps to the same context -> decision ->

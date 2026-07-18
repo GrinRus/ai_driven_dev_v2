@@ -48,6 +48,16 @@
     --control-padding-block: 8px;
   }
 
+  .topbar {
+    gap: 2px;
+    grid-template-columns: minmax(0, 1fr);
+    min-height: 0;
+    padding: 2px 6px;
+  }
+  .brand {
+    display: none;
+  }
+
   .brand-meta {
     align-items: flex-start;
     white-space: normal;
@@ -59,7 +69,10 @@
     white-space: normal;
   }
   .top-actions {
-    display: block;
+    display: grid;
+    gap: 6px;
+    grid-template-columns: minmax(0, 1fr) auto;
+    padding-right: 102px;
     width: 100%;
   }
   .runtime-picker {
@@ -72,8 +85,9 @@
     width: 100%;
   }
   .top-status {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    display: flex;
+    flex-wrap: nowrap;
+    gap: 3px;
     justify-content: stretch;
     width: 100%;
   }
@@ -92,7 +106,45 @@
     overflow-wrap: anywhere;
   }
   .topbar #localStatus {
-    grid-column: 1 / -1;
+    display: none;
+  }
+  .topbar #runChip,
+  .topbar #workItemChip {
+    flex: 1 1 50%;
+    font-size: 10px;
+    line-height: 1;
+    min-height: 18px;
+    padding: 2px 4px;
+  }
+  .right-sidebar .maintenance-overflow {
+    border: 0;
+    margin: 0;
+    padding: 0;
+    position: fixed;
+    right: 6px;
+    top: 23px;
+    z-index: 7;
+  }
+  .right-sidebar .maintenance-overflow summary {
+    background: rgba(255, 255, 255, 0.08);
+    border: 1px solid rgba(255, 255, 255, 0.22);
+    border-radius: 5px;
+    color: var(--topbar-text);
+    min-height: var(--control-height-touch);
+    padding: 0 8px;
+    text-transform: none;
+  }
+  .right-sidebar .maintenance-actions {
+    background: var(--topbar-bg);
+    border: 1px solid var(--topbar-line);
+    border-radius: 6px;
+    box-shadow: var(--elevation-overlay);
+    max-width: calc(100vw - 12px);
+    min-width: 180px;
+    padding: var(--space-2);
+    position: fixed;
+    right: 6px;
+    top: 69px;
   }
   .path-line {
     overflow-wrap: anywhere;
