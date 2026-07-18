@@ -11657,21 +11657,22 @@ Dependencies:
 
 Local tasks:
 
-- `W36-E7-S3-T1` (next) Write the observed operator task script and scoring template for
+- `W36-E7-S3-T1` (done) Write the observed operator task script and scoring template for
   Guided Setup, Inbox triage, active Studio monitoring, question recovery, runtime
   failure, QA remediation, History inspection, and terminal continuation.
   - Dependencies: `W36-E7-S2-T5` as the direct queue predecessor.
   - Scope: operator acceptance documentation.
   - Verification: every task records completion, elapsed time, wrong actions, assistance,
     confidence, and first decisive confusion.
-- `W36-E7-S3-T2` (soon) Record five first-time-operator sessions against the source-installed
+- `W36-E7-S3-T2` (next) Record five first-time-operator sessions against the source-installed
   packaged UI.
   - Dependencies: `W36-E7-S3-T1` as the direct queue predecessor.
   - Scope: manual operator acceptance evidence.
   - Verification: one anonymized report contains all required task metrics, browser and
     viewport context, blockers, and no sensitive project/runtime evidence.
-- `W36-E7-S3-T3` (planned) Reconcile accepted session findings into roadmap tasks and beta-readiness
+- `W36-E7-S3-T3` (soon) Reconcile accepted session findings into roadmap tasks and beta-readiness
   evidence.
+  - Dependencies: `W36-E7-S3-T2` as the direct queue predecessor.
   - Scope: planning and product-readiness docs.
   - Verification: every reportable finding is closed, deferred with rationale, or mapped
     to a reviewable roadmap task before beta UX is claimed.

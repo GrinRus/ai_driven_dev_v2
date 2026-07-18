@@ -1053,6 +1053,44 @@ def test_operator_ui_provider_free_browser_pass_record_is_complete() -> None:
         assert expected in record
 
 
+def test_observed_operator_acceptance_script_and_template_are_complete() -> None:
+    contract = (
+        _repo_root() / "docs" / "e2e" / "operator-ui-observed-acceptance.md"
+    ).read_text(encoding="utf-8")
+
+    for task_id, title in (
+        ("O1", "Guided Setup and first launch"),
+        ("O2", "Inbox triage"),
+        ("O3", "Active Studio monitoring"),
+        ("O4", "Blocking question recovery"),
+        ("O5", "Runtime and validation recovery"),
+        ("O6", "Review/QA remediation"),
+        ("O7", "History inspection"),
+        ("O8", "Terminal continuation"),
+    ):
+        assert f"### {task_id} — {title}" in contract
+    for expected in (
+        "must not\nhave implemented, reviewed, or previously operated this UI",
+        "Completion: <completed | not-completed | stopped-for-safety>",
+        "Elapsed time: <mm:ss>",
+        "Wrong actions: <count>",
+        (
+            "Assistance: <none | facilitator restatement | navigation hint | "
+            "product explanation | safety stop>"
+        ),
+        "Operator confidence: <1-5>",
+        "First decisive confusion:",
+        "Durable outcome observed:",
+        "Session id: <anonymous S1..S5>",
+        "Participant eligibility: <first-time operator confirmed>",
+        "Sensitive-data review: <passed | failed>",
+        "must not average away a decisive confusion",
+        "`W36-E7-S3-T3`",
+        "reviewable roadmap task",
+    ):
+        assert expected in contract
+
+
 def test_readme_quickstart_uses_request_context_and_real_runtime_first() -> None:
     readme = (_repo_root() / "README.md").read_text(encoding="utf-8")
 

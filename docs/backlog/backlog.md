@@ -7,11 +7,11 @@ slice, and local task.
 
 ## Next
 
-- `W36-E7-S3-T1` — Write the observed first-time-operator task and scoring template.
+- `W36-E7-S3-T2` — Record five first-time-operator sessions.
 
 ## Soon
 
-- `W36-E7-S3-T2` — Record five first-time-operator sessions.
+- `W36-E7-S3-T3` — Reconcile observed session findings before beta readiness.
 
 ## Parking lot
 
@@ -29,6 +29,13 @@ slice, and local task.
   queue-restoration policy in `docs/backlog/roadmap.md` (`W8-E3-S1`).
 
 ## Current reconciliation
+
+- `2026-07-18` `W36-E7-S3-T1` is complete: the observed-acceptance contract defines
+  eight bounded first-time-operator tasks for Setup, Inbox, monitoring, question/runtime
+  recovery, QA remediation, History, and terminal continuation. Every task records completion,
+  time, wrong actions, assistance, confidence, first decisive confusion, durable outcome, and a
+  stable finding id; the session summary is anonymized and explicitly separate from automation.
+  The five real sessions `T2` are promoted to `Next`, followed by reconciliation `T3`.
 
 - `2026-07-18` `W36-E7-S2-T5` and slice `W36-E7-S2` are complete: commit
   `28f8e26` passed the source-installed packaged-UI runner with Chromium `149.0.7827.55`,
