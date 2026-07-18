@@ -642,5 +642,6 @@ async function resumeProjectHomeWorkItem(workItem, options = {}) {
   document.getElementById("openWorkspaceButton").disabled = false;
   await fetchDashboard();
   await fetchProjectHome(workItem);
+  await fetchInbox();
   await renderAll();
 }

@@ -50,6 +50,7 @@ function domContext() {
       throw new Error("fetch double was not configured");
     },
     fetchDashboard: async () => {},
+    fetchInbox: async () => {},
     fetchProjectHome: async () => {},
     history: {replaceState() {}},
     location: {pathname: "/", search: ""},
@@ -128,6 +129,7 @@ test("operator bootstrap loads modules in declared order", async () => {
     "/operator-shell-rendering.js",
     "/operator-dashboard-actions.js",
     "/operator-primitives.js",
+    "/operator-inbox.js",
     "/operator-focus.js",
     "/operator-onboarding.js",
     "/operator-artifacts-documents.js",
@@ -197,7 +199,10 @@ test("surface parity manifest has one owner and journey per migration surface", 
     "W36-E7-S1-T8",
     "W36-E7-S1-T9",
   ]);
-  assert.ok(entries.every((entry) => entry.rollout === "legacy_only"));
+  assert.equal(entries.find((entry) => entry.id === "inbox")?.rollout, "candidate");
+  assert.ok(entries.filter((entry) => entry.id !== "inbox").every(
+    (entry) => entry.rollout === "legacy_only",
+  ));
   assert.ok(entries.every((entry) => entry.owner.startsWith("W36-")));
   assert.ok(entries.every((entry) => entry.rollbackRenderer.startsWith("operator-")));
   assert.ok(entries.every((entry) => entry.fixture));
@@ -222,14 +227,22 @@ test("presentation selector is browser-only and fails back to legacy", async () 
     await load(context, "operator-surface-parity.js");
     await load(context, "operator-presentation.js");
     assert.equal(window.aiddPresentation.requested, item.requested);
-    assert.equal(window.aiddPresentation.effective, "legacy");
+    const studioRequested = item.requested === "studio";
+    assert.equal(window.aiddPresentation.effective, studioRequested ? "mixed" : "legacy");
     assert.equal(window.aiddPresentation.fallback, item.fallback);
     assert.equal(Object.keys(window.aiddPresentation.surfaces).length, 12);
-    assert.ok(Object.values(window.aiddPresentation.surfaces).every(
-      (resolution) => resolution.presentation === "legacy",
-    ));
+    assert.equal(
+      window.aiddPresentation.surfaces.inbox.presentation,
+      studioRequested ? "studio" : "legacy",
+    );
+    assert.ok(Object.entries(window.aiddPresentation.surfaces)
+      .filter(([surface]) => surface !== "inbox")
+      .every(([, resolution]) => resolution.presentation === "legacy"));
     assert.equal(documentElement.dataset.presentationRequested, item.requested);
-    assert.equal(documentElement.dataset.presentationEffective, "legacy");
+    assert.equal(
+      documentElement.dataset.presentationEffective,
+      studioRequested ? "mixed" : "legacy",
+    );
   }
 });
 

@@ -12,6 +12,7 @@ async function refresh() {
     document.getElementById("openWorkspaceButton").disabled = false;
     await fetchDashboard();
     await fetchProjectHome(state.dashboard?.work_item || "");
+    await fetchInbox();
     await renderAll();
     void fetchReadiness().then(renderAll).catch((error) => {
       toast(error.message);
@@ -145,6 +146,7 @@ document.addEventListener("click", async (event) => {
       syncLocationState({historyMode: "push"});
       await fetchDashboard();
       await fetchProjectHome(state.dashboard?.work_item || "");
+      await fetchInbox();
       await renderAll();
       return;
     }
@@ -439,6 +441,7 @@ document.addEventListener("click", async (event) => {
       requestCockpitReveal();
       await fetchDashboard();
       await fetchProjectHome(state.dashboard?.work_item || "");
+      await fetchInbox();
       await renderAll();
       return;
     }

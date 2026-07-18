@@ -59,6 +59,16 @@ test("archived run intents retain both history and artifact inspection", async (
   assert.match(artifactsHref, /run_id=run-closed/);
 });
 
+test("Inbox work-item intent preserves optional run and stage context", async () => {
+  const context = await routeIntentContext();
+  const resolved = resolve(context, "inbox-work-item", {
+    workItem: "WI-001", runId: "run-1", stage: "qa",
+  });
+  assert.equal(resolved.route.workItem, "WI-001");
+  assert.equal(resolved.route.runId, "run-1");
+  assert.equal(resolved.route.stage, "qa");
+});
+
 test("unsafe and incomplete route intents fail closed", async () => {
   const context = await routeIntentContext();
   assert.throws(

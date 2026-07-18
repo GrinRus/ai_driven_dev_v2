@@ -7,18 +7,18 @@ slice, and local task.
 
 ## Next
 
-- `W36-E5-S3-T4` — Render Inbox sections and route each item to its exact Studio
-  context through the shared route/action seam.
+- `W36-E5-S4-T1` — Compose the active Studio view from shared mode navigation, compact
+  context bar, stage navigation, and Decision Bar slots.
 
 ## Soon
 
+- `W36-E5-S4-T2` — Render the read-only Document Canvas with Preview, Source, and Diff
+  through the existing safe document endpoints.
 
 ## Parking lot
 
 - `W36-E5-S2-T1` — Replace the measured `275px` mobile header with a compact
   context/status bar and maintenance overflow.
-- `W36-E5-S4-T1` — Compose the active Studio view from shared mode navigation, compact
-  context bar, stage navigation, and Decision Bar slots.
 - `W36-E5-S5-T1` — Render blocking questions with durable resolution and draft-recovery
   semantics in Recovery Studio.
 - `W36-E5-S6-T1` — Render typed runtime failure and the eligible recovery action without
@@ -46,6 +46,12 @@ slice, and local task.
   queue-restoration policy in `docs/backlog/roadmap.md` (`W8-E3-S1`).
 
 ## Current reconciliation
+
+- `2026-07-18` `W36-E5-S3-T4` is complete: `ui=studio` renders the four ordered Inbox
+  sections from the additive read model, preserves server-owned actions and exact
+  work-item/run/stage routes, and keeps missing/default plus explicit legacy presentation
+  on Project Home. `W36-E5-S4-T1` is promoted to `Next` and `S4-T2` to `Soon`; Inbox
+  parity `S3-T5` remains gated by browser journey `W36-E7-S1-T12`.
 
 - `2026-07-18` `W36-E5-S3-T3` is complete: `GET /api/inbox` now exposes the
   durable core projection plus bounded Running now state, rejects external project/path

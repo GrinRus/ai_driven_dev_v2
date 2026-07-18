@@ -531,7 +531,7 @@ async function renderCockpitContent() {
   const content = document.getElementById("cockpitContent");
   if (state.activeTab === "work") {
     if (state.workDetail === "project-home") {
-      content.innerHTML = renderProjectHome();
+      content.innerHTML = renderInboxSurface();
       return;
     }
     if (state.workDetail === "implement-review") {
@@ -627,7 +627,7 @@ function renderProjectHomeWorkItemCard(item) {
   `;
 }
 
-function renderProjectHome() {
+function renderLegacyProjectHome() {
   const home = state.projectHome;
   if (!home) return `<div class="empty-state loading-state">Loading Project Home...</div>`;
   const items = projectHomeWorkItems();
@@ -686,6 +686,14 @@ function renderProjectHome() {
       </div>
     </section>
   `;
+}
+
+function renderInboxSurface() {
+  const {renderer} = selectSurfaceRenderer("inbox", {
+    legacy: renderLegacyProjectHome,
+    studio: renderStudioInbox
+  });
+  return renderer();
 }
 
 function renderBlockersPanel() {

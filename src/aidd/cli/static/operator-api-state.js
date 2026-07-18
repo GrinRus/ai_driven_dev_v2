@@ -93,6 +93,8 @@ const state = {
   dashboardRequestGeneration: 0,
   projectHome: null,
   projectHomeRequestGeneration: 0,
+  inbox: null,
+  inboxRequestGeneration: 0,
   readiness: null,
   readinessLoading: true,
   readinessError: "",

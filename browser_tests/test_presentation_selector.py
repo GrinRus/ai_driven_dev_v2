@@ -32,7 +32,8 @@ def test_presentation_selector_preserves_legacy_service_surface(
         browser_page.page.locator("#onboardingProjectForm").wait_for(state="visible")
         root = browser_page.page.locator("html")
         assert root.get_attribute("data-presentation-requested") == requested
-        assert root.get_attribute("data-presentation-effective") == "legacy"
+        expected_effective = "mixed" if requested == "studio" else "legacy"
+        assert root.get_attribute("data-presentation-effective") == expected_effective
         requested_paths = {
             urlsplit(response_url).path
             for response_url, _ in browser_page.diagnostics.http_statuses

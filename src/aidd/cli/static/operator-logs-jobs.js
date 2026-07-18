@@ -311,6 +311,7 @@ async function reconcileRecoveredActiveJob(jobId, status) {
     state.activeJobLogChunks = chunks;
   }
   await fetchProjectHome(state.dashboard?.work_item || "");
+  await fetchInbox();
 }
 
 async function reconcileExpiredActiveJob(jobId) {
@@ -319,6 +320,7 @@ async function reconcileExpiredActiveJob(jobId) {
     if (state.dashboardActiveJob?.job_id === jobId) return false;
     if (!state.dashboardActiveJob) clearReconciledActiveJob({preserveConnection: true});
     await fetchProjectHome(state.dashboard?.work_item || "");
+    await fetchInbox();
     await renderAll();
     return true;
   } catch (_error) {
@@ -332,6 +334,7 @@ async function reconcileTerminalActiveJob(jobId) {
     clearReconciledActiveJob({preserveConnection: false});
   }
   await fetchProjectHome(state.dashboard?.work_item || "");
+  await fetchInbox();
   await renderAll();
 }
 

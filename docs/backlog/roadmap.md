@@ -10939,7 +10939,7 @@ Local tasks:
   - Scope: CLI UI read route and response contract only.
   - Verification: endpoint tests cover empty, blocking, running, ready, terminal, legacy, and
     malformed evidence without arbitrary path access.
-- `W36-E5-S3-T4` (next) Render Inbox sections and route each item to the exact Studio context through
+- `W36-E5-S3-T4` (done) Render Inbox sections and route each item to the exact Studio context through
   the shared action/state seam.
   - Scope: packaged Inbox renderer only.
   - Verification: one browser fixture per section opens the expected work item, run, stage,
@@ -10973,12 +10973,12 @@ Dependencies:
 
 Local tasks:
 
-- `W36-E5-S4-T1` (parked) Compose the active Studio view from shared mode navigation, compact context
+- `W36-E5-S4-T1` (next) Compose the active Studio view from shared mode navigation, compact context
   bar, canonical stage navigation, and Decision Bar slots.
   - Scope: packaged active-Studio markup and renderer only.
   - Verification: no-run, active, blocked, and terminal fixtures preserve context and expose
     exactly one primary action across supported desktop viewports.
-- `W36-E5-S4-T2` (planned) Render the read-only Document Canvas with Preview, Source, and Diff over the
+- `W36-E5-S4-T2` (soon) Render the read-only Document Canvas with Preview, Source, and Diff over the
   existing safe workbench/document endpoints.
   - Scope: packaged document renderer only.
   - Verification: Markdown, source, diff, missing, malformed, and truncated fixtures retain

@@ -103,7 +103,7 @@ const SURFACE_PARITY_MANIFEST = Object.freeze([
   {
     id: "inbox",
     owner: "W36-E5-S3",
-    rollout: "legacy_only",
+    rollout: "candidate",
     rollbackRenderer: "operator-control-center",
     fixture: "no-run",
     journey: "W36-E7-S1-T12",

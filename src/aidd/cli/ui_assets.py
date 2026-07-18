@@ -83,6 +83,11 @@ _OPERATOR_STATIC_ASSET_MANIFEST = (
         content_type="text/javascript; charset=utf-8",
     ),
     OperatorStaticAsset(
+        route="/operator-inbox.js",
+        filename="operator-inbox.js",
+        content_type="text/javascript; charset=utf-8",
+    ),
+    OperatorStaticAsset(
         route="/operator-focus.js",
         filename="operator-focus.js",
         content_type="text/javascript; charset=utf-8",
