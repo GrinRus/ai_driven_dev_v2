@@ -11084,17 +11084,17 @@ Local tasks:
   - Scope: runtime-failure Recovery renderer only.
   - Verification: unavailable executable, authentication, timeout, cancellation, no-progress,
     and legacy fixtures show the typed outcome and correct safe action.
-- `W36-E5-S6-T2` (next) Render transient offline, reconnecting, recovered, expired-job, and manual
+- `W36-E5-S6-T2` (done) Render transient offline, reconnecting, recovered, expired-job, and manual
   Reconnect states while preserving durable log/artifact access.
   - Scope: connection Recovery renderer only.
   - Verification: cursor-preserving failure/recovery fixtures show no skipped or duplicated
     chunks and never claim runtime termination without server evidence.
-- `W36-E5-S6-T3` (soon) Render validation findings with exact document/line/rule/provenance and make
+- `W36-E5-S6-T3` (next) Render validation findings with exact document/line/rule/provenance and make
   Run Repair primary only when the backend reports repair available.
   - Scope: validation Recovery renderer only.
   - Verification: repair-available, repaired, exhausted, explicit-stop, stale-artifact, and
     malformed-report fixtures choose the correct action and evidence.
-- `W36-E5-S6-T4` (planned) Render Request Change as primary after repair exhaustion/explicit stop and keep
+- `W36-E5-S6-T4` (soon) Render Request Change as primary after repair exhaustion/explicit stop and keep
   raw logs/attempt history as secondary drill-down.
   - Scope: repair-exhaustion Recovery renderer only.
   - Verification: no exhausted state exposes an enabled Run Repair and the intervention request

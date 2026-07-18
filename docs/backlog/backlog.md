@@ -7,13 +7,13 @@ slice, and local task.
 
 ## Next
 
-- `W36-E5-S6-T2` — Render reconnecting, recovered, expired-job, and manual reconnect
-  states without losing the log cursor.
+- `W36-E5-S6-T3` — Render exact validator findings and expose Run Repair only from
+  backend eligibility.
 
 ## Soon
 
-- `W36-E5-S6-T3` — Render exact validator findings and expose Run Repair only from
-  backend eligibility.
+- `W36-E5-S6-T4` — Make Request Change primary after repair exhaustion or explicit
+  stop while retaining evidence drill-down.
 
 ## Parking lot
 
@@ -38,6 +38,13 @@ slice, and local task.
   queue-restoration policy in `docs/backlog/roadmap.md` (`W8-E3-S1`).
 
 ## Current reconciliation
+
+- `2026-07-18` `W36-E5-S6-T2` is complete: reconnecting, recovered, offline,
+  expired-job, and manual reconnect surfaces retain the absolute log cursor, state explicitly
+  that no terminal runtime evidence was observed, and route operators to durable `runtime.log`.
+  Existing bounded retry, expired-job reconciliation, and server-authoritative readback remain
+  unchanged. Validator Recovery `T3` is promoted to `Next` and repair-exhaustion Recovery `T4`
+  to `Soon`.
 
 - `2026-07-18` `W36-E5-S6-T1` is complete: runtime/validation Recovery enters
   `candidate` rollout with typed launch, authentication, timeout, cancellation, provider,

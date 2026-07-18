@@ -553,10 +553,13 @@ test("live connection surface names reconnecting, recovered, offline, and expire
   for (const [connection, marker, copy] of cases) {
     context.connectionFixture = connection;
     const html = vm.runInContext(
-      "state.activeJobConnection = connectionFixture; renderActiveJobConnectionSurface()",
+      "state.activeJobCursor = 17; state.activeJobConnection = connectionFixture; renderActiveJobConnectionSurface()",
       context,
     );
     assert.match(html, new RegExp(`data-connection-state="${marker}"`));
+    assert.match(html, /data-connection-cursor="17"/);
+    assert.match(html, /data-runtime-terminal-observed="false"/);
+    assert.match(html, /data-durable-log="runtime.log"/);
     assert.match(html, new RegExp(copy));
   }
 });
