@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import json
+import subprocess
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -18,9 +20,19 @@ from aidd.core.run_store import (
     create_run_manifest,
     persist_stage_status,
     run_attempt_root,
+    run_stage_root,
+    write_attempt_artifact_index,
 )
 from aidd.core.runtime_operator import RuntimeOperatorRequest, append_operator_request
 from aidd.core.stages import STAGES
+from aidd.core.task_ledger import (
+    TaskExecutionStatus,
+    TaskFinalizationStatus,
+    TaskLedger,
+    persist_task_ledger,
+    task_root,
+)
+from aidd.core.task_plan import parse_task_plan
 from aidd.core.workspace import WorkspaceBootstrapService
 from aidd.runtime_permissions import RuntimeOperatorRequestKind, RuntimeOperatorRisk
 from aidd.validators.models import ValidationFinding, ValidationIssueLocation
@@ -28,6 +40,41 @@ from aidd.validators.reports import write_validator_report
 
 WORK_ITEM = "WI-BROWSER"
 RUN_ID = "run-browser"
+
+_IMPLEMENT_TASKLIST = """# Tasklist
+
+## Task summary
+
+Two dependency-ordered implementation tasks.
+
+## Ordered tasks
+
+### TL-1 — Preserve completed work
+
+- Outcome: The first change remains available.
+- Dominant deliverable: `src/completed.py`.
+- In scope: `src/completed.py`.
+- Acceptance criteria:
+  - TL-1-AC1: Completed work is retained.
+
+### TL-2 — Finish dependent work
+
+- Outcome: The dependent change is verified.
+- Dominant deliverable: `src/changed.py`.
+- In scope: `src/changed.py` and `src/new.py`.
+- Acceptance criteria:
+  - TL-2-AC1: Repository evidence agrees with the report.
+
+## Dependencies
+
+- TL-1: none
+- TL-2: TL-1
+
+## Verification notes
+
+- TL-1: `pytest -q`
+- TL-2: `pytest -q`
+"""
 
 
 @dataclass(frozen=True, slots=True)
@@ -177,6 +224,195 @@ def _succeed_through(
         persist_stage_status(workspace_root, work_item, run_id, stage, "succeeded")
 
 
+def _git(project_root: Path, *args: str) -> None:
+    subprocess.run(
+        ("git", "-C", project_root.as_posix(), *args),
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+
+
+def _implementation_repository(project_root: Path, workspace_root: Path, *, work_item: str) -> None:
+    _git(project_root, "init", "-q")
+    _git(project_root, "config", "user.email", "browser@example.invalid")
+    _git(project_root, "config", "user.name", "Browser Fixture")
+    source_root = project_root / "src"
+    source_root.mkdir()
+    source_root.joinpath("completed.py").write_text("VALUE = 'kept'\n", encoding="utf-8")
+    source_root.joinpath("changed.py").write_text("VALUE = 'before'\n", encoding="utf-8")
+    source_root.joinpath("removed.py").write_text("VALUE = 'remove'\n", encoding="utf-8")
+    _git(project_root, "add", "src")
+    _git(project_root, "commit", "-qm", "browser baseline")
+    source_root.joinpath("changed.py").write_text("VALUE = 'after'\n", encoding="utf-8")
+    source_root.joinpath("removed.py").unlink()
+    source_root.joinpath("new.py").write_text("VALUE = 'new'\n", encoding="utf-8")
+    context_root = workspace_root / "workitems" / work_item / "context"
+    context_root.joinpath("allowed-write-scope.md").write_text(
+        "# Allowed Write Scope\n\n- `src`\n",
+        encoding="utf-8",
+    )
+
+
+def _implementation_fixture(
+    *,
+    project_root: Path,
+    workspace_root: Path,
+    work_item: str,
+    run_id: str,
+    state: str,
+) -> None:
+    tasklist_path = (
+        workspace_root
+        / "workitems"
+        / work_item
+        / "stages"
+        / "tasklist"
+        / "output"
+        / "tasklist.md"
+    )
+    tasklist_path.parent.mkdir(parents=True, exist_ok=True)
+    tasklist_path.write_text(_IMPLEMENT_TASKLIST, encoding="utf-8")
+    ledger = TaskLedger.create(parse_task_plan(_IMPLEMENT_TASKLIST))
+    task_statuses = (
+        ("TL-1", TaskExecutionStatus.SUCCEEDED, None),
+        (
+            "TL-2",
+            (
+                TaskExecutionStatus.FAILED
+                if state == "implementation-task-failed"
+                else TaskExecutionStatus.SUCCEEDED
+            ),
+            "verification failed" if state == "implementation-task-failed" else None,
+        ),
+    )
+    for task_id, terminal_status, blocker in task_statuses:
+        attempt_path = task_root(
+            workspace_root=workspace_root,
+            work_item=work_item,
+            run_id=run_id,
+            task_id=task_id,
+        ) / "attempts" / "attempt-0001"
+        attempt_path.mkdir(parents=True, exist_ok=True)
+        attempt_path.joinpath("attempt-state.json").write_text(
+            json.dumps(
+                {
+                    "schema_version": 1,
+                    "attempt_number": 1,
+                    "status": terminal_status.value,
+                    "blocker": blocker,
+                },
+                indent=2,
+            )
+            + "\n",
+            encoding="utf-8",
+        )
+        relative = attempt_path.relative_to(workspace_root).as_posix()
+        ledger = ledger.transition(
+            task_id,
+            TaskExecutionStatus.EXECUTING,
+            attempt_number=1,
+            latest_attempt_path=relative,
+        ).transition(task_id, terminal_status, blocker=blocker)
+
+    if state != "implementation-task-failed":
+        finalization_root = (
+            run_stage_root(
+                workspace_root=workspace_root,
+                work_item=work_item,
+                run_id=run_id,
+                stage="implement",
+            )
+            / "finalization"
+            / "attempts"
+            / "attempt-0001"
+        )
+        finalization_root.mkdir(parents=True, exist_ok=True)
+        succeeded = state == "implementation-finalized"
+        final_status = (
+            TaskFinalizationStatus.SUCCEEDED
+            if succeeded
+            else TaskFinalizationStatus.FAILED
+        )
+        finalization_root.joinpath("finalization-state.json").write_text(
+            json.dumps(
+                {
+                    "schema_version": 1,
+                    "attempt_number": 1,
+                    "status": final_status.value,
+                    "blocker": None if succeeded else "aggregate validation failed",
+                },
+                indent=2,
+            )
+            + "\n",
+            encoding="utf-8",
+        )
+        ledger = ledger.transition_finalization(
+            TaskFinalizationStatus.EXECUTING,
+            attempt_number=1,
+            latest_attempt_path=finalization_root.relative_to(workspace_root).as_posix(),
+        ).transition_finalization(
+            final_status,
+            blocker=None if succeeded else "aggregate validation failed",
+        )
+
+    persist_task_ledger(
+        workspace_root=workspace_root,
+        work_item=work_item,
+        run_id=run_id,
+        ledger=ledger,
+    )
+    implement_output = (
+        workspace_root / "workitems" / work_item / "stages" / "implement" / "output"
+    )
+    implement_output.mkdir(parents=True, exist_ok=True)
+    implementation_report = (
+        "# Implementation Report\n\n"
+        "- Selected task id: `TL-2`\n\n"
+        "## Touched files\n\n"
+        "- `src/changed.py`\n- `src/new.py`\n- `src/removed.py`\n\n"
+        "## Verification\n\n- `pytest -q` -> exit 0.\n"
+    )
+    implement_output.joinpath("implementation-report.md").write_text(
+        implementation_report, encoding="utf-8"
+    )
+    implement_output.parent.joinpath("implementation-report.md").write_text(
+        implementation_report, encoding="utf-8"
+    )
+    implement_attempt = _attempt(
+        workspace_root,
+        "implement",
+        work_item=work_item,
+        run_id=run_id,
+    )
+    commit_runtime_evidence(
+        RuntimeEvidenceCommitRequest(
+            attempt_path=implement_attempt,
+            adapter_outcome=RuntimeAdapterOutcome.SUCCESS,
+            exit_classification="success",
+            exit_code=0,
+            stdout_text="implementation checkpoint\n",
+            stderr_text="",
+            runtime_log_text="implementation checkpoint\n",
+        )
+    )
+    persist_stage_status(
+        workspace_root,
+        work_item,
+        run_id,
+        "implement",
+        "succeeded" if state == "implementation-finalized" else "failed",
+    )
+    write_attempt_artifact_index(
+        workspace_root,
+        work_item,
+        run_id,
+        "implement",
+        1,
+    )
+    _implementation_repository(project_root, workspace_root, work_item=work_item)
+
+
 def build_browser_state_fixture(
     project_root: Path,
     state: str,
@@ -213,6 +449,35 @@ def build_browser_state_fixture(
         )
 
     _create_run(workspace_root, work_item=work_item, run_id=run_id)
+    if state in {
+        "implementation-task-failed",
+        "implementation-finalization-failed",
+        "implementation-finalized",
+    }:
+        _implementation_fixture(
+            project_root=project_root,
+            workspace_root=workspace_root,
+            work_item=work_item,
+            run_id=run_id,
+            state=state,
+        )
+        return _descriptor(
+            name=state,
+            project_root=project_root,
+            route="studio",
+            context_keys=("project", "work_item", "run", "stage", "attempt", "artifact"),
+            surface="Implementation quality gate",
+            action=(
+                "Resume"
+                if state == "implementation-task-failed"
+                else "Resume finalization"
+                if state == "implementation-finalization-failed"
+                else "Proceed to review"
+            ),
+            marker=state,
+            work_item=work_item,
+            run_id=run_id,
+        )
     if state == "running":
         _attempt(workspace_root, "idea", work_item=work_item, run_id=run_id)
         persist_stage_status(workspace_root, work_item, run_id, "idea", "executing")

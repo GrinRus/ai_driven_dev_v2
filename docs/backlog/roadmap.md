@@ -11150,7 +11150,7 @@ Local tasks:
   - Scope: quality-gate remediation renderer only.
   - Verification: one durable remediation request is created, fresh downstream stages become
     stale, stale QA never becomes terminal, and rerun uses the selected runtime.
-- `W36-E5-S7-T5` (planned) Promote the verified implement/Review/QA candidates to `parity_closed` while
+- `W36-E5-S7-T5` (soon) Promote the verified implement/Review/QA candidates to `parity_closed` while
   retaining legacy surfaces for missing/default and explicit rollback.
   - Dependencies: `W36-E7-S1-T4`, `W36-E7-S1-T9`.
   - Scope: task/quality-gate parity-manifest entries only.
@@ -11520,7 +11520,7 @@ Local tasks:
   - Scope: runtime/validation recovery scenario family.
   - Verification: each failure exposes the correct first evidence, one primary recovery
     action, and a truthful stopped/running state.
-- `W36-E7-S1-T4` (soon) Add the Review/QA quality-gate, remediation, and stale downstream
+- `W36-E7-S1-T4` (next) Add the Review/QA quality-gate, remediation, and stale downstream
   browser journey.
   - Dependencies: `W35-E2-S8`, `W36-E5-S7-T2..T4`, `W36-E7-S1-T9` as the direct
     queue predecessor.
@@ -11551,7 +11551,7 @@ Local tasks:
   - Verification: clean versus failed/blocked/warning fresh QA, stale/nonterminal exclusion,
     one core-recommended action, drafts/preflight, independent identities, truthful manual eval
     handoff, archive overlay, and byte-identical source-run evidence all pass.
-- `W36-E7-S1-T9` (next) Add the implement task run/resume, failed-attempt recovery, repository
+- `W36-E7-S1-T9` (done) Add the implement task run/resume, failed-attempt recovery, repository
   evidence, and aggregate-finalization browser journey.
   - Dependencies: `W35-E2-S8`, `W36-E5-S7-T1..T4`, `W36-E5-S7-T4` as the direct
     queue predecessor.

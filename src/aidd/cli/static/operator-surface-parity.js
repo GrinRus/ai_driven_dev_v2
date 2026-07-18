@@ -31,7 +31,7 @@ const SURFACE_PARITY_MANIFEST = Object.freeze([
   {
     id: "review-qa",
     owner: "W36-E5-S7",
-    rollout: "legacy_only",
+    rollout: "candidate",
     rollbackRenderer: "operator-control-center",
     fixture: "qa-decision",
     journey: "W36-E7-S1-T4",
@@ -76,7 +76,7 @@ const SURFACE_PARITY_MANIFEST = Object.freeze([
   {
     id: "implement",
     owner: "W36-E5-S7",
-    rollout: "legacy_only",
+    rollout: "candidate",
     rollbackRenderer: "operator-control-center",
     fixture: "implement-task",
     journey: "W36-E7-S1-T9",

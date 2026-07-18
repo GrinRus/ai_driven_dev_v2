@@ -7,12 +7,11 @@ slice, and local task.
 
 ## Next
 
-- `W36-E7-S1-T9` — Add the provider-free Implement/finalization/repository browser
-  journey.
+- `W36-E7-S1-T4` — Add the provider-free Review/QA/remediation browser journey.
 
 ## Soon
 
-- `W36-E7-S1-T4` — Add the provider-free Review/QA/remediation browser journey.
+- `W36-E5-S7-T5` — Close Implement and Review/QA presentation parity.
 
 ## Parking lot
 
@@ -35,6 +34,13 @@ slice, and local task.
   queue-restoration policy in `docs/backlog/roadmap.md` (`W8-E3-S1`).
 
 ## Current reconciliation
+
+- `2026-07-18` `W36-E7-S1-T9` is complete: provider-free Chromium fixtures preserve a
+  succeeded dependency when the next task fails, expose Resume and finalization retry, render
+  modified/untracked/deleted repository evidence with canonical scope, and open Review only
+  after successful aggregate finalization. The journey also promotes the implemented
+  Implement and Review/QA renderers to reachable `candidate` status. Review/QA journey `T4`
+  is promoted to `Next`, followed by parity closure `W36-E5-S7-T5`.
 
 - `2026-07-18` `W36-E5-S7-T4` is complete: selected Review/QA identities still launch
   the guarded canonical remediation service, while Studio now exposes pending implement
