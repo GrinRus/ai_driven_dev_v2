@@ -3511,6 +3511,21 @@ pre {
   display: grid;
   gap: 12px;
 }
+.studio-repository-evidence code {
+  overflow-wrap: anywhere;
+}
+.repository-change-marker {
+  font-weight: var(--type-weight-strong);
+}
+.repository-change-marker[data-change-kind="added"] {
+  color: var(--color-state-success-text);
+}
+.repository-change-marker[data-change-kind="removed"] {
+  color: var(--color-state-danger-text);
+}
+.repository-change-marker[data-change-kind="changed"] {
+  color: var(--color-state-warning-text);
+}
 .diff-review-layout {
   display: grid;
   gap: 12px;

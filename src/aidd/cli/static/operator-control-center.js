@@ -288,6 +288,69 @@ function renderImplementationTaskGate(taskView) {
   }).renderer();
 }
 
+function renderLegacyImplementationRepository({
+  diffView, evidence, taskView, files, visible, selected, unchanged, verificationReady
+}) {
+  return `
+    <section class="surface">
+      <div class="surface-title">
+        <span>Repository diff</span>
+        <span class="small-badge">${escapeHtml(files.length)} source changes</span>
+      </div>
+      ${diffView.project_set_roots?.length ? `
+        <div class="compact-list">
+          ${diffView.project_set_roots.map((root) => `<span>${escapeHtml(root.root_id)}: ${escapeHtml(root.relative_root)}</span>`).join("")}
+        </div>
+      ` : ""}
+      ${renderWarnings([...(diffView.warnings || []), ...unchanged.map((path) => `Mentioned but unchanged: ${path}`)])}
+      ${renderDiffFilters(files)}
+      <div class="diff-review-layout">
+        <aside class="diff-file-list">
+          ${visible.length ? visible.map((file) => {
+            const selectedClass = selected && selected.path === file.path ? " selected" : "";
+            const warnings = diffFileWarning(file);
+            return `
+              <button data-open-diff-file="${escapeHtml(file.path)}" class="diff-file-card${selectedClass}" type="button">
+                <strong>${escapeHtml(file.path)}</strong>
+                <span>${escapeHtml(file.status)} / ${escapeHtml(file.allowed_scope_status)} / ${escapeHtml(file.scope_status || "single-project")}</span>
+                ${file.root_id ? `<span class="small-badge">${escapeHtml(file.root_label || file.root_id)} ${escapeHtml(file.root_relative_root || "")}</span>` : ""}
+                <span>${warnings.map((item) => `<span class="small-badge warn">${escapeHtml(item)}</span>`).join("")}</span>
+              </button>
+            `;
+          }).join("") : `<div class="empty-state">No files match this filter.</div>`}
+        </aside>
+        <section class="diff-viewer">
+          ${selected ? `
+            <div class="surface-title compact">
+              <span>${escapeHtml(selected.path)}</span>
+              <span class="small-badge">${escapeHtml(selected.status)}</span>
+            </div>
+            <pre class="diff-pre">${escapeHtml(selected.diff || "No textual diff available.")}</pre>
+          ` : `<div class="empty-state">No source diff available.</div>`}
+        </section>
+      </div>
+      ${renderImplementationProceedGuard(evidence)}
+      <div class="wizard-actions">
+        <button data-proceed-stage="review" type="button" ${verificationReady && taskView.review_eligible && selectedRuntimeReady() ? "" : "disabled"}>Proceed to review</button>
+        <button data-rerun-implement type="button" class="secondary" ${selectedRuntimeReady() ? "" : "disabled"}>Rerun implement</button>
+        <button data-open-request-tab type="button" class="secondary">Request intervention</button>
+      </div>
+    </section>
+  `;
+}
+
+function renderImplementationRepositoryGate(context) {
+  return selectSurfaceRenderer("implement", {
+    legacy: () => renderLegacyImplementationRepository(context),
+    studio: () => renderStudioRepositoryEvidence({
+      ...context,
+      reviewEnabled: context.verificationReady
+        && context.taskView.review_eligible
+        && selectedRuntimeReady()
+    })
+  }).renderer();
+}
+
 async function renderImplementReview() {
   const content = document.getElementById("cockpitContent");
   if (!state.activeRunId) {
@@ -312,50 +375,9 @@ async function renderImplementReview() {
       <div class="implement-review-screen">
         ${renderImplementationSummary(evidence)}
         ${renderImplementationTaskGate(taskView)}
-        <section class="surface">
-          <div class="surface-title">
-            <span>Repository diff</span>
-            <span class="small-badge">${escapeHtml(files.length)} source changes</span>
-          </div>
-          ${diffView.project_set_roots?.length ? `
-            <div class="compact-list">
-              ${diffView.project_set_roots.map((root) => `<span>${escapeHtml(root.root_id)}: ${escapeHtml(root.relative_root)}</span>`).join("")}
-            </div>
-          ` : ""}
-          ${renderWarnings([...(diffView.warnings || []), ...unchanged.map((path) => `Mentioned but unchanged: ${path}`)])}
-          ${renderDiffFilters(files)}
-          <div class="diff-review-layout">
-            <aside class="diff-file-list">
-              ${visible.length ? visible.map((file) => {
-                const selectedClass = selected && selected.path === file.path ? " selected" : "";
-                const warnings = diffFileWarning(file);
-                return `
-	                  <button data-open-diff-file="${escapeHtml(file.path)}" class="diff-file-card${selectedClass}" type="button">
-	                    <strong>${escapeHtml(file.path)}</strong>
-	                    <span>${escapeHtml(file.status)} / ${escapeHtml(file.allowed_scope_status)} / ${escapeHtml(file.scope_status || "single-project")}</span>
-	                    ${file.root_id ? `<span class="small-badge">${escapeHtml(file.root_label || file.root_id)} ${escapeHtml(file.root_relative_root || "")}</span>` : ""}
-	                    <span>${warnings.map((item) => `<span class="small-badge warn">${escapeHtml(item)}</span>`).join("")}</span>
-	                  </button>
-                `;
-              }).join("") : `<div class="empty-state">No files match this filter.</div>`}
-            </aside>
-            <section class="diff-viewer">
-              ${selected ? `
-                <div class="surface-title compact">
-                  <span>${escapeHtml(selected.path)}</span>
-                  <span class="small-badge">${escapeHtml(selected.status)}</span>
-                </div>
-                <pre class="diff-pre">${escapeHtml(selected.diff || "No textual diff available.")}</pre>
-              ` : `<div class="empty-state">No source diff available.</div>`}
-            </section>
-          </div>
-          ${renderImplementationProceedGuard(evidence)}
-          <div class="wizard-actions">
-            <button data-proceed-stage="review" type="button" ${verificationReady && taskView.review_eligible && selectedRuntimeReady() ? "" : "disabled"}>Proceed to review</button>
-            <button data-rerun-implement type="button" class="secondary" ${selectedRuntimeReady() ? "" : "disabled"}>Rerun implement</button>
-            <button data-open-request-tab type="button" class="secondary">Request intervention</button>
-          </div>
-        </section>
+        ${renderImplementationRepositoryGate({
+          diffView, evidence, taskView, files, visible, selected, unchanged, verificationReady
+        })}
       </div>
     `;
   } catch (error) {

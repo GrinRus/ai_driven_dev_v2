@@ -11135,17 +11135,17 @@ Local tasks:
   - Scope: implement task workspace renderer only.
   - Verification: run/resume/fail/recover/finalize fixtures preserve successful tasks and never
     enable Review before successful aggregate finalization.
-- `W36-E5-S7-T2` (next) Render the real repository diff, untracked/deleted files, `.aidd/` separation,
+- `W36-E5-S7-T2` (done) Render the real repository diff, untracked/deleted files, `.aidd/` separation,
   scope status, and implementation-report claim mismatch in the Document Canvas.
   - Scope: implement evidence renderer only.
   - Verification: repository-diff fixtures match core evidence and use textual added/removed/
     changed meaning in addition to color.
-- `W36-E5-S7-T3` (soon) Render structured Review findings and QA verdict, residual risks, known issues,
+- `W36-E5-S7-T3` (next) Render structured Review findings and QA verdict, residual risks, known issues,
   acceptance ids, and evidence links.
   - Scope: Review/QA quality-gate renderer only.
   - Verification: approval/rejection/not-ready/blocked/missing-evidence fixtures agree with the
     canonical reports and validators.
-- `W36-E5-S7-T4` (planned) Render selected remediation to `implement`, pending readback, and explicit
+- `W36-E5-S7-T4` (soon) Render selected remediation to `implement`, pending readback, and explicit
   downstream Review/QA stale rerun.
   - Scope: quality-gate remediation renderer only.
   - Verification: one durable remediation request is created, fresh downstream stages become

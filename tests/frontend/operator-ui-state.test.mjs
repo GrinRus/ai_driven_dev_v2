@@ -292,6 +292,55 @@ test("Studio implementation gate preserves canonical readiness and finalization 
   assert.match(html, /does not record success for every task/);
 });
 
+test("Studio repository evidence names change kinds scope and claim mismatches", async () => {
+  const context = vm.createContext({
+    escapeHtml(value) {
+      return String(value);
+    },
+    diffFileWarning(file) {
+      return file.allowed_scope_status === "outside" ? ["outside scope"] : [];
+    },
+    renderDiffFilters() {
+      return '<div data-test="filters"></div>';
+    },
+    renderImplementationProceedGuard() {
+      return "";
+    },
+    renderWarnings(items) {
+      return `<div data-test="warnings">${items.join("|")}</div>`;
+    },
+    selectedRuntimeReady() {
+      return true;
+    },
+  });
+  await load(context, "operator-quality-gates.js");
+  const html = vm.runInContext(`renderStudioRepositoryEvidence({
+    diffView: {aidd_artifacts: [{path: ".aidd/report"}], warnings: []},
+    evidence: {selected_task_id: "TL-1", touched_files: ["src/changed.py"]},
+    files: [
+      {path: "src/new.py", status: "untracked", allowed_scope_status: "inside", mentioned_in_report: true},
+      {path: "src/old.py", status: "deleted", allowed_scope_status: "outside", mentioned_in_report: true},
+      {path: "src/changed.py", status: "modified", allowed_scope_status: "inside", mentioned_in_report: false}
+    ],
+    visible: [
+      {path: "src/new.py", status: "untracked", allowed_scope_status: "inside", mentioned_in_report: true},
+      {path: "src/old.py", status: "deleted", allowed_scope_status: "outside", mentioned_in_report: true},
+      {path: "src/changed.py", status: "modified", allowed_scope_status: "inside", mentioned_in_report: false}
+    ],
+    selected: {path: "src/changed.py", status: "modified", diff: "+new line"},
+    unchanged: ["src/claimed.py"],
+    reviewEnabled: false
+  })`, context);
+  assert.match(html, /data-document-canvas="implementation-evidence"/);
+  assert.match(html, /Added · untracked/);
+  assert.match(html, /Removed · deleted/);
+  assert.match(html, /Changed · modified/);
+  assert.match(html, /Allowed scope: outside/);
+  assert.match(html, /core-owned <code>\.aidd\/<\/code> evidence/);
+  assert.match(html, /Claim mismatch: src\/claimed.py was mentioned but unchanged/);
+  assert.match(html, /src\/changed.py changed but is absent/);
+});
+
 test("presentation selector is browser-only and fails back to legacy", async () => {
   const cases = [
     {search: "", requested: "legacy", fallback: false},
