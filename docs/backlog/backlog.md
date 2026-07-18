@@ -7,16 +7,16 @@ slice, and local task.
 
 ## Next
 
-- `W36-E5-S4-T3` — Render the conditional Evidence Inspector with findings, provenance,
-  related artifacts, and exact source references.
-
-## Soon
-
 - `W36-E5-S4-T4` — Integrate live elapsed time, last-output age, real milestones,
   silence state, and persisted-log access into Studio.
 
+## Soon
+
+
 ## Parking lot
 
+- `W36-E4-S2-T3` — Render dimensioned runtime readiness, protected write scope, and
+  last-launch evidence in Guided Setup and Studio.
 - `W36-E5-S2-T1` — Replace the measured `275px` mobile header with a compact
   context/status bar and maintenance overflow.
 - `W36-E5-S5-T1` — Render blocking questions with durable resolution and draft-recovery
@@ -46,6 +46,12 @@ slice, and local task.
   queue-restoration policy in `docs/backlog/roadmap.md` (`W8-E3-S1`).
 
 ## Current reconciliation
+
+- `2026-07-18` `W36-E5-S4-T3` is complete: Studio projects findings, exact contract
+  source references, version provenance, and related artifacts from the already loaded
+  workbench snapshot, while zero-value evidence keeps the Inspector absent. `S4-T4` is
+  promoted to `Next`; runtime-readiness presentation `W36-E4-S2-T3` remains parked until
+  the active-Studio implementation sequence completes.
 
 - `2026-07-18` `W36-E5-S4-T2` is complete: candidate Studio loads its Document Canvas
   from the canonical bounded stage-workbench endpoint and switches Preview, Source, and

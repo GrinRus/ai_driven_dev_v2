@@ -10776,7 +10776,7 @@ Local tasks:
   - Scope: core operator runtime-history read model.
   - Verification: no-history, success, failure, blocked, cancelled, and legacy attempts
     resolve deterministically without reading outside `.aidd/`.
-- `W36-E4-S2-T3` (planned) Render dimensioned readiness, protected write scope, and last-launch
+- `W36-E4-S2-T3` (parked) Render dimensioned readiness, protected write scope, and last-launch
   evidence in Guided Setup and the Studio launch context.
   - Scope: packaged runtime/safety UI.
   - Verification: truth-copy fixtures contain no undifferentiated authentication claim
@@ -10983,12 +10983,12 @@ Local tasks:
   - Scope: packaged document renderer only.
   - Verification: Markdown, source, diff, missing, malformed, and truncated fixtures retain
     semantics, copyability, safe keys, and document-first visual priority.
-- `W36-E5-S4-T3` (next) Render the conditional Evidence Inspector with finding, provenance, related
+- `W36-E5-S4-T3` (done) Render the conditional Evidence Inspector with finding, provenance, related
   artifact, and exact source-reference variants.
   - Scope: packaged evidence renderer only.
   - Verification: zero-value evidence hides the inspector while validator, provenance,
     implementation, and legacy fixtures show only retained evidence.
-- `W36-E5-S4-T4` (soon) Integrate live elapsed time, last-output age, real milestones, silence state,
+- `W36-E5-S4-T4` (next) Integrate live elapsed time, last-output age, real milestones, silence state,
   and Open live output into Studio without embedding raw logs in the default viewport.
   - Dependencies: `W36-E6-S3`.
   - Scope: active Studio observation renderer only.

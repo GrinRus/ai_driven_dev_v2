@@ -3613,6 +3613,16 @@ pre {
   gap: var(--space-4);
 }
 
+.studio-evidence-inspector:not([hidden]) {
+  display: grid;
+  gap: var(--space-4);
+}
+
+.studio-evidence-inspector > section {
+  display: grid;
+  gap: var(--space-2);
+}
+
 @media (max-width: 900px) {
   .active-studio-grid,
   .studio-context-identity {

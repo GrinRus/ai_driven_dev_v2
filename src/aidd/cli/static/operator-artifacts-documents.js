@@ -437,6 +437,61 @@ function renderStudioDocumentCanvas(workbench) {
   `;
 }
 
+function studioEvidenceInspectorItemCount(workbench) {
+  return [
+    workbench.requirements,
+    workbench.validation_results,
+    workbench.references,
+    workbench.versions
+  ].reduce((total, items) => total + (Array.isArray(items) ? items.length : 0), 0);
+}
+
+function renderStudioEvidenceInspector(workbench) {
+  const itemCount = studioEvidenceInspectorItemCount(workbench);
+  if (!resolveStudioEvidenceVisibility({inspectorItemCount: itemCount}).inspector) return "";
+  const validation = workbench.validation_results || [];
+  const requirements = workbench.requirements || [];
+  const references = workbench.references || [];
+  const versions = workbench.versions || [];
+  return `
+    <div class="surface-title evidence-inspector-title">
+      <span>Evidence Inspector</span><span class="small-badge">${escapeHtml(itemCount)} retained</span>
+    </div>
+    ${validation.length ? `
+      <section data-inspector-section="findings">
+        <div class="surface-title compact">Findings</div>
+        ${renderValidationResults(validation)}
+      </section>
+    ` : ""}
+    ${requirements.length ? `
+      <section data-inspector-section="source-references">
+        <div class="surface-title compact">Exact source references</div>
+        ${renderRequirementList(requirements)}
+      </section>
+    ` : ""}
+    ${versions.length ? `
+      <section data-inspector-section="provenance">
+        <div class="surface-title compact">Provenance</div>
+        <div class="recent-artifacts">${renderVersionHistory(versions)}</div>
+      </section>
+    ` : ""}
+    ${references.length ? `
+      <section data-inspector-section="related-artifacts">
+        <div class="surface-title compact">Related artifacts</div>
+        <div class="recent-artifacts">${renderWorkbenchReferences(references)}</div>
+      </section>
+    ` : ""}
+  `;
+}
+
+function updateStudioEvidenceInspector(workbench) {
+  const inspector = document.getElementById("studioEvidenceInspector");
+  if (!inspector) return;
+  const markup = renderStudioEvidenceInspector(workbench);
+  inspector.hidden = !markup;
+  inspector.innerHTML = markup;
+}
+
 function renderWorkbenchEvidenceInspector(workbench) {
   const inspectorItemCount = [
     workbench.requirements,
@@ -488,6 +543,7 @@ async function loadArtifactDocument(key) {
     if (studioCanvas) {
       state.activeStudioWorkbench = workbench;
       state.activeStudioWorkbenchError = "";
+      updateStudioEvidenceInspector(workbench);
     }
     if (tree) tree.innerHTML = renderWorkbenchTree(workbench);
     viewer.innerHTML = studioCanvas
@@ -497,6 +553,7 @@ async function loadArtifactDocument(key) {
     if (studioCanvas) {
       state.activeStudioWorkbench = null;
       state.activeStudioWorkbenchError = error.message || "Document Canvas unavailable";
+      updateStudioEvidenceInspector({});
     }
     viewer.innerHTML = `<div class="empty-state">${escapeHtml(error.message)}</div>`;
   }

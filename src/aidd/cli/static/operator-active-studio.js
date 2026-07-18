@@ -82,6 +82,7 @@ function renderActiveStudio() {
         ${renderActiveStudioDocumentSlot(studioState)}
         ${renderActiveStudioStageSummary(item)}
       </div>
+      <aside id="studioEvidenceInspector" class="surface studio-evidence-inspector" hidden></aside>
     </section>
   `;
 }
