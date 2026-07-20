@@ -17,6 +17,7 @@ def test_follow_up_definition_survives_back_and_reload(tmp_path: Path) -> None:
     ) as harness, harness.open_page((1280, 900)) as browser_page:
         page = browser_page.page
         page.goto(harness.url, wait_until="networkidle")
+        page.locator(".studio-flow-complete-other summary").click()
         page.locator('[data-next-flow-action="start-follow-up-flow"]').first.click()
         page.locator("[data-next-flow-continue]").click()
         title = page.locator('[data-follow-up-field="title"]')
@@ -29,6 +30,7 @@ def test_follow_up_definition_survives_back_and_reload(tmp_path: Path) -> None:
         assert title.input_value() == "Follow up on the retained QA evidence"
 
         page.reload(wait_until="networkidle")
+        page.locator(".studio-flow-complete-other summary").click()
         page.locator('[data-next-flow-action="start-follow-up-flow"]').first.click()
         page.locator("[data-next-flow-continue]").click()
         restored = page.locator('[data-follow-up-field="title"]')

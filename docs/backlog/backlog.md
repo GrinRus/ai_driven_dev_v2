@@ -7,14 +7,16 @@ slice, and local task.
 
 ## Next
 
-- `W36-E7-S4-T3` — Run the canonical medium scenario through Codex to clean terminal quality.
+- `W36-E7-S4-T8` — Restore the accepted mobile Studio header bound.
 
 ## Soon
 
-- `W36-E7-S4-T4` — Repeat the medium scenario through Claude Code from an independent root.
+- `W36-E7-S4-T9` — Separate intentional browser cancellation from network failure.
 
 ## Parking lot
 
+- `W36-E7-S4-T3` — Run the canonical medium scenario through Codex to clean terminal quality.
+- `W36-E7-S4-T4` — Repeat the medium scenario through Claude Code from an independent root.
 - `W36-E7-S3-T2` — Record five first-time-operator sessions after initial live hardening.
 - `W36-E7-S3-T3` — Reconcile observed session findings before beta readiness.
 - `W36-E7-S4-T5` — Record final same-revision Codex and Claude acceptance evidence.
@@ -33,6 +35,18 @@ slice, and local task.
   queue-restoration policy in `docs/backlog/roadmap.md` (`W8-E3-S1`).
 
 ## Current reconciliation
+
+- `2026-07-20` `W36-E7-S4-T7` is complete: generic browser descriptors now read exact
+  core-owned runtime selection and terminal recommendations, and clean-terminal follow-up draft
+  coverage opens the supported secondary-action disclosure before preserving its session state.
+  Twenty rendered fixture/draft cases pass. Mobile header correction `T8` is promoted to `Next`,
+  followed by route-cancellation diagnostics `T9`.
+
+- `2026-07-20` the first clean sequential full browser gate reached 179 passes and exposed
+  three independent acceptance defects: stale generic fixture actions/markers, a reproducible
+  81-pixel mobile header against the 80-pixel contract, and intentional route-reload request
+  cancellation reported as network failure. Tasks `S4-T7..T9` split those outputs; `T7` is
+  promoted to `Next`, while provider execution remains parked behind a green full browser gate.
 
 - `2026-07-20` `W36-E7-S4-T6` is complete: active-Studio shell, Document Canvas, and
   Evidence Inspector browser contracts now use a nonterminal stale-QA fixture, while fresh

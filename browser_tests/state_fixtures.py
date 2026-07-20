@@ -481,7 +481,7 @@ def build_browser_state_fixture(
             route="studio",
             context_keys=("project", "work_item"),
             surface="Studio",
-            action="Run workflow",
+            action="Select runtime",
             marker="no-run",
             work_item=work_item,
             run_id=run_id,
@@ -935,14 +935,21 @@ def build_browser_state_fixture(
                 "terminal-handoff-failed": "not-ready",
             }[state]
         _write_qa_report(workspace_root, verdict, work_item=work_item)
+        terminal_expectations = {
+            "terminal-handoff": ("Create New Work Item", "completed"),
+            "terminal-handoff-warning": ("Start Follow-up Flow", "completed-with-warning"),
+            "terminal-handoff-failed": ("Start Follow-up Flow", "failed"),
+            "terminal-handoff-blocked": ("Start Follow-up Flow", "blocked"),
+        }
+        action, marker = terminal_expectations[state]
         return _descriptor(
             name=state,
             project_root=project_root,
             route="studio",
             context_keys=("project", "work_item", "run", "stage", "document"),
             surface="Flow Complete",
-            action="Start Next Flow",
-            marker="review-complete",
+            action=action,
+            marker=marker,
             work_item=work_item,
             run_id=run_id,
         )
