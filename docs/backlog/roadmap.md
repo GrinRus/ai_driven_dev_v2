@@ -11719,7 +11719,8 @@ Local tasks:
     tracked source, forbidden product imports, or live-scenario literals in runtime product code.
 - `W36-E7-S4-T3` (next) Run `AIDD-LIVE-007` through Codex to a clean terminal result with
   manual stage-quality and rendered Studio evidence.
-  - Dependencies: `W36-E7-S4-T2`, `W36-E7-S4-T6` as the direct queue predecessor.
+  - Dependencies: `W36-E7-S4-T2`, `W36-E7-S4-T6`, and `W36-E7-S4-T10` as the
+    live-discovered direct queue predecessor.
   - Scope: external Codex live execution and evidence only.
   - Verification: installed-wheel `idea -> qa`, target verification, complete audits, terminal
     reports, and bounded Chromium evidence pass from an external run root.
@@ -11759,6 +11760,15 @@ Local tasks:
   - Scope: browser diagnostics and route-restoration tests only.
   - Verification: intentional `ERR_ABORTED` requests are recorded as cancellations while console,
     page, blocked-origin, HTTP, and real request failures remain gating.
+- `W36-E7-S4-T10` (done) Allow public stepwise stage execution to continue canonically inside
+  the same unbounded run without mutating its manifest identity.
+  - Dependencies: `W36-E7-S4-T2` as the live-discovery predecessor; blocks the active Codex
+    acceptance task `W36-E7-S4-T3`.
+  - Scope: core run-manifest compatibility, CLI stage-run regression coverage, and planning
+    reconciliation only; no scenario, provider, or target-specific branch.
+  - Verification: an explicit run may advance `idea -> research -> plan` only after each prior
+    stage succeeded, while skipped, failed, backward, runtime-mismatched, and config-mismatched
+    reuse remains fail-closed and immutable manifest identity fields do not change.
 
 Exit evidence:
 

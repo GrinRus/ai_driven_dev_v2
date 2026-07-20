@@ -10,13 +10,19 @@ from typer.testing import CliRunner
 
 from aidd.adapters.runtime_artifacts import RUNTIME_EXIT_METADATA_FILENAME
 from aidd.cli.main import _active_prompt_pack_paths, _prefix_stream_chunk, app
-from aidd.cli.stage_run import _CliRuntimeOperatorDecisionProvider
+from aidd.cli.stage_run import (
+    StageRunOptions,
+    _CliRuntimeOperatorDecisionProvider,
+    _resolve_stage_run_config,
+    _write_run_manifest,
+)
 from aidd.core.run_lookup import latest_run_id
 from aidd.core.run_store import (
     RUN_EVENTS_JSONL_FILENAME,
     RUN_RUNTIME_JSONL_FILENAME,
     RUN_RUNTIME_LOG_FILENAME,
     create_run_manifest,
+    persist_stage_status,
     run_attempt_artifact_index_path,
 )
 from aidd.core.runtime_operator import RuntimeOperatorRequest
@@ -471,6 +477,78 @@ def test_stage_run_executes_generic_cli_stage_and_streams_with_log_follow(
     )
     metadata_payload = json.loads(metadata_path.read_text(encoding="utf-8"))
     assert metadata_payload["repair_history"] == []
+
+
+def test_stage_run_continues_canonical_next_stage_in_explicit_unbounded_run(
+    tmp_path: Path,
+) -> None:
+    workspace_root = tmp_path / ".aidd"
+    work_item = "WI-STEPWISE"
+    run_id = "run-stepwise"
+    _materialize_plan_inputs(workspace_root=workspace_root, work_item=work_item)
+    writer_script = _write_runtime_writer_script(
+        tmp_path=tmp_path,
+        documents=_valid_plan_output_documents(),
+        exit_code=0,
+    )
+    runtime_command = f"{shlex.quote(sys.executable)} {shlex.quote(writer_script.as_posix())}"
+    config_path = _write_cli_config(tmp_path=tmp_path, runtime_command=runtime_command)
+    initial_options = StageRunOptions(
+        stage="research",
+        work_item=work_item,
+        runtime="generic-cli",
+        run_id=run_id,
+        root=workspace_root,
+        config=config_path,
+        log_follow=False,
+    )
+    runtime_config = _resolve_stage_run_config(initial_options)
+    _write_run_manifest(
+        options=initial_options,
+        runtime_config=runtime_config,
+        run_id=run_id,
+    )
+    persist_stage_status(
+        workspace_root=workspace_root,
+        work_item=work_item,
+        run_id=run_id,
+        stage="research",
+        status="succeeded",
+    )
+
+    result = runner.invoke(
+        app,
+        [
+            "stage",
+            "run",
+            "plan",
+            "--work-item",
+            work_item,
+            "--runtime",
+            "generic-cli",
+            "--run-id",
+            run_id,
+            "--root",
+            str(workspace_root),
+            "--config",
+            str(config_path),
+            "--no-log-follow",
+        ],
+    )
+
+    assert result.exit_code == 0, result.output
+    manifest = json.loads(
+        (
+            workspace_root
+            / "reports"
+            / "runs"
+            / work_item
+            / run_id
+            / "run-manifest.json"
+        ).read_text(encoding="utf-8")
+    )
+    assert manifest["stage_target"] == "research"
+    assert "AIDD stage run: stage=plan" in result.stdout
 
 
 def test_stage_run_without_log_follow_omits_stream_prefixes(tmp_path: Path) -> None:

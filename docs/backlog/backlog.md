@@ -7,7 +7,7 @@ slice, and local task.
 
 ## Next
 
-- `W36-E7-S4-T3` — Run the canonical medium scenario through Codex to clean terminal quality.
+- `W36-E7-S4-T3` — Rerun the canonical medium scenario through Codex after the continuation fix.
 
 ## Soon
 
@@ -33,6 +33,19 @@ slice, and local task.
   queue-restoration policy in `docs/backlog/roadmap.md` (`W8-E3-S1`).
 
 ## Current reconciliation
+
+- `2026-07-20` `W36-E7-S4-T10` is complete: immutable unbounded run manifests now accept only
+  canonical forward stage reuse after every preceding stage in that run has succeeded. Public CLI
+  coverage proves `research -> plan` progression while core matrices keep skipped, failed,
+  backward, runtime-mismatched, and configuration-mismatched reuse fail-closed. The historical
+  failed Codex bundle is retained; `S4-T3` returns to `Next` for a fresh tracked-snapshot run.
+
+- `2026-07-20` the first installed Codex medium run passed `idea` and its quality checkpoint, then
+  exposed a general public-stage continuation defect before `research`: the immutable manifest
+  retained `stage_target=idea`, while the next canonical `stage run research --run-id ...` was
+  rejected as a target mismatch before adapter launch. The historical run is not repaired in
+  place. Bounded core/CLI regression task `W36-E7-S4-T10` is promoted to `Next`; Codex `T3` is
+  explicitly blocked and parked until a fresh tracked-snapshot run can start.
 
 - `2026-07-20` `W36-E7-S4-T9` is complete: browser diagnostics now retain deliberate
   `net::ERR_ABORTED` route-restoration cancellations separately from network failures. The exact
