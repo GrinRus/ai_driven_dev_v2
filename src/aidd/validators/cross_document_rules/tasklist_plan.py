@@ -33,7 +33,11 @@ _COMMAND_PREFIXES = (
 def _ordered_milestones(plan_text: str) -> tuple[str, ...]:
     milestones: list[str] = []
     for _, line in extract_section_lines(plan_text, "Milestones"):
-        match = re.match(r"^\s*[-*+]\s+`?(M[1-9]\d*)`?\s*:", line, re.IGNORECASE)
+        match = re.match(
+            r"^\s*[-*+]\s+`?(M[1-9]\d*)`?(?:\s*:\s*|\s+)",
+            line,
+            re.IGNORECASE,
+        )
         if match is not None:
             milestones.append(match.group(1).upper())
     return tuple(dict.fromkeys(milestones))

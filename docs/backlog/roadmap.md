@@ -11719,7 +11719,7 @@ Local tasks:
     tracked source, forbidden product imports, or live-scenario literals in runtime product code.
 - `W36-E7-S4-T3` (next) Run `AIDD-LIVE-007` through Codex to a clean terminal result with
   manual stage-quality and rendered Studio evidence.
-  - Dependencies: `W36-E7-S4-T14`, `W36-E7-S4-T13`, `W36-E7-S4-T2`, `W36-E7-S4-T6`, `W36-E7-S4-T10`,
+  - Dependencies: `W36-E7-S4-T15`, `W36-E7-S4-T14`, `W36-E7-S4-T13`, `W36-E7-S4-T2`, `W36-E7-S4-T6`, `W36-E7-S4-T10`,
     `W36-E7-S4-T11`, and `W36-E7-S4-T12` as live-discovered queue
     predecessors.
   - Scope: external Codex live execution and evidence only.
@@ -11810,6 +11810,16 @@ Local tasks:
     sequential API probe has a bounded 10-second response budget, slow fixtures beyond the legacy
     two-second probe boundary succeed, and true startup/probe hangs still fail with truthful
     timeout evidence and process cleanup.
+- `W36-E7-S4-T15` (done) Align tasklist-plan milestone discovery with the canonical plan grammar
+  accepted by production validation.
+  - Dependencies: `W36-E7-S4-T14` as the live-discovery predecessor; blocks the active Codex
+    acceptance task `W36-E7-S4-T3`.
+  - Scope: runtime-neutral cross-document milestone parsing, validator regression coverage, and
+    planning reconciliation only; provider adapters, prompts, scenario manifests, and target
+    product code remain unchanged.
+  - Verification: list milestones written as either `- M1: description` or canonical
+    `- M1 description` produce the same known milestone set, missing card references yield
+    `CROSS-TASKLIST-PLAN-MILESTONE`, and dependency plus exact verification checks remain active.
 
 Exit evidence:
 

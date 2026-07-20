@@ -7,7 +7,7 @@ slice, and local task.
 
 ## Next
 
-- `W36-E7-S4-T3` — Rerun Codex with bounded installed-UI checkpoint budgets.
+- `W36-E7-S4-T3` — Rerun Codex after milestone-validation correction.
 
 ## Soon
 
@@ -33,6 +33,22 @@ slice, and local task.
   queue-restoration policy in `docs/backlog/roadmap.md` (`W8-E3-S1`).
 
 ## Current reconciliation
+
+- `2026-07-20` `W36-E7-S4-T15` is complete: tasklist/plan cross-validation now recognizes both
+  colon-delimited and canonical whitespace-delimited milestone list items. A provider-free
+  regression replays the missed grammar and proves unmapped cards plus uncovered milestones no
+  longer skip validation; dependency and exact-command checks retain their existing behavior.
+  The historical live tasklist now produces ten high milestone findings under the corrected
+  source validator. Focused checks, frontend tests, Ruff, mypy, and all 1947 Python tests pass.
+  Codex `T3` returns to `Next`; Claude `T4` is its direct successor.
+
+- `2026-07-20` the fresh `ee30835` Codex run passed and was manually audited through
+  `review-spec`, then exposed a tasklist/plan validator gap before implementation. The generated
+  task cards omitted exact `M1`-`M5` references, but cross-document validation reported pass
+  because its milestone collector accepted only `- M1: ...` while the production plan grammar
+  accepted `- M1 ...`. The external run remains historical at `awaiting-quality-review`.
+  Runtime-neutral validator task `W36-E7-S4-T15` is promoted to `Next`; Codex `T3` remains blocked
+  pending regression coverage, full checks, and another fresh tracked-snapshot run.
 
 - `2026-07-20` `W36-E7-S4-T14` is complete: installed-UI checkpoints now give cold startup a
   bounded 30-second deadline and each sequential API request a bounded 10-second response budget.

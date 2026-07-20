@@ -152,6 +152,7 @@ def _write_plan_tasklist_pair(
     task_one_milestone: str = "M1",
     task_two_milestone: str = "M2",
     task_two_command: str = "uv run pytest -q tests/api",
+    milestone_separator: str = ": ",
 ) -> None:
     work_item_root = workspace_root / "workitems" / "WI-001" / "stages"
     plan_output = work_item_root / "plan" / "output"
@@ -161,8 +162,8 @@ def _write_plan_tasklist_pair(
     plan_output.joinpath("plan.md").write_text(
         "# Plan\n\n"
         "## Milestones\n\n"
-        "- M1: Add the model.\n"
-        "- M2: Add the API.\n\n"
+        f"- M1{milestone_separator}Add the model.\n"
+        f"- M2{milestone_separator}Add the API.\n\n"
         "## Dependencies\n\n"
         "- M2 depends on M1.\n\n"
         "## Verification notes\n\n"
@@ -190,7 +191,7 @@ def _write_plan_tasklist_pair(
         "- T2: T1\n\n"
         "## Verification notes\n\n"
         f"- T1: {task_one_milestone} `uv run pytest -q tests/model`\n"
-        f"- T2: M2 `{task_two_command}`\n",
+        f"- T2: {task_two_milestone} `{task_two_command}`\n",
         encoding="utf-8",
     )
 
@@ -208,6 +209,48 @@ def test_tasklist_plan_cross_validation_accepts_exact_milestone_bindings(
     )
 
     assert findings == ()
+
+
+def test_tasklist_plan_cross_validation_accepts_canonical_whitespace_milestones(
+    tmp_path: Path,
+) -> None:
+    workspace_root = tmp_path / ".aidd"
+    _write_plan_tasklist_pair(workspace_root, milestone_separator=" ")
+
+    findings = validate_cross_document_consistency(
+        stage="tasklist",
+        work_item="WI-001",
+        workspace_root=workspace_root,
+    )
+
+    assert findings == ()
+
+
+def test_tasklist_plan_cross_validation_does_not_skip_unmapped_whitespace_milestones(
+    tmp_path: Path,
+) -> None:
+    workspace_root = tmp_path / ".aidd"
+    _write_plan_tasklist_pair(
+        workspace_root,
+        task_one_milestone="unmapped",
+        task_two_milestone="unmapped",
+        milestone_separator=" ",
+    )
+
+    findings = validate_cross_document_consistency(
+        stage="tasklist",
+        work_item="WI-001",
+        workspace_root=workspace_root,
+    )
+
+    milestone_findings = [item for item in findings if item.code == TASKLIST_PLAN_MILESTONE_CODE]
+    assert len(milestone_findings) == 4
+    assert {item.message for item in milestone_findings} >= {
+        "Task `T1` maps to no plan milestone; cite an existing milestone id.",
+        "Task `T2` maps to no plan milestone; cite an existing milestone id.",
+        "Plan milestone `M1` is not covered by any task card.",
+        "Plan milestone `M2` is not covered by any task card.",
+    }
 
 
 def test_tasklist_plan_cross_validation_reports_unknown_and_uncovered_milestones(
