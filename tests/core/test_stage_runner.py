@@ -69,6 +69,7 @@ from aidd.core.stage_runner import (
     run_structural_validation_after_output_discovery,
     update_stage_unblock_state,
 )
+from aidd.core.stage_terminal import reconcile_stage_result_after_validation_pass
 from aidd.core.state_machine import StageState, is_terminal_state, transition_stage_state
 from aidd.runtime_permissions import (
     RuntimeOperatorDecisionAction,
@@ -3585,6 +3586,44 @@ def test_decide_post_validation_transition_reconciles_stale_stage_result_on_pass
     assert "stale runtime draft status/verdict was normalized" in stage_result_text
     published_stage_result = stage_result_path.parent / "output" / "stage-result.md"
     assert "- Status: `succeeded`" in published_stage_result.read_text(encoding="utf-8")
+
+
+def test_successful_stage_result_reconciliation_is_idempotent_and_deduplicates_verdicts(
+    tmp_path: Path,
+) -> None:
+    workspace_root = tmp_path / ".aidd"
+    stage_root = workspace_root / "workitems" / "WI-001" / "stages" / "plan"
+    stage_root.mkdir(parents=True)
+    stage_result_path = stage_root / "stage-result.md"
+    stage_result_path.write_text(
+        "# Stage Result\n\n"
+        "## Status\n\n- `succeeded`\n\n"
+        "## Produced outputs\n\n- `plan.md`\n\n"
+        "## Validation summary\n\n"
+        "- Validator verdict: `pass`\n"
+        "- Validator verdict: `pass`\n"
+        "- Validator verdict: pass\n\n"
+        "## Next actions\n\n- Continue to `review-spec`.\n\n"
+        "## Terminal state notes\n\n- Ready.\n",
+        encoding="utf-8",
+    )
+
+    reconcile_stage_result_after_validation_pass(
+        workspace_root=workspace_root,
+        work_item="WI-001",
+        stage="plan",
+    )
+    first_reconciliation = stage_result_path.read_bytes()
+    reconcile_stage_result_after_validation_pass(
+        workspace_root=workspace_root,
+        work_item="WI-001",
+        stage="plan",
+    )
+
+    reconciled_text = stage_result_path.read_text(encoding="utf-8")
+    assert stage_result_path.read_bytes() == first_reconciliation
+    assert reconciled_text.count("Validator verdict: `pass`") == 1
+    assert reconciled_text.count("Validator verdict:") == 1
 
 
 def test_decide_post_validation_transition_does_not_reconcile_when_questions_block(

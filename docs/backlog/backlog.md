@@ -7,7 +7,7 @@ slice, and local task.
 
 ## Next
 
-- `W36-E7-S4-T3` — Rerun the canonical medium scenario through Codex after validation repair fix.
+- `W36-E7-S4-T3` — Rerun the canonical medium scenario through Codex after reconciliation fix.
 
 ## Soon
 
@@ -33,6 +33,17 @@ slice, and local task.
   queue-restoration policy in `docs/backlog/roadmap.md` (`W8-E3-S1`).
 
 ## Current reconciliation
+
+- `2026-07-20` `W36-E7-S4-T12` is complete: validator-verdict reconciliation now distinguishes
+  an existing byte-equal canonical match from an absent field, collapses legacy duplicates, and
+  is byte-stable across repeated calls. Focused core/CLI and full stage-run matrices pass. Codex
+  `T3` returns to `Next` for another fresh tracked-snapshot run, followed by Claude `T4`.
+
+- `2026-07-20` the first `9fde2f1` Codex idea checkpoint exposed non-idempotent success
+  reconciliation: an already canonical validator-verdict line was treated as if no regex match
+  existed because replacement text was byte-equal, so each reconciliation appended another
+  `Validator verdict: pass`. The run is stopped before research. Bounded terminal-normalization
+  task `W36-E7-S4-T12` is promoted to `Next`; Codex `T3` remains blocked pending a fresh run.
 
 - `2026-07-20` `W36-E7-S4-T11` is complete: success-owned stage-result fields are normalized and
   fully validated before the repair-budget decision. Duplicate/non-monotonic attempt history now
