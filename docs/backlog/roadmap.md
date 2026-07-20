@@ -11747,13 +11747,13 @@ Local tasks:
   - Scope: browser fixture descriptors and next-flow test navigation only.
   - Verification: no-run selects a runtime, clean QA creates new work, warning/failed/blocked QA
     starts a follow-up, and secondary follow-up draft navigation remains durable.
-- `W36-E7-S4-T8` (next) Restore the accepted 80-pixel mobile Studio header bound without reducing
+- `W36-E7-S4-T8` (done) Restore the accepted 80-pixel mobile Studio header bound without reducing
   touch target size or changing desktop composition.
   - Dependencies: `W36-E7-S4-T7` as the direct queue predecessor.
   - Scope: token-driven mobile Studio layout only.
   - Verification: both mobile viewports keep a header at or below 80 pixels, 44-pixel controls,
     primary-before-maintenance order, and no horizontal overflow.
-- `W36-E7-S4-T9` (soon) Distinguish deliberate browser request cancellation from failed network
+- `W36-E7-S4-T9` (next) Distinguish deliberate browser request cancellation from failed network
   requests during canonical Back/Forward/reload restoration.
   - Dependencies: `W36-E7-S4-T8` as the direct queue predecessor.
   - Scope: browser diagnostics and route-restoration tests only.

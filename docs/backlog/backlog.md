@@ -7,11 +7,10 @@ slice, and local task.
 
 ## Next
 
-- `W36-E7-S4-T8` — Restore the accepted mobile Studio header bound.
+- `W36-E7-S4-T9` — Separate intentional browser cancellation from network failure.
 
 ## Soon
 
-- `W36-E7-S4-T9` — Separate intentional browser cancellation from network failure.
 
 ## Parking lot
 
@@ -35,6 +34,11 @@ slice, and local task.
   queue-restoration policy in `docs/backlog/roadmap.md` (`W8-E3-S1`).
 
 ## Current reconciliation
+
+- `2026-07-20` `W36-E7-S4-T8` is complete: the token-driven mobile topbar uses one-pixel
+  vertical padding, restoring the measured 80-pixel maximum while retaining 44-pixel controls,
+  primary-before-maintenance order, desktop composition, and clean frontend behavior at both
+  mobile viewports. Route-cancellation diagnostics `T9` is promoted to `Next`.
 
 - `2026-07-20` `W36-E7-S4-T7` is complete: generic browser descriptors now read exact
   core-owned runtime selection and terminal recommendations, and clean-terminal follow-up draft
