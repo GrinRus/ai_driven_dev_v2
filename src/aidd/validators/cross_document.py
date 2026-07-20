@@ -39,6 +39,7 @@ from aidd.validators.cross_document_rules.tasklist_plan import (
     TASKLIST_PLAN_DEPENDENCY_CODE,
     TASKLIST_PLAN_MILESTONE_CODE,
     TASKLIST_PLAN_VERIFICATION_CODE,
+    TASKLIST_SCOPE_CODE,
     validate_tasklist_plan,
 )
 from aidd.validators.models import ValidationFinding
@@ -87,5 +88,6 @@ __all__ = [
     "TASKLIST_PLAN_DEPENDENCY_CODE",
     "TASKLIST_PLAN_MILESTONE_CODE",
     "TASKLIST_PLAN_VERIFICATION_CODE",
+    "TASKLIST_SCOPE_CODE",
     "validate_cross_document_consistency",
 ]

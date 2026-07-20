@@ -603,6 +603,28 @@ def test_tasklist_contract_prompts_and_repair_name_canonical_milestone_locations
     assert "the canonical rich-task grammar ignores it" in " ".join(repair_prompt.split())
 
 
+def test_tasklist_contract_and_prompts_enforce_canonical_allowed_scope() -> None:
+    paths = (
+        "contracts/stages/tasklist.md",
+        "contracts/documents/tasklist.md",
+        "prompt-packs/stages/tasklist/system.md",
+        "prompt-packs/stages/tasklist/run.md",
+        "prompt-packs/stages/tasklist/repair.md",
+    )
+
+    for path in paths:
+        text = Path(path).read_text(encoding="utf-8")
+        assert "allowed-write-scope.md" in text
+        assert "task-local" in text or "task `In scope`" in text
+
+    run_prompt = Path("prompt-packs/stages/tasklist/run.md").read_text(encoding="utf-8")
+    repair_prompt = Path("prompt-packs/stages/tasklist/repair.md").read_text(
+        encoding="utf-8"
+    )
+    assert "Do not propose an out-of-bound preferred path" in run_prompt
+    assert "do not edit, broaden, or reinterpret that context document" in repair_prompt
+
+
 def test_tasklist_prompts_are_live_installed_workspace_safe() -> None:
     run_prompt = Path("prompt-packs/stages/tasklist/run.md").read_text(
         encoding="utf-8"

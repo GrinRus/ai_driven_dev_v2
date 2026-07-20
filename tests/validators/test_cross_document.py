@@ -23,6 +23,7 @@ from aidd.validators.cross_document import (
     TASKLIST_PLAN_DEPENDENCY_CODE,
     TASKLIST_PLAN_MILESTONE_CODE,
     TASKLIST_PLAN_VERIFICATION_CODE,
+    TASKLIST_SCOPE_CODE,
     validate_cross_document_consistency,
 )
 from aidd.validators.models import ValidationFinding, ValidationIssueLocation
@@ -196,6 +197,21 @@ def _write_plan_tasklist_pair(
     )
 
 
+def _write_allowed_scope(workspace_root: Path, *paths: str) -> None:
+    scope_path = (
+        workspace_root
+        / "workitems"
+        / "WI-001"
+        / "context"
+        / "allowed-write-scope.md"
+    )
+    scope_path.parent.mkdir(parents=True, exist_ok=True)
+    scope_path.write_text(
+        "# Allowed Write Scope\n\n" + "".join(f"- `{path}`\n" for path in paths),
+        encoding="utf-8",
+    )
+
+
 def _write_tasklist_with_all_canonical_milestone_locations(workspace_root: Path) -> None:
     work_item_root = workspace_root / "workitems" / "WI-001" / "stages"
     plan_output = work_item_root / "plan" / "output"
@@ -259,6 +275,119 @@ def test_tasklist_plan_cross_validation_accepts_exact_milestone_bindings(
     )
 
     assert findings == ()
+
+
+def test_tasklist_scope_accepts_exact_files(
+    tmp_path: Path,
+) -> None:
+    workspace_root = tmp_path / ".aidd"
+    _write_plan_tasklist_pair(workspace_root)
+    _write_allowed_scope(workspace_root, "src/model.py", "src/api.py")
+
+    findings = validate_cross_document_consistency(
+        stage="tasklist",
+        work_item="WI-001",
+        workspace_root=workspace_root,
+    )
+
+    assert findings == ()
+
+
+def test_tasklist_scope_accepts_directory_descendants(tmp_path: Path) -> None:
+    workspace_root = tmp_path / ".aidd"
+    _write_plan_tasklist_pair(workspace_root)
+    _write_allowed_scope(workspace_root, "src")
+
+    findings = validate_cross_document_consistency(
+        stage="tasklist",
+        work_item="WI-001",
+        workspace_root=workspace_root,
+    )
+
+    assert findings == ()
+
+
+def test_tasklist_scope_rejects_live_discovered_out_of_boundary_card_paths(
+    tmp_path: Path,
+) -> None:
+    workspace_root = tmp_path / ".aidd"
+    _write_plan_tasklist_pair(workspace_root)
+    tasklist_path = (
+        workspace_root / "workitems" / "WI-001" / "stages" / "tasklist" / "tasklist.md"
+    )
+    tasklist_path.write_text(
+        tasklist_path.read_text(encoding="utf-8").replace(
+            "- In scope: `src/model.py`.",
+            "- In scope: `src/utils/error.ts`, `src/utils`, and `package.json`.",
+        ),
+        encoding="utf-8",
+    )
+    _write_allowed_scope(
+        workspace_root,
+        "src/compose.ts",
+        "src/hono-base.ts",
+        "src/compose.test.ts",
+        "src/hono.test.ts",
+    )
+
+    findings = validate_cross_document_consistency(
+        stage="tasklist",
+        work_item="WI-001",
+        workspace_root=workspace_root,
+    )
+
+    scope_findings = [item for item in findings if item.code == TASKLIST_SCOPE_CODE]
+    assert len(scope_findings) == 2
+    assert scope_findings[0].location.line_number == 5
+    assert "Task `T1`" in scope_findings[0].message
+    assert "src/utils/error.ts, src/utils, package.json" in scope_findings[0].message
+    assert "do not broaden the global scope" in scope_findings[0].message
+    assert "Task `T2`" in scope_findings[1].message
+
+
+def test_tasklist_scope_uses_component_boundaries(tmp_path: Path) -> None:
+    workspace_root = tmp_path / ".aidd"
+    _write_plan_tasklist_pair(workspace_root)
+    tasklist_path = (
+        workspace_root / "workitems" / "WI-001" / "stages" / "tasklist" / "tasklist.md"
+    )
+    tasklist_path.write_text(
+        tasklist_path.read_text(encoding="utf-8").replace(
+            "- In scope: `src/api.py`.",
+            "- In scope: `src2/api.py`.",
+        ),
+        encoding="utf-8",
+    )
+    _write_allowed_scope(workspace_root, "src")
+
+    findings = validate_cross_document_consistency(
+        stage="tasklist",
+        work_item="WI-001",
+        workspace_root=workspace_root,
+    )
+
+    scope_findings = [item for item in findings if item.code == TASKLIST_SCOPE_CODE]
+    assert len(scope_findings) == 1
+    assert "src2/api.py" in scope_findings[0].message
+
+
+def test_tasklist_scope_reports_malformed_canonical_document(tmp_path: Path) -> None:
+    workspace_root = tmp_path / ".aidd"
+    _write_plan_tasklist_pair(workspace_root)
+    _write_allowed_scope(workspace_root, "../src")
+
+    findings = validate_cross_document_consistency(
+        stage="tasklist",
+        work_item="WI-001",
+        workspace_root=workspace_root,
+    )
+
+    scope_findings = [item for item in findings if item.code == TASKLIST_SCOPE_CODE]
+    assert len(scope_findings) == 1
+    assert "Canonical allowed write scope is malformed" in scope_findings[0].message
+    assert scope_findings[0].location.workspace_relative_path.endswith(
+        "context/allowed-write-scope.md"
+    )
 
 
 def test_tasklist_plan_cross_validation_accepts_every_canonical_mapping_location(

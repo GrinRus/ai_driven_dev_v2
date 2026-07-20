@@ -21,6 +21,7 @@ notes, and a concrete verification signal.
   - `context/acceptance-criteria.md`
   - `context/verification-output.md`
   - `context/verification-artifacts.md`
+  - `context/allowed-write-scope.md`
   - `context/constraints.md`
   - `context/previous-decisions.md`
 - contract of record:
@@ -79,6 +80,10 @@ normalize if canonical validation proves the terminal status inconsistent.
    `In scope` must name at least one backticked repository-relative file or directory prefix.
    Do not use absolute paths, `..` traversal, or glob syntax. Explanatory prose does not replace
    concrete path prefixes.
+   When `context/allowed-write-scope.md` exists, read it before decomposition and keep every
+   task-local prefix equal to or beneath one listed canonical prefix on a component boundary.
+   Do not propose an out-of-bound preferred path with an in-scope fallback: choose a permitted
+   deliverable or ask a blocking question when the plan cannot be implemented inside the boundary.
 3. Record explicit dependencies for every task (`none` or concrete task/upstream ids).
 4. Map every task to at least one existing plan milestone by writing the exact `M<n>` id in the
    task's `Outcome`, optional `Context`, a nested acceptance criterion, or the task's dedicated
@@ -126,7 +131,9 @@ normalize if canonical validation proves the terminal status inconsistent.
    mention an authored command, quote it exactly rather than paraphrasing executable details.
 6. When naming JS/TS helper or module paths, include export-map/public-surface evidence in the
    task notes before calling the path private or internal-only.
-7. Update `stage-result.md` and `validator-report.md` so readiness, blockers, and next actions are
+7. If `context/allowed-write-scope.md` exists, compare every concrete `In scope` prefix against it
+   before writing success; a similar string prefix such as `src2` is not inside `src`.
+8. Update `stage-result.md` and `validator-report.md` so readiness, blockers, and next actions are
    consistent with tasklist content.
    When tasklist and validation evidence support success, `stage-result.md` `Next actions` must
    name the exact immediate canonical downstream stage id: `implement`. Do not write only generic
@@ -153,6 +160,7 @@ normalize if canonical validation proves the terminal status inconsistent.
   or its dedicated `Verification notes` entry, and every plan milestone is covered,
 - no task relies on an unsupported `Milestone` or `Plan milestone` field,
 - every in-scope boundary contains safe backticked repository-relative path prefixes,
+- every task-local prefix is inside canonical `context/allowed-write-scope.md` when present,
 - verification notes are concrete, task-specific, and include every declared task id,
 - command-only or verification-only task ids are present in the dedicated `Verification notes`
   section, not only in `Ordered tasks`,

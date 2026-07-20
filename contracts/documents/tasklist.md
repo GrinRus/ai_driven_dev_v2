@@ -23,6 +23,8 @@ Break the plan into reviewable implementation tasks with sequencing and verifica
   `In scope` field,
 - `In scope` contains at least one backticked repository-relative file or directory prefix;
   absolute paths, `..` traversal, and glob syntax are invalid,
+- when the work item has `context/allowed-write-scope.md`, every `In scope` prefix is equal to an
+  allowed prefix or is its descendant on a path-component boundary,
 - every task card contains at least one task-local acceptance criterion whose stable id
   matches `<task-id>-AC<n>`,
 - acceptance criterion ids are unique across the document,
@@ -59,4 +61,5 @@ Plan milestone ids may appear in `Outcome`, `Context`, acceptance-criterion text
 dedicated `Verification notes` entry. Do not add a separate `Milestone` or `Plan milestone` field.
 Backticked task-scope paths use exact-file or directory-prefix semantics. They are enforced even
 when no global allowed-write scope exists; when global scope exists, the effective boundary is the
-intersection of task-local and global scope.
+intersection of task-local and global scope, and Tasklist validation rejects an empty or
+out-of-bound intersection before implementation begins.

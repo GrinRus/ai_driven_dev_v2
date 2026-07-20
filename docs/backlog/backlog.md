@@ -7,16 +7,17 @@ slice, and local task.
 
 ## Next
 
-- `W36-E7-S4-T3` — Rerun Codex after approval confirmation race regression coverage.
+- `W36-E7-S4-T19` — Make terminal active-job reconciliation wait for durable Studio readback.
 
 ## Soon
 
-- `W36-E7-S4-T4` — Repeat the medium scenario through Claude Code from an independent root.
+- none
 
 ## Parking lot
 
 - `W36-E7-S3-T2` — Record five first-time-operator sessions after initial live hardening.
 - `W36-E7-S3-T3` — Reconcile observed session findings before beta readiness.
+- `W36-E7-S4-T4` — Repeat the medium scenario through Claude Code from an independent root.
 - `W36-E7-S4-T5` — Record final same-revision Codex and Claude acceptance evidence.
 
 ## Update rules
@@ -33,6 +34,32 @@ slice, and local task.
   queue-restoration policy in `docs/backlog/roadmap.md` (`W8-E3-S1`).
 
 ## Current reconciliation
+
+- `2026-07-20` the post-`T18` full browser gate passed 56 cases before the active-Studio journey
+  timed out at `1440x900` after cancellation: volatile `activeJobId` had already cleared, while
+  persisted `runtime.log` had not rendered. The exact case then passed six isolated reruns, with
+  duration varying from 17 to 69 seconds. Source inspection identifies a presentation ordering
+  race: terminal reconciliation clears volatile job state after dashboard readback but before
+  project-home/Inbox readback and final render. `W36-E7-S4-T19` is promoted to `Next`; Codex `T3`
+  remains blocked until a deterministic regression and a clean full browser lane.
+
+- `2026-07-20` `W36-E7-S4-T18` is complete: Tasklist cross-document validation now resolves the
+  canonical allowed-write scope and rejects each task card containing an out-of-bound local path
+  with actionable `SEM-TASK-SCOPE-MISMATCH` evidence before Implement begins. Contracts plus
+  initial and repair prompts require component-boundary containment and prohibit widening the
+  operator-authored global scope. Provider-free coverage includes exact paths, permitted
+  descendants, the live-discovered incompatible-card shape, `src`/`src2`, malformed scope, and
+  the existing unrestricted behavior when the optional document is absent. Codex `T3` returns to
+  `Next`; Claude `T4` is its direct successor on the same accepted revision.
+
+- `2026-07-20` fresh Codex run `eval-live-007-codex-20260720T195547Z` on `a4935d8`
+  passed Idea through Tasklist, including canonical milestone repair, then failed closed during
+  the first implementation task. Tasklist had accepted `T1` paths under `src/utils/` and
+  `package.json` even though the authored global scope allowed only four Hono/compose files.
+  Implement preserved three attempts, passing target Vitest and TypeScript checks while refusing
+  publication with `SEM-TASK-SCOPE-MISMATCH`. The first decisive boundary is a runtime-neutral
+  tasklist/allowed-scope validation gap; `W36-E7-S4-T18` is promoted to `Next`, Codex `T3` is
+  blocked pending its regression and a fresh external run, and Claude `T4` returns to Parking.
 
 - `2026-07-20` `W36-E7-S4-T17` is complete: the approvals surface now owns one browser-only
   session-confirmation identity and reason, captures it before polling replaces the DOM, and

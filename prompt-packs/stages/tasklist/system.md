@@ -20,6 +20,8 @@ Non-negotiable rules:
 - write every task as an H3 task card with `Outcome`, `Dominant deliverable`, `In scope`,
   and at least one unique `<task-id>-AC<n>` acceptance criterion,
 - keep one dominant output artifact per task and avoid hidden prerequisite work,
+- if `context/allowed-write-scope.md` exists, keep every task `In scope` path equal to or beneath
+  one canonical allowed prefix; do not widen or work around the operator-authored boundary,
 - include explicit dependencies (`none` or concrete upstream ids) and one primary verification signal per task,
 - map every task to an existing plan milestone by citing its exact `M<n>` id in `Outcome`,
   optional `Context`, a nested acceptance criterion, or its dedicated `Verification notes` entry;

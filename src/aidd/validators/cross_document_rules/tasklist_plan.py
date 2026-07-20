@@ -2,7 +2,11 @@ from __future__ import annotations
 
 import re
 
-from aidd.core.task_plan import TaskCard, TaskPlanParseError, parse_task_plan
+from aidd.core.allowed_write_scope import (
+    AllowedWriteScopeError,
+    resolve_allowed_write_scope,
+)
+from aidd.core.task_plan import TaskCard, TaskPlan, TaskPlanParseError, parse_task_plan
 from aidd.validators.cross_document_rules.context import (
     CrossDocumentContext,
     extract_section_lines,
@@ -13,6 +17,7 @@ from aidd.validators.models import ValidationFinding, ValidationIssueLocation
 TASKLIST_PLAN_MILESTONE_CODE = "CROSS-TASKLIST-PLAN-MILESTONE"
 TASKLIST_PLAN_DEPENDENCY_CODE = "CROSS-TASKLIST-PLAN-DEPENDENCY"
 TASKLIST_PLAN_VERIFICATION_CODE = "CROSS-TASKLIST-PLAN-VERIFICATION"
+TASKLIST_SCOPE_CODE = "SEM-TASK-SCOPE-MISMATCH"
 
 _MILESTONE_ID_PATTERN = re.compile(r"\b(M[1-9]\d*)\b", re.IGNORECASE)
 _COMMAND_PREFIXES = (
@@ -63,6 +68,71 @@ def _task_milestones(task: TaskCard) -> tuple[str, ...]:
     )
 
 
+def _task_line(tasklist_text: str, task_id: str) -> int | None:
+    return next(
+        (
+            number
+            for number, line in enumerate(tasklist_text.splitlines(), start=1)
+            if re.match(rf"^###\s+{re.escape(task_id)}\b", line.strip())
+        ),
+        None,
+    )
+
+
+def _tasklist_scope_findings(
+    context: CrossDocumentContext,
+    task_plan: TaskPlan,
+) -> tuple[ValidationFinding, ...]:
+    try:
+        allowed_scope = resolve_allowed_write_scope(context.workspace_root, context.work_item)
+    except AllowedWriteScopeError as exc:
+        scope_path = (
+            context.workspace_root
+            / "workitems"
+            / context.work_item
+            / "context"
+            / "allowed-write-scope.md"
+        )
+        return (
+            ValidationFinding(
+                TASKLIST_SCOPE_CODE,
+                (
+                    "Canonical allowed write scope is malformed; task-local scope cannot be "
+                    "validated: " + "; ".join(exc.issues)
+                ),
+                "high",
+                ValidationIssueLocation(workspace_relative(scope_path, context.workspace_root)),
+            ),
+        )
+    if allowed_scope is None:
+        return ()
+
+    tasklist_relative = workspace_relative(context.tasklist_path, context.workspace_root)
+    findings: list[ValidationFinding] = []
+    for task in task_plan.tasks:
+        outside = tuple(path for path in task.scope_paths if not allowed_scope.allows(path))
+        if not outside:
+            continue
+        findings.append(
+            ValidationFinding(
+                TASKLIST_SCOPE_CODE,
+                (
+                    f"Task `{task.id}` has `In scope` paths outside canonical "
+                    "`context/allowed-write-scope.md`: "
+                    + ", ".join(outside)
+                    + ". Replace or split the task so every path is an exact allowed prefix "
+                    "or its descendant; do not broaden the global scope."
+                ),
+                "high",
+                ValidationIssueLocation(
+                    tasklist_relative,
+                    _task_line(context.tasklist_text or "", task.id),
+                ),
+            )
+        )
+    return tuple(findings)
+
+
 def _milestone_dependencies(plan_text: str) -> tuple[tuple[str, str], ...]:
     edges: list[tuple[str, str]] = []
     for _, line in extract_section_lines(plan_text, "Dependencies"):
@@ -109,30 +179,27 @@ def _has_ancestor_milestone(
 
 
 def validate_tasklist_plan(context: CrossDocumentContext) -> tuple[ValidationFinding, ...]:
-    if context.stage != "tasklist" or context.tasklist_text is None or context.plan_text is None:
+    if context.stage != "tasklist" or context.tasklist_text is None:
         return ()
     try:
         task_plan = parse_task_plan(context.tasklist_text)
     except TaskPlanParseError:
         return ()
+    findings: list[ValidationFinding] = list(
+        _tasklist_scope_findings(context, task_plan)
+    )
+    if context.plan_text is None:
+        return tuple(findings)
     milestones = _ordered_milestones(context.plan_text)
     if not milestones:
-        return ()
+        return tuple(findings)
     known = set(milestones)
     positions = {milestone: index for index, milestone in enumerate(milestones)}
     mappings = {task.id: _task_milestones(task) for task in task_plan.tasks}
     tasklist_relative = workspace_relative(context.tasklist_path, context.workspace_root)
-    findings: list[ValidationFinding] = []
 
     for task in task_plan.tasks:
-        task_line = next(
-            (
-                number
-                for number, line in enumerate(context.tasklist_text.splitlines(), start=1)
-                if re.match(rf"^###\s+{re.escape(task.id)}\b", line.strip())
-            ),
-            None,
-        )
+        task_line = _task_line(context.tasklist_text, task.id)
         mapped = mappings[task.id]
         unknown = tuple(item for item in mapped if item not in known)
         if not mapped or unknown:

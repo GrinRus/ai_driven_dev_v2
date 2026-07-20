@@ -11717,15 +11717,15 @@ Local tasks:
   - Scope: provider-free harness and architecture tests.
   - Verification: conformance fixtures fail before live execution for overlapping roots, dirty
     tracked source, forbidden product imports, or live-scenario literals in runtime product code.
-- `W36-E7-S4-T3` (next) Run `AIDD-LIVE-007` through Codex to a clean terminal result with
+- `W36-E7-S4-T3` (blocked) Run `AIDD-LIVE-007` through Codex to a clean terminal result with
   manual stage-quality and rendered Studio evidence.
-  - Dependencies: `W36-E7-S4-T17`, `W36-E7-S4-T16`, `W36-E7-S4-T15`, `W36-E7-S4-T14`, `W36-E7-S4-T13`, `W36-E7-S4-T2`, `W36-E7-S4-T6`, `W36-E7-S4-T10`,
+  - Dependencies: `W36-E7-S4-T19`, `W36-E7-S4-T18`, `W36-E7-S4-T17`, `W36-E7-S4-T16`, `W36-E7-S4-T15`, `W36-E7-S4-T14`, `W36-E7-S4-T13`, `W36-E7-S4-T2`, `W36-E7-S4-T6`, `W36-E7-S4-T10`,
     `W36-E7-S4-T11`, and `W36-E7-S4-T12` as live-discovered queue
     predecessors.
   - Scope: external Codex live execution and evidence only.
   - Verification: installed-wheel `idea -> qa`, target verification, complete audits, terminal
     reports, and bounded Chromium evidence pass from an external run root.
-- `W36-E7-S4-T4` (soon) Run `AIDD-LIVE-007` through Claude Code from an independent root on
+- `W36-E7-S4-T4` (parked) Run `AIDD-LIVE-007` through Claude Code from an independent root on
   the same AIDD revision and target pin.
   - Dependencies: `W36-E7-S4-T3` as the direct queue predecessor.
   - Scope: external Claude Code live execution and evidence only.
@@ -11840,6 +11840,28 @@ Local tasks:
   - Verification: opening `Allow session` creates no decision, a concurrent approval readback and
     `renderApprovals()` preserve the exact pending confirmation and reason, explicit confirm writes
     one durable decision, and cancel/terminal readback clears the ephemeral state.
+- `W36-E7-S4-T18` (done) Reject task cards whose local `In scope` paths fall outside an authored
+  canonical allowed-write scope before implementation begins.
+  - Dependencies: `W36-E7-S4-T17` as the live-discovery predecessor; blocks the active Codex
+    acceptance task `W36-E7-S4-T3`.
+  - Scope: runtime-neutral tasklist contract, cross-document validation, tasklist prompts, focused
+    provider-free regression coverage, and planning reconciliation only; implementation task-diff
+    enforcement, provider adapters, scenario manifests, and target product code remain unchanged.
+  - Verification: a tasklist whose card scope includes any prefix outside
+    `context/allowed-write-scope.md` produces an actionable `SEM-TASK-SCOPE-MISMATCH` and enters
+    the normal tasklist repair budget, while exact files, permitted descendants, missing optional
+    scope, malformed scope, and component boundaries remain fail-closed and deterministic.
+- `W36-E7-S4-T19` (next) Keep the active Studio job identity live until terminal durable
+  reconciliation and persisted-log rendering complete.
+  - Dependencies: `W36-E7-S4-T18` as the full-browser-gate discovery predecessor; blocks the
+    active Codex acceptance task `W36-E7-S4-T3`.
+  - Scope: presentation-only active-job terminal reconciliation ordering plus focused frontend and
+    browser regression coverage; job APIs, cancellation semantics, durable evidence, adapters,
+    core orchestration, and live scenario code remain unchanged.
+  - Verification: terminal polling does not clear `activeJobId` while dashboard, project-home, or
+    Inbox durable readback is pending; after readback it atomically releases volatile state and
+    renders persisted `runtime.log`, including the five-viewport active-Studio journey under the
+    full browser lane.
 
 Exit evidence:
 

@@ -33,6 +33,7 @@ is a runtime-authored summary draft that AIDD may normalize after validation, an
 - `context/acceptance-criteria.md`
 - `context/verification-output.md`
 - `context/verification-artifacts.md`
+- `context/allowed-write-scope.md`
 - `context/constraints.md`
 - `context/previous-decisions.md`
 
@@ -52,6 +53,9 @@ Optional context documents may improve task decomposition quality, but they must
     `In scope` fields,
   - at least one safe backticked repository-relative file or directory prefix in every `In scope`
     field; absolute paths, `..` traversal, and glob syntax are invalid,
+  - when `context/allowed-write-scope.md` exists, every task-local `In scope` path must be the
+    exact permitted prefix or one of its descendants; a task must not defer this conflict to
+    implementation or propose an alternative path outside the authored global boundary,
   - at least one unique task-local acceptance criterion per card using the exact id shape
     `<task-id>-AC<n>`,
   - an `Acceptance criteria` field containing those task-local criteria,
@@ -100,6 +104,8 @@ Validators for `tasklist` should check:
   - dependency notes avoid hidden coupling and do not rely on unspecified prerequisites,
   - task cards contain the required outcome, deliverable, scope, and acceptance fields,
   - task-local scope contains safe repository-relative path prefixes,
+  - every task-local prefix is inside canonical `context/allowed-write-scope.md` when that optional
+    document exists, using component-boundary rather than string-prefix matching,
   - acceptance ids are task-local, well-formed, and globally unique,
 - ordering clarity:
   - task order is executable in dependency order and avoids contradictory sequencing,
@@ -152,6 +158,9 @@ Question/answer document rules:
 - AIDD core preserves validator findings and the generated repair brief for every failed attempt
 - milestone-mapping findings and repair briefs name the canonical task-card locations that can
   satisfy the mapping; repair must not invent an unsupported `Milestone` field
+- allowed-scope findings require the affected task card's `In scope` paths to be replaced or split
+  into prefixes permitted by the canonical context document; repair must not expand or rewrite
+  the operator-authored global scope
 
 ## Prompt pack
 
