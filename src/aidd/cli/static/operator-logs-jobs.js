@@ -295,6 +295,7 @@ function clearReconciledActiveJob({preserveConnection = true} = {}) {
   state.activeJobStatus = null;
   state.activeJobCursor = 0;
   state.activeJobLogChunks = [];
+  state.approvalSessionConfirmation = null;
   if (!preserveConnection) resetActiveJobConnection();
 }
 
@@ -553,6 +554,7 @@ async function pollActiveJob() {
 async function startJobPolling(job) {
   clearActiveJobPollTimer();
   state.activeJobPollGeneration += 1;
+  state.approvalSessionConfirmation = null;
   state.activeJobId = job.job_id;
   state.activeJobCursor = 0;
   state.activeJobLogChunks = [];

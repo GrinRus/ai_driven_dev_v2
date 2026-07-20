@@ -158,8 +158,9 @@ def test_runtime_approval_preserves_scope_confirmation_and_durable_winner(
 
         if action == "allow_for_session":
             card.locator('[data-operator-action="allow_for_session"]').click()
+            page.evaluate("renderApprovals()")
             confirmation = card.locator("[data-approval-session-confirmation]")
-            assert confirmation.is_visible()
+            confirmation.wait_for(state="visible", timeout=10_000)
             assert decision_posts == []
             assert "all matching requests" in confirmation.inner_text()
             confirmation.locator("[data-approval-confirm-session]").click()

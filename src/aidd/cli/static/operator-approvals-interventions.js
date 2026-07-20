@@ -566,6 +566,7 @@ async function renderApprovals() {
   const content = document.getElementById("cockpitContent");
   const diagnostics = activeStageView()?.diagnostics?.approvals || null;
   if (!state.activeJobId) {
+    state.approvalSessionConfirmation = null;
     content.innerHTML = renderApprovalsSurface({
       view: null,
       diagnostics,
@@ -580,7 +581,9 @@ async function renderApprovals() {
     const requests = view.requests || [];
     const decisions = view.decisions || [];
     const pendingIds = new Set(view.pending_request_ids || []);
+    captureApprovalSessionConfirmationDraft();
     content.innerHTML = renderApprovalsSurface({view, diagnostics, requests, decisions, pendingIds});
+    restoreApprovalSessionConfirmation(view);
   } catch (error) {
     content.innerHTML = `<div class="empty-state">${escapeHtml(error.message)}</div>`;
   }
@@ -595,9 +598,44 @@ function updateApprovalConfirmationPreview(requestId) {
   if (preview) preview.textContent = approvalReason(requestId) || "No reason provided";
 }
 
+function captureApprovalSessionConfirmationDraft() {
+  const pending = state.approvalSessionConfirmation;
+  if (!pending || pending.jobId !== state.activeJobId) return;
+  pending.reason = approvalReason(pending.requestId);
+}
+
+function restoreApprovalSessionConfirmation(view) {
+  const pending = state.approvalSessionConfirmation;
+  if (!pending || pending.jobId !== state.activeJobId) {
+    state.approvalSessionConfirmation = null;
+    return;
+  }
+  const hasDurableDecision = (view.decisions || []).some(
+    (decision) => decision.request_id === pending.requestId
+  );
+  const isPending = (view.pending_request_ids || []).includes(pending.requestId);
+  if (hasDurableDecision || !isPending) {
+    state.approvalSessionConfirmation = null;
+    return;
+  }
+  const reason = document.querySelector(`[data-approval-reason="${pending.requestId}"]`);
+  if (reason) reason.value = pending.reason;
+  const confirmation = document.querySelector(
+    `[data-approval-session-confirmation="${pending.requestId}"]`
+  );
+  if (!confirmation) return;
+  updateApprovalConfirmationPreview(pending.requestId);
+  confirmation.hidden = false;
+}
+
 function openApprovalSessionConfirmation(requestId) {
   const confirmation = document.querySelector(`[data-approval-session-confirmation="${requestId}"]`);
   if (!confirmation) return;
+  state.approvalSessionConfirmation = {
+    jobId: state.activeJobId,
+    requestId,
+    reason: approvalReason(requestId)
+  };
   updateApprovalConfirmationPreview(requestId);
   confirmation.hidden = false;
   confirmation.querySelector(`[data-approval-confirm-session="${requestId}"]`)?.focus();
@@ -606,6 +644,9 @@ function openApprovalSessionConfirmation(requestId) {
 function closeApprovalSessionConfirmation(requestId) {
   const confirmation = document.querySelector(`[data-approval-session-confirmation="${requestId}"]`);
   if (confirmation) confirmation.hidden = true;
+  if (state.approvalSessionConfirmation?.requestId === requestId) {
+    state.approvalSessionConfirmation = null;
+  }
   document.querySelector(`[data-operator-request="${requestId}"][data-operator-action="allow_for_session"]`)?.focus();
 }
 

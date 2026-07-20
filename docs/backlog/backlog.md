@@ -7,17 +7,16 @@ slice, and local task.
 
 ## Next
 
-- `W36-E7-S4-T17` — Preserve pending approval session confirmation across polling re-renders.
+- `W36-E7-S4-T3` — Rerun Codex after approval confirmation race regression coverage.
 
 ## Soon
 
-- `W36-E7-S4-T3` — Rerun Codex after approval confirmation race regression coverage.
+- `W36-E7-S4-T4` — Repeat the medium scenario through Claude Code from an independent root.
 
 ## Parking lot
 
 - `W36-E7-S3-T2` — Record five first-time-operator sessions after initial live hardening.
 - `W36-E7-S3-T3` — Reconcile observed session findings before beta readiness.
-- `W36-E7-S4-T4` — Repeat the medium scenario through Claude Code from an independent root.
 - `W36-E7-S4-T5` — Record final same-revision Codex and Claude acceptance evidence.
 
 ## Update rules
@@ -34,6 +33,14 @@ slice, and local task.
   queue-restoration policy in `docs/backlog/roadmap.md` (`W8-E3-S1`).
 
 ## Current reconciliation
+
+- `2026-07-20` `W36-E7-S4-T17` is complete: the approvals surface now owns one browser-only
+  session-confirmation identity and reason, captures it before polling replaces the DOM, and
+  restores it only while canonical readback still reports the same request pending. A new job,
+  explicit Back, durable winner, terminal readback, or reconciled job cleanup clears the ephemeral
+  state. Endpoints and decision CAS are unchanged. Frontend tests force the re-render boundary;
+  approval parity and all five browser viewports pass. Codex `T3` returns to `Next`; Claude `T4`
+  is its direct successor.
 
 - `2026-07-20` the final T16 browser gate passed 186 of 187 cases and exposed a timing-dependent
   approval presentation race at `1280×900`: `Allow session` opens an ephemeral confirmation, while

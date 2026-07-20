@@ -118,6 +118,7 @@ const state = {
   activeJobStatus: null,
   activeJobTimer: null,
   activeJobPollGeneration: 0,
+  approvalSessionConfirmation: null,
   activeJobConnection: {
     state: "unknown",
     failureCount: 0,
@@ -553,6 +554,7 @@ async function recoverActiveJobFromDashboard(job) {
     state.activeJobStatus = {...state.activeJobStatus, ...job};
     return;
   }
+  state.approvalSessionConfirmation = null;
   state.activeJobId = job.job_id;
   state.activeJobCursor = 0;
   state.activeJobLogChunks = [];
