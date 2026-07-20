@@ -11719,7 +11719,7 @@ Local tasks:
     tracked source, forbidden product imports, or live-scenario literals in runtime product code.
 - `W36-E7-S4-T3` (next) Run `AIDD-LIVE-007` through Codex to a clean terminal result with
   manual stage-quality and rendered Studio evidence.
-  - Dependencies: `W36-E7-S4-T13`, `W36-E7-S4-T2`, `W36-E7-S4-T6`, `W36-E7-S4-T10`,
+  - Dependencies: `W36-E7-S4-T14`, `W36-E7-S4-T13`, `W36-E7-S4-T2`, `W36-E7-S4-T6`, `W36-E7-S4-T10`,
     `W36-E7-S4-T11`, and `W36-E7-S4-T12` as live-discovered queue
     predecessors.
   - Scope: external Codex live execution and evidence only.
@@ -11799,6 +11799,17 @@ Local tasks:
   - Verification: an explicit path list renders a scope accepted by `AllowedWriteScope`, invalid
     paths fail during manifest loading, and a legacy task without exact paths omits the optional
     scope document instead of creating malformed fail-closed evidence.
+- `W36-E7-S4-T14` (done) Separate bounded installed-UI startup and API probe budgets for live
+  frontend checkpoints.
+  - Dependencies: `W36-E7-S4-T13` as the repeated live-discovery predecessor; blocks the active
+    Codex acceptance task `W36-E7-S4-T3`.
+  - Scope: runtime-neutral live harness checkpoint supervision and provider-free timeout tests
+    only; UI endpoints, dashboard semantics, core orchestration, provider adapters, and scenario
+    manifests remain unchanged.
+  - Verification: a cold installed UI may use up to a bounded 30-second startup budget, each
+    sequential API probe has a bounded 10-second response budget, slow fixtures beyond the legacy
+    two-second probe boundary succeed, and true startup/probe hangs still fail with truthful
+    timeout evidence and process cleanup.
 
 Exit evidence:
 

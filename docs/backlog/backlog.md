@@ -7,7 +7,7 @@ slice, and local task.
 
 ## Next
 
-- `W36-E7-S4-T3` — Rerun the canonical medium scenario through Codex after scope-bootstrap fix.
+- `W36-E7-S4-T3` — Rerun Codex with bounded installed-UI checkpoint budgets.
 
 ## Soon
 
@@ -33,6 +33,21 @@ slice, and local task.
   queue-restoration policy in `docs/backlog/roadmap.md` (`W8-E3-S1`).
 
 ## Current reconciliation
+
+- `2026-07-20` `W36-E7-S4-T14` is complete: installed-UI checkpoints now give cold startup a
+  bounded 30-second deadline and each sequential API request a bounded 10-second response budget.
+  Transcript evidence reports the full phase bound and recognizes socket timeouts even when the
+  semantic failure summary is generic. Provider-free fixtures prove a response after the legacy
+  two-second boundary succeeds, a real timeout remains bounded, and the full transition/cleanup
+  matrix remains compatible. Codex `T3` returns to `Next`; Claude `T4` is its direct successor.
+
+- `2026-07-20` two fresh Codex runs on `27e4771` independently passed their product stages and
+  validators, then failed the harness post-stage frontend gate at its fixed 10-second boundary.
+  r5 started UI but the two-second dashboard request timed out; five read-only reproductions on
+  the same installed run returned 200 in 1.71-1.91 seconds. r6 did not finish cold UI startup
+  within the same shared 10-second budget. Both bundles remain historical and external. Bounded
+  runtime-neutral checkpoint-supervision task `W36-E7-S4-T14` is promoted to `Next`; Codex `T3`
+  remains blocked pending provider-free timeout coverage and another fresh run.
 
 - `2026-07-20` `W36-E7-S4-T13` is complete: authored live tasks may declare exact canonical
   repository-relative scope prefixes, manifest loading rejects unsafe values through the shared

@@ -1263,10 +1263,14 @@ def test_running_frontend_checkpoint_routes_stage_transition_to_post_stage(
     )
     original_probe = live_orchestration._http_probe
 
-    def _release_during_checkpoint(url: str) -> dict[str, object]:
+    def _release_during_checkpoint(
+        url: str,
+        *,
+        timeout_seconds: float = live_orchestration.FRONTEND_CHECKPOINT_PROBE_TIMEOUT_SECONDS,
+    ) -> dict[str, object]:
         if ready_path.exists() and not release_path.exists():
             release_path.write_text("release\n", encoding="utf-8")
-        return original_probe(url)
+        return original_probe(url, timeout_seconds=timeout_seconds)
 
     monkeypatch.setattr(live_orchestration, "_http_probe", _release_during_checkpoint)
 
