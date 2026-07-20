@@ -15,7 +15,7 @@ from pathlib import Path
 from urllib.parse import urlsplit
 
 import pytest
-from playwright.sync_api import Browser, BrowserContext, Page, Playwright, Route
+from playwright.sync_api import Browser, BrowserContext, Page, Playwright, Request, Route
 from playwright.sync_api import Error as PlaywrightError
 
 INSTALL_COMMAND = "uv run --extra dev python -m playwright install chromium"
@@ -34,6 +34,7 @@ class BrowserDiagnostics:
     console_errors: list[str] = field(default_factory=list)
     page_errors: list[str] = field(default_factory=list)
     failed_requests: list[str] = field(default_factory=list)
+    cancelled_requests: list[str] = field(default_factory=list)
     http_statuses: list[tuple[str, int]] = field(default_factory=list)
     blocked_requests: list[str] = field(default_factory=list)
 
@@ -90,11 +91,19 @@ class OperatorBrowserHarness:
             else None,
         )
         page.on("pageerror", lambda error: diagnostics.page_errors.append(str(error)))
+
+        def _record_request_failure(request: Request) -> None:
+            request_url = request.url
+            failure = request.failure or "unknown failure"
+            entry = f"{request_url}: {failure}"
+            if failure == "net::ERR_ABORTED":
+                diagnostics.cancelled_requests.append(entry)
+                return
+            diagnostics.failed_requests.append(entry)
+
         page.on(
             "requestfailed",
-            lambda request: diagnostics.failed_requests.append(
-                f"{request.url}: {request.failure or 'unknown failure'}"
-            ),
+            _record_request_failure,
         )
         page.on(
             "response",

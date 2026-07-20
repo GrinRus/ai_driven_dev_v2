@@ -7,15 +7,14 @@ slice, and local task.
 
 ## Next
 
-- `W36-E7-S4-T9` — Separate intentional browser cancellation from network failure.
+- `W36-E7-S4-T3` — Run the canonical medium scenario through Codex to clean terminal quality.
 
 ## Soon
 
+- `W36-E7-S4-T4` — Repeat the medium scenario through Claude Code from an independent root.
 
 ## Parking lot
 
-- `W36-E7-S4-T3` — Run the canonical medium scenario through Codex to clean terminal quality.
-- `W36-E7-S4-T4` — Repeat the medium scenario through Claude Code from an independent root.
 - `W36-E7-S3-T2` — Record five first-time-operator sessions after initial live hardening.
 - `W36-E7-S3-T3` — Reconcile observed session findings before beta readiness.
 - `W36-E7-S4-T5` — Record final same-revision Codex and Claude acceptance evidence.
@@ -34,6 +33,12 @@ slice, and local task.
   queue-restoration policy in `docs/backlog/roadmap.md` (`W8-E3-S1`).
 
 ## Current reconciliation
+
+- `2026-07-20` `W36-E7-S4-T9` is complete: browser diagnostics now retain deliberate
+  `net::ERR_ABORTED` route-restoration cancellations separately from network failures. The exact
+  runtime-readiness cancellation is asserted, while console, page, origin, HTTP, and real request
+  failures remain gating. Codex medium execution `S4-T3` returns to `Next`, followed by Claude
+  `T4`.
 
 - `2026-07-20` `W36-E7-S4-T8` is complete: the token-driven mobile topbar uses one-pixel
   vertical padding, restoring the measured 80-pixel maximum while retaining 44-pixel controls,

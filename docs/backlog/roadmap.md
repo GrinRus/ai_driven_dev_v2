@@ -11717,13 +11717,13 @@ Local tasks:
   - Scope: provider-free harness and architecture tests.
   - Verification: conformance fixtures fail before live execution for overlapping roots, dirty
     tracked source, forbidden product imports, or live-scenario literals in runtime product code.
-- `W36-E7-S4-T3` (parked) Run `AIDD-LIVE-007` through Codex to a clean terminal result with
+- `W36-E7-S4-T3` (next) Run `AIDD-LIVE-007` through Codex to a clean terminal result with
   manual stage-quality and rendered Studio evidence.
   - Dependencies: `W36-E7-S4-T2`, `W36-E7-S4-T6` as the direct queue predecessor.
   - Scope: external Codex live execution and evidence only.
   - Verification: installed-wheel `idea -> qa`, target verification, complete audits, terminal
     reports, and bounded Chromium evidence pass from an external run root.
-- `W36-E7-S4-T4` (parked) Run `AIDD-LIVE-007` through Claude Code from an independent root on
+- `W36-E7-S4-T4` (soon) Run `AIDD-LIVE-007` through Claude Code from an independent root on
   the same AIDD revision and target pin.
   - Dependencies: `W36-E7-S4-T3` as the direct queue predecessor.
   - Scope: external Claude Code live execution and evidence only.
@@ -11753,7 +11753,7 @@ Local tasks:
   - Scope: token-driven mobile Studio layout only.
   - Verification: both mobile viewports keep a header at or below 80 pixels, 44-pixel controls,
     primary-before-maintenance order, and no horizontal overflow.
-- `W36-E7-S4-T9` (next) Distinguish deliberate browser request cancellation from failed network
+- `W36-E7-S4-T9` (done) Distinguish deliberate browser request cancellation from failed network
   requests during canonical Back/Forward/reload restoration.
   - Dependencies: `W36-E7-S4-T8` as the direct queue predecessor.
   - Scope: browser diagnostics and route-restoration tests only.
