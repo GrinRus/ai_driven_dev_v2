@@ -196,11 +196,76 @@ def _write_plan_tasklist_pair(
     )
 
 
+def _write_tasklist_with_all_canonical_milestone_locations(workspace_root: Path) -> None:
+    work_item_root = workspace_root / "workitems" / "WI-001" / "stages"
+    plan_output = work_item_root / "plan" / "output"
+    tasklist_root = work_item_root / "tasklist"
+    plan_output.mkdir(parents=True)
+    tasklist_root.mkdir(parents=True)
+    plan_output.joinpath("plan.md").write_text(
+        "# Plan\n\n"
+        "## Milestones\n\n"
+        "- M1 Outcome mapping.\n"
+        "- M2 Context mapping.\n"
+        "- M3 Acceptance mapping.\n"
+        "- M4 Verification mapping.\n\n"
+        "## Dependencies\n\n- none\n\n"
+        "## Verification notes\n\n- none\n",
+        encoding="utf-8",
+    )
+    tasklist_root.joinpath("tasklist.md").write_text(
+        "# Tasklist\n\n"
+        "## Ordered tasks\n\n"
+        "### T1 — Map outcome\n\n"
+        "- Outcome: Complete M1.\n"
+        "- Dominant deliverable: `src/one.py`.\n"
+        "- In scope: `src/one.py`.\n"
+        "- Acceptance criteria:\n  - T1-AC1: Outcome is complete.\n\n"
+        "### T2 — Map context\n\n"
+        "- Outcome: Complete context work.\n"
+        "- Dominant deliverable: `src/two.py`.\n"
+        "- In scope: `src/two.py`.\n"
+        "- Context: This task implements M2.\n"
+        "- Acceptance criteria:\n  - T2-AC1: Context is complete.\n\n"
+        "### T3 — Map acceptance\n\n"
+        "- Outcome: Complete acceptance work.\n"
+        "- Dominant deliverable: `src/three.py`.\n"
+        "- In scope: `src/three.py`.\n"
+        "- Acceptance criteria:\n  - T3-AC1: M3 behavior is complete.\n\n"
+        "### T4 — Map verification\n\n"
+        "- Outcome: Complete verification work.\n"
+        "- Dominant deliverable: `src/four.py`.\n"
+        "- In scope: `src/four.py`.\n"
+        "- Acceptance criteria:\n  - T4-AC1: Verification is complete.\n\n"
+        "## Dependencies\n\n"
+        "- T1: none\n- T2: none\n- T3: none\n- T4: none\n\n"
+        "## Verification notes\n\n"
+        "- T1: verify outcome\n- T2: verify context\n"
+        "- T3: verify acceptance\n- T4: verify M4\n",
+        encoding="utf-8",
+    )
+
+
 def test_tasklist_plan_cross_validation_accepts_exact_milestone_bindings(
     tmp_path: Path,
 ) -> None:
     workspace_root = tmp_path / ".aidd"
     _write_plan_tasklist_pair(workspace_root)
+
+    findings = validate_cross_document_consistency(
+        stage="tasklist",
+        work_item="WI-001",
+        workspace_root=workspace_root,
+    )
+
+    assert findings == ()
+
+
+def test_tasklist_plan_cross_validation_accepts_every_canonical_mapping_location(
+    tmp_path: Path,
+) -> None:
+    workspace_root = tmp_path / ".aidd"
+    _write_tasklist_with_all_canonical_milestone_locations(workspace_root)
 
     findings = validate_cross_document_consistency(
         stage="tasklist",
@@ -246,11 +311,57 @@ def test_tasklist_plan_cross_validation_does_not_skip_unmapped_whitespace_milest
     milestone_findings = [item for item in findings if item.code == TASKLIST_PLAN_MILESTONE_CODE]
     assert len(milestone_findings) == 4
     assert {item.message for item in milestone_findings} >= {
-        "Task `T1` maps to no plan milestone; cite an existing milestone id.",
-        "Task `T2` maps to no plan milestone; cite an existing milestone id.",
-        "Plan milestone `M1` is not covered by any task card.",
-        "Plan milestone `M2` is not covered by any task card.",
+        (
+            "Task `T1` maps to no plan milestone; cite an existing milestone id in "
+            "`Outcome`, `Context`, an acceptance criterion, or the task's "
+            "`Verification notes` entry."
+        ),
+        (
+            "Task `T2` maps to no plan milestone; cite an existing milestone id in "
+            "`Outcome`, `Context`, an acceptance criterion, or the task's "
+            "`Verification notes` entry."
+        ),
+        (
+            "Plan milestone `M1` is not covered by any task card; cite it in `Outcome`, "
+            "`Context`, an acceptance criterion, or the task's `Verification notes` entry."
+        ),
+        (
+            "Plan milestone `M2` is not covered by any task card; cite it in `Outcome`, "
+            "`Context`, an acceptance criterion, or the task's `Verification notes` entry."
+        ),
     }
+
+
+def test_tasklist_plan_cross_validation_rejects_ad_hoc_milestone_field_with_actionable_hint(
+    tmp_path: Path,
+) -> None:
+    workspace_root = tmp_path / ".aidd"
+    _write_plan_tasklist_pair(
+        workspace_root,
+        task_one_milestone="unmapped",
+        task_two_milestone="M2",
+    )
+    tasklist_path = (
+        workspace_root / "workitems" / "WI-001" / "stages" / "tasklist" / "tasklist.md"
+    )
+    tasklist_path.write_text(
+        tasklist_path.read_text(encoding="utf-8").replace(
+            "- Dominant deliverable: `src/model.py`.\n",
+            "- Dominant deliverable: `src/model.py`.\n- Milestone: M1\n",
+        ),
+        encoding="utf-8",
+    )
+
+    findings = validate_cross_document_consistency(
+        stage="tasklist",
+        work_item="WI-001",
+        workspace_root=workspace_root,
+    )
+
+    milestone_findings = [item for item in findings if item.code == TASKLIST_PLAN_MILESTONE_CODE]
+    assert len(milestone_findings) == 2
+    assert "Task `T1` maps to no plan milestone" in milestone_findings[0].message
+    assert "`Outcome`, `Context`, an acceptance criterion" in milestone_findings[0].message
 
 
 def test_tasklist_plan_cross_validation_reports_unknown_and_uncovered_milestones(

@@ -7,16 +7,17 @@ slice, and local task.
 
 ## Next
 
-- `W36-E7-S4-T3` — Rerun Codex after milestone-validation correction.
+- `W36-E7-S4-T17` — Preserve pending approval session confirmation across polling re-renders.
 
 ## Soon
 
-- `W36-E7-S4-T4` — Repeat the medium scenario through Claude Code from an independent root.
+- `W36-E7-S4-T3` — Rerun Codex after approval confirmation race regression coverage.
 
 ## Parking lot
 
 - `W36-E7-S3-T2` — Record five first-time-operator sessions after initial live hardening.
 - `W36-E7-S3-T3` — Reconcile observed session findings before beta readiness.
+- `W36-E7-S4-T4` — Repeat the medium scenario through Claude Code from an independent root.
 - `W36-E7-S4-T5` — Record final same-revision Codex and Claude acceptance evidence.
 
 ## Update rules
@@ -33,6 +34,33 @@ slice, and local task.
   queue-restoration policy in `docs/backlog/roadmap.md` (`W8-E3-S1`).
 
 ## Current reconciliation
+
+- `2026-07-20` the final T16 browser gate passed 186 of 187 cases and exposed a timing-dependent
+  approval presentation race at `1280×900`: `Allow session` opens an ephemeral confirmation, while
+  concurrent polling can replace the approvals DOM and discard it before operator confirmation.
+  The isolated case and three concurrent reruns passed, confirming nondeterminism rather than a
+  stable markup failure; source inspection proves the unowned ephemeral state boundary. No
+  decision was fabricated and durable CAS remains correct. Presentation-only task
+  `W36-E7-S4-T17` is promoted to `Next`; Codex `T3` remains blocked pending a regression and a
+  clean browser lane.
+
+- `2026-07-20` `W36-E7-S4-T16` is complete: the durable tasklist contract plus initial and
+  repair prompts now name the four canonical milestone mapping locations consumed by
+  cross-document validation (`Outcome`, `Context`, acceptance criteria, and task-local
+  `Verification notes`). Milestone findings and generated repair briefs repeat the same actionable
+  locations and explicitly reject ad hoc `Milestone`/`Plan milestone` fields without widening the
+  rich-task grammar. Provider-free regressions cover all four valid locations and replay the exact
+  unsupported-field shape from the historical live failure. Codex `T3` returns to `Next`; Claude
+  `T4` is its direct successor.
+
+- `2026-07-20` the fresh `76a4579` Codex run proved corrected milestone validation but exhausted
+  all three tasklist attempts because the authoring and repair guidance did not name the mapping
+  fields consumed by the rule. Codex added intuitive `Plan milestone`/`Milestone` card fields on
+  repair, while the canonical predicate intentionally reads only `Outcome`, `Context`, acceptance
+  criteria, and `Verification notes`. Runtime/provider startup and frontend checkpoints passed;
+  the first decisive boundary is ambiguous contract/validator/prompt repair guidance. The run is
+  historical and stopped before implementation. Runtime-neutral task `W36-E7-S4-T16` is promoted
+  to `Next`; Codex `T3` remains blocked pending regression coverage and a fresh run.
 
 - `2026-07-20` `W36-E7-S4-T15` is complete: tasklist/plan cross-validation now recognizes both
   colon-delimited and canonical whitespace-delimited milestone list items. A provider-free

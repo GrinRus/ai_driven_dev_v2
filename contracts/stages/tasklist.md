@@ -58,6 +58,11 @@ Optional context documents may improve task decomposition quality, but they must
   - one dominant output artifact per task so each item remains reviewable as a standalone unit,
   - explicit dependency notes per task (upstream task ids or `none`),
   - verification notes per task naming the primary check, test, or scenario proving completion.
+- every task card must map to at least one existing plan milestone by citing its exact `M<n>` id
+  in the card's `Outcome`, optional `Context`, a nested acceptance criterion, or the task's
+  dedicated `Verification notes` entry. Every plan milestone must be covered by at least one task.
+  Ad hoc `Milestone` or `Plan milestone` fields are outside the canonical rich-task grammar and do
+  not count as mappings.
 - the dedicated `Verification notes` section must include at least one bullet or list entry for
   every task id declared in `Ordered tasks`, including command-only or verification-only tasks.
   A primary check embedded only inside an `Ordered tasks` entry does not satisfy this dedicated
@@ -111,6 +116,9 @@ Validators for `tasklist` should check:
     internal-only scope,
   - package-importable helper paths are treated as public API risk unless intentionally accepted,
 - cross-document consistency between tasklist readiness claims, validator findings, and terminal status in `stage-result.md`.
+- exact task-to-plan milestone coverage through canonical `Outcome`, `Context`, acceptance
+  criteria, or `Verification notes` content; unsupported ad hoc milestone fields do not satisfy
+  this cross-document requirement.
 
 ## Interview policy
 
@@ -142,6 +150,8 @@ Question/answer document rules:
 - default repair budget: 2 attempts after the initial run
 - repair uses the same target documents
 - AIDD core preserves validator findings and the generated repair brief for every failed attempt
+- milestone-mapping findings and repair briefs name the canonical task-card locations that can
+  satisfy the mapping; repair must not invent an unsupported `Milestone` field
 
 ## Prompt pack
 

@@ -270,6 +270,45 @@ def test_render_repair_brief_adds_actionable_list_format_hint() -> None:
     assert "write exactly `- none`" in repair_brief
 
 
+def test_render_repair_brief_names_canonical_tasklist_milestone_locations() -> None:
+    report_markdown = render_validator_report(
+        findings=(
+            ValidationFinding(
+                code="CROSS-TASKLIST-PLAN-MILESTONE",
+                message=(
+                    "Task `T1` maps to no plan milestone; cite an existing milestone id in "
+                    "`Outcome`, `Context`, an acceptance criterion, or the task's "
+                    "`Verification notes` entry."
+                ),
+                severity="high",
+                location=ValidationIssueLocation(
+                    workspace_relative_path=(
+                        "workitems/WI-001/stages/tasklist/output/tasklist.md"
+                    ),
+                    line_number=9,
+                ),
+            ),
+        )
+    )
+
+    repair_brief = render_repair_brief(
+        validator_report_markdown=report_markdown,
+        validator_report_path=(
+            "workitems/WI-001/stages/tasklist/output/validator-report.md"
+        ),
+        prior_stage_artifacts=(
+            "workitems/WI-001/stages/plan/output/plan.md",
+        ),
+        stage_attempt_count=1,
+        max_repair_attempts=2,
+    )
+
+    assert "Use only canonical milestone mapping locations" in repair_brief
+    assert "`Outcome`, optional `Context`, a nested acceptance criterion" in repair_brief
+    assert "dedicated `Verification notes` entry" in repair_brief
+    assert "Do not add `Milestone` or `Plan milestone`" in repair_brief
+
+
 def test_render_repair_brief_adds_interview_document_answer_hint() -> None:
     report_markdown = render_validator_report(
         findings=(

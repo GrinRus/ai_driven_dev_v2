@@ -28,6 +28,9 @@ _COMMAND_PREFIXES = (
     "cargo ",
     "go test",
 )
+_MILESTONE_MAPPING_LOCATIONS = (
+    "`Outcome`, `Context`, an acceptance criterion, or the task's `Verification notes` entry"
+)
 
 
 def _ordered_milestones(plan_text: str) -> tuple[str, ...]:
@@ -137,7 +140,10 @@ def validate_tasklist_plan(context: CrossDocumentContext) -> tuple[ValidationFin
             findings.append(
                 ValidationFinding(
                     TASKLIST_PLAN_MILESTONE_CODE,
-                    f"Task `{task.id}` maps to {detail}; cite an existing milestone id.",
+                    (
+                        f"Task `{task.id}` maps to {detail}; cite an existing milestone id in "
+                        f"{_MILESTONE_MAPPING_LOCATIONS}."
+                    ),
                     "high",
                     ValidationIssueLocation(tasklist_relative, task_line),
                 )
@@ -153,7 +159,10 @@ def validate_tasklist_plan(context: CrossDocumentContext) -> tuple[ValidationFin
             findings.append(
                 ValidationFinding(
                     TASKLIST_PLAN_MILESTONE_CODE,
-                    f"Plan milestone `{milestone}` is not covered by any task card.",
+                    (
+                        f"Plan milestone `{milestone}` is not covered by any task card; cite it "
+                        f"in {_MILESTONE_MAPPING_LOCATIONS}."
+                    ),
                     "high",
                     ValidationIssueLocation(tasklist_relative),
                 )

@@ -32,6 +32,10 @@ Break the plan into reviewable implementation tasks with sequencing and verifica
   including command-only or verification-only tasks,
 - checks embedded only inside `Ordered tasks` do not replace the dedicated per-task
   `Verification notes` entries,
+- every task cites at least one exact existing plan milestone id such as `M1` in its `Outcome`,
+  optional `Context`, a nested acceptance criterion, or its dedicated `Verification notes` entry,
+- every plan milestone is covered by at least one task; ad hoc `Milestone` or `Plan milestone`
+  fields are not part of the canonical task-card grammar and do not count,
 - upstream references are present when the stage requires them.
 
 ## Notes
@@ -47,10 +51,12 @@ Canonical task-card shape:
 - Dominant deliverable: `src/example.py` contains the bounded implementation.
 - In scope: `src/example.py` and focused regression coverage under `tests/`.
 - Acceptance criteria:
-  - TL-1-AC1: The supported input produces the expected output.
+  - TL-1-AC1: Milestone M1 supported input produces the expected output.
 ```
 
 Optional task-card fields are `Context`, `Implementation constraints`, and `Out of scope`.
+Plan milestone ids may appear in `Outcome`, `Context`, acceptance-criterion text, or the task's
+dedicated `Verification notes` entry. Do not add a separate `Milestone` or `Plan milestone` field.
 Backticked task-scope paths use exact-file or directory-prefix semantics. They are enforced even
 when no global allowed-write scope exists; when global scope exists, the effective boundary is the
 intersection of task-local and global scope.
