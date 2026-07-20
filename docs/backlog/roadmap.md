@@ -11719,7 +11719,7 @@ Local tasks:
     tracked source, forbidden product imports, or live-scenario literals in runtime product code.
 - `W36-E7-S4-T3` (next) Run `AIDD-LIVE-007` through Codex to a clean terminal result with
   manual stage-quality and rendered Studio evidence.
-  - Dependencies: `W36-E7-S4-T2` as the direct queue predecessor.
+  - Dependencies: `W36-E7-S4-T2`, `W36-E7-S4-T6` as the direct queue predecessor.
   - Scope: external Codex live execution and evidence only.
   - Verification: installed-wheel `idea -> qa`, target verification, complete audits, terminal
     reports, and bounded Chromium evidence pass from an external run root.
@@ -11735,6 +11735,12 @@ Local tasks:
   - Scope: sanitized live acceptance evidence and Wave 36 closure only.
   - Verification: both fresh bundles name the same clean AIDD SHA, scenario and target revision,
     pass terminal quality gates, and match an anonymized digest-backed tracked summary.
+- `W36-E7-S4-T6` (done) Align active-Studio browser fixtures with the fresh terminal-handoff
+  boundary exposed by the final acceptance run.
+  - Dependencies: `W36-E7-S4-T2` as the discovery predecessor.
+  - Scope: browser fixture expectations only; production Studio behavior is unchanged.
+  - Verification: active context, Document Canvas, and Evidence Inspector use nonterminal stale
+    evidence, while fresh terminal QA remains owned by Flow Complete; affected browser tests pass.
 
 Exit evidence:
 

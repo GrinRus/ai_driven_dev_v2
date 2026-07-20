@@ -34,6 +34,19 @@ slice, and local task.
 
 ## Current reconciliation
 
+- `2026-07-20` `W36-E7-S4-T6` is complete: active-Studio shell, Document Canvas, and
+  Evidence Inspector browser contracts now use a nonterminal stale-QA fixture, while fresh
+  terminal QA remains exclusively owned by Flow Complete. All affected rendered cases pass with
+  production Studio behavior unchanged. Codex medium execution `S4-T3` returns to `Next`,
+  followed by Claude `T4`.
+
+- `2026-07-20` pre-live final acceptance exposed browser-test contract drift: three tests
+  expected active Studio context, Document Canvas, or Evidence Inspector from fresh terminal QA,
+  where the accepted contract correctly renders Flow Complete. Bounded test-only task
+  `W36-E7-S4-T6` is inserted in `Next`; the Codex run returns to `Soon`. A concurrently observed
+  lifecycle timeout and History timeout passed isolated reruns and remain classified as resource
+  contention, not product defects.
+
 - `2026-07-20` `W36-E7-S4-T2` is complete: a provider-neutral executable preflight now
   validates clean tracked source, external provider layouts, scenario containment, full live
   scope, command readiness, and post-run source identity without allocating run state. Static
