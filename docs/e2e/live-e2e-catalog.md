@@ -297,6 +297,10 @@ For live scenarios in this wave:
 - Public-repository live E2E now records frontend/API checkpoint evidence as raw
   run-integrity evidence, but brokered approval proof and full UI/UX audit evidence
   remain in the operator UI/local-project lane or the manual `quality-report.md`.
+- Wave 36 dual-provider acceptance additionally follows
+  [`prod-like-live-provider-acceptance.md`](prod-like-live-provider-acceptance.md): raw
+  worktrees and evidence remain in independent external provider roots, while only a
+  sanitized digest-backed result is eligible for tracked documentation.
 
 Representative matrix coverage for the live lane:
 

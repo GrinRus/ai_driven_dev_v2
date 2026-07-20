@@ -11676,13 +11676,13 @@ Local tasks:
   - Scope: operator acceptance documentation.
   - Verification: every task records completion, elapsed time, wrong actions, assistance,
     confidence, and first decisive confusion.
-- `W36-E7-S3-T2` (next) Record five first-time-operator sessions against the source-installed
+- `W36-E7-S3-T2` (parked) Record five first-time-operator sessions against the source-installed
   packaged UI.
-  - Dependencies: `W36-E7-S3-T1` as the direct queue predecessor.
+  - Dependencies: `W36-E7-S3-T1`, `W36-E7-S4-T4` as the direct queue predecessor.
   - Scope: manual operator acceptance evidence.
   - Verification: one anonymized report contains all required task metrics, browser and
     viewport context, blockers, and no sensitive project/runtime evidence.
-- `W36-E7-S3-T3` (soon) Reconcile accepted session findings into roadmap tasks and beta-readiness
+- `W36-E7-S3-T3` (parked) Reconcile accepted session findings into roadmap tasks and beta-readiness
   evidence.
   - Dependencies: `W36-E7-S3-T2` as the direct queue predecessor.
   - Scope: planning and product-readiness docs.
@@ -11693,6 +11693,57 @@ Exit evidence:
 
 - task success and operator confidence confirm the UI hierarchy instead of relying only
   on implementer-authored checks.
+
+#### Slice W36-E7-S4 — isolated prod-like provider acceptance (`planned`)
+Goal: prove the installed Studio and governed full flow against one pinned medium public-repository
+task through both maintained native providers without coupling live-evaluation behavior to product
+runtime semantics.
+
+Dependencies:
+
+- `W36-E7-S2`
+- `W24-E1-S2`
+
+Local tasks:
+
+- `W36-E7-S4-T1` (done) Define the prod-like dual-provider execution and isolation contract for
+  the canonical medium live scenario.
+  - Scope: live E2E documentation and planning only.
+  - Verification: docs consistency names the installed-wheel boundary, external evidence roots,
+    pinned scenario/target, manual quality checkpoints, and forbidden cross-boundary state.
+- `W36-E7-S4-T2` (next) Add executable preflight and architecture checks for source, target,
+  provider-root, import, and scenario-specific isolation.
+  - Dependencies: `W36-E7-S4-T1` as the direct queue predecessor.
+  - Scope: provider-free harness and architecture tests.
+  - Verification: conformance fixtures fail before live execution for overlapping roots, dirty
+    tracked source, forbidden product imports, or live-scenario literals in runtime product code.
+- `W36-E7-S4-T3` (soon) Run `AIDD-LIVE-007` through Codex to a clean terminal result with
+  manual stage-quality and rendered Studio evidence.
+  - Dependencies: `W36-E7-S4-T2` as the direct queue predecessor.
+  - Scope: external Codex live execution and evidence only.
+  - Verification: installed-wheel `idea -> qa`, target verification, complete audits, terminal
+    reports, and bounded Chromium evidence pass from an external run root.
+- `W36-E7-S4-T4` (parked) Run `AIDD-LIVE-007` through Claude Code from an independent root on
+  the same AIDD revision and target pin.
+  - Dependencies: `W36-E7-S4-T3` as the direct queue predecessor.
+  - Scope: external Claude Code live execution and evidence only.
+  - Verification: the Claude bundle meets the Codex evidence bar without reusing target state,
+    answers, attempts, patches, or provider evidence.
+- `W36-E7-S4-T5` (parked) Record a final same-revision Codex and Claude acceptance pass after
+  observed-session reconciliation.
+  - Dependencies: `W36-E7-S4-T4`, `W36-E7-S3-T3` as direct queue predecessors.
+  - Scope: sanitized live acceptance evidence and Wave 36 closure only.
+  - Verification: both fresh bundles name the same clean AIDD SHA, scenario and target revision,
+    pass terminal quality gates, and match an anonymized digest-backed tracked summary.
+
+Exit evidence:
+
+- Codex and Claude Code complete the same pinned medium task through installed public surfaces on
+  one final AIDD revision;
+- raw worktrees, provider state, logs, screenshots, and target payload remain outside the AIDD
+  checkout, while the tracked summary contains only sanitized identities, outcomes, and digests;
+- live-evaluation orchestration does not add scenario-specific behavior to core, adapters,
+  validators, prompts, or Studio.
 
 Wave 36 exit evidence:
 
@@ -11713,6 +11764,8 @@ Wave 36 exit evidence:
   geometry, interaction, console/network, and accessibility assertions;
 - five observed first-time-operator sessions meet the accepted completion/confidence bar
   or leave explicit follow-up tasks before beta UX is claimed;
+- one final clean AIDD revision has counted-clean `AIDD-LIVE-007` evidence for both Codex and
+  Claude Code, including rendered Studio inspection and strict source/target/provider isolation;
 - no Wave 34 backend responsibility is duplicated inside Wave 36.
 
 Sync notes:

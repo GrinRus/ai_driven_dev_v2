@@ -7,13 +7,18 @@ slice, and local task.
 
 ## Next
 
-- `W36-E7-S3-T2` — Record five first-time-operator sessions.
+- `W36-E7-S4-T2` — Add executable live-acceptance isolation and preflight gates.
 
 ## Soon
 
-- `W36-E7-S3-T3` — Reconcile observed session findings before beta readiness.
+- `W36-E7-S4-T3` — Run the canonical medium scenario through Codex to clean terminal quality.
 
 ## Parking lot
+
+- `W36-E7-S4-T4` — Repeat the medium scenario through Claude Code from an independent root.
+- `W36-E7-S3-T2` — Record five first-time-operator sessions after initial live hardening.
+- `W36-E7-S3-T3` — Reconcile observed session findings before beta readiness.
+- `W36-E7-S4-T5` — Record final same-revision Codex and Claude acceptance evidence.
 
 ## Update rules
 
@@ -29,6 +34,18 @@ slice, and local task.
   queue-restoration policy in `docs/backlog/roadmap.md` (`W8-E3-S1`).
 
 ## Current reconciliation
+
+- `2026-07-20` `W36-E7-S4-T1` is complete: the Wave 36 prod-like contract fixes
+  `AIDD-LIVE-007`, its Hono revision, installed tracked-snapshot wheel, external provider roots,
+  public operator surfaces, manual stage/final quality audits, rendered Studio inspection, and
+  strict product/evaluator isolation. Provider-free conformance `S4-T2` is promoted to `Next`,
+  followed by the first Codex execution `T3`.
+
+- `2026-07-20` Wave 36 final acceptance now includes the isolated prod-like slice
+  `W36-E7-S4`. The installed medium `AIDD-LIVE-007` flow runs through Codex and Claude Code
+  before observed sessions, and both providers are repeated on the final post-reconciliation
+  revision. `S4-T1` is active, followed by provider-free isolation gates `T2`; raw worktrees,
+  provider state, and evidence remain outside the source checkout.
 
 - `2026-07-18` `W36-E7-S2-T8` is complete: final full-suite acceptance now follows
   Studio-only module ownership for quality gates, History, and next-flow fields; the no-run task
