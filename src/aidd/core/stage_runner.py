@@ -84,6 +84,7 @@ from aidd.core.stage_validation import (
     persist_validation_state,
     persist_validation_state_with_repair_budget,
     prepare_stage_resume_after_answers,
+    reconcile_and_validate_stage_result_after_validation_pass,
     update_stage_unblock_state,
 )
 from aidd.core.state_machine import StageState, transition_stage_state
@@ -617,6 +618,18 @@ def run_single_stage_orchestration(
             validation_result=validation_result,
             findings=(*validation_result.findings, *interview_findings),
         )
+    if not validation_result.findings and not interview_routing.requires_interview:
+        final_stage_result_findings = reconcile_and_validate_stage_result_after_validation_pass(
+            workspace_root=workspace_root,
+            work_item=work_item,
+            stage=stage,
+            contracts_root=contracts_root,
+        )
+        if final_stage_result_findings:
+            validation_result = _append_validation_findings(
+                validation_result=validation_result,
+                findings=final_stage_result_findings,
+            )
     if validation_result.findings:
         strip_stage_result_success_claims_for_validator_findings(
             workspace_root=workspace_root,

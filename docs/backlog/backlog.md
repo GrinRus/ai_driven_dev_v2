@@ -7,7 +7,7 @@ slice, and local task.
 
 ## Next
 
-- `W36-E7-S4-T3` — Rerun the canonical medium scenario through Codex after the continuation fix.
+- `W36-E7-S4-T3` — Rerun the canonical medium scenario through Codex after validation repair fix.
 
 ## Soon
 
@@ -33,6 +33,19 @@ slice, and local task.
   queue-restoration policy in `docs/backlog/roadmap.md` (`W8-E3-S1`).
 
 ## Current reconciliation
+
+- `2026-07-20` `W36-E7-S4-T11` is complete: success-owned stage-result fields are normalized and
+  fully validated before the repair-budget decision. Duplicate/non-monotonic attempt history now
+  produces canonical findings, a repair brief, and a bounded retry instead of a terminal core
+  exception; exhausted retries remain fail-closed. Codex `T3` returns to `Next` for a fresh
+  tracked-snapshot run, followed by independent Claude `T4`.
+
+- `2026-07-20` the fresh post-continuation Codex run passed `idea` and `research`, then exposed a
+  general validation-order defect in `plan`: duplicate `Attempt 1` entries correctly emitted
+  `SEM-INCOMPLETE-SECTION`, but only after success normalization, where the finding became a hard
+  orchestration exception instead of consuming the configured repair budget. The failed bundle
+  remains historical. Bounded runtime-neutral task `W36-E7-S4-T11` is promoted to `Next`; Codex
+  `T3` is blocked until a provider-free repair regression passes and a fresh run starts.
 
 - `2026-07-20` `W36-E7-S4-T10` is complete: immutable unbounded run manifests now accept only
   canonical forward stage reuse after every preceding stage in that run has succeeded. Public CLI

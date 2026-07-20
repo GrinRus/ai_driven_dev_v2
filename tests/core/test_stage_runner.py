@@ -1293,6 +1293,66 @@ def test_run_single_stage_orchestration_executes_generic_cli_happy_path(
     assert metadata_payload["status"] == StageState.SUCCEEDED.value
 
 
+def test_post_normalization_stage_result_finding_requests_repair(
+    tmp_path: Path,
+) -> None:
+    workspace_root = tmp_path / ".aidd"
+    create_run_manifest(
+        workspace_root=workspace_root,
+        work_item="WI-001",
+        run_id="run-001",
+        runtime_id="generic-cli",
+        stage_target="plan",
+        config_snapshot={"mode": "test"},
+    )
+    preview_bundle = prepare_stage_bundle(
+        workspace_root=workspace_root,
+        work_item="WI-001",
+        stage="plan",
+    )
+    _materialize_expected_inputs(preview_bundle.expected_input_bundle)
+    runtime_documents = _valid_plan_output_documents()
+    runtime_documents["stage-result.md"] = runtime_documents["stage-result.md"].replace(
+        "## Attempt history\n\n- attempt-0001\n\n",
+        "## Attempt history\n\n"
+        "- Attempt 1 (`initial`): first claim.\n"
+        "- Attempt 1 (`initial`): duplicate claim.\n\n",
+    )
+    stage_root = workspace_root / "workitems" / "WI-001" / "stages" / "plan"
+
+    def _adapter_executor(
+        invocation: AdapterInvocationBundle,
+        execution_state: StageExecutionState,
+    ) -> AdapterExecutionOutcome:
+        _ = invocation, execution_state
+        stage_root.mkdir(parents=True, exist_ok=True)
+        for name, content in runtime_documents.items():
+            (stage_root / name).write_text(content, encoding="utf-8")
+        return AdapterExecutionOutcome(succeeded=True, details="success")
+
+    orchestration = run_single_stage_orchestration(
+        workspace_root=workspace_root,
+        work_item="WI-001",
+        run_id="run-001",
+        stage="plan",
+        adapter_executor=_adapter_executor,
+    )
+
+    assert orchestration.transition.action is PostValidationAction.REPAIR
+    assert orchestration.validation_result is not None
+    assert [finding.code for finding in orchestration.validation_result.findings] == [
+        "SEM-INCOMPLETE-SECTION"
+    ]
+    metadata = load_stage_metadata(
+        workspace_root=workspace_root,
+        work_item="WI-001",
+        run_id="run-001",
+        stage="plan",
+    )
+    assert metadata is not None
+    assert metadata.status == StageState.REPAIR_NEEDED.value
+
+
 def test_run_single_stage_orchestration_includes_answers_after_blocked_resume(
     tmp_path: Path,
 ) -> None:

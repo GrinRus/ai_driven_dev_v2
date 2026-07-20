@@ -1242,6 +1242,56 @@ def test_stage_run_retries_after_repair_and_succeeds_within_budget(tmp_path: Pat
     assert "intervention.md" not in repair_prompt_names
 
 
+def test_stage_run_repairs_duplicate_attempt_history_found_after_normalization(
+    tmp_path: Path,
+) -> None:
+    workspace_root = tmp_path / ".aidd"
+    work_item = "WI-POST-NORMALIZATION"
+    _materialize_plan_inputs(workspace_root=workspace_root, work_item=work_item)
+    invalid_documents = _valid_plan_output_documents()
+    invalid_documents["stage-result.md"] = invalid_documents["stage-result.md"].replace(
+        "## Attempt history\n\n- attempt-0001\n\n",
+        "## Attempt history\n\n"
+        "- Attempt 1 (`initial`): first claim.\n"
+        "- Attempt 1 (`initial`): duplicate claim.\n\n",
+    )
+    writer_script = _write_runtime_writer_script(
+        tmp_path=tmp_path,
+        documents=invalid_documents,
+        next_documents=_valid_plan_output_documents(repair_trace=True),
+        exit_code=0,
+    )
+    runtime_command = f"{shlex.quote(sys.executable)} {shlex.quote(writer_script.as_posix())}"
+    config_path = _write_cli_config(
+        tmp_path=tmp_path,
+        runtime_command=runtime_command,
+        max_repair_attempts=2,
+    )
+
+    result = runner.invoke(
+        app,
+        [
+            "stage",
+            "run",
+            "plan",
+            "--work-item",
+            work_item,
+            "--runtime",
+            "generic-cli",
+            "--root",
+            str(workspace_root),
+            "--config",
+            str(config_path),
+            "--no-log-follow",
+        ],
+    )
+
+    assert result.exit_code == 0, result.output
+    assert "Repair retry scheduled: attempt=2" in result.stdout
+    assert "Stage attempts: 2" in result.stdout
+    assert "Final post-normalization stage-result validation failed" not in result.output
+
+
 def test_stage_run_stops_when_repair_budget_is_exhausted(tmp_path: Path) -> None:
     workspace_root = tmp_path / ".aidd"
     _materialize_plan_inputs(workspace_root=workspace_root, work_item="WI-005")
