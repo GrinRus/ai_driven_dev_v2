@@ -331,11 +331,14 @@ async function reconcileExpiredActiveJob(jobId) {
 
 async function reconcileTerminalActiveJob(jobId) {
   await fetchDashboard();
-  if (!state.dashboardActiveJob || state.dashboardActiveJob.job_id === jobId) {
-    clearReconciledActiveJob({preserveConnection: false});
-  }
+  const terminalJobIsDurableWinner = (
+    !state.dashboardActiveJob || state.dashboardActiveJob.job_id === jobId
+  );
   await fetchProjectHome(state.dashboard?.work_item || "");
   await fetchInbox();
+  if (terminalJobIsDurableWinner && state.activeJobId === jobId) {
+    clearReconciledActiveJob({preserveConnection: false});
+  }
   await renderAll();
 }
 

@@ -7,17 +7,16 @@ slice, and local task.
 
 ## Next
 
-- `W36-E7-S4-T19` — Make terminal active-job reconciliation wait for durable Studio readback.
+- `W36-E7-S4-T3` — Rerun Codex after deterministic terminal Studio reconciliation.
 
 ## Soon
 
-- none
+- `W36-E7-S4-T4` — Repeat the medium scenario through Claude Code from an independent root.
 
 ## Parking lot
 
 - `W36-E7-S3-T2` — Record five first-time-operator sessions after initial live hardening.
 - `W36-E7-S3-T3` — Reconcile observed session findings before beta readiness.
-- `W36-E7-S4-T4` — Repeat the medium scenario through Claude Code from an independent root.
 - `W36-E7-S4-T5` — Record final same-revision Codex and Claude acceptance evidence.
 
 ## Update rules
@@ -34,6 +33,14 @@ slice, and local task.
   queue-restoration policy in `docs/backlog/roadmap.md` (`W8-E3-S1`).
 
 ## Current reconciliation
+
+- `2026-07-20` `W36-E7-S4-T19` is complete: terminal polling now retains the active job identity
+  until dashboard, project-home, and Inbox durable readback all finish, then releases volatile
+  buffers immediately before the final render. A new deferred-promise frontend regression proves
+  that no intermediate readback advertises completion, and the complete active-Studio journey
+  passes all five viewports with persisted `runtime.log` visible after cancellation. Job APIs,
+  cancellation semantics, and durable evidence are unchanged. Codex `T3` returns to `Next`;
+  Claude `T4` is its direct successor.
 
 - `2026-07-20` the post-`T18` full browser gate passed 56 cases before the active-Studio journey
   timed out at `1440x900` after cancellation: volatile `activeJobId` had already cleared, while
