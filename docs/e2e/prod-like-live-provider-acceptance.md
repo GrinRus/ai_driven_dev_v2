@@ -28,6 +28,20 @@ answers, task attempts, patch, or evidence bundle. Provider authentication may b
 the launching operator as documented by the live runner, but credentials are never copied into
 the candidate, target, report, browser, or tracked documentation trees.
 
+Run the provider-neutral gate before `aidd eval doctor` or any live command:
+
+```bash
+uv run --extra dev python -m aidd.harness.live_acceptance_preflight \
+  harness/scenarios/live/hono-non-error-throw-handling.yaml \
+  --runtime codex \
+  --source-checkout "$PWD" \
+  --external-root "$AIDD_LIVE_E2E_ROOT"
+```
+
+Repeat it with `--runtime claude-code`. The JSON result supplies the exact independent work,
+report, and browser roots for the black-box command. A failed preflight must not allocate a live
+run.
+
 ## Product and evaluator boundary
 
 - The evaluator drives only supported CLI, loopback UI/API, operator-answer, quality-audit, and

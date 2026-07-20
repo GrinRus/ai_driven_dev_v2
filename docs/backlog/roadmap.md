@@ -11711,19 +11711,19 @@ Local tasks:
   - Scope: live E2E documentation and planning only.
   - Verification: docs consistency names the installed-wheel boundary, external evidence roots,
     pinned scenario/target, manual quality checkpoints, and forbidden cross-boundary state.
-- `W36-E7-S4-T2` (next) Add executable preflight and architecture checks for source, target,
+- `W36-E7-S4-T2` (done) Add executable preflight and architecture checks for source, target,
   provider-root, import, and scenario-specific isolation.
   - Dependencies: `W36-E7-S4-T1` as the direct queue predecessor.
   - Scope: provider-free harness and architecture tests.
   - Verification: conformance fixtures fail before live execution for overlapping roots, dirty
     tracked source, forbidden product imports, or live-scenario literals in runtime product code.
-- `W36-E7-S4-T3` (soon) Run `AIDD-LIVE-007` through Codex to a clean terminal result with
+- `W36-E7-S4-T3` (next) Run `AIDD-LIVE-007` through Codex to a clean terminal result with
   manual stage-quality and rendered Studio evidence.
   - Dependencies: `W36-E7-S4-T2` as the direct queue predecessor.
   - Scope: external Codex live execution and evidence only.
   - Verification: installed-wheel `idea -> qa`, target verification, complete audits, terminal
     reports, and bounded Chromium evidence pass from an external run root.
-- `W36-E7-S4-T4` (parked) Run `AIDD-LIVE-007` through Claude Code from an independent root on
+- `W36-E7-S4-T4` (soon) Run `AIDD-LIVE-007` through Claude Code from an independent root on
   the same AIDD revision and target pin.
   - Dependencies: `W36-E7-S4-T3` as the direct queue predecessor.
   - Scope: external Claude Code live execution and evidence only.
