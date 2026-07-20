@@ -1693,6 +1693,7 @@ def _selected_task_from_payload(
             audit_rubric.strip() if isinstance(audit_rubric, str) and audit_rubric.strip() else None
         ),
         complexity_axes=_string_tuple_from_snapshot(raw.get("complexity_axes")),
+        allowed_write_scope=_string_tuple_from_snapshot(raw.get("allowed_write_scope")),
     )
 
 

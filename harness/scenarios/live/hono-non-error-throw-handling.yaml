@@ -48,6 +48,11 @@ feature_source:
       public error handler or context error type contracts.
     expected_scope: Localized runtime behavior plus tests in the Hono middleware or
       request dispatch path.
+    allowed_write_scope:
+    - src/compose.ts
+    - src/hono-base.ts
+    - src/compose.test.ts
+    - src/hono.test.ts
     acceptance_criteria:
     - Non-Error thrown values are delivered to configured onError handling instead of
       surfacing as unhandled promise rejections.

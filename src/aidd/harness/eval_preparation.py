@@ -110,6 +110,7 @@ def build_feature_selection_payload(
     if selected_task is not None:
         payload["selected_task"] = {
             "acceptance_criteria": list(selected_task.acceptance_criteria),
+            "allowed_write_scope": list(selected_task.allowed_write_scope),
             "expected_scope": selected_task.expected_scope,
             "id": selected_task.task_id,
             "intent": selected_task.intent,

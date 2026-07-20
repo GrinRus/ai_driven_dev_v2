@@ -7,7 +7,7 @@ slice, and local task.
 
 ## Next
 
-- `W36-E7-S4-T3` — Rerun the canonical medium scenario through Codex after reconciliation fix.
+- `W36-E7-S4-T3` — Rerun the canonical medium scenario through Codex after scope-bootstrap fix.
 
 ## Soon
 
@@ -33,6 +33,21 @@ slice, and local task.
   queue-restoration policy in `docs/backlog/roadmap.md` (`W8-E3-S1`).
 
 ## Current reconciliation
+
+- `2026-07-20` `W36-E7-S4-T13` is complete: authored live tasks may declare exact canonical
+  repository-relative scope prefixes, manifest loading rejects unsafe values through the shared
+  parser, bootstrap renders only those values, and prose-only legacy tasks omit the optional scope
+  document instead of creating invalid policy. The Hono medium scenario now bounds its four
+  runtime/test files. Focused harness checks, Ruff, mypy, wheel build, and all 1942 Python tests
+  pass. Codex `T3` returns to `Next` for a fresh tracked-snapshot run, followed by Claude `T4`.
+
+- `2026-07-20` the fresh `e64a923` Codex run passed and was manually audited through `tasklist`,
+  then failed closed on Implement T1 because live bootstrap wrote prose-only
+  `allowed-write-scope.md`. The canonical parser correctly rejected the document and the bounded
+  repair path removed task-local test edits but could not repair harness-owned context. The
+  historical bundle remains external. Runtime-neutral manifest/bootstrap task
+  `W36-E7-S4-T13` is promoted to `Next`; Codex `T3` is blocked pending its regression and a fresh
+  tracked-snapshot run.
 
 - `2026-07-20` `W36-E7-S4-T12` is complete: validator-verdict reconciliation now distinguishes
   an existing byte-equal canonical match from an absent field, collapses legacy duplicates, and

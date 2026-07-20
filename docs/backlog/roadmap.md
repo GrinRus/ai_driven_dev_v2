@@ -11719,8 +11719,9 @@ Local tasks:
     tracked source, forbidden product imports, or live-scenario literals in runtime product code.
 - `W36-E7-S4-T3` (next) Run `AIDD-LIVE-007` through Codex to a clean terminal result with
   manual stage-quality and rendered Studio evidence.
-  - Dependencies: `W36-E7-S4-T2`, `W36-E7-S4-T6`, `W36-E7-S4-T10`,
-    `W36-E7-S4-T11`, and `W36-E7-S4-T12` as live-discovered queue predecessors.
+  - Dependencies: `W36-E7-S4-T13`, `W36-E7-S4-T2`, `W36-E7-S4-T6`, `W36-E7-S4-T10`,
+    `W36-E7-S4-T11`, and `W36-E7-S4-T12` as live-discovered queue
+    predecessors.
   - Scope: external Codex live execution and evidence only.
   - Verification: installed-wheel `idea -> qa`, target verification, complete audits, terminal
     reports, and bounded Chromium evidence pass from an external run root.
@@ -11788,6 +11789,16 @@ Local tasks:
   - Verification: one or repeated reconciliation calls produce byte-stable Markdown with exactly
     one canonical `Validator verdict: pass` entry, including legacy input that already contains
     duplicate verdict lines.
+- `W36-E7-S4-T13` (done) Materialize live allowed-write scope only from canonical
+  repository-relative path prefixes declared by the authored scenario task.
+  - Dependencies: `W36-E7-S4-T12` as the live-discovery predecessor; blocks the active Codex
+    acceptance task `W36-E7-S4-T3`.
+  - Scope: runtime-neutral live scenario schema, workspace bootstrap, maintained Hono manifest,
+    documentation, and provider-free harness regression coverage only; core scope semantics,
+    provider adapters, prompts, and target-specific product code remain unchanged.
+  - Verification: an explicit path list renders a scope accepted by `AllowedWriteScope`, invalid
+    paths fail during manifest loading, and a legacy task without exact paths omits the optional
+    scope document instead of creating malformed fail-closed evidence.
 
 Exit evidence:
 

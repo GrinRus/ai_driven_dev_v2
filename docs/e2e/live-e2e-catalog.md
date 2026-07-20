@@ -345,6 +345,10 @@ Every maintained live scenario must:
   `acceptance_criteria`, `verification`, `quality_bar`, and `size_rationale`;
   `quality_bar` is authored task metadata only and must not be treated as an automatic
   live quality gate;
+- when exact repository prefixes are known, declare `allowed_write_scope` as canonical
+  repository-relative POSIX paths; bootstrap then writes the optional
+  `allowed-write-scope.md` from those paths only. Omitting the field omits the scope document;
+  prose `expected_scope` is never reinterpreted as a path policy;
 - for `product-evaluation`, define task `visible_request`, `audit_rubric`, and
   `complexity_axes`; `user-request.md` stays focused on `visible_request`, while
   `selected-task.md` also exposes authored task constraints such as `intent`,
