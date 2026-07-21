@@ -34,6 +34,23 @@ slice, and local task.
 
 ## Current reconciliation
 
+- `2026-07-21` `W36-E7-S4-T21` is complete: shared streaming now records normal parent exit before
+  applying later cancellation/completion/runtime deadlines during bounded descendant and inherited
+  pipe cleanup. A deterministic regression forces cleanup across the configured runtime deadline
+  and preserves the normal result, while real pre-exit timeout remains unchanged. The large
+  bidirectional success characterization now uses a distinct bounded runtime budget under its
+  existing outer watchdog. All 304 adapter/docs/planning tests, Ruff, and mypy pass. Codex `T3`
+  returns to `Next`; Claude `T4` is its direct successor.
+
+- `2026-07-21` the exact-`2c00d89` full Python gate passed 1956 tests and exposed two shared
+  process-lifecycle deadline races. The bidirectional success characterization used the same
+  200-millisecond budget as a timeout stress case and fails deterministically under current load.
+  Separately, a normally exited parent can be labelled timeout when bounded inherited-pipe cleanup
+  crosses the runtime deadline because deadline polling precedes parent-exit recognition. The
+  first decisive boundary is runtime-neutral subprocess supervision/test budgeting, not provider
+  behavior. `W36-E7-S4-T21` is promoted to `Next`; Codex `T3` is blocked until the regression and
+  a clean exact-SHA full gate.
+
 - `2026-07-21` `W36-E7-S4-T20` is complete: the Implement document/stage contracts plus initial
   and repair prompts now define rich-task `Touched files` as the exact current task baseline/final
   diff. Successful prerequisite-only paths are excluded unless changed again, new current-task

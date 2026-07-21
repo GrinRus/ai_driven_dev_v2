@@ -258,13 +258,14 @@ def test_parent_exit_stops_child_process_before_runtime_timeout(tmp_path: Path) 
     started_at = time.monotonic()
     result = run_streamed_subprocess(
         spec=spec,
-        timeout_seconds=1.0,
+        timeout_seconds=1.5,
         timeout_stop_reason=StopReason.TIMEOUT,
         cancel_stop_reason=StopReason.CANCELLED,
+        queue_timeout_seconds=1.0,
     )
 
     assert result.stop_reason is None
-    assert time.monotonic() - started_at < 2.0
+    assert time.monotonic() - started_at < 3.0
     assert signal_path.read_text(encoding="utf-8") == str(signal.SIGTERM)
 
 

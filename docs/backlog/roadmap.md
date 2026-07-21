@@ -11719,7 +11719,7 @@ Local tasks:
     tracked source, forbidden product imports, or live-scenario literals in runtime product code.
 - `W36-E7-S4-T3` (next) Run `AIDD-LIVE-007` through Codex to a clean terminal result with
   manual stage-quality and rendered Studio evidence.
-  - Dependencies: `W36-E7-S4-T20`, `W36-E7-S4-T19`, `W36-E7-S4-T18`, `W36-E7-S4-T17`, `W36-E7-S4-T16`, `W36-E7-S4-T15`, `W36-E7-S4-T14`, `W36-E7-S4-T13`, `W36-E7-S4-T2`, `W36-E7-S4-T6`, `W36-E7-S4-T10`,
+  - Dependencies: `W36-E7-S4-T21`, `W36-E7-S4-T20`, `W36-E7-S4-T19`, `W36-E7-S4-T18`, `W36-E7-S4-T17`, `W36-E7-S4-T16`, `W36-E7-S4-T15`, `W36-E7-S4-T14`, `W36-E7-S4-T13`, `W36-E7-S4-T2`, `W36-E7-S4-T6`, `W36-E7-S4-T10`,
     `W36-E7-S4-T11`, and `W36-E7-S4-T12` as live-discovered queue
     predecessors.
   - Scope: external Codex live execution and evidence only.
@@ -11875,6 +11875,16 @@ Local tasks:
     additions remain mandatory, cumulative paths appear only in aggregate finalization evidence,
     and `SEM-TASK-DIFF-MISMATCH` repair guidance removes prerequisite-only claims without reverting
     successful prior task outcomes.
+- `W36-E7-S4-T21` (done) Make successful parent exit authoritative before inherited-pipe cleanup
+  can cross the runtime deadline.
+  - Dependencies: `W36-E7-S4-T20` as the exact-SHA full-suite discovery predecessor; blocks the
+    active Codex acceptance task `W36-E7-S4-T3`.
+  - Scope: runtime-neutral shared subprocess lifecycle ordering, provider-free characterization
+    budgets, focused adapter regression coverage, and planning reconciliation only; provider
+    adapters, runtime outcomes, scenario manifests, and target product code remain unchanged.
+  - Verification: once the owned parent has exited normally, bounded descendant/pipe cleanup does
+    not rewrite the result as timeout; real pre-exit timeout remains authoritative, large
+    bidirectional I/O completes under a separate outer watchdog, and no descendants survive.
 
 Exit evidence:
 

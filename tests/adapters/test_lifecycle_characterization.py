@@ -49,7 +49,9 @@ elif scenario == "bidirectional-io":
         "print(len(sys.stdin.read()))"
     )
     stdin_text = "y" * 200000
-    timeout = 0.2
+    # Completion is bounded by the outer watchdog. Keep this success probe's runtime
+    # deadline separate from the dedicated timeout stress case below.
+    timeout = 2.0
     cancel = None
 elif scenario in {"timeout", "cancellation"}:
     child = "import time; print('started', flush=True); time.sleep(10)"
