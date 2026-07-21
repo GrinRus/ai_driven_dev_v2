@@ -11719,7 +11719,7 @@ Local tasks:
     tracked source, forbidden product imports, or live-scenario literals in runtime product code.
 - `W36-E7-S4-T3` (next) Run `AIDD-LIVE-007` through Codex to a clean terminal result with
   manual stage-quality and rendered Studio evidence.
-  - Dependencies: `W36-E7-S4-T24`, `W36-E7-S4-T23`, `W36-E7-S4-T22`, `W36-E7-S4-T21`, `W36-E7-S4-T20`, `W36-E7-S4-T19`, `W36-E7-S4-T18`, `W36-E7-S4-T17`, `W36-E7-S4-T16`, `W36-E7-S4-T15`, `W36-E7-S4-T14`, `W36-E7-S4-T13`, `W36-E7-S4-T2`, `W36-E7-S4-T6`, `W36-E7-S4-T10`,
+  - Dependencies: `W36-E7-S4-T25`, `W36-E7-S4-T24`, `W36-E7-S4-T23`, `W36-E7-S4-T22`, `W36-E7-S4-T21`, `W36-E7-S4-T20`, `W36-E7-S4-T19`, `W36-E7-S4-T18`, `W36-E7-S4-T17`, `W36-E7-S4-T16`, `W36-E7-S4-T15`, `W36-E7-S4-T14`, `W36-E7-S4-T13`, `W36-E7-S4-T2`, `W36-E7-S4-T6`, `W36-E7-S4-T10`,
     `W36-E7-S4-T11`, and `W36-E7-S4-T12` as live-discovered queue
     predecessors.
   - Scope: external Codex live execution and evidence only.
@@ -11917,6 +11917,15 @@ Local tasks:
   - Verification: T1 may retain initial/repair references and succeed, then a clean T2 attempt
     validates without requiring a current T2 repair brief; a real current-task repair mention
     without corresponding retained evidence still fails closed.
+- `W36-E7-S4-T25` (done) Replace the UI runtime-cancellation fixture's fixed one-second startup
+  polling window with a bounded monotonic log synchronization helper.
+  - Dependencies: `W36-E7-S4-T24` as the exact-SHA preflight discovery predecessor; blocks the
+    active Codex acceptance task `W36-E7-S4-T3`.
+  - Scope: provider-free UI test synchronization only; UI jobs, runtime launch, cancellation,
+    evidence persistence, provider adapters, and live scenario behavior remain unchanged.
+  - Verification: delayed cold startup is observed within an explicit bounded deadline, missing
+    startup still fails deterministically, cancellation evidence remains exact, and repeated
+    isolated plus full-suite runs no longer depend on host scheduling within one second.
 
 Exit evidence:
 

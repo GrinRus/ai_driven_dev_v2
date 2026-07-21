@@ -34,6 +34,18 @@ slice, and local task.
 
 ## Current reconciliation
 
+- `2026-07-21` `W36-E7-S4-T25` is complete: the UI runtime-cancellation fixture now waits for its
+  live-log startup marker with an explicit monotonic ten-second deadline instead of assuming host
+  scheduling within one second. Five isolated repetitions, docs/planning checks, and Ruff pass;
+  runtime launch, cancellation, and evidence semantics are unchanged. Codex `T3` returns to `Next`
+  for a fresh clean-HEAD preflight, followed by independent Claude `T4`.
+
+- `2026-07-21` the exact-`7c29b14` preflight passed Ruff, mypy, and 1961 Python tests, but the UI
+  runtime-cancellation fixture failed its fixed one-second log-start polling window. An isolated
+  rerun passed once and failed once, proving load-sensitive synchronization rather than a provider
+  result. `W36-E7-S4-T25` is promoted to `Next`; Codex `T3` is blocked before any external root or
+  provider run is created.
+
 - `2026-07-21` the operator reset the Codex provider limit. `W36-E7-S4-T3` is restored to `Next`
   for a fresh external run from clean tracked HEAD; `W36-E7-S4-T4` moves to `Soon` and remains
   dependent on a clean Codex result on the same AIDD revision.
