@@ -1009,6 +1009,48 @@ def test_validate_cross_document_consistency_reports_repair_mismatch_cases(
     )
 
 
+def test_validate_cross_document_consistency_allows_historical_repair_before_clean_attempt(
+    tmp_path: Path,
+) -> None:
+    contracts_root = tmp_path / "contracts" / "stages"
+    contracts_root.mkdir(parents=True)
+    _write_stage_contract(
+        contracts_root=contracts_root,
+        required_inputs=("context/intake.md",),
+        required_outputs=("stage-result.md",),
+        prompt_pack_paths=("prompt-packs/stages/implement/system.md",),
+    )
+    _touch_contract_references(
+        repo_root=tmp_path,
+        required_outputs=("stage-result.md",),
+        prompt_pack_paths=("prompt-packs/stages/implement/system.md",),
+    )
+
+    workspace_root = tmp_path / ".aidd"
+    stage_root = _stage_root(workspace_root)
+    stage_root.mkdir(parents=True, exist_ok=True)
+    (stage_root / "stage-result.md").write_text(
+        (
+            "# Stage Result\n\n"
+            "## Attempt history\n\n"
+            "- Attempt `1` (`initial`) -> failed validation.\n"
+            "- Attempt `2` (`repair`) -> succeeded for the previous unit of work.\n"
+            "- Attempt `3` (`initial`) -> succeeded for the current unit of work.\n\n"
+            "## Status\n\n- `succeeded`\n"
+        ),
+        encoding="utf-8",
+    )
+
+    findings = validate_cross_document_consistency(
+        stage="review",
+        work_item="WI-001",
+        workspace_root=workspace_root,
+        contracts_root=contracts_root,
+    )
+
+    assert not any(finding.code == REPAIR_MENTION_WITHOUT_BRIEF_CODE for finding in findings)
+
+
 def test_validate_cross_document_consistency_reports_unresolved_blocking_question(
     tmp_path: Path,
 ) -> None:

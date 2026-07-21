@@ -11906,7 +11906,7 @@ Local tasks:
   - Verification: a touched-file bullet such as ``- `src/app.py` - assign `context.error` `` checks
     only `src/app.py` against canonical scope, while malformed/missing paths and a genuinely
     out-of-scope leading path retain existing fail-closed findings.
-- `W36-E7-S4-T24` (next) Keep rich-task repair history scoped to the task attempt whose global
+- `W36-E7-S4-T24` (done) Keep rich-task repair history scoped to the task attempt whose global
   stage attempts it references, so a later task is not invalidated by an earlier successful task's
   retained repair evidence.
   - Dependencies: `W36-E7-S4-T23` as the direct live-discovery predecessor; blocks the active

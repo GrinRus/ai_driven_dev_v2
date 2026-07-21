@@ -7,7 +7,7 @@ slice, and local task.
 
 ## Next
 
-- `W36-E7-S4-T24` — Scope retained Implement repair history to its owning task attempt.
+- none
 
 ## Soon
 
@@ -34,6 +34,14 @@ slice, and local task.
   queue-restoration policy in `docs/backlog/roadmap.md` (`W8-E3-S1`).
 
 ## Current reconciliation
+
+- `2026-07-21` `W36-E7-S4-T24` is complete: cross-document repair traceability now derives the
+  active repair requirement from the latest canonical attempt-history entry. A completed repair
+  retained for an earlier rich task no longer requires a current task's removed canonical
+  `repair-brief.md`; a latest repair attempt and legacy unstructured repair mention remain
+  fail-closed. Cross-document, stage-runner, docs, planning, and Ruff checks pass. Product-owned
+  defects found by the independent Claude diagnostic runs are closed; provider acceptance remains
+  blocked by the Codex account quota before a fresh exact-revision run can begin.
 
 - `2026-07-21` `W36-E7-S4-T23` is complete: Implement allowed-scope validation now reads only the
   canonical leading path token from each top-level `Touched files` entry. Descriptive backticked
