@@ -11719,7 +11719,7 @@ Local tasks:
     tracked source, forbidden product imports, or live-scenario literals in runtime product code.
 - `W36-E7-S4-T3` (next) Run `AIDD-LIVE-007` through Codex to a clean terminal result with
   manual stage-quality and rendered Studio evidence.
-  - Dependencies: `W36-E7-S4-T28`, `W36-E7-S4-T27`, `W36-E7-S4-T26`, `W36-E7-S4-T25`, `W36-E7-S4-T24`, `W36-E7-S4-T23`, `W36-E7-S4-T22`, `W36-E7-S4-T21`, `W36-E7-S4-T20`, `W36-E7-S4-T19`, `W36-E7-S4-T18`, `W36-E7-S4-T17`, `W36-E7-S4-T16`, `W36-E7-S4-T15`, `W36-E7-S4-T14`, `W36-E7-S4-T13`, `W36-E7-S4-T2`, `W36-E7-S4-T6`, `W36-E7-S4-T10`,
+  - Dependencies: `W36-E7-S4-T29`, `W36-E7-S4-T28`, `W36-E7-S4-T27`, `W36-E7-S4-T26`, `W36-E7-S4-T25`, `W36-E7-S4-T24`, `W36-E7-S4-T23`, `W36-E7-S4-T22`, `W36-E7-S4-T21`, `W36-E7-S4-T20`, `W36-E7-S4-T19`, `W36-E7-S4-T18`, `W36-E7-S4-T17`, `W36-E7-S4-T16`, `W36-E7-S4-T15`, `W36-E7-S4-T14`, `W36-E7-S4-T13`, `W36-E7-S4-T2`, `W36-E7-S4-T6`, `W36-E7-S4-T10`,
     `W36-E7-S4-T11`, and `W36-E7-S4-T12` as live-discovered queue
     predecessors.
   - Scope: external Codex live execution and evidence only.
@@ -11956,6 +11956,15 @@ Local tasks:
   - Verification: backticked `sh -c`, `bash -c`, and `zsh -c` commands with observed outcomes pass
     semantic validation, while prose-only shell names and result claims without executable
     evidence remain fail-closed.
+- `W36-E7-S4-T29` (done) Use the Inbox journey's shared bounded surface budget when rendering the
+  server-confirmed Running-now overlay under full-suite load.
+  - Dependencies: `W36-E7-S4-T28` as the exact-SHA browser-gate discovery predecessor; blocks the
+    active Codex acceptance task `W36-E7-S4-T3`.
+  - Scope: provider-free Inbox browser journey synchronization only; job state, Inbox read model,
+    polling, rendering, APIs, provider adapters, and live scenario behavior remain unchanged.
+  - Verification: after the job API and Inbox read model both confirm the running identity, all
+    five viewports wait through the same bounded 30-second durable-surface budget; the original
+    `768x1024` case and the complete Inbox matrix pass without unbounded waits.
 
 Exit evidence:
 

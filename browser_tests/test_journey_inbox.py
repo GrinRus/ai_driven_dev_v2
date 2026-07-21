@@ -220,7 +220,7 @@ def test_inbox_prioritizes_and_routes_durable_and_running_work(
         page.locator('[data-tab-shortcut="project-home"]').first.click()
         sections = page.locator("[data-inbox-section]")
         page.locator('[data-inbox-section="running-now"]').wait_for(
-            state="visible", timeout=15_000
+            state="visible", timeout=_SURFACE_TIMEOUT_MS
         )
         assert sections.evaluate_all(
             "items => items.map(item => item.dataset.inboxSection)"

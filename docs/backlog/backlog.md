@@ -34,6 +34,14 @@ slice, and local task.
 
 ## Current reconciliation
 
+- `2026-07-21` `W36-E7-S4-T29` is complete: the full exact-`6f9d64c` Chromium lane passed 186 of
+  187 cases and exposed one remaining Inbox-only short wait. The job endpoint and `/api/inbox`
+  had already confirmed the same Running-now identity, but the `768x1024` render was allowed 15
+  seconds instead of the journey's shared bounded 30-second surface budget. The unchanged isolated
+  case passed in 97 seconds end to end, confirming load-sensitive test synchronization rather than
+  lost durable state. Running-now now uses the shared budget; Codex `T3` remains blocked until the
+  focused five-viewport matrix and a new full browser lane pass on this commit.
+
 - `2026-07-21` `W36-E7-S4-T28` is complete: explicit backticked `sh -c`, `bash -c`, and
   `zsh -c` verification commands are now recognized by the existing command-shaped evidence
   predicate, while prose-only shell names remain non-executable evidence. The live-shaped cleanup
