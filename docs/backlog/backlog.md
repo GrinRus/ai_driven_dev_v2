@@ -34,6 +34,14 @@ slice, and local task.
 
 ## Current reconciliation
 
+- `2026-07-21` `W36-E7-S4-T30` is complete: the post-`T29` full Chromium lane passed 184 of 187
+  cases and exposed three global network-idle timeouts in two stateful journey families. Both
+  intervention tests and terminal `1440x900` failed before their first business assertion while
+  waiting for background Studio polling to become silent. A shared test-owned helper now waits
+  after DOM readiness for the exact rendered work-item identity, and every navigation/reload in
+  those owning files uses that durable boundary. Product polling, rendering, APIs, mutations, and
+  runtime behavior are unchanged; Codex `T3` remains blocked pending focused and full gates.
+
 - `2026-07-21` `W36-E7-S4-T29` is complete: the full exact-`6f9d64c` Chromium lane passed 186 of
   187 cases and exposed one remaining Inbox-only short wait. The job endpoint and `/api/inbox`
   had already confirmed the same Running-now identity, but the `768x1024` render was allowed 15

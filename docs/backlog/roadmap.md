@@ -11719,7 +11719,7 @@ Local tasks:
     tracked source, forbidden product imports, or live-scenario literals in runtime product code.
 - `W36-E7-S4-T3` (next) Run `AIDD-LIVE-007` through Codex to a clean terminal result with
   manual stage-quality and rendered Studio evidence.
-  - Dependencies: `W36-E7-S4-T29`, `W36-E7-S4-T28`, `W36-E7-S4-T27`, `W36-E7-S4-T26`, `W36-E7-S4-T25`, `W36-E7-S4-T24`, `W36-E7-S4-T23`, `W36-E7-S4-T22`, `W36-E7-S4-T21`, `W36-E7-S4-T20`, `W36-E7-S4-T19`, `W36-E7-S4-T18`, `W36-E7-S4-T17`, `W36-E7-S4-T16`, `W36-E7-S4-T15`, `W36-E7-S4-T14`, `W36-E7-S4-T13`, `W36-E7-S4-T2`, `W36-E7-S4-T6`, `W36-E7-S4-T10`,
+  - Dependencies: `W36-E7-S4-T30`, `W36-E7-S4-T29`, `W36-E7-S4-T28`, `W36-E7-S4-T27`, `W36-E7-S4-T26`, `W36-E7-S4-T25`, `W36-E7-S4-T24`, `W36-E7-S4-T23`, `W36-E7-S4-T22`, `W36-E7-S4-T21`, `W36-E7-S4-T20`, `W36-E7-S4-T19`, `W36-E7-S4-T18`, `W36-E7-S4-T17`, `W36-E7-S4-T16`, `W36-E7-S4-T15`, `W36-E7-S4-T14`, `W36-E7-S4-T13`, `W36-E7-S4-T2`, `W36-E7-S4-T6`, `W36-E7-S4-T10`,
     `W36-E7-S4-T11`, and `W36-E7-S4-T12` as live-discovered queue
     predecessors.
   - Scope: external Codex live execution and evidence only.
@@ -11965,6 +11965,16 @@ Local tasks:
   - Verification: after the job API and Inbox read model both confirm the running identity, all
     five viewports wait through the same bounded 30-second durable-surface budget; the original
     `768x1024` case and the complete Inbox matrix pass without unbounded waits.
+- `W36-E7-S4-T30` (done) Replace global network-idle navigation waits in intervention-draft and
+  terminal-handoff browser journeys with bounded server-authoritative work-item surfaces.
+  - Dependencies: `W36-E7-S4-T29` as the exact-SHA browser-gate discovery predecessor; blocks the
+    active Codex acceptance task `W36-E7-S4-T3`.
+  - Scope: shared browser test synchronization plus the intervention-draft and terminal journey
+    families only; Studio polling, product rendering, APIs, workflow mutations, adapters, and live
+    scenario behavior remain unchanged.
+  - Verification: navigation and reload wait for DOM readiness followed by the exact rendered
+    work-item identity; intervention draft/submit and all five terminal viewports pass while a
+    missing or wrong durable identity still times out within 30 seconds.
 
 Exit evidence:
 

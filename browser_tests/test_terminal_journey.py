@@ -7,7 +7,11 @@ import pytest
 from playwright.sync_api import sync_playwright
 
 from aidd.core.run_store import run_manifest_path
-from browser_tests.browser_harness import VIEWPORTS, operator_browser_harness
+from browser_tests.browser_harness import (
+    VIEWPORTS,
+    operator_browser_harness,
+    wait_for_work_item_surface,
+)
 from browser_tests.state_fixtures import build_browser_state_fixture
 
 
@@ -44,8 +48,9 @@ def test_terminal_outcomes_keep_completed_source_run_immutable(
         page.goto(
             f"{harness.url}?ui=studio&work_item={fixture.work_item}"
             f"&run_id={fixture.run_id}&stage=qa",
-            wait_until="networkidle",
+            wait_until="domcontentloaded",
         )
+        wait_for_work_item_surface(page, fixture.work_item)
         flow = page.locator("[data-studio-flow-complete]")
         flow.wait_for(state="visible")
         assert flow.locator("[data-core-recommended-outcome]").count() == 1
@@ -108,8 +113,9 @@ def test_stale_qa_does_not_render_flow_complete(tmp_path: Path) -> None:
         page.goto(
             f"{harness.url}?ui=studio&work_item={fixture.work_item}"
             f"&run_id={fixture.run_id}&stage=qa",
-            wait_until="networkidle",
+            wait_until="domcontentloaded",
         )
+        wait_for_work_item_surface(page, fixture.work_item)
         assert page.locator("[data-studio-flow-complete]").count() == 0
         assert "stale" in page.locator("body").inner_text().lower()
         browser_page.diagnostics.assert_clean()
@@ -140,8 +146,9 @@ def test_fresh_terminal_status_uses_exact_core_recommendation(
         page.goto(
             f"{harness.url}?ui=studio&work_item={fixture.work_item}"
             f"&run_id={fixture.run_id}&stage=qa",
-            wait_until="networkidle",
+            wait_until="domcontentloaded",
         )
+        wait_for_work_item_surface(page, fixture.work_item)
         flow = page.locator("[data-studio-flow-complete]")
         flow.wait_for(state="visible")
         assert flow.get_attribute("data-terminal-status") == status

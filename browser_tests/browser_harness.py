@@ -27,6 +27,13 @@ VIEWPORTS: tuple[tuple[int, int], ...] = (
     (1440, 900),
 )
 _UI_URL = re.compile(r"AIDD UI: (http://127\.0\.0\.1:\d+/)")
+_OPERATOR_SURFACE_TIMEOUT_MS = 30_000
+
+
+def wait_for_work_item_surface(page: Page, work_item: str) -> None:
+    page.locator("#workItemChip").get_by_text(
+        f"Work item: {work_item}", exact=True
+    ).wait_for(state="visible", timeout=_OPERATOR_SURFACE_TIMEOUT_MS)
 
 
 @dataclass
