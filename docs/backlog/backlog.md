@@ -7,15 +7,14 @@ slice, and local task.
 
 ## Next
 
-- none
+- `W36-E7-S4-T3` — Run the pinned medium scenario through Codex from a fresh external root.
 
 ## Soon
 
-- none
+- `W36-E7-S4-T4` — Repeat the medium scenario through Claude Code from an independent root.
 
 ## Parking lot
 
-- `W36-E7-S4-T4` — Repeat the medium scenario through Claude Code from an independent root.
 - `W36-E7-S3-T2` — Record five first-time-operator sessions after initial live hardening.
 - `W36-E7-S3-T3` — Reconcile observed session findings before beta readiness.
 - `W36-E7-S4-T5` — Record final same-revision Codex and Claude acceptance evidence.
@@ -34,6 +33,10 @@ slice, and local task.
   queue-restoration policy in `docs/backlog/roadmap.md` (`W8-E3-S1`).
 
 ## Current reconciliation
+
+- `2026-07-21` the operator reset the Codex provider limit. `W36-E7-S4-T3` is restored to `Next`
+  for a fresh external run from clean tracked HEAD; `W36-E7-S4-T4` moves to `Soon` and remains
+  dependent on a clean Codex result on the same AIDD revision.
 
 - `2026-07-21` `W36-E7-S4-T24` is complete: cross-document repair traceability now derives the
   active repair requirement from the latest canonical attempt-history entry. A completed repair
