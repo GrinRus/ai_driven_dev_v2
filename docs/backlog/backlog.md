@@ -34,6 +34,15 @@ slice, and local task.
 
 ## Current reconciliation
 
+- `2026-07-21` `W36-E7-S4-T31` is complete: after the clean 187-case browser pass, the full Python
+  suite passed 1968 of 1969 tests and exposed one load-sensitive harness success fixture. Its
+  helper writes a heartbeat immediately and every 100 milliseconds, but the one-second
+  no-progress budget expired before the process received enough host scheduling; the decisive
+  probe remained `exists: false`. Five isolated reruns passed, with one taking 12.94 seconds end to
+  end despite 0.5 seconds of helper work. The success fixture now uses separate bounded three- and
+  eight-second budgets; the adjacent one-second silent-process test keeps production no-progress
+  classification covered. Codex `T3` remains blocked pending a clean exact-SHA full suite.
+
 - `2026-07-21` `W36-E7-S4-T30` is complete: the post-`T29` full Chromium lane passed 184 of 187
   cases and exposed three global network-idle timeouts in two stateful journey families. Both
   intervention tests and terminal `1440x900` failed before their first business assertion while

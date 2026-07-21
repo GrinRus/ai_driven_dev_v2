@@ -3442,8 +3442,8 @@ def test_black_box_command_no_progress_allows_live_artifact_heartbeats(
         command=command,
         cwd=tmp_path,
         environment=dict(os.environ),
-        timeout_seconds=5.0,
-        no_progress_timeout_seconds=1.0,
+        timeout_seconds=8.0,
+        no_progress_timeout_seconds=3.0,
         progress_probe=_probe,
     )
 
