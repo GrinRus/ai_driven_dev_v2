@@ -34,6 +34,23 @@ slice, and local task.
 
 ## Current reconciliation
 
+- `2026-07-21` `W36-E7-S4-T27` is complete: the Inbox browser journey no longer waits for global
+  network silence from a polling Studio or reads its lexical JavaScript state. Navigation and
+  reload now wait for DOM readiness followed by exact rendered work-item, Inbox, and question
+  surfaces under one bounded 30-second budget. The two originally failing edge viewports pass
+  repeatedly, the complete five-viewport Inbox matrix passes, and docs/planning plus Ruff checks
+  pass; production routing, polling, rendering, APIs, and provider behavior are unchanged. Codex
+  `T3` returns to `Next`; Claude `T4` is its direct successor.
+
+- `2026-07-21` the exact-`266cf5c` provider-free preflight passed 88 frontend tests, Ruff, mypy,
+  doctor/readiness, and 1964 Python tests, then the full Chromium lane reported two failures in the
+  same Inbox journey (`185 passed, 2 failed`). One failure waited for global `networkidle` while
+  Studio polling was healthy; the other observed canonical route/dashboard identity before the
+  bounded question surface render. Isolated rerun passed the mobile case and reproduced the
+  desktop failure at a later `networkidle` wait, proving test synchronization rather than durable
+  state loss. `W36-E7-S4-T27` is promoted to `Next`; live execution remains blocked until all five
+  viewports and the full browser lane pass on a new exact SHA.
+
 - `2026-07-21` `W36-E7-S4-T26` is complete: plan/tasklist cross-document validation now parses
   explicit `before`, `after`, `depends on`, and `requires` clauses in their authored direction,
   including a shared `M2 and M3 ... after M1, but both ... before M4` subject. A provider-free

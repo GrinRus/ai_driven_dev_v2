@@ -11719,7 +11719,7 @@ Local tasks:
     tracked source, forbidden product imports, or live-scenario literals in runtime product code.
 - `W36-E7-S4-T3` (next) Run `AIDD-LIVE-007` through Codex to a clean terminal result with
   manual stage-quality and rendered Studio evidence.
-  - Dependencies: `W36-E7-S4-T26`, `W36-E7-S4-T25`, `W36-E7-S4-T24`, `W36-E7-S4-T23`, `W36-E7-S4-T22`, `W36-E7-S4-T21`, `W36-E7-S4-T20`, `W36-E7-S4-T19`, `W36-E7-S4-T18`, `W36-E7-S4-T17`, `W36-E7-S4-T16`, `W36-E7-S4-T15`, `W36-E7-S4-T14`, `W36-E7-S4-T13`, `W36-E7-S4-T2`, `W36-E7-S4-T6`, `W36-E7-S4-T10`,
+  - Dependencies: `W36-E7-S4-T27`, `W36-E7-S4-T26`, `W36-E7-S4-T25`, `W36-E7-S4-T24`, `W36-E7-S4-T23`, `W36-E7-S4-T22`, `W36-E7-S4-T21`, `W36-E7-S4-T20`, `W36-E7-S4-T19`, `W36-E7-S4-T18`, `W36-E7-S4-T17`, `W36-E7-S4-T16`, `W36-E7-S4-T15`, `W36-E7-S4-T14`, `W36-E7-S4-T13`, `W36-E7-S4-T2`, `W36-E7-S4-T6`, `W36-E7-S4-T10`,
     `W36-E7-S4-T11`, and `W36-E7-S4-T12` as live-discovered queue
     predecessors.
   - Scope: external Codex live execution and evidence only.
@@ -11936,6 +11936,16 @@ Local tasks:
   - Verification: `M1 before M2 and M3`, `M2 and M3 after M1`, pronoun-backed `both before M4`,
     and `M4 depends on M2 and M3` produce prerequisite-to-target edges in the authored direction;
     the valid live-shaped task graph passes while a genuinely inverted task dependency fails.
+- `W36-E7-S4-T27` (done) Replace the Inbox browser journey's global network-idle waits and short
+  render polling with bounded server-authoritative surface synchronization.
+  - Dependencies: `W36-E7-S4-T26` as the exact-SHA browser-gate discovery predecessor; blocks the
+    active Codex acceptance task `W36-E7-S4-T3`.
+  - Scope: provider-free Inbox browser journey synchronization only; Studio polling, routing,
+    rendering, endpoints, service semantics, provider adapters, and live scenario behavior remain
+    unchanged.
+  - Verification: reload and navigation wait for DOM readiness plus the exact Inbox/Studio durable
+    surface rather than global network silence; all five viewports pass repeatedly under the full
+    browser lane while missing surface readback still times out deterministically.
 
 Exit evidence:
 
