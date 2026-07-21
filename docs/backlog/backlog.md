@@ -7,14 +7,15 @@ slice, and local task.
 
 ## Next
 
-- `W36-E7-S4-T3` — Run the medium scenario through Codex from a fresh isolated root.
+- `W36-E7-S4-T24` — Scope retained Implement repair history to its owning task attempt.
 
 ## Soon
 
-- `W36-E7-S4-T4` — Repeat the medium scenario through Claude Code from an independent root.
+- none
 
 ## Parking lot
 
+- `W36-E7-S4-T4` — Repeat the medium scenario through Claude Code from an independent root.
 - `W36-E7-S3-T2` — Record five first-time-operator sessions after initial live hardening.
 - `W36-E7-S3-T3` — Reconcile observed session findings before beta readiness.
 - `W36-E7-S4-T5` — Record final same-revision Codex and Claude acceptance evidence.
@@ -33,6 +34,22 @@ slice, and local task.
   queue-restoration policy in `docs/backlog/roadmap.md` (`W8-E3-S1`).
 
 ## Current reconciliation
+
+- `2026-07-21` `W36-E7-S4-T23` is complete: Implement allowed-scope validation now reads only the
+  canonical leading path token from each top-level `Touched files` entry. Descriptive backticked
+  code identifiers such as `context.error` no longer become fabricated repository paths, while
+  missing, malformed, or genuinely out-of-scope leading paths retain fail-closed validation.
+  Focused semantic/scope/docs/planning tests and Ruff pass. `W36-E7-S4-T24` is promoted to `Next`;
+  provider acceptance remains blocked pending its independent repair-history regression.
+
+- `2026-07-21` the fresh Claude retry on exact revision `c19d396` proved task-local repository
+  diff recovery, then failed T2 on two runtime-neutral validator boundaries: the Implement
+  semantic rule interpreted descriptive backticked identifier `context.error` as a second touched
+  path, and cross-document validation required a current repair brief for retained stage-wide T1
+  repair history while validating clean T2. Task diff evidence itself was exact and T1 remained
+  succeeded. `W36-E7-S4-T23` is promoted to `Next`, `T24` to `Soon`; provider runs remain blocked
+  pending separate regressions and fresh roots. The Codex diagnostic attempt was independently
+  blocked by provider quota rather than an AIDD defect.
 
 - `2026-07-21` `W36-E7-S4-T22` is complete: stage-scoped operator request Markdown is rendered to
   a unique sibling staging file and atomically renamed to its canonical `request-*.md` path. A

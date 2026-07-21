@@ -90,6 +90,44 @@ def test_semantic_validator_treats_missing_scope_as_unrestricted(tmp_path: Path)
     )
 
 
+def test_semantic_validator_ignores_backticked_code_in_touched_file_description(
+    tmp_path: Path,
+) -> None:
+    workspace_root = tmp_path / ".aidd"
+    work_item = "WI-SCOPE-DESCRIPTION-CODE"
+    _write_report(workspace_root, work_item, "src/hono-base.ts")
+    report = (
+        workspace_root
+        / "workitems"
+        / work_item
+        / "stages"
+        / "implement"
+        / "implementation-report.md"
+    )
+    report.write_text(
+        report.read_text(encoding="utf-8").replace(
+            "updated behavior.",
+            "assign the normalized value to `context.error`.",
+        ),
+        encoding="utf-8",
+    )
+    _write_scope(
+        workspace_root,
+        work_item,
+        "# Allowed Write Scope\n\n- `src/hono-base.ts`\n",
+    )
+
+    findings = validate_semantic_outputs(
+        stage="implement", work_item=work_item, workspace_root=workspace_root
+    )
+
+    assert not any(
+        finding.code == MISSING_DIFF_EVIDENCE_CODE
+        and "allowed write scope" in finding.message
+        for finding in findings
+    )
+
+
 @pytest.mark.parametrize(
     "markdown",
     (
