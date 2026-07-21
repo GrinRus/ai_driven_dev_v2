@@ -17,6 +17,7 @@ logic, dependency clarity, and review readiness.
    - `plan.md`
    - `stage-result.md`
    - `questions.md` / `answers.md` when present
+7. `context/allowed-write-scope.md` when present
 
 `repair-brief.md` is AIDD-owned read-only repair control evidence. Do not rewrite it; put
 any repair summary in `stage-result.md` and reference `repair-brief.md` by path for traceability.
@@ -72,6 +73,9 @@ Use concrete repair actions:
   highest-risk work;
 - unclear approval readiness: clarify `Out of scope`, trade-offs, and acceptance signals;
 - unresolved ambiguity: keep or add a blocking question instead of inventing assumptions.
+- out-of-scope implementation path: remove the proposed create/modify/move/delete path; keep a
+  small private helper inside allowed files when safe or raise a blocking question. Treat
+  `context/allowed-write-scope.md` as exhaustive and do not edit, broaden, or reinterpret it.
 - downstream-order drift: if successful `stage-result.md` next actions skip `review-spec` and point
   to task decomposition, implementation, review, or QA, rewrite the next action to name
   `review-spec` as the immediate canonical downstream stage.
@@ -97,6 +101,9 @@ Use concrete repair actions:
 11. If all listed findings are resolved and no blockers remain, set `stage-result.md` `Status` to `succeeded`; remove stale notes that say canonical AIDD validation still has open findings.
 12. When `stage-result.md` status is `succeeded`, its first downstream action must name
     `review-spec`, not a later canonical stage.
+13. Before declaring success, verify every proposed repository write path against
+    `context/allowed-write-scope.md` when present; read-only evidence paths and commands do not
+    expand that implementation boundary.
 
 ## Repair exit checks
 
@@ -104,6 +111,8 @@ Use concrete repair actions:
 - milestone sequencing and dependency constraints are coherent and explicit,
 - every milestone has a stable `M<N>` id and verification notes reference those ids,
 - risk mitigation and verification expectations are linked for highest-risk work,
+- no milestone or strategy proposes a helper, module, test, configuration, generated artifact, or
+  other repository write outside canonical `context/allowed-write-scope.md` when it exists,
 - successful `stage-result.md` next actions name `review-spec` as the immediate downstream stage,
 - `repair-budget-final-attempt` can coexist with `stage-result.md` status `succeeded` only when all listed findings are resolved,
 - `repair-budget-exhausted` cannot coexist with `stage-result.md` status `succeeded`,

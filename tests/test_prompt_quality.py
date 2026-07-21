@@ -625,6 +625,31 @@ def test_tasklist_contract_and_prompts_enforce_canonical_allowed_scope() -> None
     assert "do not edit, broaden, or reinterpret that context document" in repair_prompt
 
 
+def test_plan_contract_and_prompts_enforce_canonical_allowed_scope() -> None:
+    paths = (
+        "contracts/stages/plan.md",
+        "prompt-packs/stages/plan/system.md",
+        "prompt-packs/stages/plan/run.md",
+        "prompt-packs/stages/plan/repair.md",
+    )
+
+    for path in paths:
+        text = Path(path).read_text(encoding="utf-8")
+        assert "context/allowed-write-scope.md" in text
+        assert "exhaustive" in text
+        assert "helper" in text
+
+    run_prompt = Path("prompt-packs/stages/plan/run.md").read_text(encoding="utf-8")
+    repair_prompt = Path("prompt-packs/stages/plan/repair.md").read_text(
+        encoding="utf-8"
+    )
+    assert "Do not propose an out-of-bound preferred helper" in run_prompt
+    assert "keep a small private helper inside allowed files" in " ".join(
+        repair_prompt.split()
+    )
+    assert "do not edit, broaden, or reinterpret it" in repair_prompt
+
+
 def test_tasklist_prompts_are_live_installed_workspace_safe() -> None:
     run_prompt = Path("prompt-packs/stages/tasklist/run.md").read_text(
         encoding="utf-8"

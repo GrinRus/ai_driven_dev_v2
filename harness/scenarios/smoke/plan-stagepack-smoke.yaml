@@ -21,8 +21,18 @@ setup:
     [runtime.generic_cli]
     command = "python3 ../aidd_fixture_runtime.py"
     TOML
+  - |-
+    mkdir -p .aidd/workitems/WI-STAGE-PLAN-SMOKE/context
+    cat > .aidd/workitems/WI-STAGE-PLAN-SMOKE/context/allowed-write-scope.md <<'MD'
+    # Allowed Write Scope
+
+    - `src`
+    - `tests`
+    - `FIXTURE_EVIDENCE.md`
+    MD
   rationale:
   - Configure the local fixture runtime without provider authentication.
+  - Materialize a canonical bounded write scope before Plan stage preparation.
   - Keep the smoke lane reproducible in isolated contributor environments.
 aidd_invocation:
   work_item: WI-STAGE-PLAN-SMOKE
@@ -41,9 +51,11 @@ verify:
   - test -f .aidd/workitems/WI-STAGE-PLAN-SMOKE/stages/plan/output/plan.md
   - test -f .aidd/workitems/WI-STAGE-PLAN-SMOKE/stages/plan/output/stage-result.md
   - test -f .aidd/workitems/WI-STAGE-PLAN-SMOKE/stages/plan/output/validator-report.md
+  - grep -q 'context/allowed-write-scope.md' .aidd/workitems/WI-STAGE-PLAN-SMOKE/stages/plan/stage-brief.md
   pass_conditions:
   - Verification commands exit with status 0.
   - Plan stage output includes `plan.md`, `stage-result.md`, and `validator-report.md`.
+  - The packaged Plan stage brief names the canonical allowed-write-scope boundary.
 limits:
   timeout_minutes: 5
 interview:

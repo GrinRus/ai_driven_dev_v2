@@ -7,16 +7,17 @@ slice, and local task.
 
 ## Next
 
-- `W36-E7-S4-T3` — Run the medium scenario through Codex to a clean terminal result.
+- `W36-E7-S4-T33` — Fail closed on out-of-scope repository writes proposed by Plan.
 
 ## Soon
 
-- `W36-E7-S4-T4` — Repeat the medium scenario through Claude Code from an independent root.
+- `W36-E7-S4-T3` — Run the medium scenario through Codex to a clean terminal result.
 
 ## Parking lot
 
 - `W36-E7-S3-T2` — Record five first-time-operator sessions after initial live hardening.
 - `W36-E7-S3-T3` — Reconcile observed session findings before beta readiness.
+- `W36-E7-S4-T4` — Repeat the medium scenario through Claude Code from an independent root.
 - `W36-E7-S4-T5` — Record final same-revision Codex and Claude acceptance evidence.
 
 ## Update rules
@@ -33,6 +34,23 @@ slice, and local task.
   queue-restoration policy in `docs/backlog/roadmap.md` (`W8-E3-S1`).
 
 ## Current reconciliation
+
+- `2026-07-21` `W36-E7-S4-T32` is complete: the Plan contract and initial/repair prompts now read
+  canonical `context/allowed-write-scope.md` as an exhaustive implementation-write boundary,
+  distinguish read-only evidence/commands, forbid invented out-of-scope helpers and modules, and
+  require a private helper inside allowed files or a blocking question instead of scope widening.
+  The provider-free Plan stagepack now materializes the scope and verifies it in the packaged
+  stage brief. The public `aidd eval execute` smoke passes; 146 prompt/scenario/packaging/docs/
+  planning tests and focused Ruff pass. `W36-E7-S4-T33` is promoted to `Next` for fail-closed
+  semantic enforcement; Codex `T3` remains its direct successor and Claude `T4` stays parked.
+
+- `2026-07-21` two independent fresh Codex candidates on exact revision `bc248b2` passed Idea and
+  Research quality review, then each produced a structurally valid Plan that explicitly proposed
+  `src/utils/error.ts` outside the four-file canonical allowed-write scope. Manual quality review
+  stopped both candidates as `manual-quality-stop` before Review Spec or Tasklist. Because the
+  same scope leak repeated across isolated roots, `W36-E7-S4-T32` is promoted to `Next` for a
+  runtime-neutral Plan contract/prompt regression; Codex `T3` moves to `Soon`, and Claude `T4`
+  returns to Parking until a fresh exact-SHA preflight and Codex run pass.
 
 - `2026-07-21` `W36-E7-S4-T31` is complete: after the clean 187-case browser pass, the full Python
   suite passed 1968 of 1969 tests and exposed one load-sensitive harness success fixture. Its
