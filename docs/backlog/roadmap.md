@@ -11719,7 +11719,7 @@ Local tasks:
     tracked source, forbidden product imports, or live-scenario literals in runtime product code.
 - `W36-E7-S4-T3` (next) Run `AIDD-LIVE-007` through Codex to a clean terminal result with
   manual stage-quality and rendered Studio evidence.
-  - Dependencies: `W36-E7-S4-T25`, `W36-E7-S4-T24`, `W36-E7-S4-T23`, `W36-E7-S4-T22`, `W36-E7-S4-T21`, `W36-E7-S4-T20`, `W36-E7-S4-T19`, `W36-E7-S4-T18`, `W36-E7-S4-T17`, `W36-E7-S4-T16`, `W36-E7-S4-T15`, `W36-E7-S4-T14`, `W36-E7-S4-T13`, `W36-E7-S4-T2`, `W36-E7-S4-T6`, `W36-E7-S4-T10`,
+  - Dependencies: `W36-E7-S4-T26`, `W36-E7-S4-T25`, `W36-E7-S4-T24`, `W36-E7-S4-T23`, `W36-E7-S4-T22`, `W36-E7-S4-T21`, `W36-E7-S4-T20`, `W36-E7-S4-T19`, `W36-E7-S4-T18`, `W36-E7-S4-T17`, `W36-E7-S4-T16`, `W36-E7-S4-T15`, `W36-E7-S4-T14`, `W36-E7-S4-T13`, `W36-E7-S4-T2`, `W36-E7-S4-T6`, `W36-E7-S4-T10`,
     `W36-E7-S4-T11`, and `W36-E7-S4-T12` as live-discovered queue
     predecessors.
   - Scope: external Codex live execution and evidence only.
@@ -11926,6 +11926,16 @@ Local tasks:
   - Verification: delayed cold startup is observed within an explicit bounded deadline, missing
     startup still fails deterministically, cancellation evidence remains exact, and repeated
     isolated plus full-suite runs no longer depend on host scheduling within one second.
+- `W36-E7-S4-T26` (done) Parse explicit plan milestone dependency clauses with their authored
+  direction instead of treating the first milestone on a line as the dependent target.
+  - Dependencies: `W36-E7-S4-T25` as the fresh Codex live-discovery predecessor; blocks the
+    active Codex acceptance task `W36-E7-S4-T3`.
+  - Scope: runtime-neutral tasklist/plan cross-document dependency parsing and focused validator
+    regression coverage only; plan/tasklist contracts, prompts, adapters, scenario manifests, and
+    provider outputs remain unchanged.
+  - Verification: `M1 before M2 and M3`, `M2 and M3 after M1`, pronoun-backed `both before M4`,
+    and `M4 depends on M2 and M3` produce prerequisite-to-target edges in the authored direction;
+    the valid live-shaped task graph passes while a genuinely inverted task dependency fails.
 
 Exit evidence:
 

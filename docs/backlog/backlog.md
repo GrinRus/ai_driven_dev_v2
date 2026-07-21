@@ -7,7 +7,7 @@ slice, and local task.
 
 ## Next
 
-- `W36-E7-S4-T3` — Run the pinned medium scenario through Codex from a fresh external root.
+- `W36-E7-S4-T3` — Run the medium scenario through Codex to a clean terminal result.
 
 ## Soon
 
@@ -33,6 +33,21 @@ slice, and local task.
   queue-restoration policy in `docs/backlog/roadmap.md` (`W8-E3-S1`).
 
 ## Current reconciliation
+
+- `2026-07-21` `W36-E7-S4-T26` is complete: plan/tasklist cross-document validation now parses
+  explicit `before`, `after`, `depends on`, and `requires` clauses in their authored direction,
+  including a shared `M2 and M3 ... after M1, but both ... before M4` subject. A provider-free
+  live-shaped graph passes while removal of a real prerequisite remains fail-closed. Focused
+  cross-document, docs/planning, and Ruff checks pass. Codex `T3` returns to `Next`; Claude `T4`
+  is its direct successor.
+
+- `2026-07-21` the fresh Codex run on `d4883d2` passed manual quality review for Idea, Research,
+  Plan, and Review Spec, then exhausted Tasklist repair on four inverted
+  `CROSS-TASKLIST-PLAN-DEPENDENCY` findings. The authored graph correctly maps
+  `T1 -> T2/T3 -> T4/T5 -> T6`; the validator instead treated the first milestone in canonical
+  `before` and mixed `after ... before` clauses as the dependent target. Runtime attempts all
+  succeeded and final validation failed closed. `W36-E7-S4-T26` is promoted to `Next`; Codex `T3`
+  is blocked pending a clause-direction regression and a fresh external root.
 
 - `2026-07-21` `W36-E7-S4-T25` is complete: the UI runtime-cancellation fixture now waits for its
   live-log startup marker with an explicit monotonic ten-second deadline instead of assuming host

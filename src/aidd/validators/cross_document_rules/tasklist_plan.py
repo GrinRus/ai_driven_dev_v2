@@ -136,11 +136,58 @@ def _tasklist_scope_findings(
 def _milestone_dependencies(plan_text: str) -> tuple[tuple[str, str], ...]:
     edges: list[tuple[str, str]] = []
     for _, line in extract_section_lines(plan_text, "Dependencies"):
-        if not re.search(r"\b(depends? on|after|requires?)\b", line, re.IGNORECASE):
+        authored = re.sub(r"^\s*[-*+]\s+", "", line).strip()
+        leading = re.match(
+            r"^(?P<subjects>M[1-9]\d*(?:\s*(?:,|\band\b)\s*M[1-9]\d*)*)\b",
+            authored,
+            re.IGNORECASE,
+        )
+        if leading is None:
             continue
-        ids = [match.group(1).upper() for match in _MILESTONE_ID_PATTERN.finditer(line)]
-        if len(ids) >= 2:
-            edges.extend((ids[0], dependency) for dependency in ids[1:])
+        line_subjects = tuple(
+            match.group(1).upper()
+            for match in _MILESTONE_ID_PATTERN.finditer(leading.group("subjects"))
+        )
+        clauses = re.split(r"\s*,\s*but\s+|\s*;\s*", authored, flags=re.IGNORECASE)
+        for clause in clauses:
+            explicit_subjects = re.match(
+                r"^(?P<subjects>M[1-9]\d*(?:\s*(?:,|\band\b)\s*M[1-9]\d*)*)\b",
+                clause,
+                re.IGNORECASE,
+            )
+            subjects = (
+                tuple(
+                    match.group(1).upper()
+                    for match in _MILESTONE_ID_PATTERN.finditer(
+                        explicit_subjects.group("subjects")
+                    )
+                )
+                if explicit_subjects is not None
+                else line_subjects
+            )
+            relation = re.search(
+                r"\b(?P<relation>depends?\s+on|requires?|after|before)\b(?P<object>.*)$",
+                clause,
+                re.IGNORECASE,
+            )
+            if relation is None:
+                continue
+            objects = tuple(
+                match.group(1).upper()
+                for match in _MILESTONE_ID_PATTERN.finditer(relation.group("object"))
+            )
+            if relation.group("relation").casefold() == "before":
+                edges.extend(
+                    (target, prerequisite)
+                    for target in objects
+                    for prerequisite in subjects
+                )
+            else:
+                edges.extend(
+                    (target, prerequisite)
+                    for target in subjects
+                    for prerequisite in objects
+                )
     return tuple(dict.fromkeys(edges))
 
 

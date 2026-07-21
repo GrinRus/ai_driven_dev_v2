@@ -197,6 +197,59 @@ def _write_plan_tasklist_pair(
     )
 
 
+def _write_live_shaped_plan_tasklist_pair(workspace_root: Path) -> None:
+    work_item_root = workspace_root / "workitems" / "WI-001" / "stages"
+    plan_output = work_item_root / "plan" / "output"
+    tasklist_root = work_item_root / "tasklist"
+    plan_output.mkdir(parents=True)
+    tasklist_root.mkdir(parents=True)
+    plan_output.joinpath("plan.md").write_text(
+        "# Plan\n\n"
+        "## Milestones\n\n"
+        "- M1: Establish the shared normalization rule.\n"
+        "- M2: Apply it to direct dispatch.\n"
+        "- M3: Apply it to composed middleware.\n"
+        "- M4: Add regression coverage.\n"
+        "- M5: Run authored verification.\n\n"
+        "## Dependencies\n\n"
+        "- M1 must complete before M2 and M3 because both runtime edits depend on it.\n"
+        "- M2 and M3 may proceed independently after M1, but both must complete before M4.\n"
+        "- M4 depends on M2 and M3.\n"
+        "- M5 requires M4.\n\n"
+        "## Verification notes\n\n"
+        "- none\n",
+        encoding="utf-8",
+    )
+    cards = []
+    for task_id, milestone in enumerate(("M1", "M2", "M3", "M4", "M5"), start=1):
+        cards.append(
+            f"### T{task_id} — Complete {milestone}\n\n"
+            f"- Outcome: Complete {milestone}.\n"
+            f"- Dominant deliverable: `src/{task_id}.py`.\n"
+            f"- In scope: `src/{task_id}.py`.\n"
+            "- Acceptance criteria:\n"
+            f"  - T{task_id}-AC1: {milestone} is complete.\n"
+        )
+    tasklist_root.joinpath("tasklist.md").write_text(
+        "# Tasklist\n\n"
+        "## Ordered tasks\n\n"
+        + "\n".join(cards)
+        + "\n## Dependencies\n\n"
+        "- T1: none\n"
+        "- T2: T1\n"
+        "- T3: T1\n"
+        "- T4: T2, T3\n"
+        "- T5: T4\n\n"
+        "## Verification notes\n\n"
+        "- T1: verify M1\n"
+        "- T2: verify M2\n"
+        "- T3: verify M3\n"
+        "- T4: verify M4\n"
+        "- T5: verify M5\n",
+        encoding="utf-8",
+    )
+
+
 def _write_allowed_scope(workspace_root: Path, *paths: str) -> None:
     scope_path = (
         workspace_root
@@ -528,6 +581,48 @@ def test_tasklist_plan_cross_validation_reports_inverted_dependency_mapping(
     )
 
     assert any(item.code == TASKLIST_PLAN_DEPENDENCY_CODE for item in findings)
+
+
+def test_tasklist_plan_cross_validation_preserves_authored_dependency_direction(
+    tmp_path: Path,
+) -> None:
+    workspace_root = tmp_path / ".aidd"
+    _write_live_shaped_plan_tasklist_pair(workspace_root)
+
+    findings = validate_cross_document_consistency(
+        stage="tasklist",
+        work_item="WI-001",
+        workspace_root=workspace_root,
+    )
+
+    assert findings == ()
+
+
+def test_tasklist_plan_cross_validation_rejects_inverted_live_shaped_graph(
+    tmp_path: Path,
+) -> None:
+    workspace_root = tmp_path / ".aidd"
+    _write_live_shaped_plan_tasklist_pair(workspace_root)
+    tasklist_path = (
+        workspace_root / "workitems" / "WI-001" / "stages" / "tasklist" / "tasklist.md"
+    )
+    tasklist_path.write_text(
+        tasklist_path.read_text(encoding="utf-8").replace("- T2: T1", "- T2: none"),
+        encoding="utf-8",
+    )
+
+    findings = validate_cross_document_consistency(
+        stage="tasklist",
+        work_item="WI-001",
+        workspace_root=workspace_root,
+    )
+
+    dependency_findings = [
+        item for item in findings if item.code == TASKLIST_PLAN_DEPENDENCY_CODE
+    ]
+    assert len(dependency_findings) == 1
+    assert "Task `T2` covers `M2`" in dependency_findings[0].message
+    assert "`M1`" in dependency_findings[0].message
 
 
 def test_tasklist_plan_cross_validation_preserves_exact_authored_command(
