@@ -4,6 +4,7 @@ import re
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from pathlib import Path
+from uuid import uuid4
 
 from aidd.core.identifiers import contained_component_path
 from aidd.core.run_lookup import latest_run_id
@@ -36,6 +37,15 @@ class OperatorInterventionRequest:
     target_documents: tuple[str, ...]
     created_at_utc: str
     created_by: str
+
+
+def _write_text_atomic(path: Path, content: str) -> None:
+    staging_path = path.with_name(f".{path.name}.{uuid4().hex}.tmp")
+    try:
+        staging_path.write_text(content, encoding="utf-8")
+        staging_path.replace(path)
+    finally:
+        staging_path.unlink(missing_ok=True)
 
 
 def _utc_timestamp(moment: datetime | None = None) -> str:
@@ -275,7 +285,7 @@ def persist_operator_intervention_request(
         created_at_utc=timestamp,
     )
     request_path = request_root / f"{request_id}{OPERATOR_REQUEST_SUFFIX}"
-    request_path.write_text(markdown, encoding="utf-8")
+    _write_text_atomic(request_path, markdown)
     return OperatorInterventionRequest(
         work_item=work_item,
         stage=stage,

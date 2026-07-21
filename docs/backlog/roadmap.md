@@ -11719,7 +11719,7 @@ Local tasks:
     tracked source, forbidden product imports, or live-scenario literals in runtime product code.
 - `W36-E7-S4-T3` (next) Run `AIDD-LIVE-007` through Codex to a clean terminal result with
   manual stage-quality and rendered Studio evidence.
-  - Dependencies: `W36-E7-S4-T21`, `W36-E7-S4-T20`, `W36-E7-S4-T19`, `W36-E7-S4-T18`, `W36-E7-S4-T17`, `W36-E7-S4-T16`, `W36-E7-S4-T15`, `W36-E7-S4-T14`, `W36-E7-S4-T13`, `W36-E7-S4-T2`, `W36-E7-S4-T6`, `W36-E7-S4-T10`,
+  - Dependencies: `W36-E7-S4-T22`, `W36-E7-S4-T21`, `W36-E7-S4-T20`, `W36-E7-S4-T19`, `W36-E7-S4-T18`, `W36-E7-S4-T17`, `W36-E7-S4-T16`, `W36-E7-S4-T15`, `W36-E7-S4-T14`, `W36-E7-S4-T13`, `W36-E7-S4-T2`, `W36-E7-S4-T6`, `W36-E7-S4-T10`,
     `W36-E7-S4-T11`, and `W36-E7-S4-T12` as live-discovered queue
     predecessors.
   - Scope: external Codex live execution and evidence only.
@@ -11885,6 +11885,16 @@ Local tasks:
   - Verification: once the owned parent has exited normally, bounded descendant/pipe cleanup does
     not rewrite the result as timeout; real pre-exit timeout remains authoritative, large
     bidirectional I/O completes under a separate outer watchdog, and no descendants survive.
+- `W36-E7-S4-T22` (done) Publish stage-scoped operator request Markdown atomically before readers
+  can observe its canonical path.
+  - Dependencies: `W36-E7-S4-T21` as the exact-SHA browser-gate discovery predecessor; blocks the
+    active Codex acceptance task `W36-E7-S4-T3`.
+  - Scope: core-owned operator intervention persistence, focused core/browser regression coverage,
+    and planning reconciliation only; intervention endpoints, mutation payloads, eligibility,
+    adapters, scenario manifests, and target product code remain unchanged.
+  - Verification: a concurrent reader sees either no canonical `request-*.md` or the complete
+    rendered document, never an empty/partial file; failed writes remove staging residue, preserve
+    monotonic request identity, and create no duplicate intervention mutation.
 
 Exit evidence:
 

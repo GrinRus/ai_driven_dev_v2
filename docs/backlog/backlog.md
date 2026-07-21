@@ -34,6 +34,22 @@ slice, and local task.
 
 ## Current reconciliation
 
+- `2026-07-21` `W36-E7-S4-T22` is complete: stage-scoped operator request Markdown is rendered to
+  a unique sibling staging file and atomically renamed to its canonical `request-*.md` path. A
+  concurrent-reader regression blocks immediately before publication and proves the canonical path
+  is absent until complete content is available; a simulated publication failure leaves neither a
+  partial canonical file nor staging residue. Core/CLI/docs/planning tests, Ruff, mypy, and all five
+  intervention browser viewports pass with one POST and one durable request. Codex `T3` returns to
+  `Next`; Claude `T4` is its direct successor.
+
+- `2026-07-21` the exact-`96d18fc` browser gate passed 83 cases, then the mobile intervention
+  journey observed canonical `request-0001.md` as an empty file immediately after the single POST.
+  Draft restoration, routing, and mutation count were correct; the first decisive boundary is a
+  direct non-atomic `Path.write_text` in core operator-intervention persistence. The run was stopped
+  after preserving the traceback. `W36-E7-S4-T22` is promoted to `Next`; Codex `T3` remains blocked
+  until atomic publication has provider-free regression coverage and the complete browser lane is
+  green on a new exact SHA.
+
 - `2026-07-21` `W36-E7-S4-T21` is complete: shared streaming now records normal parent exit before
   applying later cancellation/completion/runtime deadlines during bounded descendant and inherited
   pipe cleanup. A deterministic regression forces cleanup across the configured runtime deadline
