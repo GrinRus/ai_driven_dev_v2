@@ -76,6 +76,8 @@ Use concrete repair actions:
 - out-of-scope implementation path: remove the proposed create/modify/move/delete path; keep a
   small private helper inside allowed files when safe or raise a blocking question. Treat
   `context/allowed-write-scope.md` as exhaustive and do not edit, broaden, or reinterpret it.
+  Treat `SEM-PLAN-SCOPE-MISMATCH` as fail-closed evidence and correct every named proposed write
+  before claiming the Plan is ready.
 - downstream-order drift: if successful `stage-result.md` next actions skip `review-spec` and point
   to task decomposition, implementation, review, or QA, rewrite the next action to name
   `review-spec` as the immediate canonical downstream stage.

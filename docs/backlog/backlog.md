@@ -7,17 +7,16 @@ slice, and local task.
 
 ## Next
 
-- `W36-E7-S4-T33` — Fail closed on out-of-scope repository writes proposed by Plan.
+- `W36-E7-S4-T3` — Run the medium scenario through Codex to a clean terminal result.
 
 ## Soon
 
-- `W36-E7-S4-T3` — Run the medium scenario through Codex to a clean terminal result.
+- `W36-E7-S4-T4` — Repeat the medium scenario through Claude Code from an independent root.
 
 ## Parking lot
 
 - `W36-E7-S3-T2` — Record five first-time-operator sessions after initial live hardening.
 - `W36-E7-S3-T3` — Reconcile observed session findings before beta readiness.
-- `W36-E7-S4-T4` — Repeat the medium scenario through Claude Code from an independent root.
 - `W36-E7-S4-T5` — Record final same-revision Codex and Claude acceptance evidence.
 
 ## Update rules
@@ -34,6 +33,15 @@ slice, and local task.
   queue-restoration policy in `docs/backlog/roadmap.md` (`W8-E3-S1`).
 
 ## Current reconciliation
+
+- `2026-07-21` `W36-E7-S4-T33` is complete: Plan semantic validation now resolves the canonical
+  allowed-write scope and fails closed with `SEM-PLAN-SCOPE-MISMATCH` when `Milestones` or
+  `Implementation strategy` proposes an out-of-scope or unsafe repository write. Read-only
+  evidence and executable command references remain outside this rule, malformed scope is a
+  high-severity finding, and missing optional scope preserves legacy unrestricted planning. The
+  live-shaped helper regression, unsafe-path matrix, protocol/renderer inventory, all validator
+  tests, docs/planning checks, and focused Ruff pass. Codex `T3` returns to `Next`; Claude `T4`
+  is its direct successor in `Soon`.
 
 - `2026-07-21` `W36-E7-S4-T32` is complete: the Plan contract and initial/repair prompts now read
   canonical `context/allowed-write-scope.md` as an exhaustive implementation-write boundary,

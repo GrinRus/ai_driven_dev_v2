@@ -84,6 +84,11 @@ Validators for `plan` should check:
 - user-approval readiness:
   - scope boundaries and trade-offs are explicit enough for operator review,
   - major risks have mitigation intent and verification linkage,
+- canonical write-scope enforcement:
+  - proposed repository writes in `Milestones` and `Implementation strategy` remain within
+    `context/allowed-write-scope.md` when that document exists,
+  - malformed scope or an unsafe/out-of-scope proposed write fails validation instead of being
+    treated as unrestricted planning,
 - cross-document consistency between plan claims, validator findings, and declared terminal status in `stage-result.md`.
 
 ## Interview policy
