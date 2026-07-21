@@ -91,6 +91,7 @@ IMPLEMENT_NOOP_JUSTIFICATION_PATTERN = re.compile(
 _KNOWN_COMMAND_EXECUTABLES = frozenset(
     {
         "aidd",
+        "bash",
         "black",
         "bun",
         "bunx",
@@ -114,6 +115,7 @@ _KNOWN_COMMAND_EXECUTABLES = frozenset(
         "rg",
         "ruff",
         "sed",
+        "sh",
         "sphinx-build",
         "test",
         "tsc",
@@ -121,6 +123,7 @@ _KNOWN_COMMAND_EXECUTABLES = frozenset(
         "uv",
         "vitest",
         "yarn",
+        "zsh",
     }
 )
 _SHELL_ASSIGNMENT_PATTERN = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*=\S+$")

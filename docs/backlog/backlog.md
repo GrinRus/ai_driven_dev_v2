@@ -34,6 +34,21 @@ slice, and local task.
 
 ## Current reconciliation
 
+- `2026-07-21` `W36-E7-S4-T28` is complete: explicit backticked `sh -c`, `bash -c`, and
+  `zsh -c` verification commands are now recognized by the existing command-shaped evidence
+  predicate, while prose-only shell names remain non-executable evidence. The live-shaped cleanup
+  regression and the complete focused validator/docs/planning matrix pass (`94 passed`), with Ruff
+  clean. Codex `T3` returns to `Next` for a fresh external run; Claude `T4` is its direct successor.
+
+- `2026-07-21` the fresh Codex run on exact revision `3d75c07` passed manual quality review through
+  Tasklist and exercised two successful fail-closed Tasklist repairs. Implement `T1` then produced
+  the correct bounded `src/compose.ts` patch, passed 233 focused Vitest cases and `tsc --noEmit`,
+  but exhausted all three report-repair attempts on `SEM-UNVERIFIABLE-CHECK-CLAIM`. The decisive
+  bullet contains an exact backticked `sh -c '...'` command and exit-code evidence; semantic
+  extraction preserves it, but the executable registry omits shell interpreters and classifies it
+  as prose. `W36-E7-S4-T28` is promoted to `Next`; Codex `T3` moves to `Soon` pending a
+  provider-free regression and a fresh external root, while Claude `T4` returns to Parking.
+
 - `2026-07-21` `W36-E7-S4-T27` is complete: the Inbox browser journey no longer waits for global
   network silence from a polling Studio or reads its lexical JavaScript state. Navigation and
   reload now wait for DOM readiness followed by exact rendered work-item, Inbox, and question
