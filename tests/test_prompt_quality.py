@@ -1159,3 +1159,30 @@ def test_implement_prompts_require_executable_verification_evidence() -> None:
     assert "truthful failed verification report" in run_prompt
     assert "timing out without stage artifacts" in run_prompt
     assert "continuing ad hoc debugging until timeout" in repair_prompt
+
+
+def test_implement_contract_and_prompts_scope_rich_task_evidence_locally() -> None:
+    document_contract = Path(
+        "contracts/documents/implementation-report.md"
+    ).read_text(encoding="utf-8")
+    stage_contract = Path("contracts/stages/implement.md").read_text(encoding="utf-8")
+    system_prompt = Path("prompt-packs/stages/implement/system.md").read_text(
+        encoding="utf-8"
+    )
+    run_prompt = Path("prompt-packs/stages/implement/run.md").read_text(
+        encoding="utf-8"
+    )
+    repair_prompt = Path("prompt-packs/stages/implement/repair.md").read_text(
+        encoding="utf-8"
+    )
+
+    for text in (document_contract, stage_contract, system_prompt, run_prompt):
+        normalized = text.lower()
+        assert "current task-local" in normalized
+        assert "prerequisite" in normalized
+        assert "aggregate finalization" in normalized
+
+    assert "Do not use the cumulative workspace" in run_prompt
+    assert "unless the current task changes them again" in run_prompt
+    assert "do not revert successful prior-task changes" in repair_prompt
+    assert "SEM-TASK-DIFF-MISMATCH" in repair_prompt

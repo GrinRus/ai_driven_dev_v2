@@ -7,7 +7,7 @@ slice, and local task.
 
 ## Next
 
-- `W36-E7-S4-T3` — Rerun Codex after deterministic terminal Studio reconciliation.
+- `W36-E7-S4-T3` — Run the medium scenario through Codex from a fresh isolated root.
 
 ## Soon
 
@@ -33,6 +33,25 @@ slice, and local task.
   queue-restoration policy in `docs/backlog/roadmap.md` (`W8-E3-S1`).
 
 ## Current reconciliation
+
+- `2026-07-21` `W36-E7-S4-T20` is complete: the Implement document/stage contracts plus initial
+  and repair prompts now define rich-task `Touched files` as the exact current task baseline/final
+  diff. Successful prerequisite-only paths are excluded unless changed again, new current-task
+  files remain mandatory, and aggregate finalization owns cumulative evidence. Repair guidance
+  removes unsupported cumulative claims without reverting preserved prior-task outcomes. Focused
+  prompt, contract, planning, packaging, and repository-evidence regressions pass. Codex `T3`
+  returns to `Next`; Claude `T4` is its direct successor on the new accepted revision.
+
+- `2026-07-21` fresh Codex run `eval-live-007-codex-20260720T231452Z` on `a6c79f9`
+  passed and was manually accepted through Tasklist, proving the new canonical scope guard. During
+  Implement, T1 succeeded; T2 initially reported prerequisite `src/compose.ts` as task-local and
+  passed after normal `SEM-TASK-DIFF-MISMATCH` repair; T3 repeated the same cumulative-workspace
+  claim for `src/compose.ts` and `src/hono-base.ts`, then failed closed after the stage-wide repair
+  budget was exhausted. The validator, ledger preservation, and fail-fast behavior are correct.
+  The first decisive boundary is contradictory generic Implement guidance: it asks each rich-task
+  report to list the whole changed workspace while validation owns the current task baseline/final
+  diff. `W36-E7-S4-T20` is promoted to `Next`; Codex `T3` remains blocked pending a provider-free
+  contract/prompt regression and a fresh external run.
 
 - `2026-07-20` `W36-E7-S4-T19` is complete: terminal polling now retains the active job identity
   until dashboard, project-home, and Inbox durable readback all finish, then releases volatile

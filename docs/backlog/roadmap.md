@@ -11719,7 +11719,7 @@ Local tasks:
     tracked source, forbidden product imports, or live-scenario literals in runtime product code.
 - `W36-E7-S4-T3` (next) Run `AIDD-LIVE-007` through Codex to a clean terminal result with
   manual stage-quality and rendered Studio evidence.
-  - Dependencies: `W36-E7-S4-T19`, `W36-E7-S4-T18`, `W36-E7-S4-T17`, `W36-E7-S4-T16`, `W36-E7-S4-T15`, `W36-E7-S4-T14`, `W36-E7-S4-T13`, `W36-E7-S4-T2`, `W36-E7-S4-T6`, `W36-E7-S4-T10`,
+  - Dependencies: `W36-E7-S4-T20`, `W36-E7-S4-T19`, `W36-E7-S4-T18`, `W36-E7-S4-T17`, `W36-E7-S4-T16`, `W36-E7-S4-T15`, `W36-E7-S4-T14`, `W36-E7-S4-T13`, `W36-E7-S4-T2`, `W36-E7-S4-T6`, `W36-E7-S4-T10`,
     `W36-E7-S4-T11`, and `W36-E7-S4-T12` as live-discovered queue
     predecessors.
   - Scope: external Codex live execution and evidence only.
@@ -11862,6 +11862,19 @@ Local tasks:
     Inbox durable readback is pending; after readback it atomically releases volatile state and
     renders persisted `runtime.log`, including the five-viewport active-Studio journey under the
     full browser lane.
+- `W36-E7-S4-T20` (done) Make rich-task implementation reports describe only the current
+  task-local repository diff while aggregate finalization owns cumulative touched-file evidence.
+  - Dependencies: `W36-E7-S4-T19` as the live-discovery predecessor; blocks the active Codex
+    acceptance task `W36-E7-S4-T3`.
+  - Scope: runtime-neutral Implement stage/document contracts, initial and repair prompts, focused
+    provider-free prompt/contract regression coverage, and planning reconciliation only; task diff
+    predicates, retry budgets, adapters, scenario manifests, and target product code remain
+    unchanged.
+  - Verification: in rich task mode, prerequisite files already modified before the current task
+    are explicitly excluded from the task attempt's `Touched files`, current task baseline/final
+    additions remain mandatory, cumulative paths appear only in aggregate finalization evidence,
+    and `SEM-TASK-DIFF-MISMATCH` repair guidance removes prerequisite-only claims without reverting
+    successful prior task outcomes.
 
 Exit evidence:
 

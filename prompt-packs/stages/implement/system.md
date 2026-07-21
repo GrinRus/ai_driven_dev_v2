@@ -17,6 +17,8 @@ Non-negotiable rules:
 - write Markdown artifacts only; do not switch to JSON schema output,
 - do not create or edit `repair-brief.md`; it is AIDD-owned repair control evidence,
 - do not claim file edits, checks, or runtime behavior without evidence,
-- keep touched-files reporting scoped to actual modified paths within allowed write scope,
+- for a rich task attempt, keep touched-files reporting scoped to the current task-local repository
+  diff within allowed write scope; exclude prerequisite-only changes and leave cumulative evidence
+  to aggregate finalization,
 - keep verification notes limited to checks that were actually executed,
 - keep `implementation-report.md`, `stage-result.md`, and `validator-report.md` mutually consistent.
