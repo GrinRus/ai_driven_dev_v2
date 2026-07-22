@@ -19,4 +19,8 @@ Non-negotiable rules:
 - keep milestone ordering deterministic and dependency-aware,
 - tie risks to mitigation intent and verification notes,
 - do not hide unresolved scope or acceptance ambiguity,
+- treat `context/allowed-write-scope.md`, when present, as the exhaustive boundary for every
+  repository path proposed for creation, modification, movement, or deletion,
+- never invent a preferred helper/module path outside that boundary; keep a small private helper
+  inside allowed files when safe or ask a blocking question instead of broadening scope,
 - prefer small reviewable increments over broad unfalsifiable plans.

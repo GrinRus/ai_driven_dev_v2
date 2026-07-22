@@ -11,7 +11,7 @@ from browser_tests.state_fixtures import build_browser_state_fixture
 
 @pytest.mark.parametrize(
     "fixture_state",
-    ("no-run", "running", "blocking-question", "terminal-handoff"),
+    ("no-run", "running", "blocking-question", "remediation-stale"),
 )
 def test_active_studio_shell_preserves_context_and_one_primary_action(
     tmp_path: Path,

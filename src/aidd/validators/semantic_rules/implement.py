@@ -221,6 +221,19 @@ def _validate_touched_files(
     )
 
 
+def _canonical_touched_file_paths(touched_files: SemanticSection) -> tuple[str, ...]:
+    """Return the leading path token from each canonical touched-file item."""
+
+    paths: list[str] = []
+    for item in extract_top_level_bullet_blocks(touched_files.content):
+        if item.casefold() == "none":
+            continue
+        match = IMPLEMENT_FILE_ENTRY_PATTERN.search(item)
+        if match is not None:
+            paths.append(match.group(0).strip("`").strip().strip("/"))
+    return tuple(dict.fromkeys(paths))
+
+
 def _validate_verification_item(
     *,
     context: SemanticDocumentContext,
@@ -386,11 +399,7 @@ def validate_implementation_report(
                     )
                 )
         if evidence_context.allowed_write_scope is not None:
-            touched_paths = {
-                match.group(0).strip("`").strip().strip("/")
-                for match in IMPLEMENT_FILE_ENTRY_PATTERN.finditer(touched_files.content)
-            }
-            for touched_path in sorted(touched_paths):
+            for touched_path in sorted(_canonical_touched_file_paths(touched_files)):
                 try:
                     allowed = evidence_context.allowed_write_scope.allows(touched_path)
                 except AllowedWriteScopeError:

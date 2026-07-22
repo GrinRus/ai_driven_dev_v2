@@ -228,6 +228,25 @@ def _wait_job_status(
     raise AssertionError(f"job did not reach {expected_status}: {job_id}")
 
 
+def _wait_for_job_log(
+    service: OperatorUiService,
+    job_id: str,
+    expected_text: str,
+    *,
+    timeout_seconds: float = 10.0,
+) -> None:
+    deadline = time.monotonic() + timeout_seconds
+    while time.monotonic() < deadline:
+        logs_payload = _payload(service.handle_get(f"/api/jobs/{job_id}/logs", {"cursor": ["0"]}))
+        if any(
+            expected_text in str(chunk["text"])
+            for chunk in logs_payload["chunks"]  # type: ignore[index]
+        ):
+            return
+        time.sleep(0.02)
+    raise AssertionError(f"job log did not contain {expected_text!r}: {job_id}")
+
+
 def test_ui_job_store_bounds_live_chunks_and_paginates_absolute_cursors() -> None:
     store = UiRunJobStore(
         max_live_log_bytes=48,
@@ -3158,13 +3177,7 @@ def test_ui_cancel_terminates_generic_cli_runtime_and_records_evidence(
 
     payload = _payload(response)
     job_id = str(payload["job_id"])
-    for _ in range(100):
-        logs_payload = _payload(service.handle_get(f"/api/jobs/{job_id}/logs", {"cursor": ["0"]}))
-        if any("long-runtime-start" in str(chunk["text"]) for chunk in logs_payload["chunks"]):  # type: ignore[index]
-            break
-        time.sleep(0.01)
-    else:  # pragma: no cover - assertion guard
-        raise AssertionError("runtime did not start")
+    _wait_for_job_log(service, job_id, "long-runtime-start")
 
     cancel_payload = _payload(service.handle_post(f"/api/jobs/{job_id}/cancel", {}))
     assert cancel_payload["status"] == "cancelling"

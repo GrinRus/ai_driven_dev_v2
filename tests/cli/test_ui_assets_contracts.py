@@ -351,7 +351,7 @@ def test_operator_script_modules_own_static_ui_surfaces() -> None:
     assert "async function resumeAfterAnswers()" in questions
     assert "async function renderApprovals()" in approvals
     assert "async function submitIntervention()" in approvals
-    assert 'kind: "stage-interact"' in approvals
+    assert 'operatorMutationKey(\n    "stage-interact"' in approvals
     assert 'operatorMutationKey(\n    "answer"' in questions
     assert "async function renderLogs()" in logs
     assert "async function startJobPolling(job)" in logs
@@ -504,7 +504,8 @@ def test_studio_flow_complete_uses_only_core_recommendation() -> None:
         (
             "async function archiveCompletedRun()",
             'postJson("/api/next-flow/archive"',
-            "state.dashboard = payload.dashboard",
+            "state.dashboard = winner.dashboard",
+            "readWinner: () => readArchiveWinner(descriptor)",
         ),
     )
     _assert_contains_all(
@@ -1598,10 +1599,10 @@ def test_operator_approvals_asset_keeps_request_and_intervention_contracts() -> 
             "interventionReadinessNote",
             "runtimeReadinessMessage()",
             "/api/jobs/${encodeURIComponent(state.activeJobId)}/operator-requests",
-            "target_documents: targetDocuments",
+            "target_documents: descriptor.targetDocuments",
             "request.created_at_utc",
             "escapeHtml(JSON.stringify(payload, null, 2))",
-            "if (state.activeRunId) payload.run_id = state.activeRunId;",
+            "if (descriptor.runId) payload.run_id = descriptor.runId;",
             'postJson("/api/stage/interact", payload)',
         ),
     )
@@ -1879,7 +1880,8 @@ def test_operator_main_asset_keeps_refresh_order_and_event_routing_contracts() -
         main,
         (
             "await fetchDashboard();",
-            "void fetchReadiness().then(renderAll)",
+            "void fetchReadiness().then((accepted) => {",
+            "if (accepted) renderReadinessSurfaces();",
             "/api/open-folder",
             "/api/server/stop",
             "function orderedTabButtons()",

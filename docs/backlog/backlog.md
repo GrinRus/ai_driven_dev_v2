@@ -7,13 +7,37 @@ slice, and local task.
 
 ## Next
 
-- `W36-E7-S3-T2` — Record five first-time-operator sessions.
+- `W36-E7-S4-T38` — Characterize provider sibling-root visibility with an executable canary.
 
 ## Soon
 
-- `W36-E7-S3-T3` — Reconcile observed session findings before beta readiness.
+- `W36-E7-S4-T39` — Enforce provider-private filesystem and environment isolation.
 
 ## Parking lot
+
+- `W36-E7-S4-T40` — Contain live run lookup and resume identities before reading state.
+- `W36-E7-S4-T41` — Make live source, target and provider integrity guards mandatory.
+- `W36-E7-S4-T42` — Reconcile abandoned stages through a public application boundary.
+- `W36-E7-S4-T43` — Constrain browser and manual evidence imports to authorized roots.
+- `W36-E7-S4-T44` — Reconcile provisional frontend probes with durable stage state.
+- `W36-E7-S4-T45` — Expose and reconcile stale-owner live flows.
+- `W36-E7-S4-T46` — Accumulate live-flow timing across resumed process segments.
+- `W36-E7-S4-T47` — Persist typed terminal evidence for remediation jobs.
+- `W36-E7-S4-T48` — Preflight target installation and verification prerequisites.
+- `W36-E7-S4-T49` — Materialize a self-contained canonical live evidence bundle.
+- `W36-E7-S4-T50` — Commit the live bundle digest and browser provenance manifest.
+- `W36-E7-S4-T51` — Finalize truthful product-bundle summaries and acceptance status.
+- `W36-E7-S4-T52` — Bound ignored dependency and cache inventories in repository evidence.
+- `W36-E7-S4-T53` — Read persisted runtime-log tails under a byte and memory bound.
+- `W36-E7-S4-T54` — Normalize provider events into a bounded lifecycle projection.
+- `W36-E7-S4-T55` — Reference canonical command evidence from aggregate live reports.
+- `W36-E7-S4-T36` — Re-run the full provider-free Chromium acceptance matrix.
+- `W36-E7-S4-T37` — Prove wheel, doctor and isolation readiness on one candidate SHA.
+- `W36-E7-S4-T3` — Run the medium scenario through Codex to a clean terminal result.
+- `W36-E7-S4-T4` — Repeat the medium scenario through Claude Code from an independent root.
+- `W36-E7-S3-T2` — Record five first-time-operator sessions after initial live hardening.
+- `W36-E7-S3-T3` — Reconcile observed session findings before beta readiness.
+- `W36-E7-S4-T5` — Record final same-revision Codex and Claude acceptance evidence.
 
 ## Update rules
 
@@ -29,6 +53,442 @@ slice, and local task.
   queue-restoration policy in `docs/backlog/roadmap.md` (`W8-E3-S1`).
 
 ## Current reconciliation
+
+- `2026-07-22` `W36-E7-S4-T35` is complete: runtime-readiness updates now use a
+  generation-aware scoped renderer and cannot replace the decision-owning Studio cockpit.
+  Flow Complete disclosure state is retained by durable handoff identity; intervention and
+  archive actions use immutable descriptors, one guarded POST, and authoritative durable
+  readback without clearing a newer browser draft or rewriting the completed source run.
+  The four characterized cases pass `4/4`, the complete intervention and terminal families
+  pass `14/14` and `10/10`, and all 97 frontend state tests pass. `T38` is promoted to `Next`;
+  its direct successor `T39` moves to `Soon`.
+
+- `2026-07-22` `W36-E7-S4-T34` is complete: the exact failures were intervention
+  viewports `320x568`, `1280x900`, and `1440x900`, plus terminal `1280x900`.
+  Isolated `4/4` reruns proved that intervention created one durable request despite
+  an asynchronous observer count of zero, while a delayed-readiness probe proved
+  that the terminal action was replaced by a second full cockpit render before
+  dispatch. The normalized evidence is recorded in
+  `docs/e2e/operator-ui-chromium-race-characterization-2026-07-22.md`. `T35` is now
+  `Next`; `T38` is its direct successor in `Soon`.
+
+- `2026-07-22` static review plus forensic analysis of 64 historical `AIDD-LIVE-007` bundles
+  found provider sibling-root visibility, unsafe live resume lookup, advisory-only integrity
+  checks, direct harness stage-state mutation, uncontained browser evidence imports, provisional
+  frontend false failures, stale running owners, reset aggregate timing, incomplete remediation
+  diagnostics, repeated target-setup failures, dangling acceptance references, stale summaries,
+  and unbounded duplicated evidence. Runtime-neutral tasks `W36-E7-S4-T38..T55` split those
+  findings by owner and verification signal. The queue remains `T34 -> T35`; then `T38..T55`
+  complete all code changes before final Chromium evidence `T36` and exact-SHA readiness `T37`.
+  Codex `T3`, Claude `T4`, observed sessions, and final same-wheel `T5` remain parked until those
+  provider-free gates pass.
+
+- `2026-07-22` the exact-`a3d5aa1` preflight passed 88 frontend tests, Ruff, mypy across 210
+  source files, and all 1980 Python tests, then the full Chromium lane reported four failures
+  (`183 passed`). Three intervention cases observed no matching stage-interact POST after
+  History/Back restoration, and one terminal case could not click Archive because polling
+  repeatedly detached or hid the Flow Complete action. `W36-E7-S4-T34..T37` split
+  characterization, shared synchronization repair, full browser acceptance, and exact-SHA
+  package/isolation readiness into separate reviewable outputs. `T34` is promoted to `Next`,
+  `T35` to `Soon`; Codex `T3` and Claude `T4` return to Parking until the provider-free gate is
+  completely green.
+
+- `2026-07-21` `W36-E7-S4-T33` is complete: Plan semantic validation now resolves the canonical
+  allowed-write scope and fails closed with `SEM-PLAN-SCOPE-MISMATCH` when `Milestones` or
+  `Implementation strategy` proposes an out-of-scope or unsafe repository write. Read-only
+  evidence and executable command references remain outside this rule, malformed scope is a
+  high-severity finding, and missing optional scope preserves legacy unrestricted planning. The
+  live-shaped helper regression, unsafe-path matrix, protocol/renderer inventory, all validator
+  tests, docs/planning checks, and focused Ruff pass. Codex `T3` returns to `Next`; Claude `T4`
+  is its direct successor in `Soon`.
+
+- `2026-07-21` `W36-E7-S4-T32` is complete: the Plan contract and initial/repair prompts now read
+  canonical `context/allowed-write-scope.md` as an exhaustive implementation-write boundary,
+  distinguish read-only evidence/commands, forbid invented out-of-scope helpers and modules, and
+  require a private helper inside allowed files or a blocking question instead of scope widening.
+  The provider-free Plan stagepack now materializes the scope and verifies it in the packaged
+  stage brief. The public `aidd eval execute` smoke passes; 146 prompt/scenario/packaging/docs/
+  planning tests and focused Ruff pass. `W36-E7-S4-T33` is promoted to `Next` for fail-closed
+  semantic enforcement; Codex `T3` remains its direct successor and Claude `T4` stays parked.
+
+- `2026-07-21` two independent fresh Codex candidates on exact revision `bc248b2` passed Idea and
+  Research quality review, then each produced a structurally valid Plan that explicitly proposed
+  `src/utils/error.ts` outside the four-file canonical allowed-write scope. Manual quality review
+  stopped both candidates as `manual-quality-stop` before Review Spec or Tasklist. Because the
+  same scope leak repeated across isolated roots, `W36-E7-S4-T32` is promoted to `Next` for a
+  runtime-neutral Plan contract/prompt regression; Codex `T3` moves to `Soon`, and Claude `T4`
+  returns to Parking until a fresh exact-SHA preflight and Codex run pass.
+
+- `2026-07-21` `W36-E7-S4-T31` is complete: after the clean 187-case browser pass, the full Python
+  suite passed 1968 of 1969 tests and exposed one load-sensitive harness success fixture. Its
+  helper writes a heartbeat immediately and every 100 milliseconds, but the one-second
+  no-progress budget expired before the process received enough host scheduling; the decisive
+  probe remained `exists: false`. Five isolated reruns passed, with one taking 12.94 seconds end to
+  end despite 0.5 seconds of helper work. The success fixture now uses separate bounded three- and
+  eight-second budgets; the adjacent one-second silent-process test keeps production no-progress
+  classification covered. Codex `T3` remains blocked pending a clean exact-SHA full suite.
+
+- `2026-07-21` `W36-E7-S4-T30` is complete: the post-`T29` full Chromium lane passed 184 of 187
+  cases and exposed three global network-idle timeouts in two stateful journey families. Both
+  intervention tests and terminal `1440x900` failed before their first business assertion while
+  waiting for background Studio polling to become silent. A shared test-owned helper now waits
+  after DOM readiness for the exact rendered work-item identity, and every navigation/reload in
+  those owning files uses that durable boundary. Product polling, rendering, APIs, mutations, and
+  runtime behavior are unchanged; Codex `T3` remains blocked pending focused and full gates.
+
+- `2026-07-21` `W36-E7-S4-T29` is complete: the full exact-`6f9d64c` Chromium lane passed 186 of
+  187 cases and exposed one remaining Inbox-only short wait. The job endpoint and `/api/inbox`
+  had already confirmed the same Running-now identity, but the `768x1024` render was allowed 15
+  seconds instead of the journey's shared bounded 30-second surface budget. The unchanged isolated
+  case passed in 97 seconds end to end, confirming load-sensitive test synchronization rather than
+  lost durable state. Running-now now uses the shared budget; Codex `T3` remains blocked until the
+  focused five-viewport matrix and a new full browser lane pass on this commit.
+
+- `2026-07-21` `W36-E7-S4-T28` is complete: explicit backticked `sh -c`, `bash -c`, and
+  `zsh -c` verification commands are now recognized by the existing command-shaped evidence
+  predicate, while prose-only shell names remain non-executable evidence. The live-shaped cleanup
+  regression and the complete focused validator/docs/planning matrix pass (`94 passed`), with Ruff
+  clean. Codex `T3` returns to `Next` for a fresh external run; Claude `T4` is its direct successor.
+
+- `2026-07-21` the fresh Codex run on exact revision `3d75c07` passed manual quality review through
+  Tasklist and exercised two successful fail-closed Tasklist repairs. Implement `T1` then produced
+  the correct bounded `src/compose.ts` patch, passed 233 focused Vitest cases and `tsc --noEmit`,
+  but exhausted all three report-repair attempts on `SEM-UNVERIFIABLE-CHECK-CLAIM`. The decisive
+  bullet contains an exact backticked `sh -c '...'` command and exit-code evidence; semantic
+  extraction preserves it, but the executable registry omits shell interpreters and classifies it
+  as prose. `W36-E7-S4-T28` is promoted to `Next`; Codex `T3` moves to `Soon` pending a
+  provider-free regression and a fresh external root, while Claude `T4` returns to Parking.
+
+- `2026-07-21` `W36-E7-S4-T27` is complete: the Inbox browser journey no longer waits for global
+  network silence from a polling Studio or reads its lexical JavaScript state. Navigation and
+  reload now wait for DOM readiness followed by exact rendered work-item, Inbox, and question
+  surfaces under one bounded 30-second budget. The two originally failing edge viewports pass
+  repeatedly, the complete five-viewport Inbox matrix passes, and docs/planning plus Ruff checks
+  pass; production routing, polling, rendering, APIs, and provider behavior are unchanged. Codex
+  `T3` returns to `Next`; Claude `T4` is its direct successor.
+
+- `2026-07-21` the exact-`266cf5c` provider-free preflight passed 88 frontend tests, Ruff, mypy,
+  doctor/readiness, and 1964 Python tests, then the full Chromium lane reported two failures in the
+  same Inbox journey (`185 passed, 2 failed`). One failure waited for global `networkidle` while
+  Studio polling was healthy; the other observed canonical route/dashboard identity before the
+  bounded question surface render. Isolated rerun passed the mobile case and reproduced the
+  desktop failure at a later `networkidle` wait, proving test synchronization rather than durable
+  state loss. `W36-E7-S4-T27` is promoted to `Next`; live execution remains blocked until all five
+  viewports and the full browser lane pass on a new exact SHA.
+
+- `2026-07-21` `W36-E7-S4-T26` is complete: plan/tasklist cross-document validation now parses
+  explicit `before`, `after`, `depends on`, and `requires` clauses in their authored direction,
+  including a shared `M2 and M3 ... after M1, but both ... before M4` subject. A provider-free
+  live-shaped graph passes while removal of a real prerequisite remains fail-closed. Focused
+  cross-document, docs/planning, and Ruff checks pass. Codex `T3` returns to `Next`; Claude `T4`
+  is its direct successor.
+
+- `2026-07-21` the fresh Codex run on `d4883d2` passed manual quality review for Idea, Research,
+  Plan, and Review Spec, then exhausted Tasklist repair on four inverted
+  `CROSS-TASKLIST-PLAN-DEPENDENCY` findings. The authored graph correctly maps
+  `T1 -> T2/T3 -> T4/T5 -> T6`; the validator instead treated the first milestone in canonical
+  `before` and mixed `after ... before` clauses as the dependent target. Runtime attempts all
+  succeeded and final validation failed closed. `W36-E7-S4-T26` is promoted to `Next`; Codex `T3`
+  is blocked pending a clause-direction regression and a fresh external root.
+
+- `2026-07-21` `W36-E7-S4-T25` is complete: the UI runtime-cancellation fixture now waits for its
+  live-log startup marker with an explicit monotonic ten-second deadline instead of assuming host
+  scheduling within one second. Five isolated repetitions, docs/planning checks, and Ruff pass;
+  runtime launch, cancellation, and evidence semantics are unchanged. Codex `T3` returns to `Next`
+  for a fresh clean-HEAD preflight, followed by independent Claude `T4`.
+
+- `2026-07-21` the exact-`7c29b14` preflight passed Ruff, mypy, and 1961 Python tests, but the UI
+  runtime-cancellation fixture failed its fixed one-second log-start polling window. An isolated
+  rerun passed once and failed once, proving load-sensitive synchronization rather than a provider
+  result. `W36-E7-S4-T25` is promoted to `Next`; Codex `T3` is blocked before any external root or
+  provider run is created.
+
+- `2026-07-21` the operator reset the Codex provider limit. `W36-E7-S4-T3` is restored to `Next`
+  for a fresh external run from clean tracked HEAD; `W36-E7-S4-T4` moves to `Soon` and remains
+  dependent on a clean Codex result on the same AIDD revision.
+
+- `2026-07-21` `W36-E7-S4-T24` is complete: cross-document repair traceability now derives the
+  active repair requirement from the latest canonical attempt-history entry. A completed repair
+  retained for an earlier rich task no longer requires a current task's removed canonical
+  `repair-brief.md`; a latest repair attempt and legacy unstructured repair mention remain
+  fail-closed. Cross-document, stage-runner, docs, planning, and Ruff checks pass. Product-owned
+  defects found by the independent Claude diagnostic runs are closed; provider acceptance remains
+  blocked by the Codex account quota before a fresh exact-revision run can begin.
+
+- `2026-07-21` `W36-E7-S4-T23` is complete: Implement allowed-scope validation now reads only the
+  canonical leading path token from each top-level `Touched files` entry. Descriptive backticked
+  code identifiers such as `context.error` no longer become fabricated repository paths, while
+  missing, malformed, or genuinely out-of-scope leading paths retain fail-closed validation.
+  Focused semantic/scope/docs/planning tests and Ruff pass. `W36-E7-S4-T24` is promoted to `Next`;
+  provider acceptance remains blocked pending its independent repair-history regression.
+
+- `2026-07-21` the fresh Claude retry on exact revision `c19d396` proved task-local repository
+  diff recovery, then failed T2 on two runtime-neutral validator boundaries: the Implement
+  semantic rule interpreted descriptive backticked identifier `context.error` as a second touched
+  path, and cross-document validation required a current repair brief for retained stage-wide T1
+  repair history while validating clean T2. Task diff evidence itself was exact and T1 remained
+  succeeded. `W36-E7-S4-T23` is promoted to `Next`, `T24` to `Soon`; provider runs remain blocked
+  pending separate regressions and fresh roots. The Codex diagnostic attempt was independently
+  blocked by provider quota rather than an AIDD defect.
+
+- `2026-07-21` `W36-E7-S4-T22` is complete: stage-scoped operator request Markdown is rendered to
+  a unique sibling staging file and atomically renamed to its canonical `request-*.md` path. A
+  concurrent-reader regression blocks immediately before publication and proves the canonical path
+  is absent until complete content is available; a simulated publication failure leaves neither a
+  partial canonical file nor staging residue. Core/CLI/docs/planning tests, Ruff, mypy, and all five
+  intervention browser viewports pass with one POST and one durable request. Codex `T3` returns to
+  `Next`; Claude `T4` is its direct successor.
+
+- `2026-07-21` the exact-`96d18fc` browser gate passed 83 cases, then the mobile intervention
+  journey observed canonical `request-0001.md` as an empty file immediately after the single POST.
+  Draft restoration, routing, and mutation count were correct; the first decisive boundary is a
+  direct non-atomic `Path.write_text` in core operator-intervention persistence. The run was stopped
+  after preserving the traceback. `W36-E7-S4-T22` is promoted to `Next`; Codex `T3` remains blocked
+  until atomic publication has provider-free regression coverage and the complete browser lane is
+  green on a new exact SHA.
+
+- `2026-07-21` `W36-E7-S4-T21` is complete: shared streaming now records normal parent exit before
+  applying later cancellation/completion/runtime deadlines during bounded descendant and inherited
+  pipe cleanup. A deterministic regression forces cleanup across the configured runtime deadline
+  and preserves the normal result, while real pre-exit timeout remains unchanged. The large
+  bidirectional success characterization now uses a distinct bounded runtime budget under its
+  existing outer watchdog. All 304 adapter/docs/planning tests, Ruff, and mypy pass. Codex `T3`
+  returns to `Next`; Claude `T4` is its direct successor.
+
+- `2026-07-21` the exact-`2c00d89` full Python gate passed 1956 tests and exposed two shared
+  process-lifecycle deadline races. The bidirectional success characterization used the same
+  200-millisecond budget as a timeout stress case and fails deterministically under current load.
+  Separately, a normally exited parent can be labelled timeout when bounded inherited-pipe cleanup
+  crosses the runtime deadline because deadline polling precedes parent-exit recognition. The
+  first decisive boundary is runtime-neutral subprocess supervision/test budgeting, not provider
+  behavior. `W36-E7-S4-T21` is promoted to `Next`; Codex `T3` is blocked until the regression and
+  a clean exact-SHA full gate.
+
+- `2026-07-21` `W36-E7-S4-T20` is complete: the Implement document/stage contracts plus initial
+  and repair prompts now define rich-task `Touched files` as the exact current task baseline/final
+  diff. Successful prerequisite-only paths are excluded unless changed again, new current-task
+  files remain mandatory, and aggregate finalization owns cumulative evidence. Repair guidance
+  removes unsupported cumulative claims without reverting preserved prior-task outcomes. Focused
+  prompt, contract, planning, packaging, and repository-evidence regressions pass. Codex `T3`
+  returns to `Next`; Claude `T4` is its direct successor on the new accepted revision.
+
+- `2026-07-21` fresh Codex run `eval-live-007-codex-20260720T231452Z` on `a6c79f9`
+  passed and was manually accepted through Tasklist, proving the new canonical scope guard. During
+  Implement, T1 succeeded; T2 initially reported prerequisite `src/compose.ts` as task-local and
+  passed after normal `SEM-TASK-DIFF-MISMATCH` repair; T3 repeated the same cumulative-workspace
+  claim for `src/compose.ts` and `src/hono-base.ts`, then failed closed after the stage-wide repair
+  budget was exhausted. The validator, ledger preservation, and fail-fast behavior are correct.
+  The first decisive boundary is contradictory generic Implement guidance: it asks each rich-task
+  report to list the whole changed workspace while validation owns the current task baseline/final
+  diff. `W36-E7-S4-T20` is promoted to `Next`; Codex `T3` remains blocked pending a provider-free
+  contract/prompt regression and a fresh external run.
+
+- `2026-07-20` `W36-E7-S4-T19` is complete: terminal polling now retains the active job identity
+  until dashboard, project-home, and Inbox durable readback all finish, then releases volatile
+  buffers immediately before the final render. A new deferred-promise frontend regression proves
+  that no intermediate readback advertises completion, and the complete active-Studio journey
+  passes all five viewports with persisted `runtime.log` visible after cancellation. Job APIs,
+  cancellation semantics, and durable evidence are unchanged. Codex `T3` returns to `Next`;
+  Claude `T4` is its direct successor.
+
+- `2026-07-20` the post-`T18` full browser gate passed 56 cases before the active-Studio journey
+  timed out at `1440x900` after cancellation: volatile `activeJobId` had already cleared, while
+  persisted `runtime.log` had not rendered. The exact case then passed six isolated reruns, with
+  duration varying from 17 to 69 seconds. Source inspection identifies a presentation ordering
+  race: terminal reconciliation clears volatile job state after dashboard readback but before
+  project-home/Inbox readback and final render. `W36-E7-S4-T19` is promoted to `Next`; Codex `T3`
+  remains blocked until a deterministic regression and a clean full browser lane.
+
+- `2026-07-20` `W36-E7-S4-T18` is complete: Tasklist cross-document validation now resolves the
+  canonical allowed-write scope and rejects each task card containing an out-of-bound local path
+  with actionable `SEM-TASK-SCOPE-MISMATCH` evidence before Implement begins. Contracts plus
+  initial and repair prompts require component-boundary containment and prohibit widening the
+  operator-authored global scope. Provider-free coverage includes exact paths, permitted
+  descendants, the live-discovered incompatible-card shape, `src`/`src2`, malformed scope, and
+  the existing unrestricted behavior when the optional document is absent. Codex `T3` returns to
+  `Next`; Claude `T4` is its direct successor on the same accepted revision.
+
+- `2026-07-20` fresh Codex run `eval-live-007-codex-20260720T195547Z` on `a4935d8`
+  passed Idea through Tasklist, including canonical milestone repair, then failed closed during
+  the first implementation task. Tasklist had accepted `T1` paths under `src/utils/` and
+  `package.json` even though the authored global scope allowed only four Hono/compose files.
+  Implement preserved three attempts, passing target Vitest and TypeScript checks while refusing
+  publication with `SEM-TASK-SCOPE-MISMATCH`. The first decisive boundary is a runtime-neutral
+  tasklist/allowed-scope validation gap; `W36-E7-S4-T18` is promoted to `Next`, Codex `T3` is
+  blocked pending its regression and a fresh external run, and Claude `T4` returns to Parking.
+
+- `2026-07-20` `W36-E7-S4-T17` is complete: the approvals surface now owns one browser-only
+  session-confirmation identity and reason, captures it before polling replaces the DOM, and
+  restores it only while canonical readback still reports the same request pending. A new job,
+  explicit Back, durable winner, terminal readback, or reconciled job cleanup clears the ephemeral
+  state. Endpoints and decision CAS are unchanged. Frontend tests force the re-render boundary;
+  approval parity and all five browser viewports pass. Codex `T3` returns to `Next`; Claude `T4`
+  is its direct successor.
+
+- `2026-07-20` the final T16 browser gate passed 186 of 187 cases and exposed a timing-dependent
+  approval presentation race at `1280×900`: `Allow session` opens an ephemeral confirmation, while
+  concurrent polling can replace the approvals DOM and discard it before operator confirmation.
+  The isolated case and three concurrent reruns passed, confirming nondeterminism rather than a
+  stable markup failure; source inspection proves the unowned ephemeral state boundary. No
+  decision was fabricated and durable CAS remains correct. Presentation-only task
+  `W36-E7-S4-T17` is promoted to `Next`; Codex `T3` remains blocked pending a regression and a
+  clean browser lane.
+
+- `2026-07-20` `W36-E7-S4-T16` is complete: the durable tasklist contract plus initial and
+  repair prompts now name the four canonical milestone mapping locations consumed by
+  cross-document validation (`Outcome`, `Context`, acceptance criteria, and task-local
+  `Verification notes`). Milestone findings and generated repair briefs repeat the same actionable
+  locations and explicitly reject ad hoc `Milestone`/`Plan milestone` fields without widening the
+  rich-task grammar. Provider-free regressions cover all four valid locations and replay the exact
+  unsupported-field shape from the historical live failure. Codex `T3` returns to `Next`; Claude
+  `T4` is its direct successor.
+
+- `2026-07-20` the fresh `76a4579` Codex run proved corrected milestone validation but exhausted
+  all three tasklist attempts because the authoring and repair guidance did not name the mapping
+  fields consumed by the rule. Codex added intuitive `Plan milestone`/`Milestone` card fields on
+  repair, while the canonical predicate intentionally reads only `Outcome`, `Context`, acceptance
+  criteria, and `Verification notes`. Runtime/provider startup and frontend checkpoints passed;
+  the first decisive boundary is ambiguous contract/validator/prompt repair guidance. The run is
+  historical and stopped before implementation. Runtime-neutral task `W36-E7-S4-T16` is promoted
+  to `Next`; Codex `T3` remains blocked pending regression coverage and a fresh run.
+
+- `2026-07-20` `W36-E7-S4-T15` is complete: tasklist/plan cross-validation now recognizes both
+  colon-delimited and canonical whitespace-delimited milestone list items. A provider-free
+  regression replays the missed grammar and proves unmapped cards plus uncovered milestones no
+  longer skip validation; dependency and exact-command checks retain their existing behavior.
+  The historical live tasklist now produces ten high milestone findings under the corrected
+  source validator. Focused checks, frontend tests, Ruff, mypy, and all 1947 Python tests pass.
+  Codex `T3` returns to `Next`; Claude `T4` is its direct successor.
+
+- `2026-07-20` the fresh `ee30835` Codex run passed and was manually audited through
+  `review-spec`, then exposed a tasklist/plan validator gap before implementation. The generated
+  task cards omitted exact `M1`-`M5` references, but cross-document validation reported pass
+  because its milestone collector accepted only `- M1: ...` while the production plan grammar
+  accepted `- M1 ...`. The external run remains historical at `awaiting-quality-review`.
+  Runtime-neutral validator task `W36-E7-S4-T15` is promoted to `Next`; Codex `T3` remains blocked
+  pending regression coverage, full checks, and another fresh tracked-snapshot run.
+
+- `2026-07-20` `W36-E7-S4-T14` is complete: installed-UI checkpoints now give cold startup a
+  bounded 30-second deadline and each sequential API request a bounded 10-second response budget.
+  Transcript evidence reports the full phase bound and recognizes socket timeouts even when the
+  semantic failure summary is generic. Provider-free fixtures prove a response after the legacy
+  two-second boundary succeeds, a real timeout remains bounded, and the full transition/cleanup
+  matrix remains compatible. Codex `T3` returns to `Next`; Claude `T4` is its direct successor.
+
+- `2026-07-20` two fresh Codex runs on `27e4771` independently passed their product stages and
+  validators, then failed the harness post-stage frontend gate at its fixed 10-second boundary.
+  r5 started UI but the two-second dashboard request timed out; five read-only reproductions on
+  the same installed run returned 200 in 1.71-1.91 seconds. r6 did not finish cold UI startup
+  within the same shared 10-second budget. Both bundles remain historical and external. Bounded
+  runtime-neutral checkpoint-supervision task `W36-E7-S4-T14` is promoted to `Next`; Codex `T3`
+  remains blocked pending provider-free timeout coverage and another fresh run.
+
+- `2026-07-20` `W36-E7-S4-T13` is complete: authored live tasks may declare exact canonical
+  repository-relative scope prefixes, manifest loading rejects unsafe values through the shared
+  parser, bootstrap renders only those values, and prose-only legacy tasks omit the optional scope
+  document instead of creating invalid policy. The Hono medium scenario now bounds its four
+  runtime/test files. Focused harness checks, Ruff, mypy, wheel build, and all 1942 Python tests
+  pass. Codex `T3` returns to `Next` for a fresh tracked-snapshot run, followed by Claude `T4`.
+
+- `2026-07-20` the fresh `e64a923` Codex run passed and was manually audited through `tasklist`,
+  then failed closed on Implement T1 because live bootstrap wrote prose-only
+  `allowed-write-scope.md`. The canonical parser correctly rejected the document and the bounded
+  repair path removed task-local test edits but could not repair harness-owned context. The
+  historical bundle remains external. Runtime-neutral manifest/bootstrap task
+  `W36-E7-S4-T13` is promoted to `Next`; Codex `T3` is blocked pending its regression and a fresh
+  tracked-snapshot run.
+
+- `2026-07-20` `W36-E7-S4-T12` is complete: validator-verdict reconciliation now distinguishes
+  an existing byte-equal canonical match from an absent field, collapses legacy duplicates, and
+  is byte-stable across repeated calls. Focused core/CLI and full stage-run matrices pass. Codex
+  `T3` returns to `Next` for another fresh tracked-snapshot run, followed by Claude `T4`.
+
+- `2026-07-20` the first `9fde2f1` Codex idea checkpoint exposed non-idempotent success
+  reconciliation: an already canonical validator-verdict line was treated as if no regex match
+  existed because replacement text was byte-equal, so each reconciliation appended another
+  `Validator verdict: pass`. The run is stopped before research. Bounded terminal-normalization
+  task `W36-E7-S4-T12` is promoted to `Next`; Codex `T3` remains blocked pending a fresh run.
+
+- `2026-07-20` `W36-E7-S4-T11` is complete: success-owned stage-result fields are normalized and
+  fully validated before the repair-budget decision. Duplicate/non-monotonic attempt history now
+  produces canonical findings, a repair brief, and a bounded retry instead of a terminal core
+  exception; exhausted retries remain fail-closed. Codex `T3` returns to `Next` for a fresh
+  tracked-snapshot run, followed by independent Claude `T4`.
+
+- `2026-07-20` the fresh post-continuation Codex run passed `idea` and `research`, then exposed a
+  general validation-order defect in `plan`: duplicate `Attempt 1` entries correctly emitted
+  `SEM-INCOMPLETE-SECTION`, but only after success normalization, where the finding became a hard
+  orchestration exception instead of consuming the configured repair budget. The failed bundle
+  remains historical. Bounded runtime-neutral task `W36-E7-S4-T11` is promoted to `Next`; Codex
+  `T3` is blocked until a provider-free repair regression passes and a fresh run starts.
+
+- `2026-07-20` `W36-E7-S4-T10` is complete: immutable unbounded run manifests now accept only
+  canonical forward stage reuse after every preceding stage in that run has succeeded. Public CLI
+  coverage proves `research -> plan` progression while core matrices keep skipped, failed,
+  backward, runtime-mismatched, and configuration-mismatched reuse fail-closed. The historical
+  failed Codex bundle is retained; `S4-T3` returns to `Next` for a fresh tracked-snapshot run.
+
+- `2026-07-20` the first installed Codex medium run passed `idea` and its quality checkpoint, then
+  exposed a general public-stage continuation defect before `research`: the immutable manifest
+  retained `stage_target=idea`, while the next canonical `stage run research --run-id ...` was
+  rejected as a target mismatch before adapter launch. The historical run is not repaired in
+  place. Bounded core/CLI regression task `W36-E7-S4-T10` is promoted to `Next`; Codex `T3` is
+  explicitly blocked and parked until a fresh tracked-snapshot run can start.
+
+- `2026-07-20` `W36-E7-S4-T9` is complete: browser diagnostics now retain deliberate
+  `net::ERR_ABORTED` route-restoration cancellations separately from network failures. The exact
+  runtime-readiness cancellation is asserted, while console, page, origin, HTTP, and real request
+  failures remain gating. Codex medium execution `S4-T3` returns to `Next`, followed by Claude
+  `T4`.
+
+- `2026-07-20` `W36-E7-S4-T8` is complete: the token-driven mobile topbar uses one-pixel
+  vertical padding, restoring the measured 80-pixel maximum while retaining 44-pixel controls,
+  primary-before-maintenance order, desktop composition, and clean frontend behavior at both
+  mobile viewports. Route-cancellation diagnostics `T9` is promoted to `Next`.
+
+- `2026-07-20` `W36-E7-S4-T7` is complete: generic browser descriptors now read exact
+  core-owned runtime selection and terminal recommendations, and clean-terminal follow-up draft
+  coverage opens the supported secondary-action disclosure before preserving its session state.
+  Twenty rendered fixture/draft cases pass. Mobile header correction `T8` is promoted to `Next`,
+  followed by route-cancellation diagnostics `T9`.
+
+- `2026-07-20` the first clean sequential full browser gate reached 179 passes and exposed
+  three independent acceptance defects: stale generic fixture actions/markers, a reproducible
+  81-pixel mobile header against the 80-pixel contract, and intentional route-reload request
+  cancellation reported as network failure. Tasks `S4-T7..T9` split those outputs; `T7` is
+  promoted to `Next`, while provider execution remains parked behind a green full browser gate.
+
+- `2026-07-20` `W36-E7-S4-T6` is complete: active-Studio shell, Document Canvas, and
+  Evidence Inspector browser contracts now use a nonterminal stale-QA fixture, while fresh
+  terminal QA remains exclusively owned by Flow Complete. All affected rendered cases pass with
+  production Studio behavior unchanged. Codex medium execution `S4-T3` returns to `Next`,
+  followed by Claude `T4`.
+
+- `2026-07-20` pre-live final acceptance exposed browser-test contract drift: three tests
+  expected active Studio context, Document Canvas, or Evidence Inspector from fresh terminal QA,
+  where the accepted contract correctly renders Flow Complete. Bounded test-only task
+  `W36-E7-S4-T6` is inserted in `Next`; the Codex run returns to `Soon`. A concurrently observed
+  lifecycle timeout and History timeout passed isolated reruns and remain classified as resource
+  contention, not product defects.
+
+- `2026-07-20` `W36-E7-S4-T2` is complete: a provider-neutral executable preflight now
+  validates clean tracked source, external provider layouts, scenario containment, full live
+  scope, command readiness, and post-run source identity without allocating run state. Static
+  boundaries reject live scenario literals in runtime product/prompts/contracts and reject
+  harness imports outside the explicit eval facade. Codex execution `S4-T3` is promoted to
+  `Next`, followed by independent Claude execution `T4`.
+
+- `2026-07-20` `W36-E7-S4-T1` is complete: the Wave 36 prod-like contract fixes
+  `AIDD-LIVE-007`, its Hono revision, installed tracked-snapshot wheel, external provider roots,
+  public operator surfaces, manual stage/final quality audits, rendered Studio inspection, and
+  strict product/evaluator isolation. Provider-free conformance `S4-T2` is promoted to `Next`,
+  followed by the first Codex execution `T3`.
+
+- `2026-07-20` Wave 36 final acceptance now includes the isolated prod-like slice
+  `W36-E7-S4`. The installed medium `AIDD-LIVE-007` flow runs through Codex and Claude Code
+  before observed sessions, and both providers are repeated on the final post-reconciliation
+  revision. `S4-T1` is active, followed by provider-free isolation gates `T2`; raw worktrees,
+  provider state, and evidence remain outside the source checkout.
 
 - `2026-07-18` `W36-E7-S2-T8` is complete: final full-suite acceptance now follows
   Studio-only module ownership for quality gates, History, and next-flow fields; the no-run task

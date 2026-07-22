@@ -289,7 +289,8 @@ PRODUCT_EVALUATION_BUNDLE_SUMMARY_JSON_FILENAME = "product-evaluation-bundle-sum
 PRODUCT_EVALUATION_BUNDLE_SUMMARY_MARKDOWN_FILENAME = "product-evaluation-bundle-summary.md"
 MANUAL_QUALITY_STOP_JSON_FILENAME = "manual-quality-stop.json"
 MANUAL_QUALITY_STOP_MARKDOWN_FILENAME = "manual-quality-stop.md"
-FRONTEND_CHECKPOINT_TIMEOUT_SECONDS = 10.0
+FRONTEND_CHECKPOINT_STARTUP_TIMEOUT_SECONDS = 30.0
+FRONTEND_CHECKPOINT_PROBE_TIMEOUT_SECONDS = 10.0
 PROVIDER_NO_PROGRESS_EXIT_CODE = 125
 STAGE_TIMEOUT_RECONCILIATION_SUFFIX = "-timeout-reconciliation.json"
 STAGE_NO_PROGRESS_RECONCILIATION_SUFFIX = "-no-progress-reconciliation.json"
@@ -1693,6 +1694,7 @@ def _selected_task_from_payload(
             audit_rubric.strip() if isinstance(audit_rubric, str) and audit_rubric.strip() else None
         ),
         complexity_axes=_string_tuple_from_snapshot(raw.get("complexity_axes")),
+        allowed_write_scope=_string_tuple_from_snapshot(raw.get("allowed_write_scope")),
     )
 
 
@@ -3427,9 +3429,13 @@ def _frontend_checkpoint_command(ctx: FlowContext, port: int) -> tuple[str, ...]
     )
 
 
-def _http_probe(url: str) -> dict[str, object]:
+def _http_probe(
+    url: str,
+    *,
+    timeout_seconds: float = FRONTEND_CHECKPOINT_PROBE_TIMEOUT_SECONDS,
+) -> dict[str, object]:
     try:
-        with urlopen(url, timeout=2.0) as response:
+        with urlopen(url, timeout=timeout_seconds) as response:
             body = response.read(1048576).decode("utf-8", errors="replace")
             payload: dict[str, object] = {
                 "ok": 200 <= response.status < 300,
@@ -3455,7 +3461,12 @@ def _http_probe(url: str) -> dict[str, object]:
         return {"ok": False, "status": None, "body_preview": "", "error": str(exc)}
 
 
-def _http_post_json(url: str, payload: dict[str, object]) -> dict[str, object]:
+def _http_post_json(
+    url: str,
+    payload: dict[str, object],
+    *,
+    timeout_seconds: float = FRONTEND_CHECKPOINT_PROBE_TIMEOUT_SECONDS,
+) -> dict[str, object]:
     data = json.dumps(payload).encode("utf-8")
     request = Request(
         url,
@@ -3464,7 +3475,7 @@ def _http_post_json(url: str, payload: dict[str, object]) -> dict[str, object]:
         headers={"Content-Type": "application/json"},
     )
     try:
-        with urlopen(request, timeout=2.0) as response:
+        with urlopen(request, timeout=timeout_seconds) as response:
             body = response.read(1048576).decode("utf-8", errors="replace")
             result: dict[str, object] = {
                 "ok": 200 <= response.status < 300,
@@ -3517,6 +3528,24 @@ def _frontend_running_probe_targets(
         ("stage-api", f"/api/stage?{stage_query}"),
         ("logs-api", f"/api/logs?{stage_query}"),
     )
+
+
+def _frontend_checkpoint_timeout_seconds(phase: str) -> float:
+    probe_count = 5 if phase == "running-stage" else 7
+    return (
+        FRONTEND_CHECKPOINT_STARTUP_TIMEOUT_SECONDS
+        + probe_count * FRONTEND_CHECKPOINT_PROBE_TIMEOUT_SECONDS
+    )
+
+
+def _frontend_checkpoint_timed_out(
+    *,
+    failure_reason: str | None,
+    probes: list[dict[str, object]],
+) -> bool:
+    evidence = [failure_reason or ""]
+    evidence.extend(str(probe.get("error") or "") for probe in probes)
+    return any("timed out" in item.lower() for item in evidence)
 
 
 def _json_contains_value(value: object, expected: str) -> bool:
@@ -4852,7 +4881,7 @@ def _run_frontend_checkpoint(
             stderr_text=f"{startup_failure_reason}\n",
             duration_seconds=duration_seconds,
             timed_out=False,
-            timeout_seconds=FRONTEND_CHECKPOINT_TIMEOUT_SECONDS,
+            timeout_seconds=FRONTEND_CHECKPOINT_STARTUP_TIMEOUT_SECONDS,
         )
         checkpoint = {
             "base_url": base_url,
@@ -4912,12 +4941,19 @@ def _run_frontend_checkpoint(
     classification: StepClassification = "fail"
     failure_reason: str | None = None
     try:
-        deadline = started + FRONTEND_CHECKPOINT_TIMEOUT_SECONDS
+        deadline = started + FRONTEND_CHECKPOINT_STARTUP_TIMEOUT_SECONDS
         while time.monotonic() < deadline:
             if process.poll() is not None:
                 failure_reason = "UI process exited before the checkpoint became ready."
                 break
-            ready_probe = _http_probe(f"{base_url}/")
+            remaining_seconds = max(deadline - time.monotonic(), 0.001)
+            ready_probe = _http_probe(
+                f"{base_url}/",
+                timeout_seconds=min(
+                    FRONTEND_CHECKPOINT_PROBE_TIMEOUT_SECONDS,
+                    remaining_seconds,
+                ),
+            )
             if ready_probe["ok"] is True:
                 failure_reason = None
                 break
@@ -5020,8 +5056,11 @@ def _run_frontend_checkpoint(
         stdout_text=stdout_text,
         stderr_text=stderr_text,
         duration_seconds=duration_seconds,
-        timed_out=failure_reason is not None and "Timed out" in failure_reason,
-        timeout_seconds=FRONTEND_CHECKPOINT_TIMEOUT_SECONDS,
+        timed_out=_frontend_checkpoint_timed_out(
+            failure_reason=failure_reason,
+            probes=probes,
+        ),
+        timeout_seconds=_frontend_checkpoint_timeout_seconds(phase),
     )
     checkpoint = {
         "base_url": base_url,
@@ -5030,6 +5069,8 @@ def _run_frontend_checkpoint(
         "created_at_utc": _utc_now(),
         "duration_seconds": duration_seconds,
         "failure_reason": failure_reason,
+        "probe_timeout_seconds": FRONTEND_CHECKPOINT_PROBE_TIMEOUT_SECONDS,
+        "startup_timeout_seconds": FRONTEND_CHECKPOINT_STARTUP_TIMEOUT_SECONDS,
         "observed_stage_status": observed_stage_status,
         "operator_surface": operator_surface,
         "phase": phase,
@@ -5137,12 +5178,22 @@ def _run_ui_remediation_job(
             start_new_session=True,
         )
         deadline = started + max(_stage_command_timeout_seconds(ctx.scenario) or 300.0, 60.0)
-        ready_deadline = min(started + FRONTEND_CHECKPOINT_TIMEOUT_SECONDS, deadline)
+        ready_deadline = min(
+            started + FRONTEND_CHECKPOINT_STARTUP_TIMEOUT_SECONDS,
+            deadline,
+        )
         while time.monotonic() < ready_deadline:
             if process.poll() is not None:
                 failure_reason = "UI process exited before remediation request."
                 break
-            ready_probe = _http_probe(f"{base_url}/")
+            remaining_seconds = max(ready_deadline - time.monotonic(), 0.001)
+            ready_probe = _http_probe(
+                f"{base_url}/",
+                timeout_seconds=min(
+                    FRONTEND_CHECKPOINT_PROBE_TIMEOUT_SECONDS,
+                    remaining_seconds,
+                ),
+            )
             probes.append({"name": "ready", **ready_probe})
             if ready_probe.get("ok") is True:
                 failure_reason = None

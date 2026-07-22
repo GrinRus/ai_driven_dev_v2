@@ -159,13 +159,6 @@ def bootstrap_live_work_item(
             f"- Selected task title: {selected_task.title}",
             f"- Selected task intent: {selected_task.intent}",
         ),
-        "allowed-write-scope.md": _markdown(
-            "# Allowed Write Scope",
-            "",
-            f"- Expected repository scope: {selected_task.expected_scope}",
-            "- Limit edits to files needed to satisfy the authored task and acceptance criteria.",
-            "- Keep scenario changes reviewable and bounded.",
-        ),
         "diff-summary.md": _markdown(
             "# Diff Summary",
             "",
@@ -209,6 +202,12 @@ def bootstrap_live_work_item(
             ),
         ),
     }
+    if selected_task.allowed_write_scope:
+        context_documents["allowed-write-scope.md"] = _markdown(
+            "# Allowed Write Scope",
+            "",
+            *(f"- `{path}`" for path in selected_task.allowed_write_scope),
+        )
 
     for name, content in context_documents.items():
         _write_text(context_root / name, content)

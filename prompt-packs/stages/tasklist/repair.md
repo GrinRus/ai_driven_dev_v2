@@ -69,6 +69,8 @@ For each finding:
    - missing task-card outcome, deliverable, scope, or acceptance criteria,
    - malformed or duplicate task/acceptance ids, unsafe scope paths, forward dependencies, and
      dependency cycles,
+   - task-local scope paths outside canonical `context/allowed-write-scope.md`,
+   - missing or unknown task-to-plan milestone mappings,
    - cross-document status drift;
 2. patch the smallest affected section in `tasklist.md`;
 3. re-check dependency references and task ordering after every dependency edit;
@@ -80,8 +82,16 @@ Use concrete repair actions:
 - incomplete task card: preserve its id and add concrete `Outcome`, `Dominant deliverable`,
   `In scope`, and an `Acceptance criteria` field with unique `<task-id>-AC<n>` entries; make
   `In scope` include safe backticked repository-relative file or directory prefixes;
+- task scope outside the authored global boundary: replace or split the affected card so every
+  backticked `In scope` prefix is equal to or beneath a prefix in
+  `context/allowed-write-scope.md`; do not edit, broaden, or reinterpret that context document,
+  and use a blocking question if the approved plan has no implementable path inside it;
 - hidden or unclear prerequisites: add explicit dependency ids or `none`, then reorder tasks so
   every dependency references an earlier card;
+- missing or unknown plan milestone mapping: cite an exact existing `M<n>` id in the task's
+  `Outcome`, optional `Context`, a nested acceptance criterion, or its dedicated
+  `Verification notes` entry. Cover every plan milestone. Do not add or preserve an ad hoc
+  `Milestone` or `Plan milestone` field because the canonical rich-task grammar ignores it;
 - weak verification guidance: add concrete primary checks per task (test/check/scenario), with
   one dedicated `Verification notes` entry for every task id declared in `Ordered tasks`,
   including command-only or
@@ -124,6 +134,10 @@ Use concrete repair actions:
 - dependencies are explicit and ordering is executable,
 - every task has at least one concrete verification note in the dedicated `Verification notes`
   section,
+- every task-local scope prefix is inside canonical `context/allowed-write-scope.md` when present,
+- every task maps to an existing plan `M<n>` id through `Outcome`, `Context`, an acceptance
+  criterion, or its dedicated `Verification notes` entry, and every plan milestone is covered,
+- no repair relies on an unsupported `Milestone` or `Plan milestone` field,
 - command-only or verification-only task ids are covered explicitly in `Verification notes`,
 - unresolved blocking ambiguity is represented in questions/blockers,
 - `repair-budget-final-attempt` can coexist with `stage-result.md` status `succeeded` only when all listed findings are resolved,

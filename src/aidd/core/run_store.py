@@ -891,9 +891,34 @@ def create_run_manifest(
                 )
             except ValueError:
                 requested_target_is_bounded = False
+        requested_target_is_canonical_continuation = False
+        existing_stage_target = str(existing.get("stage_target", ""))
         if (
-            str(existing.get("stage_target", "")) != stage_target
+            isinstance(bounds, dict)
+            and bounds.get("start") is None
+            and bounds.get("end") is None
+            and existing_stage_target in STAGES
+            and stage_target in STAGES
+        ):
+            existing_index = STAGES.index(existing_stage_target)
+            requested_index = STAGES.index(stage_target)
+            requested_target_is_canonical_continuation = requested_index > existing_index and all(
+                (
+                    metadata := load_stage_metadata(
+                        workspace_root=workspace_root,
+                        work_item=work_item,
+                        run_id=run_id,
+                        stage=required_stage,
+                    )
+                )
+                is not None
+                and metadata.status == "succeeded"
+                for required_stage in STAGES[existing_index:requested_index]
+            )
+        if (
+            existing_stage_target != stage_target
             and not requested_target_is_bounded
+            and not requested_target_is_canonical_continuation
         ):
             mismatches.append("stage_target")
         existing_config = existing.get("config_snapshot")

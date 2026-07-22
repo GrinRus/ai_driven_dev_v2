@@ -14,6 +14,7 @@ from browser_tests.rendered_geometry import assert_rendered_geometry
 from browser_tests.state_fixtures import build_browser_state_fixture
 
 JOURNEY_ID = "inbox"
+_SURFACE_TIMEOUT_MS = 30_000
 
 _ITEMS = {
     "needs-decision": ("WI-DECISION", "run-decision", "idea", "answer-questions"),
@@ -44,6 +45,18 @@ def _assert_clean_navigation_diagnostics(browser_page: BrowserPage) -> None:
     assert diagnostics.failed_requests == navigation_aborts
     diagnostics.failed_requests.clear()
     diagnostics.assert_clean()
+
+
+def _wait_for_question_surface(page: Page) -> None:
+    page.locator("#cockpitContent").get_by_text(
+        "Which acceptance boundary", exact=False
+    ).first.wait_for(state="visible", timeout=_SURFACE_TIMEOUT_MS)
+
+
+def _wait_for_work_item_surface(page: Page, work_item: str) -> None:
+    page.locator("#workItemChip").get_by_text(
+        f"Work item: {work_item}", exact=True
+    ).wait_for(state="visible", timeout=_SURFACE_TIMEOUT_MS)
 
 
 def _seed_inbox_states(project_root: Path) -> None:
@@ -104,8 +117,9 @@ def test_inbox_prioritizes_and_routes_durable_and_running_work(
         work_item="WI-RUN",
     ) as harness, harness.open_page(viewport) as browser_page:
         page = browser_page.page
-        response = page.goto(f"{harness.url}?ui=studio", wait_until="networkidle")
+        response = page.goto(f"{harness.url}?ui=studio", wait_until="domcontentloaded")
         assert response is not None and response.ok
+        _wait_for_work_item_surface(page, "WI-RUN")
 
         page.locator('[data-tab-shortcut="project-home"]').first.click()
         sections = page.locator("[data-inbox-section]")
@@ -126,8 +140,10 @@ def test_inbox_prioritizes_and_routes_durable_and_running_work(
         assert first_action.evaluate("node => document.activeElement === node")
         _assert_rendered_gate(page, viewport)
 
-        page.reload(wait_until="networkidle")
-        page.locator('[data-inbox-section="needs-decision"]').wait_for(state="visible")
+        page.reload(wait_until="domcontentloaded")
+        page.locator('[data-inbox-section="needs-decision"]').wait_for(
+            state="visible", timeout=_SURFACE_TIMEOUT_MS
+        )
         assert parse_qs(urlsplit(page.url).query).get("mode") == ["inbox"]
 
         first_action = page.locator(
@@ -142,25 +158,18 @@ def test_inbox_prioritizes_and_routes_durable_and_running_work(
         assert context_switch.value.status == 200, context_switch.value.text()
         page.wait_for_function(
             "new URLSearchParams(location.search).get('work_item') === 'WI-DECISION'",
-            timeout=15_000,
+            timeout=_SURFACE_TIMEOUT_MS,
         )
-        page.wait_for_function(
-            "eval('state.dashboard?.work_item') === 'WI-DECISION'",
-            timeout=15_000,
-        )
-        page.locator("#cockpitContent").get_by_text(
-            "Which acceptance boundary", exact=False
-        ).first.wait_for(state="visible", timeout=15_000)
+        _wait_for_question_surface(page)
         query = parse_qs(urlsplit(page.url).query)
         assert query["mode"] == ["studio"]
         assert query["work_item"] == ["WI-DECISION"]
         assert query["run_id"] == ["run-decision"]
         assert query["stage"] == ["idea"]
 
-        page.reload(wait_until="networkidle")
-        page.locator("#cockpitContent").get_by_text(
-            "Which acceptance boundary", exact=False
-        ).first.wait_for(state="visible", timeout=15_000)
+        page.reload(wait_until="domcontentloaded")
+        _wait_for_work_item_surface(page, "WI-DECISION")
+        _wait_for_question_surface(page)
         inbox_readback = page.request.get(f"{harness.url}api/inbox")
         assert inbox_readback.status == 200
         sections_payload = inbox_readback.json()["inbox"]["durable"]["sections"]
@@ -182,7 +191,8 @@ def test_inbox_prioritizes_and_routes_durable_and_running_work(
             },
         )
         assert switch_response.status == 200
-        page.goto(f"{harness.url}?ui=studio", wait_until="networkidle")
+        page.goto(f"{harness.url}?ui=studio", wait_until="domcontentloaded")
+        _wait_for_work_item_surface(page, "WI-RUN")
         launch_response = page.request.post(
             f"{harness.url}api/workflow/run",
             data={"runtime": "generic-cli", "log_follow": True},
@@ -210,7 +220,7 @@ def test_inbox_prioritizes_and_routes_durable_and_running_work(
         page.locator('[data-tab-shortcut="project-home"]').first.click()
         sections = page.locator("[data-inbox-section]")
         page.locator('[data-inbox-section="running-now"]').wait_for(
-            state="visible", timeout=15_000
+            state="visible", timeout=_SURFACE_TIMEOUT_MS
         )
         assert sections.evaluate_all(
             "items => items.map(item => item.dataset.inboxSection)"

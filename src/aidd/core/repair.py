@@ -182,6 +182,13 @@ def _render_correction_items(findings: Iterable[ValidatorReportFinding]) -> list
 def _repair_hint_for_finding(finding: ValidatorReportFinding) -> str:
     normalized_message = finding.message.lower()
     normalized_source_path = (finding.source_path or "").lower()
+    if finding.code == "CROSS-TASKLIST-PLAN-MILESTONE":
+        return (
+            "Use only canonical milestone mapping locations: write the exact existing `M<n>` "
+            "id in the task's `Outcome`, optional `Context`, a nested acceptance criterion, "
+            "or its dedicated `Verification notes` entry. Do not add `Milestone` or "
+            "`Plan milestone`; those fields are outside the rich-task grammar."
+        )
     if finding.code == "INTERVIEW-MALFORMED-DOCUMENT":
         if "answers.md" in normalized_source_path or "answer" in normalized_message:
             return (

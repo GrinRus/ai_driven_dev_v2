@@ -7,6 +7,10 @@ from typing import Any
 
 import yaml  # type: ignore[import-untyped]
 
+from aidd.core.allowed_write_scope import (
+    AllowedWriteScopeError,
+    parse_allowed_write_scope,
+)
 from aidd.core.identifiers import SafeIdentifier
 from aidd.core.stages import STAGES
 from aidd.runtime_catalog import runtime_ids
@@ -63,6 +67,7 @@ class ScenarioAuthoredTask:
     visible_request: str | None = None
     audit_rubric: str | None = None
     complexity_axes: tuple[str, ...] = tuple()
+    allowed_write_scope: tuple[str, ...] = tuple()
 
 
 @dataclass(frozen=True)
@@ -288,6 +293,26 @@ def _to_authored_task(*, raw: Any, key: str) -> ScenarioAuthoredTask:
         parent_key=key,
         required=False,
     )
+    allowed_write_scope = _to_non_empty_string_tuple(
+        payload=payload,
+        key="allowed_write_scope",
+        parent_key=key,
+        required=False,
+    )
+    if "allowed_write_scope" in payload and not allowed_write_scope:
+        raise ScenarioManifestError(
+            f"Scenario manifest key '{key}.allowed_write_scope' must be a non-empty "
+            "list of strings when provided."
+        )
+    if allowed_write_scope:
+        scope_markdown = "\n".join(f"- `{path}`" for path in allowed_write_scope)
+        try:
+            allowed_write_scope = parse_allowed_write_scope(
+                scope_markdown,
+                source_path=Path(f"{key}.allowed_write_scope"),
+            ).prefixes
+        except AllowedWriteScopeError as exc:
+            raise ScenarioManifestError(str(exc)) from exc
     return ScenarioAuthoredTask(
         task_id=task_id,
         title=title,
@@ -303,6 +328,7 @@ def _to_authored_task(*, raw: Any, key: str) -> ScenarioAuthoredTask:
         visible_request=visible_request,
         audit_rubric=audit_rubric,
         complexity_axes=complexity_axes,
+        allowed_write_scope=allowed_write_scope,
     )
 
 

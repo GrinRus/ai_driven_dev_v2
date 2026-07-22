@@ -35,8 +35,17 @@ is a runtime-authored summary draft that AIDD may normalize after validation, an
 - `context/verification-artifacts.md`
 - `context/constraints.md`
 - `context/previous-decisions.md`
+- `context/allowed-write-scope.md`
 
 Optional context documents may improve planning quality, but they must not replace required upstream stage artifacts.
+
+When `context/allowed-write-scope.md` exists, it is the exhaustive boundary for repository paths
+that the plan may propose creating, modifying, moving, or deleting. Read-only evidence and
+verification commands may refer to other paths, but implementation milestones and strategies must
+not introduce an out-of-scope helper, module, test, configuration file, or generated artifact. If
+the preferred design needs a path outside the authored scope, keep a small private helper inside an
+allowed file when that is safe or raise a blocking question; never broaden or reinterpret the
+scope from the plan stage. A missing scope document preserves unrestricted legacy planning.
 
 ## Upstream dependency rule
 
@@ -75,6 +84,11 @@ Validators for `plan` should check:
 - user-approval readiness:
   - scope boundaries and trade-offs are explicit enough for operator review,
   - major risks have mitigation intent and verification linkage,
+- canonical write-scope enforcement:
+  - proposed repository writes in `Milestones` and `Implementation strategy` remain within
+    `context/allowed-write-scope.md` when that document exists,
+  - malformed scope or an unsafe/out-of-scope proposed write fails validation instead of being
+    treated as unrestricted planning,
 - cross-document consistency between plan claims, validator findings, and declared terminal status in `stage-result.md`.
 
 ## Interview policy

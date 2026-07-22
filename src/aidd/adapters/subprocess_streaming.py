@@ -157,8 +157,11 @@ def run_streamed_subprocess[ExitClassificationT: StrEnum](
             raise
 
     while True:
-        _maybe_request_stop()
-        if process.poll() is not None and parent_exit_drain_deadline is None:
+        parent_exited = process.poll() is not None
+        if not parent_exited and parent_exit_drain_deadline is None:
+            _maybe_request_stop()
+            parent_exited = process.poll() is not None
+        if parent_exited and parent_exit_drain_deadline is None:
             parent_exit_drain_deadline = time.monotonic() + 0.2
         if (
             parent_exit_drain_deadline is not None

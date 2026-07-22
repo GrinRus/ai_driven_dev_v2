@@ -33,6 +33,7 @@ is a runtime-authored summary draft that AIDD may normalize after validation, an
 - `context/acceptance-criteria.md`
 - `context/verification-output.md`
 - `context/verification-artifacts.md`
+- `context/allowed-write-scope.md`
 - `context/constraints.md`
 - `context/previous-decisions.md`
 
@@ -52,12 +53,20 @@ Optional context documents may improve task decomposition quality, but they must
     `In scope` fields,
   - at least one safe backticked repository-relative file or directory prefix in every `In scope`
     field; absolute paths, `..` traversal, and glob syntax are invalid,
+  - when `context/allowed-write-scope.md` exists, every task-local `In scope` path must be the
+    exact permitted prefix or one of its descendants; a task must not defer this conflict to
+    implementation or propose an alternative path outside the authored global boundary,
   - at least one unique task-local acceptance criterion per card using the exact id shape
     `<task-id>-AC<n>`,
   - an `Acceptance criteria` field containing those task-local criteria,
   - one dominant output artifact per task so each item remains reviewable as a standalone unit,
   - explicit dependency notes per task (upstream task ids or `none`),
   - verification notes per task naming the primary check, test, or scenario proving completion.
+- every task card must map to at least one existing plan milestone by citing its exact `M<n>` id
+  in the card's `Outcome`, optional `Context`, a nested acceptance criterion, or the task's
+  dedicated `Verification notes` entry. Every plan milestone must be covered by at least one task.
+  Ad hoc `Milestone` or `Plan milestone` fields are outside the canonical rich-task grammar and do
+  not count as mappings.
 - the dedicated `Verification notes` section must include at least one bullet or list entry for
   every task id declared in `Ordered tasks`, including command-only or verification-only tasks.
   A primary check embedded only inside an `Ordered tasks` entry does not satisfy this dedicated
@@ -95,6 +104,8 @@ Validators for `tasklist` should check:
   - dependency notes avoid hidden coupling and do not rely on unspecified prerequisites,
   - task cards contain the required outcome, deliverable, scope, and acceptance fields,
   - task-local scope contains safe repository-relative path prefixes,
+  - every task-local prefix is inside canonical `context/allowed-write-scope.md` when that optional
+    document exists, using component-boundary rather than string-prefix matching,
   - acceptance ids are task-local, well-formed, and globally unique,
 - ordering clarity:
   - task order is executable in dependency order and avoids contradictory sequencing,
@@ -111,6 +122,9 @@ Validators for `tasklist` should check:
     internal-only scope,
   - package-importable helper paths are treated as public API risk unless intentionally accepted,
 - cross-document consistency between tasklist readiness claims, validator findings, and terminal status in `stage-result.md`.
+- exact task-to-plan milestone coverage through canonical `Outcome`, `Context`, acceptance
+  criteria, or `Verification notes` content; unsupported ad hoc milestone fields do not satisfy
+  this cross-document requirement.
 
 ## Interview policy
 
@@ -142,6 +156,11 @@ Question/answer document rules:
 - default repair budget: 2 attempts after the initial run
 - repair uses the same target documents
 - AIDD core preserves validator findings and the generated repair brief for every failed attempt
+- milestone-mapping findings and repair briefs name the canonical task-card locations that can
+  satisfy the mapping; repair must not invent an unsupported `Milestone` field
+- allowed-scope findings require the affected task card's `In scope` paths to be replaced or split
+  into prefixes permitted by the canonical context document; repair must not expand or rewrite
+  the operator-authored global scope
 
 ## Prompt pack
 

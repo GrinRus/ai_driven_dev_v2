@@ -919,6 +919,40 @@ def test_validate_semantic_outputs_accepts_bounded_diff_verification_summary(
     assert findings == ()
 
 
+def test_validate_semantic_outputs_accepts_live_sh_cleanup_verification(
+    tmp_path: Path,
+) -> None:
+    workspace_root = tmp_path / "workspace"
+    work_item = "WI-SEM-IMPLEMENT-SHELL-CLEANUP"
+    _write_implementation_report(
+        workspace_root,
+        work_item,
+        "# Implementation Report\n\n"
+        "## Summary\n\n"
+        "- Implemented selected task `T1` with one bounded source change.\n\n"
+        "## Touched files\n\n"
+        "- `src/compose.ts` - normalize caught non-Error values.\n\n"
+        "## Verification\n\n"
+        "- `sh -c 'residue=\"$(find . -name __pycache__ -print)\"; "
+        "[ -z \"$residue\" ] || { printf \"%s\\n\" \"$residue\"; exit 1; }'` "
+        "-> pass (exit code 0; no generated cache residue reported).\n"
+        "- `git status --ignored --short --untracked-files=all` -> pass "
+        "(exit code 0; no ignored verification residue).\n\n"
+        "## Risks\n\n"
+        "- None observed.\n\n"
+        "## Follow-up\n\n"
+        "- Continue with the next dependency-ready task.\n",
+    )
+
+    findings = validate_semantic_outputs(
+        stage="implement",
+        work_item=work_item,
+        workspace_root=workspace_root,
+    )
+
+    assert findings == ()
+
+
 def test_validate_semantic_outputs_accepts_setup_cleanup_residue_note(
     tmp_path: Path,
 ) -> None:
@@ -1034,4 +1068,3 @@ def test_validate_semantic_outputs_accepts_backticked_python_heredoc_verificatio
     )
 
     assert findings == ()
-

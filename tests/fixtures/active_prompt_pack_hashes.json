@@ -6,14 +6,14 @@
   "prompt-packs/stages/idea/system.md": "d612f7732be2d57edb5a91c219d085c714e705f0f19f9d3b4db8270cee9215ad",
   "prompt-packs/stages/implement/intervention.md": "0460c130d7ea4a20b3bb97003abbe01ab2c88d296f90ac4a41ffa11854cae101",
   "prompt-packs/stages/implement/interview.md": "fc10f6c3bb5d2fb35b5f8747a8713e414ed2137772cfe3e8d2ba8599b0b77030",
-  "prompt-packs/stages/implement/repair.md": "27c6b7e25c6012a01405e11640c61decf4b7b56e629a239f4f83b0f1f5226c2f",
-  "prompt-packs/stages/implement/run.md": "2e10aa195e583a09a148ddf3671e5a109c5480a23e3f7e23eb2195a25421fb85",
-  "prompt-packs/stages/implement/system.md": "bb787c824657eb06d48e170cf72b6c29a6e1ae96970d5a4a5c9c58dc5de88861",
+  "prompt-packs/stages/implement/repair.md": "6bc883f53314e4d895bb9afce2e664598e4ec3878e4bf8b80e1483f65a3ca4f3",
+  "prompt-packs/stages/implement/run.md": "4d7d3730a2600a8d76c8e9330034226739533dbcf8395aac0e07c093a7e68def",
+  "prompt-packs/stages/implement/system.md": "61f9be30761d7d4ca27ec2576ec7f44ee161c4eebf27434136f5964220bf0d94",
   "prompt-packs/stages/plan/intervention.md": "0460c130d7ea4a20b3bb97003abbe01ab2c88d296f90ac4a41ffa11854cae101",
   "prompt-packs/stages/plan/interview.md": "a8215fb766666566d62dc55fa2b3a4d588b5d0aacaa9ff3fdc9f09931f19051f",
-  "prompt-packs/stages/plan/repair.md": "1e2bfd0c1c9a4e0c0861e963c6916f1a78fc36429b0212dc5aa537b4f8c9a0b0",
-  "prompt-packs/stages/plan/run.md": "782d8b3a9ae04d47fee4afc7f5e0b4758e64358c3990b70e03f4c3ed281f06bf",
-  "prompt-packs/stages/plan/system.md": "92153cafc9559c11f8663f9dd822974845ebc8df8ed17ed054a41aa7c9bac935",
+  "prompt-packs/stages/plan/repair.md": "9804dc968a3277299d7436069f0a5622572627ec8b2e7f6df705b6c218f11565",
+  "prompt-packs/stages/plan/run.md": "fe44b6ab5d2af06bce360b84b572ab4b31665695ab846df1453467e2e6dd7120",
+  "prompt-packs/stages/plan/system.md": "50fe335630f4a39affd40c71818e8b18cdcba61709a7e7a7455278a2134369f1",
   "prompt-packs/stages/qa/intervention.md": "0460c130d7ea4a20b3bb97003abbe01ab2c88d296f90ac4a41ffa11854cae101",
   "prompt-packs/stages/qa/interview.md": "bcce0c546a910d88377e57041ebbb0515ee9441d24fcc60bedc12f0803f2bcf7",
   "prompt-packs/stages/qa/repair.md": "bfa44a4fe5165b99e049caa8304e80bc46c8fcf59c5c14e7efe5831021cb9068",
@@ -36,8 +36,7 @@
   "prompt-packs/stages/review/system.md": "4c8e2afcb833576bc4f680df84afc31e6ba7640b84645c9fdebcf3b261694458",
   "prompt-packs/stages/tasklist/intervention.md": "0460c130d7ea4a20b3bb97003abbe01ab2c88d296f90ac4a41ffa11854cae101",
   "prompt-packs/stages/tasklist/interview.md": "19c938c7d69569ed4c93378c1f09287b263ab078d04ab4f24f200f62ca19b0d5",
-  "prompt-packs/stages/tasklist/repair.md": "57ac28b4888aa85559f52aa33ae4f8697ad0bdb8993cf390dc8507cc69c8fd5e",
-  "prompt-packs/stages/tasklist/run.md": "bffd0d0642adbe31bffb89b5a95b8553eb056feedecd36a5322950fd09f66913",
-  "prompt-packs/stages/tasklist/system.md": "0055370a09318ced58c4e3dab4c755d30664b5943680f39a9af29e2ee4b5a4fe"
+  "prompt-packs/stages/tasklist/repair.md": "728cb5ba150687b6933958b58d6e54273a833df827fa10e932389b6370c579b7",
+  "prompt-packs/stages/tasklist/run.md": "e20e50d9f33ab53f90456f23c6402bd68dc0de21e5aceff50f561ce76e16ffee",
+  "prompt-packs/stages/tasklist/system.md": "f3eadbe27bd471512d9e22b48a86b5581b210894a42a8cda65370d4753bfc700"
 }
-

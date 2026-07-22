@@ -297,6 +297,10 @@ For live scenarios in this wave:
 - Public-repository live E2E now records frontend/API checkpoint evidence as raw
   run-integrity evidence, but brokered approval proof and full UI/UX audit evidence
   remain in the operator UI/local-project lane or the manual `quality-report.md`.
+- Wave 36 dual-provider acceptance additionally follows
+  [`prod-like-live-provider-acceptance.md`](prod-like-live-provider-acceptance.md): raw
+  worktrees and evidence remain in independent external provider roots, while only a
+  sanitized digest-backed result is eligible for tracked documentation.
 
 Representative matrix coverage for the live lane:
 
@@ -341,6 +345,10 @@ Every maintained live scenario must:
   `acceptance_criteria`, `verification`, `quality_bar`, and `size_rationale`;
   `quality_bar` is authored task metadata only and must not be treated as an automatic
   live quality gate;
+- when exact repository prefixes are known, declare `allowed_write_scope` as canonical
+  repository-relative POSIX paths; bootstrap then writes the optional
+  `allowed-write-scope.md` from those paths only. Omitting the field omits the scope document;
+  prose `expected_scope` is never reinterpreted as a path policy;
 - for `product-evaluation`, define task `visible_request`, `audit_rubric`, and
   `complexity_axes`; `user-request.md` stays focused on `visible_request`, while
   `selected-task.md` also exposes authored task constraints such as `intent`,

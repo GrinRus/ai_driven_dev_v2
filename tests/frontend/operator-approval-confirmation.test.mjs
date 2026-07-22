@@ -43,12 +43,13 @@ async function approvalContext({conflict = false, terminal = false} = {}) {
     },
     querySelectorAll: () => controls,
   };
+  const state = {activeJobId: "job-1", approvalSessionConfirmation: null};
   const context = vm.createContext({
     console,
     document,
     escapeHtml,
     pathLine: (value) => `<span>${escapeHtml(value)}</span>`,
-    state: {activeJobId: "job-1"},
+    state,
     postJson: async (url, payload) => {
       assert.ok(controls.every((control) => control.disabled));
       posts.push({url, payload});
@@ -72,6 +73,7 @@ async function approvalContext({conflict = false, terminal = false} = {}) {
     __controls: controls,
     __confirmation: confirmation,
     __preview: preview,
+    __state: state,
   });
   vm.runInContext(
     await readFile(path.join(staticRoot, "operator-mutation-guard.js"), "utf8"),
@@ -136,6 +138,46 @@ test("session approval posts only after confirmation with visible reason", async
     payload: {action: "allow_for_session", reason: "Bounded read-only inspection"},
   }]));
   assert.equal(context.__toasts.at(-1), "Durable runtime decision: allow_for_session: Bounded read-only inspection");
+});
+
+test("polling re-render preserves pending session confirmation and reason", async () => {
+  const context = await approvalContext();
+  await vm.runInContext(`submitApproval("REQ-1", "allow_for_session")`, context);
+  context.__confirmation.hidden = true;
+  context.__preview.textContent = "";
+  vm.runInContext(
+    `restoreApprovalSessionConfirmation({
+      pending_request_ids: ["REQ-1"], decisions: []
+    })`,
+    context,
+  );
+
+  assert.equal(context.__confirmation.hidden, false);
+  assert.equal(context.__preview.textContent, "Bounded read-only inspection");
+  assert.equal(JSON.stringify(context.__state.approvalSessionConfirmation), JSON.stringify({
+    jobId: "job-1",
+    requestId: "REQ-1",
+    reason: "Bounded read-only inspection",
+  }));
+
+  vm.runInContext(
+    `restoreApprovalSessionConfirmation({
+      pending_request_ids: [],
+      decisions: [{request_id: "REQ-1", action: "allow_for_session"}]
+    })`,
+    context,
+  );
+  assert.equal(context.__state.approvalSessionConfirmation, null);
+});
+
+test("cancelling session confirmation clears browser-only state", async () => {
+  const context = await approvalContext();
+  await vm.runInContext(`submitApproval("REQ-1", "allow_for_session")`, context);
+  vm.runInContext(`closeApprovalSessionConfirmation("REQ-1")`, context);
+
+  assert.equal(context.__confirmation.hidden, true);
+  assert.equal(context.__state.approvalSessionConfirmation, null);
+  assert.equal(context.__posts.length, 0);
 });
 
 test("opposite concurrent decisions render one durable winner", async () => {

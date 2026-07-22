@@ -5,7 +5,10 @@ from pathlib import Path
 
 from playwright.sync_api import sync_playwright
 
-from browser_tests.browser_harness import operator_browser_harness
+from browser_tests.browser_harness import (
+    operator_browser_harness,
+    wait_for_work_item_surface,
+)
 from browser_tests.journey_support import configure_sleeping_fixture_runtime
 from browser_tests.state_fixtures import build_browser_state_fixture
 
@@ -18,13 +21,15 @@ def test_question_draft_survives_reload_and_clears_after_readback(tmp_path: Path
         work_item=fixture.work_item,
     ) as harness, harness.open_page((1280, 900)) as browser_page:
         page = browser_page.page
-        page.goto(harness.url, wait_until="networkidle")
+        page.goto(harness.url, wait_until="domcontentloaded")
+        wait_for_work_item_surface(page, fixture.work_item)
         answer = page.locator('[data-question-text="Q1"]')
         answer.wait_for(state="visible")
         answer.fill("Preserve the public CLI boundary.")
         page.locator('[data-question-resolution="Q1"]').select_option("resolved")
 
-        page.reload(wait_until="networkidle")
+        page.reload(wait_until="domcontentloaded")
+        wait_for_work_item_surface(page, fixture.work_item)
         restored = page.locator('[data-question-text="Q1"]')
         restored.wait_for(state="visible")
         assert restored.input_value() == "Preserve the public CLI boundary."
@@ -90,7 +95,8 @@ def test_intervention_draft_isolated_from_question_and_restored(tmp_path: Path) 
         work_item=fixture.work_item,
     ) as harness, harness.open_page((1280, 900)) as browser_page:
         page = browser_page.page
-        page.goto(harness.url, wait_until="networkidle")
+        page.goto(harness.url, wait_until="domcontentloaded")
+        wait_for_work_item_surface(page, fixture.work_item)
         page.evaluate("renderRequestChange()")
         request = page.locator("#operatorRequestText")
         request.wait_for(state="visible")
@@ -136,7 +142,8 @@ def test_intervention_submit_creates_one_stage_scoped_request(tmp_path: Path) ->
         work_item=fixture.work_item,
     ) as harness, harness.open_page((1280, 900)) as browser_page:
         page = browser_page.page
-        page.goto(f"{harness.url}?ui=studio", wait_until="networkidle")
+        page.goto(f"{harness.url}?ui=studio", wait_until="domcontentloaded")
+        wait_for_work_item_surface(page, fixture.work_item)
         page.locator("#runtimeSelect").select_option("generic-cli")
         page.wait_for_function("eval('selectedRuntimeReady()')", timeout=15_000)
         page.evaluate("renderRequestChange()")
@@ -179,7 +186,8 @@ def test_intervention_rejects_succeeded_downstream_without_request(tmp_path: Pat
         work_item=fixture.work_item,
     ) as harness, harness.open_page((1280, 900)) as browser_page:
         page = browser_page.page
-        page.goto(f"{harness.url}?ui=studio", wait_until="networkidle")
+        page.goto(f"{harness.url}?ui=studio", wait_until="domcontentloaded")
+        wait_for_work_item_surface(page, fixture.work_item)
         page.evaluate(
             "state.activeStage = 'plan'; state.activeStageExplicit = true; fetchDashboard()"
         )

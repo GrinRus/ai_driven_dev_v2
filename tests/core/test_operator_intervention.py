@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import threading
 from pathlib import Path
 
 import pytest
@@ -113,6 +114,100 @@ def test_operator_request_artifact_allocates_markdown_path(tmp_path: Path) -> No
     assert "## Request\n\nAdd rollback risks." in text
     assert "- `workitems/WI-OP/stages/plan/plan.md`" in text
     assert "Operator: `cli`" in text
+
+
+def test_operator_request_canonical_path_appears_only_after_complete_write(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    workspace_root = tmp_path / ".aidd"
+    _materialize_plan_inputs(workspace_root=workspace_root, work_item="WI-OP")
+    request_root = (
+        workspace_root
+        / "workitems"
+        / "WI-OP"
+        / "stages"
+        / "plan"
+        / "operator-requests"
+    )
+    publication_ready = threading.Event()
+    allow_publication = threading.Event()
+    original_replace = Path.replace
+
+    def delayed_replace(path: Path, target: Path) -> Path:
+        if path.parent == request_root and path.name.endswith(".tmp"):
+            publication_ready.set()
+            assert allow_publication.wait(timeout=5)
+        return original_replace(path, target)
+
+    monkeypatch.setattr(Path, "replace", delayed_replace)
+    result: list[object] = []
+
+    def persist() -> None:
+        try:
+            result.append(
+                persist_operator_intervention_request(
+                    workspace_root=workspace_root,
+                    work_item="WI-OP",
+                    stage="plan",
+                    request_text="Add rollback risks.",
+                )
+            )
+        except BaseException as exc:  # pragma: no cover - asserted through result
+            result.append(exc)
+
+    worker = threading.Thread(target=persist)
+    worker.start()
+    assert publication_ready.wait(timeout=5)
+    assert list(request_root.glob("request-*.md")) == []
+    staging_paths = list(request_root.glob(".request-*.tmp"))
+    assert len(staging_paths) == 1
+    assert "Add rollback risks." in staging_paths[0].read_text(encoding="utf-8")
+
+    allow_publication.set()
+    worker.join(timeout=5)
+    assert not worker.is_alive()
+    assert len(result) == 1
+    assert not isinstance(result[0], BaseException)
+    canonical_paths = list(request_root.glob("request-*.md"))
+    assert len(canonical_paths) == 1
+    assert "Add rollback risks." in canonical_paths[0].read_text(encoding="utf-8")
+    assert list(request_root.glob(".*.tmp")) == []
+
+
+def test_operator_request_failed_write_leaves_no_partial_evidence(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    workspace_root = tmp_path / ".aidd"
+    _materialize_plan_inputs(workspace_root=workspace_root, work_item="WI-OP")
+    request_root = (
+        workspace_root
+        / "workitems"
+        / "WI-OP"
+        / "stages"
+        / "plan"
+        / "operator-requests"
+    )
+    original_replace = Path.replace
+
+    def failed_publication(path: Path, target: Path) -> Path:
+        if path.parent == request_root and path.name.endswith(".tmp"):
+            raise OSError("simulated interrupted request publication")
+        return original_replace(path, target)
+
+    monkeypatch.setattr(Path, "replace", failed_publication)
+
+    with pytest.raises(OSError, match="simulated interrupted request publication"):
+        persist_operator_intervention_request(
+            workspace_root=workspace_root,
+            work_item="WI-OP",
+            stage="plan",
+            request_text="Add rollback risks.",
+        )
+
+    assert list(request_root.glob("request-*.md")) == []
+    assert list(request_root.glob(".*.tmp")) == []
 
 
 def test_operator_request_validation_rejects_empty_and_out_of_scope_targets(

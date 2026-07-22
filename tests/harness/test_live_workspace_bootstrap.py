@@ -2,7 +2,11 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from aidd.harness.eval_preparation import select_authored_task
+from aidd.core.allowed_write_scope import resolve_allowed_write_scope
+from aidd.harness.eval_preparation import (
+    build_feature_selection_payload,
+    select_authored_task,
+)
 from aidd.harness.live_workspace_bootstrap import bootstrap_live_work_item
 from aidd.harness.scenarios import (
     Scenario,
@@ -112,6 +116,7 @@ def test_bootstrap_selected_task_preserves_authored_constraints_with_visible_req
     assert "Please route non-Error thrown values through configured onError." in (
         user_request_text
     )
+    assert not (work_item_root / "context" / "allowed-write-scope.md").exists()
 
 
 def test_bootstrap_hono_live_task_exposes_target_change_before_stage_run(
@@ -155,3 +160,24 @@ def test_bootstrap_hono_live_task_exposes_target_change_before_stage_run(
     )
     assert "Hono should route thrown non-Error values" in user_request_text
     assert "## Authored Task Constraints" not in user_request_text
+    scope = resolve_allowed_write_scope(working_copy / ".aidd", "WI-LIVE-HONO-SMOKE")
+    assert scope is not None
+    assert scope.prefixes == (
+        "src/compose.ts",
+        "src/hono-base.ts",
+        "src/compose.test.ts",
+        "src/hono.test.ts",
+    )
+    assert scope.allows("src/compose.ts")
+    assert not scope.allows("src/compose-extra.ts")
+    selection = build_feature_selection_payload(
+        scenario=scenario,
+        selected_task=selected_task,
+    )["selected_task"]
+    assert isinstance(selection, dict)
+    assert selection["allowed_write_scope"] == [
+        "src/compose.ts",
+        "src/hono-base.ts",
+        "src/compose.test.ts",
+        "src/hono.test.ts",
+    ]

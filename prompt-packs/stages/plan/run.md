@@ -23,6 +23,7 @@ signals are mapped to planned increments.
   - `context/verification-artifacts.md`
   - `context/constraints.md`
   - `context/previous-decisions.md`
+  - `context/allowed-write-scope.md`
 - contract of record:
   - `contracts/stages/plan.md`
 
@@ -82,6 +83,14 @@ normalize if canonical validation proves the terminal status inconsistent.
 9. Optional broad checks outside the authored verification boundary may be documented only as
    optional/non-blocking exploratory checks. Do not turn them into required pass criteria or a
    milestone exit condition unless the authored task or review-spec explicitly requires them.
+10. When `context/allowed-write-scope.md` exists, treat it as the exhaustive implementation write
+    boundary. Every path proposed for creation, modification, movement, or deletion must be an
+    exact allowed path or a descendant of an allowed directory. Read-only evidence paths and
+    verification commands may remain outside that boundary.
+11. Do not propose an out-of-bound preferred helper, module, test, configuration, or generated
+    path. If sharing code would require a new path outside the canonical scope, keep the small
+    helper private inside allowed files when safe or raise a blocking question. Do not edit,
+    broaden, or reinterpret `allowed-write-scope.md` from the plan stage.
 
 ## Execution instructions
 
@@ -95,9 +104,12 @@ normalize if canonical validation proves the terminal status inconsistent.
    inventing assumptions.
 6. Use `context/verification-output.md` as the verification boundary when present; if you need to
    mention an authored command, quote it exactly rather than paraphrasing executable details.
-7. Update `validator-report.md` so findings and verdict match plan completeness and sequencing
+7. Before writing a successful plan, compare every proposed implementation path with
+   `context/allowed-write-scope.md` when that document exists; remove or question any path that
+   does not fit instead of silently expanding the patch.
+8. Update `validator-report.md` so findings and verdict match plan completeness and sequencing
    clarity.
-8. Update `stage-result.md` so status, blockers, and next actions remain consistent with validator
+9. Update `stage-result.md` so status, blockers, and next actions remain consistent with validator
    and question artifacts.
    When planning and validation evidence support success, `stage-result.md` `Next actions` must
    point to `review-spec` as the immediate downstream stage. Do not tell the operator to proceed
@@ -123,5 +135,7 @@ normalize if canonical validation proves the terminal status inconsistent.
 - authored verification commands from `context/verification-output.md` are preserved exactly, or
   referenced generically without changing command flags or broadening scope,
 - optional broader checks are not promoted to required pass criteria outside the authored boundary,
+- every proposed repository write is inside canonical `context/allowed-write-scope.md` when it
+  exists, and no new out-of-scope helper/module path is invented,
 - stage status and validator verdict are consistent with blocker/question state,
 - successful `stage-result.md` next actions name `review-spec` as the immediate downstream stage.

@@ -42,6 +42,10 @@ async function fetchDashboard() {
     state.reviewFindingsRunId = "";
     state.qaVerdictView = null;
     state.qaVerdictRunId = "";
+    state.terminalOtherActionsIdentity = "";
+    state.terminalOtherActionsOpen = false;
+    state.archivePresentationIdentity = "";
+    state.archivePresentationPromise = null;
   }
   if (!state.selectedRuntime && state.dashboard.run?.runtime_id) {
     state.selectedRuntime = state.dashboard.run.runtime_id;

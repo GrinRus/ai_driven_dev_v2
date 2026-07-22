@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
+import pytest
 from semantic_test_support import (
     _SEMANTIC_FIXTURES_ROOT,
     _write_plan_document,
@@ -12,6 +13,35 @@ from aidd.validators.semantic import (
     INCOMPLETE_SECTION_CODE,
     validate_semantic_outputs,
 )
+from aidd.validators.semantic_rules.plan import PLAN_SCOPE_MISMATCH_CODE
+
+
+def _scoped_plan(*, milestone: str, strategy: str) -> str:
+    return (
+        "# Plan\n\n"
+        "## Goals\n\n"
+        "- Deliver bounded composition error handling.\n\n"
+        "## Out of scope\n\n"
+        "- Broad framework changes.\n\n"
+        "## Milestones\n\n"
+        f"- M1: {milestone}\n\n"
+        "## Implementation strategy\n\n"
+        f"- {strategy}\n\n"
+        "## Risks\n\n"
+        "- R1: Behavior can drift; mitigation: run focused regression checks.\n\n"
+        "## Dependencies\n\n"
+        "- M1 depends on the existing composition boundary.\n\n"
+        "## Verification approach\n\n"
+        "- Run the authored focused checks.\n\n"
+        "## Verification notes\n\n"
+        "- M1: verify composition error behavior.\n"
+    )
+
+
+def _write_allowed_scope(workspace_root: Path, work_item: str, markdown: str) -> None:
+    path = workspace_root / "workitems" / work_item / "context" / "allowed-write-scope.md"
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(markdown, encoding="utf-8")
 
 
 def test_validate_semantic_outputs_requires_plan_verification_note_milestone_links(
@@ -442,3 +472,176 @@ def test_validate_semantic_outputs_flags_invalid_plan_fixture_bundle() -> None:
         ),
     )
 
+
+def test_plan_scope_rejects_live_shaped_out_of_scope_helper(tmp_path: Path) -> None:
+    workspace_root = tmp_path / ".aidd"
+    work_item = "WI-PLAN-SCOPE-LIVE"
+    _write_allowed_scope(
+        workspace_root,
+        work_item,
+        (
+            "# Allowed write scope\n\n"
+            "- `src/compose.ts`\n"
+            "- `src/hono-base.ts`\n"
+            "- `src/compose.test.ts`\n"
+            "- `src/hono.test.ts`\n"
+        ),
+    )
+    _write_plan_document(
+        workspace_root,
+        work_item,
+        _scoped_plan(
+            milestone=(
+                "Update `src/compose.ts` and create a shared helper in "
+                "`src/utils/error.ts`."
+            ),
+            strategy="Modify `src/hono-base.ts` to consume the new helper.",
+        ),
+    )
+
+    findings = validate_semantic_outputs(
+        stage="plan",
+        work_item=work_item,
+        workspace_root=workspace_root,
+    )
+
+    scope_findings = tuple(
+        finding for finding in findings if finding.code == PLAN_SCOPE_MISMATCH_CODE
+    )
+    assert len(scope_findings) == 1
+    assert scope_findings[0].severity == "high"
+    assert "`src/utils/error.ts`" in scope_findings[0].message
+    assert "Milestones" in scope_findings[0].message
+
+
+@pytest.mark.parametrize(
+    ("path", "expected_section"),
+    (
+        ("src2/helper.ts", "Implementation strategy"),
+        ("../escape.ts", "Implementation strategy"),
+        ("/tmp/absolute.ts", "Implementation strategy"),
+        (r"src\\windows.ts", "Implementation strategy"),
+        ("src/*.ts", "Implementation strategy"),
+    ),
+)
+def test_plan_scope_rejects_outside_or_unsafe_strategy_paths(
+    tmp_path: Path,
+    path: str,
+    expected_section: str,
+) -> None:
+    workspace_root = tmp_path / ".aidd"
+    work_item = "WI-PLAN-SCOPE-BOUNDARY"
+    _write_allowed_scope(
+        workspace_root,
+        work_item,
+        "# Allowed write scope\n\n- `src`\n",
+    )
+    _write_plan_document(
+        workspace_root,
+        work_item,
+        _scoped_plan(
+            milestone="Update `src/compose.ts` with bounded behavior.",
+            strategy=f"Create `{path}` for shared error handling.",
+        ),
+    )
+
+    findings = validate_semantic_outputs(
+        stage="plan",
+        work_item=work_item,
+        workspace_root=workspace_root,
+    )
+
+    scope_findings = tuple(
+        finding for finding in findings if finding.code == PLAN_SCOPE_MISMATCH_CODE
+    )
+    assert len(scope_findings) == 1
+    assert f"`{path}`" in scope_findings[0].message
+    assert expected_section in scope_findings[0].message
+
+
+def test_plan_scope_accepts_allowed_writes_and_ignores_read_only_evidence(
+    tmp_path: Path,
+) -> None:
+    workspace_root = tmp_path / ".aidd"
+    work_item = "WI-PLAN-SCOPE-ALLOWED"
+    _write_allowed_scope(
+        workspace_root,
+        work_item,
+        "# Allowed write scope\n\n- `src/compose.ts`\n",
+    )
+    _write_plan_document(
+        workspace_root,
+        work_item,
+        _scoped_plan(
+            milestone="Update `src/compose.ts` without adding another module.",
+            strategy=(
+                "Implement the change in `src/compose.ts`.\n"
+                "  - Inspect `tests/external-fixture.ts` as read-only evidence.\n"
+                "  - Command: `uv run pytest tests/external_test.py`."
+            ),
+        ),
+    )
+
+    findings = validate_semantic_outputs(
+        stage="plan",
+        work_item=work_item,
+        workspace_root=workspace_root,
+    )
+
+    assert not any(finding.code == PLAN_SCOPE_MISMATCH_CODE for finding in findings)
+
+
+def test_plan_scope_is_unrestricted_when_canonical_document_is_absent(
+    tmp_path: Path,
+) -> None:
+    workspace_root = tmp_path / ".aidd"
+    work_item = "WI-PLAN-SCOPE-LEGACY"
+    _write_plan_document(
+        workspace_root,
+        work_item,
+        _scoped_plan(
+            milestone="Create `src/new/helper.ts` for the implementation.",
+            strategy="Update `tests/new/helper.test.ts` with focused coverage.",
+        ),
+    )
+
+    findings = validate_semantic_outputs(
+        stage="plan",
+        work_item=work_item,
+        workspace_root=workspace_root,
+    )
+
+    assert not any(finding.code == PLAN_SCOPE_MISMATCH_CODE for finding in findings)
+
+
+def test_plan_scope_fails_closed_when_canonical_document_is_malformed(
+    tmp_path: Path,
+) -> None:
+    workspace_root = tmp_path / ".aidd"
+    work_item = "WI-PLAN-SCOPE-MALFORMED"
+    _write_allowed_scope(
+        workspace_root,
+        work_item,
+        "# Allowed write scope\n\n- no canonical path\n",
+    )
+    _write_plan_document(
+        workspace_root,
+        work_item,
+        _scoped_plan(
+            milestone="Update `src/compose.ts`.",
+            strategy="Implement the bounded behavior in `src/compose.ts`.",
+        ),
+    )
+
+    findings = validate_semantic_outputs(
+        stage="plan",
+        work_item=work_item,
+        workspace_root=workspace_root,
+    )
+
+    scope_findings = tuple(
+        finding for finding in findings if finding.code == PLAN_SCOPE_MISMATCH_CODE
+    )
+    assert len(scope_findings) == 1
+    assert scope_findings[0].severity == "high"
+    assert "malformed" in scope_findings[0].message

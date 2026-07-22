@@ -66,7 +66,9 @@ For each finding:
 2. patch only the smallest affected section(s) of `implementation-report.md`;
 3. re-check touched-files entries against observable repository changes and allowed write scope;
    each top-level entry needs a backticked file path plus short intent, while nested bullets may hold
-   line-level details;
+   line-level details. For a rich task attempt, compare against the current task-local baseline/final
+   diff rather than the cumulative workspace: remove prerequisite-only claims unless the current
+   task changed those paths again, and do not revert successful prior-task changes;
 4. re-check verification entries for concrete command/check evidence plus observed outcome
    (`-> pass`, `exit 0`, `exit code 0`, or captured tool summary);
    any pass/fail/success outcome claim without executable/check evidence in the same bullet is still
@@ -102,7 +104,9 @@ For each finding:
 Use concrete repair actions:
 
 - `missing diffs`: remove unsupported touched-files claims or add missing concrete entries that match
-  observed edits;
+  observed current task-local edits; for `SEM-TASK-DIFF-MISMATCH`, exclude prerequisite-only paths
+  without reverting prior task results, while aggregate finalization retains ownership of cumulative
+  touched-file evidence;
 - `incomplete touched-files intent`: rewrite each top-level touched-files bullet in the exact shape
   ``- `path/to/file.ext` - changed <short intent>`` so the path, separator, and intent are on the
   same line;
@@ -159,6 +163,8 @@ Use concrete repair actions:
 - selected task id, change summary, touched-files list, and verification notes are mutually consistent,
 - touched-files entries stay within allowed write scope, match observed edits, and include same-line
   path + intent for every top-level file entry,
+- rich task touched-files entries match the current task-local diff, exclude prerequisite-only
+  paths, and leave cumulative touched-file evidence to aggregate finalization,
 - no top-level `workitems/...` artifacts or unrelated scratch files remain in the deliverable workspace,
 - no setup-owned workspace paths were deleted or recreated, and no ignored local
   environment, cache, coverage, build, or dist artifacts are left as unexplained workspace

@@ -379,17 +379,11 @@ def decide_post_validation_transition(
         )
     elif workspace_root is not None and next_state == StageState.SUCCEEDED:
         try:
-            reconcile_stage_result_after_validation_pass(
+            final_findings = reconcile_and_validate_stage_result_after_validation_pass(
                 workspace_root=workspace_root,
                 work_item=validation_state.work_item,
                 stage=validation_state.stage,
-            )
-            final_findings = validate_semantic_outputs(
-                stage=validation_state.stage,
-                work_item=validation_state.work_item,
-                workspace_root=workspace_root,
                 contracts_root=contracts_root,
-                validate_stage_result_document=True,
             )
             if final_findings:
                 validator_report_path = (
@@ -454,11 +448,35 @@ def decide_post_validation_transition(
     )
 
 
+def reconcile_and_validate_stage_result_after_validation_pass(
+    *,
+    workspace_root: Path,
+    work_item: str,
+    stage: str,
+    contracts_root: Path = DEFAULT_STAGE_CONTRACTS_ROOT,
+) -> tuple[ValidationFinding, ...]:
+    """Normalize success-owned fields, then validate the complete stage result."""
+
+    reconcile_stage_result_after_validation_pass(
+        workspace_root=workspace_root,
+        work_item=work_item,
+        stage=stage,
+    )
+    return validate_semantic_outputs(
+        stage=stage,
+        work_item=work_item,
+        workspace_root=workspace_root,
+        contracts_root=contracts_root,
+        validate_stage_result_document=True,
+    )
+
+
 __all__ = [
     "decide_post_validation_transition",
     "derive_validation_verdict",
     "persist_validation_state",
     "persist_validation_state_with_repair_budget",
+    "reconcile_and_validate_stage_result_after_validation_pass",
     "prepare_stage_resume_after_answers",
     "update_stage_unblock_state",
 ]

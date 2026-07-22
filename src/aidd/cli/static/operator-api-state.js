@@ -94,6 +94,7 @@ const state = {
   inbox: null,
   inboxRequestGeneration: 0,
   readiness: null,
+  readinessRequestGeneration: 0,
   readinessLoading: true,
   readinessError: "",
   activeStage: "idea",
@@ -118,6 +119,7 @@ const state = {
   activeJobStatus: null,
   activeJobTimer: null,
   activeJobPollGeneration: 0,
+  approvalSessionConfirmation: null,
   activeJobConnection: {
     state: "unknown",
     failureCount: 0,
@@ -128,6 +130,11 @@ const state = {
   },
   pendingCockpitReveal: false,
   pendingNextFlowWizardReveal: false,
+  terminalOtherActionsIdentity: "",
+  terminalOtherActionsOpen: false,
+  archivePresentationIdentity: "",
+  archivePresentationPromise: null,
+  archiveIntentSequence: 0,
   runAccountability: null,
   runAccountabilityError: "",
   runComparison: null,
@@ -202,6 +209,7 @@ const state = {
     launchReadinessError: "",
     archiveRunId: "",
     archiveReason: "",
+    archiveIntentId: "",
     selectedSourceIds: []
   }
 };
@@ -553,6 +561,7 @@ async function recoverActiveJobFromDashboard(job) {
     state.activeJobStatus = {...state.activeJobStatus, ...job};
     return;
   }
+  state.approvalSessionConfirmation = null;
   state.activeJobId = job.job_id;
   state.activeJobCursor = 0;
   state.activeJobLogChunks = [];
@@ -789,16 +798,23 @@ async function fetchOnboardingState() {
 }
 
 async function fetchReadiness() {
+  const requestGeneration = ++state.readinessRequestGeneration;
   state.readinessLoading = true;
   state.readinessError = "";
   try {
-    state.readiness = await api("/api/runtime-readiness");
+    const readiness = await api("/api/runtime-readiness");
+    if (requestGeneration !== state.readinessRequestGeneration) return false;
+    state.readiness = readiness;
     state.readinessError = "";
   } catch (error) {
+    if (requestGeneration !== state.readinessRequestGeneration) return false;
     state.readiness = {runtimes: []};
     state.readinessError = error.message || "runtime readiness unavailable";
     toast(`Runtime readiness unavailable: ${error.message}`);
   } finally {
-    state.readinessLoading = false;
+    if (requestGeneration === state.readinessRequestGeneration) {
+      state.readinessLoading = false;
+    }
   }
+  return requestGeneration === state.readinessRequestGeneration;
 }

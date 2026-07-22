@@ -66,16 +66,18 @@ function updateSubmitInterventionState() {
   const textarea = document.getElementById("operatorRequestText");
   const button = document.getElementById("submitInterventionButton");
   const note = document.getElementById("interventionReadinessNote");
+  if (!button) return;
+  const mutation = interventionMutationState();
+  const pending = mutation.status === "pending";
   const eligibilityReason = button?.dataset.interventionEligible === "false"
     ? button.dataset.interventionReason
     : "";
   const readinessReason = eligibilityReason || runtimeReadinessMessage();
   if (note) {
-    note.textContent = readinessReason;
-    note.hidden = !readinessReason;
+    note.textContent = pending ? "Request submission is pending." : readinessReason;
+    note.hidden = !pending && !readinessReason;
   }
-  if (!button) return;
-  button.disabled = Boolean(readinessReason) || !String(textarea?.value || "").trim();
+  button.disabled = pending || Boolean(readinessReason) || !String(textarea?.value || "").trim();
 }
 
 function renderInterventionDiffPreview(requestText, targetDocuments) {
@@ -566,6 +568,7 @@ async function renderApprovals() {
   const content = document.getElementById("cockpitContent");
   const diagnostics = activeStageView()?.diagnostics?.approvals || null;
   if (!state.activeJobId) {
+    state.approvalSessionConfirmation = null;
     content.innerHTML = renderApprovalsSurface({
       view: null,
       diagnostics,
@@ -580,7 +583,9 @@ async function renderApprovals() {
     const requests = view.requests || [];
     const decisions = view.decisions || [];
     const pendingIds = new Set(view.pending_request_ids || []);
+    captureApprovalSessionConfirmationDraft();
     content.innerHTML = renderApprovalsSurface({view, diagnostics, requests, decisions, pendingIds});
+    restoreApprovalSessionConfirmation(view);
   } catch (error) {
     content.innerHTML = `<div class="empty-state">${escapeHtml(error.message)}</div>`;
   }
@@ -595,9 +600,44 @@ function updateApprovalConfirmationPreview(requestId) {
   if (preview) preview.textContent = approvalReason(requestId) || "No reason provided";
 }
 
+function captureApprovalSessionConfirmationDraft() {
+  const pending = state.approvalSessionConfirmation;
+  if (!pending || pending.jobId !== state.activeJobId) return;
+  pending.reason = approvalReason(pending.requestId);
+}
+
+function restoreApprovalSessionConfirmation(view) {
+  const pending = state.approvalSessionConfirmation;
+  if (!pending || pending.jobId !== state.activeJobId) {
+    state.approvalSessionConfirmation = null;
+    return;
+  }
+  const hasDurableDecision = (view.decisions || []).some(
+    (decision) => decision.request_id === pending.requestId
+  );
+  const isPending = (view.pending_request_ids || []).includes(pending.requestId);
+  if (hasDurableDecision || !isPending) {
+    state.approvalSessionConfirmation = null;
+    return;
+  }
+  const reason = document.querySelector(`[data-approval-reason="${pending.requestId}"]`);
+  if (reason) reason.value = pending.reason;
+  const confirmation = document.querySelector(
+    `[data-approval-session-confirmation="${pending.requestId}"]`
+  );
+  if (!confirmation) return;
+  updateApprovalConfirmationPreview(pending.requestId);
+  confirmation.hidden = false;
+}
+
 function openApprovalSessionConfirmation(requestId) {
   const confirmation = document.querySelector(`[data-approval-session-confirmation="${requestId}"]`);
   if (!confirmation) return;
+  state.approvalSessionConfirmation = {
+    jobId: state.activeJobId,
+    requestId,
+    reason: approvalReason(requestId)
+  };
   updateApprovalConfirmationPreview(requestId);
   confirmation.hidden = false;
   confirmation.querySelector(`[data-approval-confirm-session="${requestId}"]`)?.focus();
@@ -606,6 +646,9 @@ function openApprovalSessionConfirmation(requestId) {
 function closeApprovalSessionConfirmation(requestId) {
   const confirmation = document.querySelector(`[data-approval-session-confirmation="${requestId}"]`);
   if (confirmation) confirmation.hidden = true;
+  if (state.approvalSessionConfirmation?.requestId === requestId) {
+    state.approvalSessionConfirmation = null;
+  }
   document.querySelector(`[data-operator-request="${requestId}"][data-operator-action="allow_for_session"]`)?.focus();
 }
 
@@ -656,6 +699,107 @@ async function submitApproval(requestId, action, {sessionConfirmed = false} = {}
   }
 }
 
+function interventionActionDescriptor() {
+  const request = document.getElementById("operatorRequestText")?.value?.trim() || "";
+  const runId = state.activeRunId || "";
+  const stage = state.activeStage;
+  const runtime = state.selectedRuntime;
+  const targetDocuments = Object.freeze([...selectedInterventionTargets()]);
+  const draftIdentity = Object.freeze({...interventionDraftIdentity()});
+  const priorRequestId = activeStageView()?.diagnostics?.request_change?.latest_request_id || "";
+  return Object.freeze({
+    workItem: state.dashboard?.work_item || state.activeRouteWorkItem || "no-work-item",
+    runId,
+    stage,
+    runtime,
+    request,
+    targetDocuments,
+    draftIdentity,
+    priorRequestId
+  });
+}
+
+function interventionMutationKey(descriptor = interventionActionDescriptor()) {
+  return operatorMutationKey(
+    "stage-interact",
+    descriptor.workItem,
+    descriptor.runId || "no-run",
+    descriptor.stage
+  );
+}
+
+function interventionMutationState(descriptor = null) {
+  const resolved = descriptor || interventionActionDescriptor();
+  return mutationGuardState(interventionMutationKey(resolved));
+}
+
+function sameInterventionAction(left, right) {
+  return Boolean(
+    left
+    && right
+    && left.workItem === right.workItem
+    && left.runId === right.runId
+    && left.stage === right.stage
+    && left.runtime === right.runtime
+    && left.request === right.request
+    && JSON.stringify(left.targetDocuments) === JSON.stringify(right.targetDocuments)
+  );
+}
+
+function clearMatchingInterventionDraft(descriptor) {
+  const record = interventionDraft();
+  const value = record?.value || {};
+  if (
+    String(value.text || "").trim() !== descriptor.request
+    || JSON.stringify(value.targetDocuments || []) !== JSON.stringify(descriptor.targetDocuments)
+  ) return false;
+  return clearOperatorDraft(descriptor.draftIdentity);
+}
+
+function interventionDashboardUrl(descriptor) {
+  const params = new URLSearchParams({stage: descriptor.stage});
+  if (descriptor.runId) params.set("run_id", descriptor.runId);
+  return `/api/dashboard?${params.toString()}`;
+}
+
+function matchingInterventionWinner(dashboard, descriptor) {
+  const stageView = dashboard?.active_stage_view || {};
+  const context = stageView?.diagnostics?.request_change || {};
+  const excerpt = descriptor.request.slice(0, 240);
+  const requestPath = String(context.latest_request_path || "").replaceAll("\\", "/");
+  const stageRequestSegment = `/stages/${descriptor.stage}/operator-requests/`;
+  if (
+    dashboard?.work_item !== descriptor.workItem
+    || dashboard?.run?.run_id !== descriptor.runId
+    || dashboard?.active_stage !== descriptor.stage
+    || !context.latest_request_id
+    || context.latest_request_id === descriptor.priorRequestId
+    || !requestPath.includes(stageRequestSegment)
+    || context.latest_request_excerpt !== excerpt
+  ) return null;
+  return Object.freeze({
+    workItem: dashboard.work_item,
+    runId: dashboard.run.run_id,
+    stage: dashboard.active_stage,
+    requestId: context.latest_request_id,
+    requestPath,
+    requestExcerpt: context.latest_request_excerpt,
+    dashboard
+  });
+}
+
+async function readInterventionWinner(descriptor, {attempts = 20, delayMs = 100} = {}) {
+  for (let attempt = 0; attempt < attempts; attempt += 1) {
+    const payload = await api(interventionDashboardUrl(descriptor));
+    const winner = matchingInterventionWinner(payload.dashboard, descriptor);
+    if (winner) return winner;
+    if (attempt + 1 < attempts) {
+      await new Promise((resolve) => window.setTimeout(resolve, delayMs));
+    }
+  }
+  return null;
+}
+
 async function submitIntervention() {
   const context = activeStageView()?.diagnostics?.request_change || {};
   if (context.eligible === false) {
@@ -670,27 +814,64 @@ async function submitIntervention() {
     return;
   }
   if (!ensureRunnableRuntime()) return;
-  const textarea = document.getElementById("operatorRequestText");
-  const request = textarea?.value?.trim() || "";
-  if (!request) {
+  const descriptor = interventionActionDescriptor();
+  if (!descriptor.request) {
     toast("Request text is required.");
     return;
   }
-  const targetDocuments = selectedInterventionTargets();
   const payload = {
-    stage: state.activeStage,
-    runtime: state.selectedRuntime,
-    request,
-    target_documents: targetDocuments,
+    stage: descriptor.stage,
+    runtime: descriptor.runtime,
+    request: descriptor.request,
+    target_documents: descriptor.targetDocuments,
     log_follow: true
   };
-  if (state.activeRunId) payload.run_id = state.activeRunId;
-  const job = await guardedJobLaunch({
-    kind: "stage-interact",
-    components: [state.activeRunId || "no-run", state.activeStage],
-    controls: ["#submitInterventionButton"],
-    execute: () => postJson("/api/stage/interact", payload)
-  });
-  clearOperatorDraft(interventionDraftIdentity());
-  if (!job) toast("Another intervention already won. Showing the durable server state.");
+  if (descriptor.runId) payload.run_id = descriptor.runId;
+  const key = interventionMutationKey(descriptor);
+  const previous = mutationGuardState(key);
+  const guarded = previous.status === "succeeded"
+    && sameInterventionAction(previous.result?.descriptor, descriptor)
+    ? Object.freeze({status: "succeeded", result: previous.result, winner: null})
+    : await runGuardedMutation({
+      key,
+      execute: async () => {
+        const job = await postJson("/api/stage/interact", payload);
+        let winner = null;
+        let reconciliationError = "";
+        try {
+          await startJobPolling(job);
+          winner = await readInterventionWinner(descriptor);
+        } catch (error) {
+          reconciliationError = error.message;
+        }
+        return Object.freeze({job, winner, descriptor, reconciliationError});
+      },
+      readWinner: () => readInterventionWinner(descriptor, {attempts: 1, delayMs: 0}),
+      onState: (mutation) => setMutationControlsPending(
+        ["#submitInterventionButton", "#operatorRequestText", "[data-intervention-target]"],
+        mutation.status === "pending"
+      )
+    });
+  const accepted = guarded.result || null;
+  let winner = guarded.status === "conflict" ? guarded.winner : accepted?.winner;
+  if (!winner && guarded.status === "succeeded") {
+    try {
+      winner = await readInterventionWinner(accepted.descriptor, {attempts: 1, delayMs: 0});
+    } catch (_error) {
+      winner = null;
+    }
+  }
+  if (winner && accepted?.descriptor) clearMatchingInterventionDraft(accepted.descriptor);
+  if (guarded.status === "conflict" && winner) {
+    clearMatchingInterventionDraft(descriptor);
+  }
+  if (guarded.status === "conflict") {
+    toast(winner
+      ? "Another matching intervention already won. Showing the durable server state."
+      : "Another request already won. Intervention draft retained until matching durable readback.");
+  }
+  if (guarded.status === "succeeded" && !winner) {
+    toast("Intervention accepted; draft retained until matching durable readback is available.");
+  }
+  return guarded.status === "succeeded" ? accepted.job : null;
 }

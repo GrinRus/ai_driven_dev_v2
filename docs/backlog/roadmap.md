@@ -11676,13 +11676,13 @@ Local tasks:
   - Scope: operator acceptance documentation.
   - Verification: every task records completion, elapsed time, wrong actions, assistance,
     confidence, and first decisive confusion.
-- `W36-E7-S3-T2` (next) Record five first-time-operator sessions against the source-installed
+- `W36-E7-S3-T2` (parked) Record five first-time-operator sessions against the source-installed
   packaged UI.
-  - Dependencies: `W36-E7-S3-T1` as the direct queue predecessor.
+  - Dependencies: `W36-E7-S3-T1`, `W36-E7-S4-T4` as the direct queue predecessor.
   - Scope: manual operator acceptance evidence.
   - Verification: one anonymized report contains all required task metrics, browser and
     viewport context, blockers, and no sensitive project/runtime evidence.
-- `W36-E7-S3-T3` (soon) Reconcile accepted session findings into roadmap tasks and beta-readiness
+- `W36-E7-S3-T3` (parked) Reconcile accepted session findings into roadmap tasks and beta-readiness
   evidence.
   - Dependencies: `W36-E7-S3-T2` as the direct queue predecessor.
   - Scope: planning and product-readiness docs.
@@ -11693,6 +11693,517 @@ Exit evidence:
 
 - task success and operator confidence confirm the UI hierarchy instead of relying only
   on implementer-authored checks.
+
+#### Slice W36-E7-S4 — isolated prod-like provider acceptance (`planned`)
+Goal: prove the installed Studio and governed full flow against one pinned medium public-repository
+task through both maintained native providers without coupling live-evaluation behavior to product
+runtime semantics.
+
+Dependencies:
+
+- `W36-E7-S2`
+- `W24-E1-S2`
+
+Local tasks:
+
+- `W36-E7-S4-T1` (done) Define the prod-like dual-provider execution and isolation contract for
+  the canonical medium live scenario.
+  - Scope: live E2E documentation and planning only.
+  - Verification: docs consistency names the installed-wheel boundary, external evidence roots,
+    pinned scenario/target, manual quality checkpoints, and forbidden cross-boundary state.
+- `W36-E7-S4-T2` (done) Add executable preflight and architecture checks for source, target,
+  provider-root, import, and scenario-specific isolation.
+  - Dependencies: `W36-E7-S4-T1` as the direct queue predecessor.
+  - Scope: provider-free harness and architecture tests.
+  - Verification: conformance fixtures fail before live execution for overlapping roots, dirty
+    tracked source, forbidden product imports, or live-scenario literals in runtime product code.
+- `W36-E7-S4-T3` (parked) Run `AIDD-LIVE-007` through Codex to a clean terminal result with
+  manual stage-quality and rendered Studio evidence.
+  - Dependencies: `W36-E7-S4-T37`, `W36-E7-S4-T33`, `W36-E7-S4-T32`, `W36-E7-S4-T31`, `W36-E7-S4-T30`, `W36-E7-S4-T29`, `W36-E7-S4-T28`, `W36-E7-S4-T27`, `W36-E7-S4-T26`, `W36-E7-S4-T25`, `W36-E7-S4-T24`, `W36-E7-S4-T23`, `W36-E7-S4-T22`, `W36-E7-S4-T21`, `W36-E7-S4-T20`, `W36-E7-S4-T19`, `W36-E7-S4-T18`, `W36-E7-S4-T17`, `W36-E7-S4-T16`, `W36-E7-S4-T15`, `W36-E7-S4-T14`, `W36-E7-S4-T13`, `W36-E7-S4-T2`, `W36-E7-S4-T6`, `W36-E7-S4-T10`,
+    `W36-E7-S4-T11`, and `W36-E7-S4-T12` as live-discovered queue
+    predecessors.
+  - Scope: external Codex live execution and evidence only.
+  - Verification: installed-wheel `idea -> qa`, target verification, complete audits, terminal
+    reports, and bounded Chromium evidence pass from an external run root.
+- `W36-E7-S4-T4` (parked) Run `AIDD-LIVE-007` through Claude Code from an independent root on
+  the same AIDD revision and target pin.
+  - Dependencies: `W36-E7-S4-T3` as the direct queue predecessor.
+  - Scope: external Claude Code live execution and evidence only.
+  - Verification: the Claude bundle meets the Codex evidence bar without reusing target state,
+    answers, attempts, patches, or provider evidence.
+- `W36-E7-S4-T5` (parked) Record a final same-revision Codex and Claude acceptance pass after
+  observed-session reconciliation.
+  - Dependencies: `W36-E7-S4-T4`, `W36-E7-S3-T3` as direct queue predecessors.
+  - Scope: sanitized live acceptance evidence and Wave 36 closure only.
+  - Verification: both fresh bundles name the same clean AIDD SHA, scenario and target revision,
+    pass terminal quality gates, and match an anonymized digest-backed tracked summary.
+- `W36-E7-S4-T6` (done) Align active-Studio browser fixtures with the fresh terminal-handoff
+  boundary exposed by the final acceptance run.
+  - Dependencies: `W36-E7-S4-T2` as the discovery predecessor.
+  - Scope: browser fixture expectations only; production Studio behavior is unchanged.
+  - Verification: active context, Document Canvas, and Evidence Inspector use nonterminal stale
+    evidence, while fresh terminal QA remains owned by Flow Complete; affected browser tests pass.
+- `W36-E7-S4-T7` (done) Align generic provider-free fixture actions and markers with core-owned
+  runtime selection and terminal recommendations.
+  - Dependencies: `W36-E7-S4-T6` as the discovery predecessor.
+  - Scope: browser fixture descriptors and next-flow test navigation only.
+  - Verification: no-run selects a runtime, clean QA creates new work, warning/failed/blocked QA
+    starts a follow-up, and secondary follow-up draft navigation remains durable.
+- `W36-E7-S4-T8` (done) Restore the accepted 80-pixel mobile Studio header bound without reducing
+  touch target size or changing desktop composition.
+  - Dependencies: `W36-E7-S4-T7` as the direct queue predecessor.
+  - Scope: token-driven mobile Studio layout only.
+  - Verification: both mobile viewports keep a header at or below 80 pixels, 44-pixel controls,
+    primary-before-maintenance order, and no horizontal overflow.
+- `W36-E7-S4-T9` (done) Distinguish deliberate browser request cancellation from failed network
+  requests during canonical Back/Forward/reload restoration.
+  - Dependencies: `W36-E7-S4-T8` as the direct queue predecessor.
+  - Scope: browser diagnostics and route-restoration tests only.
+  - Verification: intentional `ERR_ABORTED` requests are recorded as cancellations while console,
+    page, blocked-origin, HTTP, and real request failures remain gating.
+- `W36-E7-S4-T10` (done) Allow public stepwise stage execution to continue canonically inside
+  the same unbounded run without mutating its manifest identity.
+  - Dependencies: `W36-E7-S4-T2` as the live-discovery predecessor; blocks the active Codex
+    acceptance task `W36-E7-S4-T3`.
+  - Scope: core run-manifest compatibility, CLI stage-run regression coverage, and planning
+    reconciliation only; no scenario, provider, or target-specific branch.
+  - Verification: an explicit run may advance `idea -> research -> plan` only after each prior
+    stage succeeded, while skipped, failed, backward, runtime-mismatched, and config-mismatched
+    reuse remains fail-closed and immutable manifest identity fields do not change.
+- `W36-E7-S4-T11` (done) Route post-normalization `stage-result.md` findings through the normal
+  repair budget instead of failing the stage with an orchestration exception.
+  - Dependencies: `W36-E7-S4-T10` as the live-discovery predecessor; blocks the active Codex
+    acceptance task `W36-E7-S4-T3`.
+  - Scope: runtime-agnostic stage validation ordering plus core/CLI regression coverage only;
+    validator codes, repair budgets, prompts, scenario manifests, and provider adapters stay
+    unchanged.
+  - Verification: duplicate/non-monotonic attempt history discovered after success normalization
+    produces canonical validation evidence, a repair brief, and a successful bounded retry; a
+    final invalid retry still exhausts the existing budget fail-closed.
+- `W36-E7-S4-T12` (done) Make successful stage-result reconciliation idempotent and collapse
+  duplicate canonical validator-verdict lines.
+  - Dependencies: `W36-E7-S4-T11` as the live-discovery predecessor; blocks the active Codex
+    acceptance task `W36-E7-S4-T3`.
+  - Scope: runtime-agnostic stage terminal normalization and focused regression coverage only;
+    validator grammar, provider adapters, prompts, and live scenario code do not change.
+  - Verification: one or repeated reconciliation calls produce byte-stable Markdown with exactly
+    one canonical `Validator verdict: pass` entry, including legacy input that already contains
+    duplicate verdict lines.
+- `W36-E7-S4-T13` (done) Materialize live allowed-write scope only from canonical
+  repository-relative path prefixes declared by the authored scenario task.
+  - Dependencies: `W36-E7-S4-T12` as the live-discovery predecessor; blocks the active Codex
+    acceptance task `W36-E7-S4-T3`.
+  - Scope: runtime-neutral live scenario schema, workspace bootstrap, maintained Hono manifest,
+    documentation, and provider-free harness regression coverage only; core scope semantics,
+    provider adapters, prompts, and target-specific product code remain unchanged.
+  - Verification: an explicit path list renders a scope accepted by `AllowedWriteScope`, invalid
+    paths fail during manifest loading, and a legacy task without exact paths omits the optional
+    scope document instead of creating malformed fail-closed evidence.
+- `W36-E7-S4-T14` (done) Separate bounded installed-UI startup and API probe budgets for live
+  frontend checkpoints.
+  - Dependencies: `W36-E7-S4-T13` as the repeated live-discovery predecessor; blocks the active
+    Codex acceptance task `W36-E7-S4-T3`.
+  - Scope: runtime-neutral live harness checkpoint supervision and provider-free timeout tests
+    only; UI endpoints, dashboard semantics, core orchestration, provider adapters, and scenario
+    manifests remain unchanged.
+  - Verification: a cold installed UI may use up to a bounded 30-second startup budget, each
+    sequential API probe has a bounded 10-second response budget, slow fixtures beyond the legacy
+    two-second probe boundary succeed, and true startup/probe hangs still fail with truthful
+    timeout evidence and process cleanup.
+- `W36-E7-S4-T15` (done) Align tasklist-plan milestone discovery with the canonical plan grammar
+  accepted by production validation.
+  - Dependencies: `W36-E7-S4-T14` as the live-discovery predecessor; blocks the active Codex
+    acceptance task `W36-E7-S4-T3`.
+  - Scope: runtime-neutral cross-document milestone parsing, validator regression coverage, and
+    planning reconciliation only; provider adapters, prompts, scenario manifests, and target
+    product code remain unchanged.
+  - Verification: list milestones written as either `- M1: description` or canonical
+    `- M1 description` produce the same known milestone set, missing card references yield
+    `CROSS-TASKLIST-PLAN-MILESTONE`, and dependency plus exact verification checks remain active.
+- `W36-E7-S4-T16` (done) Make tasklist milestone authoring and repair guidance name the canonical
+  mapping locations consumed by cross-document validation.
+  - Dependencies: `W36-E7-S4-T15` as the live-discovery predecessor; blocks the active Codex
+    acceptance task `W36-E7-S4-T3`.
+  - Scope: runtime-neutral tasklist prompt/brief guidance, cross-document finding text, repair
+    evidence tests, and planning reconciliation only; the rich task grammar, provider adapters,
+    scenario manifests, and target product code remain unchanged.
+  - Verification: initial tasklist instructions and generated milestone repair briefs explicitly
+    require M ids in `Outcome`, `Context`, acceptance criteria, or `Verification notes`; an ad hoc
+    `Milestone` field remains unsupported, while a corrected canonical card validates.
+- `W36-E7-S4-T17` (done) Preserve pending runtime-approval session confirmation across polling
+  re-renders.
+  - Dependencies: `W36-E7-S4-T16` as the full-browser-gate discovery predecessor; blocks the
+    active Codex acceptance task `W36-E7-S4-T3`.
+  - Scope: presentation-only approval confirmation state plus focused frontend/browser regression
+    coverage; approval endpoints, durable decision CAS, runtime policy, and provider adapters
+    remain unchanged.
+  - Verification: opening `Allow session` creates no decision, a concurrent approval readback and
+    `renderApprovals()` preserve the exact pending confirmation and reason, explicit confirm writes
+    one durable decision, and cancel/terminal readback clears the ephemeral state.
+- `W36-E7-S4-T18` (done) Reject task cards whose local `In scope` paths fall outside an authored
+  canonical allowed-write scope before implementation begins.
+  - Dependencies: `W36-E7-S4-T17` as the live-discovery predecessor; blocks the active Codex
+    acceptance task `W36-E7-S4-T3`.
+  - Scope: runtime-neutral tasklist contract, cross-document validation, tasklist prompts, focused
+    provider-free regression coverage, and planning reconciliation only; implementation task-diff
+    enforcement, provider adapters, scenario manifests, and target product code remain unchanged.
+  - Verification: a tasklist whose card scope includes any prefix outside
+    `context/allowed-write-scope.md` produces an actionable `SEM-TASK-SCOPE-MISMATCH` and enters
+    the normal tasklist repair budget, while exact files, permitted descendants, missing optional
+    scope, malformed scope, and component boundaries remain fail-closed and deterministic.
+- `W36-E7-S4-T19` (done) Keep the active Studio job identity live until terminal durable
+  reconciliation and persisted-log rendering complete.
+  - Dependencies: `W36-E7-S4-T18` as the full-browser-gate discovery predecessor; blocks the
+    active Codex acceptance task `W36-E7-S4-T3`.
+  - Scope: presentation-only active-job terminal reconciliation ordering plus focused frontend and
+    browser regression coverage; job APIs, cancellation semantics, durable evidence, adapters,
+    core orchestration, and live scenario code remain unchanged.
+  - Verification: terminal polling does not clear `activeJobId` while dashboard, project-home, or
+    Inbox durable readback is pending; after readback it atomically releases volatile state and
+    renders persisted `runtime.log`, including the five-viewport active-Studio journey under the
+    full browser lane.
+- `W36-E7-S4-T20` (done) Make rich-task implementation reports describe only the current
+  task-local repository diff while aggregate finalization owns cumulative touched-file evidence.
+  - Dependencies: `W36-E7-S4-T19` as the live-discovery predecessor; blocks the active Codex
+    acceptance task `W36-E7-S4-T3`.
+  - Scope: runtime-neutral Implement stage/document contracts, initial and repair prompts, focused
+    provider-free prompt/contract regression coverage, and planning reconciliation only; task diff
+    predicates, retry budgets, adapters, scenario manifests, and target product code remain
+    unchanged.
+  - Verification: in rich task mode, prerequisite files already modified before the current task
+    are explicitly excluded from the task attempt's `Touched files`, current task baseline/final
+    additions remain mandatory, cumulative paths appear only in aggregate finalization evidence,
+    and `SEM-TASK-DIFF-MISMATCH` repair guidance removes prerequisite-only claims without reverting
+    successful prior task outcomes.
+- `W36-E7-S4-T21` (done) Make successful parent exit authoritative before inherited-pipe cleanup
+  can cross the runtime deadline.
+  - Dependencies: `W36-E7-S4-T20` as the exact-SHA full-suite discovery predecessor; blocks the
+    active Codex acceptance task `W36-E7-S4-T3`.
+  - Scope: runtime-neutral shared subprocess lifecycle ordering, provider-free characterization
+    budgets, focused adapter regression coverage, and planning reconciliation only; provider
+    adapters, runtime outcomes, scenario manifests, and target product code remain unchanged.
+  - Verification: once the owned parent has exited normally, bounded descendant/pipe cleanup does
+    not rewrite the result as timeout; real pre-exit timeout remains authoritative, large
+    bidirectional I/O completes under a separate outer watchdog, and no descendants survive.
+- `W36-E7-S4-T22` (done) Publish stage-scoped operator request Markdown atomically before readers
+  can observe its canonical path.
+  - Dependencies: `W36-E7-S4-T21` as the exact-SHA browser-gate discovery predecessor; blocks the
+    active Codex acceptance task `W36-E7-S4-T3`.
+  - Scope: core-owned operator intervention persistence, focused core/browser regression coverage,
+    and planning reconciliation only; intervention endpoints, mutation payloads, eligibility,
+    adapters, scenario manifests, and target product code remain unchanged.
+  - Verification: a concurrent reader sees either no canonical `request-*.md` or the complete
+    rendered document, never an empty/partial file; failed writes remove staging residue, preserve
+    monotonic request identity, and create no duplicate intervention mutation.
+- `W36-E7-S4-T23` (done) Parse each Implement `Touched files` list item through its canonical
+  leading path token instead of treating backticked code identifiers in the change description as
+  additional repository paths.
+  - Dependencies: `W36-E7-S4-T22` as the Claude live-discovery predecessor; blocks the active
+    provider acceptance tasks `W36-E7-S4-T3` and `W36-E7-S4-T4`.
+  - Scope: runtime-neutral Implement semantic validation and focused provider-free regression
+    coverage only; allowed-write policy, task-diff evidence, prompts, adapters, scenario manifests,
+    and target product code remain unchanged.
+  - Verification: a touched-file bullet such as ``- `src/app.py` - assign `context.error` `` checks
+    only `src/app.py` against canonical scope, while malformed/missing paths and a genuinely
+    out-of-scope leading path retain existing fail-closed findings.
+- `W36-E7-S4-T24` (done) Keep rich-task repair history scoped to the task attempt whose global
+  stage attempts it references, so a later task is not invalidated by an earlier successful task's
+  retained repair evidence.
+  - Dependencies: `W36-E7-S4-T23` as the direct live-discovery predecessor; blocks the active
+    provider acceptance tasks `W36-E7-S4-T3` and `W36-E7-S4-T4`.
+  - Scope: runtime-neutral task-attempt report/repair evidence reconciliation and focused core/
+    validator regression coverage only; repair budgets, ledger schemas, provider adapters,
+    scenario manifests, and target product code remain unchanged.
+  - Verification: T1 may retain initial/repair references and succeed, then a clean T2 attempt
+    validates without requiring a current T2 repair brief; a real current-task repair mention
+    without corresponding retained evidence still fails closed.
+- `W36-E7-S4-T25` (done) Replace the UI runtime-cancellation fixture's fixed one-second startup
+  polling window with a bounded monotonic log synchronization helper.
+  - Dependencies: `W36-E7-S4-T24` as the exact-SHA preflight discovery predecessor; blocks the
+    active Codex acceptance task `W36-E7-S4-T3`.
+  - Scope: provider-free UI test synchronization only; UI jobs, runtime launch, cancellation,
+    evidence persistence, provider adapters, and live scenario behavior remain unchanged.
+  - Verification: delayed cold startup is observed within an explicit bounded deadline, missing
+    startup still fails deterministically, cancellation evidence remains exact, and repeated
+    isolated plus full-suite runs no longer depend on host scheduling within one second.
+- `W36-E7-S4-T26` (done) Parse explicit plan milestone dependency clauses with their authored
+  direction instead of treating the first milestone on a line as the dependent target.
+  - Dependencies: `W36-E7-S4-T25` as the fresh Codex live-discovery predecessor; blocks the
+    active Codex acceptance task `W36-E7-S4-T3`.
+  - Scope: runtime-neutral tasklist/plan cross-document dependency parsing and focused validator
+    regression coverage only; plan/tasklist contracts, prompts, adapters, scenario manifests, and
+    provider outputs remain unchanged.
+  - Verification: `M1 before M2 and M3`, `M2 and M3 after M1`, pronoun-backed `both before M4`,
+    and `M4 depends on M2 and M3` produce prerequisite-to-target edges in the authored direction;
+    the valid live-shaped task graph passes while a genuinely inverted task dependency fails.
+- `W36-E7-S4-T27` (done) Replace the Inbox browser journey's global network-idle waits and short
+  render polling with bounded server-authoritative surface synchronization.
+  - Dependencies: `W36-E7-S4-T26` as the exact-SHA browser-gate discovery predecessor; blocks the
+    active Codex acceptance task `W36-E7-S4-T3`.
+  - Scope: provider-free Inbox browser journey synchronization only; Studio polling, routing,
+    rendering, endpoints, service semantics, provider adapters, and live scenario behavior remain
+    unchanged.
+  - Verification: reload and navigation wait for DOM readiness plus the exact Inbox/Studio durable
+    surface rather than global network silence; all five viewports pass repeatedly under the full
+    browser lane while missing surface readback still times out deterministically.
+- `W36-E7-S4-T28` (done) Recognize explicit shell-interpreter commands as executable Implement
+  verification evidence instead of exhausting repair on truthful command results.
+  - Dependencies: `W36-E7-S4-T27` as the fresh Codex live-discovery predecessor; blocks the active
+    Codex acceptance task `W36-E7-S4-T3`.
+  - Scope: runtime-neutral Implement semantic command recognition and focused provider-free
+    regression coverage only; shell execution, prompts, adapters, scenario manifests, and target
+    product code remain unchanged.
+  - Verification: backticked `sh -c`, `bash -c`, and `zsh -c` commands with observed outcomes pass
+    semantic validation, while prose-only shell names and result claims without executable
+    evidence remain fail-closed.
+- `W36-E7-S4-T29` (done) Use the Inbox journey's shared bounded surface budget when rendering the
+  server-confirmed Running-now overlay under full-suite load.
+  - Dependencies: `W36-E7-S4-T28` as the exact-SHA browser-gate discovery predecessor; blocks the
+    active Codex acceptance task `W36-E7-S4-T3`.
+  - Scope: provider-free Inbox browser journey synchronization only; job state, Inbox read model,
+    polling, rendering, APIs, provider adapters, and live scenario behavior remain unchanged.
+  - Verification: after the job API and Inbox read model both confirm the running identity, all
+    five viewports wait through the same bounded 30-second durable-surface budget; the original
+    `768x1024` case and the complete Inbox matrix pass without unbounded waits.
+- `W36-E7-S4-T30` (done) Replace global network-idle navigation waits in intervention-draft and
+  terminal-handoff browser journeys with bounded server-authoritative work-item surfaces.
+  - Dependencies: `W36-E7-S4-T29` as the exact-SHA browser-gate discovery predecessor; blocks the
+    active Codex acceptance task `W36-E7-S4-T3`.
+  - Scope: shared browser test synchronization plus the intervention-draft and terminal journey
+    families only; Studio polling, product rendering, APIs, workflow mutations, adapters, and live
+    scenario behavior remain unchanged.
+  - Verification: navigation and reload wait for DOM readiness followed by the exact rendered
+    work-item identity; intervention draft/submit and all five terminal viewports pass while a
+    missing or wrong durable identity still times out within 30 seconds.
+- `W36-E7-S4-T31` (done) Separate the live-artifact-heartbeat success fixture's scheduling budget
+  from the one-second no-progress termination stress case.
+  - Dependencies: `W36-E7-S4-T30` as the exact-SHA full-suite discovery predecessor; blocks the
+    active Codex acceptance task `W36-E7-S4-T3`.
+  - Scope: provider-free live-harness test budgeting only; production lifecycle deadlines,
+    no-progress classification, process supervision, scenario manifests, adapters, and provider
+    behavior remain unchanged.
+  - Verification: repeated heartbeat success fixtures tolerate bounded host startup jitter with a
+    three-second no-progress and eight-second hard budget, while the adjacent one-second silent
+    process fixture still terminates with truthful `provider-no-progress` evidence.
+- `W36-E7-S4-T32` (done) Make the canonical Plan contract and prompt pack treat an authored
+  `context/allowed-write-scope.md` as an exhaustive implementation-path boundary.
+  - Dependencies: `W36-E7-S4-T31` as the repeated Codex live-discovery predecessor; blocks the
+    active Codex acceptance task `W36-E7-S4-T3`.
+  - Scope: Plan-stage Markdown contract and prompt guidance plus provider-free prompt-quality
+    regression only; tasklist scope validation, runtime adapters, core execution, scenario IDs,
+    and target-specific paths or behavior remain unchanged.
+  - Verification: initial and repair prompts require every proposed create/modify path to satisfy
+    the canonical scope, forbid a new helper/module outside it, and direct the runtime to keep a
+    tiny helper inside allowed files or raise a blocking question instead of broadening scope.
+- `W36-E7-S4-T33` (done) Fail closed when Plan milestones or implementation strategy propose a
+  repository write outside canonical `context/allowed-write-scope.md`.
+  - Dependencies: `W36-E7-S4-T32` as the prompt-contract predecessor; blocks the active Codex
+    acceptance task `W36-E7-S4-T3`.
+  - Scope: Plan semantic validation, canonical validator protocol registration, repair guidance,
+    and provider-free regressions only; no live IDs, target-specific paths, adapters, workflow
+    execution, tasklist grammar, or allowed-scope source-of-truth changes.
+  - Verification: proposed create/modify/move/delete paths in `Milestones` and `Implementation
+    strategy` use the canonical component-boundary predicate; evidence paths and executable
+    commands are ignored, malformed scope remains fail-closed, and a live-shaped out-of-scope
+  helper produces stable `SEM-PLAN-SCOPE-MISMATCH` repair evidence.
+- `W36-E7-S4-T34` (done) Record a normalized characterization of the four exact Chromium
+  preflight failures before changing Studio or browser synchronization.
+  - Dependencies: `W36-E7-S4-T33` as the exact-SHA preflight discovery predecessor; blocks the
+    active Codex acceptance task `W36-E7-S4-T3`.
+  - Scope: provider-free intervention and terminal browser diagnostics only; production UI,
+    endpoints, mutation eligibility, provider adapters, and live scenario behavior remain
+    unchanged.
+  - Verification: isolated reruns identify for every failing viewport the rendered DOM revision,
+    actual `/api/stage/interact` request URL/count, canonical operator-request files, archive
+    decision/readback, and first decisive boundary, distinguishing a missing durable mutation
+    from observer or re-render synchronization drift.
+- `W36-E7-S4-T35` (done) Make Studio decision actions stable across polling re-renders through one
+  shared server-authoritative mutation/render synchronization contract.
+  - Dependencies: `W36-E7-S4-T34` as the characterization predecessor; blocks the active Codex
+    acceptance task `W36-E7-S4-T3`.
+  - Scope: shared Studio action dispatch/render coordination plus focused frontend and browser
+    regression coverage only; viewport-specific delays, endpoint payloads, core eligibility,
+    provider adapters, and live scenario branches are forbidden.
+  - Verification: forced polling re-renders during intervention submit and Flow Complete archive
+    produce exactly one durable mutation and stable winner readback without a detached/hidden
+    action, while duplicate input remains guarded and the source run remains byte-identical.
+- `W36-E7-S4-T38` (next) Characterize provider sibling-root visibility through the same
+  process-launch boundary used by live acceptance.
+  - Dependencies: `W36-E7-S4-T35` as the final Studio code-change predecessor; blocks the final
+    Chromium candidate and active Codex acceptance task `W36-E7-S4-T3`.
+  - Scope: provider-free live-acceptance isolation fixtures and normalized diagnostics only;
+    provider adapters, runtime semantics, and scenario behavior remain unchanged.
+  - Verification: an executable canary proves which current source, target, provider, credential,
+    and sibling-provider roots can be listed, read, or written, and unique pathnames alone never
+    count as an isolation boundary.
+- `W36-E7-S4-T39` (soon) Enforce a provider-private filesystem and environment boundary for
+  live acceptance execution.
+  - Dependencies: `W36-E7-S4-T38` as the isolation characterization predecessor.
+  - Scope: live-eval process launch, allowlisted environment construction, provider-private
+    `HOME`/temporary/config/cache roots, and fail-closed platform capability checks only; no
+    scenario-specific or target-specific product branches are allowed.
+  - Verification: the T38 canary can use its authorized target and evidence roots but cannot list
+    or read a sibling provider root, write the AIDD source, or observe another provider's
+    credentials; a platform without an enforceable boundary reports a preflight blocker.
+- `W36-E7-S4-T40` (parked) Apply canonical identifier and containment checks to live run lookup
+  and resume before reading flow state.
+  - Dependencies: `W36-E7-S4-T39` as the provider-boundary predecessor.
+  - Scope: live flow-state lookup and resume identity only; workflow semantics, provider adapters,
+    and evidence schemas remain unchanged.
+  - Verification: empty, absolute, separator, backslash, traversal, oversized, symlink-escape,
+    scenario/runtime/work-item mismatch, and wrong-root run identities fail before any read or
+    write, while a canonical interrupted run resumes with its existing lexical layout.
+- `W36-E7-S4-T41` (parked) Make source, target, and provider preflight/postflight integrity an
+  obligatory live-acceptance session guard.
+  - Dependencies: `W36-E7-S4-T40` as the contained-layout predecessor.
+  - Scope: live-acceptance preflight lifecycle and source/target integrity snapshots only; build
+    remains based on tracked `git archive` content and user-owned pre-existing untracked files are
+    not modified.
+  - Verification: provider layout is not allocated before preflight passes; tracked bytes, the
+    baseline untracked set, target contamination, provider-root separation, and cleanup are read
+    back after execution, and any new source file or harness payload fails closed.
+- `W36-E7-S4-T42` (parked) Route timeout and no-progress stage reconciliation through a public
+  application boundary instead of direct harness-owned stage-status persistence.
+  - Dependencies: `W36-E7-S4-T41` as the mandatory-session-guard predecessor.
+  - Scope: one typed application/CLI terminal-reconciliation operation and its live-harness
+    adapter only; the harness must not define an alternative stage grammar or import core status
+    persistence directly.
+  - Verification: an installed public surface terminalizes an abandoned executing stage with
+    canonical identity and idempotent history, while a terminal or mismatched stage is not
+    rewritten and the harness performs no direct stage-state write.
+- `W36-E7-S4-T43` (parked) Constrain manual and browser evidence imports to the authorized
+  provider evidence root with symlink-safe atomic materialization.
+  - Dependencies: `W36-E7-S4-T42` as the public-boundary predecessor.
+  - Scope: live browser/manual evidence intake only; browser capture semantics, Studio behavior,
+    and execution verdicts remain unchanged.
+  - Verification: contained files and directories copy atomically, while sibling-provider paths,
+    absolute escape, hard links, symlinks at every level, and partial-copy failures produce no
+    trusted or partially published evidence.
+- `W36-E7-S4-T44` (parked) Reconcile provisional running-stage frontend observations against the
+  later durable stage state and post-stage checkpoint.
+  - Dependencies: `W36-E7-S4-T43` as the safe-evidence predecessor.
+  - Scope: live black-box frontend checkpoint classification only; Studio polling, endpoints,
+    provider adapters, and the T35 mutation/render contract remain unchanged.
+  - Verification: both historical `running probe fail -> stage success -> post-stage pass`
+    sequences become superseded transition observations rather than provider failures, while a
+    persistent frontend outage remains a truthful frontend failure.
+- `W36-E7-S4-T45` (parked) Expose and reconcile stale-owner live flows without fabricating stage
+  success.
+  - Dependencies: `W36-E7-S4-T44` as the checkpoint-reconciliation predecessor.
+  - Scope: live flow-state read model and atomic resume reconciliation only; provider completion
+    events do not become stage verdicts.
+  - Verification: a helper dying after provider completion but before flow-state commit is shown
+    as stale, resumes idempotently as `interrupted-resumable`, retains its evidence, and never
+    remains indefinitely `running` after its owner disappears.
+- `W36-E7-S4-T46` (parked) Accumulate live-flow duration across every resumed process segment.
+  - Dependencies: `W36-E7-S4-T45` as the stale-flow predecessor.
+  - Scope: live timing persistence and rendering only; stage execution and retry budgets remain
+    unchanged.
+  - Verification: a multi-resume fixture produces mutually consistent stage timing, run
+    transcript duration, and retained step durations instead of resetting aggregate elapsed time
+    when a new evaluator process starts.
+- `W36-E7-S4-T47` (parked) Persist typed terminal evidence for every accepted remediation job.
+  - Dependencies: `W36-E7-S4-T46` as the truthful-flow-evidence predecessor.
+  - Scope: UI remediation job terminal evidence and harness readback only; Studio action
+    synchronization remains owned by T35 and provider outcome semantics remain unchanged.
+  - Verification: success, failure, cancellation, and operator wait retain work-item/run/stage/
+    attempt identity, runtime-exit path, adapter outcome, typed first cause, and durable mutation
+    winner; a retry cannot collapse to an untraceable generic `job failed` result.
+- `W36-E7-S4-T48` (parked) Preflight target installation and verification prerequisites before
+  allocating a paid provider run.
+  - Dependencies: `W36-E7-S4-T47` as the remediation-evidence predecessor.
+  - Scope: provider-neutral target setup probes only; no Hono-, Rollup-, model-, or adapter-specific
+    repair branch is allowed.
+  - Verification: fresh-clone dependency installation, declared verification commands, and
+    required generated/native artifacts pass a bounded smoke; the historical missing optional
+    dependency shape is classified as `target-setup` before provider execution.
+- `W36-E7-S4-T49` (parked) Materialize canonical stage, validation, target-patch, final-report,
+  and browser evidence inside a self-contained live bundle.
+  - Dependencies: `W36-E7-S4-T48` as the target-readiness predecessor.
+  - Scope: live result-bundle materialization and bundle-relative references only; legacy absolute
+    references remain readable solely as explicitly degraded evidence.
+  - Verification: deleting all mutable source/work/target roots still leaves every stage output,
+    stage result, validator report, task/finalization record, target patch, final report, and
+    browser artifact readable from the bundle; dangling or mismatched links fail closed.
+- `W36-E7-S4-T50` (parked) Commit one atomic digest and provenance manifest for the complete live
+  acceptance bundle.
+  - Dependencies: `W36-E7-S4-T49` as the self-contained-materialization predecessor.
+  - Scope: schema-v1 live bundle commit marker and readback validation only; raw evidence remains
+    external and existing execution schemas stay compatible.
+  - Verification: commit/tree/scenario/target identities plus SHA-256 and size for the source
+    archive, wheel, stage evidence, target patch, reports, runtime evidence, and each browser file
+    validate exactly; orphan browser files, wrong viewport/run identity, and digest mismatch fail.
+- `W36-E7-S4-T51` (parked) Finalize a truthful product-bundle summary after manual quality
+  evidence is complete.
+  - Dependencies: `W36-E7-S4-T50` as the digest-manifest predecessor.
+  - Scope: product-evaluation summary writer/read model and legacy degraded-state handling only;
+    the execution verdict is never rewritten retroactively.
+  - Verification: pre-review, post-review, counted-clean, not-counted, and manual-quality-stop
+    fixtures distinguish `execution_pass`, `quality_reviewed`, and `counted_clean`; an existing
+    report cannot remain recorded as absent and no derived summary contradicts primary evidence.
+- `W36-E7-S4-T52` (parked) Bound ignored dependency and cache inventories in live repository
+  snapshots without weakening exact product-change classification.
+  - Dependencies: `W36-E7-S4-T51` as the truthful-summary predecessor.
+  - Scope: live repository snapshot model only; tracked, untracked, modified, and deleted product
+    paths remain exact.
+  - Verification: a repository with tens of thousands of ignored files records counts, digests,
+    grouping, a bounded sample, and truncation metadata within a fixed size budget while retaining
+    exact product and contamination findings.
+- `W36-E7-S4-T53` (parked) Read persisted runtime-log tails under an explicit byte and memory
+  bound.
+  - Dependencies: `W36-E7-S4-T52` as the bounded-repository-evidence predecessor.
+  - Scope: canonical CLI runtime-log tail reader and its harness consumer only; full durable
+    `runtime.log` persistence remains unchanged.
+  - Verification: a large sparse log and one oversized JSON line return the correct bounded tail
+    with explicit truncation and retained-byte metadata without loading the complete file.
+- `W36-E7-S4-T54` (parked) Normalize provider events into a bounded AIDD-owned lifecycle
+  projection.
+  - Dependencies: `W36-E7-S4-T53` as the bounded-log-reader predecessor.
+  - Scope: runtime event normalization only; full provider-native payload remains canonical in
+    `runtime.jsonl` and adapter result models remain compatible.
+  - Verification: provider-free Codex, Claude, Qwen, and generic event fixtures retain lifecycle
+    identity, timing, outcome, operator references, and evidence pointers without duplicating
+    prompt/tool payload, under a fixed event-evidence size bound.
+- `W36-E7-S4-T55` (parked) Reference canonical command evidence from live flow steps, grader, and
+  aggregate transcript instead of embedding full stdout and stderr repeatedly.
+  - Dependencies: `W36-E7-S4-T54` as the bounded-event-projection predecessor.
+  - Scope: live report serialization and legacy readers only; public terminal outcomes and raw
+    runtime-log contents remain unchanged.
+  - Verification: a high-output fixture retains byte-equivalent access through canonical evidence
+    pointers while bundle size grows linearly and no derived report contains another full copy of
+    the runtime output.
+- `W36-E7-S4-T36` (parked) Re-run the complete provider-free Chromium acceptance matrix after the
+  final provider-neutral hardening change.
+  - Dependencies: `W36-E7-S4-T55` as the final code-change predecessor; blocks the active Codex
+    acceptance task `W36-E7-S4-T3`.
+  - Scope: browser acceptance evidence only; no product or fixture behavior changes.
+  - Verification: the four discovered cases, both complete intervention/terminal journey
+    families, and the full browser suite pass across all five viewports with clean console,
+    page/request diagnostics and bounded process cleanup.
+- `W36-E7-S4-T37` (parked) Prove the exact post-browser candidate is installable and ready for an
+  isolated live-provider run.
+  - Dependencies: `W36-E7-S4-T36` as the full-browser predecessor; blocks the active Codex
+    acceptance task `W36-E7-S4-T3`.
+  - Scope: candidate wheel, full static/Python/browser gates, doctor/eval-doctor, target readiness,
+    source integrity, self-contained-bundle smoke, and executable provider-isolation evidence
+    only; no production, scenario, provider, or target changes.
+  - Verification: one wheel built from clean tracked `HEAD` is bound to its commit/tree/digest and
+    loaded from an isolated install; full checks, `aidd doctor`, separate Codex and Claude
+    `aidd eval doctor`, target preflight, source tracked/untracked baseline, bundle finalization,
+    and both provider isolation canaries pass on that recorded SHA before a live layout is
+    allocated.
+
+Exit evidence:
+
+- Codex and Claude Code complete the same pinned medium task through installed public surfaces on
+  one final AIDD revision and the exact same wheel bytes;
+- raw worktrees, provider state, logs, screenshots, and target payload remain outside the AIDD
+  checkout, while the tracked summary contains only sanitized identities, outcomes, and digests;
+- each provider runs in an enforceable isolation domain that cannot read the other provider's
+  roots or credentials, and each completed bundle remains independently auditable after mutable
+  roots are removed;
+- live-evaluation orchestration does not add scenario-specific behavior to core, adapters,
+  validators, prompts, or Studio.
 
 Wave 36 exit evidence:
 
@@ -11713,6 +12224,8 @@ Wave 36 exit evidence:
   geometry, interaction, console/network, and accessibility assertions;
 - five observed first-time-operator sessions meet the accepted completion/confidence bar
   or leave explicit follow-up tasks before beta UX is claimed;
+- one final clean AIDD revision has counted-clean `AIDD-LIVE-007` evidence for both Codex and
+  Claude Code, including rendered Studio inspection and strict source/target/provider isolation;
 - no Wave 34 backend responsibility is duplicated inside Wave 36.
 
 Sync notes:

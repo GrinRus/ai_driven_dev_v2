@@ -23,6 +23,7 @@ from aidd.validators.cross_document import (
     TASKLIST_PLAN_DEPENDENCY_CODE,
     TASKLIST_PLAN_MILESTONE_CODE,
     TASKLIST_PLAN_VERIFICATION_CODE,
+    TASKLIST_SCOPE_CODE,
     validate_cross_document_consistency,
 )
 from aidd.validators.models import ValidationFinding, ValidationIssueLocation
@@ -152,6 +153,7 @@ def _write_plan_tasklist_pair(
     task_one_milestone: str = "M1",
     task_two_milestone: str = "M2",
     task_two_command: str = "uv run pytest -q tests/api",
+    milestone_separator: str = ": ",
 ) -> None:
     work_item_root = workspace_root / "workitems" / "WI-001" / "stages"
     plan_output = work_item_root / "plan" / "output"
@@ -161,8 +163,8 @@ def _write_plan_tasklist_pair(
     plan_output.joinpath("plan.md").write_text(
         "# Plan\n\n"
         "## Milestones\n\n"
-        "- M1: Add the model.\n"
-        "- M2: Add the API.\n\n"
+        f"- M1{milestone_separator}Add the model.\n"
+        f"- M2{milestone_separator}Add the API.\n\n"
         "## Dependencies\n\n"
         "- M2 depends on M1.\n\n"
         "## Verification notes\n\n"
@@ -190,7 +192,125 @@ def _write_plan_tasklist_pair(
         "- T2: T1\n\n"
         "## Verification notes\n\n"
         f"- T1: {task_one_milestone} `uv run pytest -q tests/model`\n"
-        f"- T2: M2 `{task_two_command}`\n",
+        f"- T2: {task_two_milestone} `{task_two_command}`\n",
+        encoding="utf-8",
+    )
+
+
+def _write_live_shaped_plan_tasklist_pair(workspace_root: Path) -> None:
+    work_item_root = workspace_root / "workitems" / "WI-001" / "stages"
+    plan_output = work_item_root / "plan" / "output"
+    tasklist_root = work_item_root / "tasklist"
+    plan_output.mkdir(parents=True)
+    tasklist_root.mkdir(parents=True)
+    plan_output.joinpath("plan.md").write_text(
+        "# Plan\n\n"
+        "## Milestones\n\n"
+        "- M1: Establish the shared normalization rule.\n"
+        "- M2: Apply it to direct dispatch.\n"
+        "- M3: Apply it to composed middleware.\n"
+        "- M4: Add regression coverage.\n"
+        "- M5: Run authored verification.\n\n"
+        "## Dependencies\n\n"
+        "- M1 must complete before M2 and M3 because both runtime edits depend on it.\n"
+        "- M2 and M3 may proceed independently after M1, but both must complete before M4.\n"
+        "- M4 depends on M2 and M3.\n"
+        "- M5 requires M4.\n\n"
+        "## Verification notes\n\n"
+        "- none\n",
+        encoding="utf-8",
+    )
+    cards = []
+    for task_id, milestone in enumerate(("M1", "M2", "M3", "M4", "M5"), start=1):
+        cards.append(
+            f"### T{task_id} — Complete {milestone}\n\n"
+            f"- Outcome: Complete {milestone}.\n"
+            f"- Dominant deliverable: `src/{task_id}.py`.\n"
+            f"- In scope: `src/{task_id}.py`.\n"
+            "- Acceptance criteria:\n"
+            f"  - T{task_id}-AC1: {milestone} is complete.\n"
+        )
+    tasklist_root.joinpath("tasklist.md").write_text(
+        "# Tasklist\n\n"
+        "## Ordered tasks\n\n"
+        + "\n".join(cards)
+        + "\n## Dependencies\n\n"
+        "- T1: none\n"
+        "- T2: T1\n"
+        "- T3: T1\n"
+        "- T4: T2, T3\n"
+        "- T5: T4\n\n"
+        "## Verification notes\n\n"
+        "- T1: verify M1\n"
+        "- T2: verify M2\n"
+        "- T3: verify M3\n"
+        "- T4: verify M4\n"
+        "- T5: verify M5\n",
+        encoding="utf-8",
+    )
+
+
+def _write_allowed_scope(workspace_root: Path, *paths: str) -> None:
+    scope_path = (
+        workspace_root
+        / "workitems"
+        / "WI-001"
+        / "context"
+        / "allowed-write-scope.md"
+    )
+    scope_path.parent.mkdir(parents=True, exist_ok=True)
+    scope_path.write_text(
+        "# Allowed Write Scope\n\n" + "".join(f"- `{path}`\n" for path in paths),
+        encoding="utf-8",
+    )
+
+
+def _write_tasklist_with_all_canonical_milestone_locations(workspace_root: Path) -> None:
+    work_item_root = workspace_root / "workitems" / "WI-001" / "stages"
+    plan_output = work_item_root / "plan" / "output"
+    tasklist_root = work_item_root / "tasklist"
+    plan_output.mkdir(parents=True)
+    tasklist_root.mkdir(parents=True)
+    plan_output.joinpath("plan.md").write_text(
+        "# Plan\n\n"
+        "## Milestones\n\n"
+        "- M1 Outcome mapping.\n"
+        "- M2 Context mapping.\n"
+        "- M3 Acceptance mapping.\n"
+        "- M4 Verification mapping.\n\n"
+        "## Dependencies\n\n- none\n\n"
+        "## Verification notes\n\n- none\n",
+        encoding="utf-8",
+    )
+    tasklist_root.joinpath("tasklist.md").write_text(
+        "# Tasklist\n\n"
+        "## Ordered tasks\n\n"
+        "### T1 — Map outcome\n\n"
+        "- Outcome: Complete M1.\n"
+        "- Dominant deliverable: `src/one.py`.\n"
+        "- In scope: `src/one.py`.\n"
+        "- Acceptance criteria:\n  - T1-AC1: Outcome is complete.\n\n"
+        "### T2 — Map context\n\n"
+        "- Outcome: Complete context work.\n"
+        "- Dominant deliverable: `src/two.py`.\n"
+        "- In scope: `src/two.py`.\n"
+        "- Context: This task implements M2.\n"
+        "- Acceptance criteria:\n  - T2-AC1: Context is complete.\n\n"
+        "### T3 — Map acceptance\n\n"
+        "- Outcome: Complete acceptance work.\n"
+        "- Dominant deliverable: `src/three.py`.\n"
+        "- In scope: `src/three.py`.\n"
+        "- Acceptance criteria:\n  - T3-AC1: M3 behavior is complete.\n\n"
+        "### T4 — Map verification\n\n"
+        "- Outcome: Complete verification work.\n"
+        "- Dominant deliverable: `src/four.py`.\n"
+        "- In scope: `src/four.py`.\n"
+        "- Acceptance criteria:\n  - T4-AC1: Verification is complete.\n\n"
+        "## Dependencies\n\n"
+        "- T1: none\n- T2: none\n- T3: none\n- T4: none\n\n"
+        "## Verification notes\n\n"
+        "- T1: verify outcome\n- T2: verify context\n"
+        "- T3: verify acceptance\n- T4: verify M4\n",
         encoding="utf-8",
     )
 
@@ -208,6 +328,222 @@ def test_tasklist_plan_cross_validation_accepts_exact_milestone_bindings(
     )
 
     assert findings == ()
+
+
+def test_tasklist_scope_accepts_exact_files(
+    tmp_path: Path,
+) -> None:
+    workspace_root = tmp_path / ".aidd"
+    _write_plan_tasklist_pair(workspace_root)
+    _write_allowed_scope(workspace_root, "src/model.py", "src/api.py")
+
+    findings = validate_cross_document_consistency(
+        stage="tasklist",
+        work_item="WI-001",
+        workspace_root=workspace_root,
+    )
+
+    assert findings == ()
+
+
+def test_tasklist_scope_accepts_directory_descendants(tmp_path: Path) -> None:
+    workspace_root = tmp_path / ".aidd"
+    _write_plan_tasklist_pair(workspace_root)
+    _write_allowed_scope(workspace_root, "src")
+
+    findings = validate_cross_document_consistency(
+        stage="tasklist",
+        work_item="WI-001",
+        workspace_root=workspace_root,
+    )
+
+    assert findings == ()
+
+
+def test_tasklist_scope_rejects_live_discovered_out_of_boundary_card_paths(
+    tmp_path: Path,
+) -> None:
+    workspace_root = tmp_path / ".aidd"
+    _write_plan_tasklist_pair(workspace_root)
+    tasklist_path = (
+        workspace_root / "workitems" / "WI-001" / "stages" / "tasklist" / "tasklist.md"
+    )
+    tasklist_path.write_text(
+        tasklist_path.read_text(encoding="utf-8").replace(
+            "- In scope: `src/model.py`.",
+            "- In scope: `src/utils/error.ts`, `src/utils`, and `package.json`.",
+        ),
+        encoding="utf-8",
+    )
+    _write_allowed_scope(
+        workspace_root,
+        "src/compose.ts",
+        "src/hono-base.ts",
+        "src/compose.test.ts",
+        "src/hono.test.ts",
+    )
+
+    findings = validate_cross_document_consistency(
+        stage="tasklist",
+        work_item="WI-001",
+        workspace_root=workspace_root,
+    )
+
+    scope_findings = [item for item in findings if item.code == TASKLIST_SCOPE_CODE]
+    assert len(scope_findings) == 2
+    assert scope_findings[0].location.line_number == 5
+    assert "Task `T1`" in scope_findings[0].message
+    assert "src/utils/error.ts, src/utils, package.json" in scope_findings[0].message
+    assert "do not broaden the global scope" in scope_findings[0].message
+    assert "Task `T2`" in scope_findings[1].message
+
+
+def test_tasklist_scope_uses_component_boundaries(tmp_path: Path) -> None:
+    workspace_root = tmp_path / ".aidd"
+    _write_plan_tasklist_pair(workspace_root)
+    tasklist_path = (
+        workspace_root / "workitems" / "WI-001" / "stages" / "tasklist" / "tasklist.md"
+    )
+    tasklist_path.write_text(
+        tasklist_path.read_text(encoding="utf-8").replace(
+            "- In scope: `src/api.py`.",
+            "- In scope: `src2/api.py`.",
+        ),
+        encoding="utf-8",
+    )
+    _write_allowed_scope(workspace_root, "src")
+
+    findings = validate_cross_document_consistency(
+        stage="tasklist",
+        work_item="WI-001",
+        workspace_root=workspace_root,
+    )
+
+    scope_findings = [item for item in findings if item.code == TASKLIST_SCOPE_CODE]
+    assert len(scope_findings) == 1
+    assert "src2/api.py" in scope_findings[0].message
+
+
+def test_tasklist_scope_reports_malformed_canonical_document(tmp_path: Path) -> None:
+    workspace_root = tmp_path / ".aidd"
+    _write_plan_tasklist_pair(workspace_root)
+    _write_allowed_scope(workspace_root, "../src")
+
+    findings = validate_cross_document_consistency(
+        stage="tasklist",
+        work_item="WI-001",
+        workspace_root=workspace_root,
+    )
+
+    scope_findings = [item for item in findings if item.code == TASKLIST_SCOPE_CODE]
+    assert len(scope_findings) == 1
+    assert "Canonical allowed write scope is malformed" in scope_findings[0].message
+    assert scope_findings[0].location.workspace_relative_path.endswith(
+        "context/allowed-write-scope.md"
+    )
+
+
+def test_tasklist_plan_cross_validation_accepts_every_canonical_mapping_location(
+    tmp_path: Path,
+) -> None:
+    workspace_root = tmp_path / ".aidd"
+    _write_tasklist_with_all_canonical_milestone_locations(workspace_root)
+
+    findings = validate_cross_document_consistency(
+        stage="tasklist",
+        work_item="WI-001",
+        workspace_root=workspace_root,
+    )
+
+    assert findings == ()
+
+
+def test_tasklist_plan_cross_validation_accepts_canonical_whitespace_milestones(
+    tmp_path: Path,
+) -> None:
+    workspace_root = tmp_path / ".aidd"
+    _write_plan_tasklist_pair(workspace_root, milestone_separator=" ")
+
+    findings = validate_cross_document_consistency(
+        stage="tasklist",
+        work_item="WI-001",
+        workspace_root=workspace_root,
+    )
+
+    assert findings == ()
+
+
+def test_tasklist_plan_cross_validation_does_not_skip_unmapped_whitespace_milestones(
+    tmp_path: Path,
+) -> None:
+    workspace_root = tmp_path / ".aidd"
+    _write_plan_tasklist_pair(
+        workspace_root,
+        task_one_milestone="unmapped",
+        task_two_milestone="unmapped",
+        milestone_separator=" ",
+    )
+
+    findings = validate_cross_document_consistency(
+        stage="tasklist",
+        work_item="WI-001",
+        workspace_root=workspace_root,
+    )
+
+    milestone_findings = [item for item in findings if item.code == TASKLIST_PLAN_MILESTONE_CODE]
+    assert len(milestone_findings) == 4
+    assert {item.message for item in milestone_findings} >= {
+        (
+            "Task `T1` maps to no plan milestone; cite an existing milestone id in "
+            "`Outcome`, `Context`, an acceptance criterion, or the task's "
+            "`Verification notes` entry."
+        ),
+        (
+            "Task `T2` maps to no plan milestone; cite an existing milestone id in "
+            "`Outcome`, `Context`, an acceptance criterion, or the task's "
+            "`Verification notes` entry."
+        ),
+        (
+            "Plan milestone `M1` is not covered by any task card; cite it in `Outcome`, "
+            "`Context`, an acceptance criterion, or the task's `Verification notes` entry."
+        ),
+        (
+            "Plan milestone `M2` is not covered by any task card; cite it in `Outcome`, "
+            "`Context`, an acceptance criterion, or the task's `Verification notes` entry."
+        ),
+    }
+
+
+def test_tasklist_plan_cross_validation_rejects_ad_hoc_milestone_field_with_actionable_hint(
+    tmp_path: Path,
+) -> None:
+    workspace_root = tmp_path / ".aidd"
+    _write_plan_tasklist_pair(
+        workspace_root,
+        task_one_milestone="unmapped",
+        task_two_milestone="M2",
+    )
+    tasklist_path = (
+        workspace_root / "workitems" / "WI-001" / "stages" / "tasklist" / "tasklist.md"
+    )
+    tasklist_path.write_text(
+        tasklist_path.read_text(encoding="utf-8").replace(
+            "- Dominant deliverable: `src/model.py`.\n",
+            "- Dominant deliverable: `src/model.py`.\n- Milestone: M1\n",
+        ),
+        encoding="utf-8",
+    )
+
+    findings = validate_cross_document_consistency(
+        stage="tasklist",
+        work_item="WI-001",
+        workspace_root=workspace_root,
+    )
+
+    milestone_findings = [item for item in findings if item.code == TASKLIST_PLAN_MILESTONE_CODE]
+    assert len(milestone_findings) == 2
+    assert "Task `T1` maps to no plan milestone" in milestone_findings[0].message
+    assert "`Outcome`, `Context`, an acceptance criterion" in milestone_findings[0].message
 
 
 def test_tasklist_plan_cross_validation_reports_unknown_and_uncovered_milestones(
@@ -245,6 +581,48 @@ def test_tasklist_plan_cross_validation_reports_inverted_dependency_mapping(
     )
 
     assert any(item.code == TASKLIST_PLAN_DEPENDENCY_CODE for item in findings)
+
+
+def test_tasklist_plan_cross_validation_preserves_authored_dependency_direction(
+    tmp_path: Path,
+) -> None:
+    workspace_root = tmp_path / ".aidd"
+    _write_live_shaped_plan_tasklist_pair(workspace_root)
+
+    findings = validate_cross_document_consistency(
+        stage="tasklist",
+        work_item="WI-001",
+        workspace_root=workspace_root,
+    )
+
+    assert findings == ()
+
+
+def test_tasklist_plan_cross_validation_rejects_inverted_live_shaped_graph(
+    tmp_path: Path,
+) -> None:
+    workspace_root = tmp_path / ".aidd"
+    _write_live_shaped_plan_tasklist_pair(workspace_root)
+    tasklist_path = (
+        workspace_root / "workitems" / "WI-001" / "stages" / "tasklist" / "tasklist.md"
+    )
+    tasklist_path.write_text(
+        tasklist_path.read_text(encoding="utf-8").replace("- T2: T1", "- T2: none"),
+        encoding="utf-8",
+    )
+
+    findings = validate_cross_document_consistency(
+        stage="tasklist",
+        work_item="WI-001",
+        workspace_root=workspace_root,
+    )
+
+    dependency_findings = [
+        item for item in findings if item.code == TASKLIST_PLAN_DEPENDENCY_CODE
+    ]
+    assert len(dependency_findings) == 1
+    assert "Task `T2` covers `M2`" in dependency_findings[0].message
+    assert "`M1`" in dependency_findings[0].message
 
 
 def test_tasklist_plan_cross_validation_preserves_exact_authored_command(
@@ -724,6 +1102,48 @@ def test_validate_cross_document_consistency_reports_repair_mismatch_cases(
             ),
         ),
     )
+
+
+def test_validate_cross_document_consistency_allows_historical_repair_before_clean_attempt(
+    tmp_path: Path,
+) -> None:
+    contracts_root = tmp_path / "contracts" / "stages"
+    contracts_root.mkdir(parents=True)
+    _write_stage_contract(
+        contracts_root=contracts_root,
+        required_inputs=("context/intake.md",),
+        required_outputs=("stage-result.md",),
+        prompt_pack_paths=("prompt-packs/stages/implement/system.md",),
+    )
+    _touch_contract_references(
+        repo_root=tmp_path,
+        required_outputs=("stage-result.md",),
+        prompt_pack_paths=("prompt-packs/stages/implement/system.md",),
+    )
+
+    workspace_root = tmp_path / ".aidd"
+    stage_root = _stage_root(workspace_root)
+    stage_root.mkdir(parents=True, exist_ok=True)
+    (stage_root / "stage-result.md").write_text(
+        (
+            "# Stage Result\n\n"
+            "## Attempt history\n\n"
+            "- Attempt `1` (`initial`) -> failed validation.\n"
+            "- Attempt `2` (`repair`) -> succeeded for the previous unit of work.\n"
+            "- Attempt `3` (`initial`) -> succeeded for the current unit of work.\n\n"
+            "## Status\n\n- `succeeded`\n"
+        ),
+        encoding="utf-8",
+    )
+
+    findings = validate_cross_document_consistency(
+        stage="review",
+        work_item="WI-001",
+        workspace_root=workspace_root,
+        contracts_root=contracts_root,
+    )
+
+    assert not any(finding.code == REPAIR_MENTION_WITHOUT_BRIEF_CODE for finding in findings)
 
 
 def test_validate_cross_document_consistency_reports_unresolved_blocking_question(

@@ -21,6 +21,7 @@ notes, and a concrete verification signal.
   - `context/acceptance-criteria.md`
   - `context/verification-output.md`
   - `context/verification-artifacts.md`
+  - `context/allowed-write-scope.md`
   - `context/constraints.md`
   - `context/previous-decisions.md`
 - contract of record:
@@ -79,27 +80,35 @@ normalize if canonical validation proves the terminal status inconsistent.
    `In scope` must name at least one backticked repository-relative file or directory prefix.
    Do not use absolute paths, `..` traversal, or glob syntax. Explanatory prose does not replace
    concrete path prefixes.
+   When `context/allowed-write-scope.md` exists, read it before decomposition and keep every
+   task-local prefix equal to or beneath one listed canonical prefix on a component boundary.
+   Do not propose an out-of-bound preferred path with an in-scope fallback: choose a permitted
+   deliverable or ask a blocking question when the plan cannot be implemented inside the boundary.
 3. Record explicit dependencies for every task (`none` or concrete task/upstream ids).
-4. Keep task ordering executable in dependency order, not only grouped by topic.
+4. Map every task to at least one existing plan milestone by writing the exact `M<n>` id in the
+   task's `Outcome`, optional `Context`, a nested acceptance criterion, or the task's dedicated
+   `Verification notes` entry. Cover every plan milestone. Do not add `Milestone` or
+   `Plan milestone`: those fields are outside the canonical rich-task grammar and are ignored.
+5. Keep task ordering executable in dependency order, not only grouped by topic.
    Dependencies may reference only earlier task cards. Reject self-dependencies, unknown task ids,
    forward references, and dependency cycles rather than hiding them in prose or expecting AIDD to
    reorder the cards.
-5. Add at least one concrete verification note per task (test/check/scenario). The dedicated
+6. Add at least one concrete verification note per task (test/check/scenario). The dedicated
    `Verification notes` section must contain a bullet or list item for every task id declared in
    `Ordered tasks`, including command-only or verification-only tasks. Do not rely on checks
    embedded only inside `Ordered tasks`; those checks must be repeated or summarized under the
    matching task id in `Verification notes`.
-6. Do not mark stage `succeeded` when upstream `review-spec` readiness/sign-off has unresolved
+7. Do not mark stage `succeeded` when upstream `review-spec` readiness/sign-off has unresolved
    blocking conditions.
-7. When `context/verification-output.md` names authored verification commands, copy those commands
+8. When `context/verification-output.md` names authored verification commands, copy those commands
    exactly and preserve those commands exactly when citing them in task verification notes.
    Preserve flags, path lists, environment variables, and coverage/cache-disabling options such as
    `--coverage.enabled=false`; do not rewrite them as `npx`, package-manager aliases, or broader
    suite commands.
-8. Optional broad checks outside the authored verification boundary may be listed only as
+9. Optional broad checks outside the authored verification boundary may be listed only as
    optional/non-blocking exploratory checks. Do not turn them into required task completion or final
    pass criteria unless the authored task or review-spec explicitly requires them.
-9. In JavaScript or TypeScript packages, do not plan a concrete helper/module path as private or
+10. In JavaScript or TypeScript packages, do not plan a concrete helper/module path as private or
    internal-only until you inspect `package.json` `exports`, wildcard subpath exports such as
    `./utils/*`, generated declaration outputs, and existing public import conventions. If the
    proposed path can be imported through the package boundary, either choose a non-exported
@@ -122,7 +131,9 @@ normalize if canonical validation proves the terminal status inconsistent.
    mention an authored command, quote it exactly rather than paraphrasing executable details.
 6. When naming JS/TS helper or module paths, include export-map/public-surface evidence in the
    task notes before calling the path private or internal-only.
-7. Update `stage-result.md` and `validator-report.md` so readiness, blockers, and next actions are
+7. If `context/allowed-write-scope.md` exists, compare every concrete `In scope` prefix against it
+   before writing success; a similar string prefix such as `src2` is not inside `src`.
+8. Update `stage-result.md` and `validator-report.md` so readiness, blockers, and next actions are
    consistent with tasklist content.
    When tasklist and validation evidence support success, `stage-result.md` `Next actions` must
    name the exact immediate canonical downstream stage id: `implement`. Do not write only generic
@@ -145,7 +156,11 @@ normalize if canonical validation proves the terminal status inconsistent.
 - tasklist decomposition is ordered and dependency-executable,
 - each task has one dominant deliverable and explicit dependency note,
 - each task card has an outcome, in-scope boundary, and task-local acceptance criteria,
+- every task cites an existing plan `M<n>` id in `Outcome`, `Context`, an acceptance criterion,
+  or its dedicated `Verification notes` entry, and every plan milestone is covered,
+- no task relies on an unsupported `Milestone` or `Plan milestone` field,
 - every in-scope boundary contains safe backticked repository-relative path prefixes,
+- every task-local prefix is inside canonical `context/allowed-write-scope.md` when present,
 - verification notes are concrete, task-specific, and include every declared task id,
 - command-only or verification-only task ids are present in the dedicated `Verification notes`
   section, not only in `Ordered tasks`,

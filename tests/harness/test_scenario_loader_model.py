@@ -432,6 +432,8 @@ def test_smoke_plan_stagepack_scenario_declares_cross_runtime_output_checks() ->
         "test -f .aidd/workitems/WI-STAGE-PLAN-SMOKE/stages/plan/output/plan.md",
         "test -f .aidd/workitems/WI-STAGE-PLAN-SMOKE/stages/plan/output/stage-result.md",
         "test -f .aidd/workitems/WI-STAGE-PLAN-SMOKE/stages/plan/output/validator-report.md",
+        "grep -q 'context/allowed-write-scope.md' "
+        ".aidd/workitems/WI-STAGE-PLAN-SMOKE/stages/plan/stage-brief.md",
     )
 
 

@@ -17,6 +17,9 @@ from aidd.validators.semantic_rules.evidence import (
         "Command: custom-check --verify\nObserved: passed",
         "```sh\ncustom-check --verify\n```\nObserved: passed",
         "`./scripts/verify` -> exit code 0",
+        "`sh -c 'test ! -e .pytest_cache'` -> exit code 0",
+        "`bash -c 'git diff --quiet'` -> pass",
+        "`zsh -c 'test -f pyproject.toml'` -> pass",
         "Reused the same verification command as `TL-2`; outcome passed.",
     ),
 )
@@ -29,6 +32,7 @@ def test_command_evidence_accepts_only_explicit_command_shapes(evidence: str) ->
     (
         "pytest passed.",
         "Checked with ruff and it succeeded.",
+        "sh passed.",
         "The `pytest` tool passed.",
         "The full test suite passed.",
         "`138 passed`.",

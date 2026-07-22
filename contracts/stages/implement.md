@@ -74,9 +74,15 @@ Optional context documents may improve implementation quality, but they must not
   observed outcome on that same bullet; do not split the command and outcome across separate prose
   paragraphs.
 - touched-files entries must stay within `context/allowed-write-scope.md`.
-- The implementation deliverable is the local workspace state, not a tracked-only patch. Newly
-  created untracked files under the allowed write scope count as touched files and must be listed
-  with the tracked diffs.
+- For a rich task attempt, touched-files evidence is task-local: it is the exact path set changed
+  between the current task's repository baseline and final snapshot. Exclude files changed only by
+  successful prerequisite tasks unless the current task changes those files again. Prerequisite or
+  cumulative workspace state may be described in `Summary` or `Risks`; aggregate finalization owns
+  the cumulative touched-file evidence across successful tasks.
+- The current task deliverable is not a tracked-only patch. Newly created untracked files under the
+  allowed write scope and created by the current task count as touched files and must be listed with
+  its tracked diffs. A generic one-shot implementation report without a rich task ledger continues
+  to describe the observed deliverable workspace state.
 - Setup-owned workspace files are not implementation material. Do not delete, move, reclone, or
   recreate the prepared repository checkout or setup-owned paths listed in
   `context/workspace-baseline.md`. If the prepared checkout, configured stage runner command, or
@@ -109,7 +115,9 @@ Validators for `implement` should check:
 - required output existence and heading coverage for `implementation-report.md`, `stage-result.md`, and `validator-report.md`,
 - consistency with selected task id, task intent, and allowed write scope from inputs,
 - missing diffs:
-  - touched-files entries are non-empty for non-no-op runs and map to actual modified paths,
+  - touched-files entries are non-empty for non-no-op runs and map to actual current task-local
+    modified paths for rich task attempts,
+  - cumulative prerequisite-only paths are rejected from a rich task attempt's touched-files list,
   - claimed modifications without observable file-level change evidence are rejected,
 - unverifiable claims:
   - verification notes reference concrete executed checks and outcomes,
@@ -136,6 +144,9 @@ optional when a destructive or policy-sensitive choice must be confirmed
 - AIDD core preserves validator findings and the generated repair brief for every failed attempt
 - invalid-run handling:
   - when validation fails, repair must target the root cause class (`missing diffs`, `unverifiable claims`, or `incomplete summary`) before adding new content,
+  - for `SEM-TASK-DIFF-MISMATCH`, repair removes prerequisite-only or otherwise unsupported
+    touched-file claims without reverting successful prior-task changes; current task-local changes
+    remain reported and cumulative evidence remains owned by aggregate finalization,
   - repaired outputs must keep previously valid sections unless they conflict with root-cause fixes.
 - no-op handling:
   - no-op output is allowed only when selected task is already satisfied or blocked by explicit external constraints,

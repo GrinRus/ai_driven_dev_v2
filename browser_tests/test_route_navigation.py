@@ -57,4 +57,10 @@ def test_back_forward_and_reload_restore_studio_detail(tmp_path: Path) -> None:
             "run": fixture.run_id,
             "artifact": "implementation-report.md",
         }
+        assert browser_page.diagnostics.failed_requests == []
+        assert browser_page.diagnostics.cancelled_requests
+        assert all(
+            "/api/runtime-readiness: net::ERR_ABORTED" in request
+            for request in browser_page.diagnostics.cancelled_requests
+        )
         browser_page.diagnostics.assert_clean()

@@ -577,6 +577,79 @@ def test_tasklist_contract_and_prompts_require_rich_task_cards() -> None:
         assert "<task-id>-AC<n>" in text
 
 
+def test_tasklist_contract_prompts_and_repair_name_canonical_milestone_locations() -> None:
+    paths = (
+        "contracts/stages/tasklist.md",
+        "contracts/documents/tasklist.md",
+        "prompt-packs/stages/tasklist/system.md",
+        "prompt-packs/stages/tasklist/run.md",
+        "prompt-packs/stages/tasklist/repair.md",
+    )
+
+    for path in paths:
+        text = Path(path).read_text(encoding="utf-8")
+        assert "`Outcome`" in text
+        assert "`Context`" in text
+        assert "acceptance criterion" in text or "acceptance criteria" in text
+        assert "`Verification notes`" in text
+        assert "`Milestone`" in text
+        assert "`Plan milestone`" in text
+
+    run_prompt = Path("prompt-packs/stages/tasklist/run.md").read_text(encoding="utf-8")
+    repair_prompt = Path("prompt-packs/stages/tasklist/repair.md").read_text(encoding="utf-8")
+    assert "those fields are outside the canonical rich-task grammar and are ignored" in " ".join(
+        run_prompt.split()
+    )
+    assert "the canonical rich-task grammar ignores it" in " ".join(repair_prompt.split())
+
+
+def test_tasklist_contract_and_prompts_enforce_canonical_allowed_scope() -> None:
+    paths = (
+        "contracts/stages/tasklist.md",
+        "contracts/documents/tasklist.md",
+        "prompt-packs/stages/tasklist/system.md",
+        "prompt-packs/stages/tasklist/run.md",
+        "prompt-packs/stages/tasklist/repair.md",
+    )
+
+    for path in paths:
+        text = Path(path).read_text(encoding="utf-8")
+        assert "allowed-write-scope.md" in text
+        assert "task-local" in text or "task `In scope`" in text
+
+    run_prompt = Path("prompt-packs/stages/tasklist/run.md").read_text(encoding="utf-8")
+    repair_prompt = Path("prompt-packs/stages/tasklist/repair.md").read_text(
+        encoding="utf-8"
+    )
+    assert "Do not propose an out-of-bound preferred path" in run_prompt
+    assert "do not edit, broaden, or reinterpret that context document" in repair_prompt
+
+
+def test_plan_contract_and_prompts_enforce_canonical_allowed_scope() -> None:
+    paths = (
+        "contracts/stages/plan.md",
+        "prompt-packs/stages/plan/system.md",
+        "prompt-packs/stages/plan/run.md",
+        "prompt-packs/stages/plan/repair.md",
+    )
+
+    for path in paths:
+        text = Path(path).read_text(encoding="utf-8")
+        assert "context/allowed-write-scope.md" in text
+        assert "exhaustive" in text
+        assert "helper" in text
+
+    run_prompt = Path("prompt-packs/stages/plan/run.md").read_text(encoding="utf-8")
+    repair_prompt = Path("prompt-packs/stages/plan/repair.md").read_text(
+        encoding="utf-8"
+    )
+    assert "Do not propose an out-of-bound preferred helper" in run_prompt
+    assert "keep a small private helper inside allowed files" in " ".join(
+        repair_prompt.split()
+    )
+    assert "do not edit, broaden, or reinterpret it" in repair_prompt
+
+
 def test_tasklist_prompts_are_live_installed_workspace_safe() -> None:
     run_prompt = Path("prompt-packs/stages/tasklist/run.md").read_text(
         encoding="utf-8"
@@ -1111,3 +1184,30 @@ def test_implement_prompts_require_executable_verification_evidence() -> None:
     assert "truthful failed verification report" in run_prompt
     assert "timing out without stage artifacts" in run_prompt
     assert "continuing ad hoc debugging until timeout" in repair_prompt
+
+
+def test_implement_contract_and_prompts_scope_rich_task_evidence_locally() -> None:
+    document_contract = Path(
+        "contracts/documents/implementation-report.md"
+    ).read_text(encoding="utf-8")
+    stage_contract = Path("contracts/stages/implement.md").read_text(encoding="utf-8")
+    system_prompt = Path("prompt-packs/stages/implement/system.md").read_text(
+        encoding="utf-8"
+    )
+    run_prompt = Path("prompt-packs/stages/implement/run.md").read_text(
+        encoding="utf-8"
+    )
+    repair_prompt = Path("prompt-packs/stages/implement/repair.md").read_text(
+        encoding="utf-8"
+    )
+
+    for text in (document_contract, stage_contract, system_prompt, run_prompt):
+        normalized = text.lower()
+        assert "current task-local" in normalized
+        assert "prerequisite" in normalized
+        assert "aggregate finalization" in normalized
+
+    assert "Do not use the cumulative workspace" in run_prompt
+    assert "unless the current task changes them again" in run_prompt
+    assert "do not revert successful prior-task changes" in repair_prompt
+    assert "SEM-TASK-DIFF-MISMATCH" in repair_prompt

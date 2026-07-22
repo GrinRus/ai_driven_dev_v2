@@ -69,6 +69,7 @@ from aidd.core.stage_runner import (
     run_structural_validation_after_output_discovery,
     update_stage_unblock_state,
 )
+from aidd.core.stage_terminal import reconcile_stage_result_after_validation_pass
 from aidd.core.state_machine import StageState, is_terminal_state, transition_stage_state
 from aidd.runtime_permissions import (
     RuntimeOperatorDecisionAction,
@@ -1291,6 +1292,66 @@ def test_run_single_stage_orchestration_executes_generic_cli_happy_path(
         orchestration.transition.stage_metadata_path.read_text(encoding="utf-8")
     )
     assert metadata_payload["status"] == StageState.SUCCEEDED.value
+
+
+def test_post_normalization_stage_result_finding_requests_repair(
+    tmp_path: Path,
+) -> None:
+    workspace_root = tmp_path / ".aidd"
+    create_run_manifest(
+        workspace_root=workspace_root,
+        work_item="WI-001",
+        run_id="run-001",
+        runtime_id="generic-cli",
+        stage_target="plan",
+        config_snapshot={"mode": "test"},
+    )
+    preview_bundle = prepare_stage_bundle(
+        workspace_root=workspace_root,
+        work_item="WI-001",
+        stage="plan",
+    )
+    _materialize_expected_inputs(preview_bundle.expected_input_bundle)
+    runtime_documents = _valid_plan_output_documents()
+    runtime_documents["stage-result.md"] = runtime_documents["stage-result.md"].replace(
+        "## Attempt history\n\n- attempt-0001\n\n",
+        "## Attempt history\n\n"
+        "- Attempt 1 (`initial`): first claim.\n"
+        "- Attempt 1 (`initial`): duplicate claim.\n\n",
+    )
+    stage_root = workspace_root / "workitems" / "WI-001" / "stages" / "plan"
+
+    def _adapter_executor(
+        invocation: AdapterInvocationBundle,
+        execution_state: StageExecutionState,
+    ) -> AdapterExecutionOutcome:
+        _ = invocation, execution_state
+        stage_root.mkdir(parents=True, exist_ok=True)
+        for name, content in runtime_documents.items():
+            (stage_root / name).write_text(content, encoding="utf-8")
+        return AdapterExecutionOutcome(succeeded=True, details="success")
+
+    orchestration = run_single_stage_orchestration(
+        workspace_root=workspace_root,
+        work_item="WI-001",
+        run_id="run-001",
+        stage="plan",
+        adapter_executor=_adapter_executor,
+    )
+
+    assert orchestration.transition.action is PostValidationAction.REPAIR
+    assert orchestration.validation_result is not None
+    assert [finding.code for finding in orchestration.validation_result.findings] == [
+        "SEM-INCOMPLETE-SECTION"
+    ]
+    metadata = load_stage_metadata(
+        workspace_root=workspace_root,
+        work_item="WI-001",
+        run_id="run-001",
+        stage="plan",
+    )
+    assert metadata is not None
+    assert metadata.status == StageState.REPAIR_NEEDED.value
 
 
 def test_run_single_stage_orchestration_includes_answers_after_blocked_resume(
@@ -3525,6 +3586,44 @@ def test_decide_post_validation_transition_reconciles_stale_stage_result_on_pass
     assert "stale runtime draft status/verdict was normalized" in stage_result_text
     published_stage_result = stage_result_path.parent / "output" / "stage-result.md"
     assert "- Status: `succeeded`" in published_stage_result.read_text(encoding="utf-8")
+
+
+def test_successful_stage_result_reconciliation_is_idempotent_and_deduplicates_verdicts(
+    tmp_path: Path,
+) -> None:
+    workspace_root = tmp_path / ".aidd"
+    stage_root = workspace_root / "workitems" / "WI-001" / "stages" / "plan"
+    stage_root.mkdir(parents=True)
+    stage_result_path = stage_root / "stage-result.md"
+    stage_result_path.write_text(
+        "# Stage Result\n\n"
+        "## Status\n\n- `succeeded`\n\n"
+        "## Produced outputs\n\n- `plan.md`\n\n"
+        "## Validation summary\n\n"
+        "- Validator verdict: `pass`\n"
+        "- Validator verdict: `pass`\n"
+        "- Validator verdict: pass\n\n"
+        "## Next actions\n\n- Continue to `review-spec`.\n\n"
+        "## Terminal state notes\n\n- Ready.\n",
+        encoding="utf-8",
+    )
+
+    reconcile_stage_result_after_validation_pass(
+        workspace_root=workspace_root,
+        work_item="WI-001",
+        stage="plan",
+    )
+    first_reconciliation = stage_result_path.read_bytes()
+    reconcile_stage_result_after_validation_pass(
+        workspace_root=workspace_root,
+        work_item="WI-001",
+        stage="plan",
+    )
+
+    reconciled_text = stage_result_path.read_text(encoding="utf-8")
+    assert stage_result_path.read_bytes() == first_reconciliation
+    assert reconciled_text.count("Validator verdict: `pass`") == 1
+    assert reconciled_text.count("Validator verdict:") == 1
 
 
 def test_decide_post_validation_transition_does_not_reconcile_when_questions_block(

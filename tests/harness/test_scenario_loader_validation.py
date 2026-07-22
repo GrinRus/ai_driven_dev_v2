@@ -12,6 +12,24 @@ def _write_manifest(path: Path, content: str) -> Path:
     return path
 
 
+def test_load_live_scenario_rejects_unsafe_allowed_write_scope(tmp_path: Path) -> None:
+    source = Path("harness/scenarios/live/hono-non-error-throw-handling.yaml")
+    manifest = _write_manifest(
+        tmp_path / "scenario.yaml",
+        source.read_text(encoding="utf-8").replace(
+            "    - src/compose.ts\n",
+            "    - ../escape.ts\n",
+            1,
+        ),
+    )
+
+    with pytest.raises(
+        ScenarioManifestError,
+        match="not a safe repository-relative path",
+    ):
+        load_scenario(manifest)
+
+
 def test_load_scenario_rejects_missing_required_keys(tmp_path: Path) -> None:
     manifest = _write_manifest(
         tmp_path / "scenario.yaml",

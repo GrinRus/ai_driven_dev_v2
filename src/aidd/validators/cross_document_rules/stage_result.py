@@ -20,6 +20,10 @@ _STAGE_STATUS_PATTERN = re.compile(
     r"`?(succeeded|failed|blocked|needs-input)`?", re.IGNORECASE
 )
 _PROJECT_SET_ROW_PATTERN = re.compile(r"^\|\s*`([^`]+)`\s*\|\s*`([^`]+)`\s*\|")
+_ATTEMPT_TRIGGER_PATTERN = re.compile(
+    r"\bAttempt\s+`?\d+`?\s+\(`?(initial|repair|intervention)`?\)",
+    re.IGNORECASE,
+)
 
 
 def _stage_status(stage_result_text: str | None) -> tuple[str | None, int | None]:
@@ -38,6 +42,18 @@ def _project_set_entries(project_set_text: str) -> tuple[tuple[str, str], ...]:
         for line in project_set_text.splitlines()
         if (match := _PROJECT_SET_ROW_PATTERN.match(line.strip())) is not None
     )
+
+
+def _latest_attempt_trigger(stage_result_text: str) -> str | None:
+    triggers: list[str] = []
+    for _, line in extract_section_lines(stage_result_text, heading="Attempt history"):
+        if match := _ATTEMPT_TRIGGER_PATTERN.search(line):
+            triggers.append(match.group(1).lower())
+    if triggers:
+        return triggers[-1]
+    if "(`repair`)" in stage_result_text:
+        return "repair"
+    return None
 
 
 def _project_set_findings(context: CrossDocumentContext) -> tuple[ValidationFinding, ...]:
@@ -98,7 +114,7 @@ def validate_stage_result_links(
     stage_status, stage_status_line = _stage_status(context.stage_result_text)
     if context.stage_result_text is not None:
         result_relative = workspace_relative(context.stage_result_path, context.workspace_root)
-        mentions_repair_attempt = "(`repair`)" in context.stage_result_text
+        mentions_repair_attempt = _latest_attempt_trigger(context.stage_result_text) == "repair"
         mentions_repair_brief = "repair-brief.md" in context.stage_result_text
         if mentions_repair_attempt and not context.repair_brief_path.exists():
             findings.append(

@@ -191,14 +191,24 @@ def _replace_or_add_validator_pass_claim(markdown: str) -> str:
         return markdown.rstrip() + "\n\n## Validation summary\n\n- Validator verdict: `pass`\n"
 
     body = match.group("body")
-    replacement_body = _VALIDATOR_VERDICT_LINE_PATTERN.sub(
-        r"\g<prefix>`pass`\g<suffix>",
-        body,
-        count=1,
-    )
-    if replacement_body == body:
+    verdict_matches = tuple(_VALIDATOR_VERDICT_LINE_PATTERN.finditer(body))
+    if not verdict_matches:
         prefix = "" if not body or body.endswith("\n") else "\n"
         replacement_body = body + prefix + "- Validator verdict: `pass`\n"
+    else:
+        first_verdict_seen = False
+
+        def _canonical_verdict(match: re.Match[str]) -> str:
+            nonlocal first_verdict_seen
+            if first_verdict_seen:
+                return ""
+            first_verdict_seen = True
+            return f"{match.group('prefix')}`pass`{match.group('suffix')}"
+
+        replacement_body = _VALIDATOR_VERDICT_LINE_PATTERN.sub(
+            _canonical_verdict,
+            body,
+        )
     return markdown[: match.start("body")] + replacement_body + markdown[match.end("body") :]
 
 

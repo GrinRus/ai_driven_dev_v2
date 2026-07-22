@@ -212,6 +212,32 @@ function studioFlowCompleteEligibility(handoff = state.dashboard?.terminal_hando
   });
 }
 
+function studioFlowCompleteIdentity(handoff = state.dashboard?.terminal_handoff) {
+  if (!handoff) return "";
+  return JSON.stringify([
+    state.dashboard?.work_item || "no-work-item",
+    state.activeRunId || state.dashboard?.run?.run_id || "no-run",
+    handoff.status || "unknown",
+    handoff.final_qa_status || "unknown",
+    handoff.recommended_outcome || "none"
+  ]);
+}
+
+function studioFlowCompleteOtherActionsOpen(handoff = state.dashboard?.terminal_handoff) {
+  const identity = studioFlowCompleteIdentity(handoff);
+  return Boolean(
+    identity
+    && state.terminalOtherActionsIdentity === identity
+    && state.terminalOtherActionsOpen
+  );
+}
+
+function rememberStudioFlowCompleteDisclosure(details) {
+  if (!details?.matches?.(".studio-flow-complete-other")) return;
+  state.terminalOtherActionsIdentity = studioFlowCompleteIdentity();
+  state.terminalOtherActionsOpen = Boolean(details.open);
+}
+
 function renderStudioFlowCompleteAction(action, {primary = false} = {}) {
   return `
     <button data-next-flow-action="${escapeHtml(action.action)}" type="button" class="${primary ? "primary" : "secondary"}" ${action.enabled === false ? 'disabled aria-disabled="true"' : ""}>
@@ -229,6 +255,7 @@ function renderStudioFlowCompleteState() {
   const primary = actions.find((action) => action.action === recommendation.outcome);
   if (!primary) return "";
   const others = actions.filter((action) => action.action !== recommendation.outcome);
+  const otherActionsOpen = studioFlowCompleteOtherActionsOpen(handoff);
   return `
     <section class="surface studio-flow-complete" data-studio-flow-complete data-terminal-status="${escapeHtml(handoff.status)}">
       <div class="flow-complete-hero">
@@ -250,7 +277,7 @@ function renderStudioFlowCompleteState() {
       ${renderTerminalAttentionSpotlight(handoff)}
       ${renderTerminalEvidenceSpotlight(handoff)}
       ${others.length ? `
-        <details class="studio-flow-complete-other">
+        <details class="studio-flow-complete-other" ${otherActionsOpen ? "open" : ""}>
           <summary>Other next actions</summary>
           <div class="next-flow-actions-grid">
             ${others.map((action) => `<article class="next-flow-action-card"><strong>${escapeHtml(action.label)}</strong><p>${escapeHtml(action.detail || "")}</p>${renderStudioFlowCompleteAction(action)}</article>`).join("")}
@@ -386,6 +413,12 @@ function renderArchiveConfirmation() {
   const artifacts = state.dashboard?.terminal_handoff?.final_artifacts || [];
   const handoff = state.dashboard?.terminal_handoff;
   const needsRecovery = terminalHandoffNeedsRecovery(handoff);
+  const archiveMutation = archiveMutationState({
+    workItem: sourceWorkItem === "not recorded" ? "" : sourceWorkItem,
+    runId: sourceRun === "not recorded" ? "" : sourceRun,
+    reason
+  });
+  const archivePending = archiveMutation.status === "pending";
   return `
     <section class="surface next-flow-wizard archive-confirmation">
       <div class="surface-title">
@@ -413,7 +446,7 @@ function renderArchiveConfirmation() {
       <div class="wizard-actions">
         ${renderTerminalRecoveryWizardAction(handoff)}
         <button data-close-next-flow-wizard type="button" class="secondary">Back to handoff</button>
-        <button data-archive-confirm type="button" class="danger">Confirm Archive Run</button>
+        <button data-archive-confirm data-archive-mutation-status="${escapeHtml(archiveMutation.status)}" type="button" class="danger" ${archivePending ? 'disabled aria-busy="true"' : ""}>${archivePending ? "Archiving..." : "Confirm Archive Run"}</button>
       </div>
     </section>
   `;

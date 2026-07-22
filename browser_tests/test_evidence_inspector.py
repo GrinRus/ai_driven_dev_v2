@@ -19,7 +19,7 @@ def test_studio_evidence_inspector_is_value_conditional(tmp_path: Path) -> None:
         assert browser_page.page.locator("#studioEvidenceInspector:visible").count() == 0
         browser_page.diagnostics.assert_clean()
 
-    qa = build_browser_state_fixture(tmp_path / "qa-decision", "qa-decision")
+    qa = build_browser_state_fixture(tmp_path / "remediation-stale", "remediation-stale")
     with sync_playwright() as playwright, operator_browser_harness(
         qa.project_root,
         playwright,

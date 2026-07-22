@@ -865,6 +865,57 @@ test("terminal polling releases volatile buffers after durable dashboard readbac
   assert.equal(vm.runInContext("state.activeStage", context), "qa");
 });
 
+test("terminal polling keeps active identity until every durable readback completes", async () => {
+  const {context} = domContext();
+  let request = 0;
+  const dashboardReadback = deferred();
+  const projectReadback = deferred();
+  const inboxReadback = deferred();
+  let renderCount = 0;
+  context.fetch = async () => {
+    request += 1;
+    return request === 1
+      ? response({cursor: 9, chunks: [{stream: "stdout", text: "terminal\n"}]})
+      : response({job_id: "job-1", stage: "qa", status: "cancelled"});
+  };
+  context.fetchDashboard = async () => {
+    await dashboardReadback.promise;
+    vm.runInContext(
+      "state.dashboard = {work_item: 'WI-1', active_stage: 'qa'}; state.dashboardActiveJob = null; state.activeStage = 'qa';",
+      context,
+    );
+  };
+  context.fetchProjectHome = async () => projectReadback.promise;
+  context.fetchInbox = async () => inboxReadback.promise;
+  context.renderAll = async () => {
+    renderCount += 1;
+  };
+  await load(context, "operator-api-state.js");
+  await load(context, "operator-logs-jobs.js");
+  vm.runInContext(
+    "state.activeJobId = 'job-1'; state.activeJobStatus = {status: 'running'};",
+    context,
+  );
+
+  const poll = vm.runInContext("pollActiveJob()", context);
+  await new Promise((resolve) => setImmediate(resolve));
+  assert.equal(vm.runInContext("state.activeJobId", context), "job-1");
+
+  dashboardReadback.resolve();
+  await new Promise((resolve) => setImmediate(resolve));
+  assert.equal(vm.runInContext("state.activeJobId", context), "job-1");
+
+  projectReadback.resolve();
+  await new Promise((resolve) => setImmediate(resolve));
+  assert.equal(vm.runInContext("state.activeJobId", context), "job-1");
+
+  inboxReadback.resolve();
+  await poll;
+  assert.equal(vm.runInContext("state.activeJobId", context), "");
+  assert.equal(vm.runInContext("state.activeJobStatus", context), null);
+  assert.equal(renderCount, 1);
+});
+
 test("rejected log request renders a deterministic escaped error", async () => {
   const {context, element} = domContext();
   context.fetch = async () => {
@@ -892,6 +943,7 @@ test("next-flow view renders terminal and readiness states without network mutat
   };
   await load(context, "operator-api-state.js");
   await load(context, "operator-shell-rendering.js");
+  await load(context, "operator-mutation-guard.js");
   await load(context, "operator-next-flow-actions.js");
   await load(context, "operator-next-flow-view.js");
   vm.runInContext(

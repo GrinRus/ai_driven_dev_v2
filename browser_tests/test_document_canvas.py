@@ -10,7 +10,7 @@ from browser_tests.state_fixtures import build_browser_state_fixture
 
 
 def test_studio_document_canvas_uses_safe_workbench_for_all_modes(tmp_path: Path) -> None:
-    fixture = build_browser_state_fixture(tmp_path / "qa-decision", "qa-decision")
+    fixture = build_browser_state_fixture(tmp_path / "remediation-stale", "remediation-stale")
     with sync_playwright() as playwright, operator_browser_harness(
         fixture.project_root,
         playwright,
