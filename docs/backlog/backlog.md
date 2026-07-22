@@ -7,16 +7,20 @@ slice, and local task.
 
 ## Next
 
-- `W36-E7-S4-T3` — Run the medium scenario through Codex to a clean terminal result.
+- `W36-E7-S4-T34` — Characterize the four exact Chromium preflight failures.
 
 ## Soon
 
-- `W36-E7-S4-T4` — Repeat the medium scenario through Claude Code from an independent root.
+- `W36-E7-S4-T35` — Stabilize Studio decision actions across polling re-renders.
 
 ## Parking lot
 
 - `W36-E7-S3-T2` — Record five first-time-operator sessions after initial live hardening.
 - `W36-E7-S3-T3` — Reconcile observed session findings before beta readiness.
+- `W36-E7-S4-T36` — Re-run the full provider-free Chromium acceptance matrix.
+- `W36-E7-S4-T37` — Prove wheel, doctor and isolation readiness on one candidate SHA.
+- `W36-E7-S4-T3` — Run the medium scenario through Codex to a clean terminal result.
+- `W36-E7-S4-T4` — Repeat the medium scenario through Claude Code from an independent root.
 - `W36-E7-S4-T5` — Record final same-revision Codex and Claude acceptance evidence.
 
 ## Update rules
@@ -33,6 +37,16 @@ slice, and local task.
   queue-restoration policy in `docs/backlog/roadmap.md` (`W8-E3-S1`).
 
 ## Current reconciliation
+
+- `2026-07-22` the exact-`a3d5aa1` preflight passed 88 frontend tests, Ruff, mypy across 210
+  source files, and all 1980 Python tests, then the full Chromium lane reported four failures
+  (`183 passed`). Three intervention cases observed no matching stage-interact POST after
+  History/Back restoration, and one terminal case could not click Archive because polling
+  repeatedly detached or hid the Flow Complete action. `W36-E7-S4-T34..T37` split
+  characterization, shared synchronization repair, full browser acceptance, and exact-SHA
+  package/isolation readiness into separate reviewable outputs. `T34` is promoted to `Next`,
+  `T35` to `Soon`; Codex `T3` and Claude `T4` return to Parking until the provider-free gate is
+  completely green.
 
 - `2026-07-21` `W36-E7-S4-T33` is complete: Plan semantic validation now resolves the canonical
   allowed-write scope and fails closed with `SEM-PLAN-SCOPE-MISMATCH` when `Milestones` or

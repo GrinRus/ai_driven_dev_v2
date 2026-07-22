@@ -11717,15 +11717,15 @@ Local tasks:
   - Scope: provider-free harness and architecture tests.
   - Verification: conformance fixtures fail before live execution for overlapping roots, dirty
     tracked source, forbidden product imports, or live-scenario literals in runtime product code.
-- `W36-E7-S4-T3` (next) Run `AIDD-LIVE-007` through Codex to a clean terminal result with
+- `W36-E7-S4-T3` (parked) Run `AIDD-LIVE-007` through Codex to a clean terminal result with
   manual stage-quality and rendered Studio evidence.
-  - Dependencies: `W36-E7-S4-T33`, `W36-E7-S4-T32`, `W36-E7-S4-T31`, `W36-E7-S4-T30`, `W36-E7-S4-T29`, `W36-E7-S4-T28`, `W36-E7-S4-T27`, `W36-E7-S4-T26`, `W36-E7-S4-T25`, `W36-E7-S4-T24`, `W36-E7-S4-T23`, `W36-E7-S4-T22`, `W36-E7-S4-T21`, `W36-E7-S4-T20`, `W36-E7-S4-T19`, `W36-E7-S4-T18`, `W36-E7-S4-T17`, `W36-E7-S4-T16`, `W36-E7-S4-T15`, `W36-E7-S4-T14`, `W36-E7-S4-T13`, `W36-E7-S4-T2`, `W36-E7-S4-T6`, `W36-E7-S4-T10`,
+  - Dependencies: `W36-E7-S4-T37`, `W36-E7-S4-T33`, `W36-E7-S4-T32`, `W36-E7-S4-T31`, `W36-E7-S4-T30`, `W36-E7-S4-T29`, `W36-E7-S4-T28`, `W36-E7-S4-T27`, `W36-E7-S4-T26`, `W36-E7-S4-T25`, `W36-E7-S4-T24`, `W36-E7-S4-T23`, `W36-E7-S4-T22`, `W36-E7-S4-T21`, `W36-E7-S4-T20`, `W36-E7-S4-T19`, `W36-E7-S4-T18`, `W36-E7-S4-T17`, `W36-E7-S4-T16`, `W36-E7-S4-T15`, `W36-E7-S4-T14`, `W36-E7-S4-T13`, `W36-E7-S4-T2`, `W36-E7-S4-T6`, `W36-E7-S4-T10`,
     `W36-E7-S4-T11`, and `W36-E7-S4-T12` as live-discovered queue
     predecessors.
   - Scope: external Codex live execution and evidence only.
   - Verification: installed-wheel `idea -> qa`, target verification, complete audits, terminal
     reports, and bounded Chromium evidence pass from an external run root.
-- `W36-E7-S4-T4` (soon) Run `AIDD-LIVE-007` through Claude Code from an independent root on
+- `W36-E7-S4-T4` (parked) Run `AIDD-LIVE-007` through Claude Code from an independent root on
   the same AIDD revision and target pin.
   - Dependencies: `W36-E7-S4-T3` as the direct queue predecessor.
   - Scope: external Claude Code live execution and evidence only.
@@ -12005,7 +12005,45 @@ Local tasks:
   - Verification: proposed create/modify/move/delete paths in `Milestones` and `Implementation
     strategy` use the canonical component-boundary predicate; evidence paths and executable
     commands are ignored, malformed scope remains fail-closed, and a live-shaped out-of-scope
-    helper produces stable `SEM-PLAN-SCOPE-MISMATCH` repair evidence.
+  helper produces stable `SEM-PLAN-SCOPE-MISMATCH` repair evidence.
+- `W36-E7-S4-T34` (next) Record a normalized characterization of the four exact Chromium
+  preflight failures before changing Studio or browser synchronization.
+  - Dependencies: `W36-E7-S4-T33` as the exact-SHA preflight discovery predecessor; blocks the
+    active Codex acceptance task `W36-E7-S4-T3`.
+  - Scope: provider-free intervention and terminal browser diagnostics only; production UI,
+    endpoints, mutation eligibility, provider adapters, and live scenario behavior remain
+    unchanged.
+  - Verification: isolated reruns identify for every failing viewport the rendered DOM revision,
+    actual `/api/stage/interact` request URL/count, canonical operator-request files, archive
+    decision/readback, and first decisive boundary, distinguishing a missing durable mutation
+    from observer or re-render synchronization drift.
+- `W36-E7-S4-T35` (soon) Make Studio decision actions stable across polling re-renders through one
+  shared server-authoritative mutation/render synchronization contract.
+  - Dependencies: `W36-E7-S4-T34` as the characterization predecessor; blocks the active Codex
+    acceptance task `W36-E7-S4-T3`.
+  - Scope: shared Studio action dispatch/render coordination plus focused frontend and browser
+    regression coverage only; viewport-specific delays, endpoint payloads, core eligibility,
+    provider adapters, and live scenario branches are forbidden.
+  - Verification: forced polling re-renders during intervention submit and Flow Complete archive
+    produce exactly one durable mutation and stable winner readback without a detached/hidden
+    action, while duplicate input remains guarded and the source run remains byte-identical.
+- `W36-E7-S4-T36` (parked) Re-run the complete provider-free Chromium acceptance matrix after the
+  shared synchronization fix.
+  - Dependencies: `W36-E7-S4-T35` as the direct queue predecessor; blocks the active Codex
+    acceptance task `W36-E7-S4-T3`.
+  - Scope: browser acceptance evidence only; no product or fixture behavior changes.
+  - Verification: the four discovered cases, both complete intervention/terminal journey
+    families, and the full browser suite pass across all five viewports with clean console,
+    page/request diagnostics and bounded process cleanup.
+- `W36-E7-S4-T37` (parked) Prove the exact post-browser candidate is installable and ready for an
+  isolated live-provider run.
+  - Dependencies: `W36-E7-S4-T36` as the full-browser predecessor; blocks the active Codex
+    acceptance task `W36-E7-S4-T3`.
+  - Scope: candidate wheel, doctor, eval-doctor, and live-isolation preflight evidence only; no
+    production, scenario, provider, or target changes.
+  - Verification: a wheel built from clean tracked `HEAD`, `aidd doctor`, Codex `aidd eval
+    doctor`, and provider-neutral external-root isolation preflight all pass on one recorded SHA
+    before any live run layout is allocated.
 
 Exit evidence:
 
