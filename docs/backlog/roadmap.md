@@ -12006,7 +12006,7 @@ Local tasks:
     strategy` use the canonical component-boundary predicate; evidence paths and executable
     commands are ignored, malformed scope remains fail-closed, and a live-shaped out-of-scope
   helper produces stable `SEM-PLAN-SCOPE-MISMATCH` repair evidence.
-- `W36-E7-S4-T34` (next) Record a normalized characterization of the four exact Chromium
+- `W36-E7-S4-T34` (done) Record a normalized characterization of the four exact Chromium
   preflight failures before changing Studio or browser synchronization.
   - Dependencies: `W36-E7-S4-T33` as the exact-SHA preflight discovery predecessor; blocks the
     active Codex acceptance task `W36-E7-S4-T3`.
@@ -12017,7 +12017,7 @@ Local tasks:
     actual `/api/stage/interact` request URL/count, canonical operator-request files, archive
     decision/readback, and first decisive boundary, distinguishing a missing durable mutation
     from observer or re-render synchronization drift.
-- `W36-E7-S4-T35` (soon) Make Studio decision actions stable across polling re-renders through one
+- `W36-E7-S4-T35` (next) Make Studio decision actions stable across polling re-renders through one
   shared server-authoritative mutation/render synchronization contract.
   - Dependencies: `W36-E7-S4-T34` as the characterization predecessor; blocks the active Codex
     acceptance task `W36-E7-S4-T3`.
@@ -12027,7 +12027,7 @@ Local tasks:
   - Verification: forced polling re-renders during intervention submit and Flow Complete archive
     produce exactly one durable mutation and stable winner readback without a detached/hidden
     action, while duplicate input remains guarded and the source run remains byte-identical.
-- `W36-E7-S4-T38` (parked) Characterize provider sibling-root visibility through the same
+- `W36-E7-S4-T38` (soon) Characterize provider sibling-root visibility through the same
   process-launch boundary used by live acceptance.
   - Dependencies: `W36-E7-S4-T35` as the final Studio code-change predecessor; blocks the final
     Chromium candidate and active Codex acceptance task `W36-E7-S4-T3`.

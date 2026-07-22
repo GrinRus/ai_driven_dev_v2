@@ -7,15 +7,14 @@ slice, and local task.
 
 ## Next
 
-- `W36-E7-S4-T34` — Characterize the four exact Chromium preflight failures.
+- `W36-E7-S4-T35` — Stabilize Studio decision actions across polling re-renders.
 
 ## Soon
 
-- `W36-E7-S4-T35` — Stabilize Studio decision actions across polling re-renders.
+- `W36-E7-S4-T38` — Characterize provider sibling-root visibility with an executable canary.
 
 ## Parking lot
 
-- `W36-E7-S4-T38` — Characterize provider sibling-root visibility with an executable canary.
 - `W36-E7-S4-T39` — Enforce provider-private filesystem and environment isolation.
 - `W36-E7-S4-T40` — Contain live run lookup and resume identities before reading state.
 - `W36-E7-S4-T41` — Make live source, target and provider integrity guards mandatory.
@@ -55,6 +54,15 @@ slice, and local task.
   queue-restoration policy in `docs/backlog/roadmap.md` (`W8-E3-S1`).
 
 ## Current reconciliation
+
+- `2026-07-22` `W36-E7-S4-T34` is complete: the exact failures were intervention
+  viewports `320x568`, `1280x900`, and `1440x900`, plus terminal `1280x900`.
+  Isolated `4/4` reruns proved that intervention created one durable request despite
+  an asynchronous observer count of zero, while a delayed-readiness probe proved
+  that the terminal action was replaced by a second full cockpit render before
+  dispatch. The normalized evidence is recorded in
+  `docs/e2e/operator-ui-chromium-race-characterization-2026-07-22.md`. `T35` is now
+  `Next`; `T38` is its direct successor in `Soon`.
 
 - `2026-07-22` static review plus forensic analysis of 64 historical `AIDD-LIVE-007` bundles
   found provider sibling-root visibility, unsafe live resume lookup, advisory-only integrity
