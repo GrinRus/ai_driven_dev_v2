@@ -15,12 +15,30 @@ slice, and local task.
 
 ## Parking lot
 
-- `W36-E7-S3-T2` — Record five first-time-operator sessions after initial live hardening.
-- `W36-E7-S3-T3` — Reconcile observed session findings before beta readiness.
+- `W36-E7-S4-T38` — Characterize provider sibling-root visibility with an executable canary.
+- `W36-E7-S4-T39` — Enforce provider-private filesystem and environment isolation.
+- `W36-E7-S4-T40` — Contain live run lookup and resume identities before reading state.
+- `W36-E7-S4-T41` — Make live source, target and provider integrity guards mandatory.
+- `W36-E7-S4-T42` — Reconcile abandoned stages through a public application boundary.
+- `W36-E7-S4-T43` — Constrain browser and manual evidence imports to authorized roots.
+- `W36-E7-S4-T44` — Reconcile provisional frontend probes with durable stage state.
+- `W36-E7-S4-T45` — Expose and reconcile stale-owner live flows.
+- `W36-E7-S4-T46` — Accumulate live-flow timing across resumed process segments.
+- `W36-E7-S4-T47` — Persist typed terminal evidence for remediation jobs.
+- `W36-E7-S4-T48` — Preflight target installation and verification prerequisites.
+- `W36-E7-S4-T49` — Materialize a self-contained canonical live evidence bundle.
+- `W36-E7-S4-T50` — Commit the live bundle digest and browser provenance manifest.
+- `W36-E7-S4-T51` — Finalize truthful product-bundle summaries and acceptance status.
+- `W36-E7-S4-T52` — Bound ignored dependency and cache inventories in repository evidence.
+- `W36-E7-S4-T53` — Read persisted runtime-log tails under a byte and memory bound.
+- `W36-E7-S4-T54` — Normalize provider events into a bounded lifecycle projection.
+- `W36-E7-S4-T55` — Reference canonical command evidence from aggregate live reports.
 - `W36-E7-S4-T36` — Re-run the full provider-free Chromium acceptance matrix.
 - `W36-E7-S4-T37` — Prove wheel, doctor and isolation readiness on one candidate SHA.
 - `W36-E7-S4-T3` — Run the medium scenario through Codex to a clean terminal result.
 - `W36-E7-S4-T4` — Repeat the medium scenario through Claude Code from an independent root.
+- `W36-E7-S3-T2` — Record five first-time-operator sessions after initial live hardening.
+- `W36-E7-S3-T3` — Reconcile observed session findings before beta readiness.
 - `W36-E7-S4-T5` — Record final same-revision Codex and Claude acceptance evidence.
 
 ## Update rules
@@ -37,6 +55,17 @@ slice, and local task.
   queue-restoration policy in `docs/backlog/roadmap.md` (`W8-E3-S1`).
 
 ## Current reconciliation
+
+- `2026-07-22` static review plus forensic analysis of 64 historical `AIDD-LIVE-007` bundles
+  found provider sibling-root visibility, unsafe live resume lookup, advisory-only integrity
+  checks, direct harness stage-state mutation, uncontained browser evidence imports, provisional
+  frontend false failures, stale running owners, reset aggregate timing, incomplete remediation
+  diagnostics, repeated target-setup failures, dangling acceptance references, stale summaries,
+  and unbounded duplicated evidence. Runtime-neutral tasks `W36-E7-S4-T38..T55` split those
+  findings by owner and verification signal. The queue remains `T34 -> T35`; then `T38..T55`
+  complete all code changes before final Chromium evidence `T36` and exact-SHA readiness `T37`.
+  Codex `T3`, Claude `T4`, observed sessions, and final same-wheel `T5` remain parked until those
+  provider-free gates pass.
 
 - `2026-07-22` the exact-`a3d5aa1` preflight passed 88 frontend tests, Ruff, mypy across 210
   source files, and all 1980 Python tests, then the full Chromium lane reported four failures
