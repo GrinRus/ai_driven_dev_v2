@@ -680,6 +680,19 @@ function renderSidebar() {
   renderSafetyPanel();
 }
 
+function renderReadinessSurfaces() {
+  renderRuntimeSelector();
+  renderTopbar();
+  renderSafetyPanel();
+  const studioReadiness = document.querySelector("[data-studio-runtime-readiness]");
+  if (studioReadiness) {
+    studioReadiness.outerHTML = renderActiveStudioRuntimeReadiness();
+  }
+  if (typeof updateSubmitInterventionState === "function") {
+    updateSubmitInterventionState();
+  }
+}
+
 function liveJobActivityEvents() {
   if (!state.activeJobStatus) return [];
   const status = state.activeJobStatus.status || "running";

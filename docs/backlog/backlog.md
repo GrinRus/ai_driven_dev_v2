@@ -7,15 +7,14 @@ slice, and local task.
 
 ## Next
 
-- `W36-E7-S4-T35` — Stabilize Studio decision actions across polling re-renders.
+- `W36-E7-S4-T38` — Characterize provider sibling-root visibility with an executable canary.
 
 ## Soon
 
-- `W36-E7-S4-T38` — Characterize provider sibling-root visibility with an executable canary.
+- `W36-E7-S4-T39` — Enforce provider-private filesystem and environment isolation.
 
 ## Parking lot
 
-- `W36-E7-S4-T39` — Enforce provider-private filesystem and environment isolation.
 - `W36-E7-S4-T40` — Contain live run lookup and resume identities before reading state.
 - `W36-E7-S4-T41` — Make live source, target and provider integrity guards mandatory.
 - `W36-E7-S4-T42` — Reconcile abandoned stages through a public application boundary.
@@ -54,6 +53,15 @@ slice, and local task.
   queue-restoration policy in `docs/backlog/roadmap.md` (`W8-E3-S1`).
 
 ## Current reconciliation
+
+- `2026-07-22` `W36-E7-S4-T35` is complete: runtime-readiness updates now use a
+  generation-aware scoped renderer and cannot replace the decision-owning Studio cockpit.
+  Flow Complete disclosure state is retained by durable handoff identity; intervention and
+  archive actions use immutable descriptors, one guarded POST, and authoritative durable
+  readback without clearing a newer browser draft or rewriting the completed source run.
+  The four characterized cases pass `4/4`, the complete intervention and terminal families
+  pass `14/14` and `10/10`, and all 97 frontend state tests pass. `T38` is promoted to `Next`;
+  its direct successor `T39` moves to `Soon`.
 
 - `2026-07-22` `W36-E7-S4-T34` is complete: the exact failures were intervention
   viewports `320x568`, `1280x900`, and `1440x900`, plus terminal `1280x900`.

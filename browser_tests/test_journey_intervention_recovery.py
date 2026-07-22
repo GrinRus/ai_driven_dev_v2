@@ -140,7 +140,10 @@ def test_allowed_intervention_restores_draft_and_creates_one_request(
             "new URLSearchParams(location.search).get('mode') === 'history'",
             timeout=10_000,
         )
-        page.go_back(wait_until="networkidle")
+        page.go_back(wait_until="domcontentloaded")
+        page.evaluate(
+            "async () => { if (window.aiddRouteRestore) await window.aiddRouteRestore; }"
+        )
         page.locator("#runtimeSelect").select_option("generic-cli")
         page.wait_for_function("eval('selectedRuntimeReady()')", timeout=15_000)
         page.evaluate("setOperatorMode('request'); renderCockpitContent()")
@@ -154,7 +157,17 @@ def test_allowed_intervention_restores_draft_and_creates_one_request(
             if item.method == "POST" and item.url.endswith("/api/stage/interact")
             else None,
         )
-        page.locator("#submitInterventionButton").click()
+        submit = page.locator("#submitInterventionButton")
+        with page.expect_response(
+            lambda response: response.request.method == "POST"
+            and response.url.endswith("/api/stage/interact")
+        ) as response_info:
+            submit.hover()
+            page.mouse.down()
+            page.evaluate("renderReadinessSurfaces()")
+            assert submit.evaluate("element => element.isConnected") is True
+            page.mouse.up()
+        assert response_info.value.ok
         deadline = time.monotonic() + 5
         while time.monotonic() < deadline and not list(request_root.glob("request-*.md")):
             time.sleep(0.05)

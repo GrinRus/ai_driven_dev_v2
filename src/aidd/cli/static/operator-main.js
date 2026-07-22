@@ -14,8 +14,8 @@ async function refresh() {
     await fetchProjectHome(state.dashboard?.work_item || "");
     await fetchInbox();
     await renderAll();
-    void fetchReadiness().then(renderAll).catch((error) => {
-      toast(error.message);
+    void fetchReadiness().then((accepted) => {
+      if (accepted) renderReadinessSurfaces();
     });
   } catch (error) {
     document.getElementById("cockpitContent").innerHTML = `<div class="empty-state">${escapeHtml(error.message)}</div>`;
@@ -664,6 +664,10 @@ document.addEventListener("change", (event) => {
     state.onboarding.forceContext = event.target.checked;
   }
 });
+
+document.addEventListener("toggle", (event) => {
+  rememberStudioFlowCompleteDisclosure(event.target);
+}, true);
 
 document.addEventListener("submit", async (event) => {
   try {

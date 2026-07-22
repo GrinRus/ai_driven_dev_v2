@@ -943,6 +943,7 @@ test("next-flow view renders terminal and readiness states without network mutat
   };
   await load(context, "operator-api-state.js");
   await load(context, "operator-shell-rendering.js");
+  await load(context, "operator-mutation-guard.js");
   await load(context, "operator-next-flow-actions.js");
   await load(context, "operator-next-flow-view.js");
   vm.runInContext(

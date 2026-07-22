@@ -735,6 +735,7 @@ async function openArchiveConfirmation() {
   state.nextFlowWizard.definitionErrors = [];
   state.nextFlowWizard.launchError = "";
   resetLaunchReadiness();
+  state.nextFlowWizard.archiveIntentId = String(++state.archiveIntentSequence);
   state.nextFlowWizard.archiveRunId = runId;
   state.nextFlowWizard.archiveReason = state.dashboard?.terminal_handoff
     ? `Archived from Flow Complete handoff with status ${state.dashboard.terminal_handoff.status}.`
@@ -743,26 +744,111 @@ async function openArchiveConfirmation() {
   await renderNextFlowWizardStep();
 }
 
-async function archiveCompletedRun() {
-  const runId = state.nextFlowWizard.archiveRunId || state.activeRunId || state.dashboard?.run?.run_id || "";
-  if (!runId) {
-    toast("No completed run is selected for archive.");
-    return;
-  }
+function archiveActionDescriptor() {
+  const runId = state.nextFlowWizard.archiveRunId
+    || state.activeRunId
+    || state.dashboard?.run?.run_id
+    || "";
+  const workItem = state.dashboard?.work_item || state.activeRouteWorkItem || "";
   const reason = state.nextFlowWizard.archiveReason
     || (state.dashboard?.terminal_handoff
       ? `Archived from Flow Complete handoff with status ${state.dashboard.terminal_handoff.status}.`
       : "Archived from Run History.");
-  const payload = await postJson("/api/next-flow/archive", {
-    source_run_id: runId,
-    reason
-  });
-  state.dashboard = payload.dashboard;
+  const intentId = state.nextFlowWizard.archiveIntentId || "default";
+  return Object.freeze({workItem, runId, reason, intentId});
+}
+
+function archiveMutationKey(descriptor = archiveActionDescriptor()) {
+  return operatorMutationKey(
+    "archive-run",
+    descriptor.workItem || "no-work-item",
+    descriptor.runId || "no-run",
+    descriptor.intentId || state.nextFlowWizard.archiveIntentId || "default"
+  );
+}
+
+function archiveMutationState(descriptor = archiveActionDescriptor()) {
+  if (!descriptor.runId) return Object.freeze({status: "idle"});
+  return mutationGuardState(archiveMutationKey(descriptor));
+}
+
+async function readArchiveWinner(descriptor) {
+  const params = new URLSearchParams({stage: "qa", run_id: descriptor.runId});
+  const payload = await api(`/api/dashboard?${params.toString()}`);
+  const dashboard = payload.dashboard;
+  if (
+    dashboard?.work_item !== descriptor.workItem
+    || dashboard?.run?.run_id !== descriptor.runId
+    || dashboard?.run?.archive?.archived !== true
+  ) return null;
+  return Object.freeze({dashboard, archive: dashboard.run.archive});
+}
+
+async function applyArchiveWinner(winner, intentId = "default") {
+  if (!winner?.dashboard) {
+    throw new Error("Archive mutation did not return a durable dashboard winner");
+  }
+  const identity = `${winner.dashboard.work_item}/${winner.dashboard.run?.run_id || ""}/${intentId}`;
+  if (
+    state.archivePresentationIdentity === identity
+    && state.archivePresentationPromise
+  ) return state.archivePresentationPromise;
+  state.dashboard = winner.dashboard;
   state.nextFlowWizard.active = false;
   state.nextFlowWizard.action = "";
   state.nextFlowWizard.step = "sources";
-  toast("Run archived for operator navigation.");
-  await renderAll();
+  state.archivePresentationIdentity = identity;
+  const presentation = (async () => {
+    toast("Run archived for operator navigation.");
+    await renderAll();
+    return true;
+  })();
+  state.archivePresentationPromise = presentation;
+  try {
+    return await presentation;
+  } catch (error) {
+    if (state.archivePresentationPromise === presentation) {
+      state.archivePresentationPromise = null;
+    }
+    throw error;
+  }
+}
+
+async function archiveCompletedRun() {
+  const descriptor = archiveActionDescriptor();
+  if (!descriptor.runId) {
+    toast("No completed run is selected for archive.");
+    return;
+  }
+  const key = archiveMutationKey(descriptor);
+  const previous = mutationGuardState(key);
+  const cached = previous.status === "succeeded"
+    ? Object.freeze({status: "succeeded", result: previous.result, winner: null})
+    : previous.status === "conflict" && previous.winner
+      ? Object.freeze({status: "conflict", result: null, winner: previous.winner})
+      : null;
+  const guarded = cached || await runGuardedMutation({
+    key,
+    execute: async () => {
+      const payload = await postJson("/api/next-flow/archive", {
+        source_work_item: descriptor.workItem,
+        source_run_id: descriptor.runId,
+        reason: descriptor.reason
+      });
+      return Object.freeze({dashboard: payload.dashboard, archive: payload.archive});
+    },
+    readWinner: () => readArchiveWinner(descriptor),
+    onState: (mutation) => setMutationControlsPending(
+      ["[data-archive-confirm]"],
+      mutation.status === "pending"
+    )
+  });
+  const winner = guarded.status === "conflict" ? guarded.winner : guarded.result;
+  await applyArchiveWinner(winner, descriptor.intentId);
+  if (guarded.status === "conflict") {
+    toast("Another archive request already won. Showing the durable server state.");
+  }
+  return guarded;
 }
 
 function blockingPreflightChecks(preflight) {

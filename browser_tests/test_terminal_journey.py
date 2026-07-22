@@ -1,11 +1,13 @@
 from __future__ import annotations
 
 import hashlib
+import time
 from pathlib import Path
 
 import pytest
 from playwright.sync_api import sync_playwright
 
+from aidd.core.run_archive import run_archive_decisions_root
 from aidd.core.run_store import run_manifest_path
 from browser_tests.browser_harness import (
     VIEWPORTS,
@@ -17,6 +19,16 @@ from browser_tests.state_fixtures import build_browser_state_fixture
 
 def _sha256(path: Path) -> str:
     return hashlib.sha256(path.read_bytes()).hexdigest()
+
+
+def _tree_sha256(root: Path) -> str:
+    digest = hashlib.sha256()
+    for path in sorted(item for item in root.rglob("*") if item.is_file()):
+        digest.update(path.relative_to(root).as_posix().encode("utf-8"))
+        digest.update(b"\0")
+        digest.update(path.read_bytes())
+        digest.update(b"\0")
+    return digest.hexdigest()
 
 
 def _return_to_handoff(page) -> None:
@@ -38,6 +50,12 @@ def test_terminal_outcomes_keep_completed_source_run_immutable(
     assert fixture.run_id is not None
     manifest = run_manifest_path(fixture.workspace_root, fixture.work_item, fixture.run_id)
     source_hash = _sha256(manifest)
+    source_tree_hash = _tree_sha256(manifest.parent)
+    archive_root = run_archive_decisions_root(
+        workspace_root=fixture.workspace_root,
+        work_item=fixture.work_item,
+        run_id=fixture.run_id,
+    )
 
     with sync_playwright() as playwright, operator_browser_harness(
         fixture.project_root,
@@ -45,6 +63,11 @@ def test_terminal_outcomes_keep_completed_source_run_immutable(
         work_item=fixture.work_item,
     ) as harness, harness.open_page(viewport) as browser_page:
         page = browser_page.page
+        held_readiness = []
+        page.route(
+            "**/api/runtime-readiness",
+            lambda route: held_readiness.append(route),
+        )
         page.goto(
             f"{harness.url}?ui=studio&work_item={fixture.work_item}"
             f"&run_id={fixture.run_id}&stage=qa",
@@ -54,9 +77,29 @@ def test_terminal_outcomes_keep_completed_source_run_immutable(
         flow = page.locator("[data-studio-flow-complete]")
         flow.wait_for(state="visible")
         assert flow.locator("[data-core-recommended-outcome]").count() == 1
-        flow.locator(".studio-flow-complete-other").evaluate("element => { element.open = true; }")
+        disclosure = flow.locator(".studio-flow-complete-other")
+        disclosure.locator("summary").click()
+        page.wait_for_function("state.terminalOtherActionsOpen === true")
 
-        flow.locator('[data-next-flow-action="start-follow-up-flow"]').click()
+        deadline = time.monotonic() + 5
+        while time.monotonic() < deadline and not held_readiness:
+            page.wait_for_timeout(10)
+        assert len(held_readiness) == 1
+        follow_up_action = flow.locator(
+            '[data-next-flow-action="start-follow-up-flow"]'
+        )
+        original_action = follow_up_action.element_handle()
+        original_disclosure = disclosure.element_handle()
+        assert original_action is not None
+        assert original_disclosure is not None
+        held_readiness.pop().continue_()
+        page.unroute("**/api/runtime-readiness")
+        page.wait_for_function("state.readinessLoading === false")
+        assert original_action.evaluate("element => element.isConnected") is True
+        assert original_disclosure.evaluate(
+            "element => element.open"
+        ) is True
+        follow_up_action.click()
         follow_up = page.locator('[data-studio-next-flow-action="start-follow-up-flow"]')
         follow_up.wait_for(state="visible")
         follow_up.locator("[data-next-flow-continue]").click()
@@ -90,14 +133,32 @@ def test_terminal_outcomes_keep_completed_source_run_immutable(
         flow = page.locator("[data-studio-flow-complete]")
         flow.locator(".studio-flow-complete-other").evaluate("element => { element.open = true; }")
         flow.locator('[data-next-flow-action="archive-run"]').click()
-        page.locator("[data-archive-confirm]").click()
+        archive_posts = []
+        page.on(
+            "request",
+            lambda request: archive_posts.append(request.url)
+            if request.method == "POST"
+            and request.url.endswith("/api/next-flow/archive")
+            else None,
+        )
+        with page.expect_response(
+            lambda response: response.request.method == "POST"
+            and response.url.endswith("/api/next-flow/archive")
+        ) as archive_response:
+            page.evaluate(
+                "Promise.all([archiveCompletedRun(), archiveCompletedRun()])"
+            )
+        assert archive_response.value.ok
         page.locator("[data-studio-flow-complete]").wait_for(state="visible")
         response = page.request.get(
             f"{harness.url}api/dashboard?stage=qa&run_id={fixture.run_id}"
         )
         assert response.ok
         assert response.json()["dashboard"]["run"]["archive"]["archived"] is True
+        assert archive_posts == [f"{harness.url}api/next-flow/archive"]
+        assert len(list(archive_root.glob("decision-*"))) == 1
         assert _sha256(manifest) == source_hash
+        assert _tree_sha256(manifest.parent) == source_tree_hash
         assert page.evaluate("document.documentElement.scrollWidth <= window.innerWidth")
         browser_page.diagnostics.assert_clean()
 

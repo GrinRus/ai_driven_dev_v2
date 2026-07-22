@@ -12017,7 +12017,7 @@ Local tasks:
     actual `/api/stage/interact` request URL/count, canonical operator-request files, archive
     decision/readback, and first decisive boundary, distinguishing a missing durable mutation
     from observer or re-render synchronization drift.
-- `W36-E7-S4-T35` (next) Make Studio decision actions stable across polling re-renders through one
+- `W36-E7-S4-T35` (done) Make Studio decision actions stable across polling re-renders through one
   shared server-authoritative mutation/render synchronization contract.
   - Dependencies: `W36-E7-S4-T34` as the characterization predecessor; blocks the active Codex
     acceptance task `W36-E7-S4-T3`.
@@ -12027,7 +12027,7 @@ Local tasks:
   - Verification: forced polling re-renders during intervention submit and Flow Complete archive
     produce exactly one durable mutation and stable winner readback without a detached/hidden
     action, while duplicate input remains guarded and the source run remains byte-identical.
-- `W36-E7-S4-T38` (soon) Characterize provider sibling-root visibility through the same
+- `W36-E7-S4-T38` (next) Characterize provider sibling-root visibility through the same
   process-launch boundary used by live acceptance.
   - Dependencies: `W36-E7-S4-T35` as the final Studio code-change predecessor; blocks the final
     Chromium candidate and active Codex acceptance task `W36-E7-S4-T3`.
@@ -12036,7 +12036,7 @@ Local tasks:
   - Verification: an executable canary proves which current source, target, provider, credential,
     and sibling-provider roots can be listed, read, or written, and unique pathnames alone never
     count as an isolation boundary.
-- `W36-E7-S4-T39` (parked) Enforce a provider-private filesystem and environment boundary for
+- `W36-E7-S4-T39` (soon) Enforce a provider-private filesystem and environment boundary for
   live acceptance execution.
   - Dependencies: `W36-E7-S4-T38` as the isolation characterization predecessor.
   - Scope: live-eval process launch, allowlisted environment construction, provider-private
