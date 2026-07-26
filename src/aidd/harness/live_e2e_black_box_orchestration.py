@@ -167,6 +167,14 @@ from aidd.harness.live_evidence_intake import (
     intake_live_evidence,
     validate_live_evidence_publication,
 )
+from aidd.harness.live_frontend_reconciliation import (
+    FrontendCheckpointReconciliation,
+    apply_frontend_checkpoint_reconciliation,
+    is_nondecisive_provisional_frontend_step,
+    normalize_frontend_probe_classification,
+    provisional_frontend_status,
+    reconcile_frontend_checkpoints,
+)
 from aidd.harness.live_runtime_config import (
     validate_live_runtime_command,
     write_live_runtime_config,
@@ -4133,6 +4141,14 @@ def _write_frontend_checkpoint_markdown(ctx: FlowContext, payload: dict[str, obj
                 "",
                 f"- Phase: `{phase}`",
                 f"- Classification: `{checkpoint.get('classification', 'unknown')}`",
+                (
+                    "- Reconciliation status: "
+                    f"`{checkpoint.get('reconciliation_status', 'not-reconciled')}`"
+                ),
+                (
+                    "- Effective classification: "
+                    f"`{checkpoint.get('effective_classification', 'pending')}`"
+                ),
                 f"- Base URL: `{checkpoint.get('base_url', '')}`",
                 f"- Process exit: `{checkpoint.get('process_exit_code', 'n/a')}`",
                 "",
@@ -4157,6 +4173,28 @@ def _write_frontend_checkpoint_markdown(ctx: FlowContext, payload: dict[str, obj
                     continue
                 lines.append(f"  - `{check.get('name', 'check')}`: ok=`{check.get('ok', False)}`")
         lines.append("")
+    reconciliations_raw = payload.get("reconciliations")
+    reconciliations = (
+        reconciliations_raw if isinstance(reconciliations_raw, list) else []
+    )
+    lines.extend(("## Reconciliations", ""))
+    if not reconciliations:
+        lines.append("- none")
+    for raw_reconciliation in reconciliations:
+        if not isinstance(raw_reconciliation, dict):
+            continue
+        lines.extend(
+            (
+                (
+                    f"- `{raw_reconciliation.get('stage_run_id', 'unknown')}`: "
+                    f"running=`{raw_reconciliation.get('running_status', 'not-observed')}` "
+                    f"post-stage=`{raw_reconciliation.get('post_stage_status', 'unknown')}` "
+                    f"effective="
+                    f"`{raw_reconciliation.get('effective_classification', 'unknown')}`"
+                ),
+                f"  - Reason: {raw_reconciliation.get('decisive_reason', '')}",
+            )
+        )
     path = ctx.bundle_root / FRONTEND_CHECKPOINTS_MARKDOWN_FILENAME
     path.write_text("\n".join(lines).rstrip() + "\n", encoding="utf-8")
     return path
@@ -4928,6 +4966,7 @@ def _run_frontend_checkpoint(
     ctx: FlowContext,
     stage: str,
     *,
+    stage_run_id: str | None = None,
     phase: str = "post-stage",
     observed_stage_status: str | None = None,
 ) -> StepClassification:
@@ -4951,6 +4990,10 @@ def _run_frontend_checkpoint(
     except OSError as exc:
         duration_seconds = time.monotonic() - started
         startup_failure_reason = f"Failed to start UI checkpoint process: {exc}"
+        reconciliation_status = provisional_frontend_status(
+            phase=phase,
+            classification="fail",
+        )
         transcript = HarnessCommandTranscript(
             command=_command_text(command),
             exit_code=127,
@@ -4976,7 +5019,9 @@ def _run_frontend_checkpoint(
             "phase": phase,
             "process_exit_code": None,
             "probes": [],
+            "reconciliation_status": reconciliation_status,
             "stage": stage,
+            "stage_run_id": stage_run_id,
         }
         evidence_paths = _append_frontend_checkpoint(ctx=ctx, checkpoint=checkpoint)
         _record_step(
@@ -4988,8 +5033,15 @@ def _run_frontend_checkpoint(
             ),
             classification="fail",
             decision=(
-                "Stop if the stage otherwise passed because UI/API or "
-                "operator-surface checkpoint failed."
+                (
+                    "Keep the running-stage startup failure provisional until durable "
+                    "stage metadata and the post-stage checkpoint can reconcile it."
+                )
+                if phase == "running-stage"
+                else (
+                    "Stop if the stage otherwise passed because UI/API or "
+                    "operator-surface checkpoint failed."
+                )
             ),
             plan=(
                 (
@@ -5006,7 +5058,10 @@ def _run_frontend_checkpoint(
             stage=stage,
             command_results=(BlackBoxCommandResult(command=command, transcript=transcript),),
             evidence_paths=evidence_paths,
-            details={"failure_reason": startup_failure_reason},
+            details={
+                "failure_reason": startup_failure_reason,
+                "reconciliation_status": reconciliation_status,
+            },
         )
         return "fail"
     probes: list[dict[str, object]] = []
@@ -5153,7 +5208,12 @@ def _run_frontend_checkpoint(
         "phase": phase,
         "process_exit_code": process_return_code,
         "probes": probes,
+        "reconciliation_status": provisional_frontend_status(
+            phase=phase,
+            classification=normalize_frontend_probe_classification(classification),
+        ),
         "stage": stage,
+        "stage_run_id": stage_run_id,
     }
     evidence_paths = _append_frontend_checkpoint(ctx=ctx, checkpoint=checkpoint)
     _record_step(
@@ -5165,15 +5225,18 @@ def _run_frontend_checkpoint(
         ),
         classification=classification,
         decision=(
-            "Continue after UI/API and operator-surface checkpoint passed."
-            if classification == "pass"
-            else (
-                "Continue because the running-stage state ended before checkpoint probes could run."
+            (
+                "Keep the running-stage observation provisional until durable stage "
+                "metadata and the post-stage checkpoint can reconcile it."
             )
-            if classification == "skipped" and phase == "running-stage"
+            if phase == "running-stage"
             else (
-                "Stop if the stage otherwise passed because UI/API or "
-                "operator-surface checkpoint failed."
+                "Continue after UI/API and operator-surface checkpoint passed."
+                if classification == "pass"
+                else (
+                    "Stop if the stage otherwise passed because UI/API or "
+                    "operator-surface checkpoint failed."
+                )
             )
         ),
         plan=(
@@ -5191,9 +5254,36 @@ def _run_frontend_checkpoint(
         stage=stage,
         command_results=(BlackBoxCommandResult(command=command, transcript=transcript),),
         evidence_paths=evidence_paths,
-        details={"failure_reason": failure_reason} if failure_reason else None,
+        details={
+            **({"failure_reason": failure_reason} if failure_reason else {}),
+            "reconciliation_status": checkpoint["reconciliation_status"],
+        },
     )
     return classification
+
+
+def _reconcile_frontend_checkpoint_evidence(
+    *,
+    ctx: FlowContext,
+    stage: str,
+    stage_run_id: str,
+    reconciliation: FrontendCheckpointReconciliation,
+) -> tuple[Path, Path]:
+    payload = _read_frontend_checkpoint_payload(ctx)
+    reconciled_at_utc = _utc_now()
+    steps = _load_steps(ctx.bundle_root)
+    apply_frontend_checkpoint_reconciliation(
+        checkpoint_payload=payload,
+        flow_steps=steps,
+        stage=stage,
+        stage_run_id=stage_run_id,
+        reconciled_at_utc=reconciled_at_utc,
+        reconciliation=reconciliation,
+    )
+    json_path = _write_json(ctx.bundle_root / FRONTEND_CHECKPOINTS_JSON_FILENAME, payload)
+    markdown_path = _write_frontend_checkpoint_markdown(ctx, payload)
+    _write_json(ctx.bundle_root / FLOW_STEPS_FILENAME, steps)
+    return json_path, markdown_path
 
 
 def _observed_running_stage_status(ctx: FlowContext, stage: str) -> str | None:
@@ -6485,7 +6575,11 @@ def _inspect_successful_external_stage_run(
         details={"stage_run_id": stage_run_id},
     )
     stage_classification: StepClassification = "blocked" if inspection_reports_blocked else "pass"
-    frontend_classification = _run_frontend_checkpoint(ctx, stage)
+    frontend_classification = _run_frontend_checkpoint(
+        ctx,
+        stage,
+        stage_run_id=stage_run_id,
+    )
     audit_json_path, audit_markdown_path, audit_classification = _write_stage_audit(
         ctx=ctx,
         stage=stage,
@@ -6597,6 +6691,7 @@ def _run_stage_and_inspect(ctx: FlowContext, stage: str) -> StepClassification:
         running_frontend_classification = _run_frontend_checkpoint(
             ctx,
             stage,
+            stage_run_id=stage_run_id,
             phase="running-stage",
             observed_stage_status=observed_status,
         )
@@ -6703,15 +6798,38 @@ def _run_stage_and_inspect(ctx: FlowContext, stage: str) -> StepClassification:
     if inspection_reports_blocked and classification != "infra-fail":
         classification = "blocked"
     post_stage_frontend_classification: StepClassification = (
-        "skipped" if stage_result.transcript.timed_out else _run_frontend_checkpoint(ctx, stage)
-    )
-    frontend_classification = (
-        post_stage_frontend_classification
+        "skipped"
         if stage_result.transcript.timed_out
-        else _combined_frontend_checkpoint_classification(
-            running_frontend_classification,
-            post_stage_frontend_classification,
+        else _run_frontend_checkpoint(
+            ctx,
+            stage,
+            stage_run_id=stage_run_id,
         )
+    )
+    try:
+        durable_stage_status = _observed_stage_status(ctx, stage)
+    except (OSError, json.JSONDecodeError, ValueError):
+        durable_stage_status = None
+    frontend_reconciliation = reconcile_frontend_checkpoints(
+        running_observed=running_frontend_checkpoint_observed,
+        running_classification=normalize_frontend_probe_classification(
+            running_frontend_classification
+        ),
+        post_stage_classification=normalize_frontend_probe_classification(
+            post_stage_frontend_classification
+        ),
+        durable_stage_status=durable_stage_status,
+        stage_classification=classification,
+    )
+    _reconcile_frontend_checkpoint_evidence(
+        ctx=ctx,
+        stage=stage,
+        stage_run_id=stage_run_id,
+        reconciliation=frontend_reconciliation,
+    )
+    frontend_classification = cast(
+        StepClassification,
+        frontend_reconciliation.effective_classification,
     )
     _, _, audit_classification = _write_stage_audit(
         ctx=ctx,
@@ -7167,7 +7285,11 @@ def _first_failure_from_steps(
     for step in steps:
         classification = step.get("classification")
         action = step.get("action")
-        if classification not in classifications or action in {"finish", "stop"}:
+        if (
+            classification not in classifications
+            or action in {"finish", "stop"}
+            or is_nondecisive_provisional_frontend_step(step)
+        ):
             continue
         return _format_failure_step(step)
 
@@ -7175,10 +7297,11 @@ def _first_failure_from_steps(
         for step in steps:
             classification = step.get("classification")
             action = step.get("action")
-            if classification in {"fail", "blocked", "infra-fail"} and action not in {
-                "finish",
-                "stop",
-            }:
+            if (
+                classification in {"fail", "blocked", "infra-fail"}
+                and action not in {"finish", "stop"}
+                and not is_nondecisive_provisional_frontend_step(step)
+            ):
                 return _format_failure_step(step)
     return "none", None
 
@@ -7257,7 +7380,10 @@ def _write_validator_report_from_steps(
     if status != "pass":
         for step in _load_steps(ctx.bundle_root):
             classification = step.get("classification")
-            if classification not in {"fail", "blocked", "infra-fail"}:
+            if (
+                classification not in {"fail", "blocked", "infra-fail"}
+                or is_nondecisive_provisional_frontend_step(step)
+            ):
                 continue
             finding_lines.append(
                 f"- `{classification}` in `{step.get('action', 'unknown')}`: "

@@ -74,7 +74,9 @@ They are not a UI/UX audit, not screenshot evidence, and not a quality gate.
 Observed running stages add a `running-stage` checkpoint phase for the disabled
 `wait-for-stage` next action, active running-stage visibility, and runtime-log affordance,
 including the honest pending-log state before `runtime.log` exists. Completed stages keep
-the `post-stage` phase for stage API and artifact reachability.
+the `post-stage` phase for stage API and artifact reachability. Running observations are
+provisional: a raw failure is superseded only by matching durable stage success plus a passing
+post-stage checkpoint, while a repeated post-stage outage is retained as `confirmed-fail`.
 `frontend-checkpoints.md` includes a manual visual review checklist for the launching
 agent: visible next action and active stage, readable desktop/mobile topbar labels,
 failure-appropriate recovery primary action, reachable logs/artifacts/questions/answers,

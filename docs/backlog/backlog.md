@@ -7,15 +7,14 @@ slice, and local task.
 
 ## Next
 
-- `W36-E7-S4-T44` — Reconcile provisional frontend probes with durable stage state.
+- `W36-E7-S4-T45` — Expose and reconcile stale-owner live flows.
 
 ## Soon
 
-- `W36-E7-S4-T45` — Expose and reconcile stale-owner live flows.
+- `W36-E7-S4-T46` — Accumulate live-flow timing across resumed process segments.
 
 ## Parking lot
 
-- `W36-E7-S4-T46` — Accumulate live-flow timing across resumed process segments.
 - `W36-E7-S4-T47` — Persist typed terminal evidence for remediation jobs.
 - `W36-E7-S4-T48` — Preflight target installation and verification prerequisites.
 - `W36-E7-S4-T49` — Materialize a self-contained canonical live evidence bundle.
@@ -48,14 +47,14 @@ slice, and local task.
 
 ## Current reconciliation
 
-- `2026-07-26` `W36-E7-S4-T43` is complete: browser/manual evidence is accepted only from the
-  selected provider's authorized `browser/` root. The typed intake module performs lexical
-  containment and component-wise `lstat`, rejects sibling/absolute/traversal escapes, symlinks,
-  non-regular files, and hard links, then copies through a temporary sibling directory. Every
-  file size and SHA-256 plus the complete tree digest is verified before one atomic publication;
-  failed copies clean staging, and later mutation invalidates reuse. The focused matrix passes
-  `11/11`, both live-flow integrations pass without changing execution verdicts, and Ruff/mypy
-  are clean. `T44` is promoted to `Next` and `T45` moves to `Soon`.
+- `2026-07-26` `W36-E7-S4-T44` is complete: running-stage frontend observations now retain a
+  typed provisional lifecycle instead of becoming immediate terminal failures. Raw pass/fail is
+  stored as `provisional-pass`/`provisional-fail`; after stage completion, durable metadata and
+  the post-stage checkpoint produce `superseded-transition` or `confirmed-fail` and one effective
+  frontend verdict. Both historical running-fail races now finish clean after durable
+  `succeeded` plus post-stage pass, while a persistent outage still fails. JSON, Markdown, stage
+  audit, and flow-step details agree; the focused matrix passes `12/12`, with Ruff and mypy clean.
+  `T45` is promoted to `Next` and `T46` moves to `Soon`.
 
 - `2026-07-22` `W36-E7-S4-T35` is complete: runtime-readiness updates now use a
   generation-aware scoped renderer and cannot replace the decision-owning Studio cockpit.

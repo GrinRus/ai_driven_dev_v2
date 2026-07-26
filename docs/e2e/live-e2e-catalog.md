@@ -432,7 +432,13 @@ When a public stage exposes `preparing`, `executing`, or `validating` metadata w
 stage command is still alive, `frontend-checkpoints.*` also records a `running-stage`
 phase: disabled `wait-for-stage` next action, active running stage visibility, and runtime
 log affordance, including the pending-log state before `runtime.log` exists. The normal
-`post-stage` phase still records completed stage API and artifact reachability.
+`post-stage` phase still records completed stage API and artifact reachability. A running
+observation is never terminal by itself: it is stored as `provisional-pass` or
+`provisional-fail`, then reconciled against durable stage metadata and the post-stage
+checkpoint. A transition race followed by durable stage success and a passing post-stage
+probe becomes `superseded-transition`; an outage that remains visible after the transition
+becomes `confirmed-fail`. `frontend-checkpoints.json`, its Markdown projection, and the
+corresponding flow-step details retain both the raw and effective classifications.
 
 The runner does not create `flow-quality-report.md`, `code-quality-report.md`,
 `quality-report.md`, `quality-transcript.json`, `acceptance-coverage.*`,

@@ -12090,7 +12090,7 @@ Local tasks:
     copies through a sibling staging directory, verifies file sizes/SHA-256 and a tree digest,
     then performs one atomic publication. The positive/negative/digest/failure matrix passes
     `11/11`; both live-flow import integrations preserve their prior non-gating verdict behavior.
-- `W36-E7-S4-T44` (next) Reconcile provisional running-stage frontend observations against the
+- `W36-E7-S4-T44` (done) Reconcile provisional running-stage frontend observations against the
   later durable stage state and post-stage checkpoint.
   - Dependencies: `W36-E7-S4-T43` as the safe-evidence predecessor.
   - Scope: live black-box frontend checkpoint classification only; Studio polling, endpoints,
@@ -12098,7 +12098,12 @@ Local tasks:
   - Verification: both historical `running probe fail -> stage success -> post-stage pass`
     sequences become superseded transition observations rather than provider failures, while a
     persistent frontend outage remains a truthful frontend failure.
-- `W36-E7-S4-T45` (soon) Expose and reconcile stale-owner live flows without fabricating stage
+  - Completion: the typed frontend reconciler records `provisional-pass`,
+    `provisional-fail`, `superseded-transition`, and `confirmed-fail` independently from raw
+    probe classifications. Durable stage status and the post-stage checkpoint now decide the
+    effective frontend verdict; reconciliation is projected into JSON, Markdown, and flow-step
+    details. The focused state/race/outage matrix passes `12/12`.
+- `W36-E7-S4-T45` (next) Expose and reconcile stale-owner live flows without fabricating stage
   success.
   - Dependencies: `W36-E7-S4-T44` as the checkpoint-reconciliation predecessor.
   - Scope: live flow-state read model and atomic resume reconciliation only; provider completion
@@ -12106,7 +12111,7 @@ Local tasks:
   - Verification: a helper dying after provider completion but before flow-state commit is shown
     as stale, resumes idempotently as `interrupted-resumable`, retains its evidence, and never
     remains indefinitely `running` after its owner disappears.
-- `W36-E7-S4-T46` (parked) Accumulate live-flow duration across every resumed process segment.
+- `W36-E7-S4-T46` (soon) Accumulate live-flow duration across every resumed process segment.
   - Dependencies: `W36-E7-S4-T45` as the stale-flow predecessor.
   - Scope: live timing persistence and rendering only; stage execution and retry budgets remain
     unchanged.

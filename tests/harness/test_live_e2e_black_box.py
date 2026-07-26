@@ -1368,9 +1368,130 @@ def test_running_frontend_checkpoint_routes_stage_transition_to_post_stage(
         if checkpoint["phase"] == "post-stage"
     )
     assert running["classification"] == "skipped"
+    assert running["reconciliation_status"] == "superseded-transition"
+    assert running["effective_classification"] == "pass"
     assert running["observed_stage_status"] == "succeeded"
     assert "transitioned to `succeeded`" in running["failure_reason"]
     assert post_stage["classification"] == "pass"
+    assert post_stage["reconciliation_status"] == "provisional-pass"
+
+
+@pytest.mark.parametrize("failing_probe", ("dashboard-api", "stage-api"))
+def test_running_frontend_failure_is_superseded_after_durable_success(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    failing_probe: str,
+) -> None:
+    scenario_path, work_root, report_root = _prepare_live_test(tmp_path, monkeypatch)
+    ready_path = tmp_path / f"{failing_probe}.ready"
+    release_path = tmp_path / f"{failing_probe}.release"
+    monkeypatch.setenv("AIDD_FAKE_RUNTIME_BARRIER_STAGE", "idea")
+    monkeypatch.setenv("AIDD_FAKE_RUNTIME_BARRIER_READY_PATH", ready_path.as_posix())
+    monkeypatch.setenv("AIDD_FAKE_RUNTIME_BARRIER_RELEASE_PATH", release_path.as_posix())
+    original_semantic_failure = live_orchestration._frontend_probe_semantic_failure
+    injected = False
+
+    def inject_transition_failure(**kwargs: object) -> str | None:
+        nonlocal injected
+        if (
+            kwargs.get("phase") == "running-stage"
+            and kwargs.get("name") == failing_probe
+            and not injected
+        ):
+            injected = True
+            release_path.write_text("release\n", encoding="utf-8")
+            return "injected transition race"
+        return original_semantic_failure(**kwargs)  # type: ignore[arg-type]
+
+    monkeypatch.setattr(
+        live_orchestration,
+        "_frontend_probe_semantic_failure",
+        inject_transition_failure,
+    )
+
+    result = run_black_box_live_e2e(
+        scenario_path=scenario_path,
+        runtime_id="opencode",
+        work_root=work_root,
+        report_root=report_root,
+    )
+
+    assert result.status == "pass"
+    payload = json.loads(
+        (result.bundle_root / "frontend-checkpoints.json").read_text(encoding="utf-8")
+    )
+    idea_reconciliation = next(
+        item
+        for item in payload["reconciliations"]
+        if item["stage_run_id"] == "stage-0001-idea"
+    )
+    assert idea_reconciliation["running_classification"] == "fail"
+    assert idea_reconciliation["post_stage_classification"] == "pass"
+    assert idea_reconciliation["durable_stage_status"] == "succeeded"
+    assert idea_reconciliation["running_status"] == "superseded-transition"
+    assert idea_reconciliation["effective_classification"] == "pass"
+    running = next(
+        item
+        for item in payload["checkpoints"]
+        if item["stage_run_id"] == "stage-0001-idea"
+        and item["phase"] == "running-stage"
+    )
+    assert running["classification"] == "fail"
+    assert running["reconciliation_status"] == "superseded-transition"
+    audit = json.loads(
+        (result.bundle_root / "stage-audits" / "stage-0001-idea.json").read_text(
+            encoding="utf-8"
+        )
+    )
+    assert audit["classifications"]["frontend_checkpoint"] == "pass"
+
+
+def test_persistent_frontend_outage_is_confirmed_failure(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    scenario_path, work_root, report_root = _prepare_live_test(tmp_path, monkeypatch)
+    ready_path = tmp_path / "persistent-outage.ready"
+    release_path = tmp_path / "persistent-outage.release"
+    monkeypatch.setenv("AIDD_FAKE_RUNTIME_BARRIER_STAGE", "idea")
+    monkeypatch.setenv("AIDD_FAKE_RUNTIME_BARRIER_READY_PATH", ready_path.as_posix())
+    monkeypatch.setenv("AIDD_FAKE_RUNTIME_BARRIER_RELEASE_PATH", release_path.as_posix())
+    original_semantic_failure = live_orchestration._frontend_probe_semantic_failure
+
+    def inject_persistent_failure(**kwargs: object) -> str | None:
+        if kwargs.get("name") == "dashboard-api":
+            if kwargs.get("phase") == "running-stage" and not release_path.exists():
+                release_path.write_text("release\n", encoding="utf-8")
+            return "injected persistent outage"
+        return original_semantic_failure(**kwargs)  # type: ignore[arg-type]
+
+    monkeypatch.setattr(
+        live_orchestration,
+        "_frontend_probe_semantic_failure",
+        inject_persistent_failure,
+    )
+
+    result = run_black_box_live_e2e(
+        scenario_path=scenario_path,
+        runtime_id="opencode",
+        work_root=work_root,
+        report_root=report_root,
+    )
+
+    assert result.status == "fail"
+    payload = json.loads(
+        (result.bundle_root / "frontend-checkpoints.json").read_text(encoding="utf-8")
+    )
+    reconciliation = next(
+        item
+        for item in payload["reconciliations"]
+        if item["stage_run_id"] == "stage-0001-idea"
+    )
+    assert reconciliation["running_classification"] == "fail"
+    assert reconciliation["post_stage_classification"] == "fail"
+    assert reconciliation["running_status"] == "confirmed-fail"
+    assert reconciliation["post_stage_status"] == "confirmed-fail"
+    assert reconciliation["effective_classification"] == "fail"
 
 
 def _write_stage_quality_audit(
