@@ -7,15 +7,14 @@ slice, and local task.
 
 ## Next
 
-- `W36-E7-S4-T37` — Prove wheel, doctor and isolation readiness on one candidate SHA.
+- `W36-E7-S4-T3` — Run the medium scenario through Codex to a clean terminal result.
 
 ## Soon
 
-- `W36-E7-S4-T3` — Run the medium scenario through Codex to a clean terminal result.
+- `W36-E7-S4-T4` — Repeat the medium scenario through Claude Code from an independent root.
 
 ## Parking lot
 
-- `W36-E7-S4-T4` — Repeat the medium scenario through Claude Code from an independent root.
 - `W36-E7-S3-T2` — Record five first-time-operator sessions after initial live hardening.
 - `W36-E7-S3-T3` — Reconcile observed session findings before beta readiness.
 - `W36-E7-S4-T5` — Record final same-revision Codex and Claude acceptance evidence.
@@ -34,6 +33,15 @@ slice, and local task.
   queue-restoration policy in `docs/backlog/roadmap.md` (`W8-E3-S1`).
 
 ## Current reconciliation
+
+- `2026-07-26` `W36-E7-S4-T37` is complete: clean candidate `43d740c`, tree
+  `a780ce9`, source archive `b416b44`, and wheel `b93257d` pass Ruff, mypy, Python
+  `2126/2126`, Chromium `188/188`, isolated install/doctor, both provider eval-doctors,
+  fresh pinned Hono setup and authored smoke, bundle seal/readback after target deletion,
+  public preflight, dual `macos-seatbelt` canaries, and source-integrity postflight. The
+  exact identities and sanitized signals are recorded in
+  `docs/e2e/candidate-readiness-2026-07-26.md`; the record commit is not a replacement
+  candidate. Codex acceptance `T3` is promoted to `Next`, with Claude `T4` at `Soon`.
 
 - `2026-07-26` `W36-E7-S4-T36` is complete on clean source `17213af` and tree
   `601aeb7`: the exact historical matrix passes `4/4`, complete intervention/terminal
