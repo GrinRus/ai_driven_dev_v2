@@ -2438,6 +2438,35 @@ def test_black_box_live_product_evaluation_failed_remediation_launch_stops_once(
             "stage_run_id": stage_run_id,
             "action": action,
             "failure_reason": "Remediation job ended with status `failed`.",
+            "terminal_evidence": {
+                "schema_version": 1,
+                "work_item": "WI-LIVE-BLACKBOX",
+                "run_id": payload["run_id"],
+                "stage": stage,
+                "attempt_number": 1,
+                "job_status": "failed",
+                "adapter_outcome": "runtime_failure",
+                "runtime_exit": {
+                    "artifact_path": "runtime-exit.json",
+                    "exists": True,
+                    "adapter_outcome": "runtime_failure",
+                    "exit_classification": "non_zero_exit",
+                    "exit_code": 1,
+                    "stop_reason": "runtime_failure",
+                },
+                "durable_mutation_winner": {
+                    "evidence_path": "stage-metadata.json",
+                    "status": "failed",
+                    "changed_at_utc": "2026-07-26T10:00:00Z",
+                },
+                "first_decisive_cause": {
+                    "kind": "adapter-outcome",
+                    "detail": "runtime_failure",
+                    "evidence_path": "runtime-exit.json",
+                },
+                "cancellation": {"requested": False},
+                "operator_wait": {"waiting": False},
+            },
             "job_payload": {
                 "status": "failed",
                 "result": {
@@ -2514,7 +2543,11 @@ def test_black_box_live_product_evaluation_failed_remediation_launch_stops_once(
         (result.bundle_root / "flow-state.json").read_text(encoding="utf-8")
     )
     assert state_payload["status"] == "fail"
-    assert state_payload["error"] == "remediation operator UI job failed"
+    assert state_payload["error"] == "Remediation job ended with status `failed`."
+    assert (
+        state_payload["remediation_terminal_evidence"]["first_decisive_cause"]["detail"]
+        == "runtime_failure"
+    )
 
 
 def test_black_box_live_product_evaluation_reruns_stale_review_then_qa(

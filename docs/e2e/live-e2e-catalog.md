@@ -467,6 +467,13 @@ budget, currently `scope: "per-stage-command"`. `stage-timing.json` and
 verification created known ignored byproducts after QA. That cleanup is limited to
 new verification residue and is execution hygiene before final workspace evidence.
 
+Remediation launch and rerun evidence reads the typed UI job `terminal_evidence`
+projection instead of reducing every non-success to `job failed`. The live bundle
+retains exact work-item/run/stage/attempt identity, job status, runtime-exit artifact,
+adapter outcome, durable stage-metadata winner, first decisive cause, and
+cancellation/operator-wait details. Missing or mismatched terminal identity fails
+closed before the harness accepts a remediation result.
+
 `target-workspace-evidence.*` compares the target repository snapshot after setup with
 the final workspace state. It is non-gating evidence for manual quality review:
 `aidd.example.toml` is harness config, setup-created untracked files remain visible,

@@ -7,15 +7,14 @@ slice, and local task.
 
 ## Next
 
-- `W36-E7-S4-T47` — Persist typed terminal evidence for remediation jobs.
+- `W36-E7-S4-T48` — Preflight target installation and verification prerequisites.
 
 ## Soon
 
-- `W36-E7-S4-T48` — Preflight target installation and verification prerequisites.
+- `W36-E7-S4-T49` — Materialize a self-contained canonical live evidence bundle.
 
 ## Parking lot
 
-- `W36-E7-S4-T49` — Materialize a self-contained canonical live evidence bundle.
 - `W36-E7-S4-T50` — Commit the live bundle digest and browser provenance manifest.
 - `W36-E7-S4-T51` — Finalize truthful product-bundle summaries and acceptance status.
 - `W36-E7-S4-T52` — Bound ignored dependency and cache inventories in repository evidence.
@@ -45,13 +44,14 @@ slice, and local task.
 
 ## Current reconciliation
 
-- `2026-07-26` `W36-E7-S4-T46` is complete: `flow-state.json` schema v3 now records one typed
-  process segment per evaluator ownership interval with start, finish, duration, owner PID and
-  termination reason. Quality-review yields, interruption, stale-owner reconciliation and
-  terminal outcomes close their segments; resume appends rather than resets timing. The retained
-  segment sum now drives stage timing, run transcript and eval summary. Unit and multi-resume
-  integration checks pass `30/30`, with Ruff and mypy clean. `T47` is promoted to `Next` and
-  `T48` moves to `Soon`.
+- `2026-07-26` `W36-E7-S4-T47` is complete: UI jobs now retain typed terminal evidence for
+  completion, failure, cancellation and operator wait, including work-item/run/stage/attempt
+  identity, runtime-exit/adapter outcome, durable stage winner, first cause and cancellation/
+  operator-request detail. Harness remediation readback validates that identity fail-closed and
+  persists the typed cause instead of replacing it with generic `job failed`. The new typed
+  matrix passes `12/12`; existing remediation, cancellation and operator-decision compatibility
+  passes `35/35`, with Ruff, mypy and docs checks clean. `T48` is promoted to `Next` and `T49`
+  moves to `Soon`.
 
 - `2026-07-22` `W36-E7-S4-T35` is complete: runtime-readiness updates now use a
   generation-aware scoped renderer and cannot replace the decision-owning Studio cockpit.

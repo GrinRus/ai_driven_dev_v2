@@ -12130,14 +12130,23 @@ Local tasks:
     its active segment; resume appends a new segment. Stage timing, synthetic run transcript, and
     eval summary now use the cumulative segment duration. The unit and multi-resume integration
     matrix passes `30/30`, including exact agreement across all four artifacts.
-- `W36-E7-S4-T47` (next) Persist typed terminal evidence for every accepted remediation job.
+- `W36-E7-S4-T47` (done) Persist typed terminal evidence for every accepted remediation job.
   - Dependencies: `W36-E7-S4-T46` as the truthful-flow-evidence predecessor.
   - Scope: UI remediation job terminal evidence and harness readback only; Studio action
     synchronization remains owned by T35 and provider outcome semantics remain unchanged.
   - Verification: success, failure, cancellation, and operator wait retain work-item/run/stage/
     attempt identity, runtime-exit path, adapter outcome, typed first cause, and durable mutation
     winner; a retry cannot collapse to an untraceable generic `job failed` result.
-- `W36-E7-S4-T48` (soon) Preflight target installation and verification prerequisites before
+  - Completion: `UiRunJobStore` now retains a typed `terminal_evidence` projection for
+    completed, failed, cancelled, and waiting jobs. It includes canonical job identity,
+    attempt/runtime-exit evidence, adapter outcome, durable stage-metadata winner, first
+    decisive cause, and cancellation/operator-wait detail without losing an earlier request
+    during cancellation. The live harness validates exact identity and schema before accepting
+    remediation completion, persists typed evidence into the flow state, and carries the
+    decisive cause instead of a generic failure string. The focused typed matrix passes `12/12`;
+    the existing remediation, cancellation, and operator-decision compatibility matrix passes
+    `35/35`.
+- `W36-E7-S4-T48` (next) Preflight target installation and verification prerequisites before
   allocating a paid provider run.
   - Dependencies: `W36-E7-S4-T47` as the remediation-evidence predecessor.
   - Scope: provider-neutral target setup probes only; no Hono-, Rollup-, model-, or adapter-specific
@@ -12145,7 +12154,7 @@ Local tasks:
   - Verification: fresh-clone dependency installation, declared verification commands, and
     required generated/native artifacts pass a bounded smoke; the historical missing optional
     dependency shape is classified as `target-setup` before provider execution.
-- `W36-E7-S4-T49` (parked) Materialize canonical stage, validation, target-patch, final-report,
+- `W36-E7-S4-T49` (soon) Materialize canonical stage, validation, target-patch, final-report,
   and browser evidence inside a self-contained live bundle.
   - Dependencies: `W36-E7-S4-T48` as the target-readiness predecessor.
   - Scope: live result-bundle materialization and bundle-relative references only; legacy absolute

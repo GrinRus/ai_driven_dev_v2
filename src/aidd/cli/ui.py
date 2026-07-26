@@ -44,6 +44,10 @@ from aidd.cli.ui_http import (
     _error_response,
     _json_response,
 )
+from aidd.cli.ui_job_evidence import (
+    UiJobEvidenceStatus,
+    build_ui_job_terminal_evidence,
+)
 from aidd.cli.ui_routing import OperatorUiRouter, UiJobDecisionConflict, handler_for
 from aidd.config import AiddConfig, load_config
 from aidd.core.allowed_write_scope import (
@@ -242,6 +246,8 @@ class _UiRunJob:
     dropped_chunk_bytes: int = 0
     next_chunk_cursor: int = 0
     next_chunk_sequence: int = 1
+    terminal_evidence: dict[str, object] | None = None
+    operator_wait_result: object | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -398,12 +404,14 @@ class UiRunJobStore:
                 )
                 return
             if job.status in _TERMINAL_JOB_STATUSES:
+                self._refresh_terminal_evidence_locked(job)
                 return
             job.status = "completed" if exit_code == 0 else "failed"
             job.exit_code = exit_code
             job.result = result
             job.message = message
             job.updated_at_utc = self._timestamp()
+            self._refresh_terminal_evidence_locked(job)
             self._evict_terminal_locked(self._now_utc())
 
     def fail(self, job_id: str, *, message: str, exit_code: int = 1) -> None:
@@ -416,11 +424,13 @@ class UiRunJobStore:
                 )
                 return
             if job.status in _TERMINAL_JOB_STATUSES:
+                self._refresh_terminal_evidence_locked(job)
                 return
             job.status = "failed"
             job.exit_code = exit_code
             job.message = message
             job.updated_at_utc = self._timestamp()
+            self._refresh_terminal_evidence_locked(job)
             self._evict_terminal_locked(self._now_utc())
 
     def wait_for_operator(
@@ -444,8 +454,10 @@ class UiRunJobStore:
             job.status = "waiting-for-operator"
             job.exit_code = exit_code
             job.result = result
+            job.operator_wait_result = result
             job.message = message
             job.updated_at_utc = self._timestamp()
+            self._refresh_terminal_evidence_locked(job)
 
     def mark_running(self, job_id: str, *, message: str = "running") -> None:
         with self._lock:
@@ -457,12 +469,20 @@ class UiRunJobStore:
             job.result = None
             job.message = message
             job.updated_at_utc = self._timestamp()
+            job.terminal_evidence = None
 
     def set_attempt_path(self, job_id: str, attempt_path: Path) -> None:
         with self._lock:
             job = self._require_job(job_id)
             job.attempt_path = attempt_path.as_posix()
             job.updated_at_utc = self._timestamp()
+            if job.status in {
+                "cancelled",
+                "completed",
+                "failed",
+                "waiting-for-operator",
+            }:
+                self._refresh_terminal_evidence_locked(job)
 
     def correlate(
         self,
@@ -547,6 +567,13 @@ class UiRunJobStore:
         with self._lock:
             self._evict_terminal_locked(self._now_utc())
             job = self._require_job(job_id)
+            if job.status in {
+                "cancelled",
+                "completed",
+                "failed",
+                "waiting-for-operator",
+            }:
+                self._refresh_terminal_evidence_locked(job)
             return self._view_locked(job)
 
     def logs(self, job_id: str, *, cursor: int) -> dict[str, object]:
@@ -676,6 +703,32 @@ class UiRunJobStore:
         job.message = message
         job.cancelled_at_utc = timestamp
         job.updated_at_utc = timestamp
+        self._refresh_terminal_evidence_locked(job)
+
+    @staticmethod
+    def _refresh_terminal_evidence_locked(job: _UiRunJob) -> None:
+        if job.status not in {
+            "cancelled",
+            "completed",
+            "failed",
+            "waiting-for-operator",
+        }:
+            job.terminal_evidence = None
+            return
+        evidence = build_ui_job_terminal_evidence(
+            work_item=job.work_item,
+            run_id=job.run_id,
+            stage=job.stage,
+            status=cast(UiJobEvidenceStatus, job.status),
+            exit_code=job.exit_code,
+            message=job.message,
+            result=job.result,
+            operator_wait_result=job.operator_wait_result,
+            attempt_path=Path(job.attempt_path) if job.attempt_path is not None else None,
+            cancel_requested_at_utc=job.cancel_requested_at_utc,
+            cancelled_at_utc=job.cancelled_at_utc,
+        )
+        job.terminal_evidence = evidence.to_payload()
 
     def _view_locked(self, job: _UiRunJob) -> dict[str, object]:
         if job.status == "cancelled":
@@ -726,6 +779,7 @@ class UiRunJobStore:
             "cancel_requested_at_utc": job.cancel_requested_at_utc,
             "cancelled_at_utc": job.cancelled_at_utc,
             "cancel_state": cancel_state,
+            "terminal_evidence": job.terminal_evidence,
         }
 
     @staticmethod
@@ -3779,6 +3833,26 @@ class OperatorUiService:
             run_id=run_id,
         )
 
+        def _capture_attempt(
+            *,
+            result_work_item: str | None = None,
+            result_run_id: str | None = None,
+            result_stage: str | None = None,
+        ) -> None:
+            selected_work_item = result_work_item or work_item or self.work_item
+            selected_run_id = result_run_id or run_id
+            selected_stage = result_stage or stage
+            if selected_run_id is None or selected_stage is None:
+                return
+            attempt_path = _latest_attempt_path(
+                workspace_root=self.workspace_root,
+                work_item=selected_work_item,
+                run_id=selected_run_id,
+                stage=selected_stage,
+            )
+            if attempt_path is not None:
+                self._jobs.set_attempt_path(job_id, attempt_path)
+
         def _run() -> None:
             self._jobs.append_chunk(
                 job_id,
@@ -3791,13 +3865,25 @@ class OperatorUiService:
                     result_work_item = result.get("work_item")
                     result_run_id = result.get("run_id")
                     result_stage = result.get("stage")
+                    correlated_work_item = (
+                        result_work_item if isinstance(result_work_item, str) else None
+                    )
+                    correlated_run_id = (
+                        result_run_id if isinstance(result_run_id, str) else None
+                    )
+                    correlated_stage = (
+                        result_stage if isinstance(result_stage, str) else None
+                    )
                     self._jobs.correlate(
                         job_id,
-                        work_item=(
-                            result_work_item if isinstance(result_work_item, str) else None
-                        ),
-                        run_id=result_run_id if isinstance(result_run_id, str) else None,
-                        stage=result_stage if isinstance(result_stage, str) else None,
+                        work_item=correlated_work_item,
+                        run_id=correlated_run_id,
+                        stage=correlated_stage,
+                    )
+                    _capture_attempt(
+                        result_work_item=correlated_work_item,
+                        result_run_id=correlated_run_id,
+                        result_stage=correlated_stage,
                     )
                 exit_code = _exit_code_from_result(result)
                 if isinstance(result, Mapping) and bool(result.get("waiting_for_operator")):
@@ -3815,6 +3901,7 @@ class OperatorUiService:
                     message="completed" if exit_code == 0 else "stopped",
                 )
             except Exception as exc:  # pragma: no cover - defensive job boundary
+                _capture_attempt()
                 self._jobs.append_chunk(
                     job_id,
                     stream="system",

@@ -35,6 +35,8 @@ PRESERVED_STATE_EXTRA_KEYS = (
     "no_progress_reconciliation",
     "operator_action_request_json",
     "operator_action_request_markdown",
+    "remediation_evidence",
+    "remediation_terminal_evidence",
     "stage_exit_code",
 )
 

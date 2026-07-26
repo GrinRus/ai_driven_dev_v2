@@ -253,6 +253,10 @@ Current W20 implementation status:
   `running`, `waiting-for-operator`, `completed`, `failed`, or `cancelled` status,
   elapsed time, last-output metadata, silence warning state, and
   `/api/jobs/<job_id>/logs` cursor-based live chunks;
+- every `waiting-for-operator` or terminal job view includes typed `terminal_evidence`
+  with work-item/run/stage/attempt identity, the canonical runtime-exit artifact and
+  adapter outcome when available, the durable stage-metadata winner, the first
+  decisive cause, and retained cancellation/operator-wait details;
 - selected-stage launch uses the CLI-equivalent single-stage execution path, not a
   workflow range shortcut;
 - the private local JSON API enforces a small request-body limit and deterministic

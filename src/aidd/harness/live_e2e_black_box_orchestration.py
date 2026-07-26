@@ -179,6 +179,10 @@ from aidd.harness.live_frontend_reconciliation import (
     provisional_frontend_status,
     reconcile_frontend_checkpoints,
 )
+from aidd.harness.live_remediation_evidence import (
+    classify_remediation_terminal_evidence,
+    read_remediation_terminal_evidence,
+)
 from aidd.harness.live_runtime_config import (
     validate_live_runtime_command,
     write_live_runtime_config,
@@ -2238,7 +2242,23 @@ def _record_remediation_job_stop(
     stage: str,
     classification: StepClassification,
     evidence_path: Path,
+    evidence_payload: dict[str, object],
 ) -> StepClassification:
+    terminal_evidence = evidence_payload.get("terminal_evidence")
+    failure_reason = evidence_payload.get("failure_reason")
+    error = (
+        str(failure_reason)
+        if isinstance(failure_reason, str) and failure_reason
+        else "Remediation operator UI job did not produce a successful terminal result."
+    )
+    state_evidence = {
+        "remediation_evidence": evidence_path.as_posix(),
+        **(
+            {"remediation_terminal_evidence": terminal_evidence}
+            if isinstance(terminal_evidence, dict)
+            else {}
+        ),
+    }
     if classification == "blocked":
         _persist_state(
             ctx=ctx,
@@ -2246,7 +2266,7 @@ def _record_remediation_job_stop(
             next_action="answer-questions",
             current_stage=stage,
             completed_stages=_state_completed_stages(ctx.bundle_root),
-            extra={"remediation_evidence": evidence_path.as_posix()},
+            extra=state_evidence,
         )
         return "blocked"
     _persist_state(
@@ -2255,7 +2275,7 @@ def _record_remediation_job_stop(
         next_action="stop",
         current_stage=stage,
         completed_stages=_state_completed_stages(ctx.bundle_root),
-        extra={"error": "remediation operator UI job failed"},
+        extra={"error": error, **state_evidence},
     )
     return "fail"
 
@@ -2336,6 +2356,7 @@ def _handle_quality_remediation_request(
             stage=implement_stage,
             classification=classification,
             evidence_path=evidence_path,
+            evidence_payload=evidence_payload,
         )
     stale_stages = _remediation_stale_stages_from_payload(evidence_payload) or (
         "review",
@@ -5336,6 +5357,7 @@ def _run_ui_remediation_job(
     probes: list[dict[str, object]] = []
     post_probe: dict[str, object] | None = None
     job_payload: dict[str, object] | None = None
+    terminal_evidence: dict[str, object] | None = None
     classification: StepClassification = "fail"
     failure_reason: str | None = None
     try:
@@ -5392,17 +5414,32 @@ def _run_ui_remediation_job(
                         if isinstance(raw_job_payload, dict):
                             job_payload = raw_job_payload
                             status = str(raw_job_payload.get("status") or "")
-                            if status == "completed":
-                                classification = "pass"
-                                failure_reason = None
-                                break
-                            if status in {"failed", "cancelled"}:
-                                classification = "fail"
-                                failure_reason = f"Remediation job ended with status `{status}`."
-                                break
-                            if status == "waiting-for-operator":
-                                classification = "blocked"
-                                failure_reason = "Remediation job is waiting for operator input."
+                            if status in {
+                                "cancelled",
+                                "completed",
+                                "failed",
+                                "waiting-for-operator",
+                            }:
+                                try:
+                                    typed_evidence = read_remediation_terminal_evidence(
+                                        raw_job_payload,
+                                        expected_work_item=ctx.work_item,
+                                        expected_run_id=ctx.run_id,
+                                        expected_stage=stage,
+                                    )
+                                except ValueError as exc:
+                                    classification = "fail"
+                                    failure_reason = str(exc)
+                                else:
+                                    terminal_evidence = typed_evidence.payload
+                                    classification = classify_remediation_terminal_evidence(
+                                        typed_evidence
+                                    )
+                                    failure_reason = (
+                                        None
+                                        if classification == "pass"
+                                        else typed_evidence.first_cause_detail
+                                    )
                                 break
                         time.sleep(0.25)
                     else:
@@ -5427,7 +5464,7 @@ def _run_ui_remediation_job(
         timeout_seconds=_stage_command_timeout_seconds(ctx.scenario),
     )
     evidence_payload: dict[str, object] = {
-        "schema_version": 1,
+        "schema_version": 2,
         "created_at_utc": _utc_now(),
         "action": action,
         "classification": classification,
@@ -5441,6 +5478,7 @@ def _run_ui_remediation_job(
         "process_exit_code": process_return_code,
         "post_probe": post_probe,
         "job_payload": job_payload,
+        "terminal_evidence": terminal_evidence,
         "probes": probes,
     }
     evidence_path = _write_json(_remediation_action_path(ctx, action_id), evidence_payload)
@@ -6998,6 +7036,7 @@ def _run_remediation_rerun_stage(ctx: FlowContext, stage: str) -> StepClassifica
             stage=stage,
             classification=classification,
             evidence_path=evidence_path,
+            evidence_payload=evidence_payload,
         )
     stale_stages = _remediation_stale_stages_from_payload(evidence_payload)
     if not stale_stages:
