@@ -12289,7 +12289,7 @@ Local tasks:
     identity shift, duplicate, conflict, pre-existing-winner, and newer-draft cases pass in the
     full frontend suite `98/98`; the three historical viewports pass `3/3`, the complete
     intervention family passes `14/14`, and CLI/static contract coverage passes `60/60`.
-- `W36-E7-S4-T57` (next) Replace History journey global network-idle navigation with the
+- `W36-E7-S4-T57` (done) Replace History journey global network-idle navigation with the
   shared bounded server-authoritative work-item and History surface synchronization.
   - Dependencies: `W36-E7-S4-T56` as the direct queue predecessor; blocks the next
     `W36-E7-S4-T36` rerun.
@@ -12298,7 +12298,12 @@ Local tasks:
   - Verification: all five History viewports pass repeatedly using DOM readiness plus exact
     durable work-item/History identity, while missing or wrong identity still times out within
     the shared 30-second surface budget.
-- `W36-E7-S4-T36` (soon) Re-run the complete provider-free Chromium acceptance matrix after the
+  - Completion: initial History navigation, Back restoration, and reload now wait for
+    `domcontentloaded`, the exact work-item chip, and the exact current lineage run under the
+    shared bounded surface helper instead of global network idleness. The five-viewports plus
+    wrong-run fail-closed matrix passes `6/6`; the historical `1440x900` case passes two
+    additional independent reruns, and browser-harness/docs/planning checks pass `51/51`.
+- `W36-E7-S4-T36` (next) Re-run the complete provider-free Chromium acceptance matrix after the
   final provider-neutral hardening change.
   - Dependencies: `W36-E7-S4-T55`, `W36-E7-S4-T56`, and `W36-E7-S4-T57` as final code-change
     predecessors; blocks the active Codex acceptance task `W36-E7-S4-T3`.
@@ -12313,7 +12318,7 @@ Local tasks:
     intervention-draft cleanup at `320x568`/`1440x900` and History's initial global
     `networkidle` wait at `1440x900`; sanitized evidence is in
     `docs/e2e/operator-ui-provider-free-browser-gate-2026-07-26.md`.
-- `W36-E7-S4-T37` (parked) Prove the exact post-browser candidate is installable and ready for an
+- `W36-E7-S4-T37` (soon) Prove the exact post-browser candidate is installable and ready for an
   isolated live-provider run.
   - Dependencies: `W36-E7-S4-T36` as the full-browser predecessor; blocks the active Codex
     acceptance task `W36-E7-S4-T3`.

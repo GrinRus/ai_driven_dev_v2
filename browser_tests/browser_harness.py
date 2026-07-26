@@ -36,6 +36,24 @@ def wait_for_work_item_surface(page: Page, work_item: str) -> None:
     ).wait_for(state="visible", timeout=_OPERATOR_SURFACE_TIMEOUT_MS)
 
 
+def wait_for_history_surface(
+    page: Page,
+    *,
+    work_item: str,
+    run_id: str,
+    timeout_ms: int = _OPERATOR_SURFACE_TIMEOUT_MS,
+) -> None:
+    wait_for_work_item_surface(page, work_item)
+    page.locator("[data-studio-history]").wait_for(
+        state="visible",
+        timeout=timeout_ms,
+    )
+    page.locator(f'[data-history-lineage-current="{run_id}"]').wait_for(
+        state="visible",
+        timeout=timeout_ms,
+    )
+
+
 @dataclass
 class BrowserDiagnostics:
     console_errors: list[str] = field(default_factory=list)

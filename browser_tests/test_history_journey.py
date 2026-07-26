@@ -4,10 +4,15 @@ import hashlib
 from pathlib import Path
 
 import pytest
+from playwright.sync_api import TimeoutError as PlaywrightTimeoutError
 from playwright.sync_api import sync_playwright
 
 from aidd.core.run_store import run_manifest_path
-from browser_tests.browser_harness import VIEWPORTS, operator_browser_harness
+from browser_tests.browser_harness import (
+    VIEWPORTS,
+    operator_browser_harness,
+    wait_for_history_surface,
+)
 from browser_tests.state_fixtures import build_browser_state_fixture
 
 
@@ -44,9 +49,13 @@ def test_history_journey_preserves_retained_runs(
         page.goto(
             f"{harness.url}?ui=studio&mode=history&work_item={fixture.work_item}"
             f"&run_id={fixture.run_id}&stage=implement",
-            wait_until="networkidle",
+            wait_until="domcontentloaded",
         )
-        page.locator("[data-studio-history]").wait_for(state="visible")
+        wait_for_history_surface(
+            page,
+            work_item=fixture.work_item,
+            run_id=fixture.run_id,
+        )
         assert page.locator("[data-history-frame]").count() >= 3
         assert page.locator("[data-studio-run-comparison]").is_visible()
         assert page.locator("[data-history-lineage-parent='run-source']").is_visible()
@@ -57,9 +66,18 @@ def test_history_journey_preserves_retained_runs(
         page.get_by_role("button", name="Inspect parent run").click()
         page.wait_for_url("**run_id=run-source**")
         assert "run-source" in page.url
-        page.go_back(wait_until="networkidle")
-        page.locator("[data-history-lineage-current='run-browser']").wait_for(state="visible")
-        page.reload(wait_until="networkidle")
+        page.go_back(wait_until="domcontentloaded")
+        wait_for_history_surface(
+            page,
+            work_item=fixture.work_item,
+            run_id=fixture.run_id,
+        )
+        page.reload(wait_until="domcontentloaded")
+        wait_for_history_surface(
+            page,
+            work_item=fixture.work_item,
+            run_id=fixture.run_id,
+        )
         assert page.locator("[data-history-lineage-parent='run-source']").is_visible()
         assert page.evaluate("document.documentElement.scrollWidth <= window.innerWidth")
         navigation_aborts = [
@@ -71,3 +89,33 @@ def test_history_journey_preserves_retained_runs(
         browser_page.diagnostics.failed_requests.clear()
         browser_page.diagnostics.assert_clean()
         assert (_sha256(current_manifest), _sha256(source_manifest)) == before
+
+
+def test_history_surface_wait_fails_closed_for_wrong_run_identity(tmp_path: Path) -> None:
+    fixture = build_browser_state_fixture(tmp_path / "history-wrong-run", "history")
+    with sync_playwright() as playwright, operator_browser_harness(
+        fixture.project_root,
+        playwright,
+        work_item=fixture.work_item,
+    ) as harness, harness.open_page((1280, 900)) as browser_page:
+        page = browser_page.page
+        page.goto(
+            f"{harness.url}?ui=studio&mode=history&work_item={fixture.work_item}"
+            f"&run_id={fixture.run_id}&stage=implement",
+            wait_until="domcontentloaded",
+        )
+        wait_for_history_surface(
+            page,
+            work_item=fixture.work_item,
+            run_id=fixture.run_id,
+        )
+
+        with pytest.raises(PlaywrightTimeoutError):
+            wait_for_history_surface(
+                page,
+                work_item=fixture.work_item,
+                run_id="run-missing",
+                timeout_ms=250,
+            )
+
+        browser_page.diagnostics.assert_clean()

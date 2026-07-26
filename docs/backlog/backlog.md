@@ -7,15 +7,14 @@ slice, and local task.
 
 ## Next
 
-- `W36-E7-S4-T57` — Replace History global network-idle waits with durable surface readiness.
+- `W36-E7-S4-T36` — Re-run the full provider-free Chromium acceptance matrix.
 
 ## Soon
 
-- `W36-E7-S4-T36` — Re-run the full provider-free Chromium acceptance matrix.
+- `W36-E7-S4-T37` — Prove wheel, doctor and isolation readiness on one candidate SHA.
 
 ## Parking lot
 
-- `W36-E7-S4-T37` — Prove wheel, doctor and isolation readiness on one candidate SHA.
 - `W36-E7-S4-T3` — Run the medium scenario through Codex to a clean terminal result.
 - `W36-E7-S4-T4` — Repeat the medium scenario through Claude Code from an independent root.
 - `W36-E7-S3-T2` — Record five first-time-operator sessions after initial live hardening.
@@ -37,12 +36,12 @@ slice, and local task.
 
 ## Current reconciliation
 
-- `2026-07-26` `W36-E7-S4-T56` is complete: intervention cleanup now reads and clears the
-  immutable submitted draft identity immediately after matching durable winner readback, before
-  runtime-job polling can delay reconciliation. Route/render identity shifts, duplicate/conflict,
-  pre-existing winner, and newer-draft preservation pass in the frontend suite `98/98`; the
-  historical intervention viewports pass `3/3`, the complete family `14/14`, and CLI/static
-  checks `60/60`. `T57` is promoted to `Next`; the full `T36` rerun moves to `Soon`.
+- `2026-07-26` `W36-E7-S4-T57` is complete: History initial navigation, Back restoration, and
+  reload now use DOM readiness followed by exact work-item and current-lineage surfaces under
+  the shared bounded helper, rather than global `networkidle`. The five-viewport plus wrong-run
+  matrix passes `6/6`; the historical `1440x900` case passes two additional reruns, and
+  harness/docs/planning checks pass `51/51`. Both Chromium discoveries are fixed, so `T36`
+  returns to `Next` and exact-SHA `T37` to `Soon`.
 
 - `2026-07-26` `W36-E7-S4-T53` is complete: the shared bounded log reader enforces a
   256 KiB hard limit and reports requested/retained bytes, exact ranges, head/tail truncation,
