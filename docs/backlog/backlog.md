@@ -7,15 +7,14 @@ slice, and local task.
 
 ## Next
 
-- `W36-E7-S4-T51` — Finalize truthful product-bundle summaries and acceptance status.
+- `W36-E7-S4-T52` — Bound ignored dependency and cache inventories in repository evidence.
 
 ## Soon
 
-- `W36-E7-S4-T52` — Bound ignored dependency and cache inventories in repository evidence.
+- `W36-E7-S4-T53` — Read persisted runtime-log tails under a byte and memory bound.
 
 ## Parking lot
 
-- `W36-E7-S4-T53` — Read persisted runtime-log tails under a byte and memory bound.
 - `W36-E7-S4-T54` — Normalize provider events into a bounded lifecycle projection.
 - `W36-E7-S4-T55` — Reference canonical command evidence from aggregate live reports.
 - `W36-E7-S4-T36` — Re-run the full provider-free Chromium acceptance matrix.
@@ -40,6 +39,14 @@ slice, and local task.
   queue-restoration policy in `docs/backlog/roadmap.md` (`W8-E3-S1`).
 
 ## Current reconciliation
+
+- `2026-07-26` `W36-E7-S4-T51` is complete: product summary schema v2 now reports
+  independent execution, manual-review, counted-clean, manual-stop, and legacy-degraded signals
+  with explicit not-clean reasons. Terminal refresh incorporates newly added manual reports,
+  rematerializes and reseals the bundle, while retaining byte-identical `verdict.md` and
+  `grader.json`. The five-state unit matrix passes `5/5`, terminal pre/post-review refresh passes
+  `2/2`, and all `41` live-document consistency checks pass. `T52` is promoted to `Next` and
+  `T53` to `Soon`.
 
 - `2026-07-26` `W36-E7-S4-T50` is complete: `live-bundle-manifest.json` is now the
   atomically-published final commit marker over the validated T49 index, exact tracked AIDD source

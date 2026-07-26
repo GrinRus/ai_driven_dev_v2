@@ -180,6 +180,7 @@ from aidd.harness.live_frontend_reconciliation import (
     provisional_frontend_status,
     reconcile_frontend_checkpoints,
 )
+from aidd.harness.live_product_summary import derive_live_product_acceptance
 from aidd.harness.live_remediation_evidence import (
     classify_remediation_terminal_evidence,
     read_remediation_terminal_evidence,
@@ -2763,8 +2764,23 @@ def _product_evaluation_bundle_summary_payload(ctx: FlowContext) -> dict[str, ob
     total_runner_repair_attempts = sum(
         cast(int, audit["runner_repair_attempts"]) for audit in stage_quality_audits
     )
+    final_reports = _final_report_presence(ctx)
+    consistency = _terminal_flow_state_bundle_consistency(ctx)
+    acceptance = derive_live_product_acceptance(
+        flow_status=cast(str | None, consistency["flow_state_status"]),
+        verdict_status=cast(str | None, consistency["verdict_status"]),
+        grader_status=cast(str | None, consistency["grader_execution_status"]),
+        stage_quality_audit_paths=tuple(
+            Path(str(audit["path"])) for audit in stage_quality_audits
+        ),
+        final_report_paths=tuple(
+            Path(str(report["path"])) for report in final_reports
+        ),
+        quality_report_path=ctx.bundle_root / QUALITY_REPORT_FILENAME,
+        legacy_degraded=False,
+    )
     return {
-        "schema_version": 1,
+        "schema_version": 2,
         "created_at_utc": _utc_now(),
         "scenario_id": ctx.scenario.scenario_id,
         "runtime_id": ctx.runtime_id,
@@ -2773,8 +2789,16 @@ def _product_evaluation_bundle_summary_payload(ctx: FlowContext) -> dict[str, ob
         "scope": "navigation-evidence",
         "quality_scoring": {
             "runner_owned_quality_scoring": False,
-            "summary_computes_counted_clean": False,
+            "summary_derives_counted_clean": True,
             "counted_clean_source": "manual quality-report.md only",
+        },
+        "acceptance": {
+            "execution_pass": acceptance.execution_pass,
+            "quality_reviewed": acceptance.quality_reviewed,
+            "counted_clean": acceptance.counted_clean,
+            "manual_quality_stop": acceptance.manual_quality_stop,
+            "legacy_degraded": acceptance.legacy_degraded,
+            "not_clean_reasons": list(acceptance.not_clean_reasons),
         },
         "stage_quality_audits": stage_quality_audits,
         "remediation": {
@@ -2804,8 +2828,8 @@ def _product_evaluation_bundle_summary_payload(ctx: FlowContext) -> dict[str, ob
             ],
         },
         "target_workspace": _target_workspace_bundle_summary(ctx),
-        "final_reports": _final_report_presence(ctx),
-        "terminal_flow_state_verdict_consistency": (_terminal_flow_state_bundle_consistency(ctx)),
+        "final_reports": final_reports,
+        "terminal_flow_state_verdict_consistency": consistency,
     }
 
 
@@ -2821,6 +2845,7 @@ def _render_product_evaluation_bundle_summary_markdown(
         dict[str, object],
         payload["terminal_flow_state_verdict_consistency"],
     )
+    acceptance = cast(dict[str, object], payload["acceptance"])
     lines = [
         "# Product Evaluation Bundle Summary",
         "",
@@ -2828,8 +2853,22 @@ def _render_product_evaluation_bundle_summary_markdown(
         f"- Runtime: `{payload['runtime_id']}`",
         f"- Run ID: `{payload['run_id']}`",
         "- Scope: `navigation-evidence`",
-        ("- Quality scoring: `not-runner-owned`; this summary does not compute `counted-clean`."),
+        "- Quality scoring: `not-runner-owned`; acceptance status is derived from "
+        "primary execution and manual quality evidence.",
         "- Counted-clean source: manual `quality-report.md` only.",
+        f"- Execution pass: `{acceptance['execution_pass']}`",
+        f"- Quality reviewed: `{acceptance['quality_reviewed']}`",
+        f"- Counted clean: `{acceptance['counted_clean']}`",
+        f"- Manual quality stop: `{acceptance['manual_quality_stop']}`",
+        f"- Legacy degraded: `{acceptance['legacy_degraded']}`",
+        "- Not-clean reasons:",
+        *(
+            [
+                f"- {reason}"
+                for reason in cast(list[str], acceptance["not_clean_reasons"])
+            ]
+            or ["- none"]
+        ),
         "",
         "## Stage Quality Audits",
         "",
@@ -2911,12 +2950,24 @@ def _write_product_evaluation_bundle_summary(ctx: FlowContext) -> tuple[Path, Pa
         return None
     json_path, markdown_path = _product_evaluation_bundle_summary_paths(ctx)
     payload = _product_evaluation_bundle_summary_payload(ctx)
-    return write_json_markdown_bundle(
+    immutable_primary_paths = (
+        ctx.bundle_root / VERDICT_FILENAME,
+        ctx.bundle_root / GRADER_FILENAME,
+    )
+    immutable_primary_bytes = {
+        path: path.read_bytes() for path in immutable_primary_paths if path.exists()
+    }
+    result = write_json_markdown_bundle(
         json_path=json_path,
         markdown_path=markdown_path,
         payload=payload,
         markdown=_render_product_evaluation_bundle_summary_markdown(payload),
     )
+    if any(path.read_bytes() != content for path, content in immutable_primary_bytes.items()):
+        raise RuntimeError(
+            "Refreshing the product bundle summary changed primary verdict evidence."
+        )
+    return result
 
 
 def _quality_review_request_path_from_state(ctx: FlowContext) -> Path | None:
@@ -8395,6 +8446,49 @@ def _blocked_result(ctx: FlowContext) -> BlackBoxLiveE2EResult:
     )
 
 
+def _refresh_terminal_product_evidence(
+    *,
+    ctx: FlowContext,
+    status: VerdictStatus,
+) -> BlackBoxLiveE2EResult:
+    verdict_path = ctx.bundle_root / VERDICT_FILENAME
+    grader_path = ctx.bundle_root / GRADER_FILENAME
+    primary_bytes = {
+        path: path.read_bytes() for path in (verdict_path, grader_path) if path.exists()
+    }
+    _persist_state(
+        ctx=ctx,
+        status=status,
+        next_action="finish" if status == "pass" else "stop",
+        current_stage=None,
+        completed_stages=_state_completed_stages(ctx.bundle_root),
+        extra=_preserved_state_extras(ctx),
+    )
+    _write_product_evaluation_bundle_summary(ctx)
+    if any(path.read_bytes() != content for path, content in primary_bytes.items()):
+        raise RuntimeError("Terminal evidence refresh changed verdict.md or grader.json.")
+    _materialize_canonical_live_result(ctx)
+    first_failure_note = (
+        None if status == "pass" else _first_failure_from_steps(ctx, status=status)[1]
+    )
+    return BlackBoxLiveE2EResult(
+        scenario_id=ctx.scenario.scenario_id,
+        run_id=ctx.run_id,
+        runtime_id=ctx.runtime_id,
+        status=status,
+        bundle_root=ctx.bundle_root,
+        flow_report_path=ctx.bundle_root / FLOW_REPORT_FILENAME,
+        verdict_path=verdict_path,
+        summary_path=ctx.bundle_root / SUMMARY_REPORT_FILENAME,
+        first_failure_note=first_failure_note,
+        operator_action_request_path=(
+            ctx.bundle_root / OPERATOR_REQUEST_MARKDOWN_FILENAME
+            if (ctx.bundle_root / OPERATOR_REQUEST_MARKDOWN_FILENAME).exists()
+            else None
+        ),
+    )
+
+
 def run_black_box_live_e2e(
     *,
     scenario_path: Path,
@@ -8430,17 +8524,9 @@ def _run_black_box_live_e2e_with_context(ctx: FlowContext) -> BlackBoxLiveE2ERes
     if status == "manual-quality-stop":
         return _manual_quality_stop_result(ctx)
     if status in TERMINAL_STATUSES:
-        terminal_status = cast(VerdictStatus, status)
-        return _finalize_reports(
+        return _refresh_terminal_product_evidence(
             ctx=ctx,
-            status=terminal_status,
-            summary=(
-                "Refreshed terminal black-box live E2E reports from existing "
-                "execution artifact evidence."
-            ),
-            verification_failed=terminal_status != "pass",
-            teardown_result=None,
-            teardown_error=None,
+            status=cast(VerdictStatus, status),
         )
     quality_gate = _quality_review_gate(ctx)
     if quality_gate == "awaiting-quality-review":

@@ -2912,8 +2912,16 @@ def test_black_box_live_product_evaluation_writes_navigation_bundle_summary(
     assert payload["scope"] == "navigation-evidence"
     assert payload["quality_scoring"] == {
         "runner_owned_quality_scoring": False,
-        "summary_computes_counted_clean": False,
+        "summary_derives_counted_clean": True,
         "counted_clean_source": "manual quality-report.md only",
+    }
+    assert payload["acceptance"] == {
+        "execution_pass": True,
+        "quality_reviewed": False,
+        "counted_clean": False,
+        "manual_quality_stop": False,
+        "legacy_degraded": False,
+        "not_clean_reasons": ["manual quality evidence is incomplete"],
     }
     assert [
         item["flow_decision"] for item in payload["stage_quality_audits"]
@@ -2951,6 +2959,42 @@ def test_black_box_live_product_evaluation_writes_navigation_bundle_summary(
     assert "not-runner-owned" in markdown
     assert "manual `quality-report.md` only" in markdown
     assert "`src/untracked-helper.ts`" in markdown
+
+    (result.bundle_root / "flow-quality-report.md").write_text(
+        "# Flow quality\n", encoding="utf-8"
+    )
+    (result.bundle_root / "code-quality-report.md").write_text(
+        "# Code quality\n", encoding="utf-8"
+    )
+    (result.bundle_root / "quality-report.md").write_text(
+        "# Quality\n\n- Final decision: counted-clean\n",
+        encoding="utf-8",
+    )
+    verdict_before = (result.bundle_root / "verdict.md").read_bytes()
+    grader_before = (result.bundle_root / "grader.json").read_bytes()
+
+    refreshed = run_black_box_live_e2e(
+        scenario_path=scenario_path,
+        runtime_id="opencode",
+        work_root=work_root,
+        report_root=report_root,
+        run_id=result.run_id,
+    )
+    refreshed_payload = json.loads(
+        (
+            refreshed.bundle_root / "product-evaluation-bundle-summary.json"
+        ).read_text(encoding="utf-8")
+    )
+    assert refreshed_payload["acceptance"] == {
+        "execution_pass": True,
+        "quality_reviewed": True,
+        "counted_clean": True,
+        "manual_quality_stop": False,
+        "legacy_degraded": False,
+        "not_clean_reasons": [],
+    }
+    assert (refreshed.bundle_root / "verdict.md").read_bytes() == verdict_before
+    assert (refreshed.bundle_root / "grader.json").read_bytes() == grader_before
 
 
 def test_black_box_live_e2e_compacts_setup_baseline_ignored_files_in_stage_context(

@@ -502,8 +502,10 @@ presence and decisions, remediation source ids, repair counts, tracked and
 untracked product files, known harness files, final report presence, and terminal
 flow-state/verdict consistency. The summary is navigation evidence, not
 runner-owned quality scoring. It does not update `verdict.md`, `grader.json`,
-`flow-quality-report.md`, `code-quality-report.md`, or `quality-report.md`, and it
-does not compute `counted-clean`. Manual `quality-report.md` remains the only final counted-clean decision.
+`flow-quality-report.md`, `code-quality-report.md`, or `quality-report.md`. It derives
+execution, review, counted-clean, manual-stop, and legacy-degraded flags from primary
+evidence. Manual `quality-report.md` remains the only final counted-clean decision.
+The summary only projects it alongside independent execution and provenance signals.
 
 After a terminal run, the launching SWE agent may add manual post-run evidence:
 

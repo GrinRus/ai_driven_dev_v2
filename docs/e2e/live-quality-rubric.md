@@ -8,9 +8,10 @@ Live E2E has two separate decisions:
 - the launching SWE agent's manual quality decision in
   `.aidd/reports/evals/<run_id>/quality-report.md`.
 
-The runner does not create, parse, validate, or score `quality-report.md`. It also
-does not compute counted-clean status. A missing manual quality report must not
-change a passing execution verdict.
+The runner does not create, validate, or score `quality-report.md`. The derived
+product-bundle summary reads only its explicit final decision to report
+`quality_reviewed` and `counted_clean`; it never changes the primary execution
+verdict. A missing manual quality report must not change a passing execution verdict.
 
 For `product-evaluation` scenarios, the launching SWE agent must also review every
 completed stage run before the runner may continue. The runner stops with
@@ -200,8 +201,10 @@ runner-owned quality scoring: use it to find stage-quality audit decisions,
 remediation source ids, repair counts, tracked/untracked product files, known
 harness files, final report presence, and terminal flow-state/verdict consistency.
 It does not change `verdict.md`, `grader.json`, `flow-quality-report.md`,
-`code-quality-report.md`, or `quality-report.md`, and it does not compute
-`counted-clean`. Manual `quality-report.md` remains the only final counted-clean decision.
+`code-quality-report.md`, or `quality-report.md`. It derives `execution_pass`,
+`quality_reviewed`, `counted_clean`, `manual_quality_stop`, and `legacy_degraded`;
+Manual `quality-report.md` remains the only final counted-clean decision. The summary only
+projects that decision alongside the independent execution and provenance signals.
 
 Use this exact structure:
 
@@ -319,7 +322,8 @@ UI only. It does not alter `verdict.md`, `grader.json`, or any runner execution
 status.
 
 The manual `counted-clean` phrase is only a human-authored deliverable-quality
-decision inside `quality-report.md`. AIDD does not parse it. For product-evaluation,
+decision inside `quality-report.md`; AIDD reads it only into the derived bundle summary.
+For product-evaluation,
 `counted-clean` also requires all stage-run quality audits, `code-quality-report.md`, and
 `quality-report.md`; the final report must include `Iteration History` and name every
 remediation request, source id, operator note, stale downstream rerun, and the final

@@ -12195,7 +12195,7 @@ Local tasks:
     the complete file inventory, and deterministic browser run/viewport identities; digest
     mutation, missing materialization, orphan browser files, and wrong browser identity all fail
     closed. The manifest, materialization, and terminal-flow matrix passes `79/79`.
-- `W36-E7-S4-T51` (next) Finalize a truthful product-bundle summary after manual quality
+- `W36-E7-S4-T51` (done) Finalize a truthful product-bundle summary after manual quality
   evidence is complete.
   - Dependencies: `W36-E7-S4-T50` as the digest-manifest predecessor.
   - Scope: product-evaluation summary writer/read model and legacy degraded-state handling only;
@@ -12203,7 +12203,15 @@ Local tasks:
   - Verification: pre-review, post-review, counted-clean, not-counted, and manual-quality-stop
     fixtures distinguish `execution_pass`, `quality_reviewed`, and `counted_clean`; an existing
     report cannot remain recorded as absent and no derived summary contradicts primary evidence.
-- `W36-E7-S4-T52` (soon) Bound ignored dependency and cache inventories in live repository
+  - Completion: product-evaluation summary schema v2 now independently derives
+    `execution_pass`, `quality_reviewed`, `counted_clean`, `manual_quality_stop`, and
+    `legacy_degraded`, with explicit not-clean reasons. Only the human-authored final decision in
+    `quality-report.md` can supply counted-clean quality, while consistent flow/verdict/grader
+    evidence supplies execution pass. Terminal resume is now a safe refresh operation: it updates
+    the derived summary, rematerializes and reseals the bundle, but preserves `verdict.md` and
+    `grader.json` bytes. The five-state unit matrix passes `5/5`, terminal pre/post-review refresh
+    passes `2/2`, and all `41` live-document consistency checks pass.
+- `W36-E7-S4-T52` (next) Bound ignored dependency and cache inventories in live repository
   snapshots without weakening exact product-change classification.
   - Dependencies: `W36-E7-S4-T51` as the truthful-summary predecessor.
   - Scope: live repository snapshot model only; tracked, untracked, modified, and deleted product
@@ -12211,7 +12219,7 @@ Local tasks:
   - Verification: a repository with tens of thousands of ignored files records counts, digests,
     grouping, a bounded sample, and truncation metadata within a fixed size budget while retaining
     exact product and contamination findings.
-- `W36-E7-S4-T53` (parked) Read persisted runtime-log tails under an explicit byte and memory
+- `W36-E7-S4-T53` (soon) Read persisted runtime-log tails under an explicit byte and memory
   bound.
   - Dependencies: `W36-E7-S4-T52` as the bounded-repository-evidence predecessor.
   - Scope: canonical CLI runtime-log tail reader and its harness consumer only; full durable
