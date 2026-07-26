@@ -24,9 +24,11 @@ from aidd.cli.support import (
 from aidd.config import load_config
 from aidd.core.mutation_lease import acquire_run_mutation_lease
 from aidd.core.operator_intervention import (
+    OperatorInterventionRequest,
     ensure_intervention_allowed_for_downstream,
     persist_operator_intervention_request,
     resolve_intervention_run_id,
+    validate_operator_target_documents,
 )
 from aidd.core.project_set import ResolvedProjectSet, resolve_project_set
 from aidd.core.repair import (
@@ -110,6 +112,14 @@ class StageInteractOptions:
     log_follow: bool = True
     runtime_chunk_sink: Callable[[Literal["stdout", "stderr"], str], None] | None = None
     cancel_requested: Callable[[], bool] | None = None
+    prepared_interaction: PreparedStageInteraction | None = None
+
+
+@dataclass(frozen=True, slots=True)
+class PreparedStageInteraction:
+    run_id: str
+    operator_request: OperatorInterventionRequest
+    previous_attempt_number: int | None
 
 
 @dataclass(frozen=True, slots=True)
@@ -790,7 +800,7 @@ def run_stage_command(options: StageRunOptions) -> None:
     )
 
 
-def run_stage_interact_command(options: StageInteractOptions) -> None:
+def prepare_stage_interaction(options: StageInteractOptions) -> PreparedStageInteraction:
     stage_run_options = StageRunOptions(
         stage=options.stage,
         work_item=options.work_item,
@@ -833,8 +843,74 @@ def run_stage_interact_command(options: StageInteractOptions) -> None:
     except ValueError as exc:
         console.print(f"Error: {exc}")
         raise typer.Exit(code=2) from exc
+    return PreparedStageInteraction(
+        run_id=run_id,
+        operator_request=operator_request,
+        previous_attempt_number=previous_attempt_number,
+    )
 
-    intervention_attempt_number = (previous_attempt_number or 0) + 1
+
+def _validate_prepared_stage_interaction(
+    *,
+    options: StageInteractOptions,
+    prepared: PreparedStageInteraction,
+    workspace_root: Path,
+) -> None:
+    request = prepared.operator_request
+    request_text = _operator_request_text(options)
+    expected_run_id = options.run_id.strip() if options.run_id is not None else None
+    if expected_run_id is not None and prepared.run_id != expected_run_id:
+        raise typer.BadParameter("Prepared intervention run identity does not match request.")
+    if request.work_item != options.work_item or request.stage != options.stage:
+        raise typer.BadParameter("Prepared intervention scope does not match request.")
+    if request.request_text != request_text:
+        raise typer.BadParameter("Prepared intervention text does not match request.")
+    normalized_targets = validate_operator_target_documents(
+        workspace_root=workspace_root,
+        work_item=options.work_item,
+        stage=options.stage,
+        target_documents=options.target_documents,
+    )
+    if request.target_documents != normalized_targets:
+        raise typer.BadParameter("Prepared intervention targets do not match request.")
+    resolved_request_path = request.request_path.resolve(strict=True)
+    if not resolved_request_path.is_relative_to(workspace_root.resolve(strict=True)):
+        raise typer.BadParameter("Prepared intervention request is outside workspace root.")
+    if resolved_request_path.read_text(encoding="utf-8") != request.request_markdown:
+        raise typer.BadParameter("Prepared intervention request changed before execution.")
+
+
+def run_stage_interact_command(options: StageInteractOptions) -> None:
+    stage_run_options = StageRunOptions(
+        stage=options.stage,
+        work_item=options.work_item,
+        runtime=options.runtime,
+        run_id=options.run_id,
+        root=options.root,
+        config=options.config,
+        log_follow=options.log_follow,
+        runtime_chunk_sink=options.runtime_chunk_sink,
+        cancel_requested=options.cancel_requested,
+    )
+    _validate_stage_run_options(stage_run_options)
+    runtime_config = _resolve_stage_run_config(stage_run_options)
+    prepared = options.prepared_interaction
+    if prepared is None:
+        prepared = prepare_stage_interaction(options)
+    else:
+        try:
+            _validate_prepared_stage_interaction(
+                options=options,
+                prepared=prepared,
+                workspace_root=runtime_config.workspace_root,
+            )
+        except (OSError, ValueError) as exc:
+            console.print(f"Error: {exc}")
+            raise typer.Exit(code=2) from exc
+
+    run_id = prepared.run_id
+    operator_request = prepared.operator_request
+    intervention_attempt_number = (prepared.previous_attempt_number or 0) + 1
     prompt_pack_file_paths = resolve_prompt_pack_file_paths(stage=options.stage)
     _print_stage_interact_start(
         options=options,
@@ -882,8 +958,10 @@ def run_stage_interact_command(options: StageInteractOptions) -> None:
 
 
 __all__ = [
+    "PreparedStageInteraction",
     "StageInteractOptions",
     "StageRunOptions",
+    "prepare_stage_interaction",
     "run_stage_attempt_command",
     "run_stage_interact_command",
     "run_stage_command",

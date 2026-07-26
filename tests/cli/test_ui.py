@@ -20,7 +20,11 @@ import typer
 
 from aidd.cli import main as cli_main
 from aidd.cli import ui as ui_module
-from aidd.cli.stage_run import StageInteractOptions, StageRunOptions
+from aidd.cli.stage_run import (
+    PreparedStageInteraction,
+    StageInteractOptions,
+    StageRunOptions,
+)
 from aidd.cli.ui import (
     OperatorUiService,
     UiJobSummary,
@@ -33,6 +37,7 @@ from aidd.cli.ui import (
 from aidd.cli.ui_assets import operator_static_asset_for_route, operator_static_asset_manifest
 from aidd.cli.ui_http import UiRequestBodyTooLarge, _read_json_body
 from aidd.core.operator_inbox import resolve_operator_inbox_view
+from aidd.core.operator_intervention import OperatorInterventionRequest
 from aidd.core.remediation import (
     create_remediation_request,
     mark_downstream_stale,
@@ -94,6 +99,7 @@ def _service(
     workflow_runner: Any | None = None,
     stage_runner: Any | None = None,
     stage_interact_runner: Any | None = None,
+    stage_interact_preparer: Any | None = None,
     readiness_probe_provider: Any | None = None,
     folder_opener: Any | None = None,
     host: str = "127.0.0.1",
@@ -114,11 +120,46 @@ def _service(
         kwargs["stage_runner"] = stage_runner
     if stage_interact_runner is not None:
         kwargs["stage_interact_runner"] = stage_interact_runner
+    if stage_interact_preparer is not None:
+        kwargs["stage_interact_preparer"] = stage_interact_preparer
     if readiness_probe_provider is not None:
         kwargs["readiness_probe_provider"] = readiness_probe_provider
     if folder_opener is not None:
         kwargs["folder_opener"] = folder_opener
     return OperatorUiService(options, **kwargs)
+
+
+def _prepare_test_interaction(options: StageInteractOptions) -> PreparedStageInteraction:
+    assert options.root is not None
+    assert options.request is not None
+    request_id = "request-0001"
+    request_path = (
+        options.root
+        / "workitems"
+        / options.work_item
+        / "stages"
+        / options.stage
+        / "operator-requests"
+        / f"{request_id}.md"
+    )
+    request_path.parent.mkdir(parents=True, exist_ok=True)
+    request_markdown = f"# Operator Request\n\n## Request\n\n{options.request}\n"
+    request_path.write_text(request_markdown, encoding="utf-8")
+    return PreparedStageInteraction(
+        run_id=options.run_id or "run-ui-test",
+        operator_request=OperatorInterventionRequest(
+            work_item=options.work_item,
+            stage=options.stage,
+            request_id=request_id,
+            request_path=request_path,
+            request_markdown=request_markdown,
+            request_text=options.request,
+            target_documents=options.target_documents,
+            created_at_utc="2026-07-26T00:00:00Z",
+            created_by="operator",
+        ),
+        previous_attempt_number=None,
+    )
 
 
 def _onboarding_service(tmp_path: Path, monkeypatch: Any) -> OperatorUiService:
@@ -3681,6 +3722,7 @@ def test_ui_stage_interact_endpoint_delegates_request_and_streams_logs(
     service = _service(
         workspace_root,
         stage_interact_runner=fake_stage_interact_runner,
+        stage_interact_preparer=_prepare_test_interaction,
     )
 
     response = service.handle_post(
@@ -3698,6 +3740,16 @@ def test_ui_stage_interact_endpoint_delegates_request_and_streams_logs(
     payload = _payload(response)
     assert payload["kind"] == "intervention"
     assert payload["stage"] == "plan"
+    assert payload["operator_request"] == {
+        "work_item": "WI-UI",
+        "run_id": "run-ui-flow",
+        "stage": "plan",
+        "request_id": "request-0001",
+        "request_path": (
+            "workitems/WI-UI/stages/plan/operator-requests/request-0001.md"
+        ),
+        "request_excerpt": "Add migration rollback risks",
+    }
     assert started.wait(timeout=2)
 
     job_id = str(payload["job_id"])
@@ -3709,6 +3761,20 @@ def test_ui_stage_interact_endpoint_delegates_request_and_streams_logs(
     assert options.run_id == "run-ui-flow"
     assert options.request == "Add migration rollback risks"
     assert options.target_documents == ("workitems/WI-UI/stages/plan/plan.md",)
+    assert options.prepared_interaction is not None
+    assert options.prepared_interaction.operator_request.request_id == "request-0001"
+    assert len(
+        list(
+            (
+                workspace_root
+                / "workitems"
+                / "WI-UI"
+                / "stages"
+                / "plan"
+                / "operator-requests"
+            ).glob("request-*.md")
+        )
+    ) == 1
     assert options.cancel_requested is not None
     assert options.cancel_requested() is False
     assert any(
@@ -3740,6 +3806,7 @@ def test_ui_stage_interact_cancel_callback_observes_cancel_request(
     service = _service(
         workspace_root,
         stage_interact_runner=fake_stage_interact_runner,
+        stage_interact_preparer=_prepare_test_interaction,
     )
 
     response = service.handle_post(

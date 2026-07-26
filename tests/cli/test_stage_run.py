@@ -11,10 +11,13 @@ from typer.testing import CliRunner
 from aidd.adapters.runtime_artifacts import RUNTIME_EXIT_METADATA_FILENAME
 from aidd.cli.main import _active_prompt_pack_paths, _prefix_stream_chunk, app
 from aidd.cli.stage_run import (
+    StageInteractOptions,
     StageRunOptions,
     _CliRuntimeOperatorDecisionProvider,
     _resolve_stage_run_config,
     _write_run_manifest,
+    prepare_stage_interaction,
+    run_stage_interact_command,
 )
 from aidd.core.run_lookup import latest_run_id
 from aidd.core.run_store import (
@@ -950,6 +953,66 @@ def test_stage_interact_creates_operator_request_and_runs_current_run(
     assert artifact_payload["documents"]["operator_request"].endswith(
         "operator-requests/request-0001.md"
     )
+
+
+def test_stage_interact_reuses_synchronously_prepared_request(
+    tmp_path: Path,
+) -> None:
+    workspace_root = tmp_path / ".aidd"
+    work_item = "WI-INT-PREPARED"
+    _materialize_plan_inputs(workspace_root=workspace_root, work_item=work_item)
+    create_run_manifest(
+        workspace_root=workspace_root,
+        work_item=work_item,
+        run_id="run-int",
+        runtime_id="generic-cli",
+        stage_target="plan",
+        config_snapshot={"mode": "test"},
+    )
+    writer_script = _write_intervention_runtime_script(
+        tmp_path=tmp_path,
+        documents=_valid_plan_output_documents(),
+    )
+    config_path = _write_cli_config(
+        tmp_path=tmp_path,
+        runtime_command=f"{shlex.quote(sys.executable)} {shlex.quote(writer_script.as_posix())}",
+    )
+    options = StageInteractOptions(
+        stage="plan",
+        work_item=work_item,
+        runtime="generic-cli",
+        run_id="run-int",
+        root=workspace_root,
+        config=config_path,
+        request="Add migration rollback risks",
+        target_documents=("plan.md",),
+        log_follow=False,
+    )
+
+    prepared = prepare_stage_interaction(options)
+    request_root = prepared.operator_request.request_path.parent
+    assert [path.name for path in request_root.glob("request-*.md")] == [
+        "request-0001.md"
+    ]
+
+    run_stage_interact_command(
+        StageInteractOptions(
+            stage=options.stage,
+            work_item=options.work_item,
+            runtime=options.runtime,
+            run_id=options.run_id,
+            root=options.root,
+            config=options.config,
+            request=options.request,
+            target_documents=options.target_documents,
+            log_follow=False,
+            prepared_interaction=prepared,
+        )
+    )
+
+    assert [path.name for path in request_root.glob("request-*.md")] == [
+        "request-0001.md"
+    ]
 
 
 def test_stage_interact_reports_original_intervention_attempt_when_repair_retries(

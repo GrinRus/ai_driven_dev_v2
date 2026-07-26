@@ -169,6 +169,21 @@ def test_allowed_intervention_restores_draft_and_creates_one_request(
             assert submit.evaluate("element => element.isConnected") is True
             page.mouse.up()
         assert response_info.value.ok
+        accepted = response_info.value.json()
+        accepted_request = accepted["operator_request"]
+        assert accepted["work_item"] == fixture.work_item
+        assert accepted["run_id"] == fixture.run_id
+        assert accepted["stage"] == "idea"
+        assert accepted_request["work_item"] == fixture.work_item
+        assert accepted_request["run_id"] == fixture.run_id
+        assert accepted_request["stage"] == "idea"
+        assert accepted_request["request_id"] == "request-0001"
+        assert accepted_request["request_path"].endswith(
+            "/stages/idea/operator-requests/request-0001.md"
+        )
+        assert accepted_request["request_excerpt"].startswith(
+            "Update only the current stage evidence"
+        )
         deadline = time.monotonic() + 5
         while time.monotonic() < deadline and not list(request_root.glob("request-*.md")):
             time.sleep(0.05)
@@ -184,7 +199,10 @@ def test_allowed_intervention_restores_draft_and_creates_one_request(
             timeout=30_000,
         )
 
-        job_id = page.evaluate("eval('state.activeJobId')")
+        job_id = accepted["job_id"]
+        job_status = page.request.get(f"{harness.url}api/jobs/{job_id}")
+        assert job_status.status == 200
+        assert job_status.json()["status"] == "running"
         if job_id:
             cancel = page.request.post(f"{harness.url}api/jobs/{job_id}/cancel")
             assert cancel.status == 200

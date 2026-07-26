@@ -26,8 +26,10 @@ from aidd import __version__
 from aidd.adapters.surface import get_runtime_adapter_surface
 from aidd.application.implementation import aggregate_finalization_port
 from aidd.cli.stage_run import (
+    PreparedStageInteraction,
     StageInteractOptions,
     StageRunOptions,
+    prepare_stage_interaction,
     run_stage_attempt_command,
     run_stage_command,
     run_stage_interact_command,
@@ -166,6 +168,7 @@ from aidd.runtime_permissions import (
 WorkflowRunner = Callable[..., WorkflowRunResult]
 StageRunner = Callable[[StageRunOptions], None]
 StageInteractRunner = Callable[[StageInteractOptions], None]
+StageInteractPreparer = Callable[[StageInteractOptions], PreparedStageInteraction]
 ReadinessProbeProvider = Callable[[AiddConfig], Mapping[str, RuntimeReadinessProbeReport]]
 LocalFolderOpener = Callable[[Path], None]
 
@@ -1969,6 +1972,7 @@ class OperatorUiService:
         workflow_runner: WorkflowRunner = run_workflow,
         stage_runner: StageRunner = run_stage_command,
         stage_interact_runner: StageInteractRunner = run_stage_interact_command,
+        stage_interact_preparer: StageInteractPreparer = prepare_stage_interaction,
         readiness_probe_provider: ReadinessProbeProvider = _collect_runtime_readiness_probe_reports,
         folder_opener: LocalFolderOpener = _open_local_folder,
     ) -> None:
@@ -1980,6 +1984,7 @@ class OperatorUiService:
             run_stage_attempt_command if stage_runner is run_stage_command else stage_runner
         )
         self._stage_interact_runner = stage_interact_runner
+        self._stage_interact_preparer = stage_interact_preparer
         self._readiness_probe_provider = readiness_probe_provider
         self._folder_opener = folder_opener
         self._jobs = UiRunJobStore()
@@ -3375,6 +3380,19 @@ class OperatorUiService:
         target_documents = self._target_documents_from_payload(payload)
         log_follow = bool(payload.get("log_follow", True))
         run_id = str(payload.get("run_id", "")).strip() or None
+        prepared_options = StageInteractOptions(
+            stage=stage,
+            work_item=self.work_item,
+            runtime=runtime,
+            run_id=run_id,
+            root=self.workspace_root,
+            config=self.config_path,
+            request=raw_request.strip(),
+            request_file=None,
+            target_documents=target_documents,
+            log_follow=log_follow,
+        )
+        prepared = self._stage_interact_preparer(prepared_options)
 
         def _target(job_id: str) -> object:
             return self._run_stage_interact(
@@ -3385,11 +3403,31 @@ class OperatorUiService:
                 target_documents=target_documents,
                 log_follow=log_follow,
                 job_id=job_id,
+                prepared=prepared,
             )
 
-        return self._start_job(
-            kind="intervention", stage=stage, target=_target, run_id=run_id
+        job = self._start_job(
+            kind="intervention",
+            stage=stage,
+            target=_target,
+            run_id=prepared.run_id,
         )
+        assert isinstance(job, dict)
+        request = prepared.operator_request
+        return {
+            **job,
+            "operator_request": {
+                "work_item": request.work_item,
+                "run_id": prepared.run_id,
+                "stage": request.stage,
+                "request_id": request.request_id,
+                "request_path": workspace_relative_path(
+                    self.workspace_root,
+                    request.request_path,
+                ),
+                "request_excerpt": request.request_text[:240],
+            },
+        }
 
     def _run_stage(
         self,
@@ -3471,6 +3509,7 @@ class OperatorUiService:
         target_documents: tuple[str, ...],
         log_follow: bool,
         job_id: str,
+        prepared: PreparedStageInteraction,
     ) -> object:
         try:
             self._stage_interact_runner(
@@ -3491,6 +3530,7 @@ class OperatorUiService:
                         text=text,
                     ),
                     cancel_requested=lambda: self._jobs.cancel_requested(job_id),
+                    prepared_interaction=prepared,
                 )
             )
         except typer.Exit as exc:
@@ -3498,7 +3538,7 @@ class OperatorUiService:
             return {
                 "stage": stage,
                 "runtime": runtime,
-                "run_id": run_id,
+                "run_id": prepared.run_id,
                 "target_documents": target_documents,
                 "exit_code": exit_code,
                 "completed": exit_code == 0,
@@ -3506,7 +3546,7 @@ class OperatorUiService:
         return {
             "stage": stage,
             "runtime": runtime,
-            "run_id": run_id,
+            "run_id": prepared.run_id,
             "target_documents": target_documents,
             "exit_code": 0,
             "completed": True,

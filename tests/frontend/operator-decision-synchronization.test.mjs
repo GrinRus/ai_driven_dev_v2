@@ -245,6 +245,7 @@ async function interventionContext({
 } = {}) {
   const posts = [];
   const cleared = [];
+  const clearedAtPolling = [];
   const textarea = {value: "Keep this exact intervention request"};
   const button = {dataset: {interventionEligible: "true"}, disabled: false};
   const note = {textContent: "", hidden: true};
@@ -308,6 +309,7 @@ async function interventionContext({
     runtimeReadinessMessage: () => "",
     setMutationControlsPending: () => {},
     startJobPolling: async () => {
+      clearedAtPolling.push(cleared.length);
       if (identityShift) {
         currentDraftIdentity = {form: "intervention", run: "run-2", stage: "review"};
       }
@@ -321,11 +323,27 @@ async function interventionContext({
         error.status = 409;
         throw error;
       }
-      return {job_id: "job-1", kind: "intervention", stage: "plan"};
+      const requestId = priorRequestId || "request-1";
+      return {
+        job_id: "job-1",
+        kind: "intervention",
+        work_item: "WI-1",
+        run_id: "run-1",
+        stage: "plan",
+        operator_request: {
+          work_item: "WI-1",
+          run_id: "run-1",
+          stage: "plan",
+          request_id: requestId,
+          request_path: `.aidd/workitems/WI-1/stages/plan/operator-requests/${requestId}.md`,
+          request_excerpt: payload.request.slice(0, 240),
+        },
+      };
     },
     window: {setTimeout},
     __posts: posts,
     __cleared: cleared,
+    __clearedAtPolling: clearedAtPolling,
     __textarea: textarea,
     __button: button,
     __setDraft: (value) => {
@@ -337,7 +355,7 @@ async function interventionContext({
   return context;
 }
 
-test("duplicate intervention activation uses one immutable payload and clears after matching readback", async () => {
+test("accepted intervention identity clears before runtime job polling", async () => {
   const context = await interventionContext();
   await vm.runInContext("Promise.all([submitIntervention(), submitIntervention()])", context);
 
@@ -354,6 +372,7 @@ test("duplicate intervention activation uses one immutable payload and clears af
     },
   });
   assert.equal(context.__cleared.length, 1);
+  assert.deepEqual(context.__clearedAtPolling, [1]);
 });
 
 test("matching intervention winner clears the submitted identity after route state shifts", async () => {

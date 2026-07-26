@@ -12303,7 +12303,7 @@ Local tasks:
     shared bounded surface helper instead of global network idleness. The five-viewports plus
     wrong-run fail-closed matrix passes `6/6`; the historical `1440x900` case passes two
     additional independent reruns, and browser-harness/docs/planning checks pass `51/51`.
-- `W36-E7-S4-T58` (next) Return the synchronously persisted intervention-request winner in the
+- `W36-E7-S4-T58` (done) Return the synchronously persisted intervention-request winner in the
   accepted UI job envelope and reconcile the submitted draft from that identity.
   - Dependencies: `W36-E7-S4-T56` and `W36-E7-S4-T57`; discovered by the second failed
     `W36-E7-S4-T36` attempt and blocks its next rerun.
@@ -12314,7 +12314,16 @@ Local tasks:
     the runtime job can hold later readback, one prepared request is reused by execution without
     duplication, and all five intervention viewports clear only the submitted draft while the
     runtime remains running.
-- `W36-E7-S4-T36` (soon) Re-run the complete provider-free Chromium acceptance matrix after the
+  - Completion: the stage-interact acceptance boundary now validates and persists one typed
+    intervention request before launching the background job, returns its canonical
+    work-item/run/stage/id/path/excerpt envelope, and passes that same prepared request into
+    execution without a second write. Frontend reconciliation validates the accepted envelope
+    against the immutable submitted descriptor and clears only that draft before job polling,
+    while retaining dashboard readback as a compatibility fallback. Focused CLI/frontend
+    coverage passes `17/17`; the full intervention/browser/static selection passes `28/28`;
+    and all five allowed viewports prove one request, an empty submitted draft, and a still-running
+    runtime job.
+- `W36-E7-S4-T36` (next) Re-run the complete provider-free Chromium acceptance matrix after the
   final provider-neutral hardening change.
   - Dependencies: `W36-E7-S4-T58` as the direct queue predecessor; `W36-E7-S4-T55`,
     `W36-E7-S4-T56`, and `W36-E7-S4-T57` as earlier code-change predecessors; blocks the
@@ -12335,7 +12344,7 @@ Local tasks:
     canonical request. Later layers were not run. The remaining boundary is the accepted job
     envelope, which does not expose the synchronously persisted request winner before runtime
     execution can delay dashboard readback; `W36-E7-S4-T58` owns that output.
-- `W36-E7-S4-T37` (parked) Prove the exact post-browser candidate is installable and ready for an
+- `W36-E7-S4-T37` (soon) Prove the exact post-browser candidate is installable and ready for an
   isolated live-provider run.
   - Dependencies: `W36-E7-S4-T36` as the full-browser predecessor; blocks the active Codex
     acceptance task `W36-E7-S4-T3`.
