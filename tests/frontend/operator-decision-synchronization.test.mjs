@@ -237,16 +237,24 @@ test("archive presentation failure retries rendering without a second durable PO
   assert.equal(renderAttempts, 2);
 });
 
-async function interventionContext({conflict = false, priorRequestId = "", postBarrier = null} = {}) {
+async function interventionContext({
+  conflict = false,
+  identityShift = false,
+  priorRequestId = "",
+  postBarrier = null,
+} = {}) {
   const posts = [];
   const cleared = [];
   const textarea = {value: "Keep this exact intervention request"};
   const button = {dataset: {interventionEligible: "true"}, disabled: false};
   const note = {textContent: "", hidden: true};
   const target = {dataset: {interventionTarget: "plan.md"}};
-  let draftRecord = {
+  const submittedDraftIdentity = {form: "intervention", run: "run-1", stage: "plan"};
+  let currentDraftIdentity = {...submittedDraftIdentity};
+  const draftRecords = new Map();
+  draftRecords.set(JSON.stringify(submittedDraftIdentity), {
     value: {text: textarea.value, targetDocuments: ["plan.md"]},
-  };
+  });
   const context = vm.createContext({
     URLSearchParams,
     console,
@@ -290,17 +298,20 @@ async function interventionContext({conflict = false, priorRequestId = "", postB
         },
       },
     }),
-    readOperatorDraft: () => draftRecord,
+    readOperatorDraft: (identity) => draftRecords.get(JSON.stringify(identity)) || null,
     clearOperatorDraft: (identity) => {
       cleared.push(identity);
-      draftRecord = null;
-      return true;
+      return draftRecords.delete(JSON.stringify(identity));
     },
     ensureRunnableRuntime: () => true,
-    operatorDraftIdentity: () => ({form: "intervention", run: "run-1", stage: "plan"}),
+    operatorDraftIdentity: () => ({...currentDraftIdentity}),
     runtimeReadinessMessage: () => "",
     setMutationControlsPending: () => {},
-    startJobPolling: async () => {},
+    startJobPolling: async () => {
+      if (identityShift) {
+        currentDraftIdentity = {form: "intervention", run: "run-2", stage: "review"};
+      }
+    },
     toast: () => {},
     postJson: async (url, payload) => {
       posts.push({url, payload});
@@ -317,7 +328,9 @@ async function interventionContext({conflict = false, priorRequestId = "", postB
     __cleared: cleared,
     __textarea: textarea,
     __button: button,
-    __setDraft: (value) => { draftRecord = {value}; },
+    __setDraft: (value) => {
+      draftRecords.set(JSON.stringify(submittedDraftIdentity), {value});
+    },
   });
   await load(context, "operator-mutation-guard.js");
   await load(context, "operator-approvals-interventions.js");
@@ -341,6 +354,18 @@ test("duplicate intervention activation uses one immutable payload and clears af
     },
   });
   assert.equal(context.__cleared.length, 1);
+});
+
+test("matching intervention winner clears the submitted identity after route state shifts", async () => {
+  const context = await interventionContext({identityShift: true});
+  await vm.runInContext("submitIntervention()", context);
+
+  assert.equal(context.__posts.length, 1);
+  assert.deepEqual(JSON.parse(JSON.stringify(context.__cleared)), [{
+    form: "intervention",
+    run: "run-1",
+    stage: "plan",
+  }]);
 });
 
 test("unrelated intervention conflict retains the browser draft", async () => {

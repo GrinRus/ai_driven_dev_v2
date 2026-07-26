@@ -157,6 +157,7 @@ def test_allowed_intervention_restores_draft_and_creates_one_request(
             if item.method == "POST" and item.url.endswith("/api/stage/interact")
             else None,
         )
+        submitted_draft_identity = page.evaluate("interventionDraftIdentity()")
         submit = page.locator("#submitInterventionButton")
         with page.expect_response(
             lambda response: response.request.method == "POST"
@@ -178,8 +179,9 @@ def test_allowed_intervention_restores_draft_and_creates_one_request(
             encoding="utf-8"
         )
         page.wait_for_function(
-            "readOperatorDraft(interventionDraftIdentity()) === null",
-            timeout=5_000,
+            "(identity) => readOperatorDraft(identity) === null",
+            arg=submitted_draft_identity,
+            timeout=30_000,
         )
 
         job_id = page.evaluate("eval('state.activeJobId')")

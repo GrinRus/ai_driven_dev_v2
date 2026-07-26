@@ -747,7 +747,7 @@ function sameInterventionAction(left, right) {
 }
 
 function clearMatchingInterventionDraft(descriptor) {
-  const record = interventionDraft();
+  const record = readOperatorDraft(descriptor.draftIdentity);
   const value = record?.value || {};
   if (
     String(value.text || "").trim() !== descriptor.request
@@ -839,8 +839,9 @@ async function submitIntervention() {
         let winner = null;
         let reconciliationError = "";
         try {
-          await startJobPolling(job);
           winner = await readInterventionWinner(descriptor);
+          if (winner) clearMatchingInterventionDraft(descriptor);
+          await startJobPolling(job);
         } catch (error) {
           reconciliationError = error.message;
         }

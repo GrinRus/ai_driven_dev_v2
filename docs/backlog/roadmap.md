@@ -12273,7 +12273,7 @@ Local tasks:
     digest-tamper, legacy-read, successful-flow, timeout-flow, bounded-inventory, and module
     boundary matrix passes `12/12`; the closing `T49–T55` group gate passes Ruff, mypy over
     `src scripts`, and the complete Python suite `2125/2125`.
-- `W36-E7-S4-T56` (next) Clear only the submitted intervention draft after its matching
+- `W36-E7-S4-T56` (done) Clear only the submitted intervention draft after its matching
   durable mutation wins across asynchronous Studio re-renders.
   - Dependencies: discovered by the failed `W36-E7-S4-T36` acceptance attempt after
     `W36-E7-S4-T55`; blocks the next `W36-E7-S4-T36` rerun.
@@ -12283,7 +12283,13 @@ Local tasks:
   - Verification: forced identity/render changes after an OK intervention response clear the
     immutable submitted draft exactly once while preserving newer or non-matching drafts; the
     complete five-viewport intervention family passes repeatedly with one durable request.
-- `W36-E7-S4-T57` (soon) Replace History journey global network-idle navigation with the
+  - Completion: matching intervention readback and cleanup now both use the immutable draft
+    identity captured by the submitted action, and cleanup happens immediately after the durable
+    request winner is visible instead of waiting behind runtime-job polling. Deterministic route
+    identity shift, duplicate, conflict, pre-existing-winner, and newer-draft cases pass in the
+    full frontend suite `98/98`; the three historical viewports pass `3/3`, the complete
+    intervention family passes `14/14`, and CLI/static contract coverage passes `60/60`.
+- `W36-E7-S4-T57` (next) Replace History journey global network-idle navigation with the
   shared bounded server-authoritative work-item and History surface synchronization.
   - Dependencies: `W36-E7-S4-T56` as the direct queue predecessor; blocks the next
     `W36-E7-S4-T36` rerun.
@@ -12292,7 +12298,7 @@ Local tasks:
   - Verification: all five History viewports pass repeatedly using DOM readiness plus exact
     durable work-item/History identity, while missing or wrong identity still times out within
     the shared 30-second surface budget.
-- `W36-E7-S4-T36` (parked) Re-run the complete provider-free Chromium acceptance matrix after the
+- `W36-E7-S4-T36` (soon) Re-run the complete provider-free Chromium acceptance matrix after the
   final provider-neutral hardening change.
   - Dependencies: `W36-E7-S4-T55`, `W36-E7-S4-T56`, and `W36-E7-S4-T57` as final code-change
     predecessors; blocks the active Codex acceptance task `W36-E7-S4-T3`.

@@ -413,6 +413,8 @@ curated as docs assets.
 - Request change shows current-stage target document checkboxes when available.
 - Submit & run creates an operator request artifact, switches to Logs, and streams the
   intervention job.
+- Matching durable readback clears only the immutable submitted browser draft before runtime-job
+  polling; later route/render state and newer drafts cannot change the cleanup owner.
 - Activity and Evidence Refs show `operator.request.created` after refresh.
 - Validation and repair evidence remain inspectable after the intervention attempt.
 

@@ -788,6 +788,9 @@ questions, forms, stages, runs, work items, and projects remain untouched. Expli
 discard and 24-hour expiry are the only other cleanup paths. Server evidence always wins after
 successful readback, and restoring a browser draft never creates `answers.md`, an intervention
 request, or next-flow lineage by itself.
+For intervention submits, both matching readback and cleanup use the immutable identity captured
+with the submitted action. Cleanup occurs as soon as that durable winner is visible and does not
+wait for the launched runtime job's polling or terminal state.
 
 ### 8.11 Responsive and accessibility contract
 
