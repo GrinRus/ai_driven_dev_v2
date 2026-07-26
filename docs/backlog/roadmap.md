@@ -12077,7 +12077,7 @@ Local tasks:
     and timeout/no-progress harness paths consume only that CLI JSON result. Application, CLI,
     adapter, architecture-boundary, timeout, and no-progress checks pass `18/18`, and the harness
     tree has no direct `persist_stage_status` import.
-- `W36-E7-S4-T43` (next) Constrain manual and browser evidence imports to the authorized
+- `W36-E7-S4-T43` (done) Constrain manual and browser evidence imports to the authorized
   provider evidence root with symlink-safe atomic materialization.
   - Dependencies: `W36-E7-S4-T42` as the public-boundary predecessor.
   - Scope: live browser/manual evidence intake only; browser capture semantics, Studio behavior,
@@ -12085,7 +12085,12 @@ Local tasks:
   - Verification: contained files and directories copy atomically, while sibling-provider paths,
     absolute escape, hard links, symlinks at every level, and partial-copy failures produce no
     trusted or partially published evidence.
-- `W36-E7-S4-T44` (soon) Reconcile provisional running-stage frontend observations against the
+  - Completion: `live_evidence_intake.py` now validates the provider `browser/` boundary with
+    component-wise `lstat`, inventories only real directories and single-link regular files,
+    copies through a sibling staging directory, verifies file sizes/SHA-256 and a tree digest,
+    then performs one atomic publication. The positive/negative/digest/failure matrix passes
+    `11/11`; both live-flow import integrations preserve their prior non-gating verdict behavior.
+- `W36-E7-S4-T44` (next) Reconcile provisional running-stage frontend observations against the
   later durable stage state and post-stage checkpoint.
   - Dependencies: `W36-E7-S4-T43` as the safe-evidence predecessor.
   - Scope: live black-box frontend checkpoint classification only; Studio polling, endpoints,
@@ -12093,7 +12098,7 @@ Local tasks:
   - Verification: both historical `running probe fail -> stage success -> post-stage pass`
     sequences become superseded transition observations rather than provider failures, while a
     persistent frontend outage remains a truthful frontend failure.
-- `W36-E7-S4-T45` (parked) Expose and reconcile stale-owner live flows without fabricating stage
+- `W36-E7-S4-T45` (soon) Expose and reconcile stale-owner live flows without fabricating stage
   success.
   - Dependencies: `W36-E7-S4-T44` as the checkpoint-reconciliation predecessor.
   - Scope: live flow-state read model and atomic resume reconciliation only; provider completion

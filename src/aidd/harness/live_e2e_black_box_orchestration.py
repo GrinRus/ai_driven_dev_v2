@@ -161,6 +161,12 @@ from aidd.harness.live_e2e_quality_policy import (
     StageQualityAuditInput,
     evaluate_quality_policy,
 )
+from aidd.harness.live_evidence_intake import (
+    LiveEvidenceFile,
+    LiveEvidenceIntakeError,
+    intake_live_evidence,
+    validate_live_evidence_publication,
+)
 from aidd.harness.live_runtime_config import (
     validate_live_runtime_command,
     write_live_runtime_config,
@@ -3890,26 +3896,62 @@ def _read_frontend_checkpoint_payload(ctx: FlowContext) -> dict[str, object]:
     return payload
 
 
-def _copy_manual_frontend_evidence(
-    *,
-    source: Path,
-    destination_root: Path,
-) -> tuple[str, Path, list[str]]:
-    if source.is_dir():
-        if destination_root.exists():
-            shutil.rmtree(destination_root)
-        shutil.copytree(source, destination_root)
-        files = [
-            item.relative_to(destination_root).as_posix()
-            for item in sorted(destination_root.rglob("*"))
-            if item.is_file()
-        ]
-        return "directory", destination_root, files
+def _authorized_browser_evidence_root(ctx: FlowContext) -> Path:
+    work_root = Path(os.path.abspath(ctx.workspace_root.expanduser()))
+    report_root = Path(os.path.abspath(ctx.report_root.expanduser()))
+    try:
+        provider_root = Path(os.path.commonpath((work_root, report_root)))
+    except ValueError as exc:
+        raise LiveEvidenceIntakeError(
+            "Work and report roots do not share one provider boundary."
+        ) from exc
+    if provider_root == Path(provider_root.anchor):
+        raise LiveEvidenceIntakeError(
+            "Work and report roots do not identify a bounded provider root."
+        )
+    return provider_root / "browser"
 
-    destination_root.mkdir(parents=True, exist_ok=True)
-    destination = destination_root / source.name
-    shutil.copy2(source, destination)
-    return "file", destination, [destination.name]
+
+def _existing_manual_evidence_is_trusted(
+    *,
+    existing: object,
+    destination_root: Path,
+) -> bool:
+    if not isinstance(existing, dict) or existing.get("imported") is not True:
+        return False
+    if existing.get("bundle_path") != destination_root.as_posix():
+        return False
+    raw_directories = existing.get("directories")
+    raw_artifacts = existing.get("artifacts")
+    tree_sha256 = existing.get("tree_sha256")
+    if (
+        not isinstance(raw_directories, list)
+        or not all(isinstance(item, str) for item in raw_directories)
+        or not isinstance(raw_artifacts, list)
+        or not isinstance(tree_sha256, str)
+    ):
+        return False
+    try:
+        artifacts = tuple(
+            LiveEvidenceFile(
+                relative_path=str(item["relative_path"]),
+                size_bytes=int(item["size_bytes"]),
+                sha256=str(item["sha256"]),
+            )
+            for item in raw_artifacts
+            if isinstance(item, dict)
+        )
+        if len(artifacts) != len(raw_artifacts):
+            return False
+        validate_live_evidence_publication(
+            published_root=destination_root,
+            expected_directories=tuple(cast(list[str], raw_directories)),
+            expected_files=artifacts,
+            expected_tree_sha256=tree_sha256,
+        )
+    except (KeyError, TypeError, ValueError, LiveEvidenceIntakeError):
+        return False
+    return True
 
 
 def _manual_frontend_evidence_payload(
@@ -3931,38 +3973,35 @@ def _manual_frontend_evidence_payload(
             ),
         }
 
-    source = ctx.manual_frontend_evidence.resolve(strict=False)
+    source = Path(os.path.abspath(ctx.manual_frontend_evidence.expanduser()))
     destination_root = ctx.bundle_root / MANUAL_FRONTEND_EVIDENCE_DIRNAME
+    try:
+        authorized_root = _authorized_browser_evidence_root(ctx)
+    except LiveEvidenceIntakeError as exc:
+        authorized_root = Path()
+        authorization_error: LiveEvidenceIntakeError | None = exc
+    else:
+        authorization_error = None
     payload: dict[str, object] = {
         "source_path": source.as_posix(),
+        "authorized_root": authorized_root.as_posix(),
         "non_gating": True,
         "quality_report_scope": "manual quality-report.md only",
     }
-    if not source.exists():
-        if (
-            isinstance(existing, dict)
-            and existing.get("imported") is True
-            and isinstance(existing.get("bundle_path"), str)
-        ):
-            return dict(existing)
-        payload.update(
-            {
-                "status": "missing",
-                "imported": False,
-                "bundle_path": destination_root.as_posix(),
-                "message": (
-                    "Operator-supplied manual frontend evidence path was not found. "
-                    "Execution verdict and frontend checkpoint classifications are unchanged."
-                ),
-            }
-        )
-        return payload
+    if _existing_manual_evidence_is_trusted(
+        existing=existing,
+        destination_root=destination_root,
+    ):
+        return dict(cast(dict[str, object], existing))
     try:
-        kind, imported_path, files = _copy_manual_frontend_evidence(
+        if authorization_error is not None:
+            raise authorization_error
+        result = intake_live_evidence(
             source=source,
+            authorized_root=authorized_root,
             destination_root=destination_root,
         )
-    except OSError as exc:
+    except LiveEvidenceIntakeError as exc:
         payload.update(
             {
                 "status": "import-error",
@@ -3978,9 +4017,20 @@ def _manual_frontend_evidence_payload(
         {
             "status": "imported",
             "imported": True,
-            "kind": kind,
-            "bundle_path": imported_path.as_posix(),
-            "files": files,
+            "kind": result.source_kind,
+            "bundle_path": result.published_root.as_posix(),
+            "directories": list(result.directories),
+            "files": [item.relative_path for item in result.files],
+            "artifacts": [
+                {
+                    "relative_path": item.relative_path,
+                    "size_bytes": item.size_bytes,
+                    "sha256": item.sha256,
+                }
+                for item in result.files
+            ],
+            "total_size_bytes": result.total_size_bytes,
+            "tree_sha256": result.tree_sha256,
             "message": (
                 "Operator-supplied browser screenshots or notes were imported as "
                 "manual, non-gating evidence."

@@ -421,9 +421,13 @@ active stage, readable desktop/mobile topbar labels, failure-appropriate recover
 action, reachable logs/artifacts/questions/answers, next-flow handoff visibility, and no
 horizontal overflow for long paths, log labels, or action copy. The checklist is operator
 guidance only; it is not runner-generated screenshot evidence and not a UI/UX quality gate.
-When the operator passes `--manual-frontend-evidence <path>`, the runner copies that
-operator-supplied file or directory into `manual-frontend-evidence/` and references it
-from `frontend-checkpoints.*` as non-gating evidence for the manual `quality-report.md`.
+When the operator passes `--manual-frontend-evidence <path>`, that source must remain inside
+the provider's authorized `browser/` root derived from the paired work/report roots. The runner
+uses `lstat` containment checks, rejects symlinks and hard links, verifies every copied size and
+SHA-256 digest in a temporary sibling directory, and atomically publishes
+`manual-frontend-evidence/`. Only a verified publication is referenced from
+`frontend-checkpoints.*` as non-gating evidence for the manual `quality-report.md`; an unsafe
+source or interrupted copy leaves no trusted publication.
 When a public stage exposes `preparing`, `executing`, or `validating` metadata while the
 stage command is still alive, `frontend-checkpoints.*` also records a `running-stage`
 phase: disabled `wait-for-stage` next action, active running stage visibility, and runtime

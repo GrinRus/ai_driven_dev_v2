@@ -80,9 +80,11 @@ agent: visible next action and active stage, readable desktop/mobile topbar labe
 failure-appropriate recovery primary action, reachable logs/artifacts/questions/answers,
 and no horizontal overflow for long paths, log labels, or action copy.
 Screenshots and browser notes are optional manual evidence, not runner-generated artifacts.
-When the operator passes `--manual-frontend-evidence <path>`, the runner copies that
-operator-supplied file or directory into `manual-frontend-evidence/` and references it
-from `frontend-checkpoints.*` as non-gating evidence for the manual `quality-report.md`.
+When the operator passes `--manual-frontend-evidence <path>`, the source must be contained by
+the selected provider's `browser/` root. The runner imports only regular, single-link files
+through a digest-verified temporary sibling directory and atomically publishes
+`manual-frontend-evidence/`; rejected paths and partial copies are not trusted or referenced.
+The verified import remains non-gating evidence for the manual `quality-report.md`.
 
 The `stage-audits/<implement-stage-run-id>.*` implement audit separates tracked changed files, new untracked product
 files, known harness/config untracked files, and setup-baseline untracked files. New

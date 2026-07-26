@@ -114,7 +114,9 @@ bounded notes or screenshots for active execution, Implement task/finalization e
 Review/QA, and fresh terminal Flow Complete. Conditional recovery or approval states are recorded
 only when they occur naturally. Record console, page, failed-request, overflow, and artifact/log
 reachability observations. Imported browser evidence is manual and does not change the runner
-verdict.
+verdict. The evidence source must stay below the selected provider's exact `browser/` root;
+sibling-provider files, traversal, symlinks, and hard links are rejected before atomic,
+digest-verified publication into the bundle.
 
 After terminal QA, run the manifest verification commands and write `flow-quality-report.md`,
 `code-quality-report.md`, and `quality-report.md`. A run is counted clean only when execution

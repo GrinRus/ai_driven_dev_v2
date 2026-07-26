@@ -1837,7 +1837,7 @@ def test_black_box_live_e2e_imports_manual_frontend_evidence_without_gating(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     scenario_path, work_root, report_root = _prepare_live_test(tmp_path, monkeypatch)
-    manual_evidence = tmp_path / "manual-frontend-evidence-source"
+    manual_evidence = tmp_path / "browser" / "manual-frontend-evidence-source"
     screenshot_dir = manual_evidence / "screenshots"
     screenshot_dir.mkdir(parents=True)
     (manual_evidence / "browser-notes.md").write_text(
@@ -4168,8 +4168,8 @@ def test_black_box_live_e2e_marks_provider_no_progress_as_infra_fail(
         "aidd.harness.live_e2e_black_box_orchestration._stage_no_progress_timeout_seconds",
         lambda scenario: 1.0,
     )
-    manual_evidence = tmp_path / "provider-no-progress-browser-evidence"
-    manual_evidence.mkdir()
+    manual_evidence = tmp_path / "browser" / "provider-no-progress-browser-evidence"
+    manual_evidence.mkdir(parents=True)
     (manual_evidence / "browser-notes.md").write_text(
         "# Browser Notes\n\n"
         "- Desktop UI showed the failed idea stage after provider no-progress.\n"

@@ -7,15 +7,14 @@ slice, and local task.
 
 ## Next
 
-- `W36-E7-S4-T43` — Constrain browser and manual evidence imports to authorized roots.
+- `W36-E7-S4-T44` — Reconcile provisional frontend probes with durable stage state.
 
 ## Soon
 
-- `W36-E7-S4-T44` — Reconcile provisional frontend probes with durable stage state.
+- `W36-E7-S4-T45` — Expose and reconcile stale-owner live flows.
 
 ## Parking lot
 
-- `W36-E7-S4-T45` — Expose and reconcile stale-owner live flows.
 - `W36-E7-S4-T46` — Accumulate live-flow timing across resumed process segments.
 - `W36-E7-S4-T47` — Persist typed terminal evidence for remediation jobs.
 - `W36-E7-S4-T48` — Preflight target installation and verification prerequisites.
@@ -49,15 +48,14 @@ slice, and local task.
 
 ## Current reconciliation
 
-- `2026-07-26` `W36-E7-S4-T42` is complete: abandoned executing stages are now reconciled by a
-  typed application compare-and-set operation exposed as installed
-  `aidd stage reconcile-terminal`. Canonical work-item/run/stage/expected-state/reason identity
-  is validated before mutation; only the matching non-terminal state receives one `failed`
-  history entry, while repeats are byte-stable and terminal, missing, or mismatched metadata is
-  not rewritten. Timeout and provider-no-progress paths invoke the installed CLI and retain its
-  typed evidence; an architecture test rejects any harness import of `persist_stage_status`.
-  Application, CLI, adapter, boundary, timeout, and no-progress checks pass `18/18`, with Ruff,
-  mypy, and planning integrity clean. `T43` is promoted to `Next` and `T44` moves to `Soon`.
+- `2026-07-26` `W36-E7-S4-T43` is complete: browser/manual evidence is accepted only from the
+  selected provider's authorized `browser/` root. The typed intake module performs lexical
+  containment and component-wise `lstat`, rejects sibling/absolute/traversal escapes, symlinks,
+  non-regular files, and hard links, then copies through a temporary sibling directory. Every
+  file size and SHA-256 plus the complete tree digest is verified before one atomic publication;
+  failed copies clean staging, and later mutation invalidates reuse. The focused matrix passes
+  `11/11`, both live-flow integrations pass without changing execution verdicts, and Ruff/mypy
+  are clean. `T44` is promoted to `Next` and `T45` moves to `Soon`.
 
 - `2026-07-22` `W36-E7-S4-T35` is complete: runtime-readiness updates now use a
   generation-aware scoped renderer and cannot replace the decision-owning Studio cockpit.
