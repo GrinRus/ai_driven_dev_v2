@@ -1,9 +1,12 @@
 from __future__ import annotations
 
+import fcntl
 import json
 import os
 import threading
-from collections.abc import Mapping
+from collections.abc import Callable, Iterator, Mapping
+from contextlib import contextmanager
+from dataclasses import dataclass
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any, Protocol
@@ -48,6 +51,28 @@ class FlowStateContext(Protocol):
     target_workspace_baseline_snapshot: dict[str, object] | None
     enable_next_flow_follow_up_proof: bool
     manual_frontend_evidence: Path | None
+
+
+@dataclass(frozen=True, slots=True)
+class StaleOwnerObservation:
+    durable_status: str | None
+    read_status: str | None
+    evaluator_pid: int | None
+    owner_alive: bool
+    stale_owner: bool
+    active_step: dict[str, object] | None
+    observed_at_utc: str
+
+    def to_payload(self) -> dict[str, object]:
+        return {
+            "durable_status": self.durable_status,
+            "read_status": self.read_status,
+            "evaluator_pid": self.evaluator_pid,
+            "owner_alive": self.owner_alive,
+            "stale_owner": self.stale_owner,
+            "active_step": self.active_step,
+            "observed_at_utc": self.observed_at_utc,
+        }
 
 
 def utc_now() -> str:
@@ -327,27 +352,109 @@ def _pid_is_alive(pid: object) -> bool:
     return True
 
 
-def mark_stale_running_state_interrupted(
+def detect_stale_owner(
+    state: Mapping[str, object],
+    *,
+    pid_is_alive: Callable[[object], bool] = _pid_is_alive,
+    observed_at_utc: str | None = None,
+) -> StaleOwnerObservation:
+    durable_status = state.get("status")
+    normalized_status = durable_status if isinstance(durable_status, str) else None
+    raw_pid = state.get("evaluator_pid")
+    evaluator_pid = raw_pid if isinstance(raw_pid, int) else None
+    owner_alive = pid_is_alive(raw_pid)
+    stale_owner = normalized_status == "running" and not owner_alive
+    raw_active_step = state.get("active_step")
+    active_step = (
+        {str(key): value for key, value in raw_active_step.items()}
+        if isinstance(raw_active_step, dict)
+        else None
+    )
+    return StaleOwnerObservation(
+        durable_status=normalized_status,
+        read_status="stale-owner" if stale_owner else normalized_status,
+        evaluator_pid=evaluator_pid,
+        owner_alive=owner_alive,
+        stale_owner=stale_owner,
+        active_step=active_step,
+        observed_at_utc=observed_at_utc or utc_now(),
+    )
+
+
+def stale_owner_read_model(
     state_path_value: Path,
     *,
-    state: dict[str, Any] | None = None,
+    pid_is_alive: Callable[[object], bool] = _pid_is_alive,
 ) -> dict[str, Any]:
-    payload = read_json_object(state_path_value) if state is None else dict(state)
-    if payload.get("status") != "running" or _pid_is_alive(payload.get("evaluator_pid")):
+    payload = read_json_object(state_path_value)
+    observation = detect_stale_owner(payload, pid_is_alive=pid_is_alive)
+    read_model = dict(payload)
+    read_model["durable_status"] = observation.durable_status
+    read_model["status"] = observation.read_status
+    read_model["owner_observation"] = observation.to_payload()
+    return read_model
+
+
+@contextmanager
+def _flow_state_reconciliation_lock(state_path_value: Path) -> Iterator[None]:
+    flags = os.O_RDONLY | getattr(os, "O_DIRECTORY", 0)
+    descriptor = os.open(state_path_value.parent, flags)
+    try:
+        fcntl.flock(descriptor, fcntl.LOCK_EX)
+        yield
+    finally:
+        fcntl.flock(descriptor, fcntl.LOCK_UN)
+        os.close(descriptor)
+
+
+_RESUME_IDENTITY_KEYS = (
+    "run_id",
+    "scenario_id",
+    "scenario_path",
+    "runtime_id",
+    "work_item",
+    "report_root",
+    "work_root",
+    "run_work_root",
+    "bundle_root",
+)
+
+
+def _resume_identity(state: Mapping[str, object]) -> dict[str, object]:
+    return {key: state.get(key) for key in _RESUME_IDENTITY_KEYS}
+
+
+def reconcile_stale_owner_for_resume(
+    state_path_value: Path,
+    *,
+    expected_identity: Mapping[str, object],
+    changed_at_utc: str | None = None,
+) -> dict[str, Any]:
+    with _flow_state_reconciliation_lock(state_path_value):
+        payload = read_json_object(state_path_value)
+        if _resume_identity(payload) != dict(expected_identity):
+            raise ValueError(
+                "Resume flow-state identity changed during stale-owner reconciliation."
+            )
+        observation = detect_stale_owner(payload)
+        if not observation.stale_owner:
+            return payload
+        reconciled_at = changed_at_utc or utc_now()
+        interruption = {
+            "created_at_utc": reconciled_at,
+            "reason": "stale-owner",
+            "previous_status": "running",
+            "previous_evaluator_pid": observation.evaluator_pid,
+            "active_step": observation.active_step,
+            "cleanup": "no active evaluator process was found",
+            "provider_completion_used_as_stage_verdict": False,
+        }
+        payload["status"] = "interrupted-resumable"
+        payload["next_action"] = "run-stage"
+        payload["updated_at_utc"] = reconciled_at
+        payload["interruption"] = interruption
+        write_json_atomic(state_path_value, payload)
         return payload
-    interruption = {
-        "created_at_utc": utc_now(),
-        "reason": "stale-running-state",
-        "previous_status": "running",
-        "previous_evaluator_pid": payload.get("evaluator_pid"),
-        "cleanup": "no active evaluator process was found",
-    }
-    payload["status"] = "interrupted-resumable"
-    payload["next_action"] = "run-stage"
-    payload["updated_at_utc"] = interruption["created_at_utc"]
-    payload["interruption"] = interruption
-    write_json_atomic(state_path_value, payload)
-    return payload
 
 
 def _identity_path(value: object, *, field: str) -> Path:
@@ -463,7 +570,12 @@ def find_resume_state(
         work_root=work_root,
         run_root=run_root,
     )
-    state = mark_stale_running_state_interrupted(candidate, state=state)
+    owner_observation = detect_stale_owner(state)
+    if owner_observation.stale_owner:
+        state = reconcile_stale_owner_for_resume(
+            candidate,
+            expected_identity=_resume_identity(state),
+        )
     status = state.get("status")
     if status == "awaiting-quality-review":
         required_path = state.get("quality_review_required_path")
@@ -499,18 +611,21 @@ __all__ = [
     "RESUMABLE_STATUSES",
     "TERMINAL_MANUAL_STATUSES",
     "TERMINAL_STATUSES",
+    "StaleOwnerObservation",
     "build_flow_state_payload",
     "completed_stage_runs",
     "completed_stages",
     "current_stage",
+    "detect_stale_owner",
     "find_resume_state",
     "handled_quality_stage_run_ids",
     "load_flow_state",
-    "mark_stale_running_state_interrupted",
     "persist_flow_state",
     "preserved_state_extras",
     "read_json_object",
+    "reconcile_stale_owner_for_resume",
     "remediation_cycles",
+    "stale_owner_read_model",
     "stale_downstream_stages",
     "state_path",
     "state_status",

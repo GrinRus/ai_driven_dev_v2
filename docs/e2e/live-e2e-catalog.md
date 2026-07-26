@@ -139,6 +139,12 @@ uv run python -m aidd.harness.live_e2e_black_box harness/scenarios/live/sqlite-u
   containment before checking for state. Symlinked run/state escapes are rejected,
   and `flow-state.json` must match the requested run, scenario, runtime, work item,
   report root, and work root before stale-owner reconciliation or resume.
+- Owner inspection is read-only: a durable `running` state whose evaluator PID is gone is
+  projected as `stale-owner` without changing `flow-state.json`. Explicit resume then reloads
+  the state under an exclusive bundle-directory lock, rechecks the complete identity and owner,
+  and atomically records `interrupted-resumable`. Existing active-step, provider events, stage
+  outputs, and attempt evidence are retained; a provider completion event never fabricates a
+  completed-stage verdict or advances `completed_stage_runs`.
 - Resume from `awaiting-quality-review` requires the exact audit file named in
   `flow-state.json`, for example `stage-quality-audits/stage-0007-review.md`. If that file is
   missing, the runner refuses the resume instead of advancing the stage loop.
@@ -162,7 +168,8 @@ uv run python -m aidd.harness.live_e2e_black_box harness/scenarios/live/sqlite-u
   `blocked` run. The runner writes `manual-quality-stop.json`,
   `manual-quality-stop.md`, and stop-point `target-workspace-evidence.*`; it does not
   write `verdict.md` or `grader.json` for that manual terminal state.
-- If the evaluator is interrupted, it records `interrupted-resumable` state,
+- If the evaluator is interrupted or a stale owner is atomically reconciled on resume, it
+  records `interrupted-resumable` state,
   attempts to terminate live runtime subprocesses, and requires explicit
   `--run-id` before continuing.
 - `limits.timeout_minutes` is the per-stage hard command timeout. Separately,

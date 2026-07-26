@@ -3550,7 +3550,8 @@ def test_black_box_live_e2e_marks_stale_running_run_resumable(tmp_path: Path) ->
 
     payload = json.loads(state_path.read_text(encoding="utf-8"))
     assert payload["status"] == "interrupted-resumable"
-    assert payload["interruption"]["reason"] == "stale-running-state"
+    assert payload["interruption"]["reason"] == "stale-owner"
+    assert payload["interruption"]["provider_completion_used_as_stage_verdict"] is False
 
 
 def test_black_box_rejects_unsafe_resume_id_before_loading_scenario(

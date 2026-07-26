@@ -1,11 +1,17 @@
 from __future__ import annotations
 
 import json
+import os
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
 import pytest
 
-from aidd.harness.live_e2e_flow_state import find_resume_state
+from aidd.harness.live_e2e_flow_state import (
+    find_resume_state,
+    reconcile_stale_owner_for_resume,
+    stale_owner_read_model,
+)
 
 RUN_ID = "canonical-run"
 SCENARIO_ID = "LIVE-FIXTURE"
@@ -105,6 +111,152 @@ def test_stale_running_reconstruction_is_idempotent(tmp_path: Path) -> None:
     ) == state_path
 
     assert state_path.read_bytes() == first_payload
+
+
+def test_stale_owner_detection_is_read_only(tmp_path: Path) -> None:
+    report_root = tmp_path / "reports"
+    work_root = tmp_path / "work"
+    scenario_path = tmp_path / "scenario.yaml"
+    state_path = _write_state(
+        report_root=report_root,
+        work_root=work_root,
+        scenario_path=scenario_path,
+        payload={
+            "status": "running",
+            "next_action": "run-stage",
+            "active_step": {
+                "action": "run-stage",
+                "stage": "idea",
+                "stage_run_id": "stage-0001-idea",
+            },
+        },
+    )
+    before = state_path.read_bytes()
+
+    read_model = stale_owner_read_model(state_path)
+
+    assert read_model["status"] == "stale-owner"
+    assert read_model["durable_status"] == "running"
+    assert read_model["owner_observation"]["stale_owner"] is True
+    assert read_model["owner_observation"]["active_step"]["stage"] == "idea"
+    assert state_path.read_bytes() == before
+
+
+def test_stale_owner_resume_reconciliation_is_atomic_and_idempotent(
+    tmp_path: Path,
+) -> None:
+    report_root = tmp_path / "reports"
+    work_root = tmp_path / "work"
+    scenario_path = tmp_path / "scenario.yaml"
+    state_path = _write_state(
+        report_root=report_root,
+        work_root=work_root,
+        scenario_path=scenario_path,
+        payload={"status": "running", "next_action": "run-stage"},
+    )
+    expected_identity = _identity(
+        report_root=report_root,
+        work_root=work_root,
+        scenario_path=scenario_path,
+    )
+
+    def reconcile() -> dict[str, object]:
+        return reconcile_stale_owner_for_resume(
+            state_path,
+            expected_identity=expected_identity,
+            changed_at_utc="2026-07-26T12:00:00Z",
+        )
+
+    with ThreadPoolExecutor(max_workers=2) as executor:
+        results = tuple(executor.map(lambda _: reconcile(), range(2)))
+
+    assert [result["status"] for result in results] == [
+        "interrupted-resumable",
+        "interrupted-resumable",
+    ]
+    payload = json.loads(state_path.read_text(encoding="utf-8"))
+    stable_bytes = state_path.read_bytes()
+    assert payload["interruption"]["reason"] == "stale-owner"
+    assert payload["interruption"]["provider_completion_used_as_stage_verdict"] is False
+    reconcile()
+    assert state_path.read_bytes() == stable_bytes
+
+
+def test_provider_completion_evidence_is_retained_without_fabricating_stage_verdict(
+    tmp_path: Path,
+) -> None:
+    report_root = tmp_path / "reports"
+    work_root = tmp_path / "work"
+    scenario_path = tmp_path / "scenario.yaml"
+    state_path = _write_state(
+        report_root=report_root,
+        work_root=work_root,
+        scenario_path=scenario_path,
+        payload={
+            "status": "running",
+            "next_action": "run-stage",
+            "current_stage": "idea",
+            "completed_stages": [],
+            "completed_stage_runs": [],
+            "active_step": {
+                "action": "run-stage",
+                "stage": "idea",
+                "stage_run_id": "stage-0001-idea",
+            },
+        },
+    )
+    evidence_root = state_path.parent / "provider-evidence"
+    evidence_root.mkdir()
+    runtime_events = evidence_root / "events.jsonl"
+    stage_output = evidence_root / "stage-result.md"
+    runtime_events.write_text(
+        '{"event":"stage_completed","stage":"idea"}\n',
+        encoding="utf-8",
+    )
+    stage_output.write_text("# Stage result\n\nSucceeded.\n", encoding="utf-8")
+    evidence_bytes = (runtime_events.read_bytes(), stage_output.read_bytes())
+
+    assert _find(
+        report_root=report_root,
+        work_root=work_root,
+        scenario_path=scenario_path,
+    ) == state_path
+
+    payload = json.loads(state_path.read_text(encoding="utf-8"))
+    assert payload["status"] == "interrupted-resumable"
+    assert payload["current_stage"] == "idea"
+    assert payload["completed_stages"] == []
+    assert payload["completed_stage_runs"] == []
+    assert payload["active_step"]["stage_run_id"] == "stage-0001-idea"
+    assert payload["interruption"]["provider_completion_used_as_stage_verdict"] is False
+    assert (runtime_events.read_bytes(), stage_output.read_bytes()) == evidence_bytes
+
+
+def test_live_owner_is_not_reported_or_reconciled_as_stale(tmp_path: Path) -> None:
+    report_root = tmp_path / "reports"
+    work_root = tmp_path / "work"
+    scenario_path = tmp_path / "scenario.yaml"
+    state_path = _write_state(
+        report_root=report_root,
+        work_root=work_root,
+        scenario_path=scenario_path,
+        payload={
+            "status": "running",
+            "next_action": "run-stage",
+            "evaluator_pid": os.getpid(),
+        },
+    )
+    before = state_path.read_bytes()
+
+    assert stale_owner_read_model(state_path)["status"] == "running"
+    with pytest.raises(ValueError, match="has status `running`"):
+        _find(
+            report_root=report_root,
+            work_root=work_root,
+            scenario_path=scenario_path,
+        )
+
+    assert state_path.read_bytes() == before
 
 
 def test_terminal_state_can_be_reloaded_without_rewriting(tmp_path: Path) -> None:

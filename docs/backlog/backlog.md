@@ -7,15 +7,14 @@ slice, and local task.
 
 ## Next
 
-- `W36-E7-S4-T45` — Expose and reconcile stale-owner live flows.
+- `W36-E7-S4-T46` — Accumulate live-flow timing across resumed process segments.
 
 ## Soon
 
-- `W36-E7-S4-T46` — Accumulate live-flow timing across resumed process segments.
+- `W36-E7-S4-T47` — Persist typed terminal evidence for remediation jobs.
 
 ## Parking lot
 
-- `W36-E7-S4-T47` — Persist typed terminal evidence for remediation jobs.
 - `W36-E7-S4-T48` — Preflight target installation and verification prerequisites.
 - `W36-E7-S4-T49` — Materialize a self-contained canonical live evidence bundle.
 - `W36-E7-S4-T50` — Commit the live bundle digest and browser provenance manifest.
@@ -47,14 +46,15 @@ slice, and local task.
 
 ## Current reconciliation
 
-- `2026-07-26` `W36-E7-S4-T44` is complete: running-stage frontend observations now retain a
-  typed provisional lifecycle instead of becoming immediate terminal failures. Raw pass/fail is
-  stored as `provisional-pass`/`provisional-fail`; after stage completion, durable metadata and
-  the post-stage checkpoint produce `superseded-transition` or `confirmed-fail` and one effective
-  frontend verdict. Both historical running-fail races now finish clean after durable
-  `succeeded` plus post-stage pass, while a persistent outage still fails. JSON, Markdown, stage
-  audit, and flow-step details agree; the focused matrix passes `12/12`, with Ruff and mypy clean.
-  `T45` is promoted to `Next` and `T46` moves to `Soon`.
+- `2026-07-26` `W36-E7-S4-T45` is complete: owner inspection is now a read-only flow-state read
+  model that shows dead-owner durable `running` state as `stale-owner` without changing bytes.
+  Explicit resume independently reloads under an exclusive bundle-directory lock, rechecks the
+  complete identity and owner, then atomically records one `interrupted-resumable` transition.
+  Concurrent and repeated reconciliation is byte-stable. A simulated death after a retained
+  provider `stage_completed` event preserves event/output evidence, current stage and active
+  step, but leaves completed stages unchanged and explicitly records that provider completion
+  was not used as a verdict. The stale/resume matrix passes `32/32`, with Ruff and mypy clean.
+  `T46` is promoted to `Next` and `T47` moves to `Soon`.
 
 - `2026-07-22` `W36-E7-S4-T35` is complete: runtime-readiness updates now use a
   generation-aware scoped renderer and cannot replace the decision-owning Studio cockpit.

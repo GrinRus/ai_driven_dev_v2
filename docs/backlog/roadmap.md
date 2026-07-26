@@ -12103,7 +12103,7 @@ Local tasks:
     probe classifications. Durable stage status and the post-stage checkpoint now decide the
     effective frontend verdict; reconciliation is projected into JSON, Markdown, and flow-step
     details. The focused state/race/outage matrix passes `12/12`.
-- `W36-E7-S4-T45` (next) Expose and reconcile stale-owner live flows without fabricating stage
+- `W36-E7-S4-T45` (done) Expose and reconcile stale-owner live flows without fabricating stage
   success.
   - Dependencies: `W36-E7-S4-T44` as the checkpoint-reconciliation predecessor.
   - Scope: live flow-state read model and atomic resume reconciliation only; provider completion
@@ -12111,14 +12111,20 @@ Local tasks:
   - Verification: a helper dying after provider completion but before flow-state commit is shown
     as stale, resumes idempotently as `interrupted-resumable`, retains its evidence, and never
     remains indefinitely `running` after its owner disappears.
-- `W36-E7-S4-T46` (soon) Accumulate live-flow duration across every resumed process segment.
+  - Completion: `stale_owner_read_model` now projects dead-owner `running` state as
+    `stale-owner` without writing, while explicit resume reloads under a directory lock, rechecks
+    the complete run identity and owner, and atomically records one `interrupted-resumable`
+    transition. Concurrent repeats are byte-stable; provider completion events and stage outputs
+    are retained but never append completed-stage state. The full stale/resume matrix passes
+    `32/32`.
+- `W36-E7-S4-T46` (next) Accumulate live-flow duration across every resumed process segment.
   - Dependencies: `W36-E7-S4-T45` as the stale-flow predecessor.
   - Scope: live timing persistence and rendering only; stage execution and retry budgets remain
     unchanged.
   - Verification: a multi-resume fixture produces mutually consistent stage timing, run
     transcript duration, and retained step durations instead of resetting aggregate elapsed time
     when a new evaluator process starts.
-- `W36-E7-S4-T47` (parked) Persist typed terminal evidence for every accepted remediation job.
+- `W36-E7-S4-T47` (soon) Persist typed terminal evidence for every accepted remediation job.
   - Dependencies: `W36-E7-S4-T46` as the truthful-flow-evidence predecessor.
   - Scope: UI remediation job terminal evidence and harness readback only; Studio action
     synchronization remains owned by T35 and provider outcome semantics remain unchanged.
