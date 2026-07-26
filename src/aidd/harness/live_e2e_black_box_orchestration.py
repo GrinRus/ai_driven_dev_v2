@@ -75,6 +75,7 @@ from aidd.harness.install_artifact import (
     HarnessInstallResult,
     prepare_local_wheel_install,
 )
+from aidd.harness.live_bundle_manifest import LiveBundleSealInputs, seal_live_bundle
 from aidd.harness.live_e2e_black_box_reports import (
     _command_transcript_payload as _reports_command_transcript_payload,
 )
@@ -8254,20 +8255,38 @@ def _write_run_transcript_from_flow(*, ctx: FlowContext, exit_code: int) -> Path
 
 
 def _materialize_canonical_live_result(ctx: FlowContext) -> None:
+    identity = LiveResultBundleIdentity(
+        scenario_id=ctx.scenario.scenario_id,
+        runtime_id=ctx.runtime_id,
+        run_id=ctx.run_id,
+        work_item=ctx.work_item,
+    )
     materialize_live_result_bundle(
         bundle_root=ctx.bundle_root,
-        identity=LiveResultBundleIdentity(
-            scenario_id=ctx.scenario.scenario_id,
-            runtime_id=ctx.runtime_id,
-            run_id=ctx.run_id,
-            work_item=ctx.work_item,
-        ),
+        identity=identity,
         target_root=(
             None
             if ctx.prepared_working_copy is None
             else ctx.prepared_working_copy.working_copy_path
         ),
     )
+    if (
+        ctx.source_repository_root is not None
+        and ctx.install_result is not None
+        and ctx.install_result.artifact_path is not None
+        and ctx.install_result.source_revision is not None
+        and ctx.prepared_working_copy is not None
+    ):
+        seal_live_bundle(
+            bundle_root=ctx.bundle_root,
+            inputs=LiveBundleSealInputs(
+                identity=identity,
+                source_repository_root=ctx.source_repository_root,
+                source_commit=ctx.install_result.source_revision,
+                wheel_path=ctx.install_result.artifact_path,
+                target_revision=ctx.prepared_working_copy.resolved_revision,
+            ),
+        )
 
 
 def _blocked_result(ctx: FlowContext) -> BlackBoxLiveE2EResult:

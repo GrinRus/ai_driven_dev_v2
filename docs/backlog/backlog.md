@@ -7,15 +7,14 @@ slice, and local task.
 
 ## Next
 
-- `W36-E7-S4-T50` — Commit the live bundle digest and browser provenance manifest.
+- `W36-E7-S4-T51` — Finalize truthful product-bundle summaries and acceptance status.
 
 ## Soon
 
-- `W36-E7-S4-T51` — Finalize truthful product-bundle summaries and acceptance status.
+- `W36-E7-S4-T52` — Bound ignored dependency and cache inventories in repository evidence.
 
 ## Parking lot
 
-- `W36-E7-S4-T52` — Bound ignored dependency and cache inventories in repository evidence.
 - `W36-E7-S4-T53` — Read persisted runtime-log tails under a byte and memory bound.
 - `W36-E7-S4-T54` — Normalize provider events into a bounded lifecycle projection.
 - `W36-E7-S4-T55` — Reference canonical command evidence from aggregate live reports.
@@ -41,6 +40,14 @@ slice, and local task.
   queue-restoration policy in `docs/backlog/roadmap.md` (`W8-E3-S1`).
 
 ## Current reconciliation
+
+- `2026-07-26` `W36-E7-S4-T50` is complete: `live-bundle-manifest.json` is now the
+  atomically-published final commit marker over the validated T49 index, exact tracked AIDD source
+  archive, installed wheel, source commit/tree, target pin, all bundle file sizes/digests, and
+  browser run/viewport identities. Readback rejects changed bytes, incomplete materialization,
+  orphan files, identity drift, and wrong browser provenance; repeat sealing is stable. The
+  combined manifest/materialization/terminal-flow matrix passes `79/79`. `T51` is promoted to
+  `Next` and `T52` to `Soon`.
 
 - `2026-07-26` `W36-E7-S4-T49` is complete: the typed live result materializer now copies
   work-item stage outputs, task/run/finalization evidence, target patch, final reports,

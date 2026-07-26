@@ -16,6 +16,9 @@ from aidd.core.identifiers import SafeIdentifier
 LIVE_RESULT_INDEX_FILENAME = "live-result-index.json"
 LIVE_RESULT_MATERIALIZED_DIRNAME = "canonical-evidence"
 LIVE_RESULT_INDEX_SCHEMA_VERSION = 1
+_LATER_SEAL_OUTPUT_NAMES = frozenset(
+    {"live-bundle-manifest.json", "provenance"}
+)
 
 ArtifactCategory = Literal[
     "browser",
@@ -299,6 +302,7 @@ def materialize_live_result_bundle(
             if (
                 source.name == LIVE_RESULT_MATERIALIZED_DIRNAME
                 or source.name == LIVE_RESULT_INDEX_FILENAME
+                or source.name in _LATER_SEAL_OUTPUT_NAMES
                 or source.name.startswith(".canonical-evidence-")
             ):
                 continue

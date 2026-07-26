@@ -12179,7 +12179,7 @@ Local tasks:
     with size and SHA-256 readback; containment, symlink, dangling path, digest, and exact run
     identity checks fail closed. Absolute paths require an explicit `legacy-degraded` read mode.
     The source/work/target deletion matrix and terminal-flow compatibility suite pass `74/74`.
-- `W36-E7-S4-T50` (next) Commit one atomic digest and provenance manifest for the complete live
+- `W36-E7-S4-T50` (done) Commit one atomic digest and provenance manifest for the complete live
   acceptance bundle.
   - Dependencies: `W36-E7-S4-T49` as the self-contained-materialization predecessor.
   - Scope: schema-v1 live bundle commit marker and readback validation only; raw evidence remains
@@ -12187,7 +12187,15 @@ Local tasks:
   - Verification: commit/tree/scenario/target identities plus SHA-256 and size for the source
     archive, wheel, stage evidence, target patch, reports, runtime evidence, and each browser file
     validate exactly; orphan browser files, wrong viewport/run identity, and digest mismatch fail.
-- `W36-E7-S4-T51` (soon) Finalize a truthful product-bundle summary after manual quality
+  - Completion: a separate typed `live_bundle_manifest` sealer now materializes the exact tracked
+    AIDD source archive and installed wheel into bundle provenance, records source commit/tree,
+    pinned target revision, scenario/runtime/run/work-item identity, and size/SHA-256 for every
+    regular bundle file, then atomically publishes `live-bundle-manifest.json` last. Its canonical
+    tree digest is stable across repeat sealing. Readback revalidates the T49 index, every byte,
+    the complete file inventory, and deterministic browser run/viewport identities; digest
+    mutation, missing materialization, orphan browser files, and wrong browser identity all fail
+    closed. The manifest, materialization, and terminal-flow matrix passes `79/79`.
+- `W36-E7-S4-T51` (next) Finalize a truthful product-bundle summary after manual quality
   evidence is complete.
   - Dependencies: `W36-E7-S4-T50` as the digest-manifest predecessor.
   - Scope: product-evaluation summary writer/read model and legacy degraded-state handling only;
@@ -12195,7 +12203,7 @@ Local tasks:
   - Verification: pre-review, post-review, counted-clean, not-counted, and manual-quality-stop
     fixtures distinguish `execution_pass`, `quality_reviewed`, and `counted_clean`; an existing
     report cannot remain recorded as absent and no derived summary contradicts primary evidence.
-- `W36-E7-S4-T52` (parked) Bound ignored dependency and cache inventories in live repository
+- `W36-E7-S4-T52` (soon) Bound ignored dependency and cache inventories in live repository
   snapshots without weakening exact product-change classification.
   - Dependencies: `W36-E7-S4-T51` as the truthful-summary predecessor.
   - Scope: live repository snapshot model only; tracked, untracked, modified, and deleted product
