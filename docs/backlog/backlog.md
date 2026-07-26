@@ -7,14 +7,16 @@ slice, and local task.
 
 ## Next
 
-- `W36-E7-S4-T36` — Re-run the full provider-free Chromium acceptance matrix.
+- `W36-E7-S4-T56` — Reconcile successful intervention mutations with the matching browser draft.
 
 ## Soon
 
-- `W36-E7-S4-T37` — Prove wheel, doctor and isolation readiness on one candidate SHA.
+- `W36-E7-S4-T57` — Replace History global network-idle waits with durable surface readiness.
 
 ## Parking lot
 
+- `W36-E7-S4-T36` — Re-run the full provider-free Chromium acceptance matrix.
+- `W36-E7-S4-T37` — Prove wheel, doctor and isolation readiness on one candidate SHA.
 - `W36-E7-S4-T3` — Run the medium scenario through Codex to a clean terminal result.
 - `W36-E7-S4-T4` — Repeat the medium scenario through Claude Code from an independent root.
 - `W36-E7-S3-T2` — Record five first-time-operator sessions after initial live hardening.
@@ -36,13 +38,15 @@ slice, and local task.
 
 ## Current reconciliation
 
-- `2026-07-26` `W36-E7-S4-T55` is complete: each live command now has one atomic,
-  content-addressed evidence record; flow steps, lifecycle/operator transcripts, grader,
-  aggregate transcript, and runtime-log projection retain only relative pointer, digest,
-  exit/duration/timeout metadata, and bounded previews. Legacy inline records remain readable,
-  and canonical materialization does not duplicate the evidence owner. The focused high-output
-  and live-flow matrix passes `12/12`; the full group gate passes Ruff, mypy, and `2125/2125`
-  Python tests. `T36` is promoted to `Next` and `T37` to `Soon`.
+- `2026-07-26` the `W36-E7-S4-T36` Chromium gate on source `5bbe2c9` is not accepted.
+  Historical cases passed `3/4`, complete intervention/terminal families passed `24/24`,
+  the exact 12-journey packaged runner failed only `W36-E7-S1-T10` (`13/14`), and the full
+  browser suite passed `186/187`. Successful intervention mutation evidence was durable but its
+  matching browser draft sometimes remained at `320x568` and `1440x900`; independently, History
+  at `1440x900` timed out in global `networkidle` before durable-surface assertion. Sanitized
+  evidence is recorded in
+  `docs/e2e/operator-ui-provider-free-browser-gate-2026-07-26.md`. `T56` and `T57` own the
+  separate fixes; `T36` and exact-SHA `T37` remain parked until both pass.
 
 - `2026-07-26` `W36-E7-S4-T53` is complete: the shared bounded log reader enforces a
   256 KiB hard limit and reports requested/retained bytes, exact ranges, head/tail truncation,

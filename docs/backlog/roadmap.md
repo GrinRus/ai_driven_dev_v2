@@ -12273,15 +12273,41 @@ Local tasks:
     digest-tamper, legacy-read, successful-flow, timeout-flow, bounded-inventory, and module
     boundary matrix passes `12/12`; the closing `T49–T55` group gate passes Ruff, mypy over
     `src scripts`, and the complete Python suite `2125/2125`.
-- `W36-E7-S4-T36` (next) Re-run the complete provider-free Chromium acceptance matrix after the
+- `W36-E7-S4-T56` (next) Clear only the submitted intervention draft after its matching
+  durable mutation wins across asynchronous Studio re-renders.
+  - Dependencies: discovered by the failed `W36-E7-S4-T36` acceptance attempt after
+    `W36-E7-S4-T55`; blocks the next `W36-E7-S4-T36` rerun.
+  - Scope: shared intervention draft/mutation reconciliation and focused frontend/browser
+    regressions only; endpoint payloads, core eligibility, provider adapters, and
+    viewport-specific waits remain unchanged.
+  - Verification: forced identity/render changes after an OK intervention response clear the
+    immutable submitted draft exactly once while preserving newer or non-matching drafts; the
+    complete five-viewport intervention family passes repeatedly with one durable request.
+- `W36-E7-S4-T57` (soon) Replace History journey global network-idle navigation with the
+  shared bounded server-authoritative work-item and History surface synchronization.
+  - Dependencies: `W36-E7-S4-T56` as the direct queue predecessor; blocks the next
+    `W36-E7-S4-T36` rerun.
+  - Scope: History browser journey synchronization only; History product rendering, retained-run
+    state, APIs, provider adapters, and timeout values remain unchanged.
+  - Verification: all five History viewports pass repeatedly using DOM readiness plus exact
+    durable work-item/History identity, while missing or wrong identity still times out within
+    the shared 30-second surface budget.
+- `W36-E7-S4-T36` (parked) Re-run the complete provider-free Chromium acceptance matrix after the
   final provider-neutral hardening change.
-  - Dependencies: `W36-E7-S4-T55` as the final code-change predecessor; blocks the active Codex
-    acceptance task `W36-E7-S4-T3`.
+  - Dependencies: `W36-E7-S4-T55`, `W36-E7-S4-T56`, and `W36-E7-S4-T57` as final code-change
+    predecessors; blocks the active Codex acceptance task `W36-E7-S4-T3`.
   - Scope: browser acceptance evidence only; no product or fixture behavior changes.
   - Verification: the four discovered cases, both complete intervention/terminal journey
     families, and the full browser suite pass across all five viewports with clean console,
     page/request diagnostics and bounded process cleanup.
-- `W36-E7-S4-T37` (soon) Prove the exact post-browser candidate is installable and ready for an
+  - Failed attempt: source commit `5bbe2c9` and Chromium `149.0.7827.55` produced `3/4`
+    historical cases, `24/24` complete intervention/terminal family cases, exact packaged
+    discovery/execution for all 12 journeys with `W36-E7-S1-T10` at `13/14`, and the complete
+    browser suite at `186/187`. The two independent first boundaries are post-success matching
+    intervention-draft cleanup at `320x568`/`1440x900` and History's initial global
+    `networkidle` wait at `1440x900`; sanitized evidence is in
+    `docs/e2e/operator-ui-provider-free-browser-gate-2026-07-26.md`.
+- `W36-E7-S4-T37` (parked) Prove the exact post-browser candidate is installable and ready for an
   isolated live-provider run.
   - Dependencies: `W36-E7-S4-T36` as the full-browser predecessor; blocks the active Codex
     acceptance task `W36-E7-S4-T3`.
