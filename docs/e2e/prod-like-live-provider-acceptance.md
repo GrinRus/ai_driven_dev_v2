@@ -39,8 +39,40 @@ uv run --extra dev python -m aidd.harness.live_acceptance_preflight \
 ```
 
 Repeat it with `--runtime claude-code`. The JSON result supplies the exact independent work,
-report, and browser roots for the black-box command. A failed preflight must not allocate a live
-run.
+report, and browser roots for the black-box command and names the verified isolation backend.
+A failed capability canary is a preflight blocker and must not allocate a live run.
+
+Run the evaluator itself through the isolation launcher so the evaluator, installed stage CLI,
+provider runtime, and every descendant share one OS-enforced boundary:
+
+```bash
+provider_root="$AIDD_LIVE_E2E_ROOT/codex"
+uv run --extra dev python -m aidd.harness.live_acceptance_isolation \
+  --source-checkout "$PWD" \
+  --external-root "$AIDD_LIVE_E2E_ROOT" \
+  --provider-root "$provider_root" \
+  --credential-environment-key OPENAI_API_KEY \
+  -- \
+  python -m aidd.harness.live_e2e_black_box \
+  "$PWD/harness/scenarios/live/hono-non-error-throw-handling.yaml" \
+  --runtime codex \
+  --work-root "$provider_root/work" \
+  --report-root "$provider_root/reports" \
+  --manual-frontend-evidence "$provider_root/browser"
+```
+
+Pass only credential environment keys required by the selected runtime. If a provider uses
+file-backed login state, initialize it under
+`<provider-root>/.live-provider-private/home` before the run; never expose the launching
+operator's home. Use `--tool-read-root` only when the provider executable or its read-only
+dependencies live outside the system tool roots, AIDD source, and provider subtree. The launcher
+rejects a sibling provider tool root.
+
+The child receives an allowlisted environment with private `HOME`, temporary, XDG config, cache,
+data, and state directories. The platform backend permits read-only AIDD source access and
+read/write access to the selected provider subtree, while sibling provider roots and the original
+operator home remain unreadable. Repeat with a fresh provider root and the appropriate explicit
+credential key for the second runtime.
 
 ## Product and evaluator boundary
 

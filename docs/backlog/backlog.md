@@ -7,15 +7,14 @@ slice, and local task.
 
 ## Next
 
-- `W36-E7-S4-T39` — Enforce provider-private filesystem and environment isolation.
+- `W36-E7-S4-T40` — Contain live run lookup and resume identities before reading state.
 
 ## Soon
 
-- `W36-E7-S4-T40` — Contain live run lookup and resume identities before reading state.
+- `W36-E7-S4-T41` — Make live source, target and provider integrity guards mandatory.
 
 ## Parking lot
 
-- `W36-E7-S4-T41` — Make live source, target and provider integrity guards mandatory.
 - `W36-E7-S4-T42` — Reconcile abandoned stages through a public application boundary.
 - `W36-E7-S4-T43` — Constrain browser and manual evidence imports to authorized roots.
 - `W36-E7-S4-T44` — Reconcile provisional frontend probes with durable stage state.
@@ -53,16 +52,15 @@ slice, and local task.
 
 ## Current reconciliation
 
-- `2026-07-26` `W36-E7-S4-T38` is complete: the executable provider-free canary now runs
-  through the same `_run_black_box_command` boundary as live stage commands and records
-  normalized list/read/write plus environment-presence diagnostics without rendering
-  directory entries, file contents, or credential values. The real checkout characterization
-  proved `list`, bounded `read`, and reversible `write` access to source, target, own-provider,
-  credential, and sibling-provider roots, and proved inherited sibling credential environment
-  visibility. The focused preflight/architecture matrix passes `16/16`, Ruff and focused mypy
-  pass, and the durable result is recorded in
-  `docs/e2e/live-provider-visibility-characterization-2026-07-26.md`. `T39` is promoted to
-  `Next`; its direct successor `T40` moves to `Soon`.
+- `2026-07-26` `W36-E7-S4-T39` is complete: the live evaluator can now be launched behind a
+  provider-private macOS Seatbelt or Linux bubblewrap filesystem boundary with an allowlisted
+  environment and private `HOME`, temporary, config, cache, data, and state roots. Preflight
+  fails closed when the platform capability canary cannot prove the boundary. The T38 canary
+  now verifies through the real launch prefix that target/evidence remain read-write, source is
+  read-only, sibling provider and original HOME/config/cache roots are inaccessible, and only
+  explicitly authorized credential keys cross the boundary. Focused isolation/preflight tests
+  pass `25/25`; full Ruff, mypy, and pytest pass with `1995 passed`. `T40` is promoted to `Next`
+  and its direct successor `T41` moves to `Soon`.
 
 - `2026-07-22` `W36-E7-S4-T35` is complete: runtime-readiness updates now use a
   generation-aware scoped renderer and cannot replace the decision-owning Studio cockpit.

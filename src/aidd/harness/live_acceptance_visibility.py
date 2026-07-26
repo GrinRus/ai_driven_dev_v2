@@ -256,6 +256,7 @@ def run_live_acceptance_visibility_canary(
     cwd: Path,
     environment: Mapping[str, str],
     timeout_seconds: float = 15.0,
+    launch_prefix: Sequence[str] = (),
 ) -> LiveAcceptanceVisibilityResult:
     if not targets:
         raise LiveAcceptanceVisibilityError("Visibility canary requires at least one target.")
@@ -272,6 +273,7 @@ def run_live_acceptance_visibility_canary(
         command.extend(("--environment-key", key))
     command_result = _run_black_box_command(
         command=tuple(command),
+        launch_prefix=launch_prefix,
         cwd=cwd,
         environment=dict(environment),
         timeout_seconds=timeout_seconds,

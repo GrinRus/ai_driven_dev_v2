@@ -9,6 +9,10 @@ from dataclasses import asdict, dataclass
 from pathlib import Path
 
 from aidd.core.identifiers import SafeIdentifier
+from aidd.harness.live_acceptance_isolation import (
+    LiveAcceptanceIsolationError,
+    require_live_acceptance_isolation_capability,
+)
 from aidd.harness.live_runtime_config import validate_live_runtime_command
 from aidd.harness.scenarios import ScenarioManifestError, load_scenario
 
@@ -36,6 +40,7 @@ class LiveAcceptanceLayout:
     scenario_id: str
     runtime_command: str
     runtime_mode: str
+    isolation_backend: str
     source_state: TrackedSourceState
 
 
@@ -172,6 +177,12 @@ def prepare_live_acceptance_layout(
         raise LiveAcceptancePreflightError(
             "Prod-like provider acceptance requires public frontend checkpoints."
         )
+    try:
+        isolation_capability = require_live_acceptance_isolation_capability()
+    except LiveAcceptanceIsolationError as exc:
+        raise LiveAcceptancePreflightError(
+            f"Enforceable provider isolation is unavailable: {exc}"
+        ) from exc
 
     return LiveAcceptanceLayout(
         provider_id=provider_id,
@@ -184,6 +195,7 @@ def prepare_live_acceptance_layout(
         scenario_id=loaded.scenario_id,
         runtime_command=command.command,
         runtime_mode=command.execution_mode.value,
+        isolation_backend=isolation_capability.backend,
         source_state=source_state,
     )
 

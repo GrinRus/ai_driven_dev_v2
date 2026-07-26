@@ -12036,7 +12036,7 @@ Local tasks:
   - Verification: an executable canary proves which current source, target, provider, credential,
     and sibling-provider roots can be listed, read, or written, and unique pathnames alone never
     count as an isolation boundary.
-- `W36-E7-S4-T39` (next) Enforce a provider-private filesystem and environment boundary for
+- `W36-E7-S4-T39` (done) Enforce a provider-private filesystem and environment boundary for
   live acceptance execution.
   - Dependencies: `W36-E7-S4-T38` as the isolation characterization predecessor.
   - Scope: live-eval process launch, allowlisted environment construction, provider-private
@@ -12045,7 +12045,7 @@ Local tasks:
   - Verification: the T38 canary can use its authorized target and evidence roots but cannot list
     or read a sibling provider root, write the AIDD source, or observe another provider's
     credentials; a platform without an enforceable boundary reports a preflight blocker.
-- `W36-E7-S4-T40` (soon) Apply canonical identifier and containment checks to live run lookup
+- `W36-E7-S4-T40` (next) Apply canonical identifier and containment checks to live run lookup
   and resume before reading flow state.
   - Dependencies: `W36-E7-S4-T39` as the provider-boundary predecessor.
   - Scope: live flow-state lookup and resume identity only; workflow semantics, provider adapters,
@@ -12053,7 +12053,7 @@ Local tasks:
   - Verification: empty, absolute, separator, backslash, traversal, oversized, symlink-escape,
     scenario/runtime/work-item mismatch, and wrong-root run identities fail before any read or
     write, while a canonical interrupted run resumes with its existing lexical layout.
-- `W36-E7-S4-T41` (parked) Make source, target, and provider preflight/postflight integrity an
+- `W36-E7-S4-T41` (soon) Make source, target, and provider preflight/postflight integrity an
   obligatory live-acceptance session guard.
   - Dependencies: `W36-E7-S4-T40` as the contained-layout predecessor.
   - Scope: live-acceptance preflight lifecycle and source/target integrity snapshots only; build
