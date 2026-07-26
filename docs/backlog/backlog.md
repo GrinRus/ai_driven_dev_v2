@@ -7,15 +7,14 @@ slice, and local task.
 
 ## Next
 
-- `W36-E7-S4-T41` — Make live source, target and provider integrity guards mandatory.
+- `W36-E7-S4-T42` — Reconcile abandoned stages through a public application boundary.
 
 ## Soon
 
-- `W36-E7-S4-T42` — Reconcile abandoned stages through a public application boundary.
+- `W36-E7-S4-T43` — Constrain browser and manual evidence imports to authorized roots.
 
 ## Parking lot
 
-- `W36-E7-S4-T43` — Constrain browser and manual evidence imports to authorized roots.
 - `W36-E7-S4-T44` — Reconcile provisional frontend probes with durable stage state.
 - `W36-E7-S4-T45` — Expose and reconcile stale-owner live flows.
 - `W36-E7-S4-T46` — Accumulate live-flow timing across resumed process segments.
@@ -51,14 +50,16 @@ slice, and local task.
 
 ## Current reconciliation
 
-- `2026-07-26` `W36-E7-S4-T40` is complete: explicit resume now validates `run_id` before any
-  scenario or state lookup, proves the canonical run and state paths are contained, and rejects
-  run-root/state symlink escapes. The first state read must match run, scenario, runtime, work
-  item, scenario/report/work/run-work/bundle roots before stale-state reconciliation or resume;
-  mismatches leave stale bytes unchanged. Awaiting-review evidence is also contained before
-  existence checks. The unsafe identifier, symlink, wrong-identity/root, stale-idempotence, and
-  canonical resume matrix passes `23/23`; the complete flow-state/black-box integration file
-  passes `82/82`, with Ruff and mypy clean. `T41` is promoted to `Next` and `T42` moves to `Soon`.
+- `2026-07-26` `W36-E7-S4-T41` is complete: the isolation launcher now owns a mandatory
+  context-managed live-acceptance session. It captures source commit/tree, tracked bytes, clean
+  tracked status, and the exact untracked set and bytes before provider allocation; a failed
+  source or platform preflight leaves the provider subtree absent. Postflight rechecks source
+  integrity, canonical provider/target roots, explicit fresh-versus-resume target baselines, and
+  cleanup sentinel removal, then publishes `live-acceptance-session.json`. New source files,
+  changed tracked or existing untracked bytes, pre-existing target contamination, source/provider
+  overlap, target-root symlinks, and cleanup failure invalidate the run. The complete
+  session/isolation/preflight/visibility matrix passes `36/36`, with Ruff and mypy clean. `T42`
+  is promoted to `Next` and `T43` moves to `Soon`.
 
 - `2026-07-22` `W36-E7-S4-T35` is complete: runtime-readiness updates now use a
   generation-aware scoped renderer and cannot replace the decision-owning Studio cockpit.

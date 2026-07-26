@@ -12053,7 +12053,7 @@ Local tasks:
   - Verification: empty, absolute, separator, backslash, traversal, oversized, symlink-escape,
     scenario/runtime/work-item mismatch, and wrong-root run identities fail before any read or
     write, while a canonical interrupted run resumes with its existing lexical layout.
-- `W36-E7-S4-T41` (next) Make source, target, and provider preflight/postflight integrity an
+- `W36-E7-S4-T41` (done) Make source, target, and provider preflight/postflight integrity an
   obligatory live-acceptance session guard.
   - Dependencies: `W36-E7-S4-T40` as the contained-layout predecessor.
   - Scope: live-acceptance preflight lifecycle and source/target integrity snapshots only; build
@@ -12062,7 +12062,7 @@ Local tasks:
   - Verification: provider layout is not allocated before preflight passes; tracked bytes, the
     baseline untracked set, target contamination, provider-root separation, and cleanup are read
     back after execution, and any new source file or harness payload fails closed.
-- `W36-E7-S4-T42` (soon) Route timeout and no-progress stage reconciliation through a public
+- `W36-E7-S4-T42` (next) Route timeout and no-progress stage reconciliation through a public
   application boundary instead of direct harness-owned stage-status persistence.
   - Dependencies: `W36-E7-S4-T41` as the mandatory-session-guard predecessor.
   - Scope: one typed application/CLI terminal-reconciliation operation and its live-harness
@@ -12071,7 +12071,7 @@ Local tasks:
   - Verification: an installed public surface terminalizes an abandoned executing stage with
     canonical identity and idempotent history, while a terminal or mismatched stage is not
     rewritten and the harness performs no direct stage-state write.
-- `W36-E7-S4-T43` (parked) Constrain manual and browser evidence imports to the authorized
+- `W36-E7-S4-T43` (soon) Constrain manual and browser evidence imports to the authorized
   provider evidence root with symlink-safe atomic materialization.
   - Dependencies: `W36-E7-S4-T42` as the public-boundary predecessor.
   - Scope: live browser/manual evidence intake only; browser capture semantics, Studio behavior,

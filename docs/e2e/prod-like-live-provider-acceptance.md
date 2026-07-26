@@ -61,18 +61,27 @@ uv run --extra dev python -m aidd.harness.live_acceptance_isolation \
   --manual-frontend-evidence "$provider_root/browser"
 ```
 
-Pass only credential environment keys required by the selected runtime. If a provider uses
-file-backed login state, initialize it under
-`<provider-root>/.live-provider-private/home` before the run; never expose the launching
-operator's home. Use `--tool-read-root` only when the provider executable or its read-only
-dependencies live outside the system tool roots, AIDD source, and provider subtree. The launcher
-rejects a sibling provider tool root.
+Pass only credential environment keys required by the selected runtime. Fresh execution rejects
+an already allocated provider root, including a pre-existing target clone; authenticate through
+explicit environment keys or interactively inside the newly private `HOME`, never by exposing
+the launching operator's home. Use `--tool-read-root` only when the provider executable or its
+read-only dependencies live outside the system tool roots, AIDD source, and provider subtree.
+The launcher rejects a sibling provider tool root.
 
 The child receives an allowlisted environment with private `HOME`, temporary, XDG config, cache,
 data, and state directories. The platform backend permits read-only AIDD source access and
 read/write access to the selected provider subtree, while sibling provider roots and the original
 operator home remain unreadable. Repeat with a fresh provider root and the appropriate explicit
 credential key for the second runtime.
+
+The isolation launcher also owns the mandatory live-acceptance session guard. Before creating
+the provider subtree it captures source commit/tree, tracked bytes, and the exact baseline
+untracked set and bytes. Postflight repeats those checks, validates canonical target/provider
+roots, removes its active-session sentinel, and writes
+`live-acceptance-session.json`. Any new source file, changed tracked or existing untracked bytes,
+target-root symlink, provider overlap, or cleanup failure invalidates the launch even when the
+child command returned success. Resume of an existing provider layout requires both
+`--resume-existing-provider` on the isolation launcher and an explicit nested `--run-id`.
 
 ## Product and evaluator boundary
 

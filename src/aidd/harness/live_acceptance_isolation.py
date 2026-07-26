@@ -464,11 +464,21 @@ def _parse_args(argv: Sequence[str] | None) -> argparse.Namespace:
     parser.add_argument("--provider-root", type=Path, required=True)
     parser.add_argument("--credential-environment-key", action="append", default=[])
     parser.add_argument("--tool-read-root", action="append", type=Path, default=[])
+    parser.add_argument(
+        "--resume-existing-provider",
+        action="store_true",
+        help="Allow an existing provider root only for an explicit guarded resume.",
+    )
     parser.add_argument("command", nargs=argparse.REMAINDER)
     return parser.parse_args(argv)
 
 
 def main(argv: Sequence[str] | None = None) -> int:
+    from aidd.harness.live_acceptance_session import (
+        LiveAcceptanceSession,
+        LiveAcceptanceSessionError,
+    )
+
     args = _parse_args(argv)
     command = tuple(args.command)
     if command and command[0] == "--":
@@ -476,26 +486,39 @@ def main(argv: Sequence[str] | None = None) -> int:
     if not command:
         print("live acceptance isolation: command is required", file=sys.stderr)
         return 2
+    if args.resume_existing_provider and not any(
+        item == "--run-id" or item.startswith("--run-id=") for item in command
+    ):
+        print(
+            "live acceptance isolation: --resume-existing-provider requires "
+            "an explicit nested --run-id",
+            file=sys.stderr,
+        )
+        return 2
     try:
-        boundary = prepare_live_acceptance_isolation(
+        with LiveAcceptanceSession(
             source_checkout=args.source_checkout,
             external_root=args.external_root,
             provider_root=args.provider_root,
-            credential_environment_keys=tuple(args.credential_environment_key),
-            tool_read_roots=tuple(args.tool_read_root),
-        )
-        capability = probe_live_acceptance_isolation_capability()
-        if not capability.supported:
-            raise LiveAcceptanceIsolationError(capability.detail)
-    except LiveAcceptanceIsolationError as exc:
+            allow_existing_provider=bool(args.resume_existing_provider),
+        ) as session:
+            boundary = prepare_live_acceptance_isolation(
+                source_checkout=args.source_checkout,
+                external_root=args.external_root,
+                provider_root=args.provider_root,
+                credential_environment_keys=tuple(args.credential_environment_key),
+                tool_read_roots=tuple(args.tool_read_root),
+            )
+            completed = subprocess.run(
+                boundary.wrap_command(command),
+                cwd=boundary.provider_root,
+                env=boundary.environment,
+                check=False,
+            )
+            session.record_process_exit(completed.returncode)
+    except (LiveAcceptanceIsolationError, LiveAcceptanceSessionError) as exc:
         print(f"live acceptance isolation: {exc}", file=sys.stderr)
         return 2
-    completed = subprocess.run(
-        boundary.wrap_command(command),
-        cwd=boundary.provider_root,
-        env=boundary.environment,
-        check=False,
-    )
     return completed.returncode
 
 

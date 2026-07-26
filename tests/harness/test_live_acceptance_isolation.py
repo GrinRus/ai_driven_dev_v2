@@ -1,16 +1,22 @@
 from __future__ import annotations
 
+import json
 import os
 import platform
+import subprocess
 from pathlib import Path
 
 import pytest
 
 from aidd.harness.live_acceptance_isolation import (
+    LiveAcceptanceIsolationBoundary,
+    LiveAcceptanceIsolationCapability,
     LiveAcceptanceIsolationError,
+    main,
     prepare_live_acceptance_isolation,
     probe_live_acceptance_isolation_capability,
 )
+from aidd.harness.live_acceptance_session import SESSION_INTEGRITY_FILENAME
 from aidd.harness.live_acceptance_visibility import (
     VisibilityProbeTarget,
     run_live_acceptance_visibility_canary,
@@ -36,6 +42,27 @@ def _targets_by_label(diagnostics: dict[str, object]) -> dict[str, dict[str, obj
         for target in targets
         if isinstance(target, dict)
     }
+
+
+def _git_source(tmp_path: Path) -> Path:
+    source = tmp_path / "git-source"
+    source.mkdir()
+    (source / "tracked.txt").write_text("tracked\n", encoding="utf-8")
+    for args in (
+        ("init",),
+        ("config", "user.email", "fixture@example.test"),
+        ("config", "user.name", "Fixture"),
+        ("add", "tracked.txt"),
+        ("commit", "-m", "fixture"),
+    ):
+        subprocess.run(
+            ("git", *args),
+            cwd=source,
+            check=True,
+            capture_output=True,
+            text=True,
+        )
+    return source
 
 
 def test_private_environment_is_allowlisted_and_uses_provider_roots(
@@ -291,3 +318,126 @@ def test_platform_capability_uses_negative_canary() -> None:
 
     assert capability.supported is True
     assert capability.detail == "isolation canary passed"
+
+
+def test_launcher_uses_mandatory_session_guard(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    source = _git_source(tmp_path)
+    external = tmp_path / "external"
+    external.mkdir()
+    provider = external / "provider"
+    monkeypatch.setattr(
+        "aidd.harness.live_acceptance_session."
+        "require_live_acceptance_isolation_capability",
+        lambda: LiveAcceptanceIsolationCapability(
+            backend="macos-seatbelt",
+            supported=True,
+            detail="fixture capability",
+        ),
+    )
+
+    def _boundary(**_kwargs: object) -> LiveAcceptanceIsolationBoundary:
+        return LiveAcceptanceIsolationBoundary(
+            backend="macos-seatbelt",
+            source_checkout=source,
+            external_root=external,
+            provider_root=provider,
+            private_root=provider / ".live-provider-private",
+            operator_home=None,
+            tool_read_roots=tuple(),
+            environment={"PATH": os.environ.get("PATH", "")},
+            launch_prefix=tuple(),
+        )
+
+    monkeypatch.setattr(
+        "aidd.harness.live_acceptance_isolation.prepare_live_acceptance_isolation",
+        _boundary,
+    )
+
+    assert (
+        main(
+            [
+                "--source-checkout",
+                source.as_posix(),
+                "--external-root",
+                external.as_posix(),
+                "--provider-root",
+                provider.as_posix(),
+                "--",
+                "/usr/bin/true",
+            ]
+        )
+        == 0
+    )
+    payload = json.loads(
+        (provider / SESSION_INTEGRITY_FILENAME).read_text(encoding="utf-8")
+    )
+    assert payload["status"] == "pass"
+    assert payload["process_exit_code"] == 0
+    assert payload["cleanup"]["sentinel_removed"] is True
+
+
+def test_launcher_rejects_existing_provider_without_explicit_resume(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    source = _git_source(tmp_path)
+    external = tmp_path / "external"
+    provider = external / "provider"
+    provider.mkdir(parents=True)
+    monkeypatch.setattr(
+        "aidd.harness.live_acceptance_session."
+        "require_live_acceptance_isolation_capability",
+        lambda: LiveAcceptanceIsolationCapability(
+            backend="macos-seatbelt",
+            supported=True,
+            detail="fixture capability",
+        ),
+    )
+
+    exit_code = main(
+        [
+            "--source-checkout",
+            source.as_posix(),
+            "--external-root",
+            external.as_posix(),
+            "--provider-root",
+            provider.as_posix(),
+            "--",
+            "/usr/bin/true",
+        ]
+    )
+
+    assert exit_code == 2
+    assert "already allocated or contaminated" in capsys.readouterr().err
+    assert not (provider / SESSION_INTEGRITY_FILENAME).exists()
+
+
+def test_launcher_resume_flag_requires_nested_run_id(
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    source = _git_source(tmp_path)
+    external = tmp_path / "external"
+    provider = external / "provider"
+    provider.mkdir(parents=True)
+
+    exit_code = main(
+        [
+            "--source-checkout",
+            source.as_posix(),
+            "--external-root",
+            external.as_posix(),
+            "--provider-root",
+            provider.as_posix(),
+            "--resume-existing-provider",
+            "--",
+            "/usr/bin/true",
+        ]
+    )
+
+    assert exit_code == 2
+    assert "requires an explicit nested --run-id" in capsys.readouterr().err
