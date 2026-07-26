@@ -167,6 +167,10 @@ from aidd.harness.live_evidence_intake import (
     intake_live_evidence,
     validate_live_evidence_publication,
 )
+from aidd.harness.live_flow_timing import (
+    cumulative_process_duration_seconds,
+    format_segment_timestamp,
+)
 from aidd.harness.live_frontend_reconciliation import (
     FrontendCheckpointReconciliation,
     apply_frontend_checkpoint_reconciliation,
@@ -7046,6 +7050,25 @@ def _has_timed_out_stage_attempt(ctx: FlowContext) -> bool:
     return False
 
 
+def _process_segments_for_context(ctx: FlowContext) -> list[dict[str, object]]:
+    state = _load_flow_state(ctx.bundle_root)
+    raw_segments = state.get("process_segments")
+    if not isinstance(raw_segments, list):
+        return []
+    return [
+        {str(key): value for key, value in segment.items()}
+        for segment in raw_segments
+        if isinstance(segment, dict)
+    ]
+
+
+def _cumulative_flow_duration_seconds(ctx: FlowContext) -> float:
+    return cumulative_process_duration_seconds(
+        _process_segments_for_context(ctx),
+        observed_at_utc=format_segment_timestamp(),
+    )
+
+
 def _synthetic_aidd_run_result(ctx: FlowContext, exit_code: int) -> HarnessAiddRunResult:
     steps = _load_steps(ctx.bundle_root)
     stdout_lines: list[str] = []
@@ -7070,7 +7093,7 @@ def _synthetic_aidd_run_result(ctx: FlowContext, exit_code: int) -> HarnessAiddR
         exit_code=exit_code,
         stdout_text="\n".join(stdout_lines),
         stderr_text="\n".join(stderr_lines),
-        duration_seconds=max(time.monotonic() - ctx.started, 0.0),
+        duration_seconds=_cumulative_flow_duration_seconds(ctx),
         timed_out=timed_out,
         timeout_seconds=None,
     )
@@ -7469,7 +7492,7 @@ def _stage_timing_payload_from_flow(
         runtime_id=ctx.runtime_id,
         work_item=ctx.work_item,
         workspace_root=workspace_root,
-        total_duration_seconds=max(time.monotonic() - ctx.started, 0.0),
+        total_duration_seconds=_cumulative_flow_duration_seconds(ctx),
         install_result=ctx.install_result,
         teardown_result=teardown_result,
     )
@@ -7535,6 +7558,14 @@ def _stage_timing_payload_from_flow(
             }
         )
     payload["steps"] = flow_steps
+    process_segments = _process_segments_for_context(ctx)
+    payload["process_segments"] = process_segments
+    summary = payload.get("summary")
+    if isinstance(summary, dict):
+        summary["process_segment_count"] = len(process_segments)
+        summary["process_segment_duration_seconds"] = (
+            _cumulative_flow_duration_seconds(ctx)
+        )
     return payload
 
 
@@ -7989,7 +8020,7 @@ def _finalize_reports(
         scenario_rows=(
             build_scenario_summary_row(
                 verdict=verdict,
-                duration_seconds=max(time.monotonic() - ctx.started, 0.0),
+                duration_seconds=_cumulative_flow_duration_seconds(ctx),
                 failure_boundary="none" if verdict.status == "pass" else "scenario-verification",
             ),
         ),
@@ -8063,6 +8094,7 @@ def _manual_quality_stop_result(ctx: FlowContext) -> BlackBoxLiveE2EResult:
 
 def _write_run_transcript_from_flow(*, ctx: FlowContext, exit_code: int) -> Path:
     result = _synthetic_aidd_run_result(ctx, exit_code=exit_code)
+    process_segments = _process_segments_for_context(ctx)
     return _write_step_transcript(
         path=ctx.bundle_root / RUN_TRANSCRIPT_FILENAME,
         step="run",
@@ -8070,6 +8102,9 @@ def _write_run_transcript_from_flow(*, ctx: FlowContext, exit_code: int) -> Path
         extra={
             "exit_code": result.exit_code,
             "runtime_id": result.runtime_id,
+            "process_segment_count": len(process_segments),
+            "process_segments": process_segments,
+            "process_segment_duration_seconds": result.duration_seconds,
             "timed_out": result.timed_out,
             "timeout_seconds": result.timeout_seconds,
             "timeout_policy": _timeout_policy_payload(ctx),
@@ -8162,7 +8197,7 @@ def _blocked_result(ctx: FlowContext) -> BlackBoxLiveE2EResult:
         scenario_rows=(
             build_scenario_summary_row(
                 verdict=verdict,
-                duration_seconds=max(time.monotonic() - ctx.started, 0.0),
+                duration_seconds=_cumulative_flow_duration_seconds(ctx),
                 failure_boundary="scenario-verification",
             ),
         ),

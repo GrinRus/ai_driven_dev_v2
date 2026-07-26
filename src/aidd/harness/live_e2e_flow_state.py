@@ -14,6 +14,12 @@ from typing import Any, Protocol
 from aidd.core.identifiers import SafeIdentifier, contained_component_path
 from aidd.core.stages import STAGES
 from aidd.harness.install_artifact import HarnessInstallResult
+from aidd.harness.live_flow_timing import (
+    finish_stale_owner_segment,
+    format_segment_timestamp,
+    process_segments_payload,
+    update_process_segments,
+)
 from aidd.harness.repo_prep import PreparedRepository, PreparedWorkingCopy
 from aidd.harness.scenarios import Scenario
 
@@ -116,6 +122,7 @@ def build_flow_state_payload(
     extra: Mapping[str, object] | None = None,
 ) -> dict[str, object]:
     previous_state = load_flow_state(ctx.bundle_root)
+    observed_at_utc = format_segment_timestamp()
     install_home = None
     if ctx.install_result is not None:
         install_home = ctx.install_result.install_home.as_posix()
@@ -125,8 +132,8 @@ def build_flow_state_payload(
             install_home = preserved_install_home
 
     payload: dict[str, object] = {
-        "schema_version": 2,
-        "updated_at_utc": utc_now(),
+        "schema_version": 3,
+        "updated_at_utc": observed_at_utc,
         "scenario_path": ctx.scenario_path.resolve(strict=False).as_posix(),
         "scenario_id": ctx.scenario.scenario_id,
         "runtime_id": ctx.runtime_id,
@@ -185,6 +192,21 @@ def build_flow_state_payload(
             else ctx.manual_frontend_evidence.resolve(strict=False).as_posix()
         ),
     }
+    raw_interruption = extra.get("interruption") if extra is not None else None
+    interruption_reason = (
+        raw_interruption.get("reason")
+        if isinstance(raw_interruption, Mapping)
+        else None
+    )
+    payload["process_segments"] = process_segments_payload(
+        update_process_segments(
+            previous_state.get("process_segments"),
+            owner_pid=os.getpid(),
+            observed_at_utc=observed_at_utc,
+            status=status,
+            interruption_reason=interruption_reason,
+        )
+    )
     if ctx.install_result is not None:
         payload["install"] = {
             "artifact_identity": ctx.install_result.artifact_identity,
@@ -440,6 +462,7 @@ def reconcile_stale_owner_for_resume(
         if not observation.stale_owner:
             return payload
         reconciled_at = changed_at_utc or utc_now()
+        previous_updated_at = payload.get("updated_at_utc")
         interruption = {
             "created_at_utc": reconciled_at,
             "reason": "stale-owner",
@@ -453,6 +476,18 @@ def reconcile_stale_owner_for_resume(
         payload["next_action"] = "run-stage"
         payload["updated_at_utc"] = reconciled_at
         payload["interruption"] = interruption
+        active_step = observation.active_step or {}
+        payload["process_segments"] = process_segments_payload(
+            finish_stale_owner_segment(
+                payload.get("process_segments"),
+                owner_pid=observation.evaluator_pid,
+                finished_at_utc=reconciled_at,
+                fallback_started_at_utc=(
+                    active_step.get("started_at_utc")
+                    or previous_updated_at
+                ),
+            )
+        )
         write_json_atomic(state_path_value, payload)
         return payload
 

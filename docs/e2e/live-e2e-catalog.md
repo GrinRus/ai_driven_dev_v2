@@ -145,6 +145,12 @@ uv run python -m aidd.harness.live_e2e_black_box harness/scenarios/live/sqlite-u
   and atomically records `interrupted-resumable`. Existing active-step, provider events, stage
   outputs, and attempt evidence are retained; a provider completion event never fabricates a
   completed-stage verdict or advances `completed_stage_runs`.
+- `flow-state.json` retains one typed process segment for every evaluator ownership interval:
+  segment id, UTC start/finish, duration, owner PID, and termination reason. Quality-review
+  yields, interruption, stale-owner reconciliation, and terminal outcomes close the active
+  segment; explicit resume starts the next segment. Aggregate duration in `stage-timing.json`,
+  `run-transcript.json`, and `summary.md` is the sum of all retained segments and therefore does
+  not reset when evaluator ownership changes.
 - Resume from `awaiting-quality-review` requires the exact audit file named in
   `flow-state.json`, for example `stage-quality-audits/stage-0007-review.md`. If that file is
   missing, the runner refuses the resume instead of advancing the stage loop.

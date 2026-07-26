@@ -12117,21 +12117,27 @@ Local tasks:
     transition. Concurrent repeats are byte-stable; provider completion events and stage outputs
     are retained but never append completed-stage state. The full stale/resume matrix passes
     `32/32`.
-- `W36-E7-S4-T46` (next) Accumulate live-flow duration across every resumed process segment.
+- `W36-E7-S4-T46` (done) Accumulate live-flow duration across every resumed process segment.
   - Dependencies: `W36-E7-S4-T45` as the stale-flow predecessor.
   - Scope: live timing persistence and rendering only; stage execution and retry budgets remain
     unchanged.
   - Verification: a multi-resume fixture produces mutually consistent stage timing, run
     transcript duration, and retained step durations instead of resetting aggregate elapsed time
     when a new evaluator process starts.
-- `W36-E7-S4-T47` (soon) Persist typed terminal evidence for every accepted remediation job.
+  - Completion: `flow-state.json` schema v3 retains typed evaluator process segments with
+    canonical start/finish timestamps, duration, owner PID, and termination reason. Every
+    quality-review yield, interruption, stale-owner reconciliation, and terminal outcome closes
+    its active segment; resume appends a new segment. Stage timing, synthetic run transcript, and
+    eval summary now use the cumulative segment duration. The unit and multi-resume integration
+    matrix passes `30/30`, including exact agreement across all four artifacts.
+- `W36-E7-S4-T47` (next) Persist typed terminal evidence for every accepted remediation job.
   - Dependencies: `W36-E7-S4-T46` as the truthful-flow-evidence predecessor.
   - Scope: UI remediation job terminal evidence and harness readback only; Studio action
     synchronization remains owned by T35 and provider outcome semantics remain unchanged.
   - Verification: success, failure, cancellation, and operator wait retain work-item/run/stage/
     attempt identity, runtime-exit path, adapter outcome, typed first cause, and durable mutation
     winner; a retry cannot collapse to an untraceable generic `job failed` result.
-- `W36-E7-S4-T48` (parked) Preflight target installation and verification prerequisites before
+- `W36-E7-S4-T48` (soon) Preflight target installation and verification prerequisites before
   allocating a paid provider run.
   - Dependencies: `W36-E7-S4-T47` as the remediation-evidence predecessor.
   - Scope: provider-neutral target setup probes only; no Hono-, Rollup-, model-, or adapter-specific

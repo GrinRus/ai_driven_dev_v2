@@ -2794,6 +2794,38 @@ def test_black_box_live_product_evaluation_pass_after_all_stage_audits_lists_man
     )
     assert state_payload["status"] == "pass"
     assert state_payload["completed_stages"] == list(STAGES)
+    process_segments = state_payload["process_segments"]
+    assert len(process_segments) >= 3
+    assert [segment["segment_id"] for segment in process_segments] == [
+        f"segment-{index:04d}"
+        for index in range(1, len(process_segments) + 1)
+    ]
+    assert all(segment["finished_at_utc"] for segment in process_segments)
+    assert all(segment["owner_pid"] > 0 for segment in process_segments)
+    assert all(segment["termination_reason"] for segment in process_segments)
+    process_duration = sum(
+        segment["duration_seconds"] for segment in process_segments
+    )
+    run_transcript = json.loads(
+        (result.bundle_root / "run-transcript.json").read_text(encoding="utf-8")
+    )
+    stage_timing = json.loads(
+        (result.bundle_root / "stage-timing.json").read_text(encoding="utf-8")
+    )
+    assert run_transcript["process_segments"] == process_segments
+    assert run_transcript["duration_seconds"] == pytest.approx(process_duration)
+    assert run_transcript["process_segment_duration_seconds"] == pytest.approx(
+        process_duration
+    )
+    assert stage_timing["process_segments"] == process_segments
+    assert stage_timing["summary"]["total_duration_seconds"] == pytest.approx(
+        process_duration
+    )
+    assert stage_timing["summary"]["process_segment_duration_seconds"] == pytest.approx(
+        process_duration
+    )
+    summary = (result.bundle_root / "summary.md").read_text(encoding="utf-8")
+    assert f"{process_duration:.3f}" in summary
     assert "quality_review_required_stage" not in state_payload
     assert "quality_review_required_path" not in state_payload
     assert "quality_review_decision" not in state_payload

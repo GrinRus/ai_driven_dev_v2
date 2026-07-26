@@ -7,15 +7,14 @@ slice, and local task.
 
 ## Next
 
-- `W36-E7-S4-T46` — Accumulate live-flow timing across resumed process segments.
+- `W36-E7-S4-T47` — Persist typed terminal evidence for remediation jobs.
 
 ## Soon
 
-- `W36-E7-S4-T47` — Persist typed terminal evidence for remediation jobs.
+- `W36-E7-S4-T48` — Preflight target installation and verification prerequisites.
 
 ## Parking lot
 
-- `W36-E7-S4-T48` — Preflight target installation and verification prerequisites.
 - `W36-E7-S4-T49` — Materialize a self-contained canonical live evidence bundle.
 - `W36-E7-S4-T50` — Commit the live bundle digest and browser provenance manifest.
 - `W36-E7-S4-T51` — Finalize truthful product-bundle summaries and acceptance status.
@@ -46,15 +45,13 @@ slice, and local task.
 
 ## Current reconciliation
 
-- `2026-07-26` `W36-E7-S4-T45` is complete: owner inspection is now a read-only flow-state read
-  model that shows dead-owner durable `running` state as `stale-owner` without changing bytes.
-  Explicit resume independently reloads under an exclusive bundle-directory lock, rechecks the
-  complete identity and owner, then atomically records one `interrupted-resumable` transition.
-  Concurrent and repeated reconciliation is byte-stable. A simulated death after a retained
-  provider `stage_completed` event preserves event/output evidence, current stage and active
-  step, but leaves completed stages unchanged and explicitly records that provider completion
-  was not used as a verdict. The stale/resume matrix passes `32/32`, with Ruff and mypy clean.
-  `T46` is promoted to `Next` and `T47` moves to `Soon`.
+- `2026-07-26` `W36-E7-S4-T46` is complete: `flow-state.json` schema v3 now records one typed
+  process segment per evaluator ownership interval with start, finish, duration, owner PID and
+  termination reason. Quality-review yields, interruption, stale-owner reconciliation and
+  terminal outcomes close their segments; resume appends rather than resets timing. The retained
+  segment sum now drives stage timing, run transcript and eval summary. Unit and multi-resume
+  integration checks pass `30/30`, with Ruff and mypy clean. `T47` is promoted to `Next` and
+  `T48` moves to `Soon`.
 
 - `2026-07-22` `W36-E7-S4-T35` is complete: runtime-readiness updates now use a
   generation-aware scoped renderer and cannot replace the decision-owning Studio cockpit.
