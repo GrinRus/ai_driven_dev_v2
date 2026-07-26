@@ -11717,7 +11717,7 @@ Local tasks:
   - Scope: provider-free harness and architecture tests.
   - Verification: conformance fixtures fail before live execution for overlapping roots, dirty
     tracked source, forbidden product imports, or live-scenario literals in runtime product code.
-- `W36-E7-S4-T3` (parked) Run `AIDD-LIVE-007` through Codex to a clean terminal result with
+- `W36-E7-S4-T3` (soon) Run `AIDD-LIVE-007` through Codex to a clean terminal result with
   manual stage-quality and rendered Studio evidence.
   - Dependencies: `W36-E7-S4-T37`, `W36-E7-S4-T33`, `W36-E7-S4-T32`, `W36-E7-S4-T31`, `W36-E7-S4-T30`, `W36-E7-S4-T29`, `W36-E7-S4-T28`, `W36-E7-S4-T27`, `W36-E7-S4-T26`, `W36-E7-S4-T25`, `W36-E7-S4-T24`, `W36-E7-S4-T23`, `W36-E7-S4-T22`, `W36-E7-S4-T21`, `W36-E7-S4-T20`, `W36-E7-S4-T19`, `W36-E7-S4-T18`, `W36-E7-S4-T17`, `W36-E7-S4-T16`, `W36-E7-S4-T15`, `W36-E7-S4-T14`, `W36-E7-S4-T13`, `W36-E7-S4-T2`, `W36-E7-S4-T6`, `W36-E7-S4-T10`,
     `W36-E7-S4-T11`, and `W36-E7-S4-T12` as live-discovered queue
@@ -12323,7 +12323,7 @@ Local tasks:
     coverage passes `17/17`; the full intervention/browser/static selection passes `28/28`;
     and all five allowed viewports prove one request, an empty submitted draft, and a still-running
     runtime job.
-- `W36-E7-S4-T36` (next) Re-run the complete provider-free Chromium acceptance matrix after the
+- `W36-E7-S4-T36` (done) Re-run the complete provider-free Chromium acceptance matrix after the
   final provider-neutral hardening change.
   - Dependencies: `W36-E7-S4-T58` as the direct queue predecessor; `W36-E7-S4-T55`,
     `W36-E7-S4-T56`, and `W36-E7-S4-T57` as earlier code-change predecessors; blocks the
@@ -12344,7 +12344,14 @@ Local tasks:
     canonical request. Later layers were not run. The remaining boundary is the accepted job
     envelope, which does not expose the synchronously persisted request winner before runtime
     execution can delay dashboard readback; `W36-E7-S4-T58` owns that output.
-- `W36-E7-S4-T37` (soon) Prove the exact post-browser candidate is installable and ready for an
+  - Completion: the clean post-`T58` source `17213af` and tree `601aeb7` passed the exact
+    historical matrix `4/4`, complete intervention/terminal families `24/24`, all twelve
+    packaged registry journeys `79/79` with identical discovered/executed IDs and no failed ID,
+    and the full Chromium suite `188/188` in `2617.84s`. All five viewports completed with clean
+    console, page, request, overflow, accessibility, and bounded process-cleanup diagnostics;
+    the sanitized evidence record is
+    `docs/e2e/operator-ui-provider-free-browser-gate-2026-07-26.md`.
+- `W36-E7-S4-T37` (next) Prove the exact post-browser candidate is installable and ready for an
   isolated live-provider run.
   - Dependencies: `W36-E7-S4-T36` as the full-browser predecessor; blocks the active Codex
     acceptance task `W36-E7-S4-T3`.

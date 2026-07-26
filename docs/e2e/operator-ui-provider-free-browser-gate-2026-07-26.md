@@ -1,9 +1,9 @@
 # Provider-Free Packaged UI Browser Gate — 2026-07-26
 
-This is a failed `provider-free-browser-pass-v1` attempt for the source-installed
-Document & Evidence Studio. It contains no provider credentials, temporary project paths,
-runtime logs, generated `.aidd/` state, or human-observation metrics. No product or browser
-fixture change was made during the gate.
+This record contains two failed `provider-free-browser-pass-v1` attempts and the final
+accepted rerun for the source-installed Document & Evidence Studio. It contains no provider
+credentials, temporary project paths, runtime logs, generated `.aidd/` state, or
+human-observation metrics. No product or browser fixture change was made during any gate run.
 
 ## Candidate
 
@@ -102,3 +102,26 @@ envelope. Dashboard readback can remain unavailable while the runtime job owns e
 so cleanup is still coupled to a later asynchronous read. A separate follow-up must make
 the already-persisted operator-request identity available at the job-acceptance boundary;
 the full `T36` matrix must then restart from another clean commit.
+
+## Accepted Post-T58 Rerun
+
+The complete gate passed from clean source commit
+`17213af21607e4c1873dc635b256c11248b107d0` and tree
+`601aeb7fd980ece7f4dc938b4b46482914fc52e7` with Chromium `149.0.7827.55`.
+The only worktree entry was the pre-existing excluded user snapshot
+`docs/analysis/ux-live-e2e-snapshot-2026-07-07.md`.
+
+1. The exact four-case historical matrix passed `4/4` in `57.23s`.
+2. The complete intervention and terminal journey families passed `24/24` in `258.04s`.
+3. `uv run --extra dev python scripts/run_packaged_ui_scenarios.py` executed all twelve
+   discovered journey IDs with byte-for-byte identical discovered/executed lists,
+   `failed_ids=[]`, and `79/79` passing tests. Historical intervention journey
+   `W36-E7-S1-T10` passed `14/14`.
+4. `uv run --extra dev pytest -q browser_tests` passed `188/188` in `2617.84s`.
+
+All five viewports completed with clean console, page, request, overflow, accessibility,
+and bounded process-cleanup diagnostics. The accepted run created no source-tree browser
+residue and did not modify the candidate under test.
+
+Final result: `passed`. The exact-SHA readiness task `W36-E7-S4-T37` may now consume
+commit `17213af21607e4c1873dc635b256c11248b107d0` as its browser-proven predecessor.

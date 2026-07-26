@@ -7,15 +7,14 @@ slice, and local task.
 
 ## Next
 
-- `W36-E7-S4-T36` — Re-run the full provider-free Chromium acceptance matrix.
+- `W36-E7-S4-T37` — Prove wheel, doctor and isolation readiness on one candidate SHA.
 
 ## Soon
 
-- `W36-E7-S4-T37` — Prove wheel, doctor and isolation readiness on one candidate SHA.
+- `W36-E7-S4-T3` — Run the medium scenario through Codex to a clean terminal result.
 
 ## Parking lot
 
-- `W36-E7-S4-T3` — Run the medium scenario through Codex to a clean terminal result.
 - `W36-E7-S4-T4` — Repeat the medium scenario through Claude Code from an independent root.
 - `W36-E7-S3-T2` — Record five first-time-operator sessions after initial live hardening.
 - `W36-E7-S3-T3` — Reconcile observed session findings before beta readiness.
@@ -35,6 +34,14 @@ slice, and local task.
   queue-restoration policy in `docs/backlog/roadmap.md` (`W8-E3-S1`).
 
 ## Current reconciliation
+
+- `2026-07-26` `W36-E7-S4-T36` is complete on clean source `17213af` and tree
+  `601aeb7`: the exact historical matrix passes `4/4`, complete intervention/terminal
+  families pass `24/24`, the twelve packaged journeys pass `79/79` with identical
+  discovered/executed IDs and no failed ID, and the full Chromium suite passes `188/188`
+  in `2617.84s`. All five viewports finish with clean console, page, request, overflow,
+  accessibility, and bounded process-cleanup diagnostics. Exact-SHA readiness `T37` is
+  promoted to `Next`; Codex acceptance `T3` is `Soon` but remains blocked until `T37`.
 
 - `2026-07-26` `W36-E7-S4-T58` is complete: stage-interact now synchronously persists one
   typed intervention request, returns its canonical work-item/run/stage/id/path/excerpt winner
