@@ -473,9 +473,11 @@ operator while an attempt is running. It does not enable or disable durable evid
 `--no-log-follow` suppresses live forwarding while the attempt still persists its complete raw
 `runtime.log` through the same evidence commit path.
 
-`aidd run logs` reads that persisted `runtime.log`. By default it prints the full selected
-attempt log; `--tail --lines N` prints its last `N` lines. This replay command is independent
-of the live-forwarding choice used when the attempt ran.
+`aidd run logs` reads that persisted `runtime.log` through the shared bounded reader. By
+default it prints a bounded head; `--tail --lines N` selects lines from a bounded tail.
+Both modes report retained byte ranges and truncation while the complete durable file remains
+unchanged. This replay command is independent of the live-forwarding choice used when the
+attempt ran.
 
 Runtime evidence stores:
 

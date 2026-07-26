@@ -12226,14 +12226,21 @@ Local tasks:
     deleted, and non-ignored untracked product paths remain exact and legacy full-list snapshots
     still read. The 20,000-path fixture stays below fixed JSON budgets; the repository matrix
     passes `9/9`, the live setup-baseline flow passes, and all `41` doc checks pass.
-- `W36-E7-S4-T53` (next) Read persisted runtime-log tails under an explicit byte and memory
+- `W36-E7-S4-T53` (done) Read persisted runtime-log tails under an explicit byte and memory
   bound.
   - Dependencies: `W36-E7-S4-T52` as the bounded-repository-evidence predecessor.
   - Scope: canonical CLI runtime-log tail reader and its harness consumer only; full durable
     `runtime.log` persistence remains unchanged.
   - Verification: a large sparse log and one oversized JSON line return the correct bounded tail
     with explicit truncation and retained-byte metadata without loading the complete file.
-- `W36-E7-S4-T54` (soon) Normalize provider events into a bounded AIDD-owned lifecycle
+  - Completion: `core/bounded_log_reader.py` now owns head/tail reads under a 256 KiB hard
+    limit and reports file size, requested/retained bytes, exact start/end offsets, head/tail
+    truncation, partial-line edges, and oversized-line status. Operator UI and read models use
+    the shared result, `aidd run logs` no longer calls full-file `read_text()`, and live harness
+    heartbeats inspect only a 4 KiB tail while durable `runtime.log` remains complete. The sparse
+    64 MiB and oversized-line matrix plus CLI/read-model tests pass `12/12`, UI log API tests pass
+    `5/5`, and all `41` doc checks pass.
+- `W36-E7-S4-T54` (next) Normalize provider events into a bounded AIDD-owned lifecycle
   projection.
   - Dependencies: `W36-E7-S4-T53` as the bounded-log-reader predecessor.
   - Scope: runtime event normalization only; full provider-native payload remains canonical in
@@ -12241,7 +12248,7 @@ Local tasks:
   - Verification: provider-free Codex, Claude, Qwen, and generic event fixtures retain lifecycle
     identity, timing, outcome, operator references, and evidence pointers without duplicating
     prompt/tool payload, under a fixed event-evidence size bound.
-- `W36-E7-S4-T55` (parked) Reference canonical command evidence from live flow steps, grader, and
+- `W36-E7-S4-T55` (soon) Reference canonical command evidence from live flow steps, grader, and
   aggregate transcript instead of embedding full stdout and stderr repeatedly.
   - Dependencies: `W36-E7-S4-T54` as the bounded-event-projection predecessor.
   - Scope: live report serialization and legacy readers only; public terminal outcomes and raw

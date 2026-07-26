@@ -13,6 +13,7 @@ from pathlib import Path
 from queue import Empty, Queue
 from typing import Literal, TextIO, cast
 
+from aidd.core.bounded_log_reader import read_bounded_log
 from aidd.harness.runner import HarnessCommandTranscript
 
 StepClassification = Literal[
@@ -358,7 +359,13 @@ def _format_heartbeat_timeout(seconds: float | None) -> str:
 def _runtime_log_heartbeat_label(path: Path | None) -> str:
     if path is None:
         return "n/a"
-    status = "present" if path.exists() else "waiting for first runtime event"
+    status = "waiting for first runtime event"
+    if path.exists():
+        bounded = read_bounded_log(path, mode="tail", requested_bytes=4096)
+        status = (
+            f"present; retained bytes {bounded.start_byte}:{bounded.end_byte}"
+            f"/{bounded.byte_size}"
+        )
     return f"{path.resolve(strict=False).as_posix()} ({status})"
 
 

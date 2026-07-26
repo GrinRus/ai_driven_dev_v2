@@ -7,15 +7,14 @@ slice, and local task.
 
 ## Next
 
-- `W36-E7-S4-T53` — Read persisted runtime-log tails under a byte and memory bound.
+- `W36-E7-S4-T54` — Normalize provider events into a bounded lifecycle projection.
 
 ## Soon
 
-- `W36-E7-S4-T54` — Normalize provider events into a bounded lifecycle projection.
+- `W36-E7-S4-T55` — Reference canonical command evidence from aggregate live reports.
 
 ## Parking lot
 
-- `W36-E7-S4-T55` — Reference canonical command evidence from aggregate live reports.
 - `W36-E7-S4-T36` — Re-run the full provider-free Chromium acceptance matrix.
 - `W36-E7-S4-T37` — Prove wheel, doctor and isolation readiness on one candidate SHA.
 - `W36-E7-S4-T3` — Run the medium scenario through Codex to a clean terminal result.
@@ -38,6 +37,13 @@ slice, and local task.
   queue-restoration policy in `docs/backlog/roadmap.md` (`W8-E3-S1`).
 
 ## Current reconciliation
+
+- `2026-07-26` `W36-E7-S4-T53` is complete: the shared bounded log reader enforces a
+  256 KiB hard limit and reports requested/retained bytes, exact ranges, head/tail truncation,
+  partial-line edges, and oversized-line status. CLI, operator UI/read models, and live harness
+  heartbeats now use it while the complete durable log remains unchanged. Sparse 64 MiB,
+  oversized-line, CLI, and read-model tests pass `12/12`; UI log API tests pass `5/5`; all `41`
+  doc checks pass. `T54` is promoted to `Next` and `T55` to `Soon`.
 
 - `2026-07-26` `W36-E7-S4-T52` is complete: ignored/cache paths now persist as bounded
   inventories with total/group counts, root/type groups, full-set SHA-256, a 50-path sample, and

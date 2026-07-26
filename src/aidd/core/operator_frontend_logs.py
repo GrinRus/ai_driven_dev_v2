@@ -1,7 +1,13 @@
 from __future__ import annotations
 
 from pathlib import Path
+from typing import Literal
 
+from aidd.core.bounded_log_reader import (
+    DEFAULT_LOG_READ_BYTES,
+    MAX_LOG_READ_BYTES,
+    read_bounded_log,
+)
 from aidd.core.operator_frontend_common import validate_operator_stage
 from aidd.core.operator_frontend_models import OperatorRunLogView, OperatorRunView
 from aidd.core.run_inspection import (
@@ -10,8 +16,6 @@ from aidd.core.run_inspection import (
     resolve_run_metadata_summary,
 )
 
-_DEFAULT_LOG_TAIL_BYTES = 64 * 1024
-_MAX_LOG_READ_BYTES = 256 * 1024
 
 def resolve_operator_run_view(
     *,
@@ -34,35 +38,37 @@ def _bounded_operator_run_log(
     tail_bytes: int | None,
     limit_bytes: int | None,
 ) -> OperatorRunLogView:
-    byte_size = summary.runtime_log_path.stat().st_size
+    mode: Literal["head", "tail"]
     if tail_bytes is not None:
-        requested_bytes = min(tail_bytes, _MAX_LOG_READ_BYTES)
-        start_byte = max(0, byte_size - requested_bytes)
-        end_byte = byte_size
+        mode = "tail"
+        requested_bytes = tail_bytes
     elif limit_bytes is not None:
-        requested_bytes = min(limit_bytes, _MAX_LOG_READ_BYTES)
-        start_byte = 0
-        end_byte = min(byte_size, requested_bytes)
+        mode = "head"
+        requested_bytes = limit_bytes
     else:
-        requested_bytes = _DEFAULT_LOG_TAIL_BYTES
-        start_byte = max(0, byte_size - requested_bytes)
-        end_byte = byte_size
-
-    with summary.runtime_log_path.open("rb") as file_obj:
-        file_obj.seek(start_byte)
-        raw_text = file_obj.read(end_byte - start_byte)
-
+        mode = "tail"
+        requested_bytes = DEFAULT_LOG_READ_BYTES
+    bounded = read_bounded_log(
+        summary.runtime_log_path,
+        mode=mode,
+        requested_bytes=requested_bytes,
+        max_bytes=MAX_LOG_READ_BYTES,
+    )
     return OperatorRunLogView(
         summary=summary,
-        text=raw_text.decode("utf-8", errors="replace"),
-        byte_size=byte_size,
-        start_byte=start_byte,
-        end_byte=end_byte,
-        requested_bytes=requested_bytes,
-        max_bytes=_MAX_LOG_READ_BYTES,
-        truncated=start_byte > 0 or end_byte < byte_size,
-        truncated_head=start_byte > 0,
-        truncated_tail=end_byte < byte_size,
+        text=bounded.text,
+        byte_size=bounded.byte_size,
+        start_byte=bounded.start_byte,
+        end_byte=bounded.end_byte,
+        retained_bytes=bounded.retained_bytes,
+        requested_bytes=bounded.requested_bytes,
+        max_bytes=bounded.max_bytes,
+        truncated=bounded.truncated,
+        truncated_head=bounded.truncated_head,
+        truncated_tail=bounded.truncated_tail,
+        partial_head_line=bounded.partial_head_line,
+        partial_tail_line=bounded.partial_tail_line,
+        oversized_line=bounded.oversized_line,
     )
 
 

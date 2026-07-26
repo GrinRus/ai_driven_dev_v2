@@ -17,6 +17,7 @@ from aidd.cli.support import (
     console,
 )
 from aidd.config import load_config
+from aidd.core.bounded_log_reader import MAX_LOG_READ_BYTES, read_bounded_log
 from aidd.core.run_inspection import (
     resolve_run_artifacts_summary,
     resolve_run_log_summary,
@@ -429,7 +430,12 @@ def run_logs(
     except ValueError as exc:
         raise typer.BadParameter(str(exc)) from exc
 
-    log_text = summary.runtime_log_path.read_text(encoding="utf-8")
+    bounded = read_bounded_log(
+        summary.runtime_log_path,
+        mode="tail" if tail else "head",
+        requested_bytes=MAX_LOG_READ_BYTES,
+    )
+    log_text = bounded.text
     if tail:
         log_text = _tail_lines(log_text, line_count=lines)
 
@@ -437,6 +443,14 @@ def run_logs(
         f"Run log: run_id={summary.run_id} stage={summary.stage} attempt={summary.attempt_number}"
     )
     console.print(f"Path: {summary.runtime_log_path.as_posix()}")
+    if bounded.truncated:
+        console.print(
+            "Bounded log view: "
+            f"bytes {bounded.start_byte}:{bounded.end_byte} of {bounded.byte_size}; "
+            f"retained={bounded.retained_bytes}; "
+            f"head_truncated={bounded.truncated_head}; "
+            f"tail_truncated={bounded.truncated_tail}."
+        )
     if not log_text:
         console.print("(empty runtime log)")
         return
