@@ -7,15 +7,14 @@ slice, and local task.
 
 ## Next
 
-- `W36-E7-S4-T49` — Materialize a self-contained canonical live evidence bundle.
+- `W36-E7-S4-T50` — Commit the live bundle digest and browser provenance manifest.
 
 ## Soon
 
-- `W36-E7-S4-T50` — Commit the live bundle digest and browser provenance manifest.
+- `W36-E7-S4-T51` — Finalize truthful product-bundle summaries and acceptance status.
 
 ## Parking lot
 
-- `W36-E7-S4-T51` — Finalize truthful product-bundle summaries and acceptance status.
 - `W36-E7-S4-T52` — Bound ignored dependency and cache inventories in repository evidence.
 - `W36-E7-S4-T53` — Read persisted runtime-log tails under a byte and memory bound.
 - `W36-E7-S4-T54` — Normalize provider events into a bounded lifecycle projection.
@@ -42,6 +41,15 @@ slice, and local task.
   queue-restoration policy in `docs/backlog/roadmap.md` (`W8-E3-S1`).
 
 ## Current reconciliation
+
+- `2026-07-26` `W36-E7-S4-T49` is complete: the typed live result materializer now copies
+  work-item stage outputs, task/run/finalization evidence, target patch, final reports,
+  approval/remediation records, and browser artifacts into `canonical-evidence`. Its
+  `live-result-index.json` uses only bundle-relative size/digest-backed references; containment,
+  identity, symlink, dangling-link, and digest checks fail closed, while old absolute references
+  require explicit `legacy-degraded` read mode. The source/work/target deletion matrix and
+  terminal-flow compatibility suite pass `74/74`. `T50` is promoted to `Next` and `T51` to
+  `Soon`.
 
 - `2026-07-26` `W36-E7-S4-T48` is complete: bounded target Git preparation and dependency setup
   now precede a typed `target-readiness.json` gate. The gate derives provider-free smoke from the

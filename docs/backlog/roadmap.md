@@ -12163,7 +12163,7 @@ Local tasks:
     transcripts; the integration fixture proves no `run-stage` was emitted. The focused target
     matrix passes `26/26`. The completed T44–T48 lifecycle group passes repository Ruff, mypy
     across `221` modules, and all `2096` Python tests.
-- `W36-E7-S4-T49` (next) Materialize canonical stage, validation, target-patch, final-report,
+- `W36-E7-S4-T49` (done) Materialize canonical stage, validation, target-patch, final-report,
   and browser evidence inside a self-contained live bundle.
   - Dependencies: `W36-E7-S4-T48` as the target-readiness predecessor.
   - Scope: live result-bundle materialization and bundle-relative references only; legacy absolute
@@ -12171,7 +12171,15 @@ Local tasks:
   - Verification: deleting all mutable source/work/target roots still leaves every stage output,
     stage result, validator report, task/finalization record, target patch, final report, and
     browser artifact readable from the bundle; dangling or mismatched links fail closed.
-- `W36-E7-S4-T50` (soon) Commit one atomic digest and provenance manifest for the complete live
+  - Completion: terminal, blocked, and manual-quality-stop flows now invoke a separate typed
+    `live_result_bundle` materializer. It copies the complete work-item stage tree and durable
+    task/run evidence, final reports, audits, approval/remediation records, and browser artifacts
+    into `canonical-evidence`, and records tracked plus non-ignored untracked product changes in
+    `target.patch`. The published `live-result-index.json` contains only bundle-relative paths
+    with size and SHA-256 readback; containment, symlink, dangling path, digest, and exact run
+    identity checks fail closed. Absolute paths require an explicit `legacy-degraded` read mode.
+    The source/work/target deletion matrix and terminal-flow compatibility suite pass `74/74`.
+- `W36-E7-S4-T50` (next) Commit one atomic digest and provenance manifest for the complete live
   acceptance bundle.
   - Dependencies: `W36-E7-S4-T49` as the self-contained-materialization predecessor.
   - Scope: schema-v1 live bundle commit marker and readback validation only; raw evidence remains
@@ -12179,7 +12187,7 @@ Local tasks:
   - Verification: commit/tree/scenario/target identities plus SHA-256 and size for the source
     archive, wheel, stage evidence, target patch, reports, runtime evidence, and each browser file
     validate exactly; orphan browser files, wrong viewport/run identity, and digest mismatch fail.
-- `W36-E7-S4-T51` (parked) Finalize a truthful product-bundle summary after manual quality
+- `W36-E7-S4-T51` (soon) Finalize a truthful product-bundle summary after manual quality
   evidence is complete.
   - Dependencies: `W36-E7-S4-T50` as the digest-manifest predecessor.
   - Scope: product-evaluation summary writer/read model and legacy degraded-state handling only;

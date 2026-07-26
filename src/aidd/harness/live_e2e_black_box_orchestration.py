@@ -183,6 +183,10 @@ from aidd.harness.live_remediation_evidence import (
     classify_remediation_terminal_evidence,
     read_remediation_terminal_evidence,
 )
+from aidd.harness.live_result_bundle import (
+    LiveResultBundleIdentity,
+    materialize_live_result_bundle,
+)
 from aidd.harness.live_runtime_config import (
     validate_live_runtime_command,
     write_live_runtime_config,
@@ -8166,6 +8170,7 @@ def _finalize_reports(
     _write_runtime_approval_analysis_placeholder(ctx)
     _write_run_transcript_from_flow(ctx=ctx, exit_code=0 if verdict.status == "pass" else 1)
     _write_product_evaluation_bundle_summary(ctx)
+    _materialize_canonical_live_result(ctx)
     return BlackBoxLiveE2EResult(
         scenario_id=ctx.scenario.scenario_id,
         run_id=ctx.run_id,
@@ -8210,6 +8215,7 @@ def _manual_quality_stop_result(ctx: FlowContext) -> BlackBoxLiveE2EResult:
     _write_target_workspace_evidence(ctx)
     _, manual_stop_markdown_path = _write_manual_quality_stop_artifacts(ctx)
     _write_product_evaluation_bundle_summary(ctx)
+    _materialize_canonical_live_result(ctx)
     return BlackBoxLiveE2EResult(
         scenario_id=ctx.scenario.scenario_id,
         run_id=ctx.run_id,
@@ -8244,6 +8250,23 @@ def _write_run_transcript_from_flow(*, ctx: FlowContext, exit_code: int) -> Path
             "timeout_policy": _timeout_policy_payload(ctx),
             "work_item": result.work_item,
         },
+    )
+
+
+def _materialize_canonical_live_result(ctx: FlowContext) -> None:
+    materialize_live_result_bundle(
+        bundle_root=ctx.bundle_root,
+        identity=LiveResultBundleIdentity(
+            scenario_id=ctx.scenario.scenario_id,
+            runtime_id=ctx.runtime_id,
+            run_id=ctx.run_id,
+            work_item=ctx.work_item,
+        ),
+        target_root=(
+            None
+            if ctx.prepared_working_copy is None
+            else ctx.prepared_working_copy.working_copy_path
+        ),
     )
 
 
@@ -8338,6 +8361,7 @@ def _blocked_result(ctx: FlowContext) -> BlackBoxLiveE2EResult:
     )
     _write_run_transcript_from_flow(ctx=ctx, exit_code=1)
     _write_product_evaluation_bundle_summary(ctx)
+    _materialize_canonical_live_result(ctx)
     return BlackBoxLiveE2EResult(
         scenario_id=ctx.scenario.scenario_id,
         run_id=ctx.run_id,
