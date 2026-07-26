@@ -38,6 +38,8 @@ PRESERVED_STATE_EXTRA_KEYS = (
     "remediation_evidence",
     "remediation_terminal_evidence",
     "stage_exit_code",
+    "error_classification",
+    "target_readiness_evidence",
 )
 
 

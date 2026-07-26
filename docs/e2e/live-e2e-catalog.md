@@ -408,6 +408,7 @@ Every live eval bundle must aim to contain:
 - `harness-metadata.json`
 - `flow-state.json`
 - `setup-transcript.json`
+- `target-readiness.json`
 - `run-transcript.json`
 - `verify-transcript.json`
 - `teardown-transcript.json`
@@ -466,6 +467,14 @@ budget, currently `scope: "per-stage-command"`. `stage-timing.json` and
 `verify-transcript.json` may include `workspace_cleanup` when successful manifest
 verification created known ignored byproducts after QA. That cleanup is limited to
 new verification residue and is execution hygiene before final workspace evidence.
+
+Before the first provider stage command, the evaluator must finish the pinned target
+checkout, bounded dependency setup, and `target-readiness.json`. Readiness runs the
+selected authored task's provider-free verification commands while deferring only checks
+that require later `.aidd` stage/quality artifacts. Relative generated or native command
+paths must already exist and be executable. A missing dependency, prerequisite, command
+failure, or timeout is classified as `target-setup`, persists its transcript, and stops
+before provider allocation.
 
 Remediation launch and rerun evidence reads the typed UI job `terminal_evidence`
 projection instead of reducing every non-success to `job failed`. The live bundle

@@ -7,15 +7,14 @@ slice, and local task.
 
 ## Next
 
-- `W36-E7-S4-T48` — Preflight target installation and verification prerequisites.
+- `W36-E7-S4-T49` — Materialize a self-contained canonical live evidence bundle.
 
 ## Soon
 
-- `W36-E7-S4-T49` — Materialize a self-contained canonical live evidence bundle.
+- `W36-E7-S4-T50` — Commit the live bundle digest and browser provenance manifest.
 
 ## Parking lot
 
-- `W36-E7-S4-T50` — Commit the live bundle digest and browser provenance manifest.
 - `W36-E7-S4-T51` — Finalize truthful product-bundle summaries and acceptance status.
 - `W36-E7-S4-T52` — Bound ignored dependency and cache inventories in repository evidence.
 - `W36-E7-S4-T53` — Read persisted runtime-log tails under a byte and memory bound.
@@ -44,14 +43,13 @@ slice, and local task.
 
 ## Current reconciliation
 
-- `2026-07-26` `W36-E7-S4-T47` is complete: UI jobs now retain typed terminal evidence for
-  completion, failure, cancellation and operator wait, including work-item/run/stage/attempt
-  identity, runtime-exit/adapter outcome, durable stage winner, first cause and cancellation/
-  operator-request detail. Harness remediation readback validates that identity fail-closed and
-  persists the typed cause instead of replacing it with generic `job failed`. The new typed
-  matrix passes `12/12`; existing remediation, cancellation and operator-decision compatibility
-  passes `35/35`, with Ruff, mypy and docs checks clean. `T48` is promoted to `Next` and `T49`
-  moves to `Soon`.
+- `2026-07-26` `W36-E7-S4-T48` is complete: bounded target Git preparation and dependency setup
+  now precede a typed `target-readiness.json` gate. The gate derives provider-free smoke from the
+  selected authored task, defers only future `.aidd` artifacts, checks relative generated/native
+  executables, and classifies missing dependencies, non-zero commands and timeouts as
+  `target-setup` before any `run-stage`. The focused matrix passes `26/26`; the completed
+  lifecycle group passes Ruff, mypy across `221` modules and all `2096` Python tests. `T49` is
+  promoted to `Next` and `T50` moves to `Soon`.
 
 - `2026-07-22` `W36-E7-S4-T35` is complete: runtime-readiness updates now use a
   generation-aware scoped renderer and cannot replace the decision-owning Studio cockpit.

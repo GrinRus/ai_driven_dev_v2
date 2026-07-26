@@ -187,11 +187,17 @@ from aidd.harness.live_runtime_config import (
     validate_live_runtime_command,
     write_live_runtime_config,
 )
+from aidd.harness.live_target_readiness import (
+    DEFAULT_TARGET_READINESS_TIMEOUT_SECONDS,
+    LiveTargetReadinessError,
+    run_live_target_readiness,
+)
 from aidd.harness.live_terminal_reconciliation import (
     LiveTerminalReconciliationError,
     run_live_terminal_reconciliation,
 )
 from aidd.harness.live_workspace_bootstrap import bootstrap_live_work_item
+from aidd.harness.process_lifecycle import HarnessLifecycleBudget
 from aidd.harness.repo_prep import (
     PreparedRepository,
     PreparedWorkingCopy,
@@ -243,6 +249,7 @@ from aidd.validators.semantic_rules.evidence import (
 FlowAction = Literal[
     "install",
     "setup",
+    "target-setup",
     "run-stage",
     "inspect-stage",
     "answer-questions",
@@ -288,6 +295,7 @@ NEXT_FLOW_CHECKPOINT_MARKDOWN_FILENAME = "next-flow-checkpoint.md"
 NEXT_FLOW_LINEAGE_FILENAME = "next-flow-lineage.json"
 TARGET_WORKSPACE_EVIDENCE_JSON_FILENAME = "target-workspace-evidence.json"
 TARGET_WORKSPACE_EVIDENCE_MARKDOWN_FILENAME = "target-workspace-evidence.md"
+TARGET_READINESS_FILENAME = "target-readiness.json"
 VERIFY_WORKSPACE_CLEANUP_SCOPE = "post-verify-known-ignored-residue"
 VERIFY_RESIDUE_TOP_LEVEL_DIRS = frozenset(
     {
@@ -3259,7 +3267,6 @@ def _run_setup(ctx: FlowContext) -> None:
         except (OSError, ValueError, json.JSONDecodeError):
             payload = {}
         if int(payload.get("command_count", 0) or 0) > 0:
-            _capture_target_workspace_baseline(ctx)
             return
     working_copy = _require_working_copy(ctx)
     try:
@@ -3267,6 +3274,9 @@ def _run_setup(ctx: FlowContext) -> None:
             scenario=ctx.scenario,
             working_copy_path=working_copy,
             environment=_harness_environment_for_context(ctx),
+            lifecycle_budget=HarnessLifecycleBudget.start(
+                DEFAULT_TARGET_READINESS_TIMEOUT_SECONDS
+            ),
         )
     except HarnessSetupError as exc:
         transcripts = _transcripts_from_error(exc)
@@ -3311,13 +3321,98 @@ def _run_setup(ctx: FlowContext) -> None:
         plan="Run scenario setup commands in the pinned target repository.",
         evidence_paths=(ctx.bundle_root / SETUP_TRANSCRIPT_FILENAME,),
     )
-    _capture_target_workspace_baseline(ctx)
     _persist_state(
         ctx=ctx,
         status="running",
         next_action="run-stage",
         current_stage=_first_incomplete_stage(ctx),
         completed_stages=_state_completed_stages(ctx.bundle_root),
+    )
+
+
+def _run_target_readiness(ctx: FlowContext) -> None:
+    readiness_path = ctx.bundle_root / TARGET_READINESS_FILENAME
+    if readiness_path.exists():
+        payload = _read_json_object(readiness_path)
+        if payload.get("classification") == "pass":
+            _capture_target_workspace_baseline(ctx)
+            return
+    working_copy = _require_working_copy(ctx)
+    selected_task = _selected_task_for_context(ctx)
+    if selected_task is None:
+        raise RuntimeError("Live scenario selected task is missing.")
+    try:
+        result = run_live_target_readiness(
+            task=selected_task,
+            working_copy_path=working_copy,
+            environment=_harness_environment_for_context(ctx),
+        )
+    except LiveTargetReadinessError as exc:
+        _write_json(readiness_path, exc.result.to_payload())
+        _record_step(
+            ctx=ctx,
+            action="target-setup",
+            classification="infra-fail",
+            decision=(
+                "Stop before provider allocation because target readiness failed."
+            ),
+            plan=(
+                "Run provider-free authored verification smoke after dependency setup."
+            ),
+            command_results=tuple(
+                BlackBoxCommandResult(
+                    command=("/bin/sh", "-c", transcript.command),
+                    transcript=transcript,
+                )
+                for transcript in exc.result.command_transcripts
+            ),
+            evidence_paths=(readiness_path,),
+            details={
+                "error": str(exc),
+                "failure_classification": "target-setup",
+            },
+        )
+        _persist_state(
+            ctx=ctx,
+            status="infra-fail",
+            next_action="stop",
+            current_stage=_first_incomplete_stage(ctx),
+            completed_stages=_state_completed_stages(ctx.bundle_root),
+            extra={
+                "error": str(exc),
+                "error_classification": "target-setup",
+                "target_readiness_evidence": readiness_path.as_posix(),
+            },
+        )
+        raise
+    _write_json(readiness_path, result.to_payload())
+    _capture_target_workspace_baseline(ctx)
+    _record_step(
+        ctx=ctx,
+        action="target-setup",
+        classification="pass",
+        decision="Continue to the first provider stage after target readiness passed.",
+        plan="Run provider-free authored verification smoke after dependency setup.",
+        command_results=tuple(
+            BlackBoxCommandResult(
+                command=("/bin/sh", "-c", transcript.command),
+                transcript=transcript,
+            )
+            for transcript in result.command_transcripts
+        ),
+        evidence_paths=(readiness_path,),
+        details={
+            "deferred_artifact_commands": list(result.deferred_artifact_commands),
+            "failure_classification": None,
+        },
+    )
+    _persist_state(
+        ctx=ctx,
+        status="running",
+        next_action="run-stage",
+        current_stage=_first_incomplete_stage(ctx),
+        completed_stages=_state_completed_stages(ctx.bundle_root),
+        extra={"target_readiness_evidence": readiness_path.as_posix()},
     )
 
 
@@ -8376,6 +8471,20 @@ def _run_black_box_live_e2e_with_context(ctx: FlowContext) -> BlackBoxLiveE2ERes
             ctx=ctx,
             status="infra-fail",
             summary=f"Scenario setup failed before black-box stage execution: {exc}",
+            verification_failed=True,
+            teardown_result=None,
+            teardown_error=None,
+        )
+    try:
+        _run_target_readiness(ctx)
+    except LiveTargetReadinessError as exc:
+        return _finalize_reports(
+            ctx=ctx,
+            status="infra-fail",
+            summary=(
+                "Target setup readiness failed before provider allocation: "
+                f"{exc}"
+            ),
             verification_failed=True,
             teardown_result=None,
             teardown_error=None,

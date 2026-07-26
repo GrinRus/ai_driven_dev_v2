@@ -947,6 +947,7 @@ def _write_scenario_manifest(
     verify_commands: tuple[str, ...] = (
         "test -f .aidd/workitems/WI-LIVE-BLACKBOX/stages/qa/output/stage-result.md",
     ),
+    task_verification_commands: tuple[str, ...] = ("git rev-parse --verify HEAD",),
     interview_required: bool = False,
     frontend_checkpoints: bool = True,
     runtime_targets: tuple[str, ...] = ("opencode",),
@@ -1010,7 +1011,7 @@ def _write_scenario_manifest(
                     "target_change": "Produce fake stage evidence.",
                     "expected_scope": "Test fixture only.",
                     "acceptance_criteria": list(acceptance_criteria),
-                    "verification": list(verify_commands),
+                    "verification": list(task_verification_commands),
                     "quality_bar": "Execution evidence is complete.",
                     "size_rationale": "Small test fixture.",
                     **(
@@ -1161,6 +1162,7 @@ def _prepare_live_test(
     verify_commands: tuple[str, ...] = (
         "test -f .aidd/workitems/WI-LIVE-BLACKBOX/stages/qa/output/stage-result.md",
     ),
+    task_verification_commands: tuple[str, ...] = ("git rev-parse --verify HEAD",),
     interview_required: bool = False,
     frontend_checkpoints: bool = True,
     acceptance_criteria: tuple[str, ...] = ("The fake AIDD stages complete.",),
@@ -1220,6 +1222,7 @@ def _prepare_live_test(
         repo_url=source_repo.as_uri(),
         setup_commands=setup_commands,
         verify_commands=verify_commands,
+        task_verification_commands=task_verification_commands,
         interview_required=interview_required,
         frontend_checkpoints=frontend_checkpoints,
         runtime_targets=runtime_targets,
@@ -1701,6 +1704,7 @@ def test_black_box_live_e2e_passes_stepwise_and_writes_flow_artifacts(
         "repair-history.md",
         "install-transcript.json",
         "setup-transcript.json",
+        "target-readiness.json",
         "run-transcript.json",
         "verify-transcript.json",
         "teardown-transcript.json",
@@ -4317,7 +4321,15 @@ def test_black_box_live_e2e_reconciles_timed_out_stage_metadata(
     )
     assert audit_payload["stage_state"] == "failed"
     assert audit_payload["stage_metadata_status"] == "failed"
-    assert audit_payload["classifications"]["frontend_checkpoint"] == "skipped"
+    assert audit_payload["classifications"]["frontend_checkpoint"] == "pass"
+    frontend_payload = json.loads(
+        (result.bundle_root / "frontend-checkpoints.json").read_text(encoding="utf-8")
+    )
+    assert frontend_payload["reconciliations"][0]["running_status"] == "provisional-pass"
+    assert (
+        frontend_payload["reconciliations"][0]["post_stage_status"]
+        == "superseded-transition"
+    )
     run_transcript = json.loads(
         (result.bundle_root / "run-transcript.json").read_text(encoding="utf-8")
     )
@@ -4629,6 +4641,46 @@ def test_black_box_live_e2e_reports_setup_infra_failure_and_partial_bundle(
     )
     assert setup_payload["commands"][0]["exit_code"] == 3
     assert (result.bundle_root / "flow-state.json").exists()
+
+
+def test_black_box_live_e2e_detects_target_dependency_before_provider_allocation(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    scenario_path, work_root, report_root = _prepare_live_test(
+        tmp_path,
+        monkeypatch,
+        task_verification_commands=(
+            "python -c 'import definitely_missing_optional_dependency'",
+        ),
+    )
+
+    result = run_black_box_live_e2e(
+        scenario_path=scenario_path,
+        runtime_id="opencode",
+        work_root=work_root,
+        report_root=report_root,
+    )
+
+    assert result.status == "infra-fail"
+    readiness = json.loads(
+        (result.bundle_root / "target-readiness.json").read_text(encoding="utf-8")
+    )
+    assert readiness["classification"] == "target-setup"
+    assert readiness["command_transcripts"][0]["exit_code"] != 0
+    state = json.loads(
+        (result.bundle_root / "flow-state.json").read_text(encoding="utf-8")
+    )
+    assert state["error_classification"] == "target-setup"
+    steps = json.loads(
+        (result.bundle_root / "flow-steps.json").read_text(encoding="utf-8")
+    )
+    assert any(
+        step["action"] == "target-setup"
+        and step["classification"] == "infra-fail"
+        for step in steps
+    )
+    assert all(step["action"] != "run-stage" for step in steps)
 
 
 def test_black_box_live_e2e_reports_install_failure(

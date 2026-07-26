@@ -12146,7 +12146,7 @@ Local tasks:
     decisive cause instead of a generic failure string. The focused typed matrix passes `12/12`;
     the existing remediation, cancellation, and operator-decision compatibility matrix passes
     `35/35`.
-- `W36-E7-S4-T48` (next) Preflight target installation and verification prerequisites before
+- `W36-E7-S4-T48` (done) Preflight target installation and verification prerequisites before
   allocating a paid provider run.
   - Dependencies: `W36-E7-S4-T47` as the remediation-evidence predecessor.
   - Scope: provider-neutral target setup probes only; no Hono-, Rollup-, model-, or adapter-specific
@@ -12154,7 +12154,16 @@ Local tasks:
   - Verification: fresh-clone dependency installation, declared verification commands, and
     required generated/native artifacts pass a bounded smoke; the historical missing optional
     dependency shape is classified as `target-setup` before provider execution.
-- `W36-E7-S4-T49` (soon) Materialize canonical stage, validation, target-patch, final-report,
+  - Completion: the live evaluator now completes bounded pinned-target Git preparation and
+    dependency setup, then writes `target-readiness.json` before entering the stage loop. The
+    typed readiness gate derives provider-free smoke commands from the selected authored task,
+    defers only later `.aidd` stage/quality artifact checks, validates relative generated/native
+    executables, and applies one bounded lifecycle budget. Missing prerequisites, optional
+    dependencies, non-zero commands, and timeouts are classified `target-setup` with retained
+    transcripts; the integration fixture proves no `run-stage` was emitted. The focused target
+    matrix passes `26/26`. The completed T44–T48 lifecycle group passes repository Ruff, mypy
+    across `221` modules, and all `2096` Python tests.
+- `W36-E7-S4-T49` (next) Materialize canonical stage, validation, target-patch, final-report,
   and browser evidence inside a self-contained live bundle.
   - Dependencies: `W36-E7-S4-T48` as the target-readiness predecessor.
   - Scope: live result-bundle materialization and bundle-relative references only; legacy absolute
@@ -12162,7 +12171,7 @@ Local tasks:
   - Verification: deleting all mutable source/work/target roots still leaves every stage output,
     stage result, validator report, task/finalization record, target patch, final report, and
     browser artifact readable from the bundle; dangling or mismatched links fail closed.
-- `W36-E7-S4-T50` (parked) Commit one atomic digest and provenance manifest for the complete live
+- `W36-E7-S4-T50` (soon) Commit one atomic digest and provenance manifest for the complete live
   acceptance bundle.
   - Dependencies: `W36-E7-S4-T49` as the self-contained-materialization predecessor.
   - Scope: schema-v1 live bundle commit marker and readback validation only; raw evidence remains

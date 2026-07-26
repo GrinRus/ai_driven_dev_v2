@@ -83,6 +83,13 @@ target-root symlink, provider overlap, or cleanup failure invalidates the launch
 child command returned success. Resume of an existing provider layout requires both
 `--resume-existing-provider` on the isolation launcher and an explicit nested `--run-id`.
 
+Inside each fresh provider root, the evaluator must complete the pinned target clone,
+dependency setup, generated/native command prerequisite checks, and the authored
+provider-free verification smoke before the first paid runtime process starts. Clone Git
+commands, setup, and smoke execution are bounded. `target-readiness.json` classifies any
+missing optional dependency or prerequisite as `target-setup`; such a failure blocks provider
+allocation rather than becoming a provider failure.
+
 ## Product and evaluator boundary
 
 - The evaluator drives only supported CLI, loopback UI/API, operator-answer, quality-audit, and
