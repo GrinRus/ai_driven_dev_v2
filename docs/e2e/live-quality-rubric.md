@@ -115,6 +115,9 @@ build, dist, or dependency-cache files. New ignored files under an ignored root 
 existed at setup, for example `.venv/.../__pycache__`, are recorded as `setup-baseline ignored churn`
 rather than pollution findings. These findings are non-gating execution
 evidence for manual review; they do not alter `verdict.md` or `grader.json`.
+Ignored inventories retain total count, root/type groups, full-set SHA-256, a bounded
+sample, and truncation flags. Tracked, modified, deleted, and non-ignored untracked
+product paths remain exact.
 
 When manifest `verify.commands` pass but create local ignored byproducts after QA
 has finished, the runner may remove only newly-created known verification residue

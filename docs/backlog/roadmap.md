@@ -12211,7 +12211,7 @@ Local tasks:
     the derived summary, rematerializes and reseals the bundle, but preserves `verdict.md` and
     `grader.json` bytes. The five-state unit matrix passes `5/5`, terminal pre/post-review refresh
     passes `2/2`, and all `41` live-document consistency checks pass.
-- `W36-E7-S4-T52` (next) Bound ignored dependency and cache inventories in live repository
+- `W36-E7-S4-T52` (done) Bound ignored dependency and cache inventories in live repository
   snapshots without weakening exact product-change classification.
   - Dependencies: `W36-E7-S4-T51` as the truthful-summary predecessor.
   - Scope: live repository snapshot model only; tracked, untracked, modified, and deleted product
@@ -12219,14 +12219,21 @@ Local tasks:
   - Verification: a repository with tens of thousands of ignored files records counts, digests,
     grouping, a bounded sample, and truncation metadata within a fixed size budget while retaining
     exact product and contamination findings.
-- `W36-E7-S4-T53` (soon) Read persisted runtime-log tails under an explicit byte and memory
+  - Completion: live workspace snapshots and classifications now persist ignored/cache paths as
+    typed bounded inventories with total count, root/type group count, SHA-256 of the complete
+    sorted set, a 50-path sample, and independent path/group truncation flags. Large ignored
+    findings are likewise sampled with an aggregate truncation record, while tracked, modified,
+    deleted, and non-ignored untracked product paths remain exact and legacy full-list snapshots
+    still read. The 20,000-path fixture stays below fixed JSON budgets; the repository matrix
+    passes `9/9`, the live setup-baseline flow passes, and all `41` doc checks pass.
+- `W36-E7-S4-T53` (next) Read persisted runtime-log tails under an explicit byte and memory
   bound.
   - Dependencies: `W36-E7-S4-T52` as the bounded-repository-evidence predecessor.
   - Scope: canonical CLI runtime-log tail reader and its harness consumer only; full durable
     `runtime.log` persistence remains unchanged.
   - Verification: a large sparse log and one oversized JSON line return the correct bounded tail
     with explicit truncation and retained-byte metadata without loading the complete file.
-- `W36-E7-S4-T54` (parked) Normalize provider events into a bounded AIDD-owned lifecycle
+- `W36-E7-S4-T54` (soon) Normalize provider events into a bounded AIDD-owned lifecycle
   projection.
   - Dependencies: `W36-E7-S4-T53` as the bounded-log-reader predecessor.
   - Scope: runtime event normalization only; full provider-native payload remains canonical in

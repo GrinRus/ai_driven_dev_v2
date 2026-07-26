@@ -45,6 +45,7 @@ from aidd.core.stages import STAGES
 from aidd.evals.reporting import build_scenario_summary_row, write_eval_summary_markdown
 from aidd.evals.repository_changes import (
     LIVE_KNOWN_HARNESS_UNTRACKED_FILES,
+    BoundedPathInventory,
     LiveWorkspaceSnapshot,
     classify_live_workspace_changes,
     collect_live_workspace_snapshot,
@@ -1199,6 +1200,43 @@ def _markdown_compact_path_summary(
     return lines
 
 
+def _markdown_bounded_inventory_summary(
+    inventory: BoundedPathInventory,
+    *,
+    sample_limit: int,
+    full_list_reference: str,
+) -> list[str]:
+    if inventory.total_count == 0:
+        return ["- none"]
+    sample = list(inventory.sample[:sample_limit])
+    lines = [
+        f"- Count: `{inventory.total_count}`",
+        f"- Full list: `{full_list_reference}`",
+        "- Prefix counts:",
+    ]
+    root_counts: dict[str, int] = {}
+    for group in inventory.groups:
+        root_counts[group.root] = root_counts.get(group.root, 0) + group.count
+    lines.extend(
+        f"  - `{root}`: `{count}`"
+        for root, count in sorted(
+            root_counts.items(),
+            key=lambda item: (-item[1], item[0]),
+        )
+    )
+    if inventory.groups_truncated:
+        lines.append(
+            f"  - additional groups omitted: `{inventory.group_count - len(inventory.groups)}`"
+        )
+    lines.append("- Sample paths:")
+    lines.extend(f"  - `{path}`" for path in sample)
+    omitted_count = max(inventory.total_count - len(sample), 0)
+    if omitted_count:
+        lines.append(f"- Omitted path count: `{omitted_count}`")
+    lines.append(f"- Full-set SHA-256: `{inventory.sha256}`")
+    return lines
+
+
 def _write_target_workspace_baseline_context(ctx: FlowContext) -> None:
     if ctx.target_workspace_baseline_snapshot is None or ctx.prepared_working_copy is None:
         return
@@ -1251,10 +1289,18 @@ def _write_target_workspace_baseline_context(ctx: FlowContext) -> None:
         "",
         "## Baseline Ignored Files",
         "",
-        *_markdown_compact_path_summary(
-            snapshot.ignored_files,
-            sample_limit=BASELINE_CONTEXT_PATH_SAMPLE_LIMIT,
-            full_list_reference="final workspace evidence report after the run",
+        *(
+            _markdown_bounded_inventory_summary(
+                snapshot.ignored_inventory,
+                sample_limit=BASELINE_CONTEXT_PATH_SAMPLE_LIMIT,
+                full_list_reference="final workspace evidence report after the run",
+            )
+            if snapshot.ignored_inventory is not None
+            else _markdown_compact_path_summary(
+                snapshot.ignored_files,
+                sample_limit=BASELINE_CONTEXT_PATH_SAMPLE_LIMIT,
+                full_list_reference="final workspace evidence report after the run",
+            )
         ),
         "",
         "## Setup-Baseline Workspace Files",
@@ -1292,7 +1338,7 @@ def _write_target_workspace_evidence(ctx: FlowContext) -> tuple[Path, ...]:
     )
     final_payload = _live_workspace_snapshot_payload(final_snapshot)
     payload: dict[str, object] = {
-        "schema_version": 1,
+        "schema_version": 2,
         "created_at_utc": _utc_now(),
         "run_id": ctx.run_id,
         "scenario_id": ctx.scenario.scenario_id,
@@ -1330,7 +1376,8 @@ def _write_target_workspace_evidence(ctx: FlowContext) -> tuple[Path, ...]:
             classification.baseline_ignored_files,
             sample_limit=WORKSPACE_EVIDENCE_MARKDOWN_PATH_SAMPLE_LIMIT,
             full_list_reference=(
-                "`target-workspace-evidence.json` field `classification.baseline_ignored_files`"
+                "`target-workspace-evidence.json` field "
+                "`classification.baseline_ignored_inventory`"
             ),
         ),
         "",
@@ -1348,7 +1395,8 @@ def _write_target_workspace_evidence(ctx: FlowContext) -> tuple[Path, ...]:
             classification.new_ignored_files,
             sample_limit=WORKSPACE_EVIDENCE_MARKDOWN_PATH_SAMPLE_LIMIT,
             full_list_reference=(
-                "`target-workspace-evidence.json` field `classification.new_ignored_files`"
+                "`target-workspace-evidence.json` field "
+                "`classification.new_ignored_inventory`"
             ),
         ),
         "- Setup-baseline ignored churn files:",
@@ -1357,7 +1405,7 @@ def _write_target_workspace_evidence(ctx: FlowContext) -> tuple[Path, ...]:
             sample_limit=WORKSPACE_EVIDENCE_MARKDOWN_PATH_SAMPLE_LIMIT,
             full_list_reference=(
                 "`target-workspace-evidence.json` field "
-                "`classification.setup_baseline_ignored_churn_files`"
+                "`classification.setup_baseline_ignored_churn_inventory`"
             ),
         ),
         "",
@@ -2618,6 +2666,14 @@ def _list_payload_value(payload: dict[str, object], key: str) -> list[str]:
     return [str(item) for item in raw if isinstance(item, str)]
 
 
+def _bounded_inventory_count(payload: dict[str, object], key: str) -> int:
+    raw = payload.get(key)
+    if not isinstance(raw, dict):
+        return 0
+    count = raw.get("total_count")
+    return count if isinstance(count, int) and count >= 0 else 0
+
+
 def _target_workspace_bundle_summary(ctx: FlowContext) -> dict[str, object]:
     json_path, markdown_path = _target_workspace_evidence_paths(ctx)
     if not json_path.exists():
@@ -2672,9 +2728,13 @@ def _target_workspace_bundle_summary(ctx: FlowContext) -> dict[str, object]:
             classification,
             "stray_aidd_root_files",
         ),
-        "new_ignored_files_count": len(_list_payload_value(classification, "new_ignored_files")),
-        "setup_baseline_ignored_churn_files_count": len(
-            _list_payload_value(classification, "setup_baseline_ignored_churn_files")
+        "new_ignored_files_count": _bounded_inventory_count(
+            classification,
+            "new_ignored_inventory",
+        ),
+        "setup_baseline_ignored_churn_files_count": _bounded_inventory_count(
+            classification,
+            "setup_baseline_ignored_churn_inventory",
         ),
         "non_gating_findings": findings,
     }
@@ -2780,7 +2840,7 @@ def _product_evaluation_bundle_summary_payload(ctx: FlowContext) -> dict[str, ob
         legacy_degraded=False,
     )
     return {
-        "schema_version": 2,
+        "schema_version": 1,
         "created_at_utc": _utc_now(),
         "scenario_id": ctx.scenario.scenario_id,
         "runtime_id": ctx.runtime_id,
@@ -3000,7 +3060,7 @@ def _manual_quality_stop_payload(ctx: FlowContext) -> dict[str, object]:
         else stage_name
     )
     return {
-        "schema_version": 1,
+        "schema_version": 2,
         "created_at_utc": _utc_now(),
         "run_id": ctx.run_id,
         "runtime_id": ctx.runtime_id,

@@ -1,6 +1,8 @@
 from __future__ import annotations
 
+import hashlib
 import subprocess
+from collections import Counter
 from collections.abc import Mapping
 from dataclasses import dataclass
 from pathlib import Path
@@ -29,6 +31,40 @@ LIVE_IGNORED_WORKSPACE_POLLUTION_PREFIXES = (
 )
 LIVE_IGNORED_WORKSPACE_POLLUTION_DIR_NAMES = frozenset({"__pycache__"})
 LIVE_IGNORED_WORKSPACE_POLLUTION_FILE_SUFFIXES = (".pyc", ".pyo")
+LIVE_IGNORED_PATH_SAMPLE_LIMIT = 50
+LIVE_IGNORED_GROUP_LIMIT = 50
+
+
+@dataclass(frozen=True, slots=True)
+class IgnoredPathGroup:
+    root: str
+    path_type: str
+    count: int
+
+    def to_payload(self) -> dict[str, object]:
+        return {"root": self.root, "type": self.path_type, "count": self.count}
+
+
+@dataclass(frozen=True, slots=True)
+class BoundedPathInventory:
+    total_count: int
+    group_count: int
+    groups: tuple[IgnoredPathGroup, ...]
+    sha256: str
+    sample: tuple[str, ...]
+    truncated: bool
+    groups_truncated: bool
+
+    def to_payload(self) -> dict[str, object]:
+        return {
+            "total_count": self.total_count,
+            "group_count": self.group_count,
+            "groups": [group.to_payload() for group in self.groups],
+            "sha256": self.sha256,
+            "sample": list(self.sample),
+            "truncated": self.truncated,
+            "groups_truncated": self.groups_truncated,
+        }
 
 
 @dataclass(frozen=True, slots=True)
@@ -47,12 +83,20 @@ class LiveWorkspaceSnapshot:
     status_short: str
     command_errors: tuple[str, ...]
     ignored_files: tuple[str, ...] = tuple()
+    ignored_inventory: BoundedPathInventory | None = None
+    modified_files: tuple[str, ...] = tuple()
+    deleted_files: tuple[str, ...] = tuple()
 
     def to_payload(self) -> dict[str, object]:
+        inventory = self.ignored_inventory or build_bounded_path_inventory(
+            self.ignored_files
+        )
         return {
             "tracked_files": list(self.tracked_files),
             "untracked_files": list(self.untracked_files),
-            "ignored_files": list(self.ignored_files),
+            "modified_files": list(self.modified_files),
+            "deleted_files": list(self.deleted_files),
+            "ignored_inventory": inventory.to_payload(),
             "status_short": self.status_short,
             "command_errors": list(self.command_errors),
         }
@@ -79,11 +123,16 @@ class LiveWorkspaceFinding:
 @dataclass(frozen=True, slots=True)
 class LiveWorkspaceClassification:
     tracked_files: tuple[str, ...]
+    modified_files: tuple[str, ...]
+    deleted_files: tuple[str, ...]
     baseline_untracked_files: tuple[str, ...]
     new_untracked_files: tuple[str, ...]
     baseline_ignored_files: tuple[str, ...]
     new_ignored_files: tuple[str, ...]
     setup_baseline_ignored_churn_files: tuple[str, ...]
+    baseline_ignored_inventory: BoundedPathInventory
+    new_ignored_inventory: BoundedPathInventory
+    setup_baseline_ignored_churn_inventory: BoundedPathInventory
     known_harness_files: tuple[str, ...]
     unexpected_non_aidd_untracked_files: tuple[str, ...]
     unexpected_top_level_workitems_files: tuple[str, ...]
@@ -94,12 +143,14 @@ class LiveWorkspaceClassification:
     def to_payload(self) -> dict[str, object]:
         return {
             "tracked_files": list(self.tracked_files),
+            "modified_files": list(self.modified_files),
+            "deleted_files": list(self.deleted_files),
             "baseline_untracked_files": list(self.baseline_untracked_files),
             "new_untracked_files": list(self.new_untracked_files),
-            "baseline_ignored_files": list(self.baseline_ignored_files),
-            "new_ignored_files": list(self.new_ignored_files),
-            "setup_baseline_ignored_churn_files": list(
-                self.setup_baseline_ignored_churn_files
+            "baseline_ignored_inventory": self.baseline_ignored_inventory.to_payload(),
+            "new_ignored_inventory": self.new_ignored_inventory.to_payload(),
+            "setup_baseline_ignored_churn_inventory": (
+                self.setup_baseline_ignored_churn_inventory.to_payload()
             ),
             "known_harness_files": list(self.known_harness_files),
             "unexpected_non_aidd_untracked_files": list(
@@ -109,9 +160,9 @@ class LiveWorkspaceClassification:
                 self.unexpected_top_level_workitems_files
             ),
             "unexpected_aidd_internal_files": list(self.unexpected_aidd_internal_files),
-            "unexpected_ignored_workspace_files": list(
+            "unexpected_ignored_workspace_inventory": build_bounded_path_inventory(
                 self.unexpected_ignored_workspace_files
-            ),
+            ).to_payload(),
         }
 
 
@@ -164,8 +215,81 @@ def _ignored_paths_from_status(output: str | None) -> tuple[str, ...]:
     return tuple(ignored_paths)
 
 
+def _changed_paths_from_status(
+    output: str | None,
+) -> tuple[tuple[str, ...], tuple[str, ...]]:
+    if output is None:
+        return (), ()
+    modified: list[str] = []
+    deleted: list[str] = []
+    for line in output.splitlines():
+        if len(line) < 4:
+            continue
+        code = line[:2]
+        path = line[3:].strip()
+        if " -> " in path:
+            path = path.rsplit(" -> ", 1)[1]
+        if not path or path.startswith(".aidd/"):
+            continue
+        if "D" in code:
+            deleted.append(path)
+        elif "M" in code or "R" in code or "C" in code:
+            modified.append(path)
+    return _dedupe_paths(tuple(modified)), _dedupe_paths(tuple(deleted))
+
+
 def _dedupe_paths(paths: tuple[str, ...]) -> tuple[str, ...]:
     return tuple(dict.fromkeys(paths))
+
+
+def _ignored_path_type(path: str) -> str:
+    if "node_modules" in Path(path).parts or any(
+        part in {".venv", "venv"} for part in Path(path).parts
+    ):
+        return "dependency"
+    if "__pycache__" in Path(path).parts or path.endswith(
+        LIVE_IGNORED_WORKSPACE_POLLUTION_FILE_SUFFIXES
+    ):
+        return "python-bytecode"
+    if path.startswith((".pytest_cache/", ".mypy_cache/", ".ruff_cache/", ".tox/")):
+        return "cache"
+    if path.startswith(("coverage/", ".coverage")):
+        return "coverage"
+    if path.startswith(("build/", "dist/", ".pdm-build/")):
+        return "build"
+    return "other"
+
+
+def build_bounded_path_inventory(
+    paths: tuple[str, ...],
+    *,
+    sample_limit: int = LIVE_IGNORED_PATH_SAMPLE_LIMIT,
+    group_limit: int = LIVE_IGNORED_GROUP_LIMIT,
+) -> BoundedPathInventory:
+    normalized = tuple(sorted(set(paths)))
+    digest = hashlib.sha256()
+    for path in normalized:
+        digest.update(path.encode("utf-8"))
+        digest.update(b"\0")
+    group_counts = Counter(
+        (_ignored_workspace_root(path), _ignored_path_type(path)) for path in normalized
+    )
+    all_groups = tuple(
+        IgnoredPathGroup(root=root, path_type=path_type, count=count)
+        for (root, path_type), count in sorted(
+            group_counts.items(),
+            key=lambda item: (-item[1], item[0][0], item[0][1]),
+        )
+    )
+    return BoundedPathInventory(
+        total_count=len(normalized),
+        group_count=len(all_groups),
+        groups=all_groups[:group_limit],
+        sha256=digest.hexdigest(),
+        sample=normalized[:sample_limit],
+        truncated=len(normalized) > sample_limit,
+        groups_truncated=len(all_groups) > group_limit,
+    )
 
 
 def collect_repository_changes(repo_root: Path) -> RepositoryChanges:
@@ -238,12 +362,17 @@ def collect_live_workspace_snapshot(repo_root: Path) -> LiveWorkspaceSnapshot:
         )
         if error is not None
     )
+    ignored_files = _dedupe_paths(_ignored_paths_from_status(ignored_status_output))
+    modified_files, deleted_files = _changed_paths_from_status(status_output)
     return LiveWorkspaceSnapshot(
         tracked_files=_dedupe_paths(_repo_relative_paths_including_aidd(tracked_output)),
         untracked_files=_dedupe_paths(_repo_relative_paths_including_aidd(untracked_output)),
         status_short="" if status_output is None else status_output.rstrip(),
         command_errors=command_errors,
-        ignored_files=_dedupe_paths(_ignored_paths_from_status(ignored_status_output)),
+        ignored_files=ignored_files,
+        ignored_inventory=build_bounded_path_inventory(ignored_files),
+        modified_files=modified_files,
+        deleted_files=deleted_files,
     )
 
 
@@ -251,12 +380,22 @@ def live_workspace_snapshot_from_payload(
     payload: Mapping[str, object],
 ) -> LiveWorkspaceSnapshot:
     status_short = payload.get("status_short")
+    ignored_inventory = _bounded_inventory_from_payload(payload.get("ignored_inventory"))
+    legacy_ignored_files = _string_tuple(payload.get("ignored_files"))
+    ignored_files = (
+        legacy_ignored_files
+        if ignored_inventory is None
+        else ignored_inventory.sample
+    )
     return LiveWorkspaceSnapshot(
         tracked_files=_string_tuple(payload.get("tracked_files")),
         untracked_files=_string_tuple(payload.get("untracked_files")),
         status_short=status_short if isinstance(status_short, str) else "",
         command_errors=_string_tuple(payload.get("command_errors")),
-        ignored_files=_string_tuple(payload.get("ignored_files")),
+        ignored_files=ignored_files,
+        ignored_inventory=ignored_inventory,
+        modified_files=_string_tuple(payload.get("modified_files")),
+        deleted_files=_string_tuple(payload.get("deleted_files")),
     )
 
 
@@ -264,6 +403,49 @@ def _string_tuple(value: object) -> tuple[str, ...]:
     if not isinstance(value, list):
         return tuple()
     return tuple(item for item in value if isinstance(item, str) and item)
+
+
+def _bounded_inventory_from_payload(value: object) -> BoundedPathInventory | None:
+    if not isinstance(value, Mapping):
+        return None
+    raw_groups = value.get("groups")
+    groups: list[IgnoredPathGroup] = []
+    if isinstance(raw_groups, list):
+        for raw in raw_groups:
+            if not isinstance(raw, Mapping):
+                continue
+            root = raw.get("root")
+            path_type = raw.get("type")
+            count = raw.get("count")
+            if (
+                isinstance(root, str)
+                and isinstance(path_type, str)
+                and isinstance(count, int)
+                and count >= 0
+            ):
+                groups.append(
+                    IgnoredPathGroup(root=root, path_type=path_type, count=count)
+                )
+    total_count = value.get("total_count")
+    group_count = value.get("group_count")
+    sha256 = value.get("sha256")
+    if (
+        not isinstance(total_count, int)
+        or total_count < 0
+        or not isinstance(group_count, int)
+        or group_count < 0
+        or not isinstance(sha256, str)
+    ):
+        return None
+    return BoundedPathInventory(
+        total_count=total_count,
+        group_count=group_count,
+        groups=tuple(groups),
+        sha256=sha256,
+        sample=_string_tuple(value.get("sample")),
+        truncated=value.get("truncated") is True,
+        groups_truncated=value.get("groups_truncated") is True,
+    )
 
 
 def _is_top_level_workitems_path(path: str) -> bool:
@@ -332,14 +514,35 @@ def classify_live_workspace_changes(
         for path in new_untracked_files
         if path.startswith(".aidd/") and not _is_allowed_aidd_untracked_path(path)
     )
-    new_ignored_files = tuple(
-        path for path in final_snapshot.ignored_files if path not in baseline_ignored
+    baseline_inventory = (
+        baseline_snapshot.ignored_inventory
+        or build_bounded_path_inventory(baseline_snapshot.ignored_files)
+    )
+    final_inventory = (
+        final_snapshot.ignored_inventory
+        or build_bounded_path_inventory(final_snapshot.ignored_files)
+    )
+    new_ignored_files = (
+        tuple()
+        if (
+            baseline_inventory.total_count == final_inventory.total_count
+            and baseline_inventory.sha256 == final_inventory.sha256
+        )
+        else tuple(
+            path for path in final_snapshot.ignored_files if path not in baseline_ignored
+        )
     )
     baseline_ignored_workspace_roots = {
         _ignored_workspace_root(path)
         for path in baseline_snapshot.ignored_files
         if _is_ignored_workspace_pollution_path(path)
     }
+    if baseline_snapshot.ignored_inventory is not None:
+        baseline_ignored_workspace_roots.update(
+            group.root
+            for group in baseline_snapshot.ignored_inventory.groups
+            if group.path_type != "other"
+        )
     setup_baseline_ignored_churn_files = tuple(
         path
         for path in new_ignored_files
@@ -418,7 +621,10 @@ def classify_live_workspace_changes(
                 ),
             )
         )
-    for path in unexpected_ignored_workspace_files:
+    bounded_unexpected_ignored = build_bounded_path_inventory(
+        unexpected_ignored_workspace_files
+    )
+    for path in bounded_unexpected_ignored.sample:
         findings.append(
             LiveWorkspaceFinding(
                 kind="unexpected-ignored-workspace-artifact",
@@ -435,14 +641,39 @@ def classify_live_workspace_changes(
                 ),
             )
         )
+    if bounded_unexpected_ignored.truncated:
+        findings.append(
+            LiveWorkspaceFinding(
+                kind="unexpected-ignored-workspace-artifact-inventory-truncated",
+                severity="warning",
+                path="",
+                message=(
+                    "Additional ignored workspace artifacts are represented by the "
+                    "bounded inventory digest and group counts."
+                ),
+                manual_quality_implication=(
+                    "Manual quality review should use the inventory digest and counts "
+                    "without requiring an unbounded path list."
+                ),
+            )
+        )
 
     return LiveWorkspaceClassification(
         tracked_files=final_snapshot.tracked_files,
+        modified_files=final_snapshot.modified_files,
+        deleted_files=final_snapshot.deleted_files,
         baseline_untracked_files=baseline_snapshot.untracked_files,
         new_untracked_files=new_untracked_files,
         baseline_ignored_files=baseline_snapshot.ignored_files,
         new_ignored_files=new_ignored_files,
         setup_baseline_ignored_churn_files=setup_baseline_ignored_churn_files,
+        baseline_ignored_inventory=(
+            baseline_inventory
+        ),
+        new_ignored_inventory=build_bounded_path_inventory(new_ignored_files),
+        setup_baseline_ignored_churn_inventory=build_bounded_path_inventory(
+            setup_baseline_ignored_churn_files
+        ),
         known_harness_files=known_harness_files,
         unexpected_non_aidd_untracked_files=unexpected_non_aidd_untracked_files,
         unexpected_top_level_workitems_files=unexpected_top_level_workitems_files,
@@ -453,11 +684,14 @@ def classify_live_workspace_changes(
 
 
 __all__ = [
+    "BoundedPathInventory",
+    "IgnoredPathGroup",
     "LiveWorkspaceClassification",
     "LiveWorkspaceFinding",
     "LiveWorkspaceSnapshot",
     "RepositoryChanges",
     "classify_live_workspace_changes",
+    "build_bounded_path_inventory",
     "collect_live_workspace_snapshot",
     "collect_repository_changes",
     "live_workspace_snapshot_from_payload",

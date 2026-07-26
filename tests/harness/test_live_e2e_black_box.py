@@ -3050,9 +3050,15 @@ def test_black_box_live_e2e_compacts_setup_baseline_ignored_files_in_stage_conte
             encoding="utf-8"
         )
     )
-    assert ".venv/file-79.txt" in evidence_payload["classification"][
-        "baseline_ignored_files"
+    ignored_inventory = evidence_payload["classification"][
+        "baseline_ignored_inventory"
     ]
+    assert ignored_inventory["total_count"] == 80
+    assert ignored_inventory["truncated"] is True
+    assert len(ignored_inventory["sample"]) == 50
+    assert ".venv/file-79.txt" not in ignored_inventory["sample"]
+    assert len(ignored_inventory["sha256"]) == 64
+    assert len(json.dumps(evidence_payload)) < 100_000
 
 
 def test_black_box_live_e2e_records_non_gating_stage_result_validator_mismatch(

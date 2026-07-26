@@ -495,6 +495,9 @@ rather than pollution findings. Evidence that a runtime
 deleted/recreated the prepared checkout or live harness run directories is a run
 integrity and deliverable-quality blocker for manual review. The runner does not
 turn these findings into a quality gate.
+Ignored inventories retain total count, root/type groups, a full-set digest, bounded
+samples, and truncation flags; tracked, modified, deleted, and non-ignored untracked
+product paths remain exact.
 
 For terminal `product-evaluation` bundles, `product-evaluation-bundle-summary.*`
 is generated as a read-only index over existing evidence: stage-quality audit
