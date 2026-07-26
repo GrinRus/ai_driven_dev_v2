@@ -7,15 +7,14 @@ slice, and local task.
 
 ## Next
 
-- `W36-E7-S4-T38` — Characterize provider sibling-root visibility with an executable canary.
+- `W36-E7-S4-T39` — Enforce provider-private filesystem and environment isolation.
 
 ## Soon
 
-- `W36-E7-S4-T39` — Enforce provider-private filesystem and environment isolation.
+- `W36-E7-S4-T40` — Contain live run lookup and resume identities before reading state.
 
 ## Parking lot
 
-- `W36-E7-S4-T40` — Contain live run lookup and resume identities before reading state.
 - `W36-E7-S4-T41` — Make live source, target and provider integrity guards mandatory.
 - `W36-E7-S4-T42` — Reconcile abandoned stages through a public application boundary.
 - `W36-E7-S4-T43` — Constrain browser and manual evidence imports to authorized roots.
@@ -53,6 +52,17 @@ slice, and local task.
   queue-restoration policy in `docs/backlog/roadmap.md` (`W8-E3-S1`).
 
 ## Current reconciliation
+
+- `2026-07-26` `W36-E7-S4-T38` is complete: the executable provider-free canary now runs
+  through the same `_run_black_box_command` boundary as live stage commands and records
+  normalized list/read/write plus environment-presence diagnostics without rendering
+  directory entries, file contents, or credential values. The real checkout characterization
+  proved `list`, bounded `read`, and reversible `write` access to source, target, own-provider,
+  credential, and sibling-provider roots, and proved inherited sibling credential environment
+  visibility. The focused preflight/architecture matrix passes `16/16`, Ruff and focused mypy
+  pass, and the durable result is recorded in
+  `docs/e2e/live-provider-visibility-characterization-2026-07-26.md`. `T39` is promoted to
+  `Next`; its direct successor `T40` moves to `Soon`.
 
 - `2026-07-22` `W36-E7-S4-T35` is complete: runtime-readiness updates now use a
   generation-aware scoped renderer and cannot replace the decision-owning Studio cockpit.
