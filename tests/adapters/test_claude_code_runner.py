@@ -649,10 +649,20 @@ def test_persist_normalized_events_jsonl_writes_events_when_available(tmp_path: 
 
     assert events_path == attempt_path / "events.jsonl"
     lines = events_path.read_text(encoding="utf-8").strip().splitlines()
-    assert [json.loads(line) for line in lines] == [
-        {"event": "run_started", "id": "abc", "source": "stdout"},
-        {"event": "warn", "msg": "slow", "source": "stderr"},
+    events = [json.loads(line) for line in lines]
+    assert [event["event_kind"] for event in events] == [
+        "lifecycle-start",
+        "runtime-event",
     ]
+    assert all(event["evidence"].startswith("runtime.jsonl#line=") for event in events)
+    assert all(len(event["payload_sha256"]) == 64 for event in events)
+    assert all("msg" not in event and "id" not in event for event in events)
+    runtime_events = [
+        json.loads(line)
+        for line in (attempt_path / "runtime.jsonl").read_text().splitlines()
+    ]
+    assert runtime_events[0]["payload"]["id"] == "abc"
+    assert runtime_events[1]["payload"]["msg"] == "slow"
 
 
 def test_persist_normalized_events_jsonl_returns_none_without_json_lines(tmp_path: Path) -> None:
@@ -714,7 +724,13 @@ def test_artifact_persistence_and_classification_regression(tmp_path: Path) -> N
     )
     assert events_path is not None
     events = [json.loads(line) for line in events_path.read_text(encoding="utf-8").splitlines()]
-    assert {"event": "fixture_tick", "ok": True, "source": "stdout"} in events
+    assert any(event["event_kind"] == "runtime-event" for event in events)
+    assert all("ok" not in event for event in events)
+    runtime_events = [
+        json.loads(line)
+        for line in (attempt_path / "runtime.jsonl").read_text().splitlines()
+    ]
+    assert any(event.get("payload", {}).get("ok") is True for event in runtime_events)
 
 
 def test_assemble_command_rejects_empty_configured_command() -> None:

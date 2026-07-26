@@ -7,15 +7,14 @@ slice, and local task.
 
 ## Next
 
-- `W36-E7-S4-T54` — Normalize provider events into a bounded lifecycle projection.
+- `W36-E7-S4-T55` — Reference canonical command evidence from aggregate live reports.
 
 ## Soon
 
-- `W36-E7-S4-T55` — Reference canonical command evidence from aggregate live reports.
+- `W36-E7-S4-T36` — Re-run the full provider-free Chromium acceptance matrix.
 
 ## Parking lot
 
-- `W36-E7-S4-T36` — Re-run the full provider-free Chromium acceptance matrix.
 - `W36-E7-S4-T37` — Prove wheel, doctor and isolation readiness on one candidate SHA.
 - `W36-E7-S4-T3` — Run the medium scenario through Codex to a clean terminal result.
 - `W36-E7-S4-T4` — Repeat the medium scenario through Claude Code from an independent root.
@@ -37,6 +36,13 @@ slice, and local task.
   queue-restoration policy in `docs/backlog/roadmap.md` (`W8-E3-S1`).
 
 ## Current reconciliation
+
+- `2026-07-26` `W36-E7-S4-T54` is complete: provider-native JSON remains only in
+  `runtime.jsonl`; `events.jsonl` now contains the bounded canonical lifecycle projection with
+  typed identity, timing/outcome, operator refs, evidence pointer, and payload digest. Rows are
+  capped at 1 KiB and the full projection at 1 MiB/1,023 source events with a truncation marker.
+  Provider/event tests pass `15/15`, adapter suites `60/60`, downstream readers `11/11`, and docs
+  `41/41`. `T55` is promoted to `Next` and `T36` to `Soon`.
 
 - `2026-07-26` `W36-E7-S4-T53` is complete: the shared bounded log reader enforces a
   256 KiB hard limit and reports requested/retained bytes, exact ranges, head/tail truncation,

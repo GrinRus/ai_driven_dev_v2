@@ -277,7 +277,12 @@ def parse_events_jsonl_text(events_jsonl_text: str) -> tuple[NormalizedRuntimeEv
                 f"{line_number} must be a JSON object, got {payload_type}."
             )
 
-        event_kind = str(payload.get("event") or payload.get("type") or "").strip().lower()
+        event_kind = str(
+            payload.get("event_kind")
+            or payload.get("event")
+            or payload.get("type")
+            or ""
+        ).strip().lower()
         source_value = payload.get("source")
         source = source_value.strip().lower() if isinstance(source_value, str) else None
         events.append(

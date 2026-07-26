@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import json
 import shlex
 from collections.abc import Callable, Mapping
 from dataclasses import dataclass
@@ -23,6 +22,7 @@ from aidd.adapters.runtime_execution import RuntimeRunResult, RuntimeSubprocessS
 from aidd.adapters.subprocess_streaming import run_streamed_subprocess
 from aidd.runtime_catalog import RuntimeExecutionMode, normalize_execution_mode
 from aidd.runtime_logs.events import normalize_structured_events as normalize_runtime_log_events
+from aidd.runtime_logs.events import persist_runtime_event_artifacts
 
 
 @dataclass(frozen=True, slots=True)
@@ -110,9 +110,6 @@ class ClaudeCodeExitClassification(StrEnum):
 @dataclass(frozen=True, slots=True)
 class ClaudeCodeRunResult(RuntimeRunResult[ClaudeCodeExitClassification]):
     pass
-
-
-EVENTS_JSONL_FILENAME = "events.jsonl"
 
 
 def _assemble_launch_flags(options: ClaudeCodeLaunchOptions | None) -> tuple[str, ...]:
@@ -406,15 +403,10 @@ def persist_normalized_events_jsonl(
     attempt_path: Path,
     run_result: ClaudeCodeRunResult,
 ) -> Path | None:
-    normalized_events = normalize_structured_events(run_result=run_result)
-    if not normalized_events:
-        return None
-
-    attempt_path.mkdir(parents=True, exist_ok=True)
-    events_path = attempt_path / EVENTS_JSONL_FILENAME
-    lines = [json.dumps(event, sort_keys=True) for event in normalized_events]
-    events_path.write_text("\n".join(lines) + "\n", encoding="utf-8")
-    return events_path
+    return persist_runtime_event_artifacts(
+        attempt_path=attempt_path,
+        run_result=run_result,
+    ).events_jsonl_path
 
 
 def command_preview(

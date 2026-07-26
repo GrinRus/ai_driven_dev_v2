@@ -382,12 +382,17 @@ def _runtime_events(
             continue
         if not isinstance(payload, dict):
             continue
-        event_name = str(payload.get("event") or payload.get("kind") or "runtime-event")
+        event_name = str(
+            payload.get("event_kind")
+            or payload.get("event")
+            or payload.get("kind")
+            or "runtime-event"
+        )
         events.append(
             OperatorTimelineEvent(
                 kind="runtime-event",
                 stage=stage,
-                status=str(payload.get("status", "")) or None,
+                status=str(payload.get("outcome") or payload.get("status") or "") or None,
                 attempt_number=attempt_number,
                 time_utc=str(payload.get("time_utc") or payload.get("timestamp") or "") or None,
                 message=event_name,

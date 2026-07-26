@@ -12240,7 +12240,7 @@ Local tasks:
     heartbeats inspect only a 4 KiB tail while durable `runtime.log` remains complete. The sparse
     64 MiB and oversized-line matrix plus CLI/read-model tests pass `12/12`, UI log API tests pass
     `5/5`, and all `41` doc checks pass.
-- `W36-E7-S4-T54` (next) Normalize provider events into a bounded AIDD-owned lifecycle
+- `W36-E7-S4-T54` (done) Normalize provider events into a bounded AIDD-owned lifecycle
   projection.
   - Dependencies: `W36-E7-S4-T53` as the bounded-log-reader predecessor.
   - Scope: runtime event normalization only; full provider-native payload remains canonical in
@@ -12248,7 +12248,15 @@ Local tasks:
   - Verification: provider-free Codex, Claude, Qwen, and generic event fixtures retain lifecycle
     identity, timing, outcome, operator references, and evidence pointers without duplicating
     prompt/tool payload, under a fixed event-evidence size bound.
-- `W36-E7-S4-T55` (soon) Reference canonical command evidence from live flow steps, grader, and
+  - Completion: `runtime_logs/events.py` now projects provider JSON into canonical lifecycle
+    rows containing only event kind, work-item/run/stage/attempt identity, available
+    timestamp/duration/outcome, operator request/decision references, `runtime.jsonl` pointer,
+    source, and full-payload SHA-256. Provider-native prompt/tool payload stays only in
+    `runtime.jsonl`. Rows are capped at 1 KiB and the projection at 1 MiB/1,023 source events
+    with a digest-backed truncation marker. Subprocess and Codex/Qwen live surfaces use the same
+    projector; legacy normalized read models remain compatible. The provider/event matrix passes
+    `15/15`, adapter suites `60/60`, downstream event/timeline tests `11/11`, and docs `41/41`.
+- `W36-E7-S4-T55` (next) Reference canonical command evidence from live flow steps, grader, and
   aggregate transcript instead of embedding full stdout and stderr repeatedly.
   - Dependencies: `W36-E7-S4-T54` as the bounded-event-projection predecessor.
   - Scope: live report serialization and legacy readers only; public terminal outcomes and raw
@@ -12256,7 +12264,7 @@ Local tasks:
   - Verification: a high-output fixture retains byte-equivalent access through canonical evidence
     pointers while bundle size grows linearly and no derived report contains another full copy of
     the runtime output.
-- `W36-E7-S4-T36` (parked) Re-run the complete provider-free Chromium acceptance matrix after the
+- `W36-E7-S4-T36` (soon) Re-run the complete provider-free Chromium acceptance matrix after the
   final provider-neutral hardening change.
   - Dependencies: `W36-E7-S4-T55` as the final code-change predecessor; blocks the active Codex
     acceptance task `W36-E7-S4-T3`.

@@ -773,7 +773,8 @@ def _add_runtime_event_nodes(
             incomplete_reasons.append(f"events-jsonl-line-{line_number}-not-object")
             continue
         event_name = str(
-            payload.get("type")
+            payload.get("event_kind")
+            or payload.get("type")
             or payload.get("event")
             or payload.get("message_type")
             or f"runtime.event.{line_number}"
@@ -787,8 +788,13 @@ def _add_runtime_event_nodes(
                 kind="event",
                 stage=stage,
                 path=workspace_relative_path(workspace_root, events_path),
-                status=str(payload.get("level") or "info").lower(),
-                detail=str(payload.get("message") or payload.get("text") or payload)[:240],
+                status=str(payload.get("outcome") or payload.get("level") or "info").lower(),
+                detail=str(
+                    payload.get("evidence")
+                    or payload.get("message")
+                    or payload.get("text")
+                    or payload
+                )[:240],
                 byte_size=None,
                 updated_at_utc=(
                     str(payload.get("timestamp") or payload.get("time"))
