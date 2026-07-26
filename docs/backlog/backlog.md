@@ -7,14 +7,15 @@ slice, and local task.
 
 ## Next
 
-- `W36-E7-S4-T36` — Re-run the full provider-free Chromium acceptance matrix.
+- `W36-E7-S4-T58` — Return the canonical intervention request winner with the accepted UI job.
 
 ## Soon
 
-- `W36-E7-S4-T37` — Prove wheel, doctor and isolation readiness on one candidate SHA.
+- `W36-E7-S4-T36` — Re-run the full provider-free Chromium acceptance matrix.
 
 ## Parking lot
 
+- `W36-E7-S4-T37` — Prove wheel, doctor and isolation readiness on one candidate SHA.
 - `W36-E7-S4-T3` — Run the medium scenario through Codex to a clean terminal result.
 - `W36-E7-S4-T4` — Repeat the medium scenario through Claude Code from an independent root.
 - `W36-E7-S3-T2` — Record five first-time-operator sessions after initial live hardening.
@@ -36,12 +37,13 @@ slice, and local task.
 
 ## Current reconciliation
 
-- `2026-07-26` `W36-E7-S4-T57` is complete: History initial navigation, Back restoration, and
-  reload now use DOM readiness followed by exact work-item and current-lineage surfaces under
-  the shared bounded helper, rather than global `networkidle`. The five-viewport plus wrong-run
-  matrix passes `6/6`; the historical `1440x900` case passes two additional reruns, and
-  harness/docs/planning checks pass `51/51`. Both Chromium discoveries are fixed, so `T36`
-  returns to `Next` and exact-SHA `T37` to `Soon`.
+- `2026-07-26` the second `W36-E7-S4-T36` attempt on source `cff519b` stopped at the
+  historical matrix with `2/4` passing. At `320x568` and `1280x900`, the accepted
+  intervention produced one OK POST and one correct canonical request, but the submitted draft
+  remained through the 30-second bound. `T56` fixed immutable identity and job-poll ordering,
+  but the accepted UI job envelope still omits the already-persisted request winner, so later
+  dashboard readback can remain coupled to runtime execution. `T58` owns that single boundary;
+  `T36` returns to `Soon`, while exact-SHA `T37` remains parked.
 
 - `2026-07-26` `W36-E7-S4-T53` is complete: the shared bounded log reader enforces a
   256 KiB hard limit and reports requested/retained bytes, exact ranges, head/tail truncation,

@@ -12303,10 +12303,22 @@ Local tasks:
     shared bounded surface helper instead of global network idleness. The five-viewports plus
     wrong-run fail-closed matrix passes `6/6`; the historical `1440x900` case passes two
     additional independent reruns, and browser-harness/docs/planning checks pass `51/51`.
-- `W36-E7-S4-T36` (next) Re-run the complete provider-free Chromium acceptance matrix after the
+- `W36-E7-S4-T58` (next) Return the synchronously persisted intervention-request winner in the
+  accepted UI job envelope and reconcile the submitted draft from that identity.
+  - Dependencies: `W36-E7-S4-T56` and `W36-E7-S4-T57`; discovered by the second failed
+    `W36-E7-S4-T36` attempt and blocks its next rerun.
+  - Scope: public operator UI stage-interact acceptance boundary and focused CLI/frontend/browser
+    regressions only; stage-interact CLI semantics, runtime execution, dashboard rendering,
+    provider adapters, and viewport-specific timing remain unchanged.
+  - Verification: the POST response contains the exact canonical request id/path/excerpt before
+    the runtime job can hold later readback, one prepared request is reused by execution without
+    duplication, and all five intervention viewports clear only the submitted draft while the
+    runtime remains running.
+- `W36-E7-S4-T36` (soon) Re-run the complete provider-free Chromium acceptance matrix after the
   final provider-neutral hardening change.
-  - Dependencies: `W36-E7-S4-T55`, `W36-E7-S4-T56`, and `W36-E7-S4-T57` as final code-change
-    predecessors; blocks the active Codex acceptance task `W36-E7-S4-T3`.
+  - Dependencies: `W36-E7-S4-T58` as the direct queue predecessor; `W36-E7-S4-T55`,
+    `W36-E7-S4-T56`, and `W36-E7-S4-T57` as earlier code-change predecessors; blocks the
+    active Codex acceptance task `W36-E7-S4-T3`.
   - Scope: browser acceptance evidence only; no product or fixture behavior changes.
   - Verification: the four discovered cases, both complete intervention/terminal journey
     families, and the full browser suite pass across all five viewports with clean console,
@@ -12318,7 +12330,12 @@ Local tasks:
     intervention-draft cleanup at `320x568`/`1440x900` and History's initial global
     `networkidle` wait at `1440x900`; sanitized evidence is in
     `docs/e2e/operator-ui-provider-free-browser-gate-2026-07-26.md`.
-- `W36-E7-S4-T37` (soon) Prove the exact post-browser candidate is installable and ready for an
+  - Second failed attempt: after `T56/T57`, source `cff519b` passed `2/4` historical cases but
+    retained the submitted draft at `320x568` and `1280x900` despite an OK POST and one
+    canonical request. Later layers were not run. The remaining boundary is the accepted job
+    envelope, which does not expose the synchronously persisted request winner before runtime
+    execution can delay dashboard readback; `W36-E7-S4-T58` owns that output.
+- `W36-E7-S4-T37` (parked) Prove the exact post-browser candidate is installable and ready for an
   isolated live-provider run.
   - Dependencies: `W36-E7-S4-T36` as the full-browser predecessor; blocks the active Codex
     acceptance task `W36-E7-S4-T3`.

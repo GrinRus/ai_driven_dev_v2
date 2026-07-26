@@ -82,3 +82,23 @@ render semantics.
     server-authoritative surface readiness.
 - Next action: implement each blocker as an independent roadmap task, then rerun this
   complete gate from a new clean source commit. `W36-E7-S4-T37` remains blocked.
+
+## Post-T56/T57 Rerun
+
+The gate was restarted from source commit
+`cff519bed6bef47b94a645d2deb17d182e214187` and tree
+`120a3be1468f13b7983b39d58310ce2dd645029c` after the two original blockers were
+implemented independently.
+
+The four-case historical matrix stopped the gate at `2 passed, 2 failed` in `121.25s`.
+The `320x568` and `1280x900` intervention cases again observed an OK response, one POST,
+one canonical request file, and the correct request text, but the submitted browser draft
+was not cleared within the 30-second bounded wait. Per the no-fix `T36` rule, the family,
+packaged, and full-suite layers were not run on this invalid candidate.
+
+`T56` removed current-route identity drift and moved matching cleanup ahead of ordinary
+job polling, but the UI still has no authoritative request winner in the accepted POST
+envelope. Dashboard readback can remain unavailable while the runtime job owns execution,
+so cleanup is still coupled to a later asynchronous read. A separate follow-up must make
+the already-persisted operator-request identity available at the job-acceptance boundary;
+the full `T36` matrix must then restart from another clean commit.
