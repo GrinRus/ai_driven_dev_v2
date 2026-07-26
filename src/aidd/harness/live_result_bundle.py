@@ -17,7 +17,11 @@ LIVE_RESULT_INDEX_FILENAME = "live-result-index.json"
 LIVE_RESULT_MATERIALIZED_DIRNAME = "canonical-evidence"
 LIVE_RESULT_INDEX_SCHEMA_VERSION = 1
 _LATER_SEAL_OUTPUT_NAMES = frozenset(
-    {"live-bundle-manifest.json", "provenance"}
+    {
+        "command-evidence",
+        "live-bundle-manifest.json",
+        "provenance",
+    }
 )
 
 ArtifactCategory = Literal[

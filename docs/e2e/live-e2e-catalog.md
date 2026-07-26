@@ -464,6 +464,10 @@ The runner does not create `flow-quality-report.md`, `code-quality-report.md`,
 The same file carries a `timeout_policy` object that identifies the per-stage command
 budget, currently `scope: "per-stage-command"`. `stage-timing.json` and
 `stage-timing.md` show the actual timeout recorded for each `run-stage` command.
+Command output is materialized once under `command-evidence/`; `flow-steps.json`,
+the lifecycle transcripts, `grader.json`, `run-transcript.json`, and the aggregate
+`runtime.log` projection retain only a relative pointer, SHA-256, exit/duration metadata,
+and bounded previews. Legacy inline command records remain readable.
 `verify-transcript.json` may include `workspace_cleanup` when successful manifest
 verification created known ignored byproducts after QA. That cleanup is limited to
 new verification residue and is execution hygiene before final workspace evidence.

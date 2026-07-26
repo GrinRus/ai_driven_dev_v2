@@ -1735,6 +1735,15 @@ def test_black_box_live_e2e_passes_stepwise_and_writes_flow_artifacts(
         for step in run_stage_steps
         for command in step["commands"]
     )
+    assert all(
+        "stdout_text" not in command
+        and (result.bundle_root / command["evidence_path"]).is_file()
+        for step in steps
+        for command in step["commands"]
+    )
+    assert not (
+        result.bundle_root / "canonical-evidence" / "final" / "command-evidence"
+    ).exists()
     assert "black-box" in (result.bundle_root / "harness-metadata.json").read_text(
         encoding="utf-8"
     )
@@ -3293,7 +3302,9 @@ def test_black_box_live_e2e_records_non_gating_ignored_workspace_pollution(
         )
     )
     assert set(
-        evidence_payload["classification"]["unexpected_ignored_workspace_files"]
+        evidence_payload["classification"]["unexpected_ignored_workspace_inventory"][
+            "sample"
+        ]
     ) == {
         ".venv/pyvenv.cfg",
         "coverage/index.html",
@@ -3369,7 +3380,9 @@ def test_black_box_live_e2e_cleans_successful_verify_ignored_residue(
             encoding="utf-8"
         )
     )
-    assert evidence_payload["classification"]["unexpected_ignored_workspace_files"] == []
+    assert evidence_payload["classification"]["unexpected_ignored_workspace_inventory"][
+        "total_count"
+    ] == 0
     assert evidence_payload["non_gating_findings"] == []
     target_root = Path(evidence_payload["target_repo_root"])
     assert not (target_root / ".pytest_cache").exists()
@@ -4585,7 +4598,10 @@ def test_black_box_live_e2e_marks_adapter_timeout_in_run_transcript(
     assert timeout_step["classification"] == "fail"
     assert timeout_step["commands"][0]["timed_out"] is False
     assert timeout_step["commands"][0]["timeout_seconds"] == 14400.0
-    assert "Adapter outcome: timeout" in timeout_step["commands"][0]["stdout_text"]
+    timeout_command = timeout_step["commands"][0]
+    assert "stdout_text" not in timeout_command
+    assert "Adapter outcome: timeout" in timeout_command["stdout_preview"]
+    assert (result.bundle_root / timeout_command["evidence_path"]).is_file()
 
     run_transcript = json.loads(
         (result.bundle_root / "run-transcript.json").read_text(encoding="utf-8")
@@ -4599,7 +4615,8 @@ def test_black_box_live_e2e_marks_adapter_timeout_in_run_transcript(
         "scope": "per-stage-command",
         "stage_command_timeout_seconds": 14400.0,
     }
-    assert run_transcript["commands"][0]["timed_out"] is True
+    assert run_transcript["commands"]
+    assert all("evidence_path" in command for command in run_transcript["commands"])
 
     stage_timing = json.loads(
         (result.bundle_root / "stage-timing.json").read_text(encoding="utf-8")

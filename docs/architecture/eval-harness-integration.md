@@ -185,6 +185,11 @@ mutate the execution verdict.
 `timeout_policy` object. Its aggregate `timeout_seconds` remains `null` unless the
 runner uses a real global flow timeout; per-stage command budgets are visible in
 `stage-timing.json`, `stage-timing.md`, and `log-analysis.md`.
+Full command stdout and stderr are stored once in content-addressed
+`command-evidence/<sha256>.json` records. Flow steps, lifecycle transcripts, the grader,
+and the aggregate transcript carry the bundle-relative pointer, digest, exit code,
+duration, and bounded previews. Readers continue to accept legacy inline command output,
+but new reports must not create another complete copy.
 
 ## 8. Log analysis requirements
 

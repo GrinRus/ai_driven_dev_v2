@@ -78,6 +78,10 @@ from aidd.harness.install_artifact import (
     prepare_local_wheel_install,
 )
 from aidd.harness.live_bundle_manifest import LiveBundleSealInputs, seal_live_bundle
+from aidd.harness.live_command_evidence import (
+    persist_command_evidence,
+    read_command_output,
+)
 from aidd.harness.live_e2e_black_box_reports import (
     _command_transcript_payload as _reports_command_transcript_payload,
 )
@@ -466,7 +470,9 @@ def _legacy_write_step_transcript(
 ) -> Path:
     payload: dict[str, object] = {
         "command_count": len(transcripts),
-        "commands": [_command_transcript_payload(transcript) for transcript in transcripts],
+        "commands": [
+            _legacy_command_transcript_payload(transcript) for transcript in transcripts
+        ],
         "duration_seconds": _transcript_duration(transcripts),
         "step": step,
     }
@@ -1651,17 +1657,20 @@ def _record_step(
         "plan": plan,
         "stage": stage,
         "commands": [
-            {
-                "command": list(result.command),
-                "duration_seconds": result.duration_seconds,
-                "exit_code": result.exit_code,
-                "stderr_text": result.stderr_text,
-                "stdout_text": result.stdout_text,
-                "timed_out": result.transcript.timed_out,
-                "timeout_seconds": result.transcript.timeout_seconds,
-                "no_progress": result.no_progress,
-                "no_progress_details": result.no_progress_details,
-            }
+            persist_command_evidence(
+                bundle_root=ctx.bundle_root,
+                command=result.command,
+                duration_seconds=result.duration_seconds,
+                exit_code=result.exit_code,
+                stderr_text=result.stderr_text,
+                stdout_text=result.stdout_text,
+                timed_out=result.transcript.timed_out,
+                timeout_seconds=result.transcript.timeout_seconds,
+                projection_extra={
+                    "no_progress": result.no_progress,
+                    "no_progress_details": result.no_progress_details,
+                },
+            )
             for result in command_results
         ],
     }
@@ -6594,19 +6603,27 @@ def _write_operator_action_request(
         "questions_path": questions_path.as_posix(),
         "answers_path": answers_path.as_posix(),
         "selected_task": ctx.selected_task_payload.get("selected_task"),
-        "stage_command": {
-            "command": list(stage_result.command),
-            "exit_code": stage_result.exit_code,
-            "stdout_text": stage_result.stdout_text,
-            "stderr_text": stage_result.stderr_text,
-        },
+        "stage_command": persist_command_evidence(
+            bundle_root=ctx.bundle_root,
+            command=stage_result.command,
+            duration_seconds=stage_result.duration_seconds,
+            exit_code=stage_result.exit_code,
+            stdout_text=stage_result.stdout_text,
+            stderr_text=stage_result.stderr_text,
+            timed_out=stage_result.transcript.timed_out,
+            timeout_seconds=stage_result.transcript.timeout_seconds,
+        ),
         "inspection_commands": [
-            {
-                "command": list(result.command),
-                "exit_code": result.exit_code,
-                "stdout_text": result.stdout_text,
-                "stderr_text": result.stderr_text,
-            }
+            persist_command_evidence(
+                bundle_root=ctx.bundle_root,
+                command=result.command,
+                duration_seconds=result.duration_seconds,
+                exit_code=result.exit_code,
+                stdout_text=result.stdout_text,
+                stderr_text=result.stderr_text,
+                timed_out=result.transcript.timed_out,
+                timeout_seconds=result.transcript.timeout_seconds,
+            )
             for result in inspection_results
         ],
     }
@@ -7339,11 +7356,13 @@ def _synthetic_aidd_run_result(ctx: FlowContext, exit_code: int) -> HarnessAiddR
                 continue
             if command.get("timed_out") is True:
                 timed_out = True
-            stdout = command.get("stdout_text")
-            stderr = command.get("stderr_text")
-            if isinstance(stdout, str) and stdout.strip():
+            stdout, stderr = read_command_output(
+                bundle_root=ctx.bundle_root,
+                command_payload=command,
+            )
+            if stdout.strip():
                 stdout_lines.append(stdout.rstrip())
-            if isinstance(stderr, str) and stderr.strip():
+            if stderr.strip():
                 stderr_lines.append(stderr.rstrip())
     transcript = HarnessCommandTranscript(
         command="black-box-stage-loop",
@@ -7635,16 +7654,16 @@ def _write_runtime_log_from_steps(ctx: FlowContext) -> Path:
             lines.append(
                 "command="
                 f"{_command_text(tuple(str(item) for item in command.get('command', [])))} "
-                f"exit={command.get('exit_code')}"
+                f"exit={command.get('exit_code')} "
+                f"evidence={command.get('evidence_path', 'legacy-inline')} "
+                f"sha256={command.get('evidence_sha256', 'n/a')}"
             )
-            stdout = command.get("stdout_text")
-            stderr = command.get("stderr_text")
-            if isinstance(stdout, str) and stdout.strip():
-                lines.append("stdout:")
-                lines.extend(stdout.rstrip().splitlines())
-            if isinstance(stderr, str) and stderr.strip():
-                lines.append("stderr:")
-                lines.extend(stderr.rstrip().splitlines())
+            stdout_preview = command.get("stdout_preview")
+            stderr_preview = command.get("stderr_preview")
+            if isinstance(stdout_preview, str) and stdout_preview.strip():
+                lines.append(f"stdout-preview={stdout_preview.rstrip()}")
+            if isinstance(stderr_preview, str) and stderr_preview.strip():
+                lines.append(f"stderr-preview={stderr_preview.rstrip()}")
     path = ctx.bundle_root / RUNTIME_LOG_FILENAME
     path.write_text("\n".join(lines).rstrip() + "\n", encoding="utf-8")
     return path
@@ -8354,16 +8373,28 @@ def _manual_quality_stop_result(ctx: FlowContext) -> BlackBoxLiveE2EResult:
 def _write_run_transcript_from_flow(*, ctx: FlowContext, exit_code: int) -> Path:
     result = _synthetic_aidd_run_result(ctx, exit_code=exit_code)
     process_segments = _process_segments_for_context(ctx)
-    return _write_step_transcript(
-        path=ctx.bundle_root / RUN_TRANSCRIPT_FILENAME,
-        step="run",
-        transcripts=(result.command_transcript,),
-        extra={
+    commands: list[dict[str, object]] = []
+    for step_payload in _load_steps(ctx.bundle_root):
+        raw_commands = step_payload.get("commands")
+        if not isinstance(raw_commands, list):
+            continue
+        commands.extend(
+            {str(key): value for key, value in command.items()}
+            for command in raw_commands
+            if isinstance(command, dict)
+        )
+    return _write_json(
+        ctx.bundle_root / RUN_TRANSCRIPT_FILENAME,
+        {
+            "command_count": len(commands),
+            "commands": commands,
+            "duration_seconds": result.duration_seconds,
             "exit_code": result.exit_code,
-            "runtime_id": result.runtime_id,
             "process_segment_count": len(process_segments),
             "process_segments": process_segments,
             "process_segment_duration_seconds": result.duration_seconds,
+            "runtime_id": result.runtime_id,
+            "step": "run",
             "timed_out": result.timed_out,
             "timeout_seconds": result.timeout_seconds,
             "timeout_policy": _timeout_policy_payload(ctx),

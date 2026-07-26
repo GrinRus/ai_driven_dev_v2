@@ -12256,7 +12256,7 @@ Local tasks:
     with a digest-backed truncation marker. Subprocess and Codex/Qwen live surfaces use the same
     projector; legacy normalized read models remain compatible. The provider/event matrix passes
     `15/15`, adapter suites `60/60`, downstream event/timeline tests `11/11`, and docs `41/41`.
-- `W36-E7-S4-T55` (next) Reference canonical command evidence from live flow steps, grader, and
+- `W36-E7-S4-T55` (done) Reference canonical command evidence from live flow steps, grader, and
   aggregate transcript instead of embedding full stdout and stderr repeatedly.
   - Dependencies: `W36-E7-S4-T54` as the bounded-event-projection predecessor.
   - Scope: live report serialization and legacy readers only; public terminal outcomes and raw
@@ -12264,7 +12264,16 @@ Local tasks:
   - Verification: a high-output fixture retains byte-equivalent access through canonical evidence
     pointers while bundle size grows linearly and no derived report contains another full copy of
     the runtime output.
-- `W36-E7-S4-T36` (soon) Re-run the complete provider-free Chromium acceptance matrix after the
+  - Completion: `live_command_evidence.py` now persists each command result once as an atomic,
+    content-addressed JSON record and emits bundle-relative pointer, SHA-256, size, exit/duration,
+    timeout metadata, and 2 KiB stdout/stderr previews. Flow steps, lifecycle transcripts,
+    operator requests, grader, run transcript, and aggregate runtime-log projection no longer
+    embed complete streams; verified readers retain legacy inline compatibility. Canonical bundle
+    materialization avoids copying the evidence owner a second time. The 1 MiB linear-growth,
+    digest-tamper, legacy-read, successful-flow, timeout-flow, bounded-inventory, and module
+    boundary matrix passes `12/12`; the closing `T49–T55` group gate passes Ruff, mypy over
+    `src scripts`, and the complete Python suite `2125/2125`.
+- `W36-E7-S4-T36` (next) Re-run the complete provider-free Chromium acceptance matrix after the
   final provider-neutral hardening change.
   - Dependencies: `W36-E7-S4-T55` as the final code-change predecessor; blocks the active Codex
     acceptance task `W36-E7-S4-T3`.
@@ -12272,7 +12281,7 @@ Local tasks:
   - Verification: the four discovered cases, both complete intervention/terminal journey
     families, and the full browser suite pass across all five viewports with clean console,
     page/request diagnostics and bounded process cleanup.
-- `W36-E7-S4-T37` (parked) Prove the exact post-browser candidate is installable and ready for an
+- `W36-E7-S4-T37` (soon) Prove the exact post-browser candidate is installable and ready for an
   isolated live-provider run.
   - Dependencies: `W36-E7-S4-T36` as the full-browser predecessor; blocks the active Codex
     acceptance task `W36-E7-S4-T3`.

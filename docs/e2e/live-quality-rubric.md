@@ -31,6 +31,7 @@ Runner-owned artifacts include:
 
 - `flow-state.json`
 - `flow-steps.json`
+- `command-evidence/`
 - `flow-report.md`
 - `operator-actions.jsonl`
 - `frontend-checkpoints.json`
