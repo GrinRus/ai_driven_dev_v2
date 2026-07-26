@@ -3320,6 +3320,8 @@ def test_black_box_live_e2e_adds_suffix_when_generated_run_id_exists(
 
 def test_black_box_live_e2e_marks_stale_running_run_resumable(tmp_path: Path) -> None:
     report_root = tmp_path / "reports"
+    work_root = tmp_path / "work"
+    scenario_path = tmp_path / "scenario.yaml"
     state_path = report_root / "stale-run" / "flow-state.json"
     state_path.parent.mkdir(parents=True)
     state_path.write_text(
@@ -3331,16 +3333,57 @@ def test_black_box_live_e2e_marks_stale_running_run_resumable(tmp_path: Path) ->
                 "current_stage": "plan",
                 "completed_stages": ["idea", "research"],
                 "evaluator_pid": 99999999,
+                "run_id": "stale-run",
+                "scenario_id": "LIVE-FIXTURE",
+                "scenario_path": scenario_path.resolve().as_posix(),
+                "runtime_id": "opencode",
+                "work_item": "WI-FIXTURE",
+                "report_root": report_root.resolve().as_posix(),
+                "work_root": work_root.resolve().as_posix(),
+                "run_work_root": (work_root.resolve() / "stale-run").as_posix(),
+                "bundle_root": state_path.parent.resolve().as_posix(),
             }
         ),
         encoding="utf-8",
     )
 
-    assert _find_resume_state(report_root=report_root, run_id="stale-run") == state_path
+    assert (
+        _find_resume_state(
+            report_root=report_root,
+            run_id="stale-run",
+            scenario_path=scenario_path,
+            scenario_id="LIVE-FIXTURE",
+            runtime_id="opencode",
+            work_item="WI-FIXTURE",
+            work_root=work_root,
+        )
+        == state_path
+    )
 
     payload = json.loads(state_path.read_text(encoding="utf-8"))
     assert payload["status"] == "interrupted-resumable"
     assert payload["interruption"]["reason"] == "stale-running-state"
+
+
+def test_black_box_rejects_unsafe_resume_id_before_loading_scenario(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    def _unexpected_scenario_read(*_args: object, **_kwargs: object) -> object:
+        raise AssertionError("scenario must not be read for an unsafe run id")
+
+    monkeypatch.setattr(live_orchestration, "load_scenario", _unexpected_scenario_read)
+
+    with pytest.raises(ValueError, match="run_id must be one plain path component"):
+        live_orchestration._load_or_create_context(
+            scenario_path=tmp_path / "scenario.yaml",
+            runtime_id="opencode",
+            work_root=tmp_path / "work",
+            report_root=tmp_path / "reports",
+            run_id="../escape",
+            enable_next_flow_follow_up_proof=False,
+            manual_frontend_evidence=None,
+        )
 
 
 def test_black_box_command_timeout_kills_child_process_group(tmp_path: Path) -> None:

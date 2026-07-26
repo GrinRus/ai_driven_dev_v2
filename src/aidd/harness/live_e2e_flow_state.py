@@ -8,6 +8,7 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any, Protocol
 
+from aidd.core.identifiers import SafeIdentifier, contained_component_path
 from aidd.core.stages import STAGES
 from aidd.harness.install_artifact import HarnessInstallResult
 from aidd.harness.repo_prep import PreparedRepository, PreparedWorkingCopy
@@ -326,8 +327,12 @@ def _pid_is_alive(pid: object) -> bool:
     return True
 
 
-def mark_stale_running_state_interrupted(state_path_value: Path) -> dict[str, Any]:
-    payload = read_json_object(state_path_value)
+def mark_stale_running_state_interrupted(
+    state_path_value: Path,
+    *,
+    state: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    payload = read_json_object(state_path_value) if state is None else dict(state)
     if payload.get("status") != "running" or _pid_is_alive(payload.get("evaluator_pid")):
         return payload
     interruption = {
@@ -345,23 +350,129 @@ def mark_stale_running_state_interrupted(state_path_value: Path) -> dict[str, An
     return payload
 
 
-def find_resume_state(*, report_root: Path, run_id: str | None) -> Path | None:
-    normalized_run_id = run_id.strip() if run_id is not None else None
-    if normalized_run_id == "":
-        raise ValueError("run_id must be non-empty when provided.")
-    if normalized_run_id is None:
+def _identity_path(value: object, *, field: str) -> Path:
+    if not isinstance(value, str) or not value:
+        raise ValueError(f"Resume flow state is missing canonical `{field}` identity.")
+    raw_path = Path(value)
+    if not raw_path.is_absolute():
+        raise ValueError(f"Resume flow-state `{field}` identity must be absolute.")
+    resolved = raw_path.resolve(strict=False)
+    if raw_path != resolved:
+        raise ValueError(f"Resume flow-state `{field}` identity must be canonical.")
+    return resolved
+
+
+def _assert_resume_identity(
+    *,
+    state: Mapping[str, object],
+    run_id: str,
+    scenario_path: Path,
+    scenario_id: str,
+    runtime_id: str,
+    work_item: str,
+    report_root: Path,
+    work_root: Path,
+    run_root: Path,
+) -> None:
+    scalar_fields = {
+        "run_id": run_id,
+        "scenario_id": scenario_id,
+        "runtime_id": runtime_id,
+        "work_item": work_item,
+    }
+    for field, expected in scalar_fields.items():
+        if state.get(field) != expected:
+            raise ValueError(
+                f"Resume flow-state `{field}` identity does not match the requested run."
+            )
+
+    resolved_report_root = report_root.resolve(strict=False)
+    resolved_work_root = work_root.resolve(strict=False)
+    path_fields = {
+        "scenario_path": scenario_path.resolve(strict=False),
+        "report_root": resolved_report_root,
+        "work_root": resolved_work_root,
+        "run_work_root": (resolved_work_root / run_id).resolve(strict=False),
+        "bundle_root": run_root.resolve(strict=False),
+    }
+    for path_field, expected_path in path_fields.items():
+        if _identity_path(state.get(path_field), field=path_field) != expected_path:
+            raise ValueError(
+                f"Resume flow-state `{path_field}` identity does not match the requested run."
+            )
+
+
+def _contained_required_quality_path(*, raw_path: str, run_root: Path) -> Path:
+    required = Path(raw_path)
+    if not required.is_absolute():
+        required = run_root / required
+    resolved_run_root = run_root.resolve(strict=False)
+    resolved_required = required.resolve(strict=False)
+    if not resolved_required.is_relative_to(resolved_run_root):
+        raise ValueError(
+            "Quality-review evidence path must stay inside the canonical run bundle."
+        )
+    if required.is_symlink():
+        raise ValueError("Quality-review evidence path must not be a symlink.")
+    return required
+
+
+def find_resume_state(
+    *,
+    report_root: Path,
+    run_id: str | None,
+    scenario_path: Path,
+    scenario_id: str,
+    runtime_id: str,
+    work_item: str,
+    work_root: Path,
+) -> Path | None:
+    if run_id is None:
         return None
-    candidate = report_root / normalized_run_id / FLOW_STATE_FILENAME
+    normalized_run_id = SafeIdentifier.parse(run_id, label="run_id").value
+    run_root = contained_component_path(
+        report_root,
+        normalized_run_id,
+        boundary_root=report_root,
+        label="run_id",
+    )
+    if run_root.is_symlink():
+        raise ValueError("Resume run root must not be a symlink.")
+    candidate = contained_component_path(
+        run_root,
+        FLOW_STATE_FILENAME,
+        boundary_root=report_root,
+        label="flow-state filename",
+    )
+    if candidate.is_symlink():
+        raise ValueError("Resume flow-state file must not be a symlink.")
     if not candidate.exists():
         raise ValueError(
             "Explicit --run-id can only resume or refresh an existing black-box live "
             f"E2E run. State file not found: {candidate.as_posix()}."
         )
-    state = mark_stale_running_state_interrupted(candidate)
+    state = read_json_object(candidate)
+    _assert_resume_identity(
+        state=state,
+        run_id=normalized_run_id,
+        scenario_path=scenario_path,
+        scenario_id=scenario_id,
+        runtime_id=runtime_id,
+        work_item=work_item,
+        report_root=report_root,
+        work_root=work_root,
+        run_root=run_root,
+    )
+    state = mark_stale_running_state_interrupted(candidate, state=state)
     status = state.get("status")
     if status == "awaiting-quality-review":
         required_path = state.get("quality_review_required_path")
-        if not isinstance(required_path, str) or not Path(required_path).exists():
+        required = (
+            _contained_required_quality_path(raw_path=required_path, run_root=run_root)
+            if isinstance(required_path, str) and required_path
+            else None
+        )
+        if required is None or not required.exists():
             raise ValueError(
                 "Run "
                 f"'{normalized_run_id}' is awaiting quality review. Resume requires "

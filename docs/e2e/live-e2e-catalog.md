@@ -129,6 +129,10 @@ uv run python -m aidd.harness.live_e2e_black_box harness/scenarios/live/sqlite-u
   only by passing that exact `--run-id`. If the generated run id already exists,
   the evaluator appends `-r2`, `-r3`, and so on instead of appending to the old
   bundle.
+- Explicit resume validates the run id as one path component and proves report-root
+  containment before checking for state. Symlinked run/state escapes are rejected,
+  and `flow-state.json` must match the requested run, scenario, runtime, work item,
+  report root, and work root before stale-owner reconciliation or resume.
 - Resume from `awaiting-quality-review` requires the exact audit file named in
   `flow-state.json`, for example `stage-quality-audits/stage-0007-review.md`. If that file is
   missing, the runner refuses the resume instead of advancing the stage loop.

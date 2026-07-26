@@ -24,6 +24,7 @@ from urllib.error import HTTPError, URLError
 from urllib.parse import urlencode
 from urllib.request import Request, urlopen
 
+from aidd.core.identifiers import SafeIdentifier
 from aidd.core.markdown import MarkdownSectionIndex
 from aidd.core.next_flow import (
     FollowUpDraftRequest,
@@ -1882,9 +1883,32 @@ def _load_or_create_context(
     enable_next_flow_follow_up_proof: bool,
     manual_frontend_evidence: Path | None,
 ) -> FlowContext:
+    normalized_run_id = (
+        SafeIdentifier.parse(run_id, label="run_id").value
+        if run_id is not None
+        else None
+    )
+    expected_scenario = (
+        load_scenario(
+            scenario_path,
+            runtime_id=runtime_id,
+            workspace_root=work_root,
+        )
+        if normalized_run_id is not None
+        else None
+    )
     resume_state = _find_resume_state(
         report_root=report_root,
-        run_id=run_id,
+        run_id=normalized_run_id,
+        scenario_path=scenario_path,
+        scenario_id=(
+            expected_scenario.scenario_id if expected_scenario is not None else ""
+        ),
+        runtime_id=runtime_id,
+        work_item=(
+            derive_work_item(expected_scenario) if expected_scenario is not None else ""
+        ),
+        work_root=work_root,
     )
     if resume_state is not None:
         return _context_from_state(

@@ -7,15 +7,14 @@ slice, and local task.
 
 ## Next
 
-- `W36-E7-S4-T40` — Contain live run lookup and resume identities before reading state.
+- `W36-E7-S4-T41` — Make live source, target and provider integrity guards mandatory.
 
 ## Soon
 
-- `W36-E7-S4-T41` — Make live source, target and provider integrity guards mandatory.
+- `W36-E7-S4-T42` — Reconcile abandoned stages through a public application boundary.
 
 ## Parking lot
 
-- `W36-E7-S4-T42` — Reconcile abandoned stages through a public application boundary.
 - `W36-E7-S4-T43` — Constrain browser and manual evidence imports to authorized roots.
 - `W36-E7-S4-T44` — Reconcile provisional frontend probes with durable stage state.
 - `W36-E7-S4-T45` — Expose and reconcile stale-owner live flows.
@@ -52,15 +51,14 @@ slice, and local task.
 
 ## Current reconciliation
 
-- `2026-07-26` `W36-E7-S4-T39` is complete: the live evaluator can now be launched behind a
-  provider-private macOS Seatbelt or Linux bubblewrap filesystem boundary with an allowlisted
-  environment and private `HOME`, temporary, config, cache, data, and state roots. Preflight
-  fails closed when the platform capability canary cannot prove the boundary. The T38 canary
-  now verifies through the real launch prefix that target/evidence remain read-write, source is
-  read-only, sibling provider and original HOME/config/cache roots are inaccessible, and only
-  explicitly authorized credential keys cross the boundary. Focused isolation/preflight tests
-  pass `25/25`; full Ruff, mypy, and pytest pass with `1995 passed`. `T40` is promoted to `Next`
-  and its direct successor `T41` moves to `Soon`.
+- `2026-07-26` `W36-E7-S4-T40` is complete: explicit resume now validates `run_id` before any
+  scenario or state lookup, proves the canonical run and state paths are contained, and rejects
+  run-root/state symlink escapes. The first state read must match run, scenario, runtime, work
+  item, scenario/report/work/run-work/bundle roots before stale-state reconciliation or resume;
+  mismatches leave stale bytes unchanged. Awaiting-review evidence is also contained before
+  existence checks. The unsafe identifier, symlink, wrong-identity/root, stale-idempotence, and
+  canonical resume matrix passes `23/23`; the complete flow-state/black-box integration file
+  passes `82/82`, with Ruff and mypy clean. `T41` is promoted to `Next` and `T42` moves to `Soon`.
 
 - `2026-07-22` `W36-E7-S4-T35` is complete: runtime-readiness updates now use a
   generation-aware scoped renderer and cannot replace the decision-owning Studio cockpit.

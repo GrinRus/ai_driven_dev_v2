@@ -12045,7 +12045,7 @@ Local tasks:
   - Verification: the T38 canary can use its authorized target and evidence roots but cannot list
     or read a sibling provider root, write the AIDD source, or observe another provider's
     credentials; a platform without an enforceable boundary reports a preflight blocker.
-- `W36-E7-S4-T40` (next) Apply canonical identifier and containment checks to live run lookup
+- `W36-E7-S4-T40` (done) Apply canonical identifier and containment checks to live run lookup
   and resume before reading flow state.
   - Dependencies: `W36-E7-S4-T39` as the provider-boundary predecessor.
   - Scope: live flow-state lookup and resume identity only; workflow semantics, provider adapters,
@@ -12053,7 +12053,7 @@ Local tasks:
   - Verification: empty, absolute, separator, backslash, traversal, oversized, symlink-escape,
     scenario/runtime/work-item mismatch, and wrong-root run identities fail before any read or
     write, while a canonical interrupted run resumes with its existing lexical layout.
-- `W36-E7-S4-T41` (soon) Make source, target, and provider preflight/postflight integrity an
+- `W36-E7-S4-T41` (next) Make source, target, and provider preflight/postflight integrity an
   obligatory live-acceptance session guard.
   - Dependencies: `W36-E7-S4-T40` as the contained-layout predecessor.
   - Scope: live-acceptance preflight lifecycle and source/target integrity snapshots only; build
@@ -12062,7 +12062,7 @@ Local tasks:
   - Verification: provider layout is not allocated before preflight passes; tracked bytes, the
     baseline untracked set, target contamination, provider-root separation, and cleanup are read
     back after execution, and any new source file or harness payload fails closed.
-- `W36-E7-S4-T42` (parked) Route timeout and no-progress stage reconciliation through a public
+- `W36-E7-S4-T42` (soon) Route timeout and no-progress stage reconciliation through a public
   application boundary instead of direct harness-owned stage-status persistence.
   - Dependencies: `W36-E7-S4-T41` as the mandatory-session-guard predecessor.
   - Scope: one typed application/CLI terminal-reconciliation operation and its live-harness
