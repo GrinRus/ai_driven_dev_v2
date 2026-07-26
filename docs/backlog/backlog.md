@@ -7,15 +7,14 @@ slice, and local task.
 
 ## Next
 
-- `W36-E7-S4-T42` — Reconcile abandoned stages through a public application boundary.
+- `W36-E7-S4-T43` — Constrain browser and manual evidence imports to authorized roots.
 
 ## Soon
 
-- `W36-E7-S4-T43` — Constrain browser and manual evidence imports to authorized roots.
+- `W36-E7-S4-T44` — Reconcile provisional frontend probes with durable stage state.
 
 ## Parking lot
 
-- `W36-E7-S4-T44` — Reconcile provisional frontend probes with durable stage state.
 - `W36-E7-S4-T45` — Expose and reconcile stale-owner live flows.
 - `W36-E7-S4-T46` — Accumulate live-flow timing across resumed process segments.
 - `W36-E7-S4-T47` — Persist typed terminal evidence for remediation jobs.
@@ -50,16 +49,15 @@ slice, and local task.
 
 ## Current reconciliation
 
-- `2026-07-26` `W36-E7-S4-T41` is complete: the isolation launcher now owns a mandatory
-  context-managed live-acceptance session. It captures source commit/tree, tracked bytes, clean
-  tracked status, and the exact untracked set and bytes before provider allocation; a failed
-  source or platform preflight leaves the provider subtree absent. Postflight rechecks source
-  integrity, canonical provider/target roots, explicit fresh-versus-resume target baselines, and
-  cleanup sentinel removal, then publishes `live-acceptance-session.json`. New source files,
-  changed tracked or existing untracked bytes, pre-existing target contamination, source/provider
-  overlap, target-root symlinks, and cleanup failure invalidate the run. The complete
-  session/isolation/preflight/visibility matrix passes `36/36`, with Ruff and mypy clean. `T42`
-  is promoted to `Next` and `T43` moves to `Soon`.
+- `2026-07-26` `W36-E7-S4-T42` is complete: abandoned executing stages are now reconciled by a
+  typed application compare-and-set operation exposed as installed
+  `aidd stage reconcile-terminal`. Canonical work-item/run/stage/expected-state/reason identity
+  is validated before mutation; only the matching non-terminal state receives one `failed`
+  history entry, while repeats are byte-stable and terminal, missing, or mismatched metadata is
+  not rewritten. Timeout and provider-no-progress paths invoke the installed CLI and retain its
+  typed evidence; an architecture test rejects any harness import of `persist_stage_status`.
+  Application, CLI, adapter, boundary, timeout, and no-progress checks pass `18/18`, with Ruff,
+  mypy, and planning integrity clean. `T43` is promoted to `Next` and `T44` moves to `Soon`.
 
 - `2026-07-22` `W36-E7-S4-T35` is complete: runtime-readiness updates now use a
   generation-aware scoped renderer and cannot replace the decision-owning Studio cockpit.

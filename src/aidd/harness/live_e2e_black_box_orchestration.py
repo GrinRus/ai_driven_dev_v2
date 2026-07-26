@@ -34,7 +34,6 @@ from aidd.core.next_flow import (
 from aidd.core.operator_frontend import resolve_operator_dashboard_view
 from aidd.core.run_store import (
     load_stage_metadata,
-    persist_stage_status,
     run_stage_metadata_path,
 )
 from aidd.core.runtime_operator import (
@@ -165,6 +164,10 @@ from aidd.harness.live_e2e_quality_policy import (
 from aidd.harness.live_runtime_config import (
     validate_live_runtime_command,
     write_live_runtime_config,
+)
+from aidd.harness.live_terminal_reconciliation import (
+    LiveTerminalReconciliationError,
+    run_live_terminal_reconciliation,
 )
 from aidd.harness.live_workspace_bootstrap import bootstrap_live_work_item
 from aidd.harness.repo_prep import (
@@ -5602,16 +5605,34 @@ def _reconcile_failed_incomplete_stage_run(
         stage=stage,
     )
     previous_status = None if before is None else before.status
-    reconciled = False
-    if previous_status not in TERMINAL_STAGE_METADATA_STATUSES:
-        persist_stage_status(
-            workspace_root=workspace_root,
+    expected_state = (
+        previous_status
+        if previous_status is not None
+        and previous_status not in TERMINAL_STAGE_METADATA_STATUSES
+        else "executing"
+    )
+    operation_payload: dict[str, object]
+    operation_evidence_paths: tuple[Path, ...] = tuple()
+    try:
+        operation_result = run_live_terminal_reconciliation(
+            installed_command=_require_installed_command(ctx),
+            working_copy=working_copy,
+            environment=_harness_environment_for_context(ctx),
             work_item=ctx.work_item,
             run_id=ctx.run_id,
             stage=stage,
-            status="failed",
+            expected_state=expected_state,
+            reason=reason,
         )
-        reconciled = True
+    except LiveTerminalReconciliationError as exc:
+        operation_payload = {
+            "error": str(exc),
+            "reconciled": False,
+        }
+    else:
+        operation_payload = operation_result.payload
+        if operation_result.evidence_path.exists():
+            operation_evidence_paths = (operation_result.evidence_path,)
 
     after = load_stage_metadata(
         workspace_root=workspace_root,
@@ -5620,6 +5641,7 @@ def _reconcile_failed_incomplete_stage_run(
         stage=stage,
     )
     reconciled_status = None if after is None else after.status
+    reconciled = operation_payload.get("reconciled") is True
     payload: dict[str, object] = {
         "schema_version": 1,
         "created_at_utc": _utc_now(),
@@ -5635,10 +5657,11 @@ def _reconcile_failed_incomplete_stage_run(
         "previous_status": previous_status,
         "reconciled_status": reconciled_status,
         "reconciled": reconciled,
+        "terminal_reconciliation": operation_payload,
         **extra,
     }
     _write_json(reconciliation_path, payload)
-    return (reconciliation_path,), payload
+    return (reconciliation_path, *operation_evidence_paths), payload
 
 
 def _validator_verdict_from_text(validator_text: str) -> str:

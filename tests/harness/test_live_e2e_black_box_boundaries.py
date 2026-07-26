@@ -34,3 +34,19 @@ def test_orchestration_uses_reports_owned_serialization_helpers() -> None:
     assert orchestration._write_json is reports._write_json
     assert orchestration._write_text_atomic is reports._write_text_atomic
     assert orchestration._write_step_transcript is reports._write_step_transcript
+
+
+def test_harness_does_not_import_core_stage_status_persistence() -> None:
+    harness_root = Path(orchestration.__file__).parent
+    violations: list[str] = []
+    for source_path in harness_root.glob("*.py"):
+        module = ast.parse(source_path.read_text(encoding="utf-8"))
+        for node in ast.walk(module):
+            if not isinstance(node, ast.ImportFrom):
+                continue
+            if node.module != "aidd.core.run_store":
+                continue
+            if any(alias.name == "persist_stage_status" for alias in node.names):
+                violations.append(source_path.name)
+
+    assert violations == []

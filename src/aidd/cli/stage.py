@@ -1,10 +1,15 @@
 from __future__ import annotations
 
+import json
 from pathlib import Path
 from typing import Annotated
 
 import typer
 
+from aidd.application.stage_reconciliation import (
+    TerminalStageReconciliationRequest,
+    reconcile_terminal_stage,
+)
 from aidd.cli.stage_inspection import (
     StageQuestionsOptions,
     StageSummaryOptions,
@@ -161,3 +166,44 @@ def stage_summary(
             run_id=run_id,
         )
     )
+
+
+def stage_reconcile_terminal(
+    stage: Annotated[str, typer.Argument(help="Stage name")],
+    work_item: Annotated[str, typer.Option("--work-item", help="Canonical work item id")],
+    run_id: Annotated[str, typer.Option("--run-id", help="Canonical run id")],
+    expected_state: Annotated[
+        str,
+        typer.Option(
+            "--expected-state",
+            help="Non-terminal state that must still be current.",
+        ),
+    ],
+    reason: Annotated[
+        str,
+        typer.Option(
+            "--reason",
+            help="Canonical reconciliation reason.",
+        ),
+    ],
+    root: Annotated[
+        Path,
+        typer.Option("--root", help="Root AIDD storage directory."),
+    ] = Path(".aidd"),
+) -> None:
+    """Fail an abandoned stage through an idempotent compare-and-set operation."""
+    try:
+        result = reconcile_terminal_stage(
+            TerminalStageReconciliationRequest(
+                workspace_root=root,
+                work_item=work_item,
+                run_id=run_id,
+                stage=stage,
+                expected_state=expected_state,
+                reason=reason,
+            )
+        )
+    except ValueError as exc:
+        console.print(f"Terminal reconciliation rejected: {exc}")
+        raise typer.Exit(code=2) from exc
+    typer.echo(json.dumps(result.to_payload(), sort_keys=True))

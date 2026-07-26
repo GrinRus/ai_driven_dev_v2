@@ -12062,7 +12062,7 @@ Local tasks:
   - Verification: provider layout is not allocated before preflight passes; tracked bytes, the
     baseline untracked set, target contamination, provider-root separation, and cleanup are read
     back after execution, and any new source file or harness payload fails closed.
-- `W36-E7-S4-T42` (next) Route timeout and no-progress stage reconciliation through a public
+- `W36-E7-S4-T42` (done) Route timeout and no-progress stage reconciliation through a public
   application boundary instead of direct harness-owned stage-status persistence.
   - Dependencies: `W36-E7-S4-T41` as the mandatory-session-guard predecessor.
   - Scope: one typed application/CLI terminal-reconciliation operation and its live-harness
@@ -12071,7 +12071,13 @@ Local tasks:
   - Verification: an installed public surface terminalizes an abandoned executing stage with
     canonical identity and idempotent history, while a terminal or mismatched stage is not
     rewritten and the harness performs no direct stage-state write.
-- `W36-E7-S4-T43` (soon) Constrain manual and browser evidence imports to the authorized
+  - Completion: the typed compare-and-set operation now owns canonical identity validation,
+    atomic `failed` persistence, and byte-stable `terminal-reconciliation.json`; the public
+    `aidd stage reconcile-terminal` command exposes it to the installed target environment,
+    and timeout/no-progress harness paths consume only that CLI JSON result. Application, CLI,
+    adapter, architecture-boundary, timeout, and no-progress checks pass `18/18`, and the harness
+    tree has no direct `persist_stage_status` import.
+- `W36-E7-S4-T43` (next) Constrain manual and browser evidence imports to the authorized
   provider evidence root with symlink-safe atomic materialization.
   - Dependencies: `W36-E7-S4-T42` as the public-boundary predecessor.
   - Scope: live browser/manual evidence intake only; browser capture semantics, Studio behavior,
@@ -12079,7 +12085,7 @@ Local tasks:
   - Verification: contained files and directories copy atomically, while sibling-provider paths,
     absolute escape, hard links, symlinks at every level, and partial-copy failures produce no
     trusted or partially published evidence.
-- `W36-E7-S4-T44` (parked) Reconcile provisional running-stage frontend observations against the
+- `W36-E7-S4-T44` (soon) Reconcile provisional running-stage frontend observations against the
   later durable stage state and post-stage checkpoint.
   - Dependencies: `W36-E7-S4-T43` as the safe-evidence predecessor.
   - Scope: live black-box frontend checkpoint classification only; Studio polling, endpoints,

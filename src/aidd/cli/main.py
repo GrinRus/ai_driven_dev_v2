@@ -10,7 +10,13 @@ from aidd.cli.doctor import _runtime_probe_report, doctor
 from aidd.cli.eval import eval_doctor, eval_execute, eval_summary
 from aidd.cli.init_command import init
 from aidd.cli.run import run_artifacts, run_callback, run_logs, run_show
-from aidd.cli.stage import stage_interact, stage_questions, stage_run, stage_summary
+from aidd.cli.stage import (
+    stage_interact,
+    stage_questions,
+    stage_reconcile_terminal,
+    stage_run,
+    stage_summary,
+)
 from aidd.cli.support import (
     _active_prompt_pack_paths,
     _allocate_stage_run_id,
@@ -57,6 +63,7 @@ __all__ = [
     "stage_interact",
     "select_next_runnable_stage",
     "stage_questions",
+    "stage_reconcile_terminal",
     "stage_run",
     "stage_summary",
     "summarize_workflow_advancement",
@@ -126,6 +133,7 @@ stage_app.command("run")(stage_run)
 stage_app.command("interact")(stage_interact)
 stage_app.command("questions")(stage_questions)
 stage_app.command("summary")(stage_summary)
+stage_app.command("reconcile-terminal")(stage_reconcile_terminal)
 eval_app.command("doctor")(eval_doctor)
 eval_app.command("execute")(eval_execute)
 eval_app.command("summary")(eval_summary)

@@ -346,6 +346,71 @@ def write_executing_stage_metadata(stage: str, work_item: str, run_id: str) -> N
     )
 
 
+def stage_reconcile_terminal(args: list[str]) -> int:
+    stage = args[2]
+    work_item = option(args, "--work-item")
+    run_id = option(args, "--run-id")
+    expected_state = option(args, "--expected-state")
+    reason = option(args, "--reason")
+    root = Path(option(args, "--root", ".aidd"))
+    stage_root = root / "reports" / "runs" / work_item / run_id / "stages" / stage
+    metadata_path = stage_root / "stage-metadata.json"
+    evidence_path = stage_root / "terminal-reconciliation.json"
+    before = json.loads(metadata_path.read_text()) if metadata_path.exists() else None
+    previous_status = None if before is None else before.get("status")
+    reconciled = False
+    if before is None:
+        disposition = "metadata-missing"
+    elif (
+        before.get("run_id") != run_id
+        or before.get("work_item_id") != work_item
+        or before.get("stage") != stage
+    ):
+        disposition = "metadata-identity-mismatch"
+    elif previous_status in {{"succeeded", "failed", "cancelled"}}:
+        disposition = "already-terminal"
+    elif previous_status != expected_state:
+        disposition = "expected-state-mismatch"
+    else:
+        changed_at = "2026-05-25T01:00:00Z"
+        before["status"] = "failed"
+        before["updated_at_utc"] = changed_at
+        before.setdefault("status_history", []).append(
+            {{"status": "failed", "changed_at_utc": changed_at}}
+        )
+        metadata_path.write_text(json.dumps(before, indent=2, sort_keys=True) + "\\n")
+        previous_status = expected_state
+        reconciled = True
+        disposition = "reconciled"
+    after = json.loads(metadata_path.read_text()) if metadata_path.exists() else None
+    payload = {{
+        "schema_version": 1,
+        "work_item": work_item,
+        "run_id": run_id,
+        "stage": stage,
+        "expected_state": expected_state,
+        "reason": reason,
+        "disposition": disposition,
+        "previous_status": previous_status,
+        "reconciled_status": None if after is None else after.get("status"),
+        "reconciled": reconciled,
+        "status_history_count": (
+            0 if after is None else len(after.get("status_history", []))
+        ),
+        "recorded_at_utc": (
+            "2026-05-25T01:00:00Z"
+            if reconciled
+            else "2026-05-25T01:00:01Z"
+        ),
+        "metadata_path": metadata_path.as_posix(),
+        "evidence_path": evidence_path.as_posix(),
+    }}
+    evidence_path.parent.mkdir(parents=True, exist_ok=True)
+    evidence_path.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\\n")
+    print(json.dumps(payload, sort_keys=True))
+    return 0
+
+
 def write_adapter_timeout_stage_artifacts(stage: str, work_item: str, run_id: str) -> None:
     stage_workspace_root = Path(".aidd") / "workitems" / work_item / "stages" / stage
     stage_workspace_root.mkdir(parents=True, exist_ok=True)
@@ -840,6 +905,8 @@ def main() -> int:
         return 0
     if args[:1] == ["ui"]:
         return ui(args)
+    if args[:2] == ["stage", "reconcile-terminal"]:
+        return stage_reconcile_terminal(args)
     if args[:2] == ["stage", "run"]:
         return stage_run(args)
     if INSPECT_FAIL_COMMAND and " ".join(args[:2]) == INSPECT_FAIL_COMMAND:
