@@ -12371,7 +12371,7 @@ Local tasks:
     `macos-seatbelt` canaries, and source-integrity postflight. The exact candidate and sanitized
     signals are recorded in `docs/e2e/candidate-readiness-2026-07-26.md`; later evidence commits
     do not replace or rebuild that wheel.
-- `W36-E7-S4-T59` (next) Seed one allowlisted native-provider authentication snapshot into a
+- `W36-E7-S4-T59` (done) Seed one allowlisted native-provider authentication snapshot into a
   fresh provider-private home without exposing the operator's remaining state.
   - Dependencies: the `W36-E7-S4-T3` private-home authentication discovery after
     `W36-E7-S4-T37`.
@@ -12381,7 +12381,13 @@ Local tasks:
     atomically to their exact relative destinations with private modes, while traversal,
     symlink, hard-link, oversized, and injected-copy-failure cases publish no partial credential
     file and expose no credential bytes, absolute source path, or digest in the result.
-- `W36-E7-S4-T60` (soon) Require provider-private authentication seeding and an isolated status
+  - Completion: the typed seed operation derives the sole source and destination from a strict
+    Codex/Claude Code runtime allowlist, validates every in-home component with `lstat`, rejects
+    linked, non-regular, changed, existing, or larger-than-1-MiB credentials, and publishes a
+    digest-verified staging copy with `0700/0600` modes. Its result exposes only runtime,
+    relative destination, byte count, and `seeded` status; the positive and negative matrix
+    passes `11/11`.
+- `W36-E7-S4-T60` (next) Require provider-private authentication seeding and an isolated status
   probe before the live evaluator can start.
   - Dependencies: `W36-E7-S4-T59` as the typed snapshot predecessor; invalidates the recorded
     `W36-E7-S4-T36` and `W36-E7-S4-T37` candidate evidence when implementation changes land.

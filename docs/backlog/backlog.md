@@ -7,11 +7,11 @@ slice, and local task.
 
 ## Next
 
-- `W36-E7-S4-T59` — Seed one allowlisted provider auth snapshot into a private provider home.
+- `W36-E7-S4-T60` — Require the isolated private-auth probe before evaluator launch.
 
 ## Soon
 
-- `W36-E7-S4-T60` — Require the isolated private-auth probe before evaluator launch.
+No task is queued here while the isolated auth integration is active.
 
 ## Parking lot
 
@@ -35,6 +35,14 @@ slice, and local task.
   queue-restoration policy in `docs/backlog/roadmap.md` (`W8-E3-S1`).
 
 ## Current reconciliation
+
+- `2026-07-27` `W36-E7-S4-T59` is complete: a typed, runtime-allowlisted seed operation
+  copies only Codex `.codex/auth.json` or Claude Code `.claude.json` into a distinct
+  provider-private home through verified staging and atomic publication. It rejects traversal,
+  source/destination symlinks, hard links, oversized or changing files, existing destinations,
+  and injected partial-copy failure; directories are `0700`, credentials are `0600`, and its
+  public result contains no payload, absolute source path, or digest. The focused matrix passes
+  `11/11`; isolated probe integration `T60` is promoted to `Next`.
 
 - `2026-07-27` the first post-candidate Codex readiness probe found that host OAuth is valid
   while the intentionally empty provider-private home is unauthenticated. `W36-E7-S4-T59`
