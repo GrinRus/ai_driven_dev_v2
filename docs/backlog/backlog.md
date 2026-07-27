@@ -35,6 +35,14 @@ slice, and local task.
 
 ## Current reconciliation
 
+- `2026-07-27` `W36-E7-S4-T37` is paused, not complete, on exact source `c5747a0`
+  and tree `2a946c5`. Ruff, mypy across `228` modules, and full pytest `2145/2145`
+  pass. The exact-SHA Chromium run was operator-stopped after `67` passing tests, so it must
+  restart from zero; this is incomplete evidence rather than a browser defect. No new archive,
+  wheel, digest, installed doctor, target readiness, bundle, private-auth, or source-postflight
+  candidate record exists. `T37` remains `Next`, Codex medium acceptance `T3` remains `Soon`,
+  and the live medium scenario has not yet passed.
+
 - `2026-07-27` the post-auth `W36-E7-S4-T36` rerun is complete on clean source
   `314aedf` and tree `9703b02`: the exact historical matrix passes `4/4`, complete
   intervention/terminal families pass `24/24`, the twelve packaged journeys pass `79/79` with

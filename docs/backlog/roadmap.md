@@ -12385,6 +12385,14 @@ Local tasks:
   - Revalidation: the `43d740c` record remains immutable historical evidence, but the
     post-`W36-E7-S4-T60` `T36` result must produce a new tracked-archive wheel, digest, private
     auth probes, and source postflight before provider acceptance resumes.
+  - Current revalidation: source `c5747a0`, tree `2a946c5`, and tracked-index digest
+    `bfce0b0` pass Ruff, mypy across `228` modules, and the complete Python suite
+    `2145/2145`. The exact-SHA Chromium run was operator-stopped after `67` passing tests;
+    it is incomplete evidence, not a browser failure. No tracked archive, wheel, candidate
+    digest, installed doctor result, target readiness, bundle smoke, private-auth probe, or
+    source postflight has been accepted yet. Resume `T37` by restarting the full Chromium
+    suite on unchanged `c5747a0`, then complete the remaining readiness gates before naming a
+    candidate.
 - `W36-E7-S4-T59` (done) Seed one allowlisted native-provider authentication snapshot into a
   fresh provider-private home without exposing the operator's remaining state.
   - Dependencies: the `W36-E7-S4-T3` private-home authentication discovery after
