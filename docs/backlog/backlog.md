@@ -7,15 +7,14 @@ slice, and local task.
 
 ## Next
 
-- `W36-E7-S4-T36` — Re-run the complete provider-free Chromium acceptance matrix.
+- `W36-E7-S4-T37` — Prove exact-SHA package, private-auth, bundle, and source readiness.
 
 ## Soon
 
-- `W36-E7-S4-T37` — Prove exact-SHA package, private-auth, bundle, and source readiness.
+- `W36-E7-S4-T3` — Run the medium scenario through Codex to a clean terminal result.
 
 ## Parking lot
 
-- `W36-E7-S4-T3` — Run the medium scenario through Codex to a clean terminal result.
 - `W36-E7-S4-T4` — Repeat the medium scenario through Claude Code from an independent root.
 - `W36-E7-S3-T2` — Record five first-time-operator sessions after initial live hardening.
 - `W36-E7-S3-T3` — Reconcile observed session findings before beta readiness.
@@ -35,6 +34,15 @@ slice, and local task.
   queue-restoration policy in `docs/backlog/roadmap.md` (`W8-E3-S1`).
 
 ## Current reconciliation
+
+- `2026-07-27` the post-auth `W36-E7-S4-T36` rerun is complete on clean source
+  `314aedf` and tree `9703b02`: the exact historical matrix passes `4/4`, complete
+  intervention/terminal families pass `24/24`, the twelve packaged journeys pass `79/79` with
+  exact discovered/executed ID parity and no failed ID, and the full Chromium suite passes
+  `188/188`. All five viewports complete without console, page, failed-request, overflow,
+  accessibility, or test-owned process-cleanup failures. Sanitized evidence is recorded in
+  `docs/e2e/operator-ui-provider-free-browser-gate-2026-07-27.md`; exact-SHA readiness `T37`
+  is promoted to `Next` and Codex acceptance `T3` to `Soon`.
 
 - `2026-07-27` `W36-E7-S4-T60` is complete: fresh Codex and Claude Code launchers can
   seed only their T59 auth file, both status commands run inside the OS boundary before evaluator
