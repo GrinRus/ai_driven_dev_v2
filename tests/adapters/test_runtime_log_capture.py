@@ -168,6 +168,7 @@ script = (
     "    os.write(1, chunk)\\n"
     "    os.write(2, chunk)\\n"
 )
+baseline_rss = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss
 result = run_streamed_subprocess(
     spec=RuntimeSubprocessSpec(
         command=(sys.executable, "-c", script),
@@ -181,8 +182,10 @@ result = run_streamed_subprocess(
 )
 maximum_rss = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss
 if sys.platform != "darwin":
+    baseline_rss *= 1024
     maximum_rss *= 1024
 print(json.dumps({
+    "capture_rss_growth": max(0, maximum_rss - baseline_rss),
     "maximum_rss": maximum_rss,
     "combined_tail_bytes": len(result.runtime_log_text.encode("utf-8")),
     "runtime_log_bytes": result.runtime_log_byte_count,
@@ -200,7 +203,7 @@ print(json.dumps({
 
     assert observation["runtime_log_bytes"] == 32 * 1024 * 1024
     assert observation["combined_tail_bytes"] <= COMBINED_TAIL_BYTES
-    assert observation["maximum_rss"] < 192 * 1024 * 1024
+    assert observation["capture_rss_growth"] < 128 * 1024 * 1024
 
 
 def test_callback_failure_aborts_capture_without_published_evidence(
