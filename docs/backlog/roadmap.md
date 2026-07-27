@@ -12324,9 +12324,10 @@ Local tasks:
     coverage passes `17/17`; the full intervention/browser/static selection passes `28/28`;
     and all five allowed viewports prove one request, an empty submitted draft, and a still-running
     runtime job.
-- `W36-E7-S4-T36` (done) Re-run the complete provider-free Chromium acceptance matrix after the
+- `W36-E7-S4-T36` (next) Re-run the complete provider-free Chromium acceptance matrix after the
   final provider-neutral hardening change.
-  - Dependencies: `W36-E7-S4-T58` as the direct queue predecessor; `W36-E7-S4-T55`,
+  - Dependencies: `W36-E7-S4-T60` as the new direct queue predecessor; `W36-E7-S4-T58`,
+    `W36-E7-S4-T55`,
     `W36-E7-S4-T56`, and `W36-E7-S4-T57` as earlier code-change predecessors; blocks the
     active Codex acceptance task `W36-E7-S4-T3`.
   - Scope: browser acceptance evidence only; no product or fixture behavior changes.
@@ -12352,7 +12353,10 @@ Local tasks:
     console, page, request, overflow, accessibility, and bounded process-cleanup diagnostics;
     the sanitized evidence record is
     `docs/e2e/operator-ui-provider-free-browser-gate-2026-07-26.md`.
-- `W36-E7-S4-T37` (done) Prove the exact post-browser candidate is installable and ready for an
+  - Revalidation: `W36-E7-S4-T60` changed the tracked candidate after this completion evidence;
+    rerun the same no-fixes Chromium matrix on the new clean source before another candidate is
+    named.
+- `W36-E7-S4-T37` (soon) Prove the exact post-browser candidate is installable and ready for an
   isolated live-provider run.
   - Dependencies: `W36-E7-S4-T36` as the full-browser predecessor; blocks the active Codex
     acceptance task `W36-E7-S4-T3`.
@@ -12371,6 +12375,9 @@ Local tasks:
     `macos-seatbelt` canaries, and source-integrity postflight. The exact candidate and sanitized
     signals are recorded in `docs/e2e/candidate-readiness-2026-07-26.md`; later evidence commits
     do not replace or rebuild that wheel.
+  - Revalidation: the `43d740c` record remains immutable historical evidence, but the
+    post-`W36-E7-S4-T60` `T36` result must produce a new tracked-archive wheel, digest, private
+    auth probes, and source postflight before provider acceptance resumes.
 - `W36-E7-S4-T59` (done) Seed one allowlisted native-provider authentication snapshot into a
   fresh provider-private home without exposing the operator's remaining state.
   - Dependencies: the `W36-E7-S4-T3` private-home authentication discovery after
@@ -12387,7 +12394,7 @@ Local tasks:
     digest-verified staging copy with `0700/0600` modes. Its result exposes only runtime,
     relative destination, byte count, and `seeded` status; the positive and negative matrix
     passes `11/11`.
-- `W36-E7-S4-T60` (next) Require provider-private authentication seeding and an isolated status
+- `W36-E7-S4-T60` (done) Require provider-private authentication seeding and an isolated status
   probe before the live evaluator can start.
   - Dependencies: `W36-E7-S4-T59` as the typed snapshot predecessor; invalidates the recorded
     `W36-E7-S4-T36` and `W36-E7-S4-T37` candidate evidence when implementation changes land.
@@ -12398,6 +12405,15 @@ Local tasks:
     unseeded homes return a `provider-auth` blocker without launching it, resume reuses existing
     private credentials, and reports remain credential-redacted with source read-only and sibling
     provider roots denied.
+  - Completion: the launcher now requires `codex|claude-code`, permits the minimal T59 seed only
+    for a fresh provider root, runs the runtime-specific status command inside the same OS
+    boundary, and launches the evaluator only after a zero exit. Resume retains and reprobes the
+    private credential without recopying. Preflight defers host auth with explicit
+    `provider-private/pending-isolated-probe` state; session schema v2 records only runtime, seed
+    mode, relative destination, probe status, and private-state cleanup. Both fake runtimes pass
+    seeded and fail unseeded through real Seatbelt while operator HOME, sibling state, and source
+    writes remain denied; focused launcher tests pass `17/17`, harness passes `378/378`, Ruff and
+    mypy pass, and the complete Python suite passes `2145/2145`.
 
 Exit evidence:
 

@@ -87,6 +87,14 @@ def test_session_preserves_source_and_publishes_cleanup_evidence(
         (provider / SESSION_INTEGRITY_FILENAME).read_text(encoding="utf-8")
     )
     assert payload["status"] == "pass"
+    assert payload["schema_version"] == 2
+    assert payload["provider_auth"] == {
+        "cleanup_status": "not-applicable",
+        "probe_status": "not-run",
+        "relative_destination": None,
+        "runtime": None,
+        "seed_mode": "none",
+    }
     assert payload["violations"] == []
     assert not (provider / ".live-acceptance-session-active").exists()
 
@@ -287,3 +295,43 @@ def test_cleanup_failure_invalidates_session_and_is_recorded(tmp_path: Path) -> 
     assert payload["cleanup"]["sentinel_removed"] is False
     assert payload["cleanup"]["errors"]
     assert "session cleanup sentinel was not removed" in payload["violations"]
+
+
+def test_provider_auth_parent_symlink_invalidates_session_evidence(
+    tmp_path: Path,
+) -> None:
+    source, external, provider = _roots(tmp_path)
+    escaped = provider / "escaped-auth"
+
+    with pytest.raises(LiveAcceptanceSessionError, match="not a real directory"):
+        with LiveAcceptanceSession(
+            source_checkout=source,
+            external_root=external,
+            provider_root=provider,
+        ) as session:
+            private_home = provider / ".live-provider-private" / "home"
+            private_home.mkdir(parents=True)
+            escaped.mkdir()
+            escaped_auth = escaped / "auth.json"
+            escaped_auth.write_text("credential\n", encoding="utf-8")
+            escaped_auth.chmod(0o600)
+            (private_home / ".codex").symlink_to(
+                escaped,
+                target_is_directory=True,
+            )
+            session.record_provider_auth(
+                runtime="codex",
+                seed_mode="seeded-from-operator-home",
+                relative_destination=".codex/auth.json",
+                probe_status="pass",
+            )
+
+    payload = json.loads(
+        (provider / SESSION_INTEGRITY_FILENAME).read_text(encoding="utf-8")
+    )
+    assert payload["status"] == "fail"
+    assert payload["provider_auth"]["cleanup_status"] == "failed"
+    assert (
+        "provider auth destination parent is not a real directory"
+        in payload["violations"]
+    )

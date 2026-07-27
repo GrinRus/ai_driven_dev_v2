@@ -16,6 +16,14 @@ from aidd.harness.live_acceptance_visibility import (
     VisibilityProbeTarget,
     run_live_acceptance_visibility_canary,
 )
+from aidd.harness.live_provider_auth_probe import probe_provider_auth_state
+from aidd.harness.live_provider_auth_seed import (
+    LiveProviderAuthSeedError,
+    ProviderAuthRuntime,
+    ProviderAuthSeedRequest,
+    provider_auth_relative_destination,
+    seed_provider_auth_state,
+)
 
 IsolationBackend = Literal["macos-seatbelt", "linux-bubblewrap"]
 
@@ -462,6 +470,16 @@ def _parse_args(argv: Sequence[str] | None) -> argparse.Namespace:
     parser.add_argument("--source-checkout", type=Path, required=True)
     parser.add_argument("--external-root", type=Path, required=True)
     parser.add_argument("--provider-root", type=Path, required=True)
+    parser.add_argument(
+        "--runtime",
+        choices=("codex", "claude-code"),
+        required=True,
+    )
+    parser.add_argument(
+        "--seed-provider-auth-from-home",
+        action="store_true",
+        help="Copy only the runtime's allowlisted auth file into a fresh private HOME.",
+    )
     parser.add_argument("--credential-environment-key", action="append", default=[])
     parser.add_argument("--tool-read-root", action="append", type=Path, default=[])
     parser.add_argument(
@@ -486,6 +504,13 @@ def main(argv: Sequence[str] | None = None) -> int:
     if not command:
         print("live acceptance isolation: command is required", file=sys.stderr)
         return 2
+    if args.seed_provider_auth_from_home and args.resume_existing_provider:
+        print(
+            "live acceptance isolation: --seed-provider-auth-from-home is "
+            "incompatible with --resume-existing-provider",
+            file=sys.stderr,
+        )
+        return 2
     if args.resume_existing_provider and not any(
         item == "--run-id" or item.startswith("--run-id=") for item in command
     ):
@@ -509,17 +534,75 @@ def main(argv: Sequence[str] | None = None) -> int:
                 credential_environment_keys=tuple(args.credential_environment_key),
                 tool_read_roots=tuple(args.tool_read_root),
             )
-            completed = subprocess.run(
-                boundary.wrap_command(command),
-                cwd=boundary.provider_root,
-                env=boundary.environment,
-                check=False,
+            runtime = cast(ProviderAuthRuntime, args.runtime)
+            relative_destination = provider_auth_relative_destination(runtime)
+            seed_mode: Literal[
+                "none",
+                "seeded-from-operator-home",
+                "existing-private-home",
+            ] = (
+                "existing-private-home"
+                if args.resume_existing_provider
+                else (
+                    "seeded-from-operator-home"
+                    if args.seed_provider_auth_from_home
+                    else "none"
+                )
             )
-            session.record_process_exit(completed.returncode)
-    except (LiveAcceptanceIsolationError, LiveAcceptanceSessionError) as exc:
+            session.record_provider_auth(
+                runtime=runtime,
+                seed_mode=seed_mode,
+                relative_destination=relative_destination,
+                probe_status="pending",
+            )
+            if args.seed_provider_auth_from_home:
+                if boundary.operator_home is None:
+                    raise LiveProviderAuthSeedError(
+                        "Provider auth seed requires an absolute operator HOME."
+                    )
+                seed_provider_auth_state(
+                    ProviderAuthSeedRequest(
+                        runtime=runtime,
+                        operator_home=boundary.operator_home,
+                        provider_private_home=Path(boundary.environment["HOME"]),
+                    )
+                )
+            auth_probe = probe_provider_auth_state(
+                runtime=runtime,
+                boundary=boundary,
+            )
+            session.record_provider_auth(
+                runtime=runtime,
+                seed_mode=seed_mode,
+                relative_destination=relative_destination,
+                probe_status=auth_probe.status,
+            )
+            if auth_probe.status != "pass":
+                completed_exit_code = 2
+                session.record_process_exit(completed_exit_code)
+            else:
+                completed = subprocess.run(
+                    boundary.wrap_command(command),
+                    cwd=boundary.provider_root,
+                    env=boundary.environment,
+                    check=False,
+                )
+                completed_exit_code = completed.returncode
+                session.record_process_exit(completed_exit_code)
+    except (
+        LiveAcceptanceIsolationError,
+        LiveAcceptanceSessionError,
+        LiveProviderAuthSeedError,
+    ) as exc:
         print(f"live acceptance isolation: {exc}", file=sys.stderr)
         return 2
-    return completed.returncode
+    if auth_probe.status != "pass":
+        print(
+            "live acceptance isolation: provider-auth blocker: "
+            f"isolated {args.runtime} status probe {auth_probe.status}",
+            file=sys.stderr,
+        )
+    return completed_exit_code
 
 
 if __name__ == "__main__":

@@ -5,7 +5,7 @@ import json
 import os
 import stat
 import subprocess
-from dataclasses import asdict, dataclass
+from dataclasses import asdict, dataclass, replace
 from pathlib import Path
 from types import TracebackType
 from typing import Literal, Protocol
@@ -15,11 +15,33 @@ from aidd.harness.live_acceptance_isolation import (
     LiveAcceptanceIsolationError,
     require_live_acceptance_isolation_capability,
 )
+from aidd.harness.live_provider_auth_seed import ProviderAuthRuntime
 
 SESSION_INTEGRITY_FILENAME = "live-acceptance-session.json"
-SESSION_SCHEMA_VERSION = 1
+SESSION_SCHEMA_VERSION = 2
 _SESSION_SENTINEL_FILENAME = ".live-acceptance-session-active"
 _EXPECTED_PROVIDER_ROOTS = ("work", "reports", "browser")
+
+ProviderAuthSeedMode = Literal[
+    "none",
+    "seeded-from-operator-home",
+    "existing-private-home",
+]
+ProviderAuthSessionProbeStatus = Literal[
+    "not-run",
+    "pending",
+    "pass",
+    "fail",
+    "timeout",
+    "error",
+]
+ProviderAuthCleanupStatus = Literal[
+    "pending",
+    "not-applicable",
+    "private-auth-retained",
+    "no-private-auth",
+    "failed",
+]
 
 
 class LiveAcceptanceSessionError(RuntimeError):
@@ -48,6 +70,15 @@ class TargetBaseline:
 
 
 @dataclass(frozen=True, slots=True)
+class ProviderAuthSessionEvidence:
+    runtime: ProviderAuthRuntime | None
+    seed_mode: ProviderAuthSeedMode
+    relative_destination: str | None
+    probe_status: ProviderAuthSessionProbeStatus
+    cleanup_status: ProviderAuthCleanupStatus
+
+
+@dataclass(frozen=True, slots=True)
 class LiveAcceptanceSessionResult:
     schema_version: int
     status: str
@@ -60,6 +91,7 @@ class LiveAcceptanceSessionResult:
     target_baseline: TargetBaseline
     target_postflight: dict[str, object]
     process_exit_code: int | None
+    provider_auth: ProviderAuthSessionEvidence
     violations: tuple[str, ...]
     cleanup: dict[str, object]
 
@@ -267,6 +299,109 @@ def _source_violations(
     return tuple(violations)
 
 
+def _provider_auth_cleanup(
+    *,
+    provider_root: Path,
+    evidence: ProviderAuthSessionEvidence,
+) -> tuple[ProviderAuthSessionEvidence, tuple[str, ...]]:
+    if evidence.runtime is None or evidence.relative_destination is None:
+        return replace(evidence, cleanup_status="not-applicable"), ()
+    relative = Path(evidence.relative_destination)
+    if relative.is_absolute() or ".." in relative.parts:
+        return (
+            replace(evidence, cleanup_status="failed"),
+            ("provider auth evidence destination is not contained",),
+        )
+    private_home = provider_root / ".live-provider-private" / "home"
+    destination = private_home / relative
+    staging_parent = destination.parent
+    violations: list[str] = []
+    current = private_home
+    parent_chain_valid = True
+    for component in (None, *relative.parent.parts):
+        if component is not None:
+            if component in {"", ".", ".."}:
+                violations.append(
+                    "provider auth destination has a non-canonical component"
+                )
+                parent_chain_valid = False
+                break
+            current /= component
+        try:
+            parent_metadata = current.lstat()
+        except FileNotFoundError:
+            if evidence.seed_mode == "none":
+                parent_chain_valid = False
+                break
+            violations.append(
+                "provider auth destination parent could not be inspected"
+            )
+            parent_chain_valid = False
+            break
+        except OSError:
+            violations.append(
+                "provider auth destination parent could not be inspected"
+            )
+            parent_chain_valid = False
+            break
+        if stat.S_ISLNK(parent_metadata.st_mode) or not stat.S_ISDIR(
+            parent_metadata.st_mode
+        ):
+            violations.append(
+                "provider auth destination parent is not a real directory"
+            )
+            parent_chain_valid = False
+            break
+    if parent_chain_valid:
+        try:
+            staging_files = tuple(staging_parent.glob(".provider-auth-seed-*"))
+        except OSError:
+            staging_files = ()
+            violations.append("provider auth staging cleanup could not be inspected")
+        if staging_files:
+            violations.append("provider auth staging files remain after launch")
+
+    destination_exists = False
+    if parent_chain_valid:
+        try:
+            metadata = destination.lstat()
+        except FileNotFoundError:
+            metadata = None
+        except OSError:
+            metadata = None
+            violations.append("provider auth destination could not be inspected")
+    else:
+        metadata = None
+    if metadata is not None:
+        destination_exists = True
+        if (
+            stat.S_ISLNK(metadata.st_mode)
+            or not stat.S_ISREG(metadata.st_mode)
+            or metadata.st_nlink != 1
+            or stat.S_IMODE(metadata.st_mode) != 0o600
+        ):
+            violations.append("provider auth destination metadata is invalid")
+
+    expects_auth = evidence.seed_mode in {
+        "seeded-from-operator-home",
+        "existing-private-home",
+    }
+    if expects_auth and not destination_exists:
+        violations.append("provider auth destination is missing after launch")
+    if evidence.seed_mode == "none" and destination_exists:
+        violations.append("unseeded provider auth appeared during launch")
+    cleanup_status: ProviderAuthCleanupStatus = (
+        "failed"
+        if violations
+        else (
+            "private-auth-retained"
+            if destination_exists
+            else "no-private-auth"
+        )
+    )
+    return replace(evidence, cleanup_status=cleanup_status), tuple(violations)
+
+
 def _write_result(path: Path, result: LiveAcceptanceSessionResult) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     payload = asdict(result)
@@ -298,6 +433,13 @@ class LiveAcceptanceSession:
         self.source_baseline: SourceIntegritySnapshot | None = None
         self.target_baseline: TargetBaseline | None = None
         self.process_exit_code: int | None = None
+        self.provider_auth = ProviderAuthSessionEvidence(
+            runtime=None,
+            seed_mode="none",
+            relative_destination=None,
+            probe_status="not-run",
+            cleanup_status="pending",
+        )
         self.result: LiveAcceptanceSessionResult | None = None
         self._sentinel_path: Path | None = None
 
@@ -309,6 +451,22 @@ class LiveAcceptanceSession:
 
     def record_process_exit(self, exit_code: int) -> None:
         self.process_exit_code = exit_code
+
+    def record_provider_auth(
+        self,
+        *,
+        runtime: ProviderAuthRuntime,
+        seed_mode: ProviderAuthSeedMode,
+        relative_destination: str,
+        probe_status: ProviderAuthSessionProbeStatus,
+    ) -> None:
+        self.provider_auth = ProviderAuthSessionEvidence(
+            runtime=runtime,
+            seed_mode=seed_mode,
+            relative_destination=relative_destination,
+            probe_status=probe_status,
+            cleanup_status="pending",
+        )
 
     def __enter__(self) -> LiveAcceptanceSession:
         source, external, provider = _validate_preflight_roots(
@@ -384,6 +542,11 @@ class LiveAcceptanceSession:
 
         target_postflight, target_violations = _target_postflight(self.provider_root)
         violations.extend(target_violations)
+        provider_auth, provider_auth_violations = _provider_auth_cleanup(
+            provider_root=self.provider_root,
+            evidence=self.provider_auth,
+        )
+        violations.extend(provider_auth_violations)
         cleanup: dict[str, object] = {
             "sentinel_path": (
                 None if self._sentinel_path is None else self._sentinel_path.as_posix()
@@ -419,6 +582,7 @@ class LiveAcceptanceSession:
             target_baseline=self.target_baseline,
             target_postflight=target_postflight,
             process_exit_code=self.process_exit_code,
+            provider_auth=provider_auth,
             violations=tuple(violations),
             cleanup=cleanup,
         )
@@ -441,6 +605,10 @@ __all__ = [
     "LiveAcceptanceSession",
     "LiveAcceptanceSessionError",
     "LiveAcceptanceSessionResult",
+    "ProviderAuthCleanupStatus",
+    "ProviderAuthSeedMode",
+    "ProviderAuthSessionEvidence",
+    "ProviderAuthSessionProbeStatus",
     "SourceIntegritySnapshot",
     "TargetBaseline",
     "capture_source_integrity",

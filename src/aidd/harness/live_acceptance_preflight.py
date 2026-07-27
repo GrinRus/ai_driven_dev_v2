@@ -41,6 +41,8 @@ class LiveAcceptanceLayout:
     runtime_command: str
     runtime_mode: str
     isolation_backend: str
+    auth_scope: str
+    auth_state: str
     source_state: TrackedSourceState
 
 
@@ -162,7 +164,11 @@ def prepare_live_acceptance_layout(
     source_state = capture_tracked_source_state(source)
     try:
         loaded = load_scenario(scenario, runtime_id=provider_id, workspace_root=Path(".aidd"))
-        command = validate_live_runtime_command(runtime_id=provider_id, scenario=loaded)
+        command = validate_live_runtime_command(
+            runtime_id=provider_id,
+            scenario=loaded,
+            check_provider_auth=False,
+        )
     except (RuntimeError, ScenarioManifestError, ValueError) as exc:
         raise LiveAcceptancePreflightError(str(exc)) from exc
     if not loaded.is_live or loaded.automation_lane != "manual":
@@ -196,6 +202,8 @@ def prepare_live_acceptance_layout(
         runtime_command=command.command,
         runtime_mode=command.execution_mode.value,
         isolation_backend=isolation_capability.backend,
+        auth_scope="provider-private",
+        auth_state="pending-isolated-probe",
         source_state=source_state,
     )
 

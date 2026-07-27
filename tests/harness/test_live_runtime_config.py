@@ -350,6 +350,30 @@ def test_validate_live_runtime_command_rejects_codex_native_auth_failure(
         )
 
 
+def test_validate_live_runtime_command_can_defer_auth_to_isolated_probe(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    bin_dir = tmp_path / "bin"
+    bin_dir.mkdir()
+    codex = bin_dir / "codex"
+    codex.write_text("#!/bin/sh\nexit 7\n", encoding="utf-8")
+    codex.chmod(0o755)
+    monkeypatch.setenv("PATH", "")
+
+    entry = validate_live_runtime_command(
+        runtime_id="codex",
+        scenario=_scenario(runtime_targets=("codex",)),
+        environment={
+            **_empty_live_command_env(),
+            "PATH": bin_dir.as_posix(),
+        },
+        check_provider_auth=False,
+    )
+
+    assert entry.execution_mode is RuntimeExecutionMode.NATIVE
+
+
 def test_validate_live_runtime_command_checks_claude_native_executable(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,

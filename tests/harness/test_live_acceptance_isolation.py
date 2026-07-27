@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 import os
 import platform
+import shlex
 import subprocess
 from pathlib import Path
 
@@ -21,6 +22,7 @@ from aidd.harness.live_acceptance_visibility import (
     VisibilityProbeTarget,
     run_live_acceptance_visibility_canary,
 )
+from aidd.harness.live_provider_auth_probe import ProviderAuthProbeResult
 
 
 def _roots(tmp_path: Path) -> tuple[Path, Path, Path, Path]:
@@ -63,6 +65,55 @@ def _git_source(tmp_path: Path) -> Path:
             text=True,
         )
     return source
+
+
+def _operator_auth(
+    operator_home: Path,
+    *,
+    runtime: str,
+    content: str,
+) -> Path:
+    relative = Path(".codex/auth.json") if runtime == "codex" else Path(".claude.json")
+    path = operator_home / relative
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(content, encoding="utf-8")
+    path.chmod(0o600)
+    return path
+
+
+def _fake_auth_cli(
+    bin_dir: Path,
+    *,
+    runtime: str,
+    source: Path,
+    operator_marker: Path,
+    sibling_marker: Path,
+) -> None:
+    executable = bin_dir / ("codex" if runtime == "codex" else "claude")
+    relative_auth = ".codex/auth.json" if runtime == "codex" else ".claude.json"
+    expected_args = (
+        '[ "$1" = "login" ] && [ "$2" = "status" ]'
+        if runtime == "codex"
+        else (
+            '[ "$1" = "auth" ] && [ "$2" = "status" ] '
+            '&& [ "$3" = "--json" ]'
+        )
+    )
+    executable.write_text(
+        "#!/bin/sh\n"
+        f"if ! {expected_args}; then exit 30; fi\n"
+        f"if [ -r {shlex.quote(operator_marker.as_posix())} ]; then exit 31; fi\n"
+        f"if [ -r {shlex.quote(sibling_marker.as_posix())} ]; then exit 32; fi\n"
+        f"if printf 'mutated' >> {shlex.quote((source / 'tracked.txt').as_posix())} "
+        "2>/dev/null; then exit 33; fi\n"
+        f"if [ ! -f \"$HOME/{relative_auth}\" ]; then "
+        "echo 'opaque-fixture-secret' >&2; exit 34; fi\n"
+        f"grep -F 'opaque-fixture-secret' \"$HOME/{relative_auth}\" >/dev/null "
+        "2>&1 || exit 35\n"
+        "exit 0\n",
+        encoding="utf-8",
+    )
+    executable.chmod(0o755)
 
 
 def test_private_environment_is_allowlisted_and_uses_provider_roots(
@@ -339,12 +390,19 @@ def test_launcher_uses_mandatory_session_guard(
     )
 
     def _boundary(**_kwargs: object) -> LiveAcceptanceIsolationBoundary:
+        private_root = provider / ".live-provider-private"
+        for relative in ("home", "tmp", "config", "cache", "data", "state"):
+            (private_root / relative).mkdir(
+                parents=True,
+                exist_ok=True,
+                mode=0o700,
+            )
         return LiveAcceptanceIsolationBoundary(
             backend="macos-seatbelt",
             source_checkout=source,
             external_root=external,
             provider_root=provider,
-            private_root=provider / ".live-provider-private",
+            private_root=private_root,
             operator_home=None,
             tool_read_roots=tuple(),
             environment={"PATH": os.environ.get("PATH", "")},
@@ -354,6 +412,14 @@ def test_launcher_uses_mandatory_session_guard(
     monkeypatch.setattr(
         "aidd.harness.live_acceptance_isolation.prepare_live_acceptance_isolation",
         _boundary,
+    )
+    monkeypatch.setattr(
+        "aidd.harness.live_acceptance_isolation.probe_provider_auth_state",
+        lambda **_kwargs: ProviderAuthProbeResult(
+            runtime="codex",
+            status="pass",
+            exit_code=0,
+        ),
     )
 
     assert (
@@ -365,6 +431,8 @@ def test_launcher_uses_mandatory_session_guard(
                 external.as_posix(),
                 "--provider-root",
                 provider.as_posix(),
+                "--runtime",
+                "codex",
                 "--",
                 "/usr/bin/true",
             ]
@@ -377,6 +445,14 @@ def test_launcher_uses_mandatory_session_guard(
     assert payload["status"] == "pass"
     assert payload["process_exit_code"] == 0
     assert payload["cleanup"]["sentinel_removed"] is True
+    assert payload["schema_version"] == 2
+    assert payload["provider_auth"] == {
+        "cleanup_status": "no-private-auth",
+        "probe_status": "pass",
+        "relative_destination": ".codex/auth.json",
+        "runtime": "codex",
+        "seed_mode": "none",
+    }
 
 
 def test_launcher_rejects_existing_provider_without_explicit_resume(
@@ -406,6 +482,8 @@ def test_launcher_rejects_existing_provider_without_explicit_resume(
             external.as_posix(),
             "--provider-root",
             provider.as_posix(),
+            "--runtime",
+            "codex",
             "--",
             "/usr/bin/true",
         ]
@@ -433,6 +511,8 @@ def test_launcher_resume_flag_requires_nested_run_id(
             external.as_posix(),
             "--provider-root",
             provider.as_posix(),
+            "--runtime",
+            "codex",
             "--resume-existing-provider",
             "--",
             "/usr/bin/true",
@@ -441,3 +521,350 @@ def test_launcher_resume_flag_requires_nested_run_id(
 
     assert exit_code == 2
     assert "requires an explicit nested --run-id" in capsys.readouterr().err
+
+
+def test_launcher_rejects_seed_during_resume_before_session_allocation(
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    source = _git_source(tmp_path)
+    external = tmp_path / "external"
+    provider = external / "provider"
+    external.mkdir()
+
+    exit_code = main(
+        [
+            "--source-checkout",
+            source.as_posix(),
+            "--external-root",
+            external.as_posix(),
+            "--provider-root",
+            provider.as_posix(),
+            "--runtime",
+            "codex",
+            "--seed-provider-auth-from-home",
+            "--resume-existing-provider",
+            "--",
+            "/usr/bin/true",
+            "--run-id",
+            "run-1",
+        ]
+    )
+
+    assert exit_code == 2
+    assert "incompatible" in capsys.readouterr().err
+    assert not provider.exists()
+
+
+def test_launcher_resume_reuses_private_auth_and_reprobes(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    source = _git_source(tmp_path)
+    external = tmp_path / "external"
+    provider = external / "provider"
+    operator_home = tmp_path / "operator-home"
+    fake_bin = tmp_path / "fake-bin"
+    external.mkdir()
+    operator_home.mkdir()
+    fake_bin.mkdir()
+    _operator_auth(
+        operator_home,
+        runtime="codex",
+        content='{"opaque":"opaque-fixture-secret"}\n',
+    )
+    codex = fake_bin / "codex"
+    codex.write_text(
+        "#!/bin/sh\n"
+        "[ \"$1\" = \"login\" ] && [ \"$2\" = \"status\" ] || exit 30\n"
+        "grep -F 'opaque-fixture-secret' \"$HOME/.codex/auth.json\" "
+        ">/dev/null 2>&1 || exit 31\n"
+        "exit 0\n",
+        encoding="utf-8",
+    )
+    codex.chmod(0o755)
+    monkeypatch.setattr(
+        "aidd.harness.live_acceptance_session."
+        "require_live_acceptance_isolation_capability",
+        lambda: LiveAcceptanceIsolationCapability(
+            backend="macos-seatbelt",
+            supported=True,
+            detail="fixture capability",
+        ),
+    )
+
+    def _boundary(**_kwargs: object) -> LiveAcceptanceIsolationBoundary:
+        private_root = provider / ".live-provider-private"
+        for relative in ("home", "tmp", "config", "cache", "data", "state"):
+            (private_root / relative).mkdir(
+                parents=True,
+                exist_ok=True,
+                mode=0o700,
+            )
+        return LiveAcceptanceIsolationBoundary(
+            backend="macos-seatbelt",
+            source_checkout=source,
+            external_root=external,
+            provider_root=provider,
+            private_root=private_root,
+            operator_home=operator_home,
+            tool_read_roots=(fake_bin,),
+            environment={
+                "HOME": (private_root / "home").as_posix(),
+                "PATH": f"{fake_bin.as_posix()}:/usr/bin:/bin",
+            },
+            launch_prefix=tuple(),
+        )
+
+    monkeypatch.setattr(
+        "aidd.harness.live_acceptance_isolation.prepare_live_acceptance_isolation",
+        _boundary,
+    )
+    common_args = [
+        "--source-checkout",
+        source.as_posix(),
+        "--external-root",
+        external.as_posix(),
+        "--provider-root",
+        provider.as_posix(),
+        "--runtime",
+        "codex",
+    ]
+
+    assert (
+        main(
+            [
+                *common_args,
+                "--seed-provider-auth-from-home",
+                "--",
+                "/usr/bin/true",
+            ]
+        )
+        == 0
+    )
+    private_auth = (
+        provider
+        / ".live-provider-private"
+        / "home"
+        / ".codex"
+        / "auth.json"
+    )
+    first_inode = private_auth.stat().st_ino
+    first_bytes = private_auth.read_bytes()
+
+    assert (
+        main(
+            [
+                *common_args,
+                "--resume-existing-provider",
+                "--",
+                "/usr/bin/true",
+                "--run-id",
+                "run-1",
+            ]
+        )
+        == 0
+    )
+
+    assert private_auth.stat().st_ino == first_inode
+    assert private_auth.read_bytes() == first_bytes
+    payload = json.loads(
+        (provider / SESSION_INTEGRITY_FILENAME).read_text(encoding="utf-8")
+    )
+    assert payload["provider_auth"] == {
+        "cleanup_status": "private-auth-retained",
+        "probe_status": "pass",
+        "relative_destination": ".codex/auth.json",
+        "runtime": "codex",
+        "seed_mode": "existing-private-home",
+    }
+
+
+@pytest.mark.skipif(
+    platform.system() != "Darwin",
+    reason="real provider auth Seatbelt verification is macOS-specific",
+)
+@pytest.mark.parametrize("runtime", ("codex", "claude-code"))
+def test_seeded_private_auth_probe_crosses_real_boundary_before_evaluator(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+    runtime: str,
+) -> None:
+    source = _git_source(tmp_path)
+    external = tmp_path / "external"
+    provider = external / runtime
+    sibling = external / "sibling-provider"
+    operator_home = tmp_path / "operator-home"
+    fake_bin = tmp_path / "fake-bin"
+    external.mkdir()
+    sibling.mkdir()
+    operator_home.mkdir()
+    fake_bin.mkdir()
+    operator_marker = operator_home / "operator-marker"
+    sibling_marker = sibling / "credential-marker"
+    operator_marker.write_text("operator-only\n", encoding="utf-8")
+    sibling_marker.write_text("sibling-only\n", encoding="utf-8")
+    _operator_auth(
+        operator_home,
+        runtime=runtime,
+        content='{"opaque":"opaque-fixture-secret"}\n',
+    )
+    _fake_auth_cli(
+        fake_bin,
+        runtime=runtime,
+        source=source,
+        operator_marker=operator_marker,
+        sibling_marker=sibling_marker,
+    )
+    monkeypatch.setenv("HOME", operator_home.as_posix())
+    monkeypatch.setenv(
+        "PATH",
+        f"{fake_bin.as_posix()}:/usr/bin:/bin",
+    )
+    monkeypatch.setattr(
+        "aidd.harness.live_acceptance_session."
+        "require_live_acceptance_isolation_capability",
+        lambda: LiveAcceptanceIsolationCapability(
+            backend="macos-seatbelt",
+            supported=True,
+            detail="fixture capability",
+        ),
+    )
+    evaluator_sentinel = provider / "evaluator-launched"
+
+    exit_code = main(
+        [
+            "--source-checkout",
+            source.as_posix(),
+            "--external-root",
+            external.as_posix(),
+            "--provider-root",
+            provider.as_posix(),
+            "--runtime",
+            runtime,
+            "--seed-provider-auth-from-home",
+            "--tool-read-root",
+            fake_bin.as_posix(),
+            "--",
+            "/bin/sh",
+            "-c",
+            f"printf launched > {shlex.quote(evaluator_sentinel.as_posix())}",
+        ]
+    )
+
+    assert exit_code == 0
+    assert evaluator_sentinel.read_text(encoding="utf-8") == "launched"
+    relative_auth = (
+        Path(".codex/auth.json")
+        if runtime == "codex"
+        else Path(".claude.json")
+    )
+    private_auth = (
+        provider / ".live-provider-private" / "home" / relative_auth
+    )
+    assert private_auth.is_file()
+    assert not (sibling / relative_auth).exists()
+    assert (source / "tracked.txt").read_text(encoding="utf-8") == "tracked\n"
+    payload_text = (provider / SESSION_INTEGRITY_FILENAME).read_text(
+        encoding="utf-8"
+    )
+    payload = json.loads(payload_text)
+    assert payload["provider_auth"] == {
+        "cleanup_status": "private-auth-retained",
+        "probe_status": "pass",
+        "relative_destination": relative_auth.as_posix(),
+        "runtime": runtime,
+        "seed_mode": "seeded-from-operator-home",
+    }
+    diagnostic_text = payload_text + capsys.readouterr().err
+    assert "opaque-fixture-secret" not in diagnostic_text
+    assert operator_home.as_posix() not in diagnostic_text
+    assert "credential digest" not in diagnostic_text
+
+
+@pytest.mark.skipif(
+    platform.system() != "Darwin",
+    reason="real provider auth Seatbelt verification is macOS-specific",
+)
+@pytest.mark.parametrize("runtime", ("codex", "claude-code"))
+def test_unseeded_private_auth_blocks_evaluator_inside_real_boundary(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+    runtime: str,
+) -> None:
+    source = _git_source(tmp_path)
+    external = tmp_path / "external"
+    provider = external / runtime
+    sibling = external / "sibling-provider"
+    operator_home = tmp_path / "operator-home"
+    fake_bin = tmp_path / "fake-bin"
+    external.mkdir()
+    sibling.mkdir()
+    operator_home.mkdir()
+    fake_bin.mkdir()
+    operator_marker = operator_home / "operator-marker"
+    sibling_marker = sibling / "credential-marker"
+    operator_marker.write_text("operator-only\n", encoding="utf-8")
+    sibling_marker.write_text("sibling-only\n", encoding="utf-8")
+    _operator_auth(
+        operator_home,
+        runtime=runtime,
+        content='{"opaque":"opaque-fixture-secret"}\n',
+    )
+    _fake_auth_cli(
+        fake_bin,
+        runtime=runtime,
+        source=source,
+        operator_marker=operator_marker,
+        sibling_marker=sibling_marker,
+    )
+    monkeypatch.setenv("HOME", operator_home.as_posix())
+    monkeypatch.setenv(
+        "PATH",
+        f"{fake_bin.as_posix()}:/usr/bin:/bin",
+    )
+    monkeypatch.setattr(
+        "aidd.harness.live_acceptance_session."
+        "require_live_acceptance_isolation_capability",
+        lambda: LiveAcceptanceIsolationCapability(
+            backend="macos-seatbelt",
+            supported=True,
+            detail="fixture capability",
+        ),
+    )
+    evaluator_sentinel = provider / "evaluator-launched"
+
+    exit_code = main(
+        [
+            "--source-checkout",
+            source.as_posix(),
+            "--external-root",
+            external.as_posix(),
+            "--provider-root",
+            provider.as_posix(),
+            "--runtime",
+            runtime,
+            "--tool-read-root",
+            fake_bin.as_posix(),
+            "--",
+            "/bin/sh",
+            "-c",
+            f"printf launched > {shlex.quote(evaluator_sentinel.as_posix())}",
+        ]
+    )
+
+    assert exit_code == 2
+    assert not evaluator_sentinel.exists()
+    captured = capsys.readouterr()
+    assert "provider-auth blocker" in captured.err
+    assert "opaque-fixture-secret" not in captured.err
+    payload_text = (provider / SESSION_INTEGRITY_FILENAME).read_text(
+        encoding="utf-8"
+    )
+    payload = json.loads(payload_text)
+    assert payload["provider_auth"]["probe_status"] == "fail"
+    assert payload["provider_auth"]["cleanup_status"] == "no-private-auth"
+    assert payload["provider_auth"]["seed_mode"] == "none"
+    assert "opaque-fixture-secret" not in payload_text

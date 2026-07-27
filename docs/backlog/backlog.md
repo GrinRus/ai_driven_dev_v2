@@ -7,11 +7,11 @@ slice, and local task.
 
 ## Next
 
-- `W36-E7-S4-T60` — Require the isolated private-auth probe before evaluator launch.
+- `W36-E7-S4-T36` — Re-run the complete provider-free Chromium acceptance matrix.
 
 ## Soon
 
-No task is queued here while the isolated auth integration is active.
+- `W36-E7-S4-T37` — Prove exact-SHA package, private-auth, bundle, and source readiness.
 
 ## Parking lot
 
@@ -35,6 +35,16 @@ No task is queued here while the isolated auth integration is active.
   queue-restoration policy in `docs/backlog/roadmap.md` (`W8-E3-S1`).
 
 ## Current reconciliation
+
+- `2026-07-27` `W36-E7-S4-T60` is complete: fresh Codex and Claude Code launchers can
+  seed only their T59 auth file, both status commands run inside the OS boundary before evaluator
+  execution, unseeded private homes return a redacted `provider-auth` blocker, and resume reuses
+  the retained private credential. Preflight now reports private-auth pending rather than trusting
+  host OAuth; session schema v2 records only sanitized auth lifecycle fields. Real Seatbelt tests
+  keep operator HOME and sibling state unreadable and source bytes read-only. Launcher tests pass
+  `17/17`, full harness `378/378`, Ruff, mypy across `228` modules, and full pytest `2145/2145`.
+  The code change invalidates candidate `43d740c`, so browser gate `T36` is promoted to `Next`
+  and exact-SHA readiness `T37` to `Soon`; Codex `T3` and Claude `T4` remain parked.
 
 - `2026-07-27` `W36-E7-S4-T59` is complete: a typed, runtime-allowlisted seed operation
   copies only Codex `.codex/auth.json` or Claude Code `.claude.json` into a distinct

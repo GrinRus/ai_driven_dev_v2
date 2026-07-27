@@ -352,12 +352,7 @@ def _seed_file(
 def seed_provider_auth_state(
     request: ProviderAuthSeedRequest,
 ) -> ProviderAuthSeedResult:
-    if request.runtime not in _AUTH_RELATIVE_PATHS:
-        raise LiveProviderAuthSeedError(
-            "Provider auth seed runtime must be 'codex' or 'claude-code'."
-        )
-    runtime: ProviderAuthRuntime = request.runtime
-    runtime_path = _AUTH_RELATIVE_PATHS[runtime]
+    runtime, runtime_path = _provider_auth_runtime_path(request.runtime)
     operator_home = _absolute_lexical(request.operator_home)
     private_home = _absolute_lexical(request.provider_private_home)
     _validate_distinct_homes(operator_home, private_home)
@@ -384,11 +379,29 @@ def seed_provider_auth_state(
     )
 
 
+def _provider_auth_runtime_path(
+    runtime_id: str,
+) -> tuple[ProviderAuthRuntime, Path]:
+    if runtime_id not in _AUTH_RELATIVE_PATHS:
+        raise LiveProviderAuthSeedError(
+            "Provider auth seed runtime must be 'codex' or 'claude-code'."
+        )
+    runtime: ProviderAuthRuntime = runtime_id
+    runtime_path = _AUTH_RELATIVE_PATHS[runtime]
+    return runtime, runtime_path
+
+
+def provider_auth_relative_destination(runtime_id: str) -> str:
+    _, runtime_path = _provider_auth_runtime_path(runtime_id)
+    return runtime_path.as_posix()
+
+
 __all__ = [
     "LiveProviderAuthSeedError",
     "MAX_PROVIDER_AUTH_SEED_BYTES",
     "ProviderAuthRuntime",
     "ProviderAuthSeedRequest",
     "ProviderAuthSeedResult",
+    "provider_auth_relative_destination",
     "seed_provider_auth_state",
 ]

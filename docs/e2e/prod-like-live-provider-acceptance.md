@@ -24,9 +24,11 @@ source checkout. Each provider gets a fresh subtree with independent `work`, `re
 `--report-root`, and `--manual-frontend-evidence`.
 
 The two providers must not reuse a target clone, `.aidd` workspace, install home, cache, run id,
-answers, task attempts, patch, or evidence bundle. Provider authentication may be inherited from
-the launching operator as documented by the live runner, but credentials are never copied into
-the candidate, target, report, browser, or tracked documentation trees.
+answers, task attempts, patch, or evidence bundle. For a fresh provider root, the launcher may
+seed only the selected runtime's opaque auth snapshot: `.codex/auth.json` for Codex or
+`.claude.json` for Claude Code. It never copies settings, history, sessions, plugins, shell
+snapshots, or the rest of the operator home. Credentials never enter the candidate, target,
+report, browser, bundle, or tracked documentation trees.
 
 Run the provider-neutral gate before `aidd eval doctor` or any live command:
 
@@ -40,7 +42,9 @@ uv run --extra dev python -m aidd.harness.live_acceptance_preflight \
 
 Repeat it with `--runtime claude-code`. The JSON result supplies the exact independent work,
 report, and browser roots for the black-box command and names the verified isolation backend.
-A failed capability canary is a preflight blocker and must not allocate a live run.
+It reports `auth_scope=provider-private` and `auth_state=pending-isolated-probe`; host
+authentication is not readiness evidence. A failed capability canary is a preflight blocker and
+must not allocate a live run.
 
 Run the evaluator itself through the isolation launcher so the evaluator, installed stage CLI,
 provider runtime, and every descendant share one OS-enforced boundary:
@@ -51,7 +55,8 @@ uv run --extra dev python -m aidd.harness.live_acceptance_isolation \
   --source-checkout "$PWD" \
   --external-root "$AIDD_LIVE_E2E_ROOT" \
   --provider-root "$provider_root" \
-  --credential-environment-key OPENAI_API_KEY \
+  --runtime codex \
+  --seed-provider-auth-from-home \
   -- \
   python -m aidd.harness.live_e2e_black_box \
   "$PWD/harness/scenarios/live/hono-non-error-throw-handling.yaml" \
@@ -61,12 +66,16 @@ uv run --extra dev python -m aidd.harness.live_acceptance_isolation \
   --manual-frontend-evidence "$provider_root/browser"
 ```
 
-Pass only credential environment keys required by the selected runtime. Fresh execution rejects
-an already allocated provider root, including a pre-existing target clone; authenticate through
-explicit environment keys or interactively inside the newly private `HOME`, never by exposing
-the launching operator's home. Use `--tool-read-root` only when the provider executable or its
-read-only dependencies live outside the system tool roots, AIDD source, and provider subtree.
-The launcher rejects a sibling provider tool root.
+For Claude Code, use a fresh `"$AIDD_LIVE_E2E_ROOT/claude-code"` provider root, set both launcher
+and nested evaluator `--runtime claude-code`, and retain
+`--seed-provider-auth-from-home`. Fresh execution rejects an already allocated provider root,
+including a pre-existing target clone. The seed is copied by the host only after session
+preflight and private-HOME creation. The launcher then runs `codex login status` or
+`claude auth status --json` inside the OS boundary and starts the evaluator only after exit `0`.
+Use `--credential-environment-key` only for an explicitly selected provider credential variable;
+it does not replace the isolated status probe. Use `--tool-read-root` only when the provider
+executable or its read-only dependencies live outside the system tool roots, AIDD source, and
+provider subtree. The launcher rejects a sibling provider tool root.
 
 The child receives an allowlisted environment with private `HOME`, temporary, XDG config, cache,
 data, and state directories. The platform backend permits read-only AIDD source access and
@@ -82,6 +91,10 @@ roots, removes its active-session sentinel, and writes
 target-root symlink, provider overlap, or cleanup failure invalidates the launch even when the
 child command returned success. Resume of an existing provider layout requires both
 `--resume-existing-provider` on the isolation launcher and an explicit nested `--run-id`.
+Resume is incompatible with `--seed-provider-auth-from-home`: it retains the existing private
+auth file and repeats the isolated status probe. Session evidence schema v2 records only runtime,
+seed mode, relative auth destination, probe status, and cleanup status; it never records auth
+payload, operator source path, or credential digest.
 
 Inside each fresh provider root, the evaluator must complete the pinned target clone,
 dependency setup, generated/native command prerequisite checks, and the authored

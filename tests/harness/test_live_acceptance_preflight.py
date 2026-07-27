@@ -132,9 +132,16 @@ def test_preflight_builds_independent_provider_roots(
         "aidd.harness.live_acceptance_preflight.load_scenario",
         lambda *args, **kwargs: _Scenario(),
     )
+    auth_checks: list[bool] = []
+
+    def _validate_command(*args: object, **kwargs: object) -> _Command:
+        del args
+        auth_checks.append(bool(kwargs["check_provider_auth"]))
+        return _Command()
+
     monkeypatch.setattr(
         "aidd.harness.live_acceptance_preflight.validate_live_runtime_command",
-        lambda *args, **kwargs: _Command(),
+        _validate_command,
     )
 
     external = tmp_path / "external"
@@ -162,6 +169,9 @@ def test_preflight_builds_independent_provider_roots(
         "browser",
     }
     assert codex.isolation_backend == "macos-seatbelt"
+    assert codex.auth_scope == "provider-private"
+    assert codex.auth_state == "pending-isolated-probe"
+    assert auth_checks == [False, False]
 
 
 def test_preflight_blocks_when_platform_isolation_is_unavailable(
