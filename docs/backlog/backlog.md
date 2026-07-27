@@ -7,14 +7,16 @@ slice, and local task.
 
 ## Next
 
-- `W36-E7-S4-T3` — Run the medium scenario through Codex to a clean terminal result.
+- `W36-E7-S4-T59` — Seed one allowlisted provider auth snapshot into a private provider home.
 
 ## Soon
 
-- `W36-E7-S4-T4` — Repeat the medium scenario through Claude Code from an independent root.
+- `W36-E7-S4-T60` — Require the isolated private-auth probe before evaluator launch.
 
 ## Parking lot
 
+- `W36-E7-S4-T3` — Run the medium scenario through Codex to a clean terminal result.
+- `W36-E7-S4-T4` — Repeat the medium scenario through Claude Code from an independent root.
 - `W36-E7-S3-T2` — Record five first-time-operator sessions after initial live hardening.
 - `W36-E7-S3-T3` — Reconcile observed session findings before beta readiness.
 - `W36-E7-S4-T5` — Record final same-revision Codex and Claude acceptance evidence.
@@ -33,6 +35,13 @@ slice, and local task.
   queue-restoration policy in `docs/backlog/roadmap.md` (`W8-E3-S1`).
 
 ## Current reconciliation
+
+- `2026-07-27` the first post-candidate Codex readiness probe found that host OAuth is valid
+  while the intentionally empty provider-private home is unauthenticated. `W36-E7-S4-T59`
+  owns the minimal allowlisted auth snapshot and is promoted to `Next`; `T60` owns isolated
+  status-probe integration in `Soon`. The accepted `43d740c` candidate remains immutable
+  historical evidence, but any implementation change requires fresh `T36 -> T37` gates before
+  Codex `T3` and Claude `T4` return from Parking.
 
 - `2026-07-26` `W36-E7-S4-T37` is complete: clean candidate `43d740c`, tree
   `a780ce9`, source archive `b416b44`, and wheel `b93257d` pass Ruff, mypy, Python
