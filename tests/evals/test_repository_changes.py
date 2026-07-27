@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 import subprocess
 from pathlib import Path
 from subprocess import TimeoutExpired
@@ -11,6 +12,7 @@ from aidd.evals.repository_changes import (
     classify_live_workspace_changes,
     collect_live_workspace_snapshot,
     collect_repository_changes,
+    live_workspace_snapshot_from_payload,
 )
 
 
@@ -268,3 +270,69 @@ def test_collect_live_workspace_snapshot_records_git_execution_errors(
     assert snapshot.untracked_files == tuple()
     assert len(snapshot.command_errors) == 4
     assert all("failed to execute" in error for error in snapshot.command_errors)
+
+
+def test_ignored_inventory_is_digest_backed_and_bounded_at_large_scale() -> None:
+    ignored_files = tuple(
+        f"node_modules/package-{index:05d}/cache/file-{index:05d}.js"
+        for index in range(20_000)
+    )
+    snapshot = LiveWorkspaceSnapshot(
+        tracked_files=("src/modified.py", "src/deleted.py"),
+        untracked_files=("src/new.py",),
+        status_short=" M src/modified.py\n D src/deleted.py\n?? src/new.py",
+        command_errors=tuple(),
+        ignored_files=ignored_files,
+        modified_files=("src/modified.py",),
+        deleted_files=("src/deleted.py",),
+    )
+
+    payload = snapshot.to_payload()
+    inventory = payload["ignored_inventory"]
+    assert isinstance(inventory, dict)
+    assert inventory["total_count"] == 20_000
+    assert inventory["group_count"] == 1
+    assert inventory["groups"] == [
+        {"root": "node_modules/", "type": "dependency", "count": 20_000}
+    ]
+    assert len(inventory["sample"]) == 50
+    assert inventory["truncated"] is True
+    assert inventory["groups_truncated"] is False
+    assert len(inventory["sha256"]) == 64
+    assert "ignored_files" not in payload
+    assert len(json.dumps(payload)) < 10_000
+    assert payload["tracked_files"] == ["src/modified.py", "src/deleted.py"]
+    assert payload["untracked_files"] == ["src/new.py"]
+    assert payload["modified_files"] == ["src/modified.py"]
+    assert payload["deleted_files"] == ["src/deleted.py"]
+
+    restored = live_workspace_snapshot_from_payload(payload)
+    assert restored.ignored_inventory is not None
+    assert restored.ignored_inventory.total_count == 20_000
+    assert restored.ignored_inventory.sha256 == inventory["sha256"]
+    assert restored.tracked_files == snapshot.tracked_files
+    assert restored.untracked_files == snapshot.untracked_files
+    assert restored.modified_files == snapshot.modified_files
+    assert restored.deleted_files == snapshot.deleted_files
+
+    classification = classify_live_workspace_changes(
+        baseline_snapshot=LiveWorkspaceSnapshot(
+            tracked_files=tuple(),
+            untracked_files=tuple(),
+            status_short="",
+            command_errors=tuple(),
+        ),
+        final_snapshot=snapshot,
+    )
+    classification_payload = classification.to_payload()
+    new_inventory = classification_payload["new_ignored_inventory"]
+    assert isinstance(new_inventory, dict)
+    assert new_inventory["total_count"] == 20_000
+    assert new_inventory["sha256"] == inventory["sha256"]
+    assert len(json.dumps(classification_payload)) < 20_000
+    ignored_findings = tuple(
+        finding
+        for finding in classification.non_gating_findings
+        if finding.kind.startswith("unexpected-ignored-workspace-artifact")
+    )
+    assert len(ignored_findings) == 51

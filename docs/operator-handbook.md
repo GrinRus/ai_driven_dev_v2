@@ -355,7 +355,8 @@ it does not allow arbitrary path reads.
 
 For CLI execution, `--log-follow` and `--no-log-follow` control only live forwarding of
 available stdout/stderr. Durable `runtime.log` persistence is unchanged. `aidd run logs`
-prints the full persisted log by default, or its last `N` lines with `--tail --lines N`;
+prints a bounded persisted-log head by default, or selects its last `N` lines from a bounded
+tail with `--tail --lines N`; byte-range and truncation metadata make either limit explicit.
 structured provider and normalized event JSONL remain separate audit artifacts.
 
 For long-running UI jobs, use the right-side **Active Run** panel and the **Timeline** tab.

@@ -346,6 +346,71 @@ def write_executing_stage_metadata(stage: str, work_item: str, run_id: str) -> N
     )
 
 
+def stage_reconcile_terminal(args: list[str]) -> int:
+    stage = args[2]
+    work_item = option(args, "--work-item")
+    run_id = option(args, "--run-id")
+    expected_state = option(args, "--expected-state")
+    reason = option(args, "--reason")
+    root = Path(option(args, "--root", ".aidd"))
+    stage_root = root / "reports" / "runs" / work_item / run_id / "stages" / stage
+    metadata_path = stage_root / "stage-metadata.json"
+    evidence_path = stage_root / "terminal-reconciliation.json"
+    before = json.loads(metadata_path.read_text()) if metadata_path.exists() else None
+    previous_status = None if before is None else before.get("status")
+    reconciled = False
+    if before is None:
+        disposition = "metadata-missing"
+    elif (
+        before.get("run_id") != run_id
+        or before.get("work_item_id") != work_item
+        or before.get("stage") != stage
+    ):
+        disposition = "metadata-identity-mismatch"
+    elif previous_status in {{"succeeded", "failed", "cancelled"}}:
+        disposition = "already-terminal"
+    elif previous_status != expected_state:
+        disposition = "expected-state-mismatch"
+    else:
+        changed_at = "2026-05-25T01:00:00Z"
+        before["status"] = "failed"
+        before["updated_at_utc"] = changed_at
+        before.setdefault("status_history", []).append(
+            {{"status": "failed", "changed_at_utc": changed_at}}
+        )
+        metadata_path.write_text(json.dumps(before, indent=2, sort_keys=True) + "\\n")
+        previous_status = expected_state
+        reconciled = True
+        disposition = "reconciled"
+    after = json.loads(metadata_path.read_text()) if metadata_path.exists() else None
+    payload = {{
+        "schema_version": 1,
+        "work_item": work_item,
+        "run_id": run_id,
+        "stage": stage,
+        "expected_state": expected_state,
+        "reason": reason,
+        "disposition": disposition,
+        "previous_status": previous_status,
+        "reconciled_status": None if after is None else after.get("status"),
+        "reconciled": reconciled,
+        "status_history_count": (
+            0 if after is None else len(after.get("status_history", []))
+        ),
+        "recorded_at_utc": (
+            "2026-05-25T01:00:00Z"
+            if reconciled
+            else "2026-05-25T01:00:01Z"
+        ),
+        "metadata_path": metadata_path.as_posix(),
+        "evidence_path": evidence_path.as_posix(),
+    }}
+    evidence_path.parent.mkdir(parents=True, exist_ok=True)
+    evidence_path.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\\n")
+    print(json.dumps(payload, sort_keys=True))
+    return 0
+
+
 def write_adapter_timeout_stage_artifacts(stage: str, work_item: str, run_id: str) -> None:
     stage_workspace_root = Path(".aidd") / "workitems" / work_item / "stages" / stage
     stage_workspace_root.mkdir(parents=True, exist_ok=True)
@@ -840,6 +905,8 @@ def main() -> int:
         return 0
     if args[:1] == ["ui"]:
         return ui(args)
+    if args[:2] == ["stage", "reconcile-terminal"]:
+        return stage_reconcile_terminal(args)
     if args[:2] == ["stage", "run"]:
         return stage_run(args)
     if INSPECT_FAIL_COMMAND and " ".join(args[:2]) == INSPECT_FAIL_COMMAND:
@@ -880,6 +947,7 @@ def _write_scenario_manifest(
     verify_commands: tuple[str, ...] = (
         "test -f .aidd/workitems/WI-LIVE-BLACKBOX/stages/qa/output/stage-result.md",
     ),
+    task_verification_commands: tuple[str, ...] = ("git rev-parse --verify HEAD",),
     interview_required: bool = False,
     frontend_checkpoints: bool = True,
     runtime_targets: tuple[str, ...] = ("opencode",),
@@ -943,7 +1011,7 @@ def _write_scenario_manifest(
                     "target_change": "Produce fake stage evidence.",
                     "expected_scope": "Test fixture only.",
                     "acceptance_criteria": list(acceptance_criteria),
-                    "verification": list(verify_commands),
+                    "verification": list(task_verification_commands),
                     "quality_bar": "Execution evidence is complete.",
                     "size_rationale": "Small test fixture.",
                     **(
@@ -1094,6 +1162,7 @@ def _prepare_live_test(
     verify_commands: tuple[str, ...] = (
         "test -f .aidd/workitems/WI-LIVE-BLACKBOX/stages/qa/output/stage-result.md",
     ),
+    task_verification_commands: tuple[str, ...] = ("git rev-parse --verify HEAD",),
     interview_required: bool = False,
     frontend_checkpoints: bool = True,
     acceptance_criteria: tuple[str, ...] = ("The fake AIDD stages complete.",),
@@ -1153,6 +1222,7 @@ def _prepare_live_test(
         repo_url=source_repo.as_uri(),
         setup_commands=setup_commands,
         verify_commands=verify_commands,
+        task_verification_commands=task_verification_commands,
         interview_required=interview_required,
         frontend_checkpoints=frontend_checkpoints,
         runtime_targets=runtime_targets,
@@ -1301,9 +1371,130 @@ def test_running_frontend_checkpoint_routes_stage_transition_to_post_stage(
         if checkpoint["phase"] == "post-stage"
     )
     assert running["classification"] == "skipped"
+    assert running["reconciliation_status"] == "superseded-transition"
+    assert running["effective_classification"] == "pass"
     assert running["observed_stage_status"] == "succeeded"
     assert "transitioned to `succeeded`" in running["failure_reason"]
     assert post_stage["classification"] == "pass"
+    assert post_stage["reconciliation_status"] == "provisional-pass"
+
+
+@pytest.mark.parametrize("failing_probe", ("dashboard-api", "stage-api"))
+def test_running_frontend_failure_is_superseded_after_durable_success(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    failing_probe: str,
+) -> None:
+    scenario_path, work_root, report_root = _prepare_live_test(tmp_path, monkeypatch)
+    ready_path = tmp_path / f"{failing_probe}.ready"
+    release_path = tmp_path / f"{failing_probe}.release"
+    monkeypatch.setenv("AIDD_FAKE_RUNTIME_BARRIER_STAGE", "idea")
+    monkeypatch.setenv("AIDD_FAKE_RUNTIME_BARRIER_READY_PATH", ready_path.as_posix())
+    monkeypatch.setenv("AIDD_FAKE_RUNTIME_BARRIER_RELEASE_PATH", release_path.as_posix())
+    original_semantic_failure = live_orchestration._frontend_probe_semantic_failure
+    injected = False
+
+    def inject_transition_failure(**kwargs: object) -> str | None:
+        nonlocal injected
+        if (
+            kwargs.get("phase") == "running-stage"
+            and kwargs.get("name") == failing_probe
+            and not injected
+        ):
+            injected = True
+            release_path.write_text("release\n", encoding="utf-8")
+            return "injected transition race"
+        return original_semantic_failure(**kwargs)  # type: ignore[arg-type]
+
+    monkeypatch.setattr(
+        live_orchestration,
+        "_frontend_probe_semantic_failure",
+        inject_transition_failure,
+    )
+
+    result = run_black_box_live_e2e(
+        scenario_path=scenario_path,
+        runtime_id="opencode",
+        work_root=work_root,
+        report_root=report_root,
+    )
+
+    assert result.status == "pass"
+    payload = json.loads(
+        (result.bundle_root / "frontend-checkpoints.json").read_text(encoding="utf-8")
+    )
+    idea_reconciliation = next(
+        item
+        for item in payload["reconciliations"]
+        if item["stage_run_id"] == "stage-0001-idea"
+    )
+    assert idea_reconciliation["running_classification"] == "fail"
+    assert idea_reconciliation["post_stage_classification"] == "pass"
+    assert idea_reconciliation["durable_stage_status"] == "succeeded"
+    assert idea_reconciliation["running_status"] == "superseded-transition"
+    assert idea_reconciliation["effective_classification"] == "pass"
+    running = next(
+        item
+        for item in payload["checkpoints"]
+        if item["stage_run_id"] == "stage-0001-idea"
+        and item["phase"] == "running-stage"
+    )
+    assert running["classification"] == "fail"
+    assert running["reconciliation_status"] == "superseded-transition"
+    audit = json.loads(
+        (result.bundle_root / "stage-audits" / "stage-0001-idea.json").read_text(
+            encoding="utf-8"
+        )
+    )
+    assert audit["classifications"]["frontend_checkpoint"] == "pass"
+
+
+def test_persistent_frontend_outage_is_confirmed_failure(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    scenario_path, work_root, report_root = _prepare_live_test(tmp_path, monkeypatch)
+    ready_path = tmp_path / "persistent-outage.ready"
+    release_path = tmp_path / "persistent-outage.release"
+    monkeypatch.setenv("AIDD_FAKE_RUNTIME_BARRIER_STAGE", "idea")
+    monkeypatch.setenv("AIDD_FAKE_RUNTIME_BARRIER_READY_PATH", ready_path.as_posix())
+    monkeypatch.setenv("AIDD_FAKE_RUNTIME_BARRIER_RELEASE_PATH", release_path.as_posix())
+    original_semantic_failure = live_orchestration._frontend_probe_semantic_failure
+
+    def inject_persistent_failure(**kwargs: object) -> str | None:
+        if kwargs.get("name") == "dashboard-api":
+            if kwargs.get("phase") == "running-stage" and not release_path.exists():
+                release_path.write_text("release\n", encoding="utf-8")
+            return "injected persistent outage"
+        return original_semantic_failure(**kwargs)  # type: ignore[arg-type]
+
+    monkeypatch.setattr(
+        live_orchestration,
+        "_frontend_probe_semantic_failure",
+        inject_persistent_failure,
+    )
+
+    result = run_black_box_live_e2e(
+        scenario_path=scenario_path,
+        runtime_id="opencode",
+        work_root=work_root,
+        report_root=report_root,
+    )
+
+    assert result.status == "fail"
+    payload = json.loads(
+        (result.bundle_root / "frontend-checkpoints.json").read_text(encoding="utf-8")
+    )
+    reconciliation = next(
+        item
+        for item in payload["reconciliations"]
+        if item["stage_run_id"] == "stage-0001-idea"
+    )
+    assert reconciliation["running_classification"] == "fail"
+    assert reconciliation["post_stage_classification"] == "fail"
+    assert reconciliation["running_status"] == "confirmed-fail"
+    assert reconciliation["post_stage_status"] == "confirmed-fail"
+    assert reconciliation["effective_classification"] == "fail"
 
 
 def _write_stage_quality_audit(
@@ -1513,6 +1704,7 @@ def test_black_box_live_e2e_passes_stepwise_and_writes_flow_artifacts(
         "repair-history.md",
         "install-transcript.json",
         "setup-transcript.json",
+        "target-readiness.json",
         "run-transcript.json",
         "verify-transcript.json",
         "teardown-transcript.json",
@@ -1543,6 +1735,15 @@ def test_black_box_live_e2e_passes_stepwise_and_writes_flow_artifacts(
         for step in run_stage_steps
         for command in step["commands"]
     )
+    assert all(
+        "stdout_text" not in command
+        and (result.bundle_root / command["evidence_path"]).is_file()
+        for step in steps
+        for command in step["commands"]
+    )
+    assert not (
+        result.bundle_root / "canonical-evidence" / "final" / "command-evidence"
+    ).exists()
     assert "black-box" in (result.bundle_root / "harness-metadata.json").read_text(
         encoding="utf-8"
     )
@@ -1770,7 +1971,7 @@ def test_black_box_live_e2e_imports_manual_frontend_evidence_without_gating(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     scenario_path, work_root, report_root = _prepare_live_test(tmp_path, monkeypatch)
-    manual_evidence = tmp_path / "manual-frontend-evidence-source"
+    manual_evidence = tmp_path / "browser" / "manual-frontend-evidence-source"
     screenshot_dir = manual_evidence / "screenshots"
     screenshot_dir.mkdir(parents=True)
     (manual_evidence / "browser-notes.md").write_text(
@@ -2250,6 +2451,35 @@ def test_black_box_live_product_evaluation_failed_remediation_launch_stops_once(
             "stage_run_id": stage_run_id,
             "action": action,
             "failure_reason": "Remediation job ended with status `failed`.",
+            "terminal_evidence": {
+                "schema_version": 1,
+                "work_item": "WI-LIVE-BLACKBOX",
+                "run_id": payload["run_id"],
+                "stage": stage,
+                "attempt_number": 1,
+                "job_status": "failed",
+                "adapter_outcome": "runtime_failure",
+                "runtime_exit": {
+                    "artifact_path": "runtime-exit.json",
+                    "exists": True,
+                    "adapter_outcome": "runtime_failure",
+                    "exit_classification": "non_zero_exit",
+                    "exit_code": 1,
+                    "stop_reason": "runtime_failure",
+                },
+                "durable_mutation_winner": {
+                    "evidence_path": "stage-metadata.json",
+                    "status": "failed",
+                    "changed_at_utc": "2026-07-26T10:00:00Z",
+                },
+                "first_decisive_cause": {
+                    "kind": "adapter-outcome",
+                    "detail": "runtime_failure",
+                    "evidence_path": "runtime-exit.json",
+                },
+                "cancellation": {"requested": False},
+                "operator_wait": {"waiting": False},
+            },
             "job_payload": {
                 "status": "failed",
                 "result": {
@@ -2326,7 +2556,11 @@ def test_black_box_live_product_evaluation_failed_remediation_launch_stops_once(
         (result.bundle_root / "flow-state.json").read_text(encoding="utf-8")
     )
     assert state_payload["status"] == "fail"
-    assert state_payload["error"] == "remediation operator UI job failed"
+    assert state_payload["error"] == "Remediation job ended with status `failed`."
+    assert (
+        state_payload["remediation_terminal_evidence"]["first_decisive_cause"]["detail"]
+        == "runtime_failure"
+    )
 
 
 def test_black_box_live_product_evaluation_reruns_stale_review_then_qa(
@@ -2606,6 +2840,38 @@ def test_black_box_live_product_evaluation_pass_after_all_stage_audits_lists_man
     )
     assert state_payload["status"] == "pass"
     assert state_payload["completed_stages"] == list(STAGES)
+    process_segments = state_payload["process_segments"]
+    assert len(process_segments) >= 3
+    assert [segment["segment_id"] for segment in process_segments] == [
+        f"segment-{index:04d}"
+        for index in range(1, len(process_segments) + 1)
+    ]
+    assert all(segment["finished_at_utc"] for segment in process_segments)
+    assert all(segment["owner_pid"] > 0 for segment in process_segments)
+    assert all(segment["termination_reason"] for segment in process_segments)
+    process_duration = sum(
+        segment["duration_seconds"] for segment in process_segments
+    )
+    run_transcript = json.loads(
+        (result.bundle_root / "run-transcript.json").read_text(encoding="utf-8")
+    )
+    stage_timing = json.loads(
+        (result.bundle_root / "stage-timing.json").read_text(encoding="utf-8")
+    )
+    assert run_transcript["process_segments"] == process_segments
+    assert run_transcript["duration_seconds"] == pytest.approx(process_duration)
+    assert run_transcript["process_segment_duration_seconds"] == pytest.approx(
+        process_duration
+    )
+    assert stage_timing["process_segments"] == process_segments
+    assert stage_timing["summary"]["total_duration_seconds"] == pytest.approx(
+        process_duration
+    )
+    assert stage_timing["summary"]["process_segment_duration_seconds"] == pytest.approx(
+        process_duration
+    )
+    summary = (result.bundle_root / "summary.md").read_text(encoding="utf-8")
+    assert f"{process_duration:.3f}" in summary
     assert "quality_review_required_stage" not in state_payload
     assert "quality_review_required_path" not in state_payload
     assert "quality_review_decision" not in state_payload
@@ -2655,8 +2921,16 @@ def test_black_box_live_product_evaluation_writes_navigation_bundle_summary(
     assert payload["scope"] == "navigation-evidence"
     assert payload["quality_scoring"] == {
         "runner_owned_quality_scoring": False,
-        "summary_computes_counted_clean": False,
+        "summary_derives_counted_clean": True,
         "counted_clean_source": "manual quality-report.md only",
+    }
+    assert payload["acceptance"] == {
+        "execution_pass": True,
+        "quality_reviewed": False,
+        "counted_clean": False,
+        "manual_quality_stop": False,
+        "legacy_degraded": False,
+        "not_clean_reasons": ["manual quality evidence is incomplete"],
     }
     assert [
         item["flow_decision"] for item in payload["stage_quality_audits"]
@@ -2694,6 +2968,42 @@ def test_black_box_live_product_evaluation_writes_navigation_bundle_summary(
     assert "not-runner-owned" in markdown
     assert "manual `quality-report.md` only" in markdown
     assert "`src/untracked-helper.ts`" in markdown
+
+    (result.bundle_root / "flow-quality-report.md").write_text(
+        "# Flow quality\n", encoding="utf-8"
+    )
+    (result.bundle_root / "code-quality-report.md").write_text(
+        "# Code quality\n", encoding="utf-8"
+    )
+    (result.bundle_root / "quality-report.md").write_text(
+        "# Quality\n\n- Final decision: counted-clean\n",
+        encoding="utf-8",
+    )
+    verdict_before = (result.bundle_root / "verdict.md").read_bytes()
+    grader_before = (result.bundle_root / "grader.json").read_bytes()
+
+    refreshed = run_black_box_live_e2e(
+        scenario_path=scenario_path,
+        runtime_id="opencode",
+        work_root=work_root,
+        report_root=report_root,
+        run_id=result.run_id,
+    )
+    refreshed_payload = json.loads(
+        (
+            refreshed.bundle_root / "product-evaluation-bundle-summary.json"
+        ).read_text(encoding="utf-8")
+    )
+    assert refreshed_payload["acceptance"] == {
+        "execution_pass": True,
+        "quality_reviewed": True,
+        "counted_clean": True,
+        "manual_quality_stop": False,
+        "legacy_degraded": False,
+        "not_clean_reasons": [],
+    }
+    assert (refreshed.bundle_root / "verdict.md").read_bytes() == verdict_before
+    assert (refreshed.bundle_root / "grader.json").read_bytes() == grader_before
 
 
 def test_black_box_live_e2e_compacts_setup_baseline_ignored_files_in_stage_context(
@@ -2749,9 +3059,15 @@ def test_black_box_live_e2e_compacts_setup_baseline_ignored_files_in_stage_conte
             encoding="utf-8"
         )
     )
-    assert ".venv/file-79.txt" in evidence_payload["classification"][
-        "baseline_ignored_files"
+    ignored_inventory = evidence_payload["classification"][
+        "baseline_ignored_inventory"
     ]
+    assert ignored_inventory["total_count"] == 80
+    assert ignored_inventory["truncated"] is True
+    assert len(ignored_inventory["sample"]) == 50
+    assert ".venv/file-79.txt" not in ignored_inventory["sample"]
+    assert len(ignored_inventory["sha256"]) == 64
+    assert len(json.dumps(evidence_payload)) < 100_000
 
 
 def test_black_box_live_e2e_records_non_gating_stage_result_validator_mismatch(
@@ -2986,7 +3302,9 @@ def test_black_box_live_e2e_records_non_gating_ignored_workspace_pollution(
         )
     )
     assert set(
-        evidence_payload["classification"]["unexpected_ignored_workspace_files"]
+        evidence_payload["classification"]["unexpected_ignored_workspace_inventory"][
+            "sample"
+        ]
     ) == {
         ".venv/pyvenv.cfg",
         "coverage/index.html",
@@ -3062,7 +3380,9 @@ def test_black_box_live_e2e_cleans_successful_verify_ignored_residue(
             encoding="utf-8"
         )
     )
-    assert evidence_payload["classification"]["unexpected_ignored_workspace_files"] == []
+    assert evidence_payload["classification"]["unexpected_ignored_workspace_inventory"][
+        "total_count"
+    ] == 0
     assert evidence_payload["non_gating_findings"] == []
     target_root = Path(evidence_payload["target_repo_root"])
     assert not (target_root / ".pytest_cache").exists()
@@ -3320,6 +3640,8 @@ def test_black_box_live_e2e_adds_suffix_when_generated_run_id_exists(
 
 def test_black_box_live_e2e_marks_stale_running_run_resumable(tmp_path: Path) -> None:
     report_root = tmp_path / "reports"
+    work_root = tmp_path / "work"
+    scenario_path = tmp_path / "scenario.yaml"
     state_path = report_root / "stale-run" / "flow-state.json"
     state_path.parent.mkdir(parents=True)
     state_path.write_text(
@@ -3331,16 +3653,58 @@ def test_black_box_live_e2e_marks_stale_running_run_resumable(tmp_path: Path) ->
                 "current_stage": "plan",
                 "completed_stages": ["idea", "research"],
                 "evaluator_pid": 99999999,
+                "run_id": "stale-run",
+                "scenario_id": "LIVE-FIXTURE",
+                "scenario_path": scenario_path.resolve().as_posix(),
+                "runtime_id": "opencode",
+                "work_item": "WI-FIXTURE",
+                "report_root": report_root.resolve().as_posix(),
+                "work_root": work_root.resolve().as_posix(),
+                "run_work_root": (work_root.resolve() / "stale-run").as_posix(),
+                "bundle_root": state_path.parent.resolve().as_posix(),
             }
         ),
         encoding="utf-8",
     )
 
-    assert _find_resume_state(report_root=report_root, run_id="stale-run") == state_path
+    assert (
+        _find_resume_state(
+            report_root=report_root,
+            run_id="stale-run",
+            scenario_path=scenario_path,
+            scenario_id="LIVE-FIXTURE",
+            runtime_id="opencode",
+            work_item="WI-FIXTURE",
+            work_root=work_root,
+        )
+        == state_path
+    )
 
     payload = json.loads(state_path.read_text(encoding="utf-8"))
     assert payload["status"] == "interrupted-resumable"
-    assert payload["interruption"]["reason"] == "stale-running-state"
+    assert payload["interruption"]["reason"] == "stale-owner"
+    assert payload["interruption"]["provider_completion_used_as_stage_verdict"] is False
+
+
+def test_black_box_rejects_unsafe_resume_id_before_loading_scenario(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    def _unexpected_scenario_read(*_args: object, **_kwargs: object) -> object:
+        raise AssertionError("scenario must not be read for an unsafe run id")
+
+    monkeypatch.setattr(live_orchestration, "load_scenario", _unexpected_scenario_read)
+
+    with pytest.raises(ValueError, match="run_id must be one plain path component"):
+        live_orchestration._load_or_create_context(
+            scenario_path=tmp_path / "scenario.yaml",
+            runtime_id="opencode",
+            work_root=tmp_path / "work",
+            report_root=tmp_path / "reports",
+            run_id="../escape",
+            enable_next_flow_follow_up_proof=False,
+            manual_frontend_evidence=None,
+        )
 
 
 def test_black_box_command_timeout_kills_child_process_group(tmp_path: Path) -> None:
@@ -4020,7 +4384,15 @@ def test_black_box_live_e2e_reconciles_timed_out_stage_metadata(
     )
     assert audit_payload["stage_state"] == "failed"
     assert audit_payload["stage_metadata_status"] == "failed"
-    assert audit_payload["classifications"]["frontend_checkpoint"] == "skipped"
+    assert audit_payload["classifications"]["frontend_checkpoint"] == "pass"
+    frontend_payload = json.loads(
+        (result.bundle_root / "frontend-checkpoints.json").read_text(encoding="utf-8")
+    )
+    assert frontend_payload["reconciliations"][0]["running_status"] == "provisional-pass"
+    assert (
+        frontend_payload["reconciliations"][0]["post_stage_status"]
+        == "superseded-transition"
+    )
     run_transcript = json.loads(
         (result.bundle_root / "run-transcript.json").read_text(encoding="utf-8")
     )
@@ -4058,8 +4430,8 @@ def test_black_box_live_e2e_marks_provider_no_progress_as_infra_fail(
         "aidd.harness.live_e2e_black_box_orchestration._stage_no_progress_timeout_seconds",
         lambda scenario: 1.0,
     )
-    manual_evidence = tmp_path / "provider-no-progress-browser-evidence"
-    manual_evidence.mkdir()
+    manual_evidence = tmp_path / "browser" / "provider-no-progress-browser-evidence"
+    manual_evidence.mkdir(parents=True)
     (manual_evidence / "browser-notes.md").write_text(
         "# Browser Notes\n\n"
         "- Desktop UI showed the failed idea stage after provider no-progress.\n"
@@ -4226,7 +4598,10 @@ def test_black_box_live_e2e_marks_adapter_timeout_in_run_transcript(
     assert timeout_step["classification"] == "fail"
     assert timeout_step["commands"][0]["timed_out"] is False
     assert timeout_step["commands"][0]["timeout_seconds"] == 14400.0
-    assert "Adapter outcome: timeout" in timeout_step["commands"][0]["stdout_text"]
+    timeout_command = timeout_step["commands"][0]
+    assert "stdout_text" not in timeout_command
+    assert "Adapter outcome: timeout" in timeout_command["stdout_preview"]
+    assert (result.bundle_root / timeout_command["evidence_path"]).is_file()
 
     run_transcript = json.loads(
         (result.bundle_root / "run-transcript.json").read_text(encoding="utf-8")
@@ -4240,7 +4615,8 @@ def test_black_box_live_e2e_marks_adapter_timeout_in_run_transcript(
         "scope": "per-stage-command",
         "stage_command_timeout_seconds": 14400.0,
     }
-    assert run_transcript["commands"][0]["timed_out"] is True
+    assert run_transcript["commands"]
+    assert all("evidence_path" in command for command in run_transcript["commands"])
 
     stage_timing = json.loads(
         (result.bundle_root / "stage-timing.json").read_text(encoding="utf-8")
@@ -4332,6 +4708,46 @@ def test_black_box_live_e2e_reports_setup_infra_failure_and_partial_bundle(
     )
     assert setup_payload["commands"][0]["exit_code"] == 3
     assert (result.bundle_root / "flow-state.json").exists()
+
+
+def test_black_box_live_e2e_detects_target_dependency_before_provider_allocation(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    scenario_path, work_root, report_root = _prepare_live_test(
+        tmp_path,
+        monkeypatch,
+        task_verification_commands=(
+            "python -c 'import definitely_missing_optional_dependency'",
+        ),
+    )
+
+    result = run_black_box_live_e2e(
+        scenario_path=scenario_path,
+        runtime_id="opencode",
+        work_root=work_root,
+        report_root=report_root,
+    )
+
+    assert result.status == "infra-fail"
+    readiness = json.loads(
+        (result.bundle_root / "target-readiness.json").read_text(encoding="utf-8")
+    )
+    assert readiness["classification"] == "target-setup"
+    assert readiness["command_transcripts"][0]["exit_code"] != 0
+    state = json.loads(
+        (result.bundle_root / "flow-state.json").read_text(encoding="utf-8")
+    )
+    assert state["error_classification"] == "target-setup"
+    steps = json.loads(
+        (result.bundle_root / "flow-steps.json").read_text(encoding="utf-8")
+    )
+    assert any(
+        step["action"] == "target-setup"
+        and step["classification"] == "infra-fail"
+        for step in steps
+    )
+    assert all(step["action"] != "run-stage" for step in steps)
 
 
 def test_black_box_live_e2e_reports_install_failure(

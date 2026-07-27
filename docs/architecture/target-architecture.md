@@ -268,8 +268,10 @@ For every stage run:
    include `questions.md` / `answers.md` when present.
 5. Launch the runtime through the selected adapter.
 6. Stream raw runtime logs when the adapter can expose them, and persist raw attempt logs.
-7. Persist structured `runtime.jsonl` and normalized `events.jsonl` attempt artifacts when
-   the selected adapter observes structured JSONL runtime output.
+7. Persist provider-native structured payload in `runtime.jsonl` when the selected adapter
+   observes JSONL output. Persist `events.jsonl` only as the bounded AIDD-owned lifecycle
+   projection with run/stage/attempt identity, timing/outcome, operator references, a runtime
+   evidence pointer, and provider-payload digest.
    Provider-specific native adapters may mark a process `document_complete` only after the
    declared Markdown outputs are present, terminal documents have been updated, and the
    files have settled. This is still raw-log-visible adapter evidence; it does not skip the
@@ -473,9 +475,11 @@ operator while an attempt is running. It does not enable or disable durable evid
 `--no-log-follow` suppresses live forwarding while the attempt still persists its complete raw
 `runtime.log` through the same evidence commit path.
 
-`aidd run logs` reads that persisted `runtime.log`. By default it prints the full selected
-attempt log; `--tail --lines N` prints its last `N` lines. This replay command is independent
-of the live-forwarding choice used when the attempt ran.
+`aidd run logs` reads that persisted `runtime.log` through the shared bounded reader. By
+default it prints a bounded head; `--tail --lines N` selects lines from a bounded tail.
+Both modes report retained byte ranges and truncation while the complete durable file remains
+unchanged. This replay command is independent of the live-forwarding choice used when the
+attempt ran.
 
 Runtime evidence stores:
 

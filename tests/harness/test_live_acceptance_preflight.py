@@ -6,12 +6,29 @@ from pathlib import Path
 
 import pytest
 
+from aidd.harness.live_acceptance_isolation import (
+    LiveAcceptanceIsolationCapability,
+    LiveAcceptanceIsolationError,
+)
 from aidd.harness.live_acceptance_preflight import (
     LiveAcceptancePreflightError,
     assert_tracked_source_unchanged,
     capture_tracked_source_state,
     prepare_live_acceptance_layout,
 )
+
+
+@pytest.fixture(autouse=True)
+def _isolation_capability(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(
+        "aidd.harness.live_acceptance_preflight."
+        "require_live_acceptance_isolation_capability",
+        lambda: LiveAcceptanceIsolationCapability(
+            backend="macos-seatbelt",
+            supported=True,
+            detail="fixture capability",
+        ),
+    )
 
 
 def _git(repository: Path, *args: str) -> None:
@@ -115,9 +132,16 @@ def test_preflight_builds_independent_provider_roots(
         "aidd.harness.live_acceptance_preflight.load_scenario",
         lambda *args, **kwargs: _Scenario(),
     )
+    auth_checks: list[bool] = []
+
+    def _validate_command(*args: object, **kwargs: object) -> _Command:
+        del args
+        auth_checks.append(bool(kwargs["check_provider_auth"]))
+        return _Command()
+
     monkeypatch.setattr(
         "aidd.harness.live_acceptance_preflight.validate_live_runtime_command",
-        lambda *args, **kwargs: _Command(),
+        _validate_command,
     )
 
     external = tmp_path / "external"
@@ -144,6 +168,66 @@ def test_preflight_builds_independent_provider_roots(
         "reports",
         "browser",
     }
+    assert codex.isolation_backend == "macos-seatbelt"
+    assert codex.auth_scope == "provider-private"
+    assert codex.auth_state == "pending-isolated-probe"
+    assert auth_checks == [False, False]
+
+
+def test_preflight_blocks_when_platform_isolation_is_unavailable(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    source = _source_checkout(tmp_path)
+    external = tmp_path / "external"
+    external.mkdir()
+
+    class _Run:
+        stage_start = "idea"
+        stage_end = "qa"
+
+    class _LiveFlow:
+        frontend_checkpoints = True
+
+    class _Scenario:
+        scenario_id = "LIVE-FIXTURE"
+        is_live = True
+        automation_lane = "manual"
+        run = _Run()
+        live_flow = _LiveFlow()
+
+    class _Mode:
+        value = "native"
+
+    class _Command:
+        command = "provider command"
+        execution_mode = _Mode()
+
+    monkeypatch.setattr(
+        "aidd.harness.live_acceptance_preflight.load_scenario",
+        lambda *args, **kwargs: _Scenario(),
+    )
+    monkeypatch.setattr(
+        "aidd.harness.live_acceptance_preflight.validate_live_runtime_command",
+        lambda *args, **kwargs: _Command(),
+    )
+
+    def _unavailable() -> LiveAcceptanceIsolationCapability:
+        raise LiveAcceptanceIsolationError("no supported backend")
+
+    monkeypatch.setattr(
+        "aidd.harness.live_acceptance_preflight."
+        "require_live_acceptance_isolation_capability",
+        _unavailable,
+    )
+
+    with pytest.raises(LiveAcceptancePreflightError, match="isolation is unavailable"):
+        prepare_live_acceptance_layout(
+            source_checkout=source,
+            external_root=external,
+            scenario_path=source / "scenario.yaml",
+            provider_id="codex",
+        )
 
 
 @pytest.mark.skipif(sys.platform.startswith("win"), reason="symlink fixture is POSIX-specific")

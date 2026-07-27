@@ -78,6 +78,7 @@ from aidd.adapters.runtime_events import (
     detect_question_or_pause_events,
     normalize_structured_events,
     persist_adapter_question_events,
+    persist_lifecycle_projection_from_jsonl,
     persist_runtime_event_artifacts,
 )
 from aidd.adapters.runtime_evidence import (
@@ -668,13 +669,19 @@ def _execute_codex(
             cancel_requested=request.cancel_requested,
             live_command=live_command,
         )
+        live_event_artifacts = persist_lifecycle_projection_from_jsonl(
+            attempt_path=attempt_path,
+            source_path=(
+                live_result.runtime_jsonl_path or live_result.events_jsonl_path
+            ),
+        )
         if live_result.run_result is None:
             return RuntimeAdapterExecutionResult(
                 succeeded=live_result.succeeded,
                 status=live_result.status,
                 details=live_result.details,
-                runtime_jsonl_path=live_result.runtime_jsonl_path,
-                events_jsonl_path=live_result.events_jsonl_path,
+                runtime_jsonl_path=live_event_artifacts.runtime_jsonl_path,
+                events_jsonl_path=live_event_artifacts.events_jsonl_path,
                 operator_requests_path=live_result.operator_requests_path,
                 operator_decisions_path=live_result.operator_decisions_path,
                 pending_operator_request_ids=live_result.pending_operator_request_ids,
@@ -702,8 +709,8 @@ def _execute_codex(
             adapter_outcome=adapter_outcome,
             runtime_log_path=evidence.runtime_log_path,
             runtime_exit_metadata_path=evidence.runtime_exit_metadata_path,
-            runtime_jsonl_path=live_result.runtime_jsonl_path,
-            events_jsonl_path=live_result.events_jsonl_path,
+            runtime_jsonl_path=live_event_artifacts.runtime_jsonl_path,
+            events_jsonl_path=live_event_artifacts.events_jsonl_path,
             questions_path=questions_path,
             operator_requests_path=live_result.operator_requests_path,
             operator_decisions_path=live_result.operator_decisions_path,
@@ -897,13 +904,19 @@ def _execute_qwen(
             timeout_seconds=request.timeout_seconds,
             cancel_requested=request.cancel_requested,
         )
+        live_event_artifacts = persist_lifecycle_projection_from_jsonl(
+            attempt_path=attempt_path,
+            source_path=(
+                live_result.runtime_jsonl_path or live_result.events_jsonl_path
+            ),
+        )
         if live_result.run_result is None:
             return RuntimeAdapterExecutionResult(
                 succeeded=live_result.succeeded,
                 status=live_result.status,
                 details=live_result.details,
-                runtime_jsonl_path=live_result.runtime_jsonl_path,
-                events_jsonl_path=live_result.events_jsonl_path,
+                runtime_jsonl_path=live_event_artifacts.runtime_jsonl_path,
+                events_jsonl_path=live_event_artifacts.events_jsonl_path,
                 operator_requests_path=live_result.operator_requests_path,
                 operator_decisions_path=live_result.operator_decisions_path,
                 pending_operator_request_ids=live_result.pending_operator_request_ids,
@@ -931,8 +944,8 @@ def _execute_qwen(
             adapter_outcome=adapter_outcome,
             runtime_log_path=evidence.runtime_log_path,
             runtime_exit_metadata_path=evidence.runtime_exit_metadata_path,
-            runtime_jsonl_path=live_result.runtime_jsonl_path,
-            events_jsonl_path=live_result.events_jsonl_path,
+            runtime_jsonl_path=live_event_artifacts.runtime_jsonl_path,
+            events_jsonl_path=live_event_artifacts.events_jsonl_path,
             questions_path=questions_path,
             operator_requests_path=live_result.operator_requests_path,
             operator_decisions_path=live_result.operator_decisions_path,

@@ -26,8 +26,10 @@ from aidd import __version__
 from aidd.adapters.surface import get_runtime_adapter_surface
 from aidd.application.implementation import aggregate_finalization_port
 from aidd.cli.stage_run import (
+    PreparedStageInteraction,
     StageInteractOptions,
     StageRunOptions,
+    prepare_stage_interaction,
     run_stage_attempt_command,
     run_stage_command,
     run_stage_interact_command,
@@ -43,6 +45,10 @@ from aidd.cli.ui_http import (
     UiResponse,
     _error_response,
     _json_response,
+)
+from aidd.cli.ui_job_evidence import (
+    UiJobEvidenceStatus,
+    build_ui_job_terminal_evidence,
 )
 from aidd.cli.ui_routing import OperatorUiRouter, UiJobDecisionConflict, handler_for
 from aidd.config import AiddConfig, load_config
@@ -162,6 +168,7 @@ from aidd.runtime_permissions import (
 WorkflowRunner = Callable[..., WorkflowRunResult]
 StageRunner = Callable[[StageRunOptions], None]
 StageInteractRunner = Callable[[StageInteractOptions], None]
+StageInteractPreparer = Callable[[StageInteractOptions], PreparedStageInteraction]
 ReadinessProbeProvider = Callable[[AiddConfig], Mapping[str, RuntimeReadinessProbeReport]]
 LocalFolderOpener = Callable[[Path], None]
 
@@ -242,6 +249,8 @@ class _UiRunJob:
     dropped_chunk_bytes: int = 0
     next_chunk_cursor: int = 0
     next_chunk_sequence: int = 1
+    terminal_evidence: dict[str, object] | None = None
+    operator_wait_result: object | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -398,12 +407,14 @@ class UiRunJobStore:
                 )
                 return
             if job.status in _TERMINAL_JOB_STATUSES:
+                self._refresh_terminal_evidence_locked(job)
                 return
             job.status = "completed" if exit_code == 0 else "failed"
             job.exit_code = exit_code
             job.result = result
             job.message = message
             job.updated_at_utc = self._timestamp()
+            self._refresh_terminal_evidence_locked(job)
             self._evict_terminal_locked(self._now_utc())
 
     def fail(self, job_id: str, *, message: str, exit_code: int = 1) -> None:
@@ -416,11 +427,13 @@ class UiRunJobStore:
                 )
                 return
             if job.status in _TERMINAL_JOB_STATUSES:
+                self._refresh_terminal_evidence_locked(job)
                 return
             job.status = "failed"
             job.exit_code = exit_code
             job.message = message
             job.updated_at_utc = self._timestamp()
+            self._refresh_terminal_evidence_locked(job)
             self._evict_terminal_locked(self._now_utc())
 
     def wait_for_operator(
@@ -444,8 +457,10 @@ class UiRunJobStore:
             job.status = "waiting-for-operator"
             job.exit_code = exit_code
             job.result = result
+            job.operator_wait_result = result
             job.message = message
             job.updated_at_utc = self._timestamp()
+            self._refresh_terminal_evidence_locked(job)
 
     def mark_running(self, job_id: str, *, message: str = "running") -> None:
         with self._lock:
@@ -457,12 +472,20 @@ class UiRunJobStore:
             job.result = None
             job.message = message
             job.updated_at_utc = self._timestamp()
+            job.terminal_evidence = None
 
     def set_attempt_path(self, job_id: str, attempt_path: Path) -> None:
         with self._lock:
             job = self._require_job(job_id)
             job.attempt_path = attempt_path.as_posix()
             job.updated_at_utc = self._timestamp()
+            if job.status in {
+                "cancelled",
+                "completed",
+                "failed",
+                "waiting-for-operator",
+            }:
+                self._refresh_terminal_evidence_locked(job)
 
     def correlate(
         self,
@@ -547,6 +570,13 @@ class UiRunJobStore:
         with self._lock:
             self._evict_terminal_locked(self._now_utc())
             job = self._require_job(job_id)
+            if job.status in {
+                "cancelled",
+                "completed",
+                "failed",
+                "waiting-for-operator",
+            }:
+                self._refresh_terminal_evidence_locked(job)
             return self._view_locked(job)
 
     def logs(self, job_id: str, *, cursor: int) -> dict[str, object]:
@@ -676,6 +706,32 @@ class UiRunJobStore:
         job.message = message
         job.cancelled_at_utc = timestamp
         job.updated_at_utc = timestamp
+        self._refresh_terminal_evidence_locked(job)
+
+    @staticmethod
+    def _refresh_terminal_evidence_locked(job: _UiRunJob) -> None:
+        if job.status not in {
+            "cancelled",
+            "completed",
+            "failed",
+            "waiting-for-operator",
+        }:
+            job.terminal_evidence = None
+            return
+        evidence = build_ui_job_terminal_evidence(
+            work_item=job.work_item,
+            run_id=job.run_id,
+            stage=job.stage,
+            status=cast(UiJobEvidenceStatus, job.status),
+            exit_code=job.exit_code,
+            message=job.message,
+            result=job.result,
+            operator_wait_result=job.operator_wait_result,
+            attempt_path=Path(job.attempt_path) if job.attempt_path is not None else None,
+            cancel_requested_at_utc=job.cancel_requested_at_utc,
+            cancelled_at_utc=job.cancelled_at_utc,
+        )
+        job.terminal_evidence = evidence.to_payload()
 
     def _view_locked(self, job: _UiRunJob) -> dict[str, object]:
         if job.status == "cancelled":
@@ -726,6 +782,7 @@ class UiRunJobStore:
             "cancel_requested_at_utc": job.cancel_requested_at_utc,
             "cancelled_at_utc": job.cancelled_at_utc,
             "cancel_state": cancel_state,
+            "terminal_evidence": job.terminal_evidence,
         }
 
     @staticmethod
@@ -1033,11 +1090,15 @@ def _missing_runtime_log_payload(
         "byte_size": 0,
         "start_byte": 0,
         "end_byte": 0,
+        "retained_bytes": 0,
         "requested_bytes": 0,
         "max_bytes": 0,
         "truncated": False,
         "truncated_head": False,
         "truncated_tail": False,
+        "partial_head_line": False,
+        "partial_tail_line": False,
+        "oversized_line": False,
         "available": False,
         "message": message,
     }
@@ -1911,6 +1972,7 @@ class OperatorUiService:
         workflow_runner: WorkflowRunner = run_workflow,
         stage_runner: StageRunner = run_stage_command,
         stage_interact_runner: StageInteractRunner = run_stage_interact_command,
+        stage_interact_preparer: StageInteractPreparer = prepare_stage_interaction,
         readiness_probe_provider: ReadinessProbeProvider = _collect_runtime_readiness_probe_reports,
         folder_opener: LocalFolderOpener = _open_local_folder,
     ) -> None:
@@ -1922,6 +1984,7 @@ class OperatorUiService:
             run_stage_attempt_command if stage_runner is run_stage_command else stage_runner
         )
         self._stage_interact_runner = stage_interact_runner
+        self._stage_interact_preparer = stage_interact_preparer
         self._readiness_probe_provider = readiness_probe_provider
         self._folder_opener = folder_opener
         self._jobs = UiRunJobStore()
@@ -2937,11 +3000,15 @@ class OperatorUiService:
                 "byte_size": summary.byte_size,
                 "start_byte": summary.start_byte,
                 "end_byte": summary.end_byte,
+                "retained_bytes": summary.retained_bytes,
                 "requested_bytes": summary.requested_bytes,
                 "max_bytes": summary.max_bytes,
                 "truncated": summary.truncated,
                 "truncated_head": summary.truncated_head,
                 "truncated_tail": summary.truncated_tail,
+                "partial_head_line": summary.partial_head_line,
+                "partial_tail_line": summary.partial_tail_line,
+                "oversized_line": summary.oversized_line,
                 "available": True,
                 "message": None,
             }
@@ -3313,6 +3380,19 @@ class OperatorUiService:
         target_documents = self._target_documents_from_payload(payload)
         log_follow = bool(payload.get("log_follow", True))
         run_id = str(payload.get("run_id", "")).strip() or None
+        prepared_options = StageInteractOptions(
+            stage=stage,
+            work_item=self.work_item,
+            runtime=runtime,
+            run_id=run_id,
+            root=self.workspace_root,
+            config=self.config_path,
+            request=raw_request.strip(),
+            request_file=None,
+            target_documents=target_documents,
+            log_follow=log_follow,
+        )
+        prepared = self._stage_interact_preparer(prepared_options)
 
         def _target(job_id: str) -> object:
             return self._run_stage_interact(
@@ -3323,11 +3403,31 @@ class OperatorUiService:
                 target_documents=target_documents,
                 log_follow=log_follow,
                 job_id=job_id,
+                prepared=prepared,
             )
 
-        return self._start_job(
-            kind="intervention", stage=stage, target=_target, run_id=run_id
+        job = self._start_job(
+            kind="intervention",
+            stage=stage,
+            target=_target,
+            run_id=prepared.run_id,
         )
+        assert isinstance(job, dict)
+        request = prepared.operator_request
+        return {
+            **job,
+            "operator_request": {
+                "work_item": request.work_item,
+                "run_id": prepared.run_id,
+                "stage": request.stage,
+                "request_id": request.request_id,
+                "request_path": workspace_relative_path(
+                    self.workspace_root,
+                    request.request_path,
+                ),
+                "request_excerpt": request.request_text[:240],
+            },
+        }
 
     def _run_stage(
         self,
@@ -3409,6 +3509,7 @@ class OperatorUiService:
         target_documents: tuple[str, ...],
         log_follow: bool,
         job_id: str,
+        prepared: PreparedStageInteraction,
     ) -> object:
         try:
             self._stage_interact_runner(
@@ -3429,6 +3530,7 @@ class OperatorUiService:
                         text=text,
                     ),
                     cancel_requested=lambda: self._jobs.cancel_requested(job_id),
+                    prepared_interaction=prepared,
                 )
             )
         except typer.Exit as exc:
@@ -3436,7 +3538,7 @@ class OperatorUiService:
             return {
                 "stage": stage,
                 "runtime": runtime,
-                "run_id": run_id,
+                "run_id": prepared.run_id,
                 "target_documents": target_documents,
                 "exit_code": exit_code,
                 "completed": exit_code == 0,
@@ -3444,7 +3546,7 @@ class OperatorUiService:
         return {
             "stage": stage,
             "runtime": runtime,
-            "run_id": run_id,
+            "run_id": prepared.run_id,
             "target_documents": target_documents,
             "exit_code": 0,
             "completed": True,
@@ -3779,6 +3881,26 @@ class OperatorUiService:
             run_id=run_id,
         )
 
+        def _capture_attempt(
+            *,
+            result_work_item: str | None = None,
+            result_run_id: str | None = None,
+            result_stage: str | None = None,
+        ) -> None:
+            selected_work_item = result_work_item or work_item or self.work_item
+            selected_run_id = result_run_id or run_id
+            selected_stage = result_stage or stage
+            if selected_run_id is None or selected_stage is None:
+                return
+            attempt_path = _latest_attempt_path(
+                workspace_root=self.workspace_root,
+                work_item=selected_work_item,
+                run_id=selected_run_id,
+                stage=selected_stage,
+            )
+            if attempt_path is not None:
+                self._jobs.set_attempt_path(job_id, attempt_path)
+
         def _run() -> None:
             self._jobs.append_chunk(
                 job_id,
@@ -3791,13 +3913,25 @@ class OperatorUiService:
                     result_work_item = result.get("work_item")
                     result_run_id = result.get("run_id")
                     result_stage = result.get("stage")
+                    correlated_work_item = (
+                        result_work_item if isinstance(result_work_item, str) else None
+                    )
+                    correlated_run_id = (
+                        result_run_id if isinstance(result_run_id, str) else None
+                    )
+                    correlated_stage = (
+                        result_stage if isinstance(result_stage, str) else None
+                    )
                     self._jobs.correlate(
                         job_id,
-                        work_item=(
-                            result_work_item if isinstance(result_work_item, str) else None
-                        ),
-                        run_id=result_run_id if isinstance(result_run_id, str) else None,
-                        stage=result_stage if isinstance(result_stage, str) else None,
+                        work_item=correlated_work_item,
+                        run_id=correlated_run_id,
+                        stage=correlated_stage,
+                    )
+                    _capture_attempt(
+                        result_work_item=correlated_work_item,
+                        result_run_id=correlated_run_id,
+                        result_stage=correlated_stage,
                     )
                 exit_code = _exit_code_from_result(result)
                 if isinstance(result, Mapping) and bool(result.get("waiting_for_operator")):
@@ -3815,6 +3949,7 @@ class OperatorUiService:
                     message="completed" if exit_code == 0 else "stopped",
                 )
             except Exception as exc:  # pragma: no cover - defensive job boundary
+                _capture_attempt()
                 self._jobs.append_chunk(
                     job_id,
                     stream="system",

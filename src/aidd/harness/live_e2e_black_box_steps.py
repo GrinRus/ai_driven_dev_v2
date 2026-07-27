@@ -13,6 +13,7 @@ from pathlib import Path
 from queue import Empty, Queue
 from typing import Literal, TextIO, cast
 
+from aidd.core.bounded_log_reader import read_bounded_log
 from aidd.harness.runner import HarnessCommandTranscript
 
 StepClassification = Literal[
@@ -74,6 +75,7 @@ def _command_text(command: Sequence[str]) -> str:
 def _run_black_box_command(
     *,
     command: tuple[str, ...],
+    launch_prefix: Sequence[str] = (),
     cwd: Path,
     environment: dict[str, str],
     timeout_seconds: float | None,
@@ -85,6 +87,7 @@ def _run_black_box_command(
     heartbeat_runtime_log_path: Path | None = None,
     heartbeat_stream: TextIO | None = None,
 ) -> BlackBoxCommandResult:
+    launched_command = (*launch_prefix, *command)
     started = time.monotonic()
     timed_out = False
     no_progress = False
@@ -121,7 +124,7 @@ def _run_black_box_command(
 
     try:
         process = subprocess.Popen(
-            command,
+            launched_command,
             cwd=cwd,
             env=environment,
             stdout=subprocess.PIPE,
@@ -256,7 +259,7 @@ def _run_black_box_command(
         cleanup = _stop_process_group_for_streaming(process)
         _join_threads(reader_threads)
         transcript = HarnessCommandTranscript(
-            command=_command_text(command),
+            command=_command_text(launched_command),
             exit_code=130,
             stdout_text="".join(stdout_chunks),
             stderr_text="".join(stderr_chunks),
@@ -264,9 +267,12 @@ def _run_black_box_command(
             timed_out=False,
             timeout_seconds=timeout_seconds,
         )
-        exc.command_result = BlackBoxCommandResult(command=command, transcript=transcript)
+        exc.command_result = BlackBoxCommandResult(
+            command=launched_command,
+            transcript=transcript,
+        )
         exc.cleanup = {
-            "command": list(command),
+            "command": list(launched_command),
             "process_exit_code": cleanup.get("return_code"),
             "terminated_process_group": cleanup.get("terminated_process_group"),
             "signal": exc.signum,
@@ -276,7 +282,7 @@ def _run_black_box_command(
         cleanup = _stop_process_group_for_streaming(process)
         _join_threads(reader_threads)
         transcript = HarnessCommandTranscript(
-            command=_command_text(command),
+            command=_command_text(launched_command),
             exit_code=130,
             stdout_text="".join(stdout_chunks),
             stderr_text="".join(stderr_chunks),
@@ -286,9 +292,12 @@ def _run_black_box_command(
         )
         raise LiveE2EInterrupted(
             "Black-box live E2E interrupted by operator.",
-            command_result=BlackBoxCommandResult(command=command, transcript=transcript),
+            command_result=BlackBoxCommandResult(
+                command=launched_command,
+                transcript=transcript,
+            ),
             cleanup={
-                "command": list(command),
+                "command": list(launched_command),
                 "process_exit_code": cleanup.get("return_code"),
                 "terminated_process_group": cleanup.get("terminated_process_group"),
                 "signal": None,
@@ -304,7 +313,7 @@ def _run_black_box_command(
         raise
     duration_seconds = time.monotonic() - started
     transcript = HarnessCommandTranscript(
-        command=_command_text(command),
+        command=_command_text(launched_command),
         exit_code=exit_code,
         stdout_text=stdout_text,
         stderr_text=stderr_text,
@@ -313,7 +322,7 @@ def _run_black_box_command(
         timeout_seconds=timeout_seconds,
     )
     return BlackBoxCommandResult(
-        command=command,
+        command=launched_command,
         transcript=transcript,
         no_progress=no_progress,
         no_progress_details=no_progress_details,
@@ -350,7 +359,13 @@ def _format_heartbeat_timeout(seconds: float | None) -> str:
 def _runtime_log_heartbeat_label(path: Path | None) -> str:
     if path is None:
         return "n/a"
-    status = "present" if path.exists() else "waiting for first runtime event"
+    status = "waiting for first runtime event"
+    if path.exists():
+        bounded = read_bounded_log(path, mode="tail", requested_bytes=4096)
+        status = (
+            f"present; retained bytes {bounded.start_byte}:{bounded.end_byte}"
+            f"/{bounded.byte_size}"
+        )
     return f"{path.resolve(strict=False).as_posix()} ({status})"
 
 

@@ -46,6 +46,12 @@ Every live E2E run must follow the installed full-flow operator model:
 10. Keep target `.aidd/` rooted inside the target repository.
 11. Preserve install, setup, run, verify, and teardown evidence in the eval bundle.
 12. Write `stage-audits/<stage-run-id>.json` and `.md` after each stage run.
+    If a stage subprocess times out or stops making provider progress while its durable
+    metadata is still non-terminal, the harness must call the installed
+    `aidd stage reconcile-terminal` command with the canonical run identity, expected
+    state, and reason. Only that public compare-and-set application operation may append
+    the terminal `failed` history entry; live harness modules must not import core
+    stage-status persistence.
 13. Preserve `stage-timing.json`, `stage-timing.md`, `self-repair-matrix.json`, and
     `self-repair-matrix.md` so operators can audit step duration, per-attempt runtime windows,
     deterministic repair-probe coverage, terminal document consistency, per-stage command
@@ -129,6 +135,22 @@ uv run python -m aidd.harness.live_e2e_black_box harness/scenarios/live/sqlite-u
   only by passing that exact `--run-id`. If the generated run id already exists,
   the evaluator appends `-r2`, `-r3`, and so on instead of appending to the old
   bundle.
+- Explicit resume validates the run id as one path component and proves report-root
+  containment before checking for state. Symlinked run/state escapes are rejected,
+  and `flow-state.json` must match the requested run, scenario, runtime, work item,
+  report root, and work root before stale-owner reconciliation or resume.
+- Owner inspection is read-only: a durable `running` state whose evaluator PID is gone is
+  projected as `stale-owner` without changing `flow-state.json`. Explicit resume then reloads
+  the state under an exclusive bundle-directory lock, rechecks the complete identity and owner,
+  and atomically records `interrupted-resumable`. Existing active-step, provider events, stage
+  outputs, and attempt evidence are retained; a provider completion event never fabricates a
+  completed-stage verdict or advances `completed_stage_runs`.
+- `flow-state.json` retains one typed process segment for every evaluator ownership interval:
+  segment id, UTC start/finish, duration, owner PID, and termination reason. Quality-review
+  yields, interruption, stale-owner reconciliation, and terminal outcomes close the active
+  segment; explicit resume starts the next segment. Aggregate duration in `stage-timing.json`,
+  `run-transcript.json`, and `summary.md` is the sum of all retained segments and therefore does
+  not reset when evaluator ownership changes.
 - Resume from `awaiting-quality-review` requires the exact audit file named in
   `flow-state.json`, for example `stage-quality-audits/stage-0007-review.md`. If that file is
   missing, the runner refuses the resume instead of advancing the stage loop.
@@ -152,7 +174,8 @@ uv run python -m aidd.harness.live_e2e_black_box harness/scenarios/live/sqlite-u
   `blocked` run. The runner writes `manual-quality-stop.json`,
   `manual-quality-stop.md`, and stop-point `target-workspace-evidence.*`; it does not
   write `verdict.md` or `grader.json` for that manual terminal state.
-- If the evaluator is interrupted, it records `interrupted-resumable` state,
+- If the evaluator is interrupted or a stale owner is atomically reconciled on resume, it
+  records `interrupted-resumable` state,
   attempts to terminate live runtime subprocesses, and requires explicit
   `--run-id` before continuing.
 - `limits.timeout_minutes` is the per-stage hard command timeout. Separately,
@@ -385,11 +408,14 @@ Every live eval bundle must aim to contain:
 - `harness-metadata.json`
 - `flow-state.json`
 - `setup-transcript.json`
+- `target-readiness.json`
 - `run-transcript.json`
 - `verify-transcript.json`
 - `teardown-transcript.json`
 - `stage-audits/<stage-run-id>.json`
 - `stage-audits/<stage-run-id>.md`
+- target `.aidd/reports/runs/<work-item>/<run-id>/stages/<stage>/terminal-reconciliation.json`
+  when an abandoned non-terminal stage is reconciled through the installed public command
 - `stage-quality-audits/<stage-run-id>.md` for each completed `product-evaluation` stage run,
   written manually by the launching agent before resume
 - `target-workspace-evidence.json`
@@ -409,14 +435,24 @@ active stage, readable desktop/mobile topbar labels, failure-appropriate recover
 action, reachable logs/artifacts/questions/answers, next-flow handoff visibility, and no
 horizontal overflow for long paths, log labels, or action copy. The checklist is operator
 guidance only; it is not runner-generated screenshot evidence and not a UI/UX quality gate.
-When the operator passes `--manual-frontend-evidence <path>`, the runner copies that
-operator-supplied file or directory into `manual-frontend-evidence/` and references it
-from `frontend-checkpoints.*` as non-gating evidence for the manual `quality-report.md`.
+When the operator passes `--manual-frontend-evidence <path>`, that source must remain inside
+the provider's authorized `browser/` root derived from the paired work/report roots. The runner
+uses `lstat` containment checks, rejects symlinks and hard links, verifies every copied size and
+SHA-256 digest in a temporary sibling directory, and atomically publishes
+`manual-frontend-evidence/`. Only a verified publication is referenced from
+`frontend-checkpoints.*` as non-gating evidence for the manual `quality-report.md`; an unsafe
+source or interrupted copy leaves no trusted publication.
 When a public stage exposes `preparing`, `executing`, or `validating` metadata while the
 stage command is still alive, `frontend-checkpoints.*` also records a `running-stage`
 phase: disabled `wait-for-stage` next action, active running stage visibility, and runtime
 log affordance, including the pending-log state before `runtime.log` exists. The normal
-`post-stage` phase still records completed stage API and artifact reachability.
+`post-stage` phase still records completed stage API and artifact reachability. A running
+observation is never terminal by itself: it is stored as `provisional-pass` or
+`provisional-fail`, then reconciled against durable stage metadata and the post-stage
+checkpoint. A transition race followed by durable stage success and a passing post-stage
+probe becomes `superseded-transition`; an outage that remains visible after the transition
+becomes `confirmed-fail`. `frontend-checkpoints.json`, its Markdown projection, and the
+corresponding flow-step details retain both the raw and effective classifications.
 
 The runner does not create `flow-quality-report.md`, `code-quality-report.md`,
 `quality-report.md`, `quality-transcript.json`, `acceptance-coverage.*`,
@@ -428,9 +464,28 @@ The runner does not create `flow-quality-report.md`, `code-quality-report.md`,
 The same file carries a `timeout_policy` object that identifies the per-stage command
 budget, currently `scope: "per-stage-command"`. `stage-timing.json` and
 `stage-timing.md` show the actual timeout recorded for each `run-stage` command.
+Command output is materialized once under `command-evidence/`; `flow-steps.json`,
+the lifecycle transcripts, `grader.json`, `run-transcript.json`, and the aggregate
+`runtime.log` projection retain only a relative pointer, SHA-256, exit/duration metadata,
+and bounded previews. Legacy inline command records remain readable.
 `verify-transcript.json` may include `workspace_cleanup` when successful manifest
 verification created known ignored byproducts after QA. That cleanup is limited to
 new verification residue and is execution hygiene before final workspace evidence.
+
+Before the first provider stage command, the evaluator must finish the pinned target
+checkout, bounded dependency setup, and `target-readiness.json`. Readiness runs the
+selected authored task's provider-free verification commands while deferring only checks
+that require later `.aidd` stage/quality artifacts. Relative generated or native command
+paths must already exist and be executable. A missing dependency, prerequisite, command
+failure, or timeout is classified as `target-setup`, persists its transcript, and stops
+before provider allocation.
+
+Remediation launch and rerun evidence reads the typed UI job `terminal_evidence`
+projection instead of reducing every non-success to `job failed`. The live bundle
+retains exact work-item/run/stage/attempt identity, job status, runtime-exit artifact,
+adapter outcome, durable stage-metadata winner, first decisive cause, and
+cancellation/operator-wait details. Missing or mismatched terminal identity fails
+closed before the harness accepts a remediation result.
 
 `target-workspace-evidence.*` compares the target repository snapshot after setup with
 the final workspace state. It is non-gating evidence for manual quality review:
@@ -444,6 +499,9 @@ rather than pollution findings. Evidence that a runtime
 deleted/recreated the prepared checkout or live harness run directories is a run
 integrity and deliverable-quality blocker for manual review. The runner does not
 turn these findings into a quality gate.
+Ignored inventories retain total count, root/type groups, a full-set digest, bounded
+samples, and truncation flags; tracked, modified, deleted, and non-ignored untracked
+product paths remain exact.
 
 For terminal `product-evaluation` bundles, `product-evaluation-bundle-summary.*`
 is generated as a read-only index over existing evidence: stage-quality audit
@@ -451,8 +509,10 @@ presence and decisions, remediation source ids, repair counts, tracked and
 untracked product files, known harness files, final report presence, and terminal
 flow-state/verdict consistency. The summary is navigation evidence, not
 runner-owned quality scoring. It does not update `verdict.md`, `grader.json`,
-`flow-quality-report.md`, `code-quality-report.md`, or `quality-report.md`, and it
-does not compute `counted-clean`. Manual `quality-report.md` remains the only final counted-clean decision.
+`flow-quality-report.md`, `code-quality-report.md`, or `quality-report.md`. It derives
+execution, review, counted-clean, manual-stop, and legacy-degraded flags from primary
+evidence. Manual `quality-report.md` remains the only final counted-clean decision.
+The summary only projects it alongside independent execution and provenance signals.
 
 After a terminal run, the launching SWE agent may add manual post-run evidence:
 

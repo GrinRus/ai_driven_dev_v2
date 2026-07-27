@@ -24,6 +24,8 @@ from urllib.error import HTTPError, URLError
 from urllib.parse import urlencode
 from urllib.request import Request, urlopen
 
+from aidd.core.bounded_log_reader import read_bounded_log
+from aidd.core.identifiers import SafeIdentifier
 from aidd.core.markdown import MarkdownSectionIndex
 from aidd.core.next_flow import (
     FollowUpDraftRequest,
@@ -33,7 +35,6 @@ from aidd.core.next_flow import (
 from aidd.core.operator_frontend import resolve_operator_dashboard_view
 from aidd.core.run_store import (
     load_stage_metadata,
-    persist_stage_status,
     run_stage_metadata_path,
 )
 from aidd.core.runtime_operator import (
@@ -45,6 +46,7 @@ from aidd.core.stages import STAGES
 from aidd.evals.reporting import build_scenario_summary_row, write_eval_summary_markdown
 from aidd.evals.repository_changes import (
     LIVE_KNOWN_HARNESS_UNTRACKED_FILES,
+    BoundedPathInventory,
     LiveWorkspaceSnapshot,
     classify_live_workspace_changes,
     collect_live_workspace_snapshot,
@@ -74,6 +76,11 @@ from aidd.harness.install_artifact import (
     HarnessInstallError,
     HarnessInstallResult,
     prepare_local_wheel_install,
+)
+from aidd.harness.live_bundle_manifest import LiveBundleSealInputs, seal_live_bundle
+from aidd.harness.live_command_evidence import (
+    persist_command_evidence,
+    read_command_output,
 )
 from aidd.harness.live_e2e_black_box_reports import (
     _command_transcript_payload as _reports_command_transcript_payload,
@@ -161,11 +168,48 @@ from aidd.harness.live_e2e_quality_policy import (
     StageQualityAuditInput,
     evaluate_quality_policy,
 )
+from aidd.harness.live_evidence_intake import (
+    LiveEvidenceFile,
+    LiveEvidenceIntakeError,
+    intake_live_evidence,
+    validate_live_evidence_publication,
+)
+from aidd.harness.live_flow_timing import (
+    cumulative_process_duration_seconds,
+    format_segment_timestamp,
+)
+from aidd.harness.live_frontend_reconciliation import (
+    FrontendCheckpointReconciliation,
+    apply_frontend_checkpoint_reconciliation,
+    is_nondecisive_provisional_frontend_step,
+    normalize_frontend_probe_classification,
+    provisional_frontend_status,
+    reconcile_frontend_checkpoints,
+)
+from aidd.harness.live_product_summary import derive_live_product_acceptance
+from aidd.harness.live_remediation_evidence import (
+    classify_remediation_terminal_evidence,
+    read_remediation_terminal_evidence,
+)
+from aidd.harness.live_result_bundle import (
+    LiveResultBundleIdentity,
+    materialize_live_result_bundle,
+)
 from aidd.harness.live_runtime_config import (
     validate_live_runtime_command,
     write_live_runtime_config,
 )
+from aidd.harness.live_target_readiness import (
+    DEFAULT_TARGET_READINESS_TIMEOUT_SECONDS,
+    LiveTargetReadinessError,
+    run_live_target_readiness,
+)
+from aidd.harness.live_terminal_reconciliation import (
+    LiveTerminalReconciliationError,
+    run_live_terminal_reconciliation,
+)
 from aidd.harness.live_workspace_bootstrap import bootstrap_live_work_item
+from aidd.harness.process_lifecycle import HarnessLifecycleBudget
 from aidd.harness.repo_prep import (
     PreparedRepository,
     PreparedWorkingCopy,
@@ -217,6 +261,7 @@ from aidd.validators.semantic_rules.evidence import (
 FlowAction = Literal[
     "install",
     "setup",
+    "target-setup",
     "run-stage",
     "inspect-stage",
     "answer-questions",
@@ -262,6 +307,7 @@ NEXT_FLOW_CHECKPOINT_MARKDOWN_FILENAME = "next-flow-checkpoint.md"
 NEXT_FLOW_LINEAGE_FILENAME = "next-flow-lineage.json"
 TARGET_WORKSPACE_EVIDENCE_JSON_FILENAME = "target-workspace-evidence.json"
 TARGET_WORKSPACE_EVIDENCE_MARKDOWN_FILENAME = "target-workspace-evidence.md"
+TARGET_READINESS_FILENAME = "target-readiness.json"
 VERIFY_WORKSPACE_CLEANUP_SCOPE = "post-verify-known-ignored-residue"
 VERIFY_RESIDUE_TOP_LEVEL_DIRS = frozenset(
     {
@@ -424,7 +470,9 @@ def _legacy_write_step_transcript(
 ) -> Path:
     payload: dict[str, object] = {
         "command_count": len(transcripts),
-        "commands": [_command_transcript_payload(transcript) for transcript in transcripts],
+        "commands": [
+            _legacy_command_transcript_payload(transcript) for transcript in transcripts
+        ],
         "duration_seconds": _transcript_duration(transcripts),
         "step": step,
     }
@@ -494,7 +542,13 @@ def _format_heartbeat_duration(seconds: float) -> str:
 def _runtime_log_heartbeat_label(path: Path | None) -> str:
     if path is None:
         return "n/a"
-    status = "present" if path.exists() else "waiting for first runtime event"
+    status = "waiting for first runtime event"
+    if path.exists():
+        bounded = read_bounded_log(path, mode="tail", requested_bytes=4096)
+        status = (
+            f"present; retained bytes {bounded.start_byte}:{bounded.end_byte}"
+            f"/{bounded.byte_size}"
+        )
     return f"{path.resolve(strict=False).as_posix()} ({status})"
 
 
@@ -1159,6 +1213,43 @@ def _markdown_compact_path_summary(
     return lines
 
 
+def _markdown_bounded_inventory_summary(
+    inventory: BoundedPathInventory,
+    *,
+    sample_limit: int,
+    full_list_reference: str,
+) -> list[str]:
+    if inventory.total_count == 0:
+        return ["- none"]
+    sample = list(inventory.sample[:sample_limit])
+    lines = [
+        f"- Count: `{inventory.total_count}`",
+        f"- Full list: `{full_list_reference}`",
+        "- Prefix counts:",
+    ]
+    root_counts: dict[str, int] = {}
+    for group in inventory.groups:
+        root_counts[group.root] = root_counts.get(group.root, 0) + group.count
+    lines.extend(
+        f"  - `{root}`: `{count}`"
+        for root, count in sorted(
+            root_counts.items(),
+            key=lambda item: (-item[1], item[0]),
+        )
+    )
+    if inventory.groups_truncated:
+        lines.append(
+            f"  - additional groups omitted: `{inventory.group_count - len(inventory.groups)}`"
+        )
+    lines.append("- Sample paths:")
+    lines.extend(f"  - `{path}`" for path in sample)
+    omitted_count = max(inventory.total_count - len(sample), 0)
+    if omitted_count:
+        lines.append(f"- Omitted path count: `{omitted_count}`")
+    lines.append(f"- Full-set SHA-256: `{inventory.sha256}`")
+    return lines
+
+
 def _write_target_workspace_baseline_context(ctx: FlowContext) -> None:
     if ctx.target_workspace_baseline_snapshot is None or ctx.prepared_working_copy is None:
         return
@@ -1211,10 +1302,18 @@ def _write_target_workspace_baseline_context(ctx: FlowContext) -> None:
         "",
         "## Baseline Ignored Files",
         "",
-        *_markdown_compact_path_summary(
-            snapshot.ignored_files,
-            sample_limit=BASELINE_CONTEXT_PATH_SAMPLE_LIMIT,
-            full_list_reference="final workspace evidence report after the run",
+        *(
+            _markdown_bounded_inventory_summary(
+                snapshot.ignored_inventory,
+                sample_limit=BASELINE_CONTEXT_PATH_SAMPLE_LIMIT,
+                full_list_reference="final workspace evidence report after the run",
+            )
+            if snapshot.ignored_inventory is not None
+            else _markdown_compact_path_summary(
+                snapshot.ignored_files,
+                sample_limit=BASELINE_CONTEXT_PATH_SAMPLE_LIMIT,
+                full_list_reference="final workspace evidence report after the run",
+            )
         ),
         "",
         "## Setup-Baseline Workspace Files",
@@ -1252,7 +1351,7 @@ def _write_target_workspace_evidence(ctx: FlowContext) -> tuple[Path, ...]:
     )
     final_payload = _live_workspace_snapshot_payload(final_snapshot)
     payload: dict[str, object] = {
-        "schema_version": 1,
+        "schema_version": 2,
         "created_at_utc": _utc_now(),
         "run_id": ctx.run_id,
         "scenario_id": ctx.scenario.scenario_id,
@@ -1290,7 +1389,8 @@ def _write_target_workspace_evidence(ctx: FlowContext) -> tuple[Path, ...]:
             classification.baseline_ignored_files,
             sample_limit=WORKSPACE_EVIDENCE_MARKDOWN_PATH_SAMPLE_LIMIT,
             full_list_reference=(
-                "`target-workspace-evidence.json` field `classification.baseline_ignored_files`"
+                "`target-workspace-evidence.json` field "
+                "`classification.baseline_ignored_inventory`"
             ),
         ),
         "",
@@ -1308,7 +1408,8 @@ def _write_target_workspace_evidence(ctx: FlowContext) -> tuple[Path, ...]:
             classification.new_ignored_files,
             sample_limit=WORKSPACE_EVIDENCE_MARKDOWN_PATH_SAMPLE_LIMIT,
             full_list_reference=(
-                "`target-workspace-evidence.json` field `classification.new_ignored_files`"
+                "`target-workspace-evidence.json` field "
+                "`classification.new_ignored_inventory`"
             ),
         ),
         "- Setup-baseline ignored churn files:",
@@ -1317,7 +1418,7 @@ def _write_target_workspace_evidence(ctx: FlowContext) -> tuple[Path, ...]:
             sample_limit=WORKSPACE_EVIDENCE_MARKDOWN_PATH_SAMPLE_LIMIT,
             full_list_reference=(
                 "`target-workspace-evidence.json` field "
-                "`classification.setup_baseline_ignored_churn_files`"
+                "`classification.setup_baseline_ignored_churn_inventory`"
             ),
         ),
         "",
@@ -1556,17 +1657,20 @@ def _record_step(
         "plan": plan,
         "stage": stage,
         "commands": [
-            {
-                "command": list(result.command),
-                "duration_seconds": result.duration_seconds,
-                "exit_code": result.exit_code,
-                "stderr_text": result.stderr_text,
-                "stdout_text": result.stdout_text,
-                "timed_out": result.transcript.timed_out,
-                "timeout_seconds": result.transcript.timeout_seconds,
-                "no_progress": result.no_progress,
-                "no_progress_details": result.no_progress_details,
-            }
+            persist_command_evidence(
+                bundle_root=ctx.bundle_root,
+                command=result.command,
+                duration_seconds=result.duration_seconds,
+                exit_code=result.exit_code,
+                stderr_text=result.stderr_text,
+                stdout_text=result.stdout_text,
+                timed_out=result.transcript.timed_out,
+                timeout_seconds=result.transcript.timeout_seconds,
+                projection_extra={
+                    "no_progress": result.no_progress,
+                    "no_progress_details": result.no_progress_details,
+                },
+            )
             for result in command_results
         ],
     }
@@ -1882,9 +1986,32 @@ def _load_or_create_context(
     enable_next_flow_follow_up_proof: bool,
     manual_frontend_evidence: Path | None,
 ) -> FlowContext:
+    normalized_run_id = (
+        SafeIdentifier.parse(run_id, label="run_id").value
+        if run_id is not None
+        else None
+    )
+    expected_scenario = (
+        load_scenario(
+            scenario_path,
+            runtime_id=runtime_id,
+            workspace_root=work_root,
+        )
+        if normalized_run_id is not None
+        else None
+    )
     resume_state = _find_resume_state(
         report_root=report_root,
-        run_id=run_id,
+        run_id=normalized_run_id,
+        scenario_path=scenario_path,
+        scenario_id=(
+            expected_scenario.scenario_id if expected_scenario is not None else ""
+        ),
+        runtime_id=runtime_id,
+        work_item=(
+            derive_work_item(expected_scenario) if expected_scenario is not None else ""
+        ),
+        work_root=work_root,
     )
     if resume_state is not None:
         return _context_from_state(
@@ -2193,7 +2320,23 @@ def _record_remediation_job_stop(
     stage: str,
     classification: StepClassification,
     evidence_path: Path,
+    evidence_payload: dict[str, object],
 ) -> StepClassification:
+    terminal_evidence = evidence_payload.get("terminal_evidence")
+    failure_reason = evidence_payload.get("failure_reason")
+    error = (
+        str(failure_reason)
+        if isinstance(failure_reason, str) and failure_reason
+        else "Remediation operator UI job did not produce a successful terminal result."
+    )
+    state_evidence = {
+        "remediation_evidence": evidence_path.as_posix(),
+        **(
+            {"remediation_terminal_evidence": terminal_evidence}
+            if isinstance(terminal_evidence, dict)
+            else {}
+        ),
+    }
     if classification == "blocked":
         _persist_state(
             ctx=ctx,
@@ -2201,7 +2344,7 @@ def _record_remediation_job_stop(
             next_action="answer-questions",
             current_stage=stage,
             completed_stages=_state_completed_stages(ctx.bundle_root),
-            extra={"remediation_evidence": evidence_path.as_posix()},
+            extra=state_evidence,
         )
         return "blocked"
     _persist_state(
@@ -2210,7 +2353,7 @@ def _record_remediation_job_stop(
         next_action="stop",
         current_stage=stage,
         completed_stages=_state_completed_stages(ctx.bundle_root),
-        extra={"error": "remediation operator UI job failed"},
+        extra={"error": error, **state_evidence},
     )
     return "fail"
 
@@ -2291,6 +2434,7 @@ def _handle_quality_remediation_request(
             stage=implement_stage,
             classification=classification,
             evidence_path=evidence_path,
+            evidence_payload=evidence_payload,
         )
     stale_stages = _remediation_stale_stages_from_payload(evidence_payload) or (
         "review",
@@ -2538,6 +2682,14 @@ def _list_payload_value(payload: dict[str, object], key: str) -> list[str]:
     return [str(item) for item in raw if isinstance(item, str)]
 
 
+def _bounded_inventory_count(payload: dict[str, object], key: str) -> int:
+    raw = payload.get(key)
+    if not isinstance(raw, dict):
+        return 0
+    count = raw.get("total_count")
+    return count if isinstance(count, int) and count >= 0 else 0
+
+
 def _target_workspace_bundle_summary(ctx: FlowContext) -> dict[str, object]:
     json_path, markdown_path = _target_workspace_evidence_paths(ctx)
     if not json_path.exists():
@@ -2592,9 +2744,13 @@ def _target_workspace_bundle_summary(ctx: FlowContext) -> dict[str, object]:
             classification,
             "stray_aidd_root_files",
         ),
-        "new_ignored_files_count": len(_list_payload_value(classification, "new_ignored_files")),
-        "setup_baseline_ignored_churn_files_count": len(
-            _list_payload_value(classification, "setup_baseline_ignored_churn_files")
+        "new_ignored_files_count": _bounded_inventory_count(
+            classification,
+            "new_ignored_inventory",
+        ),
+        "setup_baseline_ignored_churn_files_count": _bounded_inventory_count(
+            classification,
+            "setup_baseline_ignored_churn_inventory",
         ),
         "non_gating_findings": findings,
     }
@@ -2684,6 +2840,21 @@ def _product_evaluation_bundle_summary_payload(ctx: FlowContext) -> dict[str, ob
     total_runner_repair_attempts = sum(
         cast(int, audit["runner_repair_attempts"]) for audit in stage_quality_audits
     )
+    final_reports = _final_report_presence(ctx)
+    consistency = _terminal_flow_state_bundle_consistency(ctx)
+    acceptance = derive_live_product_acceptance(
+        flow_status=cast(str | None, consistency["flow_state_status"]),
+        verdict_status=cast(str | None, consistency["verdict_status"]),
+        grader_status=cast(str | None, consistency["grader_execution_status"]),
+        stage_quality_audit_paths=tuple(
+            Path(str(audit["path"])) for audit in stage_quality_audits
+        ),
+        final_report_paths=tuple(
+            Path(str(report["path"])) for report in final_reports
+        ),
+        quality_report_path=ctx.bundle_root / QUALITY_REPORT_FILENAME,
+        legacy_degraded=False,
+    )
     return {
         "schema_version": 1,
         "created_at_utc": _utc_now(),
@@ -2694,8 +2865,16 @@ def _product_evaluation_bundle_summary_payload(ctx: FlowContext) -> dict[str, ob
         "scope": "navigation-evidence",
         "quality_scoring": {
             "runner_owned_quality_scoring": False,
-            "summary_computes_counted_clean": False,
+            "summary_derives_counted_clean": True,
             "counted_clean_source": "manual quality-report.md only",
+        },
+        "acceptance": {
+            "execution_pass": acceptance.execution_pass,
+            "quality_reviewed": acceptance.quality_reviewed,
+            "counted_clean": acceptance.counted_clean,
+            "manual_quality_stop": acceptance.manual_quality_stop,
+            "legacy_degraded": acceptance.legacy_degraded,
+            "not_clean_reasons": list(acceptance.not_clean_reasons),
         },
         "stage_quality_audits": stage_quality_audits,
         "remediation": {
@@ -2725,8 +2904,8 @@ def _product_evaluation_bundle_summary_payload(ctx: FlowContext) -> dict[str, ob
             ],
         },
         "target_workspace": _target_workspace_bundle_summary(ctx),
-        "final_reports": _final_report_presence(ctx),
-        "terminal_flow_state_verdict_consistency": (_terminal_flow_state_bundle_consistency(ctx)),
+        "final_reports": final_reports,
+        "terminal_flow_state_verdict_consistency": consistency,
     }
 
 
@@ -2742,6 +2921,7 @@ def _render_product_evaluation_bundle_summary_markdown(
         dict[str, object],
         payload["terminal_flow_state_verdict_consistency"],
     )
+    acceptance = cast(dict[str, object], payload["acceptance"])
     lines = [
         "# Product Evaluation Bundle Summary",
         "",
@@ -2749,8 +2929,22 @@ def _render_product_evaluation_bundle_summary_markdown(
         f"- Runtime: `{payload['runtime_id']}`",
         f"- Run ID: `{payload['run_id']}`",
         "- Scope: `navigation-evidence`",
-        ("- Quality scoring: `not-runner-owned`; this summary does not compute `counted-clean`."),
+        "- Quality scoring: `not-runner-owned`; acceptance status is derived from "
+        "primary execution and manual quality evidence.",
         "- Counted-clean source: manual `quality-report.md` only.",
+        f"- Execution pass: `{acceptance['execution_pass']}`",
+        f"- Quality reviewed: `{acceptance['quality_reviewed']}`",
+        f"- Counted clean: `{acceptance['counted_clean']}`",
+        f"- Manual quality stop: `{acceptance['manual_quality_stop']}`",
+        f"- Legacy degraded: `{acceptance['legacy_degraded']}`",
+        "- Not-clean reasons:",
+        *(
+            [
+                f"- {reason}"
+                for reason in cast(list[str], acceptance["not_clean_reasons"])
+            ]
+            or ["- none"]
+        ),
         "",
         "## Stage Quality Audits",
         "",
@@ -2832,12 +3026,24 @@ def _write_product_evaluation_bundle_summary(ctx: FlowContext) -> tuple[Path, Pa
         return None
     json_path, markdown_path = _product_evaluation_bundle_summary_paths(ctx)
     payload = _product_evaluation_bundle_summary_payload(ctx)
-    return write_json_markdown_bundle(
+    immutable_primary_paths = (
+        ctx.bundle_root / VERDICT_FILENAME,
+        ctx.bundle_root / GRADER_FILENAME,
+    )
+    immutable_primary_bytes = {
+        path: path.read_bytes() for path in immutable_primary_paths if path.exists()
+    }
+    result = write_json_markdown_bundle(
         json_path=json_path,
         markdown_path=markdown_path,
         payload=payload,
         markdown=_render_product_evaluation_bundle_summary_markdown(payload),
     )
+    if any(path.read_bytes() != content for path, content in immutable_primary_bytes.items()):
+        raise RuntimeError(
+            "Refreshing the product bundle summary changed primary verdict evidence."
+        )
+    return result
 
 
 def _quality_review_request_path_from_state(ctx: FlowContext) -> Path | None:
@@ -2870,7 +3076,7 @@ def _manual_quality_stop_payload(ctx: FlowContext) -> dict[str, object]:
         else stage_name
     )
     return {
-        "schema_version": 1,
+        "schema_version": 2,
         "created_at_utc": _utc_now(),
         "run_id": ctx.run_id,
         "runtime_id": ctx.runtime_id,
@@ -3193,7 +3399,6 @@ def _run_setup(ctx: FlowContext) -> None:
         except (OSError, ValueError, json.JSONDecodeError):
             payload = {}
         if int(payload.get("command_count", 0) or 0) > 0:
-            _capture_target_workspace_baseline(ctx)
             return
     working_copy = _require_working_copy(ctx)
     try:
@@ -3201,6 +3406,9 @@ def _run_setup(ctx: FlowContext) -> None:
             scenario=ctx.scenario,
             working_copy_path=working_copy,
             environment=_harness_environment_for_context(ctx),
+            lifecycle_budget=HarnessLifecycleBudget.start(
+                DEFAULT_TARGET_READINESS_TIMEOUT_SECONDS
+            ),
         )
     except HarnessSetupError as exc:
         transcripts = _transcripts_from_error(exc)
@@ -3245,13 +3453,98 @@ def _run_setup(ctx: FlowContext) -> None:
         plan="Run scenario setup commands in the pinned target repository.",
         evidence_paths=(ctx.bundle_root / SETUP_TRANSCRIPT_FILENAME,),
     )
-    _capture_target_workspace_baseline(ctx)
     _persist_state(
         ctx=ctx,
         status="running",
         next_action="run-stage",
         current_stage=_first_incomplete_stage(ctx),
         completed_stages=_state_completed_stages(ctx.bundle_root),
+    )
+
+
+def _run_target_readiness(ctx: FlowContext) -> None:
+    readiness_path = ctx.bundle_root / TARGET_READINESS_FILENAME
+    if readiness_path.exists():
+        payload = _read_json_object(readiness_path)
+        if payload.get("classification") == "pass":
+            _capture_target_workspace_baseline(ctx)
+            return
+    working_copy = _require_working_copy(ctx)
+    selected_task = _selected_task_for_context(ctx)
+    if selected_task is None:
+        raise RuntimeError("Live scenario selected task is missing.")
+    try:
+        result = run_live_target_readiness(
+            task=selected_task,
+            working_copy_path=working_copy,
+            environment=_harness_environment_for_context(ctx),
+        )
+    except LiveTargetReadinessError as exc:
+        _write_json(readiness_path, exc.result.to_payload())
+        _record_step(
+            ctx=ctx,
+            action="target-setup",
+            classification="infra-fail",
+            decision=(
+                "Stop before provider allocation because target readiness failed."
+            ),
+            plan=(
+                "Run provider-free authored verification smoke after dependency setup."
+            ),
+            command_results=tuple(
+                BlackBoxCommandResult(
+                    command=("/bin/sh", "-c", transcript.command),
+                    transcript=transcript,
+                )
+                for transcript in exc.result.command_transcripts
+            ),
+            evidence_paths=(readiness_path,),
+            details={
+                "error": str(exc),
+                "failure_classification": "target-setup",
+            },
+        )
+        _persist_state(
+            ctx=ctx,
+            status="infra-fail",
+            next_action="stop",
+            current_stage=_first_incomplete_stage(ctx),
+            completed_stages=_state_completed_stages(ctx.bundle_root),
+            extra={
+                "error": str(exc),
+                "error_classification": "target-setup",
+                "target_readiness_evidence": readiness_path.as_posix(),
+            },
+        )
+        raise
+    _write_json(readiness_path, result.to_payload())
+    _capture_target_workspace_baseline(ctx)
+    _record_step(
+        ctx=ctx,
+        action="target-setup",
+        classification="pass",
+        decision="Continue to the first provider stage after target readiness passed.",
+        plan="Run provider-free authored verification smoke after dependency setup.",
+        command_results=tuple(
+            BlackBoxCommandResult(
+                command=("/bin/sh", "-c", transcript.command),
+                transcript=transcript,
+            )
+            for transcript in result.command_transcripts
+        ),
+        evidence_paths=(readiness_path,),
+        details={
+            "deferred_artifact_commands": list(result.deferred_artifact_commands),
+            "failure_classification": None,
+        },
+    )
+    _persist_state(
+        ctx=ctx,
+        status="running",
+        next_action="run-stage",
+        current_stage=_first_incomplete_stage(ctx),
+        completed_stages=_state_completed_stages(ctx.bundle_root),
+        extra={"target_readiness_evidence": readiness_path.as_posix()},
     )
 
 
@@ -3863,26 +4156,62 @@ def _read_frontend_checkpoint_payload(ctx: FlowContext) -> dict[str, object]:
     return payload
 
 
-def _copy_manual_frontend_evidence(
-    *,
-    source: Path,
-    destination_root: Path,
-) -> tuple[str, Path, list[str]]:
-    if source.is_dir():
-        if destination_root.exists():
-            shutil.rmtree(destination_root)
-        shutil.copytree(source, destination_root)
-        files = [
-            item.relative_to(destination_root).as_posix()
-            for item in sorted(destination_root.rglob("*"))
-            if item.is_file()
-        ]
-        return "directory", destination_root, files
+def _authorized_browser_evidence_root(ctx: FlowContext) -> Path:
+    work_root = Path(os.path.abspath(ctx.workspace_root.expanduser()))
+    report_root = Path(os.path.abspath(ctx.report_root.expanduser()))
+    try:
+        provider_root = Path(os.path.commonpath((work_root, report_root)))
+    except ValueError as exc:
+        raise LiveEvidenceIntakeError(
+            "Work and report roots do not share one provider boundary."
+        ) from exc
+    if provider_root == Path(provider_root.anchor):
+        raise LiveEvidenceIntakeError(
+            "Work and report roots do not identify a bounded provider root."
+        )
+    return provider_root / "browser"
 
-    destination_root.mkdir(parents=True, exist_ok=True)
-    destination = destination_root / source.name
-    shutil.copy2(source, destination)
-    return "file", destination, [destination.name]
+
+def _existing_manual_evidence_is_trusted(
+    *,
+    existing: object,
+    destination_root: Path,
+) -> bool:
+    if not isinstance(existing, dict) or existing.get("imported") is not True:
+        return False
+    if existing.get("bundle_path") != destination_root.as_posix():
+        return False
+    raw_directories = existing.get("directories")
+    raw_artifacts = existing.get("artifacts")
+    tree_sha256 = existing.get("tree_sha256")
+    if (
+        not isinstance(raw_directories, list)
+        or not all(isinstance(item, str) for item in raw_directories)
+        or not isinstance(raw_artifacts, list)
+        or not isinstance(tree_sha256, str)
+    ):
+        return False
+    try:
+        artifacts = tuple(
+            LiveEvidenceFile(
+                relative_path=str(item["relative_path"]),
+                size_bytes=int(item["size_bytes"]),
+                sha256=str(item["sha256"]),
+            )
+            for item in raw_artifacts
+            if isinstance(item, dict)
+        )
+        if len(artifacts) != len(raw_artifacts):
+            return False
+        validate_live_evidence_publication(
+            published_root=destination_root,
+            expected_directories=tuple(cast(list[str], raw_directories)),
+            expected_files=artifacts,
+            expected_tree_sha256=tree_sha256,
+        )
+    except (KeyError, TypeError, ValueError, LiveEvidenceIntakeError):
+        return False
+    return True
 
 
 def _manual_frontend_evidence_payload(
@@ -3904,38 +4233,35 @@ def _manual_frontend_evidence_payload(
             ),
         }
 
-    source = ctx.manual_frontend_evidence.resolve(strict=False)
+    source = Path(os.path.abspath(ctx.manual_frontend_evidence.expanduser()))
     destination_root = ctx.bundle_root / MANUAL_FRONTEND_EVIDENCE_DIRNAME
+    try:
+        authorized_root = _authorized_browser_evidence_root(ctx)
+    except LiveEvidenceIntakeError as exc:
+        authorized_root = Path()
+        authorization_error: LiveEvidenceIntakeError | None = exc
+    else:
+        authorization_error = None
     payload: dict[str, object] = {
         "source_path": source.as_posix(),
+        "authorized_root": authorized_root.as_posix(),
         "non_gating": True,
         "quality_report_scope": "manual quality-report.md only",
     }
-    if not source.exists():
-        if (
-            isinstance(existing, dict)
-            and existing.get("imported") is True
-            and isinstance(existing.get("bundle_path"), str)
-        ):
-            return dict(existing)
-        payload.update(
-            {
-                "status": "missing",
-                "imported": False,
-                "bundle_path": destination_root.as_posix(),
-                "message": (
-                    "Operator-supplied manual frontend evidence path was not found. "
-                    "Execution verdict and frontend checkpoint classifications are unchanged."
-                ),
-            }
-        )
-        return payload
+    if _existing_manual_evidence_is_trusted(
+        existing=existing,
+        destination_root=destination_root,
+    ):
+        return dict(cast(dict[str, object], existing))
     try:
-        kind, imported_path, files = _copy_manual_frontend_evidence(
+        if authorization_error is not None:
+            raise authorization_error
+        result = intake_live_evidence(
             source=source,
+            authorized_root=authorized_root,
             destination_root=destination_root,
         )
-    except OSError as exc:
+    except LiveEvidenceIntakeError as exc:
         payload.update(
             {
                 "status": "import-error",
@@ -3951,9 +4277,20 @@ def _manual_frontend_evidence_payload(
         {
             "status": "imported",
             "imported": True,
-            "kind": kind,
-            "bundle_path": imported_path.as_posix(),
-            "files": files,
+            "kind": result.source_kind,
+            "bundle_path": result.published_root.as_posix(),
+            "directories": list(result.directories),
+            "files": [item.relative_path for item in result.files],
+            "artifacts": [
+                {
+                    "relative_path": item.relative_path,
+                    "size_bytes": item.size_bytes,
+                    "sha256": item.sha256,
+                }
+                for item in result.files
+            ],
+            "total_size_bytes": result.total_size_bytes,
+            "tree_sha256": result.tree_sha256,
             "message": (
                 "Operator-supplied browser screenshots or notes were imported as "
                 "manual, non-gating evidence."
@@ -4056,6 +4393,14 @@ def _write_frontend_checkpoint_markdown(ctx: FlowContext, payload: dict[str, obj
                 "",
                 f"- Phase: `{phase}`",
                 f"- Classification: `{checkpoint.get('classification', 'unknown')}`",
+                (
+                    "- Reconciliation status: "
+                    f"`{checkpoint.get('reconciliation_status', 'not-reconciled')}`"
+                ),
+                (
+                    "- Effective classification: "
+                    f"`{checkpoint.get('effective_classification', 'pending')}`"
+                ),
                 f"- Base URL: `{checkpoint.get('base_url', '')}`",
                 f"- Process exit: `{checkpoint.get('process_exit_code', 'n/a')}`",
                 "",
@@ -4080,6 +4425,28 @@ def _write_frontend_checkpoint_markdown(ctx: FlowContext, payload: dict[str, obj
                     continue
                 lines.append(f"  - `{check.get('name', 'check')}`: ok=`{check.get('ok', False)}`")
         lines.append("")
+    reconciliations_raw = payload.get("reconciliations")
+    reconciliations = (
+        reconciliations_raw if isinstance(reconciliations_raw, list) else []
+    )
+    lines.extend(("## Reconciliations", ""))
+    if not reconciliations:
+        lines.append("- none")
+    for raw_reconciliation in reconciliations:
+        if not isinstance(raw_reconciliation, dict):
+            continue
+        lines.extend(
+            (
+                (
+                    f"- `{raw_reconciliation.get('stage_run_id', 'unknown')}`: "
+                    f"running=`{raw_reconciliation.get('running_status', 'not-observed')}` "
+                    f"post-stage=`{raw_reconciliation.get('post_stage_status', 'unknown')}` "
+                    f"effective="
+                    f"`{raw_reconciliation.get('effective_classification', 'unknown')}`"
+                ),
+                f"  - Reason: {raw_reconciliation.get('decisive_reason', '')}",
+            )
+        )
     path = ctx.bundle_root / FRONTEND_CHECKPOINTS_MARKDOWN_FILENAME
     path.write_text("\n".join(lines).rstrip() + "\n", encoding="utf-8")
     return path
@@ -4851,6 +5218,7 @@ def _run_frontend_checkpoint(
     ctx: FlowContext,
     stage: str,
     *,
+    stage_run_id: str | None = None,
     phase: str = "post-stage",
     observed_stage_status: str | None = None,
 ) -> StepClassification:
@@ -4874,6 +5242,10 @@ def _run_frontend_checkpoint(
     except OSError as exc:
         duration_seconds = time.monotonic() - started
         startup_failure_reason = f"Failed to start UI checkpoint process: {exc}"
+        reconciliation_status = provisional_frontend_status(
+            phase=phase,
+            classification="fail",
+        )
         transcript = HarnessCommandTranscript(
             command=_command_text(command),
             exit_code=127,
@@ -4899,7 +5271,9 @@ def _run_frontend_checkpoint(
             "phase": phase,
             "process_exit_code": None,
             "probes": [],
+            "reconciliation_status": reconciliation_status,
             "stage": stage,
+            "stage_run_id": stage_run_id,
         }
         evidence_paths = _append_frontend_checkpoint(ctx=ctx, checkpoint=checkpoint)
         _record_step(
@@ -4911,8 +5285,15 @@ def _run_frontend_checkpoint(
             ),
             classification="fail",
             decision=(
-                "Stop if the stage otherwise passed because UI/API or "
-                "operator-surface checkpoint failed."
+                (
+                    "Keep the running-stage startup failure provisional until durable "
+                    "stage metadata and the post-stage checkpoint can reconcile it."
+                )
+                if phase == "running-stage"
+                else (
+                    "Stop if the stage otherwise passed because UI/API or "
+                    "operator-surface checkpoint failed."
+                )
             ),
             plan=(
                 (
@@ -4929,7 +5310,10 @@ def _run_frontend_checkpoint(
             stage=stage,
             command_results=(BlackBoxCommandResult(command=command, transcript=transcript),),
             evidence_paths=evidence_paths,
-            details={"failure_reason": startup_failure_reason},
+            details={
+                "failure_reason": startup_failure_reason,
+                "reconciliation_status": reconciliation_status,
+            },
         )
         return "fail"
     probes: list[dict[str, object]] = []
@@ -5076,7 +5460,12 @@ def _run_frontend_checkpoint(
         "phase": phase,
         "process_exit_code": process_return_code,
         "probes": probes,
+        "reconciliation_status": provisional_frontend_status(
+            phase=phase,
+            classification=normalize_frontend_probe_classification(classification),
+        ),
         "stage": stage,
+        "stage_run_id": stage_run_id,
     }
     evidence_paths = _append_frontend_checkpoint(ctx=ctx, checkpoint=checkpoint)
     _record_step(
@@ -5088,15 +5477,18 @@ def _run_frontend_checkpoint(
         ),
         classification=classification,
         decision=(
-            "Continue after UI/API and operator-surface checkpoint passed."
-            if classification == "pass"
-            else (
-                "Continue because the running-stage state ended before checkpoint probes could run."
+            (
+                "Keep the running-stage observation provisional until durable stage "
+                "metadata and the post-stage checkpoint can reconcile it."
             )
-            if classification == "skipped" and phase == "running-stage"
+            if phase == "running-stage"
             else (
-                "Stop if the stage otherwise passed because UI/API or "
-                "operator-surface checkpoint failed."
+                "Continue after UI/API and operator-surface checkpoint passed."
+                if classification == "pass"
+                else (
+                    "Stop if the stage otherwise passed because UI/API or "
+                    "operator-surface checkpoint failed."
+                )
             )
         ),
         plan=(
@@ -5114,9 +5506,36 @@ def _run_frontend_checkpoint(
         stage=stage,
         command_results=(BlackBoxCommandResult(command=command, transcript=transcript),),
         evidence_paths=evidence_paths,
-        details={"failure_reason": failure_reason} if failure_reason else None,
+        details={
+            **({"failure_reason": failure_reason} if failure_reason else {}),
+            "reconciliation_status": checkpoint["reconciliation_status"],
+        },
     )
     return classification
+
+
+def _reconcile_frontend_checkpoint_evidence(
+    *,
+    ctx: FlowContext,
+    stage: str,
+    stage_run_id: str,
+    reconciliation: FrontendCheckpointReconciliation,
+) -> tuple[Path, Path]:
+    payload = _read_frontend_checkpoint_payload(ctx)
+    reconciled_at_utc = _utc_now()
+    steps = _load_steps(ctx.bundle_root)
+    apply_frontend_checkpoint_reconciliation(
+        checkpoint_payload=payload,
+        flow_steps=steps,
+        stage=stage,
+        stage_run_id=stage_run_id,
+        reconciled_at_utc=reconciled_at_utc,
+        reconciliation=reconciliation,
+    )
+    json_path = _write_json(ctx.bundle_root / FRONTEND_CHECKPOINTS_JSON_FILENAME, payload)
+    markdown_path = _write_frontend_checkpoint_markdown(ctx, payload)
+    _write_json(ctx.bundle_root / FLOW_STEPS_FILENAME, steps)
+    return json_path, markdown_path
 
 
 def _observed_running_stage_status(ctx: FlowContext, stage: str) -> str | None:
@@ -5165,6 +5584,7 @@ def _run_ui_remediation_job(
     probes: list[dict[str, object]] = []
     post_probe: dict[str, object] | None = None
     job_payload: dict[str, object] | None = None
+    terminal_evidence: dict[str, object] | None = None
     classification: StepClassification = "fail"
     failure_reason: str | None = None
     try:
@@ -5221,17 +5641,32 @@ def _run_ui_remediation_job(
                         if isinstance(raw_job_payload, dict):
                             job_payload = raw_job_payload
                             status = str(raw_job_payload.get("status") or "")
-                            if status == "completed":
-                                classification = "pass"
-                                failure_reason = None
-                                break
-                            if status in {"failed", "cancelled"}:
-                                classification = "fail"
-                                failure_reason = f"Remediation job ended with status `{status}`."
-                                break
-                            if status == "waiting-for-operator":
-                                classification = "blocked"
-                                failure_reason = "Remediation job is waiting for operator input."
+                            if status in {
+                                "cancelled",
+                                "completed",
+                                "failed",
+                                "waiting-for-operator",
+                            }:
+                                try:
+                                    typed_evidence = read_remediation_terminal_evidence(
+                                        raw_job_payload,
+                                        expected_work_item=ctx.work_item,
+                                        expected_run_id=ctx.run_id,
+                                        expected_stage=stage,
+                                    )
+                                except ValueError as exc:
+                                    classification = "fail"
+                                    failure_reason = str(exc)
+                                else:
+                                    terminal_evidence = typed_evidence.payload
+                                    classification = classify_remediation_terminal_evidence(
+                                        typed_evidence
+                                    )
+                                    failure_reason = (
+                                        None
+                                        if classification == "pass"
+                                        else typed_evidence.first_cause_detail
+                                    )
                                 break
                         time.sleep(0.25)
                     else:
@@ -5256,7 +5691,7 @@ def _run_ui_remediation_job(
         timeout_seconds=_stage_command_timeout_seconds(ctx.scenario),
     )
     evidence_payload: dict[str, object] = {
-        "schema_version": 1,
+        "schema_version": 2,
         "created_at_utc": _utc_now(),
         "action": action,
         "classification": classification,
@@ -5270,6 +5705,7 @@ def _run_ui_remediation_job(
         "process_exit_code": process_return_code,
         "post_probe": post_probe,
         "job_payload": job_payload,
+        "terminal_evidence": terminal_evidence,
         "probes": probes,
     }
     evidence_path = _write_json(_remediation_action_path(ctx, action_id), evidence_payload)
@@ -5578,16 +6014,34 @@ def _reconcile_failed_incomplete_stage_run(
         stage=stage,
     )
     previous_status = None if before is None else before.status
-    reconciled = False
-    if previous_status not in TERMINAL_STAGE_METADATA_STATUSES:
-        persist_stage_status(
-            workspace_root=workspace_root,
+    expected_state = (
+        previous_status
+        if previous_status is not None
+        and previous_status not in TERMINAL_STAGE_METADATA_STATUSES
+        else "executing"
+    )
+    operation_payload: dict[str, object]
+    operation_evidence_paths: tuple[Path, ...] = tuple()
+    try:
+        operation_result = run_live_terminal_reconciliation(
+            installed_command=_require_installed_command(ctx),
+            working_copy=working_copy,
+            environment=_harness_environment_for_context(ctx),
             work_item=ctx.work_item,
             run_id=ctx.run_id,
             stage=stage,
-            status="failed",
+            expected_state=expected_state,
+            reason=reason,
         )
-        reconciled = True
+    except LiveTerminalReconciliationError as exc:
+        operation_payload = {
+            "error": str(exc),
+            "reconciled": False,
+        }
+    else:
+        operation_payload = operation_result.payload
+        if operation_result.evidence_path.exists():
+            operation_evidence_paths = (operation_result.evidence_path,)
 
     after = load_stage_metadata(
         workspace_root=workspace_root,
@@ -5596,6 +6050,7 @@ def _reconcile_failed_incomplete_stage_run(
         stage=stage,
     )
     reconciled_status = None if after is None else after.status
+    reconciled = operation_payload.get("reconciled") is True
     payload: dict[str, object] = {
         "schema_version": 1,
         "created_at_utc": _utc_now(),
@@ -5611,10 +6066,11 @@ def _reconcile_failed_incomplete_stage_run(
         "previous_status": previous_status,
         "reconciled_status": reconciled_status,
         "reconciled": reconciled,
+        "terminal_reconciliation": operation_payload,
         **extra,
     }
     _write_json(reconciliation_path, payload)
-    return (reconciliation_path,), payload
+    return (reconciliation_path, *operation_evidence_paths), payload
 
 
 def _validator_verdict_from_text(validator_text: str) -> str:
@@ -6147,19 +6603,27 @@ def _write_operator_action_request(
         "questions_path": questions_path.as_posix(),
         "answers_path": answers_path.as_posix(),
         "selected_task": ctx.selected_task_payload.get("selected_task"),
-        "stage_command": {
-            "command": list(stage_result.command),
-            "exit_code": stage_result.exit_code,
-            "stdout_text": stage_result.stdout_text,
-            "stderr_text": stage_result.stderr_text,
-        },
+        "stage_command": persist_command_evidence(
+            bundle_root=ctx.bundle_root,
+            command=stage_result.command,
+            duration_seconds=stage_result.duration_seconds,
+            exit_code=stage_result.exit_code,
+            stdout_text=stage_result.stdout_text,
+            stderr_text=stage_result.stderr_text,
+            timed_out=stage_result.transcript.timed_out,
+            timeout_seconds=stage_result.transcript.timeout_seconds,
+        ),
         "inspection_commands": [
-            {
-                "command": list(result.command),
-                "exit_code": result.exit_code,
-                "stdout_text": result.stdout_text,
-                "stderr_text": result.stderr_text,
-            }
+            persist_command_evidence(
+                bundle_root=ctx.bundle_root,
+                command=result.command,
+                duration_seconds=result.duration_seconds,
+                exit_code=result.exit_code,
+                stdout_text=result.stdout_text,
+                stderr_text=result.stderr_text,
+                timed_out=result.transcript.timed_out,
+                timeout_seconds=result.transcript.timeout_seconds,
+            )
             for result in inspection_results
         ],
     }
@@ -6388,7 +6852,11 @@ def _inspect_successful_external_stage_run(
         details={"stage_run_id": stage_run_id},
     )
     stage_classification: StepClassification = "blocked" if inspection_reports_blocked else "pass"
-    frontend_classification = _run_frontend_checkpoint(ctx, stage)
+    frontend_classification = _run_frontend_checkpoint(
+        ctx,
+        stage,
+        stage_run_id=stage_run_id,
+    )
     audit_json_path, audit_markdown_path, audit_classification = _write_stage_audit(
         ctx=ctx,
         stage=stage,
@@ -6500,6 +6968,7 @@ def _run_stage_and_inspect(ctx: FlowContext, stage: str) -> StepClassification:
         running_frontend_classification = _run_frontend_checkpoint(
             ctx,
             stage,
+            stage_run_id=stage_run_id,
             phase="running-stage",
             observed_stage_status=observed_status,
         )
@@ -6606,15 +7075,38 @@ def _run_stage_and_inspect(ctx: FlowContext, stage: str) -> StepClassification:
     if inspection_reports_blocked and classification != "infra-fail":
         classification = "blocked"
     post_stage_frontend_classification: StepClassification = (
-        "skipped" if stage_result.transcript.timed_out else _run_frontend_checkpoint(ctx, stage)
-    )
-    frontend_classification = (
-        post_stage_frontend_classification
+        "skipped"
         if stage_result.transcript.timed_out
-        else _combined_frontend_checkpoint_classification(
-            running_frontend_classification,
-            post_stage_frontend_classification,
+        else _run_frontend_checkpoint(
+            ctx,
+            stage,
+            stage_run_id=stage_run_id,
         )
+    )
+    try:
+        durable_stage_status = _observed_stage_status(ctx, stage)
+    except (OSError, json.JSONDecodeError, ValueError):
+        durable_stage_status = None
+    frontend_reconciliation = reconcile_frontend_checkpoints(
+        running_observed=running_frontend_checkpoint_observed,
+        running_classification=normalize_frontend_probe_classification(
+            running_frontend_classification
+        ),
+        post_stage_classification=normalize_frontend_probe_classification(
+            post_stage_frontend_classification
+        ),
+        durable_stage_status=durable_stage_status,
+        stage_classification=classification,
+    )
+    _reconcile_frontend_checkpoint_evidence(
+        ctx=ctx,
+        stage=stage,
+        stage_run_id=stage_run_id,
+        reconciliation=frontend_reconciliation,
+    )
+    frontend_classification = cast(
+        StepClassification,
+        frontend_reconciliation.effective_classification,
     )
     _, _, audit_classification = _write_stage_audit(
         ctx=ctx,
@@ -6779,6 +7271,7 @@ def _run_remediation_rerun_stage(ctx: FlowContext, stage: str) -> StepClassifica
             stage=stage,
             classification=classification,
             evidence_path=evidence_path,
+            evidence_payload=evidence_payload,
         )
     stale_stages = _remediation_stale_stages_from_payload(evidence_payload)
     if not stale_stages:
@@ -6831,6 +7324,25 @@ def _has_timed_out_stage_attempt(ctx: FlowContext) -> bool:
     return False
 
 
+def _process_segments_for_context(ctx: FlowContext) -> list[dict[str, object]]:
+    state = _load_flow_state(ctx.bundle_root)
+    raw_segments = state.get("process_segments")
+    if not isinstance(raw_segments, list):
+        return []
+    return [
+        {str(key): value for key, value in segment.items()}
+        for segment in raw_segments
+        if isinstance(segment, dict)
+    ]
+
+
+def _cumulative_flow_duration_seconds(ctx: FlowContext) -> float:
+    return cumulative_process_duration_seconds(
+        _process_segments_for_context(ctx),
+        observed_at_utc=format_segment_timestamp(),
+    )
+
+
 def _synthetic_aidd_run_result(ctx: FlowContext, exit_code: int) -> HarnessAiddRunResult:
     steps = _load_steps(ctx.bundle_root)
     stdout_lines: list[str] = []
@@ -6844,18 +7356,20 @@ def _synthetic_aidd_run_result(ctx: FlowContext, exit_code: int) -> HarnessAiddR
                 continue
             if command.get("timed_out") is True:
                 timed_out = True
-            stdout = command.get("stdout_text")
-            stderr = command.get("stderr_text")
-            if isinstance(stdout, str) and stdout.strip():
+            stdout, stderr = read_command_output(
+                bundle_root=ctx.bundle_root,
+                command_payload=command,
+            )
+            if stdout.strip():
                 stdout_lines.append(stdout.rstrip())
-            if isinstance(stderr, str) and stderr.strip():
+            if stderr.strip():
                 stderr_lines.append(stderr.rstrip())
     transcript = HarnessCommandTranscript(
         command="black-box-stage-loop",
         exit_code=exit_code,
         stdout_text="\n".join(stdout_lines),
         stderr_text="\n".join(stderr_lines),
-        duration_seconds=max(time.monotonic() - ctx.started, 0.0),
+        duration_seconds=_cumulative_flow_duration_seconds(ctx),
         timed_out=timed_out,
         timeout_seconds=None,
     )
@@ -7070,7 +7584,11 @@ def _first_failure_from_steps(
     for step in steps:
         classification = step.get("classification")
         action = step.get("action")
-        if classification not in classifications or action in {"finish", "stop"}:
+        if (
+            classification not in classifications
+            or action in {"finish", "stop"}
+            or is_nondecisive_provisional_frontend_step(step)
+        ):
             continue
         return _format_failure_step(step)
 
@@ -7078,10 +7596,11 @@ def _first_failure_from_steps(
         for step in steps:
             classification = step.get("classification")
             action = step.get("action")
-            if classification in {"fail", "blocked", "infra-fail"} and action not in {
-                "finish",
-                "stop",
-            }:
+            if (
+                classification in {"fail", "blocked", "infra-fail"}
+                and action not in {"finish", "stop"}
+                and not is_nondecisive_provisional_frontend_step(step)
+            ):
                 return _format_failure_step(step)
     return "none", None
 
@@ -7135,16 +7654,16 @@ def _write_runtime_log_from_steps(ctx: FlowContext) -> Path:
             lines.append(
                 "command="
                 f"{_command_text(tuple(str(item) for item in command.get('command', [])))} "
-                f"exit={command.get('exit_code')}"
+                f"exit={command.get('exit_code')} "
+                f"evidence={command.get('evidence_path', 'legacy-inline')} "
+                f"sha256={command.get('evidence_sha256', 'n/a')}"
             )
-            stdout = command.get("stdout_text")
-            stderr = command.get("stderr_text")
-            if isinstance(stdout, str) and stdout.strip():
-                lines.append("stdout:")
-                lines.extend(stdout.rstrip().splitlines())
-            if isinstance(stderr, str) and stderr.strip():
-                lines.append("stderr:")
-                lines.extend(stderr.rstrip().splitlines())
+            stdout_preview = command.get("stdout_preview")
+            stderr_preview = command.get("stderr_preview")
+            if isinstance(stdout_preview, str) and stdout_preview.strip():
+                lines.append(f"stdout-preview={stdout_preview.rstrip()}")
+            if isinstance(stderr_preview, str) and stderr_preview.strip():
+                lines.append(f"stderr-preview={stderr_preview.rstrip()}")
     path = ctx.bundle_root / RUNTIME_LOG_FILENAME
     path.write_text("\n".join(lines).rstrip() + "\n", encoding="utf-8")
     return path
@@ -7160,7 +7679,10 @@ def _write_validator_report_from_steps(
     if status != "pass":
         for step in _load_steps(ctx.bundle_root):
             classification = step.get("classification")
-            if classification not in {"fail", "blocked", "infra-fail"}:
+            if (
+                classification not in {"fail", "blocked", "infra-fail"}
+                or is_nondecisive_provisional_frontend_step(step)
+            ):
                 continue
             finding_lines.append(
                 f"- `{classification}` in `{step.get('action', 'unknown')}`: "
@@ -7246,7 +7768,7 @@ def _stage_timing_payload_from_flow(
         runtime_id=ctx.runtime_id,
         work_item=ctx.work_item,
         workspace_root=workspace_root,
-        total_duration_seconds=max(time.monotonic() - ctx.started, 0.0),
+        total_duration_seconds=_cumulative_flow_duration_seconds(ctx),
         install_result=ctx.install_result,
         teardown_result=teardown_result,
     )
@@ -7312,6 +7834,14 @@ def _stage_timing_payload_from_flow(
             }
         )
     payload["steps"] = flow_steps
+    process_segments = _process_segments_for_context(ctx)
+    payload["process_segments"] = process_segments
+    summary = payload.get("summary")
+    if isinstance(summary, dict):
+        summary["process_segment_count"] = len(process_segments)
+        summary["process_segment_duration_seconds"] = (
+            _cumulative_flow_duration_seconds(ctx)
+        )
     return payload
 
 
@@ -7766,7 +8296,7 @@ def _finalize_reports(
         scenario_rows=(
             build_scenario_summary_row(
                 verdict=verdict,
-                duration_seconds=max(time.monotonic() - ctx.started, 0.0),
+                duration_seconds=_cumulative_flow_duration_seconds(ctx),
                 failure_boundary="none" if verdict.status == "pass" else "scenario-verification",
             ),
         ),
@@ -7778,6 +8308,7 @@ def _finalize_reports(
     _write_runtime_approval_analysis_placeholder(ctx)
     _write_run_transcript_from_flow(ctx=ctx, exit_code=0 if verdict.status == "pass" else 1)
     _write_product_evaluation_bundle_summary(ctx)
+    _materialize_canonical_live_result(ctx)
     return BlackBoxLiveE2EResult(
         scenario_id=ctx.scenario.scenario_id,
         run_id=ctx.run_id,
@@ -7822,6 +8353,7 @@ def _manual_quality_stop_result(ctx: FlowContext) -> BlackBoxLiveE2EResult:
     _write_target_workspace_evidence(ctx)
     _, manual_stop_markdown_path = _write_manual_quality_stop_artifacts(ctx)
     _write_product_evaluation_bundle_summary(ctx)
+    _materialize_canonical_live_result(ctx)
     return BlackBoxLiveE2EResult(
         scenario_id=ctx.scenario.scenario_id,
         run_id=ctx.run_id,
@@ -7840,19 +8372,70 @@ def _manual_quality_stop_result(ctx: FlowContext) -> BlackBoxLiveE2EResult:
 
 def _write_run_transcript_from_flow(*, ctx: FlowContext, exit_code: int) -> Path:
     result = _synthetic_aidd_run_result(ctx, exit_code=exit_code)
-    return _write_step_transcript(
-        path=ctx.bundle_root / RUN_TRANSCRIPT_FILENAME,
-        step="run",
-        transcripts=(result.command_transcript,),
-        extra={
+    process_segments = _process_segments_for_context(ctx)
+    commands: list[dict[str, object]] = []
+    for step_payload in _load_steps(ctx.bundle_root):
+        raw_commands = step_payload.get("commands")
+        if not isinstance(raw_commands, list):
+            continue
+        commands.extend(
+            {str(key): value for key, value in command.items()}
+            for command in raw_commands
+            if isinstance(command, dict)
+        )
+    return _write_json(
+        ctx.bundle_root / RUN_TRANSCRIPT_FILENAME,
+        {
+            "command_count": len(commands),
+            "commands": commands,
+            "duration_seconds": result.duration_seconds,
             "exit_code": result.exit_code,
+            "process_segment_count": len(process_segments),
+            "process_segments": process_segments,
+            "process_segment_duration_seconds": result.duration_seconds,
             "runtime_id": result.runtime_id,
+            "step": "run",
             "timed_out": result.timed_out,
             "timeout_seconds": result.timeout_seconds,
             "timeout_policy": _timeout_policy_payload(ctx),
             "work_item": result.work_item,
         },
     )
+
+
+def _materialize_canonical_live_result(ctx: FlowContext) -> None:
+    identity = LiveResultBundleIdentity(
+        scenario_id=ctx.scenario.scenario_id,
+        runtime_id=ctx.runtime_id,
+        run_id=ctx.run_id,
+        work_item=ctx.work_item,
+    )
+    materialize_live_result_bundle(
+        bundle_root=ctx.bundle_root,
+        identity=identity,
+        target_root=(
+            None
+            if ctx.prepared_working_copy is None
+            else ctx.prepared_working_copy.working_copy_path
+        ),
+    )
+    if (
+        ctx.source_repository_root is not None
+        and ctx.install_result is not None
+        and ctx.install_result.artifact_path is not None
+        and ctx.install_result.source_revision is not None
+        and ctx.prepared_working_copy is not None
+    ):
+        seal_live_bundle(
+            bundle_root=ctx.bundle_root,
+            inputs=LiveBundleSealInputs(
+                identity=identity,
+                source_repository_root=ctx.source_repository_root,
+                source_commit=ctx.install_result.source_revision,
+                wheel_path=ctx.install_result.artifact_path,
+                target_revision=ctx.prepared_working_copy.resolved_revision,
+            ),
+        )
 
 
 def _blocked_result(ctx: FlowContext) -> BlackBoxLiveE2EResult:
@@ -7939,13 +8522,14 @@ def _blocked_result(ctx: FlowContext) -> BlackBoxLiveE2EResult:
         scenario_rows=(
             build_scenario_summary_row(
                 verdict=verdict,
-                duration_seconds=max(time.monotonic() - ctx.started, 0.0),
+                duration_seconds=_cumulative_flow_duration_seconds(ctx),
                 failure_boundary="scenario-verification",
             ),
         ),
     )
     _write_run_transcript_from_flow(ctx=ctx, exit_code=1)
     _write_product_evaluation_bundle_summary(ctx)
+    _materialize_canonical_live_result(ctx)
     return BlackBoxLiveE2EResult(
         scenario_id=ctx.scenario.scenario_id,
         run_id=ctx.run_id,
@@ -7957,6 +8541,49 @@ def _blocked_result(ctx: FlowContext) -> BlackBoxLiveE2EResult:
         summary_path=ctx.bundle_root / SUMMARY_REPORT_FILENAME,
         first_failure_note=first_failure_note,
         operator_action_request_path=ctx.bundle_root / OPERATOR_REQUEST_MARKDOWN_FILENAME,
+    )
+
+
+def _refresh_terminal_product_evidence(
+    *,
+    ctx: FlowContext,
+    status: VerdictStatus,
+) -> BlackBoxLiveE2EResult:
+    verdict_path = ctx.bundle_root / VERDICT_FILENAME
+    grader_path = ctx.bundle_root / GRADER_FILENAME
+    primary_bytes = {
+        path: path.read_bytes() for path in (verdict_path, grader_path) if path.exists()
+    }
+    _persist_state(
+        ctx=ctx,
+        status=status,
+        next_action="finish" if status == "pass" else "stop",
+        current_stage=None,
+        completed_stages=_state_completed_stages(ctx.bundle_root),
+        extra=_preserved_state_extras(ctx),
+    )
+    _write_product_evaluation_bundle_summary(ctx)
+    if any(path.read_bytes() != content for path, content in primary_bytes.items()):
+        raise RuntimeError("Terminal evidence refresh changed verdict.md or grader.json.")
+    _materialize_canonical_live_result(ctx)
+    first_failure_note = (
+        None if status == "pass" else _first_failure_from_steps(ctx, status=status)[1]
+    )
+    return BlackBoxLiveE2EResult(
+        scenario_id=ctx.scenario.scenario_id,
+        run_id=ctx.run_id,
+        runtime_id=ctx.runtime_id,
+        status=status,
+        bundle_root=ctx.bundle_root,
+        flow_report_path=ctx.bundle_root / FLOW_REPORT_FILENAME,
+        verdict_path=verdict_path,
+        summary_path=ctx.bundle_root / SUMMARY_REPORT_FILENAME,
+        first_failure_note=first_failure_note,
+        operator_action_request_path=(
+            ctx.bundle_root / OPERATOR_REQUEST_MARKDOWN_FILENAME
+            if (ctx.bundle_root / OPERATOR_REQUEST_MARKDOWN_FILENAME).exists()
+            else None
+        ),
     )
 
 
@@ -7995,17 +8622,9 @@ def _run_black_box_live_e2e_with_context(ctx: FlowContext) -> BlackBoxLiveE2ERes
     if status == "manual-quality-stop":
         return _manual_quality_stop_result(ctx)
     if status in TERMINAL_STATUSES:
-        terminal_status = cast(VerdictStatus, status)
-        return _finalize_reports(
+        return _refresh_terminal_product_evidence(
             ctx=ctx,
-            status=terminal_status,
-            summary=(
-                "Refreshed terminal black-box live E2E reports from existing "
-                "execution artifact evidence."
-            ),
-            verification_failed=terminal_status != "pass",
-            teardown_result=None,
-            teardown_error=None,
+            status=cast(VerdictStatus, status),
         )
     quality_gate = _quality_review_gate(ctx)
     if quality_gate == "awaiting-quality-review":
@@ -8079,6 +8698,20 @@ def _run_black_box_live_e2e_with_context(ctx: FlowContext) -> BlackBoxLiveE2ERes
             ctx=ctx,
             status="infra-fail",
             summary=f"Scenario setup failed before black-box stage execution: {exc}",
+            verification_failed=True,
+            teardown_result=None,
+            teardown_error=None,
+        )
+    try:
+        _run_target_readiness(ctx)
+    except LiveTargetReadinessError as exc:
+        return _finalize_reports(
+            ctx=ctx,
+            status="infra-fail",
+            summary=(
+                "Target setup readiness failed before provider allocation: "
+                f"{exc}"
+            ),
             verification_failed=True,
             teardown_result=None,
             teardown_error=None,

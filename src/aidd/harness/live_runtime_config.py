@@ -118,6 +118,7 @@ def validate_live_runtime_command(
     runtime_id: str,
     scenario: Scenario,
     environment: Mapping[str, str] | None = None,
+    check_provider_auth: bool = True,
 ) -> LiveRuntimeCommand:
     source = dict(os.environ)
     if environment is not None:
@@ -157,12 +158,13 @@ def validate_live_runtime_command(
             f"Live runtime command executable is not available for {runtime_id}: "
             f"{tokens[0]!r} (mode={mode_hint}, source={command_entry.source})."
         )
-    _validate_provider_auth_for_native_live_runtime(
-        runtime_id=runtime_id,
-        command_entry=command_entry,
-        source=source,
-        executable=tokens[0],
-    )
+    if check_provider_auth:
+        _validate_provider_auth_for_native_live_runtime(
+            runtime_id=runtime_id,
+            command_entry=command_entry,
+            source=source,
+            executable=tokens[0],
+        )
     return command_entry
 
 

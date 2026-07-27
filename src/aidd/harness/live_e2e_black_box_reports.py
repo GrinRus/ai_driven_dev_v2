@@ -7,6 +7,7 @@ from collections.abc import Sequence
 from pathlib import Path
 from typing import Any
 
+from aidd.harness.live_command_evidence import persist_transcript_evidence
 from aidd.harness.runner import HarnessCommandTranscript
 
 
@@ -45,16 +46,12 @@ def _read_jsonl_objects(path: Path) -> list[dict[str, Any]]:
     return objects
 
 
-def _command_transcript_payload(transcript: HarnessCommandTranscript) -> dict[str, object]:
-    return {
-        "command": transcript.command,
-        "duration_seconds": transcript.duration_seconds,
-        "exit_code": transcript.exit_code,
-        "stderr_text": transcript.stderr_text,
-        "stdout_text": transcript.stdout_text,
-        "timed_out": transcript.timed_out,
-        "timeout_seconds": transcript.timeout_seconds,
-    }
+def _command_transcript_payload(
+    transcript: HarnessCommandTranscript,
+    *,
+    bundle_root: Path,
+) -> dict[str, object]:
+    return persist_transcript_evidence(bundle_root=bundle_root, transcript=transcript)
 
 
 def _transcript_duration(transcripts: tuple[HarnessCommandTranscript, ...]) -> float:
@@ -70,7 +67,10 @@ def _write_step_transcript(
 ) -> Path:
     payload: dict[str, object] = {
         "command_count": len(transcripts),
-        "commands": [_command_transcript_payload(transcript) for transcript in transcripts],
+        "commands": [
+            _command_transcript_payload(transcript, bundle_root=path.parent)
+            for transcript in transcripts
+        ],
         "duration_seconds": _transcript_duration(transcripts),
         "step": step,
     }

@@ -747,7 +747,7 @@ function sameInterventionAction(left, right) {
 }
 
 function clearMatchingInterventionDraft(descriptor) {
-  const record = interventionDraft();
+  const record = readOperatorDraft(descriptor.draftIdentity);
   const value = record?.value || {};
   if (
     String(value.text || "").trim() !== descriptor.request
@@ -785,6 +785,34 @@ function matchingInterventionWinner(dashboard, descriptor) {
     requestPath,
     requestExcerpt: context.latest_request_excerpt,
     dashboard
+  });
+}
+
+function matchingAcceptedInterventionWinner(job, descriptor) {
+  const request = job?.operator_request || {};
+  const requestPath = String(request.request_path || "").replaceAll("\\", "/");
+  const stageRequestSegment = `/stages/${descriptor.stage}/operator-requests/`;
+  const excerpt = descriptor.request.slice(0, 240);
+  if (
+    job?.work_item !== descriptor.workItem
+    || job?.run_id !== descriptor.runId
+    || job?.stage !== descriptor.stage
+    || request.work_item !== descriptor.workItem
+    || request.run_id !== descriptor.runId
+    || request.stage !== descriptor.stage
+    || !request.request_id
+    || request.request_id === descriptor.priorRequestId
+    || !requestPath.includes(stageRequestSegment)
+    || request.request_excerpt !== excerpt
+  ) return null;
+  return Object.freeze({
+    workItem: request.work_item,
+    runId: request.run_id,
+    stage: request.stage,
+    requestId: request.request_id,
+    requestPath,
+    requestExcerpt: request.request_excerpt,
+    dashboard: null
   });
 }
 
@@ -836,11 +864,12 @@ async function submitIntervention() {
       key,
       execute: async () => {
         const job = await postJson("/api/stage/interact", payload);
-        let winner = null;
+        let winner = matchingAcceptedInterventionWinner(job, descriptor);
         let reconciliationError = "";
         try {
+          if (!winner) winner = await readInterventionWinner(descriptor);
+          if (winner) clearMatchingInterventionDraft(descriptor);
           await startJobPolling(job);
-          winner = await readInterventionWinner(descriptor);
         } catch (error) {
           reconciliationError = error.message;
         }

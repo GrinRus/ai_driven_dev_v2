@@ -1595,6 +1595,7 @@ def test_operator_approvals_asset_keeps_request_and_intervention_contracts() -> 
             "function interventionTargetLabel(key)",
             "function updateSubmitInterventionState()",
             "function renderLatestRequestSummary(context)",
+            "function matchingAcceptedInterventionWinner(job, descriptor)",
             "Latest request",
             "interventionReadinessNote",
             "runtimeReadinessMessage()",

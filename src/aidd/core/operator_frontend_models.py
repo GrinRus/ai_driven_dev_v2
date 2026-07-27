@@ -42,11 +42,15 @@ class OperatorRunLogView:
     byte_size: int
     start_byte: int
     end_byte: int
+    retained_bytes: int
     requested_bytes: int
     max_bytes: int
     truncated: bool
     truncated_head: bool
     truncated_tail: bool
+    partial_head_line: bool
+    partial_tail_line: bool
+    oversized_line: bool
 
     @property
     def runtime_log_path(self) -> Path:

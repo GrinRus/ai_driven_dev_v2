@@ -8,9 +8,10 @@ Live E2E has two separate decisions:
 - the launching SWE agent's manual quality decision in
   `.aidd/reports/evals/<run_id>/quality-report.md`.
 
-The runner does not create, parse, validate, or score `quality-report.md`. It also
-does not compute counted-clean status. A missing manual quality report must not
-change a passing execution verdict.
+The runner does not create, validate, or score `quality-report.md`. The derived
+product-bundle summary reads only its explicit final decision to report
+`quality_reviewed` and `counted_clean`; it never changes the primary execution
+verdict. A missing manual quality report must not change a passing execution verdict.
 
 For `product-evaluation` scenarios, the launching SWE agent must also review every
 completed stage run before the runner may continue. The runner stops with
@@ -30,6 +31,7 @@ Runner-owned artifacts include:
 
 - `flow-state.json`
 - `flow-steps.json`
+- `command-evidence/`
 - `flow-report.md`
 - `operator-actions.jsonl`
 - `frontend-checkpoints.json`
@@ -74,15 +76,19 @@ They are not a UI/UX audit, not screenshot evidence, and not a quality gate.
 Observed running stages add a `running-stage` checkpoint phase for the disabled
 `wait-for-stage` next action, active running-stage visibility, and runtime-log affordance,
 including the honest pending-log state before `runtime.log` exists. Completed stages keep
-the `post-stage` phase for stage API and artifact reachability.
+the `post-stage` phase for stage API and artifact reachability. Running observations are
+provisional: a raw failure is superseded only by matching durable stage success plus a passing
+post-stage checkpoint, while a repeated post-stage outage is retained as `confirmed-fail`.
 `frontend-checkpoints.md` includes a manual visual review checklist for the launching
 agent: visible next action and active stage, readable desktop/mobile topbar labels,
 failure-appropriate recovery primary action, reachable logs/artifacts/questions/answers,
 and no horizontal overflow for long paths, log labels, or action copy.
 Screenshots and browser notes are optional manual evidence, not runner-generated artifacts.
-When the operator passes `--manual-frontend-evidence <path>`, the runner copies that
-operator-supplied file or directory into `manual-frontend-evidence/` and references it
-from `frontend-checkpoints.*` as non-gating evidence for the manual `quality-report.md`.
+When the operator passes `--manual-frontend-evidence <path>`, the source must be contained by
+the selected provider's `browser/` root. The runner imports only regular, single-link files
+through a digest-verified temporary sibling directory and atomically publishes
+`manual-frontend-evidence/`; rejected paths and partial copies are not trusted or referenced.
+The verified import remains non-gating evidence for the manual `quality-report.md`.
 
 The `stage-audits/<implement-stage-run-id>.*` implement audit separates tracked changed files, new untracked product
 files, known harness/config untracked files, and setup-baseline untracked files. New
@@ -110,6 +116,9 @@ build, dist, or dependency-cache files. New ignored files under an ignored root 
 existed at setup, for example `.venv/.../__pycache__`, are recorded as `setup-baseline ignored churn`
 rather than pollution findings. These findings are non-gating execution
 evidence for manual review; they do not alter `verdict.md` or `grader.json`.
+Ignored inventories retain total count, root/type groups, full-set SHA-256, a bounded
+sample, and truncation flags. Tracked, modified, deleted, and non-ignored untracked
+product paths remain exact.
 
 When manifest `verify.commands` pass but create local ignored byproducts after QA
 has finished, the runner may remove only newly-created known verification residue
@@ -196,8 +205,10 @@ runner-owned quality scoring: use it to find stage-quality audit decisions,
 remediation source ids, repair counts, tracked/untracked product files, known
 harness files, final report presence, and terminal flow-state/verdict consistency.
 It does not change `verdict.md`, `grader.json`, `flow-quality-report.md`,
-`code-quality-report.md`, or `quality-report.md`, and it does not compute
-`counted-clean`. Manual `quality-report.md` remains the only final counted-clean decision.
+`code-quality-report.md`, or `quality-report.md`. It derives `execution_pass`,
+`quality_reviewed`, `counted_clean`, `manual_quality_stop`, and `legacy_degraded`;
+Manual `quality-report.md` remains the only final counted-clean decision. The summary only
+projects that decision alongside the independent execution and provenance signals.
 
 Use this exact structure:
 
@@ -315,7 +326,8 @@ UI only. It does not alter `verdict.md`, `grader.json`, or any runner execution
 status.
 
 The manual `counted-clean` phrase is only a human-authored deliverable-quality
-decision inside `quality-report.md`. AIDD does not parse it. For product-evaluation,
+decision inside `quality-report.md`; AIDD reads it only into the derived bundle summary.
+For product-evaluation,
 `counted-clean` also requires all stage-run quality audits, `code-quality-report.md`, and
 `quality-report.md`; the final report must include `Iteration History` and name every
 remediation request, source id, operator note, stale downstream rerun, and the final

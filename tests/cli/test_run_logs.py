@@ -105,6 +105,36 @@ def test_run_logs_supports_tail_mode(tmp_path: Path) -> None:
     assert "line-3" in result.stdout
 
 
+def test_run_logs_bounds_oversized_persisted_log(tmp_path: Path) -> None:
+    workspace_root = tmp_path / ".aidd"
+    _prepare_run_with_log(
+        workspace_root=workspace_root,
+        log_text="x" * (512 * 1024),
+    )
+
+    result = runner.invoke(
+        app,
+        [
+            "run",
+            "logs",
+            "--work-item",
+            "WI-321",
+            "--stage",
+            "plan",
+            "--root",
+            str(workspace_root),
+            "--run-id",
+            "run-321",
+            "--attempt",
+            "1",
+        ],
+    )
+
+    assert result.exit_code == 0
+    assert "Bounded log view: bytes 0:262144 of 524288" in result.stdout
+    assert len(result.stdout) < 270_000
+
+
 def test_run_logs_prints_rich_markup_like_runtime_log_text_literally(
     tmp_path: Path,
 ) -> None:

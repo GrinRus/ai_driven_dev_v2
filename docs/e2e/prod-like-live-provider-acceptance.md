@@ -24,9 +24,11 @@ source checkout. Each provider gets a fresh subtree with independent `work`, `re
 `--report-root`, and `--manual-frontend-evidence`.
 
 The two providers must not reuse a target clone, `.aidd` workspace, install home, cache, run id,
-answers, task attempts, patch, or evidence bundle. Provider authentication may be inherited from
-the launching operator as documented by the live runner, but credentials are never copied into
-the candidate, target, report, browser, or tracked documentation trees.
+answers, task attempts, patch, or evidence bundle. For a fresh provider root, the launcher may
+seed only the selected runtime's opaque auth snapshot: `.codex/auth.json` for Codex or
+`.claude.json` for Claude Code. It never copies settings, history, sessions, plugins, shell
+snapshots, or the rest of the operator home. Credentials never enter the candidate, target,
+report, browser, bundle, or tracked documentation trees.
 
 Run the provider-neutral gate before `aidd eval doctor` or any live command:
 
@@ -39,8 +41,67 @@ uv run --extra dev python -m aidd.harness.live_acceptance_preflight \
 ```
 
 Repeat it with `--runtime claude-code`. The JSON result supplies the exact independent work,
-report, and browser roots for the black-box command. A failed preflight must not allocate a live
-run.
+report, and browser roots for the black-box command and names the verified isolation backend.
+It reports `auth_scope=provider-private` and `auth_state=pending-isolated-probe`; host
+authentication is not readiness evidence. A failed capability canary is a preflight blocker and
+must not allocate a live run.
+
+Run the evaluator itself through the isolation launcher so the evaluator, installed stage CLI,
+provider runtime, and every descendant share one OS-enforced boundary:
+
+```bash
+provider_root="$AIDD_LIVE_E2E_ROOT/codex"
+uv run --extra dev python -m aidd.harness.live_acceptance_isolation \
+  --source-checkout "$PWD" \
+  --external-root "$AIDD_LIVE_E2E_ROOT" \
+  --provider-root "$provider_root" \
+  --runtime codex \
+  --seed-provider-auth-from-home \
+  -- \
+  python -m aidd.harness.live_e2e_black_box \
+  "$PWD/harness/scenarios/live/hono-non-error-throw-handling.yaml" \
+  --runtime codex \
+  --work-root "$provider_root/work" \
+  --report-root "$provider_root/reports" \
+  --manual-frontend-evidence "$provider_root/browser"
+```
+
+For Claude Code, use a fresh `"$AIDD_LIVE_E2E_ROOT/claude-code"` provider root, set both launcher
+and nested evaluator `--runtime claude-code`, and retain
+`--seed-provider-auth-from-home`. Fresh execution rejects an already allocated provider root,
+including a pre-existing target clone. The seed is copied by the host only after session
+preflight and private-HOME creation. The launcher then runs `codex login status` or
+`claude auth status --json` inside the OS boundary and starts the evaluator only after exit `0`.
+Use `--credential-environment-key` only for an explicitly selected provider credential variable;
+it does not replace the isolated status probe. Use `--tool-read-root` only when the provider
+executable or its read-only dependencies live outside the system tool roots, AIDD source, and
+provider subtree. The launcher rejects a sibling provider tool root.
+
+The child receives an allowlisted environment with private `HOME`, temporary, XDG config, cache,
+data, and state directories. The platform backend permits read-only AIDD source access and
+read/write access to the selected provider subtree, while sibling provider roots and the original
+operator home remain unreadable. Repeat with a fresh provider root and the appropriate explicit
+credential key for the second runtime.
+
+The isolation launcher also owns the mandatory live-acceptance session guard. Before creating
+the provider subtree it captures source commit/tree, tracked bytes, and the exact baseline
+untracked set and bytes. Postflight repeats those checks, validates canonical target/provider
+roots, removes its active-session sentinel, and writes
+`live-acceptance-session.json`. Any new source file, changed tracked or existing untracked bytes,
+target-root symlink, provider overlap, or cleanup failure invalidates the launch even when the
+child command returned success. Resume of an existing provider layout requires both
+`--resume-existing-provider` on the isolation launcher and an explicit nested `--run-id`.
+Resume is incompatible with `--seed-provider-auth-from-home`: it retains the existing private
+auth file and repeats the isolated status probe. Session evidence schema v2 records only runtime,
+seed mode, relative auth destination, probe status, and cleanup status; it never records auth
+payload, operator source path, or credential digest.
+
+Inside each fresh provider root, the evaluator must complete the pinned target clone,
+dependency setup, generated/native command prerequisite checks, and the authored
+provider-free verification smoke before the first paid runtime process starts. Clone Git
+commands, setup, and smoke execution are bounded. `target-readiness.json` classifies any
+missing optional dependency or prerequisite as `target-setup`; such a failure blocks provider
+allocation rather than becoming a provider failure.
 
 ## Product and evaluator boundary
 
@@ -73,7 +134,9 @@ bounded notes or screenshots for active execution, Implement task/finalization e
 Review/QA, and fresh terminal Flow Complete. Conditional recovery or approval states are recorded
 only when they occur naturally. Record console, page, failed-request, overflow, and artifact/log
 reachability observations. Imported browser evidence is manual and does not change the runner
-verdict.
+verdict. The evidence source must stay below the selected provider's exact `browser/` root;
+sibling-provider files, traversal, symlinks, and hard links are rejected before atomic,
+digest-verified publication into the bundle.
 
 After terminal QA, run the manifest verification commands and write `flow-quality-report.md`,
 `code-quality-report.md`, and `quality-report.md`. A run is counted clean only when execution

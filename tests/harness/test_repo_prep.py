@@ -87,6 +87,26 @@ def _init_source_repo(path: Path) -> tuple[str, str]:
     return branch, head
 
 
+def test_live_target_git_commands_are_bounded(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    observed: dict[str, object] = {}
+
+    def fake_run(*args: object, **kwargs: object) -> None:
+        observed.update(kwargs)
+        raise subprocess.TimeoutExpired(cmd=args[0], timeout=float(kwargs["timeout"]))
+
+    monkeypatch.setattr(repo_prep.subprocess, "run", fake_run)
+
+    with pytest.raises(repo_prep.RepoPreparationError, match="timed out"):
+        repo_prep._run_git(  # noqa: SLF001 - bounded git lifecycle contract
+            ["clone", "source", "target"],
+            timeout_seconds=0.01,
+        )
+
+    assert observed["timeout"] == 0.01
+
+
 def test_prepare_scenario_repository_clones_repository(tmp_path: Path) -> None:
     source_repo = tmp_path / "source"
     branch, source_head = _init_source_repo(source_repo)

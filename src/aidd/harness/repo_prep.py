@@ -17,6 +17,9 @@ class RepoPreparationError(RuntimeError):
     """Raised when repository preparation fails."""
 
 
+LIVE_TARGET_GIT_TIMEOUT_SECONDS = 10 * 60.0
+
+
 @dataclass(frozen=True, slots=True)
 class PreparedRepository:
     repo_path: Path
@@ -45,28 +48,50 @@ def _repo_slug(repo_url: str) -> str:
     raise RepoPreparationError(f"Cannot derive repository slug from URL: {repo_url}")
 
 
-def _run_git(args: list[str], *, cwd: Path | None = None) -> None:
-    completed = subprocess.run(
-        ["git", *args],
-        cwd=cwd,
-        capture_output=True,
-        text=True,
-        check=False,
-    )
+def _run_git(
+    args: list[str],
+    *,
+    cwd: Path | None = None,
+    timeout_seconds: float | None = None,
+) -> None:
+    try:
+        completed = subprocess.run(
+            ["git", *args],
+            cwd=cwd,
+            capture_output=True,
+            text=True,
+            check=False,
+            timeout=timeout_seconds,
+        )
+    except subprocess.TimeoutExpired as exc:
+        raise RepoPreparationError(
+            f"Git command timed out after {timeout_seconds:.3f}s: git {' '.join(args)}"
+        ) from exc
     if completed.returncode == 0:
         return
     stderr = completed.stderr.strip() or completed.stdout.strip() or "unknown git error"
     raise RepoPreparationError(stderr)
 
 
-def _git_stdout(args: list[str], *, cwd: Path) -> str:
-    completed = subprocess.run(
-        ["git", *args],
-        cwd=cwd,
-        capture_output=True,
-        text=True,
-        check=False,
-    )
+def _git_stdout(
+    args: list[str],
+    *,
+    cwd: Path,
+    timeout_seconds: float | None = None,
+) -> str:
+    try:
+        completed = subprocess.run(
+            ["git", *args],
+            cwd=cwd,
+            capture_output=True,
+            text=True,
+            check=False,
+            timeout=timeout_seconds,
+        )
+    except subprocess.TimeoutExpired as exc:
+        raise RepoPreparationError(
+            f"Git command timed out after {timeout_seconds:.3f}s: git {' '.join(args)}"
+        ) from exc
     if completed.returncode != 0:
         stderr = completed.stderr.strip() or completed.stdout.strip() or "unknown git error"
         raise RepoPreparationError(stderr)
@@ -174,11 +199,20 @@ def _acquire_cache_lock(*, lock_path: Path) -> Iterator[None]:
         ) from exc
 
 
-def _pin_repository_revision(*, repo_path: Path, scenario: Scenario) -> None:
+def _pin_repository_revision(
+    *,
+    repo_path: Path,
+    scenario: Scenario,
+    timeout_seconds: float | None = None,
+) -> None:
     target_revision = scenario.repo.revision
     if target_revision:
         try:
-            _run_git(["checkout", "--detach", "--force", target_revision], cwd=repo_path)
+            _run_git(
+                ["checkout", "--detach", "--force", target_revision],
+                cwd=repo_path,
+                timeout_seconds=timeout_seconds,
+            )
         except RepoPreparationError as exc:
             raise RepoPreparationError(
                 f"Failed to pin repository to revision '{target_revision}': {exc}"
@@ -191,6 +225,7 @@ def _pin_repository_revision(*, repo_path: Path, scenario: Scenario) -> None:
             _run_git(
                 ["checkout", "--detach", "--force", f"origin/{target_branch}"],
                 cwd=repo_path,
+                timeout_seconds=timeout_seconds,
             )
         except RepoPreparationError as exc:
             raise RepoPreparationError(
@@ -322,10 +357,26 @@ def prepare_live_target_repository(
             source_path=local_source_path,
             repo_path=working_copy_path,
         )
-        _pin_repository_revision(repo_path=working_copy_path, scenario=scenario)
-        resolved_revision = _git_stdout(["rev-parse", "HEAD"], cwd=working_copy_path)
-        _run_git(["reset", "--hard", resolved_revision], cwd=working_copy_path)
-        _run_git(["clean", "-fdx"], cwd=working_copy_path)
+        _pin_repository_revision(
+            repo_path=working_copy_path,
+            scenario=scenario,
+            timeout_seconds=LIVE_TARGET_GIT_TIMEOUT_SECONDS,
+        )
+        resolved_revision = _git_stdout(
+            ["rev-parse", "HEAD"],
+            cwd=working_copy_path,
+            timeout_seconds=LIVE_TARGET_GIT_TIMEOUT_SECONDS,
+        )
+        _run_git(
+            ["reset", "--hard", resolved_revision],
+            cwd=working_copy_path,
+            timeout_seconds=LIVE_TARGET_GIT_TIMEOUT_SECONDS,
+        )
+        _run_git(
+            ["clean", "-fdx"],
+            cwd=working_copy_path,
+            timeout_seconds=LIVE_TARGET_GIT_TIMEOUT_SECONDS,
+        )
         return PreparedWorkingCopy(
             working_copy_path=working_copy_path,
             action=prepared.action,
@@ -341,17 +392,44 @@ def prepare_live_target_repository(
         action = "cloned"
 
     if action == "cloned":
-        _run_git(["clone", "--origin", "origin", scenario.repo.url, working_copy_path.as_posix()])
+        _run_git(
+            ["clone", "--origin", "origin", scenario.repo.url, working_copy_path.as_posix()],
+            timeout_seconds=LIVE_TARGET_GIT_TIMEOUT_SECONDS,
+        )
     else:
         _cleanup_transient_git_files(working_copy_path)
         if local_source_path is None:
-            _run_git(["fetch", "--prune", "origin"], cwd=working_copy_path)
+            _run_git(
+                ["fetch", "--prune", "origin"],
+                cwd=working_copy_path,
+                timeout_seconds=LIVE_TARGET_GIT_TIMEOUT_SECONDS,
+            )
 
-    _pin_repository_revision(repo_path=working_copy_path, scenario=scenario)
-    resolved_revision = _git_stdout(["rev-parse", "HEAD"], cwd=working_copy_path)
-    _run_git(["checkout", "--detach", "--force", resolved_revision], cwd=working_copy_path)
-    _run_git(["reset", "--hard", resolved_revision], cwd=working_copy_path)
-    _run_git(["clean", "-fdx"], cwd=working_copy_path)
+    _pin_repository_revision(
+        repo_path=working_copy_path,
+        scenario=scenario,
+        timeout_seconds=LIVE_TARGET_GIT_TIMEOUT_SECONDS,
+    )
+    resolved_revision = _git_stdout(
+        ["rev-parse", "HEAD"],
+        cwd=working_copy_path,
+        timeout_seconds=LIVE_TARGET_GIT_TIMEOUT_SECONDS,
+    )
+    _run_git(
+        ["checkout", "--detach", "--force", resolved_revision],
+        cwd=working_copy_path,
+        timeout_seconds=LIVE_TARGET_GIT_TIMEOUT_SECONDS,
+    )
+    _run_git(
+        ["reset", "--hard", resolved_revision],
+        cwd=working_copy_path,
+        timeout_seconds=LIVE_TARGET_GIT_TIMEOUT_SECONDS,
+    )
+    _run_git(
+        ["clean", "-fdx"],
+        cwd=working_copy_path,
+        timeout_seconds=LIVE_TARGET_GIT_TIMEOUT_SECONDS,
+    )
 
     return PreparedWorkingCopy(
         working_copy_path=working_copy_path,

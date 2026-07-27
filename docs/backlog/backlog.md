@@ -7,33 +7,14 @@ slice, and local task.
 
 ## Next
 
-- `W36-E7-S4-T38` — Characterize provider sibling-root visibility with an executable canary.
+- `W36-E7-S4-T37` — Prove exact-SHA package, private-auth, bundle, and source readiness.
 
 ## Soon
 
-- `W36-E7-S4-T39` — Enforce provider-private filesystem and environment isolation.
+- `W36-E7-S4-T3` — Run the medium scenario through Codex to a clean terminal result.
 
 ## Parking lot
 
-- `W36-E7-S4-T40` — Contain live run lookup and resume identities before reading state.
-- `W36-E7-S4-T41` — Make live source, target and provider integrity guards mandatory.
-- `W36-E7-S4-T42` — Reconcile abandoned stages through a public application boundary.
-- `W36-E7-S4-T43` — Constrain browser and manual evidence imports to authorized roots.
-- `W36-E7-S4-T44` — Reconcile provisional frontend probes with durable stage state.
-- `W36-E7-S4-T45` — Expose and reconcile stale-owner live flows.
-- `W36-E7-S4-T46` — Accumulate live-flow timing across resumed process segments.
-- `W36-E7-S4-T47` — Persist typed terminal evidence for remediation jobs.
-- `W36-E7-S4-T48` — Preflight target installation and verification prerequisites.
-- `W36-E7-S4-T49` — Materialize a self-contained canonical live evidence bundle.
-- `W36-E7-S4-T50` — Commit the live bundle digest and browser provenance manifest.
-- `W36-E7-S4-T51` — Finalize truthful product-bundle summaries and acceptance status.
-- `W36-E7-S4-T52` — Bound ignored dependency and cache inventories in repository evidence.
-- `W36-E7-S4-T53` — Read persisted runtime-log tails under a byte and memory bound.
-- `W36-E7-S4-T54` — Normalize provider events into a bounded lifecycle projection.
-- `W36-E7-S4-T55` — Reference canonical command evidence from aggregate live reports.
-- `W36-E7-S4-T36` — Re-run the full provider-free Chromium acceptance matrix.
-- `W36-E7-S4-T37` — Prove wheel, doctor and isolation readiness on one candidate SHA.
-- `W36-E7-S4-T3` — Run the medium scenario through Codex to a clean terminal result.
 - `W36-E7-S4-T4` — Repeat the medium scenario through Claude Code from an independent root.
 - `W36-E7-S3-T2` — Record five first-time-operator sessions after initial live hardening.
 - `W36-E7-S3-T3` — Reconcile observed session findings before beta readiness.
@@ -53,6 +34,131 @@ slice, and local task.
   queue-restoration policy in `docs/backlog/roadmap.md` (`W8-E3-S1`).
 
 ## Current reconciliation
+
+- `2026-07-27` `W36-E7-S4-T37` is paused, not complete, on exact source `c5747a0`
+  and tree `2a946c5`. Ruff, mypy across `228` modules, and full pytest `2145/2145`
+  pass. The exact-SHA Chromium run was operator-stopped after `67` passing tests, so it must
+  restart from zero; this is incomplete evidence rather than a browser defect. No new archive,
+  wheel, digest, installed doctor, target readiness, bundle, private-auth, or source-postflight
+  candidate record exists. `T37` remains `Next`, Codex medium acceptance `T3` remains `Soon`,
+  and the live medium scenario has not yet passed.
+
+- `2026-07-27` the post-auth `W36-E7-S4-T36` rerun is complete on clean source
+  `314aedf` and tree `9703b02`: the exact historical matrix passes `4/4`, complete
+  intervention/terminal families pass `24/24`, the twelve packaged journeys pass `79/79` with
+  exact discovered/executed ID parity and no failed ID, and the full Chromium suite passes
+  `188/188`. All five viewports complete without console, page, failed-request, overflow,
+  accessibility, or test-owned process-cleanup failures. Sanitized evidence is recorded in
+  `docs/e2e/operator-ui-provider-free-browser-gate-2026-07-27.md`; exact-SHA readiness `T37`
+  is promoted to `Next` and Codex acceptance `T3` to `Soon`.
+
+- `2026-07-27` `W36-E7-S4-T60` is complete: fresh Codex and Claude Code launchers can
+  seed only their T59 auth file, both status commands run inside the OS boundary before evaluator
+  execution, unseeded private homes return a redacted `provider-auth` blocker, and resume reuses
+  the retained private credential. Preflight now reports private-auth pending rather than trusting
+  host OAuth; session schema v2 records only sanitized auth lifecycle fields. Real Seatbelt tests
+  keep operator HOME and sibling state unreadable and source bytes read-only. Launcher tests pass
+  `17/17`, full harness `378/378`, Ruff, mypy across `228` modules, and full pytest `2145/2145`.
+  The code change invalidates candidate `43d740c`, so browser gate `T36` is promoted to `Next`
+  and exact-SHA readiness `T37` to `Soon`; Codex `T3` and Claude `T4` remain parked.
+
+- `2026-07-27` `W36-E7-S4-T59` is complete: a typed, runtime-allowlisted seed operation
+  copies only Codex `.codex/auth.json` or Claude Code `.claude.json` into a distinct
+  provider-private home through verified staging and atomic publication. It rejects traversal,
+  source/destination symlinks, hard links, oversized or changing files, existing destinations,
+  and injected partial-copy failure; directories are `0700`, credentials are `0600`, and its
+  public result contains no payload, absolute source path, or digest. The focused matrix passes
+  `11/11`; isolated probe integration `T60` is promoted to `Next`.
+
+- `2026-07-27` the first post-candidate Codex readiness probe found that host OAuth is valid
+  while the intentionally empty provider-private home is unauthenticated. `W36-E7-S4-T59`
+  owns the minimal allowlisted auth snapshot and is promoted to `Next`; `T60` owns isolated
+  status-probe integration in `Soon`. The accepted `43d740c` candidate remains immutable
+  historical evidence, but any implementation change requires fresh `T36 -> T37` gates before
+  Codex `T3` and Claude `T4` return from Parking.
+
+- `2026-07-26` `W36-E7-S4-T37` is complete: clean candidate `43d740c`, tree
+  `a780ce9`, source archive `b416b44`, and wheel `b93257d` pass Ruff, mypy, Python
+  `2126/2126`, Chromium `188/188`, isolated install/doctor, both provider eval-doctors,
+  fresh pinned Hono setup and authored smoke, bundle seal/readback after target deletion,
+  public preflight, dual `macos-seatbelt` canaries, and source-integrity postflight. The
+  exact identities and sanitized signals are recorded in
+  `docs/e2e/candidate-readiness-2026-07-26.md`; the record commit is not a replacement
+  candidate. Codex acceptance `T3` is promoted to `Next`, with Claude `T4` at `Soon`.
+
+- `2026-07-26` `W36-E7-S4-T36` is complete on clean source `17213af` and tree
+  `601aeb7`: the exact historical matrix passes `4/4`, complete intervention/terminal
+  families pass `24/24`, the twelve packaged journeys pass `79/79` with identical
+  discovered/executed IDs and no failed ID, and the full Chromium suite passes `188/188`
+  in `2617.84s`. All five viewports finish with clean console, page, request, overflow,
+  accessibility, and bounded process-cleanup diagnostics. Exact-SHA readiness `T37` is
+  promoted to `Next`; Codex acceptance `T3` is `Soon` but remains blocked until `T37`.
+
+- `2026-07-26` `W36-E7-S4-T58` is complete: stage-interact now synchronously persists one
+  typed intervention request, returns its canonical work-item/run/stage/id/path/excerpt winner
+  in the accepted job envelope, and reuses that prepared request during asynchronous execution
+  without duplication. Frontend reconciliation clears only the immutable submitted draft before
+  job polling and retains durable dashboard readback as a compatibility fallback. Focused
+  CLI/frontend coverage passes `17/17`, the full intervention/browser/static selection passes
+  `28/28`, and all five allowed viewports prove the draft is cleared while the runtime job remains
+  running. Provider-free Chromium acceptance `T36` is promoted to `Next`; exact-SHA readiness
+  `T37` is promoted to `Soon`.
+
+- `2026-07-26` the second `W36-E7-S4-T36` attempt on source `cff519b` stopped at the
+  historical matrix with `2/4` passing. At `320x568` and `1280x900`, the accepted
+  intervention produced one OK POST and one correct canonical request, but the submitted draft
+  remained through the 30-second bound. `T56` fixed immutable identity and job-poll ordering,
+  but the accepted UI job envelope still omits the already-persisted request winner, so later
+  dashboard readback can remain coupled to runtime execution. `T58` owns that single boundary;
+  `T36` returns to `Soon`, while exact-SHA `T37` remains parked.
+
+- `2026-07-26` `W36-E7-S4-T53` is complete: the shared bounded log reader enforces a
+  256 KiB hard limit and reports requested/retained bytes, exact ranges, head/tail truncation,
+  partial-line edges, and oversized-line status. CLI, operator UI/read models, and live harness
+  heartbeats now use it while the complete durable log remains unchanged. Sparse 64 MiB,
+  oversized-line, CLI, and read-model tests pass `12/12`; UI log API tests pass `5/5`; all `41`
+  doc checks pass. `T54` is promoted to `Next` and `T55` to `Soon`.
+
+- `2026-07-26` `W36-E7-S4-T52` is complete: ignored/cache paths now persist as bounded
+  inventories with total/group counts, root/type groups, full-set SHA-256, a 50-path sample, and
+  path/group truncation flags; ignored findings are bounded too. Tracked, modified, deleted, and
+  non-ignored untracked product paths remain exact, and legacy full-list snapshots still read.
+  The 20,000-path fixture remains under fixed JSON budgets; repository tests pass `9/9`, the live
+  setup-baseline flow passes, and all `41` doc checks pass. `T53` is promoted to `Next` and `T54`
+  to `Soon`.
+
+- `2026-07-26` `W36-E7-S4-T51` is complete: product summary schema v2 now reports
+  independent execution, manual-review, counted-clean, manual-stop, and legacy-degraded signals
+  with explicit not-clean reasons. Terminal refresh incorporates newly added manual reports,
+  rematerializes and reseals the bundle, while retaining byte-identical `verdict.md` and
+  `grader.json`. The five-state unit matrix passes `5/5`, terminal pre/post-review refresh passes
+  `2/2`, and all `41` live-document consistency checks pass. `T52` is promoted to `Next` and
+  `T53` to `Soon`.
+
+- `2026-07-26` `W36-E7-S4-T50` is complete: `live-bundle-manifest.json` is now the
+  atomically-published final commit marker over the validated T49 index, exact tracked AIDD source
+  archive, installed wheel, source commit/tree, target pin, all bundle file sizes/digests, and
+  browser run/viewport identities. Readback rejects changed bytes, incomplete materialization,
+  orphan files, identity drift, and wrong browser provenance; repeat sealing is stable. The
+  combined manifest/materialization/terminal-flow matrix passes `79/79`. `T51` is promoted to
+  `Next` and `T52` to `Soon`.
+
+- `2026-07-26` `W36-E7-S4-T49` is complete: the typed live result materializer now copies
+  work-item stage outputs, task/run/finalization evidence, target patch, final reports,
+  approval/remediation records, and browser artifacts into `canonical-evidence`. Its
+  `live-result-index.json` uses only bundle-relative size/digest-backed references; containment,
+  identity, symlink, dangling-link, and digest checks fail closed, while old absolute references
+  require explicit `legacy-degraded` read mode. The source/work/target deletion matrix and
+  terminal-flow compatibility suite pass `74/74`. `T50` is promoted to `Next` and `T51` to
+  `Soon`.
+
+- `2026-07-26` `W36-E7-S4-T48` is complete: bounded target Git preparation and dependency setup
+  now precede a typed `target-readiness.json` gate. The gate derives provider-free smoke from the
+  selected authored task, defers only future `.aidd` artifacts, checks relative generated/native
+  executables, and classifies missing dependencies, non-zero commands and timeouts as
+  `target-setup` before any `run-stage`. The focused matrix passes `26/26`; the completed
+  lifecycle group passes Ruff, mypy across `221` modules and all `2096` Python tests. `T49` is
+  promoted to `Next` and `T50` moves to `Soon`.
 
 - `2026-07-22` `W36-E7-S4-T35` is complete: runtime-readiness updates now use a
   generation-aware scoped renderer and cannot replace the decision-owning Studio cockpit.

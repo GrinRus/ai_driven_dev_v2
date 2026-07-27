@@ -18,6 +18,9 @@ from aidd.runtime_logs.events import (
     normalize_structured_events as normalize_structured_events,
 )
 from aidd.runtime_logs.events import (
+    persist_lifecycle_projection_from_jsonl as persist_lifecycle_projection_from_jsonl,
+)
+from aidd.runtime_logs.events import (
     persist_runtime_event_artifacts as persist_runtime_event_artifacts,
 )
 from aidd.runtime_logs.events import (
@@ -165,6 +168,7 @@ __all__ = [
     "detect_question_or_pause_events",
     "normalize_structured_events",
     "persist_adapter_question_events",
+    "persist_lifecycle_projection_from_jsonl",
     "persist_runtime_event_artifacts",
     "structured_runtime_events",
 ]
