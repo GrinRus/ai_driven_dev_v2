@@ -7,15 +7,14 @@ slice, and local task.
 
 ## Next
 
-- `W36-E7-S4-T68` — Make delayed active-job cancellation converge to one terminal handoff.
+- `W36-E7-S4-T36` — Re-run the complete provider-free Chromium matrix after T68.
 
 ## Soon
 
-- `W36-E7-S4-T36` — Re-run the complete provider-free Chromium matrix after T68.
+- `W36-E7-S4-T37` — Rebuild exact-SHA readiness after the T68 browser correction.
 
 ## Parking lot
 
-- `W36-E7-S4-T37` — Rebuild exact-SHA readiness after the T68 browser correction.
 - `W36-E7-S4-T3` — Run the medium scenario through Codex on the replacement candidate.
 - `W36-E7-S4-T4` — Repeat the medium scenario through Claude Code on the same candidate.
 - `W36-E7-S3-T2` — Record five first-time-operator sessions after initial live hardening.
@@ -36,6 +35,16 @@ slice, and local task.
   queue-restoration policy in `docs/backlog/roadmap.md` (`W8-E3-S1`).
 
 ## Current reconciliation
+
+- `2026-07-29` `W36-E7-S4-T68` is complete: typed terminal job evidence plus
+  dashboard active-job readback now releases the volatile browser identity before
+  the heavier project-home and inbox projections refresh behind a protected
+  asynchronous boundary. Frontend passes `99/99`, static contracts `49/49`,
+  three consecutive active-Studio matrices pass `5/5`, the exact Guided Setup
+  predecessor followed by active Studio passes `10/10`, Ruff and mypy pass, and
+  full pytest passes `2146/2146`. The 15-second browser budget is unchanged and
+  no test-owned UI process remains. T36 is promoted to `Next`, T37 to `Soon`;
+  provider acceptance remains parked.
 
 - `2026-07-29` the post-T67 T36 rerun passed historical cases `4/4` in
   `121.64s` and intervention/terminal families `24/24` in `518.19s`. Packaged

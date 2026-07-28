@@ -12329,7 +12329,7 @@ Local tasks:
     coverage passes `17/17`; the full intervention/browser/static selection passes `28/28`;
     and all five allowed viewports prove one request, an empty submitted draft, and a still-running
     runtime job.
-- `W36-E7-S4-T36` (soon) Re-run the complete provider-free Chromium acceptance matrix after the
+- `W36-E7-S4-T36` (next) Re-run the complete provider-free Chromium acceptance matrix after the
   final provider-neutral hardening change.
   - Dependencies: `W36-E7-S4-T68` as the current direct queue predecessor;
     `W36-E7-S4-T67` as the preceding active-job ownership correction;
@@ -12419,7 +12419,7 @@ Local tasks:
     `1440x900` retained `activeJobId` beyond 15 seconds after a recovered-log cancellation.
     The registry was stopped before the next journey and the complete browser suite did not
     run. `W36-E7-S4-T68` owns the remaining delayed-cancellation terminal handoff.
-- `W36-E7-S4-T37` (parked) Prove the exact post-browser candidate is installable and ready for an
+- `W36-E7-S4-T37` (soon) Prove the exact post-browser candidate is installable and ready for an
   isolated live-provider run.
   - Dependencies: `W36-E7-S4-T36` as the full-browser predecessor; blocks the active Codex
     acceptance task `W36-E7-S4-T3`.
@@ -12635,7 +12635,7 @@ Local tasks:
     pass, and the repeated complete Python suite passes `2146/2146`. One earlier unrelated
     100-millisecond process-start assertion missed its child PID under load, then passed `5/5`
     in isolation and in the complete rerun; no process code or timeout changed.
-- `W36-E7-S4-T68` (next) Make a nonterminal cancellation request converge through one bounded
+- `W36-E7-S4-T68` (done) Make a nonterminal cancellation request converge through one bounded
   terminal handoff even when the runtime stop and browser poll complete under suite load.
   - Dependencies: discovered by the failed post-T67 `W36-E7-S4-T36` packaged active-Studio
     journey; blocks the next complete browser gate.
@@ -12646,6 +12646,15 @@ Local tasks:
     browser winner after the owned runtime process has stopped; terminal job evidence is
     reconciled once, stale polls cannot restore it, and the packaged Guided Setup predecessor
     followed by active Studio passes repeatedly across all five viewports.
+  - Completion: terminal polling now accepts the typed terminal job plus dashboard active-job
+    readback as the durable winner, clears the volatile identity, and renders terminal/log state
+    before refreshing the heavier project-home and inbox projections behind a protected
+    asynchronous boundary. Provider-free diagnostics proved that the runtime job and dashboard
+    were already terminal while those derived projections could exceed the browser budget under
+    load. Frontend tests pass `99/99`, static asset contracts pass `49/49`, three consecutive
+    active-Studio matrices pass `5/5`, the exact Guided Setup predecessor followed by active
+    Studio passes `10/10`, Ruff and mypy across `228` modules pass, and full pytest passes
+    `2146/2146`; the 15-second browser assertion budget is unchanged.
 
 Exit evidence:
 

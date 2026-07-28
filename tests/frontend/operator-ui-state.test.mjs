@@ -680,20 +680,28 @@ test("cancellation invalidates an in-flight job poll", async () => {
   const dashboardReadback = deferred();
   const projectReadback = deferred();
   const inboxReadback = deferred();
+  const readbacksStarted = [];
   context.fetch = (url) => {
     const pending = deferred();
     requests.push({url, pending});
     return pending.promise;
   };
   context.fetchDashboard = async () => {
+    readbacksStarted.push("dashboard");
     await dashboardReadback.promise;
     vm.runInContext(
       "state.dashboard = {work_item: 'WI-1'}; state.dashboardActiveJob = null;",
       context,
     );
   };
-  context.fetchProjectHome = async () => projectReadback.promise;
-  context.fetchInbox = async () => inboxReadback.promise;
+  context.fetchProjectHome = async () => {
+    readbacksStarted.push("project");
+    return projectReadback.promise;
+  };
+  context.fetchInbox = async () => {
+    readbacksStarted.push("inbox");
+    return inboxReadback.promise;
+  };
   await load(context, "operator-api-state.js");
   await load(context, "operator-logs-jobs.js");
   vm.runInContext(
@@ -709,17 +717,16 @@ test("cancellation invalidates an in-flight job poll", async () => {
   requests[1].pending.resolve(response({job_id: "job-1", status: "cancelled"}));
   await new Promise((resolve) => setImmediate(resolve));
   assert.equal(vm.runInContext("state.activeJobId", context), "job-1");
+  assert.deepEqual(readbacksStarted, ["dashboard"]);
 
   dashboardReadback.resolve();
-  await new Promise((resolve) => setImmediate(resolve));
-  assert.equal(vm.runInContext("state.activeJobId", context), "job-1");
+  await cancel;
+  assert.equal(vm.runInContext("state.activeJobId", context), "");
+  assert.deepEqual(readbacksStarted, ["dashboard", "project", "inbox"]);
 
   projectReadback.resolve();
-  await new Promise((resolve) => setImmediate(resolve));
-  assert.equal(vm.runInContext("state.activeJobId", context), "job-1");
-
   inboxReadback.resolve();
-  await cancel;
+  await new Promise((resolve) => setImmediate(resolve));
   requests[0].pending.resolve(response({cursor: 4, chunks: [{text: "late"}]}));
   await poll;
 
@@ -921,7 +928,7 @@ test("terminal polling releases volatile buffers after durable dashboard readbac
   assert.equal(vm.runInContext("state.activeStage", context), "qa");
 });
 
-test("terminal polling keeps active identity until every durable readback completes", async () => {
+test("terminal polling releases identity after dashboard and refreshes derived surfaces", async () => {
   const {context} = domContext();
   let request = 0;
   const dashboardReadback = deferred();
@@ -958,18 +965,15 @@ test("terminal polling keeps active identity until every durable readback comple
   assert.equal(vm.runInContext("state.activeJobId", context), "job-1");
 
   dashboardReadback.resolve();
-  await new Promise((resolve) => setImmediate(resolve));
-  assert.equal(vm.runInContext("state.activeJobId", context), "job-1");
-
-  projectReadback.resolve();
-  await new Promise((resolve) => setImmediate(resolve));
-  assert.equal(vm.runInContext("state.activeJobId", context), "job-1");
-
-  inboxReadback.resolve();
   await poll;
   assert.equal(vm.runInContext("state.activeJobId", context), "");
   assert.equal(vm.runInContext("state.activeJobStatus", context), null);
   assert.equal(renderCount, 1);
+
+  projectReadback.resolve();
+  inboxReadback.resolve();
+  await new Promise((resolve) => setImmediate(resolve));
+  assert.equal(renderCount, 2);
 });
 
 test("rejected log request renders a deterministic escaped error", async () => {

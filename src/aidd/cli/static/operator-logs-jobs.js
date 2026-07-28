@@ -331,16 +331,31 @@ async function reconcileExpiredActiveJob(jobId) {
 }
 
 async function reconcileTerminalActiveJob(jobId) {
+  const workItem = state.dashboard?.work_item || "";
   await fetchDashboard();
   const terminalJobIsDurableWinner = (
     !state.dashboardActiveJob || state.dashboardActiveJob.job_id === jobId
   );
-  await fetchProjectHome(state.dashboard?.work_item || "");
-  await fetchInbox();
   if (terminalJobIsDurableWinner && state.activeJobId === jobId) {
     clearReconciledActiveJob({preserveConnection: false});
   }
   await renderAll();
+  if (terminalJobIsDurableWinner) {
+    void refreshTerminalDerivedSurfaces(workItem);
+  }
+}
+
+async function refreshTerminalDerivedSurfaces(workItem) {
+  try {
+    await Promise.all([
+      fetchProjectHome(workItem),
+      fetchInbox()
+    ]);
+    await renderAll();
+  } catch (_error) {
+    // The typed terminal job and dashboard are the durable winner. Derived
+    // projections remain retryable through the normal refresh action.
+  }
 }
 
 function renderActiveJobConnectionSurface() {
