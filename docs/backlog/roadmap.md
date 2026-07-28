@@ -11717,7 +11717,7 @@ Local tasks:
   - Scope: provider-free harness and architecture tests.
   - Verification: conformance fixtures fail before live execution for overlapping roots, dirty
     tracked source, forbidden product imports, or live-scenario literals in runtime product code.
-- `W36-E7-S4-T3` (soon) Run `AIDD-LIVE-007` through Codex to a clean terminal result with
+- `W36-E7-S4-T3` (parked) Run `AIDD-LIVE-007` through Codex to a clean terminal result with
   manual stage-quality and rendered Studio evidence.
   - Dependencies: `W36-E7-S4-T37` as the direct queue predecessor after the
     post-auth `W36-E7-S4-T60` and `W36-E7-S4-T36` gates; `W36-E7-S4-T33`, `W36-E7-S4-T32`, `W36-E7-S4-T31`, `W36-E7-S4-T30`, `W36-E7-S4-T29`, `W36-E7-S4-T28`, `W36-E7-S4-T27`, `W36-E7-S4-T26`, `W36-E7-S4-T25`, `W36-E7-S4-T24`, `W36-E7-S4-T23`, `W36-E7-S4-T22`, `W36-E7-S4-T21`, `W36-E7-S4-T20`, `W36-E7-S4-T19`, `W36-E7-S4-T18`, `W36-E7-S4-T17`, `W36-E7-S4-T16`, `W36-E7-S4-T15`, `W36-E7-S4-T14`, `W36-E7-S4-T13`, `W36-E7-S4-T2`, `W36-E7-S4-T6`, `W36-E7-S4-T10`,
@@ -12324,9 +12324,10 @@ Local tasks:
     coverage passes `17/17`; the full intervention/browser/static selection passes `28/28`;
     and all five allowed viewports prove one request, an empty submitted draft, and a still-running
     runtime job.
-- `W36-E7-S4-T36` (done) Re-run the complete provider-free Chromium acceptance matrix after the
+- `W36-E7-S4-T36` (next) Re-run the complete provider-free Chromium acceptance matrix after the
   final provider-neutral hardening change.
-  - Dependencies: `W36-E7-S4-T64` as the current direct queue predecessor;
+  - Dependencies: `W36-E7-S4-T65` as the current direct queue predecessor;
+    `W36-E7-S4-T64` as the preceding browser synchronization correction;
     `W36-E7-S4-T63` as the preceding intervention synchronization correction;
     `W36-E7-S4-T62` as the preceding isolation-backend correction;
     `W36-E7-S4-T61` as the preceding browser synchronization correction;
@@ -12390,7 +12391,7 @@ Local tasks:
     page, failed-request, overflow, accessibility, or test-owned process-cleanup failure.
     Sanitized evidence is in
     `docs/e2e/operator-ui-provider-free-browser-gate-2026-07-28-post-t64.md`.
-- `W36-E7-S4-T37` (next) Prove the exact post-browser candidate is installable and ready for an
+- `W36-E7-S4-T37` (soon) Prove the exact post-browser candidate is installable and ready for an
   isolated live-provider run.
   - Dependencies: `W36-E7-S4-T36` as the full-browser predecessor; blocks the active Codex
     acceptance task `W36-E7-S4-T3`.
@@ -12430,6 +12431,13 @@ Local tasks:
     `ANTHROPIC_AUTH_TOKEN`; no credential value or digest is recorded. The exact identities
     and sanitized signals are in `docs/e2e/candidate-readiness-2026-07-28.md`; this record
     commit does not replace or rebuild the candidate wheel.
+  - Post-T64 attempt: exact source `3cee858` passes Ruff, mypy across `228` modules, and the
+    complete Python suite `2146/2146`. Its exact-SHA Chromium gate reports `186/188`: both mobile
+    active-Studio cases time out after a recovered live connection receives an immediate
+    terminal cancellation response but retains the volatile active-job identity. The same pair
+    passes `2/2` in isolation, identifying a suite-load-dependent terminal-reconciliation race
+    owned by `W36-E7-S4-T65`. No archive, wheel, doctor, target, bundle, auth-probe, provider, or
+    large-scenario gate ran after this browser failure.
 - `W36-E7-S4-T59` (done) Seed one allowlisted native-provider authentication snapshot into a
   fresh provider-private home without exposing the operator's remaining state.
   - Dependencies: the `W36-E7-S4-T3` private-home authentication discovery after
@@ -12533,6 +12541,24 @@ Local tasks:
     Implement file passes `2/2` in `64.58s`, and no `networkidle` wait remains in the file.
     Ruff and standard mypy pass; the full Python run has `2145` passing tests and only the
     subsequently corrected planning-status mismatch failed.
+- `W36-E7-S4-T65` (done) Reconcile an immediate terminal cancellation response through the same
+  durable active-job boundary used by terminal polling.
+  - Dependencies: discovered by the failed post-T64 `W36-E7-S4-T37` exact-SHA Chromium gate;
+    blocks the next complete `W36-E7-S4-T36` rerun.
+  - Scope: active-Studio cancellation reconciliation and its provider-free frontend/browser
+    regressions only; job persistence, runtime adapters, scenario fixtures, providers, and
+    timeout budgets remain unchanged.
+  - Verification: an immediate terminal cancel result preserves the active identity until
+    dashboard, project, and inbox readback finish, then clears volatile job state; a
+    nonterminal `cancelling` result continues polling, and a pre-cancel in-flight poll cannot
+    overwrite either outcome. Both failed mobile active-Studio cases pass repeatedly with clean
+    diagnostics.
+  - Completion: cancellation captures the immutable job identity before mutation, sends immediate
+    terminal responses through the existing durable dashboard/project/inbox reconciliation, and
+    retains scheduled polling only for active statuses. Frontend tests pass `99/99`; the two
+    failed mobile cases pass `3/3` repeated pairs; the complete active-Studio journey passes
+    `5/5`; Ruff, mypy across `228` modules, planning integrity, and the complete Python suite
+    `2146/2146` pass.
 
 Exit evidence:
 

@@ -449,9 +449,10 @@ async function renderLogs() {
 
 async function cancelActiveJob() {
   if (!state.activeJobId) return;
+  const jobId = state.activeJobId;
   state.activeJobPollGeneration += 1;
   clearActiveJobPollTimer();
-  const result = await postJson(`/api/jobs/${encodeURIComponent(state.activeJobId)}/cancel`, {});
+  const result = await postJson(`/api/jobs/${encodeURIComponent(jobId)}/cancel`, {});
   state.activeJobStatus = result;
   if (result.already_finished) {
     toast("Job already finished.");
@@ -464,7 +465,11 @@ async function cancelActiveJob() {
   if (typeof updateStudioLiveObservation === "function") updateStudioLiveObservation();
   if (activeModeIsEvidenceLog()) await renderLogs();
   const activeStatuses = new Set(["running", "waiting-for-operator", "cancelling"]);
-  if (activeStatuses.has(result.status)) scheduleActiveJobPoll(0);
+  if (activeStatuses.has(result.status)) {
+    scheduleActiveJobPoll(0);
+  } else {
+    await reconcileTerminalActiveJob(jobId);
+  }
 }
 
 async function reconnectActiveJob() {

@@ -677,11 +677,23 @@ test("same stage launch is submitted and attached to polling once", async () => 
 test("cancellation invalidates an in-flight job poll", async () => {
   const {context} = domContext();
   const requests = [];
+  const dashboardReadback = deferred();
+  const projectReadback = deferred();
+  const inboxReadback = deferred();
   context.fetch = (url) => {
     const pending = deferred();
     requests.push({url, pending});
     return pending.promise;
   };
+  context.fetchDashboard = async () => {
+    await dashboardReadback.promise;
+    vm.runInContext(
+      "state.dashboard = {work_item: 'WI-1'}; state.dashboardActiveJob = null;",
+      context,
+    );
+  };
+  context.fetchProjectHome = async () => projectReadback.promise;
+  context.fetchInbox = async () => inboxReadback.promise;
   await load(context, "operator-api-state.js");
   await load(context, "operator-logs-jobs.js");
   vm.runInContext(
@@ -695,13 +707,50 @@ test("cancellation invalidates an in-flight job poll", async () => {
   assert.match(requests[1].url, /\/cancel$/);
 
   requests[1].pending.resolve(response({job_id: "job-1", status: "cancelled"}));
+  await new Promise((resolve) => setImmediate(resolve));
+  assert.equal(vm.runInContext("state.activeJobId", context), "job-1");
+
+  dashboardReadback.resolve();
+  await new Promise((resolve) => setImmediate(resolve));
+  assert.equal(vm.runInContext("state.activeJobId", context), "job-1");
+
+  projectReadback.resolve();
+  await new Promise((resolve) => setImmediate(resolve));
+  assert.equal(vm.runInContext("state.activeJobId", context), "job-1");
+
+  inboxReadback.resolve();
   await cancel;
   requests[0].pending.resolve(response({cursor: 4, chunks: [{text: "late"}]}));
   await poll;
 
-  assert.equal(vm.runInContext("state.activeJobStatus.status", context), "cancelled");
+  assert.equal(vm.runInContext("state.activeJobId", context), "");
+  assert.equal(vm.runInContext("state.activeJobStatus", context), null);
   assert.equal(vm.runInContext("state.activeJobCursor", context), 0);
   assert.equal(requests.length, 2);
+});
+
+test("nonterminal cancellation continues polling", async () => {
+  const {context} = domContext();
+  const scheduled = [];
+  context.setTimeout = (callback, delay) => {
+    scheduled.push({callback, delay});
+    return scheduled.length;
+  };
+  context.clearTimeout = () => {};
+  context.fetch = async () => response({job_id: "job-1", status: "cancelling"});
+  await load(context, "operator-api-state.js");
+  await load(context, "operator-logs-jobs.js");
+  vm.runInContext(
+    "state.activeJobId = 'job-1'; state.activeJobStatus = {status: 'running'};",
+    context,
+  );
+
+  await vm.runInContext("cancelActiveJob()", context);
+
+  assert.equal(vm.runInContext("state.activeJobId", context), "job-1");
+  assert.equal(vm.runInContext("state.activeJobStatus.status", context), "cancelling");
+  assert.equal(scheduled.length, 1);
+  assert.equal(scheduled[0].delay, 0);
 });
 
 test("polling retries with a bounded cursor-preserving backoff and recovers", async () => {

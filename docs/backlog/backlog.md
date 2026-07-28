@@ -7,14 +7,15 @@ slice, and local task.
 
 ## Next
 
-- `W36-E7-S4-T37` — Rebuild exact-SHA readiness after the T62–T64 changes.
+- `W36-E7-S4-T36` — Re-run the complete provider-free Chromium matrix after T65.
 
 ## Soon
 
-- `W36-E7-S4-T3` — Run the medium scenario through Codex to a clean terminal result.
+- `W36-E7-S4-T37` — Rebuild exact-SHA readiness after the T65 browser correction.
 
 ## Parking lot
 
+- `W36-E7-S4-T3` — Run the medium scenario through Codex to a clean terminal result.
 - `W36-E7-S4-T4` — Repeat the medium scenario through Claude Code from an independent root.
 - `W36-E7-S3-T2` — Record five first-time-operator sessions after initial live hardening.
 - `W36-E7-S3-T3` — Reconcile observed session findings before beta readiness.
@@ -34,6 +35,25 @@ slice, and local task.
   queue-restoration policy in `docs/backlog/roadmap.md` (`W8-E3-S1`).
 
 ## Current reconciliation
+
+- `2026-07-28` `W36-E7-S4-T65` is complete: immediate terminal cancellation
+  now retains the immutable job identity through dashboard, project, and inbox
+  readback, then clears volatile state; active cancellation continues polling and
+  late pre-cancel polling cannot overwrite the result. Frontend passes `99/99`,
+  both failed mobile cases pass three repeated `2/2` runs, the full active-Studio
+  journey passes `5/5`, Ruff and mypy pass, and full pytest passes `2146/2146`.
+  T36 is promoted to `Next`, T37 to `Soon`; provider and large scenarios remain
+  unstarted.
+
+- `2026-07-28` post-T64 exact-SHA `W36-E7-S4-T37` passed Ruff, mypy across
+  `228` modules, and full pytest `2146/2146`, then the exact Chromium gate
+  reported `186/188`. Both failures were the mobile active-Studio cancellation
+  cases: after a recovered live connection, an immediate terminal cancel response
+  left `activeJobId` volatile because only nonterminal cancellation scheduled the
+  polling path that performs durable reconciliation. The isolated pair passed
+  `2/2`, confirming a suite-load race. `W36-E7-S4-T65` is promoted to `Next`,
+  T36 returns to `Soon`, and T37/provider acceptance are parked. No archive,
+  wheel, provider evaluator, or large scenario ran.
 
 - `2026-07-28` the final post-T64 `W36-E7-S4-T36` rerun is complete on clean
   source `143cc1e` and tree `2efec8e`: historical cases pass `4/4`,
