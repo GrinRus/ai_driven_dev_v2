@@ -7,14 +7,15 @@ slice, and local task.
 
 ## Next
 
-- `W36-E7-S4-T37` — Prove exact-SHA package, private-auth, bundle, and source readiness.
+- `W36-E7-S4-T36` — Re-run the complete provider-free Chromium acceptance matrix.
 
 ## Soon
 
-- `W36-E7-S4-T3` — Run the medium scenario through Codex to a clean terminal result.
+- `W36-E7-S4-T37` — Prove exact-SHA package, private-auth, bundle, and source readiness.
 
 ## Parking lot
 
+- `W36-E7-S4-T3` — Run the medium scenario through Codex to a clean terminal result.
 - `W36-E7-S4-T4` — Repeat the medium scenario through Claude Code from an independent root.
 - `W36-E7-S3-T2` — Record five first-time-operator sessions after initial live hardening.
 - `W36-E7-S3-T3` — Reconcile observed session findings before beta readiness.
@@ -34,6 +35,23 @@ slice, and local task.
   queue-restoration policy in `docs/backlog/roadmap.md` (`W8-E3-S1`).
 
 ## Current reconciliation
+
+- `2026-07-28` `W36-E7-S4-T61` is complete: the runtime/validation Recovery browser
+  journey now waits for `domcontentloaded` and exact work-item surface readiness rather than
+  global network idle. The isolated `runtime-no-progress` case passes `3/3`, the complete
+  Recovery family passes `9/9` across all viewports and parity selectors, Ruff passes, and no
+  `networkidle` wait remains in the file. Production Studio, fixture state, and timeout budgets
+  are unchanged. T36 is promoted to `Next`, T37 to `Soon`; provider and large scenarios remain
+  unstarted.
+
+- `2026-07-28` the post-merge `W36-E7-S4-T36` revalidation on clean source `bbed868`
+  passed the historical matrix `4/4`, intervention/terminal families `24/24`, and the packaged
+  registry `79/79` with exact ID parity. The complete browser suite then failed after `108`
+  passing tests because the `runtime-no-progress` Recovery fixture exceeded its 30-second global
+  `networkidle` navigation wait before durable product assertions. An isolated rerun passed
+  `1/1`, classifying the boundary as a suite-order browser synchronization race.
+  `W36-E7-S4-T61` is promoted to `Next`, T36 returns to `Soon`, and T37/Codex acceptance remain
+  parked. No provider or large scenario was launched.
 
 - `2026-07-27` `W36-E7-S4-T37` is paused, not complete, on exact source `c5747a0`
   and tree `2a946c5`. Ruff, mypy across `228` modules, and full pytest `2145/2145`

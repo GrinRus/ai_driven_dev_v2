@@ -11717,7 +11717,7 @@ Local tasks:
   - Scope: provider-free harness and architecture tests.
   - Verification: conformance fixtures fail before live execution for overlapping roots, dirty
     tracked source, forbidden product imports, or live-scenario literals in runtime product code.
-- `W36-E7-S4-T3` (soon) Run `AIDD-LIVE-007` through Codex to a clean terminal result with
+- `W36-E7-S4-T3` (parked) Run `AIDD-LIVE-007` through Codex to a clean terminal result with
   manual stage-quality and rendered Studio evidence.
   - Dependencies: `W36-E7-S4-T37` as the direct queue predecessor after the
     post-auth `W36-E7-S4-T60` and `W36-E7-S4-T36` gates; `W36-E7-S4-T33`, `W36-E7-S4-T32`, `W36-E7-S4-T31`, `W36-E7-S4-T30`, `W36-E7-S4-T29`, `W36-E7-S4-T28`, `W36-E7-S4-T27`, `W36-E7-S4-T26`, `W36-E7-S4-T25`, `W36-E7-S4-T24`, `W36-E7-S4-T23`, `W36-E7-S4-T22`, `W36-E7-S4-T21`, `W36-E7-S4-T20`, `W36-E7-S4-T19`, `W36-E7-S4-T18`, `W36-E7-S4-T17`, `W36-E7-S4-T16`, `W36-E7-S4-T15`, `W36-E7-S4-T14`, `W36-E7-S4-T13`, `W36-E7-S4-T2`, `W36-E7-S4-T6`, `W36-E7-S4-T10`,
@@ -12324,9 +12324,10 @@ Local tasks:
     coverage passes `17/17`; the full intervention/browser/static selection passes `28/28`;
     and all five allowed viewports prove one request, an empty submitted draft, and a still-running
     runtime job.
-- `W36-E7-S4-T36` (done) Re-run the complete provider-free Chromium acceptance matrix after the
+- `W36-E7-S4-T36` (next) Re-run the complete provider-free Chromium acceptance matrix after the
   final provider-neutral hardening change.
-  - Dependencies: `W36-E7-S4-T60` as the new direct queue predecessor; `W36-E7-S4-T58`,
+  - Dependencies: `W36-E7-S4-T61` as the current direct queue predecessor;
+    `W36-E7-S4-T60`, `W36-E7-S4-T58`,
     `W36-E7-S4-T55`,
     `W36-E7-S4-T56`, and `W36-E7-S4-T57` as earlier code-change predecessors; blocks the
     active Codex acceptance task `W36-E7-S4-T3`.
@@ -12363,7 +12364,15 @@ Local tasks:
     viewport completed without console, page, failed-request, overflow, accessibility, or
     test-owned process-cleanup failure. The sanitized evidence is
     `docs/e2e/operator-ui-provider-free-browser-gate-2026-07-27.md`.
-- `W36-E7-S4-T37` (next) Prove the exact post-browser candidate is installable and ready for an
+  - Post-merge revalidation attempt: clean source `bbed868` passed the historical matrix `4/4`
+    in `84.44s`, complete intervention/terminal families `24/24` in `338.35s`, and all twelve
+    packaged journeys `79/79` with exact discovered/executed ID parity and no failed ID. The
+    complete browser suite stopped after its first failure at `108` passing tests: the
+    `runtime-no-progress` Recovery fixture exceeded the 30-second global `networkidle` navigation
+    wait before any durable product assertion. Isolated rerun passed `1/1` in `77.82s`, confirming
+    a suite-order synchronization race. `W36-E7-S4-T61` owns the provider-free correction; this
+    attempt is not accepted T36 evidence.
+- `W36-E7-S4-T37` (soon) Prove the exact post-browser candidate is installable and ready for an
   isolated live-provider run.
   - Dependencies: `W36-E7-S4-T36` as the full-browser predecessor; blocks the active Codex
     acceptance task `W36-E7-S4-T3`.
@@ -12429,6 +12438,21 @@ Local tasks:
     seeded and fail unseeded through real Seatbelt while operator HOME, sibling state, and source
     writes remain denied; focused launcher tests pass `17/17`, harness passes `378/378`, Ruff and
     mypy pass, and the complete Python suite passes `2145/2145`.
+- `W36-E7-S4-T61` (done) Replace the runtime/validation Recovery browser journey's global
+  navigation-idle waits with bounded work-item surface readiness.
+  - Dependencies: discovered by the failed post-merge `W36-E7-S4-T36` revalidation after
+    `W36-E7-S4-T60`; blocks the next `W36-E7-S4-T36` rerun.
+  - Scope: `browser_tests/test_journey_runtime_validation_recovery.py` navigation synchronization
+    only; production Studio, fixtures, timeout budgets, and recovery semantics remain unchanged.
+  - Verification: the isolated `runtime-no-progress` case passes repeatedly, the complete
+    runtime/validation Recovery family passes across all five viewports and parity selectors,
+    diagnostics stay clean, and no global `networkidle` navigation remains in that journey.
+  - Completion: all initial navigation and reload boundaries in the Recovery journey now wait
+    for `domcontentloaded` followed by the exact work-item chip instead of global network idle.
+    The isolated `runtime-no-progress` case passes `3/3`; the full runtime/validation Recovery
+    file passes `9/9` across all viewports and parity selectors; Ruff passes and the file contains
+    no remaining `networkidle` wait. Production Studio, fixture state, and timeout budgets are
+    unchanged.
 
 Exit evidence:
 
