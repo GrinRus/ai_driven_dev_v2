@@ -83,8 +83,10 @@ read/write access to the selected provider subtree, while sibling provider roots
 operator home remain unreadable. On macOS the backend also resolves the active trusted
 `xcode-select` developer root under `/Applications` or `/Library/Developer` and grants it
 read-only access so `/usr/bin/git` and its `libxcrun` dependency can prepare the target clone
-inside Seatbelt. It does not grant a write rule for that toolchain. Repeat with a fresh provider
-root and the appropriate explicit credential key for the second runtime.
+inside Seatbelt. It grants the fixed real system TLS configuration root `/private/etc/ssl`
+read-only access so HTTPS Git can load LibreSSL configuration and trust data. It does not grant
+a write rule for either dependency. Repeat with a fresh provider root and the appropriate
+explicit credential key for the second runtime.
 
 The isolation launcher also owns the mandatory live-acceptance session guard. Before creating
 the provider subtree it captures source commit/tree, tracked bytes, and the exact baseline

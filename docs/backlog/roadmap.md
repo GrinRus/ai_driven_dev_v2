@@ -11717,7 +11717,7 @@ Local tasks:
   - Scope: provider-free harness and architecture tests.
   - Verification: conformance fixtures fail before live execution for overlapping roots, dirty
     tracked source, forbidden product imports, or live-scenario literals in runtime product code.
-- `W36-E7-S4-T3` (next) Run `AIDD-LIVE-007` through Codex to a clean terminal result with
+- `W36-E7-S4-T3` (parked) Run `AIDD-LIVE-007` through Codex to a clean terminal result with
   manual stage-quality and rendered Studio evidence.
   - Dependencies: `W36-E7-S4-T37` as the direct queue predecessor after the
     post-auth `W36-E7-S4-T60` and `W36-E7-S4-T36` gates; `W36-E7-S4-T33`, `W36-E7-S4-T32`, `W36-E7-S4-T31`, `W36-E7-S4-T30`, `W36-E7-S4-T29`, `W36-E7-S4-T28`, `W36-E7-S4-T27`, `W36-E7-S4-T26`, `W36-E7-S4-T25`, `W36-E7-S4-T24`, `W36-E7-S4-T23`, `W36-E7-S4-T22`, `W36-E7-S4-T21`, `W36-E7-S4-T20`, `W36-E7-S4-T19`, `W36-E7-S4-T18`, `W36-E7-S4-T17`, `W36-E7-S4-T16`, `W36-E7-S4-T15`, `W36-E7-S4-T14`, `W36-E7-S4-T13`, `W36-E7-S4-T2`, `W36-E7-S4-T6`, `W36-E7-S4-T10`,
@@ -11726,7 +11726,12 @@ Local tasks:
   - Scope: external Codex live execution and evidence only.
   - Verification: installed-wheel `idea -> qa`, target verification, complete audits, terminal
     reports, and bounded Chromium evidence pass from an external run root.
-- `W36-E7-S4-T4` (soon) Run `AIDD-LIVE-007` through Claude Code from an independent root on
+  - Post-T65 attempt: candidate `1dbe87a` passed public preflight and private Codex auth, then
+    stopped in target setup before provider allocation because macOS Seatbelt denied the
+    read-only LibreSSL configuration `/private/etc/ssl/openssl.cnf` used by HTTPS Git clone.
+    The root is terminal and will not be resumed; `W36-E7-S4-T66` owns the provider-free
+    isolation correction.
+- `W36-E7-S4-T4` (parked) Run `AIDD-LIVE-007` through Claude Code from an independent root on
   the same AIDD revision and target pin.
   - Dependencies: `W36-E7-S4-T3` as the direct queue predecessor.
   - Scope: external Claude Code live execution and evidence only.
@@ -12324,9 +12329,10 @@ Local tasks:
     coverage passes `17/17`; the full intervention/browser/static selection passes `28/28`;
     and all five allowed viewports prove one request, an empty submitted draft, and a still-running
     runtime job.
-- `W36-E7-S4-T36` (done) Re-run the complete provider-free Chromium acceptance matrix after the
+- `W36-E7-S4-T36` (next) Re-run the complete provider-free Chromium acceptance matrix after the
   final provider-neutral hardening change.
-  - Dependencies: `W36-E7-S4-T65` as the current direct queue predecessor;
+  - Dependencies: `W36-E7-S4-T66` as the current direct queue predecessor;
+    `W36-E7-S4-T65` as the preceding terminal-reconciliation correction;
     `W36-E7-S4-T64` as the preceding browser synchronization correction;
     `W36-E7-S4-T63` as the preceding intervention synchronization correction;
     `W36-E7-S4-T62` as the preceding isolation-backend correction;
@@ -12399,7 +12405,7 @@ Local tasks:
     failed-request, overflow, accessibility, or test-owned process-cleanup failure. Sanitized
     evidence is in
     `docs/e2e/operator-ui-provider-free-browser-gate-2026-07-28-post-t65.md`.
-- `W36-E7-S4-T37` (done) Prove the exact post-browser candidate is installable and ready for an
+- `W36-E7-S4-T37` (soon) Prove the exact post-browser candidate is installable and ready for an
   isolated live-provider run.
   - Dependencies: `W36-E7-S4-T36` as the full-browser predecessor; blocks the active Codex
     acceptance task `W36-E7-S4-T3`.
@@ -12577,6 +12583,24 @@ Local tasks:
     failed mobile cases pass `3/3` repeated pairs; the complete active-Studio journey passes
     `5/5`; Ruff, mypy across `228` modules, planning integrity, and the complete Python suite
     `2146/2146` pass.
+- `W36-E7-S4-T66` (done) Authorize the active macOS system TLS configuration as a read-only live
+  provider dependency for HTTPS target setup.
+  - Dependencies: discovered by the first post-T65 Codex acceptance attempt before provider
+    allocation; invalidates candidate `1dbe87a` and blocks its `T36 -> T37` replacement.
+  - Scope: typed macOS isolation-backend TLS-root discovery, focused real-Seatbelt regression,
+    and prod-like runbook clarification only; Git target semantics, providers, core, adapters,
+    prompts, validators, Studio, and scenario behavior remain unchanged.
+  - Verification: a real Seatbelt child can read the exact trusted system TLS configuration
+    required by `/usr/bin/git` while that root, the selected developer toolchain, and AIDD source
+    remain read-only; own provider state remains writable and operator HOME plus sibling state
+    remain denied. The regression must not require provider credentials or a public network.
+  - Completion: the macOS backend includes the fixed real `/private/etc/ssl` directory only when
+    it exists as a non-symlink system directory, then grants it through the same read-only tool
+    roots used by Seatbelt. A real boundary regression reads `openssl.cnf`, retains the local Git
+    clone proof, and asserts no TLS write rule; a separate provider-free production-like check
+    completes the previously failing HTTPS Hono clone. Focused checks pass `2/2`, the complete
+    isolation/auth/session selection passes `55/55`, Ruff and mypy pass, and full pytest passes
+    `2146/2146`.
 
 Exit evidence:
 

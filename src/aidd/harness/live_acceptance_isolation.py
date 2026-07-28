@@ -56,6 +56,7 @@ _MACOS_DEVELOPER_ROOT_PARENTS = (
     Path("/Library/Developer"),
 )
 _MACOS_DEVELOPER_ROOT_TIMEOUT_SECONDS = 5
+_MACOS_SYSTEM_TLS_READ_ROOTS = (Path("/private/etc/ssl"),)
 
 
 class LiveAcceptanceIsolationError(RuntimeError):
@@ -284,6 +285,17 @@ def _macos_developer_tool_root() -> Path | None:
     return selected
 
 
+def _macos_system_tls_read_roots() -> tuple[Path, ...]:
+    roots: list[Path] = []
+    for candidate in _MACOS_SYSTEM_TLS_READ_ROOTS:
+        if candidate.is_symlink():
+            continue
+        resolved = _resolved(candidate)
+        if resolved == candidate and resolved.is_dir():
+            roots.append(resolved)
+    return tuple(roots)
+
+
 def _default_tool_read_roots(*, system_name: str) -> tuple[Path, ...]:
     roots: list[Path] = []
     candidates: tuple[Path, ...] = (
@@ -297,6 +309,7 @@ def _default_tool_read_roots(*, system_name: str) -> tuple[Path, ...]:
         developer_root = _macos_developer_tool_root()
         if developer_root is not None:
             candidates = (*candidates, developer_root)
+        candidates = (*candidates, *_macos_system_tls_read_roots())
     for candidate in candidates:
         resolved = _resolved(candidate)
         if resolved.exists() and resolved not in roots:

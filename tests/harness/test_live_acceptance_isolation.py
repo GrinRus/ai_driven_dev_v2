@@ -366,7 +366,7 @@ def test_macos_boundary_enforces_visibility_matrix(tmp_path: Path) -> None:
     platform.system() != "Darwin",
     reason="real Seatbelt developer-tool verification is macOS-specific",
 )
-def test_macos_boundary_allows_selected_developer_toolchain_for_git(
+def test_macos_boundary_allows_selected_developer_toolchain_and_tls_for_git(
     tmp_path: Path,
 ) -> None:
     source = _git_source(tmp_path)
@@ -394,6 +394,16 @@ def test_macos_boundary_allows_selected_developer_toolchain_for_git(
             "PATH": "/usr/bin:/bin",
         },
     )
+    tls_config = Path("/private/etc/ssl/openssl.cnf")
+    tls_read = subprocess.run(
+        boundary.wrap_command(("/bin/cat", tls_config.as_posix())),
+        cwd=provider,
+        env=boundary.environment,
+        capture_output=True,
+        text=True,
+        check=False,
+        timeout=5,
+    )
     completed = subprocess.run(
         boundary.wrap_command(
             (
@@ -412,10 +422,13 @@ def test_macos_boundary_allows_selected_developer_toolchain_for_git(
         timeout=15,
     )
 
+    assert tls_read.returncode == 0, tls_read.stderr
+    assert tls_read.stdout
     assert completed.returncode == 0, completed.stderr
     assert (provider / "target" / "tracked.txt").read_text(encoding="utf-8") == "tracked\n"
     profile = " ".join(boundary.launch_prefix)
     assert f'(subpath "{Path(selected).resolve().as_posix()}")' in profile
+    assert '(subpath "/private/etc/ssl")' in profile
     assert (
         f'(allow file-write* (subpath "{provider.resolve().as_posix()}"))'
         in profile
@@ -428,6 +441,7 @@ def test_macos_boundary_allows_selected_developer_toolchain_for_git(
         f'(allow file-write* (subpath "{sibling.resolve().as_posix()}"))'
         not in profile
     )
+    assert '(allow file-write* (subpath "/private/etc/ssl"))' not in profile
 
 
 def test_platform_capability_uses_negative_canary() -> None:

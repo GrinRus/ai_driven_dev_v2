@@ -7,14 +7,16 @@ slice, and local task.
 
 ## Next
 
-- `W36-E7-S4-T3` — Run the medium scenario through Codex on candidate `1dbe87a`.
+- `W36-E7-S4-T36` — Re-run the complete provider-free Chromium matrix after T66.
 
 ## Soon
 
-- `W36-E7-S4-T4` — Repeat the medium scenario through Claude Code on the same candidate.
+- `W36-E7-S4-T37` — Rebuild exact-SHA readiness after the T66 isolation correction.
 
 ## Parking lot
 
+- `W36-E7-S4-T3` — Run the medium scenario through Codex on the replacement candidate.
+- `W36-E7-S4-T4` — Repeat the medium scenario through Claude Code on the same candidate.
 - `W36-E7-S3-T2` — Record five first-time-operator sessions after initial live hardening.
 - `W36-E7-S3-T3` — Reconcile observed session findings before beta readiness.
 - `W36-E7-S4-T5` — Record final same-revision Codex and Claude acceptance evidence.
@@ -33,6 +35,25 @@ slice, and local task.
   queue-restoration policy in `docs/backlog/roadmap.md` (`W8-E3-S1`).
 
 ## Current reconciliation
+
+- `2026-07-28` `W36-E7-S4-T66` is complete: macOS isolation now grants
+  the fixed real `/private/etc/ssl` directory read-only so HTTPS Git can load
+  LibreSSL configuration and trust data. Real Seatbelt reads `openssl.cnf`,
+  local Git cloning remains green, no TLS write rule exists, and the exact
+  previously failing provider-free HTTPS Hono clone passes. Focused checks pass
+  `2/2`, isolation/auth/session passes `55/55`, Ruff and mypy pass, and full
+  pytest passes `2146/2146`. T36 is promoted to `Next`, T37 to `Soon`; providers
+  and large scenarios remain unstarted on the replacement candidate.
+
+- `2026-07-28` the first post-T65 Codex T3 root stopped before provider
+  allocation: public preflight and private auth passed, but Seatbelt denied
+  `/private/etc/ssl/openssl.cnf` while HTTPS Git prepared the pinned target clone.
+  This is an AIDD isolation-backend target-setup defect, not auth, provider,
+  network, or model failure. `W36-E7-S4-T66` is promoted to `Next` for a trusted
+  read-only TLS configuration root and real-Seatbelt regression. Candidate
+  `1dbe87a` is invalidated; T36 returns to `Soon`, while T37 and both provider
+  acceptances are parked. The failed root will not be resumed, and no large
+  scenario ran.
 
 - `2026-07-28` `W36-E7-S4-T37` is complete on exact candidate `1dbe87a`,
   tree `075e9fa`, tracked-index digest `c11d307`, archive digest `0f7135d`,
