@@ -6,7 +6,11 @@ from pathlib import Path
 import pytest
 from playwright.sync_api import Page, sync_playwright
 
-from browser_tests.browser_harness import VIEWPORTS, operator_browser_harness
+from browser_tests.browser_harness import (
+    VIEWPORTS,
+    operator_browser_harness,
+    wait_for_work_item_surface,
+)
 from browser_tests.journey_support import configure_sleeping_fixture_runtime
 from browser_tests.rendered_assertions import assert_accessible_render
 from browser_tests.rendered_geometry import assert_rendered_geometry
@@ -233,7 +237,8 @@ def test_downstream_success_blocks_intervention_without_creating_request(
         work_item=fixture.work_item,
     ) as harness, harness.open_page(viewport) as browser_page:
         page = browser_page.page
-        page.goto(f"{harness.url}?ui=studio", wait_until="networkidle")
+        page.goto(f"{harness.url}?ui=studio", wait_until="domcontentloaded")
+        wait_for_work_item_surface(page, fixture.work_item)
         page.evaluate(
             "state.activeStage = 'plan'; state.activeStageExplicit = true; fetchDashboard()"
         )

@@ -12326,7 +12326,8 @@ Local tasks:
     runtime job.
 - `W36-E7-S4-T36` (next) Re-run the complete provider-free Chromium acceptance matrix after the
   final provider-neutral hardening change.
-  - Dependencies: `W36-E7-S4-T62` as the current direct queue predecessor;
+  - Dependencies: `W36-E7-S4-T63` as the current direct queue predecessor;
+    `W36-E7-S4-T62` as the preceding isolation-backend correction;
     `W36-E7-S4-T61` as the preceding browser synchronization correction;
     `W36-E7-S4-T60`, `W36-E7-S4-T58`,
     `W36-E7-S4-T55`,
@@ -12491,6 +12492,22 @@ Local tasks:
     `41/41`, the complete harness passes `379/379`, Ruff and mypy pass, and the full Python
     run has `2145` passing tests; its sole initial failure was the corrected planning dependency
     edge from T62 to T36, whose planning/docs rerun passes `50/50`.
+- `W36-E7-S4-T63` (done) Replace the downstream-blocked intervention journey's global
+  navigation-idle wait with bounded exact work-item surface readiness.
+  - Dependencies: discovered by the failed post-T62 `W36-E7-S4-T36` revalidation; blocks the
+    next complete browser gate.
+  - Scope: one initial navigation boundary in
+    `browser_tests/test_journey_intervention_recovery.py`; production Studio, intervention
+    semantics, fixtures, viewport coverage, and timeout budgets remain unchanged.
+  - Verification: the isolated `390x844` case passes repeatedly, the complete intervention and
+    terminal families pass `24/24`, diagnostics remain clean, and the downstream-blocked case no
+    longer waits for global `networkidle`.
+  - Completion: the downstream-blocked intervention case now waits for `domcontentloaded`
+    followed by the exact fixture work-item chip before selecting the Plan surface. The
+    `390x844` failure passes `3/3` in isolation, and the complete intervention/terminal families
+    pass `24/24` in `599.24s` with clean diagnostics. Ruff and standard mypy pass; the full
+    Python run has `2145` passing tests and only the subsequently corrected planning-status
+    mismatch failed.
 
 Exit evidence:
 

@@ -7,11 +7,11 @@ slice, and local task.
 
 ## Next
 
-- `W36-E7-S4-T36` — Re-run the provider-free Chromium gate after the T62 isolation fix.
+- `W36-E7-S4-T36` — Re-run the complete provider-free Chromium gate after T63.
 
 ## Soon
 
-- `W36-E7-S4-T37` — Rebuild exact-SHA readiness after the T62 code change.
+- `W36-E7-S4-T37` — Rebuild exact-SHA readiness after the T62/T63 changes.
 
 ## Parking lot
 
@@ -35,6 +35,22 @@ slice, and local task.
   queue-restoration policy in `docs/backlog/roadmap.md` (`W8-E3-S1`).
 
 ## Current reconciliation
+
+- `2026-07-28` `W36-E7-S4-T63` is complete: the downstream-blocked
+  intervention journey now waits for `domcontentloaded` and the exact work-item
+  surface before durable Plan assertions. The failed `390x844` case passes `3/3`
+  in isolation, complete intervention/terminal families pass `24/24` in `599.24s`,
+  Ruff and standard mypy pass, and the full Python run has `2145` passing tests;
+  its only failure was the corrected planning status mismatch. T36 is promoted to
+  `Next`, T37 to `Soon`; providers and large scenarios remain unstarted.
+
+- `2026-07-28` the post-T62 T36 gate passed its historical matrix `4/4` in
+  `123.69s`, then the complete intervention/terminal families reported `23/24`.
+  The sole `390x844` downstream-blocked intervention failure timed out in initial
+  global `networkidle` before any durable product assertion; isolated rerun passed
+  `1/1` in `47.75s`. `W36-E7-S4-T63` is promoted to `Next` for that one browser
+  readiness boundary, T36 returns to `Soon`, and T37/provider acceptance remain
+  parked. No packaged/full browser layer, provider evaluator, or large scenario ran.
 
 - `2026-07-28` `W36-E7-S4-T62` is complete: the macOS isolation backend now resolves
   the active trusted `xcode-select` developer root and grants it read-only Seatbelt
