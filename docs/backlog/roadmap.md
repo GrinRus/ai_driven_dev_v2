@@ -11717,7 +11717,7 @@ Local tasks:
   - Scope: provider-free harness and architecture tests.
   - Verification: conformance fixtures fail before live execution for overlapping roots, dirty
     tracked source, forbidden product imports, or live-scenario literals in runtime product code.
-- `W36-E7-S4-T3` (soon) Run `AIDD-LIVE-007` through Codex to a clean terminal result with
+- `W36-E7-S4-T3` (next) Run `AIDD-LIVE-007` through Codex to a clean terminal result with
   manual stage-quality and rendered Studio evidence.
   - Dependencies: `W36-E7-S4-T37` as the direct queue predecessor after the
     post-auth `W36-E7-S4-T60` and `W36-E7-S4-T36` gates; `W36-E7-S4-T33`, `W36-E7-S4-T32`, `W36-E7-S4-T31`, `W36-E7-S4-T30`, `W36-E7-S4-T29`, `W36-E7-S4-T28`, `W36-E7-S4-T27`, `W36-E7-S4-T26`, `W36-E7-S4-T25`, `W36-E7-S4-T24`, `W36-E7-S4-T23`, `W36-E7-S4-T22`, `W36-E7-S4-T21`, `W36-E7-S4-T20`, `W36-E7-S4-T19`, `W36-E7-S4-T18`, `W36-E7-S4-T17`, `W36-E7-S4-T16`, `W36-E7-S4-T15`, `W36-E7-S4-T14`, `W36-E7-S4-T13`, `W36-E7-S4-T2`, `W36-E7-S4-T6`, `W36-E7-S4-T10`,
@@ -11726,7 +11726,7 @@ Local tasks:
   - Scope: external Codex live execution and evidence only.
   - Verification: installed-wheel `idea -> qa`, target verification, complete audits, terminal
     reports, and bounded Chromium evidence pass from an external run root.
-- `W36-E7-S4-T4` (parked) Run `AIDD-LIVE-007` through Claude Code from an independent root on
+- `W36-E7-S4-T4` (soon) Run `AIDD-LIVE-007` through Claude Code from an independent root on
   the same AIDD revision and target pin.
   - Dependencies: `W36-E7-S4-T3` as the direct queue predecessor.
   - Scope: external Claude Code live execution and evidence only.
@@ -12379,7 +12379,7 @@ Local tasks:
     `188/188` in `2720.11s`. All five viewports completed without console, page, failed-request,
     overflow, accessibility, or test-owned process-cleanup failure. The sanitized evidence is
     `docs/e2e/operator-ui-provider-free-browser-gate-2026-07-28.md`.
-- `W36-E7-S4-T37` (next) Prove the exact post-browser candidate is installable and ready for an
+- `W36-E7-S4-T37` (done) Prove the exact post-browser candidate is installable and ready for an
   isolated live-provider run.
   - Dependencies: `W36-E7-S4-T36` as the full-browser predecessor; blocks the active Codex
     acceptance task `W36-E7-S4-T3`.
@@ -12409,6 +12409,16 @@ Local tasks:
     source postflight has been accepted yet. Resume `T37` by restarting the full Chromium
     suite on unchanged `c5747a0`, then complete the remaining readiness gates before naming a
     candidate.
+  - Post-T61 completion: clean candidate `98d97c7`, tree `ebda9cd`, tracked-index digest
+    `01f9da4`, tracked-archive digest `098d587`, and wheel digest `3b6b8cf` pass Ruff, mypy
+    across `228` modules, Python `2145/2145`, exact-SHA Chromium `188/188`, isolated
+    install/doctor, both provider eval-doctors, fresh pinned Hono setup with Vitest `233/233`
+    and `tsc --noEmit`, bundle seal/readback after mutable-root deletion, public preflight,
+    dual private-auth `macos-seatbelt` canaries, and source-integrity postflight. The Claude
+    probe uses the launcher's explicit single-key credential allowlist for the active
+    `ANTHROPIC_AUTH_TOKEN`; no credential value or digest is recorded. The exact identities
+    and sanitized signals are in `docs/e2e/candidate-readiness-2026-07-28.md`; this record
+    commit does not replace or rebuild the candidate wheel.
 - `W36-E7-S4-T59` (done) Seed one allowlisted native-provider authentication snapshot into a
   fresh provider-private home without exposing the operator's remaining state.
   - Dependencies: the `W36-E7-S4-T3` private-home authentication discovery after
