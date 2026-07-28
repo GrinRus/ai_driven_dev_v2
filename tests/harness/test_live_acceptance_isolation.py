@@ -362,6 +362,74 @@ def test_macos_boundary_enforces_visibility_matrix(tmp_path: Path) -> None:
     ]
 
 
+@pytest.mark.skipif(
+    platform.system() != "Darwin",
+    reason="real Seatbelt developer-tool verification is macOS-specific",
+)
+def test_macos_boundary_allows_selected_developer_toolchain_for_git(
+    tmp_path: Path,
+) -> None:
+    source = _git_source(tmp_path)
+    external = tmp_path / "external"
+    provider = external / "provider-a"
+    sibling = external / "provider-b"
+    external.mkdir()
+    sibling.mkdir()
+    operator_home = tmp_path / "operator-home"
+    operator_home.mkdir()
+    selected = subprocess.run(
+        ("/usr/bin/xcode-select", "--print-path"),
+        capture_output=True,
+        text=True,
+        check=True,
+        timeout=5,
+    ).stdout.strip()
+
+    boundary = prepare_live_acceptance_isolation(
+        source_checkout=source,
+        external_root=external,
+        provider_root=provider,
+        inherited_environment={
+            "HOME": operator_home.as_posix(),
+            "PATH": "/usr/bin:/bin",
+        },
+    )
+    completed = subprocess.run(
+        boundary.wrap_command(
+            (
+                "/usr/bin/git",
+                "clone",
+                "--no-local",
+                source.as_posix(),
+                (provider / "target").as_posix(),
+            )
+        ),
+        cwd=provider,
+        env=boundary.environment,
+        capture_output=True,
+        text=True,
+        check=False,
+        timeout=15,
+    )
+
+    assert completed.returncode == 0, completed.stderr
+    assert (provider / "target" / "tracked.txt").read_text(encoding="utf-8") == "tracked\n"
+    profile = " ".join(boundary.launch_prefix)
+    assert f'(subpath "{Path(selected).resolve().as_posix()}")' in profile
+    assert (
+        f'(allow file-write* (subpath "{provider.resolve().as_posix()}"))'
+        in profile
+    )
+    assert (
+        f'(allow file-write* (subpath "{operator_home.resolve().as_posix()}"))'
+        not in profile
+    )
+    assert (
+        f'(allow file-write* (subpath "{sibling.resolve().as_posix()}"))'
+        not in profile
+    )
+
+
 def test_platform_capability_uses_negative_canary() -> None:
     if platform.system() == "Linux" and not Path("/usr/bin/bwrap").exists():
         pytest.skip("bubblewrap is unavailable")

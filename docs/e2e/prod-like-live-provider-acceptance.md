@@ -80,8 +80,11 @@ provider subtree. The launcher rejects a sibling provider tool root.
 The child receives an allowlisted environment with private `HOME`, temporary, XDG config, cache,
 data, and state directories. The platform backend permits read-only AIDD source access and
 read/write access to the selected provider subtree, while sibling provider roots and the original
-operator home remain unreadable. Repeat with a fresh provider root and the appropriate explicit
-credential key for the second runtime.
+operator home remain unreadable. On macOS the backend also resolves the active trusted
+`xcode-select` developer root under `/Applications` or `/Library/Developer` and grants it
+read-only access so `/usr/bin/git` and its `libxcrun` dependency can prepare the target clone
+inside Seatbelt. It does not grant a write rule for that toolchain. Repeat with a fresh provider
+root and the appropriate explicit credential key for the second runtime.
 
 The isolation launcher also owns the mandatory live-acceptance session guard. Before creating
 the provider subtree it captures source commit/tree, tracked bytes, and the exact baseline

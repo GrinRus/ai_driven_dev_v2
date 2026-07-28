@@ -7,14 +7,16 @@ slice, and local task.
 
 ## Next
 
-- `W36-E7-S4-T3` — Run the medium scenario through Codex to a clean terminal result.
+- `W36-E7-S4-T36` — Re-run the provider-free Chromium gate after the T62 isolation fix.
 
 ## Soon
 
-- `W36-E7-S4-T4` — Repeat the medium scenario through Claude Code from an independent root.
+- `W36-E7-S4-T37` — Rebuild exact-SHA readiness after the T62 code change.
 
 ## Parking lot
 
+- `W36-E7-S4-T3` — Run the medium scenario through Codex to a clean terminal result.
+- `W36-E7-S4-T4` — Repeat the medium scenario through Claude Code from an independent root.
 - `W36-E7-S3-T2` — Record five first-time-operator sessions after initial live hardening.
 - `W36-E7-S3-T3` — Reconcile observed session findings before beta readiness.
 - `W36-E7-S4-T5` — Record final same-revision Codex and Claude acceptance evidence.
@@ -33,6 +35,25 @@ slice, and local task.
   queue-restoration policy in `docs/backlog/roadmap.md` (`W8-E3-S1`).
 
 ## Current reconciliation
+
+- `2026-07-28` `W36-E7-S4-T62` is complete: the macOS isolation backend now resolves
+  the active trusted `xcode-select` developer root and grants it read-only Seatbelt
+  access. A real isolated `/usr/bin/git clone --no-local` passes while source and
+  developer tools remain read-only, own provider state is writable, and operator
+  HOME plus sibling state stay denied. Focused isolation passes `3/3`, auth/session
+  `41/41`, harness `379/379`, Ruff and mypy pass, the full Python run has `2145`
+  passing tests, and the corrected planning/docs rerun passes `50/50`. T36 is
+  promoted to `Next` and T37 to `Soon`; candidate `98d97c7` remains invalidated
+  and provider acceptance stays parked.
+
+- `2026-07-28` the first Codex T3 root stopped before install or provider allocation:
+  macOS Seatbelt denied `libxcrun.dylib` while `/usr/bin/git` prepared the pinned
+  target clone. This is an AIDD isolation-backend defect rather than auth, network,
+  provider, or model failure. `W36-E7-S4-T62` is promoted to `Next` to authorize the
+  active `xcode-select` developer root read-only and prove Git through the real
+  boundary. Its code change invalidates candidate `98d97c7`; T36 returns to `Soon`,
+  while T37 and both provider acceptances are parked. The failed root will not be
+  resumed, and no large scenario was launched.
 
 - `2026-07-28` `W36-E7-S4-T37` is complete on exact candidate `98d97c7`, tree
   `ebda9cd`, tracked-index digest `01f9da4`, tracked archive `098d587`, and wheel

@@ -11717,7 +11717,7 @@ Local tasks:
   - Scope: provider-free harness and architecture tests.
   - Verification: conformance fixtures fail before live execution for overlapping roots, dirty
     tracked source, forbidden product imports, or live-scenario literals in runtime product code.
-- `W36-E7-S4-T3` (next) Run `AIDD-LIVE-007` through Codex to a clean terminal result with
+- `W36-E7-S4-T3` (parked) Run `AIDD-LIVE-007` through Codex to a clean terminal result with
   manual stage-quality and rendered Studio evidence.
   - Dependencies: `W36-E7-S4-T37` as the direct queue predecessor after the
     post-auth `W36-E7-S4-T60` and `W36-E7-S4-T36` gates; `W36-E7-S4-T33`, `W36-E7-S4-T32`, `W36-E7-S4-T31`, `W36-E7-S4-T30`, `W36-E7-S4-T29`, `W36-E7-S4-T28`, `W36-E7-S4-T27`, `W36-E7-S4-T26`, `W36-E7-S4-T25`, `W36-E7-S4-T24`, `W36-E7-S4-T23`, `W36-E7-S4-T22`, `W36-E7-S4-T21`, `W36-E7-S4-T20`, `W36-E7-S4-T19`, `W36-E7-S4-T18`, `W36-E7-S4-T17`, `W36-E7-S4-T16`, `W36-E7-S4-T15`, `W36-E7-S4-T14`, `W36-E7-S4-T13`, `W36-E7-S4-T2`, `W36-E7-S4-T6`, `W36-E7-S4-T10`,
@@ -11726,7 +11726,7 @@ Local tasks:
   - Scope: external Codex live execution and evidence only.
   - Verification: installed-wheel `idea -> qa`, target verification, complete audits, terminal
     reports, and bounded Chromium evidence pass from an external run root.
-- `W36-E7-S4-T4` (soon) Run `AIDD-LIVE-007` through Claude Code from an independent root on
+- `W36-E7-S4-T4` (parked) Run `AIDD-LIVE-007` through Claude Code from an independent root on
   the same AIDD revision and target pin.
   - Dependencies: `W36-E7-S4-T3` as the direct queue predecessor.
   - Scope: external Claude Code live execution and evidence only.
@@ -12324,9 +12324,10 @@ Local tasks:
     coverage passes `17/17`; the full intervention/browser/static selection passes `28/28`;
     and all five allowed viewports prove one request, an empty submitted draft, and a still-running
     runtime job.
-- `W36-E7-S4-T36` (done) Re-run the complete provider-free Chromium acceptance matrix after the
+- `W36-E7-S4-T36` (next) Re-run the complete provider-free Chromium acceptance matrix after the
   final provider-neutral hardening change.
-  - Dependencies: `W36-E7-S4-T61` as the current direct queue predecessor;
+  - Dependencies: `W36-E7-S4-T62` as the current direct queue predecessor;
+    `W36-E7-S4-T61` as the preceding browser synchronization correction;
     `W36-E7-S4-T60`, `W36-E7-S4-T58`,
     `W36-E7-S4-T55`,
     `W36-E7-S4-T56`, and `W36-E7-S4-T57` as earlier code-change predecessors; blocks the
@@ -12379,7 +12380,7 @@ Local tasks:
     `188/188` in `2720.11s`. All five viewports completed without console, page, failed-request,
     overflow, accessibility, or test-owned process-cleanup failure. The sanitized evidence is
     `docs/e2e/operator-ui-provider-free-browser-gate-2026-07-28.md`.
-- `W36-E7-S4-T37` (done) Prove the exact post-browser candidate is installable and ready for an
+- `W36-E7-S4-T37` (soon) Prove the exact post-browser candidate is installable and ready for an
   isolated live-provider run.
   - Dependencies: `W36-E7-S4-T36` as the full-browser predecessor; blocks the active Codex
     acceptance task `W36-E7-S4-T3`.
@@ -12470,6 +12471,26 @@ Local tasks:
     file passes `9/9` across all viewports and parity selectors; Ruff passes and the file contains
     no remaining `networkidle` wait. Production Studio, fixture state, and timeout budgets are
     unchanged.
+- `W36-E7-S4-T62` (done) Authorize the active macOS developer toolchain as a read-only live
+  provider dependency so target Git setup can execute inside Seatbelt.
+  - Dependencies: discovered by the first post-T37 Codex acceptance attempt before provider
+    allocation; invalidates the `98d97c7` candidate and blocks its `T36 -> T37` replacement.
+  - Scope: typed macOS isolation-backend tool-root discovery, focused harness regression, and
+    prod-like runbook clarification only; core, adapters, prompts, validators, Studio, target
+    setup semantics, and provider commands remain unchanged.
+  - Verification: a real Seatbelt child executes `/usr/bin/git clone --no-local` through the
+    same launcher boundary while the selected developer root and source remain read-only, the
+    own provider root remains writable, and operator HOME plus sibling provider roots remain
+    denied.
+  - Completion: the macOS backend resolves `xcode-select --print-path` only when it names an
+    existing developer directory below trusted `/Applications` or `/Library/Developer` roots,
+    then includes that exact directory in the read-only tool roots used by Seatbelt. A real
+    boundary regression executes `/usr/bin/git clone --no-local` into the own provider root,
+    proving the previously blocked `libxcrun` path while the generated profile grants writes
+    only below that provider. Focused isolation checks pass `3/3`, auth/session checks pass
+    `41/41`, the complete harness passes `379/379`, Ruff and mypy pass, and the full Python
+    run has `2145` passing tests; its sole initial failure was the corrected planning dependency
+    edge from T62 to T36, whose planning/docs rerun passes `50/50`.
 
 Exit evidence:
 

@@ -51,6 +51,11 @@ _PRIVATE_ENVIRONMENT_PATHS = {
     "XDG_STATE_HOME": "state",
 }
 _ISOLATION_MARKER = "AIDD_LIVE_ISOLATION_ACTIVE"
+_MACOS_DEVELOPER_ROOT_PARENTS = (
+    Path("/Applications"),
+    Path("/Library/Developer"),
+)
+_MACOS_DEVELOPER_ROOT_TIMEOUT_SECONDS = 5
 
 
 class LiveAcceptanceIsolationError(RuntimeError):
@@ -251,15 +256,48 @@ def _linux_prefix(
     return tuple(prefix)
 
 
-def _default_tool_read_roots() -> tuple[Path, ...]:
+def _macos_developer_tool_root() -> Path | None:
+    executable = Path("/usr/bin/xcode-select")
+    if not executable.is_file():
+        return None
+    try:
+        completed = subprocess.run(
+            (executable.as_posix(), "--print-path"),
+            capture_output=True,
+            text=True,
+            check=False,
+            timeout=_MACOS_DEVELOPER_ROOT_TIMEOUT_SECONDS,
+        )
+    except (OSError, subprocess.TimeoutExpired):
+        return None
+    if completed.returncode != 0:
+        return None
+    raw_path = completed.stdout.strip()
+    if not raw_path or not Path(raw_path).is_absolute():
+        return None
+    selected = _resolved(Path(raw_path))
+    trusted_parents = tuple(_resolved(path) for path in _MACOS_DEVELOPER_ROOT_PARENTS)
+    if not selected.is_dir() or not any(
+        selected.is_relative_to(parent) for parent in trusted_parents
+    ):
+        return None
+    return selected
+
+
+def _default_tool_read_roots(*, system_name: str) -> tuple[Path, ...]:
     roots: list[Path] = []
-    for candidate in (
+    candidates: tuple[Path, ...] = (
         Path(sys.prefix),
         Path(sys.executable).resolve(strict=False).parents[3],
         Path(__file__).resolve(strict=False).parents[3],
         Path("/usr/local"),
         Path("/opt/homebrew"),
-    ):
+    )
+    if system_name == "Darwin":
+        developer_root = _macos_developer_tool_root()
+        if developer_root is not None:
+            candidates = (*candidates, developer_root)
+    for candidate in candidates:
         resolved = _resolved(candidate)
         if resolved.exists() and resolved not in roots:
             roots.append(resolved)
@@ -294,9 +332,15 @@ def prepare_live_acceptance_isolation(
         if operator_home_raw and Path(operator_home_raw).is_absolute()
         else None
     )
+    detected_system = system_name or platform.system()
     explicit_tool_roots = tuple(_resolved(path) for path in tool_read_roots)
     all_tool_roots = tuple(
-        dict.fromkeys((*_default_tool_read_roots(), *explicit_tool_roots))
+        dict.fromkeys(
+            (
+                *_default_tool_read_roots(system_name=detected_system),
+                *explicit_tool_roots,
+            )
+        )
     )
     for root in all_tool_roots:
         if not root.exists():
@@ -312,7 +356,6 @@ def prepare_live_acceptance_isolation(
         private_root=private_root,
         credential_environment_keys=credential_environment_keys,
     )
-    detected_system = system_name or platform.system()
     launch_prefix: tuple[str, ...]
     if detected_system == "Darwin":
         executable = shutil.which("sandbox-exec")
