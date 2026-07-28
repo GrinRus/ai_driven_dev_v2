@@ -7,15 +7,14 @@ slice, and local task.
 
 ## Next
 
-- `W36-E7-S4-T36` — Re-run the complete provider-free Chromium gate after T64.
+- `W36-E7-S4-T37` — Rebuild exact-SHA readiness after the T62–T64 changes.
 
 ## Soon
 
-- `W36-E7-S4-T37` — Rebuild exact-SHA readiness after the T62–T64 changes.
+- `W36-E7-S4-T3` — Run the medium scenario through Codex to a clean terminal result.
 
 ## Parking lot
 
-- `W36-E7-S4-T3` — Run the medium scenario through Codex to a clean terminal result.
 - `W36-E7-S4-T4` — Repeat the medium scenario through Claude Code from an independent root.
 - `W36-E7-S3-T2` — Record five first-time-operator sessions after initial live hardening.
 - `W36-E7-S3-T3` — Reconcile observed session findings before beta readiness.
@@ -35,6 +34,16 @@ slice, and local task.
   queue-restoration policy in `docs/backlog/roadmap.md` (`W8-E3-S1`).
 
 ## Current reconciliation
+
+- `2026-07-28` the final post-T64 `W36-E7-S4-T36` rerun is complete on clean
+  source `143cc1e` and tree `2efec8e`: historical cases pass `4/4`,
+  intervention/terminal families `24/24`, packaged journeys `79/79` with exact
+  discovered/executed ID parity and no failed ID, and full browser passes
+  `188/188`. All five viewports complete without console, page, failed-request,
+  overflow, accessibility, or test-owned process-cleanup failure. Sanitized
+  evidence is in
+  `docs/e2e/operator-ui-provider-free-browser-gate-2026-07-28-post-t64.md`.
+  T37 is promoted to `Next`, Codex T3 to `Soon`; no provider or large scenario ran.
 
 - `2026-07-28` `W36-E7-S4-T64` is complete: both Implement journey entries now
   wait for `domcontentloaded`, exact work-item identity, and selected-runtime
