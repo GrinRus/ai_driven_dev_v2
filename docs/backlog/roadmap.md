@@ -12329,9 +12329,10 @@ Local tasks:
     coverage passes `17/17`; the full intervention/browser/static selection passes `28/28`;
     and all five allowed viewports prove one request, an empty submitted draft, and a still-running
     runtime job.
-- `W36-E7-S4-T36` (next) Re-run the complete provider-free Chromium acceptance matrix after the
+- `W36-E7-S4-T36` (soon) Re-run the complete provider-free Chromium acceptance matrix after the
   final provider-neutral hardening change.
-  - Dependencies: `W36-E7-S4-T67` as the current direct queue predecessor;
+  - Dependencies: `W36-E7-S4-T68` as the current direct queue predecessor;
+    `W36-E7-S4-T67` as the preceding active-job ownership correction;
     `W36-E7-S4-T66` as the preceding isolation-backend correction;
     `W36-E7-S4-T65` as the preceding terminal-reconciliation correction;
     `W36-E7-S4-T64` as the preceding browser synchronization correction;
@@ -12412,7 +12413,13 @@ Local tasks:
     `activeJobId` beyond 15 seconds after recovered-log cancellation. The registry was stopped
     before the next journey and later layers did not run. `W36-E7-S4-T67` owns the remaining
     bounded nonterminal cancellation reconciliation race.
-- `W36-E7-S4-T37` (soon) Prove the exact post-browser candidate is installable and ready for an
+  - Post-T67 attempt: clean source `1a2b012`, tree `84bd68d`, passed historical cases `4/4`
+    in `121.64s` and complete intervention/terminal families `24/24` in `518.19s`. After
+    Guided Setup passed `5/5`, packaged active Studio reported `4/5`: desktop
+    `1440x900` retained `activeJobId` beyond 15 seconds after a recovered-log cancellation.
+    The registry was stopped before the next journey and the complete browser suite did not
+    run. `W36-E7-S4-T68` owns the remaining delayed-cancellation terminal handoff.
+- `W36-E7-S4-T37` (parked) Prove the exact post-browser candidate is installable and ready for an
   isolated live-provider run.
   - Dependencies: `W36-E7-S4-T36` as the full-browser predecessor; blocks the active Codex
     acceptance task `W36-E7-S4-T3`.
@@ -12628,6 +12635,17 @@ Local tasks:
     pass, and the repeated complete Python suite passes `2146/2146`. One earlier unrelated
     100-millisecond process-start assertion missed its child PID under load, then passed `5/5`
     in isolation and in the complete rerun; no process code or timeout changed.
+- `W36-E7-S4-T68` (next) Make a nonterminal cancellation request converge through one bounded
+  terminal handoff even when the runtime stop and browser poll complete under suite load.
+  - Dependencies: discovered by the failed post-T67 `W36-E7-S4-T36` packaged active-Studio
+    journey; blocks the next complete browser gate.
+  - Scope: UI job cancellation completion, active-Studio polling ownership, and focused
+    provider-free regressions only; adapters, providers, scenario fixtures, and the existing
+    15-second browser assertion budget remain unchanged.
+  - Verification: a cancellation response that starts as `cancelling` cannot remain the volatile
+    browser winner after the owned runtime process has stopped; terminal job evidence is
+    reconciled once, stale polls cannot restore it, and the packaged Guided Setup predecessor
+    followed by active Studio passes repeatedly across all five viewports.
 
 Exit evidence:
 

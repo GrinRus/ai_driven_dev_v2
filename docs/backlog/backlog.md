@@ -7,14 +7,15 @@ slice, and local task.
 
 ## Next
 
-- `W36-E7-S4-T36` — Re-run the complete provider-free Chromium matrix after T67.
+- `W36-E7-S4-T68` — Make delayed active-job cancellation converge to one terminal handoff.
 
 ## Soon
 
-- `W36-E7-S4-T37` — Rebuild exact-SHA readiness after the T67 browser correction.
+- `W36-E7-S4-T36` — Re-run the complete provider-free Chromium matrix after T68.
 
 ## Parking lot
 
+- `W36-E7-S4-T37` — Rebuild exact-SHA readiness after the T68 browser correction.
 - `W36-E7-S4-T3` — Run the medium scenario through Codex on the replacement candidate.
 - `W36-E7-S4-T4` — Repeat the medium scenario through Claude Code on the same candidate.
 - `W36-E7-S3-T2` — Record five first-time-operator sessions after initial live hardening.
@@ -35,6 +36,15 @@ slice, and local task.
   queue-restoration policy in `docs/backlog/roadmap.md` (`W8-E3-S1`).
 
 ## Current reconciliation
+
+- `2026-07-29` the post-T67 T36 rerun passed historical cases `4/4` in
+  `121.64s` and intervention/terminal families `24/24` in `518.19s`. Packaged
+  Guided Setup passed `5/5`, then active Studio reported `4/5`: desktop
+  `1440x900` retained `activeJobId` beyond 15 seconds after recovered-log
+  cancellation. The registry was stopped before the next journey and full
+  browser did not run. `W36-E7-S4-T68` is promoted to `Next` for the remaining
+  delayed-cancellation terminal handoff; T36 returns to `Soon`, while T37 and
+  provider acceptance remain parked. No provider or large scenario ran.
 
 - `2026-07-29` `W36-E7-S4-T67` is complete: terminal reconciliation
   records the immutable active job id, stale `cancelling` dashboard payloads
