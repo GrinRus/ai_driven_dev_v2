@@ -7,15 +7,14 @@ slice, and local task.
 
 ## Next
 
-- `W36-E7-S4-T36` — Re-run the complete provider-free Chromium acceptance matrix.
+- `W36-E7-S4-T37` — Prove exact-SHA package, private-auth, bundle, and source readiness.
 
 ## Soon
 
-- `W36-E7-S4-T37` — Prove exact-SHA package, private-auth, bundle, and source readiness.
+- `W36-E7-S4-T3` — Run the medium scenario through Codex to a clean terminal result.
 
 ## Parking lot
 
-- `W36-E7-S4-T3` — Run the medium scenario through Codex to a clean terminal result.
 - `W36-E7-S4-T4` — Repeat the medium scenario through Claude Code from an independent root.
 - `W36-E7-S3-T2` — Record five first-time-operator sessions after initial live hardening.
 - `W36-E7-S3-T3` — Reconcile observed session findings before beta readiness.
@@ -35,6 +34,15 @@ slice, and local task.
   queue-restoration policy in `docs/backlog/roadmap.md` (`W8-E3-S1`).
 
 ## Current reconciliation
+
+- `2026-07-28` the post-T61 `W36-E7-S4-T36` rerun is complete on clean source
+  `21c12ed` and tree `7185fbd`: historical cases pass `4/4`, intervention/terminal
+  families `24/24`, packaged journeys `79/79` with exact discovered/executed ID parity and no
+  failed ID, and the full Chromium suite `188/188`. All five viewports complete without console,
+  page, failed-request, overflow, accessibility, or test-owned process-cleanup failures. The
+  sanitized evidence is `docs/e2e/operator-ui-provider-free-browser-gate-2026-07-28.md`.
+  T37 is promoted to `Next`, Codex medium acceptance T3 to `Soon`; no provider or large scenario
+  has started.
 
 - `2026-07-28` `W36-E7-S4-T61` is complete: the runtime/validation Recovery browser
   journey now waits for `domcontentloaded` and exact work-item surface readiness rather than
