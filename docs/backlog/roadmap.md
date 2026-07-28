@@ -12326,7 +12326,8 @@ Local tasks:
     runtime job.
 - `W36-E7-S4-T36` (next) Re-run the complete provider-free Chromium acceptance matrix after the
   final provider-neutral hardening change.
-  - Dependencies: `W36-E7-S4-T63` as the current direct queue predecessor;
+  - Dependencies: `W36-E7-S4-T64` as the current direct queue predecessor;
+    `W36-E7-S4-T63` as the preceding intervention synchronization correction;
     `W36-E7-S4-T62` as the preceding isolation-backend correction;
     `W36-E7-S4-T61` as the preceding browser synchronization correction;
     `W36-E7-S4-T60`, `W36-E7-S4-T58`,
@@ -12508,6 +12509,22 @@ Local tasks:
     pass `24/24` in `599.24s` with clean diagnostics. Ruff and standard mypy pass; the full
     Python run has `2145` passing tests and only the subsequently corrected planning-status
     mismatch failed.
+- `W36-E7-S4-T64` (done) Replace the Implement journey's global initial navigation-idle waits
+  with bounded exact work-item and runtime surface readiness.
+  - Dependencies: discovered by the failed post-T63 `W36-E7-S4-T36` complete browser suite;
+    blocks the next complete browser gate.
+  - Scope: initial navigation boundaries in `browser_tests/test_journey_implementation.py`;
+    production Studio, implementation evidence, fixtures, viewport coverage, and timeout budgets
+    remain unchanged.
+  - Verification: the implementation-recovery case passes repeatedly, the complete Implement
+    journey file passes, diagnostics remain clean, and no initial navigation in that journey
+    waits for global `networkidle`.
+  - Completion: both Implement journey entry points now wait for `domcontentloaded`, the exact
+    fixture work-item chip, and selected-runtime readiness before rendering implementation
+    evidence. The recovery case passes `3/3` across its five-viewport loop, the complete
+    Implement file passes `2/2` in `64.58s`, and no `networkidle` wait remains in the file.
+    Ruff and standard mypy pass; the full Python run has `2145` passing tests and only the
+    subsequently corrected planning-status mismatch failed.
 
 Exit evidence:
 

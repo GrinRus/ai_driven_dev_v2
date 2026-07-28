@@ -7,11 +7,11 @@ slice, and local task.
 
 ## Next
 
-- `W36-E7-S4-T36` — Re-run the complete provider-free Chromium gate after T63.
+- `W36-E7-S4-T36` — Re-run the complete provider-free Chromium gate after T64.
 
 ## Soon
 
-- `W36-E7-S4-T37` — Rebuild exact-SHA readiness after the T62/T63 changes.
+- `W36-E7-S4-T37` — Rebuild exact-SHA readiness after the T62–T64 changes.
 
 ## Parking lot
 
@@ -35,6 +35,24 @@ slice, and local task.
   queue-restoration policy in `docs/backlog/roadmap.md` (`W8-E3-S1`).
 
 ## Current reconciliation
+
+- `2026-07-28` `W36-E7-S4-T64` is complete: both Implement journey entries now
+  wait for `domcontentloaded`, exact work-item identity, and selected-runtime
+  readiness before rendering evidence. Implementation recovery passes `3/3` across
+  its five-viewport loop, the full Implement file passes `2/2` in `64.58s`, no
+  `networkidle` wait remains, Ruff and standard mypy pass, and the full Python run
+  has `2145` passing tests; its only failure was the corrected planning mismatch.
+  T36 is promoted to `Next`, T37 to `Soon`; providers and large scenarios remain
+  unstarted.
+
+- `2026-07-28` the post-T63 T36 rerun passed historical cases `4/4` in
+  `64.11s`, intervention/terminal families `24/24` in `396.10s`, and packaged
+  journeys `79/79` with exact ID parity and no failed ID. The full browser suite
+  then reported `187/188` in `3297.71s`: implementation recovery timed out in its
+  first global `networkidle` navigation before product assertions, while isolated
+  rerun passed `1/1` in `54.55s`. `W36-E7-S4-T64` is promoted to `Next`, T36
+  returns to `Soon`, and T37/provider acceptance remain parked. No provider or
+  large scenario ran.
 
 - `2026-07-28` `W36-E7-S4-T63` is complete: the downstream-blocked
   intervention journey now waits for `domcontentloaded` and the exact work-item
