@@ -1673,6 +1673,7 @@ def test_operator_logs_asset_keeps_filter_raw_cancel_and_polling_contracts() -> 
             "async function reconcileRecoveredActiveJob(jobId, status)",
             "async function reconcileExpiredActiveJob(jobId)",
             "async function reconcileTerminalActiveJob(jobId)",
+            "state.reconciledTerminalJobId = state.activeJobId;",
             'data-connection-state="reconnecting"',
             'data-connection-state="offline"',
             'data-connection-state="expired-job"',

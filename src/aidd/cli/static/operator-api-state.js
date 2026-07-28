@@ -119,6 +119,7 @@ const state = {
   activeJobStatus: null,
   activeJobTimer: null,
   activeJobPollGeneration: 0,
+  reconciledTerminalJobId: "",
   approvalSessionConfirmation: null,
   activeJobConnection: {
     state: "unknown",
@@ -557,10 +558,12 @@ function activeJobPayloadIsLive(job) {
 
 async function recoverActiveJobFromDashboard(job) {
   if (!activeJobPayloadIsLive(job)) return;
+  if (job.job_id === state.reconciledTerminalJobId) return;
   if (state.activeJobId === job.job_id && state.activeJobStatus) {
     state.activeJobStatus = {...state.activeJobStatus, ...job};
     return;
   }
+  state.reconciledTerminalJobId = "";
   state.approvalSessionConfirmation = null;
   state.activeJobId = job.job_id;
   state.activeJobCursor = 0;

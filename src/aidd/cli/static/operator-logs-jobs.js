@@ -291,6 +291,7 @@ function activeJobRetryDelay(failureCount) {
 function clearReconciledActiveJob({preserveConnection = true} = {}) {
   clearActiveJobPollTimer();
   state.activeJobPollGeneration += 1;
+  state.reconciledTerminalJobId = state.activeJobId;
   state.activeJobId = "";
   state.activeJobStatus = null;
   state.activeJobCursor = 0;
@@ -562,6 +563,7 @@ async function pollActiveJob() {
 async function startJobPolling(job) {
   clearActiveJobPollTimer();
   state.activeJobPollGeneration += 1;
+  state.reconciledTerminalJobId = "";
   state.approvalSessionConfirmation = null;
   state.activeJobId = job.job_id;
   state.activeJobCursor = 0;

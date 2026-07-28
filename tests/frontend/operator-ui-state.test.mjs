@@ -727,6 +727,13 @@ test("cancellation invalidates an in-flight job poll", async () => {
   assert.equal(vm.runInContext("state.activeJobStatus", context), null);
   assert.equal(vm.runInContext("state.activeJobCursor", context), 0);
   assert.equal(requests.length, 2);
+
+  await vm.runInContext(
+    "recoverActiveJobFromDashboard({job_id: 'job-1', status: 'cancelling'})",
+    context,
+  );
+  assert.equal(vm.runInContext("state.activeJobId", context), "");
+  assert.equal(vm.runInContext("state.reconciledTerminalJobId", context), "job-1");
 });
 
 test("nonterminal cancellation continues polling", async () => {

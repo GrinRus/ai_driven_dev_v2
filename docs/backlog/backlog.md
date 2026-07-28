@@ -7,11 +7,11 @@ slice, and local task.
 
 ## Next
 
-- `W36-E7-S4-T36` — Re-run the complete provider-free Chromium matrix after T66.
+- `W36-E7-S4-T36` — Re-run the complete provider-free Chromium matrix after T67.
 
 ## Soon
 
-- `W36-E7-S4-T37` — Rebuild exact-SHA readiness after the T66 isolation correction.
+- `W36-E7-S4-T37` — Rebuild exact-SHA readiness after the T67 browser correction.
 
 ## Parking lot
 
@@ -35,6 +35,26 @@ slice, and local task.
   queue-restoration policy in `docs/backlog/roadmap.md` (`W8-E3-S1`).
 
 ## Current reconciliation
+
+- `2026-07-29` `W36-E7-S4-T67` is complete: terminal reconciliation
+  records the immutable active job id, stale `cancelling` dashboard payloads
+  cannot resurrect that tombstoned job, and a genuinely new launch clears the
+  tombstone. Guided Setup passes `5/5`, followed by three strict sequential
+  active-Studio runs at `5/5` each; frontend passes `99/99`, Ruff and mypy pass,
+  and repeated full pytest passes `2146/2146`. One earlier unrelated 100ms
+  process-start assertion passed `5/5` in isolation and in the full rerun; no
+  process timeout changed. T36 is promoted to `Next`, T37 to `Soon`; provider
+  acceptance remains parked.
+
+- `2026-07-29` the post-T66 T36 rerun passed historical cases `4/4` in
+  `116.80s` and intervention/terminal families `24/24` in `365.04s`. The
+  packaged registry passed its first journey `5/5`, then active Studio reported
+  `4/5`: tablet `768x1024` retained `activeJobId` beyond 15 seconds after
+  recovered-log cancellation. The registry was stopped before the next journey;
+  full browser did not run. `W36-E7-S4-T67` is promoted to `Next` for bounded,
+  generation-safe ownership of the nonterminal cancellation poll. T36 returns
+  to `Soon`; T37 and provider acceptance remain parked. No provider or large
+  scenario ran on the T66 source.
 
 - `2026-07-28` `W36-E7-S4-T66` is complete: macOS isolation now grants
   the fixed real `/private/etc/ssl` directory read-only so HTTPS Git can load

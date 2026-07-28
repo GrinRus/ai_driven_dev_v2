@@ -12331,7 +12331,8 @@ Local tasks:
     runtime job.
 - `W36-E7-S4-T36` (next) Re-run the complete provider-free Chromium acceptance matrix after the
   final provider-neutral hardening change.
-  - Dependencies: `W36-E7-S4-T66` as the current direct queue predecessor;
+  - Dependencies: `W36-E7-S4-T67` as the current direct queue predecessor;
+    `W36-E7-S4-T66` as the preceding isolation-backend correction;
     `W36-E7-S4-T65` as the preceding terminal-reconciliation correction;
     `W36-E7-S4-T64` as the preceding browser synchronization correction;
     `W36-E7-S4-T63` as the preceding intervention synchronization correction;
@@ -12405,6 +12406,12 @@ Local tasks:
     failed-request, overflow, accessibility, or test-owned process-cleanup failure. Sanitized
     evidence is in
     `docs/e2e/operator-ui-provider-free-browser-gate-2026-07-28-post-t65.md`.
+  - Post-T66 attempt: clean source `0e1aa84` passed historical cases `4/4` in `116.80s` and
+    intervention/terminal families `24/24` in `365.04s`. The packaged registry then passed its
+    first journey `5/5`, but active Studio reported `4/5`: tablet `768x1024` retained
+    `activeJobId` beyond 15 seconds after recovered-log cancellation. The registry was stopped
+    before the next journey and later layers did not run. `W36-E7-S4-T67` owns the remaining
+    bounded nonterminal cancellation reconciliation race.
 - `W36-E7-S4-T37` (soon) Prove the exact post-browser candidate is installable and ready for an
   isolated live-provider run.
   - Dependencies: `W36-E7-S4-T36` as the full-browser predecessor; blocks the active Codex
@@ -12601,6 +12608,26 @@ Local tasks:
     completes the previously failing HTTPS Hono clone. Focused checks pass `2/2`, the complete
     isolation/auth/session selection passes `55/55`, Ruff and mypy pass, and full pytest passes
     `2146/2146`.
+- `W36-E7-S4-T67` (done) Suppress stale dashboard recovery of an active-job identity after
+  durable terminal reconciliation.
+  - Dependencies: discovered by the failed post-T66 `W36-E7-S4-T36` packaged active-Studio
+    journey; blocks the next complete browser gate.
+  - Scope: active-Studio terminal identity ownership and provider-free frontend/browser
+    regressions only;
+    backend cancellation semantics, adapters, providers, fixtures, scenario behavior, and timeout
+    budgets remain unchanged.
+  - Verification: terminal dashboard/project/inbox readback records one browser-local tombstone
+    for the immutable job id, so a concurrent stale `cancelling` dashboard payload cannot
+    resurrect it; a genuinely new job clears the tombstone and retains normal polling. The
+    active-Studio journey passes repeatedly across all five viewports after its packaged
+    predecessor, without increasing the 15-second assertion budget.
+  - Completion: terminal reconciliation now records the immutable active job id before clearing
+    volatile state; dashboard recovery ignores that tombstoned id and a genuinely new launch
+    clears the tombstone. The exact Guided Setup predecessor passes `5/5`, followed by three
+    strict sequential active-Studio runs at `5/5` each; frontend passes `99/99`, Ruff and mypy
+    pass, and the repeated complete Python suite passes `2146/2146`. One earlier unrelated
+    100-millisecond process-start assertion missed its child PID under load, then passed `5/5`
+    in isolation and in the complete rerun; no process code or timeout changed.
 
 Exit evidence:
 
