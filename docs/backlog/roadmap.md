@@ -11717,7 +11717,7 @@ Local tasks:
   - Scope: provider-free harness and architecture tests.
   - Verification: conformance fixtures fail before live execution for overlapping roots, dirty
     tracked source, forbidden product imports, or live-scenario literals in runtime product code.
-- `W36-E7-S4-T3` (next) Run `AIDD-LIVE-007` through Codex to a clean terminal result with
+- `W36-E7-S4-T3` (parked) Run `AIDD-LIVE-007` through Codex to a clean terminal result with
   manual stage-quality and rendered Studio evidence.
   - Dependencies: `W36-E7-S4-T37` as the direct queue predecessor after the
     post-auth `W36-E7-S4-T60` and `W36-E7-S4-T36` gates; `W36-E7-S4-T33`, `W36-E7-S4-T32`, `W36-E7-S4-T31`, `W36-E7-S4-T30`, `W36-E7-S4-T29`, `W36-E7-S4-T28`, `W36-E7-S4-T27`, `W36-E7-S4-T26`, `W36-E7-S4-T25`, `W36-E7-S4-T24`, `W36-E7-S4-T23`, `W36-E7-S4-T22`, `W36-E7-S4-T21`, `W36-E7-S4-T20`, `W36-E7-S4-T19`, `W36-E7-S4-T18`, `W36-E7-S4-T17`, `W36-E7-S4-T16`, `W36-E7-S4-T15`, `W36-E7-S4-T14`, `W36-E7-S4-T13`, `W36-E7-S4-T2`, `W36-E7-S4-T6`, `W36-E7-S4-T10`,
@@ -11731,7 +11731,12 @@ Local tasks:
     read-only LibreSSL configuration `/private/etc/ssl/openssl.cnf` used by HTTPS Git clone.
     The root is terminal and will not be resumed; `W36-E7-S4-T66` owns the provider-free
     isolation correction.
-- `W36-E7-S4-T4` (soon) Run `AIDD-LIVE-007` through Claude Code from an independent root on
+  - Post-T68 attempt: candidate `52bb49d` passed public preflight, private Codex auth, target
+    clone, and wheel build without provider allocation, then stopped at installed-command
+    discovery. The private XDG environment correctly placed the uv tool under provider-private
+    data/bin while the harness expected the legacy `<install-home>/.local/bin/aidd` path.
+    The terminal root will not be resumed; `W36-E7-S4-T69` owns the provider-free correction.
+- `W36-E7-S4-T4` (parked) Run `AIDD-LIVE-007` through Claude Code from an independent root on
   the same AIDD revision and target pin.
   - Dependencies: `W36-E7-S4-T3` as the direct queue predecessor.
   - Scope: external Claude Code live execution and evidence only.
@@ -12329,9 +12334,10 @@ Local tasks:
     coverage passes `17/17`; the full intervention/browser/static selection passes `28/28`;
     and all five allowed viewports prove one request, an empty submitted draft, and a still-running
     runtime job.
-- `W36-E7-S4-T36` (done) Re-run the complete provider-free Chromium acceptance matrix after the
+- `W36-E7-S4-T36` (next) Re-run the complete provider-free Chromium acceptance matrix after the
   final provider-neutral hardening change.
-  - Dependencies: `W36-E7-S4-T68` as the current direct queue predecessor;
+  - Dependencies: `W36-E7-S4-T69` as the current direct queue predecessor;
+    `W36-E7-S4-T68` as the preceding terminal-projection correction;
     `W36-E7-S4-T67` as the preceding active-job ownership correction;
     `W36-E7-S4-T66` as the preceding isolation-backend correction;
     `W36-E7-S4-T65` as the preceding terminal-reconciliation correction;
@@ -12427,7 +12433,7 @@ Local tasks:
     without console, page, failed-request, overflow, accessibility, or test-owned
     process-cleanup failure. Sanitized evidence is in
     `docs/e2e/operator-ui-provider-free-browser-gate-2026-07-29-post-t68.md`.
-- `W36-E7-S4-T37` (done) Prove the exact post-browser candidate is installable and ready for an
+- `W36-E7-S4-T37` (soon) Prove the exact post-browser candidate is installable and ready for an
   isolated live-provider run.
   - Dependencies: `W36-E7-S4-T36` as the full-browser predecessor; blocks the active Codex
     acceptance task `W36-E7-S4-T3`.
@@ -12674,6 +12680,25 @@ Local tasks:
     active-Studio matrices pass `5/5`, the exact Guided Setup predecessor followed by active
     Studio passes `10/10`, Ruff and mypy across `228` modules pass, and full pytest passes
     `2146/2146`; the 15-second browser assertion budget is unchanged.
+- `W36-E7-S4-T69` (done) Keep local-wheel uv tool installation inside the selected live run when
+  the process already has provider-private XDG roots.
+  - Dependencies: discovered by the first post-T68 Codex acceptance attempt after
+    `W36-E7-S4-T37`; invalidates candidate `52bb49d` and blocks its `T36 -> T37` replacement.
+  - Scope: provider-neutral harness install environment, focused install regression, and
+    production-like no-provider smoke only; core, adapters, prompts, validators, Studio,
+    scenario behavior, provider auth, and isolation policy remain unchanged.
+  - Verification: the install helper explicitly owns both uv tool storage and bin roots below
+    `<run>/install-home`, even when inherited `XDG_DATA_HOME` and related variables point at the
+    provider-private session. The returned absolute `aidd` command exists under that run, the
+    wheel digest remains the candidate digest, and no executable is published into shared
+    provider-private data/bin state.
+  - Completion: local-wheel installation now sets explicit run-owned `UV_TOOL_DIR` and
+    `UV_TOOL_BIN_DIR` paths in addition to the existing run-owned HOME and cache. The focused
+    inherited-private-XDG regression proves the returned command stays below install-home and
+    shared provider-private bin remains absent. A real no-provider uv build/install smoke
+    confirms the same boundary with a valid wheel and executable. Focused checks pass `16/16`,
+    the complete harness regression passes `380/380`, Ruff and mypy across `228` modules pass,
+    and full pytest passes `2147/2147`.
 
 Exit evidence:
 

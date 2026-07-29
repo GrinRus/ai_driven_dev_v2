@@ -70,6 +70,10 @@ def _tool_bin_dir(*, install_home: Path) -> Path:
     return install_home / ".local" / "bin"
 
 
+def _tool_storage_dir(*, install_home: Path) -> Path:
+    return install_home / ".local" / "share" / "uv" / "tools"
+
+
 def _run_uv_cache_dir(*, run_root: Path) -> Path:
     return run_root / "uv-cache"
 
@@ -260,9 +264,12 @@ def prepare_local_wheel_install(
     _validate_built_wheel_resources(wheel_path)
 
     tool_bin_dir = _tool_bin_dir(install_home=install_home)
+    tool_storage_dir = _tool_storage_dir(install_home=install_home)
     install_env = dict(os.environ)
     install_env["HOME"] = install_home.as_posix()
     install_env["UV_CACHE_DIR"] = uv_cache_dir.as_posix()
+    install_env["UV_TOOL_BIN_DIR"] = tool_bin_dir.as_posix()
+    install_env["UV_TOOL_DIR"] = tool_storage_dir.as_posix()
     install_env["PATH"] = os.pathsep.join(
         [
             tool_bin_dir.as_posix(),

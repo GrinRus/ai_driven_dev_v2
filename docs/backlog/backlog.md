@@ -7,14 +7,16 @@ slice, and local task.
 
 ## Next
 
-- `W36-E7-S4-T3` — Run the medium scenario through Codex on candidate `52bb49d`.
+- `W36-E7-S4-T36` — Re-run the provider-free Chromium gate after T69.
 
 ## Soon
 
-- `W36-E7-S4-T4` — Repeat the medium scenario through Claude Code on the same candidate.
+- `W36-E7-S4-T37` — Build a replacement exact-SHA candidate after the browser gate.
 
 ## Parking lot
 
+- `W36-E7-S4-T3` — Re-run the medium scenario through Codex on the replacement candidate.
+- `W36-E7-S4-T4` — Repeat the medium scenario through Claude Code on the same candidate.
 - `W36-E7-S3-T2` — Record five first-time-operator sessions after initial live hardening.
 - `W36-E7-S3-T3` — Reconcile observed session findings before beta readiness.
 - `W36-E7-S4-T5` — Record final same-revision Codex and Claude acceptance evidence.
@@ -33,6 +35,25 @@ slice, and local task.
   queue-restoration policy in `docs/backlog/roadmap.md` (`W8-E3-S1`).
 
 ## Current reconciliation
+
+- `2026-07-29` `W36-E7-S4-T69` is complete: local-wheel installation
+  explicitly places both uv tool storage and executable links below the selected
+  run's install-home, independent of inherited provider-private XDG roots. The
+  focused install/planning matrix passes `16/16`; a real no-provider uv
+  build/install smoke returns an existing run-owned `aidd` binary and leaves the
+  shared provider-private bin empty. The complete harness regression passes
+  `380/380`, Ruff and mypy pass, and full pytest passes `2147/2147`. T36 is
+  promoted to `Next`, T37 to `Soon`; provider acceptance remains parked and
+  candidate `52bb49d` remains historical.
+
+- `2026-07-29` the first post-T68 Codex T3 attempt stopped before provider
+  allocation. Candidate `52bb49d` passed preflight, private auth, target clone,
+  and wheel build, but inherited private XDG roots made uv publish the installed
+  command under provider-private data/bin while the harness searched
+  `<run>/install-home/.local/bin/aidd`. The root is terminal and will not be
+  resumed. `W36-E7-S4-T69` is promoted to `Next`; T36 is `Soon`, while T37 and
+  provider acceptance return to the parking lot. No provider inference or large
+  scenario ran.
 
 - `2026-07-29` `W36-E7-S4-T37` is complete on exact candidate `52bb49d`, tree
   `b699659`, tracked archive digest `75105f0`, and wheel digest `90a4247`.
