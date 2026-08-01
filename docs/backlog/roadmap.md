@@ -11717,7 +11717,7 @@ Local tasks:
   - Scope: provider-free harness and architecture tests.
   - Verification: conformance fixtures fail before live execution for overlapping roots, dirty
     tracked source, forbidden product imports, or live-scenario literals in runtime product code.
-- `W36-E7-S4-T3` (next) Run `AIDD-LIVE-007` through Codex to a clean terminal result with
+- `W36-E7-S4-T3` (parked) Run `AIDD-LIVE-007` through Codex to a clean terminal result with
   manual stage-quality and rendered Studio evidence.
   - Dependencies: `W36-E7-S4-T37` as the direct queue predecessor after the
     post-auth `W36-E7-S4-T60` and `W36-E7-S4-T36` gates; `W36-E7-S4-T33`, `W36-E7-S4-T32`, `W36-E7-S4-T31`, `W36-E7-S4-T30`, `W36-E7-S4-T29`, `W36-E7-S4-T28`, `W36-E7-S4-T27`, `W36-E7-S4-T26`, `W36-E7-S4-T25`, `W36-E7-S4-T24`, `W36-E7-S4-T23`, `W36-E7-S4-T22`, `W36-E7-S4-T21`, `W36-E7-S4-T20`, `W36-E7-S4-T19`, `W36-E7-S4-T18`, `W36-E7-S4-T17`, `W36-E7-S4-T16`, `W36-E7-S4-T15`, `W36-E7-S4-T14`, `W36-E7-S4-T13`, `W36-E7-S4-T2`, `W36-E7-S4-T6`, `W36-E7-S4-T10`,
@@ -11741,7 +11741,13 @@ Local tasks:
     isolated `bun install` then installed packages but failed every selected lifecycle script
     with `CouldntReadCurrentDirectory`. A fresh provider-free Seatbelt reproduction has the
     same boundary; the terminal root will not be resumed and `W36-E7-S4-T71` owns the fix.
-- `W36-E7-S4-T4` (soon) Run `AIDD-LIVE-007` through Claude Code from an independent root on
+  - Post-T71 attempt: candidate `9d0bf59` passed isolated auth, target readiness, and manually
+    audited `idea -> tasklist`. Implement completed task-scoped attempts T1 and T2 at the
+    provider boundary, but the core canonical repair-history renderer dropped successful
+    deferred attempt 1, rewrote the model-corrected `1,2,3` history to `2,3`, and then rejected
+    its own non-1-based result with `SEM-INCOMPLETE-SECTION`. The root is terminal and will not
+    be resumed; `W36-E7-S4-T72` owns the provider-free correction and invalidates this candidate.
+- `W36-E7-S4-T4` (parked) Run `AIDD-LIVE-007` through Claude Code from an independent root on
   the same AIDD revision and target pin.
   - Dependencies: `W36-E7-S4-T3` as the direct queue predecessor.
   - Scope: external Claude Code live execution and evidence only.
@@ -12339,9 +12345,10 @@ Local tasks:
     coverage passes `17/17`; the full intervention/browser/static selection passes `28/28`;
     and all five allowed viewports prove one request, an empty submitted draft, and a still-running
     runtime job.
-- `W36-E7-S4-T36` (done) Re-run the complete provider-free Chromium acceptance matrix after the
+- `W36-E7-S4-T36` (next) Re-run the complete provider-free Chromium acceptance matrix after the
   final provider-neutral hardening change.
-  - Dependencies: `W36-E7-S4-T71` as the current direct queue predecessor;
+  - Dependencies: `W36-E7-S4-T72` as the current direct queue predecessor;
+    `W36-E7-S4-T71` as the preceding isolation correction;
     `W36-E7-S4-T69` as the preceding run-owned install correction;
     `W36-E7-S4-T68` as the preceding terminal-projection correction;
     `W36-E7-S4-T67` as the preceding active-job ownership correction;
@@ -12455,7 +12462,7 @@ Local tasks:
     failed-request, overflow, accessibility, or test-owned process-cleanup failure. Sanitized
     evidence is in
     `docs/e2e/operator-ui-provider-free-browser-gate-2026-08-01-post-t71.md`.
-- `W36-E7-S4-T37` (done) Prove the exact post-browser candidate is installable and ready for an
+- `W36-E7-S4-T37` (soon) Prove the exact post-browser candidate is installable and ready for an
   isolated live-provider run.
   - Dependencies: `W36-E7-S4-T36` as the full-browser predecessor; blocks the active Codex
     acceptance task `W36-E7-S4-T3`.
@@ -12762,6 +12769,24 @@ Local tasks:
     operator HOME, and credential access. Focused isolation tests pass `20/20`, the complete
     harness regression passes `382/382`, Ruff and mypy across `228` modules pass, and full pytest
     passes `2149/2149`.
+- `W36-E7-S4-T72` (done) Preserve a successful deferred stage attempt before a later incremental
+  implementation task enters validation or repair.
+  - Dependencies: discovered by the failed post-T71 Codex acceptance attempt after
+    `W36-E7-S4-T37`; invalidates candidate `9d0bf59` and blocks its `T36 -> T37` replacement.
+  - Scope: runtime-agnostic core stage-attempt persistence and focused provider-free regressions
+    only; adapters, provider commands, live scenario behavior, prompts, validators, and Studio
+    remain unchanged.
+  - Verification: when task-scoped success defers stage publication to `pending`, canonical
+    attempt evidence retains attempt 1 as `succeeded`; a later attempt and repair can therefore
+    render a positive, unique, strictly increasing `1,2,3` history without canonical persistence
+    deleting the first entry.
+  - Completion: deferred successful validation now persists its attempt entry before the stage
+    transitions to `pending`. The regression proves attempt 1 remains in metadata and canonical
+    `stage-result.md`; focused stage-runner/repair/validator checks pass `150/150`, and the CLI
+    plus incremental implementation lifecycle matrix passes `58/58`. Ruff and mypy across `228`
+    modules pass, and the unchanged diff passes the complete Python suite `2150/2150`; two
+    fake-runtime startup/barrier tests from the first host-loaded attempt pass `10/10` in five
+    isolated repetitions before the clean complete rerun.
 
 Exit evidence:
 

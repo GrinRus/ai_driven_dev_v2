@@ -7,16 +7,18 @@ slice, and local task.
 
 ## Next
 
-- `W36-E7-S4-T3` — Run the medium scenario through Codex on candidate `9d0bf59`.
+- `W36-E7-S4-T36` — Re-run the complete provider-free Chromium gate after T72.
 
 ## Soon
 
-- `W36-E7-S4-T4` — Repeat the medium scenario through Claude Code on the same candidate.
+- `W36-E7-S4-T37` — Build the replacement exact-SHA candidate after the browser gate.
 
 ## Parking lot
 
 - `W36-E7-S3-T2` — Record five first-time-operator sessions after initial live hardening.
 - `W36-E7-S3-T3` — Reconcile observed session findings before beta readiness.
+- `W36-E7-S4-T3` — Re-run the medium scenario through Codex on the replacement candidate.
+- `W36-E7-S4-T4` — Repeat the medium scenario through Claude Code on the same candidate.
 - `W36-E7-S4-T5` — Record final same-revision Codex and Claude acceptance evidence.
 
 ## Update rules
@@ -33,6 +35,18 @@ slice, and local task.
   queue-restoration policy in `docs/backlog/roadmap.md` (`W8-E3-S1`).
 
 ## Current reconciliation
+
+- `2026-08-01` `W36-E7-S4-T72` is complete after the post-T71 Codex run exposed a
+  runtime-agnostic incremental-stage persistence defect. Candidate `9d0bf59`
+  passed private auth, target readiness, and manual quality checkpoints from
+  `idea` through `tasklist`; Implement then completed task-scoped T1/T2 provider
+  work, but canonical repair persistence removed successful deferred attempt 1
+  and rejected its own `2,3` history. Deferred success now persists attempt 1
+  before `pending`; core/validator checks pass `150/150` and CLI/incremental
+  lifecycle checks pass `58/58`; Ruff, mypy, and the clean complete Python
+  rerun pass, with `2150/2150`. The terminal provider root is not resumed.
+  T36 is restored to `Next`, T37 to `Soon`, and provider acceptance is parked
+  until a new candidate exists; no large scenario ran.
 
 - `2026-08-01` `W36-E7-S4-T37` is complete on exact candidate `9d0bf59`,
   tree `8354d0a`, tracked archive digest `f4ef417`, and wheel digest

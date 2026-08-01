@@ -1294,6 +1294,63 @@ def test_run_single_stage_orchestration_executes_generic_cli_happy_path(
     assert metadata_payload["status"] == StageState.SUCCEEDED.value
 
 
+def test_deferred_success_preserves_first_attempt_before_later_task_runs(
+    tmp_path: Path,
+) -> None:
+    workspace_root = tmp_path / ".aidd"
+    create_run_manifest(
+        workspace_root=workspace_root,
+        work_item="WI-001",
+        run_id="run-001",
+        runtime_id="generic-cli",
+        stage_target="plan",
+        config_snapshot={"mode": "test"},
+    )
+    preview_bundle = prepare_stage_bundle(
+        workspace_root=workspace_root,
+        work_item="WI-001",
+        stage="plan",
+    )
+    _materialize_expected_inputs(preview_bundle.expected_input_bundle)
+    runtime_documents = _valid_plan_output_documents()
+    stage_root = workspace_root / "workitems" / "WI-001" / "stages" / "plan"
+
+    def _adapter_executor(
+        invocation: AdapterInvocationBundle,
+        execution_state: StageExecutionState,
+    ) -> AdapterExecutionOutcome:
+        _ = invocation, execution_state
+        stage_root.mkdir(parents=True, exist_ok=True)
+        for name, content in runtime_documents.items():
+            (stage_root / name).write_text(content, encoding="utf-8")
+        return AdapterExecutionOutcome(succeeded=True, details="success")
+
+    orchestration = run_single_stage_orchestration(
+        workspace_root=workspace_root,
+        work_item="WI-001",
+        run_id="run-001",
+        stage="plan",
+        adapter_executor=_adapter_executor,
+        defer_success_publication=True,
+    )
+
+    assert orchestration.transition.action is PostValidationAction.ADVANCE
+    metadata = load_stage_metadata(
+        workspace_root=workspace_root,
+        work_item="WI-001",
+        run_id="run-001",
+        stage="plan",
+    )
+    assert metadata is not None
+    assert metadata.status == StageState.PENDING.value
+    assert [
+        (entry.attempt_number, entry.trigger, entry.outcome)
+        for entry in metadata.repair_history
+    ] == [(1, "initial", "succeeded")]
+    stage_result = (stage_root / "stage-result.md").read_text(encoding="utf-8")
+    assert "- Attempt `1` (`initial`) -> succeeded." in stage_result
+
+
 def test_post_normalization_stage_result_finding_requests_repair(
     tmp_path: Path,
 ) -> None:
