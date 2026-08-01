@@ -4,6 +4,7 @@ import json
 import os
 import platform
 import shlex
+import shutil
 import subprocess
 from pathlib import Path
 
@@ -158,6 +159,38 @@ def test_private_environment_is_allowlisted_and_uses_provider_roots(
         (provider / ".live-provider-private" / name).is_dir()
         for name in ("home", "tmp", "config", "cache", "data", "state")
     )
+    profile = " ".join(boundary.launch_prefix)
+    assert f'(literal "{external.resolve().as_posix()}")' in profile
+    assert f'(subpath "{external.resolve().as_posix()}")' not in profile
+
+
+def test_macos_isolation_rejects_external_root_inside_operator_home(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    source = tmp_path / "source"
+    operator_home = tmp_path / "operator-home"
+    external = operator_home / "external"
+    provider = external / "provider"
+    source.mkdir()
+    external.mkdir(parents=True)
+    monkeypatch.setattr(
+        "aidd.harness.live_acceptance_isolation.shutil.which",
+        lambda _name: "/usr/bin/sandbox-exec",
+    )
+
+    with pytest.raises(LiveAcceptanceIsolationError, match="outside the operator HOME"):
+        prepare_live_acceptance_isolation(
+            source_checkout=source,
+            external_root=external,
+            provider_root=provider,
+            inherited_environment={
+                "HOME": operator_home.as_posix(),
+                "PATH": "/usr/bin:/bin",
+            },
+            system_name="Darwin",
+        )
+    assert not provider.exists()
 
 
 def test_isolation_rejects_unsupported_platform(tmp_path: Path) -> None:
@@ -359,6 +392,99 @@ def test_macos_boundary_enforces_visibility_matrix(tmp_path: Path) -> None:
             "present": True,
             "non_empty": True,
         },
+    ]
+
+
+@pytest.mark.skipif(
+    platform.system() != "Darwin" or shutil.which("bun") is None,
+    reason="real Seatbelt/Bun lifecycle verification is macOS-specific",
+)
+def test_macos_boundary_allows_bun_lifecycle_without_exposing_protected_roots(
+    tmp_path: Path,
+) -> None:
+    source = _git_source(tmp_path)
+    external = tmp_path / "external"
+    provider = external / "provider-a"
+    sibling = external / "provider-b"
+    operator_home = tmp_path / "operator-home"
+    target = provider / "target"
+    evidence = provider / "evidence"
+    external.mkdir()
+    sibling.mkdir()
+    operator_home.mkdir()
+    target.mkdir(parents=True)
+    evidence.mkdir()
+    (target / "package.json").write_text(
+        json.dumps(
+            {
+                "name": "aidd-seatbelt-lifecycle-fixture",
+                "version": "1.0.0",
+                "scripts": {"postinstall": "printf ready > lifecycle-sentinel.txt"},
+            }
+        ),
+        encoding="utf-8",
+    )
+    for root in (source, sibling, operator_home, target, evidence):
+        (root / "marker.txt").write_text(f"{root.name}\n", encoding="utf-8")
+
+    boundary = prepare_live_acceptance_isolation(
+        source_checkout=source,
+        external_root=external,
+        provider_root=provider,
+        inherited_environment={
+            "HOME": operator_home.as_posix(),
+            "PATH": os.environ.get("PATH", ""),
+            "AIDD_SIBLING_CREDENTIAL": "must-not-cross",
+        },
+    )
+    completed = subprocess.run(
+        boundary.wrap_command(("bun", "install", "--no-progress")),
+        cwd=target,
+        env=boundary.environment,
+        capture_output=True,
+        text=True,
+        check=False,
+        timeout=30,
+    )
+
+    assert completed.returncode == 0, completed.stderr
+    assert (target / "lifecycle-sentinel.txt").read_text(encoding="utf-8") == "ready"
+    result = run_live_acceptance_visibility_canary(
+        targets=tuple(
+            VisibilityProbeTarget(label, root, "marker.txt")
+            for label, root in (
+                ("source", source),
+                ("target", target),
+                ("evidence", evidence),
+                ("sibling-provider", sibling),
+                ("operator-home", operator_home),
+            )
+        ),
+        environment_keys=("AIDD_SIBLING_CREDENTIAL",),
+        cwd=target,
+        environment=boundary.environment,
+        launch_prefix=boundary.launch_prefix,
+    )
+    targets = _targets_by_label(result.diagnostics)
+    for label in ("target", "evidence"):
+        operations = targets[label]["operations"]
+        assert isinstance(operations, dict)
+        assert all(operation["allowed"] for operation in operations.values())
+    source_operations = targets["source"]["operations"]
+    assert isinstance(source_operations, dict)
+    assert source_operations["list"]["allowed"] is True
+    assert source_operations["read"]["allowed"] is True
+    assert source_operations["write"]["allowed"] is False
+    for label in ("sibling-provider", "operator-home"):
+        operations = targets[label]["operations"]
+        assert isinstance(operations, dict)
+        assert all(operation["allowed"] is False for operation in operations.values())
+    assert result.diagnostics["environment"] == [
+        {
+            "key": "AIDD_SIBLING_CREDENTIAL",
+            "present": False,
+            "non_empty": False,
+        }
     ]
 
 

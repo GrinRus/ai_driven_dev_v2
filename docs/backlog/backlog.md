@@ -7,14 +7,16 @@ slice, and local task.
 
 ## Next
 
-- `W36-E7-S4-T3` — Run the medium scenario through Codex on candidate `5cb58f3`.
+- `W36-E7-S4-T36` — Re-run the provider-free Chromium gate after T71.
 
 ## Soon
 
-- `W36-E7-S4-T4` — Repeat the medium scenario through Claude Code on the same candidate.
+- `W36-E7-S4-T37` — Build a replacement exact-SHA candidate after the browser gate.
 
 ## Parking lot
 
+- `W36-E7-S4-T3` — Re-run the medium scenario through Codex on the replacement candidate.
+- `W36-E7-S4-T4` — Repeat the medium scenario through Claude Code on the same candidate.
 - `W36-E7-S3-T2` — Record five first-time-operator sessions after initial live hardening.
 - `W36-E7-S3-T3` — Reconcile observed session findings before beta readiness.
 - `W36-E7-S4-T5` — Record final same-revision Codex and Claude acceptance evidence.
@@ -33,6 +35,26 @@ slice, and local task.
   queue-restoration policy in `docs/backlog/roadmap.md` (`W8-E3-S1`).
 
 ## Current reconciliation
+
+- `2026-08-01` `W36-E7-S4-T71` is complete: macOS Seatbelt now grants
+  package-manager environment discovery only exact `literal` access to provider
+  ancestor directory objects, without `subpath` access to external or sibling
+  trees. Layouts below operator HOME fail before allocation. A real Bun
+  lifecycle fixture and a fresh pinned Hono clone complete through the same
+  boundary; source remains read-only and sibling, operator HOME, and credential
+  probes remain denied. Isolation tests pass `20/20`, the complete harness
+  regression `382/382`, Ruff and mypy across 228 modules, and full pytest
+  `2149/2149`. T36 is promoted to `Next` and T37 to `Soon`; no provider or
+  large scenario ran.
+
+- `2026-07-29` the first post-T69 Codex T3 attempt stopped before provider
+  allocation. Candidate `5cb58f3` passed private auth, target clone, run-owned
+  wheel install, and public `aidd init`; isolated `bun install` then installed
+  packages but failed lifecycle scripts with `CouldntReadCurrentDirectory`.
+  A fresh provider-free Seatbelt root reproduces the same failure. The live root
+  is terminal and will not be resumed. `W36-E7-S4-T71` is promoted to `Next`;
+  T36 is `Soon`, while T37 and provider acceptance return to the parking lot.
+  No provider inference or large scenario ran.
 
 - `2026-07-29` `W36-E7-S4-T37` is complete on exact candidate `5cb58f3`, tree
   `90953e1`, tracked archive digest `349fc3e`, and wheel digest `a7e72c1`.

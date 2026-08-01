@@ -179,10 +179,19 @@ def _macos_profile(
     source_checkout: Path,
     provider_root: Path,
     tool_read_roots: Sequence[Path],
+    literal_read_directories: Sequence[Path] = (),
 ) -> str:
     read_roots = tuple(dict.fromkeys((source_checkout, provider_root, *tool_read_roots)))
     read_filters = " ".join(
         f'(subpath "{_sbpl_string(root)}")' for root in read_roots
+    )
+    literal_read_filters = " ".join(
+        f'(literal "{_sbpl_string(root)}")' for root in literal_read_directories
+    )
+    literal_read_rule = (
+        f"(allow file-read* {literal_read_filters})"
+        if literal_read_filters
+        else ""
     )
     return " ".join(
         (
@@ -197,9 +206,28 @@ def _macos_profile(
             "(allow ipc-posix*)",
             '(allow file-read-metadata file-test-existence (subpath "/"))',
             f"(allow file-read* file-map-executable {read_filters})",
+            literal_read_rule,
             f'(allow file-write* (subpath "{_sbpl_string(provider_root)}"))',
         )
     )
+
+
+def _macos_literal_read_directories(
+    *,
+    provider_root: Path,
+    operator_home: Path | None,
+) -> tuple[Path, ...]:
+    if operator_home is not None and provider_root.is_relative_to(operator_home):
+        raise LiveAcceptanceIsolationError(
+            "macOS external live root must be outside the operator HOME."
+        )
+
+    directories: list[Path] = []
+    current = provider_root.parent
+    while current != current.parent:
+        directories.append(current)
+        current = current.parent
+    return tuple(directories)
 
 
 def _directory_components(path: Path, *, below: Path) -> tuple[Path, ...]:
@@ -332,12 +360,6 @@ def prepare_live_acceptance_isolation(
         external_root=external_root,
         provider_root=provider_root,
     )
-    provider.mkdir(mode=0o700, exist_ok=True)
-    if not provider.is_dir() or provider.is_symlink():
-        raise LiveAcceptanceIsolationError(
-            "Provider root must be a real directory, not a symlink."
-        )
-    private_root = _prepare_private_root(provider)
     inherited = os.environ if inherited_environment is None else inherited_environment
     operator_home_raw = inherited.get("HOME")
     operator_home = (
@@ -346,6 +368,18 @@ def prepare_live_acceptance_isolation(
         else None
     )
     detected_system = system_name or platform.system()
+    literal_read_directories: tuple[Path, ...] = ()
+    if detected_system == "Darwin":
+        literal_read_directories = _macos_literal_read_directories(
+            provider_root=provider,
+            operator_home=operator_home,
+        )
+    provider.mkdir(mode=0o700, exist_ok=True)
+    if not provider.is_dir() or provider.is_symlink():
+        raise LiveAcceptanceIsolationError(
+            "Provider root must be a real directory, not a symlink."
+        )
+    private_root = _prepare_private_root(provider)
     explicit_tool_roots = tuple(_resolved(path) for path in tool_read_roots)
     all_tool_roots = tuple(
         dict.fromkeys(
@@ -384,6 +418,7 @@ def prepare_live_acceptance_isolation(
                 source_checkout=source,
                 provider_root=provider,
                 tool_read_roots=all_tool_roots,
+                literal_read_directories=literal_read_directories,
             ),
         )
     elif detected_system == "Linux":

@@ -11717,7 +11717,7 @@ Local tasks:
   - Scope: provider-free harness and architecture tests.
   - Verification: conformance fixtures fail before live execution for overlapping roots, dirty
     tracked source, forbidden product imports, or live-scenario literals in runtime product code.
-- `W36-E7-S4-T3` (next) Run `AIDD-LIVE-007` through Codex to a clean terminal result with
+- `W36-E7-S4-T3` (parked) Run `AIDD-LIVE-007` through Codex to a clean terminal result with
   manual stage-quality and rendered Studio evidence.
   - Dependencies: `W36-E7-S4-T37` as the direct queue predecessor after the
     post-auth `W36-E7-S4-T60` and `W36-E7-S4-T36` gates; `W36-E7-S4-T33`, `W36-E7-S4-T32`, `W36-E7-S4-T31`, `W36-E7-S4-T30`, `W36-E7-S4-T29`, `W36-E7-S4-T28`, `W36-E7-S4-T27`, `W36-E7-S4-T26`, `W36-E7-S4-T25`, `W36-E7-S4-T24`, `W36-E7-S4-T23`, `W36-E7-S4-T22`, `W36-E7-S4-T21`, `W36-E7-S4-T20`, `W36-E7-S4-T19`, `W36-E7-S4-T18`, `W36-E7-S4-T17`, `W36-E7-S4-T16`, `W36-E7-S4-T15`, `W36-E7-S4-T14`, `W36-E7-S4-T13`, `W36-E7-S4-T2`, `W36-E7-S4-T6`, `W36-E7-S4-T10`,
@@ -11736,7 +11736,12 @@ Local tasks:
     discovery. The private XDG environment correctly placed the uv tool under provider-private
     data/bin while the harness expected the legacy `<install-home>/.local/bin/aidd` path.
     The terminal root will not be resumed; `W36-E7-S4-T69` owns the provider-free correction.
-- `W36-E7-S4-T4` (soon) Run `AIDD-LIVE-007` through Claude Code from an independent root on
+  - Post-T69 attempt: candidate `5cb58f3` passed public preflight, private Codex auth, target
+    clone, run-owned wheel install, and public `aidd init` without provider allocation. The
+    isolated `bun install` then installed packages but failed every selected lifecycle script
+    with `CouldntReadCurrentDirectory`. A fresh provider-free Seatbelt reproduction has the
+    same boundary; the terminal root will not be resumed and `W36-E7-S4-T71` owns the fix.
+- `W36-E7-S4-T4` (parked) Run `AIDD-LIVE-007` through Claude Code from an independent root on
   the same AIDD revision and target pin.
   - Dependencies: `W36-E7-S4-T3` as the direct queue predecessor.
   - Scope: external Claude Code live execution and evidence only.
@@ -12334,9 +12339,10 @@ Local tasks:
     coverage passes `17/17`; the full intervention/browser/static selection passes `28/28`;
     and all five allowed viewports prove one request, an empty submitted draft, and a still-running
     runtime job.
-- `W36-E7-S4-T36` (done) Re-run the complete provider-free Chromium acceptance matrix after the
+- `W36-E7-S4-T36` (next) Re-run the complete provider-free Chromium acceptance matrix after the
   final provider-neutral hardening change.
-  - Dependencies: `W36-E7-S4-T69` as the current direct queue predecessor;
+  - Dependencies: `W36-E7-S4-T71` as the current direct queue predecessor;
+    `W36-E7-S4-T69` as the preceding run-owned install correction;
     `W36-E7-S4-T68` as the preceding terminal-projection correction;
     `W36-E7-S4-T67` as the preceding active-job ownership correction;
     `W36-E7-S4-T66` as the preceding isolation-backend correction;
@@ -12441,7 +12447,7 @@ Local tasks:
     completed without console, page, failed-request, overflow, accessibility, or test-owned
     process-cleanup failure. Sanitized evidence is in
     `docs/e2e/operator-ui-provider-free-browser-gate-2026-07-29-post-t69.md`.
-- `W36-E7-S4-T37` (done) Prove the exact post-browser candidate is installable and ready for an
+- `W36-E7-S4-T37` (soon) Prove the exact post-browser candidate is installable and ready for an
   isolated live-provider run.
   - Dependencies: `W36-E7-S4-T36` as the full-browser predecessor; blocks the active Codex
     acceptance task `W36-E7-S4-T3`.
@@ -12718,6 +12724,26 @@ Local tasks:
     confirms the same boundary with a valid wheel and executable. Focused checks pass `16/16`,
     the complete harness regression passes `380/380`, Ruff and mypy across `228` modules pass,
     and full pytest passes `2147/2147`.
+- `W36-E7-S4-T71` (done) Make macOS live isolation support dependency lifecycle subprocesses
+  whose package manager resolves a transient working directory outside the selected target.
+  - Dependencies: discovered by the first post-T69 Codex acceptance attempt after
+    `W36-E7-S4-T37`; invalidates candidate `5cb58f3` and blocks its `T36 -> T37` replacement.
+  - Scope: typed macOS isolation dependency discovery, focused real-Seatbelt Bun lifecycle
+    regression, and runbook clarification only; target commands, Bun package semantics,
+    providers, core, adapters, prompts, validators, Studio, and scenario behavior remain
+    unchanged.
+  - Verification: a fresh Hono clone inside the own provider root completes `bun install`
+    lifecycle scripts through the same Seatbelt boundary while AIDD source and any additional
+    dependency roots stay read-only, own provider state remains writable, and operator HOME,
+    sibling provider state, and credentials remain denied.
+  - Completion: the macOS profile now grants `file-read*` only to exact `literal` ancestor
+    directory objects required by package-manager environment discovery, never to their
+    subtrees. Layouts below operator HOME fail before provider allocation. A real Seatbelt Bun
+    lifecycle fixture and a fresh pinned Hono clone both complete through the production launch
+    boundary; the post-install canary keeps source read-only and denies sibling provider,
+    operator HOME, and credential access. Focused isolation tests pass `20/20`, the complete
+    harness regression passes `382/382`, Ruff and mypy across `228` modules pass, and full pytest
+    passes `2149/2149`.
 
 Exit evidence:
 
