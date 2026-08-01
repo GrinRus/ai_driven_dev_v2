@@ -7,15 +7,14 @@ slice, and local task.
 
 ## Next
 
-- `W36-E7-S4-T37` — Build a replacement exact-SHA candidate after the browser gate.
+- `W36-E7-S4-T3` — Run the medium scenario through Codex on candidate `9d0bf59`.
 
 ## Soon
 
-- `W36-E7-S4-T3` — Re-run the medium scenario through Codex on the replacement candidate.
+- `W36-E7-S4-T4` — Repeat the medium scenario through Claude Code on the same candidate.
 
 ## Parking lot
 
-- `W36-E7-S4-T4` — Repeat the medium scenario through Claude Code on the same candidate.
 - `W36-E7-S3-T2` — Record five first-time-operator sessions after initial live hardening.
 - `W36-E7-S3-T3` — Reconcile observed session findings before beta readiness.
 - `W36-E7-S4-T5` — Record final same-revision Codex and Claude acceptance evidence.
@@ -34,6 +33,16 @@ slice, and local task.
   queue-restoration policy in `docs/backlog/roadmap.md` (`W8-E3-S1`).
 
 ## Current reconciliation
+
+- `2026-08-01` `W36-E7-S4-T37` is complete on exact candidate `9d0bf59`,
+  tree `8354d0a`, tracked archive digest `f4ef417`, and wheel digest
+  `0964977`. Ruff, mypy across 228 modules, Python `2149/2149`, exact-SHA
+  Chromium `188/188`, isolated install/doctor, both eval-doctors, fresh
+  pinned Hono readiness with Vitest `233/233` and `tsc --noEmit`,
+  self-contained bundle deletion/readback, dual private-auth Seatbelt
+  probes/canaries, and source postflight all pass. Sanitized evidence is in
+  `docs/e2e/candidate-readiness-2026-08-01-post-t71.md`. T3 is promoted to
+  `Next`, T4 to `Soon`; no provider evaluator or large scenario ran.
 
 - `2026-08-01` the post-T71 `W36-E7-S4-T36` rerun is complete on clean
   source `ef38a3f` and tree `944906b`: historical cases pass `4/4`,
