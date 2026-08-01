@@ -20,6 +20,7 @@ from aidd.validators.semantic_rules.evidence import (
         "`sh -c 'test ! -e .pytest_cache'` -> exit code 0",
         "`bash -c 'git diff --quiet'` -> pass",
         "`zsh -c 'test -f pyproject.toml'` -> pass",
+        "`node -e \"console.log('verified')\"` -> pass",
         "Reused the same verification command as `TL-2`; outcome passed.",
     ),
 )
@@ -35,6 +36,7 @@ def test_command_evidence_accepts_only_explicit_command_shapes(evidence: str) ->
         "sh passed.",
         "The `pytest` tool passed.",
         "The full test suite passed.",
+        "The Node.js runtime passed.",
         "`138 passed`.",
         "`context/verification.log` shows pass.",
     ),

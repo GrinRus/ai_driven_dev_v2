@@ -7,16 +7,18 @@ slice, and local task.
 
 ## Next
 
-- `W36-E7-S4-T3` — Re-run the medium scenario through Codex on the replacement candidate.
+- `W36-E7-S4-T36` — Re-run the complete provider-free Chromium gate after T73.
 
 ## Soon
 
-- `W36-E7-S4-T4` — Repeat the medium scenario through Claude Code on the same candidate.
+- `W36-E7-S4-T37` — Build the replacement exact-SHA candidate after the browser gate.
 
 ## Parking lot
 
 - `W36-E7-S3-T2` — Record five first-time-operator sessions after initial live hardening.
 - `W36-E7-S3-T3` — Reconcile observed session findings before beta readiness.
+- `W36-E7-S4-T3` — Re-run the medium scenario through Codex on the replacement candidate.
+- `W36-E7-S4-T4` — Repeat the medium scenario through Claude Code on the same candidate.
 - `W36-E7-S4-T5` — Record final same-revision Codex and Claude acceptance evidence.
 
 ## Update rules
@@ -33,6 +35,19 @@ slice, and local task.
   queue-restoration policy in `docs/backlog/roadmap.md` (`W8-E3-S1`).
 
 ## Current reconciliation
+
+- `2026-08-01` the post-T72 Codex `W36-E7-S4-T3` run is terminal after
+  private auth, target readiness, exact wheel identity, and strong manual
+  audits through `tasklist`. Implement correctly preserved successful deferred
+  attempt 1, then all provider attempts exited `0`; canonical validation still
+  rejected T2 because the general command recognizer treats exact
+  `node -e "..." -> pass` evidence as non-executable. Provider-free
+  reproduction isolates the missing standard `node` executable allowlist entry.
+  `W36-E7-S4-T73` is complete: focused semantic validation passes `47/47`, the
+  saved live report revalidates cleanly, Ruff and mypy across `228` modules pass,
+  planning integrity passes `9/9`, and full pytest passes `2153/2153`. T36 is
+  `Next`, T37 is `Soon`, and candidate `44ba6d3` remains historical; the live
+  root will not be resumed and no large scenario ran.
 
 - `2026-08-01` `W36-E7-S4-T37` is complete on exact candidate `44ba6d3`,
   tree `f28f428`, tracked archive digest `bb7c0b0`, and wheel digest

@@ -262,6 +262,40 @@ def test_validate_semantic_outputs_accepts_sed_command_evidence_for_implement(
     assert findings == ()
 
 
+def test_validate_semantic_outputs_accepts_node_eval_command_evidence_for_implement(
+    tmp_path: Path,
+) -> None:
+    workspace_root = tmp_path / ".aidd"
+    work_item = "WI-SEM-IMPLEMENT-NODE-COMMAND"
+    _write_implementation_report(
+        workspace_root,
+        work_item,
+        (
+            "# Implementation Report\n\n"
+            "## Summary\n\n"
+            "- Selected task id: `TASK-EXAMPLE-RUNTIME-ERROR`.\n"
+            "- Implemented the selected runtime boundary while preserving public exports.\n\n"
+            "## Touched files\n\n"
+            "- `src/compose.ts` - normalize non-Error values at the middleware boundary.\n\n"
+            "## Verification\n\n"
+            "- `node -e \"const p=require('./package.json'); console.log(p.type)\"` "
+            "-> pass (exit code 0; inspected the package export context).\n\n"
+            "## Risks\n\n"
+            "- Focused runtime regression coverage remains a downstream task.\n\n"
+            "## Follow-up\n\n"
+            "- Continue with the selected regression task.\n"
+        ),
+    )
+
+    findings = validate_semantic_outputs(
+        stage="implement",
+        work_item=work_item,
+        workspace_root=workspace_root,
+    )
+
+    assert findings == ()
+
+
 def test_validate_semantic_outputs_accepts_contract_summary_task_id_and_cli_subcommands(
     tmp_path: Path,
 ) -> None:

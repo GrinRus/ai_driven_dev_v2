@@ -11717,7 +11717,7 @@ Local tasks:
   - Scope: provider-free harness and architecture tests.
   - Verification: conformance fixtures fail before live execution for overlapping roots, dirty
     tracked source, forbidden product imports, or live-scenario literals in runtime product code.
-- `W36-E7-S4-T3` (next) Run `AIDD-LIVE-007` through Codex to a clean terminal result with
+- `W36-E7-S4-T3` (parked) Run `AIDD-LIVE-007` through Codex to a clean terminal result with
   manual stage-quality and rendered Studio evidence.
   - Dependencies: `W36-E7-S4-T37` as the direct queue predecessor after the
     post-auth `W36-E7-S4-T60` and `W36-E7-S4-T36` gates; `W36-E7-S4-T33`, `W36-E7-S4-T32`, `W36-E7-S4-T31`, `W36-E7-S4-T30`, `W36-E7-S4-T29`, `W36-E7-S4-T28`, `W36-E7-S4-T27`, `W36-E7-S4-T26`, `W36-E7-S4-T25`, `W36-E7-S4-T24`, `W36-E7-S4-T23`, `W36-E7-S4-T22`, `W36-E7-S4-T21`, `W36-E7-S4-T20`, `W36-E7-S4-T19`, `W36-E7-S4-T18`, `W36-E7-S4-T17`, `W36-E7-S4-T16`, `W36-E7-S4-T15`, `W36-E7-S4-T14`, `W36-E7-S4-T13`, `W36-E7-S4-T2`, `W36-E7-S4-T6`, `W36-E7-S4-T10`,
@@ -11747,7 +11747,14 @@ Local tasks:
     deferred attempt 1, rewrote the model-corrected `1,2,3` history to `2,3`, and then rejected
     its own non-1-based result with `SEM-INCOMPLETE-SECTION`. The root is terminal and will not
     be resumed; `W36-E7-S4-T72` owns the provider-free correction and invalidates this candidate.
-- `W36-E7-S4-T4` (soon) Run `AIDD-LIVE-007` through Claude Code from an independent root on
+  - Post-T72 attempt: candidate `44ba6d3` passed isolated auth, target readiness, exact-wheel
+    identity, and strong manual audits for `idea` through `tasklist`. Implement preserved
+    successful deferred attempt 1 and then selected T2, whose exact `node -e "..." -> pass`
+    verification evidence was rejected because the runtime-agnostic command recognizer omits
+    the standard Node.js executable. All three provider attempts exited `0`; the root is
+    terminal and will not be resumed. `W36-E7-S4-T73` owns the provider-free validator fix and
+    invalidates this candidate.
+- `W36-E7-S4-T4` (parked) Run `AIDD-LIVE-007` through Claude Code from an independent root on
   the same AIDD revision and target pin.
   - Dependencies: `W36-E7-S4-T3` as the direct queue predecessor.
   - Scope: external Claude Code live execution and evidence only.
@@ -12345,9 +12352,10 @@ Local tasks:
     coverage passes `17/17`; the full intervention/browser/static selection passes `28/28`;
     and all five allowed viewports prove one request, an empty submitted draft, and a still-running
     runtime job.
-- `W36-E7-S4-T36` (done) Re-run the complete provider-free Chromium acceptance matrix after the
+- `W36-E7-S4-T36` (next) Re-run the complete provider-free Chromium acceptance matrix after the
   final provider-neutral hardening change.
-  - Dependencies: `W36-E7-S4-T72` as the current direct queue predecessor;
+  - Dependencies: `W36-E7-S4-T73` as the current direct queue predecessor;
+    `W36-E7-S4-T72` as the preceding incremental-stage correction;
     `W36-E7-S4-T71` as the preceding isolation correction;
     `W36-E7-S4-T69` as the preceding run-owned install correction;
     `W36-E7-S4-T68` as the preceding terminal-projection correction;
@@ -12470,7 +12478,7 @@ Local tasks:
     failed-request, overflow, accessibility, or test-owned process-cleanup failure. Sanitized
     evidence is in
     `docs/e2e/operator-ui-provider-free-browser-gate-2026-08-01-post-t72.md`.
-- `W36-E7-S4-T37` (done) Prove the exact post-browser candidate is installable and ready for an
+- `W36-E7-S4-T37` (soon) Prove the exact post-browser candidate is installable and ready for an
   isolated live-provider run.
   - Dependencies: `W36-E7-S4-T36` as the full-browser predecessor; blocks the active Codex
     acceptance task `W36-E7-S4-T3`.
@@ -12805,6 +12813,21 @@ Local tasks:
     modules pass, and the unchanged diff passes the complete Python suite `2150/2150`; two
     fake-runtime startup/barrier tests from the first host-loaded attempt pass `10/10` in five
     isolated repetitions before the clean complete rerun.
+- `W36-E7-S4-T73` (done) Recognize the standard Node.js executable as concrete implementation
+  verification command evidence.
+  - Dependencies: discovered by the failed post-T72 Codex acceptance attempt after
+    `W36-E7-S4-T37`; invalidates candidate `44ba6d3` and blocks its `T36 -> T37` replacement.
+  - Scope: runtime-agnostic implementation-verification command recognition and focused
+    semantic-validator regressions only; stage contracts, prompts, providers, adapters, live
+    scenario behavior, core orchestration, and Studio remain unchanged.
+  - Verification: a backticked `node -e "..." -> pass` block is accepted as executable evidence,
+    while bare prose and non-command Node-related artifacts remain rejected; the focused
+    implement semantic matrix and planning integrity pass.
+  - Completion: the runtime-agnostic command recognizer now treats `node` as an executable only
+    in concrete command shapes, while bare Node.js prose remains non-evidence. The focused
+    semantic matrix passes `47/47`, the saved live report revalidates with no findings, Ruff and
+    mypy across `228` modules pass, planning integrity passes `9/9`, and the complete Python suite
+    passes `2153/2153`.
 
 Exit evidence:
 
