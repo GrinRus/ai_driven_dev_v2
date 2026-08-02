@@ -7,17 +7,16 @@ slice, and local task.
 
 ## Next
 
-- `W36-E7-S4-T37` — Build the replacement exact-SHA candidate after the browser gate.
+- `W36-E7-S4-T3` — Re-run the medium scenario through Codex on the replacement candidate.
 
 ## Soon
 
-- `W36-E7-S4-T3` — Re-run the medium scenario through Codex on the replacement candidate.
+- `W36-E7-S4-T4` — Repeat the medium scenario through Claude Code on the same candidate.
 
 ## Parking lot
 
 - `W36-E7-S3-T2` — Record five first-time-operator sessions after initial live hardening.
 - `W36-E7-S3-T3` — Reconcile observed session findings before beta readiness.
-- `W36-E7-S4-T4` — Repeat the medium scenario through Claude Code on the same candidate.
 - `W36-E7-S4-T5` — Record final same-revision Codex and Claude acceptance evidence.
 
 ## Update rules
@@ -35,15 +34,15 @@ slice, and local task.
 
 ## Current reconciliation
 
-- `2026-08-02` the post-T73 `W36-E7-S4-T36` rerun is complete on clean source
-  `edde5b7` and tree `65f52b5`: historical cases pass `4/4`, complete
-  intervention/terminal families `24/24`, packaged journeys `79/79` with exact
-  discovered/executed ID parity and no failed ID, and a fresh uninterrupted full
-  Chromium run passes `188/188`. All five viewports complete without console,
-  page, failed-request, overflow, accessibility, or test-owned process-cleanup
-  failure. Sanitized evidence is in
-  `docs/e2e/operator-ui-provider-free-browser-gate-2026-08-02-post-t73.md`.
-  T37 is `Next`, Codex T3 is `Soon`; no provider or large scenario ran.
+- `2026-08-02` `W36-E7-S4-T37` is complete on exact candidate `30e5f6a`, tree
+  `a4bf5c4`, tracked archive digest `4c63a6e`, and wheel digest `472c771`.
+  Ruff, mypy across `228` modules, Python `2153/2153`, exact-SHA Chromium
+  `188/188`, isolated install/doctor, both eval-doctors, fresh pinned Hono
+  readiness with Vitest `233/233` and `tsc --noEmit`, self-contained bundle
+  deletion/readback, dual private-auth Seatbelt probes/canaries, and source
+  postflight all pass. Sanitized evidence is in
+  `docs/e2e/candidate-readiness-2026-08-02-post-t73.md`. T3 is `Next`, T4 is
+  `Soon`; no provider evaluator or large scenario ran.
 
 - `2026-08-01` `W36-E7-S4-T37` is complete on exact candidate `44ba6d3`,
   tree `f28f428`, tracked archive digest `bb7c0b0`, and wheel digest
