@@ -7,6 +7,7 @@ from pathlib import Path
 
 from aidd.core.implementation_finalization import (
     TaskFinalizationContext,
+    aggregate_execution_mode,
     render_aggregate_implementation_report,
 )
 from aidd.core.implementation_service import AggregateFinalizationOutcome
@@ -51,6 +52,7 @@ def aggregate_finalization_port(
                 stage="implement",
                 work_item=work_item,
                 workspace_root=workspace_root,
+                implementation_execution_mode=aggregate_execution_mode(plan),
             )
             write_validator_report(
                 path=stage_root / "validator-report.md",

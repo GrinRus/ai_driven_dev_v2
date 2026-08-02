@@ -339,6 +339,8 @@ def _validate_verification_notes(
 
 def validate_implementation_report(
     context: SemanticDocumentContext,
+    *,
+    execution_mode_override: TaskExecutionMode | None = None,
 ) -> tuple[ValidationFinding, ...]:
     selected_task, summary, touched_files, verification, follow_up = _implementation_sections(
         context
@@ -353,11 +355,12 @@ def validate_implementation_report(
         )
     except AllowedWriteScopeError as exc:
         evidence_context_error = exc
-    verification_only = bool(
-        evidence_context is not None
-        and evidence_context.selected_task_id is not None
-        and evidence_context.execution_mode is TaskExecutionMode.VERIFICATION_ONLY
+    effective_execution_mode = execution_mode_override or (
+        evidence_context.execution_mode
+        if evidence_context is not None and evidence_context.selected_task_id is not None
+        else TaskExecutionMode.REPOSITORY_CHANGE
     )
+    verification_only = effective_execution_mode is TaskExecutionMode.VERIFICATION_ONLY
     findings: list[ValidationFinding] = []
     findings.extend(_validate_selected_task(context=context, selected_task=selected_task))
     findings.extend(_validate_change_summary(context=context, summary=summary))

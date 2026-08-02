@@ -11717,7 +11717,7 @@ Local tasks:
   - Scope: provider-free harness and architecture tests.
   - Verification: conformance fixtures fail before live execution for overlapping roots, dirty
     tracked source, forbidden product imports, or live-scenario literals in runtime product code.
-- `W36-E7-S4-T3` (next) Run `AIDD-LIVE-007` through Codex to a clean terminal result with
+- `W36-E7-S4-T3` (parked) Run `AIDD-LIVE-007` through Codex to a clean terminal result with
   manual stage-quality and rendered Studio evidence.
   - Dependencies: `W36-E7-S4-T37` as the direct queue predecessor after the
     post-auth `W36-E7-S4-T60` and `W36-E7-S4-T36` gates; `W36-E7-S4-T33`, `W36-E7-S4-T32`, `W36-E7-S4-T31`, `W36-E7-S4-T30`, `W36-E7-S4-T29`, `W36-E7-S4-T28`, `W36-E7-S4-T27`, `W36-E7-S4-T26`, `W36-E7-S4-T25`, `W36-E7-S4-T24`, `W36-E7-S4-T23`, `W36-E7-S4-T22`, `W36-E7-S4-T21`, `W36-E7-S4-T20`, `W36-E7-S4-T19`, `W36-E7-S4-T18`, `W36-E7-S4-T17`, `W36-E7-S4-T16`, `W36-E7-S4-T15`, `W36-E7-S4-T14`, `W36-E7-S4-T13`, `W36-E7-S4-T2`, `W36-E7-S4-T6`, `W36-E7-S4-T10`,
@@ -12365,9 +12365,9 @@ Local tasks:
     coverage passes `17/17`; the full intervention/browser/static selection passes `28/28`;
     and all five allowed viewports prove one request, an empty submitted draft, and a still-running
     runtime job.
-- `W36-E7-S4-T36` (done) Re-run the complete provider-free Chromium acceptance matrix after the
+- `W36-E7-S4-T36` (next) Re-run the complete provider-free Chromium acceptance matrix after the
   final provider-neutral hardening change.
-  - Dependencies: `W36-E7-S4-T76` as the current direct queue predecessor;
+  - Dependencies: `W36-E7-S4-T77` as the current direct queue predecessor;
     `W36-E7-S4-T75` as the preceding browser synchronization predecessor;
     `W36-E7-S4-T74` as the preceding verification-evidence correction;
     `W36-E7-S4-T73` as the preceding verification-evidence correction;
@@ -12527,7 +12527,7 @@ Local tasks:
     failed-request, overflow, accessibility, or test-owned process-cleanup failure. Sanitized
     evidence is in
     `docs/e2e/operator-ui-provider-free-browser-gate-2026-08-02-post-t76.md`.
-- `W36-E7-S4-T37` (done) Prove the exact post-browser candidate is installable and ready for an
+- `W36-E7-S4-T37` (soon) Prove the exact post-browser candidate is installable and ready for an
   isolated live-provider run.
   - Dependencies: `W36-E7-S4-T36` as the full-browser predecessor; blocks the active Codex
     acceptance task `W36-E7-S4-T3`.
@@ -12962,6 +12962,26 @@ Local tasks:
     checks pass `142/142`, the broader core/validator/task group passes `945/945`, Ruff and mypy
     across `228` modules pass, planning integrity passes `9/9`, and the clean complete Python
     rerun passes `2165/2165`.
+- `W36-E7-S4-T77` (done) Validate mixed repository-change and verification-only aggregate
+  implementation evidence with an explicit finalization mode.
+  - Dependencies: discovered by the failed post-T76 Codex acceptance attempt after
+    `W36-E7-S4-T37`; invalidates candidate `c26820c` and blocks its `T36 -> T37` replacement.
+  - Scope: typed aggregate-finalization validation context, aggregate implementation-report
+    rendering, and focused provider-free core/application/validator regressions only; task-local
+    fail-closed validation, providers, adapters, prompts, contracts, scenario literals, target
+    code, and Studio remain unchanged.
+  - Verification: a mixed plan with repository-change tasks followed by an explicit
+    verification-only task publishes one aggregate report containing the real changed files and
+    no synthetic `- none` entry; its validator uses the system-owned aggregate execution mode,
+    while a verification-only task-local report with any actual file entry remains rejected.
+  - Completion: aggregate finalization derives one typed effective execution mode from the full
+    task plan, filters task-local `- none` entries when real repository paths exist, and passes
+    that system-owned mode to semantic validation without weakening selected-task checks. The
+    saved post-T76 mixed live ledger now renders exactly the four real Hono paths without
+    `- none`, and its saved aggregate report revalidates with zero findings; the task-local
+    negative case remains rejected. Focused checks pass `33/33`, the broader implementation
+    group passes `130/130`, Ruff and mypy across `228` modules pass, planning integrity passes
+    `9/9`, and the complete Python suite passes `2168/2168`.
 
 Exit evidence:
 

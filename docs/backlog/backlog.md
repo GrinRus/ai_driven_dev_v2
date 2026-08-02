@@ -7,12 +7,15 @@ slice, and local task.
 
 ## Next
 
-- `W36-E7-S4-T3` — Re-run the medium scenario through Codex on the replacement candidate.
+- `W36-E7-S4-T36` — Repeat the full provider-free Chromium gate after T77.
 
 ## Soon
 
+- `W36-E7-S4-T37` — Produce the replacement exact-SHA Codex candidate after T36.
+
 ## Parking lot
 
+- `W36-E7-S4-T3` — Re-run the medium scenario through Codex on the replacement candidate.
 - `W36-E7-S4-T4` — Claude acceptance is not launched under the current Codex-only scope.
 - `W36-E7-S3-T2` — Record five first-time-operator sessions after initial live hardening.
 - `W36-E7-S3-T3` — Reconcile observed session findings before beta readiness.
@@ -32,6 +35,23 @@ slice, and local task.
   queue-restoration policy in `docs/backlog/roadmap.md` (`W8-E3-S1`).
 
 ## Current reconciliation
+
+- `2026-08-03` `W36-E7-S4-T77` is complete: aggregate finalization now derives its typed
+  execution mode from the whole plan, retains real repository paths, and drops the synthetic
+  verification-only `- none` entry without weakening task-local fail-closed validation. The
+  saved post-T76 live ledger renders the exact four Hono paths and the saved aggregate report
+  revalidates with zero findings. Focused checks pass `33/33`, the broader implementation group
+  passes `130/130`, Ruff and mypy across `228` modules pass, planning integrity passes `9/9`,
+  and full pytest passes `2168/2168`. T36 is `Next`, T37 is `Soon`, and Codex T3 remains parked
+  until the replacement candidate; no new provider run occurred during the fix.
+
+- `2026-08-03` the post-T76 Codex T3 attempt on candidate `c26820c` passed private auth,
+  target readiness, exact-wheel identity, and manual quality audits through `tasklist`.
+  Implement completed T1-T5, kept the product diff inside the four allowed files, and passed
+  focused Vitest plus `tsc --noEmit`, but aggregate finalization combined the real T1-T4 paths
+  with T5's truthful `- none` and then applied the selected verification-only rule to the whole
+  mixed report. The root is not clean and will not be resumed. `W36-E7-S4-T77` is `Next`, T36 is
+  `Soon`, and candidate `c26820c` is historical.
 
 - `2026-08-02` `W36-E7-S4-T37` is complete for the active Codex-only scope on exact
   candidate `c26820c`, tree `a46ed39`, tracked archive digest `45f6174`, and wheel

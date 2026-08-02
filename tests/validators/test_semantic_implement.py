@@ -9,6 +9,7 @@ from semantic_test_support import (
     _write_workspace_baseline,
 )
 
+from aidd.core.task_plan import TaskExecutionMode
 from aidd.validators.models import ValidationFinding, ValidationIssueLocation
 from aidd.validators.semantic import (
     INCOMPLETE_EXECUTION_SUMMARY_CODE,
@@ -1031,6 +1032,59 @@ def test_validate_semantic_outputs_accepts_explicit_verification_only_rich_task(
     )
 
     assert findings == ()
+
+
+def test_aggregate_mode_accepts_mixed_repository_and_verification_evidence(
+    tmp_path: Path,
+) -> None:
+    workspace_root = tmp_path / "workspace"
+    work_item = "WI-SEM-IMPLEMENT-MIXED-AGGREGATE"
+    selection_path = (
+        workspace_root / "workitems" / work_item / "context" / "task-selection.md"
+    )
+    selection_path.parent.mkdir(parents=True, exist_ok=True)
+    selection_path.write_text(
+        "# Task Selection\n\n## Selected task\n\n"
+        "- Task id: `T2`\n"
+        "- Execution mode: `verification-only`\n\n"
+        "## Acceptance criteria\n\n"
+        "- `T2-AC1`: Run the focused verification.\n",
+        encoding="utf-8",
+    )
+    _write_implementation_report(
+        workspace_root,
+        work_item,
+        "# Implementation Report\n\n"
+        "## Selected task\n\n- Task ids: `T1`, `T2`\n\n"
+        "## Change summary\n\n"
+        "- `T1`: Implemented the repository change.\n"
+        "- `T2`: Verified the completed repository change without another edit.\n\n"
+        "## Touched files\n\n"
+        "- `src/example.py` - implement the repository change.\n\n"
+        "## Verification notes\n\n"
+        "- `T1` `T1-AC1` -> covered by durable task evidence.\n"
+        "- `T2` `T2-AC1` -> covered by durable task evidence.\n\n"
+        "## Follow-up notes\n\n- none\n",
+    )
+
+    task_local_findings = validate_semantic_outputs(
+        stage="implement",
+        work_item=work_item,
+        workspace_root=workspace_root,
+    )
+    aggregate_findings = validate_semantic_outputs(
+        stage="implement",
+        work_item=work_item,
+        workspace_root=workspace_root,
+        implementation_execution_mode=TaskExecutionMode.REPOSITORY_CHANGE,
+    )
+
+    assert any(
+        finding.code == MISSING_DIFF_EVIDENCE_CODE
+        and "Verification-only task" in finding.message
+        for finding in task_local_findings
+    )
+    assert aggregate_findings == ()
 
 
 def test_validate_semantic_outputs_keeps_unclassified_verification_report_fail_closed(
