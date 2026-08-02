@@ -11717,7 +11717,7 @@ Local tasks:
   - Scope: provider-free harness and architecture tests.
   - Verification: conformance fixtures fail before live execution for overlapping roots, dirty
     tracked source, forbidden product imports, or live-scenario literals in runtime product code.
-- `W36-E7-S4-T3` (soon) Run `AIDD-LIVE-007` through Codex to a clean terminal result with
+- `W36-E7-S4-T3` (next) Run `AIDD-LIVE-007` through Codex to a clean terminal result with
   manual stage-quality and rendered Studio evidence.
   - Dependencies: `W36-E7-S4-T37` as the direct queue predecessor after the
     post-auth `W36-E7-S4-T60` and `W36-E7-S4-T36` gates; `W36-E7-S4-T33`, `W36-E7-S4-T32`, `W36-E7-S4-T31`, `W36-E7-S4-T30`, `W36-E7-S4-T29`, `W36-E7-S4-T28`, `W36-E7-S4-T27`, `W36-E7-S4-T26`, `W36-E7-S4-T25`, `W36-E7-S4-T24`, `W36-E7-S4-T23`, `W36-E7-S4-T22`, `W36-E7-S4-T21`, `W36-E7-S4-T20`, `W36-E7-S4-T19`, `W36-E7-S4-T18`, `W36-E7-S4-T17`, `W36-E7-S4-T16`, `W36-E7-S4-T15`, `W36-E7-S4-T14`, `W36-E7-S4-T13`, `W36-E7-S4-T2`, `W36-E7-S4-T6`, `W36-E7-S4-T10`,
@@ -12512,7 +12512,7 @@ Local tasks:
     without console, page, failed-request, overflow, accessibility, or test-owned process-cleanup
     failure. Sanitized evidence is in
     `docs/e2e/operator-ui-provider-free-browser-gate-2026-08-02-post-t75.md`.
-- `W36-E7-S4-T37` (next) Prove the exact post-browser candidate is installable and ready for an
+- `W36-E7-S4-T37` (done) Prove the exact post-browser candidate is installable and ready for an
   isolated live-provider run.
   - Dependencies: `W36-E7-S4-T36` as the full-browser predecessor; blocks the active Codex
     acceptance task `W36-E7-S4-T3`.
@@ -12520,10 +12520,10 @@ Local tasks:
     source integrity, self-contained-bundle smoke, and executable provider-isolation evidence
     only; no production, scenario, provider, or target changes.
   - Verification: one wheel built from clean tracked `HEAD` is bound to its commit/tree/digest and
-    loaded from an isolated install; full checks, `aidd doctor`, separate Codex and Claude
+    loaded from an isolated install; full checks, `aidd doctor`, the selected provider's
     `aidd eval doctor`, target preflight, source tracked/untracked baseline, bundle finalization,
-    and both provider isolation canaries pass on that recorded SHA before a live layout is
-    allocated.
+    and selected-provider isolation canary pass on that recorded SHA before a live layout is
+    allocated. Deferred providers remain parked and are not covered by the candidate record.
   - Completion: clean candidate `43d740c`, tree `a780ce9`, source-archive digest
     `b416b44`, and wheel digest `b93257d` pass Ruff, mypy, Python `2126/2126`, Chromium
     `188/188`, isolated install/doctor, both provider eval-doctors, fresh pinned Hono setup and
@@ -12621,6 +12621,16 @@ Local tasks:
     value or digest is recorded. Exact identities and sanitized signals are in
     `docs/e2e/candidate-readiness-2026-08-02-post-t73.md`; this record commit does not replace
     or rebuild the candidate wheel.
+  - Post-T75 Codex-scoped completion: clean candidate `9b9f504`, tree `9051118`, tracked-index
+    digest `a98d253`, tracked-archive digest `75ff5a0`, and wheel digest `b74d5fc` pass Ruff,
+    mypy across `228` modules, Python `2158/2158`, exact-SHA Chromium `188/188`, isolated
+    install/doctor, Codex eval-doctor, fresh pinned Hono setup with Vitest `233/233` and
+    `tsc --noEmit`, bundle seal/readback after mutable-root deletion, public preflight, Codex
+    private-auth `macos-seatbelt` session and visibility canary, and source-integrity postflight.
+    Exact identities and sanitized signals are in
+    `docs/e2e/candidate-readiness-2026-08-02-post-t75.md`; this record commit does not replace
+    or rebuild the candidate wheel. Claude readiness and live execution remain unclaimed and
+    parked under the current Codex-only scope.
 - `W36-E7-S4-T59` (done) Seed one allowlisted native-provider authentication snapshot into a
   fresh provider-private home without exposing the operator's remaining state.
   - Dependencies: the `W36-E7-S4-T3` private-home authentication discovery after
