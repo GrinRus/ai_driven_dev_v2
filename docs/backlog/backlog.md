@@ -7,7 +7,7 @@ slice, and local task.
 
 ## Next
 
-- `W36-E7-S4-T36` — Re-run the provider-free Chromium gate after the validator correction.
+- `W36-E7-S4-T36` — Re-run the provider-free Chromium gate after Inbox synchronization.
 
 ## Soon
 
@@ -35,6 +35,20 @@ slice, and local task.
   queue-restoration policy in `docs/backlog/roadmap.md` (`W8-E3-S1`).
 
 ## Current reconciliation
+
+- `2026-08-02` `W36-E7-S4-T75` is complete: Inbox provider-job and running-read-model
+  preconditions use the existing bounded 30-second surface budget and fail with phase plus last
+  durable payload. The diagnostic unit passes `1/1`, Inbox passes `9/9`, and the exact canonical
+  prefix through the formerly failing `1280x900` case passes `79/79`; Ruff, mypy across `228`
+  modules, planning integrity `9/9`, and full pytest `2158/2158` pass. T36 is `Next`, T37 is
+  `Soon`; no provider ran.
+
+- `2026-08-02` the post-T74 T36 gate on clean source `1882dc4` passed historical cases
+  `4/4`, intervention/terminal families `24/24`, and packaged registry `79/79` with exact
+  discovered/executed parity. Full Chromium then first failed at Inbox `viewport3` after `78`
+  passes; the exact case passed in isolation and again at the same full-order position. T75 is
+  `Next` to replace the test-only five-second provider-job/read-model polls with the existing
+  bounded 30-second surface budget and phase diagnostics. T36 is `Soon`; no provider ran.
 
 - `2026-08-02` `W36-E7-S4-T74` is complete: the Implement contract and runtime-agnostic
   command recognizer accept concrete ``nl -ba ... | sed ...`` inspection pipelines while

@@ -12361,7 +12361,8 @@ Local tasks:
     runtime job.
 - `W36-E7-S4-T36` (next) Re-run the complete provider-free Chromium acceptance matrix after the
   final provider-neutral hardening change.
-  - Dependencies: `W36-E7-S4-T74` as the current direct queue predecessor;
+  - Dependencies: `W36-E7-S4-T75` as the current direct queue predecessor;
+    `W36-E7-S4-T74` as the preceding verification-evidence correction;
     `W36-E7-S4-T73` as the preceding verification-evidence correction;
     `W36-E7-S4-T72` as the preceding incremental-stage correction;
     `W36-E7-S4-T71` as the preceding isolation correction;
@@ -12494,6 +12495,15 @@ Local tasks:
     without console, page, failed-request, overflow, accessibility, or test-owned process-cleanup
     failure. Sanitized evidence is in
     `docs/e2e/operator-ui-provider-free-browser-gate-2026-08-02-post-t73.md`.
+  - Post-T74 failed attempt: clean source `1882dc4`, tree `c6869ac`, passed the historical
+    matrix `4/4` in `178.15s`, intervention/terminal families `24/24` in `324.26s`, and the
+    packaged registry `79/79` with exact discovered/executed parity and `failed_ids=[]`. The
+    fresh full suite then reported its first failure at Inbox
+    `test_inbox_prioritizes_and_routes_durable_and_running_work[viewport3]` after `78` passing
+    cases. That exact case passed once in isolation and once again at the same full-order
+    position; the remaining test-only five-second provider-job/read-model polls are below the
+    declared 30-second surface budget. `W36-E7-S4-T75` owns bounded phase diagnostics and
+    synchronization before T36 restarts; no product or fixture fix was made inside this gate.
 - `W36-E7-S4-T37` (soon) Prove the exact post-browser candidate is installable and ready for an
   isolated live-provider run.
   - Dependencies: `W36-E7-S4-T36` as the full-browser predecessor; blocks the active Codex
@@ -12872,6 +12882,23 @@ Local tasks:
     focused validator checks pass `51/51`, contract/scenario/planning checks pass `80/80`, the
     saved T2 live report revalidates with zero findings, Ruff and mypy across `228` modules pass,
     and the complete Python suite passes `2157/2157`.
+- `W36-E7-S4-T75` (done) Use the Inbox journey's shared surface budget for provider-job and
+  durable running-read-model preconditions with phase-specific timeout evidence.
+  - Dependencies: discovered by the failed post-T74 `W36-E7-S4-T36` full Chromium run; blocks
+    the next no-fixes T36 restart.
+  - Scope: provider-free Inbox browser synchronization and focused browser regressions only;
+    product UI/API behavior, provider execution, fixture semantics, viewport matrix, and timeout
+    policy remain unchanged.
+  - Verification: delayed provider-job and Inbox read-model convergence may use the existing
+    bounded 30-second operator-surface budget, missing convergence still fails with the phase and
+    last durable payload, and the complete Inbox family plus exact full-order prefix through
+    `viewport3` pass without test-owned processes surviving.
+  - Completion: both provider-job and Inbox running-read-model polls now use one typed bounded
+    helper and the existing 30-second operator-surface budget; timeout evidence reports the exact
+    phase and last durable payload. The fail-closed diagnostic unit passes `1/1`, the Inbox family
+    passes `9/9`, and the canonical first-79 full-order prefix through the previously failing
+    `1280x900` case passes `79/79`. Ruff and mypy across `228` modules pass, planning integrity
+    passes `9/9`, and the clean complete Python rerun passes `2158/2158`.
 
 Exit evidence:
 

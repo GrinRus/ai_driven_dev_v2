@@ -1,7 +1,9 @@
 from __future__ import annotations
 
 import time
+from collections.abc import Callable
 from pathlib import Path
+from typing import Any
 from urllib.parse import parse_qs, urlsplit
 
 import pytest
@@ -15,6 +17,7 @@ from browser_tests.state_fixtures import build_browser_state_fixture
 
 JOURNEY_ID = "inbox"
 _SURFACE_TIMEOUT_MS = 30_000
+_SURFACE_TIMEOUT_SECONDS = _SURFACE_TIMEOUT_MS / 1_000
 
 _ITEMS = {
     "needs-decision": ("WI-DECISION", "run-decision", "idea", "answer-questions"),
@@ -57,6 +60,27 @@ def _wait_for_work_item_surface(page: Page, work_item: str) -> None:
     page.locator("#workItemChip").get_by_text(
         f"Work item: {work_item}", exact=True
     ).wait_for(state="visible", timeout=_SURFACE_TIMEOUT_MS)
+
+
+def _wait_for_durable_payload(
+    *,
+    fetch: Callable[[], dict[str, Any]],
+    ready: Callable[[dict[str, Any]], bool],
+    phase: str,
+    timeout_seconds: float = _SURFACE_TIMEOUT_SECONDS,
+    poll_interval_seconds: float = 0.05,
+) -> dict[str, Any]:
+    deadline = time.monotonic() + timeout_seconds
+    last_payload: dict[str, Any] | None = None
+    while time.monotonic() < deadline:
+        last_payload = fetch()
+        if ready(last_payload):
+            return last_payload
+        time.sleep(poll_interval_seconds)
+    pytest.fail(
+        f"{phase} did not converge within {timeout_seconds:.3f}s; "
+        f"last durable payload: {last_payload!r}"
+    )
 
 
 def _seed_inbox_states(project_root: Path) -> None:
@@ -199,24 +223,27 @@ def test_inbox_prioritizes_and_routes_durable_and_running_work(
         )
         assert launch_response.status == 200
         job_id = launch_response.json()["job_id"]
-        deadline = time.monotonic() + 5
-        while time.monotonic() < deadline:
+        def _fetch_job() -> dict[str, Any]:
             job_response = page.request.get(f"{harness.url}api/jobs/{job_id}")
             assert job_response.status == 200
-            if job_response.json()["status"] == "running":
-                break
-            time.sleep(0.05)
-        else:
-            pytest.fail("provider-free Inbox overlay job did not enter running state")
-        deadline = time.monotonic() + 5
-        while time.monotonic() < deadline:
+            return job_response.json()
+
+        _wait_for_durable_payload(
+            fetch=_fetch_job,
+            ready=lambda payload: payload.get("status") == "running",
+            phase="provider-free Inbox overlay job",
+        )
+
+        def _fetch_inbox() -> dict[str, Any]:
             running_readback = page.request.get(f"{harness.url}api/inbox")
             assert running_readback.status == 200
-            if running_readback.json()["inbox"]["running_now"]:
-                break
-            time.sleep(0.05)
-        else:
-            pytest.fail("running job did not appear in the Inbox read model")
+            return running_readback.json()
+
+        _wait_for_durable_payload(
+            fetch=_fetch_inbox,
+            ready=lambda payload: bool(payload["inbox"]["running_now"]),
+            phase="running job in Inbox read model",
+        )
         page.locator('[data-tab-shortcut="project-home"]').first.click()
         sections = page.locator("[data-inbox-section]")
         page.locator('[data-inbox-section="running-now"]').wait_for(
