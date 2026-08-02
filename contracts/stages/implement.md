@@ -70,6 +70,9 @@ Optional context documents may improve implementation quality, but they must not
   pair command evidence with an observed outcome such as `-> pass`, `exit 0`, `exit code 0`, or a
   captured tool summary. Bounded-diff checks may summarize the observed path set, for example
   `git diff --name-only -> changes bounded to src/example.py and tests/test_example.py`.
+  Concrete read-only source-inspection commands are executable evidence too, including standard
+  utilities and pipelines such as ``nl -ba src/example.py | sed -n '1,40p' -> pass``; tool-name
+  prose or a filename alone is not command evidence.
   Each verification bullet with a pass/fail/success claim must contain the command/check and
   observed outcome on that same bullet; do not split the command and outcome across separate prose
   paragraphs.

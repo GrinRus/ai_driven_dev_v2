@@ -296,6 +296,40 @@ def test_validate_semantic_outputs_accepts_node_eval_command_evidence_for_implem
     assert findings == ()
 
 
+def test_validate_semantic_outputs_accepts_nl_pipeline_evidence_for_implement(
+    tmp_path: Path,
+) -> None:
+    workspace_root = tmp_path / ".aidd"
+    work_item = "WI-SEM-IMPLEMENT-NL-COMMAND"
+    _write_implementation_report(
+        workspace_root,
+        work_item,
+        (
+            "# Implementation Report\n\n"
+            "## Summary\n\n"
+            "- Selected task id: `TASK-EXAMPLE-RUNTIME-ERROR`.\n"
+            "- Implemented the selected request boundary with preserved Error identity.\n\n"
+            "## Touched files\n\n"
+            "- `src/hono-base.ts` - normalize non-Error values at the request boundary.\n\n"
+            "## Verification\n\n"
+            "- `nl -ba src/hono-base.ts | sed -n '32,48p;388,400p'` -> pass "
+            "(observed the normalization helper and error-handler call).\n\n"
+            "## Risks\n\n"
+            "- Focused regression coverage remains a downstream task.\n\n"
+            "## Follow-up\n\n"
+            "- Continue with the selected regression task.\n"
+        ),
+    )
+
+    findings = validate_semantic_outputs(
+        stage="implement",
+        work_item=work_item,
+        workspace_root=workspace_root,
+    )
+
+    assert findings == ()
+
+
 def test_validate_semantic_outputs_accepts_contract_summary_task_id_and_cli_subcommands(
     tmp_path: Path,
 ) -> None:

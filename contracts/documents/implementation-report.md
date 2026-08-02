@@ -19,6 +19,8 @@ Explain what changed, which files were touched, and what verification was run.
 - the content is non-placeholder and stage-relevant,
 - touched file entries include a backticked file path plus same-line change intent,
 - upstream references are present when the stage requires them.
+- concrete backticked inspection commands, including `nl`-based pipelines, count as executable
+  verification only when they include command arguments and an observed outcome.
 
 ## Notes
 

@@ -91,7 +91,9 @@ feature_source:
       in the dedicated `Verification notes` section, including command-only
       verification tasks, or when a ready/proceed QA decision cites test/type/build
       checks without post-QA `git status --ignored --short --untracked-files=all`
-      evidence that classifies ignored residue.
+      evidence that classifies ignored residue. Treat concrete read-only inspection
+      pipelines such as `nl -ba ... | sed -n ...` plus an observed outcome as executable
+      implementation evidence; bare tool-name prose remains insufficient.
     complexity_axes:
     - cross-module
     - api-policy

@@ -7,14 +7,16 @@ slice, and local task.
 
 ## Next
 
-- `W36-E7-S4-T3` — Re-run the medium scenario through Codex on the replacement candidate.
+- `W36-E7-S4-T36` — Re-run the provider-free Chromium gate after the validator correction.
 
 ## Soon
 
-- `W36-E7-S4-T4` — Repeat the medium scenario through Claude Code on the same candidate.
+- `W36-E7-S4-T37` — Produce a replacement exact-SHA candidate after the browser gate.
 
 ## Parking lot
 
+- `W36-E7-S4-T3` — Re-run the medium scenario through Codex on the replacement candidate.
+- `W36-E7-S4-T4` — Claude acceptance is not launched under the current Codex-only scope.
 - `W36-E7-S3-T2` — Record five first-time-operator sessions after initial live hardening.
 - `W36-E7-S3-T3` — Reconcile observed session findings before beta readiness.
 - `W36-E7-S4-T5` — Record final same-revision Codex and Claude acceptance evidence.
@@ -33,6 +35,21 @@ slice, and local task.
   queue-restoration policy in `docs/backlog/roadmap.md` (`W8-E3-S1`).
 
 ## Current reconciliation
+
+- `2026-08-02` `W36-E7-S4-T74` is complete: the Implement contract and runtime-agnostic
+  command recognizer accept concrete ``nl -ba ... | sed ...`` inspection pipelines while
+  rejecting bare `nl` prose and `.nl` filenames. Focused validator checks pass `51/51`,
+  contract/scenario/planning checks pass `80/80`, the saved T2 live report revalidates with zero
+  findings, Ruff and mypy across `228` modules pass, and full pytest passes `2157/2157`. T36 is
+  `Next`, T37 is `Soon`, and provider acceptance remains parked until a replacement candidate;
+  only Codex will be launched under the current scope.
+
+- `2026-08-02` the post-T73 Codex T3 attempt on candidate `30e5f6a` passed private auth,
+  target readiness, and strong manual audits through `tasklist`. Implement T1/T2 provider work
+  and its focused checks passed, but the semantic validator rejected a concrete
+  ``nl -ba ... | sed ...` -> pass`` inspection command and exhausted two repairs. The terminal
+  root is not resumed. `W36-E7-S4-T74` is `Next`, T36 is `Soon`, and T37/T3 are parked until a
+  replacement candidate exists; Claude remains unlaunched under the current Codex-only scope.
 
 - `2026-08-02` `W36-E7-S4-T37` is complete on exact candidate `30e5f6a`, tree
   `a4bf5c4`, tracked archive digest `4c63a6e`, and wheel digest `472c771`.

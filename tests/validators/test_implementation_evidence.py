@@ -21,6 +21,7 @@ from aidd.validators.semantic_rules.evidence import (
         "`bash -c 'git diff --quiet'` -> pass",
         "`zsh -c 'test -f pyproject.toml'` -> pass",
         "`node -e \"console.log('verified')\"` -> pass",
+        "`nl -ba src/hono-base.ts | sed -n '32,48p;388,400p'` -> pass",
         "Reused the same verification command as `TL-2`; outcome passed.",
     ),
 )
@@ -37,6 +38,8 @@ def test_command_evidence_accepts_only_explicit_command_shapes(evidence: str) ->
         "The `pytest` tool passed.",
         "The full test suite passed.",
         "The Node.js runtime passed.",
+        "nl inspection passed.",
+        "The `notes.nl` file passed inspection.",
         "`138 passed`.",
         "`context/verification.log` shows pass.",
     ),

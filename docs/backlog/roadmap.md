@@ -11717,7 +11717,7 @@ Local tasks:
   - Scope: provider-free harness and architecture tests.
   - Verification: conformance fixtures fail before live execution for overlapping roots, dirty
     tracked source, forbidden product imports, or live-scenario literals in runtime product code.
-- `W36-E7-S4-T3` (next) Run `AIDD-LIVE-007` through Codex to a clean terminal result with
+- `W36-E7-S4-T3` (parked) Run `AIDD-LIVE-007` through Codex to a clean terminal result with
   manual stage-quality and rendered Studio evidence.
   - Dependencies: `W36-E7-S4-T37` as the direct queue predecessor after the
     post-auth `W36-E7-S4-T60` and `W36-E7-S4-T36` gates; `W36-E7-S4-T33`, `W36-E7-S4-T32`, `W36-E7-S4-T31`, `W36-E7-S4-T30`, `W36-E7-S4-T29`, `W36-E7-S4-T28`, `W36-E7-S4-T27`, `W36-E7-S4-T26`, `W36-E7-S4-T25`, `W36-E7-S4-T24`, `W36-E7-S4-T23`, `W36-E7-S4-T22`, `W36-E7-S4-T21`, `W36-E7-S4-T20`, `W36-E7-S4-T19`, `W36-E7-S4-T18`, `W36-E7-S4-T17`, `W36-E7-S4-T16`, `W36-E7-S4-T15`, `W36-E7-S4-T14`, `W36-E7-S4-T13`, `W36-E7-S4-T2`, `W36-E7-S4-T6`, `W36-E7-S4-T10`,
@@ -11754,7 +11754,14 @@ Local tasks:
     the standard Node.js executable. All three provider attempts exited `0`; the root is
     terminal and will not be resumed. `W36-E7-S4-T73` owns the provider-free validator fix and
     invalidates this candidate.
-- `W36-E7-S4-T4` (soon) Run `AIDD-LIVE-007` through Claude Code from an independent root on
+  - Post-T73 attempt: candidate `30e5f6a` passed isolated auth, target readiness, exact-wheel
+    identity, and strong manual audits for `idea` through `tasklist`. Implement completed T1 and
+    T2 provider work with passing focused Vitest and TypeScript checks, but semantic validation
+    rejected the exact ``nl -ba ... | sed ...` -> pass`` inspection command as an outcome claim
+    without executable evidence. Two repair attempts retained the truthful command and exhausted
+    the budget. The root is terminal and will not be resumed; `W36-E7-S4-T74` owns the
+    provider-free validator correction and invalidates this candidate.
+- `W36-E7-S4-T4` (parked) Run `AIDD-LIVE-007` through Claude Code from an independent root on
   the same AIDD revision and target pin.
   - Dependencies: `W36-E7-S4-T3` as the direct queue predecessor.
   - Scope: external Claude Code live execution and evidence only.
@@ -12352,9 +12359,10 @@ Local tasks:
     coverage passes `17/17`; the full intervention/browser/static selection passes `28/28`;
     and all five allowed viewports prove one request, an empty submitted draft, and a still-running
     runtime job.
-- `W36-E7-S4-T36` (done) Re-run the complete provider-free Chromium acceptance matrix after the
+- `W36-E7-S4-T36` (next) Re-run the complete provider-free Chromium acceptance matrix after the
   final provider-neutral hardening change.
-  - Dependencies: `W36-E7-S4-T73` as the current direct queue predecessor;
+  - Dependencies: `W36-E7-S4-T74` as the current direct queue predecessor;
+    `W36-E7-S4-T73` as the preceding verification-evidence correction;
     `W36-E7-S4-T72` as the preceding incremental-stage correction;
     `W36-E7-S4-T71` as the preceding isolation correction;
     `W36-E7-S4-T69` as the preceding run-owned install correction;
@@ -12486,7 +12494,7 @@ Local tasks:
     without console, page, failed-request, overflow, accessibility, or test-owned process-cleanup
     failure. Sanitized evidence is in
     `docs/e2e/operator-ui-provider-free-browser-gate-2026-08-02-post-t73.md`.
-- `W36-E7-S4-T37` (done) Prove the exact post-browser candidate is installable and ready for an
+- `W36-E7-S4-T37` (soon) Prove the exact post-browser candidate is installable and ready for an
   isolated live-provider run.
   - Dependencies: `W36-E7-S4-T36` as the full-browser predecessor; blocks the active Codex
     acceptance task `W36-E7-S4-T3`.
@@ -12846,6 +12854,24 @@ Local tasks:
     semantic matrix passes `47/47`, the saved live report revalidates with no findings, Ruff and
     mypy across `228` modules pass, planning integrity passes `9/9`, and the complete Python suite
     passes `2153/2153`.
+- `W36-E7-S4-T74` (done) Recognize a concrete `nl`-based source-inspection pipeline as executable
+  Implement verification evidence.
+  - Dependencies: discovered by the failed post-T73 Codex acceptance attempt after
+    `W36-E7-S4-T37`; invalidates candidate `30e5f6a` and blocks its `T36 -> T37` replacement.
+  - Scope: Implement Markdown contract clarification, runtime-agnostic verification-command
+    recognition, the existing medium scenario audit rubric, and focused provider-free semantic
+    regressions only; providers, adapters, core orchestration, target code, and Studio remain
+    unchanged.
+  - Verification: the saved live-shaped ``nl -ba src/hono-base.ts | sed -n ...` -> pass`` bullet
+    validates as concrete command evidence, while bare `nl` prose, filenames, and outcome claims
+    without an executable command remain fail-closed; focused validator and planning-integrity
+    checks pass.
+  - Completion: the Implement contract now explicitly accepts concrete read-only inspection
+    pipelines, and the runtime-agnostic command recognizer treats `nl` as executable only in a
+    command-shaped fragment with arguments. Bare prose and `.nl` filenames remain non-evidence;
+    focused validator checks pass `51/51`, contract/scenario/planning checks pass `80/80`, the
+    saved T2 live report revalidates with zero findings, Ruff and mypy across `228` modules pass,
+    and the complete Python suite passes `2157/2157`.
 
 Exit evidence:
 

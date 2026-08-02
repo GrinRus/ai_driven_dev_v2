@@ -13,7 +13,7 @@ IMPLEMENT_COMMAND_PATTERN = re.compile(
     r"(\$ [^\n]+|"
     r"`[^`\n]*\b("
     r"aidd|uv run|pytest|ruff|mypy|python|node|sphinx-build|npm|pnpm|yarn|go test|cargo test|"
-    r"make|git|grep|rg|sed|echo|printf|flake8|black|prettier|ty check|"
+    r"make|git|grep|rg|sed|nl|echo|printf|flake8|black|prettier|ty check|"
     r"bun|bunx|find|npx|vitest|tsc"
     r")\b[^`\n]*`|"
     + GENERIC_BACKTICKED_COMMAND_FRAGMENT
@@ -21,7 +21,7 @@ IMPLEMENT_COMMAND_PATTERN = re.compile(
     r"`(?:\.venv/bin/|\.\/node_modules/\.bin/|node_modules/\.bin/)[^`\n]+`|"
     r"(?:^|\s)(?:\.venv/bin/|\.\/node_modules/\.bin/|node_modules/\.bin/)[^\s`]+|"
     r"\b(uv run|python -m|python -c|sphinx-build|go test|cargo test|ty check)\b|"
-    r"\b(aidd|pytest|ruff|mypy|node|npm|pnpm|yarn|make|git|grep|rg|sed|echo|printf|flake8|black)\b|"
+    r"\b(aidd|pytest|ruff|mypy|node|npm|pnpm|yarn|make|git|grep|rg|sed|nl|echo|printf|flake8|black)\b|"
     r"`test\s+[^`\n]+`)",
     flags=re.IGNORECASE,
 )
@@ -106,6 +106,7 @@ _KNOWN_COMMAND_EXECUTABLES = frozenset(
         "mypy",
         "node",
         "npm",
+        "nl",
         "npx",
         "pnpm",
         "prettier",
