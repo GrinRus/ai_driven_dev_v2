@@ -82,6 +82,10 @@ Optional context documents may improve implementation quality, but they must not
   successful prerequisite tasks unless the current task changes those files again. Prerequisite or
   cumulative workspace state may be described in `Summary` or `Risks`; aggregate finalization owns
   the cumulative touched-file evidence across successful tasks.
+- When system-owned `context/task-selection.md` declares `Execution mode: verification-only`, the
+  rich attempt must preserve required command/check outcomes and report `- none` in `Touched files`.
+  Such an attempt is valid only with no observed task-local repository change. An omitted mode or
+  `repository-change` keeps the standard no-op justification and missing-diff rules.
 - The current task deliverable is not a tracked-only patch. Newly created untracked files under the
   allowed write scope and created by the current task count as touched files and must be listed with
   its tracked diffs. A generic one-shot implementation report without a rich task ledger continues
@@ -155,6 +159,8 @@ optional when a destructive or policy-sensitive choice must be confirmed
   - no-op output is allowed only when selected task is already satisfied or blocked by explicit external constraints,
   - no-op runs must include explicit justification, evidence, and next action in `implementation-report.md` and `stage-result.md`,
   - no-op without evidence or actionable next step must fail validation and require repair.
+  - an explicitly classified rich `verification-only` task is not a no-op when its required
+    command/check evidence is complete and its observed task-local diff is empty.
 
 ## Prompt pack
 

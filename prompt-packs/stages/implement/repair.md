@@ -140,6 +140,9 @@ Use concrete repair actions:
    If a listed command depends on downstream review or QA artifacts that cannot exist until a later
    stage, record it as `not-run: future-stage artifact` instead of running it as an expected failure.
 5. If no-op is retained, include justification, evidence, and next action; otherwise no-op is invalid.
+   Do not apply no-op rationale to an explicitly selected `verification-only` task: preserve the
+   required command outcomes, keep `Touched files` as `- none`, and remove or fail on any
+   task-local repository edit.
 6. Keep `stage-result.md` attempt status truthful for the current repair attempt.
    When the repaired implementation succeeds, keep the next action flow-aware: hand off to
    `review`, not directly to `qa`.
@@ -171,6 +174,8 @@ Use concrete repair actions:
   pollution; cleanup evidence explicitly covers `.pytest_cache/`, `.ruff_cache/`, `coverage/`,
   `.coverage*`, `__pycache__/`, build, dist, and dependency-cache residue,
 - no-op outcomes (if any) include evidence-backed rationale and actionable next step,
+- explicit `verification-only` attempts have complete required command evidence, `Touched files`
+  equal to `- none`, and no observed task-local repository change,
 - `repair-budget-final-attempt` can coexist with `stage-result.md` status `succeeded` only when all listed findings are resolved,
 - `repair-budget-exhausted` cannot coexist with `stage-result.md` status `succeeded`,
 - no status drift remains between `implementation-report.md`, `validator-report.md`, and `stage-result.md`.

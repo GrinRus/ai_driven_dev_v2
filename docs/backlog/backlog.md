@@ -7,12 +7,15 @@ slice, and local task.
 
 ## Next
 
-- `W36-E7-S4-T3` — Re-run the medium scenario through Codex on the replacement candidate.
+- `W36-E7-S4-T36` — Re-run the provider-free browser gate after T76.
 
 ## Soon
 
+- `W36-E7-S4-T37` — Produce the replacement exact-SHA Codex candidate after T36.
+
 ## Parking lot
 
+- `W36-E7-S4-T3` — Codex acceptance waits for the replacement T36/T37 candidate.
 - `W36-E7-S4-T4` — Claude acceptance is not launched under the current Codex-only scope.
 - `W36-E7-S3-T2` — Record five first-time-operator sessions after initial live hardening.
 - `W36-E7-S3-T3` — Reconcile observed session findings before beta readiness.
@@ -32,6 +35,21 @@ slice, and local task.
   queue-restoration policy in `docs/backlog/roadmap.md` (`W8-E3-S1`).
 
 ## Current reconciliation
+
+- `2026-08-02` `W36-E7-S4-T76` is complete: rich task cards carry typed
+  `repository-change`/`verification-only` mode into system-owned selection and readback.
+  Explicit verification-only tasks may truthfully preserve an empty task-local diff, while actual
+  edits and unclassified no-op completion claims remain fail-closed. Focused checks pass
+  `142/142`, the broader core/validator/task group passes `945/945`, Ruff and mypy across `228`
+  modules pass, planning integrity passes `9/9`, and full pytest passes `2165/2165`. T36 is
+  `Next`, T37 is `Soon`, T3 remains parked until the replacement candidate, and no provider ran.
+
+- `2026-08-02` the post-T75 Codex T3 attempt on candidate `9b9f504` passed private auth,
+  target readiness, exact-wheel identity, and manual quality audits through `tasklist`.
+  Implement completed four repository-change tasks and passed focused Vitest `237/237` plus
+  `tsc --noEmit`, but its verification-only T5 was rejected solely because the truthful
+  task-local diff was empty. The terminal root is not resumed. `W36-E7-S4-T76` is `Next`, T36
+  is `Soon`, and the candidate is invalid; Claude remains unlaunched under Codex-only scope.
 
 - `2026-08-02` `W36-E7-S4-T37` is complete for the active Codex-only scope on exact
   candidate `9b9f504`, tree `9051118`, tracked archive digest `75ff5a0`, and wheel

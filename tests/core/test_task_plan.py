@@ -5,7 +5,7 @@ from pathlib import Path
 import pytest
 
 from aidd.core.identifiers import SafeIdentifier, resolve_contained_component
-from aidd.core.task_plan import TaskPlanParseError, parse_task_plan
+from aidd.core.task_plan import TaskExecutionMode, TaskPlanParseError, parse_task_plan
 
 
 def _tasklist(*, second_dependency: str = "TL-1") -> str:
@@ -53,6 +53,30 @@ def test_parse_task_plan_preserves_order_and_acceptance() -> None:
     assert plan.ordered_ids() == ("TL-1", "TL-2")
     assert plan.tasks[1].dependencies == ("TL-1",)
     assert plan.tasks[1].acceptance_criteria[0].id == "TL-2-AC1"
+    assert plan.tasks[0].execution_mode is TaskExecutionMode.REPOSITORY_CHANGE
+
+
+def test_parse_task_plan_preserves_explicit_verification_only_mode() -> None:
+    markdown = _tasklist().replace(
+        "- In scope: `src/example.py` and `tests/test_validator.py`.",
+        "- In scope: `src/example.py` and `tests/test_validator.py`.\n"
+        "- Execution mode: verification-only",
+    )
+
+    plan = parse_task_plan(markdown)
+
+    assert plan.tasks[1].execution_mode is TaskExecutionMode.VERIFICATION_ONLY
+
+
+def test_parse_task_plan_rejects_unknown_execution_mode() -> None:
+    markdown = _tasklist().replace(
+        "- In scope: `src/example.py` and `tests/test_validator.py`.",
+        "- In scope: `src/example.py` and `tests/test_validator.py`.\n"
+        "- Execution mode: inferred-from-title",
+    )
+
+    with pytest.raises(TaskPlanParseError, match="execution mode"):
+        parse_task_plan(markdown)
 
 @pytest.mark.parametrize("value", ("", ".", "..", "../task", "task/child", "/task"))
 def test_safe_identifier_rejects_unsafe_path_components(tmp_path: Path, value: str) -> None:

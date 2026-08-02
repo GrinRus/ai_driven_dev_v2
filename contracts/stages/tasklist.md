@@ -51,6 +51,9 @@ Optional context documents may improve task decomposition quality, but they must
     (for example `T1`, `T2` or `TL-1`, `TL-2`; use one style consistently),
   - one H3 task card per task id with non-empty `Outcome`, `Dominant deliverable`, and
     `In scope` fields,
+  - explicit `Execution mode: verification-only` on any task whose standalone deliverable is
+    command/check evidence with no intended task-local repository diff; omitted mode is the
+    backward-compatible `repository-change` default,
   - at least one safe backticked repository-relative file or directory prefix in every `In scope`
     field; absolute paths, `..` traversal, and glob syntax are invalid,
   - when `context/allowed-write-scope.md` exists, every task-local `In scope` path must be the
@@ -103,6 +106,8 @@ Validators for `tasklist` should check:
   - each task has one dominant deliverable rather than bundled unrelated outcomes,
   - dependency notes avoid hidden coupling and do not rely on unspecified prerequisites,
   - task cards contain the required outcome, deliverable, scope, and acceptance fields,
+  - execution mode is either `repository-change` or `verification-only`, and evidence-only tasks
+    use the explicit latter value rather than relying on title or prose inference,
   - task-local scope contains safe repository-relative path prefixes,
   - every task-local prefix is inside canonical `context/allowed-write-scope.md` when that optional
     document exists, using component-boundary rather than string-prefix matching,

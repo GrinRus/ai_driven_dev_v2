@@ -3,6 +3,7 @@ from __future__ import annotations
 import hashlib
 import re
 from dataclasses import dataclass
+from enum import StrEnum
 
 from aidd.core.identifiers import SafeIdentifier
 
@@ -11,7 +12,7 @@ _TASK_HEADING_PATTERN = re.compile(
 )
 _FIELD_PATTERN = re.compile(
     r"^\s*-\s+(Outcome|Dominant deliverable|In scope|Context|"
-    r"Implementation constraints|Out of scope|Acceptance criteria)\s*:\s*(.*?)\s*$",
+    r"Implementation constraints|Out of scope|Execution mode|Acceptance criteria)\s*:\s*(.*?)\s*$",
     re.IGNORECASE,
 )
 _DEPENDENCY_ENTRY_PATTERN = re.compile(
@@ -25,6 +26,11 @@ class TaskPlanParseError(ValueError):
     def __init__(self, issues: tuple[str, ...]) -> None:
         self.issues = issues
         super().__init__("Invalid tasklist: " + "; ".join(issues))
+
+
+class TaskExecutionMode(StrEnum):
+    REPOSITORY_CHANGE = "repository-change"
+    VERIFICATION_ONLY = "verification-only"
 
 
 @dataclass(frozen=True, slots=True)
@@ -44,6 +50,7 @@ class TaskCard:
     acceptance_criteria: tuple[TaskAcceptanceCriterion, ...]
     dependencies: tuple[str, ...]
     verification: str
+    execution_mode: TaskExecutionMode = TaskExecutionMode.REPOSITORY_CHANGE
     context: str | None = None
     implementation_constraints: str | None = None
     out_of_scope: str | None = None
@@ -323,6 +330,18 @@ def parse_task_plan(markdown: str) -> TaskPlan:
         verification = verification_entries.get(task_id, "").strip()
         if not verification or verification.casefold().strip("` .") == "none":
             issues.append(f"Task `{task_id}` must declare concrete verification.")
+        execution_mode_value = fields.get(
+            "execution mode",
+            TaskExecutionMode.REPOSITORY_CHANGE.value,
+        ).casefold()
+        try:
+            execution_mode = TaskExecutionMode(execution_mode_value)
+        except ValueError:
+            issues.append(
+                f"Task `{task_id}` execution mode must be `repository-change` or "
+                "`verification-only`."
+            )
+            execution_mode = TaskExecutionMode.REPOSITORY_CHANGE
         cards.append(
             TaskCard(
                 id=task_id,
@@ -334,6 +353,7 @@ def parse_task_plan(markdown: str) -> TaskPlan:
                 acceptance_criteria=acceptance,
                 dependencies=parsed_dependencies.get(task_id, ()),
                 verification=verification,
+                execution_mode=execution_mode,
                 context=fields.get("context") or None,
                 implementation_constraints=(fields.get("implementation constraints") or None),
                 out_of_scope=fields.get("out of scope") or None,
@@ -357,6 +377,7 @@ def parse_task_plan(markdown: str) -> TaskPlan:
 __all__ = [
     "TaskAcceptanceCriterion",
     "TaskCard",
+    "TaskExecutionMode",
     "TaskPlan",
     "TaskPlanParseError",
     "parse_task_plan",

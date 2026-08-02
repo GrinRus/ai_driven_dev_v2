@@ -987,6 +987,91 @@ def test_validate_semantic_outputs_accepts_bounded_diff_verification_summary(
     assert findings == ()
 
 
+def test_validate_semantic_outputs_accepts_explicit_verification_only_rich_task(
+    tmp_path: Path,
+) -> None:
+    workspace_root = tmp_path / "workspace"
+    work_item = "WI-SEM-IMPLEMENT-VERIFICATION-ONLY"
+    selection_path = workspace_root / "workitems" / work_item / "context" / "task-selection.md"
+    selection_path.parent.mkdir(parents=True, exist_ok=True)
+    selection_path.write_text(
+        "# Task Selection\n\n"
+        "## Selected task\n\n"
+        "- Task id: `T5`\n"
+        "- Execution mode: `verification-only`\n\n"
+        "## Acceptance criteria\n\n"
+        "- `T5-AC1`: Run the focused verification.\n",
+        encoding="utf-8",
+    )
+    _write_implementation_report(
+        workspace_root,
+        work_item,
+        "# Implementation Report\n\n"
+        "## Summary\n\n"
+        "- Selected task: `T5` - Run focused implementation verification.\n"
+        "- `T5-AC1`: Ran the exact focused check against completed prerequisite changes; "
+        "the command passed and produced the required durable evidence.\n\n"
+        "## Touched files\n\n"
+        "- none\n\n"
+        "## Verification\n\n"
+        "- `./node_modules/.bin/vitest --run src/example.test.ts` -> pass "
+        "(exit code 0; 12 tests passed).\n"
+        "- `git status --ignored --short --untracked-files=all` -> pass "
+        "(no task-local repository change or generated residue).\n\n"
+        "## Risks\n\n"
+        "- Existing prerequisite changes remain owned by aggregate finalization.\n\n"
+        "## Follow-up\n\n"
+        "- Continue to the next dependency-ready task.\n",
+    )
+
+    findings = validate_semantic_outputs(
+        stage="implement",
+        work_item=work_item,
+        workspace_root=workspace_root,
+    )
+
+    assert findings == ()
+
+
+def test_validate_semantic_outputs_keeps_unclassified_verification_report_fail_closed(
+    tmp_path: Path,
+) -> None:
+    workspace_root = tmp_path / "workspace"
+    work_item = "WI-SEM-IMPLEMENT-UNCLASSIFIED-VERIFICATION"
+    selection_path = workspace_root / "workitems" / work_item / "context" / "task-selection.md"
+    selection_path.parent.mkdir(parents=True, exist_ok=True)
+    selection_path.write_text(
+        "# Task Selection\n\n## Selected task\n\n- Task id: `T5`\n",
+        encoding="utf-8",
+    )
+    _write_implementation_report(
+        workspace_root,
+        work_item,
+        "# Implementation Report\n\n"
+        "## Summary\n\n"
+        "- Selected task: `T5` completed verification for prerequisite changes.\n\n"
+        "## Touched files\n\n"
+        "- none\n\n"
+        "## Verification\n\n"
+        "- `python -m pytest -q` -> pass (12 tests passed).\n\n"
+        "## Risks\n\n"
+        "- No repository edit was produced.\n\n"
+        "## Follow-up\n\n"
+        "- Continue to review.\n",
+    )
+
+    findings = validate_semantic_outputs(
+        stage="implement",
+        work_item=work_item,
+        workspace_root=workspace_root,
+    )
+
+    assert {finding.code for finding in findings} >= {
+        INCOMPLETE_EXECUTION_SUMMARY_CODE,
+        MISSING_DIFF_EVIDENCE_CODE,
+    }
+
+
 def test_validate_semantic_outputs_accepts_live_sh_cleanup_verification(
     tmp_path: Path,
 ) -> None:

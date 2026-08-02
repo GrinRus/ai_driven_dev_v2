@@ -11717,7 +11717,7 @@ Local tasks:
   - Scope: provider-free harness and architecture tests.
   - Verification: conformance fixtures fail before live execution for overlapping roots, dirty
     tracked source, forbidden product imports, or live-scenario literals in runtime product code.
-- `W36-E7-S4-T3` (next) Run `AIDD-LIVE-007` through Codex to a clean terminal result with
+- `W36-E7-S4-T3` (parked) Run `AIDD-LIVE-007` through Codex to a clean terminal result with
   manual stage-quality and rendered Studio evidence.
   - Dependencies: `W36-E7-S4-T37` as the direct queue predecessor after the
     post-auth `W36-E7-S4-T60` and `W36-E7-S4-T36` gates; `W36-E7-S4-T33`, `W36-E7-S4-T32`, `W36-E7-S4-T31`, `W36-E7-S4-T30`, `W36-E7-S4-T29`, `W36-E7-S4-T28`, `W36-E7-S4-T27`, `W36-E7-S4-T26`, `W36-E7-S4-T25`, `W36-E7-S4-T24`, `W36-E7-S4-T23`, `W36-E7-S4-T22`, `W36-E7-S4-T21`, `W36-E7-S4-T20`, `W36-E7-S4-T19`, `W36-E7-S4-T18`, `W36-E7-S4-T17`, `W36-E7-S4-T16`, `W36-E7-S4-T15`, `W36-E7-S4-T14`, `W36-E7-S4-T13`, `W36-E7-S4-T2`, `W36-E7-S4-T6`, `W36-E7-S4-T10`,
@@ -11761,6 +11761,12 @@ Local tasks:
     without executable evidence. Two repair attempts retained the truthful command and exhausted
     the budget. The root is terminal and will not be resumed; `W36-E7-S4-T74` owns the
     provider-free validator correction and invalidates this candidate.
+  - Post-T75 attempt: candidate `9b9f504` passed isolated auth, target readiness, exact-wheel
+    identity, and strong manual audits for `idea` through `tasklist`. Implement completed the
+    four repository-change tasks and their focused Vitest/TypeScript checks, then rejected the
+    successful verification-only T5 because its truthful task-local touched-file set was empty.
+    The terminal root will not be resumed; `W36-E7-S4-T76` owns the provider-free contract fix
+    and invalidates this candidate.
 - `W36-E7-S4-T4` (parked) Run `AIDD-LIVE-007` through Claude Code from an independent root on
   the same AIDD revision and target pin.
   - Dependencies: `W36-E7-S4-T3` as the direct queue predecessor.
@@ -12359,9 +12365,10 @@ Local tasks:
     coverage passes `17/17`; the full intervention/browser/static selection passes `28/28`;
     and all five allowed viewports prove one request, an empty submitted draft, and a still-running
     runtime job.
-- `W36-E7-S4-T36` (done) Re-run the complete provider-free Chromium acceptance matrix after the
+- `W36-E7-S4-T36` (next) Re-run the complete provider-free Chromium acceptance matrix after the
   final provider-neutral hardening change.
-  - Dependencies: `W36-E7-S4-T75` as the current direct queue predecessor;
+  - Dependencies: `W36-E7-S4-T76` as the current direct queue predecessor;
+    `W36-E7-S4-T75` as the preceding browser synchronization predecessor;
     `W36-E7-S4-T74` as the preceding verification-evidence correction;
     `W36-E7-S4-T73` as the preceding verification-evidence correction;
     `W36-E7-S4-T72` as the preceding incremental-stage correction;
@@ -12512,7 +12519,7 @@ Local tasks:
     without console, page, failed-request, overflow, accessibility, or test-owned process-cleanup
     failure. Sanitized evidence is in
     `docs/e2e/operator-ui-provider-free-browser-gate-2026-08-02-post-t75.md`.
-- `W36-E7-S4-T37` (done) Prove the exact post-browser candidate is installable and ready for an
+- `W36-E7-S4-T37` (soon) Prove the exact post-browser candidate is installable and ready for an
   isolated live-provider run.
   - Dependencies: `W36-E7-S4-T36` as the full-browser predecessor; blocks the active Codex
     acceptance task `W36-E7-S4-T3`.
@@ -12917,6 +12924,26 @@ Local tasks:
     passes `9/9`, and the canonical first-79 full-order prefix through the previously failing
     `1280x900` case passes `79/79`. Ruff and mypy across `228` modules pass, planning integrity
     passes `9/9`, and the clean complete Python rerun passes `2158/2158`.
+- `W36-E7-S4-T76` (done) Distinguish verification-only rich implementation tasks from unsupported
+  no-op repository-change attempts.
+  - Dependencies: discovered by the failed post-T75 Codex acceptance attempt after
+    `W36-E7-S4-T37`; invalidates candidate `9b9f504` and blocks its `T36 -> T37` replacement.
+  - Scope: Tasklist and Implement Markdown contracts, typed task-plan/selection evidence,
+    runtime-agnostic Implement semantic validation, matching prompts, and focused provider-free
+    regressions only; providers, adapters, live scenario literals, target code, and Studio remain
+    unchanged.
+  - Verification: an explicitly classified `verification-only` rich task with exact command
+    outcomes and an empty task-local diff validates and reaches aggregate finalization, while an
+    unclassified or repository-change no-op with completion claims remains rejected by the
+    existing incomplete-summary and missing-diff findings.
+  - Completion: Tasklist cards now carry typed `repository-change` or explicit
+    `verification-only` execution mode into system-owned task selection and the task read model.
+    Implement semantic validation accepts `- none` only for an explicitly selected
+    verification-only rich task, while repository evidence rejects any actual task-local edit;
+    ordinary unclassified no-op completion claims remain fail-closed. Focused task/validator
+    checks pass `142/142`, the broader core/validator/task group passes `945/945`, Ruff and mypy
+    across `228` modules pass, planning integrity passes `9/9`, and the clean complete Python
+    rerun passes `2165/2165`.
 
 Exit evidence:
 

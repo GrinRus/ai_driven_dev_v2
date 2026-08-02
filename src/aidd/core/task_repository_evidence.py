@@ -14,6 +14,7 @@ from aidd.core.allowed_write_scope import (
 )
 from aidd.core.stage_models import StageExecutionState, StageOutputDiscovery
 from aidd.core.task_attempt_lifecycle import TaskExecutionContext
+from aidd.core.task_plan import TaskExecutionMode
 from aidd.validators.models import ValidationFinding, ValidationIssueLocation
 
 
@@ -207,6 +208,12 @@ def task_diff_evidence(
         issues.append(
             "Implementation report paths absent from the task-local diff: "
             + ", ".join(unsupported_report_paths)
+            + "."
+        )
+    if context.task.execution_mode is TaskExecutionMode.VERIFICATION_ONLY and observed:
+        issues.append(
+            "Verification-only task changed repository paths: "
+            + ", ".join(observed)
             + "."
         )
     allowed_scope = None

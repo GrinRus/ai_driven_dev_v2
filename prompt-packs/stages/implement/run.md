@@ -78,8 +78,13 @@ normalize if canonical validation proves the terminal status inconsistent.
    newly created untracked source files from the current task under the allowed write scope as observed
    task-local edits and include them alongside that task's tracked diffs: the deliverable is the
    current task-local workspace state, not a tracked-only patch.
+   For explicit `verification-only` selection, instead require exactly `- none` and stop with a
+   failure if the task changed any repository file.
 6. Verification notes must list actual checks run (or explicitly not run) with observed outcomes.
 7. No-op outcomes require explicit evidence-based justification plus next action; otherwise no-op is invalid.
+   The sole exception is a rich task whose system-owned selection explicitly says
+   `Execution mode: verification-only`: execute and preserve its required checks, report
+   `- none` in `Touched files`, and do not make repository edits. This is not a no-op.
 8. Stage/validator status must match observed implementation and verification evidence.
 9. Do not use `git stash`, `git reset`, `git checkout --`, or `git restore` in the deliverable
    workspace to run negative checks or revert files. Use a disposable copy for destructive
@@ -153,6 +158,8 @@ normalize if canonical validation proves the terminal status inconsistent.
    Before declaring `succeeded`, self-check the `Touched files` section: every top-level file
    bullet must have a backticked path, a separator (`-`, `:`, or `->`), and a short intent on the
    same line.
+   For explicit `verification-only` selection, self-check instead that the section is exactly
+   `- none` and that repository evidence shows no task-local change.
 6. Record verification using concrete commands/checks and outcomes; include observed results such as
    `-> pass`, `exit code 0`, or the captured tool summary on the same bullet. Do not imply execution that did
    not happen.

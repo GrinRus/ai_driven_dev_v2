@@ -21,6 +21,8 @@ Break the plan into reviewable implementation tasks with sequencing and verifica
   and an imperative title,
 - every task card contains exactly one non-empty `Outcome`, `Dominant deliverable`, and
   `In scope` field,
+- a task that intentionally produces command/check evidence without a task-local repository diff
+  declares `Execution mode: verification-only`; omitted mode means `repository-change`,
 - `In scope` contains at least one backticked repository-relative file or directory prefix;
   absolute paths, `..` traversal, and glob syntax are invalid,
 - when the work item has `context/allowed-write-scope.md`, every `In scope` prefix is equal to an
@@ -57,6 +59,11 @@ Canonical task-card shape:
 ```
 
 Optional task-card fields are `Context`, `Implementation constraints`, and `Out of scope`.
+`Execution mode` is also optional for repository-change tasks and defaults to
+`repository-change`; the only explicit alternate value is `verification-only`. A
+verification-only card still requires bounded `In scope`, acceptance criteria, dependencies, and
+dedicated verification notes. It is not an unsupported no-op: its dominant deliverable and
+acceptance criteria must be executable evidence rather than repository edits.
 Plan milestone ids may appear in `Outcome`, `Context`, acceptance-criterion text, or the task's
 dedicated `Verification notes` entry. Do not add a separate `Milestone` or `Plan milestone` field.
 Backticked task-scope paths use exact-file or directory-prefix semantics. They are enforced even

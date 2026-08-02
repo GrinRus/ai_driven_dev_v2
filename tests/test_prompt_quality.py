@@ -1211,3 +1211,32 @@ def test_implement_contract_and_prompts_scope_rich_task_evidence_locally() -> No
     assert "unless the current task changes them again" in run_prompt
     assert "do not revert successful prior-task changes" in repair_prompt
     assert "SEM-TASK-DIFF-MISMATCH" in repair_prompt
+
+
+def test_tasklist_and_implement_contracts_use_explicit_verification_only_mode() -> None:
+    tasklist_paths = (
+        "contracts/documents/tasklist.md",
+        "contracts/stages/tasklist.md",
+        "prompt-packs/stages/tasklist/run.md",
+        "prompt-packs/stages/tasklist/repair.md",
+    )
+    implement_paths = (
+        "contracts/documents/implementation-report.md",
+        "contracts/stages/implement.md",
+        "prompt-packs/stages/implement/system.md",
+        "prompt-packs/stages/implement/run.md",
+        "prompt-packs/stages/implement/repair.md",
+    )
+
+    for path in tasklist_paths + implement_paths:
+        text = Path(path).read_text(encoding="utf-8")
+        assert "verification-only" in text
+
+    for path in tasklist_paths:
+        text = Path(path).read_text(encoding="utf-8")
+        assert "repository-change" in text
+
+    for path in implement_paths:
+        normalized = " ".join(Path(path).read_text(encoding="utf-8").split())
+        assert "`- none`" in normalized
+        assert "task-local" in normalized

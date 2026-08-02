@@ -33,3 +33,9 @@ Prerequisite or cumulative workspace state may be explained in `Summary` or `Ris
 not be claimed as a current-task touch. Aggregate finalization owns the cumulative touched-file
 evidence across successful tasks. A generic one-shot implementation report without a rich task
 ledger continues to describe the observed deliverable workspace state.
+
+When system-owned task selection explicitly declares `Execution mode: verification-only`, a rich
+task attempt may use `- none` in `Touched files` after executing and preserving its required checks.
+This is evidence production, not a no-op repository-change attempt. Any observed task-local file
+change still fails closed, and omitted or `repository-change` execution mode retains the normal
+evidence-backed no-op rules.
