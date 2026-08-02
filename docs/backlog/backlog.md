@@ -7,15 +7,14 @@ slice, and local task.
 
 ## Next
 
-- `W36-E7-S4-T36` — Re-run the provider-free browser gate after T76.
+- `W36-E7-S4-T37` — Produce the replacement exact-SHA Codex candidate after T36.
 
 ## Soon
 
-- `W36-E7-S4-T37` — Produce the replacement exact-SHA Codex candidate after T36.
+- `W36-E7-S4-T3` — Re-run the medium scenario through Codex on the replacement candidate.
 
 ## Parking lot
 
-- `W36-E7-S4-T3` — Codex acceptance waits for the replacement T36/T37 candidate.
 - `W36-E7-S4-T4` — Claude acceptance is not launched under the current Codex-only scope.
 - `W36-E7-S3-T2` — Record five first-time-operator sessions after initial live hardening.
 - `W36-E7-S3-T3` — Reconcile observed session findings before beta readiness.
@@ -35,6 +34,15 @@ slice, and local task.
   queue-restoration policy in `docs/backlog/roadmap.md` (`W8-E3-S1`).
 
 ## Current reconciliation
+
+- `2026-08-02` the post-T76 `W36-E7-S4-T36` rerun is complete on clean source
+  `acd48ce` and tree `43c1e97`: historical cases pass `4/4`, intervention/terminal families
+  `24/24`, packaged journeys pass `79/79` with exact discovered/executed ID parity and
+  `failed_ids=[]`, and one fresh uninterrupted full Chromium suite passes `188/188`. All five
+  viewports complete without console, page, failed-request, overflow, accessibility, or
+  test-owned process-cleanup failure. Sanitized evidence is in
+  `docs/e2e/operator-ui-provider-free-browser-gate-2026-08-02-post-t76.md`. T37 is `Next`, Codex
+  T3 is `Soon`, and no provider or large scenario ran.
 
 - `2026-08-02` `W36-E7-S4-T76` is complete: rich task cards carry typed
   `repository-change`/`verification-only` mode into system-owned selection and readback.
