@@ -12372,7 +12372,7 @@ Local tasks:
     coverage passes `17/17`; the full intervention/browser/static selection passes `28/28`;
     and all five allowed viewports prove one request, an empty submitted draft, and a still-running
     runtime job.
-- `W36-E7-S4-T36` (next) Re-run the complete provider-free Chromium acceptance matrix after the
+- `W36-E7-S4-T36` (done) Re-run the complete provider-free Chromium acceptance matrix after the
   final provider-neutral hardening change.
   - Dependencies: `W36-E7-S4-T80` as the current direct queue predecessor;
     `W36-E7-S4-T79` as the preceding aggregate-evidence correction;
@@ -12559,7 +12559,15 @@ Local tasks:
     without console, page, failed-request, overflow, accessibility, or process-cleanup failure;
     the final process postflight was empty. Sanitized evidence is in
     `docs/e2e/operator-ui-provider-free-browser-gate-2026-08-03-post-t79.md`.
-- `W36-E7-S4-T37` (soon) Prove the exact post-browser candidate is installable and ready for an
+  - Post-T80 completion: clean source `403129a`, tree `fe3bd4c`, Playwright `1.61.0`, and
+    Chromium `149.0.7827.55` passed the historical matrix `4/4` in `79.28s`, complete
+    intervention/terminal families `24/24` in `313.57s`, all twelve packaged journeys `79/79`
+    in summed `1506.17s` with exact discovered/executed ID parity and `failed_ids=[]`, and one
+    fresh uninterrupted full browser suite `188/188` in `2164.92s`. All five viewports completed
+    without console, page, failed-request, overflow, accessibility, or process-cleanup failure;
+    the process preflight and postflight were empty. Sanitized evidence is in
+    `docs/e2e/operator-ui-provider-free-browser-gate-2026-08-03-post-t80.md`.
+- `W36-E7-S4-T37` (next) Prove the exact post-browser candidate is installable and ready for an
   isolated live-provider run.
   - Dependencies: `W36-E7-S4-T36` as the full-browser predecessor; blocks the active Codex
     acceptance task `W36-E7-S4-T3`.

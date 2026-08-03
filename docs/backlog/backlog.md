@@ -7,11 +7,11 @@ slice, and local task.
 
 ## Next
 
-- `W36-E7-S4-T36` — Revalidate the provider-free browser gate after T80.
+- `W36-E7-S4-T37` — Record the replacement exact-SHA Codex candidate after T36.
 
 ## Soon
 
-- `W36-E7-S4-T37` — Record the replacement exact-SHA Codex candidate after T36.
+No immediate successor is promoted until the exact-SHA candidate result is known.
 
 ## Parking lot
 
@@ -35,6 +35,15 @@ slice, and local task.
   queue-restoration policy in `docs/backlog/roadmap.md` (`W8-E3-S1`).
 
 ## Current reconciliation
+
+- `2026-08-03` the post-T80 `W36-E7-S4-T36` rerun is complete on clean source `403129a`
+  and tree `fe3bd4c`: historical cases pass `4/4`, intervention/terminal families `24/24`,
+  packaged journeys pass `79/79` with exact discovered/executed parity and `failed_ids=[]`, and
+  one fresh uninterrupted full Chromium suite passes `188/188`. All five viewports complete
+  without console, page, failed-request, overflow, accessibility, or process-cleanup failure;
+  process preflight and postflight are empty. Sanitized evidence is in
+  `docs/e2e/operator-ui-provider-free-browser-gate-2026-08-03-post-t80.md`. T37 is `Next`,
+  Codex T3 remains parked, and no provider or large scenario ran.
 
 - `2026-08-03` `W36-E7-S4-T80` is complete: Stage Result semantic validation reads only
   canonical leading attempt identities and no longer counts `attempt-000N/...` evidence-path
