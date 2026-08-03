@@ -7,11 +7,11 @@ slice, and local task.
 
 ## Next
 
-- `W36-E7-S4-T86` — Refresh the Codex-only candidate after T85.
+- `W36-E7-S4-T3` — Run fresh medium Codex acceptance on candidate `4b2856f`.
 
 ## Soon
 
-- `W36-E7-S4-T3` — Run fresh medium Codex acceptance on the T86 candidate.
+No task is promoted while the external Codex acceptance is active.
 
 ## Parking lot
 
@@ -34,6 +34,14 @@ slice, and local task.
   queue-restoration policy in `docs/backlog/roadmap.md` (`W8-E3-S1`).
 
 ## Current reconciliation
+
+- `2026-08-03` `W36-E7-S4-T86` is complete on exact candidate `4b2856f`, tree `9137bc3`,
+  tracked archive digest `c8769e7`, and wheel digest `f9e9f98`. Ruff, mypy, exact-candidate
+  Python `2174/2174`, validators `298/298`, saved terminal Implement revalidation,
+  bundle/manifest/isolation `29/29`, isolated install/doctor/eval-doctor, fresh Hono readiness
+  with Vitest `233/233` and `tsc --noEmit`, private Codex auth, Seatbelt isolation, and source
+  postflight pass. Browser code is unchanged and retains the accepted post-T81 Chromium `188/188`
+  gate. Evidence is in `docs/e2e/candidate-readiness-2026-08-03-post-t85.md`; T3 is `Next`.
 
 - `2026-08-03` the post-T84 Codex run passed isolated auth, exact-wheel target readiness, and
   manual quality audits through `tasklist`. Implement T1/T2 succeeded and T3 produced a bounded

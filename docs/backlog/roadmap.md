@@ -11717,7 +11717,7 @@ Local tasks:
   - Scope: provider-free harness and architecture tests.
   - Verification: conformance fixtures fail before live execution for overlapping roots, dirty
     tracked source, forbidden product imports, or live-scenario literals in runtime product code.
-- `W36-E7-S4-T3` (soon) Run `AIDD-LIVE-007` through Codex to a clean terminal result with
+- `W36-E7-S4-T3` (next) Run `AIDD-LIVE-007` through Codex to a clean terminal result with
   manual stage-quality and rendered Studio evidence.
   - Dependencies: `W36-E7-S4-T86` as the direct replacement-candidate predecessor after the
     `W36-E7-S4-T85` compound-command evidence fix and terminal post-T84 run;
@@ -13194,7 +13194,7 @@ Local tasks:
     `SEM-UNVERIFIABLE-CHECK-CLAIM` finding to zero without editing its evidence. Positive and
     negative compound-command regressions pass in the focused `31/31` suite; Ruff and mypy pass.
 
-- `W36-E7-S4-T86` (next) Refresh the Codex-only candidate after T85.
+- `W36-E7-S4-T86` (done) Refresh the Codex-only candidate after T85.
   - Dependencies: `W36-E7-S4-T85`; blocks the next fresh `W36-E7-S4-T3` acceptance run.
   - Scope: provider-free repository gates, tracked-archive wheel, isolated install and doctor,
     pinned Hono readiness, bundle/isolation smoke, private Codex auth probe, and source postflight.
@@ -13202,6 +13202,14 @@ Local tasks:
     its contract/prompt, tests, and scenario rubric; no UI, harness, Studio, or browser code changed.
   - Verification: one immutable source SHA/tree and wheel digest passes all Codex-only readiness
     checks affected by T85 and becomes the sole artifact used by the next T3 run.
+  - Completion: candidate `4b2856f`, tree `9137bc3`, tracked archive digest `c8769e7`, and wheel
+    digest `f9e9f98` pass the affected Codex-only readiness bar. Ruff, mypy, exact-candidate Python
+    `2174/2174`, validators `298/298`, saved terminal Implement revalidation, bundle/manifest/
+    isolation `29/29`, isolated install/doctor/eval-doctor, private-auth Seatbelt readiness,
+    fresh pinned Hono setup, Vitest `233/233`, `tsc --noEmit`, and source postflight pass. The
+    unchanged browser surfaces retain the accepted post-T81 Chromium `188/188` evidence.
+    Sanitized evidence is recorded in `docs/e2e/candidate-readiness-2026-08-03-post-t85.md`;
+    T3 is now next.
 
 Exit evidence:
 
