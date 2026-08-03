@@ -7,15 +7,14 @@ slice, and local task.
 
 ## Next
 
-- `W36-E7-S4-T92` — Refresh the Codex-only candidate after T91.
+- `W36-E7-S4-T3` — Run fresh medium Codex acceptance on candidate `ae3131a`.
 
 ## Soon
 
-No task is promoted until the replacement candidate is fixed to an immutable SHA and wheel.
+No task is promoted while the external Codex acceptance is active.
 
 ## Parking lot
 
-- `W36-E7-S4-T3` — Run fresh medium Codex acceptance after the replacement candidate.
 - `W36-E7-S4-T4` — Claude acceptance is not launched under the current Codex-only scope.
 - `W36-E7-S3-T2` — Record five first-time-operator sessions after initial live hardening.
 - `W36-E7-S3-T3` — Reconcile observed session findings before beta readiness.
@@ -35,6 +34,14 @@ No task is promoted until the replacement candidate is fixed to an immutable SHA
   queue-restoration policy in `docs/backlog/roadmap.md` (`W8-E3-S1`).
 
 ## Current reconciliation
+
+- `2026-08-03` `W36-E7-S4-T92` is complete on exact candidate `ae3131a`, tree `696633d`,
+  tracked archive digest `aecf4e4`, and byte-repeatable wheel digest `2b3e481`. Ruff, mypy,
+  Python `2179/2179`, focused validator/planning `55/55`, isolated install/doctor/eval-doctor,
+  private-auth Seatbelt readiness, fresh Hono setup with Vitest `233/233` and `tsc --noEmit`,
+  clean target diff, and source postflight pass. Browser code is unchanged and retains post-T81
+  Chromium `188/188`. Evidence is in `docs/e2e/candidate-readiness-2026-08-03-post-t91.md`;
+  T3 is `Next`.
 
 - `2026-08-03` `W36-E7-S4-T91` is complete. Dependency objects are scoped to their individual
   relation spans, and the exact terminal plan now yields the authored acyclic graph without the

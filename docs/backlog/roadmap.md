@@ -11717,10 +11717,10 @@ Local tasks:
   - Scope: provider-free harness and architecture tests.
   - Verification: conformance fixtures fail before live execution for overlapping roots, dirty
     tracked source, forbidden product imports, or live-scenario literals in runtime product code.
-- `W36-E7-S4-T3` (parked) Run `AIDD-LIVE-007` through Codex to a clean terminal result with
+- `W36-E7-S4-T3` (next) Run `AIDD-LIVE-007` through Codex to a clean terminal result with
   manual stage-quality and rendered Studio evidence.
-  - Dependencies: `W36-E7-S4-T90` as the direct replacement-candidate predecessor after the
-    `W36-E7-S4-T89` QA-local command-evidence fix and terminal post-T88 run;
+  - Dependencies: `W36-E7-S4-T92` as the direct replacement-candidate predecessor after the
+    `W36-E7-S4-T91` dependency-direction fix and terminal post-T90 run;
     `W36-E7-S4-T88` as the prior replacement-candidate predecessor after the
     `W36-E7-S4-T87` shell-command-list evidence fix and terminal post-T86 run;
     `W36-E7-S4-T86` as the prior replacement-candidate predecessor after the
@@ -13291,11 +13291,18 @@ Local tasks:
     `M5 -> M4`. Focused validator/planning tests pass `55/55`, Ruff and mypy pass, and the full
     Python suite passes `2179/2179`.
 
-- `W36-E7-S4-T92` (next) Refresh the Codex-only candidate after T91.
+- `W36-E7-S4-T92` (done) Refresh the Codex-only candidate after T91.
   - Dependencies: `W36-E7-S4-T91`; blocks the next fresh `W36-E7-S4-T3` acceptance run.
   - Scope and verification: repeat the affected provider-free exact-SHA readiness bar,
     tracked-archive wheel, isolated install/doctor, pinned Hono readiness, bundle/isolation,
     private Codex auth, and source postflight; retain accepted unchanged-browser evidence.
+  - Completion: candidate `ae3131a`, tree `696633d`, tracked archive digest `aecf4e4`, and
+    byte-repeatable wheel digest `2b3e481` pass the affected Codex-only readiness bar. Ruff,
+    mypy, Python `2179/2179`, focused validator/planning `55/55`, isolated install/doctor/
+    eval-doctor, private-auth Seatbelt readiness, fresh pinned Hono setup, Vitest `233/233`,
+    `tsc --noEmit`, clean target diff, and source postflight pass. The unchanged browser surfaces
+    retain post-T81 Chromium `188/188` evidence. Sanitized evidence is recorded in
+    `docs/e2e/candidate-readiness-2026-08-03-post-t91.md`; T3 is now next.
 
 Exit evidence:
 
