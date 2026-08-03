@@ -84,6 +84,10 @@ normalize if canonical validation proves the terminal status inconsistent.
    task-local prefix equal to or beneath one listed canonical prefix on a component boundary.
    Do not propose an out-of-bound preferred path with an in-scope fallback: choose a permitted
    deliverable or ask a blocking question when the plan cannot be implemented inside the boundary.
+   When a task's standalone deliverable is only command/check evidence and it intentionally makes
+   no task-local repository edit, add the exact card field
+   `- Execution mode: verification-only`. Omit the field for normal repository-change tasks;
+   omission means `repository-change`. Do not infer evidence-only behavior from the title alone.
 3. Record explicit dependencies for every task (`none` or concrete task/upstream ids).
 4. Map every task to at least one existing plan milestone by writing the exact `M<n>` id in the
    task's `Outcome`, optional `Context`, a nested acceptance criterion, or the task's dedicated
@@ -164,6 +168,8 @@ normalize if canonical validation proves the terminal status inconsistent.
 - verification notes are concrete, task-specific, and include every declared task id,
 - command-only or verification-only task ids are present in the dedicated `Verification notes`
   section, not only in `Ordered tasks`,
+- every task intended to complete without a task-local repository diff explicitly declares
+  `Execution mode: verification-only`,
 - authored verification commands from `context/verification-output.md` are preserved exactly, or
   referenced generically without changing command flags or broadening scope,
 - optional broader checks are not promoted to required pass criteria outside the authored boundary,

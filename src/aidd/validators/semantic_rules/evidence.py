@@ -12,8 +12,8 @@ GENERIC_BACKTICKED_COMMAND_FRAGMENT = (
 IMPLEMENT_COMMAND_PATTERN = re.compile(
     r"(\$ [^\n]+|"
     r"`[^`\n]*\b("
-    r"aidd|uv run|pytest|ruff|mypy|python|sphinx-build|npm|pnpm|yarn|go test|cargo test|"
-    r"make|git|grep|rg|sed|echo|printf|flake8|black|prettier|ty check|"
+    r"aidd|uv run|pytest|ruff|mypy|python|node|sphinx-build|npm|pnpm|yarn|go test|cargo test|"
+    r"make|git|grep|rg|sed|nl|echo|printf|flake8|black|prettier|ty check|"
     r"bun|bunx|find|npx|vitest|tsc"
     r")\b[^`\n]*`|"
     + GENERIC_BACKTICKED_COMMAND_FRAGMENT
@@ -21,7 +21,7 @@ IMPLEMENT_COMMAND_PATTERN = re.compile(
     r"`(?:\.venv/bin/|\.\/node_modules/\.bin/|node_modules/\.bin/)[^`\n]+`|"
     r"(?:^|\s)(?:\.venv/bin/|\.\/node_modules/\.bin/|node_modules/\.bin/)[^\s`]+|"
     r"\b(uv run|python -m|python -c|sphinx-build|go test|cargo test|ty check)\b|"
-    r"\b(aidd|pytest|ruff|mypy|npm|pnpm|yarn|make|git|grep|rg|sed|echo|printf|flake8|black)\b|"
+    r"\b(aidd|pytest|ruff|mypy|node|npm|pnpm|yarn|make|git|grep|rg|sed|nl|echo|printf|flake8|black)\b|"
     r"`test\s+[^`\n]+`)",
     flags=re.IGNORECASE,
 )
@@ -104,7 +104,9 @@ _KNOWN_COMMAND_EXECUTABLES = frozenset(
         "grep",
         "make",
         "mypy",
+        "node",
         "npm",
+        "nl",
         "npx",
         "pnpm",
         "prettier",
@@ -137,6 +139,15 @@ _FENCED_COMMAND_PATTERN = re.compile(
     r"```(?:bash|console|sh|shell|zsh)?\s*\n(?P<body>.*?)```",
     flags=re.IGNORECASE | re.DOTALL,
 )
+_SHELL_COMPOUND_PATTERN = re.compile(
+    r"^(?:(?:[A-Za-z_][A-Za-z0-9_]*=\$\([^;)]++\)|"
+    r"[A-Za-z_][A-Za-z0-9_]*=(?!\$\()[^;\s]++);\s*+)*+(?:"
+    r"if\s+.+;\s*then\s+.+;\s*(?:else\s+.+;\s*)?fi|"
+    r"(?:for|while|until)\s+.+;\s*do\s+.+;\s*done|"
+    r"case\s+.+\s+in\s+.+(?:;;\s*)?esac"
+    r")(?:;\s*.+)?$",
+    flags=re.IGNORECASE | re.DOTALL,
+)
 
 
 def is_deferred_implementation_verification(verification_item: str) -> bool:
@@ -164,6 +175,7 @@ def _command_tokens(candidate: str) -> tuple[str, ...]:
 
 
 def _looks_like_command(candidate: str, *, explicit_container: bool) -> bool:
+    normalized_candidate = candidate.strip().strip("`").strip()
     tokens = list(_command_tokens(candidate))
     if not tokens:
         return False
@@ -174,6 +186,11 @@ def _looks_like_command(candidate: str, *, explicit_container: bool) -> bool:
     if not tokens:
         return False
     executable = tokens[0].lower()
+    if _SHELL_COMPOUND_PATTERN.fullmatch(normalized_candidate) is not None:
+        return any(
+            token.strip(";(){}!").lower() in _KNOWN_COMMAND_EXECUTABLES
+            for token in tokens[1:]
+        )
     if explicit_container:
         return (
             re.fullmatch(

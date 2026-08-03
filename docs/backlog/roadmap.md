@@ -11717,15 +11717,86 @@ Local tasks:
   - Scope: provider-free harness and architecture tests.
   - Verification: conformance fixtures fail before live execution for overlapping roots, dirty
     tracked source, forbidden product imports, or live-scenario literals in runtime product code.
-- `W36-E7-S4-T3` (soon) Run `AIDD-LIVE-007` through Codex to a clean terminal result with
+- `W36-E7-S4-T3` (done) Run `AIDD-LIVE-007` through Codex to a clean terminal result with
   manual stage-quality and rendered Studio evidence.
-  - Dependencies: `W36-E7-S4-T37` as the direct queue predecessor after the
+  - Dependencies: `W36-E7-S4-T92` as the direct replacement-candidate predecessor after the
+    `W36-E7-S4-T91` dependency-direction fix and terminal post-T90 run;
+    `W36-E7-S4-T88` as the prior replacement-candidate predecessor after the
+    `W36-E7-S4-T87` shell-command-list evidence fix and terminal post-T86 run;
+    `W36-E7-S4-T86` as the prior replacement-candidate predecessor after the
+    `W36-E7-S4-T85` compound-command evidence fix and terminal post-T84 run;
+    `W36-E7-S4-T84` as the prior replacement-candidate predecessor after the
+    `W36-E7-S4-T83` QA-traceability fix and terminal post-T82 run, `W36-E7-S4-T82` as its prior
+    candidate predecessor after `W36-E7-S4-T81`, and
+    `W36-E7-S4-T37` as the exact-SHA candidate predecessor after the
     post-auth `W36-E7-S4-T60` and `W36-E7-S4-T36` gates; `W36-E7-S4-T33`, `W36-E7-S4-T32`, `W36-E7-S4-T31`, `W36-E7-S4-T30`, `W36-E7-S4-T29`, `W36-E7-S4-T28`, `W36-E7-S4-T27`, `W36-E7-S4-T26`, `W36-E7-S4-T25`, `W36-E7-S4-T24`, `W36-E7-S4-T23`, `W36-E7-S4-T22`, `W36-E7-S4-T21`, `W36-E7-S4-T20`, `W36-E7-S4-T19`, `W36-E7-S4-T18`, `W36-E7-S4-T17`, `W36-E7-S4-T16`, `W36-E7-S4-T15`, `W36-E7-S4-T14`, `W36-E7-S4-T13`, `W36-E7-S4-T2`, `W36-E7-S4-T6`, `W36-E7-S4-T10`,
     `W36-E7-S4-T11`, and `W36-E7-S4-T12` as live-discovered queue
     predecessors.
   - Scope: external Codex live execution and evidence only.
   - Verification: installed-wheel `idea -> qa`, target verification, complete audits, terminal
     reports, and bounded Chromium evidence pass from an external run root.
+  - Post-T65 attempt: candidate `1dbe87a` passed public preflight and private Codex auth, then
+    stopped in target setup before provider allocation because macOS Seatbelt denied the
+    read-only LibreSSL configuration `/private/etc/ssl/openssl.cnf` used by HTTPS Git clone.
+    The root is terminal and will not be resumed; `W36-E7-S4-T66` owns the provider-free
+    isolation correction.
+  - Post-T68 attempt: candidate `52bb49d` passed public preflight, private Codex auth, target
+    clone, and wheel build without provider allocation, then stopped at installed-command
+    discovery. The private XDG environment correctly placed the uv tool under provider-private
+    data/bin while the harness expected the legacy `<install-home>/.local/bin/aidd` path.
+    The terminal root will not be resumed; `W36-E7-S4-T69` owns the provider-free correction.
+  - Post-T69 attempt: candidate `5cb58f3` passed public preflight, private Codex auth, target
+    clone, run-owned wheel install, and public `aidd init` without provider allocation. The
+    isolated `bun install` then installed packages but failed every selected lifecycle script
+    with `CouldntReadCurrentDirectory`. A fresh provider-free Seatbelt reproduction has the
+    same boundary; the terminal root will not be resumed and `W36-E7-S4-T71` owns the fix.
+  - Post-T71 attempt: candidate `9d0bf59` passed isolated auth, target readiness, and manually
+    audited `idea -> tasklist`. Implement completed task-scoped attempts T1 and T2 at the
+    provider boundary, but the core canonical repair-history renderer dropped successful
+    deferred attempt 1, rewrote the model-corrected `1,2,3` history to `2,3`, and then rejected
+    its own non-1-based result with `SEM-INCOMPLETE-SECTION`. The root is terminal and will not
+    be resumed; `W36-E7-S4-T72` owns the provider-free correction and invalidates this candidate.
+  - Post-T72 attempt: candidate `44ba6d3` passed isolated auth, target readiness, exact-wheel
+    identity, and strong manual audits for `idea` through `tasklist`. Implement preserved
+    successful deferred attempt 1 and then selected T2, whose exact `node -e "..." -> pass`
+    verification evidence was rejected because the runtime-agnostic command recognizer omits
+    the standard Node.js executable. All three provider attempts exited `0`; the root is
+    terminal and will not be resumed. `W36-E7-S4-T73` owns the provider-free validator fix and
+    invalidates this candidate.
+  - Post-T73 attempt: candidate `30e5f6a` passed isolated auth, target readiness, exact-wheel
+    identity, and strong manual audits for `idea` through `tasklist`. Implement completed T1 and
+    T2 provider work with passing focused Vitest and TypeScript checks, but semantic validation
+    rejected the exact ``nl -ba ... | sed ...` -> pass`` inspection command as an outcome claim
+    without executable evidence. Two repair attempts retained the truthful command and exhausted
+    the budget. The root is terminal and will not be resumed; `W36-E7-S4-T74` owns the
+    provider-free validator correction and invalidates this candidate.
+  - Post-T75 attempt: candidate `9b9f504` passed isolated auth, target readiness, exact-wheel
+    identity, and strong manual audits for `idea` through `tasklist`. Implement completed the
+    four repository-change tasks and their focused Vitest/TypeScript checks, then rejected the
+    successful verification-only T5 because its truthful task-local touched-file set was empty.
+    The terminal root will not be resumed; `W36-E7-S4-T76` owns the provider-free contract fix
+    and invalidates this candidate.
+  - Post-T78 attempt: candidate `ead6dab` passed isolated auth, exact-wheel identity, target
+    readiness, and strong manual audits through `tasklist`. Implement completed T1-T6, retained
+    exactly the four allowed Hono paths, and passed its canonical validator, focused Vitest, and
+    `tsc --noEmit`, but the live stage audit rejected the aggregate report because task-local
+    executable evidence used `## Verification` while aggregate finalization copied only
+    `## Verification notes`. The terminal root will not be resumed; `W36-E7-S4-T79` owns the
+    runtime-agnostic finalization correction and invalidates this candidate.
+  - Post-T80 attempt: candidate `4880ea4` passed private auth, target readiness, exact-wheel
+    identity, manual quality audits through review, the exact four-file Hono implementation
+    scope, focused Vitest `234/234`, and `tsc --noEmit`. QA exhausted its repair budget because
+    rich-task semantic validation interpreted the contract-permitted evidence id `EV-11` as an
+    additional task id. The terminal root is not resumed; `W36-E7-S4-T81` owns the provider-free
+    correction and invalidates this candidate.
+  - Completion evidence: fresh run `eval-live-007-codex-20260803T205243Z` used exact candidate
+    `ae3131a`, tree `696633d`, wheel digest `2b3e481`, and pinned Hono revision `cf2d2b7`.
+    All eight stages completed with manual stage-quality audits; the final four-file patch passed
+    Vitest `236/236` and `tsc --noEmit`; terminal Chromium inspection found no console error or
+    horizontal overflow. Execution, manual quality, source/session integrity, and provenance are
+    independently clean. The sealed 469-file self-contained bundle has tree digest `a127580` and
+    validates after the mutable work path is removed. Sanitized evidence is recorded in
+    `docs/e2e/live-e2e-codex-acceptance-2026-08-03-post-t91.md`.
 - `W36-E7-S4-T4` (parked) Run `AIDD-LIVE-007` through Claude Code from an independent root on
   the same AIDD revision and target pin.
   - Dependencies: `W36-E7-S4-T3` as the direct queue predecessor.
@@ -12326,7 +12397,25 @@ Local tasks:
     runtime job.
 - `W36-E7-S4-T36` (done) Re-run the complete provider-free Chromium acceptance matrix after the
   final provider-neutral hardening change.
-  - Dependencies: `W36-E7-S4-T60` as the new direct queue predecessor; `W36-E7-S4-T58`,
+  - Dependencies: `W36-E7-S4-T80` as the current direct queue predecessor;
+    `W36-E7-S4-T79` as the preceding aggregate-evidence correction;
+    `W36-E7-S4-T78` as the preceding fixture-cleanup correction;
+    `W36-E7-S4-T77` as the preceding aggregate-finalization correction;
+    `W36-E7-S4-T75` as the preceding browser synchronization predecessor;
+    `W36-E7-S4-T74` as the preceding verification-evidence correction;
+    `W36-E7-S4-T73` as the preceding verification-evidence correction;
+    `W36-E7-S4-T72` as the preceding incremental-stage correction;
+    `W36-E7-S4-T71` as the preceding isolation correction;
+    `W36-E7-S4-T69` as the preceding run-owned install correction;
+    `W36-E7-S4-T68` as the preceding terminal-projection correction;
+    `W36-E7-S4-T67` as the preceding active-job ownership correction;
+    `W36-E7-S4-T66` as the preceding isolation-backend correction;
+    `W36-E7-S4-T65` as the preceding terminal-reconciliation correction;
+    `W36-E7-S4-T64` as the preceding browser synchronization correction;
+    `W36-E7-S4-T63` as the preceding intervention synchronization correction;
+    `W36-E7-S4-T62` as the preceding isolation-backend correction;
+    `W36-E7-S4-T61` as the preceding browser synchronization correction;
+    `W36-E7-S4-T60`, `W36-E7-S4-T58`,
     `W36-E7-S4-T55`,
     `W36-E7-S4-T56`, and `W36-E7-S4-T57` as earlier code-change predecessors; blocks the
     active Codex acceptance task `W36-E7-S4-T3`.
@@ -12363,7 +12452,145 @@ Local tasks:
     viewport completed without console, page, failed-request, overflow, accessibility, or
     test-owned process-cleanup failure. The sanitized evidence is
     `docs/e2e/operator-ui-provider-free-browser-gate-2026-07-27.md`.
-- `W36-E7-S4-T37` (next) Prove the exact post-browser candidate is installable and ready for an
+  - Post-merge revalidation attempt: clean source `bbed868` passed the historical matrix `4/4`
+    in `84.44s`, complete intervention/terminal families `24/24` in `338.35s`, and all twelve
+    packaged journeys `79/79` with exact discovered/executed ID parity and no failed ID. The
+    complete browser suite stopped after its first failure at `108` passing tests: the
+    `runtime-no-progress` Recovery fixture exceeded the 30-second global `networkidle` navigation
+    wait before any durable product assertion. Isolated rerun passed `1/1` in `77.82s`, confirming
+    a suite-order synchronization race. `W36-E7-S4-T61` owns the provider-free correction; this
+    attempt is not accepted T36 evidence.
+  - Post-T61 completion: clean source `21c12ed`, tree `7185fbd`, Playwright `1.61.0`, and
+    Chromium `149.0.7827.55` passed the exact historical matrix `4/4` in `80.71s`, complete
+    intervention/terminal families `24/24` in `342.98s`, all twelve packaged journeys `79/79`
+    with exact discovered/executed ID parity and no failed ID, and the full browser suite
+    `188/188` in `2720.11s`. All five viewports completed without console, page, failed-request,
+    overflow, accessibility, or test-owned process-cleanup failure. The sanitized evidence is
+    `docs/e2e/operator-ui-provider-free-browser-gate-2026-07-28.md`.
+  - Post-T64 completion: clean source `143cc1e`, tree `2efec8e`, Playwright `1.61.0`, and
+    Chromium `149.0.7827.55` passed the exact historical matrix `4/4` in `79.62s`, complete
+    intervention/terminal families `24/24` in `351.27s`, all twelve packaged journeys
+    `79/79` in `2099.53s` with exact discovered/executed ID parity and no failed ID, and the
+    full browser suite `188/188` in `2662.12s`. All five viewports completed without console,
+    page, failed-request, overflow, accessibility, or test-owned process-cleanup failure.
+    Sanitized evidence is in
+    `docs/e2e/operator-ui-provider-free-browser-gate-2026-07-28-post-t64.md`.
+  - Post-T65 completion: clean source `b38dd4c`, tree `8facd6e`, Playwright `1.61.0`, and
+    Chromium `149.0.7827.55` passed the exact historical matrix `4/4` in `90.99s`, complete
+    intervention/terminal families `24/24` in `332.59s`, all twelve packaged journeys `79/79`
+    in `2185.87s` with exact discovered/executed ID parity and no failed ID, and the full browser
+    suite `188/188` in `3274.98s`. All five viewports completed without console, page,
+    failed-request, overflow, accessibility, or test-owned process-cleanup failure. Sanitized
+    evidence is in
+    `docs/e2e/operator-ui-provider-free-browser-gate-2026-07-28-post-t65.md`.
+  - Post-T66 attempt: clean source `0e1aa84` passed historical cases `4/4` in `116.80s` and
+    intervention/terminal families `24/24` in `365.04s`. The packaged registry then passed its
+    first journey `5/5`, but active Studio reported `4/5`: tablet `768x1024` retained
+    `activeJobId` beyond 15 seconds after recovered-log cancellation. The registry was stopped
+    before the next journey and later layers did not run. `W36-E7-S4-T67` owns the remaining
+    bounded nonterminal cancellation reconciliation race.
+  - Post-T67 attempt: clean source `1a2b012`, tree `84bd68d`, passed historical cases `4/4`
+    in `121.64s` and complete intervention/terminal families `24/24` in `518.19s`. After
+    Guided Setup passed `5/5`, packaged active Studio reported `4/5`: desktop
+    `1440x900` retained `activeJobId` beyond 15 seconds after a recovered-log cancellation.
+    The registry was stopped before the next journey and the complete browser suite did not
+    run. `W36-E7-S4-T68` owns the remaining delayed-cancellation terminal handoff.
+  - Post-T68 completion: clean source `cb12e5b`, tree `6d26af7`, Playwright `1.61.0`, and
+    Chromium `149.0.7827.55` passed the exact historical matrix `4/4` in `156.57s`,
+    complete intervention/terminal families `24/24` in `822.19s`, all twelve packaged
+    journeys `79/79` in `2149.14s` with exact discovered/executed ID parity and no failed
+    ID, and the full browser suite `188/188` in `2861.70s`. All five viewports completed
+    without console, page, failed-request, overflow, accessibility, or test-owned
+    process-cleanup failure. Sanitized evidence is in
+    `docs/e2e/operator-ui-provider-free-browser-gate-2026-07-29-post-t68.md`.
+  - Post-T69 completion: clean source `aa02a40`, tree `2905378`, Playwright `1.61.0`, and
+    Chromium `149.0.7827.55` passed the exact historical matrix `4/4` in `130.32s`,
+    complete intervention/terminal families `24/24` in `652.53s`, all twelve packaged
+    journeys `79/79` in summed `2415.26s` with exact discovered/executed ID parity and no
+    failed ID, and the full browser suite `188/188` in `2841.88s`. All five viewports
+    completed without console, page, failed-request, overflow, accessibility, or test-owned
+    process-cleanup failure. Sanitized evidence is in
+    `docs/e2e/operator-ui-provider-free-browser-gate-2026-07-29-post-t69.md`.
+  - Post-T71 completion: clean source `ef38a3f`, tree `944906b`, Playwright `1.61.0`, and
+    Chromium `149.0.7827.55` passed the exact historical matrix `4/4` in `114.91s`, complete
+    intervention/terminal families `24/24` in `585.43s`, all twelve packaged journeys `79/79`
+    in summed `1834.28s` with exact discovered/executed ID parity and no failed ID, and the full
+    browser suite `188/188` in `2422.40s`. All five viewports completed without console, page,
+    failed-request, overflow, accessibility, or test-owned process-cleanup failure. Sanitized
+    evidence is in
+    `docs/e2e/operator-ui-provider-free-browser-gate-2026-08-01-post-t71.md`.
+  - Post-T72 completion: clean source `bb465ea`, tree `6d43544`, Playwright `1.61.0`, and
+    Chromium `149.0.7827.55` passed the exact historical matrix `4/4` in `67.48s`, complete
+    intervention/terminal families `24/24` in `297.36s`, all twelve packaged journeys `79/79`
+    in summed `1451.49s` with exact discovered/executed ID parity and no failed ID, and the full
+    browser suite `188/188` in `2457.28s`. All five viewports completed without console, page,
+    failed-request, overflow, accessibility, or test-owned process-cleanup failure. Sanitized
+    evidence is in
+    `docs/e2e/operator-ui-provider-free-browser-gate-2026-08-01-post-t72.md`.
+  - Post-T73 completion: clean source `edde5b7`, tree `65f52b5`, Playwright `1.61.0`, and
+    Chromium `149.0.7827.55` passed the exact historical matrix `4/4` in `209.69s`, complete
+    intervention/terminal families `24/24` in `503.14s`, all twelve packaged journeys `79/79`
+    in summed `2184.39s` with exact discovered/executed ID parity and no failed ID, and a fresh
+    uninterrupted full browser suite `188/188` in `3264.76s`. All five viewports completed
+    without console, page, failed-request, overflow, accessibility, or test-owned process-cleanup
+    failure. Sanitized evidence is in
+    `docs/e2e/operator-ui-provider-free-browser-gate-2026-08-02-post-t73.md`.
+  - Post-T74 failed attempt: clean source `1882dc4`, tree `c6869ac`, passed the historical
+    matrix `4/4` in `178.15s`, intervention/terminal families `24/24` in `324.26s`, and the
+    packaged registry `79/79` with exact discovered/executed parity and `failed_ids=[]`. The
+    fresh full suite then reported its first failure at Inbox
+    `test_inbox_prioritizes_and_routes_durable_and_running_work[viewport3]` after `78` passing
+    cases. That exact case passed once in isolation and once again at the same full-order
+    position; the remaining test-only five-second provider-job/read-model polls are below the
+    declared 30-second surface budget. `W36-E7-S4-T75` owns bounded phase diagnostics and
+    synchronization before T36 restarts; no product or fixture fix was made inside this gate.
+  - Post-T75 completion: clean source `5d37cae`, tree `374b94b`, Playwright `1.61.0`, and
+    Chromium `149.0.7827.55` passed the exact historical matrix `4/4` in `131.60s`, complete
+    intervention/terminal families `24/24` in `408.31s`, all twelve packaged journeys `79/79`
+    in summed `1813.28s` with exact discovered/executed ID parity and no failed ID, and a fresh
+    uninterrupted full browser suite `188/188` in `1975.10s`. All five viewports completed
+    without console, page, failed-request, overflow, accessibility, or test-owned process-cleanup
+    failure. Sanitized evidence is in
+    `docs/e2e/operator-ui-provider-free-browser-gate-2026-08-02-post-t75.md`.
+  - Post-T76 completion: clean source `acd48ce`, tree `43c1e97`, Playwright `1.61.0`, and
+    Chromium `149.0.7827.55` passed the exact historical matrix `4/4` in `117.09s`, complete
+    intervention/terminal families `24/24` in `496.55s`, all twelve packaged journeys `79/79`
+    with identical discovered/executed IDs and `failed_ids=[]`, and one fresh uninterrupted full
+    browser suite `188/188` in `2114.35s`. All five viewports completed without console, page,
+    failed-request, overflow, accessibility, or test-owned process-cleanup failure. Sanitized
+    evidence is in
+    `docs/e2e/operator-ui-provider-free-browser-gate-2026-08-02-post-t76.md`.
+  - Post-T77 failed attempt: after a clean process baseline, source `102366b` passed the exact
+    historical matrix `4/4`, complete intervention/terminal families `24/24`, and all twelve
+    packaged journeys `79/79` with exact discovered/executed ID parity and `failed_ids=[]`.
+    Postflight then found one orphaned Inbox `browser_fixture_runtime.py` owned by the final
+    `1440x900` case, so the full Chromium layer was not launched. `W36-E7-S4-T78` owns the
+    provider-free fixture cleanup correction; no live provider ran.
+  - Post-T78 completion: clean source `a05a58e`, tree `7b5ce6a`, Playwright `1.61.0`, and
+    Chromium `149.0.7827.55` passed the historical matrix `4/4` in `72.66s`, complete
+    intervention/terminal families `24/24` in `289.46s`, all twelve packaged journeys `79/79`
+    with exact discovered/executed ID parity and `failed_ids=[]`, and one fresh uninterrupted
+    full browser suite `188/188` in `2054.64s`. All five viewports completed without console,
+    page, failed-request, overflow, accessibility, or process-cleanup failure; explicit packaged
+    and full-suite postflights were empty. Sanitized evidence is in
+    `docs/e2e/operator-ui-provider-free-browser-gate-2026-08-03-post-t78.md`.
+  - Post-T79 completion: clean source `c040f0e`, tree `75fe019`, Playwright `1.61.0`, and
+    Chromium `149.0.7827.55` passed the historical matrix `4/4` in `68.84s`, complete
+    intervention/terminal families `24/24` in `282.31s`, all twelve packaged journeys `79/79`
+    in summed `1394.59s` with exact discovered/executed ID parity and `failed_ids=[]`, and one
+    fresh uninterrupted full browser suite `188/188` in `2071.90s`. All five viewports completed
+    without console, page, failed-request, overflow, accessibility, or process-cleanup failure;
+    the final process postflight was empty. Sanitized evidence is in
+    `docs/e2e/operator-ui-provider-free-browser-gate-2026-08-03-post-t79.md`.
+  - Post-T80 completion: clean source `403129a`, tree `fe3bd4c`, Playwright `1.61.0`, and
+    Chromium `149.0.7827.55` passed the historical matrix `4/4` in `79.28s`, complete
+    intervention/terminal families `24/24` in `313.57s`, all twelve packaged journeys `79/79`
+    in summed `1506.17s` with exact discovered/executed ID parity and `failed_ids=[]`, and one
+    fresh uninterrupted full browser suite `188/188` in `2164.92s`. All five viewports completed
+    without console, page, failed-request, overflow, accessibility, or process-cleanup failure;
+    the process preflight and postflight were empty. Sanitized evidence is in
+    `docs/e2e/operator-ui-provider-free-browser-gate-2026-08-03-post-t80.md`.
+- `W36-E7-S4-T37` (done) Prove the exact post-browser candidate is installable and ready for an
   isolated live-provider run.
   - Dependencies: `W36-E7-S4-T36` as the full-browser predecessor; blocks the active Codex
     acceptance task `W36-E7-S4-T3`.
@@ -12371,10 +12598,10 @@ Local tasks:
     source integrity, self-contained-bundle smoke, and executable provider-isolation evidence
     only; no production, scenario, provider, or target changes.
   - Verification: one wheel built from clean tracked `HEAD` is bound to its commit/tree/digest and
-    loaded from an isolated install; full checks, `aidd doctor`, separate Codex and Claude
+    loaded from an isolated install; full checks, `aidd doctor`, the selected provider's
     `aidd eval doctor`, target preflight, source tracked/untracked baseline, bundle finalization,
-    and both provider isolation canaries pass on that recorded SHA before a live layout is
-    allocated.
+    and selected-provider isolation canary pass on that recorded SHA before a live layout is
+    allocated. Deferred providers remain parked and are not covered by the candidate record.
   - Completion: clean candidate `43d740c`, tree `a780ce9`, source-archive digest
     `b416b44`, and wheel digest `b93257d` pass Ruff, mypy, Python `2126/2126`, Chromium
     `188/188`, isolated install/doctor, both provider eval-doctors, fresh pinned Hono setup and
@@ -12393,6 +12620,134 @@ Local tasks:
     source postflight has been accepted yet. Resume `T37` by restarting the full Chromium
     suite on unchanged `c5747a0`, then complete the remaining readiness gates before naming a
     candidate.
+  - Post-T61 completion: clean candidate `98d97c7`, tree `ebda9cd`, tracked-index digest
+    `01f9da4`, tracked-archive digest `098d587`, and wheel digest `3b6b8cf` pass Ruff, mypy
+    across `228` modules, Python `2145/2145`, exact-SHA Chromium `188/188`, isolated
+    install/doctor, both provider eval-doctors, fresh pinned Hono setup with Vitest `233/233`
+    and `tsc --noEmit`, bundle seal/readback after mutable-root deletion, public preflight,
+    dual private-auth `macos-seatbelt` canaries, and source-integrity postflight. The Claude
+    probe uses the launcher's explicit single-key credential allowlist for the active
+    `ANTHROPIC_AUTH_TOKEN`; no credential value or digest is recorded. The exact identities
+    and sanitized signals are in `docs/e2e/candidate-readiness-2026-07-28.md`; this record
+    commit does not replace or rebuild the candidate wheel.
+  - Post-T64 attempt: exact source `3cee858` passes Ruff, mypy across `228` modules, and the
+    complete Python suite `2146/2146`. Its exact-SHA Chromium gate reports `186/188`: both mobile
+    active-Studio cases time out after a recovered live connection receives an immediate
+    terminal cancellation response but retains the volatile active-job identity. The same pair
+    passes `2/2` in isolation, identifying a suite-load-dependent terminal-reconciliation race
+    owned by `W36-E7-S4-T65`. No archive, wheel, doctor, target, bundle, auth-probe, provider, or
+    large-scenario gate ran after this browser failure.
+  - Post-T65 completion: clean candidate `1dbe87a`, tree `075e9fa`, tracked-index digest
+    `c11d307`, tracked-archive digest `0f7135d`, and wheel digest `3b38a55` pass Ruff, mypy
+    across `228` modules, Python `2146/2146`, exact-SHA Chromium `188/188`, isolated
+    install/doctor, both provider eval-doctors, fresh pinned Hono setup with Vitest `233/233`
+    and `tsc --noEmit`, bundle seal/readback after mutable-root deletion, public preflight,
+    dual private-auth `macos-seatbelt` sessions, and source-integrity postflight. The Claude
+    probe receives only the explicitly selected `ANTHROPIC_AUTH_TOKEN`; no credential value or
+    digest is recorded. The exact identities and sanitized signals are in
+    `docs/e2e/candidate-readiness-2026-07-28-post-t65.md`; this record commit does not replace or
+    rebuild the candidate wheel.
+  - Post-T68 completion: clean candidate `52bb49d`, tree `b699659`, tracked-index digest
+    `0f6d7ef`, tracked-archive digest `75105f0`, and wheel digest `90a4247` pass Ruff, mypy
+    across `228` modules, Python `2146/2146`, exact-SHA Chromium `188/188`, isolated
+    install/doctor, both provider eval-doctors, fresh pinned Hono setup with Vitest `233/233`
+    and `tsc --noEmit`, bundle seal/readback after mutable-root deletion, public preflight,
+    dual private-auth `macos-seatbelt` sessions and visibility canaries, and source-integrity
+    postflight. The Claude probe receives only the explicitly selected
+    `ANTHROPIC_AUTH_TOKEN`; no credential value or digest is recorded. The exact identities
+    and sanitized signals are in
+    `docs/e2e/candidate-readiness-2026-07-29-post-t68.md`; this record commit does not replace
+    or rebuild the candidate wheel.
+  - Post-T69 completion: clean candidate `5cb58f3`, tree `90953e1`, tracked-index digest
+    `cfbf294`, tracked-archive digest `349fc3e`, and wheel digest `a7e72c1` pass Ruff, mypy
+    across `228` modules, Python `2147/2147`, an uninterrupted exact-SHA Chromium
+    `188/188`, isolated install/doctor, both provider eval-doctors, fresh pinned Hono setup
+    with Vitest `233/233` and `tsc --noEmit`, bundle seal/readback after mutable-root
+    deletion, public preflight, dual private-auth `macos-seatbelt` sessions and visibility
+    canaries, and source-integrity postflight. One rejected host-saturation browser attempt
+    is recorded without changing source or timeouts; the three exact cases, their 37-case
+    predecessor, and the subsequent complete suite all pass. The exact identities and
+    sanitized signals are in `docs/e2e/candidate-readiness-2026-07-29-post-t69.md`; this
+    record commit does not replace or rebuild the candidate wheel.
+  - Post-T71 completion: clean candidate `9d0bf59`, tree `8354d0a`, tracked-index digest
+    `b89a31c`, tracked-archive digest `f4ef417`, and wheel digest `0964977` pass Ruff, mypy
+    across `228` modules, Python `2149/2149`, exact-SHA Chromium `188/188`, isolated
+    install/doctor, both provider eval-doctors, fresh pinned Hono setup with Vitest `233/233`
+    and `tsc --noEmit`, bundle seal/readback after mutable-root deletion, public preflight,
+    dual private-auth `macos-seatbelt` sessions and visibility canaries, and source-integrity
+    postflight. The Claude probe receives only the explicitly selected
+    `ANTHROPIC_AUTH_TOKEN`; no credential value or digest is recorded. The exact identities
+    and sanitized signals are in `docs/e2e/candidate-readiness-2026-08-01-post-t71.md`; this
+    record commit does not replace or rebuild the candidate wheel.
+  - Post-T72 completion: clean candidate `44ba6d3`, tree `f28f428`, tracked-index digest
+    `8339ec6`, tracked-archive digest `bb7c0b0`, and wheel digest `1ea5b09` pass Ruff, mypy
+    across `228` modules, Python `2150/2150`, exact-SHA Chromium `188/188`, isolated
+    install/doctor, both provider eval-doctors, fresh pinned Hono setup with Vitest `233/233`
+    and `tsc --noEmit`, bundle seal/readback after mutable-root deletion, public preflight,
+    dual private-auth `macos-seatbelt` sessions and visibility canaries, and source-integrity
+    postflight. The Claude probe receives only the explicitly selected
+    `ANTHROPIC_AUTH_TOKEN`; no credential value or digest is recorded. The exact identities
+    and sanitized signals are in `docs/e2e/candidate-readiness-2026-08-01-post-t72.md`; this
+    record commit does not replace or rebuild the candidate wheel.
+  - Post-T73 completion: clean candidate `30e5f6a`, tree `a4bf5c4`, tracked-index digest
+    `734b607`, tracked-archive digest `4c63a6e`, and wheel digest `472c771` pass Ruff, mypy
+    across `228` modules, Python `2153/2153`, exact-SHA Chromium `188/188`, isolated
+    install/doctor, both provider eval-doctors, fresh pinned Hono setup with Vitest `233/233`
+    and `tsc --noEmit`, bundle seal/readback after mutable-root deletion, dual private-auth
+    `macos-seatbelt` sessions and visibility canaries, and source-integrity postflight. The
+    Claude probe receives only the explicitly selected `ANTHROPIC_AUTH_TOKEN`; no credential
+    value or digest is recorded. Exact identities and sanitized signals are in
+    `docs/e2e/candidate-readiness-2026-08-02-post-t73.md`; this record commit does not replace
+    or rebuild the candidate wheel.
+  - Post-T75 Codex-scoped completion: clean candidate `9b9f504`, tree `9051118`, tracked-index
+    digest `a98d253`, tracked-archive digest `75ff5a0`, and wheel digest `b74d5fc` pass Ruff,
+    mypy across `228` modules, Python `2158/2158`, exact-SHA Chromium `188/188`, isolated
+    install/doctor, Codex eval-doctor, fresh pinned Hono setup with Vitest `233/233` and
+    `tsc --noEmit`, bundle seal/readback after mutable-root deletion, public preflight, Codex
+    private-auth `macos-seatbelt` session and visibility canary, and source-integrity postflight.
+    Exact identities and sanitized signals are in
+    `docs/e2e/candidate-readiness-2026-08-02-post-t75.md`; this record commit does not replace
+    or rebuild the candidate wheel. Claude readiness and live execution remain unclaimed and
+    parked under the current Codex-only scope.
+  - Post-T76 Codex-scoped completion: clean candidate `c26820c`, tree `a46ed39`, tracked-index
+    digest `e2acd4f`, tracked-archive digest `45f6174`, and wheel digest `469df0b` pass Ruff,
+    mypy across `228` modules, Python `2165/2165`, exact-SHA Chromium `188/188`, isolated
+    install/doctor, Codex eval-doctor, fresh pinned Hono setup with Vitest `233/233` and
+    `tsc --noEmit`, bundle seal/readback after mutable-root deletion, public preflight, Codex
+    private-auth `macos-seatbelt` session and visibility canary, and source-integrity postflight.
+    Exact identities and sanitized signals are in
+    `docs/e2e/candidate-readiness-2026-08-02-post-t76.md`; this record commit does not replace
+    or rebuild the candidate wheel. Claude readiness and live execution remain unclaimed and
+    parked under the current Codex-only scope.
+  - Post-T78 Codex-scoped completion: clean candidate `ead6dab`, tree `cfbc108`, tracked-index
+    digest `4b373d3`, tracked-archive digest `9d87bfd`, and wheel digest `dc11248` pass Ruff,
+    mypy across `228` modules, Python `2168/2168`, exact-SHA Chromium `188/188`, isolated
+    install/doctor, Codex eval-doctor, fresh pinned Hono setup with Vitest `233/233` and
+    `tsc --noEmit`, bundle seal/readback after mutable-root deletion, public preflight, Codex
+    private-auth `macos-seatbelt` readiness, a standalone visibility canary, and source-integrity
+    postflight. Exact identities and sanitized signals are in
+    `docs/e2e/candidate-readiness-2026-08-03-post-t78.md`; this record commit does not replace
+    or rebuild the candidate wheel. Claude readiness and live execution remain unclaimed and
+    parked under the current Codex-only scope.
+  - Post-T79 Codex-scoped completion: clean candidate `abbc4d6`, tree `bc10c57`, tracked-index
+    digest `42b9dca`, tracked-archive digest `93a46bc`, and wheel digest `78f4d11` pass Ruff,
+    mypy across `228` modules, Python `2168/2168`, exact-SHA Chromium `188/188`, isolated
+    install/doctor, Codex eval-doctor, fresh pinned Hono setup with Vitest `233/233` and
+    `tsc --noEmit`, bundle seal/readback after mutable-root deletion, provider-private Codex auth
+    readiness, a standalone `macos-seatbelt` capability canary, and source-integrity postflight.
+    Exact identities and sanitized signals are in
+    `docs/e2e/candidate-readiness-2026-08-03-post-t79.md`; this record commit does not replace or
+    rebuild the candidate wheel. Claude readiness and live execution remain unclaimed and parked
+    under the current Codex-only scope.
+  - Post-T80 Codex-scoped completion: clean candidate `4880ea4`, tree `3ec3904`, tracked-index
+    digest `bb9c0a0`, tracked-archive digest `cca520a`, and wheel digest `300bf16` pass Ruff,
+    mypy across `228` modules, Python `2170/2170`, exact-SHA Chromium `188/188`, isolated
+    install/doctor, Codex eval-doctor, fresh pinned Hono setup with Vitest `233/233` and
+    `tsc --noEmit`, installed-candidate bundle deletion/readback, provider-private Codex auth,
+    `macos-seatbelt` isolation, and source-integrity postflight. Exact identities and sanitized
+    signals are in `docs/e2e/candidate-readiness-2026-08-03-post-t80.md`; this record commit does
+    not replace or rebuild the candidate wheel. Claude readiness and live execution remain
+    unclaimed and parked under the current Codex-only scope.
 - `W36-E7-S4-T59` (done) Seed one allowlisted native-provider authentication snapshot into a
   fresh provider-private home without exposing the operator's remaining state.
   - Dependencies: the `W36-E7-S4-T3` private-home authentication discovery after
@@ -12429,6 +12784,543 @@ Local tasks:
     seeded and fail unseeded through real Seatbelt while operator HOME, sibling state, and source
     writes remain denied; focused launcher tests pass `17/17`, harness passes `378/378`, Ruff and
     mypy pass, and the complete Python suite passes `2145/2145`.
+- `W36-E7-S4-T61` (done) Replace the runtime/validation Recovery browser journey's global
+  navigation-idle waits with bounded work-item surface readiness.
+  - Dependencies: discovered by the failed post-merge `W36-E7-S4-T36` revalidation after
+    `W36-E7-S4-T60`; blocks the next `W36-E7-S4-T36` rerun.
+  - Scope: `browser_tests/test_journey_runtime_validation_recovery.py` navigation synchronization
+    only; production Studio, fixtures, timeout budgets, and recovery semantics remain unchanged.
+  - Verification: the isolated `runtime-no-progress` case passes repeatedly, the complete
+    runtime/validation Recovery family passes across all five viewports and parity selectors,
+    diagnostics stay clean, and no global `networkidle` navigation remains in that journey.
+  - Completion: all initial navigation and reload boundaries in the Recovery journey now wait
+    for `domcontentloaded` followed by the exact work-item chip instead of global network idle.
+    The isolated `runtime-no-progress` case passes `3/3`; the full runtime/validation Recovery
+    file passes `9/9` across all viewports and parity selectors; Ruff passes and the file contains
+    no remaining `networkidle` wait. Production Studio, fixture state, and timeout budgets are
+    unchanged.
+- `W36-E7-S4-T62` (done) Authorize the active macOS developer toolchain as a read-only live
+  provider dependency so target Git setup can execute inside Seatbelt.
+  - Dependencies: discovered by the first post-T37 Codex acceptance attempt before provider
+    allocation; invalidates the `98d97c7` candidate and blocks its `T36 -> T37` replacement.
+  - Scope: typed macOS isolation-backend tool-root discovery, focused harness regression, and
+    prod-like runbook clarification only; core, adapters, prompts, validators, Studio, target
+    setup semantics, and provider commands remain unchanged.
+  - Verification: a real Seatbelt child executes `/usr/bin/git clone --no-local` through the
+    same launcher boundary while the selected developer root and source remain read-only, the
+    own provider root remains writable, and operator HOME plus sibling provider roots remain
+    denied.
+  - Completion: the macOS backend resolves `xcode-select --print-path` only when it names an
+    existing developer directory below trusted `/Applications` or `/Library/Developer` roots,
+    then includes that exact directory in the read-only tool roots used by Seatbelt. A real
+    boundary regression executes `/usr/bin/git clone --no-local` into the own provider root,
+    proving the previously blocked `libxcrun` path while the generated profile grants writes
+    only below that provider. Focused isolation checks pass `3/3`, auth/session checks pass
+    `41/41`, the complete harness passes `379/379`, Ruff and mypy pass, and the full Python
+    run has `2145` passing tests; its sole initial failure was the corrected planning dependency
+    edge from T62 to T36, whose planning/docs rerun passes `50/50`.
+- `W36-E7-S4-T63` (done) Replace the downstream-blocked intervention journey's global
+  navigation-idle wait with bounded exact work-item surface readiness.
+  - Dependencies: discovered by the failed post-T62 `W36-E7-S4-T36` revalidation; blocks the
+    next complete browser gate.
+  - Scope: one initial navigation boundary in
+    `browser_tests/test_journey_intervention_recovery.py`; production Studio, intervention
+    semantics, fixtures, viewport coverage, and timeout budgets remain unchanged.
+  - Verification: the isolated `390x844` case passes repeatedly, the complete intervention and
+    terminal families pass `24/24`, diagnostics remain clean, and the downstream-blocked case no
+    longer waits for global `networkidle`.
+  - Completion: the downstream-blocked intervention case now waits for `domcontentloaded`
+    followed by the exact fixture work-item chip before selecting the Plan surface. The
+    `390x844` failure passes `3/3` in isolation, and the complete intervention/terminal families
+    pass `24/24` in `599.24s` with clean diagnostics. Ruff and standard mypy pass; the full
+    Python run has `2145` passing tests and only the subsequently corrected planning-status
+    mismatch failed.
+- `W36-E7-S4-T64` (done) Replace the Implement journey's global initial navigation-idle waits
+  with bounded exact work-item and runtime surface readiness.
+  - Dependencies: discovered by the failed post-T63 `W36-E7-S4-T36` complete browser suite;
+    blocks the next complete browser gate.
+  - Scope: initial navigation boundaries in `browser_tests/test_journey_implementation.py`;
+    production Studio, implementation evidence, fixtures, viewport coverage, and timeout budgets
+    remain unchanged.
+  - Verification: the implementation-recovery case passes repeatedly, the complete Implement
+    journey file passes, diagnostics remain clean, and no initial navigation in that journey
+    waits for global `networkidle`.
+  - Completion: both Implement journey entry points now wait for `domcontentloaded`, the exact
+    fixture work-item chip, and selected-runtime readiness before rendering implementation
+    evidence. The recovery case passes `3/3` across its five-viewport loop, the complete
+    Implement file passes `2/2` in `64.58s`, and no `networkidle` wait remains in the file.
+    Ruff and standard mypy pass; the full Python run has `2145` passing tests and only the
+    subsequently corrected planning-status mismatch failed.
+- `W36-E7-S4-T65` (done) Reconcile an immediate terminal cancellation response through the same
+  durable active-job boundary used by terminal polling.
+  - Dependencies: discovered by the failed post-T64 `W36-E7-S4-T37` exact-SHA Chromium gate;
+    blocks the next complete `W36-E7-S4-T36` rerun.
+  - Scope: active-Studio cancellation reconciliation and its provider-free frontend/browser
+    regressions only; job persistence, runtime adapters, scenario fixtures, providers, and
+    timeout budgets remain unchanged.
+  - Verification: an immediate terminal cancel result preserves the active identity until
+    dashboard, project, and inbox readback finish, then clears volatile job state; a
+    nonterminal `cancelling` result continues polling, and a pre-cancel in-flight poll cannot
+    overwrite either outcome. Both failed mobile active-Studio cases pass repeatedly with clean
+    diagnostics.
+  - Completion: cancellation captures the immutable job identity before mutation, sends immediate
+    terminal responses through the existing durable dashboard/project/inbox reconciliation, and
+    retains scheduled polling only for active statuses. Frontend tests pass `99/99`; the two
+    failed mobile cases pass `3/3` repeated pairs; the complete active-Studio journey passes
+    `5/5`; Ruff, mypy across `228` modules, planning integrity, and the complete Python suite
+    `2146/2146` pass.
+- `W36-E7-S4-T66` (done) Authorize the active macOS system TLS configuration as a read-only live
+  provider dependency for HTTPS target setup.
+  - Dependencies: discovered by the first post-T65 Codex acceptance attempt before provider
+    allocation; invalidates candidate `1dbe87a` and blocks its `T36 -> T37` replacement.
+  - Scope: typed macOS isolation-backend TLS-root discovery, focused real-Seatbelt regression,
+    and prod-like runbook clarification only; Git target semantics, providers, core, adapters,
+    prompts, validators, Studio, and scenario behavior remain unchanged.
+  - Verification: a real Seatbelt child can read the exact trusted system TLS configuration
+    required by `/usr/bin/git` while that root, the selected developer toolchain, and AIDD source
+    remain read-only; own provider state remains writable and operator HOME plus sibling state
+    remain denied. The regression must not require provider credentials or a public network.
+  - Completion: the macOS backend includes the fixed real `/private/etc/ssl` directory only when
+    it exists as a non-symlink system directory, then grants it through the same read-only tool
+    roots used by Seatbelt. A real boundary regression reads `openssl.cnf`, retains the local Git
+    clone proof, and asserts no TLS write rule; a separate provider-free production-like check
+    completes the previously failing HTTPS Hono clone. Focused checks pass `2/2`, the complete
+    isolation/auth/session selection passes `55/55`, Ruff and mypy pass, and full pytest passes
+    `2146/2146`.
+- `W36-E7-S4-T67` (done) Suppress stale dashboard recovery of an active-job identity after
+  durable terminal reconciliation.
+  - Dependencies: discovered by the failed post-T66 `W36-E7-S4-T36` packaged active-Studio
+    journey; blocks the next complete browser gate.
+  - Scope: active-Studio terminal identity ownership and provider-free frontend/browser
+    regressions only;
+    backend cancellation semantics, adapters, providers, fixtures, scenario behavior, and timeout
+    budgets remain unchanged.
+  - Verification: terminal dashboard/project/inbox readback records one browser-local tombstone
+    for the immutable job id, so a concurrent stale `cancelling` dashboard payload cannot
+    resurrect it; a genuinely new job clears the tombstone and retains normal polling. The
+    active-Studio journey passes repeatedly across all five viewports after its packaged
+    predecessor, without increasing the 15-second assertion budget.
+  - Completion: terminal reconciliation now records the immutable active job id before clearing
+    volatile state; dashboard recovery ignores that tombstoned id and a genuinely new launch
+    clears the tombstone. The exact Guided Setup predecessor passes `5/5`, followed by three
+    strict sequential active-Studio runs at `5/5` each; frontend passes `99/99`, Ruff and mypy
+    pass, and the repeated complete Python suite passes `2146/2146`. One earlier unrelated
+    100-millisecond process-start assertion missed its child PID under load, then passed `5/5`
+    in isolation and in the complete rerun; no process code or timeout changed.
+- `W36-E7-S4-T68` (done) Make a nonterminal cancellation request converge through one bounded
+  terminal handoff even when the runtime stop and browser poll complete under suite load.
+  - Dependencies: discovered by the failed post-T67 `W36-E7-S4-T36` packaged active-Studio
+    journey; blocks the next complete browser gate.
+  - Scope: UI job cancellation completion, active-Studio polling ownership, and focused
+    provider-free regressions only; adapters, providers, scenario fixtures, and the existing
+    15-second browser assertion budget remain unchanged.
+  - Verification: a cancellation response that starts as `cancelling` cannot remain the volatile
+    browser winner after the owned runtime process has stopped; terminal job evidence is
+    reconciled once, stale polls cannot restore it, and the packaged Guided Setup predecessor
+    followed by active Studio passes repeatedly across all five viewports.
+  - Completion: terminal polling now accepts the typed terminal job plus dashboard active-job
+    readback as the durable winner, clears the volatile identity, and renders terminal/log state
+    before refreshing the heavier project-home and inbox projections behind a protected
+    asynchronous boundary. Provider-free diagnostics proved that the runtime job and dashboard
+    were already terminal while those derived projections could exceed the browser budget under
+    load. Frontend tests pass `99/99`, static asset contracts pass `49/49`, three consecutive
+    active-Studio matrices pass `5/5`, the exact Guided Setup predecessor followed by active
+    Studio passes `10/10`, Ruff and mypy across `228` modules pass, and full pytest passes
+    `2146/2146`; the 15-second browser assertion budget is unchanged.
+- `W36-E7-S4-T69` (done) Keep local-wheel uv tool installation inside the selected live run when
+  the process already has provider-private XDG roots.
+  - Dependencies: discovered by the first post-T68 Codex acceptance attempt after
+    `W36-E7-S4-T37`; invalidates candidate `52bb49d` and blocks its `T36 -> T37` replacement.
+  - Scope: provider-neutral harness install environment, focused install regression, and
+    production-like no-provider smoke only; core, adapters, prompts, validators, Studio,
+    scenario behavior, provider auth, and isolation policy remain unchanged.
+  - Verification: the install helper explicitly owns both uv tool storage and bin roots below
+    `<run>/install-home`, even when inherited `XDG_DATA_HOME` and related variables point at the
+    provider-private session. The returned absolute `aidd` command exists under that run, the
+    wheel digest remains the candidate digest, and no executable is published into shared
+    provider-private data/bin state.
+  - Completion: local-wheel installation now sets explicit run-owned `UV_TOOL_DIR` and
+    `UV_TOOL_BIN_DIR` paths in addition to the existing run-owned HOME and cache. The focused
+    inherited-private-XDG regression proves the returned command stays below install-home and
+    shared provider-private bin remains absent. A real no-provider uv build/install smoke
+    confirms the same boundary with a valid wheel and executable. Focused checks pass `16/16`,
+    the complete harness regression passes `380/380`, Ruff and mypy across `228` modules pass,
+    and full pytest passes `2147/2147`.
+- `W36-E7-S4-T71` (done) Make macOS live isolation support dependency lifecycle subprocesses
+  whose package manager resolves a transient working directory outside the selected target.
+  - Dependencies: discovered by the first post-T69 Codex acceptance attempt after
+    `W36-E7-S4-T37`; invalidates candidate `5cb58f3` and blocks its `T36 -> T37` replacement.
+  - Scope: typed macOS isolation dependency discovery, focused real-Seatbelt Bun lifecycle
+    regression, and runbook clarification only; target commands, Bun package semantics,
+    providers, core, adapters, prompts, validators, Studio, and scenario behavior remain
+    unchanged.
+  - Verification: a fresh Hono clone inside the own provider root completes `bun install`
+    lifecycle scripts through the same Seatbelt boundary while AIDD source and any additional
+    dependency roots stay read-only, own provider state remains writable, and operator HOME,
+    sibling provider state, and credentials remain denied.
+  - Completion: the macOS profile now grants `file-read*` only to exact `literal` ancestor
+    directory objects required by package-manager environment discovery, never to their
+    subtrees. Layouts below operator HOME fail before provider allocation. A real Seatbelt Bun
+    lifecycle fixture and a fresh pinned Hono clone both complete through the production launch
+    boundary; the post-install canary keeps source read-only and denies sibling provider,
+    operator HOME, and credential access. Focused isolation tests pass `20/20`, the complete
+    harness regression passes `382/382`, Ruff and mypy across `228` modules pass, and full pytest
+    passes `2149/2149`.
+- `W36-E7-S4-T72` (done) Preserve a successful deferred stage attempt before a later incremental
+  implementation task enters validation or repair.
+  - Dependencies: discovered by the failed post-T71 Codex acceptance attempt after
+    `W36-E7-S4-T37`; invalidates candidate `9d0bf59` and blocks its `T36 -> T37` replacement.
+  - Scope: runtime-agnostic core stage-attempt persistence and focused provider-free regressions
+    only; adapters, provider commands, live scenario behavior, prompts, validators, and Studio
+    remain unchanged.
+  - Verification: when task-scoped success defers stage publication to `pending`, canonical
+    attempt evidence retains attempt 1 as `succeeded`; a later attempt and repair can therefore
+    render a positive, unique, strictly increasing `1,2,3` history without canonical persistence
+    deleting the first entry.
+  - Completion: deferred successful validation now persists its attempt entry before the stage
+    transitions to `pending`. The regression proves attempt 1 remains in metadata and canonical
+    `stage-result.md`; focused stage-runner/repair/validator checks pass `150/150`, and the CLI
+    plus incremental implementation lifecycle matrix passes `58/58`. Ruff and mypy across `228`
+    modules pass, and the unchanged diff passes the complete Python suite `2150/2150`; two
+    fake-runtime startup/barrier tests from the first host-loaded attempt pass `10/10` in five
+    isolated repetitions before the clean complete rerun.
+- `W36-E7-S4-T73` (done) Recognize the standard Node.js executable as concrete implementation
+  verification command evidence.
+  - Dependencies: discovered by the failed post-T72 Codex acceptance attempt after
+    `W36-E7-S4-T37`; invalidates candidate `44ba6d3` and blocks its `T36 -> T37` replacement.
+  - Scope: runtime-agnostic implementation-verification command recognition and focused
+    semantic-validator regressions only; stage contracts, prompts, providers, adapters, live
+    scenario behavior, core orchestration, and Studio remain unchanged.
+  - Verification: a backticked `node -e "..." -> pass` block is accepted as executable evidence,
+    while bare prose and non-command Node-related artifacts remain rejected; the focused
+    implement semantic matrix and planning integrity pass.
+  - Completion: the runtime-agnostic command recognizer now treats `node` as an executable only
+    in concrete command shapes, while bare Node.js prose remains non-evidence. The focused
+    semantic matrix passes `47/47`, the saved live report revalidates with no findings, Ruff and
+    mypy across `228` modules pass, planning integrity passes `9/9`, and the complete Python suite
+    passes `2153/2153`.
+- `W36-E7-S4-T74` (done) Recognize a concrete `nl`-based source-inspection pipeline as executable
+  Implement verification evidence.
+  - Dependencies: discovered by the failed post-T73 Codex acceptance attempt after
+    `W36-E7-S4-T37`; invalidates candidate `30e5f6a` and blocks its `T36 -> T37` replacement.
+  - Scope: Implement Markdown contract clarification, runtime-agnostic verification-command
+    recognition, the existing medium scenario audit rubric, and focused provider-free semantic
+    regressions only; providers, adapters, core orchestration, target code, and Studio remain
+    unchanged.
+  - Verification: the saved live-shaped ``nl -ba src/hono-base.ts | sed -n ...` -> pass`` bullet
+    validates as concrete command evidence, while bare `nl` prose, filenames, and outcome claims
+    without an executable command remain fail-closed; focused validator and planning-integrity
+    checks pass.
+  - Completion: the Implement contract now explicitly accepts concrete read-only inspection
+    pipelines, and the runtime-agnostic command recognizer treats `nl` as executable only in a
+    command-shaped fragment with arguments. Bare prose and `.nl` filenames remain non-evidence;
+    focused validator checks pass `51/51`, contract/scenario/planning checks pass `80/80`, the
+    saved T2 live report revalidates with zero findings, Ruff and mypy across `228` modules pass,
+    and the complete Python suite passes `2157/2157`.
+- `W36-E7-S4-T75` (done) Use the Inbox journey's shared surface budget for provider-job and
+  durable running-read-model preconditions with phase-specific timeout evidence.
+  - Dependencies: discovered by the failed post-T74 `W36-E7-S4-T36` full Chromium run; blocks
+    the next no-fixes T36 restart.
+  - Scope: provider-free Inbox browser synchronization and focused browser regressions only;
+    product UI/API behavior, provider execution, fixture semantics, viewport matrix, and timeout
+    policy remain unchanged.
+  - Verification: delayed provider-job and Inbox read-model convergence may use the existing
+    bounded 30-second operator-surface budget, missing convergence still fails with the phase and
+    last durable payload, and the complete Inbox family plus exact full-order prefix through
+    `viewport3` pass without test-owned processes surviving.
+  - Completion: both provider-job and Inbox running-read-model polls now use one typed bounded
+    helper and the existing 30-second operator-surface budget; timeout evidence reports the exact
+    phase and last durable payload. The fail-closed diagnostic unit passes `1/1`, the Inbox family
+    passes `9/9`, and the canonical first-79 full-order prefix through the previously failing
+    `1280x900` case passes `79/79`. Ruff and mypy across `228` modules pass, planning integrity
+    passes `9/9`, and the clean complete Python rerun passes `2158/2158`.
+- `W36-E7-S4-T76` (done) Distinguish verification-only rich implementation tasks from unsupported
+  no-op repository-change attempts.
+  - Dependencies: discovered by the failed post-T75 Codex acceptance attempt after
+    `W36-E7-S4-T37`; invalidates candidate `9b9f504` and blocks its `T36 -> T37` replacement.
+  - Scope: Tasklist and Implement Markdown contracts, typed task-plan/selection evidence,
+    runtime-agnostic Implement semantic validation, matching prompts, and focused provider-free
+    regressions only; providers, adapters, live scenario literals, target code, and Studio remain
+    unchanged.
+  - Verification: an explicitly classified `verification-only` rich task with exact command
+    outcomes and an empty task-local diff validates and reaches aggregate finalization, while an
+    unclassified or repository-change no-op with completion claims remains rejected by the
+    existing incomplete-summary and missing-diff findings.
+  - Completion: Tasklist cards now carry typed `repository-change` or explicit
+    `verification-only` execution mode into system-owned task selection and the task read model.
+    Implement semantic validation accepts `- none` only for an explicitly selected
+    verification-only rich task, while repository evidence rejects any actual task-local edit;
+    ordinary unclassified no-op completion claims remain fail-closed. Focused task/validator
+    checks pass `142/142`, the broader core/validator/task group passes `945/945`, Ruff and mypy
+    across `228` modules pass, planning integrity passes `9/9`, and the clean complete Python
+    rerun passes `2165/2165`.
+- `W36-E7-S4-T77` (done) Validate mixed repository-change and verification-only aggregate
+  implementation evidence with an explicit finalization mode.
+  - Dependencies: discovered by the failed post-T76 Codex acceptance attempt after
+    `W36-E7-S4-T37`; invalidates candidate `c26820c` and blocks its `T36 -> T37` replacement.
+  - Scope: typed aggregate-finalization validation context, aggregate implementation-report
+    rendering, and focused provider-free core/application/validator regressions only; task-local
+    fail-closed validation, providers, adapters, prompts, contracts, scenario literals, target
+    code, and Studio remain unchanged.
+  - Verification: a mixed plan with repository-change tasks followed by an explicit
+    verification-only task publishes one aggregate report containing the real changed files and
+    no synthetic `- none` entry; its validator uses the system-owned aggregate execution mode,
+    while a verification-only task-local report with any actual file entry remains rejected.
+  - Completion: aggregate finalization derives one typed effective execution mode from the full
+    task plan, filters task-local `- none` entries when real repository paths exist, and passes
+    that system-owned mode to semantic validation without weakening selected-task checks. The
+    saved post-T76 mixed live ledger now renders exactly the four real Hono paths without
+    `- none`, and its saved aggregate report revalidates with zero findings; the task-local
+    negative case remains rejected. Focused checks pass `33/33`, the broader implementation
+    group passes `130/130`, Ruff and mypy across `228` modules pass, planning integrity passes
+    `9/9`, and the complete Python suite passes `2168/2168`.
+- `W36-E7-S4-T78` (done) Reconcile the Inbox browser fixture's running runtime before the UI
+  harness exits.
+  - Dependencies: discovered by the failed post-T77 `W36-E7-S4-T36` packaged-runner postflight;
+    blocks the next complete `W36-E7-S4-T36` rerun.
+  - Scope: provider-free Inbox browser fixture lifecycle and focused process-cleanup evidence
+    only; production UI shutdown semantics, runtimes, adapters, providers, prompts, validators,
+    scenario literals, and Studio behavior remain unchanged.
+  - Verification: the Inbox running-now journey cancels its test-owned job through the public
+    endpoint, observes a durable terminal status, and proves the fixture runtime PID has exited
+    after every viewport, including `1440x900`; a focused postflight finds no UI or runtime
+    orphan.
+  - Completion: the Inbox fixture now publishes its test-owned runtime PID, cancels the job
+    through the public endpoint in a fail-safe cleanup block, waits for durable `cancelled`, and
+    proves the recorded process has exited before the viewport case completes. The formerly
+    orphaning `1440x900` case passes `1/1`, the complete Inbox family passes `9/9` across all five
+    viewports with an empty external process postflight, Ruff and mypy across `228` modules pass,
+    and the complete Python suite passes `2168/2168`.
+- `W36-E7-S4-T79` (done) Preserve task-local executable verification in aggregate Implement
+  finalization evidence.
+  - Dependencies: discovered by the failed post-T78 Codex acceptance attempt; invalidates
+    candidate `ead6dab` and blocks its `T36 -> T37` replacement.
+  - Scope: runtime-agnostic aggregate implementation-report rendering and focused provider-free
+    finalization/audit regressions only; task-local validation, providers, adapters, prompts,
+    contracts, scenario literals, target code, and Studio remain unchanged.
+  - Verification: task reports using either canonical `## Verification` or legacy
+    `## Verification notes` contribute executable command/outcome lines to the aggregate report;
+    a realistic mixed Implement aggregate has nonzero backed evidence and passes the stage-audit
+    policy, while reports with unbacked verification claims remain fail-closed.
+  - Completion: aggregate finalization now prefers the canonical `Verification` section and
+    falls back to legacy `Verification notes`, preserving executable task-local bullets before
+    adding criterion pointers. Re-rendering the saved post-T78 six-task ledger changes the live
+    audit shape from zero to `62` backed evidence lines with `48` outcome claims. Focused checks
+    pass `3/3`, the broader implementation/harness regression passes `120/120`, Ruff and mypy
+    across `228` modules pass, planning integrity passes `9/9`, and the complete Python suite
+    passes `2168/2168` without weakening the existing evidence classifier.
+
+- `W36-E7-S4-T80` (done) Parse only canonical leading attempt identities from Stage Result
+  attempt-history entries.
+  - Dependencies: discovered by the failed post-T79 Codex acceptance attempt; invalidates
+    candidate `abbc4d6` and blocks its `T36 -> T37` replacement.
+  - Scope: runtime-agnostic Stage Result semantic validation and focused provider-free
+    regressions only; core orchestration, providers, adapters, prompts, contracts, scenario
+    literals, target code, and Studio remain unchanged.
+  - Verification: live-shaped attempt-history bullets may reference their own
+    `attempt-000N/...` evidence paths without creating duplicate attempt identities, while
+    duplicate, non-positive, and out-of-order leading attempt entries remain fail-closed.
+  - Completion: Stage Result validation now extracts the canonical leading identity from each
+    attempt-history bullet and ignores incidental attempt ids inside evidence paths. The
+    live-shaped evidence-path regression passes while duplicate leading identities remain
+    fail-closed; focused validator/core checks pass `393/393`, planning integrity passes `9/9`,
+    Ruff and mypy across `228` modules pass, and the complete Python suite passes `2170/2170`.
+
+- `W36-E7-S4-T81` (done) Do not interpret a structured QA evidence reference as an additional
+  task identity.
+  - Dependencies: discovered by the terminal post-T80 Codex acceptance attempt; invalidates
+    candidate `4880ea4` and blocks its `T36 -> T37 -> T3` replacement.
+  - Scope: runtime-agnostic rich-task evidence semantic validation and focused provider-free
+    regressions only; core orchestration, providers, adapters, prompts, contracts, scenario
+    literals, target code, and Studio remain unchanged.
+  - Verification: a canonical task acceptance entry may cite a permitted `EV-N` reference or a
+    task-scoped artifact path without either reference being counted as a second task id, while
+    unknown and mismatched task/acceptance pairs remain fail-closed.
+  - Completion: rich-task validation now derives task and acceptance identity only from the
+    structured fields before `Evidence:`. The live-shaped regression contains both a task id and
+    `EV-11` inside the evidence path and again in notes without creating a false second task;
+    focused validator/cross-document checks pass `56/56`, planning integrity passes `9/9`, Ruff
+    and mypy across `228` modules pass, and the complete Python suite passes `2170/2170`.
+
+- `W36-E7-S4-T82` (done) Refresh the Codex-only exact-SHA candidate after T81.
+  - Dependencies: `W36-E7-S4-T81` as the validator-fix predecessor; blocks the fresh
+    `W36-E7-S4-T3` acceptance run.
+  - Scope: provider-free full Chromium revalidation plus tracked-archive wheel, isolated install,
+    doctor/eval-doctor, pinned Hono readiness, bundle smoke, private Codex auth/isolation probe,
+    and source postflight; no Claude, Qwen, large, human, or product-code changes.
+  - Verification: one immutable source SHA/tree and wheel digest passes the accepted T36/T37
+    Codex-only readiness bar and becomes the sole artifact used by the next T3 run.
+  - Completion: candidate `09b8d6a`, tree `8bba6dd`, tracked archive digest `9f10c8b`, and
+    wheel digest `6db06bc` pass the Codex-only readiness bar. The exact-SHA Chromium suite passes
+    `188/188`; bundle/manifest/isolation regressions pass `29/29`; isolated install, doctor,
+    Codex eval-doctor, private-auth Seatbelt readiness, fresh pinned Hono setup, Vitest
+    `233/233`, `tsc --noEmit`, and source postflight all pass. Sanitized evidence is recorded in
+    `docs/e2e/candidate-readiness-2026-08-03-post-t81.md`; T3 is now the next task.
+
+- `W36-E7-S4-T83` (done) Resolve QA-local evidence ids through their declared upstream
+  artifact references.
+  - Dependencies: discovered by the terminal post-T82 Codex acceptance attempt; invalidates
+    candidate `09b8d6a` and blocks its `T36 -> T37 -> T3` replacement.
+  - Scope: runtime-agnostic QA cross-document traceability and focused provider-free regressions
+    only; core orchestration, providers, adapters, prompts, contracts, scenario literals, target
+    code, and Studio remain unchanged.
+  - Verification: an `EV-N` defined in the QA Evidence section is reusable from verification,
+    readiness, acceptance, and task-acceptance entries only when its definition contains an
+    existing full workspace-relative upstream/context artifact path; missing, basename-only, and
+    circular local evidence remains fail-closed.
+  - Completion: QA cross-document validation now derives reusable local evidence ids only from
+    Evidence definitions backed by an existing full upstream/context artifact path. A focused
+    positive and circular-negative matrix passes, the exact terminal live QA report revalidates
+    with zero findings, the validator suite passes `296/296`, planning integrity passes `9/9`,
+    Ruff and mypy across `228` modules pass, and the complete Python suite passes `2172/2172`.
+
+- `W36-E7-S4-T84` (done) Refresh the Codex-only candidate after T83 without reopening deferred
+  provider lanes.
+  - Dependencies: `W36-E7-S4-T83`; blocks the next fresh `W36-E7-S4-T3` acceptance run.
+  - Scope: exact-commit tracked archive/wheel, isolated install and doctor/eval-doctor, saved-QA
+    regression, pinned Hono readiness, bundle smoke, private Codex auth/isolation probe, and
+    source postflight. The already accepted post-T81 full Chromium evidence remains applicable
+    because T83 changes only provider-free Markdown cross-document validation; no UI, harness,
+    core, adapter, prompt, contract, Studio, or browser code changed.
+  - Verification: one immutable source SHA/tree and wheel digest passes the Codex-only readiness
+    checks affected by T83 and becomes the sole artifact used by the next T3 run.
+  - Completion: candidate `912f444`, tree `5fb8486`, tracked archive digest `3260f35`, and wheel
+    digest `4e1fe07` pass the affected Codex-only readiness bar. Ruff, mypy, Python `2172/2172`,
+    validators `296/296`, saved terminal QA revalidation, bundle/manifest/isolation `29/29`,
+    isolated install/doctor/eval-doctor, private-auth Seatbelt readiness, fresh pinned Hono setup,
+    Vitest `233/233`, `tsc --noEmit`, and source postflight pass. The unchanged browser surfaces
+    retain the accepted post-T81 Chromium `188/188` evidence. Sanitized evidence is recorded in
+    `docs/e2e/candidate-readiness-2026-08-03-post-t83.md`; T3 is now next.
+
+- `W36-E7-S4-T85` (done) Recognize complete shell compound checks as executable Implement
+  verification evidence.
+  - Dependencies: discovered by the terminal post-T84 Codex acceptance attempt; invalidates
+    candidate `912f444` and blocks its replacement candidate and fresh `W36-E7-S4-T3` run.
+  - Scope: the runtime-agnostic Implement evidence classifier, documented contract/prompt,
+    focused validator regressions, and the maintained medium scenario rubric only; core,
+    adapters, providers, target code, Studio, and browser behavior remain unchanged.
+  - Verification: complete backticked `if ...; then ...; else ...; fi` checks containing a
+    concrete executable are accepted with an observed outcome, while shell-like prose remains
+    fail-closed.
+  - Completion: the exact terminal T3 Implement report changes from one blocking
+    `SEM-UNVERIFIABLE-CHECK-CLAIM` finding to zero without editing its evidence. Positive and
+    negative compound-command regressions pass in the focused `31/31` suite; Ruff and mypy pass.
+
+- `W36-E7-S4-T86` (done) Refresh the Codex-only candidate after T85.
+  - Dependencies: `W36-E7-S4-T85`; blocks the next fresh `W36-E7-S4-T3` acceptance run.
+  - Scope: provider-free repository gates, tracked-archive wheel, isolated install and doctor,
+    pinned Hono readiness, bundle/isolation smoke, private Codex auth probe, and source postflight.
+    Reuse the accepted post-T81 Chromium evidence because T85 changes only Markdown validation,
+    its contract/prompt, tests, and scenario rubric; no UI, harness, Studio, or browser code changed.
+  - Verification: one immutable source SHA/tree and wheel digest passes all Codex-only readiness
+    checks affected by T85 and becomes the sole artifact used by the next T3 run.
+  - Completion: candidate `4b2856f`, tree `9137bc3`, tracked archive digest `c8769e7`, and wheel
+    digest `f9e9f98` pass the affected Codex-only readiness bar. Ruff, mypy, exact-candidate Python
+    `2174/2174`, validators `298/298`, saved terminal Implement revalidation, bundle/manifest/
+    isolation `29/29`, isolated install/doctor/eval-doctor, private-auth Seatbelt readiness,
+    fresh pinned Hono setup, Vitest `233/233`, `tsc --noEmit`, and source postflight pass. The
+    unchanged browser surfaces retain the accepted post-T81 Chromium `188/188` evidence.
+    Sanitized evidence is recorded in `docs/e2e/candidate-readiness-2026-08-03-post-t85.md`;
+    T3 is now next.
+
+- `W36-E7-S4-T87` (done) Recognize a complete shell compound command when it is surrounded by
+  command-list setup and trailing checks.
+  - Dependencies: discovered by the terminal post-T86 Codex acceptance attempt; invalidates
+    candidate `4b2856f` and blocks its replacement candidate and fresh `W36-E7-S4-T3` run.
+  - Scope: runtime-agnostic Implement evidence classification, documented contract/prompt,
+    focused regressions, and maintained medium scenario rubric only; core, adapters, providers,
+    target code, Studio, and browser behavior remain unchanged.
+  - Verification: a backticked command list shaped as `name=$(command); if ...; fi; check` is
+    accepted only when the compound syntax closes and the list contains a concrete executable;
+    shell-like prose remains fail-closed.
+  - Completion: the exact terminal T3 T1 report changes from one blocking
+    `SEM-UNVERIFIABLE-CHECK-CLAIM` finding to zero without editing its evidence. The focused
+    positive/negative evidence matrix passes `32/32` and Ruff passes.
+
+- `W36-E7-S4-T88` (done) Refresh the Codex-only candidate after T87.
+  - Dependencies: `W36-E7-S4-T87`; blocks the next fresh `W36-E7-S4-T3` acceptance run.
+  - Scope and verification: repeat the affected Codex-only exact-SHA readiness bar from T86,
+    including repository gates, tracked-archive wheel, isolated install/doctor, saved-report
+    regression, bundle/isolation smoke, pinned Hono readiness, private auth, and source postflight;
+    retain the accepted unchanged-browser Chromium evidence explicitly.
+  - Completion: candidate `7726023`, tree `1f89bd2`, tracked archive digest `9a9cf26`, and wheel
+    digest `29b43f7` pass the affected Codex-only readiness bar. Ruff, mypy, exact-candidate Python
+    `2175/2175`, validator/prompt/packaging/planning `382/382`, saved terminal Implement
+    revalidation, bundle/manifest/isolation `29/29`, isolated install/doctor/eval-doctor,
+    private-auth Seatbelt readiness, fresh pinned Hono setup, Vitest `233/233`, `tsc --noEmit`,
+    and source postflight pass. Sanitized evidence is recorded in
+    `docs/e2e/candidate-readiness-2026-08-03-post-t87.md`; T3 is now next.
+
+- `W36-E7-S4-T89` (done) Accept bounded QA-local command evidence without weakening upstream
+  traceability.
+  - Dependencies: discovered by the terminal post-T88 Codex acceptance attempt; invalidates
+    candidate `7726023` and blocks its replacement candidate and fresh `W36-E7-S4-T3` run.
+  - Scope: align the runtime-agnostic QA contract, prompt, and cross-document validator so an
+    `EV-N` definition may be grounded either in an existing exact upstream/context artifact or
+    in a syntactically executable QA-local command with an explicit terminal outcome. Reuse the
+    shared command-evidence classifier; do not add provider, scenario, target, core, adapter, or
+    Studio branches.
+  - Verification: the exact terminal QA report accepts post-QA status, ignored-residue, file,
+    and artifact-presence commands while prose, circular ids, basename-only paths, commands
+    without outcomes, and outcome claims without executable commands remain fail-closed.
+  - Completion: QA cross-document validation reuses the shared executable-command classifier and
+    requires an explicit terminal outcome before a QA-local `EV-N` becomes reusable. The exact
+    terminal post-T88 QA report revalidates from eight blocking occurrences to zero without
+    editing its evidence; focused validator/prompt/scenario/planning tests pass `432/432`, Ruff
+    passes, mypy passes `228` modules, and the complete Python suite passes `2178/2178`.
+
+- `W36-E7-S4-T90` (done) Refresh the Codex-only candidate after T89.
+  - Dependencies: `W36-E7-S4-T89`; blocks the next fresh `W36-E7-S4-T3` acceptance run.
+  - Scope and verification: repeat the affected provider-free repository, validator, prompt,
+    packaging, tracked-archive wheel, isolated install/doctor, pinned Hono readiness,
+    bundle/isolation, private Codex auth, and source-integrity gates; retain unchanged-browser
+    evidence explicitly.
+  - Completion: candidate `5a53614`, tree `b1877a8`, tracked archive digest `143e406`, and
+    byte-repeatable wheel digest `e057790` pass the affected Codex-only readiness bar. Ruff,
+    mypy, Python `2178/2178`, validator/prompt/scenario/planning `432/432`, exact terminal QA
+    revalidation, bundle/manifest/session/isolation/auth `52/52`, isolated install/doctor/
+    eval-doctor, private-auth Seatbelt readiness, fresh pinned Hono setup, Vitest `233/233`,
+    `tsc --noEmit`, and source postflight pass. The unchanged browser surfaces retain the
+    post-T81 Chromium `188/188` evidence. Sanitized evidence is recorded in
+    `docs/e2e/candidate-readiness-2026-08-03-post-t89.md`; T3 is now next.
+
+- `W36-E7-S4-T91` (done) Preserve dependency direction when one plan sentence contains
+  more than one milestone relation.
+  - Dependencies: discovered by the terminal post-T90 Codex acceptance attempt; invalidates
+    candidate `5a53614` and blocks its replacement candidate and fresh `W36-E7-S4-T3` run.
+  - Scope: runtime-agnostic tasklist/plan dependency parsing and focused cross-document
+    regressions only; contracts, prompts, providers, target code, core, Studio, and browser
+    behavior remain unchanged.
+  - Verification: a sentence shaped as `M2 depends on M1 and is completed before M4` yields
+    only `M2 -> M1` and `M4 -> M2`; it must not invent the reverse `M2 -> M4` edge. The exact
+    terminal post-T90 plan/tasklist pair must no longer force a cyclic repair.
+  - Completion: dependency objects are bounded by the next relation in the same clause, so the
+    exact terminal plan now produces only `M2 -> M1`, `M3 -> M1`, `M4 -> M2/M3`, and
+    `M5 -> M4`. Focused validator/planning tests pass `55/55`, Ruff and mypy pass, and the full
+    Python suite passes `2179/2179`.
+
+- `W36-E7-S4-T92` (done) Refresh the Codex-only candidate after T91.
+  - Dependencies: `W36-E7-S4-T91`; blocks the next fresh `W36-E7-S4-T3` acceptance run.
+  - Scope and verification: repeat the affected provider-free exact-SHA readiness bar,
+    tracked-archive wheel, isolated install/doctor, pinned Hono readiness, bundle/isolation,
+    private Codex auth, and source postflight; retain accepted unchanged-browser evidence.
+  - Completion: candidate `ae3131a`, tree `696633d`, tracked archive digest `aecf4e4`, and
+    byte-repeatable wheel digest `2b3e481` pass the affected Codex-only readiness bar. Ruff,
+    mypy, Python `2179/2179`, focused validator/planning `55/55`, isolated install/doctor/
+    eval-doctor, private-auth Seatbelt readiness, fresh pinned Hono setup, Vitest `233/233`,
+    `tsc --noEmit`, clean target diff, and source postflight pass. The unchanged browser surfaces
+    retain post-T81 Chromium `188/188` evidence. Sanitized evidence is recorded in
+    `docs/e2e/candidate-readiness-2026-08-03-post-t91.md`; T3 is now next.
+
+- `W36-E7-S4-T93` (done) Remove exponential backtracking from shell compound-evidence
+  recognition before the `v0.1.0a16` release.
+  - Dependencies: GitHub CodeQL high-severity alert on the accepted T3 branch; blocks release
+    branch preparation but does not change provider execution or target-product behavior.
+  - Scope: semantic command-evidence recognition and one adversarial validator regression.
+  - Verification: command-substitution and plain assignment alternatives are disjoint and the
+    assignment prefix is possessive; a 128-part scanner-shaped input terminates within the bounded
+    validator test and is rejected as unverifiable, legitimate compound commands remain accepted,
+    Ruff/mypy pass, and focused validator/planning tests pass `42/42`.
 
 Exit evidence:
 

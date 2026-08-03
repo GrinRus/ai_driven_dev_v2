@@ -127,10 +127,16 @@ def validate_aggregate_task_evidence(
                     f"`{entry.task_id}` / `{entry.acceptance_id}`.",
                 )
             )
-        task_ids = {match.group(1).upper() for match in _TASK_ID_PATTERN.finditer(entry.raw_line)}
+        identity_fields = re.split(
+            r";\s*Evidence\s*:", entry.raw_line, maxsplit=1, flags=re.IGNORECASE
+        )[0]
+        task_ids = {
+            match.group(1).upper()
+            for match in _TASK_ID_PATTERN.finditer(identity_fields)
+        }
         acceptance_ids = {
             match.group(1).upper()
-            for match in _ACCEPTANCE_ID_PATTERN.finditer(entry.raw_line)
+            for match in _ACCEPTANCE_ID_PATTERN.finditer(identity_fields)
         }
         if task_ids != {entry.task_id} or acceptance_ids != {entry.acceptance_id}:
             findings.append(

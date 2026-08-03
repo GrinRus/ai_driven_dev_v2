@@ -14,7 +14,7 @@ from aidd.core.task_ledger import (
     TaskLedger,
     persist_task_ledger,
 )
-from aidd.core.task_plan import TaskPlan
+from aidd.core.task_plan import TaskExecutionMode, TaskPlan
 
 
 @dataclass(frozen=True, slots=True)
@@ -22,6 +22,16 @@ class TaskFinalizationContext:
     ledger: TaskLedger
     attempt_path: Path
     attempt_number: int
+
+
+def aggregate_execution_mode(plan: TaskPlan) -> TaskExecutionMode:
+    """Return the effective repository mode for system-owned aggregate evidence."""
+
+    if any(
+        task.execution_mode is TaskExecutionMode.REPOSITORY_CHANGE for task in plan.tasks
+    ):
+        return TaskExecutionMode.REPOSITORY_CHANGE
+    return TaskExecutionMode.VERIFICATION_ONLY
 
 
 def _finalization_attempts_root(*, workspace_root: Path, work_item: str, run_id: str) -> Path:
@@ -167,9 +177,17 @@ def render_aggregate_implementation_report(
             f"`{entry.latest_attempt_path}/implementation-report.md`."
         )
         for line in _section(report, "Touched files").splitlines():
-            if line.strip().startswith("-") and line not in touched:
-                touched.append(line)
-        for line in _section(report, "Verification notes").splitlines():
+            normalized_line = line.strip()
+            if (
+                normalized_line.startswith("-")
+                and normalized_line.casefold() != "- none"
+                and normalized_line not in touched
+            ):
+                touched.append(normalized_line)
+        verification_section = _section(report, "Verification") or _section(
+            report, "Verification notes"
+        )
+        for line in verification_section.splitlines():
             if line.strip().startswith("-"):
                 verification.append(f"- `{task.id}` {line.strip()[1:].strip()}")
         for criterion in task.acceptance_criteria:
@@ -209,6 +227,7 @@ def render_aggregate_implementation_report(
 
 __all__ = [
     "TaskFinalizationContext",
+    "aggregate_execution_mode",
     "complete_task_finalization",
     "prepare_task_finalization",
     "render_aggregate_implementation_report",

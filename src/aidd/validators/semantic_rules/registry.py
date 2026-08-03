@@ -7,6 +7,7 @@ from aidd.core.stage_registry import (
     load_stage_manifest,
     resolve_expected_output_documents,
 )
+from aidd.core.task_plan import TaskExecutionMode
 from aidd.validators.document_loader import load_markdown_document
 from aidd.validators.models import ValidationFinding
 from aidd.validators.semantic_rules.common import (
@@ -26,7 +27,12 @@ from aidd.validators.semantic_rules.common import (
     validate_placeholder_sections,
 )
 from aidd.validators.semantic_rules.idea import RULES as IDEA_RULES
-from aidd.validators.semantic_rules.implement import RULES as IMPLEMENT_RULES
+from aidd.validators.semantic_rules.implement import (
+    RULES as IMPLEMENT_RULES,
+)
+from aidd.validators.semantic_rules.implement import (
+    validate_implementation_report,
+)
 from aidd.validators.semantic_rules.placeholders import has_non_placeholder_text
 from aidd.validators.semantic_rules.plan import RULES as PLAN_RULES
 from aidd.validators.semantic_rules.qa import RULES as QA_RULES
@@ -63,6 +69,7 @@ def validate_semantic_outputs(
     workspace_root: Path,
     contracts_root: Path = DEFAULT_STAGE_CONTRACTS_ROOT,
     validate_stage_result_document: bool = False,
+    implementation_execution_mode: TaskExecutionMode | None = None,
 ) -> tuple[ValidationFinding, ...]:
     load_stage_manifest(stage=stage, contracts_root=contracts_root)
     expected_outputs = resolve_expected_output_documents(
@@ -102,6 +109,18 @@ def validate_semantic_outputs(
         rule = semantic_rule_for(stage=stage, document_name=output_path.name)
         if rule is None:
             findings.extend(validate_placeholder_sections(context))
+            continue
+        if (
+            stage == "implement"
+            and output_path.name == "implementation-report.md"
+            and implementation_execution_mode is not None
+        ):
+            findings.extend(
+                validate_implementation_report(
+                    context,
+                    execution_mode_override=implementation_execution_mode,
+                )
+            )
             continue
         findings.extend(rule.validate(context))
 

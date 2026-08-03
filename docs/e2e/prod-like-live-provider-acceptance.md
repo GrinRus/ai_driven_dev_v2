@@ -80,8 +80,18 @@ provider subtree. The launcher rejects a sibling provider tool root.
 The child receives an allowlisted environment with private `HOME`, temporary, XDG config, cache,
 data, and state directories. The platform backend permits read-only AIDD source access and
 read/write access to the selected provider subtree, while sibling provider roots and the original
-operator home remain unreadable. Repeat with a fresh provider root and the appropriate explicit
-credential key for the second runtime.
+operator home remain unreadable. On macOS the backend also resolves the active trusted
+`xcode-select` developer root under `/Applications` or `/Library/Developer` and grants it
+read-only access so `/usr/bin/git` and its `libxcrun` dependency can prepare the target clone
+inside Seatbelt. It grants the fixed real system TLS configuration root `/private/etc/ssl`
+read-only access so HTTPS Git can load LibreSSL configuration and trust data. It does not grant
+a write rule for either dependency. Package managers such as Bun inspect directory ancestors
+before starting lifecycle subprocesses. On macOS the profile therefore grants `file-read*` only
+to each ancestor directory object via exact `literal` filters; it never grants `subpath` access
+to the external root or its parents. This supports ancestor traversal without making sibling
+provider contents readable. A provider layout below the original operator HOME is rejected
+because it cannot preserve both lifecycle discovery and HOME confidentiality. Repeat with a
+fresh provider root and the appropriate explicit credential key for the second runtime.
 
 The isolation launcher also owns the mandatory live-acceptance session guard. Before creating
 the provider subtree it captures source commit/tree, tracked bytes, and the exact baseline

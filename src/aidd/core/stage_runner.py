@@ -184,7 +184,13 @@ def _should_persist_terminal_repair_history(
     attempt_number: int,
     attempt_mode: str,
     validation_transition: RepairBudgetValidationTransition,
+    defer_success_publication: bool,
 ) -> bool:
+    if (
+        defer_success_publication
+        and validation_transition.resolved_verdict is ValidationVerdict.PASS
+    ):
+        return True
     if validation_transition.requested_verdict is ValidationVerdict.REPAIR:
         return validation_transition.resolved_verdict is ValidationVerdict.FAIL
     if attempt_mode == "intervention":
@@ -659,6 +665,7 @@ def run_single_stage_orchestration(
         attempt_number=execution_state.attempt_number,
         attempt_mode=adapter_invocation.attempt_mode,
         validation_transition=validation_transition,
+        defer_success_publication=defer_success_publication,
     ):
         persist_repair_history_snapshot(
             workspace_root=workspace_root,

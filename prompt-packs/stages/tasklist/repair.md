@@ -96,6 +96,9 @@ Use concrete repair actions:
   one dedicated `Verification notes` entry for every task id declared in `Ordered tasks`,
   including command-only or
   verification-only tasks;
+- unclassified evidence-only task: add `Execution mode: verification-only` only when the task's
+  dominant deliverable and acceptance criteria require command/check evidence without a
+  task-local repository edit; otherwise keep the repository-change default,
 - unresolved upstream blocking conditions: keep/add `[blocking]` questions instead of forcing
   `succeeded`;
 - stage/validator drift: align blocker list, terminal status, and next actions with validator
@@ -139,6 +142,8 @@ Use concrete repair actions:
   criterion, or its dedicated `Verification notes` entry, and every plan milestone is covered,
 - no repair relies on an unsupported `Milestone` or `Plan milestone` field,
 - command-only or verification-only task ids are covered explicitly in `Verification notes`,
+- every task intended to finish with an empty task-local diff explicitly declares
+  `Execution mode: verification-only`,
 - unresolved blocking ambiguity is represented in questions/blockers,
 - `repair-budget-final-attempt` can coexist with `stage-result.md` status `succeeded` only when all listed findings are resolved,
 - `repair-budget-exhausted` cannot coexist with `stage-result.md` status `succeeded`,

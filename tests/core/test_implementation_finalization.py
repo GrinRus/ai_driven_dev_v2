@@ -6,12 +6,13 @@ from pathlib import Path
 import pytest
 
 from aidd.core.implementation_finalization import (
+    aggregate_execution_mode,
     complete_task_finalization,
     prepare_task_finalization,
     render_aggregate_implementation_report,
 )
 from aidd.core.task_ledger import TaskExecutionStatus, TaskLedger
-from aidd.core.task_plan import parse_task_plan
+from aidd.core.task_plan import TaskExecutionMode, parse_task_plan
 
 
 def _plan():  # type: ignore[no-untyped-def]
@@ -50,7 +51,7 @@ def _successful_ledger(workspace_root: Path) -> TaskLedger:
     (attempt / "implementation-report.md").write_text(
         "# Implementation Report\n\n"
         "## Touched files\n\n- `src/example.py`\n\n"
-        "## Verification notes\n\n- `pytest -q` -> pass.\n\n"
+        "## Verification\n\n- `pytest -q` -> pass.\n\n"
         "## Follow-up notes\n\n- none\n",
         encoding="utf-8",
     )
@@ -133,3 +134,117 @@ def test_aggregate_report_requires_complete_task_evidence(tmp_path: Path) -> Non
     assert "`TL-1`" in report
     assert "`TL-1-AC1`" in report
     assert "`src/example.py`" in report
+    assert "- `TL-1` `pytest -q` -> pass." in report
+
+
+def test_mixed_mode_aggregate_omits_verification_only_none_entry(tmp_path: Path) -> None:
+    plan = parse_task_plan(
+        """# Tasklist
+
+## Task summary
+
+One task changes the repository and one verifies the aggregate result.
+
+## Ordered tasks
+
+### T1 — Change the repository
+
+- Outcome: The repository change exists.
+- Dominant deliverable: `src/example.py` contains the change.
+- In scope: `src/example.py`.
+- Acceptance criteria:
+  - T1-AC1: The change exists.
+
+### T2 — Verify the repository
+
+- Outcome: The completed repository change is verified.
+- Dominant deliverable: verification evidence.
+- In scope: `src/example.py`.
+- Execution mode: verification-only
+- Acceptance criteria:
+  - T2-AC1: The verification passes.
+
+## Dependencies
+
+- T1: none
+- T2: T1
+
+## Verification notes
+
+- T1: `pytest -q`
+- T2: `pytest -q`
+"""
+    )
+    reports = {
+        "T1": (
+            "# Implementation Report\n\n## Touched files\n\n"
+            "- `src/example.py` - implement the change.\n\n"
+            "## Verification notes\n\n- `pytest -q` -> pass.\n\n"
+            "## Follow-up notes\n\n- none\n"
+        ),
+        "T2": (
+            "# Implementation Report\n\n## Touched files\n\n- none\n\n"
+            "## Verification notes\n\n- `pytest -q` -> pass.\n\n"
+            "## Follow-up notes\n\n- none\n"
+        ),
+    }
+    ledger = TaskLedger.create(plan)
+    for attempt_number, task_id in enumerate(("T1", "T2"), start=1):
+        attempt = tmp_path / task_id
+        attempt.mkdir()
+        (attempt / "implementation-report.md").write_text(
+            reports[task_id], encoding="utf-8"
+        )
+        ledger = ledger.transition(
+            task_id,
+            TaskExecutionStatus.EXECUTING,
+            attempt_number=attempt_number,
+            latest_attempt_path=task_id,
+        ).transition(task_id, TaskExecutionStatus.SUCCEEDED)
+
+    report = render_aggregate_implementation_report(
+        plan=plan,
+        ledger=ledger,
+        workspace_root=tmp_path,
+    )
+
+    touched_section = report.split("## Touched files", 1)[1].split(
+        "## Verification notes", 1
+    )[0]
+    assert "`src/example.py`" in touched_section
+    assert "- none" not in touched_section
+    assert "- `T1` `pytest -q` -> pass." in report
+    assert "- `T2` `pytest -q` -> pass." in report
+    assert aggregate_execution_mode(plan) is TaskExecutionMode.REPOSITORY_CHANGE
+
+
+def test_all_verification_only_aggregate_preserves_verification_mode() -> None:
+    plan = parse_task_plan(
+        """# Tasklist
+
+## Task summary
+
+One task verifies existing repository state.
+
+## Ordered tasks
+
+### T1 — Verify the repository
+
+- Outcome: The repository is verified.
+- Dominant deliverable: verification evidence.
+- In scope: `src/example.py`.
+- Execution mode: verification-only
+- Acceptance criteria:
+  - T1-AC1: The verification passes.
+
+## Dependencies
+
+- T1: none
+
+## Verification notes
+
+- T1: `pytest -q`
+"""
+    )
+
+    assert aggregate_execution_mode(plan) is TaskExecutionMode.VERIFICATION_ONLY

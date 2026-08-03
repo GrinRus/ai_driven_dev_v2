@@ -70,6 +70,14 @@ Optional context documents may improve implementation quality, but they must not
   pair command evidence with an observed outcome such as `-> pass`, `exit 0`, `exit code 0`, or a
   captured tool summary. Bounded-diff checks may summarize the observed path set, for example
   `git diff --name-only -> changes bounded to src/example.py and tests/test_example.py`.
+  Concrete read-only source-inspection commands are executable evidence too, including standard
+  utilities and pipelines such as ``nl -ba src/example.py | sed -n '1,40p' -> pass``; tool-name
+  prose or a filename alone is not command evidence. Backticked shell compound commands are also
+  executable evidence when they use complete shell syntax (for example
+  ``if <check>; then exit 1; else exit 0; fi``) and contain a concrete executable check. A
+  command-substitution assignment may precede the compound check, for example
+  ``found=$(find ...); if test -n "$found"; then exit 1; fi``. A concrete trailing check may
+  follow the closed compound in the same command list.
   Each verification bullet with a pass/fail/success claim must contain the command/check and
   observed outcome on that same bullet; do not split the command and outcome across separate prose
   paragraphs.
@@ -79,6 +87,10 @@ Optional context documents may improve implementation quality, but they must not
   successful prerequisite tasks unless the current task changes those files again. Prerequisite or
   cumulative workspace state may be described in `Summary` or `Risks`; aggregate finalization owns
   the cumulative touched-file evidence across successful tasks.
+- When system-owned `context/task-selection.md` declares `Execution mode: verification-only`, the
+  rich attempt must preserve required command/check outcomes and report `- none` in `Touched files`.
+  Such an attempt is valid only with no observed task-local repository change. An omitted mode or
+  `repository-change` keeps the standard no-op justification and missing-diff rules.
 - The current task deliverable is not a tracked-only patch. Newly created untracked files under the
   allowed write scope and created by the current task count as touched files and must be listed with
   its tracked diffs. A generic one-shot implementation report without a rich task ledger continues
@@ -152,6 +164,8 @@ optional when a destructive or policy-sensitive choice must be confirmed
   - no-op output is allowed only when selected task is already satisfied or blocked by explicit external constraints,
   - no-op runs must include explicit justification, evidence, and next action in `implementation-report.md` and `stage-result.md`,
   - no-op without evidence or actionable next step must fail validation and require repair.
+  - an explicitly classified rich `verification-only` task is not a no-op when its required
+    command/check evidence is complete and its observed task-local diff is empty.
 
 ## Prompt pack
 

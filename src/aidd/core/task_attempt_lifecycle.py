@@ -81,6 +81,7 @@ def write_task_selection_context(*, workspace_root: Path, work_item: str, task: 
         f"- Outcome: {task.outcome}",
         f"- Dominant deliverable: {task.dominant_deliverable}",
         f"- In scope: {task.in_scope}",
+        f"- Execution mode: `{task.execution_mode.value}`",
         "",
         "## Acceptance criteria",
         "",

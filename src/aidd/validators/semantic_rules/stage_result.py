@@ -14,8 +14,8 @@ from aidd.validators.semantic_rules.common import (
 
 _STATUS_PATTERN = re.compile(r"\b(succeeded|failed|blocked|needs-input)\b", re.IGNORECASE)
 _STAGE_ID_PATTERN = re.compile(r"`?(idea|research|plan|review-spec|tasklist|implement|review|qa)`?")
-_ATTEMPT_PATTERN = re.compile(
-    r"(?:\bAttempt\s+`?(\d+)`?\b|\battempt-(\d+)\b)",
+_ATTEMPT_ENTRY_PATTERN = re.compile(
+    r"^\s*(?:Attempt\s+`?(\d+)`?\b|attempt-(\d+)\b)",
     re.IGNORECASE,
 )
 
@@ -63,10 +63,11 @@ def validate_stage_result(
         )
 
     history = context.section_by_candidates(candidates=("Attempt history",))
-    attempt_numbers = [
-        int(match.group(1) or match.group(2))
-        for match in _ATTEMPT_PATTERN.finditer(history.content)
-    ]
+    attempt_numbers: list[int] = []
+    for item in extract_bullet_items(history.content):
+        match = _ATTEMPT_ENTRY_PATTERN.match(item)
+        if match is not None:
+            attempt_numbers.append(int(match.group(1) or match.group(2)))
     if (
         not attempt_numbers
         or attempt_numbers[0] <= 0

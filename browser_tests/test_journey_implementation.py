@@ -4,7 +4,11 @@ from pathlib import Path
 
 from playwright.sync_api import Page, sync_playwright
 
-from browser_tests.browser_harness import VIEWPORTS, operator_browser_harness
+from browser_tests.browser_harness import (
+    VIEWPORTS,
+    operator_browser_harness,
+    wait_for_work_item_surface,
+)
 from browser_tests.rendered_assertions import assert_accessible_render
 from browser_tests.rendered_geometry import assert_rendered_geometry
 from browser_tests.state_fixtures import build_browser_state_fixture
@@ -53,8 +57,10 @@ def test_implementation_recovery_preserves_success_and_repository_evidence(
                 page.goto(
                     f"{harness.url}?ui=studio&mode=studio&work_item={fixture.work_item}"
                     f"&run_id={fixture.run_id}&stage=implement",
-                    wait_until="networkidle",
+                    wait_until="domcontentloaded",
                 )
+                wait_for_work_item_surface(page, fixture.work_item)
+                page.wait_for_function("eval('selectedRuntimeReady()')", timeout=15_000)
                 _open_implementation(page)
 
                 completed = page.locator('[data-task-id="TL-1"]')
@@ -93,8 +99,10 @@ def test_finalization_retry_is_the_only_review_eligibility_boundary(tmp_path: Pa
             page.goto(
                 f"{harness.url}?ui=studio&mode=studio&work_item={fixture.work_item}"
                 f"&run_id={fixture.run_id}&stage=implement",
-                wait_until="networkidle",
+                wait_until="domcontentloaded",
             )
+            wait_for_work_item_surface(page, fixture.work_item)
+            page.wait_for_function("eval('selectedRuntimeReady()')", timeout=15_000)
             _open_implementation(page)
 
             gate = page.locator('[data-studio-quality-gate="implement"]')

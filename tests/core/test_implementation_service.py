@@ -133,6 +133,71 @@ def test_run_all_preserves_dependency_order_and_finalizes(tmp_path: Path) -> Non
     assert result.ledger.all_succeeded()
 
 
+def test_run_all_finalizes_after_clean_verification_only_task(tmp_path: Path) -> None:
+    request = _request(tmp_path)
+    tasklist_path = (
+        request.workspace_root
+        / "workitems"
+        / request.work_item
+        / "stages"
+        / "tasklist"
+        / "output"
+        / "tasklist.md"
+    )
+    tasklist_path.write_text(
+        tasklist_path.read_text(encoding="utf-8").replace(
+            "- In scope: `src/example.py`.",
+            "- In scope: `src/example.py`.\n- Execution mode: verification-only",
+        ),
+        encoding="utf-8",
+    )
+    executed: list[str] = []
+
+    def executor(context):  # type: ignore[no-untyped-def]
+        executed.append(context.task.id)
+        report = (
+            request.workspace_root
+            / "workitems"
+            / request.work_item
+            / "stages"
+            / "implement"
+            / "implementation-report.md"
+        )
+        report.parent.mkdir(parents=True, exist_ok=True)
+        if context.task.id == "TL-1":
+            target = request.project_root / "contracts" / "example.md"
+            target.parent.mkdir(parents=True, exist_ok=True)
+            target.write_text("contract\n", encoding="utf-8")
+            touched = "- `contracts/example.md` - completed task."
+        else:
+            touched = "- none"
+        report.write_text(
+            "# Implementation Report\n\n"
+            f"## Selected task\n\n- Task id: `{context.task.id}`\n\n"
+            "## Change summary\n\nCompleted the selected task.\n\n"
+            f"## Touched files\n\n{touched}\n\n"
+            "## Verification notes\n\n- check -> pass.\n\n"
+            "## Follow-up notes\n\n- none\n",
+            encoding="utf-8",
+        )
+        return TaskAttemptOutcome(succeeded=True)
+
+    service = ImplementationExecutionService(
+        task_executor=executor,
+        aggregate_finalizer=lambda context: AggregateFinalizationOutcome(
+            succeeded=True,
+            published=True,
+        ),
+    )
+
+    result = service.run_all(request)
+
+    assert executed == ["TL-1", "TL-2"]
+    assert result.status is ImplementationExecutionStatus.SUCCEEDED
+    assert result.published is True
+    assert result.ledger.all_succeeded()
+
+
 def test_run_task_does_not_publish_or_finalize(tmp_path: Path) -> None:
     request = _request(tmp_path)
     finalized = False

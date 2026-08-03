@@ -20,5 +20,8 @@ Non-negotiable rules:
 - for a rich task attempt, keep touched-files reporting scoped to the current task-local repository
   diff within allowed write scope; exclude prerequisite-only changes and leave cumulative evidence
   to aggregate finalization,
+- when system-owned task selection explicitly declares `Execution mode: verification-only`,
+  preserve the required checks, report `Touched files` as `- none`, and make no repository edit;
+  omitted mode retains normal repository-change and no-op rules,
 - keep verification notes limited to checks that were actually executed,
 - keep `implementation-report.md`, `stage-result.md`, and `validator-report.md` mutually consistent.

@@ -9,6 +9,7 @@ from semantic_test_support import (
     _write_workspace_baseline,
 )
 
+from aidd.core.task_plan import TaskExecutionMode
 from aidd.validators.models import ValidationFinding, ValidationIssueLocation
 from aidd.validators.semantic import (
     INCOMPLETE_EXECUTION_SUMMARY_CODE,
@@ -250,6 +251,74 @@ def test_validate_semantic_outputs_accepts_sed_command_evidence_for_implement(
             "- Public type compatibility remains source-compatible.\n\n"
             "## Follow-up\n\n"
             "- none\n"
+        ),
+    )
+
+    findings = validate_semantic_outputs(
+        stage="implement",
+        work_item=work_item,
+        workspace_root=workspace_root,
+    )
+
+    assert findings == ()
+
+
+def test_validate_semantic_outputs_accepts_node_eval_command_evidence_for_implement(
+    tmp_path: Path,
+) -> None:
+    workspace_root = tmp_path / ".aidd"
+    work_item = "WI-SEM-IMPLEMENT-NODE-COMMAND"
+    _write_implementation_report(
+        workspace_root,
+        work_item,
+        (
+            "# Implementation Report\n\n"
+            "## Summary\n\n"
+            "- Selected task id: `TASK-EXAMPLE-RUNTIME-ERROR`.\n"
+            "- Implemented the selected runtime boundary while preserving public exports.\n\n"
+            "## Touched files\n\n"
+            "- `src/compose.ts` - normalize non-Error values at the middleware boundary.\n\n"
+            "## Verification\n\n"
+            "- `node -e \"const p=require('./package.json'); console.log(p.type)\"` "
+            "-> pass (exit code 0; inspected the package export context).\n\n"
+            "## Risks\n\n"
+            "- Focused runtime regression coverage remains a downstream task.\n\n"
+            "## Follow-up\n\n"
+            "- Continue with the selected regression task.\n"
+        ),
+    )
+
+    findings = validate_semantic_outputs(
+        stage="implement",
+        work_item=work_item,
+        workspace_root=workspace_root,
+    )
+
+    assert findings == ()
+
+
+def test_validate_semantic_outputs_accepts_nl_pipeline_evidence_for_implement(
+    tmp_path: Path,
+) -> None:
+    workspace_root = tmp_path / ".aidd"
+    work_item = "WI-SEM-IMPLEMENT-NL-COMMAND"
+    _write_implementation_report(
+        workspace_root,
+        work_item,
+        (
+            "# Implementation Report\n\n"
+            "## Summary\n\n"
+            "- Selected task id: `TASK-EXAMPLE-RUNTIME-ERROR`.\n"
+            "- Implemented the selected request boundary with preserved Error identity.\n\n"
+            "## Touched files\n\n"
+            "- `src/hono-base.ts` - normalize non-Error values at the request boundary.\n\n"
+            "## Verification\n\n"
+            "- `nl -ba src/hono-base.ts | sed -n '32,48p;388,400p'` -> pass "
+            "(observed the normalization helper and error-handler call).\n\n"
+            "## Risks\n\n"
+            "- Focused regression coverage remains a downstream task.\n\n"
+            "## Follow-up\n\n"
+            "- Continue with the selected regression task.\n"
         ),
     )
 
@@ -720,6 +789,114 @@ def test_validate_semantic_outputs_rejects_plain_tool_prose_as_command_evidence(
     assert all(finding.severity == "high" for finding in findings)
 
 
+def test_validate_semantic_outputs_accepts_shell_compound_command_evidence(
+    tmp_path: Path,
+) -> None:
+    workspace_root = tmp_path / ".aidd"
+    _write_implementation_report(
+        workspace_root,
+        "WI-SEM-IMPLEMENT-COMPOUND-COMMAND",
+        (
+            "# Implementation Report\n\n"
+            "## Selected task\n\n"
+            "- Stable selected task id: `TASK-EXAMPLE-RUNTIME-ERROR`\n\n"
+            "## Summary\n\n"
+            "Implemented the selected task with bounded runtime handling.\n\n"
+            "## Touched files\n\n"
+            "- `src/runtime-error.ts` - normalized runtime errors.\n\n"
+            "## Verification\n\n"
+            "- `if git status --ignored --short | rg '[.]cache'; then exit 1; "
+            "else exit 0; fi` -> pass (exit code 0).\n\n"
+            "## Risks\n\n"
+            "- None.\n\n"
+            "## Follow-up\n\n"
+            "- Continue to review.\n"
+        ),
+    )
+
+    findings = validate_semantic_outputs(
+        stage="implement",
+        work_item="WI-SEM-IMPLEMENT-COMPOUND-COMMAND",
+        workspace_root=workspace_root,
+    )
+
+    assert not any(
+        finding.code == UNVERIFIABLE_CHECK_CLAIM_CODE for finding in findings
+    )
+
+
+def test_validate_semantic_outputs_accepts_assignment_before_shell_compound(
+    tmp_path: Path,
+) -> None:
+    workspace_root = tmp_path / ".aidd"
+    _write_implementation_report(
+        workspace_root,
+        "WI-SEM-IMPLEMENT-ASSIGNMENT-COMPOUND",
+        (
+            "# Implementation Report\n\n"
+            "## Selected task\n\n"
+            "- Stable selected task id: `TASK-EXAMPLE-RUNTIME-ERROR`\n\n"
+            "## Summary\n\n"
+            "Implemented the selected task with bounded runtime handling.\n\n"
+            "## Touched files\n\n"
+            "- `src/runtime-error.ts` - normalized runtime errors.\n\n"
+            "## Verification\n\n"
+            "- `found=$(find . -name '.cache' -print -quit); if test -n \"$found\"; "
+            "then printf '%s\\n' \"$found\"; exit 1; fi; test ! -e .cache` -> pass "
+            "(exit code 0).\n\n"
+            "## Risks\n\n"
+            "- None.\n\n"
+            "## Follow-up\n\n"
+            "- Continue to review.\n"
+        ),
+    )
+
+    findings = validate_semantic_outputs(
+        stage="implement",
+        work_item="WI-SEM-IMPLEMENT-ASSIGNMENT-COMPOUND",
+        workspace_root=workspace_root,
+    )
+
+    assert not any(
+        finding.code == UNVERIFIABLE_CHECK_CLAIM_CODE for finding in findings
+    )
+
+
+def test_validate_semantic_outputs_rejects_shell_like_compound_prose(
+    tmp_path: Path,
+) -> None:
+    workspace_root = tmp_path / ".aidd"
+    _write_implementation_report(
+        workspace_root,
+        "WI-SEM-IMPLEMENT-COMPOUND-PROSE",
+        (
+            "# Implementation Report\n\n"
+            "## Selected task\n\n"
+            "- Stable selected task id: `TASK-EXAMPLE-RUNTIME-ERROR`\n\n"
+            "## Summary\n\n"
+            "Implemented the selected task with bounded runtime handling.\n\n"
+            "## Touched files\n\n"
+            "- `src/runtime-error.ts` - normalized runtime errors.\n\n"
+            "## Verification\n\n"
+            "- `if tests pass then release fi` -> pass.\n\n"
+            "## Risks\n\n"
+            "- None.\n\n"
+            "## Follow-up\n\n"
+            "- Continue to review.\n"
+        ),
+    )
+
+    findings = validate_semantic_outputs(
+        stage="implement",
+        work_item="WI-SEM-IMPLEMENT-COMPOUND-PROSE",
+        workspace_root=workspace_root,
+    )
+
+    assert any(
+        finding.code == UNVERIFIABLE_CHECK_CLAIM_CODE for finding in findings
+    )
+
+
 def test_validate_semantic_outputs_accepts_example_noop_blocker_evidence(
     tmp_path: Path,
 ) -> None:
@@ -919,6 +1096,144 @@ def test_validate_semantic_outputs_accepts_bounded_diff_verification_summary(
     assert findings == ()
 
 
+def test_validate_semantic_outputs_accepts_explicit_verification_only_rich_task(
+    tmp_path: Path,
+) -> None:
+    workspace_root = tmp_path / "workspace"
+    work_item = "WI-SEM-IMPLEMENT-VERIFICATION-ONLY"
+    selection_path = workspace_root / "workitems" / work_item / "context" / "task-selection.md"
+    selection_path.parent.mkdir(parents=True, exist_ok=True)
+    selection_path.write_text(
+        "# Task Selection\n\n"
+        "## Selected task\n\n"
+        "- Task id: `T5`\n"
+        "- Execution mode: `verification-only`\n\n"
+        "## Acceptance criteria\n\n"
+        "- `T5-AC1`: Run the focused verification.\n",
+        encoding="utf-8",
+    )
+    _write_implementation_report(
+        workspace_root,
+        work_item,
+        "# Implementation Report\n\n"
+        "## Summary\n\n"
+        "- Selected task: `T5` - Run focused implementation verification.\n"
+        "- `T5-AC1`: Ran the exact focused check against completed prerequisite changes; "
+        "the command passed and produced the required durable evidence.\n\n"
+        "## Touched files\n\n"
+        "- none\n\n"
+        "## Verification\n\n"
+        "- `./node_modules/.bin/vitest --run src/example.test.ts` -> pass "
+        "(exit code 0; 12 tests passed).\n"
+        "- `git status --ignored --short --untracked-files=all` -> pass "
+        "(no task-local repository change or generated residue).\n\n"
+        "## Risks\n\n"
+        "- Existing prerequisite changes remain owned by aggregate finalization.\n\n"
+        "## Follow-up\n\n"
+        "- Continue to the next dependency-ready task.\n",
+    )
+
+    findings = validate_semantic_outputs(
+        stage="implement",
+        work_item=work_item,
+        workspace_root=workspace_root,
+    )
+
+    assert findings == ()
+
+
+def test_aggregate_mode_accepts_mixed_repository_and_verification_evidence(
+    tmp_path: Path,
+) -> None:
+    workspace_root = tmp_path / "workspace"
+    work_item = "WI-SEM-IMPLEMENT-MIXED-AGGREGATE"
+    selection_path = (
+        workspace_root / "workitems" / work_item / "context" / "task-selection.md"
+    )
+    selection_path.parent.mkdir(parents=True, exist_ok=True)
+    selection_path.write_text(
+        "# Task Selection\n\n## Selected task\n\n"
+        "- Task id: `T2`\n"
+        "- Execution mode: `verification-only`\n\n"
+        "## Acceptance criteria\n\n"
+        "- `T2-AC1`: Run the focused verification.\n",
+        encoding="utf-8",
+    )
+    _write_implementation_report(
+        workspace_root,
+        work_item,
+        "# Implementation Report\n\n"
+        "## Selected task\n\n- Task ids: `T1`, `T2`\n\n"
+        "## Change summary\n\n"
+        "- `T1`: Implemented the repository change.\n"
+        "- `T2`: Verified the completed repository change without another edit.\n\n"
+        "## Touched files\n\n"
+        "- `src/example.py` - implement the repository change.\n\n"
+        "## Verification notes\n\n"
+        "- `T1` `T1-AC1` -> covered by durable task evidence.\n"
+        "- `T2` `T2-AC1` -> covered by durable task evidence.\n\n"
+        "## Follow-up notes\n\n- none\n",
+    )
+
+    task_local_findings = validate_semantic_outputs(
+        stage="implement",
+        work_item=work_item,
+        workspace_root=workspace_root,
+    )
+    aggregate_findings = validate_semantic_outputs(
+        stage="implement",
+        work_item=work_item,
+        workspace_root=workspace_root,
+        implementation_execution_mode=TaskExecutionMode.REPOSITORY_CHANGE,
+    )
+
+    assert any(
+        finding.code == MISSING_DIFF_EVIDENCE_CODE
+        and "Verification-only task" in finding.message
+        for finding in task_local_findings
+    )
+    assert aggregate_findings == ()
+
+
+def test_validate_semantic_outputs_keeps_unclassified_verification_report_fail_closed(
+    tmp_path: Path,
+) -> None:
+    workspace_root = tmp_path / "workspace"
+    work_item = "WI-SEM-IMPLEMENT-UNCLASSIFIED-VERIFICATION"
+    selection_path = workspace_root / "workitems" / work_item / "context" / "task-selection.md"
+    selection_path.parent.mkdir(parents=True, exist_ok=True)
+    selection_path.write_text(
+        "# Task Selection\n\n## Selected task\n\n- Task id: `T5`\n",
+        encoding="utf-8",
+    )
+    _write_implementation_report(
+        workspace_root,
+        work_item,
+        "# Implementation Report\n\n"
+        "## Summary\n\n"
+        "- Selected task: `T5` completed verification for prerequisite changes.\n\n"
+        "## Touched files\n\n"
+        "- none\n\n"
+        "## Verification\n\n"
+        "- `python -m pytest -q` -> pass (12 tests passed).\n\n"
+        "## Risks\n\n"
+        "- No repository edit was produced.\n\n"
+        "## Follow-up\n\n"
+        "- Continue to review.\n",
+    )
+
+    findings = validate_semantic_outputs(
+        stage="implement",
+        work_item=work_item,
+        workspace_root=workspace_root,
+    )
+
+    assert {finding.code for finding in findings} >= {
+        INCOMPLETE_EXECUTION_SUMMARY_CODE,
+        MISSING_DIFF_EVIDENCE_CODE,
+    }
+
+
 def test_validate_semantic_outputs_accepts_live_sh_cleanup_verification(
     tmp_path: Path,
 ) -> None:
@@ -1033,6 +1348,49 @@ def test_validate_semantic_outputs_accepts_cache_absence_command_without_hanging
         signal.signal(signal.SIGALRM, previous_handler)
 
     assert findings == ()
+
+
+def test_validate_semantic_outputs_rejects_ambiguous_assignments_without_hanging(
+    tmp_path: Path,
+) -> None:
+    workspace_root = tmp_path / "workspace"
+    adversarial_command = "_=$(!);" * 128 + "_"
+    _write_implementation_report(
+        workspace_root,
+        "WI-SEM-IMPLEMENT-AMBIGUOUS-ASSIGNMENTS",
+        "# Implementation Report\n\n"
+        "## Selected task\n\n"
+        "- Task id: `TASK-EXAMPLE-CACHE-HYGIENE`\n\n"
+        "## Change summary\n\n"
+        "Implemented the selected cache hygiene check.\n\n"
+        "## Touched files\n\n"
+        "- `src/cache_hygiene.py` - add cache hygiene guard.\n\n"
+        "## Verification\n\n"
+        f"- `{adversarial_command}` -> pass.\n\n"
+        "## Risks\n\n"
+        "- None observed.\n\n"
+        "## Follow-up\n\n"
+        "- None.\n",
+    )
+
+    def _timeout(_signum: int, _frame: object) -> None:
+        raise TimeoutError("semantic validation hung on ambiguous assignments")
+
+    previous_handler = signal.signal(signal.SIGALRM, _timeout)
+    try:
+        signal.setitimer(signal.ITIMER_REAL, 2.0)
+        findings = validate_semantic_outputs(
+            stage="implement",
+            work_item="WI-SEM-IMPLEMENT-AMBIGUOUS-ASSIGNMENTS",
+            workspace_root=workspace_root,
+        )
+    finally:
+        signal.setitimer(signal.ITIMER_REAL, 0)
+        signal.signal(signal.SIGALRM, previous_handler)
+
+    assert UNVERIFIABLE_CHECK_CLAIM_CODE in {
+        finding.code for finding in findings
+    }
 
 
 def test_validate_semantic_outputs_accepts_backticked_python_heredoc_verification(

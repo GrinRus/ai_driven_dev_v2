@@ -20,6 +20,10 @@ TASKLIST_PLAN_VERIFICATION_CODE = "CROSS-TASKLIST-PLAN-VERIFICATION"
 TASKLIST_SCOPE_CODE = "SEM-TASK-SCOPE-MISMATCH"
 
 _MILESTONE_ID_PATTERN = re.compile(r"\b(M[1-9]\d*)\b", re.IGNORECASE)
+_DEPENDENCY_RELATION_PATTERN = re.compile(
+    r"\b(?P<relation>depends?\s+on|requires?|after|before)\b",
+    re.IGNORECASE,
+)
 _COMMAND_PREFIXES = (
     "uv ",
     "pytest ",
@@ -165,29 +169,30 @@ def _milestone_dependencies(plan_text: str) -> tuple[tuple[str, str], ...]:
                 if explicit_subjects is not None
                 else line_subjects
             )
-            relation = re.search(
-                r"\b(?P<relation>depends?\s+on|requires?|after|before)\b(?P<object>.*)$",
-                clause,
-                re.IGNORECASE,
-            )
-            if relation is None:
-                continue
-            objects = tuple(
-                match.group(1).upper()
-                for match in _MILESTONE_ID_PATTERN.finditer(relation.group("object"))
-            )
-            if relation.group("relation").casefold() == "before":
-                edges.extend(
-                    (target, prerequisite)
-                    for target in objects
-                    for prerequisite in subjects
+            relations = tuple(_DEPENDENCY_RELATION_PATTERN.finditer(clause))
+            for index, relation in enumerate(relations):
+                object_end = (
+                    relations[index + 1].start()
+                    if index + 1 < len(relations)
+                    else len(clause)
                 )
-            else:
-                edges.extend(
-                    (target, prerequisite)
-                    for target in subjects
-                    for prerequisite in objects
+                object_text = clause[relation.end() : object_end]
+                objects = tuple(
+                    match.group(1).upper()
+                    for match in _MILESTONE_ID_PATTERN.finditer(object_text)
                 )
+                if relation.group("relation").casefold() == "before":
+                    edges.extend(
+                        (target, prerequisite)
+                        for target in objects
+                        for prerequisite in subjects
+                    )
+                else:
+                    edges.extend(
+                        (target, prerequisite)
+                        for target in subjects
+                        for prerequisite in objects
+                    )
     return tuple(dict.fromkeys(edges))
 
 

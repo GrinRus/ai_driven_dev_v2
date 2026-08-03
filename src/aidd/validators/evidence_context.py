@@ -5,8 +5,10 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from aidd.core.allowed_write_scope import AllowedWriteScope, resolve_allowed_write_scope
+from aidd.core.task_plan import TaskExecutionMode
 
 _TASK_ID_LINE = re.compile(r"Task id\s*:\s*`([^`]+)`", re.IGNORECASE)
+_EXECUTION_MODE_LINE = re.compile(r"Execution mode\s*:\s*`([^`]+)`", re.IGNORECASE)
 _AC_ID = re.compile(r"`?((?:[A-Z][A-Z0-9]{0,15}-\d+|T\d+)-AC\d+)`?")
 
 
@@ -17,6 +19,7 @@ class ImplementationEvidenceContext:
     allowed_write_scope: AllowedWriteScope | None
     authored_verification: str | None
     required_verification_commands: tuple[str, ...]
+    execution_mode: TaskExecutionMode
 
 
 def _read_optional(path: Path) -> str | None:
@@ -55,6 +58,14 @@ def load_implementation_evidence_context(
     selection = _read_optional(context_root / "task-selection.md")
     verification = _read_optional(context_root / "verification-output.md")
     selected_match = _TASK_ID_LINE.search(selection or "")
+    execution_mode_match = _EXECUTION_MODE_LINE.search(selection or "")
+    execution_mode = TaskExecutionMode.REPOSITORY_CHANGE
+    if (
+        execution_mode_match is not None
+        and execution_mode_match.group(1).casefold()
+        == TaskExecutionMode.VERIFICATION_ONLY.value
+    ):
+        execution_mode = TaskExecutionMode.VERIFICATION_ONLY
     return ImplementationEvidenceContext(
         selected_task_id=(selected_match.group(1).upper() if selected_match else None),
         acceptance_ids=tuple(
@@ -63,6 +74,7 @@ def load_implementation_evidence_context(
         allowed_write_scope=resolve_allowed_write_scope(workspace_root, work_item),
         authored_verification=verification,
         required_verification_commands=_verification_commands(selection, verification),
+        execution_mode=execution_mode,
     )
 
 
