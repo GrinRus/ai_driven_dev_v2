@@ -7,14 +7,15 @@ slice, and local task.
 
 ## Next
 
-- `W36-E7-S4-T3` — Run fresh medium Codex acceptance on candidate `5a53614`.
+- `W36-E7-S4-T92` — Refresh the Codex-only candidate after T91.
 
 ## Soon
 
-No task is promoted while the external Codex acceptance is active.
+No task is promoted until the replacement candidate is fixed to an immutable SHA and wheel.
 
 ## Parking lot
 
+- `W36-E7-S4-T3` — Run fresh medium Codex acceptance after the replacement candidate.
 - `W36-E7-S4-T4` — Claude acceptance is not launched under the current Codex-only scope.
 - `W36-E7-S3-T2` — Record five first-time-operator sessions after initial live hardening.
 - `W36-E7-S3-T3` — Reconcile observed session findings before beta readiness.
@@ -34,6 +35,18 @@ No task is promoted while the external Codex acceptance is active.
   queue-restoration policy in `docs/backlog/roadmap.md` (`W8-E3-S1`).
 
 ## Current reconciliation
+
+- `2026-08-03` `W36-E7-S4-T91` is complete. Dependency objects are scoped to their individual
+  relation spans, and the exact terminal plan now yields the authored acyclic graph without the
+  invented reverse edges that exhausted tasklist repair. Focused validator/planning tests pass
+  `55/55`, Ruff and mypy pass, and full pytest passes `2179/2179`. T92 is `Next`; T3 remains
+  parked until the replacement candidate is recorded.
+
+- `2026-08-03` the post-T90 Codex run passed private auth, target readiness, and manual quality
+  audits through `review-spec`. Tasklist then exhausted repair because the dependency parser
+  treated both milestone references following the first relation in a mixed-relation sentence
+  as prerequisites, inventing `M2/M3 -> M4` in addition to the authored `M4 -> M2/M3` edges.
+  The terminal root is not resumed; T91 is `Next`, T92 and a fresh T3 follow.
 
 - `2026-08-03` `W36-E7-S4-T90` is complete on exact candidate `5a53614`, tree `b1877a8`,
   tracked archive digest `143e406`, and byte-repeatable wheel digest `e057790`. Ruff, mypy,

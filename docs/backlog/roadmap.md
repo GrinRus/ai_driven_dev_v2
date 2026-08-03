@@ -11717,7 +11717,7 @@ Local tasks:
   - Scope: provider-free harness and architecture tests.
   - Verification: conformance fixtures fail before live execution for overlapping roots, dirty
     tracked source, forbidden product imports, or live-scenario literals in runtime product code.
-- `W36-E7-S4-T3` (next) Run `AIDD-LIVE-007` through Codex to a clean terminal result with
+- `W36-E7-S4-T3` (parked) Run `AIDD-LIVE-007` through Codex to a clean terminal result with
   manual stage-quality and rendered Studio evidence.
   - Dependencies: `W36-E7-S4-T90` as the direct replacement-candidate predecessor after the
     `W36-E7-S4-T89` QA-local command-evidence fix and terminal post-T88 run;
@@ -13275,6 +13275,27 @@ Local tasks:
     `tsc --noEmit`, and source postflight pass. The unchanged browser surfaces retain the
     post-T81 Chromium `188/188` evidence. Sanitized evidence is recorded in
     `docs/e2e/candidate-readiness-2026-08-03-post-t89.md`; T3 is now next.
+
+- `W36-E7-S4-T91` (done) Preserve dependency direction when one plan sentence contains
+  more than one milestone relation.
+  - Dependencies: discovered by the terminal post-T90 Codex acceptance attempt; invalidates
+    candidate `5a53614` and blocks its replacement candidate and fresh `W36-E7-S4-T3` run.
+  - Scope: runtime-agnostic tasklist/plan dependency parsing and focused cross-document
+    regressions only; contracts, prompts, providers, target code, core, Studio, and browser
+    behavior remain unchanged.
+  - Verification: a sentence shaped as `M2 depends on M1 and is completed before M4` yields
+    only `M2 -> M1` and `M4 -> M2`; it must not invent the reverse `M2 -> M4` edge. The exact
+    terminal post-T90 plan/tasklist pair must no longer force a cyclic repair.
+  - Completion: dependency objects are bounded by the next relation in the same clause, so the
+    exact terminal plan now produces only `M2 -> M1`, `M3 -> M1`, `M4 -> M2/M3`, and
+    `M5 -> M4`. Focused validator/planning tests pass `55/55`, Ruff and mypy pass, and the full
+    Python suite passes `2179/2179`.
+
+- `W36-E7-S4-T92` (next) Refresh the Codex-only candidate after T91.
+  - Dependencies: `W36-E7-S4-T91`; blocks the next fresh `W36-E7-S4-T3` acceptance run.
+  - Scope and verification: repeat the affected provider-free exact-SHA readiness bar,
+    tracked-archive wheel, isolated install/doctor, pinned Hono readiness, bundle/isolation,
+    private Codex auth, and source postflight; retain accepted unchanged-browser evidence.
 
 Exit evidence:
 
