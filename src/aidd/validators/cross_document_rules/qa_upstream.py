@@ -23,6 +23,10 @@ QA_UPSTREAM_EVIDENCE_CODE = "CROSS-QA-UPSTREAM-EVIDENCE"
 QA_UPSTREAM_VERDICT_CODE = "CROSS-QA-UPSTREAM-VERDICT"
 
 _EVIDENCE_ID_PATTERN = re.compile(r"\bEV-\d+\b", re.IGNORECASE)
+_EVIDENCE_DEFINITION_PATTERN = re.compile(
+    r"^\s*-\s*(?P<evidence_id>EV-\d+)\s*:",
+    re.IGNORECASE,
+)
 _BACKTICKED_REFERENCE_PATTERN = re.compile(r"`([^`]+)`")
 _REVIEW_ACCEPTED_RISK_PATTERN = re.compile(r"\bAR-[1-9]\d*\b", re.IGNORECASE)
 _QA_EVIDENCE_ENTRY_PATTERN = re.compile(r"^\s*-\s+", re.MULTILINE)
@@ -47,15 +51,28 @@ def validate_qa_upstream(context: CrossDocumentContext) -> tuple[ValidationFindi
         )
         for match in pattern.finditer(text)
     }
+    work_item_root = context.workspace_root / "workitems" / context.work_item
+    upstream_artifact_roots = (
+        work_item_root / "context",
+        *(work_item_root / "stages" / stage / "output" for stage in (
+            "idea",
+            "research",
+            "plan",
+            "review-spec",
+            "tasklist",
+            "implement",
+            "review",
+        )),
+    )
     available_paths = {
         workspace_relative(path, context.workspace_root)
-        for root in (context.upstream_review_path.parent, context.implementation_output_root)
+        for root in upstream_artifact_roots
         if root.is_dir()
-        for path in root.iterdir()
+        for path in root.rglob("*")
         if path.is_file()
     }
 
-    def resolved_reference(text: str) -> bool:
+    def resolved_upstream_reference(text: str) -> bool:
         if any(
             match.group(0).upper() in available_ids
             for match in _EVIDENCE_ID_PATTERN.finditer(text)
@@ -71,6 +88,29 @@ def validate_qa_upstream(context: CrossDocumentContext) -> tuple[ValidationFindi
             value.strip().removeprefix("./").rstrip("/") in available_paths
             for value in _BACKTICKED_REFERENCE_PATTERN.findall(text)
         )
+
+    evidence_sections_by_heading = {
+        heading: level_two_section_text(context.qa_text, heading)
+        for heading in ("Evidence references", "Evidence", "Verification summary")
+    }
+    local_evidence_ids: set[str] = set()
+    for heading in ("Evidence references", "Evidence"):
+        for entry in re.split(
+            r"(?=^\s*-\s+)",
+            evidence_sections_by_heading[heading],
+            flags=re.MULTILINE,
+        ):
+            definition = _EVIDENCE_DEFINITION_PATTERN.match(entry)
+            if definition is not None and resolved_upstream_reference(entry):
+                local_evidence_ids.add(definition.group("evidence_id").upper())
+
+    def resolved_reference(text: str) -> bool:
+        if any(
+            match.group(0).upper() in local_evidence_ids
+            for match in _EVIDENCE_ID_PATTERN.finditer(text)
+        ):
+            return True
+        return resolved_upstream_reference(text)
 
     findings: list[ValidationFinding] = []
     risk_section = level_two_section_text(
@@ -94,12 +134,15 @@ def validate_qa_upstream(context: CrossDocumentContext) -> tuple[ValidationFindi
                     ValidationIssueLocation(qa_relative),
                 )
             )
-    evidence_sections = "\n".join(
-        level_two_section_text(context.qa_text, heading)
-        for heading in ("Evidence references", "Evidence", "Verification summary")
-    )
+    evidence_sections = "\n".join(evidence_sections_by_heading.values())
     for entry in re.split(r"(?=^\s*-\s+)", evidence_sections, flags=re.MULTILINE):
-        if _QA_EVIDENCE_ENTRY_PATTERN.match(entry) is not None and not resolved_reference(entry):
+        definition = _EVIDENCE_DEFINITION_PATTERN.match(entry)
+        reference_resolved = (
+            resolved_upstream_reference(entry)
+            if definition is not None
+            else resolved_reference(entry)
+        )
+        if _QA_EVIDENCE_ENTRY_PATTERN.match(entry) is not None and not reference_resolved:
             findings.append(
                 ValidationFinding(
                     QA_UPSTREAM_EVIDENCE_CODE,

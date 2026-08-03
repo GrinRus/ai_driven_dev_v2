@@ -1503,6 +1503,62 @@ def test_qa_cross_validation_accepts_exact_upstream_traceability(tmp_path: Path)
     assert findings == ()
 
 
+def test_qa_cross_validation_resolves_qa_local_evidence_id_from_context_artifact(
+    tmp_path: Path,
+) -> None:
+    workspace_root = tmp_path / ".aidd"
+    _write_qa_upstream_bundle(workspace_root)
+    context_root = workspace_root / "workitems" / "WI-001" / "context"
+    context_root.mkdir(parents=True)
+    (context_root / "verification-output.md").write_text(
+        "# Verification Output\n\n- `pytest -q` -> pass.\n",
+        encoding="utf-8",
+    )
+    qa_path = workspace_root / "workitems" / "WI-001" / "stages" / "qa" / "qa-report.md"
+    qa_path.write_text(
+        "# QA Report\n\n"
+        "## Quality verdict\n\n- QA verdict: ready\n\n"
+        "## Verification summary\n\n"
+        "- Authored verification passed. Evidence: EV-11.\n\n"
+        "## Release recommendation\n\n- proceed\n\n"
+        "## Evidence\n\n"
+        "- EV-11: `workitems/WI-001/context/verification-output.md` -> pass.\n\n"
+        "## Known issues\n\n- Known issues: none.\n\n"
+        "## Readiness\n\n- Ready. Evidence: EV-11.\n",
+        encoding="utf-8",
+    )
+
+    findings = validate_cross_document_consistency(
+        stage="qa", work_item="WI-001", workspace_root=workspace_root
+    )
+
+    assert findings == ()
+
+
+def test_qa_cross_validation_rejects_circular_qa_local_evidence_id(
+    tmp_path: Path,
+) -> None:
+    workspace_root = tmp_path / ".aidd"
+    _write_qa_upstream_bundle(workspace_root)
+    qa_path = workspace_root / "workitems" / "WI-001" / "stages" / "qa" / "qa-report.md"
+    qa_path.write_text(
+        "# QA Report\n\n"
+        "## Quality verdict\n\n- QA verdict: ready\n\n"
+        "## Verification summary\n\n- Alleged verification passed. Evidence: EV-9.\n\n"
+        "## Release recommendation\n\n- proceed\n\n"
+        "## Evidence\n\n- EV-9: self-declared evidence without an artifact.\n\n"
+        "## Known issues\n\n- Known issues: none.\n\n"
+        "## Readiness\n\n- Ready. Evidence: EV-9.\n",
+        encoding="utf-8",
+    )
+
+    findings = validate_cross_document_consistency(
+        stage="qa", work_item="WI-001", workspace_root=workspace_root
+    )
+
+    assert [finding.code for finding in findings].count(QA_UPSTREAM_EVIDENCE_CODE) == 2
+
+
 def test_qa_cross_validation_rejects_unresolved_risk_and_evidence(tmp_path: Path) -> None:
     workspace_root = tmp_path / ".aidd"
     _write_qa_upstream_bundle(

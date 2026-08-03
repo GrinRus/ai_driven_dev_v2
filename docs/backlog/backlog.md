@@ -7,11 +7,11 @@ slice, and local task.
 
 ## Next
 
-- `W36-E7-S4-T3` — Run fresh medium Codex acceptance on candidate `09b8d6a`.
+- `W36-E7-S4-T84` — Refresh the exact Codex candidate after T83.
 
 ## Soon
 
-No task is promoted while the external Codex acceptance is active.
+- `W36-E7-S4-T3` — Refresh the candidate and rerun fresh medium Codex acceptance after T83.
 
 ## Parking lot
 
@@ -34,6 +34,13 @@ No task is promoted while the external Codex acceptance is active.
   queue-restoration policy in `docs/backlog/roadmap.md` (`W8-E3-S1`).
 
 ## Current reconciliation
+
+- `2026-08-03` the post-T82 Codex run reached QA with all prior stage quality audits accepted,
+  the four-file Hono patch passing focused Vitest `237/237` and `tsc --noEmit`, and Review
+  approved. QA then exhausted repair because cross-document validation rejected QA-local
+  `EV-N` references even when their definitions contained full existing upstream/context paths,
+  contradicting the QA document contract and prompt. The terminal root is not resumed;
+  `W36-E7-S4-T83` is `Next`, T3 is `Soon`, and candidate `09b8d6a` is historical.
 
 - `2026-08-03` `W36-E7-S4-T82` is complete for the active Codex-only prerelease scope on exact
   candidate `09b8d6a`, tree `8bba6dd`, tracked archive digest `9f10c8b`, and wheel digest

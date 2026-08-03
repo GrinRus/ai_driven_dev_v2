@@ -11717,10 +11717,11 @@ Local tasks:
   - Scope: provider-free harness and architecture tests.
   - Verification: conformance fixtures fail before live execution for overlapping roots, dirty
     tracked source, forbidden product imports, or live-scenario literals in runtime product code.
-- `W36-E7-S4-T3` (next) Run `AIDD-LIVE-007` through Codex to a clean terminal result with
+- `W36-E7-S4-T3` (soon) Run `AIDD-LIVE-007` through Codex to a clean terminal result with
   manual stage-quality and rendered Studio evidence.
-  - Dependencies: `W36-E7-S4-T82` as the replacement candidate predecessor after
-    `W36-E7-S4-T81`, and
+  - Dependencies: `W36-E7-S4-T84` as the direct replacement-candidate predecessor after the
+    `W36-E7-S4-T83` QA-traceability fix and terminal post-T82 run, `W36-E7-S4-T82` as its prior
+    candidate predecessor after `W36-E7-S4-T81`, and
     `W36-E7-S4-T37` as the exact-SHA candidate predecessor after the
     post-auth `W36-E7-S4-T60` and `W36-E7-S4-T36` gates; `W36-E7-S4-T33`, `W36-E7-S4-T32`, `W36-E7-S4-T31`, `W36-E7-S4-T30`, `W36-E7-S4-T29`, `W36-E7-S4-T28`, `W36-E7-S4-T27`, `W36-E7-S4-T26`, `W36-E7-S4-T25`, `W36-E7-S4-T24`, `W36-E7-S4-T23`, `W36-E7-S4-T22`, `W36-E7-S4-T21`, `W36-E7-S4-T20`, `W36-E7-S4-T19`, `W36-E7-S4-T18`, `W36-E7-S4-T17`, `W36-E7-S4-T16`, `W36-E7-S4-T15`, `W36-E7-S4-T14`, `W36-E7-S4-T13`, `W36-E7-S4-T2`, `W36-E7-S4-T6`, `W36-E7-S4-T10`,
     `W36-E7-S4-T11`, and `W36-E7-S4-T12` as live-discovered queue
@@ -13141,6 +13142,34 @@ Local tasks:
     Codex eval-doctor, private-auth Seatbelt readiness, fresh pinned Hono setup, Vitest
     `233/233`, `tsc --noEmit`, and source postflight all pass. Sanitized evidence is recorded in
     `docs/e2e/candidate-readiness-2026-08-03-post-t81.md`; T3 is now the next task.
+
+- `W36-E7-S4-T83` (done) Resolve QA-local evidence ids through their declared upstream
+  artifact references.
+  - Dependencies: discovered by the terminal post-T82 Codex acceptance attempt; invalidates
+    candidate `09b8d6a` and blocks its `T36 -> T37 -> T3` replacement.
+  - Scope: runtime-agnostic QA cross-document traceability and focused provider-free regressions
+    only; core orchestration, providers, adapters, prompts, contracts, scenario literals, target
+    code, and Studio remain unchanged.
+  - Verification: an `EV-N` defined in the QA Evidence section is reusable from verification,
+    readiness, acceptance, and task-acceptance entries only when its definition contains an
+    existing full workspace-relative upstream/context artifact path; missing, basename-only, and
+    circular local evidence remains fail-closed.
+  - Completion: QA cross-document validation now derives reusable local evidence ids only from
+    Evidence definitions backed by an existing full upstream/context artifact path. A focused
+    positive and circular-negative matrix passes, the exact terminal live QA report revalidates
+    with zero findings, the validator suite passes `296/296`, planning integrity passes `9/9`,
+    Ruff and mypy across `228` modules pass, and the complete Python suite passes `2172/2172`.
+
+- `W36-E7-S4-T84` (next) Refresh the Codex-only candidate after T83 without reopening deferred
+  provider lanes.
+  - Dependencies: `W36-E7-S4-T83`; blocks the next fresh `W36-E7-S4-T3` acceptance run.
+  - Scope: exact-commit tracked archive/wheel, isolated install and doctor/eval-doctor, saved-QA
+    regression, pinned Hono readiness, bundle smoke, private Codex auth/isolation probe, and
+    source postflight. The already accepted post-T81 full Chromium evidence remains applicable
+    because T83 changes only provider-free Markdown cross-document validation; no UI, harness,
+    core, adapter, prompt, contract, Studio, or browser code changed.
+  - Verification: one immutable source SHA/tree and wheel digest passes the Codex-only readiness
+    checks affected by T83 and becomes the sole artifact used by the next T3 run.
 
 Exit evidence:
 
