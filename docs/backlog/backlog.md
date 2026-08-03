@@ -7,11 +7,11 @@ slice, and local task.
 
 ## Next
 
-- `W36-E7-S4-T90` — Refresh the Codex-only exact-SHA candidate after T89.
+- `W36-E7-S4-T3` — Run fresh medium Codex acceptance on candidate `5a53614`.
 
 ## Soon
 
-- `W36-E7-S4-T3` — Run fresh medium Codex acceptance on the T90 candidate.
+No task is promoted while the external Codex acceptance is active.
 
 ## Parking lot
 
@@ -34,6 +34,15 @@ slice, and local task.
   queue-restoration policy in `docs/backlog/roadmap.md` (`W8-E3-S1`).
 
 ## Current reconciliation
+
+- `2026-08-03` `W36-E7-S4-T90` is complete on exact candidate `5a53614`, tree `b1877a8`,
+  tracked archive digest `143e406`, and byte-repeatable wheel digest `e057790`. Ruff, mypy,
+  Python `2178/2178`, validator/prompt/scenario/planning `432/432`, exact terminal QA
+  revalidation, bundle/manifest/session/isolation/auth `52/52`, isolated install/doctor/
+  eval-doctor, fresh Hono readiness with Vitest `233/233` and `tsc --noEmit`, private Codex auth,
+  Seatbelt isolation, and source postflight pass. Browser code is unchanged and retains
+  post-T81 Chromium `188/188`. Evidence is in
+  `docs/e2e/candidate-readiness-2026-08-03-post-t89.md`; T3 is `Next`.
 
 - `2026-08-03` `W36-E7-S4-T89` is complete. QA-local `EV-N` definitions are accepted only when
   they contain a syntactically executable command and explicit terminal outcome; upstream claims

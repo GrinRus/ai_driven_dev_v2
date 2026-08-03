@@ -11717,7 +11717,7 @@ Local tasks:
   - Scope: provider-free harness and architecture tests.
   - Verification: conformance fixtures fail before live execution for overlapping roots, dirty
     tracked source, forbidden product imports, or live-scenario literals in runtime product code.
-- `W36-E7-S4-T3` (soon) Run `AIDD-LIVE-007` through Codex to a clean terminal result with
+- `W36-E7-S4-T3` (next) Run `AIDD-LIVE-007` through Codex to a clean terminal result with
   manual stage-quality and rendered Studio evidence.
   - Dependencies: `W36-E7-S4-T90` as the direct replacement-candidate predecessor after the
     `W36-E7-S4-T89` QA-local command-evidence fix and terminal post-T88 run;
@@ -13261,12 +13261,20 @@ Local tasks:
     editing its evidence; focused validator/prompt/scenario/planning tests pass `432/432`, Ruff
     passes, mypy passes `228` modules, and the complete Python suite passes `2178/2178`.
 
-- `W36-E7-S4-T90` (next) Refresh the Codex-only candidate after T89.
+- `W36-E7-S4-T90` (done) Refresh the Codex-only candidate after T89.
   - Dependencies: `W36-E7-S4-T89`; blocks the next fresh `W36-E7-S4-T3` acceptance run.
   - Scope and verification: repeat the affected provider-free repository, validator, prompt,
     packaging, tracked-archive wheel, isolated install/doctor, pinned Hono readiness,
     bundle/isolation, private Codex auth, and source-integrity gates; retain unchanged-browser
     evidence explicitly.
+  - Completion: candidate `5a53614`, tree `b1877a8`, tracked archive digest `143e406`, and
+    byte-repeatable wheel digest `e057790` pass the affected Codex-only readiness bar. Ruff,
+    mypy, Python `2178/2178`, validator/prompt/scenario/planning `432/432`, exact terminal QA
+    revalidation, bundle/manifest/session/isolation/auth `52/52`, isolated install/doctor/
+    eval-doctor, private-auth Seatbelt readiness, fresh pinned Hono setup, Vitest `233/233`,
+    `tsc --noEmit`, and source postflight pass. The unchanged browser surfaces retain the
+    post-T81 Chromium `188/188` evidence. Sanitized evidence is recorded in
+    `docs/e2e/candidate-readiness-2026-08-03-post-t89.md`; T3 is now next.
 
 Exit evidence:
 
