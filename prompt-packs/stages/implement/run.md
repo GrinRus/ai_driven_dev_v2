@@ -173,6 +173,9 @@ normalize if canonical validation proves the terminal status inconsistent.
    artifact path, or a captured assertion/tool summary.
    Complete shell compound checks such as ``if <check>; then exit 1; else exit 0; fi`` are allowed
    when the backticked command contains the concrete check and the same bullet records its outcome.
+   A command-substitution assignment may precede that check, for example
+   ``found=$(find ...); if test -n "$found"; then exit 1; fi``; a concrete trailing check may
+   follow the closed compound in the same backticked command list.
    Manual or `CliRunner` checks must cite the executed command/snippet, artifact path, or captured
    assertion result; do not write `manual inspection -> pass` without evidence.
    Do not list mutation-only cleanup commands such as `rm -rf ...` as verification bullets with

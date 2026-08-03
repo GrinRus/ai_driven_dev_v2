@@ -7,11 +7,11 @@ slice, and local task.
 
 ## Next
 
-- `W36-E7-S4-T3` — Run fresh medium Codex acceptance on candidate `4b2856f`.
+- `W36-E7-S4-T88` — Refresh the Codex-only candidate after T87.
 
 ## Soon
 
-No task is promoted while the external Codex acceptance is active.
+- `W36-E7-S4-T3` — Run fresh medium Codex acceptance on the T88 candidate.
 
 ## Parking lot
 
@@ -34,6 +34,14 @@ No task is promoted while the external Codex acceptance is active.
   queue-restoration policy in `docs/backlog/roadmap.md` (`W8-E3-S1`).
 
 ## Current reconciliation
+
+- `2026-08-03` the post-T86 Codex run passed private auth, target readiness, and manual audits
+  through `tasklist`. Implement T1 added only the intended `src/compose.test.ts` red regression,
+  with Vitest truthfully reporting the expected pre-runtime-change failure and `tsc` passing, but
+  validation exhausted repair on a complete command list shaped as
+  `found=$(find ...); if ...; fi; test ...`. T87 now recognizes only closed compound lists with
+  concrete executables; the saved terminal report revalidates with zero findings and focused tests
+  pass `32/32`. The terminal root is not resumed; T88 is `Next` and T3 is `Soon`.
 
 - `2026-08-03` `W36-E7-S4-T86` is complete on exact candidate `4b2856f`, tree `9137bc3`,
   tracked archive digest `c8769e7`, and wheel digest `f9e9f98`. Ruff, mypy, exact-candidate

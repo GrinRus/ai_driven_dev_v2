@@ -825,6 +825,43 @@ def test_validate_semantic_outputs_accepts_shell_compound_command_evidence(
     )
 
 
+def test_validate_semantic_outputs_accepts_assignment_before_shell_compound(
+    tmp_path: Path,
+) -> None:
+    workspace_root = tmp_path / ".aidd"
+    _write_implementation_report(
+        workspace_root,
+        "WI-SEM-IMPLEMENT-ASSIGNMENT-COMPOUND",
+        (
+            "# Implementation Report\n\n"
+            "## Selected task\n\n"
+            "- Stable selected task id: `TASK-EXAMPLE-RUNTIME-ERROR`\n\n"
+            "## Summary\n\n"
+            "Implemented the selected task with bounded runtime handling.\n\n"
+            "## Touched files\n\n"
+            "- `src/runtime-error.ts` - normalized runtime errors.\n\n"
+            "## Verification\n\n"
+            "- `found=$(find . -name '.cache' -print -quit); if test -n \"$found\"; "
+            "then printf '%s\\n' \"$found\"; exit 1; fi; test ! -e .cache` -> pass "
+            "(exit code 0).\n\n"
+            "## Risks\n\n"
+            "- None.\n\n"
+            "## Follow-up\n\n"
+            "- Continue to review.\n"
+        ),
+    )
+
+    findings = validate_semantic_outputs(
+        stage="implement",
+        work_item="WI-SEM-IMPLEMENT-ASSIGNMENT-COMPOUND",
+        workspace_root=workspace_root,
+    )
+
+    assert not any(
+        finding.code == UNVERIFIABLE_CHECK_CLAIM_CODE for finding in findings
+    )
+
+
 def test_validate_semantic_outputs_rejects_shell_like_compound_prose(
     tmp_path: Path,
 ) -> None:

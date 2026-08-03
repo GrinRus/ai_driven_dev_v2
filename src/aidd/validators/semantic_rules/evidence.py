@@ -140,11 +140,12 @@ _FENCED_COMMAND_PATTERN = re.compile(
     flags=re.IGNORECASE | re.DOTALL,
 )
 _SHELL_COMPOUND_PATTERN = re.compile(
-    r"^(?:"
+    r"^(?:(?:[A-Za-z_][A-Za-z0-9_]*=\$\([^;]+\)|"
+    r"[A-Za-z_][A-Za-z0-9_]*=[^;\s]+);\s*)*(?:"
     r"if\s+.+;\s*then\s+.+;\s*(?:else\s+.+;\s*)?fi|"
     r"(?:for|while|until)\s+.+;\s*do\s+.+;\s*done|"
     r"case\s+.+\s+in\s+.+(?:;;\s*)?esac"
-    r")$",
+    r")(?:;\s*.+)?$",
     flags=re.IGNORECASE | re.DOTALL,
 )
 

@@ -74,7 +74,10 @@ Optional context documents may improve implementation quality, but they must not
   utilities and pipelines such as ``nl -ba src/example.py | sed -n '1,40p' -> pass``; tool-name
   prose or a filename alone is not command evidence. Backticked shell compound commands are also
   executable evidence when they use complete shell syntax (for example
-  ``if <check>; then exit 1; else exit 0; fi``) and contain a concrete executable check.
+  ``if <check>; then exit 1; else exit 0; fi``) and contain a concrete executable check. A
+  command-substitution assignment may precede the compound check, for example
+  ``found=$(find ...); if test -n "$found"; then exit 1; fi``. A concrete trailing check may
+  follow the closed compound in the same command list.
   Each verification bullet with a pass/fail/success claim must contain the command/check and
   observed outcome on that same bullet; do not split the command and outcome across separate prose
   paragraphs.
