@@ -7,15 +7,14 @@ slice, and local task.
 
 ## Next
 
-- `W36-E7-S4-T36` — Re-run the complete provider-free Chromium gate after T79.
+- `W36-E7-S4-T37` — Produce a replacement exact-SHA Codex candidate after T36.
 
 ## Soon
 
-- `W36-E7-S4-T37` — Produce a replacement exact-SHA Codex candidate after T36.
+- `W36-E7-S4-T3` — Re-run the medium scenario through Codex on that replacement candidate.
 
 ## Parking lot
 
-- `W36-E7-S4-T3` — Re-run the medium scenario through Codex on that replacement candidate.
 - `W36-E7-S4-T4` — Claude acceptance is not launched under the current Codex-only scope.
 - `W36-E7-S3-T2` — Record five first-time-operator sessions after initial live hardening.
 - `W36-E7-S3-T3` — Reconcile observed session findings before beta readiness.
@@ -35,6 +34,15 @@ slice, and local task.
   queue-restoration policy in `docs/backlog/roadmap.md` (`W8-E3-S1`).
 
 ## Current reconciliation
+
+- `2026-08-03` the post-T79 `W36-E7-S4-T36` rerun is complete on clean source `c040f0e`
+  and tree `75fe019`: historical cases pass `4/4`, intervention/terminal families `24/24`,
+  packaged journeys pass `79/79` with exact discovered/executed parity and `failed_ids=[]`, and
+  one fresh uninterrupted full Chromium suite passes `188/188`. All five viewports complete
+  without console, page, failed-request, overflow, accessibility, or process-cleanup failure;
+  the final process postflight is empty. Sanitized evidence is in
+  `docs/e2e/operator-ui-provider-free-browser-gate-2026-08-03-post-t79.md`. T37 is `Next`, Codex
+  T3 is `Soon`, and no provider or large scenario ran.
 
 - `2026-08-03` `W36-E7-S4-T79` is complete: aggregate Implement finalization now preserves
   task-local executable evidence from canonical `## Verification` and falls back to legacy
