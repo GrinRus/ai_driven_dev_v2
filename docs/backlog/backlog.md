@@ -7,14 +7,15 @@ slice, and local task.
 
 ## Next
 
-- `W36-E7-S4-T3` — Re-run the medium scenario through Codex on the post-T79 candidate.
+- `W36-E7-S4-T36` — Revalidate the provider-free browser gate after T80.
 
 ## Soon
 
-No immediate successor is promoted until the Codex-only acceptance result is known.
+- `W36-E7-S4-T37` — Record the replacement exact-SHA Codex candidate after T36.
 
 ## Parking lot
 
+- `W36-E7-S4-T3` — Codex acceptance resumes after replacement T36/T37 candidate gates.
 - `W36-E7-S4-T4` — Claude acceptance is not launched under the current Codex-only scope.
 - `W36-E7-S3-T2` — Record five first-time-operator sessions after initial live hardening.
 - `W36-E7-S3-T3` — Reconcile observed session findings before beta readiness.
@@ -34,6 +35,21 @@ No immediate successor is promoted until the Codex-only acceptance result is kno
   queue-restoration policy in `docs/backlog/roadmap.md` (`W8-E3-S1`).
 
 ## Current reconciliation
+
+- `2026-08-03` `W36-E7-S4-T80` is complete: Stage Result semantic validation reads only
+  canonical leading attempt identities and no longer counts `attempt-000N/...` evidence-path
+  references as duplicate attempts. The live-shaped positive case and duplicate negative case
+  pass; focused validator/core checks pass `393/393`, planning integrity passes `9/9`, Ruff and
+  mypy across `228` modules pass, and full pytest passes `2170/2170`. T36 is `Next`, T37 is
+  `Soon`, and Codex T3 remains parked until the replacement candidate is accepted.
+
+- `2026-08-03` the post-T79 Codex T3 attempt on candidate `abbc4d6` passed private auth,
+  target readiness, exact-wheel identity, and strong manual audits through `tasklist`.
+  Implement completed three provider attempts with exit `0`, kept the target diff inside the
+  authored scope, and passed focused Vitest `233/233` plus `tsc --noEmit`, but Stage Result
+  semantic validation counted each `attempt-000N/...` evidence-path reference as a second
+  attempt identity and exhausted repair on a false non-increasing sequence. The terminal root
+  will not be resumed; `W36-E7-S4-T80` is `Next`, T36 is `Soon`, and the candidate is historical.
 
 - `2026-08-03` `W36-E7-S4-T37` is complete for the active Codex-only scope on exact
   candidate `abbc4d6`, tree `bc10c57`, tracked archive digest `93a46bc`, and wheel digest

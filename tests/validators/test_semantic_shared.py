@@ -10,7 +10,61 @@ from aidd.validators.semantic import (
     has_non_placeholder_text,
 )
 from aidd.validators.semantic_rules.common import SemanticDocumentContext
+from aidd.validators.semantic_rules.stage_result import validate_stage_result
 from aidd.validators.task_evidence import validate_aggregate_task_evidence
+
+
+def _stage_result_context(tmp_path: Path, attempt_history: str) -> SemanticDocumentContext:
+    workspace_root = tmp_path / ".aidd"
+    output_path = (
+        workspace_root / "workitems" / "WI-001" / "stages" / "implement" / "stage-result.md"
+    )
+    markdown = (
+        "# Stage result\n\n"
+        "## Stage\n\n- Stage: `implement`\n\n"
+        f"## Attempt history\n\n{attempt_history}\n"
+        "## Status\n\n- Status: `failed`\n\n"
+        "## Produced outputs\n\n- none\n\n"
+        "## Validation summary\n\n- Validator verdict: `fail`\n\n"
+        "## Blockers\n\n- validation failed\n\n"
+        "## Next actions\n\n- inspect validation evidence\n"
+    )
+    return SemanticDocumentContext.from_markdown(
+        stage="implement",
+        output_path=output_path,
+        workspace_root=workspace_root,
+        required_sections=(),
+        markdown_text=markdown,
+    )
+
+
+def test_stage_result_attempt_history_ignores_attempt_ids_inside_evidence_paths(
+    tmp_path: Path,
+) -> None:
+    context = _stage_result_context(
+        tmp_path,
+        "- Attempt `1` (`initial`) -> succeeded; evidence: "
+        "`stages/implement/attempts/attempt-0001/validator-report.md`.\n"
+        "- Attempt `2` (`repair`) -> failed; evidence: "
+        "`stages/implement/attempts/attempt-0002/repair-brief.md`.",
+    )
+
+    assert validate_stage_result(context) == ()
+
+
+def test_stage_result_attempt_history_rejects_duplicate_leading_attempts(
+    tmp_path: Path,
+) -> None:
+    context = _stage_result_context(
+        tmp_path,
+        "- Attempt `1` (`initial`) -> failed.\n"
+        "- Attempt `1` (`repair`) -> failed.",
+    )
+
+    findings = validate_stage_result(context)
+
+    assert [finding.code for finding in findings] == ["SEM-INCOMPLETE-SECTION"]
+    assert "strictly increasing" in findings[0].message
 
 
 def test_structured_task_evidence_accepts_one_exact_entry_per_criterion(
@@ -115,4 +169,3 @@ def test_has_non_placeholder_text_detects_placeholders() -> None:
     )
     assert not has_non_placeholder_text("Placeholder: TBD")
     assert not has_non_placeholder_text("- Evidence state:\n  TBD define signal.")
-

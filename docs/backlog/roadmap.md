@@ -11717,7 +11717,7 @@ Local tasks:
   - Scope: provider-free harness and architecture tests.
   - Verification: conformance fixtures fail before live execution for overlapping roots, dirty
     tracked source, forbidden product imports, or live-scenario literals in runtime product code.
-- `W36-E7-S4-T3` (next) Run `AIDD-LIVE-007` through Codex to a clean terminal result with
+- `W36-E7-S4-T3` (parked) Run `AIDD-LIVE-007` through Codex to a clean terminal result with
   manual stage-quality and rendered Studio evidence.
   - Dependencies: `W36-E7-S4-T37` as the direct queue predecessor after the
     post-auth `W36-E7-S4-T60` and `W36-E7-S4-T36` gates; `W36-E7-S4-T33`, `W36-E7-S4-T32`, `W36-E7-S4-T31`, `W36-E7-S4-T30`, `W36-E7-S4-T29`, `W36-E7-S4-T28`, `W36-E7-S4-T27`, `W36-E7-S4-T26`, `W36-E7-S4-T25`, `W36-E7-S4-T24`, `W36-E7-S4-T23`, `W36-E7-S4-T22`, `W36-E7-S4-T21`, `W36-E7-S4-T20`, `W36-E7-S4-T19`, `W36-E7-S4-T18`, `W36-E7-S4-T17`, `W36-E7-S4-T16`, `W36-E7-S4-T15`, `W36-E7-S4-T14`, `W36-E7-S4-T13`, `W36-E7-S4-T2`, `W36-E7-S4-T6`, `W36-E7-S4-T10`,
@@ -12372,9 +12372,10 @@ Local tasks:
     coverage passes `17/17`; the full intervention/browser/static selection passes `28/28`;
     and all five allowed viewports prove one request, an empty submitted draft, and a still-running
     runtime job.
-- `W36-E7-S4-T36` (done) Re-run the complete provider-free Chromium acceptance matrix after the
+- `W36-E7-S4-T36` (next) Re-run the complete provider-free Chromium acceptance matrix after the
   final provider-neutral hardening change.
-  - Dependencies: `W36-E7-S4-T79` as the current direct queue predecessor;
+  - Dependencies: `W36-E7-S4-T80` as the current direct queue predecessor;
+    `W36-E7-S4-T79` as the preceding aggregate-evidence correction;
     `W36-E7-S4-T78` as the preceding fixture-cleanup correction;
     `W36-E7-S4-T77` as the preceding aggregate-finalization correction;
     `W36-E7-S4-T75` as the preceding browser synchronization predecessor;
@@ -12558,7 +12559,7 @@ Local tasks:
     without console, page, failed-request, overflow, accessibility, or process-cleanup failure;
     the final process postflight was empty. Sanitized evidence is in
     `docs/e2e/operator-ui-provider-free-browser-gate-2026-08-03-post-t79.md`.
-- `W36-E7-S4-T37` (done) Prove the exact post-browser candidate is installable and ready for an
+- `W36-E7-S4-T37` (soon) Prove the exact post-browser candidate is installable and ready for an
   isolated live-provider run.
   - Dependencies: `W36-E7-S4-T36` as the full-browser predecessor; blocks the active Codex
     acceptance task `W36-E7-S4-T3`.
@@ -13068,6 +13069,22 @@ Local tasks:
     pass `3/3`, the broader implementation/harness regression passes `120/120`, Ruff and mypy
     across `228` modules pass, planning integrity passes `9/9`, and the complete Python suite
     passes `2168/2168` without weakening the existing evidence classifier.
+
+- `W36-E7-S4-T80` (done) Parse only canonical leading attempt identities from Stage Result
+  attempt-history entries.
+  - Dependencies: discovered by the failed post-T79 Codex acceptance attempt; invalidates
+    candidate `abbc4d6` and blocks its `T36 -> T37` replacement.
+  - Scope: runtime-agnostic Stage Result semantic validation and focused provider-free
+    regressions only; core orchestration, providers, adapters, prompts, contracts, scenario
+    literals, target code, and Studio remain unchanged.
+  - Verification: live-shaped attempt-history bullets may reference their own
+    `attempt-000N/...` evidence paths without creating duplicate attempt identities, while
+    duplicate, non-positive, and out-of-order leading attempt entries remain fail-closed.
+  - Completion: Stage Result validation now extracts the canonical leading identity from each
+    attempt-history bullet and ignores incidental attempt ids inside evidence paths. The
+    live-shaped evidence-path regression passes while duplicate leading identities remain
+    fail-closed; focused validator/core checks pass `393/393`, planning integrity passes `9/9`,
+    Ruff and mypy across `228` modules pass, and the complete Python suite passes `2170/2170`.
 
 Exit evidence:
 
