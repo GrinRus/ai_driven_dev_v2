@@ -12367,7 +12367,8 @@ Local tasks:
     runtime job.
 - `W36-E7-S4-T36` (next) Re-run the complete provider-free Chromium acceptance matrix after the
   final provider-neutral hardening change.
-  - Dependencies: `W36-E7-S4-T77` as the current direct queue predecessor;
+  - Dependencies: `W36-E7-S4-T78` as the current direct queue predecessor;
+    `W36-E7-S4-T77` as the preceding aggregate-finalization correction;
     `W36-E7-S4-T75` as the preceding browser synchronization predecessor;
     `W36-E7-S4-T74` as the preceding verification-evidence correction;
     `W36-E7-S4-T73` as the preceding verification-evidence correction;
@@ -12527,6 +12528,12 @@ Local tasks:
     failed-request, overflow, accessibility, or test-owned process-cleanup failure. Sanitized
     evidence is in
     `docs/e2e/operator-ui-provider-free-browser-gate-2026-08-02-post-t76.md`.
+  - Post-T77 failed attempt: after a clean process baseline, source `102366b` passed the exact
+    historical matrix `4/4`, complete intervention/terminal families `24/24`, and all twelve
+    packaged journeys `79/79` with exact discovered/executed ID parity and `failed_ids=[]`.
+    Postflight then found one orphaned Inbox `browser_fixture_runtime.py` owned by the final
+    `1440x900` case, so the full Chromium layer was not launched. `W36-E7-S4-T78` owns the
+    provider-free fixture cleanup correction; no live provider ran.
 - `W36-E7-S4-T37` (soon) Prove the exact post-browser candidate is installable and ready for an
   isolated live-provider run.
   - Dependencies: `W36-E7-S4-T36` as the full-browser predecessor; blocks the active Codex
@@ -12982,6 +12989,23 @@ Local tasks:
     negative case remains rejected. Focused checks pass `33/33`, the broader implementation
     group passes `130/130`, Ruff and mypy across `228` modules pass, planning integrity passes
     `9/9`, and the complete Python suite passes `2168/2168`.
+- `W36-E7-S4-T78` (done) Reconcile the Inbox browser fixture's running runtime before the UI
+  harness exits.
+  - Dependencies: discovered by the failed post-T77 `W36-E7-S4-T36` packaged-runner postflight;
+    blocks the next complete `W36-E7-S4-T36` rerun.
+  - Scope: provider-free Inbox browser fixture lifecycle and focused process-cleanup evidence
+    only; production UI shutdown semantics, runtimes, adapters, providers, prompts, validators,
+    scenario literals, and Studio behavior remain unchanged.
+  - Verification: the Inbox running-now journey cancels its test-owned job through the public
+    endpoint, observes a durable terminal status, and proves the fixture runtime PID has exited
+    after every viewport, including `1440x900`; a focused postflight finds no UI or runtime
+    orphan.
+  - Completion: the Inbox fixture now publishes its test-owned runtime PID, cancels the job
+    through the public endpoint in a fail-safe cleanup block, waits for durable `cancelled`, and
+    proves the recorded process has exited before the viewport case completes. The formerly
+    orphaning `1440x900` case passes `1/1`, the complete Inbox family passes `9/9` across all five
+    viewports with an empty external process postflight, Ruff and mypy across `228` modules pass,
+    and the complete Python suite passes `2168/2168`.
 
 Exit evidence:
 

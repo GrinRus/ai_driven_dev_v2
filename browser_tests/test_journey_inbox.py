@@ -10,7 +10,10 @@ import pytest
 from playwright.sync_api import Locator, Page, sync_playwright
 
 from browser_tests.browser_harness import VIEWPORTS, BrowserPage, operator_browser_harness
-from browser_tests.journey_support import configure_sleeping_fixture_runtime
+from browser_tests.journey_support import (
+    configure_sleeping_fixture_runtime,
+    wait_for_recorded_process_exit,
+)
 from browser_tests.rendered_assertions import assert_accessible_render
 from browser_tests.rendered_geometry import assert_rendered_geometry
 from browser_tests.state_fixtures import build_browser_state_fixture
@@ -132,8 +135,13 @@ def test_inbox_prioritizes_and_routes_durable_and_running_work(
     viewport: tuple[int, int],
 ) -> None:
     project_root = tmp_path / f"inbox-{viewport[0]}"
+    runtime_process_marker = project_root / "fixture-runtime.pid"
     _seed_inbox_states(project_root)
-    configure_sleeping_fixture_runtime(project_root, sleep_seconds=60)
+    configure_sleeping_fixture_runtime(
+        project_root,
+        sleep_seconds=60,
+        process_marker=runtime_process_marker,
+    )
 
     with sync_playwright() as playwright, operator_browser_harness(
         project_root,
@@ -223,51 +231,64 @@ def test_inbox_prioritizes_and_routes_durable_and_running_work(
         )
         assert launch_response.status == 200
         job_id = launch_response.json()["job_id"]
-        def _fetch_job() -> dict[str, Any]:
-            job_response = page.request.get(f"{harness.url}api/jobs/{job_id}")
-            assert job_response.status == 200
-            return job_response.json()
+        try:
 
-        _wait_for_durable_payload(
-            fetch=_fetch_job,
-            ready=lambda payload: payload.get("status") == "running",
-            phase="provider-free Inbox overlay job",
-        )
+            def _fetch_job() -> dict[str, Any]:
+                job_response = page.request.get(f"{harness.url}api/jobs/{job_id}")
+                assert job_response.status == 200
+                return job_response.json()
 
-        def _fetch_inbox() -> dict[str, Any]:
-            running_readback = page.request.get(f"{harness.url}api/inbox")
-            assert running_readback.status == 200
-            return running_readback.json()
+            _wait_for_durable_payload(
+                fetch=_fetch_job,
+                ready=lambda payload: payload.get("status") == "running",
+                phase="provider-free Inbox overlay job",
+            )
 
-        _wait_for_durable_payload(
-            fetch=_fetch_inbox,
-            ready=lambda payload: bool(payload["inbox"]["running_now"]),
-            phase="running job in Inbox read model",
-        )
-        page.locator('[data-tab-shortcut="project-home"]').first.click()
-        sections = page.locator("[data-inbox-section]")
-        page.locator('[data-inbox-section="running-now"]').wait_for(
-            state="visible", timeout=_SURFACE_TIMEOUT_MS
-        )
-        assert sections.evaluate_all(
-            "items => items.map(item => item.dataset.inboxSection)"
-        ) == list(_ITEMS)
+            def _fetch_inbox() -> dict[str, Any]:
+                running_readback = page.request.get(f"{harness.url}api/inbox")
+                assert running_readback.status == 200
+                return running_readback.json()
 
-        for section_key, (work_item, run_id, stage, action) in _ITEMS.items():
-            section = page.locator(f'[data-inbox-section="{section_key}"]')
-            item = _item_for(section, work_item)
-            item.wait_for(state="visible")
-            buttons = item.locator("[data-inbox-action]")
-            assert buttons.count() == 1
-            button = buttons.first
-            assert button.get_attribute("data-inbox-action") == action
-            assert button.get_attribute("data-route-work-item") == work_item
-            assert button.get_attribute("data-route-stage") == stage
-            if run_id is not None:
-                assert button.get_attribute("data-route-run-id") == run_id
-            elif section_key != "running-now":
-                assert button.get_attribute("data-route-run-id") is None
+            _wait_for_durable_payload(
+                fetch=_fetch_inbox,
+                ready=lambda payload: bool(payload["inbox"]["running_now"]),
+                phase="running job in Inbox read model",
+            )
+            page.locator('[data-tab-shortcut="project-home"]').first.click()
+            sections = page.locator("[data-inbox-section]")
+            page.locator('[data-inbox-section="running-now"]').wait_for(
+                state="visible", timeout=_SURFACE_TIMEOUT_MS
+            )
+            assert sections.evaluate_all(
+                "items => items.map(item => item.dataset.inboxSection)"
+            ) == list(_ITEMS)
 
-        _assert_rendered_gate(page, viewport)
+            for section_key, (work_item, run_id, stage, action) in _ITEMS.items():
+                section = page.locator(f'[data-inbox-section="{section_key}"]')
+                item = _item_for(section, work_item)
+                item.wait_for(state="visible")
+                buttons = item.locator("[data-inbox-action]")
+                assert buttons.count() == 1
+                button = buttons.first
+                assert button.get_attribute("data-inbox-action") == action
+                assert button.get_attribute("data-route-work-item") == work_item
+                assert button.get_attribute("data-route-stage") == stage
+                if run_id is not None:
+                    assert button.get_attribute("data-route-run-id") == run_id
+                elif section_key != "running-now":
+                    assert button.get_attribute("data-route-run-id") is None
 
-        _assert_clean_navigation_diagnostics(browser_page)
+            _assert_rendered_gate(page, viewport)
+            _assert_clean_navigation_diagnostics(browser_page)
+        finally:
+            cancel_response = page.request.post(
+                f"{harness.url}api/jobs/{job_id}/cancel"
+            )
+            assert cancel_response.status == 200
+            _wait_for_durable_payload(
+                fetch=_fetch_job,
+                ready=lambda payload: payload.get("status") == "cancelled",
+                phase="Inbox fixture runtime cancellation",
+            )
+
+    wait_for_recorded_process_exit(runtime_process_marker)

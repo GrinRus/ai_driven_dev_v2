@@ -7,7 +7,7 @@ slice, and local task.
 
 ## Next
 
-- `W36-E7-S4-T36` — Repeat the full provider-free Chromium gate after T77.
+- `W36-E7-S4-T36` — Repeat the full provider-free Chromium gate after T78.
 
 ## Soon
 
@@ -35,6 +35,21 @@ slice, and local task.
   queue-restoration policy in `docs/backlog/roadmap.md` (`W8-E3-S1`).
 
 ## Current reconciliation
+
+- `2026-08-03` `W36-E7-S4-T78` is complete: the Inbox running-now fixture cancels its
+  test-owned job through the public endpoint, waits for durable `cancelled`, and proves the
+  recorded runtime PID has exited before harness teardown. The formerly orphaning `1440x900`
+  case passes `1/1`, the full Inbox family passes `9/9` across all five viewports with an empty
+  external process postflight, Ruff and mypy across `228` modules pass, planning integrity
+  passes `9/9`, and full pytest passes `2168/2168`. T36 is `Next`, T37 is `Soon`, and Codex T3
+  remains parked until both replacement gates pass; no provider ran.
+
+- `2026-08-03` the post-T77 T36 attempt started from a verified empty process baseline and
+  passed historical cases `4/4`, intervention/terminal families `24/24`, and packaged registry
+  `79/79` with exact discovered/executed ID parity and `failed_ids=[]`. The fail-closed
+  postflight found one new orphaned Inbox fixture runtime from the final `1440x900` case, so the
+  full Chromium layer and all provider work were not launched. `W36-E7-S4-T78` is `Next`, T36
+  is `Soon`, and T37/T3 are parked until the cleanup regression and replacement gates pass.
 
 - `2026-08-03` `W36-E7-S4-T77` is complete: aggregate finalization now derives its typed
   execution mode from the whole plan, retains real repository paths, and drops the synthetic
