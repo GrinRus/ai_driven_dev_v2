@@ -1350,6 +1350,49 @@ def test_validate_semantic_outputs_accepts_cache_absence_command_without_hanging
     assert findings == ()
 
 
+def test_validate_semantic_outputs_rejects_ambiguous_assignments_without_hanging(
+    tmp_path: Path,
+) -> None:
+    workspace_root = tmp_path / "workspace"
+    adversarial_command = "_=$(!);" * 128 + "_"
+    _write_implementation_report(
+        workspace_root,
+        "WI-SEM-IMPLEMENT-AMBIGUOUS-ASSIGNMENTS",
+        "# Implementation Report\n\n"
+        "## Selected task\n\n"
+        "- Task id: `TASK-EXAMPLE-CACHE-HYGIENE`\n\n"
+        "## Change summary\n\n"
+        "Implemented the selected cache hygiene check.\n\n"
+        "## Touched files\n\n"
+        "- `src/cache_hygiene.py` - add cache hygiene guard.\n\n"
+        "## Verification\n\n"
+        f"- `{adversarial_command}` -> pass.\n\n"
+        "## Risks\n\n"
+        "- None observed.\n\n"
+        "## Follow-up\n\n"
+        "- None.\n",
+    )
+
+    def _timeout(_signum: int, _frame: object) -> None:
+        raise TimeoutError("semantic validation hung on ambiguous assignments")
+
+    previous_handler = signal.signal(signal.SIGALRM, _timeout)
+    try:
+        signal.setitimer(signal.ITIMER_REAL, 2.0)
+        findings = validate_semantic_outputs(
+            stage="implement",
+            work_item="WI-SEM-IMPLEMENT-AMBIGUOUS-ASSIGNMENTS",
+            workspace_root=workspace_root,
+        )
+    finally:
+        signal.setitimer(signal.ITIMER_REAL, 0)
+        signal.signal(signal.SIGALRM, previous_handler)
+
+    assert UNVERIFIABLE_CHECK_CLAIM_CODE in {
+        finding.code for finding in findings
+    }
+
+
 def test_validate_semantic_outputs_accepts_backticked_python_heredoc_verification(
     tmp_path: Path,
 ) -> None:

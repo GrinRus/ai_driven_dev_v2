@@ -35,6 +35,15 @@ No task is promoted while the external Codex acceptance is active.
 
 ## Current reconciliation
 
+- `2026-08-03` `W36-E7-S4-T93` is complete. The CodeQL-reported shell compound-evidence
+  expression now makes command-substitution and plain assignment alternatives disjoint and uses
+  a possessive assignment prefix, removing exponential backtracking without changing accepted
+  legitimate commands. The 128-part
+  scanner-shaped regression terminates under a two-second guard and is rejected as unverifiable;
+  focused validator/planning tests pass `42/42`, with Ruff and mypy clean. This is a bounded
+  release security correction after the counted-clean T3 candidate; it does not claim a new live
+  provider run.
+
 - `2026-08-03` `W36-E7-S4-T3` is complete. Fresh Codex run
   `eval-live-007-codex-20260803T205243Z` used exact candidate `ae3131a`, tree `696633d`,
   byte-fixed wheel digest `2b3e481`, and Hono pin `cf2d2b7`. All eight stages and manual

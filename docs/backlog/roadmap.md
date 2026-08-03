@@ -13312,6 +13312,16 @@ Local tasks:
     retain post-T81 Chromium `188/188` evidence. Sanitized evidence is recorded in
     `docs/e2e/candidate-readiness-2026-08-03-post-t91.md`; T3 is now next.
 
+- `W36-E7-S4-T93` (done) Remove exponential backtracking from shell compound-evidence
+  recognition before the `v0.1.0a16` release.
+  - Dependencies: GitHub CodeQL high-severity alert on the accepted T3 branch; blocks release
+    branch preparation but does not change provider execution or target-product behavior.
+  - Scope: semantic command-evidence recognition and one adversarial validator regression.
+  - Verification: command-substitution and plain assignment alternatives are disjoint and the
+    assignment prefix is possessive; a 128-part scanner-shaped input terminates within the bounded
+    validator test and is rejected as unverifiable, legitimate compound commands remain accepted,
+    Ruff/mypy pass, and focused validator/planning tests pass `42/42`.
+
 Exit evidence:
 
 - Codex and Claude Code complete the same pinned medium task through installed public surfaces on
