@@ -7,11 +7,11 @@ slice, and local task.
 
 ## Next
 
-- `W36-E7-S4-T37` — Produce a replacement exact-SHA Codex candidate after T36.
+- `W36-E7-S4-T3` — Re-run the medium scenario through Codex on the post-T79 candidate.
 
 ## Soon
 
-- `W36-E7-S4-T3` — Re-run the medium scenario through Codex on that replacement candidate.
+No immediate successor is promoted until the Codex-only acceptance result is known.
 
 ## Parking lot
 
@@ -34,6 +34,15 @@ slice, and local task.
   queue-restoration policy in `docs/backlog/roadmap.md` (`W8-E3-S1`).
 
 ## Current reconciliation
+
+- `2026-08-03` `W36-E7-S4-T37` is complete for the active Codex-only scope on exact
+  candidate `abbc4d6`, tree `bc10c57`, tracked archive digest `93a46bc`, and wheel digest
+  `78f4d11`. Ruff, mypy, Python `2168/2168`, exact-SHA Chromium `188/188`, isolated
+  install/doctor, Codex eval-doctor, fresh Hono readiness with Vitest `233/233` and
+  `tsc --noEmit`, bundle seal/readback after mutable-root deletion, private-auth readiness,
+  standalone Seatbelt capability canary, and source postflight all pass. Sanitized evidence is
+  in `docs/e2e/candidate-readiness-2026-08-03-post-t79.md`. T3 is `Next`; Claude and large lanes
+  remain parked, and no live evaluator ran during T37.
 
 - `2026-08-03` the post-T79 `W36-E7-S4-T36` rerun is complete on clean source `c040f0e`
   and tree `75fe019`: historical cases pass `4/4`, intervention/terminal families `24/24`,
