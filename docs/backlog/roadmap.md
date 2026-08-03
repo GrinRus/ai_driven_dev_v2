@@ -11717,7 +11717,7 @@ Local tasks:
   - Scope: provider-free harness and architecture tests.
   - Verification: conformance fixtures fail before live execution for overlapping roots, dirty
     tracked source, forbidden product imports, or live-scenario literals in runtime product code.
-- `W36-E7-S4-T3` (next) Run `AIDD-LIVE-007` through Codex to a clean terminal result with
+- `W36-E7-S4-T3` (done) Run `AIDD-LIVE-007` through Codex to a clean terminal result with
   manual stage-quality and rendered Studio evidence.
   - Dependencies: `W36-E7-S4-T92` as the direct replacement-candidate predecessor after the
     `W36-E7-S4-T91` dependency-direction fix and terminal post-T90 run;
@@ -11789,6 +11789,14 @@ Local tasks:
     rich-task semantic validation interpreted the contract-permitted evidence id `EV-11` as an
     additional task id. The terminal root is not resumed; `W36-E7-S4-T81` owns the provider-free
     correction and invalidates this candidate.
+  - Completion evidence: fresh run `eval-live-007-codex-20260803T205243Z` used exact candidate
+    `ae3131a`, tree `696633d`, wheel digest `2b3e481`, and pinned Hono revision `cf2d2b7`.
+    All eight stages completed with manual stage-quality audits; the final four-file patch passed
+    Vitest `236/236` and `tsc --noEmit`; terminal Chromium inspection found no console error or
+    horizontal overflow. Execution, manual quality, source/session integrity, and provenance are
+    independently clean. The sealed 469-file self-contained bundle has tree digest `a127580` and
+    validates after the mutable work path is removed. Sanitized evidence is recorded in
+    `docs/e2e/live-e2e-codex-acceptance-2026-08-03-post-t91.md`.
 - `W36-E7-S4-T4` (parked) Run `AIDD-LIVE-007` through Claude Code from an independent root on
   the same AIDD revision and target pin.
   - Dependencies: `W36-E7-S4-T3` as the direct queue predecessor.

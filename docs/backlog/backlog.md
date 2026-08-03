@@ -7,7 +7,7 @@ slice, and local task.
 
 ## Next
 
-- `W36-E7-S4-T3` — Run fresh medium Codex acceptance on candidate `ae3131a`.
+No task is promoted under the current Codex-only alpha scope.
 
 ## Soon
 
@@ -34,6 +34,16 @@ No task is promoted while the external Codex acceptance is active.
   queue-restoration policy in `docs/backlog/roadmap.md` (`W8-E3-S1`).
 
 ## Current reconciliation
+
+- `2026-08-03` `W36-E7-S4-T3` is complete. Fresh Codex run
+  `eval-live-007-codex-20260803T205243Z` used exact candidate `ae3131a`, tree `696633d`,
+  byte-fixed wheel digest `2b3e481`, and Hono pin `cf2d2b7`. All eight stages and manual
+  stage-quality audits completed; Vitest passed `236/236`, `tsc --noEmit` passed, and terminal
+  Chromium inspection found no console error or horizontal overflow. The derived acceptance is
+  execution-pass, quality-reviewed, and counted-clean. The sealed 469-file bundle tree digest is
+  `a127580` and readback succeeds without the mutable work path. Sanitized evidence is in
+  `docs/e2e/live-e2e-codex-acceptance-2026-08-03-post-t91.md`. Claude, human, and dual-provider
+  beta gates remain parked and are not part of the Codex-only alpha release claim.
 
 - `2026-08-03` `W36-E7-S4-T92` is complete on exact candidate `ae3131a`, tree `696633d`,
   tracked archive digest `aecf4e4`, and byte-repeatable wheel digest `2b3e481`. Ruff, mypy,
