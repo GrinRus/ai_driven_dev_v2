@@ -7,11 +7,11 @@ slice, and local task.
 
 ## Next
 
-- `W36-E7-S4-T82` — Refresh the exact-SHA Codex candidate after T81.
+- `W36-E7-S4-T3` — Run fresh medium Codex acceptance on candidate `09b8d6a`.
 
 ## Soon
 
-- `W36-E7-S4-T3` — Run fresh medium Codex acceptance after T81 candidate refresh.
+No task is promoted while the external Codex acceptance is active.
 
 ## Parking lot
 
@@ -34,6 +34,15 @@ slice, and local task.
   queue-restoration policy in `docs/backlog/roadmap.md` (`W8-E3-S1`).
 
 ## Current reconciliation
+
+- `2026-08-03` `W36-E7-S4-T82` is complete for the active Codex-only prerelease scope on exact
+  candidate `09b8d6a`, tree `8bba6dd`, tracked archive digest `9f10c8b`, and wheel digest
+  `6db06bc`. T81 Ruff, mypy, and Python `2170/2170`, exact-SHA Chromium `188/188`, focused
+  bundle/manifest/isolation `29/29`, isolated install/doctor, Codex eval-doctor, fresh Hono
+  readiness with Vitest `233/233` and `tsc --noEmit`, private Codex auth, Seatbelt isolation,
+  and source postflight pass. Evidence is in
+  `docs/e2e/candidate-readiness-2026-08-03-post-t81.md`; T3 is `Next`, and no live evaluator ran
+  during T82.
 
 - `2026-08-03` `W36-E7-S4-T37` is complete for the active Codex-only scope on exact candidate
   `4880ea4`, tree `3ec3904`, tracked archive digest `cca520a`, and wheel digest `300bf16`.

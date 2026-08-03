@@ -11717,7 +11717,7 @@ Local tasks:
   - Scope: provider-free harness and architecture tests.
   - Verification: conformance fixtures fail before live execution for overlapping roots, dirty
     tracked source, forbidden product imports, or live-scenario literals in runtime product code.
-- `W36-E7-S4-T3` (soon) Run `AIDD-LIVE-007` through Codex to a clean terminal result with
+- `W36-E7-S4-T3` (next) Run `AIDD-LIVE-007` through Codex to a clean terminal result with
   manual stage-quality and rendered Studio evidence.
   - Dependencies: `W36-E7-S4-T82` as the replacement candidate predecessor after
     `W36-E7-S4-T81`, and
@@ -13127,7 +13127,7 @@ Local tasks:
     focused validator/cross-document checks pass `56/56`, planning integrity passes `9/9`, Ruff
     and mypy across `228` modules pass, and the complete Python suite passes `2170/2170`.
 
-- `W36-E7-S4-T82` (next) Refresh the Codex-only exact-SHA candidate after T81.
+- `W36-E7-S4-T82` (done) Refresh the Codex-only exact-SHA candidate after T81.
   - Dependencies: `W36-E7-S4-T81` as the validator-fix predecessor; blocks the fresh
     `W36-E7-S4-T3` acceptance run.
   - Scope: provider-free full Chromium revalidation plus tracked-archive wheel, isolated install,
@@ -13135,6 +13135,12 @@ Local tasks:
     and source postflight; no Claude, Qwen, large, human, or product-code changes.
   - Verification: one immutable source SHA/tree and wheel digest passes the accepted T36/T37
     Codex-only readiness bar and becomes the sole artifact used by the next T3 run.
+  - Completion: candidate `09b8d6a`, tree `8bba6dd`, tracked archive digest `9f10c8b`, and
+    wheel digest `6db06bc` pass the Codex-only readiness bar. The exact-SHA Chromium suite passes
+    `188/188`; bundle/manifest/isolation regressions pass `29/29`; isolated install, doctor,
+    Codex eval-doctor, private-auth Seatbelt readiness, fresh pinned Hono setup, Vitest
+    `233/233`, `tsc --noEmit`, and source postflight all pass. Sanitized evidence is recorded in
+    `docs/e2e/candidate-readiness-2026-08-03-post-t81.md`; T3 is now the next task.
 
 Exit evidence:
 
