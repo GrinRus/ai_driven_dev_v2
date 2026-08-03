@@ -7,11 +7,11 @@ slice, and local task.
 
 ## Next
 
-- `W36-E7-S4-T84` — Refresh the exact Codex candidate after T83.
+- `W36-E7-S4-T3` — Run fresh medium Codex acceptance on candidate `912f444`.
 
 ## Soon
 
-- `W36-E7-S4-T3` — Refresh the candidate and rerun fresh medium Codex acceptance after T83.
+No task is promoted while the external Codex acceptance is active.
 
 ## Parking lot
 
@@ -34,6 +34,14 @@ slice, and local task.
   queue-restoration policy in `docs/backlog/roadmap.md` (`W8-E3-S1`).
 
 ## Current reconciliation
+
+- `2026-08-03` `W36-E7-S4-T84` is complete on exact candidate `912f444`, tree `5fb8486`,
+  tracked archive digest `3260f35`, and wheel digest `4e1fe07`. Ruff, mypy, Python `2172/2172`,
+  validators `296/296`, saved terminal QA revalidation, bundle/manifest/isolation `29/29`,
+  isolated install/doctor/eval-doctor, fresh Hono readiness with Vitest `233/233` and
+  `tsc --noEmit`, private Codex auth, Seatbelt isolation, and source postflight pass. The browser
+  code is unchanged and retains the accepted post-T81 Chromium `188/188` gate. Evidence is in
+  `docs/e2e/candidate-readiness-2026-08-03-post-t83.md`; T3 is `Next`.
 
 - `2026-08-03` the post-T82 Codex run reached QA with all prior stage quality audits accepted,
   the four-file Hono patch passing focused Vitest `237/237` and `tsc --noEmit`, and Review

@@ -11717,7 +11717,7 @@ Local tasks:
   - Scope: provider-free harness and architecture tests.
   - Verification: conformance fixtures fail before live execution for overlapping roots, dirty
     tracked source, forbidden product imports, or live-scenario literals in runtime product code.
-- `W36-E7-S4-T3` (soon) Run `AIDD-LIVE-007` through Codex to a clean terminal result with
+- `W36-E7-S4-T3` (next) Run `AIDD-LIVE-007` through Codex to a clean terminal result with
   manual stage-quality and rendered Studio evidence.
   - Dependencies: `W36-E7-S4-T84` as the direct replacement-candidate predecessor after the
     `W36-E7-S4-T83` QA-traceability fix and terminal post-T82 run, `W36-E7-S4-T82` as its prior
@@ -13160,7 +13160,7 @@ Local tasks:
     with zero findings, the validator suite passes `296/296`, planning integrity passes `9/9`,
     Ruff and mypy across `228` modules pass, and the complete Python suite passes `2172/2172`.
 
-- `W36-E7-S4-T84` (next) Refresh the Codex-only candidate after T83 without reopening deferred
+- `W36-E7-S4-T84` (done) Refresh the Codex-only candidate after T83 without reopening deferred
   provider lanes.
   - Dependencies: `W36-E7-S4-T83`; blocks the next fresh `W36-E7-S4-T3` acceptance run.
   - Scope: exact-commit tracked archive/wheel, isolated install and doctor/eval-doctor, saved-QA
@@ -13170,6 +13170,13 @@ Local tasks:
     core, adapter, prompt, contract, Studio, or browser code changed.
   - Verification: one immutable source SHA/tree and wheel digest passes the Codex-only readiness
     checks affected by T83 and becomes the sole artifact used by the next T3 run.
+  - Completion: candidate `912f444`, tree `5fb8486`, tracked archive digest `3260f35`, and wheel
+    digest `4e1fe07` pass the affected Codex-only readiness bar. Ruff, mypy, Python `2172/2172`,
+    validators `296/296`, saved terminal QA revalidation, bundle/manifest/isolation `29/29`,
+    isolated install/doctor/eval-doctor, private-auth Seatbelt readiness, fresh pinned Hono setup,
+    Vitest `233/233`, `tsc --noEmit`, and source postflight pass. The unchanged browser surfaces
+    retain the accepted post-T81 Chromium `188/188` evidence. Sanitized evidence is recorded in
+    `docs/e2e/candidate-readiness-2026-08-03-post-t83.md`; T3 is now next.
 
 Exit evidence:
 
