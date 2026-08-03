@@ -11717,7 +11717,7 @@ Local tasks:
   - Scope: provider-free harness and architecture tests.
   - Verification: conformance fixtures fail before live execution for overlapping roots, dirty
     tracked source, forbidden product imports, or live-scenario literals in runtime product code.
-- `W36-E7-S4-T3` (next) Run `AIDD-LIVE-007` through Codex to a clean terminal result with
+- `W36-E7-S4-T3` (parked) Run `AIDD-LIVE-007` through Codex to a clean terminal result with
   manual stage-quality and rendered Studio evidence.
   - Dependencies: `W36-E7-S4-T37` as the direct queue predecessor after the
     post-auth `W36-E7-S4-T60` and `W36-E7-S4-T36` gates; `W36-E7-S4-T33`, `W36-E7-S4-T32`, `W36-E7-S4-T31`, `W36-E7-S4-T30`, `W36-E7-S4-T29`, `W36-E7-S4-T28`, `W36-E7-S4-T27`, `W36-E7-S4-T26`, `W36-E7-S4-T25`, `W36-E7-S4-T24`, `W36-E7-S4-T23`, `W36-E7-S4-T22`, `W36-E7-S4-T21`, `W36-E7-S4-T20`, `W36-E7-S4-T19`, `W36-E7-S4-T18`, `W36-E7-S4-T17`, `W36-E7-S4-T16`, `W36-E7-S4-T15`, `W36-E7-S4-T14`, `W36-E7-S4-T13`, `W36-E7-S4-T2`, `W36-E7-S4-T6`, `W36-E7-S4-T10`,
@@ -11767,6 +11767,13 @@ Local tasks:
     successful verification-only T5 because its truthful task-local touched-file set was empty.
     The terminal root will not be resumed; `W36-E7-S4-T76` owns the provider-free contract fix
     and invalidates this candidate.
+  - Post-T78 attempt: candidate `ead6dab` passed isolated auth, exact-wheel identity, target
+    readiness, and strong manual audits through `tasklist`. Implement completed T1-T6, retained
+    exactly the four allowed Hono paths, and passed its canonical validator, focused Vitest, and
+    `tsc --noEmit`, but the live stage audit rejected the aggregate report because task-local
+    executable evidence used `## Verification` while aggregate finalization copied only
+    `## Verification notes`. The terminal root will not be resumed; `W36-E7-S4-T79` owns the
+    runtime-agnostic finalization correction and invalidates this candidate.
 - `W36-E7-S4-T4` (parked) Run `AIDD-LIVE-007` through Claude Code from an independent root on
   the same AIDD revision and target pin.
   - Dependencies: `W36-E7-S4-T3` as the direct queue predecessor.
@@ -12365,9 +12372,10 @@ Local tasks:
     coverage passes `17/17`; the full intervention/browser/static selection passes `28/28`;
     and all five allowed viewports prove one request, an empty submitted draft, and a still-running
     runtime job.
-- `W36-E7-S4-T36` (done) Re-run the complete provider-free Chromium acceptance matrix after the
+- `W36-E7-S4-T36` (next) Re-run the complete provider-free Chromium acceptance matrix after the
   final provider-neutral hardening change.
-  - Dependencies: `W36-E7-S4-T78` as the current direct queue predecessor;
+  - Dependencies: `W36-E7-S4-T79` as the current direct queue predecessor;
+    `W36-E7-S4-T78` as the preceding fixture-cleanup correction;
     `W36-E7-S4-T77` as the preceding aggregate-finalization correction;
     `W36-E7-S4-T75` as the preceding browser synchronization predecessor;
     `W36-E7-S4-T74` as the preceding verification-evidence correction;
@@ -12542,7 +12550,7 @@ Local tasks:
     page, failed-request, overflow, accessibility, or process-cleanup failure; explicit packaged
     and full-suite postflights were empty. Sanitized evidence is in
     `docs/e2e/operator-ui-provider-free-browser-gate-2026-08-03-post-t78.md`.
-- `W36-E7-S4-T37` (done) Prove the exact post-browser candidate is installable and ready for an
+- `W36-E7-S4-T37` (soon) Prove the exact post-browser candidate is installable and ready for an
   isolated live-provider run.
   - Dependencies: `W36-E7-S4-T36` as the full-browser predecessor; blocks the active Codex
     acceptance task `W36-E7-S4-T3`.
@@ -13024,6 +13032,24 @@ Local tasks:
     orphaning `1440x900` case passes `1/1`, the complete Inbox family passes `9/9` across all five
     viewports with an empty external process postflight, Ruff and mypy across `228` modules pass,
     and the complete Python suite passes `2168/2168`.
+- `W36-E7-S4-T79` (done) Preserve task-local executable verification in aggregate Implement
+  finalization evidence.
+  - Dependencies: discovered by the failed post-T78 Codex acceptance attempt; invalidates
+    candidate `ead6dab` and blocks its `T36 -> T37` replacement.
+  - Scope: runtime-agnostic aggregate implementation-report rendering and focused provider-free
+    finalization/audit regressions only; task-local validation, providers, adapters, prompts,
+    contracts, scenario literals, target code, and Studio remain unchanged.
+  - Verification: task reports using either canonical `## Verification` or legacy
+    `## Verification notes` contribute executable command/outcome lines to the aggregate report;
+    a realistic mixed Implement aggregate has nonzero backed evidence and passes the stage-audit
+    policy, while reports with unbacked verification claims remain fail-closed.
+  - Completion: aggregate finalization now prefers the canonical `Verification` section and
+    falls back to legacy `Verification notes`, preserving executable task-local bullets before
+    adding criterion pointers. Re-rendering the saved post-T78 six-task ledger changes the live
+    audit shape from zero to `62` backed evidence lines with `48` outcome claims. Focused checks
+    pass `3/3`, the broader implementation/harness regression passes `120/120`, Ruff and mypy
+    across `228` modules pass, planning integrity passes `9/9`, and the complete Python suite
+    passes `2168/2168` without weakening the existing evidence classifier.
 
 Exit evidence:
 

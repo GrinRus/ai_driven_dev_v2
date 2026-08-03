@@ -7,14 +7,15 @@ slice, and local task.
 
 ## Next
 
-- `W36-E7-S4-T3` — Re-run the medium scenario through Codex on the post-T78 candidate.
+- `W36-E7-S4-T36` — Re-run the complete provider-free Chromium gate after T79.
 
 ## Soon
 
-No immediate successor is promoted until the Codex-only acceptance result is known.
+- `W36-E7-S4-T37` — Produce a replacement exact-SHA Codex candidate after T36.
 
 ## Parking lot
 
+- `W36-E7-S4-T3` — Re-run the medium scenario through Codex on that replacement candidate.
 - `W36-E7-S4-T4` — Claude acceptance is not launched under the current Codex-only scope.
 - `W36-E7-S3-T2` — Record five first-time-operator sessions after initial live hardening.
 - `W36-E7-S3-T3` — Reconcile observed session findings before beta readiness.
@@ -34,6 +35,22 @@ No immediate successor is promoted until the Codex-only acceptance result is kno
   queue-restoration policy in `docs/backlog/roadmap.md` (`W8-E3-S1`).
 
 ## Current reconciliation
+
+- `2026-08-03` `W36-E7-S4-T79` is complete: aggregate Implement finalization now preserves
+  task-local executable evidence from canonical `## Verification` and falls back to legacy
+  `## Verification notes`. Re-rendering the saved six-task post-T78 ledger produces `62` backed
+  evidence lines and `48` outcome claims instead of zero. Focused checks pass `3/3`, the broader
+  implementation/harness group passes `120/120`, Ruff and mypy across `228` modules pass,
+  planning integrity passes `9/9`, and full pytest passes `2168/2168`. T36 is `Next`, T37 is
+  `Soon`, and Codex T3 remains parked until the replacement candidate; no provider ran for T79.
+
+- `2026-08-03` the post-T78 Codex T3 attempt on candidate `ead6dab` passed isolated auth,
+  exact-wheel identity, target readiness, and strong manual audits through `tasklist`. Implement
+  completed T1-T6, retained exactly the four allowed Hono paths, and passed canonical validation,
+  focused Vitest, and `tsc --noEmit`. The live audit then failed closed because aggregate
+  finalization copied only legacy `## Verification notes` and dropped task-local executable
+  evidence authored under canonical `## Verification`. The terminal root is not resumed; T79 is
+  `Next`, T36 is `Soon`, and T37/T3 remain parked until a replacement candidate exists.
 
 - `2026-08-03` `W36-E7-S4-T37` is complete for the active Codex-only scope on exact
   candidate `ead6dab`, tree `cfbc108`, tracked archive digest `9d87bfd`, and wheel digest

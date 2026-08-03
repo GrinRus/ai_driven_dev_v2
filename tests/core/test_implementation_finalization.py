@@ -51,7 +51,7 @@ def _successful_ledger(workspace_root: Path) -> TaskLedger:
     (attempt / "implementation-report.md").write_text(
         "# Implementation Report\n\n"
         "## Touched files\n\n- `src/example.py`\n\n"
-        "## Verification notes\n\n- `pytest -q` -> pass.\n\n"
+        "## Verification\n\n- `pytest -q` -> pass.\n\n"
         "## Follow-up notes\n\n- none\n",
         encoding="utf-8",
     )
@@ -134,6 +134,7 @@ def test_aggregate_report_requires_complete_task_evidence(tmp_path: Path) -> Non
     assert "`TL-1`" in report
     assert "`TL-1-AC1`" in report
     assert "`src/example.py`" in report
+    assert "- `TL-1` `pytest -q` -> pass." in report
 
 
 def test_mixed_mode_aggregate_omits_verification_only_none_entry(tmp_path: Path) -> None:
@@ -212,6 +213,8 @@ One task changes the repository and one verifies the aggregate result.
     )[0]
     assert "`src/example.py`" in touched_section
     assert "- none" not in touched_section
+    assert "- `T1` `pytest -q` -> pass." in report
+    assert "- `T2` `pytest -q` -> pass." in report
     assert aggregate_execution_mode(plan) is TaskExecutionMode.REPOSITORY_CHANGE
 
 

@@ -184,7 +184,10 @@ def render_aggregate_implementation_report(
                 and normalized_line not in touched
             ):
                 touched.append(normalized_line)
-        for line in _section(report, "Verification notes").splitlines():
+        verification_section = _section(report, "Verification") or _section(
+            report, "Verification notes"
+        )
+        for line in verification_section.splitlines():
             if line.strip().startswith("-"):
                 verification.append(f"- `{task.id}` {line.strip()[1:].strip()}")
         for criterion in task.acceptance_criteria:
