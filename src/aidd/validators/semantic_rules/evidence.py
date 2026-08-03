@@ -139,6 +139,14 @@ _FENCED_COMMAND_PATTERN = re.compile(
     r"```(?:bash|console|sh|shell|zsh)?\s*\n(?P<body>.*?)```",
     flags=re.IGNORECASE | re.DOTALL,
 )
+_SHELL_COMPOUND_PATTERN = re.compile(
+    r"^(?:"
+    r"if\s+.+;\s*then\s+.+;\s*(?:else\s+.+;\s*)?fi|"
+    r"(?:for|while|until)\s+.+;\s*do\s+.+;\s*done|"
+    r"case\s+.+\s+in\s+.+(?:;;\s*)?esac"
+    r")$",
+    flags=re.IGNORECASE | re.DOTALL,
+)
 
 
 def is_deferred_implementation_verification(verification_item: str) -> bool:
@@ -166,6 +174,7 @@ def _command_tokens(candidate: str) -> tuple[str, ...]:
 
 
 def _looks_like_command(candidate: str, *, explicit_container: bool) -> bool:
+    normalized_candidate = candidate.strip().strip("`").strip()
     tokens = list(_command_tokens(candidate))
     if not tokens:
         return False
@@ -176,6 +185,11 @@ def _looks_like_command(candidate: str, *, explicit_container: bool) -> bool:
     if not tokens:
         return False
     executable = tokens[0].lower()
+    if _SHELL_COMPOUND_PATTERN.fullmatch(normalized_candidate) is not None:
+        return any(
+            token.strip(";(){}!").lower() in _KNOWN_COMMAND_EXECUTABLES
+            for token in tokens[1:]
+        )
     if explicit_container:
         return (
             re.fullmatch(

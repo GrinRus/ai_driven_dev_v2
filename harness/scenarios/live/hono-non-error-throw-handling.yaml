@@ -93,7 +93,9 @@ feature_source:
       checks without post-QA `git status --ignored --short --untracked-files=all`
       evidence that classifies ignored residue. Treat concrete read-only inspection
       pipelines such as `nl -ba ... | sed -n ...` plus an observed outcome as executable
-      implementation evidence; bare tool-name prose remains insufficient.
+      implementation evidence. Treat complete backticked shell compound checks such as
+      `if <check>; then exit 1; else exit 0; fi` the same way when they contain a concrete
+      executable check; bare tool-name prose remains insufficient.
     complexity_axes:
     - cross-module
     - api-policy

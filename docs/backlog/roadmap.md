@@ -11717,9 +11717,11 @@ Local tasks:
   - Scope: provider-free harness and architecture tests.
   - Verification: conformance fixtures fail before live execution for overlapping roots, dirty
     tracked source, forbidden product imports, or live-scenario literals in runtime product code.
-- `W36-E7-S4-T3` (next) Run `AIDD-LIVE-007` through Codex to a clean terminal result with
+- `W36-E7-S4-T3` (soon) Run `AIDD-LIVE-007` through Codex to a clean terminal result with
   manual stage-quality and rendered Studio evidence.
-  - Dependencies: `W36-E7-S4-T84` as the direct replacement-candidate predecessor after the
+  - Dependencies: `W36-E7-S4-T86` as the direct replacement-candidate predecessor after the
+    `W36-E7-S4-T85` compound-command evidence fix and terminal post-T84 run;
+    `W36-E7-S4-T84` as the prior replacement-candidate predecessor after the
     `W36-E7-S4-T83` QA-traceability fix and terminal post-T82 run, `W36-E7-S4-T82` as its prior
     candidate predecessor after `W36-E7-S4-T81`, and
     `W36-E7-S4-T37` as the exact-SHA candidate predecessor after the
@@ -13177,6 +13179,29 @@ Local tasks:
     Vitest `233/233`, `tsc --noEmit`, and source postflight pass. The unchanged browser surfaces
     retain the accepted post-T81 Chromium `188/188` evidence. Sanitized evidence is recorded in
     `docs/e2e/candidate-readiness-2026-08-03-post-t83.md`; T3 is now next.
+
+- `W36-E7-S4-T85` (done) Recognize complete shell compound checks as executable Implement
+  verification evidence.
+  - Dependencies: discovered by the terminal post-T84 Codex acceptance attempt; invalidates
+    candidate `912f444` and blocks its replacement candidate and fresh `W36-E7-S4-T3` run.
+  - Scope: the runtime-agnostic Implement evidence classifier, documented contract/prompt,
+    focused validator regressions, and the maintained medium scenario rubric only; core,
+    adapters, providers, target code, Studio, and browser behavior remain unchanged.
+  - Verification: complete backticked `if ...; then ...; else ...; fi` checks containing a
+    concrete executable are accepted with an observed outcome, while shell-like prose remains
+    fail-closed.
+  - Completion: the exact terminal T3 Implement report changes from one blocking
+    `SEM-UNVERIFIABLE-CHECK-CLAIM` finding to zero without editing its evidence. Positive and
+    negative compound-command regressions pass in the focused `31/31` suite; Ruff and mypy pass.
+
+- `W36-E7-S4-T86` (next) Refresh the Codex-only candidate after T85.
+  - Dependencies: `W36-E7-S4-T85`; blocks the next fresh `W36-E7-S4-T3` acceptance run.
+  - Scope: provider-free repository gates, tracked-archive wheel, isolated install and doctor,
+    pinned Hono readiness, bundle/isolation smoke, private Codex auth probe, and source postflight.
+    Reuse the accepted post-T81 Chromium evidence because T85 changes only Markdown validation,
+    its contract/prompt, tests, and scenario rubric; no UI, harness, Studio, or browser code changed.
+  - Verification: one immutable source SHA/tree and wheel digest passes all Codex-only readiness
+    checks affected by T85 and becomes the sole artifact used by the next T3 run.
 
 Exit evidence:
 

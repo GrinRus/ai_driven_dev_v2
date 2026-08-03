@@ -789,6 +789,77 @@ def test_validate_semantic_outputs_rejects_plain_tool_prose_as_command_evidence(
     assert all(finding.severity == "high" for finding in findings)
 
 
+def test_validate_semantic_outputs_accepts_shell_compound_command_evidence(
+    tmp_path: Path,
+) -> None:
+    workspace_root = tmp_path / ".aidd"
+    _write_implementation_report(
+        workspace_root,
+        "WI-SEM-IMPLEMENT-COMPOUND-COMMAND",
+        (
+            "# Implementation Report\n\n"
+            "## Selected task\n\n"
+            "- Stable selected task id: `TASK-EXAMPLE-RUNTIME-ERROR`\n\n"
+            "## Summary\n\n"
+            "Implemented the selected task with bounded runtime handling.\n\n"
+            "## Touched files\n\n"
+            "- `src/runtime-error.ts` - normalized runtime errors.\n\n"
+            "## Verification\n\n"
+            "- `if git status --ignored --short | rg '[.]cache'; then exit 1; "
+            "else exit 0; fi` -> pass (exit code 0).\n\n"
+            "## Risks\n\n"
+            "- None.\n\n"
+            "## Follow-up\n\n"
+            "- Continue to review.\n"
+        ),
+    )
+
+    findings = validate_semantic_outputs(
+        stage="implement",
+        work_item="WI-SEM-IMPLEMENT-COMPOUND-COMMAND",
+        workspace_root=workspace_root,
+    )
+
+    assert not any(
+        finding.code == UNVERIFIABLE_CHECK_CLAIM_CODE for finding in findings
+    )
+
+
+def test_validate_semantic_outputs_rejects_shell_like_compound_prose(
+    tmp_path: Path,
+) -> None:
+    workspace_root = tmp_path / ".aidd"
+    _write_implementation_report(
+        workspace_root,
+        "WI-SEM-IMPLEMENT-COMPOUND-PROSE",
+        (
+            "# Implementation Report\n\n"
+            "## Selected task\n\n"
+            "- Stable selected task id: `TASK-EXAMPLE-RUNTIME-ERROR`\n\n"
+            "## Summary\n\n"
+            "Implemented the selected task with bounded runtime handling.\n\n"
+            "## Touched files\n\n"
+            "- `src/runtime-error.ts` - normalized runtime errors.\n\n"
+            "## Verification\n\n"
+            "- `if tests pass then release fi` -> pass.\n\n"
+            "## Risks\n\n"
+            "- None.\n\n"
+            "## Follow-up\n\n"
+            "- Continue to review.\n"
+        ),
+    )
+
+    findings = validate_semantic_outputs(
+        stage="implement",
+        work_item="WI-SEM-IMPLEMENT-COMPOUND-PROSE",
+        workspace_root=workspace_root,
+    )
+
+    assert any(
+        finding.code == UNVERIFIABLE_CHECK_CLAIM_CODE for finding in findings
+    )
+
+
 def test_validate_semantic_outputs_accepts_example_noop_blocker_evidence(
     tmp_path: Path,
 ) -> None:

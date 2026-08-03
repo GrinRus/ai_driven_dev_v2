@@ -171,6 +171,8 @@ normalize if canonical validation proves the terminal status inconsistent.
    A verification note with any pass/fail/success outcome claim is invalid unless the same bullet
    includes executable/check evidence: a shell command in backticks, a test or code snippet path, an
    artifact path, or a captured assertion/tool summary.
+   Complete shell compound checks such as ``if <check>; then exit 1; else exit 0; fi`` are allowed
+   when the backticked command contains the concrete check and the same bullet records its outcome.
    Manual or `CliRunner` checks must cite the executed command/snippet, artifact path, or captured
    assertion result; do not write `manual inspection -> pass` without evidence.
    Do not list mutation-only cleanup commands such as `rm -rf ...` as verification bullets with

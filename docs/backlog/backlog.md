@@ -7,11 +7,11 @@ slice, and local task.
 
 ## Next
 
-- `W36-E7-S4-T3` — Run fresh medium Codex acceptance on candidate `912f444`.
+- `W36-E7-S4-T86` — Refresh the Codex-only candidate after T85.
 
 ## Soon
 
-No task is promoted while the external Codex acceptance is active.
+- `W36-E7-S4-T3` — Run fresh medium Codex acceptance on the T86 candidate.
 
 ## Parking lot
 
@@ -34,6 +34,14 @@ No task is promoted while the external Codex acceptance is active.
   queue-restoration policy in `docs/backlog/roadmap.md` (`W8-E3-S1`).
 
 ## Current reconciliation
+
+- `2026-08-03` the post-T84 Codex run passed isolated auth, exact-wheel target readiness, and
+  manual quality audits through `tasklist`. Implement T1/T2 succeeded and T3 produced a bounded
+  three-file patch with focused Vitest `234/234` and `tsc --noEmit` passing, but the Implement
+  validator rejected a complete backticked shell `if ...; then ...; else ...; fi` residue check
+  as non-executable evidence. T85 now recognizes only syntactically complete compound checks
+  containing a concrete executable; the saved terminal report revalidates with zero findings and
+  focused tests pass `31/31`. The terminal root is not resumed; T86 is `Next` and T3 is `Soon`.
 
 - `2026-08-03` `W36-E7-S4-T84` is complete on exact candidate `912f444`, tree `5fb8486`,
   tracked archive digest `3260f35`, and wheel digest `4e1fe07`. Ruff, mypy, Python `2172/2172`,
