@@ -7,7 +7,7 @@ slice, and local task.
 
 ## Next
 
-- `W36-E7-S4-T37` — Record the replacement exact-SHA Codex candidate after T36.
+- `W36-E7-S4-T3` — Run fresh medium Codex acceptance on the post-T80 candidate.
 
 ## Soon
 
@@ -15,7 +15,6 @@ No immediate successor is promoted until the exact-SHA candidate result is known
 
 ## Parking lot
 
-- `W36-E7-S4-T3` — Codex acceptance resumes after replacement T36/T37 candidate gates.
 - `W36-E7-S4-T4` — Claude acceptance is not launched under the current Codex-only scope.
 - `W36-E7-S3-T2` — Record five first-time-operator sessions after initial live hardening.
 - `W36-E7-S3-T3` — Reconcile observed session findings before beta readiness.
@@ -35,6 +34,14 @@ No immediate successor is promoted until the exact-SHA candidate result is known
   queue-restoration policy in `docs/backlog/roadmap.md` (`W8-E3-S1`).
 
 ## Current reconciliation
+
+- `2026-08-03` `W36-E7-S4-T37` is complete for the active Codex-only scope on exact candidate
+  `4880ea4`, tree `3ec3904`, tracked archive digest `cca520a`, and wheel digest `300bf16`.
+  Ruff, mypy, Python `2170/2170`, exact-SHA Chromium `188/188`, isolated install/doctor, Codex
+  eval-doctor, fresh Hono readiness with Vitest `233/233` and `tsc --noEmit`, installed bundle
+  deletion/readback, private Codex auth, Seatbelt isolation, and source postflight all pass.
+  Sanitized evidence is in `docs/e2e/candidate-readiness-2026-08-03-post-t80.md`. T3 is `Next`;
+  Claude and large lanes remain parked, and no live evaluator ran during T37.
 
 - `2026-08-03` the post-T80 `W36-E7-S4-T36` rerun is complete on clean source `403129a`
   and tree `fe3bd4c`: historical cases pass `4/4`, intervention/terminal families `24/24`,
