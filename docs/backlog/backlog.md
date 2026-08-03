@@ -7,11 +7,11 @@ slice, and local task.
 
 ## Next
 
-- `W36-E7-S4-T3` — Run fresh medium Codex acceptance on candidate `7726023`.
+- `W36-E7-S4-T90` — Refresh the Codex-only exact-SHA candidate after T89.
 
 ## Soon
 
-No task is promoted while the external Codex acceptance is active.
+- `W36-E7-S4-T3` — Run fresh medium Codex acceptance on the T90 candidate.
 
 ## Parking lot
 
@@ -34,6 +34,20 @@ No task is promoted while the external Codex acceptance is active.
   queue-restoration policy in `docs/backlog/roadmap.md` (`W8-E3-S1`).
 
 ## Current reconciliation
+
+- `2026-08-03` `W36-E7-S4-T89` is complete. QA-local `EV-N` definitions are accepted only when
+  they contain a syntactically executable command and explicit terminal outcome; upstream claims
+  still require exact ids or existing full workspace-relative artifact paths. The exact terminal
+  post-T88 QA report revalidates from eight blocking occurrences to zero, the focused
+  validator/prompt/scenario/planning group passes `432/432`, Ruff and mypy pass, and full pytest
+  passes `2178/2178`. Historical candidate `7726023` remains invalid; T90 is `Next`, T3 is `Soon`.
+
+- `2026-08-03` the post-T88 Codex run completed quality-audited `idea` through `review`; its
+  four-file Hono patch passed focused Vitest `234/234`, `tsc --noEmit`, Implement, and independent
+  Review. QA exhausted document repair because `CROSS-QA-UPSTREAM-EVIDENCE` rejects bounded
+  QA-local command evidence even though the QA contract requires post-QA residue and artifact
+  checks. The terminal root is not resumed. T89 aligns the contract and validator without
+  weakening upstream artifact traceability; T90 then replaces historical candidate `7726023`.
 
 - `2026-08-03` `W36-E7-S4-T88` is complete on exact candidate `7726023`, tree `1f89bd2`,
   tracked archive digest `9a9cf26`, and wheel digest `29b43f7`. Ruff, mypy, exact-candidate

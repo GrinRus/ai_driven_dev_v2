@@ -17,6 +17,10 @@ from aidd.validators.semantic_rules.common import (
     is_empty_risk_entry,
     is_risk_metadata_entry,
 )
+from aidd.validators.semantic_rules.evidence import (
+    IMPLEMENT_RESULT_PATTERN,
+    has_implementation_command_evidence,
+)
 
 QA_REVIEW_RISK_CODE = "CROSS-QA-REVIEW-RISK"
 QA_UPSTREAM_EVIDENCE_CODE = "CROSS-QA-UPSTREAM-EVIDENCE"
@@ -89,6 +93,12 @@ def validate_qa_upstream(context: CrossDocumentContext) -> tuple[ValidationFindi
             for value in _BACKTICKED_REFERENCE_PATTERN.findall(text)
         )
 
+    def resolved_qa_local_command_evidence(text: str) -> bool:
+        return (
+            has_implementation_command_evidence(text)
+            and IMPLEMENT_RESULT_PATTERN.search(text) is not None
+        )
+
     evidence_sections_by_heading = {
         heading: level_two_section_text(context.qa_text, heading)
         for heading in ("Evidence references", "Evidence", "Verification summary")
@@ -101,7 +111,10 @@ def validate_qa_upstream(context: CrossDocumentContext) -> tuple[ValidationFindi
             flags=re.MULTILINE,
         ):
             definition = _EVIDENCE_DEFINITION_PATTERN.match(entry)
-            if definition is not None and resolved_upstream_reference(entry):
+            if definition is not None and (
+                resolved_upstream_reference(entry)
+                or resolved_qa_local_command_evidence(entry)
+            ):
                 local_evidence_ids.add(definition.group("evidence_id").upper())
 
     def resolved_reference(text: str) -> bool:
@@ -138,7 +151,10 @@ def validate_qa_upstream(context: CrossDocumentContext) -> tuple[ValidationFindi
     for entry in re.split(r"(?=^\s*-\s+)", evidence_sections, flags=re.MULTILINE):
         definition = _EVIDENCE_DEFINITION_PATTERN.match(entry)
         reference_resolved = (
-            resolved_upstream_reference(entry)
+            (
+                resolved_upstream_reference(entry)
+                or resolved_qa_local_command_evidence(entry)
+            )
             if definition is not None
             else resolved_reference(entry)
         )

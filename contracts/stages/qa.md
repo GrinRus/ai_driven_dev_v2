@@ -122,8 +122,10 @@ Optional context documents may improve QA depth, but they must not replace imple
 - Every non-empty residual-risk entry must cite an exact upstream review finding (`RV-*` or
   `REV-*`), accepted-risk (`AR-*`), implementation/review evidence id, or an existing exact
   workspace-relative artifact path. Basename-only and fuzzy references are not traceable.
-- Every material verification-check or evidence entry must resolve to an upstream evidence id or
-  an existing exact workspace-relative artifact path.
+- Every material verification-check or evidence entry must resolve to an upstream evidence id,
+  an existing exact workspace-relative artifact path, or a QA-local syntactically executable
+  command paired with an explicit terminal outcome. Prose outcome claims and commands without an
+  outcome are not evidence.
 - QA must preserve the upstream decision: a rejected review or an unresolved `must-fix` finding
   requires `QA verdict: not-ready` and release recommendation `hold`.
 - `stage-result.md` and `validator-report.md` must remain consistent with verdict and release recommendation.

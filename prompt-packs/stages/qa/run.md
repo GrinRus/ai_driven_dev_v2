@@ -183,6 +183,10 @@ acceptance id, and concrete evidence. Any `fail` or `not-verified` entry require
    `proceed`, `proceed-with-conditions`, or `hold`.
 5. In `Evidence`, label material evidence entries as `EV-1`, `EV-2`, ... and include command
    outcomes or artifact paths in backticks.
+   A QA-local command is valid evidence only when the entry contains a syntactically executable
+   command and an explicit terminal outcome such as pass/fail or exit code. Do not replace either
+   part with prose. Claims reused from earlier stages must still cite an exact upstream evidence id
+   or full existing workspace-relative artifact path.
    If the final verdict/recommendation is `ready`/`proceed` or
    `ready-with-risks`/`proceed-with-conditions` and you cite any test, type, lint, docs, or build
    command, include a post-QA ignored-residue evidence entry for

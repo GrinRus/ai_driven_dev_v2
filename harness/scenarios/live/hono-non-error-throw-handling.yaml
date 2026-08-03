@@ -91,7 +91,10 @@ feature_source:
       in the dedicated `Verification notes` section, including command-only
       verification tasks, or when a ready/proceed QA decision cites test/type/build
       checks without post-QA `git status --ignored --short --untracked-files=all`
-      evidence that classifies ignored residue. Treat concrete read-only inspection
+      evidence that classifies ignored residue. Treat a QA-local check as traceable only
+      when the same evidence entry contains both a syntactically executable command and
+      an explicit terminal outcome; prose claims and commands without outcomes still fail.
+      Treat concrete read-only inspection
       pipelines such as `nl -ba ... | sed -n ...` plus an observed outcome as executable
       implementation evidence. Treat complete backticked shell compound checks such as
       `if <check>; then exit 1; else exit 0; fi` the same way when they contain a concrete

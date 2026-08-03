@@ -87,7 +87,8 @@ Use concrete repair actions:
   preserve only the alternative that the evidence actually exercised;
 - missing evidence: add direct references to available verification output, verification artifacts,
   or upstream evidence for each material QA claim, using `EV-1`, `EV-2`, ... evidence ids and/or
-  backticked artifact paths;
+  backticked artifact paths; for checks executed locally during QA, include both the exact
+  executable command and its explicit terminal outcome in the same `EV-N` definition;
 - missing ready/proceed residue evidence: when the report cites test/type/lint/docs/build checks
   and keeps `ready`/`proceed` or `ready-with-risks`/`proceed-with-conditions`, add a
   post-QA `git status --ignored --short --untracked-files=all` evidence entry, cite it from

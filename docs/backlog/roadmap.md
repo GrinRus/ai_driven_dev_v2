@@ -11717,9 +11717,11 @@ Local tasks:
   - Scope: provider-free harness and architecture tests.
   - Verification: conformance fixtures fail before live execution for overlapping roots, dirty
     tracked source, forbidden product imports, or live-scenario literals in runtime product code.
-- `W36-E7-S4-T3` (next) Run `AIDD-LIVE-007` through Codex to a clean terminal result with
+- `W36-E7-S4-T3` (soon) Run `AIDD-LIVE-007` through Codex to a clean terminal result with
   manual stage-quality and rendered Studio evidence.
-  - Dependencies: `W36-E7-S4-T88` as the direct replacement-candidate predecessor after the
+  - Dependencies: `W36-E7-S4-T90` as the direct replacement-candidate predecessor after the
+    `W36-E7-S4-T89` QA-local command-evidence fix and terminal post-T88 run;
+    `W36-E7-S4-T88` as the prior replacement-candidate predecessor after the
     `W36-E7-S4-T87` shell-command-list evidence fix and terminal post-T86 run;
     `W36-E7-S4-T86` as the prior replacement-candidate predecessor after the
     `W36-E7-S4-T85` compound-command evidence fix and terminal post-T84 run;
@@ -13240,6 +13242,31 @@ Local tasks:
     private-auth Seatbelt readiness, fresh pinned Hono setup, Vitest `233/233`, `tsc --noEmit`,
     and source postflight pass. Sanitized evidence is recorded in
     `docs/e2e/candidate-readiness-2026-08-03-post-t87.md`; T3 is now next.
+
+- `W36-E7-S4-T89` (done) Accept bounded QA-local command evidence without weakening upstream
+  traceability.
+  - Dependencies: discovered by the terminal post-T88 Codex acceptance attempt; invalidates
+    candidate `7726023` and blocks its replacement candidate and fresh `W36-E7-S4-T3` run.
+  - Scope: align the runtime-agnostic QA contract, prompt, and cross-document validator so an
+    `EV-N` definition may be grounded either in an existing exact upstream/context artifact or
+    in a syntactically executable QA-local command with an explicit terminal outcome. Reuse the
+    shared command-evidence classifier; do not add provider, scenario, target, core, adapter, or
+    Studio branches.
+  - Verification: the exact terminal QA report accepts post-QA status, ignored-residue, file,
+    and artifact-presence commands while prose, circular ids, basename-only paths, commands
+    without outcomes, and outcome claims without executable commands remain fail-closed.
+  - Completion: QA cross-document validation reuses the shared executable-command classifier and
+    requires an explicit terminal outcome before a QA-local `EV-N` becomes reusable. The exact
+    terminal post-T88 QA report revalidates from eight blocking occurrences to zero without
+    editing its evidence; focused validator/prompt/scenario/planning tests pass `432/432`, Ruff
+    passes, mypy passes `228` modules, and the complete Python suite passes `2178/2178`.
+
+- `W36-E7-S4-T90` (next) Refresh the Codex-only candidate after T89.
+  - Dependencies: `W36-E7-S4-T89`; blocks the next fresh `W36-E7-S4-T3` acceptance run.
+  - Scope and verification: repeat the affected provider-free repository, validator, prompt,
+    packaging, tracked-archive wheel, isolated install/doctor, pinned Hono readiness,
+    bundle/isolation, private Codex auth, and source-integrity gates; retain unchanged-browser
+    evidence explicitly.
 
 Exit evidence:
 

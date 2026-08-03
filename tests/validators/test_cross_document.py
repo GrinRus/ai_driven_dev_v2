@@ -1559,6 +1559,81 @@ def test_qa_cross_validation_rejects_circular_qa_local_evidence_id(
     assert [finding.code for finding in findings].count(QA_UPSTREAM_EVIDENCE_CODE) == 2
 
 
+def test_qa_cross_validation_accepts_qa_local_executable_evidence_with_outcome(
+    tmp_path: Path,
+) -> None:
+    workspace_root = tmp_path / ".aidd"
+    _write_qa_upstream_bundle(workspace_root)
+    qa_path = workspace_root / "workitems" / "WI-001" / "stages" / "qa" / "qa-report.md"
+    qa_path.write_text(
+        "# QA Report\n\n"
+        "## Quality verdict\n\n- QA verdict: ready\n\n"
+        "## Verification summary\n\n"
+        "- Post-QA residue is absent. Evidence: EV-12.\n\n"
+        "## Release recommendation\n\n- proceed\n\n"
+        "## Evidence\n\n"
+        "- EV-12: `git status --ignored --short --untracked-files=all` -> pass "
+        "(exit code 0; no unexpected residue).\n\n"
+        "## Known issues\n\n- Known issues: none.\n\n"
+        "## Readiness\n\n- Ready. Evidence: EV-12.\n",
+        encoding="utf-8",
+    )
+
+    findings = validate_cross_document_consistency(
+        stage="qa", work_item="WI-001", workspace_root=workspace_root
+    )
+
+    assert findings == ()
+
+
+def test_qa_cross_validation_rejects_qa_local_command_without_outcome(
+    tmp_path: Path,
+) -> None:
+    workspace_root = tmp_path / ".aidd"
+    _write_qa_upstream_bundle(workspace_root)
+    qa_path = workspace_root / "workitems" / "WI-001" / "stages" / "qa" / "qa-report.md"
+    qa_path.write_text(
+        "# QA Report\n\n"
+        "## Quality verdict\n\n- QA verdict: ready\n\n"
+        "## Verification summary\n\n- Alleged residue check. Evidence: EV-12.\n\n"
+        "## Release recommendation\n\n- proceed\n\n"
+        "## Evidence\n\n- EV-12: `git status --ignored --short --untracked-files=all`.\n\n"
+        "## Known issues\n\n- Known issues: none.\n\n"
+        "## Readiness\n\n- Ready. Evidence: EV-12.\n",
+        encoding="utf-8",
+    )
+
+    findings = validate_cross_document_consistency(
+        stage="qa", work_item="WI-001", workspace_root=workspace_root
+    )
+
+    assert [finding.code for finding in findings].count(QA_UPSTREAM_EVIDENCE_CODE) == 2
+
+
+def test_qa_cross_validation_rejects_qa_local_outcome_without_executable_command(
+    tmp_path: Path,
+) -> None:
+    workspace_root = tmp_path / ".aidd"
+    _write_qa_upstream_bundle(workspace_root)
+    qa_path = workspace_root / "workitems" / "WI-001" / "stages" / "qa" / "qa-report.md"
+    qa_path.write_text(
+        "# QA Report\n\n"
+        "## Quality verdict\n\n- QA verdict: ready\n\n"
+        "## Verification summary\n\n- Alleged residue check. Evidence: EV-12.\n\n"
+        "## Release recommendation\n\n- proceed\n\n"
+        "## Evidence\n\n- EV-12: residue was checked -> pass.\n\n"
+        "## Known issues\n\n- Known issues: none.\n\n"
+        "## Readiness\n\n- Ready. Evidence: EV-12.\n",
+        encoding="utf-8",
+    )
+
+    findings = validate_cross_document_consistency(
+        stage="qa", work_item="WI-001", workspace_root=workspace_root
+    )
+
+    assert [finding.code for finding in findings].count(QA_UPSTREAM_EVIDENCE_CODE) == 2
+
+
 def test_qa_cross_validation_rejects_unresolved_risk_and_evidence(tmp_path: Path) -> None:
     workspace_root = tmp_path / ".aidd"
     _write_qa_upstream_bundle(
