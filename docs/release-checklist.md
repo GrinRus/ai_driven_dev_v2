@@ -166,25 +166,32 @@ python -m scripts.release.evidence_collector release-evidence.json
 
 ## Maintainer release state
 
-Maintainer source development package version: `0.1.0a16.dev0`.
-Latest accepted published prerelease evidence: `0.1.0a15`.
+Current release-candidate package version: `0.1.0a16`.
+Latest accepted published prerelease evidence before this candidate: `0.1.0a15`.
 Previous accepted published prerelease evidence: `0.1.0a14`.
-Maintainer source development package version before this release branch: `0.1.0a15.dev0`.
+Maintainer source development package version before this release branch: `0.1.0a16.dev0`.
 
 README install guidance is pinned to `0.1.0a15` because the `v0.1.0a15` GitHub Release
 workflow published to PyPI and verified `pipx` plus `uv tool` installability.
-No current release candidate is accepted from this development version.
+Candidate `0.1.0a16` is accepted for release preparation from exact AIDD source
+`ae3131a`, wheel digest `2b3e481`, and counted-clean Codex run
+`eval-live-007-codex-20260803T205243Z`. It is not accepted package-channel evidence until the
+GitHub Release workflow publishes and verifies PyPI, `pipx`, and `uv tool`.
+No accepted `v0.1.0a16` evidence log entry exists before publication and package-channel
+verification.
 
-Release candidate preparation for `v0.1.0a15` includes:
+Release candidate preparation for `v0.1.0a16` includes:
 
-- recovery-first operator frontend decision hierarchy for implement review, review
-  findings, QA not-ready handoff, and failed terminal QA;
-- follow-up flow source selection, definition blocker, preflight, launch failure, and
-  runtime readiness refresh UX hardening;
-- clone, eval, archive, history, and fresh-work copy that keeps non-remediation paths
-  visibly separate from QA recovery;
-- static UI contract tests and browser-verified desktop/mobile audit evidence for
-  recovery, clone, eval, and archive states.
+- provider-private auth, operating-system isolation, path containment, source/target integrity,
+  and fail-closed live session cleanup;
+- self-contained digest-sealed bundles, bounded logs and projections, truthful manual-quality
+  summaries, cumulative timing, and typed reconciliation evidence;
+- provider-free exact-candidate Ruff, mypy, Python, Chromium, isolated install, target setup,
+  bundle, auth/isolation, and source postflight gates;
+- one fresh counted-clean Codex medium acceptance run with eight stage-quality audits, terminal
+  Chromium evidence, Vitest `236/236`, and `tsc --noEmit`;
+- an explicit alpha limitation: Claude, Qwen, large/xlarge, five first-time-operator sessions,
+  and final dual-provider beta readiness are deferred and not claimed.
 
 ### Post-release note for `v0.1.0a15`
 
