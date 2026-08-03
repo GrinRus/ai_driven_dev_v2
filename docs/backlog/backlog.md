@@ -7,11 +7,11 @@ slice, and local task.
 
 ## Next
 
-- `W36-E7-S4-T3` — Run fresh medium Codex acceptance on the post-T80 candidate.
+- `W36-E7-S4-T82` — Refresh the exact-SHA Codex candidate after T81.
 
 ## Soon
 
-No immediate successor is promoted until the exact-SHA candidate result is known.
+- `W36-E7-S4-T3` — Run fresh medium Codex acceptance after T81 candidate refresh.
 
 ## Parking lot
 

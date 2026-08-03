@@ -81,7 +81,8 @@ def test_structured_task_evidence_accepts_one_exact_entry_per_criterion(
         "## Verdict\n\n- Review status: approved\n\n"
         "## Task acceptance evidence\n\n"
         "- Task: `TL-1`; Acceptance: `TL-1-AC1`; Status: `pass`; "
-        "Evidence: `stages/implement/task.md`; Notes: verified.\n"
+        "Evidence: `reports/runs/WI/stages/implement/tasks/TL-1/EV-11.md`; "
+        "Notes: verified by EV-11.\n"
     )
     context = SemanticDocumentContext.from_markdown(
         stage="review",

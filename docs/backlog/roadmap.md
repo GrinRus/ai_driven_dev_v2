@@ -11717,9 +11717,11 @@ Local tasks:
   - Scope: provider-free harness and architecture tests.
   - Verification: conformance fixtures fail before live execution for overlapping roots, dirty
     tracked source, forbidden product imports, or live-scenario literals in runtime product code.
-- `W36-E7-S4-T3` (next) Run `AIDD-LIVE-007` through Codex to a clean terminal result with
+- `W36-E7-S4-T3` (soon) Run `AIDD-LIVE-007` through Codex to a clean terminal result with
   manual stage-quality and rendered Studio evidence.
-  - Dependencies: `W36-E7-S4-T37` as the direct queue predecessor after the
+  - Dependencies: `W36-E7-S4-T82` as the replacement candidate predecessor after
+    `W36-E7-S4-T81`, and
+    `W36-E7-S4-T37` as the exact-SHA candidate predecessor after the
     post-auth `W36-E7-S4-T60` and `W36-E7-S4-T36` gates; `W36-E7-S4-T33`, `W36-E7-S4-T32`, `W36-E7-S4-T31`, `W36-E7-S4-T30`, `W36-E7-S4-T29`, `W36-E7-S4-T28`, `W36-E7-S4-T27`, `W36-E7-S4-T26`, `W36-E7-S4-T25`, `W36-E7-S4-T24`, `W36-E7-S4-T23`, `W36-E7-S4-T22`, `W36-E7-S4-T21`, `W36-E7-S4-T20`, `W36-E7-S4-T19`, `W36-E7-S4-T18`, `W36-E7-S4-T17`, `W36-E7-S4-T16`, `W36-E7-S4-T15`, `W36-E7-S4-T14`, `W36-E7-S4-T13`, `W36-E7-S4-T2`, `W36-E7-S4-T6`, `W36-E7-S4-T10`,
     `W36-E7-S4-T11`, and `W36-E7-S4-T12` as live-discovered queue
     predecessors.
@@ -11774,6 +11776,12 @@ Local tasks:
     executable evidence used `## Verification` while aggregate finalization copied only
     `## Verification notes`. The terminal root will not be resumed; `W36-E7-S4-T79` owns the
     runtime-agnostic finalization correction and invalidates this candidate.
+  - Post-T80 attempt: candidate `4880ea4` passed private auth, target readiness, exact-wheel
+    identity, manual quality audits through review, the exact four-file Hono implementation
+    scope, focused Vitest `234/234`, and `tsc --noEmit`. QA exhausted its repair budget because
+    rich-task semantic validation interpreted the contract-permitted evidence id `EV-11` as an
+    additional task id. The terminal root is not resumed; `W36-E7-S4-T81` owns the provider-free
+    correction and invalidates this candidate.
 - `W36-E7-S4-T4` (parked) Run `AIDD-LIVE-007` through Claude Code from an independent root on
   the same AIDD revision and target pin.
   - Dependencies: `W36-E7-S4-T3` as the direct queue predecessor.
@@ -13102,6 +13110,31 @@ Local tasks:
     live-shaped evidence-path regression passes while duplicate leading identities remain
     fail-closed; focused validator/core checks pass `393/393`, planning integrity passes `9/9`,
     Ruff and mypy across `228` modules pass, and the complete Python suite passes `2170/2170`.
+
+- `W36-E7-S4-T81` (done) Do not interpret a structured QA evidence reference as an additional
+  task identity.
+  - Dependencies: discovered by the terminal post-T80 Codex acceptance attempt; invalidates
+    candidate `4880ea4` and blocks its `T36 -> T37 -> T3` replacement.
+  - Scope: runtime-agnostic rich-task evidence semantic validation and focused provider-free
+    regressions only; core orchestration, providers, adapters, prompts, contracts, scenario
+    literals, target code, and Studio remain unchanged.
+  - Verification: a canonical task acceptance entry may cite a permitted `EV-N` reference or a
+    task-scoped artifact path without either reference being counted as a second task id, while
+    unknown and mismatched task/acceptance pairs remain fail-closed.
+  - Completion: rich-task validation now derives task and acceptance identity only from the
+    structured fields before `Evidence:`. The live-shaped regression contains both a task id and
+    `EV-11` inside the evidence path and again in notes without creating a false second task;
+    focused validator/cross-document checks pass `56/56`, planning integrity passes `9/9`, Ruff
+    and mypy across `228` modules pass, and the complete Python suite passes `2170/2170`.
+
+- `W36-E7-S4-T82` (next) Refresh the Codex-only exact-SHA candidate after T81.
+  - Dependencies: `W36-E7-S4-T81` as the validator-fix predecessor; blocks the fresh
+    `W36-E7-S4-T3` acceptance run.
+  - Scope: provider-free full Chromium revalidation plus tracked-archive wheel, isolated install,
+    doctor/eval-doctor, pinned Hono readiness, bundle smoke, private Codex auth/isolation probe,
+    and source postflight; no Claude, Qwen, large, human, or product-code changes.
+  - Verification: one immutable source SHA/tree and wheel digest passes the accepted T36/T37
+    Codex-only readiness bar and becomes the sole artifact used by the next T3 run.
 
 Exit evidence:
 
