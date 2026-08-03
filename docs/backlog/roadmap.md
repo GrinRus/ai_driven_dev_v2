@@ -11717,7 +11717,7 @@ Local tasks:
   - Scope: provider-free harness and architecture tests.
   - Verification: conformance fixtures fail before live execution for overlapping roots, dirty
     tracked source, forbidden product imports, or live-scenario literals in runtime product code.
-- `W36-E7-S4-T3` (soon) Run `AIDD-LIVE-007` through Codex to a clean terminal result with
+- `W36-E7-S4-T3` (next) Run `AIDD-LIVE-007` through Codex to a clean terminal result with
   manual stage-quality and rendered Studio evidence.
   - Dependencies: `W36-E7-S4-T88` as the direct replacement-candidate predecessor after the
     `W36-E7-S4-T87` shell-command-list evidence fix and terminal post-T86 run;
@@ -13227,12 +13227,19 @@ Local tasks:
     `SEM-UNVERIFIABLE-CHECK-CLAIM` finding to zero without editing its evidence. The focused
     positive/negative evidence matrix passes `32/32` and Ruff passes.
 
-- `W36-E7-S4-T88` (next) Refresh the Codex-only candidate after T87.
+- `W36-E7-S4-T88` (done) Refresh the Codex-only candidate after T87.
   - Dependencies: `W36-E7-S4-T87`; blocks the next fresh `W36-E7-S4-T3` acceptance run.
   - Scope and verification: repeat the affected Codex-only exact-SHA readiness bar from T86,
     including repository gates, tracked-archive wheel, isolated install/doctor, saved-report
     regression, bundle/isolation smoke, pinned Hono readiness, private auth, and source postflight;
     retain the accepted unchanged-browser Chromium evidence explicitly.
+  - Completion: candidate `7726023`, tree `1f89bd2`, tracked archive digest `9a9cf26`, and wheel
+    digest `29b43f7` pass the affected Codex-only readiness bar. Ruff, mypy, exact-candidate Python
+    `2175/2175`, validator/prompt/packaging/planning `382/382`, saved terminal Implement
+    revalidation, bundle/manifest/isolation `29/29`, isolated install/doctor/eval-doctor,
+    private-auth Seatbelt readiness, fresh pinned Hono setup, Vitest `233/233`, `tsc --noEmit`,
+    and source postflight pass. Sanitized evidence is recorded in
+    `docs/e2e/candidate-readiness-2026-08-03-post-t87.md`; T3 is now next.
 
 Exit evidence:
 

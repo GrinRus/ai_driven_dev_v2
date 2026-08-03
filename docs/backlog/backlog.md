@@ -7,11 +7,11 @@ slice, and local task.
 
 ## Next
 
-- `W36-E7-S4-T88` — Refresh the Codex-only candidate after T87.
+- `W36-E7-S4-T3` — Run fresh medium Codex acceptance on candidate `7726023`.
 
 ## Soon
 
-- `W36-E7-S4-T3` — Run fresh medium Codex acceptance on the T88 candidate.
+No task is promoted while the external Codex acceptance is active.
 
 ## Parking lot
 
@@ -34,6 +34,14 @@ slice, and local task.
   queue-restoration policy in `docs/backlog/roadmap.md` (`W8-E3-S1`).
 
 ## Current reconciliation
+
+- `2026-08-03` `W36-E7-S4-T88` is complete on exact candidate `7726023`, tree `1f89bd2`,
+  tracked archive digest `9a9cf26`, and wheel digest `29b43f7`. Ruff, mypy, exact-candidate
+  Python `2175/2175`, validator/prompt/packaging/planning `382/382`, saved terminal Implement
+  revalidation, bundle/manifest/isolation `29/29`, isolated install/doctor/eval-doctor, fresh
+  Hono readiness with Vitest `233/233` and `tsc --noEmit`, private Codex auth, Seatbelt isolation,
+  and source postflight pass. Browser code is unchanged and retains post-T81 Chromium `188/188`.
+  Evidence is in `docs/e2e/candidate-readiness-2026-08-03-post-t87.md`; T3 is `Next`.
 
 - `2026-08-03` the post-T86 Codex run passed private auth, target readiness, and manual audits
   through `tasklist`. Implement T1 added only the intended `src/compose.test.ts` red regression,
