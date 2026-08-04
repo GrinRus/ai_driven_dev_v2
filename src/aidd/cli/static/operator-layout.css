@@ -284,7 +284,8 @@ body.setup-active .stage-rail,
 body.setup-active .right-sidebar,
 body.setup-active .bottom-dock,
 body.setup-active .cockpit-header,
-body.setup-active .tabs {
+body.setup-active .tabs,
+body.setup-active #projectInboxButton {
   display: none;
 }
 body.setup-active .cockpit {
