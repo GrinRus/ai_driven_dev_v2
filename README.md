@@ -77,10 +77,8 @@ for the complete model.
 
 ## Project status and safety
 
-Latest published prerelease: `0.1.0a16`.
-Latest accepted published prerelease evidence: `0.1.0a16`.
-Current release-candidate package version on this branch: `0.1.0a17`.
-Latest accepted published prerelease evidence before this candidate: `0.1.0a16`.
+Latest published prerelease: `0.1.0a17`.
+Latest accepted published prerelease evidence: `0.1.0a17`.
 The `main` branch is development source and may contain unreleased changes.
 
 > [!WARNING]
@@ -117,7 +115,7 @@ or model access.
 Install the latest published prerelease:
 
 ```bash
-pipx install "ai-driven-dev-v2==0.1.0a16"
+pipx install "ai-driven-dev-v2==0.1.0a17"
 aidd --version
 aidd doctor
 ```
@@ -125,7 +123,7 @@ aidd doctor
 ## Install with uv tool
 
 ```bash
-uv tool install "ai-driven-dev-v2==0.1.0a16"
+uv tool install "ai-driven-dev-v2==0.1.0a17"
 aidd --version
 aidd doctor
 ```
