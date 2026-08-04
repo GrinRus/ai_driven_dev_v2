@@ -10,6 +10,54 @@ async function refresh() {
     }
     document.body.classList.remove("setup-active");
     document.getElementById("openWorkspaceButton").disabled = false;
+    let selectedWorkItem = state.onboarding.contextWorkItem;
+    const route = decodeOperatorRoute(window.location.search).value;
+    let routeRestoreError = "";
+    if (
+      route.mode !== "inbox"
+      && route.workItem
+      && route.workItem !== selectedWorkItem
+    ) {
+      try {
+        // A non-Inbox deep link is an explicit context request. After a server
+        // restart the service intentionally starts project-only, so restore
+        // this known work item through the same guarded Inbox resume endpoint.
+        await postJson("/api/onboarding/work-item", {
+          action: "resume",
+          project_root: state.onboarding.projectRootInput || ".",
+          work_item: route.workItem
+        });
+        await fetchOnboardingState();
+        selectedWorkItem = state.onboarding.contextWorkItem;
+        if (selectedWorkItem !== route.workItem) {
+          throw new Error("The requested work item was not restored.");
+        }
+      } catch (error) {
+        routeRestoreError = error.message || "The requested work item could not be restored.";
+      }
+    }
+    if (!selectedWorkItem || routeRestoreError) {
+      // An existing project is useful before an operator chooses a work item:
+      // keep the first view at the Inbox instead of inventing a Studio context.
+      state.dashboard = null;
+      state.dashboardActiveJob = null;
+      state.activeRunId = "";
+      state.activeRouteWorkItem = "";
+      state.readinessLoading = false;
+      state.readinessError = "";
+      state.readiness = {runtimes: []};
+      setOperatorMode("project-home");
+      await Promise.all([fetchProjectHome(), fetchInbox()]);
+      await renderAll();
+      if (routeRestoreError) toast(routeRestoreError);
+      return;
+    }
+    if (!new URLSearchParams(window.location.search).has("mode")) {
+      // --work-item is an explicit Studio deep link; a bare existing project
+      // above remains an Inbox route.
+      state.activeRouteWorkItem = selectedWorkItem;
+      setOperatorMode("work");
+    }
     await fetchDashboard();
     await fetchProjectHome(state.dashboard?.work_item || "");
     await fetchInbox();
@@ -104,6 +152,14 @@ document.addEventListener("click", async (event) => {
       };
       if (intent === "inbox-work-item") await activateInboxWorkItemRoute(context);
       else await navigateOperatorRouteIntent(intent, context);
+      return;
+    }
+    if (event.target.closest("[data-new-work-item]")) {
+      await openProjectWorkItemCreation();
+      return;
+    }
+    if (event.target.closest("[data-cancel-new-work-item]")) {
+      await closeProjectWorkItemCreation();
       return;
     }
     if (event.target.closest("[data-guided-delivery-toggle]")) {
@@ -379,9 +435,37 @@ document.addEventListener("click", async (event) => {
       });
       return;
     }
+    const readerArtifactKey = event.target.closest("[data-reader-artifact-key]")?.dataset.readerArtifactKey;
+    if (readerArtifactKey) {
+      state.activeArtifactKey = readerArtifactKey;
+      state.activeArtifactComparison = null;
+      state.selectedEvidenceNodeId = `document:${readerArtifactKey}`;
+      state.selectedEvidenceEdgeId = "";
+      // Keep a document-reading selection shareable without switching the
+      // operator away from the Studio reader into the evidence browser.
+      syncLocationState({historyMode: "push"});
+      await loadArtifactDocument(readerArtifactKey);
+      return;
+    }
+    const compareAttempt = event.target.closest("[data-compare-attempt]")?.dataset.compareAttempt;
+    if (compareAttempt) {
+      state.artifactViewMode = "compare";
+      await loadArtifactComparison(compareAttempt);
+      return;
+    }
+    if (event.target.closest("[data-clear-artifact-comparison]")) {
+      state.activeArtifactComparison = null;
+      if (state.activeArtifactKey) await loadArtifactDocument(state.activeArtifactKey);
+      return;
+    }
+    if (event.target.closest("[data-retry-artifact-document]")) {
+      if (state.activeArtifactKey) await loadArtifactDocument(state.activeArtifactKey);
+      return;
+    }
     const artifactKey = event.target.closest("[data-artifact-key]")?.dataset.artifactKey;
     if (artifactKey) {
       state.activeArtifactKey = artifactKey;
+      state.activeArtifactComparison = null;
       state.selectedEvidenceNodeId = `document:${artifactKey}`;
       state.selectedEvidenceEdgeId = "";
       await renderArtifacts();
@@ -393,6 +477,7 @@ document.addEventListener("click", async (event) => {
       state.selectedEvidenceEdgeId = "";
       if (evidenceNode.startsWith("document:")) {
         state.activeArtifactKey = evidenceNode.split(":").slice(1).join(":");
+        state.activeArtifactComparison = null;
       }
       await renderArtifacts();
       return;
@@ -422,6 +507,7 @@ document.addEventListener("click", async (event) => {
     const artifactMode = event.target.closest("[data-artifact-mode]")?.dataset.artifactMode;
     if (artifactMode) {
       state.artifactViewMode = artifactMode;
+      if (artifactMode !== "compare") state.activeArtifactComparison = null;
       if (state.activeArtifactKey) await loadArtifactDocument(state.activeArtifactKey);
       return;
     }
@@ -650,6 +736,14 @@ document.addEventListener("input", (event) => {
     state.onboarding.requestText = event.target.value;
     syncOnboardingCreateActionState();
   }
+  if (event.target.id === "projectNewWorkItem") {
+    state.onboarding.workItemInput = event.target.value;
+    syncProjectWorkItemCreateActionState();
+  }
+  if (event.target.id === "projectNewRequest") {
+    state.onboarding.requestText = event.target.value;
+    syncProjectWorkItemCreateActionState();
+  }
   if (event.target.id === "operatorRequestText") {
     persistInterventionDraft();
     updateInterventionPreview();
@@ -692,6 +786,11 @@ document.addEventListener("submit", async (event) => {
     if (event.target.id === "onboardingCreateForm") {
       event.preventDefault();
       await completeOnboardingWorkItem("create", state.onboarding.workItemInput.trim());
+      return;
+    }
+    if (event.target.id === "projectNewWorkItemForm") {
+      event.preventDefault();
+      await createProjectWorkItem();
     }
   } catch (error) {
     toast(error.message);

@@ -27,13 +27,13 @@ const VALID_TABS = [
 ];
 
 function resolveStudioEvidenceVisibility({
-  inspectorItemCount = 0,
+  inspectorDecisionValue = false,
   filmstripFrameCount = 0,
   logEvidenceAvailable = false,
   requestedSurface = ""
 } = {}) {
   return Object.freeze({
-    inspector: Number(inspectorItemCount) > 0,
+    inspector: Boolean(inspectorDecisionValue),
     filmstrip: Number(filmstripFrameCount) > 0 && requestedSurface === "history",
     logs: Boolean(logEvidenceAvailable) && requestedSurface === "logs"
   });
@@ -152,6 +152,8 @@ const state = {
   qaVerdictView: null,
   qaVerdictRunId: "",
   activeArtifactKey: "",
+  activeArtifactWorkbench: null,
+  activeArtifactComparison: null,
   activeStudioWorkbench: null,
   activeStudioWorkbenchError: "",
   implementDiffFilter: "all",
@@ -173,6 +175,7 @@ const state = {
     recentProjects: [],
     inspecting: false,
     inspectError: "",
+    contextWorkItem: "",
     workItemInput: "",
     requestText: "",
     forceContext: false,
@@ -183,6 +186,7 @@ const state = {
     projectSetLoading: false,
     createError: "",
     creating: false,
+    createPanelOpen: false,
     guidedDelivery: true,
     guided: {
       step: "project",
@@ -616,6 +620,7 @@ function applyOperatorModeBodyClass() {
   const decisionDetailActive = state.activeTab === "work"
     && ["review-findings", "qa-verdict"].includes(state.workDetail);
   const inboxDetailActive = state.activeTab === "work" && state.workDetail === "project-home";
+  const workOverviewActive = state.activeTab === "work" && state.workDetail === "overview";
   const staleDownstreamActive = state.dashboard?.next_action?.action === "rerun-stale-downstream"
     || (state.dashboard?.stages || []).some((item) => item.stale);
   const terminalRepairActive = Boolean(
@@ -627,6 +632,7 @@ function applyOperatorModeBodyClass() {
   document.body.classList.toggle("evidence-log-mode", evidenceLogActive);
   document.body.classList.toggle("decision-detail-mode", decisionDetailActive);
   document.body.classList.toggle("inbox-detail-mode", inboxDetailActive);
+  document.body.classList.toggle("work-overview-mode", workOverviewActive);
   document.body.classList.toggle("stale-downstream-mode", staleDownstreamActive);
   document.body.classList.toggle("terminal-handoff-mode", terminalHandoffActive);
   document.body.classList.toggle("terminal-repair-mode", terminalRepairActive);
@@ -712,12 +718,7 @@ function applyOperatorRoute(route) {
 }
 
 function initializeStateFromLocation() {
-  const params = new URLSearchParams(window.location.search);
   const route = decodeOperatorRoute(window.location.search).value;
-  if (!params.has("mode") && route.mode === "inbox") {
-    setOperatorMode("work");
-    return;
-  }
   applyOperatorRoute(route);
 }
 
@@ -790,6 +791,7 @@ async function fetchOnboardingState() {
     state.onboarding.setupRequired = Boolean(payload.setup_required);
     state.onboarding.recentProjects = payload.recent_projects || [];
     const context = payload.context || null;
+    state.onboarding.contextWorkItem = context?.work_item || "";
     if (context) {
       state.onboarding.projectRootInput = context.project_root || state.onboarding.projectRootInput;
       state.onboarding.workItemInput = context.work_item || state.onboarding.workItemInput;

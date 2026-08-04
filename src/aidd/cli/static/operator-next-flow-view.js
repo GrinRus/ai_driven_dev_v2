@@ -1420,14 +1420,24 @@ function renderNextActionPanel() {
   if (!panel) return;
   const action = state.dashboard?.next_action || {action: "choose-runtime", label: "Select runtime", detail: "Choose a runtime.", enabled: false};
   const noRunWithRuntime = action.action === "choose-runtime" && state.selectedRuntime;
+  const choosingRuntime = action.action === "choose-runtime" && !state.selectedRuntime;
   const runStageResume = action.action === "run-stage" && state.activeRunId && action.enabled;
   const runtimeNeeded = needsRuntime(action.action) || noRunWithRuntime;
-  const runtimeBlocked = runtimeNeeded && (!state.selectedRuntime || !selectedRuntimeReady());
+  const runtimeBlocked = !choosingRuntime
+    && runtimeNeeded
+    && (!state.selectedRuntime || !selectedRuntimeReady());
   const activeJobState = activeJobNextActionState(action);
-  const disabled = Boolean(activeJobState) || !(action.enabled || noRunWithRuntime) || runtimeBlocked;
+  // Choosing a runtime is itself the safe next action. Keep that button usable
+  // so the operator can move directly to the selector instead of meeting a
+  // disabled duplicate of the control they need.
+  const disabled = Boolean(activeJobState)
+    || (!(action.enabled || noRunWithRuntime) && !choosingRuntime)
+    || runtimeBlocked;
   const blockerMessage = nextActionRuntimeBlockerMessage(runtimeBlocked);
   const label = activeJobState?.label || (noRunWithRuntime
     ? (state.activeRunId ? "Resume workflow" : "Run workflow")
+    : choosingRuntime
+      ? "Choose runtime"
     : runStageResume
       ? `Continue with ${stageTitle(action.stage || state.activeStage)}`
       : action.label);
@@ -1435,6 +1445,8 @@ function renderNextActionPanel() {
     ? runtimeBlocked
       ? "Runtime selected. Resolve readiness before starting the governed workflow."
       : "Runtime selected and ready to start the governed workflow."
+    : choosingRuntime
+      ? "Choose a runtime in the toolbar, then start the governed workflow."
     : action.detail);
   const detail = runtimeBlocked && state.selectedRuntime && !noRunWithRuntime
     ? `${baseDetail} ${state.readinessLoading ? "Checking runtime readiness." : "Selected runtime is not ready."}`
@@ -1486,13 +1498,22 @@ function renderGlobalNextActionStrip() {
   host.hidden = false;
   const action = state.dashboard?.next_action || {action: "choose-runtime", label: "Select runtime", detail: "Choose a runtime.", enabled: false};
   const noRunWithRuntime = action.action === "choose-runtime" && state.selectedRuntime;
+  const choosingRuntime = action.action === "choose-runtime" && !state.selectedRuntime;
   const runtimeNeeded = needsRuntime(action.action) || noRunWithRuntime;
-  const runtimeBlocked = runtimeNeeded && (!state.selectedRuntime || !selectedRuntimeReady());
+  const runtimeBlocked = !choosingRuntime
+    && runtimeNeeded
+    && (!state.selectedRuntime || !selectedRuntimeReady());
   const activeJobState = activeJobNextActionState(action);
-  const disabled = Boolean(activeJobState) || !(action.enabled || noRunWithRuntime) || runtimeBlocked;
+  // Selecting a runtime is the action in this state, rather than a blocker to
+  // it. The click handler focuses the canonical toolbar selector.
+  const disabled = Boolean(activeJobState)
+    || (!(action.enabled || noRunWithRuntime) && !choosingRuntime)
+    || runtimeBlocked;
   const blockerMessage = nextActionRuntimeBlockerMessage(runtimeBlocked);
   const label = activeJobState?.label || (noRunWithRuntime
     ? (state.activeRunId ? "Resume workflow" : "Run workflow")
+    : choosingRuntime
+      ? "Choose runtime"
     : action.action === "run-stage" && state.activeRunId && action.enabled
       ? `Continue with ${stageTitle(action.stage || state.activeStage)}`
       : action.label);
@@ -1500,6 +1521,8 @@ function renderGlobalNextActionStrip() {
     ? runtimeBlocked
       ? "Runtime selected. Resolve readiness before starting the workflow."
       : "Runtime selected. Start the workflow from the current work item."
+    : choosingRuntime
+      ? "Choose a runtime in the toolbar, then start the governed workflow."
     : action.detail);
   const stage = activeJobState?.stage || (action.stage ? stageTitle(action.stage) : state.dashboard?.active_stage || "run");
   const run = activeJobState?.run || state.activeRunId || "not started";

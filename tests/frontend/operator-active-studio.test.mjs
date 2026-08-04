@@ -24,6 +24,7 @@ async function contextFor(dashboard) {
     renderPrimaryArtifact() { return "<div data-document>document</div>"; },
     renderStateSurface({title}) { return `<div data-state-surface>${title}</div>`; },
     studioFlowCompleteEligibility() { return {eligible: false}; },
+    workflowProgressSummary(options) { return `<div data-workflow-collapsed="${Boolean(options?.collapsed)}"></div>`; },
   });
   const source = await readFile(path.join(staticRoot, "operator-active-studio.js"), "utf8");
   vm.runInContext(source, context, {filename: "operator-active-studio.js"});
@@ -39,6 +40,7 @@ test("active Studio preserves work item, run, stage, and status context", async 
   const html = vm.runInContext("renderActiveStudio()", context);
   assert.match(html, /data-studio-surface="active-studio"/);
   assert.match(html, /data-state="active"/);
+  assert.match(html, /data-workflow-collapsed="true"/);
   for (const value of ["WI-1", "run-1", "idea", "Stage running"]) {
     assert.match(html, new RegExp(value));
   }

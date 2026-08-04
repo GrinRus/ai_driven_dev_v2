@@ -1833,6 +1833,143 @@ def test_ui_onboarding_can_resume_existing_project_work_item(
     )
 
 
+def test_ui_existing_workspace_reopens_project_inbox_without_selecting_work_item(
+    tmp_path: Path,
+    monkeypatch: Any,
+) -> None:
+    project_root = tmp_path / "project"
+    project_root.mkdir()
+    workspace_root = project_root / ".aidd"
+    seed_work_item_metadata(root=workspace_root, work_item="WI-EXISTING")
+    monkeypatch.chdir(project_root)
+
+    service = OperatorUiService(
+        UiServerOptions(
+            work_item=None,
+            root=Path(".aidd"),
+            config=Path("aidd.test.toml"),
+            host="127.0.0.1",
+            port=0,
+        )
+    )
+
+    state_payload = _payload(service.handle_get("/api/onboarding/state", {}))
+    context = state_payload["context"]
+    assert state_payload["setup_required"] is False
+    assert isinstance(context, dict)
+    assert context["project_root"] == project_root.as_posix()
+    assert context["workspace_root"] == workspace_root.as_posix()
+    assert context["work_item"] is None
+
+    project_home = _payload(service.handle_get("/api/project-home", {}))["project_home"]
+    assert project_home["selected_work_item"] is None  # type: ignore[index]
+    assert [item["work_item"] for item in project_home["work_items"]] == [  # type: ignore[index]
+        "WI-EXISTING"
+    ]
+
+    inbox = _payload(service.handle_get("/api/inbox", {}))["inbox"]
+    assert [section["key"] for section in inbox["durable"]["sections"]] == [  # type: ignore[index]
+        "needs-decision",
+        "ready-to-continue",
+        "flow-complete",
+    ]
+
+    dashboard = service.handle_get("/api/dashboard", {})
+    assert dashboard.status == HTTPStatus.BAD_REQUEST
+    assert _error_payload(dashboard)["error"] == "Select a work item before using this UI action."
+
+
+def test_ui_project_context_creates_an_independent_work_item_without_runtime(
+    tmp_path: Path,
+    monkeypatch: Any,
+) -> None:
+    project_root = tmp_path / "project"
+    project_root.mkdir()
+    workspace_root = project_root / ".aidd"
+    seed_work_item_metadata(root=workspace_root, work_item="WI-EXISTING")
+    monkeypatch.chdir(project_root)
+    service = OperatorUiService(
+        UiServerOptions(
+            work_item=None,
+            root=Path(".aidd"),
+            config=Path("aidd.test.toml"),
+            host="127.0.0.1",
+            port=0,
+        )
+    )
+
+    created = _payload(
+        service.handle_post(
+            "/api/onboarding/work-item",
+            {
+                "action": "create",
+                "project_root": project_root.as_posix(),
+                "work_item": "WI-NEW",
+                "request": "Create an independent work item from the project Inbox.",
+            },
+        )
+    )
+
+    context = created["context"]
+    assert isinstance(context, dict)
+    assert context["work_item"] == "WI-NEW"
+    assert (
+        workspace_root / "workitems" / "WI-NEW" / "context" / "user-request.md"
+    ).read_text(encoding="utf-8").endswith(
+        "Create an independent work item from the project Inbox.\n"
+    )
+    project_home = _payload(service.handle_get("/api/project-home", {}))["project_home"]
+    assert [item["work_item"] for item in project_home["work_items"]] == [  # type: ignore[index]
+        "WI-EXISTING",
+        "WI-NEW",
+    ]
+
+
+def test_ui_relative_nested_workspace_root_creates_new_work_item_in_project_workspace(
+    tmp_path: Path,
+    monkeypatch: Any,
+) -> None:
+    project_root = tmp_path / "project"
+    project_root.mkdir()
+    workspace_root = project_root / ".aidd"
+    seed_work_item_metadata(root=workspace_root, work_item="WI-EXISTING")
+    monkeypatch.chdir(tmp_path)
+    service = OperatorUiService(
+        UiServerOptions(
+            work_item="WI-EXISTING",
+            root=Path("project/.aidd"),
+            config=Path("aidd.test.toml"),
+            host="127.0.0.1",
+            port=0,
+        )
+    )
+
+    created = _payload(
+        service.handle_post(
+            "/api/onboarding/work-item",
+            {
+                "action": "create",
+                "project_root": "project",
+                "work_item": "WI-INDEPENDENT",
+                "request": "Create beside the selected direct work item.",
+            },
+        )
+    )
+
+    context = created["context"]
+    assert isinstance(context, dict)
+    assert context["workspace_root"] == workspace_root.as_posix()
+    assert context["work_item"] == "WI-INDEPENDENT"
+    assert (
+        workspace_root
+        / "workitems"
+        / "WI-INDEPENDENT"
+        / "context"
+        / "user-request.md"
+    ).is_file()
+    assert not (project_root / "project" / ".aidd").exists()
+
+
 def test_ui_onboarding_create_requires_request_and_safe_work_item_id(
     tmp_path: Path,
     monkeypatch: Any,

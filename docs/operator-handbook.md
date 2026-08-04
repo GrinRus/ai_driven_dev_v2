@@ -26,9 +26,10 @@ Today:
 - `aidd stage run` executes stage orchestration for `generic-cli`, `claude-code`, `codex`, `opencode`, and experimental `qwen`;
 - `aidd stage interact` records a stage-scoped operator request and runs an
   intervention attempt in the current run through the same adapter boundary;
-- `aidd ui` opens Guided Setup or Document & Evidence Studio with explicit runtime selection,
-  decision-first Inbox, active-run visibility, implementation repository evidence, exact
-  Review/QA gates, History, and
+- `aidd ui` opens Guided Setup only for missing, non-directory, or inaccessible workspace context; an existing
+  project-local `.aidd/` workspace opens the decision-first Inbox, which has explicit
+  independent work-item creation, active-run visibility, implementation repository evidence,
+  exact Review/QA gates, History, and
   review/QA remediation back to `implement`;
 - manual external eval policies and runbooks live under `docs/e2e/`.
 
@@ -223,26 +224,35 @@ not installed globally, prefix each command with:
 uv tool run --from /path/to/ai_driven_dev_v2 aidd
 ```
 
-### 6.1 Start UI onboarding
+### 6.1 Start the UI
 
-The recommended first-run path is the local UI setup mode:
+For a clean local project, the recommended first-run path is the local UI setup mode:
 
 ```bash
 cd /path/to/local-project
 aidd ui
 ```
 
-Setup mode opens before a work item exists. It validates the selected local project root,
-resolves the project-local `.aidd/` workspace, discovers existing work items, creates or
-resumes a work item, seeds the operator request, shows runtime readiness, and requires the
-operator to select a runtime before any workflow or stage execution starts. It uses the
-same workspace creation and request seeding behavior as `aidd init`; it does not
+Guided Setup opens only when the project root or project-local `.aidd/` workspace is missing,
+invalid, or inaccessible. It validates the selected local project root, resolves the
+project-local workspace, creates or resumes a work item, and seeds the operator request. It
+uses the same workspace creation and request seeding behavior as `aidd init`; it does not
 introduce a second workflow engine or a hidden `generic-cli` fallback.
 
-After setup completes, Studio exposes both **Run workflow** for
-normal full progression and **Run selected stage** for a bounded active-stage smoke or
-retry. Successful UI jobs report `/api/jobs/<job_id>` status `completed`; the stage rail
-reports the completed stage state as `succeeded`.
+When an accessible `.aidd/` directory already exists, restart with the same command (for example,
+`aidd ui --root .aidd`) to open the project **Inbox**, not Guided Setup; no existing work-item
+marker is required. That project-only Inbox context does not select an arbitrary work item,
+create a work item, or launch a run.
+Choose **New work item** there to create independent work alongside existing items. Creation
+needs a valid identifier and request, but no runtime selection; select a runtime later only
+when using **Run workflow** or **Run selected stage**. Creating new work does not alter a
+running or completed work item.
+
+After creating or resuming a work item, Studio exposes both **Run workflow** for normal full
+progression and **Run selected stage** for a bounded active-stage smoke or retry. Successful UI
+jobs report `/api/jobs/<job_id>` status `completed`; the workflow-progress summary reports the
+completed canonical-stage count and the active/stopped stage as factual state, not a fabricated
+percentage.
 
 Bare `aidd`, `aidd --help`, and scripted subcommands keep their existing CLI behavior. Use
 the CLI steps below when you need a terminal-first or scripted setup.
@@ -312,6 +322,10 @@ Expected behavior in the current local implementation:
 - `aidd run`, `aidd stage run`, and `aidd stage interact` require an explicit `--runtime`;
 - `aidd ui` also requires the operator to select a runtime in the browser before
   launching a workflow or selected stage; the UI does not silently default to `generic-cli`;
+- restarting `aidd ui --root .aidd` for a valid existing workspace opens the project Inbox,
+  rather than Guided Setup, without selecting an arbitrary work item;
+- **New work item** is available from that Inbox even when other work items exist; it requires
+  project context, a safe id, and request text, but not a runtime selection or a new launch;
 - the UI **Run workflow** action requests full workflow progression, while **Run selected
   stage** uses the same single-stage semantics as `aidd stage run <stage>`;
 - the UI **Request change** panel uses the same durable intervention semantics as
@@ -368,8 +382,13 @@ instead of mutating downstream artifacts.
 During a UI-triggered run, the **Logs** tab follows the in-memory job stream from the
 runtime stdout/stderr callbacks. After completion, `aidd run logs` and the UI persisted
 log view read the durable attempt `runtime.log`. The **Artifacts** tab renders known
-stage document keys from the artifact index as read-only Markdown preview/source views;
-it does not allow arbitrary path reads.
+stage document keys from the artifact index in a read-only document reader: a short brief
+explains the document's role and freshness, **Read** renders Markdown, **Source** exposes a
+bounded copy, and **Compare** can place an earlier retained attempt beside the selected copy.
+It does not allow arbitrary path reads or claim a generated diff when no retained comparison
+exists. Supporting evidence is grouped by why it matters: attention, contract requirements,
+provenance, and related context. Each validation, contract, and version row also says why that
+specific item is retained, so the group title does not hide its decision value.
 
 For CLI execution, `--log-follow` and `--no-log-follow` control only live forwarding of
 available stdout/stderr. Durable `runtime.log` persistence is unchanged. `aidd run logs`
@@ -377,11 +396,11 @@ prints a bounded persisted-log head by default, or selects its last `N` lines fr
 tail with `--tail --lines N`; byte-range and truncation metadata make either limit explicit.
 structured provider and normalized event JSONL remain separate audit artifacts.
 
-For long-running UI jobs, use the right-side **Active Run** panel and the **Timeline** tab.
-They show job id, active stage, runner, elapsed time, last output age, stage timeout
-summary, runner command, cancel action, live logs shortcut, and real milestones from
-stage metadata, attempts, `events.jsonl`, repair history, questions, and artifacts. The
-UI does not show fake percentage progress.
+For long-running UI jobs, use the compact active-run summary and the **Timeline** / **Logs**
+drill-downs. They show job id, active stage, runner, elapsed time, last output age, stage
+timeout summary, runner command, cancel action, live logs shortcut, and real milestones from
+stage metadata, attempts, `events.jsonl`, repair history, questions, and artifacts. The UI does
+not show fake percentage progress or repeat the same status in equal-weight panels.
 
 The local UI has no authentication in this release. The default bind host is
 `127.0.0.1`; binding to `0.0.0.0`, a LAN address, or another non-loopback host is
@@ -435,7 +454,9 @@ When a run reaches terminal `qa`, the local UI command center switches to
 **Flow Complete**. Treat this screen as the operator handoff point, not as a continuation
 of the completed source run. The handoff summarizes final QA status, final artifacts,
 open blockers, repair counts, approval counts, answered-question counts, recommended
-next-flow actions, runtime/config context, and source-run lineage.
+next-flow actions, runtime/config context, and source-run lineage. **Create New Work Item** is
+also available from the project Inbox before any run reaches this handoff; Flow Complete simply
+adds the contextual recommendation and source-lineage alternatives.
 
 Available next-flow actions:
 

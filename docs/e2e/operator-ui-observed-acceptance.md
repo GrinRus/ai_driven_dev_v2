@@ -27,21 +27,24 @@ supporting evidence is not inherently wrong.
 
 ### O1 — Guided Setup and first launch
 
-- Entry: a valid local project with no selected work item.
+- Entry: a valid local project with no usable `.aidd/` workspace.
 - Prompt: “Create a new work item for the supplied request and start the governed flow with the
   available local runtime.”
 - Durable outcome: the work item exists and the participant reaches its Inbox/Studio context
   after one launch request.
 - Time box: 8 minutes.
 
-### O2 — Inbox triage
+### O2 — Existing-workspace re-entry, Inbox triage, and new work
 
-- Entry: Inbox with one blocking decision, one ready continuation, one running overlay, and one
-  completed flow.
-- Prompt: “Find the item that needs you now and open the exact place where you can act.”
-- Durable outcome: the highest-priority server-approved item opens in its exact Studio context;
-  no unrelated mutation occurs.
-- Time box: 4 minutes.
+- Entry: an existing `.aidd/` workspace with no selected work item, one blocking decision, one
+  ready continuation, one running overlay, and one completed flow.
+- Prompt: “Restart the UI, find the item that needs you now and open the exact place where you
+  can act. Then create a separate work item for the supplied request without disturbing the
+  existing work.”
+- Durable outcome: the restart opens Inbox rather than Guided Setup, the highest-priority
+  server-approved item opens in its exact Studio context, and **New work item** creates the
+  independent item without requiring runtime selection or changing another run.
+- Time box: 6 minutes.
 
 ### O3 — Active Studio monitoring
 
@@ -83,10 +86,12 @@ supporting evidence is not inherently wrong.
 
 - Entry: a run with stage/task/finalization frames, retained comparison evidence, lineage, and an
   archive overlay.
-- Prompt: “Find an earlier attempt, compare it with the current evidence, inspect its lineage,
-  and return to live state.”
-- Durable outcome: the participant selects the retained frame, distinguishes unavailable
-  evidence, opens a parent/child relation, and returns to live without mutating either run.
+- Prompt: “Find an earlier attempt, explain why the current document and one individual
+  evidence item matter, compare the retained copies, inspect its lineage, and return to live
+  state.”
+- Durable outcome: the participant uses the reading brief and purpose-labelled evidence to
+  distinguish current from stale or unavailable evidence, selects the retained frame, opens a
+  parent/child relation, and returns to live without mutating either run.
 - Time box: 7 minutes.
 
 ### O8 — Terminal continuation

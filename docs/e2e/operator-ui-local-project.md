@@ -25,20 +25,26 @@ The local-project UI lane follows the product operator path:
 1. Install or run AIDD locally.
 2. Change into the target local project root.
 3. Run `aidd doctor` with the intended config.
-4. Start `aidd ui` without `--work-item` for clean setup mode, validate the project
-   root, create or resume a work item, seed the request, inspect runner readiness, and
-   select a runtime explicitly.
-5. Use **Run workflow** for full progression or **Run selected stage** for a bounded
+4. Start `aidd ui` without `--work-item`. A missing, non-directory, or inaccessible `.aidd/` path opens
+   clean setup, where the operator validates the project root and creates or resumes a
+   work item. An accessible existing `.aidd/` directory, even with no work items, opens the
+   project Inbox instead.
+5. Restart `aidd ui --root .aidd` after setup and verify that Inbox retains project context
+   without selecting an arbitrary work item, creating work, or launching a run.
+6. Use the Inbox **New work item** action to create independent work alongside existing
+   items. It requires a valid id and request, not runtime selection; choose a runtime only
+   before a launch action.
+7. Use **Run workflow** for full progression or **Run selected stage** for a bounded
    active-stage run from Studio.
-6. For scripted setup, `aidd init --work-item <id> --request "<task>" --root .aidd`
+8. For scripted setup, `aidd init --work-item <id> --request "<task>" --root .aidd`
    remains supported before opening `aidd ui --work-item <id>`.
-7. Run a single selected stage through the UI or `aidd stage run <stage>` when the
+9. Run a single selected stage through the UI or `aidd stage run <stage>` when the
    operator needs a bounded retry.
-8. Request a stage-scoped correction through the UI `Request change` panel or
+10. Request a stage-scoped correction through the UI `Request change` panel or
    `aidd stage interact <stage>` when the operator needs a documented intervention.
-9. Inspect live UI job logs, persisted logs, and rendered artifacts through the UI or
+11. Inspect live UI job logs, persisted logs, and rendered artifacts through the UI or
    `aidd run logs` / `aidd run artifacts`.
-10. Keep `.aidd/` inside the local project root.
+12. Keep `.aidd/` inside the local project root.
 
 `aidd init --github-issue <url>` is out of product scope for this lane.
 
@@ -47,6 +53,10 @@ The local-project UI lane follows the product operator path:
 The maintained operator UI lane covers:
 
 - page load for Guided Setup plus the three destinations Inbox, Studio, and History;
+- existing-workspace re-entry: bare `aidd ui --root .aidd` opens Inbox, preserves project
+  context without choosing a work item, and does not create or launch work on load;
+- explicit Inbox **New work item** creation alongside existing work items, without requiring
+  a runtime selection or changing another work item's run;
 - decision-first Recovery inside Studio for blocked questions, runtime or validation failure,
   intervention, approval, and remediation, with one server-authoritative primary action;
 - dashboard read-model payload shape through `/api/dashboard`, including selected
@@ -153,21 +163,27 @@ A manual installed UI smoke should use a disposable local fixture project:
 2. Change into the local fixture project root.
 3. Run `aidd doctor` with the fixture config.
 4. Start `aidd ui --config <fixture-config> --host 127.0.0.1 --port <port>` without
-   `--work-item`.
-5. In setup mode, validate the absolute fixture project root, confirm the runner picker
-   visually distinguishes the deterministic baseline from native provider runners,
-   select the deterministic runtime explicitly, then create a work item and request
-   through the onboarding form. Verify the create action becomes enabled even when
-   the runtime was selected before the work item id and request text were entered.
+   `--work-item` in a fixture with no `.aidd/` workspace.
+5. In Guided Setup, validate the absolute fixture project root and create a work item and
+   request through the onboarding form. Verify that creation becomes enabled with a valid
+   work-item id and request even before a runtime is selected; the runner picker is required
+   only for workflow or stage launch and still distinguishes the deterministic baseline from
+   native provider runners.
 6. Confirm `.aidd/workitems/<id>/context/user-request.md` is created inside the fixture
    project without running `aidd init`.
-7. From the command center, use **Run selected stage** for `idea`, wait until
+7. Restart `aidd ui --root .aidd --config <fixture-config>` and verify that the existing
+   workspace opens Inbox, not Guided Setup, with no selected arbitrary work item or new run.
+8. From Inbox, use **New work item** to create a second independent work item without selecting
+   a runtime. Verify the first work item and its run are unchanged, no runtime process starts,
+   and the new item opens in no-run Studio.
+9. Select the deterministic runtime for the first work item, then use **Run selected stage** for
+   `idea`, wait until
    `/api/jobs/<job_id>` reports `completed`, and verify the stage rail reports
    `idea` as `succeeded`.
-8. Run `research` through **Run selected stage** or the next-action continue path, wait
+10. Run `research` through **Run selected stage** or the next-action continue path, wait
    until the UI job reports `completed`, and verify the stage rail reports `research`
    as `succeeded`.
-9. Verify the page loads, the dashboard shell renders the four-mode operator navigation,
+11. Verify the page loads, the dashboard shell renders the four-mode operator navigation,
    runtime selection is required before `/api/workflow/run` and `/api/stage/run`
    dispatch, blocking answers persist, answer-and-resume keeps the same run id,
    `Request change -> Submit & run` creates a durable operator request and switches
@@ -175,15 +191,15 @@ A manual installed UI smoke should use a disposable local fixture project:
    render as preview/source, validation state is visible, repair and operator-request
    evidence is linked, and recent activity/artifact rows remain reachable through
    Evidence or History after refresh.
-10. For a blocked or failed `plan` stage, submit a request such as
+12. For a blocked or failed `plan` stage, submit a request such as
    `Add migration rollback risks`, verify `/api/stage/interact` returns a job id,
    the Logs tab stays visible while polling `/api/jobs/<id>/logs`, and the latest
    request appears as `operator.request.created` in Activity plus an Evidence Ref.
-11. For completed-run handoff proof, use a terminal `qa` run or deterministic seeded
+13. For completed-run handoff proof, use a terminal `qa` run or deterministic seeded
    terminal workspace, open Flow Complete, start the follow-up wizard, create or preview
    a follow-up draft, run launch preflight, inspect Run History / Lineage, and record
    the Archive Run decision path.
-12. Remove the disposable fixture project. Do not commit `.aidd/` artifacts.
+14. Remove the disposable fixture project. Do not commit `.aidd/` artifacts.
 
 Manual smoke evidence is recorded in `docs/backlog/roadmap.md`; generated `.aidd/`
 state stays local to the fixture project.
@@ -285,9 +301,9 @@ destination. The only route intents in this contract are `setup`, `inbox`, `stud
 `mode=studio`, or `mode=history`, followed in stable order by the optional keys
 `view`, `work_item`, `run_id`, `stage`, `attempt`, `task_attempt`, and `artifact`.
 The Studio `view` is one of `overview`, `recovery`, `artifacts`, or `logs`. Guided Setup is
-server-owned state reached before a valid project/work-item context; it does not invent a
-fourth persisted browser mode. `artifact` stores a bounded artifact/document key, never an
-arbitrary path.
+server-owned state reached before a valid project/workspace context; it does not invent a fourth
+persisted browser mode. `artifact` stores a bounded artifact/document key, never an arbitrary
+path.
 
 Visible navigation uses one shared intent vocabulary: `Open in Studio` for an Inbox work
 item, `Inspect run history` for a recorded run, `Inspect parent run` for parent lineage,
@@ -309,7 +325,7 @@ durable objects needed by its decision surface.
 | Operator state | Route intent | Required context keys | Primary decision surface |
 | --- | --- | --- | --- |
 | Guided Setup | `setup` | `project` when selected | Validate project, then create or resume a work item. |
-| Inbox | `inbox` | `project` | Select the highest-priority durable decision or ready work item. |
+| Inbox | `inbox` | `project` | Select the highest-priority durable decision or ready work item, or create independent new work. |
 | Active Studio | `studio` | `project`, `work_item`, `run`, `stage`, `document` when available | Observe the active attempt or perform the one eligible stage/task action. |
 | Reconnecting Studio | `studio` | `project`, `work_item`, `run`, `stage`, `attempt` when available | Reconnect while preserving the durable run and live-log cursor; do not infer termination. |
 | Question Recovery | `studio` | `project`, `work_item`, `run`, `stage`, `recovery_target` | Answer the blocking question through the canonical answer service. |
@@ -344,16 +360,22 @@ curated as docs assets.
 - Project Home loads from `/api/project-home` and shows selected project root, `.aidd`
   root, discovered work items, latest run, stage progress, blockers, terminal state, and
   project-set roots before the operator enters stage internals.
+- A bare restart into a valid existing `.aidd/` workspace renders Inbox, not Guided Setup,
+  does not auto-select a work item, and performs no mutation.
+- **New work item** is visible from Inbox even when other work items exist; it can create an
+  independent work item with a valid id and request before any runtime is selected.
 - Work Item Board cards can resume a work item through the standard setup/resume path
   without creating duplicate workspace state.
 - No-run state explains the first action and exposes runtime-gated `Run workflow` and
   `Run selected stage` actions after a runtime is selected.
 - The primary run-global Next Action strip appears above the selected-stage workbench and
   shows runnable copy when a runtime is already selected and ready.
-- Work item, run chip, runtime readiness, stage rail, stage cockpit, right sidebar,
-  Activity / Events, and Recent artifacts are visible after refresh.
-- The active stage is marked in the rail and remains visible after selecting another
-  stage.
+- The first working viewport presents compact context, one next action with its factual reason,
+  and completed-stage/current-stage progress. Activity, artifacts, logs, and diagnostics remain
+  reachable through contextual Evidence, History, or Studio drill-downs rather than repeating
+  equal-weight status panels.
+- The active stage is marked in canonical navigation and progress remains visible after
+  selecting another stage.
 
 ### Cockpit Tabs
 
@@ -380,11 +402,17 @@ curated as docs assets.
   validation evidence, runtime evidence, project evidence, and lineage evidence.
 - The Artifacts tab opens with the Stage Document Workbench first; the evidence graph and
   artifact table stay in a secondary drill-down below it.
-- Markdown preview and Source mode load through `/api/artifacts/document`.
-- Preview, Source, and Diff modes remain available from known artifact keys only.
+- The reader begins with a role/freshness brief, then exposes rendered Read and bounded Source
+  from known artifact keys only.
+- Compare opens only a retained earlier copy of the same safe document key and labels the
+  side-by-side source view honestly; it never implies a generated diff when no earlier copy
+  exists.
 - Large artifacts show byte-range truncation states and keep Open folder available for
   full-file inspection.
-- Evidence Refs and Recent Artifacts navigate into the artifact inspection view.
+- Evidence supports reading through purpose-labelled disclosures for attention, contract
+  requirements, provenance, and related artifacts. Each displayed validation, requirement, and
+  version has a short item-level **Why** explanation. Document references stay in the reader;
+  graph/table provenance remains an advanced drill-down.
 
 ### Diagnostics / Recovery
 
@@ -439,7 +467,8 @@ curated as docs assets.
 ### Flow Complete Handoff
 
 - A terminal `qa` run switches the command center from active-stage operation to
-  **Flow Complete** without hiding stage rail, Activity / Events, or Recent artifacts.
+  **Flow Complete** while retaining stage, activity, and artifact evidence through contextual
+  drill-downs rather than requiring every panel to remain permanently visible.
 - The handoff summary shows final QA status, runtime id, final artifacts, open blockers,
   evidence refs, repair counts, approval counts, and answered-question counts.
 - Final artifacts open in the Artifacts view and remain readable in Preview and Source
@@ -487,7 +516,9 @@ curated as docs assets.
 
 ### Viewports
 
-- Desktop width shows stage rail, cockpit, right sidebar, and bottom dock together.
+- Desktop width prioritizes compact context, one decision, factual progress, and the document
+  canvas. Stage navigation, inspector, and Filmstrip appear only when they add decision value;
+  the same status or next action is not repeated as a rail, sidebar, and dock.
 - Desktop completed-flow view keeps Flow Complete, Start Next Flow, final artifacts,
   and run-history lineage visible without overlapping panels.
 - Tablet width keeps the right sidebar below the cockpit without overlapping content.

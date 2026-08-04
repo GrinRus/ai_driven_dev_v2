@@ -157,6 +157,10 @@
     );
     width: 100%;
   }
+  .top-actions #projectInboxButton,
+  .top-actions #newWorkItemButton {
+    width: 100%;
+  }
   .runtime-picker {
     display: grid;
     grid-template-columns: 58px minmax(0, 1fr);
@@ -315,6 +319,12 @@
   .global-next-action-strip .next-action-controls {
     order: -1;
   }
+  body.work-overview-mode .global-next-action-strip .next-action-controls {
+    order: initial;
+  }
+  body.work-overview-mode .global-next-action-strip .next-action-meta {
+    display: none;
+  }
   body.inbox-detail-mode .cockpit-header,
   body.inbox-detail-mode .tabs,
   body.inbox-detail-mode .global-next-action-strip {
@@ -427,6 +437,11 @@
   .artifact-layout,
   .workbench-main,
   .workbench-sidebar,
+  .reader-brief-heading,
+  .reader-brief-facts,
+  .reader-technical-facts,
+  .reader-comparison-grid,
+  .studio-reading-sidebar,
   .artifact-ownership-note,
   .project-setup-grid,
   .flow-complete-hero,
@@ -488,6 +503,24 @@
     min-height: var(--control-height-touch);
   }
   .artifact-row {
+    min-height: var(--control-height-touch);
+  }
+  .studio-workflow-progress .stage-progress-step {
+    min-height: var(--control-height-touch);
+  }
+  .reader-badges {
+    align-items: flex-start;
+    flex-direction: row;
+  }
+  .reader-technical-content > button,
+  .reader-comparison-heading > button {
+    min-height: var(--control-height-touch);
+    width: 100%;
+  }
+  .reader-technical-details > summary,
+  .reader-document-map > summary,
+  .reader-evidence-group > summary,
+  .reader-header .viewer-modes button {
     min-height: var(--control-height-touch);
   }
   .next-flow-action-card {

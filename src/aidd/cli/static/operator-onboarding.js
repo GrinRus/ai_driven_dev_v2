@@ -385,7 +385,6 @@ function onboardingCanCreate() {
     onboardingProject()
     && state.onboarding.workItemInput.trim()
     && state.onboarding.requestText.trim()
-    && state.selectedRuntime
   );
 }
 
@@ -397,11 +396,51 @@ function syncOnboardingCreateActionState() {
   button.disabled = !(onboardingCanCreate() && !state.onboarding.creating);
 }
 
+function projectWorkItemCanCreate() {
+  return Boolean(
+    state.projectHome?.project_root
+    && state.onboarding.workItemInput.trim()
+    && state.onboarding.requestText.trim()
+  );
+}
+
+function syncProjectWorkItemCreateActionState() {
+  const form = document.getElementById("projectNewWorkItemForm");
+  if (!form) return;
+  const button = form.querySelector('button[type="submit"]');
+  if (!button) return;
+  button.disabled = !(projectWorkItemCanCreate() && !state.onboarding.creating);
+}
+
+function renderProjectWorkItemCreator() {
+  if (!state.onboarding.createPanelOpen) return "";
+  const canCreate = projectWorkItemCanCreate() && !state.onboarding.creating;
+  return `
+    <section class="surface project-work-item-creator" data-project-work-item-creator>
+      <div class="surface-title">
+        <span>New work item</span>
+        <button class="link-button" data-cancel-new-work-item type="button">Cancel</button>
+      </div>
+      <p class="muted">Capture the request now. Runtime selection happens only when you start delivery.</p>
+      <form id="projectNewWorkItemForm" class="form-grid">
+        <label class="field-label" for="projectNewWorkItem">Work item id</label>
+        <input id="projectNewWorkItem" name="work_item" type="text" maxlength="120" value="${escapeHtml(state.onboarding.workItemInput)}" autocomplete="off" spellcheck="false" placeholder="WI-123">
+        <label class="field-label" for="projectNewRequest">Request</label>
+        <textarea id="projectNewRequest" name="request" rows="5" maxlength="20000" placeholder="What should this work item deliver?">${escapeHtml(state.onboarding.requestText)}</textarea>
+        <div class="setup-actions">
+          <button type="submit" ${canCreate ? "" : "disabled"}>${state.onboarding.creating ? "Creating..." : "Create work item"}</button>
+          ${state.onboarding.createError ? `<span class="form-error">${escapeHtml(state.onboarding.createError)}</span>` : ""}
+        </div>
+      </form>
+    </section>
+  `;
+}
+
 function renderOnboardingTopbar() {
   document.body.classList.add("setup-active");
   const project = onboardingProject();
   const projectRoot = project?.project_root || "select project";
-  const runLabel = state.selectedRuntime ? `Runner: ${state.selectedRuntime}` : "Runner: required";
+  const runLabel = state.selectedRuntime ? `Runner: ${state.selectedRuntime}` : "Runner: choose before launch";
   const projectPath = document.getElementById("projectPath");
   const workItemChip = document.getElementById("workItemChip");
   const runChip = document.getElementById("runChip");
@@ -416,6 +455,7 @@ function renderOnboardingTopbar() {
   localStatus.title = state.onboarding.error || "Onboarding";
   localStatus.className = state.onboarding.error ? "status-chip" : "status-chip good";
   document.getElementById("openWorkspaceButton").disabled = true;
+  document.getElementById("newWorkItemButton").disabled = true;
   if (project) renderRuntimeSelector();
   else {
     const select = document.getElementById("runtimeSelect");
@@ -428,7 +468,7 @@ function renderOnboarding() {
   const content = document.getElementById("cockpitContent");
   const selectedRunner = state.selectedRuntime
     ? `<span class="small-badge good">${escapeHtml(state.selectedRuntime)}</span>`
-    : `<span class="small-badge warn">required</span>`;
+    : `<span class="small-badge">optional until launch</span>`;
   content.innerHTML = `
     <div class="onboarding-shell">
       ${renderGuidedDeliveryPreference()}
@@ -594,12 +634,8 @@ async function validateOnboardingProjectSet() {
 }
 
 async function completeOnboardingWorkItem(action, workItem) {
-  if (action === "create" && !state.selectedRuntime) {
-    toast("Select runner first.");
-    return;
-  }
   transitionGuidedSetup("work-item-selected", {branch: action, workItem});
-  if (action === "create") {
+  if (action === "create" && state.selectedRuntime) {
     transitionGuidedSetup("runtime-selected", {runtimeId: state.selectedRuntime});
   }
   state.onboarding.creating = true;
@@ -626,6 +662,57 @@ async function completeOnboardingWorkItem(action, workItem) {
   }
 }
 
+async function openProjectWorkItemCreation() {
+  state.onboarding.createPanelOpen = true;
+  state.onboarding.createError = "";
+  state.onboarding.workItemInput = "";
+  state.onboarding.requestText = "";
+  activateTab("project-home", {historyMode: "push"});
+  renderProjectHomeRail();
+  await renderCockpit();
+  window.requestAnimationFrame(() => document.getElementById("projectNewWorkItem")?.focus());
+}
+
+async function closeProjectWorkItemCreation() {
+  state.onboarding.createPanelOpen = false;
+  state.onboarding.createError = "";
+  await renderCockpit();
+}
+
+async function createProjectWorkItem() {
+  if (!projectWorkItemCanCreate()) {
+    state.onboarding.createError = "Work item id and request are required.";
+    await renderCockpit();
+    return;
+  }
+  state.onboarding.creating = true;
+  state.onboarding.createError = "";
+  await renderCockpit();
+  try {
+    const payload = await postJson("/api/onboarding/work-item", {
+      action: "create",
+      project_root: state.projectHome?.project_root || state.onboarding.projectRootInput || ".",
+      work_item: state.onboarding.workItemInput.trim(),
+      request: state.onboarding.requestText
+    });
+    const workItem = payload.created?.work_item || payload.context?.work_item || state.onboarding.workItemInput.trim();
+    state.onboarding.contextWorkItem = workItem;
+    state.onboarding.createPanelOpen = false;
+    state.onboarding.workItemInput = "";
+    state.onboarding.requestText = "";
+    state.activeRouteWorkItem = workItem;
+    state.activeRunId = "";
+    setOperatorMode("work");
+    syncLocationState({historyMode: "push"});
+    await refresh();
+  } catch (error) {
+    state.onboarding.createError = error.message || "work item creation failed";
+  } finally {
+    state.onboarding.creating = false;
+    if (state.onboarding.createPanelOpen) await renderCockpit();
+  }
+}
+
 async function resumeProjectHomeWorkItem(workItem, options = {}) {
   const item = projectHomeWorkItems().find((candidate) => candidate.work_item === workItem) || null;
   await postJson("/api/onboarding/work-item", {
@@ -646,6 +733,9 @@ async function resumeProjectHomeWorkItem(workItem, options = {}) {
   await fetchProjectHome(workItem);
   await fetchInbox();
   await renderAll();
+  void fetchReadiness().then((accepted) => {
+    if (accepted) renderReadinessSurfaces();
+  });
 }
 
 async function activateInboxWorkItemRoute(context) {

@@ -13,11 +13,21 @@ def test_document_canvas_is_primary_and_evidence_inspector_is_conditional() -> N
     artifacts = _asset("/operator-artifacts-documents.js")
 
     assert "function renderWorkbenchEvidenceInspector(workbench)" in artifacts
-    assert "resolveStudioEvidenceVisibility({inspectorItemCount})" in artifacts
-    assert 'if (!visibility.inspector) return "";' in artifacts
+    assert "function readerEvidenceGroups(workbench = {})" in artifacts
+    assert (
+        "resolveStudioEvidenceVisibility("
+        "{inspectorDecisionValue: groups.hasDecisionValue})" in artifacts
+    )
+    assert (
+        'if (!resolveStudioEvidenceVisibility('
+        '{inspectorDecisionValue: groups.hasDecisionValue}).inspector) return "";'
+        in artifacts
+    )
     assert "hierarchy-primary document-canvas" in artifacts
     assert "hierarchy-supporting evidence-inspector" in artifacts
     assert 'data-evidence-inspector="${evidenceInspector ? "present" : "absent"}"' in artifacts
+    assert "What this document must satisfy" in artifacts
+    assert "Where this version came from" in artifacts
 
 
 def test_history_uses_primary_filmstrip_and_supporting_event_hierarchy() -> None:

@@ -641,7 +641,7 @@ def test_operator_state_and_dashboard_assets_keep_runtime_and_tab_contracts() ->
     ) in api_state
 
 
-def test_operator_onboarding_static_contract_syncs_create_action_state() -> None:
+def test_operator_onboarding_static_contract_keeps_creation_and_launch_separate() -> None:
     onboarding = _asset_text("/operator-onboarding.js")
     main = _asset_text("/operator-main.js")
 
@@ -669,7 +669,6 @@ def test_operator_onboarding_static_contract_syncs_create_action_state() -> None
             'id="onboardingCreateForm"',
             'data-onboarding-work-item-branch="create"',
             'data-onboarding-work-item-branch="resume"',
-            'if (action === "create" && !state.selectedRuntime)',
             "runtime selection and launch remain separate actions",
             'data-project-set-field="id"',
             "Duplicate root",
@@ -687,6 +686,27 @@ def test_operator_onboarding_static_contract_syncs_create_action_state() -> None
         ),
     )
     assert main.count("syncOnboardingCreateActionState();") == 3
+    create_predicate = onboarding[
+        onboarding.index("function onboardingCanCreate()"):onboarding.index(
+            "function syncOnboardingCreateActionState()"
+        )
+    ]
+    assert "state.selectedRuntime" not in create_predicate
+    assert 'if (action === "create" && !state.selectedRuntime)' not in onboarding
+
+    dashboard_actions = _dashboard_actions()
+    workflow_start = dashboard_actions.index("async function startWorkflow()")
+    stage_start = dashboard_actions.index("async function startStage(")
+    dispatch_start = dashboard_actions.index("async function dispatchTaskAwareLaunch(")
+    assert "if (!ensureRunnableRuntime()) return;" in dashboard_actions[
+        workflow_start:stage_start
+    ]
+    assert "if (!ensureRunnableRuntime()) return;" in dashboard_actions[
+        stage_start:dispatch_start
+    ]
+    shell = _asset_text("/operator-shell-rendering.js")
+    assert "if (!state.selectedRuntime)" in shell
+    assert "if (!selectedRuntimeReady())" in shell
 
 
 def test_operator_onboarding_distinguishes_deterministic_runner_path() -> None:
@@ -741,11 +761,17 @@ def test_operator_shell_asset_keeps_runtime_readiness_navigation_and_markdown_co
             "function workItemTerminalLabel(item)",
             'if (handoffStatus === "failed") return "bad";',
             'if (handoffStatus === "failed") return "qa not-ready";',
-            "QA not ready / ${item.stage_progress_label}",
-            "QA risks / ${item.stage_progress_label}",
-            "handoff blocked / ${item.stage_progress_label}",
+            "const progress = `${completed} of ${total} stages complete`;",
+            "QA not ready · ${progress}",
+            "QA risks · ${progress}",
+            "Handoff blocked · ${progress}",
             "function workItemProgressText(item)",
-            "flow complete / ${item.stage_progress_label}",
+            "Flow complete · ${progress}",
+            "function workflowProgressSummary({collapsed = false} = {})",
+            "Workflow progress",
+            "workflow-progress-steps",
+            "stage-progress-step",
+            "studio-workflow-progress",
             "workItemTerminalLabel(item)",
             "function updateContextualTabs()",
             "function tabHasQuestions()",
@@ -1038,8 +1064,13 @@ def test_operator_artifact_asset_keeps_document_and_truncation_contracts() -> No
             "No artifacts for this stage yet",
             "function renderWorkbenchTree(workbench)",
             "function renderWorkbenchViewer(workbench)",
-            "function renderWorkbenchDiff(workbench)",
+            "function renderWorkbenchComparison(workbench)",
             "function renderWorkbenchTableOfContents(workbench)",
+            "function renderDocumentReadingBrief(workbench)",
+            (
+                "function renderReaderEvidenceDisclosure("
+                "{section, title, purpose, count, body, open = false})"
+            ),
             "function artifactCategoryFor(item = {})",
             "function artifactCategoryLabel(category)",
             "function artifactCategoryDetail(category)",
@@ -1048,7 +1079,7 @@ def test_operator_artifact_asset_keeps_document_and_truncation_contracts() -> No
             "function renderArtifactDownloadButton(item = {}, className = \"link-button\")",
             "function renderArtifactOwnershipNote(item = {})",
             "function markdownHeadingSummary(text)",
-            "Table of Contents",
+            "Document map",
             "function renderRequirementList(requirements)",
             "function renderValidationResults(results)",
             "function renderMissingEvidence(requirements)",
@@ -1068,11 +1099,11 @@ def test_operator_artifact_asset_keeps_document_and_truncation_contracts() -> No
             "Runtime evidence",
             "Project evidence",
             "Lineage evidence",
-            "Contract requirements",
-            "Validation results",
-            "Missing evidence",
-            "References",
-            "Version history",
+            "Needs attention",
+            "What this document must satisfy",
+            "Where this version came from",
+            "Related evidence",
+            "Compare retained copies",
             "function evidenceEdgeId(edge)",
             "function preferredEvidenceArtifactKey(view)",
             "function selectedEvidenceSelection(view)",
@@ -1098,11 +1129,13 @@ def test_operator_artifact_asset_keeps_document_and_truncation_contracts() -> No
             "/api/artifacts/document?${params.toString()}",
             "/api/stage/workbench?${params.toString()}",
             'params.set("source_limit", String(MAX_ARTIFACT_READ_BYTES));',
-            'data-artifact-mode="diff"',
+            'data-artifact-mode="compare"',
             'renderTruncationNotice("artifact", view, state.artifactViewMode)',
             "${renderMarkdown(view.text)}",
             "async function inspectArtifactReference({stage, key, path, kind})",
             "data-artifact-key",
+            "data-reader-artifact-key",
+            "data-compare-attempt",
         ),
     )
     assert (
@@ -1128,10 +1161,14 @@ def test_operator_artifact_asset_keeps_document_and_truncation_contracts() -> No
             ".artifact-doc-title {",
             ".markdown-preview code {",
             ".workbench-side-row span {",
+            ".reader-brief {",
+            ".reader-evidence-group {",
+            ".reader-comparison-grid {",
         ),
     )
     assert ".artifact-ownership-note," in responsive
     assert ".workbench-sidebar," in responsive
+    assert ".reader-comparison-grid," in responsive
 
 
 def test_operator_questions_asset_keeps_answer_resolution_and_saved_answer_contracts() -> None:

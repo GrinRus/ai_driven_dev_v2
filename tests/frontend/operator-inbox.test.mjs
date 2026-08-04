@@ -20,6 +20,7 @@ async function inboxContext() {
     escapeHtml(value) { return String(value ?? ""); },
     renderStateSurface() { return "loading"; },
     renderStatusMarker({status, label}) { return `<mark data-status="${status}">${label}</mark>`; },
+    renderProjectWorkItemCreator() { return ""; },
   });
   await load(context, "operator-inbox.js");
   return context;
@@ -70,6 +71,17 @@ test("Studio Inbox preserves section priority and exact durable routes", async (
   assert.match(html, /data-inbox-action="answer-questions"/);
   assert.match(html, /data-inbox-action="run-stage"/);
   assert.match(html, /data-inbox-action="create-new-work-item"/);
+});
+
+test("Project Inbox exposes a direct new work item entry point", async () => {
+  const context = await inboxContext();
+  const html = vm.runInContext(`
+    state.inbox = {durable: {sections: []}, running_now: []};
+    renderStudioInbox();
+  `, context);
+
+  assert.match(html, /data-new-work-item/);
+  assert.match(html, /New work item/);
 });
 
 test("disabled service eligibility does not disable read-only context navigation", async () => {

@@ -27,8 +27,8 @@ test("Studio evidence visibility is value-aware and request-gated", async () => 
   const context = await policyContext();
   const cases = [
     ["no run", {}, {inspector: false, filmstrip: false, logs: false}],
-    ["healthy running", {inspectorItemCount: 2, logEvidenceAvailable: true}, {inspector: true, filmstrip: false, logs: false}],
-    ["blocked evidence", {inspectorItemCount: 1, logEvidenceAvailable: true, requestedSurface: "logs"}, {inspector: true, filmstrip: false, logs: true}],
+    ["meaningful evidence", {inspectorDecisionValue: true, logEvidenceAvailable: true}, {inspector: true, filmstrip: false, logs: false}],
+    ["requested logs with evidence", {inspectorDecisionValue: true, logEvidenceAvailable: true, requestedSurface: "logs"}, {inspector: true, filmstrip: false, logs: true}],
     ["terminal overview", {filmstripFrameCount: 4, logEvidenceAvailable: true}, {inspector: false, filmstrip: false, logs: false}],
     ["requested history", {filmstripFrameCount: 4, requestedSurface: "history"}, {inspector: false, filmstrip: true, logs: false}],
   ];
@@ -42,7 +42,7 @@ test("inspector, Filmstrip, and logs use the shared visibility policy", async ()
   const history = await readFile(path.join(assetsRoot, "operator-history.js"), "utf8");
   const logs = await readFile(path.join(assetsRoot, "operator-logs-jobs.js"), "utf8");
   const cockpit = await readFile(path.join(assetsRoot, "operator-stage-cockpit.js"), "utf8");
-  assert.match(artifacts, /resolveStudioEvidenceVisibility\(\{inspectorItemCount\}\)/);
+  assert.match(artifacts, /resolveStudioEvidenceVisibility\(\{inspectorDecisionValue: groups\.hasDecisionValue\}\)/);
   assert.match(history, /timeline\.frames/);
   assert.match(history, /history-filmstrip-frames/);
   assert.match(logs, /logEvidenceAvailable: liveLogAvailable \|\| Number\(item\?\.attempt_count \|\| 0\) > 0/);
