@@ -68,7 +68,7 @@ from aidd.core.stage_runner import (
 from aidd.core.stages import STAGES, is_valid_stage
 from aidd.core.state_machine import StageState
 from aidd.core.workspace import stage_root as workspace_stage_root
-from aidd.runtime_catalog import RuntimeExecutionMode
+from aidd.runtime_catalog import RuntimeExecutionMode, validate_runtime_selectors
 from aidd.runtime_permissions import (
     AutoApprovalPreset,
     RuntimeInteractionMode,
@@ -96,6 +96,8 @@ class StageRunOptions:
         Callable[[StageExecutionState, StageOutputDiscovery], tuple[ValidationFinding, ...]] | None
     ) = None
     intervention_request_path: Path | None = None
+    model_override: str | None = None
+    reasoning_effort_override: str | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -136,6 +138,8 @@ class StageRunRuntimeConfig:
     project_set: ResolvedProjectSet | None
     runtime_model: str | None = None
     runtime_reasoning_effort: str | None = None
+    runtime_model_source: str = "runtime-default"
+    runtime_reasoning_effort_source: str = "runtime-default"
 
 
 @dataclass(frozen=True, slots=True)
@@ -218,6 +222,20 @@ def _resolve_stage_run_config(options: StageRunOptions) -> StageRunRuntimeConfig
         else None
     )
     runtime_cfg = cfg.runtime_config(options.runtime)
+    runtime_model = (
+        options.model_override if options.model_override is not None else runtime_cfg.model
+    )
+    runtime_reasoning_effort = (
+        options.reasoning_effort_override
+        if options.reasoning_effort_override is not None
+        else runtime_cfg.reasoning_effort
+    )
+    validate_runtime_selectors(
+        runtime_id=options.runtime,
+        execution_mode=runtime_cfg.execution_mode,
+        model=runtime_model,
+        reasoning_effort=runtime_reasoning_effort,
+    )
     return StageRunRuntimeConfig(
         workspace_root=workspace_root,
         repository_root=repository_root,
@@ -229,8 +247,22 @@ def _resolve_stage_run_config(options: StageRunOptions) -> StageRunRuntimeConfig
         runtime_permission_policy=runtime_cfg.permission_policy,
         runtime_interaction_mode=runtime_cfg.interaction_mode,
         runtime_auto_approval_preset=runtime_cfg.auto_approval_preset,
-        runtime_model=runtime_cfg.model,
-        runtime_reasoning_effort=runtime_cfg.reasoning_effort,
+        runtime_model=runtime_model,
+        runtime_reasoning_effort=runtime_reasoning_effort,
+        runtime_model_source=(
+            "ui-selection"
+            if options.model_override is not None
+            else "runtime-config"
+            if runtime_cfg.model is not None
+            else "runtime-default"
+        ),
+        runtime_reasoning_effort_source=(
+            "ui-selection"
+            if options.reasoning_effort_override is not None
+            else "runtime-config"
+            if runtime_cfg.reasoning_effort is not None
+            else "runtime-default"
+        ),
         runtime_timeout_seconds=_runtime_timeout_for_runtime(
             runtime=options.runtime,
             cfg=cfg,
@@ -625,29 +657,13 @@ def _write_run_manifest(
             "log_follow": options.log_follow,
             "runtime_model": runtime_config.runtime_model,
             "runtime_reasoning_effort": runtime_config.runtime_reasoning_effort,
-            "runtime_model_source": (
-                "runtime-config"
-                if runtime_config.runtime_model is not None
-                else "runtime-default"
-            ),
-            "runtime_reasoning_effort_source": (
-                "runtime-config"
-                if runtime_config.runtime_reasoning_effort is not None
-                else "runtime-default"
-            ),
+            "runtime_model_source": runtime_config.runtime_model_source,
+            "runtime_reasoning_effort_source": runtime_config.runtime_reasoning_effort_source,
             "runtime_selection": {
                 "requested_model": runtime_config.runtime_model,
                 "requested_reasoning_effort": runtime_config.runtime_reasoning_effort,
-                "model_source": (
-                    "runtime-config"
-                    if runtime_config.runtime_model is not None
-                    else "runtime-default"
-                ),
-                "reasoning_effort_source": (
-                    "runtime-config"
-                    if runtime_config.runtime_reasoning_effort is not None
-                    else "runtime-default"
-                ),
+                "model_source": runtime_config.runtime_model_source,
+                "reasoning_effort_source": runtime_config.runtime_reasoning_effort_source,
             },
         },
     )

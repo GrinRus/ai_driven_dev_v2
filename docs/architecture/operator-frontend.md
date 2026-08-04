@@ -48,7 +48,7 @@ workflow authority and must be rebuildable from AIDD artifacts.
 The first frontend contract covers these flows:
 
 1. **Full workflow run**
-   - choose a work item and runtime;
+  - choose a work item, runtime, and optional typed model/reasoning-effort selectors;
    - start or resume `idea -> qa` through the workflow run application service;
    - show the current stage, terminal state, and next required operator action.
 
@@ -227,6 +227,8 @@ The first implementation should expose:
 
 - work-item selection;
 - runtime selection from registered runtimes;
+- optional model and reasoning-effort controls for runtimes that advertise typed selector
+  capability; blank controls mean native runtime defaults and are not sent to adapters;
 - full-flow start/resume;
 - per-stage status;
 - blocking question answer form;

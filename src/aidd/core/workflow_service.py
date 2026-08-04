@@ -38,6 +38,8 @@ class WorkflowRunRequest:
     log_follow: bool = False
     run_id: str | None = None
     continuation: bool = False
+    model_override: str | None = None
+    reasoning_effort_override: str | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -49,6 +51,8 @@ class WorkflowStageExecutionRequest:
     workspace_root: Path
     config_path: Path
     log_follow: bool
+    model_override: str | None = None
+    reasoning_effort_override: str | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -308,6 +312,8 @@ def _run_workflow_without_lease(
                     workspace_root=request.workspace_root,
                     config_path=request.config_path,
                     log_follow=request.log_follow,
+                    model_override=request.model_override,
+                    reasoning_effort_override=request.reasoning_effort_override,
                 )
             )
         except WorkflowStageExecutionError as exc:

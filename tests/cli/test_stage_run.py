@@ -342,6 +342,48 @@ def _write_cli_config(
     return config_path
 
 
+def test_ui_selector_override_is_capability_checked_and_recorded_in_manifest(
+    tmp_path: Path,
+) -> None:
+    workspace_root = tmp_path / ".aidd"
+    config_path = _write_cli_config(tmp_path=tmp_path, runtime_command="python")
+    options = StageRunOptions(
+        stage="idea",
+        work_item="WI-UI-SELECTOR",
+        runtime="codex",
+        run_id="run-ui-selector",
+        root=workspace_root,
+        config=config_path,
+        log_follow=False,
+        model_override="gpt-5.6-luna",
+        reasoning_effort_override="high",
+    )
+
+    runtime_config = _resolve_stage_run_config(options)
+
+    assert runtime_config.runtime_model == "gpt-5.6-luna"
+    assert runtime_config.runtime_reasoning_effort == "high"
+    assert runtime_config.runtime_model_source == "ui-selection"
+    assert runtime_config.runtime_reasoning_effort_source == "ui-selection"
+    _write_run_manifest(options=options, runtime_config=runtime_config, run_id=options.run_id)
+    manifest = json.loads(
+        (
+            workspace_root
+            / "reports"
+            / "runs"
+            / "WI-UI-SELECTOR"
+            / "run-ui-selector"
+            / "run-manifest.json"
+        ).read_text(encoding="utf-8")
+    )
+    assert manifest["config_snapshot"]["runtime_selection"] == {
+        "model_source": "ui-selection",
+        "reasoning_effort_source": "ui-selection",
+        "requested_model": "gpt-5.6-luna",
+        "requested_reasoning_effort": "high",
+    }
+
+
 def _write_native_runtime_cli_config(
     *,
     tmp_path: Path,

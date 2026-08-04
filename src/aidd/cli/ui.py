@@ -51,7 +51,7 @@ from aidd.cli.ui_job_evidence import (
     build_ui_job_terminal_evidence,
 )
 from aidd.cli.ui_routing import OperatorUiRouter, UiJobDecisionConflict, handler_for
-from aidd.config import AiddConfig, load_config, runtime_selection_config_snapshot
+from aidd.config import AiddConfig, load_config
 from aidd.core.allowed_write_scope import (
     AllowedWriteScopeError,
     resolve_allowed_write_scope,
@@ -159,7 +159,7 @@ from aidd.core.workflow_service import (
     allocate_workflow_run_id,
     run_workflow,
 )
-from aidd.runtime_catalog import runtime_definitions
+from aidd.runtime_catalog import runtime_definitions, validate_runtime_selectors
 from aidd.runtime_permissions import (
     RuntimeOperatorDecisionAction,
     RuntimeOperatorDecisionSource,
@@ -1130,6 +1130,21 @@ def _runtime_from_payload(payload: dict[str, Any]) -> str:
     if not runtime:
         raise ValueError("runtime is required.")
     return runtime
+
+
+def _runtime_selector_overrides_from_payload(
+    payload: Mapping[str, Any],
+) -> tuple[str | None, str | None]:
+    values: list[str | None] = []
+    for key in ("model", "reasoning_effort"):
+        if key not in payload:
+            values.append(None)
+            continue
+        raw_value = payload[key]
+        if not isinstance(raw_value, str) or not raw_value.strip():
+            raise ValueError(f"{key} must be a non-empty string when provided.")
+        values.append(raw_value.strip())
+    return values[0], values[1]
 
 
 def _optional_run_id_from_payload(payload: dict[str, Any]) -> str | None:
@@ -2187,6 +2202,9 @@ class OperatorUiService:
             raise ValueError("run_id is required.")
         if not runtime:
             raise ValueError("runtime is required.")
+        model_override, reasoning_effort_override = _runtime_selector_overrides_from_payload(
+            payload
+        )
         lease = acquire_run_mutation_lease_handle(
             run_root(
                 workspace_root=self.workspace_root,
@@ -2208,6 +2226,8 @@ class OperatorUiService:
                         runtime=runtime,
                         run_id=run_id,
                         job_id=job_id,
+                        model_override=model_override,
+                        reasoning_effort_override=reasoning_effort_override,
                     )
                     result = service.run_task(
                         self._implementation_request(run_id=run_id),
@@ -2309,6 +2329,8 @@ class OperatorUiService:
         runtime: str,
         run_id: str,
         job_id: str,
+        model_override: str | None = None,
+        reasoning_effort_override: str | None = None,
     ) -> ImplementationExecutionService:
         def _execute(context: TaskExecutionContext) -> TaskAttemptOutcome:
             try:
@@ -2330,6 +2352,8 @@ class OperatorUiService:
                             _UiRuntimeOperatorDecisionProvider(service=self, job_id=job_id)
                         ),
                         cancel_requested=lambda: self._jobs.cancel_requested(job_id),
+                        model_override=model_override,
+                        reasoning_effort_override=reasoning_effort_override,
                         defer_success_publication=True,
                         validation_finding_provider=lambda execution_state, discovery: (
                             task_validation_findings(
@@ -3341,6 +3365,9 @@ class OperatorUiService:
         stage = _stage_from_payload(payload)
         runtime = _runtime_from_payload(payload)
         _validate_runtime(runtime)
+        model_override, reasoning_effort_override = _runtime_selector_overrides_from_payload(
+            payload
+        )
         log_follow = bool(payload.get("log_follow", True))
         run_id = str(payload.get("run_id", "")).strip() or None
 
@@ -3351,6 +3378,8 @@ class OperatorUiService:
                 run_id=run_id,
                 log_follow=log_follow,
                 job_id=job_id,
+                model_override=model_override,
+                reasoning_effort_override=reasoning_effort_override,
             )
 
         return self._start_job(kind="stage", stage=stage, target=_target, run_id=run_id)
@@ -3437,6 +3466,8 @@ class OperatorUiService:
         run_id: str | None,
         log_follow: bool,
         job_id: str,
+        model_override: str | None = None,
+        reasoning_effort_override: str | None = None,
     ) -> object:
         selected_run_id = run_id
         try:
@@ -3459,6 +3490,8 @@ class OperatorUiService:
                         job_id=job_id,
                     ),
                     cancel_requested=lambda: self._jobs.cancel_requested(job_id),
+                    model_override=model_override,
+                    reasoning_effort_override=reasoning_effort_override,
                 )
             )
         except typer.Exit as exc:
@@ -3556,6 +3589,7 @@ class OperatorUiService:
         self._require_context()
         runtime = _runtime_from_payload(payload)
         _validate_runtime(runtime)
+        _runtime_selector_overrides_from_payload(payload)
         stage_start, stage_end = _workflow_bounds_from_payload(payload)
         requested_run_id = _optional_run_id_from_payload(payload)
         run_id = requested_run_id or allocate_workflow_run_id(
@@ -3981,9 +4015,38 @@ class OperatorUiService:
         log_follow = bool(payload.get("log_follow", True))
         target_work_item = work_item or self.work_item
         cfg = load_config(self.config_path)
+        model_override, reasoning_effort_override = _runtime_selector_overrides_from_payload(
+            payload
+        )
         runtime_command = _runtime_command_for_runtime(runtime=runtime, cfg=cfg)
         runtime_execution_mode = _runtime_execution_mode_for_runtime(runtime=runtime, cfg=cfg)
         runtime_config = cfg.runtime_config(runtime)
+        effective_model = model_override if model_override is not None else runtime_config.model
+        effective_reasoning_effort = (
+            reasoning_effort_override
+            if reasoning_effort_override is not None
+            else runtime_config.reasoning_effort
+        )
+        validate_runtime_selectors(
+            runtime_id=runtime,
+            execution_mode=runtime_execution_mode,
+            model=effective_model,
+            reasoning_effort=effective_reasoning_effort,
+        )
+        model_source = (
+            "ui-selection"
+            if model_override is not None
+            else "runtime-config"
+            if runtime_config.model is not None
+            else "runtime-default"
+        )
+        reasoning_effort_source = (
+            "ui-selection"
+            if reasoning_effort_override is not None
+            else "runtime-config"
+            if runtime_config.reasoning_effort is not None
+            else "runtime-default"
+        )
         config_snapshot: dict[str, Any] = {
             "config_path": self.config_path.as_posix(),
             "workspace_root": self.workspace_root.as_posix(),
@@ -3992,7 +4055,16 @@ class OperatorUiService:
             "runtime_permission_policy": runtime_config.permission_policy.value,
             "runtime_interaction_mode": runtime_config.interaction_mode.value,
             "runtime_auto_approval_preset": runtime_config.auto_approval_preset.value,
-            **runtime_selection_config_snapshot(runtime_config),
+            "runtime_model": effective_model,
+            "runtime_reasoning_effort": effective_reasoning_effort,
+            "runtime_model_source": model_source,
+            "runtime_reasoning_effort_source": reasoning_effort_source,
+            "runtime_selection": {
+                "requested_model": effective_model,
+                "requested_reasoning_effort": effective_reasoning_effort,
+                "model_source": model_source,
+                "reasoning_effort_source": reasoning_effort_source,
+            },
             "log_follow": log_follow,
             "mode": "ui-workflow",
         }
@@ -4020,6 +4092,8 @@ class OperatorUiService:
                             job_id=job_id,
                         ),
                         cancel_requested=lambda: self._jobs.cancel_requested(job_id),
+                        model_override=request.model_override,
+                        reasoning_effort_override=request.reasoning_effort_override,
                     )
                 )
             except typer.Exit as exc:
@@ -4040,6 +4114,8 @@ class OperatorUiService:
                 lineage=lineage,
                 run_id=run_id,
                 continuation=bool(payload.get("continuation", False)),
+                model_override=model_override,
+                reasoning_effort_override=reasoning_effort_override,
                 stage_start=stage_start,
                 stage_end=stage_end,
                 log_follow=log_follow,

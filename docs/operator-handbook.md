@@ -161,6 +161,12 @@ collides with a selector already owned by a custom command fails closed. With no
 override, AIDD leaves the command unchanged and records `runtime-default` in the run
 snapshot rather than asserting a factual provider model.
 
+The local Operator UI exposes the same selectors beside the runtime picker. Enter a model
+and optional reasoning effort before starting a workflow or stage; the fields are free-form
+because AIDD does not maintain a global model-id allowlist. Controls are enabled only when
+the selected runtime advertises the capability, blank values are omitted, and the chosen
+values plus `ui-selection` provenance are retained in the run snapshot.
+
 Claude Code, Codex, and OpenCode native mode adapt AIDD stage briefs and prompt
 packs to the raw provider CLI. Use `mode = "adapter-flags"` only for wrapper
 commands that accept AIDD adapter flags directly.

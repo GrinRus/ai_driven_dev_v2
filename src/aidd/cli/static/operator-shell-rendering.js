@@ -26,7 +26,45 @@ function renderRuntimeSelector() {
       return `<option value="${escapeHtml(runtimeId)}"${selected}>${escapeHtml(runtimeId)} (${label})</option>`;
     })
   ].join("");
+  const selected = runtimes.find((runtime) => String(runtime.runtime_id || "") === state.selectedRuntime);
+  if (state.runtimeSelectionRuntime !== state.selectedRuntime) {
+    state.runtimeSelectionRuntime = state.selectedRuntime;
+    state.runtimeModel = String(selected?.configured_model || "");
+    state.runtimeReasoningEffort = String(selected?.configured_reasoning_effort || "");
+    state.runtimeModelDirty = false;
+    state.runtimeReasoningEffortDirty = false;
+  }
+  const supportedSelectors = new Set(selected?.capabilities?.supported_selectors || []);
+  const modelInput = document.getElementById("runtimeModelInput");
+  const effortInput = document.getElementById("runtimeReasoningEffortInput");
+  if (modelInput) {
+    modelInput.value = state.runtimeModel;
+    modelInput.disabled = !supportedSelectors.has("model");
+    modelInput.title = modelInput.disabled
+      ? "The selected runtime does not advertise model selection."
+      : "Optional runtime model override; blank keeps the configured/native default.";
+  }
+  if (effortInput) {
+    effortInput.value = state.runtimeReasoningEffort;
+    effortInput.disabled = !supportedSelectors.has("reasoning_effort");
+    effortInput.title = effortInput.disabled
+      ? "The selected runtime does not advertise reasoning effort selection."
+      : "Optional runtime reasoning effort override; blank keeps the configured/native default.";
+  }
   setRunButtonState();
+}
+
+function runtimeSelectorPayload() {
+  const runtime = selectedRuntimeView();
+  const supported = new Set(runtime?.capabilities?.supported_selectors || []);
+  const payload = {};
+  const model = String(state.runtimeModel || "").trim();
+  const reasoningEffort = String(state.runtimeReasoningEffort || "").trim();
+  if (state.runtimeModelDirty && model && supported.has("model")) payload.model = model;
+  if (state.runtimeReasoningEffortDirty && reasoningEffort && supported.has("reasoning_effort")) {
+    payload.reasoning_effort = reasoningEffort;
+  }
+  return payload;
 }
 
 function scrollActiveStageIntoView() {

@@ -35,6 +35,11 @@ No task is promoted while the external Codex acceptance is active.
 
 ## Current reconciliation
 
+- `2026-08-04` Wave 39 UI selector slice is complete. The local operator shell exposes
+  capability-gated model and reasoning-effort controls, UI stage/workflow payloads omit
+  blank values, and selected values reach the shared runtime request path with immutable
+  `ui-selection` provenance. Frontend 13/13, stage-run 30/30, UI 100/100, Ruff, and mypy pass.
+
 - `2026-08-04` Wave 38 is complete. Typed `model` and `reasoning_effort` selectors are
   capability-gated, Codex-specific mapping is covered for subprocess and app-server paths,
   run snapshots record requested values and `runtime-config`/`runtime-default` provenance,

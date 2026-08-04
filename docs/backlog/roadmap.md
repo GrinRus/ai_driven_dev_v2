@@ -13528,3 +13528,55 @@ Sync notes:
 - `2026-08-04` Completed the typed selector vertical slice. Config, adapter, app-server,
   manifest/resume, live-profile, documentation, focused tests, full pytest (`2188 passed`),
   Ruff, and mypy checks pass. No provider-authenticated live scenario was launched.
+
+---
+
+## Wave 39 — operator runtime selector picker (`planned`)
+
+Goal: let operators choose optional typed model and reasoning-effort selectors in the
+local UI launch flow while preserving adapter capability validation, native defaults,
+and immutable run selection provenance.
+
+Non-goals:
+
+- adding a static global model-id allowlist;
+- moving Codex flag or app-server mapping into the frontend or core;
+- changing the existing CLI configuration contract.
+
+### Epic W39-E1 — UI launch selection (`done`)
+Linked stories: `US-01`, `US-10`, `US-11`
+
+#### Slice W39-E1-S1 — typed UI launch selection (`done`)
+Goal: carry operator-selected model and reasoning effort from the UI picker through
+the shared launch path into runtime requests and run snapshots.
+
+Dependencies:
+
+- `W38-E1` typed runtime selector boundary;
+- existing operator frontend launch service.
+
+Local tasks:
+
+- `W39-E1-S1-T1` (done) Propagate UI runtime selectors through stage/workflow launch requests and snapshots.
+  - Scope: UI launch request models, stage/workflow execution handoff, and provenance tests.
+  - Verification: a UI-selected Codex model/effort reaches the existing adapter request and
+    manifest with `ui-selection` provenance; omitted values retain configured/native defaults.
+
+- `W39-E1-S1-T2` (done) Render editable model and reasoning-effort controls for the selected runtime.
+  - Scope: operator frontend Guided Setup and command-center assets.
+  - Verification: browser-asset tests prove controls are visible, runtime changes reset stale
+    selectors, and launch payloads include only non-empty typed values.
+
+Exit evidence:
+
+- UI can choose model and reasoning effort without editing TOML;
+- blank selectors are omitted and native defaults remain intact;
+- unsupported runtime selectors still fail closed at the existing adapter boundary;
+- UI-created manifests preserve selector values, source, and resume identity.
+
+Sync notes:
+
+- `2026-08-04` Completed the UI picker vertical slice. The operator shell now exposes
+  capability-gated model and reasoning-effort inputs, forwards non-empty values through
+  UI stage/workflow launches, and records `ui-selection` provenance. Frontend, stage-run,
+  Ruff, and mypy checks pass.
