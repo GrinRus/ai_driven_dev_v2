@@ -19,6 +19,8 @@ def test_command_contains_permission_bypass_covers_provider_bypass_flags() -> No
         "claude -p --dangerously-skip-permissions=true"
     )
     assert command_contains_permission_bypass("qwen -y")
+    assert command_contains_permission_bypass("qwen --approval-mode auto")
+    assert command_contains_permission_bypass("qwen --approval-mode=auto")
     assert command_contains_permission_bypass("qwen --approval-mode yolo")
 
 

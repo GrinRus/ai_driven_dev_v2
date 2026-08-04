@@ -65,7 +65,7 @@ def test_load_config_defaults_native_providers_to_native(tmp_path: Path) -> None
     assert cfg.codex_execution_mode is RuntimeExecutionMode.NATIVE
     assert cfg.opencode_command == "opencode run --format json --dangerously-skip-permissions"
     assert cfg.opencode_execution_mode is RuntimeExecutionMode.NATIVE
-    assert cfg.qwen_command == "qwen --approval-mode yolo --output-format stream-json"
+    assert cfg.qwen_command == "qwen --approval-mode auto --output-format stream-json"
     assert cfg.qwen_execution_mode is RuntimeExecutionMode.NATIVE
     assert cfg.generic_cli_execution_mode is RuntimeExecutionMode.ADAPTER_FLAGS
     assert cfg.claude_code_timeout_seconds is None
@@ -308,7 +308,7 @@ def test_brokered_config_rewrites_explicit_default_managed_command(
                 "",
                 "[runtime.qwen]",
                 'permission_policy = "brokered"',
-                'command = "qwen --approval-mode yolo --output-format stream-json"',
+                'command = "qwen --approval-mode auto --output-format stream-json"',
                 "",
             )
         ),

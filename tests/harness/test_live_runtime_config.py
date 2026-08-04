@@ -213,7 +213,7 @@ def test_write_live_runtime_config_records_native_modes(tmp_path: Path) -> None:
     assert "[runtime.opencode]" in config_text
     assert 'command = "opencode run --format json --dangerously-skip-permissions"' in config_text
     assert "[runtime.qwen]" in config_text
-    assert 'command = "qwen --approval-mode yolo --output-format stream-json"' in config_text
+    assert 'command = "qwen --approval-mode auto --output-format stream-json"' in config_text
     assert "[runtime.generic_cli]" not in config_text
     assert config_text.count("timeout_seconds = 3600") == 4
     assert "[runtime.claude_code.stage_timeouts]" in config_text
@@ -419,7 +419,7 @@ def test_validate_live_runtime_command_checks_qwen_native_executable(
     )
 
     assert entry.execution_mode is RuntimeExecutionMode.NATIVE
-    assert entry.command.startswith("qwen --approval-mode yolo")
+    assert entry.command.startswith("qwen --approval-mode auto")
 
 
 def test_validate_live_runtime_command_fails_before_repo_prep_when_missing(

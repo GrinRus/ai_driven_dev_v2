@@ -132,7 +132,7 @@ mode = "native"
 # timeout_seconds = 3600
 
 [runtime.qwen]
-command = "qwen --approval-mode yolo --output-format stream-json"
+command = "qwen --approval-mode auto --output-format stream-json"
 mode = "native"
 # timeout_seconds = 3600
 
