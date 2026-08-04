@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import os
 import shlex
 from collections.abc import Mapping
 from dataclasses import asdict, dataclass
@@ -83,10 +84,23 @@ def _command_prerequisite(
     candidate = Path(executable)
     if candidate.is_absolute() or "/" not in executable:
         return None
-    resolved = (working_copy_path / candidate).resolve(strict=False)
+    working_copy = working_copy_path.resolve(strict=False)
+    candidate_path = working_copy / candidate
+    lexical_candidate = Path(os.path.abspath(candidate_path))
     try:
-        resolved.relative_to(working_copy_path.resolve(strict=False))
+        lexical_relative = lexical_candidate.relative_to(working_copy)
     except ValueError:
+        return TargetCommandPrerequisite(
+            command=command,
+            path=lexical_candidate.as_posix(),
+            exists=False,
+            executable=False,
+        )
+    resolved = candidate_path.resolve(strict=False)
+    if not resolved.is_relative_to(working_copy) and lexical_relative.parts[:2] != (
+        ".venv",
+        "bin",
+    ):
         return TargetCommandPrerequisite(
             command=command,
             path=resolved.as_posix(),

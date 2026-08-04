@@ -77,6 +77,29 @@ def test_target_readiness_classifies_missing_generated_executable(
     assert raised.value.result.command_transcripts == tuple()
 
 
+def test_target_readiness_accepts_uv_style_venv_interpreter_symlink(
+    tmp_path: Path,
+) -> None:
+    external_interpreter = tmp_path.parent / f"{tmp_path.name}-python"
+    external_interpreter.write_text("#!/bin/sh\nexit 0\n", encoding="utf-8")
+    external_interpreter.chmod(0o755)
+    venv_python = tmp_path / ".venv" / "bin" / "python"
+    venv_python.parent.mkdir(parents=True)
+    venv_python.symlink_to(external_interpreter)
+
+    result = run_live_target_readiness(
+        task=_task(".venv/bin/python --smoke"),
+        working_copy_path=tmp_path,
+        environment=dict(os.environ),
+        timeout_seconds=5.0,
+    )
+
+    assert result.classification == "pass"
+    assert result.prerequisites[0].exists is True
+    assert result.prerequisites[0].executable is True
+    assert result.command_transcripts[0].exit_code == 0
+
+
 def test_target_readiness_detects_missing_optional_dependency_before_provider(
     tmp_path: Path,
 ) -> None:
