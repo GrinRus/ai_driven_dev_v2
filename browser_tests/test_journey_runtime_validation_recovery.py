@@ -5,7 +5,11 @@ from pathlib import Path
 import pytest
 from playwright.sync_api import Page, sync_playwright
 
-from browser_tests.browser_harness import VIEWPORTS, operator_browser_harness
+from browser_tests.browser_harness import (
+    VIEWPORTS,
+    operator_browser_harness,
+    wait_for_work_item_surface,
+)
 from browser_tests.rendered_assertions import assert_accessible_render
 from browser_tests.rendered_geometry import assert_rendered_geometry
 from browser_tests.state_fixtures import build_browser_state_fixture
@@ -62,7 +66,8 @@ def test_runtime_failures_show_exact_durable_signal_without_mutation(
                     if request.method == "POST"
                     else None,
                 )
-                page.goto(f"{harness.url}?ui=studio", wait_until="networkidle")
+                page.goto(f"{harness.url}?ui=studio", wait_until="domcontentloaded")
+                wait_for_work_item_surface(page, fixture.work_item)
                 _open_recovery(page)
 
                 recovery = page.locator(f'[data-runtime-failure-kind="{kind}"]')
@@ -77,7 +82,8 @@ def test_runtime_failures_show_exact_durable_signal_without_mutation(
                 assert mutation_posts == []
 
                 if viewport == VIEWPORTS[0]:
-                    page.reload(wait_until="networkidle")
+                    page.reload(wait_until="domcontentloaded")
+                    wait_for_work_item_surface(page, fixture.work_item)
                     _open_recovery(page)
                     assert page.locator(
                         f'[data-runtime-failure-kind="{kind}"]'
@@ -111,7 +117,8 @@ def test_validation_recovery_exposes_one_eligible_primary_action(
         for viewport in VIEWPORTS:
             with harness.open_page(viewport) as browser_page:
                 page = browser_page.page
-                page.goto(f"{harness.url}?ui=studio", wait_until="networkidle")
+                page.goto(f"{harness.url}?ui=studio", wait_until="domcontentloaded")
+                wait_for_work_item_surface(page, fixture.work_item)
                 page.evaluate(
                     "async () => {"
                     "  state.activeStage = 'plan';"
@@ -150,7 +157,8 @@ def test_runtime_validation_recovery_parity_preserves_durable_read_models(
         for selector in ("", "?ui=legacy", "?ui=studio", "?ui=unknown"):
             with harness.open_page((1280, 900)) as browser_page:
                 page = browser_page.page
-                page.goto(f"{harness.url}{selector}", wait_until="networkidle")
+                page.goto(f"{harness.url}{selector}", wait_until="domcontentloaded")
+                wait_for_work_item_surface(page, fixture.work_item)
                 page.evaluate(
                     "async (stage) => {"
                     "  state.activeStage = stage;"

@@ -97,6 +97,8 @@ def test_prepare_local_wheel_install_returns_absolute_installed_command_for_rela
             assert Path(env["UV_CACHE_DIR"]).is_absolute()
             home = Path(env["HOME"])
             tool_bin_dir = install_artifact._tool_bin_dir(install_home=home)
+            assert Path(env["UV_TOOL_BIN_DIR"]) == tool_bin_dir
+            assert Path(env["UV_TOOL_DIR"]).is_relative_to(home)
             tool_bin_dir.mkdir(parents=True, exist_ok=True)
             installed_binary = tool_bin_dir / "aidd"
             installed_binary.write_text("#!/bin/sh\nexit 0\n", encoding="utf-8")
@@ -122,6 +124,58 @@ def test_prepare_local_wheel_install_returns_absolute_installed_command_for_rela
     assert result.install_home == tmp_path / "work-root" / "eval-live-test" / "install-home"
     assert result.uv_cache_dir == tmp_path / "work-root" / "eval-live-test" / "uv-cache"
     assert result.source_revision
+
+
+def test_prepare_local_wheel_install_overrides_provider_private_xdg_tool_roots(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    repository_root = tmp_path / "repo"
+    repository_root.mkdir()
+    (repository_root / "pyproject.toml").write_text("[project]\nname='aidd-test'\n")
+    (repository_root / "contracts").mkdir()
+    _commit_source_checkout(repository_root)
+    provider_private = tmp_path / "provider-private"
+    monkeypatch.setenv("XDG_DATA_HOME", (provider_private / "data").as_posix())
+    monkeypatch.setenv("XDG_BIN_HOME", (provider_private / "bin").as_posix())
+
+    def _fake_run_command(
+        *,
+        command: tuple[str, ...],
+        cwd: Path,
+        env: dict[str, str] | None = None,
+    ) -> HarnessCommandTranscript:
+        if _is_uv_build_command(command):
+            _write_fake_aidd_wheel(
+                Path(command[-1]) / "ai_driven_dev_v2-0.0.0-py3-none-any.whl"
+            )
+        elif _is_uv_tool_install_command(command):
+            assert env is not None
+            tool_bin_dir = Path(env["UV_TOOL_BIN_DIR"])
+            tool_storage_dir = Path(env["UV_TOOL_DIR"])
+            install_home = Path(env["HOME"])
+            assert tool_bin_dir.is_relative_to(install_home)
+            assert tool_storage_dir.is_relative_to(install_home)
+            assert not tool_bin_dir.is_relative_to(provider_private)
+            assert not tool_storage_dir.is_relative_to(provider_private)
+            tool_bin_dir.mkdir(parents=True)
+            installed_binary = tool_bin_dir / "aidd"
+            installed_binary.write_text("#!/bin/sh\nexit 0\n", encoding="utf-8")
+            installed_binary.chmod(0o755)
+        return _transcript(command)
+
+    monkeypatch.setattr(install_artifact, "_run_command", _fake_run_command)
+
+    result = prepare_local_wheel_install(
+        work_root=tmp_path / "work-root",
+        run_id="eval-live-test",
+        repository_root=repository_root,
+    )
+
+    installed_binary = Path(result.installed_command[0])
+    assert installed_binary == result.tool_bin_dir / "aidd"
+    assert installed_binary.is_file()
+    assert not (provider_private / "bin" / "aidd").exists()
 
 
 def test_prepare_local_wheel_install_honors_uv_environment_override(

@@ -3,6 +3,7 @@ from __future__ import annotations
 import re
 
 from aidd.core.allowed_write_scope import AllowedWriteScopeError
+from aidd.core.task_plan import TaskExecutionMode
 from aidd.validators.evidence_context import load_implementation_evidence_context
 from aidd.validators.models import ValidationFinding
 from aidd.validators.semantic_rules.common import (
@@ -192,6 +193,7 @@ def _validate_touched_files(
     summary: SemanticSection,
     touched_files: SemanticSection,
     follow_up: SemanticSection,
+    verification_only: bool,
 ) -> tuple[ValidationFinding, ...]:
     touched_file_items = extract_top_level_bullet_blocks(touched_files.content)
     if not touched_file_items:
@@ -209,11 +211,25 @@ def _validate_touched_files(
 
     has_real_touched_file_entries = any(item.lower() != "none" for item in touched_file_items)
     if has_real_touched_file_entries:
+        if verification_only:
+            return (
+                context.finding(
+                    code=MISSING_DIFF_EVIDENCE_CODE,
+                    message=(
+                        "Verification-only task must report `- none` in `Touched files` "
+                        "and leave no task-local repository change."
+                    ),
+                    severity="high",
+                    location=touched_files.location,
+                ),
+            )
         return _validate_real_touched_file_entries(
             context=context,
             touched_files=touched_files,
             touched_file_items=touched_file_items,
         )
+    if verification_only:
+        return tuple()
     return _validate_noop_touched_file_entries(
         context=context,
         summary=summary,
@@ -323,10 +339,28 @@ def _validate_verification_notes(
 
 def validate_implementation_report(
     context: SemanticDocumentContext,
+    *,
+    execution_mode_override: TaskExecutionMode | None = None,
 ) -> tuple[ValidationFinding, ...]:
     selected_task, summary, touched_files, verification, follow_up = _implementation_sections(
         context
     )
+    work_item = context.output_path.parts[context.output_path.parts.index("workitems") + 1]
+    evidence_context = None
+    evidence_context_error: AllowedWriteScopeError | None = None
+    try:
+        evidence_context = load_implementation_evidence_context(
+            workspace_root=context.workspace_root,
+            work_item=work_item,
+        )
+    except AllowedWriteScopeError as exc:
+        evidence_context_error = exc
+    effective_execution_mode = execution_mode_override or (
+        evidence_context.execution_mode
+        if evidence_context is not None and evidence_context.selected_task_id is not None
+        else TaskExecutionMode.REPOSITORY_CHANGE
+    )
+    verification_only = effective_execution_mode is TaskExecutionMode.VERIFICATION_ONLY
     findings: list[ValidationFinding] = []
     findings.extend(_validate_selected_task(context=context, selected_task=selected_task))
     findings.extend(_validate_change_summary(context=context, summary=summary))
@@ -336,27 +370,22 @@ def validate_implementation_report(
             summary=summary,
             touched_files=touched_files,
             follow_up=follow_up,
+            verification_only=verification_only,
         )
     )
     findings.extend(_validate_verification_notes(context=context, verification=verification))
-    work_item = context.output_path.parts[context.output_path.parts.index("workitems") + 1]
-    try:
-        evidence_context = load_implementation_evidence_context(
-            workspace_root=context.workspace_root,
-            work_item=work_item,
-        )
-    except AllowedWriteScopeError as exc:
+    if evidence_context_error is not None:
         findings.append(
             context.finding(
                 code=MISSING_DIFF_EVIDENCE_CODE,
-                message=str(exc),
+                message=str(evidence_context_error),
                 severity="high",
                 location=touched_files.location,
             )
         )
         findings.extend(validate_placeholder_sections(context))
         return tuple(findings)
-    if evidence_context.selected_task_id is not None:
+    if evidence_context is not None and evidence_context.selected_task_id is not None:
         report_text = "\n".join(context.markdown_lines)
         if evidence_context.selected_task_id not in extract_tasklist_task_ids(
             selected_task.content

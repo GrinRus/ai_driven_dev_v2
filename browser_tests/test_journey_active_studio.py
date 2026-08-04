@@ -4,7 +4,14 @@ from pathlib import Path
 from urllib.parse import urlsplit
 
 import pytest
-from playwright.sync_api import Page, Route, sync_playwright
+from playwright.sync_api import (
+    Page,
+    Route,
+    sync_playwright,
+)
+from playwright.sync_api import (
+    TimeoutError as PlaywrightTimeoutError,
+)
 
 from browser_tests.browser_harness import VIEWPORTS, BrowserDiagnostics, operator_browser_harness
 from browser_tests.journey_support import configure_sleeping_fixture_runtime
@@ -122,7 +129,31 @@ def test_active_studio_reconnects_cancels_and_returns_to_durable_logs(
         _assert_rendered_gate(page, viewport)
 
         page.locator("[data-cancel-job]:visible").first.click()
-        page.wait_for_function("eval('state.activeJobId') === ''", timeout=15_000)
+        try:
+            page.wait_for_function("eval('state.activeJobId') === ''", timeout=15_000)
+        except PlaywrightTimeoutError:
+            browser_state = page.evaluate(
+                """async () => {
+                  const activeJobId = eval("state.activeJobId");
+                  const durable = activeJobId
+                    ? await fetch(`/api/jobs/${encodeURIComponent(activeJobId)}`).then(
+                        (response) => response.json()
+                      )
+                    : null;
+                  return {
+                    activeJobId,
+                    activeJobStatus: eval("state.activeJobStatus"),
+                    pollGeneration: eval("state.activeJobPollGeneration"),
+                    dashboardActiveJob: eval("state.dashboardActiveJob"),
+                    dashboardRequestGeneration: eval("state.dashboardRequestGeneration"),
+                    projectHomeRequestGeneration: eval("state.projectHomeRequestGeneration"),
+                    inboxRequestGeneration: eval("state.inboxRequestGeneration"),
+                    connection: eval("state.activeJobConnection"),
+                    durable
+                  };
+                }"""
+            )
+            pytest.fail(f"active job did not reconcile after cancellation: {browser_state!r}")
         page.locator("#cockpitContent").get_by_text(
             "Saved runtime.log", exact=False
         ).first.wait_for(state="visible", timeout=10_000)

@@ -20,8 +20,10 @@ Reviewed sources:
 
 ### README
 
-- The source development package version matches the package state: `0.1.0a16.dev0`.
-- The latest accepted published prerelease evidence is `0.1.0a15`.
+- The release-candidate package version matches the package state: `0.1.0a16`.
+- The last accepted published prerelease evidence before this candidate is `0.1.0a15`.
+  `main` previously carried `0.1.0a16.dev0` and must return to a later `.dev0` only after
+  publication.
 - The `v0.1.0a15` GitHub Release workflow published to PyPI and verified `pipx` plus
   `uv tool`; README installation guidance stays pinned to the latest accepted package
   release.

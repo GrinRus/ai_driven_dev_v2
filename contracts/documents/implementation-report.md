@@ -19,6 +19,8 @@ Explain what changed, which files were touched, and what verification was run.
 - the content is non-placeholder and stage-relevant,
 - touched file entries include a backticked file path plus same-line change intent,
 - upstream references are present when the stage requires them.
+- concrete backticked inspection commands, including `nl`-based pipelines, count as executable
+  verification only when they include command arguments and an observed outcome.
 
 ## Notes
 
@@ -31,3 +33,9 @@ Prerequisite or cumulative workspace state may be explained in `Summary` or `Ris
 not be claimed as a current-task touch. Aggregate finalization owns the cumulative touched-file
 evidence across successful tasks. A generic one-shot implementation report without a rich task
 ledger continues to describe the observed deliverable workspace state.
+
+When system-owned task selection explicitly declares `Execution mode: verification-only`, a rich
+task attempt may use `- none` in `Touched files` after executing and preserving its required checks.
+This is evidence production, not a no-op repository-change attempt. Any observed task-local file
+change still fails closed, and omitted or `repository-change` execution mode retains the normal
+evidence-backed no-op rules.

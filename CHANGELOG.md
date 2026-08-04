@@ -7,7 +7,23 @@ stable compatibility window exists.
 
 ## Unreleased
 
-- Open development after accepted `v0.1.0a15` package-channel evidence.
+- Reserved for changes after `v0.1.0a16`.
+
+## 0.1.0a16 - 2026-08-03
+
+- Prepare the Codex-only alpha prerelease after accepted `v0.1.0a15` package-channel
+  evidence; Claude, Qwen, human-session, and dual-provider beta gates remain deferred.
+- Harden live provider execution with private authentication state, operating-system filesystem
+  isolation, contained resume/evidence paths, source and target integrity guards, and fail-closed
+  session cleanup.
+- Add self-contained, digest-sealed live evidence bundles, bounded logs/events/inventories,
+  truthful counted-clean summaries, cumulative lifecycle timing, and typed reconciliation
+  evidence.
+- Strengthen document validators and aggregate attempt evidence across Plan, Implement, Review,
+  and QA, including mixed dependency relations and executable verification command forms.
+- Record provider-free Ruff, mypy, Python, Chromium, isolated-install, target-readiness, and
+  bundle gates for exact candidate `ae3131a`, followed by a fresh counted-clean Codex medium
+  `AIDD-LIVE-007` acceptance run.
 
 ## 0.1.0a15 - 2026-07-09
 

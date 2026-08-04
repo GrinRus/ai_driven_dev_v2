@@ -291,6 +291,7 @@ function activeJobRetryDelay(failureCount) {
 function clearReconciledActiveJob({preserveConnection = true} = {}) {
   clearActiveJobPollTimer();
   state.activeJobPollGeneration += 1;
+  state.reconciledTerminalJobId = state.activeJobId;
   state.activeJobId = "";
   state.activeJobStatus = null;
   state.activeJobCursor = 0;
@@ -330,16 +331,31 @@ async function reconcileExpiredActiveJob(jobId) {
 }
 
 async function reconcileTerminalActiveJob(jobId) {
+  const workItem = state.dashboard?.work_item || "";
   await fetchDashboard();
   const terminalJobIsDurableWinner = (
     !state.dashboardActiveJob || state.dashboardActiveJob.job_id === jobId
   );
-  await fetchProjectHome(state.dashboard?.work_item || "");
-  await fetchInbox();
   if (terminalJobIsDurableWinner && state.activeJobId === jobId) {
     clearReconciledActiveJob({preserveConnection: false});
   }
   await renderAll();
+  if (terminalJobIsDurableWinner) {
+    void refreshTerminalDerivedSurfaces(workItem);
+  }
+}
+
+async function refreshTerminalDerivedSurfaces(workItem) {
+  try {
+    await Promise.all([
+      fetchProjectHome(workItem),
+      fetchInbox()
+    ]);
+    await renderAll();
+  } catch (_error) {
+    // The typed terminal job and dashboard are the durable winner. Derived
+    // projections remain retryable through the normal refresh action.
+  }
 }
 
 function renderActiveJobConnectionSurface() {
@@ -449,9 +465,10 @@ async function renderLogs() {
 
 async function cancelActiveJob() {
   if (!state.activeJobId) return;
+  const jobId = state.activeJobId;
   state.activeJobPollGeneration += 1;
   clearActiveJobPollTimer();
-  const result = await postJson(`/api/jobs/${encodeURIComponent(state.activeJobId)}/cancel`, {});
+  const result = await postJson(`/api/jobs/${encodeURIComponent(jobId)}/cancel`, {});
   state.activeJobStatus = result;
   if (result.already_finished) {
     toast("Job already finished.");
@@ -464,7 +481,11 @@ async function cancelActiveJob() {
   if (typeof updateStudioLiveObservation === "function") updateStudioLiveObservation();
   if (activeModeIsEvidenceLog()) await renderLogs();
   const activeStatuses = new Set(["running", "waiting-for-operator", "cancelling"]);
-  if (activeStatuses.has(result.status)) scheduleActiveJobPoll(0);
+  if (activeStatuses.has(result.status)) {
+    scheduleActiveJobPoll(0);
+  } else {
+    await reconcileTerminalActiveJob(jobId);
+  }
 }
 
 async function reconnectActiveJob() {
@@ -557,6 +578,7 @@ async function pollActiveJob() {
 async function startJobPolling(job) {
   clearActiveJobPollTimer();
   state.activeJobPollGeneration += 1;
+  state.reconciledTerminalJobId = "";
   state.approvalSessionConfirmation = null;
   state.activeJobId = job.job_id;
   state.activeJobCursor = 0;

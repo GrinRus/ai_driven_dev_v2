@@ -98,6 +98,7 @@ def resolve_task_read_model(
                 **entry.to_dict(),
                 "outcome": card.outcome,
                 "dominant_deliverable": card.dominant_deliverable,
+                "execution_mode": card.execution_mode.value,
                 "in_scope": card.in_scope,
                 "scope_paths": list(card.scope_paths),
                 "context": card.context,

@@ -78,6 +78,9 @@ for the complete model.
 ## Project status and safety
 
 Latest published prerelease: `0.1.0a15`.
+Latest accepted published prerelease evidence: `0.1.0a15`.
+Current release-candidate package version on this branch: `0.1.0a16`.
+Latest accepted published prerelease evidence before this candidate: `0.1.0a15`.
 The `main` branch is development source and may contain unreleased changes.
 
 > [!WARNING]
@@ -271,7 +274,7 @@ classification, and report generation. Manual external repository evaluations ar
 operator audit evidence; they are not CI/CD or release automation.
 
 See the
-[live E2E catalog](https://github.com/GrinRus/ai_driven_dev_v2/blob/main/docs/e2e/live-e2e-catalog.md)
+[manual evaluation catalog](https://github.com/GrinRus/ai_driven_dev_v2/blob/main/docs/e2e/live-e2e-catalog.md)
 and [scenario matrix](https://github.com/GrinRus/ai_driven_dev_v2/blob/main/docs/e2e/scenario-matrix.md)
 for the maintained evaluation boundaries.
 

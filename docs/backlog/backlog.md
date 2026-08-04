@@ -7,15 +7,15 @@ slice, and local task.
 
 ## Next
 
-- `W36-E7-S4-T37` — Prove exact-SHA package, private-auth, bundle, and source readiness.
+No task is promoted under the current Codex-only alpha scope.
 
 ## Soon
 
-- `W36-E7-S4-T3` — Run the medium scenario through Codex to a clean terminal result.
+No task is promoted while the external Codex acceptance is active.
 
 ## Parking lot
 
-- `W36-E7-S4-T4` — Repeat the medium scenario through Claude Code from an independent root.
+- `W36-E7-S4-T4` — Claude acceptance is not launched under the current Codex-only scope.
 - `W36-E7-S3-T2` — Record five first-time-operator sessions after initial live hardening.
 - `W36-E7-S3-T3` — Reconcile observed session findings before beta readiness.
 - `W36-E7-S4-T5` — Record final same-revision Codex and Claude acceptance evidence.
@@ -34,6 +34,670 @@ slice, and local task.
   queue-restoration policy in `docs/backlog/roadmap.md` (`W8-E3-S1`).
 
 ## Current reconciliation
+
+- `2026-08-03` `W36-E7-S4-T93` is complete. The CodeQL-reported shell compound-evidence
+  expression now makes command-substitution and plain assignment alternatives disjoint and uses
+  a possessive assignment prefix, removing exponential backtracking without changing accepted
+  legitimate commands. The 128-part
+  scanner-shaped regression terminates under a two-second guard and is rejected as unverifiable;
+  focused validator/planning tests pass `42/42`, with Ruff and mypy clean. This is a bounded
+  release security correction after the counted-clean T3 candidate; it does not claim a new live
+  provider run.
+
+- `2026-08-03` `W36-E7-S4-T3` is complete. Fresh Codex run
+  `eval-live-007-codex-20260803T205243Z` used exact candidate `ae3131a`, tree `696633d`,
+  byte-fixed wheel digest `2b3e481`, and Hono pin `cf2d2b7`. All eight stages and manual
+  stage-quality audits completed; Vitest passed `236/236`, `tsc --noEmit` passed, and terminal
+  Chromium inspection found no console error or horizontal overflow. The derived acceptance is
+  execution-pass, quality-reviewed, and counted-clean. The sealed 469-file bundle tree digest is
+  `a127580` and readback succeeds without the mutable work path. Sanitized evidence is in
+  `docs/e2e/live-e2e-codex-acceptance-2026-08-03-post-t91.md`. Claude, human, and dual-provider
+  beta gates remain parked and are not part of the Codex-only alpha release claim.
+
+- `2026-08-03` `W36-E7-S4-T92` is complete on exact candidate `ae3131a`, tree `696633d`,
+  tracked archive digest `aecf4e4`, and byte-repeatable wheel digest `2b3e481`. Ruff, mypy,
+  Python `2179/2179`, focused validator/planning `55/55`, isolated install/doctor/eval-doctor,
+  private-auth Seatbelt readiness, fresh Hono setup with Vitest `233/233` and `tsc --noEmit`,
+  clean target diff, and source postflight pass. Browser code is unchanged and retains post-T81
+  Chromium `188/188`. Evidence is in `docs/e2e/candidate-readiness-2026-08-03-post-t91.md`;
+  T3 is `Next`.
+
+- `2026-08-03` `W36-E7-S4-T91` is complete. Dependency objects are scoped to their individual
+  relation spans, and the exact terminal plan now yields the authored acyclic graph without the
+  invented reverse edges that exhausted tasklist repair. Focused validator/planning tests pass
+  `55/55`, Ruff and mypy pass, and full pytest passes `2179/2179`. T92 is `Next`; T3 remains
+  parked until the replacement candidate is recorded.
+
+- `2026-08-03` the post-T90 Codex run passed private auth, target readiness, and manual quality
+  audits through `review-spec`. Tasklist then exhausted repair because the dependency parser
+  treated both milestone references following the first relation in a mixed-relation sentence
+  as prerequisites, inventing `M2/M3 -> M4` in addition to the authored `M4 -> M2/M3` edges.
+  The terminal root is not resumed; T91 is `Next`, T92 and a fresh T3 follow.
+
+- `2026-08-03` `W36-E7-S4-T90` is complete on exact candidate `5a53614`, tree `b1877a8`,
+  tracked archive digest `143e406`, and byte-repeatable wheel digest `e057790`. Ruff, mypy,
+  Python `2178/2178`, validator/prompt/scenario/planning `432/432`, exact terminal QA
+  revalidation, bundle/manifest/session/isolation/auth `52/52`, isolated install/doctor/
+  eval-doctor, fresh Hono readiness with Vitest `233/233` and `tsc --noEmit`, private Codex auth,
+  Seatbelt isolation, and source postflight pass. Browser code is unchanged and retains
+  post-T81 Chromium `188/188`. Evidence is in
+  `docs/e2e/candidate-readiness-2026-08-03-post-t89.md`; T3 is `Next`.
+
+- `2026-08-03` `W36-E7-S4-T89` is complete. QA-local `EV-N` definitions are accepted only when
+  they contain a syntactically executable command and explicit terminal outcome; upstream claims
+  still require exact ids or existing full workspace-relative artifact paths. The exact terminal
+  post-T88 QA report revalidates from eight blocking occurrences to zero, the focused
+  validator/prompt/scenario/planning group passes `432/432`, Ruff and mypy pass, and full pytest
+  passes `2178/2178`. Historical candidate `7726023` remains invalid; T90 is `Next`, T3 is `Soon`.
+
+- `2026-08-03` the post-T88 Codex run completed quality-audited `idea` through `review`; its
+  four-file Hono patch passed focused Vitest `234/234`, `tsc --noEmit`, Implement, and independent
+  Review. QA exhausted document repair because `CROSS-QA-UPSTREAM-EVIDENCE` rejects bounded
+  QA-local command evidence even though the QA contract requires post-QA residue and artifact
+  checks. The terminal root is not resumed. T89 aligns the contract and validator without
+  weakening upstream artifact traceability; T90 then replaces historical candidate `7726023`.
+
+- `2026-08-03` `W36-E7-S4-T88` is complete on exact candidate `7726023`, tree `1f89bd2`,
+  tracked archive digest `9a9cf26`, and wheel digest `29b43f7`. Ruff, mypy, exact-candidate
+  Python `2175/2175`, validator/prompt/packaging/planning `382/382`, saved terminal Implement
+  revalidation, bundle/manifest/isolation `29/29`, isolated install/doctor/eval-doctor, fresh
+  Hono readiness with Vitest `233/233` and `tsc --noEmit`, private Codex auth, Seatbelt isolation,
+  and source postflight pass. Browser code is unchanged and retains post-T81 Chromium `188/188`.
+  Evidence is in `docs/e2e/candidate-readiness-2026-08-03-post-t87.md`; T3 is `Next`.
+
+- `2026-08-03` the post-T86 Codex run passed private auth, target readiness, and manual audits
+  through `tasklist`. Implement T1 added only the intended `src/compose.test.ts` red regression,
+  with Vitest truthfully reporting the expected pre-runtime-change failure and `tsc` passing, but
+  validation exhausted repair on a complete command list shaped as
+  `found=$(find ...); if ...; fi; test ...`. T87 now recognizes only closed compound lists with
+  concrete executables; the saved terminal report revalidates with zero findings and focused tests
+  pass `32/32`. The terminal root is not resumed; T88 is `Next` and T3 is `Soon`.
+
+- `2026-08-03` `W36-E7-S4-T86` is complete on exact candidate `4b2856f`, tree `9137bc3`,
+  tracked archive digest `c8769e7`, and wheel digest `f9e9f98`. Ruff, mypy, exact-candidate
+  Python `2174/2174`, validators `298/298`, saved terminal Implement revalidation,
+  bundle/manifest/isolation `29/29`, isolated install/doctor/eval-doctor, fresh Hono readiness
+  with Vitest `233/233` and `tsc --noEmit`, private Codex auth, Seatbelt isolation, and source
+  postflight pass. Browser code is unchanged and retains the accepted post-T81 Chromium `188/188`
+  gate. Evidence is in `docs/e2e/candidate-readiness-2026-08-03-post-t85.md`; T3 is `Next`.
+
+- `2026-08-03` the post-T84 Codex run passed isolated auth, exact-wheel target readiness, and
+  manual quality audits through `tasklist`. Implement T1/T2 succeeded and T3 produced a bounded
+  three-file patch with focused Vitest `234/234` and `tsc --noEmit` passing, but the Implement
+  validator rejected a complete backticked shell `if ...; then ...; else ...; fi` residue check
+  as non-executable evidence. T85 now recognizes only syntactically complete compound checks
+  containing a concrete executable; the saved terminal report revalidates with zero findings and
+  focused tests pass `31/31`. The terminal root is not resumed; T86 is `Next` and T3 is `Soon`.
+
+- `2026-08-03` `W36-E7-S4-T84` is complete on exact candidate `912f444`, tree `5fb8486`,
+  tracked archive digest `3260f35`, and wheel digest `4e1fe07`. Ruff, mypy, Python `2172/2172`,
+  validators `296/296`, saved terminal QA revalidation, bundle/manifest/isolation `29/29`,
+  isolated install/doctor/eval-doctor, fresh Hono readiness with Vitest `233/233` and
+  `tsc --noEmit`, private Codex auth, Seatbelt isolation, and source postflight pass. The browser
+  code is unchanged and retains the accepted post-T81 Chromium `188/188` gate. Evidence is in
+  `docs/e2e/candidate-readiness-2026-08-03-post-t83.md`; T3 is `Next`.
+
+- `2026-08-03` the post-T82 Codex run reached QA with all prior stage quality audits accepted,
+  the four-file Hono patch passing focused Vitest `237/237` and `tsc --noEmit`, and Review
+  approved. QA then exhausted repair because cross-document validation rejected QA-local
+  `EV-N` references even when their definitions contained full existing upstream/context paths,
+  contradicting the QA document contract and prompt. The terminal root is not resumed;
+  `W36-E7-S4-T83` is `Next`, T3 is `Soon`, and candidate `09b8d6a` is historical.
+
+- `2026-08-03` `W36-E7-S4-T82` is complete for the active Codex-only prerelease scope on exact
+  candidate `09b8d6a`, tree `8bba6dd`, tracked archive digest `9f10c8b`, and wheel digest
+  `6db06bc`. T81 Ruff, mypy, and Python `2170/2170`, exact-SHA Chromium `188/188`, focused
+  bundle/manifest/isolation `29/29`, isolated install/doctor, Codex eval-doctor, fresh Hono
+  readiness with Vitest `233/233` and `tsc --noEmit`, private Codex auth, Seatbelt isolation,
+  and source postflight pass. Evidence is in
+  `docs/e2e/candidate-readiness-2026-08-03-post-t81.md`; T3 is `Next`, and no live evaluator ran
+  during T82.
+
+- `2026-08-03` `W36-E7-S4-T37` is complete for the active Codex-only scope on exact candidate
+  `4880ea4`, tree `3ec3904`, tracked archive digest `cca520a`, and wheel digest `300bf16`.
+  Ruff, mypy, Python `2170/2170`, exact-SHA Chromium `188/188`, isolated install/doctor, Codex
+  eval-doctor, fresh Hono readiness with Vitest `233/233` and `tsc --noEmit`, installed bundle
+  deletion/readback, private Codex auth, Seatbelt isolation, and source postflight all pass.
+  Sanitized evidence is in `docs/e2e/candidate-readiness-2026-08-03-post-t80.md`. T3 is `Next`;
+  Claude and large lanes remain parked, and no live evaluator ran during T37.
+
+- `2026-08-03` the post-T80 `W36-E7-S4-T36` rerun is complete on clean source `403129a`
+  and tree `fe3bd4c`: historical cases pass `4/4`, intervention/terminal families `24/24`,
+  packaged journeys pass `79/79` with exact discovered/executed parity and `failed_ids=[]`, and
+  one fresh uninterrupted full Chromium suite passes `188/188`. All five viewports complete
+  without console, page, failed-request, overflow, accessibility, or process-cleanup failure;
+  process preflight and postflight are empty. Sanitized evidence is in
+  `docs/e2e/operator-ui-provider-free-browser-gate-2026-08-03-post-t80.md`. T37 is `Next`,
+  Codex T3 remains parked, and no provider or large scenario ran.
+
+- `2026-08-03` `W36-E7-S4-T80` is complete: Stage Result semantic validation reads only
+  canonical leading attempt identities and no longer counts `attempt-000N/...` evidence-path
+  references as duplicate attempts. The live-shaped positive case and duplicate negative case
+  pass; focused validator/core checks pass `393/393`, planning integrity passes `9/9`, Ruff and
+  mypy across `228` modules pass, and full pytest passes `2170/2170`. T36 is `Next`, T37 is
+  `Soon`, and Codex T3 remains parked until the replacement candidate is accepted.
+
+- `2026-08-03` the post-T79 Codex T3 attempt on candidate `abbc4d6` passed private auth,
+  target readiness, exact-wheel identity, and strong manual audits through `tasklist`.
+  Implement completed three provider attempts with exit `0`, kept the target diff inside the
+  authored scope, and passed focused Vitest `233/233` plus `tsc --noEmit`, but Stage Result
+  semantic validation counted each `attempt-000N/...` evidence-path reference as a second
+  attempt identity and exhausted repair on a false non-increasing sequence. The terminal root
+  will not be resumed; `W36-E7-S4-T80` is `Next`, T36 is `Soon`, and the candidate is historical.
+
+- `2026-08-03` `W36-E7-S4-T37` is complete for the active Codex-only scope on exact
+  candidate `abbc4d6`, tree `bc10c57`, tracked archive digest `93a46bc`, and wheel digest
+  `78f4d11`. Ruff, mypy, Python `2168/2168`, exact-SHA Chromium `188/188`, isolated
+  install/doctor, Codex eval-doctor, fresh Hono readiness with Vitest `233/233` and
+  `tsc --noEmit`, bundle seal/readback after mutable-root deletion, private-auth readiness,
+  standalone Seatbelt capability canary, and source postflight all pass. Sanitized evidence is
+  in `docs/e2e/candidate-readiness-2026-08-03-post-t79.md`. T3 is `Next`; Claude and large lanes
+  remain parked, and no live evaluator ran during T37.
+
+- `2026-08-03` the post-T79 `W36-E7-S4-T36` rerun is complete on clean source `c040f0e`
+  and tree `75fe019`: historical cases pass `4/4`, intervention/terminal families `24/24`,
+  packaged journeys pass `79/79` with exact discovered/executed parity and `failed_ids=[]`, and
+  one fresh uninterrupted full Chromium suite passes `188/188`. All five viewports complete
+  without console, page, failed-request, overflow, accessibility, or process-cleanup failure;
+  the final process postflight is empty. Sanitized evidence is in
+  `docs/e2e/operator-ui-provider-free-browser-gate-2026-08-03-post-t79.md`. T37 is `Next`, Codex
+  T3 is `Soon`, and no provider or large scenario ran.
+
+- `2026-08-03` `W36-E7-S4-T79` is complete: aggregate Implement finalization now preserves
+  task-local executable evidence from canonical `## Verification` and falls back to legacy
+  `## Verification notes`. Re-rendering the saved six-task post-T78 ledger produces `62` backed
+  evidence lines and `48` outcome claims instead of zero. Focused checks pass `3/3`, the broader
+  implementation/harness group passes `120/120`, Ruff and mypy across `228` modules pass,
+  planning integrity passes `9/9`, and full pytest passes `2168/2168`. T36 is `Next`, T37 is
+  `Soon`, and Codex T3 remains parked until the replacement candidate; no provider ran for T79.
+
+- `2026-08-03` the post-T78 Codex T3 attempt on candidate `ead6dab` passed isolated auth,
+  exact-wheel identity, target readiness, and strong manual audits through `tasklist`. Implement
+  completed T1-T6, retained exactly the four allowed Hono paths, and passed canonical validation,
+  focused Vitest, and `tsc --noEmit`. The live audit then failed closed because aggregate
+  finalization copied only legacy `## Verification notes` and dropped task-local executable
+  evidence authored under canonical `## Verification`. The terminal root is not resumed; T79 is
+  `Next`, T36 is `Soon`, and T37/T3 remain parked until a replacement candidate exists.
+
+- `2026-08-03` `W36-E7-S4-T37` is complete for the active Codex-only scope on exact
+  candidate `ead6dab`, tree `cfbc108`, tracked archive digest `9d87bfd`, and wheel digest
+  `dc11248`. Ruff, mypy, Python `2168/2168`, exact-SHA Chromium `188/188`, isolated
+  install/doctor, Codex eval-doctor, fresh Hono readiness with Vitest `233/233` and
+  `tsc --noEmit`, bundle seal/readback after mutable-root deletion, private-auth readiness,
+  standalone Seatbelt visibility canary, and source postflight all pass. Sanitized evidence is
+  in `docs/e2e/candidate-readiness-2026-08-03-post-t78.md`. T3 is `Next`; Claude and large
+  lanes remain parked, and no live evaluator ran during T37.
+
+- `2026-08-03` the post-T78 `W36-E7-S4-T36` rerun is complete on clean source `a05a58e`
+  and tree `7b5ce6a`: historical cases pass `4/4`, intervention/terminal families `24/24`,
+  packaged journeys pass `79/79` with exact discovered/executed parity and `failed_ids=[]`, and
+  one fresh uninterrupted full Chromium suite passes `188/188`. All five viewports complete
+  without console, page, failed-request, overflow, accessibility, or process-cleanup failure;
+  explicit packaged and full-suite postflights are empty. Sanitized evidence is in
+  `docs/e2e/operator-ui-provider-free-browser-gate-2026-08-03-post-t78.md`. T37 is `Next`, Codex
+  T3 is `Soon`, and no provider or large scenario ran.
+
+- `2026-08-03` `W36-E7-S4-T78` is complete: the Inbox running-now fixture cancels its
+  test-owned job through the public endpoint, waits for durable `cancelled`, and proves the
+  recorded runtime PID has exited before harness teardown. The formerly orphaning `1440x900`
+  case passes `1/1`, the full Inbox family passes `9/9` across all five viewports with an empty
+  external process postflight, Ruff and mypy across `228` modules pass, planning integrity
+  passes `9/9`, and full pytest passes `2168/2168`. T36 is `Next`, T37 is `Soon`, and Codex T3
+  remains parked until both replacement gates pass; no provider ran.
+
+- `2026-08-03` the post-T77 T36 attempt started from a verified empty process baseline and
+  passed historical cases `4/4`, intervention/terminal families `24/24`, and packaged registry
+  `79/79` with exact discovered/executed ID parity and `failed_ids=[]`. The fail-closed
+  postflight found one new orphaned Inbox fixture runtime from the final `1440x900` case, so the
+  full Chromium layer and all provider work were not launched. `W36-E7-S4-T78` is `Next`, T36
+  is `Soon`, and T37/T3 are parked until the cleanup regression and replacement gates pass.
+
+- `2026-08-03` `W36-E7-S4-T77` is complete: aggregate finalization now derives its typed
+  execution mode from the whole plan, retains real repository paths, and drops the synthetic
+  verification-only `- none` entry without weakening task-local fail-closed validation. The
+  saved post-T76 live ledger renders the exact four Hono paths and the saved aggregate report
+  revalidates with zero findings. Focused checks pass `33/33`, the broader implementation group
+  passes `130/130`, Ruff and mypy across `228` modules pass, planning integrity passes `9/9`,
+  and full pytest passes `2168/2168`. T36 is `Next`, T37 is `Soon`, and Codex T3 remains parked
+  until the replacement candidate; no new provider run occurred during the fix.
+
+- `2026-08-03` the post-T76 Codex T3 attempt on candidate `c26820c` passed private auth,
+  target readiness, exact-wheel identity, and manual quality audits through `tasklist`.
+  Implement completed T1-T5, kept the product diff inside the four allowed files, and passed
+  focused Vitest plus `tsc --noEmit`, but aggregate finalization combined the real T1-T4 paths
+  with T5's truthful `- none` and then applied the selected verification-only rule to the whole
+  mixed report. The root is not clean and will not be resumed. `W36-E7-S4-T77` is `Next`, T36 is
+  `Soon`, and candidate `c26820c` is historical.
+
+- `2026-08-02` `W36-E7-S4-T37` is complete for the active Codex-only scope on exact
+  candidate `c26820c`, tree `a46ed39`, tracked archive digest `45f6174`, and wheel
+  digest `469df0b`. Ruff, mypy across `228` modules, Python `2165/2165`, exact-SHA
+  Chromium `188/188`, isolated install/doctor and Codex eval-doctor, fresh pinned Hono
+  readiness with Vitest `233/233` and `tsc --noEmit`, self-contained bundle
+  deletion/readback, Codex private-auth Seatbelt probe/canary, and source postflight all
+  pass. Sanitized evidence is in
+  `docs/e2e/candidate-readiness-2026-08-02-post-t76.md`. Codex T3 is `Next`; Claude
+  readiness and live execution remain parked and unclaimed, and no provider evaluator or
+  large scenario ran.
+
+- `2026-08-02` the post-T76 `W36-E7-S4-T36` rerun is complete on clean source
+  `acd48ce` and tree `43c1e97`: historical cases pass `4/4`, intervention/terminal families
+  `24/24`, packaged journeys pass `79/79` with exact discovered/executed ID parity and
+  `failed_ids=[]`, and one fresh uninterrupted full Chromium suite passes `188/188`. All five
+  viewports complete without console, page, failed-request, overflow, accessibility, or
+  test-owned process-cleanup failure. Sanitized evidence is in
+  `docs/e2e/operator-ui-provider-free-browser-gate-2026-08-02-post-t76.md`. T37 is `Next`, Codex
+  T3 is `Soon`, and no provider or large scenario ran.
+
+- `2026-08-02` `W36-E7-S4-T76` is complete: rich task cards carry typed
+  `repository-change`/`verification-only` mode into system-owned selection and readback.
+  Explicit verification-only tasks may truthfully preserve an empty task-local diff, while actual
+  edits and unclassified no-op completion claims remain fail-closed. Focused checks pass
+  `142/142`, the broader core/validator/task group passes `945/945`, Ruff and mypy across `228`
+  modules pass, planning integrity passes `9/9`, and full pytest passes `2165/2165`. T36 is
+  `Next`, T37 is `Soon`, T3 remains parked until the replacement candidate, and no provider ran.
+
+- `2026-08-02` the post-T75 Codex T3 attempt on candidate `9b9f504` passed private auth,
+  target readiness, exact-wheel identity, and manual quality audits through `tasklist`.
+  Implement completed four repository-change tasks and passed focused Vitest `237/237` plus
+  `tsc --noEmit`, but its verification-only T5 was rejected solely because the truthful
+  task-local diff was empty. The terminal root is not resumed. `W36-E7-S4-T76` is `Next`, T36
+  is `Soon`, and the candidate is invalid; Claude remains unlaunched under Codex-only scope.
+
+- `2026-08-02` `W36-E7-S4-T37` is complete for the active Codex-only scope on exact
+  candidate `9b9f504`, tree `9051118`, tracked archive digest `75ff5a0`, and wheel
+  digest `b74d5fc`. Ruff, mypy across `228` modules, Python `2158/2158`, exact-SHA
+  Chromium `188/188`, isolated install/doctor and Codex eval-doctor, fresh pinned Hono
+  readiness with Vitest `233/233` and `tsc --noEmit`, self-contained bundle
+  deletion/readback, Codex private-auth Seatbelt probe/canary, and source postflight all
+  pass. Sanitized evidence is in
+  `docs/e2e/candidate-readiness-2026-08-02-post-t75.md`. Codex T3 is `Next`; Claude
+  readiness and live execution remain parked and unclaimed, and no provider evaluator or
+  large scenario ran.
+
+- `2026-08-02` the post-T75 `W36-E7-S4-T36` rerun is complete on clean source
+  `5d37cae` and tree `374b94b`: historical cases pass `4/4`, intervention/terminal
+  families `24/24`, packaged journeys `79/79` with exact discovered/executed ID parity
+  and no failed ID, and a fresh uninterrupted full Chromium suite passes `188/188`.
+  All five viewports complete without console, page, failed-request, overflow,
+  accessibility, or test-owned process-cleanup failure. Sanitized evidence is in
+  `docs/e2e/operator-ui-provider-free-browser-gate-2026-08-02-post-t75.md`. T37 is
+  `Next`, Codex T3 is `Soon`; no provider or large scenario ran.
+
+- `2026-08-02` `W36-E7-S4-T75` is complete: Inbox provider-job and running-read-model
+  preconditions use the existing bounded 30-second surface budget and fail with phase plus last
+  durable payload. The diagnostic unit passes `1/1`, Inbox passes `9/9`, and the exact canonical
+  prefix through the formerly failing `1280x900` case passes `79/79`; Ruff, mypy across `228`
+  modules, planning integrity `9/9`, and full pytest `2158/2158` pass. T36 is `Next`, T37 is
+  `Soon`; no provider ran.
+
+- `2026-08-02` the post-T74 T36 gate on clean source `1882dc4` passed historical cases
+  `4/4`, intervention/terminal families `24/24`, and packaged registry `79/79` with exact
+  discovered/executed parity. Full Chromium then first failed at Inbox `viewport3` after `78`
+  passes; the exact case passed in isolation and again at the same full-order position. T75 is
+  `Next` to replace the test-only five-second provider-job/read-model polls with the existing
+  bounded 30-second surface budget and phase diagnostics. T36 is `Soon`; no provider ran.
+
+- `2026-08-02` `W36-E7-S4-T74` is complete: the Implement contract and runtime-agnostic
+  command recognizer accept concrete ``nl -ba ... | sed ...`` inspection pipelines while
+  rejecting bare `nl` prose and `.nl` filenames. Focused validator checks pass `51/51`,
+  contract/scenario/planning checks pass `80/80`, the saved T2 live report revalidates with zero
+  findings, Ruff and mypy across `228` modules pass, and full pytest passes `2157/2157`. T36 is
+  `Next`, T37 is `Soon`, and provider acceptance remains parked until a replacement candidate;
+  only Codex will be launched under the current scope.
+
+- `2026-08-02` the post-T73 Codex T3 attempt on candidate `30e5f6a` passed private auth,
+  target readiness, and strong manual audits through `tasklist`. Implement T1/T2 provider work
+  and its focused checks passed, but the semantic validator rejected a concrete
+  ``nl -ba ... | sed ...` -> pass`` inspection command and exhausted two repairs. The terminal
+  root is not resumed. `W36-E7-S4-T74` is `Next`, T36 is `Soon`, and T37/T3 are parked until a
+  replacement candidate exists; Claude remains unlaunched under the current Codex-only scope.
+
+- `2026-08-02` `W36-E7-S4-T37` is complete on exact candidate `30e5f6a`, tree
+  `a4bf5c4`, tracked archive digest `4c63a6e`, and wheel digest `472c771`.
+  Ruff, mypy across `228` modules, Python `2153/2153`, exact-SHA Chromium
+  `188/188`, isolated install/doctor, both eval-doctors, fresh pinned Hono
+  readiness with Vitest `233/233` and `tsc --noEmit`, self-contained bundle
+  deletion/readback, dual private-auth Seatbelt probes/canaries, and source
+  postflight all pass. Sanitized evidence is in
+  `docs/e2e/candidate-readiness-2026-08-02-post-t73.md`. T3 is `Next`, T4 is
+  `Soon`; no provider evaluator or large scenario ran.
+
+- `2026-08-01` `W36-E7-S4-T37` is complete on exact candidate `44ba6d3`,
+  tree `f28f428`, tracked archive digest `bb7c0b0`, and wheel digest
+  `1ea5b09`. Ruff, mypy across 228 modules, Python `2150/2150`, exact-SHA
+  Chromium `188/188`, isolated install/doctor, both eval-doctors, fresh
+  pinned Hono readiness with Vitest `233/233` and `tsc --noEmit`,
+  self-contained bundle deletion/readback, dual private-auth Seatbelt
+  probes/canaries, and source postflight all pass. Sanitized evidence is in
+  `docs/e2e/candidate-readiness-2026-08-01-post-t72.md`. T3 is promoted to
+  `Next`, T4 to `Soon`; no provider evaluator or large scenario ran.
+
+- `2026-08-01` the post-T72 `W36-E7-S4-T36` rerun is complete on clean
+  source `bb465ea` and tree `6d43544`: historical cases pass `4/4`,
+  intervention/terminal families `24/24`, packaged journeys `79/79` with
+  exact discovered/executed ID parity and no failed ID, and full Chromium
+  passes `188/188`. All five viewports complete without console, page,
+  failed-request, overflow, accessibility, or test-owned process-cleanup
+  failure. Sanitized evidence is in
+  `docs/e2e/operator-ui-provider-free-browser-gate-2026-08-01-post-t72.md`.
+  T37 is promoted to `Next`, Codex T3 to `Soon`; no provider or large scenario
+  ran.
+
+- `2026-08-01` `W36-E7-S4-T72` is complete after the post-T71 Codex run exposed a
+  runtime-agnostic incremental-stage persistence defect. Candidate `9d0bf59`
+  passed private auth, target readiness, and manual quality checkpoints from
+  `idea` through `tasklist`; Implement then completed task-scoped T1/T2 provider
+  work, but canonical repair persistence removed successful deferred attempt 1
+  and rejected its own `2,3` history. Deferred success now persists attempt 1
+  before `pending`; core/validator checks pass `150/150` and CLI/incremental
+  lifecycle checks pass `58/58`; Ruff, mypy, and the clean complete Python
+  rerun pass, with `2150/2150`. The terminal provider root is not resumed.
+  T36 is restored to `Next`, T37 to `Soon`, and provider acceptance is parked
+  until a new candidate exists; no large scenario ran.
+
+- `2026-08-01` `W36-E7-S4-T37` is complete on exact candidate `9d0bf59`,
+  tree `8354d0a`, tracked archive digest `f4ef417`, and wheel digest
+  `0964977`. Ruff, mypy across 228 modules, Python `2149/2149`, exact-SHA
+  Chromium `188/188`, isolated install/doctor, both eval-doctors, fresh
+  pinned Hono readiness with Vitest `233/233` and `tsc --noEmit`,
+  self-contained bundle deletion/readback, dual private-auth Seatbelt
+  probes/canaries, and source postflight all pass. Sanitized evidence is in
+  `docs/e2e/candidate-readiness-2026-08-01-post-t71.md`. T3 is promoted to
+  `Next`, T4 to `Soon`; no provider evaluator or large scenario ran.
+
+- `2026-08-01` the post-T71 `W36-E7-S4-T36` rerun is complete on clean
+  source `ef38a3f` and tree `944906b`: historical cases pass `4/4`,
+  intervention/terminal families `24/24`, packaged journeys `79/79` with
+  exact discovered/executed ID parity and no failed ID, and full Chromium
+  passes `188/188`. All five viewports complete without console, page,
+  failed-request, overflow, accessibility, or test-owned process-cleanup
+  failure. Sanitized evidence is in
+  `docs/e2e/operator-ui-provider-free-browser-gate-2026-08-01-post-t71.md`.
+  T37 is promoted to `Next`, Codex T3 to `Soon`; no provider or large scenario
+  ran.
+
+- `2026-08-01` `W36-E7-S4-T71` is complete: macOS Seatbelt now grants
+  package-manager environment discovery only exact `literal` access to provider
+  ancestor directory objects, without `subpath` access to external or sibling
+  trees. Layouts below operator HOME fail before allocation. A real Bun
+  lifecycle fixture and a fresh pinned Hono clone complete through the same
+  boundary; source remains read-only and sibling, operator HOME, and credential
+  probes remain denied. Isolation tests pass `20/20`, the complete harness
+  regression `382/382`, Ruff and mypy across 228 modules, and full pytest
+  `2149/2149`. T36 is promoted to `Next` and T37 to `Soon`; no provider or
+  large scenario ran.
+
+- `2026-07-29` the first post-T69 Codex T3 attempt stopped before provider
+  allocation. Candidate `5cb58f3` passed private auth, target clone, run-owned
+  wheel install, and public `aidd init`; isolated `bun install` then installed
+  packages but failed lifecycle scripts with `CouldntReadCurrentDirectory`.
+  A fresh provider-free Seatbelt root reproduces the same failure. The live root
+  is terminal and will not be resumed. `W36-E7-S4-T71` is promoted to `Next`;
+  T36 is `Soon`, while T37 and provider acceptance return to the parking lot.
+  No provider inference or large scenario ran.
+
+- `2026-07-29` `W36-E7-S4-T37` is complete on exact candidate `5cb58f3`, tree
+  `90953e1`, tracked archive digest `349fc3e`, and wheel digest `a7e72c1`.
+  Ruff, mypy across 228 modules, Python `2147/2147`, an uninterrupted exact-SHA
+  Chromium `188/188`, isolated install/doctor, both eval-doctors, fresh pinned
+  Hono readiness with Vitest `233/233` and `tsc --noEmit`, self-contained bundle
+  deletion/readback, dual private-auth Seatbelt probes/canaries, and source
+  postflight all pass. A rejected transient host-saturation browser attempt is
+  retained as diagnostic evidence and did not change source or timeouts.
+  Sanitized evidence is in
+  `docs/e2e/candidate-readiness-2026-07-29-post-t69.md`. T3 is promoted to
+  `Next`, T4 to `Soon`; no provider evaluator or large scenario ran.
+
+- `2026-07-29` the post-T69 `W36-E7-S4-T36` rerun is complete on clean
+  source `aa02a40` and tree `2905378`: historical cases pass `4/4`,
+  intervention/terminal families `24/24`, packaged journeys `79/79` with
+  exact discovered/executed ID parity and no failed ID, and full Chromium
+  passes `188/188`. All five viewports complete without console, page,
+  failed-request, overflow, accessibility, or test-owned process-cleanup
+  failure. Sanitized evidence is in
+  `docs/e2e/operator-ui-provider-free-browser-gate-2026-07-29-post-t69.md`.
+  T37 is promoted to `Next`, Codex T3 to `Soon`; no provider or large scenario
+  ran.
+
+- `2026-07-29` `W36-E7-S4-T69` is complete: local-wheel installation
+  explicitly places both uv tool storage and executable links below the selected
+  run's install-home, independent of inherited provider-private XDG roots. The
+  focused install/planning matrix passes `16/16`; a real no-provider uv
+  build/install smoke returns an existing run-owned `aidd` binary and leaves the
+  shared provider-private bin empty. The complete harness regression passes
+  `380/380`, Ruff and mypy pass, and full pytest passes `2147/2147`. T36 is
+  promoted to `Next`, T37 to `Soon`; provider acceptance remains parked and
+  candidate `52bb49d` remains historical.
+
+- `2026-07-29` the first post-T68 Codex T3 attempt stopped before provider
+  allocation. Candidate `52bb49d` passed preflight, private auth, target clone,
+  and wheel build, but inherited private XDG roots made uv publish the installed
+  command under provider-private data/bin while the harness searched
+  `<run>/install-home/.local/bin/aidd`. The root is terminal and will not be
+  resumed. `W36-E7-S4-T69` is promoted to `Next`; T36 is `Soon`, while T37 and
+  provider acceptance return to the parking lot. No provider inference or large
+  scenario ran.
+
+- `2026-07-29` `W36-E7-S4-T37` is complete on exact candidate `52bb49d`, tree
+  `b699659`, tracked archive digest `75105f0`, and wheel digest `90a4247`.
+  Ruff, mypy across 228 modules, Python `2146/2146`, exact-SHA Chromium
+  `188/188`, isolated install/doctor, both eval-doctors, fresh pinned Hono
+  readiness with Vitest `233/233` and `tsc --noEmit`, self-contained bundle
+  deletion/readback, dual private-auth Seatbelt probes/canaries, and source
+  postflight all pass. Sanitized evidence is in
+  `docs/e2e/candidate-readiness-2026-07-29-post-t68.md`. T3 is promoted to
+  `Next`, T4 to `Soon`; no provider evaluator or large scenario ran.
+
+- `2026-07-29` the post-T68 `W36-E7-S4-T36` rerun is complete on clean
+  source `cb12e5b` and tree `6d26af7`: historical cases pass `4/4`,
+  intervention/terminal families `24/24`, packaged journeys `79/79` with
+  exact discovered/executed ID parity and no failed ID, and full Chromium
+  passes `188/188`. All five viewports complete without console, page,
+  failed-request, overflow, accessibility, or test-owned process-cleanup
+  failure. Sanitized evidence is in
+  `docs/e2e/operator-ui-provider-free-browser-gate-2026-07-29-post-t68.md`.
+  T37 is promoted to `Next`, Codex T3 to `Soon`; no provider or large scenario
+  ran.
+
+- `2026-07-29` `W36-E7-S4-T68` is complete: typed terminal job evidence plus
+  dashboard active-job readback now releases the volatile browser identity before
+  the heavier project-home and inbox projections refresh behind a protected
+  asynchronous boundary. Frontend passes `99/99`, static contracts `49/49`,
+  three consecutive active-Studio matrices pass `5/5`, the exact Guided Setup
+  predecessor followed by active Studio passes `10/10`, Ruff and mypy pass, and
+  full pytest passes `2146/2146`. The 15-second browser budget is unchanged and
+  no test-owned UI process remains. T36 is promoted to `Next`, T37 to `Soon`;
+  provider acceptance remains parked.
+
+- `2026-07-29` the post-T67 T36 rerun passed historical cases `4/4` in
+  `121.64s` and intervention/terminal families `24/24` in `518.19s`. Packaged
+  Guided Setup passed `5/5`, then active Studio reported `4/5`: desktop
+  `1440x900` retained `activeJobId` beyond 15 seconds after recovered-log
+  cancellation. The registry was stopped before the next journey and full
+  browser did not run. `W36-E7-S4-T68` is promoted to `Next` for the remaining
+  delayed-cancellation terminal handoff; T36 returns to `Soon`, while T37 and
+  provider acceptance remain parked. No provider or large scenario ran.
+
+- `2026-07-29` `W36-E7-S4-T67` is complete: terminal reconciliation
+  records the immutable active job id, stale `cancelling` dashboard payloads
+  cannot resurrect that tombstoned job, and a genuinely new launch clears the
+  tombstone. Guided Setup passes `5/5`, followed by three strict sequential
+  active-Studio runs at `5/5` each; frontend passes `99/99`, Ruff and mypy pass,
+  and repeated full pytest passes `2146/2146`. One earlier unrelated 100ms
+  process-start assertion passed `5/5` in isolation and in the full rerun; no
+  process timeout changed. T36 is promoted to `Next`, T37 to `Soon`; provider
+  acceptance remains parked.
+
+- `2026-07-29` the post-T66 T36 rerun passed historical cases `4/4` in
+  `116.80s` and intervention/terminal families `24/24` in `365.04s`. The
+  packaged registry passed its first journey `5/5`, then active Studio reported
+  `4/5`: tablet `768x1024` retained `activeJobId` beyond 15 seconds after
+  recovered-log cancellation. The registry was stopped before the next journey;
+  full browser did not run. `W36-E7-S4-T67` is promoted to `Next` for bounded,
+  generation-safe ownership of the nonterminal cancellation poll. T36 returns
+  to `Soon`; T37 and provider acceptance remain parked. No provider or large
+  scenario ran on the T66 source.
+
+- `2026-07-28` `W36-E7-S4-T66` is complete: macOS isolation now grants
+  the fixed real `/private/etc/ssl` directory read-only so HTTPS Git can load
+  LibreSSL configuration and trust data. Real Seatbelt reads `openssl.cnf`,
+  local Git cloning remains green, no TLS write rule exists, and the exact
+  previously failing provider-free HTTPS Hono clone passes. Focused checks pass
+  `2/2`, isolation/auth/session passes `55/55`, Ruff and mypy pass, and full
+  pytest passes `2146/2146`. T36 is promoted to `Next`, T37 to `Soon`; providers
+  and large scenarios remain unstarted on the replacement candidate.
+
+- `2026-07-28` the first post-T65 Codex T3 root stopped before provider
+  allocation: public preflight and private auth passed, but Seatbelt denied
+  `/private/etc/ssl/openssl.cnf` while HTTPS Git prepared the pinned target clone.
+  This is an AIDD isolation-backend target-setup defect, not auth, provider,
+  network, or model failure. `W36-E7-S4-T66` is promoted to `Next` for a trusted
+  read-only TLS configuration root and real-Seatbelt regression. Candidate
+  `1dbe87a` is invalidated; T36 returns to `Soon`, while T37 and both provider
+  acceptances are parked. The failed root will not be resumed, and no large
+  scenario ran.
+
+- `2026-07-28` `W36-E7-S4-T37` is complete on exact candidate `1dbe87a`,
+  tree `075e9fa`, tracked-index digest `c11d307`, archive digest `0f7135d`,
+  and wheel digest `3b38a55`. Ruff, mypy across `228` modules, full pytest
+  `2146/2146`, exact-SHA Chromium `188/188`, isolated install/doctor, both
+  eval-doctors, pinned Hono setup with Vitest `233/233` and `tsc --noEmit`,
+  bundle seal/readback after mutable-root deletion, dual private-auth Seatbelt
+  sessions, and source postflight pass. Sanitized evidence is in
+  `docs/e2e/candidate-readiness-2026-07-28-post-t65.md`. Codex medium acceptance
+  T3 is promoted to `Next`, Claude T4 to `Soon`; no evaluator, Qwen, candidate-only,
+  or large scenario ran.
+
+- `2026-07-28` the post-T65 `W36-E7-S4-T36` rerun is complete on clean
+  source `b38dd4c` and tree `8facd6e`: historical cases pass `4/4`,
+  intervention/terminal families `24/24`, packaged journeys `79/79` with exact
+  discovered/executed ID parity and no failed ID, and full Chromium passes
+  `188/188`. All five viewports complete without console, page, failed-request,
+  overflow, accessibility, or test-owned process-cleanup failure. Sanitized
+  evidence is in
+  `docs/e2e/operator-ui-provider-free-browser-gate-2026-07-28-post-t65.md`.
+  T37 is promoted to `Next`, Codex T3 to `Soon`; no provider or large scenario ran.
+
+- `2026-07-28` `W36-E7-S4-T65` is complete: immediate terminal cancellation
+  now retains the immutable job identity through dashboard, project, and inbox
+  readback, then clears volatile state; active cancellation continues polling and
+  late pre-cancel polling cannot overwrite the result. Frontend passes `99/99`,
+  both failed mobile cases pass three repeated `2/2` runs, the full active-Studio
+  journey passes `5/5`, Ruff and mypy pass, and full pytest passes `2146/2146`.
+  T36 is promoted to `Next`, T37 to `Soon`; provider and large scenarios remain
+  unstarted.
+
+- `2026-07-28` post-T64 exact-SHA `W36-E7-S4-T37` passed Ruff, mypy across
+  `228` modules, and full pytest `2146/2146`, then the exact Chromium gate
+  reported `186/188`. Both failures were the mobile active-Studio cancellation
+  cases: after a recovered live connection, an immediate terminal cancel response
+  left `activeJobId` volatile because only nonterminal cancellation scheduled the
+  polling path that performs durable reconciliation. The isolated pair passed
+  `2/2`, confirming a suite-load race. `W36-E7-S4-T65` is promoted to `Next`,
+  T36 returns to `Soon`, and T37/provider acceptance are parked. No archive,
+  wheel, provider evaluator, or large scenario ran.
+
+- `2026-07-28` the final post-T64 `W36-E7-S4-T36` rerun is complete on clean
+  source `143cc1e` and tree `2efec8e`: historical cases pass `4/4`,
+  intervention/terminal families `24/24`, packaged journeys `79/79` with exact
+  discovered/executed ID parity and no failed ID, and full browser passes
+  `188/188`. All five viewports complete without console, page, failed-request,
+  overflow, accessibility, or test-owned process-cleanup failure. Sanitized
+  evidence is in
+  `docs/e2e/operator-ui-provider-free-browser-gate-2026-07-28-post-t64.md`.
+  T37 is promoted to `Next`, Codex T3 to `Soon`; no provider or large scenario ran.
+
+- `2026-07-28` `W36-E7-S4-T64` is complete: both Implement journey entries now
+  wait for `domcontentloaded`, exact work-item identity, and selected-runtime
+  readiness before rendering evidence. Implementation recovery passes `3/3` across
+  its five-viewport loop, the full Implement file passes `2/2` in `64.58s`, no
+  `networkidle` wait remains, Ruff and standard mypy pass, and the full Python run
+  has `2145` passing tests; its only failure was the corrected planning mismatch.
+  T36 is promoted to `Next`, T37 to `Soon`; providers and large scenarios remain
+  unstarted.
+
+- `2026-07-28` the post-T63 T36 rerun passed historical cases `4/4` in
+  `64.11s`, intervention/terminal families `24/24` in `396.10s`, and packaged
+  journeys `79/79` with exact ID parity and no failed ID. The full browser suite
+  then reported `187/188` in `3297.71s`: implementation recovery timed out in its
+  first global `networkidle` navigation before product assertions, while isolated
+  rerun passed `1/1` in `54.55s`. `W36-E7-S4-T64` is promoted to `Next`, T36
+  returns to `Soon`, and T37/provider acceptance remain parked. No provider or
+  large scenario ran.
+
+- `2026-07-28` `W36-E7-S4-T63` is complete: the downstream-blocked
+  intervention journey now waits for `domcontentloaded` and the exact work-item
+  surface before durable Plan assertions. The failed `390x844` case passes `3/3`
+  in isolation, complete intervention/terminal families pass `24/24` in `599.24s`,
+  Ruff and standard mypy pass, and the full Python run has `2145` passing tests;
+  its only failure was the corrected planning status mismatch. T36 is promoted to
+  `Next`, T37 to `Soon`; providers and large scenarios remain unstarted.
+
+- `2026-07-28` the post-T62 T36 gate passed its historical matrix `4/4` in
+  `123.69s`, then the complete intervention/terminal families reported `23/24`.
+  The sole `390x844` downstream-blocked intervention failure timed out in initial
+  global `networkidle` before any durable product assertion; isolated rerun passed
+  `1/1` in `47.75s`. `W36-E7-S4-T63` is promoted to `Next` for that one browser
+  readiness boundary, T36 returns to `Soon`, and T37/provider acceptance remain
+  parked. No packaged/full browser layer, provider evaluator, or large scenario ran.
+
+- `2026-07-28` `W36-E7-S4-T62` is complete: the macOS isolation backend now resolves
+  the active trusted `xcode-select` developer root and grants it read-only Seatbelt
+  access. A real isolated `/usr/bin/git clone --no-local` passes while source and
+  developer tools remain read-only, own provider state is writable, and operator
+  HOME plus sibling state stay denied. Focused isolation passes `3/3`, auth/session
+  `41/41`, harness `379/379`, Ruff and mypy pass, the full Python run has `2145`
+  passing tests, and the corrected planning/docs rerun passes `50/50`. T36 is
+  promoted to `Next` and T37 to `Soon`; candidate `98d97c7` remains invalidated
+  and provider acceptance stays parked.
+
+- `2026-07-28` the first Codex T3 root stopped before install or provider allocation:
+  macOS Seatbelt denied `libxcrun.dylib` while `/usr/bin/git` prepared the pinned
+  target clone. This is an AIDD isolation-backend defect rather than auth, network,
+  provider, or model failure. `W36-E7-S4-T62` is promoted to `Next` to authorize the
+  active `xcode-select` developer root read-only and prove Git through the real
+  boundary. Its code change invalidates candidate `98d97c7`; T36 returns to `Soon`,
+  while T37 and both provider acceptances are parked. The failed root will not be
+  resumed, and no large scenario was launched.
+
+- `2026-07-28` `W36-E7-S4-T37` is complete on exact candidate `98d97c7`, tree
+  `ebda9cd`, tracked-index digest `01f9da4`, tracked archive `098d587`, and wheel
+  `3b6b8cf`. Ruff, mypy across `228` modules, Python `2145/2145`, exact-SHA
+  Chromium `188/188`, isolated install/doctor, both eval-doctors, pinned Hono
+  setup with Vitest `233/233` and `tsc --noEmit`, bundle seal/readback after
+  mutable-root deletion, dual private-auth Seatbelt canaries, and source postflight
+  pass. The Claude probe uses only the launcher's explicitly selected
+  `ANTHROPIC_AUTH_TOKEN`; credential values and digests are not recorded. Sanitized
+  evidence is in `docs/e2e/candidate-readiness-2026-07-28.md`. Codex medium
+  acceptance T3 is promoted to `Next`, Claude T4 to `Soon`; no evaluator or large
+  scenario has started.
+
+- `2026-07-28` the post-T61 `W36-E7-S4-T36` rerun is complete on clean source
+  `21c12ed` and tree `7185fbd`: historical cases pass `4/4`, intervention/terminal
+  families `24/24`, packaged journeys `79/79` with exact discovered/executed ID parity and no
+  failed ID, and the full Chromium suite `188/188`. All five viewports complete without console,
+  page, failed-request, overflow, accessibility, or test-owned process-cleanup failures. The
+  sanitized evidence is `docs/e2e/operator-ui-provider-free-browser-gate-2026-07-28.md`.
+  T37 is promoted to `Next`, Codex medium acceptance T3 to `Soon`; no provider or large scenario
+  has started.
+
+- `2026-07-28` `W36-E7-S4-T61` is complete: the runtime/validation Recovery browser
+  journey now waits for `domcontentloaded` and exact work-item surface readiness rather than
+  global network idle. The isolated `runtime-no-progress` case passes `3/3`, the complete
+  Recovery family passes `9/9` across all viewports and parity selectors, Ruff passes, and no
+  `networkidle` wait remains in the file. Production Studio, fixture state, and timeout budgets
+  are unchanged. T36 is promoted to `Next`, T37 to `Soon`; provider and large scenarios remain
+  unstarted.
+
+- `2026-07-28` the post-merge `W36-E7-S4-T36` revalidation on clean source `bbed868`
+  passed the historical matrix `4/4`, intervention/terminal families `24/24`, and the packaged
+  registry `79/79` with exact ID parity. The complete browser suite then failed after `108`
+  passing tests because the `runtime-no-progress` Recovery fixture exceeded its 30-second global
+  `networkidle` navigation wait before durable product assertions. An isolated rerun passed
+  `1/1`, classifying the boundary as a suite-order browser synchronization race.
+  `W36-E7-S4-T61` is promoted to `Next`, T36 returns to `Soon`, and T37/Codex acceptance remain
+  parked. No provider or large scenario was launched.
 
 - `2026-07-27` `W36-E7-S4-T37` is paused, not complete, on exact source `c5747a0`
   and tree `2a946c5`. Ruff, mypy across `228` modules, and full pytest `2145/2145`

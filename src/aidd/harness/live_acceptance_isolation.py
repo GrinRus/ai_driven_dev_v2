@@ -51,6 +51,12 @@ _PRIVATE_ENVIRONMENT_PATHS = {
     "XDG_STATE_HOME": "state",
 }
 _ISOLATION_MARKER = "AIDD_LIVE_ISOLATION_ACTIVE"
+_MACOS_DEVELOPER_ROOT_PARENTS = (
+    Path("/Applications"),
+    Path("/Library/Developer"),
+)
+_MACOS_DEVELOPER_ROOT_TIMEOUT_SECONDS = 5
+_MACOS_SYSTEM_TLS_READ_ROOTS = (Path("/private/etc/ssl"),)
 
 
 class LiveAcceptanceIsolationError(RuntimeError):
@@ -173,10 +179,19 @@ def _macos_profile(
     source_checkout: Path,
     provider_root: Path,
     tool_read_roots: Sequence[Path],
+    literal_read_directories: Sequence[Path] = (),
 ) -> str:
     read_roots = tuple(dict.fromkeys((source_checkout, provider_root, *tool_read_roots)))
     read_filters = " ".join(
         f'(subpath "{_sbpl_string(root)}")' for root in read_roots
+    )
+    literal_read_filters = " ".join(
+        f'(literal "{_sbpl_string(root)}")' for root in literal_read_directories
+    )
+    literal_read_rule = (
+        f"(allow file-read* {literal_read_filters})"
+        if literal_read_filters
+        else ""
     )
     return " ".join(
         (
@@ -191,9 +206,28 @@ def _macos_profile(
             "(allow ipc-posix*)",
             '(allow file-read-metadata file-test-existence (subpath "/"))',
             f"(allow file-read* file-map-executable {read_filters})",
+            literal_read_rule,
             f'(allow file-write* (subpath "{_sbpl_string(provider_root)}"))',
         )
     )
+
+
+def _macos_literal_read_directories(
+    *,
+    provider_root: Path,
+    operator_home: Path | None,
+) -> tuple[Path, ...]:
+    if operator_home is not None and provider_root.is_relative_to(operator_home):
+        raise LiveAcceptanceIsolationError(
+            "macOS external live root must be outside the operator HOME."
+        )
+
+    directories: list[Path] = []
+    current = provider_root.parent
+    while current != current.parent:
+        directories.append(current)
+        current = current.parent
+    return tuple(directories)
 
 
 def _directory_components(path: Path, *, below: Path) -> tuple[Path, ...]:
@@ -251,15 +285,60 @@ def _linux_prefix(
     return tuple(prefix)
 
 
-def _default_tool_read_roots() -> tuple[Path, ...]:
+def _macos_developer_tool_root() -> Path | None:
+    executable = Path("/usr/bin/xcode-select")
+    if not executable.is_file():
+        return None
+    try:
+        completed = subprocess.run(
+            (executable.as_posix(), "--print-path"),
+            capture_output=True,
+            text=True,
+            check=False,
+            timeout=_MACOS_DEVELOPER_ROOT_TIMEOUT_SECONDS,
+        )
+    except (OSError, subprocess.TimeoutExpired):
+        return None
+    if completed.returncode != 0:
+        return None
+    raw_path = completed.stdout.strip()
+    if not raw_path or not Path(raw_path).is_absolute():
+        return None
+    selected = _resolved(Path(raw_path))
+    trusted_parents = tuple(_resolved(path) for path in _MACOS_DEVELOPER_ROOT_PARENTS)
+    if not selected.is_dir() or not any(
+        selected.is_relative_to(parent) for parent in trusted_parents
+    ):
+        return None
+    return selected
+
+
+def _macos_system_tls_read_roots() -> tuple[Path, ...]:
     roots: list[Path] = []
-    for candidate in (
+    for candidate in _MACOS_SYSTEM_TLS_READ_ROOTS:
+        if candidate.is_symlink():
+            continue
+        resolved = _resolved(candidate)
+        if resolved == candidate and resolved.is_dir():
+            roots.append(resolved)
+    return tuple(roots)
+
+
+def _default_tool_read_roots(*, system_name: str) -> tuple[Path, ...]:
+    roots: list[Path] = []
+    candidates: tuple[Path, ...] = (
         Path(sys.prefix),
         Path(sys.executable).resolve(strict=False).parents[3],
         Path(__file__).resolve(strict=False).parents[3],
         Path("/usr/local"),
         Path("/opt/homebrew"),
-    ):
+    )
+    if system_name == "Darwin":
+        developer_root = _macos_developer_tool_root()
+        if developer_root is not None:
+            candidates = (*candidates, developer_root)
+        candidates = (*candidates, *_macos_system_tls_read_roots())
+    for candidate in candidates:
         resolved = _resolved(candidate)
         if resolved.exists() and resolved not in roots:
             roots.append(resolved)
@@ -281,12 +360,6 @@ def prepare_live_acceptance_isolation(
         external_root=external_root,
         provider_root=provider_root,
     )
-    provider.mkdir(mode=0o700, exist_ok=True)
-    if not provider.is_dir() or provider.is_symlink():
-        raise LiveAcceptanceIsolationError(
-            "Provider root must be a real directory, not a symlink."
-        )
-    private_root = _prepare_private_root(provider)
     inherited = os.environ if inherited_environment is None else inherited_environment
     operator_home_raw = inherited.get("HOME")
     operator_home = (
@@ -294,9 +367,27 @@ def prepare_live_acceptance_isolation(
         if operator_home_raw and Path(operator_home_raw).is_absolute()
         else None
     )
+    detected_system = system_name or platform.system()
+    literal_read_directories: tuple[Path, ...] = ()
+    if detected_system == "Darwin":
+        literal_read_directories = _macos_literal_read_directories(
+            provider_root=provider,
+            operator_home=operator_home,
+        )
+    provider.mkdir(mode=0o700, exist_ok=True)
+    if not provider.is_dir() or provider.is_symlink():
+        raise LiveAcceptanceIsolationError(
+            "Provider root must be a real directory, not a symlink."
+        )
+    private_root = _prepare_private_root(provider)
     explicit_tool_roots = tuple(_resolved(path) for path in tool_read_roots)
     all_tool_roots = tuple(
-        dict.fromkeys((*_default_tool_read_roots(), *explicit_tool_roots))
+        dict.fromkeys(
+            (
+                *_default_tool_read_roots(system_name=detected_system),
+                *explicit_tool_roots,
+            )
+        )
     )
     for root in all_tool_roots:
         if not root.exists():
@@ -312,7 +403,6 @@ def prepare_live_acceptance_isolation(
         private_root=private_root,
         credential_environment_keys=credential_environment_keys,
     )
-    detected_system = system_name or platform.system()
     launch_prefix: tuple[str, ...]
     if detected_system == "Darwin":
         executable = shutil.which("sandbox-exec")
@@ -328,6 +418,7 @@ def prepare_live_acceptance_isolation(
                 source_checkout=source,
                 provider_root=provider,
                 tool_read_roots=all_tool_roots,
+                literal_read_directories=literal_read_directories,
             ),
         )
     elif detected_system == "Linux":
