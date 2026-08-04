@@ -1,56 +1,114 @@
-# ai_driven_dev_v2
+# AIDD
 
-Runtime-agnostic orchestration for document-first AI software delivery.
+[![CI](https://github.com/GrinRus/ai_driven_dev_v2/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/GrinRus/ai_driven_dev_v2/actions/workflows/ci.yml)
+[![Security](https://github.com/GrinRus/ai_driven_dev_v2/actions/workflows/security.yml/badge.svg?branch=main)](https://github.com/GrinRus/ai_driven_dev_v2/actions/workflows/security.yml)
+[![PyPI](https://img.shields.io/pypi/v/ai-driven-dev-v2?include_prereleases&label=PyPI)](https://pypi.org/project/ai-driven-dev-v2/)
+[![Python](https://img.shields.io/pypi/pyversions/ai-driven-dev-v2)](https://github.com/GrinRus/ai_driven_dev_v2/blob/main/docs/compatibility-policy.md)
+[![License](https://img.shields.io/github/license/GrinRus/ai_driven_dev_v2)](https://github.com/GrinRus/ai_driven_dev_v2/blob/main/LICENSE)
 
-AIDD runs a governed staged workflow over a local project. It asks a runtime such as
-Claude Code, Codex, OpenCode, or a generic CLI to produce Markdown stage artifacts, then
-validates those artifacts before the workflow can advance.
+**A reviewable, document-first workflow around the AI coding runtimes you already use.**
 
-The canonical stage flow is:
+AIDD (`ai_driven_dev_v2`) is an open-source orchestration layer for AI-assisted software
+delivery. It runs one governed workflow through Claude Code, Codex, OpenCode, Qwen Code, or
+an AIDD-compatible CLI, while keeping the workflow itself independent of any one provider.
+
+Instead of turning a prompt directly into an opaque code change, AIDD moves a work item
+through explicit stages. Each stage produces readable Markdown, is checked against a
+document contract, and either advances, attempts a bounded repair, or pauses for human input.
+Artifacts, questions, validation results, and runtime logs remain available in the local
+project for inspection.
+
+[Quick start](#run-your-first-workflow) · [How it works](#how-it-works) ·
+[Documentation](#documentation) · [Contributing](#contributing)
+
+## Why AIDD?
+
+Coding agents are useful, but a one-off agent run often leaves important questions
+unanswered: What requirements did it use? Why did it make a decision? Was the output checked?
+Can the same process run with another provider? What evidence remains after the session ends?
+
+| Common agent workflow | AIDD |
+| --- | --- |
+| Context lives mainly in chat history | Inputs, decisions, and outputs are ordinary Markdown files |
+| The process changes with the provider | One stage graph runs through provider-specific adapters |
+| The final response is accepted as-is | Validators gate progression against explicit contracts |
+| Small output mistakes require manual cleanup | A bounded repair attempt receives the exact findings |
+| Ambiguity is guessed or lost | Blocking questions and answers are durable workflow artifacts |
+| Logs disappear with the session | Runtime logs, attempts, and provenance remain inspectable |
+
+AIDD validates conformance to its declared contracts; it does not guarantee that generated
+software is correct. Human product ownership, code review, and appropriate testing remain
+essential.
+
+## How it works
+
+The canonical workflow is:
 
 ```text
 idea -> research -> plan -> review-spec -> tasklist -> implement -> review -> qa
 ```
 
-## Alpha status and safety
+Every stage follows the same runtime-agnostic loop:
+
+1. AIDD gathers the declared Markdown inputs and builds a stage brief.
+2. The selected adapter launches an external AI runtime.
+3. The runtime writes the stage documents while AIDD retains available logs and evidence.
+4. AIDD validates the output against structural, semantic, and cross-document rules.
+5. A valid result advances. An invalid result receives a bounded repair attempt. A blocking
+   question pauses the run until the operator answers it.
+
+```text
+operator CLI / UI
+        |
+        v
+    AIDD core ------> validator / repair / interview
+        |
+        v
+     adapter -------> external AI runtime
+        |
+        v
+project-local .aidd/ documents, logs, and evidence
+```
+
+The core owns workflow semantics, stage order, validation, and artifact policy. Adapters own
+runtime-specific process launch, streaming, and capability mapping. See the
+[target architecture](https://github.com/GrinRus/ai_driven_dev_v2/blob/main/docs/architecture/target-architecture.md)
+for the complete model.
+
+## Project status and safety
 
 Latest published prerelease: `0.1.0a16`.
 Latest accepted published prerelease evidence: `0.1.0a16`.
 The `main` branch is development source and may contain unreleased changes.
-Source checkouts are not accepted package-channel evidence until the GitHub Release,
-PyPI publish, `pipx`, and `uv tool` verification jobs succeed for a tagged release.
 
-AIDD is alpha software for local evaluation and controlled operator trials. It is not
-ready for unattended production automation. AIDD launches external runtime CLIs against a
-local working tree; review runtime commands before execution and prefer a disposable branch,
-workspace, or sandboxed checkout for trials.
+> [!WARNING]
+> AIDD is alpha software for local evaluation and controlled operator trials. It is not
+> ready for unattended production automation, and its interfaces may change.
 
-Beta-readiness work on `main` is a preparation gate, not a production-readiness claim.
-Before any beta-oriented release note is published, maintainers must confirm that the README,
-main user stories, and target architecture still match the code, deterministic release checks
-pass, and manual eval evidence is refreshed outside CI/CD.
+Beta readiness is a future evidence gate, not a current production-readiness claim.
 
-Do not commit `.aidd/` unless your repository policy explicitly allows it. The workspace can
-contain raw runtime logs, prompts, repository context, operator answers, and other sensitive
-evidence.
+Before running AIDD:
 
-## What is AIDD?
+- use a disposable branch, sandboxed checkout, or otherwise controlled workspace;
+- review the configured provider command and permission policy—alpha defaults may give the
+  selected runtime broad access to the working tree;
+- install and authenticate the provider CLI separately;
+- treat `.aidd/` as sensitive local state because it can contain prompts, repository context,
+  operator answers, raw logs, and provider evidence;
+- do not commit `.aidd/` unless your repository policy explicitly allows it;
+- keep the local Operator UI on loopback unless you have deliberately reviewed the exposure.
+  It is a local, no-auth operator surface rather than a remote multi-user service.
 
-`ai_driven_dev_v2` (AIDD) is for teams that want AI-assisted software work to leave
-inspectable evidence instead of only chat transcripts or opaque runtime state.
+## Requirements
 
-AIDD provides:
+- CPython 3.12, 3.13, or 3.14
+- Linux for the release-blocking platform path, or macOS on a best-effort basis
+- `pipx` or `uv` for installation
+- an installed and authenticated provider CLI, or a configured generic wrapper, for runtime
+  execution
 
-- a runtime-agnostic core with adapter-based runtime integration;
-- Markdown-first stage inputs and outputs;
-- validator gates before stage progression;
-- bounded self-repair after invalid outputs;
-- durable questions, answers, logs, validation reports, and run artifacts;
-- a CLI and local operator UI over the same repository-local `.aidd/` workspace;
-- deterministic harnesses and manual evaluation support.
-
-AIDD does not bundle third-party runtime binaries. Operators install and authenticate
-Claude Code, Codex, OpenCode, or other runtime CLIs separately.
+Windows is not currently supported. AIDD does not bundle AI runtimes, provider credentials,
+or model access.
 
 ## Install with pipx
 
@@ -64,56 +122,48 @@ aidd doctor
 
 ## Install with uv tool
 
-Install the latest published prerelease:
-
 ```bash
 uv tool install "ai-driven-dev-v2==0.1.0a16"
 aidd --version
 aidd doctor
 ```
 
+`aidd doctor` checks local configuration and runtime command availability. It does not prove
+that provider authentication, quota, or remote API access will succeed.
+
 ## Container support
 
-AIDD does not publish or support Docker/GHCR images during the alpha phase.
-The supported alpha installation paths are PyPI via pipx, uv tool, and source checkout.
+AIDD does not publish or support Docker/GHCR images during the alpha phase. Use the PyPI
+package or a source checkout.
 
-Container support may be reconsidered after the runtime permission model, release
-provenance, and operator workflows stabilize.
+## Run your first workflow
 
-Beta readiness is a future evidence gate, not a current alpha claim. It requires fresh
-install evidence, clean UI onboarding, real-provider UI smokes, Browser-verified operator
-states, project-set boundaries, remediation, provenance, approval audit, and release
-evidence.
+Start in the local project root that should receive the workflow state. For a first trial,
+use a disposable or feature branch.
 
-## Source checkout
-
-```bash
-git clone https://github.com/GrinRus/ai_driven_dev_v2.git
-cd ai_driven_dev_v2
-uv sync --locked --extra dev
-uv run aidd --version
-uv run aidd doctor
-```
-
-The latest published prerelease is `v0.1.0a16`. Use the pinned `pipx` or
-`uv tool` install commands above when you need accepted package-channel behavior;
-source checkouts may contain unreleased changes after the latest package.
-
-## Run your first local workflow
-
-Start from the local project root that should receive AIDD workflow state:
+### UI-first path
 
 ```bash
 cd /path/to/local-project
+aidd doctor
 aidd ui
 ```
 
-The UI opens setup mode when no work item is provided. Use it to confirm the local project
-root, create or resume a work item, seed the request, inspect runtime readiness, select a
-runtime, and start the governed flow. The UI still writes the same project-local `.aidd/`
-workspace as the CLI and still requires explicit runtime selection before execution.
+`aidd ui` starts a loopback server and prints its local URL. Open that URL in a browser.
+Without `--work-item`, Guided Setup lets you create or resume a work item, enter the request,
+inspect runtime readiness, and make an explicit runtime selection. The UI and CLI use the same
+project-local `.aidd/` workspace.
 
-Scripted and terminal-first flows remain supported:
+To open an initialized work item directly:
+
+```bash
+aidd ui --work-item WI-001 --root .aidd
+```
+
+### CLI-first path
+
+This bounded example runs only the strategy stages through `plan`; it does not reach the
+code-changing `implement` stage:
 
 ```bash
 cd /path/to/local-project
@@ -123,255 +173,175 @@ aidd run --work-item WI-001 --runtime codex --from-stage idea --to-stage plan --
 aidd run show --work-item WI-001 --root .aidd
 ```
 
-Starting from any stage after `idea` is an explicit continuation of existing run evidence:
+Initialization creates project-local state similar to:
 
-```bash
-aidd run --work-item WI-001 --runtime codex --run-id run-20260716T120000Z \
-  --from-stage research --to-stage plan --root .aidd
+```text
+.aidd/
+├── config/
+├── workitems/
+│   └── WI-001/
+│       ├── context/
+│       └── stages/
+│           ├── idea/
+│           ├── research/
+│           └── ...
+└── reports/
+    └── runs/
 ```
 
-The selected run must already exist, contain the requested bounds, and have succeeded
-upstream stages; AIDD never allocates a new run for a non-first start.
+A run may stop with blocking questions instead of advancing. That is a normal governed
+outcome, not a silent failure.
 
-This creates `.aidd/` inside the local project and seeds the required intake context
-documents for the first stage. Treat `.aidd/` as project-local operator state that may
-include sensitive raw runtime logs, prompts, repository context, questions, answers, and
-validation evidence.
+## Supported runtimes
 
-From a source checkout without installing globally, replace `aidd` with:
+Support tiers describe maintenance and release impact, not feature identity. Runtime
+capabilities can differ, and AIDD reports explicit degraded behavior when needed.
 
-```bash
-uv tool run --from /path/to/ai_driven_dev_v2 aidd
-```
+| Runtime | Support status | What you install |
+| --- | --- | --- |
+| `claude-code` | Tier 1 — release-blocking maintained | Authenticated `claude` CLI |
+| `generic-cli` | Tier 1 — portability and conformance baseline | Configured AIDD-compatible wrapper command |
+| `codex` | Tier 2 — actively maintained, non-blocking | Authenticated `codex` CLI |
+| `opencode` | Tier 3 — limited maintained, best effort | Authenticated `opencode` CLI |
+| `qwen` | Experimental | Authenticated Qwen Code CLI |
 
-The product operator path starts from a local project root. `aidd init --github-issue <url>`
-is out of product scope. Public GitHub repositories are evaluator evidence sources only,
-not a product intake path.
+`generic-cli` is not the default product onboarding runtime. Use it when you intentionally
+provide an AIDD-compatible wrapper command using `adapter-flags` mode. For exact capabilities
+and support commitments, see the
+[runtime matrix](https://github.com/GrinRus/ai_driven_dev_v2/blob/main/docs/architecture/runtime-matrix.md).
 
-## Choose a runtime
+## Inspect and steer a run
 
-Use `aidd doctor` to check provider availability, configured execution commands, support
-tiers, and default timeout settings.
-
-| Runtime | External dependency | Default execution mode | Typical use |
-| --- | --- | --- | --- |
-| `generic-cli` | Python | `adapter-flags` | Advanced AIDD-compatible wrapper and deterministic checks |
-| `claude-code` | Authenticated `claude` CLI | `native` | Claude Code-backed workflow runs |
-| `codex` | Authenticated `codex` CLI | `native` | Codex-backed workflow runs and manual evals |
-| `opencode` | Authenticated `opencode` CLI | `native` | OpenCode-backed workflow runs and manual evals |
-| `qwen` | Authenticated `qwen` CLI | `native` | Experimental Qwen Code workflow runs |
-
-Product workflow and stage execution require an explicit runtime id:
-
-```bash
-aidd run --work-item WI-001 --runtime codex --root .aidd
-aidd stage run plan --work-item WI-001 --runtime opencode --root .aidd
-```
-
-Codex, OpenCode, Qwen, and Claude Code default to native provider CLI execution.
-`generic-cli` is not the default product onboarding runtime; use it when you
-intentionally configure an AIDD-compatible wrapper command with `mode = "adapter-flags"`
-for a deterministic or custom execution surface.
-
-Unknown runtime ids fail fast with `unsupported-runtime` classification.
-
-## Inspect artifacts and logs
-
-AIDD stores workflow evidence under `.aidd/`:
+The UI and CLI expose the same durable evidence:
 
 ```bash
 aidd run show --work-item WI-001 --root .aidd
 aidd run logs --work-item WI-001 --stage plan --root .aidd
 aidd run artifacts --work-item WI-001 --stage plan --root .aidd
 aidd stage questions idea --work-item WI-001 --root .aidd
-aidd stage interact plan --work-item WI-001 --runtime codex --request "Add rollback risks" --root .aidd
+aidd stage interact plan --work-item WI-001 --runtime codex \
+  --request "Add rollback risks" --root .aidd
 ```
 
-Stage documents, runtime logs, validator reports, repair briefs, questions, and answers
-remain ordinary files in the local workspace. The core treats Markdown documents as the
-contract surface; runtime-authored JSON schemas are not the primary stage output format.
-When a CLI stage stops on questions, inspect them with `aidd stage questions`, write
-answers to `.aidd/workitems/<work-item>/stages/<stage>/answers.md`, and rerun the stage
-with `aidd stage run <stage> --work-item <id> --runtime <runtime> --root .aidd`.
-When a stage artifact needs a scoped correction or additional analysis, use
-`aidd stage interact <stage>` with `--request` or `--request-file`; AIDD stores the
-operator request under `operator-requests/request-000N.md` and runs a normal validated
-stage attempt in the current run.
+When a CLI stage stops on a question, inspect it with `aidd stage questions`, write the answer
+to `.aidd/workitems/<work-item>/stages/<stage>/answers.md`, and rerun the stage. The UI can write question answers as `[resolved]`, `[partial]`, or `[deferred]` entries; only `[resolved]` answers unblock blocking questions.
+
+Use `aidd stage interact <stage>` for a scoped correction or additional analysis. The request
+is saved as stage-local Markdown input and the new result still passes through the normal
+validator gate.
 
 ## Operator UI
 
-Start setup mode for a local project, or open an initialized work item directly:
+The local **Document & Evidence Studio** is a browser surface over the same workflow state as
+the CLI, not a second workflow engine. Guided Setup handles first-run context, Inbox surfaces
+decisions, Studio keeps the current document and action together, and History exposes retained
+attempts and lineage.
 
-```bash
-aidd ui
-aidd ui --work-item WI-001 --root .aidd
-```
+After terminal `qa`, the command center switches to **Flow Complete**.
+It summarizes the final QA status, final artifacts, and blockers.
+It also retains repair counts, approval counts, answered questions, recommended next-flow actions,
+and source-run lineage. From there, operators can:
 
-Without `--work-item`, the UI validates the selected project root, resolves `.aidd/`,
-discovers existing work items, and creates new work items through the same bootstrap path as
-`aidd init`. With `--work-item`, it opens Document & Evidence Studio directly.
+- create a new work item;
+- start a follow-up flow;
+- clone the previous flow;
+- hand off to an eval / scenario batch; or
+- archive the run without deleting artifacts or mutating the completed source run.
 
-The Studio UI reads the same `.aidd/` state as the CLI. Its Inbox prioritizes durable
-decisions, Studio keeps the canonical document and current action together, and History
-renders retained attempts, comparison, lineage, and archive disposition. It can render stage
-Markdown artifacts, show runtime logs, answer questions, show repair history, submit
-stage-scoped operator intervention requests, and display runtime readiness details without
-introducing a separate workflow engine. Operators can run the full workflow, run or resume
-the next eligible stage, run the active stage with **Run selected stage**, or submit
-**Request change -> Submit & run** from the selected
-Studio context; these actions require an explicit runtime selection and there is no hidden
-`generic-cli` fallback. New UI launches stream live job logs while the process runs, and
-the saved `runtime.log` remains available afterward through the normal log view and CLI.
-Successful UI jobs report `/api/jobs/<job_id>` status `completed`; successful stage
-progress remains visible as stage state `succeeded` in the rail and artifacts.
-Active Studio and History also show long-running job evidence:
-elapsed time, last output age, runner command, stage timeout summary, cancel action, and
-real stage milestones are shown without fake progress percentages.
-When a UI-started job is live, the central next-action strip switches to a live progress
-summary with elapsed time, last runtime output, live log chunk count, an Open live logs
-shortcut, and the cancel action; on mobile the current decision precedes supporting evidence.
-The UI can write question answers as `[resolved]`, `[partial]`, or `[deferred]` entries
-in the standard `answers.md`; only `[resolved]` answers unblock blocking questions, then
-rerun the selected stage or workflow after answering. Intervention requests are stored as
-durable Markdown input under `.aidd/workitems/<id>/stages/<stage>/operator-requests/`
-and are shown in Activity, Evidence Refs, and Recent Artifacts. The UI is a local no-auth
-operator surface: the default host is loopback, and non-loopback binds print a warning.
+The detailed operator path lives in the
+[Operator Handbook](https://github.com/GrinRus/ai_driven_dev_v2/blob/main/docs/operator-handbook.md).
 
-For `implement`, the **Implement Review** tab shows the real project repository diff,
-including untracked files, deleted files, bounded diff hunks, `.aidd/` artifacts separated
-from source files, allowed-scope status, and mismatches between changed files and
-`implementation-report.md`. For `review` and `qa`, structured tabs surface findings,
-approval status, QA verdict, residual risks, known issues, and evidence ids. Selected
-review findings or QA risks can be sent back to `implement` as a durable remediation
-request; the UI then marks downstream `review` and `qa` stale until the operator explicitly
-reruns `review -> qa` with a selected runtime. CLI behavior remains document/validator
-driven and does not get new default gates from these UI controls.
+## Scope and non-goals
 
-After terminal `qa`, the command center switches to **Flow Complete**. The completed-run
-handoff shows final QA status, final artifacts, blockers, repair counts, approval counts,
-answered questions, recommended next-flow actions, and source-run lineage. Operators can
-create a new work item, start a follow-up flow, clone the previous flow, hand off to an
-eval / scenario batch, or archive the run. Follow-up and clone actions create new
-independent work item or run identities with source-run references; archive records local
-operator intent without deleting artifacts or mutating the completed source run.
+AIDD is an orchestration and evidence layer. It is not:
 
-For the local UI evidence lane, see `docs/e2e/operator-ui-local-project.md`.
+- an AI model, coding agent, IDE, or hosted SaaS product;
+- a replacement for human requirements, review, security analysis, or release decisions;
+- a guarantee that a runtime will produce correct code or that a repair will succeed;
+- a promise of identical capabilities across every AI runtime;
+- a production-ready platform for unattended or remote multi-user automation.
 
-## How AIDD works
+The product operator path starts from a local project root. `aidd init --github-issue <url>`
+is out of product scope. Public GitHub repositories are evaluator evidence sources only, not a
+product intake path.
 
-Architecture in one line:
+## Harness and evaluations
 
-```text
-operator CLI / UI -> AIDD core -> adapter -> runtime -> workspace documents
-```
+AIDD includes deterministic scenario loading, adapter conformance checks, graders, failure
+classification, and report generation. Manual external repository evaluations are local
+operator audit evidence; they are not CI/CD or release automation.
 
-Key design rules:
+See the
+[manual evaluation catalog](https://github.com/GrinRus/ai_driven_dev_v2/blob/main/docs/e2e/live-e2e-catalog.md)
+and [scenario matrix](https://github.com/GrinRus/ai_driven_dev_v2/blob/main/docs/e2e/scenario-matrix.md)
+for the maintained evaluation boundaries.
 
-- the core owns workflow semantics, stage order, validation, repair, and workspace policy;
-- adapters own runtime process launch, streaming, and runtime-specific command behavior;
-- stage inputs and outputs are Markdown documents;
-- validation failures trigger repair or an explicit stop;
-- questions and answers are persisted as documents;
-- operator intervention requests are persisted as stage-scoped Markdown input and
-  validated through the normal stage chain;
-- runtime logs are streamed when possible and saved for replay and eval analysis.
+## Documentation
 
-Primary architecture docs:
-
-- `docs/architecture/target-architecture.md`
-- `docs/architecture/adapter-protocol.md`
-- `docs/architecture/document-contracts.md`
-- `docs/architecture/runtime-matrix.md`
-- `docs/architecture/operator-frontend.md`
-- `docs/architecture/project-set-workspace.md`
-- `docs/architecture/distribution-and-development.md`
+| Goal | Read |
+| --- | --- |
+| Install, configure, and operate AIDD | [Operator Handbook](https://github.com/GrinRus/ai_driven_dev_v2/blob/main/docs/operator-handbook.md) |
+| Diagnose common failures | [Operator Troubleshooting](https://github.com/GrinRus/ai_driven_dev_v2/blob/main/docs/operator-troubleshooting.md) |
+| Understand support boundaries | [Support Policy](https://github.com/GrinRus/ai_driven_dev_v2/blob/main/docs/operator-support-policy.md) and [Compatibility Policy](https://github.com/GrinRus/ai_driven_dev_v2/blob/main/docs/compatibility-policy.md) |
+| Understand the architecture | [Target Architecture](https://github.com/GrinRus/ai_driven_dev_v2/blob/main/docs/architecture/target-architecture.md) and [Document Contracts](https://github.com/GrinRus/ai_driven_dev_v2/blob/main/docs/architecture/document-contracts.md) |
+| Follow product scope and plans | [User Stories](https://github.com/GrinRus/ai_driven_dev_v2/blob/main/docs/product/user-stories.md), [Roadmap](https://github.com/GrinRus/ai_driven_dev_v2/blob/main/docs/backlog/roadmap.md), and [Backlog](https://github.com/GrinRus/ai_driven_dev_v2/blob/main/docs/backlog/backlog.md) |
+| Review user-visible changes | [Changelog](https://github.com/GrinRus/ai_driven_dev_v2/blob/main/CHANGELOG.md) |
 
 ## Development from source
 
-Prerequisites:
-
-- Python 3.12+
-- `uv`
-- optional provider CLIs for runtime-specific development
-- provider authentication configured outside AIDD
-
-Bootstrap and check the repository:
-
 ```bash
+git clone https://github.com/GrinRus/ai_driven_dev_v2.git
+cd ai_driven_dev_v2
 uv sync --locked --extra dev
 uv run aidd --version
 uv run aidd doctor
+```
+
+Run the repository quality checks:
+
+```bash
 uv run --extra dev ruff check .
 uv run --extra dev python -m mypy src scripts
 uv run --extra dev pytest -q
 ```
 
-Contributor workflow:
+To use a source checkout against another local project without installing it globally:
 
-1. Read `AGENTS.md`.
-2. Read `docs/product/user-stories.md`.
-3. Pick a local task from `docs/backlog/backlog.md`.
-4. Use `docs/backlog/roadmap.md` for the full wave/epic/slice/task hierarchy.
-5. Keep the core runtime-agnostic and update docs/contracts/prompts when behavior changes.
+```bash
+uv tool run --from /path/to/ai_driven_dev_v2 aidd
+```
 
-## Eval and release evidence
+The main code and extension points are:
 
-AIDD includes deterministic harness checks and manual evaluation scenarios. Public
-repository evals are local operator audit evidence, not CI/CD, not a release workflow,
-not GitHub Actions, and not a release gate. CI, security, and release workflows must
-not run public-repository scenarios, require provider credentials, or depend on public
-target repositories.
-
-Detailed scenario policies, runbooks, artifact inventories, and manual quality
-rubrics live under:
-
-- `docs/e2e/live-e2e-catalog.md`
-- `docs/e2e/scenario-matrix.md`
-- `harness/scenarios/live/`
-
-Release and install evidence for PyPI, `pipx`, and `uv tool` is recorded in
-`docs/release-checklist.md`. Docker/GHCR is intentionally outside the alpha release
-contract.
-
-## Docs map
-
-- `docs/operator-handbook.md` — operator install, config, and runtime guidance
-- `docs/operator-troubleshooting.md` — diagnostics and common failure modes
-- `docs/operator-support-policy.md` — support and evidence expectations
-- `docs/product/user-stories.md` — product outcomes and scope boundaries
-- `docs/architecture/` — stable architecture decisions and protocols
-- `docs/e2e/` — manual eval and local operator UI evidence
-- `docs/backlog/roadmap.md` — canonical plan
-- `docs/backlog/backlog.md` — short actionable queue
-- `docs/compatibility-policy.md` — Python and platform compatibility
-
-## Repository map
-
-- `src/aidd/` — Python package with core orchestration, adapters, validators, CLI, harness, and evals
+- `src/aidd/core/` — runtime-agnostic orchestration and workspace policy
+- `src/aidd/adapters/` — provider-specific integration
+- `src/aidd/validators/` — document validation
 - `contracts/` — stage and document contracts
-- `prompt-packs/` — file-based stage prompts
-- `harness/scenarios/` — smoke and manual scenario manifests
-- `.agents/skills/` — reusable team skills for Codex-style development
-- `tests/` — deterministic unit, integration, docs, adapter, harness, and eval checks
-- `MANIFEST.md` — historical archive contents snapshot, not the current source-of-truth inventory
+- `prompt-packs/` — version-controlled stage prompts
+- `src/aidd/harness/` and `src/aidd/evals/` — scenarios, graders, and reports
+- `tests/` — deterministic regression and conformance coverage
 
 ## Contributing
 
-See `CONTRIBUTING.md`.
-
-The short version:
-
-- keep changes aligned with the user stories;
-- keep runtime-specific logic inside adapters;
-- update docs, contracts, prompts, scenarios, and tests when behavior changes;
-- run the narrowest useful checks locally before opening a PR.
+Contributions to code, adapters, contracts, prompts, documentation, scenarios, and tests are
+welcome. Start with the
+[contribution guide](https://github.com/GrinRus/ai_driven_dev_v2/blob/main/CONTRIBUTING.md)
+and [Code of Conduct](https://github.com/GrinRus/ai_driven_dev_v2/blob/main/CODE_OF_CONDUCT.md).
+For a large change, open an
+[issue](https://github.com/GrinRus/ai_driven_dev_v2/issues/new/choose) or a draft pull request
+before investing in the full implementation.
 
 ## Security and support
 
-Use `SECURITY.md` for vulnerability reporting and `SUPPORT.md` for operator support scope.
-Do not file public issues containing secrets, private repository contents, provider logs, or
-tokens. Release notes and user-visible changes are tracked in `CHANGELOG.md`.
+Report vulnerabilities through the process in
+[SECURITY.md](https://github.com/GrinRus/ai_driven_dev_v2/blob/main/SECURITY.md). Do not put
+tokens, private repository contents, provider credentials, or unredacted runtime logs in a
+public issue.
+
+For reproducible operator problems, see
+[SUPPORT.md](https://github.com/GrinRus/ai_driven_dev_v2/blob/main/SUPPORT.md).
 
 ## License
 
-This project is licensed under the Apache License 2.0. See `LICENSE`.
+AIDD is available under the
+[Apache License 2.0](https://github.com/GrinRus/ai_driven_dev_v2/blob/main/LICENSE).
