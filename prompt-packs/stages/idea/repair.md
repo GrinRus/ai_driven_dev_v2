@@ -72,7 +72,11 @@ Use these concrete repair actions:
 
 - `STRUCT-MISSING-DOCUMENT`: create the missing required Markdown document with contract headings.
 - `STRUCT-MISSING-HEADING` / `STRUCT-EMPTY-SECTION`: add or complete the exact required heading content.
-- `SEM-PLACEHOLDER-CONTENT`: replace placeholders with concrete, supportable statements.
+- `SEM-PLACEHOLDER-CONTENT`: inspect the exact token and line named by the finding, replace
+  it with concrete, supportable content, and preserve every unaffected section.
+- `SEM-INCOMPLETE-SECTION` for a succeeded `stage-result.md` `Blockers` section: replace
+  the section body with exactly `- none` when no concrete blocker or unresolved blocking
+  question remains.
 - `SEM-INCOMPLETE-SECTION` for `Constraints` or `Open questions`: convert the section to top-level
   Markdown bullet items, or use exactly `- none` when there are no entries.
 - `SEM-UNSUPPORTED-CLAIM`: remove unsupported claim or restate it as an explicit assumption.

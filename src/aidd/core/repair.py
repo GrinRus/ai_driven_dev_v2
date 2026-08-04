@@ -209,6 +209,20 @@ def _repair_hint_for_finding(finding: ValidatorReportFinding) -> str:
             "do not put punctuation immediately after the marker and do not invent `A1` "
             "answer ids."
         )
+    if finding.code == "SEM-PLACEHOLDER-CONTENT":
+        return (
+            "Remove or replace only the named placeholder token(s) in the affected section; "
+            "preserve all other valid sections and do not regenerate the whole document."
+        )
+    if (
+        finding.code == "SEM-INCOMPLETE-SECTION"
+        and "succeeded stage-result" in normalized_message
+        and "blockers" in normalized_message
+    ):
+        return (
+            "For a succeeded stage-result, replace the entire `Blockers` section body "
+            "with exactly `- none`."
+        )
     if (
         finding.code == "SEM-INCOMPLETE-SECTION"
         and "must use bullet items" in normalized_message
@@ -518,9 +532,11 @@ def render_stage_result_with_repair_history(
     )
 
     lines = [
-        "# Stage",
+        "# Stage Result",
         "",
-        normalized_stage,
+        "## Stage",
+        "",
+        f"- Stage: `{normalized_stage}`",
         "",
         "## Attempt history",
         "",

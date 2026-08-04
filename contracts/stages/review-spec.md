@@ -112,6 +112,8 @@ Question/answer document rules:
 
 - default repair budget: 2 attempts after the initial run
 - repair uses the same target documents
+- repair attempts receive existing same-stage output documents in their input bundle and must
+  preserve valid sections and the merged interview ledger
 - AIDD core preserves validator findings and the generated repair brief for every failed attempt
 
 ## Prompt pack

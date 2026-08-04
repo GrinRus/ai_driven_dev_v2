@@ -40,6 +40,9 @@ Store user-facing clarification questions raised during a stage.
   asks a question with an existing id, update that question in place; when it asks a new
   id, append it; do not silently remove unresolved questions that were omitted from the
   later attempt output.
+- Preserve every existing question that is still referenced by `answers.md`, including
+  resolved questions. A later runtime attempt must not replace the ledger with `- none`
+  when durable answers still refer to an earlier question id.
 - To stop blocking on a question, either provide a matching `[resolved]` answer in
   `answers.md` or re-emit the same question id as `[non-blocking]` while recording the
   bounded assumption in the stage output artifact.
@@ -56,6 +59,8 @@ Store user-facing clarification questions raised during a stage.
 - each listed question has a stable id and a valid blocking marker,
 - marker usage is consistent with blocker semantics,
 - `- none` appears only when no open questions exist.
+- A later attempt that omits an earlier question must not cause a matching answer to become
+  orphaned; cross-document validation must continue to resolve the same question id.
 
 ## Notes
 

@@ -32,6 +32,14 @@ verify:
   - test -f .aidd/workitems/WI-DETERMINISTIC-FULL/stages/qa/output/qa-report.md
   - test -f .aidd/workitems/WI-DETERMINISTIC-FULL/stages/qa/output/stage-result.md
   - test -f .aidd/workitems/WI-DETERMINISTIC-FULL/stages/qa/output/validator-report.md
+  - grep -q '^## Stage$' .aidd/workitems/WI-DETERMINISTIC-FULL/stages/qa/output/stage-result.md
+  - grep -q '^## Blockers$' .aidd/workitems/WI-DETERMINISTIC-FULL/stages/qa/output/stage-result.md
+  - grep -q '^- none$' .aidd/workitems/WI-DETERMINISTIC-FULL/stages/qa/output/stage-result.md
+  - |-
+    if grep -En '\b(TBD|TODO|TBA|N/A|FIXME|PLACEHOLDER)\b' \
+      .aidd/workitems/WI-DETERMINISTIC-FULL/stages/review-spec/output/review-spec-report.md; then
+      exit 1
+    fi
 limits:
   timeout_minutes: 10
 interview:

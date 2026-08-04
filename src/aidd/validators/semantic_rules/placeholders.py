@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import re
+from dataclasses import dataclass
 
 INLINE_CODE_PATTERN = re.compile(r"(?<!`)`(?!`)(.*?)(?<!`)`(?!`)", flags=re.DOTALL)
 PLACEHOLDER_PATTERN = re.compile(r"\b(TBD|TODO|TBA|N/A)\b|\.{3}", flags=re.IGNORECASE)
@@ -14,17 +15,28 @@ PLACEHOLDER_NEGATED_EXAMPLE_PATTERN = re.compile(
 )
 
 
+@dataclass(frozen=True, slots=True)
+class PlaceholderOccurrence:
+    token: str
+    line_number: int
+
+
 def has_non_placeholder_text(text: str) -> bool:
     return not contains_placeholder_content(text)
 
 
 def contains_placeholder_content(text: str) -> bool:
+    return bool(find_placeholder_occurrences(text))
+
+
+def find_placeholder_occurrences(text: str) -> tuple[PlaceholderOccurrence, ...]:
     placeholder_matches = tuple(PLACEHOLDER_PATTERN.finditer(text))
     if not placeholder_matches:
-        return False
+        return ()
 
     inline_code_matches = tuple(INLINE_CODE_PATTERN.finditer(text))
-    placeholder_requires_context = False
+    occurrences: list[PlaceholderOccurrence] = []
+    context_matches: list[re.Match[str]] = []
     for placeholder_match in placeholder_matches:
         inline_code_match = inline_code_match_for_placeholder(
             placeholder_match=placeholder_match,
@@ -32,16 +44,27 @@ def contains_placeholder_content(text: str) -> bool:
         )
         if inline_code_match is None:
             if placeholder_outside_inline_code_is_content(text, placeholder_match):
-                return True
+                occurrences.append(
+                    PlaceholderOccurrence(
+                        token=placeholder_match.group(0),
+                        line_number=text.count("\n", 0, placeholder_match.start()) + 1,
+                    )
+                )
             continue
 
         if inline_placeholder_requires_context(placeholder_match, inline_code_match):
-            placeholder_requires_context = True
+            context_matches.append(placeholder_match)
 
-    if not placeholder_requires_context:
-        return False
+    if context_matches and inline_placeholder_context_is_content(text):
+        occurrences.extend(
+            PlaceholderOccurrence(
+                token=placeholder_match.group(0),
+                line_number=text.count("\n", 0, placeholder_match.start()) + 1,
+            )
+            for placeholder_match in context_matches
+        )
 
-    return inline_placeholder_context_is_content(text)
+    return tuple(occurrences)
 
 
 def inline_code_match_for_placeholder(
@@ -161,7 +184,9 @@ def is_standalone_ellipsis_placeholder(
 
 
 __all__ = [
+    "PlaceholderOccurrence",
     "contains_placeholder_content",
+    "find_placeholder_occurrences",
     "has_non_placeholder_text",
     "inline_code_match_for_placeholder",
     "inline_placeholder_context_is_content",

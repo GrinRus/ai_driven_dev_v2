@@ -7,6 +7,7 @@ from aidd.core.stage_terminal import (
     ensure_stage_result_references_repair_brief,
     exhausted_budget_validation_finding,
     force_stage_result_failed_for_exhausted_budget,
+    normalize_success_stage_result_blockers_if_empty,
     reconcile_stage_result_after_validation_pass,
     repair_brief_exhausts_terminal_budget,
     strip_stage_result_success_claims_for_validator_findings,
@@ -157,6 +158,63 @@ def test_reconcile_stage_result_after_validation_pass_does_not_note_clean_result
     assert result_path == stage_result_path
     stage_result_text = stage_result_path.read_text(encoding="utf-8")
     assert "stale runtime draft status/verdict was normalized" not in stage_result_text
+
+
+def test_reconcile_stage_result_after_validation_pass_normalizes_success_blockers(
+    tmp_path: Path,
+) -> None:
+    workspace_root = tmp_path / ".aidd"
+    stage_result_path = _stage_result_path(workspace_root)
+    stage_result_path.parent.mkdir(parents=True, exist_ok=True)
+    stage_result_path.write_text(
+        "# Stage Result\n\n"
+        "## Status\n\n- Status: `succeeded`\n\n"
+        "## Validation summary\n\n- Validator verdict: `pass`\n\n"
+        "## Blockers\n\nNo blockers.\n",
+        encoding="utf-8",
+    )
+
+    reconcile_stage_result_after_validation_pass(
+        workspace_root=workspace_root,
+        work_item="WI-001",
+        stage="plan",
+    )
+
+    assert "## Blockers\n\n- none\n" in stage_result_path.read_text(encoding="utf-8")
+
+
+def test_normalize_success_stage_result_blockers_if_empty_repairs_prose(
+    tmp_path: Path,
+) -> None:
+    workspace_root = tmp_path / ".aidd"
+    stage_result_path = _stage_result_path(workspace_root)
+    stage_result_path.parent.mkdir(parents=True, exist_ok=True)
+    stage_result_path.write_text(
+        "# Stage Result\n\n"
+        "## Status\n\n- Status: `succeeded`\n\n"
+        "## Blockers\n\nNo blockers.\n",
+        encoding="utf-8",
+    )
+
+    assert normalize_success_stage_result_blockers_if_empty(stage_result_path) is True
+    assert "## Blockers\n\n- none\n" in stage_result_path.read_text(encoding="utf-8")
+
+
+def test_normalize_success_stage_result_blockers_if_empty_preserves_concrete_blocker(
+    tmp_path: Path,
+) -> None:
+    workspace_root = tmp_path / ".aidd"
+    stage_result_path = _stage_result_path(workspace_root)
+    stage_result_path.parent.mkdir(parents=True, exist_ok=True)
+    original = (
+        "# Stage Result\n\n"
+        "## Status\n\n- Status: `succeeded`\n\n"
+        "## Blockers\n\n- unresolved blocking question `Q1`.\n"
+    )
+    stage_result_path.write_text(original, encoding="utf-8")
+
+    assert normalize_success_stage_result_blockers_if_empty(stage_result_path) is False
+    assert stage_result_path.read_text(encoding="utf-8") == original
 
 
 def test_force_stage_result_failed_for_exhausted_budget_creates_missing_result(

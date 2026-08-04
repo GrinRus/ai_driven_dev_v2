@@ -53,6 +53,15 @@ _PRODUCED_OUTPUTS_PATTERN = re.compile(
     r"(?P<prefix>#{1,6}\s+Produced outputs\s*\n+)(?P<body>.*?)(?=\n#{1,6}\s+|\Z)",
     re.IGNORECASE | re.DOTALL,
 )
+_BLOCKERS_PATTERN = re.compile(
+    r"(?P<prefix>#{1,6}\s+Blockers\s*\n+)(?P<body>.*?)(?=\n#{1,6}\s+|\Z)",
+    re.IGNORECASE | re.DOTALL,
+)
+_EMPTY_SUCCESS_BLOCKER_LINE_PATTERN = re.compile(
+    r"^(?:[-*]\s*)?(?:blockers?\s*:\s*)?"
+    r"(?:none|no blockers?|no known blockers?)\s*[.`]?\s*$",
+    re.IGNORECASE,
+)
 
 
 def _workspace_relative_path(workspace_root: Path, path: Path) -> str:
@@ -259,6 +268,45 @@ def _replace_success_produced_outputs(
     return markdown[: match.start("body")] + body + markdown[match.end("body") :]
 
 
+def _replace_success_blockers(markdown: str) -> str:
+    match = _BLOCKERS_PATTERN.search(markdown)
+    if match is None:
+        return markdown.rstrip() + "\n\n## Blockers\n\n- none\n"
+    return markdown[: match.start("body")] + "- none\n" + markdown[match.end("body") :]
+
+
+def normalize_success_stage_result_blockers_if_empty(stage_result_path: Path) -> bool:
+    """Canonicalize an explicitly empty blocker claim before semantic validation."""
+
+    if not stage_result_path.exists():
+        return False
+    markdown = stage_result_path.read_text(encoding="utf-8", errors="replace")
+    status_match = _STATUS_SECTION_PATTERN.search(markdown)
+    blockers_match = _BLOCKERS_PATTERN.search(markdown)
+    if status_match is None or blockers_match is None:
+        return False
+    statuses = {
+        match.group(1).lower()
+        for match in _TERMINAL_STATUS_PATTERN.finditer(status_match.group("body"))
+    }
+    if statuses != {"succeeded"}:
+        return False
+
+    body_lines = tuple(
+        line.strip() for line in blockers_match.group("body").splitlines() if line.strip()
+    )
+    if body_lines and not all(
+        _EMPTY_SUCCESS_BLOCKER_LINE_PATTERN.fullmatch(line) for line in body_lines
+    ):
+        return False
+
+    normalized = _replace_success_blockers(markdown)
+    if normalized == markdown:
+        return False
+    stage_result_path.write_text(normalized, encoding="utf-8")
+    return True
+
+
 def _replace_stale_terminal_status_notes_for_validation_pass(markdown: str) -> str:
     match = _TERMINAL_NOTES_PATTERN.search(markdown)
     if match is None:
@@ -347,7 +395,9 @@ def reconcile_stage_result_after_validation_pass(
     has_stale_failure_claim = _has_stale_failure_claim_for_validation_pass(text)
     updated = _replace_success_produced_outputs(
         _replace_success_next_action(
-            _replace_or_add_validator_pass_claim(_replace_or_add_success_status_section(text)),
+            _replace_success_blockers(
+                _replace_or_add_validator_pass_claim(_replace_or_add_success_status_section(text))
+            ),
             stage=stage,
         ),
         workspace_root=workspace_root,
@@ -419,6 +469,7 @@ __all__ = [
     "ensure_stage_result_references_repair_brief",
     "exhausted_budget_validation_finding",
     "force_stage_result_failed_for_exhausted_budget",
+    "normalize_success_stage_result_blockers_if_empty",
     "reconcile_stage_result_after_validation_pass",
     "repair_brief_exhausts_terminal_budget",
     "strip_stage_result_success_claims_for_validator_findings",

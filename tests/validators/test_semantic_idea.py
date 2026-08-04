@@ -61,11 +61,13 @@ def test_validate_semantic_outputs_reports_placeholder_content(tmp_path: Path) -
     assert findings == (
         ValidationFinding(
             code=PLACEHOLDER_CONTENT_CODE,
-            message="Placeholder content remains in required section `Desired outcome`.",
+            message=(
+                "Placeholder content remains in required section `Desired outcome`: `TBD`."
+            ),
             severity="high",
             location=ValidationIssueLocation(
                 workspace_relative_path="workitems/WI-001/stages/idea/idea-brief.md",
-                line_number=7,
+                line_number=9,
             ),
         ),
     )
@@ -397,6 +399,7 @@ def test_validate_semantic_outputs_requires_list_format_for_constraints(tmp_path
     )
 
 
+
 def test_validate_semantic_outputs_passes_for_grounded_complete_content(tmp_path: Path) -> None:
     contracts_root = tmp_path / "contracts" / "stages"
     contracts_root.mkdir(parents=True)
@@ -466,11 +469,13 @@ def test_validate_semantic_outputs_flags_invalid_fixture_bundle() -> None:
     assert findings == (
         ValidationFinding(
             code=PLACEHOLDER_CONTENT_CODE,
-            message="Placeholder content remains in required section `Desired outcome`.",
+            message=(
+                "Placeholder content remains in required section `Desired outcome`: `TBD`."
+            ),
             severity="high",
             location=ValidationIssueLocation(
                 workspace_relative_path="workitems/WI-SEM-INVALID/stages/idea/idea-brief.md",
-                line_number=7,
+                line_number=9,
             ),
         ),
     )
@@ -514,4 +519,3 @@ def test_validate_semantic_outputs_flags_invalid_list_format_fixture_bundle() ->
             ),
         ),
     )
-
