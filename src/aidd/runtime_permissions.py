@@ -142,7 +142,10 @@ def command_contains_permission_bypass(command: str) -> bool:
             return True
         if executable == "qwen" and token == "-y":
             return True
-        if token.startswith("--approval-mode=") and token.split("=", 1)[1] == "yolo":
+        if token.startswith("--approval-mode=") and token.split("=", 1)[1] in {
+            "auto",
+            "yolo",
+        }:
             return True
         if token.startswith("--approval-policy=") and token.split("=", 1)[1] == "never":
             return True
@@ -156,7 +159,11 @@ def command_contains_permission_bypass(command: str) -> bool:
             "full-access",
         }:
             return True
-        if token == "--approval-mode" and index + 1 < len(tokens) and tokens[index + 1] == "yolo":
+        if (
+            token == "--approval-mode"
+            and index + 1 < len(tokens)
+            and tokens[index + 1] in {"auto", "yolo"}
+        ):
             return True
         if (
             token == "--approval-policy"

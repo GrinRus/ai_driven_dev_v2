@@ -183,7 +183,7 @@ def test_qwen_live_transport_resumes_after_provider_decision(tmp_path: Path) -> 
     attempt_path = tmp_path / "attempt"
 
     result = get_runtime_adapter_surface("qwen").execute_stage_request(
-        configured_command=f"{fake_qwen} --approval-mode yolo --output-format stream-json",
+        configured_command=f"{fake_qwen} --approval-mode auto --output-format stream-json",
         request=_request(tmp_path),
         attempt_path=attempt_path,
         base_env={},
