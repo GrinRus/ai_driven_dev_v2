@@ -9,7 +9,7 @@ stable compatibility window exists.
 
 - Reserved for changes after `v0.1.0a16`.
 
-## 0.1.0a16 - 2026-08-03
+## 0.1.0a16 - 2026-08-04
 
 - Prepare the Codex-only alpha prerelease after accepted `v0.1.0a15` package-channel
   evidence; Claude, Qwen, human-session, and dual-provider beta gates remain deferred.

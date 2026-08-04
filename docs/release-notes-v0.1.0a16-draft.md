@@ -1,11 +1,12 @@
 # Release Notes: v0.1.0a16
 
-Status: draft, not tagged or published.
+Status: published on 2026-08-04.
 
-Current release-candidate package version: `0.1.0a16`.
-Latest accepted published prerelease evidence before this candidate: `0.1.0a15`.
-The `0.1.0a16` package must not be described as the latest accepted published prerelease
-until package-channel verification succeeds.
+Published package version: `0.1.0a16`.
+GitHub Release: `https://github.com/GrinRus/ai_driven_dev_v2/releases/tag/v0.1.0a16`.
+PyPI: `https://pypi.org/project/ai-driven-dev-v2/0.1.0a16/`.
+Release workflow: `https://github.com/GrinRus/ai_driven_dev_v2/actions/runs/30878924948`.
+Release workflow quality, build, publish, `pipx`, and `uv tool` verification jobs passed.
 
 ## Summary
 
@@ -59,8 +60,8 @@ Docker/GHCR is not part of the supported alpha release contract.
 - This is an alpha prerelease with Codex-only live acceptance.
 - Claude Code, Qwen, large/xlarge scenarios, five first-time-operator sessions, and final
   dual-provider acceptance remain separate beta-readiness gates and are not claimed here.
-- The release is not accepted package-channel evidence until the published GitHub Release
-  workflow verifies PyPI, `pipx`, and `uv tool` installation.
+- The release is accepted package-channel evidence after the published GitHub Release
+  workflow verified PyPI, `pipx`, and `uv tool` installation.
 
 ## Release checklist
 
@@ -68,4 +69,4 @@ Docker/GHCR is not part of the supported alpha release contract.
 - Release branch: `release/v0.1.0a16`.
 - Release workflow: GitHub Release `published` event only; manual dispatch is dry-run only.
 - Direct tag push is forbidden.
-- Publication requires a separate explicit maintainer approval.
+- Publication was completed after explicit maintainer approval.
