@@ -88,9 +88,11 @@ def test_document_canvas_and_evidence_inspector_preserve_safe_context(
         canvas = page.locator("#studioDocumentCanvas")
         canvas.locator('[data-document-canvas-mode="preview"]').wait_for(state="visible")
         assert "QA verdict: ready" in canvas.inner_text()
+        assert "Historical / stale" in canvas.inner_text()
+        assert "Why it matters now" in canvas.inner_text()
         _assert_rendered_gate(page, viewport)
 
-        for mode in ("source", "diff", "preview"):
+        for mode in ("source", "compare", "preview"):
             canvas.locator(f'[data-artifact-mode="{mode}"]').click()
             canvas.locator(f'[data-document-canvas-mode="{mode}"]').wait_for(
                 state="visible"
@@ -104,17 +106,35 @@ def test_document_canvas_and_evidence_inspector_preserve_safe_context(
             '[data-inspector-section="source-references"]'
         ).count() == 1
         assert inspector.locator('[data-inspector-section="related-artifacts"]').count() == 1
-        inspector_text = inspector.inner_text()
+        assert (
+            inspector.locator('[data-inspector-section="source-references"]').get_attribute(
+                "open"
+            )
+            is None
+        )
+        for section in ("provenance", "source-references", "related-artifacts"):
+            group = inspector.locator(f'[data-inspector-section="{section}"]')
+            if group.get_attribute("open") is None:
+                group.locator("summary").click()
+        inspector_text = inspector.inner_text().lower()
+        assert "evidence supporting this reading" in inspector_text
+        assert "what this document must satisfy" in inspector_text
+        assert "where this version came from" in inspector_text
+        assert "related evidence" in inspector_text
         assert "validator-report" in inspector_text
-        assert "Attempt 1" in inspector_text
+        assert "attempt 1" in inspector_text
         assert "required-section / document-contract" in inspector_text
         assert "missing" in inspector_text
+        assert (
+            "why: needed so this document has the structure required by its contract"
+            in inspector_text
+        )
 
         with page.expect_response(
             lambda item: urlsplit(item.url).path == "/api/stage/workbench"
             and parse_qs(urlsplit(item.url).query).get("key") == ["qa_report"]
         ) as selected_document:
-            page.locator('[data-artifact-key="qa_report"]').click()
+            page.locator('[data-reader-artifact-key="qa_report"]:visible').first.click()
         assert selected_document.value.status == 200
 
         unsafe_query = urlencode(
@@ -133,7 +153,7 @@ def test_document_canvas_and_evidence_inspector_preserve_safe_context(
 
         page.reload(wait_until="networkidle")
         page.locator(
-            '#artifactViewer [data-artifact-mode="preview"][aria-pressed="true"]'
+            '#studioDocumentCanvas [data-document-canvas-mode="preview"]'
         ).wait_for(state="visible")
         assert parse_qs(urlsplit(page.url).query).get("artifact") == ["qa_report"]
 

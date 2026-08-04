@@ -151,9 +151,13 @@ aidd doctor
 aidd ui
 ```
 
-`aidd ui` starts a loopback server and prints its local URL. Open that URL in a browser.
-Without `--work-item`, Guided Setup lets you create or resume a work item, enter the request,
-inspect runtime readiness, and make an explicit runtime selection. The UI and CLI use the same
+`aidd ui` starts a loopback server and prints its local URL. Open that URL in a browser. Without `--work-item`, it chooses the entry surface from the durable project state: when the project has
+no accessible local `.aidd/` directory, Guided Setup lets you create or resume a work item, enter
+the request, inspect runtime readiness, and select a runtime before launch. When an accessible
+`.aidd/` directory already exists, a bare restart opens the project Inbox instead of onboarding;
+it does not need an existing work-item marker. The Inbox has an explicit **New work item** action
+for independent work; creating it does not require selecting a runtime or disturb existing work.
+Select a runtime only when you choose to launch a workflow or stage. The UI and CLI use the same
 project-local `.aidd/` workspace.
 
 To open an initialized work item directly:
@@ -235,9 +239,11 @@ validator gate.
 ## Operator UI
 
 The local **Document & Evidence Studio** is a browser surface over the same workflow state as
-the CLI, not a second workflow engine. Guided Setup handles first-run context, Inbox surfaces
-decisions, Studio keeps the current document and action together, and History exposes retained
-attempts and lineage.
+the CLI, not a second workflow engine. Guided Setup handles only missing, non-directory, or inaccessible workspace
+context, Inbox is the restart entry for an existing project and surfaces decisions plus explicit
+new-work creation, Studio keeps the current document and one next action together, and History
+exposes retained attempts and lineage. Progress is factual: completed canonical stages, current
+state, and retained live/terminal evidence rather than an invented percentage.
 
 After terminal `qa`, the command center switches to **Flow Complete**.
 It summarizes the final QA status, final artifacts, and blockers.

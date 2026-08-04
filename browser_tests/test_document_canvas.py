@@ -9,7 +9,7 @@ from browser_tests.browser_harness import operator_browser_harness
 from browser_tests.state_fixtures import build_browser_state_fixture
 
 
-def test_studio_document_canvas_uses_safe_workbench_for_all_modes(tmp_path: Path) -> None:
+def test_studio_document_canvas_uses_safe_workbench_for_all_reader_modes(tmp_path: Path) -> None:
     fixture = build_browser_state_fixture(tmp_path / "remediation-stale", "remediation-stale")
     with sync_playwright() as playwright, operator_browser_harness(
         fixture.project_root,
@@ -18,9 +18,13 @@ def test_studio_document_canvas_uses_safe_workbench_for_all_modes(tmp_path: Path
     ) as harness, harness.open_page((1280, 900)) as browser_page:
         response = browser_page.page.goto(f"{harness.url}?ui=studio", wait_until="networkidle")
         assert response is not None and response.ok
+        progress = browser_page.page.locator(".studio-workflow-progress")
+        assert progress.get_attribute("open") is None
+        progress.locator("summary").click()
+        progress.locator('[aria-current="step"]').wait_for(state="visible")
         canvas = browser_page.page.locator("#studioDocumentCanvas")
         canvas.locator('[data-document-canvas-mode="preview"]').wait_for(state="visible")
-        for mode in ("source", "diff", "preview"):
+        for mode in ("source", "compare", "preview"):
             canvas.locator(f'[data-artifact-mode="{mode}"]').click()
             canvas.locator(f'[data-document-canvas-mode="{mode}"]').wait_for(state="visible")
         workbench_requests = [

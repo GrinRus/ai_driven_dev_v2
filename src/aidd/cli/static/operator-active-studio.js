@@ -19,6 +19,17 @@ function activeStudioStateLabel(studioState, item) {
 function renderActiveStudioContextBar(studioState, item) {
   const dashboard = state.dashboard || {};
   const run = dashboard.run || {};
+  const identity = studioState === "no-run"
+    ? `
+      <div><dt>Work item</dt><dd>${escapeHtml(dashboard.work_item || "unknown")}</dd></div>
+      <div><dt>Status</dt><dd>${escapeHtml(activeStudioStateLabel(studioState, item))}</dd></div>
+    `
+    : `
+      <div><dt>Work item</dt><dd>${escapeHtml(dashboard.work_item || "unknown")}</dd></div>
+      <div><dt>Run</dt><dd>${escapeHtml(run.run_id || "not started")}</dd></div>
+      <div><dt>Stage</dt><dd>${escapeHtml(state.activeStage)}</dd></div>
+      <div><dt>Status</dt><dd>${escapeHtml(activeStudioStateLabel(studioState, item))}</dd></div>
+    `;
   return `
     <header class="surface studio-context-bar" data-studio-context-bar>
       <div>
@@ -27,10 +38,7 @@ function renderActiveStudioContextBar(studioState, item) {
         <p class="muted">${escapeHtml(item?.subtitle || stageSubtitle(state.activeStage))}</p>
       </div>
       <dl class="studio-context-identity">
-        <div><dt>Work item</dt><dd>${escapeHtml(dashboard.work_item || "unknown")}</dd></div>
-        <div><dt>Run</dt><dd>${escapeHtml(run.run_id || "not started")}</dd></div>
-        <div><dt>Stage</dt><dd>${escapeHtml(state.activeStage)}</dd></div>
-        <div><dt>Status</dt><dd>${escapeHtml(activeStudioStateLabel(studioState, item))}</dd></div>
+        ${identity}
       </dl>
     </header>
   `;
@@ -168,13 +176,18 @@ function renderActiveStudio() {
   return `
     <section class="active-studio" data-studio-surface="active-studio" data-state="${escapeHtml(studioState)}">
       ${renderActiveStudioContextBar(studioState, item)}
+      ${typeof workflowProgressSummary === "function" ? workflowProgressSummary({collapsed: true}) : ""}
       <div class="active-studio-grid">
         ${renderActiveStudioDocumentSlot(studioState)}
-        ${renderActiveStudioStageSummary(item)}
+        ${studioState === "no-run" ? "" : `
+          <div class="studio-reading-sidebar">
+            ${renderActiveStudioStageSummary(item)}
+            <aside id="studioEvidenceInspector" class="surface studio-evidence-inspector" hidden></aside>
+          </div>
+        `}
       </div>
       <div id="studioLiveObservation">${renderStudioLiveObservation()}</div>
-      ${renderActiveStudioRuntimeReadiness()}
-      <aside id="studioEvidenceInspector" class="surface studio-evidence-inspector" hidden></aside>
+      ${studioState === "no-run" ? "" : renderActiveStudioRuntimeReadiness()}
     </section>
   `;
 }

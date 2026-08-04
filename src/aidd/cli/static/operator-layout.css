@@ -284,12 +284,48 @@ body.setup-active .stage-rail,
 body.setup-active .right-sidebar,
 body.setup-active .bottom-dock,
 body.setup-active .cockpit-header,
-body.setup-active .tabs {
+body.setup-active .tabs,
+body.setup-active #projectInboxButton {
   display: none;
 }
 body.setup-active .cockpit {
   grid-column: 1;
   grid-row: 1;
+}
+body.inbox-detail-mode .operator-shell,
+body.work-overview-mode .operator-shell {
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-rows: minmax(0, 1fr);
+  max-height: none;
+  min-height: calc(100vh - 52px);
+  overflow: visible;
+}
+body.inbox-detail-mode .stage-rail,
+body.inbox-detail-mode .right-sidebar,
+body.inbox-detail-mode .bottom-dock,
+body.inbox-detail-mode .cockpit-header,
+body.inbox-detail-mode .tabs,
+body.inbox-detail-mode .global-next-action-strip,
+body.work-overview-mode .stage-rail,
+body.work-overview-mode .right-sidebar,
+body.work-overview-mode .bottom-dock,
+body.work-overview-mode .cockpit-header {
+  display: none;
+}
+body.inbox-detail-mode .runtime-picker {
+  display: none;
+}
+body.inbox-detail-mode #newWorkItemButton {
+  display: none;
+}
+body.inbox-detail-mode .cockpit,
+body.work-overview-mode .cockpit {
+  grid-column: 1;
+  grid-row: 1;
+  margin-inline: auto;
+  max-width: 1120px;
+  padding: 20px;
+  width: 100%;
 }
 .stage-rail {
   align-self: start;

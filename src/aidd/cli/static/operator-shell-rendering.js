@@ -201,9 +201,13 @@ function renderTopbar() {
   const projectPath = document.getElementById("projectPath");
   const workItemChip = document.getElementById("workItemChip");
   const runChip = document.getElementById("runChip");
-  const projectRoot = dashboard.project_root || "...";
-  const workItemLabel = `Work item: ${dashboard.work_item || "unknown"}`;
-  const runLabel = run.run_id ? `Run: ${run.run_id}` : "Run: none";
+  const projectRoot = dashboard.project_root || state.projectHome?.project_root || "...";
+  const workItemLabel = dashboard.work_item
+    ? `Work item: ${dashboard.work_item}`
+    : "Project inbox";
+  const runLabel = dashboard.work_item
+    ? (run.run_id ? `Run: ${run.run_id}` : "Run: not started")
+    : "Choose a work item";
   projectPath.textContent = projectRoot;
   projectPath.title = projectRoot;
   workItemChip.textContent = workItemLabel;
@@ -306,14 +310,75 @@ function currentWorkItemSummary() {
 }
 
 function workItemProgressText(item) {
+  const completed = Number(item?.stage_progress_count || 0);
+  const total = Number(item?.stage_total_count || STAGES.length);
+  const progress = `${completed} of ${total} stages complete`;
+  const activeStage = stageTitle(item?.active_stage || "idea");
   if (item?.terminal_state === "completed") {
     const handoffStatus = workItemHandoffStatus(item);
-    if (handoffStatus === "failed") return `QA not ready / ${item.stage_progress_label}`;
-    if (handoffStatus === "completed-with-warning") return `QA risks / ${item.stage_progress_label}`;
-    if (handoffStatus === "blocked") return `handoff blocked / ${item.stage_progress_label}`;
-    return `flow complete / ${item.stage_progress_label}`;
+    if (handoffStatus === "failed") return `QA not ready · ${progress}`;
+    if (handoffStatus === "completed-with-warning") return `QA risks · ${progress}`;
+    if (handoffStatus === "blocked") return `Handoff blocked · ${progress}`;
+    return `Flow complete · ${progress}`;
   }
-  return `${item?.active_stage || "not started"} / ${item?.stage_progress_label || `0/${STAGES.length}`}`;
+  if (item?.terminal_state === "blocked") {
+    const blockers = Number(item?.blocker_count || 0);
+    return `Blocked at ${activeStage} · ${blockers} blocker${blockers === 1 ? "" : "s"} · ${progress}`;
+  }
+  if (item?.terminal_state === "running") return `Running ${activeStage} · ${progress}`;
+  return `Ready at ${activeStage} · ${progress}`;
+}
+
+function workflowProgressSummary({collapsed = false} = {}) {
+  const stages = state.dashboard?.stages || [];
+  if (!stages.length) return "";
+  const completed = stages.filter((item) => item.status === "succeeded").length;
+  const total = stages.length;
+  const current = currentWorkItemSummary();
+  const active = current?.active_stage || state.activeStage;
+  const blockerCount = Number(current?.blocker_count || 0);
+  const terminalState = current?.terminal_state || "ready";
+  const stateLabel = terminalState === "blocked"
+    ? `${blockerCount} blocker${blockerCount === 1 ? "" : "s"}`
+    : terminalState === "running"
+      ? `Working in ${stageTitle(active)}`
+      : terminalState === "completed"
+        ? "Flow complete"
+        : `Ready at ${stageTitle(active)}`;
+  const summary = `
+    <div class="workflow-progress-summary">
+      <div><strong>Workflow progress</strong><span>${escapeHtml(completed)} of ${escapeHtml(total)} stages complete</span></div>
+      <span class="small-badge ${escapeHtml(workItemStatusClass(current))}">${escapeHtml(stateLabel)}</span>
+    </div>
+  `;
+  const steps = `
+    <ol class="workflow-progress-steps">
+      ${stages.map((item, index) => {
+        const activeStep = item.stage === state.activeStage;
+        const status = statusClass(item.status);
+        const selectable = activeStep || item.status !== "pending";
+        const label = `${index + 1}. ${item.title} — ${item.status}`;
+        return `
+          <li>
+            <button class="stage-progress-step ${escapeHtml(status)}${activeStep ? " active" : ""}" data-stage="${escapeHtml(item.stage)}" type="button" aria-current="${activeStep ? "step" : "false"}" aria-label="${escapeHtml(label)}" ${selectable ? "" : "disabled"}>
+              <span>${escapeHtml(index + 1)}</span>
+              <strong>${escapeHtml(item.title)}</strong>
+            </button>
+          </li>
+        `;
+      }).join("")}
+    </ol>
+  `;
+  if (collapsed) {
+    return `
+      <details class="surface workflow-progress studio-workflow-progress" aria-label="Workflow progress">
+        <summary>${summary}</summary>
+        <p class="studio-workflow-progress-hint">Open the stage map to navigate retained stage evidence.</p>
+        ${steps}
+      </details>
+    `;
+  }
+  return `<section class="surface workflow-progress" aria-label="Workflow progress">${summary}${steps}</section>`;
 }
 
 function renderProjectSetRootChips(item) {
@@ -342,9 +407,10 @@ function renderProjectHomeRail() {
       <button data-tab-shortcut="overview" class="${workItemsActive ? "active" : ""}" aria-pressed="${workItemsActive ? "true" : "false"}" type="button">Work items</button>
     </div>
     <div class="rail-header small">
-      <span>Active work items</span>
+      <span>Work items</span>
       <span class="counter">${escapeHtml(items.length)}</span>
     </div>
+    <button data-new-work-item class="secondary project-home-new-work-item" type="button">New work item</button>
     <div class="work-item-board-rail">
       ${items.length ? items.slice(0, 6).map((item) => `
         <button class="work-item-card ${item.work_item === current?.work_item ? "active" : ""}" data-project-home-resume="${escapeHtml(item.work_item)}" type="button" aria-current="${item.work_item === current?.work_item ? "true" : "false"}">

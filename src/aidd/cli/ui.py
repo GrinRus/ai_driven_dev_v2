@@ -196,7 +196,10 @@ class UiServerOptions:
 
 @dataclass(frozen=True, slots=True)
 class UiProjectContext:
-    work_item: str
+    # A project context is enough to render the Inbox.  A selected work item is
+    # deliberately optional so reopening an existing workspace never has to
+    # guess which work item an operator meant to continue.
+    work_item: str | None
     root: Path
     config: Path
     project_root: Path
@@ -1992,7 +1995,8 @@ class OperatorUiService:
         folder_opener: LocalFolderOpener = _open_local_folder,
     ) -> None:
         self.options = options
-        project_root = options.root.resolve(strict=False).parent
+        workspace_root = options.root.resolve(strict=False)
+        project_root = workspace_root.parent
         self._workflow_runner = workflow_runner
         self._stage_runner = stage_runner
         self._implementation_stage_runner = (
@@ -2008,18 +2012,28 @@ class OperatorUiService:
             attempt_path_resolver=self._job_attempt_path,
         )
         self._shutdown_requested = False
-        self._context: UiProjectContext | None = (
-            UiProjectContext(
+        # A bare UI launch has two intentional entry points:
+        # - no workspace yet: guided setup;
+        # - an existing workspace: the project Inbox, without silently picking
+        #   a work item.  ``--work-item`` remains an explicit Studio deep link.
+        if options.work_item is not None:
+            self._context: UiProjectContext | None = UiProjectContext(
                 work_item=options.work_item,
                 root=options.root,
                 config=options.config,
                 project_root=project_root,
             )
-            if options.work_item is not None
-            else None
-        )
+        elif workspace_root.is_dir():
+            self._context = UiProjectContext(
+                work_item=None,
+                root=workspace_root,
+                config=self._context_config_path(project_root),
+                project_root=project_root,
+            )
+        else:
+            self._context = None
         self._recent_project_roots: list[Path] = (
-            [project_root] if options.work_item is not None else []
+            [project_root] if self._context is not None else []
         )
         self._router = OperatorUiRouter(
             get_routes=self._get_routes(),
@@ -2042,7 +2056,10 @@ class OperatorUiService:
 
     @property
     def work_item(self) -> str:
-        return self._require_context().work_item
+        work_item = self._require_context().work_item
+        if work_item is None:
+            raise ValueError("Select a work item before using this UI action.")
+        return work_item
 
     @property
     def config_path(self) -> Path:
@@ -2062,9 +2079,21 @@ class OperatorUiService:
         return self._context
 
     def _onboarding_service(self) -> OnboardingService:
+        workspace_root = self.options.root
+        context = self._context
+        if context is not None:
+            try:
+                # Onboarding validates roots relative to a project.  The CLI
+                # accepts an absolute --root for re-entry, so recover its
+                # project-relative spelling before creating another work item.
+                workspace_root = context.root.resolve(strict=False).relative_to(
+                    context.project_root.resolve(strict=False)
+                )
+            except ValueError:
+                pass
         return OnboardingService(
             launch_root=Path.cwd().resolve(strict=False),
-            workspace_root=self.options.root,
+            workspace_root=workspace_root,
         )
 
     def _remember_recent_project(self, project_root: Path) -> None:
@@ -4135,7 +4164,7 @@ class OperatorUiService:
     def _runtime_readiness_for_config(self, config_path: Path) -> RuntimeReadinessView:
         cfg = load_config(config_path)
         launch_history = None
-        if self._context is not None:
+        if self._context is not None and self._context.work_item is not None:
             launch_history = resolve_runtime_launch_history(
                 workspace_root=self.workspace_root,
                 work_item=self.work_item,
@@ -4149,6 +4178,16 @@ class OperatorUiService:
 
     def _runtime_readiness(self) -> object:
         readiness = self._runtime_readiness_for_config(self.config_path)
+        if self._context is None or self._context.work_item is None:
+            return {
+                "runtimes": readiness.runtimes,
+                "protected_write_scope": UiProtectedWriteScope(
+                    status="unavailable",
+                    prefixes=(),
+                    source_path=None,
+                    message="Select a work item to inspect its protected write scope.",
+                ),
+            }
         try:
             scope = resolve_allowed_write_scope(self.workspace_root, self.work_item)
         except AllowedWriteScopeError as exc:

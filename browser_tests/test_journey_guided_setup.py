@@ -78,12 +78,11 @@ def test_guided_setup_create_or_resume_launches_into_inbox(
     ) as harness, harness.open_page(viewport) as browser_page:
         page = browser_page.page
         page.goto(f"{harness.url}?ui=studio", wait_until="networkidle")
-        page.locator("#onboardingProjectRoot").fill(project_root.as_posix())
-        page.locator("#onboardingProjectForm").evaluate("form => form.requestSubmit()")
-        page.locator('[data-onboarding-runtime="generic-cli"]').wait_for(state="visible")
-        _assert_rendered_gate(page, viewport)
-
         if branch == "create":
+            page.locator("#onboardingProjectRoot").fill(project_root.as_posix())
+            page.locator("#onboardingProjectForm").evaluate("form => form.requestSubmit()")
+            page.locator('[data-onboarding-runtime="generic-cli"]').wait_for(state="visible")
+            _assert_rendered_gate(page, viewport)
             page.locator('[data-onboarding-runtime="generic-cli"]').click(force=True)
             page.locator("#onboardingWorkItem").fill(work_item)
             page.locator("#onboardingRequest").fill(
@@ -91,7 +90,13 @@ def test_guided_setup_create_or_resume_launches_into_inbox(
             )
             page.locator("#onboardingCreateForm").evaluate("form => form.requestSubmit()")
         else:
-            page.locator(f'[data-onboarding-resume="{work_item}"]').click(force=True)
+            page.locator(".studio-inbox").wait_for(state="visible")
+            assert page.locator("#onboardingProjectRoot").count() == 0
+            _assert_rendered_gate(page, viewport)
+            page.locator(
+                f'[data-operator-route-intent="inbox-work-item"]'
+                f'[data-route-work-item="{work_item}"]'
+            ).click()
 
         page.locator(".active-studio").wait_for(state="visible")
         if branch == "resume":

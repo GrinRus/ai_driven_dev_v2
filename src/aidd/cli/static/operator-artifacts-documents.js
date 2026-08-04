@@ -111,7 +111,7 @@ function artifactCategoryLabel(category) {
 
 function artifactCategoryDetail(category) {
   return ({
-    "canonical-stage-document": "Source-of-truth stage files for operator review, diff, and corrections.",
+    "canonical-stage-document": "Source-of-truth stage files for operator review, retained-copy comparison, and corrections.",
     "published-stage-output": "Downstream handoff copies under output/. They mirror stage evidence after validation or promotion.",
     "runtime-input": "Prompt and request context supplied to the runtime for this stage.",
     "validation-evidence": "Validator and repair records. Use these to understand gates and recovery decisions.",
@@ -175,6 +175,232 @@ function renderArtifactOwnershipNote(item = {}) {
   `;
 }
 
+const DOCUMENT_READING_COPY = Object.freeze({
+  idea_brief: {
+    title: "Idea brief",
+    purpose: "It captures the problem and intended outcome before the delivery flow expands it.",
+    use: "Use it to check that later work still answers the original request."
+  },
+  research_notes: {
+    title: "Research notes",
+    purpose: "They record the evidence and constraints discovered before a plan was chosen.",
+    use: "Use them to distinguish verified context from assumptions."
+  },
+  plan: {
+    title: "Plan",
+    purpose: "It explains the proposed delivery approach and the decisions behind it.",
+    use: "Use it to review scope and trade-offs before implementation."
+  },
+  review_spec_report: {
+    title: "Review-spec report",
+    purpose: "It records whether the planned work satisfies the specification gate.",
+    use: "Use it to understand what needs correction before task breakdown."
+  },
+  tasklist: {
+    title: "Tasklist",
+    purpose: "It turns the approved approach into a concrete, reviewable sequence of work.",
+    use: "Use it to see what implementation should cover and in what order."
+  },
+  implementation_report: {
+    title: "Implementation report",
+    purpose: "It records what the implementation attempt changed and how it was checked.",
+    use: "Use it to connect code changes with their stated verification evidence."
+  },
+  review_report: {
+    title: "Review report",
+    purpose: "It records the quality review and any findings that must be resolved.",
+    use: "Use it to decide whether the implementation evidence is ready for QA."
+  },
+  qa_report: {
+    title: "QA report",
+    purpose: "It records verification outcomes for this retained QA attempt.",
+    use: "Use it with freshness and validation evidence before treating it as a proceed decision."
+  },
+  stage_result: {
+    title: "Stage result",
+    purpose: "It records the durable result and gate state for a stage attempt.",
+    use: "Use it to understand the recorded stage state, not to infer missing evidence."
+  },
+  validator_report: {
+    title: "Validator report",
+    purpose: "It records the checks applied to the attempt and their reported outcome.",
+    use: "Use it to understand why progression is allowed, blocked, or needs repair."
+  },
+  questions: {
+    title: "Questions",
+    purpose: "It preserves clarification needed before the flow can safely continue.",
+    use: "Use it to answer unresolved decisions instead of guessing in later documents."
+  },
+  answers: {
+    title: "Answers",
+    purpose: "It preserves operator clarification supplied to the governed flow.",
+    use: "Use it to see which assumptions were explicitly resolved."
+  },
+  input_bundle: {
+    title: "Input bundle",
+    purpose: "It records the input context supplied to the runtime for this attempt.",
+    use: "Use it to reproduce or audit what the runtime was asked to work from."
+  },
+  stage_brief: {
+    title: "Stage brief",
+    purpose: "It records the bounded instruction and context assembled for the stage.",
+    use: "Use it to understand the intended scope of this attempt."
+  },
+  repair_brief: {
+    title: "Repair brief",
+    purpose: "It records the corrective context produced after a validation or review issue.",
+    use: "Use it to understand why a later attempt differs from the earlier one."
+  },
+  operator_request: {
+    title: "Operator request",
+    purpose: "It records a runtime request that required operator attention or approval.",
+    use: "Use it with the decision record to audit the granted scope."
+  }
+});
+
+function readerLabelForKey(key) {
+  const normalized = String(key || "").trim().replace(/-/g, "_").toLowerCase();
+  if (DOCUMENT_READING_COPY[normalized]?.title) return DOCUMENT_READING_COPY[normalized].title;
+  return String(key || "Selected document");
+}
+
+function documentReadingProfile(workbench = {}) {
+  const documentView = workbench.document || {};
+  const key = String(documentView.key || workbench.selected_key || "").replace(/-/g, "_").toLowerCase();
+  const specific = DOCUMENT_READING_COPY[key];
+  if (specific) return {...specific, category: artifactCategoryFor({key, kind: "document", path: documentView.path || ""})};
+  const category = artifactCategoryFor({key, kind: "document", path: documentView.path || ""});
+  const fallback = {
+    "published-stage-output": {
+      purpose: "This is a published handoff copy retained for downstream use.",
+      use: "Use it to inspect the delivered handoff, then check its canonical source before changing it."
+    },
+    "validation-evidence": {
+      purpose: "This is supporting validation or repair evidence, not the primary stage document.",
+      use: "Use it to understand gate and recovery decisions around the stage output."
+    },
+    "runtime-input": {
+      purpose: "This is input context supplied to the runtime for the attempt.",
+      use: "Use it to audit the attempt context rather than as a final stage decision."
+    },
+    "runtime-evidence": {
+      purpose: "This is retained runtime evidence captured for audit and replay.",
+      use: "Use it to investigate what happened during the attempt."
+    },
+    "project-evidence": {
+      purpose: "This is project context used by the governed flow.",
+      use: "Use it to understand the project constraints that informed the stage."
+    },
+    "lineage-evidence": {
+      purpose: "This is provenance for a remediation, follow-up, or archived run.",
+      use: "Use it to trace why this evidence exists and which run it belongs to."
+    },
+    "canonical-stage-document": {
+      purpose: "This is the canonical document retained for the selected stage attempt.",
+      use: "Read it first, then use the supporting evidence to assess confidence and next steps."
+    }
+  }[category] || {};
+  return {
+    title: readerLabelForKey(documentView.key || workbench.selected_key),
+    purpose: fallback.purpose || "This retained document is available for read-only inspection.",
+    use: fallback.use || "Use it with the supporting evidence before making a stage decision.",
+    category
+  };
+}
+
+function readerStageItem() {
+  return typeof activeStageItem === "function" ? activeStageItem() : null;
+}
+
+function readerFreshness(workbench = {}) {
+  const documentView = workbench.document || {};
+  if (documentView.status && documentView.status !== "present") {
+    return {
+      label: "Unavailable",
+      tone: "bad",
+      detail: "This retained copy could not be read safely, so it cannot support a stage decision."
+    };
+  }
+  const stage = readerStageItem();
+  const stageAttempt = Number(stage?.attempt_count || 0);
+  const documentAttempt = Number(workbench.attempt_number || 0);
+  const stale = Boolean(stage?.stale) || String(stage?.status || "").toLowerCase() === "stale";
+  if (stale || (stageAttempt && documentAttempt && stageAttempt !== documentAttempt)) {
+    return {
+      label: "Historical / stale",
+      tone: "warn",
+      detail: stage?.stale_reason
+        || "A later request or repair changed the stage context. Do not use this copy as the current proceed decision."
+    };
+  }
+  if (documentAttempt) {
+    return {
+      label: `Attempt ${documentAttempt} retained`,
+      tone: "good",
+      detail: "This is the retained copy selected for the current stage context. Check validation before relying on it."
+    };
+  }
+  return {
+    label: "Retained copy",
+    tone: "",
+    detail: "The attempt number is unavailable. Treat this as retained evidence and check its provenance."
+  };
+}
+
+function renderDocumentReadingBrief(workbench) {
+  const documentView = workbench.document || {};
+  const profile = documentReadingProfile(workbench);
+  const freshness = readerFreshness(workbench);
+  const badge = artifactOwnershipBadge({
+    key: documentView.key || workbench.selected_key,
+    kind: "document",
+    path: documentView.path || "",
+    category: profile.category
+  });
+  return `
+    <section class="reader-brief" aria-label="Document reading brief">
+      <div class="reader-brief-heading">
+        <div>
+          <p class="reader-eyebrow">Reading brief</p>
+          <h2>${escapeHtml(profile.title)}</h2>
+          <p>${escapeHtml(profile.purpose)}</p>
+        </div>
+        <div class="reader-badges">
+          <span class="small-badge ${escapeHtml(badge.tone)}">${escapeHtml(badge.label)}</span>
+          <span class="small-badge ${escapeHtml(freshness.tone)}">${escapeHtml(freshness.label)}</span>
+        </div>
+      </div>
+      <dl class="reader-brief-facts">
+        <div><dt>Why it matters now</dt><dd>${escapeHtml(profile.use)}</dd></div>
+        <div><dt>Freshness</dt><dd>${escapeHtml(freshness.detail)}</dd></div>
+      </dl>
+    </section>
+  `;
+}
+
+function renderReaderTechnicalDetails(workbench) {
+  const documentView = workbench.document || {};
+  const attempt = workbench.attempt_number ? `Attempt ${workbench.attempt_number}` : "Attempt unavailable";
+  return `
+    <details class="reader-technical-details">
+      <summary>Technical details and file location</summary>
+      <div class="reader-technical-content">
+        <div class="reader-technical-facts">
+          <span><strong>Version</strong>${escapeHtml(attempt)}</span>
+          <span><strong>Size</strong>${escapeHtml(documentView.byte_size ?? "unknown")} bytes</span>
+          ${documentView.path ? `<span><strong>Path</strong>${pathLine(documentView.path, 92)}</span>` : ""}
+        </div>
+        ${documentView.path ? renderArtifactOwnershipNote({
+          key: documentView.key || workbench.selected_key,
+          kind: "document",
+          path: documentView.path
+        }) : ""}
+        ${documentView.path ? `<button data-open-artifact="${escapeHtml(documentView.path)}" class="secondary" type="button">Open folder</button>` : ""}
+      </div>
+    </details>
+  `;
+}
+
 function renderWorkbenchTree(workbench) {
   const references = workbench.references || [];
   const categories = [
@@ -218,6 +444,46 @@ function renderWorkbenchTree(workbench) {
   `;
 }
 
+function readerValidationPresentation(item = {}) {
+  const detail = String(item.detail || "");
+  const noRecordedVerdict = String(item.label || "").toLowerCase() === "validator-report"
+    && /0\s+passing[^\d]*0\s+failing/i.test(detail);
+  if (noRecordedVerdict) {
+    return {
+      label: "no verdict",
+      tone: "warn",
+      detail: `${detail || "No validator checks were recorded."} This is not a passing validation verdict.`,
+      needsAttention: true
+    };
+  }
+  const status = String(item.status || "unknown");
+  return {
+    label: status,
+    tone: workbenchStatusClass(status),
+    detail,
+    needsAttention: ["missing", "fail", "failed", "invalid", "blocked", "warning", "warn", "unknown"].includes(status.toLowerCase())
+  };
+}
+
+function readerRequirementPurpose(item = {}) {
+  const kind = String(item.kind || "").toLowerCase();
+  const status = String(item.status || "").toLowerCase();
+  if (["missing", "unknown"].includes(status)) {
+    return "Without this evidence, the stage contract is not fully supported.";
+  }
+  if (kind === "required-section") {
+    return "Needed so this document has the structure required by its contract.";
+  }
+  return "Needed to show that the stage has the contract evidence required for a safe handoff.";
+}
+
+function readerValidationPurpose(item = {}) {
+  if (String(item.label || "").toLowerCase() === "validator-report") {
+    return "Needed to establish whether recorded checks support progression.";
+  }
+  return "Needed to assess confidence in this retained copy before relying on it.";
+}
+
 function renderRequirementList(requirements) {
   return (requirements || []).map((item) => `
     <div class="workbench-side-row">
@@ -225,6 +491,7 @@ function renderRequirementList(requirements) {
       <span>
         <strong>${escapeHtml(item.label)}</strong>
         <small>${escapeHtml(item.kind)} / ${escapeHtml(item.source)}</small>
+        <small class="reader-item-purpose">Why: ${escapeHtml(readerRequirementPurpose(item))}</small>
         ${item.path ? pathLine(item.path, 60) : ""}
       </span>
     </div>
@@ -232,71 +499,150 @@ function renderRequirementList(requirements) {
 }
 
 function renderValidationResults(results) {
-  return (results || []).map((item) => `
-    <div class="workbench-side-row">
-      <span class="small-badge ${workbenchStatusClass(item.status)}">${escapeHtml(item.status)}</span>
-      <span>
-        <strong>${escapeHtml(item.label)}</strong>
-        <small>${escapeHtml(item.detail)}</small>
-        ${item.path ? pathLine(item.path, 60) : ""}
-      </span>
-    </div>
-  `).join("") || `<div class="empty-state">No validation results yet.</div>`;
+  return (results || []).map((item) => {
+    const presentation = readerValidationPresentation(item);
+    return `
+      <div class="workbench-side-row">
+        <span class="small-badge ${escapeHtml(presentation.tone)}">${escapeHtml(presentation.label)}</span>
+        <span>
+          <strong>${escapeHtml(item.label)}</strong>
+          <small>${escapeHtml(presentation.detail)}</small>
+          <small class="reader-item-purpose">Why: ${escapeHtml(readerValidationPurpose(item))}</small>
+          ${item.path ? pathLine(item.path, 60) : ""}
+        </span>
+      </div>
+    `;
+  }).join("") || `<div class="empty-state">No validation results yet.</div>`;
 }
 
 function renderMissingEvidence(requirements) {
-  const missing = (requirements || []).filter((item) => item.status === "missing");
+  const missing = (requirements || []).filter((item) => ["missing", "unknown"].includes(String(item.status || "").toLowerCase()));
   return missing.map((item) => `
     <div class="workbench-side-row">
-      <span class="small-badge bad">missing</span>
+      <span class="small-badge bad">${escapeHtml(item.status)}</span>
       <span>
         <strong>${escapeHtml(item.label)}</strong>
         <small>${escapeHtml(item.kind)} from ${escapeHtml(item.source)}</small>
+        <small class="reader-item-purpose">Why: ${escapeHtml(readerRequirementPurpose(item))}</small>
         ${item.path ? pathLine(item.path, 60) : ""}
       </span>
     </div>
   `).join("") || `<div class="empty-state">No missing evidence for the selected document.</div>`;
 }
 
+function readerReferenceAction(ref = {}) {
+  if (ref.kind === "document") {
+    return `data-reader-artifact-key="${escapeHtml(ref.label)}"`;
+  }
+  if (ref.kind === "log") {
+    return `data-evidence-path="${escapeHtml(ref.path)}" data-evidence-stage="${escapeHtml(ref.stage || state.activeStage)}" data-evidence-kind="log"`;
+  }
+  return `data-open-artifact="${escapeHtml(ref.path)}"`;
+}
+
 function renderWorkbenchReferences(references) {
   return (references || []).map((ref) => `
-    <button class="artifact-row" data-open-artifact="${escapeHtml(ref.path)}" type="button">
-      <span><strong>${escapeHtml(ref.label)}</strong>${pathLine(ref.path, 58)}</span>
+    <button class="artifact-row" ${readerReferenceAction(ref)} type="button">
+      <span>
+        <strong>${escapeHtml(ref.label)}</strong>
+        <small>${escapeHtml(artifactCategoryDetail(artifactCategoryFor(ref)))}</small>
+        ${pathLine(ref.path, 58)}
+      </span>
       <span class="small-badge ${escapeHtml(artifactOwnershipBadge(ref).tone)}">${escapeHtml(artifactOwnershipBadge(ref).label)}</span>
     </button>
   `).join("") || `<div class="empty-state">No references linked.</div>`;
 }
 
-function renderVersionHistory(versions) {
-  return (versions || []).map((version) => `
-    <button class="artifact-row" data-open-artifact="${escapeHtml(version.path)}" type="button">
-      <span>
-        <strong>${escapeHtml(version.label)}</strong>
-        <span>${escapeHtml(version.source)} / ${escapeHtml(version.updated_at_utc || "timestamp unavailable")}</span>
-        ${pathLine(version.path, 58)}
-      </span>
-      <span class="small-badge">v${escapeHtml(version.attempt_number)}</span>
-    </button>
-  `).join("") || `<div class="empty-state">No version history for this document.</div>`;
+function renderVersionHistory(versions, currentAttempt = 0) {
+  return (versions || []).map((version) => {
+    const isCurrent = Number(version.attempt_number || 0) === Number(currentAttempt || 0);
+    const action = isCurrent ? "disabled" : `data-compare-attempt="${escapeHtml(version.attempt_number)}"`;
+    const actionLabel = isCurrent ? "current copy" : "compare copy";
+    const purpose = isCurrent
+      ? "Why: This identifies the retained copy currently being read."
+      : "Why: Compare this earlier copy to understand what changed after retry or repair.";
+    return `
+      <button class="artifact-row" ${action} type="button">
+        <span>
+          <strong>${escapeHtml(version.label)}</strong>
+          <small>${escapeHtml(version.source)} / ${escapeHtml(version.updated_at_utc || "timestamp unavailable")}</small>
+          <small class="reader-item-purpose">${escapeHtml(purpose)}</small>
+          ${pathLine(version.path, 58)}
+        </span>
+        <span class="small-badge">${escapeHtml(actionLabel)}</span>
+      </button>
+    `;
+  }).join("") || `<div class="empty-state">No version history for this document.</div>`;
 }
 
-function renderWorkbenchDiff(workbench) {
-  const inputs = workbench.diff_inputs || [];
-  const inputRows = inputs.map((item) => `
-    <button class="artifact-row" data-open-artifact="${escapeHtml(item.path)}" type="button">
-      <span>
-        <strong>${escapeHtml(item.label)}</strong>
-        <span>${escapeHtml(item.kind)}${item.attempt_number ? ` / attempt ${escapeHtml(item.attempt_number)}` : ""}</span>
-        ${pathLine(item.path, 78)}
-      </span>
-      <span class="small-badge">diff</span>
-    </button>
-  `).join("") || `<div class="empty-state">No diff inputs available for this document.</div>`;
+function renderComparisonCopy(workbench, label) {
+  const documentView = workbench?.document || {};
+  const view = documentView.source || documentView.preview;
+  if (!view || documentView.status !== "present") {
+    return `
+      <section class="reader-comparison-copy">
+        <div class="surface-title compact">${escapeHtml(label)}</div>
+        <div class="empty-state">This retained copy is unavailable for safe comparison.</div>
+      </section>
+    `;
+  }
   return `
-    <div class="workbench-diff-panel">
-      <div class="surface-title">Diff controls</div>
-      <p>Compare the selected document with another current artifact or the previous attempt. Source files remain read-only.</p>
-      <div class="recent-artifacts">${inputRows}</div>
+    <section class="reader-comparison-copy">
+      <div class="surface-title compact">
+        <span>${escapeHtml(label)}</span>
+        <span class="small-badge">attempt ${escapeHtml(workbench.attempt_number || "?")}</span>
+      </div>
+      ${renderTruncationNotice("artifact", view, "source")}
+      <pre>${escapeHtml(view.text)}</pre>
+    </section>
+  `;
+}
+
+function comparisonCandidates(workbench) {
+  const currentAttempt = Number(workbench?.attempt_number || 0);
+  return (workbench?.versions || []).filter((version) => Number(version.attempt_number || 0) && Number(version.attempt_number) !== currentAttempt);
+}
+
+function renderWorkbenchComparison(workbench) {
+  const selected = state.activeArtifactComparison;
+  const candidates = comparisonCandidates(workbench);
+  if (selected?.workbench) {
+    return `
+      <div class="reader-comparison-panel">
+        <div class="reader-comparison-heading">
+          <div>
+            <div class="surface-title">Compare retained copies</div>
+            <p>Side-by-side source is shown below. This is a comparison view, not a generated line-by-line diff.</p>
+          </div>
+          <button data-clear-artifact-comparison class="secondary" type="button">Choose another copy</button>
+        </div>
+        <div class="reader-comparison-grid">
+          ${renderComparisonCopy(workbench, "Selected stage copy")}
+          ${renderComparisonCopy(selected.workbench, `Retained attempt ${selected.attemptNumber}`)}
+        </div>
+      </div>
+    `;
+  }
+  if (!candidates.length) {
+    return `
+      <div class="reader-comparison-panel empty-state">
+        <strong>No retained prior copy</strong>
+        <span>Comparison is unavailable because this document has no earlier retained attempt. No diff is implied.</span>
+      </div>
+    `;
+  }
+  return `
+    <div class="reader-comparison-panel">
+      <div class="surface-title">Compare retained copies</div>
+      <p>Choose an earlier retained attempt. The reader will show both bounded source copies side by side; it does not claim to generate a diff.</p>
+      <div class="recent-artifacts reader-comparison-options">
+        ${candidates.map((version) => `
+          <button class="artifact-row" data-compare-attempt="${escapeHtml(version.attempt_number)}" type="button">
+            <span><strong>${escapeHtml(version.label)}</strong><small>${escapeHtml(version.source)} / ${escapeHtml(version.updated_at_utc || "timestamp unavailable")}</small></span>
+            <span class="small-badge">compare</span>
+          </button>
+        `).join("")}
+      </div>
     </div>
   `;
 }
@@ -328,28 +674,23 @@ function markdownHeadingSummary(text) {
 }
 
 function renderWorkbenchTableOfContents(workbench) {
-  if (state.artifactViewMode === "diff") {
-    return `
-      <section class="workbench-toc" aria-label="Table of Contents">
-        <div class="surface-title compact">Table of Contents</div>
-        <div class="empty-state">Switch to Preview or Source to inspect document headings.</div>
-      </section>
-    `;
-  }
+  if (state.artifactViewMode === "compare") return "";
   const view = workbenchSelectedDocumentView(workbench);
   const headings = markdownHeadingSummary(view?.text || "");
+  if (headings.length < 2) return "";
   return `
-    <section class="workbench-toc" aria-label="Table of Contents">
-      <div class="surface-title compact">
-        <span>Table of Contents</span>
-        <span class="small-badge">${escapeHtml(headings.length)} headings</span>
-      </div>
+    <details class="workbench-toc reader-document-map" aria-label="Document map">
+      <summary>
+        <span>Document map</span>
+        <span class="small-badge">${escapeHtml(headings.length)} sections</span>
+      </summary>
+      <p>This is a reading map for the visible copy; it does not change the document or navigate away.</p>
       <ol class="workbench-toc-list">
-        ${headings.length ? headings.map((heading) => `
+        ${headings.map((heading) => `
           <li class="toc-level-${escapeHtml(heading.level)}">${escapeHtml(heading.label)}</li>
-        `).join("") : `<li>No headings in the visible document window.</li>`}
+        `).join("")}
       </ol>
-    </section>
+    </details>
   `;
 }
 
@@ -357,13 +698,17 @@ function renderWorkbenchDocumentBody(workbench) {
   const documentView = workbench.document;
   if (!documentView || documentView.status !== "present") {
     return `
-      <div class="empty-state">
-        <strong>${escapeHtml(documentView?.status || "missing")}</strong>
-        <span>${escapeHtml(documentView?.message || "Selected document is not available.")}</span>
+      <div class="reader-state reader-state-error" role="alert">
+        <strong>Document unavailable</strong>
+        <span>This retained copy cannot be read safely, so do not use the stage state alone as evidence.</span>
+        <details>
+          <summary>Technical details</summary>
+          <code>${escapeHtml(documentView?.status || "missing")}: ${escapeHtml(documentView?.message || "Selected document is not available.")}</code>
+        </details>
       </div>
     `;
   }
-  if (state.artifactViewMode === "diff") return renderWorkbenchDiff(workbench);
+  if (state.artifactViewMode === "compare") return renderWorkbenchComparison(workbench);
   const view = workbenchSelectedDocumentView(workbench);
   if (!view) {
     return `<div class="empty-state">No bounded ${escapeHtml(state.artifactViewMode)} view available.</div>`;
@@ -374,62 +719,31 @@ function renderWorkbenchDocumentBody(workbench) {
   return `${renderTruncationNotice("artifact", view, state.artifactViewMode)}${body}`;
 }
 
-function renderWorkbenchViewer(workbench) {
+function renderDocumentReaderControls(workbench) {
   const previewActive = state.artifactViewMode === "preview" ? " active" : "";
   const sourceActive = state.artifactViewMode === "source" ? " active" : "";
-  const diffActive = state.artifactViewMode === "diff" ? " active" : "";
-  const documentView = workbench.document || {};
-  const evidenceInspector = renderWorkbenchEvidenceInspector(workbench);
+  const compareActive = state.artifactViewMode === "compare" ? " active" : "";
+  const profile = documentReadingProfile(workbench);
   return `
-    <div class="viewer-header">
+    <div class="viewer-header reader-header">
       <div>
-        <strong>${escapeHtml(documentView.key || workbench.selected_key)}</strong>
-        ${pathLine(`${documentView.path || "path unavailable"} / ${documentView.byte_size ?? "unknown"} bytes`, 78)}
+        <span class="reader-eyebrow">Document reader</span>
+        <strong>${escapeHtml(profile.title)}</strong>
       </div>
-      <div class="viewer-modes" role="group" aria-label="Document presentation">
-        <button data-artifact-mode="preview" class="${previewActive}" type="button" aria-pressed="${state.artifactViewMode === "preview" ? "true" : "false"}">Preview</button>
+      <div class="viewer-modes" role="group" aria-label="Document reader mode">
+        <button data-artifact-mode="preview" class="${previewActive}" type="button" aria-pressed="${state.artifactViewMode === "preview" ? "true" : "false"}">Read</button>
         <button data-artifact-mode="source" class="${sourceActive}" type="button" aria-pressed="${state.artifactViewMode === "source" ? "true" : "false"}">Source</button>
-        <button data-artifact-mode="diff" class="${diffActive}" type="button" aria-pressed="${state.artifactViewMode === "diff" ? "true" : "false"}">Diff</button>
-        ${documentView.path ? `<button data-open-artifact="${escapeHtml(documentView.path)}" class="secondary" type="button">Open folder</button>` : ""}
+        <button data-artifact-mode="compare" class="${compareActive}" type="button" aria-pressed="${state.artifactViewMode === "compare" ? "true" : "false"}">Compare</button>
       </div>
-    </div>
-    ${renderArtifactOwnershipNote({
-      key: documentView.key || workbench.selected_key,
-      kind: "document",
-      path: documentView.path || ""
-    })}
-    <div class="workbench-main" data-evidence-inspector="${evidenceInspector ? "present" : "absent"}">
-      <section class="workbench-document-pane hierarchy-primary document-canvas">
-        ${renderWorkbenchTableOfContents(workbench)}
-        ${renderWorkbenchDocumentBody(workbench)}
-      </section>
-      ${evidenceInspector}
     </div>
   `;
 }
 
-function renderStudioDocumentCanvas(workbench) {
-  const previewActive = state.artifactViewMode === "preview" ? " active" : "";
-  const sourceActive = state.artifactViewMode === "source" ? " active" : "";
-  const diffActive = state.artifactViewMode === "diff" ? " active" : "";
-  const documentView = workbench.document || {};
+function renderDocumentReaderCanvas(workbench, {studio = false} = {}) {
   return `
-    <div class="viewer-header">
-      <div>
-        <strong>${escapeHtml(documentView.key || workbench.selected_key || "No document selected")}</strong>
-        ${pathLine(`${documentView.path || "path unavailable"} / ${documentView.byte_size ?? "unknown"} bytes`, 78)}
-      </div>
-      <div class="viewer-modes" role="group" aria-label="Document presentation">
-        <button data-artifact-mode="preview" class="${previewActive}" type="button" aria-pressed="${state.artifactViewMode === "preview" ? "true" : "false"}">Preview</button>
-        <button data-artifact-mode="source" class="${sourceActive}" type="button" aria-pressed="${state.artifactViewMode === "source" ? "true" : "false"}">Source</button>
-        <button data-artifact-mode="diff" class="${diffActive}" type="button" aria-pressed="${state.artifactViewMode === "diff" ? "true" : "false"}">Diff</button>
-      </div>
-    </div>
-    ${documentView.path ? renderArtifactOwnershipNote({
-      key: documentView.key || workbench.selected_key,
-      kind: "document",
-      path: documentView.path
-    }) : ""}
+    ${renderDocumentReadingBrief(workbench)}
+    ${renderDocumentReaderControls(workbench)}
+    ${renderReaderTechnicalDetails(workbench)}
     <section class="workbench-document-pane hierarchy-primary document-canvas" data-document-canvas-mode="${escapeHtml(state.artifactViewMode)}">
       ${renderWorkbenchTableOfContents(workbench)}
       ${renderWorkbenchDocumentBody(workbench)}
@@ -437,50 +751,165 @@ function renderStudioDocumentCanvas(workbench) {
   `;
 }
 
+function renderWorkbenchViewer(workbench) {
+  const evidenceInspector = renderWorkbenchEvidenceInspector(workbench);
+  return `
+    <div class="workbench-main reader-workbench-main" data-evidence-inspector="${evidenceInspector ? "present" : "absent"}">
+      <div class="reader-document-column">
+        ${renderDocumentReaderCanvas(workbench)}
+      </div>
+      ${evidenceInspector}
+    </div>
+  `;
+}
+
+function renderStudioDocumentCanvas(workbench) {
+  return renderDocumentReaderCanvas(workbench, {studio: true});
+}
+
+function readerEvidenceGroups(workbench = {}) {
+  const validation = Array.isArray(workbench.validation_results) ? workbench.validation_results : [];
+  const requirements = Array.isArray(workbench.requirements) ? workbench.requirements : [];
+  const references = Array.isArray(workbench.references) ? workbench.references : [];
+  const versions = Array.isArray(workbench.versions) ? workbench.versions : [];
+  const documentRequirements = requirements.filter((item) => item.kind === "required-section");
+  const stageRequirements = requirements.filter((item) => item.kind !== "required-section");
+  const missingRequirements = requirements.filter((item) => ["missing", "unknown"].includes(String(item.status || "").toLowerCase()));
+  const attentionValidation = validation.filter((item) => readerValidationPresentation(item).needsAttention);
+  const freshness = readerFreshness(workbench);
+  const staleDocument = freshness.label === "Historical / stale";
+  return {
+    validation,
+    requirements,
+    documentRequirements,
+    stageRequirements,
+    missingRequirements,
+    attentionValidation,
+    references,
+    versions,
+    freshness,
+    hasAttention: Boolean(attentionValidation.length || missingRequirements.length || staleDocument),
+    hasDecisionValue: Boolean(
+      validation.length
+      || requirements.length
+      || references.length
+      || versions.length > 1
+      || staleDocument
+    )
+  };
+}
+
 function studioEvidenceInspectorItemCount(workbench) {
-  return [
-    workbench.requirements,
-    workbench.validation_results,
-    workbench.references,
-    workbench.versions
-  ].reduce((total, items) => total + (Array.isArray(items) ? items.length : 0), 0);
+  const groups = readerEvidenceGroups(workbench);
+  return groups.validation.length
+    + groups.requirements.length
+    + groups.references.length
+    + groups.versions.length;
+}
+
+function renderReaderEvidenceDisclosure({section, title, purpose, count, body, open = false}) {
+  return `
+    <details class="reader-evidence-group" data-inspector-section="${escapeHtml(section)}" ${open ? "open" : ""}>
+      <summary>
+        <span class="reader-evidence-summary-copy">
+          <strong>${escapeHtml(title)}</strong>
+          <small>${escapeHtml(purpose)}</small>
+        </span>
+        <span class="small-badge">${escapeHtml(count)} item${Number(count) === 1 ? "" : "s"}</span>
+      </summary>
+      <div class="reader-evidence-body">${body}</div>
+    </details>
+  `;
+}
+
+function renderReaderRequirementGroups(groups) {
+  const documentRequirements = groups.documentRequirements.length ? `
+    <div class="reader-evidence-subgroup">
+      <strong>Document structure</strong>
+      <small>These headings make this document complete enough for its contract.</small>
+      ${renderRequirementList(groups.documentRequirements)}
+    </div>
+  ` : "";
+  const stageRequirements = groups.stageRequirements.length ? `
+    <div class="reader-evidence-subgroup">
+      <strong>Stage outputs</strong>
+      <small>These related outputs show whether the stage has the evidence its contract expects.</small>
+      ${renderRequirementList(groups.stageRequirements)}
+    </div>
+  ` : "";
+  return documentRequirements || stageRequirements || `<div class="empty-state">No contract requirements resolved.</div>`;
+}
+
+function renderReaderAttention(groups) {
+  const stale = groups.freshness.label === "Historical / stale" ? `
+    <div class="reader-attention-note">
+      <span class="small-badge warn">historical / stale</span>
+      <span>${escapeHtml(groups.freshness.detail)}</span>
+    </div>
+  ` : "";
+  const validation = groups.attentionValidation.length ? renderValidationResults(groups.attentionValidation) : "";
+  const missing = groups.missingRequirements.length ? `
+    <div class="reader-evidence-subgroup">
+      <strong>Missing or unresolved contract evidence</strong>
+      ${renderMissingEvidence(groups.missingRequirements)}
+    </div>
+  ` : "";
+  return stale || validation || missing || `<div class="empty-state">No recorded evidence needs immediate attention.</div>`;
 }
 
 function renderStudioEvidenceInspector(workbench) {
+  const groups = readerEvidenceGroups(workbench);
   const itemCount = studioEvidenceInspectorItemCount(workbench);
-  if (!resolveStudioEvidenceVisibility({inspectorItemCount: itemCount}).inspector) return "";
-  const validation = workbench.validation_results || [];
-  const requirements = workbench.requirements || [];
-  const references = workbench.references || [];
-  const versions = workbench.versions || [];
+  if (!resolveStudioEvidenceVisibility({inspectorDecisionValue: groups.hasDecisionValue}).inspector) return "";
+  const sections = [];
+  if (groups.hasAttention || groups.validation.length) {
+    const title = groups.hasAttention ? "Needs attention" : "Validation checks";
+    const purpose = groups.hasAttention
+      ? "These facts can change whether the document is safe to rely on or whether the stage can proceed."
+      : "These recorded checks support the confidence of this retained copy; review them before proceeding.";
+    const body = groups.hasAttention ? renderReaderAttention(groups) : renderValidationResults(groups.validation);
+    sections.push(renderReaderEvidenceDisclosure({
+      section: "findings",
+      title,
+      purpose,
+      count: groups.hasAttention ? groups.attentionValidation.length + groups.missingRequirements.length + (groups.freshness.label === "Historical / stale" ? 1 : 0) : groups.validation.length,
+      body,
+      open: groups.hasAttention
+    }));
+  }
+  if (groups.requirements.length) {
+    sections.push(renderReaderEvidenceDisclosure({
+      section: "source-references",
+      title: "What this document must satisfy",
+      purpose: "These are the contract requirements behind the document, so you can see what “complete” means here.",
+      count: groups.requirements.length,
+      body: renderReaderRequirementGroups(groups)
+    }));
+  }
+  if (groups.versions.length) {
+    sections.push(renderReaderEvidenceDisclosure({
+      section: "provenance",
+      title: "Where this version came from",
+      purpose: "Version history explains which retained attempt you are reading and lets you compare an earlier copy without leaving the reader.",
+      count: groups.versions.length,
+      body: `<div class="recent-artifacts">${renderVersionHistory(groups.versions, workbench.attempt_number)}</div>`
+    }));
+  }
+  if (groups.references.length) {
+    sections.push(renderReaderEvidenceDisclosure({
+      section: "related-artifacts",
+      title: "Related evidence",
+      purpose: "These files add context, validation, logs, or handoff provenance for the selected document.",
+      count: groups.references.length,
+      body: `<div class="recent-artifacts">${renderWorkbenchReferences(groups.references)}</div>`
+    }));
+  }
   return `
     <div class="surface-title evidence-inspector-title">
-      <span>Evidence Inspector</span><span class="small-badge">${escapeHtml(itemCount)} retained</span>
+      <span>Evidence supporting this reading</span><span class="small-badge">${escapeHtml(itemCount)} retained</span>
     </div>
-    ${validation.length ? `
-      <section data-inspector-section="findings">
-        <div class="surface-title compact">Findings</div>
-        ${renderValidationResults(validation)}
-      </section>
-    ` : ""}
-    ${requirements.length ? `
-      <section data-inspector-section="source-references">
-        <div class="surface-title compact">Exact source references</div>
-        ${renderRequirementList(requirements)}
-      </section>
-    ` : ""}
-    ${versions.length ? `
-      <section data-inspector-section="provenance">
-        <div class="surface-title compact">Provenance</div>
-        <div class="recent-artifacts">${renderVersionHistory(versions)}</div>
-      </section>
-    ` : ""}
-    ${references.length ? `
-      <section data-inspector-section="related-artifacts">
-        <div class="surface-title compact">Related artifacts</div>
-        <div class="recent-artifacts">${renderWorkbenchReferences(references)}</div>
-      </section>
-    ` : ""}
+    <p class="evidence-inspector-intro">Open only the evidence that answers a confidence or next-step question.</p>
+    ${sections.join("")}
   `;
 }
 
@@ -493,69 +922,98 @@ function updateStudioEvidenceInspector(workbench) {
 }
 
 function renderWorkbenchEvidenceInspector(workbench) {
-  const inspectorItemCount = [
-    workbench.requirements,
-    workbench.validation_results,
-    workbench.references,
-    workbench.versions
-  ].reduce((total, items) => total + (Array.isArray(items) ? items.length : 0), 0);
-  const visibility = resolveStudioEvidenceVisibility({inspectorItemCount});
-  if (!visibility.inspector) return "";
+  const inspector = renderStudioEvidenceInspector(workbench);
+  if (!inspector) return "";
   return `
       <aside class="workbench-sidebar hierarchy-supporting evidence-inspector">
-        <div class="surface-title evidence-inspector-title">Evidence Inspector</div>
-        <section class="surface">
-          <div class="surface-title">Contract requirements</div>
-          ${renderRequirementList(workbench.requirements)}
-        </section>
-        <section class="surface">
-          <div class="surface-title">Validation results</div>
-          ${renderValidationResults(workbench.validation_results)}
-        </section>
-        <section class="surface">
-          <div class="surface-title">Missing evidence</div>
-          ${renderMissingEvidence(workbench.requirements)}
-        </section>
-        <section class="surface">
-          <div class="surface-title">References</div>
-          <div class="recent-artifacts">${renderWorkbenchReferences(workbench.references)}</div>
-        </section>
-        <section class="surface">
-          <div class="surface-title">Version history</div>
-          <div class="recent-artifacts">${renderVersionHistory(workbench.versions)}</div>
-        </section>
+        ${inspector}
       </aside>
   `;
 }
 
+function workbenchRequestPath(key, attemptNumber = null) {
+  const params = new URLSearchParams({stage: state.activeStage});
+  if (key) params.set("key", key);
+  if (state.activeRunId) params.set("run_id", state.activeRunId);
+  if (attemptNumber) params.set("attempt_number", String(attemptNumber));
+  params.set("source_limit", String(MAX_ARTIFACT_READ_BYTES));
+  return `/api/stage/workbench?${params.toString()}`;
+}
+
+function activeReaderViewer() {
+  return document.getElementById("artifactViewer") || document.getElementById("studioDocumentCanvas");
+}
+
+function renderDocumentReaderFailure(error) {
+  const message = String(error?.message || error || "Document reader unavailable.");
+  return `
+    <div class="reader-state reader-state-error" role="alert">
+      <strong>Document reader unavailable</strong>
+      <span>The document was not loaded, so no reading or progression decision should rely on this view.</span>
+      <button data-retry-artifact-document class="secondary" type="button">Try again</button>
+      <details>
+        <summary>Technical details</summary>
+        <code>${escapeHtml(message)}</code>
+      </details>
+    </div>
+  `;
+}
+
+function renderLoadedArtifactDocument(workbench, {tree, viewer, studioCanvas}) {
+  state.activeArtifactKey = workbench.selected_key;
+  state.activeArtifactWorkbench = workbench;
+  if (studioCanvas) {
+    state.activeStudioWorkbench = workbench;
+    state.activeStudioWorkbenchError = "";
+    updateStudioEvidenceInspector(workbench);
+  }
+  if (tree) tree.innerHTML = renderWorkbenchTree(workbench);
+  viewer.innerHTML = studioCanvas
+    ? renderStudioDocumentCanvas(workbench)
+    : renderWorkbenchViewer(workbench);
+}
+
 async function loadArtifactDocument(key) {
   const tree = document.getElementById("workbenchTree");
-  const viewer = document.getElementById("artifactViewer") || document.getElementById("studioDocumentCanvas");
+  const viewer = activeReaderViewer();
   if (!viewer) return;
   const studioCanvas = viewer.id === "studioDocumentCanvas";
+  if (key && key !== state.activeArtifactKey) state.activeArtifactComparison = null;
+  viewer.innerHTML = `<div class="reader-state loading-state" role="status">Loading retained document evidence…</div>`;
   try {
-    const params = new URLSearchParams({stage: state.activeStage});
-    if (key) params.set("key", key);
-    if (state.activeRunId) params.set("run_id", state.activeRunId);
-    params.set("source_limit", String(MAX_ARTIFACT_READ_BYTES));
-    const workbench = await api(`/api/stage/workbench?${params.toString()}`);
-    state.activeArtifactKey = workbench.selected_key;
-    if (studioCanvas) {
-      state.activeStudioWorkbench = workbench;
-      state.activeStudioWorkbenchError = "";
-      updateStudioEvidenceInspector(workbench);
-    }
-    if (tree) tree.innerHTML = renderWorkbenchTree(workbench);
-    viewer.innerHTML = studioCanvas
-      ? renderStudioDocumentCanvas(workbench)
-      : renderWorkbenchViewer(workbench);
+    const workbench = await api(workbenchRequestPath(key));
+    const comparisonKey = state.activeArtifactComparison?.workbench?.selected_key;
+    if (comparisonKey && comparisonKey !== workbench.selected_key) state.activeArtifactComparison = null;
+    renderLoadedArtifactDocument(workbench, {tree, viewer, studioCanvas});
   } catch (error) {
     if (studioCanvas) {
       state.activeStudioWorkbench = null;
       state.activeStudioWorkbenchError = error.message || "Document Canvas unavailable";
       updateStudioEvidenceInspector({});
     }
-    viewer.innerHTML = `<div class="empty-state">${escapeHtml(error.message)}</div>`;
+    viewer.innerHTML = renderDocumentReaderFailure(error);
+  }
+}
+
+async function loadArtifactComparison(attemptNumber) {
+  const currentWorkbench = state.activeArtifactWorkbench || state.activeStudioWorkbench;
+  const viewer = activeReaderViewer();
+  if (!currentWorkbench || !viewer || !state.activeArtifactKey) return;
+  const selectedAttempt = Number(attemptNumber || 0);
+  if (!selectedAttempt || selectedAttempt === Number(currentWorkbench.attempt_number || 0)) return;
+  const studioCanvas = viewer.id === "studioDocumentCanvas";
+  viewer.innerHTML = `<div class="reader-state loading-state" role="status">Loading retained comparison copy…</div>`;
+  try {
+    const comparison = await api(workbenchRequestPath(state.activeArtifactKey, selectedAttempt));
+    state.activeArtifactComparison = {attemptNumber: selectedAttempt, workbench: comparison};
+    renderLoadedArtifactDocument(currentWorkbench, {
+      tree: document.getElementById("workbenchTree"),
+      viewer,
+      studioCanvas
+    });
+  } catch (error) {
+    state.activeArtifactComparison = null;
+    viewer.innerHTML = renderDocumentReaderFailure(error);
   }
 }
 
@@ -688,7 +1146,7 @@ function renderEvidenceGraphFallback(view) {
         <span>Flat Table Fallback</span>
         <span class="small-badge warn">${escapeHtml(reasons.length || 1)} reason</span>
       </div>
-      <p>Graph provenance is incomplete, so the artifact table remains the source of truth for inspection actions.</p>
+      <p>Graph provenance is incomplete, so the artifact table remains the source of truth for inspection actions. Indexed documents still open in the reader above.</p>
       <div class="evidence-reasons">
         ${(reasons.length ? reasons : ["graph-unavailable"]).map((reason) => `<span class="small-badge warn">${escapeHtml(reason)}</span>`).join("")}
       </div>
@@ -854,9 +1312,10 @@ function renderEvidenceWorkbenchUnavailable(view) {
   }
   if (viewer) {
     viewer.innerHTML = `
-      <div class="empty-state">
-        Stage Document Workbench is unavailable while Evidence Graph is in flat table fallback (${escapeHtml(reasons)}).
-        Use the artifact table actions for read-only inspection.
+      <div class="reader-state reader-state-error">
+        <strong>No indexed document is available to read</strong>
+        <span>The evidence graph is in flat-table fallback (${escapeHtml(reasons)}), and no document key could be selected from the retained artifact index.</span>
+        <span>Use the table below to inspect available evidence or choose a document when one is indexed.</span>
       </div>
     `;
   }
@@ -900,8 +1359,8 @@ async function renderArtifacts() {
     content.innerHTML = renderEvidenceGraphScreen(view, selection);
     const selectedArtifactKey = selection.node?.kind === "document"
       ? evidenceNodeArtifactKey(selection.node)
-      : state.activeArtifactKey;
-    if (view.mode === "graph" && selectedArtifactKey) {
+      : state.activeArtifactKey || preferredEvidenceArtifactKey(view);
+    if (selectedArtifactKey) {
       state.activeArtifactKey = selectedArtifactKey;
       state.selectedEvidenceNodeId = `document:${selectedArtifactKey}`;
       await loadArtifactDocument(selectedArtifactKey);
@@ -924,6 +1383,7 @@ async function inspectArtifactReference({stage, key, path, kind}) {
   state.activeStage = targetStage;
   state.activeStageExplicit = true;
   state.activeArtifactKey = key || artifactKeyForPath(path, targetStage);
+  state.activeArtifactComparison = null;
   state.selectedEvidenceNodeId = state.activeArtifactKey
     ? `${kind === "log" ? "log" : "document"}:${state.activeArtifactKey}`
     : "";

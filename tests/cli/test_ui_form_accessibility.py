@@ -41,6 +41,8 @@ def test_onboarding_and_follow_up_fields_have_id_name_and_associated_labels() ->
         ("onboardingWorkItem", "work_item"),
         ("onboardingRequest", "request"),
         ("onboardingForceContext", "force_context"),
+        ("projectNewWorkItem", "work_item"),
+        ("projectNewRequest", "request"),
     ):
         assert f'id="{field_id}" name="{name}"' in onboarding
         assert f'for="{field_id}"' in onboarding

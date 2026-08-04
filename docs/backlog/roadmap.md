@@ -13580,3 +13580,183 @@ Sync notes:
   capability-gated model and reasoning-effort inputs, forwards non-empty values through
   UI stage/workflow launches, and records `ui-selection` provenance. Frontend, stage-run,
   Ruff, and mypy checks pass.
+---
+
+## Wave 40 — operator re-entry and task clarity (`done`)
+
+Goal: make the local Operator UI understandable when a project already has AIDD state: open
+the project-level decision queue on restart, make an independent work item visibly available,
+and keep progress and the next safe action legible without changing workflow semantics.
+
+### Epic W40-E1 — project-first operator orientation (`done`)
+Linked stories: `US-02`, `US-03`, `US-05`, `US-06`, `US-11`, `US-13`
+
+#### Slice W40-E1-S1 — existing-project re-entry (`done`)
+Goal: route a bare local UI launch to the existing project's Inbox instead of repeating setup.
+
+Primary outputs:
+
+- project-only UI context for an existing `.aidd/` workspace;
+- Inbox-first startup and restart behavior;
+- deterministic API and browser coverage.
+
+Touched areas:
+
+- `src/aidd/cli/ui.py`
+- `src/aidd/cli/static/`
+- `tests/cli/`, `tests/frontend/`, and browser journeys
+
+Dependencies:
+
+- `W36-E7-S2`
+
+Local tasks:
+
+- `W40-E1-S1-T1` (done) Open the existing project Inbox on bare `aidd ui`.
+  - Scope: project-context startup and packaged UI bootstrap only.
+  - Verification: a browser launch from a project containing `.aidd/` opens Inbox without
+    setup, creates no artifacts, and resumes an exact selected work item only after an explicit
+    operator action.
+
+Exit evidence:
+
+- restart distinguishes a missing project from an existing workspace without persisting a
+  speculative last-work-item selection;
+- a bare UI entry shows project-level decisions before stage-specific controls.
+
+#### Slice W40-E1-S2 — independent work-item entry (`done`)
+Goal: let an operator create a separate task while other work items remain active or inspectable.
+
+Primary outputs:
+
+- persistent project-level **New work item** entry;
+- concise creation surface separate from runtime selection and launch.
+
+Touched areas:
+
+- `src/aidd/cli/static/`
+- `tests/frontend/` and browser journeys
+
+Dependencies:
+
+- `W40-E1-S1`
+
+Local tasks:
+
+- `W40-E1-S2-T1` (done) Render and dispatch project-level independent work-item creation.
+  - Scope: Inbox/Studio creation surface and existing onboarding service call only.
+  - Verification: an operator can create a valid work item from an existing project without
+    selecting a runtime, receives inline duplicate-id feedback, and lands on the new no-run
+    Studio without mutating another run.
+
+Exit evidence:
+
+- creating work and launching work are visibly distinct choices;
+- existing work items remain navigable after creation.
+
+#### Slice W40-E1-S3 — decision-first progress density (`done`)
+Goal: replace duplicated dashboard chrome with one readable workflow-progress and next-action
+surface per current context.
+
+Primary outputs:
+
+- compact project/work-item progress summaries;
+- contextual diagnostics and evidence disclosure instead of always-visible empty panels.
+
+Touched areas:
+
+- `src/aidd/cli/static/`
+- `docs/architecture/operator-frontend.md`
+- frontend and browser tests
+
+Dependencies:
+
+- `W40-E1-S1`
+
+Local tasks:
+
+- `W40-E1-S3-T1` (done) Consolidate the Inbox and Studio hierarchy around progress and one
+  next action.
+  - Scope: packaged Studio shell, styles, and documented UX acceptance only.
+  - Verification: desktop and mobile browser checks show a compact progress state and one
+    eligible action without simultaneous zero-value rails, sidebars, and activity surfaces;
+    live state remains factual and never fabricates a percentage.
+
+Exit evidence:
+
+- operators can state which work item is current, which stage is next or blocked, and why,
+  before opening diagnostics;
+- document, evidence, history, and logs remain reachable as contextual drill-downs.
+
+Sync notes:
+
+- `2026-08-04` Completed the re-entry and clarity slice: a bare existing `.aidd/` workspace
+  opens the project Inbox without choosing or persisting a speculative work item; explicit
+  Studio links restore their requested item through the existing canonical endpoint. Operators
+  can create an independent work item before choosing a runtime, and the Inbox/Studio surfaces
+  now lead with factual progress and one next action. Focused CLI/frontend regressions and
+  desktop/mobile browser checks passed.
+
+---
+
+## Wave 41 — evidence-first document reading (`done`)
+
+Goal: make the Document & Evidence Studio easy to read: lead with the selected document and
+its decision value, then reveal clearly explained supporting evidence without changing the
+workflow, artifact ownership, or source-of-truth rules.
+
+### Epic W41-E1 — explainable operator reading (`done`)
+Linked stories: `US-02`, `US-03`, `US-06`, `US-11`
+
+#### Slice W41-E1-S1 — document-reader hierarchy (`done`)
+Goal: turn the current Canvas and Evidence Inspector into one compact reading flow that explains
+why every visible evidence group exists.
+
+Primary outputs:
+
+- document role and purpose brief for Canvas and Artifact Workbench readers;
+- purpose-labelled, disclosure-based Evidence Inspector with useful empty, missing, and bounded
+  states;
+- desktop and mobile verification of document-first hierarchy.
+
+Touched areas:
+
+- `src/aidd/cli/static/operator-artifacts-documents.js`
+- `src/aidd/cli/static/operator-components.css`
+- `src/aidd/cli/static/operator-responsive.css`
+- `docs/architecture/operator-frontend.md`
+- `tests/frontend/`, `tests/cli/`, and operator UI acceptance docs
+
+Dependencies:
+
+- `W40-E1-S3`
+
+Local tasks:
+
+- `W41-E1-S1-T1` (done) Render an evidence-first document reader with purpose-labelled
+  supporting disclosures.
+  - Scope: packaged Canvas, Artifact Workbench, Evidence Inspector, and their reader-only
+    styles; preserve existing workbench payloads and read-only ownership rules.
+  - Verification: deterministic frontend tests prove document role/purpose and evidence-group
+    explanations; desktop and 390px browser checks show the document before supporting
+    evidence, usable native disclosures, no horizontal overflow, and no console errors.
+
+Exit evidence:
+
+- an operator can identify what the selected document is, why it matters, and which evidence
+  group to open before inspecting raw paths or provenance;
+- unresolved validation remains visible without turning unrelated evidence into equal-weight
+  chrome;
+- missing, bounded, unavailable-comparison, and graph-fallback states are explicit and do not
+  fabricate durable evidence.
+
+Sync notes:
+
+- `2026-08-04` Completed the evidence-first reader slice. Studio and the Artifact Workbench now
+  lead with a role, freshness, and decision-use brief; stale retained copies explicitly cannot
+  masquerade as current proceed evidence. Supporting evidence is a compact disclosure stack with
+  a group purpose and an item-level **Why** for validations, contract requirements, and retained
+  versions. Read, Source, and Compare are bounded and truthful; Compare only presents retained
+  copies side by side and never claims a generated diff. Related documents remain in Studio and
+  persist in the canonical route across reload. Focused verification passed: frontend `107`, UI
+  CLI `155`, focused browser `14`, Ruff, and mypy.

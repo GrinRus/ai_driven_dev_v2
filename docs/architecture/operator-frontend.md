@@ -379,13 +379,20 @@ Current W20 implementation status:
   open-folder/server-stop actions, stage intervention request dispatch, and
   workflow-run delegation through the internal service seam.
 
-## 7. Onboarding-first startup
+## 7. Startup and onboarding
 
 The recommended first-run operator path starts in the local UI, but existing CLI
 subcommands remain compatible scripted surfaces. Bare `aidd` and `aidd --help` keep their
-current help behavior in this release. `aidd ui` can start without `--work-item` and then
-serves setup mode; `aidd ui --work-item <id> --root <path>` bypasses setup mode and opens
-the existing command center for initialized work items.
+current help behavior in this release. `aidd ui` can start without `--work-item`: it opens
+Guided Setup only when the resolved project root or project-local `.aidd/` path is
+missing, non-directory, or inaccessible. An accessible existing workspace opens its project Inbox
+instead.
+`aidd ui --work-item <id> --root <path>` bypasses setup mode and remains an explicit deep link
+that opens the existing command center for that work item.
+
+For this entry decision, an accessible `.aidd/` directory is an existing workspace even when it
+contains no work item yet; a work-item marker is not required to open Inbox and create the first
+one.
 
 Setup mode is a launcher over the same repository-local state model, not a separate
 workflow authority. It must let the operator:
@@ -401,6 +408,10 @@ workflow authority. It must let the operator:
 - inspect runtime readiness before any workflow run exists;
 - explicitly select a runtime before workflow, stage, intervention, follow-up, or clone
   execution starts.
+
+Creating or resuming a work item is not a runtime launch. Creation requires only a valid
+project/workspace, a safe work-item identifier, and the required request/context; runtime
+selection is deferred until an action actually launches workflow or stage execution.
 
 Runtime readiness remains observational. The UI may preselect a project-local runtime
 preference as a convenience, but every launch request must still include the operator-selected
@@ -467,8 +478,11 @@ comparison are contextual surfaces; they are not permanent global destinations.
 
 Entry behavior is deterministic:
 
-- an invalid project root or missing work item opens Guided Setup;
-- an initialized workspace opens Inbox;
+- an invalid project root, missing or non-directory workspace path, or inaccessible workspace opens Guided Setup;
+- an accessible existing `.aidd/` directory, including one with no discovered work items, opens
+  Inbox without requiring a work-item marker;
+- a bare restart into an existing workspace preserves project context but does not select an
+  arbitrary work item, create a work item, or launch a run;
 - a deep link restores the exact work item, run, stage, mode, attempt, and artifact when
   those objects still exist;
 - an active job has one server-authoritative live state shared by Inbox and Studio;
@@ -493,6 +507,17 @@ action, one **View evidence** action, and runtime or attempt identity when relev
 items cannot be dismissed. Any noncanonical snooze behavior must be local-only and must not
 hide a blocker.
 
+The Inbox header always exposes **New work item**, even when existing work items, running jobs,
+or terminal flows are present. It opens a short independent-work form rather than a hidden
+onboarding path. The form needs project/workspace context, a safe identifier, and request text;
+it does not require a runtime selection and does not alter an existing run. After durable
+creation, the new work item opens in its no-run Studio context, where a runtime is selected only
+when the operator chooses a launch action.
+
+Each work-item row also carries one compact, factual progress summary: successfully completed
+canonical stages out of eight, the current or stopped stage, and any blocking, terminal, or live
+state. It must not infer a percentage from elapsed time, artifacts, or renderer state.
+
 The frontend must not derive workflow policy from presentation state. Priority, eligibility,
 the first decisive failure, and the primary action come from core-owned read models. Inbox
 may aggregate those facts but must not create an alternate progression engine.
@@ -504,19 +529,73 @@ Desktop order is:
 
 1. compact project/work-item/run/runtime context bar;
 2. a **Decision Bar** with one primary action and a short factual reason;
-3. canonical eight-stage navigation;
-4. a central **Document Canvas** with `Preview`, `Source`, and `Diff` views;
+3. a compact factual workflow-progress summary and canonical eight-stage navigation;
+4. a central **Document Canvas** with `Read`, `Source`, and retained-copy `Compare` views;
 5. a contextual **Evidence Inspector**, hidden when it has no decision value;
 6. a collapsed Filmstrip that expands into attempt and event diagnostics.
 
 The stage navigation communicates canonical progression. The Filmstrip communicates temporal
 history. They must not duplicate the same status list.
 
+The context bar names scope, the Decision Bar names the one action and reason, and the progress
+summary names completed stages plus the current state. The same work-item/run status, next
+action, or live metric must not be repeated as equal-weight panels in a rail, sidebar, and dock.
+Supporting evidence remains reachable through contextual drill-downs rather than permanently
+competing with the document and current decision.
+
 The Document Canvas prioritizes the canonical Markdown artifact. Generated stage outputs,
 validator reports, repair briefs, implementation reports, and runtime logs are read-only.
 Corrections use **Answer question**, **Request Change**, repair, remediation, or the relevant
 runtime approval path. Opening the inspector must not obscure the document that gives the
 evidence its meaning.
+
+#### 8.4.1 Evidence-first reading contract
+
+Reading a document is a different job from navigating the workflow. Once Studio opens a
+document or the Artifacts drill-down, the page must answer these questions in this order:
+
+1. **What am I reading?** — the document label, stage, bounded-file state, and whether it is a
+   canonical source, downstream handoff mirror, runtime input, validation record, or runtime
+   evidence.
+2. **Why does it matter now?** — a short role-specific explanation that connects the selected
+   artifact to the current decision. The explanation must distinguish source-of-truth documents
+   from mirrors and supporting evidence; it must not imply that a read-only artifact can be
+   edited in place.
+3. **How should I read it?** — rendered Markdown is the primary view; raw source and retained
+   comparison inputs are explicit alternate views. A compact document map helps orientation but
+   must not compete visually with the document body.
+4. **What supports or challenges it?** — evidence remains a secondary companion, grouped by
+   purpose rather than as one undifferentiated list.
+
+The reader therefore contains one compact **reading brief** above the document: document role,
+why it is useful, and the appropriate operator response when it is missing, truncated, or has
+unresolved validation findings. The brief uses only persisted workbench data and current
+core-owned stage status; it does not infer success, ownership, or progression.
+
+The **Evidence Inspector** is titled and ordered as supporting reading context:
+
+- **Needs attention** — retained validation findings that can affect the next decision. It is
+  open by default only when a finding is unresolved or failed.
+- **What this document must satisfy** — contract requirements and their resolved state. This
+  explains why a required section or source reference is being shown.
+- **Where this version came from** — retained attempt/version provenance. This explains which
+  execution wrote the visible evidence without treating an older attempt as current.
+- **Related evidence** — logs, inputs, or neighboring artifacts that provide context. It stays
+  collapsed until the operator asks for it.
+
+Each group exposes a one-line purpose in its summary and a specific empty state. Every displayed
+validation result, contract requirement, and retained version also carries a short bounded
+**Why** line derived from its recorded kind and status, so a group label never forces the
+operator to guess why an individual row is present. The reader must keep the document visible
+while evidence is expanded; at narrower widths the document precedes the inspector and the
+inspector becomes a vertical disclosure stack. The full graph and flat artifact table remain
+advanced provenance drill-downs, with an explicit fallback when the graph is incomplete. They
+are not prerequisites for reading a canonical document.
+
+All reader states are honest: a missing document identifies what is unavailable, a bounded read
+identifies the retained range and how to inspect the full file, and an unavailable comparison
+does not synthesize a diff. Keyboard users can operate the view switcher and native evidence
+disclosures in document order.
 
 For `implement`, Studio adds the dependency-ready task ledger, task-attempt evidence, real
 repository diff, aggregate publication state, and finalization recovery. Successful tasks
@@ -562,6 +641,10 @@ selected context. Its setup sequence has at most four decision steps:
    policy, and last launch evidence separately.
 4. **Review & Launch** — summarize work item, runtime, action, scope, and evidence
    destination before launch.
+
+**Create Work Item** is available both during clean setup and from the existing-project Inbox.
+In either surface, a runtime is not a prerequisite for creation; only launch and execution
+actions require an explicitly selected eligible runtime.
 
 During a run, the guide becomes one contextual explanation: what happened, why the stage
 stopped or is ready, what the operator must decide, which durable artifact will be written,
@@ -626,7 +709,7 @@ mutation path.
 | Visible action | Endpoint / application service | Durable outcome | Eligibility and conflict behavior |
 | --- | --- | --- | --- |
 | **Validate project** | `POST /api/onboarding/project` / canonical project validation | Validation result only; no workspace write | Invalid, blank, escaped, or inaccessible roots fail before mutation. |
-| **Create Work Item** | `POST /api/onboarding/work-item` / workspace bootstrap | New canonical work-item context | Requires a valid project and safe unused identifier; conflicts read back existing state instead of overwriting. |
+| **Create Work Item** | `POST /api/onboarding/work-item` / workspace bootstrap | New canonical work-item context | Requires a valid project, safe unused identifier, and request/context; no runtime selection is required. Conflicts read back existing state instead of overwriting. |
 | **Resume Work Item** | `POST /api/onboarding/work-item` / existing-work-item selection | No new work-item evidence; selected durable context changes | Requires an existing valid work item; missing or stale identity returns a factual error. |
 | **Launch workflow** | `POST /api/workflow/run` / workflow execution service | Run manifest, stage attempts, and governed stage outputs | Requires explicit eligible runtime and bounds; duplicate launch is suppressed and conflicts reconcile to server state. |
 | **Run selected stage** | `POST /api/stage/run` / stage execution service | One governed stage attempt in the selected run | Requires stage eligibility, explicit runtime, and matching run identity; progression guards remain authoritative. |
@@ -707,6 +790,7 @@ completed source run.
 | State | Surface | Primary action | Required behavior |
 | --- | --- | --- | --- |
 | Invalid or missing project root | Guided Setup | **Validate project** | Field-level error and no workspace mutation. |
+| Valid existing workspace, no selected work item | Inbox | Highest-priority item or **New work item** | Preserve project context, select no arbitrary work item, and do not return to setup on restart. |
 | Valid project, no work items | Inbox empty state | **Create Work Item** | Hide empty Evidence and History regions. |
 | Work item, no run | Studio | **Review & Launch** | Explicit runtime required. |
 | Running, output fresh | Active Studio | **Open live output** | Cancel remains secondary and dangerous. |
@@ -753,7 +837,8 @@ Document and evidence behavior is fixed:
 - the primary document remains visible when the inspector opens;
 - Preview preserves Markdown heading, list, table, link, and code semantics;
 - Source is selectable, copyable plain text;
-- Diff includes textual added/removed/changed meaning, not color alone;
+- Compare shows two bounded retained source copies only when both exist, and explicitly says
+  whether it is a side-by-side reading view rather than a generated line diff;
 - exact paths are copyable but visually secondary;
 - a missing artifact is named instead of producing an empty surface;
 - raw logs are an explicit drill-down with native/system/normalized filters and visible
@@ -872,8 +957,8 @@ drawer transitions, and 240ms context changes, all with reduced-motion alternati
 | --- | --- |
 | Decision Bar | Reason, factual status, one primary action, optional evidence link; ready, running, waiting, blocked, failed, complete, and reconnecting variants. |
 | Inbox Item | Breadcrumb, title, explanation, timestamp, runtime/attempt metadata, primary action, evidence action; decision, running, ready, and complete variants. |
-| Document Canvas | Artifact title/path, Preview/Source/Diff switch, content, missing/truncated notice, copy/open actions; read-only in every variant. |
-| Evidence Inspector | Finding or evidence title, provenance, exact source reference, related artifacts, contextual action; hidden when empty. |
+| Document Canvas | Reading brief (role, purpose, freshness), Read/Source/Compare switch, content, document map, missing/truncated notice, technical file disclosure, and copy/open actions; read-only in every variant. |
+| Evidence Inspector | Purpose-labelled disclosures for attention, contract requirements, provenance, and related evidence; contextual actions; hidden when no decision value. |
 | Stage Navigation | Eight canonical stages, active selection, status text, stale marker, keyboard navigation; compact desktop and horizontal tablet variants. |
 | Filmstrip Frame | Stage/task, attempt mode, runtime, timestamps, outcome, markers, artifact/log links; live, selected, failed, repaired, and unavailable-snapshot states. |
 | Guided Step | Step name, why it matters, inputs, validation feedback, primary action, back action, advanced disclosure. |
@@ -961,8 +1046,13 @@ Before implementation is considered done, the local UI evidence lane must prove:
 
 - clean setup completes in no more than four decision steps and exposes Create and Resume
   before advanced project-set options;
+- a bare restart into a valid existing workspace opens Inbox, not Guided Setup, selects no
+  arbitrary work item, and performs no workflow mutation;
 - an existing project opens in Inbox with the first actionable item and primary action visible
-  without scrolling;
+  without scrolling; **New work item** remains explicit and can create independent work without
+  a selected runtime;
+- Inbox and Studio show completed-stage count, current stage, and factual blocker/terminal/live
+  state without fabricated percentage progress or repeated equal-weight status panels;
 - an Inbox item opens the exact work item, run, stage, document, and recovery/evidence context;
 - Guided Delivery and Studio call the same service path and create the same durable artifacts;
 - Studio's first viewport contains context, one current decision, and the primary document;

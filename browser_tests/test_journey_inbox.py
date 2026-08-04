@@ -122,7 +122,7 @@ def test_inbox_ignores_retired_presentation_selector(
     ) as harness, harness.open_page((1280, 900)) as browser_page:
         page = browser_page.page
         page.goto(f"{harness.url}{query}", wait_until="networkidle")
-        page.locator('[data-tab-shortcut="project-home"]').first.click()
+        page.locator("#projectInboxButton").click()
         page.locator(".studio-inbox").wait_for(state="visible")
         assert page.locator(".project-home-screen").count() == 0
         assert page.locator("[data-inbox-dismiss]").count() == 0
@@ -153,7 +153,7 @@ def test_inbox_prioritizes_and_routes_durable_and_running_work(
         assert response is not None and response.ok
         _wait_for_work_item_surface(page, "WI-RUN")
 
-        page.locator('[data-tab-shortcut="project-home"]').first.click()
+        page.locator("#projectInboxButton").click()
         sections = page.locator("[data-inbox-section]")
         sections.first.wait_for(state="visible")
         assert sections.evaluate_all(
@@ -254,7 +254,7 @@ def test_inbox_prioritizes_and_routes_durable_and_running_work(
                 ready=lambda payload: bool(payload["inbox"]["running_now"]),
                 phase="running job in Inbox read model",
             )
-            page.locator('[data-tab-shortcut="project-home"]').first.click()
+            page.locator("#projectInboxButton").click()
             sections = page.locator("[data-inbox-section]")
             page.locator('[data-inbox-section="running-now"]').wait_for(
                 state="visible", timeout=_SURFACE_TIMEOUT_MS

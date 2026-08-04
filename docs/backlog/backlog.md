@@ -7,11 +7,7 @@ slice, and local task.
 
 ## Next
 
-No task is promoted under the current Codex-only alpha scope.
-
 ## Soon
-
-No task is promoted while the external Codex acceptance is active.
 
 ## Parking lot
 
@@ -46,6 +42,17 @@ No task is promoted while the external Codex acceptance is active.
   and resume rejects selection drift. The generated Codex live profile uses
   `gpt-5.6-luna` with `high`; other runtimes retain native defaults. Full pytest passes
   `2188/2188`, Ruff and mypy pass, and no provider-authenticated live scenario ran.
+- `2026-08-04` `W41-E1-S1-T1` is complete. The Document & Evidence Studio and Artifact
+  Workbench now put a role/freshness/decision-use brief ahead of the document, keep supporting
+  evidence in explained disclosures, and give each validation, requirement, and retained-version
+  row an item-level **Why**. Historical evidence is visibly stale, retained-copy comparison is
+  honest, and reader document links preserve the Studio context and canonical route on reload.
+  Frontend `107`, UI CLI `155`, focused browser `14`, Ruff, and mypy passed.
+
+- `2026-08-04` `W40-E1-S1-T1`, `W40-E1-S2-T1`, and `W40-E1-S3-T1` are complete. Existing
+  project launches now start in Inbox, explicit Studio links restore their selected work item,
+  new work is independent from runtime selection, and the packaged UI presents factual progress
+  with a single next action. Focused CLI/frontend and desktop/mobile browser verification passed.
 
 - `2026-08-03` `W36-E7-S4-T93` is complete. The CodeQL-reported shell compound-evidence
   expression now makes command-substitution and plain assignment alternatives disjoint and uses

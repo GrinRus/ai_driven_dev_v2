@@ -146,6 +146,64 @@ test("operator bootstrap loads modules in declared order", async () => {
   ]);
 });
 
+test("runtime selection remains a usable first decision", async () => {
+  const decision = {
+    hidden: false,
+    innerHTML: "",
+    classList: classList(),
+  };
+  const context = vm.createContext({
+    console,
+    document: {
+      body: {classList: classList()},
+      getElementById(id) {
+        return id === "globalNextActionStrip" ? decision : null;
+      },
+      querySelector() { return null; },
+    },
+    escapeHtml(value) { return String(value ?? ""); },
+    state: {
+      activeTab: "work",
+      activeRunId: "",
+      activeStage: "idea",
+      selectedRuntime: "",
+      onboarding: {setupRequired: false},
+      dashboard: {
+        active_stage: "idea",
+        next_action: {
+          action: "choose-runtime",
+          label: "Select runtime",
+          detail: "Choose a runtime before starting the workflow.",
+          enabled: false,
+        },
+      },
+    },
+    syncLiveJobBodyClass() {},
+    syncExternalRunningBodyClass() {},
+    workDetailOwnsPrimarySurface() { return false; },
+    needsRuntime() { return true; },
+    selectedRuntimeReady() { return false; },
+    activeJobNextActionState() { return null; },
+    nextActionRuntimeBlockerMessage() { return "Select a runtime first."; },
+    stageTitle(value) { return String(value); },
+    externalRunningStageItem() { return null; },
+    primaryValidationFinding() { return null; },
+    renderGlobalLiveProgress() { return ""; },
+    renderExternalRunningStageProgress() { return ""; },
+    renderValidationFindingSummary() { return ""; },
+    renderGlobalTerminalEvidenceActions() { return ""; },
+    staleDownstreamStages() { return []; },
+    staleDownstreamRuntimeGate() { return {label: "", nextStep: ""}; },
+  });
+  await load(context, "operator-next-flow-view.js");
+
+  vm.runInContext("renderGlobalNextActionStrip()", context);
+
+  assert.match(decision.innerHTML, />Choose runtime</);
+  assert.doesNotMatch(decision.innerHTML, /\sdisabled(?:\s|>)/);
+  assert.match(decision.innerHTML, /Choose a runtime in the toolbar/);
+});
+
 test("terminal handoff recommendation fails closed for legacy and malformed payloads", async () => {
   const {context} = domContext();
   await load(context, "operator-api-state.js");

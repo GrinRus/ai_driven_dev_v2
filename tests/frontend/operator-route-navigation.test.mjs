@@ -67,12 +67,12 @@ test("Inbox route restores the project-home surface", async () => {
   });
 });
 
-test("bare route preserves the context-aware Studio fallback", async () => {
+test("bare route stays on the project Inbox until a work item is selected", async () => {
   const {context} = await navigationContext();
   vm.runInContext("initializeStateFromLocation()", context);
   assert.deepEqual(value(context, `({tab: state.activeTab, detail: state.workDetail})`), {
     tab: "work",
-    detail: "overview",
+    detail: "project-home",
   });
 });
 

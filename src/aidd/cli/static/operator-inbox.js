@@ -18,6 +18,9 @@ function inboxRouteAttributes(route) {
 function renderStudioInboxItem(item) {
   const route = item.route || null;
   const action = item.primary_action || null;
+  const projectItem = (state.projectHome?.work_items || []).find(
+    (candidate) => candidate.work_item === route?.work_item
+  ) || null;
   const actionMarkup = action && route
     ? `<button ${inboxRouteAttributes(route)} data-inbox-action="${escapeHtml(action.action)}" data-service-action-enabled="${action.enabled === false ? "false" : "true"}" type="button">${escapeHtml(action.label)}</button>`
     : '<span class="inbox-item-no-action">No action available</span>';
@@ -37,7 +40,10 @@ function renderStudioInboxItem(item) {
         ${renderStatusMarker({status: markerStatus, label: item.status_label})}
         <strong>${escapeHtml(item.title)}</strong>
         <p>${escapeHtml(item.summary)}</p>
-        <dl><div><dt>Context</dt><dd>${escapeHtml(routeLabel)}</dd></div></dl>
+        <dl>
+          <div><dt>Context</dt><dd>${escapeHtml(routeLabel)}</dd></div>
+          ${projectItem ? `<div><dt>Progress</dt><dd>${escapeHtml(workItemProgressText(projectItem))}</dd></div>` : ""}
+        </dl>
       </div>
       <div class="inbox-item-action">${actionMarkup}</div>
     </article>
@@ -90,11 +96,15 @@ function renderStudioInbox() {
       <header class="surface studio-inbox-header">
         <div>
           <p class="eyebrow">Inbox</p>
-          <h2>Operator decisions</h2>
-          <p class="muted">Durable workflow state first, with current UI jobs shown as a temporary overlay.</p>
+          <h2>Project inbox</h2>
+          <p class="muted">Choose the work item that needs attention, or create one before selecting a runtime.</p>
         </div>
-        <span class="small-badge">${escapeHtml(count)} items</span>
+        <div class="studio-inbox-actions">
+          <span class="small-badge">${escapeHtml(count)} items</span>
+          <button data-new-work-item type="button">New work item</button>
+        </div>
       </header>
+      ${renderProjectWorkItemCreator()}
       <div class="studio-inbox-sections">
         ${visibleSections.length ? visibleSections.map((section) => `
           <section class="surface inbox-section" data-inbox-section="${escapeHtml(section.key)}">

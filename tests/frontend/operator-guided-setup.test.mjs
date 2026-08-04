@@ -66,15 +66,45 @@ test("Guided Setup fails closed on validation, incomplete continue, and blocked 
   assert.equal(state.error, "command unavailable");
 });
 
-test("Create and Resume are sibling branches before runtime selection", async () => {
+test("Create and Resume establish durable context before any runtime launch", async () => {
   const source = await readFile(assetPath, "utf8");
   const create = source.indexOf('data-onboarding-work-item-branch="create"');
   const resume = source.indexOf('data-onboarding-work-item-branch="resume"');
   const runtime = source.indexOf("<span>Runner</span>", resume);
   assert.ok(create >= 0 && resume > create && runtime > resume);
   assert.doesNotMatch(source, /const canResume = Boolean\(state\.selectedRuntime\)/);
-  assert.match(source, /if \(action === "create" && !state\.selectedRuntime\)/);
+  assert.doesNotMatch(source, /if \(action === "create" && !state\.selectedRuntime\)/);
   assert.match(source, /runtime selection and launch remain separate actions/);
+});
+
+test("work item creation is runtime-independent while launch remains readiness-guarded", async () => {
+  const value = await context();
+  value.state = {
+    selectedRuntime: "",
+    onboarding: {
+      project: {project_root: "/workspace/project"},
+      workItemInput: "WI-NEW",
+      requestText: "Create the work item before choosing a runner."
+    }
+  };
+  assert.equal(vm.runInContext("onboardingCanCreate()", value), true);
+
+  const [actions, shell] = await Promise.all([
+    readFile(path.join(path.dirname(assetPath), "operator-dashboard-actions.js"), "utf8"),
+    readFile(path.join(path.dirname(assetPath), "operator-shell-rendering.js"), "utf8"),
+  ]);
+  const workflow = actions.slice(
+    actions.indexOf("async function startWorkflow()"),
+    actions.indexOf("async function startStage(")
+  );
+  const stage = actions.slice(
+    actions.indexOf("async function startStage("),
+    actions.indexOf("async function dispatchTaskAwareLaunch(")
+  );
+  assert.match(workflow, /if \(!ensureRunnableRuntime\(\)\) return;/);
+  assert.match(stage, /if \(!ensureRunnableRuntime\(\)\) return;/);
+  assert.match(shell, /if \(!state\.selectedRuntime\)/);
+  assert.match(shell, /if \(!selectedRuntimeReady\(\)\)/);
 });
 
 test("project-set and config details are collapsed behind Advanced", async () => {
