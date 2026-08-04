@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import os
+from dataclasses import replace
 from pathlib import Path
 
 import pytest
@@ -86,3 +87,19 @@ def test_registered_runtime_launch_failures_commit_equivalent_evidence(
     assert metadata["adapter_outcome"] == "launch_failure"
     assert metadata["exit_code"] is None
     assert metadata["stop_reason"] == "launch_failure"
+
+
+@pytest.mark.parametrize("runtime_id", ("generic-cli", "claude-code", "opencode", "qwen"))
+def test_non_codex_typed_selectors_fail_before_runtime_launch(
+    tmp_path: Path,
+    runtime_id: str,
+) -> None:
+    request = replace(_request(tmp_path, runtime_id), model="provider-model")
+
+    with pytest.raises(ValueError, match="does not support typed selector 'model'"):
+        get_runtime_adapter_surface(runtime_id).execute_stage_request(
+            configured_command=str(tmp_path / "missing-runtime"),
+            request=request,
+            attempt_path=tmp_path / "attempt-unsupported-selector",
+            base_env=dict(os.environ),
+        )

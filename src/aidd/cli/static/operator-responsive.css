@@ -151,7 +151,7 @@
   .top-actions {
     display: grid;
     gap: 6px;
-    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-columns: minmax(0, 1fr);
     padding-right: calc(
       var(--control-height-touch) + var(--space-16) + var(--space-8) + var(--space-5)
     );
@@ -162,6 +162,7 @@
     grid-template-columns: 58px minmax(0, 1fr);
     width: 100%;
   }
+  .runtime-picker input,
   .runtime-picker select {
     min-width: 0;
     width: 100%;

@@ -42,9 +42,19 @@ class StageRuntimeRequest:
     operator_request_path: Path | None = None
     operator_request_markdown: str | None = None
     cancel_requested: Callable[[], bool] | None = None
+    model: str | None = None
+    reasoning_effort: str | None = None
 
     def __post_init__(self) -> None:
         validate_runtime_budget(self.timeout_seconds)
+        for field_name, value in (
+            ("model", self.model),
+            ("reasoning_effort", self.reasoning_effort),
+        ):
+            if value is not None and (not isinstance(value, str) or not value.strip()):
+                raise ValueError(
+                    f"Stage runtime selector {field_name!r} must be a non-empty string."
+                )
 
 
 @dataclass(frozen=True, slots=True)

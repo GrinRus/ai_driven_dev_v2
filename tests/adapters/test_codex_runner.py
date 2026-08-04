@@ -10,6 +10,7 @@ import pytest
 from aidd.adapters.codex.runner import (
     CodexCommandContext,
     CodexExitClassification,
+    CodexSelectorConflictError,
     CodexSubprocessSpec,
     assemble_command,
     build_execution_environment,
@@ -162,6 +163,59 @@ def test_build_native_subprocess_spec_uses_stdin_prompt_without_adapter_flags(
     assert spec.stdin_text is not None
     assert "# AIDD stage runtime request" in spec.stdin_text
     assert "# Stage brief" in spec.stdin_text
+
+
+def test_build_native_subprocess_spec_injects_typed_selectors(tmp_path: Path) -> None:
+    context = _context(tmp_path)
+
+    spec = build_subprocess_spec(
+        configured_command=get_runtime_definition("codex").default_command,
+        context=context,
+        repository_root=tmp_path,
+        execution_mode=RuntimeExecutionMode.NATIVE,
+        model="gpt-5.6-luna",
+        reasoning_effort="high",
+    )
+
+    assert spec.command == (
+        "codex",
+        "exec",
+        "--dangerously-bypass-approvals-and-sandbox",
+        "--skip-git-repo-check",
+        "--json",
+        "--model",
+        "gpt-5.6-luna",
+        "--config",
+        'model_reasoning_effort="high"',
+        "-",
+    )
+
+
+def test_build_subprocess_spec_preserves_command_without_typed_selectors(tmp_path: Path) -> None:
+    context = _context(tmp_path)
+    configured_command = "codex exec --model command-owned -"
+
+    spec = build_subprocess_spec(
+        configured_command=configured_command,
+        context=context,
+        repository_root=tmp_path,
+        execution_mode=RuntimeExecutionMode.NATIVE,
+    )
+
+    assert spec.command == tuple(configured_command.split())
+
+
+def test_build_subprocess_spec_rejects_command_owned_selector_conflict(tmp_path: Path) -> None:
+    context = _context(tmp_path)
+
+    with pytest.raises(CodexSelectorConflictError, match="selector conflict"):
+        build_subprocess_spec(
+            configured_command="codex exec --model command-owned -",
+            context=context,
+            repository_root=tmp_path,
+            execution_mode=RuntimeExecutionMode.NATIVE,
+            model="typed-model",
+        )
 
 
 def test_run_subprocess_with_streaming_captures_output_and_callbacks(tmp_path: Path) -> None:

@@ -69,6 +69,8 @@ class RuntimeCapabilityReadiness:
     supports_permission_policy: bool | None
     supports_live_decisions: bool | None
     preferred_transport: str | None
+    supported_selectors: tuple[str, ...]
+    selector_execution_modes: tuple[str, ...]
 
 
 @dataclass(frozen=True, slots=True)
@@ -92,6 +94,8 @@ class RuntimeReadinessItem:
     authentication: RuntimeAuthenticationReadiness
     capabilities: RuntimeCapabilityReadiness
     latest_launch: RuntimeLaunchOutcome | None
+    configured_model: str | None
+    configured_reasoning_effort: str | None
 
 
 @dataclass(frozen=True, slots=True)
@@ -166,12 +170,22 @@ def resolve_runtime_readiness(
                     ),
                     detail=None if probe_report is None else probe_report.authentication_detail,
                 ),
-                capabilities=_capability_readiness(probe_report),
+                capabilities=_capability_readiness(
+                    probe_report,
+                    supported_selectors=tuple(
+                        selector.value for selector in definition.supported_selectors
+                    ),
+                    selector_execution_modes=tuple(
+                        mode.value for mode in definition.selector_execution_modes
+                    ),
+                ),
                 latest_launch=(
                     None
                     if launch_history is None
                     else launch_history.get(definition.runtime_id)
                 ),
+                configured_model=runtime_config.model,
+                configured_reasoning_effort=runtime_config.reasoning_effort,
             )
         )
     return RuntimeReadinessView(runtimes=tuple(runtimes))
@@ -179,6 +193,9 @@ def resolve_runtime_readiness(
 
 def _capability_readiness(
     probe_report: RuntimeReadinessProbeReport | None,
+    *,
+    supported_selectors: tuple[str, ...],
+    selector_execution_modes: tuple[str, ...],
 ) -> RuntimeCapabilityReadiness:
     capabilities = None if probe_report is None else probe_report.capabilities
     if capabilities is None:
@@ -192,6 +209,8 @@ def _capability_readiness(
             supports_permission_policy=None,
             supports_live_decisions=None,
             preferred_transport=None,
+            supported_selectors=supported_selectors,
+            selector_execution_modes=selector_execution_modes,
         )
     return RuntimeCapabilityReadiness(
         status="known",
@@ -203,6 +222,8 @@ def _capability_readiness(
         supports_permission_policy=capabilities.supports_permission_policy,
         supports_live_decisions=capabilities.supports_live_decisions,
         preferred_transport=capabilities.preferred_transport,
+        supported_selectors=supported_selectors,
+        selector_execution_modes=selector_execution_modes,
     )
 
 

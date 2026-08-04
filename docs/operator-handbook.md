@@ -124,6 +124,9 @@ mode = "native"
 [runtime.codex]
 command = "codex exec --dangerously-bypass-approvals-and-sandbox --skip-git-repo-check --json -"
 mode = "native"
+# Optional typed provider selectors. Omit either field to keep Codex's native default.
+# model = "gpt-5.6-luna"
+# reasoning_effort = "high"
 # timeout_seconds = 3600
 
 [runtime.opencode]
@@ -145,9 +148,24 @@ max_attempts = 2
 
 Configuration loading is fail-closed. Omitting a documented key selects its default, but
 an explicitly blank workspace, logging, command, execution-mode, permission-policy,
-interaction-mode, or auto-approval value is invalid. Unknown top-level sections, runtime
+interaction-mode, auto-approval, model, or reasoning-effort value is invalid. Unknown top-level sections, runtime
 sections, section keys, project fields, runtime ids, and stage-timeout names are rejected
 before any runtime process or persisted run state is created.
+
+`model` and `reasoning_effort` are optional typed selectors. AIDD validates their type,
+non-empty value, and runtime adapter capability before launch; it does not maintain a
+global model-id allowlist. Codex maps them in its adapter: subprocess commands receive
+`--model` and `--config model_reasoning_effort=...`, while brokered app-server requests
+receive `model` in `thread/start` and `effort` in `turn/start`. A typed selector that
+collides with a selector already owned by a custom command fails closed. With no typed
+override, AIDD leaves the command unchanged and records `runtime-default` in the run
+snapshot rather than asserting a factual provider model.
+
+The local Operator UI exposes the same selectors beside the runtime picker. Enter a model
+and optional reasoning effort before starting a workflow or stage; the fields are free-form
+because AIDD does not maintain a global model-id allowlist. Controls are enabled only when
+the selected runtime advertises the capability, blank values are omitted, and the chosen
+values plus `ui-selection` provenance are retained in the run snapshot.
 
 Claude Code, Codex, and OpenCode native mode adapt AIDD stage briefs and prompt
 packs to the raw provider CLI. Use `mode = "adapter-flags"` only for wrapper

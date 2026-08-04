@@ -70,7 +70,7 @@ _MANAGED_FLAG_OPTIONS = frozenset(
     }
 )
 _MANAGED_POSITIONAL_TOKENS = frozenset({"exec", "-"})
-_UNSUPPORTED_NAMED_OPTIONS = frozenset({"--profile", "-c", "--config"})
+_UNSUPPORTED_NAMED_OPTIONS = frozenset({"--profile"})
 
 
 class CodexLiveCommandError(ValueError):
@@ -81,15 +81,22 @@ class CodexLiveCommandError(ValueError):
 class CodexLiveCommand:
     executable: str
     model: str | None = None
+    reasoning_effort: str | None = None
 
 
-def parse_codex_live_command(configured_command: str) -> CodexLiveCommand:
+def parse_codex_live_command(
+    configured_command: str,
+    *,
+    typed_model: str | None = None,
+    typed_reasoning_effort: str | None = None,
+) -> CodexLiveCommand:
     try:
         tokens = split_command(configured_command, runtime_label="codex")
     except ValueError as exc:
         raise CodexLiveCommandError(f"codex-live-command: {exc}") from exc
 
     model: str | None = None
+    reasoning_effort: str | None = None
     index = 1
     seen_positionals: set[str] = set()
     while index < len(tokens):
@@ -103,6 +110,37 @@ def parse_codex_live_command(configured_command: str) -> CodexLiveCommand:
                 current=model,
                 candidate=_non_empty_option_value(token.partition("=")[2], option="--model"),
             )
+            index += 1
+            continue
+        if token in {"--config", "-c"}:
+            value, index = _required_option_value(tokens, index=index, option=token)
+            selector, selector_value = _config_selector(value)
+            if selector == "model":
+                model = _merge_model_option(current=model, candidate=selector_value)
+            elif selector == "reasoning_effort":
+                reasoning_effort = _merge_reasoning_option(
+                    current=reasoning_effort,
+                    candidate=selector_value,
+                )
+            else:
+                raise CodexLiveCommandError(
+                    f"codex-live-command: config selector {value!r} is not supported."
+                )
+            continue
+        if token.startswith("--config=") or token.startswith("-c="):
+            value = _non_empty_option_value(token.partition("=")[2], option=token)
+            selector, selector_value = _config_selector(value)
+            if selector == "model":
+                model = _merge_model_option(current=model, candidate=selector_value)
+            elif selector == "reasoning_effort":
+                reasoning_effort = _merge_reasoning_option(
+                    current=reasoning_effort,
+                    candidate=selector_value,
+                )
+            else:
+                raise CodexLiveCommandError(
+                    f"codex-live-command: config selector {value!r} is not supported."
+                )
             index += 1
             continue
         if token in _UNSUPPORTED_NAMED_OPTIONS or any(
@@ -132,10 +170,31 @@ def parse_codex_live_command(configured_command: str) -> CodexLiveCommand:
             continue
         raise CodexLiveCommandError(
             f"codex-live-command: unsupported argument {token!r}; only the managed "
-            "AIDD exec scaffold and --model/-m are supported in live mode."
+            "AIDD exec scaffold, model, and model_reasoning_effort selectors are "
+            "supported in live mode."
         )
 
-    return CodexLiveCommand(executable=tokens[0], model=model)
+    if typed_model is not None:
+        if model is not None:
+            raise CodexLiveCommandError(
+                "codex-live-command: typed model conflicts with a command-owned model selector."
+            )
+        model = _non_empty_option_value(typed_model, option="typed model")
+    if typed_reasoning_effort is not None:
+        if reasoning_effort is not None:
+            raise CodexLiveCommandError(
+                "codex-live-command: typed reasoning_effort conflicts with a command-owned "
+                "model_reasoning_effort selector."
+            )
+        reasoning_effort = _non_empty_option_value(
+            typed_reasoning_effort,
+            option="typed reasoning_effort",
+        )
+    return CodexLiveCommand(
+        executable=tokens[0],
+        model=model,
+        reasoning_effort=reasoning_effort,
+    )
 
 
 def _required_option_value(
@@ -165,6 +224,22 @@ def _merge_model_option(*, current: str | None, candidate: str) -> str:
     if current is not None and current != candidate:
         raise CodexLiveCommandError(
             "codex-live-command: conflicting model options "
+            f"{current!r} and {candidate!r}."
+        )
+    return candidate
+
+
+def _config_selector(value: str) -> tuple[str, str]:
+    key, separator, raw_value = value.partition("=")
+    if not separator or key.strip() != "model_reasoning_effort":
+        return "unsupported", ""
+    return "reasoning_effort", _non_empty_option_value(raw_value, option=key.strip())
+
+
+def _merge_reasoning_option(*, current: str | None, candidate: str) -> str:
+    if current is not None and current != candidate:
+        raise CodexLiveCommandError(
+            "codex-live-command: conflicting model_reasoning_effort options "
             f"{current!r} and {candidate!r}."
         )
     return candidate
@@ -342,8 +417,14 @@ def execute_codex_live_transport(
     timeout_seconds: float | None,
     cancel_requested: Callable[[], bool] | None = None,
     live_command: CodexLiveCommand | None = None,
+    model: str | None = None,
+    reasoning_effort: str | None = None,
 ) -> LiveTransportResult[CodexExitClassification]:
-    command = live_command or parse_codex_live_command(configured_command)
+    command = live_command or parse_codex_live_command(
+        configured_command,
+        typed_model=model,
+        typed_reasoning_effort=reasoning_effort,
+    )
     if not codex_live_transport_available(command):
         return LiveTransportResult(
             run_result=CodexRunResult(
@@ -366,6 +447,8 @@ def execute_codex_live_transport(
         base_env=base_env,
         repository_root=repository_root,
         execution_mode=RuntimeExecutionMode.NATIVE,
+        model=command.model,
+        reasoning_effort=command.reasoning_effort,
     )
     attempt_path.mkdir(parents=True, exist_ok=True)
     transcript_path = attempt_path / _CODEX_TRANSCRIPT_FILENAME
@@ -484,6 +567,11 @@ def execute_codex_live_transport(
             "approvalsReviewer": "user",
             "sandboxPolicy": {"type": "readOnly", "networkAccess": False},
             "input": [{"type": "text", "text": spec.stdin_text or ""}],
+            **(
+                {"effort": command.reasoning_effort}
+                if command.reasoning_effort is not None
+                else {}
+            ),
         },
     )
     completed = False

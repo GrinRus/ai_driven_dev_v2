@@ -28,8 +28,8 @@ _PROVIDER_AUTH_CHECK_TIMEOUT_SECONDS = 10
 LIVE_E2E_RUNTIME_ALLOWLIST = ("codex", "opencode", "claude-code", "qwen")
 LIVE_E2E_PROVIDER_TIMEOUT_SECONDS = 3600
 LIVE_E2E_STAGE_TIMEOUT_SECONDS = 3600
-LIVE_E2E_CODEX_MODEL = "gpt-5.5"
-LIVE_E2E_CODEX_REASONING_EFFORT = "xhigh"
+LIVE_E2E_CODEX_MODEL = "gpt-5.6-luna"
+LIVE_E2E_CODEX_REASONING_EFFORT = "high"
 LIVE_E2E_RUNTIME_COMMAND_ENV_VARS = {
     "claude-code": "AIDD_EVAL_CLAUDE_CODE_COMMAND",
     "codex": "AIDD_EVAL_CODEX_COMMAND",
@@ -45,24 +45,7 @@ def _toml_string(value: str) -> str:
 
 def _default_live_native_command(*, runtime_id: str) -> str:
     definition = get_runtime_definition(runtime_id)
-    if runtime_id != "codex":
-        return definition.default_command
-
-    command_tokens = shlex.split(definition.default_command)
-    if not command_tokens or command_tokens[-1] != "-":
-        raise ValueError(
-            "The native Codex default command must end with the stdin prompt marker '-'."
-        )
-    return shlex.join(
-        (
-            *command_tokens[:-1],
-            "--model",
-            LIVE_E2E_CODEX_MODEL,
-            "--config",
-            f'model_reasoning_effort="{LIVE_E2E_CODEX_REASONING_EFFORT}"',
-            command_tokens[-1],
-        )
-    )
+    return definition.default_command
 
 
 def resolve_live_runtime_commands(
@@ -259,6 +242,8 @@ def write_live_runtime_config(
                 "[runtime.codex]",
                 f"command = {_toml_string(_runtime_command('codex'))}",
                 f"mode = {_toml_string(runtime_entries['codex'].execution_mode.value)}",
+                f"model = {_toml_string(LIVE_E2E_CODEX_MODEL)}",
+                f"reasoning_effort = {_toml_string(LIVE_E2E_CODEX_REASONING_EFFORT)}",
                 f"timeout_seconds = {LIVE_E2E_PROVIDER_TIMEOUT_SECONDS}",
                 "",
                 "[runtime.codex.stage_timeouts]",

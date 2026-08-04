@@ -23,6 +23,9 @@ mode = "native"
 [runtime.codex]
 command = "codex exec --dangerously-bypass-approvals-and-sandbox --skip-git-repo-check --json -"
 mode = "native"
+# Optional typed selectors. Omit them to preserve Codex native defaults.
+# model = "gpt-5.6-luna"
+# reasoning_effort = "high"
 # timeout_seconds = 900
 
 [runtime.opencode]
