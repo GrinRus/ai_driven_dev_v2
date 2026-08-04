@@ -15,7 +15,7 @@ The project distinguishes between:
 | --- | --- | --- | --- | --- | --- | --- | --- |
 | `generic-cli` | Tier 1 (release-blocking maintained) | subprocess CLI | yes, if the wrapped tool emits them | adapter-defined | usually no | no | baseline portability adapter |
 | `claude-code` | Tier 1 (release-blocking maintained) | CLI-first, optional richer SDK path later | yes | yes when available | yes when available | yes | first-class maintained runtime |
-| `codex` | Tier 2 (actively maintained, non-blocking) | CLI-first | yes | yes when JSONL is emitted | yes when JSONL question events are emitted | yes | second-wave maintained runtime |
+| `codex` | Tier 2 (actively maintained, non-blocking) | CLI-first and app-server brokered | yes | yes when JSONL is emitted | yes when JSONL question events are emitted | yes | typed model/effort selectors are adapter-owned |
 | `opencode` | Tier 3 (limited maintained, best-effort) | CLI-first / backend attach later | yes | yes when JSONL is emitted | yes when JSONL question events are emitted | yes | third-wave registered runtime |
 | `qwen` | Experimental | CLI-first; dual-output bridge targeted | yes | yes when stream JSON is emitted | yes when JSONL question events are emitted | unknown | experimental Qwen Code runtime |
 | `pi-mono` | Future / experimental (outside current tiers) | external bridge | adapter-defined | adapter-defined | adapter-defined | adapter-defined | treat as compatibility target first |
@@ -23,6 +23,30 @@ The project distinguishes between:
 ## Capability principle
 
 A runtime does not need every capability to participate, but the adapter must declare what is missing and the core must apply an explicit fallback.
+
+## Typed model and reasoning selectors
+
+Runtime TOML may optionally declare `model` and `reasoning_effort` under a runtime
+section. These are typed selectors, not a global model registry:
+
+```toml
+[runtime.codex]
+model = "gpt-5.6-luna"
+reasoning_effort = "high"
+```
+
+Values must be non-empty strings and the selected runtime adapter must advertise support
+for the selector in the configured execution mode. Codex owns the provider mapping:
+subprocess execution appends `--model` and `--config model_reasoning_effort=...`, while
+the brokered app-server path sends `model` in `thread/start` and `effort` in `turn/start`.
+Other adapters do not receive these Codex-specific parameters. If a custom command already
+owns a selector, a typed selector is rejected rather than appended with last-write-wins
+semantics. When omitted, no selector is injected and the provider's native default remains
+the effective choice.
+
+Run manifests record requested values and per-selector source (`runtime-config` or
+`runtime-default`). A runtime-default source deliberately does not claim which factual
+model the provider selected. The selection identity is immutable for a resumed run.
 
 ## Execution-command note
 

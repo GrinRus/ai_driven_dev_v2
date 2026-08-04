@@ -13424,3 +13424,107 @@ Sync notes:
   `gpt-5.5` with `model_reasoning_effort="xhigh"`; Claude Code and Qwen retain their
   catalog defaults, and focused harness, eval-doctor, static, and documentation checks
   pass.
+
+---
+
+## Wave 38 — typed runtime model and reasoning selection (`done`)
+
+Goal: expose optional typed `model` and `reasoning_effort` selectors in runtime TOML,
+map them only through adapter-owned capabilities, and preserve immutable selection
+provenance across subprocess, brokered Codex, live E2E, and resume paths.
+
+Non-goals:
+
+- adding a UI model picker or one-off CLI selector flags;
+- adding a static global model-id allowlist;
+- changing native defaults when selectors are omitted;
+- launching a provider-authenticated live scenario as an implementation gate.
+
+### Epic W38-E1 — typed runtime selection boundary (`done`)
+Linked stories: `US-01`, `US-07`, `US-08`, `US-10`
+
+#### Slice W38-E1-S1 — typed selector configuration and capabilities (`done`)
+Goal: parse optional runtime selectors, validate their types and adapter capabilities,
+and reject unsupported or conflicting combinations before launch.
+
+Dependencies:
+
+- existing runtime catalog, config loader, and adapter surface;
+- `W37-E1-S1` live Codex baseline.
+
+Local tasks:
+
+- `W38-E1-S1-T1` (done) Define typed runtime selector fields and capability metadata.
+  - Scope: `src/aidd/config.py`, `src/aidd/runtime_catalog.py`, config tests.
+  - Verification: omitted selectors preserve current native configuration; blank,
+    non-string, unsupported-runtime, and unsupported-mode combinations fail closed.
+
+- `W38-E1-S1-T2` (done) Validate selector conflicts before runtime allocation.
+  - Scope: typed command/capability validation at the config-to-adapter boundary and
+    focused negative tests.
+  - Verification: raw custom commands remain compatible without typed selectors, while
+    typed selectors conflicting with command-owned selectors fail closed before launch.
+
+#### Slice W38-E1-S2 — Codex subprocess selector assembly (`done`)
+Goal: inject typed selectors into Codex's native subprocess command without changing
+other runtime commands or allowing command-owned selector conflicts.
+
+Local tasks:
+
+- `W38-E1-S2-T1` (done) Assemble Codex subprocess model and reasoning selectors at the adapter boundary.
+  - Scope: `src/aidd/adapters/codex/runner.py`, runtime execution request, adapter tests.
+  - Verification: empty configuration reproduces prior command tokens; Codex receives
+    `--model` and `--config model_reasoning_effort=...`; other runtimes receive no Codex flags.
+
+#### Slice W38-E1-S3 — Codex brokered selector payloads (`done`)
+Goal: carry typed Codex selection through native app-server `thread/start` and `turn/start`
+payloads while preserving command-owned conflict detection.
+
+Local tasks:
+
+- `W38-E1-S3-T1` (done) Map Codex selectors into brokered thread and turn start payloads.
+  - Scope: `src/aidd/adapters/codex/live.py`, brokered adapter tests.
+  - Verification: model appears only in `thread/start`, effort only in `turn/start`,
+    and conflicting command-owned selectors fail before provider allocation.
+
+#### Slice W38-E1-S4 — selection provenance and resume identity (`done`)
+Goal: persist requested selectors, effective source, and runtime-default semantics in
+run snapshots and make resumed runs immutable with respect to selection identity.
+
+Local tasks:
+
+- `W38-E1-S4-T1` (done) Persist typed selector provenance in stage and workflow run snapshots.
+  - Scope: `src/aidd/cli/stage_run.py`, `src/aidd/cli/run.py`, manifest/resume tests.
+  - Verification: requested selectors and source are readable in snapshots; omitted
+    selectors say `runtime-default` without claiming a factual model; resume rejects drift.
+
+#### Slice W38-E1-S5 — live E2E profile and operator documentation (`done`)
+Goal: use the typed selector surface for the Codex live profile and document the operator
+contract, runtime matrix, example TOML, and live E2E policy.
+
+Local tasks:
+
+- `W38-E1-S5-T1` (done) Generate the Luna/high Codex live profile and document typed selection behavior.
+  - Scope: `src/aidd/harness/live_runtime_config.py`, `aidd.example.toml`, architecture,
+    operator handbook, runtime matrix, and `docs/e2e`.
+  - Verification: live config contains Codex `gpt-5.6-luna`/`high`, other runtimes retain
+    native defaults, and docs checks plus focused harness tests pass.
+
+Exit evidence:
+
+- typed selectors validate before any runtime process is launched;
+- empty runtime configuration preserves prior commands and native defaults;
+- Codex subprocess and brokered app-server paths receive selectors at their native boundaries;
+- non-Codex adapters receive no Codex-specific parameters;
+- run snapshots and resume guards preserve immutable selection provenance;
+- live E2E generated Codex profile uses `gpt-5.6-luna` with `high` effort without requiring
+  a provider-authenticated scenario run.
+
+Sync notes:
+
+- `2026-08-04` Opened from the requested typed runtime-selection vertical slice. The work is
+  split by dominant subsystem and verification signal so core, adapter, provenance, and harness
+  changes remain reviewable independently. No historical Wave 37 entry is rewritten.
+- `2026-08-04` Completed the typed selector vertical slice. Config, adapter, app-server,
+  manifest/resume, live-profile, documentation, focused tests, full pytest (`2188 passed`),
+  Ruff, and mypy checks pass. No provider-authenticated live scenario was launched.

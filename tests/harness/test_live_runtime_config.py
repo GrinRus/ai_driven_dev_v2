@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import shlex
 import tomllib
 from pathlib import Path
 
@@ -115,14 +114,7 @@ def test_resolve_live_runtime_command_entries_defaults_codex_to_native() -> None
     assert entries["codex"].execution_mode is RuntimeExecutionMode.NATIVE
     assert entries["codex"].command.startswith("codex exec")
     assert entries["codex"].source == "default-native"
-    assert shlex.split(entries["codex"].command) == [
-        *shlex.split(get_runtime_definition("codex").default_command)[:-1],
-        "--model",
-        "gpt-5.5",
-        "--config",
-        'model_reasoning_effort="xhigh"',
-        "-",
-    ]
+    assert entries["codex"].command == get_runtime_definition("codex").default_command
 
 
 def test_resolve_live_runtime_command_entries_defaults_claude_code_to_native() -> None:
@@ -205,10 +197,11 @@ def test_write_live_runtime_config_records_native_modes(tmp_path: Path) -> None:
     assert "[runtime.codex]" in config_text
     assert (
         'command = "codex exec --dangerously-bypass-approvals-and-sandbox '
-        "--skip-git-repo-check --json --model gpt-5.5 "
-        "--config 'model_reasoning_effort=\\\"xhigh\\\"' -\""
+        "--skip-git-repo-check --json -\""
         in config_text
     )
+    assert 'model = "gpt-5.6-luna"' in config_text
+    assert 'reasoning_effort = "high"' in config_text
     assert 'mode = "native"' in config_text
     assert "[runtime.opencode]" in config_text
     assert 'command = "opencode run --format json --dangerously-skip-permissions"' in config_text
@@ -285,11 +278,9 @@ def test_write_live_runtime_config_preserves_real_runtime_defaults(tmp_path: Pat
     config = tomllib.loads(config_path.read_text(encoding="utf-8"))
 
     assert "permission_policy" not in config["runtime"]["codex"]
-    assert (
-        config["runtime"]["codex"]["command"]
-        == "codex exec --dangerously-bypass-approvals-and-sandbox --skip-git-repo-check "
-        "--json --model gpt-5.5 --config 'model_reasoning_effort=\"xhigh\"' -"
-    )
+    assert config["runtime"]["codex"]["command"] == get_runtime_definition("codex").default_command
+    assert config["runtime"]["codex"]["model"] == "gpt-5.6-luna"
+    assert config["runtime"]["codex"]["reasoning_effort"] == "high"
 
 
 def test_validate_live_runtime_command_checks_native_executable(

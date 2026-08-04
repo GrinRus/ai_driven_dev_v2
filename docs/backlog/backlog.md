@@ -35,6 +35,13 @@ No task is promoted while the external Codex acceptance is active.
 
 ## Current reconciliation
 
+- `2026-08-04` Wave 38 is complete. Typed `model` and `reasoning_effort` selectors are
+  capability-gated, Codex-specific mapping is covered for subprocess and app-server paths,
+  run snapshots record requested values and `runtime-config`/`runtime-default` provenance,
+  and resume rejects selection drift. The generated Codex live profile uses
+  `gpt-5.6-luna` with `high`; other runtimes retain native defaults. Full pytest passes
+  `2188/2188`, Ruff and mypy pass, and no provider-authenticated live scenario ran.
+
 - `2026-08-03` `W36-E7-S4-T93` is complete. The CodeQL-reported shell compound-evidence
   expression now makes command-substitution and plain assignment alternatives disjoint and uses
   a possessive assignment prefix, removing exponential backtracking without changing accepted

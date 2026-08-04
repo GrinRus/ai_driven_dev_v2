@@ -648,7 +648,15 @@ def _execute_codex(
         execution_mode=request.execution_mode,
         provider_present=operator_decision_provider is not None,
     )
-    live_command = parse_codex_live_command(configured_command) if use_live_transport else None
+    live_command = (
+        parse_codex_live_command(
+            configured_command,
+            typed_model=request.model,
+            typed_reasoning_effort=request.reasoning_effort,
+        )
+        if use_live_transport
+        else None
+    )
     if live_command is not None and codex_live_transport_available(live_command):
         broker = RuntimeOperatorBroker(
             policy=_operator_policy_for_stage_request(request),
@@ -668,6 +676,8 @@ def _execute_codex(
             timeout_seconds=request.timeout_seconds,
             cancel_requested=request.cancel_requested,
             live_command=live_command,
+            model=request.model,
+            reasoning_effort=request.reasoning_effort,
         )
         live_event_artifacts = persist_lifecycle_projection_from_jsonl(
             attempt_path=attempt_path,
@@ -730,6 +740,8 @@ def _execute_codex(
         base_env=base_env,
         repository_root=request.repository_root,
         execution_mode=request.execution_mode,
+        model=request.model,
+        reasoning_effort=request.reasoning_effort,
     )
     run_result = run_codex_subprocess_with_streaming(
         spec=spec,

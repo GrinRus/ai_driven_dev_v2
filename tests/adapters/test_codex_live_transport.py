@@ -92,6 +92,8 @@ def _request(
     *,
     timeout_seconds: float = 5.0,
     cancel_requested: Callable[[], bool] | None = None,
+    model: str | None = None,
+    reasoning_effort: str | None = None,
 ) -> StageRuntimeRequest:
     repo = tmp_path / "repo"
     workspace = tmp_path / ".aidd"
@@ -117,6 +119,8 @@ def _request(
         repository_root=repo,
         project_roots=(repo,),
         cancel_requested=cancel_requested,
+        model=model,
+        reasoning_effort=reasoning_effort,
     )
 
 
@@ -282,6 +286,51 @@ def test_codex_live_transport_resumes_after_provider_decision(tmp_path: Path) ->
         "type": "readOnly",
         "networkAccess": False,
     }
+
+
+def test_codex_live_transport_maps_typed_selectors_to_native_start_payloads(
+    tmp_path: Path,
+) -> None:
+    fake_codex = _fake_codex(tmp_path)
+    attempt_path = tmp_path / "attempt"
+
+    result = get_runtime_adapter_surface("codex").execute_stage_request(
+        configured_command=f"{fake_codex} exec --json -",
+        request=_request(
+            tmp_path,
+            model="gpt-5.6-luna",
+            reasoning_effort="high",
+        ),
+        attempt_path=attempt_path,
+        base_env={},
+        operator_decision_provider=_DecisionProvider(
+            RuntimeOperatorDecisionAction.ALLOW_FOR_SESSION
+        ),
+    )
+
+    assert result.resolved_status is AdapterExecutionStatus.SUCCEEDED
+    transcript = [
+        json.loads(line)
+        for line in (attempt_path / "codex-app-server.jsonl").read_text(
+            encoding="utf-8",
+        ).splitlines()
+    ]
+    thread_start = next(
+        item["payload"]
+        for item in transcript
+        if item["direction"] == "client"
+        and item["payload"].get("method") == "thread/start"
+    )
+    turn_start = next(
+        item["payload"]
+        for item in transcript
+        if item["direction"] == "client"
+        and item["payload"].get("method") == "turn/start"
+    )
+    assert thread_start["params"]["model"] == "gpt-5.6-luna"
+    assert "effort" not in thread_start["params"]
+    assert turn_start["params"]["effort"] == "high"
+    assert "model" not in turn_start["params"]
 
 
 @pytest.mark.parametrize(

@@ -51,7 +51,7 @@ from aidd.cli.ui_job_evidence import (
     build_ui_job_terminal_evidence,
 )
 from aidd.cli.ui_routing import OperatorUiRouter, UiJobDecisionConflict, handler_for
-from aidd.config import AiddConfig, load_config
+from aidd.config import AiddConfig, load_config, runtime_selection_config_snapshot
 from aidd.core.allowed_write_scope import (
     AllowedWriteScopeError,
     resolve_allowed_write_scope,
@@ -3992,6 +3992,7 @@ class OperatorUiService:
             "runtime_permission_policy": runtime_config.permission_policy.value,
             "runtime_interaction_mode": runtime_config.interaction_mode.value,
             "runtime_auto_approval_preset": runtime_config.auto_approval_preset.value,
+            **runtime_selection_config_snapshot(runtime_config),
             "log_follow": log_follow,
             "mode": "ui-workflow",
         }

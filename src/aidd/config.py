@@ -14,6 +14,7 @@ from aidd.runtime_catalog import (
     get_runtime_definition,
     normalize_execution_mode,
     runtime_ids,
+    validate_runtime_selectors,
 )
 from aidd.runtime_permissions import (
     AutoApprovalPreset,
@@ -45,6 +46,8 @@ _RUNTIME_CONFIG_KEYS = frozenset(
         "permission_policy",
         "interaction_mode",
         "auto_approval_preset",
+        "model",
+        "reasoning_effort",
     }
 )
 _PROJECT_CONFIG_KEYS = frozenset({"id", "root", "role"})
@@ -59,6 +62,8 @@ class RuntimeConfig:
     permission_policy: RuntimePermissionPolicy = RuntimePermissionPolicy.FULL_ACCESS
     interaction_mode: RuntimeInteractionMode = RuntimeInteractionMode.BATCH
     auto_approval_preset: AutoApprovalPreset = AutoApprovalPreset.BROAD
+    model: str | None = None
+    reasoning_effort: str | None = None
 
 
 @dataclass(frozen=True)
@@ -384,8 +389,15 @@ def _copy_runtime_configs(
             problems.append(f"unknown runtime configs: {', '.join(unknown_runtime_ids)}")
         raise ValueError("; ".join(problems))
 
-    return {
-        runtime_id: RuntimeConfig(
+    copied: dict[str, RuntimeConfig] = {}
+    for runtime_id, runtime_config in runtime_configs.items():
+        validate_runtime_selectors(
+            runtime_id=runtime_id,
+            execution_mode=runtime_config.execution_mode,
+            model=runtime_config.model,
+            reasoning_effort=runtime_config.reasoning_effort,
+        )
+        copied[runtime_id] = RuntimeConfig(
             command=runtime_config.command,
             execution_mode=runtime_config.execution_mode,
             timeout_seconds=runtime_config.timeout_seconds,
@@ -393,9 +405,10 @@ def _copy_runtime_configs(
             permission_policy=runtime_config.permission_policy,
             interaction_mode=runtime_config.interaction_mode,
             auto_approval_preset=runtime_config.auto_approval_preset,
+            model=runtime_config.model,
+            reasoning_effort=runtime_config.reasoning_effort,
         )
-        for runtime_id, runtime_config in runtime_configs.items()
-    }
+    return copied
 
 
 def _normalize_runtime_configs(
@@ -684,6 +697,54 @@ def _runtime_auto_approval_preset(
         ) from exc
 
 
+def _optional_runtime_selector(
+    data: dict[str, Any],
+    runtime_id: str,
+    field_name: str,
+) -> str | None:
+    definition = get_runtime_definition(runtime_id)
+    section = _runtime_section(data, runtime_id)
+    if field_name not in section:
+        return None
+    raw_value = section[field_name]
+    if not isinstance(raw_value, str):
+        raise ValueError(
+            f"[runtime.{definition.config_section}.{field_name}] must be a string when provided."
+        )
+    value = raw_value.strip()
+    if not value:
+        raise ValueError(
+            f"[runtime.{definition.config_section}.{field_name}] must not be blank when provided."
+        )
+    return value
+
+
+def runtime_selection_snapshot(runtime_config: RuntimeConfig) -> dict[str, Any]:
+    return {
+        "requested_model": runtime_config.model,
+        "requested_reasoning_effort": runtime_config.reasoning_effort,
+        "model_source": (
+            "runtime-config" if runtime_config.model is not None else "runtime-default"
+        ),
+        "reasoning_effort_source": (
+            "runtime-config"
+            if runtime_config.reasoning_effort is not None
+            else "runtime-default"
+        ),
+    }
+
+
+def runtime_selection_config_snapshot(runtime_config: RuntimeConfig) -> dict[str, Any]:
+    selection = runtime_selection_snapshot(runtime_config)
+    return {
+        "runtime_model": selection["requested_model"],
+        "runtime_reasoning_effort": selection["requested_reasoning_effort"],
+        "runtime_model_source": selection["model_source"],
+        "runtime_reasoning_effort_source": selection["reasoning_effort_source"],
+        "runtime_selection": selection,
+    }
+
+
 def _parse_project_set(data: dict[str, Any]) -> ProjectSetConfig:
     raw_project_set = data.get("project_set", {})
     if raw_project_set is None:
@@ -758,14 +819,35 @@ def load_config(path: Path) -> AiddConfig:
     runtime_configs: dict[str, RuntimeConfig] = {}
     for runtime_id in runtime_ids():
         permission_policy = _runtime_permission_policy(data, runtime_id)
+        execution_mode = _runtime_execution_mode(data, runtime_id)
+        model = _optional_runtime_selector(data, runtime_id, "model")
+        reasoning_effort = _optional_runtime_selector(
+            data,
+            runtime_id,
+            "reasoning_effort",
+        )
+        try:
+            validate_runtime_selectors(
+                runtime_id=runtime_id,
+                execution_mode=execution_mode,
+                model=model,
+                reasoning_effort=reasoning_effort,
+            )
+        except ValueError as exc:
+            definition = get_runtime_definition(runtime_id)
+            raise ValueError(
+                f"[runtime.{definition.config_section}] {exc}"
+            ) from exc
         runtime_configs[runtime_id] = RuntimeConfig(
             command=_runtime_command(data, runtime_id, permission_policy),
-            execution_mode=_runtime_execution_mode(data, runtime_id),
+            execution_mode=execution_mode,
             timeout_seconds=_runtime_timeout_seconds(data, runtime_id),
             stage_timeout_seconds=_runtime_stage_timeout_seconds(data, runtime_id),
             permission_policy=permission_policy,
             interaction_mode=_runtime_interaction_mode(data, runtime_id),
             auto_approval_preset=_runtime_auto_approval_preset(data, runtime_id),
+            model=model,
+            reasoning_effort=reasoning_effort,
         )
     log_mode = _string_config_value(
         _config_table(data, "logging"),

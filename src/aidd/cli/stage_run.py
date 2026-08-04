@@ -134,6 +134,8 @@ class StageRunRuntimeConfig:
     runtime_timeout_seconds: float | None
     repair_policy: RepairBudgetPolicy
     project_set: ResolvedProjectSet | None
+    runtime_model: str | None = None
+    runtime_reasoning_effort: str | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -227,6 +229,8 @@ def _resolve_stage_run_config(options: StageRunOptions) -> StageRunRuntimeConfig
         runtime_permission_policy=runtime_cfg.permission_policy,
         runtime_interaction_mode=runtime_cfg.interaction_mode,
         runtime_auto_approval_preset=runtime_cfg.auto_approval_preset,
+        runtime_model=runtime_cfg.model,
+        runtime_reasoning_effort=runtime_cfg.reasoning_effort,
         runtime_timeout_seconds=_runtime_timeout_for_runtime(
             runtime=options.runtime,
             cfg=cfg,
@@ -380,6 +384,8 @@ def _execute_adapter_invocation(
         operator_request_path=invocation.operator_request_path,
         operator_request_markdown=invocation.operator_request_markdown,
         cancel_requested=options.cancel_requested,
+        model=runtime_config.runtime_model,
+        reasoning_effort=runtime_config.runtime_reasoning_effort,
     )
 
     def _on_stdout(chunk: str) -> None:
@@ -617,6 +623,32 @@ def _write_run_manifest(
             "runtime_auto_approval_preset": (runtime_config.runtime_auto_approval_preset.value),
             "runtime_timeout_seconds": runtime_config.runtime_timeout_seconds,
             "log_follow": options.log_follow,
+            "runtime_model": runtime_config.runtime_model,
+            "runtime_reasoning_effort": runtime_config.runtime_reasoning_effort,
+            "runtime_model_source": (
+                "runtime-config"
+                if runtime_config.runtime_model is not None
+                else "runtime-default"
+            ),
+            "runtime_reasoning_effort_source": (
+                "runtime-config"
+                if runtime_config.runtime_reasoning_effort is not None
+                else "runtime-default"
+            ),
+            "runtime_selection": {
+                "requested_model": runtime_config.runtime_model,
+                "requested_reasoning_effort": runtime_config.runtime_reasoning_effort,
+                "model_source": (
+                    "runtime-config"
+                    if runtime_config.runtime_model is not None
+                    else "runtime-default"
+                ),
+                "reasoning_effort_source": (
+                    "runtime-config"
+                    if runtime_config.runtime_reasoning_effort is not None
+                    else "runtime-default"
+                ),
+            },
         },
     )
 

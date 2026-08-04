@@ -138,3 +138,49 @@ def test_unbounded_continuation_preserves_runtime_and_config_identity(
         )
 
     assert manifest_path.read_bytes() == before
+
+
+def test_unbounded_continuation_preserves_typed_runtime_selection_identity(
+    tmp_path: Path,
+) -> None:
+    workspace_root = tmp_path / ".aidd"
+    selection = {
+        "runtime_model": "gpt-5.6-luna",
+        "runtime_reasoning_effort": "high",
+        "runtime_model_source": "runtime-config",
+        "runtime_reasoning_effort_source": "runtime-config",
+        "runtime_selection": {
+            "requested_model": "gpt-5.6-luna",
+            "requested_reasoning_effort": "high",
+            "model_source": "runtime-config",
+            "reasoning_effort_source": "runtime-config",
+        },
+    }
+    manifest_path = create_run_manifest(
+        workspace_root=workspace_root,
+        work_item="WI-STEPWISE",
+        run_id="run-stepwise",
+        runtime_id="codex",
+        stage_target="idea",
+        config_snapshot=selection,
+    )
+    _mark_succeeded(workspace_root, "idea")
+
+    with pytest.raises(ValueError, match="runtime_selection"):
+        create_run_manifest(
+            workspace_root=workspace_root,
+            work_item="WI-STEPWISE",
+            run_id="run-stepwise",
+            runtime_id="codex",
+            stage_target="research",
+            config_snapshot={
+                **selection,
+                "runtime_reasoning_effort": "low",
+                "runtime_selection": {
+                    **selection["runtime_selection"],
+                    "requested_reasoning_effort": "low",
+                },
+            },
+        )
+
+    assert manifest_path.read_bytes()

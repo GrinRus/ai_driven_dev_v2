@@ -923,6 +923,27 @@ def create_run_manifest(
             mismatches.append("stage_target")
         existing_config = existing.get("config_snapshot")
         if isinstance(existing_config, dict):
+            def _legacy_default_selection_compatible(key: str) -> bool:
+                if key not in config_snapshot or key in existing_config:
+                    return False
+                if key in {"runtime_model", "runtime_reasoning_effort"}:
+                    return config_snapshot[key] is None
+                if key in {
+                    "runtime_model_source",
+                    "runtime_reasoning_effort_source",
+                }:
+                    return bool(config_snapshot[key] == "runtime-default")
+                if key == "runtime_selection":
+                    selection = config_snapshot[key]
+                    return (
+                        isinstance(selection, dict)
+                        and selection.get("requested_model") is None
+                        and selection.get("requested_reasoning_effort") is None
+                        and selection.get("model_source") == "runtime-default"
+                        and selection.get("reasoning_effort_source") == "runtime-default"
+                    )
+                return False
+
             for key in (
                 "workspace_root",
                 "runtime_command",
@@ -930,7 +951,14 @@ def create_run_manifest(
                 "runtime_permission_policy",
                 "runtime_interaction_mode",
                 "runtime_auto_approval_preset",
+                "runtime_model",
+                "runtime_reasoning_effort",
+                "runtime_model_source",
+                "runtime_reasoning_effort_source",
+                "runtime_selection",
             ):
+                if _legacy_default_selection_compatible(key):
+                    continue
                 if (key in existing_config or key in config_snapshot) and (
                     existing_config.get(key) != config_snapshot.get(key)
                 ):
