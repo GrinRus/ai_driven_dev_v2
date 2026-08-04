@@ -34,7 +34,7 @@ supporting evidence is not inherently wrong.
   after one launch request.
 - Time box: 8 minutes.
 
-### O2 — Existing-workspace re-entry, Inbox triage, and new work
+### O2 — Inbox triage
 
 - Entry: an existing `.aidd/` workspace with no selected work item, one blocking decision, one
   ready continuation, one running overlay, and one completed flow.

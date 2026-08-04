@@ -2229,7 +2229,7 @@
   gap: var(--space-2);
   grid-template-columns: auto minmax(0, 1fr);
   justify-content: stretch;
-  min-height: 38px;
+  min-height: var(--control-height-progress-step);
   padding: 6px 8px;
   text-align: left;
   width: 100%;
@@ -3471,7 +3471,7 @@ button.artifact-row:not(:disabled):not([aria-disabled="true"]):hover {
   border: 1px solid var(--color-border-default);
   font-size: var(--type-caption-size);
   margin: 0;
-  max-height: 42rem;
+  max-height: var(--reader-comparison-source-max-height);
   overflow: auto;
   padding: var(--space-3);
 }

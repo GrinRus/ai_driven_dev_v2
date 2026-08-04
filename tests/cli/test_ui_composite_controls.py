@@ -21,11 +21,11 @@ def test_segmented_filters_publish_pressed_state_from_the_same_selection() -> No
         'aria-pressed="${state.implementDiffFilter === id ? "true" : "false"}"'
         in implementation
     )
-    for mode in ("preview", "source", "diff"):
+    for mode in ("preview", "source", "compare"):
         pressed_state = (
             f'aria-pressed="${{state.artifactViewMode === "{mode}" ? "true" : "false"}}"'
         )
-        assert artifacts.count(pressed_state) == 2
+        assert artifacts.count(pressed_state) == 1
 
 
 def test_clickable_rows_publish_authoritative_selection_state_without_false_modes() -> None:

@@ -27,9 +27,9 @@ Today:
 - `aidd stage interact` records a stage-scoped operator request and runs an
   intervention attempt in the current run through the same adapter boundary;
 - `aidd ui` opens Guided Setup only for missing, non-directory, or inaccessible workspace context; an existing
-  project-local `.aidd/` workspace opens the decision-first Inbox, which has explicit
-  independent work-item creation, active-run visibility, implementation repository evidence,
-  exact Review/QA gates, History, and
+  project-local `.aidd/` workspace opens the decision-first Inbox and then **Document & Evidence Studio**, with
+  explicit independent work-item creation, active-run visibility, implementation repository evidence, exact
+  Review/QA gates, History, and
   review/QA remediation back to `implement`;
 - manual external eval policies and runbooks live under `docs/e2e/`.
 

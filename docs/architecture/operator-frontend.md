@@ -387,8 +387,8 @@ current help behavior in this release. `aidd ui` can start without `--work-item`
 Guided Setup only when the resolved project root or project-local `.aidd/` path is
 missing, non-directory, or inaccessible. An accessible existing workspace opens its project Inbox
 instead.
-`aidd ui --work-item <id> --root <path>` remains an explicit deep link that opens the existing
-command center for that work item.
+`aidd ui --work-item <id> --root <path>` bypasses setup mode and remains an explicit deep link
+that opens the existing command center for that work item.
 
 For this entry decision, an accessible `.aidd/` directory is an existing workspace even when it
 contains no work item yet; a work-item marker is not required to open Inbox and create the first

@@ -129,6 +129,7 @@
   --control-height-compact: 32px;
   --control-height-default: 36px;
   --control-height-touch: 44px;
+  --control-height-progress-step: 38px;
   --control-height: var(--control-height-compact);
   --control-border-width: 1px;
   --control-font-size: var(--type-label-size);
@@ -149,6 +150,9 @@
   --motion-duration-slow: 240ms;
   --motion-ease-standard: cubic-bezier(0.2, 0, 0, 1);
   --motion-ease-emphasized: cubic-bezier(0.2, 0, 0, 1.2);
+
+  /* Bounded reading keeps retained source comparison scannable. */
+  --reader-comparison-source-max-height: 42rem;
 
   font-family: var(--font-sans);
   background: var(--bg);

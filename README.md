@@ -151,15 +151,14 @@ aidd doctor
 aidd ui
 ```
 
-`aidd ui` starts a loopback server and prints its local URL. Open that URL in a browser. When
-the project has no accessible local `.aidd/` directory, Guided Setup lets you create or resume a work
-item, enter the request, inspect runtime readiness, and select a runtime before launch. When an
-accessible `.aidd/` directory already exists, a bare restart opens the project Inbox instead of
-onboarding; it does not need an existing work-item marker. The Inbox has an explicit **New work
-item** action for independent work; creating it does not require selecting a runtime or disturb
-existing work. Select a runtime only when you choose to launch a workflow or stage. The UI and
-CLI use the same project-local `.aidd/`
-workspace.
+`aidd ui` starts a loopback server and prints its local URL. Open that URL in a browser. Without `--work-item`, it chooses the entry surface from the durable project state: when the project has
+no accessible local `.aidd/` directory, Guided Setup lets you create or resume a work item, enter
+the request, inspect runtime readiness, and select a runtime before launch. When an accessible
+`.aidd/` directory already exists, a bare restart opens the project Inbox instead of onboarding;
+it does not need an existing work-item marker. The Inbox has an explicit **New work item** action
+for independent work; creating it does not require selecting a runtime or disturb existing work.
+Select a runtime only when you choose to launch a workflow or stage. The UI and CLI use the same
+project-local `.aidd/` workspace.
 
 To open an initialized work item directly:
 
