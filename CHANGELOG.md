@@ -7,7 +7,14 @@ stable compatibility window exists.
 
 ## Unreleased
 
-- Reserved for changes after `v0.1.0a16`.
+- Reserved for changes after `v0.1.0a17`.
+
+## 0.1.0a17 - 2026-08-04
+
+- Fix the experimental Qwen native runtime default: use the supported
+  `--approval-mode auto` value instead of the rejected `yolo` value.
+- Keep permission-bypass detection, the operator handbook, live-runtime configuration, and
+  Qwen adapter coverage aligned with the supported approval mode.
 
 ## 0.1.0a16 - 2026-08-04
 

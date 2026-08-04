@@ -166,10 +166,11 @@ python -m scripts.release.evidence_collector release-evidence.json
 
 ## Maintainer release state
 
-Maintainer source development package version: `0.1.0a17.dev0`.
+Release candidate package version: `0.1.0a17`.
 Latest accepted published prerelease evidence: `0.1.0a16`.
 Previous accepted published prerelease evidence: `0.1.0a15`.
-No current release candidate is accepted from this development version.
+`v0.1.0a17` is a prepared candidate only; it is not accepted release evidence until the
+GitHub Release is published and its PyPI, `pipx`, and `uv tool` verification jobs pass.
 
 README install guidance is pinned to `0.1.0a16` because the `v0.1.0a16` GitHub Release
 workflow published to PyPI and verified `pipx` plus `uv tool` installability. The accepted
