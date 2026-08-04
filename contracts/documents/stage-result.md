@@ -73,6 +73,13 @@ or validation wording when the canonical validator report proves the draft incon
 - `Status`
   - Must contain one terminal stage status for this run (`succeeded`, `failed`, `blocked`, or `needs-input`).
   - Must not use ambiguous states such as `done-ish` or `in progress`.
+- `Blockers`
+  - A succeeded stage-result must use exactly `- none` when no unresolved blocking
+    question or other terminal blocker remains.
+  - AIDD may normalize an explicitly empty successful runtime claim such as `No blockers.`
+    to `- none` before canonical validation when no unresolved blocking question exists; it
+    must never erase a concrete blocker. Blocked and needs-input results must retain concrete
+    blocker entries.
 - `Produced outputs`
   - Must list output documents produced in the final attempt as AIDD workspace-relative paths.
   - Must explicitly note missing required outputs when status is not `succeeded`.
@@ -121,6 +128,8 @@ or validation wording when the canonical validator report proves the draft incon
 ## Authoring rules
 
 - Use required heading names exactly; do not collapse `Attempt history` into `Status`.
+- Core-authored repair-history stage results must use `# Stage Result` as the document title
+  and `## Stage` as the required stage section heading.
 - Replace any placeholder stage-result content completely. A completed or halted stage result
   must not retain the bootstrap copy `# Stage result` / `Stage not run yet.` above or inside
   the real `# Stage Result` document.

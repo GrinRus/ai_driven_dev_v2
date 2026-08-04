@@ -270,6 +270,46 @@ def test_render_repair_brief_adds_actionable_list_format_hint() -> None:
     assert "write exactly `- none`" in repair_brief
 
 
+def test_render_repair_brief_adds_placeholder_and_success_blocker_hints() -> None:
+    report_markdown = render_validator_report(
+        findings=(
+            ValidationFinding(
+                code="SEM-PLACEHOLDER-CONTENT",
+                message=(
+                    "Placeholder content remains in required section `Decision`: `TODO`."
+                ),
+                severity="high",
+                location=ValidationIssueLocation(
+                    workspace_relative_path=(
+                        "workitems/WI-001/stages/review-spec/review-spec-report.md"
+                    ),
+                    line_number=12,
+                ),
+            ),
+            ValidationFinding(
+                code="SEM-INCOMPLETE-SECTION",
+                message="A succeeded stage-result must declare `- none` in `Blockers`.",
+                severity="high",
+                location=ValidationIssueLocation(
+                    workspace_relative_path="workitems/WI-001/stages/review-spec/stage-result.md",
+                    line_number=30,
+                ),
+            ),
+        )
+    )
+
+    repair_brief = render_repair_brief(
+        validator_report_markdown=report_markdown,
+        validator_report_path="workitems/WI-001/stages/review-spec/validator-report.md",
+        prior_stage_artifacts=(),
+        stage_attempt_count=1,
+        max_repair_attempts=2,
+    )
+
+    assert "named placeholder token(s)" in repair_brief
+    assert "replace the entire `Blockers` section body" in repair_brief
+
+
 def test_render_repair_brief_names_canonical_tasklist_milestone_locations() -> None:
     report_markdown = render_validator_report(
         findings=(
@@ -627,6 +667,7 @@ def test_render_stage_result_with_repair_history_includes_attempt_lines() -> Non
         repair_brief_path="workitems/WI-001/stages/review/repair-brief.md",
     )
 
+    assert stage_result.startswith("# Stage Result\n\n## Stage\n\n- Stage: `review`\n")
     assert "## Attempt history" in stage_result
     assert "- Attempt `1` (`initial`) -> failed validation." in stage_result
     assert "- Attempt `2` (`repair`) -> failed validation." in stage_result

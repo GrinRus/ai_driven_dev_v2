@@ -5,9 +5,12 @@ from datetime import datetime
 from pathlib import Path
 
 from aidd.core.interview import (
+    InterviewQuestion,
     load_questions_document,
     parse_answers_markdown,
+    parse_questions_markdown,
     render_answers_markdown,
+    render_questions_markdown,
 )
 from aidd.core.project_set import ResolvedProjectSet
 from aidd.core.remediation import latest_remediation_input_documents
@@ -75,6 +78,7 @@ from aidd.core.stage_terminal import (
     ensure_stage_result_references_repair_brief,
     exhausted_budget_validation_finding,
     force_stage_result_failed_for_exhausted_budget,
+    normalize_success_stage_result_blockers_if_empty,
     repair_brief_exhausts_terminal_budget,
     strip_stage_result_success_claims_for_validator_findings,
 )
@@ -221,6 +225,8 @@ def _should_include_existing_stage_outputs_for_resume(
     )
     if metadata is None:
         return False
+    if metadata.status == StageState.REPAIR_NEEDED.value:
+        return True
     return metadata.status == StageState.PREPARING.value and any(
         status_change.status == StageState.BLOCKED.value
         for status_change in metadata.status_history
@@ -244,6 +250,25 @@ def _read_stage_answers_text(
     if not answers_path.exists():
         return None
     return answers_path.read_text(encoding="utf-8")
+
+
+def _read_stage_questions_text(
+    *,
+    workspace_root: Path,
+    work_item: str,
+    stage: str,
+) -> str | None:
+    questions_path = (
+        workspace_stage_root(
+            root=workspace_root,
+            work_item=work_item,
+            stage=stage,
+        )
+        / "questions.md"
+    )
+    if not questions_path.exists():
+        return None
+    return questions_path.read_text(encoding="utf-8")
 
 
 def _answers_text_is_no_answer_placeholder(answers_text: str) -> bool:
@@ -304,6 +329,64 @@ def _restore_operator_owned_answers_after_runtime_attempt(
         answers_path.write_text(answers_text_before_attempt, encoding="utf-8")
 
 
+def _restore_and_merge_questions_after_runtime_attempt(
+    *,
+    workspace_root: Path,
+    work_item: str,
+    stage: str,
+    questions_text_before_attempt: str | None,
+) -> None:
+    """Merge runtime questions into the durable ledger without dropping prior QIDs."""
+
+    if questions_text_before_attempt is None:
+        return
+
+    try:
+        previous_questions = parse_questions_markdown(questions_text_before_attempt)
+    except ValueError:
+        # Preserve the runtime document so canonical validation can report its malformed
+        # syntax instead of masking it with a core-authored replacement.
+        return
+
+    questions_path = (
+        workspace_stage_root(
+            root=workspace_root,
+            work_item=work_item,
+            stage=stage,
+        )
+        / "questions.md"
+    )
+    try:
+        current_questions_text = questions_path.read_text(encoding="utf-8")
+    except FileNotFoundError:
+        current_questions_text = None
+
+    current_questions: tuple[InterviewQuestion, ...]
+    if current_questions_text is None:
+        current_questions = ()
+    else:
+        try:
+            current_questions = parse_questions_markdown(current_questions_text)
+        except ValueError:
+            # Keep malformed runtime output visible to the validator.
+            return
+
+    merged = list(previous_questions)
+    index_by_question_id = {
+        question.question_id: index for index, question in enumerate(merged)
+    }
+    for question in current_questions:
+        existing_index = index_by_question_id.get(question.question_id)
+        if existing_index is None:
+            index_by_question_id[question.question_id] = len(merged)
+            merged.append(question)
+        else:
+            merged[existing_index] = question
+
+    questions_path.parent.mkdir(parents=True, exist_ok=True)
+    questions_path.write_text(render_questions_markdown(merged), encoding="utf-8")
+
+
 def _intervention_context_documents(
     *,
     workspace_root: Path,
@@ -345,6 +428,11 @@ def run_single_stage_orchestration(
     ]
     | None = None,
 ) -> StageOrchestrationResult:
+    questions_text_before_attempt = _read_stage_questions_text(
+        workspace_root=workspace_root,
+        work_item=work_item,
+        stage=stage,
+    )
     answers_text_before_attempt = _read_stage_answers_text(
         workspace_root=workspace_root,
         work_item=work_item,
@@ -557,6 +645,12 @@ def run_single_stage_orchestration(
         execution_state=execution_state,
         invocation_bundle=adapter_invocation,
     )
+    _restore_and_merge_questions_after_runtime_attempt(
+        workspace_root=workspace_root,
+        work_item=work_item,
+        stage=stage,
+        questions_text_before_attempt=questions_text_before_attempt,
+    )
     _restore_operator_owned_answers_after_runtime_attempt(
         workspace_root=workspace_root,
         work_item=work_item,
@@ -589,6 +683,19 @@ def run_single_stage_orchestration(
         stage=stage,
         repair_brief_path=repair_brief_trace_path,
     )
+    interview_routing, interview_findings = _route_stage_questions_to_interview_with_validation(
+        workspace_root=workspace_root,
+        discovery=discovery,
+    )
+    if not interview_findings and not interview_routing.requires_interview:
+        normalize_success_stage_result_blockers_if_empty(
+            workspace_stage_root(
+                root=workspace_root,
+                work_item=work_item,
+                stage=stage,
+            )
+            / "stage-result.md"
+        )
     validation_result = run_structural_validation_after_output_discovery(
         workspace_root=workspace_root,
         discovery=discovery,
@@ -615,10 +722,6 @@ def run_single_stage_orchestration(
             validation_result=validation_result,
             findings=findings,
         )
-    interview_routing, interview_findings = _route_stage_questions_to_interview_with_validation(
-        workspace_root=workspace_root,
-        discovery=discovery,
-    )
     if interview_findings:
         validation_result = _append_validation_findings(
             validation_result=validation_result,

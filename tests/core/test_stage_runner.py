@@ -569,6 +569,70 @@ def test_prepare_adapter_invocation_repair_attempt_injects_repair_context(tmp_pa
     )
 
 
+def test_repair_attempt_input_bundle_includes_existing_stage_outputs(tmp_path: Path) -> None:
+    workspace_root = tmp_path / ".aidd"
+    create_run_manifest(
+        workspace_root=workspace_root,
+        work_item="WI-001",
+        run_id="run-001",
+        runtime_id="generic-cli",
+        stage_target="plan",
+        config_snapshot={"mode": "test"},
+    )
+    preparation_bundle = prepare_stage_bundle(
+        workspace_root=workspace_root,
+        work_item="WI-001",
+        stage="plan",
+    )
+    _materialize_expected_inputs(preparation_bundle.expected_input_bundle)
+    persist_execution_state(
+        workspace_root=workspace_root,
+        work_item="WI-001",
+        run_id="run-001",
+        stage="plan",
+    )
+    stage_root = workspace_root / "workitems" / "WI-001" / "stages" / "plan"
+    stage_root.mkdir(parents=True, exist_ok=True)
+    for name, content in _valid_plan_output_documents().items():
+        (stage_root / name).write_text(content, encoding="utf-8")
+    repair_brief_path = stage_root / "repair-brief.md"
+    repair_brief_path.write_text(
+        "# Failed checks\n\n- `SEM-PLACEHOLDER-CONTENT` `high` in `plan.md`: fix.\n",
+        encoding="utf-8",
+    )
+    persist_stage_status(
+        workspace_root=workspace_root,
+        work_item="WI-001",
+        run_id="run-001",
+        stage="plan",
+        status=StageState.REPAIR_NEEDED.value,
+    )
+    seen_input_bundles: list[str] = []
+
+    def _adapter_executor(
+        invocation: AdapterInvocationBundle,
+        execution_state: StageExecutionState,
+    ) -> AdapterExecutionOutcome:
+        del execution_state
+        seen_input_bundles.append(invocation.input_bundle_markdown)
+        assert invocation.repair_mode is True
+        return AdapterExecutionOutcome(succeeded=False, details="repair test stop")
+
+    run_single_stage_orchestration(
+        workspace_root=workspace_root,
+        work_item="WI-001",
+        run_id="run-001",
+        stage="plan",
+        adapter_executor=_adapter_executor,
+    )
+
+    assert seen_input_bundles
+    assert "`workitems/WI-001/stages/plan/plan.md`" in seen_input_bundles[0]
+    assert "`workitems/WI-001/stages/plan/stage-result.md`" in seen_input_bundles[0]
+    assert "`workitems/WI-001/stages/plan/questions.md`" in seen_input_bundles[0]
+    assert "`workitems/WI-001/stages/plan/answers.md`" in seen_input_bundles[0]
+
+
 def test_restore_core_owned_repair_brief_reverts_runtime_overwrite(
     tmp_path: Path,
 ) -> None:
@@ -1673,6 +1737,74 @@ def test_run_single_stage_orchestration_preserves_operator_answers_after_runtime
     assert orchestration.transition.next_state is StageState.SUCCEEDED
     answers_text = (stage_root / "answers.md").read_text(encoding="utf-8")
     assert answers_text == operator_answers
+
+
+def test_run_single_stage_orchestration_preserves_omitted_questions_with_answers(
+    tmp_path: Path,
+) -> None:
+    workspace_root = tmp_path / ".aidd"
+    create_run_manifest(
+        workspace_root=workspace_root,
+        work_item="WI-001",
+        run_id="run-001",
+        runtime_id="generic-cli",
+        stage_target="plan",
+        config_snapshot={"mode": "test"},
+    )
+    stage_root = workspace_root / "workitems" / "WI-001" / "stages" / "plan"
+    stage_root.mkdir(parents=True, exist_ok=True)
+    (stage_root / "questions.md").write_text(
+        "# Questions\n\n## Questions\n\n"
+        "- Q1 [blocking] Confirm the release owner.\n",
+        encoding="utf-8",
+    )
+    (stage_root / "answers.md").write_text(
+        "# Answers\n\n## Answers\n\n"
+        "- Q1 [resolved] The release owner is recorded.\n",
+        encoding="utf-8",
+    )
+
+    preview_bundle = prepare_stage_bundle(
+        workspace_root=workspace_root,
+        work_item="WI-001",
+        stage="plan",
+    )
+    _materialize_expected_inputs(preview_bundle.expected_input_bundle)
+    runtime_documents = _valid_plan_output_documents()
+    runtime_documents["questions.md"] = "# Questions\n\n## Questions\n\n- none\n"
+    runtime_documents["stage-result.md"] = runtime_documents["stage-result.md"].replace(
+        "## Blockers\n\n- none\n",
+        "## Blockers\n\nNo blockers.\n",
+    )
+
+    def _adapter_executor(
+        invocation: AdapterInvocationBundle,
+        execution_state: StageExecutionState,
+    ) -> AdapterExecutionOutcome:
+        del invocation, execution_state
+        stage_root.mkdir(parents=True, exist_ok=True)
+        for name, content in runtime_documents.items():
+            (stage_root / name).write_text(content, encoding="utf-8")
+        return AdapterExecutionOutcome(succeeded=True, details="success")
+
+    orchestration = run_single_stage_orchestration(
+        workspace_root=workspace_root,
+        work_item="WI-001",
+        run_id="run-001",
+        stage="plan",
+        adapter_executor=_adapter_executor,
+    )
+
+    assert orchestration.transition.action is PostValidationAction.ADVANCE
+    assert "- `Q1` `[blocking]` Confirm the release owner." in (
+        stage_root / "questions.md"
+    ).read_text(encoding="utf-8")
+    assert "CROSS-ANSWER-WITHOUT-QUESTION" not in (
+        stage_root / "validator-report.md"
+    ).read_text(encoding="utf-8")
+    assert "## Blockers\n\n- none\n" in (
+        stage_root / "stage-result.md"
+    ).read_text(encoding="utf-8")
 
 
 def test_run_single_stage_orchestration_preserves_repair_context_after_blocked_repair_resume(

@@ -400,7 +400,8 @@ Instead, the core:
 
 1. writes a repair brief,
 2. summarizes validator findings,
-3. reruns the stage with the same document targets,
+3. reruns the stage with the same document targets and includes existing same-stage
+   outputs in the repair input bundle,
 4. records the attempt number,
 5. preserves repair context and repair history in stage metadata and the final
    `stage-result.md` whenever repair is used,

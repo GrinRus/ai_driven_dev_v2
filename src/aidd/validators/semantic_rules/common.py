@@ -84,7 +84,7 @@ from aidd.validators.semantic_rules.ids import (
 from aidd.validators.semantic_rules.ids import (
     extract_tasklist_task_ids as extract_tasklist_task_ids,
 )
-from aidd.validators.semantic_rules.placeholders import contains_placeholder_content
+from aidd.validators.semantic_rules.placeholders import find_placeholder_occurrences
 from aidd.validators.semantic_rules.risks import (
     QA_EVIDENCE_ID_PATTERN as QA_EVIDENCE_ID_PATTERN,
 )
@@ -453,19 +453,82 @@ def validate_placeholder_sections(
 ) -> tuple[ValidationFinding, ...]:
     findings: list[ValidationFinding] = []
     for section in context.iter_required_sections():
-        if contains_placeholder_content(section.content):
-            findings.append(
-                context.finding(
-                    code=PLACEHOLDER_CONTENT_CODE,
-                    message=(
-                        "Placeholder content remains in required section "
-                        f"`{section.name}`."
-                    ),
-                    severity="high",
-                    location=section.location,
-                )
+        section_content = _placeholder_section_content(context=context, section=section)
+        occurrences = find_placeholder_occurrences(section_content)
+        if not occurrences:
+            continue
+
+        tokens = tuple(dict.fromkeys(occurrence.token for occurrence in occurrences))
+        line_number = _placeholder_section_line_number(
+            context=context,
+            section_name=section.name,
+            tokens=tokens,
+            fallback=section.location.line_number or 1,
+        )
+        token_text = ", ".join(f"`{token}`" for token in tokens)
+        findings.append(
+            context.finding(
+                code=PLACEHOLDER_CONTENT_CODE,
+                message=(
+                    "Placeholder content remains in required section "
+                    f"`{section.name}`: {token_text}."
+                ),
+                severity="high",
+                location=context.location(line_number=line_number),
             )
+        )
     return tuple(findings)
+
+
+def _placeholder_section_line_number(
+    *,
+    context: SemanticDocumentContext,
+    section_name: str,
+    tokens: tuple[str, ...],
+    fallback: int,
+) -> int:
+    match = context.first_heading_match(candidates=(section_name,))
+    if match is None:
+        return fallback
+
+    heading_index, heading = match
+    end_line = len(context.markdown_lines)
+    for next_heading in context.headings[heading_index + 1 :]:
+        if (
+            context.document_name == "stage-result.md"
+            and normalized_heading(section_name) == "stage"
+        ) or next_heading.level <= heading.level:
+            end_line = next_heading.line_number - 1
+            break
+
+    for line_number in range(heading.line_number + 1, end_line + 1):
+        line = context.markdown_lines[line_number - 1]
+        if any(token in line for token in tokens):
+            return line_number
+    return fallback
+
+
+def _placeholder_section_content(
+    *,
+    context: SemanticDocumentContext,
+    section: SemanticSection,
+) -> str:
+    if not (
+        context.document_name == "stage-result.md"
+        and normalized_heading(section.name) == "stage"
+    ):
+        return section.content
+
+    match = context.first_heading_match(candidates=(section.name,))
+    if match is None:
+        return section.content
+    heading_index, heading = match
+    end_line = len(context.markdown_lines)
+    if heading_index + 1 < len(context.headings):
+        end_line = context.headings[heading_index + 1].line_number - 1
+    return "\n".join(
+        context.markdown_lines[heading.line_number:end_line]
+    ).strip()
 
 
 def extract_review_finding_blocks(section_content: str) -> tuple[str, ...]:

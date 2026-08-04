@@ -68,6 +68,12 @@ For each finding:
 
 Use concrete repair actions:
 
+- `SEM-PLACEHOLDER-CONTENT`: inspect the exact token and line named by the finding, replace
+  it with concrete stage-relevant content, and preserve every unaffected section. Do not
+  regenerate the whole report from the skeleton.
+- `SEM-INCOMPLETE-SECTION` for a succeeded `stage-result.md` `Blockers` section: replace
+  the section body with exactly `- none` when no concrete blocker or unresolved blocking
+  question remains.
 - weak issue quality: rewrite issues with explicit scope, severity, evidence, and rationale linked to plan
   risks/gaps; `Issue list` may use top-level bullets or `### I<N> - ...` subsections, but each
   issue item/subsection must include explicit `Severity`, `Evidence`, and `Rationale` text; if no material issue

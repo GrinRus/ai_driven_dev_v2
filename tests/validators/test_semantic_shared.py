@@ -9,7 +9,10 @@ from semantic_test_support import (
 from aidd.validators.semantic import (
     has_non_placeholder_text,
 )
-from aidd.validators.semantic_rules.common import SemanticDocumentContext
+from aidd.validators.semantic_rules.common import (
+    SemanticDocumentContext,
+    validate_placeholder_sections,
+)
 from aidd.validators.semantic_rules.stage_result import validate_stage_result
 from aidd.validators.task_evidence import validate_aggregate_task_evidence
 
@@ -65,6 +68,31 @@ def test_stage_result_attempt_history_rejects_duplicate_leading_attempts(
 
     assert [finding.code for finding in findings] == ["SEM-INCOMPLETE-SECTION"]
     assert "strictly increasing" in findings[0].message
+
+
+def test_stage_result_stage_placeholder_does_not_include_child_sections(
+    tmp_path: Path,
+) -> None:
+    output_path = (
+        tmp_path / ".aidd" / "workitems" / "WI-001" / "stages" / "plan" / "stage-result.md"
+    )
+    context = SemanticDocumentContext.from_markdown(
+        stage="plan",
+        output_path=output_path,
+        workspace_root=tmp_path / ".aidd",
+        required_sections=("Stage", "Terminal state notes"),
+        markdown_text=(
+            "# Stage\n\nplan\n\n"
+            "## Terminal state notes\n\n- TODO: explain the terminal state.\n"
+        ),
+    )
+
+    findings = validate_placeholder_sections(context)
+
+    assert [finding.location.line_number for finding in findings] == [7]
+    assert [finding.message for finding in findings] == [
+        "Placeholder content remains in required section `Terminal state notes`: `TODO`."
+    ]
 
 
 def test_structured_task_evidence_accepts_one_exact_entry_per_criterion(

@@ -163,6 +163,9 @@ Protocol v1 readers accept these historical forms, but writers must never emit t
 - Do not report `pass` when any `critical` issue remains unresolved.
 - Do not report `pass` when any canonical AIDD validator finding remains unresolved.
 - Keep wording diagnostic and actionable; avoid generic statements such as `bad output`.
+- Semantic content findings should identify the concrete offending token or rule input and
+  its source line whenever the validator can determine it, so a bounded repair can patch the
+  named content without regenerating unrelated sections.
 
 ## Validation cues
 
