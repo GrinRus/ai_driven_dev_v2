@@ -138,7 +138,7 @@ async function startWorkflow() {
     return;
   }
   if (!ensureRunnableRuntime()) return;
-  const payload = {runtime: state.selectedRuntime, log_follow: true};
+  const payload = {runtime: state.selectedRuntime, log_follow: true, ...runtimeSelectorPayload()};
   if (state.activeRunId) payload.run_id = state.activeRunId;
   await guardedJobLaunch({
     kind: "workflow-run",
@@ -150,7 +150,7 @@ async function startWorkflow() {
 
 async function startStage(stage = state.activeStage) {
   if (!ensureRunnableRuntime()) return;
-  const payload = {stage, runtime: state.selectedRuntime, log_follow: true};
+  const payload = {stage, runtime: state.selectedRuntime, log_follow: true, ...runtimeSelectorPayload()};
   if (state.activeRunId) payload.run_id = state.activeRunId;
   await guardedJobLaunch({
     kind: "stage-run",
@@ -179,7 +179,8 @@ async function startImplementationTask(taskId) {
     execute: () => postJson("/api/tasks/run", {
       task_id: taskId,
       run_id: state.activeRunId,
-      runtime: state.selectedRuntime
+      runtime: state.selectedRuntime,
+      ...runtimeSelectorPayload()
     })
   });
 }

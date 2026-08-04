@@ -584,6 +584,11 @@ document.addEventListener("click", async (event) => {
 document.addEventListener("change", async (event) => {
   if (event.target.id === "runtimeSelect") {
     state.selectedRuntime = event.target.value;
+    state.runtimeSelectionRuntime = "";
+    state.runtimeModel = "";
+    state.runtimeReasoningEffort = "";
+    state.runtimeModelDirty = false;
+    state.runtimeReasoningEffortDirty = false;
     if (state.onboarding.setupRequired) {
       renderOnboarding();
       return;
@@ -593,6 +598,14 @@ document.addEventListener("change", async (event) => {
     renderTopbar();
     renderSidebar();
     if (state.activeTab === "work") await renderCockpit();
+  }
+  if (event.target.id === "runtimeModelInput") {
+    state.runtimeModel = event.target.value;
+    state.runtimeModelDirty = true;
+  }
+  if (event.target.id === "runtimeReasoningEffortInput") {
+    state.runtimeReasoningEffort = event.target.value;
+    state.runtimeReasoningEffortDirty = true;
   }
   const questionResolution = event.target.closest("[data-question-resolution]")?.dataset.questionResolution;
   if (questionResolution) {

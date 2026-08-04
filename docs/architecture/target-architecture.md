@@ -70,6 +70,14 @@ The runtime reads and writes Markdown documents in the repository workspace. The
 7. **Harness-first development**
    - Conformance, smoke cases, and evals are mandatory architecture, not optional test extras.
 
+8. **Typed runtime selection stays at the adapter boundary**
+   - Optional runtime `model` and `reasoning_effort` values are validated as typed,
+     capability-gated selectors by the core configuration boundary.
+   - Provider flag and API mapping remains inside the owning adapter. Omitted selectors
+     are not synthesized, so the selected runtime retains its native defaults.
+   - Run manifests retain requested selector values and whether each choice came from
+     runtime configuration or the runtime default; this is immutable continuation identity.
+
 ## 5. System layers
 
 ```text

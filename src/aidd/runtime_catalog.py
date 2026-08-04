@@ -9,6 +9,11 @@ class RuntimeExecutionMode(StrEnum):
     ADAPTER_FLAGS = "adapter-flags"
 
 
+class RuntimeSelector(StrEnum):
+    MODEL = "model"
+    REASONING_EFFORT = "reasoning_effort"
+
+
 @dataclass(frozen=True, slots=True)
 class RuntimeDefinition:
     runtime_id: str
@@ -19,6 +24,8 @@ class RuntimeDefinition:
     default_execution_mode: RuntimeExecutionMode
     supported_execution_modes: tuple[RuntimeExecutionMode, ...]
     brokered_default_command: str | None = None
+    supported_selectors: frozenset[RuntimeSelector] = frozenset()
+    selector_execution_modes: tuple[RuntimeExecutionMode, ...] = ()
 
 
 _RUNTIME_DEFINITIONS: dict[str, RuntimeDefinition] = {
@@ -65,6 +72,11 @@ _RUNTIME_DEFINITIONS: dict[str, RuntimeDefinition] = {
         ),
         brokered_default_command=(
             "codex exec --sandbox workspace-write --skip-git-repo-check --json -"
+        ),
+        supported_selectors=frozenset(RuntimeSelector),
+        selector_execution_modes=(
+            RuntimeExecutionMode.NATIVE,
+            RuntimeExecutionMode.ADAPTER_FLAGS,
         ),
     ),
     "opencode": RuntimeDefinition(
@@ -143,3 +155,41 @@ def normalize_execution_mode(
             f"Supported modes: {supported}."
         )
     return mode
+
+
+def validate_runtime_selectors(
+    *,
+    runtime_id: str,
+    execution_mode: RuntimeExecutionMode,
+    model: str | None,
+    reasoning_effort: str | None,
+) -> None:
+    definition = get_runtime_definition(runtime_id)
+    values = (
+        (RuntimeSelector.MODEL, model),
+        (RuntimeSelector.REASONING_EFFORT, reasoning_effort),
+    )
+    for selector, value in values:
+        if value is None:
+            continue
+        if not isinstance(value, str):
+            raise ValueError(
+                f"Runtime selector {selector.value!r} for {runtime_id} must be a string."
+            )
+        if not value.strip():
+            raise ValueError(
+                f"Runtime selector {selector.value!r} for {runtime_id} must not be blank."
+            )
+        if selector not in definition.supported_selectors:
+            raise ValueError(
+                f"Runtime {runtime_id} does not support typed selector {selector.value!r}."
+            )
+        if execution_mode not in definition.selector_execution_modes:
+            supported = ", ".join(
+                mode.value for mode in definition.selector_execution_modes
+            ) or "none"
+            raise ValueError(
+                f"Runtime selector {selector.value!r} is not supported for runtime "
+                f"{runtime_id} execution mode {execution_mode.value!r}. "
+                f"Supported modes: {supported}."
+            )

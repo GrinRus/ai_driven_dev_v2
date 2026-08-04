@@ -7,6 +7,8 @@ import {fileURLToPath} from "node:url";
 
 const repositoryRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
 const sourcePath = path.join(repositoryRoot, "src/aidd/cli/static/operator-shell-rendering.js");
+const indexPath = path.join(repositoryRoot, "src/aidd/cli/static/index.html");
+const actionsPath = path.join(repositoryRoot, "src/aidd/cli/static/operator-dashboard-actions.js");
 
 async function readinessContext() {
   const context = vm.createContext({
@@ -59,4 +61,52 @@ test("protected write scope distinguishes bounded, invalid, and not-authored sta
     assert.match(html, /Protected write scope/);
     assert.doesNotMatch(html, /No upstream write/);
   }
+});
+
+test("runtime selector payload is capability-gated and omits blank values", async () => {
+  const context = vm.createContext({
+    console,
+    state: {
+      selectedRuntime: "codex",
+      runtimeModel: "gpt-5.6-luna",
+      runtimeReasoningEffort: "high",
+      runtimeModelDirty: true,
+      runtimeReasoningEffortDirty: true,
+      readiness: {
+        runtimes: [{
+          runtime_id: "codex",
+          capabilities: {supported_selectors: ["model", "reasoning_effort"]},
+        }],
+      },
+    },
+  });
+  vm.runInContext(await readFile(sourcePath, "utf8"), context, {filename: sourcePath});
+  assert.deepEqual(
+    JSON.parse(JSON.stringify(vm.runInContext("runtimeSelectorPayload()", context))),
+    {model: "gpt-5.6-luna", reasoning_effort: "high"},
+  );
+  vm.runInContext("state.runtimeModel = '  '; state.runtimeReasoningEffort = '';", context);
+  assert.deepEqual(
+    JSON.parse(JSON.stringify(vm.runInContext("runtimeSelectorPayload()", context))),
+    {},
+  );
+  vm.runInContext("state.selectedRuntime = 'generic-cli'; state.runtimeModel = 'gpt-5.6-luna';", context);
+  context.state.readiness.runtimes.push({
+    runtime_id: "generic-cli",
+    capabilities: {supported_selectors: []},
+  });
+  assert.deepEqual(
+    JSON.parse(JSON.stringify(vm.runInContext("runtimeSelectorPayload()", context))),
+    {},
+  );
+});
+
+test("operator shell exposes model and reasoning-effort controls and forwards them", async () => {
+  const [index, actions] = await Promise.all([
+    readFile(indexPath, "utf8"),
+    readFile(actionsPath, "utf8"),
+  ]);
+  assert.match(index, /id="runtimeModelInput"/);
+  assert.match(index, /id="runtimeReasoningEffortInput"/);
+  assert.match(actions, /\.\.\.runtimeSelectorPayload\(\)/);
 });

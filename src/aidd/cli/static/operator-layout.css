@@ -195,10 +195,14 @@
 }
 .topbar button.secondary,
 .topbar button.danger,
+.topbar input,
 .topbar select {
   background: rgba(255, 255, 255, 0.08);
   border-color: var(--topbar-control-line);
   color: var(--topbar-text);
+}
+.topbar input::placeholder {
+  color: var(--topbar-muted);
 }
 .topbar button.secondary:hover {
   border-color: #5bd0ca;

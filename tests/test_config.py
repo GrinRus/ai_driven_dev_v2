@@ -6,7 +6,12 @@ from pathlib import Path
 
 import pytest
 
-from aidd.config import AiddConfig, RuntimeConfig, load_config
+from aidd.config import (
+    AiddConfig,
+    RuntimeConfig,
+    load_config,
+    runtime_selection_config_snapshot,
+)
 from aidd.runtime_catalog import RuntimeExecutionMode
 from aidd.runtime_permissions import (
     AutoApprovalPreset,
@@ -80,6 +85,55 @@ def test_load_config_defaults_native_providers_to_native(tmp_path: Path) -> None
     assert cfg.runtime_config("codex").permission_policy is RuntimePermissionPolicy.FULL_ACCESS
     assert cfg.runtime_config("codex").interaction_mode is RuntimeInteractionMode.BATCH
     assert cfg.runtime_config("codex").auto_approval_preset is AutoApprovalPreset.BROAD
+    assert cfg.runtime_config("codex").model is None
+    assert cfg.runtime_config("codex").reasoning_effort is None
+
+
+def test_load_config_parses_typed_codex_selectors_and_keeps_other_runtimes_unselected(
+    tmp_path: Path,
+) -> None:
+    config_path = tmp_path / "aidd.toml"
+    config_path.write_text(
+        '[runtime.codex]\nmodel = "gpt-5.6-luna"\nreasoning_effort = "high"\n',
+        encoding="utf-8",
+    )
+
+    config = load_config(config_path)
+
+    assert config.runtime_config("codex").model == "gpt-5.6-luna"
+    assert config.runtime_config("codex").reasoning_effort == "high"
+    assert config.runtime_config("claude-code").model is None
+    assert config.runtime_config("opencode").reasoning_effort is None
+
+
+def test_runtime_selection_snapshot_does_not_claim_unselected_model(tmp_path: Path) -> None:
+    config = load_config(tmp_path / "missing.toml")
+    snapshot = runtime_selection_config_snapshot(config.runtime_config("codex"))
+
+    assert snapshot["runtime_model"] is None
+    assert snapshot["runtime_reasoning_effort"] is None
+    assert snapshot["runtime_model_source"] == "runtime-default"
+    assert snapshot["runtime_reasoning_effort_source"] == "runtime-default"
+
+
+@pytest.mark.parametrize(
+    "config_text",
+    (
+        '[runtime.codex]\nmodel = ""\n',
+        '[runtime.codex]\nreasoning_effort = "   "\n',
+        "[runtime.codex]\nmodel = 42\n",
+        '[runtime.claude_code]\nmodel = "provider-model"\n',
+    ),
+)
+def test_load_config_rejects_invalid_or_unsupported_typed_selectors(
+    tmp_path: Path,
+    config_text: str,
+) -> None:
+    config_path = tmp_path / "aidd.toml"
+    config_path.write_text(config_text, encoding="utf-8")
+
+    with pytest.raises(ValueError):
+        load_config(config_path)
 
 
 @pytest.mark.parametrize(

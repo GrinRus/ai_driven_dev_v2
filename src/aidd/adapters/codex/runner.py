@@ -77,11 +77,92 @@ class CodexRunResult(RuntimeRunResult[CodexExitClassification]):
     pass
 
 
+class CodexSelectorConflictError(ValueError):
+    """Raised when typed selectors would overwrite a command-owned selector."""
+
+
+def _command_owned_selectors(tokens: tuple[str, ...]) -> set[str]:
+    owned: set[str] = set()
+    index = 1
+    while index < len(tokens):
+        token = tokens[index]
+        if token in {"--model", "-m"} or token.startswith("--model="):
+            owned.add("model")
+            index += 2 if token in {"--model", "-m"} else 1
+            continue
+        if token in {"--config", "-c"}:
+            owned.add(
+                _config_selector_name(tokens[index + 1])
+                if index + 1 < len(tokens)
+                else "config"
+            )
+            index += 2
+            continue
+        if token.startswith("--config=") or token.startswith("-c="):
+            owned.add(_config_selector_name(token.partition("=")[2]))
+        index += 1
+    return owned
+
+
+def _config_selector_name(value: str) -> str:
+    key = value.partition("=")[0].strip()
+    if key == "model":
+        return "model"
+    if key == "model_reasoning_effort":
+        return "reasoning_effort"
+    return "config"
+
+
+def _selector_tokens(
+    *,
+    base_tokens: tuple[str, ...],
+    model: str | None,
+    reasoning_effort: str | None,
+) -> tuple[str, ...]:
+    if model is None and reasoning_effort is None:
+        return ()
+    owned = _command_owned_selectors(base_tokens)
+    if model is not None and "model" in owned:
+        raise CodexSelectorConflictError(
+            "codex selector conflict: typed model would overwrite a command-owned model selector."
+        )
+    if reasoning_effort is not None and "reasoning_effort" in owned:
+        raise CodexSelectorConflictError(
+            "codex selector conflict: typed reasoning_effort would overwrite a command-owned "
+            "model_reasoning_effort selector."
+        )
+    selector_tokens: list[str] = []
+    if model is not None:
+        selector_tokens.extend(("--model", model))
+    if reasoning_effort is not None:
+        selector_tokens.extend(("--config", f'model_reasoning_effort="{reasoning_effort}"'))
+    return tuple(selector_tokens)
+
+
+def _command_with_selector_tokens(
+    *,
+    base_tokens: tuple[str, ...],
+    model: str | None,
+    reasoning_effort: str | None,
+) -> tuple[str, ...]:
+    selectors = _selector_tokens(
+        base_tokens=base_tokens,
+        model=model,
+        reasoning_effort=reasoning_effort,
+    )
+    if not selectors:
+        return base_tokens
+    insertion_index = len(base_tokens) - 1 if base_tokens[-1:] == ("-",) else len(base_tokens)
+    return (*base_tokens[:insertion_index], *selectors, *base_tokens[insertion_index:])
+
+
 def assemble_command(
     *,
     configured_command: str,
     context: CodexCommandContext,
     repository_root: Path | None = None,
+    model: str | None = None,
+    reasoning_effort: str | None = None,
 ) -> tuple[str, ...]:
     base_tokens = split_configured_command(
         configured_command=configured_command,
@@ -99,7 +180,11 @@ def assemble_command(
     )
 
     command: list[str] = [
-        *base_tokens,
+        *_command_with_selector_tokens(
+            base_tokens=base_tokens,
+            model=model,
+            reasoning_effort=reasoning_effort,
+        ),
         "--stage",
         context.stage,
         "--work-item",
@@ -154,12 +239,19 @@ def assemble_native_command(
     configured_command: str,
     context: CodexCommandContext,
     repository_root: Path | None = None,
+    model: str | None = None,
+    reasoning_effort: str | None = None,
 ) -> tuple[str, ...]:
     _ = context, repository_root
-    return _split_configured_command(
+    base_tokens = _split_configured_command(
         configured_command=configured_command,
         runtime_label="codex",
     )
+    return _command_with_selector_tokens(
+            base_tokens=base_tokens,
+            model=model,
+            reasoning_effort=reasoning_effort,
+        )
 
 
 def build_execution_environment(
@@ -203,6 +295,8 @@ def build_subprocess_spec(
     base_env: Mapping[str, str] | None = None,
     repository_root: Path | None = None,
     execution_mode: str | RuntimeExecutionMode = RuntimeExecutionMode.ADAPTER_FLAGS,
+    model: str | None = None,
+    reasoning_effort: str | None = None,
 ) -> CodexSubprocessSpec:
     resolved_workspace_root = context.workspace_root.resolve(strict=False)
     mode = normalize_execution_mode(runtime_id="codex", value=execution_mode)
@@ -213,6 +307,8 @@ def build_subprocess_spec(
                 configured_command=configured_command,
                 context=context,
                 repository_root=repository_root,
+                model=model,
+                reasoning_effort=reasoning_effort,
             ),
             cwd=resolved_repository_root,
             env=build_execution_environment(
@@ -230,6 +326,8 @@ def build_subprocess_spec(
             configured_command=configured_command,
             context=context,
             repository_root=repository_root,
+            model=model,
+            reasoning_effort=reasoning_effort,
         ),
         cwd=resolved_workspace_root,
         env=build_execution_environment(

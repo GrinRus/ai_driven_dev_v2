@@ -16,7 +16,7 @@ from aidd.cli.support import (
     _tail_lines,
     console,
 )
-from aidd.config import load_config
+from aidd.config import load_config, runtime_selection_config_snapshot
 from aidd.core.bounded_log_reader import MAX_LOG_READ_BYTES, read_bounded_log
 from aidd.core.run_inspection import (
     resolve_run_artifacts_summary,
@@ -260,6 +260,7 @@ def run_callback(
         "runtime_permission_policy": runtime_config.permission_policy.value,
         "runtime_interaction_mode": runtime_config.interaction_mode.value,
         "runtime_auto_approval_preset": runtime_config.auto_approval_preset.value,
+        **runtime_selection_config_snapshot(runtime_config),
         "log_follow": log_follow,
         "mode": "workflow",
     }

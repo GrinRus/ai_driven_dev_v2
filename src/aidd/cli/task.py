@@ -15,7 +15,7 @@ from aidd.cli.support import (
     _runtime_execution_mode_for_runtime,
     console,
 )
-from aidd.config import load_config
+from aidd.config import load_config, runtime_selection_config_snapshot
 from aidd.core.implementation_service import (
     AggregateFinalizer,
     ImplementationExecutionRequest,
@@ -94,6 +94,7 @@ def _validate_run_manifest_identity(
             "runtime_permission_policy": runtime_cfg.permission_policy.value,
             "runtime_interaction_mode": runtime_cfg.interaction_mode.value,
             "runtime_auto_approval_preset": runtime_cfg.auto_approval_preset.value,
+            **runtime_selection_config_snapshot(runtime_cfg),
         },
     )
 
