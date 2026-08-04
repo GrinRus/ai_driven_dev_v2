@@ -1,8 +1,9 @@
 # Release Notes: v0.1.0a17
 
-Status: prepared candidate; not yet published.
+Status: draft, not tagged or published.
 
-Candidate package version: `0.1.0a17`.
+Current release-candidate package version: `0.1.0a17`.
+Latest accepted published prerelease evidence before this candidate: `0.1.0a16`.
 GitHub Release target: `release/v0.1.0a17`.
 
 ## Summary
@@ -25,6 +26,8 @@ approval-mode value with the installed Qwen CLI.
 - Qwen remains experimental. Its CLI installation and authentication are external operator
   prerequisites.
 - Manual live evaluation remains outside GitHub Actions, CI/CD, and release workflows.
+- `0.1.0a17` package must not be described as the latest accepted published prerelease
+  until the release workflow verifies the published package channels.
 
 ## Publication checklist
 

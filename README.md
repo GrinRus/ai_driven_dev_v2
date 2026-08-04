@@ -79,6 +79,8 @@ for the complete model.
 
 Latest published prerelease: `0.1.0a16`.
 Latest accepted published prerelease evidence: `0.1.0a16`.
+Current release-candidate package version on this branch: `0.1.0a17`.
+Latest accepted published prerelease evidence before this candidate: `0.1.0a16`.
 The `main` branch is development source and may contain unreleased changes.
 
 > [!WARNING]

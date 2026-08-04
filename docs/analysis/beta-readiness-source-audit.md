@@ -20,8 +20,8 @@ Reviewed sources:
 
 ### README
 
-- The latest accepted published prerelease evidence is `0.1.0a16`.
-- The source development package version matches the package state: `0.1.0a17.dev0`.
+- The last accepted published prerelease evidence before this candidate is `0.1.0a16`.
+- The release-candidate package version matches the package state: `0.1.0a17`.
 - The `v0.1.0a16` GitHub Release workflow published to PyPI and verified `pipx` plus
   `uv tool`; README installation guidance stays pinned to the latest accepted package
   release.
