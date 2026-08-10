@@ -5,6 +5,11 @@
 - Selected task: `TL-2` — Add execution-state persistence wiring.
 - Implemented deterministic blocked-state persistence and resume behavior for `TL-2-AC1` and `TL-2-AC2`.
 
+## Acceptance evidence
+
+- `TL-2-AC1`: `uv run pytest tests/core/test_stage_runner.py -q` verifies blocked-state persistence for unresolved questions.
+- `TL-2-AC2`: `uv run pytest tests/core/test_stage_runner.py -q` verifies resume behavior after a resolved answer.
+
 ## Touched files
 
 - `src/aidd/core/stage_runner.py` - persist blocked status when unresolved blocking questions are present.

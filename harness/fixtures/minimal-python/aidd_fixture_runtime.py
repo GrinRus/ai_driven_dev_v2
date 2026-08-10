@@ -348,6 +348,10 @@ def _implement_documents(
 - Selected task: `{task_id}`.
 - Completed `{task_id}` as a bounded deterministic fixture change for `{acceptance_id}`.
 
+## Acceptance evidence
+
+- `{acceptance_id}`: `python -m pytest -q` -> pass; the generated deliverable and regression evidence cover this criterion.
+
 ## Touched files
 
 - `{touched_path}` - implement the selected fixture deliverable.
