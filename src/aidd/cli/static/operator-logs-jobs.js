@@ -428,12 +428,12 @@ async function renderLogs() {
     requestedSurface: "logs"
   });
   if (!visibility.logs) {
-    document.getElementById("cockpitContent").innerHTML = `<div class="empty-state">No runtime log for this stage yet.</div>`;
+    document.getElementById("intentContent").innerHTML = `<div class="empty-state">No runtime log for this stage yet.</div>`;
     return;
   }
   if (liveLogAvailable) {
     const entries = logEntriesFromChunks(state.activeJobLogChunks);
-    document.getElementById("cockpitContent").innerHTML = `${renderActiveJobConnectionSurface()}${renderLogPanel({
+    document.getElementById("intentContent").innerHTML = `${renderActiveJobConnectionSurface()}${renderLogPanel({
       title: `Live job ${state.activeJobId}`,
       meta: [state.activeJobStatus?.status || "running", state.activeJobStatus?.stage || "workflow"],
       entries,
@@ -450,7 +450,7 @@ async function renderLogs() {
     state.savedLogText = view.text || "";
     const summary = view.summary || {};
     const logAvailable = view.available !== false;
-    document.getElementById("cockpitContent").innerHTML = `${renderActiveJobConnectionSurface()}${renderLogPanel({
+    document.getElementById("intentContent").innerHTML = `${renderActiveJobConnectionSurface()}${renderLogPanel({
       title: logAvailable ? "Saved runtime.log" : "Saved runtime.log (pending)",
       meta: [summary.run_id ? `run ${summary.run_id}` : "", summary.stage ? `stage ${summary.stage}` : "", summary.attempt_number ? `attempt ${summary.attempt_number}` : ""],
       entries: logEntriesFromText(state.savedLogText),
@@ -459,7 +459,7 @@ async function renderLogs() {
       truncation: view
     })}`;
   } catch (error) {
-    document.getElementById("cockpitContent").innerHTML = `<div class="empty-state">${escapeHtml(error.message)}</div>`;
+    document.getElementById("intentContent").innerHTML = `<div class="empty-state">${escapeHtml(error.message)}</div>`;
   }
 }
 
@@ -594,7 +594,13 @@ async function startJobPolling(job) {
   renderActiveRunPanel();
   if (typeof renderNextActionPanel === "function") renderNextActionPanel();
   if (typeof renderGlobalNextActionStrip === "function") renderGlobalNextActionStrip();
-  activateTab("logs");
-  await renderLogs();
+  // Keep the primary Intent workspace visible while execution is live. Logs
+  // are technical evidence, so they remain available through the observation
+  // shortcut/technical disclosure instead of replacing the decision surface.
+  activateTab("overview");
+  // A new runtime attempt may not have an artifact index yet. Keep the
+  // existing Document Canvas placeholder while the job is live; the normal
+  // terminal reconciliation render will load the durable attempt evidence.
+  await renderAll({skipArtifactLoad: true});
   await pollActiveJob();
 }

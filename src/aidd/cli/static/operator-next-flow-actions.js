@@ -372,7 +372,7 @@ async function openCloneFlowDraft() {
       onState: nextFlowMutationState(['[data-next-flow-action="clone-flow"]'])
     });
     if (guarded.status === "conflict") {
-      throw new Error(`A clone draft or work item already exists for ${draftRequest.new_work_item}.`);
+      throw new Error(`A clone draft or intent already exists for ${draftRequest.new_work_item}.`);
     }
     const payload = guarded.result;
     wizard.followUpDraft = mergeNextFlowBrowserDraft(cloneDraftFromPayload(payload), "clone-flow");
@@ -510,7 +510,7 @@ function selectedInheritedContextLines(items = [], fallbackLines = null) {
 function followUpDraftValidationErrors(draft) {
   if (state.nextFlowWizard.action !== "start-follow-up-flow") return [];
   const errors = [];
-  if (!String(draft?.new_work_item || "").trim()) errors.push("Work item id is required before preflight.");
+  if (!String(draft?.new_work_item || "").trim()) errors.push("Intent id is required before preflight.");
   if (!String(draft?.title || "").trim()) errors.push("Title is required before preflight.");
   if (!String(draft?.first_stage_input_preview || "").trim()) errors.push("First-stage input preview is required before preflight.");
   if (!(draft?.acceptance_criteria || []).some((item) => String(item || "").trim())) {
@@ -576,7 +576,7 @@ async function createFollowUpDraftForLaunch(draft) {
     onState: nextFlowMutationState(["[data-launch-flow-now]"])
   });
   if (guarded.status === "conflict") {
-    throw new Error(`A follow-up draft or work item already exists for ${draft.new_work_item}.`);
+    throw new Error(`A follow-up draft or intent already exists for ${draft.new_work_item}.`);
   }
   const payload = guarded.result;
   state.nextFlowWizard.createdDraft = payload.created;
@@ -879,7 +879,7 @@ function workDetailOwnsPrimarySurface() {
     && ["implement-review", "review-findings", "qa-verdict"].includes(state.workDetail);
 }
 
-function globalNextActionStripProvidesPrimary() {
+function intentDecisionSurfaceProvidesPrimary() {
   if (state.onboarding?.setupRequired) return false;
   if (state.activeTab === "recovery") return false;
   if (workDetailOwnsPrimarySurface()) return false;

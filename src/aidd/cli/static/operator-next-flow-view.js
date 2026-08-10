@@ -278,7 +278,7 @@ function renderStudioFlowCompleteState() {
         <aside class="flow-lineage-panel">
           <h3>Lineage</h3>
           <dl>
-            <div><dt>Source work item</dt><dd>${escapeHtml(sourceWorkItem)}</dd></div>
+            <div><dt>Source intent</dt><dd>${escapeHtml(sourceWorkItem)}</dd></div>
             <div><dt>Run</dt><dd>${escapeHtml(run.run_id || "not recorded")}</dd></div>
             <div><dt>Baseline</dt><dd>${escapeHtml(baseline)}</dd></div>
           </dl>
@@ -323,7 +323,7 @@ function renderArchiveConfirmation() {
       </div>
       <div class="wizard-context-grid">
         <div class="panel-item"><strong>Source run</strong><span>${escapeHtml(sourceRun)}</span></div>
-        <div class="panel-item"><strong>Source work item</strong><span>${escapeHtml(sourceWorkItem)}</span></div>
+        <div class="panel-item"><strong>Source intent</strong><span>${escapeHtml(sourceWorkItem)}</span></div>
         <div class="panel-item"><strong>Final artifacts</strong><span>${escapeHtml(artifacts.length)}</span></div>
         <div class="panel-item"><strong>Mutation</strong><span>archive metadata only</span></div>
       </div>
@@ -432,7 +432,7 @@ function nextFlowWizardStepState(stepId) {
 
 function nextFlowWizardTypeLabel() {
   const labels = {
-    "create-new-work-item": "New Work Item",
+    "create-new-work-item": "New intent",
     "start-follow-up-flow": "Follow-up Flow",
     "clone-flow": "Clone This Flow",
     "run-eval-batch": "Eval / Scenario Batch"
@@ -455,7 +455,7 @@ function renderNextFlowWizardProgress() {
     : [
         ["type", "Choose Flow Type", nextFlowWizardTypeLabel()],
         ["sources", "Select Source Findings", selected ? `${selected} selected` : "Select findings to carry forward"],
-        ["definition", "Define Work Item", draft?.new_work_item || "Configure new work item"],
+        ["definition", "Define intent", draft?.new_work_item || "Configure new intent"],
         ["confirm", "Confirm Launch", "Review preflight and audit preview"]
       ];
   return `
@@ -478,8 +478,8 @@ function renderNextFlowWizardProgress() {
       <div class="wizard-policy-note">
         <strong>${cloneNeedsRecovery ? "Clone-only flow" : "Independent flow"}</strong>
         <span>${escapeHtml(cloneNeedsRecovery
-          ? "The source run stays immutable; clone creates a new work item and run identity without clearing QA status."
-          : "The source run stays immutable; launch creates a new work item and run identity."
+          ? "The source run stays immutable; clone creates a new intent and run identity without clearing QA status."
+          : "The source run stays immutable; launch creates a new intent and run identity."
         )}</span>
       </div>
     </aside>
@@ -563,7 +563,7 @@ function renderNextFlowSourceSelection() {
     body: `
       <div class="wizard-context-grid">
         <div class="panel-item"><strong>Source run</strong><span>${escapeHtml(payload.source_run_id)}</span></div>
-        <div class="panel-item"><strong>Source work item</strong><span>${escapeHtml(payload.source_work_item)}</span></div>
+        <div class="panel-item"><strong>Source intent</strong><span>${escapeHtml(payload.source_work_item)}</span></div>
         <div class="panel-item"><strong>Selected sources</strong><span>${escapeHtml(selectedCount)} / ${escapeHtml(payload.counts.total_items)}</span></div>
         <div class="panel-item"><strong>Linked artifacts</strong><span>${escapeHtml(payload.counts.source_artifact_links)}</span></div>
       </div>
@@ -571,10 +571,10 @@ function renderNextFlowSourceSelection() {
       <div class="source-finding-groups">
         ${(payload.groups || []).map((group) => renderSourceFindingGroup(group)).join("")}
       </div>
-      ${selectedCount ? "" : '<div class="truncation-notice"><strong>Selection required</strong><span>Choose at least one source finding before defining the follow-up work item.</span></div>'}
+      ${selectedCount ? "" : '<div class="truncation-notice"><strong>Selection required</strong><span>Choose at least one source finding before defining the follow-up intent.</span></div>'}
       <div class="wizard-actions">
         <button data-close-next-flow-wizard type="button" class="secondary">Back to handoff</button>
-        <button data-next-flow-continue type="button" ${selectedCount ? "" : "disabled"}>Continue to Define Work Item</button>
+        <button data-next-flow-continue type="button" ${selectedCount ? "" : "disabled"}>Continue to Define intent</button>
       </div>
     `
   });
@@ -596,17 +596,17 @@ function renderNewWorkItemHandoff() {
   return `
     <section class="surface next-flow-wizard">
       <div class="surface-title">
-        <span>Create New Work Item</span>
+        <span>Create new intent</span>
         <span class="small-badge">fresh scope</span>
       </div>
       <div class="wizard-context-grid">
         <div class="panel-item"><strong>Source run</strong><span>${escapeHtml(sourceRun)}</span></div>
-        <div class="panel-item"><strong>Source work item</strong><span>${escapeHtml(sourceWorkItem)}</span></div>
+        <div class="panel-item"><strong>Source intent</strong><span>${escapeHtml(sourceWorkItem)}</span></div>
         <div class="panel-item"><strong>Inheritance</strong><span>none by default</span></div>
         <div class="panel-item"><strong>Policy</strong><span>source run stays immutable</span></div>
       </div>
       <div class="truncation-notice" role="status">
-        <strong>${terminalHandoffNeedsRecovery(handoff) ? "Separate scope only" : "Fresh work item handoff"}</strong>
+        <strong>${terminalHandoffNeedsRecovery(handoff) ? "Separate scope only" : "Fresh intent handoff"}</strong>
         <span>${escapeHtml(separateScopeHandoffMessage(handoff))}</span>
       </div>
       <pre>aidd init --work-item &lt;new-id&gt; --request "&lt;new request&gt;" --root .aidd
@@ -635,7 +635,7 @@ function renderEvalBatchHandoff() {
       </div>
       <div class="wizard-context-grid">
         <div class="panel-item"><strong>Source run</strong><span>${escapeHtml(sourceRun)}</span></div>
-        <div class="panel-item"><strong>Source work item</strong><span>${escapeHtml(sourceWorkItem)}</span></div>
+        <div class="panel-item"><strong>Source intent</strong><span>${escapeHtml(sourceWorkItem)}</span></div>
         <div class="panel-item"><strong>AIDD version</strong><span>${escapeHtml(appVersion)}</span></div>
         <div class="panel-item"><strong>Final artifacts</strong><span>${escapeHtml(artifacts.length)}</span></div>
         <div class="panel-item"><strong>Scenario source</strong><span>operator-selected local manifest</span></div>
@@ -706,7 +706,7 @@ function renderLaunchFailureSummary(wizard, draft, backLabel) {
     <div class="truncation-notice launch-failure-summary" data-launch-failure-summary role="alert">
       <strong>Launch did not start${escapeHtml(target)}</strong>
       <span>${escapeHtml(wizard.launchError)}</span>
-      <span>Use ${escapeHtml(backLabel)} to correct the follow-up work item or launch inputs, then retry launch. The source run remains unchanged.</span>
+      <span>Use ${escapeHtml(backLabel)} to correct the follow-up intent or launch inputs, then retry launch. The source run remains unchanged.</span>
     </div>
   `;
 }
@@ -714,7 +714,7 @@ function renderLaunchFailureSummary(wizard, draft, backLabel) {
 function cloneDraftCreationMessage(error, targetWorkItem) {
   const raw = String(error || "").trim();
   if (raw.includes("Request context documents already exist")) {
-    return `A clone draft or work item already exists for ${targetWorkItem}.`;
+    return `A clone draft or intent already exists for ${targetWorkItem}.`;
   }
   return raw.replace(/\s*Use --force-context to overwrite them\.?$/i, "").trim()
     || "Clone draft could not be created.";
@@ -734,14 +734,14 @@ function renderCloneDraftCreationError(wizard) {
       <div class="truncation-notice clone-draft-error-summary" data-clone-draft-error-summary role="alert">
         <strong>Clone target is already in use</strong>
         <span>${escapeHtml(message)}</span>
-        <span>Open the existing work item from Active work items, or choose another clone target before retrying.</span>
+        <span>Open the existing intent from Active intents, or choose another clone target before retrying.</span>
         ${needsRecovery ? "<span>Clone still does not remediate QA. Use Start Follow-up Flow for implementation work.</span>" : ""}
       </div>
       <div class="wizard-actions">
         <button data-next-flow-back-to-definition type="button">Back to handoff</button>
       </div>
       <div class="audit-preview">
-        <div class="panel-item"><strong>Target work item</strong><span>${escapeHtml(targetWorkItem)}</span></div>
+        <div class="panel-item"><strong>Target intent</strong><span>${escapeHtml(targetWorkItem)}</span></div>
         <div class="panel-item"><strong>Source run</strong><span>${escapeHtml(nextFlowSourceRunId() || "not recorded")}</span></div>
         <div class="panel-item"><strong>Source state</strong><span>${escapeHtml(needsRecovery ? "still needs recovery" : "unchanged")}</span></div>
       </div>
@@ -802,7 +802,7 @@ function renderAuditPreview(draft, preflight) {
   const cloneFlow = state.nextFlowWizard.action === "clone-flow";
   return `
     <div class="audit-preview">
-      <div class="panel-item"><strong>New work item</strong><span>${escapeHtml(draft.new_work_item)}</span></div>
+      <div class="panel-item"><strong>New intent</strong><span>${escapeHtml(draft.new_work_item)}</span></div>
       <div class="panel-item"><strong>Source run</strong><span>${escapeHtml(draft.source_run_id)}</span></div>
       <div class="panel-item"><strong>Runtime</strong><span>${escapeHtml(state.selectedRuntime || state.dashboard?.run?.runtime_id || "not selected")}</span></div>
       <div class="panel-item"><strong>Resolved baseline</strong><span>${escapeHtml(preflight?.resolved_baseline_id || "not resolved")}</span></div>
@@ -984,20 +984,20 @@ function renderFollowUpDefinition() {
   const definitionErrors = followUpDefinitionErrorsForRender(wizard);
   return renderNextFlowWizardShell({
     sectionClass: "next-flow-wizard follow-up-definition",
-    title: "Define Follow-up Work Item",
+    title: "Define Follow-up Intent",
     badge: "editable draft",
     body: `
       ${renderFollowUpDefinitionErrorSummary(definitionErrors)}
       <div class="wizard-context-grid">
         <div class="panel-item"><strong>Source run</strong><span>${escapeHtml(draft.source_run_id)}</span></div>
-        <div class="panel-item"><strong>Source work item</strong><span>${escapeHtml(draft.source_work_item)}</span></div>
+        <div class="panel-item"><strong>Source intent</strong><span>${escapeHtml(draft.source_work_item)}</span></div>
         <div class="panel-item"><strong>Selected sources</strong><span>${escapeHtml(draft.selected_sources.length)}</span></div>
-        <div class="panel-item"><strong>New work item</strong><span>${escapeHtml(draft.new_work_item)}</span></div>
+        <div class="panel-item"><strong>New intent</strong><span>${escapeHtml(draft.new_work_item)}</span></div>
       </div>
       <div class="follow-up-definition-grid">
         <section class="definition-form">
           <label class="form-field" for="followUpWorkItem">
-            <span>Work item id</span>
+            <span>Intent id</span>
             <input id="followUpWorkItem" name="new_work_item" data-follow-up-field="new_work_item" type="text" value="${escapeHtml(draft.new_work_item)}">
           </label>
           <label class="form-field" for="followUpTitle">
@@ -1311,8 +1311,8 @@ function renderNextActionSidebarMirror({label, statusMessage, tone}) {
 }
 
 function renderNextActionPanel() {
-  const panel = document.getElementById("nextActionPanel")
-    || document.querySelector('[data-current-decision-stable-id="nextActionPanel"]');
+  const panel = document.getElementById("technicalDecisionStatus")
+    || document.querySelector('[data-current-decision-stable-id="technicalDecisionStatus"]');
   if (!panel) return;
   const action = state.dashboard?.next_action || {action: "choose-runtime", label: "Select runtime", detail: "Choose a runtime.", enabled: false};
   const noRunWithRuntime = action.action === "choose-runtime" && state.selectedRuntime;
@@ -1350,7 +1350,7 @@ function renderNextActionPanel() {
   const finding = action.action === "inspect-validation" || action.action === "review-intervention"
     ? primaryValidationFinding()
     : null;
-  if (globalNextActionStripProvidesPrimary()) {
+  if (intentDecisionSurfaceProvidesPrimary()) {
     const statusMessage = blockerMessage ? "" : activeJobState?.detail || (disabled
       ? "Primary action is not available yet."
       : "Primary action is ready in the stage cockpit.");
@@ -1376,8 +1376,8 @@ function renderNextActionPanel() {
 }
 
 function renderGlobalNextActionStrip() {
-  const host = document.getElementById("globalNextActionStrip")
-    || document.querySelector('[data-current-decision-stable-id="globalNextActionStrip"]');
+  const host = document.getElementById("intentDecisionSurface")
+    || document.querySelector('[data-current-decision-stable-id="intentDecisionSurface"]');
   if (!host) return;
   syncLiveJobBodyClass();
   syncExternalRunningBodyClass();
@@ -1416,7 +1416,7 @@ function renderGlobalNextActionStrip() {
   const detail = activeJobState?.detail || (noRunWithRuntime
     ? runtimeBlocked
       ? "Runtime selected. Resolve readiness before starting the workflow."
-      : "Runtime selected. Start the workflow from the current work item."
+      : "Runtime selected. Start the workflow from the current intent."
     : choosingRuntime
       ? "Select runtime in the toolbar, then start the governed workflow."
     : action.detail);
@@ -1428,9 +1428,22 @@ function renderGlobalNextActionStrip() {
     : null;
   host.classList.toggle("live-progress-active", Boolean(activeJobState));
   host.classList.toggle("external-progress-active", Boolean(externalRunningState));
+  const technicalLiveProgress = activeJobState
+    ? renderGlobalLiveProgress(state.activeJobStatus)
+    : externalRunningState
+      ? renderExternalRunningStageProgress(action)
+      : "";
+  const technicalRunHost = document.getElementById("technicalActiveRun");
+  if (technicalRunHost) {
+    technicalRunHost.querySelector("[data-technical-live-progress]")?.remove();
+    if (technicalLiveProgress) {
+      technicalRunHost.insertAdjacentHTML(
+        "afterbegin",
+        `<div data-technical-live-progress>${technicalLiveProgress}</div>`,
+      );
+    }
+  }
   host.innerHTML = `
-    ${activeJobState ? renderGlobalLiveProgress(state.activeJobStatus) : ""}
-    ${externalRunningState ? renderExternalRunningStageProgress(action) : ""}
     <div class="next-action-copy">
       <span class="next-action-icon" aria-hidden="true">&gt;</span>
       <div>

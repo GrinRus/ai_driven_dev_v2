@@ -11,7 +11,7 @@ from browser_tests.state_fixtures import build_browser_state_fixture
 
 
 @pytest.mark.parametrize("viewport", ((1280, 900), (1440, 900)))
-def test_studio_cockpit_is_the_only_desktop_content_scroll_owner(
+def test_intent_workspace_is_the_only_desktop_content_scroll_owner(
     tmp_path: Path,
     viewport: tuple[int, int],
 ) -> None:
@@ -24,7 +24,7 @@ def test_studio_cockpit_is_the_only_desktop_content_scroll_owner(
         page = browser_page.page
         response = page.goto(harness.url, wait_until="networkidle")
         assert response is not None and response.ok
-        page.locator("#cockpitContent").evaluate(
+        page.locator("#intentContent").evaluate(
             "element => { const filler = document.createElement('div'); "
             "filler.style.height = '1800px'; element.append(filler); }"
         )
@@ -32,22 +32,21 @@ def test_studio_cockpit_is_the_only_desktop_content_scroll_owner(
         result = page.evaluate(
             """
             () => {
-              const shell = document.querySelector('[data-aidd-scroll-owner="studio"]');
-              const topLevel = ['.stage-rail', '.cockpit', '.right-sidebar']
-                .map((selector) => document.querySelector(selector));
+              const shell = document.querySelector('[data-aidd-scroll-owner="workspace"]');
               return {
                 shellOverflow: getComputedStyle(shell).overflowY,
                 shellScrollable: shell.scrollHeight > shell.clientHeight,
-                childOverflow: topLevel.map((element) => getComputedStyle(element).overflowY),
+                legacyRegions: ['.stage-rail', '.cockpit', '.right-sidebar', '.bottom-dock']
+                  .filter((selector) => document.querySelector(selector)),
                 topbarPosition: getComputedStyle(document.querySelector('.topbar')).position,
               };
             }
             """
         )
         assert result == {
-            "shellOverflow": "visible",
-            "shellScrollable": False,
-            "childOverflow": ["hidden", "auto", "visible"],
+            "shellOverflow": "auto",
+            "shellScrollable": True,
+            "legacyRegions": [],
             "topbarPosition": "sticky",
         }
         assert_rendered_geometry(page)

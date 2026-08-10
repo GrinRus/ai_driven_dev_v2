@@ -22,6 +22,6 @@ def test_studio_observes_durable_external_run_without_fake_progress(tmp_path: Pa
         assert "Open persisted logs" in observation.inner_text()
         assert "%" not in observation.inner_text()
         observation.locator('[data-tab-shortcut="logs"]').click()
-        browser_page.page.locator("#cockpitContent").wait_for(state="visible")
-        assert "runtime.log" in browser_page.page.locator("#cockpitContent").inner_text().lower()
+        browser_page.page.locator("#intentContent").wait_for(state="visible")
+        assert "runtime.log" in browser_page.page.locator("#intentContent").inner_text().lower()
         browser_page.diagnostics.assert_clean()

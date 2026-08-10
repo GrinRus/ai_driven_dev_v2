@@ -73,7 +73,7 @@ function runtimeSelectorPayload() {
 }
 
 function scrollActiveStageIntoView() {
-  const rail = document.getElementById("stageRail");
+  const rail = document.getElementById("intentPhaseStepper")?.querySelector(".intent-phase-list");
   if (!rail || !window.matchMedia("(max-width: 760px)").matches) return;
   if (document.body.classList.contains("terminal-handoff-mode")) return;
   if (document.body.classList.contains("terminal-repair-mode")) return;
@@ -153,7 +153,7 @@ function renderRuntimeReadinessDimensions(runtime, {compact = false} = {}) {
 
 function renderProtectedWriteScope(scope = state.readiness?.protected_write_scope) {
   if (!scope) {
-    return `<div class="panel-item"><strong>Protected write scope</strong><span>Unavailable until a work item context is selected.</span></div>`;
+    return `<div class="panel-item"><strong>Protected write scope</strong><span>Unavailable until an intent context is selected.</span></div>`;
   }
   const prefixes = (scope.prefixes || []).join(", ") || "none authored";
   return `
@@ -210,15 +210,15 @@ function renderTopbar() {
   const dashboard = state.dashboard || {};
   const run = dashboard.run || {};
   const projectPath = document.getElementById("projectPath");
-  const workItemChip = document.getElementById("workItemChip");
+  const workItemChip = document.getElementById("intentChip");
   const runChip = document.getElementById("runChip");
   const projectRoot = dashboard.project_root || state.projectHome?.project_root || "...";
   const workItemLabel = dashboard.work_item
-    ? `Work item: ${dashboard.work_item}`
+    ? `Intent: ${dashboard.work_item}`
     : "Project inbox";
   const runLabel = dashboard.work_item
     ? (run.run_id ? `Run: ${run.run_id}` : "Run: not started")
-    : "Choose a work item";
+    : "Choose an intent";
   projectPath.textContent = projectRoot;
   projectPath.title = projectRoot;
   workItemChip.textContent = workItemLabel;
@@ -226,10 +226,10 @@ function renderTopbar() {
   runChip.textContent = runLabel;
   runChip.title = runLabel;
   const topContextProject = document.getElementById("topContextProject");
-  const topContextWorkItem = document.getElementById("topContextWorkItem");
+  const topContextWorkItem = document.getElementById("topContextIntent");
   const topContextRun = document.getElementById("topContextRun");
   if (topContextProject) topContextProject.textContent = projectPath.textContent || "Local Project";
-  if (topContextWorkItem) topContextWorkItem.textContent = dashboard.work_item || "Choose a work item";
+  if (topContextWorkItem) topContextWorkItem.textContent = dashboard.work_item || "Choose an intent";
   if (topContextRun) topContextRun.textContent = run.run_id || "No run";
   const runtime = selectedRuntimeView();
   const ready = runtime ? runtime.provider_available && runtime.execution_command_available : false;
@@ -253,43 +253,7 @@ function renderTopbar() {
 }
 
 function renderStageRail() {
-  const stages = state.dashboard?.stages || [];
-  const done = stages.filter((item) => item.status === "succeeded").length;
-  document.getElementById("stageCounter").textContent = `${done}/${STAGES.length}`;
-  document.getElementById("stageRail").innerHTML = stages.map((item, index) => {
-    const isActive = item.stage === state.activeStage;
-    const active = isActive ? " active" : "";
-    const status = statusClass(item.status);
-    const attemptCount = Number(item.attempt_count || 0);
-    const retry = stageRetrySummary(item);
-    const attemptTitle = attemptCount > 1
-      ? retry.title
-      : `${attemptCount || 0} attempt${attemptCount === 1 ? "" : "s"}`;
-    const markers = [
-      item.stale ? `<span class="small-badge warn" title="${escapeHtml(item.stale_reason || "downstream evidence is stale")}">stale</span>` : "",
-      item.unresolved_blocking_count ? `<span class="small-badge warn">Q${item.unresolved_blocking_count}</span>` : "",
-      item.validator_fail_count ? `<span class="small-badge bad">V${item.validator_fail_count}</span>` : "",
-      attemptCount ? `<span class="small-badge ${retry ? "retried" : ""}" title="${escapeHtml(attemptTitle)}">${retry ? `retry ${escapeHtml(attemptCount)}x` : `${escapeHtml(attemptCount)}x`}</span>` : ""
-    ].filter(Boolean).join("");
-    const retryAria = retry ? `, ${retry.retryCount === 1 ? "1 retry" : `${retry.retryCount} retries`} recorded` : "";
-    const nameId = `stage-${item.stage}-name`;
-    const statusId = `stage-${item.stage}-status`;
-    return `
-      <button class="stage-card${active}${retry ? " retried" : ""}" data-stage="${escapeHtml(item.stage)}" type="button" aria-current="${isActive ? "step" : "false"}" aria-labelledby="${escapeHtml(nameId)} ${escapeHtml(statusId)}">
-        <span class="stage-index">${index + 1}</span>
-        <span class="stage-copy">
-          <span id="${escapeHtml(nameId)}" class="stage-name">${escapeHtml(item.title)}</span>
-          <span class="stage-subtitle">${escapeHtml(item.subtitle)}</span>
-        </span>
-        <span class="stage-markers">
-          <span class="marker-dot ${escapeHtml(status)}" title="${escapeHtml(item.status)}"></span>
-          ${markers}
-          <span id="${escapeHtml(statusId)}" class="sr-only">${escapeHtml(`${item.status}${retryAria}`)}</span>
-        </span>
-      </button>
-    `;
-  }).join("");
-  requestAnimationFrame(scrollActiveStageIntoView);
+  // Stage navigation is rendered as the four-phase stepper in the active view.
 }
 
 function workItemHandoffStatus(item) {
@@ -399,53 +363,11 @@ function workflowProgressSummary({collapsed = false} = {}) {
 }
 
 function renderProjectHomeRail() {
-  const host = document.getElementById("projectHomeRail");
-  if (!host) return;
-  const home = state.projectHome;
-  if (!home) {
-    host.innerHTML = `<div class="empty-state compact">Project Home loading...</div>`;
-    return;
-  }
-  const current = currentWorkItemSummary();
-  const items = projectHomeWorkItems();
-  const projectsActive = state.activeTab === "work" && state.workDetail === "project-home";
-  const workItemsActive = state.activeTab === "work" && state.workDetail !== "project-home";
-  host.innerHTML = `
-    <div class="project-home-tabs" role="group" aria-label="Project and work item navigation">
-      <button data-tab-shortcut="project-home" class="${projectsActive ? "active" : ""}" aria-pressed="${projectsActive ? "true" : "false"}" type="button">Projects</button>
-      <button data-tab-shortcut="overview" class="${workItemsActive ? "active" : ""}" aria-pressed="${workItemsActive ? "true" : "false"}" type="button">Work items</button>
-    </div>
-    <div class="rail-header small">
-      <span>Work items</span>
-      <span class="counter">${escapeHtml(items.length)}</span>
-    </div>
-      <button data-new-work-item class="secondary project-home-new-work-item" type="button">New intent</button>
-    <div class="work-item-board-rail">
-      ${items.length ? items.slice(0, 6).map((item) => `
-        <button class="work-item-card ${item.work_item === current?.work_item ? "active" : ""}" data-project-home-resume="${escapeHtml(item.work_item)}" type="button" aria-current="${item.work_item === current?.work_item ? "true" : "false"}">
-          <span>
-            <strong>${escapeHtml(item.work_item)}</strong>
-            <small>${escapeHtml(workItemProgressText(item))}</small>
-          </span>
-          <span class="small-badge ${workItemStatusClass(item)}">${escapeHtml(workItemTerminalLabel(item))}</span>
-        </button>
-      `).join("") : `<div class="empty-state compact">No work items in this project.</div>`}
-    </div>
-  `;
+  // Project navigation is owned by the Inbox surface; no permanent rail exists.
 }
 
 function renderStageHeader() {
-  const item = activeStageItem();
-  const retry = stageRetrySummary(item);
-  document.getElementById("stageTitle").textContent = item?.title || stageTitle(state.activeStage);
-  document.getElementById("stageSubtitle").textContent = item?.subtitle || stageSubtitle(state.activeStage);
-  document.getElementById("stageBadges").innerHTML = [
-    `<span class="status-badge ${escapeHtml(statusClass(item?.status))}">${escapeHtml(item?.status || "pending")}</span>`,
-    item?.stale ? `<span class="status-badge warn" title="${escapeHtml(item.stale_reason || "downstream evidence is stale")}">stale</span>` : "",
-    `<span class="status-badge">Attempts ${escapeHtml(item?.attempt_count || 0)}</span>`,
-    retry ? `<button class="badge-button retried" data-stage-recovery="validation" type="button" title="${escapeHtml(retry.title)}">Retry history</button>` : "",
-    `<span class="status-badge">Validation ${escapeHtml(item?.validator_pass_count || 0)}/${escapeHtml(item?.validator_fail_count || 0)}</span>`
-  ].filter(Boolean).join("");
+  // Stage title and status are part of the Intent context rendered by the active view.
 }
 
 function stageHasEvidence(stage) {

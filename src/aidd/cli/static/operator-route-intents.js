@@ -2,7 +2,7 @@ const OPERATOR_ROUTE_INTENTS = Object.freeze({
   "inbox-work-item": Object.freeze({label: "Open in Studio", mode: "studio", view: "overview"}),
   "historical-run": Object.freeze({label: "Inspect run history", mode: "history", view: "overview"}),
   "parent-run": Object.freeze({label: "Inspect parent run", mode: "history", view: "overview"}),
-  "child-work-item": Object.freeze({label: "Open child work item", mode: "studio", view: "overview"}),
+  "child-work-item": Object.freeze({label: "Open child intent", mode: "studio", view: "overview"}),
   "run-artifacts": Object.freeze({label: "Inspect run artifacts", mode: "studio", view: "artifacts"})
 });
 
@@ -17,7 +17,7 @@ function routeIntentIdentifier(value, field) {
 function resolveOperatorRouteIntent(intent, context = {}) {
   const definition = OPERATOR_ROUTE_INTENTS[intent];
   if (!definition) throw new Error(`Unknown operator route intent: ${intent || "empty"}`);
-  const workItem = routeIntentIdentifier(context.workItem, "work item");
+  const workItem = routeIntentIdentifier(context.workItem, "intent");
   const needsRun = ["historical-run", "parent-run", "run-artifacts"].includes(intent);
   const acceptsRun = needsRun || intent === "inbox-work-item";
   const runId = acceptsRun && context.runId

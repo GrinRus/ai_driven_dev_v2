@@ -30,7 +30,7 @@ def _open_implementation(page: Page) -> None:
     )
     gate = page.locator('[data-studio-quality-gate="implement"]')
     if gate.count() != 1:
-        raise AssertionError(page.locator("#cockpitContent").inner_text())
+        raise AssertionError(page.locator("#intentContent").inner_text())
     gate.wait_for(state="visible")
 
 

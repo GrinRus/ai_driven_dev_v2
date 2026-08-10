@@ -25,9 +25,12 @@ def test_active_studio_shell_preserves_context_and_one_primary_action(
     ) as harness, harness.open_page((1280, 900)) as browser_page:
         response = browser_page.page.goto(f"{harness.url}?ui=studio", wait_until="networkidle")
         assert response is not None and response.ok
-        assert browser_page.page.locator(".cockpit").get_attribute("data-active-studio") == "true"
         assert (
-            browser_page.page.locator("#stageRail").get_attribute("data-studio-stage-navigation")
+            browser_page.page.locator("#intentContent").get_attribute("data-active-studio")
+            == "true"
+        )
+        assert (
+            browser_page.page.locator("#intentPhaseStepper").get_attribute("data-studio-phase-navigation")
             == "true"
         )
         assert browser_page.page.locator("[data-studio-context-bar]").count() == (

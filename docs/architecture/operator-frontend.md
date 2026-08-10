@@ -50,6 +50,36 @@ recommendation: continue the highest-priority active intent (blocking or ready) 
 create a new intent when no active intent remains. Deep links continue to open their
 exact work-item/run/stage context and bypass this recommendation.
 
+### Intent workspace shell
+
+The packaged UI uses one compact shell rather than permanent stage, diagnostics, and activity
+regions. Its stable presentation regions are:
+
+```text
+operatorTopbar
+operatorWorkspace
+  intentContext
+  intentPhaseStepper
+  intentDecisionSurface
+  intentDocumentSurface
+  intentTechnicalDetails
+operatorToast
+```
+
+`operatorWorkspace` owns the primary vertical scroll. Evidence, recovery, history, and runtime
+logs are contextual drill-downs under `intentTechnicalDetails`; a nested scroll region is allowed
+only when it is named and bounded for a high-volume stream such as logs. The shell must not keep
+empty stage rails, sidebars, docks, or duplicate next-action surfaces in the base DOM.
+
+The primary DOM and focus order is context, phase, current decision, document, technical details,
+then maintenance. Existing dynamic form and action controls keep their IDs where those IDs belong
+to a mutation or recovery contract; shell layout anchors are not compatibility APIs and may be
+replaced without changing routes, services, or payloads.
+
+`Intent` is the user-facing vocabulary. Canonical `work_item` fields, route parameters, command
+examples, and source/target lineage identifiers remain technical values and are shown only in
+technical details or contract-level surfaces.
+
 ## 2. Source of truth
 
 The frontend must not introduce a new canonical artifact format.
@@ -906,14 +936,15 @@ wait for the launched runtime job's polling or terminal state.
 
 ### 8.11 Responsive and accessibility contract
 
-The layout has one primary vertical scroll owner. Desktop may use three workbench columns;
-tablet moves the Evidence Inspector into a drawer; mobile uses a single decision-first column.
+The layout has one primary vertical scroll owner. Desktop uses a compact intent workspace;
+technical details move into labelled disclosures or drawers; mobile uses a single decision-first
+column.
 
 | Viewport | Layout behavior |
 | --- | --- |
-| `>= 1280px` | Compact context bar; 208-224px stage/artifact rail; flexible Document Canvas; 300-336px inspector when valuable; collapsed bottom Filmstrip. |
-| `768-1279px` | Horizontal stage navigation; full-width document; inspector and Filmstrip in labelled drawers. |
-| `< 768px` | Context bar no taller than 80px; current decision in the first viewport; document follows; evidence and vertical Filmstrip open as bottom sheets or dedicated drill-downs. |
+| `>= 1280px` | Compact intent context; phase stepper and decision surface beside the flexible Document Canvas; technical details collapsed until valuable. |
+| `768-1279px` | Compact context and phase navigation; full-width document; technical details in labelled drawers. |
+| `< 768px` | Context bar no taller than 80px; current decision in the first viewport; document follows; evidence, history, and logs open as dedicated drill-downs. |
 
 Further requirements:
 

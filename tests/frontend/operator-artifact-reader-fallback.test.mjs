@@ -20,7 +20,7 @@ test("flat evidence-graph fallback still opens the indexed document reader", asy
       selectedEvidenceNodeId: "",
       selectedEvidenceEdgeId: "",
     },
-    document: {getElementById(id) { return id === "cockpitContent" ? content : null; }},
+    document: {getElementById(id) { return id === "intentContent" ? content : null; }},
     activeStageItem() { return {attempt_count: 1}; },
     escapeHtml(value) { return String(value ?? ""); },
     compactPath(value) { return String(value); },

@@ -54,14 +54,14 @@ def _assert_clean_navigation_diagnostics(browser_page: BrowserPage) -> None:
 
 
 def _wait_for_question_surface(page: Page) -> None:
-    page.locator("#cockpitContent").get_by_text(
+    page.locator("#intentContent").get_by_text(
         "Which acceptance boundary", exact=False
     ).first.wait_for(state="visible", timeout=_SURFACE_TIMEOUT_MS)
 
 
 def _wait_for_work_item_surface(page: Page, work_item: str) -> None:
-    page.locator("#workItemChip").get_by_text(
-        f"Work item: {work_item}", exact=True
+    page.locator("#intentChip").get_by_text(
+        f"Intent: {work_item}", exact=True
     ).wait_for(state="visible", timeout=_SURFACE_TIMEOUT_MS)
 
 

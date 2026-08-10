@@ -30,7 +30,7 @@ async function contextFor(dashboard) {
   return context;
 }
 
-test("active Studio preserves work item, run, stage, and status context", async () => {
+test("active Studio preserves intent, phase, and status context", async () => {
   const context = await contextFor({
     work_item: "WI-1",
     run: {run_id: "run-1"},
@@ -40,10 +40,12 @@ test("active Studio preserves work item, run, stage, and status context", async 
   assert.match(html, /data-studio-surface="active-studio"/);
   assert.match(html, /data-state="active"/);
   assert.match(html, /data-workflow-collapsed="true"/);
-  for (const value of ["WI-1", "run-1", "idea", "Stage running"]) {
+  for (const value of ["idea", "Stage running"]) {
     assert.match(html, new RegExp(value));
   }
   assert.match(html, /Intent Workspace/);
+  assert.doesNotMatch(html, /<dt>Work item<\/dt>/);
+  assert.doesNotMatch(html, /<dt>Run<\/dt>/);
   for (const phase of ["Understand", "Decide", "Deliver", "Prove"]) {
     assert.match(html, new RegExp(phase));
   }

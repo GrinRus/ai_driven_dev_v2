@@ -246,6 +246,10 @@ the four read-only product phases, and keeps runtime/model/reasoning controls be
 `Execution settings` disclosure until a launch action needs them. Recovery uses one
 dominant `Save answer & resume` CTA for a non-empty answer; technical timeline markers
 are nested under their durable attempt rather than rendered as peer cards.
+The base DOM contains one `operatorWorkspace` scroll owner with context, phase, decision,
+document, and technical-detail regions; stage rails, permanent sidebars, bottom docks, and
+duplicate next-action strips are not present. User-facing copy says `Intent`; canonical
+`work_item` and lineage identifiers are limited to technical details and contract fields.
 
 For each observed operator journey, also record:
 
@@ -529,11 +533,12 @@ curated as docs assets.
   the same status or next action is not repeated as a rail, sidebar, and dock.
 - Desktop completed-flow view keeps Flow Complete, Start Next Flow, final artifacts,
   and run-history lineage visible without overlapping panels.
-- Tablet width keeps the right sidebar below the cockpit without overlapping content.
+- Tablet width keeps the compact intent workspace and technical-detail drawer readable without
+  overlapping content.
 - Tablet completed-flow view keeps the wizard action row, source-finding groups, and
   launch preflight cards readable after wrapping.
-- Mobile width turns the stage rail into horizontal navigation, auto-scrolls the active
-  stage into view on load and stage switch, and preserves readable tab/action buttons.
+- Mobile width keeps the phase stepper readable, auto-scrolls the active phase into view on load
+  and phase switch, and preserves readable decision/action buttons.
 - Mobile and tablet widths keep order as Next Action, selected-stage/document workbench,
   diagnostics/recovery, logs/evidence, and secondary history surfaces.
 - Mobile completed-flow view keeps Flow Complete actions, wizard controls, lineage

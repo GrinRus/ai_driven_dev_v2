@@ -89,6 +89,10 @@ Use concrete repair actions:
   or upstream evidence for each material QA claim, using `EV-1`, `EV-2`, ... evidence ids and/or
   backticked artifact paths; for checks executed locally during QA, include both the exact
   executable command and its explicit terminal outcome in the same `EV-N` definition;
+- `CROSS-QA-UPSTREAM-EVIDENCE` in `Verification summary` or `Readiness`: treat each affected
+  bullet as an index entry and add the corresponding `EV-N` from `Evidence` or an exact existing
+  workspace-relative artifact path. Rewriting only the path inside `Evidence` is insufficient;
+  do not leave a bare command/result bullet in either index section;
 - missing ready/proceed residue evidence: when the report cites test/type/lint/docs/build checks
   and keeps `ready`/`proceed` or `ready-with-risks`/`proceed-with-conditions`, add a
   post-QA `git status --ignored --short --untracked-files=all` evidence entry, cite it from

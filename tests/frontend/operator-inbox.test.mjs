@@ -73,7 +73,7 @@ test("Studio Inbox preserves section priority and exact durable routes", async (
   assert.match(html, /data-inbox-action="create-new-work-item"/);
 });
 
-test("Project Inbox exposes a direct new work item entry point", async () => {
+test("Project Inbox exposes a direct new intent entry point", async () => {
   const context = await inboxContext();
   const html = vm.runInContext(`
     state.inbox = {durable: {sections: []}, running_now: []};
@@ -81,7 +81,7 @@ test("Project Inbox exposes a direct new work item entry point", async () => {
   `, context);
 
   assert.match(html, /data-new-work-item/);
-  assert.match(html, /New work item/);
+  assert.match(html, /New intent/);
 });
 
 test("Project Inbox exposes one durable continue-or-create entry recommendation", async () => {

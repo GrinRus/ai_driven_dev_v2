@@ -72,7 +72,6 @@ def test_active_studio_reconnects_cancels_and_returns_to_durable_logs(
         job_id = page.evaluate("eval('state.activeJobId')")
         assert isinstance(job_id, str) and job_id
 
-        page.locator("#tab-work").click()
         observation = page.locator('[data-studio-observation="ui-job"]')
         observation.wait_for(state="visible")
         assert "Live runtime evidence is updating" in observation.inner_text()
@@ -97,7 +96,6 @@ def test_active_studio_reconnects_cancels_and_returns_to_durable_logs(
         page.route("**/api/jobs/**", _silence_status)
         page.evaluate("pollActiveJob()")
         page.unroute("**/api/jobs/**", _silence_status)
-        page.locator("#tab-work").click()
         observation.wait_for(state="visible")
         assert "No runtime output" in observation.inner_text()
 
@@ -129,6 +127,7 @@ def test_active_studio_reconnects_cancels_and_returns_to_durable_logs(
         assert page.evaluate("eval('state.activeJobCursor')") >= cursor_before_failure
         _assert_rendered_gate(page, viewport)
 
+        page.locator("#intentTechnicalDetails").evaluate("node => { node.open = true; }")
         page.locator("[data-cancel-job]:visible").first.click()
         try:
             page.wait_for_function("eval('state.activeJobId') === ''", timeout=15_000)
@@ -155,9 +154,9 @@ def test_active_studio_reconnects_cancels_and_returns_to_durable_logs(
                 }"""
             )
             pytest.fail(f"active job did not reconcile after cancellation: {browser_state!r}")
-        page.locator("#cockpitContent").get_by_text(
+        page.locator("#intentContent").get_by_text(
             "Saved runtime.log", exact=False
         ).first.wait_for(state="visible", timeout=10_000)
-        assert "runtime" in page.locator("#cockpitContent").inner_text().lower()
+        assert "runtime" in page.locator("#intentContent").inner_text().lower()
         _assert_rendered_gate(page, viewport)
         _assert_expected_diagnostics(browser_page.diagnostics)

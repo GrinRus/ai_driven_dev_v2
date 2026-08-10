@@ -132,7 +132,7 @@ function renderStudioInbox() {
         </div>
         <div class="studio-inbox-actions">
           <span class="small-badge">${escapeHtml(count)} items</span>
-          <button data-new-work-item aria-label="New intent (New work item)" type="button">New intent</button>
+          <button data-new-work-item aria-label="New intent" type="button">New intent</button>
         </div>
       </header>
       ${renderStudioEntryRecommendation(state.inbox)}

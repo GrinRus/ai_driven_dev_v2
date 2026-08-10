@@ -21,6 +21,8 @@ Summarize verification evidence, remaining risks, and release readiness.
 - `Release recommendation` declares exactly one supported state:
   `proceed`, `proceed-with-conditions`, or `hold`,
 - material evidence entries use stable `EV-N` ids and/or backticked artifact paths,
+- material verification and verdict claims in `Verification summary` and `Readiness` cite an
+  `EV-N` defined in `Evidence` or an exact existing workspace-relative artifact path,
 - ready/proceed-style reports that cite test/type/lint/docs/build commands also cite
   ignored residue evidence from `git status --ignored --short --untracked-files=all`
   collected after all QA commands, or equivalent post-command workspace hygiene evidence,

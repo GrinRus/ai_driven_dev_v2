@@ -134,7 +134,7 @@ async function guardedJobLaunch({kind, components, controls, execute}) {
 
 async function startWorkflow() {
   if (state.onboarding?.setupRequired || !state.dashboard?.work_item) {
-    toast("Create or resume a work item before starting the workflow.");
+    toast("Create or resume an intent before starting the workflow.");
     return;
   }
   if (!ensureRunnableRuntime()) return;

@@ -1325,10 +1325,10 @@ function renderEvidenceGraphScreen(view, selection) {
 async function renderArtifacts() {
   const item = activeStageItem();
   if (!item || Number(item.attempt_count || 0) <= 0) {
-    document.getElementById("cockpitContent").innerHTML = `<div class="empty-state">No artifacts for this stage yet.</div>`;
+    document.getElementById("intentContent").innerHTML = `<div class="empty-state">No artifacts for this stage yet.</div>`;
     return;
   }
-  const content = document.getElementById("cockpitContent");
+  const content = document.getElementById("intentContent");
   content.innerHTML = `<div class="empty-state loading-state">Loading Artifacts / Evidence Graph...</div>`;
   try {
     const params = new URLSearchParams({stage: state.activeStage});

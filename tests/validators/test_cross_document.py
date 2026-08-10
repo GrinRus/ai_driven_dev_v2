@@ -1693,6 +1693,33 @@ def test_qa_cross_validation_accepts_qa_local_executable_evidence_with_outcome(
     assert findings == ()
 
 
+def test_qa_cross_validation_rejects_unindexed_verification_summary_claim(
+    tmp_path: Path,
+) -> None:
+    workspace_root = tmp_path / ".aidd"
+    _write_qa_upstream_bundle(workspace_root)
+    qa_path = workspace_root / "workitems" / "WI-001" / "stages" / "qa" / "qa-report.md"
+    qa_path.write_text(
+        "# QA Report\n\n"
+        "## Quality verdict\n\n- QA verdict: ready\n\n"
+        "## Verification summary\n\n"
+        "- Full suite `uv run pytest -q` -> pass.\n\n"
+        "## Release recommendation\n\n- proceed\n\n"
+        "## Evidence\n\n"
+        "- EV-1: `workitems/WI-001/stages/implement/output/implementation-report.md` "
+        "-> pass.\n\n"
+        "## Known issues\n\n- Known issues: none.\n\n"
+        "## Readiness\n\n- Ready. Evidence: EV-1.\n",
+        encoding="utf-8",
+    )
+
+    findings = validate_cross_document_consistency(
+        stage="qa", work_item="WI-001", workspace_root=workspace_root
+    )
+
+    assert [finding.code for finding in findings] == [QA_UPSTREAM_EVIDENCE_CODE]
+
+
 def test_qa_cross_validation_rejects_qa_local_command_without_outcome(
     tmp_path: Path,
 ) -> None:
