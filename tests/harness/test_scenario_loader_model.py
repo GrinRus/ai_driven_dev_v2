@@ -232,6 +232,19 @@ def test_sqlite_utils_canonical_live_scenario_declares_black_box_operator_contra
     assert scenario.run.timeout_minutes == 240
 
 
+def test_sqlite_utils_task_verification_stays_before_qa_artifact_gate() -> None:
+    scenario = load_scenario(
+        Path("harness/scenarios/live/sqlite-utils-detect-types-header-only.yaml")
+    )
+
+    assert scenario.feature_source is not None
+    assert scenario.feature_source.tasks[0].verification == ("uv run pytest -q",)
+    assert scenario.verify.commands[-2:] == (
+        "test -f .aidd/workitems/WI-LIVE-SQLITE-SMOKE/stages/qa/output/stage-result.md",
+        "test -f .aidd/workitems/WI-LIVE-SQLITE-SMOKE/stages/qa/output/validator-report.md",
+    )
+
+
 def test_sqlite_utils_interview_scenario_forces_blocking_question_conditions() -> None:
     scenario = load_scenario(
         Path("harness/scenarios/live/sqlite-utils-yielded-rows-interview.yaml")

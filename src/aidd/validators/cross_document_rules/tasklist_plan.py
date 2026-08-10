@@ -72,6 +72,29 @@ def _task_milestones(task: TaskCard) -> tuple[str, ...]:
     )
 
 
+def _task_primary_milestone_positions(
+    mappings: dict[str, tuple[str, ...]],
+    positions: dict[str, int],
+) -> dict[str, int | None]:
+    """Return the earliest plan milestone each task card is primarily tied to.
+
+    A task may legitimately mention a later milestone in an acceptance criterion or
+    verification note (for example, a regression test can lock a contract before the
+    implementation milestone).  Those references still count for coverage, but they
+    must not make an otherwise valid dependency look like a backwards edge.  Ordering
+    checks therefore use the earliest mapped milestone while coverage and verification
+    checks continue to use the complete mapping.
+    """
+
+    return {
+        task_id: min(
+            (positions[milestone] for milestone in milestones if milestone in positions),
+            default=None,
+        )
+        for task_id, milestones in mappings.items()
+    }
+
+
 def _task_line(tasklist_text: str, task_id: str) -> int | None:
     return next(
         (
@@ -288,16 +311,15 @@ def validate_tasklist_plan(context: CrossDocumentContext) -> tuple[ValidationFin
             )
 
     dependencies = {task.id: task.dependencies for task in task_plan.tasks}
+    primary_positions = _task_primary_milestone_positions(mappings, positions)
     for task in task_plan.tasks:
-        current_positions = [positions[item] for item in mappings[task.id] if item in positions]
+        current_position = primary_positions[task.id]
         for dependency_id in task.dependencies:
-            dependency_positions = [
-                positions[item] for item in mappings.get(dependency_id, ()) if item in positions
-            ]
+            dependency_position = primary_positions.get(dependency_id)
             if (
-                current_positions
-                and dependency_positions
-                and max(dependency_positions) > min(current_positions)
+                current_position is not None
+                and dependency_position is not None
+                and dependency_position > current_position
             ):
                 findings.append(
                     ValidationFinding(
@@ -315,7 +337,7 @@ def validate_tasklist_plan(context: CrossDocumentContext) -> tuple[ValidationFin
         if target not in known or prerequisite not in known:
             continue
         for task in task_plan.tasks:
-            if target not in mappings[task.id]:
+            if primary_positions[task.id] != positions[target]:
                 continue
             if prerequisite in mappings[task.id] or _has_ancestor_milestone(
                 task_id=task.id,

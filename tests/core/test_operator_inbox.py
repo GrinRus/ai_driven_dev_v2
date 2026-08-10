@@ -10,6 +10,7 @@ from aidd.core.operator_frontend_models import (
     OperatorFirstFailure,
     OperatorNextAction,
 )
+from aidd.core.operator_frontend_project_home import resolve_operator_project_home_view
 from aidd.core.operator_inbox import resolve_operator_inbox_view
 from aidd.core.run_store import (
     create_next_attempt_directory,
@@ -67,6 +68,46 @@ def test_inbox_projection_has_stable_sections_and_exact_identity(tmp_path: Path)
     assert item.route.run_id is None
     assert item.route.stage == "idea"
     assert item.primary_action.action == "choose-runtime"
+    assert inbox.entry_recommendation is not None
+    assert inbox.entry_recommendation.action == "continue-existing-intent"
+    assert inbox.entry_recommendation.work_item == "WI-READY"
+
+
+def test_project_home_intent_excerpt_is_bounded_and_excludes_markdown_heading(
+    tmp_path: Path,
+) -> None:
+    workspace_root = tmp_path / ".aidd"
+    _prepare_work_item(workspace_root, "WI-INTENT")
+    request_path = (
+        workspace_root / "workitems" / "WI-INTENT" / "context" / "user-request.md"
+    )
+    request_path.parent.mkdir(parents=True, exist_ok=True)
+    request_path.write_text(
+        "# Original request\n\nBuild a calmer operator workspace. " + ("Keep it bounded. " * 40),
+        encoding="utf-8",
+    )
+
+    home = resolve_operator_project_home_view(
+        project_root=tmp_path,
+        workspace_root=workspace_root,
+        selected_work_item="WI-INTENT",
+        recent_project_roots=(),
+    )
+    assert home.selected_work_item_resume is not None
+    assert home.selected_work_item_resume.intent.excerpt.startswith(
+        "Build a calmer operator workspace."
+    )
+    assert len(home.selected_work_item_resume.intent.excerpt) <= 220
+    assert home.selected_work_item_resume.intent.source_path == (
+        "workitems/WI-INTENT/context/user-request.md"
+    )
+
+    inbox = resolve_operator_inbox_view(
+        project_root=tmp_path,
+        workspace_root=workspace_root,
+    )
+    item = inbox.sections[1].items[0]
+    assert item.route.work_item == "WI-INTENT"
 
 
 def test_inbox_projection_omits_durable_running_item_until_job_overlay(

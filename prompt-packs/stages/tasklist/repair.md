@@ -87,7 +87,9 @@ Use concrete repair actions:
   `context/allowed-write-scope.md`; do not edit, broaden, or reinterpret that context document,
   and use a blocking question if the approved plan has no implementable path inside it;
 - hidden or unclear prerequisites: add explicit dependency ids or `none`, then reorder tasks so
-  every dependency references an earlier card;
+  every dependency references an earlier card. If an entry has rationale after the machine-readable
+  value, keep that rationale after the leading `none` or task ids; milestone/review ids in rationale
+  are not dependencies;
 - missing or unknown plan milestone mapping: cite an exact existing `M<n>` id in the task's
   `Outcome`, optional `Context`, a nested acceptance criterion, or its dedicated
   `Verification notes` entry. Cover every plan milestone. Do not add or preserve an ad hoc

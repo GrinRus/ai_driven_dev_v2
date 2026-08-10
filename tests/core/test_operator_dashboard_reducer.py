@@ -14,6 +14,7 @@ from aidd.core.operator_frontend_models import (
     OperatorRunArchive,
     OperatorRunLineage,
     OperatorRunSummary,
+    OperatorStageRailItem,
 )
 
 
@@ -118,3 +119,42 @@ def test_dashboard_reducer_has_no_io_dependencies() -> None:
         "time.time",
     ):
         assert forbidden not in source
+
+
+def test_dashboard_reducer_projects_four_intent_phases_without_changing_stage_authority(
+    tmp_path: Path,
+) -> None:
+    evidence = _evidence(tmp_path)
+    stage_defaults = dict(
+        title="Stage",
+        subtitle="Stage",
+        attempt_count=0,
+        can_run=False,
+        reason="",
+        question_count=0,
+        unresolved_blocking_count=0,
+        validator_pass_count=0,
+        validator_fail_count=0,
+    )
+    stages = tuple(
+        OperatorStageRailItem(stage=stage, status=status, **stage_defaults)
+        for stage, status in (
+            ("idea", "succeeded"),
+            ("research", "executing"),
+            ("plan", "pending"),
+            ("review-spec", "pending"),
+            ("tasklist", "pending"),
+            ("implement", "pending"),
+            ("review", "pending"),
+            ("qa", "pending"),
+        )
+    )
+    view = reduce_operator_dashboard_evidence(replace(evidence, stages=stages))
+
+    assert [(phase.phase_id, phase.status) for phase in view.phases] == [
+        ("understand", "active"),
+        ("decide", "pending"),
+        ("deliver", "pending"),
+        ("prove", "pending"),
+    ]
+    assert view.stages is stages

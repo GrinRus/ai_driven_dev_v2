@@ -143,6 +143,45 @@ function renderGuidedDeliveryPreference() {
   `;
 }
 
+function renderGuidedSetupProgress(guided = state.onboarding.guided || initialGuidedSetupState()) {
+  const labels = [
+    ["project", "Project"],
+    ["work-item", "Work Item"],
+    ["runtime", "Runtime"],
+    ["review-launch", "Review & Launch"]
+  ];
+  const activeIndex = Math.max(0, GUIDED_SETUP_STEPS.indexOf(guided.step));
+  return `
+    <nav class="guided-setup-progress" aria-label="Guided setup progress">
+      ${labels.map(([step, label], index) => {
+        const complete = index < activeIndex;
+        const active = index === activeIndex;
+        return `
+          <div class="guided-setup-step ${complete ? "complete" : active ? "active" : "upcoming"}" aria-current="${active ? "step" : "false"}">
+            <span class="guided-setup-step-index">${complete ? "✓" : index + 1}</span>
+            <strong>${escapeHtml(label)}</strong>
+            <small>${complete ? "completed" : active ? "active" : "upcoming"}</small>
+          </div>
+        `;
+      }).join("")}
+    </nav>
+  `;
+}
+
+function renderGuidedSetupSummary(guided = state.onboarding.guided || initialGuidedSetupState()) {
+  if (guided.projectStatus !== "valid" && !guided.workItem) return "";
+  const project = onboardingProject();
+  return `
+    <section class="surface guided-setup-summary" aria-label="Setup summary">
+      <div class="surface-title"><span>Setup summary</span><span class="small-badge">selected context</span></div>
+      <dl>
+        <div><dt>Project</dt><dd>${escapeHtml(project?.project_root || state.onboarding.projectRootInput || "Local project")}</dd></div>
+        <div><dt>Work item</dt><dd>${escapeHtml(guided.workItem || "Choose a work item")}</dd></div>
+      </dl>
+    </section>
+  `;
+}
+
 function onboardingProject() {
   return state.onboarding.project || null;
 }
@@ -450,6 +489,12 @@ function renderOnboardingTopbar() {
   workItemChip.title = "Setup mode";
   runChip.textContent = runLabel;
   runChip.title = runLabel;
+  const topContextProject = document.getElementById("topContextProject");
+  const topContextWorkItem = document.getElementById("topContextWorkItem");
+  const topContextRun = document.getElementById("topContextRun");
+  if (topContextProject) topContextProject.textContent = projectRoot;
+  if (topContextWorkItem) topContextWorkItem.textContent = "Guided setup";
+  if (topContextRun) topContextRun.textContent = state.selectedRuntime || "Ready";
   const localStatus = document.getElementById("localStatus");
   localStatus.textContent = state.onboarding.error || "Onboarding";
   localStatus.title = state.onboarding.error || "Onboarding";
@@ -466,11 +511,14 @@ function renderOnboardingTopbar() {
 function renderOnboarding() {
   renderOnboardingTopbar();
   const content = document.getElementById("cockpitContent");
+  const guided = state.onboarding.guided || initialGuidedSetupState();
   const selectedRunner = state.selectedRuntime
     ? `<span class="small-badge good">${escapeHtml(state.selectedRuntime)}</span>`
     : `<span class="small-badge">optional until launch</span>`;
   content.innerHTML = `
-    <div class="onboarding-shell">
+    <div class="onboarding-shell" data-guided-step="${escapeHtml(guided.step)}">
+      ${renderGuidedSetupProgress(guided)}
+      ${renderGuidedSetupSummary(guided)}
       ${renderGuidedDeliveryPreference()}
       <section class="surface onboarding-panel">
         <div class="surface-title">
@@ -481,7 +529,7 @@ function renderOnboarding() {
           <label class="field-label" for="onboardingProjectRoot">Project root</label>
           <div class="inline-form-row">
             <input id="onboardingProjectRoot" name="project_root" type="text" value="${escapeHtml(state.onboarding.projectRootInput)}" autocomplete="off" spellcheck="false">
-            <button type="submit" class="secondary" ${state.onboarding.inspecting ? "disabled" : ""}>Validate</button>
+            <button type="submit" class="secondary" ${state.onboarding.inspecting ? "disabled" : ""}>Validate project</button>
           </div>
         </form>
         ${onboardingProjectSummary()}

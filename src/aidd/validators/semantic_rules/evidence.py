@@ -12,7 +12,8 @@ GENERIC_BACKTICKED_COMMAND_FRAGMENT = (
 IMPLEMENT_COMMAND_PATTERN = re.compile(
     r"(\$ [^\n]+|"
     r"`[^`\n]*\b("
-    r"aidd|uv run|pytest|ruff|mypy|python|node|sphinx-build|npm|pnpm|yarn|go test|cargo test|"
+    r"aidd|ast-index|uv run|pytest|ruff|mypy|python|node|sphinx-build|npm|pnpm|yarn|"
+    r"go test|cargo test|"
     r"make|git|grep|rg|sed|nl|echo|printf|flake8|black|prettier|ty check|"
     r"bun|bunx|find|npx|vitest|tsc"
     r")\b[^`\n]*`|"
@@ -61,6 +62,10 @@ IMPLEMENT_ASSERTION_REFERENCE_PATTERN = re.compile(
     r"[A-Za-z_][A-Za-z0-9_.]*\(\))\s*(?:==|!=|is|contains)\s*[^`]+`",
     flags=re.IGNORECASE,
 )
+IMPLEMENT_TEST_REFERENCE_PATTERN = re.compile(
+    r"`(?:[^`\n/]+/)*tests?/[^`\n]+::[A-Za-z_][A-Za-z0-9_]*(?:::[A-Za-z0-9_]+)*`",
+    flags=re.IGNORECASE,
+)
 IMPLEMENT_REUSED_COMMAND_EVIDENCE_PATTERN = re.compile(
     r"\b(same\s+)?stash/pop\s+procedure\b|"
     r"\bsame\b.{0,80}\b(?:procedure|command|check|run)\b.{0,80}\bas\s+`?(?:T\d+|TL-\d+)`?",
@@ -91,6 +96,7 @@ IMPLEMENT_NOOP_JUSTIFICATION_PATTERN = re.compile(
 _KNOWN_COMMAND_EXECUTABLES = frozenset(
     {
         "aidd",
+        "ast-index",
         "bash",
         "black",
         "bun",
@@ -238,6 +244,7 @@ __all__ = [
     "IMPLEMENT_NOOP_JUSTIFICATION_PATTERN",
     "IMPLEMENT_NON_COMMAND_ARTIFACT_TEXT_PATTERN",
     "IMPLEMENT_RESULT_PATTERN",
+    "IMPLEMENT_TEST_REFERENCE_PATTERN",
     "IMPLEMENT_REUSED_COMMAND_EVIDENCE_PATTERN",
     "has_implementation_command_evidence",
     "is_deferred_implementation_verification",

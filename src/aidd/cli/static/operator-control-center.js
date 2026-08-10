@@ -82,51 +82,6 @@ function renderWarnings(warnings) {
   `;
 }
 
-async function renderTimeline() {
-  const content = document.getElementById("cockpitContent");
-  if (!state.activeRunId) {
-    content.innerHTML = `<div class="empty-state">No run is available yet.</div>`;
-    return;
-  }
-  content.innerHTML = `<div class="empty-state loading-state">Loading run timeline...</div>`;
-  try {
-    const params = runScopedQuery(state.activeStage);
-    const view = await api(`/api/run/timeline?${params}`);
-    const events = view.events || [];
-    content.innerHTML = `
-      <section class="surface control-center-screen">
-        <div class="surface-title">
-          <span>Stage Timeline</span>
-          <span class="small-badge">${escapeHtml(events.length)} events</span>
-        </div>
-        ${renderWarnings(view.warnings)}
-        <div class="operator-timeline">
-          ${events.length ? events.map((event) => `
-            <article class="timeline-event">
-              <span class="marker-dot ${escapeHtml(statusClass(event.status || event.kind))}"></span>
-              <div>
-                <div class="question-head">
-                  <strong>${escapeHtml(event.kind)}</strong>
-                  <span class="small-badge">${escapeHtml(event.stage || "run")}</span>
-                  ${event.attempt_number ? `<span class="small-badge">attempt ${escapeHtml(event.attempt_number)}</span>` : ""}
-                </div>
-                <div class="question-meta">
-                  <span>${escapeHtml(event.time_utc || "time not recorded")}</span>
-                  <span>${escapeHtml(event.status || "event")}</span>
-                </div>
-                <p>${escapeHtml(event.message || "")}</p>
-                ${event.path ? pathLine(event.path, 92) : ""}
-              </div>
-            </article>
-          `).join("") : `<div class="empty-state">No timeline events for this stage yet.</div>`}
-        </div>
-      </section>
-    `;
-  } catch (error) {
-    content.innerHTML = `<div class="empty-state">${escapeHtml(error.message)}</div>`;
-  }
-}
-
 function diffFileWarning(file) {
   const warnings = [];
   if (file.allowed_scope_status === "outside") warnings.push("outside scope");
@@ -294,10 +249,6 @@ function checkedRemediationIds(sourceStage) {
   return Array.from(document.querySelectorAll(`[data-remediation-source="${sourceStage}"]:checked`))
     .map((input) => input.value)
     .filter(Boolean);
-}
-
-function countLabel(count, singular, plural = `${singular}s`) {
-  return `${count} ${count === 1 ? singular : plural}`;
 }
 
 function renderRemediationRuntimeGuard(sourceStage, hasRemediationItems) {

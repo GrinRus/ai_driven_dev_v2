@@ -13,6 +13,7 @@ from aidd.validators.semantic_rules.common import (
     IMPLEMENT_FILE_ENTRY_PATTERN,
     IMPLEMENT_NOOP_JUSTIFICATION_PATTERN,
     IMPLEMENT_RESULT_PATTERN,
+    IMPLEMENT_TEST_REFERENCE_PATTERN,
     INCOMPLETE_EXECUTION_SUMMARY_CODE,
     INCOMPLETE_SECTION_CODE,
     MISSING_DIFF_EVIDENCE_CODE,
@@ -267,6 +268,7 @@ def _validate_verification_item(
     has_artifact_reference = (
         IMPLEMENT_ARTIFACT_REFERENCE_PATTERN.search(verification_item) is not None
         or IMPLEMENT_ASSERTION_REFERENCE_PATTERN.search(verification_item) is not None
+        or IMPLEMENT_TEST_REFERENCE_PATTERN.search(verification_item) is not None
     )
     if has_result_reference and not has_command_reference and not has_artifact_reference:
         return (

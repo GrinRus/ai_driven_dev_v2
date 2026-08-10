@@ -297,6 +297,77 @@ def test_validate_semantic_outputs_accepts_node_eval_command_evidence_for_implem
     assert findings == ()
 
 
+def test_validate_semantic_outputs_accepts_pytest_node_reference_evidence_for_implement(
+    tmp_path: Path,
+) -> None:
+    workspace_root = tmp_path / ".aidd"
+    work_item = "WI-SEM-IMPLEMENT-PYTEST-NODE-REFERENCE"
+    _write_implementation_report(
+        workspace_root,
+        work_item,
+        (
+            "# Implementation Report\n\n"
+            "## Summary\n\n"
+            "- Selected task id: `TASK-EXAMPLE-RUNTIME-ERROR`.\n"
+            "- Verified the bounded runtime change with the focused regression.\n\n"
+            "## Touched files\n\n"
+            "- none\n\n"
+            "## Verification\n\n"
+            "- `tests/test_cli.py::test_csv_detect_types_header_only` -> pass "
+            "(exit code 0; asserted the header-derived TEXT schema and empty table).\n\n"
+            "## Risks\n\n"
+            "- The full suite remains a downstream check.\n\n"
+            "## Follow-up\n\n"
+            "- Continue with the authored verification gate.\n"
+        ),
+    )
+
+    findings = validate_semantic_outputs(
+        stage="implement",
+        work_item=work_item,
+        workspace_root=workspace_root,
+        implementation_execution_mode=TaskExecutionMode.VERIFICATION_ONLY,
+    )
+
+    assert findings == ()
+
+
+def test_validate_semantic_outputs_accepts_ast_index_command_evidence_for_implement(
+    tmp_path: Path,
+) -> None:
+    workspace_root = tmp_path / ".aidd"
+    work_item = "WI-SEM-IMPLEMENT-AST-INDEX-COMMAND"
+    _write_implementation_report(
+        workspace_root,
+        work_item,
+        (
+            "# Implementation Report\n\n"
+            "## Summary\n\n"
+            "- Selected task id: `TASK-EXAMPLE-RUNTIME-ERROR`.\n"
+            "- Confirmed the bounded implementation boundary before handoff.\n\n"
+            "## Touched files\n\n"
+            "- none\n\n"
+            "## Verification\n\n"
+            '- `ast-index rebuild && ast-index search "if tracker is not None" '
+            '--module sqlite_utils/cli.py --format json` -> pass '
+            "(two production matches reported).\n\n"
+            "## Risks\n\n"
+            "- No repository edits were made in this verification-only task.\n\n"
+            "## Follow-up\n\n"
+            "- Continue with the implementation task.\n"
+        ),
+    )
+
+    findings = validate_semantic_outputs(
+        stage="implement",
+        work_item=work_item,
+        workspace_root=workspace_root,
+        implementation_execution_mode=TaskExecutionMode.VERIFICATION_ONLY,
+    )
+
+    assert findings == ()
+
+
 def test_validate_semantic_outputs_accepts_nl_pipeline_evidence_for_implement(
     tmp_path: Path,
 ) -> None:

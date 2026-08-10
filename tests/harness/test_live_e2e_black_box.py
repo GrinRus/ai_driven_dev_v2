@@ -491,6 +491,22 @@ def stage_run(args: list[str]) -> int:
         return 0
     if stage == NO_PROGRESS_STAGE:
         write_executing_stage_metadata(stage, work_item, run_id)
+        attempt_root = (
+            Path(".aidd")
+            / "reports"
+            / "runs"
+            / work_item
+            / run_id
+            / "stages"
+            / stage
+            / "attempts"
+            / "attempt-0001"
+        )
+        (attempt_root / ".runtime-log.fake.tmp").write_text(
+            json.dumps({{"event": "provider_started", "stage": stage}}) + "\\n",
+            encoding="utf-8",
+        )
+        (attempt_root / ".runtime-events.fake.tmp").write_text("", encoding="utf-8")
         print(f"Stage run started: state=executing stage={{stage}}", flush=True)
         time.sleep(5)
         return 0
@@ -4471,6 +4487,15 @@ def test_black_box_live_e2e_marks_provider_no_progress_as_infra_fail(
         "executing",
         "failed",
     ]
+    attempt_path = metadata_path.parent / "attempts" / "attempt-0001"
+    runtime_log_path = attempt_path / "runtime.log"
+    runtime_exit_path = attempt_path / "runtime-exit.json"
+    assert runtime_log_path.read_text(encoding="utf-8").startswith('{"event": "provider_started"')
+    runtime_exit = json.loads(runtime_exit_path.read_text(encoding="utf-8"))
+    assert runtime_exit["exit_classification"] == "provider-no-progress"
+    assert runtime_exit["partial_runtime_capture"] is True
+    assert (attempt_path / "runtime.jsonl").exists()
+    assert (attempt_path / "events.jsonl").exists()
 
     steps = json.loads((result.bundle_root / "flow-steps.json").read_text(encoding="utf-8"))
     no_progress_step = next(
@@ -4486,6 +4511,10 @@ def test_black_box_live_e2e_marks_provider_no_progress_as_infra_fail(
     assert no_progress_details["reason"] == "provider-no-progress"
     assert no_progress_details["no_progress_timeout_seconds"] == 1.0
     assert "observed_paths" in no_progress_details["observed_files"]
+    assert no_progress_details["partial_runtime_evidence"]["salvaged"] is True
+    assert no_progress_details["partial_runtime_evidence"]["runtime_events_source"] == (
+        "raw-runtime-log"
+    )
     assert no_progress_step["details"]["no_progress_reconciliation"]["previous_status"] == (
         "executing"
     )

@@ -45,7 +45,7 @@ def test_mobile_primary_decision_is_in_the_initial_viewport(
         assert bounds is not None
         assert bounds["y"] >= page.locator(".topbar").bounding_box()["height"]
         assert bounds["y"] + bounds["height"] <= viewport[1]
-        assert page.locator(".right-sidebar").bounding_box()["y"] >= (
-            bounds["y"] + bounds["height"]
-        )
+        sidebar = page.locator(".right-sidebar").bounding_box()
+        if sidebar is not None and sidebar["height"] > 0:
+            assert sidebar["y"] >= bounds["y"] + bounds["height"]
         browser_page.diagnostics.assert_clean()

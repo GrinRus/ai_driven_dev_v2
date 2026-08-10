@@ -5,6 +5,7 @@ from pathlib import Path
 from aidd.core.operator_frontend_dashboard import resolve_operator_dashboard_view
 from aidd.core.operator_frontend_models import (
     OperatorDashboardView,
+    OperatorInboxEntryRecommendation,
     OperatorInboxItem,
     OperatorInboxRoute,
     OperatorInboxSection,
@@ -95,6 +96,34 @@ def _item_sort_key(item: OperatorInboxItem) -> tuple[int, str, str]:
     return stage_index, item.route.work_item.casefold(), item.item_id
 
 
+def _entry_recommendation(
+    sections: tuple[OperatorInboxSection, ...],
+) -> OperatorInboxEntryRecommendation:
+    for section_key in ("needs-decision", "ready-to-continue"):
+        section = next((item for item in sections if item.key == section_key), None)
+        candidate = section.items[0] if section and section.items else None
+        if candidate is not None:
+            return OperatorInboxEntryRecommendation(
+                action="continue-existing-intent",
+                label="Continue existing intent",
+                detail=candidate.summary,
+                work_item=candidate.route.work_item,
+                route=candidate.route,
+            )
+    has_completed = any(
+        section.key == "flow-complete" and section.items for section in sections
+    )
+    return OperatorInboxEntryRecommendation(
+        action="create-new-intent",
+        label="Create new intent",
+        detail=(
+            "Current intents are complete. Start a separate intent for new work."
+            if has_completed
+            else "No active intent is waiting. Capture the outcome you want to deliver."
+        ),
+    )
+
+
 def resolve_operator_inbox_view(
     *,
     project_root: Path,
@@ -120,17 +149,19 @@ def resolve_operator_inbox_view(
         grouped[section].append(
             _inbox_item(summary=summary, dashboard=dashboard, section=section)
         )
+    sections = tuple(
+        OperatorInboxSection(
+            key=key,
+            label=_SECTION_LABELS[key],
+            items=tuple(sorted(grouped[key], key=_item_sort_key)),
+        )
+        for key in _SECTION_ORDER
+    )
     return OperatorInboxView(
         project_root=home.project_root,
         workspace_root=home.workspace_root,
-        sections=tuple(
-            OperatorInboxSection(
-                key=key,
-                label=_SECTION_LABELS[key],
-                items=tuple(sorted(grouped[key], key=_item_sort_key)),
-            )
-            for key in _SECTION_ORDER
-        ),
+        sections=sections,
+        entry_recommendation=_entry_recommendation(sections),
     )
 
 

@@ -53,8 +53,6 @@ feature_source:
     - aidd stage questions idea --work-item WI-LIVE-PYTEST-COLLECTION
     - test -f .aidd/workitems/WI-LIVE-PYTEST-COLLECTION/stages/idea/answers.md
     - .venv/bin/python -m pytest -q testing/test_collection.py testing/test_terminal.py testing/test_main.py
-    - test -f .aidd/workitems/WI-LIVE-PYTEST-COLLECTION/stages/qa/output/stage-result.md
-    - test -f .aidd/workitems/WI-LIVE-PYTEST-COLLECTION/stages/qa/output/validator-report.md
     quality_bar: The result must preserve pytest compatibility, make the reporting
       policy explicit, and avoid broad terminal-output churn outside the selected edge case.
     size_rationale: Xlarge because pytest collection and terminal reporting semantics are

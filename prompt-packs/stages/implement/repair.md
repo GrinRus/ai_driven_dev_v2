@@ -64,6 +64,9 @@ For each finding:
    - `invalid no-op rationale`,
    - cross-document status drift;
 2. patch only the smallest affected section(s) of `implementation-report.md`;
+   when a finding says an acceptance criterion is missing, add or repair the dedicated
+   `## Acceptance evidence` section and copy every missing acceptance id verbatim. Keep one
+   top-level bullet per id; descriptive paraphrases do not satisfy the finding.
 3. re-check touched-files entries against observable repository changes and allowed write scope;
    each top-level entry needs a backticked file path plus short intent, while nested bullets may hold
    line-level details. For a rich task attempt, compare against the current task-local baseline/final

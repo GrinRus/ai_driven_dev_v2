@@ -10,6 +10,7 @@ from aidd.core.operator_frontend_models import (
     OperatorDashboardView,
     OperatorEvidenceRef,
     OperatorFirstFailure,
+    OperatorIntentPhaseSummary,
     OperatorNextAction,
     OperatorPrimaryArtifact,
     OperatorRecoveryAction,
@@ -19,6 +20,47 @@ from aidd.core.operator_frontend_models import (
     OperatorTerminalRunHandoff,
     OperatorValidationFindingView,
 )
+
+_INTENT_PHASES: tuple[tuple[str, str, tuple[str, ...]], ...] = (
+    ("understand", "Understand", ("idea", "research")),
+    ("decide", "Decide", ("plan", "review-spec")),
+    ("deliver", "Deliver", ("tasklist", "implement")),
+    ("prove", "Prove", ("review", "qa")),
+)
+
+
+def _intent_phase_status(
+    stages: tuple[OperatorStageRailItem, ...],
+    phase_stages: tuple[str, ...],
+) -> str:
+    stage_by_id = {getattr(item, "stage", ""): item for item in stages}
+    items = [stage_by_id[stage] for stage in phase_stages if stage in stage_by_id]
+    statuses = {str(getattr(item, "status", "pending")) for item in items}
+    if not items:
+        return "pending"
+    if statuses & {"blocked", "failed", "cancelled"}:
+        return "blocked"
+    if statuses & {"preparing", "executing", "validating"}:
+        return "active"
+    if statuses and statuses <= {"succeeded"}:
+        return "complete"
+    if statuses - {"pending"}:
+        return "ready"
+    return "pending"
+
+
+def _intent_phases(
+    stages: tuple[OperatorStageRailItem, ...],
+) -> tuple[OperatorIntentPhaseSummary, ...]:
+    return tuple(
+        OperatorIntentPhaseSummary(
+            phase_id=phase_id,
+            label=label,
+            stages=phase_stages,
+            status=_intent_phase_status(stages, phase_stages),
+        )
+        for phase_id, label, phase_stages in _INTENT_PHASES
+    )
 
 
 @dataclass(frozen=True, slots=True)
@@ -65,6 +107,7 @@ def reduce_operator_dashboard_evidence(
         activity=evidence.activity,
         recent_artifacts=evidence.recent_artifacts,
         terminal_handoff=evidence.terminal_handoff,
+        phases=_intent_phases(evidence.stages),
     )
 
 

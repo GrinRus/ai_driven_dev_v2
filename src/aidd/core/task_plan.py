@@ -20,6 +20,7 @@ _DEPENDENCY_ENTRY_PATTERN = re.compile(
 )
 _VERIFICATION_ENTRY_PATTERN = _DEPENDENCY_ENTRY_PATTERN
 _TASK_ID_PATTERN = re.compile(r"\b((?:[A-Z][A-Z0-9]{0,15}-\d+)|T\d+)\b")
+_NONE_DEPENDENCY_PATTERN = re.compile(r"^\s*none(?:\s|[.,;:—–-]|$)", re.IGNORECASE)
 
 
 class TaskPlanParseError(ValueError):
@@ -306,7 +307,11 @@ def parse_task_plan(markdown: str) -> TaskPlan:
     parsed_dependencies: dict[str, tuple[str, ...]] = {}
     for task_id in task_ids:
         dependency_text = dependency_entries.get(task_id, "")
-        if dependency_text.casefold().strip("` .") == "none":
+        # Dependency entries may carry a short human-readable rationale after the
+        # machine-readable value (for example, ``T1: none — establishes M1``).
+        # Only the leading dependency value defines the graph; milestone/review
+        # ids in the rationale must not turn a valid ``none`` into a dependency.
+        if _NONE_DEPENDENCY_PATTERN.match(dependency_text.strip("` .")):
             parsed_dependencies[task_id] = ()
         else:
             parsed_dependencies[task_id] = tuple(

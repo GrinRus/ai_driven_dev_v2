@@ -28,6 +28,28 @@ It must let an operator:
 The frontend is not a second workflow engine. It must use the same stage graph,
 contracts, validators, repair policy, run state, and adapter boundary as the CLI.
 
+### Intent-centered presentation
+
+The UI uses **Intent** as a bounded presentation label for an existing work item and
+its `context/user-request.md`; it does not add an `intent.md` artifact, a second id, or
+a new lifecycle. The read model may expose a short, bounded request excerpt and its
+known source path, while the full Markdown remains in the Document Canvas.
+
+The canonical eight stages remain the progression authority and are grouped only for
+navigation:
+
+| Product phase | Canonical stages |
+| --- | --- |
+| Understand | `idea`, `research` |
+| Decide | `plan`, `review-spec` |
+| Deliver | `tasklist`, `implement` |
+| Prove | `review`, `qa` |
+
+When an existing workspace is reopened, the Inbox read model returns one entry
+recommendation: continue the highest-priority active intent (blocking or ready) or
+create a new intent when no active intent remains. Deep links continue to open their
+exact work-item/run/stage context and bypass this recommendation.
+
 ## 2. Source of truth
 
 The frontend must not introduce a new canonical artifact format.
@@ -69,6 +91,9 @@ The first frontend contract covers these flows:
    - resume only through the normal core path after answers are present.
    - when blocking questions exist, make the answer form the selected-stage
      Decision Bar priority and use the current run id when resuming the selected stage.
+   - provide one primary `Save answer & resume` action; it is enabled only when the
+     selected resolution is valid and the answer is non-empty. Draft text may be saved
+     separately and restored after reload.
 
 4. **Recovery-first operation**
    - present blocked runs as contextual Recovery inside Studio, reached from Inbox or an exact

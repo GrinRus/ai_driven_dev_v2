@@ -38,7 +38,8 @@ function renderStudioInboxItem(item) {
     <article class="inbox-item" data-inbox-item="${escapeHtml(item.item_id || item.job_id)}" data-state="${escapeHtml(item.state)}">
       <div class="inbox-item-copy">
         ${renderStatusMarker({status: markerStatus, label: item.status_label})}
-        <strong>${escapeHtml(item.title)}</strong>
+        <strong>${escapeHtml(projectItem?.intent?.excerpt || item.title)}</strong>
+        <small class="inbox-item-identity">${escapeHtml(item.title)}</small>
         <p>${escapeHtml(item.summary)}</p>
         <dl>
           <div><dt>Context</dt><dd>${escapeHtml(routeLabel)}</dd></div>
@@ -47,6 +48,36 @@ function renderStudioInboxItem(item) {
       </div>
       <div class="inbox-item-action">${actionMarkup}</div>
     </article>
+  `;
+}
+
+function renderStudioEntryRecommendation(inbox) {
+  const recommendation = inbox?.durable?.entry_recommendation;
+  const projectItem = recommendation?.work_item
+    ? (state.projectHome?.work_items || []).find(
+      (candidate) => candidate.work_item === recommendation.work_item
+    )
+    : null;
+  const intentText = projectItem?.intent?.excerpt || recommendation?.detail || "";
+  const actionMarkup = recommendation?.action === "continue-existing-intent" && recommendation.route
+    ? `<button ${inboxRouteAttributes(recommendation.route)} data-inbox-action="continue-existing-intent" type="button">${escapeHtml(recommendation.label || "Continue existing intent")}</button>`
+    : `<button data-new-work-item type="button">${escapeHtml(recommendation?.label || "Create new intent")}</button>`;
+  const secondaryAction = recommendation?.action === "continue-existing-intent"
+    ? `<button data-new-work-item class="secondary" type="button">New intent</button>`
+    : "";
+  return `
+    <section class="surface intent-entry-recommendation" data-intent-entry-recommendation="${escapeHtml(recommendation?.action || "create-new-intent")}">
+      <div class="intent-entry-copy">
+        <p class="eyebrow">Returning to this project</p>
+        <h2>${escapeHtml(recommendation?.label || "Create new intent")}</h2>
+        <p>${escapeHtml(intentText)}</p>
+        ${recommendation?.work_item ? `<span class="small-badge">${escapeHtml(recommendation.work_item)}</span>` : ""}
+      </div>
+      <div class="intent-entry-actions">
+        ${actionMarkup}
+        ${secondaryAction}
+      </div>
+    </section>
   `;
 }
 
@@ -97,13 +128,14 @@ function renderStudioInbox() {
         <div>
           <p class="eyebrow">Inbox</p>
           <h2>Project inbox</h2>
-          <p class="muted">Choose the work item that needs attention, or create one before selecting a runtime.</p>
+          <p class="muted">Choose the intent that needs attention, or create one before selecting a runtime.</p>
         </div>
         <div class="studio-inbox-actions">
           <span class="small-badge">${escapeHtml(count)} items</span>
-          <button data-new-work-item type="button">New work item</button>
+          <button data-new-work-item aria-label="New intent (New work item)" type="button">New intent</button>
         </div>
       </header>
+      ${renderStudioEntryRecommendation(state.inbox)}
       ${renderProjectWorkItemCreator()}
       <div class="studio-inbox-sections">
         ${visibleSections.length ? visibleSections.map((section) => `

@@ -30,6 +30,29 @@ def test_load_live_scenario_rejects_unsafe_allowed_write_scope(tmp_path: Path) -
         load_scenario(manifest)
 
 
+def test_load_live_scenario_rejects_future_qa_artifact_task_verification(
+    tmp_path: Path,
+) -> None:
+    source = Path("harness/scenarios/live/sqlite-utils-detect-types-header-only.yaml")
+    manifest_path = tmp_path / "scenarios" / "live" / "scenario.yaml"
+    manifest_path.parent.mkdir(parents=True)
+    manifest_path.write_text(
+        source.read_text(encoding="utf-8").replace(
+            "    - uv run pytest -q\n",
+            "    - uv run pytest -q\n"
+            "    - test -f .aidd/workitems/WI-LIVE-SQLITE-SMOKE/stages/qa/output/stage-result.md\n",
+            1,
+        ),
+        encoding="utf-8",
+    )
+
+    with pytest.raises(
+        ScenarioManifestError,
+        match="must not require future QA artifacts",
+    ):
+        load_scenario(manifest_path)
+
+
 def test_load_scenario_rejects_missing_required_keys(tmp_path: Path) -> None:
     manifest = _write_manifest(
         tmp_path / "scenario.yaml",

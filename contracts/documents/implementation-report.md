@@ -11,6 +11,7 @@ Explain what changed, which files were touched, and what verification was run.
 - `Verification`
 - `Risks`
 - `Follow-up`
+- `Acceptance evidence` when a selected task provides acceptance criteria
 
 ## Validation cues
 
@@ -19,6 +20,9 @@ Explain what changed, which files were touched, and what verification was run.
 - the content is non-placeholder and stage-relevant,
 - touched file entries include a backticked file path plus same-line change intent,
 - upstream references are present when the stage requires them.
+- when a selected task provides acceptance criteria, `Acceptance evidence` contains exactly one
+  top-level entry per authored acceptance criterion, with the stable id copied verbatim and
+  paired with implementation or verification evidence.
 - concrete backticked inspection commands, including `nl`-based pipelines, count as executable
   verification only when they include command arguments and an observed outcome.
 

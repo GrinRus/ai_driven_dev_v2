@@ -657,6 +657,18 @@ function activateTab(tab, {preserveDetail = false, historyMode = "replace"} = {}
     button.setAttribute("aria-selected", isActive ? "true" : "false");
     button.setAttribute("tabindex", isActive ? "0" : "-1");
   });
+  document.querySelectorAll(".primary-nav [data-tab-shortcut]").forEach((button) => {
+    const shortcut = button.dataset.tabShortcut;
+    const isActive = shortcut === "project-home"
+      ? state.activeTab === "work" && state.workDetail === "project-home"
+      : shortcut === "history"
+        ? state.activeTab === "history"
+        : shortcut === "overview"
+          ? state.activeTab === "work" && state.workDetail !== "project-home"
+          : false;
+    button.classList.toggle("active", isActive);
+    button.setAttribute("aria-current", isActive ? "page" : "false");
+  });
   const content = document.getElementById("cockpitContent");
   if (content) content.setAttribute("aria-labelledby", `tab-${state.activeTab}`);
   applyOperatorModeBodyClass();

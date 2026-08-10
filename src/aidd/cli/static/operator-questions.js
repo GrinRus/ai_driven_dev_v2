@@ -47,10 +47,20 @@ function updateQuestionResumeButtonState(questionId) {
   const button = document.querySelector(`[data-answer-resume="${CSS.escape(questionId)}"]`);
   if (!button || button.dataset.requiresResolvedResume !== "true") return;
   const resolution = document.querySelector(`[data-question-resolution="${CSS.escape(questionId)}"]`);
+  const textarea = document.querySelector(`[data-question-text="${CSS.escape(questionId)}"]`);
   const resolved = (resolution?.value || "resolved") === "resolved";
-  button.disabled = !resolved;
-  button.textContent = resolved ? (button.dataset.resumeReadyLabel || "Answer & resume") : "Select resolved to resume";
-  button.title = resolved ? "" : "Blocking questions must be saved as resolved before resume.";
+  const hasText = Boolean(textarea?.value?.trim());
+  button.disabled = !(resolved && hasText);
+  button.textContent = resolved && hasText
+    ? (button.dataset.resumeReadyLabel || "Save answer & resume")
+    : !hasText
+      ? "Enter an answer to resume"
+      : "Select resolved to resume";
+  button.title = resolved && hasText
+    ? ""
+    : !hasText
+      ? "Blocking questions need an answer before the stage can resume."
+      : "Blocking questions must be saved as resolved before resume.";
 }
 
 function updateQuestionResumeButtonStates() {
@@ -175,7 +185,7 @@ function renderBlockedStageContext(view) {
         <strong>Resume rule</strong>
         <span>${blocked ? "Resolve all blocking questions before continuing the runtime." : "Stage can resume when runtime readiness allows."}</span>
       </div>
-      <button data-answer-resume-all type="button" ${blocked ? "disabled" : ""}>Resume stage</button>
+      <p class="muted recovery-context-note">Use the answer card action after each required answer is ready.</p>
     </aside>
   `;
 }
@@ -202,9 +212,11 @@ function renderQuestionCards({showResume}) {
         const answerText = draft?.text ?? question.answer_text ?? "";
         const resolutionValue = draft?.resolution || question.answer_resolution || "resolved";
         const resumeNeedsResolved = questionRequiresResolvedResume(question);
-        const resumeDisabled = resumeNeedsResolved && resolutionValue !== "resolved";
+        const resumeDisabled = resumeNeedsResolved && (
+          resolutionValue !== "resolved" || !answerText.trim()
+        );
         const resumeLabel = resumeDisabled
-          ? "Select resolved to resume"
+          ? !answerText.trim() ? "Enter an answer to resume" : "Select resolved to resume"
           : displayStatus === "resolved" ? "Update & resume" : "Answer & resume";
         return `
           <article class="question-card" data-question-id="${escapeHtml(question.question_id)}" data-question-status="${escapeHtml(displayStatus)}" data-answer-resolution="${escapeHtml(resolutionValue)}">
@@ -228,8 +240,11 @@ function renderQuestionCards({showResume}) {
                 <option value="partial" ${resolutionValue === "partial" ? "selected" : ""}>partial</option>
                 <option value="deferred" ${resolutionValue === "deferred" ? "selected" : ""}>deferred</option>
               </select>
-              <button data-save-answer="${escapeHtml(question.question_id)}" type="button">${displayStatus === "resolved" ? "Update answer" : "Save answer"}</button>
-              ${showResume ? `<button data-primary-action data-answer-resume="${escapeHtml(question.question_id)}" data-requires-resolved-resume="${resumeNeedsResolved ? "true" : "false"}" data-resume-ready-label="${displayStatus === "resolved" ? "Update & resume" : "Answer & resume"}" type="button" ${resumeDisabled ? 'disabled title="Blocking questions must be saved as resolved before resume."' : ""}>${escapeHtml(resumeLabel)}</button>` : ""}
+              <details class="question-save-options">
+                <summary>Save draft only</summary>
+                <button data-save-answer="${escapeHtml(question.question_id)}" type="button" class="secondary">${displayStatus === "resolved" ? "Update answer" : "Save answer"}</button>
+              </details>
+              ${showResume ? `<button data-primary-action data-answer-resume="${escapeHtml(question.question_id)}" data-requires-resolved-resume="${resumeNeedsResolved ? "true" : "false"}" data-resume-ready-label="Save answer & resume" type="button" ${resumeDisabled ? 'disabled title="Blocking questions must be saved as resolved before resume."' : ""}>${escapeHtml(resumeLabel === "Update & resume" || resumeLabel === "Answer & resume" ? "Save answer & resume" : resumeLabel)}</button>` : ""}
             </div>
           </article>
         `;

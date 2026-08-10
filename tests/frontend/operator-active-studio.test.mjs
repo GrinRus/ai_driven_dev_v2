@@ -21,7 +21,6 @@ async function contextFor(dashboard) {
     renderRuntimeReadinessDimensions() { return ""; },
     renderProtectedWriteScope() { return ""; },
     pathLine(value) { return `<code>${value}</code>`; },
-    renderPrimaryArtifact() { return "<div data-document>document</div>"; },
     renderStateSurface({title}) { return `<div data-state-surface>${title}</div>`; },
     studioFlowCompleteEligibility() { return {eligible: false}; },
     workflowProgressSummary(options) { return `<div data-workflow-collapsed="${Boolean(options?.collapsed)}"></div>`; },
@@ -43,6 +42,10 @@ test("active Studio preserves work item, run, stage, and status context", async 
   assert.match(html, /data-workflow-collapsed="true"/);
   for (const value of ["WI-1", "run-1", "idea", "Stage running"]) {
     assert.match(html, new RegExp(value));
+  }
+  assert.match(html, /Intent Workspace/);
+  for (const phase of ["Understand", "Decide", "Deliver", "Prove"]) {
+    assert.match(html, new RegExp(phase));
   }
   assert.doesNotMatch(html, /data-primary-action/);
 });

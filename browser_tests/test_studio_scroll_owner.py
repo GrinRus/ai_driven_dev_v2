@@ -11,7 +11,7 @@ from browser_tests.state_fixtures import build_browser_state_fixture
 
 
 @pytest.mark.parametrize("viewport", ((1280, 900), (1440, 900)))
-def test_studio_shell_is_the_only_desktop_content_scroll_owner(
+def test_studio_cockpit_is_the_only_desktop_content_scroll_owner(
     tmp_path: Path,
     viewport: tuple[int, int],
 ) -> None:
@@ -45,9 +45,9 @@ def test_studio_shell_is_the_only_desktop_content_scroll_owner(
             """
         )
         assert result == {
-            "shellOverflow": "auto",
-            "shellScrollable": True,
-            "childOverflow": ["visible", "visible", "visible"],
+            "shellOverflow": "visible",
+            "shellScrollable": False,
+            "childOverflow": ["hidden", "auto", "visible"],
             "topbarPosition": "sticky",
         }
         assert_rendered_geometry(page)
