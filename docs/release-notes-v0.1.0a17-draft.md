@@ -1,10 +1,11 @@
 # Release Notes: v0.1.0a17
 
-Status: draft, not tagged or published.
+Status: published on 2026-08-04; accepted package-channel evidence.
 
-Current release-candidate package version: `0.1.0a17`.
-Latest accepted published prerelease evidence before this candidate: `0.1.0a16`.
-GitHub Release target: `release/v0.1.0a17`.
+Published package version: `0.1.0a17`.
+GitHub Release: `https://github.com/GrinRus/ai_driven_dev_v2/releases/tag/v0.1.0a17`.
+PyPI: `https://pypi.org/project/ai-driven-dev-v2/0.1.0a17/`.
+Release workflow: `https://github.com/GrinRus/ai_driven_dev_v2/actions/runs/30897355532`.
 
 ## Summary
 
@@ -26,12 +27,10 @@ approval-mode value with the installed Qwen CLI.
 - Qwen remains experimental. Its CLI installation and authentication are external operator
   prerequisites.
 - Manual live evaluation remains outside GitHub Actions, CI/CD, and release workflows.
-- `0.1.0a17` package must not be described as the latest accepted published prerelease
-  until the release workflow verifies the published package channels.
+- The release workflow verified quality, build, PyPI publication, `pipx`, and `uv tool`
+  installation for the published package.
 
 ## Publication checklist
 
-- Create a draft GitHub prerelease targeting `release/v0.1.0a17`.
-- Publish only after explicit maintainer approval.
-- The GitHub Release `published` workflow must pass quality, build, PyPI, `pipx`, and
-  `uv tool` verification before this candidate is described as accepted.
+- Release branch: `release/v0.1.0a17`.
+- Release workflow quality, build, publish, `pipx`, and `uv tool` verification jobs passed.

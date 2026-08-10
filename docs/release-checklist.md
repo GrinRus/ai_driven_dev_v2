@@ -166,19 +166,18 @@ python -m scripts.release.evidence_collector release-evidence.json
 
 ## Maintainer release state
 
-Current release-candidate package version: `0.1.0a17`.
-Latest accepted published prerelease evidence before this candidate: `0.1.0a16`.
-Previous accepted published prerelease evidence: `0.1.0a15`.
-`v0.1.0a17` is a prepared candidate only; it is not accepted release evidence until the
+Current release-candidate package version: `0.1.0a18`.
+Latest accepted published prerelease evidence before this candidate: `0.1.0a17`.
+Previous accepted published prerelease evidence: `0.1.0a16`.
+`v0.1.0a18` is a prepared candidate only; it is not accepted release evidence until the
 GitHub Release is published and its PyPI, `pipx`, and `uv tool` verification jobs pass.
-Do not add an accepted `v0.1.0a17` evidence log entry until those package-channel checks
+Do not add an accepted `v0.1.0a18` evidence log entry until those package-channel checks
 complete successfully.
 
-README install guidance is pinned to `0.1.0a16` because the `v0.1.0a16` GitHub Release
+README install guidance is pinned to `0.1.0a17` because the `v0.1.0a17` GitHub Release
 workflow published to PyPI and verified `pipx` plus `uv tool` installability. The accepted
-release used exact AIDD source `ae3131a`, wheel digest `2b3e481`, and counted-clean Codex run
-`eval-live-007-codex-20260803T205243Z`; the release metadata and tag were published from
-release branch commit `2c479ec6f4524c516257ddd2bd2d4da2e264b7d6`.
+release used source commit `836b0ddce08adaf940df9f2b05224ad24435a981`; its release workflow
+run is recorded below.
 
 Release candidate preparation for `v0.1.0a16` includes:
 
@@ -457,6 +456,22 @@ package-channel acceptance and does not replace GitHub Release, PyPI, `pipx`, or
 Historical release attempts below may mention GHCR because earlier alpha candidates
 temporarily published container images. That evidence is retained for traceability only and
 does not make Docker/GHCR a supported alpha distribution channel.
+
+### `v0.1.0a17` accepted evidence on 2026-08-04
+
+- Tag: `v0.1.0a17`
+- Release branch: `release/v0.1.0a17`
+- Commit: `836b0ddce08adaf940df9f2b05224ad24435a981`
+- GitHub Release: `https://github.com/GrinRus/ai_driven_dev_v2/releases/tag/v0.1.0a17`
+- Workflow run: `https://github.com/GrinRus/ai_driven_dev_v2/actions/runs/30897355532`
+- Result: accepted release/install evidence.
+- Job results: `quality` passed on Python 3.12, 3.13, and 3.14; `build` passed;
+  `publish-pypi` passed; `verify-pypi-install` passed; `verify-uv-tool-install` passed.
+- Build evidence: release tag `v0.1.0a17` matched `project.version` `0.1.0a17`, and the
+  tag commit matched the release branch HEAD during workflow validation.
+- PyPI output: `https://pypi.org/project/ai-driven-dev-v2/0.1.0a17/`.
+- `pipx` and `uv tool` verification returned `aidd 0.1.0a17` and passed `aidd doctor`.
+- No Docker/GHCR artifact is part of the supported `v0.1.0a17` release contract.
 
 ### `v0.1.0a16` accepted evidence on 2026-08-04
 

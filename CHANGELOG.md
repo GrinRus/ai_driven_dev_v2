@@ -7,7 +7,19 @@ stable compatibility window exists.
 
 ## Unreleased
 
-- Reserved for changes after `v0.1.0a17`.
+- Reserved for changes after `v0.1.0a18`.
+
+## 0.1.0a18 - 2026-08-10
+
+- Finish the intent-centered Operator UI shell with a single workspace scroll owner and
+  compact decision-first layout across desktop and mobile.
+- Replace stage-centric presentation copy with `Intent` in user-facing surfaces while keeping
+  canonical work-item identifiers and routes unchanged.
+- Move runtime controls and technical lineage into contextual details, preserve the primary
+  action in the first viewport, and harden focus, touch-target, wrapping, and responsive
+  geometry behavior.
+- Add browser and static contract coverage for the final shell, Intent vocabulary, technical
+  disclosure, and mobile/desktop navigation behavior.
 
 ## 0.1.0a17 - 2026-08-04
 
