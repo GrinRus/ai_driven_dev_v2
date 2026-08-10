@@ -1145,3 +1145,13 @@
     white-space: nowrap;
   }
 }
+
+@media (max-width: 760px) and (max-height: 700px) {
+  /* Keep the first Inbox decision reachable on short phone viewports. */
+  body.inbox-detail-mode .cockpit {
+    padding-top: 0;
+  }
+  body.inbox-detail-mode .studio-inbox {
+    padding-top: var(--space-2);
+  }
+}
