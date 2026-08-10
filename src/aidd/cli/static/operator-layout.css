@@ -203,7 +203,7 @@
 .topbar #runChip {
   max-width: min(26vw, 300px);
 }
-.topbar #workItemChip {
+.topbar #intentChip {
   max-width: min(24vw, 280px);
 }
 .topbar #localStatus {
@@ -265,254 +265,11 @@
   justify-content: flex-start;
   width: 100%;
 }
-.operator-shell {
-  display: grid;
-  grid-template-columns: 228px minmax(0, 1fr) 300px;
-  grid-template-rows: minmax(500px, auto) minmax(200px, auto);
-  max-height: calc(100vh - 52px);
-  min-height: calc(100vh - 52px);
-  overflow-y: auto;
-}
-body.bottom-dock-collapsed .operator-shell {
-  grid-template-rows: minmax(500px, auto) auto;
-}
-body.recovery-mode .operator-shell {
-  grid-template-columns: 228px minmax(0, 1fr);
-  grid-template-rows: minmax(500px, calc(100vh - 98px)) auto;
-}
-body.recovery-mode .right-sidebar,
-body.recovery-mode .global-next-action-strip,
-body.evidence-log-mode .global-next-action-strip {
-  display: none;
-}
-body.recovery-mode .stage-rail {
-  grid-row: 1;
-}
-body.recovery-mode .cockpit {
-  grid-column: 2;
-  grid-row: 1;
-  overflow: visible;
-}
-body.recovery-mode .bottom-dock {
-  grid-column: 2;
-  grid-row: 2;
-}
-body.setup-active .operator-shell {
-  grid-template-columns: minmax(0, 1fr);
-  grid-template-rows: auto;
-}
-body.setup-active .stage-rail,
-body.setup-active .right-sidebar,
-body.setup-active .bottom-dock,
-body.setup-active .cockpit-header,
-body.setup-active .tabs,
-body.setup-active #projectInboxButton {
-  display: none;
-}
-body.setup-active .cockpit {
-  grid-column: 1;
-  grid-row: 1;
-}
-body.inbox-detail-mode .operator-shell,
-body.work-overview-mode .operator-shell {
-  grid-template-columns: minmax(0, 1fr);
-  grid-template-rows: minmax(0, 1fr);
-  max-height: calc(100vh - 52px);
-  min-height: calc(100vh - 52px);
-  overflow-y: auto;
-}
-body.inbox-detail-mode .stage-rail,
-body.inbox-detail-mode .bottom-dock,
-body.inbox-detail-mode .cockpit-header,
-body.inbox-detail-mode .tabs,
-body.inbox-detail-mode .global-next-action-strip,
-body.work-overview-mode .stage-rail,
-body.work-overview-mode .bottom-dock,
-body.work-overview-mode .cockpit-header {
-  display: none;
-}
-body.inbox-detail-mode .right-sidebar,
-body.work-overview-mode .right-sidebar {
-  background: transparent;
-  border: 0;
-  display: block;
-  height: 0;
-  min-width: 0;
-  overflow: visible;
-  padding: 0;
-  position: fixed;
-  right: 0;
-  top: 0;
-  width: 0;
-  z-index: 7;
-}
-body.inbox-detail-mode .right-sidebar > :not(.maintenance-overflow),
-body.work-overview-mode .right-sidebar > :not(.maintenance-overflow) {
-  display: none;
-}
-body.inbox-detail-mode .right-sidebar .maintenance-overflow,
-body.work-overview-mode .right-sidebar .maintenance-overflow {
-  pointer-events: auto;
-  position: fixed;
-  right: 12px;
-  top: 9px;
-}
 body.inbox-detail-mode .runtime-picker {
   display: none;
 }
 body.inbox-detail-mode #newWorkItemButton {
   display: none;
-}
-body.inbox-detail-mode .cockpit,
-body.work-overview-mode .cockpit {
-  grid-column: 1;
-  grid-row: 1;
-  margin-inline: auto;
-  max-width: 1120px;
-  padding: 20px;
-  width: 100%;
-}
-.stage-rail {
-  align-self: start;
-  background: var(--color-bg-disabled);
-  border-right: 1px solid var(--line);
-  display: flex;
-  flex-direction: column;
-  grid-row: 1 / span 2;
-  min-height: 0;
-  overflow: visible;
-  padding: 12px 10px;
-  position: sticky;
-  top: 0;
-}
-.rail-header,
-.dock-header {
-  align-items: center;
-  color: var(--color-text-tertiary);
-  display: flex;
-  font-size: var(--type-caption-size);
-  font-weight: 800;
-  justify-content: space-between;
-  letter-spacing: 0.02em;
-  margin-bottom: 8px;
-  text-transform: uppercase;
-}
-.rail-header.small {
-  margin-top: 12px;
-}
-.stage-list {
-  display: grid;
-  gap: 5px;
-}
-.stage-card {
-  align-items: center;
-  background: transparent;
-  border: 1px solid transparent;
-  color: var(--text);
-  display: grid;
-  gap: 7px;
-  grid-template-columns: 30px minmax(0, 1fr) auto;
-  justify-content: stretch;
-  min-height: 50px;
-  padding: 7px;
-  text-align: left;
-  width: 100%;
-}
-.stage-card.active {
-  background: #e7f3f1;
-  border-color: var(--color-border-accent);
-}
-button.stage-card:not(:disabled):not([aria-disabled="true"]):hover {
-  background: var(--color-bg-selected);
-  border-color: var(--color-border-accent);
-  color: var(--text);
-}
-button.stage-card:not(:disabled):not([aria-disabled="true"]):hover .stage-subtitle {
-  color: var(--color-text-primary);
-}
-.stage-card.retried {
-  box-shadow: inset 3px 0 0 rgba(154, 106, 18, 0.28);
-}
-.stage-card.active.retried {
-  box-shadow: inset 3px 0 0 var(--amber);
-}
-.stage-index {
-  align-items: center;
-  background: var(--surface);
-  border: 1px solid var(--line-strong);
-  border-radius: 5px;
-  display: flex;
-  font-size: 12px;
-  font-weight: 800;
-  height: 28px;
-  justify-content: center;
-  width: 28px;
-}
-.stage-card.active .stage-index {
-  background: var(--teal);
-  border-color: var(--teal);
-  color: var(--color-text-inverse);
-}
-.stage-copy {
-  display: grid;
-  gap: 2px;
-  min-width: 0;
-}
-.stage-name {
-  display: block;
-  font-size: 13px;
-  font-weight: 760;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-.stage-subtitle {
-  color: var(--muted);
-  display: block;
-  font-size: var(--type-caption-size);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-.stage-markers {
-  align-items: flex-end;
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-.marker-dot {
-  border: 1px solid var(--line-strong);
-  border-radius: 50%;
-  height: 10px;
-  width: 10px;
-}
-.marker-dot.succeeded { background: var(--green); border-color: var(--color-state-success-text); }
-.marker-dot.blocked,
-.marker-dot.repair-needed { background: var(--amber); border-color: var(--color-state-warning-text); }
-.marker-dot.failed { background: var(--red); border-color: var(--color-state-danger-text); }
-.marker-dot.running { background: var(--blue); border-color: var(--color-state-info-text); }
-.quick-links {
-  border-top: 1px solid var(--line);
-  display: grid;
-  gap: 5px;
-  margin-top: auto;
-  padding-top: 10px;
-}
-button.quick-link {
-  justify-content: flex-start;
-  width: 100%;
-}
-.cockpit {
-  min-width: 0;
-  overflow: visible;
-  padding: 14px 16px;
-}
-.cockpit-header {
-  align-items: flex-start;
-  display: flex;
-  gap: 12px;
-  justify-content: space-between;
-  margin-bottom: 10px;
 }
 .eyebrow {
   color: var(--muted);
@@ -535,16 +292,6 @@ h1, h2, h3, p {
   gap: 6px;
   justify-content: flex-end;
 }
-.tabs {
-  border-bottom: 1px solid var(--line);
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-  margin-bottom: 14px;
-  padding-bottom: 8px;
-}
-.tabs button.active,
-.tabs button[aria-selected="true"],
 .log-filter button.active,
 .log-filter button[aria-pressed="true"],
 .viewer-modes button.active,
@@ -553,10 +300,6 @@ h1, h2, h3, p {
   border-color: var(--teal);
   color: var(--teal-dark);
 }
-.cockpit-content {
-  min-height: 360px;
-}
-
 /* Document Studio composition: navigation first, one reading canvas, contextual evidence. */
 body {
   background: var(--surface);
@@ -648,7 +391,7 @@ body {
   max-width: 300px;
   overflow: hidden;
 }
-.top-status #workItemChip,
+.top-status #intentChip,
 .top-status #runChip {
   clip-path: inset(50%);
   color: var(--studio-header-text);
@@ -728,218 +471,13 @@ body {
   align-self: center;
   color: var(--muted);
 }
-.operator-shell {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr);
-  grid-template-rows: auto minmax(0, 1fr) auto;
-  max-height: none;
-  min-height: calc(100vh - var(--studio-topbar-height));
-  overflow: visible;
-}
-.stage-rail {
-  align-self: stretch;
-  background: var(--surface);
-  border-bottom: 1px solid var(--line);
-  border-right: 0;
-  display: block;
-  grid-column: 1;
-  grid-row: 1;
-  min-width: 0;
-  overflow: hidden;
-  padding: 0 var(--space-8);
-}
-.stage-rail #projectHomeRail,
-.stage-rail .rail-header {
-  display: none;
-}
-.stage-list {
-  align-items: stretch;
-  display: grid;
-  gap: var(--space-2);
-  grid-template-columns: repeat(8, minmax(0, 1fr));
-  height: var(--studio-stagebar-height);
-  overflow-x: auto;
-  padding: var(--space-3) 0 0;
-}
-.stage-card {
-  align-items: center;
-  background: transparent;
-  border: 0;
-  border-bottom: 3px solid transparent;
-  border-radius: 0;
-  color: var(--muted);
-  display: grid;
-  gap: var(--space-3);
-  grid-template-columns: auto minmax(0, 1fr) auto;
-  justify-content: start;
-  min-height: var(--control-height-touch);
-  min-width: 0;
-  padding: var(--space-3) var(--space-4);
-  text-align: left;
-}
-.stage-card:hover,
-.stage-card.active {
-  background: var(--studio-accent-soft);
-  border-bottom-color: var(--teal);
-  color: var(--teal-dark);
-}
-.stage-card .stage-index {
-  align-items: center;
-  background: var(--surface-soft);
-  border-radius: var(--radius-pill);
-  display: inline-flex;
-  height: 28px;
-  justify-content: center;
-  width: 28px;
-}
-.stage-card.active .stage-index,
-.stage-card .marker-dot.succeeded {
-  background: var(--teal-dark);
-  color: var(--color-text-inverse);
-}
-.stage-copy {
-  min-width: 0;
-}
-.stage-name,
-.stage-subtitle {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-.stage-name {
-  font-size: 14px;
-  font-weight: 700;
-}
-.stage-subtitle {
-  color: var(--muted);
-  display: block;
-  font-size: var(--type-caption-size);
-  margin-top: var(--space-1);
-}
-.cockpit {
-  background: var(--surface);
-  grid-column: 1;
-  grid-row: 2;
-  min-width: 0;
-  overflow: visible;
-  padding: 0 var(--space-8) var(--space-8);
-}
-.cockpit-header,
-.tabs {
-  display: none;
-}
-.tabs {
-  display: flex;
-  height: 1px;
-  left: 0;
-  opacity: 0;
-  overflow: hidden;
-  position: fixed;
-  top: var(--studio-topbar-height);
-  width: 1px;
-  z-index: 9999;
-}
-.tabs button {
-  height: 32px;
-  left: 0;
-  min-height: 32px;
-  min-width: 32px;
-  position: fixed;
-  top: 0;
-  width: 32px;
-  z-index: 9999;
-}
-.tabs #tab-work {
-  z-index: 10001;
-}
-.global-next-action-strip {
+.intent-decision-surface {
   border: 0;
   border-bottom: 1px solid var(--line);
   border-radius: 0;
   margin: 0 auto;
   max-width: var(--studio-content-max);
   padding: var(--space-6) 0;
-}
-.right-sidebar {
-  background: transparent;
-  border: 0;
-  display: block;
-  height: 0;
-  min-width: 0;
-  overflow: visible;
-  padding: 0;
-  pointer-events: none;
-  position: fixed;
-  right: 0;
-  top: 0;
-  width: 0;
-  z-index: 25;
-}
-.right-sidebar > :not(.maintenance-overflow) {
-  display: none;
-}
-.right-sidebar .maintenance-overflow {
-  pointer-events: auto;
-  position: fixed;
-  right: var(--space-8);
-  top: 0;
-}
-.right-sidebar .maintenance-overflow summary {
-  background: var(--studio-header-bg);
-  color: var(--studio-header-text);
-  min-height: var(--studio-topbar-height);
-  padding: 0 var(--space-4);
-}
-.bottom-dock {
-  background: var(--surface);
-  border-top: 1px solid var(--line);
-  display: grid;
-  grid-column: 1;
-  grid-row: 3;
-  grid-template-columns: 1fr 1fr;
-  min-height: var(--control-height-touch);
-}
-body.inbox-detail-mode .operator-shell {
-  grid-template-rows: minmax(0, 1fr);
-}
-body.inbox-detail-mode .stage-rail,
-body.inbox-detail-mode .global-next-action-strip,
-body.inbox-detail-mode .bottom-dock {
-  display: none;
-}
-body.inbox-detail-mode .cockpit {
-  grid-row: 1;
-  padding: var(--space-10) var(--space-8);
-}
-body.inbox-detail-mode .right-sidebar,
-body.work-overview-mode .right-sidebar,
-body.recovery-mode .right-sidebar,
-body.evidence-log-mode .right-sidebar,
-body.terminal-handoff-mode .right-sidebar {
-  display: block;
-}
-body.work-overview-mode .operator-shell,
-body.recovery-mode .operator-shell,
-body.evidence-log-mode .operator-shell,
-body.terminal-handoff-mode .operator-shell {
-  grid-template-rows: auto minmax(0, 1fr) auto;
-}
-body.work-overview-mode .stage-rail,
-body.recovery-mode .stage-rail,
-body.evidence-log-mode .stage-rail,
-body.terminal-handoff-mode .stage-rail {
-  display: block;
-}
-body.work-overview-mode .cockpit,
-body.recovery-mode .cockpit,
-body.evidence-log-mode .cockpit,
-body.terminal-handoff-mode .cockpit {
-  grid-column: 1;
-  grid-row: 2;
-  margin-inline: auto;
-  max-width: var(--studio-content-max);
-  padding: 0 var(--space-8) var(--space-8);
-  width: 100%;
 }
 body.setup-active .topbar {
   grid-template-columns: auto auto minmax(0, 1fr) auto auto;
@@ -961,7 +499,7 @@ body.setup-active .top-context,
 body.setup-active .top-status {
   display: flex;
 }
-body.setup-active .top-status #workItemChip,
+body.setup-active .top-status #intentChip,
 body.setup-active .top-status #runChip {
   display: block;
 }
@@ -972,14 +510,6 @@ body.setup-active .brand-title::after {
 body.setup-active .primary-nav #projectInboxButton {
   display: block;
 }
-body.setup-active .operator-shell {
-  display: block;
-  min-height: calc(100vh - var(--studio-topbar-height));
-}
-body.setup-active .cockpit {
-  padding: var(--space-12) var(--space-8);
-}
-
 .active-studio {
   margin-inline: auto;
   max-width: var(--studio-content-max);
@@ -1201,77 +731,9 @@ body.setup-active .cockpit {
   padding: var(--space-6) 0 0;
 }
 
-/* Mode-specific selectors from the legacy shell are more specific than the
-   base composition above. Keep every operator mode on the same single canvas. */
-body.work-overview-mode .operator-shell,
-body.recovery-mode .operator-shell,
-body.evidence-log-mode .operator-shell,
-body.terminal-handoff-mode .operator-shell {
-  grid-template-columns: minmax(0, 1fr);
-  grid-template-rows: auto minmax(0, 1fr) auto;
-  min-height: calc(100vh - var(--studio-topbar-height));
-  max-height: none;
-  overflow: visible;
-}
-body[data-operator-mode="history"] .operator-shell {
-  grid-template-columns: minmax(0, 1fr);
-  grid-template-rows: auto minmax(0, 1fr) auto;
-  min-height: calc(100vh - var(--studio-topbar-height));
-  max-height: none;
-  overflow: visible;
-}
-body[data-operator-mode="history"] .stage-rail {
-  display: block;
-  grid-column: 1;
-  grid-row: 1;
-}
-body[data-operator-mode="history"] .cockpit {
-  grid-column: 1;
-  grid-row: 2;
-  min-height: 0;
-  overflow: auto;
-  width: 100%;
-}
-body[data-operator-mode="history"] .bottom-dock {
-  display: grid;
-  grid-column: 1;
-  grid-row: 3;
-  max-height: var(--control-height-touch);
-  min-height: var(--control-height-touch);
-  overflow: hidden;
-}
-body.work-overview-mode .stage-rail,
-body.recovery-mode .stage-rail,
-body.evidence-log-mode .stage-rail,
-body.terminal-handoff-mode .stage-rail {
-  display: block;
-  grid-column: 1;
-  grid-row: 1;
-}
-body.work-overview-mode .cockpit,
-body.recovery-mode .cockpit,
-body.evidence-log-mode .cockpit,
-body.terminal-handoff-mode .cockpit {
-  grid-column: 1;
-  grid-row: 2;
-  min-height: 0;
-  overflow: auto;
-  width: 100%;
-}
-body.work-overview-mode .bottom-dock,
-body.recovery-mode .bottom-dock,
-body.evidence-log-mode .bottom-dock,
-body.terminal-handoff-mode .bottom-dock {
-  display: grid;
-  grid-column: 1;
-  grid-row: 3;
-  max-height: var(--control-height-touch);
-  min-height: var(--control-height-touch);
-  overflow: hidden;
-}
-body.recovery-mode .global-next-action-strip,
-body.evidence-log-mode .global-next-action-strip,
-body.terminal-handoff-mode .global-next-action-strip {
+body.recovery-mode .intent-decision-surface,
+body.evidence-log-mode .intent-decision-surface,
+body.terminal-handoff-mode .intent-decision-surface {
   display: block;
 }
 body.recovery-mode .runtime-settings,

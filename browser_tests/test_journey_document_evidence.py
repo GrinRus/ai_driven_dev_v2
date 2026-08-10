@@ -164,10 +164,10 @@ def test_document_canvas_and_evidence_inspector_preserve_safe_context(
         page.locator(
             '[data-studio-observation="durable-attempt"] [data-tab-shortcut="logs"]'
         ).click()
-        page.locator("#cockpitContent").get_by_text(
+        page.locator("#intentContent").get_by_text(
             "Saved runtime.log", exact=False
         ).first.wait_for(state="visible")
-        assert "qa complete" in page.locator("#cockpitContent").inner_text()
+        assert "qa complete" in page.locator("#intentContent").inner_text()
 
         page.go_back(wait_until="networkidle")
         page.evaluate("() => window.aiddRouteRestore || Promise.resolve()")

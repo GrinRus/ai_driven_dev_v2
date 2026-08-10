@@ -20,7 +20,7 @@ def test_skip_link_and_detail_focus_return_are_deterministic(tmp_path: Path) -> 
               Skip to current decision
             </a>
             <button id="details" data-tab-shortcut="evidence">Open evidence</button>
-            <div id="cockpitContent" tabindex="0">
+            <div id="intentContent" tabindex="0">
               <section data-primary-slot><button>Run</button></section>
             </div>
             <button data-tab="work" aria-selected="true">Work</button>
@@ -36,7 +36,7 @@ def test_skip_link_and_detail_focus_return_are_deterministic(tmp_path: Path) -> 
         assert page.evaluate("document.activeElement.id") == "currentDecision"
 
         page.locator("#details").click()
-        page.locator("#cockpitContent").evaluate(
+        page.locator("#intentContent").evaluate(
             """
             node => {
               node.innerHTML = '<section data-primary-slot><button>Inspect</button></section>';
@@ -44,7 +44,7 @@ def test_skip_link_and_detail_focus_return_are_deterministic(tmp_path: Path) -> 
             """
         )
         page.evaluate("syncCurrentDecisionTarget()")
-        assert page.evaluate("document.activeElement.id") == "cockpitContent"
+        assert page.evaluate("document.activeElement.id") == "intentContent"
         page.keyboard.press("Escape")
         assert page.evaluate("document.activeElement.id") == "details"
         browser_page.diagnostics.assert_clean()

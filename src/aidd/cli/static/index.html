@@ -24,12 +24,12 @@
     <div class="top-context" aria-live="polite">
       <span id="topContextProject">Local Project</span>
       <span aria-hidden="true">/</span>
-      <span id="topContextWorkItem">Work item</span>
+      <span id="topContextIntent">Intent</span>
       <span aria-hidden="true">/</span>
       <span id="topContextRun">Run</span>
     </div>
     <div class="top-status">
-      <span id="workItemChip" class="status-chip">Work item</span>
+      <span id="intentChip" class="status-chip">Intent</span>
       <span id="runChip" class="status-chip">Run: none</span>
       <span id="localStatus" class="status-chip good">Local control-plane connected</span>
     </div>
@@ -57,71 +57,35 @@
     </div>
   </header>
 
-  <main class="operator-shell" aria-label="Operator workspace" data-aidd-scroll-owner="studio" data-mobile-priority-layout="context-decision-document-drilldown">
-    <aside class="stage-rail" aria-label="Workflow navigation">
-      <div id="projectHomeRail" class="project-home-rail"></div>
-      <div class="rail-header">
-        <span>Stages</span>
-        <span id="stageCounter" class="counter">0/8</span>
-      </div>
-      <nav id="stageRail" class="stage-list" aria-label="Workflow stages"></nav>
-    </aside>
-
-    <section class="cockpit" aria-label="Stage cockpit">
-      <div class="cockpit-header">
-        <div>
-          <p class="eyebrow">Stage cockpit</p>
-          <h1 id="stageTitle">Idea</h1>
-          <p id="stageSubtitle" class="muted">Clarify the request</p>
-        </div>
-        <div id="stageBadges" class="badge-row"></div>
-      </div>
-      <div class="tabs" role="tablist" aria-label="Stage cockpit views">
-        <button id="tab-work" data-tab="work" role="tab" aria-selected="true" aria-controls="cockpitContent" tabindex="0" class="active" type="button">Work</button>
-        <button id="tab-recovery" data-tab="recovery" role="tab" aria-selected="false" aria-controls="cockpitContent" tabindex="-1" type="button">Recovery</button>
-        <button id="tab-evidence" data-tab="evidence" role="tab" aria-selected="false" aria-controls="cockpitContent" tabindex="-1" type="button">Evidence</button>
-        <button id="tab-history" data-tab="history" role="tab" aria-selected="false" aria-controls="cockpitContent" tabindex="-1" type="button">History</button>
-      </div>
-      <section id="globalNextActionStrip" class="global-next-action-strip" aria-label="Run global next action"></section>
-      <div id="cockpitContent" class="cockpit-content" role="tabpanel" aria-labelledby="tab-work" tabindex="0">
-        <div class="empty-state loading-state">Loading operator workspace...</div>
-      </div>
+  <main id="operatorWorkspace" class="operator-workspace" aria-label="Operator workspace" data-aidd-scroll-owner="workspace">
+    <section id="intentContext" class="intent-context-region" aria-label="Intent context"></section>
+    <nav id="intentPhaseStepper" class="intent-phase-region" aria-label="Intent delivery phases"></nav>
+    <section id="intentDecisionSurface" class="intent-decision-surface" aria-label="Current decision"></section>
+    <section id="intentContent" class="intent-document-surface" aria-live="polite" tabindex="-1">
+      <div class="empty-state loading-state">Loading operator workspace...</div>
     </section>
 
-    <aside class="right-sidebar" aria-label="Run details">
-      <section class="panel" id="activeRunPanel"></section>
-      <section class="panel" id="nextActionPanel"></section>
-      <section class="panel" id="blockersPanel"></section>
-      <section class="panel" id="recoveryAssistantPanel"></section>
-      <section class="panel" id="evidencePanel"></section>
-      <section class="panel" id="runtimeRootPanel"></section>
-      <section class="panel" id="safetyPanel"></section>
-      <details class="maintenance-overflow">
-        <summary data-aidd-focus-role="maintenance">Maintenance</summary>
-        <div class="maintenance-actions" role="group" aria-label="Service maintenance commands">
-          <button id="refreshButton" class="secondary" type="button">Refresh</button>
-          <button id="openWorkspaceButton" class="secondary" type="button">Open .aidd</button>
-          <button id="stopServerButton" class="danger" type="button">Stop server</button>
+    <details id="intentTechnicalDetails" class="intent-technical-details">
+      <summary data-aidd-focus-role="technical-details">Technical details</summary>
+      <div id="intentTechnicalContent" class="intent-technical-content">
+        <section id="technicalActiveRun" class="technical-region" aria-label="Active run"></section>
+        <section id="technicalDecisionStatus" class="technical-region" aria-label="Decision status"></section>
+        <section id="technicalBlockers" class="technical-region" aria-label="Blockers"></section>
+        <section id="technicalRecovery" class="technical-region" aria-label="Recovery details"></section>
+        <section id="technicalEvidence" class="technical-region" aria-label="Evidence references"></section>
+        <section id="technicalRuntime" class="technical-region" aria-label="Runtime details"></section>
+        <section id="technicalSafety" class="technical-region" aria-label="Safety and readiness"></section>
+        <section id="technicalActivity" class="technical-region" aria-label="Activity and events"></section>
+        <section id="technicalArtifacts" class="technical-region" aria-label="Recent artifacts"></section>
+        <div class="maintenance-overflow">
+          <div class="maintenance-actions" role="group" aria-label="Service maintenance commands">
+            <button id="refreshButton" class="secondary" type="button">Refresh</button>
+            <button id="openWorkspaceButton" class="secondary" type="button">Open .aidd</button>
+            <button id="stopServerButton" class="danger" type="button">Stop server</button>
+          </div>
         </div>
-      </details>
-    </aside>
-
-    <section class="bottom-dock" aria-label="Activity and recent artifacts">
-      <div class="dock-panel activity-panel">
-        <div class="dock-header">
-          <span>Activity / Events</span>
-          <button id="viewFullLogButton" class="link-button" type="button">View full log</button>
-        </div>
-        <div id="activityTable" class="table-wrap"></div>
       </div>
-      <div class="dock-panel artifacts-panel">
-        <div class="dock-header">
-          <span>Recent artifacts</span>
-          <button id="openStageFolderButton" class="link-button" type="button">Open stage folder</button>
-        </div>
-        <div id="recentArtifacts" class="recent-artifacts"></div>
-      </div>
-    </section>
+    </details>
   </main>
 
   <div id="toast" class="toast" role="status" aria-live="polite"></div>

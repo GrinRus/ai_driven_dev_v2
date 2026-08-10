@@ -11,11 +11,11 @@ const OPERATOR_DETAIL_TRIGGER_SELECTOR = [
 
 function currentDecisionTarget() {
   const selectors = [
-    "#cockpitContent [data-primary-recovery-slot]",
-    "#cockpitContent [data-primary-slot]",
-    "#cockpitContent .setup-actions",
-    "#globalNextActionStrip",
-    "#nextActionPanel"
+    "#intentContent [data-primary-recovery-slot]",
+    "#intentContent [data-primary-slot]",
+    "#intentContent .setup-actions",
+    "#intentDecisionSurface",
+    "#technicalDecisionStatus"
   ];
   for (const selector of selectors) {
     const candidate = document.querySelector(selector);
@@ -46,7 +46,7 @@ function syncCurrentDecisionTarget() {
   }
   if (operatorFocusEntryPending) {
     operatorFocusEntryPending = false;
-    const content = document.getElementById("cockpitContent");
+    const content = document.getElementById("intentContent");
     if (content) content.focus({preventScroll: true});
   }
   return target;

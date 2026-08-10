@@ -31,8 +31,8 @@ _OPERATOR_SURFACE_TIMEOUT_MS = 30_000
 
 
 def wait_for_work_item_surface(page: Page, work_item: str) -> None:
-    page.locator("#workItemChip").get_by_text(
-        f"Work item: {work_item}", exact=True
+    page.locator("#intentChip").get_by_text(
+        f"Intent: {work_item}", exact=True
     ).wait_for(state="attached", timeout=_OPERATOR_SURFACE_TIMEOUT_MS)
 
 

@@ -192,27 +192,41 @@ def test_operator_css_loader_imports_manifested_layers() -> None:
         "/operator-layout.css",
         "/operator-components.css",
         "/operator-responsive.css",
+        "/operator-intent-shell.css",
     ]
     for route in layer_routes:
         assert f'@import url("{route}")' in loader
 
 
-def test_operator_html_exposes_four_mode_navigation_without_quick_links() -> None:
-    assert _INDEX_HTML.count('role="tab"') == 4
-    for mode in ("work", "recovery", "evidence", "history"):
-        assert f'data-tab="{mode}"' in _INDEX_HTML
-        assert f'id="tab-{mode}"' in _INDEX_HTML
-    for legacy_tab in (
-        "overview",
-        "questions",
-        "validation",
-        "timeline",
-        "artifacts",
-        "logs",
-        "request",
+def test_operator_html_exposes_intent_workspace_without_legacy_shell_regions() -> None:
+    for anchor in (
+        'id="operatorWorkspace"',
+        'id="intentContext"',
+        'id="intentPhaseStepper"',
+        'id="intentDecisionSurface"',
+        'id="intentContent"',
+        'id="intentTechnicalDetails"',
     ):
-        assert f'data-tab="{legacy_tab}"' not in _INDEX_HTML
-    assert 'class="quick-link"' not in _INDEX_HTML
+        assert anchor in _INDEX_HTML
+    for legacy in (
+        "stage-rail",
+        "cockpit-header",
+        "globalNextActionStrip",
+        "right-sidebar",
+        "bottom-dock",
+        'id="cockpitContent"',
+    ):
+        assert legacy not in _INDEX_HTML
+
+
+def test_visible_operator_vocabulary_uses_intent_and_keeps_work_item_technical() -> None:
+    html = _asset_text("/")
+    bundle = _js_bundle()
+
+    assert "Work item" not in html
+    for visible_marker in (">Work item<", "Work item:", "New work item", "Choose a work item"):
+        assert visible_marker not in bundle
+    assert "work_item" in bundle
 
 
 def test_operator_responsive_css_prevents_artifact_graph_mobile_overflow() -> None:
@@ -239,34 +253,28 @@ def test_operator_responsive_css_keeps_mobile_topbar_status_readable() -> None:
     assert ".runtime-picker select {" in responsive
     assert ".topbar .status-chip," in responsive
     assert ".topbar #runChip," in responsive
-    assert ".topbar #workItemChip," in responsive
+    assert "#intentChip" in _asset_text("/operator-layout.css")
     assert ".topbar #localStatus {" in responsive
     assert "white-space: normal;" in responsive
     assert "text-overflow: clip;" in responsive
     assert "overflow-wrap: anywhere;" in responsive
-    assert ".right-sidebar .maintenance-overflow {" in responsive
-    assert "position: fixed;" in responsive
+    assert ".maintenance-overflow {" in responsive
     assert ".path-line {" in responsive
 
 
-def test_operator_responsive_css_keeps_mobile_stage_rail_inside_viewport() -> None:
+def test_operator_responsive_css_keeps_intent_phase_stepper_inside_viewport() -> None:
+    shell_css = _asset_text("/operator-intent-shell.css")
     responsive = _asset_text("/operator-responsive.css")
-    api_state = _asset_text("/operator-api-state.js")
     shell = _asset_text("/operator-shell-rendering.js")
 
-    assert ".stage-list {" in responsive
-    assert "grid-template-columns: repeat(2, minmax(0, 1fr));" in responsive
-    assert "overflow-x: visible;" in responsive
-    assert "scroll-snap-type: none;" in responsive
-    assert ".stage-card {" in responsive
-    assert "min-width: 0;" in responsive
-    assert "width: 100%;" in responsive
-    assert ".next-action-controls {" in responsive
-    assert ".global-next-action-strip .next-button {" in responsive
-    assert "function postStageNextActionIsPrimary(" in api_state
-    assert "post-stage-next-action-mode" in api_state
-    assert _MOBILE_PRIORITY_SELECTOR in responsive
-    assert 'document.body.classList.contains("post-stage-next-action-mode")' in shell
+    assert ".intent-phase-list" in responsive
+    assert "grid-template-columns: repeat(4, minmax(130px, 1fr));" in responsive
+    assert "overflow-x: auto;" in responsive
+    assert ".intent-phase-step" in shell_css
+    assert "min-width: 0;" in shell_css
+    assert "overflow-wrap: anywhere;" in shell_css
+    assert "function scrollActiveStageIntoView()" in shell
+    assert 'document.getElementById("intentPhaseStepper")' in shell
 
 
 def test_operator_workbench_css_wraps_path_lines_without_document_overflow() -> None:
@@ -335,7 +343,9 @@ def test_operator_script_modules_own_static_ui_surfaces() -> None:
     assert "async function api(path, options = {})" in api_state
     assert "function renderRuntimeSelector()" in shell
     assert "function renderStageRail()" in shell
-    assert "Retry history" in shell
+    assert "function renderProjectHomeRail()" in shell
+    assert "function renderStageHeader()" in shell
+    assert "function renderTechnicalRegions()" in cockpit
     assert "projectPath.title = projectRoot;" in shell
     assert "workItemChip.title = workItemLabel;" in shell
     assert "runChip.title = runLabel;" in shell
@@ -370,7 +380,7 @@ def test_operator_script_modules_own_static_ui_surfaces() -> None:
     assert "async function handleNextAction()" in dashboard_actions
     assert "function renderStudioFlowCompleteState()" in next_flow_view
     assert "function renderStudioHistory(timeline)" in _asset_text("/operator-history.js")
-    assert "async function renderCockpit()" in cockpit
+    assert "async function renderCockpit({skipArtifactLoad = false} = {})" in cockpit
     assert "function renderRecoveryActionBand(diagnostics)" in cockpit
     assert "function renderRepairTimeline(validation)" in cockpit
     assert "function renderResolvedRepairSummary(validation)" in cockpit
@@ -566,7 +576,8 @@ def test_operator_state_and_dashboard_assets_keep_runtime_and_tab_contracts() ->
             "function scrollNextFlowWizardToTopOnMobile()",
             "function revealNextFlowWizardOnMobile()",
             "window.matchMedia(\"(max-width: 760px)\").matches",
-            "window.scrollTo({top: Math.max(0, target), behavior: \"auto\"});",
+            "workspace.scrollTo({top: Math.max(0, workspace.scrollTop - topbarHeight), "
+            'behavior: "auto"});',
             "window.requestAnimationFrame(scrollCockpitToTopOnMobile);",
             "window.setTimeout(scrollCockpitToTopOnMobile, 80);",
             "function applyOperatorModeBodyClass()",
@@ -630,7 +641,7 @@ def test_operator_state_and_dashboard_assets_keep_runtime_and_tab_contracts() ->
             'api("/api/runtime-readiness")',
             'if (element.textContent === message) element.textContent = "";',
             'button.setAttribute("aria-selected", isActive ? "true" : "false");',
-            'content.setAttribute("aria-labelledby", `tab-${state.activeTab}`);',
+            'content.dataset.operatorMode = state.activeTab;',
         ),
     )
     assert (
@@ -790,14 +801,6 @@ def test_operator_shell_asset_keeps_runtime_readiness_navigation_and_markdown_co
             "function readinessDetail(label, value, maxLength = 72)",
             "function ensureRunnableRuntime()",
             'toast("Selected runtime is not ready.")',
-            "function scrollActiveStageIntoView()",
-            'window.matchMedia("(max-width: 760px)").matches',
-            'rail.querySelector(`[data-stage="${CSS.escape(state.activeStage)}"]`)',
-            "rail.scrollWidth <= rail.clientWidth",
-            'rail.scrollTo({behavior: "auto", left: Math.max(0, left)});',
-            "requestAnimationFrame(scrollActiveStageIntoView);",
-            'aria-current="${isActive ? "step" : "false"}"',
-            'class="stage-copy"',
             "function renderMarkdown(text)",
         ),
     )
@@ -806,13 +809,10 @@ def test_operator_shell_asset_keeps_runtime_readiness_navigation_and_markdown_co
 def test_operator_project_rail_uses_distinct_segment_states() -> None:
     shell = _asset_text("/operator-shell-rendering.js")
 
-    assert 'data-tab-shortcut="project-home"' in shell
-    assert 'data-tab-shortcut="overview"' in shell
-    assert shell.count('data-tab-shortcut="work"') == 0
-    assert "projectsActive" in shell
-    assert "workItemsActive" in shell
-    assert 'aria-pressed="${projectsActive ? "true" : "false"}"' in shell
-    assert 'aria-pressed="${workItemsActive ? "true" : "false"}"' in shell
+    assert "Project navigation is owned by the Inbox surface" in shell
+    assert "function projectHomeWorkItems()" in shell
+    assert 'data-tab-shortcut="project-home"' not in shell
+    assert 'class="stage-rail"' not in shell
 
 
 def test_operator_stage_retry_affordance_links_to_recovery_history() -> None:
@@ -832,27 +832,8 @@ def test_operator_stage_retry_affordance_links_to_recovery_history() -> None:
             "open Recovery for repair and retry history",
         ),
     )
-    _assert_contains_all(
-        shell,
-        (
-            "const retry = stageRetrySummary(item);",
-            'class="small-badge ${retry ? "retried" : ""}"',
-            "retry ${escapeHtml(attemptCount)}x",
-            'class="stage-card${active}${retry ? " retried" : ""}"',
-            'data-stage-recovery="validation"',
-            "Retry history",
-        ),
-    )
-    _assert_contains_all(
-        layout,
-        (
-            ".small-badge.retried",
-            ".status-badge.retried",
-            ".badge-button.retried",
-            ".stage-card.retried",
-            ".stage-card.active.retried",
-        ),
-    )
+    assert "stage-card" not in shell
+    assert ".stage-card" not in layout
     _assert_contains_all(
         components,
         (
@@ -889,7 +870,7 @@ def test_operator_cockpit_asset_keeps_overview_sidebar_and_activity_contracts() 
     _assert_contains_all(
         cockpit,
         (
-            "async function renderCockpit()",
+                "async function renderCockpit({skipArtifactLoad = false} = {})",
             "renderQuestionCards({showResume: true})",
             'state.recoveryDetail === "questions"',
             "content.innerHTML = renderQuestions();",
@@ -902,11 +883,9 @@ def test_operator_cockpit_asset_keeps_overview_sidebar_and_activity_contracts() 
             '"Supporting evidence", path: evidencePath}',
             'item.action === "inspect-runtime-log"',
             "Open Recovery Summary",
-            "function bottomDockDefaultCollapsed()",
-            "function bottomDockIsCollapsed()",
-            "data-bottom-dock-toggle",
-            "Hide activity",
-            "Show activity",
+            "function renderTechnicalRegions()",
+            "technicalActivity",
+            "technicalArtifacts",
             "No validation evidence for this stage yet",
             "data-blocker-stage",
             "data-evidence-path",
@@ -928,7 +907,7 @@ def test_operator_cockpit_asset_keeps_overview_sidebar_and_activity_contracts() 
             "stage: state.activeStage,",
             "function renderHistoryMode()",
             "renderRuntimeSelector();",
-            "await renderCockpit();",
+                "await renderCockpit({skipArtifactLoad});",
         ),
     )
 
@@ -1015,8 +994,8 @@ def test_operator_global_next_action_surfaces_live_job_progress() -> None:
     _assert_contains_all(
         components,
         (
-            ".global-next-action-strip.live-progress-active {",
-            ".global-next-action-strip.external-progress-active {",
+            ".intent-decision-surface.live-progress-active {",
+            ".intent-decision-surface.external-progress-active {",
             ".live-progress-strip {",
             ".live-progress-strip.external-running-stage {",
             "grid-template-columns: minmax(0, 1fr);",
@@ -1035,11 +1014,8 @@ def test_operator_global_next_action_surfaces_live_job_progress() -> None:
             ".live-progress-actions {",
             ".live-progress-actions button {",
             ".live-progress-meta,",
-            f"{_MOBILE_PRIORITY_SELECTOR} {{",
-            f"{_MOBILE_PRIORITY_SELECTOR} .cockpit {{",
-            f"{_MOBILE_PRIORITY_SELECTOR} .stage-rail {{",
-            f"{_MOBILE_PRIORITY_SELECTOR} .right-sidebar {{",
-            f"{_MOBILE_PRIORITY_SELECTOR} .bottom-dock {{",
+            ".intent-decision-surface {",
+            ".intent-decision-surface .next-action-controls {",
         ),
     )
 
@@ -1546,8 +1522,7 @@ def test_operator_stale_downstream_summary_prioritizes_rerun_guidance() -> None:
             "grid-template-columns: repeat(4, minmax(0, 1fr));",
         ),
     )
-    assert _MOBILE_PRIORITY_SELECTOR in responsive
-    assert f"{_MOBILE_PRIORITY_SELECTOR} .cockpit" in responsive
+    assert ".intent-decision-surface" in responsive
     assert ".stale-downstream-summary," in responsive
     assert ".stale-downstream-facts," in responsive
 
@@ -1742,6 +1717,7 @@ def test_operator_logs_asset_keeps_filter_raw_cancel_and_polling_contracts() -> 
             "Number.isFinite(nextCursor)",
             "state.activeJobStatus.status === \"waiting-for-operator\"",
             "async function startJobPolling(job)",
+            "await renderAll({skipArtifactLoad: true});",
             "message: \"job started\"",
             "renderActiveRunPanel();",
             "renderNextActionPanel();",
@@ -1785,14 +1761,14 @@ def test_operator_next_action_explains_runtime_readiness_blocker_locally() -> No
             ".next-action-button-stack {",
             ".next-action-blocker {",
             "overflow-wrap: anywhere;",
-            ".global-next-action-strip .next-action-button-stack {",
-            ".global-next-action-strip .next-action-button-stack .next-button {",
+            ".intent-decision-surface .next-action-button-stack {",
+            ".intent-decision-surface .next-action-button-stack .next-button {",
         ),
     )
     _assert_contains_all(
         responsive,
         (
-            ".global-next-action-strip .next-action-button-stack {",
+            ".intent-decision-surface .next-action-button-stack {",
             "justify-self: stretch;",
             ".next-action-blocker {",
             "max-width: 100%;",
@@ -1809,7 +1785,7 @@ def test_operator_next_action_sidebar_is_status_mirror_when_global_cta_is_primar
         (
             "function workDetailOwnsPrimarySurface()",
             '["implement-review", "review-findings", "qa-verdict"].includes(state.workDetail)',
-            "function globalNextActionStripProvidesPrimary()",
+            "function intentDecisionSurfaceProvidesPrimary()",
             "state.activeTab === \"recovery\"",
             "workDetailOwnsPrimarySurface()",
             'document.body.classList.contains("evidence-log-mode")',
@@ -1856,7 +1832,7 @@ def test_operator_next_flow_wizard_static_contract_covers_controls_and_preflight
             "data-source-selection-mode",
             "data-close-next-flow-wizard",
             "data-next-flow-continue",
-            "Continue to Define Work Item",
+            "Continue to Define intent",
             "data-next-flow-back-to-sources",
             "data-next-flow-confirm-preview",
             "data-next-flow-back-to-definition",
@@ -1904,9 +1880,11 @@ def test_operator_focus_visible_contract_covers_keyboard_reachable_surfaces() ->
     _assert_contains_all(
         html,
         (
-            'id="cockpitContent"',
-            'role="tabpanel"',
-            'tabindex="0"',
+            'id="operatorWorkspace"',
+            'data-aidd-scroll-owner="workspace"',
+            'id="intentDecisionSurface"',
+            'id="intentContent"',
+            'id="intentTechnicalDetails"',
             'id="runtimeSelect"',
             'role="status" aria-live="polite"',
         ),
@@ -1960,8 +1938,6 @@ def test_operator_main_asset_keeps_refresh_order_and_event_routing_contracts() -
             'closest("[data-inherited-context]")',
             "invalidateFollowUpDraftPreview();",
             'event.target.id === "operatorRequestText"',
-            'closest("[data-bottom-dock-toggle]")',
-            "state.bottomDockUserCollapsed = !bottomDockIsCollapsed();",
             'closest("[data-intervention-target]")',
             "updateInterventionPreview();",
             'if (state.activeTab === "work") await renderCockpit();',
@@ -2003,11 +1979,11 @@ def test_index_html_exposes_named_operator_landmarks() -> None:
 def test_index_html_keeps_service_commands_in_labelled_maintenance_overflow() -> None:
     html = _asset_text("/")
 
-    assert html.index('id="cockpitContent"') < html.index('class="maintenance-overflow"')
+    assert html.index('id="intentTechnicalDetails"') < html.index('class="maintenance-overflow"')
     _assert_contains_all(
         html,
         (
-            '<summary data-aidd-focus-role="maintenance">Maintenance</summary>',
+            '<summary data-aidd-focus-role="technical-details">Technical details</summary>',
             'role="group" aria-label="Service maintenance commands"',
             'id="refreshButton"',
             'id="openWorkspaceButton"',
@@ -2020,60 +1996,34 @@ def test_index_html_keeps_service_commands_in_labelled_maintenance_overflow() ->
     assert 'id="stopServerButton"' not in top_actions
 
 
-def test_desktop_studio_shell_owns_primary_vertical_scrolling() -> None:
+def test_desktop_intent_workspace_owns_primary_vertical_scrolling() -> None:
     html = _asset_text("/")
-    layout = _asset_text("/operator-layout.css")
-    components = _asset_text("/operator-components.css")
-    responsive = _asset_text("/operator-responsive.css")
+    shell_css = _asset_text("/operator-intent-shell.css")
 
     assert (
-        'class="operator-shell" aria-label="Operator workspace" '
-        'data-aidd-scroll-owner="studio" data-mobile-priority-layout='
-    ) in html
-    shell_rule = layout.split(".operator-shell {", 1)[1].split("}", 1)[0]
-    assert "max-height: calc(100vh - 52px);" in shell_rule
-    assert "overflow-y: auto;" in shell_rule
-    stage_rule = layout.split("\n.stage-rail {", 1)[1].split("}", 1)[0]
-    cockpit_rule = layout.split("\n.cockpit {", 1)[1].split("}", 1)[0]
-    sidebar_rule = components.split("\n.right-sidebar {", 1)[1].split("}", 1)[0]
-    assert "overflow: visible;" in stage_rule
-    assert "overflow: visible;" in cockpit_rule
-    assert "overflow: visible;" in sidebar_rule
-    mobile_shell = responsive.split(
-        f"  {_MOBILE_PRIORITY_SELECTOR} {{",
-        1,
-    )[1].split("}", 1)[0]
-    assert "max-height: none;" in mobile_shell
-    assert "overflow: visible;" in mobile_shell
-    assert _attrs_for("aside", **{"aria-label": "Workflow navigation"})
-    assert _attrs_for("section", **{"aria-label": "Stage cockpit"})
-    assert _attrs_for("aside", **{"aria-label": "Run details"})
-    assert _attrs_for("section", **{"aria-label": "Activity and recent artifacts"})
-    assert _attrs_for("nav", id="stageRail", **{"aria-label": "Workflow stages"})
+        'class="operator-workspace" aria-label="Operator workspace" '
+        'data-aidd-scroll-owner="workspace"' in html
+    )
+    workspace_rule = shell_css.split(".operator-workspace {", 1)[1].split("}", 1)[0]
+    assert "overflow-y: auto;" in workspace_rule
+    assert "min-height: calc(100vh - 64px);" in workspace_rule
+    assert _attrs_for("main", id="operatorWorkspace")
+    assert _attrs_for("section", id="intentContext")
+    assert _attrs_for("nav", id="intentPhaseStepper")
+    assert _attrs_for("section", id="intentDecisionSurface")
+    assert _attrs_for("section", id="intentContent")
+    assert _attrs_for("details", id="intentTechnicalDetails")
 
 
 def test_index_html_exposes_tab_and_panel_semantics() -> None:
-    assert _attrs_for("div", role="tablist", **{"aria-label": "Stage cockpit views"})
-    work_tab = _attrs_for("button", id="tab-work", role="tab")
-    recovery_tab = _attrs_for("button", id="tab-recovery", role="tab")
-    evidence_tab = _attrs_for("button", id="tab-evidence", role="tab")
-    history_tab = _attrs_for("button", id="tab-history", role="tab")
-    panel = _attrs_for("div", id="cockpitContent", role="tabpanel")
-
-    assert work_tab["aria-selected"] == "true"
-    assert work_tab["aria-controls"] == "cockpitContent"
-    assert work_tab["tabindex"] == "0"
-    assert recovery_tab["aria-selected"] == "false"
-    assert recovery_tab["aria-controls"] == "cockpitContent"
-    assert recovery_tab["tabindex"] == "-1"
-    assert evidence_tab["aria-selected"] == "false"
-    assert evidence_tab["aria-controls"] == "cockpitContent"
-    assert evidence_tab["tabindex"] == "-1"
-    assert history_tab["aria-selected"] == "false"
-    assert history_tab["aria-controls"] == "cockpitContent"
-    assert history_tab["tabindex"] == "-1"
-    assert panel["aria-labelledby"] == "tab-work"
-    assert panel["tabindex"] == "0"
+    assert _attrs_for("main", id="operatorWorkspace", **{"aria-label": "Operator workspace"})
+    decision = _attrs_for("section", id="intentDecisionSurface")
+    content = _attrs_for("section", id="intentContent")
+    details = _attrs_for("details", id="intentTechnicalDetails")
+    assert decision["aria-label"] == "Current decision"
+    assert content["aria-live"] == "polite"
+    assert content["tabindex"] == "-1"
+    assert details["class"] == "intent-technical-details"
 
 
 def test_index_html_exposes_runtime_and_loading_contracts() -> None:
@@ -2090,8 +2040,8 @@ def test_operator_script_keeps_dynamic_accessibility_contracts() -> None:
         "/operator-questions.js"
     )
     assert 'aria-describedby="${questionTextId}"' in _asset_text("/operator-questions.js")
-    assert 'aria-current="${isActive ? "step" : "false"}' in _asset_text(
-        "/operator-shell-rendering.js"
+    assert 'aria-current="${current ? "step" : "false"}' in _asset_text(
+        "/operator-active-studio.js"
     )
     assert 'button.setAttribute("aria-selected", isActive ? "true" : "false");' in _asset_text(
         "/operator-api-state.js"

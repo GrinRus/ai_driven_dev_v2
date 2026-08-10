@@ -487,8 +487,8 @@ function renderValidation() {
   `;
 }
 
-async function renderCockpitContent() {
-  const content = document.getElementById("cockpitContent");
+async function renderCockpitContent({skipArtifactLoad = false} = {}) {
+  const content = document.getElementById("intentContent");
   if (state.activeTab === "work") {
     if (state.workDetail === "project-home") {
       content.innerHTML = renderInboxSurface();
@@ -507,7 +507,7 @@ async function renderCockpitContent() {
       return;
     }
     content.innerHTML = renderOverviewSurface();
-    if (document.getElementById("studioDocumentCanvas")) {
+    if (!skipArtifactLoad && document.getElementById("studioDocumentCanvas")) {
       await loadArtifactDocument(state.activeArtifactKey);
     }
     void loadRunAccountabilityCard();
@@ -553,12 +553,26 @@ async function renderCockpitContent() {
   }
 }
 
-async function renderCockpit() {
+async function renderCockpit({skipArtifactLoad = false} = {}) {
   try {
-    await renderCockpitContent();
+    await renderCockpitContent({skipArtifactLoad});
   } finally {
+    syncIntentShellRegions();
     syncCurrentDecisionTarget();
   }
+}
+
+function syncIntentShellRegions() {
+  const content = document.getElementById("intentContent");
+  const context = document.getElementById("intentContext");
+  const phases = document.getElementById("intentPhaseStepper");
+  if (!content || !context || !phases) return;
+  context.replaceChildren();
+  phases.replaceChildren();
+  const contextBar = content.querySelector("[data-studio-context-bar]");
+  const phaseStepper = content.querySelector("[data-intent-phase-stepper]");
+  if (contextBar) context.appendChild(contextBar);
+  if (phaseStepper) phases.appendChild(phaseStepper);
 }
 
 function renderInboxSurface() {
@@ -577,7 +591,7 @@ function renderBlockersPanel() {
       <span class="small-badge ${blocker.severity === "error" ? "bad" : "warn"}">${escapeHtml(blocker.kind)}</span>
     </button>
   `).join("") : `<p>No blockers detected for the selected stage.</p>`;
-  document.getElementById("blockersPanel").innerHTML = `
+  document.getElementById("technicalBlockers").innerHTML = `
     <div class="panel-title">Blockers <span class="small-badge ${blockers.length ? "warn" : "good"}">${escapeHtml(blockers.length)}</span></div>
     <div class="panel-list">${body}</div>
   `;
@@ -592,7 +606,7 @@ function renderEvidencePanel() {
       <span class="small-badge">${escapeHtml(ref.kind)}</span>
     </button>
   `).join("") : `<p>No evidence refs yet.</p>`;
-  document.getElementById("evidencePanel").innerHTML = `
+  document.getElementById("technicalEvidence").innerHTML = `
     <details class="secondary-drilldown" ${open ? "open" : ""}>
       <summary><span>Evidence refs</span><span class="small-badge">${escapeHtml(refs.length)}</span></summary>
       <div class="panel-list">${body}</div>
@@ -601,7 +615,7 @@ function renderEvidencePanel() {
 }
 
 function renderRecoveryAssistantPanel() {
-  const host = document.getElementById("recoveryAssistantPanel");
+  const host = document.getElementById("technicalRecovery");
   if (!host) return;
   const firstFailure = state.dashboard?.first_failure || null;
   const actions = state.dashboard?.recovery_actions || [];
@@ -620,7 +634,7 @@ function renderRecoveryAssistantPanel() {
 
 function renderRuntimeRootPanel() {
   const workspace = state.dashboard?.workspace_root || "";
-  document.getElementById("runtimeRootPanel").innerHTML = `
+  document.getElementById("technicalRuntime").innerHTML = `
     <details class="secondary-drilldown">
       <summary><span>Runtime root</span><span class="small-badge">.aidd</span></summary>
       <p><code>.aidd/</code></p>
@@ -660,7 +674,7 @@ function renderSafetyPanel() {
       renderProtectedWriteScope()
     ].join("");
   }
-  document.getElementById("safetyPanel").innerHTML = `
+  document.getElementById("technicalSafety").innerHTML = `
     <details class="secondary-drilldown" ${activeModeIsEvidenceLog() ? "open" : ""}>
       <summary><span>Safety / Readiness</span><span class="small-badge">${escapeHtml(badge)}</span></summary>
       <div class="panel-list">
@@ -790,9 +804,15 @@ function renderActivityTableMarkup(events) {
 }
 
 function renderActivityTable() {
-  const host = document.getElementById("activityTable");
+  const host = document.getElementById("technicalActivity");
   if (!host) return;
-  host.innerHTML = renderActivityTableMarkup(activityEvents());
+  host.innerHTML = `
+    <div class="technical-region-header">
+      <strong>Activity / Events</strong>
+      <button id="viewFullLogButton" class="link-button" type="button">View full log</button>
+    </div>
+    ${renderActivityTableMarkup(activityEvents())}
+  `;
 }
 
 async function renderHistoryMode() {
@@ -801,68 +821,28 @@ async function renderHistoryMode() {
 
 function renderRecentArtifacts() {
   const refs = state.dashboard?.recent_artifacts || [];
-  document.getElementById("recentArtifacts").innerHTML = refs.length ? refs.map((ref) => `
+  const host = document.getElementById("technicalArtifacts");
+  if (!host) return;
+  host.innerHTML = `
+    <div class="technical-region-header">
+      <strong>Recent artifacts</strong>
+      <button id="openStageFolderButton" class="link-button" type="button">Open stage folder</button>
+    </div>
+    ${refs.length ? refs.map((ref) => `
     <button class="artifact-row" data-artifact-stage="${escapeHtml(ref.stage)}" data-artifact-key="${escapeHtml(ref.key)}" data-artifact-kind="${escapeHtml(ref.kind)}" type="button">
       <span><strong>${escapeHtml(ref.stage)} / ${escapeHtml(ref.key)}</strong>${pathLine(ref.path)}</span>
       <span class="small-badge">${escapeHtml(ref.kind)}</span>
     </button>
-  `).join("") : `<div class="empty-state">No artifacts yet.</div>`;
-}
-
-function bottomDockDefaultCollapsed() {
-  if (!state.dashboard?.run?.run_id) return false;
-  if (state.nextFlowWizard.active) return true;
-  if (state.activeTab === "evidence" || state.activeTab === "recovery") return true;
-  if (state.activeTab === "work") {
-    if (state.dashboard?.terminal_handoff) return true;
-    return state.workDetail !== "overview";
-  }
-  return false;
-}
-
-function bottomDockIsCollapsed() {
-  if (state.bottomDockUserCollapsed === true || state.bottomDockUserCollapsed === false) {
-    return state.bottomDockUserCollapsed;
-  }
-  return bottomDockDefaultCollapsed();
-}
-
-function renderBottomDock() {
-  const dock = document.querySelector(".bottom-dock");
-  if (!dock) return;
-  const collapsed = bottomDockIsCollapsed();
-  document.body.classList.toggle("bottom-dock-collapsed", collapsed);
-  dock.classList.toggle("collapsed", collapsed);
-  dock.setAttribute("aria-expanded", collapsed ? "false" : "true");
-  dock.innerHTML = `
-    <div class="bottom-dock-toggle-row">
-      <span>Activity / Recent artifacts</span>
-      <button data-bottom-dock-toggle class="link-button" type="button">${collapsed ? "Show activity" : "Hide activity"}</button>
-    </div>
-    ${collapsed ? "" : `
-      <div class="dock-panel activity-panel">
-        <div class="dock-header">
-          <span>Activity / Events</span>
-          <button id="viewFullLogButton" class="link-button" type="button">View full log</button>
-        </div>
-        <div id="activityTable" class="table-wrap"></div>
-      </div>
-      <div class="dock-panel artifacts-panel">
-        <div class="dock-header">
-          <span>Recent artifacts</span>
-          <button id="openStageFolderButton" class="link-button" type="button">Open stage folder</button>
-        </div>
-        <div id="recentArtifacts" class="recent-artifacts"></div>
-      </div>
-    `}
+  `).join("") : `<div class="empty-state">No artifacts yet.</div>`}
   `;
-  if (!collapsed) {
-    renderActivityTable();
-    renderRecentArtifacts();
-  }
 }
 
-async function renderAll() {
+function renderTechnicalRegions() {
+  renderActivityTable();
+  renderRecentArtifacts();
+}
+
+async function renderAll({skipArtifactLoad = false} = {}) {
   document.body.classList.remove("setup-active");
   document.getElementById("openWorkspaceButton").disabled = false;
   document.getElementById("newWorkItemButton").disabled = false;
@@ -872,11 +852,11 @@ async function renderAll() {
   renderStageRail();
   renderStageHeader();
   applyActiveStudioShellPresentation();
-  renderGlobalNextActionStrip();
   updateContextualTabs();
   renderSidebar();
-  renderBottomDock();
+  renderTechnicalRegions();
+  renderGlobalNextActionStrip();
   activateTab(state.activeTab, {preserveDetail: true});
-  await renderCockpit();
+  await renderCockpit({skipArtifactLoad});
   revealCockpitOnMobile();
 }

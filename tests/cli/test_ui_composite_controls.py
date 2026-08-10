@@ -38,7 +38,8 @@ def test_clickable_rows_publish_authoritative_selection_state_without_false_mode
     assert 'role="radio"' not in next_flow
     assert "data-setup-mode" not in next_flow
     assert artifacts.count('aria-pressed="${selected ? "true" : "false"}"') >= 1
-    assert 'aria-current="${item.work_item === current?.work_item ? "true" : "false"}"' in shell
+    assert "function renderProjectHomeRail()" in shell
+    assert 'class="stage-rail"' not in shell
 
 
 def test_composite_selection_css_is_driven_by_aria_as_well_as_legacy_classes() -> None:
@@ -52,7 +53,6 @@ def test_composite_selection_css_is_driven_by_aria_as_well_as_legacy_classes() -
     )
 
     for selector in (
-        '.tabs button[aria-selected="true"]',
         '.log-filter button[aria-pressed="true"]',
         '.viewer-modes button[aria-pressed="true"]',
         '.runner-card[aria-pressed="true"]',

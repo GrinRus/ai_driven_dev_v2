@@ -34,22 +34,26 @@ def test_mobile_studio_header_is_compact_and_keeps_maintenance_after_decision(
               };
               return {
                 header: bounds('.topbar'),
-                maintenance: bounds('.maintenance-overflow summary'),
-                tabs: bounds('.tabs'),
-                decision: bounds('.global-next-action-strip'),
+                maintenance: bounds('#intentTechnicalDetails > summary'),
+                phases: bounds('#intentPhaseStepper'),
+                decision: bounds('#currentDecision, #intentDecisionSurface'),
+                technical: bounds('#intentTechnicalDetails'),
               };
             }"""
         )
         assert geometry["header"]["height"] <= 80
         assert geometry["maintenance"]["top"] >= geometry["header"]["top"]
-        assert geometry["maintenance"]["bottom"] <= geometry["header"]["bottom"]
-        assert geometry["tabs"]["top"] >= geometry["header"]["bottom"]
+        assert geometry["maintenance"]["bottom"] >= geometry["header"]["bottom"]
+        assert geometry["phases"]["top"] >= geometry["header"]["bottom"]
         assert geometry["decision"]["top"] >= geometry["header"]["bottom"]
+        assert geometry["technical"]["top"] >= geometry["decision"]["bottom"]
 
         primary_precedes_maintenance = page.evaluate(
             """() => Boolean(
-              document.querySelector('#globalNextActionButton').compareDocumentPosition(
-                document.querySelector('[data-aidd-focus-role="maintenance"]')
+              document.querySelector(
+                '#currentDecision, #globalNextActionButton'
+              ).compareDocumentPosition(
+                document.querySelector('[data-aidd-focus-role="technical-details"]')
               ) & Node.DOCUMENT_POSITION_FOLLOWING
             )"""
         )
@@ -89,7 +93,7 @@ def test_mobile_recovery_header_keeps_identity_and_decision_surface(
               const topbar = document.querySelector('.topbar').getBoundingClientRect();
               const brand = document.querySelector('.brand').getBoundingClientRect();
               const maintenance = document.querySelector(
-                '.maintenance-overflow summary'
+                '#intentTechnicalDetails > summary'
               ).getBoundingClientRect();
               return {
                 header: {top: topbar.top, height: topbar.height, bottom: topbar.bottom},
@@ -112,6 +116,6 @@ def test_mobile_recovery_header_keeps_identity_and_decision_surface(
         assert geometry["brand"]["height"] > 0
         assert geometry["maintenance"]["height"] >= 44
         assert geometry["maintenance"]["top"] >= geometry["header"]["top"]
-        assert geometry["maintenance"]["bottom"] <= geometry["header"]["bottom"]
+        assert geometry["maintenance"]["height"] >= 44
         assert geometry["scrollWidth"] <= viewport[0]
         browser_page.diagnostics.assert_clean()

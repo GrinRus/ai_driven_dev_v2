@@ -21,7 +21,7 @@ async function refresh() {
       try {
         // A non-Inbox deep link is an explicit context request. After a server
         // restart the service intentionally starts project-only, so restore
-        // this known work item through the same guarded Inbox resume endpoint.
+        // this known intent through the same guarded Inbox resume endpoint.
         await postJson("/api/onboarding/work-item", {
           action: "resume",
           project_root: state.onboarding.projectRootInput || ".",
@@ -30,14 +30,14 @@ async function refresh() {
         await fetchOnboardingState();
         selectedWorkItem = state.onboarding.contextWorkItem;
         if (selectedWorkItem !== route.workItem) {
-          throw new Error("The requested work item was not restored.");
+          throw new Error("The requested intent was not restored.");
         }
       } catch (error) {
-        routeRestoreError = error.message || "The requested work item could not be restored.";
+        routeRestoreError = error.message || "The requested intent could not be restored.";
       }
     }
     if (!selectedWorkItem || routeRestoreError) {
-      // An existing project is useful before an operator chooses a work item:
+      // An existing project is useful before an operator chooses an intent:
       // keep the first view at the Inbox instead of inventing a Studio context.
       state.dashboard = null;
       state.dashboardActiveJob = null;
@@ -66,7 +66,7 @@ async function refresh() {
       if (accepted) renderReadinessSurfaces();
     });
   } catch (error) {
-    document.getElementById("cockpitContent").innerHTML = `<div class="empty-state">${escapeHtml(error.message)}</div>`;
+    document.getElementById("intentContent").innerHTML = `<div class="empty-state">${escapeHtml(error.message)}</div>`;
   }
 }
 
@@ -245,18 +245,12 @@ document.addEventListener("click", async (event) => {
         );
         primaryInboxAction?.focus({preventScroll: true});
         const revealInboxStart = () => {
-          document.querySelector(".operator-shell")?.scrollTo({top: 0, behavior: "auto"});
+          document.querySelector("#operatorWorkspace")?.scrollTo({top: 0, behavior: "auto"});
           window.scrollTo({top: 0, behavior: "auto"});
         };
         revealInboxStart();
         window.requestAnimationFrame(revealInboxStart);
       }
-      return;
-    }
-    const bottomDockToggle = event.target.closest("[data-bottom-dock-toggle]");
-    if (bottomDockToggle) {
-      state.bottomDockUserCollapsed = !bottomDockIsCollapsed();
-      renderBottomDock();
       return;
     }
     const nextFlowAction = event.target.closest("[data-next-flow-action]");

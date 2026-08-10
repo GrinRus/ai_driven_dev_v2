@@ -29,7 +29,7 @@ function renderRunningStageNotice(job) {
 }
 
 function renderActiveRunPanel() {
-  const panel = document.getElementById("activeRunPanel");
+  const panel = document.getElementById("technicalActiveRun");
   if (!panel) return;
   const job = state.activeJobStatus;
   const staleStages = (state.dashboard?.stages || []).filter((item) => item.stale);
@@ -212,7 +212,7 @@ function renderImplementationRepositoryGate(context) {
 }
 
 async function renderImplementReview() {
-  const content = document.getElementById("cockpitContent");
+  const content = document.getElementById("intentContent");
   if (!state.activeRunId) {
     content.innerHTML = `<div class="empty-state">Run implement before reviewing repository changes.</div>`;
     return;
@@ -301,7 +301,7 @@ async function launchRemediation(sourceStage) {
 }
 
 async function renderReviewFindings() {
-  const content = document.getElementById("cockpitContent");
+  const content = document.getElementById("intentContent");
   content.innerHTML = `<div class="empty-state loading-state">Loading review findings...</div>`;
   try {
     const view = await api(`/api/review/findings?${runScopedQuery()}`);
@@ -315,7 +315,7 @@ async function renderReviewFindings() {
 }
 
 async function renderQaVerdict() {
-  const content = document.getElementById("cockpitContent");
+  const content = document.getElementById("intentContent");
   content.innerHTML = `<div class="empty-state loading-state">Loading QA verdict...</div>`;
   try {
     const view = await api(`/api/qa/verdict?${runScopedQuery()}`);

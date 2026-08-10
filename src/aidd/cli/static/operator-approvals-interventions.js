@@ -195,7 +195,7 @@ async function renderRequestChange() {
       <span><strong>${escapeHtml(interventionTargetLabel(key))}</strong>${pathLine(path, 82)}</span>
     </label>
   `).join("") : `<div class="empty-state">No current-stage target documents available yet. The request can still run against the stage scope.</div>`;
-  document.getElementById("cockpitContent").innerHTML = `
+  document.getElementById("intentContent").innerHTML = `
     <section class="request-change-screen" data-human-decision-surface="intervention" data-intervention-eligible="${interventionEligible ? "true" : "false"}" data-intervention-stage="${escapeHtml(state.activeStage)}" data-intervention-run="${escapeHtml(state.activeRunId || "")}">
       <section class="surface">
         <div class="surface-title">
@@ -565,7 +565,7 @@ function renderApprovalsSurface({view, diagnostics, requests, decisions, pending
 }
 
 async function renderApprovals() {
-  const content = document.getElementById("cockpitContent");
+  const content = document.getElementById("intentContent");
   const diagnostics = activeStageView()?.diagnostics?.approvals || null;
   if (!state.activeJobId) {
     state.approvalSessionConfirmation = null;

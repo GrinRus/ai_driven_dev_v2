@@ -197,7 +197,7 @@ def test_intervention_rejects_succeeded_downstream_without_request(tmp_path: Pat
         blocked = page.locator('[data-intervention-eligible="false"]').first
         blocked.wait_for(state="visible")
         assert "requires remediation routing" in page.locator(
-            "#cockpitContent"
+            "#intentContent"
         ).inner_text()
         assert page.locator("#submitInterventionButton").is_disabled()
         page.evaluate("submitIntervention()")

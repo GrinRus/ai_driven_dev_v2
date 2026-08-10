@@ -126,6 +126,9 @@ Optional context documents may improve QA depth, but they must not replace imple
   an existing exact workspace-relative artifact path, or a QA-local syntactically executable
   command paired with an explicit terminal outcome. Prose outcome claims and commands without an
   outcome are not evidence.
+- Bullets in `Verification summary` and `Readiness` that make material verification or verdict
+  claims are index entries and must cite an `EV-N` defined in `Evidence` or an exact existing
+  workspace-relative artifact path; they must not be bare command/result prose.
 - QA must preserve the upstream decision: a rejected review or an unresolved `must-fix` finding
   requires `QA verdict: not-ready` and release recommendation `hold`.
 - `stage-result.md` and `validator-report.md` must remain consistent with verdict and release recommendation.

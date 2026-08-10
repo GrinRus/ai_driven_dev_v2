@@ -182,6 +182,11 @@ _OPERATOR_STATIC_ASSET_MANIFEST = (
         filename="operator-responsive.css",
         content_type="text/css; charset=utf-8",
     ),
+    OperatorStaticAsset(
+        route="/operator-intent-shell.css",
+        filename="operator-intent-shell.css",
+        content_type="text/css; charset=utf-8",
+    ),
 )
 
 

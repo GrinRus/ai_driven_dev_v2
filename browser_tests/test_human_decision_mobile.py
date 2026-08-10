@@ -28,7 +28,7 @@ def _open_surface(page: Page, surface: str) -> tuple[str, str]:
             suggestions: ["allow_once", "allow_for_session", "deny", "cancel"],
             payload: {command: "python -m pytest -q"}
           };
-          document.getElementById("cockpitContent").innerHTML = renderApprovalsSurface({
+          document.getElementById("intentContent").innerHTML = renderApprovalsSurface({
             view: null,
             diagnostics: null,
             requests: [request],

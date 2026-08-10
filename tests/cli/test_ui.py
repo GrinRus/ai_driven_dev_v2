@@ -4312,27 +4312,20 @@ def test_operator_ui_local_project_e2e_lane_covers_core_operator_flow(
     assert 'id="openWorkspaceButton"' in html
     assert 'id="stopServerButton"' in html
     assert 'class="topbar" aria-label="Operator controls"' in html
-    assert 'class="operator-shell" aria-label="Operator workspace"' in html
-    assert 'class="stage-rail" aria-label="Workflow navigation"' in html
-    assert 'class="cockpit" aria-label="Stage cockpit"' in html
-    assert 'class="right-sidebar" aria-label="Run details"' in html
-    assert 'class="bottom-dock" aria-label="Activity and recent artifacts"' in html
-    assert 'id="stageRail" class="stage-list" aria-label="Workflow stages"' in html
-    assert 'class="tabs" role="tablist" aria-label="Stage cockpit views"' in html
     assert (
-        'id="tab-work" data-tab="work" role="tab" aria-selected="true" '
-        'aria-controls="cockpitContent" tabindex="0"' in html
+        'class="operator-workspace" aria-label="Operator workspace" '
+        'data-aidd-scroll-owner="workspace"' in html
     )
-    assert 'id="tab-recovery" data-tab="recovery" role="tab"' in html
-    assert 'id="tab-evidence" data-tab="evidence" role="tab"' in html
-    assert (
-        'id="tab-history" data-tab="history" role="tab" aria-selected="false" '
-        'aria-controls="cockpitContent" tabindex="-1"' in html
-    )
-    assert (
-        'id="cockpitContent" class="cockpit-content" role="tabpanel" '
-        'aria-labelledby="tab-work" tabindex="0"' in html
-    )
+    for anchor in (
+        'id="intentContext"',
+        'id="intentPhaseStepper"',
+        'id="intentDecisionSurface"',
+        'id="intentContent"',
+        'id="intentTechnicalDetails"',
+    ):
+        assert anchor in html
+    for legacy in ("stage-rail", "right-sidebar", "bottom-dock", 'id="cockpitContent"'):
+        assert legacy not in html
     assert 'id="nextActionButton"' not in html
 
     run_response = service.handle_post(

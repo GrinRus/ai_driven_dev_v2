@@ -113,7 +113,6 @@ const state = {
   runtimeReasoningEffort: "",
   runtimeModelDirty: false,
   runtimeReasoningEffortDirty: false,
-  bottomDockUserCollapsed: null,
   activeRunId: "",
   activeRouteWorkItem: "",
   activeAttempt: null,
@@ -521,12 +520,11 @@ function requestNextFlowWizardReveal() {
 
 function scrollCockpitToTopOnMobile() {
   if (!window.matchMedia("(max-width: 760px)").matches) return;
-  const cockpit = document.querySelector(".cockpit");
-  if (!cockpit) return;
+  const workspace = document.querySelector("#operatorWorkspace");
+  if (!workspace) return;
   const topbar = document.querySelector(".topbar");
   const topbarHeight = topbar ? topbar.getBoundingClientRect().height : 0;
-  const target = cockpit.getBoundingClientRect().top + window.scrollY - topbarHeight;
-  window.scrollTo({top: Math.max(0, target), behavior: "auto"});
+  workspace.scrollTo({top: Math.max(0, workspace.scrollTop - topbarHeight), behavior: "auto"});
 }
 
 function revealCockpitOnMobile() {
@@ -541,10 +539,9 @@ function scrollNextFlowWizardToTopOnMobile() {
   if (!window.matchMedia("(max-width: 760px)").matches) return;
   const wizard = document.querySelector(".next-flow-wizard");
   if (!wizard) return;
-  const topbar = document.querySelector(".topbar");
-  const topbarHeight = topbar ? topbar.getBoundingClientRect().height : 0;
-  const target = wizard.getBoundingClientRect().top + window.scrollY - topbarHeight - 8;
-  window.scrollTo({top: Math.max(0, target), behavior: "auto"});
+  const workspace = document.getElementById("operatorWorkspace");
+  if (!workspace) return;
+  workspace.scrollTo({top: Math.max(0, wizard.offsetTop - 8), behavior: "auto"});
 }
 
 function revealNextFlowWizardOnMobile() {
@@ -669,8 +666,8 @@ function activateTab(tab, {preserveDetail = false, historyMode = "replace"} = {}
     button.classList.toggle("active", isActive);
     button.setAttribute("aria-current", isActive ? "page" : "false");
   });
-  const content = document.getElementById("cockpitContent");
-  if (content) content.setAttribute("aria-labelledby", `tab-${state.activeTab}`);
+  const content = document.getElementById("intentContent");
+  if (content) content.dataset.operatorMode = state.activeTab;
   applyOperatorModeBodyClass();
   syncLocationState({historyMode});
 }

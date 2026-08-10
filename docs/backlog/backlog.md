@@ -7,7 +7,11 @@ slice, and local task.
 
 ## Next
 
+_No active local tasks._
+
 ## Soon
+
+_No promoted follow-up tasks._
 
 ## Parking lot
 
@@ -30,6 +34,21 @@ slice, and local task.
   queue-restoration policy in `docs/backlog/roadmap.md` (`W8-E3-S1`).
 
 ## Current reconciliation
+
+- `2026-08-10` W40-E1-S4 (including T3), W41-E1-S2, and W36-E7-S4-T94 are complete. The packaged UI uses one
+  `operatorWorkspace` scroll owner with Intent context, a four-phase stepper, one current
+  decision surface, document content, and a technical-details disclosure. Legacy rail/sidebar/
+  dock DOM and responsive rules were removed. User-facing copy uses `Intent`; canonical
+  `work_item`/run/stage lineage remains technical. Dynamic form/action IDs, routes, API payloads,
+  workflow semantics, and artifact ownership are unchanged. Frontend/static contracts pass;
+  the browser matrix passes 192/192 cases across 47 modules at the supported viewport sizes;
+  Ruff, mypy, and diff checks are clean. The required Codex live lane used `gpt-5.6-luna` with
+  `reasoning_effort=high` and completed all eight stages through QA with status `pass` and zero
+  findings. QA verification-summary and readiness bullets now carry retained `EV-N` evidence
+  references; the rerun closed the prior `CROSS-QA-UPSTREAM-EVIDENCE` gap without changing
+  runtime, workflow, API, or canonical work-item semantics. A live-intervention browser race was
+  also closed: a new job no longer requests its artifact index before the first durable attempt
+  exists. The canonical live bundle is retained outside the source checkout for audit.
 
 - `2026-08-04` Wave 39 UI selector slice is complete. The local operator shell exposes
   capability-gated model and reasoning-effort controls, UI stage/workflow payloads omit

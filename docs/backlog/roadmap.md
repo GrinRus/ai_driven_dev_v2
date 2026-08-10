@@ -13322,6 +13322,23 @@ Local tasks:
     validator test and is rejected as unverifiable, legitimate compound commands remain accepted,
     Ruff/mypy pass, and focused validator/planning tests pass `42/42`.
 
+- `W36-E7-S4-T94` (done) Require material QA index claims to point to retained evidence.
+  - Dependencies: `W36-E7-S4-T89` as the existing QA evidence-contract predecessor; discovered
+    by the `AIDD-LIVE-005` Codex rerun after the Intent shell cleanup.
+  - Scope: QA prompt/repair guidance, QA document contracts, cross-document validation, and
+    focused regression coverage only; runtime adapters, stage progression, and target-work-item
+    semantics remain unchanged.
+  - Verification: every material `Verification summary` and `Readiness` bullet cites an `EV-N`
+    defined in `Evidence` or an exact existing workspace-relative artifact path; a bare
+    command/result bullet is rejected with `CROSS-QA-UPSTREAM-EVIDENCE`; prompt, validator,
+    frontend, browser, Ruff, and mypy checks pass, and the Codex live lane reaches `qa` with
+    status `pass`.
+  - Completion: QA run/repair prompts and contracts now state the indexed-claim rule, the
+    validator rejects an unindexed summary claim, and focused regression coverage passes.
+    Provider-free UI/browser gates remain green; live run
+    `eval-live-005-codex-20260810T104433Z` uses `gpt-5.6-luna` with `reasoning_effort=high`,
+    completes all eight stages through `qa`, and reports `pass` with zero findings.
+
 Exit evidence:
 
 - Codex and Claude Code complete the same pinned medium task through installed public surfaces on
@@ -13531,7 +13548,7 @@ Sync notes:
 
 ---
 
-## Wave 39 — operator runtime selector picker (`planned`)
+## Wave 39 — operator runtime selector picker (`done`)
 
 Goal: let operators choose optional typed model and reasoning-effort selectors in the
 local UI launch flow while preserving adapter capability validation, native defaults,
@@ -13697,6 +13714,61 @@ Sync notes:
   now lead with factual progress and one next action. Focused CLI/frontend regressions and
   desktop/mobile browser checks passed.
 
+#### Slice W40-E1-S4 — compact intent shell migration (`done`)
+Goal: replace the compatibility cockpit composition with one intent-first workspace surface
+without changing workflow, route, or runtime semantics.
+
+Primary outputs:
+
+- compact shell anchors with one primary workspace scroll owner;
+- renderer/event rebinding for the new context, phase, decision, document, and technical-detail
+  regions;
+- removal of permanent stage rail, sidebar, dock, and duplicate cockpit chrome.
+
+Touched areas:
+
+- `src/aidd/cli/static/`
+- `docs/architecture/operator-frontend.md`
+- frontend, CLI contract, and browser tests
+
+Dependencies:
+
+- `W40-E1-S3`
+- `W41-E1-S1`
+
+Local tasks:
+
+- `W40-E1-S4-T1` (done) Define compact shell anchors and scroll ownership in the packaged UI.
+  - Scope: static shell markup and architecture acceptance only.
+  - Verification: static contracts identify the new anchors and reject legacy shell containers.
+- `W40-E1-S4-T2` (done) Rebind shell renderers and event handlers to the compact anchors.
+  - Scope: browser-side renderers and focus/navigation wiring; preserve API and route contracts.
+  - Verification: frontend and packaged browser journeys pass at all supported viewports.
+- `W40-E1-S4-T3` (done) Keep live execution in the Intent workspace until durable artifacts exist.
+  - Scope: browser-side job polling/render coordination only; runtime job, artifact, and route
+    contracts remain unchanged.
+  - Verification: starting an intervention or workflow does not request a not-yet-created
+    artifact index, preserves the primary workspace while the job runs, and terminal
+    reconciliation loads the durable artifact view; intervention recovery and frontend/static
+    checks pass.
+
+Exit evidence:
+
+- legacy shell containers are absent from the base DOM;
+- primary decision precedes technical details and maintenance in DOM and focus order;
+- every intentional nested scroll region has an explicit owner.
+
+Sync notes:
+
+- `2026-08-10` Completed the compact intent shell migration. The packaged UI now has one
+  `operatorWorkspace` scroll owner with Intent context, four delivery phases, one decision
+  surface, a document canvas, and a technical-details disclosure. Legacy rail/sidebar/dock
+  containers and their responsive layout rules were removed; dynamic form/action IDs, routes,
+  API payloads, and workflow semantics remain unchanged. Live job polling now leaves the
+  workspace visible without requesting a not-yet-created artifact index, then loads durable
+  evidence after terminal reconciliation. Frontend/static contracts and focused browser geometry
+  checks pass.
+
 ---
 
 ## Wave 41 — evidence-first document reading (`done`)
@@ -13760,3 +13832,42 @@ Sync notes:
   copies side by side and never claims a generated diff. Related documents remain in Studio and
   persist in the canonical route across reload. Focused verification passed: frontend `107`, UI
   CLI `155`, focused browser `14`, Ruff, and mypy.
+
+#### Slice W41-E1-S2 — intent vocabulary and technical disclosure (`done`)
+Goal: make user-facing copy consistently intent-first while keeping canonical work-item identity
+available only in technical lineage and contract fields.
+
+Primary outputs:
+
+- `Intent` copy across topbar, Inbox, onboarding, Studio, and next-flow actions;
+- one non-duplicated Intent identity block in Active Studio;
+- technical work-item/run/stage lineage behind a disclosure.
+
+Touched areas:
+
+- `src/aidd/cli/static/`
+- `docs/architecture/operator-frontend.md`
+- `docs/e2e/operator-ui-local-project.md`
+- frontend and browser tests
+
+Dependencies:
+
+- `W41-E1-S1`
+
+Local tasks:
+
+- `W41-E1-S2-T1` (done) Replace visible Work item copy with Intent and remove duplicate identity.
+  - Scope: user-facing labels, accessible names, and validation/error copy only.
+  - Verification: copy-whitelist tests find no visible Work item outside technical disclosure.
+- `W41-E1-S2-T2` (done) Move lineage and diagnostics into technical disclosures and document the
+  vocabulary boundary.
+  - Scope: next-flow/history/evidence presentation and UX contract documentation.
+  - Verification: browser checks preserve source/target/run/stage auditability without exposing
+  canonical identifiers as primary context.
+
+Sync notes:
+
+- `2026-08-10` Completed the intent vocabulary and technical disclosure follow-up. User-facing
+  surfaces consistently say `Intent`; canonical `work_item`, run, stage, and lineage fields stay
+  available in technical routes/disclosures. Active Studio no longer repeats the same identity,
+  and copy-whitelist tests reject visible `Work item` labels outside technical context.

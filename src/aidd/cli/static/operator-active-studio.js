@@ -79,21 +79,9 @@ function renderIntentPhaseStepper() {
 
 function renderActiveStudioContextBar(studioState, item) {
   const dashboard = state.dashboard || {};
-  const run = dashboard.run || {};
   const intent = activeIntentSummary();
   const intentExcerpt = intent?.excerpt || "Capture the desired outcome before starting delivery.";
   const currentPhase = INTENT_PHASES.find((phase) => phase.stages.includes(state.activeStage));
-  const identity = studioState === "no-run"
-    ? `
-      <div><dt>Work item</dt><dd>${escapeHtml(dashboard.work_item || "unknown")}</dd></div>
-      <div><dt>Status</dt><dd>${escapeHtml(activeStudioStateLabel(studioState, item))}</dd></div>
-    `
-    : `
-      <div><dt>Work item</dt><dd>${escapeHtml(dashboard.work_item || "unknown")}</dd></div>
-      <div><dt>Run</dt><dd>${escapeHtml(run.run_id || "not started")}</dd></div>
-      <div><dt>Stage</dt><dd>${escapeHtml(state.activeStage)}</dd></div>
-      <div><dt>Status</dt><dd>${escapeHtml(activeStudioStateLabel(studioState, item))}</dd></div>
-    `;
   return `
     <header class="surface studio-context-bar" data-studio-context-bar>
       <div>
@@ -102,8 +90,7 @@ function renderActiveStudioContextBar(studioState, item) {
         <p class="muted">${escapeHtml(currentPhase?.label || "Capture")} · ${escapeHtml(activeStudioStateLabel(studioState, item))}</p>
       </div>
       <dl class="studio-context-identity">
-        <div><dt>Intent</dt><dd>${escapeHtml(dashboard.work_item || "not created")}</dd></div>
-        ${identity}
+        <div><dt>Current status</dt><dd>${escapeHtml(activeStudioStateLabel(studioState, item))}</dd></div>
       </dl>
     </header>
   `;
@@ -287,10 +274,10 @@ function renderActiveStudio() {
 }
 
 function applyActiveStudioShellPresentation() {
-  const cockpit = document.querySelector(".cockpit");
-  const stageRail = document.getElementById("stageRail");
-  const decision = document.getElementById("globalNextActionStrip");
-  if (cockpit) cockpit.dataset.activeStudio = "true";
-  if (stageRail) stageRail.dataset.studioStageNavigation = "true";
+  const content = document.getElementById("intentContent");
+  const phases = document.getElementById("intentPhaseStepper");
+  const decision = document.getElementById("intentDecisionSurface");
+  if (content) content.dataset.activeStudio = "true";
+  if (phases) phases.dataset.studioPhaseNavigation = "true";
   if (decision) decision.dataset.studioDecisionSlot = "true";
 }

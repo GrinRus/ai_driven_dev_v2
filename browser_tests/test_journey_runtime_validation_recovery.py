@@ -131,7 +131,7 @@ def test_validation_recovery_exposes_one_eligible_primary_action(
                 primary = page.locator("[data-primary-recovery-slot]")
                 assert primary.get_by_role("button", name=action).is_enabled()
                 assert primary.get_by_role("button", name=forbidden).count() == 0
-                assert "validator-report.md" in page.locator("#cockpitContent").inner_text()
+                assert "validator-report.md" in page.locator("#intentContent").inner_text()
                 if fixture_state.endswith("exhausted"):
                     assert primary.locator('[data-recovery-stage="plan"]').count() == 1
                 _assert_rendered_gate(page, viewport)
