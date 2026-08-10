@@ -232,7 +232,7 @@ async function handleNextAction() {
     if (state.selectedRuntime) {
       await startWorkflow();
     } else {
-      document.getElementById("runtimeSelect").focus();
+      focusRuntimeSelector();
       toast("Select runtime first.");
     }
     return;

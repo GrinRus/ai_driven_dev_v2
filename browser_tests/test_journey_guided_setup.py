@@ -96,10 +96,11 @@ def test_guided_setup_create_or_resume_launches_into_inbox(
             page.locator(
                 f'[data-operator-route-intent="inbox-work-item"]'
                 f'[data-route-work-item="{work_item}"]'
-            ).click()
+            ).first.click()
 
         page.locator(".active-studio").wait_for(state="visible")
         if branch == "resume":
+            page.locator("#runtimeSettings").evaluate("node => { node.open = true; }")
             page.locator("#runtimeSelect").select_option("generic-cli")
             page.wait_for_timeout(200)
         assert browser_page.diagnostics.page_errors == []

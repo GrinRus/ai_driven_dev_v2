@@ -1,4 +1,9 @@
 function renderRuntimeSelector() {
+  const settings = document.getElementById("runtimeSettings");
+  if (settings && !settings.dataset.initialized) {
+    settings.open = false;
+    settings.dataset.initialized = "true";
+  }
   const select = document.getElementById("runtimeSelect");
   const runtimes = state.readinessLoading ? [] : (state.readiness?.runtimes || []);
   const runtimeIds = runtimes.map((runtime) => String(runtime.runtime_id || ""));
@@ -82,6 +87,12 @@ function scrollActiveStageIntoView() {
 function selectedRuntimeView() {
   if (state.readinessLoading) return null;
   return (state.readiness?.runtimes || []).find((runtime) => runtime.runtime_id === state.selectedRuntime) || null;
+}
+
+function focusRuntimeSelector() {
+  const settings = document.getElementById("runtimeSettings");
+  if (settings) settings.open = true;
+  document.getElementById("runtimeSelect")?.focus();
 }
 
 function selectedRuntimeReady() {
@@ -183,12 +194,12 @@ function readinessDetail(label, value, maxLength = 72) {
 
 function ensureRunnableRuntime() {
   if (!state.selectedRuntime) {
-    document.getElementById("runtimeSelect").focus();
+    focusRuntimeSelector();
     toast("Select runtime first.");
     return false;
   }
   if (!selectedRuntimeReady()) {
-    document.getElementById("runtimeSelect").focus();
+    focusRuntimeSelector();
     toast("Selected runtime is not ready.");
     return false;
   }
@@ -214,6 +225,12 @@ function renderTopbar() {
   workItemChip.title = workItemLabel;
   runChip.textContent = runLabel;
   runChip.title = runLabel;
+  const topContextProject = document.getElementById("topContextProject");
+  const topContextWorkItem = document.getElementById("topContextWorkItem");
+  const topContextRun = document.getElementById("topContextRun");
+  if (topContextProject) topContextProject.textContent = projectPath.textContent || "Local Project";
+  if (topContextWorkItem) topContextWorkItem.textContent = dashboard.work_item || "Choose a work item";
+  if (topContextRun) topContextRun.textContent = run.run_id || "No run";
   const runtime = selectedRuntimeView();
   const ready = runtime ? runtime.provider_available && runtime.execution_command_available : false;
   const localStatus = document.getElementById("localStatus");
@@ -381,14 +398,6 @@ function workflowProgressSummary({collapsed = false} = {}) {
   return `<section class="surface workflow-progress" aria-label="Workflow progress">${summary}${steps}</section>`;
 }
 
-function renderProjectSetRootChips(item) {
-  const roots = item?.project_set_roots || [];
-  if (!roots.length) return `<span class="small-badge">single root</span>`;
-  return roots.slice(0, 3).map((root) => (
-    `<span class="small-badge" title="${escapeHtml(root.root)}">${escapeHtml(root.root_id)}:${escapeHtml(root.relative_root)}</span>`
-  )).join("");
-}
-
 function renderProjectHomeRail() {
   const host = document.getElementById("projectHomeRail");
   if (!host) return;
@@ -410,7 +419,7 @@ function renderProjectHomeRail() {
       <span>Work items</span>
       <span class="counter">${escapeHtml(items.length)}</span>
     </div>
-    <button data-new-work-item class="secondary project-home-new-work-item" type="button">New work item</button>
+      <button data-new-work-item class="secondary project-home-new-work-item" type="button">New intent</button>
     <div class="work-item-board-rail">
       ${items.length ? items.slice(0, 6).map((item) => `
         <button class="work-item-card ${item.work_item === current?.work_item ? "active" : ""}" data-project-home-resume="${escapeHtml(item.work_item)}" type="button" aria-current="${item.work_item === current?.work_item ? "true" : "false"}">

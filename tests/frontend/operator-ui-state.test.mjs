@@ -201,7 +201,7 @@ test("runtime selection remains a usable first decision", async () => {
 
   assert.match(decision.innerHTML, />Choose runtime</);
   assert.doesNotMatch(decision.innerHTML, /\sdisabled(?:\s|>)/);
-  assert.match(decision.innerHTML, /Choose a runtime in the toolbar/);
+  assert.match(decision.innerHTML, /Select runtime in the toolbar/);
 });
 
 test("terminal handoff recommendation fails closed for legacy and malformed payloads", async () => {

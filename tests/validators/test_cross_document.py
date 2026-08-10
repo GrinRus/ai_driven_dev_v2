@@ -26,6 +26,10 @@ from aidd.validators.cross_document import (
     TASKLIST_SCOPE_CODE,
     validate_cross_document_consistency,
 )
+from aidd.validators.cross_document_rules.context import CrossDocumentContext
+from aidd.validators.cross_document_rules.review_implementation import (
+    validate_review_implementation,
+)
 from aidd.validators.models import ValidationFinding, ValidationIssueLocation
 
 
@@ -588,6 +592,31 @@ def test_tasklist_plan_cross_validation_preserves_authored_dependency_direction(
 ) -> None:
     workspace_root = tmp_path / ".aidd"
     _write_live_shaped_plan_tasklist_pair(workspace_root)
+
+    findings = validate_cross_document_consistency(
+        stage="tasklist",
+        work_item="WI-001",
+        workspace_root=workspace_root,
+    )
+
+    assert findings == ()
+
+
+def test_tasklist_plan_allows_secondary_milestone_evidence_on_a_task(
+    tmp_path: Path,
+) -> None:
+    workspace_root = tmp_path / ".aidd"
+    _write_live_shaped_plan_tasklist_pair(workspace_root)
+    tasklist_path = (
+        workspace_root / "workitems" / "WI-001" / "stages" / "tasklist" / "tasklist.md"
+    )
+    tasklist_path.write_text(
+        tasklist_path.read_text(encoding="utf-8").replace(
+            "  - T1-AC1: M1 is complete.",
+            "  - T1-AC1: M1 is complete and the M3 regression contract is covered.",
+        ),
+        encoding="utf-8",
+    )
 
     findings = validate_cross_document_consistency(
         stage="tasklist",
@@ -1460,6 +1489,56 @@ def test_review_cross_validation_requires_exact_changed_path(tmp_path: Path) -> 
 
     assert [finding.code for finding in findings] == [REVIEW_IMPLEMENT_PATH_CODE]
     assert "tests/app.py" in findings[0].message
+
+
+def test_review_cross_validation_accepts_existing_upstream_evidence_paths(
+    tmp_path: Path,
+) -> None:
+    workspace_root = tmp_path / ".aidd"
+    _write_review_implementation_pair(
+        workspace_root,
+        review_evidence=(
+            "`workitems/WI-001/stages/tasklist/output/tasklist.md`, "
+            "`workitems/WI-001/stages/implement/output/implementation-report.md`, "
+            "and `context/verification-output.md`"
+        ),
+    )
+    tasklist_path = (
+        workspace_root / "workitems" / "WI-001" / "stages" / "tasklist" / "output" / "tasklist.md"
+    )
+    tasklist_path.parent.mkdir(parents=True, exist_ok=True)
+    tasklist_path.write_text("# Tasklist\n", encoding="utf-8")
+    verification_path = (
+        workspace_root / "workitems" / "WI-001" / "context" / "verification-output.md"
+    )
+    verification_path.parent.mkdir(parents=True, exist_ok=True)
+    verification_path.write_text("# Verification Output\n", encoding="utf-8")
+
+    findings = validate_review_implementation(
+        CrossDocumentContext.load(
+            stage="review", work_item="WI-001", workspace_root=workspace_root
+        )
+    )
+
+    assert findings == ()
+
+
+def test_review_cross_validation_does_not_allow_missing_reserved_path(
+    tmp_path: Path,
+) -> None:
+    workspace_root = tmp_path / ".aidd"
+    _write_review_implementation_pair(
+        workspace_root,
+        review_evidence="`workitems/WI-001/stages/tasklist/output/missing.md`",
+    )
+
+    findings = validate_review_implementation(
+        CrossDocumentContext.load(
+            stage="review", work_item="WI-001", workspace_root=workspace_root
+        )
+    )
+
+    assert [finding.code for finding in findings] == [REVIEW_IMPLEMENT_PATH_CODE]
 
 
 def test_review_cross_validation_defers_when_implementation_report_is_missing(

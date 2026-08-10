@@ -1237,7 +1237,7 @@ def test_operator_questions_asset_keeps_answer_resolution_and_saved_answer_contr
             "data-requires-resolved-resume",
             "Blocking questions must be saved as resolved before resume.",
             '<details class="question-history"',
-            "data-answer-resume-all",
+            'class="question-save-options"',
             'resolution: resolution?.value || "resolved"',
             'option value="partial"',
             'option value="deferred"',
@@ -1246,6 +1246,7 @@ def test_operator_questions_asset_keeps_answer_resolution_and_saved_answer_contr
             "async function resumeAfterAnswers()",
         ),
     )
+    assert "data-answer-resume-all" not in questions
     _assert_contains_all(
         components,
         (

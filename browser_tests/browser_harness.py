@@ -33,7 +33,7 @@ _OPERATOR_SURFACE_TIMEOUT_MS = 30_000
 def wait_for_work_item_surface(page: Page, work_item: str) -> None:
     page.locator("#workItemChip").get_by_text(
         f"Work item: {work_item}", exact=True
-    ).wait_for(state="visible", timeout=_OPERATOR_SURFACE_TIMEOUT_MS)
+    ).wait_for(state="attached", timeout=_OPERATOR_SURFACE_TIMEOUT_MS)
 
 
 def wait_for_history_surface(

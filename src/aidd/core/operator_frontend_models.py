@@ -213,6 +213,7 @@ class OperatorProjectSetRootSummary:
 class OperatorWorkItemSummary:
     work_item: str
     has_request_context: bool
+    intent: OperatorIntentSummary
     latest_run: OperatorRunSummary
     active_stage: str
     stage_progress_label: str
@@ -221,6 +222,16 @@ class OperatorWorkItemSummary:
     blocker_count: int
     terminal_state: str
     project_set_roots: tuple[OperatorProjectSetRootSummary, ...]
+
+
+@dataclass(frozen=True, slots=True)
+class OperatorIntentSummary:
+    """Bounded, read-only presentation of the operator's original intent."""
+
+    work_item: str
+    excerpt: str
+    source_path: str | None
+    has_request_context: bool
 
 
 @dataclass(frozen=True, slots=True)
@@ -261,10 +272,20 @@ class OperatorInboxSection:
 
 
 @dataclass(frozen=True, slots=True)
+class OperatorInboxEntryRecommendation:
+    action: str
+    label: str
+    detail: str
+    work_item: str | None = None
+    route: OperatorInboxRoute | None = None
+
+
+@dataclass(frozen=True, slots=True)
 class OperatorInboxView:
     project_root: Path
     workspace_root: Path
     sections: tuple[OperatorInboxSection, ...]
+    entry_recommendation: OperatorInboxEntryRecommendation | None = None
 
     @property
     def item_count(self) -> int:
@@ -287,6 +308,16 @@ class OperatorStageRailItem:
     stale: bool = False
     stale_reason: str | None = None
     stale_invalidated_by: str | None = None
+
+
+@dataclass(frozen=True, slots=True)
+class OperatorIntentPhaseSummary:
+    """Read-only grouping of canonical stages for intent-centered navigation."""
+
+    phase_id: str
+    label: str
+    stages: tuple[str, ...]
+    status: str
 
 
 @dataclass(frozen=True, slots=True)
@@ -568,6 +599,7 @@ class OperatorDashboardView:
     activity: tuple[OperatorActivityEvent, ...]
     recent_artifacts: tuple[OperatorArtifactRef, ...]
     terminal_handoff: OperatorTerminalRunHandoff | None
+    phases: tuple[OperatorIntentPhaseSummary, ...] = ()
 
 
 __all__ = [
@@ -587,9 +619,12 @@ __all__ = [
     "OperatorNextFlowRecommendation",
     "OperatorFirstFailure",
     "OperatorInboxItem",
+    "OperatorInboxEntryRecommendation",
     "OperatorInboxRoute",
     "OperatorInboxSection",
     "OperatorInboxView",
+    "OperatorIntentSummary",
+    "OperatorIntentPhaseSummary",
     "OperatorPrimaryArtifact",
     "OperatorProjectHomeView",
     "OperatorProjectSetRootSummary",

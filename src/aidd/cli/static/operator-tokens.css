@@ -141,6 +141,21 @@
   --control-disabled-opacity: 0.68;
   --control-pending-opacity: 0.78;
 
+  /* Document Studio visual anchors. */
+  --studio-topbar-height: 64px;
+  --studio-stagebar-height: 68px;
+  --studio-content-max: 1500px;
+  --studio-file-rail: 280px;
+  --studio-evidence-rail: 344px;
+  --studio-reading-max: 820px;
+  --studio-header-bg: #004b4b;
+  --studio-header-bg-deep: #003b3c;
+  --studio-header-text: #f7fffd;
+  --studio-header-muted: #b9d7d3;
+  --studio-accent-soft: #e5f2f0;
+  --studio-warning-soft: #fff8e8;
+  --studio-danger-soft: #fff2f0;
+
   /* Focus and meaningful transition roles. */
   --focus-width: 3px;
   --focus-offset: 2px;

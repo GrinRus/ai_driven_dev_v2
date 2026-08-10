@@ -239,6 +239,14 @@ indicators are at least `3:1`, the primary decision is fully visible in the init
 and there is no page-level horizontal overflow, clipped primary label, or control overlap.
 The evidence must identify the owner of every intentional nested scroll region.
 
+The intent-centered shell additionally requires that the first returning-workspace view
+offers one explicit `Continue existing intent` or `Create new intent` recommendation,
+shows the request excerpt before technical ids, groups the eight canonical stages into
+the four read-only product phases, and keeps runtime/model/reasoning controls behind an
+`Execution settings` disclosure until a launch action needs them. Recovery uses one
+dominant `Save answer & resume` CTA for a non-empty answer; technical timeline markers
+are nested under their durable attempt rather than rendered as peer cards.
+
 For each observed operator journey, also record:
 
 - Completion: `<completed | not completed>`

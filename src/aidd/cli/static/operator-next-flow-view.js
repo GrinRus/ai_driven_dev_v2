@@ -171,39 +171,6 @@ function renderTerminalBlockers(blockers) {
   `).join("");
 }
 
-function renderTerminalRepairHighlights(highlights) {
-  if (!highlights?.length) return "";
-  return `
-    <div class="repair-highlight-spotlight">
-      <div class="surface-title">
-        <span>Resolved Repairs</span>
-        <span class="small-badge good">visible in handoff</span>
-      </div>
-      <p>These validation issues were retried and resolved before QA handoff.</p>
-      <div class="repair-highlight-list">
-        ${highlights.map((highlight) => {
-          const stageLabel = stageTitle(highlight.stage);
-          const outcome = String(highlight.outcome || "recorded");
-          const outcomeTone = outcome.toLowerCase().includes("fail") ? "warn" : "good";
-          return `
-            <article class="repair-highlight-card">
-              <div>
-                <span class="small-badge ${outcomeTone}">${escapeHtml(outcome)}</span>
-                <strong>${escapeHtml(stageLabel)} retry ${escapeHtml(highlight.attempt_number || "")}</strong>
-                <p>${escapeHtml(highlight.reason || "Repair reason was not recorded.")}</p>
-              </div>
-              <div class="repair-highlight-evidence">
-                ${highlight.repair_brief_path ? `<button data-open-artifact="${escapeHtml(highlight.repair_brief_path)}" type="button">Repair brief</button>` : ""}
-                ${highlight.validator_report_path ? `<button data-open-artifact="${escapeHtml(highlight.validator_report_path)}" type="button">Validator report</button>` : ""}
-              </div>
-            </article>
-          `;
-        }).join("")}
-      </div>
-    </div>
-  `;
-}
-
 function studioFlowCompleteEligibility(handoff = state.dashboard?.terminal_handoff) {
   const recommendation = terminalHandoffRecommendation(handoff);
   return Object.freeze({
@@ -256,10 +223,15 @@ function renderStudioFlowCompleteState() {
   if (!primary) return "";
   const others = actions.filter((action) => action.action !== recommendation.outcome);
   const otherActionsOpen = studioFlowCompleteOtherActionsOpen(handoff);
+  const run = state.dashboard?.run || {};
+  const lineage = run.lineage || {};
+  const finalArtifacts = terminalEvidenceArtifacts(handoff.final_artifacts || []);
+  const sourceWorkItem = lineageValue(lineage.source_work_item_id, state.dashboard?.work_item || "not recorded");
+  const baseline = lineageValue(lineage.baseline_label || lineage.baseline_id, "current run");
   return `
     <section class="surface studio-flow-complete" data-studio-flow-complete data-terminal-status="${escapeHtml(handoff.status)}">
       <div class="flow-complete-hero">
-        <div>
+        <div class="flow-complete-hero-copy">
           <p class="eyebrow">Fresh terminal QA</p>
           <h2>Flow Complete</h2>
           <p>${escapeHtml(handoff.final_qa_status)}</p>
@@ -274,16 +246,45 @@ function renderStudioFlowCompleteState() {
         </div>
         ${renderStudioFlowCompleteAction(primary, {primary: true})}
       </section>
-      ${renderTerminalAttentionSpotlight(handoff)}
-      ${renderTerminalEvidenceSpotlight(handoff)}
-      ${others.length ? `
-        <details class="studio-flow-complete-other" ${otherActionsOpen ? "open" : ""}>
-          <summary>Other next actions</summary>
-          <div class="next-flow-actions-grid">
-            ${others.map((action) => `<article class="next-flow-action-card"><strong>${escapeHtml(action.label)}</strong><p>${escapeHtml(action.detail || "")}</p>${renderStudioFlowCompleteAction(action)}</article>`).join("")}
-          </div>
-        </details>
-      ` : ""}
+      <div class="flow-complete-layout">
+        <main class="flow-complete-main">
+          <section class="flow-immutable-handoff">
+            <h3>Immutable handoff</h3>
+            <p>Final evidence is complete and ready for the next decision. This completed run will not be changed.</p>
+            <div class="flow-complete-metrics">
+              <div><span>QA verdict</span><strong>${escapeHtml(handoff.final_qa_status || handoff.status)}</strong></div>
+              <div><span>Final artifacts</span><strong>${escapeHtml((handoff.final_artifacts || []).length)}</strong></div>
+              <div><span>Repair attempts</span><strong>${escapeHtml(handoff.repair_attempt_count || 0)}</strong></div>
+              <div><span>Approvals</span><strong>${escapeHtml(handoff.approval_count || 0)}</strong></div>
+              <div><span>Answered questions</span><strong>${escapeHtml(handoff.answered_question_count || 0)}</strong></div>
+            </div>
+          </section>
+          ${renderTerminalAttentionSpotlight(handoff)}
+          <section class="flow-final-artifacts">
+            <div class="surface-title"><span>Final artifacts</span><span class="small-badge">read-only</span></div>
+            <p class="muted">Canonical outputs for this run, content-addressed and immutable.</p>
+            <div class="recent-artifacts">${renderTerminalArtifacts(finalArtifacts)}</div>
+          </section>
+          ${renderTerminalEvidenceSpotlight(handoff)}
+          ${others.length ? `
+            <details class="studio-flow-complete-other" ${otherActionsOpen ? "open" : ""}>
+              <summary>Other next actions</summary>
+              <div class="next-flow-actions-grid">
+                ${others.map((action) => `<article class="next-flow-action-card"><strong>${escapeHtml(action.label)}</strong><p>${escapeHtml(action.detail || "")}</p>${renderStudioFlowCompleteAction(action)}</article>`).join("")}
+              </div>
+            </details>
+          ` : ""}
+        </main>
+        <aside class="flow-lineage-panel">
+          <h3>Lineage</h3>
+          <dl>
+            <div><dt>Source work item</dt><dd>${escapeHtml(sourceWorkItem)}</dd></div>
+            <div><dt>Run</dt><dd>${escapeHtml(run.run_id || "not recorded")}</dd></div>
+            <div><dt>Baseline</dt><dd>${escapeHtml(baseline)}</dd></div>
+          </dl>
+          <p class="muted">This completed run remains immutable.</p>
+        </aside>
+      </div>
     </section>
   `;
 }
@@ -291,111 +292,6 @@ function renderStudioFlowCompleteState() {
 function lineageValue(value, fallback = "not recorded") {
   const normalized = String(value || "").trim();
   return normalized || fallback;
-}
-
-function lineageCandidateAction(candidate) {
-  const relationship = String(candidate.relationship || "").toLowerCase();
-  if (relationship.includes("clone")) return "Clone Flow";
-  if (relationship.includes("eval")) return "Run Eval Batch";
-  return "Start Follow-up";
-}
-
-function renderLineageActions(handoff) {
-  const actions = handoff?.recommended_next_flow_actions || [];
-  if (!actions.length) {
-    return `<div class="empty-state">No next-flow actions recorded for this run.</div>`;
-  }
-  return `
-    <div class="lineage-actions">
-      ${actions.map((action) => `
-        <button data-next-flow-action="${escapeHtml(action.action)}" type="button" ${action.enabled ? "" : "disabled"}>
-          ${escapeHtml(nextFlowButtonLabel(action))}
-        </button>
-      `).join("")}
-    </div>
-  `;
-}
-
-function renderLineageArtifactRefs() {
-  const artifacts = state.dashboard?.recent_artifacts || [];
-  if (!artifacts.length) {
-    return `<div class="empty-state">No linked artifacts recorded for this run.</div>`;
-  }
-  return artifacts.slice(0, 4).map((artifact) => `
-    <button class="artifact-row" data-artifact-stage="${escapeHtml(artifact.stage)}" data-artifact-key="${escapeHtml(artifact.key)}" data-artifact-kind="${escapeHtml(artifact.kind)}" type="button">
-      <span>
-        <strong>${escapeHtml(`${artifact.stage} / ${artifact.key}`)}</strong>
-        ${pathLine(artifact.path, 76)}
-      </span>
-      <span class="small-badge">${escapeHtml(artifact.kind)}</span>
-    </button>
-  `).join("");
-}
-
-function renderLineageCandidates(candidates) {
-  if (!candidates.length) {
-    return `
-      <article class="lineage-node pending">
-        <span class="small-badge">next work item</span>
-        <strong>Not created yet</strong>
-        <p>Follow-up, clone, and eval actions will create independent work instead of mutating this run.</p>
-      </article>
-    `;
-  }
-  return candidates.map((candidate) => `
-    <article class="lineage-node child" data-lineage-work-item="${escapeHtml(candidate.work_item_id)}">
-      <span class="small-badge good">${escapeHtml(lineageCandidateAction(candidate))}</span>
-      <strong>${escapeHtml(candidate.label || candidate.work_item_id)}</strong>
-      <p>${escapeHtml(candidate.relationship || "child work item")}</p>
-      <div class="panel-item"><strong>Work item</strong><span>${escapeHtml(candidate.work_item_id)}</span></div>
-      <div class="panel-item"><strong>Source run</strong><span>${escapeHtml(candidate.source_run_id || state.dashboard?.run?.run_id || "not recorded")}</span></div>
-      <button data-operator-route-intent="child-work-item" data-route-work-item="${escapeHtml(candidate.work_item_id)}" type="button">Open child work item</button>
-    </article>
-  `).join("");
-}
-
-function renderLineageRows({run, lineage, candidates}) {
-  const hasParentRun = Boolean(lineage.source_run_id && lineage.source_run_id !== run.run_id);
-  const sourceRun = lineageValue(lineage.source_run_id, "not recorded");
-  const sourceWorkItem = lineageValue(lineage.source_work_item_id, state.dashboard?.work_item || "not recorded");
-  const baseline = lineageValue(lineage.baseline_label || lineage.baseline_id, "current run");
-  const childRows = candidates.map((candidate) => `
-    <tr>
-      <td><span class="small-badge good">${escapeHtml(lineageCandidateAction(candidate))}</span></td>
-      <td>${escapeHtml(candidate.work_item_id)}</td>
-      <td>${escapeHtml(candidate.label || candidate.relationship || "child work item")}</td>
-      <td>${escapeHtml(candidate.source_run_id || run.run_id || "not recorded")}</td>
-    </tr>
-  `).join("");
-  return `
-    <table class="activity-table lineage-table">
-      <thead><tr><th>Relationship</th><th>Run / work item</th><th>Next action</th><th>Source</th></tr></thead>
-      <tbody>
-        ${hasParentRun ? `
-          <tr>
-            <td><span class="small-badge">parent</span></td>
-            <td data-lineage-run-id="${escapeHtml(sourceRun)}">${escapeHtml(sourceRun)}</td>
-            <td>${escapeHtml(baseline)}</td>
-            <td>${escapeHtml(sourceWorkItem)}</td>
-          </tr>
-        ` : ""}
-        <tr>
-          <td><span class="small-badge good">current</span></td>
-          <td data-lineage-run-id="${escapeHtml(run.run_id || "")}">${escapeHtml(run.run_id || "none")}</td>
-          <td>${escapeHtml(state.dashboard?.next_action?.label || "Review run")}</td>
-          <td>${escapeHtml(state.dashboard?.work_item || "not recorded")}</td>
-        </tr>
-        ${childRows || `
-          <tr>
-            <td><span class="small-badge warn">child</span></td>
-            <td>not created</td>
-            <td>Start Next Flow</td>
-            <td>${escapeHtml(run.run_id || "not recorded")}</td>
-          </tr>
-        `}
-      </tbody>
-    </table>
-  `;
 }
 
 function sourceFindingPriority(item) {
@@ -1446,7 +1342,7 @@ function renderNextActionPanel() {
       ? "Runtime selected. Resolve readiness before starting the governed workflow."
       : "Runtime selected and ready to start the governed workflow."
     : choosingRuntime
-      ? "Choose a runtime in the toolbar, then start the governed workflow."
+      ? "Select runtime in the toolbar, then start the governed workflow."
     : action.detail);
   const detail = runtimeBlocked && state.selectedRuntime && !noRunWithRuntime
     ? `${baseDetail} ${state.readinessLoading ? "Checking runtime readiness." : "Selected runtime is not ready."}`
@@ -1522,7 +1418,7 @@ function renderGlobalNextActionStrip() {
       ? "Runtime selected. Resolve readiness before starting the workflow."
       : "Runtime selected. Start the workflow from the current work item."
     : choosingRuntime
-      ? "Choose a runtime in the toolbar, then start the governed workflow."
+      ? "Select runtime in the toolbar, then start the governed workflow."
     : action.detail);
   const stage = activeJobState?.stage || (action.stage ? stageTitle(action.stage) : state.dashboard?.active_stage || "run");
   const run = activeJobState?.run || state.activeRunId || "not started";

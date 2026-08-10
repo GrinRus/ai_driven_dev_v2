@@ -99,9 +99,6 @@ def bootstrap_live_work_item(
     verify_command_lines = tuple(
         f"- `{command}`" for command in selected_task.verification
     )
-    scenario_verify_command_lines = tuple(
-        f"- `{command}`" for command in scenario.verify.commands
-    )
     acceptance_criteria_lines = tuple(
         f"- AC-{index}: {criterion}"
         for index, criterion in enumerate(selected_task.acceptance_criteria, start=1)
@@ -183,9 +180,14 @@ def bootstrap_live_work_item(
             "",
             *verify_command_lines,
             "",
-            "## Scenario Verification Commands",
+            "## Evaluator-Owned Post-Flow Verification",
             "",
-            *scenario_verify_command_lines,
+            (
+                "- The harness runs its scenario verification commands only after the "
+                "complete declared stage scope. They are evaluator-owned checks, not "
+                "authored task verification, and must not be copied into stage tasklists "
+                "or implementation acceptance criteria."
+            ),
         ),
         "verification-artifacts.md": _markdown(
             "# Verification Artifacts",

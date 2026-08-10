@@ -16,9 +16,73 @@ function activeStudioStateLabel(studioState, item) {
   }[studioState];
 }
 
+const INTENT_PHASES = Object.freeze([
+  Object.freeze({id: "understand", label: "Understand", stages: ["idea", "research"]}),
+  Object.freeze({id: "decide", label: "Decide", stages: ["plan", "review-spec"]}),
+  Object.freeze({id: "deliver", label: "Deliver", stages: ["tasklist", "implement"]}),
+  Object.freeze({id: "prove", label: "Prove", stages: ["review", "qa"]})
+]);
+
+function activeIntentSummary() {
+  const workItem = state.dashboard?.work_item || state.activeRouteWorkItem || "";
+  return state.projectHome?.selected_work_item_resume?.intent
+    || (state.projectHome?.work_items || []).find((item) => item.work_item === workItem)?.intent
+    || null;
+}
+
+function phaseStatus(phase, stages) {
+  const items = phase.stages.map((stage) => stages.find((item) => item.stage === stage)).filter(Boolean);
+  if (!items.length) return "pending";
+  if (items.some((item) => ["blocked", "failed", "cancelled"].includes(item.status))) return "blocked";
+  if (items.some((item) => ["preparing", "executing", "validating"].includes(item.status))) return "active";
+  if (items.every((item) => item.status === "succeeded")) return "complete";
+  if (items.some((item) => item.status !== "pending")) return "ready";
+  return "pending";
+}
+
+function phaseFocusStage(phase, stages) {
+  const active = phase.stages.find((stage) => stage === state.activeStage);
+  if (active) return active;
+  const current = [...phase.stages].reverse().find((stage) => {
+    const item = stages.find((candidate) => candidate.stage === stage);
+    return item && item.status !== "pending";
+  });
+  return current || phase.stages[0];
+}
+
+function renderIntentPhaseStepper() {
+  const stages = state.dashboard?.stages || [];
+  const phases = state.dashboard?.phases?.length
+    ? state.dashboard.phases
+    : INTENT_PHASES.map((phase) => ({...phase, phase_id: phase.id}));
+  return `
+    <section class="surface intent-phase-stepper" data-intent-phase-stepper aria-label="Intent delivery phases">
+      <div class="surface-title"><span>Delivery path</span><span class="small-badge">4 phases</span></div>
+      <ol class="intent-phase-list">
+        ${phases.map((phase, index) => {
+          const status = phase.status || phaseStatus(phase, stages);
+          const focusStage = phaseFocusStage(phase, stages);
+          const current = phase.stages.includes(state.activeStage);
+          return `
+            <li>
+              <button class="intent-phase-step ${escapeHtml(status)}${current ? " active" : ""}" data-stage="${escapeHtml(focusStage)}" type="button" aria-current="${current ? "step" : "false"}">
+                <span class="intent-phase-index">${index + 1}</span>
+                <span><strong>${escapeHtml(phase.label)}</strong><small>${escapeHtml(phase.stages.map(stageTitle).join(" · "))}</small></span>
+              </button>
+            </li>
+          `;
+        }).join("")}
+      </ol>
+    </section>
+  `;
+}
+
 function renderActiveStudioContextBar(studioState, item) {
   const dashboard = state.dashboard || {};
   const run = dashboard.run || {};
+  const intent = activeIntentSummary();
+  const intentExcerpt = intent?.excerpt || "Capture the desired outcome before starting delivery.";
+  const currentPhase = INTENT_PHASES.find((phase) => phase.stages.includes(state.activeStage));
   const identity = studioState === "no-run"
     ? `
       <div><dt>Work item</dt><dd>${escapeHtml(dashboard.work_item || "unknown")}</dd></div>
@@ -33,11 +97,12 @@ function renderActiveStudioContextBar(studioState, item) {
   return `
     <header class="surface studio-context-bar" data-studio-context-bar>
       <div>
-        <p class="eyebrow">Document &amp; Evidence Studio</p>
-        <h2>${escapeHtml(stageTitle(state.activeStage))}</h2>
-        <p class="muted">${escapeHtml(item?.subtitle || stageSubtitle(state.activeStage))}</p>
+        <p class="eyebrow">Intent Workspace</p>
+        <h2>${escapeHtml(intentExcerpt)}</h2>
+        <p class="muted">${escapeHtml(currentPhase?.label || "Capture")} · ${escapeHtml(activeStudioStateLabel(studioState, item))}</p>
       </div>
       <dl class="studio-context-identity">
+        <div><dt>Intent</dt><dd>${escapeHtml(dashboard.work_item || "not created")}</dd></div>
         ${identity}
       </dl>
     </header>
@@ -60,6 +125,33 @@ function renderActiveStudioDocumentSlot(studioState) {
         <div class="empty-state loading-state">Loading bounded document view...</div>
       </div>
     </section>
+  `;
+}
+
+function renderStudioDocumentRail(studioState) {
+  if (studioState === "no-run") return "";
+  const refs = (state.dashboard?.recent_artifacts || [])
+    .filter((ref) => !ref.stage || ref.stage === state.activeStage)
+    .slice(0, 8);
+  return `
+    <aside class="studio-document-rail" aria-label="Stage documents">
+      <div class="studio-document-rail-header">
+        <span>Documents</span>
+        <span class="small-badge">${escapeHtml(refs.length)}</span>
+      </div>
+      <div class="studio-document-list">
+        ${refs.length ? refs.map((ref) => `
+          <button class="studio-document-item${ref.key === state.activeArtifactKey ? " active" : ""}" data-artifact-stage="${escapeHtml(ref.stage || state.activeStage)}" data-artifact-key="${escapeHtml(ref.key)}" data-artifact-kind="${escapeHtml(ref.kind || "document")}" type="button">
+            <span class="studio-document-icon" aria-hidden="true">▤</span>
+            <span><strong>${escapeHtml(ref.label || ref.key || "Document")}</strong><small>${escapeHtml(ref.path || ref.kind || "stage document")}</small></span>
+          </button>
+        `).join("") : `<p class="muted studio-document-empty">No stage documents yet.</p>`}
+      </div>
+      <details class="studio-document-details">
+        <summary>Technical details</summary>
+        <p>Canonical Markdown, validator evidence, and runtime provenance remain available through the evidence view.</p>
+      </details>
+    </aside>
   `;
 }
 
@@ -176,8 +268,10 @@ function renderActiveStudio() {
   return `
     <section class="active-studio" data-studio-surface="active-studio" data-state="${escapeHtml(studioState)}">
       ${renderActiveStudioContextBar(studioState, item)}
+      ${renderIntentPhaseStepper()}
       ${typeof workflowProgressSummary === "function" ? workflowProgressSummary({collapsed: true}) : ""}
       <div class="active-studio-grid">
+        ${renderStudioDocumentRail(studioState)}
         ${renderActiveStudioDocumentSlot(studioState)}
         ${studioState === "no-run" ? "" : `
           <div class="studio-reading-sidebar">
@@ -187,7 +281,7 @@ function renderActiveStudio() {
         `}
       </div>
       <div id="studioLiveObservation">${renderStudioLiveObservation()}</div>
-      ${studioState === "no-run" ? "" : renderActiveStudioRuntimeReadiness()}
+      ${renderActiveStudioRuntimeReadiness()}
     </section>
   `;
 }

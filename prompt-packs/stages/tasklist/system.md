@@ -22,7 +22,8 @@ Non-negotiable rules:
 - keep one dominant output artifact per task and avoid hidden prerequisite work,
 - if `context/allowed-write-scope.md` exists, keep every task `In scope` path equal to or beneath
   one canonical allowed prefix; do not widen or work around the operator-authored boundary,
-- include explicit dependencies (`none` or concrete upstream ids) and one primary verification signal per task,
+- include explicit dependencies (`none` or concrete upstream ids) and one primary verification signal per task;
+  short rationale may follow the machine-readable dependency value without changing the graph,
 - map every task to an existing plan milestone by citing its exact `M<n>` id in `Outcome`,
   optional `Context`, a nested acceptance criterion, or its dedicated `Verification notes` entry;
   cover every plan milestone and do not invent a `Milestone` or `Plan milestone` field,

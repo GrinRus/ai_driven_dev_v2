@@ -576,6 +576,12 @@ def test_tasklist_contract_and_prompts_require_rich_task_cards() -> None:
         assert "Acceptance criteria" in text
         assert "<task-id>-AC<n>" in text
 
+    assert "optional rationale" in document_contract
+    assert "only the leading `none` or task ids define the graph" in run_prompt
+    assert "milestone/review ids in rationale are not dependencies" in " ".join(
+        repair_prompt.split()
+    )
+
 
 def test_tasklist_contract_prompts_and_repair_name_canonical_milestone_locations() -> None:
     paths = (
@@ -1211,6 +1217,22 @@ def test_implement_contract_and_prompts_scope_rich_task_evidence_locally() -> No
     assert "unless the current task changes them again" in run_prompt
     assert "do not revert successful prior-task changes" in repair_prompt
     assert "SEM-TASK-DIFF-MISMATCH" in repair_prompt
+    assert "dedicated `## Acceptance evidence` section" in run_prompt
+    assert "copying each id verbatim" in run_prompt
+    assert "exact acceptance-id traceability" in system_prompt
+    assert "top-level bullet per id" in " ".join(repair_prompt.split())
+    assert "Acceptance evidence" in document_contract
+    assert "one top-level entry for every authored acceptance id" in stage_contract
+
+
+def test_implement_evidence_contract_does_not_mine_cross_task_prose_ids() -> None:
+    context_module = Path("src/aidd/validators/evidence_context.py").read_text(
+        encoding="utf-8"
+    )
+
+    assert "Acceptance criteria" in context_module
+    assert "without mining prose references" in context_module
+    assert "^\\s*-\\s+`?" in context_module
 
 
 def test_tasklist_and_implement_contracts_use_explicit_verification_only_mode() -> None:

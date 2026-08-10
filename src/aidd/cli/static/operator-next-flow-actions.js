@@ -1,25 +1,3 @@
-function setupPreviousRunContext() {
-  const dashboard = state.dashboard || {};
-  const run = dashboard.run || {};
-  const lineage = run.lineage || {};
-  const handoff = dashboard.terminal_handoff || null;
-  const sourceRunId = lineage.source_run_id || (handoff && run.run_id ? run.run_id : "");
-  const sourceWorkItem = lineage.source_work_item_id || (sourceRunId ? dashboard.work_item : "");
-  const baseline = lineage.baseline_label || lineage.baseline_id || "";
-  const finalArtifacts = handoff?.final_artifacts || [];
-  const blockers = handoff?.blockers || [];
-  const approvalCounts = handoff?.approval_counts || null;
-  return {
-    available: Boolean(sourceRunId || baseline || finalArtifacts.length || blockers.length),
-    sourceRunId,
-    sourceWorkItem,
-    baseline,
-    finalArtifacts,
-    blockers,
-    approvalCounts
-  };
-}
-
 function terminalHandoffNeedsRecovery(handoff) {
   return Boolean(handoff && (handoff.status !== "completed" || (handoff.blockers || []).length));
 }
@@ -544,10 +522,6 @@ function followUpDraftValidationErrors(draft) {
   return errors;
 }
 
-function followUpDraftValidationError(draft) {
-  return followUpDraftValidationErrors(draft)[0] || "";
-}
-
 function readFollowUpDraftForm() {
   const draft = state.nextFlowWizard.followUpDraft;
   if (!draft || state.nextFlowWizard.action !== "start-follow-up-flow") return draft;
@@ -613,8 +587,7 @@ async function blockLaunchForRuntimeReadiness(message) {
   const wizard = state.nextFlowWizard;
   wizard.launchReadinessChecking = false;
   wizard.launchReadinessError = message;
-  const runtimeSelect = document.getElementById("runtimeSelect");
-  if (runtimeSelect) runtimeSelect.focus();
+  focusRuntimeSelector();
   if (!message.startsWith("Runtime readiness unavailable:")) toast(message);
   await renderNextFlowWizardStep();
   return false;

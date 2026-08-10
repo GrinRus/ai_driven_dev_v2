@@ -24,6 +24,13 @@ from urllib.error import HTTPError, URLError
 from urllib.parse import urlencode
 from urllib.request import Request, urlopen
 
+from aidd.adapters.runtime_evidence import (
+    RuntimeAdapterOutcome,
+    RuntimeEvidenceCommitRequest,
+    RuntimeStopReason,
+    commit_runtime_evidence,
+    runtime_evidence_paths,
+)
 from aidd.core.bounded_log_reader import read_bounded_log
 from aidd.core.identifiers import SafeIdentifier
 from aidd.core.markdown import MarkdownSectionIndex
@@ -250,6 +257,7 @@ from aidd.harness.runner import (
     run_verification_steps,
 )
 from aidd.harness.scenarios import Scenario, ScenarioAuthoredTask, load_scenario
+from aidd.runtime_logs.events import persist_lifecycle_projection_from_jsonl
 from aidd.validators.semantic_rules.blocks import extract_implementation_verification_blocks
 from aidd.validators.semantic_rules.evidence import (
     IMPLEMENT_ARTIFACT_REFERENCE_PATTERN,
@@ -5807,6 +5815,176 @@ def _stage_first_attempt_runtime_log_path(ctx: FlowContext, stage: str) -> Path:
     )
 
 
+def _runtime_capture_candidates(attempt_root: Path, prefix: str) -> tuple[Path, ...]:
+    candidates = [
+        path
+        for path in attempt_root.glob(f".{prefix}.*.tmp")
+        if path.is_file()
+    ]
+    candidates.sort(
+        key=lambda path: path.stat().st_mtime_ns,
+        reverse=True,
+    )
+    return tuple(candidates)
+
+
+def _write_runtime_events_from_raw_log(*, runtime_log_path: Path, destination: Path) -> bool:
+    rows: list[str] = []
+    for line in runtime_log_path.read_text(encoding="utf-8", errors="replace").splitlines():
+        stripped = line.strip()
+        if not stripped:
+            continue
+        try:
+            payload = json.loads(stripped)
+        except json.JSONDecodeError:
+            continue
+        if not isinstance(payload, dict):
+            continue
+        rows.append(
+            json.dumps(
+                {"payload": payload, "source": "stdout"},
+                sort_keys=True,
+            )
+        )
+    if not rows:
+        return False
+    _reports_write_text_atomic(destination, "\n".join(rows) + "\n")
+    return True
+
+
+def _salvage_partial_runtime_evidence(
+    *,
+    ctx: FlowContext,
+    stage: str,
+    stage_result: BlackBoxCommandResult,
+) -> tuple[tuple[Path, ...], dict[str, object]]:
+    """Promote adapter capture files left behind by an externally stopped stage.
+
+    The live harness owns the watchdog process and may terminate the public
+    ``aidd stage run`` process before the adapter can call its normal finalizer.
+    The disk-backed sink deliberately leaves these temporary files in place, so
+    this recovery is able to publish the raw bytes without inventing a stage
+    result or changing the terminal reconciliation decision.
+    """
+
+    first_attempt_root = _stage_first_attempt_runtime_log_path(ctx, stage).parent
+    attempts_root = first_attempt_root.parent
+    attempt_roots = [path for path in attempts_root.glob("attempt-*") if path.is_dir()]
+    if attempt_roots:
+        attempt_root = max(
+            attempt_roots,
+            key=lambda path: (
+                int(path.name.rsplit("-", 1)[-1])
+                if path.name.rsplit("-", 1)[-1].isdigit()
+                else -1,
+                path.stat().st_mtime_ns,
+            ),
+        )
+    else:
+        attempt_root = first_attempt_root
+    attempt_root.mkdir(parents=True, exist_ok=True)
+    evidence = runtime_evidence_paths(attempt_root)
+    runtime_tmp = next(iter(_runtime_capture_candidates(attempt_root, "runtime-log")), None)
+    events_tmp = next(
+        iter(_runtime_capture_candidates(attempt_root, "runtime-events")),
+        None,
+    )
+    details: dict[str, object] = {
+        "attempt_path": attempt_root.resolve(strict=False).as_posix(),
+        "salvaged": False,
+        "runtime_log_path": evidence.runtime_log_path.resolve(strict=False).as_posix(),
+        "runtime_exit_metadata_path": evidence.runtime_exit_metadata_path.resolve(
+            strict=False
+        ).as_posix(),
+    }
+    evidence_paths: list[Path] = []
+
+    if not evidence.runtime_log_path.exists() and runtime_tmp is not None:
+        runtime_text = runtime_tmp.read_text(encoding="utf-8", errors="replace")
+        runtime_byte_count = runtime_tmp.stat().st_size
+        provider_exit_code = None
+        if stage_result.no_progress_details is not None:
+            candidate = stage_result.no_progress_details.get("process_exit_code")
+            if isinstance(candidate, int):
+                provider_exit_code = candidate
+        commit_runtime_evidence(
+            RuntimeEvidenceCommitRequest(
+                attempt_path=attempt_root,
+                adapter_outcome=RuntimeAdapterOutcome.RUNTIME_FAILURE,
+                exit_classification="provider-no-progress",
+                exit_code=(
+                    provider_exit_code
+                    if provider_exit_code is not None
+                    else stage_result.exit_code
+                ),
+                stdout_text="",
+                stderr_text="",
+                runtime_log_text=runtime_text,
+                stop_reason=RuntimeStopReason.RUNTIME_FAILURE,
+                runtime_log_source_path=runtime_tmp,
+                runtime_log_byte_count=runtime_byte_count,
+                runtime_log_char_count=len(runtime_text),
+            )
+        )
+        metadata = json.loads(
+            evidence.runtime_exit_metadata_path.read_text(encoding="utf-8")
+        )
+        metadata.update(
+            {
+                "partial_runtime_capture": True,
+                "capture_source": "harness-no-progress-recovery",
+                "harness_exit_code": stage_result.exit_code,
+                "provider_exit_code": provider_exit_code,
+                "captured_at_utc": _utc_now(),
+            }
+        )
+        _write_json(evidence.runtime_exit_metadata_path, metadata)
+        evidence_paths.extend(
+            [evidence.runtime_log_path, evidence.runtime_exit_metadata_path]
+        )
+        details.update(
+            {
+                "salvaged": True,
+                "runtime_log_source_path": runtime_tmp.resolve(strict=False).as_posix(),
+                "runtime_log_bytes": runtime_byte_count,
+            }
+        )
+    elif evidence.runtime_log_path.exists():
+        evidence_paths.append(evidence.runtime_log_path)
+        if evidence.runtime_exit_metadata_path.exists():
+            evidence_paths.append(evidence.runtime_exit_metadata_path)
+
+    runtime_jsonl_path = attempt_root / RUNTIME_JSONL_FILENAME
+    if not runtime_jsonl_path.exists() and events_tmp is not None:
+        if events_tmp.stat().st_size > 0:
+            os.replace(events_tmp, runtime_jsonl_path)
+            details["runtime_events_source"] = "structured-events-temp"
+        elif evidence.runtime_log_path.exists() and _write_runtime_events_from_raw_log(
+            runtime_log_path=evidence.runtime_log_path,
+            destination=runtime_jsonl_path,
+        ):
+            details["runtime_events_source"] = "raw-runtime-log"
+    elif runtime_jsonl_path.exists():
+        details["runtime_events_source"] = "existing-runtime-jsonl"
+
+    if runtime_jsonl_path.exists():
+        event_artifacts = persist_lifecycle_projection_from_jsonl(
+            attempt_path=attempt_root,
+            source_path=runtime_jsonl_path,
+        )
+        if event_artifacts.runtime_jsonl_path is not None:
+            evidence_paths.append(event_artifacts.runtime_jsonl_path)
+        if event_artifacts.events_jsonl_path is not None:
+            evidence_paths.append(event_artifacts.events_jsonl_path)
+        details["runtime_jsonl_path"] = runtime_jsonl_path.resolve(strict=False).as_posix()
+        if event_artifacts.events_jsonl_path is not None:
+            details["events_jsonl_path"] = event_artifacts.events_jsonl_path.resolve(
+                strict=False
+            ).as_posix()
+
+    return tuple(dict.fromkeys(evidence_paths)), details
+
+
 def _stage_progress_probe(ctx: FlowContext, stage: str) -> Callable[[], dict[str, object]]:
     observed_paths = _stage_run_observed_paths(ctx, stage)
     return lambda: _progress_snapshot(observed_paths)
@@ -5971,7 +6149,14 @@ def _reconcile_no_progress_stage_run(
 ) -> tuple[tuple[Path, ...], dict[str, object] | None]:
     if not stage_result.no_progress:
         return tuple(), None
-    return _reconcile_failed_incomplete_stage_run(
+    partial_evidence_paths, partial_evidence = _salvage_partial_runtime_evidence(
+        ctx=ctx,
+        stage=stage,
+        stage_result=stage_result,
+    )
+    if stage_result.no_progress_details is not None:
+        stage_result.no_progress_details["partial_runtime_evidence"] = partial_evidence
+    reconciliation_paths, reconciliation = _reconcile_failed_incomplete_stage_run(
         ctx=ctx,
         stage=stage,
         stage_run_id=stage_run_id,
@@ -5985,8 +6170,10 @@ def _reconcile_no_progress_stage_run(
         extra={
             "no_progress": True,
             "no_progress_details": stage_result.no_progress_details or {},
+            "partial_runtime_evidence": partial_evidence,
         },
     )
+    return (*reconciliation_paths, *partial_evidence_paths), reconciliation
 
 
 def _reconcile_failed_incomplete_stage_run(

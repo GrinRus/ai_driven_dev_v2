@@ -53,8 +53,6 @@ feature_source:
     - The tracked diff stays within Rich rendering/markup code and focused tests.
     verification:
     - .venv/bin/python -m pytest -q tests/test_console.py tests/test_table.py tests/test_markup.py
-    - test -f .aidd/workitems/WI-LIVE-RICH-LITERAL-MARKUP/stages/qa/output/stage-result.md
-    - test -f .aidd/workitems/WI-LIVE-RICH-LITERAL-MARKUP/stages/qa/output/validator-report.md
     quality_bar: The patch must be localized, backwards-compatible for markup-enabled
       output, and regression-covered through public console/table rendering behavior.
     size_rationale: Medium product-evaluation lane because the behavior crosses

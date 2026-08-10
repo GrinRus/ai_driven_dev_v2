@@ -54,6 +54,9 @@ Optional context documents may improve implementation quality, but they must not
 
 - `implementation-report.md` must include:
   - an explicit change summary mapped to the selected task id from `context/task-selection.md`,
+  - an `Acceptance evidence` section with one top-level entry for every authored acceptance id,
+    copying each stable id verbatim and pairing it with observable implementation or verification
+    evidence,
   - local tasklist ids such as `T1` or `TL-1` in verification notes when the upstream tasklist
     uses them to structure implementation work,
   - a touched-files list with file path and short change intent per entry,

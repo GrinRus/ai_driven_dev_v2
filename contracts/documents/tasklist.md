@@ -30,8 +30,9 @@ Break the plan into reviewable implementation tasks with sequencing and verifica
 - every task card contains at least one task-local acceptance criterion whose stable id
   matches `<task-id>-AC<n>`,
 - acceptance criterion ids are unique across the document,
-- `Dependencies` has one entry per task id, uses `none` or known earlier task ids, and contains
-  no self-reference, forward reference, or cycle,
+- `Dependencies` has one entry per task id, starts with `none` or known earlier task ids, and
+  contains no self-reference, forward reference, or cycle; optional rationale after the
+  machine-readable value is ignored for graph construction,
 - `Verification notes` uses bullet items that reference every task id from `Ordered tasks`,
   including command-only or verification-only tasks,
 - checks embedded only inside `Ordered tasks` do not replace the dedicated per-task

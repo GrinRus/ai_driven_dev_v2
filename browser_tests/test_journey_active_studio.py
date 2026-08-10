@@ -57,6 +57,7 @@ def test_active_studio_reconnects_cancels_and_returns_to_durable_logs(
     ) as harness, harness.open_page(viewport) as browser_page:
         page = browser_page.page
         page.goto(f"{harness.url}?ui=studio", wait_until="networkidle")
+        page.locator("#runtimeSettings").evaluate("node => { node.open = true; }")
         page.locator("#runtimeSelect").select_option("generic-cli")
         page.wait_for_function("eval('selectedRuntimeReady()')", timeout=15_000)
         page.wait_for_function(

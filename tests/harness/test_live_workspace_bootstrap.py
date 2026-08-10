@@ -181,3 +181,36 @@ def test_bootstrap_hono_live_task_exposes_target_change_before_stage_run(
         "src/compose.test.ts",
         "src/hono.test.ts",
     ]
+
+
+def test_bootstrap_keeps_post_flow_checks_out_of_authored_verification_context(
+    tmp_path: Path,
+) -> None:
+    scenario = load_scenario(
+        Path("harness/scenarios/live/sqlite-utils-detect-types-header-only.yaml")
+    )
+    selected_task = select_authored_task(scenario)
+    assert selected_task is not None
+    working_copy = tmp_path / "target"
+    work_item_root = (
+        working_copy / ".aidd" / "workitems" / "WI-LIVE-SQLITE-SMOKE"
+    )
+    work_item_root.mkdir(parents=True)
+
+    bootstrap_live_work_item(
+        working_copy_path=working_copy,
+        scenario=scenario,
+        work_item="WI-LIVE-SQLITE-SMOKE",
+        selected_task=selected_task,
+        resolved_revision=scenario.repo.revision,
+    )
+
+    verification_output = (
+        work_item_root / "context" / "verification-output.md"
+    ).read_text(encoding="utf-8")
+
+    assert "uv run pytest -q" in verification_output
+    assert "Evaluator-Owned Post-Flow Verification" in verification_output
+    assert "must not be copied into stage tasklists" in verification_output
+    assert "stages/qa/output/stage-result.md" not in verification_output
+    assert "stages/qa/output/validator-report.md" not in verification_output

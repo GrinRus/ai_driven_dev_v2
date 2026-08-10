@@ -47,6 +47,7 @@ def test_question_draft_survives_reload_and_clears_after_readback(tmp_path: Path
             ),
         )
         with page.expect_response(lambda response: response.url.endswith("/api/answers")):
+            page.locator('[data-question-id="Q1"] .question-save-options > summary').click()
             page.locator('[data-save-answer="Q1"]').click()
         assert page.evaluate("readOperatorDraft(questionDraftIdentity('Q1')) !== null")
         page.unroute("**/api/answers")
@@ -144,6 +145,7 @@ def test_intervention_submit_creates_one_stage_scoped_request(tmp_path: Path) ->
         page = browser_page.page
         page.goto(f"{harness.url}?ui=studio", wait_until="domcontentloaded")
         wait_for_work_item_surface(page, fixture.work_item)
+        page.locator("#runtimeSettings").evaluate("node => { node.open = true; }")
         page.locator("#runtimeSelect").select_option("generic-cli")
         page.wait_for_function("eval('selectedRuntimeReady()')", timeout=15_000)
         page.evaluate("renderRequestChange()")

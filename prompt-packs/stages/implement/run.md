@@ -64,7 +64,10 @@ normalize if canonical validation proves the terminal status inconsistent.
    `TL-1`, use those local ids to structure touched-file and verification evidence where practical.
    Treat the selected task card's `Outcome`, `In scope`, and every `<task-id>-AC<n>` item
    as hard implementation boundaries. Cite every acceptance id in the implementation report
-   with implementation or verification evidence.
+   with implementation or verification evidence. Before declaring the task complete, add a
+   dedicated `## Acceptance evidence` section with exactly one top-level bullet per acceptance
+   criterion, copying each id verbatim (for example `- T4-AC1: ...`). A descriptive claim without
+   the exact authored id is incomplete, even when the command passed.
 2. When `context/allowed-write-scope.md` is provided, it is a hard boundary for touched files.
 3. When provided, `context/acceptance-criteria.md` and `context/verification-output.md` define the
    authored acceptance and verification baseline for the implementation.
@@ -138,7 +141,8 @@ normalize if canonical validation proves the terminal status inconsistent.
 2. Confirm selected task id, acceptance criteria, scope limits, verification commands, and
    repository baseline when those inputs are provided before editing outputs.
 3. Produce `implementation-report.md` with selected task id, scoped change summary, touched-files list,
-   verification notes, and residual risk/deferred notes when applicable.
+   verification notes, an `Acceptance evidence` entry for every authored acceptance id, and residual
+   risk/deferred notes when applicable.
 4. Before and after editing, inspect the repository change set with `git status --short --untracked-files=all` and
    `git diff --name-only` or an equivalent project-native command when Git is unavailable.
    For a rich task attempt, use these commands for situational awareness but list only paths changed
@@ -210,6 +214,8 @@ normalize if canonical validation proves the terminal status inconsistent.
 ## Completion checklist
 
 - selected task id is explicit and traced to implementation summary when provided,
+- `Acceptance evidence` contains one top-level entry for every authored acceptance id, with each id
+  copied verbatim and paired with observable implementation or verification evidence,
 - edits stay within allowed write scope when provided,
 - touched-files list is concrete and evidence-backed, with path + same-line intent for every
   top-level file entry,

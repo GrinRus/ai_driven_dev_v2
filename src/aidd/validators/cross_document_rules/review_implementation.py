@@ -22,6 +22,46 @@ REVIEW_IMPLEMENT_PATH_CODE = "CROSS-REVIEW-IMPLEMENT-PATH"
 _EVIDENCE_ID_PATTERN = re.compile(r"\bEV-\d+\b", re.IGNORECASE)
 _BACKTICKED_REFERENCE_PATTERN = re.compile(r"`([^`]+)`")
 _ARTIFACT_SUFFIXES = frozenset({".md", ".json", ".jsonl", ".log", ".txt"})
+_REVIEW_UPSTREAM_STAGES = (
+    "idea",
+    "research",
+    "plan",
+    "review-spec",
+    "tasklist",
+    "implement",
+)
+
+
+def _available_review_evidence_references(
+    context: CrossDocumentContext,
+) -> frozenset[str]:
+    """Return workspace and work-item-relative paths review may cite as evidence.
+
+    Review evidence can point at AIDD-owned context and upstream stage artifacts in
+    addition to implementation artifacts. Those paths are not product files, so
+    they must not be compared with the implementation's touched-file list.
+    Restricting this to existing files keeps arbitrary paths under the reserved
+    namespaces from bypassing the changed-path check.
+    """
+
+    work_item_root = context.workspace_root / "workitems" / context.work_item
+    roots = (
+        work_item_root / "context",
+        *(
+            work_item_root / "stages" / stage / "output"
+            for stage in _REVIEW_UPSTREAM_STAGES
+        ),
+    )
+    references: set[str] = set()
+    for root in roots:
+        if not root.is_dir():
+            continue
+        for path in root.rglob("*"):
+            if not path.is_file():
+                continue
+            references.add(workspace_relative(path, context.workspace_root))
+            references.add(path.relative_to(work_item_root).as_posix())
+    return frozenset(references)
 
 
 def validate_review_implementation(
@@ -80,6 +120,7 @@ def validate_review_implementation(
     available_artifacts = {
         path.name for path in context.implementation_output_root.iterdir() if path.is_file()
     }
+    available_review_evidence_references = _available_review_evidence_references(context)
     available_evidence_ids = {
         match.group(0).upper()
         for match in _EVIDENCE_ID_PATTERN.finditer(context.implementation_text)
@@ -114,6 +155,8 @@ def validate_review_implementation(
                             ValidationIssueLocation(review_relative),
                         )
                     )
+                continue
+            if reference in available_review_evidence_references:
                 continue
             if "/" not in reference and not suffix:
                 continue

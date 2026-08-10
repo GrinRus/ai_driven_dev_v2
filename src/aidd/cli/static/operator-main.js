@@ -675,6 +675,10 @@ document.addEventListener("change", async (event) => {
     state.runtimeReasoningEffort = "";
     state.runtimeModelDirty = false;
     state.runtimeReasoningEffortDirty = false;
+    const runtimeSettings = document.getElementById("runtimeSettings");
+    if (runtimeSettings && window.matchMedia("(max-width: 760px)").matches) {
+      runtimeSettings.open = false;
+    }
     if (state.onboarding.setupRequired) {
       renderOnboarding();
       return;
@@ -749,7 +753,10 @@ document.addEventListener("input", (event) => {
     updateInterventionPreview();
   }
   const questionText = event.target.closest("[data-question-text]")?.dataset.questionText;
-  if (questionText) persistQuestionDraft(questionText);
+  if (questionText) {
+    persistQuestionDraft(questionText);
+    updateQuestionResumeButtonState(questionText);
+  }
   const approvalReasonId = event.target.closest("[data-approval-reason]")?.dataset.approvalReason;
   if (approvalReasonId) updateApprovalConfirmationPreview(approvalReasonId);
   if (event.target.id === "runComparisonBaseline") {

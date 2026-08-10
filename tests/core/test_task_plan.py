@@ -56,6 +56,29 @@ def test_parse_task_plan_preserves_order_and_acceptance() -> None:
     assert plan.tasks[0].execution_mode is TaskExecutionMode.REPOSITORY_CHANGE
 
 
+def test_parse_task_plan_allows_dependency_rationale_after_machine_value() -> None:
+    markdown = _tasklist().replace(
+        "- TL-1: none\n",
+        "- TL-1: none — establishes milestone M1\n",
+    ).replace(
+        "- TL-2: TL-1\n",
+        "- TL-2: TL-1; preserves the bounded order\n",
+    )
+
+    plan = parse_task_plan(markdown)
+
+    assert plan.tasks[0].dependencies == ()
+    assert plan.tasks[1].dependencies == ("TL-1",)
+
+
+def test_parse_task_plan_accepts_backticked_none_dependency() -> None:
+    markdown = _tasklist().replace("- TL-1: none\n", "- TL-1: `none`.\n")
+
+    plan = parse_task_plan(markdown)
+
+    assert plan.tasks[0].dependencies == ()
+
+
 def test_parse_task_plan_preserves_explicit_verification_only_mode() -> None:
     markdown = _tasklist().replace(
         "- In scope: `src/example.py` and `tests/test_validator.py`.",

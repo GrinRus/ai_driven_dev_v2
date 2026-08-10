@@ -607,6 +607,16 @@ def _validate_scenario_contract(
             raise ScenarioManifestError(
                 "Live scenario manifests must use `feature_source.mode: authored-task-pool`."
             )
+        for index, task in enumerate(feature_source.tasks):
+            if any(
+                "/stages/qa/output/" in command.replace("\\", "/")
+                for command in task.verification
+            ):
+                raise ScenarioManifestError(
+                    "Live authored task verification must not require future QA "
+                    f"artifacts (`feature_source.tasks[{index}].verification`). "
+                    "Keep post-QA artifact checks in top-level `verify.commands`."
+                )
         if "quality" in raw:
             raise ScenarioManifestError(
                 "Live scenario manifests must not declare `quality`; live E2E "

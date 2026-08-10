@@ -46,27 +46,6 @@ function renderTruncationNotice(kind, view, mode = "") {
   `;
 }
 
-function renderPrimaryArtifact() {
-  const artifact = state.dashboard?.primary_artifact;
-  if (!artifact) {
-    return `<div class="empty-state">No primary artifact for this stage yet.</div>`;
-  }
-  const truncated = artifact.truncated ? `<p class="muted">Preview truncated at ${escapeHtml(artifact.excerpt.length)} characters.</p>` : "";
-  const body = artifact.content_type === "text/markdown"
-    ? `<div class="markdown-preview">${renderMarkdown(artifact.excerpt)}</div>`
-    : `<pre>${escapeHtml(artifact.excerpt)}</pre>`;
-  return `
-    <div class="viewer-header">
-      <div>
-        <strong>${escapeHtml(artifact.key)}</strong>
-        ${pathLine(`${artifact.path} / ${artifact.byte_size} bytes`, 72)}
-      </div>
-      <button data-open-artifact="${escapeHtml(artifact.path)}" class="secondary" type="button">Open folder</button>
-    </div>
-    <div class="primary-artifact">${body}${truncated}</div>
-  `;
-}
-
 function preferredArtifactKey(documents) {
   for (const key of PREFERRED_ARTIFACT_KEYS) {
     if (Object.prototype.hasOwnProperty.call(documents, key)) return key;

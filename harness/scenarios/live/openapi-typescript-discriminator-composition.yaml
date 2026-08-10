@@ -52,8 +52,6 @@ feature_source:
     - test -f .aidd/workitems/WI-LIVE-OPENAPI-DISCRIMINATOR/stages/idea/answers.md
     - pnpm --filter openapi-typescript exec vitest run test/discriminators.test.ts test/node-api.test.ts
     - pnpm --filter openapi-typescript lint:ts
-    - test -f .aidd/workitems/WI-LIVE-OPENAPI-DISCRIMINATOR/stages/qa/output/stage-result.md
-    - test -f .aidd/workitems/WI-LIVE-OPENAPI-DISCRIMINATOR/stages/qa/output/validator-report.md
     quality_bar: The result must be policy-explicit, covered by focused codegen tests,
       and free of unrelated generator output churn.
     size_rationale: Large product-evaluation lane because the task touches code

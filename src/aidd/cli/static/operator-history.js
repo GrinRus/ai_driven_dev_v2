@@ -17,6 +17,16 @@ function historyFrameTone(status) {
   return "warn";
 }
 
+function primaryHistoryFrames(timeline) {
+  const frames = Array.isArray(timeline?.frames) ? timeline.frames : [];
+  return frames.filter((frame) => frame.kind !== "event-marker");
+}
+
+function historyEventMarkers(timeline) {
+  const frames = Array.isArray(timeline?.frames) ? timeline.frames : [];
+  return frames.filter((frame) => frame.kind === "event-marker");
+}
+
 async function loadStudioHistoryTimeline() {
   if (!state.activeRunId) {
     state.historyTimeline = null;
@@ -24,14 +34,15 @@ async function loadStudioHistoryTimeline() {
   }
   const timeline = await api(`/api/run/timeline?${runScopedQuery()}`);
   state.historyTimeline = timeline;
-  if (state.historyAutoFollow && (timeline.frames || []).length) {
-    state.historySelectedFrame = timeline.frames.at(-1).identity;
+  const frames = primaryHistoryFrames(timeline);
+  if (state.historyAutoFollow && frames.length) {
+    state.historySelectedFrame = frames.at(-1).identity;
   }
   return timeline;
 }
 
 function selectedHistoryFrame(timeline) {
-  const frames = timeline?.frames || [];
+  const frames = primaryHistoryFrames(timeline);
   return frames.find((frame) => frame.identity === state.historySelectedFrame)
     || frames.at(-1)
     || null;
@@ -43,7 +54,7 @@ function renderHistoryFrameButton(frame) {
     <button class="history-frame ${selected ? "selected" : ""}" data-history-frame="${escapeHtml(frame.identity)}" type="button" aria-pressed="${selected ? "true" : "false"}">
       <span class="small-badge ${historyFrameTone(frame.status)}">${escapeHtml(frame.status)}</span>
       <strong>${escapeHtml(historyFrameLabel(frame))}</strong>
-      <span>${escapeHtml(frame.time_utc || "time not authored")}</span>
+      <span>${escapeHtml(frame.time_utc || "Timestamp unavailable")}</span>
     </button>
   `;
 }
@@ -216,15 +227,16 @@ function renderStudioHistoryArchive() {
 }
 
 function renderStudioHistory(timeline) {
-  const frames = timeline?.frames || [];
+  const frames = primaryHistoryFrames(timeline);
+  const markers = historyEventMarkers(timeline);
   if (!frames.length) {
-    return `<div class="empty-state">No durable History frames are available for this run.</div>`;
+    return `<div class="empty-state">No durable attempt History frames are available for this run.</div>`;
   }
   const selected = selectedHistoryFrame(timeline);
   return `
     <section class="surface studio-history" data-studio-history data-history-auto-follow="${state.historyAutoFollow ? "true" : "false"}">
       <div class="surface-title">
-        <span>History Filmstrip</span>
+        <span>Run chronology</span>
         <span class="small-badge">${escapeHtml(frames.length)} frames</span>
       </div>
       <div class="history-filmstrip-frames" aria-label="Durable run frames">
@@ -238,6 +250,14 @@ function renderStudioHistory(timeline) {
         <span>Historical selection pauses browser auto-follow only; the active runtime is not stopped.</span>
         <div class="recent-artifacts">${renderHistoryEvidence(selected)}</div>
       </div>
+      ${markers.length ? `
+        <details class="history-technical-events">
+          <summary>Technical events (${escapeHtml(markers.length)})</summary>
+          <div class="history-technical-event-list">
+            ${markers.map(renderHistoryFrameButton).join("")}
+          </div>
+        </details>
+      ` : ""}
     </section>
     ${renderStudioRunComparisonPanel()}
     ${renderStudioHistoryLineage()}

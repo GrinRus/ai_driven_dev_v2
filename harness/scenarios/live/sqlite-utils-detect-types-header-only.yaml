@@ -44,8 +44,6 @@ feature_source:
     - Regression coverage exercises the CLI or nearest stable import surface.
     verification:
     - uv run pytest -q
-    - test -f .aidd/workitems/WI-LIVE-SQLITE-SMOKE/stages/qa/output/stage-result.md
-    - test -f .aidd/workitems/WI-LIVE-SQLITE-SMOKE/stages/qa/output/validator-report.md
     quality_bar: The patch should stay small, cover the edge case, and avoid broad CSV
       import rewrites.
     size_rationale: Small because the expected fix is a localized bugfix with one or

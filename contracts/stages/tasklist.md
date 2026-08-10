@@ -63,7 +63,8 @@ Optional context documents may improve task decomposition quality, but they must
     `<task-id>-AC<n>`,
   - an `Acceptance criteria` field containing those task-local criteria,
   - one dominant output artifact per task so each item remains reviewable as a standalone unit,
-  - explicit dependency notes per task (upstream task ids or `none`),
+  - explicit dependency notes per task (upstream task ids or `none`); optional rationale may follow
+    the machine-readable value and does not alter the dependency graph,
   - verification notes per task naming the primary check, test, or scenario proving completion.
 - every task card must map to at least one existing plan milestone by citing its exact `M<n>` id
   in the card's `Outcome`, optional `Context`, a nested acceptance criterion, or the task's

@@ -78,8 +78,6 @@ feature_source:
       if offenders:
           raise SystemExit(f"placeholder runnable example introduced: {offenders}")
       PY
-    - test -f .aidd/workitems/WI-LIVE-HTTPX-DOCS-SYNC/stages/qa/output/stage-result.md
-    - test -f .aidd/workitems/WI-LIVE-HTTPX-DOCS-SYNC/stages/qa/output/validator-report.md
     quality_bar: The documentation should be minimal, truthful, runnable or clearly
       labeled, should not require source changes, and should pass docs-only
       acceptance checks. Full upstream pytest remains useful exploratory evidence

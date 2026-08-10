@@ -47,8 +47,6 @@ feature_source:
     - aidd stage questions idea --work-item WI-LIVE-SQLITE-INTERVIEW
     - test -f .aidd/workitems/WI-LIVE-SQLITE-INTERVIEW/stages/idea/answers.md
     - uv run pytest -q
-    - test -f .aidd/workitems/WI-LIVE-SQLITE-INTERVIEW/stages/qa/output/stage-result.md
-    - test -f .aidd/workitems/WI-LIVE-SQLITE-INTERVIEW/stages/qa/output/validator-report.md
     quality_bar: The result must be explicit about code execution risk, covered by tests,
       and documented without implying a broader security guarantee. When resolved
       interview answers intentionally select trusted local Python execution and the

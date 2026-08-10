@@ -84,6 +84,27 @@ test("Project Inbox exposes a direct new work item entry point", async () => {
   assert.match(html, /New work item/);
 });
 
+test("Project Inbox exposes one durable continue-or-create entry recommendation", async () => {
+  const context = await inboxContext();
+  const html = vm.runInContext(`
+    state.inbox = {durable: {
+      entry_recommendation: {
+        action: "continue-existing-intent",
+        label: "Continue existing intent",
+        detail: "The research brief is waiting for review.",
+        work_item: "WI-7",
+        route: {intent: "inbox-work-item", work_item: "WI-7", run_id: "run-7", stage: "research"}
+      },
+      sections: []
+    }, running_now: []};
+    renderStudioInbox();
+  `, context);
+  assert.match(html, /Continue existing intent/);
+  assert.match(html, /New intent/);
+  assert.match(html, /data-route-work-item="WI-7"/);
+  assert.match(html, /research/);
+});
+
 test("disabled service eligibility does not disable read-only context navigation", async () => {
   const context = await inboxContext();
   const html = vm.runInContext(`renderStudioInboxItem({

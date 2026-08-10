@@ -164,6 +164,27 @@
   gap: 7px;
   min-width: 0;
 }
+.runtime-settings {
+  align-self: stretch;
+  min-width: 0;
+}
+.runtime-settings > summary {
+  align-items: center;
+  color: var(--topbar-muted);
+  cursor: pointer;
+  display: flex;
+  font-size: var(--type-caption-size);
+  font-weight: 750;
+  min-height: var(--control-height-compact);
+  padding: 0 4px;
+  white-space: nowrap;
+}
+.runtime-settings-fields {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+}
 .runtime-picker span {
   color: var(--topbar-muted);
   font-size: var(--type-caption-size);
@@ -296,21 +317,45 @@ body.inbox-detail-mode .operator-shell,
 body.work-overview-mode .operator-shell {
   grid-template-columns: minmax(0, 1fr);
   grid-template-rows: minmax(0, 1fr);
-  max-height: none;
+  max-height: calc(100vh - 52px);
   min-height: calc(100vh - 52px);
-  overflow: visible;
+  overflow-y: auto;
 }
 body.inbox-detail-mode .stage-rail,
-body.inbox-detail-mode .right-sidebar,
 body.inbox-detail-mode .bottom-dock,
 body.inbox-detail-mode .cockpit-header,
 body.inbox-detail-mode .tabs,
 body.inbox-detail-mode .global-next-action-strip,
 body.work-overview-mode .stage-rail,
-body.work-overview-mode .right-sidebar,
 body.work-overview-mode .bottom-dock,
 body.work-overview-mode .cockpit-header {
   display: none;
+}
+body.inbox-detail-mode .right-sidebar,
+body.work-overview-mode .right-sidebar {
+  background: transparent;
+  border: 0;
+  display: block;
+  height: 0;
+  min-width: 0;
+  overflow: visible;
+  padding: 0;
+  position: fixed;
+  right: 0;
+  top: 0;
+  width: 0;
+  z-index: 7;
+}
+body.inbox-detail-mode .right-sidebar > :not(.maintenance-overflow),
+body.work-overview-mode .right-sidebar > :not(.maintenance-overflow) {
+  display: none;
+}
+body.inbox-detail-mode .right-sidebar .maintenance-overflow,
+body.work-overview-mode .right-sidebar .maintenance-overflow {
+  pointer-events: auto;
+  position: fixed;
+  right: 12px;
+  top: 9px;
 }
 body.inbox-detail-mode .runtime-picker {
   display: none;
@@ -510,4 +555,767 @@ h1, h2, h3, p {
 }
 .cockpit-content {
   min-height: 360px;
+}
+
+/* Document Studio composition: navigation first, one reading canvas, contextual evidence. */
+body {
+  background: var(--surface);
+  color: var(--text);
+}
+.topbar {
+  align-items: center;
+  background: var(--studio-header-bg);
+  border-bottom: 0;
+  display: grid;
+  gap: var(--space-6);
+  grid-template-columns: auto auto minmax(160px, 1fr) auto auto;
+  min-height: var(--studio-topbar-height);
+  padding: 0 var(--space-8);
+  position: sticky;
+  top: 0;
+  z-index: 20;
+}
+.brand {
+  gap: var(--space-5);
+}
+.brand-mark {
+  background: transparent;
+  border: 0;
+  color: var(--studio-header-text);
+  font-size: 0;
+  height: var(--studio-topbar-height);
+  width: 0;
+}
+.brand-mark::after {
+  color: var(--studio-header-text);
+  content: "AIDD";
+  font-size: 20px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+}
+.brand-title {
+  color: var(--studio-header-text);
+  font-size: 18px;
+  font-weight: 760;
+  white-space: nowrap;
+}
+.brand-title .version-badge,
+.brand-meta {
+  display: none;
+}
+.primary-nav {
+  align-items: stretch;
+  display: flex;
+  height: var(--studio-topbar-height);
+}
+.primary-nav button {
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+  color: var(--studio-header-text);
+  font-size: 15px;
+  font-weight: 650;
+  min-height: var(--studio-topbar-height);
+  padding: 0 var(--space-8);
+}
+.primary-nav button:hover,
+.primary-nav button.active,
+.primary-nav button[aria-current="page"] {
+  background: rgba(255, 255, 255, 0.1);
+  border-bottom: 3px solid #72d7ce;
+  color: var(--studio-header-text);
+}
+.top-context {
+  align-items: center;
+  color: var(--studio-header-text);
+  display: flex;
+  font-size: 14px;
+  gap: var(--space-3);
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+}
+.top-context span:not([aria-hidden="true"]) {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.top-context span[aria-hidden="true"] {
+  color: var(--studio-header-text);
+}
+.top-status {
+  gap: var(--space-3);
+  justify-content: flex-end;
+  max-width: 300px;
+  overflow: hidden;
+}
+.top-status #workItemChip,
+.top-status #runChip {
+  clip-path: inset(50%);
+  color: var(--studio-header-text);
+  display: block;
+  height: 1px;
+  opacity: 0;
+  overflow: hidden;
+  pointer-events: none;
+  position: absolute;
+  width: 1px;
+}
+.topbar .status-chip,
+.topbar .version-badge {
+  background: transparent;
+  border: 0;
+  color: var(--studio-header-text);
+  font-size: 13px;
+  max-width: 230px;
+  padding: 0;
+}
+.topbar .status-chip.good {
+  background: var(--studio-header-bg);
+  color: var(--studio-header-text);
+}
+.top-actions {
+  gap: var(--space-3);
+  min-width: 0;
+}
+.top-actions #newWorkItemButton {
+  background: transparent;
+  border: 0;
+  color: var(--studio-header-text);
+  font-size: 14px;
+  min-height: var(--studio-topbar-height);
+  padding-inline: var(--space-5);
+}
+.runtime-settings {
+  align-self: center;
+  position: relative;
+}
+.runtime-settings > summary {
+  background: var(--studio-header-bg);
+  color: var(--studio-header-text);
+  font-size: 0;
+  min-height: var(--studio-topbar-height);
+  padding: 0 var(--space-4);
+}
+.runtime-settings > summary::before {
+  color: var(--studio-header-text);
+  content: "⋮";
+  font-size: 28px;
+  line-height: 1;
+}
+.runtime-settings-fields {
+  background: var(--surface);
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-surface);
+  box-shadow: var(--elevation-overlay);
+  display: grid;
+  gap: var(--space-4);
+  min-width: 320px;
+  padding: var(--space-6);
+  position: absolute;
+  right: 0;
+  top: calc(100% + var(--space-4));
+  z-index: 30;
+}
+.runtime-settings:not([open]) .runtime-settings-fields {
+  display: none;
+}
+.runtime-settings-fields .runtime-picker {
+  display: grid;
+  gap: var(--space-3);
+  grid-template-columns: 120px minmax(0, 1fr);
+}
+.runtime-settings-fields .runtime-picker span {
+  align-self: center;
+  color: var(--muted);
+}
+.operator-shell {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  max-height: none;
+  min-height: calc(100vh - var(--studio-topbar-height));
+  overflow: visible;
+}
+.stage-rail {
+  align-self: stretch;
+  background: var(--surface);
+  border-bottom: 1px solid var(--line);
+  border-right: 0;
+  display: block;
+  grid-column: 1;
+  grid-row: 1;
+  min-width: 0;
+  overflow: hidden;
+  padding: 0 var(--space-8);
+}
+.stage-rail #projectHomeRail,
+.stage-rail .rail-header {
+  display: none;
+}
+.stage-list {
+  align-items: stretch;
+  display: grid;
+  gap: var(--space-2);
+  grid-template-columns: repeat(8, minmax(0, 1fr));
+  height: var(--studio-stagebar-height);
+  overflow-x: auto;
+  padding: var(--space-3) 0 0;
+}
+.stage-card {
+  align-items: center;
+  background: transparent;
+  border: 0;
+  border-bottom: 3px solid transparent;
+  border-radius: 0;
+  color: var(--muted);
+  display: grid;
+  gap: var(--space-3);
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  justify-content: start;
+  min-height: var(--control-height-touch);
+  min-width: 0;
+  padding: var(--space-3) var(--space-4);
+  text-align: left;
+}
+.stage-card:hover,
+.stage-card.active {
+  background: var(--studio-accent-soft);
+  border-bottom-color: var(--teal);
+  color: var(--teal-dark);
+}
+.stage-card .stage-index {
+  align-items: center;
+  background: var(--surface-soft);
+  border-radius: var(--radius-pill);
+  display: inline-flex;
+  height: 28px;
+  justify-content: center;
+  width: 28px;
+}
+.stage-card.active .stage-index,
+.stage-card .marker-dot.succeeded {
+  background: var(--teal-dark);
+  color: var(--color-text-inverse);
+}
+.stage-copy {
+  min-width: 0;
+}
+.stage-name,
+.stage-subtitle {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.stage-name {
+  font-size: 14px;
+  font-weight: 700;
+}
+.stage-subtitle {
+  color: var(--muted);
+  display: block;
+  font-size: var(--type-caption-size);
+  margin-top: var(--space-1);
+}
+.cockpit {
+  background: var(--surface);
+  grid-column: 1;
+  grid-row: 2;
+  min-width: 0;
+  overflow: visible;
+  padding: 0 var(--space-8) var(--space-8);
+}
+.cockpit-header,
+.tabs {
+  display: none;
+}
+.tabs {
+  display: flex;
+  height: 1px;
+  left: 0;
+  opacity: 0;
+  overflow: hidden;
+  position: fixed;
+  top: var(--studio-topbar-height);
+  width: 1px;
+  z-index: 9999;
+}
+.tabs button {
+  height: 32px;
+  left: 0;
+  min-height: 32px;
+  min-width: 32px;
+  position: fixed;
+  top: 0;
+  width: 32px;
+  z-index: 9999;
+}
+.tabs #tab-work {
+  z-index: 10001;
+}
+.global-next-action-strip {
+  border: 0;
+  border-bottom: 1px solid var(--line);
+  border-radius: 0;
+  margin: 0 auto;
+  max-width: var(--studio-content-max);
+  padding: var(--space-6) 0;
+}
+.right-sidebar {
+  background: transparent;
+  border: 0;
+  display: block;
+  height: 0;
+  min-width: 0;
+  overflow: visible;
+  padding: 0;
+  pointer-events: none;
+  position: fixed;
+  right: 0;
+  top: 0;
+  width: 0;
+  z-index: 25;
+}
+.right-sidebar > :not(.maintenance-overflow) {
+  display: none;
+}
+.right-sidebar .maintenance-overflow {
+  pointer-events: auto;
+  position: fixed;
+  right: var(--space-8);
+  top: 0;
+}
+.right-sidebar .maintenance-overflow summary {
+  background: var(--studio-header-bg);
+  color: var(--studio-header-text);
+  min-height: var(--studio-topbar-height);
+  padding: 0 var(--space-4);
+}
+.bottom-dock {
+  background: var(--surface);
+  border-top: 1px solid var(--line);
+  display: grid;
+  grid-column: 1;
+  grid-row: 3;
+  grid-template-columns: 1fr 1fr;
+  min-height: var(--control-height-touch);
+}
+body.inbox-detail-mode .operator-shell {
+  grid-template-rows: minmax(0, 1fr);
+}
+body.inbox-detail-mode .stage-rail,
+body.inbox-detail-mode .global-next-action-strip,
+body.inbox-detail-mode .bottom-dock {
+  display: none;
+}
+body.inbox-detail-mode .cockpit {
+  grid-row: 1;
+  padding: var(--space-10) var(--space-8);
+}
+body.inbox-detail-mode .right-sidebar,
+body.work-overview-mode .right-sidebar,
+body.recovery-mode .right-sidebar,
+body.evidence-log-mode .right-sidebar,
+body.terminal-handoff-mode .right-sidebar {
+  display: block;
+}
+body.work-overview-mode .operator-shell,
+body.recovery-mode .operator-shell,
+body.evidence-log-mode .operator-shell,
+body.terminal-handoff-mode .operator-shell {
+  grid-template-rows: auto minmax(0, 1fr) auto;
+}
+body.work-overview-mode .stage-rail,
+body.recovery-mode .stage-rail,
+body.evidence-log-mode .stage-rail,
+body.terminal-handoff-mode .stage-rail {
+  display: block;
+}
+body.work-overview-mode .cockpit,
+body.recovery-mode .cockpit,
+body.evidence-log-mode .cockpit,
+body.terminal-handoff-mode .cockpit {
+  grid-column: 1;
+  grid-row: 2;
+  margin-inline: auto;
+  max-width: var(--studio-content-max);
+  padding: 0 var(--space-8) var(--space-8);
+  width: 100%;
+}
+body.setup-active .topbar {
+  grid-template-columns: auto auto minmax(0, 1fr) auto auto;
+}
+body.setup-active .primary-nav,
+body.setup-active .top-context,
+body.setup-active .top-status,
+body.setup-active #newWorkItemButton,
+body.setup-active .runtime-settings {
+  display: flex;
+}
+body.setup-active .top-context,
+body.setup-active .top-status,
+body.setup-active #newWorkItemButton,
+body.setup-active .runtime-settings {
+  display: none;
+}
+body.setup-active .top-context,
+body.setup-active .top-status {
+  display: flex;
+}
+body.setup-active .top-status #workItemChip,
+body.setup-active .top-status #runChip {
+  display: block;
+}
+body.setup-active .brand-title::after {
+  content: " · Guided Setup";
+  font-weight: 650;
+}
+body.setup-active .primary-nav #projectInboxButton {
+  display: block;
+}
+body.setup-active .operator-shell {
+  display: block;
+  min-height: calc(100vh - var(--studio-topbar-height));
+}
+body.setup-active .cockpit {
+  padding: var(--space-12) var(--space-8);
+}
+
+.active-studio {
+  margin-inline: auto;
+  max-width: var(--studio-content-max);
+  padding-top: var(--space-8);
+}
+.studio-context-bar {
+  align-items: end;
+  border: 0;
+  border-bottom: 1px solid var(--line);
+  border-radius: 0;
+  display: flex;
+  gap: var(--space-8);
+  justify-content: space-between;
+  padding: var(--space-8) 0;
+}
+.studio-context-bar h2 {
+  font-size: clamp(24px, 3vw, 34px);
+  line-height: 1.15;
+  max-width: var(--studio-reading-max);
+}
+.studio-context-identity {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-6) var(--space-8);
+  justify-content: flex-end;
+  margin: 0;
+  min-width: 280px;
+}
+.studio-context-identity div {
+  display: grid;
+  gap: var(--space-2);
+}
+.studio-context-identity dt {
+  color: var(--muted);
+  font-size: var(--type-caption-size);
+}
+.studio-context-identity dd {
+  font-family: var(--mono);
+  font-size: 13px;
+  font-weight: 700;
+  margin: 0;
+}
+.intent-phase-stepper,
+.studio-workflow-progress {
+  border: 0;
+  border-bottom: 1px solid var(--line);
+  border-radius: 0;
+  box-shadow: none;
+  padding: var(--space-5) 0;
+}
+.intent-phase-list {
+  display: grid;
+  gap: var(--space-3);
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.intent-phase-step {
+  align-items: center;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-control);
+  color: var(--text);
+  display: flex;
+  gap: var(--space-4);
+  justify-content: flex-start;
+  min-height: 52px;
+  padding: var(--space-4);
+  text-align: left;
+  width: 100%;
+}
+.intent-phase-step.active,
+.intent-phase-step:hover {
+  background: var(--studio-accent-soft);
+  border-color: var(--teal);
+}
+.intent-phase-step.complete .intent-phase-index {
+  background: var(--green);
+  color: var(--color-text-inverse);
+}
+.intent-phase-step.blocked .intent-phase-index {
+  background: var(--red);
+  color: var(--color-text-inverse);
+}
+.intent-phase-index {
+  align-items: center;
+  background: var(--surface-soft);
+  border-radius: var(--radius-pill);
+  display: inline-flex;
+  flex: 0 0 auto;
+  height: 28px;
+  justify-content: center;
+  width: 28px;
+}
+.intent-phase-step strong,
+.intent-phase-step small {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.intent-phase-step small {
+  color: var(--muted);
+  font-size: var(--type-caption-size);
+  margin-top: var(--space-1);
+}
+.active-studio-grid {
+  display: grid;
+  gap: var(--space-8);
+  grid-template-columns: minmax(200px, var(--studio-file-rail)) minmax(0, 1fr) minmax(240px, var(--studio-evidence-rail));
+  margin-top: var(--space-8);
+  align-items: start;
+}
+.studio-document-rail,
+.studio-reading-sidebar {
+  min-width: 0;
+}
+.studio-document-rail {
+  border-right: 1px solid var(--line);
+  min-height: 260px;
+  padding-right: var(--space-6);
+}
+.studio-document-rail-header {
+  align-items: center;
+  display: flex;
+  font-size: 13px;
+  font-weight: 750;
+  justify-content: space-between;
+  padding: 0 0 var(--space-4);
+  text-transform: uppercase;
+}
+.studio-document-list {
+  display: grid;
+  gap: var(--space-2);
+}
+.studio-document-item {
+  align-items: flex-start;
+  background: transparent;
+  border: 0;
+  border-left: 3px solid transparent;
+  border-radius: 0;
+  color: var(--text);
+  display: grid;
+  gap: var(--space-3);
+  grid-template-columns: auto minmax(0, 1fr);
+  justify-content: start;
+  min-height: 44px;
+  padding: var(--space-4);
+  text-align: left;
+  width: 100%;
+}
+.studio-document-item:hover,
+.studio-document-item.active {
+  background: var(--studio-accent-soft);
+  border-left-color: var(--teal);
+}
+.studio-document-icon {
+  color: var(--teal-dark);
+  font-size: 18px;
+  line-height: 1;
+}
+.studio-document-item strong,
+.studio-document-item small {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.studio-document-item small {
+  color: var(--muted);
+  font-family: var(--mono);
+  font-size: var(--type-caption-size);
+  margin-top: var(--space-1);
+}
+.studio-document-details {
+  border-top: 1px solid var(--line);
+  margin-top: var(--space-6);
+  padding-top: var(--space-4);
+}
+.studio-document-details summary {
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 700;
+}
+.studio-document-details p {
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.45;
+  margin-top: var(--space-4);
+}
+.studio-reading-sidebar {
+  display: grid;
+  gap: var(--space-6);
+}
+.studio-reading-sidebar > .surface {
+  border: 0;
+  border-left: 1px solid var(--line);
+  border-radius: 0;
+  padding: 0 0 0 var(--space-6);
+}
+.studio-document-canvas {
+  border: 0;
+  border-radius: 0;
+  min-width: 0;
+  padding: 0;
+}
+.studio-document-canvas > .surface-title,
+.studio-document-canvas .surface-title {
+  border-bottom: 1px solid var(--line);
+  padding-bottom: var(--space-4);
+}
+.studio-live-observation,
+.studio-runtime-readiness {
+  border: 0;
+  border-top: 1px solid var(--line);
+  border-radius: 0;
+  margin-top: var(--space-8);
+  padding: var(--space-6) 0 0;
+}
+
+/* Mode-specific selectors from the legacy shell are more specific than the
+   base composition above. Keep every operator mode on the same single canvas. */
+body.work-overview-mode .operator-shell,
+body.recovery-mode .operator-shell,
+body.evidence-log-mode .operator-shell,
+body.terminal-handoff-mode .operator-shell {
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  min-height: calc(100vh - var(--studio-topbar-height));
+  max-height: none;
+  overflow: visible;
+}
+body[data-operator-mode="history"] .operator-shell {
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  min-height: calc(100vh - var(--studio-topbar-height));
+  max-height: none;
+  overflow: visible;
+}
+body[data-operator-mode="history"] .stage-rail {
+  display: block;
+  grid-column: 1;
+  grid-row: 1;
+}
+body[data-operator-mode="history"] .cockpit {
+  grid-column: 1;
+  grid-row: 2;
+  min-height: 0;
+  overflow: auto;
+  width: 100%;
+}
+body[data-operator-mode="history"] .bottom-dock {
+  display: grid;
+  grid-column: 1;
+  grid-row: 3;
+  max-height: var(--control-height-touch);
+  min-height: var(--control-height-touch);
+  overflow: hidden;
+}
+body.work-overview-mode .stage-rail,
+body.recovery-mode .stage-rail,
+body.evidence-log-mode .stage-rail,
+body.terminal-handoff-mode .stage-rail {
+  display: block;
+  grid-column: 1;
+  grid-row: 1;
+}
+body.work-overview-mode .cockpit,
+body.recovery-mode .cockpit,
+body.evidence-log-mode .cockpit,
+body.terminal-handoff-mode .cockpit {
+  grid-column: 1;
+  grid-row: 2;
+  min-height: 0;
+  overflow: auto;
+  width: 100%;
+}
+body.work-overview-mode .bottom-dock,
+body.recovery-mode .bottom-dock,
+body.evidence-log-mode .bottom-dock,
+body.terminal-handoff-mode .bottom-dock {
+  display: grid;
+  grid-column: 1;
+  grid-row: 3;
+  max-height: var(--control-height-touch);
+  min-height: var(--control-height-touch);
+  overflow: hidden;
+}
+body.recovery-mode .global-next-action-strip,
+body.evidence-log-mode .global-next-action-strip,
+body.terminal-handoff-mode .global-next-action-strip {
+  display: block;
+}
+body.recovery-mode .runtime-settings,
+body.evidence-log-mode .runtime-settings,
+body.terminal-handoff-mode .runtime-settings,
+body.decision-detail-mode .runtime-settings {
+  display: none;
+}
+.maintenance-overflow summary {
+  font-size: 0;
+  width: 40px;
+}
+.maintenance-overflow summary::before {
+  color: var(--studio-header-text);
+  content: "⋮";
+  font-size: 24px;
+  line-height: 1;
+}
+.maintenance-overflow summary::after {
+  display: none;
+}
+
+/* Recovery keeps execution settings out of the primary decision surface, but
+   preserves the explicit open path used by the durable answer/run flow. */
+body.recovery-mode .runtime-settings {
+  display: block;
+}
+body.recovery-mode .runtime-settings > summary {
+  height: 1px;
+  min-height: 1px;
+  opacity: 0;
+  overflow: hidden;
+  padding: 0;
+  width: 1px;
+}
+body.recovery-mode .runtime-settings-fields {
+  position: fixed;
+  right: var(--space-8);
+  top: calc(var(--studio-topbar-height) + var(--space-4));
+  width: min(360px, calc(100vw - (2 * var(--space-8))));
+}
+.brand-mark {
+  display: none;
+}
+.brand {
+  gap: 0;
 }

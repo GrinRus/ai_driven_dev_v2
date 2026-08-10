@@ -58,6 +58,7 @@ def test_intervention_parity_preserves_allowed_and_blocked_service_paths(
                 "state.activeStage = 'plan'; state.activeStageExplicit = true; fetchDashboard()"
             )
         else:
+            page.locator("#runtimeSettings").evaluate("node => { node.open = true; }")
             page.locator("#runtimeSelect").select_option("generic-cli")
             page.wait_for_function("eval('selectedRuntimeReady()')", timeout=15_000)
         page.evaluate("setOperatorMode('request'); renderCockpitContent()")
@@ -118,6 +119,7 @@ def test_allowed_intervention_restores_draft_and_creates_one_request(
     ) as harness, harness.open_page(viewport) as browser_page:
         page = browser_page.page
         page.goto(f"{harness.url}?ui=studio", wait_until="networkidle")
+        page.locator("#runtimeSettings").evaluate("node => { node.open = true; }")
         page.locator("#runtimeSelect").select_option("generic-cli")
         page.wait_for_function("eval('selectedRuntimeReady()')", timeout=15_000)
         page.evaluate("setOperatorMode('request'); renderCockpitContent()")
@@ -148,6 +150,7 @@ def test_allowed_intervention_restores_draft_and_creates_one_request(
         page.evaluate(
             "async () => { if (window.aiddRouteRestore) await window.aiddRouteRestore; }"
         )
+        page.locator("#runtimeSettings").evaluate("node => { node.open = true; }")
         page.locator("#runtimeSelect").select_option("generic-cli")
         page.wait_for_function("eval('selectedRuntimeReady()')", timeout=15_000)
         page.evaluate("setOperatorMode('request'); renderCockpitContent()")

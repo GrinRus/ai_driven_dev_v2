@@ -12,9 +12,21 @@
     <div class="brand">
       <div class="brand-mark">AI</div>
       <div>
-        <div class="brand-title">AIDD Operator Console <span id="appVersion" class="version-badge">v</span></div>
+        <div class="brand-title">AIDD <span id="appVersion" class="version-badge">v</span></div>
         <div class="brand-meta">Project <code id="projectPath">...</code></div>
       </div>
+    </div>
+    <nav class="primary-nav" aria-label="Product navigation">
+      <button id="projectInboxButton" data-tab-shortcut="project-home" type="button">Inbox</button>
+      <button id="studioNavButton" data-tab-shortcut="overview" type="button">Studio</button>
+      <button id="historyNavButton" data-tab-shortcut="history" type="button">History</button>
+    </nav>
+    <div class="top-context" aria-live="polite">
+      <span id="topContextProject">Local Project</span>
+      <span aria-hidden="true">/</span>
+      <span id="topContextWorkItem">Work item</span>
+      <span aria-hidden="true">/</span>
+      <span id="topContextRun">Run</span>
     </div>
     <div class="top-status">
       <span id="workItemChip" class="status-chip">Work item</span>
@@ -22,22 +34,26 @@
       <span id="localStatus" class="status-chip good">Local control-plane connected</span>
     </div>
     <div class="top-actions">
-      <button id="projectInboxButton" class="secondary" data-tab-shortcut="project-home" type="button">Project inbox</button>
-      <button id="newWorkItemButton" class="secondary" data-new-work-item type="button">New work item</button>
-      <label class="runtime-picker" for="runtimeSelect">
-        <span>Runtime</span>
-        <select id="runtimeSelect" name="runtime">
-          <option value="">Select runtime</option>
-        </select>
-      </label>
-      <label class="runtime-picker runtime-selector-field" for="runtimeModelInput">
-        <span>Model</span>
-        <input id="runtimeModelInput" name="model" type="text" placeholder="Native default" autocomplete="off" spellcheck="false" disabled>
-      </label>
-      <label class="runtime-picker runtime-selector-field" for="runtimeReasoningEffortInput">
-        <span>Reasoning effort</span>
-        <input id="runtimeReasoningEffortInput" name="reasoning_effort" type="text" placeholder="Native default" autocomplete="off" spellcheck="false" disabled>
-      </label>
+      <button id="newWorkItemButton" class="secondary" data-new-work-item type="button">New intent</button>
+      <details id="runtimeSettings" class="runtime-settings">
+        <summary>Execution settings</summary>
+        <div class="runtime-settings-fields">
+          <label class="runtime-picker" for="runtimeSelect">
+            <span>Runtime</span>
+            <select id="runtimeSelect" name="runtime">
+              <option value="">Select runtime</option>
+            </select>
+          </label>
+          <label class="runtime-picker runtime-selector-field" for="runtimeModelInput">
+            <span>Model</span>
+            <input id="runtimeModelInput" name="model" type="text" placeholder="Native default" autocomplete="off" spellcheck="false" disabled>
+          </label>
+          <label class="runtime-picker runtime-selector-field" for="runtimeReasoningEffortInput">
+            <span>Reasoning effort</span>
+            <input id="runtimeReasoningEffortInput" name="reasoning_effort" type="text" placeholder="Native default" autocomplete="off" spellcheck="false" disabled>
+          </label>
+        </div>
+      </details>
     </div>
   </header>
 

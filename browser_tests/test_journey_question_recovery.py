@@ -62,6 +62,7 @@ def test_question_recovery_parity_preserves_answer_service_path(
             "Use the same durable answer service path."
         )
         page.locator('[data-question-resolution="Q1"]').select_option("resolved")
+        page.locator(".question-save-options").evaluate("node => { node.open = true; }")
         with page.expect_response(
             lambda response: response.url.endswith("/api/answers")
         ) as saved:
@@ -103,6 +104,7 @@ def test_question_recovery_restores_draft_and_resumes_from_durable_answer(
     ) as harness, harness.open_page(viewport) as browser_page:
         page = browser_page.page
         page.goto(f"{harness.url}?ui=studio", wait_until="networkidle")
+        page.locator("#runtimeSettings").evaluate("node => { node.open = true; }")
         page.locator("#runtimeSelect").select_option("generic-cli")
         page.wait_for_function("eval('selectedRuntimeReady()')", timeout=15_000)
         root = page.locator('[data-human-decision-surface="question"]')
@@ -134,6 +136,7 @@ def test_question_recovery_restores_draft_and_resumes_from_durable_answer(
         answer = page.locator('[data-question-text="Q1"]')
         answer.wait_for(state="visible")
         assert answer.input_value().startswith("Keep the public CLI")
+        page.locator("#runtimeSettings").evaluate("node => { node.open = true; }")
         page.locator("#runtimeSelect").select_option("generic-cli")
         page.wait_for_function("eval('selectedRuntimeReady()')", timeout=15_000)
 
@@ -151,6 +154,7 @@ def test_question_recovery_restores_draft_and_resumes_from_durable_answer(
             )
 
         page.route("**/api/answers", _fail_answer)
+        page.locator(".question-save-options").evaluate("node => { node.open = true; }")
         with page.expect_response(
             lambda response: urlsplit(response.url).path == "/api/answers"
         ):

@@ -85,6 +85,17 @@ def test_live_scenarios_do_not_mask_setup_or_pytest_failures_with_shell_fallback
         assert all("||" not in command for command in commands), path.as_posix()
 
 
+def test_live_task_verification_does_not_require_future_qa_artifacts() -> None:
+    for path, scenario in _scenario_entries():
+        if not scenario.is_live or scenario.feature_source is None:
+            continue
+        for task in scenario.feature_source.tasks:
+            assert all(
+                "/stages/qa/output/" not in command.replace("\\", "/")
+                for command in task.verification
+            ), f"{path.as_posix()}:{task.task_id}"
+
+
 def test_ci_eligible_scenarios_are_deterministic_only() -> None:
     for path, scenario in _scenario_entries():
         if scenario.automation_lane == "ci":

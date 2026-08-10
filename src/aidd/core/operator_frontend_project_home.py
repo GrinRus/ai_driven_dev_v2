@@ -5,6 +5,7 @@ from pathlib import Path
 from aidd.core.onboarding import OnboardingWorkItemSummary
 from aidd.core.operator_frontend_dashboard import resolve_operator_dashboard_view
 from aidd.core.operator_frontend_models import (
+    OperatorIntentSummary,
     OperatorProjectHomeView,
     OperatorProjectSetRootSummary,
     OperatorRunSummary,
@@ -35,6 +36,49 @@ _RUNTIME_FAILURE_KINDS = frozenset(
         "timeout",
     }
 )
+
+_INTENT_EXCERPT_LIMIT = 220
+
+
+def _intent_summary(
+    *,
+    workspace_root: Path,
+    work_item: str,
+    has_request_context: bool,
+) -> OperatorIntentSummary:
+    """Read a bounded request excerpt without making the UI a document parser."""
+    context_root = work_item_context_root(root=workspace_root, work_item=work_item)
+    request_path = context_root / WORKITEM_CONTEXT_USER_REQUEST_FILENAME
+    if not request_path.exists():
+        return OperatorIntentSummary(
+            work_item=work_item,
+            excerpt="No request context recorded yet.",
+            source_path=None,
+            has_request_context=has_request_context,
+        )
+    try:
+        text = request_path.read_text(encoding="utf-8", errors="replace")
+    except OSError:
+        return OperatorIntentSummary(
+            work_item=work_item,
+            excerpt="Request context is unavailable.",
+            source_path=workspace_relative_path(workspace_root, request_path),
+            has_request_context=has_request_context,
+        )
+    lines = [
+        " ".join(line.strip().split())
+        for line in text.splitlines()
+        if line.strip() and not line.lstrip().startswith("#")
+    ]
+    excerpt = " ".join(lines).strip() or "Request context is empty."
+    if len(excerpt) > _INTENT_EXCERPT_LIMIT:
+        excerpt = excerpt[: _INTENT_EXCERPT_LIMIT - 1].rstrip() + "…"
+    return OperatorIntentSummary(
+        work_item=work_item,
+        excerpt=excerpt,
+        source_path=workspace_relative_path(workspace_root, request_path),
+        has_request_context=has_request_context,
+    )
 
 
 def _discover_work_items(workspace_root: Path) -> tuple[OnboardingWorkItemSummary, ...]:
@@ -151,6 +195,11 @@ def _work_item_summary(
     return OperatorWorkItemSummary(
         work_item=item.work_item,
         has_request_context=item.has_request_context,
+        intent=_intent_summary(
+            workspace_root=workspace_root,
+            work_item=item.work_item,
+            has_request_context=item.has_request_context,
+        ),
         latest_run=dashboard.run,
         active_stage=active,
         stage_progress_label=f"{completed}/{len(STAGES)}",

@@ -88,7 +88,10 @@ normalize if canonical validation proves the terminal status inconsistent.
    no task-local repository edit, add the exact card field
    `- Execution mode: verification-only`. Omit the field for normal repository-change tasks;
    omission means `repository-change`. Do not infer evidence-only behavior from the title alone.
-3. Record explicit dependencies for every task (`none` or concrete task/upstream ids).
+3. Record explicit dependencies for every task (`none` or concrete task/upstream ids). If a short
+   rationale is useful, put it after the machine-readable value (for example `T1: none — establishes
+   M1`); only the leading `none` or task ids define the graph, so do not make milestone/review ids
+   look like dependencies.
 4. Map every task to at least one existing plan milestone by writing the exact `M<n>` id in the
    task's `Outcome`, optional `Context`, a nested acceptance criterion, or the task's dedicated
    `Verification notes` entry. Cover every plan milestone. Do not add `Milestone` or
