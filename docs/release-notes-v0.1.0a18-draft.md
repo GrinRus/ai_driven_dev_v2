@@ -1,10 +1,11 @@
 # Release Notes: v0.1.0a18
 
-Status: draft, not tagged or published.
+Status: published on 2026-08-10; accepted package-channel evidence.
 
-Current release-candidate package version: `0.1.0a18`.
-Latest accepted published prerelease evidence before this candidate: `0.1.0a17`.
-GitHub Release target: `release/v0.1.0a18`.
+Published package version: `0.1.0a18`.
+GitHub Release: `https://github.com/GrinRus/ai_driven_dev_v2/releases/tag/v0.1.0a18`.
+PyPI: `https://pypi.org/project/ai-driven-dev-v2/0.1.0a18/`.
+Release workflow: `https://github.com/GrinRus/ai_driven_dev_v2/actions/runs/31415418286`.
 
 ## Summary
 
@@ -35,12 +36,10 @@ workflow, API, and canonical work-item model.
 - Manual live evaluation remains outside GitHub Actions, CI/CD, and release workflows.
 - AIDD remains alpha software for local evaluation and controlled operator trials; this release
   does not claim unattended production automation or beta readiness.
-- The `0.1.0a18` package must not be described as the latest accepted published prerelease
-  until the release workflow verifies the published package channels.
+- Release workflow quality, build, publish, `pipx`, and `uv tool` verification jobs passed.
 
 ## Publication checklist
 
-- Create a draft GitHub prerelease targeting `release/v0.1.0a18`.
-- Publish only after explicit maintainer approval.
-- The GitHub Release `published` workflow must pass quality, build, PyPI, `pipx`, and
-  `uv tool` verification before this candidate is described as accepted.
+- Release branch: `release/v0.1.0a18`.
+- The GitHub Release `published` workflow passed quality, build, PyPI, `pipx`, and
+  `uv tool` verification.
