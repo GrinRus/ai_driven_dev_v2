@@ -249,7 +249,9 @@
     padding-block: var(--space-6);
   }
   .studio-inbox .intent-entry-recommendation {
+    gap: var(--space-4);
     margin-bottom: var(--space-4);
+    padding: var(--space-4);
   }
 
   .studio-history,
