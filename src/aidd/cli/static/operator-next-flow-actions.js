@@ -372,7 +372,7 @@ async function openCloneFlowDraft() {
       onState: nextFlowMutationState(['[data-next-flow-action="clone-flow"]'])
     });
     if (guarded.status === "conflict") {
-      throw new Error(`A clone draft or intent already exists for ${draftRequest.new_work_item}.`);
+      throw new Error(`A clone draft or Work Item already exists for ${draftRequest.new_work_item}.`);
     }
     const payload = guarded.result;
     wizard.followUpDraft = mergeNextFlowBrowserDraft(cloneDraftFromPayload(payload), "clone-flow");
@@ -510,7 +510,7 @@ function selectedInheritedContextLines(items = [], fallbackLines = null) {
 function followUpDraftValidationErrors(draft) {
   if (state.nextFlowWizard.action !== "start-follow-up-flow") return [];
   const errors = [];
-  if (!String(draft?.new_work_item || "").trim()) errors.push("Intent id is required before preflight.");
+  if (!String(draft?.new_work_item || "").trim()) errors.push("Work Item id is required before preflight.");
   if (!String(draft?.title || "").trim()) errors.push("Title is required before preflight.");
   if (!String(draft?.first_stage_input_preview || "").trim()) errors.push("First-stage input preview is required before preflight.");
   if (!(draft?.acceptance_criteria || []).some((item) => String(item || "").trim())) {
@@ -576,7 +576,7 @@ async function createFollowUpDraftForLaunch(draft) {
     onState: nextFlowMutationState(["[data-launch-flow-now]"])
   });
   if (guarded.status === "conflict") {
-    throw new Error(`A follow-up draft or intent already exists for ${draft.new_work_item}.`);
+    throw new Error(`A follow-up draft or Work Item already exists for ${draft.new_work_item}.`);
   }
   const payload = guarded.result;
   state.nextFlowWizard.createdDraft = payload.created;

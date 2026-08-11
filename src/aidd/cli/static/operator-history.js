@@ -155,7 +155,7 @@ function renderStudioHistoryLineageCandidate(candidate, currentRunId) {
       <span class="small-badge good">${escapeHtml(candidate.relationship || "child")}</span>
       <strong>${escapeHtml(candidate.label || candidate.work_item_id)}</strong>
       <span>Source run: ${escapeHtml(candidate.source_run_id || currentRunId || "not recorded")}</span>
-      <button data-operator-route-intent="child-work-item" data-route-work-item="${escapeHtml(candidate.work_item_id)}" type="button">Open child intent</button>
+      <button data-operator-route-intent="child-work-item" data-route-work-item="${escapeHtml(candidate.work_item_id)}" type="button">Open child Work Item</button>
     </article>
   `;
 }
@@ -185,7 +185,7 @@ function renderStudioHistoryLineage() {
         <article class="lineage-node current" data-history-lineage-current="${escapeHtml(run.run_id || "")}">
           <span class="small-badge good">current</span>
           <strong>${escapeHtml(run.run_id || "No selected run")}</strong>
-          <span>${escapeHtml(state.dashboard?.work_item || "intent not recorded")}</span>
+          <span>${escapeHtml(state.dashboard?.work_item || "Work Item not recorded")}</span>
           ${run.run_id ? `<button data-operator-route-intent="historical-run" data-route-work-item="${escapeHtml(state.dashboard?.work_item || "")}" data-route-run-id="${escapeHtml(run.run_id)}" type="button">Inspect current run</button>` : ""}
         </article>
         <div class="lineage-children">

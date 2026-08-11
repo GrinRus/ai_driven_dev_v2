@@ -431,6 +431,35 @@ Every live eval bundle must aim to contain:
 - `next-flow-checkpoint.json`
 - `next-flow-checkpoint.md`
 
+### Task-flow checkpoint target contract
+
+After `W42-E7-S3-T1` enables task-aware live evidence, maintained full-flow runs that reach
+`tasklist` also publish `task-flow-checkpoint.json` schema v1 and its human-readable
+`task-flow-checkpoint.md` projection. The checkpoint is runner-owned run-integrity evidence, not a
+replacement for stage validation, manual product-quality review, or responsive UI evidence.
+
+The runner records one snapshot after the validated tasklist is published and one after Implement
+reaches aggregate finalization. Each snapshot contains:
+
+- scenario id, Work Item, run, stage, runtime, AIDD revision, and target revision;
+- the published tasklist path and SHA-256 plus task-ledger schema and source hash;
+- authored task ids/order, dependencies, persisted status, attempt count, and exact terminal
+  evidence link when one is required;
+- the core-selected next-ready task and any literal blocker;
+- aggregate finalization status, attempt count, and evidence link;
+- Review eligibility and its core-owned blocker.
+
+Collection remains black-box: the live harness may invoke installed public CLI/UI/API surfaces
+and inspect authorized durable target artifacts, but it does not import AIDD product modules from
+the source checkout or duplicate core eligibility rules. It compares the public projection with
+the retained tasklist, ledger, task attempts, and finalization evidence.
+
+A tasklist/ledger hash mismatch, missing terminal task evidence, premature finalization, invalid
+next-ready selection, or Review eligibility that disagrees with the durable aggregate commit is a
+fail-closed checkpoint classification. The checkpoint does not mutate target state and does not
+turn API reachability into UX or code-quality proof. `frontend-checkpoints.*` continues to own
+operator-surface availability; `task-flow-checkpoint.*` owns durable task execution truth.
+
 `frontend-checkpoints.md` starts with a manual visual review checklist for the launching
 agent. It names the browser checks that API probes cannot prove: visible next action and
 active stage, readable desktop/mobile topbar labels, failure-appropriate recovery primary

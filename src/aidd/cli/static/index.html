@@ -24,17 +24,17 @@
     <div class="top-context" aria-live="polite">
       <span id="topContextProject">Local Project</span>
       <span aria-hidden="true">/</span>
-      <span id="topContextIntent">Intent</span>
+      <span id="topContextIntent">Work Item</span>
       <span aria-hidden="true">/</span>
       <span id="topContextRun">Run</span>
     </div>
     <div class="top-status">
-      <span id="intentChip" class="status-chip">Intent</span>
+      <span id="intentChip" class="status-chip">Work Item</span>
       <span id="runChip" class="status-chip">Run: none</span>
       <span id="localStatus" class="status-chip good">Local control-plane connected</span>
     </div>
     <div class="top-actions">
-      <button id="newWorkItemButton" class="secondary" data-new-work-item type="button">New intent</button>
+      <button id="newWorkItemButton" class="secondary" data-new-work-item type="button">New Work Item</button>
       <details id="runtimeSettings" class="runtime-settings">
         <summary>Execution settings</summary>
         <div class="runtime-settings-fields">
@@ -58,8 +58,8 @@
   </header>
 
   <main id="operatorWorkspace" class="operator-workspace" aria-label="Operator workspace" data-aidd-scroll-owner="workspace">
-    <section id="intentContext" class="intent-context-region" aria-label="Intent context"></section>
-    <nav id="intentPhaseStepper" class="intent-phase-region" aria-label="Intent delivery phases"></nav>
+    <section id="intentContext" class="intent-context-region" aria-label="Work Item context"></section>
+    <nav id="intentPhaseStepper" class="intent-phase-region" aria-label="Work Item delivery phases"></nav>
     <section id="intentDecisionSurface" class="intent-decision-surface" aria-label="Current decision"></section>
     <section id="intentContent" class="intent-document-surface" aria-live="polite" tabindex="-1">
       <div class="empty-state loading-state">Loading operator workspace...</div>

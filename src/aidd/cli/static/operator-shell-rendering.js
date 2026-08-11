@@ -153,7 +153,7 @@ function renderRuntimeReadinessDimensions(runtime, {compact = false} = {}) {
 
 function renderProtectedWriteScope(scope = state.readiness?.protected_write_scope) {
   if (!scope) {
-    return `<div class="panel-item"><strong>Protected write scope</strong><span>Unavailable until an intent context is selected.</span></div>`;
+    return `<div class="panel-item"><strong>Protected write scope</strong><span>Unavailable until a Work Item context is selected.</span></div>`;
   }
   const prefixes = (scope.prefixes || []).join(", ") || "none authored";
   return `
@@ -214,11 +214,11 @@ function renderTopbar() {
   const runChip = document.getElementById("runChip");
   const projectRoot = dashboard.project_root || state.projectHome?.project_root || "...";
   const workItemLabel = dashboard.work_item
-    ? `Intent: ${dashboard.work_item}`
+    ? `Work Item: ${dashboard.work_item}`
     : "Project inbox";
   const runLabel = dashboard.work_item
     ? (run.run_id ? `Run: ${run.run_id}` : "Run: not started")
-    : "Choose an intent";
+    : "Choose a Work Item";
   projectPath.textContent = projectRoot;
   projectPath.title = projectRoot;
   workItemChip.textContent = workItemLabel;
@@ -229,7 +229,7 @@ function renderTopbar() {
   const topContextWorkItem = document.getElementById("topContextIntent");
   const topContextRun = document.getElementById("topContextRun");
   if (topContextProject) topContextProject.textContent = projectPath.textContent || "Local Project";
-  if (topContextWorkItem) topContextWorkItem.textContent = dashboard.work_item || "Choose an intent";
+  if (topContextWorkItem) topContextWorkItem.textContent = dashboard.work_item || "Choose a Work Item";
   if (topContextRun) topContextRun.textContent = run.run_id || "No run";
   const runtime = selectedRuntimeView();
   const ready = runtime ? runtime.provider_available && runtime.execution_command_available : false;

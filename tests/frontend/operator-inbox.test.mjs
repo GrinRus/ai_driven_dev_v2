@@ -73,7 +73,7 @@ test("Studio Inbox preserves section priority and exact durable routes", async (
   assert.match(html, /data-inbox-action="create-new-work-item"/);
 });
 
-test("Project Inbox exposes a direct new intent entry point", async () => {
+test("Project Inbox exposes a direct new Work Item entry point", async () => {
   const context = await inboxContext();
   const html = vm.runInContext(`
     state.inbox = {durable: {sections: []}, running_now: []};
@@ -81,7 +81,7 @@ test("Project Inbox exposes a direct new intent entry point", async () => {
   `, context);
 
   assert.match(html, /data-new-work-item/);
-  assert.match(html, /New intent/);
+  assert.match(html, /New Work Item/);
 });
 
 test("Project Inbox exposes one durable continue-or-create entry recommendation", async () => {
@@ -90,7 +90,7 @@ test("Project Inbox exposes one durable continue-or-create entry recommendation"
     state.inbox = {durable: {
       entry_recommendation: {
         action: "continue-existing-intent",
-        label: "Continue existing intent",
+        label: "Continue existing Work Item",
         detail: "The research brief is waiting for review.",
         work_item: "WI-7",
         route: {intent: "inbox-work-item", work_item: "WI-7", run_id: "run-7", stage: "research"}
@@ -99,8 +99,8 @@ test("Project Inbox exposes one durable continue-or-create entry recommendation"
     }, running_now: []};
     renderStudioInbox();
   `, context);
-  assert.match(html, /Continue existing intent/);
-  assert.match(html, /New intent/);
+  assert.match(html, /Continue existing Work Item/);
+  assert.match(html, /New Work Item/);
   assert.match(html, /data-route-work-item="WI-7"/);
   assert.match(html, /research/);
 });

@@ -30,7 +30,7 @@ test("every visible navigation action resolves to one canonical route outcome", 
     ["inbox-work-item", {workItem: "WI-001"}, "Open in Studio", "studio", ""],
     ["historical-run", {workItem: "WI-001", runId: "run-2"}, "Inspect run history", "history", "run-2"],
     ["parent-run", {workItem: "WI-000", runId: "run-1"}, "Inspect parent run", "history", "run-1"],
-    ["child-work-item", {workItem: "WI-002"}, "Open child intent", "studio", ""],
+    ["child-work-item", {workItem: "WI-002"}, "Open child Work Item", "studio", ""],
     ["run-artifacts", {workItem: "WI-001", runId: "run-2"}, "Inspect run artifacts", "studio", "run-2"],
   ];
   for (const [intent, input, label, mode, runId] of cases) {
@@ -77,11 +77,11 @@ test("unsafe and incomplete route intents fail closed", async () => {
   );
   assert.throws(
     () => vm.runInContext('resolveOperatorRouteIntent("child-work-item", {workItem: ".."})', context),
-    /safe intent/,
+    /safe Work Item/,
   );
   assert.throws(
     () => vm.runInContext('resolveOperatorRouteIntent("surprise", {workItem: "WI-1"})', context),
-    /Unknown operator route intent/,
+    /Unknown operator route/,
   );
 });
 

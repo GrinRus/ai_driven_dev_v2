@@ -17,7 +17,7 @@ def test_legacy_stage_renderer_does_not_recreate_removed_shell_regions(
         page = browser_page.page
         page.set_content(
             f"""
-            <nav id="intentPhaseStepper" aria-label="Intent delivery phases"></nav>
+            <nav id="intentPhaseStepper" aria-label="Work Item delivery phases"></nav>
             <script src="{harness.url}operator-api-state.js"></script>
             <script src="{harness.url}operator-shell-rendering.js"></script>
             """,
