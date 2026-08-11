@@ -13957,8 +13957,17 @@ Touched areas:
 
 - `src/aidd/core/operator_inbox.py`
 - `src/aidd/core/operator_frontend_models.py`
+- `src/aidd/cli/static/index.html`
 - `src/aidd/cli/static/operator-main.js`
+- `src/aidd/cli/static/operator-inbox.js`
+- `src/aidd/cli/static/operator-active-studio.js`
+- `src/aidd/cli/static/operator-shell-rendering.js`
 - `src/aidd/cli/static/operator-onboarding.js`
+- `src/aidd/cli/static/operator-route-intents.js`
+- `src/aidd/cli/static/operator-history.js`
+- `src/aidd/cli/static/operator-next-flow-view.js`
+- `src/aidd/cli/static/operator-next-flow-actions.js`
+- `src/aidd/cli/static/operator-dashboard-actions.js`
 - `src/aidd/cli/static/operator-components.css`
 - `src/aidd/cli/static/operator-responsive.css`
 - core, CLI, and frontend contract tests
@@ -13967,14 +13976,14 @@ Dependencies: `W42-E1`.
 
 Local tasks:
 
-- `W42-E2-S1-T1` (next) Replace primary `Intent` presentation with literal Work Item and Task
+- `W42-E2-S1-T1` (done) Replace primary `Intent` presentation with literal Work Item and Task
   vocabulary.
   - Scope: core-emitted and static visible labels, accessible names, headings, route titles, and
     copy assertions only; preserve `work_item` ids, request paths, API shapes, internal
     compatibility fields, and historical evidence text.
   - Verification: focused core/static copy tests reject `Intent` as a navigation noun while
     technical disclosures and canonical identifiers remain accessible.
-- `W42-E2-S1-T2` (soon) Publish core-owned Work Item attention groups and deterministic ordering.
+- `W42-E2-S1-T2` (next) Publish core-owned Work Item attention groups and deterministic ordering.
   - Scope: extend the existing `OperatorInboxView` with Needs input, Running, Ready, and Complete,
     canonical-stage/Work-Item ordering, and one entry recommendation; failed/stale terminal state
     is not Complete and active `wait-for-stage` work is not omitted.

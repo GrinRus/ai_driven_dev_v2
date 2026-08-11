@@ -42,7 +42,7 @@ function reduceGuidedSetupState(current, event, payload = {}) {
     const branch = String(payload.branch || "");
     const workItem = String(payload.workItem || "").trim();
     if (guided.projectStatus !== "valid" || !["create", "resume"].includes(branch) || !workItem) {
-      return Object.freeze({...guided, error: "Select a valid create or resume intent."});
+      return Object.freeze({...guided, error: "Select a valid create or resume Work Item."});
     }
     return Object.freeze({
       ...guided,
@@ -112,7 +112,7 @@ function guidedDeliveryExplanation(guided = state.onboarding.guided) {
   const step = guided?.step || "project";
   const explanations = {
     project: ["Confirm the project boundary", "Validate the local workspace before choosing delivery context."],
-    "work-item": ["Choose durable intent context", "Create a new request or resume saved evidence without launching runtime work."],
+    "work-item": ["Choose durable Work Item context", "Create a new request or resume saved evidence without launching runtime work."],
     runtime: ["Choose the execution runtime", "Review observed runtime readiness before a launch request is dispatched."],
     "review-launch": ["Review and launch", "Confirm the selected context, then use the same guarded service action as Studio."]
   };
@@ -146,7 +146,7 @@ function renderGuidedDeliveryPreference() {
 function renderGuidedSetupProgress(guided = state.onboarding.guided || initialGuidedSetupState()) {
   const labels = [
     ["project", "Project"],
-    ["work-item", "Intent"],
+    ["work-item", "Work Item"],
     ["runtime", "Runtime"],
     ["review-launch", "Review & Launch"]
   ];
@@ -176,7 +176,7 @@ function renderGuidedSetupSummary(guided = state.onboarding.guided || initialGui
       <div class="surface-title"><span>Setup summary</span><span class="small-badge">selected context</span></div>
       <dl>
         <div><dt>Project</dt><dd>${escapeHtml(project?.project_root || state.onboarding.projectRootInput || "Local project")}</dd></div>
-        <div><dt>Intent</dt><dd>${escapeHtml(guided.workItem || "Choose an intent")}</dd></div>
+        <div><dt>Work Item</dt><dd>${escapeHtml(guided.workItem || "Choose a Work Item")}</dd></div>
       </dl>
     </section>
   `;
@@ -301,8 +301,8 @@ function onboardingRecentProjects() {
 function onboardingWorkItems() {
   const project = onboardingProject();
   const items = project?.work_items || [];
-  if (!project) return `<div class="empty-state">Validate a project to discover intents.</div>`;
-  if (!items.length) return `<div class="empty-state">No intents in this project yet.</div>`;
+  if (!project) return `<div class="empty-state">Validate a project to discover Work Items.</div>`;
+  if (!items.length) return `<div class="empty-state">No Work Items in this project yet.</div>`;
   return items.map((item) => `
     <button class="artifact-row" data-onboarding-resume="${escapeHtml(item.work_item)}" type="button">
       <span>
@@ -457,17 +457,17 @@ function renderProjectWorkItemCreator() {
   return `
     <section class="surface project-work-item-creator" data-project-work-item-creator>
       <div class="surface-title">
-        <span>New intent</span>
+        <span>New Work Item</span>
         <button class="link-button" data-cancel-new-work-item type="button">Cancel</button>
       </div>
       <p class="muted">Capture the request now. Runtime selection happens only when you start delivery.</p>
       <form id="projectNewWorkItemForm" class="form-grid">
-        <label class="field-label" for="projectNewWorkItem">Intent id</label>
+        <label class="field-label" for="projectNewWorkItem">Work Item id</label>
         <input id="projectNewWorkItem" name="work_item" type="text" maxlength="120" value="${escapeHtml(state.onboarding.workItemInput)}" autocomplete="off" spellcheck="false" placeholder="WI-123">
         <label class="field-label" for="projectNewRequest">Request</label>
-        <textarea id="projectNewRequest" name="request" rows="5" maxlength="20000" placeholder="What should this intent deliver?">${escapeHtml(state.onboarding.requestText)}</textarea>
+        <textarea id="projectNewRequest" name="request" rows="5" maxlength="20000" placeholder="What should this Work Item deliver?">${escapeHtml(state.onboarding.requestText)}</textarea>
         <div class="setup-actions">
-          <button type="submit" ${canCreate ? "" : "disabled"}>${state.onboarding.creating ? "Creating..." : "Create intent"}</button>
+          <button type="submit" ${canCreate ? "" : "disabled"}>${state.onboarding.creating ? "Creating..." : "Create Work Item"}</button>
           ${state.onboarding.createError ? `<span class="form-error">${escapeHtml(state.onboarding.createError)}</span>` : ""}
         </div>
       </form>
@@ -538,14 +538,14 @@ function renderOnboarding() {
 
       <section class="surface onboarding-panel">
         <div class="surface-title">
-          <span>Intent</span>
+          <span>Work Item</span>
           <span class="small-badge">create or resume</span>
         </div>
         <div class="onboarding-work-item-branches">
           <article class="onboarding-work-item-branch" data-onboarding-work-item-branch="create">
             <div class="surface-title compact"><span>Create</span><span class="small-badge">new context</span></div>
             <form id="onboardingCreateForm" class="form-grid">
-            <label class="field-label" for="onboardingWorkItem">Intent id</label>
+            <label class="field-label" for="onboardingWorkItem">Work Item id</label>
               <input id="onboardingWorkItem" name="work_item" type="text" maxlength="120" value="${escapeHtml(state.onboarding.workItemInput)}" autocomplete="off" spellcheck="false">
               <label class="field-label" for="onboardingRequest">Request</label>
               <textarea id="onboardingRequest" name="request" rows="7" maxlength="20000">${escapeHtml(state.onboarding.requestText)}</textarea>
@@ -561,7 +561,7 @@ function renderOnboarding() {
           </article>
           <article class="onboarding-work-item-branch" data-onboarding-work-item-branch="resume">
             <div class="surface-title compact"><span>Resume</span><span class="small-badge">inspect context</span></div>
-            <p class="muted">Open saved intent context now; runtime selection and launch remain separate actions.</p>
+            <p class="muted">Open saved Work Item context now; runtime selection and launch remain separate actions.</p>
             <div class="panel-list">${onboardingWorkItems()}</div>
           </article>
         </div>
@@ -703,7 +703,7 @@ async function completeOnboardingWorkItem(action, workItem) {
     document.getElementById("openWorkspaceButton").disabled = false;
     await refresh();
   } catch (error) {
-    state.onboarding.createError = error.message || "intent setup failed";
+    state.onboarding.createError = error.message || "Work Item setup failed";
   } finally {
     state.onboarding.creating = false;
     if (state.onboarding.setupRequired) renderOnboarding();
@@ -729,7 +729,7 @@ async function closeProjectWorkItemCreation() {
 
 async function createProjectWorkItem() {
   if (!projectWorkItemCanCreate()) {
-    state.onboarding.createError = "Intent id and request are required.";
+    state.onboarding.createError = "Work Item id and request are required.";
     await renderCockpit();
     return;
   }
@@ -754,7 +754,7 @@ async function createProjectWorkItem() {
     syncLocationState({historyMode: "push"});
     await refresh();
   } catch (error) {
-    state.onboarding.createError = error.message || "intent creation failed";
+    state.onboarding.createError = error.message || "Work Item creation failed";
   } finally {
     state.onboarding.creating = false;
     if (state.onboarding.createPanelOpen) await renderCockpit();

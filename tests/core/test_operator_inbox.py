@@ -70,6 +70,7 @@ def test_inbox_projection_has_stable_sections_and_exact_identity(tmp_path: Path)
     assert item.primary_action.action == "choose-runtime"
     assert inbox.entry_recommendation is not None
     assert inbox.entry_recommendation.action == "continue-existing-intent"
+    assert inbox.entry_recommendation.label == "Continue existing Work Item"
     assert inbox.entry_recommendation.work_item == "WI-READY"
 
 

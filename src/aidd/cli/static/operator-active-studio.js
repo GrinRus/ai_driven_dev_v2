@@ -56,7 +56,7 @@ function renderIntentPhaseStepper() {
     ? state.dashboard.phases
     : INTENT_PHASES.map((phase) => ({...phase, phase_id: phase.id}));
   return `
-    <section class="surface intent-phase-stepper" data-intent-phase-stepper aria-label="Intent delivery phases">
+    <section class="surface intent-phase-stepper" data-intent-phase-stepper aria-label="Work Item delivery phases">
       <div class="surface-title"><span>Delivery path</span><span class="small-badge">4 phases</span></div>
       <ol class="intent-phase-list">
         ${phases.map((phase, index) => {
@@ -85,7 +85,7 @@ function renderActiveStudioContextBar(studioState, item) {
   return `
     <header class="surface studio-context-bar" data-studio-context-bar>
       <div>
-        <p class="eyebrow">Intent Workspace</p>
+        <p class="eyebrow">Work Item Workspace</p>
         <h2>${escapeHtml(intentExcerpt)}</h2>
         <p class="muted">${escapeHtml(currentPhase?.label || "Capture")} · ${escapeHtml(activeStudioStateLabel(studioState, item))}</p>
       </div>

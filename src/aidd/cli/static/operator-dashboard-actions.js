@@ -134,7 +134,7 @@ async function guardedJobLaunch({kind, components, controls, execute}) {
 
 async function startWorkflow() {
   if (state.onboarding?.setupRequired || !state.dashboard?.work_item) {
-    toast("Create or resume an intent before starting the workflow.");
+    toast("Create or resume a Work Item before starting the workflow.");
     return;
   }
   if (!ensureRunnableRuntime()) return;
@@ -163,7 +163,7 @@ async function startStage(stage = state.activeStage) {
 async function dispatchTaskAwareLaunch(intent, stage = state.activeStage) {
   if (intent === "workflow") return startWorkflow();
   if (intent === "stage") return startStage(stage);
-  throw new Error(`Unsupported launch intent: ${intent || "missing"}`);
+  throw new Error(`Unsupported launch action: ${intent || "missing"}`);
 }
 
 async function startImplementationTask(taskId) {

@@ -30,7 +30,7 @@ async function contextFor(dashboard) {
   return context;
 }
 
-test("active Studio preserves intent, phase, and status context", async () => {
+test("active Studio preserves Work Item, phase, and status context", async () => {
   const context = await contextFor({
     work_item: "WI-1",
     run: {run_id: "run-1"},
@@ -43,7 +43,7 @@ test("active Studio preserves intent, phase, and status context", async () => {
   for (const value of ["idea", "Stage running"]) {
     assert.match(html, new RegExp(value));
   }
-  assert.match(html, /Intent Workspace/);
+  assert.match(html, /Work Item Workspace/);
   assert.doesNotMatch(html, /<dt>Work item<\/dt>/);
   assert.doesNotMatch(html, /<dt>Run<\/dt>/);
   for (const phase of ["Understand", "Decide", "Deliver", "Prove"]) {

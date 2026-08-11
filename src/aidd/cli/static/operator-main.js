@@ -30,10 +30,10 @@ async function refresh() {
         await fetchOnboardingState();
         selectedWorkItem = state.onboarding.contextWorkItem;
         if (selectedWorkItem !== route.workItem) {
-          throw new Error("The requested intent was not restored.");
+          throw new Error("The requested Work Item was not restored.");
         }
       } catch (error) {
-        routeRestoreError = error.message || "The requested intent could not be restored.";
+        routeRestoreError = error.message || "The requested Work Item could not be restored.";
       }
     }
     if (!selectedWorkItem || routeRestoreError) {

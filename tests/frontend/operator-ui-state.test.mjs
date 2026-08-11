@@ -1138,7 +1138,7 @@ test("next-flow view renders terminal and readiness states without network mutat
   const followUpHtml = vm.runInContext("renderStudioNextFlowWizard()", context);
   assert.match(followUpHtml, /data-studio-next-flow-action="start-follow-up-flow"/);
   assert.match(followUpHtml, /run-ui/);
-  assert.match(followUpHtml, /Continue to Define intent/);
+  assert.match(followUpHtml, /Continue to Define Work Item/);
   vm.runInContext('state.nextFlowWizard.action = "clone-flow"', context);
   const cloneHtml = vm.runInContext("renderStudioNextFlowWizard()", context);
   assert.match(cloneHtml, /data-studio-next-flow-action="clone-flow"/);

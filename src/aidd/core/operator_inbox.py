@@ -105,7 +105,7 @@ def _entry_recommendation(
         if candidate is not None:
             return OperatorInboxEntryRecommendation(
                 action="continue-existing-intent",
-                label="Continue existing intent",
+                label="Continue existing Work Item",
                 detail=candidate.summary,
                 work_item=candidate.route.work_item,
                 route=candidate.route,
@@ -115,11 +115,11 @@ def _entry_recommendation(
     )
     return OperatorInboxEntryRecommendation(
         action="create-new-intent",
-        label="Create new intent",
+        label="Create new Work Item",
         detail=(
-            "Current intents are complete. Start a separate intent for new work."
+            "Current Work Items are complete. Start a separate Work Item for new work."
             if has_completed
-            else "No active intent is waiting. Capture the outcome you want to deliver."
+            else "No active Work Item is waiting. Capture the outcome you want to deliver."
         ),
     )
 

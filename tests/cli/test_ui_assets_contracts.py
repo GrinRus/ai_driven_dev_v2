@@ -219,13 +219,15 @@ def test_operator_html_exposes_intent_workspace_without_legacy_shell_regions() -
         assert legacy not in _INDEX_HTML
 
 
-def test_visible_operator_vocabulary_uses_intent_and_keeps_work_item_technical() -> None:
+def test_visible_operator_vocabulary_uses_work_item_and_keeps_compatibility_identifiers() -> None:
     html = _asset_text("/")
     bundle = _js_bundle()
 
-    assert "Work item" not in html
-    for visible_marker in (">Work item<", "Work item:", "New work item", "Choose a work item"):
-        assert visible_marker not in bundle
+    assert "Work Item" in html
+    for visible_marker in (">Work Item<", "Work Item:", "New Work Item", "Choose a Work Item"):
+        assert visible_marker in bundle
+    assert "Intent Workspace" not in bundle
+    assert "New intent" not in bundle
     assert "work_item" in bundle
 
 
@@ -1832,7 +1834,7 @@ def test_operator_next_flow_wizard_static_contract_covers_controls_and_preflight
             "data-source-selection-mode",
             "data-close-next-flow-wizard",
             "data-next-flow-continue",
-            "Continue to Define intent",
+            "Continue to Define Work Item",
             "data-next-flow-back-to-sources",
             "data-next-flow-confirm-preview",
             "data-next-flow-back-to-definition",

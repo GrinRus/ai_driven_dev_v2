@@ -58,19 +58,19 @@ function renderStudioEntryRecommendation(inbox) {
       (candidate) => candidate.work_item === recommendation.work_item
     )
     : null;
-  const intentText = projectItem?.intent?.excerpt || recommendation?.detail || "";
+  const workItemText = projectItem?.intent?.excerpt || recommendation?.detail || "";
   const actionMarkup = recommendation?.action === "continue-existing-intent" && recommendation.route
-    ? `<button ${inboxRouteAttributes(recommendation.route)} data-inbox-action="continue-existing-intent" type="button">${escapeHtml(recommendation.label || "Continue existing intent")}</button>`
-    : `<button data-new-work-item type="button">${escapeHtml(recommendation?.label || "Create new intent")}</button>`;
+    ? `<button ${inboxRouteAttributes(recommendation.route)} data-inbox-action="continue-existing-intent" type="button">${escapeHtml(recommendation.label || "Continue existing Work Item")}</button>`
+    : `<button data-new-work-item type="button">${escapeHtml(recommendation?.label || "Create new Work Item")}</button>`;
   const secondaryAction = recommendation?.action === "continue-existing-intent"
-    ? `<button data-new-work-item class="secondary" type="button">New intent</button>`
+    ? `<button data-new-work-item class="secondary" type="button">New Work Item</button>`
     : "";
   return `
     <section class="surface intent-entry-recommendation" data-intent-entry-recommendation="${escapeHtml(recommendation?.action || "create-new-intent")}">
       <div class="intent-entry-copy">
         <p class="eyebrow">Returning to this project</p>
-        <h2>${escapeHtml(recommendation?.label || "Create new intent")}</h2>
-        <p>${escapeHtml(intentText)}</p>
+        <h2>${escapeHtml(recommendation?.label || "Create new Work Item")}</h2>
+        <p>${escapeHtml(workItemText)}</p>
         ${recommendation?.work_item ? `<span class="small-badge">${escapeHtml(recommendation.work_item)}</span>` : ""}
       </div>
       <div class="intent-entry-actions">
@@ -128,11 +128,11 @@ function renderStudioInbox() {
         <div>
           <p class="eyebrow">Inbox</p>
           <h2>Project inbox</h2>
-          <p class="muted">Choose the intent that needs attention, or create one before selecting a runtime.</p>
+          <p class="muted">Choose the Work Item that needs attention, or create one before selecting a runtime.</p>
         </div>
         <div class="studio-inbox-actions">
           <span class="small-badge">${escapeHtml(count)} items</span>
-          <button data-new-work-item aria-label="New intent" type="button">New intent</button>
+          <button data-new-work-item aria-label="New Work Item" type="button">New Work Item</button>
         </div>
       </header>
       ${renderStudioEntryRecommendation(state.inbox)}

@@ -2,22 +2,22 @@ const OPERATOR_ROUTE_INTENTS = Object.freeze({
   "inbox-work-item": Object.freeze({label: "Open in Studio", mode: "studio", view: "overview"}),
   "historical-run": Object.freeze({label: "Inspect run history", mode: "history", view: "overview"}),
   "parent-run": Object.freeze({label: "Inspect parent run", mode: "history", view: "overview"}),
-  "child-work-item": Object.freeze({label: "Open child intent", mode: "studio", view: "overview"}),
+  "child-work-item": Object.freeze({label: "Open child Work Item", mode: "studio", view: "overview"}),
   "run-artifacts": Object.freeze({label: "Inspect run artifacts", mode: "studio", view: "artifacts"})
 });
 
 function routeIntentIdentifier(value, field) {
   const normalized = String(value || "").trim();
   if (!OPERATOR_ROUTE_IDENTIFIER.test(normalized) || normalized === "." || normalized === "..") {
-    throw new Error(`Route intent requires a safe ${field}`);
+    throw new Error(`Route context requires a safe ${field}`);
   }
   return normalized;
 }
 
 function resolveOperatorRouteIntent(intent, context = {}) {
   const definition = OPERATOR_ROUTE_INTENTS[intent];
-  if (!definition) throw new Error(`Unknown operator route intent: ${intent || "empty"}`);
-  const workItem = routeIntentIdentifier(context.workItem, "intent");
+  if (!definition) throw new Error(`Unknown operator route: ${intent || "empty"}`);
+  const workItem = routeIntentIdentifier(context.workItem, "Work Item");
   const needsRun = ["historical-run", "parent-run", "run-artifacts"].includes(intent);
   const acceptsRun = needsRun || intent === "inbox-work-item";
   const runId = acceptsRun && context.runId

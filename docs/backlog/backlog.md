@@ -7,12 +7,10 @@ slice, and local task.
 
 ## Next
 
-- `W42-E2-S1-T1` — Replace primary `Intent` presentation with literal Work Item and Task
-  vocabulary.
+- `W42-E2-S1-T2` — Publish core-owned Work Item attention groups and deterministic ordering.
 
 ## Soon
 
-- `W42-E2-S1-T2` — Publish core-owned Work Item attention groups and deterministic ordering.
 
 ## Parking lot
 
@@ -46,8 +44,8 @@ slice, and local task.
   progression-required repair, and one-extension invariants are frozen in target architecture;
   the remaining tasks implement and verify them across contracts, core, adapters, validators,
   CLI, frontend, scenarios, and comparative evals. Wave 42 remains the active queue; only evidence
-  task `W43-E1-S1-T1` is parked and ready so the new track does not silently displace
-  `W42-E2-S1-T1`.
+  task `W43-E1-S1-T1` is parked and ready so the new track does not silently displace the active
+  Wave 42 Inbox work.
 
 - `2026-08-11` Wave 42 is accepted as the task-centered Operator UI correction. Its normative
   contract defines `Project -> Work Item -> Stage -> Task/Decision -> Run/Attempt ->
@@ -55,8 +53,9 @@ slice, and local task.
   generated documents, Work Item/Runner/Task state matrices, compatibility/cutover boundaries,
   schema-v1 task-flow live evidence, 13 target screens, and responsive acceptance. Contract and
   visual-authority tasks `W42-E1-S1-T1` and `W42-E1-S2-T1` are complete. The next implementation
-  task remains the bounded vocabulary correction `W42-E2-S1-T1`; core-owned attention groups
-  `W42-E2-S1-T2` follow, then separate frontend rendering `W42-E2-S1-T4`.
+  vocabulary correction `W42-E2-S1-T1` is complete with compatibility identifiers preserved;
+  core-owned attention groups `W42-E2-S1-T2` are now next, followed by separate frontend
+  rendering `W42-E2-S1-T4`.
 
 - `2026-08-10` W40-E1-S4 (including T3), W41-E1-S2, and W36-E7-S4-T94 are complete. The packaged UI uses one
   `operatorWorkspace` scroll owner with Intent context, a four-phase stepper, one current
