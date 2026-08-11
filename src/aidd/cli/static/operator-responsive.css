@@ -449,6 +449,9 @@
   body .top-status #intentChip {
     flex: none;
     min-height: var(--control-height-touch);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
     padding: 0 4px;
   }
   .project-home-tabs button {
