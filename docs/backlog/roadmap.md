@@ -13965,13 +13965,13 @@ Dependencies: `W42-E1`.
 
 Local tasks:
 
-- `W42-E2-S1-T1` (planned) Replace primary `Intent` presentation with literal Work Item and Task
+- `W42-E2-S1-T1` (next) Replace primary `Intent` presentation with literal Work Item and Task
   vocabulary.
   - Scope: visible labels, accessible names, headings, route titles, and copy assertions only;
     preserve `work_item` ids, request paths, API shapes, and historical evidence text.
   - Verification: focused static copy tests reject `Intent` as a navigation noun while technical
     disclosures and canonical identifiers remain accessible.
-- `W42-E2-S1-T2` (planned) Render project Work Items in core-prioritized attention groups.
+- `W42-E2-S1-T2` (soon) Render project Work Items in core-prioritized attention groups.
   - Scope: project list composition for Needs input, Running, Ready, and Complete plus one selected
     contextual inspector; do not duplicate priority or mutate status in the browser.
   - Verification: provider-free fixtures prove deterministic group order, selection persistence,
