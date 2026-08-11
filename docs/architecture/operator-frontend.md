@@ -5,7 +5,9 @@ Document status:
 - sections 1 through 7 define workflow invariants, write boundaries, compatibility surfaces,
   and the shared application-service boundary;
 - sections 8 and 9 define the implemented Document & Evidence Studio information architecture,
-  presentation contract, reference screens, and acceptance criteria;
+  presentation contract, and compatibility baseline;
+- [Target Operator Experience](operator-frontend-target-ux.md) defines the accepted Wave 42
+  interaction hierarchy, Markdown behavior, task workspace, and replacement visual references;
 - Mission Control, cockpit, right-rail, bottom-dock, and Work / Recovery / Evidence / History
   presentation terminology is historical and non-normative. Its service, artifact, safety, and
   workflow invariants remain binding where explicitly retained below.
@@ -34,6 +36,11 @@ The UI uses **Intent** as a bounded presentation label for an existing work item
 its `context/user-request.md`; it does not add an `intent.md` artifact, a second id, or
 a new lifecycle. The read model may expose a short, bounded request excerpt and its
 known source path, while the full Markdown remains in the Document Canvas.
+
+This describes the implemented compatibility baseline. Wave 42 replaces `Intent` as a primary
+navigation noun with the literal `Work Item` and `Task` vocabulary defined in
+[Target Operator Experience](operator-frontend-target-ux.md), without changing canonical ids or
+the request artifact.
 
 The canonical eight stages remain the progression authority and are grouped only for
 navigation:
@@ -1029,54 +1036,36 @@ share anatomy and semantics; they do not create separate action paths.
 
 ### 8.14 Visual references
 
-The accepted reference set is stored in
-`docs/architecture/assets/operator-ui-document-evidence-studio/`:
+The accepted replacement set is stored in
+`docs/architecture/assets/operator-ui-target-v2/` and is governed by
+[Target Operator Experience](operator-frontend-target-ux.md):
 
-1. `01-inbox-desktop.png` — the decision-first project entry.
-2. `02-guided-setup-desktop.png` — the four-step first-run setup.
-3. `03-active-studio-desktop.png` — the default document-centered live workspace.
-4. `04-validation-repair-desktop.png` — exact validator finding and repair action.
-5. `05-quality-gate-desktop.png` — implementation/review/QA evidence and remediation.
-6. `06-history-filmstrip-desktop.png` — attempt history, selected evidence, and lineage.
-7. `07-flow-complete-desktop.png` — immutable handoff and one recommended next outcome.
-8. `08-question-mobile.png` — compact mobile context and first-viewport human decision.
+1. `01-project-work-items.png` — grouped project work and selected next action.
+2. `02-create-work-item.png` — operator-request Markdown authoring without premature Runner choice.
+3. `03-work-item-launch.png` — request review, explicit Runner, readiness, and launch.
+4. `04-task-workspace.png` — dependency-aware task list and selected-task action.
+5. `05-active-task-run.png` — factual active-attempt observation and live output.
+6. `06-decision-workbench.png` — bounded question resolution with source evidence.
+7. `07-validation-repair.png` — anchored validation finding and exact repair semantics.
+8. `08-markdown-workspace.png` — read-only canonical Markdown and controlled change request.
+9. `09-implementation-review.png` — repository diff, claims, verification, and Review launch.
+10. `10-review-qa-remediation.png` — selected findings and Markdown remediation request.
+11. `11-run-history.png` — retained attempts, exact timeline, artifacts, and lineage.
+12. `12-flow-complete.png` — immutable handoff and recommended next outcome.
+13. `13-mobile-decision.png` — first-viewport mobile blocking decision.
 
-#### Inbox
+Representative references:
 
-![Decision-first Inbox](assets/operator-ui-document-evidence-studio/01-inbox-desktop.png)
+![Task-centered workspace](assets/operator-ui-target-v2/04-task-workspace.png)
 
-#### Guided Setup
+![Read-only Markdown workspace](assets/operator-ui-target-v2/08-markdown-workspace.png)
 
-![Four-step Guided Setup](assets/operator-ui-document-evidence-studio/02-guided-setup-desktop.png)
-
-#### Active Studio
-
-![Document-centered active Studio](assets/operator-ui-document-evidence-studio/03-active-studio-desktop.png)
-
-#### Validation recovery
-
-![Validation finding and repair](assets/operator-ui-document-evidence-studio/04-validation-repair-desktop.png)
-
-#### Quality gate
-
-![Review evidence and remediation](assets/operator-ui-document-evidence-studio/05-quality-gate-desktop.png)
-
-#### History Filmstrip
-
-![Attempt history and selected evidence](assets/operator-ui-document-evidence-studio/06-history-filmstrip-desktop.png)
-
-#### Flow Complete
-
-![Immutable handoff and next outcome](assets/operator-ui-document-evidence-studio/07-flow-complete-desktop.png)
-
-#### Mobile question
-
-![First-viewport mobile decision](assets/operator-ui-document-evidence-studio/08-question-mobile.png)
+![First-viewport mobile decision](assets/operator-ui-target-v2/13-mobile-decision.png)
 
 These are hierarchy and interaction references, not pixel-perfect implementation fixtures.
-If generated text conflicts with this contract, the written contract wins.
-The shared visual brief and per-screen generation prompts are preserved in
-`docs/architecture/assets/operator-ui-document-evidence-studio/generation-prompts.md`.
+Generated text is illustrative; the written target contract and service semantics win. The
+shared brief and per-screen prompts are preserved in
+`docs/architecture/assets/operator-ui-target-v2/generation-prompts.md`.
 
 ### 8.15 Risks and locked decisions
 
