@@ -565,11 +565,16 @@ Inbox requires a separate safe context registry and is outside this contract.
 Inbox is a bounded decision queue, not an activity feed or a dashboard of every available
 metric. Its ordered sections are:
 
-1. **Needs your decision** — blocking question, runtime approval, validation or runtime
+1. **Needs input** — blocking question, runtime approval, validation or runtime
    failure, repair exhaustion, or remediation decision.
-2. **Running now** — active jobs, last output age, silence warning, and reconnect state.
-3. **Ready to continue** — an eligible stage or task, or stale downstream rerun.
-4. **Flow complete** — terminal QA handoff and the recommended next-flow decision.
+2. **Running** — active workflow, stage, task, finalization, remediation, or rerun work.
+3. **Ready** — an eligible stage or task, or stale downstream rerun.
+4. **Complete** — a fresh terminal QA handoff and the recommended next-flow decision. Failed
+   or stale terminal state is never Complete.
+
+The core-owned `OperatorInboxView` determines membership, canonical-stage/Work-Item ordering,
+and the entry recommendation. Active `wait-for-stage` work remains in Running; the browser does
+not omit, reorder, or reinterpret these groups.
 
 Each item shows the work-item/run/stage breadcrumb, factual state, timestamp, one primary
 action, one **View evidence** action, and runtime or attempt identity when relevant. Blocking

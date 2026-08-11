@@ -7,7 +7,7 @@ slice, and local task.
 
 ## Next
 
-- `W42-E2-S1-T2` — Publish core-owned Work Item attention groups and deterministic ordering.
+- `W42-E2-S1-T4` — Render core-owned Work Item attention groups and selected context.
 
 ## Soon
 
@@ -53,9 +53,9 @@ slice, and local task.
   generated documents, Work Item/Runner/Task state matrices, compatibility/cutover boundaries,
   schema-v1 task-flow live evidence, 13 target screens, and responsive acceptance. Contract and
   visual-authority tasks `W42-E1-S1-T1` and `W42-E1-S2-T1` are complete. The next implementation
-  vocabulary correction `W42-E2-S1-T1` is complete with compatibility identifiers preserved;
-  core-owned attention groups `W42-E2-S1-T2` are now next, followed by separate frontend
-  rendering `W42-E2-S1-T4`.
+  vocabulary correction `W42-E2-S1-T1` and core-owned attention groups `W42-E2-S1-T2` are
+  complete with compatibility identifiers preserved; separate frontend rendering
+  `W42-E2-S1-T4` is now next.
 
 - `2026-08-10` W40-E1-S4 (including T3), W41-E1-S2, and W36-E7-S4-T94 are complete. The packaged UI uses one
   `operatorWorkspace` scroll owner with Intent context, a four-phase stepper, one current

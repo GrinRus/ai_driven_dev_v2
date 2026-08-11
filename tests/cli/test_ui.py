@@ -403,9 +403,10 @@ def test_ui_inbox_endpoint_composes_durable_and_running_state(tmp_path: Path) ->
     initial = _payload(service.handle_get("/api/inbox", {}))
     inbox = initial["inbox"]
     assert [section["key"] for section in inbox["durable"]["sections"]] == [  # type: ignore[index]
-        "needs-decision",
-        "ready-to-continue",
-        "flow-complete",
+        "needs-input",
+        "running",
+        "ready",
+        "complete",
     ]
     assert inbox["running_now"] == []  # type: ignore[index]
 
@@ -1869,9 +1870,10 @@ def test_ui_existing_workspace_reopens_project_inbox_without_selecting_work_item
 
     inbox = _payload(service.handle_get("/api/inbox", {}))["inbox"]
     assert [section["key"] for section in inbox["durable"]["sections"]] == [  # type: ignore[index]
-        "needs-decision",
-        "ready-to-continue",
-        "flow-complete",
+        "needs-input",
+        "running",
+        "ready",
+        "complete",
     ]
 
     dashboard = service.handle_get("/api/dashboard", {})

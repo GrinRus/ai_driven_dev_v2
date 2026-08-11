@@ -9,7 +9,7 @@ import tomllib
 from collections import deque
 from collections.abc import Callable, Mapping
 from concurrent.futures import ThreadPoolExecutor, as_completed
-from dataclasses import dataclass, field, replace
+from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from http import HTTPStatus
 from http.server import ThreadingHTTPServer
@@ -86,7 +86,6 @@ from aidd.core.onboarding import (
     OnboardingWorkItemSummary,
 )
 from aidd.core.operator_frontend import (
-    OperatorInboxEntryRecommendation,
     OperatorInboxRoute,
     OperatorInboxView,
     persist_operator_answer,
@@ -330,28 +329,7 @@ def compose_operator_inbox_with_jobs(
             )
         )
     running_now = tuple(running[-max_running_jobs:])
-    recommendation = inbox.entry_recommendation
-    running_candidate = next((item for item in running_now if item.route is not None), None)
-    running_route = running_candidate.route if running_candidate is not None else None
-    if (
-        recommendation is not None
-        and recommendation.action == "create-new-intent"
-        and running_candidate is not None
-        and running_route is not None
-    ):
-        recommendation = OperatorInboxEntryRecommendation(
-            action="continue-existing-intent",
-            label="Continue existing intent",
-            detail=running_candidate.message or "A runtime is currently executing this intent.",
-            work_item=running_route.work_item,
-            route=running_route,
-        )
-    durable = (
-        replace(inbox, entry_recommendation=recommendation)
-        if recommendation is not inbox.entry_recommendation
-        else inbox
-    )
-    return UiInboxComposition(durable=durable, running_now=running_now)
+    return UiInboxComposition(durable=inbox, running_now=running_now)
 
 
 class UiRunJobStore:
