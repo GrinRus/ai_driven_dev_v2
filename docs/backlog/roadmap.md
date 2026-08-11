@@ -14307,6 +14307,31 @@ Local tasks:
   - Verification: evidence records completion, wrong turns, time-to-next-action, vocabulary or
     consequence confusion, resulting tasks, and an explicit default-routing decision.
 
+#### Slice W42-E7-S3 — installed task-centered live evidence (`planned`)
+
+Primary output: one runner-owned live E2E checkpoint that proves the installed Implement flow
+preserves canonical task-plan, ledger, attempt, finalization, and downstream-eligibility truth.
+
+Touched areas:
+
+- `src/aidd/harness/live_e2e_black_box_orchestration.py`
+- live E2E report projections
+- focused harness tests
+- `docs/e2e/live-e2e-catalog.md`
+
+Dependencies: `W42-E3-S1` and `W42-E7-S1`.
+
+Local tasks:
+
+- `W42-E7-S3-T1` (planned) Add task-aware live E2E checkpoints for the installed Implement flow.
+  - Scope: persist `task-flow-checkpoint.json` and `.md` after tasklist and Implement with task
+    ids, dependencies, the core-selected next task, statuses, attempts, evidence links, tasklist
+    hash, aggregate finalization, and Review eligibility; reuse the maintained `AIDD-LIVE-007`
+    lane without duplicating the responsive browser matrix or forcing synthetic provider failures.
+  - Verification: focused harness tests accept a dependency-ordered finalized ledger and fail
+    closed on tasklist/ledger hash drift, missing task evidence, premature finalization, or Review
+    eligibility that disagrees with the durable aggregate commit.
+
 Wave 42 exit evidence:
 
 - the target contract, code, fixtures, browser evidence, and backlog agree;
@@ -14315,6 +14340,8 @@ Wave 42 exit evidence:
 - generated Markdown is read-only and every supported operator write previews Markdown, names its
   destination, survives failure, and reconciles to durable state;
 - all 13 reference states are executable without provider credentials;
+- maintained live product-evaluation evidence exposes task-plan, task-attempt, finalization, and
+  downstream-eligibility truth instead of reducing Implement to one opaque stage result;
 - the responsive matrix and observed first-time journey pass before the target shell becomes the
   default renderer.
 
