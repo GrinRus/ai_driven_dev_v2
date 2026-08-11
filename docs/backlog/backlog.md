@@ -12,7 +12,7 @@ slice, and local task.
 
 ## Soon
 
-- `W42-E2-S1-T2` — Render project Work Items in core-prioritized attention groups.
+- `W42-E2-S1-T2` — Publish core-owned Work Item attention groups and deterministic ordering.
 
 ## Parking lot
 
@@ -42,18 +42,21 @@ slice, and local task.
   It separates runtime content from AIDD-owned workflow records, protects canonical interview
   ledgers, makes rich-tasklist grammar and diagnostics workable for lower-capability runtimes,
   aligns fail findings with required repair corrections, and adds one audited operator-authorized
-  repair extension after automatic exhaustion. The wave is decomposed into reviewable contract,
-  core, adapter, validator, CLI, frontend, scenario, and comparative-eval tasks in `roadmap.md`.
-  Wave 42 remains the active queue; only evidence task `W43-E1-S1-T1` is parked and ready so the
-  new track does not silently displace `W42-E2-S1-T1`.
+  repair extension after automatic exhaustion. Ownership, QID merge, attempt accounting,
+  progression-required repair, and one-extension invariants are frozen in target architecture;
+  the remaining tasks implement and verify them across contracts, core, adapters, validators,
+  CLI, frontend, scenarios, and comparative evals. Wave 42 remains the active queue; only evidence
+  task `W43-E1-S1-T1` is parked and ready so the new track does not silently displace
+  `W42-E2-S1-T1`.
 
 - `2026-08-11` Wave 42 is accepted as the task-centered Operator UI correction. Its normative
   contract defines `Project -> Work Item -> Stage -> Task/Decision -> Run/Attempt ->
   Document/Evidence`, contextual Runner placement, controlled Markdown authoring, read-only
-  generated documents, 13 target screens, and responsive acceptance. Contract and visual-authority
-  tasks `W42-E1-S1-T1` and `W42-E1-S2-T1` are complete. The superseded UI image sets were removed;
-  the next implementation task is the bounded vocabulary correction `W42-E2-S1-T1`, followed by
-  the grouped project Work Item list in `W42-E2-S1-T2`.
+  generated documents, Work Item/Runner/Task state matrices, compatibility/cutover boundaries,
+  schema-v1 task-flow live evidence, 13 target screens, and responsive acceptance. Contract and
+  visual-authority tasks `W42-E1-S1-T1` and `W42-E1-S2-T1` are complete. The next implementation
+  task remains the bounded vocabulary correction `W42-E2-S1-T1`; core-owned attention groups
+  `W42-E2-S1-T2` follow, then separate frontend rendering `W42-E2-S1-T4`.
 
 - `2026-08-10` W40-E1-S4 (including T3), W41-E1-S2, and W36-E7-S4-T94 are complete. The packaged UI uses one
   `operatorWorkspace` scroll owner with Intent context, a four-phase stepper, one current

@@ -42,6 +42,30 @@ remote-host, or malformed owners remain conflicts. UI mutation endpoints acquire
 returning a background job id. Stage success remains uncommitted until the final aggregate
 implementation report passes validation and atomic publication succeeds.
 
+## Operator task projection
+
+The core projects task groups from dependency eligibility plus durable ledger state. Group names
+describe what the operator can do; they do not replace or rewrite the stored status.
+
+- **Ready** contains a pending, failed, blocked, or interrupted task only when every dependency
+  succeeded and no other core blocker prevents an attempt. The action is **Run** before the first
+  attempt and **Resume** after any retained attempt.
+- **Running** contains only the task whose ledger state is `executing`; another launch is rejected.
+- **Blocked** contains tasks with incomplete dependencies, unresolved input, a tasklist/ledger
+  mismatch, or another explicit core blocker.
+- **Done** contains only `succeeded` tasks and is read-only.
+
+When every task is Done, the mutually exclusive action becomes **Finalize implementation** or,
+after a retained failed finalization attempt, **Resume finalization**. Finalization failure never
+reopens a successful task. A changed source tasklist SHA-256 blocks every task mutation and
+requires a continuation run.
+
+The next-ready recommendation is the first actionable task in authored order. A critical-path
+marker may additionally identify the unfinished task with the longest remaining dependency path
+to a terminal task, using authored order as a deterministic tie-breaker. The marker is advisory:
+it never changes dependency eligibility, automatic selection, or failure behavior, and is omitted
+for a stale or invalid graph.
+
 ## Task-attempt evidence ownership
 
 Global implement attempts under `stages/implement/attempts/attempt-000N/` are the canonical,

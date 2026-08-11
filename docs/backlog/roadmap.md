@@ -13955,11 +13955,13 @@ Item tabs, and the exact stage strip.
 
 Touched areas:
 
+- `src/aidd/core/operator_inbox.py`
+- `src/aidd/core/operator_frontend_models.py`
 - `src/aidd/cli/static/operator-main.js`
 - `src/aidd/cli/static/operator-onboarding.js`
 - `src/aidd/cli/static/operator-components.css`
 - `src/aidd/cli/static/operator-responsive.css`
-- frontend contract tests
+- core, CLI, and frontend contract tests
 
 Dependencies: `W42-E1`.
 
@@ -13967,20 +13969,29 @@ Local tasks:
 
 - `W42-E2-S1-T1` (next) Replace primary `Intent` presentation with literal Work Item and Task
   vocabulary.
-  - Scope: visible labels, accessible names, headings, route titles, and copy assertions only;
-    preserve `work_item` ids, request paths, API shapes, and historical evidence text.
-  - Verification: focused static copy tests reject `Intent` as a navigation noun while technical
-    disclosures and canonical identifiers remain accessible.
-- `W42-E2-S1-T2` (soon) Render project Work Items in core-prioritized attention groups.
-  - Scope: project list composition for Needs input, Running, Ready, and Complete plus one selected
-    contextual inspector; do not duplicate priority or mutate status in the browser.
-  - Verification: provider-free fixtures prove deterministic group order, selection persistence,
-    empty-project creation, and one primary action for the selected item.
+  - Scope: core-emitted and static visible labels, accessible names, headings, route titles, and
+    copy assertions only; preserve `work_item` ids, request paths, API shapes, internal
+    compatibility fields, and historical evidence text.
+  - Verification: focused core/static copy tests reject `Intent` as a navigation noun while
+    technical disclosures and canonical identifiers remain accessible.
+- `W42-E2-S1-T2` (soon) Publish core-owned Work Item attention groups and deterministic ordering.
+  - Scope: extend the existing `OperatorInboxView` with Needs input, Running, Ready, and Complete,
+    canonical-stage/Work-Item ordering, and one entry recommendation; failed/stale terminal state
+    is not Complete and active `wait-for-stage` work is not omitted.
+  - Verification: core/service tests prove exact membership, deterministic ordering, empty-project
+    creation, and one recommendation without browser-owned priority.
+- `W42-E2-S1-T4` (planned) Render core-owned Work Item attention groups and selected context.
+  - Scope: render the four server groups, preserve selected Work Item and deep-link context, show
+    one contextual inspector and one primary action, and never mutate or re-sort server state.
+  - Verification: provider-free frontend fixtures prove group order, selection persistence,
+    empty groups, empty-project creation, and one primary action for the selected item.
+  - Dependencies: `W42-E2-S1-T2` as the core-projection predecessor.
 - `W42-E2-S1-T3` (planned) Render the Work Item tabs and canonical stage strip.
   - Scope: Overview, Tasks, Documents, Runs tabs and the eight exact stages; retain current deep
     links, browser history, focus restoration, and stale/status semantics.
   - Verification: route and DOM tests cover all tabs, exact stage order, keyboard navigation,
     status text, and reload restoration without duplicate navigation landmarks.
+  - Dependencies: `W42-E2-S1-T4` as the project-shell predecessor.
 
 #### Slice W42-E2-S2 — launch readiness and contextual Runner (`planned`)
 
@@ -14002,10 +14013,12 @@ Local tasks:
 
 - `W42-E2-S2-T1` (planned) Publish a core-owned launch-readiness projection.
   - Scope: selected runtime id, binary, command, auth, capabilities, permission policy, model,
-    reasoning, last evidence timestamp, eligibility, and literal disabled reason; no adapter logic
-    in the core.
+    reasoning, config identity, probe observation timestamp, eligibility, and literal disabled
+    reason; a stale snapshot or prior successful launch cannot authorize a mutation, and no
+    adapter logic enters the core.
   - Verification: core and service tests cover ready, missing selection, stale evidence,
-    unsupported capability, permission denial, and runtime-unavailable outcomes.
+    verified/failed/unverified auth, unsupported capability, permission denial, config drift, and
+    runtime-unavailable outcomes.
 - `W42-E2-S2-T2` (planned) Extract and place the contextual Runner control.
   - Scope: one frontend component reused beside workflow, stage, task, repair, and remediation
     launches; hide it from create, read-only history, completed handoff, and non-launch decisions.
@@ -14324,13 +14337,16 @@ Dependencies: `W42-E3-S1` and `W42-E7-S1`.
 Local tasks:
 
 - `W42-E7-S3-T1` (planned) Add task-aware live E2E checkpoints for the installed Implement flow.
-  - Scope: persist `task-flow-checkpoint.json` and `.md` after tasklist and Implement with task
-    ids, dependencies, the core-selected next task, statuses, attempts, evidence links, tasklist
-    hash, aggregate finalization, and Review eligibility; reuse the maintained `AIDD-LIVE-007`
-    lane without duplicating the responsive browser matrix or forcing synthetic provider failures.
+  - Scope: persist schema-v1 `task-flow-checkpoint.json` and `.md` after tasklist and Implement
+    with run/revision identity, task ids/order/dependencies, the core-selected next task, statuses,
+    attempts, evidence links, tasklist/ledger hashes, aggregate finalization, and Review
+    eligibility; collect through installed public surfaces plus authorized durable artifacts,
+    reuse `AIDD-LIVE-007`, and do not duplicate the responsive browser matrix or force synthetic
+    provider failures.
   - Verification: focused harness tests accept a dependency-ordered finalized ledger and fail
-    closed on tasklist/ledger hash drift, missing task evidence, premature finalization, or Review
-    eligibility that disagrees with the durable aggregate commit.
+    closed on identity or tasklist/ledger hash drift, missing task evidence, invalid next-ready
+    selection, premature finalization, or Review eligibility that disagrees with the durable
+    aggregate commit.
 
 Wave 42 exit evidence:
 
@@ -14372,6 +14388,12 @@ Reference authority:
 
 Linked stories: `US-01`, `US-02`, `US-03`, `US-04`, `US-05`, `US-06`, `US-07`, `US-10`,
 `US-11`, `US-13`
+
+Wave sequencing: Wave 42 remains the active implementation track. The parked failure-corpus task
+may prepare sanitized evidence, but Wave 43 functional changes remain separate from Wave 42 UI
+branches. Task-aware live checkpoint schema v1 is the compatibility baseline for later resilience
+work; Wave 43 readers remain compatible with retained pre-Wave-43 runs. The repair-extension UI
+continues to depend explicitly on `W42-E5-S1`.
 
 ### Epic W43-E1 — artifact ownership and terminal records (`planned`)
 

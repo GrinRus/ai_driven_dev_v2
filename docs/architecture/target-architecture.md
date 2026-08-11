@@ -364,16 +364,24 @@ It includes:
 
 This is the canonical stage summary for workflow progression.
 
-Artifact ownership is explicit:
+Artifact ownership is explicit and exclusive:
 
-- primary stage content documents such as `plan.md`, `tasklist.md`, and
-  `implementation-report.md` are runtime-authored Markdown outputs;
-- runtime-authored `stage-result.md` content is accepted as the stage summary draft, then the
-  AIDD core may normalize terminal status when canonical validation proves the draft wrong;
-- `validator-report.md` is canonical only after AIDD validation writes it. Runtime-authored
-  validator text is draft evidence and may be replaced;
-- `repair-brief.md` is AIDD-owned control evidence. Runtimes read it during repair attempts but
-  must not create or rewrite it.
+| Artifact class | Author/candidate source | Canonical owner and mutation rule |
+| --- | --- | --- |
+| Primary stage content such as `plan.md`, `tasklist.md`, and `implementation-report.md` | Runtime | Runtime-authored content validated and published by AIDD. |
+| `stage-result.md` | AIDD lifecycle state | AIDD-owned workflow record. A runtime copy is unexpected raw attempt evidence and cannot drive progression. |
+| `validator-report.md` | AIDD validator result | AIDD-owned validation record written after content validation. Runtime validator text cannot create or suppress findings. |
+| `repair-brief.md` | AIDD repair policy | AIDD-owned read-only control evidence. A runtime or operator cannot create or rewrite it. |
+| `questions.md` | Structured events or raw runtime Markdown candidates | AIDD-owned interview ledger merged by stable QID. Rejected candidates remain raw attempt evidence. |
+| `answers.md` | Operator | Operator-owned input protected from runtime mutation. |
+| Operator intervention/remediation/follow-up/clone requests | Operator or application service | Durable operator input; runtime reads it but never rewrites the submitted request. |
+| Logs, normalized events, runtime exits, manifests, task ledger/finalization, and archive overlays | Runtime/adapter or AIDD service as declared | Immutable attempt evidence or AIDD workflow state; frontend access is read-only. |
+
+Output discovery, stage briefs, adapters, publication, intervention, and frontend authoring use
+the same ownership categories. Maintained adapters wait only for runtime-content targets; process
+success remains runtime evidence, while canonical AIDD validation decides progression. An
+unexpected runtime copy of an AIDD-owned record is retained under the attempt evidence boundary
+and never promoted over the canonical record.
 
 ## 11. Validation architecture
 
@@ -420,6 +428,23 @@ Instead, the core:
 
 Repair is stage-specific. The system should not assume the same repair prompt works equally well for all stages.
 
+Severity and progression impact are separate. Every finding that contributes to `Verdict: fail`
+is a required correction regardless of severity. Advisory observations do not cause failure or
+request repair by themselves. Repair briefs group primary, related, and advisory evidence while
+retaining exact finding ids and locations.
+
+Only validation-triggered `repair` attempts consume the automatic repair budget. Runtime retry,
+question `resume`, and operator `intervention` remain distinct attempt modes. After automatic
+exhaustion, the target recovery contract permits at most one durable `repair-extension` grant for
+the latest exhausted stage in the same run. The grant records run/stage identity, config plus
+validator/brief hashes, author, time, and reason; it never resets budget or history.
+
+Repair-extension preflight revalidates current documents first. If they already pass, AIDD
+finalizes without launching a runtime. Otherwise it may allocate one extension attempt only when
+no job is active, evidence is current, no downstream stage succeeded, and no prior grant was used.
+Generic failure, stale/config-drifted evidence, a second grant, or succeeded downstream work stops
+before runtime execution. Request Change and a new run remain separate recovery paths.
+
 ## 13. User interview architecture
 
 Some stages require direct human clarification.
@@ -457,6 +482,18 @@ It is optional but supported for:
 Current implementation note: AIDD validates durable `questions.md` / `answers.md`, blocks
 unanswered `[blocking]` questions, resumes blocked stages after answers are available, and
 maps adapter-observed structured question/pause events into the same durable question path.
+
+The canonical interview ledger merges candidates only by stable QID, never by similar prose.
+Safe normalization is presentation-only: equivalent list markers, marker-adjacent punctuation,
+and nested continuation indentation may normalize when required meaning is unchanged. Omitted
+unresolved questions and existing operator answers are preserved. Duplicate or ambiguous
+candidates are retained as raw attempt evidence and stop in an explicit operator-attention state
+without overwriting the ledger or consuming repair budget.
+
+`resume` is a non-repair attempt mode. It is recorded only when a runtime invocation actually
+starts; checking that answers exist or rejecting a malformed candidate does not allocate an empty
+attempt. Attempt history distinguishes `initial`, `repair`, `resume`, `intervention`, and the
+separately authorized `repair-extension` mode.
 
 ## 14. Adapter architecture
 

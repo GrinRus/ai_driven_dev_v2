@@ -42,6 +42,13 @@ navigation noun with the literal `Work Item` and `Task` vocabulary defined in
 [Target Operator Experience](operator-frontend-target-ux.md), without changing canonical ids or
 the request artifact.
 
+Wave 42 migration preserves `work_item` ids, endpoint names, request shapes, durable paths, and
+historical evidence. User-visible labels emitted by core read models are part of the presentation
+surface and migrate with static copy; internal route/action fields may retain compatibility values
+such as `intent` until an owning API task changes them. Layout-only DOM anchors may change, while
+mutation, recovery, deep-link, and draft identities remain stable until explicitly migrated and
+verified.
+
 The canonical eight stages remain the progression authority and are grouped only for
 navigation:
 
@@ -1080,10 +1087,14 @@ shared brief and per-screen prompts are preserved in
 - Filmstrip uses attempts or task attempts as frames and events as markers.
 - English remains the canonical UI vocabulary for this iteration; localization is a later
   product decision.
-
-The remaining implementation question is whether the project-level Inbox needs a new
-core-owned aggregate read model or a deterministic aggregation of existing per-run next-action
-models. Either implementation must preserve core ownership of priority and eligibility.
+- Project Work extends the existing core-owned `OperatorInboxView`; the browser does not create a
+  second project aggregate or reinterpret per-run next actions.
+- The core projection owns **Needs input**, **Running**, **Ready**, and **Complete** membership,
+  canonical-stage/Work-Item ordering, and the entry recommendation. Active `wait-for-stage` work
+  belongs to Running rather than disappearing from the project list.
+- Runner readiness is one core/service projection with config identity, observation time,
+  capabilities, permission/auth state, eligibility, and literal disabled reason. Every launch
+  revalidates it before mutation.
 
 ## 9. UX validation checklist for the accepted direction
 
