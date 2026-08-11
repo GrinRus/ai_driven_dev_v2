@@ -16,6 +16,8 @@ slice, and local task.
 
 ## Parking lot
 
+- `W43-E1-S1-T1` — Record the validation and repair failure corpus before changing ownership,
+  parser, repair-budget, or recovery behavior.
 - `W36-E7-S4-T4` — Claude acceptance is not launched under the current Codex-only scope.
 - `W36-E7-S3-T2` — Record five first-time-operator sessions after initial live hardening.
 - `W36-E7-S3-T3` — Reconcile observed session findings before beta readiness.
@@ -35,6 +37,15 @@ slice, and local task.
   queue-restoration policy in `docs/backlog/roadmap.md` (`W8-E3-S1`).
 
 ## Current reconciliation
+
+- `2026-08-11` Wave 43 is planned as the runtime-neutral validation and repair resilience track.
+  It separates runtime content from AIDD-owned workflow records, protects canonical interview
+  ledgers, makes rich-tasklist grammar and diagnostics workable for lower-capability runtimes,
+  aligns fail findings with required repair corrections, and adds one audited operator-authorized
+  repair extension after automatic exhaustion. The wave is decomposed into reviewable contract,
+  core, adapter, validator, CLI, frontend, scenario, and comparative-eval tasks in `roadmap.md`.
+  Wave 42 remains the active queue; only evidence task `W43-E1-S1-T1` is parked and ready so the
+  new track does not silently displace `W42-E2-S1-T1`.
 
 - `2026-08-11` Wave 42 is accepted as the task-centered Operator UI correction. Its normative
   contract defines `Project -> Work Item -> Stage -> Task/Decision -> Run/Attempt ->

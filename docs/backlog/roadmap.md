@@ -14317,3 +14317,526 @@ Wave 42 exit evidence:
 - all 13 reference states are executable without provider credentials;
 - the responsive matrix and observed first-time journey pass before the target shell becomes the
   default renderer.
+
+---
+
+## Wave 43 — validation and repair resilience (`planned`)
+
+Goal: make the document-first workflow reliable across maintained and lower-capability runtimes
+by separating runtime-authored content from AIDD-owned workflow records, preserving canonical
+interview state, producing root-cause validation evidence, and providing one audited recovery
+path after automatic repair exhaustion without weakening fail-closed progression.
+
+This wave is runtime-neutral. It does not add provider-specific exceptions, accept missing
+semantic content, reset repair history, permit generated Markdown to bypass validation, or add a
+downstream rerun cascade. Safe Markdown-equivalent syntax may be normalized only when the same
+required meaning is present. Runtime/provider differences remain adapter evidence and eval
+variables rather than core branches.
+
+Reference authority:
+
+1. [Target architecture](../architecture/target-architecture.md) for lifecycle, document
+   ownership, validation, repair, and adapter boundaries;
+2. [Target Operator Experience](../architecture/operator-frontend-target-ux.md) for generated
+   document ownership, Decision Workbench recovery, Runner placement, and attempt visibility;
+3. document and stage contracts under `contracts/` for canonical Markdown grammar;
+4. retained IUIT-1203 question, stage-result, tasklist, validator, repair, and runtime evidence
+   after sanitization under the first Wave 43 task.
+
+Linked stories: `US-01`, `US-02`, `US-03`, `US-04`, `US-05`, `US-06`, `US-07`, `US-10`,
+`US-11`, `US-13`
+
+### Epic W43-E1 — artifact ownership and terminal records (`planned`)
+
+Goal: make each stage request only runtime-authored content while AIDD owns validation and
+terminal workflow records end to end.
+
+#### Slice W43-E1-S1 — failure corpus and ownership contract (`planned`)
+
+Primary output: reproducible failure fixtures plus one ownership matrix for runtime content,
+workflow records, control documents, interview ledgers, and raw candidate evidence.
+
+Touched areas:
+
+- `docs/analysis/`
+- `docs/architecture/target-architecture.md`
+- `contracts/documents/`
+- `contracts/stages/`
+
+Dependencies: retained IUIT-1203 artifacts or sanitized equivalents supplied from the observed
+Qwen run; contract work may begin from the already captured log/report evidence when the exact
+documents are unavailable.
+
+Local tasks:
+
+- `W43-E1-S1-T1` (parked) Record the validation and repair failure corpus.
+  - Scope: sanitize and retain the malformed question resume, service-document placeholder,
+    malformed rich-tasklist, cascade finding, and repair-exhaustion shapes; identify the first
+    decisive boundary, runtime, stage, attempt mode, and automatic repair consumption for each.
+  - Verification: every retained case is replayable through a provider-free parser, validator,
+    or lifecycle fixture and distinguishes primary cause from related findings.
+- `W43-E1-S1-T2` (planned) Define the canonical stage-document ownership matrix.
+  - Scope: classify every stage document exactly once as runtime content, AIDD workflow record,
+    AIDD control document, interview ledger, or raw candidate evidence; name create, mutate,
+    validate, publish, and UI-authoring permissions without changing the eight-stage graph.
+  - Verification: contract-registry coverage proves every declared document has one owner and
+    rejects conflicting runtime/AIDD ownership.
+
+#### Slice W43-E1-S2 — ownership-aware output registry and stage brief (`planned`)
+
+Primary output: typed output categories used independently for runtime requests, system
+generation, validation, and publication.
+
+Touched areas:
+
+- `src/aidd/core/stage_registry.py`
+- `src/aidd/core/stage_preparation.py`
+- core registry/preparation tests
+
+Dependencies: `W43-E1-S1`.
+
+Local tasks:
+
+- `W43-E1-S2-T1` (planned) Split stage output resolution by document owner.
+  - Scope: expose runtime-authored, AIDD-generated, interview/control, and published document
+    sets for all eight stages; retain a bounded compatibility reader only where existing callers
+    require migration.
+  - Verification: one table-driven core test asserts the exact four sets for every stage and
+    proves `stage-result.md` and `validator-report.md` are absent from runtime completion targets.
+- `W43-E1-S2-T2` (planned) Render ownership-aware stage briefs.
+  - Scope: list runtime write targets, AIDD-generated records, read-only inputs, and stage-specific
+    skeletons separately in installed and source-checkout briefs; remove instructions that ask the
+    runtime to author canonical terminal records.
+  - Verification: stage-brief snapshots for all stages and prompt-quality checks agree on write
+    ownership and required content headings.
+
+#### Slice W43-E1-S3 — canonical validator and stage-result generation (`planned`)
+
+Primary output: AIDD-generated validator and terminal records derived from canonical lifecycle
+state rather than runtime-authored drafts.
+
+Touched areas:
+
+- `src/aidd/core/stage_outputs.py`
+- `src/aidd/core/stage_terminal.py`
+- `src/aidd/core/repair.py`
+- focused core and validator tests
+
+Dependencies: `W43-E1-S2`.
+
+Local tasks:
+
+- `W43-E1-S3-T1` (planned) Generate canonical validator reports only after content validation.
+  - Scope: validate runtime-content documents, retain an unexpected runtime validator draft only
+    as attempt evidence, and write the canonical report from actual findings; do not require a
+    model-authored validator file for output discovery.
+  - Verification: missing and contradictory runtime drafts cannot create or suppress findings,
+    while the final report exactly matches the current attempt's validator result.
+- `W43-E1-S3-T2` (planned) Render stage results from canonical lifecycle state.
+  - Scope: derive stage id, attempt history, status, produced outputs, validation summary,
+    blockers, next action, and terminal notes from AIDD state; preserve historical repair evidence
+    and make repeated reconciliation byte-stable.
+  - Verification: state-matrix tests cover succeeded, failed, blocked, repair-needed, exhausted,
+    and resumed outcomes, including the exact `Terminal state notes: TODO` regression without
+    consuming repair budget.
+- `W43-E1-S3-T3` (planned) Enforce workflow-record ownership at every mutation boundary.
+  - Scope: exclude AIDD records from misplaced runtime promotion and operator intervention
+    targets, include canonical records during publication and indexing, and retain unexpected
+    runtime copies only under attempt evidence.
+  - Verification: discovery, publication, intervention, and artifact-index tests reject a runtime
+    or operator overwrite while publishing the AIDD-owned records once.
+
+#### Slice W43-E1-S4 — adapter document-completion alignment (`planned`)
+
+Primary output: maintained adapters declare document completion from runtime-authored targets
+only while preserving raw logs and canonical validation.
+
+Touched areas:
+
+- `src/aidd/adapters/`
+- adapter conformance and runner tests
+
+Dependencies: `W43-E1-S2`.
+
+Local tasks:
+
+- `W43-E1-S4-T1` (planned) Align maintained adapter completion with runtime-authored outputs.
+  - Scope: update generic CLI, Qwen, and OpenCode completion/settling behavior to wait only for
+    runtime-content documents; retain adapter success as process evidence, not validation pass,
+    and keep all provider-specific detection inside adapters.
+  - Verification: adapter matrices prove a runtime may finish after writing only its content
+    targets, raw stdout/stderr remain retained, and canonical validation still decides progression.
+
+### Epic W43-E2 — canonical interview resume (`planned`)
+
+Goal: preserve operator answers and unresolved questions across attempts while accepting only
+deterministically normalizable runtime question candidates.
+
+#### Slice W43-E2-S1 — interview ledger and candidate ingestion (`planned`)
+
+Primary output: one AIDD-owned question ledger fed by structured events or raw Markdown
+candidates, with operator-owned answers protected from runtime mutation.
+
+Touched areas:
+
+- `contracts/documents/questions.md`
+- `contracts/documents/answers.md`
+- `src/aidd/core/interview.py`
+- interview tests and examples
+
+Dependencies: `W43-E1-S1-T2`.
+
+Local tasks:
+
+- `W43-E2-S1-T1` (planned) Define canonical interview candidate and ledger semantics.
+  - Scope: document QID merge rules, operator answer ownership, safe punctuation/list
+    normalization, raw evidence retention, unresolved-question preservation, and explicit
+    operator-attention behavior for ambiguous candidates.
+  - Verification: contract examples cover canonical, safely normalizable, duplicate, omitted,
+    and ambiguous question/answer cases without inventing decisions.
+- `W43-E2-S1-T2` (planned) Ingest structured and Markdown question candidates tolerantly.
+  - Scope: normalize marker-adjacent colons, equivalent Markdown list markers, nested
+    continuation text, and matching QIDs; preserve the raw candidate and reject semantic
+    ambiguity without overwriting the ledger.
+  - Verification: a table-driven parser matrix round-trips valid variants to canonical Markdown
+    and leaves the prior ledger byte-identical for rejected candidates.
+- `W43-E2-S1-T3` (planned) Merge interview state safely after every runtime attempt.
+  - Scope: snapshot questions and answers before execution, merge valid candidates by QID,
+    preserve omitted unresolved questions, restore operator answers, and expose rejected candidate
+    evidence to the attempt index.
+  - Verification: blocked -> answer -> resume -> malformed candidate retains valid canonical
+    ledgers and either progresses or stops in explicit operator-attention state.
+
+#### Slice W43-E2-S2 — resume accounting and operator recovery (`planned`)
+
+Primary output: a distinct resume attempt identity plus an actionable rejected-candidate recovery
+surface.
+
+Touched areas:
+
+- `src/aidd/core/models/run.py`
+- `src/aidd/core/stage_invocation.py`
+- `src/aidd/core/stage_validation.py`
+- operator frontend read models and question UI
+
+Dependencies: `W43-E2-S1`; frontend task additionally depends on `W42-E5-S1`.
+
+Local tasks:
+
+- `W43-E2-S2-T1` (planned) Add `resume` as a non-repair attempt mode.
+  - Scope: persist and render `initial`, `repair`, `resume`, and `intervention` distinctly; count
+    only validation-triggered repair attempts against the automatic budget and read legacy
+    manifests compatibly.
+  - Verification: `initial -> repair -> blocked -> resume -> repair` records two repairs, one
+    resume, monotonic attempt history, and the correct remaining budget.
+- `W43-E2-S2-T2` (planned) Expose rejected interview candidate diagnostics in the core UI model.
+  - Scope: publish canonical question, protected answer, raw rejected fragment, source attempt,
+    runtime, reason, and eligible recovery without making the frontend parse Markdown.
+  - Verification: core/service tests cover absent, accepted, rejected, stale, and permission-
+    unavailable candidate evidence with one deterministic next action.
+- `W43-E2-S2-T3` (planned) Render bounded interview rejection recovery in the Decision Workbench.
+  - Scope: show the rejected fragment and canonical state, preserve answer drafts, and offer only
+    the eligible confirm/edit/resume or request-change action; do not schedule a repair merely to
+    fix candidate punctuation.
+  - Verification: provider-free browser flow covers answer, rejected resume candidate, evidence
+    inspection, recovery, focus restoration, and unchanged repair budget.
+
+### Epic W43-E3 — rich-tasklist authoring and diagnosis (`planned`)
+
+Goal: make the strict executable tasklist grammar easier for weaker runtimes to produce and make
+one formatting root cause yield one actionable repair rather than dozens of cascade findings.
+
+#### Slice W43-E3-S1 — task-card grammar and embedded scaffold (`planned`)
+
+Primary output: one documented rich-task grammar plus a complete installed-package scaffold.
+
+Touched areas:
+
+- `contracts/documents/tasklist.md`
+- `contracts/stages/tasklist.md`
+- `prompt-packs/stages/tasklist/`
+- `src/aidd/core/stage_preparation.py`
+
+Dependencies: `W43-E1-S2-T2`.
+
+Local tasks:
+
+- `W43-E3-S1-T1` (planned) Separate required task semantics from safe Markdown presentation.
+  - Scope: retain H3 task cards, outcome, dominant deliverable, bounded in-scope paths,
+    task-local acceptance criteria, dependencies, and dedicated verification; document equivalent
+    emphasis/list punctuation and continue rejecting compact or ambiguous table-like tasklists.
+  - Verification: contract/example tests accept only meaning-preserving variants and reject any
+    document missing executable task semantics.
+- `W43-E3-S1-T2` (planned) Embed a complete rich-tasklist scaffold in the stage brief.
+  - Scope: render one canonical H3 card, nested acceptance criterion, dependency entry, and
+    verification entry in the installed brief; keep prompt text lean and ensure scaffold
+    placeholders are prompt input rather than validated output.
+  - Verification: stage-preparation snapshots and installed-package fixtures expose the same
+    copyable grammar without requiring repository-local contract discovery.
+
+#### Slice W43-E3-S2 — tolerant task parsing and located issues (`planned`)
+
+Primary output: one typed task plan from safe Markdown variants and structured parse issues for
+content that remains invalid.
+
+Touched areas:
+
+- `src/aidd/core/task_plan.py`
+- task-plan unit tests
+
+Dependencies: `W43-E3-S1`.
+
+Local tasks:
+
+- `W43-E3-S2-T1` (planned) Parse safe rich-task Markdown variants without semantic inference.
+  - Scope: accept equivalent `-`/`*` markers, emphasized field labels, backticked/emphasized task
+    ids, and supported heading separators; retain strict paths, acceptance ids, dependencies, and
+    verification requirements.
+  - Verification: canonical and safe-variant documents produce equivalent typed task plans while
+    compact, table-like, unsafe, duplicate, and semantically incomplete cases remain invalid.
+- `W43-E3-S2-T2` (planned) Return structured task parse issues with exact source locations.
+  - Scope: replace string-only issues with kind, task id, heading/field line, missing fields, and
+    root/related classification while retaining a compatibility error message for existing
+    callers.
+  - Verification: each malformed card points to its own source line and one missing field no
+    longer produces an unrelated path or verification derivative.
+
+#### Slice W43-E3-S3 — root-cause tasklist validation and repair (`planned`)
+
+Primary output: calibrated, grouped tasklist findings and one exact repair strategy.
+
+Touched areas:
+
+- `src/aidd/validators/semantic_rules/tasklist.py`
+- `src/aidd/core/repair.py`
+- tasklist validator and repair tests
+
+Dependencies: `W43-E3-S2` and `W43-E4-S1` for final repair wording.
+
+Local tasks:
+
+- `W43-E3-S3-T1` (planned) Collapse tasklist cascade issues into primary findings.
+  - Scope: group a shared unrecognized card grammar across task ids, list affected ids and missing
+    fields once, retain independent dependency/verification findings, and report the first exact
+    offending line rather than the common `Ordered tasks` heading.
+  - Verification: the retained eleven-card IUIT shape produces one grammar root finding plus only
+    genuinely independent findings instead of six or seven messages per task.
+- `W43-E3-S3-T2` (planned) Calibrate tasklist finding severity to executability.
+  - Scope: mark globally unreadable grammar and missing execution-critical card fields high,
+    retain material verification gaps as medium repair-required findings, and omit findings for
+    safely normalized presentation-only variants.
+  - Verification: a severity matrix keeps incomplete tasklists fail-closed and prevents an
+    unexecutable document from presenting a misleading no-blocker summary.
+- `W43-E3-S3-T3` (planned) Render one tasklist-specific correction strategy.
+  - Scope: preserve stable ids and valid cards, name the canonical card scaffold, repair only the
+    affected section, and synchronize dependency and verification entries without asking the
+    runtime to resolve every cascade message individually.
+  - Verification: a deterministic repair fixes the retained malformed-tasklist shape in one
+    attempt while unrelated valid sections remain byte-identical.
+
+### Epic W43-E4 — repair protocol and operator-authorized extension (`planned`)
+
+Goal: make every progression-blocking correction explicit and permit one audited additional
+repair after exhaustion without resetting automatic budget or conflating repair with Request
+Change.
+
+#### Slice W43-E4-S1 — progression-required repair semantics (`planned`)
+
+Primary output: repair reports distinguish severity from progression impact and never label a
+fail-causing correction optional.
+
+Touched areas:
+
+- `contracts/documents/validator-report.md`
+- `contracts/documents/repair-brief.md`
+- `src/aidd/core/repair.py`
+- report and repair tests
+
+Dependencies: `W43-E1-S1-T2`.
+
+Local tasks:
+
+- `W43-E4-S1-T1` (planned) Define severity, progression, and advisory semantics explicitly.
+  - Scope: preserve severity as impact, define every canonical fail finding as required for
+    progression, reserve advisory observations for non-verdict evidence, and keep protocol-v1
+    read compatibility where labels change.
+  - Verification: contract/protocol tests reject `Verdict: fail` with only optional corrections
+    and keep legacy reports readable.
+- `W43-E4-S1-T2` (planned) Group repair briefs into primary, related, and advisory corrections.
+  - Scope: replace high/critical mandatory versus medium/low optional grouping with progression-
+    aware sections, retain exact evidence paths, and allow validator-specific bounded hints
+    without runtime-specific branches.
+  - Verification: a single medium fail finding renders under required corrections, duplicate or
+    related findings collapse, and advisory-only evidence does not request a repair.
+
+#### Slice W43-E4-S2 — repair-extension contract and accounting (`planned`)
+
+Primary output: a durable one-attempt operator grant plus separate automatic and manual repair
+accounting.
+
+Touched areas:
+
+- architecture and repair document contracts
+- `src/aidd/core/models/run.py`
+- `src/aidd/core/repair.py`
+- repair accounting tests
+
+Dependencies: `W43-E2-S2-T1` and `W43-E4-S1`.
+
+Local tasks:
+
+- `W43-E4-S2-T1` (planned) Define the operator-authorized repair-extension contract.
+  - Scope: permit exactly one additional attempt only for the latest `repair-exhausted` stage,
+    retain run/stage identity, validator and brief hashes, author/time/reason, same-run selection
+    constraints, no succeeded downstream, and no validation bypass; keep Request Change and new
+    run as separate actions.
+  - Verification: allowed and rejected contract examples cover exhausted, generic failed, stale,
+    already-extended, downstream-succeeded, intervention, and configuration-drift cases.
+- `W43-E4-S2-T2` (planned) Account automatic repairs and manual extensions separately.
+  - Scope: add `repair-extension` attempt/history identity, preserve the original automatic
+    budget and exhaustion record, count one durable operator grant, and read older attempt indexes
+    without the new mode.
+  - Verification: `initial -> repair -> repair -> exhausted -> repair-extension` records two
+    automatic repairs and one manual extension without resetting history or scheduling another
+    automatic retry.
+
+#### Slice W43-E4-S3 — guarded repair reopen and CLI (`planned`)
+
+Primary output: one application service and CLI command that revalidates before issuing a single
+repair extension.
+
+Touched areas:
+
+- application/core recovery service
+- `src/aidd/cli/stage.py`
+- `src/aidd/cli/stage_run.py`
+- focused core and CLI tests
+
+Dependencies: `W43-E1-S3`, `W43-E4-S2`, and the existing no-downstream-intervention guard.
+
+Local tasks:
+
+- `W43-E4-S3-T1` (planned) Implement guarded repair-extension preflight and reopen.
+  - Scope: verify failure reason, latest verdict, inactive job, downstream state, evidence hashes,
+    and unused grant; revalidate current documents first, finalize without runtime when manual
+    edits already pass, otherwise persist the grant and regenerate a fresh bounded repair brief.
+  - Verification: only an eligible exhausted stage opens; generic failure, stale evidence,
+    concurrent work, downstream success, and second grant stop before runtime execution.
+- `W43-E4-S3-T2` (planned) Expose one explicit CLI repair-extension command.
+  - Scope: select exact work item/run/stage/runtime, preview findings and budget, require operator
+    confirmation or an explicit non-interactive flag, stream logs, and print grant, attempt, and
+    validator evidence paths.
+  - Verification: CLI tests cover prevalidation success, extension success/failure, cancellation,
+    stale selection, non-interactive refusal, and no second extension.
+
+#### Slice W43-E4-S4 — repair-extension operator UI (`planned`)
+
+Primary output: core-owned eligibility plus a Validation Recovery action that distinguishes one
+more repair, Request Change, and a new run.
+
+Touched areas:
+
+- operator frontend recovery read models
+- UI service mutation endpoint
+- `src/aidd/cli/static/operator-stage-cockpit.js`
+- frontend and browser tests
+
+Dependencies: `W43-E3-S3`, `W43-E4-S3`, and `W42-E5-S1`.
+
+Local tasks:
+
+- `W43-E4-S4-T1` (planned) Publish repair-extension eligibility and preview evidence.
+  - Scope: expose primary cause, current findings, automatic budget, manual grant usage, exact
+    validator/brief hashes, selected Runner, downstream restriction, and a literal disabled reason
+    from core/service code.
+  - Verification: service tests cover eligible, manually-fixed, stale, active, downstream-
+    succeeded, already-used, and configuration-drift states without frontend inference.
+- `W43-E4-S4-T2` (planned) Render `Run one more repair` as bounded recovery.
+  - Scope: show one repair-extension primary action only when eligible, preview that history and
+    budget are not reset, retain Request Change and Start new run as distinct alternatives, stream
+    the exact attempt, and reconcile to canonical server state.
+  - Verification: desktop/mobile browser fixtures cover extension success, extension failure,
+    prevalidation success, disabled reasons, duplicate suppression, reconnect, and one primary
+    action per recovery state.
+
+### Epic W43-E5 — resilience regression and weaker-runtime evidence (`planned`)
+
+Goal: prove the ownership, interview, tasklist, and repair-extension behavior deterministically
+before comparing repeated live runs on a lower-capability runtime.
+
+#### Slice W43-E5-S1 — provider-free resilience scenarios (`planned`)
+
+Primary output: deterministic scenarios for every observed false-exhaustion and recovery path.
+
+Touched areas:
+
+- `src/aidd/evals/self_repair_probes.py`
+- `harness/scenarios/deterministic/`
+- validator, core, adapter, CLI, and browser fixtures selected by the scenario manifests
+
+Dependencies: each owning Wave 43 functional slice; scenarios may land incrementally with their
+owner and the slice closes after `W43-E4`.
+
+Local tasks:
+
+- `W43-E5-S1-T1` (planned) Add ownership, interview, and tasklist resilience scenarios.
+  - Scope: cover missing or contradictory runtime workflow drafts, service placeholder content,
+    malformed question after resume, safe question/tasklist variants, eleven malformed cards,
+    one malformed card, root-cause repair, and non-repair resume accounting.
+  - Verification: each scenario asserts terminal state, attempt modes, budget, canonical ledgers,
+    workflow records, root findings, raw evidence, and fail-closed semantic omissions.
+- `W43-E5-S1-T2` (planned) Add repair-extension eligibility and terminal scenarios.
+  - Scope: cover extension success, repeated failure, manual-fix prevalidation, stale evidence,
+    downstream success, second grant, Request Change separation, and immutable history.
+  - Verification: provider-free runs assert exact grant content, attempt history, report lineage,
+    no automatic loop, and unchanged downstream artifacts.
+
+#### Slice W43-E5-S2 — comparative lower-capability runtime lane (`planned`)
+
+Primary output: a repeatable before/after comparison that measures whether Wave 43 reduces false
+repair exhaustion without weakening validation.
+
+Touched areas:
+
+- eval profiles and reports
+- sanitized retained runtime traces
+- `docs/e2e/` or `docs/analysis/` comparison evidence
+
+Dependencies: `W43-E5-S1`; provider credentials and the lower-capability runtime environment are
+external prerequisites and must be reported as explicit blockers when unavailable.
+
+Local tasks:
+
+- `W43-E5-S2-T1` (planned) Define the comparative resilience profile and metrics.
+  - Scope: pin representative work item, stage boundaries, prompt/runtime configuration, repeated
+    run count, initial-pass rate, first-repair recovery, exhaustion, findings per root cause,
+    false budget consumption, interview resume, tasklist compliance, extension success, and
+    intervention rate.
+  - Verification: eval-doctor and profile tests prove the same scenario and evidence schema apply
+    to the control and lower-capability runtimes without core/provider conditionals.
+- `W43-E5-S2-T2` (planned) Run and report the lower-capability comparative lane.
+  - Scope: record baseline evidence, run the provider-free gate, execute at least three fresh
+    lower-capability repetitions plus the maintained control when available, classify first
+    decisive failures, and retain sanitized comparable artifacts.
+  - Verification: the report demonstrates no semantic-validation regression, no service-record
+    repair failures, no resume budget consumption, bounded root findings, and explicit pass,
+    improvement, regression, or environment-blocked verdicts for every metric.
+
+Wave 43 exit evidence:
+
+- every stage document has one enforced owner and maintained adapters wait only for runtime
+  content;
+- AIDD writes canonical validator and stage-result records, so service placeholders cannot spend
+  repair budget;
+- question/answer ledgers survive blocked resume and rejected candidates without operator-answer
+  loss;
+- resume and repair-extension attempts are distinct from automatic repairs in retained history;
+- safe Markdown variants are accepted only when all required meaning is present;
+- one malformed task grammar produces one actionable root cause rather than a wall of cascade
+  findings;
+- every fail-causing finding is a required repair correction, while advisory evidence does not
+  force progression failure;
+- one operator-authorized repair extension is auditable, revalidates first, never resets budget,
+  never loops automatically, and is blocked after succeeded downstream work;
+- provider-free scenarios pass before live comparison, and lower-capability runtime evidence is
+  retained or explicitly environment-blocked.
