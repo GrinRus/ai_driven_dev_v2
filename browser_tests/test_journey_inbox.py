@@ -206,7 +206,7 @@ def test_inbox_prioritizes_and_routes_durable_and_running_work(
         assert inbox_readback.status == 200
         sections_payload = inbox_readback.json()["inbox"]["durable"]["sections"]
         blocking_items = next(
-            item["items"] for item in sections_payload if item["key"] == "needs-decision"
+            item["items"] for item in sections_payload if item["key"] == "needs-input"
         )
         decision_item = next(
             item for item in blocking_items if item["route"]["work_item"] == "WI-DECISION"

@@ -5,6 +5,16 @@ const STUDIO_INBOX_SECTION_ORDER = Object.freeze([
   "flow-complete"
 ]);
 
+// Keep the established DOM section keys stable while the core projection moves to
+// its canonical Needs input / Running / Ready / Complete vocabulary. T4 will
+// replace these presentation aliases once the new renderer is installed.
+const CORE_INBOX_SECTION_ALIASES = Object.freeze({
+  "needs-input": "needs-decision",
+  "running": "running-now",
+  "ready": "ready-to-continue",
+  "complete": "flow-complete"
+});
+
 function inboxRouteAttributes(route) {
   if (!route) return "";
   return [
@@ -97,11 +107,30 @@ function runningNowInboxItems(items = []) {
 
 function studioInboxSections(inbox) {
   const durable = new Map((inbox?.durable?.sections || []).map((section) => [section.key, section]));
-  const sections = new Map(durable);
+  const sections = new Map();
+  for (const section of durable.values()) {
+    const presentationKey = CORE_INBOX_SECTION_ALIASES[section.key] || section.key;
+    sections.set(presentationKey, {
+      ...section,
+      key: presentationKey,
+      label: presentationKey === "needs-decision"
+        ? "Needs your decision"
+        : presentationKey === "ready-to-continue"
+          ? "Ready to continue"
+          : presentationKey === "flow-complete"
+            ? "Flow complete"
+            : section.label
+    });
+  }
+  const durableRunning = sections.get("running-now");
+  const runningNow = runningNowInboxItems(inbox?.running_now || []);
   sections.set("running-now", {
+    ...(durableRunning || {}),
     key: "running-now",
     label: "Running now",
-    items: runningNowInboxItems(inbox?.running_now || [])
+    // A live job is the richer compatibility representation for its same
+    // work-item/run; fall back to the durable wait-for-stage item otherwise.
+    items: runningNow.length ? runningNow : (durableRunning?.items || [])
   });
   return STUDIO_INBOX_SECTION_ORDER.map((key) => sections.get(key) || {
     key,

@@ -532,7 +532,8 @@ def test_operator_ui_docs_and_backlog_queue_stay_synchronized() -> None:
     assert "Guided Delivery preference" in operator_frontend
     assert "task-centered operator experience (`planned`)" in roadmap
     assert "`W42-E2-S1-T1` (done)" in w42
-    assert "`W42-E2-S1-T2` (next)" in w42
+    assert "`W42-E2-S1-T2` (done)" in w42
+    assert "`W42-E2-S1-T4` (next)" in w42
     assert "`W42-E7-S2-T2` (planned)" in w42
     visual_reference_dir = (
         repo_root

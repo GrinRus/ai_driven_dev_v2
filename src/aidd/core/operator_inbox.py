@@ -15,11 +15,12 @@ from aidd.core.operator_frontend_models import (
 from aidd.core.operator_frontend_project_home import resolve_operator_project_home_view
 from aidd.core.stages import STAGES
 
-_SECTION_ORDER = ("needs-decision", "ready-to-continue", "flow-complete")
+_SECTION_ORDER = ("needs-input", "running", "ready", "complete")
 _SECTION_LABELS = {
-    "needs-decision": "Needs your decision",
-    "ready-to-continue": "Ready to continue",
-    "flow-complete": "Flow complete",
+    "needs-input": "Needs input",
+    "running": "Running",
+    "ready": "Ready",
+    "complete": "Complete",
 }
 _DECISION_ACTIONS = frozenset(
     {
@@ -29,39 +30,41 @@ _DECISION_ACTIONS = frozenset(
         "review-findings",
         "review-intervention",
         "rerun-stale-downstream",
+        "review-complete",
     }
 )
 
 
-def _section_for(dashboard: OperatorDashboardView) -> str | None:
+def _section_for(dashboard: OperatorDashboardView) -> str:
     handoff = dashboard.terminal_handoff
     if handoff is not None:
-        if handoff.status in {"completed", "completed-with-warning", "failed"}:
-            return "flow-complete"
-        return "needs-decision"
+        if handoff.status in {"completed", "completed-with-warning"}:
+            return "complete"
+        return "needs-input"
     if dashboard.blockers or dashboard.first_failure is not None:
-        return "needs-decision"
+        return "needs-input"
     if dashboard.next_action.action in _DECISION_ACTIONS:
-        return "needs-decision"
+        return "needs-input"
     if dashboard.next_action.action == "wait-for-stage":
-        return None
-    return "ready-to-continue"
+        return "running"
+    return "ready"
 
 
 def _item_state(section: str) -> str:
     return {
-        "needs-decision": "blocking",
-        "ready-to-continue": "ready",
-        "flow-complete": "terminal",
+        "needs-input": "blocking",
+        "running": "running",
+        "ready": "ready",
+        "complete": "terminal",
     }[section]
 
 
 def _summary_for(dashboard: OperatorDashboardView, section: str) -> str:
-    if section == "needs-decision" and dashboard.first_failure is not None:
+    if section == "needs-input" and dashboard.first_failure is not None:
         return dashboard.first_failure.detail
-    if section == "needs-decision" and dashboard.blockers:
+    if section == "needs-input" and dashboard.blockers:
         return dashboard.blockers[0].detail
-    if section == "flow-complete" and dashboard.terminal_handoff is not None:
+    if section == "complete" and dashboard.terminal_handoff is not None:
         rationale = dashboard.terminal_handoff.recommendation_rationale
         return rationale or dashboard.next_action.detail
     return dashboard.next_action.detail
@@ -99,7 +102,7 @@ def _item_sort_key(item: OperatorInboxItem) -> tuple[int, str, str]:
 def _entry_recommendation(
     sections: tuple[OperatorInboxSection, ...],
 ) -> OperatorInboxEntryRecommendation:
-    for section_key in ("needs-decision", "ready-to-continue"):
+    for section_key in ("needs-input", "ready"):
         section = next((item for item in sections if item.key == section_key), None)
         candidate = section.items[0] if section and section.items else None
         if candidate is not None:
@@ -111,7 +114,7 @@ def _entry_recommendation(
                 route=candidate.route,
             )
     has_completed = any(
-        section.key == "flow-complete" and section.items for section in sections
+        section.key == "complete" and section.items for section in sections
     )
     return OperatorInboxEntryRecommendation(
         action="create-new-intent",
@@ -144,8 +147,6 @@ def resolve_operator_inbox_view(
             project_root=project_root,
         )
         section = _section_for(dashboard)
-        if section is None:
-            continue
         grouped[section].append(
             _inbox_item(summary=summary, dashboard=dashboard, section=section)
         )

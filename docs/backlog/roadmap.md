@@ -13983,13 +13983,13 @@ Local tasks:
     compatibility fields, and historical evidence text.
   - Verification: focused core/static copy tests reject `Intent` as a navigation noun while
     technical disclosures and canonical identifiers remain accessible.
-- `W42-E2-S1-T2` (next) Publish core-owned Work Item attention groups and deterministic ordering.
+- `W42-E2-S1-T2` (done) Publish core-owned Work Item attention groups and deterministic ordering.
   - Scope: extend the existing `OperatorInboxView` with Needs input, Running, Ready, and Complete,
     canonical-stage/Work-Item ordering, and one entry recommendation; failed/stale terminal state
     is not Complete and active `wait-for-stage` work is not omitted.
   - Verification: core/service tests prove exact membership, deterministic ordering, empty-project
     creation, and one recommendation without browser-owned priority.
-- `W42-E2-S1-T4` (planned) Render core-owned Work Item attention groups and selected context.
+- `W42-E2-S1-T4` (next) Render core-owned Work Item attention groups and selected context.
   - Scope: render the four server groups, preserve selected Work Item and deep-link context, show
     one contextual inspector and one primary action, and never mutate or re-sort server state.
   - Verification: provider-free frontend fixtures prove group order, selection persistence,

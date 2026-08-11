@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from dataclasses import replace
 from pathlib import Path
+from types import SimpleNamespace
 
 import pytest
 
@@ -57,12 +58,13 @@ def test_inbox_projection_has_stable_sections_and_exact_identity(tmp_path: Path)
     )
 
     assert [section.key for section in inbox.sections] == [
-        "needs-decision",
-        "ready-to-continue",
-        "flow-complete",
+        "needs-input",
+        "running",
+        "ready",
+        "complete",
     ]
     assert inbox.item_count == 1
-    item = inbox.sections[1].items[0]
+    item = inbox.sections[2].items[0]
     assert item.route.intent == "inbox-work-item"
     assert item.route.work_item == "WI-READY"
     assert item.route.run_id is None
@@ -107,11 +109,11 @@ def test_project_home_intent_excerpt_is_bounded_and_excludes_markdown_heading(
         project_root=tmp_path,
         workspace_root=workspace_root,
     )
-    item = inbox.sections[1].items[0]
+    item = inbox.sections[2].items[0]
     assert item.route.work_item == "WI-INTENT"
 
 
-def test_inbox_projection_omits_durable_running_item_until_job_overlay(
+def test_inbox_projection_keeps_durable_running_item_visible(
     tmp_path: Path,
 ) -> None:
     workspace_root = tmp_path / ".aidd"
@@ -122,7 +124,10 @@ def test_inbox_projection_omits_durable_running_item_until_job_overlay(
         workspace_root=workspace_root,
     )
 
-    assert inbox.item_count == 0
+    running = next(section for section in inbox.sections if section.key == "running")
+    assert [item.route.work_item for item in running.items] == ["WI-RUNNING"]
+    assert running.items[0].primary_action.action == "wait-for-stage"
+    assert inbox.item_count == 1
 
 
 def test_inbox_projection_orders_items_without_frontend_priority_policy(
@@ -176,9 +181,127 @@ def test_inbox_projection_orders_items_without_frontend_priority_policy(
         workspace_root=workspace_root,
     )
 
-    needs_decision = inbox.sections[0]
-    assert [item.route.work_item for item in needs_decision.items] == [
+    needs_input = inbox.sections[0]
+    assert [item.route.work_item for item in needs_input.items] == [
         "WI-ALPHA",
         "WI-ZETA",
     ]
-    assert all(item.primary_action.action == "review-findings" for item in needs_decision.items)
+    assert all(item.primary_action.action == "review-findings" for item in needs_input.items)
+
+
+def test_inbox_projection_classifies_failed_and_stale_terminal_states_as_needs_input(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    workspace_root = tmp_path / ".aidd"
+    _prepare_work_item(workspace_root, "WI-FAILED")
+    _prepare_work_item(workspace_root, "WI-STALE")
+
+    from aidd.core import operator_inbox
+
+    real_resolve = operator_inbox.resolve_operator_dashboard_view
+
+    def resolve_terminal_states(
+        *,
+        workspace_root: Path,
+        work_item: str,
+        active_stage: str,
+        project_root: Path | None = None,
+    ) -> OperatorDashboardView:
+        dashboard = real_resolve(
+            workspace_root=workspace_root,
+            work_item=work_item,
+            active_stage=active_stage,
+            project_root=project_root,
+        )
+        if work_item == "WI-FAILED":
+            return replace(
+                dashboard,
+                terminal_handoff=SimpleNamespace(status="failed"),
+                blockers=(),
+                first_failure=None,
+            )
+        return replace(
+            dashboard,
+            terminal_handoff=None,
+            blockers=(),
+            first_failure=None,
+            next_action=replace(
+                dashboard.next_action,
+                action="rerun-stale-downstream",
+                detail="QA evidence is stale after remediation.",
+            ),
+        )
+
+    monkeypatch.setattr(operator_inbox, "resolve_operator_dashboard_view", resolve_terminal_states)
+    inbox = resolve_operator_inbox_view(
+        project_root=tmp_path,
+        workspace_root=workspace_root,
+    )
+
+    needs_input = next(section for section in inbox.sections if section.key == "needs-input")
+    assert [item.route.work_item for item in needs_input.items] == ["WI-FAILED", "WI-STALE"]
+    assert all(item.state == "blocking" for item in needs_input.items)
+
+
+def test_inbox_projection_recommends_needs_input_then_ready_not_running_or_complete(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    workspace_root = tmp_path / ".aidd"
+    for work_item in ("WI-COMPLETE", "WI-RUNNING", "WI-READY", "WI-NEEDS"):
+        _prepare_work_item(workspace_root, work_item, running=work_item == "WI-RUNNING")
+
+    from aidd.core import operator_inbox
+
+    real_resolve = operator_inbox.resolve_operator_dashboard_view
+
+    def resolve_grouped_states(
+        *,
+        workspace_root: Path,
+        work_item: str,
+        active_stage: str,
+        project_root: Path | None = None,
+    ) -> OperatorDashboardView:
+        dashboard = real_resolve(
+            workspace_root=workspace_root,
+            work_item=work_item,
+            active_stage=active_stage,
+            project_root=project_root,
+        )
+        if work_item == "WI-COMPLETE":
+            return replace(
+                dashboard,
+                terminal_handoff=SimpleNamespace(
+                    status="completed",
+                    recommendation_rationale="QA is fresh and complete.",
+                ),
+                blockers=(),
+                first_failure=None,
+            )
+        if work_item == "WI-READY":
+            return replace(dashboard, blockers=(), first_failure=None)
+        if work_item == "WI-NEEDS":
+            return replace(
+                dashboard,
+                blockers=(),
+                first_failure=OperatorFirstFailure(
+                    kind="operator-decision",
+                    title="Decision required",
+                    detail="Choose the retained evidence boundary.",
+                    stage="plan",
+                    path=None,
+                    time_utc=None,
+                ),
+            )
+        return dashboard
+
+    monkeypatch.setattr(operator_inbox, "resolve_operator_dashboard_view", resolve_grouped_states)
+    inbox = resolve_operator_inbox_view(
+        project_root=tmp_path,
+        workspace_root=workspace_root,
+    )
+
+    assert inbox.entry_recommendation is not None
+    assert inbox.entry_recommendation.work_item == "WI-NEEDS"
+    assert inbox.entry_recommendation.action == "continue-existing-intent"
