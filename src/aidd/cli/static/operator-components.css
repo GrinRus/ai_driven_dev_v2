@@ -175,6 +175,12 @@
   background: var(--color-state-warning-bg);
   border-left-color: var(--color-state-warning);
 }
+.inbox-item.selected,
+.inbox-item[aria-current="true"] {
+  background: var(--color-bg-selected);
+  border-color: var(--color-border-accent);
+  box-shadow: inset 0 0 0 1px var(--color-accent-ring);
+}
 .inbox-item-copy {
   display: grid;
   gap: var(--space-3);
@@ -216,6 +222,11 @@
 .inbox-item-action {
   align-items: center;
   display: flex;
+}
+.inbox-item-selected-hint {
+  color: var(--color-text-secondary);
+  font-size: var(--type-caption-size);
+  white-space: nowrap;
 }
 .guided-step {
   background: var(--color-bg-surface);
@@ -4577,7 +4588,7 @@ button.intent-phase-step.active:hover {
   }
 }
 
-/* Inbox is an intent index, not another operator dashboard. */
+/* Inbox is a Work Item attention index, not another operator dashboard. */
 .studio-inbox {
   margin: 0 auto;
   max-width: 1120px;
@@ -4606,6 +4617,12 @@ button.intent-phase-step.active:hover {
   display: grid;
   gap: var(--space-8);
 }
+.studio-inbox-layout {
+  align-items: start;
+  display: grid;
+  gap: var(--space-10);
+  grid-template-columns: minmax(0, 1fr) minmax(260px, 340px);
+}
 .inbox-section {
   border: 0;
   border-radius: 0;
@@ -4621,6 +4638,12 @@ button.intent-phase-step.active:hover {
   border: 1px solid var(--line-strong);
   border-radius: var(--radius-surface);
   overflow: hidden;
+}
+.inbox-section-empty {
+  color: var(--color-text-secondary);
+  font-size: var(--type-label-size);
+  margin: 0;
+  padding: var(--space-8);
 }
 .inbox-section .inbox-item {
   border: 0;
@@ -4642,6 +4665,69 @@ button.intent-phase-step.active:hover {
 }
 .inbox-item-action button {
   min-width: 190px;
+}
+.inbox-selected-context {
+  display: grid;
+  gap: var(--space-6);
+  min-width: 0;
+  position: sticky;
+  top: var(--space-8);
+}
+.inbox-selected-context-head {
+  align-items: center;
+  border-bottom: 1px solid var(--line);
+  display: flex;
+  gap: var(--space-4);
+  justify-content: space-between;
+  padding-bottom: var(--space-6);
+}
+.inbox-selected-context h2 {
+  font-size: var(--type-heading-size);
+  line-height: var(--type-title-line);
+  overflow-wrap: anywhere;
+}
+.inbox-selected-context > p {
+  color: var(--color-text-secondary);
+  font-size: var(--type-body-size);
+  line-height: var(--type-body-line);
+  margin: 0;
+}
+.inbox-selected-context-identity {
+  color: var(--color-text-tertiary) !important;
+  font-family: var(--font-mono);
+  font-size: var(--type-caption-size) !important;
+  overflow-wrap: anywhere;
+}
+.inbox-selected-context-facts {
+  border-top: 1px solid var(--line);
+  display: grid;
+  gap: var(--space-4);
+  margin: 0;
+  padding-top: var(--space-6);
+}
+.inbox-selected-context-facts > div {
+  display: flex;
+  gap: var(--space-4);
+  justify-content: space-between;
+}
+.inbox-selected-context-facts dt,
+.inbox-selected-context-facts dd {
+  font-size: var(--type-caption-size);
+  margin: 0;
+}
+.inbox-selected-context-facts dt {
+  color: var(--color-text-secondary);
+}
+.inbox-selected-context-facts dd {
+  overflow-wrap: anywhere;
+  text-align: right;
+}
+.inbox-selected-context-action {
+  border-top: 1px solid var(--line);
+  padding-top: var(--space-6);
+}
+.inbox-selected-context-action button {
+  width: 100%;
 }
 .intent-entry-recommendation {
   background: var(--studio-accent-soft);
@@ -4669,6 +4755,12 @@ button.intent-phase-step.active:hover {
 }
 
 @media (max-width: 900px) {
+  .studio-inbox-layout {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .inbox-selected-context {
+    position: static;
+  }
   .active-studio-grid {
     grid-template-columns: minmax(0, 1fr);
   }

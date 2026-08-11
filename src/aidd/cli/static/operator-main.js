@@ -241,7 +241,7 @@ document.addEventListener("click", async (event) => {
       await renderCockpit();
       if (tabShortcut === "project-home") {
         const primaryInboxAction = document.querySelector(
-          '[data-inbox-section="needs-decision"] [data-inbox-action], [data-inbox-action]'
+          '[data-inbox-section="needs-input"] [data-inbox-action], [data-inbox-action]'
         );
         primaryInboxAction?.focus({preventScroll: true});
         const revealInboxStart = () => {

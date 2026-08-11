@@ -31,19 +31,19 @@ test("Studio Inbox preserves section priority and exact durable routes", async (
   const html = vm.runInContext(`
     state.inbox = {
       durable: {sections: [
-        {key: "needs-decision", label: "Needs your decision", items: [{
+        {key: "needs-input", label: "Needs input", items: [{
           item_id: "decision", state: "blocking", status_label: "Blocked",
           title: "Answer question", summary: "Q1 is unresolved",
           route: {intent: "inbox-work-item", work_item: "WI-1", run_id: "run-1", stage: "idea"},
           primary_action: {action: "answer-questions", label: "Answer", enabled: true}
         }]},
-        {key: "ready-to-continue", label: "Ready to continue", items: [{
+        {key: "ready", label: "Ready", items: [{
           item_id: "ready", state: "ready", status_label: "Ready",
           title: "Continue plan", summary: "Plan may run",
           route: {intent: "inbox-work-item", work_item: "WI-2", run_id: "run-2", stage: "plan"},
           primary_action: {action: "run-stage", label: "Run plan", enabled: true}
         }]},
-        {key: "flow-complete", label: "Flow complete", items: [{
+        {key: "complete", label: "Complete", items: [{
           item_id: "complete", state: "terminal", status_label: "Complete",
           title: "QA complete", summary: "Choose next flow",
           route: {intent: "inbox-work-item", work_item: "WI-3", run_id: "run-3", stage: "qa"},
@@ -57,7 +57,7 @@ test("Studio Inbox preserves section priority and exact durable routes", async (
     };
     renderStudioInbox();
   `, context);
-  const positions = ["needs-decision", "running-now", "ready-to-continue", "flow-complete"]
+  const positions = ["needs-input", "running", "ready", "complete"]
     .map((section) => html.indexOf(`data-inbox-section="${section}"`));
   assert.deepEqual([...positions].sort((a, b) => a - b), positions);
   for (const [workItem, runId, stage] of [
@@ -73,7 +73,7 @@ test("Studio Inbox preserves section priority and exact durable routes", async (
   assert.match(html, /data-inbox-action="create-new-work-item"/);
 });
 
-test("Studio Inbox keeps legacy DOM keys while accepting canonical core groups", async () => {
+test("Studio Inbox renders canonical DOM keys while accepting legacy payload groups", async () => {
   const context = await inboxContext();
   const html = vm.runInContext(`
     state.inbox = {
@@ -108,11 +108,11 @@ test("Studio Inbox keeps legacy DOM keys while accepting canonical core groups",
     renderStudioInbox();
   `, context);
 
-  const positions = ["needs-decision", "running-now", "ready-to-continue", "flow-complete"]
+  const positions = ["needs-input", "running", "ready", "complete"]
     .map((section) => html.indexOf(`data-inbox-section="${section}"`));
   assert.deepEqual([...positions].sort((a, b) => a - b), positions);
-  assert.match(html, /data-inbox-section="needs-decision"/);
-  assert.match(html, /data-inbox-section="running-now"/);
+  assert.match(html, /data-inbox-section="needs-input"/);
+  assert.match(html, /data-inbox-section="running"/);
   assert.match(html, /data-route-work-item="WI-2"/);
 });
 
@@ -125,6 +125,37 @@ test("Project Inbox exposes a direct new Work Item entry point", async () => {
 
   assert.match(html, /data-new-work-item/);
   assert.match(html, /New Work Item/);
+});
+
+test("Project Inbox renders empty groups and one selected Work Item inspector action", async () => {
+  const context = await inboxContext();
+  const html = vm.runInContext(`
+    state.projectHome = {
+      selected_work_item: "WI-7",
+      work_items: [{
+        work_item: "WI-7", intent: {excerpt: "Investigate checkout"},
+        active_stage: "plan", stage_progress_count: 2, stage_total_count: 8,
+        terminal_state: "blocked", blocker_count: 1
+      }]
+    };
+    state.inbox = {durable: {sections: [
+      {key: "needs-input", label: "Needs input", items: [{
+        item_id: "decision", state: "blocking", status_label: "Waiting for answer",
+        title: "Answer question", summary: "A decision is required.",
+        route: {intent: "inbox-work-item", work_item: "WI-7", run_id: "run-7", stage: "plan"},
+        primary_action: {action: "answer-questions", label: "Open decision", enabled: true}
+      }]}
+    ]}, running_now: []};
+    renderStudioInbox();
+  `, context);
+
+  for (const section of ["needs-input", "running", "ready", "complete"]) {
+    assert.match(html, new RegExp(`data-inbox-section="${section}"`));
+  }
+  assert.match(html, /data-inbox-inspector/);
+  assert.match(html, /data-inbox-selected-context="WI-7"/);
+  assert.equal((html.match(/data-inbox-action="answer-questions"/g) || []).length, 1);
+  assert.match(html, /data-selected-work-item="WI-7"/);
 });
 
 test("Project Inbox exposes one durable continue-or-create entry recommendation", async () => {
