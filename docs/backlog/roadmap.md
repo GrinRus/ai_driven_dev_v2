@@ -13989,13 +13989,13 @@ Local tasks:
     is not Complete and active `wait-for-stage` work is not omitted.
   - Verification: core/service tests prove exact membership, deterministic ordering, empty-project
     creation, and one recommendation without browser-owned priority.
-- `W42-E2-S1-T4` (next) Render core-owned Work Item attention groups and selected context.
+- `W42-E2-S1-T4` (done) Render core-owned Work Item attention groups and selected context.
   - Scope: render the four server groups, preserve selected Work Item and deep-link context, show
     one contextual inspector and one primary action, and never mutate or re-sort server state.
   - Verification: provider-free frontend fixtures prove group order, selection persistence,
     empty groups, empty-project creation, and one primary action for the selected item.
   - Dependencies: `W42-E2-S1-T2` as the core-projection predecessor.
-- `W42-E2-S1-T3` (planned) Render the Work Item tabs and canonical stage strip.
+- `W42-E2-S1-T3` (next) Render the Work Item tabs and canonical stage strip.
   - Scope: Overview, Tasks, Documents, Runs tabs and the eight exact stages; retain current deep
     links, browser history, focus restoration, and stale/status semantics.
   - Verification: route and DOM tests cover all tabs, exact stage order, keyboard navigation,

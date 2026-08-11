@@ -133,7 +133,7 @@ def test_guided_setup_create_or_resume_launches_into_inbox(
         page.locator('[data-tab-shortcut="project-home"]').first.evaluate(
             "node => node.click()"
         )
-        running = page.locator('[data-inbox-section="running-now"] [data-inbox-item]')
+        running = page.locator('[data-inbox-section="running"] [data-inbox-item]')
         running.wait_for(state="visible")
         assert running.get_attribute("data-state") == "running"
         _assert_rendered_gate(page, viewport)

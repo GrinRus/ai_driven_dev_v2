@@ -1,18 +1,28 @@
 const STUDIO_INBOX_SECTION_ORDER = Object.freeze([
-  "needs-decision",
-  "running-now",
-  "ready-to-continue",
-  "flow-complete"
+  "needs-input",
+  "running",
+  "ready",
+  "complete"
 ]);
 
-// Keep the established DOM section keys stable while the core projection moves to
-// its canonical Needs input / Running / Ready / Complete vocabulary. T4 will
-// replace these presentation aliases once the new renderer is installed.
+const STUDIO_INBOX_SECTION_LABELS = Object.freeze({
+  "needs-input": "Needs input",
+  running: "Running",
+  ready: "Ready",
+  complete: "Complete"
+});
+
+// Older persisted fixtures may still use the pre-Wave-42 presentation keys. They
+// are accepted as input only; the DOM always exposes the core-owned vocabulary.
 const CORE_INBOX_SECTION_ALIASES = Object.freeze({
-  "needs-input": "needs-decision",
-  "running": "running-now",
-  "ready": "ready-to-continue",
-  "complete": "flow-complete"
+  "needs-input": "needs-input",
+  running: "running",
+  ready: "ready",
+  complete: "complete",
+  "needs-decision": "needs-input",
+  "running-now": "running",
+  "ready-to-continue": "ready",
+  "flow-complete": "complete"
 });
 
 function inboxRouteAttributes(route) {
@@ -25,12 +35,20 @@ function inboxRouteAttributes(route) {
   ].filter(Boolean).join(" ");
 }
 
-function renderStudioInboxItem(item) {
+function inboxProjectProgressText(projectItem) {
+  if (!projectItem) return "";
+  if (typeof workItemProgressText === "function") return workItemProgressText(projectItem);
+  if (projectItem.stage_progress_label) return String(projectItem.stage_progress_label);
+  return `${Number(projectItem.stage_progress_count || 0)} of ${Number(projectItem.stage_total_count || 0)} stages complete`;
+}
+
+function renderStudioInboxItem(item, {selectedWorkItem = ""} = {}) {
   const route = item.route || null;
   const action = item.primary_action || null;
   const projectItem = (state.projectHome?.work_items || []).find(
     (candidate) => candidate.work_item === route?.work_item
   ) || null;
+  const selected = Boolean(selectedWorkItem && selectedWorkItem === route?.work_item);
   const actionMarkup = action && route
     ? `<button ${inboxRouteAttributes(route)} data-inbox-action="${escapeHtml(action.action)}" data-service-action-enabled="${action.enabled === false ? "false" : "true"}" type="button">${escapeHtml(action.label)}</button>`
     : '<span class="inbox-item-no-action">No action available</span>';
@@ -44,8 +62,11 @@ function renderStudioInboxItem(item) {
     terminal: "complete",
     malformed: "stale"
   }[item.state];
+  const selectionAttributes = selected
+    ? `data-selected-work-item="${escapeHtml(route?.work_item)}" aria-current="true"`
+    : 'aria-current="false"';
   return `
-    <article class="inbox-item" data-inbox-item="${escapeHtml(item.item_id || item.job_id)}" data-state="${escapeHtml(item.state)}">
+    <article class="inbox-item${selected ? " selected" : ""}" data-inbox-item="${escapeHtml(item.item_id || item.job_id)}" data-state="${escapeHtml(item.state)}" ${selectionAttributes}>
       <div class="inbox-item-copy">
         ${renderStatusMarker({status: markerStatus, label: item.status_label})}
         <strong>${escapeHtml(projectItem?.intent?.excerpt || item.title)}</strong>
@@ -53,11 +74,61 @@ function renderStudioInboxItem(item) {
         <p>${escapeHtml(item.summary)}</p>
         <dl>
           <div><dt>Context</dt><dd>${escapeHtml(routeLabel)}</dd></div>
-          ${projectItem ? `<div><dt>Progress</dt><dd>${escapeHtml(workItemProgressText(projectItem))}</dd></div>` : ""}
+          ${projectItem ? `<div><dt>Progress</dt><dd>${escapeHtml(inboxProjectProgressText(projectItem))}</dd></div>` : ""}
         </dl>
       </div>
-      <div class="inbox-item-action">${actionMarkup}</div>
+      <div class="inbox-item-action">${selected
+        ? `<span class="inbox-item-selected-hint" ${inboxRouteAttributes(route)} data-inbox-selected-route="true">Selected Work Item</span>`
+        : actionMarkup}</div>
     </article>
+  `;
+}
+
+function inboxSelectedWorkItem() {
+  return String(
+    state.projectHome?.selected_work_item
+      || state.dashboard?.work_item
+      || state.activeRouteWorkItem
+      || ""
+  );
+}
+
+function inboxSelectedItem(sections, workItem) {
+  if (!workItem) return null;
+  for (const section of sections) {
+    const item = section.items.find((candidate) => candidate.route?.work_item === workItem);
+    if (item) return item;
+  }
+  return null;
+}
+
+function renderInboxSelectedContext(item) {
+  if (!item?.route?.work_item) return "";
+  const route = item.route;
+  const action = item.primary_action || null;
+  const projectItem = (state.projectHome?.work_items || []).find(
+    (candidate) => candidate.work_item === route.work_item
+  ) || null;
+  const actionMarkup = action
+    ? `<button ${inboxRouteAttributes(route)} data-inbox-action="${escapeHtml(action.action)}" data-service-action-enabled="${action.enabled === false ? "false" : "true"}" type="button">${escapeHtml(action.label)}</button>`
+    : '<span class="inbox-item-no-action">No primary action available</span>';
+  const context = [route.work_item, route.run_id, route.stage].filter(Boolean).join(" / ");
+  const progress = projectItem ? inboxProjectProgressText(projectItem) : item.status_label;
+  return `
+    <aside class="surface inbox-selected-context" data-inbox-inspector data-inbox-selected-context="${escapeHtml(route.work_item)}" aria-label="Selected Work Item">
+      <div class="inbox-selected-context-head">
+        <p class="eyebrow">Selected Work Item</p>
+        <span class="small-badge">${escapeHtml(item.status_label)}</span>
+      </div>
+      <h2>${escapeHtml(projectItem?.intent?.excerpt || item.title)}</h2>
+      <p class="inbox-selected-context-identity">${escapeHtml(context)}</p>
+      <p>${escapeHtml(item.summary)}</p>
+      <dl class="inbox-selected-context-facts">
+        <div><dt>Stage</dt><dd>${escapeHtml(route.stage || "Unavailable")}</dd></div>
+        <div><dt>Progress</dt><dd>${escapeHtml(progress)}</dd></div>
+      </dl>
+      <div class="inbox-selected-context-action">${actionMarkup}</div>
+    </aside>
   `;
 }
 
@@ -113,28 +184,22 @@ function studioInboxSections(inbox) {
     sections.set(presentationKey, {
       ...section,
       key: presentationKey,
-      label: presentationKey === "needs-decision"
-        ? "Needs your decision"
-        : presentationKey === "ready-to-continue"
-          ? "Ready to continue"
-          : presentationKey === "flow-complete"
-            ? "Flow complete"
-            : section.label
+      label: STUDIO_INBOX_SECTION_LABELS[presentationKey] || section.label
     });
   }
-  const durableRunning = sections.get("running-now");
+  const durableRunning = sections.get("running");
   const runningNow = runningNowInboxItems(inbox?.running_now || []);
-  sections.set("running-now", {
+  sections.set("running", {
     ...(durableRunning || {}),
-    key: "running-now",
-    label: "Running now",
+    key: "running",
+    label: STUDIO_INBOX_SECTION_LABELS.running,
     // A live job is the richer compatibility representation for its same
     // work-item/run; fall back to the durable wait-for-stage item otherwise.
     items: runningNow.length ? runningNow : (durableRunning?.items || [])
   });
   return STUDIO_INBOX_SECTION_ORDER.map((key) => sections.get(key) || {
     key,
-    label: key.replaceAll("-", " "),
+    label: STUDIO_INBOX_SECTION_LABELS[key],
     items: []
   });
 }
@@ -150,7 +215,8 @@ function renderStudioInbox() {
   }
   const sections = studioInboxSections(state.inbox);
   const count = sections.reduce((total, section) => total + section.items.length, 0);
-  const visibleSections = sections.filter((section) => section.items.length);
+  const selectedWorkItem = inboxSelectedWorkItem();
+  const selectedItem = inboxSelectedItem(sections, selectedWorkItem);
   return `
     <section class="studio-inbox" data-studio-surface="inbox">
       <header class="surface studio-inbox-header">
@@ -166,23 +232,29 @@ function renderStudioInbox() {
       </header>
       ${renderStudioEntryRecommendation(state.inbox)}
       ${renderProjectWorkItemCreator()}
-      <div class="studio-inbox-sections">
-        ${visibleSections.length ? visibleSections.map((section) => `
+      <div class="studio-inbox-layout">
+        <div class="studio-inbox-sections">
+        ${sections.map((section) => `
           <section class="surface inbox-section" data-inbox-section="${escapeHtml(section.key)}">
             <div class="surface-title">
               <span>${escapeHtml(section.label)}</span>
               <span class="small-badge">${escapeHtml(section.items.length)}</span>
             </div>
             <div class="inbox-section-items">
-              ${section.items.map(renderStudioInboxItem).join("")}
+              ${section.items.length
+                ? section.items.map((item) => renderStudioInboxItem(item, {selectedWorkItem})).join("")
+                : '<p class="inbox-section-empty">No Work Items in this group.</p>'}
             </div>
           </section>
-        `).join("") : renderStateSurface({
+        `).join("")}
+        ${count ? "" : renderStateSurface({
           kind: "inbox",
           state: "empty",
           title: "Inbox is clear",
           consequence: "No durable operator decision is waiting in this project."
         })}
+        </div>
+        ${renderInboxSelectedContext(selectedItem)}
       </div>
     </section>
   `;

@@ -13,9 +13,9 @@ from browser_tests.state_fixtures import RUN_ID, WORK_ITEM, build_browser_state_
 @pytest.mark.parametrize(
     ("fixture_state", "section", "stage"),
     (
-        ("blocking-question", "needs-decision", "idea"),
-        ("no-run", "ready-to-continue", "idea"),
-        ("terminal-handoff", "flow-complete", "qa"),
+        ("blocking-question", "needs-input", "idea"),
+        ("no-run", "ready", "idea"),
+        ("terminal-handoff", "complete", "qa"),
     ),
 )
 def test_studio_inbox_routes_each_durable_section_to_exact_context(
@@ -35,7 +35,12 @@ def test_studio_inbox_routes_each_durable_section_to_exact_context(
         browser_page.page.locator('[data-tab-shortcut="project-home"]').first.click()
         inbox_section = browser_page.page.locator(f'[data-inbox-section="{section}"]')
         inbox_section.locator("[data-inbox-item]").wait_for(state="visible")
-        inbox_section.locator("[data-operator-route-intent]").first.click(force=True)
+        route_target = inbox_section.locator("[data-operator-route-intent]").first
+        if route_target.count() == 0:
+            route_target = browser_page.page.locator(
+                '[data-inbox-selected-context] [data-operator-route-intent]'
+            ).first
+        route_target.click(force=True)
         browser_page.page.wait_for_load_state("networkidle")
 
         query = parse_qs(urlsplit(browser_page.page.url).query)

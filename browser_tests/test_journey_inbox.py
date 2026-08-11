@@ -23,10 +23,10 @@ _SURFACE_TIMEOUT_MS = 30_000
 _SURFACE_TIMEOUT_SECONDS = _SURFACE_TIMEOUT_MS / 1_000
 
 _ITEMS = {
-    "needs-decision": ("WI-DECISION", "run-decision", "idea", "answer-questions"),
-    "running-now": ("WI-RUN", None, "idea", "open-running-job"),
-    "ready-to-continue": ("WI-READY", None, "idea", "choose-runtime"),
-    "flow-complete": ("WI-COMPLETE", "run-complete", "qa", "review-complete"),
+    "needs-input": ("WI-DECISION", "run-decision", "idea", "answer-questions"),
+    "running": ("WI-RUN", None, "idea", "open-running-job"),
+    "ready": ("WI-READY", None, "idea", "choose-runtime"),
+    "complete": ("WI-COMPLETE", "run-complete", "qa", "review-complete"),
 }
 
 
@@ -158,11 +158,11 @@ def test_inbox_prioritizes_and_routes_durable_and_running_work(
         sections.first.wait_for(state="visible")
         assert sections.evaluate_all(
             "items => items.map(item => item.dataset.inboxSection)"
-        ) == ["needs-decision", "ready-to-continue", "flow-complete"]
+        ) == ["needs-input", "running", "ready", "complete"]
         page.wait_for_function("window.scrollY === 0", timeout=5_000)
 
         first_action = page.locator(
-            '[data-inbox-section="needs-decision"] [data-inbox-action]'
+            '[data-inbox-section="needs-input"] [data-inbox-action]'
         )
         bounds = first_action.bounding_box()
         assert bounds is not None
@@ -173,13 +173,13 @@ def test_inbox_prioritizes_and_routes_durable_and_running_work(
         _assert_rendered_gate(page, viewport)
 
         page.reload(wait_until="domcontentloaded")
-        page.locator('[data-inbox-section="needs-decision"]').wait_for(
+        page.locator('[data-inbox-section="needs-input"]').wait_for(
             state="visible", timeout=_SURFACE_TIMEOUT_MS
         )
         assert parse_qs(urlsplit(page.url).query).get("mode") == ["inbox"]
 
         first_action = page.locator(
-            '[data-inbox-section="needs-decision"] [data-inbox-action]'
+            '[data-inbox-section="needs-input"] [data-inbox-action]'
         )
         first_action.wait_for(state="visible")
         first_action.focus()
@@ -256,7 +256,7 @@ def test_inbox_prioritizes_and_routes_durable_and_running_work(
             )
             page.locator("#projectInboxButton").click()
             sections = page.locator("[data-inbox-section]")
-            page.locator('[data-inbox-section="running-now"]').wait_for(
+            page.locator('[data-inbox-section="running"]').wait_for(
                 state="visible", timeout=_SURFACE_TIMEOUT_MS
             )
             assert sections.evaluate_all(
@@ -268,6 +268,10 @@ def test_inbox_prioritizes_and_routes_durable_and_running_work(
                 item = _item_for(section, work_item)
                 item.wait_for(state="visible")
                 buttons = item.locator("[data-inbox-action]")
+                if buttons.count() == 0:
+                    buttons = page.locator(
+                        f'[data-inbox-selected-context="{work_item}"] [data-inbox-action]'
+                    )
                 assert buttons.count() == 1
                 button = buttons.first
                 assert button.get_attribute("data-inbox-action") == action
@@ -275,7 +279,7 @@ def test_inbox_prioritizes_and_routes_durable_and_running_work(
                 assert button.get_attribute("data-route-stage") == stage
                 if run_id is not None:
                     assert button.get_attribute("data-route-run-id") == run_id
-                elif section_key != "running-now":
+                elif section_key != "running":
                     assert button.get_attribute("data-route-run-id") is None
 
             _assert_rendered_gate(page, viewport)
