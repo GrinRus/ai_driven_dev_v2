@@ -73,6 +73,49 @@ test("Studio Inbox preserves section priority and exact durable routes", async (
   assert.match(html, /data-inbox-action="create-new-work-item"/);
 });
 
+test("Studio Inbox keeps legacy DOM keys while accepting canonical core groups", async () => {
+  const context = await inboxContext();
+  const html = vm.runInContext(`
+    state.inbox = {
+      durable: {sections: [
+        {key: "needs-input", label: "Needs input", items: [{
+          item_id: "decision", state: "blocking", status_label: "Blocked",
+          title: "Answer question", summary: "Q1 is unresolved",
+          route: {intent: "inbox-work-item", work_item: "WI-1", run_id: "run-1", stage: "idea"},
+          primary_action: {action: "answer-questions", label: "Answer", enabled: true}
+        }]},
+        {key: "running", label: "Running", items: [{
+          item_id: "running", state: "running", status_label: "Running",
+          title: "Wait for stage", summary: "Stage is executing",
+          route: {intent: "inbox-work-item", work_item: "WI-2", run_id: "run-2", stage: "plan"},
+          primary_action: {action: "wait-for-stage", label: "View", enabled: true}
+        }]},
+        {key: "ready", label: "Ready", items: [{
+          item_id: "ready", state: "ready", status_label: "Ready",
+          title: "Continue plan", summary: "Plan may run",
+          route: {intent: "inbox-work-item", work_item: "WI-3", run_id: "run-3", stage: "plan"},
+          primary_action: {action: "run-stage", label: "Run plan", enabled: true}
+        }]},
+        {key: "complete", label: "Complete", items: [{
+          item_id: "complete", state: "terminal", status_label: "Complete",
+          title: "QA complete", summary: "Choose next flow",
+          route: {intent: "inbox-work-item", work_item: "WI-4", run_id: "run-4", stage: "qa"},
+          primary_action: {action: "create-new-work-item", label: "Create", enabled: true}
+        }]}
+      ]},
+      running_now: []
+    };
+    renderStudioInbox();
+  `, context);
+
+  const positions = ["needs-decision", "running-now", "ready-to-continue", "flow-complete"]
+    .map((section) => html.indexOf(`data-inbox-section="${section}"`));
+  assert.deepEqual([...positions].sort((a, b) => a - b), positions);
+  assert.match(html, /data-inbox-section="needs-decision"/);
+  assert.match(html, /data-inbox-section="running-now"/);
+  assert.match(html, /data-route-work-item="WI-2"/);
+});
+
 test("Project Inbox exposes a direct new Work Item entry point", async () => {
   const context = await inboxContext();
   const html = vm.runInContext(`
