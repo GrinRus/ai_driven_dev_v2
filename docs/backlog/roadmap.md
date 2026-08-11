@@ -6393,8 +6393,8 @@ Exit evidence:
 
 - `US-11` includes terminal-run next-flow handoff as a frontend success signal;
 - `operator-frontend.md` records the 12 accepted screens and completed-run actions;
-- `docs/architecture/assets/operator-ui-mission-control/` stores the accepted visual
-  references, including active and completed command-center states;
+- the historical Mission Control visual set recorded the accepted active and completed
+  command-center states; Wave 42 replaces and removes those superseded image files;
 - `target-architecture.md` records immutable completed runs and lineage-based next flows;
 - Wave 26 local tasks are split and promoted into the short backlog queue.
 
@@ -8233,7 +8233,8 @@ Touched areas:
 
 Dependencies:
 
-- `docs/architecture/assets/operator-ui-mission-control/13-integrated-operator-workbench.png`
+- the historical integrated-operator-workbench concept, removed after the Wave 42 target set
+  replaced it
 - completed Wave 29 browser evidence
 
 Local tasks:
@@ -10172,8 +10173,9 @@ When references disagree, use this order:
    [project-set workspace](../architecture/project-set-workspace.md) for workflow, task,
    completed-run, and project-root ownership;
 4. [user stories](../product/user-stories.md) for product outcomes and scope;
-5. the [reference-screen prompt set](../architecture/assets/operator-ui-document-evidence-studio/generation-prompts.md)
-   and linked images for visual hierarchy, density, and responsive intent only;
+5. the [Wave 42 target contract](../architecture/operator-frontend-target-ux.md) and
+   [replacement prompt set](../architecture/assets/operator-ui-target-v2/generation-prompts.md)
+   for visual hierarchy, density, and responsive intent only;
 6. current core/UI read models, service contracts, and deterministic tests for compatibility;
 7. analysis reports and the previous Mission Control assets as historical baseline evidence,
    never as normative target design.
@@ -10182,7 +10184,8 @@ Canonical design references:
 
 - [accepted UX direction](../architecture/operator-frontend.md#8-accepted-next-generation-ux-direction);
 - [UX validation checklist](../architecture/operator-frontend.md#9-ux-validation-checklist-for-the-accepted-direction);
-- [reference-screen prompt set](../architecture/assets/operator-ui-document-evidence-studio/generation-prompts.md);
+- [Wave 42 target contract](../architecture/operator-frontend-target-ux.md) and
+  [replacement prompt set](../architecture/assets/operator-ui-target-v2/generation-prompts.md);
 - [document contracts](../architecture/document-contracts.md) and
   [runtime matrix](../architecture/runtime-matrix.md);
 - [local-project Operator UI E2E lane](../e2e/operator-ui-local-project.md) for the current
@@ -10260,19 +10263,11 @@ progress, or changing AIDD workflow semantics. The local authority order above a
 
 ### Reference-screen crosswalk
 
-| Reference | Target surface | Owning slice | Supporting contract | Executable journey | Primary acceptance |
-| --- | --- | --- | --- | --- | --- |
-| [01-inbox-desktop.png](../architecture/assets/operator-ui-document-evidence-studio/01-inbox-desktop.png) | Project-local decision queue | `W36-E5-S3` | `W36-E5-S0` and `W36-E5-S1` | `W36-E7-S1-T12` | First core-approved decision and action are visible without scrolling. |
-| [02-guided-setup-desktop.png](../architecture/assets/operator-ui-document-evidence-studio/02-guided-setup-desktop.png) | Four-step Guided Setup | `W36-E4-S1` | `W36-E3-S2` and `W36-E3-S3` | `W36-E7-S1-T1` | Create/Resume and explicit runtime selection complete through one service path. |
-| [03-active-studio-desktop.png](../architecture/assets/operator-ui-document-evidence-studio/03-active-studio-desktop.png) | Live document-centered Studio | `W36-E5-S4` | `W36-E5-S1` | `W36-E7-S1-T2` and `W36-E7-S1-T7` | Context, Decision Bar, primary document, and live evidence share the first desktop viewport. |
-| [04-validation-repair-desktop.png](../architecture/assets/operator-ui-document-evidence-studio/04-validation-repair-desktop.png) | Validation recovery | `W36-E5-S6` | `W36-E6-S3` | `W36-E7-S1-T3` | Exact finding and `Run Repair` versus `Request Change` semantics remain truthful. |
-| [05-quality-gate-desktop.png](../architecture/assets/operator-ui-document-evidence-studio/05-quality-gate-desktop.png) | Implement/Review/QA quality gate | `W36-E5-S7` | `W35-E2-S8` | `W36-E7-S1-T4` and `W36-E7-S1-T9` | Real diff, claim evidence, remediation selection, and stale downstream state agree. |
-| [06-history-filmstrip-desktop.png](../architecture/assets/operator-ui-document-evidence-studio/06-history-filmstrip-desktop.png) | Attempt History Filmstrip | `W36-E5-S8` | `W36-E6-S1` | `W36-E7-S1-T5` | Only durable attempts, events, artifacts, and lineage are selectable. |
-| [07-flow-complete-desktop.png](../architecture/assets/operator-ui-document-evidence-studio/07-flow-complete-desktop.png) | Immutable terminal handoff | `W36-E5-S9` | `W36-E6-S2` and `W36-E6-S4` | `W36-E7-S1-T8` | Fresh QA exposes one core-recommended outcome and never mutates the source run. |
-| [08-question-mobile.png](../architecture/assets/operator-ui-document-evidence-studio/08-question-mobile.png) | First-viewport mobile question | `W36-E5-S5` | `W36-E5-S2` | `W36-E7-S1-T6` | Question, resolution status, and submit action fit the decision-first mobile contract. |
-
-Generated text is not normative. The written architecture contract and service semantics win
-when a reference image differs from executable behavior.
+The historical eight-screen crosswalk was removed with its superseded assets. Wave 42 owns the
+current 13-screen crosswalk in
+[Target Operator Experience](../architecture/operator-frontend-target-ux.md). Completed Wave 36
+task and browser evidence remains valid as implementation-baseline history; it does not make the
+removed images normative.
 
 ### Migration phases
 
@@ -13871,3 +13866,454 @@ Sync notes:
   surfaces consistently say `Intent`; canonical `work_item`, run, stage, and lineage fields stay
   available in technical routes/disclosures. Active Studio no longer repeats the same identity,
   and copy-whitelist tests reject visible `Work item` labels outside technical context.
+
+---
+
+## Wave 42 — task-centered operator experience (`planned`)
+
+Goal: replace the implemented document-first shell's ambiguous `Intent` vocabulary and weak task
+affordances with one organic operator flow: create a Work Item, select an eligible Runner at the
+point of execution, work dependency-ready Tasks, read or author Markdown through explicit
+ownership boundaries, recover from exact failures, and finish with an immutable handoff.
+
+This wave changes presentation, read models, and controlled frontend authoring only. It does not
+change the eight-stage graph, adapter boundary, Markdown contracts, validation policy, durable
+`.aidd/` ownership, or CLI behavior. Existing routes and payloads remain compatibility surfaces
+until a slice explicitly migrates and verifies them.
+
+Reference authority:
+
+1. [Target Operator Experience](../architecture/operator-frontend-target-ux.md) for hierarchy,
+   vocabulary, flows, Markdown ownership, states, responsive behavior, and acceptance;
+2. [target visual set](../architecture/assets/operator-ui-target-v2/generation-prompts.md) for
+   composition, density, and contextual action placement only;
+3. [Operator Frontend Contract](../architecture/operator-frontend.md) for implemented service,
+   endpoint, safety, and compatibility boundaries;
+4. [task execution](../architecture/task-execution.md), document contracts, and existing core
+   read models for canonical behavior.
+
+Linked stories: `US-01`, `US-02`, `US-03`, `US-05`, `US-06`, `US-11`, `US-13`
+
+### Epic W42-E1 — target contract and visual authority (`done`)
+
+Goal: establish one written UX authority and one complete screen set before implementation.
+
+#### Slice W42-E1-S1 — target interaction and Markdown contract (`done`)
+
+Primary output: one normative target that names the product hierarchy, complete flow, screen
+inventory, document ownership, controlled writes, task behavior, recovery states, and measurable
+acceptance.
+
+Touched areas:
+
+- `docs/architecture/operator-frontend-target-ux.md`
+- `docs/architecture/operator-frontend.md`
+
+Dependencies: completed Wave 40 and Wave 41 implementation evidence.
+
+Local tasks:
+
+- `W42-E1-S1-T1` (done) Define the task-centered target operator contract.
+  - Scope: architecture documentation only; retain existing workflow, runtime, and artifact
+    ownership semantics.
+  - Verification: the contract names all 13 surfaces, exact eight-stage order, Runner placement,
+    task workspace behavior, Markdown ownership classes, failure states, viewport matrix, and
+    provider-free acceptance.
+
+#### Slice W42-E1-S2 — replacement visual set and stale-asset cleanup (`done`)
+
+Primary output: one 13-screen reference set that covers the end-to-end desktop flow plus the
+mobile blocking-decision path, with reproducible prompt notes and no competing old UI assets.
+
+Touched areas:
+
+- `docs/architecture/assets/operator-ui-target-v2/`
+- `docs/architecture/operator-frontend.md`
+- `docs/backlog/roadmap.md`
+- `tests/test_docs_consistency.py`
+
+Dependencies: `W42-E1-S1`.
+
+Local tasks:
+
+- `W42-E1-S2-T1` (done) Generate, register, and verify the replacement visual authority.
+  - Scope: 13 target PNGs, prompt record, architecture and roadmap links, docs-consistency
+    expectations, and deletion of the superseded Mission Control, Document & Evidence Studio,
+    and exploratory image folders.
+  - Verification: all 13 expected files exist, every filename is linked from architecture and
+    planning docs, old asset paths have no remaining references, and docs consistency passes.
+
+### Epic W42-E2 — literal navigation and contextual Runner (`planned`)
+
+Goal: make project/work/task identity and execution choice visible where the operator acts,
+without changing canonical ids or creating frontend-owned eligibility.
+
+#### Slice W42-E2-S1 — Work Item shell and project work list (`planned`)
+
+Primary output: a stable `Project -> Work Item` shell with literal vocabulary, grouped work, Work
+Item tabs, and the exact stage strip.
+
+Touched areas:
+
+- `src/aidd/cli/static/operator-main.js`
+- `src/aidd/cli/static/operator-onboarding.js`
+- `src/aidd/cli/static/operator-components.css`
+- `src/aidd/cli/static/operator-responsive.css`
+- frontend contract tests
+
+Dependencies: `W42-E1`.
+
+Local tasks:
+
+- `W42-E2-S1-T1` (planned) Replace primary `Intent` presentation with literal Work Item and Task
+  vocabulary.
+  - Scope: visible labels, accessible names, headings, route titles, and copy assertions only;
+    preserve `work_item` ids, request paths, API shapes, and historical evidence text.
+  - Verification: focused static copy tests reject `Intent` as a navigation noun while technical
+    disclosures and canonical identifiers remain accessible.
+- `W42-E2-S1-T2` (planned) Render project Work Items in core-prioritized attention groups.
+  - Scope: project list composition for Needs input, Running, Ready, and Complete plus one selected
+    contextual inspector; do not duplicate priority or mutate status in the browser.
+  - Verification: provider-free fixtures prove deterministic group order, selection persistence,
+    empty-project creation, and one primary action for the selected item.
+- `W42-E2-S1-T3` (planned) Render the Work Item tabs and canonical stage strip.
+  - Scope: Overview, Tasks, Documents, Runs tabs and the eight exact stages; retain current deep
+    links, browser history, focus restoration, and stale/status semantics.
+  - Verification: route and DOM tests cover all tabs, exact stage order, keyboard navigation,
+    status text, and reload restoration without duplicate navigation landmarks.
+
+#### Slice W42-E2-S2 — launch readiness and contextual Runner (`planned`)
+
+Primary output: one core-authoritative Runner readiness projection and one reusable picker placed
+beside every action that launches workflow, stage, task, repair, or remediation work.
+
+Touched areas:
+
+- `src/aidd/core/operator_frontend_models.py`
+- `src/aidd/core/operator_frontend_dashboard.py`
+- `src/aidd/cli/ui.py`
+- `src/aidd/cli/static/operator-api-state.js`
+- `src/aidd/cli/static/operator-components.js`
+- core, CLI, and frontend tests
+
+Dependencies: `W42-E2-S1` and existing Wave 39 selector contracts.
+
+Local tasks:
+
+- `W42-E2-S2-T1` (planned) Publish a core-owned launch-readiness projection.
+  - Scope: selected runtime id, binary, command, auth, capabilities, permission policy, model,
+    reasoning, last evidence timestamp, eligibility, and literal disabled reason; no adapter logic
+    in the core.
+  - Verification: core and service tests cover ready, missing selection, stale evidence,
+    unsupported capability, permission denial, and runtime-unavailable outcomes.
+- `W42-E2-S2-T2` (planned) Extract and place the contextual Runner control.
+  - Scope: one frontend component reused beside workflow, stage, task, repair, and remediation
+    launches; hide it from create, read-only history, completed handoff, and non-launch decisions.
+  - Verification: fixture tests prove selected values reach the existing request path, disabled
+    reasons mirror the core projection, and no surface exposes two Runner selectors or launch
+    actions.
+
+### Epic W42-E3 — dependency-aware Task Workspace (`planned`)
+
+Goal: make Task the default Deliver-stage unit, with truthful readiness, attempts, evidence, and
+one mutually exclusive Run, Resume, or Finalize action.
+
+#### Slice W42-E3-S1 — task workspace read boundary (`planned`)
+
+Primary output: a reusable core/API projection for grouped tasks and a selected task.
+
+Touched areas:
+
+- `src/aidd/core/operator_frontend_models.py`
+- `src/aidd/core/operator_frontend_dashboard.py`
+- `src/aidd/core/task_execution.py`
+- `src/aidd/cli/ui.py`
+- core and CLI tests
+
+Dependencies: `W42-E2-S2-T1` and existing Wave 35 task ledger.
+
+Local tasks:
+
+- `W42-E3-S1-T1` (planned) Add the core Task Workspace read model.
+  - Scope: Ready, Running, Blocked, Done groups; core next-ready and critical-path signals;
+    dependencies, attempt counts, verification, last durable event, and preserved successes.
+  - Verification: deterministic core tests cover mixed dependency graphs, no-ready work,
+    interrupted attempts, partial success, finalization eligibility, and stale tasklists.
+- `W42-E3-S1-T2` (planned) Expose task workspace and selected-task detail through the UI service.
+  - Scope: bounded list and detail payloads over existing ledger/evidence sources; preserve
+    synchronous conflict and duplicate-suppression behavior.
+  - Verification: CLI service tests prove stable ids, bounded reads, exact evidence links, missing
+    task behavior, and post-mutation server-winner readback.
+
+#### Slice W42-E3-S2 — task list, detail, and active run (`planned`)
+
+Primary output: the target Tasks surface and its active-attempt observation state.
+
+Touched areas:
+
+- `src/aidd/cli/static/operator-main.js`
+- `src/aidd/cli/static/operator-logs-jobs.js`
+- `src/aidd/cli/static/operator-components.css`
+- `src/aidd/cli/static/operator-responsive.css`
+- frontend and browser tests
+
+Dependencies: `W42-E3-S1` and `W42-E2-S2-T2`.
+
+Local tasks:
+
+- `W42-E3-S2-T1` (planned) Render the grouped task list and deterministic selection.
+  - Scope: Ready, Running, Blocked, Done sections, search/filter, dependency badges, next-ready
+    marker, URL selection, empty/loading/error states, and keyboard list navigation.
+  - Verification: fixture tests cover ordering, filters, deep links, reload, focus, empty groups,
+    and no client-side status movement.
+- `W42-E3-S2-T2` (planned) Render selected-task detail and mutually exclusive actions.
+  - Scope: outcome, scope, acceptance, dependencies, expected files, attempts, linked documents,
+    blockers, Runner, and Run/Resume/Finalize; reuse existing mutation services.
+  - Verification: tests prove action eligibility, pending duplicate suppression, conflict
+    recovery, preserved successes, and literal disabled consequences.
+- `W42-E3-S2-T3` (planned) Render the active task attempt and live-output tray.
+  - Scope: attempt identity, factual elapsed time, last-output age, durable milestone, cancel
+    state, reconnect cursor, and collapsible raw output; never estimate percentage completion.
+  - Verification: browser fixtures cover starting, streaming, quiet, cancellation-pending,
+    failed, completed, reconnecting, and missing-log states without context loss.
+
+### Epic W42-E4 — Markdown Workspace and controlled authoring (`planned`)
+
+Goal: make Markdown pleasant to read and safe to change by exposing document role, provenance,
+freshness, retained versions, and explicit authoring boundaries.
+
+#### Slice W42-E4-S1 — canonical Markdown reader (`planned`)
+
+Primary output: a grouped document navigator and a read-only Markdown workspace that never
+fabricates versions or implies generated output is editable.
+
+Touched areas:
+
+- `src/aidd/cli/static/operator-artifacts-documents.js`
+- `src/aidd/cli/static/operator-components.css`
+- `src/aidd/cli/static/operator-responsive.css`
+- frontend and browser tests
+
+Dependencies: `W42-E2-S1-T3` and current artifact/document read models.
+
+Local tasks:
+
+- `W42-E4-S1-T1` (planned) Render role-grouped document navigation and the reading brief.
+  - Scope: Output, Questions, Validation, Inputs, Evidence groups; filename, role, stage, attempt,
+    freshness, bounded state, source of truth, rendered body, heading map, path/copy utilities.
+  - Verification: fixtures cover current, stale, missing, malformed, truncated, permission-denied,
+    and empty documents with one truthful next action.
+- `W42-E4-S1-T2` (planned) Add Source, retained Compare, and anchored finding context.
+  - Scope: exact source rendering, comparison only for two named retained attempts, heading/line
+    anchors, related evidence, and browser-history-preserving cross-document navigation.
+  - Verification: tests reject synthetic history and editing controls; browser checks cover
+    anchors, unavailable comparison, back/forward restoration, long Markdown, and overflow.
+
+#### Slice W42-E4-S2 — operator-authored Markdown (`planned`)
+
+Primary output: consistent Write/Preview workflows for each supported operator-owned document,
+with draft, conflict, and durable destination semantics.
+
+Touched areas:
+
+- `src/aidd/cli/static/operator-onboarding.js`
+- `src/aidd/cli/static/operator-questions.js`
+- `src/aidd/cli/static/operator-approvals-interventions.js`
+- `src/aidd/cli/static/operator-next-flow-actions.js`
+- frontend and CLI tests
+
+Dependencies: `W42-E4-S1` and existing write services.
+
+Local tasks:
+
+- `W42-E4-S2-T1` (planned) Add operator-request Markdown Write/Preview with a consumed-input
+  boundary.
+  - Scope: new Work Item request and supported context inputs; edit before first consuming run,
+    then route outcome changes to a revision/intervention instead of rewriting history.
+  - Verification: tests cover preview, destination, validation, unsaved navigation, first write,
+    pre-run edit, consumed-input refusal, and exact durable readback.
+- `W42-E4-S2-T2` (planned) Add the structured Markdown answer workflow.
+  - Scope: question context, resolved/partial/deferred state, Write/Preview, evidence links,
+    unblock consequence, draft persistence, and `answers.md` destination.
+  - Verification: tests cover each resolution status, invalid/partial answers, failed submission,
+    duplicate suppression, reconnect, conflict winner, and resulting workflow state.
+- `W42-E4-S2-T3` (planned) Unify intervention, remediation, follow-up, and clone Markdown drafts.
+  - Scope: purpose-specific fields over one draft/preview state machine, source-evidence selection,
+    exact destination, unsaved warning, and no mutation of runtime-generated documents.
+  - Verification: frontend/service tests cover each purpose, draft isolation, destination,
+    submission consequence, stale downstream stages, conflict, and reload recovery.
+
+### Epic W42-E5 — decisions, recovery, and quality gates (`planned`)
+
+Goal: give every blocking condition one bounded workbench, exact evidence, and one safe recovery
+action without conflating questions, approvals, validation failure, or runtime failure.
+
+#### Slice W42-E5-S1 — Decision Workbench and recovery (`planned`)
+
+Primary output: shared decision composition with distinct schemas and truthful recovery semantics.
+
+Touched areas:
+
+- `src/aidd/cli/static/operator-questions.js`
+- `src/aidd/cli/static/operator-approvals-interventions.js`
+- `src/aidd/cli/static/operator-stage-cockpit.js`
+- frontend and browser tests
+
+Dependencies: `W42-E4-S2-T2` and `W42-E2-S2-T2`.
+
+Local tasks:
+
+- `W42-E5-S1-T1` (planned) Render the shared Decision Workbench for questions and approvals.
+  - Scope: decision type, reason, source snippets, consequence, schema-specific inputs, draft or
+    approval evidence, and exactly one submit action; do not reduce approvals to answer forms.
+  - Verification: fixtures cover question, approval, deferred answer, unavailable evidence,
+    pending, conflict, permission denial, and mobile first-action visibility.
+- `W42-E5-S1-T2` (planned) Render validation and runtime recovery as distinct states.
+  - Scope: validation document/rule/location/hint/budget/exact brief plus repair Runner; runtime
+    first decisive failure/logs/retry/selection consequence without consuming repair budget.
+  - Verification: tests prove repair exhaustion, request-change routing, runtime retry, cancel,
+    stale evidence, no-budget mutation, and one primary action per state.
+
+#### Slice W42-E5-S2 — implementation, Review, and QA gates (`planned`)
+
+Primary output: repository-truth implementation review and selective Markdown remediation.
+
+Touched areas:
+
+- `src/aidd/cli/static/operator-stage-cockpit.js`
+- `src/aidd/cli/static/operator-artifacts-documents.js`
+- `src/aidd/cli/static/operator-approvals-interventions.js`
+- frontend and browser tests
+
+Dependencies: `W42-E3-S2` and `W42-E4-S2-T3`.
+
+Local tasks:
+
+- `W42-E5-S2-T1` (planned) Render Implementation Review from real repository and verification
+  evidence.
+  - Scope: changed-file list, unified diff, completed task claims, actual commands/results, scope
+    coverage, risk, Runner, and `Proceed to Review`; no stage-document editing.
+  - Verification: fixtures cover clean, incomplete, changed-outside-scope, missing evidence,
+    failed verification, large diff, and launch eligibility.
+- `W42-E5-S2-T2` (planned) Render selective Review/QA remediation and downstream staleness.
+  - Scope: selectable findings/risks, exact source evidence, Markdown remediation Write/Preview,
+    destination, Runner, and return to Implement through the existing service.
+  - Verification: tests cover selection requirements, blocking/non-blocking findings, saved draft,
+    conflict, stale Review/QA, preserved task successes, rerun, and fresh acceptance.
+
+### Epic W42-E6 — run lineage and terminal handoff (`planned`)
+
+Goal: make attempts and completion auditable without presenting inferred history or mutable final
+state.
+
+#### Slice W42-E6-S1 — Runs and Attempts workspace (`planned`)
+
+Primary output: chronological run/attempt navigation with exact timeline, logs, artifacts, and
+lineage.
+
+Touched areas:
+
+- `src/aidd/core/operator_timeline.py`
+- `src/aidd/cli/static/operator-logs-jobs.js`
+- `src/aidd/cli/static/operator-artifacts-documents.js`
+- core, frontend, and browser tests
+
+Dependencies: `W42-E2-S1-T3` and existing retained-attempt models.
+
+Local tasks:
+
+- `W42-E6-S1-T1` (planned) Render the run list, retained attempts, exact timeline, and lineage.
+  - Scope: filters, stable selection, run/attempt metadata, durable events, raw log, artifacts,
+    input/output hashes, copy id, and compare only when both attempts are retained.
+  - Verification: tests cover live, failed, repaired, completed, missing artifact, bounded log,
+    unavailable comparison, reload, and no Runner selector on read-only history.
+
+#### Slice W42-E6-S2 — immutable Flow Complete (`planned`)
+
+Primary output: one final handoff that requires fresh QA and recommends one next outcome.
+
+Touched areas:
+
+- `src/aidd/cli/static/operator-next-flow-actions.js`
+- `src/aidd/cli/static/operator-artifacts-documents.js`
+- frontend and browser tests
+
+Dependencies: `W42-E5-S2` and `W42-E6-S1`.
+
+Local tasks:
+
+- `W42-E6-S2-T1` (planned) Render immutable handoff, final evidence, and next outcomes.
+  - Scope: delivered scope, verification, known limitations, repository state, final documents,
+    QA result, run ids, retained evidence, one core-recommended action, and quieter alternatives.
+  - Verification: fixtures prove fresh-QA gating, stale/failed exclusion, source-run immutability,
+    recommended outcome, follow-up lineage, clone/eval/archive semantics, and no Runner selector.
+
+### Epic W42-E7 — executable UX acceptance (`planned`)
+
+Goal: prevent another visual-only redesign by requiring deterministic surface fixtures, browser
+behavior, accessibility, responsive geometry, and observed first-time use before cutover.
+
+#### Slice W42-E7-S1 — provider-free surface fixtures and component states (`planned`)
+
+Primary output: deterministic fixtures and contract tests for every target reference and shared
+interaction state.
+
+Touched areas:
+
+- `tests/frontend/`
+- `tests/cli/`
+- operator UI fixture routes and documentation
+
+Dependencies: each owning Wave 42 surface slice before its corresponding fixture closes.
+
+Local tasks:
+
+- `W42-E7-S1-T1` (planned) Add provider-free routes for all 13 target surfaces.
+  - Scope: canonical fixture payloads for project work, create, launch, tasks, active attempt,
+    decision, validation repair, Markdown, implementation review, remediation, history,
+    completion, and mobile decision.
+  - Verification: one manifest test proves every target filename maps to a loadable fixture with
+    no network, provider credentials, clock drift, or random ids.
+- `W42-E7-S1-T2` (planned) Add shared interaction-state and accessibility contracts.
+  - Scope: loading, empty, partial, error, disabled, selected, pending, conflict, success, offline,
+    reconnecting, permission denied, focus, keyboard, target size, and accessible names.
+  - Verification: frontend tests exercise the applicable state matrix for every shared component
+    and reject duplicate primary actions, color-only status, clipped names, and focus loss.
+
+#### Slice W42-E7-S2 — responsive browser journeys and observed usability (`planned`)
+
+Primary output: measured browser evidence and one observed novice journey that gates default
+routing.
+
+Touched areas:
+
+- browser acceptance tests
+- `docs/e2e/operator-ui-local-project.md`
+- Wave 42 reconciliation notes
+
+Dependencies: `W42-E2` through `W42-E7-S1`.
+
+Local tasks:
+
+- `W42-E7-S2-T1` (planned) Run the target browser journey matrix at all supported viewports.
+  - Scope: create -> runner -> launch, task run, question recovery, validation repair, Markdown
+    change, review remediation, history, and completion at 320x568, 390x844, 768x1024, 1280x900,
+    and 1440x900.
+  - Verification: captured checks prove first-action visibility, focus order, target size, contrast,
+    clipping, overflow, draft retention, reconnect, one primary action, and zero console errors.
+- `W42-E7-S2-T2` (planned) Observe and reconcile a first-time operator journey before cutover.
+  - Scope: one uncoached create -> choose Runner -> launch -> answer question -> resume session;
+    record comprehension failures as new roadmap tasks rather than silent polish.
+  - Verification: evidence records completion, wrong turns, time-to-next-action, vocabulary or
+    consequence confusion, resulting tasks, and an explicit default-routing decision.
+
+Wave 42 exit evidence:
+
+- the target contract, code, fixtures, browser evidence, and backlog agree;
+- every launch exposes one eligible Runner and one action, while non-launch surfaces hide it;
+- Tasks is the default Deliver workspace and preserves core dependency/status truth;
+- generated Markdown is read-only and every supported operator write previews Markdown, names its
+  destination, survives failure, and reconciles to durable state;
+- all 13 reference states are executable without provider credentials;
+- the responsive matrix and observed first-time journey pass before the target shell becomes the
+  default renderer.

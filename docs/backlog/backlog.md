@@ -7,11 +7,12 @@ slice, and local task.
 
 ## Next
 
-_No active local tasks._
+- `W42-E2-S1-T1` — Replace primary `Intent` presentation with literal Work Item and Task
+  vocabulary.
 
 ## Soon
 
-_No promoted follow-up tasks._
+- `W42-E2-S1-T2` — Render project Work Items in core-prioritized attention groups.
 
 ## Parking lot
 
@@ -34,6 +35,14 @@ _No promoted follow-up tasks._
   queue-restoration policy in `docs/backlog/roadmap.md` (`W8-E3-S1`).
 
 ## Current reconciliation
+
+- `2026-08-11` Wave 42 is accepted as the task-centered Operator UI correction. Its normative
+  contract defines `Project -> Work Item -> Stage -> Task/Decision -> Run/Attempt ->
+  Document/Evidence`, contextual Runner placement, controlled Markdown authoring, read-only
+  generated documents, 13 target screens, and responsive acceptance. Contract and visual-authority
+  tasks `W42-E1-S1-T1` and `W42-E1-S2-T1` are complete. The superseded UI image sets were removed;
+  the next implementation task is the bounded vocabulary correction `W42-E2-S1-T1`, followed by
+  the grouped project Work Item list in `W42-E2-S1-T2`.
 
 - `2026-08-10` W40-E1-S4 (including T3), W41-E1-S2, and W36-E7-S4-T94 are complete. The packaged UI uses one
   `operatorWorkspace` scroll owner with Intent context, a four-phase stepper, one current

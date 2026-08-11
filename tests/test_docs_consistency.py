@@ -439,6 +439,9 @@ def test_operator_ui_docs_and_backlog_queue_stay_synchronized() -> None:
     operator_frontend = (
         repo_root / "docs" / "architecture" / "operator-frontend.md"
     ).read_text(encoding="utf-8")
+    target_operator_frontend = (
+        repo_root / "docs" / "architecture" / "operator-frontend-target-ux.md"
+    ).read_text(encoding="utf-8")
     w24_s1 = roadmap.split("#### Slice W24-E1-S1", 1)[1].split(
         "#### Slice W24-E1-S2",
         1,
@@ -446,6 +449,7 @@ def test_operator_ui_docs_and_backlog_queue_stay_synchronized() -> None:
     w24_s2 = roadmap.split("#### Slice W24-E1-S2", 1)[1].split("## Wave", 1)[0]
     w26 = roadmap.split("## Wave 26", 1)[1]
     w36 = roadmap.split("## Wave 36", 1)[1].split("## Wave 37", 1)[0]
+    w42 = roadmap.split("## Wave 42", 1)[1]
 
     assert (
         "The UI can write question answers as `[resolved]`, `[partial]`, or "
@@ -526,27 +530,36 @@ def test_operator_ui_docs_and_backlog_queue_stay_synchronized() -> None:
     assert "legacy_only | candidate | parity_closed" in w36
     assert "three destinations and one presentation preference" in operator_frontend
     assert "Guided Delivery preference" in operator_frontend
+    assert "task-centered operator experience (`planned`)" in roadmap
+    assert "`W42-E2-S1-T1` (planned)" in w42
+    assert "`W42-E7-S2-T2` (planned)" in w42
     visual_reference_dir = (
         repo_root
         / "docs"
         / "architecture"
         / "assets"
-        / "operator-ui-document-evidence-studio"
+        / "operator-ui-target-v2"
     )
     visual_references = (
-        "01-inbox-desktop.png",
-        "02-guided-setup-desktop.png",
-        "03-active-studio-desktop.png",
-        "04-validation-repair-desktop.png",
-        "05-quality-gate-desktop.png",
-        "06-history-filmstrip-desktop.png",
-        "07-flow-complete-desktop.png",
-        "08-question-mobile.png",
+        "01-project-work-items.png",
+        "02-create-work-item.png",
+        "03-work-item-launch.png",
+        "04-task-workspace.png",
+        "05-active-task-run.png",
+        "06-decision-workbench.png",
+        "07-validation-repair.png",
+        "08-markdown-workspace.png",
+        "09-implementation-review.png",
+        "10-review-qa-remediation.png",
+        "11-run-history.png",
+        "12-flow-complete.png",
+        "13-mobile-decision.png",
     )
     for filename in visual_references:
         assert filename in operator_frontend
-        assert filename in w36
+        assert filename in target_operator_frontend
         assert (visual_reference_dir / filename).is_file()
+    assert (visual_reference_dir / "generation-prompts.md").is_file()
 
 
 def test_release_docs_describe_release_branch_publish_flow() -> None:
