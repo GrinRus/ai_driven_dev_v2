@@ -948,4 +948,7 @@
   body.inbox-detail-mode .studio-inbox {
     padding-top: var(--space-2);
   }
+  body.inbox-detail-mode .studio-inbox-header {
+    padding: var(--space-3);
+  }
 }

@@ -759,11 +759,14 @@ function applyOperatorRoute(route) {
   const workTab = normalizeWorkItemTab(route.workTab || "overview");
   if (route.mode === "inbox") {
     setOperatorMode("project-home");
+  } else if (route.mode === "history") {
+    // History is a canonical top-level route. The Work Item Runs tab may add
+    // a presentation hint, but it must not demote a retained history deep link
+    // to the not-yet-populated Runs placeholder during reload.
+    setOperatorMode("history");
   } else if (workTab !== "overview") {
     setWorkItemTab(workTab);
     if (workTab === "documents" && route.view === "logs") state.evidenceDetail = "logs";
-  } else if (route.mode === "history") {
-    setOperatorMode("history");
   } else if (route.mode === "studio" && ["logs", "artifacts"].includes(route.view)) {
     setOperatorMode(route.view);
   } else if (route.mode === "studio" && route.view === "recovery") {
