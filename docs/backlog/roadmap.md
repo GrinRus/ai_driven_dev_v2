@@ -13995,7 +13995,7 @@ Local tasks:
   - Verification: provider-free frontend fixtures prove group order, selection persistence,
     empty groups, empty-project creation, and one primary action for the selected item.
   - Dependencies: `W42-E2-S1-T2` as the core-projection predecessor.
-- `W42-E2-S1-T3` (next) Render the Work Item tabs and canonical stage strip.
+- `W42-E2-S1-T3` (done) Render the Work Item tabs and canonical stage strip.
   - Scope: Overview, Tasks, Documents, Runs tabs and the eight exact stages; retain current deep
     links, browser history, focus restoration, and stale/status semantics.
   - Verification: route and DOM tests cover all tabs, exact stage order, keyboard navigation,
@@ -14020,7 +14020,7 @@ Dependencies: `W42-E2-S1` and existing Wave 39 selector contracts.
 
 Local tasks:
 
-- `W42-E2-S2-T1` (planned) Publish a core-owned launch-readiness projection.
+- `W42-E2-S2-T1` (next) Publish a core-owned launch-readiness projection.
   - Scope: selected runtime id, binary, command, auth, capabilities, permission policy, model,
     reasoning, config identity, probe observation timestamp, eligibility, and literal disabled
     reason; a stale snapshot or prior successful launch cannot authorize a mutation, and no

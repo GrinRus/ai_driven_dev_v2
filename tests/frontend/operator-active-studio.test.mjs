@@ -46,6 +46,9 @@ test("active Studio preserves Work Item, phase, and status context", async () =>
   assert.match(html, /Work Item Workspace/);
   assert.doesNotMatch(html, /<dt>Work item<\/dt>/);
   assert.doesNotMatch(html, /<dt>Run<\/dt>/);
+  const stages = [...html.matchAll(/data-canonical-stage="([^"]+)"/g)].map((match) => match[1]);
+  assert.deepEqual(stages, ["idea", "research", "plan", "review-spec", "tasklist", "implement", "review", "qa"]);
+  assert.match(html, /8 stages/);
   for (const phase of ["Understand", "Decide", "Deliver", "Prove"]) {
     assert.match(html, new RegExp(phase));
   }

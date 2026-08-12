@@ -37,6 +37,34 @@ test("canonical route state round-trips every supported context key", async () =
   assert.deepEqual(decode(context, query).value, route);
 });
 
+test("Work Item tabs round-trip without changing legacy route contexts", async () => {
+  const context = await routeContext();
+  const route = {
+    mode: "studio",
+    view: "overview",
+    workItem: "WI-001",
+    runId: "run-1",
+    stage: "plan",
+    attempt: null,
+    taskAttempt: null,
+    artifact: "",
+    workTab: "tasks",
+  };
+  const query = vm.runInContext(`encodeOperatorRoute(${JSON.stringify(route)})`, context);
+  assert.match(query, /work_tab=tasks/);
+  assert.deepEqual(decode(context, query).value, route);
+  assert.deepEqual(decode(context, "?mode=studio&work_item=WI-001").value, {
+    mode: "studio",
+    view: "overview",
+    workItem: "WI-001",
+    runId: "",
+    stage: "",
+    attempt: null,
+    taskAttempt: null,
+    artifact: "",
+  });
+});
+
 test("missing and legacy routes resolve deterministically", async () => {
   const context = await routeContext();
   assert.deepEqual(decode(context, "").value, {

@@ -25,6 +25,13 @@ const VALID_TABS = [
   ...OPERATOR_MODES,
   ...Object.keys(LEGACY_TAB_TO_MODE)
 ];
+const WORK_ITEM_TAB_LABELS = Object.freeze({
+  overview: "Overview",
+  tasks: "Tasks",
+  documents: "Documents",
+  runs: "Runs"
+});
+const WORK_ITEM_TABS = Object.freeze(Object.keys(WORK_ITEM_TAB_LABELS));
 
 function resolveStudioEvidenceVisibility({
   inspectorDecisionValue = false,
@@ -101,6 +108,7 @@ const state = {
   activeStageExplicit: false,
   activeTab: "work",
   workDetail: "overview",
+  workItemTab: "overview",
   recoveryDetail: "summary",
   evidenceDetail: "artifacts",
   historyDetail: "history",
@@ -487,13 +495,41 @@ function normalizeOperatorMode(tab) {
   return {mode: "work", detail: "overview"};
 }
 
+function normalizeWorkItemTab(tab) {
+  const requested = String(tab || "overview");
+  return WORK_ITEM_TABS.includes(requested) ? requested : "overview";
+}
+
+function setWorkItemTab(tab) {
+  const normalized = normalizeWorkItemTab(tab);
+  state.workItemTab = normalized;
+  if (normalized === "documents") {
+    state.activeTab = "evidence";
+    state.evidenceDetail = "artifacts";
+    return;
+  }
+  state.activeTab = "work";
+  state.workDetail = normalized;
+}
+
 function setOperatorMode(tab) {
   const normalized = normalizeOperatorMode(tab);
   state.activeTab = normalized.mode;
-  if (normalized.mode === "work") state.workDetail = normalized.detail;
+  if (normalized.mode === "work") {
+    state.workDetail = normalized.detail;
+    state.workItemTab = WORK_ITEM_TABS.includes(normalized.detail)
+      ? normalized.detail
+      : "overview";
+  }
   if (normalized.mode === "recovery") state.recoveryDetail = normalized.detail;
-  if (normalized.mode === "evidence") state.evidenceDetail = normalized.detail;
-  if (normalized.mode === "history") state.historyDetail = normalized.detail;
+  if (normalized.mode === "evidence") {
+    state.evidenceDetail = normalized.detail;
+    state.workItemTab = "documents";
+  }
+  if (normalized.mode === "history") {
+    state.historyDetail = normalized.detail;
+    state.workItemTab = "runs";
+  }
 }
 
 function isRecoveryNextAction(action) {
@@ -672,6 +708,12 @@ function activateTab(tab, {preserveDetail = false, historyMode = "replace"} = {}
   syncLocationState({historyMode});
 }
 
+function activateWorkItemTab(tab, {historyMode = "push"} = {}) {
+  setWorkItemTab(tab);
+  applyOperatorModeBodyClass();
+  syncLocationState({historyMode});
+}
+
 function operatorRouteView() {
   if (state.activeTab === "evidence") return state.evidenceDetail === "logs" ? "logs" : "artifacts";
   if (state.activeTab === "recovery") return "recovery";
@@ -695,7 +737,8 @@ function operatorRouteSnapshot() {
     stage: inbox ? "" : state.activeStage,
     attempt: inbox ? null : state.activeAttempt,
     taskAttempt: inbox ? null : state.activeTaskAttempt,
-    artifact: inbox ? "" : state.activeArtifactKey
+    artifact: inbox ? "" : state.activeArtifactKey,
+    workTab: inbox ? "overview" : normalizeWorkItemTab(state.workItemTab)
   };
 }
 
@@ -713,10 +756,17 @@ function applyOperatorRoute(route) {
     state.activeStage = route.stage;
     state.activeStageExplicit = true;
   }
+  const workTab = normalizeWorkItemTab(route.workTab || "overview");
   if (route.mode === "inbox") {
     setOperatorMode("project-home");
   } else if (route.mode === "history") {
+    // History is a canonical top-level route. The Work Item Runs tab may add
+    // a presentation hint, but it must not demote a retained history deep link
+    // to the not-yet-populated Runs placeholder during reload.
     setOperatorMode("history");
+  } else if (workTab !== "overview") {
+    setWorkItemTab(workTab);
+    if (workTab === "documents" && route.view === "logs") state.evidenceDetail = "logs";
   } else if (route.mode === "studio" && ["logs", "artifacts"].includes(route.view)) {
     setOperatorMode(route.view);
   } else if (route.mode === "studio" && route.view === "recovery") {

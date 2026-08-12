@@ -58,6 +58,26 @@ test("reload restores selected stage, run, artifact, and logs view", async () =>
   });
 });
 
+test("canonical History routes remain History when the Runs tab hint is retained", async () => {
+  const {context} = await navigationContext(
+    "?mode=history&work_tab=runs&work_item=WI-001&run_id=run-1&stage=qa",
+  );
+  vm.runInContext("initializeStateFromLocation()", context);
+  assert.deepEqual(value(context, `({
+    tab: state.activeTab,
+    detail: state.historyDetail,
+    workTab: state.workItemTab,
+    stage: state.activeStage,
+    run: state.activeRunId
+  })`), {
+    tab: "history",
+    detail: "history",
+    workTab: "runs",
+    stage: "qa",
+    run: "run-1",
+  });
+});
+
 test("Inbox route restores the project-home surface", async () => {
   const {context} = await navigationContext("?mode=inbox&ui=studio");
   vm.runInContext("initializeStateFromLocation()", context);
