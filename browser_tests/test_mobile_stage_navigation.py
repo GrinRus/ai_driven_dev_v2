@@ -21,7 +21,7 @@ def test_mobile_phase_navigation_preserves_identity_status_and_bounds(
         page = browser_page.page
         page.goto(f"{harness.url}?ui=studio", wait_until="networkidle")
         cards = page.locator("#intentPhaseStepper .intent-phase-step")
-        assert cards.count() == 4
+        assert cards.count() == 8
         measurements = cards.evaluate_all(
             """nodes => nodes.map((card) => {
               const name = card.querySelector('strong');

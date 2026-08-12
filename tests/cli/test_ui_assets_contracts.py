@@ -270,8 +270,8 @@ def test_operator_responsive_css_keeps_intent_phase_stepper_inside_viewport() ->
     shell = _asset_text("/operator-shell-rendering.js")
 
     assert ".intent-phase-list" in responsive
-    assert "grid-template-columns: repeat(4, minmax(130px, 1fr));" in responsive
-    assert "overflow-x: auto;" in responsive
+    assert ".canonical-stage-groups" in responsive
+    assert "grid-template-columns: minmax(0, 1fr);" in responsive
     assert ".intent-phase-step" in shell_css
     assert "min-width: 0;" in shell_css
     assert "overflow-wrap: anywhere;" in shell_css

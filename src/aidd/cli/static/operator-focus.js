@@ -67,7 +67,9 @@ function rememberOperatorFocusReturn(trigger) {
 }
 
 function returnOperatorFocus() {
-  const fallback = document.querySelector('[data-tab][aria-selected="true"]');
+  const fallback = document.querySelector(
+    '[data-work-item-tab][aria-selected="true"], [data-tab][aria-selected="true"]'
+  );
   const target = operatorFocusReturnTarget?.isConnected ? operatorFocusReturnTarget : fallback;
   operatorFocusReturnTarget = null;
   operatorFocusEntryPending = false;

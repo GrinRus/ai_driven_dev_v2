@@ -1,5 +1,6 @@
 const OPERATOR_ROUTE_MODES = new Set(["inbox", "studio", "history"]);
 const OPERATOR_ROUTE_VIEWS = new Set(["overview", "recovery", "artifacts", "logs"]);
+const OPERATOR_WORK_ITEM_TABS = new Set(["overview", "tasks", "documents", "runs"]);
 const OPERATOR_ROUTE_STAGES = new Set([
   "idea",
   "research",
@@ -71,6 +72,11 @@ function decodeOperatorRoute(search, {knownWorkItems = null, knownRuns = null} =
     warnings.push(routeWarning("invalid-value", "view", view));
     view = "overview";
   }
+  const requestedWorkTab = String(params.get("work_tab") || "").trim();
+  let workTab = OPERATOR_WORK_ITEM_TABS.has(requestedWorkTab) ? requestedWorkTab : "overview";
+  if (requestedWorkTab && !OPERATOR_WORK_ITEM_TABS.has(requestedWorkTab)) {
+    warnings.push(routeWarning("invalid-value", "work_tab", requestedWorkTab));
+  }
   let workItem = routeIdentifier(params, "work_item", warnings);
   let runId = routeIdentifier(params, "run_id", warnings);
   let artifact = routeIdentifier(params, "artifact", warnings);
@@ -105,8 +111,9 @@ function decodeOperatorRoute(search, {knownWorkItems = null, knownRuns = null} =
     artifact = "";
     attempt = null;
     view = "overview";
+    workTab = "overview";
   }
-  const value = Object.freeze({
+  const value = {
     mode,
     view,
     workItem,
@@ -115,8 +122,11 @@ function decodeOperatorRoute(search, {knownWorkItems = null, knownRuns = null} =
     attempt,
     taskAttempt: mode === "inbox" ? null : taskAttempt,
     artifact
-  });
-  return Object.freeze({value, warnings: Object.freeze(warnings), source});
+  };
+  // Keep the established route object shape for existing links. The new tab
+  // key is emitted only when an explicit non-default Work Item tab is used.
+  if (workTab !== "overview") value.workTab = workTab;
+  return Object.freeze({value: Object.freeze(value), warnings: Object.freeze(warnings), source});
 }
 
 function encodeOperatorRoute(route) {
@@ -125,6 +135,8 @@ function encodeOperatorRoute(route) {
   params.set("mode", mode);
   const view = OPERATOR_ROUTE_VIEWS.has(route?.view) ? route.view : "overview";
   if (mode !== "inbox" && view !== "overview") params.set("view", view);
+  const workTab = OPERATOR_WORK_ITEM_TABS.has(route?.workTab) ? route.workTab : "overview";
+  if (mode !== "inbox" && workTab !== "overview") params.set("work_tab", workTab);
   const fields = [
     ["work_item", OPERATOR_ROUTE_IDENTIFIER.test(route?.workItem || "") ? route.workItem : ""],
     ["run_id", OPERATOR_ROUTE_IDENTIFIER.test(route?.runId || "") ? route.runId : ""],

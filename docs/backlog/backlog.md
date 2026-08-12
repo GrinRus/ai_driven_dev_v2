@@ -7,7 +7,7 @@ slice, and local task.
 
 ## Next
 
-- `W42-E2-S1-T3` — Render the Work Item tabs and canonical stage strip.
+- `W42-E2-S2-T1` — Publish a core-owned launch-readiness projection.
 
 ## Soon
 
@@ -56,7 +56,15 @@ slice, and local task.
   vocabulary correction `W42-E2-S1-T1` and core-owned attention groups `W42-E2-S1-T2` are
   complete with compatibility identifiers preserved; `W42-E2-S1-T4` now renders the canonical
   Inbox groups, all empty group states, and one selected Work Item inspector action; `W42-E2-S1-T3`
+  is complete with Work Item tabs, route persistence, and the exact eight-stage strip. `W42-E2-S2-T1`
   is now next.
+
+- `2026-08-12` `W42-E2-S1-T3` is complete. Work Item Overview/Tasks/Documents/Runs tabs now
+  persist through canonical routes, keyboard focus, and reload; the active shell renders the
+  exact eight stages grouped as Understand, Decide, Deliver, and Prove with retained status and
+  stale semantics. Tasks and Runs expose bounded honest placeholders until their owning slices;
+  existing evidence/history routes remain readable. Frontend `113`, focused browser route/stage
+  `15`, UI CLI `153`, Ruff, and mypy passed. `W42-E2-S2-T1` is now Next.
 
 - `2026-08-10` W40-E1-S4 (including T3), W41-E1-S2, and W36-E7-S4-T94 are complete. The packaged UI uses one
   `operatorWorkspace` scroll owner with Intent context, a four-phase stepper, one current

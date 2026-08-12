@@ -203,9 +203,11 @@
     justify-content: flex-start;
     min-width: 0;
   }
+  .canonical-stage-groups {
+    grid-template-columns: minmax(0, 1fr);
+  }
   .intent-phase-list {
-    grid-template-columns: repeat(4, minmax(130px, 1fr));
-    overflow-x: auto;
+    grid-template-columns: minmax(0, 1fr);
     padding-bottom: var(--space-2);
   }
   .active-studio-grid {

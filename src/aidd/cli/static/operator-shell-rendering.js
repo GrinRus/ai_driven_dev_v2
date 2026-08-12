@@ -59,6 +59,36 @@ function renderRuntimeSelector() {
   setRunButtonState();
 }
 
+function renderWorkItemTabs() {
+  const host = document.getElementById("workItemTabs");
+  if (!host) return;
+  const isInbox = state.activeTab === "work" && state.workDetail === "project-home";
+  const hasWorkItem = Boolean(state.dashboard?.work_item || state.activeRouteWorkItem);
+  if (isInbox || !hasWorkItem) {
+    host.replaceChildren();
+    host.hidden = true;
+    return;
+  }
+  host.hidden = false;
+  const active = normalizeWorkItemTab(state.workItemTab);
+  host.innerHTML = `
+    <div class="work-item-tabs-list" role="tablist" aria-label="Work Item sections">
+      ${WORK_ITEM_TABS.map((tab) => `
+        <button
+          class="work-item-tab${tab === active ? " active" : ""}"
+          data-work-item-tab="${escapeHtml(tab)}"
+          role="tab"
+          type="button"
+          aria-selected="${tab === active ? "true" : "false"}"
+          aria-controls="intentContent"
+          tabindex="${tab === active ? "0" : "-1"}">
+          ${escapeHtml(WORK_ITEM_TAB_LABELS[tab])}
+        </button>
+      `).join("")}
+    </div>
+  `;
+}
+
 function runtimeSelectorPayload() {
   const runtime = selectedRuntimeView();
   const supported = new Set(runtime?.capabilities?.supported_selectors || []);

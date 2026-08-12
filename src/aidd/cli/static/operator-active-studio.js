@@ -52,27 +52,37 @@ function phaseFocusStage(phase, stages) {
 
 function renderIntentPhaseStepper() {
   const stages = state.dashboard?.stages || [];
-  const phases = state.dashboard?.phases?.length
-    ? state.dashboard.phases
-    : INTENT_PHASES.map((phase) => ({...phase, phase_id: phase.id}));
+  let stageNumber = 0;
   return `
-    <section class="surface intent-phase-stepper" data-intent-phase-stepper aria-label="Work Item delivery phases">
-      <div class="surface-title"><span>Delivery path</span><span class="small-badge">4 phases</span></div>
-      <ol class="intent-phase-list">
-        ${phases.map((phase, index) => {
-          const status = phase.status || phaseStatus(phase, stages);
-          const focusStage = phaseFocusStage(phase, stages);
-          const current = phase.stages.includes(state.activeStage);
-          return `
-            <li>
-              <button class="intent-phase-step ${escapeHtml(status)}${current ? " active" : ""}" data-stage="${escapeHtml(focusStage)}" type="button" aria-current="${current ? "step" : "false"}">
-                <span class="intent-phase-index">${index + 1}</span>
-                <span><strong>${escapeHtml(phase.label)}</strong><small>${escapeHtml(phase.stages.map(stageTitle).join(" · "))}</small></span>
-              </button>
-            </li>
-          `;
-        }).join("")}
-      </ol>
+    <section class="surface intent-phase-stepper canonical-stage-strip" data-intent-phase-stepper aria-label="Work Item delivery stages">
+      <div class="surface-title"><span>Delivery path</span><span class="small-badge">8 stages</span></div>
+      <div class="canonical-stage-groups">
+        ${INTENT_PHASES.map((phase) => `
+          <section class="canonical-stage-group" data-stage-group="${escapeHtml(phase.id)}" aria-label="${escapeHtml(phase.label)} stages">
+            <h3>${escapeHtml(phase.label)}</h3>
+            <ol class="intent-phase-list">
+              ${phase.stages.map((stage) => {
+                stageNumber += 1;
+                const item = stages.find((candidate) => candidate.stage === stage);
+                const status = item?.status || "pending";
+                const stale = Boolean(item?.stale);
+                const statusLabel = stale ? `${status} · stale` : status;
+                const current = stage === state.activeStage;
+                const selectable = current || status !== "pending";
+                const label = `${stageTitle(stage)} — ${statusLabel}`;
+                return `
+                  <li>
+                    <button class="intent-phase-step canonical-stage-step ${escapeHtml(String(status).toLowerCase().replace(/_/g, "-"))}${stale ? " stale" : ""}${current ? " active" : ""}" data-stage="${escapeHtml(stage)}" data-canonical-stage="${escapeHtml(stage)}" data-stage-stale="${stale ? "true" : "false"}" type="button" aria-current="${current ? "step" : "false"}" aria-label="${escapeHtml(label)}" ${selectable ? "" : "disabled"}>
+                      <span class="intent-phase-index">${stageNumber}</span>
+                      <span><strong>${escapeHtml(stageTitle(stage))}</strong><small>${escapeHtml(statusLabel)}</small></span>
+                    </button>
+                  </li>
+                `;
+              }).join("")}
+            </ol>
+          </section>
+        `).join("")}
+      </div>
     </section>
   `;
 }
@@ -111,6 +121,26 @@ function renderActiveStudioDocumentSlot(studioState) {
       <div id="studioDocumentCanvas" class="artifact-viewer" aria-live="polite">
         <div class="empty-state loading-state">Loading bounded document view...</div>
       </div>
+    </section>
+  `;
+}
+
+function renderWorkItemTabPlaceholder(tab) {
+  const item = activeStageItem();
+  const studioState = activeStudioState();
+  const title = WORK_ITEM_TAB_LABELS[tab] || tab;
+  const copy = tab === "tasks"
+    ? "Task Workspace is the next surface in the Work Item flow. Its dependency-aware ledger will appear here without changing the canonical stage or run state."
+    : "Run history will appear here with retained attempts and lineage. Existing History routes remain available while this Work Item surface is introduced.";
+  return `
+    <section class="active-studio" data-studio-surface="active-studio" data-state="${escapeHtml(studioState)}" data-work-item-tab-surface="${escapeHtml(tab)}">
+      ${renderActiveStudioContextBar(studioState, item)}
+      ${renderIntentPhaseStepper()}
+      <section class="surface work-item-tab-placeholder" data-work-item-placeholder="${escapeHtml(tab)}">
+        <p class="eyebrow">Work Item / ${escapeHtml(title)}</p>
+        <h2>${escapeHtml(title)}</h2>
+        <p>${escapeHtml(copy)}</p>
+      </section>
     </section>
   `;
 }

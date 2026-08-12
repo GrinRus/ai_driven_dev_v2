@@ -87,6 +87,29 @@ function orderedTabButtons() {
   );
 }
 
+function orderedWorkItemTabButtons() {
+  return [...document.querySelectorAll("[data-work-item-tab]")].filter((button) => !button.hidden);
+}
+
+async function moveWorkItemTabFocus(currentButton, offset) {
+  const buttons = orderedWorkItemTabButtons();
+  const currentIndex = buttons.indexOf(currentButton);
+  if (currentIndex < 0 || buttons.length === 0) return;
+  const nextButton = buttons[(currentIndex + offset + buttons.length) % buttons.length];
+  activateWorkItemTab(nextButton.dataset.workItemTab);
+  await renderAll();
+  document.querySelector(`[data-work-item-tab="${CSS.escape(nextButton.dataset.workItemTab)}"]`)?.focus();
+}
+
+async function focusWorkItemTabAtIndex(index) {
+  const buttons = orderedWorkItemTabButtons();
+  const nextButton = buttons[index];
+  if (!nextButton) return;
+  activateWorkItemTab(nextButton.dataset.workItemTab);
+  await renderAll();
+  document.querySelector(`[data-work-item-tab="${CSS.escape(nextButton.dataset.workItemTab)}"]`)?.focus();
+}
+
 async function moveTabFocus(currentButton, offset) {
   const buttons = orderedTabButtons();
   const currentIndex = buttons.indexOf(currentButton);
@@ -107,6 +130,29 @@ async function focusTabAtIndex(index) {
 }
 
 document.addEventListener("keydown", async (event) => {
+  const currentWorkItemTab = event.target.closest?.("[data-work-item-tab]");
+  if (currentWorkItemTab) {
+    if (event.key === "ArrowRight" || event.key === "ArrowDown") {
+      event.preventDefault();
+      await moveWorkItemTabFocus(currentWorkItemTab, 1);
+      return;
+    }
+    if (event.key === "ArrowLeft" || event.key === "ArrowUp") {
+      event.preventDefault();
+      await moveWorkItemTabFocus(currentWorkItemTab, -1);
+      return;
+    }
+    if (event.key === "Home") {
+      event.preventDefault();
+      await focusWorkItemTabAtIndex(0);
+      return;
+    }
+    if (event.key === "End") {
+      event.preventDefault();
+      await focusWorkItemTabAtIndex(orderedWorkItemTabButtons().length - 1);
+      return;
+    }
+  }
   const currentTab = event.target.closest?.("[data-tab]");
   if (!currentTab) return;
   if (event.key === "ArrowRight" || event.key === "ArrowDown") {
@@ -231,6 +277,13 @@ document.addEventListener("click", async (event) => {
       activateTab(tab, {historyMode: "push"});
       renderProjectHomeRail();
       await renderCockpit();
+      return;
+    }
+    const workItemTab = event.target.closest("[data-work-item-tab]")?.dataset.workItemTab;
+    if (workItemTab) {
+      activateWorkItemTab(workItemTab, {historyMode: "push"});
+      await renderAll();
+      document.querySelector(`[data-work-item-tab="${CSS.escape(workItemTab)}"]`)?.focus();
       return;
     }
     const tabShortcut = event.target.closest("[data-tab-shortcut]")?.dataset.tabShortcut;

@@ -494,6 +494,10 @@ async function renderCockpitContent({skipArtifactLoad = false} = {}) {
       content.innerHTML = renderInboxSurface();
       return;
     }
+    if (["tasks", "runs"].includes(state.workDetail)) {
+      content.innerHTML = renderWorkItemTabPlaceholder(state.workDetail);
+      return;
+    }
     if (state.workDetail === "implement-review") {
       await renderImplementReview();
       return;
@@ -849,6 +853,7 @@ async function renderAll({skipArtifactLoad = false} = {}) {
   renderRuntimeSelector();
   renderTopbar();
   renderProjectHomeRail();
+  renderWorkItemTabs();
   renderStageRail();
   renderStageHeader();
   applyActiveStudioShellPresentation();
