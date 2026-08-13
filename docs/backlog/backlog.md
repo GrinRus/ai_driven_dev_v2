@@ -7,7 +7,7 @@ slice, and local task.
 
 ## Next
 
-- `W42-E3-S2-T2` — Render selected-task detail and mutually exclusive actions.
+- `W42-E3-S2-T3` — Render the active task attempt and live-output tray.
 
 ## Soon
 
@@ -87,6 +87,13 @@ slice, and local task.
   path markers, and persists selected task identity in canonical `task_id` deep links. 117 Node
   frontend tests, 156 Python UI/asset tests, CI matrix, deterministic/adapter checks, and
   packaged browser acceptance passed. `W42-E3-S2-T2` is now the only Next task.
+
+- `2026-08-13` `W42-E3-S2-T2` is complete in PR #186 (merge `ff0025c8`). Selected task detail
+  now shows outcome, dependencies, blocker, and core-owned status, with exactly one eligible
+  Run, Resume, or Finalize action routed through the existing guarded mutation services. Running,
+  Blocked, and Done tasks do not receive a fabricated launch action. 117 Node frontend tests,
+  50 Python UI asset tests, CI matrix, deterministic/adapter checks, and packaged browser
+  acceptance passed. `W42-E3-S2-T3` is now the only Next task.
 
 - `2026-08-12` `W42-E2-S1-T3` is complete. Work Item Overview/Tasks/Documents/Runs tabs now
   persist through canonical routes, keyboard focus, and reload; the active shell renders the
