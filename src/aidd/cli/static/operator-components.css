@@ -1431,6 +1431,96 @@
   display: grid;
   gap: 10px;
 }
+.decision-workbench-header {
+  background: var(--color-bg-raised);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  display: grid;
+  gap: 12px;
+  grid-template-columns: minmax(0, 1fr) minmax(260px, 0.85fr);
+  margin-bottom: 12px;
+  padding: 12px;
+}
+.decision-workbench-heading {
+  display: grid;
+  gap: 5px;
+  min-width: 0;
+}
+.decision-workbench-heading .small-badge {
+  justify-self: start;
+}
+.decision-workbench-heading strong {
+  font-size: 16px;
+  line-height: 1.25;
+}
+.decision-workbench-heading p {
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.45;
+  margin: 0;
+}
+.decision-workbench-facts {
+  display: grid;
+  gap: 7px;
+  margin: 0;
+}
+.decision-workbench-facts div {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+.decision-workbench-facts dt,
+.decision-workbench-facts dd {
+  margin: 0;
+}
+.decision-workbench-facts dt,
+.decision-workbench-source strong,
+.decision-workbench-retained-evidence strong {
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+}
+.decision-workbench-facts dd {
+  font-size: 12px;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+}
+.decision-workbench-evidence {
+  border-top: 1px solid var(--line);
+  display: grid;
+  gap: 12px;
+  grid-column: 1 / -1;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  padding-top: 10px;
+}
+.decision-workbench-source,
+.decision-workbench-retained-evidence {
+  display: grid;
+  gap: 5px;
+  min-width: 0;
+}
+.decision-workbench-evidence ul {
+  display: grid;
+  gap: 4px;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.decision-workbench-evidence li,
+.decision-workbench-evidence .muted {
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+}
+.decision-workbench-evidence li {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  padding: 5px 7px;
+}
 .interview-loop-screen,
 .validation-repair-center {
   align-items: start;

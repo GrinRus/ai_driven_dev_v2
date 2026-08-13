@@ -407,10 +407,10 @@ function renderApprovalRequestCard(request, decision, pendingIds) {
         <span>Decision reason</span>
         <input id="approval-reason-${escapeHtml(request.id)}" data-approval-reason="${escapeHtml(request.id)}" type="text" placeholder="Why is this decision appropriate?">
       </label>
-      <button data-operator-request="${escapeHtml(request.id)}" data-operator-action="allow_once" type="button">Allow once</button>
-      <button data-operator-request="${escapeHtml(request.id)}" data-operator-action="allow_for_session" type="button">Allow session</button>
-      <button data-operator-request="${escapeHtml(request.id)}" data-operator-action="deny" class="secondary" type="button">Deny</button>
-      <button data-operator-request="${escapeHtml(request.id)}" data-operator-action="cancel" class="danger" type="button">Cancel</button>
+      <button data-operator-request="${escapeHtml(request.id)}" data-operator-action="allow_once" data-decision-submit="true" type="button">Allow once</button>
+      <button data-operator-request="${escapeHtml(request.id)}" data-operator-action="allow_for_session" data-decision-alternative="session" type="button">Allow session</button>
+      <button data-operator-request="${escapeHtml(request.id)}" data-operator-action="deny" data-decision-alternative="deny" class="secondary" type="button">Deny</button>
+      <button data-operator-request="${escapeHtml(request.id)}" data-operator-action="cancel" data-decision-alternative="cancel" class="danger" type="button">Cancel</button>
       <div class="approval-session-confirmation" data-approval-session-confirmation="${escapeHtml(request.id)}" hidden role="alertdialog" aria-labelledby="approval-confirm-title-${escapeHtml(request.id)}">
         <strong id="approval-confirm-title-${escapeHtml(request.id)}">Confirm session-wide approval</strong>
         <span><b>Breadth:</b> all matching requests in the current runtime approval session</span>
@@ -425,6 +425,7 @@ function renderApprovalRequestCard(request, decision, pendingIds) {
   return `
     <article class="approval-card ${pending ? "pending" : ""}"
       data-approval-request-id="${escapeHtml(request.id)}"
+      data-decision-item="approval"
       data-approval-status="${escapeHtml(approvalStatus)}"
       data-approval-risk="${escapeHtml(request.risk || "unknown")}"
       data-approval-scope="${escapeHtml(approvalScope)}"
@@ -556,13 +557,30 @@ function renderApprovalsSurface({view, diagnostics, requests, decisions, pending
     : `<div class="empty-state">No runtime operator requests for this job. Saved stage diagnostics are still shown in the queue summary.</div>`;
   const requestPath = view?.requests_path || diagnostics?.requests_path;
   const decisionsPath = view?.decisions_path || diagnostics?.decisions_path;
+  const sourceSnippets = requests.map((request) => {
+    const payload = request.payload || {};
+    const command = payload.command || payload.cmd || payload.preview || "runtime request";
+    return `${request.id || "request"}: ${command}`;
+  });
+  const evidence = [requestPath, decisionsPath].filter(Boolean);
   return `
-    <section class="approval-console-screen" data-human-decision-surface="approval">
+    <section class="approval-console-screen" data-human-decision-surface="approval" data-decision-workbench="approval" data-decision-item-count="${escapeHtml(requests.length)}">
       <section class="surface">
         <div class="surface-title">
           <span>Approvals / Runtime Requests</span>
           <span class="small-badge ${pendingIds.size || diagnostics?.pending_count ? "warn" : "good"}">${escapeHtml(pendingIds.size || diagnostics?.pending_count || 0)} pending</span>
         </div>
+        ${typeof decisionWorkbenchHeader === "function" ? decisionWorkbenchHeader({
+          type: "approval",
+          reason: pendingIds.size
+            ? `${pendingIds.size} runtime request${pendingIds.size === 1 ? "" : "s"} require an explicit operator approval decision.`
+            : "Review retained approval evidence and the durable decision ledger for this runtime job.",
+          sourceSnippets,
+          consequence: pendingIds.size ? "Allow continues the selected runtime request; deny or cancel stops that request and remains in the audit ledger." : "The durable approval ledger is read-only until a pending request is selected.",
+          inputSchema: "decision reason + request scope + allow/deny/cancel action",
+          evidence,
+          primaryAction: "Allow once",
+        }) : ""}
         ${renderApprovalDecisionSpotlight({requests, decisions, pendingIds, diagnostics, auditHistory})}
         ${renderApprovalQueueSummary({requests, decisions, pendingIds, diagnostics})}
         <div class="approval-ledger-paths">

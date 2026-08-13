@@ -1,3 +1,55 @@
+function decisionWorkbenchTypeLabel(type) {
+  return type === "approval" ? "Approval" : "Question";
+}
+
+function decisionWorkbenchHeader({
+  type,
+  reason,
+  sourceSnippets = [],
+  consequence,
+  inputSchema,
+  evidence = [],
+  primaryAction,
+} = {}) {
+  const normalizedType = type === "approval" ? "approval" : "question";
+  const snippets = sourceSnippets
+    .map((snippet) => String(snippet || "").trim())
+    .filter(Boolean)
+    .slice(0, 3);
+  const evidencePaths = evidence
+    .map((item) => String(item || "").trim())
+    .filter(Boolean)
+    .slice(0, 4);
+  return `
+    <section class="decision-workbench-header" data-decision-workbench-header="${normalizedType}">
+      <div class="decision-workbench-heading">
+        <span class="small-badge">Decision Workbench</span>
+        <strong>${escapeHtml(decisionWorkbenchTypeLabel(normalizedType))} decision</strong>
+        <p>${escapeHtml(reason || "Review the supplied context before submitting one durable decision.")}</p>
+      </div>
+      <dl class="decision-workbench-facts">
+        <div><dt>Consequence</dt><dd data-decision-consequence>${escapeHtml(consequence || "The workflow remains unchanged until the decision is saved.")}</dd></div>
+        <div><dt>Input schema</dt><dd data-decision-input-schema>${escapeHtml(inputSchema || "Decision-specific input")}</dd></div>
+        <div><dt>Primary action</dt><dd data-decision-primary-label>${escapeHtml(primaryAction || "Submit decision")}</dd></div>
+      </dl>
+      <div class="decision-workbench-evidence">
+        <div class="decision-workbench-source">
+          <strong>Source snippets</strong>
+          ${snippets.length
+            ? `<ul>${snippets.map((snippet) => `<li data-decision-source-snippet>${escapeHtml(snippet)}</li>`).join("")}</ul>`
+            : `<span class="muted" data-decision-source-empty>Source snippets unavailable; use the durable evidence links below.</span>`}
+        </div>
+        <div class="decision-workbench-retained-evidence">
+          <strong>Decision evidence</strong>
+          ${evidencePaths.length
+            ? `<ul>${evidencePaths.map((item) => `<li data-decision-evidence>${escapeHtml(item)}</li>`).join("")}</ul>`
+            : `<span class="muted" data-decision-evidence-empty>No retained decision evidence yet.</span>`}
+        </div>
+      </div>
+    </section>
+  `;
+}
+
 function questionControlId(prefix, questionId, index) {
   const safeQuestionId = String(questionId ?? "")
     .trim()
@@ -227,7 +279,7 @@ function renderQuestionCards({showResume}) {
           ? !answerText.trim() ? "Enter an answer to resume" : "Select resolved to resume"
           : displayStatus === "resolved" ? "Update & resume" : "Answer & resume";
         return `
-          <article class="question-card" data-question-id="${escapeHtml(question.question_id)}" data-question-status="${escapeHtml(displayStatus)}" data-answer-resolution="${escapeHtml(resolutionValue)}">
+          <article class="question-card" data-question-id="${escapeHtml(question.question_id)}" data-question-status="${escapeHtml(displayStatus)}" data-answer-resolution="${escapeHtml(resolutionValue)}" data-decision-item="question" data-decision-source="${escapeHtml(question.text || "")}">
             <div class="question-head">
               <strong>${escapeHtml(question.question_id)}</strong>
               <span class="small-badge ${questionStatusClass(question)}">${escapeHtml(displayStatus)}</span>
@@ -245,7 +297,7 @@ function renderQuestionCards({showResume}) {
               <span>Evidence links <small>(one path or URL per line)</small></span>
               <textarea id="${evidenceId}" name="${evidenceId}" rows="2" data-question-evidence="${escapeHtml(question.question_id)}" placeholder="reports/qa.md#decision">${escapeHtml(evidenceLinks.join("\n"))}</textarea>
             </label>
-            <label class="question-context-field" for="${consequenceId}">
+            <label class="question-context-field" for="${consequenceId}" data-decision-consequence-field>
               <span>Unblock consequence</span>
               <textarea id="${consequenceId}" name="${consequenceId}" rows="2" data-question-consequence="${escapeHtml(question.question_id)}" placeholder="What can resume after this answer is accepted?">${escapeHtml(unblockConsequence)}</textarea>
             </label>
@@ -259,10 +311,10 @@ function renderQuestionCards({showResume}) {
               </select>
               <details class="question-save-options">
                 <summary>Save draft only</summary>
-                <button data-save-answer="${escapeHtml(question.question_id)}" type="button" class="secondary">${displayStatus === "resolved" ? "Update answer" : "Save answer"}</button>
+              <button data-save-answer="${escapeHtml(question.question_id)}" data-decision-alternative="draft" type="button" class="secondary">${displayStatus === "resolved" ? "Update answer" : "Save answer"}</button>
               </details>
               <button data-answer-preview="${escapeHtml(question.question_id)}" type="button" class="secondary">Preview answers.md</button>
-              ${showResume ? `<button data-primary-action data-answer-resume="${escapeHtml(question.question_id)}" data-requires-resolved-resume="${resumeNeedsResolved ? "true" : "false"}" data-resume-ready-label="Save answer & resume" type="button" ${resumeDisabled ? 'disabled title="Blocking questions must be saved as resolved before resume."' : ""}>${escapeHtml(resumeLabel === "Update & resume" || resumeLabel === "Answer & resume" ? "Save answer & resume" : resumeLabel)}</button>` : ""}
+              ${showResume ? `<button data-primary-action data-decision-submit="true" data-answer-resume="${escapeHtml(question.question_id)}" data-requires-resolved-resume="${resumeNeedsResolved ? "true" : "false"}" data-resume-ready-label="Save answer & resume" type="button" ${resumeDisabled ? 'disabled title="Blocking questions must be saved as resolved before resume."' : ""}>${escapeHtml(resumeLabel === "Update & resume" || resumeLabel === "Answer & resume" ? "Save answer & resume" : resumeLabel)}</button>` : ""}
             </div>
           </article>
         `;
@@ -282,13 +334,28 @@ function renderQuestionCards({showResume}) {
 
 function renderQuestions() {
   const view = activeStageView()?.questions;
+  const questions = view?.questions || [];
+  const unresolved = view?.unresolved_blocking_question_ids || [];
+  const sourceSnippets = questions.map((question) => `${question.question_id || "Question"}: ${question.text || ""}`);
+  const evidence = [view?.answers_path].filter(Boolean);
   return `
-    <div class="interview-loop-screen" data-human-decision-surface="question">
+    <div class="interview-loop-screen" data-human-decision-surface="question" data-decision-workbench="question" data-decision-item-count="${escapeHtml(questions.length)}">
       <section class="surface">
         <div class="surface-title">
           <span>Questions / Interview Loop</span>
-          <span class="small-badge ${view?.unresolved_blocking_question_ids?.length ? "bad" : "good"}">${escapeHtml(view?.unresolved_blocking_question_ids?.length || 0)} required</span>
+          <span class="small-badge ${unresolved.length ? "bad" : "good"}">${escapeHtml(unresolved.length)} required</span>
         </div>
+        ${decisionWorkbenchHeader({
+          type: "question",
+          reason: unresolved.length
+            ? `${unresolved.length} blocking question${unresolved.length === 1 ? "" : "s"} require an operator decision before the stage can resume.`
+            : "Review the question context and record the resolution that should shape the next stage action.",
+          sourceSnippets,
+          consequence: unresolved.length ? "A resolved answer can unblock stage resume; partial or deferred answers remain visible and fail closed." : "The saved answer becomes durable stage context.",
+          inputSchema: "answer text + resolution + evidence links + unblock consequence",
+          evidence,
+          primaryAction: "Save answer & resume",
+        })}
         ${renderInterviewDecisionSpotlight(view)}
         ${renderInterviewSummary(view)}
         ${renderQuestionCards({showResume: true})}
@@ -321,6 +388,14 @@ async function saveAnswer(questionId) {
     `[data-save-answer="${questionId}"]`,
     `[data-answer-resume="${questionId}"]`
   ];
+  const answerPayload = {
+    stage: state.activeStage,
+    question_id: questionId,
+    text,
+    resolution: resolution?.value || "resolved"
+  };
+  if (evidenceLinks.length) answerPayload.evidence_links = evidenceLinks;
+  if (unblockConsequence) answerPayload.unblock_consequence = unblockConsequence;
   const durableQuestion = async () => {
     await fetchDashboard();
     return state.dashboard?.active_stage_view?.questions?.questions?.find(
@@ -330,14 +405,7 @@ async function saveAnswer(questionId) {
   const guarded = await runGuardedMutation({
     key,
     execute: async () => {
-      await postJson("/api/answers", {
-        stage: state.activeStage,
-        question_id: questionId,
-        text,
-        resolution: resolution?.value || "resolved",
-        evidence_links: evidenceLinks,
-        unblock_consequence: unblockConsequence
-      });
+      await postJson("/api/answers", answerPayload);
       const readback = await durableQuestion();
       if (
         readback?.answer_text !== text
