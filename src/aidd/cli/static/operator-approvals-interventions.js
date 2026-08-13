@@ -46,7 +46,9 @@ function selectedInterventionTargets() {
 }
 
 function interventionDraftIdentity() {
-  return operatorDraftIdentity("intervention", state.activeStage);
+  return typeof operatorPurposeDraftIdentity === "function"
+    ? operatorPurposeDraftIdentity("intervention", state.activeStage)
+    : operatorDraftIdentity("intervention", state.activeStage);
 }
 
 function interventionDraft() {
@@ -56,10 +58,18 @@ function interventionDraft() {
 function persistInterventionDraft() {
   const textarea = document.getElementById("operatorRequestText");
   if (!textarea) return;
-  writeOperatorDraft(interventionDraftIdentity(), {
-    text: textarea.value,
-    targetDocuments: selectedInterventionTargets()
-  });
+  const value = typeof operatorPurposeDraftValue === "function"
+    ? operatorPurposeDraftValue("intervention", {
+      text: textarea.value,
+      targetDocuments: selectedInterventionTargets(),
+      source_evidence: selectedInterventionTargets(),
+      destination: `stages/${state.activeStage}/operator-requests/`
+    })
+    : {
+      text: textarea.value,
+      targetDocuments: selectedInterventionTargets()
+    };
+  writeOperatorDraft(interventionDraftIdentity(), value);
 }
 
 function updateSubmitInterventionState() {
@@ -186,7 +196,9 @@ async function renderRequestChange() {
     }
   }
   const targets = requestChangeTargetEntries(documents, context);
-  const restoredDraft = interventionDraft()?.value || {};
+  const restoredDraft = typeof operatorPurposeDraftValue === "function"
+    ? operatorPurposeDraftValue("intervention", interventionDraft()?.value || {})
+    : interventionDraft()?.value || {};
   const restoredTargets = new Set(restoredDraft.targetDocuments || []);
   const interventionEligible = context.eligible !== false;
   const targetBody = targets.length ? targets.map(([key, path], index) => `
@@ -706,6 +718,13 @@ function interventionActionDescriptor() {
   const runtime = state.selectedRuntime;
   const targetDocuments = Object.freeze([...selectedInterventionTargets()]);
   const draftIdentity = Object.freeze({...interventionDraftIdentity()});
+  const draftState = typeof operatorPurposeDraftState === "function"
+    ? operatorPurposeDraftState({
+      purpose: "intervention",
+      draft: readOperatorDraft(draftIdentity),
+      destination: `stages/${state.activeStage}/operator-requests/`
+    })
+    : null;
   const priorRequestId = activeStageView()?.diagnostics?.request_change?.latest_request_id || "";
   return Object.freeze({
     workItem: state.dashboard?.work_item || state.activeRouteWorkItem || "no-work-item",
@@ -715,6 +734,7 @@ function interventionActionDescriptor() {
     request,
     targetDocuments,
     draftIdentity,
+    draftState,
     priorRequestId
   });
 }

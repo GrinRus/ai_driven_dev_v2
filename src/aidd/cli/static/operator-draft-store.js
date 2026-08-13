@@ -8,6 +8,57 @@ const OPERATOR_DRAFT_FORMS = new Set(["question", "intervention", "follow-up", "
 const OPERATOR_DRAFT_IDENTITY_FIELDS = ["project", "workItem", "run", "stage", "form", "sourceId"];
 const OPERATOR_DRAFT_SENSITIVE_KEY = /(?:credential|password|secret|token|api[_-]?key)/i;
 
+function operatorDraftIdentity(form, sourceId) {
+  const currentState = typeof state === "undefined" ? {} : state;
+  return Object.freeze({
+    project: String(currentState?.dashboard?.project_root || currentState?.onboarding?.project?.workspace_root || window.location?.pathname || "operator"),
+    workItem: String(currentState?.dashboard?.work_item || currentState?.activeRouteWorkItem || "no-work-item"),
+    run: String(currentState?.activeRunId || "no-run"),
+    stage: String(currentState?.activeStage || "idea"),
+    form: String(form || ""),
+    sourceId: String(sourceId || "default")
+  });
+}
+const OPERATOR_DRAFT_PURPOSES = Object.freeze({
+  intervention: Object.freeze({form: "intervention", label: "Intervention"}),
+  remediation: Object.freeze({form: "intervention", label: "Remediation"}),
+  "follow-up": Object.freeze({form: "follow-up", label: "Follow-up"}),
+  clone: Object.freeze({form: "clone", label: "Clone"})
+});
+
+function operatorPurposeDraftSpec(purpose) {
+  const normalized = String(purpose || "").trim().toLowerCase();
+  const spec = OPERATOR_DRAFT_PURPOSES[normalized];
+  if (!spec) throw new Error(`Unsupported operator draft purpose: ${purpose}`);
+  return Object.freeze({purpose: normalized, ...spec});
+}
+
+function operatorPurposeDraftIdentity(purpose, sourceId) {
+  const spec = operatorPurposeDraftSpec(purpose);
+  return operatorDraftIdentity(spec.form, sourceId);
+}
+
+function operatorPurposeDraftValue(purpose, fields = {}) {
+  const spec = operatorPurposeDraftSpec(purpose);
+  const value = {...fields, purpose: spec.purpose, purpose_label: spec.label};
+  if (!Object.prototype.hasOwnProperty.call(value, "destination")) value.destination = null;
+  if (!Object.prototype.hasOwnProperty.call(value, "source_evidence")) value.source_evidence = [];
+  return Object.freeze(value);
+}
+
+function operatorPurposeDraftState({purpose, draft = null, destination = null, submitted = false} = {}) {
+  const spec = operatorPurposeDraftSpec(purpose);
+  const value = draft?.value || draft || {};
+  return Object.freeze({
+    purpose: spec.purpose,
+    label: spec.label,
+    status: submitted ? "submitted" : draft ? "draft" : "empty",
+    destination: destination || value.destination || null,
+    source_evidence: [...(value.source_evidence || value.targetDocuments || value.selected_sources || [])],
+    value
+  });
+}
+
 function draftJsonBytes(value) {
   return new TextEncoder().encode(JSON.stringify(value)).byteLength;
 }

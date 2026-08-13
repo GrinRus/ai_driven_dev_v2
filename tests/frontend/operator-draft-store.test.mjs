@@ -118,3 +118,40 @@ test("store enforces count, payload, and sensitive-field bounds", async () => {
     /secret fields/,
   );
 });
+
+test("purpose drafts share one state machine while preserving isolated durable forms", async () => {
+  const {context} = await draftContext();
+  const intervention = vm.runInContext(
+    `operatorPurposeDraftValue("intervention", {text: "Update plan", targetDocuments: ["plan.md"]})`,
+    context,
+  );
+  const followUp = vm.runInContext(
+    `operatorPurposeDraftValue("follow-up", {title: "Follow up", source_evidence: ["qa.md"]})`,
+    context,
+  );
+  assert.equal(intervention.purpose, "intervention");
+  assert.equal(intervention.purpose_label, "Intervention");
+  assert.equal(followUp.purpose, "follow-up");
+  assert.equal(
+    vm.runInContext(
+      `operatorPurposeDraftIdentity("remediation", "run-1").form`,
+      context,
+    ),
+    "intervention",
+  );
+  assert.throws(
+    () => vm.runInContext(`operatorPurposeDraftSpec("unknown")`, context),
+    /Unsupported operator draft purpose/,
+  );
+  vm.runInContext(
+    `writeOperatorDraft(operatorPurposeDraftIdentity("clone", "run-1"), operatorPurposeDraftValue("clone", {title: "Clone"}), {now: 100})`,
+    context,
+  );
+  const state = expression(
+    context,
+    `operatorPurposeDraftState({purpose: "clone", draft: readOperatorDraft(operatorPurposeDraftIdentity("clone", "run-1"), {now: 101}), destination: "workitems/WI-CLONE/context/"})`,
+  );
+  assert.equal(state.status, "draft");
+  assert.equal(state.destination, "workitems/WI-CLONE/context/");
+  assert.equal(state.value.purpose_label, "Clone");
+});
