@@ -101,6 +101,63 @@ test("runtime selector payload is capability-gated and omits blank values", asyn
   );
 });
 
+test("core readiness eligibility and literal disabled reason drive launch gating", async () => {
+  const context = await readinessContext();
+  context.state.selectedRuntime = "codex";
+  context.state.readiness = {
+    runtimes: [{
+      runtime_id: "codex",
+      eligible: false,
+      disabled_reason: "probe is stale; revalidate runtime readiness before launch",
+      binary: {status: "detected"},
+      execution_command: {status: "available"},
+      authentication: {status: "verified"},
+      capabilities: {status: "known"},
+    }],
+  };
+  assert.equal(vm.runInContext("selectedRuntimeReady()", context), false);
+  assert.equal(
+    vm.runInContext("runtimeReadinessMessage()", context),
+    "probe is stale; revalidate runtime readiness before launch",
+  );
+  const html = vm.runInContext("renderContextualRunnerControl({actionLabel: 'task run'})", context);
+  assert.match(html, /data-contextual-runner-control/);
+  assert.match(html, /data-runner-eligible="false"/);
+  assert.match(html, /probe is stale; revalidate runtime readiness before launch/);
+  assert.match(html, /data-open-runner/);
+});
+
+test("eligible readiness keeps one contextual Runner control focused on the canonical selector", async () => {
+  const context = await readinessContext();
+  context.state.selectedRuntime = "codex";
+  context.state.readiness = {
+    runtimes: [{
+      runtime_id: "codex",
+      eligible: true,
+      disabled_reason: "",
+      config_identity: "config-current",
+      probe_observed_at_utc: "2026-08-13T10:00:00Z",
+      binary: {status: "detected"},
+      execution_command: {status: "available"},
+      authentication: {status: "verified"},
+      capabilities: {status: "known"},
+    }],
+  };
+  assert.equal(vm.runInContext("selectedRuntimeReady()", context), true);
+  assert.deepEqual(
+    JSON.parse(JSON.stringify(vm.runInContext("runtimeSelectorPayload()", context))),
+    {
+      require_runtime_revalidation: true,
+      readiness_config_identity: "config-current",
+      readiness_probe_observed_at_utc: "2026-08-13T10:00:00Z",
+    },
+  );
+  const html = vm.runInContext("renderContextualRunnerControl({actionLabel: 'workflow launch'})", context);
+  assert.match(html, /data-runner-eligible="true"/);
+  assert.match(html, /Eligible for workflow launch\./);
+  assert.equal((html.match(/data-open-runner/g) || []).length, 1);
+});
+
 test("operator shell exposes model and reasoning-effort controls and forwards them", async () => {
   const [index, actions] = await Promise.all([
     readFile(indexPath, "utf8"),

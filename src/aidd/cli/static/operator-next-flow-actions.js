@@ -643,7 +643,8 @@ async function launchNextFlowNow() {
           relationship: wizard.action === "clone-flow" ? "clone" : "follow-up",
           from_stage: "idea",
           to_stage: "qa",
-          log_follow: true
+          log_follow: true,
+          ...(typeof runtimeSelectorPayload === "function" ? runtimeSelectorPayload() : {})
         });
         const readback = await api(`/api/jobs/${encodeURIComponent(job.job_id)}`);
         if (readback.job_id !== job.job_id) {

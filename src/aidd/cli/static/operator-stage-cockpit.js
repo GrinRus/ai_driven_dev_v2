@@ -121,6 +121,7 @@ function renderRecoveryActionBand(diagnostics) {
         ${renderValidationFindingSummary(finding)}
       </div>
       <div class="repair-actions">
+        ${repairAvailable && typeof renderContextualRunnerControl === "function" ? renderContextualRunnerControl({actionLabel: "validation repair"}) : ""}
         ${requestPrimary ? `<button data-recovery-action="request-change" data-recovery-stage="${escapeHtml(state.activeStage)}" type="button">Request Change</button>` : `<button data-run-repair type="button" ${repairAvailable ? "" : "disabled"}>Run Repair</button>`}
         ${requestPrimary ? `<button type="button" class="secondary" disabled aria-disabled="true">${status === "explicit-stop" ? "Repair unavailable" : "Repair exhausted"}</button>` : `<button data-tab-shortcut="request" type="button" class="secondary">Request Change</button>`}
         <button data-stop-run type="button" class="danger">Stop Run</button>

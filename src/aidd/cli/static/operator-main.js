@@ -178,6 +178,10 @@ document.addEventListener("keydown", async (event) => {
 
 document.addEventListener("click", async (event) => {
   try {
+    if (event.target.closest("[data-open-runner]")) {
+      focusRuntimeSelector();
+      return;
+    }
     const stateRecovery = event.target.closest("[data-state-recovery]")?.dataset.stateRecovery;
     if (stateRecovery === "reconnect-live-job") {
       await reconnectActiveJob();

@@ -197,7 +197,8 @@ async function startTaskFinalization() {
     controls: ["[data-finalize-tasks]"],
     execute: () => postJson("/api/tasks/finalize", {
       run_id: state.activeRunId,
-      runtime: state.selectedRuntime
+      runtime: state.selectedRuntime,
+      ...runtimeSelectorPayload()
     })
   });
 }
@@ -215,7 +216,8 @@ async function rerunStaleDownstream() {
     execute: () => postJson("/api/remediation/rerun-downstream", {
       runtime: state.selectedRuntime,
       run_id: state.activeRunId,
-      log_follow: true
+      log_follow: true,
+      ...runtimeSelectorPayload()
     })
   });
 }

@@ -67,7 +67,7 @@ from aidd.core.runtime_operator import (
     append_operator_request,
     load_operator_decisions,
 )
-from aidd.core.runtime_readiness import RuntimeReadinessProbeReport
+from aidd.core.runtime_readiness import RuntimeReadinessProbeReport, runtime_config_identity
 from aidd.core.stage_runner import prepare_stage_bundle
 from aidd.core.stages import STAGES
 from aidd.core.workflow_service import (
@@ -4213,6 +4213,81 @@ def test_ui_runtime_readiness_endpoint_exposes_probe_and_config_data(
     assert generic_cli["default_timeout_seconds"] == 42
     assert generic_cli["stage_timeout_seconds"] == {"plan": 90}
     assert runtimes["codex"]["command_source"] == "default"
+
+
+def test_ui_launch_revalidates_core_readiness_before_starting_a_job(tmp_path: Path) -> None:
+    workspace_root = tmp_path / ".aidd"
+    observed_at = datetime.now(UTC).replace(microsecond=0)
+
+    def ready_probe(cfg: object) -> dict[str, RuntimeReadinessProbeReport]:
+        runtime_config = cfg.runtime_config("generic-cli")
+        return {
+            "generic-cli": RuntimeReadinessProbeReport(
+                provider_available=True,
+                execution_command_available=True,
+                provider_version="fixture",
+                provider_command="generic-cli",
+                config_identity=runtime_config_identity(
+                    runtime_id="generic-cli",
+                    runtime_config=runtime_config,
+                ),
+                observed_at_utc=observed_at.isoformat().replace("+00:00", "Z"),
+            )
+        }
+
+    def fake_workflow_runner(**_: object) -> WorkflowRunResult:
+        return WorkflowRunResult(
+            run_id="run-revalidated",
+            executed_stage_count=0,
+            completed=True,
+            incomplete=(),
+        )
+
+    service = _service(
+        workspace_root,
+        workflow_runner=fake_workflow_runner,
+        readiness_probe_provider=ready_probe,
+    )
+    response = service.handle_post(
+        "/api/workflow/run",
+        {
+            "runtime": "generic-cli",
+            "require_runtime_revalidation": True,
+            "readiness_config_identity": "client-snapshot",
+        },
+    )
+    payload = _payload(response)
+    job = _wait_job(service, str(payload["job_id"]))
+    assert job["status"] == "completed"
+    assert job["result"]["run_id"] == "run-revalidated"  # type: ignore[index]
+
+
+def test_ui_launch_revalidation_fails_closed_for_stale_probe(tmp_path: Path) -> None:
+    workspace_root = tmp_path / ".aidd"
+    observed_at = datetime.now(UTC) - timedelta(minutes=10)
+
+    def stale_probe(cfg: object) -> dict[str, RuntimeReadinessProbeReport]:
+        runtime_config = cfg.runtime_config("generic-cli")
+        return {
+            "generic-cli": RuntimeReadinessProbeReport(
+                provider_available=True,
+                execution_command_available=True,
+                config_identity=runtime_config_identity(
+                    runtime_id="generic-cli",
+                    runtime_config=runtime_config,
+                ),
+                observed_at_utc=observed_at.isoformat().replace("+00:00", "Z"),
+            )
+        }
+
+    service = _service(workspace_root, readiness_probe_provider=stale_probe)
+    response = service.handle_post(
+        "/api/workflow/run",
+        {"runtime": "generic-cli", "require_runtime_revalidation": True},
+    )
+    payload = _payload_with_status(response, HTTPStatus.BAD_REQUEST)
+    assert "stale" in str(payload["error"]).lower()
+    assert "job_id" not in payload
 
 
 def test_ui_runtime_readiness_reports_invalid_scope_without_claiming_no_scope(

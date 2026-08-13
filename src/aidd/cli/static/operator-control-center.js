@@ -289,7 +289,8 @@ async function launchRemediation(sourceStage) {
     operator_note: operatorNote,
     runtime: state.selectedRuntime,
     run_id: state.activeRunId,
-    log_follow: true
+    log_follow: true,
+    ...runtimeSelectorPayload()
   };
   const job = await guardedJobLaunch({
     kind: "remediation-launch",

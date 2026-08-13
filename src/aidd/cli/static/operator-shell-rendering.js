@@ -93,6 +93,13 @@ function runtimeSelectorPayload() {
   const runtime = selectedRuntimeView();
   const supported = new Set(runtime?.capabilities?.supported_selectors || []);
   const payload = {};
+  if (runtime && Object.prototype.hasOwnProperty.call(runtime, "eligible")) {
+    payload.require_runtime_revalidation = true;
+    if (runtime.config_identity) payload.readiness_config_identity = runtime.config_identity;
+    if (runtime.probe_observed_at_utc) {
+      payload.readiness_probe_observed_at_utc = runtime.probe_observed_at_utc;
+    }
+  }
   const model = String(state.runtimeModel || "").trim();
   const reasoningEffort = String(state.runtimeReasoningEffort || "").trim();
   if (state.runtimeModelDirty && model && supported.has("model")) payload.model = model;
@@ -127,15 +134,45 @@ function focusRuntimeSelector() {
 
 function selectedRuntimeReady() {
   const runtime = selectedRuntimeView();
-  return Boolean(runtime && runtime.provider_available && runtime.execution_command_available);
+  if (!runtime) return false;
+  if (Object.prototype.hasOwnProperty.call(runtime, "eligible")) {
+    return runtime.eligible === true;
+  }
+  // Compatibility with pre-readiness payloads retained by older browser fixtures.
+  return Boolean(runtime.provider_available && runtime.execution_command_available);
 }
 
 function runtimeReadinessMessage() {
   if (!state.selectedRuntime) return "Select a runtime before this action can run.";
   if (state.readinessLoading) return "Checking runtime readiness before this action can run.";
   if (state.readinessError) return `Runtime readiness unavailable: ${state.readinessError}`;
-  if (!selectedRuntimeReady()) return "Selected runtime is not ready for execution.";
+  if (!selectedRuntimeReady()) {
+    return String(selectedRuntimeView()?.disabled_reason || "Selected runtime is not ready for execution.");
+  }
   return "";
+}
+
+function renderContextualRunnerControl({actionLabel = "launch"} = {}) {
+  const runtime = selectedRuntimeView();
+  const runtimeLabel = state.selectedRuntime || "no Runner selected";
+  const ready = selectedRuntimeReady();
+  const reason = state.readinessLoading
+    ? "Checking current readiness evidence."
+    : state.readinessError
+      ? `Readiness unavailable: ${state.readinessError}`
+      : ready
+        ? `Eligible for ${actionLabel}.`
+        : runtime?.disabled_reason || "Choose an eligible Runner before this action.";
+  return `
+    <div class="contextual-runner-control" data-contextual-runner-control data-runner-eligible="${ready ? "true" : "false"}">
+      <div class="contextual-runner-copy">
+        <span class="eyebrow">Runner</span>
+        <strong>${escapeHtml(runtimeLabel)}</strong>
+        <span>${escapeHtml(reason)}</span>
+      </div>
+      <button class="secondary" data-open-runner type="button">${state.selectedRuntime ? "Change Runner" : "Choose Runner"}</button>
+    </div>
+  `;
 }
 
 function readinessBoolean(value) {
@@ -172,6 +209,9 @@ function renderRuntimeReadinessDimensions(runtime, {compact = false} = {}) {
     ["Execution command", `${command.status} / ${command.source || "unknown source"}`],
     ["Authentication evidence", `${authentication.status}${authentication.detail ? ` / ${authentication.detail}` : ""}`],
     ["Adapter capabilities", runtimeCapabilitySummary(runtime)],
+    ["Eligibility", runtime.eligible === true ? "eligible" : runtime.disabled_reason || "not eligible"],
+    ["Config identity", runtime.config_identity || "not reported"],
+    ["Probe observed", runtime.probe_observed_at_utc || "not observed"],
     ["Latest launch", runtimeLatestLaunchSummary(runtime)]
   ];
   return `
@@ -262,7 +302,7 @@ function renderTopbar() {
   if (topContextWorkItem) topContextWorkItem.textContent = dashboard.work_item || "Choose a Work Item";
   if (topContextRun) topContextRun.textContent = run.run_id || "No run";
   const runtime = selectedRuntimeView();
-  const ready = runtime ? runtime.provider_available && runtime.execution_command_available : false;
+  const ready = runtime ? selectedRuntimeReady() : false;
   const localStatus = document.getElementById("localStatus");
   if (state.readinessLoading) {
     localStatus.textContent = "Checking runtime readiness...";
