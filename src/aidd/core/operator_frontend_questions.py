@@ -104,6 +104,10 @@ def resolve_operator_questions_view(
                 status=status,
                 answer_text=answer.text if answer else None,
                 answer_resolution=answer.resolution if answer else None,
+                answer_evidence_links=answer.evidence_links if answer else (),
+                answer_unblock_consequence=(
+                    answer.unblock_consequence if answer else None
+                ),
             )
         )
 
@@ -612,6 +616,8 @@ def persist_operator_answer(
     question_id: str,
     text: str,
     resolution: AnswerResolution = AnswerResolution.RESOLVED,
+    evidence_links: tuple[str, ...] = (),
+    unblock_consequence: str | None = None,
 ) -> OperatorQuestionsView:
     validate_operator_stage(stage)
     questions = load_questions_document(
@@ -635,6 +641,8 @@ def persist_operator_answer(
                 question_id=question_id,
                 text=text,
                 resolution=resolution,
+                evidence_links=evidence_links,
+                unblock_consequence=unblock_consequence,
             ),
         ),
     )

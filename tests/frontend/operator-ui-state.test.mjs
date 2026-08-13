@@ -613,6 +613,29 @@ test("question Recovery renders exact durable ids and resolution states", async 
   assert.match(html, /Select resolved to resume/);
 });
 
+test("question answer cards expose structured context and preview destination", async () => {
+  const {context} = domContext();
+  context.readOperatorDraft = () => null;
+  await load(context, "operator-api-state.js");
+  await load(context, "operator-questions.js");
+  vm.runInContext(`state.dashboard = {
+    active_stage_view: {questions: {
+      unresolved_blocking_question_ids: ["Q1"],
+      questions: [{
+        question_id: "Q1", text: "Confirm owner.", policy: "blocking",
+        status: "pending-blocking", answer_evidence_links: ["reports/plan.md#owner"],
+        answer_unblock_consequence: "Plan can resume after owner confirmation."
+      }]
+    }}
+  }`, context);
+  const html = vm.runInContext("renderQuestionCards({showResume: true})", context);
+  assert.match(html, /data-question-evidence="Q1"/);
+  assert.match(html, /reports\/plan\.md#owner/);
+  assert.match(html, /data-question-consequence="Q1"/);
+  assert.match(html, /data-answer-preview="Q1"/);
+  assert.match(html, /data-answer-preview-panel="Q1"/);
+});
+
 test("late dashboard response cannot overwrite a newer request", async () => {
   const {context} = domContext();
   const requests = [];

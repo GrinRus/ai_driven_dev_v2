@@ -2133,6 +2133,70 @@ def test_ui_service_persists_answer_through_operator_service(tmp_path: Path) -> 
     assert "- `Q1` `[resolved]`" not in answers_text
 
 
+def test_ui_answer_preview_is_non_mutating_and_write_persists_context(
+    tmp_path: Path,
+) -> None:
+    workspace_root = tmp_path / ".aidd"
+    _write_questions(workspace_root)
+    service = _service(workspace_root)
+
+    preview = _payload(
+        service.handle_post(
+            "/api/answers",
+            {
+                "mode": "preview",
+                "stage": "plan",
+                "question_id": "Q1",
+                "text": "Use the staged rollout.",
+                "resolution": "partial",
+                "evidence_links": ["reports/plan.md#rollout", "run://run-1/qa"],
+                "unblock_consequence": "The plan stage can resume after scope review.",
+            },
+        )
+    )
+    assert preview["mode"] == "preview"
+    assert "## Evidence" in preview["markdown"]
+    assert "## Unblock consequence" in preview["markdown"]
+    assert not (workspace_root / "workitems/WI-UI/stages/plan/answers.md").exists()
+
+    written = _payload(
+        service.handle_post(
+            "/api/answers",
+            {
+                "mode": "write",
+                "stage": "plan",
+                "question_id": "Q1",
+                "text": "Use the staged rollout.",
+                "resolution": "partial",
+                "evidence_links": "reports/plan.md#rollout\nrun://run-1/qa",
+                "unblock_consequence": "The plan stage can resume after scope review.",
+            },
+        )
+    )
+    question = written["questions"][0]
+    assert question["answer_evidence_links"] == ["reports/plan.md#rollout", "run://run-1/qa"]
+    assert question["answer_unblock_consequence"] == "The plan stage can resume after scope review."
+    answers_text = (
+        workspace_root / "workitems/WI-UI/stages/plan/answers.md"
+    ).read_text(encoding="utf-8")
+    assert "reports/plan.md#rollout" in answers_text
+    assert "The plan stage can resume after scope review." in answers_text
+
+
+def test_ui_answers_get_exposes_question_context_and_durable_destination(
+    tmp_path: Path,
+) -> None:
+    workspace_root = tmp_path / ".aidd"
+    _write_questions(workspace_root)
+    service = _service(workspace_root)
+
+    payload = _payload(service.handle_get("/api/answers", {"stage": ["plan"]}))
+
+    assert payload["stage"] == "plan"
+    assert payload["answers_path"].endswith("workitems/WI-UI/stages/plan/answers.md")
+    assert payload["questions"][0]["question_id"] == "Q1"
+
+
 def test_ui_stage_endpoint_exposes_interview_recovery_answer_states(
     tmp_path: Path,
 ) -> None:

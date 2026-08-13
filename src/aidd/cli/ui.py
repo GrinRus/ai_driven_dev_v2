@@ -63,7 +63,13 @@ from aidd.core.implementation_service import (
     ImplementationExecutionService,
     TaskAttemptOutcome,
 )
-from aidd.core.interview import AnswerResolution
+from aidd.core.interview import (
+    AnswerResolution,
+    InterviewAnswer,
+    load_answers_document,
+    load_questions_document,
+    render_answers_markdown,
+)
 from aidd.core.mutation_lease import (
     acquire_run_mutation_lease,
     acquire_run_mutation_lease_handle,
@@ -1697,6 +1703,17 @@ def _operator_request_context_payload(
     }
 
 
+def _answer_links_from_payload(payload: Mapping[str, object]) -> tuple[str, ...]:
+    raw = payload.get("evidence_links", ())
+    if isinstance(raw, str):
+        raw_values: list[object] = list(raw.splitlines())
+    elif isinstance(raw, (list, tuple)):
+        raw_values = list(raw)
+    else:
+        raw_values = []
+    return tuple(str(value).strip() for value in raw_values if str(value).strip())
+
+
 def _follow_up_creation_payload(
     *,
     workspace_root: Path,
@@ -3073,6 +3090,7 @@ class OperatorUiService:
             ),
             "/api/stage": self._get_stage,
             "/api/questions": self._get_questions,
+            "/api/answers": self._get_answers,
             "/api/logs": self._get_logs,
             "/api/artifacts": self._get_artifacts,
             "/api/stage/workbench": self._get_stage_workbench,
@@ -3142,6 +3160,23 @@ class OperatorUiService:
                 work_item=self.work_item,
                 stage=stage,
             )
+        )
+
+    def _get_answers(self, params: dict[str, list[str]]) -> UiResponse:
+        stage = _first_param(params, "stage") or STAGES[0]
+        view = resolve_operator_questions_view(
+            workspace_root=self.workspace_root,
+            work_item=self.work_item,
+            stage=stage,
+        )
+        return _json_response(
+            {
+                "work_item": view.work_item,
+                "stage": view.stage,
+                "answers_path": view.answers_path,
+                "questions": view.questions,
+                "unresolved_blocking_question_ids": view.unresolved_blocking_question_ids,
+            }
         )
 
     def _get_logs(self, params: dict[str, list[str]]) -> UiResponse:
@@ -3371,6 +3406,61 @@ class OperatorUiService:
             return _error_response("question_id is required.")
         if not text:
             return _error_response("text is required.")
+        questions = load_questions_document(
+            workspace_root=self.workspace_root,
+            work_item=self.work_item,
+            stage=stage,
+        )
+        if question_id not in {question.question_id for question in questions}:
+            return _error_response(
+                f"Question id `{question_id}` does not exist for work item "
+                f"`{self.work_item}` stage `{stage}`."
+            )
+        try:
+            resolution = AnswerResolution(raw_resolution)
+        except ValueError:
+            return _error_response(
+                "resolution must be one of: resolved, partial, deferred."
+            )
+        evidence_links = _answer_links_from_payload(payload)
+        consequence = str(payload.get("unblock_consequence") or "").strip() or None
+        answer = InterviewAnswer(
+            question_id=question_id,
+            text=text,
+            resolution=resolution,
+            evidence_links=evidence_links,
+            unblock_consequence=consequence,
+        )
+        mode = str(payload.get("mode") or "write").strip().lower()
+        if mode == "preview":
+            existing_answers = load_answers_document(
+                workspace_root=self.workspace_root,
+                work_item=self.work_item,
+                stage=stage,
+            )
+            preview_answers = tuple(
+                answer
+                for answer in existing_answers
+                if answer.question_id != question_id
+            ) + (answer,)
+            return _json_response(
+                {
+                    "mode": "preview",
+                    "answer": answer,
+                    "answers_path": (
+                        self.workspace_root
+                        / "workitems"
+                        / self.work_item
+                        / "stages"
+                        / stage
+                        / "answers.md"
+                    ),
+                    "markdown": render_answers_markdown(preview_answers),
+                    "unblock_consequence": consequence,
+                }
+            )
+        if mode != "write":
+            return _error_response("mode must be 'preview' or 'write'.")
         return _json_response(
             persist_operator_answer(
                 workspace_root=self.workspace_root,
@@ -3378,7 +3468,9 @@ class OperatorUiService:
                 stage=stage,
                 question_id=question_id,
                 text=text,
-                resolution=AnswerResolution(raw_resolution),
+                resolution=resolution,
+                evidence_links=evidence_links,
+                unblock_consequence=consequence,
             )
         )
 

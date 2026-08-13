@@ -343,6 +343,24 @@ def test_parse_and_render_answers_markdown_round_trip() -> None:
     assert parsed == answers
 
 
+def test_answers_markdown_round_trip_preserves_evidence_and_unblock_consequence() -> None:
+    answers = (
+        InterviewAnswer(
+            question_id="Q1",
+            resolution=AnswerResolution.RESOLVED,
+            text="Use the staged rollout.",
+            evidence_links=("reports/plan.md#rollout", "run://run-1/qa"),
+            unblock_consequence="The plan stage may resume with staged rollout scope.",
+        ),
+    )
+
+    rendered = render_answers_markdown(answers)
+
+    assert "## Evidence" in rendered
+    assert "## Unblock consequence" in rendered
+    assert parse_answers_markdown(rendered) == answers
+
+
 @pytest.mark.parametrize(
     ("markdown_text", "expected_message"),
     (

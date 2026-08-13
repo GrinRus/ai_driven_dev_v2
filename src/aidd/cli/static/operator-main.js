@@ -656,6 +656,11 @@ document.addEventListener("click", async (event) => {
       await renderAll();
       return;
     }
+    const answerPreviewButton = event.target.closest("[data-answer-preview]");
+    if (answerPreviewButton) {
+      await previewAnswer(answerPreviewButton.dataset.answerPreview);
+      return;
+    }
     const answerResumeButton = event.target.closest("[data-answer-resume]");
     if (answerResumeButton) {
       await answerAndResume(answerResumeButton.dataset.answerResume);
@@ -843,6 +848,10 @@ document.addEventListener("input", (event) => {
     persistQuestionDraft(questionText);
     updateQuestionResumeButtonState(questionText);
   }
+  const questionEvidence = event.target.closest("[data-question-evidence]")?.dataset.questionEvidence;
+  if (questionEvidence) persistQuestionDraft(questionEvidence);
+  const questionConsequence = event.target.closest("[data-question-consequence]")?.dataset.questionConsequence;
+  if (questionConsequence) persistQuestionDraft(questionConsequence);
   const approvalReasonId = event.target.closest("[data-approval-reason]")?.dataset.approvalReason;
   if (approvalReasonId) updateApprovalConfirmationPreview(approvalReasonId);
   if (event.target.id === "runComparisonBaseline") {
