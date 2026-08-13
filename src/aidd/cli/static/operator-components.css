@@ -1477,7 +1477,7 @@
 .decision-workbench-source strong,
 .decision-workbench-retained-evidence strong {
   color: var(--muted);
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 800;
   letter-spacing: 0.03em;
   text-transform: uppercase;
