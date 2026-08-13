@@ -14185,12 +14185,12 @@ Dependencies: `W42-E4-S2-T2` and `W42-E2-S2-T2`.
 
 Local tasks:
 
-- `W42-E5-S1-T1` (next) Render the shared Decision Workbench for questions and approvals.
+- `W42-E5-S1-T1` (done) Render the shared Decision Workbench for questions and approvals.
   - Scope: decision type, reason, source snippets, consequence, schema-specific inputs, draft or
     approval evidence, and exactly one submit action; do not reduce approvals to answer forms.
   - Verification: fixtures cover question, approval, deferred answer, unavailable evidence,
     pending, conflict, permission denial, and mobile first-action visibility.
-- `W42-E5-S1-T2` (planned) Render validation and runtime recovery as distinct states.
+- `W42-E5-S1-T2` (next) Render validation and runtime recovery as distinct states.
   - Scope: validation document/rule/location/hint/budget/exact brief plus repair Runner; runtime
     first decisive failure/logs/retry/selection consequence without consuming repair budget.
   - Verification: tests prove repair exhaustion, request-change routing, runtime retry, cancel,
