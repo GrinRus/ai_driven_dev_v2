@@ -1188,8 +1188,15 @@ def test_operator_questions_asset_keeps_answer_resolution_and_saved_answer_contr
     _assert_contains_all(
         questions,
         (
-            "function questionControlId(prefix, questionId, index)",
-            (
+                "function questionControlId(prefix, questionId, index)",
+                "function decisionWorkbenchHeader({",
+                'data-decision-workbench="question"',
+                'data-decision-item="question"',
+                'data-decision-submit="true"',
+                "data-decision-source-snippet",
+                "data-decision-input-schema",
+                "data-decision-consequence",
+                (
                 'const questionTextId = questionControlId("question-text", '
                 "question.question_id, index);"
             ),

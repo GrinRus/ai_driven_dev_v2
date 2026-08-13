@@ -826,6 +826,16 @@
   [data-human-decision-surface] .approval-summary-grid {
     display: none;
   }
+  [data-human-decision-surface] .decision-workbench-header {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-3);
+  }
+  [data-human-decision-surface] .decision-workbench-evidence {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-3);
+  }
   [data-human-decision-surface="question"] .question-list,
   [data-human-decision-surface="intervention"] .request-change-grid,
   [data-human-decision-surface="approval"] .approval-queue {

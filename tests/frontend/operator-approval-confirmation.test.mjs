@@ -79,6 +79,10 @@ async function approvalContext({conflict = false, terminal = false} = {}) {
     await readFile(path.join(staticRoot, "operator-mutation-guard.js"), "utf8"),
     context,
   );
+  vm.runInContext(
+    await readFile(path.join(staticRoot, "operator-questions.js"), "utf8"),
+    context,
+  );
   vm.runInContext(await readFile(assetPath, "utf8"), context, {filename: assetPath});
   vm.runInContext("renderApprovals = async () => {}", context);
   return context;
@@ -101,6 +105,36 @@ test("approval card exposes reason capture and explicit session breadth", async 
   assert.match(html, /data-approval-risk="unknown"/);
   assert.match(html, /data-approval-scope="runtime request payload"/);
   assert.match(html, /data-approval-breadth="single-request"/);
+});
+
+test("Decision Workbench keeps approval schema, evidence, consequence, and one primary submit", async () => {
+  const context = await approvalContext();
+  const header = vm.runInContext(
+    `decisionWorkbenchHeader({
+      type: "approval",
+      reason: "Runtime request needs an explicit operator decision.",
+      sourceSnippets: ["REQ-1: python -m pytest -q"],
+      consequence: "Allow continues this request; deny stops it.",
+      inputSchema: "reason + scope + action",
+      evidence: [".aidd/requests.jsonl", ".aidd/decisions.jsonl"],
+      primaryAction: "Allow once"
+    })`,
+    context,
+  );
+  assert.match(header, /data-decision-workbench-header="approval"/);
+  assert.match(header, /data-decision-source-snippet/);
+  assert.match(header, /data-decision-consequence/);
+  assert.match(header, /data-decision-input-schema/);
+  assert.match(header, /data-decision-evidence/);
+  const card = vm.runInContext(
+    `renderApprovalRequestCard({
+      id: "REQ-1", kind: "shell", runtime_id: "generic-cli", stage: "idea",
+      payload: {command: "python -m pytest -q"}
+    }, null, new Set(["REQ-1"]))`,
+    context,
+  );
+  assert.equal((card.match(/data-decision-submit="true"/g) || []).length, 1);
+  assert.equal((card.match(/data-decision-alternative=/g) || []).length, 3);
 });
 
 test("resolved approval card exposes the durable winner and session breadth", async () => {
