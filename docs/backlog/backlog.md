@@ -7,7 +7,7 @@ slice, and local task.
 
 ## Next
 
-- `W42-E2-S2-T2` — Extract and place the contextual Runner control.
+- `W42-E3-S1-T1` — Add the core Task Workspace read model.
 
 ## Soon
 
@@ -59,11 +59,12 @@ slice, and local task.
   is complete with Work Item tabs, route persistence, and the exact eight-stage strip. `W42-E2-S2-T1`
   is now next.
 
-- `2026-08-13` `W42-E2-S2-T1` is complete and `W42-E2-S2-T2` is now the only Next task. The
-  core readiness projection carries config identity, probe timestamp, eligibility, and one
-  disabled reason; stale, drifted, unavailable, unauthenticated, unsupported, or identity-less
-  readiness cannot authorize a launch. PR #176 merged as `e2743332`; CI and packaged browser
-  acceptance passed.
+- `2026-08-13` `W42-E2-S2-T2` is complete and `W42-E3-S1-T1` is now the only Next task. The
+  contextual Runner control is reused beside workflow, stage, task, repair, and remediation
+  launches; it mirrors core eligibility and literal disabled reasons, keeps read-only/history/
+  completion surfaces selector-free, forwards readiness identity, and service-revalidates before
+  mutation. PR #178 merged as `f0cf3c8b`; focused UI/service tests, full frontend tests, CI, and
+  packaged browser acceptance passed. T1 was reconciled in PR #177 (`eaa694fa`).
 
 - `2026-08-12` `W42-E2-S1-T3` is complete. Work Item Overview/Tasks/Documents/Runs tabs now
   persist through canonical routes, keyboard focus, and reload; the active shell renders the

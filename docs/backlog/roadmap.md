@@ -14028,12 +14028,12 @@ Local tasks:
   - Verification: core and service tests cover ready, missing selection, stale evidence,
     verified/failed/unverified auth, unsupported capability, permission denial, config drift, and
     runtime-unavailable outcomes.
-- `W42-E2-S2-T2` (next) Extract and place the contextual Runner control.
+- `W42-E2-S2-T2` (done) Extract and place the contextual Runner control.
   - Scope: one frontend component reused beside workflow, stage, task, repair, and remediation
     launches; hide it from create, read-only history, completed handoff, and non-launch decisions.
   - Verification: fixture tests prove selected values reach the existing request path, disabled
     reasons mirror the core projection, and no surface exposes two Runner selectors or launch
-    actions.
+    actions; service-side revalidation repeats the core readiness check before mutation.
 
 ### Epic W42-E3 — dependency-aware Task Workspace (`planned`)
 
@@ -14056,7 +14056,7 @@ Dependencies: `W42-E2-S2-T1` and existing Wave 35 task ledger.
 
 Local tasks:
 
-- `W42-E3-S1-T1` (planned) Add the core Task Workspace read model.
+- `W42-E3-S1-T1` (next) Add the core Task Workspace read model.
   - Scope: Ready, Running, Blocked, Done groups; core next-ready and critical-path signals;
     dependencies, attempt counts, verification, last durable event, and preserved successes.
   - Verification: deterministic core tests cover mixed dependency graphs, no-ready work,
