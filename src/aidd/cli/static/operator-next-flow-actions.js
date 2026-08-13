@@ -644,7 +644,7 @@ async function launchNextFlowNow() {
           from_stage: "idea",
           to_stage: "qa",
           log_follow: true,
-          ...runtimeSelectorPayload()
+          ...(typeof runtimeSelectorPayload === "function" ? runtimeSelectorPayload() : {})
         });
         const readback = await api(`/api/jobs/${encodeURIComponent(job.job_id)}`);
         if (readback.job_id !== job.job_id) {
