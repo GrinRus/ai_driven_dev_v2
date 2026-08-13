@@ -298,6 +298,16 @@ document.addEventListener("click", async (event) => {
       document.querySelector(`[data-task-select="${CSS.escape(taskSelection)}"]`)?.focus();
       return;
     }
+    const taskAction = event.target.closest("[data-task-action]");
+    if (taskAction) {
+      const action = taskAction.dataset.taskAction;
+      if (action === "run" || action === "resume") {
+        await startImplementationTask(taskAction.dataset.taskActionId);
+      } else if (action === "finalize") {
+        await startTaskFinalization();
+      }
+      return;
+    }
     const tabShortcut = event.target.closest("[data-tab-shortcut]")?.dataset.tabShortcut;
     if (tabShortcut) {
       activateTab(tabShortcut, {historyMode: "push"});

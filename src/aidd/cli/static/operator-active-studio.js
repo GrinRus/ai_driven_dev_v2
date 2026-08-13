@@ -153,6 +153,13 @@ function renderTaskWorkspace(taskView) {
     || String(task.title || "").toLowerCase().includes(filter));
   const groups = ["Ready", "Running", "Blocked", "Done"];
   const selected = taskView?.selected_task || null;
+  const selectedAction = selected
+    ? selected.group === "Ready"
+      ? (selected.status === "pending" ? "Run" : "Resume")
+      : selected.group === "Done" && taskView.finalization_eligible && taskView.finalization?.status !== "succeeded"
+        ? (taskView.finalization?.status === "failed" ? "Resume finalization" : "Finalize")
+        : null
+    : null;
   return `
     <section class="active-studio" data-studio-surface="task-workspace" data-state="ready">
       ${renderActiveStudioContextBar(activeStudioState(), activeStageItem())}
@@ -188,7 +195,9 @@ function renderTaskWorkspace(taskView) {
           <h3>${escapeHtml(selected.id)} · ${escapeHtml(selected.title || "Untitled task")}</h3>
           <p>${escapeHtml(selected.outcome || "Outcome is recorded in the task contract.")}</p>
           <p>Dependencies: ${escapeHtml((selected.dependencies || []).join(", ") || "none")}</p>
-          <p>Blocker: ${escapeHtml(selected.blocker || "none")}</p>` : `<p class="muted">Select a task to inspect its bounded detail.</p>`}
+          <p>Blocker: ${escapeHtml(selected.blocker || "none")}</p>
+          ${selectedAction === "Run" || selectedAction === "Resume" ? `<button data-task-action="${escapeHtml(selectedAction.toLowerCase())}" data-task-action-id="${escapeHtml(selected.id)}" type="button" ${selectedRuntimeReady() ? "" : "disabled aria-disabled=\"true\""}>${selectedAction}</button>` : ""}
+          ${selectedAction === "Finalize" || selectedAction === "Resume finalization" ? `<button data-task-action="finalize" type="button" ${selectedRuntimeReady() ? "" : "disabled aria-disabled=\"true\""}>${selectedAction}</button>` : ""}` : `<p class="muted">Select a task to inspect its bounded detail.</p>`}
       </section>
     </section>
   `;
