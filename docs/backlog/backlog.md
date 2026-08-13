@@ -7,7 +7,7 @@ slice, and local task.
 
 ## Next
 
-- `W42-E4-S2-T3` — Unify intervention, remediation, follow-up, and clone Markdown drafts.
+- `W42-E5-S1-T1` — Render the shared Decision Workbench for questions and approvals.
 
 ## Soon
 
@@ -128,6 +128,14 @@ slice, and local task.
   the existing answer service. Invalid QIDs and resolution values fail closed; focused core/CLI
   tests, 123 frontend tests, full Python matrix, deterministic/adapter checks, and packaged
   browser acceptance passed. `W42-E4-S2-T3` is now the only Next task.
+
+- `2026-08-13` `W42-E4-S2-T3` is complete in PR #197 (merge `cf32894d`). Intervention,
+  remediation, follow-up, and clone drafts now share purpose-aware identity/state helpers while
+  preserving their existing forms, routes, destinations, and runtime-generated-document
+  read-only boundary. Source-evidence selection, destination metadata, draft isolation, and
+  durable-purpose status are retained in the browser-session draft layer. Focused draft/static
+  tests, 124 frontend tests, full Python matrix, deterministic/adapter checks, packaged browser
+  acceptance, and package build passed. `W42-E5-S1-T1` is now the only Next task.
 
 - `2026-08-12` `W42-E2-S1-T3` is complete. Work Item Overview/Tasks/Documents/Runs tabs now
   persist through canonical routes, keyboard focus, and reload; the active shell renders the

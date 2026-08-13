@@ -14159,7 +14159,7 @@ Local tasks:
     unblock consequence, draft persistence, and `answers.md` destination.
   - Verification: tests cover each resolution status, invalid/partial answers, failed submission,
     duplicate suppression, reconnect, conflict winner, and resulting workflow state.
-- `W42-E4-S2-T3` (next) Unify intervention, remediation, follow-up, and clone Markdown drafts.
+- `W42-E4-S2-T3` (done) Unify intervention, remediation, follow-up, and clone Markdown drafts.
   - Scope: purpose-specific fields over one draft/preview state machine, source-evidence selection,
     exact destination, unsaved warning, and no mutation of runtime-generated documents.
   - Verification: frontend/service tests cover each purpose, draft isolation, destination,
@@ -14185,7 +14185,7 @@ Dependencies: `W42-E4-S2-T2` and `W42-E2-S2-T2`.
 
 Local tasks:
 
-- `W42-E5-S1-T1` (planned) Render the shared Decision Workbench for questions and approvals.
+- `W42-E5-S1-T1` (next) Render the shared Decision Workbench for questions and approvals.
   - Scope: decision type, reason, source snippets, consequence, schema-specific inputs, draft or
     approval evidence, and exactly one submit action; do not reduce approvals to answer forms.
   - Verification: fixtures cover question, approval, deferred answer, unavailable evidence,
