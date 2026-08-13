@@ -7,7 +7,7 @@ slice, and local task.
 
 ## Next
 
-- `W42-E3-S2-T3` — Render the active task attempt and live-output tray.
+- `W42-E4-S1-T1` — Render role-grouped document navigation and the reading brief.
 
 ## Soon
 
@@ -94,6 +94,13 @@ slice, and local task.
   Blocked, and Done tasks do not receive a fabricated launch action. 117 Node frontend tests,
   50 Python UI asset tests, CI matrix, deterministic/adapter checks, and packaged browser
   acceptance passed. `W42-E3-S2-T3` is now the only Next task.
+
+- `2026-08-13` `W42-E3-S2-T3` is complete in PR #188 (merge `dfe764fb`). The Tasks surface
+  now exposes active attempt identity, factual elapsed time, last-output age, durable milestone,
+  cancellation state, connection/reconnect cursor, and collapsible raw output from the existing
+  UI job evidence without percentage estimates. Focused Node/static tests, CI matrix,
+  deterministic/adapter checks, and packaged browser acceptance passed. `W42-E4-S1-T1` is now
+  the only Next task; `W42-E6-S1-T1` remains a parallel planned direction.
 
 - `2026-08-12` `W42-E2-S1-T3` is complete. Work Item Overview/Tasks/Documents/Runs tabs now
   persist through canonical routes, keyboard focus, and reload; the active shell renders the

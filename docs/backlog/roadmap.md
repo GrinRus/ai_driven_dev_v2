@@ -14093,7 +14093,7 @@ Local tasks:
     blockers, Runner, and Run/Resume/Finalize; reuse existing mutation services.
   - Verification: tests prove action eligibility, pending duplicate suppression, conflict
     recovery, preserved successes, and literal disabled consequences.
-- `W42-E3-S2-T3` (next) Render the active task attempt and live-output tray.
+- `W42-E3-S2-T3` (done) Render the active task attempt and live-output tray.
   - Scope: attempt identity, factual elapsed time, last-output age, durable milestone, cancel
     state, reconnect cursor, and collapsible raw output; never estimate percentage completion.
   - Verification: browser fixtures cover starting, streaming, quiet, cancellation-pending,
@@ -14120,7 +14120,7 @@ Dependencies: `W42-E2-S1-T3` and current artifact/document read models.
 
 Local tasks:
 
-- `W42-E4-S1-T1` (planned) Render role-grouped document navigation and the reading brief.
+- `W42-E4-S1-T1` (next) Render role-grouped document navigation and the reading brief.
   - Scope: Output, Questions, Validation, Inputs, Evidence groups; filename, role, stage, attempt,
     freshness, bounded state, source of truth, rendered body, heading map, path/copy utilities.
   - Verification: fixtures cover current, stale, missing, malformed, truncated, permission-denied,
