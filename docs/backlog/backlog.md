@@ -7,7 +7,7 @@ slice, and local task.
 
 ## Next
 
-- `W42-E3-S1-T1` — Add the core Task Workspace read model.
+- `W42-E3-S1-T2` — Expose task workspace and selected-task detail through the UI service.
 
 ## Soon
 
@@ -65,6 +65,14 @@ slice, and local task.
   completion surfaces selector-free, forwards readiness identity, and service-revalidates before
   mutation. PR #178 merged as `f0cf3c8b`; focused UI/service tests, full frontend tests, CI, and
   packaged browser acceptance passed. T1 was reconciled in PR #177 (`eaa694fa`).
+
+- `2026-08-13` `W42-E3-S1-T1` is complete in PR #180 (merge `eb6bd55f`). The core Task
+  Workspace projection now publishes deterministic Ready/Running/Blocked/Done groups,
+  dependency graph, next-ready and advisory critical-path signals, attempts, durable events,
+  evidence links, preserved successes, and explicit finalization/review eligibility while
+  retaining fail-closed tasklist hash drift behavior. Focused task/CLI tests, full UI CLI tests,
+  Ruff, mypy, CI Python matrix, deterministic/adapter checks, and packaged browser acceptance
+  passed. `W42-E3-S1-T2` is now the only Next task.
 
 - `2026-08-12` `W42-E2-S1-T3` is complete. Work Item Overview/Tasks/Documents/Runs tabs now
   persist through canonical routes, keyboard focus, and reload; the active shell renders the
