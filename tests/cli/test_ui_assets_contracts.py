@@ -1399,6 +1399,25 @@ def test_studio_implementation_gate_uses_canonical_task_actions_and_review_guard
     )
 
 
+def test_task_workspace_attempt_tray_preserves_factual_live_state() -> None:
+    studio = _asset_text("/operator-active-studio.js")
+    logs = _asset_text("/operator-logs-jobs.js")
+
+    _assert_contains_all(
+        studio,
+        (
+            'data-task-attempt-tray',
+            'Reconnect cursor',
+            'Raw output',
+            'runtimeOutputFreshnessLabel(activeJob)',
+            'activeJob.elapsed_seconds',
+            'data-cancel-job="${escapeHtml(activeJob.job_id)}"',
+        ),
+    )
+    assert "progress" not in studio.split("function renderTaskWorkspace", 1)[1].split(
+        "async function renderWorkItemTasks", 1
+    )[0].lower()
+    assert 'state.workDetail === "tasks"' in logs
 def test_studio_repository_evidence_uses_textual_change_and_scope_contracts() -> None:
     quality_gate = _asset_text("/operator-quality-gates.js")
 
