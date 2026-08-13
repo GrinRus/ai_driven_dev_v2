@@ -681,6 +681,10 @@
     min-height: var(--control-height-touch);
     width: 100%;
   }
+  .workbench-toc-list a,
+  .finding-anchor {
+    min-height: var(--control-height-touch);
+  }
   .reader-technical-details > summary,
   .reader-document-map > summary,
   .reader-evidence-group > summary,

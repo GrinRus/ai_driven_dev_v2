@@ -3373,6 +3373,10 @@ button.artifact-row:not(:disabled):not([aria-disabled="true"]):hover {
 .workbench-toc-list a,
 .finding-anchor {
   color: var(--teal-dark);
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--control-height);
+  padding: 4px 6px;
   text-decoration: underline;
   text-decoration-thickness: 1px;
   text-underline-offset: 2px;

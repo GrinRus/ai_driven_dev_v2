@@ -1171,6 +1171,8 @@ def test_operator_artifact_asset_keeps_document_and_truncation_contracts() -> No
             ".reader-comparison-grid {",
             ".finding-anchor {",
             ".document-canvas pre [data-finding-anchor=\"line\"] {",
+            ".workbench-toc-list a,",
+            "min-height: var(--control-height);",
         ),
     )
     assert ".artifact-ownership-note," in responsive
