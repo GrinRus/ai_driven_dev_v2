@@ -496,7 +496,11 @@ async function renderCockpitContent({skipArtifactLoad = false} = {}) {
       return;
     }
     if (["tasks", "runs"].includes(state.workDetail)) {
-      content.innerHTML = renderWorkItemTabPlaceholder(state.workDetail);
+      if (state.workDetail === "tasks") {
+        await renderWorkItemTasks();
+      } else {
+        content.innerHTML = renderWorkItemTabPlaceholder(state.workDetail);
+      }
       return;
     }
     if (state.workDetail === "implement-review") {

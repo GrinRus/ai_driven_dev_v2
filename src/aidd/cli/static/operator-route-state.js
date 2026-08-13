@@ -80,6 +80,7 @@ function decodeOperatorRoute(search, {knownWorkItems = null, knownRuns = null} =
   let workItem = routeIdentifier(params, "work_item", warnings);
   let runId = routeIdentifier(params, "run_id", warnings);
   let artifact = routeIdentifier(params, "artifact", warnings);
+  let taskId = routeIdentifier(params, "task_id", warnings);
   if (!artifact && params.has("key")) artifact = routeIdentifier(params, "key", warnings);
   const requestedStage = String(params.get("stage") || "").trim();
   let stage = OPERATOR_ROUTE_STAGES.has(requestedStage) ? requestedStage : "";
@@ -109,6 +110,7 @@ function decodeOperatorRoute(search, {knownWorkItems = null, knownRuns = null} =
     runId = "";
     stage = "";
     artifact = "";
+    taskId = "";
     attempt = null;
     view = "overview";
     workTab = "overview";
@@ -126,6 +128,7 @@ function decodeOperatorRoute(search, {knownWorkItems = null, knownRuns = null} =
   // Keep the established route object shape for existing links. The new tab
   // key is emitted only when an explicit non-default Work Item tab is used.
   if (workTab !== "overview") value.workTab = workTab;
+  if (mode !== "inbox" && taskId) value.taskId = taskId;
   return Object.freeze({value: Object.freeze(value), warnings: Object.freeze(warnings), source});
 }
 
@@ -143,6 +146,7 @@ function encodeOperatorRoute(route) {
     ["stage", OPERATOR_ROUTE_STAGES.has(route?.stage) ? route.stage : ""],
     ["attempt", Number.isInteger(route?.attempt) && route.attempt > 0 ? route.attempt : null],
     ["task_attempt", Number.isInteger(route?.taskAttempt) && route.taskAttempt > 0 ? route.taskAttempt : null],
+    ["task_id", OPERATOR_ROUTE_IDENTIFIER.test(route?.taskId || "") ? route.taskId : ""],
     ["artifact", OPERATOR_ROUTE_IDENTIFIER.test(route?.artifact || "") ? route.artifact : ""]
   ];
   for (const [key, raw] of fields) {

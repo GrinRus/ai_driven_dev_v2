@@ -125,6 +125,10 @@ const state = {
   activeRouteWorkItem: "",
   activeAttempt: null,
   activeTaskAttempt: null,
+  selectedTaskId: "",
+  taskWorkspace: null,
+  taskWorkspaceError: "",
+  taskWorkspaceFilter: "",
   activeJobId: "",
   activeJobCursor: 0,
   activeJobLogChunks: [],
@@ -737,6 +741,7 @@ function operatorRouteSnapshot() {
     stage: inbox ? "" : state.activeStage,
     attempt: inbox ? null : state.activeAttempt,
     taskAttempt: inbox ? null : state.activeTaskAttempt,
+    taskId: inbox ? "" : state.selectedTaskId,
     artifact: inbox ? "" : state.activeArtifactKey,
     workTab: inbox ? "overview" : normalizeWorkItemTab(state.workItemTab)
   };
@@ -751,6 +756,7 @@ function applyOperatorRoute(route) {
   state.activeRunId = route.runId || "";
   state.activeAttempt = route.attempt;
   state.activeTaskAttempt = route.taskAttempt;
+  state.selectedTaskId = route.taskId || "";
   state.activeArtifactKey = route.artifact || "";
   if (route.stage && STAGES.includes(route.stage)) {
     state.activeStage = route.stage;

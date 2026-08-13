@@ -65,6 +65,25 @@ test("Work Item tabs round-trip without changing legacy route contexts", async (
   });
 });
 
+test("selected Task Workspace task is a bounded canonical route key", async () => {
+  const context = await routeContext();
+  const route = {
+    mode: "studio",
+    view: "overview",
+    workItem: "WI-001",
+    runId: "run-1",
+    stage: "implement",
+    attempt: null,
+    taskAttempt: null,
+    artifact: "",
+    workTab: "tasks",
+    taskId: "TL-2",
+  };
+  const query = vm.runInContext(`encodeOperatorRoute(${JSON.stringify(route)})`, context);
+  assert.match(query, /task_id=TL-2/);
+  assert.deepEqual(decode(context, query).value, route);
+});
+
 test("missing and legacy routes resolve deterministically", async () => {
   const context = await routeContext();
   assert.deepEqual(decode(context, "").value, {
