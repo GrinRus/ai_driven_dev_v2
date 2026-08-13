@@ -14120,12 +14120,12 @@ Dependencies: `W42-E2-S1-T3` and current artifact/document read models.
 
 Local tasks:
 
-- `W42-E4-S1-T1` (next) Render role-grouped document navigation and the reading brief.
+- `W42-E4-S1-T1` (done) Render role-grouped document navigation and the reading brief.
   - Scope: Output, Questions, Validation, Inputs, Evidence groups; filename, role, stage, attempt,
     freshness, bounded state, source of truth, rendered body, heading map, path/copy utilities.
   - Verification: fixtures cover current, stale, missing, malformed, truncated, permission-denied,
     and empty documents with one truthful next action.
-- `W42-E4-S1-T2` (planned) Add Source, retained Compare, and anchored finding context.
+- `W42-E4-S1-T2` (next) Add Source, retained Compare, and anchored finding context.
   - Scope: exact source rendering, comparison only for two named retained attempts, heading/line
     anchors, related evidence, and browser-history-preserving cross-document navigation.
   - Verification: tests reject synthetic history and editing controls; browser checks cover

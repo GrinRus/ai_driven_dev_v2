@@ -7,7 +7,7 @@ slice, and local task.
 
 ## Next
 
-- `W42-E4-S1-T1` — Render role-grouped document navigation and the reading brief.
+- `W42-E4-S1-T2` — Add Source, retained Compare, and anchored finding context.
 
 ## Soon
 
@@ -101,6 +101,14 @@ slice, and local task.
   UI job evidence without percentage estimates. Focused Node/static tests, CI matrix,
   deterministic/adapter checks, and packaged browser acceptance passed. `W42-E4-S1-T1` is now
   the only Next task; `W42-E6-S1-T1` remains a parallel planned direction.
+
+- `2026-08-13` `W42-E4-S1-T1` is complete in PR #190 (merge `6a5fdc3a`). The read-only
+  Markdown workspace now groups Output, Questions, Validation, Inputs, and Evidence while
+  showing filename, role, stage/attempt, freshness, bounded state, source of truth, heading
+  map, rendered content, and copy/open-folder utilities. Missing, malformed, permission-denied,
+  empty, and truncated copies expose one truthful safe action without adding generated-document
+  editing. Core/frontend focused tests, full UI asset contracts, all Python matrix checks, and
+  packaged browser acceptance passed. `W42-E4-S1-T2` is now the only Next task.
 
 - `2026-08-12` `W42-E2-S1-T3` is complete. Work Item Overview/Tasks/Documents/Runs tabs now
   persist through canonical routes, keyboard focus, and reload; the active shell renders the
