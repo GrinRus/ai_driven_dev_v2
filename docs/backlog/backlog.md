@@ -7,7 +7,7 @@ slice, and local task.
 
 ## Next
 
-- `W42-E4-S1-T2` — Add Source, retained Compare, and anchored finding context.
+- `W42-E4-S2-T2` — Add the structured Markdown answer workflow.
 
 ## Soon
 
@@ -108,7 +108,19 @@ slice, and local task.
   map, rendered content, and copy/open-folder utilities. Missing, malformed, permission-denied,
   empty, and truncated copies expose one truthful safe action without adding generated-document
   editing. Core/frontend focused tests, full UI asset contracts, all Python matrix checks, and
-  packaged browser acceptance passed. `W42-E4-S1-T2` is now the only Next task.
+  packaged browser acceptance passed. At that point, `W42-E4-S1-T2` was the only Next task.
+
+- `2026-08-13` `W42-E4-S1-T2` is complete in PR #192 (merge `9566147b`). Source renders exact
+  bounded lines, retained comparison is available only for a named earlier attempt, and heading,
+  line, finding, and related-evidence anchors preserve browser history without synthetic versions
+  or generated-document editing. The full Python/frontend matrix and packaged browser journeys
+  passed after correcting the one-attempt fixture to assert disabled Compare. `W42-E4-S2-T1` was
+  then completed in PR #193 (merge `5877a0d5`): operator-owned request Markdown now has a durable
+  Preview/Write path, exact readback and destination, browser-session draft editing, and a
+  core/service fail-closed consumed-input boundary that routes later changes to revision or
+  intervention. Focused request-context tests, UI asset contracts, full frontend tests, Python
+  matrix, deterministic/adapter checks, and packaged browser acceptance passed. `W42-E4-S2-T2`
+  is now the only Next task.
 
 - `2026-08-12` `W42-E2-S1-T3` is complete. Work Item Overview/Tasks/Documents/Runs tabs now
   persist through canonical routes, keyboard focus, and reload; the active shell renders the

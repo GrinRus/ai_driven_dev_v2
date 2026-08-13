@@ -14125,7 +14125,7 @@ Local tasks:
     freshness, bounded state, source of truth, rendered body, heading map, path/copy utilities.
   - Verification: fixtures cover current, stale, missing, malformed, truncated, permission-denied,
     and empty documents with one truthful next action.
-- `W42-E4-S1-T2` (next) Add Source, retained Compare, and anchored finding context.
+- `W42-E4-S1-T2` (done) Add Source, retained Compare, and anchored finding context.
   - Scope: exact source rendering, comparison only for two named retained attempts, heading/line
     anchors, related evidence, and browser-history-preserving cross-document navigation.
   - Verification: tests reject synthetic history and editing controls; browser checks cover
@@ -14148,13 +14148,13 @@ Dependencies: `W42-E4-S1` and existing write services.
 
 Local tasks:
 
-- `W42-E4-S2-T1` (planned) Add operator-request Markdown Write/Preview with a consumed-input
+- `W42-E4-S2-T1` (done) Add operator-request Markdown Write/Preview with a consumed-input
   boundary.
   - Scope: new Work Item request and supported context inputs; edit before first consuming run,
     then route outcome changes to a revision/intervention instead of rewriting history.
   - Verification: tests cover preview, destination, validation, unsaved navigation, first write,
     pre-run edit, consumed-input refusal, and exact durable readback.
-- `W42-E4-S2-T2` (planned) Add the structured Markdown answer workflow.
+- `W42-E4-S2-T2` (next) Add the structured Markdown answer workflow.
   - Scope: question context, resolved/partial/deferred state, Write/Preview, evidence links,
     unblock consequence, draft persistence, and `answers.md` destination.
   - Verification: tests cover each resolution status, invalid/partial answers, failed submission,
