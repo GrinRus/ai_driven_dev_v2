@@ -1214,7 +1214,7 @@ def _try_bounded_workbench_document(
             ),
             None,
         )
-    except ValueError as exc:
+    except (OSError, ValueError) as exc:
         return None, str(exc)
 
 
@@ -1243,6 +1243,8 @@ def _workbench_document(
     document_path = _safe_relative_path(workspace_root, relative_document_path)
     if error is not None and "does not exist" in error:
         status = "missing"
+    elif error is not None and "Permission denied" in error:
+        status = "permission-denied"
     elif error is not None and "not UTF-8 text" in error:
         status = "invalid"
     else:

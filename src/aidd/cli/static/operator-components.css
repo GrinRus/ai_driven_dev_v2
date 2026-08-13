@@ -3055,6 +3055,26 @@ button.artifact-row:not(:disabled):not([aria-disabled="true"]):hover {
   display: grid;
   gap: 6px;
 }
+.document-navigator {
+  display: grid;
+  gap: 10px;
+  margin-bottom: 18px;
+}
+.document-navigator-group {
+  border-top: 1px solid var(--line);
+  padding-top: 10px;
+}
+.document-navigator-group:first-of-type {
+  border-top: 0;
+  padding-top: 0;
+}
+.document-navigator-item small {
+  line-height: 1.35;
+}
+.document-navigator-empty {
+  font-size: 12px;
+  padding: 8px;
+}
 .artifact-doc {
   background: var(--surface);
   border-color: var(--line-strong);
@@ -3294,6 +3314,19 @@ button.artifact-row:not(:disabled):not([aria-disabled="true"]):hover {
 }
 .reader-technical-content > button {
   justify-self: start;
+}
+.reader-path-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+.reader-next-action {
+  justify-self: start;
+  margin-top: var(--space-3);
+}
+.reader-state-empty {
+  display: grid;
+  gap: var(--space-2);
 }
 .workbench-document-pane {
   background: var(--color-bg-surface);

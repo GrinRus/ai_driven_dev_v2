@@ -109,6 +109,121 @@ function artifactOwnershipBadge(item = {}) {
   return {label: "evidence", tone: ""};
 }
 
+const DOCUMENT_NAVIGATOR_ROLES = Object.freeze([
+  ["output", "Output", "Canonical stage outputs and their retained handoff copies."],
+  ["questions", "Questions", "Clarifications that must be answered instead of guessed."],
+  ["validation", "Validation", "Validation and repair records that explain gate decisions."],
+  ["inputs", "Inputs", "Context supplied to the runtime for this stage attempt."],
+  ["evidence", "Evidence", "Logs, project context, lineage, and supporting retained evidence."],
+]);
+
+function documentNavigatorRole(item = {}) {
+  const key = String(item.key || item.label || "").replace(/-/g, "_").toLowerCase();
+  const kind = String(item.kind || "").toLowerCase();
+  const category = artifactCategoryFor(item);
+  if (["questions", "answers"].includes(key)) return "questions";
+  if (["validator_report", "repair_brief", "repair_context"].includes(key) || category === "validation-evidence") {
+    return "validation";
+  }
+  if (["input_bundle", "stage_brief", "operator_request"].includes(key) || category === "runtime-input") {
+    return "inputs";
+  }
+  if (kind === "document" && ["canonical-stage-document", "published-stage-output"].includes(category)) {
+    return "output";
+  }
+  return "evidence";
+}
+
+function documentNavigatorRoleLabel(role) {
+  return DOCUMENT_NAVIGATOR_ROLES.find(([value]) => value === role)?.[1] || "Evidence";
+}
+
+function documentNavigatorRoleDetail(role) {
+  return DOCUMENT_NAVIGATOR_ROLES.find(([value]) => value === role)?.[2] || "Supporting retained evidence.";
+}
+
+function documentFilename(path, fallback = "document") {
+  const normalized = String(path || "").replace(/\\/g, "/").replace(/\/$/, "");
+  return normalized.split("/").pop() || fallback;
+}
+
+function documentNavigatorFreshness(item = {}, workbench = {}) {
+  if (item.stale === true || item.latest === false) return {label: "Historical / stale", tone: "warn"};
+  if (item.available === false) return {label: "Unavailable", tone: "bad"};
+  const selected = String(item.label || item.key || "") === String(workbench.selected_key || "");
+  if (selected) {
+    const freshness = readerFreshness(workbench);
+    return {label: freshness.label, tone: freshness.tone};
+  }
+  return {label: "Retained", tone: ""};
+}
+
+function documentNavigatorBoundedState(item = {}, workbench = {}) {
+  const selected = String(item.label || item.key || "") === String(workbench.selected_key || "");
+  const document = selected ? workbench.document || {} : null;
+  if (document && document.status && document.status !== "present") {
+    return {label: document.status === "missing" ? "Missing" : "Unreadable", tone: "bad"};
+  }
+  if (item.available === false) return {label: "Missing", tone: "bad"};
+  const view = selected ? document?.preview || document?.source : null;
+  if (view?.truncated) return {label: "Bounded / truncated", tone: "warn"};
+  return {label: "Bounded read", tone: "good"};
+}
+
+function documentNavigatorSourceOfTruth(item = {}) {
+  const role = documentNavigatorRole(item);
+  if (role === "output") return artifactCategoryFor(item) === "published-stage-output"
+    ? "Canonical stage document (mirror is downstream evidence)"
+    : "Canonical stage document";
+  if (role === "questions") return "Persisted question/answer document";
+  if (role === "validation") return "Persisted validator or repair evidence";
+  if (role === "inputs") return "Persisted stage input context";
+  return "Retained evidence path";
+}
+
+function renderDocumentNavigatorItem(item, workbench) {
+  const selected = String(item.label || item.key || "") === String(workbench.selected_key || "");
+  const freshness = documentNavigatorFreshness(item, workbench);
+  const bounded = documentNavigatorBoundedState(item, workbench);
+  const role = documentNavigatorRole(item);
+  const action = item.kind === "document"
+    ? `data-artifact-key="${escapeHtml(item.label || item.key)}" data-reader-artifact-key="${escapeHtml(item.label || item.key)}"`
+    : `data-open-artifact="${escapeHtml(item.path || "")}"`;
+  return `
+    <button class="artifact-doc document-navigator-item${selected ? " active" : ""}" ${action} type="button" aria-pressed="${selected ? "true" : "false"}" data-document-role="${escapeHtml(role)}">
+      <span class="artifact-doc-title">
+        <strong>${escapeHtml(documentFilename(item.path, item.label || item.key || "document"))}</strong>
+        <span class="small-badge ${escapeHtml(freshness.tone)}">${escapeHtml(freshness.label)}</span>
+      </span>
+      <small>${escapeHtml(documentNavigatorRoleLabel(role))} · ${escapeHtml(item.stage || workbench.stage || state.activeStage)} · Attempt ${escapeHtml(workbench.attempt_number || "?")}</small>
+      <small>${escapeHtml(bounded.label)} · ${escapeHtml(documentNavigatorSourceOfTruth(item))}</small>
+    </button>
+  `;
+}
+
+function renderDocumentNavigator(workbench) {
+  const references = (workbench.references || []).filter((ref) => ref.kind === "document" || ref.kind === "mirror");
+  const groups = DOCUMENT_NAVIGATOR_ROLES.map(([role, label, detail]) => {
+    const refs = references.filter((ref) => documentNavigatorRole(ref) === role);
+    return `
+      <section class="document-navigator-group" data-document-role-group="${escapeHtml(role)}">
+        <div class="surface-title compact"><span>${escapeHtml(label)}</span><span class="small-badge">${escapeHtml(refs.length)}</span></div>
+        <p class="artifact-category-note">${escapeHtml(detail)}</p>
+        <div class="artifact-list">
+          ${refs.length ? refs.map((ref) => renderDocumentNavigatorItem(ref, workbench)).join("") : `<div class="empty-state document-navigator-empty">No ${escapeHtml(label.toLowerCase())} documents indexed.</div>`}
+        </div>
+      </section>
+    `;
+  }).join("");
+  return `
+    <section class="document-navigator" aria-label="Document navigator">
+      <div class="surface-title"><span>Document navigator</span><span class="small-badge">${escapeHtml(references.length)} retained</span></div>
+      <p class="artifact-category-note">Read-only documents are grouped by role. Selection opens the bounded reader; generated Markdown has no edit action here.</p>
+      ${groups}
+    </section>
+  `;
+}
+
 function artifactSupportsDownload(item = {}) {
   const kind = String(item.kind || "").toLowerCase();
   return kind === "document" || kind === "log";
@@ -330,6 +445,16 @@ function renderDocumentReadingBrief(workbench) {
   const documentView = workbench.document || {};
   const profile = documentReadingProfile(workbench);
   const freshness = readerFreshness(workbench);
+  const role = documentNavigatorRole({
+    key: documentView.key || workbench.selected_key,
+    kind: "document",
+    path: documentView.path || ""
+  });
+  const bounded = documentNavigatorBoundedState({
+    key: documentView.key || workbench.selected_key,
+    kind: "document",
+    path: documentView.path || ""
+  }, workbench);
   const badge = artifactOwnershipBadge({
     key: documentView.key || workbench.selected_key,
     kind: "document",
@@ -350,6 +475,10 @@ function renderDocumentReadingBrief(workbench) {
         </div>
       </div>
       <dl class="reader-brief-facts">
+        <div><dt>Role</dt><dd>${escapeHtml(documentNavigatorRoleLabel(role))}</dd></div>
+        <div><dt>Stage / attempt</dt><dd>${escapeHtml(workbench.stage || state.activeStage)} / ${escapeHtml(workbench.attempt_number || "?")}</dd></div>
+        <div><dt>Bounded state</dt><dd><span class="small-badge ${escapeHtml(bounded.tone)}">${escapeHtml(bounded.label)}</span></dd></div>
+        <div><dt>Source of truth</dt><dd>${escapeHtml(documentNavigatorSourceOfTruth({key: documentView.key || workbench.selected_key, kind: "document", path: documentView.path || ""}))}</dd></div>
         <div><dt>Why it matters now</dt><dd>${escapeHtml(profile.use)}</dd></div>
         <div><dt>Freshness</dt><dd>${escapeHtml(freshness.detail)}</dd></div>
       </dl>
@@ -374,7 +503,7 @@ function renderReaderTechnicalDetails(workbench) {
           kind: "document",
           path: documentView.path
         }) : ""}
-        ${documentView.path ? `<button data-open-artifact="${escapeHtml(documentView.path)}" class="secondary" type="button">Open folder</button>` : ""}
+        ${documentView.path ? `<div class="reader-path-actions"><button data-open-artifact="${escapeHtml(documentView.path)}" class="secondary" type="button">Open folder</button><button data-copy-artifact-path="${escapeHtml(documentView.path)}" class="secondary" type="button">Copy path</button></div>` : ""}
       </div>
     </details>
   `;
@@ -418,6 +547,7 @@ function renderWorkbenchTree(workbench) {
     `;
   }).filter(Boolean).join("");
   return `
+    ${renderDocumentNavigator(workbench)}
     <div class="surface-title">Artifact categories</div>
     ${grouped || `<div class="empty-state">No artifacts indexed for this stage.</div>`}
   `;
@@ -656,7 +786,6 @@ function renderWorkbenchTableOfContents(workbench) {
   if (state.artifactViewMode === "compare") return "";
   const view = workbenchSelectedDocumentView(workbench);
   const headings = markdownHeadingSummary(view?.text || "");
-  if (headings.length < 2) return "";
   return `
     <details class="workbench-toc reader-document-map" aria-label="Document map">
       <summary>
@@ -664,33 +793,59 @@ function renderWorkbenchTableOfContents(workbench) {
         <span class="small-badge">${escapeHtml(headings.length)} sections</span>
       </summary>
       <p>This is a reading map for the visible copy; it does not change the document or navigate away.</p>
-      <ol class="workbench-toc-list">
+      ${headings.length ? `<ol class="workbench-toc-list">
         ${headings.map((heading) => `
           <li class="toc-level-${escapeHtml(heading.level)}">${escapeHtml(heading.label)}</li>
         `).join("")}
-      </ol>
+      </ol>` : `<div class="empty-state">No Markdown headings were recorded in this bounded copy.</div>`}
     </details>
   `;
+}
+
+function renderReaderNextAction(workbench, reason) {
+  const documentView = workbench?.document || {};
+  const path = documentView.path || "";
+  if (path) {
+    return `<button class="secondary reader-next-action" data-reader-next-action="open-folder" data-open-artifact="${escapeHtml(path)}" type="button">Open folder</button>`;
+  }
+  if (reason === "empty") {
+    return `<button class="secondary reader-next-action" data-reader-next-action="source" data-artifact-mode="source" type="button">Read source view</button>`;
+  }
+  return `<span class="reader-next-action" data-reader-next-action="none">No safe next action is available.</span>`;
+}
+
+function readerDocumentStatus(documentView = {}) {
+  const status = String(documentView.status || "").toLowerCase();
+  const message = String(documentView.message || "");
+  if (status === "permission-denied" || /permission|denied|access/i.test(message)) return {label: "Permission denied", reason: "permission-denied"};
+  if (status === "missing") return {label: "Missing", reason: "missing"};
+  if (status && status !== "present") return {label: "Malformed or unreadable", reason: "malformed"};
+  return {label: "Present", reason: "present"};
 }
 
 function renderWorkbenchDocumentBody(workbench) {
   const documentView = workbench.document;
   if (!documentView || documentView.status !== "present") {
+    const status = readerDocumentStatus(documentView || {});
     return `
       <div class="reader-state reader-state-error" role="alert">
-        <strong>Document unavailable</strong>
+        <strong>Document ${escapeHtml(status.label.toLowerCase())}</strong>
         <span>This retained copy cannot be read safely, so do not use the stage state alone as evidence.</span>
         <details>
           <summary>Technical details</summary>
           <code>${escapeHtml(documentView?.status || "missing")}: ${escapeHtml(documentView?.message || "Selected document is not available.")}</code>
         </details>
+        ${renderReaderNextAction(workbench, status.reason)}
       </div>
     `;
   }
   if (state.artifactViewMode === "compare") return renderWorkbenchComparison(workbench);
   const view = workbenchSelectedDocumentView(workbench);
   if (!view) {
-    return `<div class="empty-state">No bounded ${escapeHtml(state.artifactViewMode)} view available.</div>`;
+    return `<div class="reader-state reader-state-empty" role="status"><strong>Document is empty</strong><span>No bounded ${escapeHtml(state.artifactViewMode)} view is available for this retained document.</span>${renderReaderNextAction(workbench, "empty")}</div>`;
+  }
+  if (!String(view.text || "").trim()) {
+    return `<div class="reader-state reader-state-empty" role="status"><strong>Document is empty</strong><span>The retained file is present but contains no readable Markdown content.</span>${renderReaderNextAction(workbench, "empty")}</div>`;
   }
   const body = state.artifactViewMode === "source" || view.content_type !== "text/markdown"
     ? `<pre>${escapeHtml(view.text)}</pre>`

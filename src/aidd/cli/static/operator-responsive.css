@@ -673,6 +673,14 @@
     min-height: var(--control-height-touch);
     width: 100%;
   }
+  .reader-path-actions {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .reader-path-actions button {
+    min-height: var(--control-height-touch);
+    width: 100%;
+  }
   .reader-technical-details > summary,
   .reader-document-map > summary,
   .reader-evidence-group > summary,
