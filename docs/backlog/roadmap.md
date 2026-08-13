@@ -14061,7 +14061,7 @@ Local tasks:
     dependencies, attempt counts, verification, last durable event, and preserved successes.
   - Verification: deterministic core tests cover mixed dependency graphs, no-ready work,
     interrupted attempts, partial success, finalization eligibility, and stale tasklists.
-- `W42-E3-S1-T2` (next) Expose task workspace and selected-task detail through the UI service.
+- `W42-E3-S1-T2` (done) Expose task workspace and selected-task detail through the UI service.
   - Scope: bounded list and detail payloads over existing ledger/evidence sources; preserve
     synchronous conflict and duplicate-suppression behavior.
   - Verification: CLI service tests prove stable ids, bounded reads, exact evidence links, missing
@@ -14083,7 +14083,7 @@ Dependencies: `W42-E3-S1` and `W42-E2-S2-T2`.
 
 Local tasks:
 
-- `W42-E3-S2-T1` (planned) Render the grouped task list and deterministic selection.
+- `W42-E3-S2-T1` (next) Render the grouped task list and deterministic selection.
   - Scope: Ready, Running, Blocked, Done sections, search/filter, dependency badges, next-ready
     marker, URL selection, empty/loading/error states, and keyboard list navigation.
   - Verification: fixture tests cover ordering, filters, deep links, reload, focus, empty groups,
