@@ -187,7 +187,7 @@ function renderDocumentNavigatorItem(item, workbench) {
   const bounded = documentNavigatorBoundedState(item, workbench);
   const role = documentNavigatorRole(item);
   const action = item.kind === "document"
-    ? `data-artifact-key="${escapeHtml(item.label || item.key)}" data-reader-artifact-key="${escapeHtml(item.label || item.key)}"`
+    ? `data-artifact-key="${escapeHtml(item.label || item.key)}" data-reader-artifact-key="${escapeHtml(item.label || item.key)}" data-reader-cross-document="push"`
     : `data-open-artifact="${escapeHtml(item.path || "")}"`;
   return `
     <button class="artifact-doc document-navigator-item${selected ? " active" : ""}" ${action} type="button" aria-pressed="${selected ? "true" : "false"}" data-document-role="${escapeHtml(role)}">
@@ -617,6 +617,7 @@ function renderValidationResults(results) {
           <strong>${escapeHtml(item.label)}</strong>
           <small>${escapeHtml(presentation.detail)}</small>
           <small class="reader-item-purpose">Why: ${escapeHtml(readerValidationPurpose(item))}</small>
+          ${renderFindingAnchor(item)}
           ${item.path ? pathLine(item.path, 60) : ""}
         </span>
       </div>
@@ -641,7 +642,7 @@ function renderMissingEvidence(requirements) {
 
 function readerReferenceAction(ref = {}) {
   if (ref.kind === "document") {
-    return `data-reader-artifact-key="${escapeHtml(ref.label)}"`;
+    return `data-reader-artifact-key="${escapeHtml(ref.label)}" data-reader-cross-document="push"`;
   }
   if (ref.kind === "log") {
     return `data-evidence-path="${escapeHtml(ref.path)}" data-evidence-stage="${escapeHtml(ref.stage || state.activeStage)}" data-evidence-kind="log"`;
@@ -702,7 +703,7 @@ function renderComparisonCopy(workbench, label) {
         <span class="small-badge">attempt ${escapeHtml(workbench.attempt_number || "?")}</span>
       </div>
       ${renderTruncationNotice("artifact", view, "source")}
-      <pre>${escapeHtml(view.text)}</pre>
+      <pre data-source-rendering="exact-bounded-source">${renderSourceWithLineAnchors(view.text)}</pre>
     </section>
   `;
 }
@@ -782,6 +783,43 @@ function markdownHeadingSummary(text) {
     .slice(0, 10);
 }
 
+function readerAnchorSlug(value, fallback = "section") {
+  const slug = String(value || "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 72);
+  return slug || fallback;
+}
+
+function readerHeadingAnchorId(heading, index = 0) {
+  return `finding-${readerAnchorSlug(heading?.label, "section")}-${index + 1}`;
+}
+
+function renderMarkdownWithReaderAnchors(text) {
+  const headings = markdownHeadingSummary(text);
+  let headingIndex = 0;
+  return renderMarkdown(text).replace(/<h([1-6])>/g, (match, level) => {
+    const heading = headings[headingIndex];
+    const id = readerHeadingAnchorId(heading, headingIndex);
+    headingIndex += 1;
+    return `<h${level} id="${escapeHtml(id)}" data-finding-anchor="heading">`;
+  });
+}
+
+function renderSourceWithLineAnchors(text) {
+  return String(text ?? "")
+    .split(/\r?\n/)
+    .map((line, index) => `<span id="line-${index + 1}" data-finding-anchor="line">${escapeHtml(line)}</span>`)
+    .join("\n");
+}
+
+function renderFindingAnchor(item = {}) {
+  const line = Number(item.line_number || item.line || 0);
+  if (!Number.isInteger(line) || line <= 0) return "";
+  return `<a class="finding-anchor" data-finding-anchor-link="line" href="#line-${line}">Line ${line}</a>`;
+}
+
 function renderWorkbenchTableOfContents(workbench) {
   if (state.artifactViewMode === "compare") return "";
   const view = workbenchSelectedDocumentView(workbench);
@@ -794,8 +832,8 @@ function renderWorkbenchTableOfContents(workbench) {
       </summary>
       <p>This is a reading map for the visible copy; it does not change the document or navigate away.</p>
       ${headings.length ? `<ol class="workbench-toc-list">
-        ${headings.map((heading) => `
-          <li class="toc-level-${escapeHtml(heading.level)}">${escapeHtml(heading.label)}</li>
+        ${headings.map((heading, index) => `
+          <li class="toc-level-${escapeHtml(heading.level)}"><a href="#${escapeHtml(readerHeadingAnchorId(heading, index))}" data-finding-anchor-link="heading">${escapeHtml(heading.label)}</a></li>
         `).join("")}
       </ol>` : `<div class="empty-state">No Markdown headings were recorded in this bounded copy.</div>`}
     </details>
@@ -848,8 +886,8 @@ function renderWorkbenchDocumentBody(workbench) {
     return `<div class="reader-state reader-state-empty" role="status"><strong>Document is empty</strong><span>The retained file is present but contains no readable Markdown content.</span>${renderReaderNextAction(workbench, "empty")}</div>`;
   }
   const body = state.artifactViewMode === "source" || view.content_type !== "text/markdown"
-    ? `<pre>${escapeHtml(view.text)}</pre>`
-    : `<div class="markdown-preview">${renderMarkdown(view.text)}</div>`;
+    ? `<pre data-source-rendering="exact-bounded-source">${renderSourceWithLineAnchors(view.text)}</pre>`
+    : `<div class="markdown-preview">${renderMarkdownWithReaderAnchors(view.text)}</div>`;
   return `${renderTruncationNotice("artifact", view, state.artifactViewMode)}${body}`;
 }
 
@@ -857,6 +895,7 @@ function renderDocumentReaderControls(workbench) {
   const previewActive = state.artifactViewMode === "preview" ? " active" : "";
   const sourceActive = state.artifactViewMode === "source" ? " active" : "";
   const compareActive = state.artifactViewMode === "compare" ? " active" : "";
+  const compareAvailable = comparisonCandidates(workbench).length > 0;
   const profile = documentReadingProfile(workbench);
   return `
     <div class="viewer-header reader-header">
@@ -867,7 +906,7 @@ function renderDocumentReaderControls(workbench) {
       <div class="viewer-modes" role="group" aria-label="Document reader mode">
         <button data-artifact-mode="preview" class="${previewActive}" type="button" aria-pressed="${state.artifactViewMode === "preview" ? "true" : "false"}">Read</button>
         <button data-artifact-mode="source" class="${sourceActive}" type="button" aria-pressed="${state.artifactViewMode === "source" ? "true" : "false"}">Source</button>
-        <button data-artifact-mode="compare" class="${compareActive}" type="button" aria-pressed="${state.artifactViewMode === "compare" ? "true" : "false"}">Compare</button>
+        <button data-artifact-mode="compare" class="${compareActive}" type="button" aria-pressed="${state.artifactViewMode === "compare" ? "true" : "false"}" ${compareAvailable ? "" : "disabled aria-disabled=\"true\""}>Compare</button>
       </div>
     </div>
   `;
