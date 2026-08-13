@@ -92,11 +92,14 @@ def test_document_canvas_and_evidence_inspector_preserve_safe_context(
         assert "Why it matters now" in canvas.inner_text()
         _assert_rendered_gate(page, viewport)
 
-        for mode in ("source", "compare", "preview"):
+        for mode in ("source", "preview"):
             canvas.locator(f'[data-artifact-mode="{mode}"]').click()
             canvas.locator(f'[data-document-canvas-mode="{mode}"]').wait_for(
                 state="visible"
             )
+        compare = canvas.locator('[data-artifact-mode="compare"]')
+        assert compare.is_disabled()
+        assert compare.get_attribute("aria-disabled") == "true"
 
         inspector = page.locator("#studioEvidenceInspector:visible")
         inspector.wait_for(state="visible")
