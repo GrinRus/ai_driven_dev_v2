@@ -538,6 +538,9 @@ async function pollActiveJob() {
     if (typeof renderNextActionPanel === "function") renderNextActionPanel();
     if (typeof renderGlobalNextActionStrip === "function") renderGlobalNextActionStrip();
     if (typeof updateStudioLiveObservation === "function") updateStudioLiveObservation();
+    if (state.activeTab === "work" && state.workDetail === "tasks" && typeof renderWorkItemTasks === "function") {
+      await renderWorkItemTasks();
+    }
     renderActivityTable();
     if (activeModeIsEvidenceLog()) await renderLogs();
     if (state.activeJobStatus.status === "waiting-for-operator") {

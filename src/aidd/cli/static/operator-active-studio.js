@@ -160,6 +160,27 @@ function renderTaskWorkspace(taskView) {
         ? (taskView.finalization?.status === "failed" ? "Resume finalization" : "Finalize")
         : null
     : null;
+  const activeJob = state.activeJobStatus;
+  const activeTaskJob = activeJob && ["task", "task-finalize"].includes(activeJob.kind);
+  const attempts = selected?.attempts || [];
+  const latestAttempt = attempts.length ? attempts[attempts.length - 1] : null;
+  const attemptIdentity = activeTaskJob
+    ? (activeJob.attempt_path || activeJob.job_id || "active attempt")
+    : (latestAttempt?.path || "not available");
+  const attemptStatus = activeTaskJob ? activeJob.status : (latestAttempt?.status || "not started");
+  const attemptElapsed = activeTaskJob && activeJob.elapsed_seconds !== undefined
+    ? secondsLabel(activeJob.elapsed_seconds)
+    : "not available";
+  const attemptOutputAge = activeTaskJob
+    ? runtimeOutputFreshnessLabel(activeJob)
+    : (latestAttempt ? "Persisted runtime evidence available" : "No output evidence recorded");
+  const attemptMilestone = activeTaskJob
+    ? (activeJob.message || `${selected?.status || "task"} / ${attemptStatus}`)
+    : (latestAttempt ? `${selected?.status || "recorded"} / attempt ${latestAttempt.number}` : "No durable milestone");
+  const attemptConnection = activeTaskJob
+    ? (state.activeJobConnection?.state || "unknown")
+    : "durable";
+  const rawOutput = activeTaskJob ? rawTextFromEntries(logEntriesFromChunks(state.activeJobLogChunks || [])) : "";
   return `
     <section class="active-studio" data-studio-surface="task-workspace" data-state="ready">
       ${renderActiveStudioContextBar(activeStudioState(), activeStageItem())}
@@ -199,6 +220,20 @@ function renderTaskWorkspace(taskView) {
           ${selectedAction === "Run" || selectedAction === "Resume" ? `<button data-task-action="${escapeHtml(selectedAction.toLowerCase())}" data-task-action-id="${escapeHtml(selected.id)}" type="button" ${selectedRuntimeReady() ? "" : "disabled aria-disabled=\"true\""}>${selectedAction}</button>` : ""}
           ${selectedAction === "Finalize" || selectedAction === "Resume finalization" ? `<button data-task-action="finalize" type="button" ${selectedRuntimeReady() ? "" : "disabled aria-disabled=\"true\""}>${selectedAction}</button>` : ""}` : `<p class="muted">Select a task to inspect its bounded detail.</p>`}
       </section>
+      ${(selected || activeTaskJob) ? `<section class="surface task-attempt-tray" data-task-attempt-tray data-attempt-status="${escapeHtml(attemptStatus)}">
+        <div class="surface-title"><span>Active attempt</span><span class="small-badge">${escapeHtml(attemptStatus)}</span></div>
+        <dl class="task-attempt-facts">
+          <div><dt>Identity</dt><dd>${escapeHtml(attemptIdentity)}</dd></div>
+          <div><dt>Elapsed</dt><dd>${escapeHtml(attemptElapsed)}</dd></div>
+          <div><dt>Last output</dt><dd>${escapeHtml(attemptOutputAge)}</dd></div>
+          <div><dt>Milestone</dt><dd>${escapeHtml(attemptMilestone)}</dd></div>
+          <div><dt>Connection</dt><dd>${escapeHtml(attemptConnection)}</dd></div>
+          <div><dt>Reconnect cursor</dt><dd>${escapeHtml(state.activeJobCursor || 0)}</dd></div>
+        </dl>
+        ${activeTaskJob && ["running", "waiting-for-operator", "cancelling"].includes(activeJob.status) ? `<button data-cancel-job="${escapeHtml(activeJob.job_id)}" type="button" ${activeJob.status === "cancelling" ? "disabled" : ""}>${activeJob.status === "cancelling" ? "Cancelling..." : "Cancel attempt"}</button>` : ""}
+        <details class="task-attempt-output"><summary>Raw output</summary><pre>${escapeHtml(rawOutput || "No runtime output captured yet.")}</pre></details>
+        ${activeTaskJob ? renderActiveJobConnectionSurface() : ""}
+      </section>` : ""}
     </section>
   `;
 }
