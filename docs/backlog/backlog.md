@@ -7,7 +7,7 @@ slice, and local task.
 
 ## Next
 
-- `W42-E3-S1-T2` — Expose task workspace and selected-task detail through the UI service.
+- `W42-E3-S2-T1` — Render the grouped task list and deterministic selection.
 
 ## Soon
 
@@ -73,6 +73,13 @@ slice, and local task.
   retaining fail-closed tasklist hash drift behavior. Focused task/CLI tests, full UI CLI tests,
   Ruff, mypy, CI Python matrix, deterministic/adapter checks, and packaged browser acceptance
   passed. `W42-E3-S1-T2` is now the only Next task.
+
+- `2026-08-13` `W42-E3-S1-T2` is complete in PR #182 (merge `66c306bf`). The UI service now
+  exposes bounded `task_list` navigation payloads and selected-task detail over the existing
+  ledger/evidence read model, rejects unknown task ids explicitly, and returns server-winner
+  task views after task and finalization mutations. Legacy rich `tasks` payloads remain intact.
+  Focused and full UI tests, characterization tests, Ruff, source mypy, CI matrix, deterministic/
+  adapter checks, and packaged browser acceptance passed. `W42-E3-S2-T1` is now the only Next task.
 
 - `2026-08-12` `W42-E2-S1-T3` is complete. Work Item Overview/Tasks/Documents/Runs tabs now
   persist through canonical routes, keyboard focus, and reload; the active shell renders the
