@@ -290,6 +290,14 @@ document.addEventListener("click", async (event) => {
       document.querySelector(`[data-work-item-tab="${CSS.escape(workItemTab)}"]`)?.focus();
       return;
     }
+    const taskSelection = event.target.closest("[data-task-select]")?.dataset.taskSelect;
+    if (taskSelection) {
+      state.selectedTaskId = taskSelection;
+      syncLocationState({historyMode: "push"});
+      await renderCockpit();
+      document.querySelector(`[data-task-select="${CSS.escape(taskSelection)}"]`)?.focus();
+      return;
+    }
     const tabShortcut = event.target.closest("[data-tab-shortcut]")?.dataset.tabShortcut;
     if (tabShortcut) {
       activateTab(tabShortcut, {historyMode: "push"});
@@ -773,6 +781,11 @@ document.addEventListener("change", async (event) => {
 });
 
 document.addEventListener("input", (event) => {
+  if (event.target.closest?.("[data-task-filter]")) {
+    state.taskWorkspaceFilter = event.target.value || "";
+    void renderCockpit();
+    return;
+  }
   const projectSetField = event.target.dataset?.projectSetField;
   const projectSetIndex = event.target.dataset?.projectSetIndex;
   if (projectSetField && projectSetIndex !== undefined) {

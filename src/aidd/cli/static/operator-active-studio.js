@@ -145,6 +145,71 @@ function renderWorkItemTabPlaceholder(tab) {
   `;
 }
 
+function renderTaskWorkspace(taskView) {
+  const allTasks = taskView?.task_list || [];
+  const filter = String(state.taskWorkspaceFilter || "").trim().toLowerCase();
+  const visible = allTasks.filter((task) => !filter
+    || String(task.id || "").toLowerCase().includes(filter)
+    || String(task.title || "").toLowerCase().includes(filter));
+  const groups = ["Ready", "Running", "Blocked", "Done"];
+  const selected = taskView?.selected_task || null;
+  return `
+    <section class="active-studio" data-studio-surface="task-workspace" data-state="ready">
+      ${renderActiveStudioContextBar(activeStudioState(), activeStageItem())}
+      ${renderIntentPhaseStepper()}
+      <section class="surface task-workspace" data-task-workspace>
+        <div class="surface-title"><span>Task Workspace</span><span class="small-badge">${escapeHtml(allTasks.length)} tasks</span></div>
+        <p class="muted">Groups, order, readiness, and next task are authoritative from the core ledger.</p>
+        <label class="task-workspace-filter">Search tasks
+          <input data-task-filter type="search" value="${escapeHtml(state.taskWorkspaceFilter)}" placeholder="Task id or title" autocomplete="off">
+        </label>
+        <div class="task-workspace-meta">
+          <span>Next ready: <strong>${escapeHtml(taskView?.next_ready_task || "none")}</strong></span>
+          <span>Critical path: <strong>${escapeHtml((taskView?.critical_path || []).join(" → ") || "none")}</strong></span>
+        </div>
+        <div class="task-workspace-groups">
+          ${groups.map((group) => {
+            const tasks = visible.filter((task) => task.group === group);
+            return `<section class="task-workspace-group" data-task-group="${group}">
+              <div class="surface-title compact"><h3>${group}</h3><span class="small-badge">${tasks.length}</span></div>
+              ${tasks.length ? `<div class="compact-list">${tasks.map((task) => `
+                <button class="panel-item task-workspace-item${task.id === state.selectedTaskId ? " selected" : ""}" data-task-select="${escapeHtml(task.id)}" type="button" aria-pressed="${task.id === state.selectedTaskId ? "true" : "false"}">
+                  <strong>${escapeHtml(task.id)} · ${escapeHtml(task.title || "Untitled task")}</strong>
+                  <span>${escapeHtml(task.status || "unknown")} · ${escapeHtml(task.attempt_count || 0)} attempts</span>
+                  <span>Dependencies: ${escapeHtml((task.dependencies || []).join(", ") || "none")}</span>
+                  ${task.id === taskView?.next_ready_task ? `<span class="small-badge good">Next ready</span>` : ""}
+                </button>`).join("")}</div>` : `<p class="muted" data-task-group-empty>No ${group.toLowerCase()} tasks.</p>`}
+            </section>`;
+          }).join("")}
+        </div>
+      </section>
+      <section class="surface task-workspace-detail" data-task-detail>
+        ${selected ? `<div class="surface-title"><span>Selected task</span><span class="small-badge">${escapeHtml(selected.status || "unknown")}</span></div>
+          <h3>${escapeHtml(selected.id)} · ${escapeHtml(selected.title || "Untitled task")}</h3>
+          <p>${escapeHtml(selected.outcome || "Outcome is recorded in the task contract.")}</p>
+          <p>Dependencies: ${escapeHtml((selected.dependencies || []).join(", ") || "none")}</p>
+          <p>Blocker: ${escapeHtml(selected.blocker || "none")}</p>` : `<p class="muted">Select a task to inspect its bounded detail.</p>`}
+      </section>
+    </section>
+  `;
+}
+
+async function renderWorkItemTasks() {
+  const content = document.getElementById("intentContent");
+  content.innerHTML = renderWorkItemTabPlaceholder("tasks");
+  try {
+    const query = runScopedQuery();
+    const taskId = state.selectedTaskId ? `&task_id=${encodeURIComponent(state.selectedTaskId)}` : "";
+    const payload = await api(`/api/tasks?${query}${taskId}`);
+    state.taskWorkspace = payload;
+    state.taskWorkspaceError = "";
+    content.innerHTML = renderTaskWorkspace(payload);
+  } catch (error) {
+    state.taskWorkspaceError = error.message || "Task Workspace unavailable";
+    content.innerHTML = `<section class="surface task-workspace" data-task-workspace-state="error"><div class="empty-state">${escapeHtml(state.taskWorkspaceError)}</div></section>`;
+  }
+}
+
 function renderStudioDocumentRail(studioState) {
   if (studioState === "no-run") return "";
   const refs = (state.dashboard?.recent_artifacts || [])
