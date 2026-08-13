@@ -14020,7 +14020,7 @@ Dependencies: `W42-E2-S1` and existing Wave 39 selector contracts.
 
 Local tasks:
 
-- `W42-E2-S2-T1` (next) Publish a core-owned launch-readiness projection.
+- `W42-E2-S2-T1` (done) Publish a core-owned launch-readiness projection.
   - Scope: selected runtime id, binary, command, auth, capabilities, permission policy, model,
     reasoning, config identity, probe observation timestamp, eligibility, and literal disabled
     reason; a stale snapshot or prior successful launch cannot authorize a mutation, and no
@@ -14028,7 +14028,7 @@ Local tasks:
   - Verification: core and service tests cover ready, missing selection, stale evidence,
     verified/failed/unverified auth, unsupported capability, permission denial, config drift, and
     runtime-unavailable outcomes.
-- `W42-E2-S2-T2` (planned) Extract and place the contextual Runner control.
+- `W42-E2-S2-T2` (next) Extract and place the contextual Runner control.
   - Scope: one frontend component reused beside workflow, stage, task, repair, and remediation
     launches; hide it from create, read-only history, completed handoff, and non-launch decisions.
   - Verification: fixture tests prove selected values reach the existing request path, disabled
