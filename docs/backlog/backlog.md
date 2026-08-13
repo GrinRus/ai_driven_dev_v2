@@ -7,7 +7,7 @@ slice, and local task.
 
 ## Next
 
-- `W42-E5-S1-T1` — Render the shared Decision Workbench for questions and approvals.
+- `W42-E5-S1-T2` — Render validation and runtime recovery as distinct states.
 
 ## Soon
 
@@ -136,6 +136,14 @@ slice, and local task.
   durable-purpose status are retained in the browser-session draft layer. Focused draft/static
   tests, 124 frontend tests, full Python matrix, deterministic/adapter checks, packaged browser
   acceptance, and package build passed. `W42-E5-S1-T1` is now the only Next task.
+
+- `2026-08-13` `W42-E5-S1-T1` is complete in PR #199 (merge `ccb2748c`). Questions and
+  approvals now share a Decision Workbench composition that exposes decision type, reason,
+  source snippets, consequence, schema-specific inputs, retained evidence, and one primary
+  submit action while preserving separate question and approval workflows. Empty optional
+  answer fields remain omitted for API compatibility. Focused UI/contract tests, 125 frontend
+  tests, full Python matrix, deterministic/adapter checks, packaged browser acceptance, and
+  package build passed. `W42-E5-S1-T2` is now the only Next task.
 
 - `2026-08-12` `W42-E2-S1-T3` is complete. Work Item Overview/Tasks/Documents/Runs tabs now
   persist through canonical routes, keyboard focus, and reload; the active shell renders the
