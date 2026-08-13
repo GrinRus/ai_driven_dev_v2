@@ -1369,6 +1369,7 @@ function renderNextActionPanel() {
     <p>${escapeHtml(detail)}</p>
     ${renderValidationFindingSummary(finding, {compact: true})}
     <div class="next-action-button-stack">
+      ${runtimeNeeded && typeof renderContextualRunnerControl === "function" ? renderContextualRunnerControl({actionLabel: label}) : ""}
       <button id="nextActionButton" class="next-button" data-next-action="${escapeHtml(action.action)}" type="button" ${disabled ? "disabled" : ""}>${escapeHtml(label)}</button>
       ${renderNextActionBlocker(blockerMessage)}
     </div>
@@ -1463,6 +1464,7 @@ function renderGlobalNextActionStrip() {
         <span><strong>Run</strong>${escapeHtml(run)}</span>
       </div>
       <div class="next-action-button-stack">
+        ${runtimeNeeded && typeof renderContextualRunnerControl === "function" ? renderContextualRunnerControl({actionLabel: label}) : ""}
         <button id="globalNextActionButton" class="next-button" data-primary-action type="button" ${disabled ? "disabled" : ""}>${escapeHtml(label)}</button>
         ${renderNextActionBlocker(blockerMessage)}
       </div>

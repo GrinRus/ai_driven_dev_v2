@@ -2238,6 +2238,7 @@ class OperatorUiService:
             raise ValueError("run_id is required.")
         if not runtime:
             raise ValueError("runtime is required.")
+        self._revalidate_runtime_for_mutation(payload, runtime=runtime)
         model_override, reasoning_effort_override = _runtime_selector_overrides_from_payload(
             payload
         )
@@ -2296,6 +2297,7 @@ class OperatorUiService:
             raise ValueError("run_id is required.")
         if not runtime:
             raise ValueError("runtime is required.")
+        self._revalidate_runtime_for_mutation(payload, runtime=runtime)
         lease = acquire_run_mutation_lease_handle(
             run_root(
                 workspace_root=self.workspace_root,
@@ -2681,6 +2683,7 @@ class OperatorUiService:
     def _launch_remediation(self, payload: dict[str, Any]) -> object:
         runtime = _runtime_from_payload(payload)
         _validate_runtime(runtime)
+        self._revalidate_runtime_for_mutation(payload, runtime=runtime)
         source_stage = _text_from_payload(payload, "source_stage")
         source_ids = self._validated_remediation_source_ids(
             source_stage=source_stage,
@@ -2781,6 +2784,7 @@ class OperatorUiService:
     def _rerun_stale_downstream(self, payload: dict[str, Any]) -> object:
         runtime = _runtime_from_payload(payload)
         _validate_runtime(runtime)
+        self._revalidate_runtime_for_mutation(payload, runtime=runtime)
         run_id = _source_run_id_from_payload(payload)
         stale_stages = self._stale_downstream_stages(run_id)
         if not stale_stages:
@@ -2845,6 +2849,7 @@ class OperatorUiService:
     def _rerun_remediation_stage(self, payload: dict[str, Any]) -> object:
         runtime = _runtime_from_payload(payload)
         _validate_runtime(runtime)
+        self._revalidate_runtime_for_mutation(payload, runtime=runtime)
         run_id = _source_run_id_from_payload(payload)
         stage = _text_from_payload(payload, "stage")
         stale_stages = self._stale_downstream_stages(run_id)
@@ -3401,6 +3406,7 @@ class OperatorUiService:
         stage = _stage_from_payload(payload)
         runtime = _runtime_from_payload(payload)
         _validate_runtime(runtime)
+        self._revalidate_runtime_for_mutation(payload, runtime=runtime)
         model_override, reasoning_effort_override = _runtime_selector_overrides_from_payload(
             payload
         )
@@ -3439,6 +3445,7 @@ class OperatorUiService:
         stage = _stage_from_payload(payload)
         runtime = _runtime_from_payload(payload)
         _validate_runtime(runtime)
+        self._revalidate_runtime_for_mutation(payload, runtime=runtime)
         raw_request = payload.get("request")
         if not isinstance(raw_request, str) or not raw_request.strip():
             raise ValueError("request is required.")
@@ -3625,6 +3632,7 @@ class OperatorUiService:
         self._require_context()
         runtime = _runtime_from_payload(payload)
         _validate_runtime(runtime)
+        self._revalidate_runtime_for_mutation(payload, runtime=runtime)
         _runtime_selector_overrides_from_payload(payload)
         stage_start, stage_end = _workflow_bounds_from_payload(payload)
         requested_run_id = _optional_run_id_from_payload(payload)
@@ -3840,6 +3848,7 @@ class OperatorUiService:
         new_work_item = _text_from_payload(payload, "new_work_item")
         runtime = _runtime_from_payload(payload)
         _validate_runtime(runtime)
+        self._revalidate_runtime_for_mutation(payload, runtime=runtime)
         preflight = validate_next_flow_launch_preflight(
             NextFlowLaunchPreflightRequest(
                 workspace_root=self.workspace_root,
@@ -4225,6 +4234,34 @@ class OperatorUiService:
             "runtimes": readiness.runtimes,
             "protected_write_scope": protected_scope,
         }
+
+    def _revalidate_runtime_for_mutation(
+        self,
+        payload: Mapping[str, Any],
+        *,
+        runtime: str,
+    ) -> None:
+        """Re-check core-owned launch eligibility immediately before a UI mutation.
+
+        Older callers may not send the readiness marker yet; retaining that wire
+        compatibility keeps existing API clients and historical fixtures readable.
+        New operator surfaces always send the marker from ``runtimeSelectorPayload``.
+        """
+
+        if payload.get("require_runtime_revalidation") is not True:
+            return
+        readiness = self._runtime_readiness_for_config(self.config_path)
+        item = next(
+            (candidate for candidate in readiness.runtimes if candidate.runtime_id == runtime),
+            None,
+        )
+        if item is None:
+            raise ValueError(f"Runtime `{runtime}` is not available for launch.")
+        if not item.eligible:
+            raise ValueError(
+                f"Runtime `{runtime}` is not eligible for launch: "
+                f"{item.disabled_reason or 'readiness did not authorize mutation.'}"
+            )
 
     def _ensure_local_only_action(self) -> None:
         if not _is_loopback_host(self.options.host):

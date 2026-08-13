@@ -52,6 +52,10 @@ function renderStudioImplementationQualityGate(taskView) {
   const tasks = taskView?.tasks || [];
   if (!tasks.length) return "";
   const finalization = taskView.finalization || {status: "pending", attempts: []};
+  const runnableTasks = tasks.filter((task) => task.ready && task.status !== "succeeded");
+  const runnerAction = runnableTasks.length
+    ? runnableTasks.length === 1 ? "task run or resume" : "task actions"
+    : "implementation finalization";
   return `
     <section class="surface studio-implementation-gate" data-studio-quality-gate="implement" data-review-eligible="${taskView.review_eligible ? "true" : "false"}">
       <div class="surface-title">
@@ -59,6 +63,7 @@ function renderStudioImplementationQualityGate(taskView) {
         <span class="small-badge">${escapeHtml(tasks.filter((task) => task.status === "succeeded").length)} / ${escapeHtml(tasks.length)} tasks</span>
       </div>
       <p>Task readiness, attempts, blockers, and aggregate finalization come from the canonical task ledger.</p>
+      ${(runnableTasks.length || (taskView.finalization_eligible && finalization.status !== "succeeded")) && typeof renderContextualRunnerControl === "function" ? renderContextualRunnerControl({actionLabel: runnerAction}) : ""}
       <div class="compact-list">
         ${tasks.map(renderStudioImplementationTask).join("")}
         <article class="panel-item" data-aggregate-finalization="${escapeHtml(finalization.status || "pending")}">
@@ -206,6 +211,7 @@ function renderStudioReviewQualityGate(view) {
           </label>
           ${renderRemediationRuntimeGuard("review", Boolean(findings.length))}
           <div class="wizard-actions">
+            ${findings.length && typeof renderContextualRunnerControl === "function" ? renderContextualRunnerControl({actionLabel: "review remediation"}) : ""}
             <button data-proceed-stage="qa" type="button" ${status === "approved" && selectedRuntimeReady() ? "" : "disabled aria-disabled=\"true\""}>Proceed to QA</button>
             <button data-remediation-launch="review" type="button" ${findings.length && selectedRuntimeReady() ? "" : "disabled"}>Send selected to implement</button>
             <button data-open-request-tab type="button" class="secondary">Request review intervention</button>
@@ -268,6 +274,7 @@ function renderStudioQaQualityGate(view, sourceItems) {
       ${renderRemediationRuntimeGuard("qa", Boolean(sourceItems.length))}
       ${renderQaCompletionGuard(view, Boolean(sourceItems.length))}
       <div class="wizard-actions">
+        ${sourceItems.length && typeof renderContextualRunnerControl === "function" ? renderContextualRunnerControl({actionLabel: "QA remediation"}) : ""}
         <button data-accept-qa type="button" ${blocked ? "disabled aria-disabled=\"true\"" : ""}>Accept complete</button>
         <button data-remediation-launch="qa" type="button" ${sourceItems.length && selectedRuntimeReady() ? "" : "disabled"}>Send selected to implement</button>
         <button data-next-flow-start type="button" class="secondary">Start follow-up</button>
