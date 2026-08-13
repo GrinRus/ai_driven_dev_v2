@@ -14083,12 +14083,12 @@ Dependencies: `W42-E3-S1` and `W42-E2-S2-T2`.
 
 Local tasks:
 
-- `W42-E3-S2-T1` (next) Render the grouped task list and deterministic selection.
+- `W42-E3-S2-T1` (done) Render the grouped task list and deterministic selection.
   - Scope: Ready, Running, Blocked, Done sections, search/filter, dependency badges, next-ready
     marker, URL selection, empty/loading/error states, and keyboard list navigation.
   - Verification: fixture tests cover ordering, filters, deep links, reload, focus, empty groups,
     and no client-side status movement.
-- `W42-E3-S2-T2` (planned) Render selected-task detail and mutually exclusive actions.
+- `W42-E3-S2-T2` (next) Render selected-task detail and mutually exclusive actions.
   - Scope: outcome, scope, acceptance, dependencies, expected files, attempts, linked documents,
     blockers, Runner, and Run/Resume/Finalize; reuse existing mutation services.
   - Verification: tests prove action eligibility, pending duplicate suppression, conflict

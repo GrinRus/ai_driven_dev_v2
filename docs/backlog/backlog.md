@@ -7,7 +7,7 @@ slice, and local task.
 
 ## Next
 
-- `W42-E3-S2-T1` — Render the grouped task list and deterministic selection.
+- `W42-E3-S2-T2` — Render selected-task detail and mutually exclusive actions.
 
 ## Soon
 
@@ -80,6 +80,13 @@ slice, and local task.
   task views after task and finalization mutations. Legacy rich `tasks` payloads remain intact.
   Focused and full UI tests, characterization tests, Ruff, source mypy, CI matrix, deterministic/
   adapter checks, and packaged browser acceptance passed. `W42-E3-S2-T1` is now the only Next task.
+
+- `2026-08-13` `W42-E3-S2-T1` is complete in PR #184 (merge `f358e347`). The Work Item Tasks
+  surface now renders core-owned Ready/Running/Blocked/Done groups without browser sorting or
+  status mutation, supports bounded search, deterministic selection, next-ready and critical
+  path markers, and persists selected task identity in canonical `task_id` deep links. 117 Node
+  frontend tests, 156 Python UI/asset tests, CI matrix, deterministic/adapter checks, and
+  packaged browser acceptance passed. `W42-E3-S2-T2` is now the only Next task.
 
 - `2026-08-12` `W42-E2-S1-T3` is complete. Work Item Overview/Tasks/Documents/Runs tabs now
   persist through canonical routes, keyboard focus, and reload; the active shell renders the
