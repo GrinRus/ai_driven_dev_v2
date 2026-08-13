@@ -177,7 +177,10 @@ function nextFlowDraftForm(action = state.nextFlowWizard.action) {
 }
 
 function nextFlowBrowserDraftIdentity(action = state.nextFlowWizard.action) {
-  return operatorDraftIdentity(nextFlowDraftForm(action), nextFlowSourceRunId());
+  return operatorPurposeDraftIdentity(
+    action === "clone-flow" ? "clone" : "follow-up",
+    nextFlowSourceRunId()
+  );
 }
 
 function editableNextFlowDraftValue(draft) {
@@ -215,7 +218,17 @@ function persistNextFlowBrowserDraft() {
   const draft = readFollowUpDraftForm() || state.nextFlowWizard.followUpDraft;
   const value = editableNextFlowDraftValue(draft);
   if (!value) return;
-  writeOperatorDraft(nextFlowBrowserDraftIdentity(), value);
+  writeOperatorDraft(
+    nextFlowBrowserDraftIdentity(),
+    operatorPurposeDraftValue(
+      state.nextFlowWizard.action === "clone-flow" ? "clone" : "follow-up",
+      {
+        ...value,
+        source_evidence: state.nextFlowWizard.selectedSourceIds || [],
+        destination: `workitems/${draft.source_work_item || nextFlowSourceWorkItem()}/context/`
+      }
+    )
+  );
 }
 
 async function openNextFlowWizard(action) {
