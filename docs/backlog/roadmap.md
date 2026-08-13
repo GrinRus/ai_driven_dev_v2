@@ -14056,12 +14056,12 @@ Dependencies: `W42-E2-S2-T1` and existing Wave 35 task ledger.
 
 Local tasks:
 
-- `W42-E3-S1-T1` (next) Add the core Task Workspace read model.
+- `W42-E3-S1-T1` (done) Add the core Task Workspace read model.
   - Scope: Ready, Running, Blocked, Done groups; core next-ready and critical-path signals;
     dependencies, attempt counts, verification, last durable event, and preserved successes.
   - Verification: deterministic core tests cover mixed dependency graphs, no-ready work,
     interrupted attempts, partial success, finalization eligibility, and stale tasklists.
-- `W42-E3-S1-T2` (planned) Expose task workspace and selected-task detail through the UI service.
+- `W42-E3-S1-T2` (next) Expose task workspace and selected-task detail through the UI service.
   - Scope: bounded list and detail payloads over existing ledger/evidence sources; preserve
     synchronous conflict and duplicate-suppression behavior.
   - Verification: CLI service tests prove stable ids, bounded reads, exact evidence links, missing
