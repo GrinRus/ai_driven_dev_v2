@@ -80,6 +80,8 @@ class InterviewAnswer:
     question_id: str
     text: str
     resolution: AnswerResolution
+    evidence_links: tuple[str, ...] = ()
+    unblock_consequence: str | None = None
 
     def __post_init__(self) -> None:
         normalized_id = self.question_id.strip()
@@ -96,6 +98,13 @@ class InterviewAnswer:
         if not normalized_text:
             raise ValueError("Answer text must not be empty.")
         object.__setattr__(self, "text", normalized_text)
+
+        normalized_links = tuple(
+            link.strip() for link in self.evidence_links if link.strip()
+        )
+        object.__setattr__(self, "evidence_links", normalized_links)
+        normalized_consequence = (self.unblock_consequence or "").strip() or None
+        object.__setattr__(self, "unblock_consequence", normalized_consequence)
 
 
 @dataclass(frozen=True, slots=True)
@@ -296,8 +305,63 @@ def parse_answer_entries(markdown_text: str) -> tuple[ParsedInterviewAnswer, ...
     return tuple(parsed)
 
 
+def _answer_context_entries(
+    markdown_text: str,
+    *,
+    section_heading: str,
+) -> tuple[tuple[str, str], ...]:
+    entries: list[tuple[str, str]] = []
+    for line_number, line in _interview_section_lines(
+        markdown_text=markdown_text,
+        section_heading=section_heading,
+    ):
+        del line_number
+        match = re.match(r"^\s*-\s+`?(Q[\w-]+)`?\s*:\s*(.+?)\s*$", line)
+        if match is not None:
+            entries.append((match.group(1), match.group(2).strip()))
+    return tuple(entries)
+
+
+def _merge_answer_context(
+    *,
+    answers: tuple[ParsedInterviewAnswer, ...],
+    markdown_text: str,
+) -> tuple[ParsedInterviewAnswer, ...]:
+    evidence_by_id: dict[str, list[str]] = {}
+    for question_id, link in _answer_context_entries(
+        markdown_text,
+        section_heading="Evidence",
+    ):
+        evidence_by_id.setdefault(question_id, []).append(link)
+    consequence_by_id = dict(
+        _answer_context_entries(markdown_text, section_heading="Unblock consequence")
+    )
+    merged: list[ParsedInterviewAnswer] = []
+    for entry in answers:
+        answer = entry.value
+        merged.append(
+            ParsedInterviewAnswer(
+                value=InterviewAnswer(
+                    question_id=answer.question_id,
+                    text=answer.text,
+                    resolution=answer.resolution,
+                    evidence_links=tuple(evidence_by_id.get(answer.question_id, ())),
+                    unblock_consequence=consequence_by_id.get(answer.question_id),
+                ),
+                line_number=entry.line_number,
+            )
+        )
+    return tuple(merged)
+
+
 def parse_answers_markdown(markdown_text: str) -> tuple[InterviewAnswer, ...]:
-    return tuple(entry.value for entry in parse_answer_entries(markdown_text))
+    return tuple(
+        entry.value
+        for entry in _merge_answer_context(
+            answers=parse_answer_entries(markdown_text),
+            markdown_text=markdown_text,
+        )
+    )
 
 
 def render_answers_markdown(answers: Iterable[InterviewAnswer]) -> str:
@@ -308,6 +372,25 @@ def render_answers_markdown(answers: Iterable[InterviewAnswer]) -> str:
     else:
         for answer in ordered:
             lines.append(f"- {answer.question_id} [{answer.resolution.value}] {answer.text}")
+    evidence = tuple(
+        (answer.question_id, link)
+        for answer in ordered
+        for link in answer.evidence_links
+    )
+    consequences = tuple(
+        (answer.question_id, answer.unblock_consequence)
+        for answer in ordered
+        if answer.unblock_consequence
+    )
+    if evidence:
+        lines.extend(("", "## Evidence", ""))
+        lines.extend(f"- `{question_id}`: {link}" for question_id, link in evidence)
+    if consequences:
+        lines.extend(("", "## Unblock consequence", ""))
+        lines.extend(
+            f"- `{question_id}`: {consequence}"
+            for question_id, consequence in consequences
+        )
     lines.append("")
     return "\n".join(lines)
 
@@ -480,7 +563,16 @@ def _merge_answers(
             index_by_question_id[answer.question_id] = len(merged)
             merged.append(answer)
             continue
-        merged[existing_index] = answer
+        existing_answer = merged[existing_index]
+        merged[existing_index] = InterviewAnswer(
+            question_id=answer.question_id,
+            text=answer.text,
+            resolution=answer.resolution,
+            evidence_links=answer.evidence_links or existing_answer.evidence_links,
+            unblock_consequence=(
+                answer.unblock_consequence or existing_answer.unblock_consequence
+            ),
+        )
 
     return tuple(merged)
 

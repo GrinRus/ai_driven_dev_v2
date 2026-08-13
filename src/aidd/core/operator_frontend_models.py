@@ -15,6 +15,8 @@ class OperatorQuestionView:
     status: str
     answer_text: str | None = None
     answer_resolution: AnswerResolution | None = None
+    answer_evidence_links: tuple[str, ...] = ()
+    answer_unblock_consequence: str | None = None
 
 
 @dataclass(frozen=True, slots=True)

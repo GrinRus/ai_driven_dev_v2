@@ -36,10 +36,14 @@ function questionDraft(questionId) {
 function persistQuestionDraft(questionId) {
   const textarea = document.querySelector(`[data-question-text="${CSS.escape(questionId)}"]`);
   const resolution = document.querySelector(`[data-question-resolution="${CSS.escape(questionId)}"]`);
+  const evidence = document.querySelector(`[data-question-evidence="${CSS.escape(questionId)}"]`);
+  const consequence = document.querySelector(`[data-question-consequence="${CSS.escape(questionId)}"]`);
   if (!textarea) return;
   writeOperatorDraft(questionDraftIdentity(questionId), {
     text: textarea.value,
-    resolution: resolution?.value || "resolved"
+    resolution: resolution?.value || "resolved",
+    evidence_links: (evidence?.value || "").split("\n").map((value) => value.trim()).filter(Boolean),
+    unblock_consequence: consequence?.value || ""
   });
 }
 
@@ -204,6 +208,8 @@ function renderQuestionCards({showResume}) {
         const questionTextId = questionControlId("question-text", question.question_id, index);
         const answerId = questionControlId("answer", question.question_id, index);
         const resolutionId = questionControlId("resolution", question.question_id, index);
+        const evidenceId = questionControlId("evidence", question.question_id, index);
+        const consequenceId = questionControlId("consequence", question.question_id, index);
         const displayStatus = questionDisplayStatus(question);
         const savedAnswer = question.answer_resolution
           ? `<div class="saved-answer"><span class="saved-answer-label">Saved ${escapeHtml(question.answer_resolution)} answer</span><span class="saved-answer-text">${escapeHtml(question.answer_text || "Answer recorded in answers.md; blocking question still requires a resolved answer.")}</span></div>`
@@ -211,6 +217,8 @@ function renderQuestionCards({showResume}) {
         const draft = questionDraft(question.question_id)?.value || null;
         const answerText = draft?.text ?? question.answer_text ?? "";
         const resolutionValue = draft?.resolution || question.answer_resolution || "resolved";
+        const evidenceLinks = draft?.evidence_links || question.answer_evidence_links || [];
+        const unblockConsequence = draft?.unblock_consequence ?? question.answer_unblock_consequence ?? "";
         const resumeNeedsResolved = questionRequiresResolvedResume(question);
         const resumeDisabled = resumeNeedsResolved && (
           resolutionValue !== "resolved" || !answerText.trim()
@@ -233,6 +241,15 @@ function renderQuestionCards({showResume}) {
             ${draft ? `<p class="muted question-draft-status" data-question-draft-restored="${escapeHtml(question.question_id)}">Restored unsent session draft.</p>` : ""}
             <label class="sr-only" for="${answerId}">Answer for ${escapeHtml(questionLabel)}</label>
             <textarea id="${answerId}" name="${answerId}" aria-describedby="${questionTextId}" data-question-text="${escapeHtml(question.question_id)}">${escapeHtml(answerText)}</textarea>
+            <label class="question-context-field" for="${evidenceId}">
+              <span>Evidence links <small>(one path or URL per line)</small></span>
+              <textarea id="${evidenceId}" name="${evidenceId}" rows="2" data-question-evidence="${escapeHtml(question.question_id)}" placeholder="reports/qa.md#decision">${escapeHtml(evidenceLinks.join("\n"))}</textarea>
+            </label>
+            <label class="question-context-field" for="${consequenceId}">
+              <span>Unblock consequence</span>
+              <textarea id="${consequenceId}" name="${consequenceId}" rows="2" data-question-consequence="${escapeHtml(question.question_id)}" placeholder="What can resume after this answer is accepted?">${escapeHtml(unblockConsequence)}</textarea>
+            </label>
+            <div class="answer-preview-panel" data-answer-preview-panel="${escapeHtml(question.question_id)}" hidden aria-live="polite"></div>
             <div class="question-actions">
               <label class="sr-only" for="${resolutionId}">Resolution for ${escapeHtml(questionLabel)}</label>
               <select id="${resolutionId}" name="${resolutionId}" aria-describedby="${questionTextId}" data-question-resolution="${escapeHtml(question.question_id)}">
@@ -244,6 +261,7 @@ function renderQuestionCards({showResume}) {
                 <summary>Save draft only</summary>
                 <button data-save-answer="${escapeHtml(question.question_id)}" type="button" class="secondary">${displayStatus === "resolved" ? "Update answer" : "Save answer"}</button>
               </details>
+              <button data-answer-preview="${escapeHtml(question.question_id)}" type="button" class="secondary">Preview answers.md</button>
               ${showResume ? `<button data-primary-action data-answer-resume="${escapeHtml(question.question_id)}" data-requires-resolved-resume="${resumeNeedsResolved ? "true" : "false"}" data-resume-ready-label="Save answer & resume" type="button" ${resumeDisabled ? 'disabled title="Blocking questions must be saved as resolved before resume."' : ""}>${escapeHtml(resumeLabel === "Update & resume" || resumeLabel === "Answer & resume" ? "Save answer & resume" : resumeLabel)}</button>` : ""}
             </div>
           </article>
@@ -288,6 +306,10 @@ async function saveAnswer(questionId) {
     toast("Answer text is required.");
     return false;
   }
+  const evidence = document.querySelector(`[data-question-evidence="${CSS.escape(questionId)}"]`);
+  const consequence = document.querySelector(`[data-question-consequence="${CSS.escape(questionId)}"]`);
+  const evidenceLinks = (evidence?.value || "").split("\n").map((value) => value.trim()).filter(Boolean);
+  const unblockConsequence = consequence?.value?.trim() || "";
   const key = operatorMutationKey(
     "answer",
     state.dashboard?.work_item || state.activeRouteWorkItem || "no-work-item",
@@ -312,12 +334,16 @@ async function saveAnswer(questionId) {
         stage: state.activeStage,
         question_id: questionId,
         text,
-        resolution: resolution?.value || "resolved"
+        resolution: resolution?.value || "resolved",
+        evidence_links: evidenceLinks,
+        unblock_consequence: unblockConsequence
       });
       const readback = await durableQuestion();
       if (
         readback?.answer_text !== text
         || readback?.answer_resolution !== (resolution?.value || "resolved")
+        || JSON.stringify(readback?.answer_evidence_links || []) !== JSON.stringify(evidenceLinks)
+        || (readback?.answer_unblock_consequence || "") !== unblockConsequence
       ) {
         throw new Error("Answer durable readback did not match the submitted value");
       }
@@ -335,6 +361,37 @@ async function saveAnswer(questionId) {
   }
   toast("Answer saved.");
   return true;
+}
+
+async function previewAnswer(questionId) {
+  const textarea = document.querySelector(`[data-question-text="${CSS.escape(questionId)}"]`);
+  const resolution = document.querySelector(`[data-question-resolution="${CSS.escape(questionId)}"]`);
+  const evidence = document.querySelector(`[data-question-evidence="${CSS.escape(questionId)}"]`);
+  const consequence = document.querySelector(`[data-question-consequence="${CSS.escape(questionId)}"]`);
+  const panel = document.querySelector(`[data-answer-preview-panel="${CSS.escape(questionId)}"]`);
+  if (!textarea || !panel) return;
+  const text = textarea.value.trim();
+  if (!text) {
+    panel.hidden = false;
+    panel.textContent = "Answer text is required before preview.";
+    return;
+  }
+  panel.hidden = false;
+  panel.textContent = "Building durable answers.md preview…";
+  try {
+    const payload = await postJson("/api/answers", {
+      mode: "preview",
+      stage: state.activeStage,
+      question_id: questionId,
+      text,
+      resolution: resolution?.value || "resolved",
+      evidence_links: (evidence?.value || "").split("\n").map((value) => value.trim()).filter(Boolean),
+      unblock_consequence: consequence?.value?.trim() || ""
+    });
+    panel.innerHTML = `<strong>Preview · ${escapeHtml(payload.answers_path || "answers.md")}</strong><pre>${escapeHtml(payload.markdown || "")}</pre>`;
+  } catch (error) {
+    panel.textContent = `Preview unavailable: ${error.message}`;
+  }
 }
 
 async function answerAndResume(questionId) {
