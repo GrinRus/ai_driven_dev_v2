@@ -4792,6 +4792,7 @@ def test_ui_tasks_endpoint_returns_rich_task_state(tmp_path: Path) -> None:
     assert task["id"] == "TL-1"
     assert task["status"] == "pending"
     assert task["ready"] is True
+    assert task["group"] == "Ready"
     acceptance = task["acceptance_criteria"]
     assert isinstance(acceptance, list)
     assert acceptance[0]["id"] == "TL-1-AC1"
@@ -4802,6 +4803,27 @@ def test_ui_tasks_endpoint_returns_rich_task_state(tmp_path: Path) -> None:
     assert payload["finalization_eligible"] is False
     assert payload["review_eligible"] is False
     assert payload["review_blocker"] == "No implementation run is selected."
+    task_list = payload["task_list"]
+    assert isinstance(task_list, list)
+    assert task_list[0]["id"] == "TL-1"
+    assert "acceptance_criteria" not in task_list[0]
+    assert payload["selected_task"] is None
+    selected_payload = _payload(
+        service.handle_get("/api/tasks", {"task_id": ["TL-1"]})
+    )
+    assert selected_payload["selected_task"]["id"] == "TL-1"  # type: ignore[index]
+    assert selected_payload["selection"] == {"state": "selected", "task_id": "TL-1"}
+
+
+def test_ui_tasks_endpoint_returns_missing_task_error(tmp_path: Path) -> None:
+    workspace_root = tmp_path / ".aidd"
+    _seed_rich_tasklist(workspace_root)
+    service = _service(workspace_root)
+
+    response = service.handle_get("/api/tasks", {"task_id": ["TL-404"]})
+
+    assert response.status == HTTPStatus.BAD_REQUEST
+    assert _error_payload(response)["error"] == "Unknown task id `TL-404`."
 
 
 def test_ui_task_run_requires_explicit_run_id(tmp_path: Path) -> None:

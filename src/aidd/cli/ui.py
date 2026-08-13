@@ -1051,6 +1051,28 @@ def _first_param(params: dict[str, list[str]], name: str, default: str | None = 
     return value or default
 
 
+_TASK_LIST_FIELDS = (
+    "id",
+    "title",
+    "status",
+    "group",
+    "ready",
+    "dependency_eligible",
+    "dependencies",
+    "missing_dependencies",
+    "attempt_count",
+    "blocker",
+    "preserved_success",
+    "last_durable_event",
+)
+
+
+def _bounded_task_list_item(task: Mapping[str, object]) -> dict[str, object]:
+    """Keep list reads small while retaining the fields needed for navigation."""
+
+    return {field: task.get(field) for field in _TASK_LIST_FIELDS}
+
+
 def _optional_attempt(params: dict[str, list[str]]) -> int | None:
     raw_attempt = _first_param(params, "attempt")
     if raw_attempt is None:
@@ -2221,12 +2243,26 @@ class OperatorUiService:
             work_item=self.work_item,
             run_id=run_id,
         )
-        tasks = list(cast(list[dict[str, object]], model["tasks"]))
+        all_tasks = list(cast(list[dict[str, object]], model["tasks"]))
+        tasks = all_tasks
         if task_id is not None:
             tasks = [task for task in tasks if task.get("id") == task_id]
         if task_id is not None and not tasks:
             raise ValueError(f"Unknown task id `{task_id}`.")
-        return {**model, "tasks": tasks}
+        selected_task = tasks[0] if task_id is not None else None
+        return {
+            **model,
+            # Keep the existing rich `tasks` field for compatibility with the current
+            # implementation gate while exposing an explicitly bounded list/detail boundary.
+            "tasks": tasks,
+            "task_list": [_bounded_task_list_item(task) for task in all_tasks],
+            "selected_task": selected_task,
+            "selected_task_id": task_id,
+            "selection": {
+                "state": "selected" if selected_task is not None else "unselected",
+                "task_id": task_id,
+            },
+        }
 
     def _start_task_job(self, payload: dict[str, Any]) -> object:
         task_id = str(payload.get("task_id", "")).strip()
@@ -2280,6 +2316,9 @@ class OperatorUiService:
                 "task_id": task_id,
                 "run_id": run_id,
                 "status": ledger.entry(task_id).status.value,
+                "task_view": self._task_view(
+                    {"run_id": [run_id], "task_id": [task_id]}
+                ),
             }
 
         try:
@@ -2327,6 +2366,7 @@ class OperatorUiService:
             return {
                 "run_id": run_id,
                 "status": ledger.finalization.status.value,
+                "task_view": self._task_view({"run_id": [run_id]}),
             }
 
         try:
