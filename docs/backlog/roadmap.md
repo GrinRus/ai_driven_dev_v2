@@ -14088,12 +14088,12 @@ Local tasks:
     marker, URL selection, empty/loading/error states, and keyboard list navigation.
   - Verification: fixture tests cover ordering, filters, deep links, reload, focus, empty groups,
     and no client-side status movement.
-- `W42-E3-S2-T2` (next) Render selected-task detail and mutually exclusive actions.
+- `W42-E3-S2-T2` (done) Render selected-task detail and mutually exclusive actions.
   - Scope: outcome, scope, acceptance, dependencies, expected files, attempts, linked documents,
     blockers, Runner, and Run/Resume/Finalize; reuse existing mutation services.
   - Verification: tests prove action eligibility, pending duplicate suppression, conflict
     recovery, preserved successes, and literal disabled consequences.
-- `W42-E3-S2-T3` (planned) Render the active task attempt and live-output tray.
+- `W42-E3-S2-T3` (next) Render the active task attempt and live-output tray.
   - Scope: attempt identity, factual elapsed time, last-output age, durable milestone, cancel
     state, reconnect cursor, and collapsible raw output; never estimate percentage completion.
   - Verification: browser fixtures cover starting, streaming, quiet, cancellation-pending,
