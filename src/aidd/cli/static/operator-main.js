@@ -178,6 +178,14 @@ document.addEventListener("keydown", async (event) => {
 
 document.addEventListener("click", async (event) => {
   try {
+    if (event.target.closest("[data-request-preview]")) {
+      previewOperatorRequest();
+      return;
+    }
+    if (event.target.closest("[data-request-write]")) {
+      await writeOperatorRequest();
+      return;
+    }
     if (event.target.closest("[data-open-runner]")) {
       focusRuntimeSelector();
       return;
@@ -821,6 +829,10 @@ document.addEventListener("input", (event) => {
   if (event.target.id === "projectNewRequest") {
     state.onboarding.requestText = event.target.value;
     syncProjectWorkItemCreateActionState();
+  }
+  if (event.target.closest?.("[data-request-field]")) {
+    const status = document.querySelector("[data-request-write-status]");
+    if (status) status.textContent = "Draft changed; preview or write the durable request.";
   }
   if (event.target.id === "operatorRequestText") {
     persistInterventionDraft();

@@ -84,6 +84,7 @@ from aidd.core.onboarding import (
     OnboardingProjectSummary,
     OnboardingService,
     OnboardingWorkItemSummary,
+    OperatorRequestContext,
 )
 from aidd.core.operator_frontend import (
     OperatorInboxRoute,
@@ -1677,6 +1678,25 @@ def _workspace_response_path(workspace_root: Path, path: Path) -> str:
     return workspace_relative_path(workspace_root, path)
 
 
+def _operator_request_context_payload(
+    *,
+    workspace_root: Path,
+    context: OperatorRequestContext,
+    preview_markdown: str | None = None,
+) -> dict[str, object]:
+    return {
+        "work_item": context.work_item,
+        "request_text": context.request_text,
+        "request_markdown": preview_markdown or context.markdown,
+        "request_path": _workspace_response_path(workspace_root, context.request_path),
+        "intake_path": _workspace_response_path(workspace_root, context.intake_path),
+        "consumed": context.consumed,
+        "editable": context.editable,
+        "disabled_reason": context.disabled_reason,
+        "destination": _workspace_response_path(workspace_root, context.request_path),
+    }
+
+
 def _follow_up_creation_payload(
     *,
     workspace_root: Path,
@@ -2572,6 +2592,55 @@ class OperatorUiService:
         )
         return {"created": created, "context": self._onboarding_state()["context"]}
 
+    def _get_operator_request_context(self) -> object:
+        context = self._onboarding_service().request_context(
+            raw_project_root=self.project_root,
+            work_item=self.work_item,
+        )
+        return _operator_request_context_payload(
+            workspace_root=self.workspace_root,
+            context=context,
+        )
+
+    def _post_operator_request_context(self, payload: dict[str, Any]) -> UiResponse:
+        mode = str(payload.get("mode", "preview")).strip().lower()
+        if mode not in {"preview", "write"}:
+            return _error_response("mode must be preview or write.")
+        request_text = str(payload.get("request_text", payload.get("request", "")))
+        if not request_text.strip():
+            return _error_response("request_text is required.")
+        service = self._onboarding_service()
+        current = service.request_context(
+            raw_project_root=self.project_root,
+            work_item=self.work_item,
+        )
+        if mode == "preview":
+            return _json_response(
+                {
+                    "mode": "preview",
+                    "request": _operator_request_context_payload(
+                        workspace_root=self.workspace_root,
+                        context=current,
+                        preview_markdown="# User request\n\n" f"{request_text.strip()}\n",
+                    ),
+                }
+            )
+        written = service.write_request_context(
+            raw_project_root=self.project_root,
+            work_item=self.work_item,
+            request_text=request_text,
+        )
+        return _json_response(
+            {
+                "mode": "write",
+                "persisted": True,
+                "request": _operator_request_context_payload(
+                    workspace_root=self.workspace_root,
+                    context=written,
+                ),
+            }
+        )
+
     def _selected_run_id_from_params(self, params: dict[str, list[str]]) -> str:
         run_id = _first_param(params, "run_id")
         if run_id:
@@ -2965,6 +3034,9 @@ class OperatorUiService:
             "/api/work-item/resume": lambda params: _json_response(
                 self._work_item_resume_context(params)
             ),
+            "/api/work-item/request": lambda params: _json_response(
+                self._get_operator_request_context()
+            ),
             "/api/run": self._get_run,
             "/api/dashboard": self._get_dashboard,
             "/api/run/timeline": lambda params: _json_response(
@@ -3239,6 +3311,7 @@ class OperatorUiService:
             "/api/onboarding/work-item": lambda payload: _json_response(
                 self._setup_onboarding_work_item(payload)
             ),
+            "/api/work-item/request": self._post_operator_request_context,
             "/api/answers": self._post_answer,
             "/api/stage/run": lambda payload: _json_response(
                 self._start_stage_job(payload)

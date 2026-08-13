@@ -427,6 +427,58 @@ function onboardingCanCreate() {
   );
 }
 
+function requestEditorPreviewMarkdown(text) {
+  const normalized = String(text || "").trim();
+  if (!normalized) return "";
+  return `# User request\n\n${normalized}\n`;
+}
+
+function previewOperatorRequest() {
+  const field = document.querySelector("[data-request-field]");
+  const panel = document.querySelector("[data-request-preview-panel]");
+  if (!field || !panel) return;
+  const markdown = requestEditorPreviewMarkdown(field.value);
+  if (!markdown) {
+    panel.hidden = false;
+    panel.textContent = "Request text is required before preview.";
+    return;
+  }
+  panel.hidden = false;
+  panel.innerHTML = `<pre data-request-preview-markdown>${escapeHtml(markdown)}</pre>`;
+}
+
+async function writeOperatorRequest() {
+  const field = document.querySelector("[data-request-field]");
+  const button = document.querySelector("[data-request-write]");
+  const status = document.querySelector("[data-request-write-status]");
+  const workItem = state.dashboard?.work_item || state.projectHome?.selected_work_item || "";
+  if (!field || !button || !workItem) return;
+  const requestText = field.value.trim();
+  if (!requestText) {
+    if (status) status.textContent = "Request text is required before writing.";
+    return;
+  }
+  button.disabled = true;
+  button.setAttribute("aria-busy", "true");
+  if (status) status.textContent = "Writing durable request context…";
+  try {
+    const payload = await postJson("/api/work-item/request", {
+      mode: "write",
+      request_text: requestText
+    });
+    state.requestContext = payload.request || payload;
+    if (status) status.textContent = "Request written to the durable context destination.";
+    await fetchProjectHome(workItem);
+    await fetchInbox();
+    await renderAll({skipArtifactLoad: true});
+  } catch (error) {
+    if (status) status.textContent = error.message || "Request write failed.";
+  } finally {
+    button.disabled = false;
+    button.removeAttribute("aria-busy");
+  }
+}
+
 function syncOnboardingCreateActionState() {
   const form = document.getElementById("onboardingCreateForm");
   if (!form) return;
