@@ -79,6 +79,24 @@ async function fetchProjectHome(workItem = "") {
   document.getElementById("appVersion").textContent = version.startsWith("v")
     ? version
     : `v${version || "dev"}`;
+  if (workItem) {
+    const requestGeneration = ++state.requestContextRequestGeneration;
+    state.requestContextError = "";
+    try {
+      const requestPayload = await api("/api/work-item/request");
+      if (requestGeneration === state.requestContextRequestGeneration) {
+        state.requestContext = requestPayload.request || requestPayload;
+      }
+    } catch (error) {
+      if (requestGeneration === state.requestContextRequestGeneration) {
+        state.requestContext = null;
+        state.requestContextError = error.message || "Request context unavailable.";
+      }
+    }
+  } else {
+    state.requestContext = null;
+    state.requestContextError = "";
+  }
   return true;
 }
 

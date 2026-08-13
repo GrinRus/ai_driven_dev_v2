@@ -114,6 +114,14 @@ function renderInboxSelectedContext(item) {
     : '<span class="inbox-item-no-action">No primary action available</span>';
   const context = [route.work_item, route.run_id, route.stage].filter(Boolean).join(" / ");
   const progress = projectItem ? inboxProjectProgressText(projectItem) : item.status_label;
+  const requestContext = state.requestContext?.work_item === route.work_item
+    ? state.requestContext
+    : null;
+  const requestEditor = requestContext
+    ? renderOperatorRequestEditor(requestContext)
+    : state.requestContextError
+      ? `<p class="form-error" data-request-context-error>${escapeHtml(state.requestContextError)}</p>`
+      : "";
   return `
     <aside class="surface inbox-selected-context" data-inbox-inspector data-inbox-selected-context="${escapeHtml(route.work_item)}" aria-label="Selected Work Item">
       <div class="inbox-selected-context-head">
@@ -128,7 +136,33 @@ function renderInboxSelectedContext(item) {
         <div><dt>Progress</dt><dd>${escapeHtml(progress)}</dd></div>
       </dl>
       <div class="inbox-selected-context-action">${actionMarkup}</div>
+      ${requestEditor}
     </aside>
+  `;
+}
+
+function renderOperatorRequestEditor(context) {
+  const disabled = context.editable !== true;
+  const disabledReason = context.disabled_reason || "Request context is not editable.";
+  return `
+    <section class="operator-request-editor" data-request-editor data-request-consumed="${context.consumed ? "true" : "false"}">
+      <div class="surface-title compact">
+        <span>Work Item request</span>
+        <span class="small-badge">${context.consumed ? "consumed" : "editable"}</span>
+      </div>
+      <p class="muted">Edit the operator-owned request before the first consuming run. Generated stage documents remain read-only.</p>
+      <label class="field-label" for="operatorWorkItemRequest">Request Markdown</label>
+      <textarea id="operatorWorkItemRequest" data-request-field rows="7" maxlength="20000" ${disabled ? "disabled aria-disabled=\"true\"" : ""}>${escapeHtml(context.request_text || "")}</textarea>
+      ${disabled ? `<p class="form-readiness-note" data-request-disabled-reason>${escapeHtml(disabledReason)}</p>` : `
+        <div class="setup-actions">
+          <button type="button" class="secondary" data-request-preview>Preview</button>
+          <button type="button" data-request-write>Write request</button>
+        </div>
+        <div class="markdown-preview" data-request-preview-panel hidden aria-live="polite"></div>
+        <p class="form-readiness-note" data-request-write-status role="status"></p>
+      `}
+      <small>${escapeHtml(context.destination || context.request_path || "context/user-request.md")}</small>
+    </section>
   `;
 }
 

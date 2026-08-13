@@ -10,6 +10,7 @@ from aidd.core.project_set import (
     persist_project_set_context,
     resolve_project_set,
 )
+from aidd.core.run_store import RUN_MANIFEST_FILENAME, work_item_runs_root
 from aidd.core.workspace import (
     WORKITEM_CONTEXT_USER_REQUEST_FILENAME,
     WORKITEM_METADATA_FILENAME,
@@ -42,6 +43,40 @@ class OnboardingWorkItemCreation:
     work_item_root: Path
     seeded_context: WorkItemContextSeedResult | None
     project_set_context_path: Path | None = None
+
+
+@dataclass(frozen=True, slots=True)
+class OperatorRequestContext:
+    """The operator-owned request boundary exposed by the local UI service."""
+
+    work_item: str
+    request_text: str
+    request_path: Path
+    intake_path: Path
+    consumed: bool
+    editable: bool
+    disabled_reason: str | None = None
+
+    @property
+    def markdown(self) -> str:
+        return "# User request\n\n" f"{self.request_text}\n"
+
+
+def _request_body(markdown: str) -> str:
+    lines = markdown.splitlines()
+    if lines and lines[0].strip().lower() == "# user request":
+        lines = lines[1:]
+    return "\n".join(lines).strip()
+
+
+def _request_context_consumed(*, workspace_root: Path, work_item: str) -> bool:
+    runs_root = work_item_runs_root(workspace_root=workspace_root, work_item=work_item)
+    if not runs_root.is_dir():
+        return False
+    return any(
+        child.is_dir() and (child / RUN_MANIFEST_FILENAME).is_file()
+        for child in runs_root.iterdir()
+    )
 
 
 @dataclass(frozen=True, slots=True)
@@ -106,6 +141,69 @@ class OnboardingService:
             work_item_root=work_item_root,
             seeded_context=seeded_context,
             project_set_context_path=project_set_context_path,
+        )
+
+    def request_context(
+        self,
+        *,
+        raw_project_root: str | Path,
+        work_item: str,
+    ) -> OperatorRequestContext:
+        normalized_work_item = self._normalize_work_item(work_item)
+        project = self.inspect_project(raw_project_root)
+        context_root = work_item_context_root(
+            root=project.workspace_root,
+            work_item=normalized_work_item,
+        )
+        request_path = context_root / WORKITEM_CONTEXT_USER_REQUEST_FILENAME
+        intake_path = context_root / "intake.md"
+        if request_path.exists():
+            try:
+                request_text = _request_body(request_path.read_text(encoding="utf-8"))
+            except UnicodeDecodeError as exc:
+                raise ValueError("Request context is not valid UTF-8 Markdown.") from exc
+        else:
+            request_text = ""
+        consumed = _request_context_consumed(
+            workspace_root=project.workspace_root,
+            work_item=normalized_work_item,
+        )
+        return OperatorRequestContext(
+            work_item=normalized_work_item,
+            request_text=request_text,
+            request_path=request_path,
+            intake_path=intake_path,
+            consumed=consumed,
+            editable=not consumed,
+            disabled_reason=(
+                "The request was consumed by an existing run; create a revision or intervention."
+                if consumed
+                else None
+            ),
+        )
+
+    def write_request_context(
+        self,
+        *,
+        raw_project_root: str | Path,
+        work_item: str,
+        request_text: str,
+    ) -> OperatorRequestContext:
+        context = self.request_context(raw_project_root=raw_project_root, work_item=work_item)
+        if context.consumed:
+            raise FileExistsError(context.disabled_reason or "Request context is consumed.")
+        project = self.inspect_project(raw_project_root)
+        bootstrap = WorkspaceBootstrapService(root=project.workspace_root)
+        bootstrap.bootstrap_work_item(work_item=context.work_item)
+        bootstrap.seed_request_context(
+            work_item=context.work_item,
+            request_text=request_text,
+            project_root=project.project_root,
+            force=True,
+        )
+        return self.request_context(
+            raw_project_root=project.project_root,
+            work_item=context.work_item,
         )
 
     def resolve_project_set(

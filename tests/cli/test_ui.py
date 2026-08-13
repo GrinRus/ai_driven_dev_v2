@@ -1809,7 +1809,7 @@ def test_ui_onboarding_can_resume_existing_project_work_item(
             },
         )
     )
-    service = _onboarding_service(tmp_path, monkeypatch)
+    service = _service(project_root / ".aidd")
 
     inspect_payload = _payload(
         service.handle_post("/api/onboarding/project", {"project_root": "project"})
@@ -1978,7 +1978,7 @@ def test_ui_onboarding_create_requires_request_and_safe_work_item_id(
 ) -> None:
     project_root = tmp_path / "project"
     project_root.mkdir()
-    service = _onboarding_service(tmp_path, monkeypatch)
+    service = _service(project_root / ".aidd")
 
     missing_request = service.handle_post(
         "/api/onboarding/work-item",
@@ -2001,6 +2001,111 @@ def test_ui_onboarding_create_requires_request_and_safe_work_item_id(
     assert _error_payload(missing_request)["error"] == "request is required."
     assert "work_item" in _error_payload(unsafe_work_item)["error"]  # type: ignore[operator]
     assert not (project_root / ".aidd" / "WI-ESCAPE").exists()
+
+
+def test_ui_request_context_supports_preview_write_and_durable_readback(
+    tmp_path: Path,
+    monkeypatch: Any,
+) -> None:
+    project_root = tmp_path / "project"
+    project_root.mkdir()
+    creator = _onboarding_service(tmp_path, monkeypatch)
+    _payload(
+        creator.handle_post(
+            "/api/onboarding/work-item",
+            {
+                "action": "create",
+                "project_root": "project",
+                "work_item": "WI-REQUEST",
+                "request": "Initial operator request.",
+            },
+        )
+    )
+    service = OperatorUiService(
+        UiServerOptions(
+            work_item="WI-REQUEST",
+            root=project_root / ".aidd",
+            config=Path("aidd.test.toml"),
+            host="127.0.0.1",
+            port=0,
+        )
+    )
+
+    current = _payload(service.handle_get("/api/work-item/request", {}))
+    assert current["request_text"] == "Initial operator request."
+    assert current["editable"] is True
+    assert current["consumed"] is False
+
+    preview = _payload(
+        service.handle_post(
+            "/api/work-item/request",
+            {"mode": "preview", "request_text": "Preview without persistence."},
+        )
+    )
+    assert preview["mode"] == "preview"
+    assert "Preview without persistence." in preview["request"]["request_markdown"]  # type: ignore[index]
+    assert current["request_path"] == preview["request"]["request_path"]  # type: ignore[index]
+
+    written = _payload(
+        service.handle_post(
+            "/api/work-item/request",
+            {"mode": "write", "request_text": "Persist the revised request."},
+        )
+    )
+    assert written["persisted"] is True
+    request_path = project_root / ".aidd" / written["request"]["request_path"]  # type: ignore[index]
+    assert request_path.read_text(encoding="utf-8") == (
+        "# User request\n\nPersist the revised request.\n"
+    )
+    readback = _payload(service.handle_get("/api/work-item/request", {}))
+    assert readback["request_text"] == "Persist the revised request."
+
+
+def test_ui_request_context_is_fail_closed_after_consuming_run(
+    tmp_path: Path,
+    monkeypatch: Any,
+) -> None:
+    project_root = tmp_path / "project"
+    project_root.mkdir()
+    creator = _onboarding_service(tmp_path, monkeypatch)
+    _payload(
+        creator.handle_post(
+            "/api/onboarding/work-item",
+            {
+                "action": "create",
+                "project_root": "project",
+                "work_item": "WI-CONSUMED",
+                "request": "Consumed request.",
+            },
+        )
+    )
+    run_root = project_root / ".aidd" / "reports" / "runs" / "WI-CONSUMED" / "run-1"
+    run_root.mkdir(parents=True)
+    run_root.joinpath("run-manifest.json").write_text("{}\n", encoding="utf-8")
+    service = OperatorUiService(
+        UiServerOptions(
+            work_item="WI-CONSUMED",
+            root=project_root / ".aidd",
+            config=Path("aidd.test.toml"),
+            host="127.0.0.1",
+            port=0,
+        )
+    )
+
+    context = _payload(service.handle_get("/api/work-item/request", {}))
+    assert context["consumed"] is True
+    assert context["editable"] is False
+    assert "revision or intervention" in context["disabled_reason"]  # type: ignore[operator]
+
+    response = service.handle_post(
+        "/api/work-item/request",
+        {"mode": "write", "request_text": "Must not rewrite history."},
+    )
+    assert response.status == HTTPStatus.CONFLICT
+    assert "revision or intervention" in _error_payload(response)["error"]  # type: ignore[operator]
+    assert "Consumed request." in (
+        project_root / ".aidd" / "workitems" / "WI-CONSUMED" / "context" / "user-request.md"
+    ).read_text(encoding="utf-8")
 
 
 def test_ui_service_persists_answer_through_operator_service(tmp_path: Path) -> None:
