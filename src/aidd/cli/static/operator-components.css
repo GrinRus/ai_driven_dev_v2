@@ -3370,6 +3370,21 @@ button.artifact-row:not(:disabled):not([aria-disabled="true"]):hover {
   margin-bottom: 4px;
   overflow-wrap: anywhere;
 }
+.workbench-toc-list a,
+.finding-anchor {
+  color: var(--teal-dark);
+  text-decoration: underline;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 2px;
+}
+.finding-anchor {
+  display: inline-block;
+  font-size: var(--type-caption-size);
+  margin-top: var(--space-1);
+}
+.document-canvas pre [data-finding-anchor="line"] {
+  overflow-wrap: anywhere;
+}
 .workbench-toc-list .toc-level-1 {
   color: var(--text);
   font-weight: 800;

@@ -107,3 +107,34 @@ test("bounded Source keeps explicit truncation semantics", async () => {
   assert.match(html, /bounded/);
   assert.match(html, /Open the folder for the full file/);
 });
+
+test("Document map and Source expose stable heading and line anchors without synthetic history", async () => {
+  const context = await canvasContext();
+  context.renderMarkdown = () => "<h1>QA</h1><h2>Verdict</h2>";
+  context.workbench = {
+    ...workbench,
+    validation_results: [{label: "QA finding", status: "failed", line_number: 2, detail: "Needs review"}],
+    document: {
+      ...workbench.document,
+      preview: {text: "# QA\n\n## Verdict\npass", content_type: "text/markdown", truncated: false},
+      source: {text: "# QA\nline two\n## Verdict", content_type: "text/markdown", truncated: false},
+    },
+  };
+  let html = vm.runInContext('state.artifactViewMode = "preview"; renderStudioDocumentCanvas(workbench)', context);
+  assert.match(html, /href="#finding-qa-1"/);
+  assert.match(html, /id="finding-qa-1"/);
+  assert.match(html, /id="finding-verdict-2"/);
+  assert.doesNotMatch(html, /Write|Edit/);
+  assert.match(vm.runInContext("renderValidationResults(workbench.validation_results)", context), /href="#line-2"/);
+  html = vm.runInContext('state.artifactViewMode = "source"; renderStudioDocumentCanvas(workbench)', context);
+  assert.match(html, /data-source-rendering="exact-bounded-source"/);
+  assert.match(html, /id="line-2"/);
+});
+
+test("Compare is unavailable unless an earlier retained attempt is named", async () => {
+  const context = await canvasContext();
+  context.workbench = {...workbench, versions: []};
+  const html = vm.runInContext("renderDocumentReaderControls(workbench)", context);
+  assert.match(html, /data-artifact-mode="compare"[^>]*disabled/);
+  assert.match(html, /aria-disabled="true"/);
+});
