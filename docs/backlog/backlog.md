@@ -7,7 +7,7 @@ slice, and local task.
 
 ## Next
 
-- `W42-E4-S2-T2` — Add the structured Markdown answer workflow.
+- `W42-E4-S2-T3` — Unify intervention, remediation, follow-up, and clone Markdown drafts.
 
 ## Soon
 
@@ -121,6 +121,13 @@ slice, and local task.
   intervention. Focused request-context tests, UI asset contracts, full frontend tests, Python
   matrix, deterministic/adapter checks, and packaged browser acceptance passed. `W42-E4-S2-T2`
   is now the only Next task.
+
+- `2026-08-13` `W42-E4-S2-T2` is complete in PR #195 (merge `b4176882`). Answers now support
+  resolved/partial/deferred resolution, question context, evidence links, unblock consequence,
+  browser-session drafts, non-mutating `answers.md` Preview, and durable Write/readback through
+  the existing answer service. Invalid QIDs and resolution values fail closed; focused core/CLI
+  tests, 123 frontend tests, full Python matrix, deterministic/adapter checks, and packaged
+  browser acceptance passed. `W42-E4-S2-T3` is now the only Next task.
 
 - `2026-08-12` `W42-E2-S1-T3` is complete. Work Item Overview/Tasks/Documents/Runs tabs now
   persist through canonical routes, keyboard focus, and reload; the active shell renders the
