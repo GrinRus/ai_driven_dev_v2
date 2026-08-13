@@ -4158,6 +4158,12 @@ def test_ui_runtime_readiness_endpoint_exposes_probe_and_config_data(
                 execution_command_available=False,
                 provider_version="Python <3>",
                 provider_command="/usr/bin/python",
+                observed_at_utc=(
+                    datetime.now(UTC)
+                    .replace(microsecond=0)
+                    .isoformat()
+                    .replace("+00:00", "Z")
+                ),
             )
         }
 
@@ -4191,6 +4197,10 @@ def test_ui_runtime_readiness_endpoint_exposes_probe_and_config_data(
     assert generic_cli["provider_version"] == "Python <3>"
     assert generic_cli["provider_command"] == "/usr/bin/python"
     assert generic_cli["execution_command_available"] is False
+    assert len(generic_cli["config_identity"]) == 64
+    assert generic_cli["probe_observed_at_utc"]
+    assert generic_cli["eligible"] is False
+    assert generic_cli["disabled_reason"] == "Runtime execution command is unavailable."
     assert generic_cli["binary"] == {
         "command": "/usr/bin/python",
         "status": "detected",

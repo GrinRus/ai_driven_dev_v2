@@ -144,6 +144,7 @@ from aidd.core.runtime_readiness import (
     RuntimeReadinessProbeReport,
     RuntimeReadinessView,
     resolve_runtime_readiness,
+    runtime_config_identity,
 )
 from aidd.core.stage_paths import workspace_relative_path
 from aidd.core.stage_registry import DEFAULT_STAGE_CONTRACTS_ROOT
@@ -1969,6 +1970,11 @@ def _collect_runtime_readiness_probe_reports(
                     supports_live_decisions=provider_report.supports_live_decisions,
                     preferred_transport=provider_report.preferred_transport,
                 ),
+                config_identity=runtime_config_identity(
+                    runtime_id=runtime_id,
+                    runtime_config=runtime_config,
+                ),
+                observed_at_utc=_format_utc_timestamp(datetime.now(UTC)),
             ),
         )
 
