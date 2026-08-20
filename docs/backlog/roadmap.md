@@ -14264,7 +14264,7 @@ Dependencies: `W42-E5-S2` and `W42-E6-S1`.
 
 Local tasks:
 
-- `W42-E6-S2-T1` (next) Render immutable handoff, final evidence, and next outcomes.
+- `W42-E6-S2-T1` (done) Render immutable handoff, final evidence, and next outcomes.
   - Scope: delivered scope, verification, known limitations, repository state, final documents,
     QA result, run ids, retained evidence, one core-recommended action, and quieter alternatives.
   - Verification: fixtures prove fresh-QA gating, stale/failed exclusion, source-run immutability,
@@ -14290,7 +14290,7 @@ Dependencies: each owning Wave 42 surface slice before its corresponding fixture
 
 Local tasks:
 
-- `W42-E7-S1-T1` (planned) Add provider-free routes for all 13 target surfaces.
+- `W42-E7-S1-T1` (next) Add provider-free routes for all 13 target surfaces.
   - Scope: canonical fixture payloads for project work, create, launch, tasks, active attempt,
     decision, validation repair, Markdown, implementation review, remediation, history,
     completion, and mobile decision.
