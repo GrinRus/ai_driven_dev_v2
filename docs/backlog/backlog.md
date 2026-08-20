@@ -7,7 +7,7 @@ slice, and local task.
 
 ## Next
 
-- `W42-E6-S1-T1` — Render the run list, retained attempts, exact timeline, and lineage.
+- `W42-E6-S2-T1` — Render immutable handoff, final evidence, and next outcomes.
 
 ## Soon
 
@@ -35,6 +35,13 @@ slice, and local task.
   queue-restoration policy in `docs/backlog/roadmap.md` (`W8-E3-S1`).
 
 ## Current reconciliation
+
+- `2026-08-20` `W42-E6-S1-T1` is complete in PR #207 (merge `118c8c23`). Runs and Attempts now
+  expose a bounded Work Item run list, retained attempt metadata, durable timeline events,
+  artifacts, hashes, copy ids, lineage, filters, and compare gating without a Runner selector
+  on read-only History. Core timeline/service tests, frontend tests, UI contracts, Ruff, mypy,
+  five-viewport browser History journeys, and full CI passed. `W42-E6-S2-T1` is now the only Next
+  task.
 
 - `2026-08-20` `W42-E5-S2-T2` is complete in PR #205 (merge `1b728c2f`). Review and QA now
   expose selectable findings and risks with exact source evidence, durable browser-session
