@@ -326,6 +326,7 @@ test("Studio implementation gate preserves canonical readiness and finalization 
     },
   });
   await load(context, "operator-quality-gates.js");
+  await load(context, "operator-control-center.js");
   const html = vm.runInContext(`renderStudioImplementationQualityGate({
     tasks: [
       {id: "TL-1", title: "First", status: "pending", ready: true, dependencies: [], attempts: []},
@@ -461,6 +462,7 @@ test("Studio Review and QA gates render exact upstream identities and blockers",
     },
   });
   await load(context, "operator-quality-gates.js");
+  await load(context, "operator-control-center.js");
   const review = vm.runInContext(`renderStudioReviewQualityGate({
     approval_status: "rejected",
     warnings: [],
@@ -477,6 +479,10 @@ test("Studio Review and QA gates render exact upstream identities and blockers",
   assert.match(review, /data-review-finding="RV-7"/);
   assert.match(review, /Acceptance: AC-2/);
   assert.match(review, /Evidence: EV-4 · implementation-report.md/);
+  assert.match(review, /Source evidence: EV-4 · implementation-report.md/);
+  assert.match(review, /Related paths: src\/app.py/);
+  assert.match(review, /data-remediation-write-preview/);
+  assert.match(review, /Destination: \.aidd\/workitems\/no-work-item\/remediations\/run-quality\/request-####\.md/);
   assert.match(review, /data-quality-gate-blocker/);
   assert.match(review, /data-proceed-stage="qa"[^>]*disabled/);
 
@@ -488,12 +494,14 @@ test("Studio Review and QA gates render exact upstream identities and blockers",
     acceptance_ids: ["AC-2"],
     evidence_references: ["EV-4", "verification.md"],
     warnings: []
-  }, [{id: "risk-1", kind: "risk", label: "Retry remains unverified"}])`, context);
+  }, [{id: "risk-1", kind: "risk", label: "Retry remains unverified", evidence: ["EV-4", "verification.md"]}])`, context);
   assert.match(qa, /data-qa-verdict="not-ready"/);
   assert.match(qa, /Acceptance: AC-2/);
   assert.match(qa, /Evidence: EV-4, verification.md/);
   assert.match(qa, /Residual risk · Retry remains unverified/);
   assert.match(qa, /Known issue · QAI-1/);
+  assert.match(qa, /Source evidence: EV-4, verification.md/);
+  assert.match(qa, /data-remediation-write-preview/);
   assert.match(qa, /data-accept-qa[^>]*disabled/);
 
   context.state.activeJobStatus = {kind: "remediation", stage: "implement", status: "running"};

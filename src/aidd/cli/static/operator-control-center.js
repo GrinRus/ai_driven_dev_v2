@@ -267,6 +267,100 @@ function checkedRemediationIds(sourceStage) {
     .filter(Boolean);
 }
 
+function remediationDraftIdentity(sourceStage) {
+  if (typeof operatorPurposeDraftIdentity === "function") {
+    return operatorPurposeDraftIdentity("remediation", sourceStage);
+  }
+  return operatorDraftIdentity("intervention", sourceStage);
+}
+
+function readRemediationDraft(sourceStage) {
+  if (typeof readOperatorDraft !== "function") return null;
+  try {
+    return readOperatorDraft(remediationDraftIdentity(sourceStage));
+  } catch (_error) {
+    return null;
+  }
+}
+
+function remediationDraftDestination() {
+  return `.aidd/workitems/${state.dashboard?.work_item || state.activeRouteWorkItem || "no-work-item"}/remediations/${state.activeRunId || "no-run"}/request-####.md`;
+}
+
+function remediationPreviewMarkdown(sourceStage, ids, note) {
+  const sourceLabel = sourceStage === "review" ? "Review finding" : "QA risk or issue";
+  return [
+    "# Remediation Request",
+    "",
+    `- Source stage: ${sourceStage}`,
+    `- Target stage: implement`,
+    "",
+    "## Selected source ids",
+    "",
+    ...(ids.length ? ids.map((id) => `- ${id}`) : ["- none selected"]),
+    "",
+    "## Operator note",
+    "",
+    note || `Select at least one ${sourceLabel.toLowerCase()} before writing.`,
+    "",
+    "## Runtime instruction",
+    "",
+    "Fix only the selected findings or risks and record verification evidence in implementation-report.md.",
+    ""
+  ].join("\n");
+}
+
+function renderRemediationDraftPreview(sourceStage, {destination = null} = {}) {
+  const draft = readRemediationDraft(sourceStage);
+  const ids = draft?.value?.source_ids || [];
+  const note = draft?.value?.text || "";
+  return `
+    <details class="remediation-draft-preview" data-remediation-write-preview open>
+      <summary>Markdown Write/Preview</summary>
+      <div class="compact-list" data-remediation-destination>
+        <span>Destination: ${escapeHtml(destination || remediationDraftDestination())}</span>
+        <span>Durable destination is assigned by the service on write; generated stage documents remain read-only.</span>
+      </div>
+      <pre data-remediation-preview>${escapeHtml(remediationPreviewMarkdown(sourceStage, ids, note))}</pre>
+    </details>
+  `;
+}
+
+function persistRemediationDraft(sourceStage) {
+  if (typeof writeOperatorDraft !== "function") return;
+  const noteInput = document.querySelector(`[data-remediation-note="${sourceStage}"]`);
+  const value = typeof operatorPurposeDraftValue === "function"
+    ? operatorPurposeDraftValue("remediation", {
+      text: String(noteInput?.value || ""),
+      source_ids: checkedRemediationIds(sourceStage),
+      source_stage: sourceStage,
+      destination: remediationDraftDestination(),
+      source_evidence: checkedRemediationIds(sourceStage)
+    })
+    : {
+      text: String(noteInput?.value || ""),
+      source_ids: checkedRemediationIds(sourceStage),
+      source_stage: sourceStage,
+      destination: remediationDraftDestination()
+    };
+  try {
+    writeOperatorDraft(remediationDraftIdentity(sourceStage), value);
+  } catch (_error) {
+    // Keep the in-memory form usable if a bounded browser-session store is unavailable.
+  }
+}
+
+function updateRemediationPreview(sourceStage) {
+  const preview = document.querySelector("[data-remediation-preview]");
+  if (!preview) return;
+  const noteInput = document.querySelector(`[data-remediation-note="${sourceStage}"]`);
+  preview.textContent = remediationPreviewMarkdown(
+    sourceStage,
+    checkedRemediationIds(sourceStage),
+    String(noteInput?.value || "").trim()
+  );
+}
+
 function renderRemediationRuntimeGuard(sourceStage, hasRemediationItems) {
   if (!hasRemediationItems || selectedRuntimeReady()) return "";
   const label = sourceStage === "review" ? "review findings" : "QA risks or issues";
@@ -298,6 +392,7 @@ async function launchRemediation(sourceStage) {
   }
   const noteInput = document.querySelector(`[data-remediation-note="${sourceStage}"]`);
   const operatorNote = String(noteInput?.value || "").trim() || `Fix selected ${sourceStage} findings.`;
+  persistRemediationDraft(sourceStage);
   const payload = {
     source_stage: sourceStage,
     source_ids: ids,
@@ -342,8 +437,18 @@ async function renderQaVerdict() {
     const risks = view.residual_risks || [];
     const issues = view.known_issues || [];
     const sourceItems = [
-      ...risks.map((item, index) => ({id: `risk-${index + 1}`, label: item, kind: "risk"})),
-      ...issues.map((item, index) => ({id: `issue-${index + 1}`, label: item, kind: "issue"}))
+      ...risks.map((item, index) => ({
+        id: `risk-${index + 1}`,
+        label: item,
+        kind: "risk",
+        evidence: view.evidence_references || view.evidence_ids || []
+      })),
+      ...issues.map((item, index) => ({
+        id: `issue-${index + 1}`,
+        label: item,
+        kind: "issue",
+        evidence: view.evidence_references || view.evidence_ids || []
+      }))
     ];
     content.innerHTML = renderStudioQaQualityGate(view, sourceItems);
   } catch (error) {

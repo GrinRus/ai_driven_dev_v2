@@ -788,6 +788,11 @@ document.addEventListener("change", async (event) => {
     persistInterventionDraft();
     updateInterventionPreview();
   }
+  const remediationSource = event.target.closest("[data-remediation-source]")?.dataset.remediationSource;
+  if (remediationSource) {
+    persistRemediationDraft(remediationSource);
+    updateRemediationPreview(remediationSource);
+  }
   const sourceSelection = event.target.closest("[data-source-selection-id]");
   if (sourceSelection) {
     setSourceFindingSelection(sourceSelection.dataset.sourceSelectionId, sourceSelection.checked);
@@ -842,6 +847,11 @@ document.addEventListener("input", (event) => {
   if (event.target.id === "operatorRequestText") {
     persistInterventionDraft();
     updateInterventionPreview();
+  }
+  const remediationNote = event.target.closest("[data-remediation-note]")?.dataset.remediationNote;
+  if (remediationNote) {
+    persistRemediationDraft(remediationNote);
+    updateRemediationPreview(remediationNote);
   }
   const questionText = event.target.closest("[data-question-text]")?.dataset.questionText;
   if (questionText) {
