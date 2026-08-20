@@ -14290,13 +14290,13 @@ Dependencies: each owning Wave 42 surface slice before its corresponding fixture
 
 Local tasks:
 
-- `W42-E7-S1-T1` (next) Add provider-free routes for all 13 target surfaces.
+- `W42-E7-S1-T1` (done) Add provider-free routes for all 13 target surfaces.
   - Scope: canonical fixture payloads for project work, create, launch, tasks, active attempt,
     decision, validation repair, Markdown, implementation review, remediation, history,
     completion, and mobile decision.
   - Verification: one manifest test proves every target filename maps to a loadable fixture with
     no network, provider credentials, clock drift, or random ids.
-- `W42-E7-S1-T2` (planned) Add shared interaction-state and accessibility contracts.
+- `W42-E7-S1-T2` (next) Add shared interaction-state and accessibility contracts.
   - Scope: loading, empty, partial, error, disabled, selected, pending, conflict, success, offline,
     reconnecting, permission denied, focus, keyboard, target size, and accessible names.
   - Verification: frontend tests exercise the applicable state matrix for every shared component
