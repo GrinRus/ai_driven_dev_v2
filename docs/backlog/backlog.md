@@ -7,7 +7,7 @@ slice, and local task.
 
 ## Next
 
-- `W42-E7-S2-T1` — Run the target browser journey matrix at all supported viewports.
+- `W42-E7-S2-T2` — Observe and reconcile a first-time operator journey before cutover.
 
 ## Soon
 
@@ -35,6 +35,13 @@ slice, and local task.
   queue-restoration policy in `docs/backlog/roadmap.md` (`W8-E3-S1`).
 
 ## Current reconciliation
+
+- `2026-08-20` `W42-E7-S2-T1` is complete in PR #215 (merge `101a1f38`). Wave 42 now has a
+  declarative `wave42-responsive-browser-matrix-v1` registry covering eight journeys across
+  `320x568`, `390x844`, `768x1024`, `1280x900`, and `1440x900`, with provider-free canonical
+  routes, first-action bounds, accessibility/geometry checks, diagnostics, screenshots, and
+  bounded cleanup evidence. The matrix passed locally and in packaged UI CI; Flow Complete
+  evidence no longer creates nested scroll owners. `W42-E7-S2-T2` is now the only Next task.
 
 - `2026-08-20` `W42-E7-S1-T2` is complete in PR #213 (merge `85e72ec9`). Operator UI shared
   primitives now publish a shared-v1 interaction contract for loading, empty, partial, error,
