@@ -35,6 +35,82 @@ const RECOVERY_SUMMARY_KINDS = new Set([
   "intervention",
   "quality-gate"
 ]);
+const SHARED_INTERACTION_STATES = Object.freeze([
+  "loading",
+  "empty",
+  "partial",
+  "error",
+  "disabled",
+  "selected",
+  "pending",
+  "conflict",
+  "success",
+  "offline",
+  "unavailable",
+  "reconnecting",
+  "permission-denied",
+  "focus",
+  "keyboard"
+]);
+const SHARED_INTERACTION_STATE_CONTRACT = Object.freeze({
+  loading: Object.freeze({role: "status", live: "polite", busy: true}),
+  empty: Object.freeze({role: "status", live: "polite", busy: false}),
+  partial: Object.freeze({role: "status", live: "polite", busy: false}),
+  error: Object.freeze({role: "alert", live: "assertive", busy: false}),
+  disabled: Object.freeze({role: "status", live: "polite", busy: false}),
+  selected: Object.freeze({role: "status", live: "polite", busy: false}),
+  pending: Object.freeze({role: "status", live: "polite", busy: true}),
+  conflict: Object.freeze({role: "alert", live: "assertive", busy: false}),
+  success: Object.freeze({role: "status", live: "polite", busy: false}),
+  offline: Object.freeze({role: "status", live: "polite", busy: false}),
+  unavailable: Object.freeze({role: "status", live: "polite", busy: false}),
+  reconnecting: Object.freeze({role: "status", live: "polite", busy: true}),
+  "permission-denied": Object.freeze({role: "alert", live: "assertive", busy: false}),
+  focus: Object.freeze({role: "status", live: "polite", busy: false}),
+  keyboard: Object.freeze({role: "status", live: "polite", busy: false})
+});
+
+function sharedInteractionState(value) {
+  const stateName = String(value || "").trim();
+  if (!SHARED_INTERACTION_STATE_CONTRACT[stateName]) {
+    throw new Error(`Unknown shared interaction state: ${stateName || "empty"}`);
+  }
+  return stateName;
+}
+
+function validateSharedInteractionContract({
+  state,
+  accessibleName,
+  statusText,
+  primaryActionCount = 0,
+  statusUsesColorOnly = false,
+  clipped = false,
+  focusLost = false
+} = {}) {
+  const stateName = sharedInteractionState(state);
+  if (!String(accessibleName || "").trim()) {
+    throw new Error("Shared interaction surface requires an accessible name");
+  }
+  if (!String(statusText || "").trim()) {
+    throw new Error("Shared interaction surface requires visible status text");
+  }
+  if (primaryActionCount > 1) {
+    throw new Error("Shared interaction surface allows one primary action");
+  }
+  if (statusUsesColorOnly) {
+    throw new Error("Shared interaction status requires text, not color alone");
+  }
+  if (clipped) {
+    throw new Error("Shared interaction labels must fit their rendered bounds");
+  }
+  if (focusLost) {
+    throw new Error("Shared interaction surface must preserve focus");
+  }
+  return Object.freeze({
+    state: stateName,
+    ...SHARED_INTERACTION_STATE_CONTRACT[stateName]
+  });
+}
 
 function decisionBarState(value) {
   const stateName = String(value || "").trim();
@@ -51,7 +127,7 @@ function renderStatusMarker({status, label}) {
   return `
     <span class="status-marker" data-status="${escapeHtml(stateName)}">
       <span class="status-marker-symbol" aria-hidden="true"></span>
-      <span>${escapeHtml(visibleLabel)}</span>
+      <span data-status-text>${escapeHtml(visibleLabel)}</span>
     </span>
   `;
 }
@@ -61,7 +137,7 @@ function renderPrimaryActionSlot({primaryAction = null, guidance = ""} = {}) {
     ? primaryAction
     : null;
   const content = action
-    ? `<button class="decision-bar-primary-action" data-decision-action="${escapeHtml(action.action)}" type="button" ${action.enabled === false ? 'disabled aria-disabled="true"' : ""}>${escapeHtml(action.label)}</button>`
+    ? `<button class="decision-bar-primary-action" data-primary-action data-decision-action="${escapeHtml(action.action)}" type="button" ${action.enabled === false ? 'disabled aria-disabled="true"' : ""}>${escapeHtml(action.label)}</button>`
     : `<span class="decision-bar-no-action">${escapeHtml(guidance || "No action available")}</span>`;
   return `<div class="decision-bar-primary-slot" data-primary-slot>${content}</div>`;
 }
@@ -78,9 +154,23 @@ function renderDecisionBar({
   legacyTone = ""
 }) {
   const stateName = decisionBarState(status);
+  const sharedState = {
+    action: "selected",
+    "no-action": "disabled",
+    pending: "pending",
+    blocked: "error",
+    complete: "success",
+    stale: "conflict"
+  }[stateName];
+  validateSharedInteractionContract({
+    state: sharedState,
+    accessibleName: title,
+    statusText: statusLabel,
+    primaryActionCount: primaryAction ? 1 : 0
+  });
   const legacyClass = legacyTone ? ` decision-summary ${escapeHtml(legacyTone)}` : "";
   return `
-    <section class="decision-bar${legacyClass}" data-decision-bar="${escapeHtml(kind)}" data-state="${escapeHtml(stateName)}" role="status" aria-live="polite">
+    <section class="decision-bar${legacyClass}" data-decision-bar="${escapeHtml(kind)}" data-state="${escapeHtml(stateName)}" data-interaction-region role="status" aria-live="polite">
       <div class="decision-bar-copy decision-summary-copy">
         ${renderStatusMarker({status: stateName, label: statusLabel})}
         <strong>${escapeHtml(title)}</strong>
@@ -104,7 +194,7 @@ function renderDecisionBar({
 
 function renderStateSurface({kind, state: requestedState, title, consequence, recovery = null}) {
   const stateName = String(requestedState || "").trim();
-  if (!STATE_SURFACE_STATES.has(stateName)) {
+  if (!STATE_SURFACE_STATES.has(stateName) && !SHARED_INTERACTION_STATE_CONTRACT[stateName]) {
     throw new Error(`Unknown state surface: ${stateName || "empty"}`);
   }
   const visibleTitle = String(title || "").trim();
@@ -112,16 +202,22 @@ function renderStateSurface({kind, state: requestedState, title, consequence, re
   if (!visibleTitle || !visibleConsequence) {
     throw new Error("State surface requires a title and consequence");
   }
-  const waiting = stateName === "loading" || stateName === "reconnecting";
-  const role = stateName === "error" ? "alert" : "status";
-  const live = stateName === "error" ? "assertive" : "polite";
+  const contract = validateSharedInteractionContract({
+    state: stateName === "unavailable" ? "unavailable" : stateName,
+    accessibleName: visibleTitle,
+    statusText: stateName
+  });
+  const waiting = contract.busy;
+  const role = contract.role;
+  const live = contract.live;
   const recoveryAction = recovery && String(recovery.action || "").trim()
     ? `<button data-state-recovery="${escapeHtml(recovery.action)}" type="button" ${recovery.enabled === false ? 'disabled aria-disabled="true"' : ""}>${escapeHtml(recovery.label)}</button>`
     : "";
   return `
-    <section class="state-surface" data-state-surface="${escapeHtml(kind)}" data-state="${escapeHtml(stateName)}" role="${role}" aria-live="${live}" aria-busy="${waiting ? "true" : "false"}">
+    <section class="state-surface" data-state-surface="${escapeHtml(kind)}" data-state="${escapeHtml(stateName)}" data-interaction-region role="${role}" aria-live="${live}" aria-busy="${waiting ? "true" : "false"}"
+      data-interaction-contract="shared-v1">
       <div class="state-surface-copy">
-        ${renderStatusMarker({status: stateName === "error" ? "blocked" : waiting ? "pending" : "no-action", label: stateName})}
+        ${renderStatusMarker({status: stateName === "error" || stateName === "conflict" || stateName === "permission-denied" ? "blocked" : waiting ? "pending" : "no-action", label: stateName})}
         <strong>${escapeHtml(visibleTitle)}</strong>
         <p>${escapeHtml(visibleConsequence)}</p>
       </div>
