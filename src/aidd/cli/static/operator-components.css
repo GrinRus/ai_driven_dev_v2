@@ -4575,6 +4575,18 @@ button.intent-phase-step.active:hover {
   grid-template-columns: minmax(0, 1.45fr) minmax(320px, 0.7fr);
   overflow: hidden;
 }
+.flow-complete-scope,
+.flow-complete-verification {
+  border: 1px solid var(--line);
+  border-radius: var(--radius-control);
+  display: grid;
+  gap: var(--space-4);
+  padding: var(--space-5);
+}
+.flow-complete-limitations {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
 .studio-history > .surface-title {
   border-bottom: 1px solid var(--line);
   grid-area: title;

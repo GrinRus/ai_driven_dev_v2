@@ -76,6 +76,9 @@ def test_terminal_outcomes_keep_completed_source_run_immutable(
         wait_for_work_item_surface(page, fixture.work_item)
         flow = page.locator("[data-studio-flow-complete]")
         flow.wait_for(state="visible")
+        assert flow.locator("[data-flow-complete-scope]").is_visible()
+        assert flow.locator("[data-flow-complete-verification]").is_visible()
+        assert page.locator("#runtimeSettings").is_hidden()
         assert flow.locator("[data-core-recommended-outcome]").count() == 1
         disclosure = flow.locator(".studio-flow-complete-other")
         disclosure.locator("summary").click()

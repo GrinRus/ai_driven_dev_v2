@@ -213,6 +213,52 @@ function renderStudioFlowCompleteAction(action, {primary = false} = {}) {
   `;
 }
 
+function renderFlowCompleteScope(run, stages) {
+  const completed = stages.filter((stage) => stage.status === "succeeded").length;
+  const bounds = [run.workflow_stage_start, run.workflow_stage_end].filter(Boolean).join(" → ");
+  return `
+    <section class="flow-complete-scope" data-flow-complete-scope>
+      <div class="surface-title compact"><span>Delivered scope</span><span class="small-badge">read-only</span></div>
+      <div class="flow-complete-metrics">
+        <div><span>Work Item</span><strong>${escapeHtml(state.dashboard?.work_item || "not recorded")}</strong></div>
+        <div><span>Stage target</span><strong>${escapeHtml(run.stage_target || "not recorded")}</strong></div>
+        <div><span>Workflow bounds</span><strong>${escapeHtml(bounds || "full workflow")}</strong></div>
+        <div><span>Completed stages</span><strong>${escapeHtml(`${completed}/${stages.length}`)}</strong></div>
+      </div>
+    </section>
+  `;
+}
+
+function renderFlowCompleteVerification(handoff, run, stages) {
+  const verifiedStages = stages.filter((stage) => stage.status === "succeeded");
+  const sourceRun = run.lineage?.source_run_id;
+  const evidenceCount = (handoff.final_artifacts || []).filter((artifact) => artifact.available !== false).length;
+  const repositoryArtifacts = (handoff.final_artifacts || []).filter((artifact) =>
+    /repository|diff|implementation/i.test(`${artifact.key} ${artifact.path}`)
+  );
+  const repositoryState = repositoryArtifacts.length
+    ? repositoryArtifacts.map((artifact) => artifact.key).join(", ")
+    : "not recorded";
+  const limitations = (handoff.blockers || []).length
+    ? handoff.blockers.map((blocker) => blocker.title || blocker.kind).join("; ")
+    : "No known limitations recorded in the terminal handoff.";
+  return `
+    <section class="flow-complete-verification" data-flow-complete-verification>
+      <div class="surface-title compact"><span>Verification and repository state</span><span class="small-badge good">retained evidence</span></div>
+      <div class="terminal-summary-grid">
+        <div class="metric"><span>QA result</span><strong>${escapeHtml(handoff.final_qa_status || "not recorded")}</strong></div>
+        <div class="metric"><span>QA stage state</span><strong>${escapeHtml(handoff.qa_stage_state || "not recorded")}</strong></div>
+        <div class="metric"><span>Verified stages</span><strong>${escapeHtml(verifiedStages.map((stage) => stage.stage).join(", ") || "not recorded")}</strong></div>
+        <div class="metric"><span>Evidence items</span><strong>${escapeHtml(evidenceCount)}</strong></div>
+        <div class="metric"><span>Repository state</span><strong>${escapeHtml(repositoryState)}</strong></div>
+        <div class="metric"><span>Run id</span><strong>${escapeHtml(run.run_id || "not recorded")}</strong></div>
+        <div class="metric"><span>Source run</span><strong>${escapeHtml(sourceRun || "independent run")}</strong></div>
+      </div>
+      <p class="flow-complete-limitations"><strong>Known limitations:</strong> ${escapeHtml(limitations)}</p>
+    </section>
+  `;
+}
+
 function renderStudioFlowCompleteState() {
   const handoff = state.dashboard?.terminal_handoff;
   const eligibility = studioFlowCompleteEligibility(handoff);
@@ -248,6 +294,8 @@ function renderStudioFlowCompleteState() {
       </section>
       <div class="flow-complete-layout">
         <main class="flow-complete-main">
+          ${renderFlowCompleteScope(run, state.dashboard?.stages || [])}
+          ${renderFlowCompleteVerification(handoff, run, state.dashboard?.stages || [])}
           <section class="flow-immutable-handoff">
             <h3>Immutable handoff</h3>
             <p>Final evidence is complete and ready for the next decision. This completed run will not be changed.</p>
