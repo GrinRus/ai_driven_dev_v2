@@ -14211,13 +14211,13 @@ Dependencies: `W42-E3-S2` and `W42-E4-S2-T3`.
 
 Local tasks:
 
-- `W42-E5-S2-T1` (next) Render Implementation Review from real repository and verification
+- `W42-E5-S2-T1` (done) Render Implementation Review from real repository and verification
   evidence.
   - Scope: changed-file list, unified diff, completed task claims, actual commands/results, scope
     coverage, risk, Runner, and `Proceed to Review`; no stage-document editing.
   - Verification: fixtures cover clean, incomplete, changed-outside-scope, missing evidence,
     failed verification, large diff, and launch eligibility.
-- `W42-E5-S2-T2` (planned) Render selective Review/QA remediation and downstream staleness.
+- `W42-E5-S2-T2` (next) Render selective Review/QA remediation and downstream staleness.
   - Scope: selectable findings/risks, exact source evidence, Markdown remediation Write/Preview,
     destination, Runner, and return to Implement through the existing service.
   - Verification: tests cover selection requirements, blocking/non-blocking findings, saved draft,
