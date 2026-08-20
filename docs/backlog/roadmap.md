@@ -14323,7 +14323,7 @@ Local tasks:
     and 1440x900.
   - Verification: captured checks prove first-action visibility, focus order, target size, contrast,
     clipping, overflow, draft retention, reconnect, one primary action, and zero console errors.
-- `W42-E7-S2-T2` (next) Observe and reconcile a first-time operator journey before cutover.
+- `W42-E7-S2-T2` (done) Observe and reconcile a first-time operator journey before cutover.
   - Scope: one uncoached create -> choose Runner -> launch -> answer question -> resume session;
     record comprehension failures as new roadmap tasks rather than silent polish.
   - Verification: evidence records completion, wrong turns, time-to-next-action, vocabulary or
@@ -14345,7 +14345,7 @@ Dependencies: `W42-E3-S1` and `W42-E7-S1`.
 
 Local tasks:
 
-- `W42-E7-S3-T1` (planned) Add task-aware live E2E checkpoints for the installed Implement flow.
+- `W42-E7-S3-T1` (next) Add task-aware live E2E checkpoints for the installed Implement flow.
   - Scope: persist schema-v1 `task-flow-checkpoint.json` and `.md` after tasklist and Implement
     with run/revision identity, task ids/order/dependencies, the core-selected next task, statuses,
     attempts, evidence links, tasklist/ledger hashes, aggregate finalization, and Review

@@ -7,7 +7,7 @@ slice, and local task.
 
 ## Next
 
-- `W42-E7-S2-T2` — Observe and reconcile a first-time operator journey before cutover.
+- `W42-E7-S3-T1` — Add task-aware live E2E checkpoints for the installed Implement flow.
 
 ## Soon
 
@@ -35,6 +35,14 @@ slice, and local task.
   queue-restoration policy in `docs/backlog/roadmap.md` (`W8-E3-S1`).
 
 ## Current reconciliation
+
+- `2026-08-20` `W42-E7-S2-T2` is complete in PR #217 (merge `b1bf2b23`). The one-session
+  provider-free rehearsal now records the ordered create -> Runner -> launch -> answer -> resume
+  journey with per-step elapsed time, durable outcomes, wrong-action/assistance/confusion fields,
+  explicit routing decision, accessibility/geometry/one-primary-action checks, and a fail-closed
+  `wave42-first-time-operator-journey-v1` evidence contract. It is explicitly labelled a scripted
+  rehearsal rather than human usability evidence; missing external runtime is environment-blocked.
+  `W42-E7-S3-T1` is now the only Next task.
 
 - `2026-08-20` `W42-E7-S2-T1` is complete in PR #215 (merge `101a1f38`). Wave 42 now has a
   declarative `wave42-responsive-browser-matrix-v1` registry covering eight journeys across
