@@ -14376,8 +14376,27 @@ Local tasks:
     execution, `task-flow-checkpoint.json/.md` snapshots with identity/dependency/attempt/hash/
     finalization/Review truth, final flow/code/quality reports, and no unclassified product diff;
     provider or runtime absence is explicitly environment-blocked.
+- `W42-E7-S3-T3` (next) Stabilize the installed public Task Workspace read boundary used by
+  the task-aware live checkpoint.
+  - Dependencies: `W42-E7-S3-T1`; this remediation is required before a fresh `W42-E7-S3-T2`
+    run can reconcile the task projection.
+  - Scope: make the runner's short-lived `/api/tasks` probe resilient to transient UI startup or
+    process-lifetime races, retain process/error diagnostics when the public boundary is
+    unavailable, and prove that a valid installed task projection is read without relaxing
+    fail-closed identity, dependency, hash, finalization, or Review-eligibility checks.
+  - Verification: focused harness tests cover a successful public-task read, a transient probe
+    retry, and a terminal unavailable boundary with retained diagnostics; existing checkpoint
+    tests still fail closed on missing tasks or drift. The Codex live lane is rerun from clean
+    `main` after this task merges.
 
 Wave 42 reconciliation notes:
+
+- `2026-08-20` Fresh Codex `AIDD-LIVE-007` attempts reached a valid tasklist but both stopped at
+  the task-aware checkpoint because the installed short-lived `/api/tasks` public read boundary
+  returned connection refused. Direct UI verification served the same endpoint, so the failure
+  is classified as a repeatable harness/read-boundary race rather than a Hono target defect.
+  `W42-E7-S3-T3` is added as a bounded remediation before retrying the live acceptance; no
+  checkpoint pass or Wave 42 exit claim is made.
 
 - `2026-08-20` `W42-E7-S2-T3` implementation contract is complete in PR #224 (merge `72aee00e`):
   real human observations require confidence, and the bounded blocker helper emits sanitized

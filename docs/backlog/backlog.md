@@ -7,12 +7,14 @@ slice, and local task.
 
 ## Next
 
-<!-- No task is actionable while the required uncoached human observation is blocked. -->
+- `W42-E7-S3-T3` — Stabilize the installed public `/api/tasks` read boundary used by the
+  task-aware live checkpoint before retrying Codex `AIDD-LIVE-007`.
 
 
 ## Soon
 
-<!-- The live checkpoint is blocked by W42-E7-S2-T3. -->
+<!-- The live acceptance remains blocked until W42-E7-S2-T3 is satisfied; this harness
+     remediation is the explicit prerequisite for a truthful retry. -->
 
 
 ## Parking lot
@@ -39,6 +41,13 @@ slice, and local task.
   queue-restoration policy in `docs/backlog/roadmap.md` (`W8-E3-S1`).
 
 ## Current reconciliation
+
+- `2026-08-20` Two fresh Codex `AIDD-LIVE-007` attempts reached a valid tasklist but both
+  fail-closed at the task-aware checkpoint because the installed short-lived `/api/tasks` probe
+  returned connection refused. Direct UI verification served the same endpoint, so the bounded
+  remediation `W42-E7-S3-T3` is promoted to `Next` to stabilize the public read boundary before
+  retrying live evidence. The original human-observation blocker and Wave 42 exit gate remain
+  unchanged.
 
 - `2026-08-20` PR #224 (merge `72aee00e`) landed the Wave 42 human-observation contract and
   fail-closed blocker path. No eligible participant was available, so `W42-E7-S2-T3` remains
