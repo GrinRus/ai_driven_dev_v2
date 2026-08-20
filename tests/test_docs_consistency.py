@@ -999,6 +999,9 @@ def test_operator_ui_evidence_template_has_measurable_ux_gates() -> None:
         "Operator confidence: `<1-5>`",
         "First decisive confusion:",
         "five-session\nrelease bar remains owned by `W36-E7-S3`",
+        "Human observation capture and fail-closed blockers",
+        "environment_blocked_first_time_journey_evidence",
+        "An `environment-blocked` record can never claim `completed`",
     ):
         assert expected in lane
 

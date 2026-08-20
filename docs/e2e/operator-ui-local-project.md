@@ -331,6 +331,36 @@ The rehearsal is not human usability evidence: it is labelled
 non-sensitive observations. Missing credentials or an unavailable external runtime are recorded
 as `environment-blocked`, never as a passing live session.
 
+### Human observation capture and fail-closed blockers
+
+The genuine observation is a manual, uncoached session, not a replay of the scripted
+provider-free browser test. Before starting, the operator confirms that the participant has
+not implemented, reviewed, or previously operated this UI and that the Codex Runner is
+available. The facilitator records only what the participant does and says; navigation hints,
+product explanations, or safety stops are assistance and must be recorded as such. Do not
+capture names, repository paths, prompts, credentials, tokens, or raw runtime logs.
+
+For a real provider-free session, use `observation_mode` = `uncoached-human-observation`,
+`environment_status` = `provider-free`, and a participant confidence value from `1` to `5`.
+The five ordered steps remain `create`, `choose-runner`, `launch`, `answer-question`, and
+`resume-session`. Record each factual elapsed time, wrong action, assistance, first decisive
+confusion, resulting roadmap task ids, durable outcome, and default-routing decision.
+
+If no eligible participant or Codex Runner is available, write a blocker record instead of
+pretending to observe the journey. The bounded helper
+`environment_blocked_first_time_journey_evidence` emits the same schema with:
+
+- `environment_status` = `environment-blocked`;
+- `completion` = `not-completed`;
+- `confidence` = `null` (there is no participant rating);
+- `durable_outcome` beginning with `environment-blocked:`;
+- all five steps marked `not run` with zero synthetic elapsed time.
+
+An `environment-blocked` record can never claim `completed` and does not satisfy the Wave 42
+exit gate. It is retained only to make the blocker explicit and to keep default routing gated.
+Once a participant and runtime are available, replace the blocker with a fresh anonymized
+human report; never edit a blocker into a passing session.
+
 The report must retain these fields:
 
 - schema, anonymous session id, observation mode, environment status;
