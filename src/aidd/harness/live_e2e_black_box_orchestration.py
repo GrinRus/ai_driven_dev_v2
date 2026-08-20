@@ -353,6 +353,8 @@ FRONTEND_CHECKPOINT_STARTUP_TIMEOUT_SECONDS = 30.0
 FRONTEND_CHECKPOINT_PROBE_TIMEOUT_SECONDS = 10.0
 TASK_FLOW_PUBLIC_TASK_PROBE_ATTEMPTS = 3
 TASK_FLOW_PUBLIC_TASK_PROBE_RETRY_DELAY_SECONDS = 0.1
+TASK_FLOW_PUBLIC_TASK_LAUNCH_ATTEMPTS = 3
+TASK_FLOW_PUBLIC_TASK_LAUNCH_RETRY_DELAY_SECONDS = 0.1
 PROVIDER_NO_PROGRESS_EXIT_CODE = 125
 STAGE_TIMEOUT_RECONCILIATION_SUFFIX = "-timeout-reconciliation.json"
 STAGE_NO_PROGRESS_RECONCILIATION_SUFFIX = "-no-progress-reconciliation.json"
@@ -3804,7 +3806,7 @@ def _task_flow_public_task_probe(
                 "attempt_count": attempt,
                 "process_state": "running" if process.poll() is None else "exited",
             }
-        if process.poll() is not None or attempt == TASK_FLOW_PUBLIC_TASK_PROBE_ATTEMPTS:
+        if attempt == TASK_FLOW_PUBLIC_TASK_PROBE_ATTEMPTS:
             break
         time.sleep(TASK_FLOW_PUBLIC_TASK_PROBE_RETRY_DELAY_SECONDS)
 
@@ -3838,63 +3840,105 @@ def _task_flow_public_task_view(
     """
 
     working_copy = _require_working_copy(ctx)
-    port = _allocate_loopback_port()
-    base_url = f"http://127.0.0.1:{port}"
-    command = _frontend_checkpoint_command(ctx, port)
     started = time.monotonic()
-    try:
-        process = subprocess.Popen(
-            command,
-            cwd=working_copy,
-            env=_harness_environment_for_context(ctx),
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
-            text=True,
-            start_new_session=True,
-        )
-    except OSError as exc:
-        return None, {
+    launcher_attempts: list[dict[str, object]] = []
+    last_surface: dict[str, object] | None = None
+
+    for launch_attempt in range(1, TASK_FLOW_PUBLIC_TASK_LAUNCH_ATTEMPTS + 1):
+        port = _allocate_loopback_port()
+        base_url = f"http://127.0.0.1:{port}"
+        command = _frontend_checkpoint_command(ctx, port)
+        attempt_started = time.monotonic()
+        process: subprocess.Popen[str] | None = None
+        attempt_surface: dict[str, object] = {
+            "attempt": launch_attempt,
+            "base_url": base_url,
             "status": "process-start-failed",
+        }
+        try:
+            try:
+                process = subprocess.Popen(
+                    command,
+                    cwd=working_copy,
+                    env=_harness_environment_for_context(ctx),
+                    stdout=subprocess.PIPE,
+                    stderr=subprocess.PIPE,
+                    text=True,
+                    start_new_session=True,
+                )
+            except OSError as exc:
+                attempt_surface["error"] = str(exc)
+                last_surface = attempt_surface
+                launcher_attempts.append(attempt_surface)
+                if launch_attempt < TASK_FLOW_PUBLIC_TASK_LAUNCH_ATTEMPTS:
+                    time.sleep(TASK_FLOW_PUBLIC_TASK_LAUNCH_RETRY_DELAY_SECONDS)
+                continue
+
+            failure: str | None = None
+            deadline = attempt_started + FRONTEND_CHECKPOINT_STARTUP_TIMEOUT_SECONDS
+            while time.monotonic() < deadline:
+                if process.poll() is not None:
+                    failure = "UI process exited before task checkpoint became ready."
+                    break
+                remaining = max(deadline - time.monotonic(), 0.001)
+                ready = _http_probe(
+                    f"{base_url}/",
+                    timeout_seconds=min(FRONTEND_CHECKPOINT_PROBE_TIMEOUT_SECONDS, remaining),
+                )
+                if ready.get("ok") is True:
+                    break
+                failure = str(ready.get("error") or "UI page is not ready yet.")
+                time.sleep(0.1)
+            else:
+                failure = "Timed out waiting for task checkpoint UI."
+
+            if failure is not None:
+                attempt_surface.update(
+                    {
+                        "status": "unavailable",
+                        "error": failure,
+                        "process_state": "running" if process.poll() is None else "exited",
+                        "process_return_code": process.poll(),
+                    }
+                )
+            else:
+                payload, public_surface = _task_flow_public_task_probe(
+                    base_url=base_url,
+                    run_id=ctx.run_id,
+                    process=process,
+                )
+                attempt_surface.update(public_surface)
+                attempt_surface["duration_seconds"] = time.monotonic() - attempt_started
+                last_surface = public_surface
+                if payload is not None:
+                    public_surface["launcher_attempt_count"] = launch_attempt
+                    public_surface["launcher_attempts"] = [*launcher_attempts, attempt_surface]
+                    public_surface["duration_seconds"] = time.monotonic() - started
+                    return payload, public_surface
+            last_surface = attempt_surface
+        finally:
+            if process is not None:
+                stdout_text, stderr_text, return_code = _steps_terminate_process(process)
+                attempt_surface["process_return_code"] = return_code
+                attempt_surface["process_state"] = "exited"
+                for key, value in (("stdout", stdout_text), ("stderr", stderr_text)):
+                    if value:
+                        attempt_surface[key] = value[-2000:]
+        launcher_attempts.append(attempt_surface)
+        if launch_attempt < TASK_FLOW_PUBLIC_TASK_LAUNCH_ATTEMPTS:
+            time.sleep(TASK_FLOW_PUBLIC_TASK_LAUNCH_RETRY_DELAY_SECONDS)
+
+    surface = dict(last_surface or {})
+    surface.update(
+        {
+            "status": surface.get("status", "unavailable"),
             "endpoint": "/api/tasks",
-            "error": str(exc),
+            "launcher_attempt_count": len(launcher_attempts),
+            "launcher_attempts": launcher_attempts,
             "duration_seconds": time.monotonic() - started,
         }
-
-    failure: str | None = None
-    try:
-        deadline = started + FRONTEND_CHECKPOINT_STARTUP_TIMEOUT_SECONDS
-        while time.monotonic() < deadline:
-            if process.poll() is not None:
-                failure = "UI process exited before task checkpoint became ready."
-                break
-            remaining = max(deadline - time.monotonic(), 0.001)
-            ready = _http_probe(
-                f"{base_url}/",
-                timeout_seconds=min(FRONTEND_CHECKPOINT_PROBE_TIMEOUT_SECONDS, remaining),
-            )
-            if ready.get("ok") is True:
-                break
-            failure = str(ready.get("error") or "UI page is not ready yet.")
-            time.sleep(0.1)
-        else:
-            failure = "Timed out waiting for task checkpoint UI."
-        if failure is not None:
-            return None, {
-                "status": "unavailable",
-                "endpoint": "/api/tasks",
-                "error": failure,
-                "base_url": base_url,
-                "duration_seconds": time.monotonic() - started,
-            }
-        payload, public_surface = _task_flow_public_task_probe(
-            base_url=base_url,
-            run_id=ctx.run_id,
-            process=process,
-        )
-        public_surface["duration_seconds"] = time.monotonic() - started
-        return payload, public_surface
-    finally:
-        _steps_terminate_process(process)
+    )
+    return None, surface
 
 
 def _task_flow_checkpoint(
