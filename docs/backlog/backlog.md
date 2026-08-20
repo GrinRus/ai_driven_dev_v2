@@ -7,7 +7,7 @@ slice, and local task.
 
 ## Next
 
-- `W42-E7-S1-T1` — Add provider-free routes for all 13 target surfaces.
+- `W42-E7-S1-T2` — Add shared interaction-state and accessibility contracts.
 
 ## Soon
 
@@ -35,6 +35,14 @@ slice, and local task.
   queue-restoration policy in `docs/backlog/roadmap.md` (`W8-E3-S1`).
 
 ## Current reconciliation
+
+- `2026-08-20` `W42-E7-S1-T1` is complete in PR #211 (merge `dfdee03f`). The packaged Operator UI
+  now has a separate Wave 42 provider-free route registry for all 13 target references, mapping
+  each filename to a deterministic local query and materializable fixture without credentials,
+  provider processes, wall-clock state, or random ids. The registry remains separate from the
+  historical Wave 36 journey ids. Manifest, fixture, UI asset, docs consistency, planning,
+  frontend, Ruff, mypy, packaged-JS, full CI, packaged browser, and build checks passed.
+  `W42-E7-S1-T2` is now the only Next task.
 
 - `2026-08-20` `W42-E6-S2-T1` is complete in PR #209 (merge `7398c13f`). Flow Complete now
   exposes delivered scope, verification, repository state, QA result, run ids, retained evidence,
