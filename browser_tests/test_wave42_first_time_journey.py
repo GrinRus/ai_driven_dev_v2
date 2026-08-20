@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import time
+from dataclasses import replace
 from pathlib import Path
 
 from playwright.sync_api import Page, sync_playwright
@@ -17,6 +18,7 @@ from browser_tests.wave42_first_time_journey import (
     WAVE42_FIRST_TIME_JOURNEY_SCHEMA,
     FirstTimeJourneyEvidence,
     JourneyStepEvidence,
+    environment_blocked_first_time_journey_evidence,
     validate_first_time_journey_evidence,
     write_first_time_journey_evidence,
 )
@@ -60,17 +62,22 @@ def _assert_first_action(page: Page, selector: str) -> None:
 
 def _wait_for_blocked_dashboard(page: Page, url: str, run_id: str) -> None:
     deadline = time.monotonic() + 10.0
+    last_status: int | None = None
     while time.monotonic() < deadline:
         response = page.request.get(
             f"{url}api/dashboard?run_id={run_id}&stage=idea"
         )
-        assert response.status == 200
-        dashboard = response.json()["dashboard"]
-        stage = next(item for item in dashboard["stages"] if item["stage"] == "idea")
-        if stage["status"] == "blocked":
-            return
+        last_status = response.status
+        if response.status == 200:
+            dashboard = response.json()["dashboard"]
+            stage = next(item for item in dashboard["stages"] if item["stage"] == "idea")
+            if stage["status"] == "blocked":
+                return
         time.sleep(0.1)
-    raise AssertionError("question fixture did not reach a durable blocked state")
+    raise AssertionError(
+        "question fixture did not reach a durable blocked state "
+        f"(last dashboard status: {last_status})"
+    )
 
 
 def test_wave42_first_time_operator_journey_records_bounded_rehearsal(
@@ -277,3 +284,70 @@ def test_wave42_first_time_journey_contract_rejects_incomplete_steps() -> None:
     except AssertionError:
         return
     raise AssertionError("incomplete first-time journey evidence must fail closed")
+
+
+def test_wave42_first_time_journey_requires_confidence_for_real_human_observation() -> None:
+    evidence = FirstTimeJourneyEvidence(
+        schema=WAVE42_FIRST_TIME_JOURNEY_SCHEMA,
+        session_id="S-human-no-confidence",
+        observation_mode="uncoached-human-observation",
+        environment_status="provider-free",
+        completion="completed",
+        elapsed_ms=1,
+        wrong_actions=0,
+        first_wrong_action=None,
+        assistance="none",
+        confidence=None,
+        first_decisive_confusion=None,
+        resulting_tasks=(),
+        default_routing_decision="keep current renderer",
+        durable_outcome="resume accepted",
+        steps=tuple(
+            JourneyStepEvidence(
+                step_id=step_id,
+                action="observe",
+                outcome="completed",
+                elapsed_ms=0,
+            )
+            for step_id in JOURNEY_STEP_IDS
+        ),
+    )
+    try:
+        validate_first_time_journey_evidence(evidence)
+    except AssertionError:
+        return
+    raise AssertionError("human evidence without participant confidence must fail closed")
+
+
+def test_wave42_first_time_journey_blocker_cannot_claim_completion() -> None:
+    blocked = environment_blocked_first_time_journey_evidence(
+        session_id="S-W42-BLOCKED-1",
+        blocker="no eligible participant in the execution environment",
+        default_routing_decision="keep the current renderer until human evidence exists",
+    )
+    validate_first_time_journey_evidence(blocked)
+    assert blocked.completion == "not-completed"
+    assert blocked.confidence is None
+    assert all("environment-blocked" in step.outcome for step in blocked.steps)
+
+    invalid_completed_record = replace(blocked, completion="completed")
+    try:
+        validate_first_time_journey_evidence(invalid_completed_record)
+    except AssertionError:
+        return
+    raise AssertionError("environment-blocked evidence must never claim completion")
+
+
+def test_wave42_first_time_journey_blocker_writer_is_sanitized(tmp_path: Path) -> None:
+    evidence = environment_blocked_first_time_journey_evidence(
+        session_id="S-W42-BLOCKED-2",
+        blocker="Codex Runner is unavailable for an independent observation",
+        default_routing_decision="do not switch the default renderer",
+    )
+    report_path = tmp_path / "blocked" / "first-time-operator-evidence.json"
+    write_first_time_journey_evidence(report_path, evidence)
+    payload = report_path.read_text(encoding="utf-8")
+    assert '"environment_status": "environment-blocked"' in payload
+    assert '"completion": "not-completed"' in payload
+    assert '"confidence": null' in payload
+    assert payload.count('"step_id":') == len(JOURNEY_STEP_IDS)
