@@ -1,0 +1,9 @@
+{
+  "stage": "implement",
+  "stage_attempt_count": 3,
+  "max_repair_attempts": 2,
+  "repair_attempts_used": 2,
+  "remaining_repair_attempts": 0,
+  "status": "failed",
+  "terminal_signal": "CROSS-REPAIR-BUDGET-EXHAUSTED"
+}
