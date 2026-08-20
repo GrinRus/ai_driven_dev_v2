@@ -3886,6 +3886,11 @@ def _task_flow_public_task_view(
                     timeout_seconds=min(FRONTEND_CHECKPOINT_PROBE_TIMEOUT_SECONDS, remaining),
                 )
                 if ready.get("ok") is True:
+                    # A transient startup error is expected before the first successful root
+                    # response. Clear it before entering the task projection probe; otherwise
+                    # the stale error makes the caller skip `/api/tasks` and tear down a healthy
+                    # server as if readiness had failed.
+                    failure = None
                     break
                 failure = str(ready.get("error") or "UI page is not ready yet.")
                 time.sleep(0.1)

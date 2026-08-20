@@ -212,3 +212,53 @@ def test_task_flow_public_task_view_relaunches_after_launcher_exits_before_readi
     assert surface["launcher_attempt_count"] == 2
     attempts = surface["launcher_attempts"]
     assert [attempt["status"] for attempt in attempts] == ["unavailable", "read"]  # type: ignore[index]
+
+
+def test_task_flow_public_task_view_probes_tasks_after_transient_root_refusal(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    working_copy = tmp_path / "target"
+    working_copy.mkdir()
+    process = _SequenceProcess([None, None])
+    task_probe_calls = 0
+
+    def fake_task_probe(**_kwargs: object) -> tuple[dict[str, object], dict[str, object]]:
+        nonlocal task_probe_calls
+        task_probe_calls += 1
+        return {"tasks": ["T1"]}, {"status": "read", "endpoint": "/api/tasks"}
+
+    root_responses = iter(
+        [
+            {"ok": False, "status": None, "error": "connection refused"},
+            {"ok": True, "status": 200},
+        ]
+    )
+    monkeypatch.setattr(orchestration.subprocess, "Popen", lambda *_args, **_kwargs: process)
+    monkeypatch.setattr(orchestration, "_allocate_loopback_port", lambda: 12345)
+    monkeypatch.setattr(orchestration, "_harness_environment_for_context", lambda _ctx: {})
+    monkeypatch.setattr(
+        orchestration,
+        "_http_probe",
+        lambda _url, **_kwargs: next(root_responses),
+    )
+    monkeypatch.setattr(orchestration, "_task_flow_public_task_probe", fake_task_probe)
+    monkeypatch.setattr(orchestration.time, "sleep", lambda _seconds: None)
+    monkeypatch.setattr(
+        orchestration,
+        "_steps_terminate_process",
+        lambda process: ("", "", process.poll()),
+    )
+
+    ctx = SimpleNamespace(
+        config_path=working_copy / "aidd.example.toml",
+        installed_command=("aidd",),
+        prepared_working_copy=SimpleNamespace(working_copy_path=working_copy),
+        run_id="run-1",
+        work_item="WI-1",
+    )
+    payload, surface = orchestration._task_flow_public_task_view(ctx)  # type: ignore[arg-type]
+
+    assert payload == {"tasks": ["T1"]}
+    assert surface["status"] == "read"
+    assert task_probe_calls == 1
