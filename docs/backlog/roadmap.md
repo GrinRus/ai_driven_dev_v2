@@ -14388,7 +14388,7 @@ Local tasks:
     retry, and a terminal unavailable boundary with retained diagnostics; existing checkpoint
     tests still fail closed on missing tasks or drift. The Codex live lane is rerun from clean
     `main` after this task merges.
-- `W42-E7-S3-T4` (next) Keep the installed public Task Workspace server alive for the task-aware
+- `W42-E7-S3-T4` (done) Keep the installed public Task Workspace server alive for the task-aware
   checkpoint after the UI root becomes ready.
   - Dependencies: `W42-E7-S3-T3`; this follow-up was discovered by the clean Codex rerun and is
     required before `W42-E7-S3-T2` can produce truthful live evidence.
@@ -14401,6 +14401,15 @@ Local tasks:
     the clean Codex `AIDD-LIVE-007` lane is rerun after this task merges.
 
 Wave 42 reconciliation notes:
+
+- `2026-08-20` `W42-E7-S3-T4` is complete in PR #230 (merge `afc127fc`). The task checkpoint now
+  records bounded launcher attempts, relaunches an installed UI process that exits before root
+  readiness, and continues bounded `/api/tasks` probes after a launcher exit so a surviving
+  server is not mistaken for an unavailable boundary. Process state, return codes, launcher
+  attempts, and captured output are retained on failure. Focused checkpoint/tasklist tests (11),
+  the full live-E2E harness suite (64), docs/planning tests (50), Ruff, mypy, deterministic/
+  adapter checks, security checks, and packaged UI browser CI passed. The clean Codex live lane
+  must still be rerun from this merge; no Wave 42 exit claim is made.
 
 - `2026-08-20` The clean Codex rerun `eval-live-007-codex-20260820T210403Z` passed install,
   `idea -> tasklist` stage validation, quality audits, target verification, and all public UI
