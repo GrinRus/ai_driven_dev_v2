@@ -317,6 +317,34 @@ The matrix is complete only when all 8 journey ids have all 5 viewport rows, all
 pass, loopback-only cleanup succeeds, and the default renderer decision remains unchanged until
 the Wave 42 exit gate is reconciled.
 
+## Wave 42 first-time operator journey evidence
+
+The observed Wave 42 journey is a single bounded sequence:
+`create -> choose Runner -> launch -> answer question -> resume session`.
+Its executable contract is `browser_tests/wave42_first_time_journey.py` and its evidence schema is
+`wave42-first-time-operator-journey-v1`. The provider-free browser rehearsal uses one browser
+context and records each step's factual elapsed time, durable outcome, wrong-action count,
+assistance, first decisive confusion, resulting tasks, and the explicit default-routing decision.
+The rehearsal is not human usability evidence: it is labelled
+`scripted-provider-free-rehearsal`; a real uncoached observation must use
+`uncoached-human-observation`, record confidence from 1 to 5, and preserve the participant's
+non-sensitive observations. Missing credentials or an unavailable external runtime are recorded
+as `environment-blocked`, never as a passing live session.
+
+The report must retain these fields:
+
+- schema, anonymous session id, observation mode, environment status;
+- completion, total elapsed time, ordered step ids and per-step elapsed time;
+- wrong actions and first wrong action;
+- assistance, confidence (human sessions only), and first decisive confusion;
+- resulting roadmap task ids (or an empty tuple when no finding was observed);
+- durable outcome and one explicit default-routing decision.
+
+The provider-free rehearsal must complete all five ordered steps, keep one visible primary action,
+pass accessibility and geometry checks, preserve the durable answer readback, and report zero
+console/page/request/overflow diagnostics. Its routing decision keeps the current renderer gated
+until the Wave 42 exit evidence is complete; it does not silently switch the default renderer.
+
 Cleanup rules:
 
 - keep generated `.aidd/` state inside the disposable local fixture project;
