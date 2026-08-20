@@ -14296,7 +14296,7 @@ Local tasks:
     completion, and mobile decision.
   - Verification: one manifest test proves every target filename maps to a loadable fixture with
     no network, provider credentials, clock drift, or random ids.
-- `W42-E7-S1-T2` (next) Add shared interaction-state and accessibility contracts.
+- `W42-E7-S1-T2` (done) Add shared interaction-state and accessibility contracts.
   - Scope: loading, empty, partial, error, disabled, selected, pending, conflict, success, offline,
     reconnecting, permission denied, focus, keyboard, target size, and accessible names.
   - Verification: frontend tests exercise the applicable state matrix for every shared component
@@ -14317,7 +14317,7 @@ Dependencies: `W42-E2` through `W42-E7-S1`.
 
 Local tasks:
 
-- `W42-E7-S2-T1` (planned) Run the target browser journey matrix at all supported viewports.
+- `W42-E7-S2-T1` (next) Run the target browser journey matrix at all supported viewports.
   - Scope: create -> runner -> launch, task run, question recovery, validation repair, Markdown
     change, review remediation, history, and completion at 320x568, 390x844, 768x1024, 1280x900,
     and 1440x900.

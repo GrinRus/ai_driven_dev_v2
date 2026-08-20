@@ -7,7 +7,7 @@ slice, and local task.
 
 ## Next
 
-- `W42-E7-S1-T2` — Add shared interaction-state and accessibility contracts.
+- `W42-E7-S2-T1` — Run the target browser journey matrix at all supported viewports.
 
 ## Soon
 
@@ -35,6 +35,15 @@ slice, and local task.
   queue-restoration policy in `docs/backlog/roadmap.md` (`W8-E3-S1`).
 
 ## Current reconciliation
+
+- `2026-08-20` `W42-E7-S1-T2` is complete in PR #213 (merge `85e72ec9`). Operator UI shared
+  primitives now publish a shared-v1 interaction contract for loading, empty, partial, error,
+  disabled, selected, pending, conflict, success, offline, reconnecting, permission-denied,
+  focus, and keyboard states. State surfaces expose semantic role/live/busy metadata and visible
+  status text; primary action slots are explicitly marked and constrained to one action. Frontend,
+  CLI contract, browser accessibility/geometry, docs consistency, planning, Ruff, mypy, packaged
+  JavaScript, full CI, packaged browser, and build checks passed. `W42-E7-S2-T1` is now the only
+  Next task.
 
 - `2026-08-20` `W42-E7-S1-T1` is complete in PR #211 (merge `dfdee03f`). The packaged Operator UI
   now has a separate Wave 42 provider-free route registry for all 13 target references, mapping
