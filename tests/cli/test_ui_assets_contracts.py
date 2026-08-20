@@ -1466,6 +1466,7 @@ def test_studio_repository_evidence_uses_textual_change_and_scope_contracts() ->
         (
             "function renderStudioRepositoryEvidence({",
             'data-document-canvas="implementation-evidence"',
+            "data-implementation-review>",
             'return "Added"',
             'return "Removed"',
             'return "Changed"',
@@ -1476,6 +1477,12 @@ def test_studio_repository_evidence_uses_textual_change_and_scope_contracts() ->
             "mentioned but unchanged",
             "absent from implementation-report.md",
             "data-implementation-claims",
+            "data-implementation-completed-claims",
+            "Completed task claims from canonical ledger",
+            "data-implementation-scope-coverage",
+            "Inside allowed scope:",
+            "Outside project set:",
+            "Not mentioned in report:",
         ),
     )
 
@@ -1531,9 +1538,15 @@ def test_operator_implement_review_surfaces_missing_verification_evidence() -> N
             "No executable verification commands",
             "renderWarnings(implementationSummaryWarnings(implementation))",
             "function renderImplementationVerificationItems(implementation)",
+            "function renderImplementationEvidenceList(items, emptyLabel)",
             "Skipped: ${escapeHtml(item)}",
             "Verification evidence missing.",
             "${renderImplementationVerificationItems(implementation)}",
+            "data-implementation-review-summary",
+            "data-implementation-verification",
+            "Actual verification commands/results",
+            "data-implementation-task-claims",
+            "data-implementation-risks",
             "function implementationVerificationReady(implementation)",
             "function renderImplementationProceedGuard(implementation)",
             (

@@ -154,13 +154,19 @@ function implementationSummaryWarnings(implementation) {
 function renderImplementationVerificationItems(implementation) {
   const commands = implementation?.verification_commands || [];
   if (commands.length) {
-    return commands.slice(0, 4).map((item) => `<span>${escapeHtml(item)}</span>`).join("");
+    return commands.slice(0, 8).map((item) => `<span>${escapeHtml(item)}</span>`).join("");
   }
   const skipped = implementation?.skipped_checks || [];
   if (skipped.length) {
-    return skipped.slice(0, 4).map((item) => `<span>Skipped: ${escapeHtml(item)}</span>`).join("");
+    return skipped.slice(0, 8).map((item) => `<span>Skipped: ${escapeHtml(item)}</span>`).join("");
   }
   return "<span>Verification evidence missing.</span>";
+}
+
+function renderImplementationEvidenceList(items, emptyLabel) {
+  const values = (items || []).filter(Boolean);
+  if (!values.length) return `<span class="muted">${escapeHtml(emptyLabel)}</span>`;
+  return values.map((item) => `<span>${escapeHtml(item)}</span>`).join("");
 }
 
 function implementationVerificationReady(implementation) {
@@ -178,7 +184,7 @@ function renderImplementationProceedGuard(implementation) {
 
 function renderImplementationSummary(implementation) {
   return `
-    <section class="surface">
+    <section class="surface" data-implementation-review-summary>
       <div class="surface-title">
         <span>Implementation summary</span>
         <span class="small-badge">${escapeHtml(implementation?.selected_task_id || "task not detected")}</span>
@@ -191,8 +197,18 @@ function renderImplementationSummary(implementation) {
         <div class="metric"><span>Skipped checks</span><strong>${escapeHtml((implementation?.skipped_checks || []).length)}</strong></div>
         <div class="metric"><span>Residual risks</span><strong>${escapeHtml((implementation?.residual_risks || []).length)}</strong></div>
       </div>
-      <div class="compact-list">
+      <div class="compact-list" data-implementation-verification>
+        <strong>Actual verification commands/results</strong>
         ${renderImplementationVerificationItems(implementation)}
+      </div>
+      <div class="compact-list" data-implementation-task-claims>
+        <strong>Completed task claim</strong>
+        <span>${escapeHtml(implementation?.selected_task_id || "No selected task claim recorded.")}</span>
+        <span>Reported touched files: ${escapeHtml((implementation?.touched_files || []).join(", ") || "none")}</span>
+      </div>
+      <div class="compact-list" data-implementation-risks>
+        <strong>Residual risks</strong>
+        ${renderImplementationEvidenceList(implementation?.residual_risks, "No residual risks recorded.")}
       </div>
     </section>
   `;
