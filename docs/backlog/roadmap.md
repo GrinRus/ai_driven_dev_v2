@@ -14190,7 +14190,7 @@ Local tasks:
     approval evidence, and exactly one submit action; do not reduce approvals to answer forms.
   - Verification: fixtures cover question, approval, deferred answer, unavailable evidence,
     pending, conflict, permission denial, and mobile first-action visibility.
-- `W42-E5-S1-T2` (next) Render validation and runtime recovery as distinct states.
+- `W42-E5-S1-T2` (done) Render validation and runtime recovery as distinct states.
   - Scope: validation document/rule/location/hint/budget/exact brief plus repair Runner; runtime
     first decisive failure/logs/retry/selection consequence without consuming repair budget.
   - Verification: tests prove repair exhaustion, request-change routing, runtime retry, cancel,
@@ -14211,7 +14211,7 @@ Dependencies: `W42-E3-S2` and `W42-E4-S2-T3`.
 
 Local tasks:
 
-- `W42-E5-S2-T1` (planned) Render Implementation Review from real repository and verification
+- `W42-E5-S2-T1` (next) Render Implementation Review from real repository and verification
   evidence.
   - Scope: changed-file list, unified diff, completed task claims, actual commands/results, scope
     coverage, risk, Runner, and `Proceed to Review`; no stage-document editing.
