@@ -437,6 +437,7 @@ test("Implementation Review exposes report truth without editing stage documents
 
 test("Studio Review and QA gates render exact upstream identities and blockers", async () => {
   const context = vm.createContext({
+    URLSearchParams,
     state: {
       activeRunId: "run-quality",
       activeJobStatus: null,
@@ -522,10 +523,15 @@ test("Studio Review and QA gates render exact upstream identities and blockers",
 
 test("Studio History renders typed frames and pauses only browser auto-follow", async () => {
   const context = vm.createContext({
+    URLSearchParams,
     state: {
       activeRunId: "run-history",
       activeStage: "implement",
       activeTab: "history",
+      historyRuns: null,
+      historyRunsError: "",
+      historyStatusFilter: "",
+      historyAttemptModeFilter: "",
       historyTimeline: null,
       historySelectedFrame: "",
       historyAutoFollow: true,
@@ -588,7 +594,14 @@ test("Studio History renders typed frames and pauses only browser auto-follow", 
             attempt_number: 1,
             status: "failed",
             time_utc: "2026-07-18T00:00:00Z",
-            evidence_refs: ["reports/runtime.log"]
+            evidence_refs: ["reports/runtime.log"],
+            runtime_id: "generic-cli",
+            attempt_mode: "initial",
+            started_at_utc: "2026-07-18T00:00:00Z",
+            duration_seconds: 8,
+            input_hash: "1234567890abcdef-input",
+            output_hash: "fedcba0987654321-output",
+            copy_id: "copy-001"
           },
           {
             identity: "finalization:implement:attempt:0002",
@@ -596,9 +609,23 @@ test("Studio History renders typed frames and pauses only browser auto-follow", 
             stage: "implement",
             attempt_number: 2,
             status: "succeeded",
-            evidence_refs: ["reports/finalization-state.json"]
+            evidence_refs: ["reports/finalization-state.json"],
+            runtime_id: "generic-cli",
+            attempt_mode: "initial",
+            input_hash: "1234567890abcdef-input",
+            output_hash: "fedcba0987654321-output",
+            copy_id: "copy-001"
           }
-        ]
+        ],
+        runs: [{
+          run_id: "run-history",
+          status: "completed",
+          runtime_id: "generic-cli",
+          attempt_count: 2,
+          retained_attempt_count: 2,
+          attempt_modes: ["initial"],
+          updated_at_utc: "2026-07-18T00:00:00Z"
+        }]
       };
     }
   });
@@ -608,6 +635,11 @@ test("Studio History renders typed frames and pauses only browser auto-follow", 
   assert.equal(timeline.frames.length, 2);
   assert.equal(context.state.historySelectedFrame, "finalization:implement:attempt:0002");
   assert.match(html, /data-studio-history/);
+  assert.match(html, /data-history-run-list/);
+  assert.match(html, /data-history-run="run-history"/);
+  assert.match(html, /data-history-attempt-details/);
+  assert.match(html, /Input hash: 1234567890abcdef/);
+  assert.match(html, /Copy id: copy-001/);
   assert.match(html, /task:TL-1:attempt:0001/);
   assert.match(html, /Aggregate finalization · attempt 2/);
   assert.match(html, /Return to live/);

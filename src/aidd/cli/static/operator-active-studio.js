@@ -145,6 +145,18 @@ function renderWorkItemTabPlaceholder(tab) {
   `;
 }
 
+async function renderWorkItemRuns() {
+  const content = document.getElementById("intentContent");
+  content.innerHTML = `<section class="surface" data-work-item-runs><div class="empty-state loading-state">Loading retained runs...</div></section>`;
+  try {
+    await loadStudioHistoryTimeline();
+    content.innerHTML = renderStudioHistory(state.historyTimeline);
+    if (typeof loadRunComparisonPanel === "function") void loadRunComparisonPanel();
+  } catch (error) {
+    content.innerHTML = `<section class="surface" data-work-item-runs><div class="empty-state bad">${escapeHtml(error.message || "Run history unavailable")}</div></section>`;
+  }
+}
+
 function renderTaskWorkspace(taskView) {
   const allTasks = taskView?.task_list || [];
   const filter = String(state.taskWorkspaceFilter || "").trim().toLowerCase();
