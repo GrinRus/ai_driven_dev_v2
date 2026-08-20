@@ -14399,8 +14399,26 @@ Local tasks:
   - Verification: focused harness tests cover a server that remains reachable after the launcher
     reports readiness, launcher exit before readiness, and terminal `/api/tasks` unavailability;
     the clean Codex `AIDD-LIVE-007` lane is rerun after this task merges.
+- `W42-E7-S3-T5` (next) Make the installed Task Workspace checkpoint use a durable public UI
+  server lifecycle rather than a probe-time process that can disappear after root readiness.
+  - Dependencies: `W42-E7-S3-T4`; this follow-up is required because the next clean Codex rerun
+    still received connection refusal from all bounded `/api/tasks` attempts even though direct
+    verification of the same installed UI served the projection.
+  - Scope: isolate and fix the remaining launcher/server lifetime boundary, retaining explicit
+    server ownership, readiness, shutdown, and endpoint diagnostics without weakening the
+    fail-closed task identity, dependency, hash, finalization, or Review-eligibility checks.
+  - Verification: focused harness tests reproduce the observed root-ready then connection-refused
+    sequence, prove a durable `/api/tasks` read through the installed public surface, and preserve
+    terminal diagnostics; the clean Codex `AIDD-LIVE-007` lane is rerun after this task merges.
 
 Wave 42 reconciliation notes:
+
+- `2026-08-20` The clean Codex rerun `eval-live-007-codex-20260820T222927Z` passed install,
+  `idea -> tasklist` stage validation, manual quality audits, target verification, and public UI
+  root checkpoints, but the task-aware checkpoint again failed closed: all three `/api/tasks`
+  attempts returned connection refused and the short-lived launcher was terminated with `-15`.
+  Direct verification of the same installed UI served `/api/tasks`, so this is recorded as a new
+  lifecycle-boundary remediation `W42-E7-S3-T5`; no live checkpoint or Wave 42 exit claim is made.
 
 - `2026-08-20` `W42-E7-S3-T4` is complete in PR #230 (merge `afc127fc`). The task checkpoint now
   records bounded launcher attempts, relaunches an installed UI process that exits before root
