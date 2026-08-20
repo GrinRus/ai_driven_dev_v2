@@ -1521,6 +1521,26 @@
   border-radius: 4px;
   padding: 5px 7px;
 }
+.recovery-decision-workbench {
+  background: var(--color-bg-raised);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  display: grid;
+  gap: 10px;
+  grid-template-columns: minmax(0, 1fr) minmax(300px, 1fr);
+  margin-bottom: 12px;
+  padding: 12px;
+}
+.recovery-decision-heading { display: grid; gap: 5px; min-width: 0; }
+.recovery-decision-heading .small-badge { justify-self: start; }
+.recovery-decision-heading strong { font-size: 16px; line-height: 1.25; }
+.recovery-decision-heading p { color: var(--muted); font-size: 12px; line-height: 1.4; margin: 0; }
+.recovery-decision-facts { display: grid; gap: 7px; margin: 0; }
+.recovery-decision-facts div { display: grid; gap: 2px; min-width: 0; }
+.recovery-decision-facts dt { color: var(--muted); font-size: 12px; font-weight: 800; text-transform: uppercase; }
+.recovery-decision-facts dd { font-size: 12px; line-height: 1.35; margin: 0; overflow-wrap: anywhere; }
+.recovery-decision-actions { align-items: center; display: flex; flex-wrap: wrap; gap: 7px; grid-column: 1 / -1; }
+.recovery-decision-attempts { font-size: 12px; grid-column: 1 / -1; }
 .interview-loop-screen,
 .validation-repair-center {
   align-items: start;

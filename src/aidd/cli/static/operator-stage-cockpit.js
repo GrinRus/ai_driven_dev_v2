@@ -324,6 +324,36 @@ function renderRuntimePartialEvidence(firstFailure) {
   `;
 }
 
+function renderRecoveryDecisionWorkbench({runtimeFailure, firstFailure, diagnostics, validation, status, evidencePath, primary}) {
+  const mode = runtimeFailure ? "runtime" : "validation";
+  const runtimeDetail = firstFailure?.detail || "Inspect the first decisive runtime failure before retrying or cancelling.";
+  const validationFinding = primaryValidationFindingForValidation(validation);
+  const validationLocation = validationFinding ? validationFindingLocation(validationFinding) : validation?.validator_report_path || evidencePath;
+  const repairAttempts = validation?.repair_attempts || [];
+  const budgetLabel = status === "repair-exhausted"
+    ? "exhausted"
+    : validation?.repair_budget_remaining ?? validation?.remaining_repair_budget ?? (status === "repair-available" ? "available" : "not reported");
+  return `
+    <section class="recovery-decision-workbench" data-recovery-mode="${mode}" data-repair-budget="${escapeHtml(budgetLabel)}">
+      <div class="recovery-decision-heading">
+        <span class="small-badge ${runtimeFailure ? "bad" : status === "repair-exhausted" ? "bad" : "warn"}">${runtimeFailure ? "Runtime recovery" : "Validation recovery"}</span>
+        <strong>${runtimeFailure ? "Runtime failure recovery" : "Validation failure recovery"}</strong>
+        <p>${escapeHtml(runtimeFailure ? runtimeDetail : validation?.primary_validation_finding?.message || "A validator finding must be repaired or explicitly routed to Request Change.")}</p>
+      </div>
+      <dl class="recovery-decision-facts">
+        <div><dt>First decisive signal</dt><dd data-recovery-decisive-signal>${escapeHtml(runtimeFailure ? (firstFailure?.kind || "runtime failure") : (validationFinding?.rule || validation?.validator_report_path || "validator finding"))}</dd></div>
+        <div><dt>Evidence</dt><dd data-recovery-evidence>${escapeHtml(runtimeFailure ? (runtimeFailureEvidencePath(firstFailure, diagnostics) || "runtime log unavailable") : (validationLocation || "validator evidence unavailable"))}</dd></div>
+        <div><dt>${runtimeFailure ? "Retry consequence" : "Repair budget"}</dt><dd data-recovery-consequence>${escapeHtml(runtimeFailure ? "Retry does not consume validation repair budget; cancel leaves the durable failed attempt unchanged." : `${budgetLabel} budget; exhaustion fails closed to Request Change.`)}</dd></div>
+        <div><dt>Primary action</dt><dd data-recovery-primary>${escapeHtml(primary?.label || (runtimeFailure ? "Open logs" : status === "repair-available" ? "Run Repair" : "Request Change"))}</dd></div>
+      </dl>
+      <div class="recovery-decision-actions">
+        ${runtimeFailure ? `<button data-recovery-action="inspect-runtime-log" data-recovery-stage="${escapeHtml(firstFailure?.stage || state.activeStage)}" type="button">Open logs</button><button data-recovery-action="resume-stage" data-recovery-stage="${escapeHtml(firstFailure?.stage || state.activeStage)}" type="button" ${primary?.action === "resume-stage" ? "" : "disabled"}>Retry stage</button><button data-stop-run type="button" class="danger">Cancel</button>` : `<button data-run-repair type="button" ${status === "repair-available" ? "" : "disabled"}>Run Repair</button><button data-recovery-action="request-change" data-recovery-stage="${escapeHtml(state.activeStage)}" type="button" class="secondary" ${status === "repair-exhausted" || status === "explicit-stop" ? "" : "disabled"}>Request Change</button>`}
+      </div>
+      <span class="muted recovery-decision-attempts">${escapeHtml(runtimeFailure ? "Runtime retry is separate from validation repair attempts." : `${repairAttempts.length} validation repair attempt${repairAttempts.length === 1 ? "" : "s"} retained.`)}</span>
+    </section>
+  `;
+}
+
 function renderRecoveryWorkbench() {
   const view = activeStageView();
   const diagnostics = view?.diagnostics || {};
@@ -370,6 +400,7 @@ function renderRecoveryWorkbench() {
         : "intervention";
   return `
     <section class="recovery-workbench" data-runtime-failure-kind="${escapeHtml(runtimeFailure ? firstFailure.kind : "")}" data-runtime-stopped="${runtimeFailure ? "true" : "false"}" data-runtime-last-signal="${escapeHtml(runtimeFailure ? evidencePath : "")}" data-validation-repair-budget-consumed="false">
+      ${renderRecoveryDecisionWorkbench({runtimeFailure, firstFailure, diagnostics, validation, status, evidencePath, primary})}
       ${renderRecoverySummary({
         kind: recoveryKind,
         status: "blocked",
