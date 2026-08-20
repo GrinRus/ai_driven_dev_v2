@@ -351,6 +351,8 @@ MANUAL_QUALITY_STOP_JSON_FILENAME = "manual-quality-stop.json"
 MANUAL_QUALITY_STOP_MARKDOWN_FILENAME = "manual-quality-stop.md"
 FRONTEND_CHECKPOINT_STARTUP_TIMEOUT_SECONDS = 30.0
 FRONTEND_CHECKPOINT_PROBE_TIMEOUT_SECONDS = 10.0
+TASK_FLOW_PUBLIC_TASK_PROBE_ATTEMPTS = 3
+TASK_FLOW_PUBLIC_TASK_PROBE_RETRY_DELAY_SECONDS = 0.1
 PROVIDER_NO_PROGRESS_EXIT_CODE = 125
 STAGE_TIMEOUT_RECONCILIATION_SUFFIX = "-timeout-reconciliation.json"
 STAGE_NO_PROGRESS_RECONCILIATION_SUFFIX = "-no-progress-reconciliation.json"
@@ -3768,6 +3770,63 @@ def _http_probe(
         return {"ok": False, "status": None, "body_preview": "", "error": str(exc)}
 
 
+def _task_flow_public_task_probe(
+    *,
+    base_url: str,
+    run_id: str,
+    process: subprocess.Popen[str],
+) -> tuple[dict[str, object] | None, dict[str, object]]:
+    """Read ``/api/tasks`` while tolerating a short-lived UI startup race.
+
+    The task checkpoint is fail-closed, but a single connection refusal immediately after the
+    UI root becomes ready is not durable evidence that the public boundary is unavailable.  Keep
+    the retry bounded and retain every probe plus process state so a terminal failure remains
+    diagnosable without weakening the checkpoint's later task/hash checks.
+    """
+
+    endpoint = "/api/tasks"
+    query = urlencode({"run_id": run_id})
+    url = f"{base_url}{endpoint}?{query}"
+    probes: list[dict[str, object]] = []
+    last_probe: dict[str, object] | None = None
+    for attempt in range(1, TASK_FLOW_PUBLIC_TASK_PROBE_ATTEMPTS + 1):
+        probe = _http_probe(url)
+        last_probe = probe
+        probes.append({"attempt": attempt, **probe})
+        payload = probe.get("json_payload")
+        if probe.get("ok") is True and isinstance(payload, dict):
+            return payload, {
+                "status": "read",
+                "endpoint": endpoint,
+                "base_url": base_url,
+                "status_code": probe.get("status"),
+                "probe_attempts": probes,
+                "attempt_count": attempt,
+                "process_state": "running" if process.poll() is None else "exited",
+            }
+        if process.poll() is not None or attempt == TASK_FLOW_PUBLIC_TASK_PROBE_ATTEMPTS:
+            break
+        time.sleep(TASK_FLOW_PUBLIC_TASK_PROBE_RETRY_DELAY_SECONDS)
+
+    process_return_code = process.poll()
+    error = (
+        str(last_probe.get("error"))
+        if last_probe is not None and last_probe.get("error")
+        else "Public task projection returned an invalid response."
+    )
+    status = "invalid-response" if last_probe and last_probe.get("ok") is True else "unavailable"
+    return None, {
+        "status": status,
+        "endpoint": endpoint,
+        "base_url": base_url,
+        "error": error,
+        "probe_attempts": probes,
+        "attempt_count": len(probes),
+        "process_state": "running" if process_return_code is None else "exited",
+        "process_return_code": process_return_code,
+    }
+
+
 def _task_flow_public_task_view(
     ctx: FlowContext,
 ) -> tuple[dict[str, object] | None, dict[str, object]]:
@@ -3827,24 +3886,13 @@ def _task_flow_public_task_view(
                 "base_url": base_url,
                 "duration_seconds": time.monotonic() - started,
             }
-        query = urlencode({"run_id": ctx.run_id})
-        probe = _http_probe(f"{base_url}/api/tasks?{query}")
-        payload = probe.get("json_payload")
-        if not isinstance(payload, dict):
-            return None, {
-                "status": "invalid-response",
-                "endpoint": "/api/tasks",
-                "base_url": base_url,
-                "probe": probe,
-                "duration_seconds": time.monotonic() - started,
-            }
-        return payload, {
-            "status": "read",
-            "endpoint": "/api/tasks",
-            "base_url": base_url,
-            "status_code": probe.get("status"),
-            "duration_seconds": time.monotonic() - started,
-        }
+        payload, public_surface = _task_flow_public_task_probe(
+            base_url=base_url,
+            run_id=ctx.run_id,
+            process=process,
+        )
+        public_surface["duration_seconds"] = time.monotonic() - started
+        return payload, public_surface
     finally:
         _steps_terminate_process(process)
 
