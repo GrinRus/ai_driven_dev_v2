@@ -14217,7 +14217,7 @@ Local tasks:
     coverage, risk, Runner, and `Proceed to Review`; no stage-document editing.
   - Verification: fixtures cover clean, incomplete, changed-outside-scope, missing evidence,
     failed verification, large diff, and launch eligibility.
-- `W42-E5-S2-T2` (next) Render selective Review/QA remediation and downstream staleness.
+- `W42-E5-S2-T2` (done) Render selective Review/QA remediation and downstream staleness.
   - Scope: selectable findings/risks, exact source evidence, Markdown remediation Write/Preview,
     destination, Runner, and return to Implement through the existing service.
   - Verification: tests cover selection requirements, blocking/non-blocking findings, saved draft,
@@ -14244,7 +14244,7 @@ Dependencies: `W42-E2-S1-T3` and existing retained-attempt models.
 
 Local tasks:
 
-- `W42-E6-S1-T1` (planned) Render the run list, retained attempts, exact timeline, and lineage.
+- `W42-E6-S1-T1` (next) Render the run list, retained attempts, exact timeline, and lineage.
   - Scope: filters, stable selection, run/attempt metadata, durable events, raw log, artifacts,
     input/output hashes, copy id, and compare only when both attempts are retained.
   - Verification: tests cover live, failed, repaired, completed, missing artifact, bounded log,

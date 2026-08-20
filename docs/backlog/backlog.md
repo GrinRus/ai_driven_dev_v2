@@ -7,7 +7,7 @@ slice, and local task.
 
 ## Next
 
-- `W42-E5-S2-T2` — Render selective Review/QA remediation and downstream staleness.
+- `W42-E6-S1-T1` — Render the run list, retained attempts, exact timeline, and lineage.
 
 ## Soon
 
@@ -35,6 +35,14 @@ slice, and local task.
   queue-restoration policy in `docs/backlog/roadmap.md` (`W8-E3-S1`).
 
 ## Current reconciliation
+
+- `2026-08-20` `W42-E5-S2-T2` is complete in PR #205 (merge `1b728c2f`). Review and QA now
+  expose selectable findings and risks with exact source evidence, durable browser-session
+  remediation drafts, Markdown Write/Preview destinations, and guarded return-to-Implement
+  launches. Existing stale downstream readback and rerun semantics remain authoritative;
+  generated stage documents stay read-only. Frontend fixtures, UI contracts, focused review/QA
+  browser journeys, full frontend tests, Ruff, mypy, and CI (including packaged browser
+  acceptance) passed. `W42-E6-S1-T1` is now the only Next task.
 
 - `2026-08-20` `W42-E5-S2-T1` is complete in PR #203 (merge `ef12aae9`). Implementation Review
   now exposes repository-truth changed files and unified diffs together with completed ledger
