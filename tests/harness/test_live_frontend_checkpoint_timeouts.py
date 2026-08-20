@@ -2,7 +2,9 @@ from __future__ import annotations
 
 import time
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+from pathlib import Path
 from threading import Thread
+from types import SimpleNamespace
 from typing import ClassVar
 
 import pytest
@@ -16,6 +18,14 @@ class _ProbeProcess:
 
     def poll(self) -> int | None:
         return self.return_code
+
+
+class _SequenceProcess:
+    def __init__(self, values: list[int | None]) -> None:
+        self.values = values
+
+    def poll(self) -> int | None:
+        return self.values.pop(0) if self.values else None
 
 
 class _DelayedHandler(BaseHTTPRequestHandler):
@@ -130,3 +140,75 @@ def test_task_flow_public_task_probe_retains_terminal_unavailable_diagnostics(
     assert surface["attempt_count"] == orchestration.TASK_FLOW_PUBLIC_TASK_PROBE_ATTEMPTS
     assert surface["process_state"] == "running"
     assert len(surface["probe_attempts"]) == orchestration.TASK_FLOW_PUBLIC_TASK_PROBE_ATTEMPTS  # type: ignore[arg-type]
+
+
+def test_task_flow_public_task_probe_keeps_probing_after_launcher_exit(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    responses = [
+        {"ok": False, "status": None, "error": "connection refused"},
+        {"ok": True, "status": 200, "json_payload": {"tasks": ["T1"]}},
+    ]
+    monkeypatch.setattr(orchestration, "_http_probe", lambda _url: responses.pop(0))
+    monkeypatch.setattr(orchestration.time, "sleep", lambda _seconds: None)
+
+    payload, surface = orchestration._task_flow_public_task_probe(
+        base_url="http://127.0.0.1:12345",
+        run_id="run-1",
+        process=_ProbeProcess(return_code=0),  # type: ignore[arg-type]
+    )
+
+    assert payload == {"tasks": ["T1"]}
+    assert surface["status"] == "read"
+    assert surface["attempt_count"] == 2
+
+
+def test_task_flow_public_task_view_relaunches_after_launcher_exits_before_readiness(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    working_copy = tmp_path / "target"
+    working_copy.mkdir()
+    processes = [_SequenceProcess([1]), _SequenceProcess([None, None])]
+    popen_calls = 0
+
+    def fake_popen(*_args: object, **_kwargs: object) -> _SequenceProcess:
+        nonlocal popen_calls
+        process = processes[popen_calls]
+        popen_calls += 1
+        return process
+
+    monkeypatch.setattr(orchestration.subprocess, "Popen", fake_popen)
+    monkeypatch.setattr(orchestration, "_allocate_loopback_port", lambda: 12345 + popen_calls)
+    monkeypatch.setattr(orchestration, "_harness_environment_for_context", lambda _ctx: {})
+    monkeypatch.setattr(
+        orchestration,
+        "_http_probe",
+        lambda _url, **_kwargs: {"ok": True, "status": 200},
+    )
+    monkeypatch.setattr(
+        orchestration,
+        "_task_flow_public_task_probe",
+        lambda **_kwargs: ({"tasks": ["T1"]}, {"status": "read"}),
+    )
+    monkeypatch.setattr(orchestration.time, "sleep", lambda _seconds: None)
+    monkeypatch.setattr(
+        orchestration,
+        "_steps_terminate_process",
+        lambda process: ("", "", process.poll()),
+    )
+
+    ctx = SimpleNamespace(
+        config_path=working_copy / "aidd.example.toml",
+        installed_command=("aidd",),
+        prepared_working_copy=SimpleNamespace(working_copy_path=working_copy),
+        run_id="run-1",
+        work_item="WI-1",
+    )
+    payload, surface = orchestration._task_flow_public_task_view(ctx)  # type: ignore[arg-type]
+
+    assert payload == {"tasks": ["T1"]}
+    assert popen_calls == 2
+    assert surface["launcher_attempt_count"] == 2
+    attempts = surface["launcher_attempts"]
+    assert [attempt["status"] for attempt in attempts] == ["unavailable", "read"]  # type: ignore[index]
