@@ -14345,7 +14345,7 @@ Dependencies: `W42-E3-S1` and `W42-E7-S1`.
 
 Local tasks:
 
-- `W42-E7-S3-T1` (next) Add task-aware live E2E checkpoints for the installed Implement flow.
+- `W42-E7-S3-T1` (done) Add task-aware live E2E checkpoints for the installed Implement flow.
   - Scope: persist schema-v1 `task-flow-checkpoint.json` and `.md` after tasklist and Implement
     with run/revision identity, task ids/order/dependencies, the core-selected next task, statuses,
     attempts, evidence links, tasklist/ledger hashes, aggregate finalization, and Review
@@ -14427,7 +14427,7 @@ documents are unavailable.
 
 Local tasks:
 
-- `W43-E1-S1-T1` (parked) Record the validation and repair failure corpus.
+- `W43-E1-S1-T1` (next) Record the validation and repair failure corpus.
   - Scope: sanitize and retain the malformed question resume, service-document placeholder,
     malformed rich-tasklist, cascade finding, and repair-exhaustion shapes; identify the first
     decisive boundary, runtime, stage, attempt mode, and automatic repair consumption for each.

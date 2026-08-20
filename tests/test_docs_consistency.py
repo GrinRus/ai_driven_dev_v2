@@ -555,7 +555,7 @@ def test_operator_ui_docs_and_backlog_queue_stay_synchronized() -> None:
     assert "`W42-E7-S1-T1` (done)" in w42
     assert "`W42-E7-S1-T2` (done)" in w42
     assert "`W42-E7-S2-T2` (done)" in w42
-    assert "`W42-E7-S3-T1` (next)" in w42
+    assert "`W42-E7-S3-T1` (done)" in w42
     visual_reference_dir = (
         repo_root
         / "docs"

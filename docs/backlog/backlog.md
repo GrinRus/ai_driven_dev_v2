@@ -7,15 +7,14 @@ slice, and local task.
 
 ## Next
 
-- `W42-E7-S3-T1` — Add task-aware live E2E checkpoints for the installed Implement flow.
+- `W43-E1-S1-T1` — Record the validation and repair failure corpus before changing ownership,
+  parser, repair-budget, or recovery behavior.
 
 ## Soon
 
 
 ## Parking lot
 
-- `W43-E1-S1-T1` — Record the validation and repair failure corpus before changing ownership,
-  parser, repair-budget, or recovery behavior.
 - `W36-E7-S4-T4` — Claude acceptance is not launched under the current Codex-only scope.
 - `W36-E7-S3-T2` — Record five first-time-operator sessions after initial live hardening.
 - `W36-E7-S3-T3` — Reconcile observed session findings before beta readiness.
@@ -35,6 +34,16 @@ slice, and local task.
   queue-restoration policy in `docs/backlog/roadmap.md` (`W8-E3-S1`).
 
 ## Current reconciliation
+
+- `2026-08-20` `W42-E7-S3-T1` is complete in PR #219 (merge `754e6d7c`). Rich task-aware live
+  flows now publish schema-v1 JSON/Markdown checkpoints after validated tasklist publication and
+  aggregate Implement finalization. The runner reconciles the installed `/api/tasks` projection
+  with authorized tasklist, ledger, attempt, and finalization artifacts, preserving run/revision
+  identity, dependencies, statuses, attempts, evidence links, next-ready selection, finalization,
+  and Review eligibility; hash drift, missing evidence, invalid readiness, premature finalization,
+  or eligibility disagreement fail closed. Placeholder legacy tasklists remain outside this lane.
+  `W43-E1-S1-T1` is promoted to `Next` as the evidence-only follow-on; functional Wave 43 work
+  remains gated on Wave 42 exit evidence.
 
 - `2026-08-20` `W42-E7-S2-T2` is complete in PR #217 (merge `b1bf2b23`). The one-session
   provider-free rehearsal now records the ordered create -> Runner -> launch -> answer -> resume
