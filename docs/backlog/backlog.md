@@ -7,14 +7,15 @@ slice, and local task.
 
 ## Next
 
-<!-- No dependency-ready task is promoted while Wave 42 exit evidence remains blocked on a
-     genuine uncoached human observation. -->
+- `W42-E7-S3-T4` — Keep the installed public Task Workspace server alive between UI root readiness
+  and the task-aware `/api/tasks` checkpoint after the clean Codex rerun reproduced the lifetime
+  race.
 
 
 ## Soon
 
-<!-- The live acceptance remains blocked until W42-E7-S2-T3 is satisfied. The public-task
-     read-boundary remediation is merged, but it does not substitute for human evidence. -->
+<!-- The live acceptance remains blocked until W42-E7-S2-T3 is satisfied; T4 is a separate
+     harness remediation required before another truthful Codex retry. -->
 
 
 ## Parking lot
@@ -41,6 +42,14 @@ slice, and local task.
   queue-restoration policy in `docs/backlog/roadmap.md` (`W8-E3-S1`).
 
 ## Current reconciliation
+
+- `2026-08-20` The clean Codex run `eval-live-007-codex-20260820T210403Z` passed install,
+  `idea -> tasklist` stage validation, manual quality audits, target verification, and public UI
+  root checkpoints, but the task-aware checkpoint again received connection refused from
+  `/api/tasks` immediately after root readiness. T3's bounded retry and diagnostics worked but
+  did not solve the UI launcher/server lifetime race, so `W42-E7-S3-T4` is added and promoted to
+  `Next` before another live retry. Wave 42 remains open and the human-observation blocker is
+  unchanged.
 
 - `2026-08-20` PR #227 (merge `9613b203`) completed `W42-E7-S3-T3`. The installed `/api/tasks`
   probe now has bounded transient retries and fail-closed diagnostics for an unavailable public

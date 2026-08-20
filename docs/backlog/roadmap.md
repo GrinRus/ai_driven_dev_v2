@@ -14388,8 +14388,26 @@ Local tasks:
     retry, and a terminal unavailable boundary with retained diagnostics; existing checkpoint
     tests still fail closed on missing tasks or drift. The Codex live lane is rerun from clean
     `main` after this task merges.
+- `W42-E7-S3-T4` (next) Keep the installed public Task Workspace server alive for the task-aware
+  checkpoint after the UI root becomes ready.
+  - Dependencies: `W42-E7-S3-T3`; this follow-up was discovered by the clean Codex rerun and is
+    required before `W42-E7-S3-T2` can produce truthful live evidence.
+  - Scope: make the checkpoint's UI process ownership explicit so a wrapper exit cannot orphan or
+    terminate the `/api/tasks` server between root readiness and the task projection read; retain
+    process-lifetime diagnostics and preserve bounded retry plus fail-closed identity, dependency,
+    hash, finalization, and Review-eligibility checks.
+  - Verification: focused harness tests cover a server that remains reachable after the launcher
+    reports readiness, launcher exit before readiness, and terminal `/api/tasks` unavailability;
+    the clean Codex `AIDD-LIVE-007` lane is rerun after this task merges.
 
 Wave 42 reconciliation notes:
+
+- `2026-08-20` The clean Codex rerun `eval-live-007-codex-20260820T210403Z` passed install,
+  `idea -> tasklist` stage validation, quality audits, target verification, and all public UI
+  root checkpoints, but the task-aware checkpoint still failed closed on connection refusal at
+  `/api/tasks` immediately after root readiness. The T3 bounded retry retained the unavailable
+  boundary but did not solve the launcher/server lifetime race; `W42-E7-S3-T4` is added as a
+  separate remediation before another live retry. No Wave 42 exit claim is made.
 
 - `2026-08-20` `W42-E7-S3-T3` is complete in PR #227 (merge `9613b203`). The installed public
   `/api/tasks` probe now retries transient startup/process-lifetime failures within a bounded
