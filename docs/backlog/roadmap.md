@@ -14244,7 +14244,7 @@ Dependencies: `W42-E2-S1-T3` and existing retained-attempt models.
 
 Local tasks:
 
-- `W42-E6-S1-T1` (next) Render the run list, retained attempts, exact timeline, and lineage.
+- `W42-E6-S1-T1` (done) Render the run list, retained attempts, exact timeline, and lineage.
   - Scope: filters, stable selection, run/attempt metadata, durable events, raw log, artifacts,
     input/output hashes, copy id, and compare only when both attempts are retained.
   - Verification: tests cover live, failed, repaired, completed, missing artifact, bounded log,
@@ -14264,7 +14264,7 @@ Dependencies: `W42-E5-S2` and `W42-E6-S1`.
 
 Local tasks:
 
-- `W42-E6-S2-T1` (planned) Render immutable handoff, final evidence, and next outcomes.
+- `W42-E6-S2-T1` (next) Render immutable handoff, final evidence, and next outcomes.
   - Scope: delivered scope, verification, known limitations, repository state, final documents,
     QA result, run ids, retained evidence, one core-recommended action, and quieter alternatives.
   - Verification: fixtures prove fresh-QA gating, stale/failed exclusion, source-run immutability,
