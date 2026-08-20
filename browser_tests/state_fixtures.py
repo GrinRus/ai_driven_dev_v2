@@ -459,6 +459,7 @@ def build_browser_state_fixture(
     *,
     work_item: str = WORK_ITEM,
     run_id: str = RUN_ID,
+    route_intent_override: str | None = None,
 ) -> BrowserStateFixture:
     project_root.mkdir(parents=True, exist_ok=True)
     if state == "setup":
@@ -478,7 +479,7 @@ def build_browser_state_fixture(
         return _descriptor(
             name=state,
             project_root=project_root,
-            route="studio",
+            route=route_intent_override or "studio",
             context_keys=("project", "work_item"),
             surface="Studio",
             action="Select runtime",

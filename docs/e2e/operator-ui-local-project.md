@@ -347,6 +347,31 @@ durable objects needed by its decision surface.
 | Flow Complete | `studio` | `project`, `work_item`, `run`, `stage`, `document` | Choose the recommended next-flow action while the completed run remains immutable. |
 | History | `history` | `project`, `work_item`, `run`, `history_frame`; optional `artifact` | Inspect a retained frame, lineage, comparison, logs, or artifacts without mutation. |
 
+### Wave 42 provider-free route fixtures
+
+The packaged Operator UI keeps the historical Wave 36 parity journeys and the Wave 42
+reference routes in one static, provider-free registry:
+`/operator-surface-parity.js` (`PROVIDER_FREE_ROUTE_MANIFEST`). Each reference filename maps
+to one deterministic route query and a local fixture state. The registry uses no credentials,
+provider process, wall clock, or generated ids; its contract test also materializes every fixture
+through the public UI state builder before browser acceptance.
+
+| Target reference | Route fixture | Route query |
+| --- | --- | --- |
+| `01-project-work-items.png` | `no-run` | `?mode=inbox` |
+| `02-create-work-item.png` | `setup` | `?ui=studio` |
+| `03-work-item-launch.png` | `no-run` | `?mode=studio&work_item=WI-BROWSER&view=overview` |
+| `04-task-workspace.png` | `implementation-finalized` | `?mode=studio&work_item=WI-BROWSER&run_id=run-browser&stage=implement&work_tab=tasks` |
+| `05-active-task-run.png` | `running` | `?mode=studio&work_item=WI-BROWSER&run_id=run-browser&stage=idea&attempt=1` |
+| `06-decision-workbench.png` | `blocking-question` | `?mode=studio&work_item=WI-BROWSER&run_id=run-browser&stage=idea&view=recovery` |
+| `07-validation-repair.png` | `validation-repair` | `?mode=studio&work_item=WI-BROWSER&run_id=run-browser&stage=plan&view=recovery` |
+| `08-markdown-workspace.png` | `qa-decision` | `?mode=studio&work_item=WI-BROWSER&run_id=run-browser&stage=qa&view=artifacts` |
+| `09-implementation-review.png` | `implementation-finalized` | `?mode=studio&work_item=WI-BROWSER&run_id=run-browser&stage=implement` |
+| `10-review-qa-remediation.png` | `remediation-stale` | `?mode=studio&work_item=WI-BROWSER&run_id=run-browser&stage=qa&view=recovery` |
+| `11-run-history.png` | `history` | `?mode=history&work_item=WI-BROWSER&run_id=run-browser&stage=implement` |
+| `12-flow-complete.png` | `terminal-handoff` | `?mode=studio&work_item=WI-BROWSER&run_id=run-browser&stage=qa` |
+| `13-mobile-decision.png` | `blocking-question` | `?mode=studio&work_item=WI-BROWSER&run_id=run-browser&stage=idea&view=recovery` |
+
 Context restoration is fail-closed and non-mutating. If a selected document, attempt,
 artifact, recovery target, or history frame is stale, the UI falls back to the nearest valid
 Studio context for the same run. If the run or work item is missing, it falls back to Inbox;

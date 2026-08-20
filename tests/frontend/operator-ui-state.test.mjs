@@ -275,6 +275,38 @@ test("surface parity manifest has one owner and journey per migration surface", 
   assert.ok(entries.every((entry) => entry.removalGate.startsWith("W36-")));
 });
 
+test("provider-free route manifest covers every Wave 42 target filename deterministically", async () => {
+  const context = vm.createContext({console});
+  await load(context, "operator-surface-parity.js");
+  const entries = JSON.parse(vm.runInContext(
+    "JSON.stringify(PROVIDER_FREE_ROUTE_MANIFEST.map((entry) => ({...entry, context: {...entry.context}})))",
+    context,
+  ));
+  assert.equal(entries.length, 13);
+  assert.deepEqual(entries.map((entry) => entry.target), [
+    "01-project-work-items.png",
+    "02-create-work-item.png",
+    "03-work-item-launch.png",
+    "04-task-workspace.png",
+    "05-active-task-run.png",
+    "06-decision-workbench.png",
+    "07-validation-repair.png",
+    "08-markdown-workspace.png",
+    "09-implementation-review.png",
+    "10-review-qa-remediation.png",
+    "11-run-history.png",
+    "12-flow-complete.png",
+    "13-mobile-decision.png",
+  ]);
+  assert.ok(entries.every((entry) => entry.route.startsWith("?")));
+  assert.ok(entries.every((entry) => entry.provider === "local"));
+  assert.ok(entries.every((entry) => entry.requiresLiveProvider === false));
+  assert.ok(entries.every((entry) => entry.credentialMode === "none"));
+  assert.ok(entries.every((entry) => entry.clockMode === "fixed"));
+  assert.ok(entries.every((entry) => entry.idMode === "deterministic"));
+  assert.equal(entries.find((entry) => entry.id === "mobile-decision").viewport, "390x844");
+});
+
 test("exhausted and explicitly stopped recovery route only to the stage intervention", async () => {
   for (const diagnostics of [
     {validation: {status: "repair-exhausted"}},
