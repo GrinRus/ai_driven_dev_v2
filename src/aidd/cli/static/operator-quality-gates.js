@@ -29,6 +29,16 @@ function studioRemediationReadback(sourceStage) {
   `;
 }
 
+function remediationDraftNote(sourceStage, fallback) {
+  if (typeof readRemediationDraft !== "function") return fallback;
+  return String(readRemediationDraft(sourceStage)?.value?.text || fallback);
+}
+
+function remediationDraftSelection(sourceStage) {
+  if (typeof readRemediationDraft !== "function") return new Set();
+  return new Set(readRemediationDraft(sourceStage)?.value?.source_ids || []);
+}
+
 function renderStudioImplementationTask(task) {
   const attempts = task.attempts || [];
   const runnable = task.ready && task.status !== "succeeded";
@@ -202,6 +212,11 @@ function renderStudioReviewQualityGate(view) {
       .trim())
     .filter(Boolean)
     .join(" · ");
+  const draftSelection = remediationDraftSelection("review");
+  const defaultNote = "Fix the selected review finding(s), update implementation-report.md, and preserve unrelated changes.";
+  const selectedFinding = (finding) => draftSelection.size
+    ? draftSelection.has(finding.finding_id)
+    : finding.disposition === "must-fix";
   // Keep canonical upstream fields explicit: finding.acceptance_ids and finding.evidence.
   return `
     <section class="surface studio-quality-gate" data-studio-quality-gate="review" data-review-status="${escapeHtml(status)}">
@@ -230,8 +245,9 @@ function renderStudioReviewQualityGate(view) {
           </div>
           <label class="form-field" for="reviewRemediationNote">
             <span>Operator note for implement</span>
-            <textarea id="reviewRemediationNote" name="review_remediation_note" data-remediation-note="review" rows="4">Fix the selected review finding(s), update implementation-report.md, and preserve unrelated changes.</textarea>
+            <textarea id="reviewRemediationNote" name="review_remediation_note" data-remediation-note="review" rows="4">${escapeHtml(remediationDraftNote("review", defaultNote))}</textarea>
           </label>
+          ${typeof renderRemediationDraftPreview === "function" ? renderRemediationDraftPreview("review", {destination: typeof remediationDraftDestination === "function" ? remediationDraftDestination() : "remediations/<run>/request-####.md"}) : ""}
           ${renderRemediationRuntimeGuard("review", Boolean(findings.length))}
           <div class="wizard-actions">
             ${findings.length && typeof renderContextualRunnerControl === "function" ? renderContextualRunnerControl({actionLabel: "review remediation"}) : ""}
@@ -250,7 +266,12 @@ function renderStudioReviewQualityGate(view) {
               </div>
               <p>${escapeHtml(findingSummary(finding))}</p>
               <span>Disposition: ${escapeHtml(finding.disposition || "missing disposition")}</span>
-              <label><input id="studio-review-remediation-${index}" name="review_remediation" data-remediation-source="review" type="checkbox" value="${escapeHtml(finding.finding_id)}" ${finding.disposition === "must-fix" ? "checked" : ""}> Select for remediation</label>
+              <div class="compact-list" data-remediation-source-evidence>
+                <span>Source evidence: ${escapeHtml(findingEvidence(finding) || "not referenced")}</span>
+                <span>Related paths: ${escapeHtml((finding.related_paths || []).join(", ") || "not referenced")}</span>
+                <span>Acceptance: ${escapeHtml((finding.acceptance_ids || []).join(", ") || "not referenced")}</span>
+              </div>
+              <label><input id="studio-review-remediation-${index}" name="review_remediation" data-remediation-source="review" type="checkbox" value="${escapeHtml(finding.finding_id)}" ${selectedFinding(finding) ? "checked" : ""}> Select for remediation</label>
             </article>
           `).join("") : `<div class="empty-state">No structured Review findings were published.</div>`}
         </aside>
@@ -264,6 +285,8 @@ function renderStudioQaQualityGate(view, sourceItems) {
   const risks = view?.residual_risks || [];
   const issues = view?.known_issues || [];
   const blocked = !["ready", "ready-with-risks"].includes(verdict);
+  const draftSelection = remediationDraftSelection("qa");
+  const defaultNote = "Fix the selected QA risk(s) or issue(s), rerun verification, and update implementation-report.md.";
   return `
     <section class="surface studio-quality-gate" data-studio-quality-gate="qa" data-qa-verdict="${escapeHtml(verdict)}">
       <div class="surface-title">
@@ -288,12 +311,13 @@ function renderStudioQaQualityGate(view, sourceItems) {
         ${issues.map((issue) => `<span>Known issue · ${escapeHtml(issue)}</span>`).join("") || "<span>No known issues published.</span>"}
       </div>
       <div class="compact-list" data-qa-remediation-items>
-        ${sourceItems.map((item, index) => `<label><input id="studio-qa-remediation-${index}" name="qa_remediation" data-remediation-source="qa" type="checkbox" value="${escapeHtml(item.id)}" ${verdict === "not-ready" ? "checked" : ""}> ${escapeHtml(item.kind)} · ${escapeHtml(item.label)}</label>`).join("")}
+        ${sourceItems.map((item, index) => `<div class="compact-list"><label><input id="studio-qa-remediation-${index}" name="qa_remediation" data-remediation-source="qa" type="checkbox" value="${escapeHtml(item.id)}" ${(draftSelection.size ? draftSelection.has(item.id) : verdict === "not-ready") ? "checked" : ""}> ${escapeHtml(item.kind)} · ${escapeHtml(item.label)}</label><span data-remediation-source-evidence>Source evidence: ${escapeHtml((item.evidence || []).join(", ") || "not referenced")}</span></div>`).join("")}
       </div>
       <label class="form-field" for="qaRemediationNote">
         <span>Operator note for implement</span>
-        <textarea id="qaRemediationNote" name="qa_remediation_note" data-remediation-note="qa" rows="4">Fix the selected QA risk(s) or issue(s), rerun verification, and update implementation-report.md.</textarea>
+        <textarea id="qaRemediationNote" name="qa_remediation_note" data-remediation-note="qa" rows="4">${escapeHtml(remediationDraftNote("qa", defaultNote))}</textarea>
       </label>
+      ${typeof renderRemediationDraftPreview === "function" ? renderRemediationDraftPreview("qa", {destination: typeof remediationDraftDestination === "function" ? remediationDraftDestination() : "remediations/<run>/request-####.md"}) : ""}
       ${renderRemediationRuntimeGuard("qa", Boolean(sourceItems.length))}
       ${renderQaCompletionGuard(view, Boolean(sourceItems.length))}
       <div class="wizard-actions">

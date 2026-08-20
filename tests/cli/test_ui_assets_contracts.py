@@ -1511,6 +1511,9 @@ def test_studio_review_qa_gates_render_exact_identity_and_blocker_contracts() ->
             'data-remediation-readback=',
             'data-recovery-action="rerun-stale-downstream"',
             "Terminal handoff stays blocked",
+            "function remediationDraftNote(sourceStage, fallback)",
+            "function remediationDraftSelection(sourceStage)",
+            "data-remediation-source-evidence",
         ),
     )
     _assert_contains_all(
@@ -1518,6 +1521,31 @@ def test_studio_review_qa_gates_render_exact_identity_and_blocker_contracts() ->
         (
             "renderStudioReviewQualityGate(view)",
             "renderStudioQaQualityGate(view, sourceItems)",
+            "function remediationDraftIdentity(sourceStage)",
+            "function readRemediationDraft(sourceStage)",
+            "function remediationDraftDestination()",
+            "function remediationPreviewMarkdown(sourceStage, ids, note)",
+            "function renderRemediationDraftPreview(sourceStage",
+            "function persistRemediationDraft(sourceStage)",
+            "function updateRemediationPreview(sourceStage)",
+            "data-remediation-write-preview",
+            "Markdown Write/Preview",
+            "data-remediation-destination",
+            "data-remediation-preview",
+            'operatorPurposeDraftValue("remediation"',
+            "persistRemediationDraft(sourceStage);",
+        ),
+    )
+    main = _asset_text("/operator-main.js")
+    _assert_contains_all(
+        main,
+        (
+            'data-remediation-source',
+            'data-remediation-note',
+            "persistRemediationDraft(remediationSource)",
+            "updateRemediationPreview(remediationSource)",
+            "persistRemediationDraft(remediationNote)",
+            "updateRemediationPreview(remediationNote)",
         ),
     )
 
