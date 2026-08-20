@@ -7,7 +7,7 @@ slice, and local task.
 
 ## Next
 
-- `W42-E5-S2-T1` — Render Implementation Review from real repository and verification evidence.
+- `W42-E5-S2-T2` — Render selective Review/QA remediation and downstream staleness.
 
 ## Soon
 
@@ -35,6 +35,13 @@ slice, and local task.
   queue-restoration policy in `docs/backlog/roadmap.md` (`W8-E3-S1`).
 
 ## Current reconciliation
+
+- `2026-08-20` `W42-E5-S2-T1` is complete in PR #203 (merge `ef12aae9`). Implementation Review
+  now exposes repository-truth changed files and unified diffs together with completed ledger
+  claims, actual verification commands/results, residual risks, and allowed/project-set scope
+  coverage. Generated stage documents remain read-only. Frontend fixtures, UI contracts, focused
+  Implementation browser journeys, full frontend tests, Ruff, mypy, and CI (including packaged
+  browser acceptance) passed. `W42-E5-S2-T2` is now the only Next task.
 
 - `2026-08-20` `W42-E5-S1-T2` is complete in PR #201 (merge `377b2c6f`). Validation and
   runtime recovery now render as distinct Decision Workbench states: validation exposes exact
