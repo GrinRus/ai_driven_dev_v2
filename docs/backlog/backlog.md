@@ -7,14 +7,15 @@ slice, and local task.
 
 ## Next
 
-- `W43-E1-S1-T1` — Record the validation and repair failure corpus before changing ownership,
-  parser, repair-budget, or recovery behavior.
+
 
 ## Soon
 
 
 ## Parking lot
 
+- `W43-E1-S1-T2` — Define the canonical stage-document ownership matrix after the Wave 42 exit
+  gate is explicitly reconciled.
 - `W36-E7-S4-T4` — Claude acceptance is not launched under the current Codex-only scope.
 - `W36-E7-S3-T2` — Record five first-time-operator sessions after initial live hardening.
 - `W36-E7-S3-T3` — Reconcile observed session findings before beta readiness.
@@ -34,6 +35,14 @@ slice, and local task.
   queue-restoration policy in `docs/backlog/roadmap.md` (`W8-E3-S1`).
 
 ## Current reconciliation
+
+- `2026-08-20` `W43-E1-S1-T1` is complete in PR #221 (merge `3862b114`). The evidence-only
+  failure corpus is sanitized and provider-free: five replayable cases retain runtime, stage,
+  attempt mode, first decisive boundary, primary/related findings, and automatic repair-budget
+  consumption. Existing interview, placeholder, rich-tasklist, validator-report, and
+  repair-budget paths replay the declared signals with fail-closed manifest/path/credential
+  checks. Functional Wave 43 remains gated on the unreconciled Wave 42 exit evidence, so
+  `W43-E1-S1-T2` is parked and `Next` is intentionally empty; no ownership behavior is changed.
 
 - `2026-08-20` `W42-E7-S3-T1` is complete in PR #219 (merge `754e6d7c`). Rich task-aware live
   flows now publish schema-v1 JSON/Markdown checkpoints after validated tasklist publication and

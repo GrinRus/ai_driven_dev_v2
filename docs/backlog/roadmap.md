@@ -14427,13 +14427,13 @@ documents are unavailable.
 
 Local tasks:
 
-- `W43-E1-S1-T1` (next) Record the validation and repair failure corpus.
+- `W43-E1-S1-T1` (done) Record the validation and repair failure corpus.
   - Scope: sanitize and retain the malformed question resume, service-document placeholder,
     malformed rich-tasklist, cascade finding, and repair-exhaustion shapes; identify the first
     decisive boundary, runtime, stage, attempt mode, and automatic repair consumption for each.
   - Verification: every retained case is replayable through a provider-free parser, validator,
     or lifecycle fixture and distinguishes primary cause from related findings.
-- `W43-E1-S1-T2` (planned) Define the canonical stage-document ownership matrix.
+- `W43-E1-S1-T2` (parked) Define the canonical stage-document ownership matrix.
   - Scope: classify every stage document exactly once as runtime content, AIDD workflow record,
     AIDD control document, interview ledger, or raw candidate evidence; name create, mutate,
     validate, publish, and UI-authoring permissions without changing the eight-stage graph.
