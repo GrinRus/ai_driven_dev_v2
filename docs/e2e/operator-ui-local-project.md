@@ -294,6 +294,29 @@ is a blocker, never a skip or a passing result. This record must not contain hum
 wrong-action counts, assistance, confidence, or first-confusion ratings; those belong only to the
 observed first-time-operator acceptance owned by `W36-E7-S3`.
 
+## Wave 42 responsive browser matrix evidence
+
+The Wave 42 responsive gate is recorded separately from the historical Wave 36 packaged pass.
+Its executable registry is `browser_tests/wave42_browser_matrix.py` and its evidence schema is
+`wave42-responsive-browser-matrix-v1`.
+
+- Journey ids: `create-runner-launch`, `task-run`, `question-recovery`, `validation-repair`,
+  `markdown-change`, `review-remediation`, `history`, `completion`.
+- Viewports: `320x568`, `390x844`, `768x1024`, `1280x900`, `1440x900`.
+- Every journey must load its canonical route with a deterministic local fixture and no provider
+  credentials, wall-clock decisions, random ids, or external network requests.
+- Every journey/viewport row records the visible surface and first action, accessible names and
+  labels, keyboard/focus order, target size, contrast, clipping, overflow, and one-primary-action
+  semantics where the surface owns a decision.
+- Browser diagnostics must contain no console/page errors, failed or blocked requests, or HTTP
+  statuses at or above 400. A missing browser/runtime is `infrastructure-blocked`, never pass.
+- Draft retention and reconnect behavior remain owned by their focused journey tests; the matrix
+  references those tests rather than duplicating mutations or inventing a provider run.
+
+The matrix is complete only when all 8 journey ids have all 5 viewport rows, all rendered checks
+pass, loopback-only cleanup succeeds, and the default renderer decision remains unchanged until
+the Wave 42 exit gate is reconciled.
+
 Cleanup rules:
 
 - keep generated `.aidd/` state inside the disposable local fixture project;

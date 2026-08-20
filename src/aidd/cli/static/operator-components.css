@@ -4587,6 +4587,11 @@ button.intent-phase-step.active:hover {
   margin: 0;
   overflow-wrap: anywhere;
 }
+.studio-flow-complete .recent-artifacts,
+.studio-flow-complete .terminal-attention-blockers {
+  max-height: none;
+  overflow: visible;
+}
 .studio-history > .surface-title {
   border-bottom: 1px solid var(--line);
   grid-area: title;
