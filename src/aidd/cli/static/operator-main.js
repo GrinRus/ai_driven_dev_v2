@@ -369,6 +369,15 @@ document.addEventListener("click", async (event) => {
       await renderCockpit();
       return;
     }
+    const historyRun = event.target.closest("[data-history-run]")?.dataset.historyRun;
+    if (historyRun) {
+      state.activeRunId = historyRun;
+      state.historySelectedFrame = "";
+      state.historyAutoFollow = true;
+      syncLocationState({historyMode: "push"});
+      await renderCockpit();
+      return;
+    }
     if (event.target.closest("[data-history-return-live]")) {
       state.historySelectedFrame = "";
       state.historyAutoFollow = true;
@@ -778,6 +787,13 @@ document.addEventListener("change", async (event) => {
   if (event.target.id === "runtimeReasoningEffortInput") {
     state.runtimeReasoningEffort = event.target.value;
     state.runtimeReasoningEffortDirty = true;
+  }
+  const historyFilter = event.target.closest("[data-history-filter]")?.dataset.historyFilter;
+  if (historyFilter) {
+    if (historyFilter === "status") state.historyStatusFilter = event.target.value || "";
+    if (historyFilter === "attempt-mode") state.historyAttemptModeFilter = event.target.value || "";
+    await renderCockpit();
+    return;
   }
   const questionResolution = event.target.closest("[data-question-resolution]")?.dataset.questionResolution;
   if (questionResolution) {

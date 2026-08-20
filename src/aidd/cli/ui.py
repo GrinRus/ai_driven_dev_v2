@@ -113,7 +113,10 @@ from aidd.core.operator_reports import (
     resolve_qa_verdict,
     resolve_review_findings,
 )
-from aidd.core.operator_timeline import resolve_operator_run_timeline
+from aidd.core.operator_timeline import (
+    resolve_operator_run_history,
+    resolve_operator_run_timeline,
+)
 from aidd.core.remediation import (
     clear_stale_stages,
     create_remediation_request,
@@ -2679,6 +2682,17 @@ class OperatorUiService:
             stage=stage,
         )
 
+    def _run_history(self, params: dict[str, list[str]]) -> object:
+        status = _first_param(params, "status")
+        attempt_mode = _first_param(params, "attempt_mode")
+        return resolve_operator_run_history(
+            workspace_root=self.workspace_root,
+            work_item=self.work_item,
+            run_id=_first_param(params, "run_id"),
+            status=status,
+            attempt_mode=attempt_mode,
+        )
+
     def _run_accountability(self, params: dict[str, list[str]]) -> object:
         return resolve_run_accountability(
             workspace_root=self.workspace_root,
@@ -3058,6 +3072,9 @@ class OperatorUiService:
             "/api/dashboard": self._get_dashboard,
             "/api/run/timeline": lambda params: _json_response(
                 self._run_timeline(params)
+            ),
+            "/api/run/history": lambda params: _json_response(
+                self._run_history(params)
             ),
             "/api/run/accountability": lambda params: _json_response(
                 self._run_accountability(params)

@@ -1,5 +1,8 @@
 function renderRuntimeSelector() {
   const settings = document.getElementById("runtimeSettings");
+  const readOnlyHistory = state.activeTab === "history" || state.workDetail === "runs";
+  if (settings) settings.hidden = readOnlyHistory;
+  if (readOnlyHistory) return;
   if (settings && !settings.dataset.initialized) {
     settings.open = false;
     settings.dataset.initialized = "true";

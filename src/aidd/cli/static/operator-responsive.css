@@ -257,6 +257,7 @@
   }
 
   .studio-history,
+  .history-run-list,
   .studio-run-comparison,
   .studio-history-lineage,
   .studio-history-archive {
@@ -271,6 +272,13 @@
     flex: none;
     min-height: var(--control-height);
     width: 100%;
+  }
+  .history-filters {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .history-run-list .surface-title {
+    align-items: stretch;
+    display: grid;
   }
   .history-selection .surface-title,
   .studio-run-comparison .surface-title,

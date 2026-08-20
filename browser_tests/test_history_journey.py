@@ -56,7 +56,11 @@ def test_history_journey_preserves_retained_runs(
             work_item=fixture.work_item,
             run_id=fixture.run_id,
         )
+        assert page.locator("[data-history-run-list]").is_visible()
+        assert page.locator("[data-history-run]").count() >= 1
         assert page.locator("[data-history-frame]").count() >= 3
+        assert page.locator("[data-history-attempt-details]").is_visible()
+        assert page.locator("#runtimeSettings").is_hidden()
         assert page.locator("[data-studio-run-comparison]").is_visible()
         assert page.locator("[data-history-lineage-parent='run-source']").is_visible()
         archive = page.locator("[data-studio-history-archive]")

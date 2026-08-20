@@ -2990,6 +2990,36 @@ def test_ui_operator_control_center_endpoints_return_structured_views(
     assert qa["quality_verdict"] == "not-ready"
 
 
+def test_ui_run_history_endpoint_returns_bounded_attempt_metadata(tmp_path: Path) -> None:
+    workspace_root = tmp_path / ".aidd"
+    _prepare_completed_qa_run(workspace_root)
+    service = _service(workspace_root)
+
+    payload = _payload(
+        service.handle_get(
+            "/api/run/history",
+            {"run_id": ["run-ui"]},
+        )
+    )
+
+    assert payload["work_item"] == "WI-UI"
+    assert payload["selected_run_id"] == "run-ui"
+    assert payload["runs"]
+    entry = payload["runs"][0]
+    assert entry["run_id"] == "run-ui"
+    assert entry["runtime_id"] == "codex"
+    assert entry["attempt_count"] >= 1
+    assert "attempt_modes" in entry
+
+    failed = _payload(
+        service.handle_get(
+            "/api/run/history",
+            {"status": ["failed"]},
+        )
+    )
+    assert all(item["status"] == "failed" for item in failed["runs"])
+
+
 def test_ui_run_comparison_endpoint_is_bounded_and_work_item_scoped(tmp_path: Path) -> None:
     workspace_root = tmp_path / ".aidd"
     for run_id, status, text in (

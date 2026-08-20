@@ -402,12 +402,23 @@ def test_studio_history_uses_typed_frames_without_runtime_mutation() -> None:
     history = _asset_text("/operator-history.js")
     responsive = _asset_text("/operator-responsive.css")
     cockpit = _asset_text("/operator-stage-cockpit.js")
+    active_studio = _asset_text("/operator-active-studio.js")
     main = _asset_text("/operator-main.js")
 
     _assert_contains_all(
         history,
         (
             "async function loadStudioHistoryTimeline()",
+            "async function loadStudioRunHistory()",
+            "/api/run/history?",
+            "function renderHistoryRunList()",
+            "data-history-run-list",
+            "data-history-filter=",
+            "data-history-run=",
+            "data-history-attempt-details",
+            "Input hash:",
+            "Output hash:",
+            "Copy id:",
             "timeline.frames",
             "function renderStudioHistory(timeline)",
             "function renderStudioRunComparisonPanel()",
@@ -419,6 +430,7 @@ def test_studio_history_uses_typed_frames_without_runtime_mutation() -> None:
             "active runtime is not stopped",
             'data-comparison-evidence-path=',
             "snapshot unavailable",
+            "Compare is unavailable until two retained attempts are present",
             "History will not reconstruct it",
             "function renderStudioHistoryLineage()",
             "data-studio-history-lineage",
@@ -442,6 +454,7 @@ def test_studio_history_uses_typed_frames_without_runtime_mutation() -> None:
         ),
     )
     assert "return renderStudioHistory(await loadStudioHistoryTimeline());" in cockpit
+    assert "renderWorkItemRuns" in cockpit + active_studio
     assert 'state.historyAutoFollow = false' in main
     assert 'state.historyAutoFollow = true' in main
     assert "renderActiveRunComparisonPanel()" in _asset_text(

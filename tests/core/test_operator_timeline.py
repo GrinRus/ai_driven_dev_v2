@@ -3,7 +3,10 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-from aidd.core.operator_timeline import resolve_operator_run_timeline
+from aidd.core.operator_timeline import (
+    resolve_operator_run_history,
+    resolve_operator_run_timeline,
+)
 from aidd.core.run_store import (
     RUN_EVENTS_JSONL_FILENAME,
     create_next_attempt_directory,
@@ -163,3 +166,121 @@ def test_operator_timeline_projects_task_and_finalization_frames(tmp_path: Path)
     )
     assert finalization_frame.identity == "finalization:implement:attempt:0001"
     assert finalization_frame.status == "failed"
+
+
+def test_operator_timeline_retains_attempt_metadata_and_hashes(tmp_path: Path) -> None:
+    workspace_root = tmp_path / ".aidd"
+    create_run_manifest(
+        workspace_root=workspace_root,
+        work_item="WI-HISTORY",
+        run_id="run-history",
+        runtime_id="generic-cli",
+        stage_target="implement",
+        config_snapshot={"mode": "history-test"},
+    )
+    attempt_root = create_next_attempt_directory(
+        workspace_root=workspace_root,
+        work_item="WI-HISTORY",
+        run_id="run-history",
+        stage="implement",
+    )
+    persist_stage_status(
+        workspace_root=workspace_root,
+        work_item="WI-HISTORY",
+        run_id="run-history",
+        stage="implement",
+        status="succeeded",
+    )
+    attempt_root.joinpath("attempt-state.json").write_text(
+        json.dumps(
+            {
+                "status": "succeeded",
+                "started_at_utc": "2026-06-04T00:00:00Z",
+                "updated_at_utc": "2026-06-04T00:00:12Z",
+                "validator_outcome": "passed",
+                "copy_id": "copy-001",
+            }
+        ),
+        encoding="utf-8",
+    )
+    attempt_root.joinpath("runtime-exit.json").write_text(
+        json.dumps({"exit_classification": "success"}), encoding="utf-8"
+    )
+    attempt_root.joinpath("input-bundle.md").write_text("input\n", encoding="utf-8")
+    output_path = workspace_root / "workitems" / "WI-HISTORY" / "stages" / "implement" / "output.md"
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    output_path.write_text("output\n", encoding="utf-8")
+    attempt_root.joinpath("artifact-index.json").write_text(
+        json.dumps(
+            {
+                "attempt_mode": "initial",
+                "documents": {"output": "workitems/WI-HISTORY/stages/implement/output.md"},
+                "logs": {},
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    view = resolve_operator_run_timeline(
+        workspace_root=workspace_root,
+        work_item="WI-HISTORY",
+        run_id="run-history",
+        stage="implement",
+    )
+
+    frame = next(frame for frame in view.frames if frame.kind == "stage-attempt")
+    assert frame.attempt_mode == "initial"
+    assert frame.runtime_id == "generic-cli"
+    assert frame.started_at_utc == "2026-06-04T00:00:00Z"
+    assert frame.duration_seconds == 12.0
+    assert frame.validator_outcome == "passed"
+    assert frame.input_hash
+    assert frame.output_hash
+    assert frame.copy_id == "copy-001"
+    assert frame.retained is True
+    assert frame.first_decisive_failure is None
+    assert frame.primary_artifact == "workitems/WI-HISTORY/stages/implement/output.md"
+
+
+def test_operator_run_history_lists_filters_and_selection(tmp_path: Path) -> None:
+    workspace_root = tmp_path / ".aidd"
+    for run_id, status in (("run-old", "failed"), ("run-new", "succeeded")):
+        create_run_manifest(
+            workspace_root=workspace_root,
+            work_item="WI-HISTORY",
+            run_id=run_id,
+            runtime_id="generic-cli",
+            stage_target="implement",
+            config_snapshot={"mode": "history-test"},
+        )
+        create_next_attempt_directory(
+            workspace_root=workspace_root,
+            work_item="WI-HISTORY",
+            run_id=run_id,
+            stage="implement",
+        )
+        persist_stage_status(
+            workspace_root=workspace_root,
+            work_item="WI-HISTORY",
+            run_id=run_id,
+            stage="implement",
+            status=status,
+        )
+
+    history = resolve_operator_run_history(
+        workspace_root=workspace_root,
+        work_item="WI-HISTORY",
+        run_id="run-old",
+    )
+    assert [entry.run_id for entry in history.runs] == ["run-new", "run-old"]
+    assert history.selected_run_id == "run-old"
+    assert history.runs[0].status == "completed"
+    assert history.runs[1].status == "failed"
+    assert history.runs[0].retained_attempt_count == 1
+
+    failed = resolve_operator_run_history(
+        workspace_root=workspace_root,
+        work_item="WI-HISTORY",
+        status="failed",
+    )
+    assert [entry.run_id for entry in failed.runs] == ["run-old"]
