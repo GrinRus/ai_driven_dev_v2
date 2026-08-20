@@ -110,6 +110,10 @@ test("Flow Complete disclosure survives a render of the same durable handoff", a
     state.dashboard = {
       work_item: "WI-1",
       run: {run_id: "run-1"},
+      stages: [
+        {stage: "review", status: "succeeded"},
+        {stage: "qa", status: "succeeded"}
+      ],
       terminal_handoff: {
         status: "completed",
         final_qa_status: "ready",
@@ -127,6 +131,8 @@ test("Flow Complete disclosure survives a render of the same durable handoff", a
   `, context);
 
   assert.match(vm.runInContext("renderStudioFlowCompleteState()", context), /studio-flow-complete-other" open/);
+  assert.match(vm.runInContext("renderStudioFlowCompleteState()", context), /data-flow-complete-scope/);
+  assert.match(vm.runInContext("renderStudioFlowCompleteState()", context), /data-flow-complete-verification/);
   vm.runInContext("state.activeRunId = 'run-2'", context);
   assert.doesNotMatch(vm.runInContext("renderStudioFlowCompleteState()", context), /studio-flow-complete-other" open/);
 });

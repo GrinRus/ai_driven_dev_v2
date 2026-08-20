@@ -477,6 +477,12 @@ def test_studio_flow_complete_uses_only_core_recommendation() -> None:
             "data-studio-flow-complete",
             "data-core-recommended-outcome",
             "Other next actions",
+            "function renderFlowCompleteScope(run, stages)",
+            "data-flow-complete-scope",
+            "function renderFlowCompleteVerification(handoff, run, stages)",
+            "data-flow-complete-verification",
+            "Repository state",
+            "Known limitations:",
         ),
     )
     assert "return renderStudioFlowCompleteState();" in studio
@@ -501,6 +507,9 @@ def test_studio_flow_complete_uses_only_core_recommendation() -> None:
     )
     assert "state.nextFlowWizard.active" in studio
     assert "renderStudioNextFlowWizard()" in studio
+    assert "const terminalHandoff = Boolean(state.dashboard?.terminal_handoff)" in _asset_text(
+        "/operator-shell-rendering.js"
+    )
     actions = _asset_text("/operator-next-flow-actions.js")
     _assert_contains_all(
         actions,

@@ -1,8 +1,10 @@
 function renderRuntimeSelector() {
   const settings = document.getElementById("runtimeSettings");
   const readOnlyHistory = state.activeTab === "history" || state.workDetail === "runs";
-  if (settings) settings.hidden = readOnlyHistory;
-  if (readOnlyHistory) return;
+  const terminalHandoff = Boolean(state.dashboard?.terminal_handoff);
+  const readOnlySurface = readOnlyHistory || terminalHandoff;
+  if (settings) settings.hidden = readOnlySurface;
+  if (readOnlySurface) return;
   if (settings && !settings.dataset.initialized) {
     settings.open = false;
     settings.dataset.initialized = "true";
