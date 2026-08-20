@@ -14317,13 +14317,13 @@ Dependencies: `W42-E2` through `W42-E7-S1`.
 
 Local tasks:
 
-- `W42-E7-S2-T1` (next) Run the target browser journey matrix at all supported viewports.
+- `W42-E7-S2-T1` (done) Run the target browser journey matrix at all supported viewports.
   - Scope: create -> runner -> launch, task run, question recovery, validation repair, Markdown
     change, review remediation, history, and completion at 320x568, 390x844, 768x1024, 1280x900,
     and 1440x900.
   - Verification: captured checks prove first-action visibility, focus order, target size, contrast,
     clipping, overflow, draft retention, reconnect, one primary action, and zero console errors.
-- `W42-E7-S2-T2` (planned) Observe and reconcile a first-time operator journey before cutover.
+- `W42-E7-S2-T2` (next) Observe and reconcile a first-time operator journey before cutover.
   - Scope: one uncoached create -> choose Runner -> launch -> answer question -> resume session;
     record comprehension failures as new roadmap tasks rather than silent polish.
   - Verification: evidence records completion, wrong turns, time-to-next-action, vocabulary or
