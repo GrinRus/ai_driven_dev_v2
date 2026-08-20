@@ -96,6 +96,90 @@ test("state surfaces expose consequence, recovery, and truthful live semantics",
   }
 });
 
+test("shared interaction contract covers every state and its semantic announcement", async () => {
+  const context = await primitivesContext();
+  const states = JSON.parse(vm.runInContext("JSON.stringify(SHARED_INTERACTION_STATES)", context));
+  assert.deepEqual(states, [
+    "loading", "empty", "partial", "error", "disabled", "selected", "pending",
+    "conflict", "success", "offline", "unavailable", "reconnecting",
+    "permission-denied", "focus", "keyboard"
+  ]);
+
+  for (const state of states) {
+    const contract = JSON.parse(vm.runInContext(
+      `JSON.stringify(validateSharedInteractionContract({
+        state: ${JSON.stringify(state)},
+        accessibleName: "Shared state",
+        statusText: ${JSON.stringify(state)}
+      }))`,
+      context,
+    ));
+    const html = vm.runInContext(
+      `renderStateSurface({
+        kind: "shared-contract",
+        state: ${JSON.stringify(state)},
+        title: "Shared state",
+        consequence: "The service-owned consequence is visible.",
+        recovery: {action: "retry", label: "Retry"}
+      })`,
+      context,
+    );
+    assert.match(html, /data-interaction-contract="shared-v1"/);
+    assert.match(html, new RegExp(`data-state="${state}"`));
+    assert.match(html, new RegExp(`role="${contract.role}"`));
+    assert.match(html, new RegExp(`aria-live="${contract.live}"`));
+    assert.match(html, new RegExp(`aria-busy="${contract.busy}"`));
+    assert.equal((html.match(/data-status-text/g) || []).length, 1);
+    assert.equal((html.match(/data-state-recovery/g) || []).length, 1);
+  }
+});
+
+test("shared interaction contract rejects duplicate actions, color-only status, clipping, and focus loss", async () => {
+  const context = await primitivesContext();
+  const invalidCases = [
+    ["primaryActionCount: 2", /one primary action/],
+    ["statusUsesColorOnly: true", /text, not color alone/],
+    ["clipped: true", /fit their rendered bounds/],
+    ["focusLost: true", /preserve focus/],
+  ];
+  for (const [option, message] of invalidCases) {
+    assert.throws(
+      () => vm.runInContext(
+        `validateSharedInteractionContract({state: "selected", accessibleName: "State", statusText: "Selected", ${option}})`,
+        context,
+      ),
+      message,
+    );
+  }
+  assert.throws(
+    () => vm.runInContext(
+      'validateSharedInteractionContract({state: "selected", accessibleName: "", statusText: "Selected"})',
+      context,
+    ),
+    /accessible name/,
+  );
+});
+
+test("decision bars publish one primary action and a non-color status contract", async () => {
+  const context = await primitivesContext();
+  for (const status of ["action", "pending", "blocked", "complete", "stale", "no-action"]) {
+    const html = vm.runInContext(
+      `renderDecisionBar({
+        kind: "shared-contract",
+        status: ${JSON.stringify(status)},
+        statusLabel: "${status}",
+        title: "Decision",
+        body: "The consequence is visible.",
+        primaryAction: ${status === "action" ? '{action: "run", label: "Run"}' : "null"}
+      })`,
+      context,
+    );
+    assert.match(html, /data-interaction-region/);
+    assert.equal((html.match(/data-primary-action/g) || []).length, status === "action" ? 1 : 0);
+    assert.equal((html.match(/data-status-text/g) || []).length, 1);
+  }
+});
+
 test("Inbox Item renders service-owned routes and actions without eligibility policy", async () => {
   const context = await primitivesContext();
   for (const state of ["blocking", "running", "ready", "terminal", "malformed"]) {
