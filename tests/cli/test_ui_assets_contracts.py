@@ -178,6 +178,28 @@ def test_operator_surface_parity_manifest_is_complete_and_policy_free() -> None:
     assert "postJson(" not in parity
 
 
+def test_provider_free_route_manifest_covers_wave42_target_references() -> None:
+    parity = _asset_text("/operator-surface-parity.js")
+
+    _assert_contains_all(
+        parity,
+        (
+            "const PROVIDER_FREE_ROUTE_MANIFEST = Object.freeze([",
+            'target: "01-project-work-items.png"',
+            'target: "13-mobile-decision.png"',
+            'provider: "local"',
+            'credentialMode: "none"',
+            'clockMode: "fixed"',
+            'idMode: "deterministic"',
+            "function validateProviderFreeRouteManifest(",
+            "Expected 13 provider-free routes",
+        ),
+    )
+    assert 'String(entry.route).includes("http")' in parity
+    assert "requiresLiveProvider: true" not in parity
+    assert "Math.random" not in parity
+
+
 def test_operator_css_loader_imports_manifested_layers() -> None:
     loader = _asset_text("/operator.css")
     layer_routes = [
