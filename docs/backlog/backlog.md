@@ -7,15 +7,19 @@ slice, and local task.
 
 ## Next
 
+- `W42-E7-S2-T3` — Record one genuine uncoached first-time operator observation.
 
 
 ## Soon
+
+- `W42-E7-S3-T2` — Run and retain a fresh Codex task-aware `AIDD-LIVE-007` acceptance.
 
 
 ## Parking lot
 
 - `W43-E1-S1-T2` — Define the canonical stage-document ownership matrix after the Wave 42 exit
   gate is explicitly reconciled.
+- `W43-E5-S2-T3` — Run a future cross-runtime lower-capability comparison after Codex-only alpha.
 - `W36-E7-S4-T4` — Claude acceptance is not launched under the current Codex-only scope.
 - `W36-E7-S3-T2` — Record five first-time-operator sessions after initial live hardening.
 - `W36-E7-S3-T3` — Reconcile observed session findings before beta readiness.
@@ -35,6 +39,13 @@ slice, and local task.
   queue-restoration policy in `docs/backlog/roadmap.md` (`W8-E3-S1`).
 
 ## Current reconciliation
+
+- `2026-08-20` The Codex-only execution plan is now represented in the canonical roadmap. The
+  provider-free rehearsal `W42-E7-S2-T2` is explicitly classified as scripted evidence; the new
+  `W42-E7-S2-T3` owns the genuine uncoached observation, and `W42-E7-S3-T2` owns the fresh current-
+  revision Codex `AIDD-LIVE-007` run with task-aware checkpoints. Wave 43 E5-S2 now measures Codex
+  stability through three repetitions; the original cross-runtime comparison is parked as
+  `W43-E5-S2-T3`. Claude, dual-provider, and Wave 36 beta tasks remain out of scope.
 
 - `2026-08-20` `W43-E1-S1-T1` is complete in PR #221 (merge `3862b114`). The evidence-only
   failure corpus is sanitized and provider-free: five replayable cases retain runtime, stage,

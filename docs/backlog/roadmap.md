@@ -14324,10 +14324,20 @@ Local tasks:
   - Verification: captured checks prove first-action visibility, focus order, target size, contrast,
     clipping, overflow, draft retention, reconnect, one primary action, and zero console errors.
 - `W42-E7-S2-T2` (done) Observe and reconcile a first-time operator journey before cutover.
-  - Scope: one uncoached create -> choose Runner -> launch -> answer question -> resume session;
-    record comprehension failures as new roadmap tasks rather than silent polish.
-  - Verification: evidence records completion, wrong turns, time-to-next-action, vocabulary or
-    consequence confusion, resulting tasks, and an explicit default-routing decision.
+  - Scope: run the deterministic provider-free rehearsal for create -> choose Runner -> launch ->
+    answer question -> resume session; keep its scripted observation mode distinct from human
+    usability evidence and record comprehension signals as new roadmap tasks rather than silent
+    polish.
+  - Verification: the provider-free evidence records all five ordered steps, factual elapsed time,
+    wrong actions, assistance, first decisive confusion, resulting tasks, accessibility/geometry
+    checks, durable answer readback, and an explicit gated routing decision.
+- `W42-E7-S2-T3` (next) Record one genuine uncoached first-time operator observation.
+  - Scope: observe one participant completing create -> choose Codex Runner -> launch -> answer
+    question -> resume without coaching and retain only anonymized usability evidence.
+  - Verification: `wave42-first-time-operator-journey-v1` uses
+    `uncoached-human-observation`, records completion, timings, wrong turns, assistance, confidence,
+    first confusion, resulting roadmap tasks, and routing decision; missing participant/runtime is
+    `environment-blocked`, never pass.
 
 #### Slice W42-E7-S3 — installed task-centered live evidence (`planned`)
 
@@ -14356,6 +14366,16 @@ Local tasks:
     closed on identity or tasklist/ledger hash drift, missing task evidence, invalid next-ready
     selection, premature finalization, or Review eligibility that disagrees with the durable
     aggregate commit.
+- `W42-E7-S3-T2` (soon) Run and retain a fresh Codex task-aware `AIDD-LIVE-007` acceptance.
+  - Dependencies: `W42-E7-S2-T3` and `W42-E7-S3-T1` as the final Wave 42 exit-evidence
+    predecessors.
+  - Scope: execute the installed current-`main` flow against the pinned Hono revision through
+    Codex from `idea` to `qa`, retaining manual stage-quality audits, target verification, browser
+    evidence, Flow Complete evidence, and task-aware checkpoints.
+  - Verification: the run has install and provider readiness evidence, a complete `idea -> qa`
+    execution, `task-flow-checkpoint.json/.md` snapshots with identity/dependency/attempt/hash/
+    finalization/Review truth, final flow/code/quality reports, and no unclassified product diff;
+    provider or runtime absence is explicitly environment-blocked.
 
 Wave 42 exit evidence:
 
@@ -14817,10 +14837,10 @@ Local tasks:
     prevalidation success, disabled reasons, duplicate suppression, reconnect, and one primary
     action per recovery state.
 
-### Epic W43-E5 — resilience regression and weaker-runtime evidence (`planned`)
+### Epic W43-E5 — resilience regression and Codex-only evidence (`planned`)
 
-Goal: prove the ownership, interview, tasklist, and repair-extension behavior deterministically
-before comparing repeated live runs on a lower-capability runtime.
+Goal: prove the ownership, interview, tasklist, and repair-extension behavior deterministically,
+then measure repeatability through a Codex-only live lane without claiming cross-provider readiness.
 
 #### Slice W43-E5-S1 — provider-free resilience scenarios (`planned`)
 
@@ -14849,10 +14869,10 @@ Local tasks:
   - Verification: provider-free runs assert exact grant content, attempt history, report lineage,
     no automatic loop, and unchanged downstream artifacts.
 
-#### Slice W43-E5-S2 — comparative lower-capability runtime lane (`planned`)
+#### Slice W43-E5-S2 — Codex stability lane (`planned`)
 
-Primary output: a repeatable before/after comparison that measures whether Wave 43 reduces false
-repair exhaustion without weakening validation.
+Primary output: a repeatable Codex profile that measures whether Wave 43 reduces false repair
+exhaustion without weakening validation; cross-runtime comparison remains deferred.
 
 Touched areas:
 
@@ -14860,25 +14880,29 @@ Touched areas:
 - sanitized retained runtime traces
 - `docs/e2e/` or `docs/analysis/` comparison evidence
 
-Dependencies: `W43-E5-S1`; provider credentials and the lower-capability runtime environment are
-external prerequisites and must be reported as explicit blockers when unavailable.
+Dependencies: `W43-E5-S1`; Codex credentials and the pinned live environment are external
+prerequisites and must be reported as explicit blockers when unavailable.
 
 Local tasks:
 
-- `W43-E5-S2-T1` (planned) Define the comparative resilience profile and metrics.
-  - Scope: pin representative work item, stage boundaries, prompt/runtime configuration, repeated
-    run count, initial-pass rate, first-repair recovery, exhaustion, findings per root cause,
-    false budget consumption, interview resume, tasklist compliance, extension success, and
-    intervention rate.
+- `W43-E5-S2-T1` (planned) Define the Codex stability profile and metrics.
+  - Scope: pin the representative work item, stage boundaries, prompt/runtime configuration,
+    repetition count, initial-pass rate, first-repair recovery, exhaustion, findings per root
+    cause, false budget consumption, interview resume, tasklist compliance, extension success,
+    and intervention rate.
   - Verification: eval-doctor and profile tests prove the same scenario and evidence schema apply
-    to the control and lower-capability runtimes without core/provider conditionals.
-- `W43-E5-S2-T2` (planned) Run and report the lower-capability comparative lane.
-  - Scope: record baseline evidence, run the provider-free gate, execute at least three fresh
-    lower-capability repetitions plus the maintained control when available, classify first
-    decisive failures, and retain sanitized comparable artifacts.
-  - Verification: the report demonstrates no semantic-validation regression, no service-record
-    repair failures, no resume budget consumption, bounded root findings, and explicit pass,
-    improvement, regression, or environment-blocked verdicts for every metric.
+    to every Codex repetition without provider-specific branches in core.
+- `W43-E5-S2-T2` (planned) Run and report three fresh Codex repetitions.
+  - Scope: execute at least three fresh Codex runs against one pinned scenario/profile after the
+    provider-free gate, classify first decisive failures, and retain sanitized comparable artifacts.
+  - Verification: every repetition has install/readiness evidence, runtime logs, stage audits,
+    task-aware checkpoints, target verification, and per-metric verdicts; the aggregate report
+    distinguishes stability, regression, and blocked-provider outcomes.
+- `W43-E5-S2-T3` (parked) Run a future cross-runtime lower-capability comparison.
+  - Scope: preserve the original lower-capability comparison objective for a later provider lane
+    without changing Codex-only alpha acceptance or core/provider boundaries.
+  - Verification: a future report compares the same profile across maintained and lower-capability
+    runtimes and retains explicit environment-blocked verdicts when prerequisites are absent.
 
 Wave 43 exit evidence:
 
@@ -14896,5 +14920,5 @@ Wave 43 exit evidence:
   force progression failure;
 - one operator-authorized repair extension is auditable, revalidates first, never resets budget,
   never loops automatically, and is blocked after succeeded downstream work;
-- provider-free scenarios pass before live comparison, and lower-capability runtime evidence is
-  retained or explicitly environment-blocked.
+- provider-free scenarios pass before Codex repetition evidence, and Codex stability artifacts are
+  retained; cross-runtime evidence is explicitly deferred to `W43-E5-S2-T3`.
