@@ -14376,7 +14376,7 @@ Local tasks:
     execution, `task-flow-checkpoint.json/.md` snapshots with identity/dependency/attempt/hash/
     finalization/Review truth, final flow/code/quality reports, and no unclassified product diff;
     provider or runtime absence is explicitly environment-blocked.
-- `W42-E7-S3-T3` (next) Stabilize the installed public Task Workspace read boundary used by
+- `W42-E7-S3-T3` (done) Stabilize the installed public Task Workspace read boundary used by
   the task-aware live checkpoint.
   - Dependencies: `W42-E7-S3-T1`; this remediation is required before a fresh `W42-E7-S3-T2`
     run can reconcile the task projection.
@@ -14390,6 +14390,14 @@ Local tasks:
     `main` after this task merges.
 
 Wave 42 reconciliation notes:
+
+- `2026-08-20` `W42-E7-S3-T3` is complete in PR #227 (merge `9613b203`). The installed public
+  `/api/tasks` probe now retries transient startup/process-lifetime failures within a bounded
+  window and retains endpoint, attempt, process, and error diagnostics when the boundary remains
+  unavailable. Focused checkpoint/probe tests, the full live-E2E harness suite, Ruff, mypy,
+  deterministic/adapter checks, security checks, and packaged UI browser CI passed. The fresh
+  Codex acceptance still must be rerun from this clean `main`; `W42-E7-S3-T2` remains blocked by
+  the missing eligible human observation and no Wave 42 exit claim is made.
 
 - `2026-08-20` Fresh Codex `AIDD-LIVE-007` attempts reached a valid tasklist but both stopped at
   the task-aware checkpoint because the installed short-lived `/api/tasks` public read boundary

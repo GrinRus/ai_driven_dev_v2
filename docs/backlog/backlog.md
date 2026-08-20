@@ -7,14 +7,14 @@ slice, and local task.
 
 ## Next
 
-- `W42-E7-S3-T3` — Stabilize the installed public `/api/tasks` read boundary used by the
-  task-aware live checkpoint before retrying Codex `AIDD-LIVE-007`.
+<!-- No dependency-ready task is promoted while Wave 42 exit evidence remains blocked on a
+     genuine uncoached human observation. -->
 
 
 ## Soon
 
-<!-- The live acceptance remains blocked until W42-E7-S2-T3 is satisfied; this harness
-     remediation is the explicit prerequisite for a truthful retry. -->
+<!-- The live acceptance remains blocked until W42-E7-S2-T3 is satisfied. The public-task
+     read-boundary remediation is merged, but it does not substitute for human evidence. -->
 
 
 ## Parking lot
@@ -41,6 +41,13 @@ slice, and local task.
   queue-restoration policy in `docs/backlog/roadmap.md` (`W8-E3-S1`).
 
 ## Current reconciliation
+
+- `2026-08-20` PR #227 (merge `9613b203`) completed `W42-E7-S3-T3`. The installed `/api/tasks`
+  probe now has bounded transient retries and fail-closed diagnostics for an unavailable public
+  boundary; focused checkpoint/probe tests, the full live-E2E harness suite, Ruff, mypy,
+  deterministic/adapter checks, security checks, and packaged UI browser CI passed. `Next` and
+  `Soon` remain empty because `W42-E7-S2-T3` still lacks an eligible uncoached human observation;
+  the fresh Codex `W42-E7-S3-T2` acceptance is not claimed complete and Wave 43 remains parked.
 
 - `2026-08-20` Two fresh Codex `AIDD-LIVE-007` attempts reached a valid tasklist but both
   fail-closed at the task-aware checkpoint because the installed short-lived `/api/tasks` probe
