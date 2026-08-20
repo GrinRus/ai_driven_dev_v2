@@ -7,12 +7,12 @@ slice, and local task.
 
 ## Next
 
-- `W42-E7-S2-T3` — Record one genuine uncoached first-time operator observation.
+<!-- No task is actionable while the required uncoached human observation is blocked. -->
 
 
 ## Soon
 
-- `W42-E7-S3-T2` — Run and retain a fresh Codex task-aware `AIDD-LIVE-007` acceptance.
+<!-- The live checkpoint is blocked by W42-E7-S2-T3. -->
 
 
 ## Parking lot
@@ -39,6 +39,13 @@ slice, and local task.
   queue-restoration policy in `docs/backlog/roadmap.md` (`W8-E3-S1`).
 
 ## Current reconciliation
+
+- `2026-08-20` PR #224 (merge `72aee00e`) landed the Wave 42 human-observation contract and
+  fail-closed blocker path. No eligible participant was available, so `W42-E7-S2-T3` remains
+  `blocked` rather than `done`; its direct successor `W42-E7-S3-T2` is also `blocked`, and both
+  are intentionally absent from `Next`/`Soon`. The Wave 42 exit gate and default-renderer
+  decision remain gated. Resume with a fresh anonymized participant observation; do not edit the
+  blocker record into a pass.
 
 - `2026-08-20` The Codex-only execution plan is now represented in the canonical roadmap. The
   provider-free rehearsal `W42-E7-S2-T2` is explicitly classified as scripted evidence; the new

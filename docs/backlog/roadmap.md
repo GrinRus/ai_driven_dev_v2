@@ -14331,7 +14331,7 @@ Local tasks:
   - Verification: the provider-free evidence records all five ordered steps, factual elapsed time,
     wrong actions, assistance, first decisive confusion, resulting tasks, accessibility/geometry
     checks, durable answer readback, and an explicit gated routing decision.
-- `W42-E7-S2-T3` (next) Record one genuine uncoached first-time operator observation.
+- `W42-E7-S2-T3` (blocked) Record one genuine uncoached first-time operator observation.
   - Scope: observe one participant completing create -> choose Codex Runner -> launch -> answer
     question -> resume without coaching and retain only anonymized usability evidence.
   - Verification: `wave42-first-time-operator-journey-v1` uses
@@ -14366,7 +14366,7 @@ Local tasks:
     closed on identity or tasklist/ledger hash drift, missing task evidence, invalid next-ready
     selection, premature finalization, or Review eligibility that disagrees with the durable
     aggregate commit.
-- `W42-E7-S3-T2` (soon) Run and retain a fresh Codex task-aware `AIDD-LIVE-007` acceptance.
+- `W42-E7-S3-T2` (blocked) Run and retain a fresh Codex task-aware `AIDD-LIVE-007` acceptance.
   - Dependencies: `W42-E7-S2-T3` and `W42-E7-S3-T1` as the final Wave 42 exit-evidence
     predecessors.
   - Scope: execute the installed current-`main` flow against the pinned Hono revision through
@@ -14376,6 +14376,15 @@ Local tasks:
     execution, `task-flow-checkpoint.json/.md` snapshots with identity/dependency/attempt/hash/
     finalization/Review truth, final flow/code/quality reports, and no unclassified product diff;
     provider or runtime absence is explicitly environment-blocked.
+
+Wave 42 reconciliation notes:
+
+- `2026-08-20` `W42-E7-S2-T3` implementation contract is complete in PR #224 (merge `72aee00e`):
+  real human observations require confidence, and the bounded blocker helper emits sanitized
+  `environment-blocked` records that cannot claim completion. No eligible participant was
+  available in this execution context, so the task remains `blocked` rather than being reported
+  as passed. Its direct successor `W42-E7-S3-T2` is also `blocked`; the Wave 42 exit gate and
+  default-renderer decision remain gated until a fresh anonymized human observation is supplied.
 
 Wave 42 exit evidence:
 
