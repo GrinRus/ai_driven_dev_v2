@@ -7,13 +7,13 @@ slice, and local task.
 
 ## Next
 
-- `W42-E7-S3-T5` — Stabilize the remaining installed Task Workspace server lifecycle after the
-  clean Codex rerun reproduced connection refusal from `/api/tasks` despite direct UI success.
+- `W42-E7-S3-T6` — Parse authored task dependencies without including explanatory prose, after
+  the clean Codex rerun reached `/api/tasks` and exposed dependency drift in checkpoint parsing.
 
 
 ## Soon
 
-<!-- The live acceptance remains blocked until T5 is merged and a fresh Codex rerun succeeds;
+<!-- The live acceptance remains blocked until T6 is merged and a fresh Codex rerun succeeds;
      the genuine uncoached human observation is still a separate fail-closed prerequisite. -->
 
 
@@ -41,6 +41,12 @@ slice, and local task.
   queue-restoration policy in `docs/backlog/roadmap.md` (`W8-E3-S1`).
 
 ## Current reconciliation
+
+- `2026-08-20` PR #233 (merge `fd6922b7`) completed `W42-E7-S3-T5`: the stale readiness error is
+  cleared once the installed UI root responds, so the checkpoint now reaches `/api/tasks` and
+  retains the successful public projection. Fresh run `eval-live-007-codex-20260820T233552Z`
+  instead exposed parser-level `dependency-drift:T1..T4`, so T6 is promoted to `Next`; Wave 42
+  and Wave 43 remain open.
 
 - `2026-08-20` The clean Codex rerun `eval-live-007-codex-20260820T222927Z` passed through
   `tasklist` but the installed `/api/tasks` checkpoint again received connection refused on all
