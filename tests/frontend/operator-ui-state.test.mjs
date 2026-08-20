@@ -369,6 +369,9 @@ test("Studio repository evidence names change kinds scope and claim mismatches",
   const html = vm.runInContext(`renderStudioRepositoryEvidence({
     diffView: {aidd_artifacts: [{path: ".aidd/report"}], warnings: []},
     evidence: {selected_task_id: "TL-1", touched_files: ["src/changed.py"]},
+    taskView: {
+      tasks: [{id: "TL-1", title: "Ship the change", status: "succeeded"}]
+    },
     files: [
       {path: "src/new.py", status: "untracked", allowed_scope_status: "inside", mentioned_in_report: true},
       {path: "src/old.py", status: "deleted", allowed_scope_status: "outside", mentioned_in_report: true},
@@ -391,6 +394,44 @@ test("Studio repository evidence names change kinds scope and claim mismatches",
   assert.match(html, /core-owned <code>\.aidd\/<\/code> evidence/);
   assert.match(html, /Claim mismatch: src\/claimed.py was mentioned but unchanged/);
   assert.match(html, /src\/changed.py changed but is absent/);
+  assert.match(html, /data-implementation-review/);
+  assert.match(html, /Completed task claims from canonical ledger/);
+  assert.match(html, /Inside allowed scope: 2/);
+  assert.match(html, /Outside allowed scope: 1/);
+  assert.match(html, /Not mentioned in report: 1/);
+});
+
+test("Implementation Review exposes report truth without editing stage documents", async () => {
+  const context = vm.createContext({
+    escapeHtml(value) {
+      return String(value);
+    },
+    renderWarnings() {
+      return "";
+    },
+    renderDecisionSummary() {
+      return "";
+    },
+    renderImplementationVerificationGap() {
+      return "";
+    },
+  });
+  await load(context, "operator-control-center.js");
+  const html = vm.runInContext(`renderImplementationSummary({
+    selected_task_id: "TL-1",
+    touched_files: ["src/app.py", "tests/test_app.py"],
+    verification_commands: ["pytest -q tests/test_app.py -> exit 0"],
+    skipped_checks: [],
+    residual_risks: ["Manual browser check remains."]
+  })`, context);
+  assert.match(html, /data-implementation-review-summary/);
+  assert.match(html, /Actual verification commands\/results/);
+  assert.match(html, /pytest -q tests\/test_app.py -> exit 0/);
+  assert.match(html, /Completed task claim/);
+  assert.match(html, /TL-1/);
+  assert.match(html, /Residual risks/);
+  assert.match(html, /Manual browser check remains/);
+  assert.doesNotMatch(html, /<textarea|contenteditable|data-document-write/);
 });
 
 test("Studio Review and QA gates render exact upstream identities and blockers", async () => {

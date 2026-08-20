@@ -91,6 +91,7 @@ function studioRepositoryChangeLabel(status) {
 function renderStudioRepositoryEvidence({
   diffView,
   evidence,
+  taskView,
   files,
   visible,
   selected,
@@ -98,6 +99,13 @@ function renderStudioRepositoryEvidence({
   reviewEnabled
 }) {
   const aiddArtifacts = diffView.aidd_artifacts || [];
+  const completedTasks = (taskView?.tasks || []).filter((task) => task.status === "succeeded");
+  const insideScope = files.filter((file) => file.allowed_scope_status === "inside");
+  const outsideScope = files.filter((file) => file.allowed_scope_status === "outside");
+  const scopeNotAuthored = files.filter((file) => file.allowed_scope_status === "not-authored");
+  const outsideProjectSet = files.filter((file) => file.scope_status === "outside-project-set");
+  const unmentioned = files.filter((file) => !file.mentioned_in_report);
+  const truncated = files.filter((file) => file.truncated);
   const mismatchWarnings = [
     ...(diffView.warnings || []),
     ...unchanged.map((path) => `Claim mismatch: ${path} was mentioned but unchanged.`),
@@ -106,7 +114,7 @@ function renderStudioRepositoryEvidence({
     )
   ];
   return `
-    <section class="surface studio-repository-evidence" data-document-canvas="implementation-evidence">
+    <section class="surface studio-repository-evidence" data-document-canvas="implementation-evidence" data-implementation-review>
       <div class="surface-title">
         <span>Repository evidence</span>
         <span class="small-badge">${escapeHtml(files.length)} source changes</span>
@@ -149,6 +157,21 @@ function renderStudioRepositoryEvidence({
         <span>Report task: ${escapeHtml(evidence?.selected_task_id || "not declared")}</span>
         <span>Reported touched files: ${escapeHtml((evidence?.touched_files || []).length)}</span>
         <span>Repository changed files: ${escapeHtml(files.length)}</span>
+      </div>
+      <div class="compact-list" data-implementation-completed-claims>
+        <strong>Completed task claims from canonical ledger</strong>
+        ${completedTasks.length
+          ? completedTasks.map((task) => `<span>${escapeHtml(task.id)} · ${escapeHtml(task.title || "completed")}</span>`).join("")
+          : `<span class="muted">No completed task claims recorded.</span>`}
+      </div>
+      <div class="compact-list" data-implementation-scope-coverage>
+        <strong>Scope coverage from repository truth</strong>
+        <span>Inside allowed scope: ${escapeHtml(insideScope.length)}</span>
+        <span>Outside allowed scope: ${escapeHtml(outsideScope.length)}</span>
+        <span>Allowed scope not authored: ${escapeHtml(scopeNotAuthored.length)}</span>
+        <span>Outside project set: ${escapeHtml(outsideProjectSet.length)}</span>
+        <span>Not mentioned in report: ${escapeHtml(unmentioned.length)}</span>
+        <span>Truncated previews: ${escapeHtml(truncated.length)}</span>
       </div>
       ${renderImplementationProceedGuard(evidence)}
       <div class="wizard-actions">
