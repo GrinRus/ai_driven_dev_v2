@@ -7,15 +7,14 @@ slice, and local task.
 
 ## Next
 
-- `W42-E7-S3-T4` — Keep the installed public Task Workspace server alive between UI root readiness
-  and the task-aware `/api/tasks` checkpoint after the clean Codex rerun reproduced the lifetime
-  race.
+<!-- No dependency-ready task is promoted while Wave 42 exit evidence remains blocked on a
+     fresh Codex live rerun and a genuine uncoached human observation. -->
 
 
 ## Soon
 
-<!-- The live acceptance remains blocked until W42-E7-S2-T3 is satisfied; T4 is a separate
-     harness remediation required before another truthful Codex retry. -->
+<!-- The live acceptance remains blocked until W42-E7-S2-T3 is satisfied. T4 is merged and the
+     next required action is a fresh live rerun from clean main, not a premature Wave 43 task. -->
 
 
 ## Parking lot
@@ -42,6 +41,13 @@ slice, and local task.
   queue-restoration policy in `docs/backlog/roadmap.md` (`W8-E3-S1`).
 
 ## Current reconciliation
+
+- `2026-08-20` PR #230 (merge `afc127fc`) completed `W42-E7-S3-T4`. The task checkpoint now
+  retries launcher startup, preserves process/attempt diagnostics, and keeps probing `/api/tasks`
+  after a launcher exit; focused checkpoint/tasklist tests (11), full live-E2E harness (64),
+  docs/planning tests (50), Ruff, mypy, deterministic/adapter checks, security checks, and
+  packaged UI browser CI passed. `Next` and `Soon` remain empty pending the fresh Codex live
+  rerun and missing eligible human observation; Wave 42 and Wave 43 are not claimed complete.
 
 - `2026-08-20` The clean Codex run `eval-live-007-codex-20260820T210403Z` passed install,
   `idea -> tasklist` stage validation, manual quality audits, target verification, and public UI
