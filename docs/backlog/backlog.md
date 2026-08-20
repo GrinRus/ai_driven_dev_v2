@@ -7,14 +7,14 @@ slice, and local task.
 
 ## Next
 
-<!-- No dependency-ready task is promoted while Wave 42 exit evidence remains blocked on a
-     fresh Codex live rerun and a genuine uncoached human observation. -->
+- `W42-E7-S3-T5` — Stabilize the remaining installed Task Workspace server lifecycle after the
+  clean Codex rerun reproduced connection refusal from `/api/tasks` despite direct UI success.
 
 
 ## Soon
 
-<!-- The live acceptance remains blocked until W42-E7-S2-T3 is satisfied. T4 is merged and the
-     next required action is a fresh live rerun from clean main, not a premature Wave 43 task. -->
+<!-- The live acceptance remains blocked until T5 is merged and a fresh Codex rerun succeeds;
+     the genuine uncoached human observation is still a separate fail-closed prerequisite. -->
 
 
 ## Parking lot
@@ -41,6 +41,11 @@ slice, and local task.
   queue-restoration policy in `docs/backlog/roadmap.md` (`W8-E3-S1`).
 
 ## Current reconciliation
+
+- `2026-08-20` The clean Codex rerun `eval-live-007-codex-20260820T222927Z` passed through
+  `tasklist` but the installed `/api/tasks` checkpoint again received connection refused on all
+  three bounded attempts; direct verification served the same projection. `W42-E7-S3-T5` is added
+  and promoted to `Next` as a bounded lifecycle remediation. Wave 42 and Wave 43 remain open.
 
 - `2026-08-20` PR #230 (merge `afc127fc`) completed `W42-E7-S3-T4`. The task checkpoint now
   retries launcher startup, preserves process/attempt diagnostics, and keeps probing `/api/tasks`
