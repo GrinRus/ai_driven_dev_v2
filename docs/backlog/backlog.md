@@ -7,7 +7,7 @@ slice, and local task.
 
 ## Next
 
-- `W42-E6-S2-T1` — Render immutable handoff, final evidence, and next outcomes.
+- `W42-E7-S1-T1` — Add provider-free routes for all 13 target surfaces.
 
 ## Soon
 
@@ -35,6 +35,13 @@ slice, and local task.
   queue-restoration policy in `docs/backlog/roadmap.md` (`W8-E3-S1`).
 
 ## Current reconciliation
+
+- `2026-08-20` `W42-E6-S2-T1` is complete in PR #209 (merge `7398c13f`). Flow Complete now
+  exposes delivered scope, verification, repository state, QA result, run ids, retained evidence,
+  known limitations, and core-recommended next outcomes while preserving immutable source-run
+  lineage and hiding Runner on terminal/read-only surfaces. Frontend/UI contract checks, focused
+  five-viewport terminal browser coverage, Ruff, mypy, full CI, packaged browser acceptance, and
+  build passed. `W42-E7-S1-T1` is now the only Next task.
 
 - `2026-08-20` `W42-E6-S1-T1` is complete in PR #207 (merge `118c8c23`). Runs and Attempts now
   expose a bounded Work Item run list, retained attempt metadata, durable timeline events,
