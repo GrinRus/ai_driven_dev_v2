@@ -7,7 +7,7 @@ slice, and local task.
 
 ## Next
 
-- `W42-E5-S1-T2` — Render validation and runtime recovery as distinct states.
+- `W42-E5-S2-T1` — Render Implementation Review from real repository and verification evidence.
 
 ## Soon
 
@@ -35,6 +35,13 @@ slice, and local task.
   queue-restoration policy in `docs/backlog/roadmap.md` (`W8-E3-S1`).
 
 ## Current reconciliation
+
+- `2026-08-20` `W42-E5-S1-T2` is complete in PR #201 (merge `377b2c6f`). Validation and
+  runtime recovery now render as distinct Decision Workbench states: validation exposes exact
+  document/rule/location/budget evidence with repair routing, while runtime exposes the first
+  decisive failure, logs, retry, and cancel without consuming validation repair budget. Focused
+  frontend/UI contract tests, Ruff, mypy, Python matrix, deterministic/adapter checks, packaged
+  browser acceptance, and build passed. `W42-E5-S2-T1` is now the only Next task.
 
 - `2026-08-11` Wave 43 is planned as the runtime-neutral validation and repair resilience track.
   It separates runtime content from AIDD-owned workflow records, protects canonical interview
