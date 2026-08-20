@@ -1,0 +1,130 @@
+{
+  "schema_version": 1,
+  "corpus_id": "w43-e1-s1-failure-corpus-v1",
+  "source": {
+    "kind": "sanitized-observed-evidence",
+    "source_ref": "IUIT-1203",
+    "credentials_removed": true,
+    "provider_payloads_removed": true,
+    "target_paths_redacted": true,
+    "timestamps_fixed_for_replay": true
+  },
+  "cases": [
+    {
+      "case_id": "malformed-question-resume",
+      "replay_kind": "interview",
+      "runtime": "qwen",
+      "stage": "research",
+      "attempt_mode": "resume",
+      "primary_cause": "The resumed question document contains a duplicate stable question id.",
+      "related_findings": ["CROSS-DUPLICATE-QUESTION-ID"],
+      "first_decisive_boundary": {
+        "category": "validation",
+        "signal": "INTERVIEW-MALFORMED-DOCUMENT",
+        "source": "questions.md",
+        "line": 6
+      },
+      "automatic_repair_budget": {
+        "max": 2,
+        "consumed": 0
+      },
+      "fixtures": {
+        "questions": "cases/malformed-question-resume/questions.md",
+        "answers": "cases/malformed-question-resume/answers.md"
+      },
+      "expected_signals": ["INTERVIEW-MALFORMED-DOCUMENT"]
+    },
+    {
+      "case_id": "service-document-placeholder",
+      "replay_kind": "service-document",
+      "runtime": "qwen",
+      "stage": "plan",
+      "attempt_mode": "initial",
+      "primary_cause": "A runtime draft retained the service-owned stage-result placeholder instead of stage evidence.",
+      "related_findings": ["SEM-INCOMPLETE-SECTION"],
+      "first_decisive_boundary": {
+        "category": "validation",
+        "signal": "STRUCT-STALE-STAGE-RESULT-PLACEHOLDER",
+        "source": "stage-result.md",
+        "line": 17
+      },
+      "automatic_repair_budget": {
+        "max": 2,
+        "consumed": 0
+      },
+      "fixtures": {
+        "document": "cases/service-document-placeholder/stage-result.md"
+      },
+      "expected_signals": ["STRUCT-STALE-STAGE-RESULT-PLACEHOLDER"]
+    },
+    {
+      "case_id": "malformed-rich-tasklist",
+      "replay_kind": "rich-tasklist",
+      "runtime": "qwen",
+      "stage": "tasklist",
+      "attempt_mode": "repair",
+      "primary_cause": "The rich tasklist repeats a task id and omits a required acceptance field.",
+      "related_findings": ["CROSS-TASKLIST-PLAN-DEPENDENCY"],
+      "first_decisive_boundary": {
+        "category": "validation",
+        "signal": "RICH-TASKLIST-PARSE-ERROR",
+        "source": "tasklist.md",
+        "line": 17
+      },
+      "automatic_repair_budget": {
+        "max": 2,
+        "consumed": 1
+      },
+      "fixtures": {
+        "tasklist": "cases/malformed-rich-tasklist/tasklist.md"
+      },
+      "expected_signals": ["RICH-TASKLIST-PARSE-ERROR"]
+    },
+    {
+      "case_id": "cascade-finding",
+      "replay_kind": "validator",
+      "runtime": "qwen",
+      "stage": "plan",
+      "attempt_mode": "repair",
+      "primary_cause": "One placeholder in the plan caused a related incomplete-section finding.",
+      "related_findings": ["SEM-INCOMPLETE-SECTION"],
+      "first_decisive_boundary": {
+        "category": "validation",
+        "signal": "SEM-PLACEHOLDER-CONTENT",
+        "source": "plan.md",
+        "line": 12
+      },
+      "automatic_repair_budget": {
+        "max": 2,
+        "consumed": 1
+      },
+      "fixtures": {
+        "validator-report": "cases/cascade-finding/validator-report.md"
+      },
+      "expected_signals": ["SEM-PLACEHOLDER-CONTENT", "SEM-INCOMPLETE-SECTION"]
+    },
+    {
+      "case_id": "repair-exhaustion",
+      "replay_kind": "repair-budget",
+      "runtime": "qwen",
+      "stage": "implement",
+      "attempt_mode": "repair",
+      "primary_cause": "The stage remains invalid after the configured automatic repair budget is consumed.",
+      "related_findings": ["SEM-PLACEHOLDER-CONTENT"],
+      "first_decisive_boundary": {
+        "category": "lifecycle",
+        "signal": "CROSS-REPAIR-BUDGET-EXHAUSTED",
+        "source": "state.json",
+        "line": 8
+      },
+      "automatic_repair_budget": {
+        "max": 2,
+        "consumed": 2
+      },
+      "fixtures": {
+        "state": "cases/repair-exhaustion/state.json"
+      },
+      "expected_signals": ["CROSS-REPAIR-BUDGET-EXHAUSTED"]
+    }
+  ]
+}
