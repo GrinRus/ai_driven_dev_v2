@@ -257,6 +257,11 @@ from aidd.harness.runner import (
     run_verification_steps,
 )
 from aidd.harness.scenarios import Scenario, ScenarioAuthoredTask, load_scenario
+from aidd.harness.task_flow_checkpoint import (
+    TASK_FLOW_CHECKPOINT_JSON_FILENAME,
+    TASK_FLOW_CHECKPOINT_MARKDOWN_FILENAME,
+    build_task_flow_checkpoint,
+)
 from aidd.runtime_logs.events import persist_lifecycle_projection_from_jsonl
 from aidd.validators.semantic_rules.blocks import extract_implementation_verification_blocks
 from aidd.validators.semantic_rules.evidence import (
@@ -277,6 +282,7 @@ FlowAction = Literal[
     "remediation",
     "frontend-checkpoint",
     "frontend-running-stage-checkpoint",
+    "task-flow-checkpoint",
     "verify",
     "teardown",
     "finish",
@@ -3762,6 +3768,165 @@ def _http_probe(
         return {"ok": False, "status": None, "body_preview": "", "error": str(exc)}
 
 
+def _task_flow_public_task_view(
+    ctx: FlowContext,
+) -> tuple[dict[str, object] | None, dict[str, object]]:
+    """Read the installed Task Workspace boundary without importing target code.
+
+    This intentionally starts a short-lived loopback UI process instead of resolving the core
+    read model in the source checkout.  The resulting payload is retained in the checkpoint as
+    provenance; the target workspace is never mutated.
+    """
+
+    working_copy = _require_working_copy(ctx)
+    port = _allocate_loopback_port()
+    base_url = f"http://127.0.0.1:{port}"
+    command = _frontend_checkpoint_command(ctx, port)
+    started = time.monotonic()
+    try:
+        process = subprocess.Popen(
+            command,
+            cwd=working_copy,
+            env=_harness_environment_for_context(ctx),
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True,
+            start_new_session=True,
+        )
+    except OSError as exc:
+        return None, {
+            "status": "process-start-failed",
+            "endpoint": "/api/tasks",
+            "error": str(exc),
+            "duration_seconds": time.monotonic() - started,
+        }
+
+    failure: str | None = None
+    try:
+        deadline = started + FRONTEND_CHECKPOINT_STARTUP_TIMEOUT_SECONDS
+        while time.monotonic() < deadline:
+            if process.poll() is not None:
+                failure = "UI process exited before task checkpoint became ready."
+                break
+            remaining = max(deadline - time.monotonic(), 0.001)
+            ready = _http_probe(
+                f"{base_url}/",
+                timeout_seconds=min(FRONTEND_CHECKPOINT_PROBE_TIMEOUT_SECONDS, remaining),
+            )
+            if ready.get("ok") is True:
+                break
+            failure = str(ready.get("error") or "UI page is not ready yet.")
+            time.sleep(0.1)
+        else:
+            failure = "Timed out waiting for task checkpoint UI."
+        if failure is not None:
+            return None, {
+                "status": "unavailable",
+                "endpoint": "/api/tasks",
+                "error": failure,
+                "base_url": base_url,
+                "duration_seconds": time.monotonic() - started,
+            }
+        query = urlencode({"run_id": ctx.run_id})
+        probe = _http_probe(f"{base_url}/api/tasks?{query}")
+        payload = probe.get("json_payload")
+        if not isinstance(payload, dict):
+            return None, {
+                "status": "invalid-response",
+                "endpoint": "/api/tasks",
+                "base_url": base_url,
+                "probe": probe,
+                "duration_seconds": time.monotonic() - started,
+            }
+        return payload, {
+            "status": "read",
+            "endpoint": "/api/tasks",
+            "base_url": base_url,
+            "status_code": probe.get("status"),
+            "duration_seconds": time.monotonic() - started,
+        }
+    finally:
+        _steps_terminate_process(process)
+
+
+def _task_flow_checkpoint(
+    *,
+    ctx: FlowContext,
+    stage: str,
+    stage_run_id: str,
+) -> tuple[StepClassification, tuple[Path, ...]]:
+    if stage not in {"tasklist", "implement"} or ctx.prepared_working_copy is None:
+        return "skipped", tuple()
+    tasklist_path = (
+        ctx.prepared_working_copy.working_copy_path
+        / ".aidd"
+        / "workitems"
+        / ctx.work_item
+        / "stages"
+        / "tasklist"
+        / "output"
+        / "tasklist.md"
+    )
+    try:
+        tasklist_text = tasklist_path.read_text(encoding="utf-8")
+    except OSError:
+        tasklist_text = ""
+    # Legacy/general live fixtures can reach the tasklist stage with a deliberately minimal
+    # placeholder.  Task-aware evidence is enabled only for the installed rich-tasklist flow;
+    # malformed rich cards still fail closed inside ``build_task_flow_checkpoint``.
+    if not re.search(r"(?m)^###\s+[A-Za-z0-9][\w.-]*\b", tasklist_text):
+        return "skipped", tuple()
+    task_view, public_surface = _task_flow_public_task_view(ctx)
+    target_workspace = ctx.prepared_working_copy.working_copy_path / ".aidd"
+    aidd_revision = (
+        ctx.install_result.source_revision
+        if ctx.install_result is not None
+        else (
+            str(ctx.preserved_install_payload.get("source_revision"))
+            if ctx.preserved_install_payload is not None
+            and ctx.preserved_install_payload.get("source_revision")
+            is not None
+            else None
+        )
+    )
+    result = build_task_flow_checkpoint(
+        scenario_id=ctx.scenario.scenario_id,
+        work_item=ctx.work_item,
+        run_id=ctx.run_id,
+        runtime_id=ctx.runtime_id,
+        aidd_revision=aidd_revision,
+        target_revision=ctx.prepared_working_copy.resolved_revision,
+        stage=stage,
+        workspace_root=target_workspace,
+        output_root=ctx.bundle_root,
+        task_view=task_view,
+        public_surface=public_surface,
+    )
+    classification = cast(StepClassification, result.classification)
+    _record_step(
+        ctx=ctx,
+        action="task-flow-checkpoint",
+        classification=classification,
+        decision=(
+            "Continue after tasklist/ledger and aggregate finalization evidence matched."
+            if classification == "pass"
+            else "Stop fail-closed because task execution truth could not be reconciled."
+        ),
+        plan=(
+            "Read the installed `/api/tasks` public projection and authorized durable tasklist, "
+            "ledger, attempt, and finalization artifacts without mutating the target workspace."
+        ),
+        stage=stage,
+        evidence_paths=(result.json_path, result.markdown_path),
+        details={
+            "stage_run_id": stage_run_id,
+            "public_surface": public_surface,
+            "findings": result.payload.get("findings", []),
+        },
+    )
+    return classification, (result.json_path, result.markdown_path)
+
+
 def _http_post_json(
     url: str,
     payload: dict[str, object],
@@ -7094,6 +7259,21 @@ def _inspect_successful_external_stage_run(
         stale_downstream_stages=stale_downstream_stages,
         extra=state_extra,
     )
+    task_checkpoint_classification, _ = _task_flow_checkpoint(
+        ctx=ctx,
+        stage=stage,
+        stage_run_id=stage_run_id,
+    )
+    if task_checkpoint_classification == "fail":
+        _persist_state(
+            ctx=ctx,
+            status="fail",
+            next_action="stop",
+            current_stage=stage,
+            completed_stages=_state_completed_stages(ctx.bundle_root),
+            extra={"error": "task-flow checkpoint failed closed"},
+        )
+        return "fail"
     quality_gate = _quality_review_gate(ctx)
     if quality_gate is not None:
         return quality_gate
@@ -7345,6 +7525,21 @@ def _run_stage_and_inspect(ctx: FlowContext, stage: str) -> StepClassification:
             audit_markdown_path=ctx.bundle_root / STAGE_AUDITS_DIRNAME / f"{stage_run_id}.md",
             current_stage=_next_stage_after(ctx.scenario, stage),
         )
+        task_checkpoint_classification, _ = _task_flow_checkpoint(
+            ctx=ctx,
+            stage=stage,
+            stage_run_id=stage_run_id,
+        )
+        if task_checkpoint_classification == "fail":
+            _persist_state(
+                ctx=ctx,
+                status="fail",
+                next_action="stop",
+                current_stage=stage,
+                completed_stages=_state_completed_stages(ctx.bundle_root),
+                extra={"error": "task-flow checkpoint failed closed"},
+            )
+            return "fail"
         quality_gate = _quality_review_gate(ctx)
         if quality_gate is not None:
             return quality_gate
@@ -8160,6 +8355,12 @@ def _write_harness_metadata(
             "next_flow_checkpoint": (
                 ctx.bundle_root / NEXT_FLOW_CHECKPOINT_JSON_FILENAME
             ).as_posix(),
+            "task_flow_checkpoint": (
+                ctx.bundle_root / TASK_FLOW_CHECKPOINT_JSON_FILENAME
+            ).as_posix(),
+            "task_flow_checkpoint_markdown": (
+                ctx.bundle_root / TASK_FLOW_CHECKPOINT_MARKDOWN_FILENAME
+            ).as_posix(),
             "next_flow_lineage": (ctx.bundle_root / NEXT_FLOW_LINEAGE_FILENAME).as_posix(),
         },
         "black_box": {
@@ -8237,6 +8438,17 @@ def _grader_payload(
             "operator_decision": next_flow_checkpoint.get("next_flow_actions", {}),
             "flow_complete_visible": next_flow_checkpoint.get("flow_complete_visible"),
         },
+        "task_flow_checkpoint": {
+            "artifact": (ctx.bundle_root / TASK_FLOW_CHECKPOINT_JSON_FILENAME).as_posix(),
+            "markdown_artifact": (
+                ctx.bundle_root / TASK_FLOW_CHECKPOINT_MARKDOWN_FILENAME
+            ).as_posix(),
+            "status": (
+                "recorded"
+                if (ctx.bundle_root / TASK_FLOW_CHECKPOINT_JSON_FILENAME).exists()
+                else "not-recorded"
+            ),
+        },
         "manual_quality_artifacts": _manual_quality_artifacts_payload(ctx),
         "selected_task": ctx.selected_task_payload.get("selected_task"),
         "stage_audits": _stage_audit_payloads(ctx),
@@ -8277,6 +8489,8 @@ def _record_terminal_decision_step(
             ctx.bundle_root / RUNTIME_APPROVAL_ANALYSIS_FILENAME,
             ctx.bundle_root / NEXT_FLOW_CHECKPOINT_JSON_FILENAME,
             ctx.bundle_root / NEXT_FLOW_CHECKPOINT_MARKDOWN_FILENAME,
+            ctx.bundle_root / TASK_FLOW_CHECKPOINT_JSON_FILENAME,
+            ctx.bundle_root / TASK_FLOW_CHECKPOINT_MARKDOWN_FILENAME,
             ctx.bundle_root / NEXT_FLOW_LINEAGE_FILENAME,
             ctx.bundle_root / STAGE_AUDITS_DIRNAME,
             *evidence_paths,

@@ -430,6 +430,8 @@ Every live eval bundle must aim to contain:
   `--manual-frontend-evidence` with browser notes or screenshots
 - `next-flow-checkpoint.json`
 - `next-flow-checkpoint.md`
+- `task-flow-checkpoint.json` when the published tasklist contains rich task cards
+- `task-flow-checkpoint.md` when the published tasklist contains rich task cards
 
 ### Task-flow checkpoint target contract
 
@@ -437,6 +439,10 @@ After `W42-E7-S3-T1` enables task-aware live evidence, maintained full-flow runs
 `tasklist` also publish `task-flow-checkpoint.json` schema v1 and its human-readable
 `task-flow-checkpoint.md` projection. The checkpoint is runner-owned run-integrity evidence, not a
 replacement for stage validation, manual product-quality review, or responsive UI evidence.
+
+Legacy live fixtures that intentionally publish only a placeholder tasklist remain outside this
+task-aware lane and do not receive a task-flow checkpoint. A rich tasklist is identified by its
+canonical task-card headings; malformed rich cards are still recorded as fail-closed findings.
 
 The runner records one snapshot after the validated tasklist is published and one after Implement
 reaches aggregate finalization. Each snapshot contains:
