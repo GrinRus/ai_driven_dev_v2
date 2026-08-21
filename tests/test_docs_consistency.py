@@ -650,7 +650,8 @@ def test_operator_docs_describe_live_manual_providers_and_execution_wrappers() -
         in operator_handbook
     )
     assert (
-        "codex exec --dangerously-bypass-approvals-and-sandbox --skip-git-repo-check --json -"
+        "codex exec --ignore-user-config --disable plugins --disable remote_plugin "
+        "--dangerously-bypass-approvals-and-sandbox --skip-git-repo-check --json -"
         in operator_handbook
     )
     assert "opencode run --format json --dangerously-skip-permissions" in operator_handbook

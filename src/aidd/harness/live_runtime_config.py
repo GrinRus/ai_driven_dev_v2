@@ -30,6 +30,16 @@ LIVE_E2E_PROVIDER_TIMEOUT_SECONDS = 3600
 LIVE_E2E_STAGE_TIMEOUT_SECONDS = 3600
 LIVE_E2E_CODEX_MODEL = "gpt-5.6-luna"
 LIVE_E2E_CODEX_REASONING_EFFORT = "high"
+# The manual Codex lane must not inherit unrelated desktop MCP/plugin startup.
+# Keep this scoped to the live harness so normal runtime configuration remains
+# unchanged for operators who explicitly use those integrations.
+_LIVE_CODEX_NATIVE_STARTUP_OPTIONS = (
+    "--ignore-user-config",
+    "--disable",
+    "plugins",
+    "--disable",
+    "remote_plugin",
+)
 LIVE_E2E_RUNTIME_COMMAND_ENV_VARS = {
     "claude-code": "AIDD_EVAL_CLAUDE_CODE_COMMAND",
     "codex": "AIDD_EVAL_CODEX_COMMAND",
@@ -45,7 +55,24 @@ def _toml_string(value: str) -> str:
 
 def _default_live_native_command(*, runtime_id: str) -> str:
     definition = get_runtime_definition(runtime_id)
-    return definition.default_command
+    if runtime_id != "codex":
+        return definition.default_command
+
+    tokens = shlex.split(definition.default_command)
+    try:
+        exec_index = tokens.index("exec")
+    except ValueError:
+        return definition.default_command
+    insertion_index = exec_index + 1
+    existing = set(tokens)
+    options = [
+        option
+        for option in _LIVE_CODEX_NATIVE_STARTUP_OPTIONS
+        if option not in existing
+    ]
+    return shlex.join(
+        [*tokens[:insertion_index], *options, *tokens[insertion_index:]],
+    )
 
 
 def resolve_live_runtime_commands(

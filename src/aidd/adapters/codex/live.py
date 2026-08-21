@@ -61,10 +61,11 @@ _AIDD_CODEX_APPROVAL_POLICY: dict[str, object] = {
         "skill_approval": True,
     }
 }
-_MANAGED_VALUE_OPTIONS = frozenset({"--sandbox"})
+_MANAGED_VALUE_OPTIONS = frozenset({"--disable", "--sandbox"})
 _MANAGED_FLAG_OPTIONS = frozenset(
     {
         "--dangerously-bypass-approvals-and-sandbox",
+        "--ignore-user-config",
         "--json",
         "--skip-git-repo-check",
     }
