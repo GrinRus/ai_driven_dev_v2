@@ -7,10 +7,12 @@ slice, and local task.
 
 ## Next
 
-- `W43-E2-S2-T3` — Render bounded interview rejection recovery in the Decision Workbench.
+- `W43-E3-S1-T1` — Separate required task semantics from safe Markdown presentation.
 
 
 ## Soon
+
+- `W43-E3-S1-T2` — Embed a complete rich-tasklist scaffold in the stage brief.
 
 ## Parking lot
 
@@ -36,6 +38,14 @@ slice, and local task.
   queue-restoration policy in `docs/backlog/roadmap.md` (`W8-E3-S1`).
 
 ## Current reconciliation
+
+- `2026-08-21` PR #269 (merge `11d8e62d`) completed `W43-E2-S2-T3`: the Decision Workbench now
+  renders bounded rejected interview candidates with canonical QID state, retained raw evidence,
+  source inspection, draft-preserving edit/review focus, resume or Request Change actions, and no
+  repair scheduling. Frontend tests (132), UI/docs/planning contracts (102), provider-free mobile and
+  desktop browser recovery, full Python suite (2326), Ruff, mypy, full CI, deterministic scenarios,
+  packaged UI browser, and build passed. `W43-E3-S1-T1` is now `Next`; its scaffold successor is
+  `Soon`; human usability, Claude, cross-runtime, and Wave 36 work remain parked.
 
 - `2026-08-21` PR #267 (merge `13ba2cd9`) completed `W43-E2-S2-T2`: the core operator stage model
   now exposes bounded rejected, accepted, stale, absent, and permission-unavailable interview

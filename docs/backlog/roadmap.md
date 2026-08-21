@@ -14843,12 +14843,18 @@ Local tasks:
     answers, and exposes resume-only recovery guidance without frontend Markdown parsing. Focused
     core/docs/planning tests (122), full Python suite (2326), Ruff, mypy, full CI, deterministic
     scenarios, packaged UI browser, and build passed.
-- `W43-E2-S2-T3` (next) Render bounded interview rejection recovery in the Decision Workbench.
+- `W43-E2-S2-T3` (done) Render bounded interview rejection recovery in the Decision Workbench.
   - Scope: show the rejected fragment and canonical state, preserve answer drafts, and offer only
     the eligible confirm/edit/resume or request-change action; do not schedule a repair merely to
     fix candidate punctuation.
   - Verification: provider-free browser flow covers answer, rejected resume candidate, evidence
     inspection, recovery, focus restoration, and unchanged repair budget.
+  - Completion: PR #269 (merge `11d8e62d`) renders bounded rejected-candidate diagnostics in the
+    Decision Workbench, keeps canonical answers and browser drafts authoritative, supports retained
+    evidence inspection, preserves focus for edit/review, and routes resume without repair. Frontend
+    tests (132), UI/docs/planning contracts (102), provider-free mobile/desktop browser recovery,
+    full Python suite (2326), Ruff, mypy, full CI, deterministic scenarios, packaged UI browser,
+    and build passed.
 
 ### Epic W43-E3 — rich-tasklist authoring and diagnosis (`planned`)
 
@@ -14870,13 +14876,13 @@ Dependencies: `W43-E1-S2-T2`.
 
 Local tasks:
 
-- `W43-E3-S1-T1` (planned) Separate required task semantics from safe Markdown presentation.
+- `W43-E3-S1-T1` (next) Separate required task semantics from safe Markdown presentation.
   - Scope: retain H3 task cards, outcome, dominant deliverable, bounded in-scope paths,
     task-local acceptance criteria, dependencies, and dedicated verification; document equivalent
     emphasis/list punctuation and continue rejecting compact or ambiguous table-like tasklists.
   - Verification: contract/example tests accept only meaning-preserving variants and reject any
     document missing executable task semantics.
-- `W43-E3-S1-T2` (planned) Embed a complete rich-tasklist scaffold in the stage brief.
+- `W43-E3-S1-T2` (soon) Embed a complete rich-tasklist scaffold in the stage brief.
   - Scope: render one canonical H3 card, nested acceptance criterion, dependency entry, and
     verification entry in the installed brief; keep prompt text lean and ensure scaffold
     placeholders are prompt input rather than validated output.
