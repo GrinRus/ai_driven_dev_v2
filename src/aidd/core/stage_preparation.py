@@ -66,6 +66,35 @@ _COMMON_OUTPUT_SKELETONS = {
     "validator-report.md": render_validator_report_skeleton(),
 }
 _SKIPPED_CONTRACT_SKELETONS = {"answers.md", "questions.md"}
+_TASKLIST_OUTPUT_SKELETON = """```md
+# Tasklist
+
+## Task summary
+
+- <replace with a stage-specific decomposition summary>
+
+## Ordered tasks
+
+### TL-1 — <imperative task title>
+
+- Outcome: <observable outcome tied to an approved plan milestone>
+- Dominant deliverable: `src/example.py` contains the bounded change.
+- In scope: `src/example.py` and `tests/test_example.py`.
+- Acceptance criteria:
+  - TL-1-AC1: <task-local executable acceptance criterion>
+
+## Dependencies
+
+- TL-1: none
+
+## Verification notes
+
+- TL-1: <focused check that proves TL-1>
+```
+
+This is prompt input, not a validated output document. Replace every angle-bracket placeholder,
+add the remaining dependency-ordered cards, and publish only the resulting tasklist.
+"""
 
 
 class StageInputPreflightError(FileNotFoundError):
@@ -82,6 +111,8 @@ def _contract_output_skeleton(
     document_name: str,
     contracts_root: Path,
 ) -> str | None:
+    if document_name == "tasklist.md":
+        return _TASKLIST_OUTPUT_SKELETON
     if (
         document_name in _COMMON_OUTPUT_SKELETONS
         or document_name in _SKIPPED_CONTRACT_SKELETONS
