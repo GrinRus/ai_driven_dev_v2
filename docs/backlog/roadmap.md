@@ -14693,20 +14693,20 @@ Dependencies: `W43-E1-S2`.
 
 Local tasks:
 
-- `W43-E1-S3-T1` (next) Generate canonical validator reports only after content validation.
+- `W43-E1-S3-T1` (done) Generate canonical validator reports only after content validation.
   - Scope: validate runtime-content documents, retain an unexpected runtime validator draft only
     as attempt evidence, and write the canonical report from actual findings; do not require a
     model-authored validator file for output discovery.
   - Verification: missing and contradictory runtime drafts cannot create or suppress findings,
     while the final report exactly matches the current attempt's validator result.
-- `W43-E1-S3-T2` (soon) Render stage results from canonical lifecycle state.
+- `W43-E1-S3-T2` (next) Render stage results from canonical lifecycle state.
   - Scope: derive stage id, attempt history, status, produced outputs, validation summary,
     blockers, next action, and terminal notes from AIDD state; preserve historical repair evidence
     and make repeated reconciliation byte-stable.
   - Verification: state-matrix tests cover succeeded, failed, blocked, repair-needed, exhausted,
     and resumed outcomes, including the exact `Terminal state notes: TODO` regression without
     consuming repair budget.
-- `W43-E1-S3-T3` (planned) Enforce workflow-record ownership at every mutation boundary.
+- `W43-E1-S3-T3` (soon) Enforce workflow-record ownership at every mutation boundary.
   - Scope: exclude AIDD records from misplaced runtime promotion and operator intervention
     targets, include canonical records during publication and indexing, and retain unexpected
     runtime copies only under attempt evidence.
@@ -15094,6 +15094,15 @@ Local tasks:
     runtimes and retains explicit environment-blocked verdicts when prerequisites are absent.
 
 Wave 43 reconciliation notes:
+
+- `2026-08-21` `W43-E1-S3-T1` is complete in PR #250 (merge `f198cb8b`). Runtime completion and
+  discovery now use substantive stage documents only; canonical validator reports are rendered
+  from the current structural, semantic, and cross-document findings. Missing or contradictory
+  runtime validator drafts cannot affect the verdict, while an unexpected draft is retained as
+  `runtime-validator-report.md` in attempt evidence and the artifact index. Focused core,
+  validator, adapter-handshake, CLI, docs/planning tests (254), Ruff, mypy, full CI, packaged UI
+  browser, and build passed. `W43-E1-S3-T2` is now Next and `W43-E1-S3-T3` is Soon. Human
+  usability, Claude, cross-runtime, and Wave 36 work remain deferred.
 
 - `2026-08-21` `W43-E1-S2-T2` is complete in PR #248 (merge `4db5613e`). Stage briefs now
   distinguish runtime write targets, AIDD-generated records, interview/control documents, and the

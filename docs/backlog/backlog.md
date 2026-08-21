@@ -7,12 +7,12 @@ slice, and local task.
 
 ## Next
 
-- `W43-E1-S3-T1` — Generate canonical validator reports only after content validation.
+- `W43-E1-S3-T2` — Render stage results from canonical lifecycle state.
 
 
 ## Soon
 
-- `W43-E1-S3-T2` — Render stage results from canonical lifecycle state.
+- `W43-E1-S3-T3` — Enforce workflow-record ownership at every mutation boundary.
 
 
 ## Parking lot
@@ -39,6 +39,14 @@ slice, and local task.
   queue-restoration policy in `docs/backlog/roadmap.md` (`W8-E3-S1`).
 
 ## Current reconciliation
+
+- `2026-08-21` PR #250 (merge `f198cb8b`) completed `W43-E1-S3-T1`: runtime discovery and
+  completion now target substantive content only; canonical validator reports derive from
+  current validation findings, and unexpected runtime validator drafts are retained only in
+  attempt evidence/artifact index. Focused core/validator/adapter/CLI/docs/planning tests (254),
+  Ruff, mypy, full CI, packaged UI browser, and build passed. `W43-E1-S3-T2` is now `Next` and
+  `W43-E1-S3-T3` is `Soon`; human usability, Claude, cross-runtime, and Wave 36 work remain
+  parked.
 
 - `2026-08-21` PR #248 (merge `4db5613e`) completed `W43-E1-S2-T2`: stage briefs now separate
   runtime write targets, AIDD-generated records, interview/control documents, and the published
