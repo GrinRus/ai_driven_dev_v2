@@ -14876,13 +14876,18 @@ Dependencies: `W43-E1-S2-T2`.
 
 Local tasks:
 
-- `W43-E3-S1-T1` (next) Separate required task semantics from safe Markdown presentation.
+- `W43-E3-S1-T1` (done) Separate required task semantics from safe Markdown presentation.
   - Scope: retain H3 task cards, outcome, dominant deliverable, bounded in-scope paths,
     task-local acceptance criteria, dependencies, and dedicated verification; document equivalent
     emphasis/list punctuation and continue rejecting compact or ambiguous table-like tasklists.
   - Verification: contract/example tests accept only meaning-preserving variants and reject any
     document missing executable task semantics.
-- `W43-E3-S1-T2` (soon) Embed a complete rich-tasklist scaffold in the stage brief.
+  - Completion: PR #271 (merge `da566a09`) separated required task semantics from presentation-only
+    Markdown changes in the document and stage contracts, added safe/invalid presentation fixtures,
+    and retained fail-closed parser coverage for compact and table-like tasklists. Focused
+    task-plan/prompt checks (30), docs/planning/semantic checks (56), full Python suite (2330),
+    Ruff, mypy, full CI, deterministic scenarios, packaged UI browser, and build passed.
+- `W43-E3-S1-T2` (next) Embed a complete rich-tasklist scaffold in the stage brief.
   - Scope: render one canonical H3 card, nested acceptance criterion, dependency entry, and
     verification entry in the installed brief; keep prompt text lean and ensure scaffold
     placeholders are prompt input rather than validated output.

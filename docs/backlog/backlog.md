@@ -7,12 +7,12 @@ slice, and local task.
 
 ## Next
 
-- `W43-E3-S1-T1` — Separate required task semantics from safe Markdown presentation.
+- `W43-E3-S1-T2` — Embed a complete rich-tasklist scaffold in the stage brief.
 
 
 ## Soon
 
-- `W43-E3-S1-T2` — Embed a complete rich-tasklist scaffold in the stage brief.
+- none
 
 ## Parking lot
 
@@ -38,6 +38,14 @@ slice, and local task.
   queue-restoration policy in `docs/backlog/roadmap.md` (`W8-E3-S1`).
 
 ## Current reconciliation
+
+- `2026-08-21` PR #271 (merge `da566a09`) completed `W43-E3-S1-T1`: tasklist contracts now
+  separate required executable semantics from presentation-only Markdown changes, document safe
+  emphasis/list-marker equivalence, and keep compact/table-like forms fail-closed. Safe and invalid
+  presentation fixtures plus parser/contract tests were added. Focused task-plan/prompt checks
+  (30), docs/planning/semantic checks (56), full Python suite (2330), Ruff, mypy, full CI,
+  deterministic scenarios, packaged UI browser, and build passed. `W43-E3-S1-T2` is now `Next`;
+  human usability, Claude, cross-runtime, and Wave 36 work remain parked.
 
 - `2026-08-21` PR #269 (merge `11d8e62d`) completed `W43-E2-S2-T3`: the Decision Workbench now
   renders bounded rejected interview candidates with canonical QID state, retained raw evidence,
