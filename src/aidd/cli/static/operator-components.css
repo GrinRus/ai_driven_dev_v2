@@ -1702,6 +1702,30 @@
 .question-actions select {
   min-width: 130px;
 }
+.interview-candidate-recovery {
+  gap: 10px;
+  margin: 12px 0;
+}
+.interview-candidate-facts {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+.interview-candidate-recovery pre {
+  background: var(--color-bg-disabled);
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  font-size: 12px;
+  line-height: 1.4;
+  margin: 0;
+  max-height: 220px;
+  overflow: auto;
+  overflow-wrap: anywhere;
+  padding: 8px;
+  white-space: pre-wrap;
+}
+.interview-candidate-actions {
+  border-top: 1px solid var(--line);
+  padding-top: 8px;
+}
 .question-context-field {
   display: grid;
   gap: 5px;
@@ -1715,6 +1739,15 @@
 .question-context-field small {
   font-weight: 600;
   text-transform: none;
+}
+@media (max-width: 760px) {
+  .interview-candidate-facts,
+  .interview-candidate-recovery .decision-workbench-evidence {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .interview-candidate-actions > button {
+    width: 100%;
+  }
 }
 .answer-preview-panel {
   background: var(--color-bg-disabled);

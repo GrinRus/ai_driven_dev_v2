@@ -196,3 +196,70 @@ def test_question_recovery_restores_draft_and_resumes_from_durable_answer(
             cancel = page.request.post(f"{harness.url}api/jobs/{job_id}/cancel")
             assert cancel.status == 200
         browser_page.diagnostics.assert_clean()
+
+
+@pytest.mark.parametrize("viewport", ((390, 844), (1280, 900)))
+def test_rejected_interview_candidate_recovery_preserves_focus_and_repair_budget(
+    tmp_path: Path,
+    viewport: tuple[int, int],
+) -> None:
+    fixture = build_browser_state_fixture(
+        tmp_path / f"rejected-candidate-{viewport[0]}",
+        "rejected-interview-candidate",
+    )
+    configure_sleeping_fixture_runtime(fixture.project_root, sleep_seconds=30)
+
+    with sync_playwright() as playwright, operator_browser_harness(
+        fixture.project_root,
+        playwright,
+        work_item=fixture.work_item,
+    ) as harness, harness.open_page(viewport) as browser_page:
+        page = browser_page.page
+        page.goto(f"{harness.url}?ui=studio", wait_until="networkidle")
+        page.locator("#runtimeSettings").evaluate("node => { node.open = true; }")
+        page.locator("#runtimeSelect").select_option("generic-cli")
+        page.wait_for_function("eval('selectedRuntimeReady()')", timeout=15_000)
+
+        recovery = page.locator('[data-interview-candidate-recovery="rejected"]')
+        recovery.wait_for(state="visible")
+        assert recovery.locator("[data-interview-candidate-status]").inner_text().lower() == (
+            "runtime candidate rejected"
+        )
+        assert recovery.locator("[data-interview-candidate-raw]").inner_text().startswith(
+            "# Questions"
+        )
+        assert recovery.locator("[data-interview-candidate-evidence]").count() == 1
+        assert recovery.locator('[data-recovery-action="request-change"]').count() == 1
+        assert recovery.locator("[data-run-repair]").count() == 0
+
+        recovery.locator('[data-focus-question="Q1"]').click()
+        assert page.locator('[data-question-text="Q1"]').evaluate(
+            "node => node === document.activeElement"
+        )
+        page.locator('[data-question-text="Q1"]').fill(
+            "Preserve the public CLI and durable evidence boundary."
+        )
+        page.locator('[data-question-resolution="Q1"]').select_option("resolved")
+
+        stage_posts: list[str] = []
+        repair_posts: list[str] = []
+
+        def _record_request(request: object) -> None:
+            request_url = str(getattr(request, "url", ""))
+            if getattr(request, "method", None) != "POST":
+                return
+            if request_url.endswith("/api/stage/run"):
+                stage_posts.append(request_url)
+            if "/api/repair" in request_url:
+                repair_posts.append(request_url)
+
+        page.on("request", _record_request)
+        page.locator('[data-answer-resume="Q1"]').click()
+        page.wait_for_function("eval('state.activeJobId')", timeout=10_000)
+        assert len(stage_posts) == 1
+        assert repair_posts == []
+        job_id = page.evaluate("eval('state.activeJobId')")
+        if job_id:
+            cancel = page.request.post(f"{harness.url}api/jobs/{job_id}/cancel")
+            assert cancel.status == 200
+        browser_page.diagnostics.assert_clean()

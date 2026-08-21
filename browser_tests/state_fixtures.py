@@ -659,6 +659,59 @@ def build_browser_state_fixture(
             work_item=work_item,
             run_id=run_id,
         )
+    if state == "rejected-interview-candidate":
+        attempt_root = _attempt(workspace_root, "idea", work_item=work_item, run_id=run_id)
+        persist_stage_status(workspace_root, work_item, run_id, "idea", "blocked")
+        persist_questions_document(
+            workspace_root=workspace_root,
+            work_item=work_item,
+            stage="idea",
+            adapter_question_events=(
+                AdapterQuestionEvent(
+                    question_id="Q1",
+                    policy=QuestionPolicy.BLOCKING,
+                    text="Which acceptance boundary should the run preserve?",
+                ),
+            ),
+        )
+        attempt_root.joinpath("runtime-questions-candidate.md").write_text(
+            "# Questions\n\n- Q1 [blocking: malformed candidate]\n",
+            encoding="utf-8",
+        )
+        attempt_root.joinpath("interview-candidate-disposition.md").write_text(
+            "\n".join(
+                (
+                    "# Interview Candidate Disposition",
+                    "",
+                    "- Document: `questions.md`",
+                    "- Disposition: `operator-attention`",
+                    "- Reason: `invalid-marker`",
+                    "- QID: `Q1`",
+                    "- Raw candidate: `runtime-questions-candidate.md`",
+                    "",
+                )
+            ),
+            encoding="utf-8",
+        )
+        write_attempt_artifact_index(
+            workspace_root,
+            work_item,
+            run_id,
+            "idea",
+            1,
+            attempt_mode="initial",
+        )
+        return _descriptor(
+            name=state,
+            project_root=project_root,
+            route="studio",
+            context_keys=("project", "work_item", "run", "stage", "recovery_target"),
+            surface="Question Recovery",
+            action="Review rejected interview candidate",
+            marker="blocked",
+            work_item=work_item,
+            run_id=run_id,
+        )
     runtime_failures = {
         "runtime-failure": (
             RuntimeAdapterOutcome.RUNTIME_FAILURE,
@@ -962,6 +1015,7 @@ BROWSER_FIXTURE_STATES = (
     "no-run",
     "running",
     "blocking-question",
+    "rejected-interview-candidate",
     "runtime-failure",
     "runtime-launch-failure",
     "runtime-authentication-failure",
