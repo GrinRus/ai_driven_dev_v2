@@ -41,6 +41,25 @@ def test_tasklist_dependency_parser_keeps_malformed_machine_clause_fail_closed()
     assert dependencies == {"T1": ("T99",)}
 
 
+def test_tasklist_dependency_parser_normalizes_terminal_punctuation() -> None:
+    _, dependencies = _tasklist_cards(
+        """# Tasklist
+
+### T1 — Runtime normalization
+### T2 — Direct regressions
+### T3 — Verification
+
+## Dependencies
+
+- T1: none. — establishes the runtime boundary.
+- T2: T1. — adds direct coverage.
+- T3: T1, T2.; — runs the focused verification.
+"""
+    )
+
+    assert dependencies == {"T1": (), "T2": ("T1",), "T3": ("T1", "T2")}
+
+
 def _write_workspace(tmp_path: Path, *, finalization: str = "pending") -> tuple[Path, Path]:
     workspace = tmp_path / ".aidd"
     work_item = "WI-CHECKPOINT"
