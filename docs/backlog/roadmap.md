@@ -14410,7 +14410,7 @@ Local tasks:
   - Verification: focused harness tests reproduce the observed root-ready then connection-refused
     sequence, prove a durable `/api/tasks` read through the installed public surface, and preserve
     terminal diagnostics; the clean Codex `AIDD-LIVE-007` lane is rerun after this task merges.
-- `W42-E7-S3-T6` (next) Parse authored task dependencies from structured tasklist clauses without
+- `W42-E7-S3-T6` (done) Parse authored task dependencies from structured tasklist clauses without
   treating explanatory prose as task IDs.
   - Dependencies: `W42-E7-S3-T5`; this follow-up is required because the first clean rerun after
     T5 successfully read `/api/tasks` but the checkpoint parser reported dependency drift for every
@@ -14421,8 +14421,24 @@ Local tasks:
   - Verification: focused checkpoint/parser tests cover concise clauses, explanatory prose,
     multiple dependencies, malformed clauses, and public-projection drift; the clean Codex
     `AIDD-LIVE-007` lane is rerun after this task merges.
+- `W42-E7-S3-T7` (next) Normalize terminal punctuation in authored dependency identifiers.
+  - Dependencies: `W42-E7-S3-T6`; this follow-up was discovered by the fresh Codex rerun after
+    T6: the parser now isolates the dependency clause, but authored values such as `T1.` and
+    `none.` still differ from the public projection and fail the checkpoint closed.
+  - Scope: strip only unambiguous terminal punctuation from parsed task identifiers and the
+    `none` sentinel, retain fail-closed behavior for malformed or ambiguous clauses, and keep
+    public dependency comparison authoritative.
+  - Verification: focused parser/checkpoint tests cover terminal punctuation, explanatory prose,
+    concise and multiple dependencies, malformed clauses, and public-projection drift; the
+    clean Codex `AIDD-LIVE-007` lane is rerun after this task merges.
 
 Wave 42 reconciliation notes:
+
+- `2026-08-21` PR #235 (merge `9ff76b3f`) made the installed `/api/tasks` projection reachable
+  and isolated dependency clauses, but fresh Codex run `eval-live-007-codex-20260821T003332Z`
+  still failed closed at the task-aware checkpoint because authored dependencies retained
+  terminal punctuation (`T1.`, `none.`). T6 is complete; T7 is promoted as the next bounded
+  parser remediation. No Wave 42 exit claim is made.
 
 - `2026-08-20` The clean Codex run `eval-live-007-codex-20260820T233552Z` reached the installed
   `/api/tasks` public projection successfully after T5, with HTTP 200 and retained task identity,
