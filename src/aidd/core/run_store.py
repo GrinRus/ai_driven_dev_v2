@@ -470,6 +470,12 @@ def _canonical_attempt_documents(
             workspace_root=workspace_root,
             path=repair_context_path,
         )
+    runtime_validator_draft_path = attempt_root / "runtime-validator-report.md"
+    if runtime_validator_draft_path.exists():
+        documents["runtime_validator_draft"] = _workspace_relative_canonical_path(
+            workspace_root=workspace_root,
+            path=runtime_validator_draft_path,
+        )
     return documents
 
 

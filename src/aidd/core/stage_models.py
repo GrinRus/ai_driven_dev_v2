@@ -66,6 +66,7 @@ class StageOutputDiscovery:
     discovered_markdown_documents: tuple[Path, ...]
     missing_markdown_documents: tuple[Path, ...]
     promoted_misplaced_documents: tuple[StageOutputPromotion, ...] = ()
+    unexpected_runtime_documents: tuple[Path, ...] = ()
 
 
 class ValidationVerdict(StrEnum):

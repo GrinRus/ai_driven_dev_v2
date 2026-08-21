@@ -70,13 +70,18 @@ def validate_semantic_outputs(
     contracts_root: Path = DEFAULT_STAGE_CONTRACTS_ROOT,
     validate_stage_result_document: bool = False,
     implementation_execution_mode: TaskExecutionMode | None = None,
+    output_documents: tuple[Path, ...] | None = None,
 ) -> tuple[ValidationFinding, ...]:
     load_stage_manifest(stage=stage, contracts_root=contracts_root)
-    expected_outputs = resolve_expected_output_documents(
-        stage=stage,
-        work_item=work_item,
-        workspace_root=workspace_root,
-        contracts_root=contracts_root,
+    expected_outputs = (
+        resolve_expected_output_documents(
+            stage=stage,
+            work_item=work_item,
+            workspace_root=workspace_root,
+            contracts_root=contracts_root,
+        )
+        if output_documents is None
+        else output_documents
     )
 
     findings: list[ValidationFinding] = []
