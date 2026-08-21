@@ -158,7 +158,7 @@ def test_qwen_surface_treats_document_complete_as_success(
     )
 
     def fake_run_qwen_subprocess_with_streaming(**kwargs):
-        assert kwargs["document_completion_paths"] == (qa_report, stage_result, validator_report)
+        assert kwargs["document_completion_paths"] == (qa_report,)
         spec = kwargs["spec"]
         assert spec.env["AIDD_ATTEMPT_MODE"] == "intervention"
         assert spec.env["AIDD_OPERATOR_REQUEST_PATH"] == operator_request.as_posix()

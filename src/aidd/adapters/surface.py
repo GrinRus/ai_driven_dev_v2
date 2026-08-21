@@ -74,6 +74,7 @@ from aidd.adapters.qwen.runner import persist_attempt_runtime_log as persist_qwe
 from aidd.adapters.qwen.runner import (
     run_subprocess_with_streaming as run_qwen_subprocess_with_streaming,
 )
+from aidd.adapters.runner_support import runtime_content_document_paths
 from aidd.adapters.runtime_events import (
     detect_question_or_pause_events,
     normalize_structured_events,
@@ -528,6 +529,9 @@ def _execute_generic_cli(
         on_stdout=on_stdout,
         on_stderr=on_stderr,
         timeout_seconds=request.timeout_seconds,
+        document_completion_paths=runtime_content_document_paths(
+            request.expected_output_documents
+        ),
         cancel_requested=request.cancel_requested,
         capture_directory=attempt_path,
     )
@@ -538,9 +542,10 @@ def _execute_generic_cli(
         run_result.exit_classification.value
     )
     return RuntimeAdapterExecutionResult(
-        succeeded=_success_result(
-            run_result.exit_classification,
+        succeeded=run_result.exit_classification
+        in (
             GenericCliExitClassification.SUCCESS,
+            GenericCliExitClassification.DOCUMENT_COMPLETE,
         ),
         details=run_result.exit_classification.value,
         adapter_outcome=adapter_outcome,
@@ -842,7 +847,9 @@ def _execute_opencode(
         on_stdout=on_stdout,
         on_stderr=on_stderr,
         timeout_seconds=request.timeout_seconds,
-        document_completion_paths=request.expected_output_documents,
+        document_completion_paths=runtime_content_document_paths(
+            request.expected_output_documents
+        ),
         cancel_requested=request.cancel_requested,
         capture_directory=attempt_path,
     )
@@ -998,7 +1005,9 @@ def _execute_qwen(
         on_stdout=on_stdout,
         on_stderr=on_stderr,
         timeout_seconds=request.timeout_seconds,
-        document_completion_paths=request.expected_output_documents,
+        document_completion_paths=runtime_content_document_paths(
+            request.expected_output_documents
+        ),
         cancel_requested=request.cancel_requested,
         capture_directory=attempt_path,
     )

@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import json
 import shlex
-import time
 from collections.abc import Callable, Mapping
 from dataclasses import dataclass
 from enum import StrEnum
@@ -15,6 +14,7 @@ from aidd.adapters.path_resolution import (
 )
 from aidd.adapters.runner_support import (
     build_aidd_execution_environment,
+    build_runtime_document_completion_requested,
     persist_runtime_log_artifacts,
     resolve_exit_classification,
     split_configured_command,
@@ -79,15 +79,6 @@ class OpenCodeRunResult(RuntimeRunResult[OpenCodeExitClassification]):
 
 
 _DOCUMENT_COMPLETION_SETTLE_SECONDS = 30.0
-_DOCUMENT_PLACEHOLDERS = {
-    "# Questions\n\nNo questions yet.",
-    "# Answers\n\nNo answers yet.",
-    "# Validator report\n\nNo validator output yet.",
-    "# Stage result\n\nStage not run yet.",
-}
-_TERMINAL_DOCUMENT_NAMES = {"stage-result.md", "validator-report.md"}
-
-
 def _resolve_exit_classification(
     *,
     exit_code: int | None,
@@ -217,81 +208,15 @@ def _split_configured_command(*, configured_command: str, runtime_label: str) ->
     )
 
 
-def _document_text_is_complete(path: Path) -> bool:
-    try:
-        text = path.read_text(encoding="utf-8").strip()
-    except (FileNotFoundError, OSError, UnicodeDecodeError):
-        return False
-    return bool(text) and text not in _DOCUMENT_PLACEHOLDERS
-
-
-def _expected_documents_are_complete(paths: tuple[Path, ...]) -> bool:
-    incomplete_documents = tuple(path for path in paths if not _document_text_is_complete(path))
-    if not incomplete_documents:
-        return True
-
-    # `answers.md` is user/harness-owned when a stage blocks on fresh questions.
-    # Let canonical validation decide whether the unanswered questions block progression.
-    if all(path.name == "answers.md" for path in incomplete_documents):
-        return any(
-            _document_text_is_complete(path) for path in paths if path.name == "questions.md"
-        )
-
-    return False
-
-
-def _document_mtime_ns(path: Path) -> int | None:
-    try:
-        return path.stat().st_mtime_ns
-    except OSError:
-        return None
-
-
 def _build_document_completion_requested(
     *,
     expected_output_documents: tuple[Path, ...],
     settle_seconds: float = _DOCUMENT_COMPLETION_SETTLE_SECONDS,
 ) -> Callable[[], bool] | None:
-    expected_markdown_documents = tuple(
-        path.resolve(strict=False)
-        for path in expected_output_documents
-        if path.suffix.lower() == ".md"
+    return build_runtime_document_completion_requested(
+        expected_output_documents=expected_output_documents,
+        settle_seconds=settle_seconds,
     )
-    if not expected_markdown_documents:
-        return None
-
-    baseline_mtimes = {
-        path: _document_mtime_ns(path) for path in expected_markdown_documents
-    }
-    terminal_documents = tuple(
-        path for path in expected_markdown_documents if path.name in _TERMINAL_DOCUMENT_NAMES
-    )
-    complete_since: float | None = None
-
-    def _document_changed(path: Path) -> bool:
-        return _document_mtime_ns(path) != baseline_mtimes[path]
-
-    def _completion_requested() -> bool:
-        nonlocal complete_since
-        if not _expected_documents_are_complete(expected_markdown_documents):
-            complete_since = None
-            return False
-        if terminal_documents:
-            terminal_docs_changed = all(_document_changed(path) for path in terminal_documents)
-            if not terminal_docs_changed:
-                complete_since = None
-                return False
-        elif not any(_document_changed(path) for path in expected_markdown_documents):
-            complete_since = None
-            return False
-
-        now = time.monotonic()
-        if complete_since is None:
-            complete_since = now
-            return False
-        return now - complete_since >= settle_seconds
-
-    return _completion_requested
 
 
 def _build_native_prompt_text(

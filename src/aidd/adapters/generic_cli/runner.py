@@ -9,6 +9,7 @@ from pathlib import Path
 from aidd.adapters.path_resolution import resolve_prompt_pack_path_for_execution
 from aidd.adapters.runner_support import (
     build_aidd_execution_environment,
+    build_runtime_document_completion_requested,
     persist_runtime_log_artifacts,
     resolve_exit_classification,
     split_configured_command,
@@ -64,6 +65,7 @@ class GenericCliExitClassification(StrEnum):
     NON_ZERO_EXIT = "non_zero_exit"
     TIMEOUT = "timeout"
     CANCELLED = "cancelled"
+    DOCUMENT_COMPLETE = "document_complete"
     LAUNCH_FAILURE = "launch_failure"
 
 
@@ -191,8 +193,14 @@ def run_subprocess_with_streaming(
     on_stderr: Callable[[str], None] | None = None,
     timeout_seconds: float | None = None,
     cancel_requested: Callable[[], bool] | None = None,
+    document_completion_paths: tuple[Path, ...] = (),
+    document_completion_settle_seconds: float = 30.0,
     capture_directory: Path | None = None,
 ) -> GenericCliRunResult:
+    completion_requested = build_runtime_document_completion_requested(
+        expected_output_documents=document_completion_paths,
+        settle_seconds=document_completion_settle_seconds,
+    )
     streamed_result = run_streamed_subprocess(
         spec=spec,
         on_stdout=on_stdout,
@@ -202,6 +210,12 @@ def run_subprocess_with_streaming(
         timeout_stop_reason=GenericCliExitClassification.TIMEOUT,
         cancel_stop_reason=GenericCliExitClassification.CANCELLED,
         launch_failure_stop_reason=GenericCliExitClassification.LAUNCH_FAILURE,
+        completion_requested=completion_requested,
+        completion_stop_reason=(
+            GenericCliExitClassification.DOCUMENT_COMPLETE
+            if completion_requested is not None
+            else None
+        ),
         capture_directory=capture_directory,
     )
     exit_classification = _resolve_exit_classification(
