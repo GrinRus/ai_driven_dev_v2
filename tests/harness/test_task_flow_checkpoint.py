@@ -3,7 +3,42 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-from aidd.harness.task_flow_checkpoint import build_task_flow_checkpoint
+from aidd.harness.task_flow_checkpoint import _tasklist_cards, build_task_flow_checkpoint
+
+
+def test_tasklist_dependency_parser_ignores_explanatory_rationale() -> None:
+    task_ids, dependencies = _tasklist_cards(
+        """# Tasklist
+
+### T1 — Runtime normalization
+### T2 — Direct regressions
+### T3 — Composed regressions
+
+## Dependencies
+
+- T1: none — establishes the runtime behavior required by later tasks.
+- T2: T1 — adds direct coverage after the runtime behavior exists.
+- T3: T1, T2 — adds composed coverage and preserves the existing error path.
+"""
+    )
+
+    assert task_ids == ["T1", "T2", "T3"]
+    assert dependencies == {"T1": (), "T2": ("T1",), "T3": ("T1", "T2")}
+
+
+def test_tasklist_dependency_parser_keeps_malformed_machine_clause_fail_closed() -> None:
+    _, dependencies = _tasklist_cards(
+        """# Tasklist
+
+### T1 — Runtime normalization
+
+## Dependencies
+
+- T1: T99 — references an unknown task id.
+"""
+    )
+
+    assert dependencies == {"T1": ("T99",)}
 
 
 def _write_workspace(tmp_path: Path, *, finalization: str = "pending") -> tuple[Path, Path]:

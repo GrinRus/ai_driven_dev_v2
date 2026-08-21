@@ -63,12 +63,17 @@ def _tasklist_cards(text: str) -> tuple[list[str], dict[str, tuple[str, ...]]]:
             if match is None:
                 continue
             raw_dependencies = match.group(2).strip()
-            if not raw_dependencies or raw_dependencies.lower() == "none":
+            # The tasklist contract places an optional explanatory rationale after an em/en
+            # dash (for example, ``T1: none — establishes the runtime behavior``).  Only the
+            # machine-readable clause before that separator is part of the dependency graph;
+            # parsing every word in the rationale turns ordinary prose into fake task ids and
+            # causes a false dependency-drift finding at the installed public boundary.
+            dependency_clause = re.split(r"\s+[—–]\s+", raw_dependencies, maxsplit=1)[0].strip()
+            if not dependency_clause or dependency_clause.lower() == "none":
                 dependencies[match.group(1)] = ()
             else:
                 dependencies[match.group(1)] = tuple(
-                    item
-                    for item in re.findall(r"[A-Za-z0-9][\w.-]*", raw_dependencies)
+                    item for item in re.findall(r"[A-Za-z0-9][\w.-]*", dependency_clause)
                     if item.lower() != "none"
                 )
     return ids, dependencies
