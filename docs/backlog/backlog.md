@@ -7,7 +7,7 @@ slice, and local task.
 
 ## Next
 
-- `W43-E4-S1-T2` — Group repair briefs into primary, related, and advisory corrections.
+- `W43-E4-S2-T1` — Define the operator-authorized repair-extension contract.
 
 
 ## Soon
@@ -38,6 +38,15 @@ slice, and local task.
   queue-restoration policy in `docs/backlog/roadmap.md` (`W8-E3-S1`).
 
 ## Current reconciliation
+
+- `2026-08-22` PR #281 (merge `ed3aa1ba`) completed `W43-E4-S1-T2`: repair briefs now group
+  primary, related, and advisory evidence, collapse exact duplicates and explicit related
+  findings without dropping workspace-relative paths, and keep advisory-only observations
+  outside validator verdicts and repair requests. Focused repair/protocol/report tests (88),
+  contract/stage/docs/planning checks (161), full Python suite (2344), Ruff, mypy, and full CI
+  including deterministic scenarios, adapter conformance, packaged UI browser, and build passed.
+  `W43-E4-S2-T1` is now `Next`; human usability, Claude, cross-runtime, and Wave 36 work remain
+  parked.
 
 - `2026-08-22` PR #279 (merge `893300ce`) completed `W43-E4-S1-T1`: validator contracts and
   core repair planning now separate impact severity from progression impact, require every

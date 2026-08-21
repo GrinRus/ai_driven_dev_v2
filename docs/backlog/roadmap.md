@@ -15006,12 +15006,17 @@ Local tasks:
     report tests (83), compatibility checks (96), docs/planning checks (50), full Python suite
     (2339), Ruff, mypy, and full CI including deterministic scenarios, adapter conformance,
     packaged UI browser, and build passed.
-- `W43-E4-S1-T2` (next) Group repair briefs into primary, related, and advisory corrections.
+- `W43-E4-S1-T2` (done) Group repair briefs into primary, related, and advisory corrections.
   - Scope: replace high/critical mandatory versus medium/low optional grouping with progression-
     aware sections, retain exact evidence paths, and allow validator-specific bounded hints
     without runtime-specific branches.
   - Verification: a single medium fail finding renders under required corrections, duplicate or
     related findings collapse, and advisory-only evidence does not request a repair.
+  - Completion: PR #281 (merge `ed3aa1ba`) added progression-aware primary, related, and advisory
+    repair sections, explicit non-verdict advisory parsing, duplicate/related evidence collapse
+    with exact paths, and bounded correction rendering. Focused repair/protocol/report tests (88),
+    contract/stage/docs/planning checks (161), full Python suite (2344), Ruff, mypy, and full CI
+    including deterministic scenarios, adapter conformance, packaged UI browser, and build passed.
 
 #### Slice W43-E4-S2 — repair-extension contract and accounting (`planned`)
 
@@ -15029,7 +15034,7 @@ Dependencies: `W43-E2-S2-T1` and `W43-E4-S1`.
 
 Local tasks:
 
-- `W43-E4-S2-T1` (planned) Define the operator-authorized repair-extension contract.
+- `W43-E4-S2-T1` (next) Define the operator-authorized repair-extension contract.
   - Scope: permit exactly one additional attempt only for the latest `repair-exhausted` stage,
     retain run/stage identity, validator and brief hashes, author/time/reason, same-run selection
     constraints, no succeeded downstream, and no validation bypass; keep Request Change and new
