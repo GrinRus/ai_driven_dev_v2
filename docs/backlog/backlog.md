@@ -7,7 +7,7 @@ slice, and local task.
 
 ## Next
 
-- `W43-E4-S1-T1` — Define severity, progression, and advisory semantics explicitly.
+- `W43-E4-S1-T2` — Group repair briefs into primary, related, and advisory corrections.
 
 
 ## Soon
@@ -38,6 +38,15 @@ slice, and local task.
   queue-restoration policy in `docs/backlog/roadmap.md` (`W8-E3-S1`).
 
 ## Current reconciliation
+
+- `2026-08-22` PR #279 (merge `893300ce`) completed `W43-E4-S1-T1`: validator contracts and
+  core repair planning now separate impact severity from progression impact, require every
+  canonical fail finding for progression, and reserve advisory observations for non-verdict
+  evidence while retaining protocol-v1 read compatibility. Focused repair/protocol/report tests
+  (83), compatibility checks (96), docs/planning checks (50), full Python suite (2339), Ruff,
+  mypy, and full CI including deterministic scenarios, adapter conformance, packaged UI browser,
+  and build passed. `W43-E4-S1-T2` is now `Next`; human usability, Claude, cross-runtime, and
+  Wave 36 work remain parked.
 
 - `2026-08-22` PR #277 (merge `2b9bc9dd`) completed `W43-E3-S2-T2`: task-plan failures now expose
   typed kind, task id, exact source line, field, missing fields, and root/related classification,

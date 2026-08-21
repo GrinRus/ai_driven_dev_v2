@@ -14994,13 +14994,19 @@ Dependencies: `W43-E1-S1-T2`.
 
 Local tasks:
 
-- `W43-E4-S1-T1` (next) Define severity, progression, and advisory semantics explicitly.
+- `W43-E4-S1-T1` (done) Define severity, progression, and advisory semantics explicitly.
   - Scope: preserve severity as impact, define every canonical fail finding as required for
     progression, reserve advisory observations for non-verdict evidence, and keep protocol-v1
     read compatibility where labels change.
   - Verification: contract/protocol tests reject `Verdict: fail` with only optional corrections
     and keep legacy reports readable.
-- `W43-E4-S1-T2` (planned) Group repair briefs into primary, related, and advisory corrections.
+  - Completion: PR #279 (merge `893300ce`) made every canonical fail finding progression-required,
+    separated impact severity from repair eligibility, reserved advisory observations for
+    non-verdict evidence, and retained protocol-v1 read compatibility. Focused repair/protocol/
+    report tests (83), compatibility checks (96), docs/planning checks (50), full Python suite
+    (2339), Ruff, mypy, and full CI including deterministic scenarios, adapter conformance,
+    packaged UI browser, and build passed.
+- `W43-E4-S1-T2` (next) Group repair briefs into primary, related, and advisory corrections.
   - Scope: replace high/critical mandatory versus medium/low optional grouping with progression-
     aware sections, retain exact evidence paths, and allow validator-specific bounded hints
     without runtime-specific branches.
