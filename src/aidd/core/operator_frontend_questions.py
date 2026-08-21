@@ -17,6 +17,7 @@ from aidd.core.operator_frontend_common import operator_answers_path, validate_o
 from aidd.core.operator_frontend_logs import resolve_operator_run_log_view
 from aidd.core.operator_frontend_models import (
     OperatorBlockingQuestionDiagnostics,
+    OperatorInterviewCandidateDiagnostics,
     OperatorQuestionsView,
     OperatorQuestionView,
     OperatorRawLogSourceDiagnostics,
@@ -33,7 +34,11 @@ from aidd.core.operator_intervention import (
     ensure_intervention_allowed_for_downstream,
     latest_operator_intervention_request,
 )
-from aidd.core.run_inspection import StageResultSummary, resolve_stage_result_summary
+from aidd.core.run_inspection import (
+    StageResultSummary,
+    resolve_run_metadata_summary,
+    resolve_stage_result_summary,
+)
 from aidd.core.run_lookup import latest_attempt_number
 from aidd.core.run_store import (
     RUN_EVENTS_JSONL_FILENAME,
@@ -66,6 +71,7 @@ _REQUEST_CHANGE_BLOCKED_KEYS = frozenset(
     }
 )
 _DEFAULT_DIAGNOSTIC_LOG_TAIL_BYTES = 32 * 1024
+_MAX_INTERVIEW_CANDIDATE_BYTES = 16 * 1024
 
 
 def resolve_operator_questions_view(
@@ -183,6 +189,13 @@ def _stage_diagnostics(
         run_id=run_id,
         result=result,
     )
+    interview_candidate = _interview_candidate_diagnostics(
+        workspace_root=workspace_root,
+        work_item=work_item,
+        stage=stage,
+        run_id=run_id,
+        questions=questions,
+    )
     raw_log = _raw_log_diagnostics(
         workspace_root=workspace_root,
         work_item=work_item,
@@ -210,6 +223,7 @@ def _stage_diagnostics(
     )
     status = _stage_diagnostics_status(
         blocking=blocking,
+        interview_candidate=interview_candidate,
         validation=validation,
         raw_log=raw_log,
         approvals=approvals,
@@ -218,12 +232,294 @@ def _stage_diagnostics(
     return OperatorStageDiagnostics(
         status=status,
         blocking_questions=blocking,
+        interview_candidate=interview_candidate,
         validation=validation,
         raw_log=raw_log,
         approvals=approvals,
         request_change=request_change,
         stopped=stopped,
     )
+
+
+def _interview_candidate_diagnostics(
+    *,
+    workspace_root: Path,
+    work_item: str,
+    stage: str,
+    run_id: str,
+    questions: OperatorQuestionsView,
+) -> OperatorInterviewCandidateDiagnostics:
+    """Project retained candidate evidence without parsing runtime Markdown in the UI."""
+
+    latest_attempt = latest_attempt_number(
+        workspace_root=workspace_root,
+        work_item=work_item,
+        run_id=run_id,
+        stage=stage,
+    )
+    if latest_attempt is None:
+        return _empty_interview_candidate_diagnostics()
+
+    evidence: tuple[int, Path | None, Path | None, str | None] | None = None
+    for attempt_number in range(latest_attempt, 0, -1):
+        attempt_path = run_attempt_root(
+            workspace_root=workspace_root,
+            work_item=work_item,
+            run_id=run_id,
+            stage=stage,
+            attempt_number=attempt_number,
+        )
+        candidate_path: Path | None = None
+        disposition_path: Path | None = None
+        try:
+            index = load_attempt_artifact_index(
+                workspace_root=workspace_root,
+                work_item=work_item,
+                run_id=run_id,
+                stage=stage,
+                attempt_number=attempt_number,
+            )
+        except PermissionError:
+            return _permission_unavailable_candidate_diagnostics(
+                workspace_root=workspace_root,
+                attempt_number=attempt_number,
+                work_item=work_item,
+                run_id=run_id,
+                stage=stage,
+            )
+        except (OSError, ValueError, KeyError, TypeError):
+            index = None
+        if index is not None:
+            candidate_value = index.documents.get("runtime_questions_candidate")
+            if not candidate_value:
+                candidate_value = index.documents.get("runtime_answers_candidate")
+            disposition_value = index.documents.get("interview_candidate_disposition")
+            if candidate_value:
+                candidate_path = workspace_root / candidate_value
+            if disposition_value:
+                disposition_path = workspace_root / disposition_value
+        candidate_path = candidate_path or _first_existing_candidate_path(attempt_path)
+        disposition_path = disposition_path or attempt_path / "interview-candidate-disposition.md"
+        if candidate_path is not None or disposition_path.exists():
+            document = _candidate_document_name(candidate_path)
+            evidence = (attempt_number, candidate_path, disposition_path, document)
+            break
+
+    if evidence is None:
+        return _empty_interview_candidate_diagnostics()
+
+    source_attempt, candidate_path, disposition_path, document = evidence
+    try:
+        disposition_text = (
+            disposition_path.read_text(encoding="utf-8")
+            if disposition_path is not None and disposition_path.exists()
+            else ""
+        )
+        candidate_text, candidate_truncated = _read_bounded_candidate(candidate_path)
+    except PermissionError:
+        return _permission_unavailable_candidate_diagnostics(
+            workspace_root=workspace_root,
+            attempt_number=source_attempt,
+            candidate_path=candidate_path,
+            disposition_path=disposition_path,
+            work_item=work_item,
+            run_id=run_id,
+            stage=stage,
+        )
+    except OSError as exc:
+        return OperatorInterviewCandidateDiagnostics(
+            status="permission-unavailable",
+            document=document,
+            canonical_question=None,
+            raw_candidate_path=_workspace_optional_path(workspace_root, candidate_path),
+            raw_candidate=None,
+            raw_candidate_truncated=False,
+            disposition_path=_workspace_optional_path(workspace_root, disposition_path),
+            source_attempt=source_attempt,
+            attempt_mode=_attempt_mode_for_candidate(
+                workspace_root=workspace_root,
+                work_item=work_item,
+                run_id=run_id,
+                stage=stage,
+                attempt_number=source_attempt,
+            ),
+            runtime_id=_runtime_id_or_none(workspace_root, work_item, run_id),
+            reason=f"Candidate evidence is unavailable: {exc}",
+            eligible_recovery_action=None,
+            eligible_recovery_detail="Restore candidate evidence access before recovery.",
+        )
+
+    qid = _disposition_value(disposition_text, "QID")
+    canonical_question = next(
+        (question for question in questions.questions if question.question_id == qid),
+        None,
+    )
+    rejected = bool(disposition_text.strip())
+    stale = source_attempt != latest_attempt
+    status = "stale" if stale else "rejected" if rejected else "accepted"
+    reason = _disposition_value(disposition_text, "Reason")
+    recovery_action = "resume-stage" if status == "rejected" else None
+    recovery_detail = (
+        "Review the retained candidate against the canonical ledger, then resume without a repair."
+        if recovery_action
+        else "No recovery action is required for this candidate state."
+    )
+    return OperatorInterviewCandidateDiagnostics(
+        status=status,
+        document=document,
+        canonical_question=canonical_question,
+        raw_candidate_path=_workspace_optional_path(workspace_root, candidate_path),
+        raw_candidate=candidate_text,
+        raw_candidate_truncated=candidate_truncated,
+        disposition_path=(
+            _workspace_optional_path(workspace_root, disposition_path)
+            if rejected
+            else None
+        ),
+        source_attempt=source_attempt,
+        attempt_mode=_attempt_mode_for_candidate(
+            workspace_root=workspace_root,
+            work_item=work_item,
+            run_id=run_id,
+            stage=stage,
+            attempt_number=source_attempt,
+        ),
+        runtime_id=_runtime_id_or_none(workspace_root, work_item, run_id),
+        reason=reason,
+        eligible_recovery_action=recovery_action,
+        eligible_recovery_detail=recovery_detail,
+    )
+
+
+def _empty_interview_candidate_diagnostics() -> OperatorInterviewCandidateDiagnostics:
+    return OperatorInterviewCandidateDiagnostics(
+        status="absent",
+        document=None,
+        canonical_question=None,
+        raw_candidate_path=None,
+        raw_candidate=None,
+        raw_candidate_truncated=False,
+        disposition_path=None,
+        source_attempt=None,
+        attempt_mode=None,
+        runtime_id=None,
+        reason=None,
+        eligible_recovery_action=None,
+        eligible_recovery_detail="No retained interview candidate evidence is available.",
+    )
+
+
+def _permission_unavailable_candidate_diagnostics(
+    *,
+    workspace_root: Path,
+    attempt_number: int,
+    work_item: str | None = None,
+    run_id: str | None = None,
+    stage: str | None = None,
+    candidate_path: Path | None = None,
+    disposition_path: Path | None = None,
+) -> OperatorInterviewCandidateDiagnostics:
+    attempt_mode = None
+    runtime_id = None
+    if work_item is not None and run_id is not None and stage is not None:
+        attempt_mode = _attempt_mode_for_candidate(
+            workspace_root=workspace_root,
+            work_item=work_item,
+            run_id=run_id,
+            stage=stage,
+            attempt_number=attempt_number,
+        )
+        runtime_id = _runtime_id_or_none(workspace_root, work_item, run_id)
+    return OperatorInterviewCandidateDiagnostics(
+        status="permission-unavailable",
+        document=_candidate_document_name(candidate_path),
+        canonical_question=None,
+        raw_candidate_path=_workspace_optional_path(workspace_root, candidate_path),
+        raw_candidate=None,
+        raw_candidate_truncated=False,
+        disposition_path=_workspace_optional_path(workspace_root, disposition_path),
+        source_attempt=attempt_number,
+        attempt_mode=attempt_mode,
+        runtime_id=runtime_id,
+        reason="Candidate evidence cannot be read with the current operator permissions.",
+        eligible_recovery_action=None,
+        eligible_recovery_detail="Restore read access before recovery.",
+    )
+
+
+def _first_existing_candidate_path(attempt_path: Path) -> Path | None:
+    for name in ("runtime-questions-candidate.md", "runtime-answers-candidate.md"):
+        candidate = attempt_path / name
+        if candidate.exists():
+            return candidate
+    return None
+
+
+def _candidate_document_name(path: Path | None) -> str | None:
+    if path is None:
+        return None
+    if path.name == "runtime-questions-candidate.md":
+        return "questions.md"
+    if path.name == "runtime-answers-candidate.md":
+        return "answers.md"
+    return None
+
+
+def _read_bounded_candidate(path: Path | None) -> tuple[str | None, bool]:
+    if path is None:
+        return None, False
+    if not path.exists():
+        return None, False
+    text = path.read_text(encoding="utf-8")
+    encoded = text.encode("utf-8")
+    if len(encoded) <= _MAX_INTERVIEW_CANDIDATE_BYTES:
+        return text, False
+    bounded = encoded[:_MAX_INTERVIEW_CANDIDATE_BYTES].decode("utf-8", errors="ignore")
+    return bounded, True
+
+
+def _disposition_value(text: str, label: str) -> str | None:
+    prefix = f"- {label}: `"
+    for line in text.splitlines():
+        if line.startswith(prefix) and line.endswith("`"):
+            return line[len(prefix) : -1].strip() or None
+    return None
+
+
+def _workspace_optional_path(workspace_root: Path, path: Path | None) -> str | None:
+    return workspace_relative_path(workspace_root, path) if path is not None else None
+
+
+def _attempt_mode_for_candidate(
+    *,
+    workspace_root: Path,
+    work_item: str,
+    run_id: str,
+    stage: str,
+    attempt_number: int,
+) -> str | None:
+    try:
+        index = load_attempt_artifact_index(
+            workspace_root=workspace_root,
+            work_item=work_item,
+            run_id=run_id,
+            stage=stage,
+            attempt_number=attempt_number,
+        )
+    except (OSError, ValueError, KeyError, TypeError):
+        return None
+    return None if index is None else index.attempt_mode
+
+
+def _runtime_id_or_none(workspace_root: Path, work_item: str, run_id: str) -> str | None:
+    try:
+        return resolve_run_metadata_summary(
+            workspace_root=workspace_root,
+            work_item=work_item,
+            run_id=run_id,
+        ).runtime_id
+    except (OSError, ValueError, KeyError, TypeError):
+        return None
 
 
 def _blocking_question_diagnostics(
@@ -517,13 +813,16 @@ def _request_change_target_documents(
     )
     if attempt_number is None:
         return ()
-    artifact_index = load_attempt_artifact_index(
-        workspace_root=workspace_root,
-        work_item=work_item,
-        run_id=run_id,
-        stage=stage,
-        attempt_number=attempt_number,
-    )
+    try:
+        artifact_index = load_attempt_artifact_index(
+            workspace_root=workspace_root,
+            work_item=work_item,
+            run_id=run_id,
+            stage=stage,
+            attempt_number=attempt_number,
+        )
+    except (OSError, ValueError, KeyError, TypeError):
+        return ()
     if artifact_index is None:
         return ()
     stage_marker = f"/stages/{stage}/"
@@ -590,6 +889,7 @@ def _latest_stopped_event_detail(events_path: Path) -> str | None:
 def _stage_diagnostics_status(
     *,
     blocking: OperatorBlockingQuestionDiagnostics,
+    interview_candidate: OperatorInterviewCandidateDiagnostics,
     validation: OperatorValidationRepairDiagnostics,
     raw_log: OperatorRawLogSourceDiagnostics,
     approvals: OperatorRuntimeApprovalQueueDiagnostics,
@@ -599,6 +899,10 @@ def _stage_diagnostics_status(
         return "approval-waiting"
     if blocking.unresolved_count:
         return "blocked"
+    if interview_candidate.status == "rejected":
+        return "operator-attention"
+    if interview_candidate.status == "permission-unavailable":
+        return "evidence-unavailable"
     if validation.status in {"repair-available", "repair-exhausted"}:
         return validation.status
     if stopped.stopped:

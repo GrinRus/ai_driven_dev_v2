@@ -7,6 +7,7 @@ import pytest
 
 from aidd.config import load_config
 from aidd.core import operator_frontend_dashboard_evidence as dashboard_evidence_module
+from aidd.core import operator_frontend_questions as operator_questions_module
 from aidd.core.interview import AnswerResolution
 from aidd.core.operator_frontend import (
     persist_operator_answer,
@@ -1835,6 +1836,152 @@ def test_operator_stage_view_diagnostics_report_blocked_questions(
     assert diagnostics.blocking_questions.answers_path == (
         "workitems/WI-UI/stages/plan/answers.md"
     )
+
+
+def test_operator_stage_view_projects_rejected_interview_candidate_recovery(
+    tmp_path: Path,
+) -> None:
+    workspace_root = tmp_path / ".aidd"
+    _prepare_run(workspace_root)
+    _write_questions(workspace_root)
+    stage_root = workspace_root / "workitems" / "WI-UI" / "stages" / "plan"
+    (stage_root / "answers.md").write_text(
+        "# Answers\n\n## Answers\n\n- Q1 [resolved] Release owner approved the target.\n",
+        encoding="utf-8",
+    )
+    attempt_root = run_attempt_root(
+        workspace_root=workspace_root,
+        work_item="WI-UI",
+        run_id="run-ui",
+        stage="plan",
+        attempt_number=1,
+    )
+    (attempt_root / "runtime-questions-candidate.md").write_text(
+        "# Questions\n\n- Q1 [blocking]: malformed candidate\n",
+        encoding="utf-8",
+    )
+    (attempt_root / "interview-candidate-disposition.md").write_text(
+        "\n".join(
+            (
+                "# Interview Candidate Disposition",
+                "",
+                "- Document: `questions.md`",
+                "- Disposition: `operator-attention`",
+                "- Reason: `invalid-marker`",
+                "- Line: `3`",
+                "- QID: `Q1`",
+                "- Raw candidate: `runtime-questions-candidate.md`",
+                "",
+            )
+        ),
+        encoding="utf-8",
+    )
+
+    stage_view = resolve_operator_stage_view(
+        workspace_root=workspace_root,
+        work_item="WI-UI",
+        stage="plan",
+        run_id="run-ui",
+    )
+
+    candidate = stage_view.diagnostics.interview_candidate
+    assert stage_view.diagnostics.status == "operator-attention"
+    assert candidate.status == "rejected"
+    assert candidate.document == "questions.md"
+    assert candidate.source_attempt == 1
+    assert candidate.runtime_id == "codex"
+    assert candidate.reason == "invalid-marker"
+    assert candidate.canonical_question is not None
+    assert candidate.canonical_question.question_id == "Q1"
+    assert candidate.canonical_question.answer_text == "Release owner approved the target."
+    assert candidate.raw_candidate_path == (
+        "reports/runs/WI-UI/run-ui/stages/plan/attempts/attempt-0001/"
+        "runtime-questions-candidate.md"
+    )
+    assert candidate.raw_candidate is not None
+    assert candidate.eligible_recovery_action == "resume-stage"
+
+
+def test_operator_stage_view_candidate_diagnostics_cover_absent_accepted_and_stale(
+    tmp_path: Path,
+) -> None:
+    workspace_root = tmp_path / ".aidd"
+    _prepare_run(workspace_root)
+    _write_questions(workspace_root)
+
+    absent = resolve_operator_stage_view(
+        workspace_root=workspace_root,
+        work_item="WI-UI",
+        stage="plan",
+        run_id="run-ui",
+    ).diagnostics.interview_candidate
+    assert absent.status == "absent"
+    assert absent.eligible_recovery_action is None
+
+    attempt_root = run_attempt_root(
+        workspace_root=workspace_root,
+        work_item="WI-UI",
+        run_id="run-ui",
+        stage="plan",
+        attempt_number=1,
+    )
+    (attempt_root / "runtime-questions-candidate.md").write_text(
+        "# Questions\n\n- Q1 [blocking] A safe candidate.\n",
+        encoding="utf-8",
+    )
+    accepted = resolve_operator_stage_view(
+        workspace_root=workspace_root,
+        work_item="WI-UI",
+        stage="plan",
+        run_id="run-ui",
+    ).diagnostics.interview_candidate
+    assert accepted.status == "accepted"
+    assert accepted.raw_candidate is not None
+    assert accepted.eligible_recovery_action is None
+
+    create_next_attempt_directory(
+        workspace_root=workspace_root,
+        work_item="WI-UI",
+        run_id="run-ui",
+        stage="plan",
+    )
+    stale = resolve_operator_stage_view(
+        workspace_root=workspace_root,
+        work_item="WI-UI",
+        stage="plan",
+        run_id="run-ui",
+    ).diagnostics.interview_candidate
+    assert stale.status == "stale"
+    assert stale.source_attempt == 1
+    assert stale.eligible_recovery_action is None
+
+
+def test_operator_stage_view_candidate_diagnostics_fail_closed_on_permission_error(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    workspace_root = tmp_path / ".aidd"
+    _prepare_run(workspace_root)
+    _write_questions(workspace_root)
+
+    def _raise_permission(**_: object) -> object:
+        raise PermissionError("candidate evidence denied")
+
+    monkeypatch.setattr(
+        operator_questions_module,
+        "load_attempt_artifact_index",
+        _raise_permission,
+    )
+    candidate = resolve_operator_stage_view(
+        workspace_root=workspace_root,
+        work_item="WI-UI",
+        stage="plan",
+        run_id="run-ui",
+    ).diagnostics.interview_candidate
+
+    assert candidate.status == "permission-unavailable"
+    assert candidate.source_attempt == 1
+    assert candidate.eligible_recovery_action is None
 
 
 def test_operator_stage_view_diagnostics_report_repair_available(

@@ -128,6 +128,25 @@ class OperatorRuntimeApprovalQueueDiagnostics:
 
 
 @dataclass(frozen=True, slots=True)
+class OperatorInterviewCandidateDiagnostics:
+    """Core-owned, bounded recovery state for a rejected runtime interview candidate."""
+
+    status: str
+    document: str | None
+    canonical_question: OperatorQuestionView | None
+    raw_candidate_path: str | None
+    raw_candidate: str | None
+    raw_candidate_truncated: bool
+    disposition_path: str | None
+    source_attempt: int | None
+    attempt_mode: str | None
+    runtime_id: str | None
+    reason: str | None
+    eligible_recovery_action: str | None
+    eligible_recovery_detail: str | None
+
+
+@dataclass(frozen=True, slots=True)
 class OperatorRequestChangeContext:
     status: str
     eligible: bool
@@ -149,6 +168,7 @@ class OperatorStoppedDiagnostics:
 class OperatorStageDiagnostics:
     status: str
     blocking_questions: OperatorBlockingQuestionDiagnostics
+    interview_candidate: OperatorInterviewCandidateDiagnostics
     validation: OperatorValidationRepairDiagnostics
     raw_log: OperatorRawLogSourceDiagnostics
     approvals: OperatorRuntimeApprovalQueueDiagnostics
