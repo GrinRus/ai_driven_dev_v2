@@ -2,7 +2,8 @@ from __future__ import annotations
 
 import os
 import shlex
-from collections.abc import Mapping
+import time
+from collections.abc import Callable, Mapping
 from enum import StrEnum
 from pathlib import Path
 
@@ -17,6 +18,100 @@ from aidd.adapters.runtime_evidence import (
 )
 
 RuntimeArtifactPaths = RuntimeEvidencePaths
+
+
+# These documents are AIDD-owned or operator-owned workflow records.  They may be
+# present in the historical compatibility output list, but they must never be used
+# as a runtime process-completion signal.
+_NON_RUNTIME_COMPLETION_DOCUMENT_NAMES = frozenset(
+    {
+        "stage-result.md",
+        "validator-report.md",
+        "repair-brief.md",
+        "questions.md",
+        "answers.md",
+    }
+)
+
+
+def runtime_content_document_paths(paths: tuple[Path, ...]) -> tuple[Path, ...]:
+    """Return only substantive runtime-authored document paths.
+
+    The core normally supplies this projection already.  Adapters repeat the
+    boundary check because older callers and retained run manifests may still
+    provide the complete published compatibility list.
+    """
+
+    return tuple(
+        path
+        for path in paths
+        if path.name not in _NON_RUNTIME_COMPLETION_DOCUMENT_NAMES
+    )
+
+
+def _runtime_document_text_is_complete(path: Path) -> bool:
+    try:
+        text = path.read_text(encoding="utf-8").strip()
+    except (FileNotFoundError, OSError, UnicodeDecodeError):
+        return False
+    return bool(text)
+
+
+def build_runtime_document_completion_requested(
+    *,
+    expected_output_documents: tuple[Path, ...],
+    settle_seconds: float,
+) -> Callable[[], bool] | None:
+    """Build an adapter-local completion callback for runtime content only.
+
+    A process may be stopped after substantive content has been written and
+    settled.  Canonical stage-result/validator records, interview ledgers, and
+    repair controls are deliberately ignored; AIDD services create and validate
+    those records after adapter evidence is committed.
+    """
+
+    expected_markdown_documents = tuple(
+        path.resolve(strict=False)
+        for path in runtime_content_document_paths(expected_output_documents)
+        if path.suffix.lower() == ".md"
+    )
+    if not expected_markdown_documents:
+        return None
+
+    baseline_mtimes = {
+        path: _document_mtime_ns(path) for path in expected_markdown_documents
+    }
+    complete_since: float | None = None
+
+    def _document_changed(path: Path) -> bool:
+        return _document_mtime_ns(path) != baseline_mtimes[path]
+
+    def _completion_requested() -> bool:
+        nonlocal complete_since
+        if any(
+            not _runtime_document_text_is_complete(path)
+            for path in expected_markdown_documents
+        ):
+            complete_since = None
+            return False
+        if not any(_document_changed(path) for path in expected_markdown_documents):
+            complete_since = None
+            return False
+
+        now = time.monotonic()
+        if complete_since is None:
+            complete_since = now
+            return False
+        return now - complete_since >= settle_seconds
+
+    return _completion_requested
+
+
+def _document_mtime_ns(path: Path) -> int | None:
+    try:
+        return path.stat().st_mtime_ns
+    except OSError:
+        return None
 
 
 def split_configured_command(*, configured_command: str, runtime_label: str) -> tuple[str, ...]:

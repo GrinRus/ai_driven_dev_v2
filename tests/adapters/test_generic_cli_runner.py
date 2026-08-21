@@ -168,6 +168,96 @@ def test_run_subprocess_with_streaming_returns_stdout_and_stderr(tmp_path: Path)
     assert stderr_events
 
 
+def test_run_subprocess_with_streaming_settles_runtime_content_only(tmp_path: Path) -> None:
+    runtime_document = tmp_path / "plan.md"
+    runtime_document.write_text("# Plan\n\nPending.\n", encoding="utf-8")
+    stage_result = tmp_path / "stage-result.md"
+    validator_report = tmp_path / "validator-report.md"
+    stage_result.write_text("# Stage result\n\nStage not run yet.\n", encoding="utf-8")
+    validator_report.write_text(
+        "# Validator report\n\nNo validator output yet.\n",
+        encoding="utf-8",
+    )
+    script = (
+        "import pathlib, sys, time\n"
+        "pathlib.Path(sys.argv[1]).write_text('# Plan\\n\\nReady.\\n', encoding='utf-8')\n"
+        "pathlib.Path(sys.argv[2]).write_text(\n"
+        "    '# Stage result\\n\\nRuntime draft.\\n', encoding='utf-8'\n"
+        ")\n"
+        "pathlib.Path(sys.argv[3]).write_text(\n"
+        "    '# Validator report\\n\\nRuntime draft.\\n', encoding='utf-8'\n"
+        ")\n"
+        "print('content-written', flush=True)\n"
+        "time.sleep(5)\n"
+    )
+    spec = GenericCliSubprocessSpec(
+        command=(
+            sys.executable,
+            "-c",
+            script,
+            runtime_document.as_posix(),
+            stage_result.as_posix(),
+            validator_report.as_posix(),
+        ),
+        cwd=tmp_path,
+        env=dict(os.environ),
+    )
+
+    result = run_subprocess_with_streaming(
+        spec=spec,
+        timeout_seconds=5.0,
+        document_completion_paths=(runtime_document, stage_result, validator_report),
+        document_completion_settle_seconds=0.01,
+    )
+
+    assert result.exit_classification is GenericCliExitClassification.DOCUMENT_COMPLETE
+    assert result.exit_code != 0
+    assert "content-written\n" in result.runtime_log_text
+
+
+def test_run_subprocess_with_streaming_ignores_canonical_records_as_completion_targets(
+    tmp_path: Path,
+) -> None:
+    stage_result = tmp_path / "stage-result.md"
+    validator_report = tmp_path / "validator-report.md"
+    stage_result.write_text("# Stage result\n\nStage not run yet.\n", encoding="utf-8")
+    validator_report.write_text(
+        "# Validator report\n\nNo validator output yet.\n",
+        encoding="utf-8",
+    )
+
+    completion_script = (
+        "import pathlib, sys, time\n"
+        "pathlib.Path(sys.argv[1]).write_text(\n"
+        "    '# Stage result\\n\\nRuntime draft.\\n', encoding='utf-8'\n"
+        ")\n"
+        "pathlib.Path(sys.argv[2]).write_text(\n"
+        "    '# Validator report\\n\\nRuntime draft.\\n', encoding='utf-8'\n"
+        ")\n"
+        "time.sleep(5)\n"
+    )
+    spec = GenericCliSubprocessSpec(
+        command=(
+            sys.executable,
+            "-c",
+            completion_script,
+            stage_result.as_posix(),
+            validator_report.as_posix(),
+        ),
+        cwd=tmp_path,
+        env=dict(os.environ),
+    )
+
+    result = run_subprocess_with_streaming(
+        spec=spec,
+        timeout_seconds=0.2,
+        document_completion_paths=(stage_result, validator_report),
+        document_completion_settle_seconds=0.01,
+    )
+
+    assert result.exit_classification is GenericCliExitClassification.TIMEOUT
+
+
 def test_run_subprocess_with_streaming_emits_early_stdout_before_process_end(
     tmp_path: Path,
 ) -> None:
