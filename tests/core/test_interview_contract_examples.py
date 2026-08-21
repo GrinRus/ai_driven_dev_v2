@@ -90,10 +90,17 @@ def test_omitted_candidate_does_not_erase_the_existing_unresolved_ledger(
     ) == ("Q1", "Q2")
 
 
-@pytest.mark.parametrize("filename", ("duplicate-candidate.md", "ambiguous-candidate.md"))
+@pytest.mark.parametrize(
+    ("filename", "expected_kind"),
+    (
+        ("duplicate-candidate.md", "duplicate-id"),
+        ("ambiguous-candidate.md", "ambiguous-candidate"),
+    ),
+)
 def test_rejected_candidate_examples_stop_before_mutating_the_ledger(
     tmp_path: Path,
     filename: str,
+    expected_kind: str,
 ) -> None:
     example_root = _example_root()
     workspace_root = tmp_path / ".aidd"
@@ -119,7 +126,8 @@ def test_rejected_candidate_examples_stop_before_mutating_the_ledger(
             stage_output_questions_markdown=candidate,
         )
 
-    assert error.value.kind == "duplicate-id"
+    assert error.value.kind == expected_kind
+    assert error.value.raw_candidate == candidate
     assert questions_path.read_text(encoding="utf-8") == before
 
 
