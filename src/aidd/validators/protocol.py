@@ -286,6 +286,68 @@ def _parse_finding_message(raw_message: str) -> tuple[str, int]:
     return match.group("message").strip(), int(match.group("count"))
 
 
+def _validate_progression_semantics(
+    *,
+    fields: tuple[ParsedValidatorReportField, ...],
+    findings: tuple[ParsedValidatorFinding, ...],
+) -> None:
+    """Reject a report that makes a failing finding optional for progression.
+
+    The summary/result fields are optional for read compatibility with older
+    protocol-v1 evidence, so semantic validation runs only when the canonical
+    verdict and repair fields are both present.
+    """
+
+    field_values = {field.key: field.value.strip("`").strip().lower() for field in fields}
+    verdict = field_values.get("verdict")
+    repair_required = field_values.get("repair_required")
+    has_canonical_summary = any(
+        key in field_values for key in ("total_issues", "blocking_issues")
+    )
+    if verdict is None or repair_required is None or not has_canonical_summary:
+        # Minimal result-only artifacts are retained for compatibility with
+        # older stage-summary and runtime evidence readers.
+        return
+
+    if verdict in {"fail", "repair"}:
+        if not findings:
+            raise ValidatorReportProtocolError(
+                "Validator verdict `fail` requires at least one canonical finding."
+            )
+        if repair_required != "yes":
+            raise ValidatorReportProtocolError(
+                "A failing validator report must require repair for progression; "
+                "fail-causing findings cannot be optional."
+            )
+    elif verdict == "pass":
+        if findings:
+            raise ValidatorReportProtocolError(
+                "Validator verdict `pass` cannot include canonical findings."
+            )
+        if repair_required != "no":
+            raise ValidatorReportProtocolError(
+                "A passing validator report must not require repair for progression."
+            )
+    else:
+        raise ValidatorReportProtocolError(
+            f"Unsupported validator verdict: {verdict!r}."
+        )
+
+    blocking_issues = field_values.get("blocking_issues")
+    if blocking_issues not in {"yes", "no"}:
+        # Historical reports used a numeric count. Keep those reports readable
+        # during the protocol-v1 compatibility window.
+        return
+    expected_blocking = bool(findings)
+    if (blocking_issues == "yes") != expected_blocking:
+        expected = "yes" if expected_blocking else "no"
+        raise ValidatorReportProtocolError(
+            "Blocking issues must be `"
+            f"{expected}` because canonical findings, not severity, determine "
+            "progression blocking."
+        )
+
+
 def parse_validator_report(markdown: str) -> ValidatorReportReadModel:
     """Parse canonical or declared-legacy validator-report protocol vocabulary."""
 
@@ -370,7 +432,10 @@ def parse_validator_report(markdown: str) -> ValidatorReportReadModel:
             )
         )
 
-    return ValidatorReportReadModel(fields=tuple(fields), findings=tuple(findings))
+    parsed_fields = tuple(fields)
+    parsed_findings = tuple(findings)
+    _validate_progression_semantics(fields=parsed_fields, findings=parsed_findings)
+    return ValidatorReportReadModel(fields=parsed_fields, findings=parsed_findings)
 
 
 def render_validator_report_skeleton() -> str:

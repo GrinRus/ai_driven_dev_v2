@@ -126,6 +126,55 @@ def test_validator_report_reader_normalizes_declared_legacy_vocabulary() -> None
     assert all(field.used_legacy_alias for field in legacy.fields)
 
 
+def test_validator_report_reader_rejects_fail_with_optional_only_corrections() -> None:
+    with pytest.raises(
+        ValidatorReportProtocolError,
+        match="fail-causing findings cannot be optional",
+    ):
+        parse_validator_report(
+            """# Validator Report
+
+## Summary
+
+- Total issues: 1
+- Blocking issues: no
+
+## Semantic checks
+
+- `SEM-PLACEHOLDER-CONTENT` (`low`) in `plan.md`: Placeholder remains.
+
+## Result
+
+- Verdict: `fail`
+- Repair required for progression: no
+"""
+        )
+
+
+def test_validator_report_reader_treats_low_findings_as_progression_blocking() -> None:
+    report = parse_validator_report(
+        """# Validator Report
+
+## Summary
+
+- Total issues: 1
+- Blocking issues: yes
+
+## Semantic checks
+
+- `SEM-PLACEHOLDER-CONTENT` (`low`) in `plan.md`: Placeholder remains.
+
+## Result
+
+- Verdict: `fail`
+- Repair required for progression: yes
+"""
+    )
+
+    assert report.verdict == "fail"
+    assert report.findings[0].severity == "low"
+
+
 @pytest.mark.parametrize(
     "markdown",
     [

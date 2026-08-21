@@ -228,6 +228,12 @@ def test_render_repair_brief_includes_required_sections_and_budget_context(tmp_p
     )
     assert "## Mandatory fixes" in repair_brief
     assert "## Optional quality improvements" in repair_brief
+    assert (
+        "- [`CROSS-REPAIR-BRIEF-NOT-REFERENCED`] Update "
+        "`workitems/WI-001/stages/plan/stage-result.md`"
+    ) in repair_brief
+    optional_section = repair_brief.split("## Optional quality improvements", 1)[1]
+    assert "CROSS-REPAIR-BRIEF-NOT-REFERENCED" not in optional_section
     assert "- `workitems/WI-001/stages/plan/validator-report.md`" in repair_brief
     assert "- `workitems/WI-001/stages/plan/questions.md`" in repair_brief
     assert "- `workitems/WI-001/stages/research/output/research-notes.md`" in repair_brief

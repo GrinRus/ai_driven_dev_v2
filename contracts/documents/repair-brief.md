@@ -20,8 +20,12 @@ belong in `stage-result.md` or a future `repair-notes.md`, not in this control a
   - Must list failed validator issues from the latest attempt with issue code and severity.
   - Must include workspace-relative source document references for each failed check.
 - `Required corrections`
-  - Must define concrete corrections mapped to the listed failed checks.
-  - Must separate mandatory fixes from optional quality improvements.
+  - Must define concrete corrections mapped to every listed failed check.
+  - Every correction for a canonical validator finding is required for
+    progression; severity must not move it into an optional section.
+  - Optional quality improvements may contain only advisory observations that
+    are explicitly carried as non-verdict evidence. Core must not infer an
+    advisory observation from a `medium` or `low` finding.
 - `Relevant upstream docs`
   - Must list upstream artifacts required to perform the repair safely.
   - Must include `questions.md` or `answers.md` when clarification state affects the fix.

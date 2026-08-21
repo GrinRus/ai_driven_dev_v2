@@ -81,7 +81,10 @@ def render_validator_report(findings: Iterable[ValidationFinding]) -> str:
         else "none"
     )
 
-    blocking = any(finding.severity in {"critical", "high"} for finding in findings_list)
+    # Severity describes impact, not whether a finding blocks progression.  The
+    # canonical report has a fail verdict whenever any finding remains, so every
+    # finding is progression-blocking until it is resolved.
+    blocking = bool(findings_list)
     verdict = "pass" if not findings_list else "fail"
     repair_required = "no" if verdict == "pass" else "yes"
 
