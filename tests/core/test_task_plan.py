@@ -5,7 +5,13 @@ from pathlib import Path
 import pytest
 
 from aidd.core.identifiers import SafeIdentifier, resolve_contained_component
-from aidd.core.task_plan import TaskExecutionMode, TaskPlanParseError, parse_task_plan
+from aidd.core.task_plan import (
+    TaskExecutionMode,
+    TaskPlanIssueKind,
+    TaskPlanIssueRelation,
+    TaskPlanParseError,
+    parse_task_plan,
+)
 
 
 def _tasklist(*, second_dependency: str = "TL-1") -> str:
@@ -70,6 +76,77 @@ def test_parse_task_plan_accepts_safe_presentation_variants_without_inference() 
     variant = parse_task_plan(_safe_presentation_variant())
 
     assert variant.tasks == canonical.tasks
+
+
+def test_parse_task_plan_reports_structured_missing_field_at_card_heading() -> None:
+    markdown = _tasklist().replace("- Outcome: The contract is explicit.\n", "")
+
+    with pytest.raises(TaskPlanParseError) as captured:
+        parse_task_plan(markdown)
+
+    issue = next(
+        issue for issue in captured.value.issues if issue.kind is TaskPlanIssueKind.MISSING_FIELD
+    )
+    assert issue.task_id == "TL-1"
+    assert issue.field == "outcome"
+    assert issue.missing_fields == ("outcome",)
+    assert issue.line_number == 9
+    assert issue.relation is TaskPlanIssueRelation.ROOT
+    assert "missing required field `outcome`" in str(captured.value)
+
+
+def test_parse_task_plan_does_not_emit_derivative_scope_issue_for_missing_field() -> None:
+    markdown = _tasklist().replace(
+        "- In scope: `contracts/example.md` and `tests/test_contract.py`.\n",
+        "",
+    )
+
+    with pytest.raises(TaskPlanParseError) as captured:
+        parse_task_plan(markdown)
+
+    task_one_issues = [issue for issue in captured.value.issues if issue.task_id == "TL-1"]
+    assert [issue.kind for issue in task_one_issues] == [TaskPlanIssueKind.MISSING_FIELD]
+
+
+def test_parse_task_plan_reports_exact_acceptance_and_dependency_lines() -> None:
+    markdown = _tasklist(second_dependency="TL-9").replace(
+        "  - TL-1-AC1: The required field is documented.",
+        "  - TL-1-C1: The required field is documented.",
+    )
+
+    with pytest.raises(TaskPlanParseError) as captured:
+        parse_task_plan(markdown)
+
+    acceptance_issue = next(
+        issue
+        for issue in captured.value.issues
+        if issue.kind is TaskPlanIssueKind.MALFORMED_ACCEPTANCE_ID
+    )
+    dependency_issue = next(
+        issue
+        for issue in captured.value.issues
+        if issue.kind is TaskPlanIssueKind.UNKNOWN_DEPENDENCY
+    )
+    assert acceptance_issue.task_id == "TL-1"
+    assert acceptance_issue.line_number == 15
+    assert dependency_issue.task_id == "TL-2"
+    assert dependency_issue.line_number == 28
+
+
+def test_parse_task_plan_classifies_scope_derivative_as_related() -> None:
+    markdown = _tasklist().replace(
+        "`contracts/example.md` and `tests/test_contract.py`.",
+        "`../contracts/example.md`.",
+    )
+
+    with pytest.raises(TaskPlanParseError) as captured:
+        parse_task_plan(markdown)
+
+    task_one_issues = [issue for issue in captured.value.issues if issue.task_id == "TL-1"]
+    assert task_one_issues[0].kind is TaskPlanIssueKind.UNSAFE_SCOPE_PATH
+    assert task_one_issues[0].relation is TaskPlanIssueRelation.ROOT
+    assert task_one_issues[1].kind is TaskPlanIssueKind.MISSING_SCOPE_PATH
+    assert task_one_issues[1].relation is TaskPlanIssueRelation.RELATED
 
 
 def test_parse_task_plan_preserves_order_and_acceptance() -> None:
