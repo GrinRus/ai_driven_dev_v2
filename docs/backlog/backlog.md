@@ -7,12 +7,12 @@ slice, and local task.
 
 ## Next
 
-- `W43-E1-S1-T2` — Define the canonical stage-document ownership matrix.
+- `W43-E1-S2-T1` — Split stage output resolution by document owner.
 
 
 ## Soon
 
-- `W43-E1-S2-T1` — Split stage output resolution by document owner.
+- `W43-E1-S2-T2` — Render ownership-aware stage briefs.
 
 
 ## Parking lot
@@ -39,6 +39,13 @@ slice, and local task.
   queue-restoration policy in `docs/backlog/roadmap.md` (`W8-E3-S1`).
 
 ## Current reconciliation
+
+- `2026-08-21` PR #244 (merge `a4d777c4`) completed `W43-E1-S1-T2`: the canonical ownership
+  matrix covers all stage-declared documents exactly once, distinguishes runtime-authored content
+  from AIDD workflow/control/interview/raw-evidence records, and preserves read-only generated
+  Markdown. Focused docs/planning tests (53), Ruff, mypy, and full CI passed. `W43-E1-S2-T1` is
+  now `Next`, its direct brief successor is `Soon`; human usability, Claude, cross-runtime, and
+  Wave 36 acceptance remain parked.
 
 - `2026-08-21` The execution boundary is intentionally Codex-only: the genuine uncoached
   `W42-E7-S2-T3` observation is parked, Claude/dual-provider acceptance is excluded, and the

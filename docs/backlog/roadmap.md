@@ -14632,12 +14632,15 @@ Local tasks:
     decisive boundary, runtime, stage, attempt mode, and automatic repair consumption for each.
   - Verification: every retained case is replayable through a provider-free parser, validator,
     or lifecycle fixture and distinguishes primary cause from related findings.
-- `W43-E1-S1-T2` (next) Define the canonical stage-document ownership matrix.
+- `W43-E1-S1-T2` (done) Define the canonical stage-document ownership matrix.
   - Scope: classify every stage document exactly once as runtime content, AIDD workflow record,
     AIDD control document, interview ledger, or raw candidate evidence; name create, mutate,
     validate, publish, and UI-authoring permissions without changing the eight-stage graph.
   - Verification: contract-registry coverage proves every declared document has one owner and
     rejects conflicting runtime/AIDD ownership.
+  - Completion: PR #244 (merge `a4d777c4`) added the canonical Markdown matrix, linked all eight
+    stage contracts to it, and added coverage tests that fail on missing, duplicate, or conflicting
+    ownership rows. Focused docs/planning tests (53), Ruff, mypy, and full CI passed.
 
 #### Slice W43-E1-S2 — ownership-aware output registry and stage brief (`planned`)
 
@@ -14654,13 +14657,13 @@ Dependencies: `W43-E1-S1`.
 
 Local tasks:
 
-- `W43-E1-S2-T1` (soon) Split stage output resolution by document owner.
+- `W43-E1-S2-T1` (next) Split stage output resolution by document owner.
   - Scope: expose runtime-authored, AIDD-generated, interview/control, and published document
     sets for all eight stages; retain a bounded compatibility reader only where existing callers
     require migration.
   - Verification: one table-driven core test asserts the exact four sets for every stage and
     proves `stage-result.md` and `validator-report.md` are absent from runtime completion targets.
-- `W43-E1-S2-T2` (planned) Render ownership-aware stage briefs.
+- `W43-E1-S2-T2` (soon) Render ownership-aware stage briefs.
   - Scope: list runtime write targets, AIDD-generated records, read-only inputs, and stage-specific
     skeletons separately in installed and source-checkout briefs; remove instructions that ask the
     runtime to author canonical terminal records.
@@ -15082,6 +15085,14 @@ Local tasks:
     without changing Codex-only alpha acceptance or core/provider boundaries.
   - Verification: a future report compares the same profile across maintained and lower-capability
     runtimes and retains explicit environment-blocked verdicts when prerequisites are absent.
+
+Wave 43 reconciliation notes:
+
+- `2026-08-21` `W43-E1-S1-T2` is complete in PR #244 (merge `a4d777c4`). The canonical ownership
+  matrix covers every stage-declared document exactly once, separates runtime content from AIDD
+  workflow/control/interview/raw-evidence records, and names mutation and UI-authoring boundaries.
+  Coverage tests reject missing or conflicting rows; `W43-E1-S2-T1` is now the next dependency-ready
+  task. Human usability, Claude, cross-runtime, and Wave 36 acceptance remain deferred.
 
 Wave 43 exit evidence:
 
