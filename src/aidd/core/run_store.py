@@ -488,6 +488,17 @@ def _canonical_attempt_documents(
             workspace_root=workspace_root,
             path=runtime_repair_brief_draft_path,
         )
+    for filename, key in (
+        ("runtime-questions-candidate.md", "runtime_questions_candidate"),
+        ("runtime-answers-candidate.md", "runtime_answers_candidate"),
+        ("interview-candidate-disposition.md", "interview_candidate_disposition"),
+    ):
+        candidate_path = attempt_root / filename
+        if candidate_path.exists():
+            documents[key] = _workspace_relative_canonical_path(
+                workspace_root=workspace_root,
+                path=candidate_path,
+            )
     return documents
 
 
