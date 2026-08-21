@@ -14657,13 +14657,17 @@ Dependencies: `W43-E1-S1`.
 
 Local tasks:
 
-- `W43-E1-S2-T1` (next) Split stage output resolution by document owner.
+- `W43-E1-S2-T1` (done) Split stage output resolution by document owner.
   - Scope: expose runtime-authored, AIDD-generated, interview/control, and published document
     sets for all eight stages; retain a bounded compatibility reader only where existing callers
     require migration.
   - Verification: one table-driven core test asserts the exact four sets for every stage and
     proves `stage-result.md` and `validator-report.md` are absent from runtime completion targets.
-- `W43-E1-S2-T2` (soon) Render ownership-aware stage briefs.
+  - Completion: PR #246 (merge `f9f74bf6`) added typed `StageOutputRegistry` projections for all
+    eight stages and retained `resolve_expected_output_documents` as the complete compatibility
+    reader. Focused registry/preparation/runner/workflow tests (116), docs/planning/ownership tests
+    (53), Ruff, mypy, and full CI passed.
+- `W43-E1-S2-T2` (next) Render ownership-aware stage briefs.
   - Scope: list runtime write targets, AIDD-generated records, read-only inputs, and stage-specific
     skeletons separately in installed and source-checkout briefs; remove instructions that ask the
     runtime to author canonical terminal records.
@@ -14686,7 +14690,7 @@ Dependencies: `W43-E1-S2`.
 
 Local tasks:
 
-- `W43-E1-S3-T1` (planned) Generate canonical validator reports only after content validation.
+- `W43-E1-S3-T1` (soon) Generate canonical validator reports only after content validation.
   - Scope: validate runtime-content documents, retain an unexpected runtime validator draft only
     as attempt evidence, and write the canonical report from actual findings; do not require a
     model-authored validator file for output discovery.
@@ -15087,6 +15091,13 @@ Local tasks:
     runtimes and retains explicit environment-blocked verdicts when prerequisites are absent.
 
 Wave 43 reconciliation notes:
+
+- `2026-08-21` `W43-E1-S2-T1` is complete in PR #246 (merge `f9f74bf6`). Runtime-authored,
+  AIDD-generated, interview/control, and published output projections are now typed and tested
+  across all eight stages; terminal `stage-result.md` and `validator-report.md` are excluded from
+  runtime targets while existing callers retain the complete published view. `W43-E1-S2-T2` is
+  now the next dependency-ready task. Human usability, Claude, cross-runtime, and Wave 36 work
+  remain deferred.
 
 - `2026-08-21` `W43-E1-S1-T2` is complete in PR #244 (merge `a4d777c4`). The canonical ownership
   matrix covers every stage-declared document exactly once, separates runtime content from AIDD

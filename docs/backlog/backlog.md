@@ -7,12 +7,12 @@ slice, and local task.
 
 ## Next
 
-- `W43-E1-S2-T1` — Split stage output resolution by document owner.
+- `W43-E1-S2-T2` — Render ownership-aware stage briefs.
 
 
 ## Soon
 
-- `W43-E1-S2-T2` — Render ownership-aware stage briefs.
+- `W43-E1-S3-T1` — Generate canonical validator reports only after content validation.
 
 
 ## Parking lot
@@ -46,6 +46,12 @@ slice, and local task.
   Markdown. Focused docs/planning tests (53), Ruff, mypy, and full CI passed. `W43-E1-S2-T1` is
   now `Next`, its direct brief successor is `Soon`; human usability, Claude, cross-runtime, and
   Wave 36 acceptance remain parked.
+
+- `2026-08-21` PR #246 (merge `f9f74bf6`) completed `W43-E1-S2-T1`: typed owner-separated stage
+  output projections cover all eight stages, exclude `stage-result.md` and `validator-report.md`
+  from runtime targets, and preserve the complete published compatibility reader. Focused registry/
+  preparation/runner/workflow tests (116), docs/planning/ownership tests (53), Ruff, mypy, and full
+  CI passed. `W43-E1-S2-T2` is now `Next`, with canonical validator generation in `Soon`.
 
 - `2026-08-21` The execution boundary is intentionally Codex-only: the genuine uncoached
   `W42-E7-S2-T3` observation is parked, Claude/dual-provider acceptance is excluded, and the
