@@ -649,6 +649,37 @@ def test_tasklist_contract_and_prompts_enforce_canonical_allowed_scope() -> None
     assert "do not edit, broaden, or reinterpret that context document" in repair_prompt
 
 
+def test_tasklist_contract_freezes_semantics_before_presentation_normalization() -> None:
+    document_contract = Path("contracts/documents/tasklist.md").read_text(encoding="utf-8")
+    stage_contract = Path("contracts/stages/tasklist.md").read_text(encoding="utf-8")
+    safe_fixture = Path(
+        "contracts/examples/tasklist/variants/safe-presentation.md"
+    ).read_text(encoding="utf-8")
+    invalid_fixture = Path(
+        "contracts/examples/tasklist/variants/invalid-compact.md"
+    ).read_text(encoding="utf-8")
+
+    for text in (document_contract, stage_contract):
+        assert "Required semantics versus Markdown presentation" in text
+        assert "presentation-only" in text
+        normalized = text.lower()
+        assert "compact one-line" in normalized
+        assert "pipe tables" in normalized
+        assert "fail closed" in normalized
+
+    for required_marker in (
+        "Outcome",
+        "Dominant deliverable",
+        "In scope",
+        "acceptance",
+        "dependencies",
+        "verification",
+    ):
+        assert required_marker in safe_fixture
+    assert "- TL-1: add the contract; TL-2: add tests" in invalid_fixture
+    assert "| Task | Outcome | Verification |" in invalid_fixture
+
+
 def test_plan_contract_and_prompts_enforce_canonical_allowed_scope() -> None:
     paths = (
         "contracts/stages/plan.md",

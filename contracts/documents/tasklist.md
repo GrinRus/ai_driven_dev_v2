@@ -71,3 +71,25 @@ Backticked task-scope paths use exact-file or directory-prefix semantics. They a
 when no global allowed-write scope exists; when global scope exists, the effective boundary is the
 intersection of task-local and global scope, and Tasklist validation rejects an empty or
 out-of-bound intersection before implementation begins.
+
+## Required semantics versus Markdown presentation
+
+The executable meaning of a task card is independent of harmless Markdown presentation. The
+following semantic obligations must remain explicit and machine-checkable:
+
+- an H3 card with one stable task id and an imperative title;
+- one `Outcome`, one `Dominant deliverable`, and bounded `In scope` paths;
+- task-local acceptance criteria with stable ids;
+- an explicit dependency entry in executable order; and
+- one dedicated verification entry for every task.
+
+presentation-only changes may include equivalent emphasis around a field label or task id
+(for example `**Outcome**` or `` `TL-1` ``) and equivalent unordered-list punctuation (`-` or
+`*`). They must not change words, paths, ids, ordering, or the presence of any required field.
+These variants are normalization candidates for the tolerant parser; until that parser support is
+installed, the canonical card shape above remains the safe authoring form.
+
+Compact one-line task bullets, pipe tables, prose that requires inferred fields, missing H3 cards,
+ambiguous ids, inferred dependencies, and omitted acceptance or verification evidence remain
+invalid. A renderer or parser must fail closed rather than inventing executable task semantics from
+layout, punctuation, or nearby prose.
