@@ -14740,12 +14740,19 @@ Dependencies: `W43-E1-S2`.
 
 Local tasks:
 
-- `W43-E1-S4-T1` (next) Align maintained adapter completion with runtime-authored outputs.
+- `W43-E1-S4-T1` (done) Align maintained adapter completion with runtime-authored outputs.
   - Scope: update generic CLI, Qwen, and OpenCode completion/settling behavior to wait only for
     runtime-content documents; retain adapter success as process evidence, not validation pass,
     and keep all provider-specific detection inside adapters.
   - Verification: adapter matrices prove a runtime may finish after writing only its content
     targets, raw stdout/stderr remain retained, and canonical validation still decides progression.
+  - Completion: PR #257 (merge `6b87d863`) centralizes runtime-content completion settling for the
+    maintained adapters, excludes AIDD workflow/interview/control records from completion targets,
+    and preserves raw stdout/stderr as attempt evidence. Generic CLI now supports the same bounded
+    document-complete stop reason; adapter surface tests prove canonical validation remains the
+    progression authority. Adapter tests (270), core stage/registry/preparation tests (382),
+    docs/planning/contract tests (51), Ruff, mypy, full CI, deterministic scenarios, packaged UI
+    browser, and build passed.
 
 ### Epic W43-E2 — canonical interview resume (`planned`)
 
@@ -14768,13 +14775,13 @@ Dependencies: `W43-E1-S1-T2`.
 
 Local tasks:
 
-- `W43-E2-S1-T1` (planned) Define canonical interview candidate and ledger semantics.
+- `W43-E2-S1-T1` (next) Define canonical interview candidate and ledger semantics.
   - Scope: document QID merge rules, operator answer ownership, safe punctuation/list
     normalization, raw evidence retention, unresolved-question preservation, and explicit
     operator-attention behavior for ambiguous candidates.
   - Verification: contract examples cover canonical, safely normalizable, duplicate, omitted,
     and ambiguous question/answer cases without inventing decisions.
-- `W43-E2-S1-T2` (planned) Ingest structured and Markdown question candidates tolerantly.
+- `W43-E2-S1-T2` (soon) Ingest structured and Markdown question candidates tolerantly.
   - Scope: normalize marker-adjacent colons, equivalent Markdown list markers, nested
     continuation text, and matching QIDs; preserve the raw candidate and reject semantic
     ambiguity without overwriting the ledger.
@@ -15107,6 +15114,13 @@ Local tasks:
     runtimes and retains explicit environment-blocked verdicts when prerequisites are absent.
 
 Wave 43 reconciliation notes:
+
+- `2026-08-21` `W43-E1-S4-T1` is complete in PR #257 (merge `6b87d863`). Maintained generic CLI,
+  Qwen, and OpenCode adapters now settle only on substantive runtime-authored content; canonical
+  stage-result, validator-report, repair-brief, interview, and answer records cannot end a process
+  early. Raw runtime output remains retained, and adapter success still enters the existing
+  canonical validation path. `W43-E2-S1-T1` is now Next and `W43-E2-S1-T2` is Soon; human
+  usability, Claude, cross-runtime, and Wave 36 work remain parked.
 
 - `2026-08-21` `W43-E1-S3-T3` is complete in PR #255 (merge `83e3a7ce`). Runtime completion
   and operator intervention now accept only substantive runtime-owned documents; AIDD-owned

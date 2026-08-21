@@ -7,11 +7,12 @@ slice, and local task.
 
 ## Next
 
-- `W43-E1-S4-T1` — Align maintained adapter completion with runtime-authored outputs.
+- `W43-E2-S1-T1` — Define canonical interview candidate and ledger semantics.
 
 
 ## Soon
 
+- `W43-E2-S1-T2` — Ingest structured and Markdown question candidates tolerantly.
 
 ## Parking lot
 
@@ -37,6 +38,14 @@ slice, and local task.
   queue-restoration policy in `docs/backlog/roadmap.md` (`W8-E3-S1`).
 
 ## Current reconciliation
+
+- `2026-08-21` PR #257 (merge `6b87d863`) completed `W43-E1-S4-T1`: generic CLI, Qwen, and
+  OpenCode completion now settles only on runtime-authored content, excludes AIDD workflow,
+  interview, and control records, retains raw stdout/stderr evidence, and leaves canonical
+  validation as the progression authority. Adapter tests (270), core stage/registry/preparation
+  tests (382), docs/planning/contract tests (51), Ruff, mypy, full CI, deterministic scenarios,
+  packaged UI browser, and build passed. `W43-E2-S1-T1` is now `Next`; `W43-E2-S1-T2` is `Soon`.
+  Human usability, Claude, cross-runtime, and Wave 36 work remain parked.
 
 - `2026-08-21` PR #255 (merge `83e3a7ce`) completed `W43-E1-S3-T3`: runtime completion and
   operator intervention now accept only substantive runtime-owned documents; unexpected
