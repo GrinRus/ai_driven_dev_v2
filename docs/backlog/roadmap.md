@@ -14667,12 +14667,15 @@ Local tasks:
     eight stages and retained `resolve_expected_output_documents` as the complete compatibility
     reader. Focused registry/preparation/runner/workflow tests (116), docs/planning/ownership tests
     (53), Ruff, mypy, and full CI passed.
-- `W43-E1-S2-T2` (next) Render ownership-aware stage briefs.
+- `W43-E1-S2-T2` (done) Render ownership-aware stage briefs.
   - Scope: list runtime write targets, AIDD-generated records, read-only inputs, and stage-specific
     skeletons separately in installed and source-checkout briefs; remove instructions that ask the
     runtime to author canonical terminal records.
   - Verification: stage-brief snapshots for all stages and prompt-quality checks agree on write
     ownership and required content headings.
+  - Completion: PR #248 (merge `4db5613e`) added owner-separated stage briefs, updated all eight
+    stage run prompts, refreshed prompt-pack hashes, and passed 167 focused tests, 50 docs/planning
+    tests, Ruff, mypy, full CI, packaged UI browser, and build checks.
 
 #### Slice W43-E1-S3 — canonical validator and stage-result generation (`planned`)
 
@@ -14690,13 +14693,13 @@ Dependencies: `W43-E1-S2`.
 
 Local tasks:
 
-- `W43-E1-S3-T1` (soon) Generate canonical validator reports only after content validation.
+- `W43-E1-S3-T1` (next) Generate canonical validator reports only after content validation.
   - Scope: validate runtime-content documents, retain an unexpected runtime validator draft only
     as attempt evidence, and write the canonical report from actual findings; do not require a
     model-authored validator file for output discovery.
   - Verification: missing and contradictory runtime drafts cannot create or suppress findings,
     while the final report exactly matches the current attempt's validator result.
-- `W43-E1-S3-T2` (planned) Render stage results from canonical lifecycle state.
+- `W43-E1-S3-T2` (soon) Render stage results from canonical lifecycle state.
   - Scope: derive stage id, attempt history, status, produced outputs, validation summary,
     blockers, next action, and terminal notes from AIDD state; preserve historical repair evidence
     and make repeated reconciliation byte-stable.
@@ -15091,6 +15094,14 @@ Local tasks:
     runtimes and retains explicit environment-blocked verdicts when prerequisites are absent.
 
 Wave 43 reconciliation notes:
+
+- `2026-08-21` `W43-E1-S2-T2` is complete in PR #248 (merge `4db5613e`). Stage briefs now
+  distinguish runtime write targets, AIDD-generated records, interview/control documents, and the
+  published compatibility view; all eight run prompts prohibit runtime authoring of canonical
+  terminal records. Focused ownership/prompt/stage-runner tests (167), docs/planning tests (50),
+  Ruff, mypy, full CI, packaged UI browser, and build passed. `W43-E1-S3-T1` is now the next
+  dependency-ready task and `W43-E1-S3-T2` is its direct successor in Soon. Human usability,
+  Claude, cross-runtime, and Wave 36 work remain deferred.
 
 - `2026-08-21` `W43-E1-S2-T1` is complete in PR #246 (merge `f9f74bf6`). Runtime-authored,
   AIDD-generated, interview/control, and published output projections are now typed and tested

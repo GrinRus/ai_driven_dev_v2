@@ -7,12 +7,12 @@ slice, and local task.
 
 ## Next
 
-- `W43-E1-S2-T2` — Render ownership-aware stage briefs.
+- `W43-E1-S3-T1` — Generate canonical validator reports only after content validation.
 
 
 ## Soon
 
-- `W43-E1-S3-T1` — Generate canonical validator reports only after content validation.
+- `W43-E1-S3-T2` — Render stage results from canonical lifecycle state.
 
 
 ## Parking lot
@@ -39,6 +39,13 @@ slice, and local task.
   queue-restoration policy in `docs/backlog/roadmap.md` (`W8-E3-S1`).
 
 ## Current reconciliation
+
+- `2026-08-21` PR #248 (merge `4db5613e`) completed `W43-E1-S2-T2`: stage briefs now separate
+  runtime write targets, AIDD-generated records, interview/control documents, and the published
+  compatibility view; all eight run prompts prohibit runtime authoring of canonical terminal
+  records. Focused ownership/prompt/stage-runner tests (167), docs/planning tests (50), Ruff, mypy,
+  full CI, packaged UI browser, and build passed. `W43-E1-S3-T1` is now `Next` and `W43-E1-S3-T2`
+  is `Soon`; human usability, Claude, cross-runtime, and Wave 36 work remain parked.
 
 - `2026-08-21` PR #244 (merge `a4d777c4`) completed `W43-E1-S1-T2`: the canonical ownership
   matrix covers all stage-declared documents exactly once, distinguishes runtime-authored content
