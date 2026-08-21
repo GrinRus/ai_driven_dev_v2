@@ -9,6 +9,7 @@ from aidd.core.interview import (
     resolved_question_ids,
     unresolved_blocking_questions,
 )
+from aidd.core.run_store import run_attempt_root
 from aidd.core.stage_models import StageInterviewRouting, StageOutputDiscovery
 from aidd.core.stage_paths import workspace_relative_path
 from aidd.core.workspace import stage_root as workspace_stage_root
@@ -45,6 +46,17 @@ def route_stage_questions_to_interview(
         resolved_question_ids=resolved_question_ids(answers=answers),
     )
     unresolved_ids = tuple(question.question_id for question in unresolved)
+    disposition_path = (
+        run_attempt_root(
+            workspace_root=workspace_root,
+            work_item=discovery.work_item,
+            run_id=discovery.run_id,
+            stage=discovery.stage,
+            attempt_number=discovery.attempt_number,
+        )
+        / "interview-candidate-disposition.md"
+    )
+    operator_attention_evidence_path = disposition_path if disposition_path.exists() else None
     return StageInterviewRouting(
         stage=discovery.stage,
         work_item=discovery.work_item,
@@ -53,7 +65,8 @@ def route_stage_questions_to_interview(
         questions_path=questions_path,
         answers_path=answers_path,
         unresolved_blocking_question_ids=unresolved_ids,
-        requires_interview=bool(unresolved_ids),
+        requires_interview=bool(unresolved_ids or operator_attention_evidence_path),
+        operator_attention_evidence_path=operator_attention_evidence_path,
     )
 
 

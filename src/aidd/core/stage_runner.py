@@ -5,9 +5,11 @@ from datetime import datetime
 from pathlib import Path
 
 from aidd.core.interview import (
+    InterviewMarkdownParseError,
     InterviewQuestion,
     load_questions_document,
-    parse_answers_markdown,
+    parse_answer_candidate_entries,
+    parse_question_candidate_entries,
     parse_questions_markdown,
     render_answers_markdown,
     render_questions_markdown,
@@ -254,6 +256,12 @@ def _canonical_stage_result_blockers(
                 for question_id in interview_routing.unresolved_blocking_question_ids
             ),
         )
+        if interview_routing.operator_attention_evidence_path is not None:
+            blockers = (
+                *blockers,
+                "Interview candidate requires operator attention; inspect "
+                f"`{interview_routing.operator_attention_evidence_path.name}`.",
+            )
     return tuple(dict.fromkeys(blockers))
 
 
@@ -332,13 +340,41 @@ def _read_stage_questions_text(
     return questions_path.read_text(encoding="utf-8")
 
 
-def _answers_text_is_no_answer_placeholder(answers_text: str) -> bool:
-    normalized = answers_text.lower()
-    if "no answer" not in normalized and "no answers" not in normalized:
-        return False
-    return not any(
-        marker in normalized for marker in ("[resolved]", "[partial]", "[deferred]", " a1 ", "`a1`")
+def _retain_interview_candidate_evidence(
+    *,
+    execution_state: StageExecutionState,
+    document_name: str,
+    candidate_text: str,
+    error: InterviewMarkdownParseError | None = None,
+) -> None:
+    candidate_path = execution_state.attempt_path / (
+        f"runtime-{document_name.removesuffix('.md')}-candidate.md"
     )
+    candidate_path.write_text(candidate_text, encoding="utf-8")
+    if error is None:
+        return
+
+    disposition_path = execution_state.attempt_path / "interview-candidate-disposition.md"
+    lines = [
+        "# Interview Candidate Disposition",
+        "",
+        f"- Document: `{document_name}`",
+        "- Disposition: `operator-attention`",
+        f"- Reason: `{error.kind}`",
+        f"- Line: `{error.line_number}`",
+    ]
+    if error.entry_id is not None:
+        lines.append(f"- QID: `{error.entry_id}`")
+    lines.extend(
+        (
+            "- Raw candidate: `"
+            f"runtime-{document_name.removesuffix('.md')}-candidate.md`",
+            "",
+            "The canonical interview ledger was not mutated by this candidate.",
+            "",
+        )
+    )
+    disposition_path.write_text("\n".join(lines), encoding="utf-8")
 
 
 def _restore_operator_owned_answers_after_runtime_attempt(
@@ -347,6 +383,7 @@ def _restore_operator_owned_answers_after_runtime_attempt(
     work_item: str,
     stage: str,
     answers_text_before_attempt: str | None,
+    execution_state: StageExecutionState,
 ) -> None:
     answers_path = (
         workspace_stage_root(
@@ -377,15 +414,89 @@ def _restore_operator_owned_answers_after_runtime_attempt(
         if question_ids and answers_text_after_attempt != empty_answers_text:
             if answers_text_after_attempt is not None:
                 try:
-                    parse_answers_markdown(answers_text_after_attempt)
-                except ValueError:
-                    if not _answers_text_is_no_answer_placeholder(answers_text_after_attempt):
-                        return
+                    candidate_entries = parse_answer_candidate_entries(answers_text_after_attempt)
+                except InterviewMarkdownParseError as error:
+                    _retain_interview_candidate_evidence(
+                        execution_state=execution_state,
+                        document_name="answers.md",
+                        candidate_text=answers_text_after_attempt,
+                        error=error,
+                    )
+                else:
+                    unknown_entry = next(
+                        (
+                            entry
+                            for entry in candidate_entries
+                            if entry.value.question_id not in question_ids
+                        ),
+                        None,
+                    )
+                    if unknown_entry is not None:
+                        _retain_interview_candidate_evidence(
+                            execution_state=execution_state,
+                            document_name="answers.md",
+                            candidate_text=answers_text_after_attempt,
+                            error=InterviewMarkdownParseError(
+                                f"Unknown answer question id `{unknown_entry.value.question_id}`.",
+                                document_name="answers.md",
+                                kind="unknown-question-id",
+                                line_number=unknown_entry.line_number,
+                                entry_id=unknown_entry.value.question_id,
+                                parsed_answers=tuple(candidate_entries),
+                                raw_candidate=answers_text_after_attempt,
+                            ),
+                        )
+                    elif candidate_entries:
+                        _retain_interview_candidate_evidence(
+                            execution_state=execution_state,
+                            document_name="answers.md",
+                            candidate_text=answers_text_after_attempt,
+                        )
             answers_path.parent.mkdir(parents=True, exist_ok=True)
             answers_path.write_text(empty_answers_text, encoding="utf-8")
         return
 
     if question_ids and answers_text_after_attempt != answers_text_before_attempt:
+        if answers_text_after_attempt is not None:
+            try:
+                candidate_entries = parse_answer_candidate_entries(answers_text_after_attempt)
+            except InterviewMarkdownParseError as error:
+                _retain_interview_candidate_evidence(
+                    execution_state=execution_state,
+                    document_name="answers.md",
+                    candidate_text=answers_text_after_attempt,
+                    error=error,
+                )
+            else:
+                unknown_entry = next(
+                    (
+                        entry
+                        for entry in candidate_entries
+                        if entry.value.question_id not in question_ids
+                    ),
+                    None,
+                )
+                if unknown_entry is not None:
+                    _retain_interview_candidate_evidence(
+                        execution_state=execution_state,
+                        document_name="answers.md",
+                        candidate_text=answers_text_after_attempt,
+                        error=InterviewMarkdownParseError(
+                            f"Unknown answer question id `{unknown_entry.value.question_id}`.",
+                            document_name="answers.md",
+                            kind="unknown-question-id",
+                            line_number=unknown_entry.line_number,
+                            entry_id=unknown_entry.value.question_id,
+                            parsed_answers=tuple(candidate_entries),
+                            raw_candidate=answers_text_after_attempt,
+                        ),
+                    )
+                elif candidate_entries:
+                    _retain_interview_candidate_evidence(
+                        execution_state=execution_state,
+                        document_name="answers.md",
+                        candidate_text=answers_text_after_attempt,
+                    )
         answers_path.parent.mkdir(parents=True, exist_ok=True)
         answers_path.write_text(answers_text_before_attempt, encoding="utf-8")
 
@@ -396,14 +507,16 @@ def _restore_and_merge_questions_after_runtime_attempt(
     work_item: str,
     stage: str,
     questions_text_before_attempt: str | None,
+    execution_state: StageExecutionState,
 ) -> None:
     """Merge runtime questions into the durable ledger without dropping prior QIDs."""
 
-    if questions_text_before_attempt is None:
-        return
-
     try:
-        previous_questions = parse_questions_markdown(questions_text_before_attempt)
+        previous_questions = (
+            ()
+            if questions_text_before_attempt is None
+            else parse_questions_markdown(questions_text_before_attempt)
+        )
     except ValueError:
         # Preserve the runtime document so canonical validation can report its malformed
         # syntax instead of masking it with a core-authored replacement.
@@ -427,9 +540,21 @@ def _restore_and_merge_questions_after_runtime_attempt(
         current_questions = ()
     else:
         try:
-            current_questions = parse_questions_markdown(current_questions_text)
-        except ValueError:
-            # Keep malformed runtime output visible to the validator.
+            current_questions = tuple(
+                entry.value for entry in parse_question_candidate_entries(current_questions_text)
+            )
+        except InterviewMarkdownParseError as error:
+            _retain_interview_candidate_evidence(
+                execution_state=execution_state,
+                document_name="questions.md",
+                candidate_text=current_questions_text,
+                error=error,
+            )
+            questions_path.parent.mkdir(parents=True, exist_ok=True)
+            questions_path.write_text(
+                render_questions_markdown(previous_questions),
+                encoding="utf-8",
+            )
             return
 
     merged = list(previous_questions)
@@ -757,12 +882,23 @@ def run_single_stage_orchestration(
         work_item=work_item,
         stage=stage,
         questions_text_before_attempt=questions_text_before_attempt,
+        execution_state=execution_state,
     )
     _restore_operator_owned_answers_after_runtime_attempt(
         workspace_root=workspace_root,
         work_item=work_item,
         stage=stage,
         answers_text_before_attempt=answers_text_before_attempt,
+        execution_state=execution_state,
+    )
+    write_attempt_artifact_index(
+        workspace_root=workspace_root,
+        work_item=work_item,
+        run_id=run_id,
+        stage=stage,
+        attempt_number=execution_state.attempt_number,
+        contracts_root=contracts_root,
+        attempt_mode=adapter_invocation.attempt_mode,
     )
     exhausted_repair_budget = repair_brief_exhausts_terminal_budget(
         repair_brief_path=adapter_invocation.repair_brief_path,

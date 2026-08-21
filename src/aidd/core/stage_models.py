@@ -121,6 +121,7 @@ class StageInterviewRouting:
     answers_path: Path
     unresolved_blocking_question_ids: tuple[str, ...]
     requires_interview: bool
+    operator_attention_evidence_path: Path | None = None
 
 
 @dataclass(frozen=True, slots=True)

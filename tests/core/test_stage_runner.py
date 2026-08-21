@@ -2039,6 +2039,75 @@ def test_run_single_stage_orchestration_preserves_omitted_questions_with_answers
     ).read_text(encoding="utf-8")
 
 
+def test_run_single_stage_orchestration_merges_runtime_question_candidates_by_qid(
+    tmp_path: Path,
+) -> None:
+    workspace_root = tmp_path / ".aidd"
+    create_run_manifest(
+        workspace_root=workspace_root,
+        work_item="WI-001",
+        run_id="run-001",
+        runtime_id="generic-cli",
+        stage_target="plan",
+        config_snapshot={"mode": "test"},
+    )
+    stage_root = workspace_root / "workitems" / "WI-001" / "stages" / "plan"
+    stage_root.mkdir(parents=True, exist_ok=True)
+    (stage_root / "questions.md").write_text(
+        "# Questions\n\n## Questions\n\n"
+        "- Q1 [blocking] Confirm the release owner.\n",
+        encoding="utf-8",
+    )
+    (stage_root / "answers.md").write_text(
+        "# Answers\n\n## Answers\n\n"
+        "- Q1 [resolved] The release owner is recorded.\n",
+        encoding="utf-8",
+    )
+
+    preview_bundle = prepare_stage_bundle(
+        workspace_root=workspace_root,
+        work_item="WI-001",
+        stage="plan",
+    )
+    _materialize_expected_inputs(preview_bundle.expected_input_bundle)
+    runtime_documents = _valid_plan_output_documents()
+    runtime_documents["questions.md"] = (
+        "# Questions\n\n## Questions\n\n"
+        "* Q1: [blocking] Confirm the owner for this attempt.\n"
+        "  Keep the existing release-owner decision.\n"
+        "* Q2 [non-blocking] Record the rollout evidence location.\n"
+    )
+
+    def _adapter_executor(
+        invocation: AdapterInvocationBundle,
+        execution_state: StageExecutionState,
+    ) -> AdapterExecutionOutcome:
+        del execution_state
+        for name, content in runtime_documents.items():
+            (stage_root / name).write_text(content, encoding="utf-8")
+        return AdapterExecutionOutcome(succeeded=True, details="success")
+
+    orchestration = run_single_stage_orchestration(
+        workspace_root=workspace_root,
+        work_item="WI-001",
+        run_id="run-001",
+        stage="plan",
+        adapter_executor=_adapter_executor,
+    )
+
+    assert orchestration.transition.action is PostValidationAction.ADVANCE
+    assert (stage_root / "questions.md").read_text(encoding="utf-8") == (
+        "# Questions\n\n## Questions\n\n"
+        "- `Q1` `[blocking]` Confirm the owner for this attempt. "
+        "Keep the existing release-owner decision.\n"
+        "- `Q2` `[non-blocking]` Record the rollout evidence location.\n"
+    )
+    assert (stage_root / "answers.md").read_text(encoding="utf-8") == (
+        "# Answers\n\n## Answers\n\n"
+        "- Q1 [resolved] The release owner is recorded.\n"
+    )
+
+
 def test_run_single_stage_orchestration_preserves_repair_context_after_blocked_repair_resume(
     tmp_path: Path,
 ) -> None:
@@ -2378,7 +2447,7 @@ def test_run_single_stage_orchestration_preserves_historical_repair_brief_trace_
     ]
 
 
-def test_run_single_stage_orchestration_repairs_malformed_questions_document(
+def test_run_single_stage_orchestration_retains_rejected_questions_for_attention(
     tmp_path: Path,
 ) -> None:
     workspace_root = tmp_path / ".aidd"
@@ -2434,20 +2503,35 @@ def test_run_single_stage_orchestration_repairs_malformed_questions_document(
         adapter_executor=_adapter_executor,
     )
 
-    assert orchestration.transition.action is PostValidationAction.REPAIR
+    assert orchestration.transition.action is PostValidationAction.WAIT
     assert orchestration.validation_transition is not None
-    assert orchestration.validation_transition.resolved_verdict is ValidationVerdict.REPAIR
+    assert orchestration.validation_transition.resolved_verdict is ValidationVerdict.BLOCKED
     assert orchestration.validation_result is not None
-    assert any(
-        finding.code == "INTERVIEW-MALFORMED-DOCUMENT"
-        for finding in orchestration.validation_result.findings
+    assert orchestration.validation_result.findings == ()
+    assert orchestration.interview_routing is not None
+    assert orchestration.interview_routing.operator_attention_evidence_path is not None
+    disposition = orchestration.interview_routing.operator_attention_evidence_path
+    assert disposition is not None and disposition.exists()
+    assert "operator-attention" in disposition.read_text(encoding="utf-8")
+    artifact_index = json.loads(
+        run_attempt_artifact_index_path(
+            workspace_root,
+            "WI-001",
+            "run-001",
+            "plan",
+            1,
+        ).read_text(encoding="utf-8")
     )
-    validator_report_text = (
-        workspace_root / "workitems" / "WI-001" / "stages" / "plan" / "validator-report.md"
+    assert artifact_index["documents"]["runtime_questions_candidate"].endswith(
+        "runtime-questions-candidate.md"
+    )
+    assert artifact_index["documents"]["interview_candidate_disposition"].endswith(
+        "interview-candidate-disposition.md"
+    )
+    questions_text = (
+        workspace_root / "workitems" / "WI-001" / "stages" / "plan" / "questions.md"
     ).read_text(encoding="utf-8")
-    assert "`INTERVIEW-MALFORMED-DOCUMENT`" in validator_report_text
-    assert "Invalid question entry at line 9" in validator_report_text
-    assert "`- <QID> [resolved|partial|deferred] <text>` for answers" in validator_report_text
+    assert "- none" in questions_text
 
 
 def test_run_single_stage_orchestration_routes_task_diff_findings_into_repair(
@@ -2512,7 +2596,7 @@ def test_run_single_stage_orchestration_routes_task_diff_findings_into_repair(
     )
 
 
-def test_run_single_stage_orchestration_repairs_malformed_answers_document(
+def test_run_single_stage_orchestration_normalizes_runtime_answer_candidate(
     tmp_path: Path,
 ) -> None:
     workspace_root = tmp_path / ".aidd"
@@ -2566,23 +2650,30 @@ def test_run_single_stage_orchestration_repairs_malformed_answers_document(
         adapter_executor=_adapter_executor,
     )
 
-    assert orchestration.transition.action is PostValidationAction.REPAIR
+    assert orchestration.transition.action is PostValidationAction.ADVANCE
     assert orchestration.validation_transition is not None
-    assert orchestration.validation_transition.resolved_verdict is ValidationVerdict.REPAIR
+    assert orchestration.validation_transition.resolved_verdict is ValidationVerdict.PASS
     assert orchestration.validation_result is not None
-    assert any(
-        finding.code == "INTERVIEW-MALFORMED-DOCUMENT"
-        for finding in orchestration.validation_result.findings
-    )
-    validator_report_text = (
-        workspace_root / "workitems" / "WI-001" / "stages" / "plan" / "validator-report.md"
+    assert orchestration.validation_result.findings == ()
+    answers_text = (
+        workspace_root / "workitems" / "WI-001" / "stages" / "plan" / "answers.md"
     ).read_text(encoding="utf-8")
-    assert "`INTERVIEW-MALFORMED-DOCUMENT`" in validator_report_text
-    assert "Invalid answer entry at line 5" in validator_report_text
-    assert "`- <QID> [resolved|partial|deferred] <text>`" in validator_report_text
+    assert "- none" in answers_text
+    artifact_index = json.loads(
+        run_attempt_artifact_index_path(
+            workspace_root,
+            "WI-001",
+            "run-001",
+            "plan",
+            1,
+        ).read_text(encoding="utf-8")
+    )
+    assert artifact_index["documents"]["runtime_answers_candidate"].endswith(
+        "runtime-answers-candidate.md"
+    )
 
 
-def test_run_single_stage_orchestration_repairs_malformed_questions_with_blockers(
+def test_run_single_stage_orchestration_retains_rejected_questions_with_operator_attention(
     tmp_path: Path,
 ) -> None:
     workspace_root = tmp_path / ".aidd"
@@ -2631,13 +2722,13 @@ def test_run_single_stage_orchestration_repairs_malformed_questions_with_blocker
         adapter_executor=_adapter_executor,
     )
 
-    assert orchestration.transition.action is PostValidationAction.REPAIR
+    assert orchestration.transition.action is PostValidationAction.WAIT
     assert orchestration.validation_transition is not None
-    assert orchestration.validation_transition.resolved_verdict is ValidationVerdict.REPAIR
+    assert orchestration.validation_transition.resolved_verdict is ValidationVerdict.BLOCKED
     assert orchestration.validation_result is not None
-    finding_codes = {finding.code for finding in orchestration.validation_result.findings}
-    assert "INTERVIEW-MALFORMED-DOCUMENT" in finding_codes
-    assert "CROSS-BLOCKING-UNANSWERED" in finding_codes
+    assert orchestration.validation_result.findings == ()
+    assert orchestration.interview_routing is not None
+    assert orchestration.interview_routing.operator_attention_evidence_path is not None
 
 
 def test_run_single_stage_orchestration_allows_final_repair_attempt_to_pass(
