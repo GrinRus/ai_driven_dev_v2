@@ -14915,13 +14915,18 @@ Dependencies: `W43-E3-S1`.
 
 Local tasks:
 
-- `W43-E3-S2-T1` (next) Parse safe rich-task Markdown variants without semantic inference.
+- `W43-E3-S2-T1` (done) Parse safe rich-task Markdown variants without semantic inference.
   - Scope: accept equivalent `-`/`*` markers, emphasized field labels, backticked/emphasized task
     ids, and supported heading separators; retain strict paths, acceptance ids, dependencies, and
     verification requirements.
   - Verification: canonical and safe-variant documents produce equivalent typed task plans while
     compact, table-like, unsafe, duplicate, and semantically incomplete cases remain invalid.
-- `W43-E3-S2-T2` (planned) Return structured task parse issues with exact source locations.
+  - Completion: PR #275 (merge `190d1a51`) added presentation-only normalization for list markers,
+    emphasis/backticks around syntactic labels and ids, and supported heading separators while
+    preserving strict executable semantics. Focused parser/semantic tests (34), docs/planning
+    checks (50), full Python suite (2332), Ruff, mypy, full CI, deterministic scenarios, packaged
+    UI browser, and build passed.
+- `W43-E3-S2-T2` (next) Return structured task parse issues with exact source locations.
   - Scope: replace string-only issues with kind, task id, heading/field line, missing fields, and
     root/related classification while retaining a compatibility error message for existing
     callers.
