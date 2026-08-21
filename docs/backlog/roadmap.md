@@ -14822,18 +14822,23 @@ Dependencies: `W43-E2-S1`; frontend task additionally depends on `W42-E5-S1`.
 
 Local tasks:
 
-- `W43-E2-S2-T1` (next) Add `resume` as a non-repair attempt mode.
+- `W43-E2-S2-T1` (done) Add `resume` as a non-repair attempt mode.
   - Scope: persist and render `initial`, `repair`, `resume`, and `intervention` distinctly; count
     only validation-triggered repair attempts against the automatic budget and read legacy
     manifests compatibly.
   - Verification: `initial -> repair -> blocked -> resume -> repair` records two repairs, one
     resume, monotonic attempt history, and the correct remaining budget.
-- `W43-E2-S2-T2` (soon) Expose rejected interview candidate diagnostics in the core UI model.
+  - Completion: PR #265 (merge `f774b9df`) persists and renders distinct `resume` attempt
+    identity, counts only explicit `repair` modes against the budget, routes blocked-answer
+    resumes through the core/CLI, and preserves legacy artifact-index fallback. Focused core,
+    docs/planning, full Python suite (2323), Ruff, mypy, full CI, deterministic scenarios,
+    packaged UI browser, and build passed.
+- `W43-E2-S2-T2` (next) Expose rejected interview candidate diagnostics in the core UI model.
   - Scope: publish canonical question, protected answer, raw rejected fragment, source attempt,
     runtime, reason, and eligible recovery without making the frontend parse Markdown.
   - Verification: core/service tests cover absent, accepted, rejected, stale, and permission-
     unavailable candidate evidence with one deterministic next action.
-- `W43-E2-S2-T3` (planned) Render bounded interview rejection recovery in the Decision Workbench.
+- `W43-E2-S2-T3` (soon) Render bounded interview rejection recovery in the Decision Workbench.
   - Scope: show the rejected fragment and canonical state, preserve answer drafts, and offer only
     the eligible confirm/edit/resume or request-change action; do not schedule a repair merely to
     fix candidate punctuation.
