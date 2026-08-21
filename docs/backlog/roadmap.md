@@ -14926,12 +14926,18 @@ Local tasks:
     preserving strict executable semantics. Focused parser/semantic tests (34), docs/planning
     checks (50), full Python suite (2332), Ruff, mypy, full CI, deterministic scenarios, packaged
     UI browser, and build passed.
-- `W43-E3-S2-T2` (next) Return structured task parse issues with exact source locations.
+- `W43-E3-S2-T2` (done) Return structured task parse issues with exact source locations.
   - Scope: replace string-only issues with kind, task id, heading/field line, missing fields, and
     root/related classification while retaining a compatibility error message for existing
     callers.
   - Verification: each malformed card points to its own source line and one missing field no
     longer produces an unrelated path or verification derivative.
+  - Completion: PR #277 (merge `2b9bc9dd`) added typed parse issues with kind, task id, exact source
+    line, field, missing-fields, and root/related metadata; semantic tasklist findings now retain
+    precise locations while compatibility messages remain stable. Focused core/validator tests
+    (105), task-plan regression tests (38), docs/planning checks (50), full Python suite (2336),
+    Ruff, mypy, full CI, deterministic scenarios, packaged UI browser, and build passed; the
+    independent Python 3.12 UI-cancellation timing failure passed on rerun.
 
 #### Slice W43-E3-S3 — root-cause tasklist validation and repair (`planned`)
 
@@ -14988,7 +14994,7 @@ Dependencies: `W43-E1-S1-T2`.
 
 Local tasks:
 
-- `W43-E4-S1-T1` (planned) Define severity, progression, and advisory semantics explicitly.
+- `W43-E4-S1-T1` (next) Define severity, progression, and advisory semantics explicitly.
   - Scope: preserve severity as impact, define every canonical fail finding as required for
     progression, reserve advisory observations for non-verdict evidence, and keep protocol-v1
     read compatibility where labels change.

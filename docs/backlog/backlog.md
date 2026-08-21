@@ -7,7 +7,7 @@ slice, and local task.
 
 ## Next
 
-- `W43-E3-S2-T2` — Return structured task parse issues with exact source locations.
+- `W43-E4-S1-T1` — Define severity, progression, and advisory semantics explicitly.
 
 
 ## Soon
@@ -38,6 +38,15 @@ slice, and local task.
   queue-restoration policy in `docs/backlog/roadmap.md` (`W8-E3-S1`).
 
 ## Current reconciliation
+
+- `2026-08-22` PR #277 (merge `2b9bc9dd`) completed `W43-E3-S2-T2`: task-plan failures now expose
+  typed kind, task id, exact source line, field, missing fields, and root/related classification,
+  while `TaskPlanParseError` retains compatibility messages. Semantic tasklist findings now use
+  the precise issue line. Focused core/validator tests (105), task-plan regression tests (38),
+  docs/planning checks (50), full Python suite (2336), Ruff, mypy, full CI, deterministic
+  scenarios, packaged UI browser, and build passed; an independent Python 3.12 UI-cancellation
+  timing failure passed on rerun. `W43-E4-S1-T1` is now `Next`; human usability, Claude,
+  cross-runtime, and Wave 36 work remain parked.
 
 - `2026-08-22` PR #275 (merge `190d1a51`) completed `W43-E3-S2-T1`: the core parser now accepts
   equivalent `-`/`*` list markers, emphasis/backticks around syntactic labels and ids, and
