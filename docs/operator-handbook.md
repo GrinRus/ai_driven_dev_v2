@@ -123,7 +123,8 @@ mode = "native"
 # qa = 3600
 
 [runtime.codex]
-command = "codex exec --dangerously-bypass-approvals-and-sandbox --skip-git-repo-check --json -"
+# The manual live lane isolates Codex from unrelated desktop MCP/plugin startup.
+command = "codex exec --ignore-user-config --disable plugins --disable remote_plugin --dangerously-bypass-approvals-and-sandbox --skip-git-repo-check --json -"
 mode = "native"
 # Optional typed provider selectors. Omit either field to keep Codex's native default.
 # model = "gpt-5.6-luna"

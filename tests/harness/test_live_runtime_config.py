@@ -114,7 +114,11 @@ def test_resolve_live_runtime_command_entries_defaults_codex_to_native() -> None
     assert entries["codex"].execution_mode is RuntimeExecutionMode.NATIVE
     assert entries["codex"].command.startswith("codex exec")
     assert entries["codex"].source == "default-native"
-    assert entries["codex"].command == get_runtime_definition("codex").default_command
+    assert entries["codex"].command == (
+        "codex exec --ignore-user-config --disable plugins --disable remote_plugin "
+        "--dangerously-bypass-approvals-and-sandbox --skip-git-repo-check --json -"
+    )
+    assert entries["codex"].command != get_runtime_definition("codex").default_command
 
 
 def test_resolve_live_runtime_command_entries_defaults_claude_code_to_native() -> None:
@@ -196,8 +200,9 @@ def test_write_live_runtime_config_records_native_modes(tmp_path: Path) -> None:
     assert 'mode = "native"' in config_text
     assert "[runtime.codex]" in config_text
     assert (
-        'command = "codex exec --dangerously-bypass-approvals-and-sandbox '
-        "--skip-git-repo-check --json -\""
+        'command = "codex exec --ignore-user-config --disable plugins '
+        '--disable remote_plugin --dangerously-bypass-approvals-and-sandbox '
+        '--skip-git-repo-check --json -"'
         in config_text
     )
     assert 'model = "gpt-5.6-luna"' in config_text
@@ -278,7 +283,10 @@ def test_write_live_runtime_config_preserves_real_runtime_defaults(tmp_path: Pat
     config = tomllib.loads(config_path.read_text(encoding="utf-8"))
 
     assert "permission_policy" not in config["runtime"]["codex"]
-    assert config["runtime"]["codex"]["command"] == get_runtime_definition("codex").default_command
+    assert config["runtime"]["codex"]["command"] == (
+        "codex exec --ignore-user-config --disable plugins --disable remote_plugin "
+        "--dangerously-bypass-approvals-and-sandbox --skip-git-repo-check --json -"
+    )
     assert config["runtime"]["codex"]["model"] == "gpt-5.6-luna"
     assert config["runtime"]["codex"]["reasoning_effort"] == "high"
 

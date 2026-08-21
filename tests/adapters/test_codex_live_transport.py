@@ -380,6 +380,13 @@ def test_codex_live_parser_accepts_managed_default_commands() -> None:
 
     assert parse_codex_live_command(definition.default_command).executable == "codex"
     assert (
+        parse_codex_live_command(
+            "codex exec --ignore-user-config --disable plugins --disable remote_plugin "
+            "--dangerously-bypass-approvals-and-sandbox --skip-git-repo-check --json -",
+        ).executable
+        == "codex"
+    )
+    assert (
         parse_codex_live_command(definition.brokered_default_command or "").executable
         == "codex"
     )
