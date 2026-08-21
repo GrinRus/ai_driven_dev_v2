@@ -47,6 +47,31 @@ Two bounded tasks with complete dependency and verification evidence.
 
 
 
+def _safe_presentation_variant() -> str:
+    return (
+        _tasklist()
+        .replace("### TL-1 — Add the contract", "### **TL-1** — Add the contract")
+        .replace("### TL-2 — Add enforcement", "### `TL-2`: Add enforcement")
+        .replace("- Outcome:", "* **Outcome**:")
+        .replace("- Dominant deliverable:", "- `Dominant deliverable`:")
+        .replace("- In scope:", "* __In scope__:")
+        .replace("- Acceptance criteria:", "* *Acceptance criteria*:")
+        .replace("  - TL-1-AC1:", "  * **TL-1-AC1**:")
+        .replace("  - TL-2-AC1:", "  * `TL-2-AC1`:")
+        .replace("- TL-1: none", "* **TL-1**: none")
+        .replace("- TL-2: TL-1", "- `TL-2`: **TL-1**")
+        .replace("- TL-1: `pytest", "* **TL-1**: `pytest")
+        .replace("- TL-2: `pytest", "- `TL-2`: `pytest")
+    )
+
+
+def test_parse_task_plan_accepts_safe_presentation_variants_without_inference() -> None:
+    canonical = parse_task_plan(_tasklist())
+    variant = parse_task_plan(_safe_presentation_variant())
+
+    assert variant.tasks == canonical.tasks
+
+
 def test_parse_task_plan_preserves_order_and_acceptance() -> None:
     plan = parse_task_plan(_tasklist())
 

@@ -7,20 +7,79 @@ from enum import StrEnum
 
 from aidd.core.identifiers import SafeIdentifier
 
-_TASK_HEADING_PATTERN = re.compile(
-    r"^###\s+((?:[A-Z][A-Z0-9]{0,15}-\d+)|T\d+)\s+(?:[-—:]\s*)?(.+?)\s*$"
-)
-_FIELD_PATTERN = re.compile(
-    r"^\s*-\s+(Outcome|Dominant deliverable|In scope|Context|"
-    r"Implementation constraints|Out of scope|Execution mode|Acceptance criteria)\s*:\s*(.*?)\s*$",
-    re.IGNORECASE,
+_TASK_ID_TEXT = r"(?:[A-Z][A-Z0-9]{0,15}-\d+|T\d+)"
+_TASK_HEADING_PATTERN = re.compile(r"^###\s+(\S+)(?:\s+(.+?))\s*$")
+_FIELD_LINE_PATTERN = re.compile(
+    r"^\s*[-*]\s+([^:]+?)\s*:\s*(.*?)\s*$",
 )
 _DEPENDENCY_ENTRY_PATTERN = re.compile(
-    r"^\s*-\s+`?((?:[A-Z][A-Z0-9]{0,15}-\d+)|T\d+)`?\s*:\s*(.*?)\s*$"
+    r"^\s*[-*]\s+([^:\s]+)\s*:\s*(.*?)\s*$"
 )
 _VERIFICATION_ENTRY_PATTERN = _DEPENDENCY_ENTRY_PATTERN
-_TASK_ID_PATTERN = re.compile(r"\b((?:[A-Z][A-Z0-9]{0,15}-\d+)|T\d+)\b")
+_TASK_ID_PATTERN = re.compile(rf"\b({_TASK_ID_TEXT})\b")
+_TASK_ID_FULL_PATTERN = re.compile(rf"^{_TASK_ID_TEXT}$")
 _NONE_DEPENDENCY_PATTERN = re.compile(r"^\s*none(?:\s|[.,;:—–-]|$)", re.IGNORECASE)
+_FIELD_LABELS = frozenset(
+    {
+        "outcome",
+        "dominant deliverable",
+        "in scope",
+        "context",
+        "implementation constraints",
+        "out of scope",
+        "execution mode",
+        "acceptance criteria",
+    }
+)
+
+
+def _strip_markdown_wrappers(value: str) -> str:
+    """Normalize presentation wrappers around a syntactic label or identifier.
+
+    This helper is intentionally limited to tokens whose executable meaning is
+    validated separately. It must not be applied to field values, paths, or
+    task titles, where emphasis may be meaningful content rather than syntax.
+    """
+
+    normalized = value.strip()
+    wrappers = ("**", "__", "`", "*", "_")
+    changed = True
+    while changed and normalized:
+        changed = False
+        for wrapper in wrappers:
+            if (
+                len(normalized) >= len(wrapper) * 2
+                and normalized.startswith(wrapper)
+                and normalized.endswith(wrapper)
+            ):
+                normalized = normalized[len(wrapper) : -len(wrapper)].strip()
+                changed = True
+                break
+    return normalized
+
+
+def _normalized_task_id(value: str) -> str | None:
+    normalized = _strip_markdown_wrappers(value)
+    if _TASK_ID_FULL_PATTERN.fullmatch(normalized) is None:
+        return None
+    return normalized.upper()
+
+
+def _parse_task_heading(line: str) -> tuple[str, str] | None:
+    match = _TASK_HEADING_PATTERN.match(line.strip())
+    if match is None:
+        return None
+    raw_id = match.group(1)
+    task_id = _normalized_task_id(raw_id)
+    if task_id is None and raw_id[-1:] in "-—–:":
+        task_id = _normalized_task_id(raw_id[:-1])
+    if task_id is None:
+        return None
+    title = match.group(2).strip()
+    title = re.sub(r"^[-—–:]\s*", "", title).strip()
+    if not title:
+        return None
+    return task_id, title
 
 
 class TaskPlanParseError(ValueError):
@@ -106,12 +165,11 @@ def _parse_task_blocks(
     current_title = ""
     current_lines: list[str] = []
     for line in lines:
-        match = _TASK_HEADING_PATTERN.match(line.strip())
-        if match:
+        heading = _parse_task_heading(line)
+        if heading is not None:
             if current_id is not None:
                 blocks.append((current_id, current_title, current_lines))
-            current_id = match.group(1).upper()
-            current_title = match.group(2).strip()
+            current_id, current_title = heading
             current_lines = []
             continue
         if current_id is not None:
@@ -143,7 +201,9 @@ def _parse_mapped_section(
         match = pattern.match(line)
         if match is None:
             continue
-        task_id = match.group(1).upper()
+        task_id = _normalized_task_id(match.group(1))
+        if task_id is None:
+            continue
         if task_id in entries:
             issues.append(f"Section `{heading}` contains duplicate entry `{task_id}`.")
         entries[task_id] = match.group(2).strip()
@@ -159,21 +219,13 @@ def _parse_card_fields(
     issues: list[str] = []
     in_acceptance = False
     for line in lines:
-        field_match = _FIELD_PATTERN.match(line)
-        if field_match is not None:
-            key = field_match.group(1).casefold()
-            if key in fields:
-                issues.append(f"Task `{task_id}` repeats field `{field_match.group(1)}`.")
-            fields[key] = field_match.group(2).strip()
-            in_acceptance = key == "acceptance criteria"
-            continue
         if in_acceptance:
             criterion_match = re.match(
-                r"^\s{2,}-\s+`?([^`:\s]+)`?\s*:\s*(.+?)\s*$",
+                r"^\s{2,}[-*]\s+([^:\s]+)\s*:\s*(.+?)\s*$",
                 line,
             )
             if criterion_match is not None:
-                criterion_id = criterion_match.group(1).upper()
+                criterion_id = _strip_markdown_wrappers(criterion_match.group(1)).upper()
                 acceptance.append(
                     TaskAcceptanceCriterion(
                         id=criterion_id,
@@ -181,7 +233,20 @@ def _parse_card_fields(
                     )
                 )
                 continue
-        if line.strip() and not line.lstrip().startswith("-"):
+        field_match = _FIELD_LINE_PATTERN.match(line)
+        if field_match is not None:
+            label = _strip_markdown_wrappers(field_match.group(1))
+            key = label.casefold()
+            if key not in _FIELD_LABELS:
+                if line.strip() and not line.lstrip().startswith(("-", "*")):
+                    in_acceptance = False
+                continue
+            if key in fields:
+                issues.append(f"Task `{task_id}` repeats field `{label}`.")
+            fields[key] = field_match.group(2).strip()
+            in_acceptance = key == "acceptance criteria"
+            continue
+        if line.strip() and not line.lstrip().startswith(("-", "*")):
             in_acceptance = False
 
     for label in ("outcome", "dominant deliverable", "in scope"):
