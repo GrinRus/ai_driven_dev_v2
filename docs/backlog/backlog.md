@@ -7,12 +7,12 @@ slice, and local task.
 
 ## Next
 
-- `W43-E2-S2-T1` — Add `resume` as a non-repair attempt mode.
+- `W43-E2-S2-T2` — Expose rejected interview candidate diagnostics in the core UI model.
 
 
 ## Soon
 
-- `W43-E2-S2-T2` — Expose rejected interview candidate diagnostics in the core UI model.
+- `W43-E2-S2-T3` — Render bounded interview rejection recovery in the Decision Workbench.
 
 ## Parking lot
 
@@ -38,6 +38,14 @@ slice, and local task.
   queue-restoration policy in `docs/backlog/roadmap.md` (`W8-E3-S1`).
 
 ## Current reconciliation
+
+- `2026-08-21` PR #265 (merge `f774b9df`) completed `W43-E2-S2-T1`: `resume` is now a distinct
+  non-repair attempt mode in invocation, artifact indexes, stage results, and repair history;
+  only explicit validation-triggered `repair` attempts consume the automatic budget, while
+  legacy indexes retain their count fallback. Focused core/docs/planning tests, full Python
+  suite (2323), Ruff, mypy, full CI, deterministic scenarios, packaged UI browser, and build
+  passed. `W43-E2-S2-T2` is now `Next`; `W43-E2-S2-T3` is `Soon`. Human usability, Claude,
+  cross-runtime, and Wave 36 work remain parked.
 
 - `2026-08-21` PR #263 (merge `a489b7c7`) completed `W43-E2-S1-T3`: runtime attempts now
   merge questions by stable QID, preserve omitted questions and operator answers, and retain
