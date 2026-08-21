@@ -9,10 +9,15 @@ from aidd.core.stage_registry import (
     all_stages,
     load_all_stage_manifests,
     load_stage_manifest,
+    resolve_aidd_generated_output_documents,
     resolve_expected_output_documents,
+    resolve_interview_control_documents,
     resolve_optional_input_documents,
     resolve_prompt_pack_file_paths,
+    resolve_published_output_documents,
     resolve_required_input_documents,
+    resolve_runtime_output_documents,
+    resolve_stage_output_registry,
     resolve_validator_targets,
 )
 
@@ -338,3 +343,50 @@ def test_resolve_expected_output_documents_and_validator_targets(tmp_path: Path)
         workspace_root / "workitems" / "WI-001" / "stages" / "idea" / "answers.md",
     )
     assert validator_targets == expected_outputs
+
+
+@pytest.mark.parametrize("stage", all_stages())
+def test_stage_output_registry_separates_owner_sets(stage: str, tmp_path: Path) -> None:
+    workspace_root = tmp_path / ".aidd"
+    registry = resolve_stage_output_registry(
+        stage=stage,
+        work_item="WI-001",
+        workspace_root=workspace_root,
+    )
+
+    expected = resolve_expected_output_documents(
+        stage=stage,
+        work_item="WI-001",
+        workspace_root=workspace_root,
+    )
+    assert registry.published == expected
+    assert registry.published == resolve_published_output_documents(
+        stage=stage,
+        work_item="WI-001",
+        workspace_root=workspace_root,
+    )
+    assert registry.runtime_authored == resolve_runtime_output_documents(
+        stage=stage,
+        work_item="WI-001",
+        workspace_root=workspace_root,
+    )
+    assert registry.aidd_generated == resolve_aidd_generated_output_documents(
+        stage=stage,
+        work_item="WI-001",
+        workspace_root=workspace_root,
+    )
+    assert registry.interview_control == resolve_interview_control_documents(
+        stage=stage,
+        work_item="WI-001",
+        workspace_root=workspace_root,
+    )
+
+    assert {path.name for path in registry.aidd_generated} == {
+        "stage-result.md",
+        "validator-report.md",
+    }
+    assert "stage-result.md" not in {path.name for path in registry.runtime_authored}
+    assert "validator-report.md" not in {path.name for path in registry.runtime_authored}
+    assert set(registry.runtime_authored).isdisjoint(registry.aidd_generated)
+    assert set(registry.runtime_authored).isdisjoint(registry.interview_control)
+    assert set(registry.aidd_generated).isdisjoint(registry.interview_control)

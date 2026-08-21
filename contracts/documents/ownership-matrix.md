@@ -25,16 +25,16 @@ records.
 
 | Declared document path pattern | Stage(s) | Ownership class | Create | Mutate | Validate | Publish | UI authoring |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| `workitems/<id>/stages/<stage>/output/idea-brief.md` | `idea` | Runtime content | Runtime adapter | Runtime attempt only | AIDD validator | AIDD core after validation | No; read-only |
-| `workitems/<id>/stages/<stage>/output/research-notes.md` | `research` | Runtime content | Runtime adapter | Runtime attempt only | AIDD validator | AIDD core after validation | No; read-only |
-| `workitems/<id>/stages/<stage>/output/plan.md` | `plan` | Runtime content | Runtime adapter | Runtime attempt only | AIDD validator | AIDD core after validation | No; read-only |
-| `workitems/<id>/stages/<stage>/output/review-spec-report.md` | `review-spec` | Runtime content | Runtime adapter | Runtime attempt only | AIDD validator | AIDD core after validation | No; read-only |
-| `workitems/<id>/stages/<stage>/output/tasklist.md` | `tasklist` | Runtime content | Runtime adapter | Runtime attempt only | AIDD validator | AIDD core after validation | No; read-only |
-| `workitems/<id>/stages/<stage>/output/implementation-report.md` | `implement` | Runtime content | Runtime adapter | Runtime attempt only | AIDD validator | AIDD core after validation | No; read-only |
-| `workitems/<id>/stages/<stage>/output/review-report.md` | `review` | Runtime content | Runtime adapter | Runtime attempt only | AIDD validator | AIDD core after validation | No; read-only |
-| `workitems/<id>/stages/<stage>/output/qa-report.md` | `qa` | Runtime content | Runtime adapter | Runtime attempt only | AIDD validator | AIDD core after validation | No; read-only |
-| `workitems/<id>/stages/<stage>/output/questions.md` | Any stage | Interview ledger | AIDD interview controller | AIDD interview controller | AIDD interview controller | AIDD core | Controlled Write/Preview |
-| `workitems/<id>/stages/<stage>/output/answers.md` | Any stage | Interview ledger | Operator answer service | AIDD merge service | AIDD interview controller | AIDD core | Controlled Write/Preview |
+| `workitems/<id>/stages/<stage>/idea-brief.md` | `idea` | Runtime content | Runtime adapter | Runtime attempt only | AIDD validator | AIDD core after validation | No; read-only |
+| `workitems/<id>/stages/<stage>/research-notes.md` | `research` | Runtime content | Runtime adapter | Runtime attempt only | AIDD validator | AIDD core after validation | No; read-only |
+| `workitems/<id>/stages/<stage>/plan.md` | `plan` | Runtime content | Runtime adapter | Runtime attempt only | AIDD validator | AIDD core after validation | No; read-only |
+| `workitems/<id>/stages/<stage>/review-spec-report.md` | `review-spec` | Runtime content | Runtime adapter | Runtime attempt only | AIDD validator | AIDD core after validation | No; read-only |
+| `workitems/<id>/stages/<stage>/tasklist.md` | `tasklist` | Runtime content | Runtime adapter | Runtime attempt only | AIDD validator | AIDD core after validation | No; read-only |
+| `workitems/<id>/stages/<stage>/implementation-report.md` | `implement` | Runtime content | Runtime adapter | Runtime attempt only | AIDD validator | AIDD core after validation | No; read-only |
+| `workitems/<id>/stages/<stage>/review-report.md` | `review` | Runtime content | Runtime adapter | Runtime attempt only | AIDD validator | AIDD core after validation | No; read-only |
+| `workitems/<id>/stages/<stage>/qa-report.md` | `qa` | Runtime content | Runtime adapter | Runtime attempt only | AIDD validator | AIDD core after validation | No; read-only |
+| `workitems/<id>/stages/<stage>/questions.md` | Any stage | Interview ledger | AIDD interview controller | AIDD interview controller | AIDD interview controller | AIDD core | Controlled Write/Preview |
+| `workitems/<id>/stages/<stage>/answers.md` | Any stage | Interview ledger | Operator answer service | AIDD merge service | AIDD interview controller | AIDD core | Controlled Write/Preview |
 | `workitems/<id>/stages/<stage>/stage-result.md` | Any stage | AIDD workflow record | AIDD lifecycle service | AIDD lifecycle service | AIDD validator coordinator | AIDD publication service | No; read-only |
 | `workitems/<id>/stages/<stage>/validator-report.md` | Any stage | AIDD workflow record | AIDD validator coordinator | AIDD validator coordinator | AIDD validator coordinator | AIDD publication service | No; read-only |
 | `workitems/<id>/stages/<stage>/repair-brief.md` | Any stage | AIDD control document | AIDD repair controller | AIDD repair controller | AIDD repair controller | AIDD repair controller | No; read-only |
