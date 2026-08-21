@@ -30,6 +30,12 @@ A document contract defines:
 
 Contracts live under `contracts/` as Markdown.
 
+The canonical stage-document ownership boundary is the
+[`ownership-matrix.md`](../../contracts/documents/ownership-matrix.md) contract. It assigns
+each declared stage document exactly one owner and separates runtime-authored content from AIDD
+workflow, control, interview, and raw-candidate records. A reader or publisher does not become a
+second owner.
+
 ## 3. Runtime-facing vs system-facing artifacts
 
 ### Runtime-facing artifacts
