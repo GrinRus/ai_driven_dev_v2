@@ -7,12 +7,10 @@ slice, and local task.
 
 ## Next
 
-- `W43-E2-S2-T2` — Expose rejected interview candidate diagnostics in the core UI model.
+- `W43-E2-S2-T3` — Render bounded interview rejection recovery in the Decision Workbench.
 
 
 ## Soon
-
-- `W43-E2-S2-T3` — Render bounded interview rejection recovery in the Decision Workbench.
 
 ## Parking lot
 
@@ -38,6 +36,14 @@ slice, and local task.
   queue-restoration policy in `docs/backlog/roadmap.md` (`W8-E3-S1`).
 
 ## Current reconciliation
+
+- `2026-08-21` PR #267 (merge `13ba2cd9`) completed `W43-E2-S2-T2`: the core operator stage model
+  now exposes bounded rejected, accepted, stale, absent, and permission-unavailable interview
+  candidate diagnostics, canonical QID context, protected answers, raw candidate evidence, and
+  resume-only recovery guidance without frontend Markdown parsing. Focused core/docs/planning tests
+  (122), full Python suite (2326), Ruff, mypy, full CI, deterministic scenarios, packaged UI browser,
+  and build passed. `W43-E2-S2-T3` is now `Next`; human usability, Claude, cross-runtime, and Wave 36
+  work remain parked.
 
 - `2026-08-21` PR #265 (merge `f774b9df`) completed `W43-E2-S2-T1`: `resume` is now a distinct
   non-repair attempt mode in invocation, artifact indexes, stage results, and repair history;
