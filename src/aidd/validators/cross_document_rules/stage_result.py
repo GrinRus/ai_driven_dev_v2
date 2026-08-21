@@ -21,7 +21,7 @@ _STAGE_STATUS_PATTERN = re.compile(
 )
 _PROJECT_SET_ROW_PATTERN = re.compile(r"^\|\s*`([^`]+)`\s*\|\s*`([^`]+)`\s*\|")
 _ATTEMPT_TRIGGER_PATTERN = re.compile(
-    r"\bAttempt\s+`?\d+`?\s+\(`?(initial|repair|intervention)`?\)",
+    r"\bAttempt\s+`?\d+`?\s+\(`?(initial|repair|resume|intervention)`?\)",
     re.IGNORECASE,
 )
 

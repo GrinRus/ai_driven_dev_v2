@@ -509,6 +509,7 @@ def _run_stage_attempts(
     stage_attempt_count = 0
     current_intervention_request_path = intervention_request_path
     while True:
+        resume_after_answers = False
         if current_intervention_request_path is None:
             unblock_state = update_stage_unblock_state(
                 workspace_root=runtime_config.workspace_root,
@@ -546,6 +547,7 @@ def _run_stage_attempts(
                 raise typer.Exit(code=1)
             if unblock_state.unblocked:
                 console.print("Resuming blocked stage after answers were detected.")
+                resume_after_answers = True
 
         try:
             orchestration = run_single_stage_orchestration(
@@ -563,6 +565,7 @@ def _run_stage_attempts(
                 repair_policy=runtime_config.repair_policy,
                 project_set=runtime_config.project_set,
                 intervention_request_path=current_intervention_request_path,
+                resume_mode=resume_after_answers,
                 defer_success_publication=options.defer_success_publication,
                 validation_finding_provider=options.validation_finding_provider,
             )
