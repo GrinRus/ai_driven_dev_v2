@@ -15,7 +15,10 @@ from aidd.core.stage_models import (
     StagePreparationBundle,
 )
 from aidd.core.stage_paths import workspace_relative_path
-from aidd.core.stage_registry import DEFAULT_STAGE_CONTRACTS_ROOT
+from aidd.core.stage_registry import (
+    DEFAULT_STAGE_CONTRACTS_ROOT,
+    resolve_runtime_output_documents,
+)
 from aidd.core.state_machine import StageState
 from aidd.core.workspace import stage_root as workspace_stage_root
 
@@ -314,7 +317,15 @@ def prepare_adapter_invocation(
         input_bundle_path=input_bundle_path,
         input_bundle_markdown=input_bundle_markdown,
         expected_input_bundle=preparation_bundle.expected_input_bundle,
-        expected_output_documents=preparation_bundle.expected_output_documents,
+        # Runtime completion is based only on substantive content.  AIDD-owned terminal
+        # records (including validator-report.md) are written after validation and must not
+        # become model completion targets.
+        expected_output_documents=resolve_runtime_output_documents(
+            stage=execution_state.stage,
+            work_item=execution_state.work_item,
+            workspace_root=workspace_root,
+            contracts_root=contracts_root,
+        ),
         attempt_mode=attempt_mode,
         operator_request_path=intervention_request_path,
         operator_request_markdown=operator_request_markdown,

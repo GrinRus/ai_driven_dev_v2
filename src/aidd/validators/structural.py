@@ -31,6 +31,7 @@ def _iter_required_documents(
     work_item: str,
     workspace_root: Path,
     contracts_root: Path,
+    output_documents: tuple[Path, ...] | None = None,
 ) -> tuple[Path, ...]:
     required_inputs = resolve_required_input_documents(
         stage=stage,
@@ -38,11 +39,15 @@ def _iter_required_documents(
         workspace_root=workspace_root,
         contracts_root=contracts_root,
     )
-    required_outputs = resolve_expected_output_documents(
-        stage=stage,
-        work_item=work_item,
-        workspace_root=workspace_root,
-        contracts_root=contracts_root,
+    required_outputs = (
+        resolve_expected_output_documents(
+            stage=stage,
+            work_item=work_item,
+            workspace_root=workspace_root,
+            contracts_root=contracts_root,
+        )
+        if output_documents is None
+        else output_documents
     )
 
     deduplicated: list[Path] = []
@@ -126,6 +131,7 @@ def validate_required_document_existence(
     work_item: str,
     workspace_root: Path,
     contracts_root: Path = DEFAULT_STAGE_CONTRACTS_ROOT,
+    output_documents: tuple[Path, ...] | None = None,
 ) -> tuple[ValidationFinding, ...]:
     findings: list[ValidationFinding] = []
     for path in _iter_required_documents(
@@ -133,6 +139,7 @@ def validate_required_document_existence(
         work_item=work_item,
         workspace_root=workspace_root,
         contracts_root=contracts_root,
+        output_documents=output_documents,
     ):
         if path.exists():
             continue
@@ -156,14 +163,19 @@ def validate_required_sections(
     work_item: str,
     workspace_root: Path,
     contracts_root: Path = DEFAULT_STAGE_CONTRACTS_ROOT,
+    output_documents: tuple[Path, ...] | None = None,
 ) -> tuple[ValidationFinding, ...]:
     # Make dependency explicit for this validation slice.
     load_stage_manifest(stage=stage, contracts_root=contracts_root)
-    expected_outputs = resolve_expected_output_documents(
-        stage=stage,
-        work_item=work_item,
-        workspace_root=workspace_root,
-        contracts_root=contracts_root,
+    expected_outputs = (
+        resolve_expected_output_documents(
+            stage=stage,
+            work_item=work_item,
+            workspace_root=workspace_root,
+            contracts_root=contracts_root,
+        )
+        if output_documents is None
+        else output_documents
     )
 
     findings: list[ValidationFinding] = []

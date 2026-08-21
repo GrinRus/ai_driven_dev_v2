@@ -245,7 +245,8 @@ def test_generic_cli_handshake_invalid_output_flow_stops(tmp_path: Path) -> None
         workspace_root=workspace_root,
         discovery=discovery,
     )
-    assert any(
+    assert structural.findings
+    assert not any(
         finding.code == "STRUCT-MISSING-REQUIRED-DOCUMENT"
         for finding in structural.findings
     )

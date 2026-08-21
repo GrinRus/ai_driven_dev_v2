@@ -1035,10 +1035,99 @@ def test_discover_stage_markdown_outputs_returns_discovered_and_missing_document
     assert discovery.attempt_number == 1
     assert all(path.suffix.lower() == ".md" for path in discovery.expected_markdown_documents)
     assert execution_state.attempt_path / "runtime.log" not in discovery.expected_markdown_documents
-    assert discovery.discovered_markdown_documents == (
-        preparation_bundle.expected_output_documents[:2]
+    assert discovery.discovered_markdown_documents == invocation.expected_output_documents
+    assert discovery.missing_markdown_documents == ()
+
+
+@pytest.mark.parametrize(
+    ("plan_text", "runtime_verdict", "expected_verdict", "expect_findings"),
+    (
+        (_valid_plan_output_documents()["plan.md"], "fail", "pass", False),
+        ("# Plan\n\n## Goals\n\n- Incomplete.\n", "pass", "fail", True),
+    ),
+)
+def test_canonical_validator_report_ignores_runtime_validator_draft(
+    tmp_path: Path,
+    plan_text: str,
+    runtime_verdict: str,
+    expected_verdict: str,
+    expect_findings: bool,
+) -> None:
+    workspace_root = tmp_path / ".aidd"
+    create_run_manifest(
+        workspace_root=workspace_root,
+        work_item="WI-001",
+        run_id="run-001",
+        runtime_id="generic-cli",
+        stage_target="plan",
+        config_snapshot={"mode": "test"},
     )
-    assert discovery.missing_markdown_documents == preparation_bundle.expected_output_documents[2:]
+    preparation_bundle = prepare_stage_bundle(
+        workspace_root=workspace_root,
+        work_item="WI-001",
+        stage="plan",
+    )
+    _materialize_expected_inputs(preparation_bundle.expected_input_bundle)
+    execution_state = persist_execution_state(
+        workspace_root=workspace_root,
+        work_item="WI-001",
+        run_id="run-001",
+        stage="plan",
+    )
+    invocation = prepare_adapter_invocation(
+        workspace_root=workspace_root,
+        preparation_bundle=preparation_bundle,
+        execution_state=execution_state,
+    )
+    plan_output = preparation_bundle.expected_output_documents[0]
+    plan_output.parent.mkdir(parents=True, exist_ok=True)
+    plan_output.write_text(plan_text, encoding="utf-8")
+    validator_draft = next(
+        path
+        for path in preparation_bundle.expected_output_documents
+        if path.name == "validator-report.md"
+    )
+    validator_draft.write_text(
+        f"# Runtime draft\n\n- Validator verdict: `{runtime_verdict}`\n",
+        encoding="utf-8",
+    )
+    os.utime(
+        validator_draft,
+        ns=(
+            max(
+                execution_state.attempt_path.stat().st_atime_ns,
+                execution_state.attempt_path.stat().st_mtime_ns,
+            )
+            + 1,
+        )
+        * 2,
+    )
+
+    discovery = discover_stage_markdown_outputs(
+        execution_state=execution_state,
+        invocation_bundle=invocation,
+    )
+    validation = run_structural_validation_after_output_discovery(
+        workspace_root=workspace_root,
+        discovery=discovery,
+    )
+
+    assert validation.validator_report_path.read_text(encoding="utf-8").find(
+        f"- Verdict: `{expected_verdict}`"
+    ) >= 0
+    assert bool(validation.findings) is expect_findings
+    assert discovery.discovered_markdown_documents == invocation.expected_output_documents
+    assert discovery.missing_markdown_documents == ()
+    assert len(discovery.unexpected_runtime_documents) == 1
+    evidence_path = discovery.unexpected_runtime_documents[0]
+    assert evidence_path.name == "runtime-validator-report.md"
+    assert evidence_path.read_text(encoding="utf-8").startswith("# Runtime draft")
+    artifact_index = json.loads(
+        (execution_state.attempt_path / "artifact-index.json").read_text(encoding="utf-8")
+    )
+    assert artifact_index["documents"]["runtime_validator_draft"] == (
+        evidence_path.relative_to(workspace_root).as_posix()
+    )
 
 
 def test_discover_stage_markdown_outputs_promotes_misplaced_output_documents(
@@ -1097,14 +1186,14 @@ def test_discover_stage_markdown_outputs_promotes_misplaced_output_documents(
         discovery=discovery,
     )
 
-    assert discovery.discovered_markdown_documents == preparation_bundle.expected_output_documents
+    assert discovery.discovered_markdown_documents == invocation.expected_output_documents
     assert discovery.missing_markdown_documents == ()
     assert tuple(
         promotion.destination_path for promotion in discovery.promoted_misplaced_documents
-    ) == preparation_bundle.expected_output_documents
+    ) == invocation.expected_output_documents
     assert (stage_root / "plan.md").read_text(encoding="utf-8") == valid_documents["plan.md"]
     assert (stage_root / "stage-result.md").read_text(encoding="utf-8") == (
-        valid_documents["stage-result.md"]
+        "# Stage result\n\nStage not run yet.\n"
     )
     assert structural_validation.findings == ()
     validator_report_text = structural_validation.validator_report_path.read_text(
@@ -2872,12 +2961,12 @@ def test_run_structural_validation_after_output_discovery_writes_report_path(
         workspace_root / "workitems" / "WI-001" / "stages" / "plan" / "validator-report.md"
     )
     assert structural_validation.validator_report_path.exists()
-    assert any(
+    assert not any(
         finding.code == "STRUCT-MISSING-REQUIRED-DOCUMENT"
         for finding in structural_validation.findings
     )
     report_text = structural_validation.validator_report_path.read_text(encoding="utf-8")
-    assert "`STRUCT-MISSING-REQUIRED-DOCUMENT`" in report_text
+    assert "`STRUCT-MISSING-REQUIRED-DOCUMENT`" not in report_text
 
 
 def test_validation_collects_semantic_findings_with_independent_structural_defects(
@@ -2936,10 +3025,10 @@ def test_validation_collects_semantic_findings_with_independent_structural_defec
     )
 
     finding_codes = [finding.code for finding in structural_validation.findings]
-    assert "STRUCT-MISSING-REQUIRED-DOCUMENT" in finding_codes
+    assert "STRUCT-MISSING-REQUIRED-DOCUMENT" not in finding_codes
     assert "SEM-INCOMPLETE-SECTION" in finding_codes
     report_text = structural_validation.validator_report_path.read_text(encoding="utf-8")
-    assert "`STRUCT-MISSING-REQUIRED-DOCUMENT`" in report_text
+    assert "`STRUCT-MISSING-REQUIRED-DOCUMENT`" not in report_text
     assert "`SEM-INCOMPLETE-SECTION`" in report_text
 
 

@@ -774,6 +774,11 @@ def _expected_stage_document_path(
     orchestration: StageOrchestrationResult,
     document_name: str,
 ) -> Path | None:
+    if orchestration.validation_result is not None:
+        # Questions and answers are interview-control records, not runtime completion
+        # targets, so resolve them from the canonical stage root rather than the adapter's
+        # substantive output list.
+        return orchestration.validation_result.validator_report_path.parent / document_name
     for path in orchestration.adapter_invocation.expected_output_documents:
         if path.name == document_name:
             return path

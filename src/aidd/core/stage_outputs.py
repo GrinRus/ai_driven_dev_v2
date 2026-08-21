@@ -4,6 +4,7 @@ from pathlib import Path
 from shutil import copy2, rmtree
 from uuid import uuid4
 
+from aidd.core.run_store import write_attempt_artifact_index
 from aidd.core.stage_models import (
     AdapterInvocationBundle,
     StageExecutionState,
@@ -62,6 +63,63 @@ def _should_promote_misplaced_stage_output(
 
 
 _MISPLACED_OUTPUT_PROMOTION_WARNING_CODE = "STRUCT-OUTPUT-PROMOTED"
+_UNEXPECTED_RUNTIME_VALIDATOR_DRAFT_NAME = "runtime-validator-report.md"
+_VALIDATOR_REPORT_PLACEHOLDER = "# Validator report\n\nNo validator output yet."
+
+
+def _workspace_root_for_document(path: Path) -> Path:
+    parts = path.parts
+    try:
+        workitems_index = parts.index("workitems")
+    except ValueError as exc:
+        raise ValueError(f"Stage document is not inside a workitems workspace: {path}") from exc
+    return Path(*parts[:workitems_index])
+
+
+def _retain_unexpected_runtime_validator_draft(
+    *,
+    workspace_root: Path,
+    execution_state: StageExecutionState,
+) -> tuple[Path, ...]:
+    """Retain a runtime-written validator draft without treating it as canonical.
+
+    The workspace bootstrap keeps a placeholder at the canonical path.  Only a non-placeholder
+    file modified after the current attempt directory was created is considered an unexpected
+    runtime draft; it is copied into attempt evidence before AIDD overwrites the canonical path.
+    """
+
+    stage_root = workspace_stage_root(
+        root=workspace_root,
+        work_item=execution_state.work_item,
+        stage=execution_state.stage,
+    )
+    validator_report_path = stage_root / "validator-report.md"
+    if not validator_report_path.exists():
+        return ()
+    try:
+        text = validator_report_path.read_text(encoding="utf-8")
+        modified_after_attempt_start = (
+            validator_report_path.stat().st_mtime_ns
+            > execution_state.attempt_path.stat().st_mtime_ns
+        )
+    except (OSError, UnicodeDecodeError):
+        return ()
+    if not modified_after_attempt_start or text.strip() == _VALIDATOR_REPORT_PLACEHOLDER:
+        return ()
+
+    evidence_path = execution_state.attempt_path / _UNEXPECTED_RUNTIME_VALIDATOR_DRAFT_NAME
+    try:
+        copy2(validator_report_path, evidence_path)
+    except OSError:
+        return ()
+    write_attempt_artifact_index(
+        workspace_root=workspace_root,
+        work_item=execution_state.work_item,
+        run_id=execution_state.run_id,
+        stage=execution_state.stage,
+        attempt_number=execution_state.attempt_number,
+    )
+    return (evidence_path,)
 
 
 def _promote_misplaced_stage_output_documents(
@@ -145,6 +203,12 @@ def discover_stage_markdown_outputs(
     expected_markdown_documents = tuple(
         path for path in invocation_bundle.expected_output_documents if path.suffix.lower() == ".md"
     )
+    unexpected_runtime_documents = _retain_unexpected_runtime_validator_draft(
+        workspace_root=_workspace_root_for_document(expected_markdown_documents[0])
+        if expected_markdown_documents
+        else Path("."),
+        execution_state=execution_state,
+    )
     promoted_misplaced_documents = _promote_misplaced_stage_output_documents(
         expected_markdown_documents=expected_markdown_documents
     )
@@ -163,6 +227,7 @@ def discover_stage_markdown_outputs(
         discovered_markdown_documents=discovered_markdown_documents,
         missing_markdown_documents=missing_markdown_documents,
         promoted_misplaced_documents=promoted_misplaced_documents,
+        unexpected_runtime_documents=unexpected_runtime_documents,
     )
 
 
@@ -177,12 +242,14 @@ def run_structural_validation_after_output_discovery(
         work_item=discovery.work_item,
         workspace_root=workspace_root,
         contracts_root=contracts_root,
+        output_documents=discovery.expected_markdown_documents,
     )
     section_findings = validate_required_sections(
         stage=discovery.stage,
         work_item=discovery.work_item,
         workspace_root=workspace_root,
         contracts_root=contracts_root,
+        output_documents=discovery.expected_markdown_documents,
     )
     findings: tuple[ValidationFinding, ...]
     findings = (*structural_findings, *section_findings)
@@ -192,6 +259,7 @@ def run_structural_validation_after_output_discovery(
             work_item=discovery.work_item,
             workspace_root=workspace_root,
             contracts_root=contracts_root,
+            output_documents=discovery.expected_markdown_documents,
         )
         cross_document_findings = validate_cross_document_consistency(
             stage=discovery.stage,
