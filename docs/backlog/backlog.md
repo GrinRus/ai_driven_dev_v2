@@ -7,14 +7,14 @@ slice, and local task.
 
 ## Next
 
-- `W42-E7-S3-T8` — Isolate native Codex live execution from unrelated desktop MCP/plugin
-  configuration before the fresh task-aware acceptance.
+<!-- No actionable task is promoted while the required uncoached human observation remains
+     environment-blocked. The Codex live acceptance has been run and is reconciled separately. -->
 
 
 ## Soon
 
-<!-- The direct Codex acceptance remains blocked by the genuine uncoached observation and awaits
-     the bounded native-provider isolation task in Next. -->
+<!-- The direct Codex acceptance is complete as execution evidence; Wave 42 exit remains gated by
+     the genuine uncoached observation. -->
 
 
 ## Parking lot
@@ -41,6 +41,12 @@ slice, and local task.
   queue-restoration policy in `docs/backlog/roadmap.md` (`W8-E3-S1`).
 
 ## Current reconciliation
+
+- `2026-08-21` PR #240 (merge `2db0e886`) completed `W42-E7-S3-T8`. The fresh clean-main
+  `AIDD-LIVE-007` run `eval-live-007-codex-20260821T033606Z` then passed all eight stages with a
+  passing task-aware checkpoint; T2 live-evidence reconciliation is the next bounded docs step.
+  `W42-E7-S2-T3` remains explicitly environment-blocked, so no Wave 42 exit or Wave 43 promotion
+  is claimed yet.
 
 - `2026-08-21` The first clean post-T7 run `eval-live-007-codex-20260821T023047Z` passed `idea`
   with manual audit but stalled before the first `research` runtime event and was interrupted.
