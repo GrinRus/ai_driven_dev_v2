@@ -14887,12 +14887,19 @@ Local tasks:
     and retained fail-closed parser coverage for compact and table-like tasklists. Focused
     task-plan/prompt checks (30), docs/planning/semantic checks (56), full Python suite (2330),
     Ruff, mypy, full CI, deterministic scenarios, packaged UI browser, and build passed.
-- `W43-E3-S1-T2` (next) Embed a complete rich-tasklist scaffold in the stage brief.
+- `W43-E3-S1-T2` (done) Embed a complete rich-tasklist scaffold in the stage brief.
   - Scope: render one canonical H3 card, nested acceptance criterion, dependency entry, and
     verification entry in the installed brief; keep prompt text lean and ensure scaffold
     placeholders are prompt input rather than validated output.
   - Verification: stage-preparation snapshots and installed-package fixtures expose the same
     copyable grammar without requiring repository-local contract discovery.
+  - Completion: PR #273 (merge `885deee2`) embeds a complete rich-tasklist card scaffold in
+    generated stage briefs, including outcome, dominant deliverable, bounded in-scope paths,
+    nested task-local acceptance, dependency, and verification entries. It works without
+    repository-local contract discovery and declares itself prompt input rather than validated
+    output. Focused stage-preparation/stage-runner tests (11), docs/prompt/planning checks (161),
+    full Python suite (2331), Ruff, mypy, full CI, deterministic scenarios, packaged UI browser,
+    and build passed.
 
 #### Slice W43-E3-S2 — tolerant task parsing and located issues (`planned`)
 
@@ -14908,7 +14915,7 @@ Dependencies: `W43-E3-S1`.
 
 Local tasks:
 
-- `W43-E3-S2-T1` (planned) Parse safe rich-task Markdown variants without semantic inference.
+- `W43-E3-S2-T1` (next) Parse safe rich-task Markdown variants without semantic inference.
   - Scope: accept equivalent `-`/`*` markers, emphasized field labels, backticked/emphasized task
     ids, and supported heading separators; retain strict paths, acceptance ids, dependencies, and
     verification requirements.
