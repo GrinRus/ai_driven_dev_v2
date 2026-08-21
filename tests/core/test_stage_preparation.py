@@ -47,3 +47,26 @@ def test_prepared_stage_brief_separates_runtime_and_aidd_owned_documents(
     assert "`workitems/WI-001/stages/" in content
     assert "stage-result.md" in content
     assert "validator-report.md" in content
+
+
+def test_tasklist_stage_brief_embeds_rich_scaffold_without_contract_lookup(
+    tmp_path: Path,
+) -> None:
+    stage_brief = render_stage_brief(
+        stage="tasklist",
+        purpose="Break the approved plan into reviewable tasks.",
+        expected_input_bundle=(),
+        expected_output_documents=("tasklist.md",),
+        contracts_root=tmp_path / "missing-contracts",
+    )
+
+    assert "## `tasklist.md`" in stage_brief
+    assert "### TL-1 — <imperative task title>" in stage_brief
+    assert "- Outcome: <observable outcome tied to an approved plan milestone>" in stage_brief
+    assert "- Dominant deliverable: `src/example.py` contains the bounded change." in stage_brief
+    assert "- In scope: `src/example.py` and `tests/test_example.py`." in stage_brief
+    assert "  - TL-1-AC1: <task-local executable acceptance criterion>" in stage_brief
+    assert "- TL-1: none" in stage_brief
+    assert "- TL-1: <focused check that proves TL-1>" in stage_brief
+    assert "This is prompt input, not a validated output document." in stage_brief
+    assert "<replace with stage-specific content>" not in stage_brief
