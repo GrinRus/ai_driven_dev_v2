@@ -20,12 +20,15 @@ belong in `stage-result.md` or a future `repair-notes.md`, not in this control a
   - Must list failed validator issues from the latest attempt with issue code and severity.
   - Must include workspace-relative source document references for each failed check.
 - `Required corrections`
-  - Must define concrete corrections mapped to every listed failed check.
-  - Every correction for a canonical validator finding is required for
-    progression; severity must not move it into an optional section.
-  - Optional quality improvements may contain only advisory observations that
-    are explicitly carried as non-verdict evidence. Core must not infer an
-    advisory observation from a `medium` or `low` finding.
+  - Must group concrete corrections into `Primary corrections` and
+    `Related corrections`; every listed canonical finding remains required for
+    progression regardless of severity.
+  - Related findings may be collapsed into one primary correction only when
+    their exact codes, messages, and workspace-relative evidence paths remain
+    visible in the brief. Collapsing must not create a second repair action.
+  - `Advisory observations` may contain only explicitly carried non-verdict
+    evidence. Advisory observations never request repair, and core must not
+    infer an advisory observation from a `medium` or `low` finding.
 - `Relevant upstream docs`
   - Must list upstream artifacts required to perform the repair safely.
   - Must include `questions.md` or `answers.md` when clarification state affects the fix.
@@ -52,6 +55,10 @@ belong in `stage-result.md` or a future `repair-notes.md`, not in this control a
 - Keep remediation steps deterministic and stage-scoped.
 - Use backticked workspace-relative paths for all document references.
 - Keep one correction item per bullet to preserve auditability.
+- Keep one primary repair action per root correction; list related findings as
+  collapsed evidence with their exact paths.
+- Keep advisory observations visibly separate from repair actions and state
+  that they do not request repair.
 - Avoid generic instructions such as `improve quality` without concrete expected changes.
 - Do not omit budget state; missing budget context invalidates repair control.
 

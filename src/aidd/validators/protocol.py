@@ -7,6 +7,7 @@ from types import MappingProxyType
 from typing import Literal
 
 VALIDATOR_REPORT_PROTOCOL_VERSION = 1
+ADVISORY_OBSERVATIONS_HEADING = "Advisory observations"
 
 ProtocolEntryStatus = Literal["canonical", "legacy"]
 ValidatorFindingCategory = Literal[
@@ -77,6 +78,7 @@ class ParsedValidatorFinding:
 class ValidatorReportReadModel:
     fields: tuple[ParsedValidatorReportField, ...]
     findings: tuple[ParsedValidatorFinding, ...]
+    advisories: tuple[ParsedValidatorFinding, ...] = ()
 
     def field(self, key: str) -> ParsedValidatorReportField | None:
         return next((field for field in self.fields if field.key == key), None)
@@ -85,6 +87,12 @@ class ValidatorReportReadModel:
     def verdict(self) -> str | None:
         field = self.field("verdict")
         return None if field is None else field.value.strip("`").strip().lower()
+
+    @property
+    def advisory_observations(self) -> tuple[ParsedValidatorFinding, ...]:
+        """Alias that makes the non-verdict channel explicit to evidence consumers."""
+
+        return self.advisories
 
 
 VALIDATOR_REPORT_FIELDS = (
@@ -353,14 +361,18 @@ def parse_validator_report(markdown: str) -> ValidatorReportReadModel:
 
     fields: list[ParsedValidatorReportField] = []
     findings: list[ParsedValidatorFinding] = []
+    advisories: list[ParsedValidatorFinding] = []
     field_keys: set[str] = set()
     current_section: ValidatorReportSection | None = None
+    in_advisory_section = False
     sections_by_heading = {section.value: section for section in ValidatorReportSection}
 
     for line_number, raw_line in enumerate(markdown.splitlines(), start=1):
         normalized_line = raw_line.strip()
         if normalized_line.startswith("## "):
-            current_section = sections_by_heading.get(normalized_line[3:].strip())
+            heading = normalized_line[3:].strip()
+            in_advisory_section = heading == ADVISORY_OBSERVATIONS_HEADING
+            current_section = sections_by_heading.get(heading)
             continue
 
         finding_match = _FINDING_LINE_PATTERN.fullmatch(raw_line)
@@ -387,18 +399,17 @@ def parse_validator_report(markdown: str) -> ValidatorReportReadModel:
             message, occurrence_count = _parse_finding_message(
                 finding_match.group("message")
             )
-            findings.append(
-                ParsedValidatorFinding(
-                    code=code_spec.replacement or code_spec.code,
-                    severity=severity,
-                    message=message,
-                    source_path=source_path,
-                    source_line_number=source_line_number,
-                    report_line_number=line_number,
-                    occurrence_count=occurrence_count,
-                    category=code_spec.category,
-                )
+            parsed_finding = ParsedValidatorFinding(
+                code=code_spec.replacement or code_spec.code,
+                severity=severity,
+                message=message,
+                source_path=source_path,
+                source_line_number=source_line_number,
+                report_line_number=line_number,
+                occurrence_count=occurrence_count,
+                category=code_spec.category,
             )
+            (advisories if in_advisory_section else findings).append(parsed_finding)
             continue
 
         field_match = _FIELD_LINE_PATTERN.fullmatch(raw_line)
@@ -434,8 +445,13 @@ def parse_validator_report(markdown: str) -> ValidatorReportReadModel:
 
     parsed_fields = tuple(fields)
     parsed_findings = tuple(findings)
+    parsed_advisories = tuple(advisories)
     _validate_progression_semantics(fields=parsed_fields, findings=parsed_findings)
-    return ValidatorReportReadModel(fields=parsed_fields, findings=parsed_findings)
+    return ValidatorReportReadModel(
+        fields=parsed_fields,
+        findings=parsed_findings,
+        advisories=parsed_advisories,
+    )
 
 
 def render_validator_report_skeleton() -> str:
@@ -458,6 +474,8 @@ def render_validator_report_skeleton() -> str:
         "repair_required": "<yes|no>",
     }
     for section in ValidatorReportSection:
+        if section is ValidatorReportSection.RESULT:
+            lines.extend((f"## {ADVISORY_OBSERVATIONS_HEADING}", "", "- none", ""))
         lines.extend((f"## {section.value}", ""))
         fields = fields_by_section[section]
         if fields:

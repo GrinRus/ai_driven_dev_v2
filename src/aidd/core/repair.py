@@ -4,6 +4,7 @@ from collections.abc import Iterable, Sequence
 from dataclasses import dataclass, field
 from datetime import datetime
 from pathlib import Path
+from typing import Literal
 
 from aidd.core.models.run import RepairHistoryEntry
 from aidd.core.run_store import (
@@ -29,12 +30,16 @@ _IMMEDIATE_DOWNSTREAM_STAGE: dict[str, str] = {
     "review": "qa",
 }
 
+RepairFindingRelation = Literal["primary", "related", "advisory"]
+
 @dataclass(frozen=True, slots=True)
 class ValidatorReportFinding:
     code: str
     severity: str
     message: str
     source_path: str | None
+    relation: RepairFindingRelation = "primary"
+    related_to: str | None = None
 
     def __post_init__(self) -> None:
         normalized_code = self.code.strip().upper()
@@ -46,6 +51,16 @@ class ValidatorReportFinding:
         if normalized_severity not in {"critical", "high", "medium", "low"}:
             raise ValueError(f"Unsupported finding severity: {self.severity}")
         object.__setattr__(self, "severity", normalized_severity)
+
+        if self.relation not in {"primary", "related", "advisory"}:
+            raise ValueError(f"Unsupported repair finding relation: {self.relation}")
+        if self.relation == "advisory" and self.related_to is not None:
+            raise ValueError("Advisory findings cannot target a primary finding.")
+        if self.relation == "related" and self.related_to is not None:
+            normalized_related_to = self.related_to.strip().upper()
+            if not normalized_related_to:
+                raise ValueError("Related repair finding target must not be empty.")
+            object.__setattr__(self, "related_to", normalized_related_to)
 
         normalized_message = self.message.strip()
         if not normalized_message:
@@ -62,6 +77,15 @@ class ValidatorReportFinding:
         if Path(normalized_source_path).is_absolute():
             raise ValueError("Validator report finding source path must be workspace-relative.")
         object.__setattr__(self, "source_path", normalized_source_path)
+
+
+@dataclass(frozen=True, slots=True)
+class RepairFindingGroup:
+    """A primary correction plus collapsed related evidence."""
+
+    primary: ValidatorReportFinding
+    related: tuple[ValidatorReportFinding, ...] = ()
+    occurrence_count: int = 1
 
 
 @dataclass(frozen=True, slots=True)
@@ -148,6 +172,116 @@ def parse_validator_report_findings(
         )
 
 
+def parse_validator_report_advisories(
+    *,
+    validator_report_markdown: str,
+) -> tuple[ValidatorReportFinding, ...]:
+    """Read non-verdict observations without turning them into repair findings."""
+
+    report = parse_validator_report(validator_report_markdown)
+    return tuple(
+        ValidatorReportFinding(
+            code=finding.code,
+            severity=finding.severity,
+            message=finding.message,
+            source_path=finding.source_path,
+            relation="advisory",
+        )
+        for finding in report.advisories
+    )
+
+
+def _finding_identity(finding: ValidatorReportFinding) -> tuple[str, str, str, str | None]:
+    return (finding.code, finding.severity, finding.message, finding.source_path)
+
+
+def group_repair_findings(
+    findings: Iterable[ValidatorReportFinding],
+    *,
+    advisory_findings: Iterable[ValidatorReportFinding] = (),
+) -> tuple[tuple[RepairFindingGroup, ...], tuple[ValidatorReportFinding, ...]]:
+    """Group canonical findings while retaining evidence and explicit advisories.
+
+    Exact duplicates collapse into one correction with an occurrence count.  A finding
+    explicitly marked ``related`` is attached to its declared code or the nearest primary
+    finding at the same source path.  If no safe parent exists, it is promoted to a primary
+    correction so fail-closed repair behavior is preserved.
+    """
+
+    groups: list[RepairFindingGroup] = []
+    group_by_identity: dict[tuple[str, str, str, str | None], int] = {}
+    primary_by_code: dict[str, int] = {}
+    advisories: list[ValidatorReportFinding] = []
+    advisory_identities: set[tuple[str, str, str, str | None]] = set()
+
+    def add_advisory(finding: ValidatorReportFinding) -> None:
+        identity = _finding_identity(finding)
+        if identity in advisory_identities:
+            return
+        advisory_identities.add(identity)
+        advisories.append(finding)
+
+    for finding in (*findings, *advisory_findings):
+        if finding.relation == "advisory":
+            add_advisory(finding)
+            continue
+
+        identity = _finding_identity(finding)
+        existing_index = group_by_identity.get(identity)
+        if existing_index is not None:
+            existing = groups[existing_index]
+            groups[existing_index] = RepairFindingGroup(
+                primary=existing.primary,
+                related=existing.related,
+                occurrence_count=existing.occurrence_count + 1,
+            )
+            continue
+
+        if finding.relation == "related":
+            target_index = (
+                primary_by_code.get(finding.related_to or "")
+                if finding.related_to is not None
+                else None
+            )
+            if target_index is None and finding.source_path is not None:
+                target_index = next(
+                    (
+                        index
+                        for index, group in reversed(tuple(enumerate(groups)))
+                        if group.primary.source_path == finding.source_path
+                    ),
+                    None,
+                )
+            if target_index is not None:
+                existing = groups[target_index]
+                if any(
+                    _finding_identity(item) == identity for item in existing.related
+                ):
+                    continue
+                groups[target_index] = RepairFindingGroup(
+                    primary=existing.primary,
+                    related=(*existing.related, finding),
+                    occurrence_count=existing.occurrence_count,
+                )
+                continue
+
+        primary = (
+            finding
+            if finding.relation == "primary"
+            else ValidatorReportFinding(
+                code=finding.code,
+                severity=finding.severity,
+                message=finding.message,
+                source_path=finding.source_path,
+            )
+        )
+        group_by_identity[_finding_identity(primary)] = len(groups)
+        primary_by_code.setdefault(primary.code, len(groups))
+        groups.append(RepairFindingGroup(primary=primary))
+
+    return tuple(groups), tuple(advisories)
+
+
 def _render_failed_checks(findings: tuple[ValidatorReportFinding, ...]) -> list[str]:
     lines = ["# Failed checks", ""]
     if not findings:
@@ -165,7 +299,62 @@ def _render_failed_checks(findings: tuple[ValidatorReportFinding, ...]) -> list[
     return lines
 
 
-def _render_correction_items(findings: Iterable[ValidatorReportFinding]) -> list[str]:
+def _render_correction_item(
+    finding: ValidatorReportFinding,
+    *,
+    occurrence_count: int = 1,
+) -> str:
+    target = (
+        f"`{finding.source_path}`"
+        if finding.source_path is not None
+        else "affected stage docs"
+    )
+    hint = _repair_hint_for_finding(finding)
+    suffix = f" {hint}" if hint else ""
+    repeat_note = f" (repeated {occurrence_count} times)" if occurrence_count > 1 else ""
+    return (
+        f"- [`{finding.code}`] Update {target} to resolve: {finding.message}"
+        f"{repeat_note}{suffix}"
+    )
+
+
+def _render_grouped_correction_items(groups: Iterable[RepairFindingGroup]) -> list[str]:
+    lines: list[str] = []
+    for group in groups:
+        lines.append(
+            _render_correction_item(
+                group.primary,
+                occurrence_count=group.occurrence_count,
+            )
+        )
+    if not lines:
+        lines.append("- none")
+    return lines
+
+
+def _render_related_correction_items(groups: Iterable[RepairFindingGroup]) -> list[str]:
+    lines: list[str] = []
+    for group in groups:
+        if not group.related:
+            continue
+        related_details = "; ".join(
+            (
+                f"[`{finding.code}`] at "
+                f"{f'`{finding.source_path}`' if finding.source_path else 'affected stage docs'}: "
+                f"{finding.message}"
+            )
+            for finding in group.related
+        )
+        lines.append(
+            f"- Collapsed into [`{group.primary.code}`]: {related_details}. "
+            "No separate repair action is required."
+        )
+    if not lines:
+        lines.append("- none")
+    return lines
+
+
+def _render_advisory_items(findings: Iterable[ValidatorReportFinding]) -> list[str]:
     lines: list[str] = []
     for finding in findings:
         target = (
@@ -173,10 +362,9 @@ def _render_correction_items(findings: Iterable[ValidatorReportFinding]) -> list
             if finding.source_path is not None
             else "affected stage docs"
         )
-        hint = _repair_hint_for_finding(finding)
-        suffix = f" {hint}" if hint else ""
         lines.append(
-            f"- [`{finding.code}`] Update {target} to resolve: {finding.message}{suffix}"
+            f"- [`{finding.code}`] Observe {target}: {finding.message} "
+            "(advisory only; does not request repair)."
         )
     if not lines:
         lines.append("- none")
@@ -340,6 +528,8 @@ def render_repair_brief(
     stage_attempt_count: int,
     max_repair_attempts: int,
     workspace_root: Path | None = None,
+    related_findings: Iterable[ValidatorReportFinding] = (),
+    advisory_findings: Iterable[ValidatorReportFinding] = (),
 ) -> str:
     if stage_attempt_count < 0:
         raise ValueError("Stage attempt count must be non-negative.")
@@ -347,11 +537,18 @@ def render_repair_brief(
         raise ValueError("Max repair attempts must be non-negative.")
 
     findings = parse_validator_report_findings(validator_report_markdown=validator_report_markdown)
-    # Validator findings are progression-required regardless of severity.  The
-    # optional section is intentionally empty until an explicit non-verdict
-    # advisory channel is added; severity must never imply advisory status.
-    mandatory_fixes = findings
-    optional_fixes: tuple[ValidatorReportFinding, ...] = ()
+    report_advisories = parse_validator_report_advisories(
+        validator_report_markdown=validator_report_markdown
+    )
+    correction_groups, advisories = group_repair_findings(
+        (*findings, *related_findings),
+        advisory_findings=(*report_advisories, *advisory_findings),
+    )
+    canonical_findings = tuple(
+        finding
+        for group in correction_groups
+        for finding in (group.primary, *group.related)
+    )
 
     next_attempt_number = stage_attempt_count + 1
     max_attempt_number = max_repair_attempts + 1
@@ -359,18 +556,34 @@ def render_repair_brief(
     rerun_allowed_after_this_attempt = remaining_after_this_attempt > 0
 
     lines: list[str] = []
-    lines.extend(_render_failed_checks(findings))
+    lines.extend(_render_failed_checks(canonical_findings))
     lines.extend(
         [
             "# Required corrections",
             "",
+            "## Primary corrections",
+            "",
+            *_render_grouped_correction_items(correction_groups),
+            "",
+            "## Related corrections",
+            "",
+            *_render_related_correction_items(correction_groups),
+            "",
+            "## Advisory observations",
+            "",
+            *_render_advisory_items(advisories),
+            "",
             "## Mandatory fixes",
             "",
-            *_render_correction_items(mandatory_fixes),
+            "- See `Primary corrections` and `Related corrections`; all canonical findings "
+            "remain required regardless of severity.",
             "",
             "## Optional quality improvements",
             "",
-            *_render_correction_items(optional_fixes),
+            "- See `Advisory observations`; advisory evidence does not request repair.",
+            "",
+            "Repair required for progression: "
+            f"`{'yes' if correction_groups else 'no'}`.",
             "",
         ]
     )
@@ -406,6 +619,8 @@ def generate_repair_brief(
     stage_attempt_count: int,
     max_repair_attempts: int,
     workspace_root: Path | None = None,
+    related_findings: Iterable[ValidatorReportFinding] = (),
+    advisory_findings: Iterable[ValidatorReportFinding] = (),
 ) -> str:
     report_markdown = validator_report_path.read_text(encoding="utf-8")
     return render_repair_brief(
@@ -415,6 +630,8 @@ def generate_repair_brief(
         stage_attempt_count=stage_attempt_count,
         max_repair_attempts=max_repair_attempts,
         workspace_root=workspace_root,
+        related_findings=related_findings,
+        advisory_findings=advisory_findings,
     )
 
 

@@ -26,6 +26,27 @@ def test_render_validator_report_handles_empty_findings() -> None:
     assert "- Repair required for progression: no" in report
 
 
+def test_render_validator_report_keeps_advisory_observations_non_verdict() -> None:
+    report = render_validator_report(
+        findings=(),
+        advisory_findings=(
+            ValidationFinding(
+                code="SEM-RISK-UNDERREPORT",
+                message="A non-blocking observation.",
+                severity="low",
+                location=ValidationIssueLocation(workspace_relative_path="plan.md"),
+            ),
+        ),
+    )
+
+    assert "## Advisory observations" in report
+    assert "`SEM-RISK-UNDERREPORT` (`low`) in `plan.md`" in report
+    assert "- Total issues: 0" in report
+    assert "- Blocking issues: no" in report
+    assert "- Verdict: `pass`" in report
+    assert "- Repair required for progression: no" in report
+
+
 def test_render_validator_report_groups_findings_and_renders_location() -> None:
     findings = (
         ValidationFinding(

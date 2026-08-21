@@ -175,6 +175,32 @@ def test_validator_report_reader_treats_low_findings_as_progression_blocking() -
     assert report.findings[0].severity == "low"
 
 
+def test_validator_report_reader_keeps_advisory_observations_out_of_verdict() -> None:
+    report = parse_validator_report(
+        """# Validator Report
+
+## Summary
+
+- Total issues: 0
+- Blocking issues: no
+
+## Advisory observations
+
+- `SEM-RISK-UNDERREPORT` (`low`) in `plan.md`: A non-blocking observation.
+
+## Result
+
+- Verdict: `pass`
+- Repair required for progression: no
+"""
+    )
+
+    assert report.findings == ()
+    assert len(report.advisories) == 1
+    assert report.advisories[0].code == "SEM-RISK-UNDERREPORT"
+    assert report.verdict == "pass"
+
+
 @pytest.mark.parametrize(
     "markdown",
     [

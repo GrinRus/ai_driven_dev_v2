@@ -16,6 +16,9 @@ as draft evidence and may be replaced by the canonical AIDD validator report.
 - `Cross-document checks`
 - `Result`
 
+Optional non-verdict evidence may use an `Advisory observations` section between
+`Cross-document checks` and `Result`.
+
 ## Protocol version
 
 This contract defines validator-report protocol v1. AIDD writers must emit the canonical
@@ -45,6 +48,10 @@ a new major validator-report protocol version.
 - none
 
 ## Cross-document checks
+
+- none
+
+## Advisory observations
 
 - none
 
@@ -84,8 +91,11 @@ a new major validator-report protocol version.
   finding remains and `no` only when the report has no findings. Severity does
   not decide whether a finding blocks progression.
 - Advisory observations are non-verdict evidence. They must be recorded outside
-  the canonical validator finding sections and must not turn a failing report
-  into a passing report or consume repair budget.
+  the canonical validator finding sections, under `Advisory observations`, and
+  must not turn a failing report into a passing report or consume repair budget.
+- A report containing only advisory observations has no canonical findings,
+  declares `Verdict: pass`, and does not request repair. Advisory observations
+  remain visible in the repair brief without becoming correction actions.
 
 ## Canonical issue-code vocabulary
 
@@ -186,6 +196,8 @@ Protocol v1 readers accept these historical forms, but writers must never emit t
 - Do not report `pass` when any canonical AIDD validator finding remains unresolved.
 - Do not report `Verdict: fail` with `Repair required for progression: no`.
 - Keep wording diagnostic and actionable; avoid generic statements such as `bad output`.
+- Advisory observations use the same evidence-rich finding syntax but are not
+  included in `Total issues`, `Blocking issues`, or the terminal verdict.
 - Semantic content findings should identify the concrete offending token or rule input and
   its source line whenever the validator can determine it, so a bounded repair can patch the
   named content without regenerating unrelated sections.
