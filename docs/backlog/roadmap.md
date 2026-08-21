@@ -14421,7 +14421,7 @@ Local tasks:
   - Verification: focused checkpoint/parser tests cover concise clauses, explanatory prose,
     multiple dependencies, malformed clauses, and public-projection drift; the clean Codex
     `AIDD-LIVE-007` lane is rerun after this task merges.
-- `W42-E7-S3-T7` (next) Normalize terminal punctuation in authored dependency identifiers.
+- `W42-E7-S3-T7` (done) Normalize terminal punctuation in authored dependency identifiers.
   - Dependencies: `W42-E7-S3-T6`; this follow-up was discovered by the fresh Codex rerun after
     T6: the parser now isolates the dependency clause, but authored values such as `T1.` and
     `none.` still differ from the public projection and fail the checkpoint closed.
@@ -14433,6 +14433,13 @@ Local tasks:
     clean Codex `AIDD-LIVE-007` lane is rerun after this task merges.
 
 Wave 42 reconciliation notes:
+
+- `2026-08-21` PR #237 (merge `53208ce7`) completed T7: authored `none.`/`T1.` dependency
+  values are normalized without weakening fail-closed handling, with 15 focused harness tests,
+  Ruff, mypy, and full CI green. Fresh Codex run `eval-live-007-codex-20260821T013433Z` was
+  retained as `infra-fail` after provider no-progress in `idea` at the 30-minute threshold;
+  no task-aware live pass or Wave 42 exit claim is made. The genuine uncoached observation is
+  still blocked, so `Next` and `Soon` remain empty and Wave 43 stays parked.
 
 - `2026-08-21` PR #235 (merge `9ff76b3f`) made the installed `/api/tasks` projection reachable
   and isolated dependency clauses, but fresh Codex run `eval-live-007-codex-20260821T003332Z`
