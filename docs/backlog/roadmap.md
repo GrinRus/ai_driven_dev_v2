@@ -14833,12 +14833,17 @@ Local tasks:
     resumes through the core/CLI, and preserves legacy artifact-index fallback. Focused core,
     docs/planning, full Python suite (2323), Ruff, mypy, full CI, deterministic scenarios,
     packaged UI browser, and build passed.
-- `W43-E2-S2-T2` (next) Expose rejected interview candidate diagnostics in the core UI model.
+- `W43-E2-S2-T2` (done) Expose rejected interview candidate diagnostics in the core UI model.
   - Scope: publish canonical question, protected answer, raw rejected fragment, source attempt,
     runtime, reason, and eligible recovery without making the frontend parse Markdown.
   - Verification: core/service tests cover absent, accepted, rejected, stale, and permission-
     unavailable candidate evidence with one deterministic next action.
-- `W43-E2-S2-T3` (soon) Render bounded interview rejection recovery in the Decision Workbench.
+  - Completion: PR #267 (merge `13ba2cd9`) projects bounded rejected, accepted, stale, absent, and
+    permission-unavailable candidate diagnostics from retained evidence, preserves canonical QID
+    answers, and exposes resume-only recovery guidance without frontend Markdown parsing. Focused
+    core/docs/planning tests (122), full Python suite (2326), Ruff, mypy, full CI, deterministic
+    scenarios, packaged UI browser, and build passed.
+- `W43-E2-S2-T3` (next) Render bounded interview rejection recovery in the Decision Workbench.
   - Scope: show the rejected fragment and canonical state, preserve answer drafts, and offer only
     the eligible confirm/edit/resume or request-change action; do not schedule a repair merely to
     fix candidate punctuation.
