@@ -2311,6 +2311,19 @@ def test_operator_artifact_category_distinguishes_published_output_mirrors() -> 
         operator_artifact_is_canonical(key="plan", kind="document", path=canonical_path)
         is True
     )
+    for draft_key in (
+        "runtime_stage_result_draft",
+        "runtime_validator_draft",
+        "runtime_repair_brief_draft",
+    ):
+        assert (
+            operator_artifact_category(
+                key=draft_key,
+                kind="document",
+                path=f"reports/runs/WI-UI/attempts/{draft_key}.md",
+            )
+            == "runtime-evidence"
+        )
 
 
 def test_operator_evidence_graph_view_degrades_to_flat_table_without_artifact_index(

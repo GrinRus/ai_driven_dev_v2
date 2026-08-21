@@ -476,6 +476,18 @@ def _canonical_attempt_documents(
             workspace_root=workspace_root,
             path=runtime_validator_draft_path,
         )
+    runtime_stage_result_draft_path = attempt_root / "runtime-stage-result.md"
+    if runtime_stage_result_draft_path.exists():
+        documents["runtime_stage_result_draft"] = _workspace_relative_canonical_path(
+            workspace_root=workspace_root,
+            path=runtime_stage_result_draft_path,
+        )
+    runtime_repair_brief_draft_path = attempt_root / "runtime-repair-brief.md"
+    if runtime_repair_brief_draft_path.exists():
+        documents["runtime_repair_brief_draft"] = _workspace_relative_canonical_path(
+            workspace_root=workspace_root,
+            path=runtime_repair_brief_draft_path,
+        )
     return documents
 
 

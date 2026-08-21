@@ -56,6 +56,7 @@ from aidd.core.stage_models import (
 from aidd.core.stage_outputs import (
     discover_stage_markdown_outputs,
     publish_stage_outputs_after_validation_pass,
+    retain_unexpected_runtime_documents,
     run_structural_validation_after_output_discovery,
 )
 from aidd.core.stage_paths import (
@@ -612,6 +613,14 @@ def run_single_stage_orchestration(
                 f"{type(cleanup_error).__name__}: {cleanup_error}"
             )
         run_cleanup(
+            "retain unexpected runtime documents",
+            lambda: retain_unexpected_runtime_documents(
+                workspace_root=workspace_root,
+                execution_state=execution_state,
+                contracts_root=contracts_root,
+            ),
+        )
+        run_cleanup(
             "restore core-owned repair brief",
             lambda: restore_core_owned_repair_brief(
                 invocation_bundle=adapter_invocation,
@@ -631,6 +640,11 @@ def run_single_stage_orchestration(
         )
         raise
     else:
+        retain_unexpected_runtime_documents(
+            workspace_root=workspace_root,
+            execution_state=execution_state,
+            contracts_root=contracts_root,
+        )
         restore_core_owned_repair_brief(
             invocation_bundle=adapter_invocation,
             workspace_root=workspace_root,
@@ -736,6 +750,7 @@ def run_single_stage_orchestration(
     discovery = discover_stage_markdown_outputs(
         execution_state=execution_state,
         invocation_bundle=adapter_invocation,
+        contracts_root=contracts_root,
     )
     _restore_and_merge_questions_after_runtime_attempt(
         workspace_root=workspace_root,

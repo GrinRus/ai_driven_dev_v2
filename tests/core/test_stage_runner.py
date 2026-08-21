@@ -1130,6 +1130,127 @@ def test_canonical_validator_report_ignores_runtime_validator_draft(
     )
 
 
+def test_discovery_rejects_aidd_owned_runtime_targets(tmp_path: Path) -> None:
+    workspace_root = tmp_path / ".aidd"
+    create_run_manifest(
+        workspace_root=workspace_root,
+        work_item="WI-001",
+        run_id="run-001",
+        runtime_id="generic-cli",
+        stage_target="plan",
+        config_snapshot={"mode": "test"},
+    )
+    preparation_bundle = prepare_stage_bundle(
+        workspace_root=workspace_root,
+        work_item="WI-001",
+        stage="plan",
+    )
+    _materialize_expected_inputs(preparation_bundle.expected_input_bundle)
+    execution_state = persist_execution_state(
+        workspace_root=workspace_root,
+        work_item="WI-001",
+        run_id="run-001",
+        stage="plan",
+    )
+    invocation = prepare_adapter_invocation(
+        workspace_root=workspace_root,
+        preparation_bundle=preparation_bundle,
+        execution_state=execution_state,
+    )
+    stage_root = workspace_root / "workitems" / "WI-001" / "stages" / "plan"
+    unsafe_invocation = replace(
+        invocation,
+        expected_output_documents=(
+            *invocation.expected_output_documents,
+            stage_root / "stage-result.md",
+            stage_root / "validator-report.md",
+        ),
+    )
+
+    with pytest.raises(ValueError, match="AIDD-owned or non-runtime output documents"):
+        discover_stage_markdown_outputs(
+            execution_state=execution_state,
+            invocation_bundle=unsafe_invocation,
+        )
+
+
+def test_discovery_retains_unexpected_runtime_workflow_documents_as_attempt_evidence(
+    tmp_path: Path,
+) -> None:
+    workspace_root = tmp_path / ".aidd"
+    create_run_manifest(
+        workspace_root=workspace_root,
+        work_item="WI-001",
+        run_id="run-001",
+        runtime_id="generic-cli",
+        stage_target="plan",
+        config_snapshot={"mode": "test"},
+    )
+    preparation_bundle = prepare_stage_bundle(
+        workspace_root=workspace_root,
+        work_item="WI-001",
+        stage="plan",
+    )
+    _materialize_expected_inputs(preparation_bundle.expected_input_bundle)
+    execution_state = persist_execution_state(
+        workspace_root=workspace_root,
+        work_item="WI-001",
+        run_id="run-001",
+        stage="plan",
+    )
+    invocation = prepare_adapter_invocation(
+        workspace_root=workspace_root,
+        preparation_bundle=preparation_bundle,
+        execution_state=execution_state,
+    )
+    stage_root = workspace_root / "workitems" / "WI-001" / "stages" / "plan"
+    stage_root.mkdir(parents=True, exist_ok=True)
+    unexpected_documents = {
+        "stage-result.md": "# Runtime stage result\n\n- Claimed success.\n",
+        "validator-report.md": "# Runtime validator draft\n\n- Verdict: `pass`\n",
+        "repair-brief.md": "# Runtime repair brief\n\n- Rewrite the result.\n",
+    }
+    attempt_mtime = execution_state.attempt_path.stat().st_mtime_ns
+    for filename, content in unexpected_documents.items():
+        path = stage_root / filename
+        path.write_text(content, encoding="utf-8")
+        os.utime(path, ns=(attempt_mtime + 1, attempt_mtime + 1))
+
+    discovery = discover_stage_markdown_outputs(
+        execution_state=execution_state,
+        invocation_bundle=invocation,
+    )
+
+    assert {path.name for path in discovery.unexpected_runtime_documents} == {
+        "runtime-stage-result.md",
+        "runtime-validator-report.md",
+        "runtime-repair-brief.md",
+    }
+    for filename, content in unexpected_documents.items():
+        evidence_name = f"runtime-{filename}"
+        evidence_path = execution_state.attempt_path / evidence_name
+        assert evidence_path.read_text(encoding="utf-8") == content
+        assert (stage_root / filename).read_text(encoding="utf-8") == content
+    artifact_index = json.loads(
+        run_attempt_artifact_index_path(
+            workspace_root=workspace_root,
+            work_item="WI-001",
+            run_id="run-001",
+            stage="plan",
+            attempt_number=1,
+        ).read_text(encoding="utf-8")
+    )
+    assert artifact_index["documents"]["runtime_stage_result_draft"].endswith(
+        "runtime-stage-result.md"
+    )
+    assert artifact_index["documents"]["runtime_validator_draft"].endswith(
+        "runtime-validator-report.md"
+    )
+    assert artifact_index["documents"]["runtime_repair_brief_draft"].endswith(
+        "runtime-repair-brief.md"
+    )
+
+
 def test_discover_stage_markdown_outputs_promotes_misplaced_output_documents(
     tmp_path: Path,
 ) -> None:
@@ -1367,6 +1488,28 @@ def test_publish_stage_outputs_restores_previous_publication_on_replace_failure(
     assert published_brief.read_text(encoding="utf-8") == previous
     assert not tuple(stage_root.glob(".output.staging-*"))
     assert not tuple(stage_root.glob(".output.backup-*"))
+
+
+def test_publish_stage_outputs_includes_each_canonical_record_once(tmp_path: Path) -> None:
+    workspace_root = tmp_path / ".aidd"
+    bundle = prepare_stage_bundle(
+        workspace_root=workspace_root,
+        work_item="WI-001",
+        stage="idea",
+    )
+    _materialize_expected_outputs(bundle.expected_output_documents)
+
+    publication = publish_stage_outputs_after_validation_pass(
+        workspace_root=workspace_root,
+        work_item="WI-001",
+        run_id="run-idea",
+        stage="idea",
+    )
+
+    published_names = [path.name for path in publication.published_documents]
+    assert len(published_names) == len(set(published_names))
+    assert published_names.count("stage-result.md") == 1
+    assert published_names.count("validator-report.md") == 1
 
 
 def test_run_single_stage_orchestration_executes_generic_cli_happy_path(

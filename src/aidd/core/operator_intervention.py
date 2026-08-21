@@ -12,7 +12,8 @@ from aidd.core.run_store import load_stage_metadata, run_manifest_path
 from aidd.core.stage_paths import workspace_relative_path
 from aidd.core.stage_registry import (
     DEFAULT_STAGE_CONTRACTS_ROOT,
-    resolve_expected_output_documents,
+    resolve_aidd_generated_output_documents,
+    resolve_runtime_output_documents,
 )
 from aidd.core.stages import STAGES, is_valid_stage
 from aidd.core.state_machine import StageState
@@ -104,7 +105,7 @@ def _stage_scope_target_documents(
     stage: str,
     contracts_root: Path = DEFAULT_STAGE_CONTRACTS_ROOT,
 ) -> tuple[Path, ...]:
-    expected_outputs = resolve_expected_output_documents(
+    runtime_outputs = resolve_runtime_output_documents(
         stage=stage,
         work_item=work_item,
         workspace_root=workspace_root,
@@ -112,7 +113,7 @@ def _stage_scope_target_documents(
     )
     return tuple(
         path
-        for path in expected_outputs
+        for path in runtime_outputs
         if path.suffix.lower() == ".md"
         and path.name not in _CONTROL_DOCUMENTS_BLOCKED_AS_TARGETS
     )
@@ -142,6 +143,21 @@ def validate_operator_target_documents(
             contracts_root=contracts_root,
         )
     }
+    aidd_generated_paths = {
+        path.resolve(strict=False)
+        for path in resolve_aidd_generated_output_documents(
+            stage=stage,
+            work_item=work_item,
+            workspace_root=workspace_root,
+            contracts_root=contracts_root,
+        )
+    }
+    aidd_generated_paths.update(
+        {
+            (stage_root / "repair-brief.md").resolve(strict=False),
+            (stage_root / "stage-brief.md").resolve(strict=False),
+        }
+    )
     normalized: list[str] = []
     seen: set[str] = set()
 
@@ -162,7 +178,10 @@ def validate_operator_target_documents(
             )
         if resolved.suffix.lower() != ".md":
             raise ValueError(f"Target document must be Markdown: {target}")
-        if resolved.name in _CONTROL_DOCUMENTS_BLOCKED_AS_TARGETS:
+        if (
+            resolved in aidd_generated_paths
+            or resolved.name in _CONTROL_DOCUMENTS_BLOCKED_AS_TARGETS
+        ):
             raise ValueError(f"Target document is AIDD-owned and cannot be targeted: {target}")
         if resolved not in allowed_paths:
             allowed = ", ".join(

@@ -17,6 +17,7 @@ from aidd.core.stage_paths import workspace_relative_path
 from aidd.core.stage_registry import (
     DEFAULT_STAGE_CONTRACTS_ROOT,
     resolve_expected_output_documents,
+    resolve_runtime_output_documents,
 )
 from aidd.core.workspace import stage_output_root as workspace_stage_output_root
 from aidd.core.workspace import stage_root as workspace_stage_root
@@ -63,8 +64,17 @@ def _should_promote_misplaced_stage_output(
 
 
 _MISPLACED_OUTPUT_PROMOTION_WARNING_CODE = "STRUCT-OUTPUT-PROMOTED"
-_UNEXPECTED_RUNTIME_VALIDATOR_DRAFT_NAME = "runtime-validator-report.md"
-_VALIDATOR_REPORT_PLACEHOLDER = "# Validator report\n\nNo validator output yet."
+_UNEXPECTED_RUNTIME_DOCUMENTS: dict[str, tuple[str, str | None]] = {
+    "stage-result.md": (
+        "runtime-stage-result.md",
+        "# Stage result\n\nStage not run yet.",
+    ),
+    "validator-report.md": (
+        "runtime-validator-report.md",
+        "# Validator report\n\nNo validator output yet.",
+    ),
+    "repair-brief.md": ("runtime-repair-brief.md", None),
+}
 
 
 def _workspace_root_for_document(path: Path) -> Path:
@@ -76,16 +86,17 @@ def _workspace_root_for_document(path: Path) -> Path:
     return Path(*parts[:workitems_index])
 
 
-def _retain_unexpected_runtime_validator_draft(
+def retain_unexpected_runtime_documents(
     *,
     workspace_root: Path,
     execution_state: StageExecutionState,
+    contracts_root: Path = DEFAULT_STAGE_CONTRACTS_ROOT,
 ) -> tuple[Path, ...]:
-    """Retain a runtime-written validator draft without treating it as canonical.
+    """Retain runtime writes to AIDD-owned records as attempt evidence.
 
-    The workspace bootstrap keeps a placeholder at the canonical path.  Only a non-placeholder
-    file modified after the current attempt directory was created is considered an unexpected
-    runtime draft; it is copied into attempt evidence before AIDD overwrites the canonical path.
+    Canonical stage results, validator reports, and repair briefs are written by AIDD services.
+    A runtime may still write a same-named draft, so retain a modified, non-placeholder copy
+    under the current attempt before the canonical writer restores ownership.
     """
 
     stage_root = workspace_stage_root(
@@ -93,33 +104,38 @@ def _retain_unexpected_runtime_validator_draft(
         work_item=execution_state.work_item,
         stage=execution_state.stage,
     )
-    validator_report_path = stage_root / "validator-report.md"
-    if not validator_report_path.exists():
-        return ()
-    try:
-        text = validator_report_path.read_text(encoding="utf-8")
-        modified_after_attempt_start = (
-            validator_report_path.stat().st_mtime_ns
-            > execution_state.attempt_path.stat().st_mtime_ns
-        )
-    except (OSError, UnicodeDecodeError):
-        return ()
-    if not modified_after_attempt_start or text.strip() == _VALIDATOR_REPORT_PLACEHOLDER:
-        return ()
+    attempt_started_at = execution_state.attempt_path.stat().st_mtime_ns
+    retained: list[Path] = []
+    for filename, (evidence_name, placeholder) in _UNEXPECTED_RUNTIME_DOCUMENTS.items():
+        canonical_path = stage_root / filename
+        if not canonical_path.exists():
+            continue
+        try:
+            text = canonical_path.read_text(encoding="utf-8")
+            modified_after_attempt_start = canonical_path.stat().st_mtime_ns > attempt_started_at
+        except (OSError, UnicodeDecodeError):
+            continue
+        if not modified_after_attempt_start or not text.strip():
+            continue
+        if placeholder is not None and text.strip() == placeholder:
+            continue
+        evidence_path = execution_state.attempt_path / evidence_name
+        try:
+            copy2(canonical_path, evidence_path)
+        except OSError:
+            continue
+        retained.append(evidence_path)
 
-    evidence_path = execution_state.attempt_path / _UNEXPECTED_RUNTIME_VALIDATOR_DRAFT_NAME
-    try:
-        copy2(validator_report_path, evidence_path)
-    except OSError:
-        return ()
-    write_attempt_artifact_index(
-        workspace_root=workspace_root,
-        work_item=execution_state.work_item,
-        run_id=execution_state.run_id,
-        stage=execution_state.stage,
-        attempt_number=execution_state.attempt_number,
-    )
-    return (evidence_path,)
+    if retained:
+        write_attempt_artifact_index(
+            workspace_root=workspace_root,
+            work_item=execution_state.work_item,
+            run_id=execution_state.run_id,
+            stage=execution_state.stage,
+            attempt_number=execution_state.attempt_number,
+            contracts_root=contracts_root,
+        )
+    return tuple(retained)
 
 
 def _promote_misplaced_stage_output_documents(
@@ -178,6 +194,7 @@ def discover_stage_markdown_outputs(
     *,
     execution_state: StageExecutionState,
     invocation_bundle: AdapterInvocationBundle,
+    contracts_root: Path = DEFAULT_STAGE_CONTRACTS_ROOT,
 ) -> StageOutputDiscovery:
     if execution_state.stage != invocation_bundle.stage:
         raise ValueError(
@@ -203,11 +220,32 @@ def discover_stage_markdown_outputs(
     expected_markdown_documents = tuple(
         path for path in invocation_bundle.expected_output_documents if path.suffix.lower() == ".md"
     )
-    unexpected_runtime_documents = _retain_unexpected_runtime_validator_draft(
-        workspace_root=_workspace_root_for_document(expected_markdown_documents[0])
+    workspace_root = (
+        _workspace_root_for_document(expected_markdown_documents[0])
         if expected_markdown_documents
-        else Path("."),
+        else Path(".")
+    )
+    runtime_output_documents = resolve_runtime_output_documents(
+        stage=execution_state.stage,
+        work_item=execution_state.work_item,
+        workspace_root=workspace_root,
+        contracts_root=contracts_root,
+    )
+    unexpected_targets = tuple(
+        path for path in expected_markdown_documents if path.resolve(strict=False) not in {
+            candidate.resolve(strict=False) for candidate in runtime_output_documents
+        }
+    )
+    if unexpected_targets:
+        targets = ", ".join(path.name for path in unexpected_targets)
+        raise ValueError(
+            "Adapter invocation includes AIDD-owned or non-runtime output documents: "
+            f"{targets}"
+        )
+    unexpected_runtime_documents = retain_unexpected_runtime_documents(
+        workspace_root=workspace_root,
         execution_state=execution_state,
+        contracts_root=contracts_root,
     )
     promoted_misplaced_documents = _promote_misplaced_stage_output_documents(
         expected_markdown_documents=expected_markdown_documents
@@ -397,5 +435,6 @@ def publish_stage_outputs_after_validation_pass(
 __all__ = [
     "discover_stage_markdown_outputs",
     "publish_stage_outputs_after_validation_pass",
+    "retain_unexpected_runtime_documents",
     "run_structural_validation_after_output_discovery",
 ]
