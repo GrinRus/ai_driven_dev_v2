@@ -14331,13 +14331,16 @@ Local tasks:
   - Verification: the provider-free evidence records all five ordered steps, factual elapsed time,
     wrong actions, assistance, first decisive confusion, resulting tasks, accessibility/geometry
     checks, durable answer readback, and an explicit gated routing decision.
-- `W42-E7-S2-T3` (blocked) Record one genuine uncoached first-time operator observation.
+- `W42-E7-S2-T3` (parked) Record one genuine uncoached first-time operator observation.
   - Scope: observe one participant completing create -> choose Codex Runner -> launch -> answer
-    question -> resume without coaching and retain only anonymized usability evidence.
+    question -> resume without coaching and retain only anonymized usability evidence. This
+    human-usability gate is intentionally deferred from the Codex-only alpha execution lane and
+    must not be represented as passed or substituted with a scripted rehearsal.
   - Verification: `wave42-first-time-operator-journey-v1` uses
     `uncoached-human-observation`, records completion, timings, wrong turns, assistance, confidence,
     first confusion, resulting roadmap tasks, and routing decision; missing participant/runtime is
-    `environment-blocked`, never pass.
+    `environment-blocked`, never pass. The task remains deferred while Codex-only Wave 43 work
+    proceeds.
 
 #### Slice W42-E7-S3 — installed task-centered live evidence (`planned`)
 
@@ -14382,7 +14385,8 @@ Local tasks:
     ledger hashes, four succeeded tasks, successful aggregate finalization, and Review eligibility.
     Retained bundle reports include flow, code, quality, target-workspace, browser/API checkpoint,
     runtime-log, and per-stage manual quality evidence. The uncoached human predecessor remains
-    separately environment-blocked and therefore still gates the Wave 42 exit decision.
+    separately parked and is not claimed as pass; it gates only the later human-usability/default-
+    renderer decision, not the Codex-only Wave 43 implementation lane.
 - `W42-E7-S3-T3` (done) Stabilize the installed public Task Workspace read boundary used by
   the task-aware live checkpoint.
   - Dependencies: `W42-E7-S3-T1`; this remediation is required before a fresh `W42-E7-S3-T2`
@@ -14456,6 +14460,12 @@ Local tasks:
     with no provider no-progress boundary.
 
 Wave 42 reconciliation notes:
+
+- `2026-08-21` Codex-only alpha scope is now explicit: `W42-E7-S2-T3` is parked as deferred
+  human-usability evidence, while the fresh Codex live checkpoint remains retained as execution
+  evidence. Claude, dual-provider, and Wave 36 beta acceptance remain outside this lane. The
+  Codex-only Wave 43 ownership foundation is therefore opened without marking the human gate as
+  passed or switching the default renderer.
 
 - `2026-08-21` The Codex live-evidence task `W42-E7-S3-T2` is complete. The fresh clean-main
   run `eval-live-007-codex-20260821T033606Z` passed `idea -> qa`, the target verification rerun,
@@ -14585,11 +14595,13 @@ Reference authority:
 Linked stories: `US-01`, `US-02`, `US-03`, `US-04`, `US-05`, `US-06`, `US-07`, `US-10`,
 `US-11`, `US-13`
 
-Wave sequencing: Wave 42 remains the active implementation track. The parked failure-corpus task
-may prepare sanitized evidence, but Wave 43 functional changes remain separate from Wave 42 UI
-branches. Task-aware live checkpoint schema v1 is the compatibility baseline for later resilience
-work; Wave 43 readers remain compatible with retained pre-Wave-43 runs. The repair-extension UI
-continues to depend explicitly on `W42-E5-S1`.
+Wave sequencing: Codex-only Wave 42 execution evidence is reconciled, while the genuine uncoached
+human observation and default-renderer usability decision remain parked. The parked failure-corpus
+task may prepare sanitized evidence, and Wave 43 functional changes may now proceed as the
+Codex-only alpha lane; they remain separate from Wave 42 UI branches. Task-aware live checkpoint
+schema v1 is the compatibility baseline for later resilience work; Wave 43 readers remain
+compatible with retained pre-Wave-43 runs. The repair-extension UI continues to depend explicitly
+on `W42-E5-S1`. Claude, dual-provider, and cross-runtime acceptance are deferred.
 
 ### Epic W43-E1 — artifact ownership and terminal records (`planned`)
 
@@ -14620,7 +14632,7 @@ Local tasks:
     decisive boundary, runtime, stage, attempt mode, and automatic repair consumption for each.
   - Verification: every retained case is replayable through a provider-free parser, validator,
     or lifecycle fixture and distinguishes primary cause from related findings.
-- `W43-E1-S1-T2` (parked) Define the canonical stage-document ownership matrix.
+- `W43-E1-S1-T2` (next) Define the canonical stage-document ownership matrix.
   - Scope: classify every stage document exactly once as runtime content, AIDD workflow record,
     AIDD control document, interview ledger, or raw candidate evidence; name create, mutate,
     validate, publish, and UI-authoring permissions without changing the eight-stage graph.
@@ -14642,7 +14654,7 @@ Dependencies: `W43-E1-S1`.
 
 Local tasks:
 
-- `W43-E1-S2-T1` (planned) Split stage output resolution by document owner.
+- `W43-E1-S2-T1` (soon) Split stage output resolution by document owner.
   - Scope: expose runtime-authored, AIDD-generated, interview/control, and published document
     sets for all eight stages; retain a bounded compatibility reader only where existing callers
     require migration.

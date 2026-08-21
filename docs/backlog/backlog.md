@@ -7,20 +7,18 @@ slice, and local task.
 
 ## Next
 
-<!-- No actionable task is promoted while the required uncoached human observation remains
-     environment-blocked. The Codex live acceptance has been run and is reconciled separately. -->
+- `W43-E1-S1-T2` — Define the canonical stage-document ownership matrix.
 
 
 ## Soon
 
-<!-- The direct Codex acceptance is complete as execution evidence; Wave 42 exit remains gated by
-     the genuine uncoached observation. -->
+- `W43-E1-S2-T1` — Split stage output resolution by document owner.
 
 
 ## Parking lot
 
-- `W43-E1-S1-T2` — Define the canonical stage-document ownership matrix after the Wave 42 exit
-  gate is explicitly reconciled.
+- `W42-E7-S2-T3` — Record one genuine uncoached first-time operator observation when a participant
+  and eligible environment are available; this is deferred human-usability evidence, not a pass.
 - `W43-E5-S2-T3` — Run a future cross-runtime lower-capability comparison after Codex-only alpha.
 - `W36-E7-S4-T4` — Claude acceptance is not launched under the current Codex-only scope.
 - `W36-E7-S3-T2` — Record five first-time-operator sessions after initial live hardening.
@@ -41,6 +39,12 @@ slice, and local task.
   queue-restoration policy in `docs/backlog/roadmap.md` (`W8-E3-S1`).
 
 ## Current reconciliation
+
+- `2026-08-21` The execution boundary is intentionally Codex-only: the genuine uncoached
+  `W42-E7-S2-T3` observation is parked, Claude/dual-provider acceptance is excluded, and the
+  fresh Codex `W42-E7-S3-T2` evidence remains retained without claiming the human gate or default-
+  renderer cutover. Wave 43 is now opened in dependency order: ownership matrix is `Next` and its
+  direct registry successor is `Soon`; cross-runtime and Wave 36 work remain parked.
 
 - `2026-08-21` The fresh clean-main Codex `AIDD-LIVE-007` run
   `eval-live-007-codex-20260821T033606Z` completed all eight stages with execution verdict
