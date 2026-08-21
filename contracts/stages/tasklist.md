@@ -80,8 +80,19 @@ Optional context documents may improve task decomposition quality, but they must
   section requirement.
 - task ordering must already be executable in dependency order rather than being silently
   reordered; dependencies may reference only earlier task cards.
+## Required semantics versus Markdown presentation
+
 - compact bullet-only tasklists are not accepted; the H3 task-card form is required and there
   is no legacy one-shot fallback for newly validated tasklists.
+- required task semantics are distinct from Markdown presentation: presentation-only emphasis around
+  labels or ids
+  and `-`/`*` list punctuation may be normalized only when all words, paths, ids, ordering,
+  dependencies, acceptance criteria, and verification evidence remain unchanged. Tolerant parser
+  support is a separate downstream task; canonical cards remain the safe authoring form until it
+  lands.
+- compact one-line cards, pipe tables, ambiguous ids, inferred dependencies, and omitted executable
+  fields remain fail-closed (fail closed); layout or nearby prose must never supply missing task
+  meaning.
 - when `context/verification-output.md` names authored verification commands, task verification
   notes must preserve those commands exactly when citing them, including flags, path lists,
   environment variables, and coverage/cache-disabling options such as `--coverage.enabled=false`;

@@ -177,3 +177,40 @@ def test_parse_task_plan_rejects_malformed_and_duplicate_acceptance_ids() -> Non
     )
     with pytest.raises(TaskPlanParseError, match="duplicate acceptance ids"):
         parse_task_plan(duplicate)
+
+
+@pytest.mark.parametrize(
+    "compact_tasks",
+    (
+        "- TL-1: add the contract; TL-2: add tests",
+        "| Task | Outcome | Verification |\n"
+        "| --- | --- | --- |\n"
+        "| TL-1 | add the contract | run tests |",
+    ),
+)
+def test_parse_task_plan_rejects_compact_or_table_like_presentation(
+    compact_tasks: str,
+) -> None:
+    markdown = _tasklist().replace(
+        "### TL-1 — Add the contract\n\n"
+        "- Outcome: The contract is explicit.\n"
+        "- Dominant deliverable: `contracts/example.md` is updated.\n"
+        "- In scope: `contracts/example.md` and `tests/test_contract.py`.\n"
+        "- Acceptance criteria:\n"
+        "  - TL-1-AC1: The required field is documented.\n",
+        compact_tasks + "\n",
+    )
+
+    with pytest.raises(TaskPlanParseError):
+        parse_task_plan(markdown)
+
+
+def test_canonical_tasklist_example_retains_executable_semantics() -> None:
+    example = Path("contracts/examples/tasklist/tasklist.md").read_text(encoding="utf-8")
+
+    plan = parse_task_plan(example)
+
+    assert plan.ordered_ids() == ("TL-1", "TL-2", "TL-3")
+    assert all(task.outcome and task.dominant_deliverable for task in plan.tasks)
+    assert all(task.scope_paths for task in plan.tasks)
+    assert all(task.acceptance_criteria for task in plan.tasks)
