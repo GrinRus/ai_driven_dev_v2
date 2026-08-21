@@ -262,9 +262,13 @@ def validate_tasklist(context: SemanticDocumentContext) -> tuple[ValidationFindi
         findings.extend(
             context.finding(
                 code=INCOMPLETE_SECTION_CODE,
-                message=issue,
+                message=issue.message,
                 severity="medium",
-                location=ordered_tasks.location,
+                location=(
+                    context.location(line_number=issue.line_number)
+                    if issue.line_number is not None
+                    else ordered_tasks.location
+                ),
             )
             for issue in exc.issues
         )

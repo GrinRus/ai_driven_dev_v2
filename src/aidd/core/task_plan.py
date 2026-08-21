@@ -82,10 +82,87 @@ def _parse_task_heading(line: str) -> tuple[str, str] | None:
     return task_id, title
 
 
+class TaskPlanIssueKind(StrEnum):
+    INVALID_HEADING = "invalid-heading"
+    MISSING_TASK_CARDS = "missing-task-cards"
+    DUPLICATE_TASK_ID = "duplicate-task-id"
+    MIXED_TASK_ID_STYLE = "mixed-task-id-style"
+    DUPLICATE_MAPPED_ENTRY = "duplicate-mapped-entry"
+    MISSING_MAPPED_ENTRY = "missing-mapped-entry"
+    UNKNOWN_MAPPED_TASK_ID = "unknown-mapped-task-id"
+    EMPTY_DEPENDENCY = "empty-dependency"
+    UNKNOWN_DEPENDENCY = "unknown-dependency"
+    SELF_DEPENDENCY = "self-dependency"
+    FORWARD_DEPENDENCY = "forward-dependency"
+    DEPENDENCY_CYCLE = "dependency-cycle"
+    DUPLICATE_FIELD = "duplicate-field"
+    MISSING_FIELD = "missing-field"
+    MISSING_ACCEPTANCE = "missing-acceptance"
+    MALFORMED_ACCEPTANCE_ID = "malformed-acceptance-id"
+    DUPLICATE_ACCEPTANCE_ID = "duplicate-acceptance-id"
+    UNSAFE_SCOPE_PATH = "unsafe-scope-path"
+    MISSING_SCOPE_PATH = "missing-scope-path"
+    MISSING_VERIFICATION = "missing-verification"
+    INVALID_EXECUTION_MODE = "invalid-execution-mode"
+    DUPLICATE_GLOBAL_ACCEPTANCE_ID = "duplicate-global-acceptance-id"
+
+
+class TaskPlanIssueRelation(StrEnum):
+    ROOT = "root"
+    RELATED = "related"
+
+
+@dataclass(frozen=True, slots=True)
+class TaskPlanParseIssue:
+    kind: TaskPlanIssueKind | str
+    message: str
+    task_id: str | None = None
+    line_number: int | None = None
+    field: str | None = None
+    missing_fields: tuple[str, ...] = ()
+    relation: TaskPlanIssueRelation = TaskPlanIssueRelation.ROOT
+
+    @property
+    def source_line_number(self) -> int | None:
+        """Alias used by evidence consumers that call the location a source line."""
+
+        return self.line_number
+
+    def __str__(self) -> str:
+        return self.message
+
+
+def _issue(
+    kind: TaskPlanIssueKind | str,
+    message: str,
+    *,
+    task_id: str | None = None,
+    line_number: int | None = None,
+    field: str | None = None,
+    missing_fields: tuple[str, ...] = (),
+    relation: TaskPlanIssueRelation = TaskPlanIssueRelation.ROOT,
+) -> TaskPlanParseIssue:
+    return TaskPlanParseIssue(
+        kind=kind,
+        message=message,
+        task_id=task_id,
+        line_number=line_number,
+        field=field,
+        missing_fields=missing_fields,
+        relation=relation,
+    )
+
+
 class TaskPlanParseError(ValueError):
-    def __init__(self, issues: tuple[str, ...]) -> None:
-        self.issues = issues
-        super().__init__("Invalid tasklist: " + "; ".join(issues))
+    def __init__(self, issues: tuple[TaskPlanParseIssue | str, ...]) -> None:
+        self.issues = tuple(
+            issue
+            if isinstance(issue, TaskPlanParseIssue)
+            else _issue("legacy", issue)
+            for issue in issues
+        )
+        self.messages = tuple(issue.message for issue in self.issues)
+        super().__init__("Invalid tasklist: " + "; ".join(self.messages))
 
 
 class TaskExecutionMode(StrEnum):
@@ -136,7 +213,7 @@ class TaskPlan:
         )
 
 
-def _section_lines(markdown: str, heading: str) -> list[str]:
+def _section_lines_with_numbers(markdown: str, heading: str) -> list[tuple[int, str]]:
     target = heading.casefold()
     lines = markdown.splitlines()
     start: int | None = None
@@ -152,39 +229,116 @@ def _section_lines(markdown: str, heading: str) -> list[str]:
         if re.match(r"^##\s+", lines[index].strip()):
             end = index
             break
-    return lines[start:end]
+    return [(index + 1, lines[index]) for index in range(start, end)]
+
+
+def _section_lines(markdown: str, heading: str) -> list[str]:
+    return [line for _, line in _section_lines_with_numbers(markdown, heading)]
+
+
+def _section_heading_line(markdown: str, heading: str) -> int | None:
+    target = heading.casefold()
+    for index, line in enumerate(markdown.splitlines()):
+        match = re.match(r"^##\s+(.+?)\s*$", line.strip())
+        if match and match.group(1).strip().casefold() == target:
+            return index + 1
+    return None
+
+
+@dataclass(frozen=True, slots=True)
+class _TaskBlock:
+    task_id: str
+    title: str
+    lines: tuple[tuple[int, str], ...]
+    heading_line: int
 
 
 def _parse_task_blocks(
     markdown: str,
-) -> tuple[list[tuple[str, str, list[str]]], list[str]]:
-    lines = _section_lines(markdown, "Ordered tasks")
-    issues: list[str] = []
-    blocks: list[tuple[str, str, list[str]]] = []
+) -> tuple[list[_TaskBlock], list[TaskPlanParseIssue]]:
+    lines = _section_lines_with_numbers(markdown, "Ordered tasks")
+    issues: list[TaskPlanParseIssue] = []
+    blocks: list[_TaskBlock] = []
     current_id: str | None = None
     current_title = ""
-    current_lines: list[str] = []
-    for line in lines:
+    current_heading_line = _section_heading_line(markdown, "Ordered tasks") or 1
+    current_lines: list[tuple[int, str]] = []
+    malformed_heading_lines: list[int] = []
+    for line_number, line in lines:
         heading = _parse_task_heading(line)
         if heading is not None:
             if current_id is not None:
-                blocks.append((current_id, current_title, current_lines))
+                blocks.append(
+                    _TaskBlock(
+                        task_id=current_id,
+                        title=current_title,
+                        lines=tuple(current_lines),
+                        heading_line=current_heading_line,
+                    )
+                )
             current_id, current_title = heading
+            current_heading_line = line_number
             current_lines = []
             continue
+        if line.lstrip().startswith("###"):
+            malformed_heading_lines.append(line_number)
         if current_id is not None:
-            current_lines.append(line)
+            current_lines.append((line_number, line))
     if current_id is not None:
-        blocks.append((current_id, current_title, current_lines))
+        blocks.append(
+            _TaskBlock(
+                task_id=current_id,
+                title=current_title,
+                lines=tuple(current_lines),
+                heading_line=current_heading_line,
+            )
+        )
+    for line_number in malformed_heading_lines:
+        issues.append(
+            _issue(
+                TaskPlanIssueKind.INVALID_HEADING,
+                "`Ordered tasks` contains a malformed H3 task heading with a missing or "
+                "ambiguous stable task id.",
+                line_number=line_number,
+            )
+        )
     if not blocks:
-        issues.append("`Ordered tasks` must contain H3 task cards with stable task ids.")
-    ids = [task_id for task_id, _, _ in blocks]
+        issues.append(
+            _issue(
+                TaskPlanIssueKind.MISSING_TASK_CARDS,
+                "`Ordered tasks` must contain H3 task cards with stable task ids.",
+                line_number=_section_heading_line(markdown, "Ordered tasks"),
+                relation=(
+                    TaskPlanIssueRelation.RELATED
+                    if malformed_heading_lines
+                    else TaskPlanIssueRelation.ROOT
+                ),
+            )
+        )
+    ids = [block.task_id for block in blocks]
     duplicate_ids = sorted({task_id for task_id in ids if ids.count(task_id) > 1})
     if duplicate_ids:
-        issues.append("Duplicate task ids: " + ", ".join(duplicate_ids) + ".")
+        duplicate_id = duplicate_ids[0]
+        duplicate_line = next(
+            block.heading_line for block in blocks if block.task_id == duplicate_id
+        )
+        issues.append(
+            _issue(
+                TaskPlanIssueKind.DUPLICATE_TASK_ID,
+                "Duplicate task ids: " + ", ".join(duplicate_ids) + ".",
+                task_id=duplicate_id,
+                line_number=duplicate_line,
+            )
+        )
     styles = {"compact" if re.fullmatch(r"T\d+", task_id) else "prefixed" for task_id in ids}
     if len(styles) > 1:
-        issues.append("Task cards must not mix compact and prefixed task id styles.")
+        issues.append(
+            _issue(
+                TaskPlanIssueKind.MIXED_TASK_ID_STYLE,
+                "Task cards must not mix compact and prefixed task id styles.",
+                line_number=blocks[0].heading_line if blocks else None,
+            )
+        )
     return blocks, issues
 
 
@@ -192,10 +346,10 @@ def _parse_mapped_section(
     markdown: str,
     heading: str,
     pattern: re.Pattern[str],
-) -> tuple[dict[str, str], list[str]]:
-    entries: dict[str, str] = {}
-    issues: list[str] = []
-    for line in _section_lines(markdown, heading):
+) -> tuple[dict[str, tuple[str, int]], list[TaskPlanParseIssue]]:
+    entries: dict[str, tuple[str, int]] = {}
+    issues: list[TaskPlanParseIssue] = []
+    for line_number, line in _section_lines_with_numbers(markdown, heading):
         if not line.strip():
             continue
         match = pattern.match(line)
@@ -205,20 +359,36 @@ def _parse_mapped_section(
         if task_id is None:
             continue
         if task_id in entries:
-            issues.append(f"Section `{heading}` contains duplicate entry `{task_id}`.")
-        entries[task_id] = match.group(2).strip()
+            issues.append(
+                _issue(
+                    TaskPlanIssueKind.DUPLICATE_MAPPED_ENTRY,
+                    f"Section `{heading}` contains duplicate entry `{task_id}`.",
+                    task_id=task_id,
+                    line_number=line_number,
+                )
+            )
+        entries[task_id] = (match.group(2).strip(), line_number)
     return entries, issues
 
 
 def _parse_card_fields(
     task_id: str,
-    lines: list[str],
-) -> tuple[dict[str, str], tuple[TaskAcceptanceCriterion, ...], list[str]]:
+    lines: tuple[tuple[int, str], ...],
+    heading_line: int,
+) -> tuple[
+    dict[str, str],
+    dict[str, int],
+    tuple[TaskAcceptanceCriterion, ...],
+    tuple[int, ...],
+    list[TaskPlanParseIssue],
+]:
     fields: dict[str, str] = {}
+    field_lines: dict[str, int] = {}
     acceptance: list[TaskAcceptanceCriterion] = []
-    issues: list[str] = []
+    acceptance_lines: list[int] = []
+    issues: list[TaskPlanParseIssue] = []
     in_acceptance = False
-    for line in lines:
+    for line_number, line in lines:
         if in_acceptance:
             criterion_match = re.match(
                 r"^\s{2,}[-*]\s+([^:\s]+)\s*:\s*(.+?)\s*$",
@@ -226,6 +396,7 @@ def _parse_card_fields(
             )
             if criterion_match is not None:
                 criterion_id = _strip_markdown_wrappers(criterion_match.group(1)).upper()
+                acceptance_lines.append(line_number)
                 acceptance.append(
                     TaskAcceptanceCriterion(
                         id=criterion_id,
@@ -242,8 +413,17 @@ def _parse_card_fields(
                     in_acceptance = False
                 continue
             if key in fields:
-                issues.append(f"Task `{task_id}` repeats field `{label}`.")
+                issues.append(
+                    _issue(
+                        TaskPlanIssueKind.DUPLICATE_FIELD,
+                        f"Task `{task_id}` repeats field `{label}`.",
+                        task_id=task_id,
+                        line_number=line_number,
+                        field=key,
+                    )
+                )
             fields[key] = field_match.group(2).strip()
+            field_lines[key] = line_number
             in_acceptance = key == "acceptance criteria"
             continue
         if line.strip() and not line.lstrip().startswith(("-", "*")):
@@ -251,23 +431,67 @@ def _parse_card_fields(
 
     for label in ("outcome", "dominant deliverable", "in scope"):
         if not fields.get(label, "").strip():
-            issues.append(f"Task `{task_id}` is missing required field `{label}`.")
+            issues.append(
+                _issue(
+                    TaskPlanIssueKind.MISSING_FIELD,
+                    f"Task `{task_id}` is missing required field `{label}`.",
+                    task_id=task_id,
+                    line_number=heading_line,
+                    field=label,
+                    missing_fields=(label,),
+                )
+            )
     expected_acceptance_pattern = re.compile(rf"^{re.escape(task_id)}-AC[1-9]\d*$")
     if not acceptance:
-        issues.append(f"Task `{task_id}` must declare at least one acceptance criterion.")
+        issues.append(
+            _issue(
+                TaskPlanIssueKind.MISSING_ACCEPTANCE,
+                f"Task `{task_id}` must declare at least one acceptance criterion.",
+                task_id=task_id,
+                line_number=field_lines.get("acceptance criteria", heading_line),
+                field="acceptance criteria",
+            )
+        )
     acceptance_ids = [criterion.id for criterion in acceptance]
-    for acceptance_id in acceptance_ids:
+    for acceptance_id, line_number in zip(acceptance_ids, acceptance_lines, strict=True):
         if expected_acceptance_pattern.fullmatch(acceptance_id) is None:
-            issues.append(f"Task `{task_id}` has malformed acceptance id `{acceptance_id}`.")
+            issues.append(
+                _issue(
+                    TaskPlanIssueKind.MALFORMED_ACCEPTANCE_ID,
+                    f"Task `{task_id}` has malformed acceptance id `{acceptance_id}`.",
+                    task_id=task_id,
+                    line_number=line_number,
+                    field="acceptance criteria",
+                )
+            )
     duplicates = sorted({item for item in acceptance_ids if acceptance_ids.count(item) > 1})
     if duplicates:
-        issues.append(f"Task `{task_id}` has duplicate acceptance ids: {', '.join(duplicates)}.")
-    return fields, tuple(acceptance), issues
+        duplicate_id = duplicates[0]
+        duplicate_line = next(
+            line_number
+            for criterion, line_number in zip(acceptance_ids, acceptance_lines, strict=True)
+            if criterion == duplicate_id
+        )
+        issues.append(
+            _issue(
+                TaskPlanIssueKind.DUPLICATE_ACCEPTANCE_ID,
+                f"Task `{task_id}` has duplicate acceptance ids: {', '.join(duplicates)}.",
+                task_id=task_id,
+                line_number=duplicate_line,
+                field="acceptance criteria",
+            )
+        )
+    return fields, field_lines, tuple(acceptance), tuple(acceptance_lines), issues
 
 
-def _parse_scope_paths(task_id: str, value: str) -> tuple[tuple[str, ...], list[str]]:
+def _parse_scope_paths(
+    task_id: str,
+    value: str,
+    *,
+    line_number: int,
+) -> tuple[tuple[str, ...], list[TaskPlanParseIssue]]:
     paths: list[str] = []
-    issues: list[str] = []
+    issues: list[TaskPlanParseIssue] = []
     for raw_value in re.findall(r"`([^`]+)`", value):
         candidate = raw_value.strip().strip("/")
         invalid = (
@@ -282,13 +506,32 @@ def _parse_scope_paths(task_id: str, value: str) -> tuple[tuple[str, ...], list[
             is None
         )
         if invalid:
-            issues.append(f"Task `{task_id}` has unsafe in-scope path `{raw_value}`.")
+            issues.append(
+                _issue(
+                    TaskPlanIssueKind.UNSAFE_SCOPE_PATH,
+                    f"Task `{task_id}` has unsafe in-scope path `{raw_value}`.",
+                    task_id=task_id,
+                    line_number=line_number,
+                    field="in scope",
+                )
+            )
             continue
         paths.append(candidate)
     if not paths:
         issues.append(
-            f"Task `{task_id}` field `in scope` must contain at least one backticked "
-            "repository-relative file or directory path."
+            _issue(
+                TaskPlanIssueKind.MISSING_SCOPE_PATH,
+                f"Task `{task_id}` field `in scope` must contain at least one backticked "
+                "repository-relative file or directory path.",
+                task_id=task_id,
+                line_number=line_number,
+                field="in scope",
+                relation=(
+                    TaskPlanIssueRelation.RELATED
+                    if issues
+                    else TaskPlanIssueRelation.ROOT
+                ),
+            )
         )
     return tuple(dict.fromkeys(paths)), issues
 
@@ -296,18 +539,33 @@ def _parse_scope_paths(task_id: str, value: str) -> tuple[tuple[str, ...], list[
 def _validate_dependency_graph(
     task_ids: tuple[str, ...],
     dependencies: dict[str, tuple[str, ...]],
-) -> list[str]:
-    issues: list[str] = []
+    dependency_lines: dict[str, int],
+) -> list[TaskPlanParseIssue]:
+    issues: list[TaskPlanParseIssue] = []
     known = set(task_ids)
     positions = {task_id: index for index, task_id in enumerate(task_ids)}
     for task_id, task_dependencies in dependencies.items():
         unknown = sorted(set(task_dependencies) - known)
         if unknown:
             issues.append(
-                f"Task `{task_id}` references unknown dependencies: {', '.join(unknown)}."
+                _issue(
+                    TaskPlanIssueKind.UNKNOWN_DEPENDENCY,
+                    f"Task `{task_id}` references unknown dependencies: {', '.join(unknown)}.",
+                    task_id=task_id,
+                    line_number=dependency_lines.get(task_id),
+                    field="dependencies",
+                )
             )
         if task_id in task_dependencies:
-            issues.append(f"Task `{task_id}` cannot depend on itself.")
+            issues.append(
+                _issue(
+                    TaskPlanIssueKind.SELF_DEPENDENCY,
+                    f"Task `{task_id}` cannot depend on itself.",
+                    task_id=task_id,
+                    line_number=dependency_lines.get(task_id),
+                    field="dependencies",
+                )
+            )
         forward = tuple(
             dependency
             for dependency in task_dependencies
@@ -315,8 +573,14 @@ def _validate_dependency_graph(
         )
         if forward:
             issues.append(
-                f"Task `{task_id}` references dependencies that do not appear earlier in "
-                f"`Ordered tasks`: {', '.join(forward)}."
+                _issue(
+                    TaskPlanIssueKind.FORWARD_DEPENDENCY,
+                    f"Task `{task_id}` references dependencies that do not appear earlier in "
+                    f"`Ordered tasks`: {', '.join(forward)}.",
+                    task_id=task_id,
+                    line_number=dependency_lines.get(task_id),
+                    field="dependencies",
+                )
             )
 
     visiting: set[str] = set()
@@ -326,7 +590,15 @@ def _validate_dependency_graph(
         if task_id in visited:
             return
         if task_id in visiting:
-            issues.append(f"Task dependency graph contains a cycle at `{task_id}`.")
+            issues.append(
+                _issue(
+                    TaskPlanIssueKind.DEPENDENCY_CYCLE,
+                    f"Task dependency graph contains a cycle at `{task_id}`.",
+                    task_id=task_id,
+                    line_number=dependency_lines.get(task_id),
+                    field="dependencies",
+                )
+            )
             return
         visiting.add(task_id)
         for dependency in dependencies.get(task_id, ()):
@@ -354,7 +626,7 @@ def parse_task_plan(markdown: str) -> TaskPlan:
     )
     issues.extend(dependency_issues)
     issues.extend(verification_issues)
-    task_ids = tuple(task_id for task_id, _, _ in blocks)
+    task_ids = tuple(block.task_id for block in blocks)
     known_ids = set(task_ids)
     for section_name, entries in (
         ("Dependencies", dependency_entries),
@@ -363,15 +635,36 @@ def parse_task_plan(markdown: str) -> TaskPlan:
         missing = sorted(known_ids - set(entries))
         unknown = sorted(set(entries) - known_ids)
         if missing:
-            issues.append(f"Section `{section_name}` is missing task ids: {', '.join(missing)}.")
-        if unknown:
             issues.append(
-                f"Section `{section_name}` references unknown task ids: {', '.join(unknown)}."
+                _issue(
+                    TaskPlanIssueKind.MISSING_MAPPED_ENTRY,
+                    f"Section `{section_name}` is missing task ids: {', '.join(missing)}.",
+                    line_number=_section_heading_line(markdown, section_name),
+                    field=section_name.casefold(),
+                )
+            )
+        if unknown:
+            unknown_id = unknown[0]
+            unknown_line = entries[unknown_id][1]
+            issues.append(
+                _issue(
+                    TaskPlanIssueKind.UNKNOWN_MAPPED_TASK_ID,
+                    f"Section `{section_name}` references unknown task ids: {', '.join(unknown)}.",
+                    task_id=unknown_id,
+                    line_number=unknown_line,
+                    field=section_name.casefold(),
+                )
             )
 
     parsed_dependencies: dict[str, tuple[str, ...]] = {}
+    dependency_lines: dict[str, int] = {}
     for task_id in task_ids:
-        dependency_text = dependency_entries.get(task_id, "")
+        dependency_entry = dependency_entries.get(task_id)
+        if dependency_entry is None:
+            parsed_dependencies[task_id] = ()
+            continue
+        dependency_text, dependency_line = dependency_entry
+        dependency_lines[task_id] = dependency_line
         # Dependency entries may carry a short human-readable rationale after the
         # machine-readable value (for example, ``T1: none — establishes M1``).
         # Only the leading dependency value defines the graph; milestone/review
@@ -385,21 +678,56 @@ def parse_task_plan(markdown: str) -> TaskPlan:
                 )
             )
             if not parsed_dependencies[task_id]:
-                issues.append(f"Task `{task_id}` dependencies must be `none` or task ids.")
+                issues.append(
+                    _issue(
+                        TaskPlanIssueKind.EMPTY_DEPENDENCY,
+                        f"Task `{task_id}` dependencies must be `none` or task ids.",
+                        task_id=task_id,
+                        line_number=dependency_line,
+                        field="dependencies",
+                    )
+                )
 
-    issues.extend(_validate_dependency_graph(task_ids, parsed_dependencies))
+    issues.extend(_validate_dependency_graph(task_ids, parsed_dependencies, dependency_lines))
     cards: list[TaskCard] = []
     all_acceptance_ids: list[str] = []
-    for task_id, title, lines in blocks:
+    acceptance_lines_by_id: dict[str, int] = {}
+    for block in blocks:
+        task_id = block.task_id
+        title = block.title
         SafeIdentifier.parse(task_id, label="task id")
-        fields, acceptance, field_issues = _parse_card_fields(task_id, lines)
+        fields, field_lines, acceptance, acceptance_lines, field_issues = _parse_card_fields(
+            task_id,
+            block.lines,
+            block.heading_line,
+        )
         issues.extend(field_issues)
-        scope_paths, scope_issues = _parse_scope_paths(task_id, fields.get("in scope", ""))
-        issues.extend(scope_issues)
+        if "in scope" in fields:
+            scope_paths, scope_issues = _parse_scope_paths(
+                task_id,
+                fields["in scope"],
+                line_number=field_lines["in scope"],
+            )
+            issues.extend(scope_issues)
+        else:
+            scope_paths = ()
         all_acceptance_ids.extend(item.id for item in acceptance)
-        verification = verification_entries.get(task_id, "").strip()
-        if not verification or verification.casefold().strip("` .") == "none":
-            issues.append(f"Task `{task_id}` must declare concrete verification.")
+        for acceptance_id, acceptance_line in zip(acceptance, acceptance_lines, strict=True):
+            acceptance_lines_by_id.setdefault(acceptance_id.id, acceptance_line)
+        verification_entry = verification_entries.get(task_id)
+        verification = verification_entry[0].strip() if verification_entry is not None else ""
+        if verification_entry is not None and (
+            not verification or verification.casefold().strip("` .") == "none"
+        ):
+            issues.append(
+                _issue(
+                    TaskPlanIssueKind.MISSING_VERIFICATION,
+                    f"Task `{task_id}` must declare concrete verification.",
+                    task_id=task_id,
+                    line_number=verification_entry[1],
+                    field="verification notes",
+                )
+            )
         execution_mode_value = fields.get(
             "execution mode",
             TaskExecutionMode.REPOSITORY_CHANGE.value,
@@ -408,8 +736,14 @@ def parse_task_plan(markdown: str) -> TaskPlan:
             execution_mode = TaskExecutionMode(execution_mode_value)
         except ValueError:
             issues.append(
-                f"Task `{task_id}` execution mode must be `repository-change` or "
-                "`verification-only`."
+                _issue(
+                    TaskPlanIssueKind.INVALID_EXECUTION_MODE,
+                    f"Task `{task_id}` execution mode must be `repository-change` or "
+                    "`verification-only`.",
+                    task_id=task_id,
+                    line_number=field_lines.get("execution mode", block.heading_line),
+                    field="execution mode",
+                )
             )
             execution_mode = TaskExecutionMode.REPOSITORY_CHANGE
         cards.append(
@@ -433,8 +767,17 @@ def parse_task_plan(markdown: str) -> TaskPlan:
         {item for item in all_acceptance_ids if all_acceptance_ids.count(item) > 1}
     )
     if duplicate_acceptance:
+        duplicate_id = duplicate_acceptance[0]
         issues.append(
-            "Acceptance ids must be globally unique: " + ", ".join(duplicate_acceptance) + "."
+            _issue(
+                TaskPlanIssueKind.DUPLICATE_GLOBAL_ACCEPTANCE_ID,
+                "Acceptance ids must be globally unique: "
+                + ", ".join(duplicate_acceptance)
+                + ".",
+                task_id=duplicate_id.split("-AC", maxsplit=1)[0],
+                line_number=acceptance_lines_by_id.get(duplicate_id),
+                field="acceptance criteria",
+            )
         )
     if issues:
         raise TaskPlanParseError(tuple(dict.fromkeys(issues)))
@@ -448,6 +791,9 @@ __all__ = [
     "TaskAcceptanceCriterion",
     "TaskCard",
     "TaskExecutionMode",
+    "TaskPlanIssueKind",
+    "TaskPlanIssueRelation",
+    "TaskPlanParseIssue",
     "TaskPlan",
     "TaskPlanParseError",
     "parse_task_plan",
