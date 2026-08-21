@@ -7,14 +7,14 @@ slice, and local task.
 
 ## Next
 
-<!-- Empty: T7 is merged; the Wave 42 exit gate remains blocked by the genuine uncoached
-     observation and the latest Codex live lane is explicitly infra-fail. -->
+- `W42-E7-S3-T8` — Isolate native Codex live execution from unrelated desktop MCP/plugin
+  configuration before the fresh task-aware acceptance.
 
 
 ## Soon
 
-<!-- The live acceptance remains blocked by the environment-blocked Codex rerun and the genuine
-     uncoached human observation; no Wave 43 task is promoted. -->
+<!-- The direct Codex acceptance remains blocked by the genuine uncoached observation and awaits
+     the bounded native-provider isolation task in Next. -->
 
 
 ## Parking lot
@@ -41,6 +41,12 @@ slice, and local task.
   queue-restoration policy in `docs/backlog/roadmap.md` (`W8-E3-S1`).
 
 ## Current reconciliation
+
+- `2026-08-21` The first clean post-T7 run `eval-live-007-codex-20260821T023047Z` passed `idea`
+  with manual audit but stalled before the first `research` runtime event and was interrupted.
+  A disposable installed-stage probe with desktop plugins disabled completed `research`; the
+  bounded provider-isolation remediation `W42-E7-S3-T8` is promoted to `Next`. Wave 42 remains
+  open and no task-aware live pass is claimed.
 
 - `2026-08-21` PR #237 (merge `53208ce7`) completed `W42-E7-S3-T7`: parser punctuation
   normalization and focused tests passed, but fresh run `eval-live-007-codex-20260821T013433Z`
