@@ -7,14 +7,14 @@ slice, and local task.
 
 ## Next
 
-- `W42-E7-S3-T7` — Normalize terminal punctuation in authored dependency identifiers after the
-  fresh Codex rerun isolated `T1.`/`none.` as the remaining checkpoint drift.
+<!-- Empty: T7 is merged; the Wave 42 exit gate remains blocked by the genuine uncoached
+     observation and the latest Codex live lane is explicitly infra-fail. -->
 
 
 ## Soon
 
-<!-- The live acceptance remains blocked until T7 is merged and a fresh Codex rerun succeeds;
-     the genuine uncoached human observation is still a separate fail-closed prerequisite. -->
+<!-- The live acceptance remains blocked by the environment-blocked Codex rerun and the genuine
+     uncoached human observation; no Wave 43 task is promoted. -->
 
 
 ## Parking lot
@@ -41,6 +41,12 @@ slice, and local task.
   queue-restoration policy in `docs/backlog/roadmap.md` (`W8-E3-S1`).
 
 ## Current reconciliation
+
+- `2026-08-21` PR #237 (merge `53208ce7`) completed `W42-E7-S3-T7`: parser punctuation
+  normalization and focused tests passed, but fresh run `eval-live-007-codex-20260821T013433Z`
+  ended `infra-fail` after Codex made no progress in `idea` for 30 minutes. T7 is removed from
+  the queue; `Next`/`Soon` remain empty, the human-observation blocker remains, and Wave 42/43
+  are open.
 
 - `2026-08-21` PR #235 (merge `9ff76b3f`) completed `W42-E7-S3-T6`: `/api/tasks` is reachable and
   explanatory prose is no longer parsed as dependency IDs. Fresh Codex run
