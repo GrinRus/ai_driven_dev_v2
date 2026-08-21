@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from collections.abc import Iterable
+from collections.abc import Iterable, Sequence
 from dataclasses import dataclass, field
 from datetime import datetime
 from pathlib import Path
@@ -739,12 +739,61 @@ def count_stage_attempts(
     return count
 
 
-def repair_attempts_used(*, stage_attempt_count: int) -> int:
+def repair_attempts_used(
+    *,
+    stage_attempt_count: int,
+    attempt_modes: Sequence[str | None] | None = None,
+) -> int:
     if stage_attempt_count < 0:
         raise ValueError("Stage attempt count must be non-negative.")
 
-    # The first stage attempt is the initial run, not a repair run.
+    if attempt_modes is not None:
+        normalized_modes = tuple(
+            None if mode is None else mode.strip().lower() for mode in attempt_modes
+        )
+        if len(normalized_modes) != stage_attempt_count:
+            raise ValueError("Attempt modes must correspond to the stage attempt count.")
+        # New artifact indexes identify validation-triggered repairs explicitly.  Resume and
+        # intervention attempts are durable attempts, but they never consume this budget.
+        if all(mode is not None for mode in normalized_modes):
+            return sum(mode == "repair" for mode in normalized_modes)
+
+        # Older indexes did not persist a mode.  Preserve their historical interpretation:
+        # the first attempt was initial and every later attempt was a repair.
+        return max(0, stage_attempt_count - 1)
+
+    # The first stage attempt is the initial run, not a repair run.  This fallback keeps the
+    # public helper compatible with callers that only know the legacy attempt count.
     return max(0, stage_attempt_count - 1)
+
+
+def _attempt_modes_from_artifacts(
+    *,
+    workspace_root: Path,
+    work_item: str,
+    run_id: str,
+    stage: str,
+    stage_attempt_count: int,
+) -> tuple[str | None, ...]:
+    """Read mode metadata without making old or malformed indexes fatal to accounting."""
+
+    from aidd.core.run_store import load_attempt_artifact_index
+
+    modes: list[str | None] = []
+    for attempt_number in range(1, stage_attempt_count + 1):
+        try:
+            index = load_attempt_artifact_index(
+                workspace_root=workspace_root,
+                work_item=work_item,
+                run_id=run_id,
+                stage=stage,
+                attempt_number=attempt_number,
+            )
+        except (OSError, ValueError, KeyError, TypeError):
+            modes.append(None)
+            continue
+        modes.append(None if index is None else index.attempt_mode)
+    return tuple(modes)
 
 
 def remaining_repair_attempts(*, repair_attempts_used: int, max_repair_attempts: int) -> int:
@@ -772,7 +821,16 @@ def evaluate_stage_repair_counter(
         stage=stage,
     )
     max_repair_attempts = effective_repair_budget(stage=stage, policy=resolved_policy)
-    used = repair_attempts_used(stage_attempt_count=stage_attempt_count)
+    used = repair_attempts_used(
+        stage_attempt_count=stage_attempt_count,
+        attempt_modes=_attempt_modes_from_artifacts(
+            workspace_root=workspace_root,
+            work_item=work_item,
+            run_id=run_id,
+            stage=stage,
+            stage_attempt_count=stage_attempt_count,
+        ),
+    )
     remaining = remaining_repair_attempts(
         repair_attempts_used=used,
         max_repair_attempts=max_repair_attempts,

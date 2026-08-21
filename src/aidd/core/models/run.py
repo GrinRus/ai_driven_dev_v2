@@ -40,9 +40,10 @@ class RepairHistoryEntry:
             raise ValueError("Repair history attempt number must be >= 1.")
 
         normalized_trigger = self.trigger.strip().lower()
-        if normalized_trigger not in {"initial", "repair", "intervention"}:
+        if normalized_trigger not in {"initial", "repair", "resume", "intervention"}:
             raise ValueError(
-                "Repair history trigger must be one of 'initial', 'repair', or 'intervention'."
+                "Repair history trigger must be one of 'initial', 'repair', 'resume', or "
+                "'intervention'."
             )
         object.__setattr__(self, "trigger", normalized_trigger)
 
@@ -307,7 +308,7 @@ class RunArtifactIndex:
         attempt_mode = None
         if raw_attempt_mode is not None:
             attempt_mode = str(raw_attempt_mode).strip().lower()
-            if attempt_mode not in {"initial", "repair", "intervention"}:
+            if attempt_mode not in {"initial", "repair", "resume", "intervention"}:
                 raise ValueError(f"Unknown artifact-index attempt_mode: {attempt_mode}")
         return cls(
             schema_version=int(payload.get("schema_version", 1)),

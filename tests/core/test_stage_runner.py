@@ -4559,6 +4559,13 @@ def test_prepare_stage_resume_after_answers_creates_new_attempt_and_invocation(
     assert resume_result.execution_state.attempt_number == 1
     assert resume_result.execution_state.attempt_path.name == "attempt-0001"
     assert resume_result.adapter_invocation.attempt_number == 1
+    assert resume_result.adapter_invocation.attempt_mode == "resume"
+    assert resume_result.adapter_invocation.repair_mode is False
+    assert json.loads(
+        resume_result.execution_state.attempt_path.joinpath("artifact-index.json").read_text(
+            encoding="utf-8"
+        )
+    )["attempt_mode"] == "resume"
     assert resume_result.adapter_invocation.input_bundle_path.exists()
     assert (
         "`workitems/WI-001/stages/plan/questions.md`"

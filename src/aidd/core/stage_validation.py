@@ -338,6 +338,7 @@ def prepare_stage_resume_after_answers(
         preparation_bundle=preparation_bundle,
         execution_state=execution_state,
         contracts_root=contracts_root,
+        resume_mode=True,
     )
     return StageResumeResult(
         stage=stage,

@@ -608,6 +608,7 @@ def run_single_stage_orchestration(
     project_set: ResolvedProjectSet | None = None,
     changed_at_utc: datetime | None = None,
     intervention_request_path: Path | None = None,
+    resume_mode: bool = False,
     defer_success_publication: bool = False,
     validation_finding_provider: Callable[
         [StageExecutionState, StageOutputDiscovery], tuple[ValidationFinding, ...]
@@ -681,6 +682,7 @@ def run_single_stage_orchestration(
             execution_state=execution_state,
             contracts_root=contracts_root,
             intervention_request_path=intervention_request_path,
+            resume_mode=resume_mode,
         )
     except Exception:
         persist_stage_status(

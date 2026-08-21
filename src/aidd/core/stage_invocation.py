@@ -198,6 +198,7 @@ def prepare_adapter_invocation(
     execution_state: StageExecutionState,
     contracts_root: Path = DEFAULT_STAGE_CONTRACTS_ROOT,
     intervention_request_path: Path | None = None,
+    resume_mode: bool = False,
 ) -> AdapterInvocationBundle:
     if preparation_bundle.stage != execution_state.stage:
         raise ValueError(
@@ -231,7 +232,7 @@ def prepare_adapter_invocation(
         previous_status=previous_status,
     )
     intervention_mode = intervention_request_path is not None
-    if intervention_mode:
+    if intervention_mode or resume_mode:
         repair_mode = False
     repair_brief_path: Path | None = None
     repair_brief_markdown: str | None = None
@@ -293,7 +294,15 @@ def prepare_adapter_invocation(
         attempt_path=execution_state.attempt_path,
         expected_input_bundle=preparation_bundle.expected_input_bundle,
     )
-    attempt_mode = "intervention" if intervention_mode else "repair" if repair_mode else "initial"
+    attempt_mode = (
+        "intervention"
+        if intervention_mode
+        else "resume"
+        if resume_mode
+        else "repair"
+        if repair_mode
+        else "initial"
+    )
     write_attempt_artifact_index(
         workspace_root=workspace_root,
         work_item=execution_state.work_item,

@@ -2,8 +2,17 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from aidd.core.repair import RepairBudgetPolicy, persist_repair_history_snapshot
-from aidd.core.run_store import create_run_manifest, load_stage_metadata, persist_stage_status
+from aidd.core.repair import (
+    RepairBudgetPolicy,
+    evaluate_stage_repair_counter,
+    persist_repair_history_snapshot,
+)
+from aidd.core.run_store import (
+    create_run_manifest,
+    load_stage_metadata,
+    persist_stage_status,
+    write_attempt_artifact_index,
+)
 from aidd.core.stage_runner import (
     PostValidationAction,
     ValidationVerdict,
@@ -104,6 +113,58 @@ def test_one_shot_repair_success_flow(tmp_path: Path) -> None:
     assert "- Attempt `2` (`repair`) -> succeeded." in stage_result_text
     assert "## Status" in stage_result_text
     assert "- `succeeded`" in stage_result_text
+
+
+def test_resume_attempt_is_recorded_without_consuming_repair_budget(tmp_path: Path) -> None:
+    workspace_root = _bootstrap_run(tmp_path)
+    policy = RepairBudgetPolicy(default_max_repair_attempts=3)
+
+    for mode in ("initial", "repair", "resume", "repair"):
+        attempt_number = _start_attempt(workspace_root)
+        write_attempt_artifact_index(
+            workspace_root=workspace_root,
+            work_item="WI-001",
+            run_id="run-001",
+            stage="plan",
+            attempt_number=attempt_number,
+            attempt_mode=mode,
+        )
+
+    counter = evaluate_stage_repair_counter(
+        workspace_root=workspace_root,
+        work_item="WI-001",
+        run_id="run-001",
+        stage="plan",
+        policy=policy,
+    )
+
+    assert counter.stage_attempt_count == 4
+    assert counter.repair_attempts_used == 2
+    assert counter.remaining_repair_attempts == 1
+    assert counter.budget_exhausted is False
+
+    resume_result = persist_repair_history_snapshot(
+        workspace_root=workspace_root,
+        work_item="WI-001",
+        run_id="run-001",
+        stage="plan",
+        attempt_number=3,
+        trigger="resume",
+        outcome="succeeded",
+        stage_status="succeeded",
+    )
+    metadata = load_stage_metadata(
+        workspace_root=workspace_root,
+        work_item="WI-001",
+        run_id="run-001",
+        stage="plan",
+    )
+
+    assert metadata is not None
+    assert [entry.trigger for entry in metadata.repair_history] == ["resume"]
+    assert "Attempt `3` (`resume`) -> succeeded." in resume_result.stage_result_path.read_text(
+        encoding="utf-8"
+    )
 
 
 def test_repeated_repair_failure_flow_records_attempt_history(tmp_path: Path) -> None:
