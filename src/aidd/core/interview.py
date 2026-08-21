@@ -25,6 +25,14 @@ _QUESTION_LINE_PATTERN = re.compile(
 _ANSWER_LINE_PATTERN = re.compile(
     r"^\s*-\s+`?(Q[\w-]+)`?\s+`?\[(resolved|partial|deferred)\]`?\s+(.+?)\s*$"
 )
+_CANDIDATE_QUESTION_LINE_PATTERN = re.compile(
+    r"^`?(Q[\w-]+)`?\s*(?::\s*|\s+)`?\[(blocking|non-blocking)\]`?"
+    r"\s*(?::\s*|\s+)(.+?)\s*$"
+)
+_CANDIDATE_ANSWER_LINE_PATTERN = re.compile(
+    r"^`?(Q[\w-]+)`?\s*(?::\s*|\s+)`?\[(resolved|partial|deferred)\]`?"
+    r"\s*(?::\s*|\s+)(.+?)\s*$"
+)
 _QUESTION_ID_NUMERIC_SUFFIX_PATTERN = re.compile(r"^Q(\d+)$")
 
 
@@ -130,6 +138,7 @@ class InterviewMarkdownParseError(ValueError):
         entry_id: str | None = None,
         parsed_questions: tuple[ParsedInterviewQuestion, ...] = (),
         parsed_answers: tuple[ParsedInterviewAnswer, ...] = (),
+        raw_candidate: str | None = None,
     ) -> None:
         super().__init__(message)
         self.document_name = document_name
@@ -138,6 +147,7 @@ class InterviewMarkdownParseError(ValueError):
         self.entry_id = entry_id
         self.parsed_questions = parsed_questions
         self.parsed_answers = parsed_answers
+        self.raw_candidate = raw_candidate
 
 
 def question_policy_from_marker(marker: str) -> QuestionPolicy:
@@ -217,6 +227,109 @@ def parse_question_entries(markdown_text: str) -> tuple[ParsedInterviewQuestion,
         parsed.append(ParsedInterviewQuestion(value=question, line_number=line_number))
 
     return tuple(parsed)
+
+
+def _candidate_section_entries(
+    *,
+    markdown_text: str,
+    section_heading: str,
+    document_name: str,
+) -> tuple[tuple[int, str], ...]:
+    """Return safe candidate bullets with indented continuation prose joined."""
+
+    entries: list[tuple[int, str]] = []
+    current_line_number: int | None = None
+    current_body: str | None = None
+
+    def flush() -> None:
+        nonlocal current_line_number, current_body
+        if current_line_number is not None and current_body is not None:
+            entries.append((current_line_number, current_body))
+        current_line_number = None
+        current_body = None
+
+    for line_number, line in _interview_section_lines(
+        markdown_text=markdown_text,
+        section_heading=section_heading,
+    ):
+        stripped = line.strip()
+        if not stripped:
+            continue
+
+        bullet_match = re.match(r"^(?P<indent>\s*)(?P<marker>[-*])\s+(?P<body>.+?)\s*$", line)
+        if bullet_match is not None:
+            flush()
+            if bullet_match.group("indent"):
+                raise InterviewMarkdownParseError(
+                    f"Invalid nested {document_name} entry at line {line_number}: "
+                    "nested bullets are not safe candidate continuation text.",
+                    document_name=document_name,
+                    kind="invalid-entry",
+                    line_number=line_number,
+                    raw_candidate=markdown_text,
+                )
+            body = bullet_match.group("body")
+            if body.lower() == "none":
+                continue
+            current_line_number = line_number
+            current_body = body
+            continue
+
+        if current_body is not None and line[:1].isspace():
+            current_body = f"{current_body} {stripped}"
+
+    flush()
+    return tuple(entries)
+
+
+def parse_question_candidate_entries(
+    markdown_text: str,
+) -> tuple[ParsedInterviewQuestion, ...]:
+    """Parse runtime question candidates using only meaning-preserving normalization."""
+
+    parsed: list[ParsedInterviewQuestion] = []
+    seen: dict[str, InterviewQuestion] = {}
+    for line_number, body in _candidate_section_entries(
+        markdown_text=markdown_text,
+        section_heading="Questions",
+        document_name="questions.md",
+    ):
+        match = _CANDIDATE_QUESTION_LINE_PATTERN.match(body)
+        if match is None:
+            raise InterviewMarkdownParseError(
+                "Invalid question candidate at line "
+                f"{line_number}: expected a QID, policy marker, and question text.",
+                document_name="questions.md",
+                kind="invalid-entry",
+                line_number=line_number,
+                parsed_questions=tuple(parsed),
+                raw_candidate=markdown_text,
+            )
+        question = InterviewQuestion(
+            question_id=match.group(1),
+            policy=question_policy_from_marker(match.group(2)),
+            text=match.group(3),
+        )
+        prior = seen.get(question.question_id)
+        if prior is not None:
+            kind = "duplicate-id" if prior == question else "ambiguous-candidate"
+            detail = "Duplicate" if kind == "duplicate-id" else "Ambiguous"
+            raise InterviewMarkdownParseError(
+                f"{detail} question candidate id `{question.question_id}`.",
+                document_name="questions.md",
+                kind=kind,
+                line_number=line_number,
+                entry_id=question.question_id,
+                parsed_questions=tuple(parsed),
+                raw_candidate=markdown_text,
+            )
+        seen[question.question_id] = question
+        parsed.append(ParsedInterviewQuestion(value=question, line_number=line_number))
+    return tuple(parsed)
+
+
+def parse_question_candidates_markdown(markdown_text: str) -> tuple[InterviewQuestion, ...]:
+    return tuple(entry.value for entry in parse_question_candidate_entries(markdown_text))
 
 
 def parse_questions_markdown(markdown_text: str) -> tuple[InterviewQuestion, ...]:
@@ -303,6 +416,56 @@ def parse_answer_entries(markdown_text: str) -> tuple[ParsedInterviewAnswer, ...
         parsed.append(ParsedInterviewAnswer(value=answer, line_number=line_number))
 
     return tuple(parsed)
+
+
+def parse_answer_candidate_entries(
+    markdown_text: str,
+) -> tuple[ParsedInterviewAnswer, ...]:
+    """Parse runtime answer candidates using only meaning-preserving normalization."""
+
+    parsed: list[ParsedInterviewAnswer] = []
+    seen: dict[str, InterviewAnswer] = {}
+    for line_number, body in _candidate_section_entries(
+        markdown_text=markdown_text,
+        section_heading="Answers",
+        document_name="answers.md",
+    ):
+        match = _CANDIDATE_ANSWER_LINE_PATTERN.match(body)
+        if match is None:
+            raise InterviewMarkdownParseError(
+                "Invalid answer candidate at line "
+                f"{line_number}: expected a QID, resolution marker, and answer text.",
+                document_name="answers.md",
+                kind="invalid-entry",
+                line_number=line_number,
+                parsed_answers=tuple(parsed),
+                raw_candidate=markdown_text,
+            )
+        answer = InterviewAnswer(
+            question_id=match.group(1),
+            resolution=answer_resolution_from_marker(match.group(2)),
+            text=match.group(3),
+        )
+        prior = seen.get(answer.question_id)
+        if prior is not None:
+            kind = "duplicate-id" if prior == answer else "ambiguous-candidate"
+            detail = "Duplicate" if kind == "duplicate-id" else "Ambiguous"
+            raise InterviewMarkdownParseError(
+                f"{detail} answer candidate id `{answer.question_id}`.",
+                document_name="answers.md",
+                kind=kind,
+                line_number=line_number,
+                entry_id=answer.question_id,
+                parsed_answers=tuple(parsed),
+                raw_candidate=markdown_text,
+            )
+        seen[answer.question_id] = answer
+        parsed.append(ParsedInterviewAnswer(value=answer, line_number=line_number))
+    return _merge_answer_context(answers=tuple(parsed), markdown_text=markdown_text)
+
+
+def parse_answer_candidates_markdown(markdown_text: str) -> tuple[InterviewAnswer, ...]:
+    return tuple(entry.value for entry in parse_answer_candidate_entries(markdown_text))
 
 
 def _answer_context_entries(
@@ -594,7 +757,7 @@ def persist_questions_document(
         existing_questions = ()
 
     staged_questions = (
-        parse_questions_markdown(stage_output_questions_markdown)
+        parse_question_candidates_markdown(stage_output_questions_markdown)
         if stage_output_questions_markdown is not None
         else ()
     )
@@ -630,7 +793,7 @@ def persist_answers_document(
 
     staged_answers: tuple[InterviewAnswer, ...]
     if stage_output_answers_markdown is not None:
-        staged_answers = parse_answers_markdown(stage_output_answers_markdown)
+        staged_answers = parse_answer_candidates_markdown(stage_output_answers_markdown)
     else:
         staged_answers = ()
 
