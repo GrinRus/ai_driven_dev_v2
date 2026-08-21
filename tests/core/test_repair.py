@@ -7,11 +7,13 @@ import pytest
 from aidd.core.models.run import RepairHistoryEntry
 from aidd.core.repair import (
     RepairBudgetPolicy,
+    ValidatorReportFinding,
     count_stage_attempts,
     default_repair_budget,
     effective_repair_budget,
     evaluate_stage_repair_counter,
     generate_repair_brief,
+    group_repair_findings,
     parse_validator_report_findings,
     persist_repair_history_snapshot,
     remaining_repair_attempts,
@@ -240,6 +242,100 @@ def test_render_repair_brief_includes_required_sections_and_budget_context(tmp_p
     assert "attempt `2` of max `3`" in repair_brief
     assert "remaining retries after this attempt: `1`" in repair_brief
     assert "Repair budget status: `repair-budget-available`." in repair_brief
+
+
+def test_group_repair_findings_collapses_duplicates_and_related_evidence() -> None:
+    primary = ValidatorReportFinding(
+        code="SEM-PLACEHOLDER-CONTENT",
+        severity="medium",
+        message="Placeholder remains.",
+        source_path="workitems/WI-001/stages/plan/plan.md",
+    )
+    related = ValidatorReportFinding(
+        code="SEM-INCOMPLETE-SECTION",
+        severity="high",
+        message="A related section is incomplete.",
+        source_path="workitems/WI-001/stages/plan/stage-result.md",
+        relation="related",
+        related_to=primary.code,
+    )
+
+    groups, advisories = group_repair_findings((primary, primary, related))
+
+    assert len(groups) == 1
+    assert groups[0].primary == primary
+    assert groups[0].occurrence_count == 2
+    assert groups[0].related == (related,)
+    assert advisories == ()
+
+
+def test_render_repair_brief_separates_primary_related_and_advisory() -> None:
+    primary = ValidationFinding(
+        code="SEM-PLACEHOLDER-CONTENT",
+        message="Placeholder remains.",
+        severity="medium",
+        location=ValidationIssueLocation(
+            workspace_relative_path="workitems/WI-001/stages/plan/plan.md",
+        ),
+    )
+    report_markdown = render_validator_report(findings=(primary,))
+    related = ValidatorReportFinding(
+        code="SEM-INCOMPLETE-SECTION",
+        severity="high",
+        message="A related section is incomplete.",
+        source_path="workitems/WI-001/stages/plan/stage-result.md",
+        relation="related",
+        related_to=primary.code,
+    )
+    advisory = ValidatorReportFinding(
+        code="SEM-RISK-UNDERREPORT",
+        severity="low",
+        message="A non-blocking quality observation was retained.",
+        source_path="workitems/WI-001/stages/plan/plan.md",
+        relation="advisory",
+    )
+
+    repair_brief = render_repair_brief(
+        validator_report_markdown=report_markdown,
+        validator_report_path="validator-report.md",
+        prior_stage_artifacts=(),
+        stage_attempt_count=0,
+        max_repair_attempts=2,
+        related_findings=(related,),
+        advisory_findings=(advisory,),
+    )
+
+    assert "## Primary corrections" in repair_brief
+    assert "## Related corrections" in repair_brief
+    assert "## Advisory observations" in repair_brief
+    assert "Update `workitems/WI-001/stages/plan/plan.md`" in repair_brief
+    assert "Collapsed into [`SEM-PLACEHOLDER-CONTENT`]" in repair_brief
+    assert "`workitems/WI-001/stages/plan/stage-result.md`" in repair_brief
+    assert "advisory only; does not request repair" in repair_brief
+    assert "Repair required for progression: `yes`." in repair_brief
+
+
+def test_render_repair_brief_with_only_advisory_observations_does_not_request_repair() -> None:
+    advisory = ValidationFinding(
+        code="SEM-RISK-UNDERREPORT",
+        message="A non-blocking quality observation was retained.",
+        severity="low",
+        location=ValidationIssueLocation(workspace_relative_path="plan.md"),
+    )
+    report_markdown = render_validator_report(findings=(), advisory_findings=(advisory,))
+
+    repair_brief = render_repair_brief(
+        validator_report_markdown=report_markdown,
+        validator_report_path="validator-report.md",
+        prior_stage_artifacts=(),
+        stage_attempt_count=0,
+        max_repair_attempts=2,
+    )
+
+    assert "`SEM-RISK-UNDERREPORT`" in repair_brief
+    assert "advisory only; does not request repair" in repair_brief
+    assert "Repair required for progression: `no`." in repair_brief
+    assert "Update `plan.md`" not in repair_brief
 
 
 def test_render_repair_brief_adds_actionable_list_format_hint() -> None:

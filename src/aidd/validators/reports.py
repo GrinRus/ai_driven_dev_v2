@@ -52,8 +52,13 @@ def _collapse_duplicate_findings(
     return tuple(rendered)
 
 
-def render_validator_report(findings: Iterable[ValidationFinding]) -> str:
+def render_validator_report(
+    findings: Iterable[ValidationFinding],
+    *,
+    advisory_findings: Iterable[ValidationFinding] = (),
+) -> str:
     rendered_findings = _collapse_duplicate_findings(findings)
+    rendered_advisories = _collapse_duplicate_findings(advisory_findings)
     findings_list = [rendered.finding for rendered in rendered_findings]
     occurrence_count = sum(rendered.occurrence_count for rendered in rendered_findings)
     finding_sections = (
@@ -134,6 +139,24 @@ def render_validator_report(findings: Iterable[ValidationFinding]) -> str:
             )
         lines.append("")
 
+    lines.extend(["## Advisory observations", ""])
+    if not rendered_advisories:
+        lines.extend(["- none", ""])
+    else:
+        for rendered in rendered_advisories:
+            finding = rendered.finding
+            _classify_bucket(finding.code)
+            repeat_note = (
+                f" (repeated {rendered.occurrence_count} times)"
+                if rendered.occurrence_count > 1
+                else ""
+            )
+            lines.append(
+                f"- `{finding.code}` (`{finding.severity}`) in {_format_location(finding)}: "
+                f"{finding.message}{repeat_note}"
+            )
+        lines.append("")
+
     lines.extend(
         [
             "## Result",
@@ -153,5 +176,13 @@ def write_report(path: Path, text: str) -> None:
     path.write_text(text, encoding="utf-8")
 
 
-def write_validator_report(path: Path, findings: Iterable[ValidationFinding]) -> None:
-    write_report(path=path, text=render_validator_report(findings))
+def write_validator_report(
+    path: Path,
+    findings: Iterable[ValidationFinding],
+    *,
+    advisory_findings: Iterable[ValidationFinding] = (),
+) -> None:
+    write_report(
+        path=path,
+        text=render_validator_report(findings, advisory_findings=advisory_findings),
+    )
