@@ -34,15 +34,16 @@ The stage is complete only when verdict, recommendation, and evidence are cohere
 - contract of record:
   - `contracts/stages/qa.md`
 
-## Required outputs (always write)
+## Runtime-authored outputs (always write)
 
 - `qa-report.md`
-- `stage-result.md`
-- `validator-report.md`
+## AIDD-generated records (do not write)
 
-Treat `validator-report.md` as draft evidence: AIDD writes the canonical validator report after
-post-runtime validation. Treat `stage-result.md` as a truthful summary draft that AIDD may
-normalize if canonical validation proves the terminal status inconsistent.
+- `validator-report.md` is written canonically by AIDD after structural, semantic, and
+  cross-document validation.
+- `stage-result.md` is written canonically by AIDD from lifecycle state and validation outcome.
+- Runtime content must expose QA findings and evidence for reconciliation but must not create or edit
+  either terminal record as a completion target.
 
 ## Conditional outputs
 
@@ -221,17 +222,20 @@ acceptance id, and concrete evidence. Any `fail` or `not-verified` entry require
 12. Keep optional broader-check limitations as non-blocking notes when authored verification,
    review, and acceptance criteria are clean. Isolated optional broad-suite failures in unrelated
    environment-sensitive tests are not residual risks for the selected task.
-13. Keep `stage-result.md` and `validator-report.md` aligned with the final QA conclusion.
+13. Leave canonical `stage-result.md` and `validator-report.md` generation to AIDD; keep QA findings
+    and evidence aligned with the final conclusion for reconciliation.
 
 ## Common output skeleton discipline
 
-- Before writing `stage-result.md` or `validator-report.md`, use the exact common skeleton shown in `stage-brief.md`.
+- Do not write `stage-result.md` or `validator-report.md`; AIDD owns their canonical skeletons and
+  post-runtime publication.
 - Keep the required headings exactly as written; add stage-specific detail under those headings instead of renaming them.
 - If a required section has no findings or blockers, write exactly `- none` rather than leaving it empty.
 - If no clarification is needed and you create `questions.md` or `answers.md`, write exactly
   `# Questions\n\n- none\n` or `# Answers\n\n- none\n`; do not write prose such as
   `No questions required.` as a bullet.
-- Keep `stage-result.md` status, `validator-report.md` verdict, questions, blockers, and next actions mutually consistent.
+- Keep QA findings, questions, and evidence truthful; AIDD reconciles status, verdict, blockers, and
+  next actions into canonical records.
 
 ## Completion checklist
 

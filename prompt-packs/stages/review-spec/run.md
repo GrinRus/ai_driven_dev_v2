@@ -23,15 +23,16 @@ sign-off state is coherent with required changes.
 - contract of record:
   - `contracts/stages/review-spec.md`
 
-## Required outputs (always write)
+## Runtime-authored outputs (always write)
 
 - `review-spec-report.md`
-- `stage-result.md`
-- `validator-report.md`
+## AIDD-generated records (do not write)
 
-Treat `validator-report.md` as draft evidence: AIDD writes the canonical validator report after
-post-runtime validation. Treat `stage-result.md` as a truthful summary draft that AIDD may
-normalize if canonical validation proves the terminal status inconsistent.
+- `validator-report.md` is written canonically by AIDD after structural, semantic, and
+  cross-document validation.
+- `stage-result.md` is written canonically by AIDD from lifecycle state and validation outcome.
+- Runtime content must expose review findings and evidence for reconciliation but must not create or
+  edit either terminal record as a completion target.
 
 `review-spec-report.md` must use these exact top-level section headings:
 
@@ -111,18 +112,20 @@ containing only `ready-with-conditions`.
 5. Map recommended actions to issue ids/severity where possible so remediation order is clear.
 6. If contradictory constraints, missing decision authority, or missing acceptance policy block
    sign-off, raise a `[blocking]` question instead of forcing approval status.
-7. Update `validator-report.md` and `stage-result.md` so verdict, blockers, and next actions remain
-   consistent with report conclusions.
+7. Leave canonical `validator-report.md` and `stage-result.md` generation to AIDD; expose review
+   findings and decision evidence needed for reconciliation.
    When review and validation evidence support success, `stage-result.md` `Next actions` must
    point to `tasklist` as the immediate downstream stage. Do not tell the operator to proceed to
    implementation, review, or QA before the canonical `tasklist` stage has completed successfully.
 
 ## Common output skeleton discipline
 
-- Before writing `stage-result.md` or `validator-report.md`, use the exact common skeleton shown in `stage-brief.md`.
+- Do not write `stage-result.md` or `validator-report.md`; AIDD owns their canonical skeletons and
+  post-runtime publication.
 - Keep the required headings exactly as written; add stage-specific detail under those headings instead of renaming them.
 - If a required section has no findings or blockers, write exactly `- none` rather than leaving it empty.
-- Keep `stage-result.md` status, `validator-report.md` verdict, questions, blockers, and next actions mutually consistent.
+- Keep review findings, questions, and decision evidence truthful; AIDD reconciles status, verdict,
+  blockers, and next actions into canonical records.
 - Keep `stage-result.md` next-action copy flow-aware: `review-spec` hands off to `tasklist`, never
   directly to `implement`, `review`, or `qa`.
 

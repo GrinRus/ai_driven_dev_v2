@@ -26,15 +26,16 @@ consistent across `implementation-report.md`, `validator-report.md`, and `stage-
 - contract of record:
   - `contracts/stages/implement.md`
 
-## Required outputs (always write)
+## Runtime-authored outputs (always write)
 
 - `implementation-report.md`
-- `stage-result.md`
-- `validator-report.md`
+## AIDD-generated records (do not write)
 
-Treat `validator-report.md` as draft evidence: AIDD writes the canonical validator report after
-post-runtime validation. Treat `stage-result.md` as a truthful summary draft that AIDD may
-normalize if canonical validation proves the terminal status inconsistent.
+- `validator-report.md` is written canonically by AIDD after structural, semantic, and
+  cross-document validation.
+- `stage-result.md` is written canonically by AIDD from lifecycle state and validation outcome.
+- Runtime content must expose implementation evidence for reconciliation but must not create or edit
+  either terminal record as a completion target.
 
 ## Conditional outputs
 
@@ -191,23 +192,25 @@ normalize if canonical validation proves the terminal status inconsistent.
    until a later stage, record it as `not-run: future-stage artifact` during `implement` rather than
    executing it as an expected failure.
    For skipped checks, write `not-run: <reason>` in the verification note.
-7. Write or update `implementation-report.md`, `stage-result.md`, and `validator-report.md` before
-   optional broad-suite verification or exploratory debugging. A truthful failed verification report
-   is better than timing out without stage artifacts.
+7. Write or update `implementation-report.md` and expose its evidence before optional broad-suite
+   verification or exploratory debugging. A truthful failed verification report is better than
+   timing out without stage artifacts; AIDD owns the canonical terminal records.
 8. If required inputs are missing or provided scope/task constraints conflict, raise a `[blocking]`
    question instead of inventing assumptions.
-9. Update `validator-report.md` and `stage-result.md` so readiness, blockers, and next actions remain
-   consistent with implementation evidence.
+9. Leave canonical `validator-report.md` and `stage-result.md` generation to AIDD; keep
+   implementation evidence, blockers, and next-action recommendations truthful for reconciliation.
    When implementation and validation evidence support success, `stage-result.md` `Next actions`
    must point to `review` as the immediate downstream stage. Do not tell the operator to proceed
    directly to `qa`; QA can only run after the canonical `review` stage has completed successfully.
 
 ## Common output skeleton discipline
 
-- Before writing `stage-result.md` or `validator-report.md`, use the exact common skeleton shown in `stage-brief.md`.
+- Do not write `stage-result.md` or `validator-report.md`; AIDD owns their canonical skeletons and
+  post-runtime publication.
 - Keep the required headings exactly as written; add stage-specific detail under those headings instead of renaming them.
 - If a required section has no findings or blockers, write exactly `- none` rather than leaving it empty.
-- Keep `stage-result.md` status, `validator-report.md` verdict, questions, blockers, and next actions mutually consistent.
+- Keep implementation evidence, questions, and blockers truthful; AIDD reconciles status, verdict,
+  and next actions into canonical records.
 - Keep `stage-result.md` next-action copy flow-aware: `implement` hands off to `review`, never
   directly to `qa`.
 
