@@ -350,7 +350,7 @@ def render_validator_report_source(
             "## Result",
             "",
             f"- Verdict: `{verdict}`",
-            "- Repair required for progression: no",
+            "- Repair required for progression: yes",
             "",
         )
     )

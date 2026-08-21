@@ -72,6 +72,23 @@ def test_render_validator_report_groups_findings_and_renders_location() -> None:
     assert "- Repair required for progression: yes" in report
 
 
+def test_render_validator_report_marks_low_findings_as_progression_blocking() -> None:
+    report = render_validator_report(
+        findings=(
+            ValidationFinding(
+                code="SEM-PLACEHOLDER-CONTENT",
+                message="A canonical placeholder remains.",
+                severity="low",
+                location=ValidationIssueLocation(workspace_relative_path="plan.md"),
+            ),
+        )
+    )
+
+    assert "- Blocking issues: yes" in report
+    assert "- Verdict: `fail`" in report
+    assert "- Repair required for progression: yes" in report
+
+
 def test_render_validator_report_collapses_exact_duplicate_findings() -> None:
     repeated = ValidationFinding(
         code="SEM-UNVERIFIABLE-CHECK-CLAIM",

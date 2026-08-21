@@ -347,10 +347,11 @@ def render_repair_brief(
         raise ValueError("Max repair attempts must be non-negative.")
 
     findings = parse_validator_report_findings(validator_report_markdown=validator_report_markdown)
-    mandatory_fixes = tuple(
-        finding for finding in findings if finding.severity in {"critical", "high"}
-    )
-    optional_fixes = tuple(finding for finding in findings if finding.severity in {"medium", "low"})
+    # Validator findings are progression-required regardless of severity.  The
+    # optional section is intentionally empty until an explicit non-verdict
+    # advisory channel is added; severity must never imply advisory status.
+    mandatory_fixes = findings
+    optional_fixes: tuple[ValidatorReportFinding, ...] = ()
 
     next_attempt_number = stage_attempt_count + 1
     max_attempt_number = max_repair_attempts + 1
