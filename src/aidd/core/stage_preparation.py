@@ -15,9 +15,9 @@ from aidd.core.stage_paths import workspace_relative_paths
 from aidd.core.stage_registry import (
     DEFAULT_STAGE_CONTRACTS_ROOT,
     load_stage_manifest,
-    resolve_expected_output_documents,
     resolve_optional_input_documents,
     resolve_required_input_documents,
+    resolve_stage_output_registry,
 )
 from aidd.core.state_machine import StageState
 from aidd.validators.protocol import render_validator_report_skeleton
@@ -151,6 +151,10 @@ def render_stage_brief(
     purpose: str | None,
     expected_input_bundle: tuple[str, ...],
     expected_output_documents: tuple[str, ...],
+    runtime_output_documents: tuple[str, ...] | None = None,
+    aidd_generated_documents: tuple[str, ...] = (),
+    interview_control_documents: tuple[str, ...] = (),
+    published_output_documents: tuple[str, ...] | None = None,
     project_set: ResolvedProjectSet | None = None,
     project_set_context_path: str | None = None,
     contracts_root: Path = DEFAULT_STAGE_CONTRACTS_ROOT,
@@ -186,8 +190,58 @@ def render_stage_brief(
                 ),
             ]
         )
-    lines.extend(["", "# Expected output documents", ""])
-    lines.extend(f"- `{path}`" for path in expected_output_documents)
+    compatibility_view = published_output_documents or expected_output_documents
+    runtime_documents = runtime_output_documents or expected_output_documents
+    lines.extend(
+        [
+            "",
+            "# Runtime write targets",
+            "",
+            (
+                "Only these substantive documents are runtime completion targets. AIDD owns the "
+                "canonical workflow and control records below."
+            ),
+        ]
+    )
+    lines.extend(f"- `{path}`" for path in runtime_documents)
+    lines.extend(["", "# AIDD-generated records", ""])
+    if aidd_generated_documents:
+        lines.extend(
+            [
+                (
+                    "Do not create or edit these documents; AIDD writes them after runtime content "
+                    "validation."
+                ),
+                "",
+            ]
+        )
+        lines.extend(f"- `{path}`" for path in aidd_generated_documents)
+    else:
+        lines.append("- none")
+    lines.extend(["", "# Interview/control documents", ""])
+    if interview_control_documents:
+        lines.extend(
+            [
+                (
+                    "Use only the explicitly described controlled interview or intervention path; "
+                    "never treat these records as substantive stage output."
+                ),
+                "",
+            ]
+        )
+        lines.extend(f"- `{path}`" for path in interview_control_documents)
+    else:
+        lines.append("- none")
+    lines.extend(["", "# Published documents", ""])
+    lines.extend(f"- `{path}`" for path in compatibility_view)
+    lines.extend(
+        [
+            "",
+            "# Expected output documents (published compatibility view)",
+            "",
+        ]
+    )
+    lines.extend(f"- `{path}`" for path in compatibility_view)
     lines.extend(
         [
             "",
@@ -205,7 +259,7 @@ def render_stage_brief(
     )
     _append_output_skeletons(
         lines=lines,
-        expected_output_documents=expected_output_documents,
+        expected_output_documents=runtime_documents,
         contracts_root=contracts_root,
     )
     lines.append("")
@@ -241,12 +295,13 @@ def prepare_stage_bundle(
         if path.exists()
     )
     expected_inputs = (*expected_inputs, *optional_inputs)
-    expected_outputs = resolve_expected_output_documents(
+    output_registry = resolve_stage_output_registry(
         stage=stage,
         work_item=work_item,
         workspace_root=workspace_root,
         contracts_root=contracts_root,
     )
+    expected_outputs = output_registry.published
     if include_existing_stage_outputs:
         existing_outputs = tuple(path for path in expected_outputs if path.exists())
         expected_inputs = (*expected_inputs, *existing_outputs)
@@ -275,6 +330,18 @@ def prepare_stage_bundle(
         purpose=manifest.purpose,
         expected_input_bundle=workspace_relative_paths(workspace_root, expected_inputs),
         expected_output_documents=workspace_relative_paths(workspace_root, expected_outputs),
+        runtime_output_documents=workspace_relative_paths(
+            workspace_root, output_registry.runtime_authored
+        ),
+        aidd_generated_documents=workspace_relative_paths(
+            workspace_root, output_registry.aidd_generated
+        ),
+        interview_control_documents=workspace_relative_paths(
+            workspace_root, output_registry.interview_control
+        ),
+        published_output_documents=workspace_relative_paths(
+            workspace_root, output_registry.published
+        ),
         project_set=project_set,
         project_set_context_path=(
             None

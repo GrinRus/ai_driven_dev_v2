@@ -82,6 +82,23 @@ def test_stage_run_prompts_make_interview_syntax_strict(stage: str) -> None:
     )
 
 
+@pytest.mark.parametrize("stage", STAGES)
+def test_stage_run_prompts_assign_terminal_records_to_aidd(stage: str) -> None:
+    run_prompt = (Path("prompt-packs") / "stages" / stage / "run.md").read_text(
+        encoding="utf-8"
+    )
+
+    assert "## Runtime-authored outputs (always write)" in run_prompt
+    assert "## AIDD-generated records (do not write)" in run_prompt
+    assert "Do not write `stage-result.md` or `validator-report.md`" in run_prompt
+    assert "validator-report.md` is written canonically by AIDD" in run_prompt
+    assert "AIDD owns their canonical" in run_prompt
+    assert "## Required outputs (always write)" not in run_prompt
+    for verb in ("Write", "Update"):
+        assert f"{verb} `stage-result.md`" not in run_prompt
+        assert f"{verb} `validator-report.md`" not in run_prompt
+
+
 def test_interview_document_contracts_and_native_prompt_forbid_marker_colon() -> None:
     questions_contract = Path("contracts/documents/questions.md").read_text(
         encoding="utf-8"
@@ -431,14 +448,13 @@ def test_stage_result_prompts_forbid_stale_placeholder_append() -> None:
         encoding="utf-8"
     )
 
-    for text in (
-        stage_result_contract,
-        stage_preparation,
-        research_prompt,
-        tasklist_prompt,
-    ):
+    for text in (stage_result_contract, stage_preparation):
         assert "Stage not run yet" in text
         assert "placeholder" in text.lower()
+
+    for text in (research_prompt, tasklist_prompt):
+        assert "Do not write `stage-result.md` or `validator-report.md`" in text
+        assert "placeholder removal" in text
 
 
 def test_js_ts_helper_internal_claims_require_export_map_evidence() -> None:
@@ -669,10 +685,10 @@ def test_tasklist_prompts_are_live_installed_workspace_safe() -> None:
     for text in (run_prompt, repair_prompt):
         assert "stage-brief.md" in text
         assert "Repository-local `contracts/...` files may be absent" in text
-        assert "Do not end the turn after analysis-only reads" in text
+    assert "Do not end the turn after analysis-only reads" in repair_prompt
 
     assert "Avoid broad commands such as `rg --files .aidd`" in run_prompt
-    assert "make the first file-changing action create or replace all" in run_prompt
+    assert "first file-changing action" in run_prompt
     assert "the first file-changing action must" in repair_prompt
 
 

@@ -23,7 +23,7 @@ question state is visible.
 - contract of record:
   - `contracts/stages/idea.md`
 
-## Required outputs (always write)
+## Runtime-authored outputs (always write)
 
 - `idea-brief.md`
   - include complete sections:
@@ -31,15 +31,13 @@ question state is visible.
     - `Desired outcome`
     - `Constraints` as Markdown bullet items, or exactly `- none`
     - `Open questions` as Markdown bullet items, or exactly `- none`
-- `validator-report.md`
-  - include structural, semantic, and cross-document findings;
-  - end with terminal verdict (`pass` or `fail`).
-- `stage-result.md`
-  - include attempt summary, status, produced outputs, validation summary, blockers, and next actions.
+## AIDD-generated records (do not write)
 
-Treat `validator-report.md` as draft evidence: AIDD writes the canonical validator report after
-post-runtime validation. Treat `stage-result.md` as a truthful summary draft that AIDD may
-normalize if canonical validation proves the terminal status inconsistent.
+- `validator-report.md` is written canonically by AIDD after structural, semantic, and
+  cross-document validation.
+- `stage-result.md` is written canonically by AIDD from lifecycle state and validation outcome.
+- Runtime content must expose evidence for those records but must not create or edit either
+  terminal record as a completion target.
 
 ## Conditional outputs
 
@@ -87,16 +85,17 @@ normalize if canonical validation proves the terminal status inconsistent.
    release, those questions are `[blocking]`. Do not downgrade that obligation to `[non-blocking]`
    just because repository conventions could support a plausible default policy.
 4. Treat unresolved `[blocking]` questions as stage blockers; do not mark the stage as `succeeded`.
-5. Write `validator-report.md` so its findings and verdict match the actual artifact state.
-6. Write `stage-result.md` so status and blockers are consistent with both `validator-report.md`
-   and question/answer artifacts.
+5. Leave canonical `validator-report.md` and `stage-result.md` generation to AIDD; ensure the
+   runtime-authored content exposes enough evidence for post-runtime reconciliation.
 
 ## Common output skeleton discipline
 
-- Before writing `stage-result.md` or `validator-report.md`, use the exact common skeleton shown in `stage-brief.md`.
+- Do not write `stage-result.md` or `validator-report.md`; AIDD owns their canonical skeletons and
+  post-runtime publication.
 - Keep the required headings exactly as written; add stage-specific detail under those headings instead of renaming them.
 - If a required section has no findings or blockers, write exactly `- none` rather than leaving it empty.
-- Keep `stage-result.md` status, `validator-report.md` verdict, questions, blockers, and next actions mutually consistent.
+- Keep questions and answers truthful; AIDD reconciles their lifecycle status, validator verdict,
+  blockers, and next actions into canonical records.
 
 ## Completion checklist
 

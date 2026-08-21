@@ -1,6 +1,11 @@
 from __future__ import annotations
 
-from aidd.core.stage_preparation import render_stage_brief
+from pathlib import Path
+
+import pytest
+
+from aidd.core.stage_preparation import prepare_stage_bundle, render_stage_brief
+from aidd.core.stages import STAGES
 from aidd.validators.protocol import VALIDATOR_REPORT_FIELDS
 
 
@@ -19,3 +24,26 @@ def test_stage_brief_uses_registry_owned_validator_report_skeleton() -> None:
     assert "## Structural checks\n\n- none" in stage_brief
     assert "## Semantic checks\n\n- none" in stage_brief
     assert "## Cross-document checks\n\n- none" in stage_brief
+
+
+@pytest.mark.parametrize("stage", STAGES)
+def test_prepared_stage_brief_separates_runtime_and_aidd_owned_documents(
+    tmp_path: Path, stage: str
+) -> None:
+    bundle = prepare_stage_bundle(
+        workspace_root=tmp_path / ".aidd",
+        work_item="WI-001",
+        stage=stage,
+    )
+    content = bundle.stage_brief_markdown
+
+    assert "# Runtime write targets" in content
+    assert "# AIDD-generated records" in content
+    assert "# Interview/control documents" in content
+    assert "# Published documents" in content
+    assert "# Expected output documents (published compatibility view)" in content
+    assert "## `stage-result.md`" not in content
+    assert "## `validator-report.md`" not in content
+    assert "`workitems/WI-001/stages/" in content
+    assert "stage-result.md" in content
+    assert "validator-report.md" in content

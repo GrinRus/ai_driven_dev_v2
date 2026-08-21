@@ -28,15 +28,16 @@ notes, and a concrete verification signal.
   - `stage-brief.md` required output skeletons
   - `contracts/stages/tasklist.md` only when it is present in the current checkout
 
-## Required outputs (always write)
+## Runtime-authored outputs (always write)
 
 - `tasklist.md`
-- `stage-result.md`
-- `validator-report.md`
+## AIDD-generated records (do not write)
 
-Treat `validator-report.md` as draft evidence: AIDD writes the canonical validator report after
-post-runtime validation. Treat `stage-result.md` as a truthful summary draft that AIDD may
-normalize if canonical validation proves the terminal status inconsistent.
+- `validator-report.md` is written canonically by AIDD after structural, semantic, and
+  cross-document validation.
+- `stage-result.md` is written canonically by AIDD from lifecycle state and validation outcome.
+- Runtime content must expose tasklist and evidence details for reconciliation but must not create or
+  edit either terminal record as a completion target.
 
 ## System-owned control artifacts
 
@@ -63,9 +64,9 @@ normalize if canonical validation proves the terminal status inconsistent.
 - Limit pre-write inspection to the required inputs, the optional context files needed for task
   decomposition, and `stage-brief.md`. Avoid broad commands such as `rg --files .aidd` before the
   required outputs exist.
-- After reading the required inputs, make the first file-changing action create or replace all
-  required stage documents: `tasklist.md`, `stage-result.md`, `validator-report.md`, `questions.md`,
-  and `answers.md`. Do not end the turn after analysis-only reads.
+- After reading the required inputs, make the first file-changing action create or replace the
+  runtime-authored documents: `tasklist.md`, `questions.md`, and `answers.md`. Read canonical
+  `stage-result.md` and `validator-report.md` as AIDD-owned records; do not create or edit them.
 
 ## Decomposition discipline
 
@@ -140,8 +141,8 @@ normalize if canonical validation proves the terminal status inconsistent.
    task notes before calling the path private or internal-only.
 7. If `context/allowed-write-scope.md` exists, compare every concrete `In scope` prefix against it
    before writing success; a similar string prefix such as `src2` is not inside `src`.
-8. Update `stage-result.md` and `validator-report.md` so readiness, blockers, and next actions are
-   consistent with tasklist content.
+8. Leave canonical `stage-result.md` and `validator-report.md` generation to AIDD; expose tasklist,
+   readiness, blocker, and question evidence needed for reconciliation.
    When tasklist and validation evidence support success, `stage-result.md` `Next actions` must
    name the exact immediate canonical downstream stage id: `implement`. Do not write only generic
    wording such as `implementation` or `implementation stage`.
@@ -151,12 +152,12 @@ normalize if canonical validation proves the terminal status inconsistent.
 
 ## Common output skeleton discipline
 
-- Before writing `stage-result.md` or `validator-report.md`, use the exact common skeleton shown in `stage-brief.md`.
-- Replace the entire bootstrap placeholder when writing `stage-result.md`; do not leave
-  `# Stage result` / `Stage not run yet.` above the real `# Stage Result` document.
+- Do not write `stage-result.md` or `validator-report.md`; AIDD owns their canonical skeletons,
+  placeholder removal, and publication.
 - Keep the required headings exactly as written; add stage-specific detail under those headings instead of renaming them.
 - If a required section has no findings or blockers, write exactly `- none` rather than leaving it empty.
-- Keep `stage-result.md` status, `validator-report.md` verdict, questions, blockers, and next actions mutually consistent.
+- Keep tasklist and interview evidence truthful; AIDD reconciles status, verdict, blockers, and next
+  actions into canonical records.
 
 ## Completion checklist
 

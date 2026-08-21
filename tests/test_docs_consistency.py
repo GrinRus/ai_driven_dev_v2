@@ -181,8 +181,10 @@ def test_artifact_ownership_docs_and_prompt_packs_are_consistent() -> None:
         assert "canonical only after AIDD writes the post-runtime validation report" in (
             stage_contract
         )
-        assert "Treat `validator-report.md` as draft evidence" in run_prompt
-        assert "Treat `stage-result.md` as a truthful summary draft" in run_prompt
+        assert "## AIDD-generated records (do not write)" in run_prompt
+        assert "validator-report.md` is written canonically by AIDD" in run_prompt
+        assert "stage-result.md` is written canonically by AIDD" in run_prompt
+        assert "Do not write `stage-result.md` or `validator-report.md`" in run_prompt
 
 
 def test_validator_report_contract_matches_protocol_registry() -> None:
