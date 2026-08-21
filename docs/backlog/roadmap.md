@@ -14785,13 +14785,17 @@ Local tasks:
     both interview document contracts, added canonical/safe/duplicate/ambiguous/omitted worked
     examples, and added focused parser/persistence tests. Focused interview, contract, docs,
     planning, Ruff, mypy, full CI, deterministic scenarios, packaged UI browser, and build passed.
-- `W43-E2-S1-T2` (next) Ingest structured and Markdown question candidates tolerantly.
+- `W43-E2-S1-T2` (done) Ingest structured and Markdown question candidates tolerantly.
   - Scope: normalize marker-adjacent colons, equivalent Markdown list markers, nested
     continuation text, and matching QIDs; preserve the raw candidate and reject semantic
     ambiguity without overwriting the ledger.
   - Verification: a table-driven parser matrix round-trips valid variants to canonical Markdown
     and leaves the prior ledger byte-identical for rejected candidates.
-- `W43-E2-S1-T3` (soon) Merge interview state safely after every runtime attempt.
+  - Completion: PR #261 (merge `75a14f59`) added tolerant question/answer candidate parsers,
+    raw rejected-candidate details, safe continuation normalization, and persistence coverage;
+    focused interview tests, Ruff, mypy, full CI, deterministic scenarios, packaged UI browser,
+    and build passed.
+- `W43-E2-S1-T3` (next) Merge interview state safely after every runtime attempt.
   - Scope: snapshot questions and answers before execution, merge valid candidates by QID,
     preserve omitted unresolved questions, restore operator answers, and expose rejected candidate
     evidence to the attempt index.
@@ -14814,7 +14818,7 @@ Dependencies: `W43-E2-S1`; frontend task additionally depends on `W42-E5-S1`.
 
 Local tasks:
 
-- `W43-E2-S2-T1` (planned) Add `resume` as a non-repair attempt mode.
+- `W43-E2-S2-T1` (soon) Add `resume` as a non-repair attempt mode.
   - Scope: persist and render `initial`, `repair`, `resume`, and `intervention` distinctly; count
     only validation-triggered repair attempts against the automatic budget and read legacy
     manifests compatibly.

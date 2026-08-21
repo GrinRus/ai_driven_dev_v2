@@ -7,12 +7,12 @@ slice, and local task.
 
 ## Next
 
-- `W43-E2-S1-T2` — Ingest structured and Markdown question candidates tolerantly.
+- `W43-E2-S1-T3` — Merge interview state safely after every runtime attempt.
 
 
 ## Soon
 
-- `W43-E2-S1-T3` — Merge interview state safely after every runtime attempt.
+- `W43-E2-S2-T1` — Add `resume` as a non-repair attempt mode.
 
 ## Parking lot
 
@@ -38,6 +38,13 @@ slice, and local task.
   queue-restoration policy in `docs/backlog/roadmap.md` (`W8-E3-S1`).
 
 ## Current reconciliation
+
+- `2026-08-21` PR #261 (merge `75a14f59`) completed `W43-E2-S1-T2`: runtime question and
+  answer candidates now accept only meaning-preserving Markdown normalization, retain raw
+  rejected candidates, and fail closed on duplicate or ambiguous QIDs. Focused interview and
+  contract tests, Ruff, mypy, full CI, deterministic scenarios, packaged UI browser, and build
+  passed. `W43-E2-S1-T3` is now `Next`; `W43-E2-S2-T1` is `Soon`. Human usability, Claude,
+  cross-runtime, and Wave 36 work remain parked.
 
 - `2026-08-21` PR #259 (merge `0dd3e22e`) completed `W43-E2-S1-T1`: interview contracts now
   define exact-QID merge, operator-owned answers, safe presentation normalization, raw rejected
