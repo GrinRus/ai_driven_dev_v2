@@ -14713,12 +14713,18 @@ Local tasks:
     Focused stage-terminal/repair/stage-runner tests (127), Ruff, mypy, full CI, deterministic
     scenarios, packaged UI browser, and build passed. `W43-E1-S3-T3` is now the next
     dependency-ready task.
-- `W43-E1-S3-T3` (next) Enforce workflow-record ownership at every mutation boundary.
+- `W43-E1-S3-T3` (done) Enforce workflow-record ownership at every mutation boundary.
   - Scope: exclude AIDD records from misplaced runtime promotion and operator intervention
     targets, include canonical records during publication and indexing, and retain unexpected
     runtime copies only under attempt evidence.
   - Verification: discovery, publication, intervention, and artifact-index tests reject a runtime
     or operator overwrite while publishing the AIDD-owned records once.
+  - Completion: PR #255 (merge `83e3a7ce`) made runtime completion targets and operator
+    intervention targets runtime-owned only, retained unexpected stage-result, validator-report,
+    and repair-brief drafts under attempt evidence, and classified those drafts as runtime
+    evidence in the operator graph. Canonical records remain published and indexed exactly once.
+    Focused ownership/stage-runner/intervention/frontend tests (209), docs/planning tests (50),
+    Ruff, mypy, full CI, deterministic scenarios, packaged UI browser, and build passed.
 
 #### Slice W43-E1-S4 — adapter document-completion alignment (`planned`)
 
@@ -14734,7 +14740,7 @@ Dependencies: `W43-E1-S2`.
 
 Local tasks:
 
-- `W43-E1-S4-T1` (planned) Align maintained adapter completion with runtime-authored outputs.
+- `W43-E1-S4-T1` (next) Align maintained adapter completion with runtime-authored outputs.
   - Scope: update generic CLI, Qwen, and OpenCode completion/settling behavior to wait only for
     runtime-content documents; retain adapter success as process evidence, not validation pass,
     and keep all provider-specific detection inside adapters.
@@ -15101,6 +15107,16 @@ Local tasks:
     runtimes and retains explicit environment-blocked verdicts when prerequisites are absent.
 
 Wave 43 reconciliation notes:
+
+- `2026-08-21` `W43-E1-S3-T3` is complete in PR #255 (merge `83e3a7ce`). Runtime completion
+  and operator intervention now accept only substantive runtime-owned documents; AIDD-owned
+  stage-result, validator-report, repair-brief, stage-brief, and publication records cannot be
+  overwritten through those paths. Unexpected runtime drafts are retained under attempt evidence,
+  indexed with stable keys, and shown as runtime evidence, while canonical records are published
+  exactly once. Focused ownership/stage-runner/intervention/frontend tests (209), docs/planning
+  tests (50), Ruff, mypy, full CI, deterministic scenarios, packaged UI browser, and build passed.
+  `W43-E1-S4-T1` is now Next; human usability, Claude, cross-runtime, and Wave 36 work remain
+  deferred.
 
 - `2026-08-21` `W43-E1-S3-T2` is complete in PR #253 (merge `e2899537`). AIDD now renders
   stage-result records from canonical lifecycle state instead of trusting runtime drafts, with

@@ -7,7 +7,7 @@ slice, and local task.
 
 ## Next
 
-- `W43-E1-S3-T3` — Enforce workflow-record ownership at every mutation boundary.
+- `W43-E1-S4-T1` — Align maintained adapter completion with runtime-authored outputs.
 
 
 ## Soon
@@ -37,6 +37,15 @@ slice, and local task.
   queue-restoration policy in `docs/backlog/roadmap.md` (`W8-E3-S1`).
 
 ## Current reconciliation
+
+- `2026-08-21` PR #255 (merge `83e3a7ce`) completed `W43-E1-S3-T3`: runtime completion and
+  operator intervention now accept only substantive runtime-owned documents; unexpected
+  stage-result, validator-report, and repair-brief drafts are retained under attempt evidence,
+  indexed with stable keys, and classified as runtime evidence, while canonical records are
+  published once. Focused ownership/stage-runner/intervention/frontend tests (209), docs/planning
+  tests (50), Ruff, mypy, full CI, deterministic scenarios, packaged UI browser, and build passed.
+  `W43-E1-S4-T1` is now `Next`; human usability, Claude, cross-runtime, and Wave 36 work remain
+  parked.
 
 - `2026-08-21` PR #253 (merge `e2899537`) completed `W43-E1-S3-T2`: stage-result records now
   come from canonical lifecycle state, preserve attempt/repair and project-set evidence, expose
