@@ -14399,7 +14399,7 @@ Local tasks:
   - Verification: focused harness tests cover a server that remains reachable after the launcher
     reports readiness, launcher exit before readiness, and terminal `/api/tasks` unavailability;
     the clean Codex `AIDD-LIVE-007` lane is rerun after this task merges.
-- `W42-E7-S3-T5` (next) Make the installed Task Workspace checkpoint use a durable public UI
+- `W42-E7-S3-T5` (done) Make the installed Task Workspace checkpoint use a durable public UI
   server lifecycle rather than a probe-time process that can disappear after root readiness.
   - Dependencies: `W42-E7-S3-T4`; this follow-up is required because the next clean Codex rerun
     still received connection refusal from all bounded `/api/tasks` attempts even though direct
@@ -14410,8 +14410,27 @@ Local tasks:
   - Verification: focused harness tests reproduce the observed root-ready then connection-refused
     sequence, prove a durable `/api/tasks` read through the installed public surface, and preserve
     terminal diagnostics; the clean Codex `AIDD-LIVE-007` lane is rerun after this task merges.
+- `W42-E7-S3-T6` (next) Parse authored task dependencies from structured tasklist clauses without
+  treating explanatory prose as task IDs.
+  - Dependencies: `W42-E7-S3-T5`; this follow-up is required because the first clean rerun after
+    T5 successfully read `/api/tasks` but the checkpoint parser reported dependency drift for every
+    task after including the rest of each `Dependencies:` sentence as authored dependencies.
+  - Scope: make tasklist dependency extraction preserve only declared task identifiers while
+    retaining fail-closed behavior for malformed, missing, or ambiguous dependency clauses and
+    preserving the public projection comparison.
+  - Verification: focused checkpoint/parser tests cover concise clauses, explanatory prose,
+    multiple dependencies, malformed clauses, and public-projection drift; the clean Codex
+    `AIDD-LIVE-007` lane is rerun after this task merges.
 
 Wave 42 reconciliation notes:
+
+- `2026-08-20` The clean Codex run `eval-live-007-codex-20260820T233552Z` reached the installed
+  `/api/tasks` public projection successfully after T5, with HTTP 200 and retained task identity,
+  hash, and dependency data. Checkpoint reconciliation then failed closed on
+  `dependency-drift:T1..T4`: authored dependency parsing included explanatory prose from each
+  `Dependencies:` sentence, while the public graph contained the correct task IDs. T5 is complete
+  in PR #233 (merge `fd6922b7`); `W42-E7-S3-T6` is added and promoted as the next bounded parser
+  remediation. No Wave 42 exit claim is made.
 
 - `2026-08-20` The clean Codex rerun `eval-live-007-codex-20260820T222927Z` passed install,
   `idea -> tasklist` stage validation, manual quality audits, target verification, and public UI
