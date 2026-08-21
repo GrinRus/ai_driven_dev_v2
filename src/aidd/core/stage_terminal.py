@@ -182,6 +182,56 @@ def _canonical_default_next_actions(
     return ("- Review the canonical validator report and prepare the next bounded repair attempt.",)
 
 
+def _project_set_evidence_lines(
+    *, workspace_root: Path | None, work_item: str
+) -> tuple[str, ...]:
+    if workspace_root is None:
+        return ()
+    context_path = (
+        workspace_root
+        / "workitems"
+        / work_item
+        / "context"
+        / "project-set.md"
+    )
+    if not context_path.exists():
+        return ()
+    try:
+        context_text = context_path.read_text(encoding="utf-8")
+    except OSError:
+        context_text = ""
+    projects = tuple(
+        (match.group(1), match.group(2))
+        for line in context_text.splitlines()
+        if (
+            match := re.match(
+                r"^\|\s*`([^`]+)`\s*\|\s*`([^`]+)`\s*\|", line.strip()
+            )
+        )
+    )
+    context_relative = _workspace_relative_path(workspace_root, context_path)
+    lines: list[str] = [
+        "## Project-set evidence",
+        "",
+        f"- Context: `{context_relative}`",
+    ]
+    if projects:
+        lines.append("- Declared project roots:")
+        lines.extend(
+            f"  - `{project_id}` at `{project_root}`"
+            for project_id, project_root in projects
+        )
+    else:
+        lines.append("- No declared project roots were recorded in the context document.")
+    lines.extend(
+        [
+            "- Canonical lifecycle records preserve per-project ownership for this stage.",
+            "",
+        ]
+    )
+    return tuple(lines)
+
+
 def render_stage_result_from_lifecycle_state(
     projection: CanonicalStageResultProjection,
     *,
@@ -282,6 +332,10 @@ def render_stage_result_from_lifecycle_state(
     )
     if repair_brief is not None:
         notes.append(f"- Repair decision context recorded in `{repair_brief}`.")
+    project_set_evidence = _project_set_evidence_lines(
+        workspace_root=workspace_root,
+        work_item=work_item,
+    )
 
     lines = [
         "# Stage Result",
@@ -323,6 +377,7 @@ def render_stage_result_from_lifecycle_state(
         "",
         *next_actions,
         "",
+        *project_set_evidence,
         "## Terminal state notes",
         "",
         *notes,
