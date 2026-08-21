@@ -53,6 +53,32 @@ Store user-facing clarification questions raised during a stage.
 - Do not use answer ids such as `A1` or `A2` in `questions.md`; durable interview
   cross-references always use `Q`-prefixed question ids.
 
+## Runtime candidate and ledger semantics
+
+`questions.md` is the AIDD-owned canonical ledger. A runtime attempt may provide a
+question candidate as structured data or Markdown, but the candidate is not canonical
+until the interview merge boundary accepts it. The merge boundary follows these rules:
+
+- Match questions by the exact stable `QID`; never match or replace an entry because its
+  prose looks similar.
+- Replace a matching question in its existing position, and append a new `QID` after the
+  existing ledger in candidate order. The ledger's order is otherwise stable.
+- Preserve omitted questions, including unresolved questions and questions referenced by
+  `answers.md`. A candidate containing `- none` means that the candidate raised no new
+  questions; it is not permission to erase the durable ledger.
+- Treat equivalent presentation as safe to normalize only when meaning is unchanged:
+  `-`/`*` list markers, optional marker-adjacent punctuation, and indented continuation
+  prose may normalize to the canonical bullet form. Rewording, merging decisions,
+  inferring a missing policy marker, or converting a table into questions is not safe
+  normalization.
+
+The raw candidate remains attempt evidence even when it is rejected. A duplicate `QID`
+within one candidate, contradictory entries for one `QID`, or any other semantically
+ambiguous candidate is retained with an explicit `operator-attention` disposition. Such
+a candidate must not mutate the canonical ledger, overwrite an operator answer, or
+consume repair budget. The operator must confirm, edit, or reject the candidate before a
+later attempt can use it.
+
 ## Validation cues
 
 - the required heading set is present exactly once,

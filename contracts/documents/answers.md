@@ -45,6 +45,33 @@ Store durable answers to the questions raised during a stage.
 - Only bullets inside the `Answers` section are interpreted as answer entries;
   use noncanonical sections only for non-authoritative prose metadata.
 
+## Runtime candidate and ledger semantics
+
+`answers.md` is operator-owned durable state. Runtime attempts can emit answer-shaped
+candidate content as raw evidence, but they cannot create, replace, downgrade, or remove
+an operator answer at the merge boundary. The canonical answer ledger follows these
+rules:
+
+- Match an incoming answer by the exact question `QID` from `questions.md`; similar
+  wording is never a substitute for a stable id.
+- A later operator answer for an existing `QID` replaces that answer in place and remains
+  the latest durable decision. New answer ids or answers for unknown questions are
+  rejected for operator attention rather than appended silently.
+- Preserve omitted answers and their evidence. A runtime candidate containing `- none`
+  does not erase existing answers, and it cannot turn an unresolved operator decision
+  into a resolved one.
+- Normalize presentation only when meaning is unchanged: `-`/`*` list markers,
+  marker-adjacent punctuation, and indented continuation prose may be rendered in the
+  canonical bullet form. Do not infer answer text, resolution, evidence, or unblock
+  consequences from formatting.
+
+Duplicate or contradictory entries for one `QID`, an unknown `QID`, and any candidate
+whose resolution cannot be determined are retained as raw attempt evidence with an
+explicit `operator-attention` disposition. They do not overwrite the canonical answer
+ledger or consume repair budget. The operator must confirm or edit the candidate through
+the controlled answer workflow, which then performs durable write and server-winner
+readback.
+
 ## Validation cues
 
 - the required heading set is present exactly once,
