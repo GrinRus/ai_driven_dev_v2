@@ -71,7 +71,13 @@ _SYSTEM_DOCUMENT_KEYS = {
 def operator_artifact_category(*, key: str, kind: str, path: str) -> str:
     normalized_key = key.replace("-", "_").lower()
     normalized_path = path.replace("\\", "/").lower()
-    if kind == "log" or normalized_key in {"runtime_log", "events_jsonl"}:
+    if kind == "log" or normalized_key in {
+        "runtime_log",
+        "events_jsonl",
+        "runtime_stage_result_draft",
+        "runtime_validator_draft",
+        "runtime_repair_brief_draft",
+    }:
         return "runtime-evidence"
     if "/stages/" in normalized_path and "/output/" in normalized_path:
         return "published-stage-output"

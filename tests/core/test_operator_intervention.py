@@ -239,6 +239,23 @@ def test_operator_request_validation_rejects_empty_and_out_of_scope_targets(
         )
 
 
+@pytest.mark.parametrize("target", ("stage-result.md", "validator-report.md"))
+def test_operator_intervention_rejects_aidd_generated_targets(
+    tmp_path: Path,
+    target: str,
+) -> None:
+    workspace_root = tmp_path / ".aidd"
+    _materialize_plan_inputs(workspace_root=workspace_root, work_item="WI-OP")
+
+    with pytest.raises(ValueError, match="AIDD-owned"):
+        validate_operator_target_documents(
+            workspace_root=workspace_root,
+            work_item="WI-OP",
+            stage="plan",
+            target_documents=(target,),
+        )
+
+
 def test_intervention_uses_latest_run_and_blocks_succeeded_downstream(
     tmp_path: Path,
 ) -> None:
