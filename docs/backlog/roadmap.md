@@ -14795,12 +14795,16 @@ Local tasks:
     raw rejected-candidate details, safe continuation normalization, and persistence coverage;
     focused interview tests, Ruff, mypy, full CI, deterministic scenarios, packaged UI browser,
     and build passed.
-- `W43-E2-S1-T3` (next) Merge interview state safely after every runtime attempt.
+- `W43-E2-S1-T3` (done) Merge interview state safely after every runtime attempt.
   - Scope: snapshot questions and answers before execution, merge valid candidates by QID,
     preserve omitted unresolved questions, restore operator answers, and expose rejected candidate
     evidence to the attempt index.
   - Verification: blocked -> answer -> resume -> malformed candidate retains valid canonical
     ledgers and either progresses or stops in explicit operator-attention state.
+  - Completion: PR #263 (merge `a489b7c7`) implemented QID-preserving runtime merges, protected
+    operator answers, raw candidate/disposition evidence in the attempt index, and a no-repair-budget
+    operator-attention stop for rejected candidates. Focused core/adapter/validator tests (168),
+    Ruff, mypy, full CI, deterministic scenarios, packaged UI browser, and build passed.
 
 #### Slice W43-E2-S2 — resume accounting and operator recovery (`planned`)
 
@@ -14818,13 +14822,13 @@ Dependencies: `W43-E2-S1`; frontend task additionally depends on `W42-E5-S1`.
 
 Local tasks:
 
-- `W43-E2-S2-T1` (soon) Add `resume` as a non-repair attempt mode.
+- `W43-E2-S2-T1` (next) Add `resume` as a non-repair attempt mode.
   - Scope: persist and render `initial`, `repair`, `resume`, and `intervention` distinctly; count
     only validation-triggered repair attempts against the automatic budget and read legacy
     manifests compatibly.
   - Verification: `initial -> repair -> blocked -> resume -> repair` records two repairs, one
     resume, monotonic attempt history, and the correct remaining budget.
-- `W43-E2-S2-T2` (planned) Expose rejected interview candidate diagnostics in the core UI model.
+- `W43-E2-S2-T2` (soon) Expose rejected interview candidate diagnostics in the core UI model.
   - Scope: publish canonical question, protected answer, raw rejected fragment, source attempt,
     runtime, reason, and eligible recovery without making the frontend parse Markdown.
   - Verification: core/service tests cover absent, accepted, rejected, stale, and permission-
