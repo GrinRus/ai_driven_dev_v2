@@ -7,13 +7,13 @@ slice, and local task.
 
 ## Next
 
-- `W42-E7-S3-T6` — Parse authored task dependencies without including explanatory prose, after
-  the clean Codex rerun reached `/api/tasks` and exposed dependency drift in checkpoint parsing.
+- `W42-E7-S3-T7` — Normalize terminal punctuation in authored dependency identifiers after the
+  fresh Codex rerun isolated `T1.`/`none.` as the remaining checkpoint drift.
 
 
 ## Soon
 
-<!-- The live acceptance remains blocked until T6 is merged and a fresh Codex rerun succeeds;
+<!-- The live acceptance remains blocked until T7 is merged and a fresh Codex rerun succeeds;
      the genuine uncoached human observation is still a separate fail-closed prerequisite. -->
 
 
@@ -41,6 +41,12 @@ slice, and local task.
   queue-restoration policy in `docs/backlog/roadmap.md` (`W8-E3-S1`).
 
 ## Current reconciliation
+
+- `2026-08-21` PR #235 (merge `9ff76b3f`) completed `W42-E7-S3-T6`: `/api/tasks` is reachable and
+  explanatory prose is no longer parsed as dependency IDs. Fresh Codex run
+  `eval-live-007-codex-20260821T003332Z` still failed closed because authored dependency values
+  retained terminal punctuation (`T1.`, `none.`); T7 is promoted to `Next`. Wave 42 and Wave 43
+  remain open.
 
 - `2026-08-20` PR #233 (merge `fd6922b7`) completed `W42-E7-S3-T5`: the stale readiness error is
   cleared once the installed UI root responds, so the checkpoint now reaches `/api/tasks` and
