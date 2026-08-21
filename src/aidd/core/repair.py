@@ -12,6 +12,10 @@ from aidd.core.run_store import (
     persist_repair_history_entry,
     run_attempts_root,
 )
+from aidd.core.stage_terminal import (
+    CanonicalStageResultProjection,
+    write_stage_result_from_lifecycle_state,
+)
 from aidd.core.workspace import stage_root as workspace_stage_root
 from aidd.validators.protocol import parse_validator_report
 
@@ -661,18 +665,26 @@ def persist_repair_history_snapshot(
         work_item=work_item,
         stage=stage,
     )
-    stage_result_markdown = render_stage_result_with_repair_history(
-        stage=stage,
-        work_item=work_item,
-        status=stage_status,
-        repair_history=metadata.repair_history,
-        produced_output_paths=produced_output_paths,
-        validator_report_path=validator_report_path,
-        repair_brief_path=repair_brief_path,
+    write_stage_result_from_lifecycle_state(
+        CanonicalStageResultProjection(
+            stage=stage,
+            work_item=work_item,
+            status=stage_status,
+            attempt_number=attempt_number,
+            attempt_mode=trigger,
+            attempt_outcome=outcome,
+            repair_history=metadata.repair_history,
+            produced_output_paths=produced_output_paths,
+            validator_report_path=validator_report_path,
+            repair_brief_path=repair_brief_path,
+            repair_budget_status=(
+                "repair-budget-exhausted"
+                if stage_status == "failed"
+                else "repair-budget-available"
+            ),
+        ),
         workspace_root=workspace_root,
     )
-    stage_result_path.parent.mkdir(parents=True, exist_ok=True)
-    stage_result_path.write_text(stage_result_markdown, encoding="utf-8")
 
     return RepairHistoryPersistenceResult(
         stage_metadata_path=stage_metadata_path,

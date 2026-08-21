@@ -2,16 +2,110 @@ from __future__ import annotations
 
 from pathlib import Path
 
+import pytest
+
+from aidd.core.models.run import RepairHistoryEntry
 from aidd.core.stage_terminal import (
+    CanonicalStageResultProjection,
     ensure_repair_brief_records_exhausted_budget,
     ensure_stage_result_references_repair_brief,
     exhausted_budget_validation_finding,
     force_stage_result_failed_for_exhausted_budget,
     normalize_success_stage_result_blockers_if_empty,
     reconcile_stage_result_after_validation_pass,
+    render_stage_result_from_lifecycle_state,
     repair_brief_exhausts_terminal_budget,
     strip_stage_result_success_claims_for_validator_findings,
 )
+
+
+def test_render_stage_result_from_lifecycle_state_is_byte_stable_and_replaces_todo() -> None:
+    projection = CanonicalStageResultProjection(
+        stage="plan",
+        work_item="WI-001",
+        status="succeeded",
+        attempt_number=2,
+        attempt_mode="repair",
+        attempt_outcome="validated",
+        repair_history=(
+            RepairHistoryEntry(
+                attempt_number=1,
+                trigger="initial",
+                outcome="failed validation",
+                recorded_at_utc="2026-08-21T10:00:00Z",
+                validator_report_path="workitems/WI-001/stages/plan/validator-report.md",
+                repair_brief_path="workitems/WI-001/stages/plan/repair-brief.md",
+            ),
+        ),
+        validator_verdict="pass",
+        validator_report_path="workitems/WI-001/stages/plan/validator-report.md",
+        terminal_notes=("Terminal state notes: TODO",),
+    )
+
+    first = render_stage_result_from_lifecycle_state(
+        projection,
+        workspace_root=Path(".aidd"),
+    )
+    second = render_stage_result_from_lifecycle_state(
+        projection,
+        workspace_root=Path(".aidd"),
+    )
+
+    assert first == second
+    assert "Terminal state notes: TODO" not in first
+    assert "Attempt `1` (`initial`) -> failed validation." in first
+    assert "Attempt `2` (`repair`) -> validated." in first
+    assert "Validator verdict: pass" in first
+    assert "workitems/WI-001/stages/plan/validator-report.md" in first
+    assert "Advance to the immediate canonical `review-spec` stage." in first
+
+
+@pytest.mark.parametrize(
+    ("lifecycle_status", "expected_status", "budget", "expected_text"),
+    (
+        ("succeeded", "succeeded", None, "Validator verdict: pass"),
+        ("failed", "failed", None, "needs operator action"),
+        ("blocked", "blocked", None, "blocking question"),
+        ("repair-needed", "failed", "repair-budget-available", "bounded repair"),
+        (
+            "failed",
+            "failed",
+            "repair-budget-exhausted",
+            "no automatic repair remains",
+        ),
+    ),
+)
+def test_render_stage_result_from_lifecycle_state_maps_state_matrix(
+    lifecycle_status: str,
+    expected_status: str,
+    budget: str | None,
+    expected_text: str,
+) -> None:
+    markdown = render_stage_result_from_lifecycle_state(
+        CanonicalStageResultProjection(
+            stage="plan",
+            work_item="WI-001",
+            status=lifecycle_status,
+            attempt_number=1,
+            attempt_outcome="blocked" if lifecycle_status == "blocked" else "failed",
+            validator_verdict=(
+                "pass"
+                if lifecycle_status == "succeeded"
+                else "blocked"
+                if lifecycle_status == "blocked"
+                else "fail"
+            ),
+            validator_report_path="workitems/WI-001/stages/plan/validator-report.md",
+            blockers=("Blocking question `Q1` remains unresolved.",)
+            if lifecycle_status == "blocked"
+            else (),
+            repair_budget_status=budget,
+        ),
+        workspace_root=Path(".aidd"),
+    )
+
+    assert f"- Status: `{expected_status}`" in markdown
+    assert expected_text in markdown
 
 
 def _stage_result_path(workspace_root: Path) -> Path:
