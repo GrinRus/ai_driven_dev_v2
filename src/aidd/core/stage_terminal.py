@@ -1,8 +1,11 @@
 from __future__ import annotations
 
 import re
+from collections.abc import Iterable
+from dataclasses import dataclass
 from pathlib import Path
 
+from aidd.core.models.run import RepairHistoryEntry
 from aidd.core.stage_registry import resolve_expected_output_documents
 from aidd.core.stages import next_stage
 from aidd.core.workspace import stage_root as workspace_stage_root
@@ -62,6 +65,291 @@ _EMPTY_SUCCESS_BLOCKER_LINE_PATTERN = re.compile(
     r"(?:none|no blockers?|no known blockers?)\s*[.`]?\s*$",
     re.IGNORECASE,
 )
+
+
+@dataclass(frozen=True, slots=True)
+class CanonicalStageResultProjection:
+    """Lifecycle-owned fields used to render a stage-result document.
+
+    Runtime-authored Markdown is deliberately absent from this projection.  The caller
+    supplies only durable lifecycle state and retained evidence, which keeps terminal
+    status, validation, and next-action fields independent from a model draft.
+    """
+
+    stage: str
+    work_item: str
+    status: str
+    attempt_number: int
+    attempt_mode: str = "initial"
+    attempt_outcome: str = "completed"
+    repair_history: tuple[RepairHistoryEntry, ...] = ()
+    produced_output_paths: tuple[str | Path, ...] = ()
+    missing_output_paths: tuple[str | Path, ...] = ()
+    validator_verdict: str | None = None
+    validator_report_path: str | Path | None = None
+    repair_brief_path: str | Path | None = None
+    blockers: tuple[str, ...] = ()
+    next_actions: tuple[str, ...] = ()
+    terminal_notes: tuple[str, ...] = ()
+    repair_budget_status: str | None = None
+
+
+def _canonical_terminal_status(status: str) -> str:
+    normalized = status.strip().lower()
+    if normalized == "repair-needed":
+        # The document contract intentionally exposes only terminal vocabulary.  The
+        # lifecycle state remains available in the terminal notes and metadata.
+        return "failed"
+    if normalized not in {"succeeded", "failed", "blocked", "needs-input"}:
+        raise ValueError(f"Unsupported canonical stage-result status: {status}")
+    return normalized
+
+
+def _canonical_relative_path(*, workspace_root: Path | None, path: str | Path) -> str:
+    candidate = Path(path)
+    if not candidate.is_absolute():
+        return candidate.as_posix()
+    if workspace_root is None:
+        raise ValueError("Absolute stage-result paths require workspace_root")
+    return _workspace_relative_path(workspace_root, candidate)
+
+
+def _canonical_trigger(attempt_mode: str) -> str:
+    normalized = attempt_mode.strip().lower()
+    if normalized in {"initial", "repair", "intervention", "resume"}:
+        return normalized
+    return "repair" if normalized else "initial"
+
+
+def _canonical_verdict(*, status: str, validator_verdict: str | None) -> str:
+    if validator_verdict is None:
+        return "pass" if status == "succeeded" else "fail"
+    normalized = validator_verdict.strip().lower()
+    if normalized in {"pass", "fail", "not-run"}:
+        return normalized
+    if normalized in {"repair", "blocked", "unknown", "missing"}:
+        return "fail"
+    raise ValueError(f"Unsupported canonical validator verdict: {validator_verdict}")
+
+
+def _canonical_attempt_lines(
+    *,
+    attempt_number: int,
+    attempt_mode: str,
+    attempt_outcome: str,
+    repair_history: Iterable[RepairHistoryEntry],
+) -> tuple[str, ...]:
+    if attempt_number < 1:
+        raise ValueError("Stage-result attempt number must be >= 1")
+    entries = tuple(repair_history)
+    records: list[tuple[int, str, str]] = []
+    for entry in entries:
+        line = f"- Attempt `{entry.attempt_number}` (`{entry.trigger}`) -> {entry.outcome}."
+        evidence: list[str] = []
+        if entry.validator_report_path:
+            evidence.append(f"validator: `{entry.validator_report_path}`")
+        if entry.repair_brief_path:
+            evidence.append(f"repair brief: `{entry.repair_brief_path}`")
+        if evidence:
+            line += f" Evidence: {', '.join(evidence)}."
+        records.append((entry.attempt_number, entry.trigger, line))
+    if not any(entry.attempt_number == attempt_number for entry in entries):
+        trigger = _canonical_trigger(attempt_mode)
+        outcome = attempt_outcome.strip() or "completed"
+        records.append(
+            (attempt_number, trigger, f"- Attempt `{attempt_number}` (`{trigger}`) -> {outcome}.")
+        )
+    return tuple(line for _, _, line in sorted(records, key=lambda item: (item[0], item[1])))
+
+
+def _canonical_default_next_actions(
+    *, stage: str, status: str, budget: str | None
+) -> tuple[str, ...]:
+    if status == "succeeded":
+        downstream = next_stage(stage)
+        if downstream is None:
+            return ("- Inspect the terminal handoff and retained final artifacts.",)
+        return (f"- Advance to the immediate canonical `{downstream}` stage.",)
+    if status == "blocked":
+        return ("- Resolve the blocking question or operator request, then resume this stage.",)
+    if status == "needs-input":
+        return ("- Record the requested operator input, then resume this stage.",)
+    if budget == "repair-budget-exhausted":
+        return (
+            "- Inspect canonical validator evidence and request a separate manual intervention; "
+            "no automatic repair remains.",
+        )
+    return ("- Review the canonical validator report and prepare the next bounded repair attempt.",)
+
+
+def render_stage_result_from_lifecycle_state(
+    projection: CanonicalStageResultProjection,
+    *,
+    workspace_root: Path | None = None,
+) -> str:
+    """Render a byte-stable stage-result exclusively from lifecycle state.
+
+    The output intentionally has no timestamps, UUIDs, or copied runtime prose, so repeated
+    reconciliation of the same projection produces identical bytes.
+    """
+
+    stage = projection.stage.strip()
+    work_item = projection.work_item.strip()
+    if not stage or not work_item:
+        raise ValueError("Stage and work item are required for canonical stage-result rendering")
+    status = _canonical_terminal_status(projection.status)
+    validator_verdict = _canonical_verdict(
+        status=status,
+        validator_verdict=projection.validator_verdict,
+    )
+    validator_report = (
+        _canonical_relative_path(
+            workspace_root=workspace_root,
+            path=projection.validator_report_path,
+        )
+        if projection.validator_report_path is not None
+        else None
+    )
+    repair_brief = (
+        _canonical_relative_path(workspace_root=workspace_root, path=projection.repair_brief_path)
+        if projection.repair_brief_path is not None
+        else None
+    )
+
+    stage_root_prefix = f"workitems/{work_item}/stages/{stage}/"
+    supplied_output_paths = tuple(
+        _canonical_relative_path(workspace_root=workspace_root, path=path)
+        for path in projection.produced_output_paths
+    )
+    declared_output_paths = (
+        tuple(
+            _canonical_relative_path(workspace_root=workspace_root, path=path)
+            for path in resolve_expected_output_documents(
+                stage=stage,
+                work_item=work_item,
+                workspace_root=workspace_root or Path("."),
+            )
+        )
+        if status == "succeeded"
+        else ()
+    )
+    output_paths = tuple(dict.fromkeys((*supplied_output_paths, *declared_output_paths)))
+    output_paths = tuple(dict.fromkeys((*output_paths, f"{stage_root_prefix}stage-result.md")))
+    if validator_report is not None:
+        output_paths = tuple(dict.fromkeys((*output_paths, validator_report)))
+    if repair_brief is not None:
+        output_paths = tuple(dict.fromkeys((*output_paths, repair_brief)))
+
+    missing_paths = tuple(
+        _canonical_relative_path(workspace_root=workspace_root, path=path)
+        for path in projection.missing_output_paths
+    )
+    blockers = tuple(item.strip() for item in projection.blockers if item.strip())
+    if status == "succeeded":
+        blocker_lines = ("- none",) if not blockers else tuple(f"- {item}" for item in blockers)
+    elif blockers:
+        blocker_lines = tuple(f"- {item}" for item in blockers)
+    else:
+        blocker_lines = (f"- Stage ended with status `{status}` and needs operator action.",)
+
+    budget = projection.repair_budget_status.strip() if projection.repair_budget_status else None
+    next_actions = projection.next_actions or _canonical_default_next_actions(
+        stage=stage,
+        status=status,
+        budget=budget,
+    )
+    attempt_lines = _canonical_attempt_lines(
+        attempt_number=projection.attempt_number,
+        attempt_mode=projection.attempt_mode,
+        attempt_outcome=projection.attempt_outcome,
+        repair_history=projection.repair_history,
+    )
+    notes = [f"- Canonical lifecycle status: `{projection.status.strip().lower()}`."]
+    notes.append(f"- Canonical validator verdict: `{validator_verdict}`.")
+    if status != "succeeded" and validator_report is not None:
+        notes.append(
+            "- Canonical AIDD validation found open findings; terminal status and "
+            "validator verdict claims must not remain `succeeded` or `pass`."
+        )
+    if budget is not None:
+        notes.append(f"- Repair budget status: `{budget}`.")
+    notes.extend(
+        f"- {note.strip().lstrip('- ').strip()}"
+        for note in projection.terminal_notes
+        if note.strip()
+        and "todo" not in note.lower()
+        and note.strip().lower().lstrip("- ").startswith("terminal state notes") is False
+    )
+    if repair_brief is not None:
+        notes.append(f"- Repair decision context recorded in `{repair_brief}`.")
+
+    lines = [
+        "# Stage Result",
+        "",
+        "## Stage",
+        "",
+        f"- Stage: `{stage}`",
+        "",
+        "## Attempt history",
+        "",
+        *attempt_lines,
+        "",
+        "## Status",
+        "",
+        f"- Status: `{status}`",
+        # Retain the historical bare-status marker for readers that predate the
+        # owner-aware renderer; both markers are the same canonical lifecycle value.
+        f"- `{status}`",
+        "",
+        "## Produced outputs",
+        "",
+        *(f"- `{path}`" for path in output_paths),
+        *(f"- Missing required output: `{path}`" for path in missing_paths),
+        "",
+        "## Validation summary",
+        "",
+        f"- Validator verdict: {validator_verdict}",
+        (
+            f"- Validator report: `{validator_report}`"
+            if validator_report is not None
+            else "- Validator report: not available; validation was not reached."
+        ),
+        "",
+        "## Blockers",
+        "",
+        *blocker_lines,
+        "",
+        "## Next actions",
+        "",
+        *next_actions,
+        "",
+        "## Terminal state notes",
+        "",
+        *notes,
+        "",
+    ]
+    return "\n".join(lines)
+
+
+def write_stage_result_from_lifecycle_state(
+    projection: CanonicalStageResultProjection,
+    *,
+    workspace_root: Path,
+) -> Path:
+    stage_result_path = (
+        workspace_stage_root(
+            root=workspace_root,
+            work_item=projection.work_item,
+            stage=projection.stage,
+        )
+        / "stage-result.md"
+    )
+    stage_result_path.parent.mkdir(parents=True, exist_ok=True)
+    stage_result_path.write_text(
+        render_stage_result_from_lifecycle_state(projection, workspace_root=workspace_root),
+        encoding="utf-8",
+    )
+    return stage_result_path
 
 
 def _workspace_relative_path(workspace_root: Path, path: Path) -> str:
@@ -465,6 +753,7 @@ def exhausted_budget_validation_finding(
 
 
 __all__ = [
+    "CanonicalStageResultProjection",
     "ensure_repair_brief_records_exhausted_budget",
     "ensure_stage_result_references_repair_brief",
     "exhausted_budget_validation_finding",
@@ -472,5 +761,7 @@ __all__ = [
     "normalize_success_stage_result_blockers_if_empty",
     "reconcile_stage_result_after_validation_pass",
     "repair_brief_exhausts_terminal_budget",
+    "render_stage_result_from_lifecycle_state",
     "strip_stage_result_success_claims_for_validator_findings",
+    "write_stage_result_from_lifecycle_state",
 ]

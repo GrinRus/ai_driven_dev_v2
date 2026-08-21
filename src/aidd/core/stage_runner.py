@@ -12,6 +12,7 @@ from aidd.core.interview import (
     render_answers_markdown,
     render_questions_markdown,
 )
+from aidd.core.models.run import RepairHistoryEntry
 from aidd.core.project_set import ResolvedProjectSet
 from aidd.core.remediation import latest_remediation_input_documents
 from aidd.core.repair import RepairBudgetPolicy, persist_repair_history_snapshot
@@ -74,6 +75,7 @@ from aidd.core.stage_preparation import (
 )
 from aidd.core.stage_registry import DEFAULT_STAGE_CONTRACTS_ROOT
 from aidd.core.stage_terminal import (
+    CanonicalStageResultProjection,
     ensure_repair_brief_records_exhausted_budget,
     ensure_stage_result_references_repair_brief,
     exhausted_budget_validation_finding,
@@ -81,6 +83,7 @@ from aidd.core.stage_terminal import (
     normalize_success_stage_result_blockers_if_empty,
     repair_brief_exhausts_terminal_budget,
     strip_stage_result_success_claims_for_validator_findings,
+    write_stage_result_from_lifecycle_state,
 )
 from aidd.core.stage_validation import (
     decide_post_validation_transition,
@@ -230,6 +233,63 @@ def _should_include_existing_stage_outputs_for_resume(
     return metadata.status == StageState.PREPARING.value and any(
         status_change.status == StageState.BLOCKED.value
         for status_change in metadata.status_history
+    )
+
+
+def _canonical_stage_result_blockers(
+    *,
+    findings: tuple[ValidationFinding, ...],
+    interview_routing: StageInterviewRouting | None = None,
+) -> tuple[str, ...]:
+    blockers = tuple(
+        f"`{finding.code}`: {finding.message.strip()}"
+        for finding in findings
+    )
+    if interview_routing is not None and interview_routing.requires_interview:
+        blockers = (
+            *blockers,
+            *(
+                f"Unresolved blocking question `{question_id}`."
+                for question_id in interview_routing.unresolved_blocking_question_ids
+            ),
+        )
+    return tuple(dict.fromkeys(blockers))
+
+
+def _write_canonical_stage_result(
+    *,
+    workspace_root: Path,
+    execution_state: StageExecutionState,
+    lifecycle_status: StageState,
+    attempt_mode: str,
+    attempt_outcome: str,
+    repair_history: tuple[RepairHistoryEntry, ...],
+    produced_output_paths: tuple[Path, ...] = (),
+    missing_output_paths: tuple[Path, ...] = (),
+    validator_verdict: str | None = None,
+    validator_report_path: Path | None = None,
+    repair_brief_path: Path | None = None,
+    blockers: tuple[str, ...] = (),
+    repair_budget_status: str | None = None,
+) -> Path:
+    return write_stage_result_from_lifecycle_state(
+        CanonicalStageResultProjection(
+            stage=execution_state.stage,
+            work_item=execution_state.work_item,
+            status=lifecycle_status.value,
+            attempt_number=execution_state.attempt_number,
+            attempt_mode=attempt_mode,
+            attempt_outcome=attempt_outcome,
+            repair_history=tuple(repair_history),
+            produced_output_paths=tuple(produced_output_paths),
+            missing_output_paths=tuple(missing_output_paths),
+            validator_verdict=validator_verdict,
+            validator_report_path=validator_report_path,
+            repair_brief_path=repair_brief_path,
+            blockers=blockers,
+            repair_budget_status=repair_budget_status,
+        ),
+        workspace_root=workspace_root,
     )
 
 
@@ -592,6 +652,22 @@ def run_single_stage_orchestration(
             stage=stage,
             changed_at_utc=changed_at_utc,
         )
+        metadata = load_stage_metadata(
+            workspace_root=workspace_root,
+            work_item=work_item,
+            run_id=run_id,
+            stage=stage,
+        )
+        _write_canonical_stage_result(
+            workspace_root=workspace_root,
+            execution_state=execution_state,
+            lifecycle_status=StageState.BLOCKED,
+            attempt_mode=adapter_invocation.attempt_mode,
+            attempt_outcome=adapter_outcome.details or "blocked for operator",
+            repair_history=() if metadata is None else metadata.repair_history,
+            validator_verdict="not-run",
+            blockers=(adapter_outcome.details or "Operator decision is required.",),
+        )
         transition = decide_post_validation_transition(blocked_validation_state)
         return StageOrchestrationResult(
             stage=stage,
@@ -615,6 +691,22 @@ def run_single_stage_orchestration(
             run_id=run_id,
             stage=stage,
             changed_at_utc=changed_at_utc,
+        )
+        metadata = load_stage_metadata(
+            workspace_root=workspace_root,
+            work_item=work_item,
+            run_id=run_id,
+            stage=stage,
+        )
+        _write_canonical_stage_result(
+            workspace_root=workspace_root,
+            execution_state=execution_state,
+            lifecycle_status=StageState.FAILED,
+            attempt_mode=adapter_invocation.attempt_mode,
+            attempt_outcome=adapter_outcome.details or "adapter execution failed",
+            repair_history=() if metadata is None else metadata.repair_history,
+            validator_verdict="not-run",
+            blockers=(adapter_outcome.details or "Adapter execution failed before validation.",),
         )
         transition = decide_post_validation_transition(failed_validation_state)
         return StageOrchestrationResult(
@@ -783,6 +875,39 @@ def run_single_stage_orchestration(
             repair_brief_path=adapter_invocation.repair_brief_path,
             changed_at_utc=changed_at_utc,
         )
+    metadata = load_stage_metadata(
+        workspace_root=workspace_root,
+        work_item=work_item,
+        run_id=run_id,
+        stage=stage,
+    )
+    repair_budget_status: str | None = None
+    if validation_transition.budget_exhausted:
+        repair_budget_status = "repair-budget-exhausted"
+    elif validation_transition.requested_verdict is ValidationVerdict.REPAIR:
+        repair_budget_status = (
+            "repair-budget-final-attempt"
+            if validation_transition.remaining_repair_attempts == 1
+            else "repair-budget-available"
+        )
+    _write_canonical_stage_result(
+        workspace_root=workspace_root,
+        execution_state=execution_state,
+        lifecycle_status=validation_transition.validation_state.next_state,
+        attempt_mode=adapter_invocation.attempt_mode,
+        attempt_outcome=_repair_history_outcome(validation_transition=validation_transition),
+        repair_history=() if metadata is None else metadata.repair_history,
+        produced_output_paths=discovery.discovered_markdown_documents,
+        missing_output_paths=discovery.missing_markdown_documents,
+        validator_verdict=validation_transition.resolved_verdict.value,
+        validator_report_path=validation_result.validator_report_path,
+        repair_brief_path=repair_brief_trace_path,
+        blockers=_canonical_stage_result_blockers(
+            findings=validation_result.findings,
+            interview_routing=interview_routing,
+        ),
+        repair_budget_status=repair_budget_status,
+    )
     transition = decide_post_validation_transition(
         validation_transition.validation_state,
         workspace_root=workspace_root,
