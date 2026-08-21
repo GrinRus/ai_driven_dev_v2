@@ -7,12 +7,12 @@ slice, and local task.
 
 ## Next
 
-- `W43-E2-S1-T1` — Define canonical interview candidate and ledger semantics.
+- `W43-E2-S1-T2` — Ingest structured and Markdown question candidates tolerantly.
 
 
 ## Soon
 
-- `W43-E2-S1-T2` — Ingest structured and Markdown question candidates tolerantly.
+- `W43-E2-S1-T3` — Merge interview state safely after every runtime attempt.
 
 ## Parking lot
 
@@ -38,6 +38,14 @@ slice, and local task.
   queue-restoration policy in `docs/backlog/roadmap.md` (`W8-E3-S1`).
 
 ## Current reconciliation
+
+- `2026-08-21` PR #259 (merge `0dd3e22e`) completed `W43-E2-S1-T1`: interview contracts now
+  define exact-QID merge, operator-owned answers, safe presentation normalization, raw rejected
+  candidate evidence, omitted-question preservation, and explicit operator attention for
+  ambiguous candidates. Worked examples and focused interview/contract tests cover canonical,
+  safe, duplicate, ambiguous, and omitted candidates. Full CI, deterministic scenarios, packaged
+  UI browser, and build passed. `W43-E2-S1-T2` is now `Next`; `W43-E2-S1-T3` is `Soon`. Human
+  usability, Claude, cross-runtime, and Wave 36 work remain parked.
 
 - `2026-08-21` PR #257 (merge `6b87d863`) completed `W43-E1-S4-T1`: generic CLI, Qwen, and
   OpenCode completion now settles only on runtime-authored content, excludes AIDD workflow,
