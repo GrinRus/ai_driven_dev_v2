@@ -7,7 +7,7 @@ slice, and local task.
 
 ## Next
 
-- `W43-E3-S1-T2` — Embed a complete rich-tasklist scaffold in the stage brief.
+- `W43-E3-S2-T1` — Parse safe rich-tasklist Markdown variants without semantic inference.
 
 
 ## Soon
@@ -38,6 +38,15 @@ slice, and local task.
   queue-restoration policy in `docs/backlog/roadmap.md` (`W8-E3-S1`).
 
 ## Current reconciliation
+
+- `2026-08-21` PR #273 (merge `885deee2`) completed `W43-E3-S1-T2`: generated tasklist stage
+  briefs now embed one complete canonical H3 card with outcome, deliverable, bounded scope,
+  nested acceptance criterion, dependency, and verification examples. The scaffold is available
+  without repository-local contract discovery and is explicitly prompt input rather than validated
+  output. Focused stage-preparation/stage-runner tests (11), docs/prompt/planning checks (161),
+  full Python suite (2331), Ruff, mypy, full CI, deterministic scenarios, packaged UI browser,
+  and build passed. `W43-E3-S2-T1` is now `Next`; human usability, Claude, cross-runtime, and Wave
+  36 work remain parked.
 
 - `2026-08-21` PR #271 (merge `da566a09`) completed `W43-E3-S1-T1`: tasklist contracts now
   separate required executable semantics from presentation-only Markdown changes, document safe
