@@ -7,12 +7,10 @@ slice, and local task.
 
 ## Next
 
-- `W43-E1-S3-T2` — Render stage results from canonical lifecycle state.
+- `W43-E1-S3-T3` — Enforce workflow-record ownership at every mutation boundary.
 
 
 ## Soon
-
-- `W43-E1-S3-T3` — Enforce workflow-record ownership at every mutation boundary.
 
 
 ## Parking lot
@@ -39,6 +37,14 @@ slice, and local task.
   queue-restoration policy in `docs/backlog/roadmap.md` (`W8-E3-S1`).
 
 ## Current reconciliation
+
+- `2026-08-21` PR #253 (merge `e2899537`) completed `W43-E1-S3-T2`: stage-result records now
+  come from canonical lifecycle state, preserve attempt/repair and project-set evidence, expose
+  deterministic validator/blocker/next-action fields, remove runtime `Terminal state notes: TODO`,
+  and remain byte-stable across reconciliation. Focused stage-terminal/repair/stage-runner and
+  deterministic project-set tests (127), Ruff, mypy, full CI, packaged UI browser, and build
+  passed. `W43-E1-S3-T3` is now `Next`; human usability, Claude, cross-runtime, and Wave 36 work
+  remain parked.
 
 - `2026-08-21` PR #250 (merge `f198cb8b`) completed `W43-E1-S3-T1`: runtime discovery and
   completion now target substantive content only; canonical validator reports derive from

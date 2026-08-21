@@ -14699,14 +14699,21 @@ Local tasks:
     model-authored validator file for output discovery.
   - Verification: missing and contradictory runtime drafts cannot create or suppress findings,
     while the final report exactly matches the current attempt's validator result.
-- `W43-E1-S3-T2` (next) Render stage results from canonical lifecycle state.
+- `W43-E1-S3-T2` (done) Render stage results from canonical lifecycle state.
   - Scope: derive stage id, attempt history, status, produced outputs, validation summary,
     blockers, next action, and terminal notes from AIDD state; preserve historical repair evidence
     and make repeated reconciliation byte-stable.
   - Verification: state-matrix tests cover succeeded, failed, blocked, repair-needed, exhausted,
     and resumed outcomes, including the exact `Terminal state notes: TODO` regression without
     consuming repair budget.
-- `W43-E1-S3-T3` (soon) Enforce workflow-record ownership at every mutation boundary.
+-  - Completion: PR #253 (merge `e2899537`) added a lifecycle-only stage-result projection and
+    wired it into success, repair, blocked, exhausted, and adapter-stop paths. Canonical output
+    preserves attempt/repair evidence, deterministic next actions, validator findings, repair
+    budget notes, and durable project-set evidence; repeated reconciliation is byte-stable.
+    Focused stage-terminal/repair/stage-runner tests (127), Ruff, mypy, full CI, deterministic
+    scenarios, packaged UI browser, and build passed. `W43-E1-S3-T3` is now the next
+    dependency-ready task.
+- `W43-E1-S3-T3` (next) Enforce workflow-record ownership at every mutation boundary.
   - Scope: exclude AIDD records from misplaced runtime promotion and operator intervention
     targets, include canonical records during publication and indexing, and retain unexpected
     runtime copies only under attempt evidence.
@@ -15094,6 +15101,15 @@ Local tasks:
     runtimes and retains explicit environment-blocked verdicts when prerequisites are absent.
 
 Wave 43 reconciliation notes:
+
+- `2026-08-21` `W43-E1-S3-T2` is complete in PR #253 (merge `e2899537`). AIDD now renders
+  stage-result records from canonical lifecycle state instead of trusting runtime drafts, with
+  stable attempt history, explicit validator/blocker/next-action fields, exhausted-budget and
+  resumed-state coverage, and durable project-set evidence. The exact `Terminal state notes: TODO`
+  regression is removed and repeated reconciliation is byte-stable. Focused stage-terminal,
+  repair, stage-runner, operator diagnostics, and deterministic project-set tests, Ruff, mypy,
+  full CI, packaged UI browser, and build passed. `W43-E1-S3-T3` is now Next; human usability,
+  Claude, cross-runtime, and Wave 36 work remain deferred.
 
 - `2026-08-21` `W43-E1-S3-T1` is complete in PR #250 (merge `f198cb8b`). Runtime completion and
   discovery now use substantive stage documents only; canonical validator reports are rendered
