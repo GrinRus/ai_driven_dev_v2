@@ -218,6 +218,93 @@ function renderInterviewSummary(view) {
   `;
 }
 
+function interviewCandidateRecoveryAction(candidate) {
+  const canonical = candidate?.canonical_question;
+  if (!candidate || candidate.status !== "rejected") return null;
+  const questionId = canonical?.question_id || "";
+  const draft = questionId ? questionDraft(questionId)?.value : null;
+  const canonicalResolved = canonical?.answer_resolution === "resolved";
+  if (questionId && (!canonicalResolved || draft)) {
+    return {
+      kind: "focus-question",
+      questionId,
+      label: draft ? "Review restored answer draft" : "Edit canonical answer",
+      detail: draft
+        ? "The browser-session draft is preserved. Review it in the canonical answer card before resuming."
+        : "The runtime candidate is not authoritative. Confirm or edit the canonical answer before resuming."
+    };
+  }
+  if (candidate.eligible_recovery_action === "resume-stage") {
+    return {
+      kind: "resume-stage",
+      label: "Resume with canonical answer",
+      detail: "The canonical ledger is resolved; resume is a non-repair attempt and does not spend repair budget."
+    };
+  }
+  return null;
+}
+
+function renderInterviewCandidateRecovery(candidate) {
+  if (!candidate || candidate.status === "absent" || candidate.status === "accepted") return "";
+  const canonical = candidate.canonical_question;
+  const action = interviewCandidateRecoveryAction(candidate);
+  const canonicalText = canonical?.text || "Canonical question is unavailable.";
+  const canonicalAnswer = canonical?.answer_text || "No protected operator answer is recorded.";
+  const canonicalResolution = canonical?.answer_resolution || "unresolved";
+  const evidencePath = candidate.raw_candidate_path || candidate.disposition_path || "";
+  const statusLabel = candidate.status === "permission-unavailable"
+    ? "candidate evidence unavailable"
+    : candidate.status === "stale"
+      ? "stale candidate evidence"
+      : "runtime candidate rejected";
+  const requestChange = candidate.status === "rejected"
+    ? `<button data-recovery-action="request-change" data-recovery-stage="${escapeHtml(state.activeStage)}" type="button" class="secondary" data-decision-alternative="request-change">Request Change</button>`
+    : "";
+  const inspectEvidence = evidencePath
+    ? `<button data-evidence-stage="${escapeHtml(state.activeStage)}" data-evidence-path="${escapeHtml(evidencePath)}" data-evidence-kind="document" data-interview-candidate-evidence type="button" class="secondary">Inspect retained evidence</button>`
+    : "";
+  let primary = "";
+  if (action?.kind === "focus-question") {
+    primary = `<button data-primary-action data-decision-submit="true" data-focus-question="${escapeHtml(action.questionId)}" type="button">${escapeHtml(action.label)}</button>`;
+  } else if (action?.kind === "resume-stage") {
+    primary = `<button data-primary-action data-decision-submit="true" data-recovery-action="resume-stage" data-recovery-stage="${escapeHtml(state.activeStage)}" type="button">${escapeHtml(action.label)}</button>`;
+  }
+  return `
+    <section class="surface interview-candidate-recovery" data-interview-candidate-recovery="${escapeHtml(candidate.status)}" data-decision-item="interview-candidate" data-primary-recovery-slot>
+      <div class="surface-title">
+        <span>Rejected interview candidate</span>
+        <span class="small-badge ${candidate.status === "rejected" ? "bad" : "warn"}" data-interview-candidate-status>${escapeHtml(statusLabel)}</span>
+      </div>
+      <p class="muted" data-interview-candidate-reason>${escapeHtml(candidate.reason || candidate.eligible_recovery_detail || "Review the retained candidate evidence before choosing a next action.")}</p>
+      <dl class="decision-workbench-facts interview-candidate-facts">
+        <div><dt>Document</dt><dd data-interview-candidate-document>${escapeHtml(candidate.document || "not identified")}</dd></div>
+        <div><dt>Source attempt</dt><dd data-interview-candidate-attempt>${escapeHtml(candidate.source_attempt || "not recorded")}</dd></div>
+        <div><dt>Runtime</dt><dd data-interview-candidate-runtime>${escapeHtml(candidate.runtime_id || "not recorded")}</dd></div>
+        <div><dt>Attempt mode</dt><dd data-interview-candidate-mode>${escapeHtml(candidate.attempt_mode || "not recorded")}</dd></div>
+      </dl>
+      <div class="decision-workbench-evidence">
+        <div class="decision-workbench-source">
+          <strong>Canonical state</strong>
+          <p data-interview-candidate-canonical-question>${escapeHtml(canonicalText)}</p>
+          <p><span class="small-badge">${escapeHtml(canonicalResolution)}</span> ${escapeHtml(canonicalAnswer)}</p>
+          ${canonical?.answer_evidence_links?.length ? `<ul>${canonical.answer_evidence_links.slice(0, 4).map((path) => `<li data-interview-candidate-canonical-evidence>${escapeHtml(path)}</li>`).join("")}</ul>` : `<span class="muted">No canonical answer evidence links retained.</span>`}
+        </div>
+        <div class="decision-workbench-retained-evidence">
+          <strong>Rejected fragment</strong>
+          ${candidate.raw_candidate ? `<pre data-interview-candidate-raw>${escapeHtml(candidate.raw_candidate)}${candidate.raw_candidate_truncated ? "\n… [bounded]" : ""}</pre>` : `<span class="muted" data-interview-candidate-raw-empty>Raw candidate is unavailable.</span>`}
+          ${candidate.raw_candidate_path ? pathLine(candidate.raw_candidate_path, 88) : ""}
+        </div>
+      </div>
+      ${action?.detail ? `<p class="muted" data-interview-candidate-action-detail>${escapeHtml(action.detail)}</p>` : `<p class="muted" data-interview-candidate-action-detail>${escapeHtml(candidate.eligible_recovery_detail || "No recovery action is eligible until evidence access is restored.")}</p>`}
+      <div class="question-actions interview-candidate-actions">
+        ${inspectEvidence}
+        ${primary}
+        ${requestChange}
+      </div>
+    </section>
+  `;
+}
+
 function renderBlockedStageContext(view) {
   const diagnostics = activeStageView()?.diagnostics;
   const blocking = diagnostics?.blocking_questions;
@@ -334,6 +421,7 @@ function renderQuestionCards({showResume}) {
 
 function renderQuestions() {
   const view = activeStageView()?.questions;
+  const candidate = activeStageView()?.diagnostics?.interview_candidate;
   const questions = view?.questions || [];
   const unresolved = view?.unresolved_blocking_question_ids || [];
   const sourceSnippets = questions.map((question) => `${question.question_id || "Question"}: ${question.text || ""}`);
@@ -358,6 +446,7 @@ function renderQuestions() {
         })}
         ${renderInterviewDecisionSpotlight(view)}
         ${renderInterviewSummary(view)}
+        ${renderInterviewCandidateRecovery(candidate)}
         ${renderQuestionCards({showResume: true})}
       </section>
       ${renderBlockedStageContext(view)}

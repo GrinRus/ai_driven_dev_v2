@@ -749,6 +749,89 @@ test("question answer cards expose structured context and preview destination", 
   assert.match(html, /data-answer-preview-panel="Q1"/);
 });
 
+test("Decision Workbench renders bounded rejected interview recovery without repair", async () => {
+  const {context} = domContext();
+  context.readOperatorDraft = () => null;
+  await load(context, "operator-api-state.js");
+  await load(context, "operator-questions.js");
+  vm.runInContext(`state.activeStage = "plan"; state.dashboard = {
+    active_stage_view: {
+      questions: {
+        unresolved_blocking_question_ids: ["Q1"],
+        questions: [{
+          question_id: "Q1", text: "Confirm the release owner.", policy: "blocking",
+          status: "pending-blocking", answer_resolution: "partial",
+          answer_text: "The candidate answer is incomplete.",
+          answer_evidence_links: ["reports/answers.md#Q1"]
+        }]
+      },
+      diagnostics: {
+        interview_candidate: {
+          status: "rejected", document: "questions.md", source_attempt: 2,
+          attempt_mode: "initial", runtime_id: "codex", reason: "invalid-marker",
+          raw_candidate_path: "reports/runs/WI-UI/run-ui/stages/plan/attempts/attempt-0002/runtime-questions-candidate.md",
+          raw_candidate: "# Questions\\n\\n- Q1 [blocking: malformed <candidate>",
+          raw_candidate_truncated: false, disposition_path: "reports/runs/WI-UI/run-ui/stages/plan/attempts/attempt-0002/interview-candidate-disposition.md",
+          canonical_question: {
+            question_id: "Q1", text: "Confirm the release owner.", policy: "blocking",
+            answer_resolution: "partial", answer_text: "The candidate answer is incomplete.",
+            answer_evidence_links: ["reports/answers.md#Q1"]
+          },
+          eligible_recovery_action: "resume-stage",
+          eligible_recovery_detail: "Review the retained candidate against the canonical ledger, then resume without a repair."
+        }
+      }
+    }
+  }`, context);
+  const html = vm.runInContext("renderQuestions()", context);
+  assert.match(html, /data-interview-candidate-recovery="rejected"/);
+  assert.match(html, /data-interview-candidate-status>runtime candidate rejected/);
+  assert.match(html, /invalid-marker/);
+  assert.match(html, /malformed &lt;candidate&gt;/);
+  assert.match(html, /The candidate answer is incomplete\./);
+  assert.match(html, /data-focus-question="Q1"/);
+  assert.match(html, /data-evidence-path="reports\/runs\/WI-UI\/run-ui\/stages\/plan\/attempts\/attempt-0002\/runtime-questions-candidate\.md"/);
+  assert.match(html, /data-recovery-action="request-change"/);
+  assert.doesNotMatch(html, /data-run-repair/);
+  assert.doesNotMatch(html, /repair budget/);
+});
+
+test("resolved rejected candidate offers resume without changing repair accounting", async () => {
+  const {context} = domContext();
+  context.readOperatorDraft = () => null;
+  await load(context, "operator-api-state.js");
+  await load(context, "operator-questions.js");
+  vm.runInContext(`state.activeStage = "plan"; state.dashboard = {
+    active_stage_view: {
+      questions: {
+        unresolved_blocking_question_ids: [],
+        questions: [{
+          question_id: "Q1", text: "Confirm the release owner.", policy: "blocking",
+          status: "resolved", answer_resolution: "resolved", answer_text: "Release owner approved."
+        }]
+      },
+      diagnostics: {
+        interview_candidate: {
+          status: "rejected", document: "questions.md", source_attempt: 2,
+          attempt_mode: "resume", runtime_id: "codex", reason: "candidate-disposition",
+          raw_candidate_path: "reports/candidate.md", raw_candidate: "candidate",
+          raw_candidate_truncated: false, canonical_question: {
+            question_id: "Q1", text: "Confirm the release owner.", policy: "blocking",
+            answer_resolution: "resolved", answer_text: "Release owner approved."
+          },
+          eligible_recovery_action: "resume-stage",
+          eligible_recovery_detail: "Resume without a repair."
+        }
+      }
+    }
+  }`, context);
+  const html = vm.runInContext("renderQuestions()", context);
+  assert.match(html, /data-recovery-action="resume-stage"/);
+  assert.match(html, /Resume with canonical answer/);
+  assert.doesNotMatch(html, /data-run-repair/);
+  assert.doesNotMatch(html, /Run Repair/);
+});
+
 test("late dashboard response cannot overwrite a newer request", async () => {
   const {context} = domContext();
   const requests = [];

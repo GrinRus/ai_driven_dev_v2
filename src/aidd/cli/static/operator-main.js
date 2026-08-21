@@ -670,6 +670,17 @@ document.addEventListener("click", async (event) => {
       await previewAnswer(answerPreviewButton.dataset.answerPreview);
       return;
     }
+    const focusQuestionButton = event.target.closest("[data-focus-question]");
+    if (focusQuestionButton) {
+      const questionId = focusQuestionButton.dataset.focusQuestion || "";
+      const answer = document.querySelector(`[data-question-text="${CSS.escape(questionId)}"]`);
+      requestCockpitReveal();
+      if (answer) {
+        answer.scrollIntoView({block: "center", inline: "nearest"});
+        answer.focus({preventScroll: true});
+      }
+      return;
+    }
     const answerResumeButton = event.target.closest("[data-answer-resume]");
     if (answerResumeButton) {
       await answerAndResume(answerResumeButton.dataset.answerResume);
