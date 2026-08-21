@@ -14431,7 +14431,7 @@ Local tasks:
   - Verification: focused parser/checkpoint tests cover terminal punctuation, explanatory prose,
     concise and multiple dependencies, malformed clauses, and public-projection drift; the
     clean Codex `AIDD-LIVE-007` lane is rerun after this task merges.
-- `W42-E7-S3-T8` (next) Isolate native Codex live execution from desktop MCP and plugin configuration.
+- `W42-E7-S3-T8` (done) Isolate native Codex live execution from desktop MCP and plugin configuration.
   - Dependencies: `W42-E7-S3-T7`; this follow-up was discovered by the fresh post-T7 Codex lane,
     where provider startup remained alive without a runtime event until the no-progress boundary,
     while a bounded command with user plugins disabled completed the same research stage.
@@ -14443,8 +14443,19 @@ Local tasks:
   - Verification: command/config tests prove the live Codex command carries the isolated startup
     flags without dropping typed selectors; a focused installed-stage smoke reaches a terminal
     artifact with no desktop MCP children; the clean Codex `AIDD-LIVE-007` lane is rerun afterward.
+  - Completion: PR #240 (merge `2db0e886`) added the live-only native startup isolation flags,
+    preserved model/reasoning selectors, and passed focused tests, Ruff, mypy, and full CI. The
+    fresh clean-main Codex lane `eval-live-007-codex-20260821T033606Z` completed `idea -> qa`
+    with no provider no-progress boundary.
 
 Wave 42 reconciliation notes:
+
+- `2026-08-21` PR #240 (merge `2db0e886`) completed `W42-E7-S3-T8`. Native Codex live startup
+  now opts out of unrelated desktop MCP/plugin configuration while preserving authenticated
+  selectors and fail-closed timeout behavior. Focused tests, Ruff, mypy, and full CI passed;
+  the clean-main rerun `eval-live-007-codex-20260821T033606Z` completed all eight stages and
+  produced a passing task-aware checkpoint. The separate reconciliation of `W42-E7-S3-T2`
+  records that live evidence; `W42-E7-S2-T3` remains environment-blocked.
 
 - `2026-08-21` A fresh clean-main run `eval-live-007-codex-20260821T023047Z` passed `idea` with
   manual quality audit, but `research` remained without a first runtime event until the operator
