@@ -14367,8 +14367,8 @@ Local tasks:
     selection, premature finalization, or Review eligibility that disagrees with the durable
     aggregate commit.
 - `W42-E7-S3-T2` (blocked) Run and retain a fresh Codex task-aware `AIDD-LIVE-007` acceptance.
-  - Dependencies: `W42-E7-S2-T3` and `W42-E7-S3-T1` as the final Wave 42 exit-evidence
-    predecessors.
+  - Dependencies: `W42-E7-S2-T3`, `W42-E7-S3-T1`, and `W42-E7-S3-T8` as the final Wave 42
+    exit-evidence predecessors.
   - Scope: execute the installed current-`main` flow against the pinned Hono revision through
     Codex from `idea` to `qa`, retaining manual stage-quality audits, target verification, browser
     evidence, Flow Complete evidence, and task-aware checkpoints.
@@ -14431,8 +14431,26 @@ Local tasks:
   - Verification: focused parser/checkpoint tests cover terminal punctuation, explanatory prose,
     concise and multiple dependencies, malformed clauses, and public-projection drift; the
     clean Codex `AIDD-LIVE-007` lane is rerun after this task merges.
+- `W42-E7-S3-T8` (next) Isolate native Codex live execution from desktop MCP and plugin configuration.
+  - Dependencies: `W42-E7-S3-T7`; this follow-up was discovered by the fresh post-T7 Codex lane,
+    where provider startup remained alive without a runtime event until the no-progress boundary,
+    while a bounded command with user plugins disabled completed the same research stage.
+  - Scope: make the installed native Codex command used by manual live E2E opt out of unrelated
+    desktop MCP/plugin startup while retaining authenticated Codex access, model/reasoning
+    selectors, repository working directory, raw logs, and the existing fail-closed timeout
+    classification. Keep provider-specific isolation in the Codex adapter/runtime command
+    definition and do not change runtime-agnostic orchestration semantics.
+  - Verification: command/config tests prove the live Codex command carries the isolated startup
+    flags without dropping typed selectors; a focused installed-stage smoke reaches a terminal
+    artifact with no desktop MCP children; the clean Codex `AIDD-LIVE-007` lane is rerun afterward.
 
 Wave 42 reconciliation notes:
+
+- `2026-08-21` A fresh clean-main run `eval-live-007-codex-20260821T023047Z` passed `idea` with
+  manual quality audit, but `research` remained without a first runtime event until the operator
+  interrupted it. A disposable installed-stage probe with desktop plugins disabled completed
+  `research`, so `W42-E7-S3-T8` is promoted to `Next`; no task-aware live pass or Wave 42 exit
+  claim is made.
 
 - `2026-08-21` PR #237 (merge `53208ce7`) completed T7: authored `none.`/`T1.` dependency
   values are normalized without weakening fail-closed handling, with 15 focused harness tests,
