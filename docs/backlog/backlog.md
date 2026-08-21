@@ -42,11 +42,15 @@ slice, and local task.
 
 ## Current reconciliation
 
-- `2026-08-21` PR #240 (merge `2db0e886`) completed `W42-E7-S3-T8`. The fresh clean-main
-  `AIDD-LIVE-007` run `eval-live-007-codex-20260821T033606Z` then passed all eight stages with a
-  passing task-aware checkpoint; T2 live-evidence reconciliation is the next bounded docs step.
-  `W42-E7-S2-T3` remains explicitly environment-blocked, so no Wave 42 exit or Wave 43 promotion
-  is claimed yet.
+- `2026-08-21` The fresh clean-main Codex `AIDD-LIVE-007` run
+  `eval-live-007-codex-20260821T033606Z` completed all eight stages with execution verdict
+  `pass`, matching tasklist/ledger hashes, successful finalization, and Review eligibility.
+  `W42-E7-S3-T2` is reconciled as done with retained flow/code/quality reports, checkpoint,
+  target verification, and stage audits. `W42-E7-S2-T3` remains explicitly environment-blocked,
+  so no Wave 42 exit or Wave 43 promotion is claimed yet.
+
+- `2026-08-21` PR #240 (merge `2db0e886`) completed `W42-E7-S3-T8`; the isolated Codex live
+  command enabled the clean task-aware rerun recorded above.
 
 - `2026-08-21` The first clean post-T7 run `eval-live-007-codex-20260821T023047Z` passed `idea`
   with manual audit but stalled before the first `research` runtime event and was interrupted.
