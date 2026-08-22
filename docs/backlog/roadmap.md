@@ -15089,12 +15089,19 @@ Local tasks:
     invocation. Focused repair/stage tests (131), docs/planning checks (50), Ruff, mypy, full
     Python matrix, deterministic scenarios, adapter conformance, packaged UI browser, and build
     passed.
-- `W43-E4-S3-T2` (next) Expose one explicit CLI repair-extension command.
+- `W43-E4-S3-T2` (done) Expose one explicit CLI repair-extension command.
   - Scope: select exact work item/run/stage/runtime, preview findings and budget, require operator
     confirmation or an explicit non-interactive flag, stream logs, and print grant, attempt, and
     validator evidence paths.
   - Verification: CLI tests cover prevalidation success, extension success/failure, cancellation,
     stale selection, non-interactive refusal, and no second extension.
+  - Completion: PR #289 (merge `bf556dca`) added `aidd stage repair-extension` with exact
+    run/stage/runtime selection, core preflight and configuration identity revalidation, findings
+    and automatic-budget preview, explicit confirmation/non-interactive authorization, durable
+    grant/attempt/evidence output, cancellation propagation, and a one-attempt fail-closed runtime
+    path with no automatic retry loop. Focused CLI tests (35), core repair/stage tests (150),
+    docs/planning checks (50), Ruff, mypy, full Python matrix, deterministic scenarios, adapter
+    conformance, packaged UI browser, and build passed.
 
 #### Slice W43-E4-S4 — repair-extension operator UI (`planned`)
 
@@ -15112,7 +15119,7 @@ Dependencies: `W43-E3-S3`, `W43-E4-S3`, and `W42-E5-S1`.
 
 Local tasks:
 
-- `W43-E4-S4-T1` (planned) Publish repair-extension eligibility and preview evidence.
+- `W43-E4-S4-T1` (next) Publish repair-extension eligibility and preview evidence.
   - Scope: expose primary cause, current findings, automatic budget, manual grant usage, exact
     validator/brief hashes, selected Runner, downstream restriction, and a literal disabled reason
     from core/service code.

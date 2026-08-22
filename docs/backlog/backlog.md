@@ -7,7 +7,7 @@ slice, and local task.
 
 ## Next
 
-- `W43-E4-S3-T2` — Expose one explicit CLI repair-extension command.
+- `W43-E4-S4-T1` — Publish repair-extension eligibility and preview evidence.
 
 
 ## Soon
@@ -39,13 +39,23 @@ slice, and local task.
 
 ## Current reconciliation
 
+- `2026-08-22` PR #289 (merge `bf556dca`) completed `W43-E4-S3-T2`: the explicit
+  `aidd stage repair-extension` command now selects exact work item/run/stage/runtime, previews
+  findings and automatic budget, requires confirmation or explicit non-interactive authorization,
+  revalidates core configuration/evidence, streams logs, prints durable grant/attempt/evidence
+  paths, propagates cancellation, and never schedules an automatic retry. Focused CLI tests (35),
+  core repair/stage tests (150), docs/planning checks (50), Ruff, mypy, full Python matrix,
+  deterministic scenarios, adapter conformance, packaged UI browser, and build passed.
+  `W43-E4-S4-T1` is now `Next`; human usability, Claude, cross-runtime, and Wave 36 work remain
+  parked.
+
 - `2026-08-22` PR #287 (merge `24d974a2`) completed `W43-E4-S3-T1`: core preflight now fails
   closed on exhausted-stage identity, stale evidence, configuration drift, active jobs, downstream
   success, and duplicate grants. Manual document fixes finalize with a fresh pass report without
   runtime; unresolved findings persist one grant, a bounded `repair-extension` brief, and reopen
   state without altering automatic repair accounting. Focused repair/stage tests (131), docs/planning
   checks (50), Ruff, mypy, full Python matrix, deterministic scenarios, adapter conformance, packaged
-  UI browser, and build passed. `W43-E4-S3-T2` is now `Next`; human usability, Claude, cross-runtime,
+  UI browser, and build passed. `W43-E4-S3-T2` is complete; human usability, Claude, cross-runtime,
   and Wave 36 work remain parked.
 
 - `2026-08-22` PR #285 (merge `14147d97`) completed `W43-E4-S2-T2`: repair-extension attempts and
