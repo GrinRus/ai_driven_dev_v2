@@ -1,0 +1,148 @@
+{
+  "schema_version": 1,
+  "profile_id": "w43-e5-s2-codex-stability-v1",
+  "scenario": {
+    "id": "AIDD-LIVE-007",
+    "path": "harness/scenarios/live/hono-non-error-throw-handling.yaml",
+    "runtime_id": "codex",
+    "representative_task_id": "TASK-LIVE-HONO-NON-ERROR-THROW",
+    "work_item": "WI-LIVE-HONO-SMOKE",
+    "target_repository": "https://github.com/honojs/hono",
+    "target_revision": "cf2d2b7edcf07adef2db7614557f4d7f9e2be7ba",
+    "stage_start": "idea",
+    "stage_end": "qa"
+  },
+  "runtime_config": {
+    "execution_mode": "native",
+    "command_source": "native",
+    "model": "gpt-5.6-luna",
+    "reasoning_effort": "high",
+    "config_identity": "codex-live-007-gpt-5-6-luna-high-v1",
+    "prompt_pack_root": "prompt-packs/stages"
+  },
+  "repetitions": {
+    "minimum": 3
+  },
+  "metrics": [
+    {
+      "metric_id": "initial-pass-rate",
+      "kind": "rate",
+      "direction": "higher-is-better",
+      "description": "Repetitions that pass without a validation repair or operator intervention.",
+      "numerator": "initial_pass_count",
+      "denominator": "repetition_count",
+      "source_artifacts": ["grader.json", "stage-timing.json", "verdict.md"]
+    },
+    {
+      "metric_id": "first-repair-recovery",
+      "kind": "rate",
+      "direction": "higher-is-better",
+      "description": "Validation failures recovered by the first repair attempt.",
+      "numerator": "first_repair_recovery_count",
+      "denominator": "validation_failure_count",
+      "source_artifacts": ["repair-history.md", "stage-timing.json", "verdict.md"]
+    },
+    {
+      "metric_id": "exhaustion",
+      "kind": "rate",
+      "direction": "lower-is-better",
+      "description": "Repetitions that exhaust automatic repair before valid progression.",
+      "numerator": "exhausted_repetition_count",
+      "denominator": "repetition_count",
+      "source_artifacts": ["repair-history.md", "grader.json", "verdict.md"]
+    },
+    {
+      "metric_id": "findings-per-root-cause",
+      "kind": "ratio",
+      "direction": "lower-is-better",
+      "description": "Located validator findings retained per distinct root cause.",
+      "numerator": "finding_count",
+      "denominator": "root_cause_count",
+      "source_artifacts": ["grader.json", "log-analysis.md", "stage-audits/<stage-run-id>.json"]
+    },
+    {
+      "metric_id": "false-budget-consumption",
+      "kind": "rate",
+      "direction": "lower-is-better",
+      "description": "Automatic repair attempts spent without a progression-required finding.",
+      "numerator": "false_budget_attempt_count",
+      "denominator": "automatic_repair_attempt_count",
+      "source_artifacts": ["repair-history.md", "grader.json", "stage-timing.json"]
+    },
+    {
+      "metric_id": "interview-resume",
+      "kind": "rate",
+      "direction": "higher-is-better",
+      "description": "Interview resumes that preserve prior answers and reach their expected state.",
+      "numerator": "successful_resume_count",
+      "denominator": "resume_count",
+      "source_artifacts": ["flow-state.json", "events.jsonl", "questions.md", "answers.md"]
+    },
+    {
+      "metric_id": "tasklist-compliance",
+      "kind": "rate",
+      "direction": "higher-is-better",
+      "description": "Repetitions whose tasklist, ledger, dependencies, and checkpoints agree.",
+      "numerator": "compliant_tasklist_count",
+      "denominator": "tasklist_run_count",
+      "source_artifacts": ["task-flow-checkpoint.json", "task-flow-checkpoint.md", "grader.json"]
+    },
+    {
+      "metric_id": "extension-success",
+      "kind": "rate",
+      "direction": "higher-is-better",
+      "description": "Eligible one-time repair-extension attempts that complete validation and progression.",
+      "numerator": "successful_extension_count",
+      "denominator": "eligible_extension_count",
+      "source_artifacts": ["repair-history.md", "stage-audits/<stage-run-id>.json", "grader.json"]
+    },
+    {
+      "metric_id": "intervention-rate",
+      "kind": "rate",
+      "direction": "lower-is-better",
+      "description": "Repetitions requiring operator intervention outside the governed retry/resume path.",
+      "numerator": "operator_intervention_count",
+      "denominator": "repetition_count",
+      "source_artifacts": ["flow-state.json", "grader.json", "verdict.md"]
+    }
+  ],
+  "evidence_schema": {
+    "required_artifacts": [
+      "harness-metadata.json",
+      "install-transcript.json",
+      "feature-selection.json",
+      "flow-state.json",
+      "stage-audits/<stage-run-id>.json",
+      "runtime.log",
+      "stage-timing.json",
+      "log-analysis.md",
+      "repair-history.md",
+      "task-flow-checkpoint.json",
+      "task-flow-checkpoint.md",
+      "target-workspace-evidence.json",
+      "verify-transcript.json",
+      "grader.json",
+      "verdict.md"
+    ],
+    "conditional_artifacts": [
+      "runtime.jsonl",
+      "events.jsonl",
+      "questions.md",
+      "answers.md",
+      "frontend-checkpoints.json",
+      "frontend-checkpoints.md"
+    ],
+    "required_fields": [
+      "scenario_id",
+      "run_id",
+      "runtime_id",
+      "target_revision",
+      "config_identity",
+      "stage_scope",
+      "attempts",
+      "evidence_links",
+      "first_failure_boundary",
+      "metrics"
+    ]
+  }
+}
