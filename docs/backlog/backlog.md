@@ -7,12 +7,12 @@ slice, and local task.
 
 ## Next
 
-- `W43-E4-S4-T2` — Render `Run one more repair` as bounded recovery.
+- `W43-E5-S1-T1` — Add ownership, interview, and tasklist resilience scenarios.
 
 
 ## Soon
 
-- none
+- `W43-E5-S1-T2` — Add repair-extension eligibility and terminal scenarios.
 
 ## Parking lot
 
@@ -38,6 +38,15 @@ slice, and local task.
   queue-restoration policy in `docs/backlog/roadmap.md` (`W8-E3-S1`).
 
 ## Current reconciliation
+
+- `2026-08-22` PR #293 (merge `e4eb8a42`) completed `W43-E4-S4-T2`: the operator UI now renders
+  one core-eligible `Run one more repair` action, keeps Request Change and Start new run as
+  distinct alternatives, validates the exact selected run/stage/runtime before mutation, streams
+  the repair-extension attempt, and reads back durable server state. Focused UI/CLI/core/frontend
+  tests, docs/planning checks (50), Ruff, mypy, full Python matrix, deterministic scenarios,
+  adapter conformance, packaged UI browser, and build passed. `W43-E5-S1-T1` is now `Next` and
+  its direct repair-extension successor is `Soon`; human usability, Claude, cross-runtime, and
+  Wave 36 work remain parked.
 
 - `2026-08-22` PR #291 (merge `6456124f`) completed `W43-E4-S4-T1`: core/service read models now
   publish repair-extension eligibility and preview evidence with findings, primary cause, automatic
