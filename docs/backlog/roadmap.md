@@ -15034,14 +15034,21 @@ Dependencies: `W43-E2-S2-T1` and `W43-E4-S1`.
 
 Local tasks:
 
-- `W43-E4-S2-T1` (next) Define the operator-authorized repair-extension contract.
+- `W43-E4-S2-T1` (done) Define the operator-authorized repair-extension contract.
   - Scope: permit exactly one additional attempt only for the latest `repair-exhausted` stage,
     retain run/stage identity, validator and brief hashes, author/time/reason, same-run selection
     constraints, no succeeded downstream, and no validation bypass; keep Request Change and new
     run as separate actions.
   - Verification: allowed and rejected contract examples cover exhausted, generic failed, stale,
     already-extended, downstream-succeeded, intervention, and configuration-drift cases.
-- `W43-E4-S2-T2` (planned) Account automatic repairs and manual extensions separately.
+  - Completion: PR #283 (merge `b7485171`) added the durable `repair-extension.md` contract,
+    immutable core grant evidence for run/stage, validator/brief hashes, configuration identity,
+    author, timestamp, and reason, plus pure fail-closed eligibility checks for exhaustion-only,
+    stale evidence, configuration drift, intervention, active jobs, prior grants, downstream
+    success, identity mismatch, and validation bypass. Focused repair tests (41), harness/package
+    fixture tests (48), docs/planning/packaging checks (51), Ruff, mypy, full Python matrix,
+    deterministic scenarios, adapter conformance, packaged UI browser, and build passed.
+- `W43-E4-S2-T2` (next) Account automatic repairs and manual extensions separately.
   - Scope: add `repair-extension` attempt/history identity, preserve the original automatic
     budget and exhaustion record, count one durable operator grant, and read older attempt indexes
     without the new mode.
