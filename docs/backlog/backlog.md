@@ -7,7 +7,11 @@ slice, and local task.
 
 ## Next
 
+- `W43-E3-S3-T1` — Collapse tasklist cascade issues into primary findings.
+
 ## Soon
+
+- `W43-E3-S3-T2` — Calibrate tasklist finding severity to executability.
 
 ## Parking lot
 
@@ -33,6 +37,11 @@ slice, and local task.
   queue-restoration policy in `docs/backlog/roadmap.md` (`W8-E3-S1`).
 
 ## Current reconciliation
+
+- `2026-08-22` The Codex-only audit found that `W43-E3-S3-T1/T2/T3` remain planned in the
+  roadmap and are outside the deferred human/Claude scope. `W43-E3-S3-T1` is promoted to
+  `Next`, with `T2` in `Soon`; the human observation, Claude/cross-runtime, and Wave 36 lanes
+  remain parked.
 
 - `2026-08-22` PR #301 (merge `3f4cf00e`) completed `W43-E5-S2-T2`: three fresh Codex
   AIDD-LIVE-007 repetitions were retained and validated against the pinned profile. All three
