@@ -96,7 +96,7 @@ def test_runtime_failures_show_exact_durable_signal_without_mutation(
     ("fixture_state", "action", "forbidden"),
     (
         ("validation-repair", "Run Repair", "Request Change"),
-        ("validation-repair-exhausted", "Request Change", "Run Repair"),
+        ("validation-repair-exhausted", "Run one more repair", "Request Change"),
     ),
 )
 def test_validation_recovery_exposes_one_eligible_primary_action(
