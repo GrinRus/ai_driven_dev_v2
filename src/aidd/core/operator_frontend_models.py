@@ -90,6 +90,43 @@ class OperatorRepairAttemptDiagnostics:
 
 
 @dataclass(frozen=True, slots=True)
+class OperatorRepairExtensionPreview:
+    """Core-owned, read-only projection for the one-time repair extension."""
+
+    work_item: str
+    run_id: str
+    stage: str
+    runtime_id: str | None
+    eligible: bool
+    disabled_reason: str | None
+    primary_cause: OperatorValidationFindingView | None
+    current_findings: tuple[OperatorValidationFindingView, ...]
+    automatic_repair_attempts_used: int
+    automatic_repair_attempts_max: int
+    automatic_repair_attempts_remaining: int
+    manual_grant_used: bool
+    validator_report_path: str | None
+    validator_report_sha256: str | None
+    repair_brief_path: str | None
+    repair_brief_sha256: str | None
+    selected_runner: str | None
+    downstream_succeeded: tuple[str, ...]
+    configuration_identity: str | None
+
+    def __post_init__(self) -> None:
+        if self.eligible and self.disabled_reason is not None:
+            raise ValueError("An eligible repair-extension preview cannot have a disabled reason.")
+        if not self.eligible and not (self.disabled_reason or "").strip():
+            raise ValueError("An ineligible repair-extension preview must have a disabled reason.")
+        if self.automatic_repair_attempts_used < 0:
+            raise ValueError("Automatic repair attempts used must be non-negative.")
+        if self.automatic_repair_attempts_max < 0:
+            raise ValueError("Automatic repair attempts maximum must be non-negative.")
+        if self.automatic_repair_attempts_remaining < 0:
+            raise ValueError("Automatic repair attempts remaining must be non-negative.")
+
+
+@dataclass(frozen=True, slots=True)
 class OperatorValidationRepairDiagnostics:
     status: str
     final_state: str
@@ -99,6 +136,7 @@ class OperatorValidationRepairDiagnostics:
     repair_attempts: tuple[OperatorRepairAttemptDiagnostics, ...]
     validation_findings: tuple[OperatorValidationFindingView, ...]
     primary_validation_finding: OperatorValidationFindingView | None
+    repair_extension: OperatorRepairExtensionPreview | None = None
 
 
 @dataclass(frozen=True, slots=True)

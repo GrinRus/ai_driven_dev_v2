@@ -2186,6 +2186,10 @@ def _collect_operator_dashboard_evidence(
     active_stage: str = STAGES[0],
     run_id: str | None = None,
     project_root: Path | None = None,
+    current_configuration_identity: str | None = None,
+    selected_runner: str | None = None,
+    active_job: bool = False,
+    max_repair_attempts: int = 2,
 ) -> OperatorDashboardEvidence:
     selected_project_root = (
         project_root.resolve(strict=False) if project_root is not None else Path.cwd()
@@ -2244,6 +2248,10 @@ def _collect_operator_dashboard_evidence(
                 work_item=work_item,
                 stage=active_stage,
                 run_id=metadata.run_id,
+                current_configuration_identity=current_configuration_identity,
+                selected_runner=selected_runner,
+                active_job=active_job,
+                max_repair_attempts=max_repair_attempts,
             )
         except ValueError:
             active_stage_view = None
@@ -2414,6 +2422,10 @@ def collect_operator_dashboard_evidence(
     active_stage: str = STAGES[0],
     run_id: str | None = None,
     project_root: Path | None = None,
+    current_configuration_identity: str | None = None,
+    selected_runner: str | None = None,
+    active_job: bool = False,
+    max_repair_attempts: int = 2,
 ) -> OperatorDashboardEvidence:
     token = _READ_CACHE.set({})
     try:
@@ -2423,6 +2435,10 @@ def collect_operator_dashboard_evidence(
             active_stage=active_stage,
             run_id=run_id,
             project_root=project_root,
+            current_configuration_identity=current_configuration_identity,
+            selected_runner=selected_runner,
+            active_job=active_job,
+            max_repair_attempts=max_repair_attempts,
         )
     finally:
         _READ_CACHE.reset(token)

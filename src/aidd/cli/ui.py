@@ -127,6 +127,7 @@ from aidd.core.remediation import (
 from aidd.core.repository_diff import resolve_repository_diff
 from aidd.core.run_accountability import resolve_run_accountability
 from aidd.core.run_comparison import resolve_run_comparison
+from aidd.core.run_inspection import resolve_run_metadata_summary
 from aidd.core.run_lookup import latest_run_id as resolve_latest_run_id
 from aidd.core.run_store import (
     next_attempt_number,
@@ -3160,14 +3161,58 @@ class OperatorUiService:
 
     def _get_stage(self, params: dict[str, list[str]]) -> UiResponse:
         stage = _first_param(params, "stage") or STAGES[0]
+        run_id = _first_param(params, "run_id")
+        configuration_identity, selected_runner, active_job = self._repair_extension_context(
+            stage=stage,
+            run_id=run_id,
+        )
         return _json_response(
             resolve_operator_stage_view(
                 workspace_root=self.workspace_root,
                 work_item=self.work_item,
                 stage=stage,
-                run_id=_first_param(params, "run_id"),
+                run_id=run_id,
+                current_configuration_identity=configuration_identity,
+                selected_runner=selected_runner,
+                active_job=active_job,
             )
         )
+
+    def _repair_extension_context(
+        self,
+        *,
+        stage: str,
+        run_id: str | None,
+    ) -> tuple[str | None, str | None, bool]:
+        """Provide service-owned readiness context for the stage read model."""
+
+        runtime_id: str | None = None
+        selected_run_id: str | None = run_id
+        configuration_identity: str | None = None
+        try:
+            metadata = resolve_run_metadata_summary(
+                workspace_root=self.workspace_root,
+                work_item=self.work_item,
+                run_id=run_id,
+            )
+            selected_run_id = metadata.run_id
+            runtime_id = metadata.runtime_id
+            cfg = load_config(self.config_path)
+            configuration_identity = runtime_config_identity(
+                runtime_id=runtime_id,
+                runtime_config=cfg.runtime_config(runtime_id),
+            )
+        except (OSError, ValueError, KeyError, TypeError):
+            pass
+
+        active = self._jobs.active_job()
+        active_exact = bool(
+            active is not None
+            and active.get("work_item") == self.work_item
+            and active.get("run_id") == selected_run_id
+            and active.get("stage") == stage
+        )
+        return configuration_identity, runtime_id, active_exact
 
     def _get_questions(self, params: dict[str, list[str]]) -> UiResponse:
         stage = _first_param(params, "stage") or STAGES[0]
@@ -3316,12 +3361,19 @@ class OperatorUiService:
         run_id: str | None,
         use_terminal_default: bool,
     ) -> object:
+        configuration_identity, selected_runner, active_job = self._repair_extension_context(
+            stage=stage,
+            run_id=run_id,
+        )
         dashboard = resolve_operator_dashboard_view(
             workspace_root=self.workspace_root,
             work_item=self.work_item,
             active_stage=stage,
             run_id=run_id,
             project_root=self.project_root,
+            current_configuration_identity=configuration_identity,
+            selected_runner=selected_runner,
+            active_job=active_job,
         )
         if (
             use_terminal_default
@@ -3336,6 +3388,9 @@ class OperatorUiService:
                 active_stage=dashboard.first_failure.stage,
                 run_id=run_id,
                 project_root=self.project_root,
+                current_configuration_identity=configuration_identity,
+                selected_runner=selected_runner,
+                active_job=active_job and dashboard.first_failure.stage == stage,
             )
         if (
             use_terminal_default
@@ -3349,6 +3404,9 @@ class OperatorUiService:
                 active_stage="qa",
                 run_id=run_id,
                 project_root=self.project_root,
+                current_configuration_identity=configuration_identity,
+                selected_runner=selected_runner,
+                active_job=active_job and stage == "qa",
             )
         return dashboard
 

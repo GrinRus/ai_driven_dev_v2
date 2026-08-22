@@ -34,6 +34,7 @@ from aidd.core.operator_intervention import (
     ensure_intervention_allowed_for_downstream,
     latest_operator_intervention_request,
 )
+from aidd.core.operator_repair_extension import resolve_operator_repair_extension_preview
 from aidd.core.run_inspection import (
     StageResultSummary,
     resolve_run_metadata_summary,
@@ -142,6 +143,10 @@ def resolve_operator_stage_view(
     work_item: str,
     stage: str,
     run_id: str | None = None,
+    current_configuration_identity: str | None = None,
+    selected_runner: str | None = None,
+    active_job: bool = False,
+    max_repair_attempts: int = 2,
 ) -> OperatorStageView:
     validate_operator_stage(stage)
     result = resolve_stage_result_summary(
@@ -165,6 +170,10 @@ def resolve_operator_stage_view(
             run_id=result.run_id,
             result=result,
             questions=questions,
+            current_configuration_identity=current_configuration_identity,
+            selected_runner=selected_runner,
+            active_job=active_job,
+            max_repair_attempts=max_repair_attempts,
         ),
     )
 
@@ -177,6 +186,10 @@ def _stage_diagnostics(
     run_id: str,
     result: StageResultSummary,
     questions: OperatorQuestionsView,
+    current_configuration_identity: str | None = None,
+    selected_runner: str | None = None,
+    active_job: bool = False,
+    max_repair_attempts: int = 2,
 ) -> OperatorStageDiagnostics:
     blocking = _blocking_question_diagnostics(
         workspace_root=workspace_root,
@@ -188,6 +201,10 @@ def _stage_diagnostics(
         stage=stage,
         run_id=run_id,
         result=result,
+        current_configuration_identity=current_configuration_identity,
+        selected_runner=selected_runner,
+        active_job=active_job,
+        max_repair_attempts=max_repair_attempts,
     )
     interview_candidate = _interview_candidate_diagnostics(
         workspace_root=workspace_root,
@@ -543,6 +560,10 @@ def _validation_repair_diagnostics(
     stage: str,
     run_id: str,
     result: StageResultSummary,
+    current_configuration_identity: str | None = None,
+    selected_runner: str | None = None,
+    active_job: bool = False,
+    max_repair_attempts: int = 2,
 ) -> OperatorValidationRepairDiagnostics:
     metadata = load_stage_metadata(
         workspace_root=workspace_root,
@@ -582,6 +603,17 @@ def _validation_repair_diagnostics(
         workspace_root=workspace_root,
         validator_report_path=result.validator_report_path,
     )
+    repair_extension = resolve_operator_repair_extension_preview(
+        workspace_root=workspace_root,
+        work_item=work_item,
+        stage=stage,
+        run_id=run_id,
+        result=result,
+        current_configuration_identity=current_configuration_identity,
+        selected_runner=selected_runner,
+        active_job=active_job,
+        max_repair_attempts=max_repair_attempts,
+    )
     return OperatorValidationRepairDiagnostics(
         status=status,
         final_state=result.final_state,
@@ -591,6 +623,7 @@ def _validation_repair_diagnostics(
         repair_attempts=repair_attempts,
         validation_findings=validation_findings,
         primary_validation_finding=validation_findings[0] if validation_findings else None,
+        repair_extension=repair_extension,
     )
 
 
