@@ -4,13 +4,14 @@ from pathlib import Path
 
 import pytest
 
-from aidd.core.models.run import RepairHistoryEntry
+from aidd.core.models.run import RepairExtensionGrant, RepairHistoryEntry
 from aidd.core.repair import (
     RepairBudgetPolicy,
     ValidatorReportFinding,
     count_stage_attempts,
     default_repair_budget,
     effective_repair_budget,
+    evaluate_repair_extension_eligibility,
     evaluate_stage_repair_counter,
     generate_repair_brief,
     group_repair_findings,
@@ -20,6 +21,7 @@ from aidd.core.repair import (
     render_repair_brief,
     render_stage_result_with_repair_history,
     repair_attempts_used,
+    validate_repair_extension_grant,
     write_repair_brief,
 )
 from aidd.core.run_store import create_run_manifest, load_stage_metadata, persist_stage_status
@@ -34,6 +36,122 @@ def _make_attempt_dir(root: Path, name: str) -> None:
 
 def test_default_repair_budget_is_two_attempts() -> None:
     assert default_repair_budget() == 2
+
+
+def _repair_extension_grant() -> RepairExtensionGrant:
+    return RepairExtensionGrant(
+        work_item_id="WI-001",
+        run_id="run-001",
+        stage="plan",
+        validator_report_path="workitems/WI-001/stages/plan/validator-report.md",
+        validator_report_sha256="a" * 64,
+        repair_brief_path="workitems/WI-001/stages/plan/repair-brief.md",
+        repair_brief_sha256="b" * 64,
+        configuration_identity="codex:config-001",
+        author="operator@example.test",
+        authorized_at_utc="2026-08-22T00:00:00Z",
+        reason="Apply one bounded correction after automatic exhaustion.",
+    )
+
+
+def test_repair_extension_grant_round_trips_immutable_evidence() -> None:
+    grant = _repair_extension_grant()
+
+    restored = RepairExtensionGrant.from_dict(grant.to_dict())
+
+    assert restored == grant
+    assert restored.to_dict()["validator_report_sha256"] == "a" * 64
+    assert restored.to_dict()["repair_brief_sha256"] == "b" * 64
+
+
+@pytest.mark.parametrize(
+    ("field_name", "value", "message"),
+    (
+        ("validator_report_sha256", "not-a-hash", "SHA-256"),
+        ("repair_brief_path", "/absolute/repair-brief.md", "workspace-relative"),
+        ("reason", "", "reason must not be empty"),
+    ),
+)
+def test_repair_extension_grant_rejects_malformed_evidence(
+    field_name: str,
+    value: str,
+    message: str,
+) -> None:
+    values = _repair_extension_grant().to_dict()
+    values[field_name] = value
+
+    with pytest.raises(ValueError, match=message):
+        RepairExtensionGrant.from_dict(values)
+
+
+def test_repair_extension_contract_allows_latest_exhausted_stage() -> None:
+    grant = _repair_extension_grant()
+
+    decision = evaluate_repair_extension_eligibility(
+        grant,
+        expected_work_item_id="WI-001",
+        expected_run_id="run-001",
+        expected_stage="plan",
+        latest_stage_status="repair-exhausted",
+        latest_attempt_mode="repair",
+        current_validator_report_sha256="a" * 64,
+        current_repair_brief_sha256="b" * 64,
+        current_configuration_identity="codex:config-001",
+    )
+
+    assert decision.eligible
+    assert decision.disabled_reason is None
+    validate_repair_extension_grant(
+        grant,
+        expected_work_item_id="WI-001",
+        expected_run_id="run-001",
+        expected_stage="plan",
+        latest_stage_status="repair-exhausted",
+        latest_attempt_mode="repair",
+        current_validator_report_sha256="a" * 64,
+        current_repair_brief_sha256="b" * 64,
+        current_configuration_identity="codex:config-001",
+    )
+
+
+@pytest.mark.parametrize(
+    ("overrides", "message"),
+    (
+        ({"latest_stage_status": "failed"}, "exhausted"),
+        ({"latest_attempt_mode": "intervention"}, "intervention"),
+        ({"expected_run_id": "other-run"}, "identity"),
+        ({"current_validator_report_sha256": "c" * 64}, "stale"),
+        ({"current_configuration_identity": "codex:config-002"}, "drift"),
+        ({"active_job": True}, "active"),
+        ({"prior_grant": _repair_extension_grant()}, "already used"),
+        ({"succeeded_downstream": ("qa",)}, "downstream"),
+        ({"validation_bypassed": True}, "bypass"),
+    ),
+)
+def test_repair_extension_contract_rejects_unsafe_selection(
+    overrides: dict[str, object],
+    message: str,
+) -> None:
+    grant = _repair_extension_grant()
+    kwargs: dict[str, object] = {
+        "expected_work_item_id": "WI-001",
+        "expected_run_id": "run-001",
+        "expected_stage": "plan",
+        "latest_stage_status": "repair-exhausted",
+        "latest_attempt_mode": "repair",
+        "current_validator_report_sha256": "a" * 64,
+        "current_repair_brief_sha256": "b" * 64,
+        "current_configuration_identity": "codex:config-001",
+    }
+    kwargs.update(overrides)
+
+    decision = evaluate_repair_extension_eligibility(grant, **kwargs)  # type: ignore[arg-type]
+
+    assert not decision.eligible
+    assert decision.disabled_reason is not None
+    assert message.lower() in decision.disabled_reason.lower()
+    with pytest.raises(ValueError, match=message):
+        validate_repair_extension_grant(grant, **kwargs)
 
 
 def test_repair_budget_policy_validates_values() -> None:

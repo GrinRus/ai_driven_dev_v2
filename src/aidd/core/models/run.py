@@ -7,6 +7,22 @@ from typing import Any
 from aidd.compatibility import legacy_prompt_pack_provenance_payload
 
 
+def _normalize_required_text(value: str, *, field_name: str) -> str:
+    normalized = value.strip()
+    if not normalized:
+        raise ValueError(f"{field_name} must not be empty.")
+    return normalized
+
+
+def _normalize_sha256(value: str, *, field_name: str) -> str:
+    normalized = _normalize_required_text(value, field_name=field_name).lower()
+    if len(normalized) != 64 or any(
+        character not in "0123456789abcdef" for character in normalized
+    ):
+        raise ValueError(f"{field_name} must be a 64-character SHA-256 digest.")
+    return normalized
+
+
 @dataclass(frozen=True, slots=True)
 class StageStatusChange:
     status: str
@@ -99,6 +115,99 @@ class RepairHistoryEntry:
                 if payload.get("repair_brief_path") is not None
                 else None
             ),
+        )
+
+
+@dataclass(frozen=True, slots=True)
+class RepairExtensionGrant:
+    """Immutable evidence for the single operator-authorized repair extension.
+
+    The grant is deliberately separate from :class:`RepairHistoryEntry`: automatic repair
+    accounting and the extension attempt mode are added by the accounting slice. This model
+    freezes the identity and evidence that a later preflight must revalidate.
+    """
+
+    work_item_id: str
+    run_id: str
+    stage: str
+    validator_report_path: str
+    validator_report_sha256: str
+    repair_brief_path: str
+    repair_brief_sha256: str
+    configuration_identity: str
+    author: str
+    authorized_at_utc: str
+    reason: str
+    schema_version: int = 1
+
+    def __post_init__(self) -> None:
+        for field_name in ("work_item_id", "run_id", "stage", "configuration_identity", "author"):
+            object.__setattr__(
+                self,
+                field_name,
+                _normalize_required_text(getattr(self, field_name), field_name=field_name),
+            )
+
+        for field_name in ("validator_report_path", "repair_brief_path"):
+            value = _normalize_required_text(getattr(self, field_name), field_name=field_name)
+            if Path(value).is_absolute() or "\\" in value:
+                raise ValueError(f"{field_name} must be workspace-relative.")
+            object.__setattr__(self, field_name, value)
+
+        object.__setattr__(
+            self,
+            "validator_report_sha256",
+            _normalize_sha256(self.validator_report_sha256, field_name="validator_report_sha256"),
+        )
+        object.__setattr__(
+            self,
+            "repair_brief_sha256",
+            _normalize_sha256(self.repair_brief_sha256, field_name="repair_brief_sha256"),
+        )
+        object.__setattr__(
+            self,
+            "authorized_at_utc",
+            _normalize_required_text(self.authorized_at_utc, field_name="authorized_at_utc"),
+        )
+        object.__setattr__(
+            self,
+            "reason",
+            _normalize_required_text(self.reason, field_name="reason"),
+        )
+        if self.schema_version != 1:
+            raise ValueError(f"Unsupported repair-extension grant schema: {self.schema_version}")
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "schema_version": self.schema_version,
+            "work_item_id": self.work_item_id,
+            "run_id": self.run_id,
+            "stage": self.stage,
+            "validator_report_path": self.validator_report_path,
+            "validator_report_sha256": self.validator_report_sha256,
+            "repair_brief_path": self.repair_brief_path,
+            "repair_brief_sha256": self.repair_brief_sha256,
+            "configuration_identity": self.configuration_identity,
+            "author": self.author,
+            "authorized_at_utc": self.authorized_at_utc,
+            "reason": self.reason,
+        }
+
+    @classmethod
+    def from_dict(cls, payload: dict[str, Any]) -> RepairExtensionGrant:
+        return cls(
+            schema_version=int(payload.get("schema_version", 1)),
+            work_item_id=str(payload["work_item_id"]),
+            run_id=str(payload["run_id"]),
+            stage=str(payload["stage"]),
+            validator_report_path=str(payload["validator_report_path"]),
+            validator_report_sha256=str(payload["validator_report_sha256"]),
+            repair_brief_path=str(payload["repair_brief_path"]),
+            repair_brief_sha256=str(payload["repair_brief_sha256"]),
+            configuration_identity=str(payload["configuration_identity"]),
+            author=str(payload["author"]),
+            authorized_at_utc=str(payload["authorized_at_utc"]),
+            reason=str(payload["reason"]),
         )
 
 

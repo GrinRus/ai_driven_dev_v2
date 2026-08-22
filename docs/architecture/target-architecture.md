@@ -439,6 +439,11 @@ exhaustion, the target recovery contract permits at most one durable `repair-ext
 the latest exhausted stage in the same run. The grant records run/stage identity, config plus
 validator/brief hashes, author, time, and reason; it never resets budget or history.
 
+The durable Markdown shape for that authorization is
+`contracts/documents/repair-extension.md`. It records the identity and evidence gates before
+the decision, requires an explicit revalidation-before-runtime declaration, and keeps Request
+Change and a new run as separate actions.
+
 Repair-extension preflight revalidates current documents first. If they already pass, AIDD
 finalizes without launching a runtime. Otherwise it may allocate one extension attempt only when
 no job is active, evidence is current, no downstream stage succeeded, and no prior grant was used.

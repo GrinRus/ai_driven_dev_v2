@@ -121,6 +121,7 @@ def test_built_wheel_includes_runtime_owned_contracts_and_prompt_packs(tmp_path:
 
     for stage in STAGES:
         assert f"aidd/_resources/contracts/stages/{stage}.md" in archive_names
+    assert "aidd/_resources/contracts/documents/repair-extension.md" in archive_names
     assert "aidd/_resources/contracts/documents/stage-result.md" in archive_names
     assert "aidd/_resources/prompt-packs/stages/plan/system.md" in archive_names
     for prompt_path in _active_prompt_hashes():
