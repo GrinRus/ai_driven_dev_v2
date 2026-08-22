@@ -1,0 +1,122 @@
+{
+  "schema_version": 1,
+  "profile_id": "w43-e5-s2-codex-stability-v1",
+  "status": "infra-fail",
+  "repetitions": [
+    {
+      "schema_version": 1,
+      "repetition_id": "repetition-01",
+      "scenario_id": "AIDD-LIVE-007",
+      "run_id": "eval-live-007-codex-20260822T083432Z",
+      "runtime_id": "codex",
+      "target_revision": "cf2d2b7edcf07adef2db7614557f4d7f9e2be7ba",
+      "config_identity": "codex-live-007-gpt-5-6-luna-high-v1",
+      "status": "infra-fail",
+      "stage_scope": ["idea", "qa"],
+      "attempts": [
+        {"stage": "idea", "status": "pass"},
+        {"stage": "research", "status": "pass"},
+        {"stage": "plan", "status": "pass"},
+        {"stage": "review-spec", "status": "pass"},
+        {"stage": "tasklist", "status": "pass"},
+        {"stage": "implement", "status": "infra-fail", "signal": "run-stage terminated after runaway repository snapshot serialization"}
+      ],
+      "evidence_links": [
+        "harness-metadata.json", "install-transcript.json", "feature-selection.json", "flow-state.json",
+        "stage-audits/stage-0006-implement.json", "runtime.log", "stage-timing.json", "log-analysis.md",
+        "repair-history.md", "task-flow-checkpoint.json", "task-flow-checkpoint.md",
+        "target-workspace-evidence.json", "verify-transcript.json", "grader.json", "verdict.md"
+      ],
+      "first_failure_boundary": {
+        "category": "infrastructure",
+        "signal": "run-stage implement terminated after runaway repository snapshot serialization",
+        "source": "verdict.md"
+      },
+      "metrics": {
+        "initial-pass-rate": {"numerator": 0, "denominator": 1, "value": 0},
+        "first-repair-recovery": {"numerator": 0, "denominator": 1, "value": 0},
+        "exhaustion": {"numerator": 0, "denominator": 1, "value": 0},
+        "findings-per-root-cause": {"numerator": 0, "denominator": 1, "value": 0},
+        "false-budget-consumption": {"numerator": 0, "denominator": 1, "value": 0},
+        "interview-resume": {"numerator": 0, "denominator": 1, "value": 0},
+        "tasklist-compliance": {"numerator": 1, "denominator": 1, "value": 1},
+        "extension-success": {"numerator": 0, "denominator": 1, "value": 0},
+        "intervention-rate": {"numerator": 0, "denominator": 1, "value": 0}
+      }
+    },
+    {
+      "schema_version": 1,
+      "repetition_id": "repetition-02",
+      "scenario_id": "AIDD-LIVE-007",
+      "run_id": "eval-live-007-codex-20260822T090559Z",
+      "runtime_id": "codex",
+      "target_revision": "cf2d2b7edcf07adef2db7614557f4d7f9e2be7ba",
+      "config_identity": "codex-live-007-gpt-5-6-luna-high-v1",
+      "status": "infra-fail",
+      "stage_scope": ["idea", "qa"],
+      "attempts": [
+        {"stage": "idea", "status": "pass"},
+        {"stage": "research", "status": "infra-fail", "signal": "no first runtime event before bounded stop"}
+      ],
+      "evidence_links": [
+        "harness-metadata.json", "install-transcript.json", "feature-selection.json", "flow-state.json",
+        "stage-audits/stage-0001-idea.json", "runtime.log", "stage-timing.json", "log-analysis.md",
+        "repair-history.md", "task-flow-checkpoint.json", "task-flow-checkpoint.md",
+        "target-workspace-evidence.json", "verify-transcript.json", "grader.json", "verdict.md"
+      ],
+      "first_failure_boundary": {
+        "category": "infrastructure",
+        "signal": "Codex research stage emitted no first runtime event before bounded stop",
+        "source": "verdict.md"
+      },
+      "metrics": {
+        "initial-pass-rate": {"numerator": 0, "denominator": 1, "value": 0},
+        "first-repair-recovery": {"numerator": 0, "denominator": 1, "value": 0},
+        "exhaustion": {"numerator": 0, "denominator": 1, "value": 0},
+        "findings-per-root-cause": {"numerator": 0, "denominator": 1, "value": 0},
+        "false-budget-consumption": {"numerator": 0, "denominator": 1, "value": 0},
+        "interview-resume": {"numerator": 0, "denominator": 1, "value": 0},
+        "tasklist-compliance": {"numerator": 0, "denominator": 1, "value": 0},
+        "extension-success": {"numerator": 0, "denominator": 1, "value": 0},
+        "intervention-rate": {"numerator": 0, "denominator": 1, "value": 0}
+      }
+    },
+    {
+      "schema_version": 1,
+      "repetition_id": "repetition-03",
+      "scenario_id": "AIDD-LIVE-007",
+      "run_id": "eval-live-007-codex-20260822T091236Z",
+      "runtime_id": "codex",
+      "target_revision": "cf2d2b7edcf07adef2db7614557f4d7f9e2be7ba",
+      "config_identity": "codex-live-007-gpt-5-6-luna-high-v1",
+      "status": "infra-fail",
+      "stage_scope": ["idea", "qa"],
+      "attempts": [
+        {"stage": "idea", "status": "pass"},
+        {"stage": "research", "status": "infra-fail", "signal": "no first runtime event before bounded stop"}
+      ],
+      "evidence_links": [
+        "harness-metadata.json", "install-transcript.json", "feature-selection.json", "flow-state.json",
+        "stage-audits/stage-0001-idea.json", "runtime.log", "stage-timing.json", "log-analysis.md",
+        "repair-history.md", "task-flow-checkpoint.json", "task-flow-checkpoint.md",
+        "target-workspace-evidence.json", "verify-transcript.json", "grader.json", "verdict.md"
+      ],
+      "first_failure_boundary": {
+        "category": "infrastructure",
+        "signal": "Codex research stage emitted no first runtime event before bounded stop",
+        "source": "verdict.md"
+      },
+      "metrics": {
+        "initial-pass-rate": {"numerator": 0, "denominator": 1, "value": 0},
+        "first-repair-recovery": {"numerator": 0, "denominator": 1, "value": 0},
+        "exhaustion": {"numerator": 0, "denominator": 1, "value": 0},
+        "findings-per-root-cause": {"numerator": 0, "denominator": 1, "value": 0},
+        "false-budget-consumption": {"numerator": 0, "denominator": 1, "value": 0},
+        "interview-resume": {"numerator": 0, "denominator": 1, "value": 0},
+        "tasklist-compliance": {"numerator": 0, "denominator": 1, "value": 0},
+        "extension-success": {"numerator": 0, "denominator": 1, "value": 0},
+        "intervention-rate": {"numerator": 0, "denominator": 1, "value": 0}
+      }
+    }
+  ]
+}
