@@ -15209,14 +15209,19 @@ prerequisites and must be reported as explicit blockers when unavailable.
 
 Local tasks:
 
-- `W43-E5-S2-T1` (next) Define the Codex stability profile and metrics.
+- `W43-E5-S2-T1` (done) Define the Codex stability profile and metrics.
   - Scope: pin the representative work item, stage boundaries, prompt/runtime configuration,
     repetition count, initial-pass rate, first-repair recovery, exhaustion, findings per root
     cause, false budget consumption, interview resume, tasklist compliance, extension success,
     and intervention rate.
   - Verification: eval-doctor and profile tests prove the same scenario and evidence schema apply
     to every Codex repetition without provider-specific branches in core.
-- `W43-E5-S2-T2` (planned) Run and report three fresh Codex repetitions.
+  - Completion: PR #299 (merge `fa75f0e7`) added the pinned AIDD-LIVE-007 Codex profile, canonical
+    nine-metric vocabulary, required/conditional evidence inventory, fail-closed repetition
+    validation, fixture-backed tests, and the stability-lane handoff. Ruff, mypy, focused eval/
+    CLI tests (11), docs/planning/scenario checks (75), and full CI passed. Live repetitions remain
+    the separate `W43-E5-S2-T2` task; human, Claude, and cross-runtime lanes remain parked.
+- `W43-E5-S2-T2` (next) Run and report three fresh Codex repetitions.
   - Scope: execute at least three fresh Codex runs against one pinned scenario/profile after the
     provider-free gate, classify first decisive failures, and retain sanitized comparable artifacts.
   - Verification: every repetition has install/readiness evidence, runtime logs, stage audits,
@@ -15229,6 +15234,13 @@ Local tasks:
     runtimes and retains explicit environment-blocked verdicts when prerequisites are absent.
 
 Wave 43 reconciliation notes:
+
+- `2026-08-22` `W43-E5-S2-T1` is complete in PR #299 (merge `fa75f0e7`). The Codex-only stability
+  lane now has a pinned AIDD-LIVE-007 profile, native runtime/config identity, canonical nine
+  metrics, required/conditional evidence inventory, and fail-closed repetition schema checks.
+  Focused profile/eval-doctor tests, docs/planning/scenario checks, Ruff, mypy, and full CI passed.
+  `W43-E5-S2-T2` is now the only dependency-ready task; human usability, Claude, cross-runtime,
+  and Wave 36 work remain parked.
 
 - `2026-08-22` `W43-E5-S1-T2` is complete in PR #297 (merge `69e3f214`). The provider-free
   repair-extension lane now covers successful and repeated-failure grants, manual-fix

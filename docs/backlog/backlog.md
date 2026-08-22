@@ -7,7 +7,7 @@ slice, and local task.
 
 ## Next
 
-- `W43-E5-S2-T1` — Define the Codex stability profile and metrics.
+- `W43-E5-S2-T2` — Run and report three fresh Codex repetitions.
 
 
 ## Soon
@@ -36,6 +36,13 @@ slice, and local task.
   queue-restoration policy in `docs/backlog/roadmap.md` (`W8-E3-S1`).
 
 ## Current reconciliation
+
+- `2026-08-22` PR #299 (merge `fa75f0e7`) completed `W43-E5-S2-T1`: the Codex-only stability
+  lane now has a pinned AIDD-LIVE-007 profile, native runtime/config identity, canonical nine
+  metrics, required/conditional evidence inventory, and fail-closed repetition schema checks.
+  Focused profile/eval-doctor tests (11), docs/planning/scenario checks (75), Ruff, mypy, and full
+  CI passed. `W43-E5-S2-T2` is now `Next`; human usability, Claude, cross-runtime, and Wave 36
+  work remain parked.
 
 - `2026-08-22` PR #297 (merge `69e3f214`) completed `W43-E5-S1-T2`: eight provider-free
   repair-extension scenarios now cover successful and repeated-failure grants, manual-fix
