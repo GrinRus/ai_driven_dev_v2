@@ -7,7 +7,7 @@ slice, and local task.
 
 ## Next
 
-- `W43-E4-S4-T1` — Publish repair-extension eligibility and preview evidence.
+- `W43-E4-S4-T2` — Render `Run one more repair` as bounded recovery.
 
 
 ## Soon
@@ -38,6 +38,14 @@ slice, and local task.
   queue-restoration policy in `docs/backlog/roadmap.md` (`W8-E3-S1`).
 
 ## Current reconciliation
+
+- `2026-08-22` PR #291 (merge `6456124f`) completed `W43-E4-S4-T1`: core/service read models now
+  publish repair-extension eligibility and preview evidence with findings, primary cause, automatic
+  budget, manual grant usage, exact validator/brief hashes, selected Runner, downstream restriction,
+  configuration identity, and literal disabled reasons. Focused repair/frontend/CLI tests (180),
+  docs/planning checks (50), Ruff, mypy, full Python matrix, deterministic scenarios, adapter
+  conformance, packaged UI browser, and build passed. `W43-E4-S4-T2` is now `Next`; human usability,
+  Claude, cross-runtime, and Wave 36 work remain parked.
 
 - `2026-08-22` PR #289 (merge `bf556dca`) completed `W43-E4-S3-T2`: the explicit
   `aidd stage repair-extension` command now selects exact work item/run/stage/runtime, previews
