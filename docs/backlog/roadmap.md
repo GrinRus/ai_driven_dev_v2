@@ -14953,19 +14953,24 @@ Dependencies: `W43-E3-S2` and `W43-E4-S1` for final repair wording.
 
 Local tasks:
 
-- `W43-E3-S3-T1` (next) Collapse tasklist cascade issues into primary findings.
+- `W43-E3-S3-T1` (done) Collapse tasklist cascade issues into primary findings.
   - Scope: group a shared unrecognized card grammar across task ids, list affected ids and missing
     fields once, retain independent dependency/verification findings, and report the first exact
     offending line rather than the common `Ordered tasks` heading.
   - Verification: the retained eleven-card IUIT shape produces one grammar root finding plus only
     genuinely independent findings instead of six or seven messages per task.
-- `W43-E3-S3-T2` (soon) Calibrate tasklist finding severity to executability.
+- Completion: PR #304 (merge `59af3079`) groups repeated card-grammar failures by root cause,
+    preserves independent dependency findings, and anchors the finding to the first offending
+    source line. Focused semantic/repair tests (138), resilience/report checks (54), Ruff, mypy,
+    docs/planning checks, and the full PR CI including deterministic scenarios, packaged UI
+    browser, adapter conformance, and build passed.
+- `W43-E3-S3-T2` (next) Calibrate tasklist finding severity to executability.
   - Scope: mark globally unreadable grammar and missing execution-critical card fields high,
     retain material verification gaps as medium repair-required findings, and omit findings for
     safely normalized presentation-only variants.
   - Verification: a severity matrix keeps incomplete tasklists fail-closed and prevents an
     unexecutable document from presenting a misleading no-blocker summary.
-- `W43-E3-S3-T3` (planned) Render one tasklist-specific correction strategy.
+- `W43-E3-S3-T3` (soon) Render one tasklist-specific correction strategy.
   - Scope: preserve stable ids and valid cards, name the canonical card scaffold, repair only the
     affected section, and synchronize dependency and verification entries without asking the
     runtime to resolve every cascade message individually.

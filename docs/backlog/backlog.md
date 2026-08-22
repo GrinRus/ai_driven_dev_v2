@@ -7,11 +7,11 @@ slice, and local task.
 
 ## Next
 
-- `W43-E3-S3-T1` — Collapse tasklist cascade issues into primary findings.
+- `W43-E3-S3-T2` — Calibrate tasklist finding severity to executability.
 
 ## Soon
 
-- `W43-E3-S3-T2` — Calibrate tasklist finding severity to executability.
+- `W43-E3-S3-T3` — Render one tasklist-specific correction strategy.
 
 ## Parking lot
 
@@ -37,6 +37,13 @@ slice, and local task.
   queue-restoration policy in `docs/backlog/roadmap.md` (`W8-E3-S1`).
 
 ## Current reconciliation
+
+- `2026-08-22` PR #304 (merge `59af3079`) completed `W43-E3-S3-T1`: repeated task-card grammar
+  failures now collapse into one located root finding while independent dependency findings and
+  valid cards remain preserved. Focused semantic/repair, resilience/report, docs/planning,
+  Ruff, mypy, deterministic-scenario, adapter-conformance, packaged-browser, and build checks
+  passed. `W43-E3-S3-T2` is now `Next`, with `T3` in `Soon`; human usability, Claude,
+  cross-runtime, and Wave 36 work remain parked.
 
 - `2026-08-22` The Codex-only audit found that `W43-E3-S3-T1/T2/T3` remain planned in the
   roadmap and are outside the deferred human/Claude scope. `W43-E3-S3-T1` is promoted to
