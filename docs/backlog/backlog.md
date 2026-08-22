@@ -7,9 +7,6 @@ slice, and local task.
 
 ## Next
 
-- `W43-E5-S2-T2` — Run and report three fresh Codex repetitions.
-
-
 ## Soon
 
 ## Parking lot
@@ -36,6 +33,15 @@ slice, and local task.
   queue-restoration policy in `docs/backlog/roadmap.md` (`W8-E3-S1`).
 
 ## Current reconciliation
+
+- `2026-08-22` PR #301 (merge `3f4cf00e`) completed `W43-E5-S2-T2`: three fresh Codex
+  AIDD-LIVE-007 repetitions were retained and validated against the pinned profile. All three
+  are explicitly `infra-fail` (runaway repository snapshot serialization or no first runtime
+  event), so the aggregate report is indeterminate and makes no stability claim. Focused
+  repetition/profile tests (11), eval/docs/planning checks (191), Ruff, mypy, full CI, adapter
+  conformance, deterministic scenarios, packaged UI browser, and build passed. There is no
+  remaining dependency-ready task in the Codex-only queue; human usability, Claude,
+  cross-runtime, and Wave 36 work remain parked.
 
 - `2026-08-22` PR #299 (merge `fa75f0e7`) completed `W43-E5-S2-T1`: the Codex-only stability
   lane now has a pinned AIDD-LIVE-007 profile, native runtime/config identity, canonical nine
