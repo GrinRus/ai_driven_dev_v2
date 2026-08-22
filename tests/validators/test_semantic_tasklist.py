@@ -240,3 +240,55 @@ def test_validate_semantic_outputs_flags_invalid_tasklist_fixture_bundle() -> No
     ) in messages
     assert "`Ordered tasks` must contain H3 task cards with stable task ids." in messages
 
+
+def test_tasklist_validator_collapses_repeated_card_grammar_at_first_source_line(
+    tmp_path: Path,
+) -> None:
+    workspace_root = tmp_path / ".aidd"
+    malformed = (
+        _SEMANTIC_FIXTURES_ROOT.parent.parent.parent
+        / "fixtures"
+        / "w43-e5-s1-t1-resilience"
+        / "tasklist"
+        / "eleven-malformed.md"
+    ).read_text(encoding="utf-8")
+    _write_tasklist_document(workspace_root, "WI-SEM-TASKLIST-CASCADE", malformed)
+
+    findings = validate_semantic_outputs(
+        stage="tasklist",
+        work_item="WI-SEM-TASKLIST-CASCADE",
+        workspace_root=workspace_root,
+    )
+
+    assert len(findings) == 1
+    finding = findings[0]
+    assert "Task-card grammar has one shared root issue" in finding.message
+    assert all(f"`TL-{index}`" in finding.message for index in range(1, 12))
+    assert finding.message.count("`outcome`") == 1
+    assert finding.location is not None
+    assert finding.location.line_number == 9
+
+
+def test_tasklist_validator_keeps_independent_dependency_findings_separate(
+    tmp_path: Path,
+) -> None:
+    workspace_root = tmp_path / ".aidd"
+    malformed = (
+        _SEMANTIC_FIXTURES_ROOT.parent.parent.parent
+        / "fixtures"
+        / "w43-e5-s1-t1-resilience"
+        / "tasklist"
+        / "eleven-malformed.md"
+    ).read_text(encoding="utf-8").replace("- TL-2: TL-1", "- TL-2: TL-99")
+    _write_tasklist_document(workspace_root, "WI-SEM-TASKLIST-INDEPENDENT", malformed)
+
+    findings = validate_semantic_outputs(
+        stage="tasklist",
+        work_item="WI-SEM-TASKLIST-INDEPENDENT",
+        workspace_root=workspace_root,
+    )
+    messages = {finding.message for finding in findings}
+
+    assert len(findings) == 2
+    assert any("Task-card grammar has one shared root issue" in message for message in messages)
+    assert any("unknown dependencies: TL-99" in message for message in messages)
