@@ -14975,12 +14975,18 @@ Local tasks:
     variants finding-free. Focused tasklist/task-plan/repair/docs tests (152), resilience/report
     checks (54), Ruff, mypy, and full PR CI including deterministic scenarios, packaged UI
     browser, adapter conformance, and build passed.
-- `W43-E3-S3-T3` (next) Render one tasklist-specific correction strategy.
+- `W43-E3-S3-T3` (done) Render one tasklist-specific correction strategy.
   - Scope: preserve stable ids and valid cards, name the canonical card scaffold, repair only the
     affected section, and synchronize dependency and verification entries without asking the
     runtime to resolve every cascade message individually.
   - Verification: a deterministic repair fixes the retained malformed-tasklist shape in one
     attempt while unrelated valid sections remain byte-identical.
+  - Completion: PR #308 (merge `52943ae2`) adds one tasklist-specific bounded correction strategy
+    to the core repair brief: stable ids and valid cards are preserved, the canonical rich-task
+    scaffold is named, only affected sections are patched, dependencies and verification entries
+    are synchronized, and a complete re-parse is required. Focused repair/tasklist tests (153),
+    resilience/report checks (54), Ruff, mypy, and full PR CI including deterministic scenarios,
+    packaged UI browser, adapter conformance, and build passed.
 
 ### Epic W43-E4 — repair protocol and operator-authorized extension (`planned`)
 
