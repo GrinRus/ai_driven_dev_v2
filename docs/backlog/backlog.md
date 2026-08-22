@@ -7,7 +7,7 @@ slice, and local task.
 
 ## Next
 
-- `W43-E4-S2-T2` — Account automatic repairs and manual extensions separately.
+- `W43-E4-S3-T1` — Implement guarded repair-extension preflight and reopen.
 
 
 ## Soon
@@ -39,6 +39,13 @@ slice, and local task.
 
 ## Current reconciliation
 
+- `2026-08-22` PR #285 (merge `14147d97`) completed `W43-E4-S2-T2`: repair-extension attempts and
+  history are now distinct from automatic repairs, preserving the original budget and exhaustion
+  record while counting one durable operator grant; legacy attempt indexes remain readable and
+  duplicate grants fail closed. Focused repair-flow tests (70), Ruff, mypy, full Python matrix,
+  deterministic scenarios, adapter conformance, packaged UI browser, and build passed. `W43-E4-S3-T1`
+  is now `Next`; human usability, Claude, cross-runtime, and Wave 36 work remain parked.
+
 - `2026-08-22` PR #283 (merge `b7485171`) completed `W43-E4-S2-T1`: the durable
   `repair-extension.md` contract now records immutable run/stage identity, validator/brief
   hashes, configuration identity, author, timestamp, and reason. Core eligibility is pure and
@@ -47,7 +54,7 @@ slice, and local task.
   Change and new runs remain separate. Focused repair tests (41), harness/package fixture tests
   (48), docs/planning/packaging checks (51), Ruff, mypy, full Python matrix, deterministic
   scenarios, adapter conformance, packaged UI browser, and build passed. `W43-E4-S2-T2` is now
-  `Next`; human usability, Claude, cross-runtime, and Wave 36 work remain parked.
+  complete; human usability, Claude, cross-runtime, and Wave 36 work remain parked.
 
 - `2026-08-22` PR #281 (merge `ed3aa1ba`) completed `W43-E4-S1-T2`: repair briefs now group
   primary, related, and advisory evidence, collapse exact duplicates and explicit related

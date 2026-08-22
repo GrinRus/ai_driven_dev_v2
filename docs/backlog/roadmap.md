@@ -15048,14 +15048,17 @@ Local tasks:
     success, identity mismatch, and validation bypass. Focused repair tests (41), harness/package
     fixture tests (48), docs/planning/packaging checks (51), Ruff, mypy, full Python matrix,
     deterministic scenarios, adapter conformance, packaged UI browser, and build passed.
-- `W43-E4-S2-T2` (next) Account automatic repairs and manual extensions separately.
+- `W43-E4-S2-T2` (done) Account automatic repairs and manual extensions separately.
   - Scope: add `repair-extension` attempt/history identity, preserve the original automatic
     budget and exhaustion record, count one durable operator grant, and read older attempt indexes
     without the new mode.
   - Verification: `initial -> repair -> repair -> exhausted -> repair-extension` records two
     automatic repairs and one manual extension without resetting history or scheduling another
     automatic retry.
-
+  - Completion: PR #285 (merge `14147d97`) added durable `repair-extension` metadata and attempt
+    identity, preserved automatic repair budgets and exhaustion history, kept legacy attempt indexes
+    readable, and rejected duplicate grants. Focused repair-flow tests (70), Ruff, mypy, full Python
+    matrix, deterministic scenarios, adapter conformance, packaged UI browser, and build passed.
 #### Slice W43-E4-S3 — guarded repair reopen and CLI (`planned`)
 
 Primary output: one application service and CLI command that revalidates before issuing a single
@@ -15072,7 +15075,7 @@ Dependencies: `W43-E1-S3`, `W43-E4-S2`, and the existing no-downstream-intervent
 
 Local tasks:
 
-- `W43-E4-S3-T1` (planned) Implement guarded repair-extension preflight and reopen.
+- `W43-E4-S3-T1` (next) Implement guarded repair-extension preflight and reopen.
   - Scope: verify failure reason, latest verdict, inactive job, downstream state, evidence hashes,
     and unused grant; revalidate current documents first, finalize without runtime when manual
     edits already pass, otherwise persist the grant and regenerate a fresh bounded repair brief.
