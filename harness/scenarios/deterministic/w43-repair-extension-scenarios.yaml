@@ -1,0 +1,57 @@
+id: AIDD-DETERMINISTIC-006
+scenario_class: deterministic-stage
+feature_size: small
+automation_lane: manual
+canonical_runtime: generic-cli
+repo:
+  url: harness/fixtures/minimal-python
+objective: Exercise provider-free repair-extension eligibility and terminal recovery scenarios.
+task: Run one-shot repair-extension scenarios and persist auditable grant, attempt, and lineage evidence.
+stage_scope:
+  start: idea
+  end: idea
+setup:
+  commands:
+  - |-
+    cat > aidd.example.toml <<'TOML'
+    [workspace]
+    root = ".aidd"
+
+    [runtime.generic_cli]
+    command = "python3 ../aidd_fixture_runtime.py"
+    TOML
+aidd_invocation:
+  work_item: WI-W43-REPAIR-EXTENSION
+  expected_stage_scope:
+    start: idea
+    end: idea
+feature_source:
+  mode: fixture-seed
+  selection_policy: fixture-owned
+  fixture_path: harness/fixtures/minimal-python
+  seed_id: w43-e5-s1-t2-repair-extension
+  summary: Exercise one-shot extension success, failure, prevalidation, stale evidence, and terminal guards.
+verify:
+  commands:
+  - python -m aidd.evals.repair_extension_scenarios --output .aidd/reports/w43-e5-s1-t2-repair-extension.json
+  - |-
+    python - <<'PY'
+    import json
+    from pathlib import Path
+
+    report = json.loads(Path('.aidd/reports/w43-e5-s1-t2-repair-extension.json').read_text())
+    assert report['all_passed'] is True
+    assert len(report['scenarios']) == 8
+    assert all(item['automatic_loop_scheduled'] is False for item in report['scenarios'])
+    assert all(item['grant_count'] <= 1 for item in report['scenarios'])
+    PY
+  pass_conditions:
+  - Every scenario retains exact grant content, attempt history, report lineage, and raw evidence.
+  - Stale evidence, downstream success, and second grants fail closed with literal reasons.
+  - Request Change remains separate and prior attempt artifacts remain immutable.
+limits:
+  timeout_minutes: 5
+interview:
+  required: false
+runtime_targets:
+- generic-cli

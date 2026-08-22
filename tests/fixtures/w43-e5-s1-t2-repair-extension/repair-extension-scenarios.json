@@ -1,0 +1,19 @@
+{
+  "schema_version": 1,
+  "suite_id": "w43-e5-s1-t2-repair-extension-v1",
+  "source": {
+    "kind": "provider-free-core-scenarios",
+    "source_ref": "W43-E5-S1-T2",
+    "credentials_removed": true
+  },
+  "scenarios": [
+    {"scenario_id": "extension-success", "expected_action": "reopened", "expected_terminal": "succeeded"},
+    {"scenario_id": "extension-repeated-failure", "expected_action": "reopened", "expected_terminal": "failed"},
+    {"scenario_id": "manual-fix-prevalidation", "expected_action": "finalized", "expected_terminal": "succeeded"},
+    {"scenario_id": "stale-evidence", "expected_action": "blocked", "expected_terminal": "failed"},
+    {"scenario_id": "downstream-success", "expected_action": "blocked", "expected_terminal": "failed"},
+    {"scenario_id": "second-grant", "expected_action": "blocked", "expected_terminal": "repair-needed"},
+    {"scenario_id": "request-change-separation", "expected_action": "blocked", "expected_terminal": "repair-needed"},
+    {"scenario_id": "immutable-history", "expected_action": "reopened", "expected_terminal": "failed"}
+  ]
+}
