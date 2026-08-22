@@ -4,11 +4,12 @@ import re
 from collections.abc import Callable
 
 from aidd.core.task_plan import (
+    TaskPlanIssueKind,
     TaskPlanParseError,
     TaskPlanParseIssue,
     parse_task_plan,
 )
-from aidd.validators.models import ValidationFinding
+from aidd.validators.models import SeverityLevel, ValidationFinding
 from aidd.validators.semantic_rules.common import (
     INCOMPLETE_SECTION_CODE,
     SemanticDocumentContext,
@@ -255,6 +256,45 @@ _SECTION_RULES: dict[
 }
 
 
+# These failures either make the task grammar unreadable as a plan or remove a field that
+# the executor needs to identify and scope a task.  Severity is deliberately independent
+# from progression: every finding still fails validation, while this calibration tells the
+# operator which repair deserves attention first.
+_HIGH_EXECUTION_TASK_PLAN_ISSUES = frozenset(
+    {
+        TaskPlanIssueKind.INVALID_HEADING,
+        TaskPlanIssueKind.MISSING_TASK_CARDS,
+        TaskPlanIssueKind.DUPLICATE_TASK_ID,
+        TaskPlanIssueKind.MIXED_TASK_ID_STYLE,
+        TaskPlanIssueKind.DUPLICATE_FIELD,
+        TaskPlanIssueKind.MISSING_FIELD,
+        TaskPlanIssueKind.MISSING_ACCEPTANCE,
+        TaskPlanIssueKind.DUPLICATE_ACCEPTANCE_ID,
+        TaskPlanIssueKind.DUPLICATE_GLOBAL_ACCEPTANCE_ID,
+        TaskPlanIssueKind.UNSAFE_SCOPE_PATH,
+        TaskPlanIssueKind.MISSING_SCOPE_PATH,
+        TaskPlanIssueKind.INVALID_EXECUTION_MODE,
+    }
+)
+
+
+def _task_plan_issue_severity(
+    issue_group: tuple[TaskPlanParseIssue, ...],
+) -> SeverityLevel:
+    """Calibrate a grouped task-plan failure by its execution impact.
+
+    Parser issues are intentionally fail-closed regardless of this value.  High is reserved
+    for unreadable grammar, ambiguous identity, and missing/unsafe execution-critical card
+    content; dependency mapping and verification coverage remain material medium findings.
+    Unknown future issue kinds conservatively stay medium until their execution impact is
+    explicitly classified.
+    """
+
+    if any(issue.kind in _HIGH_EXECUTION_TASK_PLAN_ISSUES for issue in issue_group):
+        return "high"
+    return "medium"
+
+
 def _task_plan_issue_signature(issue: TaskPlanParseIssue) -> tuple[object, ...]:
     """Return a stable signature for one shared card-grammar failure.
 
@@ -350,7 +390,7 @@ def validate_tasklist(context: SemanticDocumentContext) -> tuple[ValidationFindi
                 context.finding(
                     code=INCOMPLETE_SECTION_CODE,
                     message=_render_task_plan_issue_group(issue_group),
-                    severity="medium",
+                    severity=_task_plan_issue_severity(issue_group),
                     location=(
                         context.location(line_number=first_issue.line_number)
                         if first_issue.line_number is not None
