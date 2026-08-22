@@ -43,6 +43,7 @@ from aidd.core.operator_frontend_models import (
     OperatorRecoveryAction,
     OperatorRepairAttemptDiagnostics,
     OperatorRepairCounts,
+    OperatorRepairExtensionPreview,
     OperatorRequestChangeContext,
     OperatorRunArchive,
     OperatorRunLineage,
@@ -72,6 +73,7 @@ from aidd.core.operator_frontend_questions import (
     resolve_operator_stage_view,
 )
 from aidd.core.operator_inbox import resolve_operator_inbox_view
+from aidd.core.operator_repair_extension import resolve_operator_repair_extension_preview
 
 __all__ = [
     "OperatorActivityEvent",
@@ -103,6 +105,7 @@ __all__ = [
     "OperatorQuestionsView",
     "OperatorRawLogSourceDiagnostics",
     "OperatorRepairAttemptDiagnostics",
+    "OperatorRepairExtensionPreview",
     "OperatorRepairCounts",
     "OperatorRecoveryAction",
     "OperatorRequestChangeContext",
@@ -138,4 +141,5 @@ __all__ = [
     "resolve_operator_run_view",
     "resolve_operator_stage_document_workbench",
     "resolve_operator_stage_view",
+    "resolve_operator_repair_extension_preview",
 ]

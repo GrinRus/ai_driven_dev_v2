@@ -20,6 +20,10 @@ def resolve_operator_dashboard_view(
     active_stage: str = STAGES[0],
     run_id: str | None = None,
     project_root: Path | None = None,
+    current_configuration_identity: str | None = None,
+    selected_runner: str | None = None,
+    active_job: bool = False,
+    max_repair_attempts: int = 2,
 ) -> OperatorDashboardView:
     validate_operator_stage(active_stage)
     evidence = collect_operator_dashboard_evidence(
@@ -28,6 +32,10 @@ def resolve_operator_dashboard_view(
         active_stage=active_stage,
         run_id=run_id,
         project_root=project_root,
+        current_configuration_identity=current_configuration_identity,
+        selected_runner=selected_runner,
+        active_job=active_job,
+        max_repair_attempts=max_repair_attempts,
     )
     return reduce_operator_dashboard_evidence(evidence)
 
