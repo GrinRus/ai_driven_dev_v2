@@ -2,15 +2,18 @@ from __future__ import annotations
 
 from pathlib import Path
 
+import pytest
 from semantic_test_support import (
     _SEMANTIC_FIXTURES_ROOT,
     _write_tasklist_document,
 )
 
+from aidd.core.task_plan import TaskPlanIssueKind, TaskPlanParseIssue
 from aidd.validators.semantic import (
     INCOMPLETE_SECTION_CODE,
     validate_semantic_outputs,
 )
+from aidd.validators.semantic_rules.tasklist import _task_plan_issue_severity
 
 
 def test_validate_semantic_outputs_accepts_valid_tasklist_fixture_bundle() -> None:
@@ -292,3 +295,80 @@ def test_tasklist_validator_keeps_independent_dependency_findings_separate(
     assert len(findings) == 2
     assert any("Task-card grammar has one shared root issue" in message for message in messages)
     assert any("unknown dependencies: TL-99" in message for message in messages)
+
+
+@pytest.mark.parametrize(
+    ("kind", "expected_severity"),
+    (
+        (TaskPlanIssueKind.INVALID_HEADING, "high"),
+        (TaskPlanIssueKind.MISSING_TASK_CARDS, "high"),
+        (TaskPlanIssueKind.MIXED_TASK_ID_STYLE, "high"),
+        (TaskPlanIssueKind.MISSING_FIELD, "high"),
+        (TaskPlanIssueKind.MISSING_ACCEPTANCE, "high"),
+        (TaskPlanIssueKind.UNSAFE_SCOPE_PATH, "high"),
+        (TaskPlanIssueKind.MISSING_SCOPE_PATH, "high"),
+        (TaskPlanIssueKind.INVALID_EXECUTION_MODE, "high"),
+        (TaskPlanIssueKind.UNKNOWN_DEPENDENCY, "medium"),
+        (TaskPlanIssueKind.MISSING_MAPPED_ENTRY, "medium"),
+        (TaskPlanIssueKind.MISSING_VERIFICATION, "medium"),
+        (TaskPlanIssueKind.EMPTY_DEPENDENCY, "medium"),
+    ),
+)
+def test_tasklist_issue_severity_matrix(
+    kind: TaskPlanIssueKind,
+    expected_severity: str,
+) -> None:
+    issue = TaskPlanParseIssue(kind=kind, message="fixture issue")
+
+    assert _task_plan_issue_severity((issue,)) == expected_severity
+
+
+def test_tasklist_validator_uses_high_for_execution_critical_root_and_medium_for_dependency(
+    tmp_path: Path,
+) -> None:
+    workspace_root = tmp_path / ".aidd"
+    malformed = (
+        _SEMANTIC_FIXTURES_ROOT.parent.parent.parent
+        / "fixtures"
+        / "w43-e5-s1-t1-resilience"
+        / "tasklist"
+        / "eleven-malformed.md"
+    ).read_text(encoding="utf-8").replace("- TL-2: TL-1", "- TL-2: TL-99")
+    _write_tasklist_document(workspace_root, "WI-SEM-TASKLIST-SEVERITY", malformed)
+
+    findings = validate_semantic_outputs(
+        stage="tasklist",
+        work_item="WI-SEM-TASKLIST-SEVERITY",
+        workspace_root=workspace_root,
+    )
+
+    grammar = next(
+        finding for finding in findings if "shared root issue" in finding.message
+    )
+    dependency = next(
+        finding for finding in findings if "unknown dependencies: TL-99" in finding.message
+    )
+    assert grammar.severity == "high"
+    assert dependency.severity == "medium"
+
+
+def test_tasklist_validator_reports_no_finding_for_safe_presentation_variant(
+    tmp_path: Path,
+) -> None:
+    workspace_root = tmp_path / ".aidd"
+    safe_variant = (
+        _SEMANTIC_FIXTURES_ROOT.parent.parent.parent
+        / "fixtures"
+        / "w43-e5-s1-t1-resilience"
+        / "tasklist"
+        / "safe-presentation.md"
+    ).read_text(encoding="utf-8")
+    _write_tasklist_document(workspace_root, "WI-SEM-TASKLIST-SAFE", safe_variant)
+
+    findings = validate_semantic_outputs(
+        stage="tasklist",
+        work_item="WI-SEM-TASKLIST-SAFE",
+        workspace_root=workspace_root,
+    )
+
+    assert findings == ()
