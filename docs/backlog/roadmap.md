@@ -15131,13 +15131,20 @@ Local tasks:
     manual-fix, and configuration-drift states. Focused repair/frontend/CLI tests (180), docs/
     planning checks (50), Ruff, mypy, full Python matrix, deterministic scenarios, adapter
     conformance, packaged UI browser, and build passed.
-- `W43-E4-S4-T2` (next) Render `Run one more repair` as bounded recovery.
+- `W43-E4-S4-T2` (done) Render `Run one more repair` as bounded recovery.
   - Scope: show one repair-extension primary action only when eligible, preview that history and
     budget are not reset, retain Request Change and Start new run as distinct alternatives, stream
     the exact attempt, and reconcile to canonical server state.
   - Verification: desktop/mobile browser fixtures cover extension success, extension failure,
     prevalidation success, disabled reasons, duplicate suppression, reconnect, and one primary
     action per recovery state.
+  - Completion: PR #293 (merge `e4eb8a42`) added the bounded UI recovery action and loopback
+    mutation endpoint backed by the existing core preflight/CLI command, with exact run/stage/
+    runtime selection, service revalidation, streamed attempt logs, durable job readback, and
+    separate Request Change/Start new run alternatives. Focused UI/CLI/core/frontend tests,
+    docs/planning checks, Ruff, mypy, full Python matrix, deterministic scenarios, adapter
+    conformance, packaged UI browser, and build passed; the browser contract was reconciled to
+    the new eligible exhausted-state primary action.
 
 ### Epic W43-E5 — resilience regression and Codex-only evidence (`planned`)
 
@@ -15159,13 +15166,13 @@ owner and the slice closes after `W43-E4`.
 
 Local tasks:
 
-- `W43-E5-S1-T1` (planned) Add ownership, interview, and tasklist resilience scenarios.
+- `W43-E5-S1-T1` (next) Add ownership, interview, and tasklist resilience scenarios.
   - Scope: cover missing or contradictory runtime workflow drafts, service placeholder content,
     malformed question after resume, safe question/tasklist variants, eleven malformed cards,
     one malformed card, root-cause repair, and non-repair resume accounting.
   - Verification: each scenario asserts terminal state, attempt modes, budget, canonical ledgers,
     workflow records, root findings, raw evidence, and fail-closed semantic omissions.
-- `W43-E5-S1-T2` (planned) Add repair-extension eligibility and terminal scenarios.
+- `W43-E5-S1-T2` (soon) Add repair-extension eligibility and terminal scenarios.
   - Scope: cover extension success, repeated failure, manual-fix prevalidation, stale evidence,
     downstream success, second grant, Request Change separation, and immutable history.
   - Verification: provider-free runs assert exact grant content, attempt history, report lineage,
