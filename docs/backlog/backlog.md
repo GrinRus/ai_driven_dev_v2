@@ -7,11 +7,9 @@ slice, and local task.
 
 ## Next
 
-- `W43-E3-S3-T2` — Calibrate tasklist finding severity to executability.
+- `W43-E3-S3-T3` — Render one tasklist-specific correction strategy.
 
 ## Soon
-
-- `W43-E3-S3-T3` — Render one tasklist-specific correction strategy.
 
 ## Parking lot
 
@@ -37,6 +35,14 @@ slice, and local task.
   queue-restoration policy in `docs/backlog/roadmap.md` (`W8-E3-S1`).
 
 ## Current reconciliation
+
+- `2026-08-22` PR #306 (merge `3825b465`) completed `W43-E3-S3-T2`: tasklist findings now use a
+  fail-closed severity matrix, with unreadable grammar and execution-critical card defects at
+  `high`, material dependency/verification gaps at `medium`, and safe presentation variants
+  accepted without findings. Focused tasklist/task-plan/repair, resilience/report, docs/planning,
+  Ruff, mypy, deterministic-scenario, adapter-conformance, packaged-browser, and build checks
+  passed. `W43-E3-S3-T3` is now `Next`; human usability, Claude, cross-runtime, and Wave 36 work
+  remain parked.
 
 - `2026-08-22` PR #304 (merge `59af3079`) completed `W43-E3-S3-T1`: repeated task-card grammar
   failures now collapse into one located root finding while independent dependency findings and

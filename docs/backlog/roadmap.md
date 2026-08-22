@@ -14964,13 +14964,18 @@ Local tasks:
     source line. Focused semantic/repair tests (138), resilience/report checks (54), Ruff, mypy,
     docs/planning checks, and the full PR CI including deterministic scenarios, packaged UI
     browser, adapter conformance, and build passed.
-- `W43-E3-S3-T2` (next) Calibrate tasklist finding severity to executability.
+- `W43-E3-S3-T2` (done) Calibrate tasklist finding severity to executability.
   - Scope: mark globally unreadable grammar and missing execution-critical card fields high,
     retain material verification gaps as medium repair-required findings, and omit findings for
     safely normalized presentation-only variants.
   - Verification: a severity matrix keeps incomplete tasklists fail-closed and prevents an
     unexecutable document from presenting a misleading no-blocker summary.
-- `W43-E3-S3-T3` (soon) Render one tasklist-specific correction strategy.
+  - Completion: PR #306 (merge `3825b465`) classifies unreadable grammar and execution-critical
+    card failures as `high`, dependency/verification gaps as `medium`, and keeps safe presentation
+    variants finding-free. Focused tasklist/task-plan/repair/docs tests (152), resilience/report
+    checks (54), Ruff, mypy, and full PR CI including deterministic scenarios, packaged UI
+    browser, adapter conformance, and build passed.
+- `W43-E3-S3-T3` (next) Render one tasklist-specific correction strategy.
   - Scope: preserve stable ids and valid cards, name the canonical card scaffold, repair only the
     affected section, and synchronize dependency and verification entries without asking the
     runtime to resolve every cascade message individually.
