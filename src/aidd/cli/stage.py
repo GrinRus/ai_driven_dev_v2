@@ -18,9 +18,11 @@ from aidd.cli.stage_inspection import (
 )
 from aidd.cli.stage_run import (
     StageInteractOptions,
+    StageRepairExtensionOptions,
     StageRunOptions,
     run_stage_command,
     run_stage_interact_command,
+    run_stage_repair_extension_command,
 )
 from aidd.cli.support import console
 
@@ -126,6 +128,64 @@ def stage_interact(
             request=request,
             request_file=request_file,
             target_documents=tuple(target_documents or ()),
+            log_follow=log_follow,
+        )
+    )
+
+
+def stage_repair_extension(
+    stage: Annotated[str, typer.Argument(help="Exhausted stage name")],
+    work_item: Annotated[str, typer.Option("--work-item", help="Work item id")],
+    run_id: Annotated[str, typer.Option("--run-id", help="Exact exhausted run id")],
+    runtime: Annotated[str | None, typer.Option("--runtime", help="Runtime id")] = None,
+    root: Annotated[
+        Path | None,
+        typer.Option("--root", help="Root AIDD storage directory. Defaults to config value."),
+    ] = None,
+    config: Annotated[
+        Path,
+        typer.Option("--config", help="Path to an AIDD TOML config file."),
+    ] = Path("aidd.example.toml"),
+    author: Annotated[
+        str | None,
+        typer.Option("--author", help="Operator identity recorded in the durable grant."),
+    ] = None,
+    reason: Annotated[
+        str,
+        typer.Option("--reason", help="Reason recorded in the durable grant."),
+    ] = "Apply one bounded correction after automatic repair exhaustion.",
+    non_interactive: Annotated[
+        bool,
+        typer.Option(
+            "--non-interactive",
+            help="Explicitly authorize the command without an interactive confirmation.",
+        ),
+    ] = False,
+    log_follow: Annotated[
+        bool,
+        typer.Option(
+            "--log-follow/--no-log-follow",
+            help="Enable explicit live-log follow mode during the extension attempt.",
+        ),
+    ] = True,
+) -> None:
+    """Authorize and run exactly one guarded repair-extension attempt."""
+    if runtime is None:
+        console.print(
+            "Missing option '--runtime'. Repair extension requires an explicit runtime id."
+        )
+        raise typer.Exit(code=2)
+    run_stage_repair_extension_command(
+        StageRepairExtensionOptions(
+            stage=stage,
+            work_item=work_item,
+            runtime=runtime,
+            run_id=run_id,
+            root=root,
+            config=config,
+            author=author,
+            reason=reason,
+            non_interactive=non_interactive,
             log_follow=log_follow,
         )
     )

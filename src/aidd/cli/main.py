@@ -14,6 +14,7 @@ from aidd.cli.stage import (
     stage_interact,
     stage_questions,
     stage_reconcile_terminal,
+    stage_repair_extension,
     stage_run,
     stage_summary,
 )
@@ -64,6 +65,7 @@ __all__ = [
     "select_next_runnable_stage",
     "stage_questions",
     "stage_reconcile_terminal",
+    "stage_repair_extension",
     "stage_run",
     "stage_summary",
     "summarize_workflow_advancement",
@@ -131,6 +133,7 @@ run_app.command("logs")(run_logs)
 run_app.command("artifacts")(run_artifacts)
 stage_app.command("run")(stage_run)
 stage_app.command("interact")(stage_interact)
+stage_app.command("repair-extension")(stage_repair_extension)
 stage_app.command("questions")(stage_questions)
 stage_app.command("summary")(stage_summary)
 stage_app.command("reconcile-terminal")(stage_reconcile_terminal)
