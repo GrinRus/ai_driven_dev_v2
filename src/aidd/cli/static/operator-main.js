@@ -643,6 +643,10 @@ document.addEventListener("click", async (event) => {
         await startStage(state.activeStage);
         return;
       }
+      else if (action === "repair-extension") {
+        await startRepairExtension(state.activeStage);
+        return;
+      }
       else if (action === "resume-stage") {
         await startStage(state.activeStage);
         return;
@@ -755,6 +759,10 @@ document.addEventListener("click", async (event) => {
     }
     if (event.target.closest("[data-run-repair]")) {
       await startStage(state.activeStage);
+      return;
+    }
+    if (event.target.closest("[data-repair-extension]")) {
+      await startRepairExtension(state.activeStage);
       return;
     }
     if (event.target.closest("[data-stop-run]")) {

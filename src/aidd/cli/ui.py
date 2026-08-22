@@ -28,11 +28,13 @@ from aidd.application.implementation import aggregate_finalization_port
 from aidd.cli.stage_run import (
     PreparedStageInteraction,
     StageInteractOptions,
+    StageRepairExtensionOptions,
     StageRunOptions,
     prepare_stage_interaction,
     run_stage_attempt_command,
     run_stage_command,
     run_stage_interact_command,
+    run_stage_repair_extension_command,
 )
 from aidd.cli.support import (
     _execution_command_available,
@@ -3426,6 +3428,10 @@ class OperatorUiService:
             "/api/stage/run": lambda payload: _json_response(
                 self._start_stage_job(payload)
             ),
+            "/api/stage/repair-extension": lambda payload: _json_response(
+                self._start_stage_repair_extension_job(payload),
+                status=HTTPStatus.ACCEPTED,
+            ),
             "/api/stage/interact": lambda payload: _json_response(
                 self._start_stage_interact_job(payload)
             ),
@@ -3705,6 +3711,74 @@ class OperatorUiService:
             )
 
         return self._start_job(kind="stage", stage=stage, target=_target, run_id=run_id)
+
+    def _start_stage_repair_extension_job(self, payload: dict[str, Any]) -> object:
+        """Launch exactly one core-guarded repair-extension attempt from the UI."""
+
+        stage = _stage_from_payload(payload)
+        runtime = _runtime_from_payload(payload)
+        _validate_runtime(runtime)
+        self._revalidate_runtime_for_mutation(payload, runtime=runtime)
+        raw_run_id = payload.get("run_id")
+        if not isinstance(raw_run_id, str) or not raw_run_id.strip():
+            raise ValueError("run_id is required for repair-extension.")
+        run_id = raw_run_id.strip()
+        raw_author = payload.get("author", "operator-ui")
+        if not isinstance(raw_author, str) or not raw_author.strip():
+            raise ValueError("author must be a non-empty string when provided.")
+        raw_reason = payload.get("reason")
+        if raw_reason is not None and (
+            not isinstance(raw_reason, str) or not raw_reason.strip()
+        ):
+            raise ValueError("reason must be a non-empty string when provided.")
+        author = raw_author.strip()
+        reason = (
+            raw_reason.strip()
+            if isinstance(raw_reason, str) and raw_reason.strip()
+            else "Apply one bounded correction after automatic repair exhaustion."
+        )
+        log_follow = bool(payload.get("log_follow", True))
+
+        def _target(job_id: str) -> object:
+            run_stage_repair_extension_command(
+                StageRepairExtensionOptions(
+                    stage=stage,
+                    work_item=self.work_item,
+                    runtime=runtime,
+                    run_id=run_id,
+                    root=self.workspace_root,
+                    config=self.config_path,
+                    non_interactive=True,
+                    author=author,
+                    reason=reason,
+                    log_follow=log_follow,
+                    runtime_chunk_sink=lambda stream, text: self._jobs.append_chunk(
+                        job_id,
+                        stream=stream,
+                        text=text,
+                    ),
+                    runtime_operator_decision_provider=_UiRuntimeOperatorDecisionProvider(
+                        service=self,
+                        job_id=job_id,
+                    ),
+                    cancel_requested=lambda: self._jobs.cancel_requested(job_id),
+                )
+            )
+            return {
+                "stage": stage,
+                "work_item": self.work_item,
+                "run_id": run_id,
+                "completed": True,
+                "exit_code": 0,
+                "attempt_mode": "repair-extension",
+            }
+
+        return self._start_job(
+            kind="repair-extension",
+            stage=stage,
+            target=_target,
+            run_id=run_id,
+        )
 
     def _target_documents_from_payload(self, payload: dict[str, Any]) -> tuple[str, ...]:
         raw_targets = payload.get("target_documents", ())

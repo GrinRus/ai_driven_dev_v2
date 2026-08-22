@@ -23,6 +23,7 @@ from aidd.cli import ui as ui_module
 from aidd.cli.stage_run import (
     PreparedStageInteraction,
     StageInteractOptions,
+    StageRepairExtensionOptions,
     StageRunOptions,
 )
 from aidd.cli.ui import (
@@ -2894,6 +2895,65 @@ def test_ui_stage_run_endpoint_delegates_selected_stage_and_streams_live_logs(
     assert completed_payload["result"]["completed"] is True  # type: ignore[index]
     terminal_dashboard_payload = _payload(service.handle_get("/api/dashboard", {}))
     assert terminal_dashboard_payload["active_job"] is None
+
+
+def test_ui_repair_extension_endpoint_delegates_exact_selection_and_streams_attempt_logs(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    workspace_root = tmp_path / ".aidd"
+    started = threading.Event()
+    release = threading.Event()
+    captured: dict[str, object] = {}
+
+    def fake_repair_extension(options: StageRepairExtensionOptions) -> None:
+        captured["options"] = options
+        assert options.runtime_chunk_sink is not None
+        options.runtime_chunk_sink("stdout", "repair-extension-output\n")
+        started.set()
+        assert release.wait(timeout=2)
+
+    monkeypatch.setattr(ui_module, "run_stage_repair_extension_command", fake_repair_extension)
+    service = _service(workspace_root, config=Path("aidd.example.toml"))
+
+    response = service.handle_post(
+        "/api/stage/repair-extension",
+        {
+            "stage": "plan",
+            "runtime": "codex",
+            "run_id": "run-repair-extension-ui",
+            "log_follow": True,
+        },
+    )
+
+    payload = _payload_with_status(response, HTTPStatus.ACCEPTED)
+    assert payload["kind"] == "repair-extension"
+    assert payload["stage"] == "plan"
+    assert payload["run_id"] == "run-repair-extension-ui"
+    job_id = str(payload["job_id"])
+    assert started.wait(timeout=2)
+
+    running_payload = _payload(service.handle_get(f"/api/jobs/{job_id}", {}))
+    logs_payload = _payload(service.handle_get(f"/api/jobs/{job_id}/logs", {"cursor": ["0"]}))
+    options = captured["options"]
+    assert isinstance(options, StageRepairExtensionOptions)
+    assert options.stage == "plan"
+    assert options.runtime == "codex"
+    assert options.run_id == "run-repair-extension-ui"
+    assert options.non_interactive is True
+    assert options.runtime_operator_decision_provider is not None
+    assert options.cancel_requested is not None
+    assert options.cancel_requested() is False
+    assert running_payload["status"] == "running"
+    assert any(
+        chunk["stream"] == "stdout" and chunk["text"] == "repair-extension-output\n"
+        for chunk in logs_payload["chunks"]  # type: ignore[index]
+    )
+
+    release.set()
+    completed_payload = _wait_job(service, job_id)
+    assert completed_payload["status"] == "completed"
+    assert completed_payload["result"]["attempt_mode"] == "repair-extension"  # type: ignore[index]
 
 
 def test_ui_live_job_status_distinguishes_system_logs_from_runtime_output(

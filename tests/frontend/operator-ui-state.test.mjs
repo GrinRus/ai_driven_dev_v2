@@ -895,6 +895,7 @@ test("shared dashboard actions preserve workflow and stage request payloads", as
 
   await vm.runInContext('dispatchTaskAwareLaunch("workflow")', context);
   await vm.runInContext('dispatchTaskAwareLaunch("stage", "plan")', context);
+  await vm.runInContext('startRepairExtension("plan")', context);
 
   assert.deepEqual(requests.map(({url, options}) => ({
     url,
@@ -911,10 +912,16 @@ test("shared dashboard actions preserve workflow and stage request payloads", as
       method: "POST",
       body: {stage: "plan", runtime: "generic-cli", log_follow: true, run_id: "run-ui"},
     },
+    {
+      url: "/api/stage/repair-extension",
+      method: "POST",
+      body: {stage: "plan", runtime: "generic-cli", log_follow: true, run_id: "run-ui"},
+    },
   ]);
   assert.deepEqual(jobs, [
     {job_id: "job-1", status: "running"},
     {job_id: "job-2", status: "running"},
+    {job_id: "job-3", status: "running"},
   ]);
 });
 

@@ -344,6 +344,9 @@ function renderRecoverySummary({
   const recoveryStage = primaryAction.stage
     ? ` data-recovery-stage="${escapeHtml(primaryAction.stage)}"`
     : "";
+  const repairExtension = primaryAction.action === "repair-extension"
+    ? " data-repair-extension"
+    : "";
   return `
     <section class="decision-bar recovery-summary" data-decision-bar="recovery" data-recovery-summary="${escapeHtml(kind)}">
       <header class="recovery-summary-header">
@@ -361,7 +364,7 @@ function renderRecoverySummary({
         <button class="secondary" data-tab-shortcut="evidence" type="button">Open Evidence</button>
       </div>
       <div class="recovery-summary-primary" data-primary-recovery-slot>
-        <button data-primary-action data-recovery-action="${escapeHtml(primaryAction.action)}"${recoveryStage} type="button" ${primaryAction.enabled === false ? 'disabled aria-disabled="true"' : ""}>${escapeHtml(primaryAction.label)}</button>
+        <button data-primary-action data-recovery-action="${escapeHtml(primaryAction.action)}"${recoveryStage}${repairExtension} type="button" ${primaryAction.enabled === false ? 'disabled aria-disabled="true"' : ""}>${escapeHtml(primaryAction.label)}</button>
       </div>
     </section>
   `;
