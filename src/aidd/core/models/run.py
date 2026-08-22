@@ -56,10 +56,16 @@ class RepairHistoryEntry:
             raise ValueError("Repair history attempt number must be >= 1.")
 
         normalized_trigger = self.trigger.strip().lower()
-        if normalized_trigger not in {"initial", "repair", "resume", "intervention"}:
+        if normalized_trigger not in {
+            "initial",
+            "repair",
+            "resume",
+            "intervention",
+            "repair-extension",
+        }:
             raise ValueError(
-                "Repair history trigger must be one of 'initial', 'repair', 'resume', or "
-                "'intervention'."
+                "Repair history trigger must be one of 'initial', 'repair', 'resume', "
+                "'intervention', or 'repair-extension'."
             )
         object.__setattr__(self, "trigger", normalized_trigger)
 
@@ -221,6 +227,7 @@ class StageRunMetadata:
     updated_at_utc: str
     status_history: tuple[StageStatusChange, ...]
     repair_history: tuple[RepairHistoryEntry, ...] = ()
+    repair_extension_grant: RepairExtensionGrant | None = None
     schema_version: int = 1
 
     @classmethod
@@ -262,6 +269,13 @@ class StageRunMetadata:
         repair_history = tuple(
             RepairHistoryEntry.from_dict(entry) for entry in payload.get("repair_history", [])
         )
+        raw_grant = payload.get("repair_extension_grant")
+        if raw_grant is None:
+            repair_extension_grant = None
+        elif isinstance(raw_grant, dict):
+            repair_extension_grant = RepairExtensionGrant.from_dict(raw_grant)
+        else:
+            raise ValueError("Repair-extension grant metadata must be an object or null.")
 
         return cls(
             schema_version=int(payload.get("schema_version", 1)),
@@ -273,6 +287,7 @@ class StageRunMetadata:
             updated_at_utc=str(payload["updated_at_utc"]),
             status_history=history,
             repair_history=repair_history,
+            repair_extension_grant=repair_extension_grant,
         )
 
     def to_dict(self) -> dict[str, Any]:
@@ -286,6 +301,11 @@ class StageRunMetadata:
             "updated_at_utc": self.updated_at_utc,
             "status_history": [change.to_dict() for change in self.status_history],
             "repair_history": [entry.to_dict() for entry in self.repair_history],
+            "repair_extension_grant": (
+                None
+                if self.repair_extension_grant is None
+                else self.repair_extension_grant.to_dict()
+            ),
         }
 
     def with_status(self, *, status: str, changed_at_utc: str) -> StageRunMetadata:
@@ -302,6 +322,7 @@ class StageRunMetadata:
             updated_at_utc=changed_at_utc,
             status_history=history,
             repair_history=self.repair_history,
+            repair_extension_grant=self.repair_extension_grant,
         )
 
     def with_repair_history_entry(
@@ -331,6 +352,34 @@ class StageRunMetadata:
             updated_at_utc=changed_at_utc,
             status_history=self.status_history,
             repair_history=tuple(history),
+            repair_extension_grant=self.repair_extension_grant,
+        )
+
+    def with_repair_extension_grant(
+        self,
+        *,
+        grant: RepairExtensionGrant,
+        changed_at_utc: str,
+    ) -> StageRunMetadata:
+        if self.repair_extension_grant is not None:
+            raise ValueError("A repair-extension grant already exists for this stage run.")
+        if (
+            grant.work_item_id != self.work_item_id
+            or grant.run_id != self.run_id
+            or grant.stage != self.stage
+        ):
+            raise ValueError("Repair-extension grant identity does not match stage metadata.")
+        return StageRunMetadata(
+            schema_version=self.schema_version,
+            run_id=self.run_id,
+            work_item_id=self.work_item_id,
+            stage=self.stage,
+            status=self.status,
+            created_at_utc=self.created_at_utc,
+            updated_at_utc=changed_at_utc,
+            status_history=self.status_history,
+            repair_history=self.repair_history,
+            repair_extension_grant=grant,
         )
 
 
@@ -417,7 +466,13 @@ class RunArtifactIndex:
         attempt_mode = None
         if raw_attempt_mode is not None:
             attempt_mode = str(raw_attempt_mode).strip().lower()
-            if attempt_mode not in {"initial", "repair", "resume", "intervention"}:
+            if attempt_mode not in {
+                "initial",
+                "repair",
+                "resume",
+                "intervention",
+                "repair-extension",
+            }:
                 raise ValueError(f"Unknown artifact-index attempt_mode: {attempt_mode}")
         return cls(
             schema_version=int(payload.get("schema_version", 1)),

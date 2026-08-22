@@ -116,7 +116,7 @@ def _canonical_relative_path(*, workspace_root: Path | None, path: str | Path) -
 
 def _canonical_trigger(attempt_mode: str) -> str:
     normalized = attempt_mode.strip().lower()
-    if normalized in {"initial", "repair", "intervention", "resume"}:
+    if normalized in {"initial", "repair", "intervention", "resume", "repair-extension"}:
         return normalized
     return "repair" if normalized else "initial"
 

@@ -7,7 +7,12 @@ from pathlib import Path
 from typing import Any
 
 from aidd.core.identifiers import contained_component_path
-from aidd.core.models.run import RepairHistoryEntry, RunArtifactIndex, StageRunMetadata
+from aidd.core.models.run import (
+    RepairExtensionGrant,
+    RepairHistoryEntry,
+    RunArtifactIndex,
+    StageRunMetadata,
+)
 from aidd.core.resources import resolve_resource_layout_from_contracts_root
 from aidd.core.run_provenance import (
     classify_resource_source,
@@ -850,6 +855,49 @@ def persist_repair_history_entry(
                 path=repair_brief_path,
             ),
         ),
+        changed_at_utc=timestamp,
+    )
+    metadata_path = run_stage_metadata_path(
+        workspace_root=workspace_root,
+        work_item=work_item,
+        run_id=run_id,
+        stage=stage,
+    )
+    _write_json_payload(metadata_path, metadata.to_dict())
+    _touch_manifest_timestamp(
+        workspace_root=workspace_root,
+        work_item=work_item,
+        run_id=run_id,
+        updated_at_utc=timestamp,
+    )
+    return metadata_path
+
+
+def persist_repair_extension_grant(
+    workspace_root: Path,
+    work_item: str,
+    run_id: str,
+    stage: str,
+    *,
+    grant: RepairExtensionGrant,
+    changed_at_utc: datetime | None = None,
+) -> Path:
+    """Persist one immutable extension grant without changing automatic repair accounting."""
+
+    existing = load_stage_metadata(
+        workspace_root=workspace_root,
+        work_item=work_item,
+        run_id=run_id,
+        stage=stage,
+    )
+    if existing is None:
+        raise ValueError(
+            "Cannot persist a repair-extension grant before stage metadata exists: "
+            f"run_id={run_id}, work_item={work_item}, stage={stage}"
+        )
+    timestamp = _format_utc_timestamp(changed_at_utc)
+    metadata = existing.with_repair_extension_grant(
+        grant=grant,
         changed_at_utc=timestamp,
     )
     metadata_path = run_stage_metadata_path(
