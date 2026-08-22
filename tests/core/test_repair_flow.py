@@ -2,9 +2,13 @@ from __future__ import annotations
 
 from pathlib import Path
 
+import pytest
+
+from aidd.core.models.run import RepairExtensionGrant
 from aidd.core.repair import (
     RepairBudgetPolicy,
     evaluate_stage_repair_counter,
+    persist_repair_extension_grant,
     persist_repair_history_snapshot,
 )
 from aidd.core.run_store import (
@@ -165,6 +169,111 @@ def test_resume_attempt_is_recorded_without_consuming_repair_budget(tmp_path: Pa
     assert "Attempt `3` (`resume`) -> succeeded." in resume_result.stage_result_path.read_text(
         encoding="utf-8"
     )
+
+
+def test_repair_extension_is_distinct_and_does_not_reset_automatic_budget(
+    tmp_path: Path,
+) -> None:
+    workspace_root = _bootstrap_run(tmp_path)
+    modes = ("initial", "repair", "repair")
+    for mode in modes:
+        attempt_number = _start_attempt(workspace_root)
+        write_attempt_artifact_index(
+            workspace_root=workspace_root,
+            work_item="WI-001",
+            run_id="run-001",
+            stage="plan",
+            attempt_number=attempt_number,
+            attempt_mode=mode,
+        )
+        persist_repair_history_snapshot(
+            workspace_root=workspace_root,
+            work_item="WI-001",
+            run_id="run-001",
+            stage="plan",
+            attempt_number=attempt_number,
+            trigger=mode,
+            outcome="failed validation",
+            stage_status="failed",
+        )
+
+    grant = RepairExtensionGrant(
+        work_item_id="WI-001",
+        run_id="run-001",
+        stage="plan",
+        validator_report_path="workitems/WI-001/stages/plan/validator-report.md",
+        validator_report_sha256="a" * 64,
+        repair_brief_path="workitems/WI-001/stages/plan/repair-brief.md",
+        repair_brief_sha256="b" * 64,
+        configuration_identity="codex:config-001",
+        author="operator@example.test",
+        authorized_at_utc="2026-08-22T00:00:00Z",
+        reason="One bounded correction after automatic exhaustion.",
+    )
+    persist_repair_extension_grant(
+        workspace_root=workspace_root,
+        work_item="WI-001",
+        run_id="run-001",
+        stage="plan",
+        grant=grant,
+    )
+
+    extension_attempt = _start_attempt(workspace_root)
+    write_attempt_artifact_index(
+        workspace_root=workspace_root,
+        work_item="WI-001",
+        run_id="run-001",
+        stage="plan",
+        attempt_number=extension_attempt,
+        attempt_mode="repair-extension",
+    )
+    extension_result = persist_repair_history_snapshot(
+        workspace_root=workspace_root,
+        work_item="WI-001",
+        run_id="run-001",
+        stage="plan",
+        attempt_number=extension_attempt,
+        trigger="repair-extension",
+        outcome="failed validation",
+        stage_status="failed",
+    )
+
+    counter = evaluate_stage_repair_counter(
+        workspace_root=workspace_root,
+        work_item="WI-001",
+        run_id="run-001",
+        stage="plan",
+        policy=RepairBudgetPolicy(default_max_repair_attempts=2),
+    )
+    metadata = load_stage_metadata(
+        workspace_root=workspace_root,
+        work_item="WI-001",
+        run_id="run-001",
+        stage="plan",
+    )
+
+    assert counter.stage_attempt_count == 4
+    assert counter.repair_attempts_used == 2
+    assert counter.remaining_repair_attempts == 0
+    assert metadata is not None
+    assert metadata.repair_extension_grant == grant
+    assert [entry.trigger for entry in metadata.repair_history] == [
+        "initial",
+        "repair",
+        "repair",
+        "repair-extension",
+    ]
+    assert "Attempt `4` (`repair-extension`) -> failed validation." in (
+        extension_result.stage_result_path.read_text(encoding="utf-8")
+    )
+    with pytest.raises(ValueError, match="already exists"):
+        persist_repair_extension_grant(
+            workspace_root=workspace_root,
+            work_item="WI-001",
+            run_id="run-001",
+            stage="plan",
+            grant=grant,
+        )
 
 
 def test_repeated_repair_failure_flow_records_attempt_history(tmp_path: Path) -> None:

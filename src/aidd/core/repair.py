@@ -13,6 +13,9 @@ from aidd.core.run_store import (
     persist_repair_history_entry,
     run_attempts_root,
 )
+from aidd.core.run_store import (
+    persist_repair_extension_grant as persist_run_repair_extension_grant,
+)
 from aidd.core.stage_terminal import (
     CanonicalStageResultProjection,
     write_stage_result_from_lifecycle_state,
@@ -1022,6 +1025,27 @@ def persist_repair_history_snapshot(
     return RepairHistoryPersistenceResult(
         stage_metadata_path=stage_metadata_path,
         stage_result_path=stage_result_path,
+    )
+
+
+def persist_repair_extension_grant(
+    *,
+    workspace_root: Path,
+    work_item: str,
+    run_id: str,
+    stage: str,
+    grant: RepairExtensionGrant,
+    changed_at_utc: datetime | None = None,
+) -> Path:
+    """Persist the one-time grant while leaving automatic budget counters untouched."""
+
+    return persist_run_repair_extension_grant(
+        workspace_root=workspace_root,
+        work_item=work_item,
+        run_id=run_id,
+        stage=stage,
+        grant=grant,
+        changed_at_utc=changed_at_utc,
     )
 
 
