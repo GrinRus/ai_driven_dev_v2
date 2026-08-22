@@ -607,6 +607,37 @@ def test_render_repair_brief_keeps_collapsed_tasklist_root_as_one_correction() -
     assert "No separate repair action is required" not in repair_brief
 
 
+def test_render_repair_brief_names_one_tasklist_correction_strategy() -> None:
+    finding = ValidationFinding(
+        code="SEM-INCOMPLETE-SECTION",
+        severity="high",
+        message=(
+            "Task-card grammar has one shared root issue for task ids `TL-1`, `TL-2`: "
+            "missing required field(s) `outcome`. Repair the affected cards using the "
+            "canonical rich-task card shape; unrelated valid cards do not need changes."
+        ),
+        location=ValidationIssueLocation(
+            "workitems/WI-001/stages/tasklist/tasklist.md",
+            line_number=9,
+        ),
+    )
+
+    repair_brief = render_repair_brief(
+        validator_report_markdown=render_validator_report((finding,)),
+        validator_report_path="workitems/WI-001/stages/tasklist/validator-report.md",
+        prior_stage_artifacts=(),
+        stage_attempt_count=0,
+        max_repair_attempts=2,
+    )
+
+    assert "Use one bounded tasklist correction pass" in repair_brief
+    assert "preserve every stable task id" in repair_brief
+    assert "`### <task-id> — <imperative title>`" in repair_brief
+    assert "synchronize only the affected ids" in repair_brief
+    assert "unrelated valid sections must remain byte-identical" in repair_brief
+    assert "no separate repair action is needed for each cascade occurrence" in repair_brief
+
+
 def test_render_repair_brief_separates_primary_related_and_advisory() -> None:
     primary = ValidationFinding(
         code="SEM-PLACEHOLDER-CONTENT",

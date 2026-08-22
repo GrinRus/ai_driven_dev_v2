@@ -942,6 +942,24 @@ def _render_advisory_items(findings: Iterable[ValidatorReportFinding]) -> list[s
 def _repair_hint_for_finding(finding: ValidatorReportFinding) -> str:
     normalized_message = finding.message.lower()
     normalized_source_path = (finding.source_path or "").lower()
+    if (
+        finding.code == "SEM-INCOMPLETE-SECTION"
+        and (
+            "task-card grammar" in normalized_message
+            or "tasklist grammar" in normalized_message
+            or normalized_source_path.endswith("tasklist.md")
+        )
+    ):
+        return (
+            "Use one bounded tasklist correction pass: preserve every stable task id and each "
+            "unaffected valid card, then patch only the named card/section. Restore the canonical "
+            "rich-task card scaffold (`### <task-id> — <imperative title>` with `Outcome`, "
+            "`Dominant deliverable`, bounded `In scope`, and nested `<task-id>-AC<n>` "
+            "acceptance criteria), and synchronize only the affected ids in `Dependencies` and "
+            "`Verification notes`. Re-parse the complete tasklist after the edit; unrelated valid "
+            "sections must remain byte-identical and no separate repair action is needed for "
+            "each cascade occurrence."
+        )
     if finding.code == "CROSS-TASKLIST-PLAN-MILESTONE":
         return (
             "Use only canonical milestone mapping locations: write the exact existing `M<n>` "
