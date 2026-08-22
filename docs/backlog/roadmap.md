@@ -15119,13 +15119,19 @@ Dependencies: `W43-E3-S3`, `W43-E4-S3`, and `W42-E5-S1`.
 
 Local tasks:
 
-- `W43-E4-S4-T1` (next) Publish repair-extension eligibility and preview evidence.
+- `W43-E4-S4-T1` (done) Publish repair-extension eligibility and preview evidence.
   - Scope: expose primary cause, current findings, automatic budget, manual grant usage, exact
     validator/brief hashes, selected Runner, downstream restriction, and a literal disabled reason
     from core/service code.
   - Verification: service tests cover eligible, manually-fixed, stale, active, downstream-
     succeeded, already-used, and configuration-drift states without frontend inference.
-- `W43-E4-S4-T2` (planned) Render `Run one more repair` as bounded recovery.
+  - Completion: PR #291 (merge `6456124f`) added the core-owned repair-extension preview projection,
+    propagated configuration identity, selected Runner, active-job and downstream context through
+    the service/dashboard read paths, and covered eligible, stale, active, manual-grant, downstream,
+    manual-fix, and configuration-drift states. Focused repair/frontend/CLI tests (180), docs/
+    planning checks (50), Ruff, mypy, full Python matrix, deterministic scenarios, adapter
+    conformance, packaged UI browser, and build passed.
+- `W43-E4-S4-T2` (next) Render `Run one more repair` as bounded recovery.
   - Scope: show one repair-extension primary action only when eligible, preview that history and
     budget are not reset, retain Request Change and Start new run as distinct alternatives, stream
     the exact attempt, and reconcile to canonical server state.
