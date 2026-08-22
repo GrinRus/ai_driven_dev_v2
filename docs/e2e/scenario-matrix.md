@@ -67,6 +67,14 @@ The maintained set must cover these buckets without turning the matrix into a fu
 | live full flow interview product evaluation | `large + manual + product-evaluation` | `AIDD-LIVE-010` |
 | live full flow interview product evaluation | `xlarge + manual + product-evaluation` | `AIDD-LIVE-006`, `AIDD-LIVE-008`, `AIDD-LIVE-011` |
 
+The Codex-only Wave 43 stability lane reuses the maintained `AIDD-LIVE-007` medium
+product-evaluation scenario rather than introducing a second scenario class. Its pinned profile,
+metric vocabulary, and repetition evidence contract are documented in
+[`Wave 43 Codex Stability Profile`](./w43-e5-s2-t1-codex-stability-profile.md). The profile
+requires at least three fresh repetitions with the same repository revision, authored task,
+native Codex configuration, and task-aware evidence schema; it does not claim a live result until
+those repetitions are run.
+
 `AIDD-LIVE-001` is retired from maintained coverage because it is setup-blocked before
 the runtime boundary. The maintained small lanes are regression-smoke only:
 `AIDD-LIVE-004` for docs/config flow health and `AIDD-LIVE-005` for code-change flow
