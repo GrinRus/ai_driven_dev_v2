@@ -7,12 +7,10 @@ slice, and local task.
 
 ## Next
 
-- `W43-E5-S1-T1` — Add ownership, interview, and tasklist resilience scenarios.
+- `W43-E5-S1-T2` — Add repair-extension eligibility and terminal scenarios.
 
 
 ## Soon
-
-- `W43-E5-S1-T2` — Add repair-extension eligibility and terminal scenarios.
 
 ## Parking lot
 
@@ -38,6 +36,16 @@ slice, and local task.
   queue-restoration policy in `docs/backlog/roadmap.md` (`W8-E3-S1`).
 
 ## Current reconciliation
+
+- `2026-08-22` PR #295 (merge `17dfbdae`) completed `W43-E5-S1-T1`: ten provider-free
+  ownership/interview/tasklist resilience scenarios now assert terminal state, attempt modes,
+  repair budget, canonical/workflow records, located findings, raw evidence, and fail-closed
+  semantic omissions. The suite includes safe Markdown variants, malformed question resume,
+  eleven-card and single-card tasklist failures, root-cause evidence, and non-repair resume
+  accounting. Focused eval/failure-corpus/probe/stage-timing/harness tests (71), full Python suite
+  (2387), Ruff, mypy, deterministic scenarios, adapter conformance, packaged UI browser, and
+  build passed. `W43-E5-S1-T2` is now `Next`; human usability, Claude, cross-runtime, and Wave 36
+  work remain parked.
 
 - `2026-08-22` PR #293 (merge `e4eb8a42`) completed `W43-E4-S4-T2`: the operator UI now renders
   one core-eligible `Run one more repair` action, keeps Request Change and Start new run as
