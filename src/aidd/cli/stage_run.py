@@ -147,6 +147,7 @@ class StageRepairExtensionOptions:
     reason: str = "Apply one bounded correction after automatic repair exhaustion."
     log_follow: bool = True
     runtime_chunk_sink: Callable[[Literal["stdout", "stderr"], str], None] | None = None
+    runtime_operator_decision_provider: RuntimeOperatorDecisionProvider | None = None
     cancel_requested: Callable[[], bool] | None = None
 
 
@@ -1001,6 +1002,7 @@ def run_stage_repair_extension_command(options: StageRepairExtensionOptions) -> 
         config=options.config,
         log_follow=options.log_follow,
         runtime_chunk_sink=options.runtime_chunk_sink,
+        runtime_operator_decision_provider=options.runtime_operator_decision_provider,
         cancel_requested=options.cancel_requested,
     )
     _validate_stage_run_options(stage_options)

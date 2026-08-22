@@ -96,19 +96,66 @@ function repairCenterStatus(validation, stopped) {
   return validation?.status || (validation?.validator_fail_count ? "repair-needed" : "clear");
 }
 
+function renderRepairExtensionPreview(validation) {
+  const preview = validation?.repair_extension;
+  if (!preview) return "";
+  const eligible = preview.eligible === true;
+  const cause = preview.primary_cause;
+  const findings = preview.current_findings || [];
+  const downstream = preview.downstream_succeeded || [];
+  const disabledReason = String(preview.disabled_reason || "").trim();
+  const causeMarkup = cause
+    ? renderValidationFindingSummary(cause, {compact: true})
+    : `<div class="empty-state">No primary cause recorded.</div>`;
+  return `
+    <section class="repair-extension-preview" data-repair-extension-preview data-repair-extension-eligible="${eligible ? "true" : "false"}">
+      <div class="surface-title compact">
+        <span>One more repair preview</span>
+        <span class="small-badge ${eligible ? "warn" : "bad"}">${eligible ? "eligible" : "blocked"}</span>
+      </div>
+      <p>${escapeHtml(eligible
+        ? "Runs exactly one repair-extension attempt without resetting automatic repair history or budget."
+        : disabledReason || "Repair extension is not eligible for this stage.")}</p>
+      <dl class="recovery-decision-facts">
+        <div><dt>Automatic budget</dt><dd>${escapeHtml(`${preview.automatic_repair_attempts_used}/${preview.automatic_repair_attempts_max} used; ${preview.automatic_repair_attempts_remaining} remaining`)}</dd></div>
+        <div><dt>Manual grant</dt><dd>${escapeHtml(preview.manual_grant_used ? "already used" : "unused")}</dd></div>
+        <div><dt>Selected Runner</dt><dd>${escapeHtml(preview.selected_runner || preview.runtime_id || "not selected")}</dd></div>
+        <div><dt>Downstream</dt><dd>${escapeHtml(downstream.length ? downstream.join(", ") : "none succeeded")}</dd></div>
+      </dl>
+      <div class="panel-item"><strong>Primary cause</strong>${causeMarkup}</div>
+      <div class="panel-item"><strong>Current findings</strong><span>${escapeHtml(findings.length)}</span></div>
+      <div class="panel-item"><strong>Validator evidence</strong>${pathLine(preview.validator_report_path || "not available", 86)}<code>${escapeHtml(preview.validator_report_sha256 || "hash unavailable")}</code></div>
+      <div class="panel-item"><strong>Repair brief evidence</strong>${pathLine(preview.repair_brief_path || "not available", 86)}<code>${escapeHtml(preview.repair_brief_sha256 || "hash unavailable")}</code></div>
+      ${preview.configuration_identity ? `<div class="panel-item"><strong>Configuration identity</strong><code>${escapeHtml(preview.configuration_identity)}</code></div>` : ""}
+    </section>
+  `;
+}
+
 function renderRecoveryActionBand(diagnostics) {
+  return renderRecoveryActionBandInternal(diagnostics, {showPrimary: true});
+}
+
+function renderRecoveryActionBandReadOnly(diagnostics) {
+  return renderRecoveryActionBandInternal(diagnostics, {showPrimary: false});
+}
+
+function renderRecoveryActionBandInternal(diagnostics, {showPrimary = true} = {}) {
   const validation = diagnostics?.validation;
   const stopped = diagnostics?.stopped;
   const status = repairCenterStatus(validation, stopped);
   const repairAvailable = status === "repair-available";
   const requestPrimary = status === "repair-exhausted" || status === "explicit-stop";
+  const extensionPreview = validation?.repair_extension;
+  const extensionEligible = status === "repair-exhausted" && extensionPreview?.eligible === true;
   const stoppedMessage = stopped?.stopped ? stopped.detail || "Stage stopped." : "";
   const finding = primaryValidationFindingForValidation(validation);
   const guidance = stoppedMessage
     || (repairAvailable
       ? "Validation failed. Run Repair starts the selected stage through the normal stage runner."
       : status === "repair-exhausted"
-        ? "Validation still fails after repair attempts. Request Change creates an operator intervention for this stage."
+        ? extensionEligible
+          ? "Automatic repair is exhausted. Run one more repair is a single explicitly authorized extension; Request Change and Start new run remain separate alternatives."
+          : extensionPreview?.disabled_reason || "Validation still fails after repair attempts. Request Change creates an operator intervention for this stage."
         : "Review validation evidence, repair history, and recovery actions before continuing.");
   return `
     <section class="repair-action-band ${repairAvailable ? "repair-available" : ""}">
@@ -120,10 +167,11 @@ function renderRecoveryActionBand(diagnostics) {
         <p>${escapeHtml(guidance)}</p>
         ${renderValidationFindingSummary(finding)}
       </div>
+      ${renderRepairExtensionPreview(validation)}
       <div class="repair-actions">
-        ${repairAvailable && typeof renderContextualRunnerControl === "function" ? renderContextualRunnerControl({actionLabel: "validation repair"}) : ""}
-        ${requestPrimary ? `<button data-recovery-action="request-change" data-recovery-stage="${escapeHtml(state.activeStage)}" type="button">Request Change</button>` : `<button data-run-repair type="button" ${repairAvailable ? "" : "disabled"}>Run Repair</button>`}
-        ${requestPrimary ? `<button type="button" class="secondary" disabled aria-disabled="true">${status === "explicit-stop" ? "Repair unavailable" : "Repair exhausted"}</button>` : `<button data-tab-shortcut="request" type="button" class="secondary">Request Change</button>`}
+        ${repairAvailable && typeof renderContextualRunnerControl === "function" ? renderContextualRunnerControl({actionLabel: "validation repair"}) : extensionEligible && typeof renderContextualRunnerControl === "function" ? renderContextualRunnerControl({actionLabel: "one more repair"}) : ""}
+        ${showPrimary ? extensionEligible ? `<button data-recovery-action="repair-extension" data-recovery-stage="${escapeHtml(state.activeStage)}" data-repair-extension type="button">Run one more repair</button>` : requestPrimary ? `<button data-recovery-action="request-change" data-recovery-stage="${escapeHtml(state.activeStage)}" type="button">Request Change</button>` : `<button data-run-repair type="button" ${repairAvailable ? "" : "disabled"}>Run Repair</button>` : `<span class="muted">Primary recovery action is shown above.</span>`}
+        ${requestPrimary && extensionEligible ? `<button data-recovery-action="request-change" data-recovery-stage="${escapeHtml(state.activeStage)}" type="button" class="secondary">Request Change</button><button data-work-item-tab="overview" type="button" class="secondary">Start new run</button>` : requestPrimary ? `<button type="button" class="secondary" disabled aria-disabled="true">${status === "explicit-stop" ? "Repair unavailable" : "Repair exhausted"}</button>` : `<button data-tab-shortcut="request" type="button" class="secondary">Request Change</button>`}
         <button data-stop-run type="button" class="danger">Stop Run</button>
       </div>
     </section>
@@ -241,6 +289,14 @@ function recoveryPrimaryActionSpec(diagnostics) {
       attrs: "data-run-repair"
     };
   }
+  if (status === "repair-exhausted" && validation?.repair_extension?.eligible === true) {
+    return {
+      action: "repair-extension",
+      label: "Run one more repair",
+      detail: "Run exactly one explicitly authorized repair extension without resetting automatic history or budget.",
+      attrs: `data-recovery-action="repair-extension" data-recovery-stage="${escapeHtml(stage)}" data-repair-extension`
+    };
+  }
   if (status === "repair-exhausted" || status === "explicit-stop") {
     return {
       action: "request-change",
@@ -347,7 +403,7 @@ function renderRecoveryDecisionWorkbench({runtimeFailure, firstFailure, diagnost
         <div><dt>Primary action</dt><dd data-recovery-primary>${escapeHtml(primary?.label || (runtimeFailure ? "Open logs" : status === "repair-available" ? "Run Repair" : "Request Change"))}</dd></div>
       </dl>
       <div class="recovery-decision-actions">
-        ${runtimeFailure ? `<button data-recovery-action="inspect-runtime-log" data-recovery-stage="${escapeHtml(firstFailure?.stage || state.activeStage)}" type="button">Open logs</button><button data-recovery-action="resume-stage" data-recovery-stage="${escapeHtml(firstFailure?.stage || state.activeStage)}" type="button" ${primary?.action === "resume-stage" ? "" : "disabled"}>Retry stage</button><button data-stop-run type="button" class="danger">Cancel</button>` : `<button data-run-repair type="button" ${status === "repair-available" ? "" : "disabled"}>Run Repair</button><button data-recovery-action="request-change" data-recovery-stage="${escapeHtml(state.activeStage)}" type="button" class="secondary" ${status === "repair-exhausted" || status === "explicit-stop" ? "" : "disabled"}>Request Change</button>`}
+        ${runtimeFailure ? `<button data-recovery-action="inspect-runtime-log" data-recovery-stage="${escapeHtml(firstFailure?.stage || state.activeStage)}" type="button">Open logs</button><button data-recovery-action="resume-stage" data-recovery-stage="${escapeHtml(firstFailure?.stage || state.activeStage)}" type="button" ${primary?.action === "resume-stage" ? "" : "disabled"}>Retry stage</button><button data-stop-run type="button" class="danger">Cancel</button>` : `<span class="muted">Use the single bounded recovery action below; this panel is read-only evidence.</span>`}
       </div>
       <span class="muted recovery-decision-attempts">${escapeHtml(runtimeFailure ? "Runtime retry is separate from validation repair attempts." : `${repairAttempts.length} validation repair attempt${repairAttempts.length === 1 ? "" : "s"} retained.`)}</span>
     </section>
@@ -419,6 +475,7 @@ function renderRecoveryWorkbench() {
           enabled: !primary.attrs.includes("disabled")
         }
       })}
+      ${!runtimeFailure ? renderRecoveryActionBandReadOnly(diagnostics) : ""}
       ${renderRuntimePartialEvidence(firstFailure)}
       ${unresolvedQuestions.length || (questions.questions || []).length ? `
         <section class="surface recovery-section">

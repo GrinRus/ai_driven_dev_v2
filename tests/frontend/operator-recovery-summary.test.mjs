@@ -23,3 +23,18 @@ test("Studio recovery has one canonical summary and a navigation-only sidebar", 
   assert.doesNotMatch(sidebar, /recovery-card|data-recovery-action/);
   assert.doesNotMatch(source, /function renderRecoveryScreen\(/);
 });
+
+test("repair-extension recovery is rendered from core eligibility and keeps alternatives distinct", async () => {
+  const source = await readFile(cockpitPath, "utf8");
+  assert.match(source, /function renderRepairExtensionPreview\(validation\)/);
+  assert.match(source, /validation\?\.repair_extension/);
+  assert.match(source, /preview\.eligible === true/);
+  assert.match(source, /Run one more repair/);
+  assert.match(source, /data-recovery-action="repair-extension"/);
+  assert.match(source, /data-repair-extension/);
+  assert.match(source, /Request Change/);
+  assert.match(source, /Start new run/);
+  assert.match(source, /automatic_repair_attempts_used/);
+  assert.match(source, /validator_report_sha256/);
+  assert.match(source, /repair_brief_sha256/);
+});

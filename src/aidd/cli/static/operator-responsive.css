@@ -847,6 +847,7 @@
   .recovery-decision-workbench { display: flex; flex-direction: column; }
   .recovery-decision-actions { align-items: stretch; display: grid; grid-template-columns: minmax(0, 1fr); }
   .recovery-decision-actions button { width: 100%; }
+  .repair-extension-preview .recovery-decision-facts { grid-template-columns: minmax(0, 1fr); }
   [data-human-decision-surface="question"] .question-list,
   [data-human-decision-surface="intervention"] .request-change-grid,
   [data-human-decision-surface="approval"] .approval-queue {

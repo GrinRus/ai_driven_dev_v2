@@ -394,6 +394,9 @@ def test_operator_script_modules_own_static_ui_surfaces() -> None:
     assert "async function fetchDashboard()" in dashboard_actions
     assert "async function fetchProjectHome(workItem = \"\")" in dashboard_actions
     assert "async function startWorkflow()" in dashboard_actions
+    assert "async function startRepairExtension(stage = state.activeStage)" in dashboard_actions
+    assert 'kind: "repair-extension"' in dashboard_actions
+    assert '"/api/stage/repair-extension"' in dashboard_actions
     assert (
         "async function guardedJobLaunch({kind, components, controls, execute})"
         in dashboard_actions
@@ -406,6 +409,9 @@ def test_operator_script_modules_own_static_ui_surfaces() -> None:
     assert "function renderStudioHistory(timeline)" in _asset_text("/operator-history.js")
     assert "async function renderCockpit({skipArtifactLoad = false} = {})" in cockpit
     assert "function renderRecoveryActionBand(diagnostics)" in cockpit
+    assert "function renderRepairExtensionPreview(validation)" in cockpit
+    assert 'data-recovery-action="repair-extension"' in cockpit
+    assert "Run one more repair" in cockpit
     assert "function renderRepairTimeline(validation)" in cockpit
     assert "function renderResolvedRepairSummary(validation)" in cockpit
     assert "function renderRuntimePartialEvidence(firstFailure)" in cockpit

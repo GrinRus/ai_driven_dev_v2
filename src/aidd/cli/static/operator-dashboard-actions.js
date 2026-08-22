@@ -178,6 +178,26 @@ async function startStage(stage = state.activeStage) {
   });
 }
 
+async function startRepairExtension(stage = state.activeStage) {
+  if (!ensureRunnableRuntime()) return;
+  if (!state.activeRunId) {
+    toast("No run selected.");
+    return;
+  }
+  await guardedJobLaunch({
+    kind: "repair-extension",
+    components: [state.activeRunId, stage],
+    controls: ["[data-repair-extension]"],
+    execute: () => postJson("/api/stage/repair-extension", {
+      stage,
+      runtime: state.selectedRuntime,
+      run_id: state.activeRunId,
+      log_follow: true,
+      ...runtimeSelectorPayload()
+    })
+  });
+}
+
 async function dispatchTaskAwareLaunch(intent, stage = state.activeStage) {
   if (intent === "workflow") return startWorkflow();
   if (intent === "stage") return startStage(stage);
