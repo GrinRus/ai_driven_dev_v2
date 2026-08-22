@@ -1,9 +1,13 @@
 from __future__ import annotations
 
+import hashlib
+import json
 import os
 import sys
 from collections.abc import Callable
 from dataclasses import dataclass
+from datetime import UTC, datetime
+from getpass import getuser
 from pathlib import Path
 from typing import Literal
 
@@ -22,6 +26,7 @@ from aidd.cli.support import (
     console,
 )
 from aidd.config import load_config
+from aidd.core.models.run import RepairExtensionGrant
 from aidd.core.mutation_lease import acquire_run_mutation_lease
 from aidd.core.operator_intervention import (
     OperatorInterventionRequest,
@@ -33,17 +38,26 @@ from aidd.core.operator_intervention import (
 from aidd.core.project_set import ResolvedProjectSet, resolve_project_set
 from aidd.core.repair import (
     RepairBudgetPolicy,
+    RepairExtensionPreflightResult,
+    ValidatorReportFinding,
+    count_stage_attempts,
+    effective_repair_budget,
     generate_repair_brief,
+    parse_validator_report_findings,
     persist_repair_history_snapshot,
+    preflight_repair_extension,
+    repair_attempts_used,
     write_repair_brief,
 )
 from aidd.core.run_lookup import latest_attempt_number, latest_run_id
 from aidd.core.run_store import (
     RUN_RUNTIME_LOG_FILENAME,
     create_run_manifest,
+    load_attempt_artifact_index,
     load_stage_metadata,
     next_attempt_number,
     run_attempt_root,
+    run_manifest_path,
     run_root,
     write_attempt_artifact_index,
 )
@@ -54,6 +68,7 @@ from aidd.core.runtime_operator import (
     RuntimeOperatorRequest,
     unapproved_operator_request_ids,
 )
+from aidd.core.runtime_readiness import runtime_config_identity
 from aidd.core.stage_registry import resolve_prompt_pack_file_paths
 from aidd.core.stage_runner import (
     AdapterExecutionOutcome,
@@ -115,6 +130,24 @@ class StageInteractOptions:
     runtime_chunk_sink: Callable[[Literal["stdout", "stderr"], str], None] | None = None
     cancel_requested: Callable[[], bool] | None = None
     prepared_interaction: PreparedStageInteraction | None = None
+
+
+@dataclass(frozen=True, slots=True)
+class StageRepairExtensionOptions:
+    """Explicit operator command options for one repair-extension attempt."""
+
+    stage: str
+    work_item: str
+    runtime: str
+    run_id: str
+    root: Path | None
+    config: Path
+    non_interactive: bool = False
+    author: str | None = None
+    reason: str = "Apply one bounded correction after automatic repair exhaustion."
+    log_follow: bool = True
+    runtime_chunk_sink: Callable[[Literal["stdout", "stderr"], str], None] | None = None
+    cancel_requested: Callable[[], bool] | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -504,6 +537,7 @@ def _run_stage_attempts(
     run_id: str,
     prompt_pack_file_paths: tuple[Path, ...],
     intervention_request_path: Path | None = None,
+    allow_automatic_repair: bool = True,
 ) -> tuple[StageOrchestrationResult, int]:
     orchestration: StageOrchestrationResult | None = None
     stage_attempt_count = 0
@@ -576,6 +610,11 @@ def _run_stage_attempts(
         stage_attempt_count += 1
         current_intervention_request_path = None
         if orchestration.transition.action is not PostValidationAction.REPAIR:
+            break
+        if not allow_automatic_repair:
+            console.print(
+                "Repair-extension attempt finished without scheduling an automatic retry."
+            )
             break
         repair_brief_path = _write_repair_brief_for_retry(
             orchestration=orchestration,
@@ -786,6 +825,326 @@ def _expected_stage_document_path(
         if path.name == document_name:
             return path
     return None
+
+
+def _repair_extension_workspace_relative_path(
+    *, workspace_root: Path, path: Path
+) -> str:
+    resolved_workspace = workspace_root.resolve(strict=False)
+    resolved_path = path.resolve(strict=False)
+    if not resolved_path.is_relative_to(resolved_workspace):
+        raise ValueError("Repair-extension evidence must stay inside the workspace root.")
+    return resolved_path.relative_to(resolved_workspace).as_posix()
+
+
+def _repair_extension_evidence_paths(
+    *,
+    workspace_root: Path,
+    work_item: str,
+    stage: str,
+    metadata: object,
+) -> tuple[Path, Path]:
+    history = getattr(metadata, "repair_history", ())
+    latest = history[-1] if history else None
+    stage_documents_root = workspace_stage_root(
+        root=workspace_root,
+        work_item=work_item,
+        stage=stage,
+    )
+    validator_relative = getattr(latest, "validator_report_path", None)
+    brief_relative = getattr(latest, "repair_brief_path", None)
+    validator_path = (
+        workspace_root / validator_relative
+        if isinstance(validator_relative, str) and validator_relative.strip()
+        else stage_documents_root / "validator-report.md"
+    )
+    brief_path = (
+        workspace_root / brief_relative
+        if isinstance(brief_relative, str) and brief_relative.strip()
+        else stage_documents_root / "repair-brief.md"
+    )
+    for evidence_path in (validator_path, brief_path):
+        if not evidence_path.is_file():
+            raise ValueError(f"Repair-extension evidence is missing: {evidence_path}")
+        _repair_extension_workspace_relative_path(
+            workspace_root=workspace_root,
+            path=evidence_path,
+        )
+    return validator_path, brief_path
+
+
+def _repair_extension_grant_for_selection(
+    *,
+    workspace_root: Path,
+    work_item: str,
+    run_id: str,
+    stage: str,
+    configuration_identity: str,
+    author: str | None,
+    reason: str,
+    metadata: object,
+) -> RepairExtensionGrant:
+    validator_path, repair_brief_path = _repair_extension_evidence_paths(
+        workspace_root=workspace_root,
+        work_item=work_item,
+        stage=stage,
+        metadata=metadata,
+    )
+    return RepairExtensionGrant(
+        work_item_id=work_item,
+        run_id=run_id,
+        stage=stage,
+        validator_report_path=_repair_extension_workspace_relative_path(
+            workspace_root=workspace_root,
+            path=validator_path,
+        ),
+        validator_report_sha256=hashlib.sha256(validator_path.read_bytes()).hexdigest(),
+        repair_brief_path=_repair_extension_workspace_relative_path(
+            workspace_root=workspace_root,
+            path=repair_brief_path,
+        ),
+        repair_brief_sha256=hashlib.sha256(repair_brief_path.read_bytes()).hexdigest(),
+        configuration_identity=configuration_identity,
+        author=(author or getuser() or "operator").strip(),
+        authorized_at_utc=datetime.now(UTC).isoformat().replace("+00:00", "Z"),
+        reason=reason,
+    )
+
+
+def _repair_extension_budget_snapshot(
+    *,
+    workspace_root: Path,
+    work_item: str,
+    run_id: str,
+    stage: str,
+    repair_policy: RepairBudgetPolicy,
+) -> tuple[int, int, int]:
+    stage_attempt_count = count_stage_attempts(
+        workspace_root=workspace_root,
+        work_item=work_item,
+        run_id=run_id,
+        stage=stage,
+    )
+    attempt_modes: list[str | None] = []
+    for attempt_number in range(1, stage_attempt_count + 1):
+        index = load_attempt_artifact_index(
+            workspace_root=workspace_root,
+            work_item=work_item,
+            run_id=run_id,
+            stage=stage,
+            attempt_number=attempt_number,
+        )
+        attempt_modes.append(None if index is None else index.attempt_mode)
+    used = repair_attempts_used(
+        stage_attempt_count=stage_attempt_count,
+        attempt_modes=tuple(attempt_modes) if attempt_modes else None,
+    )
+    maximum = effective_repair_budget(stage=stage, policy=repair_policy)
+    return used, maximum, max(0, maximum - used)
+
+
+def _print_repair_extension_preview(
+    *,
+    options: StageRepairExtensionOptions,
+    findings: tuple[ValidatorReportFinding, ...],
+    budget: tuple[int, int, int],
+    grant: RepairExtensionGrant,
+) -> None:
+    used, maximum, remaining = budget
+    console.print("Repair-extension preview")
+    console.print(
+        "Selection: "
+        f"work_item={options.work_item} run_id={options.run_id} "
+        f"stage={options.stage} runtime={options.runtime}"
+    )
+    console.print(f"Findings: {len(findings)}")
+    for finding in findings:
+        source = f" ({finding.source_path})" if finding.source_path else ""
+        console.print(f"- {finding.code} [{finding.severity}]{source}: {finding.message}")
+    console.print(
+        f"Automatic repair budget: used={used} max={maximum} remaining={remaining}; "
+        "extension grant=one"
+    )
+    console.print(f"Validator evidence: {grant.validator_report_path}")
+    console.print(f"Repair brief evidence: {grant.repair_brief_path}")
+
+
+def _print_repair_extension_outcome(result: RepairExtensionPreflightResult) -> None:
+    if result.blocked:
+        console.print(f"Repair-extension blocked: {result.eligibility.disabled_reason}")
+        return
+    console.print(f"Repair-extension preflight: action={result.action}")
+    if result.grant is not None:
+        console.print(
+            "Grant: "
+            f"author={result.grant.author} authorized_at={result.grant.authorized_at_utc}"
+        )
+    if result.next_attempt_number is not None:
+        console.print(f"Attempt: {result.next_attempt_number}")
+    if result.validator_report_path is not None:
+        console.print(f"Validator evidence: {result.validator_report_path.as_posix()}")
+    if result.repair_brief_path is not None:
+        console.print(f"Repair brief evidence: {result.repair_brief_path.as_posix()}")
+    if result.stage_result_path is not None:
+        console.print(f"Stage result: {result.stage_result_path.as_posix()}")
+
+
+def run_stage_repair_extension_command(options: StageRepairExtensionOptions) -> None:
+    """Authorize and execute exactly one guarded repair-extension attempt."""
+
+    stage_options = StageRunOptions(
+        stage=options.stage,
+        work_item=options.work_item,
+        runtime=options.runtime,
+        run_id=options.run_id,
+        root=options.root,
+        config=options.config,
+        log_follow=options.log_follow,
+        runtime_chunk_sink=options.runtime_chunk_sink,
+        cancel_requested=options.cancel_requested,
+    )
+    _validate_stage_run_options(stage_options)
+    if not options.run_id.strip():
+        raise typer.BadParameter("Repair-extension requires an explicit '--run-id'.")
+    runtime_config = _resolve_stage_run_config(stage_options)
+    workspace_root = runtime_config.workspace_root
+    metadata = load_stage_metadata(
+        workspace_root=workspace_root,
+        work_item=options.work_item,
+        run_id=options.run_id,
+        stage=options.stage,
+    )
+    if metadata is None:
+        raise typer.BadParameter("Selected stage metadata does not exist.")
+    if metadata.repair_extension_grant is not None:
+        console.print(
+            "Repair-extension blocked: Repair extension grant was already used for this run "
+            "and stage."
+        )
+        raise typer.Exit(code=1)
+    manifest_path = run_manifest_path(
+        workspace_root=workspace_root,
+        work_item=options.work_item,
+        run_id=options.run_id,
+    )
+    try:
+        manifest_payload = json.loads(manifest_path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as exc:
+        raise typer.BadParameter(f"Selected run manifest cannot be read: {exc}") from exc
+    if (
+        not isinstance(manifest_payload, dict)
+        or manifest_payload.get("runtime_id") != options.runtime
+    ):
+        manifest_runtime = (
+            manifest_payload.get("runtime_id")
+            if isinstance(manifest_payload, dict)
+            else None
+        )
+        raise typer.BadParameter(
+            f"Runtime '{options.runtime}' does not match selected run manifest "
+            f"'{manifest_runtime}'."
+        )
+
+    config_identity = runtime_config_identity(
+        runtime_id=options.runtime,
+        runtime_config=load_config(options.config).runtime_config(options.runtime),
+    )
+    try:
+        grant = _repair_extension_grant_for_selection(
+            workspace_root=workspace_root,
+            work_item=options.work_item,
+            run_id=options.run_id,
+            stage=options.stage,
+            configuration_identity=config_identity,
+            author=options.author,
+            reason=options.reason,
+            metadata=metadata,
+        )
+        findings = parse_validator_report_findings(
+            validator_report_markdown=(workspace_root / grant.validator_report_path).read_text(
+                encoding="utf-8"
+            )
+        )
+        budget = _repair_extension_budget_snapshot(
+            workspace_root=workspace_root,
+            work_item=options.work_item,
+            run_id=options.run_id,
+            stage=options.stage,
+            repair_policy=runtime_config.repair_policy,
+        )
+    except (OSError, ValueError) as exc:
+        console.print(f"Repair-extension selection error: {exc}")
+        raise typer.Exit(code=2) from exc
+
+    _print_repair_extension_preview(
+        options=options,
+        findings=findings,
+        budget=budget,
+        grant=grant,
+    )
+    if not options.non_interactive:
+        if not sys.stdin.isatty() or not sys.stdout.isatty():
+            console.print(
+                "Repair-extension requires operator confirmation; pass "
+                "'--non-interactive' explicitly for an authorized automation lane."
+            )
+            raise typer.Exit(code=2)
+        if not typer.confirm("Authorize this one-time repair extension?", default=False):
+            console.print("Repair-extension not authorized.")
+            raise typer.Exit(code=1)
+
+    downstream = tuple(
+        downstream_stage
+        for downstream_stage in STAGES[STAGES.index(options.stage) + 1 :]
+        if (
+            downstream_metadata := load_stage_metadata(
+                workspace_root=workspace_root,
+                work_item=options.work_item,
+                run_id=options.run_id,
+                stage=downstream_stage,
+            )
+        )
+        is not None
+        and downstream_metadata.status.strip().lower() == StageState.SUCCEEDED.value
+    )
+    run_root_path = run_root(
+        workspace_root=workspace_root,
+        work_item=options.work_item,
+        run_id=options.run_id,
+    )
+    with acquire_run_mutation_lease(run_root_path, operation="stage:repair-extension"):
+        result = preflight_repair_extension(
+            workspace_root=workspace_root,
+            grant=grant,
+            current_configuration_identity=config_identity,
+            succeeded_downstream=downstream,
+            prior_stage_artifacts=(),
+            repair_policy=runtime_config.repair_policy,
+        )
+        _print_repair_extension_outcome(result)
+        if result.blocked:
+            raise typer.Exit(code=1)
+        if result.action == "finalized":
+            return
+        prompt_pack_file_paths = resolve_prompt_pack_file_paths(stage=options.stage)
+        _print_stage_run_start(
+            options=stage_options,
+            run_id=options.run_id,
+            is_resume_candidate=False,
+        )
+        orchestration, stage_attempt_count = _run_stage_attempts(
+            options=stage_options,
+            runtime_config=runtime_config,
+            run_id=options.run_id,
+            prompt_pack_file_paths=tuple(prompt_pack_file_paths),
+            allow_automatic_repair=False,
+        )
+        _print_stage_run_result(
+            orchestration=orchestration,
+            stage_attempt_count=stage_attempt_count,
+        )
+        if orchestration.transition.action is not PostValidationAction.ADVANCE:
+            raise typer.Exit(code=1)
 
 
 def run_stage_attempt_command(options: StageRunOptions) -> None:
@@ -1016,9 +1375,11 @@ def run_stage_interact_command(options: StageInteractOptions) -> None:
 __all__ = [
     "PreparedStageInteraction",
     "StageInteractOptions",
+    "StageRepairExtensionOptions",
     "StageRunOptions",
     "prepare_stage_interaction",
     "run_stage_attempt_command",
     "run_stage_interact_command",
+    "run_stage_repair_extension_command",
     "run_stage_command",
 ]

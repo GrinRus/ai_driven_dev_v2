@@ -6,18 +6,21 @@ import sys
 from pathlib import Path
 
 import pytest
+import typer
 from typer.testing import CliRunner
 
 from aidd.adapters.runtime_artifacts import RUNTIME_EXIT_METADATA_FILENAME
 from aidd.cli.main import _active_prompt_pack_paths, _prefix_stream_chunk, app
 from aidd.cli.stage_run import (
     StageInteractOptions,
+    StageRepairExtensionOptions,
     StageRunOptions,
     _CliRuntimeOperatorDecisionProvider,
     _resolve_stage_run_config,
     _write_run_manifest,
     prepare_stage_interaction,
     run_stage_interact_command,
+    run_stage_repair_extension_command,
 )
 from aidd.core.run_lookup import latest_run_id
 from aidd.core.run_store import (
@@ -35,6 +38,8 @@ from aidd.runtime_permissions import (
     RuntimeOperatorDecisionSource,
     RuntimeOperatorRequestKind,
 )
+from aidd.validators.models import ValidationFinding
+from aidd.validators.reports import render_validator_report
 
 runner = CliRunner()
 
@@ -340,6 +345,238 @@ def _write_cli_config(
         encoding="utf-8",
     )
     return config_path
+
+
+def _prepare_cli_repair_extension_workspace(
+    *,
+    tmp_path: Path,
+    documents: dict[str, str],
+    exit_code: int = 0,
+) -> tuple[Path, Path, Path]:
+    workspace_root = tmp_path / ".aidd"
+    work_item = "WI-CLI-REPAIR-EXTENSION"
+    run_id = "run-cli-repair-extension"
+    _materialize_plan_inputs(workspace_root=workspace_root, work_item=work_item)
+    writer_script = _write_runtime_writer_script(
+        tmp_path=tmp_path,
+        documents=documents,
+        exit_code=exit_code,
+    )
+    runtime_command = f"{shlex.quote(sys.executable)} {shlex.quote(writer_script.as_posix())}"
+    config_path = _write_cli_config(
+        tmp_path=tmp_path,
+        runtime_command=runtime_command,
+    )
+    options = StageRunOptions(
+        stage="plan",
+        work_item=work_item,
+        runtime="generic-cli",
+        run_id=run_id,
+        root=workspace_root,
+        config=config_path,
+        log_follow=False,
+    )
+    runtime_config = _resolve_stage_run_config(options)
+    _write_run_manifest(options=options, runtime_config=runtime_config, run_id=run_id)
+    persist_stage_status(
+        workspace_root=workspace_root,
+        work_item=work_item,
+        run_id=run_id,
+        stage="plan",
+        status="failed",
+    )
+    stage_root = workspace_root / "workitems" / work_item / "stages" / "plan"
+    stage_root.mkdir(parents=True, exist_ok=True)
+    (stage_root / "validator-report.md").write_text(
+        render_validator_report(
+            (
+                ValidationFinding(
+                    code="SEM-PLACEHOLDER-CONTENT",
+                    message="Replace the placeholder content.",
+                ),
+            )
+        ),
+        encoding="utf-8",
+    )
+    (stage_root / "repair-brief.md").write_text(
+        "# Repair brief\n\nRepair budget status: `repair-budget-exhausted`.\n",
+        encoding="utf-8",
+    )
+    return workspace_root, config_path, stage_root
+
+
+def test_stage_repair_extension_cli_runs_one_explicit_attempt_and_streams_evidence(
+    tmp_path: Path,
+) -> None:
+    workspace_root, config_path, stage_root = _prepare_cli_repair_extension_workspace(
+        tmp_path=tmp_path,
+        documents=_valid_plan_output_documents(),
+    )
+
+    result = runner.invoke(
+        app,
+        [
+            "stage",
+            "repair-extension",
+            "plan",
+            "--work-item",
+            "WI-CLI-REPAIR-EXTENSION",
+            "--run-id",
+            "run-cli-repair-extension",
+            "--runtime",
+            "generic-cli",
+            "--root",
+            str(workspace_root),
+            "--config",
+            str(config_path),
+            "--non-interactive",
+            "--log-follow",
+        ],
+    )
+
+    assert result.exit_code == 0, result.output
+    assert "Repair-extension preview" in result.stdout
+    assert "Automatic repair budget" in result.stdout
+    assert "Repair-extension preflight: action=reopened" in result.stdout
+    assert "Validator evidence:" in result.stdout
+    assert "Stage run result: action=advance state=succeeded" in result.stdout
+    metadata = json.loads(
+        (
+            workspace_root
+            / "reports"
+            / "runs"
+            / "WI-CLI-REPAIR-EXTENSION"
+            / "run-cli-repair-extension"
+            / "stages"
+            / "plan"
+            / "stage-metadata.json"
+        ).read_text(encoding="utf-8")
+    )
+    assert metadata["repair_extension_grant"]["stage"] == "plan"
+    assert metadata["repair_history"][-1]["trigger"] == "repair-extension"
+    assert (stage_root / "output" / "plan.md").exists()
+
+
+def test_stage_repair_extension_cli_refuses_implicit_non_interactive_authorization(
+    tmp_path: Path,
+) -> None:
+    workspace_root, config_path, _ = _prepare_cli_repair_extension_workspace(
+        tmp_path=tmp_path,
+        documents=_valid_plan_output_documents(),
+    )
+
+    result = runner.invoke(
+        app,
+        [
+            "stage",
+            "repair-extension",
+            "plan",
+            "--work-item",
+            "WI-CLI-REPAIR-EXTENSION",
+            "--run-id",
+            "run-cli-repair-extension",
+            "--runtime",
+            "generic-cli",
+            "--root",
+            str(workspace_root),
+            "--config",
+            str(config_path),
+        ],
+    )
+
+    assert result.exit_code == 2, result.output
+    assert "requires operator confirmation" in result.stdout
+
+
+def test_stage_repair_extension_cli_does_not_schedule_automatic_retry_after_failure(
+    tmp_path: Path,
+) -> None:
+    workspace_root, config_path, _ = _prepare_cli_repair_extension_workspace(
+        tmp_path=tmp_path,
+        documents={},
+        exit_code=3,
+    )
+
+    result = runner.invoke(
+        app,
+        [
+            "stage",
+            "repair-extension",
+            "plan",
+            "--work-item",
+            "WI-CLI-REPAIR-EXTENSION",
+            "--run-id",
+            "run-cli-repair-extension",
+            "--runtime",
+            "generic-cli",
+            "--root",
+            str(workspace_root),
+            "--config",
+            str(config_path),
+            "--non-interactive",
+            "--no-log-follow",
+        ],
+    )
+
+    assert result.exit_code == 1, result.output
+    assert "Repair retry scheduled" not in result.stdout
+    assert "Adapter outcome: non_zero_exit" in result.stdout
+
+
+def test_stage_repair_extension_command_propagates_cancellation(
+    tmp_path: Path,
+) -> None:
+    workspace_root, config_path, _ = _prepare_cli_repair_extension_workspace(
+        tmp_path=tmp_path,
+        documents=_valid_plan_output_documents(),
+    )
+    options = StageRepairExtensionOptions(
+        stage="plan",
+        work_item="WI-CLI-REPAIR-EXTENSION",
+        runtime="generic-cli",
+        run_id="run-cli-repair-extension",
+        root=workspace_root,
+        config=config_path,
+        non_interactive=True,
+        log_follow=False,
+        cancel_requested=lambda: True,
+    )
+
+    with pytest.raises(typer.Exit) as exc_info:
+        run_stage_repair_extension_command(options)
+
+    assert exc_info.value.exit_code == 1
+
+
+def test_stage_repair_extension_cli_blocks_second_grant(tmp_path: Path) -> None:
+    workspace_root, config_path, _ = _prepare_cli_repair_extension_workspace(
+        tmp_path=tmp_path,
+        documents=_valid_plan_output_documents(),
+    )
+    args = [
+        "stage",
+        "repair-extension",
+        "plan",
+        "--work-item",
+        "WI-CLI-REPAIR-EXTENSION",
+        "--run-id",
+        "run-cli-repair-extension",
+        "--runtime",
+        "generic-cli",
+        "--root",
+        str(workspace_root),
+        "--config",
+        str(config_path),
+        "--non-interactive",
+        "--no-log-follow",
+    ]
+
+    first = runner.invoke(app, args)
+    second = runner.invoke(app, args)
+
+    assert first.exit_code == 0, first.output
+    assert second.exit_code == 1, second.output
+    assert "already used" in second.stdout
 
 
 def test_ui_selector_override_is_capability_checked_and_recorded_in_manifest(
