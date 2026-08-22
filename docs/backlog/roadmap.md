@@ -15075,13 +15075,21 @@ Dependencies: `W43-E1-S3`, `W43-E4-S2`, and the existing no-downstream-intervent
 
 Local tasks:
 
-- `W43-E4-S3-T1` (next) Implement guarded repair-extension preflight and reopen.
+- `W43-E4-S3-T1` (done) Implement guarded repair-extension preflight and reopen.
   - Scope: verify failure reason, latest verdict, inactive job, downstream state, evidence hashes,
     and unused grant; revalidate current documents first, finalize without runtime when manual
     edits already pass, otherwise persist the grant and regenerate a fresh bounded repair brief.
   - Verification: only an eligible exhausted stage opens; generic failure, stale evidence,
     concurrent work, downstream success, and second grant stop before runtime execution.
-- `W43-E4-S3-T2` (planned) Expose one explicit CLI repair-extension command.
+  - Completion: PR #287 (merge `24d974a2`) added core-owned guarded preflight with fail-closed
+    evidence, configuration, concurrency, downstream, identity, and duplicate-grant checks;
+    manual-pass finalization writes a fresh pass report without runtime, while unresolved findings
+    persist one grant, bounded `repair-extension` evidence, and reopen state without changing
+    automatic repair accounting. Extension attempts consume the dedicated brief through stage
+    invocation. Focused repair/stage tests (131), docs/planning checks (50), Ruff, mypy, full
+    Python matrix, deterministic scenarios, adapter conformance, packaged UI browser, and build
+    passed.
+- `W43-E4-S3-T2` (next) Expose one explicit CLI repair-extension command.
   - Scope: select exact work item/run/stage/runtime, preview findings and budget, require operator
     confirmation or an explicit non-interactive flag, stream logs, and print grant, attempt, and
     validator evidence paths.
