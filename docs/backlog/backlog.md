@@ -7,7 +7,7 @@ slice, and local task.
 
 ## Next
 
-- `W43-E3-S3-T3` — Render one tasklist-specific correction strategy.
+- none
 
 ## Soon
 
@@ -35,6 +35,14 @@ slice, and local task.
   queue-restoration policy in `docs/backlog/roadmap.md` (`W8-E3-S1`).
 
 ## Current reconciliation
+
+- `2026-08-22` PR #308 (merge `52943ae2`) completed `W43-E3-S3-T3`: repair briefs now provide one
+  deterministic tasklist correction strategy that preserves stable ids and valid cards, names
+  the canonical scaffold, patches only affected sections, synchronizes dependencies and
+  verification entries, and requires a post-edit re-parse. Focused repair/tasklist,
+  resilience/report, docs/planning, Ruff, mypy, deterministic-scenario, adapter-conformance,
+  packaged-browser, and build checks passed. The active Codex-only queue is now empty; human
+  usability, Claude, cross-runtime, and Wave 36 work remain parked.
 
 - `2026-08-22` PR #306 (merge `3825b465`) completed `W43-E3-S3-T2`: tasklist findings now use a
   fail-closed severity matrix, with unreadable grammar and execution-critical card defects at
