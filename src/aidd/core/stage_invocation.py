@@ -216,12 +216,19 @@ def prepare_adapter_invocation(
         work_item=execution_state.work_item,
         stage=execution_state.stage,
     )
-    candidate_repair_brief_path = stage_documents_root / "repair-brief.md"
     stage_metadata = load_stage_metadata(
         workspace_root=workspace_root,
         work_item=execution_state.work_item,
         run_id=execution_state.run_id,
         stage=execution_state.stage,
+    )
+    extension_attempt = stage_metadata is not None and any(
+        entry.attempt_number == execution_state.attempt_number
+        and entry.trigger == "repair-extension"
+        for entry in stage_metadata.repair_history
+    )
+    candidate_repair_brief_path = stage_documents_root / (
+        "repair-extension-brief.md" if extension_attempt else "repair-brief.md"
     )
     previous_status = _previous_stage_status_before_current_attempt(
         stage_metadata=stage_metadata,
@@ -299,6 +306,8 @@ def prepare_adapter_invocation(
         if intervention_mode
         else "resume"
         if resume_mode
+        else "repair-extension"
+        if extension_attempt
         else "repair"
         if repair_mode
         else "initial"
