@@ -15166,13 +15166,20 @@ owner and the slice closes after `W43-E4`.
 
 Local tasks:
 
-- `W43-E5-S1-T1` (next) Add ownership, interview, and tasklist resilience scenarios.
+- `W43-E5-S1-T1` (done) Add ownership, interview, and tasklist resilience scenarios.
   - Scope: cover missing or contradictory runtime workflow drafts, service placeholder content,
     malformed question after resume, safe question/tasklist variants, eleven malformed cards,
     one malformed card, root-cause repair, and non-repair resume accounting.
   - Verification: each scenario asserts terminal state, attempt modes, budget, canonical ledgers,
     workflow records, root findings, raw evidence, and fail-closed semantic omissions.
-- `W43-E5-S1-T2` (soon) Add repair-extension eligibility and terminal scenarios.
+- Completion: PR #295 (merge `17dfbdae`) added ten provider-free resilience scenarios backed by
+  production interview/tasklist parsers and the retained failure corpus, a manual
+  `AIDD-DETERMINISTIC-005` manifest, located malformed-card fixtures, lifecycle/evidence JSON
+  reporting, and expanded self-repair probe coverage. Focused eval/failure-corpus/probe/stage-
+  timing/harness tests (71), full Python suite (2387), Ruff, mypy, deterministic scenarios,
+  adapter conformance, packaged UI browser, and build passed. `W43-E5-S1-T2` is now the next
+  dependency-ready task; human usability, Claude, cross-runtime, and Wave 36 work remain parked.
+- `W43-E5-S1-T2` (next) Add repair-extension eligibility and terminal scenarios.
   - Scope: cover extension success, repeated failure, manual-fix prevalidation, stale evidence,
     downstream success, second grant, Request Change separation, and immutable history.
   - Verification: provider-free runs assert exact grant content, attempt history, report lineage,
@@ -15214,6 +15221,15 @@ Local tasks:
     runtimes and retains explicit environment-blocked verdicts when prerequisites are absent.
 
 Wave 43 reconciliation notes:
+
+- `2026-08-22` `W43-E5-S1-T1` is complete in PR #295 (merge `17dfbdae`). The provider-free
+  resilience suite now covers missing/contradictory ownership drafts, service placeholders,
+  malformed and safe interview candidates, safe tasklist presentation, eleven-card and single-
+  card malformed tasklists, root/related finding retention, and non-repair resume accounting.
+  Every result retains terminal state, attempt modes, repair budget, canonical/workflow records,
+  located findings, and raw evidence; semantic omissions fail closed. `W43-E5-S1-T2` is now the
+  next dependency-ready task. Human usability, Claude, cross-runtime, and Wave 36 work remain
+  parked.
 
 - `2026-08-21` `W43-E1-S4-T1` is complete in PR #257 (merge `6b87d863`). Maintained generic CLI,
   Qwen, and OpenCode adapters now settle only on substantive runtime-authored content; canonical
