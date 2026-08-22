@@ -1,0 +1,56 @@
+id: AIDD-DETERMINISTIC-005
+scenario_class: deterministic-stage
+feature_size: small
+automation_lane: manual
+canonical_runtime: generic-cli
+repo:
+  url: harness/fixtures/minimal-python
+objective: Exercise the provider-free Wave 43 ownership, interview, and tasklist resilience suite.
+task: Run the retained parser/replay scenarios and persist one auditable JSON report.
+stage_scope:
+  start: idea
+  end: idea
+setup:
+  commands:
+  - |-
+    cat > aidd.example.toml <<'TOML'
+    [workspace]
+    root = ".aidd"
+
+    [runtime.generic_cli]
+    command = "python3 ../aidd_fixture_runtime.py"
+    TOML
+aidd_invocation:
+  work_item: WI-W43-RESILIENCE
+  expected_stage_scope:
+    start: idea
+    end: idea
+feature_source:
+  mode: fixture-seed
+  selection_policy: fixture-owned
+  fixture_path: harness/fixtures/minimal-python
+  seed_id: w43-e5-s1-t1-resilience
+  summary: Replay sanitized ownership, interview, and rich-tasklist failures through existing parsers.
+verify:
+  commands:
+  - python -m aidd.evals.resilience_scenarios --output .aidd/reports/w43-e5-s1-t1-resilience.json
+  - |-
+    python - <<'PY'
+    import json
+    from pathlib import Path
+
+    report = json.loads(Path('.aidd/reports/w43-e5-s1-t1-resilience.json').read_text())
+    assert report['all_passed'] is True
+    assert len(report['scenarios']) == 10
+    assert all(not item['semantic_omissions'] for item in report['scenarios'])
+    PY
+  pass_conditions:
+  - Every scenario retains terminal state, attempt modes, repair budget, canonical records, workflow records, and raw evidence.
+  - Malformed question and tasklist inputs fail closed with located findings.
+  - Safe presentation variants preserve executable meaning without inference.
+limits:
+  timeout_minutes: 5
+interview:
+  required: false
+runtime_targets:
+- generic-cli

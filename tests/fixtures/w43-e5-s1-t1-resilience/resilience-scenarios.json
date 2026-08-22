@@ -1,0 +1,147 @@
+{
+  "schema_version": 1,
+  "suite_id": "w43-e5-s1-t1-provider-free-resilience-v1",
+  "source": {
+    "kind": "sanitized-provider-free-regression-fixtures",
+    "source_ref": "W43-E5-S1-T1",
+    "credentials_removed": true
+  },
+  "scenarios": [
+    {
+      "scenario_id": "ownership-missing-runtime-draft",
+      "category": "ownership",
+      "stage": "plan",
+      "terminal_state": "blocked",
+      "attempt_modes": ["initial"],
+      "automatic_repair_budget": {"max": 2, "consumed": 0},
+      "canonical_records": ["stage-result.md", "validator-report.md", "attempt-state.json"],
+      "workflow_records": ["ownership-boundary", "stage-transition-blocked"],
+      "expected_root_findings": ["RUNTIME-CONTENT-MISSING"],
+      "required_evidence": ["ownership/missing-runtime-draft/runtime.log"],
+      "fixtures": ["ownership/missing-runtime-draft/runtime.log"]
+    },
+    {
+      "scenario_id": "ownership-contradictory-runtime-draft",
+      "category": "ownership",
+      "stage": "plan",
+      "terminal_state": "blocked",
+      "attempt_modes": ["initial"],
+      "automatic_repair_budget": {"max": 2, "consumed": 0},
+      "canonical_records": ["stage-result.md", "validator-report.md", "attempt-state.json"],
+      "workflow_records": ["ownership-boundary", "service-draft-ignored", "stage-transition-blocked"],
+      "expected_root_findings": ["RUNTIME-OWNERSHIP-CONFLICT"],
+      "required_evidence": ["ownership/contradictory-runtime-draft/plan.md", "ownership/contradictory-runtime-draft/stage-result.md"],
+      "fixtures": [
+        "ownership/contradictory-runtime-draft/plan.md",
+        "ownership/contradictory-runtime-draft/stage-result.md",
+        "ownership/contradictory-runtime-draft/validator-report.md"
+      ]
+    },
+    {
+      "scenario_id": "service-placeholder-content",
+      "category": "ownership",
+      "stage": "plan",
+      "terminal_state": "blocked",
+      "attempt_modes": ["initial"],
+      "automatic_repair_budget": {"max": 2, "consumed": 0},
+      "canonical_records": ["stage-result.md", "validator-report.md", "attempt-state.json"],
+      "workflow_records": ["canonical-record-validation", "stage-transition-blocked"],
+      "expected_root_findings": ["STRUCT-STALE-STAGE-RESULT-PLACEHOLDER"],
+      "required_evidence": ["corpus:service-document-placeholder/document"],
+      "replay_case": "service-document-placeholder"
+    },
+    {
+      "scenario_id": "interview-resume-malformed-question",
+      "category": "interview",
+      "stage": "research",
+      "terminal_state": "blocked",
+      "attempt_modes": ["initial", "resume"],
+      "automatic_repair_budget": {"max": 2, "consumed": 0},
+      "canonical_records": ["questions.md", "answers.md", "interview-ledger.json"],
+      "workflow_records": ["resume-rejected", "operator-input-required"],
+      "expected_root_findings": ["INTERVIEW-MALFORMED-DOCUMENT"],
+      "required_evidence": ["corpus:malformed-question-resume/questions", "corpus:malformed-question-resume/answers"],
+      "replay_case": "malformed-question-resume"
+    },
+    {
+      "scenario_id": "interview-safe-question-variant",
+      "category": "interview",
+      "stage": "research",
+      "terminal_state": "ready-to-resume",
+      "attempt_modes": ["initial", "resume"],
+      "automatic_repair_budget": {"max": 2, "consumed": 0},
+      "canonical_records": ["questions.md", "answers.md", "interview-ledger.json"],
+      "workflow_records": ["candidate-accepted", "resume-eligible"],
+      "expected_root_findings": [],
+      "required_evidence": ["interview/safe-candidate.md"],
+      "fixtures": ["interview/safe-candidate.md"]
+    },
+    {
+      "scenario_id": "tasklist-safe-presentation",
+      "category": "tasklist",
+      "stage": "tasklist",
+      "terminal_state": "ready-for-execution",
+      "attempt_modes": ["initial"],
+      "automatic_repair_budget": {"max": 2, "consumed": 0},
+      "canonical_records": ["tasklist.md", "task-ledger.json"],
+      "workflow_records": ["tasklist-accepted", "execution-eligible"],
+      "expected_root_findings": [],
+      "required_evidence": ["tasklist/canonical.md", "tasklist/safe-presentation.md"],
+      "fixtures": ["tasklist/canonical.md", "tasklist/safe-presentation.md"]
+    },
+    {
+      "scenario_id": "tasklist-eleven-malformed-cards",
+      "category": "tasklist",
+      "stage": "tasklist",
+      "terminal_state": "blocked",
+      "attempt_modes": ["initial", "repair"],
+      "automatic_repair_budget": {"max": 2, "consumed": 1},
+      "canonical_records": ["tasklist.md", "task-ledger.json", "validator-report.md"],
+      "workflow_records": ["tasklist-parse-rejected", "repair-required"],
+      "expected_root_findings": ["RICH-TASKLIST-PARSE-ERROR"],
+      "required_evidence": ["tasklist/eleven-malformed.md"],
+      "fixtures": ["tasklist/eleven-malformed.md"],
+      "expected_issue_count": 11
+    },
+    {
+      "scenario_id": "tasklist-one-malformed-card",
+      "category": "tasklist",
+      "stage": "tasklist",
+      "terminal_state": "blocked",
+      "attempt_modes": ["initial"],
+      "automatic_repair_budget": {"max": 2, "consumed": 0},
+      "canonical_records": ["tasklist.md", "task-ledger.json", "validator-report.md"],
+      "workflow_records": ["tasklist-parse-rejected", "repair-required"],
+      "expected_root_findings": ["RICH-TASKLIST-PARSE-ERROR"],
+      "required_evidence": ["tasklist/one-malformed.md"],
+      "fixtures": ["tasklist/one-malformed.md"],
+      "expected_issue_count": 1
+    },
+    {
+      "scenario_id": "tasklist-root-cause-repair",
+      "category": "tasklist",
+      "stage": "plan",
+      "terminal_state": "blocked",
+      "attempt_modes": ["initial", "repair"],
+      "automatic_repair_budget": {"max": 2, "consumed": 1},
+      "canonical_records": ["validator-report.md", "repair-brief.md", "attempt-state.json"],
+      "workflow_records": ["primary-finding-retained", "related-findings-retained", "repair-required"],
+      "expected_root_findings": ["SEM-PLACEHOLDER-CONTENT", "SEM-INCOMPLETE-SECTION"],
+      "required_evidence": ["corpus:cascade-finding/validator-report"],
+      "replay_case": "cascade-finding"
+    },
+    {
+      "scenario_id": "interview-resume-non-repair-accounting",
+      "category": "interview",
+      "stage": "research",
+      "terminal_state": "ready-to-resume",
+      "attempt_modes": ["initial", "resume"],
+      "automatic_repair_budget": {"max": 2, "consumed": 0},
+      "canonical_records": ["questions.md", "answers.md", "interview-ledger.json", "attempt-state.json"],
+      "workflow_records": ["candidate-accepted", "resume-eligible", "repair-budget-unchanged"],
+      "expected_root_findings": [],
+      "required_evidence": ["interview/safe-candidate.md"],
+      "fixtures": ["interview/safe-candidate.md"]
+    }
+  ]
+}
