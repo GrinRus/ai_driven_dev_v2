@@ -23,14 +23,23 @@ def test_self_repair_probe_catalog_includes_planned_failure_modes() -> None:
     assert "idea-blocking-question-mismatch" in probe_ids
     assert "research-missing-citations" in probe_ids
     assert "research-unsupported-claim" in probe_ids
+    assert "research-resume-malformed-question" in probe_ids
+    assert "research-safe-question-candidate" in probe_ids
     assert "plan-malformed-repair-brief" in probe_ids
     assert "plan-weak-dependencies" in probe_ids
     assert "plan-validator-status-mismatch" in probe_ids
+    assert "plan-service-placeholder" in probe_ids
+    assert "plan-ownership-conflict" in probe_ids
+    assert "plan-root-cause-cascade" in probe_ids
     assert "review-spec-sign-off-conflict" in probe_ids
     assert "tasklist-bundled-task" in probe_ids
     assert "tasklist-broken-dependency" in probe_ids
+    assert "tasklist-safe-presentation" in probe_ids
+    assert "tasklist-eleven-malformed-cards" in probe_ids
+    assert "tasklist-one-malformed-card" in probe_ids
     assert "implement-unverifiable-touched-files" in probe_ids
     assert "implement-no-op-without-reason" in probe_ids
+    assert "implement-resume-non-repair-accounting" in probe_ids
     assert "review-approval-with-unresolved-must-fix" in probe_ids
     assert "qa-ready-without-verification-evidence" in probe_ids
 
@@ -43,4 +52,7 @@ def test_probes_for_stage_returns_only_requested_stage() -> None:
         "plan-malformed-repair-brief",
         "plan-weak-dependencies",
         "plan-validator-status-mismatch",
+        "plan-service-placeholder",
+        "plan-ownership-conflict",
+        "plan-root-cause-cascade",
     }

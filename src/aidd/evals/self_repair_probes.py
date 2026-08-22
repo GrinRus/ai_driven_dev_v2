@@ -39,6 +39,16 @@ SELF_REPAIR_PROBES: tuple[SelfRepairProbe, ...] = (
         description="Research output makes an unsupported implementation claim.",
     ),
     SelfRepairProbe(
+        stage="research",
+        probe_id="research-resume-malformed-question",
+        description="A resumed interview candidate contains a duplicate stable question id.",
+    ),
+    SelfRepairProbe(
+        stage="research",
+        probe_id="research-safe-question-candidate",
+        description="Safe candidate presentation preserves question meaning and QID order.",
+    ),
+    SelfRepairProbe(
         stage="plan",
         probe_id="plan-malformed-repair-brief",
         description="Repair control evidence is malformed or model-authored.",
@@ -52,6 +62,21 @@ SELF_REPAIR_PROBES: tuple[SelfRepairProbe, ...] = (
         stage="plan",
         probe_id="plan-validator-status-mismatch",
         description="Stage result claims pass while canonical validator findings remain.",
+    ),
+    SelfRepairProbe(
+        stage="plan",
+        probe_id="plan-service-placeholder",
+        description="A service-owned placeholder is mistaken for runtime-authored stage content.",
+    ),
+    SelfRepairProbe(
+        stage="plan",
+        probe_id="plan-ownership-conflict",
+        description="Contradictory runtime and service drafts cross the ownership boundary.",
+    ),
+    SelfRepairProbe(
+        stage="plan",
+        probe_id="plan-root-cause-cascade",
+        description="A primary validation finding is retained with its related cascade evidence.",
     ),
     SelfRepairProbe(
         stage="review-spec",
@@ -69,6 +94,21 @@ SELF_REPAIR_PROBES: tuple[SelfRepairProbe, ...] = (
         description="Task dependency reference is missing or points to no task.",
     ),
     SelfRepairProbe(
+        stage="tasklist",
+        probe_id="tasklist-safe-presentation",
+        description="Safe Markdown presentation variants preserve executable task semantics.",
+    ),
+    SelfRepairProbe(
+        stage="tasklist",
+        probe_id="tasklist-eleven-malformed-cards",
+        description="Eleven malformed cards retain located parse findings and fail closed.",
+    ),
+    SelfRepairProbe(
+        stage="tasklist",
+        probe_id="tasklist-one-malformed-card",
+        description="A single malformed card retains its root finding and source location.",
+    ),
+    SelfRepairProbe(
         stage="implement",
         probe_id="implement-unverifiable-touched-files",
         description="Implementation result claims touched files without evidence.",
@@ -77,6 +117,13 @@ SELF_REPAIR_PROBES: tuple[SelfRepairProbe, ...] = (
         stage="implement",
         probe_id="implement-no-op-without-reason",
         description="Implementation performs no change without an explicit reason.",
+    ),
+    SelfRepairProbe(
+        stage="implement",
+        probe_id="implement-resume-non-repair-accounting",
+        description=(
+            "Interview resume creates a non-repair attempt without consuming repair budget."
+        ),
     ),
     SelfRepairProbe(
         stage="review",
