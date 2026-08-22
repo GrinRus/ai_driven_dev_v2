@@ -15179,11 +15179,19 @@ Local tasks:
   timing/harness tests (71), full Python suite (2387), Ruff, mypy, deterministic scenarios,
   adapter conformance, packaged UI browser, and build passed. `W43-E5-S1-T2` is now the next
   dependency-ready task; human usability, Claude, cross-runtime, and Wave 36 work remain parked.
-- `W43-E5-S1-T2` (next) Add repair-extension eligibility and terminal scenarios.
+- `W43-E5-S1-T2` (done) Add repair-extension eligibility and terminal scenarios.
   - Scope: cover extension success, repeated failure, manual-fix prevalidation, stale evidence,
     downstream success, second grant, Request Change separation, and immutable history.
   - Verification: provider-free runs assert exact grant content, attempt history, report lineage,
     no automatic loop, and unchanged downstream artifacts.
+- Completion: PR #297 (merge `69e3f214`) added the production-backed repair-extension scenario
+  runner, eight sanitized terminal-path fixtures, and the `AIDD-DETERMINISTIC-006` manifest.
+  Reports retain exact grant content and hashes, distinct repair-extension attempt modes, budget
+  and history accounting, report lineage, stale/downstream/second-grant guards, Request Change
+  separation, and immutable source history. Focused repair/core/eval tests (62), scenario tests
+  (10), docs/scenario/planning tests (113), Ruff, mypy, deterministic scenarios, adapter
+  conformance, packaged UI browser, and build passed. `W43-E5-S2-T1` is now the next
+  dependency-ready task; human usability, Claude, cross-runtime, and Wave 36 work remain parked.
 
 #### Slice W43-E5-S2 — Codex stability lane (`planned`)
 
@@ -15201,7 +15209,7 @@ prerequisites and must be reported as explicit blockers when unavailable.
 
 Local tasks:
 
-- `W43-E5-S2-T1` (planned) Define the Codex stability profile and metrics.
+- `W43-E5-S2-T1` (next) Define the Codex stability profile and metrics.
   - Scope: pin the representative work item, stage boundaries, prompt/runtime configuration,
     repetition count, initial-pass rate, first-repair recovery, exhaustion, findings per root
     cause, false budget consumption, interview resume, tasklist compliance, extension success,
@@ -15221,6 +15229,14 @@ Local tasks:
     runtimes and retains explicit environment-blocked verdicts when prerequisites are absent.
 
 Wave 43 reconciliation notes:
+
+- `2026-08-22` `W43-E5-S1-T2` is complete in PR #297 (merge `69e3f214`). The provider-free
+  repair-extension lane now covers successful and repeated-failure grants, manual-fix
+  prevalidation, stale evidence, downstream-success and second-grant guards, Request Change
+  separation, and immutable history. Every scenario retains exact grant hashes, attempt modes,
+  automatic/manual accounting, report lineage, raw evidence, and no-loop assertions; fail-closed
+  terminal reasons are checked explicitly. `W43-E5-S2-T1` is now the next dependency-ready task.
+  Human usability, Claude, cross-runtime, and Wave 36 work remain parked.
 
 - `2026-08-22` `W43-E5-S1-T1` is complete in PR #295 (merge `17dfbdae`). The provider-free
   resilience suite now covers missing/contradictory ownership drafts, service placeholders,

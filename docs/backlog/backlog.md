@@ -7,7 +7,7 @@ slice, and local task.
 
 ## Next
 
-- `W43-E5-S1-T2` — Add repair-extension eligibility and terminal scenarios.
+- `W43-E5-S2-T1` — Define the Codex stability profile and metrics.
 
 
 ## Soon
@@ -36,6 +36,15 @@ slice, and local task.
   queue-restoration policy in `docs/backlog/roadmap.md` (`W8-E3-S1`).
 
 ## Current reconciliation
+
+- `2026-08-22` PR #297 (merge `69e3f214`) completed `W43-E5-S1-T2`: eight provider-free
+  repair-extension scenarios now cover successful and repeated-failure grants, manual-fix
+  prevalidation, stale evidence, downstream-success and second-grant guards, Request Change
+  separation, and immutable history. Reports retain exact grant hashes, attempt modes, budget and
+  history accounting, lineage, raw evidence, and explicit no-loop assertions. Focused repair/core/
+  eval tests (62), scenario tests (10), docs/scenario/planning tests (113), Ruff, mypy, deterministic
+  scenarios, adapter conformance, packaged UI browser, and build passed. `W43-E5-S2-T1` is now
+  `Next`; human usability, Claude, cross-runtime, and Wave 36 work remain parked.
 
 - `2026-08-22` PR #295 (merge `17dfbdae`) completed `W43-E5-S1-T1`: ten provider-free
   ownership/interview/tasklist resilience scenarios now assert terminal state, attempt modes,
