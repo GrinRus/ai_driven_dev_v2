@@ -118,6 +118,7 @@ def _validate_built_wheel_resources(wheel_path: Path) -> None:
         f"aidd/_resources/contracts/stages/{stage}.md" for stage in STAGES
     }
     expected_document_contracts = {
+        "aidd/_resources/contracts/documents/repair-extension.md",
         "aidd/_resources/contracts/documents/stage-result.md",
         "aidd/_resources/contracts/documents/validator-report.md",
     }

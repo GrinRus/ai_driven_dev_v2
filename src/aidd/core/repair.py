@@ -6,7 +6,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Literal
 
-from aidd.core.models.run import RepairHistoryEntry
+from aidd.core.models.run import RepairExtensionGrant, RepairHistoryEntry
 from aidd.core.run_store import (
     RUN_ATTEMPT_PREFIX,
     load_stage_metadata,
@@ -31,6 +31,121 @@ _IMMEDIATE_DOWNSTREAM_STAGE: dict[str, str] = {
 }
 
 RepairFindingRelation = Literal["primary", "related", "advisory"]
+
+
+@dataclass(frozen=True, slots=True)
+class RepairExtensionEligibility:
+    """Core-owned decision for the one-time repair-extension contract."""
+
+    eligible: bool
+    disabled_reason: str | None = None
+
+    def __post_init__(self) -> None:
+        if self.eligible and self.disabled_reason is not None:
+            raise ValueError("An eligible repair extension cannot have a disabled reason.")
+        if not self.eligible and not (self.disabled_reason or "").strip():
+            raise ValueError("An ineligible repair extension must have a disabled reason.")
+
+
+def evaluate_repair_extension_eligibility(
+    grant: RepairExtensionGrant,
+    *,
+    expected_work_item_id: str,
+    expected_run_id: str,
+    expected_stage: str,
+    latest_stage_status: str,
+    latest_attempt_mode: str,
+    current_validator_report_sha256: str,
+    current_repair_brief_sha256: str,
+    current_configuration_identity: str,
+    active_job: bool = False,
+    prior_grant: RepairExtensionGrant | None = None,
+    succeeded_downstream: Iterable[str] = (),
+    validation_bypassed: bool = False,
+) -> RepairExtensionEligibility:
+    """Evaluate immutable selection and evidence gates without mutating a run.
+
+    This is intentionally a pure contract check. Persistence, document revalidation, and
+    starting a ``repair-extension`` attempt belong to later recovery/accounting tasks.
+    """
+
+    if latest_stage_status.strip().lower() != "repair-exhausted":
+        return RepairExtensionEligibility(
+            eligible=False,
+            disabled_reason=(
+                "Repair extension is allowed only for the latest repair-exhausted stage."
+            ),
+        )
+    if latest_attempt_mode.strip().lower() == "intervention":
+        return RepairExtensionEligibility(
+            eligible=False,
+            disabled_reason="Repair extension cannot be requested for an intervention attempt.",
+        )
+
+    expected_identity = (
+        expected_work_item_id.strip(),
+        expected_run_id.strip(),
+        expected_stage.strip(),
+    )
+    if (grant.work_item_id, grant.run_id, grant.stage) != expected_identity:
+        return RepairExtensionEligibility(
+            eligible=False,
+            disabled_reason=(
+                "Repair extension selection does not match the retained work item/run/stage "
+                "identity."
+            ),
+        )
+
+    if (
+        grant.validator_report_sha256 != current_validator_report_sha256.strip().lower()
+        or grant.repair_brief_sha256 != current_repair_brief_sha256.strip().lower()
+    ):
+        return RepairExtensionEligibility(
+            eligible=False,
+            disabled_reason=(
+                "Repair extension evidence is stale; refresh the validator report and repair "
+                "brief."
+            ),
+        )
+    if grant.configuration_identity != current_configuration_identity.strip():
+        return RepairExtensionEligibility(
+            eligible=False,
+            disabled_reason="Repair extension configuration drifted from the exhausted attempt.",
+        )
+    if active_job:
+        return RepairExtensionEligibility(
+            eligible=False,
+            disabled_reason="Repair extension is blocked while a stage job is active.",
+        )
+    if prior_grant is not None:
+        return RepairExtensionEligibility(
+            eligible=False,
+            disabled_reason="Repair extension grant was already used for this run and stage.",
+        )
+    downstream = tuple(stage.strip() for stage in succeeded_downstream if stage.strip())
+    if downstream:
+        return RepairExtensionEligibility(
+            eligible=False,
+            disabled_reason="Repair extension is blocked because downstream stages already "
+            "succeeded.",
+        )
+    if validation_bypassed:
+        return RepairExtensionEligibility(
+            eligible=False,
+            disabled_reason="Repair extension cannot bypass validation.",
+        )
+    return RepairExtensionEligibility(eligible=True)
+
+
+def validate_repair_extension_grant(
+    grant: RepairExtensionGrant,
+    **kwargs: object,
+) -> None:
+    """Raise a literal contract error when a selected extension grant is not eligible."""
+
+    decision = evaluate_repair_extension_eligibility(grant, **kwargs)  # type: ignore[arg-type]
+    if not decision.eligible:
+        raise ValueError(decision.disabled_reason)
 
 @dataclass(frozen=True, slots=True)
 class ValidatorReportFinding:

@@ -38,6 +38,10 @@ def _write_fake_aidd_wheel(path: Path) -> None:
         for stage in STAGES:
             archive.writestr(f"aidd/_resources/contracts/stages/{stage}.md", "# Stage\n")
         archive.writestr(
+            "aidd/_resources/contracts/documents/repair-extension.md",
+            "# Repair extension\n",
+        )
+        archive.writestr(
             "aidd/_resources/contracts/documents/stage-result.md",
             "# Stage result\n",
         )
