@@ -15221,12 +15221,20 @@ Local tasks:
     validation, fixture-backed tests, and the stability-lane handoff. Ruff, mypy, focused eval/
     CLI tests (11), docs/planning/scenario checks (75), and full CI passed. Live repetitions remain
     the separate `W43-E5-S2-T2` task; human, Claude, and cross-runtime lanes remain parked.
-- `W43-E5-S2-T2` (next) Run and report three fresh Codex repetitions.
+- `W43-E5-S2-T2` (done) Run and report three fresh Codex repetitions.
   - Scope: execute at least three fresh Codex runs against one pinned scenario/profile after the
     provider-free gate, classify first decisive failures, and retain sanitized comparable artifacts.
   - Verification: every repetition has install/readiness evidence, runtime logs, stage audits,
     task-aware checkpoints, target verification, and per-metric verdicts; the aggregate report
     distinguishes stability, regression, and blocked-provider outcomes.
+  - Completion: PR #301 (merge `3f4cf00e`) retained three fresh Codex run bundles and a
+    profile-validated repetition fixture. All three repetitions are explicitly `infra-fail`: the
+    first hit runaway repository-snapshot serialization during `implement`, and the next two
+    produced no first Codex runtime event in `research`. Focused repetition/profile tests (11),
+    eval/docs/planning checks (191), Ruff, mypy, full CI, adapter conformance, deterministic
+    scenarios, packaged UI browser, and build passed. The aggregate result is indeterminate and
+    does not claim Codex stability; human usability, Claude, cross-runtime, and Wave 36 lanes
+    remain parked.
 - `W43-E5-S2-T3` (parked) Run a future cross-runtime lower-capability comparison.
   - Scope: preserve the original lower-capability comparison objective for a later provider lane
     without changing Codex-only alpha acceptance or core/provider boundaries.
@@ -15234,6 +15242,14 @@ Local tasks:
     runtimes and retains explicit environment-blocked verdicts when prerequisites are absent.
 
 Wave 43 reconciliation notes:
+
+- `2026-08-22` `W43-E5-S2-T2` is complete in PR #301 (merge `3f4cf00e`). Three fresh Codex
+  repetitions were executed against the pinned AIDD-LIVE-007 profile and retained with install,
+  runtime, stage-audit, checkpoint, verification, and verdict evidence. The runs are all
+  `infra-fail` (one runaway snapshot serialization and two no-first-runtime-event stalls), so
+  no stability or regression claim is made. The Codex-only lane is evidence-blocked pending a
+  repeatable Codex service/harness environment; human usability, Claude, cross-runtime, and Wave
+  36 work remain parked.
 
 - `2026-08-22` `W43-E5-S2-T1` is complete in PR #299 (merge `fa75f0e7`). The Codex-only stability
   lane now has a pinned AIDD-LIVE-007 profile, native runtime/config identity, canonical nine
