@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import hashlib
 from pathlib import Path
 
 import pytest
@@ -17,6 +18,7 @@ from aidd.core.repair import (
     group_repair_findings,
     parse_validator_report_findings,
     persist_repair_history_snapshot,
+    preflight_repair_extension,
     remaining_repair_attempts,
     render_repair_brief,
     render_stage_result_with_repair_history,
@@ -24,7 +26,11 @@ from aidd.core.repair import (
     validate_repair_extension_grant,
     write_repair_brief,
 )
-from aidd.core.run_store import create_run_manifest, load_stage_metadata, persist_stage_status
+from aidd.core.run_store import (
+    create_run_manifest,
+    load_stage_metadata,
+    persist_stage_status,
+)
 from aidd.validators.models import ValidationFinding, ValidationIssueLocation
 from aidd.validators.protocol import ValidatorReportProtocolError
 from aidd.validators.reports import render_validator_report
@@ -152,6 +158,191 @@ def test_repair_extension_contract_rejects_unsafe_selection(
     assert message.lower() in decision.disabled_reason.lower()
     with pytest.raises(ValueError, match=message):
         validate_repair_extension_grant(grant, **kwargs)
+
+
+def _prepare_exhausted_repair_extension_workspace(
+    tmp_path: Path,
+) -> tuple[Path, RepairExtensionGrant]:
+    workspace_root = tmp_path / ".aidd"
+    create_run_manifest(
+        workspace_root=workspace_root,
+        work_item="WI-001",
+        run_id="run-001",
+        runtime_id="codex",
+        stage_target="plan",
+        config_snapshot={"mode": "test"},
+    )
+    persist_stage_status(
+        workspace_root=workspace_root,
+        work_item="WI-001",
+        run_id="run-001",
+        stage="plan",
+        status="failed",
+    )
+    stage_root = workspace_root / "workitems" / "WI-001" / "stages" / "plan"
+    stage_root.mkdir(parents=True, exist_ok=True)
+    validator_report_path = stage_root / "validator-report.md"
+    repair_brief_path = stage_root / "repair-brief.md"
+    validator_report_path.write_text(
+        render_validator_report(
+            (
+                ValidationFinding(
+                    code="SEM-PLACEHOLDER-CONTENT",
+                    message="Replace the placeholder content.",
+                ),
+            )
+        ),
+        encoding="utf-8",
+    )
+    repair_brief_path.write_text(
+        "# Repair brief\n\nRepair budget status: `repair-budget-exhausted`.\n",
+        encoding="utf-8",
+    )
+    grant = RepairExtensionGrant(
+        work_item_id="WI-001",
+        run_id="run-001",
+        stage="plan",
+        validator_report_path="workitems/WI-001/stages/plan/validator-report.md",
+        validator_report_sha256=hashlib.sha256(validator_report_path.read_bytes()).hexdigest(),
+        repair_brief_path="workitems/WI-001/stages/plan/repair-brief.md",
+        repair_brief_sha256=hashlib.sha256(repair_brief_path.read_bytes()).hexdigest(),
+        configuration_identity="codex:config-001",
+        author="operator@example.test",
+        authorized_at_utc="2026-08-22T00:00:00Z",
+        reason="Apply one bounded correction after automatic exhaustion.",
+    )
+    return workspace_root, grant
+
+
+def test_repair_extension_preflight_finalizes_manual_fix_without_runtime(tmp_path: Path) -> None:
+    workspace_root, grant = _prepare_exhausted_repair_extension_workspace(tmp_path)
+    runtime_calls: list[str] = []
+
+    result = preflight_repair_extension(
+        workspace_root=workspace_root,
+        grant=grant,
+        current_configuration_identity="codex:config-001",
+        latest_stage_status="repair-exhausted",
+        latest_attempt_mode="repair",
+        revalidate_documents=lambda: runtime_calls,
+    )
+
+    assert result.action == "finalized"
+    assert result.runtime_required is False
+    assert result.stage_result_path is not None and result.stage_result_path.exists()
+    assert runtime_calls == []
+    metadata = load_stage_metadata(
+        workspace_root=workspace_root,
+        work_item="WI-001",
+        run_id="run-001",
+        stage="plan",
+    )
+    assert metadata is not None
+    assert metadata.status == "succeeded"
+    assert metadata.repair_extension_grant == grant
+    assert metadata.repair_history[-1].trigger == "repair-extension"
+
+
+def test_repair_extension_preflight_reopens_with_bounded_brief_without_spending_budget(
+    tmp_path: Path,
+) -> None:
+    workspace_root, grant = _prepare_exhausted_repair_extension_workspace(tmp_path)
+    finding = ValidatorReportFinding(
+        code="SEM-PLACEHOLDER-CONTENT",
+        severity="high",
+        message="Replace the placeholder content.",
+        source_path="workitems/WI-001/stages/plan/plan.md",
+    )
+
+    result = preflight_repair_extension(
+        workspace_root=workspace_root,
+        grant=grant,
+        current_configuration_identity="codex:config-001",
+        latest_stage_status="repair-exhausted",
+        latest_attempt_mode="repair",
+        revalidation_findings=(finding,),
+        prior_stage_artifacts=("workitems/WI-001/context/intake.md",),
+    )
+
+    assert result.action == "reopened"
+    assert result.runtime_required is True
+    assert result.repair_brief_path is not None and result.repair_brief_path.exists()
+    assert "repair-extension" in result.repair_brief_path.read_text(encoding="utf-8")
+    metadata = load_stage_metadata(
+        workspace_root=workspace_root,
+        work_item="WI-001",
+        run_id="run-001",
+        stage="plan",
+    )
+    assert metadata is not None
+    assert metadata.status == "repair-needed"
+    assert metadata.repair_extension_grant == grant
+    assert metadata.repair_history[-1].trigger == "repair-extension"
+    assert result.next_attempt_number == 1
+
+
+@pytest.mark.parametrize(
+    ("overrides", "message"),
+    (
+        ({"latest_stage_status": "failed"}, "exhausted"),
+        ({"active_job": True}, "active"),
+        ({"succeeded_downstream": ("qa",)}, "downstream"),
+    ),
+)
+def test_repair_extension_preflight_stops_before_revalidation_for_unsafe_state(
+    tmp_path: Path,
+    overrides: dict[str, object],
+    message: str,
+) -> None:
+    workspace_root, grant = _prepare_exhausted_repair_extension_workspace(tmp_path)
+    callback_calls: list[str] = []
+    kwargs: dict[str, object] = {
+        "workspace_root": workspace_root,
+        "grant": grant,
+        "current_configuration_identity": "codex:config-001",
+        "latest_stage_status": "repair-exhausted",
+        "latest_attempt_mode": "repair",
+        "revalidate_documents": lambda: callback_calls,
+    }
+    kwargs.update(overrides)
+
+    result = preflight_repair_extension(**kwargs)  # type: ignore[arg-type]
+
+    assert result.blocked
+    assert message in (result.eligibility.disabled_reason or "").lower()
+    assert callback_calls == []
+
+
+def test_repair_extension_preflight_rejects_second_grant(tmp_path: Path) -> None:
+    workspace_root, grant = _prepare_exhausted_repair_extension_workspace(tmp_path)
+    first = preflight_repair_extension(
+        workspace_root=workspace_root,
+        grant=grant,
+        current_configuration_identity="codex:config-001",
+        latest_stage_status="repair-exhausted",
+        latest_attempt_mode="repair",
+        revalidation_findings=(
+            ValidatorReportFinding(
+                code="SEM-PLACEHOLDER-CONTENT",
+                severity="high",
+                message="Replace the placeholder content.",
+                source_path="workitems/WI-001/stages/plan/plan.md",
+            ),
+        ),
+    )
+    assert first.action == "reopened"
+
+    second = preflight_repair_extension(
+        workspace_root=workspace_root,
+        grant=grant,
+        current_configuration_identity="codex:config-001",
+        latest_stage_status="repair-exhausted",
+        latest_attempt_mode="repair",
+        revalidation_findings=(),
+    )
+
+    assert second.blocked
+    assert "already used" in (second.eligibility.disabled_reason or "").lower()
 
 
 def test_repair_budget_policy_validates_values() -> None:

@@ -569,6 +569,79 @@ def test_prepare_adapter_invocation_repair_attempt_injects_repair_context(tmp_pa
     )
 
 
+def test_prepare_adapter_invocation_uses_repair_extension_brief_for_reopened_attempt(
+    tmp_path: Path,
+) -> None:
+    workspace_root = tmp_path / ".aidd"
+    create_run_manifest(
+        workspace_root=workspace_root,
+        work_item="WI-001",
+        run_id="run-001",
+        runtime_id="generic-cli",
+        stage_target="plan",
+        config_snapshot={"mode": "test"},
+    )
+    preparation_bundle = prepare_stage_bundle(
+        workspace_root=workspace_root,
+        work_item="WI-001",
+        stage="plan",
+    )
+    _materialize_expected_inputs(preparation_bundle.expected_input_bundle)
+    persist_execution_state(
+        workspace_root=workspace_root,
+        work_item="WI-001",
+        run_id="run-001",
+        stage="plan",
+    )
+    persist_stage_status(
+        workspace_root=workspace_root,
+        work_item="WI-001",
+        run_id="run-001",
+        stage="plan",
+        status=StageState.REPAIR_NEEDED.value,
+    )
+    stage_root = workspace_root / "workitems" / "WI-001" / "stages" / "plan"
+    stage_root.mkdir(parents=True, exist_ok=True)
+    validator_report_path = stage_root / "validator-report.md"
+    extension_brief_path = stage_root / "repair-extension-brief.md"
+    validator_report_path.write_text("# Validator Report\n", encoding="utf-8")
+    extension_brief_path.write_text(
+        "# Repair extension\n\n- Mode: `repair-extension`.\n",
+        encoding="utf-8",
+    )
+    persist_repair_history_snapshot(
+        workspace_root=workspace_root,
+        work_item="WI-001",
+        run_id="run-001",
+        stage="plan",
+        attempt_number=2,
+        trigger="repair-extension",
+        outcome="authorized; awaiting explicit runtime execution",
+        stage_status=StageState.REPAIR_NEEDED.value,
+        validator_report_path=validator_report_path,
+        repair_brief_path=extension_brief_path,
+    )
+    reopened_attempt = persist_execution_state(
+        workspace_root=workspace_root,
+        work_item="WI-001",
+        run_id="run-001",
+        stage="plan",
+    )
+
+    invocation = prepare_adapter_invocation(
+        workspace_root=workspace_root,
+        preparation_bundle=preparation_bundle,
+        execution_state=reopened_attempt,
+    )
+
+    assert invocation.attempt_number == 2
+    assert invocation.repair_mode is True
+    assert invocation.attempt_mode == "repair-extension"
+    assert invocation.repair_brief_path == extension_brief_path
+    assert invocation.repair_brief_markdown is not None
+    assert "repair-extension" in invocation.repair_brief_markdown
+
+
 def test_repair_attempt_input_bundle_includes_existing_stage_outputs(tmp_path: Path) -> None:
     workspace_root = tmp_path / ".aidd"
     create_run_manifest(

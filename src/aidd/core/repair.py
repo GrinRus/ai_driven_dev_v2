@@ -1,6 +1,7 @@
 from __future__ import annotations
 
-from collections.abc import Iterable, Sequence
+import hashlib
+from collections.abc import Callable, Iterable, Sequence
 from dataclasses import dataclass, field
 from datetime import datetime
 from pathlib import Path
@@ -10,8 +11,11 @@ from aidd.core.models.run import RepairExtensionGrant, RepairHistoryEntry
 from aidd.core.run_store import (
     RUN_ATTEMPT_PREFIX,
     load_stage_metadata,
+    next_attempt_number,
     persist_repair_history_entry,
+    persist_stage_status,
     run_attempts_root,
+    run_stage_metadata_path,
 )
 from aidd.core.run_store import (
     persist_repair_extension_grant as persist_run_repair_extension_grant,
@@ -20,8 +24,10 @@ from aidd.core.stage_terminal import (
     CanonicalStageResultProjection,
     write_stage_result_from_lifecycle_state,
 )
+from aidd.core.state_machine import StageState
 from aidd.core.workspace import stage_root as workspace_stage_root
 from aidd.validators.protocol import parse_validator_report
+from aidd.validators.reports import render_validator_report
 
 _IMMEDIATE_DOWNSTREAM_STAGE: dict[str, str] = {
     "idea": "research",
@@ -48,6 +54,41 @@ class RepairExtensionEligibility:
             raise ValueError("An eligible repair extension cannot have a disabled reason.")
         if not self.eligible and not (self.disabled_reason or "").strip():
             raise ValueError("An ineligible repair extension must have a disabled reason.")
+
+
+RepairExtensionPreflightAction = Literal["blocked", "finalized", "reopened"]
+
+
+@dataclass(frozen=True, slots=True)
+class RepairExtensionPreflightResult:
+    """Durable outcome of guarded repair-extension preflight.
+
+    ``reopened`` means that a single operator-authorized attempt is prepared but has not
+    started.  No attempt directory is created here, so automatic repair accounting remains
+    unchanged until the runtime actually starts.  ``finalized`` is used when current operator
+    edits pass validation and therefore need no runtime execution.
+    """
+
+    action: RepairExtensionPreflightAction
+    eligibility: RepairExtensionEligibility
+    work_item_id: str
+    run_id: str
+    stage: str
+    stage_metadata_path: Path | None = None
+    stage_result_path: Path | None = None
+    validator_report_path: Path | None = None
+    repair_brief_path: Path | None = None
+    next_attempt_number: int | None = None
+    findings: tuple[ValidatorReportFinding, ...] = ()
+    grant: RepairExtensionGrant | None = None
+
+    @property
+    def blocked(self) -> bool:
+        return self.action == "blocked"
+
+    @property
+    def runtime_required(self) -> bool:
+        return self.action == "reopened"
 
 
 def evaluate_repair_extension_eligibility(
@@ -149,6 +190,415 @@ def validate_repair_extension_grant(
     decision = evaluate_repair_extension_eligibility(grant, **kwargs)  # type: ignore[arg-type]
     if not decision.eligible:
         raise ValueError(decision.disabled_reason)
+
+
+def _repair_extension_workspace_path(*, workspace_root: Path, relative_path: str) -> Path:
+    """Resolve a grant path while keeping evidence inside the workspace."""
+
+    candidate = Path(relative_path)
+    if candidate.is_absolute() or "\\" in relative_path:
+        raise ValueError("Repair-extension evidence paths must be workspace-relative.")
+    workspace = workspace_root.resolve(strict=False)
+    resolved = (workspace / candidate).resolve(strict=False)
+    if not resolved.is_relative_to(workspace):
+        raise ValueError("Repair-extension evidence path escapes the workspace root.")
+    return resolved
+
+
+def _repair_extension_sha256(path: Path) -> str:
+    return hashlib.sha256(path.read_bytes()).hexdigest()
+
+
+def _repair_extension_blocked(
+    *,
+    grant: RepairExtensionGrant,
+    reason: str,
+) -> RepairExtensionPreflightResult:
+    return RepairExtensionPreflightResult(
+        action="blocked",
+        eligibility=RepairExtensionEligibility(eligible=False, disabled_reason=reason),
+        work_item_id=grant.work_item_id,
+        run_id=grant.run_id,
+        stage=grant.stage,
+        grant=grant,
+    )
+
+
+def _write_repair_extension_stage_result(
+    *,
+    workspace_root: Path,
+    work_item: str,
+    run_id: str,
+    stage: str,
+    status: str,
+    attempt_number: int,
+    outcome: str,
+    validator_report_path: Path,
+    repair_brief_path: Path | None,
+    blockers: tuple[str, ...] = (),
+) -> Path:
+    metadata = load_stage_metadata(
+        workspace_root=workspace_root,
+        work_item=work_item,
+        run_id=run_id,
+        stage=stage,
+    )
+    if metadata is None:
+        raise ValueError("Stage metadata is required before writing repair-extension evidence.")
+    stage_result_path = workspace_stage_root(
+        root=workspace_root,
+        work_item=work_item,
+        stage=stage,
+    ) / "stage-result.md"
+    write_stage_result_from_lifecycle_state(
+        CanonicalStageResultProjection(
+            stage=stage,
+            work_item=work_item,
+            status=status,
+            attempt_number=attempt_number,
+            attempt_mode="repair-extension",
+            attempt_outcome=outcome,
+            repair_history=metadata.repair_history,
+            produced_output_paths=(
+                _existing_declared_stage_output_paths(
+                    workspace_root=workspace_root,
+                    work_item=work_item,
+                    stage=stage,
+                )
+                if status == StageState.SUCCEEDED.value
+                else ()
+            ),
+            validator_verdict="pass" if status == StageState.SUCCEEDED.value else "fail",
+            validator_report_path=validator_report_path,
+            repair_brief_path=repair_brief_path,
+            blockers=blockers,
+            repair_budget_status=(
+                None
+                if status == StageState.SUCCEEDED.value
+                else "repair-budget-exhausted"
+            ),
+        ),
+        workspace_root=workspace_root,
+    )
+    return stage_result_path
+
+
+def preflight_repair_extension(
+    *,
+    workspace_root: Path,
+    grant: RepairExtensionGrant,
+    current_configuration_identity: str,
+    latest_stage_status: str | None = None,
+    latest_attempt_mode: str | None = None,
+    active_job: bool = False,
+    succeeded_downstream: Iterable[str] = (),
+    validation_bypassed: bool = False,
+    revalidate_documents: Callable[[], Iterable[ValidatorReportFinding]] | None = None,
+    revalidation_findings: Iterable[ValidatorReportFinding] | None = None,
+    prior_stage_artifacts: Iterable[str | Path] = (),
+    repair_policy: RepairBudgetPolicy | None = None,
+    changed_at_utc: datetime | None = None,
+) -> RepairExtensionPreflightResult:
+    """Guard one repair extension, revalidating before any runtime execution.
+
+    The caller supplies the operator-authorized grant and, when available, a validator callback
+    for the current stage documents.  All durable gates run before that callback.  Passing
+    validation yields a succeeded lifecycle snapshot without creating an attempt.  Remaining
+    findings persist the grant and a bounded extension brief, then reopen the stage for one
+    explicitly selected runtime attempt.  No automatic repair counter is changed in either path.
+    """
+
+    metadata = load_stage_metadata(
+        workspace_root=workspace_root,
+        work_item=grant.work_item_id,
+        run_id=grant.run_id,
+        stage=grant.stage,
+    )
+    if metadata is None:
+        return _repair_extension_blocked(
+            grant=grant,
+            reason="Repair extension requires existing stage metadata.",
+        )
+
+    try:
+        validator_report_path = _repair_extension_workspace_path(
+            workspace_root=workspace_root,
+            relative_path=grant.validator_report_path,
+        )
+        repair_brief_path = _repair_extension_workspace_path(
+            workspace_root=workspace_root,
+            relative_path=grant.repair_brief_path,
+        )
+    except ValueError as exc:
+        return _repair_extension_blocked(grant=grant, reason=str(exc))
+    if not validator_report_path.is_file() or not repair_brief_path.is_file():
+        return _repair_extension_blocked(
+            grant=grant,
+            reason="Repair extension evidence is missing; refresh the exhausted-stage artifacts.",
+        )
+
+    try:
+        current_validator_report_sha256 = _repair_extension_sha256(validator_report_path)
+        current_repair_brief_sha256 = _repair_extension_sha256(repair_brief_path)
+    except OSError as exc:
+        return _repair_extension_blocked(
+            grant=grant,
+            reason=f"Repair extension evidence cannot be read: {exc}",
+        )
+
+    derived_status = latest_stage_status or metadata.status
+    if (
+        latest_stage_status is None
+        and derived_status.strip().lower() == StageState.FAILED.value
+    ):
+        try:
+            repair_brief_text = repair_brief_path.read_text(encoding="utf-8", errors="replace")
+        except OSError as exc:
+            return _repair_extension_blocked(
+                grant=grant,
+                reason=f"Repair extension evidence cannot be read: {exc}",
+            )
+        if "repair-budget-exhausted" in repair_brief_text.lower():
+            derived_status = "repair-exhausted"
+    derived_mode = latest_attempt_mode or (
+        metadata.repair_history[-1].trigger if metadata.repair_history else "initial"
+    )
+    prior_grant = metadata.repair_extension_grant
+    if prior_grant is not None:
+        return _repair_extension_blocked(
+            grant=grant,
+            reason="Repair extension grant was already used for this run and stage.",
+        )
+
+    try:
+        eligibility = evaluate_repair_extension_eligibility(
+            grant,
+            expected_work_item_id=grant.work_item_id,
+            expected_run_id=grant.run_id,
+            expected_stage=grant.stage,
+            latest_stage_status=derived_status,
+            latest_attempt_mode=derived_mode,
+            current_validator_report_sha256=current_validator_report_sha256,
+            current_repair_brief_sha256=current_repair_brief_sha256,
+            current_configuration_identity=current_configuration_identity,
+            active_job=active_job,
+            prior_grant=prior_grant,
+            succeeded_downstream=succeeded_downstream,
+            validation_bypassed=validation_bypassed,
+        )
+    except (ValueError, OSError) as exc:
+        return _repair_extension_blocked(grant=grant, reason=str(exc))
+    if not eligibility.eligible:
+        return RepairExtensionPreflightResult(
+            action="blocked",
+            eligibility=eligibility,
+            work_item_id=grant.work_item_id,
+            run_id=grant.run_id,
+            stage=grant.stage,
+            grant=grant,
+        )
+
+    if revalidation_findings is not None and revalidate_documents is not None:
+        return _repair_extension_blocked(
+            grant=grant,
+            reason="Provide either revalidation_findings or revalidate_documents, not both.",
+        )
+    try:
+        findings = tuple(
+            revalidation_findings
+            if revalidation_findings is not None
+            else revalidate_documents()
+            if revalidate_documents is not None
+            else parse_validator_report_findings(
+                validator_report_markdown=validator_report_path.read_text(encoding="utf-8")
+            )
+        )
+    except (OSError, ValueError) as exc:
+        return _repair_extension_blocked(
+            grant=grant,
+            reason=f"Repair extension document revalidation failed: {exc}",
+        )
+
+    next_attempt = next_attempt_number(
+        workspace_root=workspace_root,
+        work_item=grant.work_item_id,
+        run_id=grant.run_id,
+        stage=grant.stage,
+    )
+    if not findings:
+        try:
+            revalidated_report_path = workspace_stage_root(
+                root=workspace_root,
+                work_item=grant.work_item_id,
+                stage=grant.stage,
+            ) / "repair-extension-validator-report.md"
+            revalidated_report_path.write_text(
+                render_validator_report(()),
+                encoding="utf-8",
+            )
+            persist_repair_extension_grant(
+                workspace_root=workspace_root,
+                work_item=grant.work_item_id,
+                run_id=grant.run_id,
+                stage=grant.stage,
+                grant=grant,
+                changed_at_utc=changed_at_utc,
+            )
+            persist_stage_status(
+                workspace_root=workspace_root,
+                work_item=grant.work_item_id,
+                run_id=grant.run_id,
+                stage=grant.stage,
+                status=StageState.SUCCEEDED.value,
+                changed_at_utc=changed_at_utc,
+            )
+            persist_repair_history_entry(
+                workspace_root=workspace_root,
+                work_item=grant.work_item_id,
+                run_id=grant.run_id,
+                stage=grant.stage,
+                attempt_number=next_attempt,
+                trigger="repair-extension",
+                outcome="succeeded without runtime after document revalidation",
+                validator_report_path=revalidated_report_path,
+                repair_brief_path=repair_brief_path,
+                changed_at_utc=changed_at_utc,
+            )
+            stage_result_path = _write_repair_extension_stage_result(
+                workspace_root=workspace_root,
+                work_item=grant.work_item_id,
+                run_id=grant.run_id,
+                stage=grant.stage,
+                status=StageState.SUCCEEDED.value,
+                attempt_number=next_attempt,
+                outcome="succeeded without runtime after document revalidation",
+                validator_report_path=revalidated_report_path,
+                repair_brief_path=repair_brief_path,
+            )
+        except (OSError, ValueError) as exc:
+            return _repair_extension_blocked(
+                grant=grant,
+                reason=f"Repair extension finalization failed: {exc}",
+            )
+        metadata = load_stage_metadata(
+            workspace_root=workspace_root,
+            work_item=grant.work_item_id,
+            run_id=grant.run_id,
+            stage=grant.stage,
+        )
+        return RepairExtensionPreflightResult(
+            action="finalized",
+            eligibility=eligibility,
+            work_item_id=grant.work_item_id,
+            run_id=grant.run_id,
+            stage=grant.stage,
+            stage_metadata_path=(
+                run_stage_metadata_path(
+                    workspace_root=workspace_root,
+                    work_item=grant.work_item_id,
+                    run_id=grant.run_id,
+                    stage=grant.stage,
+                )
+                if metadata is not None
+                else None
+            ),
+            stage_result_path=stage_result_path,
+            validator_report_path=revalidated_report_path,
+            next_attempt_number=next_attempt,
+            findings=(),
+            grant=grant,
+        )
+
+    fresh_brief_path = workspace_stage_root(
+        root=workspace_root,
+        work_item=grant.work_item_id,
+        stage=grant.stage,
+    ) / "repair-extension-brief.md"
+    try:
+        persist_repair_extension_grant(
+            workspace_root=workspace_root,
+            work_item=grant.work_item_id,
+            run_id=grant.run_id,
+            stage=grant.stage,
+            grant=grant,
+            changed_at_utc=changed_at_utc,
+        )
+        repair_brief = generate_repair_brief(
+            validator_report_path=validator_report_path,
+            prior_stage_artifacts=prior_stage_artifacts,
+            stage_attempt_count=max(0, next_attempt - 1),
+            max_repair_attempts=effective_repair_budget(
+                stage=grant.stage,
+                policy=repair_policy,
+            ),
+            workspace_root=workspace_root,
+        )
+        repair_brief = (
+            repair_brief.rstrip()
+            + "\n\n## Repair extension\n\n"
+            + "- Mode: `repair-extension`.\n"
+            + "- The automatic repair budget and exhaustion history remain unchanged.\n"
+            + "- This is one explicit operator-authorized attempt; no automatic retry loop "
+            + "is scheduled.\n"
+        )
+        write_repair_brief(path=fresh_brief_path, repair_brief_markdown=repair_brief)
+        persist_stage_status(
+            workspace_root=workspace_root,
+            work_item=grant.work_item_id,
+            run_id=grant.run_id,
+            stage=grant.stage,
+            status=StageState.REPAIR_NEEDED.value,
+            changed_at_utc=changed_at_utc,
+        )
+        persist_repair_history_entry(
+            workspace_root=workspace_root,
+            work_item=grant.work_item_id,
+            run_id=grant.run_id,
+            stage=grant.stage,
+            attempt_number=next_attempt,
+            trigger="repair-extension",
+            outcome="authorized; awaiting explicit runtime execution",
+            validator_report_path=validator_report_path,
+            repair_brief_path=fresh_brief_path,
+            changed_at_utc=changed_at_utc,
+        )
+        stage_result_path = _write_repair_extension_stage_result(
+            workspace_root=workspace_root,
+            work_item=grant.work_item_id,
+            run_id=grant.run_id,
+            stage=grant.stage,
+            status=StageState.REPAIR_NEEDED.value,
+            attempt_number=next_attempt,
+            outcome="authorized; awaiting explicit runtime execution",
+            validator_report_path=validator_report_path,
+            repair_brief_path=fresh_brief_path,
+            blockers=tuple(f"`{finding.code}`: {finding.message}" for finding in findings),
+        )
+    except (OSError, ValueError) as exc:
+        return _repair_extension_blocked(
+            grant=grant,
+            reason=f"Repair extension reopen failed: {exc}",
+        )
+
+    return RepairExtensionPreflightResult(
+        action="reopened",
+        eligibility=eligibility,
+        work_item_id=grant.work_item_id,
+        run_id=grant.run_id,
+        stage=grant.stage,
+        stage_metadata_path=run_stage_metadata_path(
+            workspace_root=workspace_root,
+            work_item=grant.work_item_id,
+            run_id=grant.run_id,
+            stage=grant.stage,
+        ),
+        stage_result_path=stage_result_path,
+        validator_report_path=validator_report_path,
+        repair_brief_path=fresh_brief_path,
+        next_attempt_number=next_attempt,
+        findings=findings,
+        grant=grant,
+    )
 
 @dataclass(frozen=True, slots=True)
 class ValidatorReportFinding:
