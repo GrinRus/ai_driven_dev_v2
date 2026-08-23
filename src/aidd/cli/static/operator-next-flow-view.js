@@ -5,6 +5,18 @@ function terminalHandoffTone(status) {
   return "";
 }
 
+// The shell owns the full surface policy. Keep a narrow fallback for
+// isolated render tests and partial bootstrap states where that module is not
+// loaded yet.
+function operatorActionSurfacePolicy() {
+  if (typeof currentOperatorSurfacePolicy === "function") {
+    return currentOperatorSurfacePolicy();
+  }
+  const recovery = state.activeTab === "recovery";
+  const terminal = Boolean(state.dashboard?.terminal_handoff);
+  return {hidesGlobalAction: recovery || terminal, terminal};
+}
+
 function nextFlowButtonLabel(action) {
   if (action.action === "create-new-work-item") return "Create New";
   if (action.action === "start-follow-up-flow") return "Start Follow-up";
@@ -207,7 +219,7 @@ function rememberStudioFlowCompleteDisclosure(details) {
 
 function renderStudioFlowCompleteAction(action, {primary = false} = {}) {
   return `
-    <button data-next-flow-action="${escapeHtml(action.action)}" type="button" class="${primary ? "primary" : "secondary"}" ${action.enabled === false ? 'disabled aria-disabled="true"' : ""}>
+    <button data-next-flow-action="${escapeHtml(action.action)}"${primary ? " data-primary-action" : ""} type="button" class="${primary ? "primary" : "secondary"}" ${action.enabled === false ? 'disabled aria-disabled="true"' : ""}>
       ${escapeHtml(action.label || nextFlowButtonLabel(action))}
     </button>
   `;
@@ -1362,6 +1374,13 @@ function renderNextActionPanel() {
   const panel = document.getElementById("technicalDecisionStatus")
     || document.querySelector('[data-current-decision-stable-id="technicalDecisionStatus"]');
   if (!panel) return;
+  const surfacePolicy = operatorActionSurfacePolicy();
+  if (surfacePolicy.hidesGlobalAction && !surfacePolicy.terminal) {
+    panel.hidden = true;
+    panel.innerHTML = "";
+    return;
+  }
+  panel.hidden = false;
   const action = state.dashboard?.next_action || {action: "choose-runtime", label: "Select runtime", detail: "Choose a runtime.", enabled: false};
   const noRunWithRuntime = action.action === "choose-runtime" && state.selectedRuntime;
   const choosingRuntime = action.action === "choose-runtime" && !state.selectedRuntime;
@@ -1431,7 +1450,7 @@ function renderGlobalNextActionStrip() {
   syncLiveJobBodyClass();
   syncExternalRunningBodyClass();
   if (
-    state.activeTab === "recovery"
+    operatorActionSurfacePolicy().hidesGlobalAction
     || state.onboarding?.setupRequired
     || workDetailOwnsPrimarySurface()
   ) {

@@ -1,8 +1,26 @@
+function currentOperatorSurfacePolicy() {
+  const inbox = state.activeTab === "work" && state.workDetail === "project-home";
+  const history = state.activeTab === "history" || state.workDetail === "runs";
+  const documents = state.activeTab === "evidence" || state.workItemTab === "documents";
+  const recovery = state.activeTab === "recovery";
+  const taskWorkspace = state.activeTab === "work" && state.workDetail === "tasks";
+  const terminal = Boolean(state.dashboard?.terminal_handoff);
+  return Object.freeze({
+    inbox,
+    history,
+    documents,
+    recovery,
+    taskWorkspace,
+    terminal,
+    hidesRunner: inbox || history || documents || terminal,
+    hidesGlobalAction: inbox || history || documents || recovery || taskWorkspace || terminal
+  });
+}
+
 function renderRuntimeSelector() {
   const settings = document.getElementById("runtimeSettings");
-  const readOnlyHistory = state.activeTab === "history" || state.workDetail === "runs";
   const terminalHandoff = Boolean(state.dashboard?.terminal_handoff);
-  const readOnlySurface = readOnlyHistory || terminalHandoff;
+  const readOnlySurface = currentOperatorSurfacePolicy().hidesRunner || terminalHandoff;
   if (settings) settings.hidden = readOnlySurface;
   if (readOnlySurface) return;
   if (settings && !settings.dataset.initialized) {
