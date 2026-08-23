@@ -716,6 +716,9 @@ function activateTab(tab, {preserveDetail = false, historyMode = "replace"} = {}
   const content = document.getElementById("intentContent");
   if (content) content.dataset.operatorMode = state.activeTab;
   applyOperatorModeBodyClass();
+  if (typeof renderRuntimeSelector === "function") renderRuntimeSelector();
+  if (typeof renderGlobalNextActionStrip === "function") renderGlobalNextActionStrip();
+  if (typeof renderNextActionPanel === "function") renderNextActionPanel();
   syncLocationState({historyMode});
 }
 

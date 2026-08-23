@@ -479,6 +479,9 @@ body {
   max-width: var(--studio-content-max);
   padding: var(--space-6) 0;
 }
+.intent-decision-surface[hidden] {
+  display: none !important;
+}
 body.setup-active .topbar {
   grid-template-columns: auto auto minmax(0, 1fr) auto auto;
 }

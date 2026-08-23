@@ -546,6 +546,13 @@
   .intent-decision-surface {
     grid-template-columns: 1fr;
   }
+  /* Put the current decision before the long stage strip on narrow launch views. */
+  body.work-overview-mode .intent-decision-surface {
+    order: 1;
+  }
+  body.work-overview-mode .intent-phase-region {
+    order: 2;
+  }
   .intent-decision-surface .next-action-controls {
     order: -1;
   }
