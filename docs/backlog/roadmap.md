@@ -14066,14 +14066,17 @@ Local tasks:
     synchronous conflict and duplicate-suppression behavior.
   - Verification: CLI service tests prove stable ids, bounded reads, exact evidence links, missing
     task behavior, and post-mutation server-winner readback.
-- `W42-E3-S1-T3` (next) Expose core-owned selected-task action eligibility in the bounded service
+- `W42-E3-S1-T3` (done) Expose core-owned selected-task action eligibility in the bounded service
   payload.
   - Scope: publish Run, Resume, and Finalize action states with literal disabled consequences from
     the task ledger, dependency graph, stale-tasklist guard, finalization state, and Runner
     readiness; the browser must not infer action policy from status or group names.
   - Verification: core/service tests cover ready, running, blocked, done, stale, conflicted,
     unavailable-Runner, and finalization-retry states with one mutually exclusive recommended
-    action and fail-closed disabled reasons.
+    action and fail-closed disabled reasons. Completed in PR #313 (merge `fa2426a6`): the core
+    projection now owns action semantics and the UI service gates selected-task mutations on the
+    current run lease and Runner readiness; focused core/UI tests, planning/docs checks, Ruff,
+    mypy, deterministic scenarios, adapter conformance, and packaged browser checks passed.
 
 #### Slice W42-E3-S2 — task list, detail, and active run (`planned`)
 
@@ -14106,7 +14109,7 @@ Local tasks:
     state, reconnect cursor, and collapsible raw output; never estimate percentage completion.
   - Verification: browser fixtures cover starting, streaming, quiet, cancellation-pending,
     failed, completed, reconnecting, and missing-log states without context loss.
-- `W42-E3-S2-T4` (soon) Render the selected-task contract and contextual Runner from core action
+- `W42-E3-S2-T4` (next) Render the selected-task contract and contextual Runner from core action
   projection.
   - Dependencies: `W42-E3-S1-T3`.
   - Scope: show scope, acceptance, expected files, verification, evidence, linked documents,
