@@ -71,6 +71,8 @@ def test_human_decision_surface_is_mobile_first_without_overflow(
         assert primary_bounds is not None
         assert primary_bounds["height"] >= 44
         assert primary_bounds["y"] + primary_bounds["height"] <= viewport[1]
+        assert primary.evaluate("node => getComputedStyle(node).position") == "fixed"
+        assert primary.evaluate("node => node.tabIndex") >= 0
         assert page.evaluate(
             "document.documentElement.scrollWidth <= window.innerWidth"
         )
