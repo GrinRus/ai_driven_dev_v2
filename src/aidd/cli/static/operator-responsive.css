@@ -1011,3 +1011,21 @@
     padding: 0;
   }
 }
+
+@media (max-width: 760px) {
+  .task-contract-grid,
+  .task-action-bar {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .task-action-controls {
+    min-width: 0;
+  }
+  .task-action-controls > button,
+  .task-action-controls .contextual-runner-control {
+    width: 100%;
+  }
+  .task-action-controls .contextual-runner-control {
+    align-items: stretch;
+    flex-direction: column;
+  }
+}

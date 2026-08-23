@@ -165,13 +165,19 @@ function renderTaskWorkspace(taskView) {
     || String(task.title || "").toLowerCase().includes(filter));
   const groups = ["Ready", "Running", "Blocked", "Done"];
   const selected = taskView?.selected_task || null;
-  const selectedAction = selected
-    ? selected.group === "Ready"
-      ? (selected.status === "pending" ? "Run" : "Resume")
-      : selected.group === "Done" && taskView.finalization_eligible && taskView.finalization?.status !== "succeeded"
-        ? (taskView.finalization?.status === "failed" ? "Resume finalization" : "Finalize")
-        : null
-    : null;
+  const actionProjection = selected?.action_projection || taskView?.selected_task_actions || null;
+  const actionStates = actionProjection?.states || {};
+  const actionName = actionProjection?.recommended || actionProjection?.core_recommended || null;
+  const actionState = actionName ? actionStates[actionName] || null : null;
+  const actionLabel = actionName === "run"
+    ? "Run"
+    : actionName === "resume"
+      ? "Resume"
+      : actionName === "finalize"
+        ? "Finalize"
+        : "No action available";
+  const actionReason = actionState?.disabled_reason
+    || (actionName ? "This task action is not currently eligible." : "No task action is currently eligible.");
   const activeJob = state.activeJobStatus;
   const activeTaskJob = activeJob && ["task", "task-finalize"].includes(activeJob.kind);
   const attempts = selected?.attempts || [];
@@ -193,6 +199,27 @@ function renderTaskWorkspace(taskView) {
     ? (state.activeJobConnection?.state || "unknown")
     : "durable";
   const rawOutput = activeTaskJob ? rawTextFromEntries(logEntriesFromChunks(state.activeJobLogChunks || [])) : "";
+  const scopePaths = Array.isArray(selected?.scope_paths) ? selected.scope_paths : [];
+  const acceptanceCriteria = Array.isArray(selected?.acceptance_criteria)
+    ? selected.acceptance_criteria
+    : [];
+  const evidenceLinks = Array.isArray(selected?.evidence_links) ? selected.evidence_links : [];
+  const attemptsMarkup = attempts.length
+    ? `<ul class="task-contract-list">${attempts.map((attempt) => `
+        <li><strong>Attempt ${escapeHtml(attempt.number || "?")}</strong><span>${escapeHtml(attempt.status || "unknown")}</span><code>${escapeHtml(attempt.path || "not recorded")}</code></li>
+      `).join("")}</ul>`
+    : `<p class="muted">No durable attempts recorded.</p>`;
+  const acceptanceMarkup = acceptanceCriteria.length
+    ? `<ul class="task-contract-list">${acceptanceCriteria.map((criterion) => `
+        <li><strong>${escapeHtml(criterion.id || "criterion")}</strong><span>${escapeHtml(criterion.text || "")}</span></li>
+      `).join("")}</ul>`
+    : `<p class="muted">No acceptance criteria recorded.</p>`;
+  const evidenceMarkup = evidenceLinks.length
+    ? `<ul class="task-contract-list">${evidenceLinks.map((link) => `<li><code>${escapeHtml(link)}</code></li>`).join("")}</ul>`
+    : `<p class="muted">No evidence links recorded.</p>`;
+  const actionButton = actionName
+    ? `<button data-task-action="${escapeHtml(actionName)}"${actionName === "run" || actionName === "resume" ? ` data-task-action-id="${escapeHtml(selected.id)}"` : ""} type="button" ${actionState?.eligible === true ? "" : "disabled aria-disabled=\"true\""}>${escapeHtml(actionLabel)}</button>`
+    : "";
   return `
     <section class="active-studio" data-studio-surface="task-workspace" data-state="ready">
       ${renderActiveStudioContextBar(activeStudioState(), activeStageItem())}
@@ -226,11 +253,20 @@ function renderTaskWorkspace(taskView) {
       <section class="surface task-workspace-detail" data-task-detail>
         ${selected ? `<div class="surface-title"><span>Selected task</span><span class="small-badge">${escapeHtml(selected.status || "unknown")}</span></div>
           <h3>${escapeHtml(selected.id)} · ${escapeHtml(selected.title || "Untitled task")}</h3>
-          <p>${escapeHtml(selected.outcome || "Outcome is recorded in the task contract.")}</p>
-          <p>Dependencies: ${escapeHtml((selected.dependencies || []).join(", ") || "none")}</p>
-          <p>Blocker: ${escapeHtml(selected.blocker || "none")}</p>
-          ${selectedAction === "Run" || selectedAction === "Resume" ? `<button data-task-action="${escapeHtml(selectedAction.toLowerCase())}" data-task-action-id="${escapeHtml(selected.id)}" type="button" ${selectedRuntimeReady() ? "" : "disabled aria-disabled=\"true\""}>${selectedAction}</button>` : ""}
-          ${selectedAction === "Finalize" || selectedAction === "Resume finalization" ? `<button data-task-action="finalize" type="button" ${selectedRuntimeReady() ? "" : "disabled aria-disabled=\"true\""}>${selectedAction}</button>` : ""}` : `<p class="muted">Select a task to inspect its bounded detail.</p>`}
+          <p class="task-contract-outcome">${escapeHtml(selected.outcome || "Outcome is recorded in the task contract.")}</p>
+          <div class="task-contract-grid">
+            <section class="task-contract-section"><h4>Scope</h4><p>${escapeHtml(selected.dominant_deliverable || "No dominant deliverable recorded.")}</p>${scopePaths.length ? `<ul class="task-contract-list">${scopePaths.map((path) => `<li><code>${escapeHtml(path)}</code></li>`).join("")}</ul>` : `<p class="muted">No expected files recorded.</p>`}</section>
+            <section class="task-contract-section"><h4>Acceptance</h4>${acceptanceMarkup}</section>
+            <section class="task-contract-section"><h4>Dependencies</h4><p>${escapeHtml((selected.dependencies || []).join(", ") || "none")}</p>${selected.missing_dependencies?.length ? `<p class="task-contract-blocker">Missing: ${escapeHtml(selected.missing_dependencies.join(", "))}</p>` : ""}</section>
+            <section class="task-contract-section"><h4>Verification</h4><p>${escapeHtml(selected.verification || "No verification command recorded.")}</p></section>
+            <section class="task-contract-section"><h4>Evidence</h4>${evidenceMarkup}</section>
+            <section class="task-contract-section"><h4>Attempts</h4>${attemptsMarkup}</section>
+          </div>
+          <section class="task-contract-section task-contract-blockers"><h4>Blockers</h4><p>${escapeHtml(selected.blocker || "none")}</p></section>
+          <section class="task-action-bar" data-task-action-bar data-action-recommended="${escapeHtml(actionProjection?.recommended || "none")}">
+            <div><p class="eyebrow">Next task action</p><strong>${escapeHtml(actionLabel)}</strong><p class="task-action-reason" data-task-action-reason>${escapeHtml(actionReason)}</p></div>
+            <div class="task-action-controls">${actionButton}${actionName && typeof renderContextualRunnerControl === "function" ? renderContextualRunnerControl({actionLabel: actionLabel.toLowerCase()}) : ""}</div>
+          </section>` : `<p class="muted">Select a task to inspect its bounded detail.</p>`}
       </section>
       ${(selected || activeTaskJob) ? `<section class="surface task-attempt-tray" data-task-attempt-tray data-attempt-status="${escapeHtml(attemptStatus)}">
         <div class="surface-title"><span>Active attempt</span><span class="small-badge">${escapeHtml(attemptStatus)}</span></div>
@@ -255,8 +291,10 @@ async function renderWorkItemTasks() {
   content.innerHTML = renderWorkItemTabPlaceholder("tasks");
   try {
     const query = runScopedQuery();
+    const taskParams = new URLSearchParams(query);
+    if (state.selectedRuntime) taskParams.set("runtime", state.selectedRuntime);
     const taskId = state.selectedTaskId ? `&task_id=${encodeURIComponent(state.selectedTaskId)}` : "";
-    const payload = await api(`/api/tasks?${query}${taskId}`);
+    const payload = await api(`/api/tasks?${taskParams.toString()}${taskId}`);
     state.taskWorkspace = payload;
     state.taskWorkspaceError = "";
     content.innerHTML = renderTaskWorkspace(payload);

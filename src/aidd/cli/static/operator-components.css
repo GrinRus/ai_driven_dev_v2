@@ -5209,3 +5209,86 @@ button.intent-phase-step.active:hover {
   color: var(--muted);
   font-size: 0.82rem;
 }
+
+/* Selected-task detail follows the bounded core contract and keeps the launch
+   decision visually separate from durable task facts. */
+.task-workspace-detail {
+  display: grid;
+  gap: var(--space-6);
+  min-width: 0;
+}
+.task-contract-outcome {
+  color: var(--color-text-secondary);
+  font-size: var(--type-body-size);
+  line-height: var(--type-body-line);
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+.task-contract-grid {
+  display: grid;
+  gap: var(--space-6);
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+.task-contract-section {
+  display: grid;
+  gap: var(--space-3);
+  min-width: 0;
+}
+.task-contract-section h4 {
+  font-size: var(--type-label-size);
+  margin: 0;
+  text-transform: uppercase;
+}
+.task-contract-section p {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+.task-contract-list {
+  display: grid;
+  gap: var(--space-2);
+  list-style: none;
+  margin: 0;
+  min-width: 0;
+  padding: 0;
+}
+.task-contract-list li {
+  display: grid;
+  gap: var(--space-1);
+  min-width: 0;
+}
+.task-contract-list code {
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
+}
+.task-contract-blocker,
+.task-action-reason {
+  color: var(--color-state-danger-text);
+}
+.task-action-bar {
+  align-items: start;
+  border-top: 1px solid var(--line);
+  display: grid;
+  gap: var(--space-6);
+  grid-template-columns: minmax(0, 1fr) minmax(240px, auto);
+  padding-top: var(--space-6);
+}
+.task-action-bar > div:first-child {
+  min-width: 0;
+}
+.task-action-reason {
+  margin: var(--space-2) 0 0;
+  overflow-wrap: anywhere;
+}
+.task-action-controls {
+  align-items: stretch;
+  display: grid;
+  gap: var(--space-3);
+  min-width: 240px;
+}
+.task-action-controls > button {
+  min-height: var(--control-height-touch);
+  min-width: 180px;
+}
+.task-action-controls .contextual-runner-control {
+  margin: 0;
+}
