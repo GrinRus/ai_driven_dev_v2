@@ -7,8 +7,7 @@ slice, and local task.
 
 ## Next
 
-- `W42-E3-S2-T4` — Render the selected-task contract and contextual Runner from the core action
-  projection after `W42-E3-S1-T3`.
+_Empty: all non-deferred Codex-only implementation tasks are complete._
 
 ## Soon
 
@@ -36,6 +35,14 @@ slice, and local task.
   queue-restoration policy in `docs/backlog/roadmap.md` (`W8-E3-S1`).
 
 ## Current reconciliation
+
+- `2026-08-23` PR #315 (merge `29c07782`) completed `W42-E3-S2-T4`: selected Task Workspace
+  detail now renders the bounded task contract from server-owned data and keeps exactly one
+  Run/Resume/Finalize action beside one contextual Runner, with literal disabled reasons and
+  responsive mobile layout. Focused frontend/UI-contract, core/service, planning/docs, Ruff,
+  mypy, Task Workspace browser, full CI, and packaged browser checks passed. The Codex-only
+  implementation queue is now empty; genuine uncoached human usability, Claude/cross-runtime,
+  and Wave 36 acceptance remain explicitly parked.
 
 - `2026-08-23` PR #313 (merge `fa2426a6`) completed `W42-E3-S1-T3`: Task Workspace now publishes
   core-owned Run/Resume/Finalize action states, while the UI service applies current run-lease and

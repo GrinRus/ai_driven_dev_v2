@@ -14109,7 +14109,7 @@ Local tasks:
     state, reconnect cursor, and collapsible raw output; never estimate percentage completion.
   - Verification: browser fixtures cover starting, streaming, quiet, cancellation-pending,
     failed, completed, reconnecting, and missing-log states without context loss.
-- `W42-E3-S2-T4` (next) Render the selected-task contract and contextual Runner from core action
+- `W42-E3-S2-T4` (done) Render the selected-task contract and contextual Runner from core action
   projection.
   - Dependencies: `W42-E3-S1-T3`.
   - Scope: show scope, acceptance, expected files, verification, evidence, linked documents,
@@ -14117,7 +14117,11 @@ Local tasks:
     Runner beside it; preserve task ids, deep links, selection, and active-attempt context.
   - Verification: provider-free Task Workspace fixtures and browser checks prove bounded detail,
     literal disabled reasons, duplicate-action suppression, Runner payload propagation, reload,
-    keyboard focus, and no client-side eligibility inference.
+    keyboard focus, and no client-side eligibility inference. Completed in PR #315 (merge
+    `29c07782`): selected-task detail now consumes the core/service action projection, renders
+    the bounded contract fields, propagates the selected Runner, and keeps the responsive action
+    bar to one task mutation. Focused frontend, UI-contract, core/service, planning/docs, Ruff,
+    mypy, and Task Workspace browser checks passed; full CI and packaged browser acceptance passed.
 
 ### Epic W42-E4 — Markdown Workspace and controlled authoring (`planned`)
 
