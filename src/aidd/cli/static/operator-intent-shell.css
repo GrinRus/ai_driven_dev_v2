@@ -284,6 +284,20 @@ body {
     width: calc(100% - var(--operator-rail-width));
   }
 
+  /* A completed handoff (and other read-only surfaces) has no decision
+     inspector. Let its document canvas reclaim the reserved column so
+     multi-action cards keep a real hit target instead of wrapping into
+     neighboring cards. */
+  body:not(.setup-active) .operator-workspace:has(> #intentDecisionSurface:empty) {
+    grid-template-areas:
+      "context"
+      "tabs"
+      "phases"
+      "content"
+      "technical";
+    grid-template-columns: minmax(0, 1fr);
+  }
+
   body:not(.setup-active) .operator-workspace > .intent-context-region {
     grid-area: context;
   }
