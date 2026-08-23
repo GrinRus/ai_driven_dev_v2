@@ -15449,14 +15449,15 @@ Local tasks:
     read-only and create surfaces, no duplicate primary action on Flow Complete, and exactly one
     contextual Runner plus primary action on representative launch surfaces; console and overflow
     diagnostics remain clean.
-- `W44-E1-S1-T2` (next) Recompose mobile Decision and recovery surfaces for first-viewport action
+- `W44-E1-S1-T2` (done) Recompose mobile Decision and recovery surfaces for first-viewport action
   visibility.
   - Scope: keep the decision summary, consequence, and one primary action in a single responsive
     composition for question, validation, runtime, and remediation states without changing core
     eligibility or recovery semantics.
   - Verification: mobile provider-free journeys at `320x568` and `390x844` prove the first action
-    is visible, focusable, reachable in DOM order, and not clipped or displaced below the initial
-    viewport.
+    is visible, focusable, and not clipped or displaced below the initial viewport. PR #320 (merge
+    `9792d8f5`) keeps the existing primary control in a safe-area-aware mobile action dock and
+    reserves content space without adding a duplicate action or changing mutation semantics.
 
 #### Slice W44-E1-S2 — target shell composition and visual hierarchy (`planned`)
 
@@ -15468,9 +15469,9 @@ and active-attempt read models.
 
 Local tasks:
 
-- `W44-E1-S2-T1` (soon) Align the desktop shell with the target rail, tabs, stage strip, and
+- `W44-E1-S2-T1` (next) Align the desktop shell with the target rail, tabs, stage strip, and
   central working surface.
-- `W44-E1-S2-T2` (planned) Keep Documents and active-attempt evidence co-visible with the
+- `W44-E1-S2-T2` (soon) Keep Documents and active-attempt evidence co-visible with the
   contextual inspector and live-output tray.
 - `W44-E1-S2-T3` (planned) Reconcile stage-strip density, typography, tokens, and overflow across
   desktop and mobile viewports.
@@ -15502,9 +15503,16 @@ Wave 44 exit evidence:
 
 Wave 44 reconciliation:
 
+- `W44-E1-S1-T2` is complete in PR #320 (merge `9792d8f5`). Mobile question, intervention,
+  approval, and recovery actions now stay visible on `320x568` and `390x844` through one existing
+  DOM control in a safe-area-aware action dock; provider-free geometry checks cover focusability,
+  target size, clipping, and horizontal overflow. Frontend tests, UI contracts, docs/planning,
+  Ruff, mypy, packaged UI browser, deterministic scenarios, adapter conformance, and build passed.
+  `W44-E1-S2-T1` is now the next dependency-ready task; its direct successor remains planned.
+
 - `W44-E1-S1-T1` is complete in PR #318 (merge `0645856b`). Runner/global launch leakage is
   removed from non-launch surfaces, Flow Complete keeps only its core-recommended primary
   actions, and narrow work-overview surfaces expose the decision before the stage strip. Focused
   browser/contract tests, the full frontend suite, docs/planning checks, Ruff, mypy, packaged UI
-  browser, deterministic scenarios, adapter conformance, and build passed. `W44-E1-S1-T2` is
-  now the next dependency-ready task; desktop shell composition remains planned.
+  browser, deterministic scenarios, adapter conformance, and build passed; desktop shell
+  composition remained planned.

@@ -7,13 +7,13 @@ slice, and local task.
 
 ## Next
 
-- `W44-E1-S1-T2` — Recompose mobile Decision and recovery surfaces for first-viewport action
-  visibility.
+- `W44-E1-S2-T1` — Align the desktop shell with the target rail, tabs, stage strip, and central
+  working surface.
 
 ## Soon
 
-- `W44-E1-S2-T1` — Align the desktop shell with the target rail, tabs, stage strip, and central
-  working surface.
+- `W44-E1-S2-T2` — Keep Documents and active-attempt evidence co-visible with the contextual
+  inspector and live-output tray.
 
 ## Parking lot
 
@@ -40,13 +40,21 @@ slice, and local task.
 
 ## Current reconciliation
 
+- `2026-08-23` PR #320 (merge `9792d8f5`) completed `W44-E1-S1-T2`: mobile question,
+  intervention, approval, and recovery actions stay visible on `320x568` and `390x844` through
+  one existing primary control in a safe-area-aware action dock, with no mutation or core
+  eligibility changes. Focused mobile browser checks, full frontend tests, docs/planning,
+  Ruff, mypy, packaged UI browser, deterministic scenarios, adapter conformance, and build
+  passed. `W44-E1-S2-T1` is now `Next`; its direct successor `W44-E1-S2-T2` is `Soon`. Human
+  usability, Claude/cross-runtime, and Wave 36 acceptance remain parked.
+
 - `2026-08-23` PR #318 (merge `0645856b`) completed `W44-E1-S1-T1`: one shared surface policy
   removes global launch/Runner leakage from Inbox, History, generated Documents, and Flow
   Complete, while preserving read-only terminal recommendations and mobile first-viewport
   decision visibility. Focused browser/contract tests, the full frontend suite, docs/planning,
   Ruff, mypy, packaged UI browser, deterministic scenarios, adapter conformance, and build
-  passed. `W44-E1-S1-T2` is now `Next`; `W44-E1-S2-T1` is `Soon`. Human usability,
-  Claude/cross-runtime, and Wave 36 acceptance remain parked.
+  passed. Desktop shell composition remained planned; human usability, Claude/cross-runtime, and
+  Wave 36 acceptance remain parked.
 
 - `2026-08-23` Wave 44 opened through the queue-restoration policy after a rendered UI audit found
   target-UX gaps despite completed Wave 42–43 functional tasks. `W44-E1-S1-T1` was promoted to
