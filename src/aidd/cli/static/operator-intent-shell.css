@@ -124,6 +124,229 @@ body {
   }
 }
 
+/* Desktop target shell: keep the existing navigation controls as the compact
+   project rail, then give the Work Item a central canvas and a contextual
+   decision column.  This is presentation-only; routes, ids, and mutation
+   services remain owned by the existing controls. */
+@media (min-width: 1100px) and (min-height: 700px) {
+  :root {
+    --operator-rail-width: 232px;
+  }
+
+  body:not(.setup-active) {
+    background: var(--color-bg-subtle);
+  }
+
+  body:not(.setup-active) .topbar {
+    background: var(--color-bg-surface);
+    border-bottom: 1px solid var(--color-border-default);
+    color: var(--color-text-primary);
+    grid-template-columns: minmax(0, 1fr) auto auto;
+    margin-left: var(--operator-rail-width);
+    padding-inline: clamp(20px, 3vw, 48px);
+  }
+
+  body:not(.setup-active) .topbar::before {
+    background: #07182e;
+    bottom: 0;
+    content: "";
+    left: 0;
+    position: fixed;
+    top: 0;
+    width: var(--operator-rail-width);
+    z-index: -1;
+  }
+
+  body:not(.setup-active) .topbar .brand {
+    align-items: center;
+    background: #07182e;
+    box-sizing: border-box;
+    display: flex;
+    height: 64px;
+    left: 0;
+    padding-left: 28px;
+    position: fixed;
+    top: 0;
+    width: var(--operator-rail-width);
+    z-index: 22;
+  }
+
+  body:not(.setup-active) .topbar .brand-mark {
+    color: #f5f8ff;
+    display: block;
+    font-size: 0;
+    height: auto;
+    width: 132px;
+  }
+
+  body:not(.setup-active) .topbar .brand-mark::after {
+    color: #f5f8ff;
+    display: block;
+    font-size: 24px;
+  }
+
+  body:not(.setup-active) .topbar .brand-title {
+    display: none;
+  }
+
+  body:not(.setup-active) .topbar .primary-nav {
+    align-items: stretch;
+    background: #07182e;
+    box-sizing: border-box;
+    display: grid;
+    gap: 6px;
+    height: auto;
+    left: 0;
+    padding: 88px 14px 24px;
+    position: fixed;
+    bottom: 0;
+    top: 0;
+    width: var(--operator-rail-width);
+    z-index: 22;
+  }
+
+  body:not(.setup-active) .topbar .primary-nav::before {
+    color: #ffffff;
+    content: "Work Items";
+    font-size: 14px;
+    font-weight: 800;
+    padding: 0 16px 8px;
+  }
+
+  body:not(.setup-active) .topbar .primary-nav button {
+    align-items: center;
+    background: transparent;
+    border: 0;
+    border-left: 3px solid transparent;
+    border-radius: 8px;
+    color: #dbe6f7;
+    justify-content: flex-start;
+    min-height: 48px;
+    padding: 0 16px;
+    text-align: left;
+  }
+
+  body:not(.setup-active) .topbar .primary-nav button:hover,
+  body:not(.setup-active) .topbar .primary-nav button.active,
+  body:not(.setup-active) .topbar .primary-nav button[aria-current="page"] {
+    background: rgb(255 255 255 / 10%);
+    border-bottom: 0;
+    border-left-color: #2d8cff;
+    color: #ffffff;
+  }
+
+  body:not(.setup-active) .topbar .top-context,
+  body:not(.setup-active) .topbar .status-chip,
+  body:not(.setup-active) .topbar .version-badge {
+    color: var(--color-text-primary);
+  }
+
+  body:not(.setup-active) .topbar .status-chip,
+  body:not(.setup-active) .topbar .version-badge {
+    background: var(--color-bg-surface);
+    border-color: var(--color-border-default);
+  }
+
+  body:not(.setup-active) .topbar #intentChip,
+  body:not(.setup-active) .topbar #runChip {
+    background: var(--color-bg-surface);
+    color: var(--color-text-primary);
+  }
+
+  body:not(.setup-active) .topbar #localStatus {
+    background: var(--color-state-success-bg);
+    border-color: var(--color-state-success-border);
+    color: var(--color-state-success-text);
+  }
+
+  body:not(.setup-active) .topbar .top-context span[aria-hidden="true"] {
+    color: var(--color-text-secondary);
+  }
+
+  body:not(.setup-active) .topbar .top-actions #newWorkItemButton,
+  body:not(.setup-active) .topbar .runtime-settings > summary {
+    background: transparent;
+    color: var(--color-text-primary);
+  }
+
+  body:not(.setup-active) .operator-workspace {
+    display: grid;
+    grid-template-areas:
+      "context context"
+      "tabs decision"
+      "phases decision"
+      "content decision"
+      "technical technical";
+    grid-template-columns: minmax(0, 1fr) minmax(280px, 336px);
+    margin-left: var(--operator-rail-width);
+    margin-right: 0;
+    max-width: none;
+    width: calc(100% - var(--operator-rail-width));
+  }
+
+  /* A completed handoff (and other read-only surfaces) has no decision
+     inspector. Let its document canvas reclaim the reserved column so
+     multi-action cards keep a real hit target instead of wrapping into
+     neighboring cards. */
+  body:not(.setup-active) .operator-workspace:has(> #intentDecisionSurface:empty) {
+    grid-template-areas:
+      "context"
+      "tabs"
+      "phases"
+      "content"
+      "technical";
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  body:not(.setup-active) .operator-workspace > .intent-context-region {
+    grid-area: context;
+  }
+
+  body:not(.setup-active) .operator-workspace > .work-item-tabs {
+    grid-area: tabs;
+  }
+
+  body:not(.setup-active) .operator-workspace > .intent-phase-region {
+    grid-area: phases;
+  }
+
+  body:not(.setup-active) .operator-workspace > .intent-decision-surface {
+    align-self: start;
+    grid-area: decision;
+    position: sticky;
+    top: var(--space-5);
+  }
+
+  body:not(.setup-active) .operator-workspace > .intent-document-surface {
+    grid-area: content;
+    min-width: 0;
+  }
+
+  body:not(.setup-active) .operator-workspace > .intent-technical-details {
+    grid-area: technical;
+  }
+
+  body:not(.setup-active) .operator-workspace .studio-context-bar {
+    background: var(--color-bg-surface);
+    border: 0;
+    border-bottom: 1px solid var(--color-border-default);
+    border-radius: 0;
+    padding: var(--space-4) 0;
+  }
+
+  body:not(.setup-active) .operator-workspace .intent-phase-stepper {
+    background: var(--color-bg-surface);
+    border: 0;
+    border-bottom: 1px solid var(--color-border-default);
+    border-radius: 0;
+    padding: var(--space-4) 0;
+  }
+
+  body:not(.setup-active) .operator-workspace .intent-phase-list {
+    gap: var(--space-2);
+  }
+}
+
 @media (max-width: 760px) {
   .operator-workspace {
     gap: var(--space-3);
