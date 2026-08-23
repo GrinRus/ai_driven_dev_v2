@@ -15397,3 +15397,100 @@ Wave 43 exit evidence:
   never loops automatically, and is blocked after succeeded downstream work;
 - provider-free scenarios pass before Codex repetition evidence, and Codex stability artifacts are
   retained; cross-runtime evidence is explicitly deferred to `W43-E5-S2-T3`.
+
+## Wave 44 — Operator UI convergence (`planned`)
+
+Goal: iteratively bring the current Operator UI into conformance with the normative target
+experience by fixing evidence-backed hierarchy, action, responsive, and accessibility gaps while
+preserving workflow semantics, routes, API shapes, and durable evidence.
+
+Reference authority:
+
+1. [Target Operator Experience](../architecture/operator-frontend-target-ux.md) for the shell,
+   vocabulary, action hierarchy, and responsive expectations;
+2. [Main User Stories](../product/user-stories.md) for operator outcomes and runtime visibility;
+3. provider-free browser fixtures and fresh rendered audits for observed behavior.
+
+### Epic W44-E1 — action hierarchy and responsive shell (`planned`)
+
+Goal: make every visible primary action truthful for its current surface before broader visual
+polish and shell composition work.
+
+#### Slice W44-E1-S1 — contextual launch and primary-action policy (`planned`)
+
+Primary output: one shared frontend visibility policy that keeps Runner and launch actions only on
+launch surfaces, hides them from Inbox, create, history, generated-document, and Flow Complete
+surfaces, and prevents duplicate competing primary actions.
+
+Touched areas:
+
+- `src/aidd/cli/static/operator-next-flow-actions.js`
+- `src/aidd/cli/static/operator-next-flow-view.js`
+- `src/aidd/cli/static/operator-shell-rendering.js`
+- `browser_tests/`
+- `tests/cli/`
+
+Dependencies: existing Wave 42 Runner readiness and contextual action projections.
+
+Local tasks:
+
+- `W44-E1-S1-T1` (next) Enforce contextual launch-action visibility across Operator UI surfaces.
+  - Scope: centralize surface classification so Inbox/create, History/Runs, generated Markdown,
+    and immutable Flow Complete never render a Runner selector or global workflow launch action;
+    launch-capable workflow, stage, task, repair, and remediation surfaces retain exactly one
+    contextual Runner and one primary launch action. Preserve existing mutation paths and route
+    compatibility.
+  - Verification: provider-free browser fixtures assert no Runner/global launch controls on
+    read-only and create surfaces, no duplicate primary action on Flow Complete, and exactly one
+    contextual Runner plus primary action on representative launch surfaces; console and overflow
+    diagnostics remain clean.
+- `W44-E1-S1-T2` (soon) Recompose mobile Decision and recovery surfaces for first-viewport action
+  visibility.
+  - Scope: keep the decision summary, consequence, and one primary action in a single responsive
+    composition for question, validation, runtime, and remediation states without changing core
+    eligibility or recovery semantics.
+  - Verification: mobile provider-free journeys at `320x568` and `390x844` prove the first action
+    is visible, focusable, reachable in DOM order, and not clipped or displaced below the initial
+    viewport.
+
+#### Slice W44-E1-S2 — target shell composition and visual hierarchy (`planned`)
+
+Primary output: a responsive project/Work Item rail, tabs, grouped stage strip, central work
+surface, contextual inspector, and collapsible live-output tray matching the target composition.
+
+Dependencies: `W44-E1-S1`; existing Work Item tabs, stage navigation, Task Workspace, Documents,
+and active-attempt read models.
+
+Local tasks:
+
+- `W44-E1-S2-T1` (planned) Align the desktop shell with the target rail, tabs, stage strip, and
+  central working surface.
+- `W44-E1-S2-T2` (planned) Keep Documents and active-attempt evidence co-visible with the
+  contextual inspector and live-output tray.
+- `W44-E1-S2-T3` (planned) Reconcile stage-strip density, typography, tokens, and overflow across
+  desktop and mobile viewports.
+
+#### Slice W44-E1-S3 — rendered acceptance loop (`planned`)
+
+Primary output: a repeatable visual regression loop that captures target surfaces, checks hierarchy
+and states, and records the next bounded UI task until the target contract is satisfied.
+
+Dependencies: `W44-E1-S1` and `W44-E1-S2`.
+
+Local tasks:
+
+- `W44-E1-S3-T1` (planned) Add initial-viewport, focus-order, console, and overflow assertions to
+  the provider-free browser matrix.
+- `W44-E1-S3-T2` (planned) Produce a reconciled target-UX audit and close the convergence wave
+  only when all confirmed gaps are either fixed or explicitly environment-blocked.
+
+Wave 44 exit evidence:
+
+- no global launch or Runner controls leak into non-launch surfaces;
+- each launch surface has one contextual Runner and one primary action;
+- the target shell hierarchy is visible without serial scrolling on supported desktop layouts;
+- mobile decision and recovery actions are visible, focusable, and unclipped in the initial
+  viewport;
+- browser checks show no console errors, horizontal overflow, duplicate primary actions, or focus
+  loss;
+- a fresh rendered audit confirms remaining gaps are absent or explicitly blocked.
