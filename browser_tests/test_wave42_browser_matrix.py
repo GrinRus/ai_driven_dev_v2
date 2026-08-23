@@ -22,10 +22,21 @@ from browser_tests.wave42_browser_matrix import (
 )
 
 
-def _assert_first_action(page: Page, selector: str) -> None:
+def _assert_first_action(
+    page: Page,
+    selector: str,
+    *,
+    require_initial_viewport: bool = False,
+) -> None:
     action = page.locator(selector).first
     action.wait_for(state="visible")
-    action.scroll_into_view_if_needed()
+    if require_initial_viewport:
+        scroll = page.evaluate("() => ({x: window.scrollX, y: window.scrollY})")
+        assert scroll == {"x": 0, "y": 0}, (
+            "first-action assertion must measure the initial viewport"
+        )
+    else:
+        action.scroll_into_view_if_needed()
     box = action.bounding_box()
     assert box is not None
     viewport = page.viewport_size or {"width": 0, "height": 0}
@@ -72,7 +83,12 @@ def test_wave42_journey_matrix_is_provider_free_and_rendered_across_viewports(
                 assert response is not None and response.ok
                 surface = page.locator(journey.surface_selector).first
                 surface.wait_for(state="visible")
-                _assert_first_action(page, journey.first_action_selector)
+                _assert_first_action(
+                    page,
+                    journey.first_action_selector,
+                    require_initial_viewport=journey.route
+                    in {"question-recovery", "validation-repair", "review-remediation"},
+                )
                 assert_accessible_render(
                     page,
                     target_size=44 if viewport[0] <= 760 else 32,

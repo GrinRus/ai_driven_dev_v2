@@ -481,12 +481,36 @@
     display: none;
   }
   body.recovery-mode .recovery-workbench {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
     min-width: 0;
     overflow: visible;
+    width: 100%;
+  }
+  /* Recovery is a single decision column on narrow screens. Every direct
+     child must be shrinkable; otherwise an intrinsic grid minimum makes the
+     workbench wider than the operator workspace and clips the action. */
+  body.recovery-mode .recovery-workbench > * {
+    box-sizing: border-box;
+    max-width: 100%;
+    min-width: 0;
+    width: 100%;
+  }
+  body.recovery-mode .recovery-workbench > * {
+    order: 3;
+  }
+  body.recovery-mode .recovery-workbench > .recovery-summary {
+    order: 1;
+  }
+  body.recovery-mode .recovery-workbench > .recovery-decision-workbench {
+    min-width: 0;
+    order: 2;
   }
   body.recovery-mode .recovery-summary {
     gap: var(--space-4);
     padding: var(--space-4);
+    min-width: 0;
+    width: 100%;
   }
   body.recovery-mode .recovery-summary-header {
     gap: var(--space-2);

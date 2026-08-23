@@ -455,7 +455,7 @@ function renderRecoveryWorkbench() {
         ? "validation"
         : "intervention";
   return `
-    <section class="recovery-workbench" data-runtime-failure-kind="${escapeHtml(runtimeFailure ? firstFailure.kind : "")}" data-runtime-stopped="${runtimeFailure ? "true" : "false"}" data-runtime-last-signal="${escapeHtml(runtimeFailure ? evidencePath : "")}" data-validation-repair-budget-consumed="false">
+    <section class="recovery-workbench" data-recovery-kind="${escapeHtml(recoveryKind)}" data-runtime-failure-kind="${escapeHtml(runtimeFailure ? firstFailure.kind : "")}" data-runtime-stopped="${runtimeFailure ? "true" : "false"}" data-runtime-last-signal="${escapeHtml(runtimeFailure ? evidencePath : "")}" data-validation-repair-budget-consumed="false">
       ${renderRecoveryDecisionWorkbench({runtimeFailure, firstFailure, diagnostics, validation, status, evidencePath, primary})}
       ${renderRecoverySummary({
         kind: recoveryKind,
