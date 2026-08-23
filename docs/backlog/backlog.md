@@ -7,12 +7,13 @@ slice, and local task.
 
 ## Next
 
-- `W44-E1-S1-T1` — Enforce contextual launch-action visibility across Operator UI surfaces.
+- `W44-E1-S1-T2` — Recompose mobile Decision and recovery surfaces for first-viewport action
+  visibility.
 
 ## Soon
 
-- `W44-E1-S1-T2` — Recompose mobile Decision and recovery surfaces for first-viewport action
-  visibility.
+- `W44-E1-S2-T1` — Align the desktop shell with the target rail, tabs, stage strip, and central
+  working surface.
 
 ## Parking lot
 
@@ -39,12 +40,20 @@ slice, and local task.
 
 ## Current reconciliation
 
+- `2026-08-23` PR #318 (merge `0645856b`) completed `W44-E1-S1-T1`: one shared surface policy
+  removes global launch/Runner leakage from Inbox, History, generated Documents, and Flow
+  Complete, while preserving read-only terminal recommendations and mobile first-viewport
+  decision visibility. Focused browser/contract tests, the full frontend suite, docs/planning,
+  Ruff, mypy, packaged UI browser, deterministic scenarios, adapter conformance, and build
+  passed. `W44-E1-S1-T2` is now `Next`; `W44-E1-S2-T1` is `Soon`. Human usability,
+  Claude/cross-runtime, and Wave 36 acceptance remain parked.
+
 - `2026-08-23` Wave 44 opened through the queue-restoration policy after a rendered UI audit found
-  target-UX gaps despite completed Wave 42–43 functional tasks. `W44-E1-S1-T1` is promoted to
-  `Next` and its direct responsive successor `W44-E1-S1-T2` is in `Soon`. The first bounded fix
-  removes global launch/Runner leakage from non-launch surfaces; shell composition and the
-  evidence-led audit loop remain planned in Wave 44. Human usability, Claude/cross-runtime, and
-  Wave 36 acceptance remain parked.
+  target-UX gaps despite completed Wave 42–43 functional tasks. `W44-E1-S1-T1` was promoted to
+  `Next` and its direct responsive successor `W44-E1-S1-T2` was placed in `Soon`. The first
+  bounded fix removes global launch/Runner leakage from non-launch surfaces; shell composition
+  and the evidence-led audit loop remain planned in Wave 44. Human usability, Claude/cross-runtime,
+  and Wave 36 acceptance remain parked.
 
 - `2026-08-23` PR #315 (merge `29c07782`) completed `W42-E3-S2-T4`: selected Task Workspace
   detail now renders the bounded task contract from server-owned data and keeps exactly one

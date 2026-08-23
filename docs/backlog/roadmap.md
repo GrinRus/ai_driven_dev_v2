@@ -15434,7 +15434,12 @@ Dependencies: existing Wave 42 Runner readiness and contextual action projection
 
 Local tasks:
 
-- `W44-E1-S1-T1` (next) Enforce contextual launch-action visibility across Operator UI surfaces.
+- `W44-E1-S1-T1` (done) Enforce contextual launch-action visibility across Operator UI surfaces.
+  - PR #318 (merge `0645856b`) now applies one shared surface policy to Runner and global launch
+    controls, keeps terminal handoff recommendations read-only, and puts the mobile work-overview
+    decision before the long stage strip. Provider-free browser coverage verifies Inbox, History,
+    generated Documents, Flow Complete, and mobile first-viewport behavior without changing
+    mutation routes or core eligibility.
   - Scope: centralize surface classification so Inbox/create, History/Runs, generated Markdown,
     and immutable Flow Complete never render a Runner selector or global workflow launch action;
     launch-capable workflow, stage, task, repair, and remediation surfaces retain exactly one
@@ -15444,7 +15449,7 @@ Local tasks:
     read-only and create surfaces, no duplicate primary action on Flow Complete, and exactly one
     contextual Runner plus primary action on representative launch surfaces; console and overflow
     diagnostics remain clean.
-- `W44-E1-S1-T2` (soon) Recompose mobile Decision and recovery surfaces for first-viewport action
+- `W44-E1-S1-T2` (next) Recompose mobile Decision and recovery surfaces for first-viewport action
   visibility.
   - Scope: keep the decision summary, consequence, and one primary action in a single responsive
     composition for question, validation, runtime, and remediation states without changing core
@@ -15463,7 +15468,7 @@ and active-attempt read models.
 
 Local tasks:
 
-- `W44-E1-S2-T1` (planned) Align the desktop shell with the target rail, tabs, stage strip, and
+- `W44-E1-S2-T1` (soon) Align the desktop shell with the target rail, tabs, stage strip, and
   central working surface.
 - `W44-E1-S2-T2` (planned) Keep Documents and active-attempt evidence co-visible with the
   contextual inspector and live-output tray.
@@ -15494,3 +15499,12 @@ Wave 44 exit evidence:
 - browser checks show no console errors, horizontal overflow, duplicate primary actions, or focus
   loss;
 - a fresh rendered audit confirms remaining gaps are absent or explicitly blocked.
+
+Wave 44 reconciliation:
+
+- `W44-E1-S1-T1` is complete in PR #318 (merge `0645856b`). Runner/global launch leakage is
+  removed from non-launch surfaces, Flow Complete keeps only its core-recommended primary
+  actions, and narrow work-overview surfaces expose the decision before the stage strip. Focused
+  browser/contract tests, the full frontend suite, docs/planning checks, Ruff, mypy, packaged UI
+  browser, deterministic scenarios, adapter conformance, and build passed. `W44-E1-S1-T2` is
+  now the next dependency-ready task; desktop shell composition remains planned.
