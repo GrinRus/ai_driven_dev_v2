@@ -7,13 +7,10 @@ slice, and local task.
 
 ## Next
 
-- `W42-E3-S1-T3` — Expose core-owned selected-task action eligibility in the bounded service
-  payload; keep Run/Resume/Finalize policy and disabled reasons out of the browser.
-
-## Soon
-
 - `W42-E3-S2-T4` — Render the selected-task contract and contextual Runner from the core action
   projection after `W42-E3-S1-T3`.
+
+## Soon
 
 ## Parking lot
 
@@ -39,6 +36,12 @@ slice, and local task.
   queue-restoration policy in `docs/backlog/roadmap.md` (`W8-E3-S1`).
 
 ## Current reconciliation
+
+- `2026-08-23` PR #313 (merge `fa2426a6`) completed `W42-E3-S1-T3`: Task Workspace now publishes
+  core-owned Run/Resume/Finalize action states, while the UI service applies current run-lease and
+  Runner-readiness guards with literal disabled reasons. The direct selected-task rendering task
+  `W42-E3-S2-T4` is now `Next`; human usability, Claude, cross-runtime, and Wave 36 work remain
+  parked.
 
 - `2026-08-23` PR #311 (merge `d7b13d48`) completed `W42-E7-S2-T4`: mobile recovery now has one
   shrinkable decision column, summary-first primary actions, and honest initial-viewport checks
