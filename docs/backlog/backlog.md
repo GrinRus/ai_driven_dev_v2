@@ -7,11 +7,13 @@ slice, and local task.
 
 ## Next
 
-- `W42-E7-S2-T4` — Repair mobile recovery composition and first-viewport assertions so the actual
-  primary action is visible without an initial scroll and the recovery workbench has no horizontal
-  overflow.
+- `W42-E3-S1-T3` — Expose core-owned selected-task action eligibility in the bounded service
+  payload; keep Run/Resume/Finalize policy and disabled reasons out of the browser.
 
 ## Soon
+
+- `W42-E3-S2-T4` — Render the selected-task contract and contextual Runner from the core action
+  projection after `W42-E3-S1-T3`.
 
 ## Parking lot
 
@@ -38,6 +40,11 @@ slice, and local task.
 
 ## Current reconciliation
 
+- `2026-08-23` PR #311 (merge `d7b13d48`) completed `W42-E7-S2-T4`: mobile recovery now has one
+  shrinkable decision column, summary-first primary actions, and honest initial-viewport checks
+  for question, validation, and review/remediation journeys. `W42-E3-S1-T3` is now `Next`, with
+  its direct Task Workspace UI successor in `Soon`; human usability, Claude, cross-runtime, and
+  Wave 36 work remain parked.
 - `2026-08-23` UI audit found three Wave 42 mobile browser journeys red despite green packaged
   checks: question recovery, validation repair, and review/remediation clipped or pushed their
   primary action below the initial viewport. `W42-E7-S2-T4` is the bounded responsive remediation;
