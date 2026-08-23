@@ -1508,6 +1508,31 @@ def test_task_workspace_attempt_tray_preserves_factual_live_state() -> None:
         "async function renderWorkItemTasks", 1
     )[0].lower()
     assert 'state.workDetail === "tasks"' in logs
+
+
+def test_task_workspace_detail_uses_server_action_projection_and_bounded_contract() -> None:
+    studio = _asset_text("/operator-active-studio.js")
+    task_workspace = studio.split("function renderTaskWorkspace", 1)[1].split(
+        "async function renderWorkItemTasks", 1
+    )[0]
+
+    _assert_contains_all(
+        task_workspace,
+        (
+            "action_projection",
+            "selected_task_actions",
+            "task-contract-grid",
+            "data-task-action-bar",
+            "renderContextualRunnerControl",
+            "scope_paths",
+            "acceptance_criteria",
+            "evidence_links",
+            "data-task-action-reason",
+        ),
+    )
+    assert "new URLSearchParams(query)" in studio
+    assert 'selected.group === "Ready"' not in task_workspace
+    assert "selectedRuntimeReady()" not in task_workspace
 def test_studio_repository_evidence_uses_textual_change_and_scope_contracts() -> None:
     quality_gate = _asset_text("/operator-quality-gates.js")
 
