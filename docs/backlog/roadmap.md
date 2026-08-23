@@ -14066,6 +14066,14 @@ Local tasks:
     synchronous conflict and duplicate-suppression behavior.
   - Verification: CLI service tests prove stable ids, bounded reads, exact evidence links, missing
     task behavior, and post-mutation server-winner readback.
+- `W42-E3-S1-T3` (next) Expose core-owned selected-task action eligibility in the bounded service
+  payload.
+  - Scope: publish Run, Resume, and Finalize action states with literal disabled consequences from
+    the task ledger, dependency graph, stale-tasklist guard, finalization state, and Runner
+    readiness; the browser must not infer action policy from status or group names.
+  - Verification: core/service tests cover ready, running, blocked, done, stale, conflicted,
+    unavailable-Runner, and finalization-retry states with one mutually exclusive recommended
+    action and fail-closed disabled reasons.
 
 #### Slice W42-E3-S2 — task list, detail, and active run (`planned`)
 
@@ -14098,6 +14106,15 @@ Local tasks:
     state, reconnect cursor, and collapsible raw output; never estimate percentage completion.
   - Verification: browser fixtures cover starting, streaming, quiet, cancellation-pending,
     failed, completed, reconnecting, and missing-log states without context loss.
+- `W42-E3-S2-T4` (soon) Render the selected-task contract and contextual Runner from core action
+  projection.
+  - Dependencies: `W42-E3-S1-T3`.
+  - Scope: show scope, acceptance, expected files, verification, evidence, linked documents,
+    blockers, attempts, and exactly one eligible Run/Resume/Finalize action with one contextual
+    Runner beside it; preserve task ids, deep links, selection, and active-attempt context.
+  - Verification: provider-free Task Workspace fixtures and browser checks prove bounded detail,
+    literal disabled reasons, duplicate-action suppression, Runner payload propagation, reload,
+    keyboard focus, and no client-side eligibility inference.
 
 ### Epic W42-E4 — Markdown Workspace and controlled authoring (`planned`)
 
@@ -14341,14 +14358,14 @@ Local tasks:
     first confusion, resulting roadmap tasks, and routing decision; missing participant/runtime is
     `environment-blocked`, never pass. The task remains deferred while Codex-only Wave 43 work
     proceeds.
-- `W42-E7-S2-T4` (next) Repair mobile recovery composition and first-viewport assertions.
+- `W42-E7-S2-T4` (done) Repair mobile recovery composition and first-viewport assertions.
   - Scope: keep one vertical scroll owner, render question recovery before secondary context on
     narrow viewports, remove recovery-panel minimum-width overflow, and measure the actual
     production primary-action selector before any scroll is requested.
   - Verification: the browser matrix proves question, validation, and review/remediation surfaces
     expose one visible primary action in the initial 320x568 and 390x844 viewports with no clipped
     action, horizontal overflow, focus loss, or console error; the assertion fails if a helper
-    scrolls before measuring.
+    scrolls before measuring. PR #311 (`d7b13d48`) passed the full CI and packaged UI browser lane.
 
 #### Slice W42-E7-S3 — installed task-centered live evidence (`planned`)
 
