@@ -1086,6 +1086,70 @@ def _bounded_task_list_item(task: Mapping[str, object]) -> dict[str, object]:
     return {field: task.get(field) for field in _TASK_LIST_FIELDS}
 
 
+def _service_task_action_projection(
+    task: Mapping[str, object],
+    *,
+    run_id: str | None,
+    runner: Mapping[str, object],
+    mutation_conflicted: bool,
+) -> dict[str, object]:
+    """Add service-owned launch guards to the core task action projection.
+
+    Core decides which task mutation is semantically valid.  This boundary adds the
+    run lease and current Runner snapshot, so stale or unavailable launch context can
+    never be mistaken for browser-side eligibility.
+    """
+
+    raw_projection = task.get("action_projection")
+    projection = dict(raw_projection) if isinstance(raw_projection, Mapping) else {}
+    raw_states = projection.get("states")
+    states: dict[str, dict[str, object]] = {}
+    if isinstance(raw_states, Mapping):
+        states = {
+            str(name): dict(value)
+            for name, value in raw_states.items()
+            if isinstance(name, str) and isinstance(value, Mapping)
+        }
+    core_recommended = projection.get("core_recommended")
+    projection["core_recommended"] = core_recommended
+    projection["runner"] = dict(runner)
+    projection["mutation"] = {
+        "run_id": run_id,
+        "conflicted": mutation_conflicted,
+    }
+
+    if run_id is None:
+        guard_reason = "Select an implementation run before mutating tasks."
+    elif mutation_conflicted:
+        guard_reason = "Another run mutation is in progress; wait for it to finish."
+    elif runner.get("eligible") is not True:
+        guard_reason = str(
+            runner.get("disabled_reason")
+            or "Selected Runner is not ready for task mutation."
+        )
+    else:
+        guard_reason = None
+
+    for name, state in states.items():
+        if guard_reason is None or state.get("eligible") is not True:
+            continue
+        state["eligible"] = False
+        state["disabled_reason"] = guard_reason
+        states[name] = state
+    projection["states"] = states
+    projection["recommended"] = (
+        next(
+            (
+                name
+                for name in ("run", "resume", "finalize")
+                if states.get(name, {}).get("eligible") is True
+            ),
+            None,
+        )
+    )
+    return projection
+
+
 def _optional_attempt(params: dict[str, list[str]]) -> int | None:
     raw_attempt = _first_param(params, "attempt")
     if raw_attempt is None:
@@ -2258,6 +2322,40 @@ class OperatorUiService:
             ),
         }
 
+    def _task_runner_readiness(self, params: dict[str, list[str]]) -> dict[str, object]:
+        runtime_id = _first_param(params, "runtime") or _first_param(params, "runtime_id")
+        if runtime_id is None:
+            return {
+                "runtime_id": None,
+                "eligible": False,
+                "disabled_reason": "Select a Runner before this action can run.",
+                "config_identity": None,
+                "probe_observed_at_utc": None,
+                "snapshot": None,
+            }
+        readiness = self._runtime_readiness_for_config(self.config_path)
+        item = next(
+            (candidate for candidate in readiness.runtimes if candidate.runtime_id == runtime_id),
+            None,
+        )
+        if item is None:
+            return {
+                "runtime_id": runtime_id,
+                "eligible": False,
+                "disabled_reason": f"Runner `{runtime_id}` is unavailable; refresh Runner readiness.",
+                "config_identity": None,
+                "probe_observed_at_utc": None,
+                "snapshot": None,
+            }
+        return {
+            "runtime_id": item.runtime_id,
+            "eligible": item.eligible,
+            "disabled_reason": item.disabled_reason,
+            "config_identity": item.config_identity,
+            "probe_observed_at_utc": item.probe_observed_at_utc,
+            "snapshot": item,
+        }
+
     def _inbox(self, params: dict[str, list[str]]) -> object:
         unexpected = tuple(sorted(key for key, values in params.items() if values))
         if unexpected:
@@ -2292,15 +2390,41 @@ class OperatorUiService:
             tasks = [task for task in tasks if task.get("id") == task_id]
         if task_id is not None and not tasks:
             raise ValueError(f"Unknown task id `{task_id}`.")
-        selected_task = tasks[0] if task_id is not None else None
+        runner = self._task_runner_readiness(params)
+        mutation_conflicted = bool(
+            run_id
+            and (
+                run_root(
+                    workspace_root=self.workspace_root,
+                    work_item=self.work_item,
+                    run_id=run_id,
+                )
+                / ".mutation-lease"
+            ).exists()
+        )
+        selected_task = None
+        if task_id is not None:
+            selected_task = dict(tasks[0])
+            selected_task["action_projection"] = _service_task_action_projection(
+                selected_task,
+                run_id=run_id,
+                runner=runner,
+                mutation_conflicted=mutation_conflicted,
+            )
         return {
             **model,
             # Keep the existing rich `tasks` field for compatibility with the current
             # implementation gate while exposing an explicitly bounded list/detail boundary.
-            "tasks": tasks,
+            "tasks": [
+                selected_task if task.get("id") == task_id and selected_task is not None else task
+                for task in tasks
+            ],
             "task_list": [_bounded_task_list_item(task) for task in all_tasks],
             "selected_task": selected_task,
             "selected_task_id": task_id,
+            "selected_task_actions": (
+                None if selected_task is None else selected_task.get("action_projection")
+            ),
             "selection": {
                 "state": "selected" if selected_task is not None else "unselected",
                 "task_id": task_id,

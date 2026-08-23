@@ -9,6 +9,7 @@ from aidd.core.task_attempt_evidence import resolve_task_attempt_evidence
 from aidd.core.task_attempt_lifecycle import load_task_execution_plan
 from aidd.core.task_ledger import (
     TaskExecutionStatus,
+    TaskFinalizationStatus,
     TaskLedger,
     TaskLedgerEntry,
     load_task_ledger,
@@ -16,6 +17,7 @@ from aidd.core.task_ledger import (
 )
 
 TASK_WORKSPACE_SCHEMA_VERSION = 1
+TASK_ACTION_PROJECTION_SCHEMA_VERSION = 1
 
 
 def _dependency_graph(ledger: TaskLedger) -> dict[str, dict[str, object]]:
@@ -104,6 +106,110 @@ def _task_group(*, task_id: str, status: TaskExecutionStatus, ready: set[str]) -
     return "Blocked"
 
 
+def _action_state(
+    *, action: str, eligible: bool, disabled_reason: str | None = None
+) -> dict[str, object]:
+    if eligible and disabled_reason is not None:
+        raise ValueError(f"Eligible task action `{action}` cannot have a disabled reason.")
+    if not eligible and not (disabled_reason or "").strip():
+        raise ValueError(f"Disabled task action `{action}` must have a literal reason.")
+    return {
+        "action": action,
+        "eligible": eligible,
+        "disabled_reason": disabled_reason,
+    }
+
+
+def _task_action_projection(
+    *,
+    entry: TaskLedgerEntry,
+    missing_dependencies: list[str],
+    ready: set[str],
+    ledger: TaskLedger,
+) -> dict[str, object]:
+    """Project mutually exclusive task mutations from the authoritative ledger.
+
+    The projection deliberately contains no runtime-specific values.  The UI service adds
+    the selected Runner readiness before exposing a mutation affordance; the browser never
+    needs to infer this policy from status or group labels.
+    """
+
+    dependency_reason = (
+        "Task dependencies are incomplete: " + ", ".join(missing_dependencies) + "."
+        if missing_dependencies
+        else None
+    )
+    run_eligible = entry.status is TaskExecutionStatus.PENDING and entry.id in ready
+    run_reason = (
+        None
+        if run_eligible
+        else dependency_reason
+        if dependency_reason is not None
+        else "Task is not eligible for a new run."
+    )
+    resume_eligible = entry.status in {
+        TaskExecutionStatus.BLOCKED,
+        TaskExecutionStatus.FAILED,
+    } and entry.id in ready
+    resume_reason = (
+        None
+        if resume_eligible
+        else "Task has no interrupted attempt to resume."
+        if entry.status is TaskExecutionStatus.PENDING
+        else "Task attempt is already running; inspect the active attempt."
+        if entry.status is TaskExecutionStatus.EXECUTING
+        else dependency_reason
+        if dependency_reason is not None
+        else "Task already succeeded; preserved success cannot be resumed."
+    )
+    finalization_status = ledger.finalization.status
+    finalize_eligible = (
+        entry.status is TaskExecutionStatus.SUCCEEDED
+        and ledger.all_succeeded()
+        and finalization_status
+        in {TaskFinalizationStatus.PENDING, TaskFinalizationStatus.FAILED}
+    )
+    finalize_reason = (
+        None
+        if finalize_eligible
+        else "Implementation finalization is already running."
+        if finalization_status is TaskFinalizationStatus.EXECUTING
+        else "Implementation is already finalized."
+        if finalization_status is TaskFinalizationStatus.SUCCEEDED
+        else "Every task must succeed before finalization."
+        if not ledger.all_succeeded()
+        else "Selected task must succeed before finalization."
+    )
+    recommended: str | None
+    if run_eligible:
+        recommended = "run"
+    elif resume_eligible:
+        recommended = "resume"
+    elif finalize_eligible:
+        recommended = "finalize"
+    else:
+        recommended = None
+    return {
+        "schema_version": TASK_ACTION_PROJECTION_SCHEMA_VERSION,
+        "recommended": recommended,
+        "core_recommended": recommended,
+        "states": {
+            "run": _action_state(action="run", eligible=run_eligible, disabled_reason=run_reason),
+            "resume": _action_state(
+                action="resume", eligible=resume_eligible, disabled_reason=resume_reason
+            ),
+            "finalize": _action_state(
+                action="finalize", eligible=finalize_eligible, disabled_reason=finalize_reason
+            ),
+        },
+        "runner": {
+            "required": recommended is not None,
+            "eligible": None,
+            "disabled_reason": "Runner readiness must be revalidated by the service.",
+        },
+    }
+
+
 def _attempts(
     root: Path,
     *,
@@ -172,6 +278,7 @@ def resolve_task_read_model(
     tasks: list[dict[str, object]] = []
     groups: dict[str, list[str]] = {name: [] for name in ("Ready", "Running", "Blocked", "Done")}
     graph = _dependency_graph(ledger)
+    finalization_eligible = ledger.all_succeeded()
     for entry in ledger.tasks:
         card = cards[entry.id]
         attempt_items = (
@@ -210,6 +317,12 @@ def resolve_task_read_model(
                         if isinstance(reference, dict) and isinstance(reference.get("path"), str)
                     )
         task_events = _task_durable_events(entry=entry, attempts=attempt_items)
+        action_projection = _task_action_projection(
+            entry=entry,
+            missing_dependencies=missing_dependencies,
+            ready=ready,
+            ledger=ledger,
+        )
         tasks.append(
             {
                 **entry.to_dict(),
@@ -238,6 +351,7 @@ def resolve_task_read_model(
                 "durable_events": task_events,
                 "last_durable_event": task_events[-1] if task_events else None,
                 "attempts": attempt_items,
+                "action_projection": action_projection,
             }
         )
     finalization_attempts = []
@@ -266,7 +380,6 @@ def resolve_task_read_model(
         (task_id for task_id in ledger.ready_task_ids() if task_id in ready),
         None,
     )
-    finalization_eligible = ledger.all_succeeded()
     review_eligible = finalization_blocker is None
     return {
         "schema_version": TASK_WORKSPACE_SCHEMA_VERSION,
