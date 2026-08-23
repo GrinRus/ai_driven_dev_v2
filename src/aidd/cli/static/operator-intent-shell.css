@@ -159,10 +159,15 @@ body {
 
   body:not(.setup-active) .topbar .brand {
     align-items: center;
+    background: #07182e;
+    box-sizing: border-box;
     display: flex;
-    left: 28px;
+    height: 64px;
+    left: 0;
+    padding-left: 28px;
     position: fixed;
-    top: 18px;
+    top: 0;
+    width: var(--operator-rail-width);
     z-index: 22;
   }
 
@@ -186,13 +191,17 @@ body {
 
   body:not(.setup-active) .topbar .primary-nav {
     align-items: stretch;
+    background: #07182e;
+    box-sizing: border-box;
     display: grid;
     gap: 6px;
     height: auto;
-    left: 14px;
+    left: 0;
+    padding: 88px 14px 24px;
     position: fixed;
-    top: 88px;
-    width: calc(var(--operator-rail-width) - 28px);
+    bottom: 0;
+    top: 0;
+    width: var(--operator-rail-width);
     z-index: 22;
   }
 
@@ -230,6 +239,24 @@ body {
   body:not(.setup-active) .topbar .status-chip,
   body:not(.setup-active) .topbar .version-badge {
     color: var(--color-text-primary);
+  }
+
+  body:not(.setup-active) .topbar .status-chip,
+  body:not(.setup-active) .topbar .version-badge {
+    background: var(--color-bg-surface);
+    border-color: var(--color-border-default);
+  }
+
+  body:not(.setup-active) .topbar #intentChip,
+  body:not(.setup-active) .topbar #runChip {
+    background: var(--color-bg-surface);
+    color: var(--color-text-primary);
+  }
+
+  body:not(.setup-active) .topbar #localStatus {
+    background: var(--color-state-success-bg);
+    border-color: var(--color-state-success-border);
+    color: var(--color-state-success-text);
   }
 
   body:not(.setup-active) .topbar .top-context span[aria-hidden="true"] {

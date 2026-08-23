@@ -40,6 +40,8 @@ def test_desktop_shell_keeps_rail_tabs_stage_strip_and_decision_column_in_view(
                 if (!node) return null;
                 const computed = getComputedStyle(node);
                 return {
+                  background: computed.backgroundColor,
+                  color: computed.color,
                   gridArea: computed.gridArea,
                   position: computed.position,
                   marginLeft: computed.marginLeft,
@@ -49,6 +51,7 @@ def test_desktop_shell_keeps_rail_tabs_stage_strip_and_decision_column_in_view(
                 topbar: box('.topbar'),
                 rail: box('.topbar .primary-nav'),
                 railStyle: style('.topbar .primary-nav'),
+                railButtonStyle: style('.topbar .primary-nav button'),
                 workspace: box('.operator-workspace'),
                 context: style('.intent-context-region'),
                 tabs: style('.work-item-tabs'),
@@ -63,8 +66,10 @@ def test_desktop_shell_keeps_rail_tabs_stage_strip_and_decision_column_in_view(
         assert geometry["topbar"]["x"] >= 232
         assert geometry["workspace"]["x"] >= 232
         assert geometry["workspace"]["width"] <= viewport[0] - 232
-        assert geometry["rail"]["x"] == 14
+        assert geometry["rail"]["x"] == 0
         assert geometry["railStyle"]["position"] == "fixed"
+        assert geometry["railStyle"]["background"] == "rgb(7, 24, 46)"
+        assert geometry["railButtonStyle"]["color"] == "rgb(219, 230, 247)"
         assert geometry["context"]["gridArea"] == "context"
         assert geometry["tabs"]["gridArea"] == "tabs"
         assert geometry["phases"]["gridArea"] == "phases"
