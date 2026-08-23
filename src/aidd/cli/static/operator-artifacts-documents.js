@@ -1496,6 +1496,10 @@ function renderEvidenceWorkbenchUnavailable(view) {
 
 function renderEvidenceGraphScreen(view, selection) {
   return `
+    ${typeof renderActiveStudioContextBar === "function"
+      ? renderActiveStudioContextBar(activeStudioState(), activeStageItem())
+      : ""}
+    ${typeof renderIntentPhaseStepper === "function" ? renderIntentPhaseStepper() : ""}
     <div class="evidence-screen-stack">
       ${renderEvidenceWorkbenchShell(selection)}
       <details class="surface evidence-drilldown">
