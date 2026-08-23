@@ -51,7 +51,7 @@ WAVE42_BROWSER_JOURNEYS: tuple[Wave42BrowserJourney, ...] = (
         fixture_state="validation-repair",
         route="validation-repair",
         surface_selector=".recovery-workbench",
-        first_action_selector=".recovery-decision-workbench button",
+        first_action_selector="[data-recovery-summary] [data-primary-action]",
         coverage_sources=("browser_tests/test_journey_runtime_validation_recovery.py",),
     ),
     Wave42BrowserJourney(
