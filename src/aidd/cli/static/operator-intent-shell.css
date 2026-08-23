@@ -347,6 +347,72 @@ body {
   }
 }
 
+/* Documents and task attempts use the desktop workbench composition from the
+   target UX: navigation and the primary reading/execution surface stay in one
+   row, while the contextual detail and live evidence remain available without
+   turning the page into a serial stack.  The responsive stylesheet keeps the
+   single-column fallback below this range. */
+@media (min-width: 1121px) and (min-height: 700px) {
+  body:not(.setup-active) .operator-workspace
+    > .intent-document-surface:has(.stage-document-workbench) {
+    min-width: 0;
+  }
+
+  body:not(.setup-active) .operator-workspace
+    .stage-document-workbench.evidence-workbench-grid {
+    grid-template-columns: minmax(190px, 220px) minmax(0, 1fr);
+  }
+
+  body:not(.setup-active) .operator-workspace
+    .stage-document-workbench > #workbenchTree {
+    max-height: calc(100vh - 250px);
+    min-width: 0;
+    position: sticky;
+    top: var(--space-5);
+  }
+
+  body:not(.setup-active) .operator-workspace
+    .stage-document-workbench > #artifactViewer {
+    min-width: 0;
+  }
+
+  body:not(.setup-active) .operator-workspace
+    .stage-document-workbench .workbench-main {
+    grid-template-columns: minmax(0, 1fr) minmax(230px, 300px);
+  }
+
+  body:not(.setup-active) .operator-workspace
+    .active-studio[data-studio-surface="task-workspace"] {
+    display: grid;
+    gap: var(--space-5);
+    grid-template-columns: minmax(0, 1fr) minmax(280px, 336px);
+    max-width: none;
+    padding-top: 0;
+  }
+
+  body:not(.setup-active) .operator-workspace
+    .active-studio[data-studio-surface="task-workspace"] > [data-task-workspace] {
+    grid-column: 1;
+    grid-row: 1;
+    min-width: 0;
+  }
+
+  body:not(.setup-active) .operator-workspace
+    .active-studio[data-studio-surface="task-workspace"] > [data-task-detail] {
+    align-self: start;
+    grid-column: 2;
+    grid-row: 1;
+    min-width: 0;
+  }
+
+  body:not(.setup-active) .operator-workspace
+    .active-studio[data-studio-surface="task-workspace"] > [data-task-attempt-tray] {
+    grid-column: 1 / -1;
+    grid-row: 2;
+    min-width: 0;
+  }
+}
+
 @media (max-width: 760px) {
   .operator-workspace {
     gap: var(--space-3);
