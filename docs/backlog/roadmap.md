@@ -15480,9 +15480,19 @@ Local tasks:
     focused Inbox and terminal journeys, Ruff, mypy, full Python matrix, frontend checks,
     deterministic scenarios, adapter conformance, packaged UI browser, security checks, and build
     all passed.
-- `W44-E1-S2-T2` (next) Keep Documents and active-attempt evidence co-visible with the
+- `W44-E1-S2-T2` (done) Keep Documents and active-attempt evidence co-visible with the
   contextual inspector and live-output tray.
-- `W44-E1-S2-T3` (soon) Reconcile stage-strip density, typography, tokens, and overflow across
+  - PR #324 (merge `69ce00df`) adds the target desktop composition for Documents and Tasks:
+    Work Item context and the eight-stage strip remain present on Documents, the document
+    navigator/reader/evidence inspector share one row, and selected task detail sits beside the
+    authoritative task list with the attempt evidence tray spanning the workbench below. Existing
+    routes, DOM ids, read models, and mutation services are unchanged.
+  - Verification: provider-free Documents and active-attempt geometry/diagnostic coverage at
+    `1280x900` and `1440x900`, focused shell/document/implementation journeys, frontend document
+    and studio tests, UI asset contracts, docs/planning, Ruff, mypy, full Python matrix,
+    deterministic scenarios, adapter conformance, packaged UI browser, security checks, and build
+    all passed.
+- `W44-E1-S2-T3` (next) Reconcile stage-strip density, typography, tokens, and overflow across
   desktop and mobile viewports.
 
 #### Slice W44-E1-S3 — rendered acceptance loop (`planned`)
@@ -15512,14 +15522,24 @@ Wave 44 exit evidence:
 
 Wave 44 reconciliation:
 
+- `W44-E1-S2-T2` is complete in PR #324 (merge `69ce00df`). Documents now retain Work Item
+  context and stage navigation while keeping the navigator, reader, and evidence inspector
+  co-visible on desktop; selected Task Workspace detail sits beside the authoritative list and
+  active-attempt evidence occupies a full-width tray below. Existing routes, DOM ids, read models,
+  and mutation services remain unchanged. Focused provider-free geometry and diagnostics at
+  `1280x900`/`1440x900`, shell/document/implementation journeys, frontend tests, UI contracts,
+  docs/planning, Ruff, mypy, full Python matrix, deterministic scenarios, adapter conformance,
+  packaged UI browser, security checks, and build passed. `W44-E1-S2-T3` is now the next
+  dependency-ready task.
+
 - `W44-E1-S2-T1` is complete in PR #322 (merge `e3559b97`). The desktop shell now follows the
   target rail/tabs/stage-strip/central-surface composition, keeps the decision inspector
   contextual, restores WCAG-safe rail and status-chip contrast, and expands completion/read-only
   canvases when no decision value exists so actions do not overlap. Provider-free desktop shell,
   Inbox, and terminal Flow Complete checks passed locally; the full Python matrix, frontend
   checks, deterministic scenarios, adapter conformance, packaged UI browser, security checks,
-  and build passed in CI. `W44-E1-S2-T2` is now the next dependency-ready task and `T3` is its
-  direct successor in `Soon`.
+  and build passed in CI. `W44-E1-S2-T2` was the next dependency-ready task and is now complete;
+  `T3` is the next task.
 
 - `W44-E1-S1-T2` is complete in PR #320 (merge `9792d8f5`). Mobile question, intervention,
   approval, and recovery actions now stay visible on `320x568` and `390x844` through one existing
