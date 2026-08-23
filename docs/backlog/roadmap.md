@@ -14341,6 +14341,14 @@ Local tasks:
     first confusion, resulting roadmap tasks, and routing decision; missing participant/runtime is
     `environment-blocked`, never pass. The task remains deferred while Codex-only Wave 43 work
     proceeds.
+- `W42-E7-S2-T4` (next) Repair mobile recovery composition and first-viewport assertions.
+  - Scope: keep one vertical scroll owner, render question recovery before secondary context on
+    narrow viewports, remove recovery-panel minimum-width overflow, and measure the actual
+    production primary-action selector before any scroll is requested.
+  - Verification: the browser matrix proves question, validation, and review/remediation surfaces
+    expose one visible primary action in the initial 320x568 and 390x844 viewports with no clipped
+    action, horizontal overflow, focus loss, or console error; the assertion fails if a helper
+    scrolls before measuring.
 
 #### Slice W42-E7-S3 — installed task-centered live evidence (`planned`)
 
