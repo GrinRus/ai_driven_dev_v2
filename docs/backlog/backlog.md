@@ -7,13 +7,10 @@ slice, and local task.
 
 ## Next
 
-- `W44-E1-S2-T2` — Keep Documents and active-attempt evidence co-visible with the contextual
-  inspector and live-output tray.
-
-## Soon
-
 - `W44-E1-S2-T3` — Reconcile stage-strip density, typography, tokens, and overflow across desktop
   and mobile viewports.
+
+## Soon
 
 ## Parking lot
 
@@ -40,14 +37,24 @@ slice, and local task.
 
 ## Current reconciliation
 
+- `2026-08-23` PR #324 (merge `69ce00df`) completed `W44-E1-S2-T2`: Documents now retain Work Item
+  context and stage navigation while keeping the navigator, reader, and evidence inspector
+  co-visible on desktop; selected Task Workspace detail sits beside the authoritative list and
+  active-attempt evidence occupies a full-width tray below. Existing routes, DOM ids, read models,
+  and mutation services remain unchanged. Focused provider-free geometry and diagnostics at
+  `1280x900`/`1440x900`, shell/document/implementation journeys, frontend tests, UI contracts,
+  docs/planning, Ruff, mypy, full Python matrix, deterministic scenarios, adapter conformance,
+  packaged UI browser, security checks, and build passed. `W44-E1-S2-T3` is now `Next`; human
+  usability, Claude/cross-runtime, and Wave 36 acceptance remain parked.
+
 - `2026-08-23` PR #322 (merge `e3559b97`) completed `W44-E1-S2-T1`: the desktop shell now follows
   the target navy rail, Work Item tabs, stage strip, central canvas, and contextual decision
   column. Empty-inspector read-only/completion surfaces reclaim the reserved column, while rail
   and status-chip colors satisfy the rendered contrast checks and action cards retain usable hit
   targets. Focused desktop shell, Inbox, and terminal Flow Complete browser checks, Ruff, mypy,
   full Python/frontend checks, deterministic scenarios, adapter conformance, packaged UI browser,
-  security checks, and build passed. `W44-E1-S2-T2` is now `Next`, with `T3` in `Soon`; human
-  usability, Claude/cross-runtime, and Wave 36 acceptance remain parked.
+  security checks, and build passed. `W44-E1-S2-T2` was the next task and is now complete; `T3`
+  is now `Next`. Human usability, Claude/cross-runtime, and Wave 36 acceptance remain parked.
 
 - `2026-08-23` PR #320 (merge `9792d8f5`) completed `W44-E1-S1-T2`: mobile question,
   intervention, approval, and recovery actions stay visible on `320x568` and `390x844` through
