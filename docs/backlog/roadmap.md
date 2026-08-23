@@ -15469,11 +15469,20 @@ and active-attempt read models.
 
 Local tasks:
 
-- `W44-E1-S2-T1` (next) Align the desktop shell with the target rail, tabs, stage strip, and
+- `W44-E1-S2-T1` (done) Align the desktop shell with the target rail, tabs, stage strip, and
   central working surface.
-- `W44-E1-S2-T2` (soon) Keep Documents and active-attempt evidence co-visible with the
+  - PR #322 (merge `e3559b97`) adds the desktop navy project rail, Work Item context/tabs,
+    stage-strip composition, central canvas, and contextual decision column while preserving
+    existing navigation controls, routes, DOM ids, and mutation services. Read-only/completion
+    surfaces reclaim the inspector column when it is empty so action cards retain usable hit
+    targets.
+  - Verification: provider-free desktop shell and Flow Complete geometry/hit-target coverage,
+    focused Inbox and terminal journeys, Ruff, mypy, full Python matrix, frontend checks,
+    deterministic scenarios, adapter conformance, packaged UI browser, security checks, and build
+    all passed.
+- `W44-E1-S2-T2` (next) Keep Documents and active-attempt evidence co-visible with the
   contextual inspector and live-output tray.
-- `W44-E1-S2-T3` (planned) Reconcile stage-strip density, typography, tokens, and overflow across
+- `W44-E1-S2-T3` (soon) Reconcile stage-strip density, typography, tokens, and overflow across
   desktop and mobile viewports.
 
 #### Slice W44-E1-S3 — rendered acceptance loop (`planned`)
@@ -15503,12 +15512,22 @@ Wave 44 exit evidence:
 
 Wave 44 reconciliation:
 
+- `W44-E1-S2-T1` is complete in PR #322 (merge `e3559b97`). The desktop shell now follows the
+  target rail/tabs/stage-strip/central-surface composition, keeps the decision inspector
+  contextual, restores WCAG-safe rail and status-chip contrast, and expands completion/read-only
+  canvases when no decision value exists so actions do not overlap. Provider-free desktop shell,
+  Inbox, and terminal Flow Complete checks passed locally; the full Python matrix, frontend
+  checks, deterministic scenarios, adapter conformance, packaged UI browser, security checks,
+  and build passed in CI. `W44-E1-S2-T2` is now the next dependency-ready task and `T3` is its
+  direct successor in `Soon`.
+
 - `W44-E1-S1-T2` is complete in PR #320 (merge `9792d8f5`). Mobile question, intervention,
   approval, and recovery actions now stay visible on `320x568` and `390x844` through one existing
   DOM control in a safe-area-aware action dock; provider-free geometry checks cover focusability,
   target size, clipping, and horizontal overflow. Frontend tests, UI contracts, docs/planning,
   Ruff, mypy, packaged UI browser, deterministic scenarios, adapter conformance, and build passed.
-  `W44-E1-S2-T1` is now the next dependency-ready task; its direct successor remains planned.
+  `W44-E1-S2-T1` was the next dependency-ready task and is now complete; `W44-E1-S2-T2` is the
+  next dependency-ready task and `T3` remains its direct successor.
 
 - `W44-E1-S1-T1` is complete in PR #318 (merge `0645856b`). Runner/global launch leakage is
   removed from non-launch surfaces, Flow Complete keeps only its core-recommended primary
