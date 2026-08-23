@@ -7,7 +7,9 @@ slice, and local task.
 
 ## Next
 
-- none
+- `W42-E7-S2-T4` — Repair mobile recovery composition and first-viewport assertions so the actual
+  primary action is visible without an initial scroll and the recovery workbench has no horizontal
+  overflow.
 
 ## Soon
 
@@ -36,6 +38,10 @@ slice, and local task.
 
 ## Current reconciliation
 
+- `2026-08-23` UI audit found three Wave 42 mobile browser journeys red despite green packaged
+  checks: question recovery, validation repair, and review/remediation clipped or pushed their
+  primary action below the initial viewport. `W42-E7-S2-T4` is the bounded responsive remediation;
+  human usability, Claude, cross-runtime, and Wave 36 work remain parked.
 - `2026-08-22` PR #308 (merge `52943ae2`) completed `W43-E3-S3-T3`: repair briefs now provide one
   deterministic tasklist correction strategy that preserves stable ids and valid cards, names
   the canonical scaffold, patches only affected sections, synchronizes dependencies and
