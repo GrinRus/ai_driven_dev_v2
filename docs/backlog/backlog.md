@@ -7,13 +7,13 @@ slice, and local task.
 
 ## Next
 
-- `W44-E1-S2-T1` — Align the desktop shell with the target rail, tabs, stage strip, and central
-  working surface.
+- `W44-E1-S2-T2` — Keep Documents and active-attempt evidence co-visible with the contextual
+  inspector and live-output tray.
 
 ## Soon
 
-- `W44-E1-S2-T2` — Keep Documents and active-attempt evidence co-visible with the contextual
-  inspector and live-output tray.
+- `W44-E1-S2-T3` — Reconcile stage-strip density, typography, tokens, and overflow across desktop
+  and mobile viewports.
 
 ## Parking lot
 
@@ -39,6 +39,15 @@ slice, and local task.
   queue-restoration policy in `docs/backlog/roadmap.md` (`W8-E3-S1`).
 
 ## Current reconciliation
+
+- `2026-08-23` PR #322 (merge `e3559b97`) completed `W44-E1-S2-T1`: the desktop shell now follows
+  the target navy rail, Work Item tabs, stage strip, central canvas, and contextual decision
+  column. Empty-inspector read-only/completion surfaces reclaim the reserved column, while rail
+  and status-chip colors satisfy the rendered contrast checks and action cards retain usable hit
+  targets. Focused desktop shell, Inbox, and terminal Flow Complete browser checks, Ruff, mypy,
+  full Python/frontend checks, deterministic scenarios, adapter conformance, packaged UI browser,
+  security checks, and build passed. `W44-E1-S2-T2` is now `Next`, with `T3` in `Soon`; human
+  usability, Claude/cross-runtime, and Wave 36 acceptance remain parked.
 
 - `2026-08-23` PR #320 (merge `9792d8f5`) completed `W44-E1-S1-T2`: mobile question,
   intervention, approval, and recovery actions stay visible on `320x568` and `390x844` through
