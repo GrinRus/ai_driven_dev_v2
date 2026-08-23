@@ -8,6 +8,7 @@ import pytest
 
 from aidd.core.task_ledger import (
     TaskExecutionStatus,
+    TaskFinalizationStatus,
     TaskLedger,
     persist_task_ledger,
     task_root,
@@ -117,6 +118,75 @@ def test_task_workspace_groups_dependency_graph_and_selects_next_ready(tmp_path:
     }
     assert model["status"] == "ready"
     assert model["tasklist"]["matches"] is True
+    first = next(task for task in model["tasks"] if task["id"] == "TL-1")
+    assert first["action_projection"]["recommended"] == "run"
+    assert first["action_projection"]["states"]["run"] == {
+        "action": "run",
+        "eligible": True,
+        "disabled_reason": None,
+    }
+    blocked = next(task for task in model["tasks"] if task["id"] == "TL-2")
+    assert blocked["action_projection"]["recommended"] is None
+    assert blocked["action_projection"]["states"]["run"]["disabled_reason"] == (
+        "Task dependencies are incomplete: TL-1."
+    )
+
+
+def test_task_workspace_action_projection_is_fail_closed_across_attempt_states(
+    tmp_path: Path,
+) -> None:
+    workspace_root = tmp_path / ".aidd"
+    _write_tasklist(workspace_root)
+
+    ledger = _ledger(workspace_root).transition("TL-1", TaskExecutionStatus.EXECUTING)
+    ledger = ledger.transition("TL-1", TaskExecutionStatus.BLOCKED, blocker="runtime stopped")
+    persist_task_ledger(
+        workspace_root=workspace_root,
+        work_item="WI-READ",
+        run_id="run-1",
+        ledger=ledger,
+    )
+    model = cast(
+        dict[str, Any],
+        resolve_task_read_model(
+            workspace_root=workspace_root,
+            work_item="WI-READ",
+            run_id="run-1",
+        ),
+    )
+    blocked = next(task for task in model["tasks"] if task["id"] == "TL-1")
+    assert blocked["action_projection"]["recommended"] == "resume"
+    assert blocked["action_projection"]["states"]["resume"]["eligible"] is True
+    assert blocked["action_projection"]["states"]["run"]["eligible"] is False
+
+    ledger = ledger.transition("TL-1", TaskExecutionStatus.EXECUTING)
+    ledger = ledger.transition("TL-1", TaskExecutionStatus.SUCCEEDED)
+    for task_id in ("TL-2", "TL-3", "TL-4"):
+        ledger = ledger.transition(task_id, TaskExecutionStatus.EXECUTING)
+        ledger = ledger.transition(task_id, TaskExecutionStatus.SUCCEEDED)
+    ledger = ledger.transition_finalization(TaskFinalizationStatus.EXECUTING)
+    ledger = ledger.transition_finalization(
+        TaskFinalizationStatus.FAILED,
+        blocker="quality gate failed",
+    )
+    persist_task_ledger(
+        workspace_root=workspace_root,
+        work_item="WI-READ",
+        run_id="run-1",
+        ledger=ledger,
+    )
+    model = cast(
+        dict[str, Any],
+        resolve_task_read_model(
+            workspace_root=workspace_root,
+            work_item="WI-READ",
+            run_id="run-1",
+        ),
+    )
+    done = next(task for task in model["tasks"] if task["id"] == "TL-1")
+    assert done["action_projection"]["recommended"] == "finalize"
+    assert done["action_projection"]["states"]["finalize"]["eligible"] is True
+    assert done["action_projection"]["states"]["finalize"]["disabled_reason"] is None
 
 
 def test_task_workspace_preserves_success_and_projects_partial_progress(tmp_path: Path) -> None:

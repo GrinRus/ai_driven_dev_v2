@@ -5074,6 +5074,84 @@ def test_ui_tasks_endpoint_returns_rich_task_state(tmp_path: Path) -> None:
     assert selected_payload["selection"] == {"state": "selected", "task_id": "TL-1"}
 
 
+def test_ui_selected_task_actions_require_run_and_runner_readiness(tmp_path: Path) -> None:
+    workspace_root = tmp_path / ".aidd"
+    _seed_rich_tasklist(workspace_root)
+    service = _service(
+        workspace_root,
+        readiness_probe_provider=lambda _config: {
+            "generic-cli": RuntimeReadinessProbeReport(
+                provider_available=False,
+                execution_command_available=False,
+                observed_at_utc=datetime.now(UTC).isoformat().replace("+00:00", "Z"),
+            )
+        },
+    )
+
+    no_run = _payload(
+        service.handle_get(
+            "/api/tasks",
+            {"task_id": ["TL-1"]},
+        )
+    )
+    no_run_actions = no_run["selected_task_actions"]
+    assert isinstance(no_run_actions, dict)
+    assert no_run_actions["recommended"] is None
+    assert no_run_actions["states"]["run"]["disabled_reason"] == (  # type: ignore[index]
+        "Select an implementation run before mutating tasks."
+    )
+    assert no_run_actions["runner"]["eligible"] is False  # type: ignore[index]
+
+    unavailable = _payload(
+        service.handle_get(
+            "/api/tasks",
+            {
+                "run_id": ["run-1"],
+                "task_id": ["TL-1"],
+                "runtime": ["generic-cli"],
+            },
+        )
+    )
+    unavailable_actions = unavailable["selected_task_actions"]
+    assert isinstance(unavailable_actions, dict)
+    assert unavailable_actions["recommended"] is None
+    assert unavailable_actions["runner"]["eligible"] is False  # type: ignore[index]
+    assert "unavailable" in str(unavailable_actions["runner"]["disabled_reason"])  # type: ignore[index]
+    assert unavailable_actions["states"]["run"]["disabled_reason"] == (
+        unavailable_actions["runner"]["disabled_reason"]  # type: ignore[index]
+    )
+
+
+def test_ui_selected_task_actions_fail_closed_on_mutation_conflict(tmp_path: Path) -> None:
+    workspace_root = tmp_path / ".aidd"
+    _seed_rich_tasklist(workspace_root)
+    service = _service(workspace_root)
+    lease_path = run_root(
+        workspace_root=workspace_root,
+        work_item="WI-UI",
+        run_id="run-1",
+    ) / ".mutation-lease"
+    lease_path.mkdir(parents=True)
+    (lease_path / "owner.json").write_text(
+        json.dumps({"operation": "workflow", "pid": os.getpid()}),
+        encoding="utf-8",
+    )
+
+    payload = _payload(
+        service.handle_get(
+            "/api/tasks",
+            {"run_id": ["run-1"], "task_id": ["TL-1"]},
+        )
+    )
+    actions = payload["selected_task_actions"]
+    assert isinstance(actions, dict)
+    assert actions["mutation"]["conflicted"] is True  # type: ignore[index]
+    assert actions["recommended"] is None
+    assert actions["states"]["run"]["disabled_reason"] == (  # type: ignore[index]
+        "Another run mutation is in progress; wait for it to finish."
+    )
+
+
 def test_ui_tasks_endpoint_returns_missing_task_error(tmp_path: Path) -> None:
     workspace_root = tmp_path / ".aidd"
     _seed_rich_tasklist(workspace_root)
