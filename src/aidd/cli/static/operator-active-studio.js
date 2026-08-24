@@ -23,6 +23,20 @@ const INTENT_PHASES = Object.freeze([
   Object.freeze({id: "prove", label: "Prove", stages: ["review", "qa"]})
 ]);
 
+function visibleStageStatusLabel(status, stale) {
+  if (stale) return "Stale";
+  return {
+    succeeded: "Complete",
+    executing: "Running",
+    preparing: "Starting",
+    validating: "Validating",
+    blocked: "Blocked",
+    failed: "Failed",
+    cancelled: "Cancelled",
+    pending: "Pending"
+  }[status] || status;
+}
+
 function activeIntentSummary() {
   const workItem = state.dashboard?.work_item || state.activeRouteWorkItem || "";
   return state.projectHome?.selected_work_item_resume?.intent
@@ -52,11 +66,28 @@ function phaseFocusStage(phase, stages) {
 
 function renderIntentPhaseStepper() {
   const stages = state.dashboard?.stages || [];
+  const orderedStages = INTENT_PHASES.flatMap((phase) => phase.stages);
+  const currentStage = orderedStages.includes(state.activeStage)
+    ? state.activeStage
+    : orderedStages.find((stage) => {
+      const item = stages.find((candidate) => candidate.stage === stage);
+      return item && item.status !== "pending";
+    }) || orderedStages[0];
+  const currentItem = stages.find((item) => item.stage === currentStage);
+  const currentStatus = currentItem?.status || "pending";
+  const currentStale = Boolean(currentItem?.stale);
+  const currentStatusLabel = currentStale ? `${currentStatus} · stale` : currentStatus;
+  const currentStatusTitle = currentStatusLabel.charAt(0).toUpperCase() + currentStatusLabel.slice(1);
+  const currentStageNumber = orderedStages.indexOf(currentStage) + 1;
   let stageNumber = 0;
   return `
-    <section class="surface intent-phase-stepper canonical-stage-strip" data-intent-phase-stepper aria-label="Work Item delivery stages">
+    <section class="surface intent-phase-stepper canonical-stage-strip" data-intent-phase-stepper data-mobile-stages-expanded="false" aria-label="Work Item delivery stages">
       <div class="surface-title"><span>Delivery path</span><span class="small-badge">8 stages</span></div>
-      <div class="canonical-stage-groups">
+      <button class="canonical-stage-mobile-summary" data-stage-mobile-toggle type="button" aria-expanded="false" aria-controls="canonicalStageGroups">
+        <span class="stage-mobile-summary-main">${escapeHtml(stageTitle(currentStage))} · ${currentStageNumber} of ${orderedStages.length} · ${escapeHtml(currentStatusTitle)}</span>
+        <span class="stage-mobile-summary-disclosure" data-stage-mobile-toggle-label>Show stages</span>
+      </button>
+      <div class="canonical-stage-groups" id="canonicalStageGroups">
         ${INTENT_PHASES.map((phase) => `
           <section class="canonical-stage-group" data-stage-group="${escapeHtml(phase.id)}" aria-label="${escapeHtml(phase.label)} stages">
             <h3>${escapeHtml(phase.label)}</h3>
@@ -67,6 +98,7 @@ function renderIntentPhaseStepper() {
                 const status = item?.status || "pending";
                 const stale = Boolean(item?.stale);
                 const statusLabel = stale ? `${status} · stale` : status;
+                const visibleStatusLabel = visibleStageStatusLabel(status, stale);
                 const current = stage === state.activeStage;
                 const selectable = current || status !== "pending";
                 const label = `${stageTitle(stage)} — ${statusLabel}`;
@@ -74,7 +106,7 @@ function renderIntentPhaseStepper() {
                   <li>
                     <button class="intent-phase-step canonical-stage-step ${escapeHtml(String(status).toLowerCase().replace(/_/g, "-"))}${stale ? " stale" : ""}${current ? " active" : ""}" data-stage="${escapeHtml(stage)}" data-canonical-stage="${escapeHtml(stage)}" data-stage-stale="${stale ? "true" : "false"}" type="button" aria-current="${current ? "step" : "false"}" aria-label="${escapeHtml(label)}" ${selectable ? "" : "disabled"}>
                       <span class="intent-phase-index">${stageNumber}</span>
-                      <span><strong>${escapeHtml(stageTitle(stage))}</strong><small>${escapeHtml(statusLabel)}</small></span>
+                      <span><strong>${escapeHtml(stageTitle(stage))}</strong><small>${escapeHtml(visibleStatusLabel)}</small></span>
                     </button>
                   </li>
                 `;
@@ -140,6 +172,20 @@ function renderWorkItemTabPlaceholder(tab) {
         <p class="eyebrow">Work Item / ${escapeHtml(title)}</p>
         <h2>${escapeHtml(title)}</h2>
         <p>${escapeHtml(copy)}</p>
+      </section>
+    </section>
+  `;
+}
+
+function renderWorkItemTabError(tab, message) {
+  const item = activeStageItem();
+  const studioState = activeStudioState();
+  return `
+    <section class="active-studio" data-studio-surface="active-studio" data-state="${escapeHtml(studioState)}" data-work-item-tab-surface="${escapeHtml(tab)}">
+      ${renderActiveStudioContextBar(studioState, item)}
+      ${renderIntentPhaseStepper()}
+      <section class="surface task-workspace" data-task-workspace-state="error">
+        <div class="empty-state bad">${escapeHtml(message)}</div>
       </section>
     </section>
   `;
@@ -290,6 +336,15 @@ async function renderWorkItemTasks() {
   const content = document.getElementById("intentContent");
   content.innerHTML = renderWorkItemTabPlaceholder("tasks");
   try {
+    const tasklistStage = (state.dashboard?.stages || []).find((item) => item.stage === "tasklist");
+    const tasklistArtifact = (state.dashboard?.recent_artifacts || []).find(
+      (artifact) => artifact.stage === "tasklist" && /tasklist/i.test(`${artifact.key || ""} ${artifact.path || ""}`)
+    );
+    if (tasklistStage?.status === "pending" && !tasklistArtifact) {
+      state.taskWorkspaceError = tasklistStage.reason || "Published tasklist is not available yet.";
+      content.innerHTML = renderWorkItemTabError("tasks", state.taskWorkspaceError);
+      return;
+    }
     const query = runScopedQuery();
     const taskParams = new URLSearchParams(query);
     if (state.selectedRuntime) taskParams.set("runtime", state.selectedRuntime);
@@ -300,7 +355,7 @@ async function renderWorkItemTasks() {
     content.innerHTML = renderTaskWorkspace(payload);
   } catch (error) {
     state.taskWorkspaceError = error.message || "Task Workspace unavailable";
-    content.innerHTML = `<section class="surface task-workspace" data-task-workspace-state="error"><div class="empty-state">${escapeHtml(state.taskWorkspaceError)}</div></section>`;
+    content.innerHTML = renderWorkItemTabError("tasks", state.taskWorkspaceError);
   }
 }
 

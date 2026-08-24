@@ -60,6 +60,9 @@ test("active Studio preserves Work Item, phase, and status context", async () =>
   assert.match(html, /Work Item Workspace/);
   assert.doesNotMatch(html, /<dt>Work item<\/dt>/);
   assert.doesNotMatch(html, /<dt>Run<\/dt>/);
+  assert.match(html, /data-stage-mobile-toggle/);
+  assert.match(html, /aria-controls="canonicalStageGroups"/);
+  assert.match(html, /data-mobile-stages-expanded="false"/);
   const stages = [...html.matchAll(/data-canonical-stage="([^"]+)"/g)].map((match) => match[1]);
   assert.deepEqual(stages, ["idea", "research", "plan", "review-spec", "tasklist", "implement", "review", "qa"]);
   assert.match(html, /8 stages/);

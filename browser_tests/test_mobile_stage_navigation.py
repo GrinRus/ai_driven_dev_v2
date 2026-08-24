@@ -20,6 +20,7 @@ def test_mobile_phase_navigation_preserves_identity_status_and_bounds(
     ) as harness, harness.open_page(viewport) as browser_page:
         page = browser_page.page
         page.goto(f"{harness.url}?ui=studio", wait_until="networkidle")
+        page.locator("[data-stage-mobile-toggle]").click()
         cards = page.locator("#intentPhaseStepper .intent-phase-step")
         assert cards.count() == 8
         measurements = cards.evaluate_all(

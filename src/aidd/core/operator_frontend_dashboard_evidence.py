@@ -72,6 +72,7 @@ from aidd.core.stage_graph import StageAdvancementSummary, summarize_workflow_ad
 from aidd.core.stage_paths import workspace_relative_path
 from aidd.core.stages import STAGES
 from aidd.core.state_machine import StageState
+from aidd.core.task_attempt_lifecycle import published_tasklist_path
 from aidd.core.workspace import work_item_metadata_path
 
 _READ_CACHE: ContextVar[dict[tuple[str, ...], object] | None] = ContextVar(
@@ -1719,6 +1720,35 @@ def _recent_artifacts(
                     safe_key=operator_artifact_safe_key("operator_request"),
                 )
             )
+    tasklist_path = published_tasklist_path(
+        workspace_root=workspace_root,
+        work_item=work_item,
+    )
+    tasklist_relative_path = workspace_relative_path(workspace_root, tasklist_path)
+    tasklist_byte_size = _artifact_size(
+        workspace_root=workspace_root,
+        relative_path=tasklist_relative_path,
+    )
+    if tasklist_byte_size is not None and not any(
+        ref.path == tasklist_relative_path for ref in refs
+    ):
+        refs.append(
+            OperatorArtifactRef(
+                stage="tasklist",
+                key="tasklist",
+                kind="document",
+                path=tasklist_relative_path,
+                byte_size=tasklist_byte_size,
+                updated_at_utc=metadata.updated_at_utc,
+                category=operator_artifact_category(
+                    key="tasklist",
+                    kind="document",
+                    path=tasklist_relative_path,
+                ),
+                canonical=True,
+                safe_key=operator_artifact_safe_key("tasklist"),
+            )
+        )
     return tuple(
         sorted(refs, key=lambda ref: ref.updated_at_utc or "", reverse=True)[
             :_MAX_RECENT_ARTIFACTS

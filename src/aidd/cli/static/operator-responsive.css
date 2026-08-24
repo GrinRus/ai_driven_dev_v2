@@ -33,6 +33,12 @@
   .onboarding-work-item-branches {
     grid-template-columns: minmax(0, 1fr);
   }
+  .canonical-stage-groups {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+  .intent-phase-list {
+    grid-template-columns: minmax(0, 1fr);
+  }
 }
 
 @media (max-width: 760px) {
