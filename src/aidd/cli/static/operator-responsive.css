@@ -777,8 +777,11 @@
   .workbench-sidebar,
   .reader-brief-heading,
   .reader-brief-facts,
+  .reader-brief-compact,
+  .reader-brief-compact-facts,
   .reader-technical-facts,
   .reader-comparison-grid,
+  .reader-body-layout-compact,
   .studio-reading-sidebar,
   .artifact-ownership-note,
   .project-setup-grid,
@@ -848,6 +851,9 @@
     align-items: flex-start;
     flex-direction: row;
   }
+  .reader-heading-map {
+    position: static;
+  }
   .reader-technical-content > button,
   .reader-comparison-heading > button {
     min-height: var(--control-height-touch);
@@ -863,6 +869,9 @@
   }
   .workbench-toc-list a,
   .finding-anchor {
+    min-height: var(--control-height-touch);
+  }
+  .reader-heading-map .workbench-toc-list a {
     min-height: var(--control-height-touch);
   }
   .reader-technical-details > summary,

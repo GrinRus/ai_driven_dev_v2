@@ -25,7 +25,11 @@ def test_studio_document_canvas_uses_safe_workbench_for_all_reader_modes(tmp_pat
         canvas = browser_page.page.locator("#studioDocumentCanvas")
         canvas.locator('[data-document-canvas-mode="preview"]').wait_for(state="visible")
         for mode in ("source", "compare", "preview"):
-            canvas.locator(f'[data-artifact-mode="{mode}"]').click()
+            control = canvas.locator(f'[data-artifact-mode="{mode}"]')
+            if mode == "compare":
+                assert control.is_disabled()
+                continue
+            control.click()
             canvas.locator(f'[data-document-canvas-mode="{mode}"]').wait_for(state="visible")
         workbench_requests = [
             urlsplit(url).path

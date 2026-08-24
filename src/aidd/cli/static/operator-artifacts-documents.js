@@ -441,7 +441,7 @@ function readerFreshness(workbench = {}) {
   };
 }
 
-function renderDocumentReadingBrief(workbench) {
+function renderDocumentReadingBrief(workbench, {compact = false} = {}) {
   const documentView = workbench.document || {};
   const profile = documentReadingProfile(workbench);
   const freshness = readerFreshness(workbench);
@@ -461,6 +461,25 @@ function renderDocumentReadingBrief(workbench) {
     path: documentView.path || "",
     category: profile.category
   });
+  if (compact) {
+    return `
+      <section class="reader-brief reader-brief-compact" aria-label="Document reading brief">
+        <div class="reader-brief-compact-main">
+          <p class="reader-eyebrow">Reading brief · read-only document</p>
+          <h2>${escapeHtml(profile.title)}</h2>
+          <p>${escapeHtml(profile.purpose)}</p>
+        </div>
+        <div class="reader-brief-compact-facts" aria-label="Document provenance and freshness">
+          <span class="small-badge ${escapeHtml(badge.tone)}">${escapeHtml(badge.label)}</span>
+          <span class="small-badge ${escapeHtml(freshness.tone)}" data-reader-freshness="${escapeHtml(freshness.label)}">${escapeHtml(freshness.label)}</span>
+          <span class="reader-brief-compact-fact"><strong>Role</strong>${escapeHtml(documentNavigatorRoleLabel(role))}</span>
+          <span class="reader-brief-compact-fact"><strong>Stage / attempt</strong>${escapeHtml(workbench.stage || state.activeStage)} / ${escapeHtml(workbench.attempt_number || "?")}</span>
+          <span class="reader-brief-compact-fact"><strong>Why it matters now</strong>${escapeHtml(profile.use)}</span>
+          <span class="reader-brief-compact-fact"><strong>Source of truth</strong>${escapeHtml(documentNavigatorSourceOfTruth({key: documentView.key || workbench.selected_key, kind: "document", path: documentView.path || ""}))}</span>
+        </div>
+      </section>
+    `;
+  }
   return `
     <section class="reader-brief" aria-label="Document reading brief">
       <div class="reader-brief-heading">
@@ -820,10 +839,25 @@ function renderFindingAnchor(item = {}) {
   return `<a class="finding-anchor" data-finding-anchor-link="line" href="#line-${line}">Line ${line}</a>`;
 }
 
-function renderWorkbenchTableOfContents(workbench) {
+function renderWorkbenchTableOfContents(workbench, {compact = false} = {}) {
   if (state.artifactViewMode === "compare") return "";
   const view = workbenchSelectedDocumentView(workbench);
   const headings = markdownHeadingSummary(view?.text || "");
+  if (compact) {
+    return `
+      <nav class="workbench-toc reader-document-map reader-heading-map" data-reader-heading-map aria-label="Heading map">
+        <div class="reader-heading-map-heading">
+          <strong>Heading map</strong>
+          <span class="small-badge">${escapeHtml(headings.length)} sections</span>
+        </div>
+        ${headings.length ? `<ol class="workbench-toc-list">
+          ${headings.map((heading, index) => `
+            <li class="toc-level-${escapeHtml(heading.level)}"><a href="#${escapeHtml(readerHeadingAnchorId(heading, index))}" data-finding-anchor-link="heading">${escapeHtml(heading.label)}</a></li>
+          `).join("")}
+        </ol>` : `<div class="empty-state">No Markdown headings were recorded in this bounded copy.</div>`}
+      </nav>
+    `;
+  }
   return `
     <details class="workbench-toc reader-document-map" aria-label="Document map">
       <summary>
@@ -913,14 +947,21 @@ function renderDocumentReaderControls(workbench) {
 }
 
 function renderDocumentReaderCanvas(workbench, {studio = false} = {}) {
-  return `
-    ${renderDocumentReadingBrief(workbench)}
-    ${renderDocumentReaderControls(workbench)}
-    ${renderReaderTechnicalDetails(workbench)}
+  const readerBody = `
     <section class="workbench-document-pane hierarchy-primary document-canvas" data-document-canvas-mode="${escapeHtml(state.artifactViewMode)}">
-      ${renderWorkbenchTableOfContents(workbench)}
-      ${renderWorkbenchDocumentBody(workbench)}
+      <div class="reader-body-layout${studio ? " reader-body-layout-compact" : ""}">
+        <div class="reader-body-content">
+          ${renderWorkbenchDocumentBody(workbench)}
+        </div>
+        ${renderWorkbenchTableOfContents(workbench, {compact: studio})}
+      </div>
     </section>
+  `;
+  return `
+    ${renderDocumentReadingBrief(workbench, {compact: studio})}
+    ${renderDocumentReaderControls(workbench)}
+    ${readerBody}
+    ${renderReaderTechnicalDetails(workbench)}
   `;
 }
 
@@ -929,7 +970,7 @@ function renderWorkbenchViewer(workbench) {
   return `
     <div class="workbench-main reader-workbench-main" data-evidence-inspector="${evidenceInspector ? "present" : "absent"}">
       <div class="reader-document-column">
-        ${renderDocumentReaderCanvas(workbench)}
+        ${renderDocumentReaderCanvas(workbench, {studio: true})}
       </div>
       ${evidenceInspector}
     </div>

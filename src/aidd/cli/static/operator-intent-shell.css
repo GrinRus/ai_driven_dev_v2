@@ -360,7 +360,7 @@ body {
 
   body:not(.setup-active) .operator-workspace
     .stage-document-workbench.evidence-workbench-grid {
-    grid-template-columns: minmax(190px, 220px) minmax(0, 1fr);
+    grid-template-columns: minmax(180px, 205px) minmax(0, 1fr);
   }
 
   body:not(.setup-active) .operator-workspace
@@ -378,7 +378,7 @@ body {
 
   body:not(.setup-active) .operator-workspace
     .stage-document-workbench .workbench-main {
-    grid-template-columns: minmax(0, 1fr) minmax(230px, 300px);
+    grid-template-columns: minmax(0, 1fr) minmax(240px, 270px);
   }
 
   body:not(.setup-active) .operator-workspace
