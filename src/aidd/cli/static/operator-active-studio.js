@@ -247,6 +247,10 @@ function renderTaskWorkspace(taskView) {
     ? (state.activeJobConnection?.state || "unknown")
     : "durable";
   const rawOutput = activeTaskJob ? rawTextFromEntries(logEntriesFromChunks(state.activeJobLogChunks || [])) : "";
+  const hasAttemptEvidence = Boolean(activeTaskJob || latestAttempt);
+  const attemptTitle = selected
+    ? `${selected.id} · ${selected.title || "Untitled task"}`
+    : (state.selectedTaskId || "Active task");
   const scopePaths = Array.isArray(selected?.scope_paths) ? selected.scope_paths : [];
   const acceptanceCriteria = Array.isArray(selected?.acceptance_criteria)
     ? selected.acceptance_criteria
@@ -268,10 +272,36 @@ function renderTaskWorkspace(taskView) {
   const actionButton = actionName
     ? `<button data-task-action="${escapeHtml(actionName)}"${actionName === "run" || actionName === "resume" ? ` data-task-action-id="${escapeHtml(selected.id)}"` : ""} type="button" ${actionState?.eligible === true ? "" : "disabled aria-disabled=\"true\""}>${escapeHtml(actionLabel)}</button>`
     : "";
+  const attemptTray = `
+    <section class="surface task-attempt-tray ${hasAttemptEvidence ? "has-evidence" : "empty"}" data-task-attempt-tray data-active-task-attempt="${hasAttemptEvidence ? "true" : "false"}" data-attempt-status="${escapeHtml(attemptStatus)}">
+      <div class="task-attempt-header">
+        <div>
+          <p class="eyebrow">Active task attempt</p>
+          <h3>${escapeHtml(attemptTitle)}</h3>
+          <p class="muted task-attempt-milestone">${escapeHtml(attemptMilestone)}</p>
+        </div>
+        <span class="small-badge">${escapeHtml(attemptStatus)}</span>
+      </div>
+      ${hasAttemptEvidence ? `<dl class="task-attempt-facts" data-task-attempt-facts>
+        <div><dt>Identity</dt><dd>${escapeHtml(attemptIdentity)}</dd></div>
+        <div><dt>Elapsed</dt><dd>${escapeHtml(attemptElapsed)}</dd></div>
+        <div><dt>Last output</dt><dd>${escapeHtml(attemptOutputAge)}</dd></div>
+        <div><dt>Milestone</dt><dd>${escapeHtml(attemptMilestone)}</dd></div>
+        <div><dt>Connection</dt><dd>${escapeHtml(attemptConnection)}</dd></div>
+        <div><dt>Reconnect cursor</dt><dd>${escapeHtml(state.activeJobCursor || 0)}</dd></div>
+      </dl>
+      <div class="task-attempt-actions">
+        <button class="primary" data-task-attempt-primary data-aidd-primary-action data-aidd-focus-role="primary" data-tab-shortcut="logs" type="button">Open live output</button>
+        ${activeTaskJob && ["running", "waiting-for-operator", "cancelling"].includes(activeJob.status) ? `<button class="secondary" data-cancel-job="${escapeHtml(activeJob.job_id)}" type="button" ${activeJob.status === "cancelling" ? "disabled" : ""}>${activeJob.status === "cancelling" ? "Cancelling..." : "Cancel attempt"}</button>` : ""}
+      </div>
+      <details class="task-attempt-output"><summary>Raw output</summary><pre data-task-attempt-output>${escapeHtml(rawOutput || "No runtime output captured yet.")}</pre></details>
+      ${activeTaskJob ? renderActiveJobConnectionSurface() : ""}` : `<p class="muted">No task attempt has started; durable runtime output is not available.</p>`}
+    </section>`;
   return `
     <section class="active-studio" data-studio-surface="task-workspace" data-state="ready">
       ${renderActiveStudioContextBar(activeStudioState(), activeStageItem())}
       ${renderIntentPhaseStepper()}
+      ${hasAttemptEvidence ? attemptTray : ""}
       <section class="surface task-workspace" data-task-workspace>
         <div class="surface-title"><span>Task Workspace</span><span class="small-badge">${escapeHtml(allTasks.length)} tasks</span></div>
         <p class="muted">Groups, order, readiness, and next task are authoritative from the core ledger.</p>
@@ -344,20 +374,7 @@ function renderTaskWorkspace(taskView) {
             <div class="task-action-controls">${actionButton}${actionName && typeof renderContextualRunnerControl === "function" ? renderContextualRunnerControl({actionLabel: actionLabel.toLowerCase()}) : ""}</div>
           </section>` : `<p class="muted">Select a task to inspect its bounded detail.</p>`}
       </section>
-      ${(selected || activeTaskJob) ? `<section class="surface task-attempt-tray" data-task-attempt-tray data-attempt-status="${escapeHtml(attemptStatus)}">
-        <div class="surface-title"><span>Active attempt</span><span class="small-badge">${escapeHtml(attemptStatus)}</span></div>
-        <dl class="task-attempt-facts">
-          <div><dt>Identity</dt><dd>${escapeHtml(attemptIdentity)}</dd></div>
-          <div><dt>Elapsed</dt><dd>${escapeHtml(attemptElapsed)}</dd></div>
-          <div><dt>Last output</dt><dd>${escapeHtml(attemptOutputAge)}</dd></div>
-          <div><dt>Milestone</dt><dd>${escapeHtml(attemptMilestone)}</dd></div>
-          <div><dt>Connection</dt><dd>${escapeHtml(attemptConnection)}</dd></div>
-          <div><dt>Reconnect cursor</dt><dd>${escapeHtml(state.activeJobCursor || 0)}</dd></div>
-        </dl>
-        ${activeTaskJob && ["running", "waiting-for-operator", "cancelling"].includes(activeJob.status) ? `<button data-cancel-job="${escapeHtml(activeJob.job_id)}" type="button" ${activeJob.status === "cancelling" ? "disabled" : ""}>${activeJob.status === "cancelling" ? "Cancelling..." : "Cancel attempt"}</button>` : ""}
-        <details class="task-attempt-output"><summary>Raw output</summary><pre>${escapeHtml(rawOutput || "No runtime output captured yet.")}</pre></details>
-        ${activeTaskJob ? renderActiveJobConnectionSurface() : ""}
-      </section>` : ""}
+      ${!hasAttemptEvidence && selected ? attemptTray : ""}
     </section>
   `;
 }

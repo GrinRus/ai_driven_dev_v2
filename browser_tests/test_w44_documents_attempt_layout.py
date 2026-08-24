@@ -128,7 +128,13 @@ def test_task_attempt_detail_and_live_tray_share_desktop_workbench(
         assert len(geometry["columns"].split()) == 2
         assert abs(geometry["list"]["y"] - geometry["detail"]["y"]) < 2
         assert geometry["detail"]["x"] > geometry["list"]["x"]
-        assert geometry["tray"]["y"] >= geometry["list"]["y"] + geometry["list"]["height"]
+        assert (
+            page.locator(
+                '[data-task-attempt-tray][data-active-task-attempt="true"]'
+            ).count()
+            == 1
+        )
+        assert geometry["tray"]["y"] < geometry["list"]["y"]
         assert geometry["tray"]["width"] >= geometry["list"]["width"]
         assert page.locator('[data-task-action="resume"]').count() == 1
         assert page.locator("[data-task-action-bar] [data-contextual-runner-control]").count() == 1

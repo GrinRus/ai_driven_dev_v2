@@ -38,6 +38,11 @@ async function contextFor(dashboard) {
     renderContextualRunnerControl({actionLabel}) {
       return `<div class="contextual-runner-control" data-contextual-runner-control>${actionLabel}</div>`;
     },
+    secondsLabel(value) { return `${value}s`; },
+    runtimeOutputFreshnessLabel(job) { return `Last runtime output ${job.runtime_output_age_seconds}s ago`; },
+    logEntriesFromChunks(chunks) { return (chunks || []).map((chunk) => ({stream: chunk.stream || "stdout", source: "runtime", text: chunk.text || ""})); },
+    rawTextFromEntries(entries) { return entries.map((entry) => `[${entry.stream}] ${entry.text}`).join("\\n"); },
+    renderActiveJobConnectionSurface() { return `<div data-connection-state="reconnecting">Reconnecting to live output</div>`; },
   });
   const source = await readFile(path.join(staticRoot, "operator-active-studio.js"), "utf8");
   vm.runInContext(source, context, {filename: "operator-active-studio.js"});
@@ -162,4 +167,52 @@ test("Task Workspace preserves a literal service guard when Runner is unavailabl
   assert.match(html, /Runner authentication is not verified\./);
   assert.match(html, /data-task-action="run"[^>]+disabled/);
   assert.match(html, /data-action-recommended="none"/);
+});
+
+test("Task Workspace promotes the selected attempt tray and preserves factual live state", async () => {
+  const context = await contextFor({
+    work_item: "WI-1",
+    run: {run_id: "run-1"},
+    stages: [{stage: "implement", status: "executing"}],
+  });
+  context.state.activeJobStatus = {
+    kind: "task",
+    job_id: "job-task-1",
+    attempt_path: ".aidd/attempts/task-TL-1/1",
+    status: "running",
+    elapsed_seconds: 42,
+    runtime_output_age_seconds: 3,
+    message: "Focused verification started",
+  };
+  context.state.activeJobConnection = {state: "reconnecting", failureCount: 1, retryDelayMs: 500};
+  context.state.activeJobLogChunks = [{stream: "stdout", text: "pytest -q tests/example.py"}];
+  context.state.activeJobCursor = 7;
+  const html = vm.runInContext(`renderTaskWorkspace({
+    task_list: [{id: "TL-1", title: "Implement selected task", status: "running", group: "Running", dependencies: [], attempt_count: 1}],
+    next_ready_task: null,
+    critical_path: ["TL-1"],
+    selected_task: {
+      id: "TL-1", title: "Implement selected task", status: "running", outcome: "Deliver the bounded implementation.",
+      dominant_deliverable: "A reviewed implementation", scope_paths: ["src/example.py"], acceptance_criteria: [],
+      dependencies: [], missing_dependencies: [], verification: "pytest -q tests/example.py", evidence_links: [], attempts: [],
+      action_projection: {recommended: null, states: {}, runner: {required: false, eligible: true}},
+    },
+  })`, context, {filename: "operator-active-studio.js"});
+  assert.match(html, /data-active-task-attempt="true"/);
+  assert.match(html, /TL-1 · Implement selected task/);
+  assert.match(html, /Focused verification started/);
+  assert.match(html, /Last runtime output 3s ago/);
+  assert.match(html, /Reconnect cursor/);
+  assert.match(html, /data-task-attempt-primary[^>]*data-aidd-primary-action[^>]*>Open live output/);
+  assert.match(html, /data-cancel-job="job-task-1"/);
+  assert.match(html, /data-connection-state="reconnecting"/);
+  assert.match(html, /pytest -q tests\/example\.py/);
+  assert.doesNotMatch(html, /progress|\d+%/i);
+
+  context.state.activeJobStatus.status = "completed";
+  const terminal = vm.runInContext(`renderTaskWorkspace({
+    task_list: [], selected_task: {id: "TL-1", title: "Implement selected task", status: "succeeded", attempts: [], action_projection: {recommended: null, states: {}}}
+  })`, context, {filename: "operator-active-studio.js"});
+  assert.match(terminal, /data-task-attempt-primary[^>]*>Open live output/);
+  assert.doesNotMatch(terminal, /data-cancel-job=/);
 });
