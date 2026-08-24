@@ -15554,18 +15554,21 @@ Local tasks:
     UI asset/composite/full UI plus docs/planning checks (`220 passed`), packaged JavaScript check,
     Ruff, mypy, deterministic scenarios, adapter conformance, packaged UI browser, security checks,
     and build all passed. `W44-E1-S3-T4` is now the next dependency-ready task.
-- `W44-E1-S3-T4` (next) Render the target Ready-task Task Workspace composition using the
-  authoritative task ledger. Add a deterministic provider-free Ready fixture with selected task,
-  dependency rows, Runner readiness, one primary Run/Resume/Finalize action, and the live-output
-  tray without changing task status or eligibility ownership. Verification: task surface browser
-  fixtures, selected-task route/reload checks, geometry/accessibility checks, and no duplicate
-  launch actions.
-- `W44-E1-S3-T5` (soon) Render target Decision, Validation Repair, Review/QA Remediation, and
+- `W44-E1-S3-T4` (done) Render the target Ready-task Task Workspace composition using the
+  authoritative task ledger. The provider-free Ready fixture now retains a selected TL-2 task,
+  dependency rows, core readiness, one Run action, and the factual attempt tray without changing
+  task status or eligibility ownership. PR #334 (merge `df6b3f56`) adds the target table
+  composition, selected-task route/reload coverage, mobile layout, and provider-free matrix
+  coverage. Verification: focused Ready-task browser checks (`2 passed`), task-run matrix,
+  existing task/stage/action/accessibility/geometry checks, frontend Node suite (`135 passed`),
+  docs/planning (`50 passed`), Ruff, mypy, packaged JavaScript, deterministic scenarios, adapter
+  conformance, packaged UI browser, security, and build all passed.
+- `W44-E1-S3-T5` (next) Render target Decision, Validation Repair, Review/QA Remediation, and
   Mobile Decision content above the shared recovery chrome. Preserve the actual question/finding,
   evidence, consequence, resolution state, Write/Preview/destination, and one primary action in
   the initial readable viewport. Verification: question, validation, remediation, and mobile
   provider-free journeys with focus, action visibility, and reconnect/disabled-state checks.
-- `W44-E1-S3-T6` (planned) Replace legacy Create Work Item, Runs/Attempts, and Flow Complete
+- `W44-E1-S3-T6` (soon) Replace legacy Create Work Item, Runs/Attempts, and Flow Complete
   compositions with target task-centered layouts while retaining their existing routes, ids,
   history, lineage, and immutable handoff semantics. Verification: create/history/completion
   rendered fixtures, route/reload checks, and target screenshot comparison.
@@ -15600,6 +15603,14 @@ Wave 44 reconciliation:
   Ruff, mypy, deterministic scenarios, adapter conformance, packaged UI browser, security checks,
   and build all passed. `W44-E1-S3-T4` is now `Next`, `T5` is its direct successor in `Soon`, and
   human usability, Claude/cross-runtime, and Wave 36 acceptance remain parked.
+
+- `W44-E1-S3-T4` is complete in PR #334 (merge `df6b3f56`). The Ready-task Task Workspace now
+  renders core-owned groups as a dependency-aware table, keeps the selected task in the canonical
+  route across reload, exposes one Run action with one contextual Runner, and retains factual
+  attempt evidence. The deterministic Ready fixture and five-viewport task journey remain
+  provider-free; focused browser/UI, full frontend, docs/planning, Ruff, mypy, deterministic,
+  adapter, packaged-browser, security, and build checks passed. `W44-E1-S3-T5` is now `Next`,
+  `T6` is in `Soon`; human usability, Claude/cross-runtime, and Wave 36 acceptance remain parked.
 
 - `W44-E1-S3-T2` is complete in PR #330 (merge `834b7bfd`). The fresh rendered comparison is
   retained in `docs/e2e/w44-e1-s3-t2-target-ux-audit.md`: all captured routes are technically

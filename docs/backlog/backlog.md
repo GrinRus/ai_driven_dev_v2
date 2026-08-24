@@ -7,13 +7,13 @@ slice, and local task.
 
 ## Next
 
-- `W44-E1-S3-T4` — Render the target Ready-task Task Workspace composition using the authoritative
-  task ledger and a deterministic selected-task fixture.
+- `W44-E1-S3-T5` — Render target Decision, Validation Repair, Review/QA Remediation, and Mobile
+  Decision content above the shared recovery chrome.
 
 ## Soon
 
-- `W44-E1-S3-T5` — Render target Decision, Validation Repair, Review/QA Remediation, and Mobile
-  Decision content above the shared recovery chrome.
+- `W44-E1-S3-T6` — Replace legacy Create Work Item, Runs/Attempts, and Flow Complete compositions
+  with target task-centered layouts.
 
 ## Parking lot
 
@@ -39,6 +39,15 @@ slice, and local task.
   queue-restoration policy in `docs/backlog/roadmap.md` (`W8-E3-S1`).
 
 ## Current reconciliation
+
+- `2026-08-24` PR #334 (merge `df6b3f56`) completed `W44-E1-S3-T4`: the Ready-task Task Workspace
+  now renders core-owned groups as a dependency-aware table with selected-task route/reload,
+  dependency and verification cells, one Run action, one contextual Runner, and factual attempt
+  evidence. The deterministic provider-free Ready fixture and task-run route cover desktop/mobile
+  geometry, accessibility, diagnostics, and no duplicate launch actions; frontend, docs/planning,
+  Ruff, mypy, deterministic, adapter, packaged-browser, security, and build checks passed.
+  `W44-E1-S3-T5` is now `Next`, `T6` is in `Soon`; human usability, Claude/cross-runtime, and
+  Wave 36 acceptance remain parked.
 
 - `2026-08-24` PR #332 (merge `c7992051`) completed `W44-E1-S3-T3`: the target desktop Project/
   Work Item rail now exposes project identity, deterministic server-owned Work Item selection,
