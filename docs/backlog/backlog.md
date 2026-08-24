@@ -7,13 +7,14 @@ slice, and local task.
 
 ## Next
 
-- `W44-E1-S3-T13` — Recompose Flow Complete so the core-recommended outcome action is visible and
-  focusable in the initial `320x568` viewport.
+- `W44-E1-S3-T7` — Align shared Operator UI tokens and component density with the target visual
+  language: warm canvas, deep navy rail, cobalt primary, mint success, amber warning, and at least
+  14px primary desktop reading text.
 
 ## Soon
 
-- `W44-E1-S3-T7` — Align shared Operator UI tokens and component density with the target visual
-  language after the completion first-action contract is green.
+- `W44-E1-S3-T8` — Close the rendered convergence wave only after a fresh 13-surface audit confirms
+  every target gap is absent or explicitly environment-blocked.
 
 ## Parking lot
 
@@ -39,6 +40,13 @@ slice, and local task.
   queue-restoration policy in `docs/backlog/roadmap.md` (`W8-E3-S1`).
 
 ## Current reconciliation
+
+- `2026-08-24` PR #348 (merge `3193e39e`) completed `W44-E1-S3-T13`: Flow Complete now uses the
+  existing responsive single-primary action dock, keeping the immutable handoff outcome action
+  visible and focusable at `320x568` without changing lineage or mutation semantics. Completion,
+  terminal, full five-viewport provider-free, UI contract, frontend, Ruff, mypy, packaged JavaScript,
+  deterministic, adapter, build, and packaged-browser checks passed. `W44-E1-S3-T7` is now Next and
+  `W44-E1-S3-T8` is Soon; human usability, Claude/cross-runtime, and Wave 36 acceptance remain parked.
 
 - `2026-08-24` PR #346 (merge `f1f51178`) completed `W44-E1-S3-T12`: Review-remediation now lands on
   the authoritative rejected Review quality gate, and its existing durable remediation control is
