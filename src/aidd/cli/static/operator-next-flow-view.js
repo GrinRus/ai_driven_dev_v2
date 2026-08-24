@@ -271,6 +271,67 @@ function renderFlowCompleteVerification(handoff, run, stages) {
   `;
 }
 
+function renderFlowCompleteHandoffTable(handoff, run, stages) {
+  const repositoryArtifacts = (handoff.final_artifacts || []).filter((artifact) =>
+    /repository|diff|implementation/i.test(`${artifact.key} ${artifact.path}`)
+  );
+  const repositoryState = repositoryArtifacts.length
+    ? repositoryArtifacts.map((artifact) => artifact.key).join(", ")
+    : "Repository state not recorded";
+  const completed = stages.filter((stage) => stage.status === "succeeded").length;
+  const rows = [
+    ["Final outcome", handoff.outcome || handoff.final_qa_status || handoff.status || "not recorded"],
+    ["Delivered scope", `${run.stage_target || "full workflow"}; ${completed}/${stages.length || 0} stages complete`],
+    ["Verification summary", `${handoff.final_qa_status || "not recorded"} · ${handoff.qa_stage_state || "state unavailable"}`],
+    ["Known limitations", (handoff.blockers || []).map((item) => item.title || item.kind).join("; ") || "No known limitations recorded."],
+    ["Repository state", repositoryState],
+    ["Completed", handoff.completed_at_utc || run.completed_at_utc || "timestamp unavailable"]
+  ];
+  return `
+    <section class="target-flow-handoff-table" data-flow-complete-handoff-table aria-label="Flow Complete handoff summary">
+      <div class="target-panel-heading"><strong>Handoff summary</strong><span class="small-badge">immutable</span></div>
+      <dl>${rows.map(([label, value]) => `<div><dt>${escapeHtml(label)}</dt><dd>${escapeHtml(value)}</dd></div>`).join("")}</dl>
+    </section>
+  `;
+}
+
+function renderFlowCompleteEvidenceTable(handoff) {
+  const artifacts = handoff.final_artifacts || [];
+  return `
+    <section class="target-flow-evidence-table" data-flow-complete-evidence-table aria-label="Final documents and evidence">
+      <div class="target-panel-heading"><strong>Final documents and evidence</strong><span class="small-badge">${escapeHtml(artifacts.length)} retained</span></div>
+      <div class="target-evidence-table-head"><span>Document</span><span>Role</span><span>Final status</span><span>Action</span></div>
+      <div class="target-evidence-table-body">
+        ${artifacts.length ? artifacts.slice(0, 12).map((artifact) => `
+          <div class="target-evidence-row">
+            <strong>${escapeHtml(artifact.key || "artifact")}</strong>
+            <span>${escapeHtml(artifact.kind || artifact.stage || "Evidence")}</span>
+            <span><span class="small-badge ${artifact.available === false ? "warn" : "good"}">${artifact.available === false ? "Unavailable" : "Retained"}</span></span>
+            <button class="link-button" data-artifact-stage="${escapeHtml(artifact.stage || state.activeStage)}" data-artifact-key="${escapeHtml(artifact.key || "")}" data-artifact-kind="${escapeHtml(artifact.kind || "document")}" type="button">Open</button>
+          </div>
+        `).join("") : `<div class="empty-state">No final documents or evidence recorded.</div>`}
+      </div>
+    </section>
+  `;
+}
+
+function renderFlowCompleteCompletionInspector(handoff, run) {
+  const artifacts = (handoff.final_artifacts || []).filter((artifact) => artifact.available !== false).length;
+  const runIds = [run.run_id, run.lineage?.source_run_id].filter(Boolean);
+  return `
+    <section class="target-completion-inspector" data-flow-complete-completion-inspector aria-label="Completion inspector">
+      <div class="target-panel-heading"><strong>Completion</strong><span class="small-badge good">${escapeHtml(handoff.status || "recorded")}</span></div>
+      <ul class="target-completion-checklist">
+        <li><span aria-hidden="true">✓</span><strong>QA ${escapeHtml(handoff.final_qa_status || "recorded")}</strong></li>
+        <li><span aria-hidden="true">✓</span><strong>${escapeHtml(artifacts)} retained evidence items</strong></li>
+        <li><span aria-hidden="true">✓</span><strong>Source run remains immutable</strong></li>
+      </ul>
+      <div class="target-completion-run-ids"><span>Run IDs</span>${runIds.length ? runIds.map((id) => `<code>${escapeHtml(id)}</code>`).join("") : `<span class="muted">not recorded</span>`}</div>
+      <p class="muted">Follow-up, clone, evaluation, and archive create separate lineage overlays.</p>
+    </section>
+  `;
+}
+
 function renderStudioFlowCompleteState() {
   const handoff = state.dashboard?.terminal_handoff;
   const eligibility = studioFlowCompleteEligibility(handoff);
@@ -287,7 +348,7 @@ function renderStudioFlowCompleteState() {
   const sourceWorkItem = lineageValue(lineage.source_work_item_id, state.dashboard?.work_item || "not recorded");
   const baseline = lineageValue(lineage.baseline_label || lineage.baseline_id, "current run");
   return `
-    <section class="surface studio-flow-complete" data-studio-flow-complete data-terminal-status="${escapeHtml(handoff.status)}">
+    <section class="surface studio-flow-complete target-flow-complete" data-studio-flow-complete data-target-flow-complete data-terminal-status="${escapeHtml(handoff.status)}">
       <div class="flow-complete-hero">
         <div class="flow-complete-hero-copy">
           <p class="eyebrow">Fresh terminal QA</p>
@@ -304,8 +365,10 @@ function renderStudioFlowCompleteState() {
         </div>
         ${renderStudioFlowCompleteAction(primary, {primary: true})}
       </section>
-      <div class="flow-complete-layout">
+      <div class="flow-complete-layout target-flow-complete-layout">
         <main class="flow-complete-main">
+          ${renderFlowCompleteHandoffTable(handoff, run, state.dashboard?.stages || [])}
+          ${renderFlowCompleteEvidenceTable(handoff)}
           ${renderFlowCompleteScope(run, state.dashboard?.stages || [])}
           ${renderFlowCompleteVerification(handoff, run, state.dashboard?.stages || [])}
           <section class="flow-immutable-handoff">
@@ -336,6 +399,7 @@ function renderStudioFlowCompleteState() {
           ` : ""}
         </main>
         <aside class="flow-lineage-panel">
+          ${renderFlowCompleteCompletionInspector(handoff, run)}
           <h3>Lineage</h3>
           <dl>
             <div><dt>Source Work Item</dt><dd>${escapeHtml(sourceWorkItem)}</dd></div>

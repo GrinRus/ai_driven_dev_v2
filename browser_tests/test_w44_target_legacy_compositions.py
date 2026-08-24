@@ -1,0 +1,89 @@
+from __future__ import annotations
+
+from pathlib import Path
+
+import pytest
+from playwright.sync_api import sync_playwright
+
+from browser_tests.browser_harness import (
+    operator_browser_harness,
+    wait_for_history_surface,
+    wait_for_work_item_surface,
+)
+from browser_tests.rendered_assertions import assert_accessible_render
+from browser_tests.rendered_geometry import assert_rendered_geometry
+from browser_tests.state_fixtures import build_browser_state_fixture
+
+
+@pytest.mark.parametrize("viewport", ((1280, 900), (390, 844)))
+def test_create_work_item_uses_target_editor_and_preview(
+    tmp_path: Path, viewport: tuple[int, int]
+) -> None:
+    with sync_playwright() as playwright, operator_browser_harness(
+        tmp_path, playwright
+    ) as harness, harness.open_page(viewport) as browser_page:
+        page = browser_page.page
+        page.goto(f"{harness.url}?ui=studio", wait_until="networkidle")
+        surface = page.locator("[data-create-work-item-surface]")
+        surface.wait_for(state="visible")
+        assert surface.locator("[data-request-editor]").is_visible()
+        assert surface.locator("[data-request-preview-panel]").is_visible()
+        assert "operator-request.md" in surface.inner_text()
+        assert "Runner is selected when you launch work." in surface.inner_text()
+        assert surface.locator("[data-contextual-runner-control]").count() == 0
+        assert_accessible_render(page, target_size=44 if viewport[0] <= 760 else 32)
+        assert_rendered_geometry(page)
+        browser_page.diagnostics.assert_clean()
+
+
+def test_history_uses_target_attempt_inspector_without_changing_lineage(
+    tmp_path: Path,
+) -> None:
+    fixture = build_browser_state_fixture(tmp_path / "history", "history")
+    assert fixture.work_item and fixture.run_id
+    with sync_playwright() as playwright, operator_browser_harness(
+        fixture.project_root, playwright, work_item=fixture.work_item
+    ) as harness, harness.open_page((1280, 900)) as browser_page:
+        page = browser_page.page
+        page.goto(
+            f"{harness.url}?mode=history&work_item={fixture.work_item}"
+            f"&run_id={fixture.run_id}&stage=implement",
+            wait_until="domcontentloaded",
+        )
+        wait_for_history_surface(page, work_item=fixture.work_item, run_id=fixture.run_id)
+        target = page.locator("[data-target-history-surface]")
+        target.wait_for(state="visible")
+        assert target.locator("[data-history-selected-inspector]").is_visible()
+        assert target.locator("[data-copy-history-run]").count() == 1
+        assert target.locator("[data-history-lineage-parent='run-source']").is_visible()
+        assert target.locator("[data-studio-run-comparison]").is_visible()
+        assert_rendered_geometry(page)
+        browser_page.diagnostics.assert_clean()
+
+
+@pytest.mark.parametrize("viewport", ((1280, 900), (390, 844)))
+def test_flow_complete_uses_handoff_evidence_and_completion_inspector(
+    tmp_path: Path, viewport: tuple[int, int]
+) -> None:
+    fixture = build_browser_state_fixture(tmp_path / f"terminal-{viewport[0]}", "terminal-handoff")
+    assert fixture.work_item and fixture.run_id
+    with sync_playwright() as playwright, operator_browser_harness(
+        fixture.project_root, playwright, work_item=fixture.work_item
+    ) as harness, harness.open_page(viewport) as browser_page:
+        page = browser_page.page
+        page.goto(
+            f"{harness.url}?mode=studio&work_item={fixture.work_item}"
+            f"&run_id={fixture.run_id}&stage=qa",
+            wait_until="domcontentloaded",
+        )
+        wait_for_work_item_surface(page, fixture.work_item)
+        flow = page.locator("[data-target-flow-complete]")
+        flow.wait_for(state="visible")
+        assert flow.locator("[data-flow-complete-handoff-table]").is_visible()
+        assert flow.locator("[data-flow-complete-evidence-table]").is_visible()
+        assert flow.locator("[data-flow-complete-completion-inspector]").is_visible()
+        assert flow.locator("[data-core-recommended-outcome]").count() == 1
+        assert page.locator("#runtimeSettings").is_hidden()
+        assert_accessible_render(page, target_size=44 if viewport[0] <= 760 else 32)
+        assert_rendered_geometry(page)
+        browser_page.diagnostics.assert_clean()

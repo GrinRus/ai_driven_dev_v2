@@ -313,40 +313,77 @@ function renderStudioHistoryArchive() {
 function renderStudioHistory(timeline) {
   const frames = primaryHistoryFrames(timeline);
   const markers = historyEventMarkers(timeline);
-  if (!frames.length) {
-    return `${renderHistoryRunList()}<div class="empty-state">No durable attempt History frames are available for this run.</div>`;
-  }
+  const intentSummary = typeof activeIntentSummary === "function" ? activeIntentSummary() : null;
+  const intent = intentSummary?.excerpt || "Work Item run history";
   const selected = selectedHistoryFrame(timeline);
-  return `
-    ${renderHistoryRunList()}
-    <section class="surface studio-history" data-studio-history data-history-auto-follow="${state.historyAutoFollow ? "true" : "false"}">
-      <div class="surface-title">
-        <span>Run chronology</span>
-        <span class="small-badge">${escapeHtml(frames.length)} frames</span>
+  const selectedLabel = selected ? historyFrameLabel(selected) : "No attempt selected";
+  const targetInspector = `
+    <aside class="target-history-inspector" data-history-selected-inspector aria-label="Selected attempt inspector">
+      <div class="target-panel-heading"><strong>Evidence and lineage</strong><span class="small-badge">read-only</span></div>
+      <div class="target-history-attempt-heading">
+        <p class="eyebrow">Selected attempt</p>
+        <h3>${escapeHtml(selectedLabel)}</h3>
+        <button class="secondary" data-copy-history-run type="button">Copy run ID</button>
       </div>
-      <div class="history-filmstrip-frames" aria-label="Durable run frames">
-        ${frames.map(renderHistoryFrameButton).join("")}
-      </div>
-      <div class="history-selection" data-history-selection="${escapeHtml(selected?.identity || "")}">
-        <div class="surface-title compact">
-          <strong>${escapeHtml(selected ? historyFrameLabel(selected) : "No frame selected")}</strong>
-          <button data-history-return-live type="button" class="secondary" ${state.historyAutoFollow ? "disabled aria-disabled=\"true\"" : ""}>Return to live</button>
-        </div>
-        <span>Historical selection pauses browser auto-follow only; the active runtime is not stopped.</span>
-        ${renderHistoryFrameDetails(selected)}
+      ${renderHistoryFrameDetails(selected).replace("data-history-attempt-details", "data-target-history-attempt-details")}
+      <section class="target-history-evidence" aria-label="Selected attempt evidence">
+        <div class="surface-title compact"><span>Artifacts</span><span class="small-badge">${escapeHtml(selected?.evidence_refs?.length || 0)}</span></div>
         <div class="recent-artifacts">${renderHistoryEvidence(selected)}</div>
+      </section>
+      <p class="muted">Compare is available only when two retained attempts are present; no history is reconstructed.</p>
+    </aside>
+  `;
+  if (!frames.length) {
+    return `
+      <section class="target-history-surface" data-target-history-surface>
+        <header class="target-surface-header">
+          <div><p class="eyebrow">Work Item / Runs</p><h1>${escapeHtml(intent)}</h1><p>Inspect retained attempts, logs, artifacts, and lineage without changing the source run.</p></div>
+        </header>
+        <div class="target-history-grid">${renderHistoryRunList()}<div class="target-history-main"><div class="empty-state">No durable attempt History frames are available for this run.</div></div>${targetInspector}</div>
+      </section>
+    `;
+  }
+  return `
+    <section class="target-history-surface" data-target-history-surface>
+      <header class="target-surface-header">
+        <div><p class="eyebrow">Work Item / Runs</p><h1>${escapeHtml(intent)}</h1><p>Inspect retained attempts, logs, artifacts, and lineage without changing the source run.</p></div>
+        <div class="target-surface-status"><span class="small-badge">${escapeHtml(frames.length)} retained frames</span></div>
+      </header>
+      <div class="target-history-grid">
+        ${renderHistoryRunList()}
+        <div class="target-history-main">
+          <section class="surface studio-history" data-studio-history data-history-auto-follow="${state.historyAutoFollow ? "true" : "false"}">
+            <div class="surface-title">
+              <span>Run chronology</span>
+              <span class="small-badge">${escapeHtml(frames.length)} frames</span>
+            </div>
+            <div class="history-filmstrip-frames" aria-label="Durable run frames">
+              ${frames.map(renderHistoryFrameButton).join("")}
+            </div>
+            <div class="history-selection" data-history-selection="${escapeHtml(selected?.identity || "")}">
+              <div class="surface-title compact">
+                <strong>${escapeHtml(selected ? historyFrameLabel(selected) : "No frame selected")}</strong>
+                <button data-history-return-live type="button" class="secondary" ${state.historyAutoFollow ? "disabled aria-disabled=\"true\"" : ""}>Return to live</button>
+              </div>
+              <span>Historical selection pauses browser auto-follow only; the active runtime is not stopped.</span>
+              ${renderHistoryFrameDetails(selected)}
+              <div class="recent-artifacts">${renderHistoryEvidence(selected)}</div>
+            </div>
+            ${markers.length ? `
+              <details class="history-technical-events">
+                <summary>Technical events (${escapeHtml(markers.length)})</summary>
+                <div class="history-technical-event-list">
+                  ${markers.map(renderHistoryFrameButton).join("")}
+                </div>
+              </details>
+            ` : ""}
+          </section>
+          ${renderStudioRunComparisonPanel()}
+          ${renderStudioHistoryLineage()}
+          ${renderStudioHistoryArchive()}
+        </div>
+        ${targetInspector}
       </div>
-      ${markers.length ? `
-        <details class="history-technical-events">
-          <summary>Technical events (${escapeHtml(markers.length)})</summary>
-          <div class="history-technical-event-list">
-            ${markers.map(renderHistoryFrameButton).join("")}
-          </div>
-        </details>
-      ` : ""}
     </section>
-    ${renderStudioRunComparisonPanel()}
-    ${renderStudioHistoryLineage()}
-    ${renderStudioHistoryArchive()}
   `;
 }

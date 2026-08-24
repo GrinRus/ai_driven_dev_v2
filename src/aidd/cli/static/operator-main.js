@@ -178,6 +178,20 @@ document.addEventListener("keydown", async (event) => {
 
 document.addEventListener("click", async (event) => {
   try {
+    if (event.target.closest("[data-copy-request-destination]")) {
+      const destination = document.querySelector("[data-request-preview-panel] code")?.textContent || "";
+      if (destination && typeof copyArtifactPath === "function") {
+        await copyArtifactPath(destination);
+      }
+      return;
+    }
+    if (event.target.closest("[data-copy-history-run]")) {
+      const runId = state.activeRunId || state.dashboard?.run?.run_id || "";
+      if (runId && typeof copyArtifactPath === "function") {
+        await copyArtifactPath(runId);
+      }
+      return;
+    }
     if (event.target.closest("[data-request-preview]")) {
       previewOperatorRequest();
       return;
