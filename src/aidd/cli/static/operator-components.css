@@ -464,12 +464,15 @@
   align-items: start;
   background: #fff7f6;
   border: 1px solid var(--color-state-danger-border);
+  box-sizing: border-box;
   border-radius: 6px;
   display: flex;
   flex-wrap: wrap;
   gap: 6px;
   margin-top: 8px;
+  min-width: 0;
   padding: 8px;
+  width: 100%;
 }
 .validation-finding-summary.notice {
   background: var(--color-bg-muted);
@@ -483,9 +486,11 @@
 }
 .validation-finding-summary > strong {
   flex: 1 1 160px;
+  min-width: 0;
 }
 .validation-finding-summary > span:not(.small-badge) {
   flex: 2 1 240px;
+  min-width: 0;
 }
 .validation-finding-summary.compact > strong,
 .validation-finding-summary.compact > span:not(.small-badge) {
@@ -1807,7 +1812,7 @@
   box-sizing: border-box;
   display: grid;
   gap: 12px;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 320px) minmax(164px, 0.42fr);
+  grid-template-columns: minmax(0, 1.3fr) minmax(210px, 0.9fr);
   margin: 12px 0;
   min-width: 0;
   padding: 12px;
@@ -1815,6 +1820,36 @@
 }
 .repair-action-band > * {
   min-width: 0;
+}
+.repair-decision-copy {
+  display: grid;
+  gap: 8px;
+  grid-template-columns: minmax(0, 1fr);
+  min-width: 0;
+}
+.repair-decision-copy > p {
+  margin: 0;
+}
+.repair-decision-consequence {
+  background: var(--color-state-warning-bg-subtle);
+  border: 1px solid var(--color-state-warning-border);
+  border-left: 3px solid var(--amber);
+  border-radius: 4px;
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+  padding: 7px 9px;
+}
+.repair-decision-consequence .eyebrow {
+  color: var(--muted);
+  font-size: var(--type-caption-size);
+  font-weight: 800;
+  text-transform: uppercase;
+}
+.repair-decision-consequence strong {
+  font-size: 12px;
+  line-height: 1.4;
+  overflow-wrap: anywhere;
 }
 .repair-action-band.repair-available {
   border-color: var(--teal);
@@ -1837,6 +1872,15 @@
   padding: 9px 10px;
   width: 100%;
 }
+.repair-supporting-preview {
+  border-top: 1px solid var(--line);
+  grid-column: 1 / -1;
+  min-width: 0;
+  padding-top: 12px;
+}
+.repair-supporting-preview .repair-extension-preview {
+  max-width: none;
+}
 .repair-extension-preview p {
   margin: 0;
 }
@@ -1853,10 +1897,11 @@
 }
 .repair-actions {
   align-items: stretch;
-  display: flex;
-  flex-wrap: wrap;
+  align-content: start;
+  display: grid;
   gap: 8px;
-  justify-content: flex-end;
+  grid-template-columns: minmax(0, 1fr);
+  justify-content: stretch;
   min-width: 0;
 }
 .repair-actions .contextual-runner-control {
