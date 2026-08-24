@@ -108,6 +108,28 @@
   }
 }
 
+/* Decision Workbench at supported bounded heights: keep the real answer action
+   reachable before supporting evidence continues below the fold. This reuses
+   the same control (no mobile/desktop duplicate) and preserves the shell. */
+@media (max-width: 1500px) and (min-width: 761px) {
+  body.recovery-mode:has([data-human-decision-surface="question"])
+    .question-list > .question-card:first-child [data-primary-action] {
+    background: var(--teal-dark);
+    border: 1px solid var(--teal-dark);
+    bottom: var(--space-4);
+    box-shadow: var(--elevation-overlay);
+    min-height: var(--control-height);
+    position: fixed;
+    right: var(--space-6);
+    width: min(280px, calc(100vw - (var(--space-6) * 2)));
+    z-index: 60;
+  }
+  body.recovery-mode:has([data-human-decision-surface="question"])
+    .question-list > .question-card:first-child {
+    padding-bottom: calc(var(--space-8) + var(--control-height));
+  }
+}
+
 @media (max-width: 760px) {
   /* The question state is a focused decision page, not a miniature dashboard. */
   body.recovery-mode:has([data-human-decision-surface="question"]) .intent-context-region,
