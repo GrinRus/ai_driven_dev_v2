@@ -7,9 +7,9 @@ slice, and local task.
 
 ## Next
 
-- `W44-E1-S3-T17` — Recompose Validation Repair into a responsive finding-to-action hierarchy that
-  keeps the finding, literal repair consequence, readable Runner readiness, and one primary repair
-  action ahead of long evidence.
+- `W44-E1-S3-T18` — Correct the remaining eight-stage strip label clipping at the target desktop
+  density while preserving stage order, active/current semantics, keyboard access, and truthful mobile
+  disclosure.
 
 ## Soon
 
@@ -37,6 +37,15 @@ slice, and local task.
   queue-restoration policy in `docs/backlog/roadmap.md` (`W8-E3-S1`).
 
 ## Current reconciliation
+
+- `2026-08-24` PR #360 (merge `a678418a`) completed `W44-E1-S3-T17`: Validation Repair now presents the
+  finding, literal repair consequence, readable Runner readiness, and one primary recovery action before
+  long extension evidence across all five supported viewports, without changing readiness projections,
+  mutation services, routes, API shapes, or selectors. Focused validation/recovery browser checks,
+  frontend/UI contracts, docs/planning, Ruff, mypy, packaged JavaScript, full CI, deterministic, adapter,
+  security, build, and packaged-browser checks passed. `W44-E1-S3-T18` is now Next for the independent
+  stage-strip label-clipping follow-up; Wave 44 exit/default-routing evidence remains open, while human
+  usability, Claude/cross-runtime, and Wave 36 acceptance stay parked.
 
 - `2026-08-24` PR #358 (merge `f543ae51`) completed `W44-E1-S3-T16`: Markdown Workspace now presents a
   compact read-only brief, document body, and visible heading map together while preserving navigator
