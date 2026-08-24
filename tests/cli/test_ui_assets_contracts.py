@@ -681,7 +681,10 @@ def test_operator_state_and_dashboard_assets_keep_runtime_and_tab_contracts() ->
             "if (viewedStage && STAGES.includes(viewedStage)) {",
             "state.activeStage = viewedStage;",
             'state.activeRunId = state.dashboard.run?.run_id || "";',
-            'isRecoveryNextAction(nextAction) && state.activeTab === "work"',
+                (
+                    'isRecoveryNextAction(nextAction) && '
+                    '(state.activeTab === "work" || explicitRecoveryRoute)'
+                ),
             'state.activeTab = "recovery";',
             'state.recoveryDetail = "questions";',
             'state.recoveryDetail = "validation";',

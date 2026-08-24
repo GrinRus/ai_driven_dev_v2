@@ -43,6 +43,10 @@
 
 @media (max-width: 760px) {
   /* The question state is a focused decision page, not a miniature dashboard. */
+  body.recovery-mode:has([data-human-decision-surface="question"]) .intent-context-region,
+  body.recovery-mode:has([data-human-decision-surface="question"]) .work-item-tabs {
+    display: none;
+  }
   body.recovery-mode:has([data-human-decision-surface="question"]) .topbar {
     grid-template-columns: minmax(0, 1fr) auto;
   }
@@ -63,6 +67,7 @@
     padding: 0;
   }
   body.recovery-mode:has([data-human-decision-surface="question"]) .interview-loop-screen > .surface > .surface-title,
+  body.recovery-mode:has([data-human-decision-surface="question"]) .decision-workbench-header,
   body.recovery-mode:has([data-human-decision-surface="question"]) .interview-summary,
   body.recovery-mode:has([data-human-decision-surface="question"]) .interview-decision-spotlight,
   body.recovery-mode:has([data-human-decision-surface="question"]) .question-history,
@@ -118,6 +123,12 @@
     min-height: var(--control-height-touch);
     order: -1;
     width: 100%;
+  }
+  body.recovery-mode:has([data-human-decision-surface="question"]) .question-durable-destination {
+    border-top: 1px solid var(--line);
+    display: grid;
+    gap: var(--space-2);
+    padding-top: var(--space-4);
   }
   body.recovery-mode:has([data-human-decision-surface="question"]) .question-save-options {
     order: 2;

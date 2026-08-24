@@ -336,6 +336,7 @@ function renderBlockedStageContext(view) {
 function renderQuestionCards({showResume}) {
   const view = activeStageView()?.questions;
   const questions = view?.questions || [];
+  const destination = view?.answers_path || "answers.md not materialized";
   const unresolved = new Set(view?.unresolved_blocking_question_ids || []);
   if (!questions.length) {
     return `<div class="empty-state">No questions for this stage.</div>`;
@@ -402,6 +403,7 @@ function renderQuestionCards({showResume}) {
               </details>
               <button data-answer-preview="${escapeHtml(question.question_id)}" type="button" class="secondary">Preview answers.md</button>
               ${showResume ? `<button data-primary-action data-decision-submit="true" data-answer-resume="${escapeHtml(question.question_id)}" data-requires-resolved-resume="${resumeNeedsResolved ? "true" : "false"}" data-resume-ready-label="Save answer & resume" type="button" ${resumeDisabled ? 'disabled title="Blocking questions must be saved as resolved before resume."' : ""}>${escapeHtml(resumeLabel === "Update & resume" || resumeLabel === "Answer & resume" ? "Save answer & resume" : resumeLabel)}</button>` : ""}
+              <span class="question-durable-destination" data-answer-destination="${escapeHtml(question.question_id)}"><strong>Durable destination</strong>${pathLine(destination, 88)}</span>
             </div>
           </article>
         `;
@@ -427,12 +429,13 @@ function renderQuestions() {
   const sourceSnippets = questions.map((question) => `${question.question_id || "Question"}: ${question.text || ""}`);
   const evidence = [view?.answers_path].filter(Boolean);
   return `
-    <div class="interview-loop-screen" data-human-decision-surface="question" data-decision-workbench="question" data-decision-item-count="${escapeHtml(questions.length)}">
+    <div class="interview-loop-screen" data-human-decision-surface="question" data-recovery-summary="question" data-decision-workbench="question" data-decision-item-count="${escapeHtml(questions.length)}">
       <section class="surface">
         <div class="surface-title">
           <span>Questions / Interview Loop</span>
           <span class="small-badge ${unresolved.length ? "bad" : "good"}">${escapeHtml(unresolved.length)} required</span>
         </div>
+        ${renderQuestionCards({showResume: true})}
         ${decisionWorkbenchHeader({
           type: "question",
           reason: unresolved.length
@@ -447,7 +450,6 @@ function renderQuestions() {
         ${renderInterviewDecisionSpotlight(view)}
         ${renderInterviewSummary(view)}
         ${renderInterviewCandidateRecovery(candidate)}
-        ${renderQuestionCards({showResume: true})}
       </section>
       ${renderBlockedStageContext(view)}
     </div>
