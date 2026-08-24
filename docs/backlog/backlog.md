@@ -7,10 +7,13 @@ slice, and local task.
 
 ## Next
 
-- `W44-E1-S3-T8` — Close the rendered convergence wave only after a fresh 13-surface audit confirms
-  every target gap is absent or explicitly environment-blocked.
+- `W44-E1-S3-T14` — Render the target Project Work selected Work Item inspector and compact
+  filter/table composition from the existing core-owned Inbox projection.
 
 ## Soon
+
+- `W44-E1-S3-T15` — Render the target Active Task first-viewport attempt composition and live-output
+  tray from the existing task-attempt evidence.
 
 ## Parking lot
 
@@ -36,6 +39,14 @@ slice, and local task.
   queue-restoration policy in `docs/backlog/roadmap.md` (`W8-E3-S1`).
 
 ## Current reconciliation
+
+- `2026-08-24` PR #352 (merge `e1d77b01`) completed `W44-E1-S3-T8` as a fresh rendered 13-surface
+  audit. The provider-free matrix remained clean across five viewports, but the audit confirmed
+  four bounded composition gaps: Project Work selected inspector/filter-table, Active Task live
+  evidence, Markdown reader first viewport, and Validation Repair hierarchy. `W44-E1-S3-T14` is
+  now Next, `W44-E1-S3-T15` is Soon, and T16/T17 remain in the roadmap for subsequent slices;
+  Wave 44 is not yet at exit. Human usability, Claude/cross-runtime, and Wave 36 acceptance remain
+  parked.
 
 - `2026-08-24` PR #350 (merge `d486e9ae`) completed `W44-E1-S3-T7`: shared Operator tokens now align
   with the target warm canvas/navy rail/cobalt action/mint success/amber warning language and the
