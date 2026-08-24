@@ -15575,11 +15575,25 @@ Local tasks:
   Review/QA journey (`3 passed`), frontend Node suite (`135 passed`), provider-free/docs/planning/UI
   contracts (`104 passed`), Ruff, mypy, packaged JavaScript, deterministic scenarios, adapter
   conformance, packaged UI browser, security, and build all passed.
-- `W44-E1-S3-T6` (next) Replace legacy Create Work Item, Runs/Attempts, and Flow Complete
+- `W44-E1-S3-T6` (done) Replace legacy Create Work Item, Runs/Attempts, and Flow Complete
   compositions with target task-centered layouts while retaining their existing routes, ids,
-  history, lineage, and immutable handoff semantics. Verification: create/history/completion
-  rendered fixtures, route/reload checks, and target screenshot comparison.
-- `W44-E1-S3-T7` (soon) Align shared Operator UI tokens and component density with the target
+  history, lineage, and immutable handoff semantics. PR #338 (merge `99da14c9`) adds the target
+  create editor/preview, selected-attempt history inspector, and Flow Complete handoff/evidence/
+  completion compositions without changing mutation paths. Verification: create/history/completion
+  rendered fixtures at desktop/mobile, route and reload compatibility, frontend/UI contracts,
+  Ruff, mypy, deterministic, packaged-browser, security, and build checks passed in CI.
+- `W44-E1-S3-T9` (next) Align the provider-free browser matrix with the authoritative decision and
+  recovery surface selectors after the recovery content composition changed. Preserve the
+  first-action, focus, diagnostics, and five-viewport assertions while replacing stale selectors
+  such as `.recovery-workbench` with the current surface contracts. Verification: the full matrix
+  passes for question, validation, runtime, and remediation journeys without weakening assertions.
+- `W44-E1-S3-T10` (soon) Recompose Validation Repair for first-viewport action visibility and
+  responsive containment. Keep the finding, repair budget, Runner readiness, and one eligible
+  recovery action in the target hierarchy; remove fixed-width child overflow so `Run Repair` is
+  visible and focusable at `320x568`, `390x844`, `768x1024`, `1280x900`, and `1440x900`. Verification:
+  provider-free validation-repair fixtures, rendered geometry/accessibility, screenshot comparison,
+  and diagnostics across all five viewports.
+- `W44-E1-S3-T7` (planned) Align shared Operator UI tokens and component density with the target
   visual language: warm canvas, deep navy rail, cobalt primary, mint success, amber warning,
   and at least 14px primary desktop reading text. Verification: token contract checks plus the
   full five-viewport visual/geometry/accessibility matrix with no clipping or overflow.
@@ -15600,6 +15614,16 @@ Wave 44 exit evidence:
 - a fresh rendered audit confirms remaining gaps are absent or explicitly blocked.
 
 Wave 44 reconciliation:
+
+- `2026-08-24` PR #338 (merge `99da14c9`) completed `W44-E1-S3-T6`: Create Work Item now has a
+  target request editor and Markdown preview, Runs/Attempts has a selected-attempt inspector,
+  and Flow Complete exposes handoff, evidence, and completion tables while preserving routes,
+  ids, lineage, and immutable history. CI passed including frontend, packaged UI browser,
+  deterministic, security, and build checks. A fresh rendered audit then found an outdated
+  question-recovery matrix selector and a fixed-width Validation Repair child that clips on
+  mobile and pushes `Run Repair` below the first viewport. Those are split into `T9` and `T10`;
+  `T9` is now Next and `T10` is Soon. Token alignment `T7` and final audit `T8` remain planned;
+  human usability, Claude/cross-runtime, and Wave 36 acceptance remain parked.
 
 - `W44-E1-S3-T5` is complete in PR #336 (merge `e088c50f`). Explicit recovery routes now land on
   the server-selected question, validation, or Review finding surface instead of a generic
