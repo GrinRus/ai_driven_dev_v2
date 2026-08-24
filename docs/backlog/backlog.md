@@ -7,13 +7,13 @@ slice, and local task.
 
 ## Next
 
-- `W44-E1-S3-T6` — Replace legacy Create Work Item, Runs/Attempts, and Flow Complete compositions
-  with target task-centered layouts.
+- `W44-E1-S3-T9` — Align provider-free browser matrix selectors with the authoritative recovery
+  and decision surfaces.
 
 ## Soon
 
-- `W44-E1-S3-T7` — Align shared Operator UI tokens and component density with the target visual
-  language.
+- `W44-E1-S3-T10` — Recompose Validation Repair for first-viewport action visibility and responsive
+  containment.
 
 ## Parking lot
 
@@ -39,6 +39,15 @@ slice, and local task.
   queue-restoration policy in `docs/backlog/roadmap.md` (`W8-E3-S1`).
 
 ## Current reconciliation
+
+- `2026-08-24` PR #338 (merge `99da14c9`) completed `W44-E1-S3-T6`: target Create Work Item,
+  Runs/Attempts, and Flow Complete compositions are now rendered with existing routes, ids,
+  lineage, and immutable handoff semantics preserved. CI passed including packaged UI browser and
+  build. The subsequent rendered audit found a stale question-recovery matrix selector and a
+  fixed-width Validation Repair preview that clips on mobile and pushes `Run Repair` below the
+  first viewport; these are now bounded `T9` and `T10`. `T9` is Next, `T10` is Soon, and token
+  alignment/final audit remain planned. Human usability, Claude/cross-runtime, and Wave 36
+  acceptance remain parked.
 
 - `2026-08-24` PR #336 (merge `e088c50f`) completed `W44-E1-S3-T5`: explicit recovery routes now
   land on authoritative question, validation, and Review finding surfaces; the Decision form and
