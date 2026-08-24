@@ -134,8 +134,8 @@ const PROVIDER_FREE_ROUTE_MANIFEST = Object.freeze([
   {
     id: "task-workspace",
     target: "04-task-workspace.png",
-    fixture: "implementation-finalized",
-    route: "?mode=studio&work_item=WI-BROWSER&run_id=run-browser&stage=implement&work_tab=tasks",
+    fixture: "implementation-task-ready",
+    route: "?mode=studio&work_item=WI-BROWSER&run_id=run-browser&stage=implement&work_tab=tasks&task_id=TL-2",
     routeIntent: "studio",
     viewport: "1280x900",
     context: {project: ".", work_item: "WI-BROWSER", run: "run-browser", stage: "implement"}
@@ -235,6 +235,7 @@ const PROVIDER_FREE_FIXTURES = new Set([
   "no-run",
   "setup",
   "implementation-finalized",
+  "implementation-task-ready",
   "running",
   "blocking-question",
   "validation-repair",

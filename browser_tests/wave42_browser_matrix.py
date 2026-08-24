@@ -34,7 +34,7 @@ WAVE42_BROWSER_JOURNEYS: tuple[Wave42BrowserJourney, ...] = (
     ),
     Wave42BrowserJourney(
         journey_id="task-run",
-        fixture_state="implementation-finalized",
+        fixture_state="implementation-task-ready",
         route="tasks",
         surface_selector="[data-task-workspace]",
         first_action_selector="[data-task-select]",
@@ -109,7 +109,7 @@ def wave42_route_query(
     if journey.route == "studio":
         common.update({"view": "overview"})
     elif journey.route == "tasks":
-        common.update({"stage": "implement", "work_tab": "tasks"})
+        common.update({"stage": "implement", "work_tab": "tasks", "task_id": "TL-2"})
     elif journey.route == "question-recovery":
         common.update({"stage": "idea", "view": "recovery"})
     elif journey.route == "validation-repair":

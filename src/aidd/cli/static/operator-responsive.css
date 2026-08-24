@@ -1053,6 +1053,51 @@
 }
 
 @media (max-width: 760px) {
+  .task-workspace-table-head {
+    display: none;
+  }
+  .task-workspace-item {
+    align-items: start;
+    column-gap: var(--space-4);
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-areas:
+      "task verification"
+      "dependencies attempts"
+      "event event";
+    row-gap: var(--space-3);
+  }
+  .task-workspace-task-cell {
+    grid-area: task;
+  }
+  .task-workspace-dependencies {
+    grid-area: dependencies;
+  }
+  .task-workspace-attempts {
+    grid-area: attempts;
+    justify-self: end;
+  }
+  .task-workspace-verification {
+    grid-area: verification;
+    justify-self: end;
+  }
+  .task-workspace-event {
+    grid-area: event;
+  }
+  .task-workspace-event > span {
+    white-space: normal;
+  }
+  .task-workspace-group > .surface-title {
+    padding-inline: var(--space-4);
+  }
+  .task-workspace-table-head,
+  .task-workspace-item {
+    padding-inline: var(--space-4);
+  }
+  .task-workspace-task-cell strong {
+    font-size: var(--type-body-size);
+  }
+
   .task-contract-grid,
   .task-action-bar {
     grid-template-columns: minmax(0, 1fr);

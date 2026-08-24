@@ -314,11 +314,15 @@ def _implementation_fixture(
     tasklist_path.parent.mkdir(parents=True, exist_ok=True)
     tasklist_path.write_text(_IMPLEMENT_TASKLIST, encoding="utf-8")
     ledger = TaskLedger.create(parse_task_plan(_IMPLEMENT_TASKLIST))
+    ready_fixture = state == "implementation-task-ready"
     task_statuses = (
         ("TL-1", TaskExecutionStatus.SUCCEEDED, None),
         (
             "TL-2",
             (
+                TaskExecutionStatus.PENDING
+                if ready_fixture
+                else
                 TaskExecutionStatus.FAILED
                 if state == "implementation-task-failed"
                 else TaskExecutionStatus.SUCCEEDED
@@ -327,6 +331,8 @@ def _implementation_fixture(
         ),
     )
     for task_id, terminal_status, blocker in task_statuses:
+        if terminal_status == TaskExecutionStatus.PENDING:
+            continue
         attempt_path = task_root(
             workspace_root=workspace_root,
             work_item=work_item,
@@ -355,7 +361,7 @@ def _implementation_fixture(
             latest_attempt_path=relative,
         ).transition(task_id, terminal_status, blocker=blocker)
 
-    if state != "implementation-task-failed":
+    if state not in {"implementation-task-failed", "implementation-task-ready"}:
         finalization_root = (
             run_stage_root(
                 workspace_root=workspace_root,
@@ -441,7 +447,13 @@ def _implementation_fixture(
         work_item,
         run_id,
         "implement",
-        "succeeded" if state == "implementation-finalized" else "failed",
+        (
+            "executing"
+            if ready_fixture
+            else "succeeded"
+            if state == "implementation-finalized"
+            else "failed"
+        ),
     )
     write_attempt_artifact_index(
         workspace_root,
@@ -594,7 +606,19 @@ def build_browser_state_fixture(
         "implementation-task-failed",
         "implementation-finalization-failed",
         "implementation-finalized",
+        "implementation-task-ready",
     }:
+        if state == "implementation-task-ready":
+            # The Ready workspace is a post-tasklist, pre-implementation state.  Keep
+            # the durable stage projection truthful so the Tasks surface can render
+            # the authoritative ledger instead of its fail-closed missing-artifact
+            # state.
+            _succeed_through(
+                workspace_root,
+                "tasklist",
+                work_item=work_item,
+                run_id=run_id,
+            )
         _implementation_fixture(
             project_root=project_root,
             workspace_root=workspace_root,
@@ -611,6 +635,8 @@ def build_browser_state_fixture(
             action=(
                 "Resume"
                 if state == "implementation-task-failed"
+                else "Implement running"
+                if state == "implementation-task-ready"
                 else "Resume finalization"
                 if state == "implementation-finalization-failed"
                 else "Proceed to review"
@@ -707,7 +733,7 @@ def build_browser_state_fixture(
             route="studio",
             context_keys=("project", "work_item", "run", "stage", "recovery_target"),
             surface="Question Recovery",
-            action="Review rejected interview candidate",
+            action="Answer required questions",
             marker="blocked",
             work_item=work_item,
             run_id=run_id,
@@ -1023,6 +1049,7 @@ BROWSER_FIXTURE_STATES = (
     "runtime-cancelled",
     "runtime-no-progress",
     "validation-repair",
+    "implementation-task-ready",
     "validation-repair-exhausted",
     "pending-approval",
     "qa-decision",

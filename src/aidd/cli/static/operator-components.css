@@ -5223,6 +5223,179 @@ button.intent-phase-step.active:hover {
   font-size: 0.82rem;
 }
 
+/* Ready-task presentation: keep the ledger's authored order and group
+   membership visible as a dense, scan-friendly table.  The browser only
+   renders core-owned fields; it never derives task state or eligibility. */
+.task-workspace {
+  min-width: 0;
+}
+.task-workspace-table {
+  min-width: 0;
+}
+.task-workspace-table-head,
+.task-workspace-item {
+  align-items: center;
+  column-gap: var(--space-6);
+  display: grid;
+  grid-template-columns:
+    minmax(220px, 2fr)
+    minmax(110px, 1fr)
+    minmax(64px, 0.45fr)
+    minmax(100px, 0.8fr)
+    minmax(150px, 1.2fr);
+  min-width: 0;
+}
+.task-workspace-table-head {
+  border-bottom: 1px solid var(--line);
+  color: var(--muted);
+  font-size: var(--type-caption-size);
+  font-weight: var(--type-weight-medium);
+  min-height: 36px;
+  padding: 0 var(--space-6);
+  text-transform: none;
+}
+.task-workspace-table-head > span:not(:first-child) {
+  text-align: left;
+}
+.task-workspace-groups {
+  display: grid;
+  gap: var(--space-8);
+  margin-top: var(--space-6);
+}
+.task-workspace-group {
+  min-width: 0;
+}
+.task-workspace-group > .surface-title {
+  border-bottom: 1px solid var(--line);
+  justify-content: flex-start;
+  margin-bottom: 0;
+  min-height: 36px;
+  padding: 0 var(--space-6);
+  text-transform: none;
+}
+.task-workspace-group > .surface-title h3 {
+  align-items: center;
+  display: inline-flex;
+  font-size: var(--type-heading-size);
+  gap: var(--space-3);
+  margin: 0;
+}
+.task-group-marker,
+.task-verification-marker {
+  background: var(--color-border-strong);
+  border: 2px solid currentColor;
+  border-radius: 50%;
+  display: inline-block;
+  flex: 0 0 auto;
+  height: 14px;
+  width: 14px;
+}
+.task-group-marker[data-task-group-marker="Ready"],
+.task-verification-marker[data-state="ready"] {
+  color: var(--color-state-success);
+  background: var(--color-bg-surface);
+}
+.task-group-marker[data-task-group-marker="Running"],
+.task-verification-marker[data-state="running"] {
+  color: var(--color-state-info);
+  background: var(--color-bg-surface);
+}
+.task-group-marker[data-task-group-marker="Blocked"],
+.task-verification-marker[data-state="blocked"] {
+  color: var(--color-state-warning-text-strong);
+  background: var(--color-bg-surface);
+}
+.task-group-marker[data-task-group-marker="Done"],
+.task-verification-marker[data-state="done"] {
+  color: var(--color-state-success);
+  background: var(--color-state-success);
+}
+.task-workspace-table-body {
+  min-width: 0;
+}
+.task-workspace-item {
+  background: var(--color-bg-surface);
+  border: 0;
+  border-bottom: 1px solid var(--line);
+  border-radius: 0;
+  color: var(--color-text-primary);
+  justify-content: stretch;
+  min-height: 48px;
+  padding: var(--space-4) var(--space-6);
+  text-align: left;
+  width: 100%;
+}
+.task-workspace-item:hover,
+.task-workspace-item:focus-visible {
+  background: var(--color-bg-muted);
+  border-color: var(--line);
+  color: var(--color-text-primary);
+}
+.task-workspace-item.selected {
+  background: var(--color-bg-selected);
+  box-shadow: inset 3px 0 0 var(--color-focus), inset 0 0 0 1px var(--color-focus);
+}
+.task-workspace-cell {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.task-workspace-task-cell {
+  align-items: center;
+  display: flex;
+  gap: var(--space-6);
+}
+.task-workspace-task-cell strong {
+  font-size: var(--type-body-size);
+  font-weight: var(--type-weight-medium);
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.task-id {
+  color: var(--color-text-secondary);
+  flex: 0 0 44px;
+  font-family: var(--font-mono);
+  font-size: var(--type-caption-size);
+}
+.task-workspace-dependencies {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+.task-dependency-badge {
+  background: var(--color-bg-raised);
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-compact);
+  color: var(--color-text-secondary);
+  font-family: var(--font-mono);
+  font-size: var(--type-caption-size);
+  line-height: 1.2;
+  padding: var(--space-2) var(--space-3);
+  white-space: nowrap;
+}
+.task-dependency-badge.empty {
+  color: var(--color-text-tertiary);
+}
+.task-workspace-attempts,
+.task-workspace-verification,
+.task-workspace-event {
+  color: var(--color-text-secondary);
+  font-size: var(--type-caption-size);
+}
+.task-workspace-verification {
+  align-items: center;
+  display: inline-flex;
+  gap: var(--space-3);
+}
+.task-workspace-event > span {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.task-next-ready {
+  margin-left: auto;
+}
+
 /* Selected-task detail follows the bounded core contract and keeps the launch
    decision visually separate from durable task facts. */
 .task-workspace-detail {
