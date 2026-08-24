@@ -7,8 +7,8 @@ slice, and local task.
 
 ## Next
 
-- `W44-E1-S2-T3` — Reconcile stage-strip density, typography, tokens, and overflow across desktop
-  and mobile viewports.
+- `W44-E1-S3-T1` — Add initial-viewport, focus-order, console, and overflow assertions to the
+  provider-free browser matrix.
 
 ## Soon
 
@@ -36,6 +36,16 @@ slice, and local task.
   queue-restoration policy in `docs/backlog/roadmap.md` (`W8-E3-S1`).
 
 ## Current reconciliation
+
+- `2026-08-24` PR #326 (merge `4e50e093`) completed `W44-E1-S2-T3`: the canonical stage strip is
+  readable at desktop/tablet density, mobile exposes a keyboard-accessible current-stage summary
+  before the expandable eight-stage path, and Task Workspace errors retain Work Item context and
+  navigation. Published tasklist evidence is surfaced by the dashboard so missing-prerequisite
+  states do not produce false console failures. Focused stage-strip/mobile/route/document checks,
+  frontend Node suite (`135 passed`), full Python suite (`2430 passed`), docs/planning, Ruff,
+  mypy, deterministic scenarios, adapter conformance, packaged UI browser, security checks, and
+  build passed. `W44-E1-S3-T1` is now `Next`; human usability, Claude/cross-runtime, and Wave 36
+  acceptance remain parked.
 
 - `2026-08-23` PR #324 (merge `69ce00df`) completed `W44-E1-S2-T2`: Documents now retain Work Item
   context and stage navigation while keeping the navigator, reader, and evidence inspector
