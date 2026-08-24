@@ -15538,20 +15538,29 @@ Local tasks:
     `1280x900` plus Mobile Decision at `390x844`; route, console, failed-request, blocked-request,
     and viewport-width diagnostics clean. Screenshot evidence is retained locally under
     `/tmp/w44-audit-v1/`.
-- `W44-E1-S3-T3` (next) Render the persistent target Project/Work Item rail and context shell on
+- `W44-E1-S3-T3` (done) Render the persistent target Project/Work Item rail and context shell on
   every Work Item surface. Reuse existing route intents, Work Item ids, core-owned Inbox data,
-  tabs, and stage projections; add only frontend shell markup and styling. The rail must expose
-  project identity, Work Item search/list, selected item, and the current Work Item title/stage
-  on recovery, history, completion, and mobile decision surfaces. Verification: provider-free
-  rendered screenshots and DOM/accessibility checks for Project Work, Launch, Decision, History,
-  Flow Complete, and Mobile Decision at desktop and supported mobile viewports.
-- `W44-E1-S3-T4` (soon) Render the target Ready-task Task Workspace composition using the
+  tabs, and stage projections; add only frontend shell markup and styling. The rail exposes
+  project identity, Work Item search/list, selected item, and the current Work Item id/title/stage
+  on recovery, history, completion, and mobile decision surfaces. Desktop renders the persistent
+  navy rail; mobile keeps the central Inbox route visible without a hidden duplicate route target.
+  - PR #332 (merge `c7992051`) renders the project identity, deterministic Work Item list,
+    selected state, canonical route-intent attributes, and accessible search filter. Shared shell
+    synchronization now restores the Work Item identity and eight-stage strip on recovery, history,
+    and terminal surfaces; Work Item context explicitly includes the durable id. Existing setup,
+    mobile, route, API, and mutation semantics remain unchanged.
+  - Verification: focused desktop rail and mobile guided-setup browser checks, active-studio and
+    Inbox journeys, five-viewport provider-free browser matrix, frontend Node suite (`135 passed`),
+    UI asset/composite/full UI plus docs/planning checks (`220 passed`), packaged JavaScript check,
+    Ruff, mypy, deterministic scenarios, adapter conformance, packaged UI browser, security checks,
+    and build all passed. `W44-E1-S3-T4` is now the next dependency-ready task.
+- `W44-E1-S3-T4` (next) Render the target Ready-task Task Workspace composition using the
   authoritative task ledger. Add a deterministic provider-free Ready fixture with selected task,
   dependency rows, Runner readiness, one primary Run/Resume/Finalize action, and the live-output
   tray without changing task status or eligibility ownership. Verification: task surface browser
   fixtures, selected-task route/reload checks, geometry/accessibility checks, and no duplicate
   launch actions.
-- `W44-E1-S3-T5` (planned) Render target Decision, Validation Repair, Review/QA Remediation, and
+- `W44-E1-S3-T5` (soon) Render target Decision, Validation Repair, Review/QA Remediation, and
   Mobile Decision content above the shared recovery chrome. Preserve the actual question/finding,
   evidence, consequence, resolution state, Write/Preview/destination, and one primary action in
   the initial readable viewport. Verification: question, validation, remediation, and mobile
@@ -15581,6 +15590,16 @@ Wave 44 exit evidence:
 - a fresh rendered audit confirms remaining gaps are absent or explicitly blocked.
 
 Wave 44 reconciliation:
+
+- `W44-E1-S3-T3` is complete in PR #332 (merge `c7992051`). The target desktop Project/Work Item
+  rail now exposes project identity, a deterministic server-owned Work Item list, selected state,
+  canonical route intents, and accessible filtering. Shared Work Item context and the eight-stage
+  strip remain visible on recovery, history, completion, and mobile decision surfaces; mobile
+  keeps the central Inbox route usable without a hidden duplicate rail target. Focused browser
+  journeys, the five-viewport provider-free matrix, frontend Node suite, UI/docs/planning checks,
+  Ruff, mypy, deterministic scenarios, adapter conformance, packaged UI browser, security checks,
+  and build all passed. `W44-E1-S3-T4` is now `Next`, `T5` is its direct successor in `Soon`, and
+  human usability, Claude/cross-runtime, and Wave 36 acceptance remain parked.
 
 - `W44-E1-S3-T2` is complete in PR #330 (merge `834b7bfd`). The fresh rendered comparison is
   retained in `docs/e2e/w44-e1-s3-t2-target-ux-audit.md`: all captured routes are technically

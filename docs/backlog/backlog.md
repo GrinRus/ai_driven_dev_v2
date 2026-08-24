@@ -7,13 +7,13 @@ slice, and local task.
 
 ## Next
 
-- `W44-E1-S3-T3` — Render the persistent target Project/Work Item rail and context shell on every
-  Work Item surface without changing routes, API shapes, core projections, or mutation semantics.
+- `W44-E1-S3-T4` — Render the target Ready-task Task Workspace composition using the authoritative
+  task ledger and a deterministic selected-task fixture.
 
 ## Soon
 
-- `W44-E1-S3-T4` — Render the target Ready-task Task Workspace composition using the authoritative
-  task ledger and a deterministic selected-task fixture.
+- `W44-E1-S3-T5` — Render target Decision, Validation Repair, Review/QA Remediation, and Mobile
+  Decision content above the shared recovery chrome.
 
 ## Parking lot
 
@@ -39,6 +39,15 @@ slice, and local task.
   queue-restoration policy in `docs/backlog/roadmap.md` (`W8-E3-S1`).
 
 ## Current reconciliation
+
+- `2026-08-24` PR #332 (merge `c7992051`) completed `W44-E1-S3-T3`: the target desktop Project/
+  Work Item rail now exposes project identity, deterministic server-owned Work Item selection,
+  canonical route intents, and accessible filtering. Shared Work Item id/context and the
+  eight-stage strip remain visible on recovery, history, completion, and mobile decision surfaces;
+  mobile uses the central Inbox route without a hidden duplicate rail target. Focused browser/UI,
+  frontend, docs/planning, Ruff, mypy, deterministic, adapter, packaged-browser, security, and
+  build checks passed. `W44-E1-S3-T4` is now `Next`, `T5` is in `Soon`; human usability,
+  Claude/cross-runtime, and Wave 36 acceptance remain parked.
 
 - `2026-08-24` PR #330 (merge `834b7bfd`) completed `W44-E1-S3-T2`: the fresh 13-surface target
   UX audit is retained in `docs/e2e/w44-e1-s3-t2-target-ux-audit.md`; route/console/request/
