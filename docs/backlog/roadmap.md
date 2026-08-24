@@ -15582,21 +15582,23 @@ Local tasks:
   completion compositions without changing mutation paths. Verification: create/history/completion
   rendered fixtures at desktop/mobile, route and reload compatibility, frontend/UI contracts,
   Ruff, mypy, deterministic, packaged-browser, security, and build checks passed in CI.
-- `W44-E1-S3-T9` (next) Align the provider-free browser matrix with the authoritative decision and
-  recovery surface selectors after the recovery content composition changed. Preserve the
-  first-action, focus, diagnostics, and five-viewport assertions while replacing stale selectors
-  such as `.recovery-workbench` with the current surface contracts. Verification: the full matrix
-  passes for question, validation, runtime, and remediation journeys without weakening assertions.
-- `W44-E1-S3-T10` (soon) Recompose Validation Repair for first-viewport action visibility and
+- `W44-E1-S3-T9` (done) Align the provider-free browser matrix with the authoritative decision and
+  recovery surface selectors after the recovery content composition changed. PR #340 (merge
+  `c90ede66`) replaces stale `.recovery-workbench` selectors with the current question,
+  validation, and Review surface contracts and adds a registry guard against selector drift.
+  Focused authoritative-surface and matrix-contract checks passed; the existing first-action,
+  focus, diagnostics, and five-viewport assertions remain intact for the follow-up layout work.
+- `W44-E1-S3-T10` (next) Recompose Validation Repair for first-viewport action visibility and
   responsive containment. Keep the finding, repair budget, Runner readiness, and one eligible
   recovery action in the target hierarchy; remove fixed-width child overflow so `Run Repair` is
   visible and focusable at `320x568`, `390x844`, `768x1024`, `1280x900`, and `1440x900`. Verification:
   provider-free validation-repair fixtures, rendered geometry/accessibility, screenshot comparison,
   and diagnostics across all five viewports.
-- `W44-E1-S3-T7` (planned) Align shared Operator UI tokens and component density with the target
+- `W44-E1-S3-T7` (soon) Align shared Operator UI tokens and component density with the target
   visual language: warm canvas, deep navy rail, cobalt primary, mint success, amber warning,
   and at least 14px primary desktop reading text. Verification: token contract checks plus the
   full five-viewport visual/geometry/accessibility matrix with no clipping or overflow.
+  - Dependencies: `W44-E1-S3-T10`.
 - `W44-E1-S3-T8` (planned) Close the rendered convergence wave only after a fresh 13-surface audit
   confirms every target gap is absent or explicitly environment-blocked, with zero console errors,
   horizontal overflow, duplicate primary actions, or focus loss. Verification: full provider-free

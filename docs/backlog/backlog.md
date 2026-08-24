@@ -7,13 +7,13 @@ slice, and local task.
 
 ## Next
 
-- `W44-E1-S3-T9` — Align provider-free browser matrix selectors with the authoritative recovery
-  and decision surfaces.
+- `W44-E1-S3-T10` — Recompose Validation Repair for first-viewport action visibility and responsive
+  containment.
 
 ## Soon
 
-- `W44-E1-S3-T10` — Recompose Validation Repair for first-viewport action visibility and responsive
-  containment.
+- `W44-E1-S3-T7` — Align shared Operator UI tokens and component density with the target visual
+  language.
 
 ## Parking lot
 
@@ -48,6 +48,13 @@ slice, and local task.
   first viewport; these are now bounded `T9` and `T10`. `T9` is Next, `T10` is Soon, and token
   alignment/final audit remain planned. Human usability, Claude/cross-runtime, and Wave 36
   acceptance remain parked.
+
+- `2026-08-24` PR #340 (merge `c90ede66`) completed `W44-E1-S3-T9`: the provider-free matrix now
+  targets the authoritative question, Validation Repair, and Review surfaces instead of the stale
+  recovery shell. Existing first-action, focus, diagnostics, and five-viewport assertions were
+  preserved; the responsive Validation Repair composition is now the only `Next` task, with token
+  alignment in `Soon`. Human usability, Claude/cross-runtime, and Wave 36 acceptance remain
+  parked.
 
 - `2026-08-24` PR #336 (merge `e088c50f`) completed `W44-E1-S3-T5`: explicit recovery routes now
   land on authoritative question, validation, and Review finding surfaces; the Decision form and
