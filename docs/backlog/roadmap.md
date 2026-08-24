@@ -15648,12 +15648,17 @@ Local tasks:
   remain unchanged. Verification: provider-free running/waiting/cancelling/failed/completed and
   offline/reconnecting states across desktop/mobile (`14` focused checks plus a final targeted rerun),
   frontend/UI contracts, Ruff, mypy, full Python/packaged-browser/adapter/deterministic/build CI.
-- `W44-E1-S3-T16` (next) Recompose the Markdown Workspace so the selected read-only document,
+- `W44-E1-S3-T16` (done) Recompose the Markdown Workspace so the selected read-only document,
   heading map, provenance, freshness, and finding anchors share the first viewport with the navigator.
-  Generated documents remain read-only and existing document routes/API shapes remain unchanged.
+  PR #358 (merge `f543ae51`) adds a compact read-only brief, co-locates the Markdown body and visible
+  heading map, preserves Source/Compare/line-heading anchors and freshness semantics, and keeps
+  generated documents read-only with existing routes/API shapes unchanged. Mobile heading-map links
+  retain touch-sized targets; Compare stays explicitly disabled when no earlier retained attempt exists.
   Verification: current/stale/missing document fixtures, source/compare/anchor navigation, reload,
-  focus, long-Markdown overflow, and five-viewport geometry checks.
-- `W44-E1-S3-T17` (soon) Recompose Validation Repair into a responsive finding-to-action hierarchy
+  focus, long-Markdown overflow, five-viewport geometry/accessibility checks, frontend suite, UI asset
+  contracts, readability, docs/planning, Ruff, mypy, full CI, deterministic, adapter, packaged-browser,
+  security, and build checks passed.
+- `W44-E1-S3-T17` (next) Recompose Validation Repair into a responsive finding-to-action hierarchy
   that keeps the finding, literal repair consequence, readable Runner readiness, and one primary repair
   action ahead of long evidence. Preserve validation/readiness projections and mutation semantics.
   Verification: five-viewport validation fixtures, action visibility/focus, readable Runner state,
@@ -15669,10 +15674,20 @@ Wave 44 exit evidence:
 - browser checks show no console errors, horizontal overflow, duplicate primary actions, or focus
   loss;
 - a fresh rendered audit confirms remaining gaps are absent or explicitly blocked. The current audit
-  is evidence-complete but not an exit pass: T14 is complete, T15 is the next bounded convergence
-  slice, and T16/T17 follow their focused re-audits.
+  is evidence-complete but not an exit pass: T14, T15, and T16 are complete, T17 is the next bounded
+  convergence slice, and default task-centered routing remains provisional until the remaining audit gaps close.
 
 Wave 44 reconciliation:
+
+- `2026-08-24` PR #358 (merge `f543ae51`) completed `W44-E1-S3-T16`. Markdown Workspace now keeps a
+  compact read-only reading brief, document body, and visible heading map together in the selected
+  reader composition while preserving navigator provenance, freshness, Source/Compare behavior,
+  stable line/heading anchors, existing routes/API shapes, and generated-document immutability. The
+  five-viewport document evidence journey, desktop first-viewport geometry, mobile target-size checks,
+  frontend/UI asset/readability contracts, Ruff, mypy, full CI, deterministic, adapter, packaged-browser,
+  security, and build checks passed. `W44-E1-S3-T17` is now the only dependency-ready task; the independent
+  stage-strip label clipping follow-up and Wave 44 exit/default-routing evidence remain open, while human
+  usability, Claude/cross-runtime, and Wave 36 acceptance stay parked.
 
 - `2026-08-24` PR #356 (merge `2e77fac5`) completed `W44-E1-S3-T15`. Active Task now leads with the
   selected task-attempt evidence: identity, factual elapsed and last-output ages, durable milestone,
