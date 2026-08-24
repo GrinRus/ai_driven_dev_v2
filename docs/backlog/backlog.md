@@ -7,14 +7,11 @@ slice, and local task.
 
 ## Next
 
-- `W44-E1-S3-T16` — Recompose the Markdown Workspace so the selected read-only document, heading map,
-  provenance, freshness, and finding anchors share the first viewport with the navigator.
-
-## Soon
-
 - `W44-E1-S3-T17` — Recompose Validation Repair into a responsive finding-to-action hierarchy that
   keeps the finding, literal repair consequence, readable Runner readiness, and one primary repair
   action ahead of long evidence.
+
+## Soon
 
 ## Parking lot
 
@@ -41,13 +38,22 @@ slice, and local task.
 
 ## Current reconciliation
 
+- `2026-08-24` PR #358 (merge `f543ae51`) completed `W44-E1-S3-T16`: Markdown Workspace now presents a
+  compact read-only brief, document body, and visible heading map together while preserving navigator
+  provenance, freshness, Source/Compare semantics, stable anchors, generated-document immutability,
+  existing routes/API shapes, and mobile touch targets. Focused five-viewport document journeys,
+  frontend/UI asset/readability contracts, Ruff, mypy, full CI, deterministic, adapter, packaged-browser,
+  security, and build checks passed. `W44-E1-S3-T17` is now Next; the stage-strip clipping follow-up,
+  Wave 44 exit/default-routing evidence, human usability, Claude/cross-runtime, and Wave 36 acceptance
+  remain parked or open as previously scoped.
+
 - `2026-08-24` PR #356 (merge `2e77fac5`) completed `W44-E1-S3-T15`: Active Task now leads with the
   selected task-attempt evidence, factual elapsed/output-age/milestone/connection facts, one `Open
   live output` primary, guarded cancellation, reconnect state, and collapsible raw output. Existing
   task actions, route/API shapes, core-owned eligibility, and mutation services remain unchanged.
   Provider-free active-attempt states, ready-task regression, desktop tray geometry, frontend/UI
   contracts, Ruff, mypy, full CI, deterministic, adapter, packaged-browser, and build checks passed.
-  `W44-E1-S3-T16` is now Next and `W44-E1-S3-T17` is Soon; independent stage-strip label clipping at
+  `W44-E1-S3-T16` was the next task and `W44-E1-S3-T17` was Soon; independent stage-strip label clipping at
   1280px remains a separate follow-up, while human usability, Claude/cross-runtime, and Wave 36
   acceptance stay parked.
 
