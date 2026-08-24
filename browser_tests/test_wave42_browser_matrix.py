@@ -26,7 +26,7 @@ def _assert_first_action(
     page: Page,
     selector: str,
     *,
-    require_initial_viewport: bool = False,
+    require_initial_viewport: bool,
 ) -> None:
     action = page.locator(selector).first
     action.wait_for(state="visible")
@@ -86,8 +86,7 @@ def test_wave42_journey_matrix_is_provider_free_and_rendered_across_viewports(
                 _assert_first_action(
                     page,
                     journey.first_action_selector,
-                    require_initial_viewport=journey.route
-                    in {"question-recovery", "validation-repair", "review-remediation"},
+                    require_initial_viewport=journey.requires_initial_viewport,
                 )
                 assert_accessible_render(
                     page,

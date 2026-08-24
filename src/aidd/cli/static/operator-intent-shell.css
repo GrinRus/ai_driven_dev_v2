@@ -528,6 +528,13 @@ body {
     min-height: var(--control-height-touch);
     width: 100%;
   }
+
+  /* Recovery actions are fixed to the mobile decision dock.  Keep the
+     left/right insets authoritative instead of expanding the control to the
+     full workspace width and clipping it at the viewport edge. */
+  .operator-workspace [data-primary-recovery-slot] > [data-primary-action] {
+    width: auto;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {
