@@ -391,9 +391,23 @@ body {
   }
 
   body:not(.setup-active) .operator-workspace
+    .active-studio[data-studio-surface="task-workspace"] > [data-studio-context-bar] {
+    grid-column: 1 / -1;
+    grid-row: 1;
+    min-width: 0;
+  }
+
+  body:not(.setup-active) .operator-workspace
+    .active-studio[data-studio-surface="task-workspace"] > [data-intent-phase-stepper] {
+    grid-column: 1 / -1;
+    grid-row: 2;
+    min-width: 0;
+  }
+
+  body:not(.setup-active) .operator-workspace
     .active-studio[data-studio-surface="task-workspace"] > [data-task-workspace] {
     grid-column: 1;
-    grid-row: 1;
+    grid-row: 4;
     min-width: 0;
   }
 
@@ -401,14 +415,21 @@ body {
     .active-studio[data-studio-surface="task-workspace"] > [data-task-detail] {
     align-self: start;
     grid-column: 2;
-    grid-row: 1;
+    grid-row: 4;
     min-width: 0;
   }
 
   body:not(.setup-active) .operator-workspace
-    .active-studio[data-studio-surface="task-workspace"] > [data-task-attempt-tray] {
+    .active-studio[data-studio-surface="task-workspace"] > [data-task-attempt-tray].has-evidence {
     grid-column: 1 / -1;
-    grid-row: 2;
+    grid-row: 3;
+    min-width: 0;
+  }
+
+  body:not(.setup-active) .operator-workspace
+    .active-studio[data-studio-surface="task-workspace"] > [data-task-attempt-tray].empty {
+    grid-column: 1 / -1;
+    grid-row: 5;
     min-width: 0;
   }
 }
