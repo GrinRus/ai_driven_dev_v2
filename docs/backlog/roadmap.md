@@ -15596,17 +15596,19 @@ Local tasks:
   Validation Repair geometry/accessibility test (`5 passed`), combined recovery/browser checks
   (`18 passed`), frontend suite (`135 passed`), UI contracts (`66 passed`), Ruff, mypy, and clean
   diff check; packaged UI browser CI also passed.
-- `W44-E1-S3-T11` (next) Recompose the Question Decision surface so its authoritative answer action
-  remains visible and focusable in the initial `768x1024` viewport while preserving the question
-  evidence, durable draft, resolution state, and single primary-action contract. Verification:
-  provider-free question-recovery fixtures at all five viewports, rendered geometry/accessibility,
-  focus, diagnostics, and screenshot comparison.
-- `W44-E1-S3-T12` (soon) Align the Review-remediation browser journey with the authoritative Review
+- `W44-E1-S3-T11` (done) Recompose the Question Decision surface so its authoritative answer action
+  remains visible and focusable in the initial viewport while preserving the question evidence,
+  durable draft, resolution state, and single primary-action contract. PR #344 (merge `f693db74`)
+  adds a bounded desktop/tablet action dock that reuses the existing answer control; mobile behavior
+  remains unchanged. Verification: one provider-free question-recovery regression over all five
+  viewports (`1 passed`), selected durable-answer recovery, frontend suite (`135 passed`), UI
+  contracts (`66 passed`), Ruff, mypy, and packaged UI browser CI.
+- `W44-E1-S3-T12` (next) Align the Review-remediation browser journey with the authoritative Review
   quality-gate surface and its first-action contract instead of the generic recovery route. Preserve
   rejected-finding evidence, durable remediation launch semantics, and one primary action. Verification:
   provider-free Review/QA journey and matrix checks across all five viewports with route, focus,
   accessibility, diagnostics, and overflow assertions.
-- `W44-E1-S3-T7` (planned) Align shared Operator UI tokens and component density with the target
+- `W44-E1-S3-T7` (soon) Align shared Operator UI tokens and component density with the target
   visual language: warm canvas, deep navy rail, cobalt primary, mint success, amber warning,
   and at least 14px primary desktop reading text. Verification: token contract checks plus the
   full five-viewport visual/geometry/accessibility matrix with no clipping or overflow.
