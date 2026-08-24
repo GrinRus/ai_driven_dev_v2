@@ -7,8 +7,8 @@ slice, and local task.
 
 ## Next
 
-- `W44-E1-S3-T1` — Add initial-viewport, focus-order, console, and overflow assertions to the
-  provider-free browser matrix.
+- `W44-E1-S3-T2` — Produce a reconciled target-UX audit and close the convergence wave only when
+  all confirmed gaps are either fixed or explicitly environment-blocked.
 
 ## Soon
 
@@ -36,6 +36,16 @@ slice, and local task.
   queue-restoration policy in `docs/backlog/roadmap.md` (`W8-E3-S1`).
 
 ## Current reconciliation
+
+- `2026-08-24` PR #328 (merge `21c71156`) completed `W44-E1-S3-T1`: the provider-free matrix now
+  declares which launch, recovery, and completion journeys require an initial-viewport first
+  action, while long Task/Markdown surfaces retain controlled scrolling. Focus-order,
+  diagnostics, duplicate-primary, geometry, and overflow assertions remain active across all five
+  viewports. The mobile recovery fixed action no longer clips at `320px`. Focused browser/UI
+  contracts (`9` matrix and `68` UI checks), frontend Node suite (`135 passed`), docs/planning,
+  Ruff, mypy, full Python suite (`2430 passed`), deterministic scenarios, adapter conformance,
+  packaged UI browser, security checks, and build passed. `W44-E1-S3-T2` is now `Next`; human
+  usability, Claude/cross-runtime, and Wave 36 acceptance remain parked.
 
 - `2026-08-24` PR #326 (merge `4e50e093`) completed `W44-E1-S2-T3`: the canonical stage strip is
   readable at desktop/tablet density, mobile exposes a keyboard-accessible current-stage summary
