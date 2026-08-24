@@ -136,6 +136,7 @@ const state = {
   taskWorkspace: null,
   taskWorkspaceError: "",
   taskWorkspaceFilter: "",
+  projectRailFilter: "",
   activeJobId: "",
   activeJobCursor: 0,
   activeJobLogChunks: [],
