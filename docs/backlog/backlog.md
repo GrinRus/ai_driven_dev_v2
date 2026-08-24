@@ -7,13 +7,13 @@ slice, and local task.
 
 ## Next
 
-- `W44-E1-S3-T10` — Recompose Validation Repair for first-viewport action visibility and responsive
-  containment.
+- `W44-E1-S3-T11` — Recompose the Question Decision surface for first-viewport action visibility at
+  tablet width.
 
 ## Soon
 
-- `W44-E1-S3-T7` — Align shared Operator UI tokens and component density with the target visual
-  language.
+- `W44-E1-S3-T12` — Align the Review-remediation journey with the authoritative quality-gate surface
+  and first-action contract.
 
 ## Parking lot
 
@@ -39,6 +39,15 @@ slice, and local task.
   queue-restoration policy in `docs/backlog/roadmap.md` (`W8-E3-S1`).
 
 ## Current reconciliation
+
+- `2026-08-24` PR #342 (merge `eeeb1f33`) completed `W44-E1-S3-T10`: Validation Repair now places
+  the finding and one eligible recovery action before long evidence, with shrink-safe responsive
+  containment at all five target viewports and no horizontal overflow. A fresh matrix audit then
+  exposed two independent remaining gaps: the Question Decision action is below the initial
+  `768x1024` viewport, and the Review-remediation registry route renders generic recovery instead of
+  the authoritative Review quality gate. `W44-E1-S3-T11` is now Next, `T12` is Soon, and token
+  alignment `T7` waits on the recovery-surface corrections. Human usability, Claude/cross-runtime,
+  and Wave 36 acceptance remain parked.
 
 - `2026-08-24` PR #338 (merge `99da14c9`) completed `W44-E1-S3-T6`: target Create Work Item,
   Runs/Attempts, and Flow Complete compositions are now rendered with existing routes, ids,

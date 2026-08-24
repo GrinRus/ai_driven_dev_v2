@@ -15588,17 +15588,29 @@ Local tasks:
   validation, and Review surface contracts and adds a registry guard against selector drift.
   Focused authoritative-surface and matrix-contract checks passed; the existing first-action,
   focus, diagnostics, and five-viewport assertions remain intact for the follow-up layout work.
-- `W44-E1-S3-T10` (next) Recompose Validation Repair for first-viewport action visibility and
-  responsive containment. Keep the finding, repair budget, Runner readiness, and one eligible
-  recovery action in the target hierarchy; remove fixed-width child overflow so `Run Repair` is
-  visible and focusable at `320x568`, `390x844`, `768x1024`, `1280x900`, and `1440x900`. Verification:
-  provider-free validation-repair fixtures, rendered geometry/accessibility, screenshot comparison,
-  and diagnostics across all five viewports.
-- `W44-E1-S3-T7` (soon) Align shared Operator UI tokens and component density with the target
+- `W44-E1-S3-T10` (done) Recompose Validation Repair for first-viewport action visibility and
+  responsive containment. PR #342 (merge `eeeb1f33`) moves the recovery action band ahead of the
+  long validation evidence, makes its grid children shrink-safe, and stacks the action, Runner,
+  and extension preview without fixed-width overflow. The finding, repair budget, readiness
+  projection, and existing mutation paths remain unchanged. Verification: focused five-viewport
+  Validation Repair geometry/accessibility test (`5 passed`), combined recovery/browser checks
+  (`18 passed`), frontend suite (`135 passed`), UI contracts (`66 passed`), Ruff, mypy, and clean
+  diff check; packaged UI browser CI also passed.
+- `W44-E1-S3-T11` (next) Recompose the Question Decision surface so its authoritative answer action
+  remains visible and focusable in the initial `768x1024` viewport while preserving the question
+  evidence, durable draft, resolution state, and single primary-action contract. Verification:
+  provider-free question-recovery fixtures at all five viewports, rendered geometry/accessibility,
+  focus, diagnostics, and screenshot comparison.
+- `W44-E1-S3-T12` (soon) Align the Review-remediation browser journey with the authoritative Review
+  quality-gate surface and its first-action contract instead of the generic recovery route. Preserve
+  rejected-finding evidence, durable remediation launch semantics, and one primary action. Verification:
+  provider-free Review/QA journey and matrix checks across all five viewports with route, focus,
+  accessibility, diagnostics, and overflow assertions.
+- `W44-E1-S3-T7` (planned) Align shared Operator UI tokens and component density with the target
   visual language: warm canvas, deep navy rail, cobalt primary, mint success, amber warning,
   and at least 14px primary desktop reading text. Verification: token contract checks plus the
   full five-viewport visual/geometry/accessibility matrix with no clipping or overflow.
-  - Dependencies: `W44-E1-S3-T10`.
+  - Dependencies: `W44-E1-S3-T12`.
 - `W44-E1-S3-T8` (planned) Close the rendered convergence wave only after a fresh 13-surface audit
   confirms every target gap is absent or explicitly environment-blocked, with zero console errors,
   horizontal overflow, duplicate primary actions, or focus loss. Verification: full provider-free
