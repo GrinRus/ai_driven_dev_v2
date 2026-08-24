@@ -128,9 +128,44 @@
     .question-list > .question-card:first-child {
     padding-bottom: calc(var(--space-8) + var(--control-height));
   }
+
+  /* Review remediation is a quality-gate decision, so its existing primary
+     action must remain reachable while the operator inspects the evidence
+     canvas and finding rail. Keep the real control in the DOM; only its
+     placement changes at bounded viewport heights. */
+  [data-studio-quality-gate="review"] [data-remediation-launch="review"] {
+    background: var(--teal-dark);
+    border: 1px solid var(--teal-dark);
+    bottom: var(--space-4);
+    box-shadow: var(--elevation-overlay);
+    min-height: var(--control-height);
+    position: fixed;
+    right: var(--space-6);
+    width: min(280px, calc(100vw - (var(--space-6) * 2)));
+    z-index: 60;
+  }
+  [data-studio-quality-gate="review"] .quality-gate-document {
+    padding-bottom: calc(var(--space-8) + var(--control-height));
+  }
 }
 
 @media (max-width: 760px) {
+  [data-studio-quality-gate="review"] [data-remediation-launch="review"] {
+    background: var(--teal-dark);
+    border: 1px solid var(--teal-dark);
+    bottom: max(var(--space-4), env(safe-area-inset-bottom));
+    box-shadow: var(--elevation-overlay);
+    left: var(--space-4);
+    min-height: var(--control-height-touch);
+    position: fixed;
+    right: var(--space-4);
+    width: auto;
+    z-index: 60;
+  }
+  [data-studio-quality-gate="review"] .quality-gate-document {
+    padding-bottom: calc(var(--space-10) + var(--control-height-touch));
+  }
+
   /* The question state is a focused decision page, not a miniature dashboard. */
   body.recovery-mode:has([data-human-decision-surface="question"]) .intent-context-region,
   body.recovery-mode:has([data-human-decision-surface="question"]) .work-item-tabs {
