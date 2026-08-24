@@ -19,6 +19,7 @@ class Wave42BrowserJourney:
     surface_selector: str
     first_action_selector: str
     coverage_sources: tuple[str, ...]
+    requires_initial_viewport: bool = False
 
 
 WAVE42_BROWSER_JOURNEYS: tuple[Wave42BrowserJourney, ...] = (
@@ -29,6 +30,7 @@ WAVE42_BROWSER_JOURNEYS: tuple[Wave42BrowserJourney, ...] = (
         surface_selector=".active-studio",
         first_action_selector="#globalNextActionButton",
         coverage_sources=("browser_tests/test_journey_guided_setup.py",),
+        requires_initial_viewport=True,
     ),
     Wave42BrowserJourney(
         journey_id="task-run",
@@ -45,6 +47,7 @@ WAVE42_BROWSER_JOURNEYS: tuple[Wave42BrowserJourney, ...] = (
         surface_selector=".recovery-workbench",
         first_action_selector="[data-recovery-summary] [data-primary-action]",
         coverage_sources=("browser_tests/test_journey_question_recovery.py",),
+        requires_initial_viewport=True,
     ),
     Wave42BrowserJourney(
         journey_id="validation-repair",
@@ -53,6 +56,7 @@ WAVE42_BROWSER_JOURNEYS: tuple[Wave42BrowserJourney, ...] = (
         surface_selector=".recovery-workbench",
         first_action_selector="[data-recovery-summary] [data-primary-action]",
         coverage_sources=("browser_tests/test_journey_runtime_validation_recovery.py",),
+        requires_initial_viewport=True,
     ),
     Wave42BrowserJourney(
         journey_id="markdown-change",
@@ -69,6 +73,7 @@ WAVE42_BROWSER_JOURNEYS: tuple[Wave42BrowserJourney, ...] = (
         surface_selector="[data-recovery-summary]",
         first_action_selector='[data-recovery-summary] [data-primary-action]',
         coverage_sources=("browser_tests/test_journey_review_qa.py",),
+        requires_initial_viewport=True,
     ),
     Wave42BrowserJourney(
         journey_id="history",
@@ -85,6 +90,7 @@ WAVE42_BROWSER_JOURNEYS: tuple[Wave42BrowserJourney, ...] = (
         surface_selector="[data-studio-flow-complete]",
         first_action_selector="[data-next-flow-action]",
         coverage_sources=("browser_tests/test_terminal_journey.py",),
+        requires_initial_viewport=True,
     ),
 )
 
