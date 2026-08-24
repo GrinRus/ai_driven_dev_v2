@@ -15658,11 +15658,18 @@ Local tasks:
   focus, long-Markdown overflow, five-viewport geometry/accessibility checks, frontend suite, UI asset
   contracts, readability, docs/planning, Ruff, mypy, full CI, deterministic, adapter, packaged-browser,
   security, and build checks passed.
-- `W44-E1-S3-T17` (next) Recompose Validation Repair into a responsive finding-to-action hierarchy
+- `W44-E1-S3-T17` (done) Recompose Validation Repair into a responsive finding-to-action hierarchy
   that keeps the finding, literal repair consequence, readable Runner readiness, and one primary repair
-  action ahead of long evidence. Preserve validation/readiness projections and mutation semantics.
-  Verification: five-viewport validation fixtures, action visibility/focus, readable Runner state,
-  evidence overflow, disabled/stale states, and duplicate-primary protection.
+  action ahead of long evidence. Preserve validation/readiness projections and mutation semantics. PR
+  #360 (merge `a678418a`) adds the explicit repair consequence, keeps the finding and readable Runner
+  readiness ahead of long extension evidence, and preserves the existing mutation selectors and
+  readiness semantics. Verification: five-viewport validation fixtures, action visibility/focus,
+  readable Runner state, evidence overflow, disabled/stale states, duplicate-primary protection,
+  frontend/UI contracts, Ruff, mypy, and full CI including packaged UI browser passed.
+- `W44-E1-S3-T18` (next) Correct the remaining eight-stage strip label clipping at the target desktop
+  density, preserving stage order, active/current semantics, keyboard access, and the truthful mobile
+  disclosure. Verification: five-viewport stage-strip geometry and accessibility checks, no clipped
+  labels or horizontal overflow, stable deep links/reload, and the existing frontend/UI contracts.
 
 Wave 44 exit evidence:
 
@@ -15674,10 +15681,21 @@ Wave 44 exit evidence:
 - browser checks show no console errors, horizontal overflow, duplicate primary actions, or focus
   loss;
 - a fresh rendered audit confirms remaining gaps are absent or explicitly blocked. The current audit
-  is evidence-complete but not an exit pass: T14, T15, and T16 are complete, T17 is the next bounded
-  convergence slice, and default task-centered routing remains provisional until the remaining audit gaps close.
+  is evidence-complete but not an exit pass: T14, T15, T16, and T17 are complete, T18 is the next
+  bounded convergence slice for the stage strip, and default task-centered routing remains provisional
+  until the remaining audit gaps close.
 
 Wave 44 reconciliation:
+
+- `2026-08-24` PR #360 (merge `a678418a`) completed `W44-E1-S3-T17`. Validation Repair now leads with
+  the finding, a literal repair consequence, readable Runner readiness, and one primary recovery action
+  before long extension evidence across all five supported viewports. Existing readiness projections,
+  mutation services, selectors, routes, and API shapes remain unchanged. Focused validation browser
+  checks (`10`), recovery journeys (`13`), frontend/UI contracts, docs/planning, Ruff, mypy, packaged
+  JavaScript, full CI, deterministic, adapter, security, build, and packaged-browser checks passed.
+  `W44-E1-S3-T18` is now the only dependency-ready task for the remaining stage-strip clipping follow-up;
+  Wave 44 exit/default-routing evidence remains open, while human usability, Claude/cross-runtime, and
+  Wave 36 acceptance stay parked.
 
 - `2026-08-24` PR #358 (merge `f543ae51`) completed `W44-E1-S3-T16`. Markdown Workspace now keeps a
   compact read-only reading brief, document body, and visible heading map together in the selected
