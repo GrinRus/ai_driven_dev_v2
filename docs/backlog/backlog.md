@@ -7,13 +7,13 @@ slice, and local task.
 
 ## Next
 
-- `W44-E1-S3-T5` — Render target Decision, Validation Repair, Review/QA Remediation, and Mobile
-  Decision content above the shared recovery chrome.
+- `W44-E1-S3-T6` — Replace legacy Create Work Item, Runs/Attempts, and Flow Complete compositions
+  with target task-centered layouts.
 
 ## Soon
 
-- `W44-E1-S3-T6` — Replace legacy Create Work Item, Runs/Attempts, and Flow Complete compositions
-  with target task-centered layouts.
+- `W44-E1-S3-T7` — Align shared Operator UI tokens and component density with the target visual
+  language.
 
 ## Parking lot
 
@@ -39,6 +39,14 @@ slice, and local task.
   queue-restoration policy in `docs/backlog/roadmap.md` (`W8-E3-S1`).
 
 ## Current reconciliation
+
+- `2026-08-24` PR #336 (merge `e088c50f`) completed `W44-E1-S3-T5`: explicit recovery routes now
+  land on authoritative question, validation, and Review finding surfaces; the Decision form and
+  durable destination precede generic recovery chrome, mobile hides the dashboard shell, and the
+  remediation parity route uses rejected Review evidence. Focused desktop/mobile browser checks,
+  Review/QA journey, frontend, provider-free/docs/planning/UI contracts, Ruff, mypy, deterministic,
+  adapter, packaged-browser, security, and build checks passed. `W44-E1-S3-T6` is now `Next`, `T7`
+  is in `Soon`; human usability, Claude/cross-runtime, and Wave 36 acceptance remain parked.
 
 - `2026-08-24` PR #334 (merge `df6b3f56`) completed `W44-E1-S3-T4`: the Ready-task Task Workspace
   now renders core-owned groups as a dependency-aware table with selected-task route/reload,
