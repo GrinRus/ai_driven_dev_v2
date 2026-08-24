@@ -103,6 +103,8 @@ const state = {
   requestContextError: "",
   inbox: null,
   inboxRequestGeneration: 0,
+  inboxSelectedWorkItem: "",
+  inboxFilter: "",
   readiness: null,
   readinessRequestGeneration: 0,
   readinessLoading: true,
@@ -544,6 +546,11 @@ function setOperatorMode(tab) {
   }
 }
 
+function inboxSelectionFromLocation() {
+  const value = new URLSearchParams(window.location.search).get("inbox_work_item") || "";
+  return value.trim();
+}
+
 function isRecoveryNextAction(action) {
   return RECOVERY_NEXT_ACTIONS.has(String(action || ""));
 }
@@ -775,6 +782,7 @@ function applyOperatorRoute(route) {
   }
   const workTab = normalizeWorkItemTab(route.workTab || "overview");
   if (route.mode === "inbox") {
+    state.inboxSelectedWorkItem = inboxSelectionFromLocation();
     setOperatorMode("project-home");
   } else if (route.mode === "history") {
     // History is a canonical top-level route. The Work Item Runs tab may add
@@ -802,7 +810,17 @@ let restoringOperatorRoute = false;
 
 function syncLocationState({historyMode = "replace"} = {}) {
   if (restoringOperatorRoute) return;
-  const next = `${window.location.pathname}${encodeCurrentOperatorRoute(operatorRouteSnapshot())}`;
+  const encodedRoute = encodeCurrentOperatorRoute(operatorRouteSnapshot());
+  const nextUrl = new URL(
+    `${window.location.pathname}${encodedRoute}`,
+    window.location.origin || "http://localhost"
+  );
+  if (state.activeTab === "work" && state.workDetail === "project-home" && state.inboxSelectedWorkItem) {
+    nextUrl.searchParams.set("inbox_work_item", state.inboxSelectedWorkItem);
+  } else {
+    nextUrl.searchParams.delete("inbox_work_item");
+  }
+  const next = `${nextUrl.pathname}${nextUrl.search}${nextUrl.hash}`;
   const current = `${window.location.pathname}${window.location.search}`;
   if (next !== current) {
     const method = historyMode === "push" ? "pushState" : "replaceState";

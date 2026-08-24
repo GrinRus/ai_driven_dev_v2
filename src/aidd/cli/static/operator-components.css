@@ -202,19 +202,21 @@
   line-height: var(--type-compact-line);
 }
 .inbox-item-copy dl {
-  display: flex;
-  flex-wrap: wrap;
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
   gap: var(--space-4) var(--space-8);
   margin: 0;
 }
 .inbox-item-copy dl > div {
-  display: flex;
-  gap: var(--space-2);
+  display: grid;
+  gap: var(--space-1);
 }
 .inbox-item-copy dt,
 .inbox-item-copy dd {
   font-size: var(--type-caption-size);
   margin: 0;
+  overflow-wrap: anywhere;
+  text-align: right;
 }
 .inbox-item-copy dt {
   color: var(--color-text-secondary);
@@ -5036,9 +5038,41 @@ button.intent-phase-step.active:hover {
   font-size: 14px;
   margin-top: var(--space-3);
 }
+.inbox-filter-bar {
+  align-items: center;
+  display: flex;
+  gap: var(--space-4);
+  margin-bottom: var(--space-6);
+}
+.inbox-filter-field {
+  display: block;
+  max-width: 360px;
+  width: 100%;
+}
+.inbox-filter-field input {
+  min-height: var(--control-height);
+  width: 100%;
+}
+.inbox-filter-hint {
+  color: var(--color-text-secondary);
+  font-size: var(--type-caption-size);
+}
 .studio-inbox-sections {
   display: grid;
   gap: var(--space-8);
+}
+.inbox-table-head {
+  color: var(--color-text-secondary);
+  display: grid;
+  font-size: var(--type-caption-size);
+  gap: var(--space-4);
+  grid-template-columns: minmax(220px, 1.6fr) repeat(5, minmax(80px, 1fr));
+  padding: 0 var(--space-8) var(--space-3);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+.inbox-table-head span:not(:first-child) {
+  text-align: right;
 }
 .studio-inbox-layout {
   align-items: start;
@@ -5075,6 +5109,13 @@ button.intent-phase-step.active:hover {
   border-radius: 0;
   min-height: 120px;
   padding: var(--space-8);
+}
+.inbox-section .inbox-item[hidden] {
+  display: none;
+}
+.inbox-section .inbox-item:focus-visible {
+  outline: 3px solid var(--color-accent-ring);
+  outline-offset: -3px;
 }
 .inbox-section .inbox-item:last-child {
   border-bottom: 0;
@@ -5201,6 +5242,9 @@ button.intent-phase-step.active:hover {
 }
 
 @media (max-width: 900px) {
+  .inbox-table-head {
+    display: none;
+  }
   .studio-inbox-layout {
     grid-template-columns: minmax(0, 1fr);
   }
@@ -5209,6 +5253,9 @@ button.intent-phase-step.active:hover {
   }
   .active-studio-grid {
     grid-template-columns: minmax(0, 1fr);
+  }
+  .inbox-item-copy dl {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
 .contextual-runner-control {
