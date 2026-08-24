@@ -441,7 +441,11 @@ function readerFreshness(workbench = {}) {
   };
 }
 
-function renderDocumentReadingBrief(workbench, {compact = false} = {}) {
+function renderDocumentReadingBrief(workbench) {
+  return renderDocumentReadingBriefVariant(workbench);
+}
+
+function renderDocumentReadingBriefVariant(workbench, {compact = false} = {}) {
   const documentView = workbench.document || {};
   const profile = documentReadingProfile(workbench);
   const freshness = readerFreshness(workbench);
@@ -839,7 +843,11 @@ function renderFindingAnchor(item = {}) {
   return `<a class="finding-anchor" data-finding-anchor-link="line" href="#line-${line}">Line ${line}</a>`;
 }
 
-function renderWorkbenchTableOfContents(workbench, {compact = false} = {}) {
+function renderWorkbenchTableOfContents(workbench) {
+  return renderWorkbenchTableOfContentsVariant(workbench);
+}
+
+function renderWorkbenchTableOfContentsVariant(workbench, {compact = false} = {}) {
   if (state.artifactViewMode === "compare") return "";
   const view = workbenchSelectedDocumentView(workbench);
   const headings = markdownHeadingSummary(view?.text || "");
@@ -947,18 +955,24 @@ function renderDocumentReaderControls(workbench) {
 }
 
 function renderDocumentReaderCanvas(workbench, {studio = false} = {}) {
+  const readingBrief = studio
+    ? renderDocumentReadingBriefVariant(workbench, {compact: true})
+    : renderDocumentReadingBrief(workbench);
+  const tableOfContents = studio
+    ? renderWorkbenchTableOfContentsVariant(workbench, {compact: true})
+    : renderWorkbenchTableOfContents(workbench);
   const readerBody = `
     <section class="workbench-document-pane hierarchy-primary document-canvas" data-document-canvas-mode="${escapeHtml(state.artifactViewMode)}">
       <div class="reader-body-layout${studio ? " reader-body-layout-compact" : ""}">
         <div class="reader-body-content">
           ${renderWorkbenchDocumentBody(workbench)}
         </div>
-        ${renderWorkbenchTableOfContents(workbench, {compact: studio})}
+        ${tableOfContents}
       </div>
     </section>
   `;
   return `
-    ${renderDocumentReadingBrief(workbench, {compact: studio})}
+    ${readingBrief}
     ${renderDocumentReaderControls(workbench)}
     ${readerBody}
     ${renderReaderTechnicalDetails(workbench)}

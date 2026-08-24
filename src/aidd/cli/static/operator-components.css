@@ -3491,7 +3491,7 @@ button.artifact-row:not(:disabled):not([aria-disabled="true"]):hover {
 }
 .reader-brief-compact-fact strong {
   color: var(--color-text-secondary);
-  font-size: 11px;
+  font-size: var(--type-caption-size);
   text-transform: uppercase;
 }
 .reader-header {
