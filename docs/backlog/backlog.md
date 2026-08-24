@@ -7,9 +7,9 @@ slice, and local task.
 
 ## Next
 
-- `W44-E1-S3-T18` — Correct the remaining eight-stage strip label clipping at the target desktop
-  density while preserving stage order, active/current semantics, keyboard access, and truthful mobile
-  disclosure.
+- `W44-E1-S3-T19` — Run a fresh rendered Wave 44 exit audit across all 13 target surfaces and reconcile
+  the default task-centered routing decision, recording any new evidence-backed follow-up task before
+  claiming exit.
 
 ## Soon
 
@@ -37,6 +37,14 @@ slice, and local task.
   queue-restoration policy in `docs/backlog/roadmap.md` (`W8-E3-S1`).
 
 ## Current reconciliation
+
+- `2026-08-24` PR #362 (merge `4e36bc6f`) completed `W44-E1-S3-T18`: the compact eight-stage strip now
+  keeps all labels, including `Implement`, readable at `1280x900` while preserving canonical order,
+  phase grouping, active/current semantics, keyboard access, and mobile disclosure. Five-viewport
+  stage/accessibility checks, related active-shell/mobile navigation checks (`12`), frontend (`136`),
+  UI/docs/planning (`103`), packaged JavaScript, Ruff, mypy, full CI, deterministic, adapter, security,
+  build, and packaged-browser checks passed. `W44-E1-S3-T19` is now Next for the fresh Wave 44 exit and
+  default-routing audit; human usability, Claude/cross-runtime, and Wave 36 acceptance stay parked.
 
 - `2026-08-24` PR #360 (merge `a678418a`) completed `W44-E1-S3-T17`: Validation Repair now presents the
   finding, literal repair consequence, readable Runner readiness, and one primary recovery action before
