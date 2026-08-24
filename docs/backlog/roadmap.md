@@ -15611,17 +15611,19 @@ Local tasks:
   contract remain unchanged. Verification: focused Review matrix (`1 passed` across five viewports),
   authoritative recovery and Review/QA journeys (`7 passed`), UI contracts (`59 passed`), frontend
   Node suite (`135 passed`), Ruff, mypy, packaged JavaScript, full CI, and build all passed.
-- `W44-E1-S3-T13` (next) Recompose Flow Complete so the core-recommended outcome action is fully
+- `W44-E1-S3-T13` (done) Recompose Flow Complete so the core-recommended outcome action is fully
   visible and focusable in the initial `320x568` viewport while preserving immutable handoff evidence,
-  lineage overlays, and one primary-action semantics. Verification: completion journey and full
-  five-viewport provider-free matrix with initial-action, accessibility, diagnostics, geometry, and
-  overflow assertions.
-- `W44-E1-S3-T7` (soon) Align shared Operator UI tokens and component density with the target
+  lineage overlays, and one primary-action semantics. PR #348 (merge `3193e39e`) extends the existing
+  mobile single-primary action dock to the immutable Flow Complete handoff, keeping the core-recommended
+  outcome action visible without changing lineage or mutation semantics. Verification: completion journey,
+  full five-viewport provider-free matrix (`9 passed`), terminal journeys (`12 passed`), UI contracts
+  (`59 passed`), frontend suite (`135 passed`), Ruff, mypy, packaged JavaScript, deterministic,
+  adapter, build, and packaged UI browser CI all passed.
+- `W44-E1-S3-T7` (next) Align shared Operator UI tokens and component density with the target
   visual language: warm canvas, deep navy rail, cobalt primary, mint success, amber warning,
   and at least 14px primary desktop reading text. Verification: token contract checks plus the
   full five-viewport visual/geometry/accessibility matrix with no clipping or overflow.
-  - Dependencies: `W44-E1-S3-T13`.
-- `W44-E1-S3-T8` (planned) Close the rendered convergence wave only after a fresh 13-surface audit
+- `W44-E1-S3-T8` (soon) Close the rendered convergence wave only after a fresh 13-surface audit
   confirms every target gap is absent or explicitly environment-blocked, with zero console errors,
   horizontal overflow, duplicate primary actions, or focus loss. Verification: full provider-free
   browser matrix, target screenshot audit, and reconciliation evidence.
@@ -15638,6 +15640,15 @@ Wave 44 exit evidence:
 - a fresh rendered audit confirms remaining gaps are absent or explicitly blocked.
 
 Wave 44 reconciliation:
+
+- `2026-08-24` PR #348 (merge `3193e39e`) completed `W44-E1-S3-T13`: the immutable Flow Complete
+  handoff now reuses the responsive single-primary action dock, so the core-recommended outcome
+  action is visible and focusable at `320x568` as well as the other four supported viewports. The
+  completion journey, terminal journeys, full provider-free matrix, UI contracts, frontend suite,
+  Ruff, mypy, packaged JavaScript, deterministic, adapter, build, and packaged-browser checks passed.
+  `W44-E1-S3-T7` is now Next for the target palette and density alignment; `W44-E1-S3-T8` is its
+  direct successor and is now Soon. Human usability, Claude/cross-runtime, and Wave 36 acceptance
+  remain parked.
 
 - `2026-08-24` PR #346 (merge `f1f51178`) completed `W44-E1-S3-T12`: the Review-remediation
   journey now uses the authoritative rejected Review quality gate and its existing durable
