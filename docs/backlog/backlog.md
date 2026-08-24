@@ -7,13 +7,10 @@ slice, and local task.
 
 ## Next
 
-- `W44-E1-S3-T14` — Render the target Project Work selected Work Item inspector and compact
-  filter/table composition from the existing core-owned Inbox projection.
-
-## Soon
-
 - `W44-E1-S3-T15` — Render the target Active Task first-viewport attempt composition and live-output
   tray from the existing task-attempt evidence.
+
+## Soon
 
 ## Parking lot
 
@@ -39,6 +36,14 @@ slice, and local task.
   queue-restoration policy in `docs/backlog/roadmap.md` (`W8-E3-S1`).
 
 ## Current reconciliation
+
+- `2026-08-24` PR #354 (merge `b3622bde`) completed `W44-E1-S3-T14`: Project Work rows now support
+  click/keyboard selection, a reload-safe `inbox_work_item` deep-link, a compact server-owned filter,
+  and target-style inspector/table metadata without changing core Inbox grouping/order or mutation
+  services. Inbox (`11`), selection/deep-link (`1`), five-viewport matrix (`9`), frontend (`135`),
+  UI contracts, Ruff, mypy, packaged JavaScript, deterministic, adapter, packaged-browser, and build
+  checks passed. `W44-E1-S3-T15` is now Next; human usability, Claude/cross-runtime, and Wave 36
+  acceptance remain parked.
 
 - `2026-08-24` PR #352 (merge `e1d77b01`) completed `W44-E1-S3-T8` as a fresh rendered 13-surface
   audit. The provider-free matrix remained clean across five viewports, but the audit confirmed
