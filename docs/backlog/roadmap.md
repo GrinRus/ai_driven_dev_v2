@@ -15640,17 +15640,20 @@ Local tasks:
   ordering, status, and mutation eligibility outside the browser. Verification: Inbox journey (`11
   passed`), selection/deep-link/reload journey (`1 passed`), full five-viewport matrix (`9 passed`),
   frontend Node suite (`135 passed`), UI contracts, Ruff, mypy, packaged JavaScript, full CI, and build.
-- `W44-E1-S3-T15` (next) Render the target Active Task first-viewport attempt composition and
-  live-output tray from the existing task-attempt evidence. Show attempt identity, factual elapsed and
-  last-output ages, durable milestone, cancellation/reconnect state, and collapsible raw output without
-  fabricated progress or new mutation semantics. Verification: provider-free starting/streaming/quiet/
-  cancellation/failed/completed/reconnecting journeys and five-viewport diagnostics.
-- `W44-E1-S3-T16` (planned) Recompose the Markdown Workspace so the selected read-only document,
+- `W44-E1-S3-T15` (done) Render the target Active Task first-viewport attempt composition and
+  live-output tray from the existing task-attempt evidence. PR #356 (merge `2e77fac5`) promotes the
+  selected attempt into a first-viewport tray with factual identity, elapsed and output-age values,
+  durable milestone, connection/reconnect cursor, one `Open live output` primary, guarded cancellation,
+  and collapsible bounded raw output. Existing task actions, routes, API shapes, and mutation semantics
+  remain unchanged. Verification: provider-free running/waiting/cancelling/failed/completed and
+  offline/reconnecting states across desktop/mobile (`14` focused checks plus a final targeted rerun),
+  frontend/UI contracts, Ruff, mypy, full Python/packaged-browser/adapter/deterministic/build CI.
+- `W44-E1-S3-T16` (next) Recompose the Markdown Workspace so the selected read-only document,
   heading map, provenance, freshness, and finding anchors share the first viewport with the navigator.
   Generated documents remain read-only and existing document routes/API shapes remain unchanged.
   Verification: current/stale/missing document fixtures, source/compare/anchor navigation, reload,
   focus, long-Markdown overflow, and five-viewport geometry checks.
-- `W44-E1-S3-T17` (planned) Recompose Validation Repair into a responsive finding-to-action hierarchy
+- `W44-E1-S3-T17` (soon) Recompose Validation Repair into a responsive finding-to-action hierarchy
   that keeps the finding, literal repair consequence, readable Runner readiness, and one primary repair
   action ahead of long evidence. Preserve validation/readiness projections and mutation semantics.
   Verification: five-viewport validation fixtures, action visibility/focus, readable Runner state,
@@ -15670,6 +15673,16 @@ Wave 44 exit evidence:
   slice, and T16/T17 follow their focused re-audits.
 
 Wave 44 reconciliation:
+
+- `2026-08-24` PR #356 (merge `2e77fac5`) completed `W44-E1-S3-T15`. Active Task now leads with the
+  selected task-attempt evidence: identity, factual elapsed and last-output ages, durable milestone,
+  connection/reconnect cursor, one `Open live output` primary, guarded cancellation, and collapsible
+  raw output. The browser keeps core-owned task membership/eligibility and existing mutation services;
+  no fabricated progress or new API/route semantics were added. Active-attempt provider-free states,
+  ready-task regression, desktop tray geometry, frontend/UI contracts, Ruff, mypy, deterministic,
+  adapter, packaged-browser, build, and all required CI lanes passed. `W44-E1-S3-T16` is now the next
+  dependency-ready task and T17 remains behind it; independent stage-strip label clipping at 1280px is
+  retained as a separate follow-up, and Wave 44 exit/default-routing evidence remains open.
 
 - `2026-08-24` PR #354 (merge `b3622bde`) completed `W44-E1-S3-T14`. Project Work now exposes a
   selectable, keyboard-accessible Work Item row with a retained inspector, compact search/filter,

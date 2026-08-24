@@ -7,10 +7,14 @@ slice, and local task.
 
 ## Next
 
-- `W44-E1-S3-T15` — Render the target Active Task first-viewport attempt composition and live-output
-  tray from the existing task-attempt evidence.
+- `W44-E1-S3-T16` — Recompose the Markdown Workspace so the selected read-only document, heading map,
+  provenance, freshness, and finding anchors share the first viewport with the navigator.
 
 ## Soon
+
+- `W44-E1-S3-T17` — Recompose Validation Repair into a responsive finding-to-action hierarchy that
+  keeps the finding, literal repair consequence, readable Runner readiness, and one primary repair
+  action ahead of long evidence.
 
 ## Parking lot
 
@@ -36,6 +40,16 @@ slice, and local task.
   queue-restoration policy in `docs/backlog/roadmap.md` (`W8-E3-S1`).
 
 ## Current reconciliation
+
+- `2026-08-24` PR #356 (merge `2e77fac5`) completed `W44-E1-S3-T15`: Active Task now leads with the
+  selected task-attempt evidence, factual elapsed/output-age/milestone/connection facts, one `Open
+  live output` primary, guarded cancellation, reconnect state, and collapsible raw output. Existing
+  task actions, route/API shapes, core-owned eligibility, and mutation services remain unchanged.
+  Provider-free active-attempt states, ready-task regression, desktop tray geometry, frontend/UI
+  contracts, Ruff, mypy, full CI, deterministic, adapter, packaged-browser, and build checks passed.
+  `W44-E1-S3-T16` is now Next and `W44-E1-S3-T17` is Soon; independent stage-strip label clipping at
+  1280px remains a separate follow-up, while human usability, Claude/cross-runtime, and Wave 36
+  acceptance stay parked.
 
 - `2026-08-24` PR #354 (merge `b3622bde`) completed `W44-E1-S3-T14`: Project Work rows now support
   click/keyboard selection, a reload-safe `inbox_work_item` deep-link, a compact server-owned filter,
