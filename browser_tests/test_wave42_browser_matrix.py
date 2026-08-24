@@ -49,6 +49,16 @@ def _assert_first_action(
 def test_wave42_browser_matrix_registry_is_complete() -> None:
     validate_wave42_browser_matrix()
     assert WAVE42_BROWSER_MATRIX_SCHEMA == "wave42-responsive-browser-matrix-v1"
+    journeys = {journey.journey_id: journey for journey in WAVE42_BROWSER_JOURNEYS}
+    assert journeys["question-recovery"].surface_selector == (
+        '[data-human-decision-surface="question"]'
+    )
+    assert journeys["validation-repair"].surface_selector == ".validation-repair-center"
+    assert journeys["review-remediation"].surface_selector == (
+        '[data-studio-quality-gate="review"]'
+    )
+    for journey_id in ("question-recovery", "validation-repair", "review-remediation"):
+        assert ".recovery-workbench" not in journeys[journey_id].surface_selector
 
 
 @pytest.mark.parametrize("journey", WAVE42_BROWSER_JOURNEYS, ids=lambda item: item.journey_id)
