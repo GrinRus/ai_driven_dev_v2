@@ -963,6 +963,37 @@
   .recovery-decision-actions { align-items: stretch; display: grid; grid-template-columns: minmax(0, 1fr); }
   .recovery-decision-actions button { width: 100%; }
   .repair-extension-preview .recovery-decision-facts { grid-template-columns: minmax(0, 1fr); }
+  .repair-action-band {
+    align-items: stretch;
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .repair-action-band > .repair-actions {
+    grid-row: 1;
+  }
+  .repair-action-band > div:first-child {
+    grid-row: 2;
+  }
+  .repair-action-band > .repair-extension-preview {
+    grid-row: 3;
+    max-width: none;
+  }
+  .repair-actions {
+    align-items: stretch;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    justify-content: stretch;
+  }
+  .repair-actions .contextual-runner-control,
+  .repair-actions > button {
+    width: 100%;
+  }
+  .repair-actions > [data-run-repair],
+  .repair-actions > [data-recovery-action="repair-extension"] {
+    grid-row: 1;
+  }
+  .repair-actions > .contextual-runner-control {
+    grid-row: 2;
+  }
   [data-human-decision-surface="question"] .question-list,
   [data-human-decision-surface="intervention"] .request-change-grid,
   [data-human-decision-surface="approval"] .approval-queue {
