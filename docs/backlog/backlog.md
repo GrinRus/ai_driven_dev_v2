@@ -41,7 +41,7 @@ slice, and local task.
 
 ## Current reconciliation
 
-- `2026-08-25` completed `W44-E1-S3-T19` at revision `35ff0ace`. The fresh rendered audit is retained
+- `2026-08-25` PR #364 (merge `47a8d903`) completed `W44-E1-S3-T19` from revision `35ff0ace`. The fresh rendered audit is retained
   in `docs/e2e/w44-e1-s3-t19-rendered-exit-audit.md`; provider-free matrix (`9`) and target legacy
   compositions (`5`) are green with clean diagnostics, but target comparison confirmed remaining
   shell, inspector, recovery, history, completion, and editor-density gaps. `W44-E1-S3-T20` is now
