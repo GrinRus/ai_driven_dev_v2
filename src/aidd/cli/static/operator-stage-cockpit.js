@@ -547,6 +547,7 @@ function renderValidation() {
           <span>Validation / Repair Center</span>
           <span class="small-badge ${result.validator_fail_count ? "bad" : "good"}">${escapeHtml(repairCenterStatus(validation, diagnostics?.stopped))}</span>
         </div>
+        ${renderRecoveryActionBand(diagnostics)}
         <div class="metric-grid">
           <div class="metric"><span>Pass</span><strong>${escapeHtml(result.validator_pass_count)}</strong></div>
           <div class="metric"><span>Fail</span><strong>${escapeHtml(result.validator_fail_count)}</strong></div>
@@ -554,7 +555,6 @@ function renderValidation() {
           <div class="metric"><span>Attempts</span><strong>${escapeHtml(result.attempt_count)}</strong></div>
         </div>
         ${(validation?.repair_attempts || []).length && !Number(result.validator_fail_count || 0) ? renderResolvedRepairSummary(validation) : ""}
-        ${renderRecoveryActionBand(diagnostics)}
         <div class="panel-item">
           <strong>Validator report</strong>
           ${pathLine(result.validator_report_path)}
