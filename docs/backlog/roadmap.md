@@ -15529,7 +15529,7 @@ Local tasks:
     docs/planning (`50 passed`), Ruff, mypy, full Python suite (`2430 passed`), deterministic
     scenarios, adapter conformance, packaged UI browser (`14m27s`), security checks, and build
     all passed. `W44-E1-S3-T2` is now the next dependency-ready task.
-- `W44-E1-S3-T2` (next) Produce a reconciled target-UX audit and split confirmed visual gaps into
+- `W44-E1-S3-T2` (done) Produce a reconciled target-UX audit and split confirmed visual gaps into
   bounded follow-up tasks. The audit is retained in
   `docs/e2e/w44-e1-s3-t2-target-ux-audit.md`; technical browser checks remain green, but visual
   convergence stays open because the target shell, task-ready composition, decision surfaces,
@@ -15538,14 +15538,14 @@ Local tasks:
     `1280x900` plus Mobile Decision at `390x844`; route, console, failed-request, blocked-request,
     and viewport-width diagnostics clean. Screenshot evidence is retained locally under
     `/tmp/w44-audit-v1/`.
-- `W44-E1-S3-T3` (planned) Render the persistent target Project/Work Item rail and context shell on
+- `W44-E1-S3-T3` (next) Render the persistent target Project/Work Item rail and context shell on
   every Work Item surface. Reuse existing route intents, Work Item ids, core-owned Inbox data,
   tabs, and stage projections; add only frontend shell markup and styling. The rail must expose
   project identity, Work Item search/list, selected item, and the current Work Item title/stage
   on recovery, history, completion, and mobile decision surfaces. Verification: provider-free
   rendered screenshots and DOM/accessibility checks for Project Work, Launch, Decision, History,
   Flow Complete, and Mobile Decision at desktop and supported mobile viewports.
-- `W44-E1-S3-T4` (planned) Render the target Ready-task Task Workspace composition using the
+- `W44-E1-S3-T4` (soon) Render the target Ready-task Task Workspace composition using the
   authoritative task ledger. Add a deterministic provider-free Ready fixture with selected task,
   dependency rows, Runner readiness, one primary Run/Resume/Finalize action, and the live-output
   tray without changing task status or eligibility ownership. Verification: task surface browser
@@ -15582,12 +15582,12 @@ Wave 44 exit evidence:
 
 Wave 44 reconciliation:
 
-- The `W44-E1-S3-T2` audit output is prepared in
-  `docs/e2e/w44-e1-s3-t2-target-ux-audit.md`: all captured routes are technically clean, while
-  the persistent Work Item shell, Ready-task composition, decision content, legacy
-  create/history/completion layouts, and target visual tokens remain open. After the audit PR is
-  reconciled, `T3` will be promoted as the next bounded frontend fix; human usability,
-  Claude/cross-runtime, and Wave 36 acceptance remain parked.
+- `W44-E1-S3-T2` is complete in PR #330 (merge `834b7bfd`). The fresh rendered comparison is
+  retained in `docs/e2e/w44-e1-s3-t2-target-ux-audit.md`: all captured routes are technically
+  clean, while the persistent Work Item shell, Ready-task composition, decision content, legacy
+  create/history/completion layouts, and target visual tokens remain open. `T3` is now the next
+  bounded frontend fix; human usability, Claude/cross-runtime, and Wave 36 acceptance remain
+  parked.
 
 - `W44-E1-S3-T1` is complete in PR #328 (merge `21c71156`). The provider-free matrix now records
   which journeys require an initial-viewport first action, retains honest scroll behavior for

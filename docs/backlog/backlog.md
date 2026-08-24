@@ -7,10 +7,13 @@ slice, and local task.
 
 ## Next
 
-- `W44-E1-S3-T2` — Produce a reconciled target-UX audit and close the convergence wave only when
-  all confirmed gaps are either fixed or explicitly environment-blocked.
+- `W44-E1-S3-T3` — Render the persistent target Project/Work Item rail and context shell on every
+  Work Item surface without changing routes, API shapes, core projections, or mutation semantics.
 
 ## Soon
+
+- `W44-E1-S3-T4` — Render the target Ready-task Task Workspace composition using the authoritative
+  task ledger and a deterministic selected-task fixture.
 
 ## Parking lot
 
@@ -36,6 +39,13 @@ slice, and local task.
   queue-restoration policy in `docs/backlog/roadmap.md` (`W8-E3-S1`).
 
 ## Current reconciliation
+
+- `2026-08-24` PR #330 (merge `834b7bfd`) completed `W44-E1-S3-T2`: the fresh 13-surface target
+  UX audit is retained in `docs/e2e/w44-e1-s3-t2-target-ux-audit.md`; route/console/request/
+  overflow diagnostics are clean, but target shell, task-ready, decision, create/history/
+  completion, and token gaps remain open. `W44-E1-S3-T3` is now `Next` and its direct Task
+  Workspace successor `T4` is `Soon`. Human usability, Claude/cross-runtime, and Wave 36
+  acceptance remain parked.
 
 - `2026-08-24` PR #328 (merge `21c71156`) completed `W44-E1-S3-T1`: the provider-free matrix now
   declares which launch, recovery, and completion journeys require an initial-viewport first
