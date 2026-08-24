@@ -7,11 +7,14 @@ slice, and local task.
 
 ## Next
 
-- `W44-E1-S3-T19` — Run a fresh rendered Wave 44 exit audit across all 13 target surfaces and reconcile
-  the default task-centered routing decision, recording any new evidence-backed follow-up task before
-  claiming exit.
+- `W44-E1-S3-T20` — Recompose the selected Project Work view into a non-overlapping target table/list
+  and right-side Work Item inspector while preserving core-owned ordering, selection deep links, and
+  one primary action.
 
 ## Soon
+
+- `W44-E1-S3-T21` — Recompose Work Item Overview/Launch with the target contextual Runner inspector,
+  one launch action, and readable compact-desktop stage strip.
 
 ## Parking lot
 
@@ -37,6 +40,13 @@ slice, and local task.
   queue-restoration policy in `docs/backlog/roadmap.md` (`W8-E3-S1`).
 
 ## Current reconciliation
+
+- `2026-08-25` completed `W44-E1-S3-T19` at revision `35ff0ace`. The fresh rendered audit is retained
+  in `docs/e2e/w44-e1-s3-t19-rendered-exit-audit.md`; provider-free matrix (`9`) and target legacy
+  compositions (`5`) are green with clean diagnostics, but target comparison confirmed remaining
+  shell, inspector, recovery, history, completion, and editor-density gaps. `W44-E1-S3-T20` is now
+  Next and `T21` is Soon; T22-T28 remain in the roadmap as planned successors. Human usability,
+  Claude/cross-runtime, and Wave 36 acceptance stay parked.
 
 - `2026-08-24` PR #362 (merge `4e36bc6f`) completed `W44-E1-S3-T18`: the compact eight-stage strip now
   keeps all labels, including `Implement`, readable at `1280x900` while preserving canonical order,
