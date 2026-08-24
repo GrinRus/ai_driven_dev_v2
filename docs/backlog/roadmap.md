@@ -15619,11 +15619,14 @@ Local tasks:
   full five-viewport provider-free matrix (`9 passed`), terminal journeys (`12 passed`), UI contracts
   (`59 passed`), frontend suite (`135 passed`), Ruff, mypy, packaged JavaScript, deterministic,
   adapter, build, and packaged UI browser CI all passed.
-- `W44-E1-S3-T7` (next) Align shared Operator UI tokens and component density with the target
+- `W44-E1-S3-T7` (done) Align shared Operator UI tokens and component density with the target
   visual language: warm canvas, deep navy rail, cobalt primary, mint success, amber warning,
-  and at least 14px primary desktop reading text. Verification: token contract checks plus the
-  full five-viewport visual/geometry/accessibility matrix with no clipping or overflow.
-- `W44-E1-S3-T8` (soon) Close the rendered convergence wave only after a fresh 13-surface audit
+  and at least 14px primary desktop reading text. PR #350 (merge `d486e9ae`) updates the shared
+  semantic token layer and keeps legacy selector aliases/API behavior intact. Verification: target
+  token contract, UI/readability/asset/semantic/density checks (`65 passed`), frontend Node suite
+  (`135 passed`), full five-viewport provider-free matrix (`9 passed`), Ruff, mypy, packaged
+  JavaScript, deterministic, adapter, build, and packaged UI browser CI all passed.
+- `W44-E1-S3-T8` (next) Close the rendered convergence wave only after a fresh 13-surface audit
   confirms every target gap is absent or explicitly environment-blocked, with zero console errors,
   horizontal overflow, duplicate primary actions, or focus loss. Verification: full provider-free
   browser matrix, target screenshot audit, and reconciliation evidence.
@@ -15640,6 +15643,14 @@ Wave 44 exit evidence:
 - a fresh rendered audit confirms remaining gaps are absent or explicitly blocked.
 
 Wave 44 reconciliation:
+
+- `2026-08-24` PR #350 (merge `d486e9ae`) completed `W44-E1-S3-T7`: shared Operator tokens now use
+  a warm workspace canvas, deep navy context chrome, cobalt primary actions, mint success, amber
+  warning, and a 14px body reading role; existing teal/green selector aliases continue to resolve
+  through the new semantic roles. The target token contract, 65 focused UI/asset/semantic/density
+  checks, frontend suite, five-viewport matrix, Ruff, mypy, packaged JavaScript, deterministic,
+  adapter, build, and packaged-browser checks passed. `W44-E1-S3-T8` is now Next for a fresh 13-surface
+  rendered parity audit; human usability, Claude/cross-runtime, and Wave 36 acceptance remain parked.
 
 - `2026-08-24` PR #348 (merge `3193e39e`) completed `W44-E1-S3-T13`: the immutable Flow Complete
   handoff now reuses the responsive single-primary action dock, so the core-recommended outcome
