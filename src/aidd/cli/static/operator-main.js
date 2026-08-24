@@ -254,6 +254,17 @@ document.addEventListener("click", async (event) => {
       await completeOnboardingWorkItem("resume", onboardingResume);
       return;
     }
+    const stageMobileToggle = event.target.closest("[data-stage-mobile-toggle]");
+    if (stageMobileToggle) {
+      const stepper = stageMobileToggle.closest("[data-intent-phase-stepper]");
+      if (!stepper) return;
+      const expanded = stepper.dataset.mobileStagesExpanded === "true";
+      stepper.dataset.mobileStagesExpanded = String(!expanded);
+      stageMobileToggle.setAttribute("aria-expanded", String(!expanded));
+      const label = stageMobileToggle.querySelector("[data-stage-mobile-toggle-label]");
+      if (label) label.textContent = expanded ? "Show stages" : "Hide stages";
+      return;
+    }
     const stageButton = event.target.closest("[data-stage]");
     if (stageButton) {
       state.activeStage = stageButton.dataset.stage;
