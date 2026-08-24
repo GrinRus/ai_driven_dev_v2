@@ -483,8 +483,25 @@ function syncOnboardingCreateActionState() {
   const form = document.getElementById("onboardingCreateForm");
   if (!form) return;
   const button = form.querySelector('button[type="submit"]');
-  if (!button) return;
-  button.disabled = !(onboardingCanCreate() && !state.onboarding.creating);
+  const canCreate = onboardingCanCreate() && !state.onboarding.creating;
+  if (button) button.disabled = !(onboardingCanCreate() && !state.onboarding.creating);
+  const targetButton = document.querySelector("[data-target-create-submit]");
+  if (targetButton) targetButton.disabled = !canCreate;
+  const preview = document.querySelector("[data-request-preview-markdown]");
+  if (preview) {
+    const request = String(state.onboarding.requestText || "").trim();
+    preview.innerHTML = request
+      ? (typeof renderMarkdown === "function" ? renderMarkdown(request) : escapeHtml(request))
+      : `<p class="muted">Your requested outcome will appear here as Markdown before it is written.</p>`;
+  }
+  const draftStatus = document.querySelector("[data-create-draft-status] .small-badge");
+  if (draftStatus) {
+    draftStatus.textContent = state.onboarding.requestText.trim() ? "Unsaved draft" : "Ready to draft";
+    draftStatus.classList.toggle("warn", Boolean(state.onboarding.requestText.trim()));
+  }
+  const workItem = document.getElementById("onboardingWorkItem")?.value.trim() || "WI-NEW";
+  const destination = document.querySelector("[data-request-preview-panel] .target-document-destination code");
+  if (destination) destination.textContent = `.aidd/workitems/${workItem}/context/operator-request.md`;
 }
 
 function projectWorkItemCanCreate() {
@@ -567,73 +584,86 @@ function renderOnboarding() {
   const selectedRunner = state.selectedRuntime
     ? `<span class="small-badge good">${escapeHtml(state.selectedRuntime)}</span>`
     : `<span class="small-badge">optional until launch</span>`;
+  const requestText = state.onboarding.requestText.trim();
+  const requestPreview = requestText
+    ? (typeof renderMarkdown === "function" ? renderMarkdown(requestText) : escapeHtml(requestText))
+    : `<p class="muted">Your requested outcome will appear here as Markdown before it is written.</p>`;
+  const workItem = state.onboarding.workItemInput.trim() || "WI-NEW";
   content.innerHTML = `
-    <div class="onboarding-shell" data-guided-step="${escapeHtml(guided.step)}">
-      ${renderGuidedSetupProgress(guided)}
-      ${renderGuidedSetupSummary(guided)}
-      ${renderGuidedDeliveryPreference()}
-      <section class="surface onboarding-panel">
-        <div class="surface-title">
-          <span>Project setup</span>
-          <span class="small-badge">${state.onboarding.loading ? "loading" : "local"}</span>
+    <div class="onboarding-shell target-create-work-item" data-create-work-item-surface data-guided-step="${escapeHtml(guided.step)}">
+      <header class="target-surface-header create-work-item-header">
+        <div>
+          <p class="eyebrow">New Work Item</p>
+          <h1>Create work item</h1>
+          <p>Capture the request, context, and scope. Runner selection happens when you launch work.</p>
         </div>
-        <form id="onboardingProjectForm" class="form-grid">
-          <label class="field-label" for="onboardingProjectRoot">Project root</label>
-          <div class="inline-form-row">
-            <input id="onboardingProjectRoot" name="project_root" type="text" value="${escapeHtml(state.onboarding.projectRootInput)}" autocomplete="off" spellcheck="false">
-            <button type="submit" class="secondary" ${state.onboarding.inspecting ? "disabled" : ""}>Validate project</button>
-          </div>
-        </form>
-        ${onboardingProjectSummary()}
-        ${renderOnboardingAdvanced()}
-      </section>
-
-      <section class="surface onboarding-panel">
-        <div class="surface-title">
-          <span>Work Item</span>
-          <span class="small-badge">create or resume</span>
+        <div class="target-surface-status" data-create-draft-status>
+          <span class="small-badge ${requestText ? "warn" : ""}">${requestText ? "Unsaved draft" : "Ready to draft"}</span>
+          <button class="secondary" data-cancel-new-work-item type="button">Cancel</button>
         </div>
-        <div class="onboarding-work-item-branches">
-          <article class="onboarding-work-item-branch" data-onboarding-work-item-branch="create">
-            <div class="surface-title compact"><span>Create</span><span class="small-badge">new context</span></div>
-            <form id="onboardingCreateForm" class="form-grid">
-            <label class="field-label" for="onboardingWorkItem">Work Item id</label>
-              <input id="onboardingWorkItem" name="work_item" type="text" maxlength="120" value="${escapeHtml(state.onboarding.workItemInput)}" autocomplete="off" spellcheck="false">
-              <label class="field-label" for="onboardingRequest">Request</label>
-              <textarea id="onboardingRequest" name="request" rows="7" maxlength="20000">${escapeHtml(state.onboarding.requestText)}</textarea>
-              <label class="checkbox-row" for="onboardingForceContext">
-                <input id="onboardingForceContext" name="force_context" type="checkbox" ${state.onboarding.forceContext ? "checked" : ""}>
-                <span>Overwrite existing request context</span>
-              </label>
-              <div class="setup-actions">
-                <button type="submit" ${onboardingCanCreate() && !state.onboarding.creating ? "" : "disabled"}>${state.onboarding.creating ? "Creating..." : "Create and open command center"}</button>
-                ${state.onboarding.createError ? `<span class="form-error">${escapeHtml(state.onboarding.createError)}</span>` : ""}
+      </header>
+      <div class="target-create-layout">
+        <section class="target-create-editor" data-request-editor data-onboarding-work-item-branch="create" aria-label="Work Item request editor">
+          <div class="target-panel-heading"><strong>Work Item details</strong><span class="small-badge">operator-authored</span></div>
+          <form id="onboardingCreateForm" class="form-grid target-create-form">
+            <label class="field-label" for="onboardingWorkItem">Work Item ID</label>
+            <input id="onboardingWorkItem" name="work_item" type="text" maxlength="120" value="${escapeHtml(state.onboarding.workItemInput)}" autocomplete="off" spellcheck="false" placeholder="WI-123">
+            <span class="field-help">Use a stable identifier that can be retained across runs.</span>
+            <label class="field-label" for="onboardingRequest">Requested outcome</label>
+            <div class="target-editor-tabs" role="tablist" aria-label="Request editor mode">
+              <button class="target-editor-tab active" type="button" role="tab" aria-selected="true">Write</button>
+              <button class="target-editor-tab" type="button" role="tab" aria-selected="false" disabled>Preview</button>
+            </div>
+            <textarea id="onboardingRequest" name="request" rows="11" maxlength="20000" placeholder="What should this Work Item deliver?">${escapeHtml(state.onboarding.requestText)}</textarea>
+            <label class="checkbox-row" for="onboardingForceContext">
+              <input id="onboardingForceContext" name="force_context" type="checkbox" ${state.onboarding.forceContext ? "checked" : ""}>
+              <span>Overwrite existing request context</span>
+            </label>
+            <details class="target-create-context">
+              <summary>Context and constraints <span class="muted">optional</span></summary>
+              <textarea rows="4" aria-label="Context and constraints" placeholder="Add background, assumptions, known constraints, or helpful links."></textarea>
+            </details>
+            <div class="setup-actions target-create-form-actions">
+              <button type="submit" ${onboardingCanCreate() && !state.onboarding.creating ? "" : "disabled"}>${state.onboarding.creating ? "Creating..." : "Create Work Item"}</button>
+              ${state.onboarding.createError ? `<span class="form-error">${escapeHtml(state.onboarding.createError)}</span>` : ""}
+            </div>
+          </form>
+        </section>
+        <aside class="target-create-preview" data-request-preview-panel aria-label="Request Markdown preview">
+          <div class="target-panel-heading"><strong>operator-request.md</strong><button class="secondary" type="button" data-copy-request-destination aria-label="Copy request destination">Copy</button></div>
+          <p class="target-document-destination">Destination: <code>.aidd/workitems/${escapeHtml(workItem)}/context/operator-request.md</code></p>
+          <div class="target-markdown-preview" data-request-preview-markdown>${requestPreview}</div>
+          <div class="target-preview-section"><h2>Context</h2><p class="muted">No context provided.</p></div>
+          <div class="target-preview-section"><h2>Constraints</h2><p class="muted">No constraints provided.</p></div>
+        </aside>
+      </div>
+      <footer class="target-create-footer"><span>Runner is selected when you launch work.</span><div class="setup-actions"><button class="secondary" data-cancel-new-work-item type="button">Cancel</button><button type="submit" form="onboardingCreateForm" data-target-create-submit ${onboardingCanCreate() && !state.onboarding.creating ? "" : "disabled"}>Create work item</button></div></footer>
+      <details class="target-create-supporting" open>
+        <summary>Project, saved Work Items, and Runner readiness</summary>
+        <div class="onboarding-supporting-grid">
+          <section class="surface onboarding-panel">
+            <div class="surface-title"><span>Project setup</span><span class="small-badge">${state.onboarding.loading ? "loading" : "local"}</span></div>
+            <form id="onboardingProjectForm" class="form-grid">
+              <label class="field-label" for="onboardingProjectRoot">Project root</label>
+              <div class="inline-form-row">
+                <input id="onboardingProjectRoot" name="project_root" type="text" value="${escapeHtml(state.onboarding.projectRootInput)}" autocomplete="off" spellcheck="false">
+                <button type="submit" class="secondary" ${state.onboarding.inspecting ? "disabled" : ""}>Validate project</button>
               </div>
             </form>
-          </article>
-          <article class="onboarding-work-item-branch" data-onboarding-work-item-branch="resume">
-            <div class="surface-title compact"><span>Resume</span><span class="small-badge">inspect context</span></div>
+            ${onboardingProjectSummary()}
+            ${renderOnboardingAdvanced()}
+          </section>
+          <section class="surface onboarding-panel target-create-resume" data-onboarding-work-item-branch="resume">
+            <div class="surface-title"><span>Saved Work Items</span><span class="small-badge">resume</span></div>
             <p class="muted">Open saved Work Item context now; runtime selection and launch remain separate actions.</p>
             <div class="panel-list">${onboardingWorkItems()}</div>
-          </article>
+          </section>
+          <section class="surface onboarding-panel">
+            <div class="surface-title"><span>Runner</span>${selectedRunner}</div>
+            <div class="runner-card-grid">${onboardingRunnerCards()}</div>
+          </section>
         </div>
-      </section>
-
-      <section class="surface onboarding-panel">
-        <div class="surface-title">
-          <span>Runner</span>
-          ${selectedRunner}
-        </div>
-        <div class="runner-card-grid">${onboardingRunnerCards()}</div>
-      </section>
-
-      <section class="surface onboarding-panel">
-        <div class="surface-title">
-          <span>Recent projects</span>
-          <span class="small-badge">${(state.onboarding.recentProjects || []).length}</span>
-        </div>
-        <div class="panel-list">${onboardingRecentProjects()}</div>
-      </section>
+      </details>
     </div>
   `;
 }
