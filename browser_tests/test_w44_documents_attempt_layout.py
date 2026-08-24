@@ -51,8 +51,11 @@ def test_documents_keep_navigator_reader_and_context_visible(
                 viewer: box('.stage-document-workbench > #artifactViewer'),
                 reader: box('#artifactViewer .reader-document-column'),
                 inspector: box('#artifactViewer .workbench-sidebar'),
+                brief: box('#artifactViewer .reader-brief-compact'),
+                body: box('#artifactViewer .reader-body-content'),
+                headingMap: box('#artifactViewer [data-reader-heading-map]'),
                 columns: getComputedStyle(
-                  document.querySelector('.stage-document-workbench')
+                    document.querySelector('.stage-document-workbench')
                 ).gridTemplateColumns,
                 scrollWidth: document.documentElement.scrollWidth,
               };
@@ -64,6 +67,14 @@ def test_documents_keep_navigator_reader_and_context_visible(
         assert abs(geometry["tree"]["y"] - geometry["viewer"]["y"]) < 2
         assert geometry["reader"]["width"] > geometry["inspector"]["width"]
         assert geometry["inspector"]["x"] > geometry["reader"]["x"]
+        assert geometry["brief"]["y"] + geometry["brief"]["height"] <= geometry["body"]["y"]
+        assert geometry["body"]["y"] < viewport[1]
+        assert geometry["headingMap"]["y"] < viewport[1]
+        assert page.locator("#artifactViewer [data-reader-freshness]").count() == 1
+        assert page.locator("#artifactViewer [data-reader-heading-map]").get_by_text(
+            "Heading map", exact=True
+        ).count() == 1
+        assert page.locator("#artifactViewer [data-artifact-mode='write']").count() == 0
         assert geometry["scrollWidth"] <= viewport[0]
         browser_page.diagnostics.assert_clean()
 

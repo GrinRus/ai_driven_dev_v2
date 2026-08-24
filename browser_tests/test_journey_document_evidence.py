@@ -89,7 +89,7 @@ def test_document_canvas_and_evidence_inspector_preserve_safe_context(
         canvas.locator('[data-document-canvas-mode="preview"]').wait_for(state="visible")
         assert "QA verdict: ready" in canvas.inner_text()
         assert "Historical / stale" in canvas.inner_text()
-        assert "Why it matters now" in canvas.inner_text()
+        assert canvas.get_by_text("Why it matters now", exact=True).count() == 1
         _assert_rendered_gate(page, viewport)
 
         for mode in ("source", "preview"):
