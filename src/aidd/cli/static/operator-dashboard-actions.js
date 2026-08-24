@@ -51,8 +51,30 @@ async function fetchDashboard() {
     state.selectedRuntime = state.dashboard.run.runtime_id;
   }
   const nextAction = state.dashboard.next_action?.action || "";
-  if (isRecoveryNextAction(nextAction) && state.activeTab === "work") {
+  const route = typeof decodeOperatorRoute === "function"
+    ? decodeOperatorRoute(window.location.search).value
+    : {view: ""};
+  const explicitRecoveryRoute = route.view === "recovery"
+    && state.activeTab === "recovery"
+    && state.recoveryDetail === "summary";
+  if (explicitRecoveryRoute && nextAction === "review-findings") {
+    // A recovery deep link is an explicit request to land on the durable
+    // finding surface. Do not leave the operator at the generic summary when
+    // the server already knows that Review findings is the next action.
+    if (state.dashboard.next_action?.stage && STAGES.includes(state.dashboard.next_action.stage)) {
+      state.activeStage = state.dashboard.next_action.stage;
+      state.activeStageExplicit = true;
+    }
+    state.activeTab = "work";
+    state.workDetail = "review-findings";
+    state.workItemTab = "tasks";
+    requestCockpitReveal();
+  } else if (isRecoveryNextAction(nextAction) && (state.activeTab === "work" || explicitRecoveryRoute)) {
     state.activeTab = "recovery";
+    if (state.dashboard.next_action?.stage && STAGES.includes(state.dashboard.next_action.stage)) {
+      state.activeStage = state.dashboard.next_action.stage;
+      state.activeStageExplicit = true;
+    }
     if (nextAction === "answer-questions") state.recoveryDetail = "questions";
     else if (nextAction === "inspect-validation" || nextAction === "review-intervention") {
       state.recoveryDetail = "validation";

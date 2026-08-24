@@ -12,6 +12,7 @@ _PROVIDER_FREE_FIXTURES = set(BROWSER_FIXTURE_STATES) | {
     "implementation-task-failed",
     "implementation-finalization-failed",
     "implementation-finalized",
+    "review-qa-rejected",
 }
 
 

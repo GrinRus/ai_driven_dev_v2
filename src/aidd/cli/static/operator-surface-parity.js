@@ -188,11 +188,11 @@ const PROVIDER_FREE_ROUTE_MANIFEST = Object.freeze([
   {
     id: "review-qa-remediation",
     target: "10-review-qa-remediation.png",
-    fixture: "remediation-stale",
-    route: "?mode=studio&work_item=WI-BROWSER&run_id=run-browser&stage=qa&view=recovery",
+    fixture: "review-qa-rejected",
+    route: "?mode=studio&work_item=WI-BROWSER&run_id=run-browser&stage=review&view=recovery",
     routeIntent: "studio",
     viewport: "1280x900",
-    context: {project: ".", work_item: "WI-BROWSER", run: "run-browser", stage: "qa", recovery_target: "remediation"}
+    context: {project: ".", work_item: "WI-BROWSER", run: "run-browser", stage: "review", recovery_target: "remediation"}
   },
   {
     id: "run-history",
@@ -239,6 +239,7 @@ const PROVIDER_FREE_FIXTURES = new Set([
   "running",
   "blocking-question",
   "validation-repair",
+  "review-qa-rejected",
   "qa-decision",
   "remediation-stale",
   "history",
