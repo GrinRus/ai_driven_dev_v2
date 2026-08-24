@@ -15672,11 +15672,40 @@ Local tasks:
   space without changing the stage DOM, phase grouping, route semantics, or mobile disclosure. Verification:
   five-viewport stage-strip geometry/accessibility checks, no clipped labels or horizontal overflow,
   stable deep links/reload, frontend/UI contracts, Ruff, mypy, and full CI including packaged UI browser.
-- `W44-E1-S3-T19` (next) Run a fresh rendered Wave 44 exit audit across all 13 target surfaces and
-  reconcile the default task-centered routing decision. Retain screenshots and a written audit that
-  verifies target shell hierarchy, contextual Runner/one-primary rules, initial-viewport actions,
-  responsive/accessibility states, absence of clipping/overflow/console errors/focus loss, and records
-  any new evidence-backed follow-up task before claiming Wave 44 exit.
+- `W44-E1-S3-T19` (done) Run a fresh rendered Wave 44 exit audit across all 13 target surfaces and
+  reconcile the default task-centered routing decision. The audit is retained in
+  `docs/e2e/w44-e1-s3-t19-rendered-exit-audit.md`. Provider-free browser and legacy-composition
+  checks remain green, but the target shell and several first-viewport compositions still diverge;
+  the audit therefore decomposes the next bounded UI tasks instead of claiming Wave 44 exit.
+  - Verification: provider-free matrix (`9 passed`), target legacy compositions (`5 passed`), fresh
+    desktop/mobile screenshots, target-asset comparison, responsive/accessibility review, and clean
+    console/request/overflow diagnostics in the authoritative browser lanes.
+- `W44-E1-S3-T20` (next) Recompose the selected Project Work view into a non-overlapping target
+  table/list and right-side Work Item inspector. Preserve core-owned group membership, ordering,
+  selection deep links, one primary action, keyboard navigation, and responsive mobile fallback.
+  - Verification: selected Inbox fixture at `1280x900`, `1440x900`, `768x1024`, and mobile, with
+    geometry/accessibility, deep-link/reload, action-count, and diagnostics assertions.
+- `W44-E1-S3-T21` (soon) Recompose Work Item Overview/Launch so the contextual Runner readiness
+  inspector and one launch action occupy the target hierarchy while the eight-stage strip remains
+  readable at compact desktop widths. Preserve runtime selection, readiness revalidation, route
+  state, and no-Runner behavior on create/read-only surfaces.
+- `W44-E1-S3-T22` (planned) Recompose Tasks and Active Task into the target table/right-inspector/
+  live-output hierarchy. Preserve the authoritative task ledger, selected-task actions, factual
+  attempt fields, reconnect/cancel states, and one primary action without duplicate shells.
+- `W44-E1-S3-T23` (planned) Recompose Decision, Validation Repair, and Mobile Decision recovery
+  content so rationale, evidence, resolution/consequence, destination, and the single contextual
+  action retain the target hierarchy across desktop and mobile states.
+- `W44-E1-S3-T24` (planned) Align Runs and Attempts with the target chronology, selected-attempt
+  inspector, lineage, retained evidence, and read-only action hierarchy.
+- `W44-E1-S3-T25` (planned) Align Flow Complete with the target immutable handoff, evidence,
+  completion inspector, and recommended-next-outcome composition without changing lineage semantics.
+- `W44-E1-S3-T26` (planned) Align Create Work Item with the target editor/preview shell, draft
+  status, context sections, and one create action while preserving operator-authored Markdown rules.
+- `W44-E1-S3-T27` (planned) Align Implementation Review and Review/QA Remediation with the target
+  repository-truth, finding-evidence, and remediation action hierarchy.
+- `W44-E1-S3-T28` (planned) Align Markdown Workspace reader, navigator, provenance, heading map,
+  and evidence inspector spacing with the target document composition while keeping generated
+  documents read-only.
 
 Wave 44 exit evidence:
 
@@ -15687,12 +15716,18 @@ Wave 44 exit evidence:
   viewport;
 - browser checks show no console errors, horizontal overflow, duplicate primary actions, or focus
   loss;
-- a fresh rendered audit confirms remaining gaps are absent or explicitly blocked. The current audit
-  is evidence-complete but not an exit pass: T14 through T18 are complete, T19 is the next bounded
-  convergence slice for the final exit/default-routing decision, and default task-centered routing
-  remains provisional until that audit closes the remaining evidence gap.
+- a fresh rendered audit confirms remaining gaps are absent or explicitly blocked. T19 is now
+  evidence-complete but not an exit pass; T20 is the only dependency-ready convergence task and
+  default task-centered routing remains provisional until T20-T28 are either completed or backed by
+  stronger target-equivalence evidence.
 
 Wave 44 reconciliation:
+
+- `2026-08-25` completed `W44-E1-S3-T19` on revision `35ff0ace`. The fresh audit is retained in
+  `docs/e2e/w44-e1-s3-t19-rendered-exit-audit.md`. The five-viewport provider-free matrix and
+  target legacy-composition checks are green with clean diagnostics, but screenshot comparison
+  confirmed remaining target-shell, inspector, recovery, history, completion, and editor-density
+  gaps. `W44-E1-S3-T20` is now the only dependency-ready task; T21-T28 are planned successors.
 
 - `2026-08-24` PR #362 (merge `4e36bc6f`) completed `W44-E1-S3-T18`. The compact desktop/tablet
   stage strip now keeps all eight labels, including `Implement`, fully readable at `1280x900` while
