@@ -81,6 +81,21 @@ def test_operator_token_inventory_covers_accepted_semantic_roles() -> None:
     assert required <= declared
 
 
+def test_operator_tokens_match_target_palette_and_reading_density() -> None:
+    tokens = _asset("/operator-tokens.css")
+    declared = dict(re.findall(r"(--[a-z0-9-]+)\s*:\s*([^;]+);", tokens))
+
+    assert declared["--bg"] == "#f7f5ef"
+    assert declared["--topbar-bg"] == "var(--navy)"
+    assert declared["--navy"] == "#061a33"
+    assert declared["--color-action-primary"] == "var(--cobalt)"
+    assert declared["--cobalt"] == "#155eef"
+    assert declared["--color-action-primary-hover"] == "var(--cobalt-dark)"
+    assert declared["--green"] == "var(--mint)"
+    assert declared["--mint"] == "#087f5b"
+    assert declared["--type-body-size"] == "14px"
+
+
 def test_raw_value_inventory_outside_token_layer_cannot_grow() -> None:
     styles = "\n".join(
         _asset(route)
