@@ -15603,16 +15603,24 @@ Local tasks:
   remains unchanged. Verification: one provider-free question-recovery regression over all five
   viewports (`1 passed`), selected durable-answer recovery, frontend suite (`135 passed`), UI
   contracts (`66 passed`), Ruff, mypy, and packaged UI browser CI.
-- `W44-E1-S3-T12` (next) Align the Review-remediation browser journey with the authoritative Review
-  quality-gate surface and its first-action contract instead of the generic recovery route. Preserve
-  rejected-finding evidence, durable remediation launch semantics, and one primary action. Verification:
-  provider-free Review/QA journey and matrix checks across all five viewports with route, focus,
-  accessibility, diagnostics, and overflow assertions.
+- `W44-E1-S3-T12` (done) Align the Review-remediation browser journey with the authoritative Review
+  quality-gate surface and its first-action contract instead of the generic recovery route. PR #346
+  (merge `f1f51178`) switches the provider-free matrix to the rejected Review fixture and keeps the
+  existing remediation launch control visible in a bounded action dock across all five viewports.
+  Rejected-finding evidence, durable remediation launch semantics, and the one-primary-action
+  contract remain unchanged. Verification: focused Review matrix (`1 passed` across five viewports),
+  authoritative recovery and Review/QA journeys (`7 passed`), UI contracts (`59 passed`), frontend
+  Node suite (`135 passed`), Ruff, mypy, packaged JavaScript, full CI, and build all passed.
+- `W44-E1-S3-T13` (next) Recompose Flow Complete so the core-recommended outcome action is fully
+  visible and focusable in the initial `320x568` viewport while preserving immutable handoff evidence,
+  lineage overlays, and one primary-action semantics. Verification: completion journey and full
+  five-viewport provider-free matrix with initial-action, accessibility, diagnostics, geometry, and
+  overflow assertions.
 - `W44-E1-S3-T7` (soon) Align shared Operator UI tokens and component density with the target
   visual language: warm canvas, deep navy rail, cobalt primary, mint success, amber warning,
   and at least 14px primary desktop reading text. Verification: token contract checks plus the
   full five-viewport visual/geometry/accessibility matrix with no clipping or overflow.
-  - Dependencies: `W44-E1-S3-T12`.
+  - Dependencies: `W44-E1-S3-T13`.
 - `W44-E1-S3-T8` (planned) Close the rendered convergence wave only after a fresh 13-surface audit
   confirms every target gap is absent or explicitly environment-blocked, with zero console errors,
   horizontal overflow, duplicate primary actions, or focus loss. Verification: full provider-free
@@ -15630,6 +15638,15 @@ Wave 44 exit evidence:
 - a fresh rendered audit confirms remaining gaps are absent or explicitly blocked.
 
 Wave 44 reconciliation:
+
+- `2026-08-24` PR #346 (merge `f1f51178`) completed `W44-E1-S3-T12`: the Review-remediation
+  journey now uses the authoritative rejected Review quality gate and its existing durable
+  `Send selected to implement` control remains visible in the initial viewport at all five
+  supported sizes. Focused Review matrix, recovery, UI contract, frontend, Ruff, mypy, packaged
+  JavaScript, packaged-browser, deterministic, adapter, security, and build checks passed. The
+  same full matrix exposed an independent Flow Complete first-action gap at `320x568`; it is
+  split into `W44-E1-S3-T13`, which is now Next. Token alignment `T7` remains Soon behind T13;
+  human usability, Claude/cross-runtime, and Wave 36 acceptance remain parked.
 
 - `2026-08-24` PR #338 (merge `99da14c9`) completed `W44-E1-S3-T6`: Create Work Item now has a
   target request editor and Markdown preview, Runs/Attempts has a selected-attempt inspector,

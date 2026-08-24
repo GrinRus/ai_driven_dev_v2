@@ -7,13 +7,13 @@ slice, and local task.
 
 ## Next
 
-- `W44-E1-S3-T12` — Align the Review-remediation journey with the authoritative quality-gate surface
-  and first-action contract.
+- `W44-E1-S3-T13` — Recompose Flow Complete so the core-recommended outcome action is visible and
+  focusable in the initial `320x568` viewport.
 
 ## Soon
 
 - `W44-E1-S3-T7` — Align shared Operator UI tokens and component density with the target visual
-  language.
+  language after the completion first-action contract is green.
 
 ## Parking lot
 
@@ -39,6 +39,13 @@ slice, and local task.
   queue-restoration policy in `docs/backlog/roadmap.md` (`W8-E3-S1`).
 
 ## Current reconciliation
+
+- `2026-08-24` PR #346 (merge `f1f51178`) completed `W44-E1-S3-T12`: Review-remediation now lands on
+  the authoritative rejected Review quality gate, and its existing durable remediation control is
+  visible at all five target viewport sizes. Focused Review/recovery, UI contract, frontend, Ruff,
+  mypy, packaged JavaScript, full CI, and build checks passed. The full provider-free matrix then
+  exposed a separate Flow Complete first-action gap at `320x568`; `W44-E1-S3-T13` is now Next and
+  token alignment `T7` remains Soon behind it.
 
 - `2026-08-24` PR #344 (merge `f693db74`) completed `W44-E1-S3-T11`: the existing Question Decision
   answer action is now a bounded desktop/tablet action dock at all five supported viewport sizes,
