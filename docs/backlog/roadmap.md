@@ -15626,10 +15626,32 @@ Local tasks:
   token contract, UI/readability/asset/semantic/density checks (`65 passed`), frontend Node suite
   (`135 passed`), full five-viewport provider-free matrix (`9 passed`), Ruff, mypy, packaged
   JavaScript, deterministic, adapter, build, and packaged UI browser CI all passed.
-- `W44-E1-S3-T8` (next) Close the rendered convergence wave only after a fresh 13-surface audit
-  confirms every target gap is absent or explicitly environment-blocked, with zero console errors,
-  horizontal overflow, duplicate primary actions, or focus loss. Verification: full provider-free
-  browser matrix, target screenshot audit, and reconciliation evidence.
+- `W44-E1-S3-T8` (done) Record a fresh rendered 13-surface parity audit and decompose any
+  evidence-backed visual gaps into bounded follow-up tasks. PR #352 (merge `e1d77b01`) retains
+  `docs/e2e/w44-e1-s3-t8-rendered-convergence-audit.md`. The provider-free matrix remains clean
+  across all five viewports with no console errors, horizontal overflow, duplicate primary actions,
+  or focus loss; the audit intentionally keeps Wave 44 open because Project Work selection/inspector,
+  Active Task evidence, Markdown first-viewport reading, and Validation Repair hierarchy still diverge
+  from the target composition.
+- `W44-E1-S3-T14` (next) Render the target Project Work selected Work Item inspector and compact
+  filter/table composition from the existing core-owned Inbox projection. Preserve membership, order,
+  routes, API shapes, stable ids, and one primary action. Verification: provider-free Project Work
+  selection, deep-link/reload, keyboard, filter, focus, and five-viewport geometry checks.
+- `W44-E1-S3-T15` (soon) Render the target Active Task first-viewport attempt composition and
+  live-output tray from the existing task-attempt evidence. Show attempt identity, factual elapsed and
+  last-output ages, durable milestone, cancellation/reconnect state, and collapsible raw output without
+  fabricated progress or new mutation semantics. Verification: provider-free starting/streaming/quiet/
+  cancellation/failed/completed/reconnecting journeys and five-viewport diagnostics.
+- `W44-E1-S3-T16` (planned) Recompose the Markdown Workspace so the selected read-only document,
+  heading map, provenance, freshness, and finding anchors share the first viewport with the navigator.
+  Generated documents remain read-only and existing document routes/API shapes remain unchanged.
+  Verification: current/stale/missing document fixtures, source/compare/anchor navigation, reload,
+  focus, long-Markdown overflow, and five-viewport geometry checks.
+- `W44-E1-S3-T17` (planned) Recompose Validation Repair into a responsive finding-to-action hierarchy
+  that keeps the finding, literal repair consequence, readable Runner readiness, and one primary repair
+  action ahead of long evidence. Preserve validation/readiness projections and mutation semantics.
+  Verification: five-viewport validation fixtures, action visibility/focus, readable Runner state,
+  evidence overflow, disabled/stale states, and duplicate-primary protection.
 
 Wave 44 exit evidence:
 
@@ -15640,9 +15662,20 @@ Wave 44 exit evidence:
   viewport;
 - browser checks show no console errors, horizontal overflow, duplicate primary actions, or focus
   loss;
-- a fresh rendered audit confirms remaining gaps are absent or explicitly blocked.
+- a fresh rendered audit confirms remaining gaps are absent or explicitly blocked. The current audit
+  is evidence-complete but not an exit pass: T14 and T15 are the next bounded convergence slices, with
+  T16 and T17 following their focused re-audits.
 
 Wave 44 reconciliation:
+
+- `2026-08-24` PR #352 (merge `e1d77b01`) completed `W44-E1-S3-T8` as a fresh rendered audit, not a
+  Wave 44 exit claim. Provider-free Playwright captured all 13 target surfaces at desktop and mobile
+  reference sizes; the authoritative five-viewport matrix remained clean for diagnostics, focus,
+  target size, initial action visibility, and overflow. The audit retains four confirmed composition
+  gaps: Project Work selected inspector/filter-table, Active Task live evidence, Markdown reader first
+  viewport, and Validation Repair responsive hierarchy. Those are split into T14 (Next), T15 (Soon),
+  T16, and T17; default task-centered routing remains provisional until these follow-ups are audited.
+  Human usability, Claude/cross-runtime, and Wave 36 acceptance remain parked.
 
 - `2026-08-24` PR #350 (merge `d486e9ae`) completed `W44-E1-S3-T7`: shared Operator tokens now use
   a warm workspace canvas, deep navy context chrome, cobalt primary actions, mint success, amber
