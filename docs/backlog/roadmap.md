@@ -15666,10 +15666,17 @@ Local tasks:
   readiness semantics. Verification: five-viewport validation fixtures, action visibility/focus,
   readable Runner state, evidence overflow, disabled/stale states, duplicate-primary protection,
   frontend/UI contracts, Ruff, mypy, and full CI including packaged UI browser passed.
-- `W44-E1-S3-T18` (next) Correct the remaining eight-stage strip label clipping at the target desktop
+- `W44-E1-S3-T18` (done) Correct the remaining eight-stage strip label clipping at the target desktop
   density, preserving stage order, active/current semantics, keyboard access, and the truthful mobile
-  disclosure. Verification: five-viewport stage-strip geometry and accessibility checks, no clipped
-  labels or horizontal overflow, stable deep links/reload, and the existing frontend/UI contracts.
+  disclosure. PR #362 (merge `4e36bc6f`) adds a compact-width responsive override that reclaims inline
+  space without changing the stage DOM, phase grouping, route semantics, or mobile disclosure. Verification:
+  five-viewport stage-strip geometry/accessibility checks, no clipped labels or horizontal overflow,
+  stable deep links/reload, frontend/UI contracts, Ruff, mypy, and full CI including packaged UI browser.
+- `W44-E1-S3-T19` (next) Run a fresh rendered Wave 44 exit audit across all 13 target surfaces and
+  reconcile the default task-centered routing decision. Retain screenshots and a written audit that
+  verifies target shell hierarchy, contextual Runner/one-primary rules, initial-viewport actions,
+  responsive/accessibility states, absence of clipping/overflow/console errors/focus loss, and records
+  any new evidence-backed follow-up task before claiming Wave 44 exit.
 
 Wave 44 exit evidence:
 
@@ -15681,11 +15688,20 @@ Wave 44 exit evidence:
 - browser checks show no console errors, horizontal overflow, duplicate primary actions, or focus
   loss;
 - a fresh rendered audit confirms remaining gaps are absent or explicitly blocked. The current audit
-  is evidence-complete but not an exit pass: T14, T15, T16, and T17 are complete, T18 is the next
-  bounded convergence slice for the stage strip, and default task-centered routing remains provisional
-  until the remaining audit gaps close.
+  is evidence-complete but not an exit pass: T14 through T18 are complete, T19 is the next bounded
+  convergence slice for the final exit/default-routing decision, and default task-centered routing
+  remains provisional until that audit closes the remaining evidence gap.
 
 Wave 44 reconciliation:
+
+- `2026-08-24` PR #362 (merge `4e36bc6f`) completed `W44-E1-S3-T18`. The compact desktop/tablet
+  stage strip now keeps all eight labels, including `Implement`, fully readable at `1280x900` while
+  preserving canonical order, phase grouping, active/current semantics, keyboard access, and the mobile
+  current-stage disclosure. Five-viewport stage-strip/accessibility journeys, related active-shell and
+  mobile navigation checks (`12`), frontend Node suite (`136 passed`), UI/docs/planning checks (`103
+  passed`), packaged JavaScript, Ruff, mypy, deterministic, adapter, security, build, and packaged-browser
+  checks passed. `W44-E1-S3-T19` is now the only dependency-ready task for the fresh Wave 44 exit and
+  default-routing audit; human usability, Claude/cross-runtime, and Wave 36 acceptance remain parked.
 
 - `2026-08-24` PR #360 (merge `a678418a`) completed `W44-E1-S3-T17`. Validation Repair now leads with
   the finding, a literal repair consequence, readable Runner readiness, and one primary recovery action
