@@ -149,6 +149,7 @@ function renderRecoveryActionBandInternal(diagnostics, {showPrimary = true} = {}
   const extensionEligible = status === "repair-exhausted" && extensionPreview?.eligible === true;
   const stoppedMessage = stopped?.stopped ? stopped.detail || "Stage stopped." : "";
   const finding = primaryValidationFindingForValidation(validation);
+  const primary = recoveryPrimaryActionSpec(diagnostics);
   const guidance = stoppedMessage
     || (repairAvailable
       ? "Validation failed. Run Repair starts the selected stage through the normal stage runner."
@@ -159,21 +160,25 @@ function renderRecoveryActionBandInternal(diagnostics, {showPrimary = true} = {}
         : "Review validation evidence, repair history, and recovery actions before continuing.");
   return `
     <section class="repair-action-band ${repairAvailable ? "repair-available" : ""}">
-      <div>
+      <div class="repair-decision-copy">
         <div class="surface-title">
           <span>${repairAvailable ? "Repair Available" : status === "repair-exhausted" ? "Repair Exhausted" : status === "explicit-stop" ? "Explicit Stop" : "Repair Center"}</span>
           <span class="small-badge ${status === "clear" ? "good" : status === "explicit-stop" || status === "repair-exhausted" ? "bad" : "warn"}">${escapeHtml(status)}</span>
         </div>
         <p>${escapeHtml(guidance)}</p>
+        <div class="repair-decision-consequence">
+          <span class="eyebrow">Repair consequence</span>
+          <strong>${escapeHtml(primary.detail || guidance)}</strong>
+        </div>
         ${renderValidationFindingSummary(finding)}
       </div>
-      ${renderRepairExtensionPreview(validation)}
       <div class="repair-actions">
         ${repairAvailable && typeof renderContextualRunnerControl === "function" ? renderContextualRunnerControl({actionLabel: "validation repair"}) : extensionEligible && typeof renderContextualRunnerControl === "function" ? renderContextualRunnerControl({actionLabel: "one more repair"}) : ""}
         ${showPrimary ? extensionEligible ? `<button data-recovery-action="repair-extension" data-recovery-stage="${escapeHtml(state.activeStage)}" data-repair-extension type="button">Run one more repair</button>` : requestPrimary ? `<button data-recovery-action="request-change" data-recovery-stage="${escapeHtml(state.activeStage)}" type="button">Request Change</button>` : `<button data-run-repair type="button" ${repairAvailable ? "" : "disabled"}>Run Repair</button>` : `<span class="muted">Primary recovery action is shown above.</span>`}
         ${requestPrimary && extensionEligible ? `<button data-recovery-action="request-change" data-recovery-stage="${escapeHtml(state.activeStage)}" type="button" class="secondary">Request Change</button><button data-work-item-tab="overview" type="button" class="secondary">Start new run</button>` : requestPrimary ? `<button type="button" class="secondary" disabled aria-disabled="true">${status === "explicit-stop" ? "Repair unavailable" : "Repair exhausted"}</button>` : `<button data-tab-shortcut="request" type="button" class="secondary">Request Change</button>`}
         <button data-stop-run type="button" class="danger">Stop Run</button>
       </div>
+      ${extensionPreview ? `<div class="repair-supporting-preview">${renderRepairExtensionPreview(validation)}</div>` : ""}
     </section>
   `;
 }

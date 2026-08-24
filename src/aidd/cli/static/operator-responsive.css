@@ -1039,7 +1039,7 @@
   .repair-action-band > div:first-child {
     grid-row: 2;
   }
-  .repair-action-band > .repair-extension-preview {
+  .repair-action-band > .repair-supporting-preview {
     grid-row: 3;
     max-width: none;
   }
