@@ -15492,8 +15492,19 @@ Local tasks:
     and studio tests, UI asset contracts, docs/planning, Ruff, mypy, full Python matrix,
     deterministic scenarios, adapter conformance, packaged UI browser, security checks, and build
     all passed.
-- `W44-E1-S2-T3` (next) Reconcile stage-strip density, typography, tokens, and overflow across
+- `W44-E1-S2-T3` (done) Reconcile stage-strip density, typography, tokens, and overflow across
   desktop and mobile viewports.
+  - PR #326 (merge `4e50e093`) keeps the canonical eight-stage strip readable on desktop and
+    tablet, collapses the mobile strip behind a keyboard-accessible current-stage summary, and
+    preserves the Work Item context and stage navigation when Task Workspace data is unavailable.
+    The dashboard now exposes an existing canonical `tasklist.md` even before its stage attempt is
+    selected, so the UI can distinguish a real published tasklist from a missing prerequisite
+    without generating a failed request.
+  - Verification: focused stage-strip browser checks across `320x568`, `390x844`, `768x1024`,
+    `1280x900`, and `1440x900`; selected Documents/Tasks, mobile navigation, and route journeys;
+    frontend Node suite (`135 passed`); full Python suite (`2430 passed`); docs/planning checks,
+    Ruff, mypy, deterministic scenarios, adapter conformance, packaged UI browser, security
+    checks, and build all passed. `W44-E1-S3-T1` is now the next dependency-ready task.
 
 #### Slice W44-E1-S3 — rendered acceptance loop (`planned`)
 
@@ -15504,7 +15515,7 @@ Dependencies: `W44-E1-S1` and `W44-E1-S2`.
 
 Local tasks:
 
-- `W44-E1-S3-T1` (planned) Add initial-viewport, focus-order, console, and overflow assertions to
+- `W44-E1-S3-T1` (next) Add initial-viewport, focus-order, console, and overflow assertions to
   the provider-free browser matrix.
 - `W44-E1-S3-T2` (planned) Produce a reconciled target-UX audit and close the convergence wave
   only when all confirmed gaps are either fixed or explicitly environment-blocked.
@@ -15521,6 +15532,16 @@ Wave 44 exit evidence:
 - a fresh rendered audit confirms remaining gaps are absent or explicitly blocked.
 
 Wave 44 reconciliation:
+
+- `W44-E1-S2-T3` is complete in PR #326 (merge `4e50e093`). The stage strip now uses compact
+  readable labels and bounded desktop/tablet density, while mobile exposes a truthful current
+  stage summary with an explicit keyboard-accessible disclosure for the full eight-stage path.
+  Missing Task Workspace data retains Work Item context and navigation, and published tasklist
+  evidence is surfaced by the dashboard so the UI avoids false missing-tasklist errors. Focused
+  stage-strip/mobile/route/document checks, frontend Node suite (`135 passed`), full Python suite
+  (`2430 passed`), docs/planning, Ruff, mypy, deterministic scenarios, adapter conformance,
+  packaged UI browser, security checks, and build passed. `W44-E1-S3-T1` is now `Next`; human
+  usability, Claude/cross-runtime, and Wave 36 acceptance remain parked.
 
 - `W44-E1-S2-T2` is complete in PR #324 (merge `69ce00df`). Documents now retain Work Item
   context and stage navigation while keeping the navigator, reader, and evidence inspector
