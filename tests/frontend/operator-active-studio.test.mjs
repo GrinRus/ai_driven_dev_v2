@@ -143,6 +143,10 @@ test("Task Workspace renders the selected contract from core action projection",
   assert.match(html, /Focused test passes\./);
   assert.match(html, /run:\/\/run-1\/implement\/task-TL-1/);
   assert.match(html, /data-task-action="run"/);
+  assert.match(html, /role="table" aria-label="Dependency-aware task list"/);
+  assert.match(html, /role="columnheader">Dependencies<\/span>/);
+  assert.match(html, /data-task-group="Ready"/);
+  assert.match(html, /data-task-status="pending"/);
   assert.equal((html.match(/data-task-action="/g) || []).length, 1);
   assert.match(html, /data-contextual-runner-control/);
   assert.doesNotMatch(html, /selectedRuntimeReady\(\)/);

@@ -282,20 +282,48 @@ function renderTaskWorkspace(taskView) {
           <span>Next ready: <strong>${escapeHtml(taskView?.next_ready_task || "none")}</strong></span>
           <span>Critical path: <strong>${escapeHtml((taskView?.critical_path || []).join(" → ") || "none")}</strong></span>
         </div>
-        <div class="task-workspace-groups">
-          ${groups.map((group) => {
-            const tasks = visible.filter((task) => task.group === group);
-            return `<section class="task-workspace-group" data-task-group="${group}">
-              <div class="surface-title compact"><h3>${group}</h3><span class="small-badge">${tasks.length}</span></div>
-              ${tasks.length ? `<div class="compact-list">${tasks.map((task) => `
-                <button class="panel-item task-workspace-item${task.id === state.selectedTaskId ? " selected" : ""}" data-task-select="${escapeHtml(task.id)}" type="button" aria-pressed="${task.id === state.selectedTaskId ? "true" : "false"}">
-                  <strong>${escapeHtml(task.id)} · ${escapeHtml(task.title || "Untitled task")}</strong>
-                  <span>${escapeHtml(task.status || "unknown")} · ${escapeHtml(task.attempt_count || 0)} attempts</span>
-                  <span>Dependencies: ${escapeHtml((task.dependencies || []).join(", ") || "none")}</span>
-                  ${task.id === taskView?.next_ready_task ? `<span class="small-badge good">Next ready</span>` : ""}
-                </button>`).join("")}</div>` : `<p class="muted" data-task-group-empty>No ${group.toLowerCase()} tasks.</p>`}
-            </section>`;
-          }).join("")}
+        <div class="task-workspace-table" role="table" aria-label="Dependency-aware task list">
+          <div class="task-workspace-table-head" role="row">
+            <span role="columnheader">Task</span>
+            <span role="columnheader">Dependencies</span>
+            <span role="columnheader">Attempts</span>
+            <span role="columnheader">Verification</span>
+            <span role="columnheader">Last durable event</span>
+          </div>
+          <div class="task-workspace-groups">
+            ${groups.map((group) => {
+              const tasks = visible.filter((task) => task.group === group);
+              return `<section class="task-workspace-group" data-task-group="${group}">
+                <div class="surface-title compact"><h3><span class="task-group-marker" data-task-group-marker="${group}" aria-hidden="true"></span>${group}</h3><span class="small-badge" data-task-group-count="${group}">${tasks.length}</span></div>
+                ${tasks.length ? `<div class="task-workspace-table-body">${tasks.map((task) => {
+                  const event = task.last_durable_event || {};
+                  const dependencies = Array.isArray(task.dependencies) ? task.dependencies : [];
+                  const verification = task.group === "Done"
+                    ? "Verified"
+                    : task.group === "Running"
+                      ? "Running"
+                      : task.group === "Blocked"
+                        ? "Blocked"
+                        : task.ready === true
+                          ? "Ready"
+                          : event.status || "Pending";
+                  const eventLabel = event.recorded_at_utc
+                    ? `${event.status || "recorded"} · ${event.recorded_at_utc}`
+                    : event.status || "No durable event";
+                  const dependencyMarkup = dependencies.length
+                    ? dependencies.map((dependency) => `<span class="task-dependency-badge">${escapeHtml(dependency)}</span>`).join("")
+                    : `<span class="task-dependency-badge empty">none</span>`;
+                  return `<button class="task-workspace-item${task.id === state.selectedTaskId ? " selected" : ""}" data-task-select="${escapeHtml(task.id)}" data-task-status="${escapeHtml(task.status || "unknown")}" type="button" aria-pressed="${task.id === state.selectedTaskId ? "true" : "false"}" aria-label="${escapeHtml(`${task.id} ${task.title || "Untitled task"}`)}">
+                    <span class="task-workspace-cell task-workspace-task-cell"><span class="task-id">${escapeHtml(task.id)}</span><strong>${escapeHtml(task.title || "Untitled task")}</strong>${task.id === taskView?.next_ready_task ? `<span class="small-badge good task-next-ready">Next ready</span>` : ""}</span>
+                    <span class="task-workspace-cell task-workspace-dependencies"><span class="sr-only">Dependencies: </span>${dependencyMarkup}</span>
+                    <span class="task-workspace-cell task-workspace-attempts">${escapeHtml(task.attempt_count || 0)}</span>
+                    <span class="task-workspace-cell task-workspace-verification"><span class="task-verification-marker" data-state="${escapeHtml(String(task.group || "").toLowerCase())}" aria-hidden="true"></span>${escapeHtml(verification)}</span>
+                    <span class="task-workspace-cell task-workspace-event"><span>${escapeHtml(eventLabel)}</span></span>
+                  </button>`;
+                }).join("")}</div>` : `<p class="muted" data-task-group-empty>No ${group.toLowerCase()} tasks.</p>`}
+              </section>`;
+            }).join("")}
+          </div>
         </div>
       </section>
       <section class="surface task-workspace-detail" data-task-detail>
