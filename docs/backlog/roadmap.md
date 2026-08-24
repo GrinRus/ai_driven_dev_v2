@@ -15515,9 +15515,21 @@ Dependencies: `W44-E1-S1` and `W44-E1-S2`.
 
 Local tasks:
 
-- `W44-E1-S3-T1` (next) Add initial-viewport, focus-order, console, and overflow assertions to
+- `W44-E1-S3-T1` (done) Add initial-viewport, focus-order, console, and overflow assertions to
   the provider-free browser matrix.
-- `W44-E1-S3-T2` (planned) Produce a reconciled target-UX audit and close the convergence wave
+  - PR #328 (merge `21c71156`) makes initial-viewport requirements explicit for launch, recovery,
+    and completion journeys while retaining controlled scrolling for long Task and Markdown
+    surfaces. The provider-free matrix continues to assert accessible focus order, diagnostics,
+    duplicate-primary protection, rendered geometry, and horizontal overflow across
+    `320x568`, `390x844`, `768x1024`, `1280x900`, and `1440x900`. It also fixes the mobile recovery
+    action dock so a late workspace `width: 100%` rule cannot clip its fixed action at the
+    `320px` boundary; routes, APIs, and mutation semantics are unchanged.
+  - Verification: provider-free matrix (`9 passed`), geometry/accessibility/stage checks (`14
+    passed`), UI contract/mobile checks (`68 passed`), frontend Node suite (`135 passed`),
+    docs/planning (`50 passed`), Ruff, mypy, full Python suite (`2430 passed`), deterministic
+    scenarios, adapter conformance, packaged UI browser (`14m27s`), security checks, and build
+    all passed. `W44-E1-S3-T2` is now the next dependency-ready task.
+- `W44-E1-S3-T2` (next) Produce a reconciled target-UX audit and close the convergence wave
   only when all confirmed gaps are either fixed or explicitly environment-blocked.
 
 Wave 44 exit evidence:
@@ -15532,6 +15544,15 @@ Wave 44 exit evidence:
 - a fresh rendered audit confirms remaining gaps are absent or explicitly blocked.
 
 Wave 44 reconciliation:
+
+- `W44-E1-S3-T1` is complete in PR #328 (merge `21c71156`). The provider-free matrix now records
+  which journeys require an initial-viewport first action, retains honest scroll behavior for
+  long secondary surfaces, and keeps focus, diagnostics, geometry, duplicate-primary, and
+  overflow assertions active across all five supported viewports. A fixed mobile recovery action
+  no longer inherits full-workspace width and clips at `320px`. All focused, frontend, docs,
+  Ruff, mypy, full Python, deterministic, adapter, packaged-browser, security, and build checks
+  passed. `W44-E1-S3-T2` is now `Next`; human usability, Claude/cross-runtime, and Wave 36
+  acceptance remain parked.
 
 - `W44-E1-S2-T3` is complete in PR #326 (merge `4e50e093`). The stage strip now uses compact
   readable labels and bounded desktop/tablet density, while mobile exposes a truthful current
