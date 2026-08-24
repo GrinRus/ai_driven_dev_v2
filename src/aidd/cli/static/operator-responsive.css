@@ -1106,6 +1106,7 @@
   [data-human-decision-surface="question"] .question-list > .question-card:first-child [data-primary-action],
   [data-human-decision-surface="intervention"] #submitInterventionButton,
   [data-human-decision-surface="approval"] [data-operator-action="allow_once"],
+  [data-studio-flow-complete] [data-next-flow-action][data-primary-action],
   [data-primary-recovery-slot] > [data-primary-action] {
     background: var(--teal-dark);
     border: 1px solid var(--teal-dark);
@@ -1122,6 +1123,7 @@
   [data-human-decision-surface="question"] .question-card,
   [data-human-decision-surface="intervention"] .intervention-form,
   [data-human-decision-surface="approval"] .approval-card,
+  [data-studio-flow-complete],
   body.recovery-mode .recovery-summary {
     padding-bottom: calc(var(--space-10) + var(--control-height-touch));
   }
