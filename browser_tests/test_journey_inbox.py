@@ -176,6 +176,59 @@ def test_desktop_project_rail_keeps_work_item_context_and_filters_deterministica
         browser_page.diagnostics.assert_clean()
 
 
+def test_project_work_selects_inspector_filters_without_reordering_and_reloads(
+    tmp_path: Path,
+) -> None:
+    project_root = tmp_path / "project-work-selection"
+    _seed_inbox_states(project_root)
+
+    with sync_playwright() as playwright, operator_browser_harness(
+        project_root,
+        playwright,
+    ) as harness, harness.open_page((1280, 900)) as browser_page:
+        page = browser_page.page
+        response = page.goto(f"{harness.url}?mode=inbox", wait_until="networkidle")
+        assert response is not None and response.ok
+        page.locator(".studio-inbox").wait_for(state="visible")
+        assert page.locator("[data-inbox-inspector]").count() == 0
+
+        initial_order = page.locator("[data-inbox-item]").evaluate_all(
+            "items => items.map(item => item.dataset.inboxSelect)"
+        )
+        search = page.locator("[data-inbox-filter]")
+        search.fill("WI-DECISION")
+        page.locator('[data-inbox-item][data-inbox-select="WI-RUN"]').wait_for(
+            state="hidden"
+        )
+        assert page.locator("[data-inbox-item]:not([hidden])").evaluate_all(
+            "items => items.map(item => item.dataset.inboxSelect)"
+        ) == ["WI-DECISION"]
+
+        selected = page.locator('[data-inbox-item][data-inbox-select="WI-DECISION"]')
+        selected.click()
+        inspector = page.locator('[data-inbox-selected-context="WI-DECISION"]')
+        inspector.wait_for(state="visible")
+        assert page.locator("[data-inbox-selected-context] [data-inbox-action]").count() == 1
+        assert page.locator('[data-inbox-item][aria-current="true"]').get_attribute(
+            "data-inbox-select"
+        ) == "WI-DECISION"
+        assert parse_qs(urlsplit(page.url).query)["inbox_work_item"] == ["WI-DECISION"]
+
+        search.fill("")
+        assert page.locator("[data-inbox-item]:not([hidden])").evaluate_all(
+            "items => items.map(item => item.dataset.inboxSelect)"
+        ) == initial_order
+        selected = page.locator('[data-inbox-item][data-inbox-select="WI-DECISION"]')
+        selected.focus()
+        page.keyboard.press("Space")
+        assert selected.evaluate("node => document.activeElement === node")
+        page.reload(wait_until="networkidle")
+        page.locator('[data-inbox-selected-context="WI-DECISION"]').wait_for(
+            state="visible"
+        )
+        browser_page.diagnostics.assert_clean()
+
+
 @pytest.mark.parametrize("viewport", VIEWPORTS)
 def test_inbox_prioritizes_and_routes_durable_and_running_work(
     tmp_path: Path,

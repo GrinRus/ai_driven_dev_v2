@@ -1218,6 +1218,9 @@
     margin-bottom: var(--space-2);
     padding: 0;
   }
+  body.inbox-detail-mode .inbox-filter-bar {
+    display: none;
+  }
 }
 
 @media (max-width: 760px) {

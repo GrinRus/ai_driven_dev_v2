@@ -130,6 +130,14 @@ async function focusTabAtIndex(index) {
 }
 
 document.addEventListener("keydown", async (event) => {
+  const inboxItem = event.target.closest?.("[data-inbox-select]");
+  if (inboxItem && !event.target.closest?.("[data-inbox-action]") && (event.key === "Enter" || event.key === " ")) {
+    event.preventDefault();
+    selectInboxWorkItem(inboxItem.dataset.inboxSelect);
+    await renderAll();
+    document.querySelector(`[data-inbox-select="${CSS.escape(inboxItem.dataset.inboxSelect)}"]`)?.focus();
+    return;
+  }
   const currentWorkItemTab = event.target.closest?.("[data-work-item-tab]");
   if (currentWorkItemTab) {
     if (event.key === "ArrowRight" || event.key === "ArrowDown") {
@@ -224,6 +232,13 @@ document.addEventListener("click", async (event) => {
       };
       if (intent === "inbox-work-item") await activateInboxWorkItemRoute(context);
       else await navigateOperatorRouteIntent(intent, context);
+      return;
+    }
+    const inboxSelection = event.target.closest("[data-inbox-select]");
+    if (inboxSelection && !event.target.closest("[data-inbox-action]")) {
+      selectInboxWorkItem(inboxSelection.dataset.inboxSelect);
+      await renderAll();
+      document.querySelector(`[data-inbox-select="${CSS.escape(inboxSelection.dataset.inboxSelect)}"]`)?.focus();
       return;
     }
     if (event.target.closest("[data-new-work-item]")) {
@@ -876,6 +891,11 @@ document.addEventListener("input", (event) => {
       const searchable = item.textContent.toLowerCase();
       item.hidden = Boolean(filter && !searchable.includes(filter));
     });
+    return;
+  }
+  if (event.target.closest?.("[data-inbox-filter]")) {
+    state.inboxFilter = event.target.value || "";
+    applyInboxFilter();
     return;
   }
   if (event.target.closest?.("[data-task-filter]")) {

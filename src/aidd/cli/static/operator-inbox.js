@@ -42,6 +42,52 @@ function inboxProjectProgressText(projectItem) {
   return `${Number(projectItem.stage_progress_count || 0)} of ${Number(projectItem.stage_total_count || 0)} stages complete`;
 }
 
+function inboxProjectStage(item, projectItem) {
+  return projectItem?.active_stage || item?.route?.stage || "Unavailable";
+}
+
+function inboxProjectRunner(projectItem) {
+  return projectItem?.latest_run?.runtime_id || "—";
+}
+
+function inboxProjectLastEvent(item, projectItem) {
+  return item?.last_event || projectItem?.latest_run?.updated_at || "—";
+}
+
+function inboxSelectionHref(workItem) {
+  const params = new URLSearchParams(window.location.search);
+  if (workItem) params.set("inbox_work_item", workItem);
+  else params.delete("inbox_work_item");
+  const query = params.toString();
+  return `${window.location.pathname}${query ? `?${query}` : ""}${window.location.hash}`;
+}
+
+function selectInboxWorkItem(workItem, {historyMode = "push"} = {}) {
+  const selected = String(workItem || "").trim();
+  state.inboxSelectedWorkItem = selected;
+  const next = inboxSelectionHref(selected);
+  const current = `${window.location.pathname}${window.location.search}${window.location.hash}`;
+  if (next !== current) {
+    const method = historyMode === "push" ? "pushState" : "replaceState";
+    window.history[method]({aiddInboxSelection: true}, "", next);
+  }
+}
+
+function applyInboxFilter() {
+  const filter = String(state.inboxFilter || "").trim().toLowerCase();
+  document.querySelectorAll("[data-inbox-section]").forEach((section) => {
+    const items = [...section.querySelectorAll("[data-inbox-item]")];
+    let visible = 0;
+    items.forEach((item) => {
+      const matches = !filter || item.textContent.toLowerCase().includes(filter);
+      item.hidden = !matches;
+      if (matches) visible += 1;
+    });
+    const empty = section.querySelector("[data-inbox-filter-empty]");
+    if (empty) empty.hidden = !filter || visible > 0;
+  });
+}
+
 function renderStudioInboxItem(item, {selectedWorkItem = ""} = {}) {
   const route = item.route || null;
   const action = item.primary_action || null;
@@ -52,9 +98,6 @@ function renderStudioInboxItem(item, {selectedWorkItem = ""} = {}) {
   const actionMarkup = action && route
     ? `<button ${inboxRouteAttributes(route)} data-inbox-action="${escapeHtml(action.action)}" data-service-action-enabled="${action.enabled === false ? "false" : "true"}" type="button">${escapeHtml(action.label)}</button>`
     : '<span class="inbox-item-no-action">No action available</span>';
-  const routeLabel = route
-    ? [route.work_item, route.run_id, route.stage].filter(Boolean).join(" / ")
-    : "Durable identity unavailable";
   const markerStatus = {
     blocking: "blocked",
     running: "pending",
@@ -66,15 +109,19 @@ function renderStudioInboxItem(item, {selectedWorkItem = ""} = {}) {
     ? `data-selected-work-item="${escapeHtml(route?.work_item)}" aria-current="true"`
     : 'aria-current="false"';
   return `
-    <article class="inbox-item${selected ? " selected" : ""}" data-inbox-item="${escapeHtml(item.item_id || item.job_id)}" data-state="${escapeHtml(item.state)}" ${selectionAttributes}>
+    <article class="inbox-item${selected ? " selected" : ""}" data-inbox-item="${escapeHtml(item.item_id || item.job_id)}" data-inbox-select="${escapeHtml(route?.work_item || "")}" data-state="${escapeHtml(item.state)}" ${selectionAttributes} tabindex="${route?.work_item ? "0" : "-1"}" aria-label="${escapeHtml(`Select Work Item ${route?.work_item || item.title}`)}">
       <div class="inbox-item-copy">
         ${renderStatusMarker({status: markerStatus, label: item.status_label})}
         <strong>${escapeHtml(projectItem?.intent?.excerpt || item.title)}</strong>
         <small class="inbox-item-identity">${escapeHtml(item.title)}</small>
+        ${route ? "" : '<small class="inbox-item-identity">Durable identity unavailable</small>'}
         <p>${escapeHtml(item.summary)}</p>
         <dl>
-          <div><dt>Context</dt><dd>${escapeHtml(routeLabel)}</dd></div>
-          ${projectItem ? `<div><dt>Progress</dt><dd>${escapeHtml(inboxProjectProgressText(projectItem))}</dd></div>` : ""}
+          <div><dt>Stage</dt><dd>${escapeHtml(inboxProjectStage(item, projectItem))}</dd></div>
+          <div><dt>Progress</dt><dd>${escapeHtml(projectItem ? inboxProjectProgressText(projectItem) : "Unavailable")}</dd></div>
+          <div><dt>Runner</dt><dd>${escapeHtml(inboxProjectRunner(projectItem))}</dd></div>
+          <div><dt>Last event</dt><dd>${escapeHtml(inboxProjectLastEvent(item, projectItem))}</dd></div>
+          <div><dt>Status</dt><dd>${escapeHtml(item.status_label || "Unavailable")}</dd></div>
         </dl>
       </div>
       <div class="inbox-item-action">${selected
@@ -86,7 +133,8 @@ function renderStudioInboxItem(item, {selectedWorkItem = ""} = {}) {
 
 function inboxSelectedWorkItem() {
   return String(
-    state.projectHome?.selected_work_item
+    state.inboxSelectedWorkItem
+      || state.projectHome?.selected_work_item
       || state.dashboard?.work_item
       || state.activeRouteWorkItem
       || ""
@@ -266,8 +314,18 @@ function renderStudioInbox() {
       </header>
       ${renderStudioEntryRecommendation(state.inbox)}
       ${renderProjectWorkItemCreator()}
+      <div class="inbox-filter-bar" data-inbox-filter-bar>
+        <label class="inbox-filter-field" for="inboxWorkItemFilter">
+          <span class="sr-only">Search Work Items</span>
+          <input id="inboxWorkItemFilter" data-inbox-filter type="search" value="${escapeHtml(state.inboxFilter)}" placeholder="Search work items" autocomplete="off">
+        </label>
+        <span class="inbox-filter-hint">Filter the server-owned groups without changing their order.</span>
+      </div>
       <div class="studio-inbox-layout">
         <div class="studio-inbox-sections">
+        <div class="inbox-table-head" aria-hidden="true">
+          <span>Work Item</span><span>Stage</span><span>Progress</span><span>Runner</span><span>Last event</span><span>Status</span>
+        </div>
         ${sections.map((section) => `
           <section class="surface inbox-section" data-inbox-section="${escapeHtml(section.key)}">
             <div class="surface-title">
@@ -278,6 +336,7 @@ function renderStudioInbox() {
               ${section.items.length
                 ? section.items.map((item) => renderStudioInboxItem(item, {selectedWorkItem})).join("")
                 : '<p class="inbox-section-empty">No Work Items in this group.</p>'}
+              <p class="inbox-section-empty" data-inbox-filter-empty hidden>No matching Work Items.</p>
             </div>
           </section>
         `).join("")}
