@@ -15563,16 +15563,23 @@ Local tasks:
   existing task/stage/action/accessibility/geometry checks, frontend Node suite (`135 passed`),
   docs/planning (`50 passed`), Ruff, mypy, packaged JavaScript, deterministic scenarios, adapter
   conformance, packaged UI browser, security, and build all passed.
-- `W44-E1-S3-T5` (next) Render target Decision, Validation Repair, Review/QA Remediation, and
+- `W44-E1-S3-T5` (done) Render target Decision, Validation Repair, Review/QA Remediation, and
   Mobile Decision content above the shared recovery chrome. Preserve the actual question/finding,
   evidence, consequence, resolution state, Write/Preview/destination, and one primary action in
   the initial readable viewport. Verification: question, validation, remediation, and mobile
-  provider-free journeys with focus, action visibility, and reconnect/disabled-state checks.
-- `W44-E1-S3-T6` (soon) Replace legacy Create Work Item, Runs/Attempts, and Flow Complete
+  provider-free journeys with focus, action visibility, and reconnect/disabled-state checks. PR
+  #336 (merge `e088c50f`) promotes explicit recovery deep links to the authoritative question,
+  validation, and Review finding surfaces, moves question content and durable destination ahead of
+  generic decision chrome, and switches the remediation parity fixture to rejected Review evidence.
+  Verification: focused Decision/Validation/Review browser checks on desktop/mobile (`4 passed`),
+  Review/QA journey (`3 passed`), frontend Node suite (`135 passed`), provider-free/docs/planning/UI
+  contracts (`104 passed`), Ruff, mypy, packaged JavaScript, deterministic scenarios, adapter
+  conformance, packaged UI browser, security, and build all passed.
+- `W44-E1-S3-T6` (next) Replace legacy Create Work Item, Runs/Attempts, and Flow Complete
   compositions with target task-centered layouts while retaining their existing routes, ids,
   history, lineage, and immutable handoff semantics. Verification: create/history/completion
   rendered fixtures, route/reload checks, and target screenshot comparison.
-- `W44-E1-S3-T7` (planned) Align shared Operator UI tokens and component density with the target
+- `W44-E1-S3-T7` (soon) Align shared Operator UI tokens and component density with the target
   visual language: warm canvas, deep navy rail, cobalt primary, mint success, amber warning,
   and at least 14px primary desktop reading text. Verification: token contract checks plus the
   full five-viewport visual/geometry/accessibility matrix with no clipping or overflow.
@@ -15593,6 +15600,16 @@ Wave 44 exit evidence:
 - a fresh rendered audit confirms remaining gaps are absent or explicitly blocked.
 
 Wave 44 reconciliation:
+
+- `W44-E1-S3-T5` is complete in PR #336 (merge `e088c50f`). Explicit recovery routes now land on
+  the server-selected question, validation, or Review finding surface instead of a generic
+  summary. The Decision surface renders the real question form before shared decision chrome,
+  retains evidence/consequence controls and durable `answers.md` destination, and hides the
+  dashboard shell on mobile so the decision is the first readable content. Provider-free parity
+  now uses the rejected Review fixture for remediation, with focused desktop/mobile browser
+  coverage and clean frontend, docs/planning, Ruff, mypy, deterministic, adapter, packaged-browser,
+  security, and build checks. `W44-E1-S3-T6` is now `Next`, `T7` is in `Soon`; human usability,
+  Claude/cross-runtime, and Wave 36 acceptance remain parked.
 
 - `W44-E1-S3-T3` is complete in PR #332 (merge `c7992051`). The target desktop Project/Work Item
   rail now exposes project identity, a deterministic server-owned Work Item list, selected state,
