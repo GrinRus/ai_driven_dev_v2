@@ -347,6 +347,17 @@ body {
   }
 }
 
+/* At the compact target desktop width the four phase columns leave only a
+   narrow two-up stage cell.  Keep the canonical stage order and phase grouping,
+   but reclaim just enough inline space for the longest label (Implement) to
+   remain fully readable instead of being visually clipped. */
+@media (min-width: 761px) and (max-width: 1320px) {
+  .operator-workspace .canonical-stage-step {
+    gap: var(--space-2);
+    padding-inline: var(--space-1);
+  }
+}
+
 /* Documents and task attempts use the desktop workbench composition from the
    target UX: navigation and the primary reading/execution surface stay in one
    row, while the contextual detail and live evidence remain available without
