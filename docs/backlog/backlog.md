@@ -7,13 +7,13 @@ slice, and local task.
 
 ## Next
 
-- `W44-E1-S3-T11` — Recompose the Question Decision surface for first-viewport action visibility at
-  tablet width.
+- `W44-E1-S3-T12` — Align the Review-remediation journey with the authoritative quality-gate surface
+  and first-action contract.
 
 ## Soon
 
-- `W44-E1-S3-T12` — Align the Review-remediation journey with the authoritative quality-gate surface
-  and first-action contract.
+- `W44-E1-S3-T7` — Align shared Operator UI tokens and component density with the target visual
+  language.
 
 ## Parking lot
 
@@ -39,6 +39,14 @@ slice, and local task.
   queue-restoration policy in `docs/backlog/roadmap.md` (`W8-E3-S1`).
 
 ## Current reconciliation
+
+- `2026-08-24` PR #344 (merge `f693db74`) completed `W44-E1-S3-T11`: the existing Question Decision
+  answer action is now a bounded desktop/tablet action dock at all five supported viewport sizes,
+  with mobile behavior and answer services unchanged. The five-viewport regression, selected
+  durable-answer recovery, frontend/UI contracts, Ruff, mypy, packaged browser, and build checks
+  passed. The remaining route audit still shows the Review-remediation registry using the stale
+  `remediation-stale` fixture, which renders generic recovery instead of the rejected Review gate;
+  `W44-E1-S3-T12` is now Next and token alignment `T7` is Soon behind it.
 
 - `2026-08-24` PR #342 (merge `eeeb1f33`) completed `W44-E1-S3-T10`: Validation Repair now places
   the finding and one eligible recovery action before long evidence, with shrink-safe responsive
