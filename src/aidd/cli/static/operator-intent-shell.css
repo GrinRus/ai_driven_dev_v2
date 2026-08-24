@@ -545,3 +545,247 @@ body {
     transition-duration: 0.01ms !important;
   }
 }
+
+/* The nav wrapper remains transparent outside the desktop rail so existing
+   onboarding/mobile button layout and ids retain their compatibility shape. */
+.operator-rail-nav {
+  display: contents;
+}
+
+/* Persistent target rail: keep project identity and Work Item selection visible
+   while reusing the existing navigation ids and route-intent handlers. */
+@media (min-width: 1100px) and (min-height: 700px) {
+  body:not(.setup-active) .topbar .primary-nav {
+    align-items: stretch;
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-3);
+    overflow-x: hidden;
+    overflow-y: auto;
+    padding: 88px 14px 18px;
+  }
+
+  body:not(.setup-active) .topbar .primary-nav::before {
+    content: none;
+    display: none;
+  }
+
+  body:not(.setup-active) .operator-rail-project {
+    align-items: center;
+    background: rgb(255 255 255 / 6%);
+    border: 1px solid rgb(255 255 255 / 24%);
+    border-radius: var(--radius-control);
+    display: flex;
+    gap: var(--space-3);
+    min-height: 52px;
+    padding: 0 var(--space-4);
+  }
+
+  body:not(.setup-active) .operator-rail-project-dot,
+  body:not(.setup-active) .operator-rail-work-item-marker {
+    background: #2ad978;
+    border-radius: var(--radius-pill);
+    display: inline-flex;
+    flex: 0 0 auto;
+    height: 8px;
+    width: 8px;
+  }
+
+  body:not(.setup-active) .operator-rail-project-copy,
+  body:not(.setup-active) .operator-rail-work-item-copy {
+    display: grid;
+    gap: 2px;
+    min-width: 0;
+  }
+
+  body:not(.setup-active) .operator-rail-project-copy strong,
+  body:not(.setup-active) .operator-rail-project-copy small,
+  body:not(.setup-active) .operator-rail-work-item-copy strong,
+  body:not(.setup-active) .operator-rail-work-item-copy small {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  body:not(.setup-active) .operator-rail-project-copy strong {
+    color: #f7fbff;
+    font-size: 12px;
+  }
+
+  body:not(.setup-active) .operator-rail-project-copy small {
+    color: #a9bdd7;
+    font-size: 11px;
+  }
+
+  body:not(.setup-active) .operator-rail-project-chevron {
+    color: #dbe6f7;
+    font-size: 16px;
+    margin-left: auto;
+  }
+
+  body:not(.setup-active) .operator-rail-work-heading {
+    align-items: center;
+    color: #f7fbff;
+    display: flex;
+    font-size: 12px;
+    font-weight: 800;
+    justify-content: space-between;
+    letter-spacing: 0.04em;
+    padding: var(--space-5) var(--space-4) var(--space-2);
+    text-transform: uppercase;
+  }
+
+  body:not(.setup-active) .operator-rail-work-heading button {
+    align-items: center;
+    background: transparent;
+    border: 0;
+    border-radius: var(--radius-control);
+    color: #f7fbff;
+    display: inline-flex;
+    font-size: 22px;
+    height: 28px;
+    justify-content: center;
+    min-height: 28px;
+    padding: 0;
+    width: 28px;
+  }
+
+  body:not(.setup-active) .operator-rail-work-heading button:hover,
+  body:not(.setup-active) .operator-rail-work-heading button:focus-visible {
+    background: rgb(255 255 255 / 12%);
+  }
+
+  body:not(.setup-active) .operator-rail-search {
+    display: block;
+    padding: 0 var(--space-2);
+  }
+
+  body:not(.setup-active) .operator-rail-search input {
+    background: rgb(255 255 255 / 8%);
+    border: 1px solid rgb(255 255 255 / 20%);
+    border-radius: var(--radius-control);
+    box-sizing: border-box;
+    color: #f7fbff;
+    font-size: 12px;
+    min-height: 36px;
+    padding: 0 var(--space-4);
+    width: 100%;
+  }
+
+  body:not(.setup-active) .operator-rail-search input::placeholder {
+    color: #a9bdd7;
+  }
+
+  body:not(.setup-active) .operator-rail-work-items {
+    display: grid;
+    gap: var(--space-2);
+    max-height: min(42vh, 380px);
+    min-height: 0;
+    overflow-x: hidden;
+    overflow-y: auto;
+    padding: 0 var(--space-2);
+  }
+
+  body:not(.setup-active) .operator-rail-work-item {
+    align-items: start;
+    background: transparent;
+    border: 0;
+    border-left: 3px solid transparent;
+    border-radius: var(--radius-control);
+    color: #dbe6f7;
+    display: grid;
+    gap: var(--space-3);
+    grid-template-columns: auto minmax(0, 1fr);
+    min-height: 52px;
+    padding: var(--space-4);
+    text-align: left;
+    width: 100%;
+  }
+
+  body:not(.setup-active) .operator-rail-work-item:hover,
+  body:not(.setup-active) .operator-rail-work-item:focus-visible,
+  body:not(.setup-active) .operator-rail-work-item.selected {
+    background: rgb(255 255 255 / 10%);
+    border-left-color: #2d8cff;
+    color: #ffffff;
+  }
+
+  body:not(.setup-active) .operator-rail-work-item[hidden] {
+    display: none;
+  }
+
+  body:not(.setup-active) .operator-rail-work-item-marker[data-state="blocked"] {
+    background: #ffb020;
+  }
+
+  body:not(.setup-active) .operator-rail-work-item-marker[data-state="running"] {
+    background: #4d8dff;
+  }
+
+  body:not(.setup-active) .operator-rail-work-item-marker[data-state="completed"] {
+    background: #8e9bae;
+  }
+
+  body:not(.setup-active) .operator-rail-work-item-copy strong {
+    font-size: 12px;
+    font-weight: 700;
+  }
+
+  body:not(.setup-active) .operator-rail-work-item-copy small {
+    color: #a9bdd7;
+    font-size: 11px;
+  }
+
+  body:not(.setup-active) .operator-rail-empty {
+    color: #a9bdd7;
+    font-size: 12px;
+    padding: var(--space-4);
+  }
+
+  body:not(.setup-active) .operator-rail-nav {
+    display: grid;
+    gap: var(--space-2);
+    margin-top: auto;
+  }
+
+  body:not(.setup-active) .operator-rail-nav button {
+    align-items: center;
+    background: transparent;
+    border: 0;
+    border-left: 3px solid transparent;
+    border-radius: var(--radius-control);
+    color: #dbe6f7;
+    justify-content: flex-start;
+    min-height: 44px;
+    padding: 0 var(--space-4);
+    text-align: left;
+    width: 100%;
+  }
+
+  body:not(.setup-active) .operator-rail-nav button:hover,
+  body:not(.setup-active) .operator-rail-nav button.active,
+  body:not(.setup-active) .operator-rail-nav button[aria-current="page"] {
+    background: rgb(255 255 255 / 10%);
+    border-left-color: #2d8cff;
+    color: #ffffff;
+  }
+}
+
+@media (max-width: 1099px) {
+  .operator-rail-project,
+  .operator-rail-work-heading,
+  .operator-rail-search,
+  .operator-rail-work-items {
+    display: none;
+  }
+
+  .operator-rail-nav {
+    display: contents;
+  }
+}
+
+@media (max-width: 760px) {
+  .operator-rail-nav button:not(#projectInboxButton) {
+    display: none;
+  }
+}

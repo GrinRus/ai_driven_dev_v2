@@ -121,6 +121,7 @@ function renderIntentPhaseStepper() {
 
 function renderActiveStudioContextBar(studioState, item) {
   const dashboard = state.dashboard || {};
+  const workItem = dashboard.work_item || state.activeRouteWorkItem || "Work Item";
   const intent = activeIntentSummary();
   const intentExcerpt = intent?.excerpt || "Capture the desired outcome before starting delivery.";
   const currentPhase = INTENT_PHASES.find((phase) => phase.stages.includes(state.activeStage));
@@ -132,6 +133,7 @@ function renderActiveStudioContextBar(studioState, item) {
         <p class="muted">${escapeHtml(currentPhase?.label || "Capture")} · ${escapeHtml(activeStudioStateLabel(studioState, item))}</p>
       </div>
       <dl class="studio-context-identity">
+        <div><dt>Work Item</dt><dd>${escapeHtml(workItem)}</dd></div>
         <div><dt>Current status</dt><dd>${escapeHtml(activeStudioStateLabel(studioState, item))}</dd></div>
       </dl>
     </header>

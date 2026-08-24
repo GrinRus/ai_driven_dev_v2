@@ -866,9 +866,10 @@ def test_operator_shell_asset_keeps_runtime_readiness_navigation_and_markdown_co
 def test_operator_project_rail_uses_distinct_segment_states() -> None:
     shell = _asset_text("/operator-shell-rendering.js")
 
-    assert "Project navigation is owned by the Inbox surface" in shell
     assert "function projectHomeWorkItems()" in shell
-    assert 'data-tab-shortcut="project-home"' not in shell
+    assert 'class="operator-rail-project"' in shell
+    assert "data-operator-rail-item" in shell
+    assert 'data-tab-shortcut="project-home"' in shell
     assert 'class="stage-rail"' not in shell
 
 

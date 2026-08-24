@@ -374,6 +374,56 @@ function workItemTerminalLabel(item) {
   return item?.terminal_state || "ready";
 }
 
+function operatorRailProjectName(projectRoot) {
+  const normalized = String(projectRoot || "").replace(/[\\/]+$/, "");
+  const segments = normalized.split(/[\\/]/).filter(Boolean);
+  return segments.at(-1) || "Local Project";
+}
+
+function operatorRailWorkItemStatus(item) {
+  if (item?.terminal_state === "completed") return "Complete";
+  if (item?.terminal_state === "blocked") return "Needs input";
+  if (item?.terminal_state === "running") return "Running";
+  return "Ready";
+}
+
+function operatorRailWorkItemRoute(item) {
+  const runId = item?.latest_run?.run_id || "";
+  return [
+    'data-operator-route-intent="inbox-work-item"',
+    `data-route-work-item="${escapeHtml(item?.work_item || "")}"`,
+    runId ? `data-route-run-id="${escapeHtml(runId)}"` : "",
+    item?.active_stage ? `data-route-stage="${escapeHtml(item.active_stage)}"` : ""
+  ].filter(Boolean).join(" ");
+}
+
+function renderOperatorRailWorkItem(item, selectedWorkItem) {
+  const selected = item?.work_item === selectedWorkItem;
+  const status = operatorRailWorkItemStatus(item);
+  const excerpt = item?.intent?.excerpt || "Request context unavailable.";
+  const progress = item?.stage_progress_label || "0/8";
+  return `
+    <button class="operator-rail-work-item${selected ? " selected" : ""}"
+      data-operator-rail-item
+      ${operatorRailWorkItemRoute(item)}
+      type="button"
+      aria-current="${selected ? "page" : "false"}"
+      title="${escapeHtml(excerpt)}">
+      <span class="operator-rail-work-item-marker" data-state="${escapeHtml(item?.terminal_state || "ready")}" aria-hidden="true"></span>
+      <span class="operator-rail-work-item-copy">
+        <strong>${escapeHtml(item?.work_item || "Work Item")}</strong>
+        <small>${escapeHtml(status)} · ${escapeHtml(progress)}</small>
+      </span>
+    </button>
+  `;
+}
+
+function operatorRailDesktop() {
+  return typeof window === "undefined"
+    || typeof window.matchMedia !== "function"
+    || window.matchMedia("(min-width: 1100px) and (min-height: 700px)").matches;
+}
+
 function projectHomeWorkItems() {
   return state.projectHome?.work_items || [];
 }
@@ -456,7 +506,55 @@ function workflowProgressSummary({collapsed = false} = {}) {
 }
 
 function renderProjectHomeRail() {
-  // Project navigation is owned by the Inbox surface; no permanent rail exists.
+  const nav = document.querySelector(".primary-nav");
+  if (!nav) return;
+  if (state.onboarding?.setupRequired || !state.projectHome) {
+    nav.innerHTML = `
+      <div class="operator-rail-nav" aria-label="Project navigation">
+        <button id="projectInboxButton" data-tab-shortcut="project-home" type="button">Inbox</button>
+        <button id="studioNavButton" data-tab-shortcut="overview" type="button">Studio</button>
+        <button id="historyNavButton" data-tab-shortcut="history" type="button">History</button>
+      </div>
+    `;
+    return;
+  }
+  const projectRoot = state.projectHome.project_root || state.onboarding?.projectRootInput || ".";
+  const selectedWorkItem = state.dashboard?.work_item
+    || state.projectHome.selected_work_item
+    || state.activeRouteWorkItem
+    || "";
+  const workItems = state.projectHome.work_items || [];
+  const filter = String(state.projectRailFilter || "");
+  const railWorkItems = operatorRailDesktop()
+    ? (workItems.length
+      ? workItems.map((item) => renderOperatorRailWorkItem(item, selectedWorkItem)).join("")
+      : '<p class="operator-rail-empty">No Work Items yet.</p>')
+    : "";
+  nav.innerHTML = `
+    <div class="operator-rail-project" data-operator-rail-project>
+      <span class="operator-rail-project-dot" aria-hidden="true"></span>
+      <span class="operator-rail-project-copy">
+        <strong>${escapeHtml(operatorRailProjectName(projectRoot))}</strong>
+        <small title="${escapeHtml(projectRoot)}">Local project</small>
+      </span>
+      <span class="operator-rail-project-chevron" aria-hidden="true">⌄</span>
+    </div>
+    <div class="operator-rail-work-heading">
+      <span>Work Items</span>
+      <button data-new-work-item type="button" aria-label="New Work Item">+</button>
+    </div>
+    <label class="operator-rail-search" aria-label="Search Work Items">
+      <input data-operator-rail-filter type="search" value="${escapeHtml(filter)}" placeholder="Search work items" aria-label="Search Work Items" autocomplete="off">
+    </label>
+    <div class="operator-rail-work-items" data-operator-rail-items role="list" aria-label="Work Items">
+      ${railWorkItems}
+    </div>
+    <div class="operator-rail-nav" aria-label="Project navigation">
+      <button id="projectInboxButton" data-tab-shortcut="project-home" type="button">Inbox</button>
+      <button id="studioNavButton" data-tab-shortcut="overview" type="button">Studio</button>
+      <button id="historyNavButton" data-tab-shortcut="history" type="button">History</button>
+    </div>
+  `;
 }
 
 function renderStageHeader() {

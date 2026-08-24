@@ -668,8 +668,21 @@ function syncIntentShellRegions() {
   phases.replaceChildren();
   const contextBar = content.querySelector("[data-studio-context-bar]");
   const phaseStepper = content.querySelector("[data-intent-phase-stepper]");
-  if (contextBar) context.appendChild(contextBar);
-  if (phaseStepper) phases.appendChild(phaseStepper);
+  const inbox = state.activeTab === "work" && state.workDetail === "project-home";
+  const hasWorkItem = Boolean(state.dashboard?.work_item || state.activeRouteWorkItem);
+  if (contextBar) {
+    context.appendChild(contextBar);
+  } else if (!inbox && hasWorkItem && typeof renderActiveStudioContextBar === "function") {
+    // Recovery, History, and Flow Complete are rendered by their own surfaces and
+    // historically omitted the shared Work Item identity. Keep the target shell
+    // persistent without changing those surface-specific documents or actions.
+    context.innerHTML = renderActiveStudioContextBar(activeStudioState(), activeStageItem());
+  }
+  if (phaseStepper) {
+    phases.appendChild(phaseStepper);
+  } else if (!inbox && hasWorkItem && state.dashboard?.stages?.length && typeof renderIntentPhaseStepper === "function") {
+    phases.innerHTML = renderIntentPhaseStepper();
+  }
 }
 
 function renderInboxSurface() {

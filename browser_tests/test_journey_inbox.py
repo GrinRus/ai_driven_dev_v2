@@ -129,6 +129,53 @@ def test_inbox_ignores_retired_presentation_selector(
         browser_page.diagnostics.assert_clean()
 
 
+def test_desktop_project_rail_keeps_work_item_context_and_filters_deterministically(
+    tmp_path: Path,
+) -> None:
+    project_root = tmp_path / "project-rail"
+    _seed_inbox_states(project_root)
+
+    with sync_playwright() as playwright, operator_browser_harness(
+        project_root,
+        playwright,
+        work_item="WI-RUN",
+    ) as harness, harness.open_page((1280, 900)) as browser_page:
+        page = browser_page.page
+        response = page.goto(f"{harness.url}?ui=studio", wait_until="networkidle")
+        assert response is not None and response.ok
+
+        rail = page.locator("[data-operator-rail-project]")
+        rail.wait_for(state="visible")
+        assert rail.get_by_text("Local project", exact=True).count() == 1
+        items = page.locator("[data-operator-rail-item]")
+        assert items.count() == 4
+        assert items.evaluate_all(
+            "nodes => nodes.map(node => node.dataset.routeWorkItem)"
+        ) == ["WI-COMPLETE", "WI-DECISION", "WI-READY", "WI-RUN"]
+        assert page.locator(
+            '[data-operator-rail-item][data-route-work-item="WI-RUN"].selected'
+        ).count() == 1
+        assert page.locator(
+            '[data-operator-rail-item][data-route-work-item="WI-RUN"]'
+        ).get_attribute("aria-current") == "page"
+
+        search = page.locator("[data-operator-rail-filter]")
+        search.fill("WI-DECISION")
+        page.wait_for_function(
+            "document.querySelector('[data-route-work-item=\\\"WI-RUN\\\"]')?.hidden === true"
+        )
+        assert page.locator(
+            '[data-operator-rail-item][data-route-work-item="WI-DECISION"]'
+        ).is_visible()
+        assert page.locator(
+            '[data-operator-rail-item][data-route-work-item="WI-RUN"]'
+        ).is_hidden()
+        assert page.locator("#projectInboxButton").count() == 1
+        assert page.locator("#studioNavButton").count() == 1
+        assert page.locator("#historyNavButton").count() == 1
+        browser_page.diagnostics.assert_clean()
+
+
 @pytest.mark.parametrize("viewport", VIEWPORTS)
 def test_inbox_prioritizes_and_routes_durable_and_running_work(
     tmp_path: Path,

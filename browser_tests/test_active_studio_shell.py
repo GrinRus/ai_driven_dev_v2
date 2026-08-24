@@ -33,9 +33,15 @@ def test_active_studio_shell_preserves_context_and_one_primary_action(
             browser_page.page.locator("#intentPhaseStepper").get_attribute("data-studio-phase-navigation")
             == "true"
         )
-        assert browser_page.page.locator("[data-studio-context-bar]").count() == (
-            0 if fixture_state == "blocking-question" else 1
-        )
+        # The target shell keeps Work Item identity visible even when the
+        # decision/recovery surface is the first actionable content.
+        assert browser_page.page.locator("[data-studio-context-bar]").count() == 1
+        assert browser_page.page.locator("[data-studio-context-bar]").get_by_text(
+            fixture.work_item, exact=False
+        ).count() >= 1
+        assert browser_page.page.locator(
+            "#intentPhaseStepper [data-canonical-stage]"
+        ).count() == 8
         assert browser_page.page.locator("[data-primary-action]:visible").count() == 1
         body = browser_page.page.locator("body").inner_text()
         assert fixture.work_item in body

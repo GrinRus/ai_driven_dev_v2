@@ -53,6 +53,7 @@ test("active Studio preserves Work Item, phase, and status context", async () =>
   const html = vm.runInContext("renderActiveStudio()", context);
   assert.match(html, /data-studio-surface="active-studio"/);
   assert.match(html, /data-state="active"/);
+  assert.match(html, /<dt>Work Item<\/dt><dd>WI-1<\/dd>/);
   assert.match(html, /data-workflow-collapsed="true"/);
   for (const value of ["idea", "Stage running"]) {
     assert.match(html, new RegExp(value));

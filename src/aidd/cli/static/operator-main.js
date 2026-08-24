@@ -855,6 +855,15 @@ document.addEventListener("change", async (event) => {
 });
 
 document.addEventListener("input", (event) => {
+  if (event.target.closest?.("[data-operator-rail-filter]")) {
+    state.projectRailFilter = event.target.value || "";
+    const filter = state.projectRailFilter.trim().toLowerCase();
+    document.querySelectorAll("[data-operator-rail-item]").forEach((item) => {
+      const searchable = item.textContent.toLowerCase();
+      item.hidden = Boolean(filter && !searchable.includes(filter));
+    });
+    return;
+  }
   if (event.target.closest?.("[data-task-filter]")) {
     state.taskWorkspaceFilter = event.target.value || "";
     void renderCockpit();
