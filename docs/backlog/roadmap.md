@@ -15633,11 +15633,14 @@ Local tasks:
   or focus loss; the audit intentionally keeps Wave 44 open because Project Work selection/inspector,
   Active Task evidence, Markdown first-viewport reading, and Validation Repair hierarchy still diverge
   from the target composition.
-- `W44-E1-S3-T14` (next) Render the target Project Work selected Work Item inspector and compact
-  filter/table composition from the existing core-owned Inbox projection. Preserve membership, order,
-  routes, API shapes, stable ids, and one primary action. Verification: provider-free Project Work
-  selection, deep-link/reload, keyboard, filter, focus, and five-viewport geometry checks.
-- `W44-E1-S3-T15` (soon) Render the target Active Task first-viewport attempt composition and
+- `W44-E1-S3-T14` (done) Render the target Project Work selected Work Item inspector and compact
+  filter/table composition from the existing core-owned Inbox projection. PR #354 (merge `b3622bde`)
+  makes Inbox rows selectable by click and keyboard, preserves selection in a bounded
+  `inbox_work_item` deep-link, adds a server-owned filter/table composition, and keeps grouping,
+  ordering, status, and mutation eligibility outside the browser. Verification: Inbox journey (`11
+  passed`), selection/deep-link/reload journey (`1 passed`), full five-viewport matrix (`9 passed`),
+  frontend Node suite (`135 passed`), UI contracts, Ruff, mypy, packaged JavaScript, full CI, and build.
+- `W44-E1-S3-T15` (next) Render the target Active Task first-viewport attempt composition and
   live-output tray from the existing task-attempt evidence. Show attempt identity, factual elapsed and
   last-output ages, durable milestone, cancellation/reconnect state, and collapsible raw output without
   fabricated progress or new mutation semantics. Verification: provider-free starting/streaming/quiet/
@@ -15663,10 +15666,20 @@ Wave 44 exit evidence:
 - browser checks show no console errors, horizontal overflow, duplicate primary actions, or focus
   loss;
 - a fresh rendered audit confirms remaining gaps are absent or explicitly blocked. The current audit
-  is evidence-complete but not an exit pass: T14 and T15 are the next bounded convergence slices, with
-  T16 and T17 following their focused re-audits.
+  is evidence-complete but not an exit pass: T14 is complete, T15 is the next bounded convergence
+  slice, and T16/T17 follow their focused re-audits.
 
 Wave 44 reconciliation:
+
+- `2026-08-24` PR #354 (merge `b3622bde`) completed `W44-E1-S3-T14`. Project Work now exposes a
+  selectable, keyboard-accessible Work Item row with a retained inspector, compact search/filter,
+  target-style stage/progress/Runner/last-event/status metadata, and reload-safe `inbox_work_item`
+  selection state. The UI only filters/render-orders the existing core projection and keeps all
+  route/API/DOM ids and primary mutation services intact. Inbox journey, selection/deep-link, full
+  five-viewport matrix, frontend, UI contracts, Ruff, mypy, packaged JavaScript, deterministic,
+  adapter, packaged-browser, and build checks passed. `W44-E1-S3-T15` is now Next; Markdown and
+  Validation follow-ups remain planned. Human usability, Claude/cross-runtime, and Wave 36 acceptance
+  remain parked.
 
 - `2026-08-24` PR #352 (merge `e1d77b01`) completed `W44-E1-S3-T8` as a fresh rendered audit, not a
   Wave 44 exit claim. Provider-free Playwright captured all 13 target surfaces at desktop and mobile
