@@ -57,6 +57,13 @@ def test_wave42_browser_matrix_registry_is_complete() -> None:
     assert journeys["review-remediation"].surface_selector == (
         '[data-studio-quality-gate="review"]'
     )
+    assert journeys["review-remediation"].fixture_state == "review-qa-rejected"
+    review_query = wave42_route_query(
+        journeys["review-remediation"],
+        work_item="WI-BROWSER",
+        run_id="run-browser",
+    )
+    assert "stage=qa" in review_query and "view=recovery" in review_query
     for journey_id in ("question-recovery", "validation-repair", "review-remediation"):
         assert ".recovery-workbench" not in journeys[journey_id].surface_selector
 

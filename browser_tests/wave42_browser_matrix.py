@@ -68,7 +68,7 @@ WAVE42_BROWSER_JOURNEYS: tuple[Wave42BrowserJourney, ...] = (
     ),
     Wave42BrowserJourney(
         journey_id="review-remediation",
-        fixture_state="remediation-stale",
+        fixture_state="review-qa-rejected",
         route="review-remediation",
         surface_selector='[data-studio-quality-gate="review"]',
         first_action_selector=(
