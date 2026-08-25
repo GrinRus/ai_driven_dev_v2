@@ -7,13 +7,14 @@ slice, and local task.
 
 ## Next
 
-- `W44-E1-S3-T21` — Recompose Work Item Overview/Launch with the target contextual Runner inspector,
-  one launch action, and readable compact-desktop stage strip.
+- `W44-E1-S3-T22` — Recompose Tasks and Active Task into the target table/right-inspector/live-output
+  hierarchy while preserving authoritative task actions and factual attempt state.
 
 ## Soon
 
-- `W44-E1-S3-T22` — Recompose Tasks and Active Task into the target table/right-inspector/live-output
-  hierarchy while preserving authoritative task actions and factual attempt state.
+- `W44-E1-S3-T23` — Recompose Decision, Validation Repair, and Mobile Decision recovery content so
+  rationale, evidence, resolution/consequence, destination, and the single contextual action retain
+  the target hierarchy across desktop and mobile states.
 
 ## Parking lot
 
@@ -39,6 +40,16 @@ slice, and local task.
   queue-restoration policy in `docs/backlog/roadmap.md` (`W8-E3-S1`).
 
 ## Current reconciliation
+
+- `2026-08-25` PR #368 (merge `2d450192`) completed `W44-E1-S3-T21`: Work Item Overview/Launch now
+  presents the truthful request brief and launch scope beside one contextual Runner readiness
+  inspector and one primary launch action. The inspector preserves runtime selection and readiness
+  revalidation, while compact desktop stage groups keep all labels readable and mobile stacks the
+  Runner/action hierarchy without overflow or duplicate primaries. Four-viewport launch composition,
+  stage/action/legacy browser suites, frontend (`136`), UI asset contracts, docs/planning, Ruff, mypy,
+  deterministic, adapter, build, security, and packaged UI browser CI passed. `W44-E1-S3-T22` is now
+  Next and `T23` is Soon; Wave 44 exit evidence, human usability, Claude/cross-runtime, and Wave 36
+  acceptance remain open or parked as previously scoped.
 
 - `2026-08-25` PR #366 (merge `82fb1d23`) completed `W44-E1-S3-T20`: selected Project Work now
   keeps the server-owned table/list inside its desktop grid column, places the Work Item inspector

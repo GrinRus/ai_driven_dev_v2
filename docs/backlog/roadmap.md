@@ -15688,14 +15688,18 @@ Local tasks:
   mobile, geometry/accessibility, deep-link/reload, action-count, diagnostics, legacy/action
   browser checks (`14 passed`), frontend (`136 passed`), UI/docs/planning (`103 passed`), Ruff,
   mypy, and full CI including packaged UI browser.
-- `W44-E1-S3-T21` (next) Recompose Work Item Overview/Launch so the contextual Runner readiness
+- `W44-E1-S3-T21` (done) Recompose Work Item Overview/Launch so the contextual Runner readiness
   inspector and one launch action occupy the target hierarchy while the eight-stage strip remains
-  readable at compact desktop widths. Preserve runtime selection, readiness revalidation, route
-  state, and no-Runner behavior on create/read-only surfaces.
-- `W44-E1-S3-T22` (soon) Recompose Tasks and Active Task into the target table/right-inspector/
+  readable at compact desktop widths. PR #368 (merge `2d450192`) adds a truthful request brief and
+  launch scope, one contextual Runner readiness inspector, one primary launch action, and compact
+  desktop/mobile geometry coverage while preserving runtime selection, readiness revalidation,
+  route state, and no-Runner behavior on create/read-only surfaces. Verification: four-viewport
+  launch composition, stage/action/legacy browser suites, frontend (`136`), UI asset contracts,
+  docs/planning, Ruff, mypy, deterministic, adapter, build, security, and packaged UI browser CI.
+- `W44-E1-S3-T22` (next) Recompose Tasks and Active Task into the target table/right-inspector/
   live-output hierarchy. Preserve the authoritative task ledger, selected-task actions, factual
   attempt fields, reconnect/cancel states, and one primary action without duplicate shells.
-- `W44-E1-S3-T23` (planned) Recompose Decision, Validation Repair, and Mobile Decision recovery
+- `W44-E1-S3-T23` (soon) Recompose Decision, Validation Repair, and Mobile Decision recovery
   content so rationale, evidence, resolution/consequence, destination, and the single contextual
   action retain the target hierarchy across desktop and mobile states.
 - `W44-E1-S3-T24` (planned) Align Runs and Attempts with the target chronology, selected-attempt
