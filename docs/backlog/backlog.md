@@ -7,8 +7,8 @@ slice, and local task.
 
 ## Next
 
-- `W44-E1-S3-T24` — Align Runs and Attempts with the target chronology, selected-attempt inspector,
-  lineage, retained evidence, and read-only action hierarchy.
+- `W44-E1-S3-T25` — Align Flow Complete with the target immutable handoff, evidence,
+  completion inspector, and recommended-next-outcome composition without changing lineage semantics.
 
 ## Soon
 
@@ -36,6 +36,17 @@ slice, and local task.
   queue-restoration policy in `docs/backlog/roadmap.md` (`W8-E3-S1`).
 
 ## Current reconciliation
+
+- `2026-08-25` PR #374 (merge `a85a9d03`) completed `W44-E1-S3-T24`: Runs and Attempts now use the
+  target three-region composition with a compact retained-runs list, selected-attempt tabs and
+  chronology, read-only Timeline/Raw log/Artifacts views, and an Evidence and lineage inspector
+  with retained evidence, lineage, archive, compare, and one primary open action. Existing history
+  routes, selectors, auto-follow/read-only semantics, lineage, archive, and comparison services are
+  preserved. Focused target/history browser suites (`16`), frontend state/route tests (`41`), five-
+  viewport geometry/accessibility/diagnostic checks, CSS contracts, planning integrity, Ruff, mypy,
+  deterministic, adapter, packaged UI browser, security, and build CI passed. `W44-E1-S3-T25` is now
+  the only `Next` task; Wave 44 exit, human usability, Claude/cross-runtime, and Wave 36 acceptance
+  remain open or parked as previously scoped.
 
 - `2026-08-25` PR #372 (merge `a733341c`) completed `W44-E1-S3-T23`: Decision recovery now leads with
   rationale, retained evidence, answer/resolution controls, durable destination, and explicit impact;

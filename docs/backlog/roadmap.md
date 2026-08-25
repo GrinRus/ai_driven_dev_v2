@@ -15713,9 +15713,16 @@ Local tasks:
   repair action visible without horizontal overflow. Focused decision/recovery browser checks (`4`),
   frontend (`28`), UI contracts, Ruff, mypy, deterministic, adapter, security, packaged UI browser,
   and build CI passed.
-- `W44-E1-S3-T24` (next) Align Runs and Attempts with the target chronology, selected-attempt
-  inspector, lineage, retained evidence, and read-only action hierarchy.
-- `W44-E1-S3-T25` (planned) Align Flow Complete with the target immutable handoff, evidence,
+- `W44-E1-S3-T24` (done) Align Runs and Attempts with the target chronology, selected-attempt
+  inspector, lineage, retained evidence, and read-only action hierarchy. PR #374 (merge
+  `a85a9d03`) adds the compact Runs list, truthful attempt/view tabs, vertical chronology,
+  selected-attempt evidence/lineage inspector, retained comparison action, and responsive
+  desktop/mobile composition without changing history routes, selectors, lineage, archive, or
+  read-only semantics. Verification: focused target/history browser suites (`16 passed`), frontend
+  state/route tests (`41 passed`), five-viewport provider-free interaction/geometry/accessibility
+  matrix, clean diagnostics with no horizontal overflow, CSS token contracts, planning integrity,
+  Ruff, mypy, and full CI including packaged UI browser.
+- `W44-E1-S3-T25` (next) Align Flow Complete with the target immutable handoff, evidence,
   completion inspector, and recommended-next-outcome composition without changing lineage semantics.
 - `W44-E1-S3-T26` (planned) Align Create Work Item with the target editor/preview shell, draft
   status, context sections, and one create action while preserving operator-authored Markdown rules.
@@ -15735,8 +15742,8 @@ Wave 44 exit evidence:
 - browser checks show no console errors, horizontal overflow, duplicate primary actions, or focus
   loss;
 - a fresh rendered audit confirms remaining gaps are absent or explicitly blocked. T19 is now
-  evidence-complete but not an exit pass; T20 is the only dependency-ready convergence task and
-  default task-centered routing remains provisional until T20-T28 are either completed or backed by
+  evidence-complete but not an exit pass; T25 is now the only dependency-ready convergence task and
+  default task-centered routing remains provisional until T25-T28 are either completed or backed by
   stronger target-equivalence evidence.
 
 Wave 44 reconciliation:
