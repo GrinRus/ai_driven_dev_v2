@@ -1513,8 +1513,9 @@ function renderGlobalNextActionStrip() {
   if (!host) return;
   syncLiveJobBodyClass();
   syncExternalRunningBodyClass();
+  const surfacePolicy = operatorActionSurfacePolicy();
   if (
-    operatorActionSurfacePolicy().hidesGlobalAction
+    surfacePolicy.hidesGlobalAction
     || state.onboarding?.setupRequired
     || workDetailOwnsPrimarySurface()
   ) {
@@ -1525,9 +1526,14 @@ function renderGlobalNextActionStrip() {
   }
   host.hidden = false;
   const action = state.dashboard?.next_action || {action: "choose-runtime", label: "Select runtime", detail: "Choose a runtime.", enabled: false};
+  const launchOverview = !surfacePolicy.hidesRunner
+    && !surfacePolicy.hidesGlobalAction
+    && !state.activeRunId
+    && !state.dashboard?.run?.run_id;
   const noRunWithRuntime = action.action === "choose-runtime" && state.selectedRuntime;
   const choosingRuntime = action.action === "choose-runtime" && !state.selectedRuntime;
   const runtimeNeeded = needsRuntime(action.action) || noRunWithRuntime;
+  const showRunner = runtimeNeeded || launchOverview;
   const runtimeBlocked = !choosingRuntime
     && runtimeNeeded
     && (!state.selectedRuntime || !selectedRuntimeReady());
@@ -1595,7 +1601,7 @@ function renderGlobalNextActionStrip() {
         <span><strong>Run</strong>${escapeHtml(run)}</span>
       </div>
       <div class="next-action-button-stack">
-        ${runtimeNeeded && typeof renderContextualRunnerControl === "function" ? renderContextualRunnerControl({actionLabel: label}) : ""}
+        ${showRunner && typeof renderContextualRunnerControl === "function" ? renderContextualRunnerControl({actionLabel: label, inspector: launchOverview}) : ""}
         <button id="globalNextActionButton" class="next-button" data-primary-action type="button" ${disabled ? "disabled" : ""}>${escapeHtml(label)}</button>
         ${renderNextActionBlocker(blockerMessage)}
       </div>
