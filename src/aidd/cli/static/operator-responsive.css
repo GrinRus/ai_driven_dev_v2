@@ -41,6 +41,30 @@
   }
 }
 
+/* Flow Complete keeps its one core-recommended outcome reachable at bounded
+   desktop/tablet heights too. The handoff/evidence canvas stays in document
+   flow; only the existing primary control is lifted into the same
+   safe-area-aware dock used on phones, with reserved space so retained content
+   is not hidden. */
+@media (max-width: 1500px) and (min-width: 761px) {
+  [data-studio-flow-complete] [data-next-flow-action][data-primary-action] {
+    background: var(--teal-dark);
+    border: 1px solid var(--teal-dark);
+    bottom: max(var(--space-8), env(safe-area-inset-bottom));
+    box-shadow: var(--elevation-overlay);
+    left: auto;
+    min-height: var(--control-height-touch);
+    position: fixed;
+    right: var(--space-8);
+    width: min(320px, calc(100vw - (var(--space-8) * 2)));
+    z-index: 60;
+  }
+
+  [data-studio-flow-complete] {
+    padding-bottom: calc(var(--space-10) + var(--control-height-touch));
+  }
+}
+
 @media (max-width: 1500px) and (min-width: 900px) {
   .history-run-table-head {
     display: none;
