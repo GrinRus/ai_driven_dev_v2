@@ -315,7 +315,7 @@ function renderStudioInbox() {
   const selectedWorkItem = inboxSelectedWorkItem();
   const selectedItem = inboxSelectedItem(sections, selectedWorkItem);
   return `
-    <section class="studio-inbox" data-studio-surface="inbox" data-inbox-populated="${count ? "true" : "false"}">
+    <section class="studio-inbox" data-studio-surface="inbox" data-inbox-populated="${count ? "true" : "false"}" data-inbox-selected="${selectedWorkItem ? "true" : "false"}">
       <header class="surface studio-inbox-header">
         <div>
           <p class="eyebrow">Inbox</p>

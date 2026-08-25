@@ -1706,7 +1706,7 @@
 
 /* W44-E1-S3-T34: the Project Work surface is a compact server-owned table.
    Selection opens the inspector; the list itself stays dense and scannable. */
-.studio-inbox[data-inbox-populated="true"] .intent-entry-recommendation {
+.studio-inbox[data-inbox-populated="true"][data-inbox-selected="true"] .intent-entry-recommendation {
   display: none;
 }
 .studio-inbox .inbox-filter-bar {
