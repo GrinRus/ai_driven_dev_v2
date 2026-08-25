@@ -15802,19 +15802,22 @@ Local tasks:
   visibility, reconnect/cancel semantics, one primary action, clean diagnostics, and no horizontal
   overflow; docs/planning checks, Ruff, mypy, full CI, deterministic, adapter, packaged-browser,
   security, and build checks passed.
-- `W44-E1-S3-T33` (next) Recompose Decision and Mobile Decision so the decision context,
-  evidence, resolution choices, durable destination, and one primary action remain in the target
-  first-viewport hierarchy. Verification: question, approval, and mobile decision fixtures at all
-  five viewports with mobile resolution/action bounds, read-only evidence, fail-closed recovery,
-  and no overflow.
-  - Dependencies: `W44-E1-S3-T32`.
-- `W44-E1-S3-T34` (soon) Align Project Work with the target compact grouped table and selected
+- `W44-E1-S3-T33` (done) Recompose Decision and Mobile Decision so the decision context, evidence,
+  resolution choices, durable destination, and one primary action remain in the target first-viewport
+  hierarchy. PR #392 (merge `99ce2bca`) keeps question and approval context/evidence, resolution,
+  editor/destination state, and one real primary action in the target first viewport across the five
+  supported viewports. Question evidence opens when retained snippets exist; approval queues keep
+  Allow once primary and other decisions secondary without changing routes, ids, mutation paths, or
+  fail-closed recovery. Verification: focused browser/UI matrix (`20 passed`), UI asset contracts
+  (`53 passed`), Ruff, mypy, full CI, deterministic, adapter, packaged-browser, security, and build
+  checks passed.
+- `W44-E1-S3-T34` (next) Align Project Work with the target compact grouped table and selected
   Work Item inspector, removing duplicated setup/search chrome while preserving core-owned
   membership, ordering, progress truth, selection deep links, and one contextual action.
   Verification: seeded mixed Inbox groups across desktop/mobile with deterministic row geometry,
   selected-context bounds, keyboard selection, reload/deep-link, and clean diagnostics.
   - Dependencies: `W44-E1-S3-T33`.
-- `W44-E1-S3-T35` (planned) Align Implementation Review with the target full-width diff, claims,
+- `W44-E1-S3-T35` (soon) Align Implementation Review with the target full-width diff, claims,
   verification, and Review inspector composition while preserving repository-truth evidence,
   launch readiness, and the explicit Review gate. Verification: clean, incomplete, out-of-scope,
   missing-evidence, and failed-verification fixtures with first-viewport composition, one primary
@@ -15853,6 +15856,16 @@ Wave 44 exit evidence:
   provisional until T30-T39 are either completed or backed by explicit target-equivalence evidence.
 
 Wave 44 reconciliation:
+
+- `2026-08-26` PR #392 (merge `99ce2bca`) completed `W44-E1-S3-T33`. Decision and Mobile Decision
+  now preserve the target first-viewport hierarchy for context, retained evidence, resolution,
+  editor/destination state, and one real primary action across question and approval fixtures at all
+  five supported viewports. Read-only evidence opens when source snippets exist; approval queues keep
+  Allow once as the sole primary while secondary decisions remain available. Routes, ids, mutation
+  services, fail-closed recovery, and generated-document immutability remain unchanged. Focused
+  browser/UI checks (`20 passed`), UI contracts (`53 passed`), docs/planning, Ruff, mypy, full CI,
+  deterministic, adapter, packaged-browser, security, and build checks passed. `T34` is now the next
+  dependency-ready task and `T35` is its direct Soon successor.
 
 - `2026-08-25` PR #390 (merge `4fc916a7`) completed `W44-E1-S3-T32`. Task Workspace and Active Task
   now keep the selected attempt inspector, factual attempt controls, task groups, and live-output
