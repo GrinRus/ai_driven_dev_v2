@@ -140,14 +140,41 @@ function renderActiveStudioContextBar(studioState, item) {
   `;
 }
 
+function renderNoRunOverview() {
+  const dashboard = state.dashboard || {};
+  const workItem = dashboard.work_item || state.activeRouteWorkItem || "Work Item";
+  const intent = activeIntentSummary();
+  const request = state.requestContext?.work_item === workItem ? state.requestContext : null;
+  const requestText = request?.request_text || intent?.excerpt || "Request context is not available yet.";
+  const requestPath = request?.request_path || intent?.source_path || "operator-request.md";
+  return `
+    <section class="surface studio-document-canvas work-item-overview-canvas" data-studio-document-slot data-work-item-overview>
+      <div class="surface-title">
+        <span>Requested outcome</span>
+        <span class="small-badge">read-only brief</span>
+      </div>
+      <div class="work-item-overview-request">
+        <p>${escapeHtml(requestText)}</p>
+        <div class="work-item-overview-source" data-work-item-request-source>
+          <span><strong>Source</strong><code>${escapeHtml(requestPath)}</code></span>
+          <span class="small-badge">operator-authored</span>
+        </div>
+      </div>
+      <section class="work-item-overview-truth">
+        <h3>Launch scope</h3>
+        <ul>
+          <li><strong>Governed execution</strong><span>Stages advance only through the canonical workflow and readiness gate.</span></li>
+          <li><strong>Durable evidence</strong><span>Run, stage, and decision records remain linked to this Work Item.</span></li>
+          <li><strong>Safe by default</strong><span>No runtime mutation starts until an eligible Runner is selected.</span></li>
+        </ul>
+      </section>
+    </section>
+  `;
+}
+
 function renderActiveStudioDocumentSlot(studioState) {
   if (studioState === "no-run") {
-    return renderStateSurface({
-      kind: "studio-document",
-      state: "empty",
-      title: "No run evidence yet",
-      consequence: "Use the single decision above to select a runtime or start the governed flow."
-    });
+    return renderNoRunOverview();
   }
   return `
     <section class="surface studio-document-canvas" data-studio-document-slot>

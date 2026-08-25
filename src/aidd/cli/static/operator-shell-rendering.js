@@ -176,6 +176,9 @@ function runtimeReadinessMessage() {
 }
 
 function renderContextualRunnerControl({actionLabel = "launch"} = {}) {
+  // Keep the historical signature stable for packaged asset contracts while
+  // allowing launch Overview to opt into the richer readiness inspector.
+  const inspector = arguments[0]?.inspector === true;
   const runtime = selectedRuntimeView();
   const runtimeLabel = state.selectedRuntime || "no Runner selected";
   const ready = selectedRuntimeReady();
@@ -186,12 +189,24 @@ function renderContextualRunnerControl({actionLabel = "launch"} = {}) {
       : ready
         ? `Eligible for ${actionLabel}.`
         : runtime?.disabled_reason || "Choose an eligible Runner before this action.";
+  const model = runtime?.configured_model || state.runtimeModel || "Native default";
+  const inspectorFacts = inspector
+    ? `
+        <div class="runner-inspector-facts" data-runner-inspector-facts>
+          <div><span>Model</span><strong>${escapeHtml(model)}</strong></div>
+        </div>
+        ${runtime
+          ? renderRuntimeReadinessDimensions(runtime, {compact: true})
+          : '<p class="runner-inspector-empty">Select an eligible Runner to load current readiness evidence.</p>'}
+      `
+    : "";
   return `
-    <div class="contextual-runner-control" data-contextual-runner-control data-runner-eligible="${ready ? "true" : "false"}">
+    <div class="contextual-runner-control${inspector ? " runner-inspector" : ""}" data-contextual-runner-control data-runner-inspector-mode="${inspector ? "launch" : "contextual"}" data-runner-eligible="${ready ? "true" : "false"}">
       <div class="contextual-runner-copy">
         <span class="eyebrow">Runner</span>
         <strong>${escapeHtml(runtimeLabel)}</strong>
         <span>${escapeHtml(reason)}</span>
+        ${inspectorFacts}
       </div>
       <button class="secondary" data-open-runner type="button">${state.selectedRuntime ? "Change Runner" : "Choose Runner"}</button>
     </div>
