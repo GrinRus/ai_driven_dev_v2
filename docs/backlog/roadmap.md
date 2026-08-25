@@ -15783,21 +15783,26 @@ Local tasks:
   ids, and mutation service are unchanged. The five-viewport launch composition suite and the
   provider-free `create-runner-launch` matrix pass with focus, one-primary-action, diagnostics, and
   overflow checks green; UI contracts, planning/docs checks, Ruff, mypy, and full CI also pass.
-- `W44-E1-S3-T31` (next) Keep the core-recommended Flow Complete action visible and focusable in
+- `W44-E1-S3-T31` (done) Keep the core-recommended Flow Complete action visible and focusable in
   the initial `768x1024` viewport while retaining immutable handoff/evidence, fresh-QA gating,
-  lineage overlays, and secondary outcomes. Verification: five-viewport completion matrix with
-  first-action bounds, source-run immutability, recommendation truth, clean diagnostics, and no
-  duplicate primary actions.
-- `W44-E1-S3-T32` (planned) Recompose Task Workspace and Active Task so the selected attempt
+  lineage overlays, and secondary outcomes. PR #388 (merge `f7ab7364`) lifts the existing primary
+  action into the bounded safe-area-aware dock for supported tablet/desktop widths and extends the
+  target composition coverage to `768x1024`; handoff/evidence remain in document flow and source-run
+  immutability, recommendation truth, and one-primary semantics are unchanged. Verification: five-
+  viewport completion matrix, target legacy composition/mobile focus checks, UI contracts, docs/
+  planning consistency, Ruff, mypy, full CI, packaged UI browser, deterministic, adapter, security,
+  and build checks passed.
+- `W44-E1-S3-T32` (next) Recompose Task Workspace and Active Task so the selected attempt
   inspector, factual attempt controls, task groups, and live-output tray share the target first
   viewport without changing task-ledger ownership or mutation services. Verification: ready,
   running, waiting, cancelling, failed, and completed fixtures across desktop/mobile with tray
   visibility, reconnect/cancel semantics, one primary action, and clean diagnostics.
-- `W44-E1-S3-T33` (planned) Recompose Decision and Mobile Decision so the decision context,
+- `W44-E1-S3-T33` (soon) Recompose Decision and Mobile Decision so the decision context,
   evidence, resolution choices, durable destination, and one primary action remain in the target
   first-viewport hierarchy. Verification: question, approval, and mobile decision fixtures at all
   five viewports with mobile resolution/action bounds, read-only evidence, fail-closed recovery,
   and no overflow.
+  - Dependencies: `W44-E1-S3-T32`.
 - `W44-E1-S3-T34` (planned) Align Project Work with the target compact grouped table and selected
   Work Item inspector, removing duplicated setup/search chrome while preserving core-owned
   membership, ordering, progress truth, selection deep links, and one contextual action.
@@ -15837,18 +15842,28 @@ Wave 44 exit evidence:
 - browser checks show no console errors, horizontal overflow, duplicate primary actions, or focus
   loss;
 - a fresh rendered audit confirms remaining gaps are absent or explicitly blocked. T19 is now
-  evidence-complete but not an exit pass; T25-T30 are complete and T31 is the next dependency-ready
+  evidence-complete but not an exit pass; T25-T31 are complete and T32 is the next dependency-ready
   convergence task. Default task-centered routing remains
   provisional until T30-T39 are either completed or backed by explicit target-equivalence evidence.
 
 Wave 44 reconciliation:
+
+- `2026-08-25` PR #388 (merge `f7ab7364`) completed `W44-E1-S3-T31`. Flow Complete now keeps the
+  existing core-recommended action visible and focusable across the supported bounded tablet/
+  desktop widths, including the audited `768x1024` first viewport, via the established safe-area-
+  aware action dock. Immutable handoff/evidence content remains in document flow; fresh-QA gating,
+  source-run immutability, lineage overlays, recommendation truth, one-primary semantics, routes,
+  ids, and mutation behavior are unchanged. The five-viewport completion matrix and target legacy
+  composition/mobile focus checks passed, together with UI contracts, docs/planning consistency,
+  Ruff, mypy, full CI, packaged UI browser, deterministic, adapter, security, and build checks.
+  `W44-E1-S3-T32` is now the next dependency-ready task and `T33` is its direct successor.
 
 - `2026-08-25` PR #386 (merge `7c58edda`) completed `W44-E1-S3-T30`. The Work Item Launch primary
   action is now visible and focusable at `320x568` in a touch-safe bottom dock, while the existing
   core-owned Runner readiness projection, literal disabled reason, one contextual Runner, routes,
   ids, and fail-closed launch mutation path remain unchanged. The five-viewport launch suite and
   provider-free create/Runner/launch matrix passed with one primary action, clean diagnostics, focus,
-  and no horizontal overflow; T31 is now the sole dependency-ready successor.
+  and no horizontal overflow; T31 was promoted as its successor and is now complete, with T32 next.
 
 - `2026-08-25` PR #384 (merge `b30de404`) completed `W44-E1-S3-T29`. The fresh rendered audit is
   retained in `docs/e2e/w44-e1-s3-t29-rendered-exit-audit.md`: focused W44 suites passed (`71`),

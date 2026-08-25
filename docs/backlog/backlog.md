@@ -7,12 +7,14 @@ slice, and local task.
 
 ## Next
 
-- `W44-E1-S3-T31` — Keep the core-recommended Flow Complete action visible and focusable in the
-  initial `768x1024` viewport while retaining immutable handoff/evidence and lineage semantics.
+- `W44-E1-S3-T32` — Recompose Task Workspace and Active Task so the selected attempt inspector,
+  factual attempt controls, task groups, and live-output tray share the target first viewport.
 
 ## Soon
 
-_Empty — the next task is dependency-ready._
+- `W44-E1-S3-T33` — Recompose Decision and Mobile Decision so decision context, evidence,
+  resolution choices, durable destination, and one primary action remain in the target first-viewport
+  hierarchy.
 
 ## Parking lot
 
@@ -39,13 +41,23 @@ _Empty — the next task is dependency-ready._
 
 ## Current reconciliation
 
+- `2026-08-25` PR #388 (merge `f7ab7364`) completed `W44-E1-S3-T31`: Flow Complete keeps its existing
+  core-recommended action visible and focusable across the supported bounded tablet/desktop widths,
+  including `768x1024`, while immutable handoff/evidence, fresh-QA gating, lineage, recommendation
+  truth, routes, ids, and one-primary semantics remain unchanged. The five-viewport completion and
+  target legacy/mobile focus checks passed, together with UI contracts, docs/planning, Ruff, mypy,
+  full CI, packaged UI browser, deterministic, adapter, security, and build checks. `T32` is now
+  `Next`; `T33` is its direct `Soon` successor; human usability, Claude/cross-runtime, and Wave 36
+  acceptance remain parked.
+
 - `2026-08-25` PR #386 (merge `7c58edda`) completed `W44-E1-S3-T30`: the Work Item Launch action
   remains the existing primary/mutation control and is now visible and focusable at `320x568` in a
   touch-safe bottom dock. The core Runner readiness projection, literal disabled reason, routes,
   ids, fail-closed eligibility, and one contextual Runner are unchanged. Five-viewport launch and
   provider-free create/Runner/launch checks passed, including one-primary-action, focus, diagnostics,
-  and overflow assertions. `W44-E1-S3-T31` is now `Next`; human usability, Claude/cross-runtime, and
-  Wave 36 acceptance remain parked.
+  and overflow assertions. `W44-E1-S3-T31` was promoted as the successor and is now complete;
+  `W44-E1-S3-T32` is now `Next`; human usability, Claude/cross-runtime, and Wave 36 acceptance
+  remain parked.
 
 - `2026-08-25` PR #384 (merge `b30de404`) completed `W44-E1-S3-T29`: the fresh rendered audit is
   retained in `docs/e2e/w44-e1-s3-t29-rendered-exit-audit.md`. Focused W44 suites passed (`71`),
