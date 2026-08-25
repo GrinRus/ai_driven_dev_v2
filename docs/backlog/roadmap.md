@@ -15722,9 +15722,16 @@ Local tasks:
   state/route tests (`41 passed`), five-viewport provider-free interaction/geometry/accessibility
   matrix, clean diagnostics with no horizontal overflow, CSS token contracts, planning integrity,
   Ruff, mypy, and full CI including packaged UI browser.
-- `W44-E1-S3-T25` (next) Align Flow Complete with the target immutable handoff, evidence,
+- `W44-E1-S3-T25` (done) Align Flow Complete with the target immutable handoff, evidence,
   completion inspector, and recommended-next-outcome composition without changing lineage semantics.
-- `W44-E1-S3-T26` (planned) Align Create Work Item with the target editor/preview shell, draft
+  PR #376 (merge `a8f15319`) now renders the target status hero, central handoff summary and final
+  documents/evidence, plus a right-side Completion inspector with fresh-QA status, retained evidence,
+  run IDs, the core recommendation, one primary outcome action, and disclosed secondary actions. The
+  source run remains immutable and existing handoff/history routes, ids, lineage, and mutation
+  semantics are preserved. Verification: focused frontend and Flow Complete/browser suites, five-
+  viewport geometry/accessibility/diagnostic checks, UI contracts, planning integrity, Ruff, mypy,
+  deterministic scenarios, adapter conformance, security, packaged UI browser, and build CI passed.
+- `W44-E1-S3-T26` (next) Align Create Work Item with the target editor/preview shell, draft
   status, context sections, and one create action while preserving operator-authored Markdown rules.
 - `W44-E1-S3-T27` (planned) Align Implementation Review and Review/QA Remediation with the target
   repository-truth, finding-evidence, and remediation action hierarchy.
@@ -15742,11 +15749,21 @@ Wave 44 exit evidence:
 - browser checks show no console errors, horizontal overflow, duplicate primary actions, or focus
   loss;
 - a fresh rendered audit confirms remaining gaps are absent or explicitly blocked. T19 is now
-  evidence-complete but not an exit pass; T25 is now the only dependency-ready convergence task and
-  default task-centered routing remains provisional until T25-T28 are either completed or backed by
-  stronger target-equivalence evidence.
+  evidence-complete but not an exit pass; T25 is complete and T26 is now the only dependency-ready
+  convergence task. Default task-centered routing remains provisional until T26-T28 are either
+  completed or backed by stronger target-equivalence evidence.
 
 Wave 44 reconciliation:
+
+- `2026-08-25` PR #376 (merge `a8f15319`) completed `W44-E1-S3-T25`. Flow Complete now leads with a
+  target-like completion status row, a central immutable handoff/evidence composition, and a bounded
+  Completion inspector that exposes fresh-QA checks, retained evidence, run IDs, the core-recommended
+  outcome, one primary action, and disclosed secondary outcomes. Existing routes, selectors, lineage,
+  immutable source-run semantics, and handoff services remain unchanged. Focused Flow Complete/mobile/
+  terminal/desktop browser checks, frontend suites, five-viewport geometry/accessibility/diagnostic
+  checks, UI contracts, planning integrity, Ruff, mypy, deterministic, adapter, security, packaged UI
+  browser, and build CI passed. `W44-E1-S3-T26` is now the only dependency-ready task; human usability,
+  Claude/cross-runtime, and Wave 36 acceptance remain parked.
 
 - `2026-08-25` PR #366 (merge `82fb1d23`) completed `W44-E1-S3-T20` from the T19-audited revision.
   The selected Project Work list now stays inside its server-owned grid column, the right-side
