@@ -5906,8 +5906,19 @@ button.intent-phase-step.active:hover {
   gap: var(--space-3);
   justify-content: flex-end;
 }
+.target-draft-status {
+  align-items: center;
+  display: inline-flex;
+  gap: var(--space-2);
+}
+.target-draft-status > span:first-child {
+  color: var(--amber);
+  font-size: 14px;
+}
 .target-create-work-item {
   gap: var(--space-5);
+  grid-template-columns: minmax(0, 1fr);
+  min-width: 0;
 }
 .target-create-layout {
   border: 1px solid var(--line);
@@ -5943,6 +5954,30 @@ button.intent-phase-step.active:hover {
 .target-create-form textarea {
   min-height: 220px;
 }
+.target-create-form .target-create-context-label {
+  margin-top: var(--space-3);
+}
+.target-create-form #onboardingContext {
+  min-height: 132px;
+}
+.target-create-advanced-toggle {
+  margin-top: var(--space-1);
+}
+.target-create-editor-preview {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-control);
+  line-height: 1.55;
+  min-height: 220px;
+  overflow-wrap: anywhere;
+  padding: var(--space-5);
+}
+.target-create-editor-preview h1,
+.target-create-editor-preview h2,
+.target-create-editor-preview h3 {
+  border-bottom: 1px solid var(--line);
+  padding-bottom: var(--space-2);
+}
 .field-help,
 .target-document-destination {
   color: var(--muted);
@@ -5960,9 +5995,20 @@ button.intent-phase-step.active:hover {
   border: 0;
   border-bottom: 2px solid transparent;
   border-radius: 0;
+  color: var(--text);
   min-height: var(--control-height);
   min-width: 44px;
   padding-inline: 0;
+}
+button.target-editor-tab:hover,
+button.target-editor-tab.active:hover {
+  background: transparent;
+  border-bottom-color: var(--line-strong);
+  color: var(--text);
+}
+.target-editor-tab.active,
+.target-editor-tab.active:hover {
+  color: var(--teal-dark);
 }
 .target-editor-tab.active {
   border-bottom-color: var(--teal);
@@ -6005,6 +6051,9 @@ button.intent-phase-step.active:hover {
   justify-content: space-between;
   padding-top: var(--space-5);
 }
+.target-create-footer .setup-actions {
+  justify-content: flex-end;
+}
 .target-create-footer > span {
   color: var(--muted);
   font-size: var(--type-label-size);
@@ -6020,6 +6069,9 @@ button.intent-phase-step.active:hover {
   font-weight: 750;
   min-height: var(--control-height);
   padding-block: var(--space-2);
+}
+.target-create-supporting[open] {
+  padding-bottom: var(--space-4);
 }
 .onboarding-supporting-grid {
   display: grid;

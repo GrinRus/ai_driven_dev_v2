@@ -200,6 +200,8 @@ const state = {
     contextWorkItem: "",
     workItemInput: "",
     requestText: "",
+    contextText: "",
+    createEditorMode: "write",
     forceContext: false,
     projectSetText: "",
     projectSetRows: [{id: "", root: "", role: ""}],

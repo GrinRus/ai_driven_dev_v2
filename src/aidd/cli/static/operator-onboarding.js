@@ -427,6 +427,72 @@ function onboardingCanCreate() {
   );
 }
 
+function onboardingContextSections(text = state.onboarding.contextText) {
+  const normalized = String(text || "").trim();
+  if (!normalized) return {context: "", constraints: ""};
+  const marker = normalized.match(/^##\s+constraints?\s*$/im);
+  if (!marker || marker.index === undefined) {
+    return {context: normalized, constraints: ""};
+  }
+  return {
+    context: normalized.slice(0, marker.index).trim(),
+    constraints: normalized.slice(marker.index + marker[0].length).trim()
+  };
+}
+
+function onboardingRequestPayload() {
+  const outcome = String(state.onboarding.requestText || "").trim();
+  const sections = onboardingContextSections();
+  if (!sections.context && !sections.constraints) return outcome;
+  return [
+    outcome,
+    sections.context ? `## Context\n\n${sections.context}` : "",
+    sections.constraints ? `## Constraints\n\n${sections.constraints}` : ""
+  ].filter(Boolean).join("\n\n");
+}
+
+function onboardingMarkdownHtml(text, emptyMessage) {
+  const normalized = String(text || "").trim();
+  if (!normalized) return `<p class="muted">${escapeHtml(emptyMessage)}</p>`;
+  return typeof renderMarkdown === "function" ? renderMarkdown(normalized) : escapeHtml(normalized);
+}
+
+function onboardingCreatePreviewHtml() {
+  const request = String(state.onboarding.requestText || "").trim();
+  const sections = onboardingContextSections();
+  return `
+    <h2>Outcome</h2>
+    <div data-create-preview-outcome>${onboardingMarkdownHtml(request, "Your requested outcome will appear here as Markdown before it is written.")}</div>
+    <div class="target-preview-section">
+      <h2>Context</h2>
+      <div data-create-preview-context>${onboardingMarkdownHtml(sections.context, "No context provided.")}</div>
+    </div>
+    <div class="target-preview-section">
+      <h2>Constraints</h2>
+      <div data-create-preview-constraints>${onboardingMarkdownHtml(sections.constraints, "No constraints provided.")}</div>
+    </div>
+  `;
+}
+
+function syncOnboardingCreateEditorMode() {
+  const mode = state.onboarding.createEditorMode === "preview" ? "preview" : "write";
+  document.querySelectorAll("[data-create-editor-mode]").forEach((tab) => {
+    const active = tab.dataset.createEditorMode === mode;
+    tab.classList.toggle("active", active);
+    tab.setAttribute("aria-selected", String(active));
+  });
+  const textarea = document.getElementById("onboardingRequest");
+  const preview = document.querySelector("[data-create-editor-preview]");
+  if (textarea) textarea.hidden = mode === "preview";
+  if (preview) {
+    preview.hidden = mode !== "preview";
+    preview.innerHTML = onboardingMarkdownHtml(
+      onboardingRequestPayload(),
+      "Your requested outcome will appear here as Markdown before it is written."
+    );
+  }
+}
+
 function requestEditorPreviewMarkdown(text) {
   const normalized = String(text || "").trim();
   if (!normalized) return "";
@@ -482,26 +548,23 @@ async function writeOperatorRequest() {
 function syncOnboardingCreateActionState() {
   const form = document.getElementById("onboardingCreateForm");
   if (!form) return;
-  const button = form.querySelector('button[type="submit"]');
   const canCreate = onboardingCanCreate() && !state.onboarding.creating;
-  if (button) button.disabled = !(onboardingCanCreate() && !state.onboarding.creating);
   const targetButton = document.querySelector("[data-target-create-submit]");
   if (targetButton) targetButton.disabled = !canCreate;
   const preview = document.querySelector("[data-request-preview-markdown]");
-  if (preview) {
-    const request = String(state.onboarding.requestText || "").trim();
-    preview.innerHTML = request
-      ? (typeof renderMarkdown === "function" ? renderMarkdown(request) : escapeHtml(request))
-      : `<p class="muted">Your requested outcome will appear here as Markdown before it is written.</p>`;
-  }
+  if (preview) preview.innerHTML = onboardingCreatePreviewHtml();
   const draftStatus = document.querySelector("[data-create-draft-status] .small-badge");
   if (draftStatus) {
-    draftStatus.textContent = state.onboarding.requestText.trim() ? "Unsaved draft" : "Ready to draft";
-    draftStatus.classList.toggle("warn", Boolean(state.onboarding.requestText.trim()));
+    const hasDraft = Boolean(
+      state.onboarding.requestText.trim() || state.onboarding.contextText.trim()
+    );
+    draftStatus.textContent = hasDraft ? "Unsaved draft" : "Ready to draft";
+    draftStatus.classList.toggle("warn", hasDraft);
   }
   const workItem = document.getElementById("onboardingWorkItem")?.value.trim() || "WI-NEW";
   const destination = document.querySelector("[data-request-preview-panel] .target-document-destination code");
   if (destination) destination.textContent = `.aidd/workitems/${workItem}/context/operator-request.md`;
+  syncOnboardingCreateEditorMode();
 }
 
 function projectWorkItemCanCreate() {
@@ -585,21 +648,17 @@ function renderOnboarding() {
     ? `<span class="small-badge good">${escapeHtml(state.selectedRuntime)}</span>`
     : `<span class="small-badge">optional until launch</span>`;
   const requestText = state.onboarding.requestText.trim();
-  const requestPreview = requestText
-    ? (typeof renderMarkdown === "function" ? renderMarkdown(requestText) : escapeHtml(requestText))
-    : `<p class="muted">Your requested outcome will appear here as Markdown before it is written.</p>`;
   const workItem = state.onboarding.workItemInput.trim() || "WI-NEW";
   content.innerHTML = `
     <div class="onboarding-shell target-create-work-item" data-create-work-item-surface data-guided-step="${escapeHtml(guided.step)}">
       <header class="target-surface-header create-work-item-header">
         <div>
-          <p class="eyebrow">New Work Item</p>
           <h1>Create work item</h1>
           <p>Capture the request, context, and scope. Runner selection happens when you launch work.</p>
         </div>
         <div class="target-surface-status" data-create-draft-status>
-          <span class="small-badge ${requestText ? "warn" : ""}">${requestText ? "Unsaved draft" : "Ready to draft"}</span>
-          <button class="secondary" data-cancel-new-work-item type="button">Cancel</button>
+          <span class="target-draft-status"><span aria-hidden="true">●</span><span class="small-badge ${requestText ? "warn" : ""}">${requestText ? "Unsaved draft" : "Ready to draft"}</span></span>
+          <button class="secondary" data-cancel-new-work-item type="button">Discard draft</button>
         </div>
       </header>
       <div class="target-create-layout">
@@ -611,35 +670,30 @@ function renderOnboarding() {
             <span class="field-help">Use a stable identifier that can be retained across runs.</span>
             <label class="field-label" for="onboardingRequest">Requested outcome</label>
             <div class="target-editor-tabs" role="tablist" aria-label="Request editor mode">
-              <button class="target-editor-tab active" type="button" role="tab" aria-selected="true">Write</button>
-              <button class="target-editor-tab" type="button" role="tab" aria-selected="false" disabled>Preview</button>
+              <button class="target-editor-tab ${state.onboarding.createEditorMode === "write" ? "active" : ""}" data-create-editor-mode="write" type="button" role="tab" aria-selected="${state.onboarding.createEditorMode === "write" ? "true" : "false"}">Write</button>
+              <button class="target-editor-tab ${state.onboarding.createEditorMode === "preview" ? "active" : ""}" data-create-editor-mode="preview" type="button" role="tab" aria-selected="${state.onboarding.createEditorMode === "preview" ? "true" : "false"}">Preview</button>
             </div>
-            <textarea id="onboardingRequest" name="request" rows="11" maxlength="20000" placeholder="What should this Work Item deliver?">${escapeHtml(state.onboarding.requestText)}</textarea>
-            <label class="checkbox-row" for="onboardingForceContext">
+            <textarea id="onboardingRequest" name="request" rows="11" maxlength="20000" placeholder="What should this Work Item deliver?" ${state.onboarding.createEditorMode === "preview" ? "hidden" : ""}>${escapeHtml(state.onboarding.requestText)}</textarea>
+            <div class="target-create-editor-preview" data-create-editor-preview aria-label="Rendered request preview" ${state.onboarding.createEditorMode === "preview" ? "" : "hidden"}>${onboardingMarkdownHtml(onboardingRequestPayload(), "Your requested outcome will appear here as Markdown before it is written.")}</div>
+            <label class="field-label target-create-context-label" for="onboardingContext">Context and constraints <span class="muted">(optional)</span></label>
+            <textarea id="onboardingContext" name="context" rows="5" maxlength="20000" data-create-context placeholder="Add any background, assumptions, known constraints, or helpful links.">${escapeHtml(state.onboarding.contextText)}</textarea>
+            <p class="field-help">Use a <code>## Constraints</code> heading when you want the preview to separate constraints from context.</p>
+            <label class="checkbox-row target-create-advanced-toggle" for="onboardingForceContext">
               <input id="onboardingForceContext" name="force_context" type="checkbox" ${state.onboarding.forceContext ? "checked" : ""}>
               <span>Overwrite existing request context</span>
             </label>
-            <details class="target-create-context">
-              <summary>Context and constraints <span class="muted">optional</span></summary>
-              <textarea rows="4" aria-label="Context and constraints" placeholder="Add background, assumptions, known constraints, or helpful links."></textarea>
-            </details>
-            <div class="setup-actions target-create-form-actions">
-              <button type="submit" ${onboardingCanCreate() && !state.onboarding.creating ? "" : "disabled"}>${state.onboarding.creating ? "Creating..." : "Create Work Item"}</button>
-              ${state.onboarding.createError ? `<span class="form-error">${escapeHtml(state.onboarding.createError)}</span>` : ""}
-            </div>
+            ${state.onboarding.createError ? `<span class="form-error">${escapeHtml(state.onboarding.createError)}</span>` : ""}
           </form>
         </section>
         <aside class="target-create-preview" data-request-preview-panel aria-label="Request Markdown preview">
           <div class="target-panel-heading"><strong>operator-request.md</strong><button class="secondary" type="button" data-copy-request-destination aria-label="Copy request destination">Copy</button></div>
           <p class="target-document-destination">Destination: <code>.aidd/workitems/${escapeHtml(workItem)}/context/operator-request.md</code></p>
-          <div class="target-markdown-preview" data-request-preview-markdown>${requestPreview}</div>
-          <div class="target-preview-section"><h2>Context</h2><p class="muted">No context provided.</p></div>
-          <div class="target-preview-section"><h2>Constraints</h2><p class="muted">No constraints provided.</p></div>
+          <div class="target-markdown-preview" data-request-preview-markdown>${onboardingCreatePreviewHtml()}</div>
         </aside>
       </div>
-      <footer class="target-create-footer"><span>Runner is selected when you launch work.</span><div class="setup-actions"><button class="secondary" data-cancel-new-work-item type="button">Cancel</button><button type="submit" form="onboardingCreateForm" data-target-create-submit ${onboardingCanCreate() && !state.onboarding.creating ? "" : "disabled"}>Create work item</button></div></footer>
-      <details class="target-create-supporting" open>
-        <summary>Project, saved Work Items, and Runner readiness</summary>
+      <footer class="target-create-footer"><span>Runner is selected when you launch work.</span><div class="setup-actions"><button class="secondary" data-cancel-new-work-item type="button">Cancel</button><button type="submit" form="onboardingCreateForm" data-target-create-submit data-aidd-primary-action ${onboardingCanCreate() && !state.onboarding.creating ? "" : "disabled"}>Create work item</button></div></footer>
+      <details class="target-create-supporting" ${onboardingProject() && state.selectedRuntime ? "" : "open"}>
+        <summary>Project scope and supporting setup</summary>
         <div class="onboarding-supporting-grid">
           <section class="surface onboarding-panel">
             <div class="surface-title"><span>Project setup</span><span class="small-badge">${state.onboarding.loading ? "loading" : "local"}</span></div>
@@ -666,6 +720,7 @@ function renderOnboarding() {
       </details>
     </div>
   `;
+  syncOnboardingCreateEditorMode();
 }
 
 async function inspectOnboardingProject() {
@@ -776,7 +831,7 @@ async function completeOnboardingWorkItem(action, workItem) {
       action,
       project_root: state.onboarding.projectRootInput,
       work_item: workItem,
-      request: action === "create" ? state.onboarding.requestText : undefined,
+      request: action === "create" ? onboardingRequestPayload() : undefined,
       force_context: action === "create" ? state.onboarding.forceContext : false,
       project_set: action === "create" ? onboardingProjectSetPayload() : []
     });
@@ -797,6 +852,8 @@ async function openProjectWorkItemCreation() {
   state.onboarding.createError = "";
   state.onboarding.workItemInput = "";
   state.onboarding.requestText = "";
+  state.onboarding.contextText = "";
+  state.onboarding.createEditorMode = "write";
   activateTab("project-home", {historyMode: "push"});
   renderProjectHomeRail();
   await renderCockpit();

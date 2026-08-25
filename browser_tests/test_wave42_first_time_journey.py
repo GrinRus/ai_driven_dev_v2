@@ -168,9 +168,18 @@ def test_wave42_first_time_operator_journey_records_bounded_rehearsal(
         page.goto(
             f"{harness.url}?ui=studio&mode=studio&work_item={work_item}"
             f"&run_id={run_id}&stage=idea&view=recovery",
-            wait_until="networkidle",
+            # The fixture deliberately keeps its launch job alive while the
+            # durable blocked state is injected; polling prevents networkidle
+            # from becoming a reliable navigation boundary here.
+            wait_until="domcontentloaded",
         )
-        page.locator('[data-recovery-action="answer-questions"]').click()
+        # The recovery deep link may already promote the authoritative question
+        # surface when the server's next action is answer-questions. Older
+        # renderers exposed an intermediate summary action, so retain that
+        # compatibility without requiring a redundant click.
+        answer_action = page.locator('[data-recovery-action="answer-questions"]')
+        if answer_action.count():
+            answer_action.click()
         page.locator('[data-human-decision-surface="question"]').wait_for(
             state="visible"
         )
