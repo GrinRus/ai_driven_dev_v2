@@ -54,6 +54,19 @@ function inboxProjectLastEvent(item, projectItem) {
   return item?.last_event || projectItem?.latest_run?.updated_at || "—";
 }
 
+function inboxProjectProgressPercent(projectItem) {
+  const completed = Number(projectItem?.stage_progress_count || 0);
+  const total = Number(projectItem?.stage_total_count || 0);
+  if (!Number.isFinite(completed) || !Number.isFinite(total) || total <= 0) return 0;
+  return Math.max(0, Math.min(100, Math.round((completed / total) * 100)));
+}
+
+function renderInboxProjectProgress(projectItem) {
+  const label = projectItem ? inboxProjectProgressText(projectItem) : "Unavailable";
+  const percent = inboxProjectProgressPercent(projectItem);
+  return `<span class="inbox-progress" role="img" aria-label="${escapeHtml(label)}"><span class="inbox-progress-track"><span class="inbox-progress-fill" style="width:${percent}%"></span></span><span class="inbox-progress-label">${escapeHtml(label)}</span></span>`;
+}
+
 function inboxSelectionHref(workItem) {
   const params = new URLSearchParams(window.location.search);
   if (workItem) params.set("inbox_work_item", workItem);
@@ -111,19 +124,21 @@ function renderStudioInboxItem(item, {selectedWorkItem = ""} = {}) {
   return `
     <article class="inbox-item${selected ? " selected" : ""}" data-inbox-item="${escapeHtml(item.item_id || item.job_id)}" data-inbox-select="${escapeHtml(route?.work_item || "")}" data-state="${escapeHtml(item.state)}" ${selectionAttributes} tabindex="${route?.work_item ? "0" : "-1"}" aria-label="${escapeHtml(`Select Work Item ${route?.work_item || item.title}`)}">
       <div class="inbox-item-copy">
-        ${renderStatusMarker({status: markerStatus, label: item.status_label})}
-        <strong>${escapeHtml(projectItem?.intent?.excerpt || item.title)}</strong>
-        <small class="inbox-item-identity">${escapeHtml(item.title)}</small>
-        ${route ? "" : '<small class="inbox-item-identity">Durable identity unavailable</small>'}
-        <p>${escapeHtml(item.summary)}</p>
-        <dl>
-          <div><dt>Stage</dt><dd>${escapeHtml(inboxProjectStage(item, projectItem))}</dd></div>
-          <div><dt>Progress</dt><dd>${escapeHtml(projectItem ? inboxProjectProgressText(projectItem) : "Unavailable")}</dd></div>
-          <div><dt>Runner</dt><dd>${escapeHtml(inboxProjectRunner(projectItem))}</dd></div>
-          <div><dt>Last event</dt><dd>${escapeHtml(inboxProjectLastEvent(item, projectItem))}</dd></div>
-          <div><dt>Status</dt><dd>${escapeHtml(item.status_label || "Unavailable")}</dd></div>
-        </dl>
+        <div class="inbox-item-primary">
+          ${renderStatusMarker({status: markerStatus, label: item.status_label})}
+          <div class="inbox-item-heading">
+            <strong>${escapeHtml(projectItem?.intent?.excerpt || item.title)}</strong>
+            <small class="inbox-item-identity">${escapeHtml(item.title)}</small>
+            ${route ? "" : '<small class="inbox-item-identity">Durable identity unavailable</small>'}
+          </div>
+        </div>
+        <p class="inbox-item-summary">${escapeHtml(item.summary)}</p>
       </div>
+      <div class="inbox-item-field inbox-item-stage"><span class="inbox-item-field-label">Stage</span><strong>${escapeHtml(inboxProjectStage(item, projectItem))}</strong></div>
+      <div class="inbox-item-field inbox-item-progress">${renderInboxProjectProgress(projectItem)}</div>
+      <div class="inbox-item-field inbox-item-runner"><span class="inbox-item-field-label">Runner</span><strong>${escapeHtml(inboxProjectRunner(projectItem))}</strong></div>
+      <div class="inbox-item-field inbox-item-event"><span class="inbox-item-field-label">Last event</span><strong>${escapeHtml(inboxProjectLastEvent(item, projectItem))}</strong></div>
+      <div class="inbox-item-field inbox-item-status"><span class="inbox-item-field-label">Status</span>${renderStatusMarker({status: markerStatus, label: item.status_label || "Unavailable"})}</div>
       <div class="inbox-item-action">${selected
         ? `<span class="inbox-item-selected-hint" ${inboxRouteAttributes(route)} data-inbox-selected-route="true">Selected Work Item</span>`
         : actionMarkup}</div>
@@ -300,7 +315,7 @@ function renderStudioInbox() {
   const selectedWorkItem = inboxSelectedWorkItem();
   const selectedItem = inboxSelectedItem(sections, selectedWorkItem);
   return `
-    <section class="studio-inbox" data-studio-surface="inbox">
+    <section class="studio-inbox" data-studio-surface="inbox" data-inbox-populated="${count ? "true" : "false"}" data-inbox-selected="${selectedWorkItem ? "true" : "false"}">
       <header class="surface studio-inbox-header">
         <div>
           <p class="eyebrow">Inbox</p>
@@ -324,7 +339,7 @@ function renderStudioInbox() {
       <div class="studio-inbox-layout">
         <div class="studio-inbox-sections">
         <div class="inbox-table-head" aria-hidden="true">
-          <span>Work Item</span><span>Stage</span><span>Progress</span><span>Runner</span><span>Last event</span><span>Status</span>
+          <span>Work Item</span><span>Stage</span><span>Progress</span><span>Runner</span><span>Last event</span><span>Status</span><span></span>
         </div>
         ${sections.map((section) => `
           <section class="surface inbox-section" data-inbox-section="${escapeHtml(section.key)}">
