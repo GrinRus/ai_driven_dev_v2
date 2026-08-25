@@ -1755,3 +1755,230 @@
     overflow: visible;
   }
 }
+
+/* W44-E1-S3-T33: keep a decision's context, answer controls, evidence, and
+ * consequence-bearing action in one composed workbench. The existing
+ * mutation selectors stay in place; these rules only repair the visual
+ * hierarchy and bounded responsive geometry. */
+.decision-evidence-list {
+  display: grid;
+  gap: var(--space-2);
+  margin-top: var(--space-3);
+}
+
+.decision-resolution-options {
+  display: grid;
+  gap: var(--space-2);
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  min-width: 0;
+}
+
+.decision-resolution-option {
+  background: var(--color-bg-surface);
+  border-color: var(--color-border-default);
+  color: var(--color-text-primary);
+  min-height: var(--control-height-touch);
+  min-width: 0;
+  width: 100%;
+}
+
+.decision-resolution-option.active,
+.decision-resolution-option[aria-checked="true"] {
+  background: var(--color-bg-selected);
+  border-color: var(--color-action-primary);
+  box-shadow: inset 0 0 0 1px var(--color-action-primary);
+  color: var(--color-text-primary);
+}
+
+button.decision-resolution-option.active:hover,
+button.decision-resolution-option[aria-checked="true"]:hover,
+button.decision-resolution-option.active:focus-visible,
+button.decision-resolution-option[aria-checked="true"]:focus-visible {
+  background: var(--color-bg-selected);
+  border-color: var(--color-action-primary);
+  color: var(--color-text-primary);
+  transition: none;
+}
+
+.decision-evidence-row {
+  align-items: start;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+}
+
+/* The question main surface is the left column of the outer workbench. Its
+ * previous nested two-column grid left the answer card narrow and pushed the
+ * impact inspector into an accidental second row. */
+@media (min-width: 960px) {
+  .interview-loop-screen[data-human-decision-surface="question"] {
+    grid-template-columns: minmax(0, 1fr) minmax(280px, 0.42fr);
+  }
+
+  .interview-loop-screen[data-human-decision-surface="question"] > .decision-question-main {
+    grid-template-columns: minmax(0, 1fr);
+    min-width: 0;
+  }
+
+  .interview-loop-screen[data-human-decision-surface="question"] .decision-question-main .question-list {
+    grid-column: 1;
+    min-width: 0;
+  }
+
+  .interview-loop-screen[data-human-decision-surface="question"] > .decision-impact-panel {
+    grid-column: 2;
+    grid-row: 1;
+    min-width: 0;
+  }
+}
+
+@media (min-width: 761px) and (max-width: 959px) {
+  .interview-loop-screen[data-human-decision-surface="question"] {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .interview-loop-screen[data-human-decision-surface="question"] > .decision-question-main {
+    grid-template-columns: minmax(0, 1fr);
+    min-width: 0;
+  }
+
+  .interview-loop-screen[data-human-decision-surface="question"] > .decision-impact-panel {
+    grid-column: 1;
+    grid-row: auto;
+  }
+}
+
+/* Reorder the existing form fields without changing their ids or event
+ * delegation. Resolution and editor mode lead; supporting fields follow. */
+@media (min-width: 761px) {
+  .interview-loop-screen[data-human-decision-surface="question"] .question-card {
+    min-width: 0;
+  }
+
+  .interview-loop-screen[data-human-decision-surface="question"] .question-card .question-actions {
+    display: contents;
+  }
+
+  .interview-loop-screen[data-human-decision-surface="question"] .question-card .decision-resolution {
+    order: 3;
+  }
+
+  .interview-loop-screen[data-human-decision-surface="question"] .question-card .answer-editor-tabs {
+    order: 4;
+  }
+
+  .interview-loop-screen[data-human-decision-surface="question"] .question-card > [data-question-text] {
+    order: 5;
+    min-height: 156px;
+  }
+
+  .interview-loop-screen[data-human-decision-surface="question"] .question-card > [data-question-evidence],
+  .interview-loop-screen[data-human-decision-surface="question"] .question-card > [data-question-consequence] {
+    order: 6;
+  }
+
+  .interview-loop-screen[data-human-decision-surface="question"] .question-card > .question-context-field:has([data-question-evidence]),
+  .interview-loop-screen[data-human-decision-surface="question"] .question-card > .question-context-field:has([data-question-consequence]) {
+    order: 6;
+  }
+
+  .interview-loop-screen[data-human-decision-surface="question"] .question-card .answer-preview-panel {
+    order: 7;
+  }
+
+  .interview-loop-screen[data-human-decision-surface="question"] .question-card .question-durable-destination {
+    order: 8;
+  }
+
+  .interview-loop-screen[data-human-decision-surface="question"] .question-card .question-save-options {
+    order: 9;
+  }
+}
+
+/* Keep the real question/approval controls reachable on every supported
+ * desktop width, including the 1536px target reference. */
+@media (min-width: 761px) {
+  [data-human-decision-surface="question"] .question-list > .question-card:first-child [data-primary-action],
+  [data-human-decision-surface="approval"] .approval-card.pending [data-primary-action] {
+    background: var(--teal-dark);
+    border: 1px solid var(--teal-dark);
+    bottom: var(--space-4);
+    box-shadow: var(--elevation-overlay);
+    min-height: var(--control-height);
+    position: fixed;
+    right: var(--space-6);
+    width: min(280px, calc(100vw - (var(--space-6) * 2)));
+    z-index: 60;
+  }
+
+  [data-human-decision-surface="question"] .question-list > .question-card:first-child,
+  [data-human-decision-surface="approval"] .approval-card.pending {
+    padding-bottom: calc(var(--space-8) + var(--control-height));
+  }
+}
+
+@media (max-width: 760px) {
+  /* Mobile is a bounded decision surface, not a second dashboard shell. */
+  body:has([data-human-decision-surface="approval"]) .intent-context-region,
+  body:has([data-human-decision-surface="approval"]) .work-item-tabs {
+    display: none;
+  }
+
+  [data-human-decision-surface="question"] .decision-resolution-options {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  [data-human-decision-surface="question"] .question-card .question-actions {
+    display: contents;
+  }
+
+  [data-human-decision-surface="question"] .question-card .decision-resolution {
+    order: 3;
+  }
+
+  [data-human-decision-surface="question"] .question-card .answer-editor-tabs {
+    order: 4;
+  }
+
+  [data-human-decision-surface="question"] .question-card > [data-question-text] {
+    order: 5;
+  }
+
+  [data-human-decision-surface="question"] .question-card > [data-question-evidence],
+  [data-human-decision-surface="question"] .question-card > [data-question-consequence] {
+    order: 6;
+  }
+
+  [data-human-decision-surface="question"] .question-card > .question-context-field:has([data-question-evidence]),
+  [data-human-decision-surface="question"] .question-card > .question-context-field:has([data-question-consequence]) {
+    order: 6;
+  }
+
+  [data-human-decision-surface="question"] .question-card .answer-preview-panel {
+    order: 7;
+  }
+
+  [data-human-decision-surface="question"] .question-card .question-durable-destination {
+    order: 8;
+  }
+
+  [data-human-decision-surface="question"] .question-card .question-save-options {
+    order: 9;
+  }
+
+  body.recovery-mode:has([data-human-decision-surface="question"]) .question-card .question-save-options {
+    order: 9;
+  }
+
+  [data-human-decision-surface="approval"] .approval-card.pending [data-primary-action] {
+    width: auto !important;
+    position: fixed;
+  }
+
+  [data-human-decision-surface="approval"] [data-operator-action="allow_once"]:not([data-primary-action]) {
+    bottom: auto;
+    box-shadow: none;
+    left: auto;
+    position: static;
+    right: auto;
+    width: 100%;
+  }
+}

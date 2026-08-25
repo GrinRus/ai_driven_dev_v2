@@ -393,6 +393,8 @@ function renderApprovalRequestCard(request, decision, pendingIds) {
   const command = payload.command || payload.cmd || "";
   const paths = request.paths || [];
   const pending = pendingIds.has(request.id);
+  const primaryRequestId = pendingIds.values().next().value || "";
+  const isPrimaryRequest = pending && request.id === primaryRequestId;
   const approvalStatus = decision?.action || (pending ? "pending" : "recorded");
   const approvalScope = [request.cwd, ...paths].filter(Boolean).join(" / ") || "runtime request payload";
   const decisionBadge = decision
@@ -407,8 +409,8 @@ function renderApprovalRequestCard(request, decision, pendingIds) {
         <span>Decision reason</span>
         <input id="approval-reason-${escapeHtml(request.id)}" data-approval-reason="${escapeHtml(request.id)}" type="text" placeholder="Why is this decision appropriate?">
       </label>
-      <button data-operator-request="${escapeHtml(request.id)}" data-operator-action="allow_once" data-decision-submit="true" type="button">Allow once</button>
-      <button data-operator-request="${escapeHtml(request.id)}" data-operator-action="allow_for_session" data-decision-alternative="session" type="button">Allow session</button>
+      <button data-operator-request="${escapeHtml(request.id)}" data-operator-action="allow_once" data-decision-submit="true"${isPrimaryRequest ? " data-primary-action" : " class=\"secondary\""} type="button">Allow once</button>
+      <button data-operator-request="${escapeHtml(request.id)}" data-operator-action="allow_for_session" data-decision-alternative="session" class="secondary" type="button">Allow session</button>
       <button data-operator-request="${escapeHtml(request.id)}" data-operator-action="deny" data-decision-alternative="deny" class="secondary" type="button">Deny</button>
       <button data-operator-request="${escapeHtml(request.id)}" data-operator-action="cancel" data-decision-alternative="cancel" class="danger" type="button">Cancel</button>
       <div class="approval-session-confirmation" data-approval-session-confirmation="${escapeHtml(request.id)}" hidden role="alertdialog" aria-labelledby="approval-confirm-title-${escapeHtml(request.id)}">
