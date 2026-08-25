@@ -126,6 +126,7 @@ def test_task_attempt_detail_and_live_tray_share_desktop_workbench(
                 list: box('[data-task-workspace]'),
                 detail: box('[data-task-detail]'),
                 tray: box('[data-task-attempt-tray]'),
+                live: box('[data-task-live-output]'),
                 columns: getComputedStyle(
                   document.querySelector(
                     '.active-studio[data-studio-surface="task-workspace"]'
@@ -139,14 +140,21 @@ def test_task_attempt_detail_and_live_tray_share_desktop_workbench(
         assert len(geometry["columns"].split()) == 2
         assert abs(geometry["list"]["y"] - geometry["detail"]["y"]) < 2
         assert geometry["detail"]["x"] > geometry["list"]["x"]
+        assert geometry["tray"]["x"] >= geometry["detail"]["x"]
+        assert geometry["tray"]["width"] <= geometry["detail"]["width"]
         assert (
             page.locator(
                 '[data-task-attempt-tray][data-active-task-attempt="true"]'
             ).count()
             == 1
         )
-        assert geometry["tray"]["y"] < geometry["list"]["y"]
-        assert geometry["tray"]["width"] >= geometry["list"]["width"]
+        assert page.locator("[data-task-live-output]").count() == 1
+        assert page.locator("[data-task-attempt-tray] [data-task-attempt-output]").count() == 0
+        assert geometry["live"]["y"] >= max(
+            geometry["list"]["y"] + geometry["list"]["height"],
+            geometry["detail"]["y"] + geometry["detail"]["height"],
+        )
+        assert geometry["live"]["width"] >= geometry["list"]["width"]
         assert page.locator('[data-task-action="resume"]').count() == 1
         assert page.locator("[data-task-action-bar] [data-contextual-runner-control]").count() == 1
         assert geometry["scrollWidth"] <= viewport[0]
