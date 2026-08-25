@@ -371,7 +371,7 @@ function renderQuestionDecisionContext(view, question) {
         <strong>Why it matters</strong>
         <p>${escapeHtml(questionWhyItMatters(question))}</p>
       </div>
-      <details class="decision-evidence-disclosure" data-decision-evidence ${evidenceLinks.length ? "open" : ""}>
+      <details class="decision-evidence-disclosure" data-decision-evidence ${evidenceLinks.length || snippets.length ? "open" : ""}>
         <summary><span>Evidence (${escapeHtml(evidenceCount)})</span><span aria-hidden="true">⌄</span></summary>
         <div class="decision-evidence-list">
           <button class="decision-evidence-row" data-reader-artifact-key="${escapeHtml(sourcePath.replace(/\.md$/, ""))}" data-reader-cross-document="push" data-reader-artifact-key-label="${escapeHtml(sourcePath)}" type="button">
@@ -476,11 +476,13 @@ function renderQuestionCards({showResume}) {
             <div class="question-actions">
               <div class="decision-resolution" role="radiogroup" aria-label="Resolution">
                 <span class="decision-resolution-label">Resolution</span>
-                ${[
-                  ["resolved", "✓", "Resolved"],
-                  ["partial", "⌁", "Partial"],
-                  ["deferred", "◷", "Deferred"]
-                ].map(([value, icon, label]) => `<button type="button" class="decision-resolution-option${resolutionValue === value ? " active" : ""}" data-question-resolution-option="${escapeHtml(value)}" data-question-resolution-id="${escapeHtml(question.question_id)}" aria-checked="${resolutionValue === value ? "true" : "false"}" aria-pressed="${resolutionValue === value ? "true" : "false"}"><span aria-hidden="true">${icon}</span>${label}</button>`).join("")}
+                <div class="decision-resolution-options">
+                  ${[
+                    ["resolved", "✓", "Resolved"],
+                    ["partial", "⌁", "Partial"],
+                    ["deferred", "◷", "Deferred"]
+                  ].map(([value, icon, label]) => `<button type="button" class="decision-resolution-option${resolutionValue === value ? " active" : ""}" data-question-resolution-option="${escapeHtml(value)}" data-question-resolution-id="${escapeHtml(question.question_id)}" aria-checked="${resolutionValue === value ? "true" : "false"}" aria-pressed="${resolutionValue === value ? "true" : "false"}"><span aria-hidden="true">${icon}</span>${label}</button>`).join("")}
+                </div>
               </div>
               <label class="sr-only" for="${resolutionId}">Resolution for ${escapeHtml(questionLabel)}</label>
               <select class="question-resolution-native" id="${resolutionId}" name="${resolutionId}" aria-describedby="${questionTextId}" data-question-resolution="${escapeHtml(question.question_id)}">

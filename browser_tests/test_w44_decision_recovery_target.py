@@ -10,11 +10,38 @@ from browser_tests.rendered_assertions import assert_accessible_render
 from browser_tests.rendered_geometry import assert_rendered_geometry
 from browser_tests.state_fixtures import build_browser_state_fixture
 
+_DECISION_VIEWPORTS = ((320, 568), (390, 844), (768, 1024), (1280, 900), (1440, 900))
+
 
 def _route(base: str, fixture, stage: str) -> str:
     return (
         f"{base}?mode=studio&work_item={fixture.work_item}"
         f"&run_id={fixture.run_id}&stage={stage}&view=recovery"
+    )
+
+
+def _render_approval_surface(page) -> None:
+    page.evaluate(
+        """() => {
+          const request = {
+            id: "REQ-T33",
+            kind: "shell",
+            runtime_id: "generic-cli",
+            stage: "idea",
+            cwd: "/workspace",
+            paths: ["src"],
+            risk: "medium",
+            suggestions: ["allow_once", "allow_for_session", "deny", "cancel"],
+            payload: {command: "python -m pytest -q"}
+          };
+          document.getElementById("intentContent").innerHTML = renderApprovalsSurface({
+            view: null,
+            diagnostics: null,
+            requests: [request],
+            decisions: [],
+            pendingIds: new Set([request.id])
+          });
+        }"""
     )
 
 
@@ -123,3 +150,104 @@ def test_validation_and_review_recovery_routes_land_on_authoritative_surfaces(
                 "() => document.documentElement.scrollWidth <= window.innerWidth"
             )
             browser_page.diagnostics.assert_clean()
+
+
+@pytest.mark.parametrize("viewport", _DECISION_VIEWPORTS)
+def test_question_workbench_keeps_target_hierarchy_at_supported_viewports(
+    tmp_path: Path,
+    viewport: tuple[int, int],
+) -> None:
+    fixture = build_browser_state_fixture(
+        tmp_path / f"question-hierarchy-{viewport[0]}",
+        "blocking-question",
+    )
+    with sync_playwright() as playwright, operator_browser_harness(
+        fixture.project_root,
+        playwright,
+        work_item=fixture.work_item,
+    ) as harness, harness.open_page(viewport) as browser_page:
+        page = browser_page.page
+        response = page.goto(
+            _route(harness.url, fixture, "idea"),
+            wait_until="networkidle",
+        )
+        assert response is not None and response.ok
+        surface = page.locator('[data-human-decision-surface="question"]')
+        surface.wait_for(state="visible")
+
+        context = surface.locator("[data-decision-question-context]")
+        impact = surface.locator("[data-decision-impact]")
+        primary = surface.locator('[data-primary-action]:visible')
+        options = surface.locator(".decision-resolution-options")
+        destination = surface.locator("[data-answer-destination-panel]")
+        context_box = context.bounding_box()
+        impact_box = impact.bounding_box()
+        primary_box = primary.bounding_box()
+        options_box = options.bounding_box()
+        assert context_box is not None and context_box["y"] < viewport[1]
+        assert primary.count() == 1 and primary_box is not None
+        assert primary_box["x"] >= -1
+        assert primary_box["x"] + primary_box["width"] <= viewport[0] + 1
+        assert primary_box["y"] >= -1
+        assert primary_box["y"] + primary_box["height"] <= viewport[1] + 1
+        assert options.count() == 1 and options_box is not None
+        assert options_box["x"] + options_box["width"] <= viewport[0] + 1
+        assert destination.count() == 1
+        assert context.locator("[data-decision-evidence]").get_attribute("open") == ""
+        option_boxes = [
+            option.bounding_box()
+            for option in surface.locator("[data-question-resolution-option]").all()
+        ]
+        assert all(box is not None and box["height"] >= 44 for box in option_boxes)
+        if viewport[0] <= 760:
+            assert len({round(box["y"]) for box in option_boxes if box is not None}) == 1
+        if viewport[0] >= 960:
+            main_box = surface.locator(".decision-question-main").bounding_box()
+            assert main_box is not None and impact_box is not None
+            assert impact_box["x"] >= main_box["x"] + main_box["width"] - 1
+            assert impact_box["y"] < viewport[1]
+        assert page.evaluate("document.documentElement.scrollWidth <= window.innerWidth")
+        assert_accessible_render(page, target_size=44 if viewport[0] <= 760 else 32)
+        assert_rendered_geometry(page)
+        browser_page.diagnostics.assert_clean()
+
+
+@pytest.mark.parametrize("viewport", _DECISION_VIEWPORTS)
+def test_approval_workbench_exposes_one_primary_action_at_supported_viewports(
+    tmp_path: Path,
+    viewport: tuple[int, int],
+) -> None:
+    fixture = build_browser_state_fixture(
+        tmp_path / f"approval-hierarchy-{viewport[0]}",
+        "blocking-question",
+    )
+    with sync_playwright() as playwright, operator_browser_harness(
+        fixture.project_root,
+        playwright,
+        work_item=fixture.work_item,
+    ) as harness, harness.open_page(viewport) as browser_page:
+        page = browser_page.page
+        response = page.goto(f"{harness.url}?ui=studio", wait_until="networkidle")
+        assert response is not None and response.ok
+        _render_approval_surface(page)
+        surface = page.locator('[data-human-decision-surface="approval"]')
+        surface.wait_for(state="visible")
+        primary = surface.locator('[data-primary-action]:visible')
+        allow_once = surface.locator('[data-operator-action="allow_once"]:visible')
+        allow_session = surface.locator('[data-operator-action="allow_for_session"]:visible')
+        primary_box = primary.bounding_box()
+        assert primary.count() == 1 and primary_box is not None
+        assert allow_once.count() == 1
+        assert allow_once.get_attribute("data-primary-action") == ""
+        assert "secondary" not in (allow_once.get_attribute("class") or "")
+        assert "secondary" in (allow_session.get_attribute("class") or "")
+        assert primary_box["x"] >= -1
+        assert primary_box["x"] + primary_box["width"] <= viewport[0] + 1
+        assert primary_box["y"] >= -1
+        assert primary_box["y"] + primary_box["height"] <= viewport[1] + 1
+        assert surface.locator(".decision-workbench-header").is_visible()
+        assert "Allow once" in surface.locator(".decision-workbench-header").inner_text()
+        assert page.evaluate("document.documentElement.scrollWidth <= window.innerWidth")
+        assert_accessible_render(page, target_size=44 if viewport[0] <= 760 else 32)
+        assert_rendered_geometry(page)
+        browser_page.diagnostics.assert_clean()
