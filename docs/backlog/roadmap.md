@@ -15792,22 +15792,28 @@ Local tasks:
   viewport completion matrix, target legacy composition/mobile focus checks, UI contracts, docs/
   planning consistency, Ruff, mypy, full CI, packaged UI browser, deterministic, adapter, security,
   and build checks passed.
-- `W44-E1-S3-T32` (next) Recompose Task Workspace and Active Task so the selected attempt
+- `W44-E1-S3-T32` (done) Recompose Task Workspace and Active Task so the selected attempt
   inspector, factual attempt controls, task groups, and live-output tray share the target first
-  viewport without changing task-ledger ownership or mutation services. Verification: ready,
+  viewport without changing task-ledger ownership or mutation services. PR #390 (merge `4fc916a7`)
+  docks live output to a safe-area-aware desktop tray, bounds the task list and selected-task
+  inspector for the first viewport, and removes nested shell scrolling while preserving core-owned
+  ledger/status/eligibility, existing routes, ids, and mutation services. Verification: ready,
   running, waiting, cancelling, failed, and completed fixtures across desktop/mobile with tray
-  visibility, reconnect/cancel semantics, one primary action, and clean diagnostics.
-- `W44-E1-S3-T33` (soon) Recompose Decision and Mobile Decision so the decision context,
+  visibility, reconnect/cancel semantics, one primary action, clean diagnostics, and no horizontal
+  overflow; docs/planning checks, Ruff, mypy, full CI, deterministic, adapter, packaged-browser,
+  security, and build checks passed.
+- `W44-E1-S3-T33` (next) Recompose Decision and Mobile Decision so the decision context,
   evidence, resolution choices, durable destination, and one primary action remain in the target
   first-viewport hierarchy. Verification: question, approval, and mobile decision fixtures at all
   five viewports with mobile resolution/action bounds, read-only evidence, fail-closed recovery,
   and no overflow.
   - Dependencies: `W44-E1-S3-T32`.
-- `W44-E1-S3-T34` (planned) Align Project Work with the target compact grouped table and selected
+- `W44-E1-S3-T34` (soon) Align Project Work with the target compact grouped table and selected
   Work Item inspector, removing duplicated setup/search chrome while preserving core-owned
   membership, ordering, progress truth, selection deep links, and one contextual action.
   Verification: seeded mixed Inbox groups across desktop/mobile with deterministic row geometry,
   selected-context bounds, keyboard selection, reload/deep-link, and clean diagnostics.
+  - Dependencies: `W44-E1-S3-T33`.
 - `W44-E1-S3-T35` (planned) Align Implementation Review with the target full-width diff, claims,
   verification, and Review inspector composition while preserving repository-truth evidence,
   launch readiness, and the explicit Review gate. Verification: clean, incomplete, out-of-scope,
@@ -15841,12 +15847,23 @@ Wave 44 exit evidence:
   viewport;
 - browser checks show no console errors, horizontal overflow, duplicate primary actions, or focus
   loss;
-- a fresh rendered audit confirms remaining gaps are absent or explicitly blocked. T19 is now
-  evidence-complete but not an exit pass; T25-T31 are complete and T32 is the next dependency-ready
+  - a fresh rendered audit confirms remaining gaps are absent or explicitly blocked. T19 is now
+    evidence-complete but not an exit pass; T25-T32 are complete and T33 is the next dependency-ready
   convergence task. Default task-centered routing remains
   provisional until T30-T39 are either completed or backed by explicit target-equivalence evidence.
 
 Wave 44 reconciliation:
+
+- `2026-08-25` PR #390 (merge `4fc916a7`) completed `W44-E1-S3-T32`. Task Workspace and Active Task
+  now keep the selected attempt inspector, factual attempt controls, task groups, and live-output
+  tray in the target first-viewport desktop composition. The live tray is docked to the viewport,
+  the list and inspector use bounded workbench scroll regions without nesting inside the shell
+  scroller, and mobile retains its normal stacked flow. Core-owned task ledger/status/eligibility,
+  routes, ids, mutation services, reconnect/cancel semantics, and one-primary behavior remain
+  unchanged. Ready/running/waiting/cancelling/failed/completed browser fixtures passed across
+  desktop/mobile, together with docs/planning, Ruff, mypy, full CI, deterministic, adapter,
+  packaged-browser, security, and build checks. `W44-E1-S3-T33` is now the next dependency-ready
+  task and `T34` is its direct Soon successor.
 
 - `2026-08-25` PR #388 (merge `f7ab7364`) completed `W44-E1-S3-T31`. Flow Complete now keeps the
   existing core-recommended action visible and focusable across the supported bounded tablet/

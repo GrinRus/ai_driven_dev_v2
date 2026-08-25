@@ -7,14 +7,15 @@ slice, and local task.
 
 ## Next
 
-- `W44-E1-S3-T32` — Recompose Task Workspace and Active Task so the selected attempt inspector,
-  factual attempt controls, task groups, and live-output tray share the target first viewport.
-
-## Soon
-
 - `W44-E1-S3-T33` — Recompose Decision and Mobile Decision so decision context, evidence,
   resolution choices, durable destination, and one primary action remain in the target first-viewport
   hierarchy.
+
+## Soon
+
+- `W44-E1-S3-T34` — Align Project Work with the target compact grouped table and selected Work Item
+  inspector, removing duplicated setup/search chrome while preserving core-owned membership,
+  ordering, progress truth, selection deep links, and one contextual action.
 
 ## Parking lot
 
@@ -40,6 +41,14 @@ slice, and local task.
   queue-restoration policy in `docs/backlog/roadmap.md` (`W8-E3-S1`).
 
 ## Current reconciliation
+
+- `2026-08-25` PR #390 (merge `4fc916a7`) completed `W44-E1-S3-T32`: Task Workspace and Active Task
+  now keep the selected attempt inspector, factual attempt controls, task groups, and live-output
+  tray in the target first viewport. Ready/running/waiting/cancelling/failed/completed fixtures
+  passed across desktop/mobile with clean diagnostics and no nested shell scrolling; docs/planning,
+  Ruff, mypy, full CI, deterministic, adapter, packaged-browser, security, and build checks passed.
+  `T33` is now `Next` and `T34` is its direct `Soon` successor; human usability, Claude/cross-runtime,
+  and Wave 36 acceptance remain parked.
 
 - `2026-08-25` PR #388 (merge `f7ab7364`) completed `W44-E1-S3-T31`: Flow Complete keeps its existing
   core-recommended action visible and focusable across the supported bounded tablet/desktop widths,
