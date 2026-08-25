@@ -15704,10 +15704,16 @@ Local tasks:
   failed/completed task fixtures across desktop/mobile, target task/active-attempt geometry,
   accessibility and diagnostics (`34 passed`), frontend (`136 passed`), UI asset contracts,
   docs/planning, Ruff, mypy, deterministic, adapter, packaged UI browser, security, and build CI.
-- `W44-E1-S3-T23` (next) Recompose Decision, Validation Repair, and Mobile Decision recovery
+- `W44-E1-S3-T23` (done) Recompose Decision, Validation Repair, and Mobile Decision recovery
   content so rationale, evidence, resolution/consequence, destination, and the single contextual
-  action retain the target hierarchy across desktop and mobile states.
-- `W44-E1-S3-T24` (soon) Align Runs and Attempts with the target chronology, selected-attempt
+  action retain the target hierarchy across desktop and mobile states. PR #372 (merge `a733341c`)
+  now leads questions with decision context, rationale, retained evidence, answer/resolution controls,
+  durable destination, and impact; Validation Repair now leads with a read-only document navigator,
+  reader canvas, finding inspector, and one repair action. Mobile states keep the first decision or
+  repair action visible without horizontal overflow. Focused decision/recovery browser checks (`4`),
+  frontend (`28`), UI contracts, Ruff, mypy, deterministic, adapter, security, packaged UI browser,
+  and build CI passed.
+- `W44-E1-S3-T24` (next) Align Runs and Attempts with the target chronology, selected-attempt
   inspector, lineage, retained evidence, and read-only action hierarchy.
 - `W44-E1-S3-T25` (planned) Align Flow Complete with the target immutable handoff, evidence,
   completion inspector, and recommended-next-outcome composition without changing lineage semantics.

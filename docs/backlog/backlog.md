@@ -7,14 +7,10 @@ slice, and local task.
 
 ## Next
 
-- `W44-E1-S3-T23` — Recompose Decision, Validation Repair, and Mobile Decision recovery content so
-  rationale, evidence, resolution/consequence, destination, and the single contextual action retain
-  the target hierarchy across desktop and mobile states.
-
-## Soon
-
 - `W44-E1-S3-T24` — Align Runs and Attempts with the target chronology, selected-attempt inspector,
   lineage, retained evidence, and read-only action hierarchy.
+
+## Soon
 
 ## Parking lot
 
@@ -40,6 +36,16 @@ slice, and local task.
   queue-restoration policy in `docs/backlog/roadmap.md` (`W8-E3-S1`).
 
 ## Current reconciliation
+
+- `2026-08-25` PR #372 (merge `a733341c`) completed `W44-E1-S3-T23`: Decision recovery now leads with
+  rationale, retained evidence, answer/resolution controls, durable destination, and explicit impact;
+  Validation Repair now presents a read-only document navigator/reader plus finding inspector before
+  the single repair action. The mobile decision and repair compositions keep their first action visible
+  without horizontal overflow, while routes, ids, readiness, answer/repair services, and generated
+  document immutability remain unchanged. Focused decision/recovery browser checks (`4`), frontend (`28`),
+  UI contracts, docs/planning, Ruff, mypy, deterministic, adapter, security, packaged UI browser, and
+  build CI passed. `W44-E1-S3-T24` is now the only `Next` task; Wave 44 exit, human usability,
+  Claude/cross-runtime, and Wave 36 acceptance remain open or parked as previously scoped.
 
 - `2026-08-25` PR #370 (merge `6e7b5c88`) completed `W44-E1-S3-T22`: Tasks now keep the authoritative
   ledger in a compact grouped table, the selected task/active attempt in a right inspector, and raw
