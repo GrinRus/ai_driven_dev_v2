@@ -204,6 +204,10 @@ function studioFlowCompleteIdentity(handoff = state.dashboard?.terminal_handoff)
 
 function studioFlowCompleteOtherActionsOpen(handoff = state.dashboard?.terminal_handoff) {
   const identity = studioFlowCompleteIdentity(handoff);
+  // The target handoff keeps the secondary outcomes visible by default.  Once
+  // an operator explicitly collapses the disclosure, retain that choice for
+  // this durable handoff only.
+  if (!state.terminalOtherActionsIdentity) return true;
   return Boolean(
     identity
     && state.terminalOtherActionsIdentity === identity
@@ -315,19 +319,54 @@ function renderFlowCompleteEvidenceTable(handoff) {
   `;
 }
 
-function renderFlowCompleteCompletionInspector(handoff, run) {
+function renderFlowCompleteCompletionInspector(
+  handoff,
+  run,
+  primary,
+  others,
+  otherActionsOpen,
+  recommendation,
+) {
   const artifacts = (handoff.final_artifacts || []).filter((artifact) => artifact.available !== false).length;
-  const runIds = [run.run_id, run.lineage?.source_run_id].filter(Boolean);
+  const runIds = [...new Set([
+    ...(handoff.final_run_ids || handoff.run_ids || []),
+    run.run_id,
+    run.lineage?.source_run_id,
+  ].filter(Boolean))];
+  const blockers = (handoff.blockers || []).length;
+  const qaLabel = handoff.final_qa_status === "ready"
+    ? "QA passed"
+    : `QA ${handoff.final_qa_status || "status unavailable"}`;
+  const blockingLabel = `${blockers} blocking finding${blockers === 1 ? "" : "s"}`;
   return `
-    <section class="target-completion-inspector" data-flow-complete-completion-inspector aria-label="Completion inspector">
+    <section class="target-completion-inspector" data-flow-complete-completion-inspector data-core-recommended-outcome="${escapeHtml(primary?.action || "")}" aria-label="Completion inspector">
       <div class="target-panel-heading"><strong>Completion</strong><span class="small-badge good">${escapeHtml(handoff.status || "recorded")}</span></div>
       <ul class="target-completion-checklist">
-        <li><span aria-hidden="true">✓</span><strong>QA ${escapeHtml(handoff.final_qa_status || "recorded")}</strong></li>
+        <li><span aria-hidden="true">✓</span><strong>${escapeHtml(qaLabel)}</strong></li>
         <li><span aria-hidden="true">✓</span><strong>${escapeHtml(artifacts)} retained evidence items</strong></li>
-        <li><span aria-hidden="true">✓</span><strong>Source run remains immutable</strong></li>
+        <li><span class="${blockers ? "bad" : "good"}" aria-hidden="true">${blockers ? "!" : "✓"}</span><strong>${escapeHtml(blockingLabel)}</strong></li>
       </ul>
-      <div class="target-completion-run-ids"><span>Run IDs</span>${runIds.length ? runIds.map((id) => `<code>${escapeHtml(id)}</code>`).join("") : `<span class="muted">not recorded</span>`}</div>
-      <p class="muted">Follow-up, clone, evaluation, and archive create separate lineage overlays.</p>
+      <div class="target-completion-run-ids">
+        <span>Final run IDs</span>
+        ${runIds.length ? `<ul>${runIds.map((id) => `<li><code>${escapeHtml(id)}</code></li>`).join("")}</ul>` : `<span class="muted">not recorded</span>`}
+      </div>
+      <div class="target-completion-retained-evidence">
+        <strong>Retained evidence</strong>
+        <p>All documents and artifacts remain available in Evidence.</p>
+      </div>
+      <div class="target-completion-primary">
+        <p class="target-completion-recommendation muted"><span class="small-badge good">core recommendation</span>${escapeHtml(recommendation?.rationale || "")}</p>
+        ${primary ? renderStudioFlowCompleteAction(primary, {primary: true}) : ""}
+      </div>
+      ${others.length ? `
+        <details class="studio-flow-complete-other" ${otherActionsOpen ? "open" : ""} data-target-completion-other-actions>
+          <summary>Other actions <span class="sr-only">Other next actions</span></summary>
+          <div class="next-flow-actions-grid target-completion-action-list">
+            ${others.map((action) => `<article class="next-flow-action-card"><strong>${escapeHtml(action.label)}</strong><p>${escapeHtml(action.detail || "")}</p>${renderStudioFlowCompleteAction(action)}</article>`).join("")}
+          </div>
+        </details>
+      ` : ""}
+      <p class="target-completion-immutability muted">The completed run and its lineage remain immutable.</p>
     </section>
   `;
 }
@@ -351,20 +390,15 @@ function renderStudioFlowCompleteState() {
     <section class="surface studio-flow-complete target-flow-complete" data-studio-flow-complete data-target-flow-complete data-terminal-status="${escapeHtml(handoff.status)}">
       <div class="flow-complete-hero">
         <div class="flow-complete-hero-copy">
-          <p class="eyebrow">Fresh terminal QA</p>
-          <h2>Flow Complete</h2>
-          <p>${escapeHtml(handoff.final_qa_status)}</p>
+          <span class="target-flow-status-icon" aria-hidden="true">✓</span>
+          <div>
+            <p class="eyebrow">Fresh terminal QA</p>
+            <h2>Work item complete</h2>
+            <p>All planned work has been implemented, verified, and approved. This work item is ready for handoff.</p>
+          </div>
         </div>
         <span class="small-badge ${terminalHandoffTone(handoff.status)}">${escapeHtml(handoff.status)}</span>
       </div>
-      <section class="next-flow-decision-spotlight" data-core-recommended-outcome="${escapeHtml(recommendation.outcome)}">
-        <div>
-          <span class="small-badge good">core recommendation</span>
-          <strong>${escapeHtml(primary.label || nextFlowButtonLabel(primary))}</strong>
-          <p>${escapeHtml(recommendation.rationale)}</p>
-        </div>
-        ${renderStudioFlowCompleteAction(primary, {primary: true})}
-      </section>
       <div class="flow-complete-layout target-flow-complete-layout">
         <main class="flow-complete-main">
           ${renderFlowCompleteHandoffTable(handoff, run, state.dashboard?.stages || [])}
@@ -377,9 +411,9 @@ function renderStudioFlowCompleteState() {
             <div class="flow-complete-metrics">
               <div><span>QA verdict</span><strong>${escapeHtml(handoff.final_qa_status || handoff.status)}</strong></div>
               <div><span>Final artifacts</span><strong>${escapeHtml((handoff.final_artifacts || []).length)}</strong></div>
-              <div><span>Repair attempts</span><strong>${escapeHtml(handoff.repair_attempt_count || 0)}</strong></div>
-              <div><span>Approvals</span><strong>${escapeHtml(handoff.approval_count || 0)}</strong></div>
-              <div><span>Answered questions</span><strong>${escapeHtml(handoff.answered_question_count || 0)}</strong></div>
+              <div><span>Repair attempts</span><strong>${escapeHtml(handoff.repair_counts?.attempts || 0)}</strong></div>
+              <div><span>Approvals</span><strong>${escapeHtml(handoff.approval_counts?.approved || 0)}</strong></div>
+              <div><span>Answered questions</span><strong>${escapeHtml(handoff.questions_answered_count || 0)}</strong></div>
             </div>
           </section>
           ${renderTerminalAttentionSpotlight(handoff)}
@@ -389,17 +423,9 @@ function renderStudioFlowCompleteState() {
             <div class="recent-artifacts">${renderTerminalArtifacts(finalArtifacts)}</div>
           </section>
           ${renderTerminalEvidenceSpotlight(handoff)}
-          ${others.length ? `
-            <details class="studio-flow-complete-other" ${otherActionsOpen ? "open" : ""}>
-              <summary>Other next actions</summary>
-              <div class="next-flow-actions-grid">
-                ${others.map((action) => `<article class="next-flow-action-card"><strong>${escapeHtml(action.label)}</strong><p>${escapeHtml(action.detail || "")}</p>${renderStudioFlowCompleteAction(action)}</article>`).join("")}
-              </div>
-            </details>
-          ` : ""}
         </main>
         <aside class="flow-lineage-panel">
-          ${renderFlowCompleteCompletionInspector(handoff, run)}
+          ${renderFlowCompleteCompletionInspector(handoff, run, primary, others, otherActionsOpen, recommendation)}
           <h3>Lineage</h3>
           <dl>
             <div><dt>Source Work Item</dt><dd>${escapeHtml(sourceWorkItem)}</dd></div>

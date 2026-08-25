@@ -121,10 +121,18 @@ def test_flow_complete_uses_handoff_evidence_and_completion_inspector(
         wait_for_work_item_surface(page, fixture.work_item)
         flow = page.locator("[data-target-flow-complete]")
         flow.wait_for(state="visible")
-        assert flow.locator("[data-flow-complete-handoff-table]").is_visible()
-        assert flow.locator("[data-flow-complete-evidence-table]").is_visible()
-        assert flow.locator("[data-flow-complete-completion-inspector]").is_visible()
+        handoff = flow.locator("[data-flow-complete-handoff-table]")
+        evidence = flow.locator("[data-flow-complete-evidence-table]")
+        inspector = flow.locator("[data-flow-complete-completion-inspector]")
+        assert handoff.is_visible()
+        assert evidence.is_visible()
+        assert inspector.is_visible()
         assert flow.locator("[data-core-recommended-outcome]").count() == 1
+        assert inspector.locator("[data-primary-action]").count() == 1
+        assert flow.locator("[data-primary-action]:visible").count() == 1
+        assert inspector.locator(".target-completion-action-list").is_visible()
+        if viewport[0] > 900:
+            assert handoff.bounding_box()["x"] < inspector.bounding_box()["x"]
         assert page.locator("#runtimeSettings").is_hidden()
         assert_accessible_render(page, target_size=44 if viewport[0] <= 760 else 32)
         assert_rendered_geometry(page)

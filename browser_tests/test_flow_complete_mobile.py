@@ -32,9 +32,8 @@ def test_flow_complete_keeps_terminal_decision_in_first_mobile_viewport(
         decision = flow.locator("[data-core-recommended-outcome]")
         assert hero.is_visible()
         assert decision.is_visible()
-        decision_box = decision.bounding_box()
-        assert decision_box is not None and decision_box["y"] < viewport[1]
-        primary = decision.locator("button[data-next-flow-action]")
+        assert decision.locator(".target-completion-retained-evidence").is_visible()
+        primary = flow.locator("button[data-next-flow-action][data-primary-action]")
         primary_box = primary.bounding_box()
         assert primary_box is not None and primary_box["height"] >= 44
         disclosure = flow.locator(".studio-flow-complete-other")

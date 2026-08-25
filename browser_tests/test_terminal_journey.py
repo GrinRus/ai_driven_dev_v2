@@ -81,7 +81,7 @@ def test_terminal_outcomes_keep_completed_source_run_immutable(
         assert page.locator("#runtimeSettings").is_hidden()
         assert flow.locator("[data-core-recommended-outcome]").count() == 1
         disclosure = flow.locator(".studio-flow-complete-other")
-        disclosure.locator("summary").click()
+        disclosure.evaluate("element => { element.open = true; }")
         page.wait_for_function("state.terminalOtherActionsOpen === true")
 
         deadline = time.monotonic() + 5

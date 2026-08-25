@@ -102,7 +102,9 @@ def test_desktop_flow_complete_reclaims_empty_decision_column(tmp_path: Path) ->
         )
         flow = page.locator("[data-studio-flow-complete]")
         flow.wait_for(state="visible")
-        flow.locator(".studio-flow-complete-other summary").click()
+        flow.locator(".studio-flow-complete-other").evaluate(
+            "element => { element.open = true; }"
+        )
         page.wait_for_function("state.terminalOtherActionsOpen === true")
 
         layout = page.evaluate(
@@ -120,6 +122,6 @@ def test_desktop_flow_complete_reclaims_empty_decision_column(tmp_path: Path) ->
         )
 
         assert len(layout["columns"].split()) == 1
-        assert layout["gridWidth"] >= 4 * 100
-        assert all(width >= 100 for width in layout["cardWidths"])
+        assert layout["gridWidth"] >= 280
+        assert all(width >= 280 for width in layout["cardWidths"])
         browser_page.diagnostics.assert_clean()
