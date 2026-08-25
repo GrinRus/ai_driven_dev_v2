@@ -7,8 +7,8 @@ slice, and local task.
 
 ## Next
 
-- `W44-E1-S3-T26` — Align Create Work Item with the target editor/preview shell, draft status,
-  context sections, and one create action while preserving operator-authored Markdown rules.
+- `W44-E1-S3-T27` — Align Implementation Review and Review/QA Remediation with the target
+  repository-truth, finding-evidence, and remediation action hierarchy.
 
 ## Soon
 
@@ -36,6 +36,16 @@ slice, and local task.
   queue-restoration policy in `docs/backlog/roadmap.md` (`W8-E3-S1`).
 
 ## Current reconciliation
+
+- `2026-08-25` PR #378 (merge `9b97e908`) completed `W44-E1-S3-T26`: Create Work Item now uses the
+  target editor/preview shell with durable context and constraints, visible draft status, responsive
+  one-action footer, and no duplicate submit action. Existing request persistence, routes, Work Item
+  ids, runtime-independent creation, launch-only Runner selection, and operator-authored Markdown
+  semantics remain unchanged. Target Create Work Item, guided setup, first-time recovery, frontend,
+  UI/design-token contracts, docs/planning, Ruff, mypy, full Python matrix, deterministic, adapter,
+  security, packaged UI browser, and build CI passed. `W44-E1-S3-T27` is now the only `Next` task;
+  T28 remains planned, while human usability, Claude/cross-runtime, and Wave 36 acceptance stay
+  parked.
 
 - `2026-08-25` PR #376 (merge `a8f15319`) completed `W44-E1-S3-T25`: Flow Complete now leads with a
   target-like completion status row, a central immutable handoff/evidence composition, and a bounded
