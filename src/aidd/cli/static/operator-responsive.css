@@ -38,6 +38,29 @@
   }
 }
 
+@media (max-width: 1500px) and (min-width: 900px) {
+  .history-run-table-head {
+    display: none;
+  }
+  .history-run-row {
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+  .history-run-row .history-run-stage,
+  .history-run-row .history-run-date,
+  .history-run-row .history-run-attempts {
+    grid-column: 1;
+  }
+  .history-run-row .small-badge {
+    grid-column: 2;
+    grid-row: 1 / span 2;
+    justify-self: end;
+  }
+  .history-run-row .history-run-date,
+  .history-run-row .history-run-attempts {
+    font-size: var(--type-caption-size);
+  }
+}
+
 @media (max-width: 760px) {
   .target-surface-header,
   .target-create-footer {
@@ -93,6 +116,73 @@
   .target-flow-handoff-table dl > div {
     grid-template-columns: minmax(0, 1fr);
     gap: var(--space-1);
+  }
+}
+
+/* Runs/Attempts target composition: stack the three truthful regions while
+   keeping the selected attempt readable and every read-only action tappable. */
+@media (max-width: 900px) {
+  .target-history-heading {
+    align-items: stretch;
+    display: grid;
+  }
+  .target-history-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .target-history-grid .history-run-list,
+  .target-history-main,
+  .target-history-inspector {
+    min-width: 0;
+  }
+  .history-run-table-head {
+    display: none;
+  }
+  .history-run-row {
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+  .history-run-row .history-run-stage,
+  .history-run-row .history-run-date,
+  .history-run-row .history-run-attempts {
+    grid-column: 1;
+  }
+  .history-run-row .history-run-stage {
+    color: var(--muted);
+  }
+  .history-run-row .small-badge {
+    grid-column: 2;
+    grid-row: 1 / span 2;
+    justify-self: end;
+  }
+  .history-run-row .history-run-date,
+  .history-run-row .history-run-attempts {
+    font-size: var(--type-caption-size);
+  }
+  .target-history-run-heading,
+  .history-selection .surface-title {
+    align-items: stretch;
+    display: grid;
+  }
+  .target-history-run-heading .link-button,
+  .history-selection button,
+  .target-history-inspector-actions button,
+  .target-history-compare,
+  .target-history-retention-actions button {
+    min-height: var(--control-height-touch);
+    width: 100%;
+  }
+  .history-attempt-tabs,
+  .history-view-tabs {
+    overflow-x: auto;
+  }
+  .history-timeline-entry {
+    grid-template-columns: 34px minmax(0, 1fr);
+  }
+  .history-timeline-entry > .small-badge {
+    grid-column: 2;
+    justify-self: start;
+  }
+  .target-lineage-row {
+    align-items: start;
   }
 }
 
