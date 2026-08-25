@@ -97,6 +97,82 @@ def test_create_work_item_target_shell_has_one_action_and_live_markdown_modes(
         browser_page.diagnostics.assert_clean()
 
 
+@pytest.mark.parametrize("viewport", ((1280, 900), (768, 1024), (390, 844)))
+def test_implementation_review_uses_repository_truth_and_review_gate_shell(
+    tmp_path: Path, viewport: tuple[int, int]
+) -> None:
+    fixture = build_browser_state_fixture(
+        tmp_path / f"implementation-review-{viewport[0]}",
+        "implementation-finalized",
+    )
+    with sync_playwright() as playwright, operator_browser_harness(
+        fixture.project_root, playwright, work_item=fixture.work_item
+    ) as harness, harness.open_page(viewport) as browser_page:
+        page = browser_page.page
+        page.goto(
+            f"{harness.url}?ui=studio&mode=studio&work_item={fixture.work_item}"
+            f"&run_id={fixture.run_id}&stage=implement",
+            wait_until="domcontentloaded",
+        )
+        wait_for_work_item_surface(page, fixture.work_item or "")
+        page.evaluate(
+            "async () => {"
+            " state.activeTab='work'; state.workDetail='implement-review';"
+            " await renderImplementReview(); }"
+        )
+        target = page.locator("[data-target-implementation-review]")
+        target.wait_for(state="visible")
+        assert page.locator(
+            "[data-current-decision-stable-id='intentDecisionSurface']"
+        ).is_hidden()
+        assert target.locator("[data-document-canvas='implementation-evidence']").is_visible()
+        assert target.locator("[data-target-review-gate]").is_visible()
+        assert target.locator("[data-review-scope-coverage]").is_visible()
+        assert target.locator("[data-review-verification]").is_visible()
+        assert target.locator("[data-aidd-primary-action]:visible").count() == 1
+        assert page.evaluate("document.documentElement.scrollWidth") <= viewport[0]
+        assert_accessible_render(page, target_size=44 if viewport[0] <= 760 else 32)
+        assert_rendered_geometry(page)
+        browser_page.diagnostics.assert_clean()
+
+
+@pytest.mark.parametrize("viewport", ((1280, 900), (768, 1024), (390, 844)))
+def test_review_remediation_uses_finding_evidence_and_request_hierarchy(
+    tmp_path: Path, viewport: tuple[int, int]
+) -> None:
+    fixture = build_browser_state_fixture(
+        tmp_path / f"review-remediation-target-{viewport[0]}",
+        "review-qa-rejected",
+    )
+    with sync_playwright() as playwright, operator_browser_harness(
+        fixture.project_root, playwright, work_item=fixture.work_item
+    ) as harness, harness.open_page(viewport) as browser_page:
+        page = browser_page.page
+        page.goto(
+            f"{harness.url}?ui=studio&mode=studio&work_item={fixture.work_item}"
+            f"&run_id={fixture.run_id}&stage=qa",
+            wait_until="domcontentloaded",
+        )
+        wait_for_work_item_surface(page, fixture.work_item or "")
+        page.evaluate(
+            "async () => {"
+            " state.activeTab='work'; state.workDetail='review-findings';"
+            " await renderReviewFindings(); }"
+        )
+        target = page.locator("[data-target-remediation-surface='review']")
+        target.wait_for(state="visible")
+        assert target.locator("[data-review-findings]").is_visible()
+        assert target.locator("[data-review-finding]").count() == 1
+        assert target.locator("[data-remediation-source-evidence]").count() == 1
+        assert target.locator("[data-remediation-write-preview]").is_visible()
+        assert target.locator("[data-remediation-launch='review']").count() == 1
+        assert target.locator("[data-aidd-primary-action]:visible").count() == 1
+        assert page.evaluate("document.documentElement.scrollWidth") <= viewport[0]
+        assert_accessible_render(page, target_size=44 if viewport[0] <= 760 else 32)
+        assert_rendered_geometry(page)
+        browser_page.diagnostics.assert_clean()
+
+
 def test_history_uses_target_attempt_inspector_without_changing_lineage(
     tmp_path: Path,
 ) -> None:

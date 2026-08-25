@@ -67,26 +67,32 @@ function renderStudioImplementationQualityGate(taskView) {
     ? runnableTasks.length === 1 ? "task run or resume" : "task actions"
     : "implementation finalization";
   return `
-    <section class="surface studio-implementation-gate" data-studio-quality-gate="implement" data-review-eligible="${taskView.review_eligible ? "true" : "false"}">
-      <div class="surface-title">
-        <span>Implementation quality gate</span>
-        <span class="small-badge">${escapeHtml(tasks.filter((task) => task.status === "succeeded").length)} / ${escapeHtml(tasks.length)} tasks</span>
+    <section class="surface studio-implementation-gate target-implementation-ledger" data-studio-quality-gate="implement" data-review-eligible="${taskView.review_eligible ? "true" : "false"}">
+      <div class="target-implementation-ledger-heading">
+        <div>
+          <p class="eyebrow">Canonical task ledger</p>
+          <strong>${escapeHtml(tasks.filter((task) => task.status === "succeeded").length)} tasks completed</strong>
+        </div>
+        <span class="small-badge">${escapeHtml(tasks.length)} total</span>
       </div>
-      <p>Task readiness, attempts, blockers, and aggregate finalization come from the canonical task ledger.</p>
+      <p class="target-implementation-ledger-copy">Task readiness, attempts, blockers, and aggregate finalization come from the canonical task ledger.</p>
       ${(runnableTasks.length || (taskView.finalization_eligible && finalization.status !== "succeeded")) && typeof renderContextualRunnerControl === "function" ? renderContextualRunnerControl({actionLabel: runnerAction}) : ""}
-      <div class="compact-list">
-        ${tasks.map(renderStudioImplementationTask).join("")}
-        <article class="panel-item" data-aggregate-finalization="${escapeHtml(finalization.status || "pending")}">
-          <div class="surface-title compact">
-            <strong>Aggregate finalization</strong>
-            <span class="small-badge ${studioTaskStatusClass(finalization.status)}">${escapeHtml(finalization.status || "pending")}</span>
-          </div>
-          <span>Attempts: ${escapeHtml(finalization.attempt_count || 0)}</span>
-          ${(finalization.attempts || []).map((attempt) => `<span>Finalize ${escapeHtml(attempt.number)} · ${escapeHtml(attempt.status)} · ${escapeHtml(attempt.path)}</span>`).join("")}
-          ${finalization.blocker ? `<span class="form-error">Blocker: ${escapeHtml(finalization.blocker)}</span>` : ""}
-          ${taskView.finalization_eligible && finalization.status !== "succeeded" ? `<button data-finalize-tasks type="button" ${selectedRuntimeReady() ? "" : "disabled aria-disabled=\"true\""}>${finalization.status === "failed" ? "Resume finalization" : "Finalize"}</button>` : ""}
-        </article>
-      </div>
+      <details class="target-implementation-ledger-details" open>
+        <summary>Task attempts and finalization</summary>
+        <div class="compact-list">
+          ${tasks.map(renderStudioImplementationTask).join("")}
+          <article class="panel-item" data-aggregate-finalization="${escapeHtml(finalization.status || "pending")}">
+            <div class="surface-title compact">
+              <strong>Aggregate finalization</strong>
+              <span class="small-badge ${studioTaskStatusClass(finalization.status)}">${escapeHtml(finalization.status || "pending")}</span>
+            </div>
+            <span>Attempts: ${escapeHtml(finalization.attempt_count || 0)}</span>
+            ${(finalization.attempts || []).map((attempt) => `<span>Finalize ${escapeHtml(attempt.number)} · ${escapeHtml(attempt.status)} · ${escapeHtml(attempt.path)}</span>`).join("")}
+            ${finalization.blocker ? `<span class="form-error">Blocker: ${escapeHtml(finalization.blocker)}</span>` : ""}
+            ${taskView.finalization_eligible && finalization.status !== "succeeded" ? `<button data-finalize-tasks type="button" ${selectedRuntimeReady() ? "" : "disabled aria-disabled=\"true\""}>${finalization.status === "failed" ? "Resume finalization" : "Finalize"}</button>` : ""}
+          </article>
+        </div>
+      </details>
       ${taskView.review_eligible ? "" : `<div class="next-action-blocker" data-implementation-review-blocker>${escapeHtml(taskView.review_blocker || "Review remains blocked until aggregate finalization succeeds.")}</div>`}
     </section>
   `;
@@ -197,11 +203,11 @@ function renderStudioReviewQualityGate(view) {
   const findings = view?.findings || [];
   const status = view?.approval_status || "missing";
   const blocked = status !== "approved";
-  const firstFinding = findings[0] || null;
-  const paths = [...new Set(findings.flatMap((finding) => finding.related_paths || []))];
   const findingSummary = (finding) => String(
     finding?.summary || "Finding summary is missing."
   ).replace(/^#{1,6}\s*/, "").trim();
+  // Keep canonical upstream fields explicit: finding.acceptance_ids, finding.evidence,
+  // and finding.related_paths are never inferred from rendered copy.
   const findingEvidence = (finding) => (finding?.evidence || [])
     .map((item) => String(item)
       .replace(/^(?:[-*]\s*)?Evidence:\s*/i, "")
@@ -217,63 +223,67 @@ function renderStudioReviewQualityGate(view) {
   const selectedFinding = (finding) => draftSelection.size
     ? draftSelection.has(finding.finding_id)
     : finding.disposition === "must-fix";
-  // Keep canonical upstream fields explicit: finding.acceptance_ids and finding.evidence.
+  const selectedCount = findings.filter(selectedFinding).length;
+  const blockingCount = findings.filter((finding) => ["critical", "high"].includes(finding.severity) || finding.disposition === "must-fix").length;
+  const filter = typeof state !== "undefined" ? state.remediationFindingFilter || "all" : "all";
+  const visibleFindings = findings.filter((finding) => filter === "selected"
+    ? selectedFinding(finding)
+    : filter === "blocking"
+      ? ["critical", "high"].includes(finding.severity) || finding.disposition === "must-fix"
+      : true);
+  const paths = [...new Set(findings.flatMap((finding) => finding.related_paths || []))];
   return `
-    <section class="surface studio-quality-gate" data-studio-quality-gate="review" data-review-status="${escapeHtml(status)}">
-      <div class="surface-title">
-        <span>Review quality gate</span>
+    <section class="surface studio-quality-gate target-remediation-surface" data-studio-quality-gate="review" data-target-remediation-surface="review" data-review-status="${escapeHtml(status)}">
+      <div class="target-remediation-heading">
+        <div>
+          <p class="eyebrow">Review</p>
+          <h2>Review findings</h2>
+          <p>Inspect source evidence, select the findings that need implementation changes, and keep the remediation request durable.</p>
+        </div>
         <span class="small-badge ${status === "approved" ? "good" : "bad"}">${escapeHtml(status)}</span>
       </div>
       ${renderWarnings(view?.warnings || [])}
       ${studioRemediationReadback("review")}
       ${blocked ? `<div class="next-action-blocker" data-quality-gate-blocker>Review is ${escapeHtml(status)}; QA progression remains blocked by the canonical report.</div>` : ""}
-      <div class="quality-gate-layout">
-        <aside class="quality-gate-file-rail" aria-label="Review files">
-          <div class="surface-title compact"><span>Review scope</span><span class="small-badge">${escapeHtml(paths.length)}</span></div>
-          <div class="quality-gate-file-list">
-            ${paths.length ? paths.map((path, index) => `<button class="quality-gate-file ${index === 0 ? "active" : ""}" type="button"><span aria-hidden="true">▤</span><span>${escapeHtml(path)}</span></button>`).join("") : `<div class="empty-state compact">No related files recorded.</div>`}
+      <div class="target-remediation-layout">
+        <main class="target-remediation-main" aria-label="Review findings and source evidence">
+          <div class="target-remediation-filters" role="group" aria-label="Review finding filters">
+            <button type="button" data-remediation-filter="all" aria-pressed="${filter === "all" ? "true" : "false"}">All <span>${escapeHtml(findings.length)}</span></button>
+            <button type="button" data-remediation-filter="selected" aria-pressed="${filter === "selected" ? "true" : "false"}">Selected <span>${escapeHtml(selectedCount)}</span></button>
+            <button type="button" data-remediation-filter="blocking" aria-pressed="${filter === "blocking" ? "true" : "false"}">Blocking <span>${escapeHtml(blockingCount)}</span></button>
           </div>
-          <details class="quality-gate-technical"><summary>Technical details</summary><p>Findings and paths are read from the canonical review report.</p></details>
-        </aside>
-        <main class="quality-gate-document" aria-label="Review evidence canvas">
-          <div class="quality-gate-document-header"><strong>${escapeHtml(firstFinding?.finding_id || "Review report")}</strong><span class="small-badge">${escapeHtml(paths.length ? `${paths.length} files` : "evidence")}</span></div>
-          <div class="quality-gate-document-preview">
-            <span class="eyebrow">Unified evidence view</span>
-            <h3>${escapeHtml(firstFinding ? findingSummary(firstFinding) : "No structured review findings were published.")}</h3>
-            <p>Review findings, acceptance links, and related paths stay together so the next decision is grounded in evidence.</p>
-            ${firstFinding ? `<div class="quality-gate-evidence-row"><span>Acceptance: ${escapeHtml((firstFinding.acceptance_ids || []).join(", ") || "not referenced")}</span></div><div class="quality-gate-evidence-row"><span>Evidence: ${escapeHtml(findingEvidence(firstFinding) || "not referenced")}</span></div>` : ""}
-          </div>
-          <label class="form-field" for="reviewRemediationNote">
-            <span>Operator note for implement</span>
-            <textarea id="reviewRemediationNote" name="review_remediation_note" data-remediation-note="review" rows="4">${escapeHtml(remediationDraftNote("review", defaultNote))}</textarea>
-          </label>
-          ${typeof renderRemediationDraftPreview === "function" ? renderRemediationDraftPreview("review", {destination: typeof remediationDraftDestination === "function" ? remediationDraftDestination() : "remediations/<run>/request-####.md"}) : ""}
-          ${renderRemediationRuntimeGuard("review", Boolean(findings.length))}
-          <div class="wizard-actions">
-            ${findings.length && typeof renderContextualRunnerControl === "function" ? renderContextualRunnerControl({actionLabel: "review remediation"}) : ""}
-            <button data-proceed-stage="qa" type="button" ${status === "approved" && selectedRuntimeReady() ? "" : "disabled aria-disabled=\"true\""}>Proceed to QA</button>
-            <button data-remediation-launch="review" type="button" ${findings.length && selectedRuntimeReady() ? "" : "disabled"}>Send selected to implement</button>
-            <button data-open-request-tab type="button" class="secondary">Request review intervention</button>
+          <section class="target-findings-table" data-review-findings aria-label="Review findings">
+            <div class="target-findings-table-head" aria-hidden="true"><span></span><span>Finding</span><span>Severity</span><span>Source</span><span>Reviewer evidence</span></div>
+            ${visibleFindings.length ? visibleFindings.map((finding, index) => `
+              <article class="target-finding-row panel-item" data-review-finding="${escapeHtml(finding.finding_id)}" data-finding-severity="${escapeHtml(finding.severity || "unknown")}" data-finding-selected="${selectedFinding(finding) ? "true" : "false"}">
+                <label class="target-finding-select"><input id="studio-review-remediation-${index}" name="review_remediation" data-remediation-source="review" type="checkbox" value="${escapeHtml(finding.finding_id)}" ${selectedFinding(finding) ? "checked" : ""}><span class="sr-only">Select ${escapeHtml(finding.finding_id)} for remediation</span></label>
+                <div class="target-finding-copy"><strong>${escapeHtml(findingSummary(finding))}</strong><small>${escapeHtml(finding.disposition || "Disposition not recorded")}</small></div>
+                <span class="target-finding-severity"><span class="small-badge ${["critical", "high"].includes(finding.severity) ? "bad" : "warn"}">${escapeHtml(finding.severity || "missing severity")}</span></span>
+                <a href="#${escapeHtml(finding.finding_id)}" class="target-finding-source">${escapeHtml((finding.related_paths || [])[0] || "source unavailable")}</a>
+                <span class="target-finding-evidence">${escapeHtml(findingEvidence(finding) || "not referenced")} · Acceptance: ${escapeHtml((finding.acceptance_ids || []).join(", ") || "not referenced")}</span>
+                <div class="target-finding-details" id="${escapeHtml(finding.finding_id)}" data-remediation-source-evidence><span>Source evidence: ${escapeHtml(findingEvidence(finding) || "not referenced")}</span><span>Evidence: ${escapeHtml(findingEvidence(finding) || "not referenced")}</span><span>Related paths: ${escapeHtml((finding.related_paths || []).join(", ") || "not referenced")}</span><span>Acceptance: ${escapeHtml((finding.acceptance_ids || []).join(", ") || "not referenced")}</span></div>
+              </article>
+            `).join("") : `<div class="empty-state">No structured Review findings were published.</div>`}
+          </section>
+          <div class="target-remediation-evidence-grid">
+            <section class="target-evidence-card" aria-label="Source evidence"><h3>Source evidence</h3>${paths.length ? paths.map((path) => `<span>▧ ${escapeHtml(path)}</span>`).join("") : `<span class="muted">No source paths recorded.</span>`}</section>
+            <section class="target-evidence-card" aria-label="Finding consequences"><h3>Impact</h3><span>${escapeHtml(blockingCount)} blocking finding${blockingCount === 1 ? "" : "s"} require a durable remediation request.</span><span>${escapeHtml(paths.length)} related path${paths.length === 1 ? "" : "s"} retained from the review report.</span></section>
           </div>
         </main>
-        <aside class="quality-gate-findings" data-review-findings aria-label="Review findings">
-          <div class="surface-title compact"><span>Review findings</span><span class="small-badge">${escapeHtml(findings.length)} recorded</span></div>
-          ${findings.length ? findings.map((finding, index) => `
-            <article class="panel-item" data-review-finding="${escapeHtml(finding.finding_id)}">
-              <div class="surface-title compact">
-                <strong>${escapeHtml(finding.finding_id)}</strong>
-                <span class="small-badge ${["critical", "high"].includes(finding.severity) ? "bad" : "warn"}">${escapeHtml(finding.severity || "missing severity")}</span>
-              </div>
-              <p>${escapeHtml(findingSummary(finding))}</p>
-              <span>Disposition: ${escapeHtml(finding.disposition || "missing disposition")}</span>
-              <div class="compact-list" data-remediation-source-evidence>
-                <span>Source evidence: ${escapeHtml(findingEvidence(finding) || "not referenced")}</span>
-                <span>Related paths: ${escapeHtml((finding.related_paths || []).join(", ") || "not referenced")}</span>
-                <span>Acceptance: ${escapeHtml((finding.acceptance_ids || []).join(", ") || "not referenced")}</span>
-              </div>
-              <label><input id="studio-review-remediation-${index}" name="review_remediation" data-remediation-source="review" type="checkbox" value="${escapeHtml(finding.finding_id)}" ${selectedFinding(finding) ? "checked" : ""}> Select for remediation</label>
-            </article>
-          `).join("") : `<div class="empty-state">No structured Review findings were published.</div>`}
+        <aside class="target-remediation-request" aria-label="Remediation request">
+          <div class="target-remediation-request-heading"><h3>Remediation request</h3><span class="small-badge">${escapeHtml(selectedCount)} selected</span></div>
+          <div class="target-editor-tabs" role="tablist" aria-label="Remediation draft mode"><button class="target-editor-tab active" type="button" role="tab" aria-selected="true">Write</button><button class="target-editor-tab" type="button" role="tab" aria-selected="false">Preview</button></div>
+          <label class="form-field" for="reviewRemediationNote"><span>Markdown</span><textarea id="reviewRemediationNote" name="review_remediation_note" data-remediation-note="review" rows="8">${escapeHtml(remediationDraftNote("review", defaultNote))}</textarea></label>
+          ${typeof renderRemediationDraftPreview === "function" ? renderRemediationDraftPreview("review", {destination: typeof remediationDraftDestination === "function" ? remediationDraftDestination() : "remediations/<run>/request-####.md"}) : ""}
+          <div class="target-remediation-destination"><span>Destination</span><code>${escapeHtml(typeof remediationDraftDestination === "function" ? remediationDraftDestination() : "remediations/<run>/request-####.md")}</code><small>Draft is retained in this browser session until it is written.</small></div>
+          <div class="target-remediation-impact"><strong>Downstream impact</strong><span>Sending this request marks Review and QA stale until Implement is rerun from fresh evidence.</span><span>Request Change stays separate from remediation.</span></div>
+          ${renderRemediationRuntimeGuard("review", Boolean(findings.length))}
+          ${findings.length && typeof renderContextualRunnerControl === "function" ? renderContextualRunnerControl({actionLabel: "review remediation"}) : ""}
+          <div class="target-remediation-actions">
+            <button data-remediation-launch="review" data-aidd-primary-action type="button" ${findings.length && selectedRuntimeReady() ? "" : "disabled"}>Send selected to Implement</button>
+            <button data-proceed-stage="qa" type="button" class="secondary" ${status === "approved" && selectedRuntimeReady() ? "" : "disabled aria-disabled=\"true\""}>Proceed to QA</button>
+            <button data-open-request-tab type="button" class="link-button">Request change</button>
+          </div>
         </aside>
       </div>
     </section>
@@ -287,44 +297,74 @@ function renderStudioQaQualityGate(view, sourceItems) {
   const blocked = !["ready", "ready-with-risks"].includes(verdict);
   const draftSelection = remediationDraftSelection("qa");
   const defaultNote = "Fix the selected QA risk(s) or issue(s), rerun verification, and update implementation-report.md.";
+  const selectedItem = (item) => draftSelection.size
+    ? draftSelection.has(item.id)
+    : verdict === "not-ready";
+  const selectedCount = sourceItems.filter(selectedItem).length;
+  const blockingCount = sourceItems.filter((item) => item.kind === "risk").length;
+  const filter = typeof state !== "undefined" ? state.remediationFindingFilter || "all" : "all";
+  const visibleItems = sourceItems.filter((item) => filter === "selected"
+    ? selectedItem(item)
+    : filter === "blocking"
+      ? item.kind === "risk"
+      : true);
   return `
-    <section class="surface studio-quality-gate" data-studio-quality-gate="qa" data-qa-verdict="${escapeHtml(verdict)}">
-      <div class="surface-title">
-        <span>QA quality gate</span>
+    <section class="surface studio-quality-gate target-remediation-surface" data-studio-quality-gate="qa" data-target-remediation-surface="qa" data-qa-verdict="${escapeHtml(verdict)}">
+      <div class="target-remediation-heading">
+        <div>
+          <p class="eyebrow">Quality assurance</p>
+          <h2>QA findings</h2>
+          <p>Keep risks, known issues, source evidence, and the next remediation action in one bounded decision surface.</p>
+        </div>
         <span class="small-badge ${blocked ? "bad" : risks.length || issues.length ? "warn" : "good"}">${escapeHtml(verdict)}</span>
       </div>
       ${renderWarnings(view?.warnings || [])}
       ${studioRemediationReadback("qa")}
       ${blocked ? `<div class="next-action-blocker" data-quality-gate-blocker>QA verdict is ${escapeHtml(verdict)}; terminal progression remains blocked by the canonical report.</div>` : ""}
-      <div class="metric-grid">
-        <div class="metric"><span>Recommendation</span><strong>${escapeHtml(view?.release_recommendation || "missing")}</strong></div>
-        <div class="metric"><span>Residual risks</span><strong>${escapeHtml(risks.length)}</strong></div>
-        <div class="metric"><span>Known issues</span><strong>${escapeHtml(issues.length)}</strong></div>
-        <div class="metric"><span>Acceptance IDs</span><strong>${escapeHtml((view?.acceptance_ids || []).length)}</strong></div>
+      <div class="target-qa-summary" data-qa-summary>
+        <div><span>Recommendation</span><strong>${escapeHtml(view?.release_recommendation || "missing")}</strong></div>
+        <div><span>Residual risks</span><strong>${escapeHtml(risks.length)}</strong></div>
+        <div><span>Known issues</span><strong>${escapeHtml(issues.length)}</strong></div>
+        <div><span>Acceptance IDs</span><strong>${escapeHtml((view?.acceptance_ids || []).length)}</strong></div>
       </div>
-      <div class="compact-list" data-qa-upstream-references>
-        <span>Acceptance: ${escapeHtml((view?.acceptance_ids || []).join(", ") || "not referenced")}</span>
-        <span>Evidence: ${escapeHtml((view?.evidence_references || view?.evidence_ids || []).join(", ") || "not referenced")}</span>
-      </div>
-      <div class="compact-list" data-qa-risks>
-        ${risks.map((risk) => `<span>Residual risk · ${escapeHtml(risk)}</span>`).join("") || "<span>No residual risks published.</span>"}
-        ${issues.map((issue) => `<span>Known issue · ${escapeHtml(issue)}</span>`).join("") || "<span>No known issues published.</span>"}
-      </div>
-      <div class="compact-list" data-qa-remediation-items>
-        ${sourceItems.map((item, index) => `<div class="compact-list"><label><input id="studio-qa-remediation-${index}" name="qa_remediation" data-remediation-source="qa" type="checkbox" value="${escapeHtml(item.id)}" ${(draftSelection.size ? draftSelection.has(item.id) : verdict === "not-ready") ? "checked" : ""}> ${escapeHtml(item.kind)} · ${escapeHtml(item.label)}</label><span data-remediation-source-evidence>Source evidence: ${escapeHtml((item.evidence || []).join(", ") || "not referenced")}</span></div>`).join("")}
-      </div>
-      <label class="form-field" for="qaRemediationNote">
-        <span>Operator note for implement</span>
-        <textarea id="qaRemediationNote" name="qa_remediation_note" data-remediation-note="qa" rows="4">${escapeHtml(remediationDraftNote("qa", defaultNote))}</textarea>
-      </label>
-      ${typeof renderRemediationDraftPreview === "function" ? renderRemediationDraftPreview("qa", {destination: typeof remediationDraftDestination === "function" ? remediationDraftDestination() : "remediations/<run>/request-####.md"}) : ""}
-      ${renderRemediationRuntimeGuard("qa", Boolean(sourceItems.length))}
-      ${renderQaCompletionGuard(view, Boolean(sourceItems.length))}
-      <div class="wizard-actions">
-        ${sourceItems.length && typeof renderContextualRunnerControl === "function" ? renderContextualRunnerControl({actionLabel: "QA remediation"}) : ""}
-        <button data-accept-qa type="button" ${blocked ? "disabled aria-disabled=\"true\"" : ""}>Accept complete</button>
-        <button data-remediation-launch="qa" type="button" ${sourceItems.length && selectedRuntimeReady() ? "" : "disabled"}>Send selected to implement</button>
-        <button data-next-flow-start type="button" class="secondary">Start follow-up</button>
+      <div class="target-remediation-layout target-qa-remediation-layout">
+        <main class="target-remediation-main" aria-label="QA findings and evidence">
+          <div class="target-remediation-filters" role="group" aria-label="QA finding filters">
+            <button type="button" data-remediation-filter="all" aria-pressed="${filter === "all" ? "true" : "false"}">All <span>${escapeHtml(sourceItems.length)}</span></button>
+            <button type="button" data-remediation-filter="selected" aria-pressed="${filter === "selected" ? "true" : "false"}">Selected <span>${escapeHtml(selectedCount)}</span></button>
+            <button type="button" data-remediation-filter="blocking" aria-pressed="${filter === "blocking" ? "true" : "false"}">Blocking <span>${escapeHtml(blockingCount)}</span></button>
+          </div>
+          <section class="target-findings-table" data-qa-remediation-items aria-label="QA findings">
+            <div class="target-findings-table-head" aria-hidden="true"><span></span><span>Finding</span><span>Type</span><span>Source</span><span>Evidence</span></div>
+            ${visibleItems.length ? visibleItems.map((item, index) => `
+              <article class="target-finding-row panel-item" data-qa-remediation-item="${escapeHtml(item.id)}" data-finding-selected="${selectedItem(item) ? "true" : "false"}">
+                <label class="target-finding-select"><input id="studio-qa-remediation-${index}" name="qa_remediation" data-remediation-source="qa" type="checkbox" value="${escapeHtml(item.id)}" ${selectedItem(item) ? "checked" : ""}><span class="sr-only">Select ${escapeHtml(item.label)} for remediation</span></label>
+                <div class="target-finding-copy"><strong>${escapeHtml(item.label)}</strong><small>${escapeHtml(item.kind)}</small></div>
+                <span class="target-finding-severity"><span class="small-badge ${item.kind === "risk" ? "bad" : "warn"}">${escapeHtml(item.kind)}</span></span>
+                <span class="target-finding-source">QA report</span>
+                <span class="target-finding-evidence" data-remediation-source-evidence>Source evidence: ${escapeHtml((item.evidence || []).join(", ") || "not referenced")}</span>
+              </article>
+            `).join("") : `<div class="empty-state">No QA risks or known issues were published.</div>`}
+          </section>
+          <section class="target-evidence-card target-qa-upstream" data-qa-upstream-references aria-label="QA evidence"><h3>Acceptance and evidence</h3><span>Acceptance: ${escapeHtml((view?.acceptance_ids || []).join(", ") || "not referenced")}</span><span>Evidence: ${escapeHtml((view?.evidence_references || view?.evidence_ids || []).join(", ") || "not referenced")}</span></section>
+          <div class="sr-only" data-qa-risks>${risks.map((risk) => `<span>Residual risk · ${escapeHtml(risk)}</span>`).join("")} ${issues.map((issue) => `<span>Known issue · ${escapeHtml(issue)}</span>`).join("")}</div>
+        </main>
+        <aside class="target-remediation-request" aria-label="QA remediation request">
+          <div class="target-remediation-request-heading"><h3>Remediation request</h3><span class="small-badge">${escapeHtml(selectedCount)} selected</span></div>
+          <div class="target-editor-tabs" role="tablist" aria-label="QA remediation draft mode"><button class="target-editor-tab active" type="button" role="tab" aria-selected="true">Write</button><button class="target-editor-tab" type="button" role="tab" aria-selected="false">Preview</button></div>
+          <label class="form-field" for="qaRemediationNote"><span>Markdown</span><textarea id="qaRemediationNote" name="qa_remediation_note" data-remediation-note="qa" rows="8">${escapeHtml(remediationDraftNote("qa", defaultNote))}</textarea></label>
+          ${typeof renderRemediationDraftPreview === "function" ? renderRemediationDraftPreview("qa", {destination: typeof remediationDraftDestination === "function" ? remediationDraftDestination() : "remediations/<run>/request-####.md"}) : ""}
+          <div class="target-remediation-destination"><span>Destination</span><code>${escapeHtml(typeof remediationDraftDestination === "function" ? remediationDraftDestination() : "remediations/<run>/request-####.md")}</code><small>Draft is retained in this browser session until it is written.</small></div>
+          <div class="target-remediation-impact"><strong>Downstream impact</strong><span>Sending this request returns the Work Item to Implement and makes fresh QA evidence necessary.</span></div>
+          ${renderRemediationRuntimeGuard("qa", Boolean(sourceItems.length))}
+          ${renderQaCompletionGuard(view, Boolean(sourceItems.length))}
+          ${sourceItems.length && typeof renderContextualRunnerControl === "function" ? renderContextualRunnerControl({actionLabel: "QA remediation"}) : ""}
+          <div class="target-remediation-actions">
+            <button data-remediation-launch="qa" data-aidd-primary-action type="button" ${sourceItems.length && selectedRuntimeReady() ? "" : "disabled"}>Send selected to Implement</button>
+            <button data-accept-qa type="button" class="secondary" ${blocked ? "disabled aria-disabled=\"true\"" : ""}>Accept complete</button>
+            <button data-next-flow-start type="button" class="link-button">Start follow-up</button>
+          </div>
+        </aside>
       </div>
     </section>
   `;

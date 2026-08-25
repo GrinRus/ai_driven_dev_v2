@@ -521,6 +521,13 @@ document.addEventListener("click", async (event) => {
       await renderImplementReview();
       return;
     }
+    const remediationFilter = event.target.closest("[data-remediation-filter]")?.dataset.remediationFilter;
+    if (remediationFilter) {
+      state.remediationFindingFilter = remediationFilter;
+      if (state.workDetail === "review-findings") await renderReviewFindings();
+      else if (state.workDetail === "qa-verdict") await renderQaVerdict();
+      return;
+    }
     const proceedStage = event.target.closest("[data-proceed-stage]")?.dataset.proceedStage;
     if (proceedStage) {
       await startStage(proceedStage);
