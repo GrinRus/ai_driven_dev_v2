@@ -15754,9 +15754,22 @@ Local tasks:
   (`136 passed`), UI asset/readability/accessibility/design-token contracts, docs/planning checks,
   Ruff, mypy, full CI including Python 3.12/3.13/3.14, deterministic scenarios, adapter conformance,
   packaged UI browser, security, and build all passed.
-- `W44-E1-S3-T28` (next) Align Markdown Workspace reader, navigator, provenance, heading map,
+- `W44-E1-S3-T28` (done) Align Markdown Workspace reader, navigator, provenance, heading map,
   and evidence inspector spacing with the target document composition while keeping generated
-  documents read-only.
+  documents read-only. PR #382 (merge `5828f53b`) adds a compact role-grouped navigator,
+  bounded document brief, target-style context/provenance inspector, source/path actions, a
+  truthful Request change/Return to task action hierarchy, and route-scoped reader geometry
+  without changing generated-document immutability, routes, ids, evidence contracts, or mutation
+  services. Verification: focused Markdown Workspace browser/layout checks, document evidence
+  journeys, frontend Node suites, UI asset/readability/accessibility/design-token contracts,
+  Ruff, mypy, full Python matrix, deterministic scenarios, adapter conformance, packaged UI
+  browser, security, and build all passed.
+- `W44-E1-S3-T29` (next) Run a fresh rendered audit of all 13 provider-free target surfaces
+  against the canonical target compositions after T28, record viewport geometry, first-action
+  visibility, accessibility/diagnostic findings, and route-specific remaining gaps, and split
+  each confirmed implementation gap into a bounded successor task before coding. Verification:
+  retained audit report with current screenshots/measurements, five-viewport provider-free
+  matrix, clean console/overflow/duplicate-primary diagnostics, and synchronized roadmap/backlog.
 
 Wave 44 exit evidence:
 
@@ -15768,11 +15781,20 @@ Wave 44 exit evidence:
 - browser checks show no console errors, horizontal overflow, duplicate primary actions, or focus
   loss;
 - a fresh rendered audit confirms remaining gaps are absent or explicitly blocked. T19 is now
-  evidence-complete but not an exit pass; T25, T26, and T27 are complete and T28 is now the only dependency-ready
-  convergence task. Default task-centered routing remains provisional until T26-T28 are either
-  completed or backed by stronger target-equivalence evidence.
+  evidence-complete but not an exit pass; T25-T28 are complete and T29 is the next dependency-ready
+  convergence audit. Default task-centered routing remains provisional until T29 confirms target
+  equivalence or records explicit blockers.
 
 Wave 44 reconciliation:
+
+- `2026-08-25` PR #382 (merge `5828f53b`) completed `W44-E1-S3-T28`. Markdown Workspace now
+  uses the target compact navigator/reader/context composition with visible provenance, source
+  and path utilities, heading-map anchors, one contextual primary action, and read-only generated
+  document semantics preserved. Focused browser/layout checks, document evidence journeys,
+  frontend/UI contracts, accessibility/readability/design-token checks, docs/planning, Ruff, mypy,
+  full CI, deterministic, adapter, packaged-browser, security, and build checks passed. `T29` is
+  now the only dependency-ready task for the next fresh 13-surface convergence audit; human
+  usability, Claude/cross-runtime, and Wave 36 acceptance stay parked.
 
 - `2026-08-25` PR #380 (merge `737365c5`) completed `W44-E1-S3-T27`. Implementation Review now
   leads with repository truth, changed-file/diff evidence, verification commands, scope and risk
