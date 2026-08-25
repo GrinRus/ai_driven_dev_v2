@@ -44,7 +44,13 @@ def test_documents_keep_navigator_reader_and_context_visible(
                 const node = document.querySelector(selector);
                 if (!node) return null;
                 const rect = node.getBoundingClientRect();
-                return {x: rect.x, y: rect.y, width: rect.width, height: rect.height};
+                return {
+                  x: rect.x,
+                  y: rect.y,
+                  width: rect.width,
+                  height: rect.height,
+                  bottom: rect.bottom,
+                };
               };
               return {
                 tree: box('.stage-document-workbench > #workbenchTree'),
@@ -175,13 +181,22 @@ def test_task_attempt_detail_and_live_tray_share_desktop_workbench(
                 const node = document.querySelector(selector);
                 if (!node) return null;
                 const rect = node.getBoundingClientRect();
-                return {x: rect.x, y: rect.y, width: rect.width, height: rect.height};
+                return {
+                  x: rect.x,
+                  y: rect.y,
+                  width: rect.width,
+                  height: rect.height,
+                  bottom: rect.bottom,
+                };
               };
               return {
                 list: box('[data-task-workspace]'),
                 detail: box('[data-task-detail]'),
                 tray: box('[data-task-attempt-tray]'),
                 live: box('[data-task-live-output]'),
+                livePosition: getComputedStyle(
+                    document.querySelector('[data-task-live-output]')
+                ).position,
                 columns: getComputedStyle(
                   document.querySelector(
                     '.active-studio[data-studio-surface="task-workspace"]'
@@ -205,10 +220,12 @@ def test_task_attempt_detail_and_live_tray_share_desktop_workbench(
         )
         assert page.locator("[data-task-live-output]").count() == 1
         assert page.locator("[data-task-attempt-tray] [data-task-attempt-output]").count() == 0
-        assert geometry["live"]["y"] >= max(
-            geometry["list"]["y"] + geometry["list"]["height"],
-            geometry["detail"]["y"] + geometry["detail"]["height"],
-        )
+        assert geometry["livePosition"] == "fixed"
+        assert geometry["live"]["y"] >= 0
+        assert geometry["live"]["bottom"] <= viewport[1]
+        assert geometry["live"]["y"] < viewport[1]
+        assert geometry["list"]["bottom"] <= geometry["live"]["y"] + 1
+        assert geometry["detail"]["bottom"] <= geometry["live"]["y"] + 1
         assert geometry["live"]["width"] >= geometry["list"]["width"]
         assert page.locator('[data-task-action="resume"]').count() == 1
         assert page.locator("[data-task-action-bar] [data-contextual-runner-control]").count() == 1
