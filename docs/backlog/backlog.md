@@ -7,14 +7,13 @@ slice, and local task.
 
 ## Next
 
-- `W44-E1-S3-T20` — Recompose the selected Project Work view into a non-overlapping target table/list
-  and right-side Work Item inspector while preserving core-owned ordering, selection deep links, and
-  one primary action.
+- `W44-E1-S3-T21` — Recompose Work Item Overview/Launch with the target contextual Runner inspector,
+  one launch action, and readable compact-desktop stage strip.
 
 ## Soon
 
-- `W44-E1-S3-T21` — Recompose Work Item Overview/Launch with the target contextual Runner inspector,
-  one launch action, and readable compact-desktop stage strip.
+- `W44-E1-S3-T22` — Recompose Tasks and Active Task into the target table/right-inspector/live-output
+  hierarchy while preserving authoritative task actions and factual attempt state.
 
 ## Parking lot
 
@@ -41,11 +40,19 @@ slice, and local task.
 
 ## Current reconciliation
 
+- `2026-08-25` PR #366 (merge `82fb1d23`) completed `W44-E1-S3-T20`: selected Project Work now
+  keeps the server-owned table/list inside its desktop grid column, places the Work Item inspector
+  beside it without overlap, and stacks it normally on mobile. Four-viewport geometry/accessibility,
+  deep-link/reload, action-count, diagnostics, focused browser suites, frontend, docs/planning,
+  Ruff, mypy, and full CI including packaged UI browser passed. `W44-E1-S3-T21` is now Next and
+  `T22` is Soon; T23-T28 remain planned. Wave 44 exit evidence, human usability, Claude/cross-runtime,
+  and Wave 36 acceptance stay open or parked as previously scoped.
+
 - `2026-08-25` PR #364 (merge `47a8d903`) completed `W44-E1-S3-T19` from revision `35ff0ace`. The fresh rendered audit is retained
   in `docs/e2e/w44-e1-s3-t19-rendered-exit-audit.md`; provider-free matrix (`9`) and target legacy
   compositions (`5`) are green with clean diagnostics, but target comparison confirmed remaining
-  shell, inspector, recovery, history, completion, and editor-density gaps. `W44-E1-S3-T20` is now
-  Next and `T21` is Soon; T22-T28 remain in the roadmap as planned successors. Human usability,
+  shell, inspector, recovery, history, completion, and editor-density gaps. `W44-E1-S3-T20` was
+  Next and `T21` was Soon; T22-T28 remained in the roadmap as planned successors. Human usability,
   Claude/cross-runtime, and Wave 36 acceptance stay parked.
 
 - `2026-08-24` PR #362 (merge `4e36bc6f`) completed `W44-E1-S3-T18`: the compact eight-stage strip now
