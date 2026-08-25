@@ -138,6 +138,31 @@ def test_validation_recovery_exposes_one_eligible_primary_action(
                 browser_page.diagnostics.assert_clean()
 
 
+@pytest.mark.parametrize("viewport", ((390, 844), (1280, 900)))
+def test_runtime_recovery_keeps_retry_single_and_separate_from_summary(
+    tmp_path: Path,
+    viewport: tuple[int, int],
+) -> None:
+    fixture = build_browser_state_fixture(tmp_path / "runtime-single-retry", "runtime-failure")
+    with sync_playwright() as playwright, operator_browser_harness(
+        fixture.project_root,
+        playwright,
+        work_item=fixture.work_item,
+    ) as harness, harness.open_page(viewport) as browser_page:
+        page = browser_page.page
+        page.goto(f"{harness.url}?ui=studio", wait_until="domcontentloaded")
+        wait_for_work_item_surface(page, fixture.work_item)
+        _open_recovery(page)
+        runtime = page.locator('[data-recovery-kind="runtime"]')
+        runtime.wait_for(state="visible")
+        assert runtime.locator('[data-recovery-action="resume-stage"]').count() == 1
+        assert runtime.locator("[data-primary-recovery-slot]").count() == 0
+        assert runtime.locator("[data-recovery-primary-readonly]").count() == 1
+        assert_accessible_render(page, target_size=44 if viewport[0] <= 760 else 32)
+        assert_rendered_geometry(page)
+        browser_page.diagnostics.assert_clean()
+
+
 @pytest.mark.parametrize(
     ("fixture_state", "stage"),
     (("runtime-failure", "idea"), ("validation-repair-exhausted", "plan")),

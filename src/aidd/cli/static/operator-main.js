@@ -552,6 +552,28 @@ document.addEventListener("click", async (event) => {
       await submitApproval(approvalButton.dataset.operatorRequest, approvalButton.dataset.operatorAction);
       return;
     }
+    const resolutionOption = event.target.closest("[data-question-resolution-option]");
+    if (resolutionOption) {
+      const questionId = resolutionOption.dataset.questionResolutionId || "";
+      const value = resolutionOption.dataset.questionResolutionOption || "resolved";
+      const nativeResolution = document.querySelector(
+        `[data-question-resolution="${CSS.escape(questionId)}"]`
+      );
+      if (nativeResolution) {
+        nativeResolution.value = value;
+        nativeResolution.dispatchEvent(new Event("change", {bubbles: true}));
+      }
+      document.querySelectorAll(
+        `[data-question-resolution-id="${CSS.escape(questionId)}"]`
+      ).forEach((button) => {
+        const selected = button.dataset.questionResolutionOption === value;
+        button.classList.toggle("active", selected);
+        button.setAttribute("aria-checked", selected ? "true" : "false");
+        button.setAttribute("aria-pressed", selected ? "true" : "false");
+      });
+      updateQuestionResumeButtonState(questionId);
+      return;
+    }
     const artifactReference = event.target.closest("[data-artifact-stage]");
     if (artifactReference) {
       await inspectArtifactReference({
