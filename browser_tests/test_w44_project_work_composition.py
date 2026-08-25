@@ -32,11 +32,36 @@ def _assert_project_work_composition(page: Page, viewport: tuple[int, int]) -> N
     assert inspector_box is not None
     assert selected_box is not None
 
+    # The target Project Work surface is a compact table, not a stack of
+    # dashboard cards.  The server-owned rows expose the same five metadata
+    # columns as the header without moving membership or order into the UI.
+    assert page.locator('.studio-inbox[data-inbox-populated="true"]').count() == 1
+    assert page.locator(".intent-entry-recommendation").is_hidden()
+    assert page.locator("[data-inbox-filter]").count() == 1
+    assert page.locator(".inbox-table-head > span").count() == 7
+    row = page.locator('[data-inbox-item][data-inbox-select="WI-DECISION"]')
+    assert row.locator(".inbox-item-field").count() == 5
+    assert row.locator(".inbox-progress-track").count() == 1
+    assert row.locator(".inbox-progress-fill").count() == 1
+
     if viewport[0] > 900:
         # The selected inspector is a real second grid column, never a floating panel over
         # the authoritative server-owned list.
         assert _right(sections_box) <= inspector_box["x"] + 1
         assert _right(selected_box) <= inspector_box["x"] + 1
+        row_geometry = row.bounding_box()
+        assert row_geometry is not None
+        field_boxes = row.locator(".inbox-item-copy, .inbox-item-field").evaluate_all(
+            "nodes => nodes.map(node => {"
+            " const box = node.getBoundingClientRect();"
+            " return {y: box.y, bottom: box.bottom};"
+            "})"
+        )
+        assert all(
+            box["y"] >= row_geometry["y"] - 1
+            and box["bottom"] <= row_geometry["y"] + row_geometry["height"] + 1
+            for box in field_boxes
+        )
     else:
         # On tablet/mobile the inspector follows the list and remains in normal flow.
         assert inspector_box["y"] >= _bottom(sections_box) - 1

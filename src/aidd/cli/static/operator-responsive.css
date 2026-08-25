@@ -1704,6 +1704,212 @@
   }
 }
 
+/* W44-E1-S3-T34: the Project Work surface is a compact server-owned table.
+   Selection opens the inspector; the list itself stays dense and scannable. */
+.studio-inbox[data-inbox-populated="true"] .intent-entry-recommendation {
+  display: none;
+}
+.studio-inbox .inbox-filter-bar {
+  align-items: center;
+  margin-bottom: var(--space-4);
+}
+.studio-inbox .inbox-filter-field {
+  max-width: none;
+}
+.studio-inbox .inbox-filter-hint {
+  white-space: nowrap;
+}
+.studio-inbox .inbox-table-head {
+  gap: var(--space-4);
+  grid-template-columns: minmax(0, 2fr) minmax(72px, .8fr) minmax(112px, 1.25fr) minmax(72px, .8fr) minmax(112px, 1fr) minmax(72px, .75fr) auto;
+  padding-inline: var(--space-4);
+}
+.studio-inbox .studio-inbox-layout {
+  gap: var(--space-8);
+  grid-template-columns: minmax(0, 1fr) minmax(280px, 32%);
+}
+.studio-inbox .studio-inbox-sections {
+  gap: var(--space-6);
+}
+.studio-inbox .inbox-section > .surface-title {
+  align-items: center;
+  font-size: var(--type-body-size);
+  font-weight: 650;
+  gap: var(--space-3);
+  margin-bottom: 0;
+  padding: var(--space-3) var(--space-4);
+}
+.studio-inbox .inbox-section-items {
+  border-radius: 0;
+}
+.studio-inbox .inbox-item {
+  align-items: center;
+  border-left: 0;
+  column-gap: var(--space-4);
+  grid-template-columns: minmax(0, 2fr) minmax(72px, .8fr) minmax(112px, 1.25fr) minmax(72px, .8fr) minmax(112px, 1fr) minmax(72px, .75fr) auto;
+  min-height: var(--control-height-touch);
+  padding: var(--space-3) var(--space-4);
+}
+.studio-inbox .inbox-item[data-state="blocking"] {
+  border-left: 3px solid var(--color-state-danger);
+}
+.studio-inbox .inbox-item[data-state="running"] {
+  border-left: 3px solid var(--color-state-info);
+}
+.studio-inbox .inbox-item[data-state="ready"] {
+  border-left: 3px solid var(--color-state-success);
+}
+.studio-inbox .inbox-item[data-state="terminal"] {
+  border-left: 3px solid var(--color-text-tertiary);
+}
+.studio-inbox .inbox-item-copy {
+  gap: var(--space-1);
+  min-width: 0;
+}
+.studio-inbox .inbox-item-primary {
+  align-items: start;
+  display: flex;
+  gap: var(--space-3);
+  min-width: 0;
+}
+.studio-inbox .inbox-item-primary .status-marker {
+  flex: 0 0 auto;
+  margin-top: var(--space-1);
+}
+.studio-inbox .inbox-item-heading {
+  display: grid;
+  gap: var(--space-1);
+  min-width: 0;
+}
+.studio-inbox .inbox-item-heading strong,
+.studio-inbox .inbox-item-heading small,
+.studio-inbox .inbox-item-summary {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.studio-inbox .inbox-item-heading strong {
+  font-size: var(--type-label-size);
+  line-height: var(--type-compact-line);
+}
+.studio-inbox .inbox-item-summary {
+  color: var(--color-text-secondary);
+  font-size: var(--type-caption-size);
+  margin: 0;
+}
+.studio-inbox .inbox-item-field {
+  display: grid;
+  gap: var(--space-1);
+  min-width: 0;
+}
+.studio-inbox .inbox-item-field-label {
+  display: none;
+}
+.studio-inbox .inbox-item-field > strong,
+.studio-inbox .inbox-item-field .inbox-progress-label {
+  font-size: var(--type-caption-size);
+  font-weight: 500;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.studio-inbox .inbox-item-stage > strong,
+.studio-inbox .inbox-item-runner > strong,
+.studio-inbox .inbox-item-event > strong {
+  color: var(--color-text-secondary);
+}
+.studio-inbox .inbox-item-progress {
+  gap: var(--space-1);
+}
+.studio-inbox .inbox-progress {
+  display: grid;
+  gap: var(--space-1);
+  min-width: 0;
+}
+.studio-inbox .inbox-progress-track {
+  background: var(--color-bg-muted);
+  border-radius: var(--radius-pill);
+  display: block;
+  height: var(--space-1);
+  overflow: hidden;
+  width: 100%;
+}
+.studio-inbox .inbox-progress-fill {
+  background: var(--color-action-primary);
+  border-radius: inherit;
+  display: block;
+  height: 100%;
+}
+.studio-inbox .inbox-item-status .status-marker {
+  justify-content: center;
+}
+.studio-inbox .inbox-item-action {
+  justify-content: flex-end;
+}
+.studio-inbox .inbox-item-action button {
+  min-width: 0;
+  white-space: nowrap;
+}
+.studio-inbox .inbox-item-selected-hint {
+  max-width: none;
+  white-space: nowrap;
+}
+.studio-inbox .inbox-selected-context {
+  top: var(--space-4);
+}
+
+@media (max-width: 900px) {
+  .studio-inbox .studio-inbox-layout {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .studio-inbox .inbox-filter-bar {
+    align-items: stretch;
+    flex-direction: column;
+    gap: var(--space-2);
+  }
+  .studio-inbox .inbox-filter-hint {
+    white-space: normal;
+  }
+  .studio-inbox .inbox-item {
+    align-items: start;
+    grid-template-columns: minmax(0, 1fr) auto;
+    row-gap: var(--space-2);
+  }
+  .studio-inbox .inbox-item-copy {
+    grid-column: 1;
+    grid-row: 1;
+  }
+  .studio-inbox .inbox-item-stage,
+  .studio-inbox .inbox-item-progress {
+    grid-column: 1;
+  }
+  .studio-inbox .inbox-item-stage {
+    grid-row: 2;
+  }
+  .studio-inbox .inbox-item-progress {
+    grid-row: 3;
+  }
+  .studio-inbox .inbox-item-runner,
+  .studio-inbox .inbox-item-event,
+  .studio-inbox .inbox-item-status {
+    display: none;
+  }
+  .studio-inbox .inbox-item-action {
+    align-self: center;
+    grid-column: 2;
+    grid-row: 1 / span 3;
+  }
+  .studio-inbox .inbox-item-field-label {
+    color: var(--color-text-secondary);
+    display: inline;
+    font-size: var(--type-caption-size);
+    margin-right: var(--space-2);
+  }
+  .studio-inbox .inbox-item-stage > strong {
+    display: inline;
+  }
+}
+
 /* Review and remediation keep their single decisive action reachable while
  * the operator inspects a long evidence surface. The action remains the same
  * DOM control; only placement changes at bounded viewport sizes. */
