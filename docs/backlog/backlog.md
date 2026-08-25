@@ -7,8 +7,9 @@ slice, and local task.
 
 ## Next
 
-- `W44-E1-S3-T27` — Align Implementation Review and Review/QA Remediation with the target
-  repository-truth, finding-evidence, and remediation action hierarchy.
+- `W44-E1-S3-T28` — Align Markdown Workspace reader, navigator, provenance, heading map,
+  and evidence inspector spacing with the target document composition while keeping generated
+  documents read-only.
 
 ## Soon
 
@@ -36,6 +37,15 @@ slice, and local task.
   queue-restoration policy in `docs/backlog/roadmap.md` (`W8-E3-S1`).
 
 ## Current reconciliation
+
+- `2026-08-25` PR #380 (merge `737365c5`) completed `W44-E1-S3-T27`: Implementation Review now
+  uses repository-truth summary/diff evidence and an explicit Review gate; Review/QA remediation
+  uses finding/source-evidence tables, durable Write/Preview requests, downstream impact, contextual
+  Runner readiness, and one primary action. Existing routes, selectors, ledger/evidence projections,
+  mutation services, and generated-document boundaries remain unchanged. Focused browser journeys,
+  frontend/UI contracts, accessibility/readability/design-token checks, docs/planning, Ruff, mypy,
+  full CI, deterministic, adapter, packaged-browser, security, and build checks passed. `T28` is
+  now the only `Next` task; human usability, Claude/cross-runtime, and Wave 36 acceptance remain parked.
 
 - `2026-08-25` PR #378 (merge `9b97e908`) completed `W44-E1-S3-T26`: Create Work Item now uses the
   target editor/preview shell with durable context and constraints, visible draft status, responsive

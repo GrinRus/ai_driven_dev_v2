@@ -15744,9 +15744,17 @@ Local tasks:
     UI asset/accessibility/design-token contracts, docs/planning checks, Ruff, mypy, full Python
     matrix, deterministic scenarios, adapter conformance, packaged UI browser, security checks,
     and build CI all passed.
-- `W44-E1-S3-T27` (next) Align Implementation Review and Review/QA Remediation with the target
-  repository-truth, finding-evidence, and remediation action hierarchy.
-- `W44-E1-S3-T28` (planned) Align Markdown Workspace reader, navigator, provenance, heading map,
+- `W44-E1-S3-T27` (done) Align Implementation Review and Review/QA Remediation with the target
+  repository-truth, finding-evidence, and remediation action hierarchy. PR #380 (merge `737365c5`)
+  adds the repository-truth summary/diff workspace, compact implementation ledger, explicit Review
+  gate, finding-evidence table, retained source evidence, durable Write/Preview remediation request,
+  downstream impact, and one contextual primary action for Review and QA. Existing routes, selectors,
+  ledger/evidence projections, mutation services, and compatibility markup remain unchanged.
+  Verification: focused implementation/review browser journeys (`6 passed`), frontend Node suite
+  (`136 passed`), UI asset/readability/accessibility/design-token contracts, docs/planning checks,
+  Ruff, mypy, full CI including Python 3.12/3.13/3.14, deterministic scenarios, adapter conformance,
+  packaged UI browser, security, and build all passed.
+- `W44-E1-S3-T28` (next) Align Markdown Workspace reader, navigator, provenance, heading map,
   and evidence inspector spacing with the target document composition while keeping generated
   documents read-only.
 
@@ -15760,11 +15768,22 @@ Wave 44 exit evidence:
 - browser checks show no console errors, horizontal overflow, duplicate primary actions, or focus
   loss;
 - a fresh rendered audit confirms remaining gaps are absent or explicitly blocked. T19 is now
-  evidence-complete but not an exit pass; T25 and T26 are complete and T27 is now the only dependency-ready
+  evidence-complete but not an exit pass; T25, T26, and T27 are complete and T28 is now the only dependency-ready
   convergence task. Default task-centered routing remains provisional until T26-T28 are either
   completed or backed by stronger target-equivalence evidence.
 
 Wave 44 reconciliation:
+
+- `2026-08-25` PR #380 (merge `737365c5`) completed `W44-E1-S3-T27`. Implementation Review now
+  leads with repository truth, changed-file/diff evidence, verification commands, scope and risk
+  coverage, and an explicit Review gate. Review and QA remediation now use target finding tables,
+  source/evidence anchors, durable Write/Preview requests, downstream impact, contextual Runner
+  readiness, and one primary action while preserving existing routes, API shapes, ledger/evidence
+  projections, selectors, and generated-document boundaries. Focused browser journeys (`6 passed`),
+  frontend/UI contracts, readability/design-token/accessibility checks, docs/planning, Ruff, mypy,
+  full CI, deterministic, adapter, packaged-browser, security, and build checks passed. `T28` is now
+  the only dependency-ready task; human usability, Claude/cross-runtime, and Wave 36 acceptance stay
+  parked.
 
 - `2026-08-25` PR #378 (merge `9b97e908`) completed `W44-E1-S3-T26`. Create Work Item now uses the
   target editor/preview shell with durable context and constraints sections, visible draft status,
@@ -15773,7 +15792,7 @@ Wave 44 reconciliation:
   and operator-authored Markdown semantics remain unchanged. Target Create Work Item, guided setup,
   first-time recovery, frontend, UI contracts, design-token inventory, docs/planning, Ruff, mypy,
   full Python matrix, deterministic, adapter, security, packaged UI browser, and build CI passed.
-  `W44-E1-S3-T27` is now the only dependency-ready task; T28 remains planned, while human usability,
+  `W44-E1-S3-T27` was the only dependency-ready task; T28 was planned, while human usability,
   Claude/cross-runtime, and Wave 36 acceptance remain parked.
 
 - `2026-08-25` PR #376 (merge `a8f15319`) completed `W44-E1-S3-T25`. Flow Complete now leads with a
