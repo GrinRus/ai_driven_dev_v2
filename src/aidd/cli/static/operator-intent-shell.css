@@ -462,7 +462,7 @@ body.work-overview-mode .intent-decision-surface .next-action-button-stack .next
 
 .work-item-overview-canvas {
   display: grid;
-  gap: var(--space-7);
+  gap: var(--space-8);
 }
 
 .work-item-overview-request {

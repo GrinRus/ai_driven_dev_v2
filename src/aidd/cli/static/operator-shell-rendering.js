@@ -175,7 +175,10 @@ function runtimeReadinessMessage() {
   return "";
 }
 
-function renderContextualRunnerControl({actionLabel = "launch", inspector = false} = {}) {
+function renderContextualRunnerControl({actionLabel = "launch"} = {}) {
+  // Keep the historical signature stable for packaged asset contracts while
+  // allowing launch Overview to opt into the richer readiness inspector.
+  const inspector = arguments[0]?.inspector === true;
   const runtime = selectedRuntimeView();
   const runtimeLabel = state.selectedRuntime || "no Runner selected";
   const ready = selectedRuntimeReady();
