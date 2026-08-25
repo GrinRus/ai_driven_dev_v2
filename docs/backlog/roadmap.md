@@ -15811,18 +15811,22 @@ Local tasks:
   fail-closed recovery. Verification: focused browser/UI matrix (`20 passed`), UI asset contracts
   (`53 passed`), Ruff, mypy, full CI, deterministic, adapter, packaged-browser, security, and build
   checks passed.
-- `W44-E1-S3-T34` (next) Align Project Work with the target compact grouped table and selected
-  Work Item inspector, removing duplicated setup/search chrome while preserving core-owned
-  membership, ordering, progress truth, selection deep links, and one contextual action.
-  Verification: seeded mixed Inbox groups across desktop/mobile with deterministic row geometry,
-  selected-context bounds, keyboard selection, reload/deep-link, and clean diagnostics.
-  - Dependencies: `W44-E1-S3-T33`.
-- `W44-E1-S3-T35` (soon) Align Implementation Review with the target full-width diff, claims,
+- `W44-E1-S3-T34` (done) Align Project Work with the target compact grouped table and selected Work Item
+  inspector, removing duplicated setup/search chrome while preserving core-owned membership, ordering,
+  progress truth, selection deep links, and one contextual action. PR #394 (merge `901b6bd0`) adds explicit
+  Work Item, Stage, Progress, Runner, Last event, and Status columns with server-projected progress bars,
+  responsive row geometry, selected inspector bounds, and selected-view banner suppression. Guided Setup
+  resume keeps its direct Continue existing Work Item action visible. Existing routes, ids, membership,
+  ordering, action services, keyboard selection, and deep-link/reload semantics remain unchanged.
+  Verification: target Project Work browser matrix (`4 passed`), Inbox selection/routing smoke (`4 passed`),
+  frontend Inbox tests (`8 passed`), UI contracts (`58 passed`), docs/planning (`108 passed`), Ruff, mypy,
+  full CI, deterministic, adapter, packaged-browser, security, and build checks passed.
+- `W44-E1-S3-T35` (next) Align Implementation Review with the target full-width diff, claims,
   verification, and Review inspector composition while preserving repository-truth evidence,
   launch readiness, and the explicit Review gate. Verification: clean, incomplete, out-of-scope,
   missing-evidence, and failed-verification fixtures with first-viewport composition, one primary
   action, read-only stage documents, and no overflow.
-- `W44-E1-S3-T36` (planned) Align Review/QA Remediation with the target findings/source-evidence/
+- `W44-E1-S3-T36` (soon) Align Review/QA Remediation with the target findings/source-evidence/
   durable request composition while preserving selection semantics, downstream staleness, Runner
   readiness, conflict handling, and one remediation action. Verification: blocking/non-blocking
   findings, saved draft, conflict, rerun, and fresh-acceptance fixtures across desktop/mobile.
@@ -15851,11 +15855,21 @@ Wave 44 exit evidence:
 - browser checks show no console errors, horizontal overflow, duplicate primary actions, or focus
   loss;
   - a fresh rendered audit confirms remaining gaps are absent or explicitly blocked. T19 is now
-    evidence-complete but not an exit pass; T25-T32 are complete and T33 is the next dependency-ready
+    evidence-complete but not an exit pass; T25-T34 are complete and T35 is the next dependency-ready
   convergence task. Default task-centered routing remains
   provisional until T30-T39 are either completed or backed by explicit target-equivalence evidence.
 
 Wave 44 reconciliation:
+
+- `2026-08-26` PR #394 (merge `901b6bd0`) completed `W44-E1-S3-T34`. Project Work now presents a compact
+  server-owned grouped table with explicit Work Item, Stage, Progress, Runner, Last event, and Status
+  columns, truthful progress bars, bounded selected inspector, and responsive normal flow. The selected
+  view suppresses the duplicated entry banner while Guided Setup resume retains its direct Continue
+  existing Work Item action. Routes, ids, core-owned membership/order, deep links, keyboard selection,
+  action services, and existing compatibility behavior remain unchanged. Target Project Work browser
+  checks (`4 passed`), Inbox selection/routing (`4 passed`), frontend Inbox (`8 passed`), UI contracts,
+  docs/planning, Ruff, mypy, full CI, deterministic, adapter, packaged-browser, security, and build all
+  passed. `T35` is now `Next` and `T36` is its direct `Soon` successor.
 
 - `2026-08-26` PR #392 (merge `99ce2bca`) completed `W44-E1-S3-T33`. Decision and Mobile Decision
   now preserve the target first-viewport hierarchy for context, retained evidence, resolution,
@@ -15864,8 +15878,9 @@ Wave 44 reconciliation:
   Allow once as the sole primary while secondary decisions remain available. Routes, ids, mutation
   services, fail-closed recovery, and generated-document immutability remain unchanged. Focused
   browser/UI checks (`20 passed`), UI contracts (`53 passed`), docs/planning, Ruff, mypy, full CI,
-  deterministic, adapter, packaged-browser, security, and build checks passed. `T34` is now the next
-  dependency-ready task and `T35` is its direct Soon successor.
+  deterministic, adapter, packaged-browser, security, and build checks passed. `T34` was promoted as the
+  next dependency-ready task and is now complete; `T35` is now `Next` and `T36` is its direct `Soon`
+  successor.
 
 - `2026-08-25` PR #390 (merge `4fc916a7`) completed `W44-E1-S3-T32`. Task Workspace and Active Task
   now keep the selected attempt inspector, factual attempt controls, task groups, and live-output

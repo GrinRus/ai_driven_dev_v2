@@ -7,15 +7,15 @@ slice, and local task.
 
 ## Next
 
-- `W44-E1-S3-T34` — Align Project Work with the target compact grouped table and selected Work Item
-  inspector, removing duplicated setup/search chrome while preserving core-owned membership,
-  ordering, progress truth, selection deep links, and one contextual action.
-
-## Soon
-
 - `W44-E1-S3-T35` — Align Implementation Review with the target full-width diff, claims, verification,
   and Review inspector composition while preserving repository-truth evidence, launch readiness, and
   the explicit Review gate.
+
+## Soon
+
+- `W44-E1-S3-T36` — Align Review/QA Remediation with the target findings/source-evidence/durable request
+  composition while preserving selection semantics, downstream staleness, Runner readiness, conflict
+  handling, and one remediation action.
 
 ## Parking lot
 
@@ -41,6 +41,16 @@ slice, and local task.
   queue-restoration policy in `docs/backlog/roadmap.md` (`W8-E3-S1`).
 
 ## Current reconciliation
+
+- `2026-08-26` PR #394 (merge `901b6bd0`) completed `W44-E1-S3-T34`: Project Work now uses a compact
+  server-owned grouped table with explicit Work Item, Stage, Progress, Runner, Last event, and Status
+  columns, truthful progress bars, selected-context inspector bounds, responsive normal flow, and no
+  duplicated entry banner in the selected view. Existing membership/order, routes, ids, deep links,
+  keyboard selection, action services, and Guided Setup resume entry action remain intact. Focused target
+  browser checks (`4 passed`), Inbox selection/routing smoke (`4 passed`), frontend Inbox tests (`8`),
+  UI contracts (`58`), docs/planning (`108`), Ruff, mypy, full CI, deterministic, adapter,
+  packaged-browser, security, and build checks passed. `T35` is now `Next` and `T36` is its direct `Soon`
+  successor; human usability, Claude/cross-runtime, and Wave 36 acceptance remain parked.
 
 - `2026-08-26` PR #392 (merge `99ce2bca`) completed `W44-E1-S3-T33`: Decision and Mobile Decision now
   keep context, retained evidence, resolution choices, editor/destination state, and one real primary
