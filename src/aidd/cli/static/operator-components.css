@@ -6483,6 +6483,175 @@ button.intent-phase-step.active:hover {
   font-size: var(--type-label-size);
 }
 
+/* Flow Complete target composition: the handoff is the decision surface, so
+   status stays quiet, evidence remains central, and every next outcome lives
+   in the completion inspector instead of competing with the handoff summary. */
+.target-flow-complete .flow-complete-hero {
+  align-items: flex-start;
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+  display: flex;
+  gap: var(--space-4);
+  justify-content: space-between;
+  padding: var(--space-2) var(--space-1);
+}
+.target-flow-complete .flow-complete-hero-copy {
+  align-items: flex-start;
+  display: grid;
+  gap: var(--space-3);
+  grid-template-columns: auto minmax(0, 1fr);
+  min-width: 0;
+}
+.target-flow-status-icon {
+  align-items: center;
+  background: var(--color-state-success);
+  border-radius: 50%;
+  color: var(--surface);
+  display: inline-flex;
+  flex: 0 0 auto;
+  font-size: 18px;
+  font-weight: var(--type-weight-strong);
+  height: 28px;
+  justify-content: center;
+  margin-top: 2px;
+  width: 28px;
+}
+.target-flow-complete .flow-complete-hero-copy h2 {
+  font-size: var(--type-title-size);
+  line-height: 1.2;
+  margin: 0 0 var(--space-1);
+  text-transform: none;
+}
+.target-flow-complete .flow-complete-hero-copy p:last-child {
+  color: var(--color-text-secondary);
+  font-size: var(--type-body-size);
+  line-height: var(--type-body-line);
+  margin: 0;
+  max-width: 72ch;
+}
+.target-flow-complete-layout {
+  border: 0;
+  gap: var(--space-4);
+  grid-template-columns: minmax(0, 1fr) minmax(280px, 340px);
+}
+.target-flow-complete .flow-complete-main {
+  padding: var(--space-2) 0 0;
+}
+.target-flow-complete .flow-lineage-panel {
+  border: 0;
+  padding: var(--space-2) 0 0;
+}
+.target-completion-inspector {
+  margin: 0;
+  padding: var(--space-5);
+}
+.target-completion-inspector .target-panel-heading {
+  align-items: center;
+}
+.target-completion-checklist li > span.good,
+.target-completion-checklist li > span.bad {
+  color: var(--surface);
+}
+.target-completion-checklist li > span.good {
+  background: var(--color-state-success);
+}
+.target-completion-checklist li > span.bad {
+  background: var(--color-state-danger);
+}
+.target-completion-run-ids ul {
+  display: grid;
+  gap: var(--space-1);
+  list-style: disc;
+  margin: 0;
+  padding-left: var(--space-5);
+}
+.target-completion-run-ids li {
+  min-width: 0;
+}
+.target-completion-retained-evidence {
+  border-top: 1px solid var(--line);
+  display: grid;
+  gap: var(--space-1);
+  margin-top: var(--space-4);
+  padding-top: var(--space-4);
+}
+.target-completion-retained-evidence p {
+  color: var(--color-text-secondary);
+  font-size: var(--type-label-size);
+  line-height: var(--type-body-line);
+  margin: 0;
+}
+.target-completion-primary {
+  margin-top: var(--space-5);
+}
+.target-completion-recommendation {
+  display: grid;
+  gap: var(--space-2);
+  line-height: var(--type-body-line);
+  margin: 0 0 var(--space-3);
+}
+.target-completion-recommendation .small-badge {
+  justify-self: start;
+}
+.target-completion-primary [data-primary-action] {
+  min-height: var(--control-height-touch);
+  width: 100%;
+}
+.studio-flow-complete-other[data-target-completion-other-actions] {
+  border-top: 1px solid var(--line);
+  margin-top: var(--space-5);
+  padding-top: var(--space-4);
+}
+.studio-flow-complete-other[data-target-completion-other-actions] > summary {
+  color: var(--color-text-primary);
+  cursor: pointer;
+  font-weight: var(--type-weight-strong);
+  list-style: none;
+}
+.studio-flow-complete-other[data-target-completion-other-actions] > summary::-webkit-details-marker {
+  display: none;
+}
+.target-completion-action-list {
+  display: grid;
+  gap: var(--space-2);
+  grid-template-columns: minmax(0, 1fr);
+  margin-top: var(--space-3);
+}
+.target-completion-action-list .next-flow-action-card {
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+  display: grid;
+  gap: 0;
+  padding: 0;
+}
+.target-completion-action-list .next-flow-action-card > strong,
+.target-completion-action-list .next-flow-action-card > p {
+  display: none;
+}
+.target-completion-action-list .next-flow-action-card button {
+  min-height: var(--control-height-touch);
+  text-align: left;
+  width: 100%;
+}
+.target-completion-immutability {
+  border-top: 1px solid var(--line);
+  margin: var(--space-4) 0 0;
+  padding-top: var(--space-3);
+}
+.target-flow-complete .flow-lineage-panel > h3 {
+  border-top: 1px solid var(--line);
+  font-size: var(--type-label-size);
+  margin: var(--space-4) 0 0;
+  padding-top: var(--space-4);
+  text-transform: uppercase;
+}
+.target-flow-complete .flow-lineage-panel dl {
+  gap: var(--space-3);
+  margin: var(--space-4) 0;
+}
+
 /* Target decision and validation workbench composition.  These surfaces keep
    the evidence canvas, decision context, and one consequential action visible
    without changing the existing mutation selectors. */

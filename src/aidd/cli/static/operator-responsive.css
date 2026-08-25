@@ -36,6 +36,9 @@
   .target-history-inspector {
     grid-column: 1 / -1;
   }
+  .target-flow-complete-layout {
+    grid-template-columns: minmax(0, 1fr);
+  }
 }
 
 @media (max-width: 1500px) and (min-width: 900px) {
@@ -557,6 +560,11 @@
   .studio-flow-complete-other > summary {
     align-items: center;
     display: flex;
+  }
+  .target-flow-complete .artifact-row,
+  .target-flow-complete .target-evidence-row button,
+  .target-flow-complete .target-completion-action-list button {
+    min-height: var(--control-height-touch);
   }
   :root {
     --control-height: var(--control-height-touch);
