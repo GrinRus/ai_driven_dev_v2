@@ -1808,7 +1808,7 @@ button.decision-resolution-option[aria-checked="true"]:focus-visible {
 /* The question main surface is the left column of the outer workbench. Its
  * previous nested two-column grid left the answer card narrow and pushed the
  * impact inspector into an accidental second row. */
-@media (min-width: 960px) {
+@media (min-width: 900px) {
   .interview-loop-screen[data-human-decision-surface="question"] {
     grid-template-columns: minmax(0, 1fr) minmax(280px, 0.42fr);
   }
@@ -1830,7 +1830,7 @@ button.decision-resolution-option[aria-checked="true"]:focus-visible {
   }
 }
 
-@media (min-width: 761px) and (max-width: 959px) {
+@media (max-width: 900px) and (min-width: 761px) {
   .interview-loop-screen[data-human-decision-surface="question"] {
     grid-template-columns: minmax(0, 1fr);
   }
@@ -1894,7 +1894,7 @@ button.decision-resolution-option[aria-checked="true"]:focus-visible {
 }
 
 /* Keep the real question/approval controls reachable on every supported
- * desktop width, including the 1536px target reference. */
+ * desktop width, including the wide target reference. */
 @media (min-width: 761px) {
   [data-human-decision-surface="question"] .question-list > .question-card:first-child [data-primary-action],
   [data-human-decision-surface="approval"] .approval-card.pending [data-primary-action] {
