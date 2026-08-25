@@ -684,8 +684,11 @@ function applyOperatorModeBodyClass() {
   );
   const terminalHandoffActive = Boolean(state.dashboard?.terminal_handoff);
   const postStageNextActionActive = postStageNextActionIsPrimary();
+  const markdownWorkspaceActive = state.activeTab === "evidence"
+    && state.evidenceDetail === "artifacts";
   document.body.classList.toggle("recovery-mode", recoveryActive);
   document.body.classList.toggle("evidence-log-mode", evidenceLogActive);
+  document.body.classList.toggle("markdown-workspace-mode", markdownWorkspaceActive);
   document.body.classList.toggle("decision-detail-mode", decisionDetailActive);
   document.body.classList.toggle("inbox-detail-mode", inboxDetailActive);
   document.body.classList.toggle("work-overview-mode", workOverviewActive);

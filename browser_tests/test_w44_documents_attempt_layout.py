@@ -79,6 +79,61 @@ def test_documents_keep_navigator_reader_and_context_visible(
         browser_page.diagnostics.assert_clean()
 
 
+@pytest.mark.parametrize("viewport", ((1280, 900), (1440, 900), (390, 844)))
+def test_markdown_workspace_uses_target_context_inspector_and_compact_reader(
+    tmp_path: Path,
+    viewport: tuple[int, int],
+) -> None:
+    fixture = build_browser_state_fixture(
+        tmp_path / f"documents-target-{viewport[0]}",
+        "remediation-stale",
+    )
+    with sync_playwright() as playwright, operator_browser_harness(
+        fixture.project_root,
+        playwright,
+        work_item=fixture.work_item,
+    ) as harness, harness.open_page(viewport) as browser_page:
+        page = browser_page.page
+        page.goto(
+            f"{harness.url}?ui=studio&mode=studio&work_item={fixture.work_item}"
+            f"&run_id={fixture.run_id}&stage=qa&work_tab=documents&artifact=qa_report",
+            wait_until="networkidle",
+        )
+        viewer = page.locator("#artifactViewer")
+        viewer.locator('[data-document-canvas-mode="preview"]').wait_for(state="visible")
+
+        context = viewer.locator("[data-document-context-inspector]")
+        context.wait_for(state="visible")
+        assert context.locator("[data-document-context-contract]").is_visible()
+        assert context.locator("[data-document-context-provenance]").is_visible()
+        assert context.locator("[data-document-context-source]").is_visible()
+        assert context.locator("[data-document-context-actions]").is_visible()
+        assert context.locator('[data-aidd-primary-action]:visible').count() == 1
+        assert (
+            context.locator('[data-document-context-action="request-change"]').inner_text()
+            == "Request change"
+        )
+        assert context.locator('[data-document-context-action="return-to-task"]').is_visible()
+        assert viewer.locator(".document-context-readonly").is_visible()
+        assert viewer.locator("[data-reader-heading-map]").is_visible()
+        assert viewer.locator("[data-reader-freshness]").count() == 1
+        assert viewer.locator(".reader-brief-compact-main:visible").count() == 0
+        assert page.locator("body.markdown-workspace-mode").count() == 1
+        assert (
+            page.locator(".stage-document-workbench .artifact-category-note:visible").count()
+            == 0
+        )
+
+        if viewport[0] > 1120:
+            body_box = viewer.locator(".reader-body-content").bounding_box()
+            brief_box = viewer.locator(".reader-brief-compact").bounding_box()
+            assert body_box is not None and body_box["y"] < viewport[1]
+            assert brief_box is not None and brief_box["height"] <= 40
+
+        assert page.evaluate("document.documentElement.scrollWidth") <= viewport[0]
+        browser_page.diagnostics.assert_clean()
+
+
 @pytest.mark.parametrize("viewport", ((1280, 900), (1440, 900)))
 def test_task_attempt_detail_and_live_tray_share_desktop_workbench(
     tmp_path: Path,

@@ -217,8 +217,14 @@ function renderDocumentNavigator(workbench) {
   }).join("");
   return `
     <section class="document-navigator" aria-label="Document navigator">
-      <div class="surface-title"><span>Document navigator</span><span class="small-badge">${escapeHtml(references.length)} retained</span></div>
-      <p class="artifact-category-note">Read-only documents are grouped by role. Selection opens the bounded reader; generated Markdown has no edit action here.</p>
+      <div class="document-navigator-header">
+        <div>
+          <p class="reader-eyebrow">Documents</p>
+          <strong>Document navigator</strong>
+        </div>
+        <span class="small-badge">${escapeHtml(references.length)} retained</span>
+      </div>
+      <p class="artifact-category-note document-navigator-intro">Read-only documents are grouped by role. Selection opens the bounded reader; generated Markdown has no edit action here.</p>
       ${groups}
     </section>
   `;
@@ -467,11 +473,10 @@ function renderDocumentReadingBriefVariant(workbench, {compact = false} = {}) {
   });
   if (compact) {
     return `
-      <section class="reader-brief reader-brief-compact" aria-label="Document reading brief">
+      <section class="reader-brief reader-brief-compact" aria-label="Reading brief: document metadata">
         <div class="reader-brief-compact-main">
-          <p class="reader-eyebrow">Reading brief · read-only document</p>
-          <h2>${escapeHtml(profile.title)}</h2>
-          <p>${escapeHtml(profile.purpose)}</p>
+          <p class="reader-eyebrow">Read-only document</p>
+          <span class="reader-brief-compact-purpose">${escapeHtml(profile.purpose)}</span>
         </div>
         <div class="reader-brief-compact-facts" aria-label="Document provenance and freshness">
           <span class="small-badge ${escapeHtml(badge.tone)}">${escapeHtml(badge.label)}</span>
@@ -1150,12 +1155,90 @@ function updateStudioEvidenceInspector(workbench) {
 }
 
 function renderWorkbenchEvidenceInspector(workbench) {
-  const inspector = renderStudioEvidenceInspector(workbench);
+  const inspector = renderDocumentContextInspector(workbench);
   if (!inspector) return "";
   return `
       <aside class="workbench-sidebar hierarchy-supporting evidence-inspector">
         ${inspector}
       </aside>
+  `;
+}
+
+function renderDocumentContextInspector(workbench = {}) {
+  if (!workbench.document) return "";
+  const documentView = workbench.document;
+  const profile = documentReadingProfile(workbench);
+  const freshness = readerFreshness(workbench);
+  const role = documentNavigatorRole({
+    key: documentView.key || workbench.selected_key,
+    kind: "document",
+    path: documentView.path || ""
+  });
+  const stage = workbench.stage || state.activeStage;
+  const stageLabel = typeof stageTitle === "function" ? stageTitle(stage) : stage;
+  const versions = Array.isArray(workbench.versions) ? workbench.versions : [];
+  const currentVersion = versions.find(
+    (version) => Number(version.attempt_number || 0) === Number(workbench.attempt_number || 0)
+  ) || versions[0] || {};
+  const finding = (workbench.validation_results || []).find((item) =>
+    readerValidationPresentation(item).needsAttention
+  ) || (workbench.validation_results || [])[0];
+  const sourceOfTruth = documentNavigatorSourceOfTruth({
+    key: documentView.key || workbench.selected_key,
+    kind: "document",
+    path: documentView.path || ""
+  });
+  const primaryAction = role === "questions"
+    ? `<button class="primary" data-tab-shortcut="questions" data-aidd-primary-action data-document-context-action="answer" type="button">Answer question</button>`
+    : `<button class="primary" data-open-request-tab data-aidd-primary-action data-document-context-action="request-change" type="button">Request change</button>`;
+  const evidenceAction = role === "questions"
+    ? "Answer the retained question before changing the stage context."
+    : "Use Request change to author a durable intervention; generated Markdown stays read-only.";
+  const anchoredNote = finding ? `
+    <section class="document-context-section document-context-anchored-note">
+      <div class="document-context-section-title"><strong>Anchored note</strong>${renderFindingAnchor(finding)}</div>
+      <p>${escapeHtml(finding.detail || finding.message || "Recorded evidence requires attention before relying on this document.")}</p>
+    </section>
+  ` : "";
+  return `
+    <div class="document-context-inspector" data-document-context-inspector>
+      <div class="document-context-heading">
+        <div>
+          <p class="reader-eyebrow">Document context</p>
+          <h3>${escapeHtml(profile.title)}</h3>
+        </div>
+        <span class="small-badge ${escapeHtml(freshness.tone)}" data-document-context-freshness>${escapeHtml(freshness.label)}</span>
+      </div>
+      <section class="document-context-section" data-document-context-contract>
+        <h4>Contract</h4>
+        <dl class="document-context-facts">
+          <div><dt>Stage</dt><dd>${escapeHtml(stageLabel)}</dd></div>
+          <div><dt>Role</dt><dd>${escapeHtml(documentNavigatorRoleLabel(role))}</dd></div>
+          <div><dt>Purpose</dt><dd>${escapeHtml(profile.purpose)}</dd></div>
+        </dl>
+      </section>
+      <section class="document-context-section" data-document-context-provenance>
+        <h4>Provenance</h4>
+        <dl class="document-context-facts">
+          <div><dt>Generated by</dt><dd>${escapeHtml(currentVersion.source || "retained workflow record")}</dd></div>
+          <div><dt>Generated at</dt><dd>${escapeHtml(currentVersion.updated_at_utc || "timestamp unavailable")}</dd></div>
+          <div><dt>Attempt</dt><dd>${escapeHtml(workbench.attempt_number || "unavailable")}</dd></div>
+        </dl>
+      </section>
+      <section class="document-context-section" data-document-context-source>
+        <h4>Source of truth</h4>
+        <p>${escapeHtml(sourceOfTruth)}</p>
+      </section>
+      ${anchoredNote}
+      <div class="document-context-actions" data-document-context-actions>
+        <p>${escapeHtml(evidenceAction)}</p>
+        ${primaryAction}
+        <button class="secondary" data-work-item-tab="tasks" data-document-context-action="return-to-task" type="button">Return to task</button>
+        ${documentView.path ? `<div class="reader-path-actions"><button data-open-artifact="${escapeHtml(documentView.path)}" class="link-button" type="button">Open file</button><button data-copy-artifact-path="${escapeHtml(documentView.path)}" class="link-button" type="button">Copy path</button></div>` : ""}
+      </div>
+      <div class="document-context-readonly"><span aria-hidden="true">▣</span> Read-only</div>
+      <div class="document-context-evidence">${renderStudioEvidenceInspector(workbench)}</div>
+    </div>
   `;
 }
 
