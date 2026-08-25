@@ -600,9 +600,39 @@ body.work-overview-mode .intent-decision-surface .next-action-button-stack .next
 
   body:not(.setup-active) .operator-workspace
     .active-studio[data-studio-surface="task-workspace"] > [data-task-live-output] {
+    background: var(--surface);
+    bottom: 0;
+    box-shadow: var(--elevation-overlay);
     grid-column: 1 / -1;
-    grid-row: 4;
+    left: calc(var(--operator-rail-width) + var(--intent-shell-gutter));
     min-width: 0;
+    position: fixed;
+    right: var(--intent-shell-gutter);
+    z-index: 50;
+  }
+
+  body:not(.setup-active) .operator-workspace
+    .active-studio[data-studio-surface="task-workspace"] {
+    padding-bottom: calc(var(--space-8) + var(--control-height-touch) + var(--space-4));
+  }
+
+  /* The bounded task list and inspector are the two intentional workbench
+     scroll regions while the live-output tray is docked to the viewport.  Do
+     not nest them inside the shell's page scroller: that traps keyboard and
+     trackpad users between three competing vertical scroll owners. */
+  body:not(.setup-active) .operator-workspace:has([data-task-live-output]) {
+    overflow-y: visible;
+  }
+
+  body:not(.setup-active) .operator-workspace
+    .active-studio[data-studio-surface="task-workspace"]:has(> [data-task-live-output]) > [data-task-workspace],
+  body:not(.setup-active) .operator-workspace
+    .active-studio[data-studio-surface="task-workspace"]:has(> [data-task-live-output]) > [data-task-detail] {
+    box-sizing: border-box;
+    height: calc(100vh - 520px);
+    max-height: calc(100vh - 520px);
+    min-height: 0;
+    overflow-y: auto;
   }
 
   body:not(.setup-active) .operator-workspace .task-workspace-detail {
@@ -616,7 +646,7 @@ body.work-overview-mode .intent-decision-surface .next-action-button-stack .next
   }
 
   body:not(.setup-active) .operator-workspace .task-attempt-tray .task-attempt-facts {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 
   body:not(.setup-active) .operator-workspace .task-attempt-tray .task-attempt-actions {
