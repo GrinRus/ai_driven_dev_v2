@@ -240,7 +240,7 @@ def test_history_target_views_keep_selected_attempt_and_read_only_actions(
         browser_page.diagnostics.assert_clean()
 
 
-@pytest.mark.parametrize("viewport", ((1280, 900), (390, 844)))
+@pytest.mark.parametrize("viewport", ((1280, 900), (768, 1024), (390, 844)))
 def test_flow_complete_uses_handoff_evidence_and_completion_inspector(
     tmp_path: Path, viewport: tuple[int, int]
 ) -> None:
@@ -268,6 +268,13 @@ def test_flow_complete_uses_handoff_evidence_and_completion_inspector(
         assert inspector.locator("[data-primary-action]").count() == 1
         assert flow.locator("[data-primary-action]:visible").count() == 1
         assert inspector.locator(".target-completion-action-list").is_visible()
+        if viewport == (768, 1024):
+            primary = inspector.locator("[data-primary-action]")
+            primary.focus()
+            assert page.evaluate(
+                "() => document.activeElement === document.querySelector("
+                "'[data-next-flow-action][data-primary-action]')"
+            )
         if viewport[0] > 900:
             assert handoff.bounding_box()["x"] < inspector.bounding_box()["x"]
         assert page.locator("#runtimeSettings").is_hidden()
