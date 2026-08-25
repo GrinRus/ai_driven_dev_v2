@@ -15680,16 +15680,19 @@ Local tasks:
   - Verification: provider-free matrix (`9 passed`), target legacy compositions (`5 passed`), fresh
     desktop/mobile screenshots, target-asset comparison, responsive/accessibility review, and clean
     console/request/overflow diagnostics in the authoritative browser lanes.
-- `W44-E1-S3-T20` (next) Recompose the selected Project Work view into a non-overlapping target
-  table/list and right-side Work Item inspector. Preserve core-owned group membership, ordering,
-  selection deep links, one primary action, keyboard navigation, and responsive mobile fallback.
-  - Verification: selected Inbox fixture at `1280x900`, `1440x900`, `768x1024`, and mobile, with
-    geometry/accessibility, deep-link/reload, action-count, and diagnostics assertions.
-- `W44-E1-S3-T21` (soon) Recompose Work Item Overview/Launch so the contextual Runner readiness
+- `W44-E1-S3-T20` (done) Recompose the selected Project Work view into a non-overlapping target
+  table/list and right-side Work Item inspector. PR #366 (merge `82fb1d23`) constrains the
+  server-owned list grid, compacts the table rows, and keeps the inspector in a separate desktop
+  column or normal mobile flow without changing grouping, ordering, selection routes, or action
+  services. Verification: selected Inbox fixture at `1280x900`, `1440x900`, `768x1024`, and
+  mobile, geometry/accessibility, deep-link/reload, action-count, diagnostics, legacy/action
+  browser checks (`14 passed`), frontend (`136 passed`), UI/docs/planning (`103 passed`), Ruff,
+  mypy, and full CI including packaged UI browser.
+- `W44-E1-S3-T21` (next) Recompose Work Item Overview/Launch so the contextual Runner readiness
   inspector and one launch action occupy the target hierarchy while the eight-stage strip remains
   readable at compact desktop widths. Preserve runtime selection, readiness revalidation, route
   state, and no-Runner behavior on create/read-only surfaces.
-- `W44-E1-S3-T22` (planned) Recompose Tasks and Active Task into the target table/right-inspector/
+- `W44-E1-S3-T22` (soon) Recompose Tasks and Active Task into the target table/right-inspector/
   live-output hierarchy. Preserve the authoritative task ledger, selected-task actions, factual
   attempt fields, reconnect/cancel states, and one primary action without duplicate shells.
 - `W44-E1-S3-T23` (planned) Recompose Decision, Validation Repair, and Mobile Decision recovery
@@ -15723,11 +15726,19 @@ Wave 44 exit evidence:
 
 Wave 44 reconciliation:
 
+- `2026-08-25` PR #366 (merge `82fb1d23`) completed `W44-E1-S3-T20` from the T19-audited revision.
+  The selected Project Work list now stays inside its server-owned grid column, the right-side
+  Work Item inspector no longer overlaps rows, and mobile uses normal stacked flow. Four-viewport
+  geometry/accessibility/deep-link coverage and full CI are green. `W44-E1-S3-T21` is now the only
+  dependency-ready task; T22 is the direct Soon successor and T23-T28 remain planned. Wave 44 exit
+  evidence and default task-centered routing remain open until the remaining target compositions
+  are audited.
+
 - `2026-08-25` completed `W44-E1-S3-T19` on revision `35ff0ace`. The fresh audit is retained in
   `docs/e2e/w44-e1-s3-t19-rendered-exit-audit.md`. The five-viewport provider-free matrix and
   target legacy-composition checks are green with clean diagnostics, but screenshot comparison
   confirmed remaining target-shell, inspector, recovery, history, completion, and editor-density
-  gaps. `W44-E1-S3-T20` is now the only dependency-ready task; T21-T28 are planned successors.
+  gaps. `W44-E1-S3-T20` was the only dependency-ready task; T21-T28 were planned successors.
 
 - `2026-08-24` PR #362 (merge `4e36bc6f`) completed `W44-E1-S3-T18`. The compact desktop/tablet
   stage strip now keeps all eight labels, including `Implement`, fully readable at `1280x900` while
