@@ -7,14 +7,14 @@ slice, and local task.
 
 ## Next
 
-- `W44-E1-S3-T22` — Recompose Tasks and Active Task into the target table/right-inspector/live-output
-  hierarchy while preserving authoritative task actions and factual attempt state.
-
-## Soon
-
 - `W44-E1-S3-T23` — Recompose Decision, Validation Repair, and Mobile Decision recovery content so
   rationale, evidence, resolution/consequence, destination, and the single contextual action retain
   the target hierarchy across desktop and mobile states.
+
+## Soon
+
+- `W44-E1-S3-T24` — Align Runs and Attempts with the target chronology, selected-attempt inspector,
+  lineage, retained evidence, and read-only action hierarchy.
 
 ## Parking lot
 
@@ -40,6 +40,15 @@ slice, and local task.
   queue-restoration policy in `docs/backlog/roadmap.md` (`W8-E3-S1`).
 
 ## Current reconciliation
+
+- `2026-08-25` PR #370 (merge `6e7b5c88`) completed `W44-E1-S3-T22`: Tasks now keep the authoritative
+  ledger in a compact grouped table, the selected task/active attempt in a right inspector, and raw
+  output in a dedicated lower tray. Factual elapsed/output-age/milestone/cursor data, reconnect and
+  cancellation states, one primary action, routes, ids, and mutation services remain unchanged.
+  Desktop/mobile target geometry, accessibility/diagnostics, focused browser (`34`), frontend (`136`),
+  UI contracts, docs/planning, Ruff, mypy, deterministic, adapter, security, packaged UI browser, and
+  build CI passed. `W44-E1-S3-T23` is now Next and `T24` is Soon; Wave 44 exit, human usability,
+  Claude/cross-runtime, and Wave 36 acceptance remain open or parked as previously scoped.
 
 - `2026-08-25` PR #368 (merge `2d450192`) completed `W44-E1-S3-T21`: Work Item Overview/Launch now
   presents the truthful request brief and launch scope beside one contextual Runner readiness

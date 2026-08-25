@@ -15696,13 +15696,18 @@ Local tasks:
   route state, and no-Runner behavior on create/read-only surfaces. Verification: four-viewport
   launch composition, stage/action/legacy browser suites, frontend (`136`), UI asset contracts,
   docs/planning, Ruff, mypy, deterministic, adapter, build, security, and packaged UI browser CI.
-- `W44-E1-S3-T22` (next) Recompose Tasks and Active Task into the target table/right-inspector/
-  live-output hierarchy. Preserve the authoritative task ledger, selected-task actions, factual
-  attempt fields, reconnect/cancel states, and one primary action without duplicate shells.
-- `W44-E1-S3-T23` (soon) Recompose Decision, Validation Repair, and Mobile Decision recovery
+- `W44-E1-S3-T22` (done) Recompose Tasks and Active Task into the target table/right-inspector/
+  live-output hierarchy. PR #370 (merge `6e7b5c88`) moves the selected attempt into the right
+  inspector, separates raw output into a full-width lower tray, keeps task groups/actions and
+  factual attempt/reconnect/cancel state core-owned, and tightens table/inspector density without
+  changing routes, ids, or mutation services. Verification: ready/running/waiting/cancelling/
+  failed/completed task fixtures across desktop/mobile, target task/active-attempt geometry,
+  accessibility and diagnostics (`34 passed`), frontend (`136 passed`), UI asset contracts,
+  docs/planning, Ruff, mypy, deterministic, adapter, packaged UI browser, security, and build CI.
+- `W44-E1-S3-T23` (next) Recompose Decision, Validation Repair, and Mobile Decision recovery
   content so rationale, evidence, resolution/consequence, destination, and the single contextual
   action retain the target hierarchy across desktop and mobile states.
-- `W44-E1-S3-T24` (planned) Align Runs and Attempts with the target chronology, selected-attempt
+- `W44-E1-S3-T24` (soon) Align Runs and Attempts with the target chronology, selected-attempt
   inspector, lineage, retained evidence, and read-only action hierarchy.
 - `W44-E1-S3-T25` (planned) Align Flow Complete with the target immutable handoff, evidence,
   completion inspector, and recommended-next-outcome composition without changing lineage semantics.
