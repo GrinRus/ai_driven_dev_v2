@@ -93,7 +93,7 @@
   }
 }
 
-@media (min-width: 901px) and (max-height: 920px) {
+@media (min-width: 900px) and (max-height: 900px) {
   .target-create-editor,
   .target-create-preview {
     padding: var(--space-5);

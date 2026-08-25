@@ -5958,7 +5958,7 @@ button.intent-phase-step.active:hover {
   margin-top: var(--space-3);
 }
 .target-create-form #onboardingContext {
-  min-height: 132px;
+  min-height: 128px;
 }
 .target-create-advanced-toggle {
   margin-top: var(--space-1);
