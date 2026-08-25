@@ -201,6 +201,18 @@ function renderImplementationSummary(implementation) {
         <div class="metric"><span>Skipped checks</span><strong>${escapeHtml((implementation?.skipped_checks || []).length)}</strong></div>
         <div class="metric"><span>Residual risks</span><strong>${escapeHtml((implementation?.residual_risks || []).length)}</strong></div>
       </div>
+      <div class="target-implementation-summary-claims" data-implementation-summary-claims>
+        <div>
+          <span class="eyebrow">Claims (recorded)</span>
+          <strong>${escapeHtml(implementation?.selected_task_id || "No task claim recorded")}</strong>
+          <span>${escapeHtml((implementation?.touched_files || []).join(", ") || "No touched files recorded.")}</span>
+        </div>
+        <div>
+          <span class="eyebrow">Verified (actual)</span>
+          <strong>${escapeHtml((implementation?.verification_commands || []).length ? `${implementation.verification_commands.length} command(s)` : "Evidence missing")}</strong>
+          <span>${escapeHtml((implementation?.verification_commands || ["No executable verification command recorded."]).slice(0, 2).join(" · "))}</span>
+        </div>
+      </div>
       <div class="compact-list" data-implementation-verification>
         <strong>Actual verification commands/results</strong>
         ${renderImplementationVerificationItems(implementation)}
@@ -307,8 +319,10 @@ async function renderImplementReview() {
     const verificationReady = implementationVerificationReady(evidence);
     content.innerHTML = `
       <div class="implement-review-screen target-implementation-review" data-target-implementation-review>
-        ${renderImplementationSummary(evidence)}
-        ${renderImplementationTaskGate(taskView)}
+        <div class="target-implementation-overview">
+          ${renderImplementationSummary(evidence)}
+          ${renderImplementationTaskGate(taskView)}
+        </div>
         <div class="target-implementation-workspace">
           ${renderImplementationRepositoryGate({
             diffView, evidence, taskView, files, visible, selected, unchanged, verificationReady

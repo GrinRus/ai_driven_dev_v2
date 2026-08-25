@@ -6968,9 +6968,19 @@ button.target-editor-tab.active:hover {
   gap: var(--space-4);
   min-width: 0;
 }
+.target-implementation-overview {
+  align-items: stretch;
+  display: grid;
+  gap: var(--space-4);
+  grid-template-columns: minmax(0, 1.65fr) minmax(280px, 0.85fr);
+  min-width: 0;
+}
+.target-implementation-overview > * {
+  min-width: 0;
+}
 .target-implementation-summary {
   margin: 0;
-  padding: var(--space-6);
+  padding: var(--space-5);
 }
 .target-implementation-summary-heading,
 .target-remediation-heading {
@@ -6998,6 +7008,28 @@ button.target-editor-tab.active:hover {
   margin-top: var(--space-5);
   padding-top: var(--space-4);
 }
+.target-implementation-summary-claims {
+  border-top: 1px solid var(--line);
+  display: grid;
+  gap: var(--space-4);
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  margin-top: var(--space-4);
+  padding-top: var(--space-4);
+}
+.target-implementation-summary-claims > div {
+  display: grid;
+  gap: var(--space-1);
+  min-width: 0;
+}
+.target-implementation-summary-claims strong,
+.target-implementation-summary-claims span:last-child {
+  overflow-wrap: anywhere;
+}
+.target-implementation-summary-claims span:last-child {
+  color: var(--muted);
+  font-size: var(--type-caption-size);
+  line-height: 1.4;
+}
 .target-implementation-summary [data-implementation-verification],
 .target-implementation-summary [data-implementation-task-claims],
 .target-implementation-summary [data-implementation-risks] {
@@ -7016,7 +7048,7 @@ button.target-editor-tab.active:hover {
 }
 .target-implementation-ledger {
   margin: 0;
-  padding: var(--space-4) var(--space-6);
+  padding: var(--space-5);
 }
 .target-implementation-ledger-heading {
   align-items: center;
