@@ -791,6 +791,37 @@ body.work-overview-mode .intent-decision-surface .next-action-button-stack .next
   }
 }
 
+/* The smallest supported phone cannot fit the launch inspector and its
+   action in one normal-flow column. Keep the same launch button and
+   readiness copy, but pin that one consequential action to a touch-safe
+   bottom dock so it remains visible and focusable without changing the
+   fail-closed mutation path. The duplicated empty-state helper is already
+   represented by the literal Runner reason above it, so it is omitted only
+   at this narrow width to avoid covering the dock. */
+@media (max-width: 360px) {
+  body.work-overview-mode .intent-decision-surface {
+    padding-bottom: calc(var(--space-8) + var(--control-height-touch));
+  }
+
+  body.work-overview-mode .intent-decision-surface .runner-inspector-empty {
+    display: none;
+  }
+
+  body.work-overview-mode .intent-decision-surface .next-action-copy {
+    margin-top: calc(var(--control-height-touch) + var(--space-8));
+  }
+
+  body.work-overview-mode .intent-decision-surface #globalNextActionButton {
+    bottom: max(var(--space-8), env(safe-area-inset-bottom));
+    box-shadow: var(--elevation-overlay);
+    left: var(--space-8);
+    position: fixed;
+    right: var(--space-8);
+    width: auto;
+    z-index: 60;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .operator-workspace *,
   .operator-workspace *::before,
