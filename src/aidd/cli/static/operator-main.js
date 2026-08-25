@@ -409,6 +409,22 @@ document.addEventListener("click", async (event) => {
       await renderCockpit();
       return;
     }
+    const historyView = event.target.closest("[data-history-view]")?.dataset.historyView;
+    if (historyView) {
+      state.historyView = historyView;
+      await renderCockpit();
+      return;
+    }
+    if (event.target.closest("[data-history-open-attempt]")) {
+      document.querySelector("[data-history-selection]")?.scrollIntoView({block: "nearest"});
+      document.querySelector("[data-history-selection] button")?.focus();
+      return;
+    }
+    if (event.target.closest("[data-history-compare]")) {
+      document.querySelector("[data-studio-run-comparison]")?.scrollIntoView({block: "nearest"});
+      document.querySelector("[data-studio-run-comparison] button")?.focus();
+      return;
+    }
     const historyRun = event.target.closest("[data-history-run]")?.dataset.historyRun;
     if (historyRun) {
       state.activeRunId = historyRun;

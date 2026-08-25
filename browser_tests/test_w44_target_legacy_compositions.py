@@ -62,6 +62,48 @@ def test_history_uses_target_attempt_inspector_without_changing_lineage(
 
 
 @pytest.mark.parametrize("viewport", ((1280, 900), (390, 844)))
+def test_history_target_views_keep_selected_attempt_and_read_only_actions(
+    tmp_path: Path, viewport: tuple[int, int]
+) -> None:
+    fixture = build_browser_state_fixture(tmp_path / f"history-views-{viewport[0]}", "history")
+    assert fixture.work_item and fixture.run_id
+    with sync_playwright() as playwright, operator_browser_harness(
+        fixture.project_root, playwright, work_item=fixture.work_item
+    ) as harness, harness.open_page(viewport) as browser_page:
+        page = browser_page.page
+        page.goto(
+            f"{harness.url}?mode=history&work_item={fixture.work_item}"
+            f"&run_id={fixture.run_id}&stage=implement",
+            wait_until="domcontentloaded",
+        )
+        wait_for_history_surface(page, work_item=fixture.work_item, run_id=fixture.run_id)
+        target = page.locator("[data-target-history-surface]")
+        assert target.locator(".history-attempt-tabs").is_visible()
+        assert (
+            target.locator("[data-history-view='timeline']").get_attribute("aria-selected")
+            == "true"
+        )
+        assert target.locator("[data-history-open-attempt]").count() == 1
+        assert target.locator("[data-history-compare]").count() == 1
+
+        target.locator("[data-history-view='raw-log']").click()
+        target.locator("[data-history-raw-log]").wait_for(state="visible")
+        target.locator("[data-history-view='artifacts']").click()
+        target.locator("[data-history-artifacts]").wait_for(state="visible")
+        target.locator("[data-history-view='timeline']").click()
+        target.locator("[data-history-timeline]").wait_for(state="visible")
+
+        target.locator("[data-history-open-attempt]").click()
+        assert target.locator("[data-history-selection]").is_visible()
+        target.locator("[data-history-compare]").click()
+        assert target.locator("[data-studio-run-comparison]").is_visible()
+        assert page.evaluate("document.documentElement.scrollWidth") <= viewport[0]
+        assert_accessible_render(page, target_size=44 if viewport[0] <= 760 else 32)
+        assert_rendered_geometry(page)
+        browser_page.diagnostics.assert_clean()
+
+
+@pytest.mark.parametrize("viewport", ((1280, 900), (390, 844)))
 def test_flow_complete_uses_handoff_evidence_and_completion_inspector(
     tmp_path: Path, viewport: tuple[int, int]
 ) -> None:

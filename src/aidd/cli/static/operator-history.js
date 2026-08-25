@@ -37,6 +37,11 @@ function historyRunQuery() {
   return params.toString();
 }
 
+function selectedHistoryRun() {
+  const runs = Array.isArray(state.historyRuns) ? state.historyRuns : [];
+  return runs.find((run) => run.run_id === state.activeRunId) || runs[0] || null;
+}
+
 async function loadStudioRunHistory() {
   try {
     const payload = await api(`/api/run/history?${historyRunQuery()}`);
@@ -72,7 +77,7 @@ function renderHistoryRunList() {
   return `
     <section class="surface history-run-list" data-history-run-list>
       <div class="surface-title">
-        <span>Runs and Attempts</span>
+        <span>Runs<span class="sr-only"> and Attempts</span></span>
         <span class="small-badge">${escapeHtml(runs.length)} retained runs</span>
       </div>
       <div class="filter-row history-filters" role="group" aria-label="Run history filters">
@@ -84,13 +89,16 @@ function renderHistoryRunList() {
         </select></label>
       </div>
       ${state.historyRunsError ? `<div class="empty-state bad">${escapeHtml(state.historyRunsError)}</div>` : ""}
+      <div class="history-run-table-head" aria-hidden="true"><span>Run ID</span><span>Stage</span><span>Status</span><span>Updated</span><span>Attempts</span></div>
       <div class="history-run-list-items">
         ${runs.length ? runs.map((run) => `
           <button class="history-run-row${run.run_id === state.activeRunId ? " selected" : ""}" data-history-run="${escapeHtml(run.run_id)}" type="button" aria-pressed="${run.run_id === state.activeRunId ? "true" : "false"}">
+            <strong class="history-run-id">${escapeHtml(run.run_id)}</strong>
+            <span class="history-run-stage">${escapeHtml(stageTitle(run.stage_target || state.activeStage || "run"))}</span>
             <span class="small-badge ${historyFrameTone(run.status)}">${escapeHtml(run.status)}</span>
-            <strong>${escapeHtml(run.run_id)}</strong>
-            <span>${escapeHtml(run.runtime_id || "runtime unavailable")} · ${escapeHtml(run.attempt_count || 0)} attempts · ${escapeHtml(run.retained_attempt_count || 0)} retained</span>
-            <span>${escapeHtml(run.updated_at_utc || "Timestamp unavailable")}</span>
+            <span class="history-run-date">${escapeHtml(run.updated_at_utc || "Timestamp unavailable")}</span>
+            <span class="history-run-attempts">${escapeHtml(run.attempt_count || 0)} <small>/ ${escapeHtml(run.retained_attempt_count || 0)} retained</small></span>
+            <span class="history-run-runtime">${escapeHtml(run.runtime_id || "runtime unavailable")}</span>
           </button>
         `).join("") : `<div class="empty-state">No retained runs are available for this Work Item.</div>`}
       </div>
@@ -103,6 +111,97 @@ function selectedHistoryFrame(timeline) {
   return frames.find((frame) => frame.identity === state.historySelectedFrame)
     || frames.at(-1)
     || null;
+}
+
+function historyAttemptGroups(frames) {
+  const groups = new Map();
+  for (const frame of frames || []) {
+    const number = Number.isFinite(frame.attempt_number) ? frame.attempt_number : null;
+    const key = number === null ? frame.identity : String(number);
+    const existing = groups.get(key) || {key, attempt_number: number, frames: []};
+    existing.frames.push(frame);
+    groups.set(key, existing);
+  }
+  return [...groups.values()].map((group) => ({
+    ...group,
+    representative: group.frames.find((frame) => frame.identity === state.historySelectedFrame)
+      || group.frames.at(-1),
+    statuses: [...new Set(group.frames.map((frame) => frame.status).filter(Boolean))]
+  }));
+}
+
+function renderHistoryAttemptTabs(frames, selected) {
+  const groups = historyAttemptGroups(frames);
+  if (!groups.length) return "";
+  return `
+    <div class="history-attempt-tabs" role="tablist" aria-label="Retained attempts">
+      ${groups.map((group, index) => {
+        const active = group.frames.some((frame) => frame.identity === selected?.identity);
+        const label = group.attempt_number === null ? `Frame ${index + 1}` : `Attempt ${group.attempt_number}`;
+        const status = group.statuses.length === 1 ? group.statuses[0] : `${group.statuses.length} states`;
+        return `<button class="history-attempt-tab${active ? " active" : ""}" data-history-frame="${escapeHtml(group.representative.identity)}" type="button" role="tab" aria-selected="${active ? "true" : "false"}"><span>${escapeHtml(label)}</span><small class="small-badge ${historyFrameTone(group.representative.status)}">${escapeHtml(status)}</small></button>`;
+      }).join("")}
+    </div>
+  `;
+}
+
+function historyFrameDescription(frame) {
+  if (!frame) return "No retained attempt selected.";
+  if (frame.first_decisive_failure) return frame.first_decisive_failure;
+  if (frame.kind === "task-attempt") return `Task ${frame.task_id || "not recorded"} attempt ${frame.attempt_number || "not recorded"} was retained.`;
+  if (frame.kind === "finalization-attempt") return `Aggregate finalization attempt ${frame.attempt_number || "not recorded"} was retained.`;
+  return `${stageTitle(frame.stage || "run")} attempt ${frame.attempt_number || "not recorded"} was retained.`;
+}
+
+function historyFrameTime(frame) {
+  const timestamp = frame?.time_utc || frame?.updated_at_utc || frame?.started_at_utc || "Timestamp unavailable";
+  const duration = Number.isFinite(frame?.duration_seconds) ? ` · ${Number(frame.duration_seconds).toFixed(1)}s` : "";
+  return `${timestamp}${duration}`;
+}
+
+function renderHistoryTimeline(timeline, frames, selected) {
+  const markers = historyEventMarkers(timeline);
+  return `
+    <div class="history-timeline-view" data-history-timeline>
+      <div class="history-filmstrip-frames history-timeline-list" aria-label="Durable run chronology">
+        ${frames.map((frame) => {
+          const active = frame.identity === selected?.identity;
+          return `<button class="history-frame history-timeline-entry${active ? " selected" : ""}" data-history-frame="${escapeHtml(frame.identity)}" type="button" aria-pressed="${active ? "true" : "false"}"><span class="history-timeline-marker ${historyFrameTone(frame.status)}" aria-hidden="true">${frame.status === "succeeded" || frame.status === "success" ? "✓" : frame.status === "failed" ? "!" : "•"}</span><span class="history-timeline-copy"><strong>${escapeHtml(historyFrameLabel(frame))}</strong><span>${escapeHtml(historyFrameDescription(frame))}</span><small>${escapeHtml(historyFrameTime(frame))}</small></span><span class="small-badge ${historyFrameTone(frame.status)}">${escapeHtml(frame.status)}</span></button>`;
+        }).join("")}
+      </div>
+      ${markers.length ? `
+        <details class="history-technical-events">
+          <summary>Technical events (${escapeHtml(markers.length)})</summary>
+          <div class="history-technical-event-list">
+            ${markers.map((frame) => `<button class="history-frame" data-history-frame="${escapeHtml(frame.identity)}" type="button"><strong>${escapeHtml(frame.event_message || historyFrameLabel(frame))}</strong><span>${escapeHtml(frame.time_utc || "Timestamp unavailable")}</span></button>`).join("")}
+          </div>
+        </details>
+      ` : ""}
+    </div>
+  `;
+}
+
+function renderHistoryViewTabs() {
+  const activeView = state.historyView || "timeline";
+  return `
+    <div class="history-view-tabs" role="tablist" aria-label="Selected attempt evidence view">
+      ${[["timeline", "Timeline"], ["raw-log", "Raw log"], ["artifacts", "Artifacts"]].map(([value, label]) => `<button class="history-view-tab${activeView === value ? " active" : ""}" data-history-view="${value}" type="button" role="tab" aria-selected="${activeView === value ? "true" : "false"}">${label}</button>`).join("")}
+    </div>
+  `;
+}
+
+function renderSelectedHistoryView(timeline, frames, selected) {
+  const refs = selected?.evidence_refs || [];
+  const activeView = state.historyView || "timeline";
+  if (activeView === "raw-log") {
+    const logs = refs.filter((path) => path.endsWith("runtime.log"));
+    return `<section class="history-evidence-view" data-history-raw-log><div class="history-view-lead"><strong>Raw runtime log</strong><span>Read-only retained evidence; full output remains available through the log surface and CLI.</span></div>${logs.length ? renderHistoryEvidence({...selected, evidence_refs: logs}) : `<div class="empty-state">No retained runtime.log is attached to this attempt.</div>`}</section>`;
+  }
+  if (activeView === "artifacts") {
+    const artifacts = refs.filter((path) => !path.endsWith("runtime.log"));
+    return `<section class="history-evidence-view" data-history-artifacts><div class="history-view-lead"><strong>Retained artifacts</strong><span>Exact paths and hashes remain read-only; no artifact is reconstructed.</span></div>${artifacts.length ? renderHistoryEvidence({...selected, evidence_refs: artifacts}) : `<div class="empty-state">No retained artifacts are attached to this attempt.</div>`}</section>`;
+  }
+  return renderHistoryTimeline(timeline, frames, selected);
 }
 
 function renderHistoryFrameButton(frame) {
@@ -310,77 +409,93 @@ function renderStudioHistoryArchive() {
   `;
 }
 
-function renderStudioHistory(timeline) {
-  const frames = primaryHistoryFrames(timeline);
-  const markers = historyEventMarkers(timeline);
-  const intentSummary = typeof activeIntentSummary === "function" ? activeIntentSummary() : null;
-  const intent = intentSummary?.excerpt || "Work Item run history";
-  const selected = selectedHistoryFrame(timeline);
+function renderTargetHistoryLineage(run) {
+  const lineage = run?.lineage || {};
+  const currentRun = run?.run_id || state.activeRunId || "";
+  const sourceRun = lineage.source_run_id || "";
+  const sourceWorkItem = lineage.source_work_item_id || state.dashboard?.work_item || "";
+  const candidates = lineage.child_work_item_candidates || [];
+  return `
+    <section class="target-history-lineage" data-studio-history-lineage aria-label="Run lineage">
+      <div class="surface-title compact"><span>Lineage<span class="sr-only"> — Immutable run lineage</span></span><span class="small-badge">read-only</span></div>
+      <div class="target-history-lineage-list">
+        ${sourceRun && sourceRun !== currentRun ? `<article class="target-lineage-row" data-history-lineage-parent="${escapeHtml(sourceRun)}"><span class="small-badge">parent</span><strong>${escapeHtml(sourceRun)}</strong><button data-operator-route-intent="parent-run" data-route-work-item="${escapeHtml(sourceWorkItem)}" data-route-run-id="${escapeHtml(sourceRun)}" type="button" class="link-button">Inspect parent run</button></article>` : ""}
+        <article class="target-lineage-row current" data-history-lineage-current="${escapeHtml(currentRun)}"><span class="small-badge good">current</span><strong>${escapeHtml(currentRun || "No selected run")}</strong><span>${escapeHtml(state.dashboard?.work_item || "Work Item not recorded")}</span></article>
+        ${candidates.length ? candidates.map((candidate) => `<article class="target-lineage-row" data-history-lineage-child="${escapeHtml(candidate.work_item_id)}"><span class="small-badge good">${escapeHtml(candidate.relationship || "child")}</span><strong>${escapeHtml(candidate.label || candidate.work_item_id)}</strong><button data-operator-route-intent="child-work-item" data-route-work-item="${escapeHtml(candidate.work_item_id)}" type="button" class="link-button">Open child</button></article>`).join("") : `<span class="muted">No retained child relation.</span>`}
+      </div>
+    </section>
+  `;
+}
+
+function renderTargetHistoryRetention(run) {
+  const archive = run?.archive || {};
+  return `
+    <section class="target-history-retention" data-studio-history-archive data-archive-state="${archive.archived ? "archived" : "current"}">
+      <div class="surface-title compact"><span>Retained status</span><span class="small-badge ${archive.archived ? "warn" : "good"}">${archive.archived ? "archived" : "retained"}</span></div>
+      <p>${archive.archived ? `Archived ${escapeHtml(archive.archived_at_utc || "timestamp unavailable")}. ${escapeHtml(archive.reason || "Append-only visibility disposition.")}` : "Retained evidence remains immutable and inspectable."}</p>
+      <small>append-only visibility disposition; source run history is never rewritten.</small>
+      ${run?.run_id ? `<div class="lineage-actions target-history-retention-actions"><button data-operator-route-intent="historical-run" data-route-work-item="${escapeHtml(state.dashboard?.work_item || "")}" data-route-run-id="${escapeHtml(run.run_id)}" type="button">Inspect retained History</button><button data-operator-route-intent="run-artifacts" data-route-work-item="${escapeHtml(state.dashboard?.work_item || "")}" data-route-run-id="${escapeHtml(run.run_id)}" type="button" class="secondary">Inspect retained artifacts and logs</button></div>` : ""}
+    </section>
+  `;
+}
+
+function renderTargetHistoryInspector(selected, run) {
   const selectedLabel = selected ? historyFrameLabel(selected) : "No attempt selected";
-  const targetInspector = `
+  const retainedRefs = selected?.evidence_refs || [];
+  const compareEligible = primaryHistoryFrames(state.historyTimeline).filter((frame) => frame.retained !== false).length >= 2;
+  return `
     <aside class="target-history-inspector" data-history-selected-inspector aria-label="Selected attempt inspector">
       <div class="target-panel-heading"><strong>Evidence and lineage</strong><span class="small-badge">read-only</span></div>
       <div class="target-history-attempt-heading">
         <p class="eyebrow">Selected attempt</p>
         <h3>${escapeHtml(selectedLabel)}</h3>
-        <button class="secondary" data-copy-history-run type="button">Copy run ID</button>
+        <div class="target-history-inspector-actions"><button class="primary" data-history-open-attempt type="button">Open selected attempt</button></div>
       </div>
-      ${renderHistoryFrameDetails(selected).replace("data-history-attempt-details", "data-target-history-attempt-details")}
+      ${renderHistoryFrameDetails(selected).replace("data-history-attempt-details", "data-history-attempt-details data-target-history-attempt-details")}
       <section class="target-history-evidence" aria-label="Selected attempt evidence">
-        <div class="surface-title compact"><span>Artifacts</span><span class="small-badge">${escapeHtml(selected?.evidence_refs?.length || 0)}</span></div>
+        <div class="surface-title compact"><span>Retained evidence</span><span class="small-badge">${escapeHtml(retainedRefs.length)}</span></div>
         <div class="recent-artifacts">${renderHistoryEvidence(selected)}</div>
       </section>
-      <p class="muted">Compare is available only when two retained attempts are present; no history is reconstructed.</p>
+      ${renderTargetHistoryLineage(run)}
+      ${renderTargetHistoryRetention(run)}
+      ${compareEligible ? `<button class="secondary target-history-compare" data-history-compare type="button">Compare retained attempts</button>` : `<p class="muted">Compare appears only when two retained attempts are available.</p>`}
     </aside>
   `;
+}
+
+function renderStudioHistory(timeline) {
+  const frames = primaryHistoryFrames(timeline);
+  const selected = selectedHistoryFrame(timeline);
+  const run = {...(state.dashboard?.run || {}), ...(selectedHistoryRun() || {})};
+  const targetInspector = renderTargetHistoryInspector(selected, run);
   if (!frames.length) {
     return `
       <section class="target-history-surface" data-target-history-surface>
-        <header class="target-surface-header">
-          <div><p class="eyebrow">Work Item / Runs</p><h1>${escapeHtml(intent)}</h1><p>Inspect retained attempts, logs, artifacts, and lineage without changing the source run.</p></div>
-        </header>
+        <div class="target-history-heading"><div><p class="eyebrow">Runs and Attempts</p><h2>Runs</h2><p>Inspect retained chronology, selected evidence, and immutable lineage.</p></div></div>
         <div class="target-history-grid">${renderHistoryRunList()}<div class="target-history-main"><div class="empty-state">No durable attempt History frames are available for this run.</div></div>${targetInspector}</div>
       </section>
     `;
   }
   return `
     <section class="target-history-surface" data-target-history-surface>
-      <header class="target-surface-header">
-        <div><p class="eyebrow">Work Item / Runs</p><h1>${escapeHtml(intent)}</h1><p>Inspect retained attempts, logs, artifacts, and lineage without changing the source run.</p></div>
-        <div class="target-surface-status"><span class="small-badge">${escapeHtml(frames.length)} retained frames</span></div>
-      </header>
+      <div class="target-history-heading"><div><p class="eyebrow">Runs and Attempts</p><h2>Runs</h2><p>Inspect retained chronology, selected evidence, and immutable lineage.</p></div><span class="small-badge">${escapeHtml(frames.length)} retained frames</span></div>
       <div class="target-history-grid">
         ${renderHistoryRunList()}
         <div class="target-history-main">
           <section class="surface studio-history" data-studio-history data-history-auto-follow="${state.historyAutoFollow ? "true" : "false"}">
-            <div class="surface-title">
-              <span>Run chronology</span>
-              <span class="small-badge">${escapeHtml(frames.length)} frames</span>
-            </div>
-            <div class="history-filmstrip-frames" aria-label="Durable run frames">
-              ${frames.map(renderHistoryFrameButton).join("")}
-            </div>
+            <div class="target-history-run-heading"><div><p class="eyebrow">Run</p><h3>${escapeHtml(run.run_id || state.activeRunId || "Selected run")}</h3></div><button class="link-button" data-copy-history-run type="button">Copy run ID</button></div>
+            ${renderHistoryAttemptTabs(frames, selected)}
+            ${renderHistoryViewTabs()}
+            ${renderSelectedHistoryView(timeline, frames, selected)}
             <div class="history-selection" data-history-selection="${escapeHtml(selected?.identity || "")}">
               <div class="surface-title compact">
                 <strong>${escapeHtml(selected ? historyFrameLabel(selected) : "No frame selected")}</strong>
                 <button data-history-return-live type="button" class="secondary" ${state.historyAutoFollow ? "disabled aria-disabled=\"true\"" : ""}>Return to live</button>
               </div>
               <span>Historical selection pauses browser auto-follow only; the active runtime is not stopped.</span>
-              ${renderHistoryFrameDetails(selected)}
-              <div class="recent-artifacts">${renderHistoryEvidence(selected)}</div>
             </div>
-            ${markers.length ? `
-              <details class="history-technical-events">
-                <summary>Technical events (${escapeHtml(markers.length)})</summary>
-                <div class="history-technical-event-list">
-                  ${markers.map(renderHistoryFrameButton).join("")}
-                </div>
-              </details>
-            ` : ""}
           </section>
           ${renderStudioRunComparisonPanel()}
-          ${renderStudioHistoryLineage()}
-          ${renderStudioHistoryArchive()}
         </div>
         ${targetInspector}
       </div>

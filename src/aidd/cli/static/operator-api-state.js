@@ -124,6 +124,7 @@ const state = {
   historyTimeline: null,
   historySelectedFrame: "",
   historyAutoFollow: true,
+  historyView: "timeline",
   selectedRuntime: "",
   runtimeSelectionRuntime: "",
   runtimeModel: "",
