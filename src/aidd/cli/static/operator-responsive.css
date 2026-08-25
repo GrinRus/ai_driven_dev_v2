@@ -1218,6 +1218,99 @@
   }
 }
 
+/* Decision and validation target layouts: keep the first consequential action
+   in normal document flow on mobile, while preserving the evidence order. */
+@media (max-width: 760px) {
+  .decision-question-main,
+  .validation-repair-target {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .panel-list,
+  .panel-list > *,
+  .panel-item {
+    max-width: 100%;
+    min-width: 0;
+    overflow-wrap: anywhere;
+  }
+  .decision-question-context {
+    padding: var(--space-5);
+  }
+  .decision-question-context h2 {
+    font-size: var(--type-title-size);
+  }
+  .decision-evidence-grid,
+  .decision-resolution-options {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .decision-question-main .question-list,
+  .decision-impact-panel,
+  .validation-finding-inspector,
+  .validation-document-stage,
+  .validation-recovery-context {
+    grid-column: 1;
+    grid-row: auto;
+  }
+  .decision-question-main .question-card {
+    padding-bottom: var(--space-5);
+  }
+  .validation-finding-inspector [data-primary-action],
+  .validation-finding-inspector [data-recovery-action="repair-extension"] {
+    bottom: max(var(--space-4), env(safe-area-inset-bottom));
+    box-shadow: var(--elevation-overlay);
+    left: var(--space-4);
+    position: fixed;
+    right: var(--space-4);
+    width: auto !important;
+    z-index: 60;
+  }
+  .validation-document-workbench {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .validation-document-canvas {
+    min-height: 300px;
+    order: 1;
+  }
+  .validation-document-workbench .workbench-tree {
+    order: 2;
+  }
+  .validation-finding-inspector {
+    order: 0;
+  }
+  .validation-finding-inspector .repair-actions {
+    display: grid;
+    gap: var(--space-2);
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .validation-finding-inspector .contextual-runner-control,
+  .validation-finding-inspector .repair-actions > button {
+    width: 100%;
+  }
+  .validation-secondary-evidence {
+    margin-top: var(--space-3);
+  }
+  .reader-heading-map .workbench-toc-list a,
+  .reader-heading-map .workbench-toc-list button {
+    box-sizing: border-box;
+    display: block;
+    min-height: var(--control-height-touch);
+    width: 100%;
+  }
+}
+
+@media (min-width: 761px) {
+  .decision-question-main .question-card {
+    grid-column: 1;
+  }
+  .validation-finding-inspector .repair-actions {
+    display: grid;
+    gap: var(--space-2);
+  }
+  .validation-finding-inspector .repair-actions > button,
+  .validation-finding-inspector .contextual-runner-control {
+    width: 100%;
+  }
+}
+
 @media (max-width: 760px) and (max-height: 650px) {
   /* Keep the first Inbox decision reachable on short phone viewports. */
   body.inbox-detail-mode .studio-inbox {

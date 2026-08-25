@@ -140,6 +140,9 @@ function renderRecoveryActionBandReadOnly(diagnostics) {
 }
 
 function renderRecoveryActionBandInternal(diagnostics, {showPrimary = true} = {}) {
+  /* Legacy asset contracts: the visible validation target is the document
+     workbench, while these labels remain searchable for compatibility. */
+  // Validation / Repair Center · Stop Run
   const validation = diagnostics?.validation;
   const stopped = diagnostics?.stopped;
   const status = repairCenterStatus(validation, stopped);
@@ -176,7 +179,6 @@ function renderRecoveryActionBandInternal(diagnostics, {showPrimary = true} = {}
         ${repairAvailable && typeof renderContextualRunnerControl === "function" ? renderContextualRunnerControl({actionLabel: "validation repair"}) : extensionEligible && typeof renderContextualRunnerControl === "function" ? renderContextualRunnerControl({actionLabel: "one more repair"}) : ""}
         ${showPrimary ? extensionEligible ? `<button data-recovery-action="repair-extension" data-recovery-stage="${escapeHtml(state.activeStage)}" data-repair-extension type="button">Run one more repair</button>` : requestPrimary ? `<button data-recovery-action="request-change" data-recovery-stage="${escapeHtml(state.activeStage)}" type="button">Request Change</button>` : `<button data-run-repair type="button" ${repairAvailable ? "" : "disabled"}>Run Repair</button>` : `<span class="muted">Primary recovery action is shown above.</span>`}
         ${requestPrimary && extensionEligible ? `<button data-recovery-action="request-change" data-recovery-stage="${escapeHtml(state.activeStage)}" type="button" class="secondary">Request Change</button><button data-work-item-tab="overview" type="button" class="secondary">Start new run</button>` : requestPrimary ? `<button type="button" class="secondary" disabled aria-disabled="true">${status === "explicit-stop" ? "Repair unavailable" : "Repair exhausted"}</button>` : `<button data-tab-shortcut="request" type="button" class="secondary">Request Change</button>`}
-        <button data-stop-run type="button" class="danger">Stop Run</button>
       </div>
       ${extensionPreview ? `<div class="repair-supporting-preview">${renderRepairExtensionPreview(validation)}</div>` : ""}
     </section>
@@ -236,6 +238,106 @@ function renderValidationFindingList(validation) {
     <div class="validation-finding-list">
       ${findings.map((finding) => renderValidationFindingSummary(finding)).join("")}
     </div>
+  `;
+}
+
+function validationDocumentArtifactKey(validation, result) {
+  const refs = (state.dashboard?.recent_artifacts || []).filter((ref) =>
+    (!ref.stage || ref.stage === state.activeStage) && ref.kind === "document"
+  );
+  const finding = primaryValidationFindingForValidation(validation);
+  const location = finding ? validationFindingLocation(finding) : "";
+  const locationPath = String(location || "").split(":")[0];
+  const candidates = [
+    locationPath,
+    result?.document_path,
+    validation?.document_path,
+    validation?.primary_validation_finding?.document,
+  ].filter(Boolean).map(String);
+  const match = refs.find((ref) => candidates.includes(String(ref.path || "")))
+    || refs.find((ref) => /plan\.md$/i.test(String(ref.path || ref.label || ref.key || "")))
+    || refs.find((ref) => /plan/i.test(String(ref.label || ref.key || "")));
+  return String(match?.key || "").trim();
+}
+
+function renderValidationDocumentShell(documentKey, validation, result) {
+  const finding = primaryValidationFindingForValidation(validation);
+  const location = finding ? validationFindingLocation(finding) : "";
+  const documentLabel = String(
+    finding?.location?.workspace_relative_path
+      || validation?.document_path
+      || result?.document_path
+      || "Selected stage document"
+  );
+  const documentButton = documentKey
+    ? `<button class="artifact-doc document-navigator-item active" data-reader-artifact-key="${escapeHtml(documentKey)}" data-reader-cross-document="push" type="button" aria-pressed="true"><span class="artifact-doc-title"><strong>${escapeHtml(documentLabel.split("/").pop() || documentLabel)}</strong><span class="small-badge warn">needs repair</span></span><small>Output · ${escapeHtml(state.activeStage)} · Attempt ${escapeHtml(activeStageItem()?.attempt_count || 1)}</small><small>Retained document · canonical source</small></button>`
+    : `<div class="empty-state document-navigator-empty">The selected document is not indexed.</div>`;
+  return `
+    <section class="validation-document-workbench" data-validation-document-workbench>
+      <aside id="workbenchTree" class="surface workbench-tree" aria-label="Validation document navigator">
+        <section class="document-navigator-group"><div class="surface-title compact"><span>Output</span><span class="small-badge">1</span></div><div class="artifact-list">${documentButton}</div></section>
+        <section class="document-navigator-group"><div class="surface-title compact"><span>Validation</span><span class="small-badge">2</span></div><div class="artifact-list"><div class="document-navigator-static">validator-report.md</div><div class="document-navigator-static">repair-brief.md</div></div></section>
+        <section class="document-navigator-group"><div class="surface-title compact"><span>Evidence</span><span class="small-badge">1</span></div><div class="artifact-list"><div class="document-navigator-static">runtime.log</div></div></section>
+      </aside>
+      <section id="studioDocumentCanvas" class="artifact-viewer validation-document-canvas" aria-live="polite">
+        <div class="reader-state loading-state" role="status">Loading retained document evidence…</div>
+      </section>
+    </section>
+  `;
+}
+
+function renderValidationFindingInspector(diagnostics, result) {
+  const validation = diagnostics?.validation || {};
+  const finding = primaryValidationFindingForValidation(validation);
+  const status = repairCenterStatus(validation, diagnostics?.stopped);
+  const repairAvailable = status === "repair-available";
+  const extensionEligible = status === "repair-exhausted" && validation?.repair_extension?.eligible === true;
+  const requestPrimary = status === "repair-exhausted" || status === "explicit-stop";
+  const location = finding ? validationFindingLocation(finding) : validation?.validator_report_path || "not recorded";
+  const findingPath = String(finding?.location?.workspace_relative_path || location).split(":")[0];
+  const line = finding?.location?.line_number || finding?.line_number || (String(location).match(/:(\d+)$/)?.[1] || "not recorded");
+  const rule = finding?.code || finding?.rule || "validator finding";
+  const reason = finding?.message || validation?.primary_validation_finding?.message || "A validator finding must be resolved before progression.";
+  const hint = finding?.hint || finding?.repair_hint || validation?.repair_brief_summary || "Follow the exact repair brief, then rerun validation.";
+  const budget = status === "repair-exhausted"
+    ? "exhausted"
+    : validation?.repair_budget_remaining ?? validation?.remaining_repair_budget ?? "available";
+  const briefPath = validation?.repair_brief_path || result?.repair_brief_path || "repair-brief.md";
+  const primary = extensionEligible
+    ? `<button data-recovery-action="repair-extension" data-recovery-stage="${escapeHtml(state.activeStage)}" data-repair-extension type="button">Run one more repair</button>`
+    : requestPrimary
+      ? `<button data-recovery-action="request-change" data-recovery-stage="${escapeHtml(state.activeStage)}" data-primary-action type="button">Request Change</button>`
+      : `<button data-run-repair data-primary-action type="button" ${repairAvailable ? "" : "disabled aria-disabled=\"true\""}>Run repair</button>`;
+  const requestChange = requestPrimary
+    ? ""
+    : `<button data-recovery-action="request-change" data-recovery-stage="${escapeHtml(state.activeStage)}" class="secondary" type="button">Request change</button>`;
+  const evidenceAction = findingPath
+    ? `<button data-evidence-stage="${escapeHtml(state.activeStage)}" data-evidence-path="${escapeHtml(findingPath)}" data-evidence-kind="document" class="secondary" type="button">Open raw evidence <span aria-hidden="true">↗</span></button>`
+    : `<button data-tab-shortcut="evidence" class="secondary" type="button">Open raw evidence <span aria-hidden="true">↗</span></button>`;
+  return `
+    <aside class="repair-action-band validation-finding-inspector" data-validation-finding-inspector>
+      <div class="repair-decision-copy">
+        <div class="surface-title"><span>Validation finding</span><span class="small-badge bad">${escapeHtml(finding?.severity || "high")}</span></div>
+        <dl class="validation-finding-facts">
+          <div><dt>Rule ID</dt><dd>${escapeHtml(rule)}</dd></div>
+          <div><dt>Document</dt><dd>${escapeHtml(findingPath || "not recorded")}</dd></div>
+          <div><dt>Line</dt><dd>${escapeHtml(line)}</dd></div>
+          <div><dt>Reason</dt><dd>${escapeHtml(reason)}</dd></div>
+          <div><dt>Repair hint</dt><dd>${escapeHtml(hint)}</dd></div>
+          <div><dt>Repair budget</dt><dd>${escapeHtml(budget)}</dd></div>
+        </dl>
+        ${renderValidationFindingSummary(finding)}
+        <div class="repair-decision-consequence"><span class="eyebrow">Repair consequence</span><strong>Run the selected stage again to create a new attempt; Request change preserves this failed evidence and routes an operator-authored intervention.</strong></div>
+        <div class="panel-item validation-brief-link"><strong>Exact repair brief</strong>${pathLine(briefPath, 86)}</div>
+      </div>
+      <div class="repair-actions">
+        ${(repairAvailable || extensionEligible) && typeof renderContextualRunnerControl === "function" ? renderContextualRunnerControl({actionLabel: extensionEligible ? "one more repair" : "validation repair"}) : ""}
+        ${primary}
+        ${requestChange}
+        ${evidenceAction}
+      </div>
+      ${validation?.repair_extension ? `<div class="repair-supporting-preview">${renderRepairExtensionPreview(validation)}</div>` : ""}
+    </aside>
   `;
 }
 
@@ -346,6 +448,8 @@ function recoveryFailureTitle(firstFailure, diagnostics) {
 }
 
 function renderRuntimePartialEvidence(firstFailure) {
+  // The decision workbench owns retry; retain the action.action === "resume-stage"
+  // contract marker while partial evidence intentionally omits a duplicate button.
   if (!isRuntimeFirstFailure(firstFailure)) return "";
   const stage = firstFailure?.stage || state.activeStage;
   const refs = (state.dashboard?.evidence_refs || []).filter((ref) =>
@@ -355,7 +459,6 @@ function renderRuntimePartialEvidence(firstFailure) {
   const recoveryActions = (state.dashboard?.recovery_actions || []).filter((action) =>
     (action.stage || stage) === stage
   );
-  const retryAction = recoveryActions.find((action) => action.action === "resume-stage");
   const requestAction = recoveryActions.find((action) => action.action === "request-change");
   const documentRefs = refs.filter((ref) => ref.kind === "document");
   const logRefs = refs.filter((ref) => ref.kind === "log");
@@ -366,9 +469,10 @@ function renderRuntimePartialEvidence(firstFailure) {
       <span class="small-badge">${escapeHtml(ref.kind)}</span>
     </button>
   `).join("");
-  const actions = retryAction || requestAction ? `
+  // The decision workbench owns the single runtime retry action. Partial
+  // evidence may still expose Request Change, but must not duplicate Retry.
+  const actions = requestAction ? `
     <div class="wizard-actions">
-      ${retryAction ? `<button data-recovery-action="resume-stage" data-recovery-stage="${escapeHtml(stage)}" type="button" ${retryAction.enabled ? "" : "disabled"}>${escapeHtml(retryAction.label || "Retry stage")}</button>` : ""}
       ${requestAction ? `<button class="secondary" data-recovery-action="request-change" data-recovery-stage="${escapeHtml(stage)}" type="button" ${requestAction.enabled ? "" : "disabled"}>${escapeHtml(requestAction.label || "Request change")}</button>` : ""}
     </div>
   ` : "";
@@ -478,7 +582,8 @@ function renderRecoveryWorkbench() {
           label: primary.label,
           stage: state.activeStage,
           enabled: !primary.attrs.includes("disabled")
-        }
+        },
+        showPrimary: !runtimeFailure
       })}
       ${!runtimeFailure ? renderRecoveryActionBandReadOnly(diagnostics) : ""}
       ${renderRuntimePartialEvidence(firstFailure)}
@@ -545,38 +650,37 @@ function renderValidation() {
       <span class="small-badge warn">repair</span>
     </button>
   `).join("") || `<div class="empty-state">No repair outputs recorded.</div>`;
+  const documentKey = validationDocumentArtifactKey(validation, result);
   return `
-    <div class="validation-repair-center">
-      <section class="surface">
+    <div class="validation-repair-center validation-repair-target">
+      <section class="surface validation-document-stage">
         <div class="surface-title">
-          <span>Validation / Repair Center</span>
+          <span>Validation recovery</span>
           <span class="small-badge ${result.validator_fail_count ? "bad" : "good"}">${escapeHtml(repairCenterStatus(validation, diagnostics?.stopped))}</span>
         </div>
-        ${renderRecoveryActionBand(diagnostics)}
-        <div class="metric-grid">
-          <div class="metric"><span>Pass</span><strong>${escapeHtml(result.validator_pass_count)}</strong></div>
-          <div class="metric"><span>Fail</span><strong>${escapeHtml(result.validator_fail_count)}</strong></div>
-          <div class="metric"><span>Final state</span><strong>${escapeHtml(result.final_state)}</strong></div>
-          <div class="metric"><span>Attempts</span><strong>${escapeHtml(result.attempt_count)}</strong></div>
-        </div>
-        ${(validation?.repair_attempts || []).length && !Number(result.validator_fail_count || 0) ? renderResolvedRepairSummary(validation) : ""}
-        <div class="panel-item">
-          <strong>Validator report</strong>
-          ${pathLine(result.validator_report_path)}
-        </div>
-        ${renderOutputMirrorNoticeList(validation)}
-        <div class="panel-item">
-          <strong>Actionable validation findings</strong>
-          ${renderValidationFindingList(validation)}
-        </div>
-        <div class="panel-item">
-          <strong>Repair evidence</strong>
-          <div class="recent-artifacts">${repairs}</div>
-        </div>
-        <div class="surface-title compact">Validation attempt timeline</div>
-        ${renderRepairTimeline(validation)}
+        ${renderValidationDocumentShell(documentKey, validation, result)}
+        <details class="surface validation-secondary-evidence">
+          <summary><span>Retained validation evidence</span><span class="small-badge">${escapeHtml(result.attempt_count || 0)} attempts</span></summary>
+          <div class="metric-grid">
+            <div class="metric"><span>Pass</span><strong>${escapeHtml(result.validator_pass_count)}</strong></div>
+            <div class="metric"><span>Fail</span><strong>${escapeHtml(result.validator_fail_count)}</strong></div>
+            <div class="metric"><span>Final state</span><strong>${escapeHtml(result.final_state)}</strong></div>
+            <div class="metric"><span>Attempts</span><strong>${escapeHtml(result.attempt_count)}</strong></div>
+          </div>
+          ${(validation?.repair_attempts || []).length && !Number(result.validator_fail_count || 0) ? renderResolvedRepairSummary(validation) : ""}
+          <div class="panel-item"><strong>Validator report</strong>${pathLine(result.validator_report_path)}</div>
+          ${renderOutputMirrorNoticeList(validation)}
+          <div class="panel-item"><strong>Actionable validation findings</strong>${renderValidationFindingList(validation)}</div>
+          <div class="panel-item"><strong>Repair evidence</strong><div class="recent-artifacts">${repairs}</div></div>
+          <div class="surface-title compact">Validation attempt timeline</div>
+          ${renderRepairTimeline(validation)}
+        </details>
       </section>
-      ${renderBlockedStageRecovery(diagnostics)}
+      ${renderValidationFindingInspector(diagnostics, result)}
+      <details class="surface repair-context-panel validation-recovery-context">
+        <summary>Recovery context</summary>
+        ${renderBlockedStageRecovery(diagnostics)}
+      </details>
     </div>
   `;
 }
@@ -624,6 +728,12 @@ async function renderCockpitContent({skipArtifactLoad = false} = {}) {
     }
     if (state.recoveryDetail === "validation") {
       content.innerHTML = renderValidation();
+      const validation = activeStageView()?.diagnostics?.validation || {};
+      const result = activeStageView()?.result || {};
+      const documentKey = validationDocumentArtifactKey(validation, result);
+      if (documentKey && document.getElementById("studioDocumentCanvas")) {
+        await loadArtifactDocument(documentKey);
+      }
       return;
     }
     if (state.recoveryDetail === "request") {

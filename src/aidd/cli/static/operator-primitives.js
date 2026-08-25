@@ -328,7 +328,8 @@ function renderRecoverySummary({
   consequence,
   decisiveFailure,
   evidence,
-  primaryAction
+  primaryAction,
+  showPrimary = true
 }) {
   const kind = String(requestedKind || "").trim();
   if (!RECOVERY_SUMMARY_KINDS.has(kind)) {
@@ -363,9 +364,11 @@ function renderRecoverySummary({
         <code>${escapeHtml(evidence.path)}</code>
         <button class="secondary" data-tab-shortcut="evidence" type="button">Open Evidence</button>
       </div>
-      <div class="recovery-summary-primary" data-primary-recovery-slot>
+      ${showPrimary
+        ? `<div class="recovery-summary-primary" data-primary-recovery-slot>
         <button data-primary-action data-recovery-action="${escapeHtml(primaryAction.action)}"${recoveryStage}${repairExtension} type="button" ${primaryAction.enabled === false ? 'disabled aria-disabled="true"' : ""}>${escapeHtml(primaryAction.label)}</button>
-      </div>
+      </div>`
+        : `<div class="recovery-summary-primary recovery-summary-primary-readonly" data-recovery-primary-readonly><span>Action is available in the recovery decision panel above.</span></div>`}
     </section>
   `;
 }

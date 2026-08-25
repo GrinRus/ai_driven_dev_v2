@@ -49,6 +49,16 @@ def test_question_recovery_renders_the_decision_before_shared_chrome(
         assert page.locator('[data-answer-destination="Q1"]').count() == 1
         assert page.locator('[data-answer-resume="Q1"]').count() == 1
         assert surface.locator('[data-primary-action]').count() == 1
+        context = surface.locator("[data-decision-question-context]")
+        context.wait_for(state="visible")
+        assert context.get_by_text("Why it matters", exact=True).count() == 1
+        assert context.locator("[data-decision-evidence]").count() == 1
+        assert surface.locator("[data-question-resolution-option]").count() == 3
+        assert surface.locator("[data-decision-impact]").count() == 1
+        partial = surface.locator('[data-question-resolution-option="partial"]')
+        partial.click()
+        assert page.locator('[data-question-resolution="Q1"]').input_value() == "partial"
+        assert partial.get_attribute("aria-checked") == "true"
         if viewport[0] <= 760:
             assert not page.locator(".intent-context-region").is_visible()
             assert not page.locator(".work-item-tabs").is_visible()
@@ -95,6 +105,18 @@ def test_validation_and_review_recovery_routes_land_on_authoritative_surfaces(
             surface = page.locator(selector)
             surface.wait_for(state="visible")
             assert marker in surface.inner_text()
+            if fixture_name == "validation-repair":
+                page.locator("[data-validation-finding-inspector]").wait_for(state="visible")
+                page.locator("[data-validation-document-workbench]").wait_for(state="visible")
+                page.locator("#studioDocumentCanvas").wait_for(state="visible")
+                assert (
+                    page.locator('[data-validation-finding-inspector] [data-run-repair]').count()
+                    == 1
+                )
+                assert (
+                    page.locator('[data-validation-finding-inspector] [data-stop-run]').count()
+                    == 0
+                )
             assert_accessible_render(page, target_size=44 if viewport[0] <= 760 else 32)
             assert_rendered_geometry(page)
             assert page.evaluate(

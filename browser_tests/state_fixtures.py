@@ -824,6 +824,15 @@ def build_browser_state_fixture(
             "repair-needed" if state == "validation-repair" else "failed",
         )
         stage_root = workspace_root / "workitems" / work_item / "stages" / stage
+        (stage_root / "plan.md").write_text(
+            "# Plan\n\n"
+            "## Scope\n\n"
+            "Document the bounded implementation scope for this validation fixture.\n\n"
+            "## Approach\n\n"
+            "The fixture intentionally omits the required verification section so the\n"
+            "validator finding and repair brief remain the first decisive evidence.\n",
+            encoding="utf-8",
+        )
         validator_report = stage_root / "validator-report.md"
         repair_brief = stage_root / "repair-brief.md"
         write_validator_report(
