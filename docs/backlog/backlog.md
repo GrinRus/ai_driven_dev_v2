@@ -7,13 +7,12 @@ slice, and local task.
 
 ## Next
 
-- `W44-E1-S3-T30` — Keep the Work Item Launch primary action visible and focusable in the initial
-  `320x568` viewport while preserving core-owned Runner readiness and fail-closed launch semantics.
+- `W44-E1-S3-T31` — Keep the core-recommended Flow Complete action visible and focusable in the
+  initial `768x1024` viewport while retaining immutable handoff/evidence and lineage semantics.
 
 ## Soon
 
-- `W44-E1-S3-T31` — Keep the core-recommended Flow Complete action visible and focusable in the
-  initial `768x1024` viewport while retaining immutable handoff/evidence and lineage semantics.
+_Empty — the next task is dependency-ready._
 
 ## Parking lot
 
@@ -40,12 +39,20 @@ slice, and local task.
 
 ## Current reconciliation
 
+- `2026-08-25` PR #386 (merge `7c58edda`) completed `W44-E1-S3-T30`: the Work Item Launch action
+  remains the existing primary/mutation control and is now visible and focusable at `320x568` in a
+  touch-safe bottom dock. The core Runner readiness projection, literal disabled reason, routes,
+  ids, fail-closed eligibility, and one contextual Runner are unchanged. Five-viewport launch and
+  provider-free create/Runner/launch checks passed, including one-primary-action, focus, diagnostics,
+  and overflow assertions. `W44-E1-S3-T31` is now `Next`; human usability, Claude/cross-runtime, and
+  Wave 36 acceptance remain parked.
+
 - `2026-08-25` PR #384 (merge `b30de404`) completed `W44-E1-S3-T29`: the fresh rendered audit is
   retained in `docs/e2e/w44-e1-s3-t29-rendered-exit-audit.md`. Focused W44 suites passed (`71`),
   while the five-viewport provider-free matrix recorded `6` passes and two first-viewport contract
   failures at launch (`320x568`) and Flow Complete (`768x1024`). Confirmed target-composition gaps
-  were decomposed into T30-T39; T30 is now `Next`, T31 is `Soon`, and human usability,
-  Claude/cross-runtime, and Wave 36 acceptance remain parked.
+  were decomposed into T30-T39; T30 was the first follow-up and is now complete, with T31 promoted
+  to `Next`; human usability, Claude/cross-runtime, and Wave 36 acceptance remain parked.
 
 - `2026-08-25` PR #382 (merge `5828f53b`) completed `W44-E1-S3-T28`: Markdown Workspace now uses
   the target compact navigator, reader, heading map, provenance/context inspector, source/path

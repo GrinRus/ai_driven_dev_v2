@@ -15775,12 +15775,15 @@ Local tasks:
   shared path breadcrumb. Existing routes, ids, projections, mutation services, and generated
   document immutability are unchanged. Verification: fresh provider-free captures, focused W44
   browser suites, docs consistency, planning integrity, and full CI passed.
-- `W44-E1-S3-T30` (next) Keep the Work Item Launch primary action visible and focusable in the
+- `W44-E1-S3-T30` (done) Keep the Work Item Launch primary action visible and focusable in the
   initial `320x568` viewport while preserving the core-owned Runner readiness projection, one
-  contextual Runner, fail-closed eligibility, and existing launch mutation path. Verification:
-  five-viewport launch matrix with action bounds, focus order, one-primary-action count, clean
-  diagnostics, and no horizontal overflow.
-- `W44-E1-S3-T31` (soon) Keep the core-recommended Flow Complete action visible and focusable in
+  contextual Runner, fail-closed eligibility, and existing launch mutation path. PR #386 (merge
+  `7c58edda`) adds a narrow-phone action dock using the existing launch button and hides only the
+  duplicated empty readiness helper below `360px`; the Runner reason, readiness projection, routes,
+  ids, and mutation service are unchanged. The five-viewport launch composition suite and the
+  provider-free `create-runner-launch` matrix pass with focus, one-primary-action, diagnostics, and
+  overflow checks green; UI contracts, planning/docs checks, Ruff, mypy, and full CI also pass.
+- `W44-E1-S3-T31` (next) Keep the core-recommended Flow Complete action visible and focusable in
   the initial `768x1024` viewport while retaining immutable handoff/evidence, fresh-QA gating,
   lineage overlays, and secondary outcomes. Verification: five-viewport completion matrix with
   first-action bounds, source-run immutability, recommendation truth, clean diagnostics, and no
@@ -15834,17 +15837,25 @@ Wave 44 exit evidence:
 - browser checks show no console errors, horizontal overflow, duplicate primary actions, or focus
   loss;
 - a fresh rendered audit confirms remaining gaps are absent or explicitly blocked. T19 is now
-  evidence-complete but not an exit pass; T25-T29 are complete and T30 is the next dependency-ready
-  convergence task, with T31 reserved as its direct successor. Default task-centered routing remains
+  evidence-complete but not an exit pass; T25-T30 are complete and T31 is the next dependency-ready
+  convergence task. Default task-centered routing remains
   provisional until T30-T39 are either completed or backed by explicit target-equivalence evidence.
 
 Wave 44 reconciliation:
 
+- `2026-08-25` PR #386 (merge `7c58edda`) completed `W44-E1-S3-T30`. The Work Item Launch primary
+  action is now visible and focusable at `320x568` in a touch-safe bottom dock, while the existing
+  core-owned Runner readiness projection, literal disabled reason, one contextual Runner, routes,
+  ids, and fail-closed launch mutation path remain unchanged. The five-viewport launch suite and
+  provider-free create/Runner/launch matrix passed with one primary action, clean diagnostics, focus,
+  and no horizontal overflow; T31 is now the sole dependency-ready successor.
+
 - `2026-08-25` PR #384 (merge `b30de404`) completed `W44-E1-S3-T29`. The fresh rendered audit is
   retained in `docs/e2e/w44-e1-s3-t29-rendered-exit-audit.md`: focused W44 suites passed (`71`),
   while the five-viewport provider-free matrix recorded `6` passes and two first-viewport contract
-  failures. Confirmed gaps were decomposed into T30-T39; T30 is now the only dependency-ready task
-  and T31 is its direct successor in Soon. Human usability, Claude/cross-runtime, and Wave 36
+  failures. Confirmed gaps were decomposed into T30-T39; T30 was promoted as the first convergence
+  task and is now complete, with T31 promoted as the only dependency-ready successor. Human
+  usability, Claude/cross-runtime, and Wave 36
   acceptance remain parked.
 
 - `2026-08-25` PR #382 (merge `5828f53b`) completed `W44-E1-S3-T28`. Markdown Workspace now
