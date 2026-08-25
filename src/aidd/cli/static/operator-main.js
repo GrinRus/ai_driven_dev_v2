@@ -249,6 +249,12 @@ document.addEventListener("click", async (event) => {
       await closeProjectWorkItemCreation();
       return;
     }
+    const createEditorMode = event.target.closest("[data-create-editor-mode]")?.dataset.createEditorMode;
+    if (createEditorMode) {
+      state.onboarding.createEditorMode = createEditorMode === "preview" ? "preview" : "write";
+      syncOnboardingCreateEditorMode();
+      return;
+    }
     if (event.target.closest("[data-guided-delivery-toggle]")) {
       setGuidedDeliveryPreference(state.onboarding.guidedDelivery === false);
       return;
@@ -957,6 +963,10 @@ document.addEventListener("input", (event) => {
   }
   if (event.target.id === "onboardingRequest") {
     state.onboarding.requestText = event.target.value;
+    syncOnboardingCreateActionState();
+  }
+  if (event.target.id === "onboardingContext") {
+    state.onboarding.contextText = event.target.value;
     syncOnboardingCreateActionState();
   }
   if (event.target.id === "projectNewWorkItem") {

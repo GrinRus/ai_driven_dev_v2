@@ -64,6 +64,52 @@
   }
 }
 
+@media (max-width: 900px) {
+  .target-create-layout {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .target-create-preview {
+    border-left: 0;
+    border-top: 1px solid var(--line);
+  }
+  .target-create-work-item {
+    padding-bottom: calc(var(--space-8) + var(--control-height-touch) + var(--space-4));
+  }
+  .target-create-footer {
+    align-items: center;
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: var(--radius-control);
+    bottom: var(--space-3);
+    box-shadow: var(--elevation-overlay);
+    left: var(--space-4);
+    padding: var(--space-3);
+    position: fixed;
+    right: var(--space-4);
+    z-index: 60;
+  }
+  .target-create-footer .setup-actions {
+    justify-content: flex-end;
+  }
+}
+
+@media (min-width: 900px) and (max-height: 900px) {
+  .target-create-editor,
+  .target-create-preview {
+    padding: var(--space-5);
+  }
+  .target-create-form textarea#onboardingRequest {
+    min-height: 180px;
+  }
+  .target-create-form textarea#onboardingContext {
+    min-height: 100px;
+  }
+  .target-markdown-preview {
+    min-height: 240px;
+    padding: var(--space-5);
+  }
+}
+
 @media (max-width: 760px) {
   .target-surface-header,
   .target-create-footer {
@@ -81,6 +127,30 @@
   }
   .target-create-work-item .inline-form-row > button {
     width: 100%;
+  }
+  .target-create-work-item {
+    padding-bottom: calc(var(--space-8) + var(--control-height-touch) + var(--space-4));
+  }
+  .target-create-footer {
+    align-items: stretch;
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: var(--radius-control);
+    bottom: max(var(--space-3), env(safe-area-inset-bottom));
+    box-shadow: var(--elevation-overlay);
+    left: var(--space-3);
+    padding: var(--space-3);
+    position: fixed;
+    right: var(--space-3);
+    z-index: 60;
+  }
+  .target-create-footer .setup-actions {
+    display: grid;
+    grid-template-columns: minmax(0, auto) minmax(0, 1fr);
+    width: 100%;
+  }
+  .target-create-footer .setup-actions button {
+    min-height: var(--control-height-touch);
   }
   .target-create-preview {
     border-left: 0;

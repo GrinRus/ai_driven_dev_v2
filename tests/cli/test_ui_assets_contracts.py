@@ -728,8 +728,8 @@ def test_operator_onboarding_static_contract_keeps_creation_and_launch_separate(
             'state.selectedEvidenceNodeId = "";',
             'state.selectedEvidenceEdgeId = "";',
             'document.getElementById("onboardingCreateForm")',
-            'form.querySelector(\'button[type="submit"]\')',
-            "button.disabled = !(onboardingCanCreate() && !state.onboarding.creating);",
+            'const targetButton = document.querySelector("[data-target-create-submit]")',
+            "if (targetButton) targetButton.disabled = !canCreate;",
             'id="onboardingWorkItem"',
             'id="onboardingRequest"',
             'id="onboardingCreateForm"',
@@ -751,7 +751,7 @@ def test_operator_onboarding_static_contract_keeps_creation_and_launch_separate(
             "syncOnboardingCreateActionState();",
         ),
     )
-    assert main.count("syncOnboardingCreateActionState();") == 3
+    assert main.count("syncOnboardingCreateActionState();") == 4
     create_predicate = onboarding[
         onboarding.index("function onboardingCanCreate()"):onboarding.index(
             "function syncOnboardingCreateActionState()"

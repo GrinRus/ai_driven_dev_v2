@@ -36,6 +36,67 @@ def test_create_work_item_uses_target_editor_and_preview(
         browser_page.diagnostics.assert_clean()
 
 
+@pytest.mark.parametrize("viewport", ((1280, 900), (768, 1024), (390, 844)))
+def test_create_work_item_target_shell_has_one_action_and_live_markdown_modes(
+    tmp_path: Path, viewport: tuple[int, int]
+) -> None:
+    with sync_playwright() as playwright, operator_browser_harness(
+        tmp_path / f"create-contract-{viewport[0]}", playwright
+    ) as harness, harness.open_page(viewport) as browser_page:
+        page = browser_page.page
+        page.goto(f"{harness.url}?ui=studio", wait_until="networkidle")
+        surface = page.locator("[data-create-work-item-surface]")
+        surface.wait_for(state="visible")
+
+        assert surface.locator("[data-target-create-submit]").count() == 1
+        assert surface.locator("#onboardingCreateForm button[type=submit]").count() == 0
+        assert surface.locator("[data-create-editor-mode='preview']").is_enabled()
+        # Project/Runner setup remains expanded until the required context is
+        # available; once selected, the renderer collapses it to keep the
+        # primary create action prominent.
+        assert surface.locator(".target-create-supporting").count() == 1
+        assert page.evaluate(
+            "getComputedStyle(document.querySelector("
+            "'[data-create-work-item-surface]')).gridTemplateColumns.split(' ').length"
+        ) == 1
+
+        page.locator("#onboardingRequest").fill(
+            "Improve checkout reliability.\n\n- Prevent duplicate orders."
+        )
+        page.locator("#onboardingContext").fill(
+            "Existing webhook retries are difficult to observe.\n\n"
+            "## Constraints\n\nKeep the public API stable."
+        )
+        preview = surface.locator("[data-request-preview-markdown]")
+        assert "Improve checkout reliability" in preview.inner_text()
+        assert "Existing webhook retries" in preview.inner_text()
+        assert "Keep the public API stable" in preview.inner_text()
+
+        surface.locator("[data-create-editor-mode='preview']").click()
+        assert surface.locator("#onboardingRequest").is_hidden()
+        assert surface.locator("[data-create-editor-preview]").is_visible()
+        assert (
+            surface.locator("[data-create-editor-mode='preview']").get_attribute("aria-selected")
+            == "true"
+        )
+        surface.locator("[data-create-editor-mode='write']").click()
+        assert surface.locator("#onboardingRequest").is_visible()
+        assert (
+            surface.locator("[data-create-editor-mode='write']").get_attribute("aria-selected")
+            == "true"
+        )
+
+        primary = page.locator("[data-target-create-submit]:visible")
+        primary_box = primary.bounding_box()
+        assert primary_box is not None
+        assert primary_box["y"] >= 0
+        assert primary_box["y"] + primary_box["height"] <= viewport[1]
+        assert page.locator("[data-aidd-primary-action]:visible").count() == 1
+        assert_accessible_render(page, target_size=44 if viewport[0] <= 760 else 32)
+        assert_rendered_geometry(page)
+        browser_page.diagnostics.assert_clean()
+
+
 def test_history_uses_target_attempt_inspector_without_changing_lineage(
     tmp_path: Path,
 ) -> None:

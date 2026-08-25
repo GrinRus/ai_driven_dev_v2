@@ -40,6 +40,7 @@ def test_onboarding_and_follow_up_fields_have_id_name_and_associated_labels() ->
         ("onboardingProjectRoot", "project_root"),
         ("onboardingWorkItem", "work_item"),
         ("onboardingRequest", "request"),
+        ("onboardingContext", "context"),
         ("onboardingForceContext", "force_context"),
         ("projectNewWorkItem", "work_item"),
         ("projectNewRequest", "request"),
