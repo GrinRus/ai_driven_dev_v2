@@ -15764,12 +15764,65 @@ Local tasks:
   journeys, frontend Node suites, UI asset/readability/accessibility/design-token contracts,
   Ruff, mypy, full Python matrix, deterministic scenarios, adapter conformance, packaged UI
   browser, security, and build all passed.
-- `W44-E1-S3-T29` (next) Run a fresh rendered audit of all 13 provider-free target surfaces
+- `W44-E1-S3-T29` (done) Run a fresh rendered audit of all 13 provider-free target surfaces
   against the canonical target compositions after T28, record viewport geometry, first-action
-  visibility, accessibility/diagnostic findings, and route-specific remaining gaps, and split
-  each confirmed implementation gap into a bounded successor task before coding. Verification:
-  retained audit report with current screenshots/measurements, five-viewport provider-free
-  matrix, clean console/overflow/duplicate-primary diagnostics, and synchronized roadmap/backlog.
+  visibility, accessibility/diagnostic findings, and split each confirmed implementation gap into
+  a bounded successor task before coding. PR #384 (merge `b30de404`) retains
+  `docs/e2e/w44-e1-s3-t29-rendered-exit-audit.md`. The focused W44 suites passed (`71`), while the
+  fresh responsive matrix recorded `6` passes and two first-viewport contract failures: launch at
+  `320x568` and Flow Complete at `768x1024`. The audit also records target-density gaps in Project
+  Work, Active Task, Decision/Mobile Decision, Review, Remediation, History, Flow Complete, and the
+  shared path breadcrumb. Existing routes, ids, projections, mutation services, and generated
+  document immutability are unchanged. Verification: fresh provider-free captures, focused W44
+  browser suites, docs consistency, planning integrity, and full CI passed.
+- `W44-E1-S3-T30` (next) Keep the Work Item Launch primary action visible and focusable in the
+  initial `320x568` viewport while preserving the core-owned Runner readiness projection, one
+  contextual Runner, fail-closed eligibility, and existing launch mutation path. Verification:
+  five-viewport launch matrix with action bounds, focus order, one-primary-action count, clean
+  diagnostics, and no horizontal overflow.
+- `W44-E1-S3-T31` (soon) Keep the core-recommended Flow Complete action visible and focusable in
+  the initial `768x1024` viewport while retaining immutable handoff/evidence, fresh-QA gating,
+  lineage overlays, and secondary outcomes. Verification: five-viewport completion matrix with
+  first-action bounds, source-run immutability, recommendation truth, clean diagnostics, and no
+  duplicate primary actions.
+- `W44-E1-S3-T32` (planned) Recompose Task Workspace and Active Task so the selected attempt
+  inspector, factual attempt controls, task groups, and live-output tray share the target first
+  viewport without changing task-ledger ownership or mutation services. Verification: ready,
+  running, waiting, cancelling, failed, and completed fixtures across desktop/mobile with tray
+  visibility, reconnect/cancel semantics, one primary action, and clean diagnostics.
+- `W44-E1-S3-T33` (planned) Recompose Decision and Mobile Decision so the decision context,
+  evidence, resolution choices, durable destination, and one primary action remain in the target
+  first-viewport hierarchy. Verification: question, approval, and mobile decision fixtures at all
+  five viewports with mobile resolution/action bounds, read-only evidence, fail-closed recovery,
+  and no overflow.
+- `W44-E1-S3-T34` (planned) Align Project Work with the target compact grouped table and selected
+  Work Item inspector, removing duplicated setup/search chrome while preserving core-owned
+  membership, ordering, progress truth, selection deep links, and one contextual action.
+  Verification: seeded mixed Inbox groups across desktop/mobile with deterministic row geometry,
+  selected-context bounds, keyboard selection, reload/deep-link, and clean diagnostics.
+- `W44-E1-S3-T35` (planned) Align Implementation Review with the target full-width diff, claims,
+  verification, and Review inspector composition while preserving repository-truth evidence,
+  launch readiness, and the explicit Review gate. Verification: clean, incomplete, out-of-scope,
+  missing-evidence, and failed-verification fixtures with first-viewport composition, one primary
+  action, read-only stage documents, and no overflow.
+- `W44-E1-S3-T36` (planned) Align Review/QA Remediation with the target findings/source-evidence/
+  durable request composition while preserving selection semantics, downstream staleness, Runner
+  readiness, conflict handling, and one remediation action. Verification: blocking/non-blocking
+  findings, saved draft, conflict, rerun, and fresh-acceptance fixtures across desktop/mobile.
+- `W44-E1-S3-T37` (planned) Align Runs and Attempts with the target compact retained-run list,
+  chronology, selected-attempt inspector, lineage, and read-only actions without changing history
+  routes or comparison semantics. Verification: live, failed, repaired, completed, missing-artifact,
+  bounded-log, compare-unavailable, and reload states with clean diagnostics.
+- `W44-E1-S3-T38` (planned) Replace absolute filesystem paths in shared operator breadcrumbs with
+  truthful project, Work Item, and current-stage labels while preserving copy/path utilities where
+  they are explicitly part of document provenance. Verification: provider-free shell snapshots
+  across all target routes, stable route/deep-link/reload behavior, no sensitive path leakage,
+  accessible names, and no overflow.
+- `W44-E1-S3-T39` (planned) Recompose Validation Repair into the target finding-to-repair
+  hierarchy so the finding, literal consequence, source document, repair budget, Runner readiness,
+  and one repair action remain visible before long evidence. Verification: validation and repair
+  exhaustion fixtures at all five viewports with stale-evidence fail-closed behavior, one primary
+  action, read-only generated documents, and no overflow.
 
 Wave 44 exit evidence:
 
@@ -15781,11 +15834,18 @@ Wave 44 exit evidence:
 - browser checks show no console errors, horizontal overflow, duplicate primary actions, or focus
   loss;
 - a fresh rendered audit confirms remaining gaps are absent or explicitly blocked. T19 is now
-  evidence-complete but not an exit pass; T25-T28 are complete and T29 is the next dependency-ready
-  convergence audit. Default task-centered routing remains provisional until T29 confirms target
-  equivalence or records explicit blockers.
+  evidence-complete but not an exit pass; T25-T29 are complete and T30 is the next dependency-ready
+  convergence task, with T31 reserved as its direct successor. Default task-centered routing remains
+  provisional until T30-T39 are either completed or backed by explicit target-equivalence evidence.
 
 Wave 44 reconciliation:
+
+- `2026-08-25` PR #384 (merge `b30de404`) completed `W44-E1-S3-T29`. The fresh rendered audit is
+  retained in `docs/e2e/w44-e1-s3-t29-rendered-exit-audit.md`: focused W44 suites passed (`71`),
+  while the five-viewport provider-free matrix recorded `6` passes and two first-viewport contract
+  failures. Confirmed gaps were decomposed into T30-T39; T30 is now the only dependency-ready task
+  and T31 is its direct successor in Soon. Human usability, Claude/cross-runtime, and Wave 36
+  acceptance remain parked.
 
 - `2026-08-25` PR #382 (merge `5828f53b`) completed `W44-E1-S3-T28`. Markdown Workspace now
   uses the target compact navigator/reader/context composition with visible provenance, source
