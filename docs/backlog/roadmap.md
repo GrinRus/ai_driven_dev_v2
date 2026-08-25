@@ -15731,9 +15731,20 @@ Local tasks:
   semantics are preserved. Verification: focused frontend and Flow Complete/browser suites, five-
   viewport geometry/accessibility/diagnostic checks, UI contracts, planning integrity, Ruff, mypy,
   deterministic scenarios, adapter conformance, security, packaged UI browser, and build CI passed.
-- `W44-E1-S3-T26` (next) Align Create Work Item with the target editor/preview shell, draft
+- `W44-E1-S3-T26` (done) Align Create Work Item with the target editor/preview shell, draft
   status, context sections, and one create action while preserving operator-authored Markdown rules.
-- `W44-E1-S3-T27` (planned) Align Implementation Review and Review/QA Remediation with the target
+  PR #378 (merge `9b97e908`) adds the target editor/preview composition, durable context and
+  constraints preview, draft status, responsive action footer, and exactly one primary create action.
+  Existing request persistence, Work Item ids, routes, runtime-independent creation, launch-time
+  Runner selection, and operator-authored Markdown boundaries remain unchanged. The provider-free
+  first-time journey now tolerates direct authoritative question recovery and avoids an unreliable
+  `networkidle` boundary while the fixture is polling.
+  - Verification: target Create Work Item browser checks across `1280x900`, `768x1024`, and
+    `390x844`; guided setup and first-time recovery journey; frontend Node suite (`136 passed`),
+    UI asset/accessibility/design-token contracts, docs/planning checks, Ruff, mypy, full Python
+    matrix, deterministic scenarios, adapter conformance, packaged UI browser, security checks,
+    and build CI all passed.
+- `W44-E1-S3-T27` (next) Align Implementation Review and Review/QA Remediation with the target
   repository-truth, finding-evidence, and remediation action hierarchy.
 - `W44-E1-S3-T28` (planned) Align Markdown Workspace reader, navigator, provenance, heading map,
   and evidence inspector spacing with the target document composition while keeping generated
@@ -15749,11 +15760,21 @@ Wave 44 exit evidence:
 - browser checks show no console errors, horizontal overflow, duplicate primary actions, or focus
   loss;
 - a fresh rendered audit confirms remaining gaps are absent or explicitly blocked. T19 is now
-  evidence-complete but not an exit pass; T25 is complete and T26 is now the only dependency-ready
+  evidence-complete but not an exit pass; T25 and T26 are complete and T27 is now the only dependency-ready
   convergence task. Default task-centered routing remains provisional until T26-T28 are either
   completed or backed by stronger target-equivalence evidence.
 
 Wave 44 reconciliation:
+
+- `2026-08-25` PR #378 (merge `9b97e908`) completed `W44-E1-S3-T26`. Create Work Item now uses the
+  target editor/preview shell with durable context and constraints sections, visible draft status,
+  responsive one-action footer, and no duplicate internal submit action. Existing request write,
+  Work Item identity, route/API shapes, runtime-independent creation, launch-only Runner selection,
+  and operator-authored Markdown semantics remain unchanged. Target Create Work Item, guided setup,
+  first-time recovery, frontend, UI contracts, design-token inventory, docs/planning, Ruff, mypy,
+  full Python matrix, deterministic, adapter, security, packaged UI browser, and build CI passed.
+  `W44-E1-S3-T27` is now the only dependency-ready task; T28 remains planned, while human usability,
+  Claude/cross-runtime, and Wave 36 acceptance remain parked.
 
 - `2026-08-25` PR #376 (merge `a8f15319`) completed `W44-E1-S3-T25`. Flow Complete now leads with a
   target-like completion status row, a central immutable handoff/evidence composition, and a bounded
@@ -15762,7 +15783,7 @@ Wave 44 reconciliation:
   immutable source-run semantics, and handoff services remain unchanged. Focused Flow Complete/mobile/
   terminal/desktop browser checks, frontend suites, five-viewport geometry/accessibility/diagnostic
   checks, UI contracts, planning integrity, Ruff, mypy, deterministic, adapter, security, packaged UI
-  browser, and build CI passed. `W44-E1-S3-T26` is now the only dependency-ready task; human usability,
+  browser, and build CI passed. `W44-E1-S3-T27` is now the only dependency-ready task; human usability,
   Claude/cross-runtime, and Wave 36 acceptance remain parked.
 
 - `2026-08-25` PR #366 (merge `82fb1d23`) completed `W44-E1-S3-T20` from the T19-audited revision.
