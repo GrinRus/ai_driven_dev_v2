@@ -7128,7 +7128,7 @@ button.target-editor-tab.active:hover {
   border-radius: 50%;
   display: inline-flex;
   flex: 0 0 auto;
-  font-size: 11px;
+  font-size: var(--type-caption-size);
   height: 18px;
   justify-content: center;
   width: 18px;
@@ -7168,7 +7168,7 @@ button.target-editor-tab.active:hover {
   border: 1px solid var(--line);
   border-radius: var(--radius-control);
   display: block;
-  font-size: 11px;
+  font-size: var(--type-caption-size);
   min-width: 0;
   overflow-wrap: anywhere;
   padding: var(--space-2) var(--space-3);
@@ -7355,7 +7355,7 @@ button.target-editor-tab.active:hover {
   background: var(--surface-soft);
   border: 1px solid var(--line);
   border-radius: var(--radius-control);
-  font-size: 11px;
+  font-size: var(--type-caption-size);
   overflow-wrap: anywhere;
   padding: var(--space-2) var(--space-3);
   white-space: pre-wrap;
