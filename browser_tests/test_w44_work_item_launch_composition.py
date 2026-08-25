@@ -10,7 +10,7 @@ from browser_tests.rendered_assertions import assert_accessible_render
 from browser_tests.rendered_geometry import assert_rendered_geometry
 from browser_tests.state_fixtures import build_browser_state_fixture
 
-VIEWPORTS = ((1280, 900), (1440, 900), (768, 1024), (390, 844))
+VIEWPORTS = ((1280, 900), (1440, 900), (768, 1024), (390, 844), (320, 568))
 
 
 @pytest.mark.parametrize("viewport", VIEWPORTS)
@@ -47,6 +47,11 @@ def test_work_item_launch_has_one_runner_inspector_and_readable_overview(
         assert runner_box["x"] + runner_box["width"] <= viewport[0] + 0.5
         assert primary_box["x"] + primary_box["width"] <= viewport[0] + 0.5
         assert primary_box["y"] >= runner_box["y"] + runner_box["height"] - 1
+        if viewport == (320, 568):
+            primary.focus()
+            assert page.evaluate(
+                "() => document.activeElement === document.querySelector('#globalNextActionButton')"
+            )
 
         if viewport[0] >= 1100:
             stage_lists = page.locator(".canonical-stage-group .intent-phase-list")
