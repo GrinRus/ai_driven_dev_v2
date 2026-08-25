@@ -7,15 +7,15 @@ slice, and local task.
 
 ## Next
 
-- `W44-E1-S3-T33` — Recompose Decision and Mobile Decision so decision context, evidence,
-  resolution choices, durable destination, and one primary action remain in the target first-viewport
-  hierarchy.
-
-## Soon
-
 - `W44-E1-S3-T34` — Align Project Work with the target compact grouped table and selected Work Item
   inspector, removing duplicated setup/search chrome while preserving core-owned membership,
   ordering, progress truth, selection deep links, and one contextual action.
+
+## Soon
+
+- `W44-E1-S3-T35` — Align Implementation Review with the target full-width diff, claims, verification,
+  and Review inspector composition while preserving repository-truth evidence, launch readiness, and
+  the explicit Review gate.
 
 ## Parking lot
 
@@ -41,6 +41,15 @@ slice, and local task.
   queue-restoration policy in `docs/backlog/roadmap.md` (`W8-E3-S1`).
 
 ## Current reconciliation
+
+- `2026-08-26` PR #392 (merge `99ce2bca`) completed `W44-E1-S3-T33`: Decision and Mobile Decision now
+  keep context, retained evidence, resolution choices, editor/destination state, and one real primary
+  action in the target first viewport across question and approval fixtures at all five supported
+  viewports. Read-only evidence opens when source snippets exist; approval queues expose one primary
+  Allow once action while preserving secondary decisions. Focused browser/UI checks (`20 passed`), UI
+  asset contracts (`53 passed`), Ruff, mypy, full CI, deterministic, adapter, packaged-browser,
+  security, and build checks passed. `T34` is now `Next` and `T35` is its direct `Soon` successor;
+  human usability, Claude/cross-runtime, and Wave 36 acceptance remain parked.
 
 - `2026-08-25` PR #390 (merge `4fc916a7`) completed `W44-E1-S3-T32`: Task Workspace and Active Task
   now keep the selected attempt inspector, factual attempt controls, task groups, and live-output
