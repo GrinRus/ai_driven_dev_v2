@@ -3483,7 +3483,7 @@ button.artifact-row:not(:disabled):not([aria-disabled="true"]):hover {
   border-top: 1px solid var(--color-border-default);
   display: grid;
   gap: var(--space-1);
-  padding-top: var(--space-2);
+  padding-top: var(--space-1);
 }
 .reader-brief-facts dt {
   color: var(--color-text-secondary);
@@ -5439,14 +5439,14 @@ button.intent-phase-step.active:hover {
 .task-workspace-table-head,
 .task-workspace-item {
   align-items: center;
-  column-gap: var(--space-6);
+  column-gap: var(--space-4);
   display: grid;
   grid-template-columns:
-    minmax(220px, 2fr)
-    minmax(110px, 1fr)
-    minmax(64px, 0.45fr)
-    minmax(100px, 0.8fr)
-    minmax(150px, 1.2fr);
+    minmax(180px, 2fr)
+    minmax(84px, 0.9fr)
+    minmax(48px, 0.4fr)
+    minmax(84px, 0.8fr)
+    minmax(110px, 1.1fr);
   min-width: 0;
 }
 .task-workspace-table-head {
@@ -5463,8 +5463,8 @@ button.intent-phase-step.active:hover {
 }
 .task-workspace-groups {
   display: grid;
-  gap: var(--space-8);
-  margin-top: var(--space-6);
+  gap: var(--space-5);
+  margin-top: var(--space-4);
 }
 .task-workspace-group {
   min-width: 0;
@@ -5524,8 +5524,8 @@ button.intent-phase-step.active:hover {
   border-radius: 0;
   color: var(--color-text-primary);
   justify-content: stretch;
-  min-height: 48px;
-  padding: var(--space-4) var(--space-6);
+  min-height: 44px;
+  padding: var(--space-3) var(--space-6);
   text-align: left;
   width: 100%;
 }
@@ -5546,7 +5546,7 @@ button.intent-phase-step.active:hover {
 .task-workspace-task-cell {
   align-items: center;
   display: flex;
-  gap: var(--space-6);
+  gap: var(--space-3);
 }
 .task-workspace-task-cell strong {
   font-size: var(--type-body-size);
@@ -5619,6 +5619,32 @@ button.intent-phase-step.active:hover {
   gap: var(--space-6);
   grid-template-columns: repeat(2, minmax(0, 1fr));
 }
+.task-inspector-primary {
+  display: grid;
+  gap: var(--space-5);
+  min-width: 0;
+}
+.task-workspace-detail .task-inspector-primary {
+  gap: var(--space-3);
+}
+.task-workspace-detail .task-contract-section {
+  gap: var(--space-2);
+}
+.task-workspace-detail .task-contract-list {
+  gap: var(--space-1);
+}
+.task-contract-technical {
+  border-top: 1px solid var(--line);
+  padding-top: var(--space-4);
+}
+.task-contract-technical summary {
+  cursor: pointer;
+  font-size: var(--type-label-size);
+  font-weight: var(--type-weight-medium);
+}
+.task-contract-technical .task-contract-grid {
+  margin-top: var(--space-4);
+}
 .task-contract-section {
   display: grid;
   gap: var(--space-3);
@@ -5682,6 +5708,26 @@ button.intent-phase-step.active:hover {
 .task-action-controls .contextual-runner-control {
   margin: 0;
 }
+.task-workspace-detail .task-action-bar {
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--space-1);
+  padding-top: var(--space-2);
+}
+.task-workspace-detail .task-action-controls {
+  gap: var(--space-2);
+  min-width: 0;
+}
+.task-workspace-detail .task-action-controls .contextual-runner-control {
+  align-items: center;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+}
+.task-workspace-detail .task-action-controls .contextual-runner-control > button {
+  min-width: 0;
+  width: auto;
+}
 
 /* Active Task first-viewport composition. This tray is a truthful projection
  * of one selected task attempt; it never invents percentage progress. */
@@ -5696,6 +5742,20 @@ button.intent-phase-step.active:hover {
 }
 .task-attempt-tray.empty {
   align-content: start;
+}
+.task-attempt-tray[hidden] {
+  display: none;
+}
+.task-attempt-files {
+  border-top: 1px solid var(--line);
+  display: grid;
+  gap: var(--space-3);
+  padding-top: var(--space-4);
+}
+.task-attempt-files h4 {
+  font-size: var(--type-label-size);
+  margin: 0;
+  text-transform: uppercase;
 }
 .task-attempt-header {
   align-items: start;
@@ -5765,6 +5825,30 @@ button.intent-phase-step.active:hover {
   padding: var(--space-4);
   white-space: pre-wrap;
   overflow-wrap: anywhere;
+}
+.task-live-output-tray {
+  display: grid;
+  gap: var(--space-4);
+  min-width: 0;
+}
+.task-live-output-header {
+  align-items: center;
+  display: flex;
+  gap: var(--space-4);
+  justify-content: space-between;
+  min-width: 0;
+}
+.task-live-output-header strong {
+  display: block;
+  overflow-wrap: anywhere;
+}
+.task-live-output-header .eyebrow {
+  margin-bottom: var(--space-1);
+}
+.task-live-output-tray .task-attempt-output {
+  border-top: 1px solid var(--line);
+  margin: 0;
+  padding-top: var(--space-4);
 }
 
 @media (max-width: 1120px) {

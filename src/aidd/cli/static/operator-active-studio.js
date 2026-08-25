@@ -299,8 +299,12 @@ function renderTaskWorkspace(taskView) {
   const actionButton = actionName
     ? `<button data-task-action="${escapeHtml(actionName)}"${actionName === "run" || actionName === "resume" ? ` data-task-action-id="${escapeHtml(selected.id)}"` : ""} type="button" ${actionState?.eligible === true ? "" : "disabled aria-disabled=\"true\""}>${escapeHtml(actionLabel)}</button>`
     : "";
+  // The target active-task composition keeps the selected task/attempt facts in
+  // the right inspector and reserves a full-width lower tray for raw output.
+  // Keep the existing data hooks so routes, focus handling, and browser
+  // compatibility assertions continue to observe the same durable facts.
   const attemptTray = `
-    <section class="surface task-attempt-tray ${hasAttemptEvidence ? "has-evidence" : "empty"}" data-task-attempt-tray data-active-task-attempt="${hasAttemptEvidence ? "true" : "false"}" data-attempt-status="${escapeHtml(attemptStatus)}">
+    <section class="task-attempt-tray ${hasAttemptEvidence ? "has-evidence" : "empty"}" data-task-attempt-tray data-active-task-attempt="${hasAttemptEvidence ? "true" : "false"}" data-attempt-status="${escapeHtml(attemptStatus)}"${hasAttemptEvidence ? "" : " hidden"}>
       <div class="task-attempt-header">
         <div>
           <p class="eyebrow">Active task attempt</p>
@@ -321,14 +325,46 @@ function renderTaskWorkspace(taskView) {
         <button class="primary" data-task-attempt-primary data-aidd-primary-action data-aidd-focus-role="primary" data-tab-shortcut="logs" type="button">Open live output</button>
         ${activeTaskJob && ["running", "waiting-for-operator", "cancelling"].includes(activeJob.status) ? `<button class="secondary" data-cancel-job="${escapeHtml(activeJob.job_id)}" type="button" ${activeJob.status === "cancelling" ? "disabled" : ""}>${activeJob.status === "cancelling" ? "Cancelling..." : "Cancel attempt"}</button>` : ""}
       </div>
-      <details class="task-attempt-output"><summary>Raw output</summary><pre data-task-attempt-output>${escapeHtml(rawOutput || "No runtime output captured yet.")}</pre></details>
+      ${scopePaths.length ? `<section class="task-attempt-files"><h4>Changed files</h4><ul class="task-contract-list">${scopePaths.map((path) => `<li><code>${escapeHtml(path)}</code></li>`).join("")}</ul></section>` : ""}
       ${activeTaskJob ? renderActiveJobConnectionSurface() : ""}` : `<p class="muted">No task attempt has started; durable runtime output is not available.</p>`}
     </section>`;
+  const liveOutputTray = hasAttemptEvidence ? `
+    <section class="surface task-live-output-tray" data-task-live-output data-live-output-status="${escapeHtml(attemptStatus)}">
+      <div class="task-live-output-header">
+        <div>
+          <p class="eyebrow">Live output</p>
+          <strong>${escapeHtml(attemptTitle)}</strong>
+        </div>
+        <span class="small-badge ${escapeHtml(attemptConnection)}">${escapeHtml(attemptConnection)}</span>
+      </div>
+      <details class="task-attempt-output"><summary>Raw output</summary><pre data-task-attempt-output>${escapeHtml(rawOutput || "No runtime output captured yet.")}</pre></details>
+    </section>` : "";
+  const taskContractPrimary = selected ? `
+    <section class="task-inspector-primary" data-task-inspector-primary>
+      <section class="task-contract-section"><h4>Acceptance criteria</h4>${acceptanceMarkup}</section>
+      <section class="task-contract-section"><h4>Scope</h4><p>${escapeHtml(selected.dominant_deliverable || "No dominant deliverable recorded.")}</p>${scopePaths.length ? `<ul class="task-contract-list">${scopePaths.map((path) => `<li><code>${escapeHtml(path)}</code></li>`).join("")}</ul>` : `<p class="muted">No expected files recorded.</p>`}</section>
+      <section class="task-contract-section"><h4>Dependencies</h4><p>${escapeHtml((selected.dependencies || []).join(", ") || "none")}</p>${selected.missing_dependencies?.length ? `<p class="task-contract-blocker">Missing: ${escapeHtml(selected.missing_dependencies.join(", "))}</p>` : ""}</section>
+    </section>` : "";
+  const taskContractTechnical = selected ? `
+    <details class="task-contract-technical">
+      <summary>Task contract details</summary>
+      <p class="task-contract-outcome">${escapeHtml(selected.outcome || "Outcome is recorded in the task contract.")}</p>
+      ${hasAttemptEvidence ? taskContractPrimary : ""}
+      <div class="task-contract-grid">
+        <section class="task-contract-section"><h4>Verification</h4><p>${escapeHtml(selected.verification || "No verification command recorded.")}</p></section>
+        <section class="task-contract-section"><h4>Evidence</h4>${evidenceMarkup}</section>
+        <section class="task-contract-section"><h4>Attempts</h4>${attemptsMarkup}</section>
+      </div>
+      <section class="task-contract-section task-contract-blockers"><h4>Blockers</h4><p>${escapeHtml(selected.blocker || "none")}</p></section>
+    </details>` : "";
+  const actionBar = selected && (!hasAttemptEvidence || !activeTaskJob) ? `<section class="task-action-bar" data-task-action-bar data-action-recommended="${escapeHtml(actionProjection?.recommended || "none")}">
+    <div><p class="eyebrow">Next task action</p><strong>${escapeHtml(actionLabel)}</strong><p class="task-action-reason" data-task-action-reason>${escapeHtml(actionReason)}</p></div>
+    <div class="task-action-controls">${actionButton}${actionName && typeof renderContextualRunnerControl === "function" ? renderContextualRunnerControl({actionLabel: actionLabel.toLowerCase()}) : ""}</div>
+  </section>` : "";
   return `
     <section class="active-studio" data-studio-surface="task-workspace" data-state="ready">
       ${renderActiveStudioContextBar(activeStudioState(), activeStageItem())}
       ${renderIntentPhaseStepper()}
-      ${hasAttemptEvidence ? attemptTray : ""}
       <section class="surface task-workspace" data-task-workspace>
         <div class="surface-title"><span>Task Workspace</span><span class="small-badge">${escapeHtml(allTasks.length)} tasks</span></div>
         <p class="muted">Groups, order, readiness, and next task are authoritative from the core ledger.</p>
@@ -385,23 +421,15 @@ function renderTaskWorkspace(taskView) {
       </section>
       <section class="surface task-workspace-detail" data-task-detail>
         ${selected ? `<div class="surface-title"><span>Selected task</span><span class="small-badge">${escapeHtml(selected.status || "unknown")}</span></div>
-          <h3>${escapeHtml(selected.id)} · ${escapeHtml(selected.title || "Untitled task")}</h3>
-          <p class="task-contract-outcome">${escapeHtml(selected.outcome || "Outcome is recorded in the task contract.")}</p>
-          <div class="task-contract-grid">
-            <section class="task-contract-section"><h4>Scope</h4><p>${escapeHtml(selected.dominant_deliverable || "No dominant deliverable recorded.")}</p>${scopePaths.length ? `<ul class="task-contract-list">${scopePaths.map((path) => `<li><code>${escapeHtml(path)}</code></li>`).join("")}</ul>` : `<p class="muted">No expected files recorded.</p>`}</section>
-            <section class="task-contract-section"><h4>Acceptance</h4>${acceptanceMarkup}</section>
-            <section class="task-contract-section"><h4>Dependencies</h4><p>${escapeHtml((selected.dependencies || []).join(", ") || "none")}</p>${selected.missing_dependencies?.length ? `<p class="task-contract-blocker">Missing: ${escapeHtml(selected.missing_dependencies.join(", "))}</p>` : ""}</section>
-            <section class="task-contract-section"><h4>Verification</h4><p>${escapeHtml(selected.verification || "No verification command recorded.")}</p></section>
-            <section class="task-contract-section"><h4>Evidence</h4>${evidenceMarkup}</section>
-            <section class="task-contract-section"><h4>Attempts</h4>${attemptsMarkup}</section>
-          </div>
-          <section class="task-contract-section task-contract-blockers"><h4>Blockers</h4><p>${escapeHtml(selected.blocker || "none")}</p></section>
-          <section class="task-action-bar" data-task-action-bar data-action-recommended="${escapeHtml(actionProjection?.recommended || "none")}">
-            <div><p class="eyebrow">Next task action</p><strong>${escapeHtml(actionLabel)}</strong><p class="task-action-reason" data-task-action-reason>${escapeHtml(actionReason)}</p></div>
-            <div class="task-action-controls">${actionButton}${actionName && typeof renderContextualRunnerControl === "function" ? renderContextualRunnerControl({actionLabel: actionLabel.toLowerCase()}) : ""}</div>
-          </section>` : `<p class="muted">Select a task to inspect its bounded detail.</p>`}
+          ${!hasAttemptEvidence ? `<h3>${escapeHtml(selected.id)} · ${escapeHtml(selected.title || "Untitled task")}</h3>
+          <p class="task-contract-outcome">${escapeHtml(selected.outcome || "Outcome is recorded in the task contract.")}</p>` : ""}
+          ${hasAttemptEvidence ? attemptTray : taskContractPrimary}
+          ${taskContractTechnical}
+          ${actionBar}
+          ${hasAttemptEvidence ? "" : attemptTray}
+        ` : `<p class="muted">Select a task to inspect its bounded detail.</p>`}
       </section>
-      ${!hasAttemptEvidence && selected ? attemptTray : ""}
+      ${liveOutputTray}
     </section>
   `;
 }

@@ -586,7 +586,7 @@ body.work-overview-mode .intent-decision-surface .next-action-button-stack .next
   body:not(.setup-active) .operator-workspace
     .active-studio[data-studio-surface="task-workspace"] > [data-task-workspace] {
     grid-column: 1;
-    grid-row: 4;
+    grid-row: 3;
     min-width: 0;
   }
 
@@ -594,22 +594,39 @@ body.work-overview-mode .intent-decision-surface .next-action-button-stack .next
     .active-studio[data-studio-surface="task-workspace"] > [data-task-detail] {
     align-self: start;
     grid-column: 2;
-    grid-row: 4;
-    min-width: 0;
-  }
-
-  body:not(.setup-active) .operator-workspace
-    .active-studio[data-studio-surface="task-workspace"] > [data-task-attempt-tray].has-evidence {
-    grid-column: 1 / -1;
     grid-row: 3;
     min-width: 0;
   }
 
   body:not(.setup-active) .operator-workspace
-    .active-studio[data-studio-surface="task-workspace"] > [data-task-attempt-tray].empty {
+    .active-studio[data-studio-surface="task-workspace"] > [data-task-live-output] {
     grid-column: 1 / -1;
-    grid-row: 5;
+    grid-row: 4;
     min-width: 0;
+  }
+
+  body:not(.setup-active) .operator-workspace .task-workspace-detail {
+    gap: var(--space-5);
+  }
+
+  body:not(.setup-active) .operator-workspace .task-workspace-detail > .task-attempt-tray {
+    background: var(--surface-soft);
+    border-color: var(--color-border-strong);
+    padding: var(--space-5);
+  }
+
+  body:not(.setup-active) .operator-workspace .task-attempt-tray .task-attempt-facts {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  body:not(.setup-active) .operator-workspace .task-attempt-tray .task-attempt-actions {
+    align-items: stretch;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  body:not(.setup-active) .operator-workspace .task-attempt-tray .task-attempt-actions button {
+    width: 100%;
   }
 }
 
@@ -635,6 +652,43 @@ body.work-overview-mode .intent-decision-surface .next-action-button-stack .next
 
   .operator-workspace .studio-context-bar .muted {
     margin-top: 0;
+  }
+
+  /* On a phone an active attempt is the immediate monitoring decision. Keep
+     its factual inspector and cancellation/open-output action ahead of the
+     dense ledger; ready-task navigation keeps the normal table-first order. */
+  .operator-workspace
+    .active-studio[data-studio-surface="task-workspace"] {
+    display: flex;
+    flex-direction: column;
+  }
+  .operator-workspace
+    .active-studio[data-studio-surface="task-workspace"] > [data-studio-context-bar] {
+    order: 1;
+  }
+  .operator-workspace
+    .active-studio[data-studio-surface="task-workspace"] > [data-intent-phase-stepper] {
+    order: 2;
+  }
+  .operator-workspace
+    .active-studio[data-studio-surface="task-workspace"] > [data-task-workspace] {
+    order: 3;
+  }
+  .operator-workspace
+    .active-studio[data-studio-surface="task-workspace"] > [data-task-detail] {
+    order: 4;
+  }
+  .operator-workspace
+    .active-studio[data-studio-surface="task-workspace"] > [data-task-live-output] {
+    order: 5;
+  }
+  .operator-workspace
+    .active-studio[data-studio-surface="task-workspace"]:has(> [data-task-detail] > [data-task-attempt-tray][data-active-task-attempt="true"]) > [data-task-detail] {
+    order: 3;
+  }
+  .operator-workspace
+    .active-studio[data-studio-surface="task-workspace"]:has(> [data-task-detail] > [data-task-attempt-tray][data-active-task-attempt="true"]) > [data-task-workspace] {
+    order: 4;
   }
 
   .operator-workspace .intent-phase-stepper {
