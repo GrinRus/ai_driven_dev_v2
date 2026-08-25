@@ -184,9 +184,13 @@ function renderImplementationProceedGuard(implementation) {
 
 function renderImplementationSummary(implementation) {
   return `
-    <section class="surface" data-implementation-review-summary>
-      <div class="surface-title">
-        <span>Implementation summary</span>
+    <section class="surface target-implementation-summary" data-implementation-review-summary>
+      <div class="target-implementation-summary-heading">
+        <div>
+          <p class="eyebrow">Repository truth</p>
+          <h2>Implementation Review</h2>
+          <p>Compare the recorded implementation claims with the actual repository diff before opening Review.</p>
+        </div>
         <span class="small-badge">${escapeHtml(implementation?.selected_task_id || "task not detected")}</span>
       </div>
       ${renderWarnings(implementationSummaryWarnings(implementation))}
@@ -227,8 +231,62 @@ function renderImplementationRepositoryGate(context) {
   });
 }
 
+function renderTargetImplementationReviewGate({diffView, evidence, taskView, files, reviewEnabled}) {
+  const completed = (taskView?.tasks || []).filter((task) => task.status === "succeeded");
+  const insideScope = files.filter((file) => file.allowed_scope_status === "inside");
+  const outsideScope = files.filter((file) => file.allowed_scope_status === "outside");
+  const tests = files.filter((file) => file.category === "test");
+  const docs = files.filter((file) => file.category === "documentation");
+  const commands = evidence?.verification_commands || [];
+  const risks = evidence?.residual_risks || [];
+  const claims = evidence?.touched_files || [];
+  const reviewBlocker = taskView?.review_blocker || "Review remains blocked until implementation evidence is complete.";
+  const runner = reviewEnabled && typeof renderContextualRunnerControl === "function"
+    ? renderContextualRunnerControl({actionLabel: "review"})
+    : "";
+  return `
+    <aside class="target-review-gate" data-target-review-gate aria-label="Review gate">
+      <div class="target-review-gate-heading">
+        <h3>Review gate</h3>
+        <span class="small-badge ${reviewEnabled ? "good" : "bad"}">${reviewEnabled ? "Ready" : "Blocked"}</span>
+      </div>
+      <section class="target-review-gate-section" data-review-scope-coverage>
+        <h4>Scope coverage</h4>
+        <div class="target-review-checks">
+          <span><b class="target-check ${insideScope.length ? "good" : "bad"}">✓</b> Source files <strong>${escapeHtml(insideScope.length)} of ${escapeHtml(files.length)}</strong></span>
+          <span><b class="target-check ${tests.length ? "good" : "warn"}">✓</b> Test files <strong>${escapeHtml(tests.length)} of ${escapeHtml(tests.length)}</strong></span>
+          <span><b class="target-check ${docs.length ? "good" : "warn"}">✓</b> Docs <strong>${escapeHtml(docs.length)} of ${escapeHtml(docs.length)}</strong></span>
+          <span><b class="target-check ${outsideScope.length ? "bad" : "good"}">${outsideScope.length ? "!" : "✓"}</b> Outside scope <strong>${escapeHtml(outsideScope.length)}</strong></span>
+        </div>
+      </section>
+      <section class="target-review-gate-section" data-review-claims-evidence>
+        <h4>Claims and evidence</h4>
+        ${claims.length ? `<ul>${claims.slice(0, 6).map((path) => `<li>${escapeHtml(path)}</li>`).join("")}</ul>` : `<p class="muted">No changed files were claimed.</p>`}
+        <p class="target-review-gate-meta">${escapeHtml(completed.length)} completed task${completed.length === 1 ? "" : "s"} from the canonical ledger</p>
+      </section>
+      <section class="target-review-gate-section" data-review-verification>
+        <h4>Verification commands run</h4>
+        ${commands.length ? `<div class="target-review-command-list">${commands.slice(0, 5).map((command) => `<span><b class="target-check good">✓</b><code>${escapeHtml(command)}</code></span>`).join("")}</div>` : `<p class="form-error">No executable verification evidence recorded.</p>`}
+      </section>
+      <section class="target-review-gate-section" data-review-risks>
+        <h4>Risks</h4>
+        ${risks.length ? `<ul>${risks.slice(0, 4).map((risk) => `<li>${escapeHtml(risk)}</li>`).join("")}</ul>` : `<p class="target-review-risk-low"><b class="target-check good">✓</b> No residual risks recorded.</p>`}
+      </section>
+      ${reviewEnabled && runner ? `<div class="target-review-runner">${runner}</div>` : ""}
+      ${!reviewEnabled ? `<p class="form-error" data-target-review-blocker>${escapeHtml(reviewBlocker)}</p>` : ""}
+      <div class="target-review-gate-actions">
+        <button data-proceed-stage="review" data-aidd-primary-action aria-label="Open Review stage" type="button" ${reviewEnabled ? "" : "disabled aria-disabled=\"true\""}>Proceed to Review</button>
+        <button data-open-request-tab type="button" class="secondary">Request change</button>
+      </div>
+      <p class="target-review-gate-note">This launches the Review stage and moves this Work Item forward.</p>
+      ${diffView?.aidd_artifacts?.length ? `<small class="muted">${escapeHtml(diffView.aidd_artifacts.length)} core-owned evidence artifact(s) remain read-only.</small>` : ""}
+    </aside>
+  `;
+}
+
 async function renderImplementReview() {
   const content = document.getElementById("intentContent");
+  if (typeof renderGlobalNextActionStrip === "function") renderGlobalNextActionStrip();
   if (!state.activeRunId) {
     content.innerHTML = `<div class="empty-state">Run implement before reviewing repository changes.</div>`;
     return;
@@ -248,12 +306,15 @@ async function renderImplementReview() {
     const unchanged = diffView.mentioned_but_unchanged || [];
     const verificationReady = implementationVerificationReady(evidence);
     content.innerHTML = `
-      <div class="implement-review-screen">
+      <div class="implement-review-screen target-implementation-review" data-target-implementation-review>
         ${renderImplementationSummary(evidence)}
         ${renderImplementationTaskGate(taskView)}
-        ${renderImplementationRepositoryGate({
-          diffView, evidence, taskView, files, visible, selected, unchanged, verificationReady
-        })}
+        <div class="target-implementation-workspace">
+          ${renderImplementationRepositoryGate({
+            diffView, evidence, taskView, files, visible, selected, unchanged, verificationReady
+          })}
+          ${renderTargetImplementationReviewGate({diffView, evidence, taskView, files, reviewEnabled: verificationReady && taskView.review_eligible && selectedRuntimeReady()})}
+        </div>
       </div>
     `;
   } catch (error) {

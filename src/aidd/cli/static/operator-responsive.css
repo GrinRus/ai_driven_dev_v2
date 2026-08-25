@@ -192,6 +192,130 @@
   }
 }
 
+/* Target Review and remediation keep the evidence-first hierarchy at every
+ * supported viewport. The old floating recovery action is only for the legacy
+ * gate; target request panels own their single action in normal flow. */
+@media (max-width: 1120px) {
+  .target-implementation-workspace,
+  .target-remediation-layout {
+    grid-template-columns: minmax(0, 1fr) minmax(250px, 320px);
+  }
+  .target-findings-table-head,
+  .target-finding-row {
+    grid-template-columns: 32px minmax(150px, 1.4fr) minmax(74px, 0.55fr) minmax(110px, 0.8fr) minmax(120px, 1fr);
+  }
+}
+
+@media (max-width: 900px) {
+  .target-implementation-workspace,
+  .target-remediation-layout {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .target-remediation-surface .target-finding-row {
+    grid-template-columns: 32px minmax(0, 1fr) auto;
+  }
+  .target-review-gate,
+  .target-remediation-request {
+    position: static;
+  }
+  .target-review-gate {
+    order: 2;
+  }
+  .target-remediation-request {
+    order: 2;
+  }
+  .target-remediation-main {
+    order: 1;
+  }
+}
+
+@media (max-width: 760px) {
+  .target-implementation-summary,
+  .target-implementation-ledger,
+  .target-review-gate,
+  .target-remediation-surface {
+    padding: var(--space-4);
+  }
+  .target-implementation-summary-heading,
+  .target-remediation-heading {
+    display: grid;
+    gap: var(--space-3);
+  }
+  .target-implementation-summary .metric-grid,
+  .target-qa-summary {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .target-implementation-summary [data-implementation-verification] {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .target-remediation-evidence-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .target-findings-table {
+    overflow: visible;
+  }
+  .target-findings-table-head {
+    display: none;
+  }
+  .target-remediation-surface .target-finding-row {
+    align-items: start;
+    grid-template-columns: 44px minmax(0, 1fr) auto;
+    grid-template-areas:
+      "select copy severity"
+      "select source evidence";
+    row-gap: var(--space-2);
+  }
+  .target-finding-select {
+    grid-area: select;
+  }
+  .target-finding-copy {
+    grid-area: copy;
+  }
+  .target-finding-severity {
+    grid-area: severity;
+    justify-self: end;
+  }
+  .target-finding-source {
+    grid-area: source;
+  }
+  .target-finding-evidence {
+    grid-area: evidence;
+    justify-self: end;
+    text-align: right;
+  }
+  .target-remediation-request textarea {
+    min-height: 140px;
+  }
+}
+
+@media (max-width: 1500px) and (min-width: 761px) {
+  .target-remediation-surface [data-remediation-launch="review"],
+  .target-remediation-surface [data-remediation-launch="qa"] {
+    bottom: auto;
+    box-shadow: none;
+    left: auto;
+    min-height: var(--control-height);
+    position: static;
+    right: auto;
+    width: 100%;
+  }
+  .target-remediation-surface .target-remediation-request {
+    padding-bottom: var(--space-5);
+  }
+}
+
+@media (max-width: 760px) {
+  .target-remediation-surface [data-remediation-launch="review"],
+  .target-remediation-surface [data-remediation-launch="qa"] {
+    bottom: auto;
+    left: auto;
+    min-height: var(--control-height-touch);
+    position: static;
+    right: auto;
+    width: 100%;
+  }
+}
+
 /* Runs/Attempts target composition: stack the three truthful regions while
    keeping the selected attempt readable and every read-only action tappable. */
 @media (max-width: 900px) {
@@ -1553,5 +1677,57 @@
   .task-action-controls .contextual-runner-control {
     align-items: stretch;
     flex-direction: column;
+  }
+}
+
+/* Review and remediation keep their single decisive action reachable while
+ * the operator inspects a long evidence surface. The action remains the same
+ * DOM control; only placement changes at bounded viewport sizes. */
+@media (max-width: 1500px) and (min-width: 761px) {
+  .target-implementation-review [data-aidd-primary-action],
+  .target-remediation-surface [data-remediation-launch="review"],
+  .target-remediation-surface [data-remediation-launch="qa"] {
+    background: var(--teal-dark);
+    border: 1px solid var(--teal-dark);
+    bottom: var(--space-4);
+    box-shadow: var(--elevation-overlay);
+    min-height: var(--control-height);
+    position: fixed;
+    right: var(--space-6);
+    width: min(280px, calc(100vw - (var(--space-6) * 2)));
+    z-index: 60;
+  }
+  .target-implementation-review .target-review-gate,
+  .target-remediation-surface .target-remediation-request {
+    padding-bottom: calc(var(--space-8) + var(--control-height));
+  }
+  .target-remediation-surface .remediation-draft-preview pre {
+    max-height: none;
+    overflow: visible;
+  }
+}
+
+@media (max-width: 760px) {
+  .target-implementation-review [data-aidd-primary-action],
+  .target-remediation-surface [data-remediation-launch="review"],
+  .target-remediation-surface [data-remediation-launch="qa"] {
+    background: var(--teal-dark);
+    border: 1px solid var(--teal-dark);
+    bottom: max(var(--space-4), env(safe-area-inset-bottom));
+    box-shadow: var(--elevation-overlay);
+    left: var(--space-4);
+    min-height: var(--control-height-touch);
+    position: fixed;
+    right: var(--space-4);
+    width: auto;
+    z-index: 60;
+  }
+  .target-implementation-review .target-review-gate,
+  .target-remediation-surface .target-remediation-request {
+    padding-bottom: calc(var(--space-10) + var(--control-height-touch));
+  }
+  .target-remediation-surface .remediation-draft-preview pre {
+    max-height: none;
+    overflow: visible;
   }
 }

@@ -173,6 +173,7 @@ const state = {
   reviewFindingsRunId: "",
   qaVerdictView: null,
   qaVerdictRunId: "",
+  remediationFindingFilter: "all",
   activeArtifactKey: "",
   activeArtifactWorkbench: null,
   activeArtifactComparison: null,
