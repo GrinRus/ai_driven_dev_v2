@@ -7,8 +7,8 @@ slice, and local task.
 
 ## Next
 
-- `W44-E1-S3-T25` — Align Flow Complete with the target immutable handoff, evidence,
-  completion inspector, and recommended-next-outcome composition without changing lineage semantics.
+- `W44-E1-S3-T26` — Align Create Work Item with the target editor/preview shell, draft status,
+  context sections, and one create action while preserving operator-authored Markdown rules.
 
 ## Soon
 
@@ -37,6 +37,16 @@ slice, and local task.
 
 ## Current reconciliation
 
+- `2026-08-25` PR #376 (merge `a8f15319`) completed `W44-E1-S3-T25`: Flow Complete now leads with a
+  target-like completion status row, a central immutable handoff/evidence composition, and a bounded
+  Completion inspector with fresh-QA checks, retained evidence, run IDs, the core recommendation, one
+  primary action, and disclosed secondary outcomes. Existing routes, selectors, lineage, immutable
+  source-run semantics, and handoff services remain unchanged. Focused Flow Complete/mobile/terminal/
+  desktop browser checks, frontend suites, five-viewport geometry/accessibility/diagnostic checks, UI
+  contracts, planning integrity, Ruff, mypy, deterministic, adapter, security, packaged UI browser,
+  and build CI passed. `W44-E1-S3-T26` is now the only `Next` task; Wave 44 exit, human usability,
+  Claude/cross-runtime, and Wave 36 acceptance remain open or parked as previously scoped.
+
 - `2026-08-25` PR #374 (merge `a85a9d03`) completed `W44-E1-S3-T24`: Runs and Attempts now use the
   target three-region composition with a compact retained-runs list, selected-attempt tabs and
   chronology, read-only Timeline/Raw log/Artifacts views, and an Evidence and lineage inspector
@@ -45,8 +55,8 @@ slice, and local task.
   preserved. Focused target/history browser suites (`16`), frontend state/route tests (`41`), five-
   viewport geometry/accessibility/diagnostic checks, CSS contracts, planning integrity, Ruff, mypy,
   deterministic, adapter, packaged UI browser, security, and build CI passed. `W44-E1-S3-T25` is now
-  the only `Next` task; Wave 44 exit, human usability, Claude/cross-runtime, and Wave 36 acceptance
-  remain open or parked as previously scoped.
+  historical; `W44-E1-S3-T26` is the only `Next` task; Wave 44 exit, human usability,
+  Claude/cross-runtime, and Wave 36 acceptance remain open or parked as previously scoped.
 
 - `2026-08-25` PR #372 (merge `a733341c`) completed `W44-E1-S3-T23`: Decision recovery now leads with
   rationale, retained evidence, answer/resolution controls, durable destination, and explicit impact;
