@@ -1113,6 +1113,13 @@ def test_operator_artifact_asset_keeps_document_and_truncation_contracts() -> No
             "function renderWorkbenchComparison(workbench)",
             "function renderWorkbenchTableOfContents(workbench)",
             "function renderDocumentReadingBrief(workbench)",
+            "function renderDocumentContextInspector(workbench = {})",
+            "data-document-context-inspector",
+            "data-document-context-contract",
+            "data-document-context-provenance",
+            "data-document-context-source",
+            "data-document-context-actions",
+            'data-document-context-action="request-change"',
             (
                 "function renderReaderEvidenceDisclosure("
                 "{section, title, purpose, count, body, open = false})"
@@ -1232,6 +1239,24 @@ def test_operator_artifact_asset_keeps_document_and_truncation_contracts() -> No
     assert ".artifact-ownership-note," in responsive
     assert ".workbench-sidebar," in responsive
     assert ".reader-comparison-grid," in responsive
+
+    intent_shell = _asset_text("/operator-intent-shell.css")
+    _assert_contains_all(
+        intent_shell,
+        (
+            "body.markdown-workspace-mode",
+            ".document-context-inspector {",
+            ".document-context-actions {",
+            ".document-context-readonly {",
+            ".reader-brief-compact-purpose {",
+        ),
+    )
+
+    api_state = _asset_text("/operator-api-state.js")
+    assert (
+        'document.body.classList.toggle("markdown-workspace-mode", markdownWorkspaceActive);'
+        in api_state
+    )
 
 
 def test_operator_questions_asset_keeps_answer_resolution_and_saved_answer_contracts() -> None:
