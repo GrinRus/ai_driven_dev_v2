@@ -7,15 +7,15 @@ slice, and local task.
 
 ## Next
 
-- `W44-E1-S3-T35` — Align Implementation Review with the target full-width diff, claims, verification,
-  and Review inspector composition while preserving repository-truth evidence, launch readiness, and
-  the explicit Review gate.
-
-## Soon
-
 - `W44-E1-S3-T36` — Align Review/QA Remediation with the target findings/source-evidence/durable request
   composition while preserving selection semantics, downstream staleness, Runner readiness, conflict
   handling, and one remediation action.
+
+## Soon
+
+- `W44-E1-S3-T37` — Align Runs and Attempts with the target compact retained-run list, chronology,
+  selected-attempt inspector, lineage, and read-only actions without changing history routes or
+  comparison semantics.
 
 ## Parking lot
 
@@ -41,6 +41,15 @@ slice, and local task.
   queue-restoration policy in `docs/backlog/roadmap.md` (`W8-E3-S1`).
 
 ## Current reconciliation
+
+- `2026-08-26` PR #396 (merge `66af77e9`) completed `W44-E1-S3-T35`: Implementation Review now uses a
+  compact claims/verification overview, retains the canonical task ledger, and presents repository diff
+  evidence beside a distinct Review inspector with responsive one-column fallback. Repository-truth
+  evidence, launch readiness, read-only stage documents, routes, ids, and one primary Review action remain
+  unchanged. Focused browser composition checks (`3 passed`), frontend tests (`36 passed`), UI contracts,
+  docs/planning (`108 passed`), Ruff, mypy, full CI, deterministic, adapter, packaged-browser, security,
+  and build checks passed. `T36` is now `Next` and `T37` is its direct `Soon` successor; human usability,
+  Claude/cross-runtime, and Wave 36 acceptance remain parked.
 
 - `2026-08-26` PR #394 (merge `901b6bd0`) completed `W44-E1-S3-T34`: Project Work now uses a compact
   server-owned grouped table with explicit Work Item, Stage, Progress, Runner, Last event, and Status
