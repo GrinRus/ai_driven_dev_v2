@@ -7004,7 +7004,7 @@ button.target-editor-tab.active:hover {
   }
 }
 
-@media (min-width: 1200px) {
+@media (min-width: 761px) and (min-height: 900px) and (orientation: landscape) {
   .validation-finding-inspector .validation-finding-facts {
     gap: var(--space-2);
     margin-block: var(--space-3);
@@ -7048,11 +7048,11 @@ button.target-editor-tab.active:hover {
   }
 
   .validation-finding-inspector .contextual-runner-copy {
-    gap: 1px;
+    gap: var(--space-1);
   }
 
   .validation-finding-inspector .contextual-runner-copy > span:last-child {
-    font-size: 10px;
+    font-size: var(--type-caption-size);
     line-height: 1.1;
   }
 }
