@@ -7228,7 +7228,7 @@ button.target-editor-tab.active:hover {
   align-items: start;
   display: grid;
   gap: var(--space-4);
-  grid-template-columns: minmax(0, 1fr) minmax(280px, 340px);
+  grid-template-columns: minmax(0, 1.18fr) minmax(300px, 0.82fr);
   min-width: 0;
 }
 .target-remediation-main {
@@ -7326,6 +7326,9 @@ button.target-editor-tab.active:hover {
   display: grid;
   gap: var(--space-4);
   grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+.target-remediation-evidence-grid[data-remediation-evidence-canvas] {
+  align-items: stretch;
 }
 .target-evidence-card {
   background: var(--surface);

@@ -265,9 +265,9 @@ function renderStudioReviewQualityGate(view) {
               </article>
             `).join("") : `<div class="empty-state">No structured Review findings were published.</div>`}
           </section>
-          <div class="target-remediation-evidence-grid">
+          <div class="target-remediation-evidence-grid" data-remediation-evidence-canvas>
             <section class="target-evidence-card" aria-label="Source evidence"><h3>Source evidence</h3>${paths.length ? paths.map((path) => `<span>▧ ${escapeHtml(path)}</span>`).join("") : `<span class="muted">No source paths recorded.</span>`}</section>
-            <section class="target-evidence-card" aria-label="Finding consequences"><h3>Impact</h3><span>${escapeHtml(blockingCount)} blocking finding${blockingCount === 1 ? "" : "s"} require a durable remediation request.</span><span>${escapeHtml(paths.length)} related path${paths.length === 1 ? "" : "s"} retained from the review report.</span></section>
+            <section class="target-evidence-card" aria-label="Relevant evidence"><h3>Relevant evidence</h3>${findings.length ? findings.slice(0, 6).map((finding) => `<span>${escapeHtml(finding.finding_id)} · ${escapeHtml(findingEvidence(finding) || "not referenced")}</span>`).join("") : `<span class="muted">No retained finding evidence.</span>`}</section>
           </div>
         </main>
         <aside class="target-remediation-request" aria-label="Remediation request">
@@ -346,7 +346,7 @@ function renderStudioQaQualityGate(view, sourceItems) {
               </article>
             `).join("") : `<div class="empty-state">No QA risks or known issues were published.</div>`}
           </section>
-          <section class="target-evidence-card target-qa-upstream" data-qa-upstream-references aria-label="QA evidence"><h3>Acceptance and evidence</h3><span>Acceptance: ${escapeHtml((view?.acceptance_ids || []).join(", ") || "not referenced")}</span><span>Evidence: ${escapeHtml((view?.evidence_references || view?.evidence_ids || []).join(", ") || "not referenced")}</span></section>
+          <section class="target-evidence-card target-qa-upstream" data-qa-upstream-references data-remediation-evidence-canvas aria-label="QA evidence"><h3>Acceptance and evidence</h3><span>Acceptance: ${escapeHtml((view?.acceptance_ids || []).join(", ") || "not referenced")}</span><span>Evidence: ${escapeHtml((view?.evidence_references || view?.evidence_ids || []).join(", ") || "not referenced")}</span></section>
           <div class="sr-only" data-qa-risks>${risks.map((risk) => `<span>Residual risk · ${escapeHtml(risk)}</span>`).join("")} ${issues.map((issue) => `<span>Known issue · ${escapeHtml(issue)}</span>`).join("")}</div>
         </main>
         <aside class="target-remediation-request" aria-label="QA remediation request">

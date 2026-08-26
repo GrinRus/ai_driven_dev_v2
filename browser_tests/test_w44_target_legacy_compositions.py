@@ -176,6 +176,7 @@ def test_review_remediation_uses_finding_evidence_and_request_hierarchy(
         assert target.locator("[data-review-findings]").is_visible()
         assert target.locator("[data-review-finding]").count() == 1
         assert target.locator("[data-remediation-source-evidence]").count() == 1
+        assert target.locator("[data-remediation-evidence-canvas]").is_visible()
         assert target.locator("[data-remediation-write-preview]").is_visible()
         assert target.locator("[data-remediation-launch='review']").count() == 1
         assert target.locator("[data-aidd-primary-action]:visible").count() == 1
