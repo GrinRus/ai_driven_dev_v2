@@ -15876,14 +15876,27 @@ Local tasks:
   five-viewport matrix (`1 passed`), frontend (`136 passed`), UI contracts (`63 passed`),
   docs/planning (`50 passed`), Ruff, mypy, full CI, deterministic, adapter, packaged-browser,
   security, and build checks passed.
-- `W44-E1-S3-T41` (next) Compact the desktop Validation Repair surface's vertical rhythm so the
+- `W44-E1-S3-T41` (done) Compact the desktop Validation Repair surface's vertical rhythm so the
   inline Runner and primary repair action are visible in the supported `1280x900` and `1440x900`
   initial viewports without restoring a fixed overlay or obscuring consequence, exact repair brief,
   or extension evidence. Keep the existing routes, readiness and mutation services, generated
   document read-only boundary, and mobile first-viewport dock. Verification: fresh screenshots and
   geometry/accessibility assertions at `1280x900`, `1440x900`, `768x1024`, `390x844`, and `320x568`
   prove inline action visibility, no overlap, one primary action, clean diagnostics, and no
-  horizontal overflow.
+  horizontal overflow. PR #408 (merge `d7994130`) compacts the desktop validation context,
+  stage strip, finding inspector, and repair controls using existing UI tokens; mobile safe-area
+  behavior, routes, ids, readiness, mutation services, and generated-document immutability remain
+  unchanged. Focused viewport (`10`), validation matrix, recovery/legacy compositions (`28`),
+  frontend (`136`), UI contracts (`53`), docs/planning (`50`), Ruff, mypy, and full CI passed.
+- `W44-E1-S3-T42` (next) Split the Work Item detail shell into the target primary navigation rail
+  and secondary Work Items navigator while keeping the project Inbox shell compact. On detail
+  surfaces, preserve the existing Work Item list, selection/deep-link routes, navigation ids,
+  keyboard behavior, and mobile collapse semantics, but expose the target two-level desktop
+  hierarchy: icon navigation rail plus project Work Items rail. On the Inbox surface, retain the
+  single target project navigation rail and do not duplicate Work Item controls. Verification:
+  fresh target comparisons and geometry/accessibility checks at `1280x900`, `1440x900`,
+  `768x1024`, `390x844`, and `320x568` prove route-scoped rail composition, stable selection and
+  reload/deep links, one visible navigation state, no horizontal overflow, and clean diagnostics.
 
 Wave 44 exit evidence:
 
@@ -15895,11 +15908,19 @@ Wave 44 exit evidence:
 - browser checks show no console errors, horizontal overflow, duplicate primary actions, or focus
   loss;
   - a fresh rendered audit confirms remaining gaps are absent or explicitly blocked. T19 is now
-    evidence-complete but not an exit pass; T25-T40 are complete and T41 is the next dependency-ready
-    convergence task. Default task-centered routing remains
-    provisional until T30-T41 are either completed or backed by explicit target-equivalence evidence.
+    evidence-complete but not an exit pass; T25-T41 are complete and T42 is the next dependency-ready
+    convergence task. Default task-centered routing remains provisional until T30-T42 are either
+    completed or backed by explicit target-equivalence evidence.
 
 Wave 44 reconciliation:
+
+- `2026-08-26` PR #408 (merge `d7994130`) completed `W44-E1-S3-T41`. Validation Repair now keeps
+  the desktop Runner and primary repair action inline and visible in the initial `1280x900` and
+  `1440x900` viewports through compact tokenized spacing, while the tablet remains scrollable and
+  mobile retains its safe-area dock. Fresh screenshots and five-viewport geometry show no overlap,
+  nested scroll, duplicate primary action, diagnostic error, or horizontal overflow; the next
+  target-equivalence gap is the detail-shell split between the target icon rail and Work Items
+  navigator, tracked as `W44-E1-S3-T42`.
 
 - `2026-08-26` PR #406 (merge `40632549`) completed `W44-E1-S3-T40`. Validation Repair now keeps
   the desktop action group in normal inspector flow, so the Runner, primary repair, Request change,

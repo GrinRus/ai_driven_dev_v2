@@ -7,14 +7,13 @@ slice, and local task.
 
 ## Next
 
-- `W44-E1-S3-T41` — Compact the desktop Validation Repair surface's vertical rhythm so the inline
-  Runner and primary repair action are visible in the supported `1280x900` and `1440x900` initial
-  viewports without restoring a fixed overlay or obscuring consequence, exact repair brief, or
-  extension evidence.
+- `W44-E1-S3-T42` — Split the Work Item detail shell into the target primary navigation rail and
+  secondary Work Items navigator while keeping the project Inbox shell compact. Preserve existing
+  selection/deep-link routes, navigation ids, keyboard behavior, and mobile collapse semantics.
 
 ## Soon
 
-- None; T40 is complete and T41 is the only currently dependency-ready task.
+- None; T41 is complete and T42 is the only currently dependency-ready task.
 
 ## Parking lot
 
@@ -40,6 +39,14 @@ slice, and local task.
   queue-restoration policy in `docs/backlog/roadmap.md` (`W8-E3-S1`).
 
 ## Current reconciliation
+
+- `2026-08-26` PR #408 (merge `d7994130`) completed `W44-E1-S3-T41`: Validation Repair now keeps
+  the desktop Runner and primary repair action inline and visible in the initial `1280x900` and
+  `1440x900` viewports through compact tokenized spacing; tablet scrolling and the mobile safe-area
+  dock remain intentional. Focused viewport (`10`), recovery/legacy (`28`), frontend (`136`), UI
+  contracts (`53`), docs/planning (`50`), Ruff, mypy, and full CI passed. Fresh target comparison
+  identified the next bounded gap: detail surfaces need the target icon navigation rail plus a
+  separate Work Items navigator; `W44-E1-S3-T42` is promoted to `Next`.
 
 - `2026-08-26` PR #406 (merge `40632549`) completed `W44-E1-S3-T40`: desktop Validation Repair
   actions now remain inline with the finding inspector instead of covering consequence, exact repair
