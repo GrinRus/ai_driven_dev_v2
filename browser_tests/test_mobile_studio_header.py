@@ -119,3 +119,57 @@ def test_mobile_recovery_header_keeps_identity_and_decision_surface(
         assert geometry["maintenance"]["height"] >= 44
         assert geometry["scrollWidth"] <= viewport[0]
         browser_page.diagnostics.assert_clean()
+
+
+@pytest.mark.parametrize("fixture_state, stage", [
+    ("runtime-launch-failure", "idea"),
+    ("validation-repair-exhausted", "plan"),
+])
+@pytest.mark.parametrize("viewport", [(320, 568), (390, 844)])
+def test_mobile_recovery_route_exposes_current_work_item_identity(
+    tmp_path: Path,
+    fixture_state: str,
+    stage: str,
+    viewport: tuple[int, int],
+) -> None:
+    fixture = build_browser_state_fixture(
+        tmp_path / f"route-{fixture_state}-{viewport[0]}",
+        fixture_state,
+    )
+    with sync_playwright() as playwright, operator_browser_harness(
+        fixture.project_root,
+        playwright,
+        work_item=fixture.work_item,
+    ) as harness, harness.open_page(viewport) as browser_page:
+        page = browser_page.page
+        page.goto(
+            f"{harness.url}?mode=studio&work_item={fixture.work_item}"
+            f"&run_id={fixture.run_id}&stage={stage}&view=recovery",
+            wait_until="domcontentloaded",
+        )
+        surface = "[data-recovery-summary]" if stage == "idea" else ".validation-repair-center"
+        page.locator(surface).wait_for(state="visible")
+
+        work_item_context = page.locator("#topContextIntent")
+        work_item_context.wait_for(state="visible")
+        assert work_item_context.inner_text() == fixture.work_item
+        context_box = work_item_context.bounding_box()
+        inbox_box = page.locator("#projectInboxButton").bounding_box()
+        overflow_box = page.locator("#runtimeSettings > summary").bounding_box()
+        assert context_box is not None and context_box["width"] > 0
+        assert inbox_box is not None and inbox_box["width"] >= 44
+        assert overflow_box is not None and overflow_box["width"] >= 44
+        assert page.evaluate(
+            """() => getComputedStyle(
+              document.querySelector('#projectInboxButton'), '::before'
+            ).content"""
+        ) == '"←"'
+        assert page.evaluate(
+            """() => getComputedStyle(
+              document.querySelector('#runtimeSettings > summary'), '::before'
+            ).content"""
+        ) == '"⋮"'
+        assert page.evaluate(
+            "() => document.documentElement.scrollWidth <= window.innerWidth"
+        )
+        browser_page.diagnostics.assert_clean()
