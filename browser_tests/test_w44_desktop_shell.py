@@ -341,6 +341,67 @@ def test_tablet_detail_shell_keeps_context_before_tabs_and_stages(
         browser_page.diagnostics.assert_clean()
 
 
+@pytest.mark.parametrize("viewport", ((390, 844), (320, 568)))
+def test_mobile_detail_header_keeps_brand_work_item_and_inbox_path(
+    tmp_path: Path,
+    viewport: tuple[int, int],
+) -> None:
+    fixture = build_browser_state_fixture(tmp_path / f"mobile-identity-{viewport[0]}", "no-run")
+    assert fixture.work_item is not None
+    with sync_playwright() as playwright, operator_browser_harness(
+        fixture.project_root,
+        playwright,
+        work_item=fixture.work_item,
+    ) as harness, harness.open_page(viewport) as browser_page:
+        page = browser_page.page
+        page.goto(f"{harness.url}?ui=studio", wait_until="networkidle")
+
+        geometry = page.evaluate(
+            """() => {
+              const box = (selector) => {
+                const node = document.querySelector(selector);
+                if (!node) return null;
+                const rect = node.getBoundingClientRect();
+                const style = getComputedStyle(node);
+                return {
+                  x: rect.x,
+                  y: rect.y,
+                  width: rect.width,
+                  height: rect.height,
+                  display: style.display,
+                  visibility: style.visibility,
+                };
+              };
+              return {
+                topbar: box('.topbar'),
+                brand: box('.topbar .brand'),
+                brandTitle: box('.topbar .brand-title'),
+                context: box('.topbar .top-context'),
+                workItem: box('#topContextIntent'),
+                inbox: box('#projectInboxButton'),
+                actions: box('.topbar .top-actions'),
+                scrollWidth: document.documentElement.scrollWidth,
+              };
+            }"""
+        )
+
+        assert geometry["topbar"]["height"] <= 80
+        assert geometry["brand"]["height"] > 0
+        assert geometry["brand"]["display"] != "none"
+        assert geometry["brandTitle"]["display"] != "none"
+        assert geometry["workItem"]["display"] != "none"
+        assert geometry["workItem"]["width"] > 0
+        assert geometry["workItem"]["height"] > 0
+        assert page.locator("#topContextIntent").text_content() == fixture.work_item
+        assert geometry["inbox"]["display"] != "none"
+        assert geometry["inbox"]["width"] >= 44
+        assert geometry["actions"]["display"] != "none"
+        assert geometry["brand"]["y"] >= 0
+        assert geometry["brand"]["y"] + geometry["brand"]["height"] <= geometry["topbar"]["height"]
+        assert geometry["scrollWidth"] <= viewport[0]
+        browser_page.diagnostics.assert_clean()
+
+
 @pytest.mark.parametrize("viewport", ((1280, 900), (390, 844)))
 def test_shared_breadcrumb_uses_project_work_item_and_stage_labels(
     tmp_path: Path,
