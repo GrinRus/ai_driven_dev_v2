@@ -2048,3 +2048,118 @@ body.markdown-workspace-mode .document-context-evidence .evidence-inspector-titl
     grid-row: 1;
   }
 }
+
+/* Mobile recovery and Decision Workbench headers keep the same orientation
+   contract as Work Item detail: the operator sees AIDD, the current Work Item,
+   and a real route back to Inbox before the bounded decision content. The
+   recovery surface remains focused; stage/question content and mutation
+   controls stay owned by their existing renderers. */
+@media (max-width: 760px) {
+  body.recovery-mode .topbar {
+    gap: var(--space-2);
+    grid-template-columns: auto minmax(0, 1fr) auto auto;
+    min-height: var(--studio-topbar-height);
+    padding: 0 var(--space-3);
+  }
+
+  body.recovery-mode .topbar .brand {
+    display: flex;
+    grid-column: 1;
+    grid-row: 1;
+    min-width: 0;
+  }
+
+  body.recovery-mode .topbar .brand-mark {
+    display: none;
+  }
+
+  body.recovery-mode .topbar .brand-title {
+    color: var(--studio-header-text);
+    display: block;
+    font-size: 18px;
+    font-weight: 800;
+    line-height: 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  body.recovery-mode .topbar .brand-title .version-badge,
+  body.recovery-mode .topbar .brand-meta {
+    display: none;
+  }
+
+  body.recovery-mode .topbar .top-context {
+    align-items: center;
+    display: flex;
+    grid-column: 2;
+    grid-row: 1;
+    min-width: 0;
+    overflow: hidden;
+  }
+
+  body.recovery-mode .topbar .top-context > #topContextProject,
+  body.recovery-mode .topbar .top-context > #topContextRun,
+  body.recovery-mode .topbar .top-context > span[aria-hidden="true"] {
+    display: none;
+  }
+
+  body.recovery-mode .topbar .top-context > #topContextIntent {
+    display: block;
+    font-size: var(--type-label-size);
+    font-weight: 750;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  body.recovery-mode .topbar .primary-nav {
+    grid-column: 3;
+    grid-row: 1;
+  }
+
+  body.recovery-mode .topbar .primary-nav #projectInboxButton {
+    font-size: 0;
+    min-width: var(--control-height-touch);
+    padding-inline: 0;
+  }
+
+  body.recovery-mode .topbar .primary-nav #projectInboxButton::before {
+    color: currentColor;
+    content: "←";
+    display: block;
+    font-size: 22px;
+    line-height: 1;
+  }
+
+  body.recovery-mode .topbar .top-status {
+    display: none;
+  }
+
+  body.recovery-mode:not(:has(#runtimeSettings[open])) .topbar .top-actions {
+    align-items: center;
+    display: flex;
+    gap: 0;
+    grid-column: 4;
+    grid-row: 1;
+    padding: 0;
+    position: static;
+    width: auto;
+  }
+
+  body.recovery-mode .topbar .runtime-settings > summary {
+    justify-content: center;
+    height: var(--studio-topbar-height);
+    min-height: var(--studio-topbar-height);
+    min-width: var(--control-height-touch);
+    opacity: 1;
+    overflow: visible;
+    padding-inline: 0;
+    width: auto;
+  }
+
+  body.recovery-mode .topbar .top-actions {
+    grid-column: 4;
+    grid-row: 1;
+  }
+}
