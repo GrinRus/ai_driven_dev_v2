@@ -390,6 +390,48 @@ body {
     line-height: 1;
   }
 
+  /* Detail views already expose project, Work Item, stage, and launch context
+     in the two-level shell below. Collapse the generic breadcrumb/status row so
+     the canonical Work Item header starts in the initial viewport like the
+     target composition. The fixed navigation rails remain owned by .topbar;
+     Inbox and setup keep their existing top-level chrome. */
+  body:not(.setup-active):not(.inbox-detail-mode) .topbar {
+    background: transparent;
+    border-bottom: 0;
+    display: block;
+    height: 0;
+    min-height: 0;
+    overflow: visible;
+    padding: 0;
+  }
+
+  body:not(.setup-active):not(.inbox-detail-mode) .topbar > .brand,
+  body:not(.setup-active):not(.inbox-detail-mode) .topbar > .top-context,
+  body:not(.setup-active):not(.inbox-detail-mode) .topbar > .top-status {
+    display: none;
+  }
+
+  /* Execution settings remains a real launch/recovery control. Keep it out of
+     document flow as a compact disclosure, while removing the unrelated New
+     Work Item action from the detail chrome. */
+  body:not(.setup-active):not(.inbox-detail-mode) .topbar > .top-actions {
+    display: flex;
+    position: fixed;
+    right: var(--space-4);
+    top: 0;
+    z-index: 30;
+  }
+
+  body:not(.setup-active):not(.inbox-detail-mode) .topbar > .top-actions > #newWorkItemButton {
+    display: none;
+  }
+
+  body:not(.setup-active):not(.inbox-detail-mode) .operator-workspace {
+    max-height: 100vh;
+    min-height: 100vh;
+    padding-top: var(--space-2);
+  }
+
   body:not(.setup-active).inbox-detail-mode {
     --operator-primary-rail-width: 244px;
     --operator-secondary-rail-width: 0px;
