@@ -7,14 +7,14 @@ slice, and local task.
 
 ## Next
 
-- `W44-E1-S3-T43` — Collapse the generic desktop breadcrumb/status topbar on Work Item detail
-  surfaces so the target Work Item header, tabs, and stage strip begin in the initial viewport
-  without a duplicated chrome layer. Preserve existing routes, ids, launch Runner controls, and
-  mobile topbar behavior.
+- `W44-E1-S3-T44` — Compact the remaining Work Item detail context header so the target title, tabs,
+  and stage strip keep their first-viewport hierarchy after the generic desktop topbar is collapsed.
+  Preserve truthful Work Item/status identity, launch/recovery controls, existing routes and ids, and
+  mobile behavior.
 
 ## Soon
 
-- None; T42 is complete and T43 is the only currently dependency-ready task.
+- None; T43 is complete and T44 is the only currently dependency-ready task.
 
 ## Parking lot
 
@@ -40,6 +40,16 @@ slice, and local task.
   queue-restoration policy in `docs/backlog/roadmap.md` (`W8-E3-S1`).
 
 ## Current reconciliation
+
+- `2026-08-26` PR #412 (merge `831be726`) completed `W44-E1-S3-T43`: detail surfaces now collapse the
+  generic desktop breadcrumb/status row to zero-height chrome while retaining the real runtime settings
+  control for launch/recovery. Inbox/setup topbars, routes, ids, status/runtime semantics, and mobile
+  behavior remain unchanged; the detail identity helper now waits for durable attached state rather than
+  requiring an intentionally hidden chip. Focused shell (`12`), frontend (`136`), UI contracts (`183`),
+  docs/planning (`50`), targeted Inbox regressions, Ruff, mypy, and full CI including packaged UI browser
+  (`23m19s`) passed. Fresh comparison identifies the next bounded gap: the internal detail context header
+  still stacks an eyebrow, phase/status line, and duplicate identity rows; `W44-E1-S3-T44` is promoted to
+  `Next`.
 
 - `2026-08-26` PR #410 (merge `3ef38644`) completed `W44-E1-S3-T42`: detail surfaces now use an
   84px primary navigation rail plus a 236px Work Items rail, while Inbox keeps a single 244px rail
