@@ -6981,19 +6981,18 @@ button.target-editor-tab.active:hover {
 
 @media (min-width: 761px) {
   .validation-finding-inspector {
-    padding-bottom: 240px;
+    padding-bottom: 0;
   }
   .validation-finding-inspector .repair-actions {
-    background: var(--color-bg-raised);
-    border: 1px solid var(--line);
-    border-radius: var(--radius-panel);
-    bottom: var(--space-4);
-    box-shadow: var(--elevation-overlay);
-    padding: var(--space-3);
-    position: fixed;
-    right: var(--space-6);
-    width: min(320px, calc(100vw - (var(--space-6) * 2)));
-    z-index: 60;
+    background: transparent;
+    border: 0;
+    border-top: 1px solid var(--line);
+    border-radius: 0;
+    box-shadow: none;
+    padding: var(--space-4) 0 0;
+    position: static;
+    width: auto;
+    z-index: auto;
   }
   .validation-finding-facts div {
     align-items: baseline;
