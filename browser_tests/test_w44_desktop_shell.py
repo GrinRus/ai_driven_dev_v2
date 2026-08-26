@@ -85,6 +85,37 @@ def test_desktop_shell_keeps_rail_tabs_stage_strip_and_decision_column_in_view(
         browser_page.diagnostics.assert_clean()
 
 
+@pytest.mark.parametrize("viewport", ((1280, 900), (390, 844)))
+def test_shared_breadcrumb_uses_project_work_item_and_stage_labels(
+    tmp_path: Path,
+    viewport: tuple[int, int],
+) -> None:
+    fixture = build_browser_state_fixture(tmp_path / f"breadcrumb-{viewport[0]}", "no-run")
+    assert fixture.work_item is not None
+    with sync_playwright() as playwright, operator_browser_harness(
+        fixture.project_root,
+        playwright,
+        work_item=fixture.work_item,
+    ) as harness, harness.open_page(viewport) as browser_page:
+        page = browser_page.page
+        page.goto(f"{harness.url}?ui=studio", wait_until="networkidle")
+        page.locator("#intentChip").get_by_text(
+            f"Work Item: {fixture.work_item}", exact=True
+        ).wait_for(state="attached")
+
+        breadcrumb = page.locator(".top-context")
+        project_label = fixture.project_root.name
+        assert page.locator("#projectPath").inner_text() == project_label
+        assert page.locator("#topContextProject").inner_text() == project_label
+        assert page.locator("#topContextIntent").inner_text() == fixture.work_item
+        assert page.locator("#topContextRun").inner_text() == "Idea"
+        assert fixture.project_root.as_posix() not in breadcrumb.inner_text()
+        assert page.locator("#projectPath").get_attribute("title") == (
+            f"Project: {project_label}"
+        )
+        browser_page.diagnostics.assert_clean()
+
+
 def test_desktop_flow_complete_reclaims_empty_decision_column(tmp_path: Path) -> None:
     fixture = build_browser_state_fixture(tmp_path / "terminal", "terminal-handoff")
     assert fixture.work_item is not None

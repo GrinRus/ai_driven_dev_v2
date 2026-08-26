@@ -611,12 +611,13 @@ function renderOnboardingTopbar() {
   document.body.classList.add("setup-active");
   const project = onboardingProject();
   const projectRoot = project?.project_root || "select project";
+  const projectLabel = operatorProjectLabel(projectRoot);
   const runLabel = state.selectedRuntime ? `Runner: ${state.selectedRuntime}` : "Runner: choose before launch";
   const projectPath = document.getElementById("projectPath");
   const workItemChip = document.getElementById("intentChip");
   const runChip = document.getElementById("runChip");
-  projectPath.textContent = projectRoot;
-  projectPath.title = projectRoot;
+  projectPath.textContent = projectLabel;
+  projectPath.title = `Project: ${projectLabel}`;
   workItemChip.textContent = "Setup mode";
   workItemChip.title = "Setup mode";
   runChip.textContent = runLabel;
@@ -624,9 +625,9 @@ function renderOnboardingTopbar() {
   const topContextProject = document.getElementById("topContextProject");
   const topContextWorkItem = document.getElementById("topContextIntent");
   const topContextRun = document.getElementById("topContextRun");
-  if (topContextProject) topContextProject.textContent = projectRoot;
+  if (topContextProject) topContextProject.textContent = projectLabel;
   if (topContextWorkItem) topContextWorkItem.textContent = "Guided setup";
-  if (topContextRun) topContextRun.textContent = state.selectedRuntime || "Ready";
+  if (topContextRun) topContextRun.textContent = "Setup";
   const localStatus = document.getElementById("localStatus");
   localStatus.textContent = state.onboarding.error || "Onboarding";
   localStatus.title = state.onboarding.error || "Onboarding";
