@@ -7,13 +7,11 @@ slice, and local task.
 
 ## Next
 
-- `W44-E1-S3-T47` — Align mobile recovery and Decision Workbench headers with the target mobile
-  decision composition while preserving Work Item identity, recovery semantics, and one primary
-  action.
+- None; the Wave 44 rendered acceptance loop is complete through `W44-E1-S3-T47`.
 
 ## Soon
 
-- None; T47 is the only dependency-ready convergence task.
+- None.
 
 ## Parking lot
 
@@ -39,6 +37,13 @@ slice, and local task.
   queue-restoration policy in `docs/backlog/roadmap.md` (`W8-E3-S1`).
 
 ## Current reconciliation
+
+- `2026-08-26` PR #421 (merge `722e38b0`) completed `W44-E1-S3-T47`: mobile question and recovery
+  headers now retain AIDD, the current Work Item identity, a 44px Inbox/back arrow, and a 44px
+  overflow/runtime control with no horizontal overflow. Focused mobile/question recovery checks,
+  frontend (`136`), full CI, packaged UI browser, security, and build passed. Wave 44 rendered
+  acceptance is complete; human usability, Claude/cross-runtime, and Wave 36 evidence remain in
+  the parking lot.
 
 - `2026-08-26` planning update: the fresh 13-surface audit found a bounded target gap on mobile
   question/recovery surfaces: the current header shows AIDD and Inbox but not the current Work Item

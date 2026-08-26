@@ -15399,7 +15399,7 @@ Wave 43 exit evidence:
 - provider-free scenarios pass before Codex repetition evidence, and Codex stability artifacts are
   retained; cross-runtime evidence is explicitly deferred to `W43-E5-S2-T3`.
 
-## Wave 44 — Operator UI convergence (`planned`)
+## Wave 44 — Operator UI convergence (`done`)
 
 Goal: iteratively bring the current Operator UI into conformance with the normative target
 experience by fixing evidence-backed hierarchy, action, responsive, and accessibility gaps while
@@ -15412,7 +15412,7 @@ Reference authority:
 2. [Main User Stories](../product/user-stories.md) for operator outcomes and runtime visibility;
 3. provider-free browser fixtures and fresh rendered audits for observed behavior.
 
-### Epic W44-E1 — action hierarchy and responsive shell (`planned`)
+### Epic W44-E1 — action hierarchy and responsive shell (`done`)
 
 Goal: make every visible primary action truthful for its current surface before broader visual
 polish and shell composition work.
@@ -15507,7 +15507,7 @@ Local tasks:
     Ruff, mypy, deterministic scenarios, adapter conformance, packaged UI browser, security
     checks, and build all passed. `W44-E1-S3-T1` is now the next dependency-ready task.
 
-#### Slice W44-E1-S3 — rendered acceptance loop (`planned`)
+#### Slice W44-E1-S3 — rendered acceptance loop (`done`)
 
 Primary output: a repeatable visual regression loop that captures target surfaces, checks hierarchy
 and states, and records the next bounded UI task until the target contract is satisfied.
@@ -15942,14 +15942,16 @@ Local tasks:
   overflow; recovery and mobile decision surfaces remain unchanged. Verification: shell (`20`),
   mobile studio header (`6`), focused mobile primary decision (`4`), frontend (`136`),
   docs/planning (`50`), Ruff, mypy, and full CI including packaged UI browser passed.
-- `W44-E1-S3-T47` (next) Align the mobile recovery and Decision Workbench header with the target
-  mobile decision composition. Keep the AIDD brand, a truncated current Work Item identity, and an
-  accessible path back to the Work Item discoverable beside the existing overflow/runtime control;
-  preserve the question, approval, validation, and runtime recovery content, routes, DOM ids, status
-  ownership, and one primary action. Verification: fresh `390x844` and `320x568` captures for
-  question/recovery surfaces prove target header identity, stage/context discoverability, touch-safe
-  action placement, clean diagnostics, and no horizontal overflow; overview, Inbox, and setup
-  headers must remain unchanged.
+- `W44-E1-S3-T47` (done) Align the mobile recovery and Decision Workbench header with the target
+  mobile decision composition. PR #421 (merge `722e38b0`) scopes the compact recovery-mode chrome
+  to the AIDD brand, current Work Item identity, accessible Inbox/back path, and touch-safe
+  overflow/runtime disclosure while preserving question, approval, validation, and runtime recovery
+  content, routes, DOM ids, status ownership, and one primary action. Fresh question/recovery
+  captures at `390x844` and `320x568` show the identity, arrow, and overflow affordances without
+  horizontal overflow; overview, Inbox, and setup headers remain unchanged. Focused mobile route,
+  recovery, and question checks, frontend Node suite (`136 passed`), UI contracts/docs/planning,
+  Ruff, mypy, full Python matrix, deterministic scenarios, adapter conformance, packaged UI browser,
+  security checks, and build all passed.
 
 Wave 44 exit evidence:
 
@@ -15960,15 +15962,25 @@ Wave 44 exit evidence:
   viewport;
 - browser checks show no console errors, horizontal overflow, duplicate primary actions, or focus
   loss;
-  - a fresh rendered audit confirms remaining gaps are absent or explicitly blocked. T19 is now
-    evidence-complete; T25-T46 are complete. The post-T46 five-viewport shell audit found one
-    additional bounded gap: mobile recovery/Decision Workbench headers expose AIDD and Inbox but
-    omit the current Work Item identity required by the target mobile decision composition. T47 is
-    the next convergence task; the task-centered renderer/default routing decision remains
-    provisional until T47 is reviewed. Human, Claude/cross-runtime, and Wave 36 acceptance remain
-    outside this rendered loop.
+  - a fresh rendered audit confirms remaining gaps are absent or explicitly blocked. T19 is
+    evidence-complete and T25-T47 are complete. The T47 audit confirms that mobile question and
+    recovery headers expose AIDD, current Work Item identity, Inbox/back, and overflow controls
+    without changing recovery content or introducing overflow. The task-centered renderer/default
+    routing decision is accepted for the supported provider-free surfaces. Human, Claude/cross-runtime,
+    and Wave 36 acceptance remain outside this rendered loop.
 
 Wave 44 reconciliation:
+
+- `2026-08-26` PR #421 (merge `722e38b0`) completed `W44-E1-S3-T47` and closes the rendered
+  acceptance loop. Before T47, mobile question/recovery headers showed AIDD and Inbox but omitted
+  the current Work Item identity. The scoped recovery-mode header now keeps AIDD, the current Work
+  Item label, a real Inbox arrow path, and a 44px overflow/runtime control in the first viewport at
+  `390x844` and `320x568`; question, approval, validation, and runtime recovery content and action
+  semantics remain unchanged. Fresh captures and diagnostics are retained in
+  `docs/e2e/w44-e1-s3-t47-rendered-audit.md`. Full PR CI passed, including Python 3.12/3.13/3.14,
+  deterministic scenarios, adapter conformance, packaged UI browser, security checks, and build.
+  The target-centered renderer/default routing is accepted for the provider-free surfaces; human,
+  Claude/cross-runtime, and Wave 36 evidence remain parked.
 
 - `2026-08-26` PR #418 (merge `f533b336`) completed `W44-E1-S3-T46`. Mobile Work Item detail now
   keeps the AIDD brand, current Work Item identity, accessible Inbox/back path, and overflow/runtime
