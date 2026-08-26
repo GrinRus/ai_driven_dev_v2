@@ -538,15 +538,22 @@ function workflowProgressSummary({collapsed = false} = {}) {
 
 function renderProjectHomeRail() {
   const nav = document.querySelector(".primary-nav");
+  const workItemsRail = document.getElementById("operatorWorkItemsRail");
   if (!nav) return;
+  const isInbox = state.activeTab === "work" && state.workDetail === "project-home";
+  const navMarkup = `
+    <div class="operator-rail-nav" aria-label="Project navigation">
+      <button id="projectInboxButton" data-tab-shortcut="project-home" type="button" aria-label="Inbox">Inbox</button>
+      <button id="studioNavButton" data-tab-shortcut="overview" type="button" aria-label="Studio">Studio</button>
+      <button id="historyNavButton" data-tab-shortcut="history" type="button" aria-label="History">History</button>
+    </div>
+  `;
   if (state.onboarding?.setupRequired || !state.projectHome) {
-    nav.innerHTML = `
-      <div class="operator-rail-nav" aria-label="Project navigation">
-        <button id="projectInboxButton" data-tab-shortcut="project-home" type="button">Inbox</button>
-        <button id="studioNavButton" data-tab-shortcut="overview" type="button">Studio</button>
-        <button id="historyNavButton" data-tab-shortcut="history" type="button">History</button>
-      </div>
-    `;
+    nav.innerHTML = navMarkup;
+    if (workItemsRail) {
+      workItemsRail.hidden = true;
+      workItemsRail.replaceChildren();
+    }
     return;
   }
   const projectRoot = state.projectHome.project_root || state.onboarding?.projectRootInput || ".";
@@ -556,12 +563,8 @@ function renderProjectHomeRail() {
     || "";
   const workItems = state.projectHome.work_items || [];
   const filter = String(state.projectRailFilter || "");
-  const railWorkItems = operatorRailDesktop()
-    ? (workItems.length
-      ? workItems.map((item) => renderOperatorRailWorkItem(item, selectedWorkItem)).join("")
-      : '<p class="operator-rail-empty">No Work Items yet.</p>')
-    : "";
-  nav.innerHTML = `
+  const projectMarkup = `
+    <div class="operator-rail-brand" aria-hidden="true">AIDD</div>
     <div class="operator-rail-project" data-operator-rail-project>
       <span class="operator-rail-project-dot" aria-hidden="true"></span>
       <span class="operator-rail-project-copy">
@@ -570,6 +573,18 @@ function renderProjectHomeRail() {
       </span>
       <span class="operator-rail-project-chevron" aria-hidden="true">⌄</span>
     </div>
+  `;
+  const showWorkItems = Boolean(selectedWorkItem)
+    && !isInbox
+    && state.activeTab !== "history"
+    && !state.dashboard?.terminal_handoff;
+  const railWorkItems = operatorRailDesktop() && showWorkItems
+    ? (workItems.length
+      ? workItems.map((item) => renderOperatorRailWorkItem(item, selectedWorkItem)).join("")
+      : '<p class="operator-rail-empty">No Work Items yet.</p>')
+    : "";
+  const workItemsMarkup = showWorkItems
+    ? `
     <div class="operator-rail-work-heading">
       <span>Work Items</span>
       <button data-new-work-item type="button" aria-label="New Work Item">+</button>
@@ -580,12 +595,13 @@ function renderProjectHomeRail() {
     <div class="operator-rail-work-items" data-operator-rail-items role="list" aria-label="Work Items">
       ${railWorkItems}
     </div>
-    <div class="operator-rail-nav" aria-label="Project navigation">
-      <button id="projectInboxButton" data-tab-shortcut="project-home" type="button">Inbox</button>
-      <button id="studioNavButton" data-tab-shortcut="overview" type="button">Studio</button>
-      <button id="historyNavButton" data-tab-shortcut="history" type="button">History</button>
-    </div>
-  `;
+    `
+    : "";
+  nav.innerHTML = isInbox ? `${projectMarkup}${navMarkup}` : navMarkup;
+  if (workItemsRail) {
+    workItemsRail.hidden = !operatorRailDesktop() || isInbox;
+    workItemsRail.innerHTML = isInbox ? "" : `${projectMarkup}${workItemsMarkup}`;
+  }
 }
 
 function renderStageHeader() {
