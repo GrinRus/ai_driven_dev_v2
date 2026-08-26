@@ -20,6 +20,7 @@ class Wave42BrowserJourney:
     first_action_selector: str
     coverage_sources: tuple[str, ...]
     requires_initial_viewport: bool = False
+    initial_viewport_max_width: int | None = None
 
 
 WAVE42_BROWSER_JOURNEYS: tuple[Wave42BrowserJourney, ...] = (
@@ -57,6 +58,7 @@ WAVE42_BROWSER_JOURNEYS: tuple[Wave42BrowserJourney, ...] = (
         first_action_selector=".validation-repair-center [data-run-repair]",
         coverage_sources=("browser_tests/test_journey_runtime_validation_recovery.py",),
         requires_initial_viewport=True,
+        initial_viewport_max_width=760,
     ),
     Wave42BrowserJourney(
         journey_id="markdown-change",
@@ -153,6 +155,9 @@ def validate_wave42_browser_matrix() -> None:
         assert journey.surface_selector
         assert journey.first_action_selector
         assert journey.coverage_sources
+        if journey.initial_viewport_max_width is not None:
+            assert journey.requires_initial_viewport
+            assert journey.initial_viewport_max_width > 0
         for source in journey.coverage_sources:
             assert (Path(__file__).resolve().parents[1] / source).is_file()
         query = wave42_route_query(

@@ -12,7 +12,7 @@ from browser_tests.state_fixtures import build_browser_state_fixture
 
 
 @pytest.mark.parametrize("viewport", VIEWPORTS)
-def test_validation_repair_action_is_contained_in_the_initial_viewport(
+def test_validation_repair_action_is_contained_without_desktop_overlap(
     tmp_path: Path,
     viewport: tuple[int, int],
 ) -> None:
@@ -34,6 +34,7 @@ def test_validation_repair_action_is_contained_in_the_initial_viewport(
         assert response is not None and response.ok
 
         surface = page.locator(".validation-repair-center").first
+        inspector = page.locator(".validation-finding-inspector").first
         action = page.locator("[data-run-repair]")
         preview = page.locator(".repair-extension-preview").first
         runner = page.locator("[data-contextual-runner-control]")
@@ -45,14 +46,30 @@ def test_validation_repair_action_is_contained_in_the_initial_viewport(
 
         action_box = action.bounding_box()
         surface_box = surface.bounding_box()
+        inspector_box = inspector.bounding_box()
         preview_box = preview.bounding_box()
-        assert action_box is not None and surface_box is not None
+        assert (
+            action_box is not None
+            and surface_box is not None
+            and inspector_box is not None
+        )
         assert preview_box is not None
         assert page.evaluate("() => window.scrollX === 0 && window.scrollY === 0")
         assert action_box["x"] >= -1
         assert action_box["x"] + action_box["width"] <= viewport[0] + 1
         assert action_box["y"] >= -1
-        assert action_box["y"] + action_box["height"] <= viewport[1] + 1
+        if viewport[0] <= 760:
+            assert action_box["y"] + action_box["height"] <= viewport[1] + 1
+        else:
+            assert action_box["x"] >= inspector_box["x"] - 1
+            assert action_box["x"] + action_box["width"] <= (
+                inspector_box["x"] + inspector_box["width"] + 1
+            )
+            assert action_box["y"] >= inspector_box["y"] - 1
+            assert (
+                action_box["y"] + action_box["height"]
+                <= inspector_box["y"] + inspector_box["height"] + 1
+            )
         assert preview_box["x"] >= surface_box["x"] - 1
         assert preview_box["x"] + preview_box["width"] <= (
             surface_box["x"] + surface_box["width"] + 1
@@ -148,9 +165,11 @@ def test_validation_repair_prioritizes_finding_consequence_and_runner(
                 actions_box["y"] + actions_box["height"],
             ) - 1
         assert primary_box["y"] >= -1
-        assert primary_box["y"] + primary_box["height"] <= viewport[1] + 1
+        if viewport[0] <= 760:
+            assert primary_box["y"] + primary_box["height"] <= viewport[1] + 1
 
         if viewport[0] > 760:
+            assert actions_position == "static"
             band_grid_columns = page.evaluate(
                 "() => getComputedStyle(document.querySelector("
                 "'.validation-finding-inspector')).gridTemplateColumns"
@@ -159,6 +178,8 @@ def test_validation_repair_prioritizes_finding_consequence_and_runner(
             assert decision_box["x"] >= band_box["x"]
             assert actions_box["x"] >= band_box["x"]
             assert runner_box["width"] >= 210
+            assert actions_box["y"] >= decision_box["y"] + decision_box["height"] - 1
+            assert supporting_box["y"] >= actions_box["y"] + actions_box["height"] - 1
         else:
             document_stage = page.locator(".validation-document-stage").first
             inspector_box = inspector.bounding_box()
