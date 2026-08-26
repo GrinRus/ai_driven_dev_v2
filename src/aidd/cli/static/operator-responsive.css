@@ -225,7 +225,7 @@
   }
   .target-implementation-workspace,
   .target-remediation-layout {
-    grid-template-columns: minmax(0, 1fr) minmax(250px, 320px);
+    grid-template-columns: minmax(0, 1fr) minmax(280px, 0.72fr);
   }
   .target-findings-table-head,
   .target-finding-row {
