@@ -1599,12 +1599,28 @@
     order: 2;
   }
   .validation-finding-inspector {
+    order: -1;
+    padding-bottom: calc(var(--space-10) + var(--control-height-touch));
+  }
+  .validation-document-stage {
     order: 0;
+  }
+  .validation-recovery-context {
+    order: 1;
   }
   .validation-finding-inspector .repair-actions {
     display: grid;
     gap: var(--space-2);
     grid-template-columns: minmax(0, 1fr);
+  }
+  .repair-action-band.validation-finding-inspector > .repair-decision-copy {
+    grid-row: 1;
+  }
+  .repair-action-band.validation-finding-inspector > .repair-actions {
+    grid-row: 2;
+  }
+  .repair-action-band.validation-finding-inspector > .repair-supporting-preview {
+    grid-row: 3;
   }
   .validation-finding-inspector .contextual-runner-control,
   .validation-finding-inspector .repair-actions > button {
