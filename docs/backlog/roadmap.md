@@ -15888,7 +15888,7 @@ Local tasks:
   behavior, routes, ids, readiness, mutation services, and generated-document immutability remain
   unchanged. Focused viewport (`10`), validation matrix, recovery/legacy compositions (`28`),
   frontend (`136`), UI contracts (`53`), docs/planning (`50`), Ruff, mypy, and full CI passed.
-- `W44-E1-S3-T42` (next) Split the Work Item detail shell into the target primary navigation rail
+- `W44-E1-S3-T42` (done) Split the Work Item detail shell into the target primary navigation rail
   and secondary Work Items navigator while keeping the project Inbox shell compact. On detail
   surfaces, preserve the existing Work Item list, selection/deep-link routes, navigation ids,
   keyboard behavior, and mobile collapse semantics, but expose the target two-level desktop
@@ -15897,6 +15897,20 @@ Local tasks:
   fresh target comparisons and geometry/accessibility checks at `1280x900`, `1440x900`,
   `768x1024`, `390x844`, and `320x568` prove route-scoped rail composition, stable selection and
   reload/deep links, one visible navigation state, no horizontal overflow, and clean diagnostics.
+  PR #410 (merge `3ef38644`) adds the 84px primary rail and 236px Work Items rail on detail
+  surfaces, retains the single 244px Inbox rail, and keeps the mobile rail collapsed. Existing
+  navigation ids, route/deep-link selection, Work Item list ordering, and mutation semantics are
+  unchanged. Verification: focused shell/legacy/inbox browser checks (`35 passed`), provider-free
+  matrix (`9 passed`), frontend (`136 passed`), UI contracts/docs/planning (`110 passed`), Ruff,
+  mypy, and full CI including packaged UI browser passed.
+- `W44-E1-S3-T43` (next) Collapse the generic desktop breadcrumb/status topbar on Work Item detail
+  surfaces so the target Work Item header, tabs, and stage strip begin in the initial viewport
+  without a duplicated 64px chrome layer. Preserve top-level Inbox/Create/History routing,
+  launch-time Runner controls, existing status/runtime semantics, keyboard focus, routes, ids,
+  and mobile topbar behavior. Verification: fresh target comparisons and geometry checks at
+  `1280x900`, `1440x900`, `768x1024`, `390x844`, and `320x568` prove title/header first-viewport
+  position, one truthful context row, stable deep links/reload, no horizontal overflow, and clean
+  diagnostics.
 
 Wave 44 exit evidence:
 
@@ -15908,11 +15922,20 @@ Wave 44 exit evidence:
 - browser checks show no console errors, horizontal overflow, duplicate primary actions, or focus
   loss;
   - a fresh rendered audit confirms remaining gaps are absent or explicitly blocked. T19 is now
-    evidence-complete but not an exit pass; T25-T41 are complete and T42 is the next dependency-ready
-    convergence task. Default task-centered routing remains provisional until T30-T42 are either
+    evidence-complete but not an exit pass; T25-T42 are complete and T43 is the next dependency-ready
+    convergence task. Default task-centered routing remains provisional until T30-T43 are either
     completed or backed by explicit target-equivalence evidence.
 
 Wave 44 reconciliation:
+
+- `2026-08-26` PR #410 (merge `3ef38644`) completed `W44-E1-S3-T42`. Work Item detail surfaces now
+  use the target two-level desktop shell: an 84px primary navigation rail followed by a 236px
+  project/Work Items rail; Inbox retains one 244px project rail and mobile collapses the secondary
+  rail. Existing navigation ids, Work Item selection/deep links, ordering, and route semantics are
+  preserved. Focused shell/legacy/inbox checks (`35`), the five-viewport provider-free matrix (`9`),
+  frontend (`136`), UI contracts/docs/planning (`110`), Ruff, mypy, and full CI passed. Fresh capture
+  shows the next target-equivalence gap: the generic desktop breadcrumb/status topbar still adds a
+  duplicated 64px layer above the Work Item header; `W44-E1-S3-T43` is now `Next`.
 
 - `2026-08-26` PR #408 (merge `d7994130`) completed `W44-E1-S3-T41`. Validation Repair now keeps
   the desktop Runner and primary repair action inline and visible in the initial `1280x900` and

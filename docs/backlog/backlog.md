@@ -7,13 +7,14 @@ slice, and local task.
 
 ## Next
 
-- `W44-E1-S3-T42` — Split the Work Item detail shell into the target primary navigation rail and
-  secondary Work Items navigator while keeping the project Inbox shell compact. Preserve existing
-  selection/deep-link routes, navigation ids, keyboard behavior, and mobile collapse semantics.
+- `W44-E1-S3-T43` — Collapse the generic desktop breadcrumb/status topbar on Work Item detail
+  surfaces so the target Work Item header, tabs, and stage strip begin in the initial viewport
+  without a duplicated chrome layer. Preserve existing routes, ids, launch Runner controls, and
+  mobile topbar behavior.
 
 ## Soon
 
-- None; T41 is complete and T42 is the only currently dependency-ready task.
+- None; T42 is complete and T43 is the only currently dependency-ready task.
 
 ## Parking lot
 
@@ -39,6 +40,14 @@ slice, and local task.
   queue-restoration policy in `docs/backlog/roadmap.md` (`W8-E3-S1`).
 
 ## Current reconciliation
+
+- `2026-08-26` PR #410 (merge `3ef38644`) completed `W44-E1-S3-T42`: detail surfaces now use an
+  84px primary navigation rail plus a 236px Work Items rail, while Inbox keeps a single 244px rail
+  and mobile keeps the collapsed composition. Focused shell/legacy/inbox (`35`), provider-free
+  matrix (`9`), frontend (`136`), UI contracts/docs/planning (`110`), Ruff, mypy, and full CI passed.
+  Fresh target comparison identified the next bounded gap: the generic desktop breadcrumb/status
+  topbar still consumes a duplicated 64px layer above the Work Item header; `W44-E1-S3-T43` is
+  promoted to `Next`.
 
 - `2026-08-26` PR #408 (merge `d7994130`) completed `W44-E1-S3-T41`: Validation Repair now keeps
   the desktop Runner and primary repair action inline and visible in the initial `1280x900` and
