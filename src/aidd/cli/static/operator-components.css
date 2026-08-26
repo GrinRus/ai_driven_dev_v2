@@ -7004,6 +7004,59 @@ button.target-editor-tab.active:hover {
   }
 }
 
+@media (min-width: 761px) and (min-height: 900px) and (orientation: landscape) {
+  .validation-finding-inspector .validation-finding-facts {
+    gap: var(--space-2);
+    margin-block: var(--space-3);
+  }
+
+  .validation-finding-inspector .validation-finding-facts dd {
+    line-height: 1.25;
+  }
+
+  .validation-finding-inspector .repair-decision-copy {
+    gap: var(--space-3);
+  }
+
+  .validation-finding-inspector .repair-decision-consequence {
+    gap: var(--space-1);
+    padding: var(--space-3) var(--space-4);
+  }
+
+  .validation-finding-inspector .repair-decision-consequence strong,
+  .validation-finding-inspector .repair-decision-consequence-secondary {
+    line-height: 1.25;
+  }
+
+  /* Keep the primary repair action first and let secondary recovery paths
+     share a row. This preserves all actions while keeping the inline group
+     within the supported desktop first viewport. */
+  .validation-finding-inspector .repair-actions {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    gap: var(--space-1);
+    padding-top: 0;
+  }
+
+  .validation-finding-inspector .repair-actions .contextual-runner-control,
+  .validation-finding-inspector .repair-actions [data-run-repair] {
+    grid-column: 1 / -1;
+  }
+
+  .validation-finding-inspector .repair-actions .contextual-runner-control {
+    gap: var(--space-2);
+    padding: var(--space-3) var(--space-3);
+  }
+
+  .validation-finding-inspector .contextual-runner-copy {
+    gap: var(--space-1);
+  }
+
+  .validation-finding-inspector .contextual-runner-copy > span:last-child {
+    font-size: var(--type-caption-size);
+    line-height: 1.1;
+  }
+}
+
 /* Wave 44 target review and remediation compositions. Existing service-owned
  * fields and compatibility selectors stay in place; these wrappers make the
  * decision hierarchy visible without turning generated evidence into inputs. */
