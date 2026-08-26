@@ -15942,6 +15942,14 @@ Local tasks:
   overflow; recovery and mobile decision surfaces remain unchanged. Verification: shell (`20`),
   mobile studio header (`6`), focused mobile primary decision (`4`), frontend (`136`),
   docs/planning (`50`), Ruff, mypy, and full CI including packaged UI browser passed.
+- `W44-E1-S3-T47` (next) Align the mobile recovery and Decision Workbench header with the target
+  mobile decision composition. Keep the AIDD brand, a truncated current Work Item identity, and an
+  accessible path back to the Work Item discoverable beside the existing overflow/runtime control;
+  preserve the question, approval, validation, and runtime recovery content, routes, DOM ids, status
+  ownership, and one primary action. Verification: fresh `390x844` and `320x568` captures for
+  question/recovery surfaces prove target header identity, stage/context discoverability, touch-safe
+  action placement, clean diagnostics, and no horizontal overflow; overview, Inbox, and setup
+  headers must remain unchanged.
 
 Wave 44 exit evidence:
 
@@ -15953,10 +15961,12 @@ Wave 44 exit evidence:
 - browser checks show no console errors, horizontal overflow, duplicate primary actions, or focus
   loss;
   - a fresh rendered audit confirms remaining gaps are absent or explicitly blocked. T19 is now
-    evidence-complete; T25-T46 are complete. The post-T46 audit covers all supported shell
-    viewports and finds no additional bounded target-equivalence gap, so the task-centered
-    renderer/default routing decision is accepted for the current provider-free surfaces. Human,
-    Claude/cross-runtime, and Wave 36 acceptance remain outside this rendered loop.
+    evidence-complete; T25-T46 are complete. The post-T46 five-viewport shell audit found one
+    additional bounded gap: mobile recovery/Decision Workbench headers expose AIDD and Inbox but
+    omit the current Work Item identity required by the target mobile decision composition. T47 is
+    the next convergence task; the task-centered renderer/default routing decision remains
+    provisional until T47 is reviewed. Human, Claude/cross-runtime, and Wave 36 acceptance remain
+    outside this rendered loop.
 
 Wave 44 reconciliation:
 
