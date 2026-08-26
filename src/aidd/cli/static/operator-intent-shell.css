@@ -130,7 +130,9 @@ body {
    services remain owned by the existing controls. */
 @media (min-width: 1100px) and (min-height: 700px) {
   :root {
-    --operator-rail-width: 232px;
+    --operator-primary-rail-width: 84px;
+    --operator-secondary-rail-width: 236px;
+    --operator-rail-width: calc(var(--operator-primary-rail-width) + var(--operator-secondary-rail-width));
   }
 
   body:not(.setup-active) {
@@ -153,7 +155,7 @@ body {
     left: 0;
     position: fixed;
     top: 0;
-    width: var(--operator-rail-width);
+    width: var(--operator-primary-rail-width);
     z-index: -1;
   }
 
@@ -167,7 +169,7 @@ body {
     padding-left: 28px;
     position: fixed;
     top: 0;
-    width: var(--operator-rail-width);
+    width: var(--operator-primary-rail-width);
     z-index: 22;
   }
 
@@ -201,7 +203,7 @@ body {
     position: fixed;
     bottom: 0;
     top: 0;
-    width: var(--operator-rail-width);
+    width: var(--operator-primary-rail-width);
     z-index: 22;
   }
 
@@ -270,6 +272,7 @@ body {
   }
 
   body:not(.setup-active) .operator-workspace {
+    --intent-shell-gutter: 32px;
     display: grid;
     grid-template-areas:
       "context context"
@@ -282,6 +285,141 @@ body {
     margin-right: 0;
     max-width: none;
     width: calc(100% - var(--operator-rail-width));
+  }
+
+  /* Work Item detail surfaces use the target two-level shell: a narrow primary
+     navigation rail followed by the project/Work Items context rail. The
+     existing Inbox surface opts out below so its project navigation remains a
+     single compact rail. */
+  body:not(.setup-active) .operator-work-items-rail {
+    align-items: stretch;
+    background: #07182e;
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-3);
+    left: var(--operator-primary-rail-width);
+    overflow-x: hidden;
+    overflow-y: auto;
+    padding: 68px 12px 20px;
+    position: fixed;
+    bottom: 0;
+    top: 0;
+    width: var(--operator-secondary-rail-width);
+    z-index: 21;
+  }
+
+  body:not(.setup-active):not(.inbox-detail-mode) .topbar .brand {
+    visibility: hidden;
+  }
+
+  body:not(.setup-active):not(.inbox-detail-mode) .operator-rail-brand {
+    color: #f5f8ff;
+    display: block;
+    font-size: 24px;
+    font-weight: 800;
+    letter-spacing: -0.04em;
+    line-height: 1;
+    margin: -48px 0 6px 12px;
+  }
+
+  body:not(.setup-active):not(.inbox-detail-mode) .topbar .primary-nav .operator-rail-nav {
+    margin-top: 92px;
+  }
+
+  body:not(.setup-active) .operator-work-items-rail[hidden] {
+    display: none;
+  }
+
+  body:not(.setup-active):not(.inbox-detail-mode) .topbar .primary-nav {
+    padding: 88px 10px 24px;
+    width: var(--operator-primary-rail-width);
+  }
+
+  body:not(.setup-active):not(.inbox-detail-mode) .topbar .primary-nav button {
+    align-content: center;
+    flex-direction: column;
+    font-size: 0;
+    gap: 4px;
+    justify-content: center;
+    min-height: 48px;
+    padding: 0;
+    text-align: center;
+  }
+
+  body:not(.setup-active):not(.inbox-detail-mode) .topbar .primary-nav button::before {
+    color: currentColor;
+    display: block;
+    font-size: 22px;
+    line-height: 1;
+  }
+
+  body:not(.setup-active):not(.inbox-detail-mode) .topbar .primary-nav #projectInboxButton::before {
+    content: "▦";
+  }
+
+  body:not(.setup-active):not(.inbox-detail-mode) .topbar .primary-nav #studioNavButton::before {
+    content: "◇";
+  }
+
+  body:not(.setup-active):not(.inbox-detail-mode) .topbar .primary-nav #historyNavButton::before {
+    content: "▤";
+  }
+
+  body:not(.setup-active):not(.inbox-detail-mode) .topbar .primary-nav #projectInboxButton::after {
+    color: currentColor;
+    content: "Work";
+    display: block;
+    font-size: 10px;
+    line-height: 1;
+  }
+
+  body:not(.setup-active):not(.inbox-detail-mode) .topbar .primary-nav #studioNavButton::after {
+    color: currentColor;
+    content: "Studio";
+    display: block;
+    font-size: 10px;
+    line-height: 1;
+  }
+
+  body:not(.setup-active):not(.inbox-detail-mode) .topbar .primary-nav #historyNavButton::after {
+    color: currentColor;
+    content: "History";
+    display: block;
+    font-size: 10px;
+    line-height: 1;
+  }
+
+  body:not(.setup-active).inbox-detail-mode {
+    --operator-primary-rail-width: 244px;
+    --operator-secondary-rail-width: 0px;
+    --operator-rail-width: 244px;
+  }
+
+  body:not(.setup-active).inbox-detail-mode .topbar::before,
+  body:not(.setup-active).inbox-detail-mode .topbar .brand,
+  body:not(.setup-active).inbox-detail-mode .topbar .primary-nav {
+    width: var(--operator-rail-width);
+  }
+
+  body:not(.setup-active).inbox-detail-mode .topbar .primary-nav {
+    padding: 88px 14px 24px;
+  }
+
+  body:not(.setup-active).inbox-detail-mode .topbar .primary-nav button {
+    font-size: inherit;
+    justify-content: flex-start;
+    padding: 0 var(--space-4);
+    text-align: left;
+  }
+
+  body:not(.setup-active).inbox-detail-mode .topbar .primary-nav button::before {
+    content: none;
+    display: none;
+  }
+
+  body:not(.setup-active).inbox-detail-mode .operator-rail-brand {
+    display: none;
   }
 
   /* A completed handoff (and other read-only surfaces) has no decision
@@ -1038,11 +1176,11 @@ body.work-overview-mode .intent-decision-surface .next-action-button-stack .next
     color: #f7fbff;
     display: inline-flex;
     font-size: 22px;
-    height: 28px;
+    height: 32px;
     justify-content: center;
-    min-height: 28px;
+    min-height: 32px;
     padding: 0;
-    width: 28px;
+    width: 32px;
   }
 
   body:not(.setup-active) .operator-rail-work-heading button:hover,
@@ -1167,6 +1305,10 @@ body.work-overview-mode .intent-decision-surface .next-action-button-stack .next
 }
 
 @media (max-width: 1099px) {
+  .operator-work-items-rail {
+    display: none;
+  }
+
   .operator-rail-project,
   .operator-rail-work-heading,
   .operator-rail-search,

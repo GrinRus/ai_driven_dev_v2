@@ -63,9 +63,9 @@ def test_desktop_shell_keeps_rail_tabs_stage_strip_and_decision_column_in_view(
             }"""
         )
 
-        assert geometry["topbar"]["x"] >= 232
-        assert geometry["workspace"]["x"] >= 232
-        assert geometry["workspace"]["width"] <= viewport[0] - 232
+        assert geometry["topbar"]["x"] >= 320
+        assert geometry["workspace"]["x"] >= 320
+        assert geometry["workspace"]["width"] <= viewport[0] - 320
         assert geometry["rail"]["x"] == 0
         assert geometry["railStyle"]["position"] == "fixed"
         assert geometry["railStyle"]["background"] == "rgb(7, 24, 46)"
@@ -82,6 +82,73 @@ def test_desktop_shell_keeps_rail_tabs_stage_strip_and_decision_column_in_view(
         assert action_bounds["x"] + action_bounds["width"] <= viewport[0]
         assert action_bounds["y"] + action_bounds["height"] <= viewport[1]
         assert geometry["scrollWidth"] <= viewport[0]
+        browser_page.diagnostics.assert_clean()
+
+
+@pytest.mark.parametrize("viewport", ((1280, 900), (1440, 900)))
+def test_work_item_detail_uses_split_primary_and_work_item_rails(
+    tmp_path: Path,
+    viewport: tuple[int, int],
+) -> None:
+    fixture = build_browser_state_fixture(tmp_path / f"split-rail-{viewport[0]}", "no-run")
+    assert fixture.work_item is not None
+    with sync_playwright() as playwright, operator_browser_harness(
+        fixture.project_root,
+        playwright,
+        work_item=fixture.work_item,
+    ) as harness, harness.open_page(viewport) as browser_page:
+        page = browser_page.page
+        page.goto(f"{harness.url}?ui=studio", wait_until="networkidle")
+
+        primary = page.locator(".topbar .primary-nav")
+        secondary = page.locator("#operatorWorkItemsRail")
+        primary.wait_for(state="visible")
+        secondary.wait_for(state="visible")
+
+        geometry = page.evaluate(
+            """() => {
+              const box = (selector) => {
+                const node = document.querySelector(selector);
+                if (!node) return null;
+                const rect = node.getBoundingClientRect();
+                return {x: rect.x, width: rect.width, right: rect.right};
+              };
+              return {
+                primary: box('.topbar .primary-nav'),
+                secondary: box('#operatorWorkItemsRail'),
+                workspace: box('.operator-workspace'),
+                scrollWidth: document.documentElement.scrollWidth,
+              };
+            }"""
+        )
+        assert geometry["primary"]["x"] == 0
+        assert 80 <= geometry["primary"]["width"] <= 88
+        assert geometry["secondary"]["x"] == geometry["primary"]["width"]
+        assert 232 <= geometry["secondary"]["width"] <= 240
+        assert geometry["workspace"]["x"] == geometry["secondary"]["right"]
+        assert page.locator(
+            f'[data-operator-rail-item][data-route-work-item="{fixture.work_item}"]'
+        ).count() == 1
+
+        page.locator("#projectInboxButton").click()
+        page.locator(".studio-inbox").wait_for(state="visible")
+        assert secondary.is_hidden()
+        inbox_geometry = page.evaluate(
+            """() => {
+              const node = document.querySelector('.topbar .primary-nav');
+              const workspace = document.querySelector('.operator-workspace');
+              return {
+                primaryWidth: node.getBoundingClientRect().width,
+                workspaceX: workspace.getBoundingClientRect().x,
+                workItems: document.querySelectorAll('[data-operator-rail-item]').length,
+                scrollWidth: document.documentElement.scrollWidth,
+              };
+            }"""
+        )
+        assert 236 <= inbox_geometry["primaryWidth"] <= 248
+        assert inbox_geometry["workspaceX"] == inbox_geometry["primaryWidth"]
+        assert inbox_geometry["workItems"] == 0
+        assert inbox_geometry["scrollWidth"] <= viewport[0]
         browser_page.diagnostics.assert_clean()
 
 
