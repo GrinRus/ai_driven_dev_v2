@@ -12857,7 +12857,8 @@ Local tasks:
     dashboard, project, and inbox readback finish, then clears volatile job state; a
     nonterminal `cancelling` result continues polling, and a pre-cancel in-flight poll cannot
     overwrite either outcome. Both failed mobile active-Studio cases pass repeatedly with clean
-    diagnostics.
+  diagnostics. PR #414 (merge `2534cdef`) completed the compact header implementation; the remaining
+  tablet shell ordering/density issue is tracked as T45.
   - Completion: cancellation captures the immutable job identity before mutation, sends immediate
     terminal responses through the existing durable dashboard/project/inbox reconciliation, and
     retains scheduled polling only for active statuses. Frontend tests pass `99/99`; the two
@@ -15912,7 +15913,7 @@ Local tasks:
   position, one truthful context row, stable deep links/reload, no horizontal overflow, and clean
   diagnostics. PR #412 (merge `831be726`) completed the desktop detail chrome collapse; the
   remaining internal context-header density gap is tracked as T44.
-- `W44-E1-S3-T44` (next) Compact the remaining Work Item detail context header so the target title,
+- `W44-E1-S3-T44` (done) Compact the remaining Work Item detail context header so the target title,
   tabs, and stage strip retain their first-viewport hierarchy after the generic desktop topbar is
   collapsed. Replace the stacked `Work Item Workspace` eyebrow, phase/status line, and duplicate
   identity rows with one dense but truthful context row; preserve Work Item id, current status,
@@ -15921,6 +15922,13 @@ Local tasks:
   `1280x900`, `1440x900`, `768x1024`, `390x844`, and `320x568` prove the title/tabs/stage strip
   align with the target hierarchy, status and identity remain discoverable, no horizontal overflow
   or diagnostic errors occur, and existing deep links/reload semantics remain stable.
+- `W44-E1-S3-T45` (next) Align the tablet Work Item detail shell at `768x1024` with the target
+  hierarchy: keep a compact top-level chrome, place the truthful Work Item context before tabs and
+  the canonical stage strip, and preserve the existing desktop two-rail composition and mobile
+  navigation behavior. Do not change route/API semantics, Work Item ids, stage ordering, status
+  ownership, or launch/recovery controls. Verification: fresh geometry/accessibility checks at
+  `768x1024`, `390x844`, and `320x568` prove context → tabs → stages ordering on tablet, intentional
+  mobile composition, no horizontal overflow or diagnostic errors, and stable deep links/reload.
 
 Wave 44 exit evidence:
 
@@ -15932,11 +15940,21 @@ Wave 44 exit evidence:
 - browser checks show no console errors, horizontal overflow, duplicate primary actions, or focus
   loss;
   - a fresh rendered audit confirms remaining gaps are absent or explicitly blocked. T19 is now
-    evidence-complete but not an exit pass; T25-T43 are complete and T44 is the next dependency-ready
-    convergence task. Default task-centered routing remains provisional until T30-T44 are either
+    evidence-complete but not an exit pass; T25-T44 are complete and T45 is the next dependency-ready
+    convergence task. Default task-centered routing remains provisional until T30-T45 are either
     completed or backed by explicit target-equivalence evidence.
 
 Wave 44 reconciliation:
+
+- `2026-08-26` PR #414 (merge `2534cdef`) completed `W44-E1-S3-T44`. Work Item detail context now
+  uses a compact target-style header: the title spans the available canvas, phase/status and durable
+  Work Item identity remain discoverable in one dense metadata row, and the desktop tabs/stage strip
+  follow without the removed eyebrow/duplicate identity stack. Tablet uses the same compact context
+  treatment while retaining its established topbar; mobile remains unchanged. Focused desktop shell
+  checks (`15 passed`), active-studio journey (`5 passed`), frontend (`136 passed`), UI contracts
+  (`183 passed`), docs/planning (`50 passed`), Ruff, mypy, and full CI including packaged UI browser
+  (`14m53s`) passed. Fresh comparison identifies the next bounded tablet gap: at `768x1024` the
+  legacy topbar remains tall and tabs precede the context header; `T45` is now `Next`.
 
 - `2026-08-26` PR #412 (merge `831be726`) completed `W44-E1-S3-T43`. Work Item detail surfaces now
   collapse the generic desktop breadcrumb/status row to zero-height chrome while keeping the real

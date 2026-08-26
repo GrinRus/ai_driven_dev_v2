@@ -7,14 +7,13 @@ slice, and local task.
 
 ## Next
 
-- `W44-E1-S3-T44` — Compact the remaining Work Item detail context header so the target title, tabs,
-  and stage strip keep their first-viewport hierarchy after the generic desktop topbar is collapsed.
-  Preserve truthful Work Item/status identity, launch/recovery controls, existing routes and ids, and
-  mobile behavior.
+- `W44-E1-S3-T45` — Align the tablet Work Item detail shell at `768x1024` with the target hierarchy:
+  keep a compact top-level chrome, place Work Item context before tabs and the canonical stage strip,
+  and preserve desktop two-rail, mobile, route, id, status, and launch/recovery semantics.
 
 ## Soon
 
-- None; T43 is complete and T44 is the only currently dependency-ready task.
+- None; T44 is complete and T45 is the only currently dependency-ready task.
 
 ## Parking lot
 
@@ -40,6 +39,14 @@ slice, and local task.
   queue-restoration policy in `docs/backlog/roadmap.md` (`W8-E3-S1`).
 
 ## Current reconciliation
+
+- `2026-08-26` PR #414 (merge `2534cdef`) completed `W44-E1-S3-T44`: detail context now uses a compact
+  target-style title/metadata rhythm with durable Work Item id and current status still discoverable;
+  the desktop title, tabs, and stages occupy the intended first viewport while mobile remains unchanged.
+  Focused shell (`15`), active-studio (`5`), frontend (`136`), UI contracts (`183`), docs/planning (`50`),
+  Ruff, mypy, and full CI including packaged UI browser (`14m53s`) passed. Fresh `768x1024` comparison
+  exposes the next bounded gap: the legacy tablet topbar remains tall and tabs precede context; `T45` is
+  promoted to `Next`.
 
 - `2026-08-26` PR #412 (merge `831be726`) completed `W44-E1-S3-T43`: detail surfaces now collapse the
   generic desktop breadcrumb/status row to zero-height chrome while retaining the real runtime settings
