@@ -15932,13 +15932,16 @@ Local tasks:
   focused shell (`18 passed`), active-studio reconnect (`5 passed`), frontend (`136 passed`), UI
   contracts (`11 passed`), docs/planning (`50 passed`), Ruff, mypy, and full CI including packaged UI
   browser passed.
-- `W44-E1-S3-T46` (next) Render the mobile Work Item detail identity in the target compact header.
+- `W44-E1-S3-T46` (done) Render the mobile Work Item detail identity in the target compact header.
   Keep the AIDD brand and a truncated current Work Item label discoverable beside the existing
   overflow/runtime control, preserve an accessible path back to Inbox, and leave recovery/question
-  headers, routes, ids, status ownership, and launch controls unchanged. Verification: fresh
-  `390x844` and `320x568` geometry/accessibility checks prove brand and Work Item identity are
-  visible without clipping or horizontal overflow, Inbox navigation remains available, detail
-  context and stage summary remain stable, and recovery/mobile decision surfaces do not regress.
+  headers, routes, ids, status ownership, and launch controls unchanged. PR #418 (merge `f533b336`)
+  adds the compact mobile detail header and preserves the existing Inbox arrow path, runtime
+  disclosure, and route/DOM contracts. Fresh `390x844` and `320x568` captures show the AIDD brand,
+  current Work Item id, Inbox/back path, and overflow control without clipping or horizontal
+  overflow; recovery and mobile decision surfaces remain unchanged. Verification: shell (`20`),
+  mobile studio header (`6`), focused mobile primary decision (`4`), frontend (`136`),
+  docs/planning (`50`), Ruff, mypy, and full CI including packaged UI browser passed.
 
 Wave 44 exit evidence:
 
@@ -15950,11 +15953,22 @@ Wave 44 exit evidence:
 - browser checks show no console errors, horizontal overflow, duplicate primary actions, or focus
   loss;
   - a fresh rendered audit confirms remaining gaps are absent or explicitly blocked. T19 is now
-    evidence-complete but not an exit pass; T25-T45 are complete and T46 is the next dependency-ready
-    convergence task. Default task-centered routing remains provisional until T30-T46 are either
-    completed or backed by explicit target-equivalence evidence.
+    evidence-complete; T25-T46 are complete. The post-T46 audit covers all supported shell
+    viewports and finds no additional bounded target-equivalence gap, so the task-centered
+    renderer/default routing decision is accepted for the current provider-free surfaces. Human,
+    Claude/cross-runtime, and Wave 36 acceptance remain outside this rendered loop.
 
 Wave 44 reconciliation:
+
+- `2026-08-26` PR #418 (merge `f533b336`) completed `W44-E1-S3-T46`. Mobile Work Item detail now
+  keeps the AIDD brand, current Work Item identity, accessible Inbox/back path, and overflow/runtime
+  control in one compact 64px header at `390x844` and `320x568`. Fresh captures across
+  `320x568`, `390x844`, `768x1024`, `1280x900`, and `1440x900` show the target shell hierarchy,
+  truthful context, tabs/stages, and launch inspector without clipping or horizontal overflow;
+  console/request diagnostics are clean. Focused shell (`20`), mobile header (`6`), primary decision
+  launch (`4`), frontend (`136`), docs/planning (`50`), Ruff, mypy, and full CI including packaged
+  UI browser passed. The rendered acceptance loop has no remaining bounded UI gap; deferred human,
+  Claude/cross-runtime, and Wave 36 evidence remain parked.
 
 - `2026-08-26` PR #416 (merge `efec5a79`) completed `W44-E1-S3-T45`. Tablet Work Item detail now
   keeps a compact 64px topbar, hides duplicate breadcrumb/status chrome, and restores the target

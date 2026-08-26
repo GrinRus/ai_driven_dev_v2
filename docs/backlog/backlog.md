@@ -7,13 +7,12 @@ slice, and local task.
 
 ## Next
 
-- `W44-E1-S3-T46` — Render the mobile Work Item detail identity in the target compact header while
-  preserving Inbox navigation, recovery/question headers, routes, ids, status ownership, and launch
-  controls.
+- None; the current rendered acceptance loop is reconciled through `W44-E1-S3-T46` and no further
+  bounded target-equivalence task was found in the fresh five-viewport audit.
 
 ## Soon
 
-- None; T45 is complete and T46 is the only currently dependency-ready task.
+- None; no direct successor is dependency-ready.
 
 ## Parking lot
 
@@ -39,6 +38,15 @@ slice, and local task.
   queue-restoration policy in `docs/backlog/roadmap.md` (`W8-E3-S1`).
 
 ## Current reconciliation
+
+- `2026-08-26` PR #418 (merge `f533b336`) completed `W44-E1-S3-T46`: mobile Work Item detail now
+  exposes the AIDD brand, current Work Item id, accessible Inbox/back path, and overflow/runtime
+  control in a compact 64px header. Fresh five-viewport captures (`320x568`, `390x844`, `768x1024`,
+  `1280x900`, `1440x900`) confirm the target shell hierarchy, context/tabs/stages, launch inspector,
+  clean diagnostics, and no horizontal overflow. Shell (`20`), mobile header (`6`), focused primary
+  decision launch (`4`), frontend (`136`), docs/planning (`50`), Ruff, mypy, and full CI including
+  packaged UI browser passed. No additional bounded UI gap was found; human, Claude/cross-runtime,
+  and Wave 36 evidence remain parked.
 
 - `2026-08-26` PR #416 (merge `efec5a79`) completed `W44-E1-S3-T45`: tablet detail now uses a compact
   64px topbar, hides duplicate breadcrumb/status chrome, and restores context → tabs → stages order
