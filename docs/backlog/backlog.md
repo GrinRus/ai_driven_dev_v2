@@ -7,12 +7,13 @@ slice, and local task.
 
 ## Next
 
-- None; the current rendered acceptance loop is reconciled through `W44-E1-S3-T46` and no further
-  bounded target-equivalence task was found in the fresh five-viewport audit.
+- `W44-E1-S3-T47` — Align mobile recovery and Decision Workbench headers with the target mobile
+  decision composition while preserving Work Item identity, recovery semantics, and one primary
+  action.
 
 ## Soon
 
-- None; no direct successor is dependency-ready.
+- None; T47 is the only dependency-ready convergence task.
 
 ## Parking lot
 
@@ -38,6 +39,11 @@ slice, and local task.
   queue-restoration policy in `docs/backlog/roadmap.md` (`W8-E3-S1`).
 
 ## Current reconciliation
+
+- `2026-08-26` planning update: the fresh 13-surface audit found a bounded target gap on mobile
+  question/recovery surfaces: the current header shows AIDD and Inbox but not the current Work Item
+  identity required by `13-mobile-decision.png`. `W44-E1-S3-T47` is added to the roadmap and promoted
+  to `Next`; no overview, Inbox, setup, route, or action semantics are changed by this task.
 
 - `2026-08-26` PR #418 (merge `f533b336`) completed `W44-E1-S3-T46`: mobile Work Item detail now
   exposes the AIDD brand, current Work Item id, accessible Inbox/back path, and overflow/runtime
