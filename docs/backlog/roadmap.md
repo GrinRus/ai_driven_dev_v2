@@ -15865,13 +15865,25 @@ Local tasks:
   compositions (`17 passed`), frontend (`36 passed`), UI contracts (`55 passed`), docs/planning
   (`50 passed`), Ruff, mypy, full Python/packaged-browser CI, deterministic, adapter, security, and
   build checks passed.
-- `W44-E1-S3-T40` (next) Recompose the desktop Validation Repair action group so Runner, the primary
+- `W44-E1-S3-T40` (done) Recompose the desktop Validation Repair action group so Runner, the primary
   repair action, Request change, and raw evidence remain inline with the finding inspector instead
-  of obscuring the consequence, repair brief, or extension evidence. Preserve the existing action
-  services, stale/exhausted fail-closed semantics, generated-document read-only boundary, and
-  mobile first-viewport dock. Verification: fresh target screenshots and geometry/accessibility
-  assertions at `1280x900`, `1440x900`, `768x1024`, `390x844`, and `320x568` prove no inspector/action
-  overlap, one primary action, clean diagnostics, and no horizontal overflow.
+  of obscuring the consequence, repair brief, or extension evidence. PR #406 (merge `40632549`)
+  removes the desktop fixed overlay, keeps the action group in normal inspector flow, and preserves
+  readiness revalidation, action services, generated-document immutability, and the mobile safe-area
+  dock. The provider-free matrix now keeps initial-viewport coverage on mobile and scrolls only the
+  desktop inline action into view for geometry checks. Verification: validation-repair viewport
+  checks (`10 passed`), recovery journey (`11 passed`), target legacy compositions (`17 passed`),
+  five-viewport matrix (`1 passed`), frontend (`136 passed`), UI contracts (`63 passed`),
+  docs/planning (`50 passed`), Ruff, mypy, full CI, deterministic, adapter, packaged-browser,
+  security, and build checks passed.
+- `W44-E1-S3-T41` (next) Compact the desktop Validation Repair surface's vertical rhythm so the
+  inline Runner and primary repair action are visible in the supported `1280x900` and `1440x900`
+  initial viewports without restoring a fixed overlay or obscuring consequence, exact repair brief,
+  or extension evidence. Keep the existing routes, readiness and mutation services, generated
+  document read-only boundary, and mobile first-viewport dock. Verification: fresh screenshots and
+  geometry/accessibility assertions at `1280x900`, `1440x900`, `768x1024`, `390x844`, and `320x568`
+  prove inline action visibility, no overlap, one primary action, clean diagnostics, and no
+  horizontal overflow.
 
 Wave 44 exit evidence:
 
@@ -15883,19 +15895,19 @@ Wave 44 exit evidence:
 - browser checks show no console errors, horizontal overflow, duplicate primary actions, or focus
   loss;
   - a fresh rendered audit confirms remaining gaps are absent or explicitly blocked. T19 is now
-    evidence-complete but not an exit pass; T25-T39 are complete and T40 is the next dependency-ready
-  convergence task. Default task-centered routing remains
-  provisional until T30-T40 are either completed or backed by explicit target-equivalence evidence.
+    evidence-complete but not an exit pass; T25-T40 are complete and T41 is the next dependency-ready
+    convergence task. Default task-centered routing remains
+    provisional until T30-T41 are either completed or backed by explicit target-equivalence evidence.
 
 Wave 44 reconciliation:
 
-- `2026-08-26` PR #404 (merge `a759b2af`) completed `W44-E1-S3-T39`. Validation Repair now keeps the
-  finding, consequence, source document, repair budget, Runner readiness, and one repair action in
-  a readable target hierarchy across desktop and mobile, including exhausted-repair recovery. The
-  focused viewport suite (`10`), recovery journey (`11`), target legacy compositions (`17`), frontend,
-  UI contracts, docs/planning, Ruff, mypy, full CI, deterministic, adapter, security, and build checks
-  passed. A fresh screenshot comparison found one remaining desktop-only overlap: the fixed action dock
-  can cover the consequence/repair-brief area in the right inspector. `W44-E1-S3-T40` is now `Next`.
+- `2026-08-26` PR #406 (merge `40632549`) completed `W44-E1-S3-T40`. Validation Repair now keeps
+  the desktop action group in normal inspector flow, so the Runner, primary repair, Request change,
+  and raw evidence controls no longer cover the consequence, exact repair brief, or extension
+  evidence. Mobile retains the initial-viewport safe-area dock. Fresh initial/action screenshots and
+  the five-viewport matrix show no desktop overlap, while also exposing the next target-equivalence
+  gap: the inline desktop action sits below the initial viewport on `1280x900`/`1440x900`. `T41` is
+  now `Next` to reclaim that vertical rhythm without reintroducing an overlay.
 
 - `2026-08-26` PR #402 (merge `924138cc`) completed `W44-E1-S3-T38`. Shared shell breadcrumbs now
   present a truthful project label, Work Item, and current-stage label without exposing the absolute

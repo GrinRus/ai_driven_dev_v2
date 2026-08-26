@@ -7,13 +7,14 @@ slice, and local task.
 
 ## Next
 
-- `W44-E1-S3-T40` — Recompose the desktop Validation Repair action group so Runner, the primary
-  repair action, Request change, and raw evidence remain inline with the finding inspector without
-  obscuring consequence or repair-brief evidence.
+- `W44-E1-S3-T41` — Compact the desktop Validation Repair surface's vertical rhythm so the inline
+  Runner and primary repair action are visible in the supported `1280x900` and `1440x900` initial
+  viewports without restoring a fixed overlay or obscuring consequence, exact repair brief, or
+  extension evidence.
 
 ## Soon
 
-- None; T39 is the only currently dependency-ready task.
+- None; T40 is complete and T41 is the only currently dependency-ready task.
 
 ## Parking lot
 
@@ -40,13 +41,13 @@ slice, and local task.
 
 ## Current reconciliation
 
-- `2026-08-26` PR #404 (merge `a759b2af`) completed `W44-E1-S3-T39`: Validation Repair now keeps the
-  finding-to-repair hierarchy readable across five viewport fixtures and exhausted recovery while
-  preserving routes, readiness, mutation services, and generated-document immutability. Focused
-  viewport (`10`), recovery (`11`), target legacy (`17`), frontend/UI contracts, docs/planning, Ruff,
-  mypy, full CI, deterministic, adapter, packaged-browser, security, and build checks passed. Fresh
-  screenshot comparison found a desktop-only fixed-dock overlap over consequence/repair-brief evidence;
-  `T40` is promoted as the next bounded convergence task.
+- `2026-08-26` PR #406 (merge `40632549`) completed `W44-E1-S3-T40`: desktop Validation Repair
+  actions now remain inline with the finding inspector instead of covering consequence, exact repair
+  brief, or extension evidence; mobile keeps its initial-viewport dock. Focused viewport (`10`),
+  recovery (`11`), target legacy (`17`), five-viewport matrix, frontend (`136`), UI contracts (`63`),
+  docs/planning (`50`), Ruff, mypy, full CI, deterministic, adapter, packaged-browser, security, and
+  build checks passed. Fresh screenshots found no overlap, but the inline desktop action is now below
+  the initial `1280x900`/`1440x900` viewport; `T41` is promoted as the next bounded convergence task.
 
 - `2026-08-26` PR #402 (merge `924138cc`) completed `W44-E1-S3-T38`: shared shell breadcrumbs now
   expose a truthful project label, Work Item, and current-stage label without rendering the absolute
