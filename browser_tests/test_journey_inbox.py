@@ -62,7 +62,7 @@ def _wait_for_question_surface(page: Page) -> None:
 def _wait_for_work_item_surface(page: Page, work_item: str) -> None:
     page.locator("#intentChip").get_by_text(
         f"Work Item: {work_item}", exact=True
-    ).wait_for(state="visible", timeout=_SURFACE_TIMEOUT_MS)
+    ).wait_for(state="attached", timeout=_SURFACE_TIMEOUT_MS)
 
 
 def _wait_for_durable_payload(

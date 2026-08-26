@@ -152,6 +152,79 @@ def test_work_item_detail_uses_split_primary_and_work_item_rails(
         browser_page.diagnostics.assert_clean()
 
 
+@pytest.mark.parametrize(
+    "viewport", ((1280, 900), (1440, 900), (768, 1024), (390, 844), (320, 568))
+)
+def test_detail_header_starts_without_generic_desktop_chrome(
+    tmp_path: Path,
+    viewport: tuple[int, int],
+) -> None:
+    fixture = build_browser_state_fixture(tmp_path / f"detail-header-{viewport[0]}", "no-run")
+    assert fixture.work_item is not None
+    with sync_playwright() as playwright, operator_browser_harness(
+        fixture.project_root,
+        playwright,
+        work_item=fixture.work_item,
+    ) as harness, harness.open_page(viewport) as browser_page:
+        page = browser_page.page
+        page.goto(f"{harness.url}?ui=studio", wait_until="networkidle")
+
+        title = page.locator(".studio-context-bar h2")
+        title.wait_for(state="visible")
+        geometry = page.evaluate(
+            """() => {
+              const box = (selector) => {
+                const node = document.querySelector(selector);
+                if (!node) return null;
+                const rect = node.getBoundingClientRect();
+                const style = getComputedStyle(node);
+                return {
+                  x: rect.x,
+                  y: rect.y,
+                  width: rect.width,
+                  height: rect.height,
+                  display: style.display,
+                  visibility: style.visibility,
+                };
+              };
+              return {
+                topbar: box('.topbar'),
+                workspace: box('.operator-workspace'),
+                title: box('.studio-context-bar h2'),
+                tabs: box('.work-item-tabs'),
+                stages: box('.intent-phase-region'),
+                breadcrumb: box('.topbar > .top-context'),
+                status: box('.topbar > .top-status'),
+                actions: box('.topbar > .top-actions'),
+                scrollWidth: document.documentElement.scrollWidth,
+              };
+            }"""
+        )
+
+        assert geometry["title"]["y"] < viewport[1]
+        assert geometry["tabs"]["y"] < viewport[1]
+        if viewport[0] >= 390:
+            assert geometry["stages"]["y"] < viewport[1]
+        assert geometry["scrollWidth"] <= viewport[0]
+
+        if viewport[0] >= 1100:
+            assert geometry["title"]["y"] <= 72
+            assert geometry["topbar"]["height"] == 0
+            assert geometry["workspace"]["y"] == 0
+            for key in ("breadcrumb", "status"):
+                assert geometry[key]["display"] == "none"
+            assert geometry["actions"]["display"] != "none"
+            assert page.locator("#newWorkItemButton").evaluate(
+                "node => getComputedStyle(node).display"
+            ) == "none"
+        else:
+            assert geometry["topbar"]["height"] > 0
+            if viewport[0] >= 600:
+                assert geometry["breadcrumb"]["display"] != "none"
+
+        browser_page.diagnostics.assert_clean()
+
+
 @pytest.mark.parametrize("viewport", ((1280, 900), (390, 844)))
 def test_shared_breadcrumb_uses_project_work_item_and_stage_labels(
     tmp_path: Path,
