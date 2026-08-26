@@ -15903,14 +15903,24 @@ Local tasks:
   unchanged. Verification: focused shell/legacy/inbox browser checks (`35 passed`), provider-free
   matrix (`9 passed`), frontend (`136 passed`), UI contracts/docs/planning (`110 passed`), Ruff,
   mypy, and full CI including packaged UI browser passed.
-- `W44-E1-S3-T43` (next) Collapse the generic desktop breadcrumb/status topbar on Work Item detail
+- `W44-E1-S3-T43` (done) Collapse the generic desktop breadcrumb/status topbar on Work Item detail
   surfaces so the target Work Item header, tabs, and stage strip begin in the initial viewport
   without a duplicated 64px chrome layer. Preserve top-level Inbox/Create/History routing,
   launch-time Runner controls, existing status/runtime semantics, keyboard focus, routes, ids,
   and mobile topbar behavior. Verification: fresh target comparisons and geometry checks at
   `1280x900`, `1440x900`, `768x1024`, `390x844`, and `320x568` prove title/header first-viewport
   position, one truthful context row, stable deep links/reload, no horizontal overflow, and clean
-  diagnostics.
+  diagnostics. PR #412 (merge `831be726`) completed the desktop detail chrome collapse; the
+  remaining internal context-header density gap is tracked as T44.
+- `W44-E1-S3-T44` (next) Compact the remaining Work Item detail context header so the target title,
+  tabs, and stage strip retain their first-viewport hierarchy after the generic desktop topbar is
+  collapsed. Replace the stacked `Work Item Workspace` eyebrow, phase/status line, and duplicate
+  identity rows with one dense but truthful context row; preserve Work Item id, current status,
+  stage semantics, launch/recovery controls, keyboard focus, routes, ids, and mobile behavior.
+  Verification: fresh target comparisons and geometry/accessibility checks at
+  `1280x900`, `1440x900`, `768x1024`, `390x844`, and `320x568` prove the title/tabs/stage strip
+  align with the target hierarchy, status and identity remain discoverable, no horizontal overflow
+  or diagnostic errors occur, and existing deep links/reload semantics remain stable.
 
 Wave 44 exit evidence:
 
@@ -15922,11 +15932,22 @@ Wave 44 exit evidence:
 - browser checks show no console errors, horizontal overflow, duplicate primary actions, or focus
   loss;
   - a fresh rendered audit confirms remaining gaps are absent or explicitly blocked. T19 is now
-    evidence-complete but not an exit pass; T25-T42 are complete and T43 is the next dependency-ready
-    convergence task. Default task-centered routing remains provisional until T30-T43 are either
+    evidence-complete but not an exit pass; T25-T43 are complete and T44 is the next dependency-ready
+    convergence task. Default task-centered routing remains provisional until T30-T44 are either
     completed or backed by explicit target-equivalence evidence.
 
 Wave 44 reconciliation:
+
+- `2026-08-26` PR #412 (merge `831be726`) completed `W44-E1-S3-T43`. Work Item detail surfaces now
+  collapse the generic desktop breadcrumb/status row to zero-height chrome while keeping the real
+  runtime settings control as a fixed launch/recovery disclosure. Inbox/setup topbars, routes, ids,
+  status/runtime semantics, and mobile behavior remain unchanged; the Inbox browser helper now waits
+  for the durable detail identity to be attached rather than requiring the intentionally hidden chip.
+  Focused desktop shell checks (`12 passed`), frontend (`136 passed`), UI contracts (`183 passed`),
+  docs/planning (`50 passed`), Ruff, mypy, targeted Inbox regressions, and full CI including packaged
+  UI browser (`23m19s`) passed. Fresh comparison shows the next bounded gap: the internal detail context
+  header still consumes a stacked eyebrow, phase/status line, and duplicate identity rows; `T44` is now
+  `Next`.
 
 - `2026-08-26` PR #410 (merge `3ef38644`) completed `W44-E1-S3-T42`. Work Item detail surfaces now
   use the target two-level desktop shell: an 84px primary navigation rail followed by a 236px
