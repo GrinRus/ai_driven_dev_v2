@@ -96,13 +96,20 @@ def test_question_recovery_renders_the_decision_before_shared_chrome(
             assert work_item_context.inner_text() == fixture.work_item
             context_box = work_item_context.bounding_box()
             inbox_box = page.locator("#projectInboxButton").bounding_box()
+            overflow_box = page.locator("#runtimeSettings > summary").bounding_box()
             assert context_box is not None and context_box["width"] > 0
             assert inbox_box is not None and inbox_box["width"] >= 44
+            assert overflow_box is not None and overflow_box["width"] >= 44
             assert page.evaluate(
                 """() => getComputedStyle(
                   document.querySelector('#projectInboxButton'), '::before'
                 ).content"""
             ) == '"←"'
+            assert page.evaluate(
+                """() => getComputedStyle(
+                  document.querySelector('#runtimeSettings > summary'), '::before'
+                ).content"""
+            ) == '"⋮"'
         assert_accessible_render(page, target_size=44 if viewport[0] <= 760 else 32)
         assert_rendered_geometry(page)
         assert page.evaluate(
