@@ -101,6 +101,9 @@ def test_wave42_journey_matrix_is_provider_free_and_rendered_across_viewports(
                 surface = page.locator(journey.surface_selector).first
                 surface.wait_for(state="visible")
                 require_initial_viewport = journey.requires_initial_viewport and (
+                    journey.initial_viewport_min_width is None
+                    or viewport[0] >= journey.initial_viewport_min_width
+                ) and (
                     journey.initial_viewport_max_width is None
                     or viewport[0] <= journey.initial_viewport_max_width
                 )

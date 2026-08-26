@@ -369,6 +369,86 @@ body {
   }
 }
 
+/* Validation Repair keeps the decision inspector in the first desktop
+   viewport. Give its factual copy a stable reading column at supported
+   desktop widths so the inline Runner and repair action do not fall below
+   the fold. The document canvas remains fluid and the mobile composition is
+   intentionally untouched. */
+@media (min-width: 1200px) {
+  body:not(.setup-active) .operator-workspace:has(.validation-finding-inspector)
+    .validation-repair-center {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 340px);
+  }
+
+  /* This is a decision surface, so the stage strip and context metadata
+     should establish orientation without consuming the action's viewport.
+     Keep labels, order, and touch targets intact while using the compact
+     desktop rhythm already used by the document reader. */
+  body:not(.setup-active) .operator-workspace:has(.validation-finding-inspector)
+    .studio-context-bar {
+    padding-block: var(--space-2);
+  }
+
+  body:not(.setup-active) .operator-workspace:has(.validation-finding-inspector)
+    .studio-context-bar > div:first-child {
+    gap: var(--space-2);
+  }
+
+  body:not(.setup-active) .operator-workspace:has(.validation-finding-inspector)
+    .studio-context-bar h2 {
+    font-size: 24px;
+    line-height: 28px;
+  }
+
+  body:not(.setup-active) .operator-workspace:has(.validation-finding-inspector)
+    .intent-phase-stepper {
+    gap: var(--space-2);
+    padding-block: var(--space-2);
+  }
+
+  body:not(.setup-active) .operator-workspace:has(.validation-finding-inspector)
+    .canonical-stage-groups {
+    gap: var(--space-2);
+  }
+
+  body:not(.setup-active) .operator-workspace:has(.validation-finding-inspector)
+    .canonical-stage-group {
+    gap: var(--space-1);
+  }
+
+  body:not(.setup-active) .operator-workspace:has(.validation-finding-inspector)
+    .intent-phase-list {
+    gap: var(--space-1);
+  }
+
+  body:not(.setup-active) .operator-workspace:has(.validation-finding-inspector)
+    .canonical-stage-step {
+    gap: var(--space-2);
+    min-height: 48px;
+    padding-block: var(--space-2);
+  }
+
+  body:not(.setup-active) .operator-workspace:has(.validation-finding-inspector)
+    .canonical-stage-step .intent-phase-index {
+    block-size: 24px;
+    inline-size: 24px;
+  }
+
+  body:not(.setup-active) .operator-workspace:has(.validation-finding-inspector)
+    .canonical-stage-step strong,
+  body:not(.setup-active) .operator-workspace:has(.validation-finding-inspector)
+    .canonical-stage-step small {
+    font-size: 10px;
+    line-height: 1.1;
+  }
+
+  body:not(.setup-active) .operator-workspace:has(.validation-finding-inspector)
+    .markdown-preview {
+    max-height: none;
+    overflow: visible;
+  }
+}
+
 /* Launch Overview owns one contextual Runner inspector. The existing global
    mutation button remains the only primary action; this panel exposes the
    readiness evidence beside it without leaking into create/read-only surfaces. */

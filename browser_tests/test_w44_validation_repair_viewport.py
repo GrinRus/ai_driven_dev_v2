@@ -60,6 +60,8 @@ def test_validation_repair_action_is_contained_without_desktop_overlap(
         assert action_box["y"] >= -1
         if viewport[0] <= 760:
             assert action_box["y"] + action_box["height"] <= viewport[1] + 1
+        elif viewport[0] >= 1280:
+            assert action_box["y"] + action_box["height"] <= viewport[1] + 1
         else:
             assert action_box["x"] >= inspector_box["x"] - 1
             assert action_box["x"] + action_box["width"] <= (
@@ -166,6 +168,8 @@ def test_validation_repair_prioritizes_finding_consequence_and_runner(
             ) - 1
         assert primary_box["y"] >= -1
         if viewport[0] <= 760:
+            assert primary_box["y"] + primary_box["height"] <= viewport[1] + 1
+        elif viewport[0] >= 1280:
             assert primary_box["y"] + primary_box["height"] <= viewport[1] + 1
 
         if viewport[0] > 760:
