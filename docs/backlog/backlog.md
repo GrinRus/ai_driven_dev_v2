@@ -7,15 +7,14 @@ slice, and local task.
 
 ## Next
 
-- `W44-E1-S3-T36` — Align Review/QA Remediation with the target findings/source-evidence/durable request
-  composition while preserving selection semantics, downstream staleness, Runner readiness, conflict
-  handling, and one remediation action.
-
-## Soon
-
 - `W44-E1-S3-T37` — Align Runs and Attempts with the target compact retained-run list, chronology,
   selected-attempt inspector, lineage, and read-only actions without changing history routes or
   comparison semantics.
+
+## Soon
+
+- `W44-E1-S3-T38` — Replace absolute filesystem paths in shared operator breadcrumbs with truthful
+  project, Work Item, and current-stage labels while preserving explicit document provenance utilities.
 
 ## Parking lot
 
@@ -41,6 +40,15 @@ slice, and local task.
   queue-restoration policy in `docs/backlog/roadmap.md` (`W8-E3-S1`).
 
 ## Current reconciliation
+
+- `2026-08-26` PR #398 (merge `da87abd7`) completed `W44-E1-S3-T36`: Review/QA Remediation now keeps
+  findings, source paths, retained evidence, durable request state, downstream impact, Runner readiness,
+  and the single remediation action in the target two-region composition with responsive fallback. Exact
+  finding ids, selection semantics, draft destinations, conflict/staleness behavior, routes, and mutation
+  services remain unchanged. Focused browser review/QA checks (`6 passed`), frontend tests (`28 passed`),
+  UI contracts (`58 passed`), Ruff, mypy, full CI, deterministic, adapter, packaged-browser, security,
+  and build checks passed. `T37` is now `Next` and `T38` is its direct `Soon` successor; human usability,
+  Claude/cross-runtime, and Wave 36 acceptance remain parked.
 
 - `2026-08-26` PR #396 (merge `66af77e9`) completed `W44-E1-S3-T35`: Implementation Review now uses a
   compact claims/verification overview, retains the canonical task ledger, and presents repository diff
