@@ -1856,8 +1856,8 @@
 }
 .repair-decision-consequence-secondary {
   color: var(--muted);
-  font-size: 11px;
-  line-height: 1.35;
+  font-size: var(--type-caption-size);
+  line-height: var(--type-body-line);
   overflow-wrap: anywhere;
 }
 .repair-action-band.repair-available {
@@ -6992,7 +6992,7 @@ button.target-editor-tab.active:hover {
     padding: var(--space-3);
     position: fixed;
     right: var(--space-6);
-    width: min(328px, calc(100vw - (var(--space-6) * 2)));
+    width: min(320px, calc(100vw - (var(--space-6) * 2)));
     z-index: 60;
   }
   .validation-finding-facts div {
