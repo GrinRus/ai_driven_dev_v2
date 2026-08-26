@@ -225,6 +225,74 @@ def test_detail_header_starts_without_generic_desktop_chrome(
         browser_page.diagnostics.assert_clean()
 
 
+@pytest.mark.parametrize("viewport", ((1280, 900), (1440, 900), (768, 1024)))
+def test_detail_context_header_keeps_identity_in_compact_target_rhythm(
+    tmp_path: Path,
+    viewport: tuple[int, int],
+) -> None:
+    fixture = build_browser_state_fixture(tmp_path / f"compact-context-{viewport[0]}", "no-run")
+    assert fixture.work_item is not None
+    with sync_playwright() as playwright, operator_browser_harness(
+        fixture.project_root,
+        playwright,
+        work_item=fixture.work_item,
+    ) as harness, harness.open_page(viewport) as browser_page:
+        page = browser_page.page
+        page.goto(f"{harness.url}?ui=studio", wait_until="networkidle")
+
+        context = page.locator(".intent-context-region .studio-context-bar")
+        context.wait_for(state="visible")
+        title = context.locator("h2")
+        identity = context.locator(".studio-context-identity")
+        title.wait_for(state="visible")
+        identity.wait_for(state="visible")
+
+        geometry = page.evaluate(
+            """() => {
+              const box = (selector) => {
+                const node = document.querySelector(selector);
+                if (!node) return null;
+                const rect = node.getBoundingClientRect();
+                const style = getComputedStyle(node);
+                return {
+                  y: rect.y,
+                  height: rect.height,
+                  display: style.display,
+                  flexWrap: style.flexWrap,
+                };
+              };
+              return {
+                context: box('.intent-context-region .studio-context-bar'),
+                eyebrow: box('.intent-context-region .studio-context-bar .eyebrow'),
+                title: box('.intent-context-region .studio-context-bar h2'),
+                identity: box(
+                    '.intent-context-region .studio-context-bar .studio-context-identity'
+                ),
+                tabs: box('.work-item-tabs'),
+                stages: box('.intent-phase-region'),
+                scrollWidth: document.documentElement.scrollWidth,
+              };
+            }"""
+        )
+
+        assert geometry["context"]["height"] <= 80
+        if viewport[0] >= 1100:
+            assert geometry["context"]["display"] == "grid"
+            assert geometry["title"]["y"] <= 48
+            assert geometry["tabs"]["y"] <= 128
+            assert geometry["stages"]["y"] <= 190
+        else:
+            assert geometry["title"]["y"] < viewport[1]
+            assert geometry["tabs"]["y"] < viewport[1]
+            assert geometry["stages"]["y"] < viewport[1]
+        assert geometry["eyebrow"]["display"] == "none"
+        assert geometry["identity"]["display"] != "none"
+        assert fixture.work_item in identity.inner_text()
+        assert "Ready for first launch" in identity.inner_text()
+        assert geometry["scrollWidth"] <= viewport[0]
+        browser_page.diagnostics.assert_clean()
+
+
 @pytest.mark.parametrize("viewport", ((1280, 900), (390, 844)))
 def test_shared_breadcrumb_uses_project_work_item_and_stage_labels(
     tmp_path: Path,
