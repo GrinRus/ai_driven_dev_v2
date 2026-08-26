@@ -432,6 +432,80 @@ body {
     padding-top: var(--space-2);
   }
 
+  /* Once the generic topbar is collapsed, the Work Item detail header is the
+     orientation surface. Keep its durable identity and status discoverable,
+     but express them as one compact row so the tabs and canonical stage strip
+     inherit the target title-to-navigation rhythm. The mobile header keeps its
+     fuller stacked treatment below this desktop-only rule. */
+  body:not(.setup-active):not(.inbox-detail-mode) .operator-workspace
+    .intent-context-region .studio-context-bar {
+    align-items: center;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: var(--space-3);
+    padding-block: var(--space-2);
+  }
+
+  body:not(.setup-active):not(.inbox-detail-mode) .operator-workspace
+    .intent-context-region .studio-context-bar > div:first-child {
+    display: contents;
+  }
+
+  body:not(.setup-active):not(.inbox-detail-mode) .operator-workspace
+    .intent-context-region .studio-context-bar .eyebrow {
+    display: none;
+  }
+
+  body:not(.setup-active):not(.inbox-detail-mode) .operator-workspace
+    .intent-context-region .studio-context-bar h2 {
+    font-size: clamp(22px, 2.1vw, 28px);
+    grid-column: 1 / -1;
+    grid-row: 1;
+    line-height: 1.1;
+    min-width: 0;
+  }
+
+  body:not(.setup-active):not(.inbox-detail-mode) .operator-workspace
+    .intent-context-region .studio-context-bar .muted {
+    grid-column: 1;
+    grid-row: 2;
+    margin: 0;
+    max-width: 18ch;
+    white-space: normal;
+  }
+
+  body:not(.setup-active):not(.inbox-detail-mode) .operator-workspace
+    .intent-context-region .studio-context-bar .studio-context-identity {
+    align-items: baseline;
+    display: flex;
+    gap: var(--space-3);
+    grid-column: 2;
+    grid-row: 2;
+    min-width: 0;
+  }
+
+  body:not(.setup-active):not(.inbox-detail-mode) .operator-workspace
+    .intent-context-region .studio-context-bar .studio-context-identity div {
+    align-items: baseline;
+    display: flex;
+    gap: var(--space-1);
+    white-space: nowrap;
+  }
+
+  body:not(.setup-active):not(.inbox-detail-mode) .operator-workspace
+    .intent-context-region .studio-context-bar .studio-context-identity dt {
+    font-size: 10px;
+    text-transform: uppercase;
+  }
+
+  body:not(.setup-active):not(.inbox-detail-mode) .operator-workspace
+    .intent-context-region .studio-context-bar .studio-context-identity dd {
+    font-size: var(--type-caption-size);
+    max-width: 18ch;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
   body:not(.setup-active).inbox-detail-mode {
     --operator-primary-rail-width: 244px;
     --operator-secondary-rail-width: 0px;
@@ -546,6 +620,80 @@ body {
     text-overflow: clip;
     white-space: normal;
     overflow-wrap: anywhere;
+  }
+}
+
+/* Tablet detail views keep the established topbar, but the Work Item context
+   still needs the same compact, single-row treatment so the stage strip does
+   not get pushed below the first viewport. */
+@media (min-width: 761px) and (max-width: 1099px) {
+  body:not(.setup-active):not(.inbox-detail-mode) .operator-workspace
+    .intent-context-region .studio-context-bar {
+    align-items: center;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: var(--space-3);
+    padding-block: var(--space-2);
+  }
+
+  body:not(.setup-active):not(.inbox-detail-mode) .operator-workspace
+    .intent-context-region .studio-context-bar > div:first-child {
+    display: contents;
+  }
+
+  body:not(.setup-active):not(.inbox-detail-mode) .operator-workspace
+    .intent-context-region .studio-context-bar .eyebrow {
+    display: none;
+  }
+
+  body:not(.setup-active):not(.inbox-detail-mode) .operator-workspace
+    .intent-context-region .studio-context-bar h2 {
+    font-size: clamp(22px, 2.1vw, 28px);
+    grid-column: 1 / -1;
+    grid-row: 1;
+    line-height: 1.1;
+    min-width: 0;
+  }
+
+  body:not(.setup-active):not(.inbox-detail-mode) .operator-workspace
+    .intent-context-region .studio-context-bar .muted {
+    grid-column: 1;
+    grid-row: 2;
+    margin: 0;
+    max-width: 18ch;
+    white-space: normal;
+  }
+
+  body:not(.setup-active):not(.inbox-detail-mode) .operator-workspace
+    .intent-context-region .studio-context-bar .studio-context-identity {
+    align-items: baseline;
+    display: flex;
+    gap: var(--space-3);
+    grid-column: 2;
+    grid-row: 2;
+    min-width: 0;
+  }
+
+  body:not(.setup-active):not(.inbox-detail-mode) .operator-workspace
+    .intent-context-region .studio-context-bar .studio-context-identity div {
+    align-items: baseline;
+    display: flex;
+    gap: var(--space-1);
+    white-space: nowrap;
+  }
+
+  body:not(.setup-active):not(.inbox-detail-mode) .operator-workspace
+    .intent-context-region .studio-context-bar .studio-context-identity dt {
+    font-size: 10px;
+    text-transform: uppercase;
+  }
+
+  body:not(.setup-active):not(.inbox-detail-mode) .operator-workspace
+    .intent-context-region .studio-context-bar .studio-context-identity dd {
+    font-size: var(--type-caption-size);
+    max-width: 18ch;
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
 }
 
