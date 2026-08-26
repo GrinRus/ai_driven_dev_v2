@@ -15855,11 +15855,23 @@ Local tasks:
   launch semantics remain unchanged. Verification: focused breadcrumb browser checks (`2 passed`),
   frontend tests (`36 passed`), Guided Setup/packaged smoke (`2 passed`), UI contracts/docs/planning
   (`105 passed`), Ruff, mypy, full CI, deterministic, adapter, packaged-browser, security, and build.
-- `W44-E1-S3-T39` (next) Recompose Validation Repair into the target finding-to-repair
-  hierarchy so the finding, literal consequence, source document, repair budget, Runner readiness,
-  and one repair action remain visible before long evidence. Verification: validation and repair
-  exhaustion fixtures at all five viewports with stale-evidence fail-closed behavior, one primary
-  action, read-only generated documents, and no overflow.
+- `W44-E1-S3-T39` (done) Recompose Validation Repair into the target finding-to-repair hierarchy
+  so the finding, literal consequence, source document, repair budget, Runner readiness, and one
+  repair action remain visible before long evidence. PR #404 (merge `a759b2af`) makes the inspector
+  single-column and readable, moves the finding ahead of the document on mobile, keeps the desktop
+  Runner/action group reachable, and preserves generated-document immutability, readiness
+  revalidation, routes, ids, and mutation services. Verification: validation-repair viewport checks
+  (`10 passed`), validation recovery journey including exhausted repair (`11 passed`), target legacy
+  compositions (`17 passed`), frontend (`36 passed`), UI contracts (`55 passed`), docs/planning
+  (`50 passed`), Ruff, mypy, full Python/packaged-browser CI, deterministic, adapter, security, and
+  build checks passed.
+- `W44-E1-S3-T40` (next) Recompose the desktop Validation Repair action group so Runner, the primary
+  repair action, Request change, and raw evidence remain inline with the finding inspector instead
+  of obscuring the consequence, repair brief, or extension evidence. Preserve the existing action
+  services, stale/exhausted fail-closed semantics, generated-document read-only boundary, and
+  mobile first-viewport dock. Verification: fresh target screenshots and geometry/accessibility
+  assertions at `1280x900`, `1440x900`, `768x1024`, `390x844`, and `320x568` prove no inspector/action
+  overlap, one primary action, clean diagnostics, and no horizontal overflow.
 
 Wave 44 exit evidence:
 
@@ -15871,11 +15883,19 @@ Wave 44 exit evidence:
 - browser checks show no console errors, horizontal overflow, duplicate primary actions, or focus
   loss;
   - a fresh rendered audit confirms remaining gaps are absent or explicitly blocked. T19 is now
-    evidence-complete but not an exit pass; T25-T38 are complete and T39 is the next dependency-ready
+    evidence-complete but not an exit pass; T25-T39 are complete and T40 is the next dependency-ready
   convergence task. Default task-centered routing remains
-  provisional until T30-T39 are either completed or backed by explicit target-equivalence evidence.
+  provisional until T30-T40 are either completed or backed by explicit target-equivalence evidence.
 
 Wave 44 reconciliation:
+
+- `2026-08-26` PR #404 (merge `a759b2af`) completed `W44-E1-S3-T39`. Validation Repair now keeps the
+  finding, consequence, source document, repair budget, Runner readiness, and one repair action in
+  a readable target hierarchy across desktop and mobile, including exhausted-repair recovery. The
+  focused viewport suite (`10`), recovery journey (`11`), target legacy compositions (`17`), frontend,
+  UI contracts, docs/planning, Ruff, mypy, full CI, deterministic, adapter, security, and build checks
+  passed. A fresh screenshot comparison found one remaining desktop-only overlap: the fixed action dock
+  can cover the consequence/repair-brief area in the right inspector. `W44-E1-S3-T40` is now `Next`.
 
 - `2026-08-26` PR #402 (merge `924138cc`) completed `W44-E1-S3-T38`. Shared shell breadcrumbs now
   present a truthful project label, Work Item, and current-stage label without exposing the absolute
@@ -15883,7 +15903,7 @@ Wave 44 reconciliation:
   and setup/launch semantics remain unchanged. Focused breadcrumb browser checks (`2 passed`),
   frontend tests (`36 passed`), Guided Setup/packaged smoke (`2 passed`), UI contracts/docs/planning
   (`105 passed`), Ruff, mypy, full CI, deterministic, adapter, packaged-browser, security, and build
-  checks passed. `T39` is now `Next` and no Soon successor is currently dependency-ready.
+  checks passed. `T39` was promoted and completed; `T40` is now `Next`.
 
 - `2026-08-26` PR #400 (merge `6d9f8287`) completed `W44-E1-S3-T37`. Runs and Attempts now present a
   compact retained-run list and tighter chronology rhythm alongside the selected-attempt inspector,

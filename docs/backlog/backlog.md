@@ -7,8 +7,9 @@ slice, and local task.
 
 ## Next
 
-- `W44-E1-S3-T39` — Recompose Validation Repair into the target finding-to-repair hierarchy so the
-  finding, consequence, source document, repair budget, Runner readiness, and one repair action remain visible.
+- `W44-E1-S3-T40` — Recompose the desktop Validation Repair action group so Runner, the primary
+  repair action, Request change, and raw evidence remain inline with the finding inspector without
+  obscuring consequence or repair-brief evidence.
 
 ## Soon
 
@@ -39,13 +40,21 @@ slice, and local task.
 
 ## Current reconciliation
 
+- `2026-08-26` PR #404 (merge `a759b2af`) completed `W44-E1-S3-T39`: Validation Repair now keeps the
+  finding-to-repair hierarchy readable across five viewport fixtures and exhausted recovery while
+  preserving routes, readiness, mutation services, and generated-document immutability. Focused
+  viewport (`10`), recovery (`11`), target legacy (`17`), frontend/UI contracts, docs/planning, Ruff,
+  mypy, full CI, deterministic, adapter, packaged-browser, security, and build checks passed. Fresh
+  screenshot comparison found a desktop-only fixed-dock overlap over consequence/repair-brief evidence;
+  `T40` is promoted as the next bounded convergence task.
+
 - `2026-08-26` PR #402 (merge `924138cc`) completed `W44-E1-S3-T38`: shared shell breadcrumbs now
   expose a truthful project label, Work Item, and current-stage label without rendering the absolute
   filesystem path. Existing project-path provenance utilities, route/deep-link behavior, DOM ids,
   and setup/launch semantics remain unchanged. Focused breadcrumb browser checks (`2 passed`),
   frontend tests (`36 passed`), Guided Setup/packaged smoke (`2 passed`), UI contracts/docs/planning
   (`105 passed`), Ruff, mypy, full CI, deterministic, adapter, packaged-browser, security, and build
-  checks passed. `T39` is now `Next`; human usability, Claude/cross-runtime, and Wave 36 acceptance
+  checks passed. `T39` was promoted as the next task and is now complete; `T40` is now `Next`; human usability, Claude/cross-runtime, and Wave 36 acceptance
   remain parked.
 
 - `2026-08-26` PR #400 (merge `6d9f8287`) completed `W44-E1-S3-T37`: Runs and Attempts now use a
