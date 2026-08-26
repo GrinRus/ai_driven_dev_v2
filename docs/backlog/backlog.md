@@ -7,13 +7,13 @@ slice, and local task.
 
 ## Next
 
-- `W44-E1-S3-T45` — Align the tablet Work Item detail shell at `768x1024` with the target hierarchy:
-  keep a compact top-level chrome, place Work Item context before tabs and the canonical stage strip,
-  and preserve desktop two-rail, mobile, route, id, status, and launch/recovery semantics.
+- `W44-E1-S3-T46` — Render the mobile Work Item detail identity in the target compact header while
+  preserving Inbox navigation, recovery/question headers, routes, ids, status ownership, and launch
+  controls.
 
 ## Soon
 
-- None; T44 is complete and T45 is the only currently dependency-ready task.
+- None; T45 is complete and T46 is the only currently dependency-ready task.
 
 ## Parking lot
 
@@ -39,6 +39,13 @@ slice, and local task.
   queue-restoration policy in `docs/backlog/roadmap.md` (`W8-E3-S1`).
 
 ## Current reconciliation
+
+- `2026-08-26` PR #416 (merge `efec5a79`) completed `W44-E1-S3-T45`: tablet detail now uses a compact
+  64px topbar, hides duplicate breadcrumb/status chrome, and restores context → tabs → stages order
+  at `768x1024`; Inbox/setup and mobile navigation remain unchanged. Focused shell (`18`), active
+  studio reconnect (`5`), frontend (`136`), UI contracts (`11`), docs/planning (`50`), Ruff, mypy,
+  and full CI including packaged UI browser passed. Fresh mobile comparison identified the next
+  bounded detail-header identity gap; `W44-E1-S3-T46` is promoted to `Next`.
 
 - `2026-08-26` PR #414 (merge `2534cdef`) completed `W44-E1-S3-T44`: detail context now uses a compact
   target-style title/metadata rhythm with durable Work Item id and current status still discoverable;

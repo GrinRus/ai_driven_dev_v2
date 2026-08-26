@@ -15922,13 +15922,23 @@ Local tasks:
   `1280x900`, `1440x900`, `768x1024`, `390x844`, and `320x568` prove the title/tabs/stage strip
   align with the target hierarchy, status and identity remain discoverable, no horizontal overflow
   or diagnostic errors occur, and existing deep links/reload semantics remain stable.
-- `W44-E1-S3-T45` (next) Align the tablet Work Item detail shell at `768x1024` with the target
+- `W44-E1-S3-T45` (done) Align the tablet Work Item detail shell at `768x1024` with the target
   hierarchy: keep a compact top-level chrome, place the truthful Work Item context before tabs and
   the canonical stage strip, and preserve the existing desktop two-rail composition and mobile
   navigation behavior. Do not change route/API semantics, Work Item ids, stage ordering, status
-  ownership, or launch/recovery controls. Verification: fresh geometry/accessibility checks at
-  `768x1024`, `390x844`, and `320x568` prove context → tabs → stages ordering on tablet, intentional
-  mobile composition, no horizontal overflow or diagnostic errors, and stable deep links/reload.
+  ownership, or launch/recovery controls. PR #416 (merge `efec5a79`) compacts the detail-only tablet
+  topbar to one row, removes duplicated breadcrumb/status chrome, and restores context → tabs →
+  stages ordering while leaving Inbox/setup and mobile navigation semantics unchanged. Verification:
+  focused shell (`18 passed`), active-studio reconnect (`5 passed`), frontend (`136 passed`), UI
+  contracts (`11 passed`), docs/planning (`50 passed`), Ruff, mypy, and full CI including packaged UI
+  browser passed.
+- `W44-E1-S3-T46` (next) Render the mobile Work Item detail identity in the target compact header.
+  Keep the AIDD brand and a truncated current Work Item label discoverable beside the existing
+  overflow/runtime control, preserve an accessible path back to Inbox, and leave recovery/question
+  headers, routes, ids, status ownership, and launch controls unchanged. Verification: fresh
+  `390x844` and `320x568` geometry/accessibility checks prove brand and Work Item identity are
+  visible without clipping or horizontal overflow, Inbox navigation remains available, detail
+  context and stage summary remain stable, and recovery/mobile decision surfaces do not regress.
 
 Wave 44 exit evidence:
 
@@ -15940,11 +15950,19 @@ Wave 44 exit evidence:
 - browser checks show no console errors, horizontal overflow, duplicate primary actions, or focus
   loss;
   - a fresh rendered audit confirms remaining gaps are absent or explicitly blocked. T19 is now
-    evidence-complete but not an exit pass; T25-T44 are complete and T45 is the next dependency-ready
-    convergence task. Default task-centered routing remains provisional until T30-T45 are either
+    evidence-complete but not an exit pass; T25-T45 are complete and T46 is the next dependency-ready
+    convergence task. Default task-centered routing remains provisional until T30-T46 are either
     completed or backed by explicit target-equivalence evidence.
 
 Wave 44 reconciliation:
+
+- `2026-08-26` PR #416 (merge `efec5a79`) completed `W44-E1-S3-T45`. Tablet Work Item detail now
+  keeps a compact 64px topbar, hides duplicate breadcrumb/status chrome, and restores the target
+  context → tabs → stages order at `768x1024`; Inbox/setup and mobile navigation behavior remain
+  unchanged. Fresh geometry is contained at `768x1024`, `390x844`, and `320x568`, with shell `18`
+  passed, active-studio reconnect `5` passed, frontend `136` passed, UI contracts `11` passed,
+  docs/planning `50` passed, Ruff, mypy, and full CI including packaged UI browser green. The next
+  audit identifies a separate mobile detail-header identity gap; `T46` is promoted to `Next`.
 
 - `2026-08-26` PR #414 (merge `2534cdef`) completed `W44-E1-S3-T44`. Work Item detail context now
   uses a compact target-style header: the title spans the available canvas, phase/status and durable
