@@ -31,6 +31,9 @@ controls at least 44px wide, literal `←` and `⋮` affordances, and
 `document.documentElement.scrollWidth <= window.innerWidth`. The recovery and question content
 remains below the header and keeps its existing primary action and decision semantics.
 
+The capture is retained as local evidence only; no credentials, provider calls, or sensitive
+operator data are included.
+
 ## Target comparison and decision
 
 The target reference requires current Work Item identity and a bounded way back to the Work Item
