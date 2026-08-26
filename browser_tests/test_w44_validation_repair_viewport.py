@@ -88,14 +88,15 @@ def test_validation_repair_prioritizes_finding_consequence_and_runner(
         assert response is not None and response.ok
 
         surface = page.locator(".validation-repair-center").first
-        band = page.locator(".repair-action-band").first
-        decision = page.locator(".repair-decision-copy").first
-        actions = page.locator(".repair-actions").first
-        consequence = page.locator(".repair-decision-consequence").first
-        finding = page.locator(".repair-decision-copy .validation-finding-summary").first
-        runner = page.locator(".repair-actions [data-contextual-runner-control]").first
-        supporting = page.locator(".repair-supporting-preview").first
-        primary = page.locator("[data-run-repair]").first
+        inspector = page.locator(".validation-finding-inspector").first
+        band = inspector
+        decision = inspector.locator(".repair-decision-copy").first
+        actions = inspector.locator(".repair-actions").first
+        consequence = inspector.locator(".repair-decision-consequence").first
+        finding = inspector.locator(".validation-finding-facts").first
+        runner = inspector.locator(".repair-actions [data-contextual-runner-control]").first
+        supporting = inspector.locator(".repair-supporting-preview").first
+        primary = inspector.locator("[data-run-repair]").first
         surface.wait_for(state="visible")
         band.wait_for(state="visible")
         decision.wait_for(state="visible")
@@ -107,7 +108,8 @@ def test_validation_repair_prioritizes_finding_consequence_and_runner(
         primary.wait_for(state="visible")
 
         assert consequence.get_by_text("Repair consequence", exact=True).count() == 1
-        assert "Run the selected stage again" in consequence.inner_text()
+        assert "new attempt" in consequence.inner_text()
+        assert "Request Change" in consequence.inner_text()
         assert "STRUCT-MISSING-REQUIRED-SECTION" in finding.inner_text()
         assert "generic-cli" in runner.inner_text()
         assert page.locator("[data-aidd-primary-action]:visible").count() <= 1
@@ -135,18 +137,43 @@ def test_validation_repair_prioritizes_finding_consequence_and_runner(
             finding_box["x"] + finding_box["width"]
             <= decision_box["x"] + decision_box["width"] + 1
         )
-        assert supporting_box["y"] >= max(
-            decision_box["y"] + decision_box["height"],
-            actions_box["y"] + actions_box["height"],
-        ) - 1
+        actions_position = page.evaluate(
+            "() => getComputedStyle(document.querySelector('.repair-actions')).position"
+        )
+        if actions_position == "fixed":
+            assert supporting_box["y"] >= decision_box["y"] + decision_box["height"] - 1
+        else:
+            assert supporting_box["y"] >= max(
+                decision_box["y"] + decision_box["height"],
+                actions_box["y"] + actions_box["height"],
+            ) - 1
         assert primary_box["y"] >= -1
         assert primary_box["y"] + primary_box["height"] <= viewport[1] + 1
 
         if viewport[0] > 760:
-            assert decision_box["x"] < actions_box["x"]
+            band_grid_columns = page.evaluate(
+                "() => getComputedStyle(document.querySelector("
+                "'.validation-finding-inspector')).gridTemplateColumns"
+            )
+            assert len(band_grid_columns.split()) == 1
+            assert decision_box["x"] >= band_box["x"]
+            assert actions_box["x"] >= band_box["x"]
             assert runner_box["width"] >= 210
         else:
-            assert actions_box["y"] < decision_box["y"] < supporting_box["y"]
+            document_stage = page.locator(".validation-document-stage").first
+            inspector_box = inspector.bounding_box()
+            document_stage_box = document_stage.bounding_box()
+            assert inspector_box is not None and document_stage_box is not None
+            assert inspector_box["y"] < document_stage_box["y"]
+            assert (
+                inspector_box["y"] + inspector_box["height"]
+                <= document_stage_box["y"] + 1
+            )
+            assert decision_box["y"] < viewport[1]
+            assert decision_box["y"] < actions_box["y"]
+            consequence_box = consequence.bounding_box()
+            assert consequence_box is not None
+            assert consequence_box["y"] < document_stage_box["y"]
 
         assert page.evaluate(
             "() => document.documentElement.scrollWidth <= window.innerWidth"

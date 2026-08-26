@@ -1854,6 +1854,12 @@
   line-height: 1.4;
   overflow-wrap: anywhere;
 }
+.repair-decision-consequence-secondary {
+  color: var(--muted);
+  font-size: var(--type-caption-size);
+  line-height: var(--type-body-line);
+  overflow-wrap: anywhere;
+}
 .repair-action-band.repair-available {
   border-color: var(--teal);
   box-shadow: inset 3px 0 0 var(--teal);
@@ -6924,15 +6930,17 @@ button.target-editor-tab.active:hover {
 }
 .validation-finding-inspector {
   align-self: start;
+  display: grid;
   grid-column: 2;
   grid-row: 1;
+  grid-template-columns: minmax(0, 1fr);
   margin: 0;
   min-width: 0;
 }
 .validation-finding-facts {
   display: grid;
-  gap: var(--space-3);
-  margin: var(--space-4) 0;
+  gap: var(--space-2);
+  margin: var(--space-3) 0;
 }
 .validation-finding-facts div {
   display: grid;
@@ -6950,6 +6958,9 @@ button.target-editor-tab.active:hover {
   margin: 0;
   overflow-wrap: anywhere;
 }
+.validation-finding-inspector .repair-actions {
+  gap: var(--space-2);
+}
 .validation-secondary-evidence {
   margin-top: var(--space-4);
 }
@@ -6966,6 +6977,32 @@ button.target-editor-tab.active:hover {
   color: var(--color-text-secondary);
   font-size: var(--type-label-size);
   line-height: var(--type-body-line);
+}
+
+@media (min-width: 761px) {
+  .validation-finding-inspector {
+    padding-bottom: 240px;
+  }
+  .validation-finding-inspector .repair-actions {
+    background: var(--color-bg-raised);
+    border: 1px solid var(--line);
+    border-radius: var(--radius-panel);
+    bottom: var(--space-4);
+    box-shadow: var(--elevation-overlay);
+    padding: var(--space-3);
+    position: fixed;
+    right: var(--space-6);
+    width: min(320px, calc(100vw - (var(--space-6) * 2)));
+    z-index: 60;
+  }
+  .validation-finding-facts div {
+    align-items: baseline;
+    column-gap: var(--space-3);
+    grid-template-columns: max-content minmax(0, 1fr);
+  }
+  .validation-finding-facts dt {
+    white-space: nowrap;
+  }
 }
 
 /* Wave 44 target review and remediation compositions. Existing service-owned

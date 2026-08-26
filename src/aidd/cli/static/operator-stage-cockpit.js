@@ -320,14 +320,17 @@ function renderValidationFindingInspector(diagnostics, result) {
         <div class="surface-title"><span>Validation finding</span><span class="small-badge bad">${escapeHtml(finding?.severity || "high")}</span></div>
         <dl class="validation-finding-facts">
           <div><dt>Rule ID</dt><dd>${escapeHtml(rule)}</dd></div>
-          <div><dt>Document</dt><dd>${escapeHtml(findingPath || "not recorded")}</dd></div>
+          <div><dt>Document</dt><dd>${pathLine(findingPath || "not recorded", 40)}</dd></div>
           <div><dt>Line</dt><dd>${escapeHtml(line)}</dd></div>
           <div><dt>Reason</dt><dd>${escapeHtml(reason)}</dd></div>
           <div><dt>Repair hint</dt><dd>${escapeHtml(hint)}</dd></div>
           <div><dt>Repair budget</dt><dd>${escapeHtml(budget)}</dd></div>
         </dl>
-        ${renderValidationFindingSummary(finding)}
-        <div class="repair-decision-consequence"><span class="eyebrow">Repair consequence</span><strong>Run the selected stage again to create a new attempt; Request change preserves this failed evidence and routes an operator-authored intervention.</strong></div>
+        <div class="repair-decision-consequence">
+          <span class="eyebrow">Repair consequence</span>
+          <strong>Repair creates a new attempt. The retained attempt remains unchanged.</strong>
+          <span class="repair-decision-consequence-secondary">Request Change preserves this failed evidence and opens an operator-authored intervention.</span>
+        </div>
         <div class="panel-item validation-brief-link"><strong>Exact repair brief</strong>${pathLine(briefPath, 86)}</div>
       </div>
       <div class="repair-actions">
