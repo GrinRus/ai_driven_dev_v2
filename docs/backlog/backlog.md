@@ -7,13 +7,12 @@ slice, and local task.
 
 ## Next
 
-- `W44-E1-S3-T38` — Replace absolute filesystem paths in shared operator breadcrumbs with truthful
-  project, Work Item, and current-stage labels while preserving explicit document provenance utilities.
+- `W44-E1-S3-T39` — Recompose Validation Repair into the target finding-to-repair hierarchy so the
+  finding, consequence, source document, repair budget, Runner readiness, and one repair action remain visible.
 
 ## Soon
 
-- `W44-E1-S3-T39` — Recompose Validation Repair into the target finding-to-repair hierarchy so the
-  finding, consequence, source document, repair budget, Runner readiness, and one repair action remain visible.
+- None; T39 is the only currently dependency-ready task.
 
 ## Parking lot
 
@@ -40,14 +39,23 @@ slice, and local task.
 
 ## Current reconciliation
 
+- `2026-08-26` PR #402 (merge `924138cc`) completed `W44-E1-S3-T38`: shared shell breadcrumbs now
+  expose a truthful project label, Work Item, and current-stage label without rendering the absolute
+  filesystem path. Existing project-path provenance utilities, route/deep-link behavior, DOM ids,
+  and setup/launch semantics remain unchanged. Focused breadcrumb browser checks (`2 passed`),
+  frontend tests (`36 passed`), Guided Setup/packaged smoke (`2 passed`), UI contracts/docs/planning
+  (`105 passed`), Ruff, mypy, full CI, deterministic, adapter, packaged-browser, security, and build
+  checks passed. `T39` is now `Next`; human usability, Claude/cross-runtime, and Wave 36 acceptance
+  remain parked.
+
 - `2026-08-26` PR #400 (merge `6d9f8287`) completed `W44-E1-S3-T37`: Runs and Attempts now use a
   compact retained-run list and tighter chronology rhythm while keeping the selected-attempt
   inspector, evidence/lineage, comparison eligibility, read-only actions, routes, selectors, and
   historical semantics unchanged. Focused history browser checks (`12 passed`, plus `2 passed` after
   final CSS refinement), frontend tests (`36 passed`), UI contracts/docs/planning (`108 passed`), Ruff,
   mypy, full CI, deterministic, adapter, packaged-browser, security, and build checks passed. `T38`
-  is now `Next` and `T39` is its direct `Soon` successor; human usability, Claude/cross-runtime, and
-  Wave 36 acceptance remain parked.
+  was promoted and completed; `T39` is now `Next`; human usability, Claude/cross-runtime, and Wave 36
+  acceptance remain parked.
 
 - `2026-08-26` PR #398 (merge `da87abd7`) completed `W44-E1-S3-T36`: Review/QA Remediation now keeps
   findings, source paths, retained evidence, durable request state, downstream impact, Runner readiness,
