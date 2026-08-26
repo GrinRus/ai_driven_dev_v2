@@ -29,7 +29,8 @@ Inbox arrow, and the vertical-dots overflow control in one compact dark header. 
 at both supported mobile widths verify a 66px header, visible Work Item context, Inbox and overflow
 controls at least 44px wide, literal `←` and `⋮` affordances, and
 `document.documentElement.scrollWidth <= window.innerWidth`. The recovery and question content
-remains below the header and keeps its existing primary action and decision semantics.
+remains below the header and keeps its existing primary action and decision semantics. The measured
+header box is 66px including its border; the compact token remains 64px before that border.
 
 The capture is retained as local evidence only; no credentials, provider calls, or sensitive
 operator data are included.
