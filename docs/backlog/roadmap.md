@@ -15830,15 +15830,20 @@ Local tasks:
   Verification: focused browser composition (`3 passed`), frontend tests (`36 passed`), UI contracts,
   docs/planning (`108 passed`), Ruff, mypy, full CI, deterministic, adapter, packaged-browser, security,
   and build checks passed.
-- `W44-E1-S3-T36` (next) Align Review/QA Remediation with the target findings/source-evidence/
+- `W44-E1-S3-T36` (done) Align Review/QA Remediation with the target findings/source-evidence/
   durable request composition while preserving selection semantics, downstream staleness, Runner
-  readiness, conflict handling, and one remediation action. Verification: blocking/non-blocking
-  findings, saved draft, conflict, rerun, and fresh-acceptance fixtures across desktop/mobile.
-- `W44-E1-S3-T37` (soon) Align Runs and Attempts with the target compact retained-run list,
+  readiness, conflict handling, and one remediation action. PR #398 (merge `da87abd7`) keeps findings,
+  source paths, retained evidence, durable request state, downstream impact, Runner readiness, and one
+  remediation action in the target two-region composition with responsive fallback. Exact finding ids,
+  selection semantics, draft destinations, conflict/staleness behavior, routes, and mutation services
+  remain unchanged. Verification: focused browser review/QA (`6 passed`), frontend tests (`28 passed`),
+  UI contracts (`58 passed`), Ruff, mypy, full CI, deterministic, adapter, packaged-browser, security,
+  and build checks passed.
+- `W44-E1-S3-T37` (next) Align Runs and Attempts with the target compact retained-run list,
   chronology, selected-attempt inspector, lineage, and read-only actions without changing history
   routes or comparison semantics. Verification: live, failed, repaired, completed, missing-artifact,
   bounded-log, compare-unavailable, and reload states with clean diagnostics.
-- `W44-E1-S3-T38` (planned) Replace absolute filesystem paths in shared operator breadcrumbs with
+- `W44-E1-S3-T38` (soon) Replace absolute filesystem paths in shared operator breadcrumbs with
   truthful project, Work Item, and current-stage labels while preserving copy/path utilities where
   they are explicitly part of document provenance. Verification: provider-free shell snapshots
   across all target routes, stable route/deep-link/reload behavior, no sensitive path leakage,
@@ -15859,11 +15864,19 @@ Wave 44 exit evidence:
 - browser checks show no console errors, horizontal overflow, duplicate primary actions, or focus
   loss;
   - a fresh rendered audit confirms remaining gaps are absent or explicitly blocked. T19 is now
-    evidence-complete but not an exit pass; T25-T35 are complete and T36 is the next dependency-ready
+    evidence-complete but not an exit pass; T25-T36 are complete and T37 is the next dependency-ready
   convergence task. Default task-centered routing remains
   provisional until T30-T39 are either completed or backed by explicit target-equivalence evidence.
 
 Wave 44 reconciliation:
+
+- `2026-08-26` PR #398 (merge `da87abd7`) completed `W44-E1-S3-T36`. Review/QA Remediation now keeps
+  findings, source paths, retained evidence, durable request state, downstream impact, Runner readiness,
+  and one remediation action in the target two-region composition with responsive fallback. Exact finding
+  ids, selection semantics, draft destinations, conflict/staleness behavior, routes, and mutation services
+  remain unchanged. Focused browser review/QA (`6 passed`), frontend tests (`28 passed`), UI contracts,
+  docs/planning, Ruff, mypy, full CI, deterministic, adapter, packaged-browser, security, and build checks
+  passed. `T37` is now `Next` and `T38` is its direct `Soon` successor.
 
 - `2026-08-26` PR #396 (merge `66af77e9`) completed `W44-E1-S3-T35`. Implementation Review now presents
   a compact claims/verification overview, retains the canonical task ledger, and places repository diff
@@ -15871,7 +15884,8 @@ Wave 44 reconciliation:
   evidence, launch readiness, read-only stage documents, routes, ids, and one primary Review action remain
   unchanged. Focused browser composition (`3 passed`), frontend tests (`36 passed`), UI contracts,
   docs/planning (`108 passed`), Ruff, mypy, full CI, deterministic, adapter, packaged-browser, security,
-  and build checks passed. `T36` is now `Next` and `T37` is its direct `Soon` successor.
+  and build checks passed. `T35` was promoted as the next dependency-ready task and is now complete;
+  `T36` was then completed and `T37` is now `Next` with `T38` as its direct `Soon` successor.
 
 - `2026-08-26` PR #394 (merge `901b6bd0`) completed `W44-E1-S3-T34`. Project Work now presents a compact
   server-owned grouped table with explicit Work Item, Stage, Progress, Runner, Last event, and Status
