@@ -314,21 +314,37 @@ function ensureRunnableRuntime() {
   return true;
 }
 
+function operatorProjectLabel(projectRoot) {
+  const normalized = String(projectRoot || "")
+    .replaceAll("\\", "/")
+    .replace(/\/+$/, "")
+    .replace(/\/\.$/, "");
+  if (!normalized || normalized === "." || normalized === ".." || normalized === "/") {
+    return "Local Project";
+  }
+  const label = normalized.split("/").filter(Boolean).at(-1);
+  return label || "Local Project";
+}
+
 function renderTopbar() {
   const dashboard = state.dashboard || {};
   const run = dashboard.run || {};
   const projectPath = document.getElementById("projectPath");
   const workItemChip = document.getElementById("intentChip");
   const runChip = document.getElementById("runChip");
-  const projectRoot = dashboard.project_root || state.projectHome?.project_root || "...";
+  const projectRoot = dashboard.project_root || state.projectHome?.project_root || ".";
+  const projectLabel = operatorProjectLabel(projectRoot);
   const workItemLabel = dashboard.work_item
     ? `Work Item: ${dashboard.work_item}`
     : "Project inbox";
   const runLabel = dashboard.work_item
     ? (run.run_id ? `Run: ${run.run_id}` : "Run: not started")
     : "Choose a Work Item";
-  projectPath.textContent = projectRoot;
-  projectPath.title = projectRoot;
+  const stageLabel = dashboard.work_item
+    ? stageTitle(state.activeStage || run.stage_target || "idea")
+    : "Inbox";
+  projectPath.textContent = projectLabel;
+  projectPath.title = `Project: ${projectLabel}`;
   workItemChip.textContent = workItemLabel;
   workItemChip.title = workItemLabel;
   runChip.textContent = runLabel;
@@ -336,9 +352,9 @@ function renderTopbar() {
   const topContextProject = document.getElementById("topContextProject");
   const topContextWorkItem = document.getElementById("topContextIntent");
   const topContextRun = document.getElementById("topContextRun");
-  if (topContextProject) topContextProject.textContent = projectPath.textContent || "Local Project";
+  if (topContextProject) topContextProject.textContent = projectLabel;
   if (topContextWorkItem) topContextWorkItem.textContent = dashboard.work_item || "Choose a Work Item";
-  if (topContextRun) topContextRun.textContent = run.run_id || "No run";
+  if (topContextRun) topContextRun.textContent = stageLabel;
   const runtime = selectedRuntimeView();
   const ready = runtime ? selectedRuntimeReady() : false;
   const localStatus = document.getElementById("localStatus");

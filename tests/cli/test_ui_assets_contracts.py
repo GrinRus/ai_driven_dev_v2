@@ -370,7 +370,8 @@ def test_operator_script_modules_own_static_ui_surfaces() -> None:
     assert "function renderProjectHomeRail()" in shell
     assert "function renderStageHeader()" in shell
     assert "function renderTechnicalRegions()" in cockpit
-    assert "projectPath.title = projectRoot;" in shell
+    assert "function operatorProjectLabel(projectRoot)" in shell
+    assert 'projectPath.title = `Project: ${projectLabel}`;' in shell
     assert "workItemChip.title = workItemLabel;" in shell
     assert "runChip.title = runLabel;" in shell
     assert "async function renderArtifacts()" in artifacts
