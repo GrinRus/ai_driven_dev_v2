@@ -220,6 +220,9 @@
  * supported viewport. The old floating recovery action is only for the legacy
  * gate; target request panels own their single action in normal flow. */
 @media (max-width: 1120px) {
+  .target-implementation-overview {
+    grid-template-columns: minmax(0, 1.4fr) minmax(250px, 0.8fr);
+  }
   .target-implementation-workspace,
   .target-remediation-layout {
     grid-template-columns: minmax(0, 1fr) minmax(250px, 320px);
@@ -231,6 +234,9 @@
 }
 
 @media (max-width: 900px) {
+  .target-implementation-overview {
+    grid-template-columns: minmax(0, 1fr);
+  }
   .target-implementation-workspace,
   .target-remediation-layout {
     grid-template-columns: minmax(0, 1fr);
@@ -254,6 +260,9 @@
 }
 
 @media (max-width: 760px) {
+  .target-implementation-summary-claims {
+    grid-template-columns: minmax(0, 1fr);
+  }
   .target-implementation-summary,
   .target-implementation-ledger,
   .target-review-gate,

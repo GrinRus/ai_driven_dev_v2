@@ -129,7 +129,19 @@ def test_implementation_review_uses_repository_truth_and_review_gate_shell(
         assert target.locator("[data-target-review-gate]").is_visible()
         assert target.locator("[data-review-scope-coverage]").is_visible()
         assert target.locator("[data-review-verification]").is_visible()
+        assert target.locator("[data-implementation-summary-claims]").is_visible()
+        assert target.locator(".target-implementation-overview").count() == 1
+        assert target.locator(".target-implementation-workspace").count() == 1
+        assert target.locator(".diff-review-layout").count() == 1
         assert target.locator("[data-aidd-primary-action]:visible").count() == 1
+        if viewport[0] <= 900:
+            overview_columns = (
+                "getComputedStyle(document.querySelector("
+                "'.target-implementation-overview')).gridTemplateColumns.split(' ').length"
+            )
+            assert page.evaluate(
+                overview_columns
+            ) == 1
         assert page.evaluate("document.documentElement.scrollWidth") <= viewport[0]
         assert_accessible_render(page, target_size=44 if viewport[0] <= 760 else 32)
         assert_rendered_geometry(page)
