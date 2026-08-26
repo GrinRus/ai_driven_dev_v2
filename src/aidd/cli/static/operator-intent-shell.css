@@ -627,6 +627,72 @@ body {
    still needs the same compact, single-row treatment so the stage strip does
    not get pushed below the first viewport. */
 @media (min-width: 761px) and (max-width: 1099px) {
+  /* At tablet widths the five-column desktop topbar wraps into several tall
+     rows. Detail identity already lives in the Work Item context below, so
+     keep only the compact brand, section navigation, and runtime disclosure
+     in one row. Inbox and setup retain their established topbar. */
+  body:not(.setup-active):not(.inbox-detail-mode) .topbar {
+    gap: var(--space-2);
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    min-height: var(--studio-topbar-height);
+    padding: 0 var(--space-4);
+  }
+
+  body:not(.setup-active):not(.inbox-detail-mode) .topbar .top-context,
+  body:not(.setup-active):not(.inbox-detail-mode) .topbar .top-status {
+    display: none;
+  }
+
+  body:not(.setup-active):not(.inbox-detail-mode) .topbar .brand {
+    grid-column: 1;
+  }
+
+  body:not(.setup-active):not(.inbox-detail-mode) .topbar .primary-nav {
+    grid-column: 2;
+    justify-content: center;
+  }
+
+  body:not(.setup-active):not(.inbox-detail-mode) .topbar .primary-nav button {
+    min-height: var(--studio-topbar-height);
+    padding-inline: var(--space-4);
+  }
+
+  body:not(.setup-active):not(.inbox-detail-mode) .topbar .top-actions {
+    flex-wrap: nowrap;
+    grid-column: 3;
+  }
+
+  body:not(.setup-active):not(.inbox-detail-mode) .topbar .top-actions > #newWorkItemButton {
+    display: none;
+  }
+
+  /* The base ordering gives unassigned tabs order 0 while context/phases use
+     order 1. Restore the target sequence on tablet without changing the
+     mobile decision layouts or the desktop grid-area composition. */
+  body:not(.setup-active):not(.inbox-detail-mode) .operator-workspace > .intent-context-region {
+    order: 1;
+  }
+
+  body:not(.setup-active):not(.inbox-detail-mode) .operator-workspace > .work-item-tabs {
+    order: 2;
+  }
+
+  body:not(.setup-active):not(.inbox-detail-mode) .operator-workspace > .intent-phase-region {
+    order: 3;
+  }
+
+  body:not(.setup-active):not(.inbox-detail-mode) .operator-workspace > .intent-decision-surface {
+    order: 4;
+  }
+
+  body:not(.setup-active):not(.inbox-detail-mode) .operator-workspace > .intent-document-surface {
+    order: 5;
+  }
+
+  body:not(.setup-active):not(.inbox-detail-mode) .operator-workspace > .intent-technical-details {
+    order: 6;
+  }
+
   body:not(.setup-active):not(.inbox-detail-mode) .operator-workspace
     .intent-context-region .studio-context-bar {
     align-items: center;

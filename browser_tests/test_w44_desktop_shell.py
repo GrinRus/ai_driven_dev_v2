@@ -219,8 +219,12 @@ def test_detail_header_starts_without_generic_desktop_chrome(
             ) == "none"
         else:
             assert geometry["topbar"]["height"] > 0
-            if viewport[0] >= 600:
-                assert geometry["breadcrumb"]["display"] != "none"
+            if viewport[0] >= 761:
+                # Tablet detail keeps the compact shell from the target
+                # composition; project/work-item identity is rendered in the
+                # Work Item context card below rather than duplicated here.
+                assert geometry["breadcrumb"]["display"] == "none"
+                assert geometry["status"]["display"] == "none"
 
         browser_page.diagnostics.assert_clean()
 
@@ -290,6 +294,50 @@ def test_detail_context_header_keeps_identity_in_compact_target_rhythm(
         assert fixture.work_item in identity.inner_text()
         assert "Ready for first launch" in identity.inner_text()
         assert geometry["scrollWidth"] <= viewport[0]
+        browser_page.diagnostics.assert_clean()
+
+
+@pytest.mark.parametrize("viewport", ((768, 1024), (390, 844), (320, 568)))
+def test_tablet_detail_shell_keeps_context_before_tabs_and_stages(
+    tmp_path: Path,
+    viewport: tuple[int, int],
+) -> None:
+    fixture = build_browser_state_fixture(tmp_path / f"tablet-order-{viewport[0]}", "no-run")
+    assert fixture.work_item is not None
+    with sync_playwright() as playwright, operator_browser_harness(
+        fixture.project_root,
+        playwright,
+        work_item=fixture.work_item,
+    ) as harness, harness.open_page(viewport) as browser_page:
+        page = browser_page.page
+        page.goto(f"{harness.url}?ui=studio", wait_until="networkidle")
+
+        geometry = page.evaluate(
+            """() => {
+              const box = (selector) => {
+                const node = document.querySelector(selector);
+                if (!node) return null;
+                const rect = node.getBoundingClientRect();
+                const style = getComputedStyle(node);
+                return {y: rect.y, height: rect.height, display: style.display};
+              };
+              return {
+                topbar: box('.topbar'),
+                context: box('.intent-context-region'),
+                tabs: box('.work-item-tabs'),
+                stages: box('.intent-phase-region'),
+                scrollWidth: document.documentElement.scrollWidth,
+              };
+            }"""
+        )
+
+        assert geometry["context"]["display"] != "none"
+        assert geometry["scrollWidth"] <= viewport[0]
+        if viewport[0] == 768:
+            assert geometry["context"]["y"] < geometry["tabs"]["y"] < geometry["stages"]["y"]
+            assert geometry["topbar"]["height"] <= 72
+        else:
+            assert geometry["topbar"]["height"] > 0
         browser_page.diagnostics.assert_clean()
 
 
