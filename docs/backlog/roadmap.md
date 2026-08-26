@@ -15847,12 +15847,15 @@ Local tasks:
   semantics. Verification: focused history browser checks (`12 passed`, plus `2 passed` after final
   CSS refinement), frontend tests (`36 passed`), UI contracts/docs/planning (`108 passed`), Ruff, mypy,
   full CI, deterministic, adapter, packaged-browser, security, and build checks.
-- `W44-E1-S3-T38` (next) Replace absolute filesystem paths in shared operator breadcrumbs with
+- `W44-E1-S3-T38` (done) Replace absolute filesystem paths in shared operator breadcrumbs with
   truthful project, Work Item, and current-stage labels while preserving copy/path utilities where
-  they are explicitly part of document provenance. Verification: provider-free shell snapshots
-  across all target routes, stable route/deep-link/reload behavior, no sensitive path leakage,
-  accessible names, and no overflow.
-- `W44-E1-S3-T39` (soon) Recompose Validation Repair into the target finding-to-repair
+  they are explicitly part of document provenance. PR #402 (merge `924138cc`) now renders a truthful
+  project label, Work Item, and current-stage label in the shared shell without exposing the absolute
+  filesystem path. Existing provenance/path utilities, route/deep-link behavior, DOM ids, and setup/
+  launch semantics remain unchanged. Verification: focused breadcrumb browser checks (`2 passed`),
+  frontend tests (`36 passed`), Guided Setup/packaged smoke (`2 passed`), UI contracts/docs/planning
+  (`105 passed`), Ruff, mypy, full CI, deterministic, adapter, packaged-browser, security, and build.
+- `W44-E1-S3-T39` (next) Recompose Validation Repair into the target finding-to-repair
   hierarchy so the finding, literal consequence, source document, repair budget, Runner readiness,
   and one repair action remain visible before long evidence. Verification: validation and repair
   exhaustion fixtures at all five viewports with stale-evidence fail-closed behavior, one primary
@@ -15868,11 +15871,19 @@ Wave 44 exit evidence:
 - browser checks show no console errors, horizontal overflow, duplicate primary actions, or focus
   loss;
   - a fresh rendered audit confirms remaining gaps are absent or explicitly blocked. T19 is now
-    evidence-complete but not an exit pass; T25-T37 are complete and T38 is the next dependency-ready
+    evidence-complete but not an exit pass; T25-T38 are complete and T39 is the next dependency-ready
   convergence task. Default task-centered routing remains
   provisional until T30-T39 are either completed or backed by explicit target-equivalence evidence.
 
 Wave 44 reconciliation:
+
+- `2026-08-26` PR #402 (merge `924138cc`) completed `W44-E1-S3-T38`. Shared shell breadcrumbs now
+  present a truthful project label, Work Item, and current-stage label without exposing the absolute
+  filesystem path. Existing project-path provenance utilities, route/deep-link behavior, DOM ids,
+  and setup/launch semantics remain unchanged. Focused breadcrumb browser checks (`2 passed`),
+  frontend tests (`36 passed`), Guided Setup/packaged smoke (`2 passed`), UI contracts/docs/planning
+  (`105 passed`), Ruff, mypy, full CI, deterministic, adapter, packaged-browser, security, and build
+  checks passed. `T39` is now `Next` and no Soon successor is currently dependency-ready.
 
 - `2026-08-26` PR #400 (merge `6d9f8287`) completed `W44-E1-S3-T37`. Runs and Attempts now present a
   compact retained-run list and tighter chronology rhythm alongside the selected-attempt inspector,
@@ -15880,8 +15891,8 @@ Wave 44 reconciliation:
   eligibility, archive semantics, and historical evidence remain unchanged. Focused history browser
   checks (`12 passed`, plus `2 passed` after final CSS refinement), frontend tests (`36 passed`),
   UI contracts/docs/planning (`108 passed`), Ruff, mypy, full CI, deterministic, adapter,
-  packaged-browser, security, and build checks passed. `T38` is now `Next` and `T39` is its direct
-  `Soon` successor.
+  packaged-browser, security, and build checks passed. `T38` was promoted and completed; `T39` is now
+  `Next`.
 
 - `2026-08-26` PR #398 (merge `da87abd7`) completed `W44-E1-S3-T36`. Review/QA Remediation now keeps
   findings, source paths, retained evidence, durable request state, downstream impact, Runner readiness,
@@ -15889,7 +15900,7 @@ Wave 44 reconciliation:
   ids, selection semantics, draft destinations, conflict/staleness behavior, routes, and mutation services
   remain unchanged. Focused browser review/QA (`6 passed`), frontend tests (`28 passed`), UI contracts,
   docs/planning, Ruff, mypy, full CI, deterministic, adapter, packaged-browser, security, and build checks
-  passed. `T37` was promoted and completed; `T38` is now `Next` and `T39` is its direct `Soon` successor.
+  passed. `T37` and `T38` were promoted and completed; `T39` is now `Next`.
 
 - `2026-08-26` PR #396 (merge `66af77e9`) completed `W44-E1-S3-T35`. Implementation Review now presents
   a compact claims/verification overview, retains the canonical task ledger, and places repository diff
