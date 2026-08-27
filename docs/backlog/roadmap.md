@@ -16052,7 +16052,7 @@ Dependencies: W45-E1-S1; the QA report contract, QA prompt pack, and
 
 Local tasks:
 
-- `W45-E1-S2-T1` (next) Require every QA evidence claim to cite a resolvable artifact or executable result.
+- `W45-E1-S2-T1` (done) Require every QA evidence claim to cite a resolvable artifact or executable result.
   - Output: update the QA report authoring guidance and its deterministic fixture coverage so
     `Evidence`, `Verification summary`, `Readiness`, and task-acceptance bullets use exact existing
     workspace-relative artifact paths or stable `EV-N` definitions backed by those paths or by a
@@ -16065,6 +16065,16 @@ Local tasks:
   - Verification: deterministic QA fixtures reproduce the former `EV-4` false negative and pass
     with the corrected report shape; malformed evidence without a command/result or exact artifact
     path remains rejected. Run the focused QA validator/prompt/scenario tests, Ruff, and mypy.
+  - PR #434 (merge `48f80f81`) adds explicit bounded-diff command evidence guidance, preserves
+    fail-closed source-path handling, and adds accepted/rejected deterministic cross-document
+    fixtures. Focused QA/semantic tests (`144 passed`), docs/planning checks (`50 passed`), Ruff,
+    mypy, full CI, packaged UI browser, adapter, scenario, and build checks passed.
+
+- `2026-08-27` reconciliation after PR #434 (`48f80f81`) marks `W45-E1-S2-T1` done. QA authoring
+  now requires bounded product-diff claims to cite an executable command with an explicit outcome
+  or an exact upstream artifact; deterministic fixtures preserve rejection of prose-only evidence.
+  The fresh Codex medium run `eval-live-007-codex-20260827T145034Z` remains diagnostic until the
+  lane is rerun from clean `main` with the merged guidance.
 
 - `2026-08-27` reconciliation after PR #430 (`fa9a9674`) marks `W45-E1-S1-T3` done. The fresh
   Codex medium run `eval-live-007-codex-20260827T093650Z` completed `idea -> qa` with status `pass`,
