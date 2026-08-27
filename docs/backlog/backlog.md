@@ -7,7 +7,8 @@ slice, and local task.
 
 ## Next
 
-- None.
+- `W45-E1-S2-T2` — accept concrete negative/clean terminal outcomes for executable implementation
+  residue checks without weakening fail-closed command-evidence validation.
 
 ## Soon
 
@@ -37,6 +38,13 @@ slice, and local task.
   queue-restoration policy in `docs/backlog/roadmap.md` (`W8-E3-S1`).
 
 ## Current reconciliation
+
+- `2026-08-27` fresh Claude medium `eval-live-007-claude-code-20260827T181914Z` reached the full
+  Hono implementation task sequence with all four allowed target files changed and focused tests/
+  type-check passing, but terminal execution failed because the implementation evidence parser
+  rejected a concrete executable residue result phrased `-> no task-local cache`. This is an
+  AIDD evidence-contract gap, not a target product or UI defect. `W45-E1-S2-T2` is the sole
+  dependency-ready fix before rerunning Claude medium; the Codex medium lane remains pass.
 
 - `2026-08-27` reconciliation after PR #434 (`48f80f81`) marks `W45-E1-S2-T1` done. The QA
   prompt and report contract now give a concrete executable bounded-diff evidence shape, and

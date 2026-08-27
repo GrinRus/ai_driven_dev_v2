@@ -16070,6 +16070,20 @@ Local tasks:
     fixtures. Focused QA/semantic tests (`144 passed`), docs/planning checks (`50 passed`), Ruff,
     mypy, full CI, packaged UI browser, adapter, scenario, and build checks passed.
 
+- `W45-E1-S2-T2` (next) Accept explicit negative terminal outcomes for implementation residue checks.
+  - Output: align the implementation evidence parser and authoring guidance so an executable
+    verification command with a concrete negative/clean result such as `-> no task-local cache`
+    is accepted as an observed outcome, while prose-only claims, missing commands, and ambiguous
+    status text remain rejected. Preserve the existing fail-closed requirement for command evidence,
+    ignored-residue auditing, and exact outcome markers (`pass`, `fail`, `not-run`).
+  - Scope: `src/aidd/validators/semantic_rules/evidence.py`,
+    `prompt-packs/stages/implement/run.md`, and focused semantic/harness fixtures and tests only;
+    do not change runtime adapters, stage contracts, or public UI behavior.
+  - Verification: accepted executable residue/check bullets with `no ...` or equivalent concrete
+    clean outcomes, rejected prose-only and commandless claims, existing `pass`/`fail`/`not-run`
+    behavior, Ruff, mypy, focused semantic implement and live-evidence tests, and docs/planning
+    consistency.
+
 - `2026-08-27` reconciliation after PR #434 (`48f80f81`) marks `W45-E1-S2-T1` done. QA authoring
   now requires bounded product-diff claims to cite an executable command with an explicit outcome
   or an exact upstream artifact; deterministic fixtures preserve rejection of prose-only evidence.

@@ -30,6 +30,7 @@ IMPLEMENT_RESULT_PATTERN = re.compile(
     r"("
     r"->\s*output(?:\s+contains)?:\s*`[^`\n]+`|"
     r"->\s*(pass|fail|ok|error|empty|no output|`?\d+`?|exit\s*`?\d+`?)|"
+    r"->\s*(?:no|without|clean|clear)\s+[^.\n]+|"
     r"->\s*[^.\n]*(?:\bonly\b|\bshows?\b|\bempty\b|\bno output\b|\bbounded\b)|"
     r"\b(pass(?:ed)?|fail(?:ed)?|succeeded|error|exit code|exited with status|returned)\b|"
     r"\bexit\s*`?\d+`?|"
