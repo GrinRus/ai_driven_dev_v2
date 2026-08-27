@@ -30,6 +30,8 @@ from aidd.validators.structural import (
     validate_required_sections,
 )
 
+_CONDITIONAL_INTERVIEW_DOCUMENT_NAMES = frozenset({"questions.md", "answers.md"})
+
 
 def _stage_root_for_expected_output(expected_output_path: Path) -> Path:
     if expected_output_path.parent.name == "output":
@@ -390,6 +392,8 @@ def publish_stage_outputs_after_validation_pass(
             if source_document.suffix.lower() != ".md":
                 continue
             if not source_document.exists():
+                if source_document.name in _CONDITIONAL_INTERVIEW_DOCUMENT_NAMES:
+                    continue
                 raise FileNotFoundError(
                     "Stage output publishing requires an existing source document: "
                     f"{workspace_relative_path(workspace_root, source_document)}"
