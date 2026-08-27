@@ -7,12 +7,13 @@ slice, and local task.
 
 ## Next
 
-- `W45-E1-S1-T3` — Accept valid compound shell verification commands in implementation evidence so
-  the live medium flow does not reject executable `git status`/`awk` checks.
+- None; the parser hardening is merged and the next action is a fresh medium rerun on each
+  supported runtime.
 
 ## Soon
 
-- None; the live medium rerun exposed an evidence-parser gap before the next task can run.
+- None; any new control-plane defect found by the rerun must be added to `roadmap.md` before
+  implementation.
 
 ## Parking lot
 
@@ -38,6 +39,13 @@ slice, and local task.
   queue-restoration policy in `docs/backlog/roadmap.md` (`W8-E3-S1`).
 
 ## Current reconciliation
+
+- `2026-08-27` reconciliation after PR #430 (`fa9a9674`) marks `W45-E1-S1-T3` done. The evidence
+  parser now recognizes the exact compound command-substitution/pipeline/test shape that blocked
+  the prior Codex medium run; focused validator, semantic implement, and semantic QA checks pass
+  (`72 passed`), and CI is green. Fresh Codex medium `eval-live-007-codex-20260827T093650Z` passed
+  through QA with task-aware checkpoint evidence. Claude must still be rerun before a two-runtime
+  pass is claimed; the earlier Claude QA evidence-link failure remains diagnostic until reproduced.
 
 - `2026-08-27` live Codex medium run `eval-live-007-codex-20260827T044743Z` reached aggregate
   implementation finalization after all five implementation tasks succeeded, but publication

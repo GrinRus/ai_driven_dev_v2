@@ -16026,7 +16026,7 @@ Local tasks:
   - PR #428 (merge `a184fe95`) canonicalizes success/failure status sections and preserves historical
     attempt evidence; focused core/repair tests, Ruff, mypy, and full CI passed.
 
-- `W45-E1-S1-T3` (next) Accept valid compound shell verification commands in implementation evidence.
+- `W45-E1-S1-T3` (done) Accept valid compound shell verification commands in implementation evidence.
   - Output: extend the implementation verification evidence parser so commands containing shell
     assignments, command substitutions, pipelines, and `test` assertions are recognized as executable
     command evidence when the same verification bullet records the observed result. Preserve the
@@ -16037,6 +16037,14 @@ Local tasks:
   - Verification: compound-command parser tests must pass for the exact `git status ... | awk ...; test
     -z` shape and equivalent safe shell forms, while malformed/non-executable snippets remain rejected;
     run the focused validator/harness suite, Ruff, and mypy.
+  - PR #430 (merge `fa9a9674`) adds command-substitution recognition before shell-token evaluation and
+    regression coverage for the exact compound `git status`/`awk`/`test` evidence shape. Focused
+    implementation, semantic implement, and semantic QA checks pass (`72 passed`); CI passed.
+
+- `2026-08-27` reconciliation after PR #430 (`fa9a9674`) marks `W45-E1-S1-T3` done. The fresh
+  Codex medium run `eval-live-007-codex-20260827T093650Z` completed `idea -> qa` with status `pass`,
+  including task-aware checkpoint and target verification. A Claude rerun remains required to
+  resolve the previously retained QA evidence-link outcome before claiming a clean two-runtime flow.
 
 - `2026-08-27` Reconciled PR #428 (`a184fe95`) as `W45-E1-S1-T2` done. A fresh Codex medium run
   `eval-live-007-codex-20260827T082029Z` reached implementation with all four target Hono files and
