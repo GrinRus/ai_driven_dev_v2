@@ -16041,6 +16041,31 @@ Local tasks:
     regression coverage for the exact compound `git status`/`awk`/`test` evidence shape. Focused
     implementation, semantic implement, and semantic QA checks pass (`72 passed`); CI passed.
 
+#### Slice W45-E1-S2 — QA evidence traceability (`planned`)
+
+Goal: make runtime-authored QA evidence resolve to the canonical upstream artifacts or valid
+QA-local command evidence required by the cross-document validator, without weakening fail-closed
+traceability.
+
+Dependencies: W45-E1-S1; the QA report contract, QA prompt pack, and
+`CROSS-QA-UPSTREAM-EVIDENCE` validator.
+
+Local tasks:
+
+- `W45-E1-S2-T1` (next) Require every QA evidence claim to cite a resolvable artifact or executable result.
+  - Output: update the QA report authoring guidance and its deterministic fixture coverage so
+    `Evidence`, `Verification summary`, `Readiness`, and task-acceptance bullets use exact existing
+    workspace-relative artifact paths or stable `EV-N` definitions backed by those paths or by a
+    syntactically executable command with an explicit terminal outcome. In particular, a bounded
+    product-diff claim must include its executable `git diff --name-only ... -> pass` result (or an
+    exact upstream artifact), rather than a prose-only `bounded product path check`.
+  - Scope: `prompt-packs/stages/qa/`, `contracts/documents/qa-report.md`, and focused QA
+    cross-document/semantic fixtures and tests; do not broaden artifact roots or permit source-only
+    paths to bypass upstream evidence resolution.
+  - Verification: deterministic QA fixtures reproduce the former `EV-4` false negative and pass
+    with the corrected report shape; malformed evidence without a command/result or exact artifact
+    path remains rejected. Run the focused QA validator/prompt/scenario tests, Ruff, and mypy.
+
 - `2026-08-27` reconciliation after PR #430 (`fa9a9674`) marks `W45-E1-S1-T3` done. The fresh
   Codex medium run `eval-live-007-codex-20260827T093650Z` completed `idea -> qa` with status `pass`,
   including task-aware checkpoint and target verification. A Claude rerun remains required to
