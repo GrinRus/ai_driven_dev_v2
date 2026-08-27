@@ -15982,6 +15982,38 @@ Wave 44 reconciliation:
   The target-centered renderer/default routing is accepted for the provider-free surfaces; human,
   Claude/cross-runtime, and Wave 36 evidence remain parked.
 
+## Wave 45 — live medium flow hardening (`planned`)
+
+Goal: make the installed medium live flow terminate truthfully for both interview and
+non-interview stages while retaining the target UI and historical evidence contracts.
+
+### Epic W45-E1 — aggregate finalization compatibility (`planned`)
+
+Goal: allow aggregate implementation finalization to publish the documents that actually exist for
+the selected flow, without requiring conditional interview records on non-interview runs.
+
+#### Slice W45-E1-S1 — non-interactive publication (`planned`)
+
+Goal: keep canonical stage publication fail-closed for declared substantive and AIDD-owned records,
+while treating `questions.md` and `answers.md` as optional control documents when no interview took
+place.
+
+Dependencies: Wave 44 rendered UI acceptance; existing stage-output ownership registry and
+aggregate finalization service.
+
+Local tasks:
+
+- `W45-E1-S1-T1` (next) Permit non-interactive stage finalization to publish without `answers.md`.
+  - Output: update the runtime-agnostic stage-output publication boundary so conditional interview
+    documents are copied when present, but their absence does not turn a successful non-interview
+    implementation into a failed aggregate finalization; retain strict existence checks for
+    substantive runtime outputs and canonical AIDD records.
+  - Scope: `src/aidd/core/stage_outputs.py` plus focused core/aggregate-finalization regression
+    tests; do not change adapter behavior, stage contracts, routes, or historical evidence.
+  - Verification: focused publication and aggregate-finalization tests prove non-interview success,
+    interview documents still publish when present, missing substantive output still fails closed,
+    and published output contents remain deterministic.
+
 - `2026-08-26` PR #418 (merge `f533b336`) completed `W44-E1-S3-T46`. Mobile Work Item detail now
   keeps the AIDD brand, current Work Item identity, accessible Inbox/back path, and overflow/runtime
   control in one compact 64px header at `390x844` and `320x568`. Fresh captures across
