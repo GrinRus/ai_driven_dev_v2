@@ -7,12 +7,12 @@ slice, and local task.
 
 ## Next
 
-- `W45-E1-S1-T2` — Normalize duplicate terminal status markers after repair so valid Review/QA
-  results can progress in the live medium flow.
+- `W45-E1-S1-T3` — Accept valid compound shell verification commands in implementation evidence so
+  the live medium flow does not reject executable `git status`/`awk` checks.
 
 ## Soon
 
-- None; the live medium rerun exposed a canonical stage-result defect before the next task can run.
+- None; the live medium rerun exposed an evidence-parser gap before the next task can run.
 
 ## Parking lot
 
@@ -57,6 +57,12 @@ slice, and local task.
   lifecycle `stage-result.md` retained duplicate terminal status markers after repair. The approved
   Review report and target diff show no product defect; `W45-E1-S1-T2` is the next core hardening task
   before the Codex and Claude lanes are rerun.
+
+- `2026-08-27` Reconciliation after PR #428 (`a184fe95`) marks `W45-E1-S1-T2` done. The fresh Codex
+  run `eval-live-007-codex-20260827T082029Z` then found a validator false negative for a valid compound
+  `git status`/`awk`/`test` evidence command; target implementation and focused tests passed, but the
+  AIDD evidence contract exhausted its repair budget. `W45-E1-S1-T3` is the sole Next task for parser
+  hardening; the run remains retained as diagnostic evidence.
 
 - `2026-08-26` PR #421 (merge `722e38b0`) completed `W44-E1-S3-T47`: mobile question and recovery
   headers now retain AIDD, the current Work Item identity, a 44px Inbox/back arrow, and a 44px
