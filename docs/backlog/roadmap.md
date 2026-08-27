@@ -16097,6 +16097,17 @@ Local tasks:
     top-level paths continue to fail with `SEM-TASK-DIFF-MISMATCH`/scope findings. Run focused core
     repository-evidence tests, Ruff, mypy, and the planning consistency checks.
 
+- `2026-08-28` fresh Claude medium `eval-live-007-claude-code-20260827T223441Z` was rerun from
+  clean `main` after the W45 evidence-contract fixes and completed `idea -> qa` with terminal
+  `pass` and manual `counted-clean` quality evidence. All eight stage quality audits chose
+  `continue`; the task-aware checkpoint reports matching tasklist/ledger hashes, successful
+  aggregate finalization, and Review eligibility. The target Hono diff is bounded to the four
+  intended files and its focused TypeScript/Vitest verification passed (237 tests). Together with
+  the retained Codex medium pass and the Wave 42 UI target audit, this closes the current medium
+  diagnose -> fix -> rerun loop without a confirmed product or UI defect; task-centered routing
+  remains the default. The run bundle is retained at
+  `.aidd/reports/evals/eval-live-007-claude-code-20260827T223441Z/`.
+
 - `2026-08-28` reconciliation after PR #438 (merge `7b3bfff4`) marks `W45-E1-S2-T3` done. Task-diff
   evidence now reads only top-level `Touched files` bullets, so nested code explanations cannot be
   misclassified as changed paths; missing and unsupported top-level entries remain fail-closed.

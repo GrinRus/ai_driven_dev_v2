@@ -7,7 +7,8 @@ slice, and local task.
 
 ## Next
 
-- None. The next action is a fresh Claude medium rerun from clean `main` after PR #438.
+- None. Fresh Codex and Claude medium runs are both counted-clean; no new product defect or UI
+  mismatch was found. Resume the planned queue when the next scoped task is selected.
 
 ## Soon
 
@@ -37,6 +38,15 @@ slice, and local task.
   queue-restoration policy in `docs/backlog/roadmap.md` (`W8-E3-S1`).
 
 ## Current reconciliation
+
+- `2026-08-28` fresh Claude medium `eval-live-007-claude-code-20260827T223441Z` was rerun from
+  clean `main` after PR #438 and completed `idea -> qa` with terminal `pass` and manual
+  `counted-clean` evidence. The target Hono diff stayed bounded to the four intended files,
+  focused TypeScript/Vitest checks passed (237 tests), task-aware checkpoint hashes/finalization/
+  Review eligibility matched, and all stage quality audits chose `continue`. Combined with the
+  retained Codex medium pass and `docs/e2e/live-medium-codex-claude-ui-target-audit-2026-08-27.md`,
+  the medium flow has no confirmed product or target-UI defect; the task-centered renderer remains
+  the default. The prior diagnostic notes below remain historical evidence.
 
 - `2026-08-28` reconciliation after PR #438 (merge `7b3bfff4`) marks `W45-E1-S2-T3` done. Task-diff
   evidence now ignores nested explanatory bullets in `Touched files` while preserving the strict
