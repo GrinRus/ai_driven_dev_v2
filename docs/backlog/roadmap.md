@@ -16084,7 +16084,7 @@ Local tasks:
     behavior, Ruff, mypy, focused semantic implement and live-evidence tests, and docs/planning
     consistency.
 
-- `W45-E1-S2-T3` (next) Restrict implementation touched-file extraction to top-level entries.
+- `W45-E1-S2-T3` (done) Restrict implementation touched-file extraction to top-level entries.
   - Output: make task-diff evidence read only the top-level bullets in the `Touched files` section,
     so nested explanatory bullets containing code snippets, identifiers, or user-facing text are
     not misclassified as repository paths. Preserve reporting of every actual changed path and the
@@ -16096,6 +16096,15 @@ Local tasks:
     produces only the canonical changed paths, while missing top-level paths and unsupported
     top-level paths continue to fail with `SEM-TASK-DIFF-MISMATCH`/scope findings. Run focused core
     repository-evidence tests, Ruff, mypy, and the planning consistency checks.
+
+- `2026-08-28` reconciliation after PR #438 (merge `7b3bfff4`) marks `W45-E1-S2-T3` done. Task-diff
+  evidence now reads only top-level `Touched files` bullets, so nested code explanations cannot be
+  misclassified as changed paths; missing and unsupported top-level entries remain fail-closed.
+  Focused repository-evidence/implementation-evidence tests (`32 passed`), Ruff, mypy, docs
+  consistency, planning integrity (`50 passed`), full CI, deterministic scenarios, adapter
+  conformance, packaged UI browser, and build checks are green. The failed Claude run remains
+  retained as diagnostic evidence; the next action is a fresh Claude medium rerun from this clean
+  `main`.
 
 - `2026-08-27` reconciliation after PR #436 (merge `d12bea06`) marks `W45-E1-S2-T2` done. The
   implementation evidence parser now accepts concrete executable negative/clean outcomes such as

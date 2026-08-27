@@ -7,8 +7,7 @@ slice, and local task.
 
 ## Next
 
-- `W45-E1-S2-T3` — Restrict implementation touched-file extraction to top-level entries so nested
-  explanatory bullets with code snippets are not treated as changed repository paths.
+- None. The next action is a fresh Claude medium rerun from clean `main` after PR #438.
 
 ## Soon
 
@@ -38,6 +37,13 @@ slice, and local task.
   queue-restoration policy in `docs/backlog/roadmap.md` (`W8-E3-S1`).
 
 ## Current reconciliation
+
+- `2026-08-28` reconciliation after PR #438 (merge `7b3bfff4`) marks `W45-E1-S2-T3` done. Task-diff
+  evidence now ignores nested explanatory bullets in `Touched files` while preserving the strict
+  missing/unsupported top-level path checks. Focused repository-evidence/implementation-evidence
+  tests (`32 passed`), docs/planning (`50 passed`), Ruff, mypy, full CI, deterministic scenarios,
+  adapter conformance, packaged UI browser, and build checks are green. The next action is a fresh
+  Claude medium rerun from this clean `main`; the prior failure is retained as diagnostic evidence.
 
 - `2026-08-28` fresh Claude medium `eval-live-007-claude-code-20260827T210152Z` reached the Hono
   implementation with the target repository intact and all focused target tests/type-checks
