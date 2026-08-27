@@ -7,7 +7,7 @@ slice, and local task.
 
 ## Next
 
-- `W45-E1-S1-T1` — Permit non-interactive stage finalization to publish without `answers.md`.
+- None; `W45-E1-S1-T1` is merged and awaits live Codex/Claude medium reruns.
 
 ## Soon
 
@@ -42,9 +42,14 @@ slice, and local task.
   implementation finalization after all five implementation tasks succeeded, but publication
   failed because the non-interview flow had no `workitems/WI-LIVE-HONO-SMOKE/stages/implement/answers.md`.
   This is a core publication compatibility defect, not a target-repository failure. `W45-E1-S1-T1`
-  is added as the single `Next` task; the interrupted run remains retained as diagnostic evidence
-  and must be rerun from a clean `main` after the fix. Human usability, Claude/cross-runtime, and
-  Wave 36 acceptance remain parked.
+  was added as a single `Next` task and is now complete in PR #425 (merge `2878a851`); the
+  interrupted run remains retained as diagnostic evidence and must be rerun from a clean `main`.
+  Human usability, Claude/cross-runtime, and Wave 36 acceptance remain parked.
+
+- `2026-08-27` PR #425 (merge `2878a851`) completed `W45-E1-S1-T1`. Aggregate stage publication now
+  skips only absent conditional `questions.md`/`answers.md` records, publishes them when present,
+  and continues to fail closed for missing substantive or canonical AIDD records. Focused core and
+  full CI checks passed; the Codex medium lane is next for rerun.
 
 - `2026-08-26` PR #421 (merge `722e38b0`) completed `W44-E1-S3-T47`: mobile question and recovery
   headers now retain AIDD, the current Work Item identity, a 44px Inbox/back arrow, and a 44px
