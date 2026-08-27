@@ -1379,6 +1379,79 @@ def test_validate_semantic_outputs_accepts_setup_cleanup_residue_note(
     assert findings == ()
 
 
+def test_validate_semantic_outputs_accepts_explicit_negative_residue_outcome(
+    tmp_path: Path,
+) -> None:
+    workspace_root = tmp_path / ".aidd"
+    work_item = "WI-SEM-IMPLEMENT-NEGATIVE-RESIDUE"
+    _write_workspace_baseline(workspace_root, work_item)
+    _write_implementation_report(
+        workspace_root,
+        work_item,
+        (
+            "# Implementation Report\n\n"
+            "## Selected task\n\n"
+            "- Task id: `TASK-EXAMPLE-RUNTIME-ERROR`.\n\n"
+            "## Change summary\n\n"
+            "Implemented the selected runtime boundary with focused regression coverage.\n\n"
+            "## Touched files\n\n"
+            "- `src/runtime-error.ts` - normalize non-Error throws.\n\n"
+            "## Verification notes\n\n"
+            "- `./node_modules/.bin/tsc --noEmit` -> pass (exit code 0).\n"
+            "- `git status --ignored --short --untracked-files=all` -> no task-local cache, "
+            "coverage, build, dist, or dependency residue.\n\n"
+            "## Follow-up notes\n\n"
+            "- Continue to review.\n"
+        ),
+    )
+
+    findings = validate_semantic_outputs(
+        stage="implement",
+        work_item=work_item,
+        workspace_root=workspace_root,
+    )
+
+    assert findings == ()
+
+
+def test_validate_semantic_outputs_rejects_ambiguous_arrow_outcome(
+    tmp_path: Path,
+) -> None:
+    workspace_root = tmp_path / ".aidd"
+    work_item = "WI-SEM-IMPLEMENT-AMBIGUOUS-OUTCOME"
+    _write_workspace_baseline(workspace_root, work_item)
+    _write_implementation_report(
+        workspace_root,
+        work_item,
+        (
+            "# Implementation Report\n\n"
+            "## Selected task\n\n"
+            "- Task id: `TASK-EXAMPLE-RUNTIME-ERROR`.\n\n"
+            "## Change summary\n\n"
+            "Implemented the selected runtime boundary with focused regression coverage.\n\n"
+            "## Touched files\n\n"
+            "- `src/runtime-error.ts` - normalize non-Error throws.\n\n"
+            "## Verification notes\n\n"
+            "- `./node_modules/.bin/tsc --noEmit` -> looks good.\n"
+            "- `git status --ignored --short --untracked-files=all` -> pass (clean).\n\n"
+            "## Follow-up notes\n\n"
+            "- Continue to review.\n"
+        ),
+    )
+
+    findings = validate_semantic_outputs(
+        stage="implement",
+        work_item=work_item,
+        workspace_root=workspace_root,
+    )
+
+    assert any(
+        finding.code == UNVERIFIABLE_CHECK_CLAIM_CODE
+        and "observed command outcome" in finding.message
+        for finding in findings
+    )
+
+
 def test_validate_semantic_outputs_accepts_cache_absence_command_without_hanging(
     tmp_path: Path,
 ) -> None:

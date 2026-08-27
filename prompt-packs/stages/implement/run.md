@@ -85,6 +85,11 @@ consistent across `implementation-report.md`, `validator-report.md`, and `stage-
    For explicit `verification-only` selection, instead require exactly `- none` and stop with a
    failure if the task changed any repository file.
 6. Verification notes must list actual checks run (or explicitly not run) with observed outcomes.
+   Every executable command bullet must include a terminal outcome on the same line. Prefer the
+   literal markers `-> pass`, `-> fail`, or `-> not-run: <reason>`; an explicit negative/clean
+   result such as `-> no task-local cache or coverage residue` is also valid when it directly
+   describes the command's observed result. Do not use vague outcome prose such as `looks good`
+   or `completed successfully` without a concrete marker or exit code.
 7. No-op outcomes require explicit evidence-based justification plus next action; otherwise no-op is invalid.
    The sole exception is a rich task whose system-owned selection explicitly says
    `Execution mode: verification-only`: execute and preserve its required checks, report
