@@ -1585,6 +1585,62 @@ def test_publish_stage_outputs_includes_each_canonical_record_once(tmp_path: Pat
     assert published_names.count("validator-report.md") == 1
 
 
+def test_publish_stage_outputs_allows_missing_conditional_interview_documents(
+    tmp_path: Path,
+) -> None:
+    workspace_root = tmp_path / ".aidd"
+    bundle = prepare_stage_bundle(
+        workspace_root=workspace_root,
+        work_item="WI-001",
+        stage="idea",
+    )
+    for path in bundle.expected_output_documents:
+        if path.name in {"questions.md", "answers.md"}:
+            continue
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(f"# Output\n\n{path.name}\n", encoding="utf-8")
+
+    publication = publish_stage_outputs_after_validation_pass(
+        workspace_root=workspace_root,
+        work_item="WI-001",
+        run_id="run-idea",
+        stage="idea",
+    )
+
+    published_names = {path.name for path in publication.published_documents}
+    assert "idea-brief.md" in published_names
+    assert "stage-result.md" in published_names
+    assert "validator-report.md" in published_names
+    assert "questions.md" not in published_names
+    assert "answers.md" not in published_names
+    assert not (workspace_root / "workitems/WI-001/stages/idea/output/answers.md").exists()
+
+
+def test_publish_stage_outputs_still_requires_missing_substantive_documents(
+    tmp_path: Path,
+) -> None:
+    workspace_root = tmp_path / ".aidd"
+    bundle = prepare_stage_bundle(
+        workspace_root=workspace_root,
+        work_item="WI-001",
+        stage="idea",
+    )
+    _materialize_expected_outputs(bundle.expected_output_documents)
+    implementation_output = workspace_root / "workitems/WI-001/stages/idea/idea-brief.md"
+    implementation_output.unlink()
+
+    with pytest.raises(
+        FileNotFoundError,
+        match="workitems/WI-001/stages/idea/idea-brief.md",
+    ):
+        publish_stage_outputs_after_validation_pass(
+            workspace_root=workspace_root,
+            work_item="WI-001",
+            run_id="run-idea",
+            stage="idea",
+        )
+
+
 def test_run_single_stage_orchestration_executes_generic_cli_happy_path(
     tmp_path: Path,
 ) -> None:
