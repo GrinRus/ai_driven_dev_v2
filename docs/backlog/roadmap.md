@@ -16084,6 +16084,19 @@ Local tasks:
     behavior, Ruff, mypy, focused semantic implement and live-evidence tests, and docs/planning
     consistency.
 
+- `W45-E1-S2-T3` (next) Restrict implementation touched-file extraction to top-level entries.
+  - Output: make task-diff evidence read only the top-level bullets in the `Touched files` section,
+    so nested explanatory bullets containing code snippets, identifiers, or user-facing text are
+    not misclassified as repository paths. Preserve reporting of every actual changed path and the
+    fail-closed mismatch/scope findings for missing or unsupported top-level entries.
+  - Scope: `src/aidd/core/task_repository_evidence.py` and focused
+    `tests/core/test_task_repository_evidence.py` regression coverage only; do not broaden task
+    scope rules, semantic document contracts, runtime adapters, or public UI behavior.
+  - Verification: a report with nested backticked code examples and multiple top-level file entries
+    produces only the canonical changed paths, while missing top-level paths and unsupported
+    top-level paths continue to fail with `SEM-TASK-DIFF-MISMATCH`/scope findings. Run focused core
+    repository-evidence tests, Ruff, mypy, and the planning consistency checks.
+
 - `2026-08-27` reconciliation after PR #436 (merge `d12bea06`) marks `W45-E1-S2-T2` done. The
   implementation evidence parser now accepts concrete executable negative/clean outcomes such as
   `-> no task-local cache`, while ambiguous arrow text remains rejected. Prompt guidance, hash
