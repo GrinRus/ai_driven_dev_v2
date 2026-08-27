@@ -7,11 +7,11 @@ slice, and local task.
 
 ## Next
 
-- None; the Wave 44 rendered acceptance loop is complete through `W44-E1-S3-T47`.
+- `W45-E1-S1-T1` — Permit non-interactive stage finalization to publish without `answers.md`.
 
 ## Soon
 
-- None.
+- None; this is the first hardening task after the Wave 44 rendered acceptance loop.
 
 ## Parking lot
 
@@ -37,6 +37,14 @@ slice, and local task.
   queue-restoration policy in `docs/backlog/roadmap.md` (`W8-E3-S1`).
 
 ## Current reconciliation
+
+- `2026-08-27` live Codex medium run `eval-live-007-codex-20260827T044743Z` reached aggregate
+  implementation finalization after all five implementation tasks succeeded, but publication
+  failed because the non-interview flow had no `workitems/WI-LIVE-HONO-SMOKE/stages/implement/answers.md`.
+  This is a core publication compatibility defect, not a target-repository failure. `W45-E1-S1-T1`
+  is added as the single `Next` task; the interrupted run remains retained as diagnostic evidence
+  and must be rerun from a clean `main` after the fix. Human usability, Claude/cross-runtime, and
+  Wave 36 acceptance remain parked.
 
 - `2026-08-26` PR #421 (merge `722e38b0`) completed `W44-E1-S3-T47`: mobile question and recovery
   headers now retain AIDD, the current Work Item identity, a 44px Inbox/back arrow, and a 44px
