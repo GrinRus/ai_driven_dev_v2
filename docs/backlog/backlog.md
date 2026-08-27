@@ -7,11 +7,7 @@ slice, and local task.
 
 ## Next
 
-- `W45-E1-S2-T1` — Require every QA evidence claim to cite a resolvable artifact or executable
-  result. Correct the QA authoring guidance and deterministic fixture coverage for
-  `CROSS-QA-UPSTREAM-EVIDENCE` without weakening fail-closed traceability; the fresh Codex medium
-  rerun `eval-live-007-codex-20260827T145034Z` exposed a prose-only bounded-diff evidence entry
-  (`EV-4`) that exhausted QA validation.
+- None.
 
 ## Soon
 
@@ -42,13 +38,13 @@ slice, and local task.
 
 ## Current reconciliation
 
-- `2026-08-27` fresh Codex medium rerun `eval-live-007-codex-20260827T145034Z` reached QA after
-  implementing the bounded Hono non-Error throw fix and passing 235 focused tests plus TypeScript.
-  QA failed closed on one `CROSS-QA-UPSTREAM-EVIDENCE` finding: `EV-4` described a bounded product
-  path check only as prose and did not include an exact upstream artifact path or executable
-  command/result. This is an AIDD QA authoring/traceability defect, not a Hono or UI defect.
-  `W45-E1-S2-T1` is promoted as the next task; the run remains diagnostic until the task is merged
-  and the medium lane is rerun from clean `main`.
+- `2026-08-27` reconciliation after PR #434 (`48f80f81`) marks `W45-E1-S2-T1` done. The QA
+  prompt and report contract now give a concrete executable bounded-diff evidence shape, and
+  deterministic fixtures prove that corrected command evidence passes while prose-only path checks
+  remain rejected by `CROSS-QA-UPSTREAM-EVIDENCE`. Local focused QA/semantic checks, docs/planning,
+  Ruff, mypy, full CI, packaged UI browser, adapter, scenario, and build checks are green. The
+  prior Codex medium run `eval-live-007-codex-20260827T145034Z` remains diagnostic; the next action
+  is a fresh medium rerun from clean `main`, so `Next` is intentionally empty during that live lane.
 
 - `2026-08-27` reconciliation after PR #430 (`fa9a9674`) marks `W45-E1-S1-T3` done. The evidence
   parser now recognizes the exact compound command-substitution/pipeline/test shape that blocked
