@@ -192,6 +192,15 @@ def _looks_like_command(candidate: str, *, explicit_container: bool) -> bool:
     if not tokens:
         return False
     executable = tokens[0].lower()
+
+    # ``shlex`` tokenizes ``output=$(git status ...)`` as an assignment token
+    # followed by ``status``. Inspect the command substitution's first token
+    # before evaluating the outer command shape so this remains executable
+    # evidence instead of an unverifiable prose claim.
+    for substitution in re.finditer(r"\$\(\s*([^\s;|&()]+)", normalized_candidate):
+        if substitution.group(1).lower() in _KNOWN_COMMAND_EXECUTABLES:
+            return True
+
     if _SHELL_COMPOUND_PATTERN.fullmatch(normalized_candidate) is not None:
         return any(
             token.strip(";(){}!").lower() in _KNOWN_COMMAND_EXECUTABLES
