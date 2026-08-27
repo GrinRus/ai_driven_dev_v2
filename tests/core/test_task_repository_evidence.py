@@ -311,6 +311,55 @@ def test_task_attempt_fails_when_reported_paths_do_not_match_local_diff(tmp_path
     assert "src/other.py" in entry.blocker
 
 
+def test_task_diff_ignores_nested_touched_file_explanations(tmp_path: Path) -> None:
+    workspace_root = tmp_path / ".aidd"
+    tasklist_path = (
+        workspace_root / "workitems" / "WI-1" / "stages" / "tasklist" / "output" / "tasklist.md"
+    )
+    tasklist_path.parent.mkdir(parents=True, exist_ok=True)
+    tasklist_path.write_text(_tasklist(), encoding="utf-8")
+    contract_path = tmp_path / "contracts" / "example.md"
+    contract_path.parent.mkdir(parents=True, exist_ok=True)
+    contract_path.write_text("before\n", encoding="utf-8")
+    test_path = tmp_path / "tests" / "test_contract.py"
+    test_path.parent.mkdir(parents=True, exist_ok=True)
+    test_path.write_text("before\n", encoding="utf-8")
+
+    context = prepare_task_execution(
+        workspace_root=workspace_root,
+        work_item="WI-1",
+        run_id="run-1",
+        task_id="TL-1",
+        project_root=tmp_path,
+    )
+    contract_path.write_text("after\n", encoding="utf-8")
+    test_path.write_text("after\n", encoding="utf-8")
+    report = (
+        "## Touched files\n\n"
+        "- `contracts/example.md` - update the contract.\n"
+        "  - Added `const error = err instanceof Error ? err : new Error(String(err))`.\n"
+        "- `tests/test_contract.py` - add regression coverage.\n"
+        "  - Existing `Custom Error Message` assertion remains covered.\n"
+    )
+
+    payload, issues = task_diff_evidence(
+        context=context,
+        workspace_root=workspace_root,
+        work_item="WI-1",
+        final_snapshot=repository_evidence.capture_repository_snapshot(
+            project_root=tmp_path,
+            task_id="TL-1",
+        ),
+        report=report,
+    )
+
+    assert issues == ()
+    assert payload["reported_touched_paths"] == [
+        "contracts/example.md",
+        "tests/test_contract.py",
+    ]
+
+
 def test_task_completion_reuses_one_snapshot_per_validation_checkpoint(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,

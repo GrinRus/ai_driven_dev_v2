@@ -17,6 +17,8 @@ from aidd.core.task_attempt_lifecycle import TaskExecutionContext
 from aidd.core.task_plan import TaskExecutionMode
 from aidd.validators.models import ValidationFinding, ValidationIssueLocation
 
+_TOP_LEVEL_BULLET_PATTERN = re.compile(r"^[-*+]\s+")
+
 
 @dataclass(frozen=True, slots=True)
 class RepositorySnapshot:
@@ -167,9 +169,13 @@ def _section(markdown: str, heading: str) -> str:
 def _reported_touched_paths(report: str) -> tuple[str, ...]:
     paths: list[str] = []
     for line in _section(report, "Touched files").splitlines():
-        if not line.strip().startswith("-") or line.strip().casefold() == "- none":
+        bullet = _TOP_LEVEL_BULLET_PATTERN.match(line)
+        if bullet is None:
             continue
-        match = re.search(r"`([^`]+)`", line)
+        item = line[bullet.end() :].strip()
+        if item.casefold() == "none":
+            continue
+        match = re.search(r"`([^`]+)`", item)
         if match is not None:
             paths.append(match.group(1).strip().strip("/"))
     return tuple(dict.fromkeys(paths))

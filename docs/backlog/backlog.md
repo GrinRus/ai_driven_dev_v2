@@ -7,7 +7,8 @@ slice, and local task.
 
 ## Next
 
-- None. The next action is a fresh Claude medium rerun from clean `main`.
+- `W45-E1-S2-T3` — Restrict implementation touched-file extraction to top-level entries so nested
+  explanatory bullets with code snippets are not treated as changed repository paths.
 
 ## Soon
 
@@ -37,6 +38,16 @@ slice, and local task.
   queue-restoration policy in `docs/backlog/roadmap.md` (`W8-E3-S1`).
 
 ## Current reconciliation
+
+- `2026-08-28` fresh Claude medium `eval-live-007-claude-code-20260827T210152Z` reached the Hono
+  implementation with the target repository intact and all focused target tests/type-checks
+  passing, but AIDD task-diff evidence misclassified nested explanatory bullets in `Touched files`
+  as repository paths. The validator correctly preserved the real `src/compose.ts` and
+  `src/hono.test.ts` scope mismatch for the selected TL-1 task, while the parser additionally
+  reported code phrases such as `onError` and `Custom Error Message` as paths and exhausted the
+  repair budget. This is an AIDD evidence-contract defect, so `W45-E1-S2-T3` is the sole Next task;
+  the run remains retained as diagnostic evidence and must be rerun from a clean `main` after the
+  fix is merged.
 
 - `2026-08-27` reconciliation after PR #436 (merge `d12bea06`) marks `W45-E1-S2-T2` done. The
   implementation evidence parser now accepts concrete executable negative/clean outcomes such as
