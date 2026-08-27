@@ -7,13 +7,15 @@ slice, and local task.
 
 ## Next
 
-- None; the parser hardening is merged and the next action is a fresh medium rerun on each
-  supported runtime.
+- `W45-E1-S2-T1` — Require every QA evidence claim to cite a resolvable artifact or executable
+  result. Correct the QA authoring guidance and deterministic fixture coverage for
+  `CROSS-QA-UPSTREAM-EVIDENCE` without weakening fail-closed traceability; the fresh Codex medium
+  rerun `eval-live-007-codex-20260827T145034Z` exposed a prose-only bounded-diff evidence entry
+  (`EV-4`) that exhausted QA validation.
 
 ## Soon
 
-- None; any new control-plane defect found by the rerun must be added to `roadmap.md` before
-  implementation.
+- None.
 
 ## Parking lot
 
@@ -39,6 +41,14 @@ slice, and local task.
   queue-restoration policy in `docs/backlog/roadmap.md` (`W8-E3-S1`).
 
 ## Current reconciliation
+
+- `2026-08-27` fresh Codex medium rerun `eval-live-007-codex-20260827T145034Z` reached QA after
+  implementing the bounded Hono non-Error throw fix and passing 235 focused tests plus TypeScript.
+  QA failed closed on one `CROSS-QA-UPSTREAM-EVIDENCE` finding: `EV-4` described a bounded product
+  path check only as prose and did not include an exact upstream artifact path or executable
+  command/result. This is an AIDD QA authoring/traceability defect, not a Hono or UI defect.
+  `W45-E1-S2-T1` is promoted as the next task; the run remains diagnostic until the task is merged
+  and the medium lane is rerun from clean `main`.
 
 - `2026-08-27` reconciliation after PR #430 (`fa9a9674`) marks `W45-E1-S1-T3` done. The evidence
   parser now recognizes the exact compound command-substitution/pipeline/test shape that blocked
