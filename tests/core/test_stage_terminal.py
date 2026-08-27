@@ -61,6 +61,29 @@ def test_render_stage_result_from_lifecycle_state_is_byte_stable_and_replaces_to
 
 
 @pytest.mark.parametrize(
+    ("status", "expected"),
+    (("succeeded", "succeeded"), ("failed", "failed")),
+)
+def test_render_stage_result_from_lifecycle_state_emits_one_status_marker(
+    status: str,
+    expected: str,
+) -> None:
+    markdown = render_stage_result_from_lifecycle_state(
+        CanonicalStageResultProjection(
+            stage="review",
+            work_item="WI-001",
+            status=status,
+            attempt_number=1,
+        ),
+        workspace_root=Path(".aidd"),
+    )
+
+    status_body = markdown.split("## Status\n\n", 1)[1].split("\n## Produced outputs", 1)[0]
+    assert status_body == f"- Status: `{expected}`\n"
+    assert f"- `{expected}`" not in status_body
+
+
+@pytest.mark.parametrize(
     ("lifecycle_status", "expected_status", "budget", "expected_text"),
     (
         ("succeeded", "succeeded", None, "Validator verdict: pass"),
@@ -165,10 +188,45 @@ def test_force_stage_result_failed_for_exhausted_budget_rewrites_terminal_claims
 
     assert result_path == stage_result_path
     stage_result_text = stage_result_path.read_text(encoding="utf-8")
-    assert "- `failed`" in stage_result_text
+    assert "- Status: `failed`" in stage_result_text
+    assert stage_result_text.count("- Status:") == 1
     assert "validator report verdict: `fail`" in stage_result_text
     assert "validation `fail`" in stage_result_text
     assert "Repair budget status: `repair-budget-exhausted`" in stage_result_text
+
+
+def test_force_stage_result_failed_canonicalizes_conflicting_status_markers(
+    tmp_path: Path,
+) -> None:
+    workspace_root = tmp_path / ".aidd"
+    stage_result_path = _stage_result_path(workspace_root)
+    stage_result_path.parent.mkdir(parents=True, exist_ok=True)
+    stage_result_path.write_text(
+        "# Stage Result\n\n"
+        "## Attempt history\n\n"
+        "- Attempt `1` (`initial`) -> failed validation.\n\n"
+        "## Status\n\n"
+        "- Status: `succeeded`\n"
+        "- `failed`\n"
+        "- Status: `blocked`\n\n"
+        "## Terminal state notes\n\n"
+        "- Preserve this historical note.\n",
+        encoding="utf-8",
+    )
+
+    force_stage_result_failed_for_exhausted_budget(
+        workspace_root=workspace_root,
+        work_item="WI-001",
+        stage="plan",
+    )
+
+    reconciled = stage_result_path.read_text(encoding="utf-8")
+    status_body = reconciled.split("## Status\n\n", 1)[1].split(
+        "\n## Terminal state notes", 1
+    )[0]
+    assert status_body == "- Status: `failed`\n"
+    assert "Attempt `1` (`initial`) -> failed validation." in reconciled
+    assert "Preserve this historical note." in reconciled
 
 
 def test_reconcile_stage_result_after_validation_pass_rewrites_stale_failure_claims(
@@ -323,7 +381,7 @@ def test_force_stage_result_failed_for_exhausted_budget_creates_missing_result(
     )
 
     stage_result_text = stage_result_path.read_text(encoding="utf-8")
-    assert "## Status\n\n- `failed`" in stage_result_text
+    assert "## Status\n\n- Status: `failed`" in stage_result_text
     assert "Repair budget status: `repair-budget-exhausted`" in stage_result_text
 
 
@@ -341,7 +399,8 @@ def test_strip_success_claims_for_validator_findings_keeps_result_file(
 
     assert result_path == stage_result_path
     stage_result_text = stage_result_path.read_text(encoding="utf-8")
-    assert "- `failed`" in stage_result_text
+    assert "- Status: `failed`" in stage_result_text
+    assert stage_result_text.count("- Status:") == 1
     assert "validator report verdict: `fail`" in stage_result_text
     assert "canonical aidd validation found open findings" in stage_result_text.lower()
 
