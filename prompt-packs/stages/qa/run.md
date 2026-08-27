@@ -188,6 +188,11 @@ acceptance id, and concrete evidence. Any `fail` or `not-verified` entry require
    command and an explicit terminal outcome such as pass/fail or exit code. Do not replace either
    part with prose. Claims reused from earlier stages must still cite an exact upstream evidence id
    or full existing workspace-relative artifact path.
+   For a bounded product-diff claim, use an executable command over the exact paths and record its
+   terminal outcome. For example, `git diff --name-only -- src/compose.ts src/hono-base.ts
+   src/compose.test.ts src/hono.test.ts` -> pass; exactly four planned files changed. A prose-only
+   statement such as `bounded product path check -> pass` is not evidence, and source paths alone
+   do not resolve an upstream artifact reference.
    Treat `Verification summary` and `Readiness` as indexed claims, not free-standing evidence:
    every bullet that states a material verification outcome or supports the verdict must cite an
    `EV-N` defined in `Evidence` or an exact existing workspace-relative artifact path. Repeat the
