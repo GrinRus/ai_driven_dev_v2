@@ -16014,6 +16014,23 @@ Local tasks:
     Python 3.12/3.13/3.14, deterministic scenarios, adapter conformance, packaged UI browser, CodeQL,
     dependency review, scorecard, and build.
 
+- `W45-E1-S1-T2` (next) Normalize terminal status markers after repair and validation.
+  - Output: make lifecycle-owned `stage-result.md` rendering and repair reconciliation emit exactly
+    one terminal status in the `Status` section, so a valid Review/QA artifact cannot be rejected by
+    a stale or duplicate compatibility marker. Preserve attempt history, validator evidence, and the
+    existing public document contract.
+  - Scope: `src/aidd/core/stage_terminal.py` and focused stage-result/orchestration tests only.
+  - Verification: renderer and exhausted-repair regression tests must prove one canonical status for
+    success and failure, idempotent reconciliation, preserved history, and no status drift in a fresh
+    live medium flow.
+
+- `2026-08-27` Codex medium rerun `eval-live-007-codex-20260827T064545Z` completed idea through
+  implementation with target diff and focused verification passing, but stopped at Review after
+  three validation attempts. The review report was complete and approved; the lifecycle result was
+  rejected because the Status section retained duplicate terminal markers after repair. This is an
+  AIDD-owned canonical-record defect, not a Hono target or UI defect. `W45-E1-S1-T2` is promoted as
+  the next bounded fix before rerunning Codex and Claude medium lanes.
+
 - `2026-08-26` PR #418 (merge `f533b336`) completed `W44-E1-S3-T46`. Mobile Work Item detail now
   keeps the AIDD brand, current Work Item identity, accessible Inbox/back path, and overflow/runtime
   control in one compact 64px header at `390x844` and `320x568`. Fresh captures across
