@@ -16003,16 +16003,16 @@ aggregate finalization service.
 
 Local tasks:
 
-- `W45-E1-S1-T1` (next) Permit non-interactive stage finalization to publish without `answers.md`.
-  - Output: update the runtime-agnostic stage-output publication boundary so conditional interview
-    documents are copied when present, but their absence does not turn a successful non-interview
-    implementation into a failed aggregate finalization; retain strict existence checks for
-    substantive runtime outputs and canonical AIDD records.
-  - Scope: `src/aidd/core/stage_outputs.py` plus focused core/aggregate-finalization regression
-    tests; do not change adapter behavior, stage contracts, routes, or historical evidence.
-  - Verification: focused publication and aggregate-finalization tests prove non-interview success,
-    interview documents still publish when present, missing substantive output still fails closed,
-    and published output contents remain deterministic.
+- `W45-E1-S1-T1` (done) Permit non-interactive stage finalization to publish without `answers.md`.
+  - PR #425 (merge `2878a851`) updates the runtime-agnostic stage-output publication boundary so
+    conditional interview documents are copied when present, while their absence no longer turns a
+    successful non-interview implementation into failed aggregate finalization. Substantive runtime
+    outputs and canonical AIDD records retain strict existence checks; adapters, stage contracts,
+    routes, and historical evidence are unchanged.
+  - Verification: focused publication tests (`5 passed`), `tests/core/test_stage_runner.py` plus
+    implementation-finalization tests (`92 passed`), Ruff, and mypy (`234 files`) passed; CI passed
+    Python 3.12/3.13/3.14, deterministic scenarios, adapter conformance, packaged UI browser, CodeQL,
+    dependency review, scorecard, and build.
 
 - `2026-08-26` PR #418 (merge `f533b336`) completed `W44-E1-S3-T46`. Mobile Work Item detail now
   keeps the AIDD brand, current Work Item identity, accessible Inbox/back path, and overflow/runtime
