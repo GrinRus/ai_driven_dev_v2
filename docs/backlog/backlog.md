@@ -7,11 +7,12 @@ slice, and local task.
 
 ## Next
 
-- None; `W45-E1-S1-T1` is merged and awaits live Codex/Claude medium reruns.
+- `W45-E1-S1-T2` — Normalize duplicate terminal status markers after repair so valid Review/QA
+  results can progress in the live medium flow.
 
 ## Soon
 
-- None; this is the first hardening task after the Wave 44 rendered acceptance loop.
+- None; the live medium rerun exposed a canonical stage-result defect before the next task can run.
 
 ## Parking lot
 
@@ -50,6 +51,12 @@ slice, and local task.
   skips only absent conditional `questions.md`/`answers.md` records, publishes them when present,
   and continues to fail closed for missing substantive or canonical AIDD records. Focused core and
   full CI checks passed; the Codex medium lane is next for rerun.
+
+- `2026-08-27` Codex medium rerun `eval-live-007-codex-20260827T064545Z` reached Review with all
+  target implementation tasks and focused checks passing, but exhausted validation attempts because
+  lifecycle `stage-result.md` retained duplicate terminal status markers after repair. The approved
+  Review report and target diff show no product defect; `W45-E1-S1-T2` is the next core hardening task
+  before the Codex and Claude lanes are rerun.
 
 - `2026-08-26` PR #421 (merge `722e38b0`) completed `W44-E1-S3-T47`: mobile question and recovery
   headers now retain AIDD, the current Work Item identity, a 44px Inbox/back arrow, and a 44px
