@@ -7,8 +7,7 @@ slice, and local task.
 
 ## Next
 
-- `W45-E1-S2-T2` — accept concrete negative/clean terminal outcomes for executable implementation
-  residue checks without weakening fail-closed command-evidence validation.
+- None. The next action is a fresh Claude medium rerun from clean `main`.
 
 ## Soon
 
@@ -38,6 +37,14 @@ slice, and local task.
   queue-restoration policy in `docs/backlog/roadmap.md` (`W8-E3-S1`).
 
 ## Current reconciliation
+
+- `2026-08-27` reconciliation after PR #436 (merge `d12bea06`) marks `W45-E1-S2-T2` done. The
+  implementation evidence parser now accepts concrete executable negative/clean outcomes such as
+  `-> no task-local cache`, while ambiguous arrow text remains rejected. Prompt guidance, hash
+  fixtures, focused semantic tests, docs/planning checks, Ruff, mypy, full CI, deterministic
+  scenarios, adapter conformance, packaged UI browser, and build checks are green. The next
+  action is a fresh Claude medium rerun from this clean `main`, so `Next` is intentionally empty
+  during the live lane.
 
 - `2026-08-27` fresh Claude medium `eval-live-007-claude-code-20260827T181914Z` reached the full
   Hono implementation task sequence with all four allowed target files changed and focused tests/
