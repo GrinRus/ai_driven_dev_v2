@@ -215,6 +215,10 @@ def test_qa_prompt_requires_machine_readable_verdict_line() -> None:
     assert "Do not use range claims such as `AC-1 through AC-4`" in run_prompt
     assert "Verification summary` and `Readiness` as indexed claims" in run_prompt
     assert "do not leave a bare command/result bullet" in run_prompt
+    assert "bounded product-diff claim" in run_prompt
+    assert "prose-only" in run_prompt
+    assert "source paths alone" in run_prompt
+    assert "do not resolve an upstream artifact reference" in run_prompt
     assert "Do not pair `QA verdict: ready` with residual risk bullets" in run_prompt
     assert "use `ready-with-risks` and `proceed-with-conditions`" in run_prompt
     assert "isolated optional broad-suite failures in unrelated environment-sensitive tests" in (

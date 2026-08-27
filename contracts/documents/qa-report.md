@@ -26,6 +26,10 @@ Summarize verification evidence, remaining risks, and release readiness.
 - ready/proceed-style reports that cite test/type/lint/docs/build commands also cite
   ignored residue evidence from `git status --ignored --short --untracked-files=all`
   collected after all QA commands, or equivalent post-command workspace hygiene evidence,
+- bounded product-diff claims use an executable command over the exact changed paths with an
+  explicit terminal outcome (for example, `git diff --name-only -- src/compose.ts` -> pass),
+  or cite an exact upstream artifact; prose-only path-check statements and source paths without
+  an artifact/command result are not traceable evidence,
 - when `context/acceptance-criteria.md` exists, acceptance coverage is explicit: one top-level
   bullet per `AC-N`, each naming exactly one criterion id and citing same-bullet evidence,
 - `Known issues` may include an empty marker such as `- Known issues: none.`;
