@@ -16014,7 +16014,7 @@ Local tasks:
     Python 3.12/3.13/3.14, deterministic scenarios, adapter conformance, packaged UI browser, CodeQL,
     dependency review, scorecard, and build.
 
-- `W45-E1-S1-T2` (next) Normalize terminal status markers after repair and validation.
+- `W45-E1-S1-T2` (done) Normalize terminal status markers after repair and validation.
   - Output: make lifecycle-owned `stage-result.md` rendering and repair reconciliation emit exactly
     one terminal status in the `Status` section, so a valid Review/QA artifact cannot be rejected by
     a stale or duplicate compatibility marker. Preserve attempt history, validator evidence, and the
@@ -16023,6 +16023,26 @@ Local tasks:
   - Verification: renderer and exhausted-repair regression tests must prove one canonical status for
     success and failure, idempotent reconciliation, preserved history, and no status drift in a fresh
     live medium flow.
+  - PR #428 (merge `a184fe95`) canonicalizes success/failure status sections and preserves historical
+    attempt evidence; focused core/repair tests, Ruff, mypy, and full CI passed.
+
+- `W45-E1-S1-T3` (next) Accept valid compound shell verification commands in implementation evidence.
+  - Output: extend the implementation verification evidence parser so commands containing shell
+    assignments, command substitutions, pipelines, and `test` assertions are recognized as executable
+    command evidence when the same verification bullet records the observed result. Preserve the
+    existing fail-closed behavior for outcome claims without a command or artifact reference.
+  - Scope: `src/aidd/validators/semantic_rules/evidence.py`, focused semantic-rule/harness tests, and
+    the live implementation evidence fixture only; no runtime adapters, stage contracts, or public
+    document shape changes.
+  - Verification: compound-command parser tests must pass for the exact `git status ... | awk ...; test
+    -z` shape and equivalent safe shell forms, while malformed/non-executable snippets remain rejected;
+    run the focused validator/harness suite, Ruff, and mypy.
+
+- `2026-08-27` Reconciled PR #428 (`a184fe95`) as `W45-E1-S1-T2` done. A fresh Codex medium run
+  `eval-live-007-codex-20260827T082029Z` reached implementation with all four target Hono files and
+  240 focused tests passing, but AIDD evidence validation rejected a valid compound `git status`/`awk`
+  command as an unverifiable claim after repair budget exhaustion. No target product defect was found;
+  `W45-E1-S1-T3` is promoted as the bounded parser hardening task before rerunning Codex and Claude.
 
 - `2026-08-27` Codex medium rerun `eval-live-007-codex-20260827T064545Z` completed idea through
   implementation with target diff and focused verification passing, but stopped at Review after
