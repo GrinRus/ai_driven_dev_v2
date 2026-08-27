@@ -4238,7 +4238,10 @@ def test_successful_stage_result_reconciliation_is_idempotent_and_deduplicates_v
     stage_result_path = stage_root / "stage-result.md"
     stage_result_path.write_text(
         "# Stage Result\n\n"
-        "## Status\n\n- `succeeded`\n\n"
+        "## Status\n\n"
+        "- Status: `failed`\n"
+        "- `succeeded`\n"
+        "- Status: `blocked`\n\n"
         "## Produced outputs\n\n- `plan.md`\n\n"
         "## Validation summary\n\n"
         "- Validator verdict: `pass`\n"
@@ -4263,6 +4266,10 @@ def test_successful_stage_result_reconciliation_is_idempotent_and_deduplicates_v
 
     reconciled_text = stage_result_path.read_text(encoding="utf-8")
     assert stage_result_path.read_bytes() == first_reconciliation
+    status_body = reconciled_text.split("## Status\n\n", 1)[1].split(
+        "\n## Produced outputs", 1
+    )[0]
+    assert status_body == "- Status: `succeeded`\n"
     assert reconciled_text.count("Validator verdict: `pass`") == 1
     assert reconciled_text.count("Validator verdict:") == 1
 

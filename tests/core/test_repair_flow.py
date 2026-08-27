@@ -116,7 +116,7 @@ def test_one_shot_repair_success_flow(tmp_path: Path) -> None:
     assert "- Attempt `1` (`initial`) -> failed validation." in stage_result_text
     assert "- Attempt `2` (`repair`) -> succeeded." in stage_result_text
     assert "## Status" in stage_result_text
-    assert "- `succeeded`" in stage_result_text
+    assert "- Status: `succeeded`" in stage_result_text
 
 
 def test_resume_attempt_is_recorded_without_consuming_repair_budget(tmp_path: Path) -> None:
@@ -412,4 +412,4 @@ def test_implement_repair_loop_integration_scenario(tmp_path: Path) -> None:
     assert "- Attempt `1` (`initial`) -> failed validation." in stage_result_text
     assert "- Attempt `2` (`repair`) -> succeeded." in stage_result_text
     assert "## Status" in stage_result_text
-    assert "- `succeeded`" in stage_result_text
+    assert "- Status: `succeeded`" in stage_result_text

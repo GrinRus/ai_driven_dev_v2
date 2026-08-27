@@ -351,9 +351,6 @@ def render_stage_result_from_lifecycle_state(
         "## Status",
         "",
         f"- Status: `{status}`",
-        # Retain the historical bare-status marker for readers that predate the
-        # owner-aware renderer; both markers are the same canonical lifecycle value.
-        f"- `{status}`",
         "",
         "## Produced outputs",
         "",
@@ -479,26 +476,28 @@ def ensure_stage_result_references_repair_brief(
 
 
 def _replace_or_add_status_section(markdown: str) -> str:
+    """Canonicalize the Status section to one lifecycle-owned marker.
+
+    Runtime drafts can contain a mixture of legacy bare markers and newer labelled
+    markers, sometimes with conflicting values after a repair.  The lifecycle state
+    is authoritative, so discard the draft body and write the contract's single
+    labelled status line while leaving every other section byte-for-byte intact.
+    """
     match = _STATUS_SECTION_PATTERN.search(markdown)
     if match is None:
-        return markdown.rstrip() + "\n\n## Status\n\nfailed\n"
+        return markdown.rstrip() + "\n\n## Status\n\n- Status: `failed`\n"
 
-    body = match.group("body")
-    replacement_body = _TERMINAL_STATUS_PATTERN.sub("failed", body, count=1)
-    if replacement_body == body:
-        replacement_body = "- `failed`\n"
+    replacement_body = "- Status: `failed`\n"
     return markdown[: match.start("body")] + replacement_body + markdown[match.end("body") :]
 
 
 def _replace_or_add_success_status_section(markdown: str) -> str:
+    """Canonicalize the Status section to exactly one successful marker."""
     match = _STATUS_SECTION_PATTERN.search(markdown)
     if match is None:
-        return markdown.rstrip() + "\n\n## Status\n\nsucceeded\n"
+        return markdown.rstrip() + "\n\n## Status\n\n- Status: `succeeded`\n"
 
-    body = match.group("body")
-    replacement_body = _TERMINAL_STATUS_PATTERN.sub("succeeded", body, count=1)
-    if replacement_body == body:
-        replacement_body = "- `succeeded`\n"
+    replacement_body = "- Status: `succeeded`\n"
     return markdown[: match.start("body")] + replacement_body + markdown[match.end("body") :]
 
 
