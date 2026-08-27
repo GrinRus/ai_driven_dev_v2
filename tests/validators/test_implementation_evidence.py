@@ -22,6 +22,9 @@ from aidd.validators.semantic_rules.evidence import (
         "`zsh -c 'test -f pyproject.toml'` -> pass",
         "`node -e \"console.log('verified')\"` -> pass",
         "`nl -ba src/hono-base.ts | sed -n '32,48p;388,400p'` -> pass",
+        "`out=$(git status --short --untracked-files=all | awk '$1 == \"??\" "
+        "&& $2 !~ /^\\.aidd\\// && $2 != \"aidd.example.toml\" { print }'); "
+        "test -z \"$out\"` -> pass",
         "Reused the same verification command as `TL-2`; outcome passed.",
     ),
 )
