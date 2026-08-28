@@ -7,7 +7,7 @@ slice, and local task.
 
 ## Next
 
-- None.
+- `W45-E1-S4-T1` — Harden QA evidence authoring for one-command-per-entry outcomes.
 
 ## Soon
 
@@ -37,6 +37,15 @@ slice, and local task.
   queue-restoration policy in `docs/backlog/roadmap.md` (`W8-E3-S1`).
 
 ## Current reconciliation
+
+- `2026-08-28` planning update after fresh Claude medium
+  `eval-live-007-claude-code-20260828T094324Z`: target implementation, review, scope fidelity,
+  and UI evidence were clean, but QA exhausted repair on eight `CROSS-QA-UPSTREAM-EVIDENCE`
+  findings because bounded diff evidence omitted an explicit `pass` and post-QA residue commands
+  were nested under one `EV-5` parent bullet. `W45-E1-S4-T1` is the single dependency-ready task
+  to make the one-command-per-entry shape explicit and rerun Claude medium from a clean merge.
+  This is an AIDD QA evidence-contract issue, not a target product or UI defect; the failed bundle
+  and diagnostic analysis remain retained.
 
 - `2026-08-28` reconciliation after PR #442 (merge `21e75401`) marks `W45-E1-S3-T1` done. The
   implement prompts now enforce one selected task card per attempt and forbid edits to later-card
