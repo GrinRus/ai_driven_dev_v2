@@ -188,6 +188,14 @@ acceptance id, and concrete evidence. Any `fail` or `not-verified` entry require
    command and an explicit terminal outcome such as pass/fail or exit code. Do not replace either
    part with prose. Claims reused from earlier stages must still cite an exact upstream evidence id
    or full existing workspace-relative artifact path.
+   Each `EV-N` definition must be one top-level bullet with exactly one command or artifact
+   reference and its outcome on that same bullet. Do not create a parent `EV-N` bullet with nested
+   command bullets: assign a distinct id to every command instead. For example:
+   `- EV-5: \`git diff --name-only -- src/app.ts\` -> pass; exactly one planned file changed.`
+   `- EV-6: \`git status --ignored --short --untracked-files=all\` -> pass (exit code 0; no residue).`
+   A bounded diff must include the literal `-> pass` (or another supported outcome) immediately
+   after the executable command; phrases such as `exactly four files` or `root-residue-absent`
+   alone do not establish a terminal outcome.
    For a bounded product-diff claim, use an executable command over the exact paths and record its
    terminal outcome. For example, `git diff --name-only -- src/compose.ts src/hono-base.ts
    src/compose.test.ts src/hono.test.ts` -> pass; exactly four planned files changed. A prose-only

@@ -219,6 +219,9 @@ def test_qa_prompt_requires_machine_readable_verdict_line() -> None:
     assert "prose-only" in run_prompt
     assert "source paths alone" in run_prompt
     assert "do not resolve an upstream artifact reference" in run_prompt
+    assert "Each `EV-N` definition must be one top-level bullet" in run_prompt
+    assert "Do not create a parent `EV-N` bullet with nested" in run_prompt
+    assert "literal `-> pass`" in run_prompt
     assert "Do not pair `QA verdict: ready` with residual risk bullets" in run_prompt
     assert "use `ready-with-risks` and `proceed-with-conditions`" in run_prompt
     assert "isolated optional broad-suite failures in unrelated environment-sensitive tests" in (
@@ -242,6 +245,17 @@ def test_qa_prompts_do_not_downgrade_for_isolated_optional_broad_suite_failures(
     assert "record it as a non-blocking optional-check note" in run_prompt
     assert "rather than a residual risk" in repair_prompt
     assert "must record it as a non-blocking" in contract
+
+
+def test_qa_prompts_keep_evidence_definitions_flat_and_outcome_bound() -> None:
+    run_prompt = Path("prompt-packs/stages/qa/run.md").read_text(encoding="utf-8")
+    repair_prompt = Path("prompt-packs/stages/qa/repair.md").read_text(encoding="utf-8")
+    document_contract = Path("contracts/documents/qa-report.md").read_text(encoding="utf-8")
+
+    assert "Each `EV-N` definition must be one top-level bullet" in run_prompt
+    assert "Flatten nested command bullets" in repair_prompt
+    assert "each `EV-N` definition is one top-level bullet" in document_contract
+    assert "exactly one executable command" in document_contract
 
 
 def test_review_prompt_respects_authored_verification_boundary() -> None:

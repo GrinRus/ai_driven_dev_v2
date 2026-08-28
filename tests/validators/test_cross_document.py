@@ -1721,6 +1721,33 @@ def test_qa_cross_validation_accepts_bounded_product_diff_command_evidence(
     assert findings == ()
 
 
+def test_qa_cross_validation_rejects_nested_local_evidence_parent(
+    tmp_path: Path,
+) -> None:
+    workspace_root = tmp_path / ".aidd"
+    _write_qa_upstream_bundle(workspace_root)
+    qa_path = workspace_root / "workitems" / "WI-001" / "stages" / "qa" / "qa-report.md"
+    qa_path.write_text(
+        "# QA Report\n\n"
+        "## Quality verdict\n\n- QA verdict: ready\n\n"
+        "## Verification summary\n\n- Residue check. Evidence: EV-12.\n\n"
+        "## Release recommendation\n\n- proceed\n\n"
+        "## Evidence\n\n"
+        "- EV-12: Post-QA residue audit:\n"
+        "  - `git status --ignored --short --untracked-files=all` -> pass (exit code 0).\n\n"
+        "## Known issues\n\n- Known issues: none.\n\n"
+        "## Readiness\n\n- Ready. Evidence: EV-12.\n",
+        encoding="utf-8",
+    )
+
+    findings = validate_cross_document_consistency(
+        stage="qa", work_item="WI-001", workspace_root=workspace_root
+    )
+
+    assert findings
+    assert all(finding.code == QA_UPSTREAM_EVIDENCE_CODE for finding in findings)
+
+
 def test_qa_cross_validation_rejects_prose_only_bounded_product_diff_evidence(
     tmp_path: Path,
 ) -> None:

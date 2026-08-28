@@ -21,6 +21,9 @@ Summarize verification evidence, remaining risks, and release readiness.
 - `Release recommendation` declares exactly one supported state:
   `proceed`, `proceed-with-conditions`, or `hold`,
 - material evidence entries use stable `EV-N` ids and/or backticked artifact paths,
+- each `EV-N` definition is one top-level bullet containing exactly one executable command or one
+  exact upstream artifact path plus its explicit terminal outcome on the same bullet; nested command
+  bullets under a parent evidence id are invalid,
 - material verification and verdict claims in `Verification summary` and `Readiness` cite an
   `EV-N` defined in `Evidence` or an exact existing workspace-relative artifact path,
 - ready/proceed-style reports that cite test/type/lint/docs/build commands also cite
