@@ -7,8 +7,7 @@ slice, and local task.
 
 ## Next
 
-- `W45-E1-S5-T1` — Resolve valid work-item-relative QA evidence references without weakening
-  fail-closed upstream traceability.
+- None.
 
 ## Soon
 
@@ -38,6 +37,13 @@ slice, and local task.
   queue-restoration policy in `docs/backlog/roadmap.md` (`W8-E3-S1`).
 
 ## Current reconciliation
+
+- `2026-08-28` reconciliation after PR #448 (merge `63c08ab0`) marks `W45-E1-S5-T1` done and
+  leaves `Next`/`Soon` empty: QA upstream evidence now resolves valid work-item-relative context
+  and stage paths while rejecting traversal and other out-of-scope references. Focused
+  cross-document tests (`59 passed`), Ruff, mypy, full CI, deterministic scenarios, adapter
+  conformance, packaged UI browser, and build are green. The failed Claude medium bundle remains
+  retained for the fresh rerun; no Hono product or target-UI defect was found.
 
 - `2026-08-28` fresh Claude medium `eval-live-007-claude-code-20260828T122806Z` completed
   idea → review with target implementation, focused verification, and UI checkpoints clean, but

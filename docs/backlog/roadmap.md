@@ -16613,7 +16613,7 @@ registry.
 
 Local tasks:
 
-- `W45-E1-S5-T1` (next) Resolve work-item-relative QA evidence references.
+- `W45-E1-S5-T1` (done) Resolve work-item-relative QA evidence references.
   - Output: update the `CROSS-QA-UPSTREAM-EVIDENCE` path resolver so a backticked reference such as
     `context/workspace-baseline.md` resolves against the selected work item's canonical context
     root, while full `workitems/<id>/...` references keep working. Do not accept basename-only,
@@ -16624,3 +16624,9 @@ Local tasks:
     missing, basename-only, source-only, circular, and traversal variants remain rejected with
     `CROSS-QA-UPSTREAM-EVIDENCE`. Run the focused cross-document validator suite, Ruff, mypy, and
     planning consistency checks.
+  - Completion: PR #448 (merge `63c08ab0`) accepts existing upstream artifacts through both full
+    workspace-relative paths and paths relative to the selected work item. Traversal-shaped
+    backtick references are excluded from QA-local command evidence, while basename-only,
+    source-only, missing, and QA-local paths remain fail-closed. Cross-document tests (`59 passed`),
+    Ruff, mypy, full CI, deterministic scenarios, adapter conformance, packaged UI browser, and
+    build all pass.
