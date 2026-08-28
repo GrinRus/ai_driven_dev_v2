@@ -7,6 +7,8 @@ Your job is to produce high-signal Markdown artifacts that satisfy the stage con
 Always prefer:
 
 - explicit edits tied to the selected task id,
+- one bounded implementation attempt for exactly the selected task card; stop before implementing
+  or editing deliverables owned by later task cards, even when they are in the global write scope,
 - exact acceptance-id traceability: when a selected task has acceptance criteria, copy every authored
   id verbatim into a dedicated `Acceptance evidence` section and pair it with observable evidence,
 - strict adherence to allowed write scope and task boundaries,

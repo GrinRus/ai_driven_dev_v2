@@ -1245,6 +1245,27 @@ def test_implement_prompts_require_executable_verification_evidence() -> None:
     assert "continuing ad hoc debugging until timeout" in repair_prompt
 
 
+def test_implement_prompts_enforce_selected_task_execution_boundary() -> None:
+    run_prompt = Path("prompt-packs/stages/implement/run.md").read_text(encoding="utf-8")
+    system_prompt = Path("prompt-packs/stages/implement/system.md").read_text(encoding="utf-8")
+    normalized_run_prompt = " ".join(run_prompt.split())
+
+    assert "Execute exactly the selected task card from `context/task-selection.md`" in run_prompt
+    assert "Do not implement, edit tests for, or otherwise modify files" in run_prompt
+    assert "owned only by a later task card" in run_prompt
+    assert "Later cards must run in their own attempts" in run_prompt
+    assert "advance to the next dependency-ready card in the same attempt" in normalized_run_prompt
+    normalized_system_prompt = " ".join(system_prompt.split())
+    assert (
+        "one bounded implementation attempt for exactly the selected task card"
+        in normalized_system_prompt
+    )
+    assert (
+        "stop before implementing or editing deliverables owned by later task cards"
+        in normalized_system_prompt
+    )
+
+
 def test_implement_contract_and_prompts_scope_rich_task_evidence_locally() -> None:
     document_contract = Path(
         "contracts/documents/implementation-report.md"
