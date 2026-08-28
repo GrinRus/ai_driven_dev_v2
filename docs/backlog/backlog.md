@@ -7,7 +7,7 @@ slice, and local task.
 
 ## Next
 
-- None.
+- `W45-E1-S6-T1` — Parse executable evidence with nested code delimiters safely.
 
 ## Soon
 
@@ -37,6 +37,14 @@ slice, and local task.
   queue-restoration policy in `docs/backlog/roadmap.md` (`W8-E3-S1`).
 
 ## Current reconciliation
+
+- `2026-08-28` fresh Codex medium `eval-live-007-codex-20260828T145801Z` stopped at the
+  implementation stage after bounded repairs exhausted on `SEM-UNVERIFIABLE-CHECK-CLAIM`: a
+  truthful `bun -e` verification command contained JavaScript template-literal backticks, and the
+  shared evidence parser truncated the Markdown code span before recognizing the executable
+  command. The target Hono diff, UI checkpoints, and preceding stage audits were clean; this is a
+  bounded AIDD validator defect, so `W45-E1-S6-T1` is the sole Next task. The failed bundle remains
+  retained for the post-fix rerun.
 
 - `2026-08-28` reconciliation after PR #448 (merge `63c08ab0`) marks `W45-E1-S5-T1` done and
   leaves `Next`/`Soon` empty: QA upstream evidence now resolves valid work-item-relative context

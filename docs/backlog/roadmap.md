@@ -16630,3 +16630,27 @@ Local tasks:
     source-only, missing, and QA-local paths remain fail-closed. Cross-document tests (`59 passed`),
     Ruff, mypy, full CI, deterministic scenarios, adapter conformance, packaged UI browser, and
     build all pass.
+
+#### Slice W45-E1-S6 — nested-backtick executable evidence (`planned`)
+
+Goal: recognize truthful executable verification commands whose shell payload contains nested
+Markdown/code backticks while preserving fail-closed evidence validation.
+
+Dependencies: W45-E1-S5; the shared implementation evidence classifier and implementation-report
+contract.
+
+Local tasks:
+
+- `W45-E1-S6-T1` (next) Parse executable evidence with nested code delimiters safely.
+  - Output: update the shared implementation evidence parser so a command wrapped as Markdown
+    inline code can contain JavaScript or other nested backticks (for example a `bun -e` command
+    using a template literal) and still be recognized as executable evidence with its terminal
+    outcome. Preserve rejection of prose-only claims, command-without-outcome, malformed or
+    unclosed code, and existing QA-local circular/upstream path rules.
+  - Scope: `src/aidd/validators/semantic_rules/evidence.py` and focused implementation evidence
+    validator tests only; do not change runtime adapters, stage contracts, prompts, UI, or target
+    behavior.
+  - Verification: positive nested-backtick `bun`/`node` commands with `-> pass` are accepted;
+    ordinary commands remain accepted; malformed or unclosed nested code, prose-only claims, and
+    command-without-outcome remain rejected. Run focused implementation evidence tests, Ruff,
+    mypy, and planning consistency checks.
