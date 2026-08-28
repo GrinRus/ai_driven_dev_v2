@@ -137,6 +137,7 @@ _KNOWN_COMMAND_EXECUTABLES = frozenset(
 )
 _SHELL_ASSIGNMENT_PATTERN = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*=\S+$")
 _BACKTICKED_FRAGMENT_PATTERN = re.compile(r"`([^`\n]+)`")
+_BACKTICKED_RESULT_DELIMITER_PATTERN = re.compile(r"`\s*->\s*")
 _PROMPT_COMMAND_PATTERN = re.compile(r"^\s*\$\s+(.+?)\s*$", re.MULTILINE)
 _COMMAND_FIELD_PATTERN = re.compile(
     r"^\s*(?:-\s*)?Command\s*:\s*(.+?)\s*$",
@@ -220,9 +221,58 @@ def _looks_like_command(candidate: str, *, explicit_container: bool) -> bool:
     return executable.startswith(("./", "../", "/", ".venv/bin/", "node_modules/.bin/"))
 
 
+def _classify_backticked_command_with_result(text: str) -> bool | None:
+    """Recognize a command span whose payload contains literal backticks.
+
+    Markdown's single-backtick code spans cannot represent an unescaped
+    JavaScript template literal, but runtimes commonly emit exactly that shape
+    in one-line verification notes.  The terminal ``->`` marker gives us an
+    unambiguous right boundary; we still require balanced nested delimiters and
+    a command-shaped payload so prose or malformed spans remain fail-closed.
+    """
+
+    saw_malformed_nested_command = False
+    for line in text.splitlines():
+        backtick_openings = tuple(match.start() for match in re.finditer("`", line))
+        delimiters = tuple(_BACKTICKED_RESULT_DELIMITER_PATTERN.finditer(line))
+        for opening in backtick_openings:
+            prefix = line[:opening].strip()
+            if prefix and not prefix.endswith(":"):
+                continue
+            for delimiter in reversed(delimiters):
+                if delimiter.start() <= opening:
+                    continue
+                candidate = line[opening + 1 : delimiter.start()]
+                if "`" not in candidate:
+                    continue
+                normalized_candidate = candidate.replace("`", "")
+                if candidate.count("`") % 2 == 0 and _looks_like_command(
+                    normalized_candidate,
+                    explicit_container=False,
+                ):
+                    return True
+                if _command_starts_with_known_executable(normalized_candidate):
+                    saw_malformed_nested_command = True
+    return False if saw_malformed_nested_command else None
+
+
+def _command_starts_with_known_executable(candidate: str) -> bool:
+    """Recognize a command prefix even when malformed quoting blocks ``shlex``."""
+
+    tokens = candidate.strip().split()
+    if tokens and tokens[0].lower() == "env":
+        tokens.pop(0)
+    while tokens and _SHELL_ASSIGNMENT_PATTERN.fullmatch(tokens[0]):
+        tokens.pop(0)
+    return bool(tokens and tokens[0].lower() in _KNOWN_COMMAND_EXECUTABLES and len(tokens) > 1)
+
+
 def has_implementation_command_evidence(verification_item: str) -> bool:
     command_candidate = _without_non_command_artifact_text_outside_code(verification_item)
     if IMPLEMENT_REUSED_COMMAND_EVIDENCE_PATTERN.search(command_candidate) is not None:
+        return True
+    backticked_command_status = _classify_backticked_command_with_result(command_candidate)
+    if backticked_command_status is True:
         return True
     if any(
         _looks_like_command(match.group(1), explicit_container=True)
@@ -238,6 +288,8 @@ def has_implementation_command_evidence(verification_item: str) -> bool:
                 explicit_container=True,
             ):
                 return True
+    if backticked_command_status is False:
+        return False
     return any(
         _looks_like_command(match.group(1), explicit_container=False)
         for match in _BACKTICKED_FRAGMENT_PATTERN.finditer(command_candidate)
