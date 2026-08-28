@@ -7,7 +7,8 @@ slice, and local task.
 
 ## Next
 
-- None.
+- `W45-E1-S5-T1` — Resolve valid work-item-relative QA evidence references without weakening
+  fail-closed upstream traceability.
 
 ## Soon
 
@@ -37,6 +38,14 @@ slice, and local task.
   queue-restoration policy in `docs/backlog/roadmap.md` (`W8-E3-S1`).
 
 ## Current reconciliation
+
+- `2026-08-28` fresh Claude medium `eval-live-007-claude-code-20260828T122806Z` completed
+  idea → review with target implementation, focused verification, and UI checkpoints clean, but
+  QA exhausted three bounded repairs on `CROSS-QA-UPSTREAM-EVIDENCE`. The remaining finding is a
+  validator path-resolution gap: `context/workspace-baseline.md` is valid relative to the selected
+  work item but is not recognized unless prefixed with `workitems/<id>/`. `W45-E1-S5-T1` is the
+  sole dependency-ready task; the failed bundle and stage audits remain retained. No Hono product
+  or target-UI defect was found.
 
 - `2026-08-28` reconciliation after PR #445 (merge `72049686`) marks `W45-E1-S4-T1` done. QA
   authoring now requires one top-level `EV-N` per executable command or exact upstream artifact,
