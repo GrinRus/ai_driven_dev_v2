@@ -35,6 +35,33 @@ def test_command_evidence_accepts_only_explicit_command_shapes(evidence: str) ->
 @pytest.mark.parametrize(
     "evidence",
     (
+        "`bun -e 'console.log(`ok`)'` -> pass",
+        '`node -e "console.log(`ok`)"` -> pass',
+        "``bun -e 'console.log(`ok`)'`` -> exit code 0",
+    ),
+)
+def test_command_evidence_accepts_nested_backtick_payloads(evidence: str) -> None:
+    assert has_implementation_command_evidence(evidence)
+
+
+@pytest.mark.parametrize(
+    "evidence",
+    (
+        "`bun -e 'console.log(`ok`)'`",
+        "`bun -e console.log(`ok` -> pass",
+        "`bun -e 'console.log(`ok`)' -> pass",
+        "The `bun` example `ran` -> pass",
+    ),
+)
+def test_command_evidence_rejects_malformed_nested_backtick_payloads(
+    evidence: str,
+) -> None:
+    assert not has_implementation_command_evidence(evidence)
+
+
+@pytest.mark.parametrize(
+    "evidence",
+    (
         "pytest passed.",
         "Checked with ruff and it succeeded.",
         "sh passed.",

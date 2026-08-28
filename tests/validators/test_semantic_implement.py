@@ -788,6 +788,7 @@ def test_validate_semantic_outputs_accepts_bun_verification_evidence(
             "- `bunx vitest --run tests/pipeline.test.ts tests/runtime-error.test.ts` "
             "-> exit code 0; captured summary `Test Files 2 passed (2)` and "
             "`Tests 241 passed (241)`.\n"
+            "- `bun -e 'console.log(`nested template literal`)'` -> pass.\n"
             "- `bunx tsc --noEmit` -> exit code 0; captured output contained no diagnostics.\n"
             "- `./node_modules/.bin/prettier --check src/runtime-error-utils.ts "
             "src/runtime-error.ts` "
