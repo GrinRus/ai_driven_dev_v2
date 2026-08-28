@@ -72,8 +72,14 @@ consistent across `implementation-report.md`, `validator-report.md`, and `stage-
 2. When `context/allowed-write-scope.md` is provided, it is a hard boundary for touched files.
 3. When provided, `context/acceptance-criteria.md` and `context/verification-output.md` define the
    authored acceptance and verification baseline for the implementation.
-4. Change summary must describe what changed, why it changed, and how it maps to the selected task id.
-5. Touched-files list must include concrete path + short intent per entry and never claim unobserved edits.
+4. Execute exactly the selected task card from `context/task-selection.md` as one bounded
+   implementation unit, then stop. Do not implement, edit tests for, or otherwise modify files
+   owned only by a later task card, even when those paths are present in the global allowed write
+   scope. Later cards must run in their own attempts. If a later card's existing test is useful,
+   run it read-only when possible; never pre-implement its deliverable or advance to the next
+   dependency-ready card in the same attempt.
+5. Change summary must describe what changed, why it changed, and how it maps to the selected task id.
+6. Touched-files list must include concrete path + short intent per entry and never claim unobserved edits.
    For a rich task attempt, report only the current task-local repository diff between that task's
    baseline and final snapshot. Exclude prerequisite changes unless the current task changes them again.
    Do not use the cumulative workspace or cumulative `git diff`
