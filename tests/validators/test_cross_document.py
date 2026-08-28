@@ -3,6 +3,8 @@ from __future__ import annotations
 import shutil
 from pathlib import Path
 
+import pytest
+
 from aidd.validators.cross_document import (
     ANSWER_WITHOUT_QUESTION_CODE,
     BLOCKING_UNANSWERED_CODE,
@@ -1608,6 +1610,74 @@ def test_qa_cross_validation_accepts_exact_upstream_traceability(tmp_path: Path)
     )
 
     assert findings == ()
+
+
+def test_qa_cross_validation_accepts_work_item_relative_upstream_path(
+    tmp_path: Path,
+) -> None:
+    workspace_root = tmp_path / ".aidd"
+    _write_qa_upstream_bundle(workspace_root)
+    context_path = workspace_root / "workitems" / "WI-001" / "context" / "workspace-baseline.md"
+    context_path.parent.mkdir(parents=True)
+    context_path.write_text("# Workspace baseline\n", encoding="utf-8")
+    qa_path = workspace_root / "workitems" / "WI-001" / "stages" / "qa" / "qa-report.md"
+    qa_path.write_text(
+        "# QA Report\n\n"
+        "## Quality verdict\n\nQA verdict: ready-with-risks\n\n"
+        "## Residual risks\n\n"
+        "- QR-1 (`medium`, Evidence: EV-11): bounded residual risk.\n\n"
+        "## Release recommendation\n\n- proceed-with-conditions\n\n"
+        "## Evidence references\n\n"
+        "- EV-11: `context/workspace-baseline.md` -> pass.\n",
+        encoding="utf-8",
+    )
+
+    findings = validate_cross_document_consistency(
+        stage="qa", work_item="WI-001", workspace_root=workspace_root
+    )
+
+    assert findings == ()
+
+
+@pytest.mark.parametrize(
+    "reference",
+    (
+        "workspace-baseline.md",
+        "context/missing.md",
+        "src/compose.ts",
+        "../context/workspace-baseline.md",
+        "stages/qa/qa-report.md",
+    ),
+)
+def test_qa_cross_validation_rejects_unresolved_relative_upstream_path(
+    tmp_path: Path,
+    reference: str,
+) -> None:
+    workspace_root = tmp_path / ".aidd"
+    _write_qa_upstream_bundle(workspace_root)
+    context_path = workspace_root / "workitems" / "WI-001" / "context" / "workspace-baseline.md"
+    context_path.parent.mkdir(parents=True)
+    context_path.write_text("# Workspace baseline\n", encoding="utf-8")
+    qa_path = workspace_root / "workitems" / "WI-001" / "stages" / "qa" / "qa-report.md"
+    qa_path.write_text(
+        "# QA Report\n\n"
+        "## Quality verdict\n\nQA verdict: ready-with-risks\n\n"
+        "## Residual risks\n\n"
+        "- QR-1 (`medium`, Evidence: EV-11): bounded residual risk.\n\n"
+        "## Release recommendation\n\n- proceed-with-conditions\n\n"
+        "## Evidence references\n\n"
+        f"- EV-11: `{reference}` -> pass.\n",
+        encoding="utf-8",
+    )
+
+    findings = validate_cross_document_consistency(
+        stage="qa", work_item="WI-001", workspace_root=workspace_root
+    )
+
+    assert [finding.code for finding in findings] == [
+        QA_REVIEW_RISK_CODE,
+        QA_UPSTREAM_EVIDENCE_CODE,
+    ]
 
 
 def test_qa_cross_validation_resolves_qa_local_evidence_id_from_context_artifact(

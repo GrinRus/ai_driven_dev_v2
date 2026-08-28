@@ -36,6 +36,11 @@ _REVIEW_ACCEPTED_RISK_PATTERN = re.compile(r"\bAR-[1-9]\d*\b", re.IGNORECASE)
 _QA_EVIDENCE_ENTRY_PATTERN = re.compile(r"^\s*-\s+", re.MULTILINE)
 
 
+def _contains_path_traversal(reference: str) -> bool:
+    normalized = reference.strip().replace("\\", "/")
+    return ".." in normalized.split("/")
+
+
 def validate_qa_upstream(context: CrossDocumentContext) -> tuple[ValidationFinding, ...]:
     if (
         context.stage != "qa"
@@ -69,11 +74,15 @@ def validate_qa_upstream(context: CrossDocumentContext) -> tuple[ValidationFindi
         )),
     )
     available_paths = {
-        workspace_relative(path, context.workspace_root)
+        reference
         for root in upstream_artifact_roots
         if root.is_dir()
         for path in root.rglob("*")
         if path.is_file()
+        for reference in (
+            workspace_relative(path, context.workspace_root),
+            path.relative_to(work_item_root).as_posix(),
+        )
     }
 
     def resolved_upstream_reference(text: str) -> bool:
@@ -94,6 +103,11 @@ def validate_qa_upstream(context: CrossDocumentContext) -> tuple[ValidationFindi
         )
 
     def resolved_qa_local_command_evidence(text: str) -> bool:
+        if any(
+            _contains_path_traversal(reference)
+            for reference in _BACKTICKED_REFERENCE_PATTERN.findall(text)
+        ):
+            return False
         return (
             has_implementation_command_evidence(text)
             and IMPLEMENT_RESULT_PATTERN.search(text) is not None
