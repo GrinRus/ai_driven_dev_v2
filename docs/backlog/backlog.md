@@ -7,8 +7,8 @@ slice, and local task.
 
 ## Next
 
-- None. Fresh Codex and Claude medium runs are both counted-clean; no new product defect or UI
-  mismatch was found. Resume the planned queue when the next scoped task is selected.
+- `W45-E1-S3-T1` — enforce the selected implementation task as a hard execution boundary so a
+  runtime cannot modify later tasklist cards during the current attempt.
 
 ## Soon
 
@@ -38,6 +38,14 @@ slice, and local task.
   queue-restoration policy in `docs/backlog/roadmap.md` (`W8-E3-S1`).
 
 ## Current reconciliation
+
+- `2026-08-28` fresh Claude medium `eval-live-007-claude-code-20260828T061232Z` reached the
+  implementation stage but failed closed after the runtime advanced from selected `TL-2` into
+  later `TL-3` test files (`src/hono.test.ts`). The canonical validator reported
+  `SEM-TASK-SCOPE-MISMATCH`/`SEM-TASK-DIFF-MISMATCH`, and the repair budget was exhausted without
+  weakening scope checks. This is an AIDD implementation-boundary defect, not a Hono behavior or
+  UI mismatch; `W45-E1-S3-T1` is the sole Next task. The run and `log-analysis.md` remain retained
+  as diagnostic evidence; Codex and the earlier clean Claude medium evidence remain valid.
 
 - `2026-08-28` fresh Claude medium `eval-live-007-claude-code-20260827T223441Z` was rerun from
   clean `main` after PR #438 and completed `idea -> qa` with terminal `pass` and manual
