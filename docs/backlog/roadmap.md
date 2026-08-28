@@ -16582,7 +16582,7 @@ and `CROSS-QA-UPSTREAM-EVIDENCE` validator.
 
 Local tasks:
 
-- `W45-E1-S4-T1` (next) Harden QA evidence authoring for one-command-per-entry outcomes.
+- `W45-E1-S4-T1` (done) Harden QA evidence authoring for one-command-per-entry outcomes.
   - Output: update the QA prompt/contract guidance and deterministic regression fixtures so each
     `EV-N` definition contains one executable command (or one exact upstream artifact path) and an
     explicit terminal outcome such as `pass`, `fail`, `no output`, or `exit code 0`. Prohibit a
@@ -16596,3 +16596,9 @@ Local tasks:
     revalidates from `CROSS-QA-UPSTREAM-EVIDENCE` findings to zero; malformed nested, omitted-outcome,
     and prose-only variants remain rejected. Run focused QA validator/prompt tests, Ruff, mypy, and
     planning consistency.
+  - Completion: PR #445 (merge `72049686`) adds explicit one-command-per-entry guidance to the QA
+    run and repair prompts and document contract, updates prompt hash fixtures, and adds a nested
+    evidence regression. Focused cross-document/prompt tests (`136` and `138` passed), Ruff, mypy,
+    full CI, deterministic scenarios, adapter conformance, packaged UI browser, security, and build
+    all pass. The original failed Claude medium bundle remains retained; a fresh Claude rerun is
+    required to confirm the runtime now authors the corrected shape.

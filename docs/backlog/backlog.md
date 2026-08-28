@@ -7,7 +7,7 @@ slice, and local task.
 
 ## Next
 
-- `W45-E1-S4-T1` — Harden QA evidence authoring for one-command-per-entry outcomes.
+- None.
 
 ## Soon
 
@@ -37,6 +37,15 @@ slice, and local task.
   queue-restoration policy in `docs/backlog/roadmap.md` (`W8-E3-S1`).
 
 ## Current reconciliation
+
+- `2026-08-28` reconciliation after PR #445 (merge `72049686`) marks `W45-E1-S4-T1` done. QA
+  authoring now requires one top-level `EV-N` per executable command or exact upstream artifact,
+  with an explicit terminal outcome on that same bullet; nested parent evidence, bounded-diff
+  counts without `pass`, and command-without-outcome shapes remain fail-closed. Focused QA and
+  cross-document tests, Ruff, mypy, full CI, deterministic scenarios, adapter conformance,
+  packaged UI browser, security, and build are green. `Next` is intentionally empty while the
+  fresh Claude medium rerun is executed from this clean `main`; the previous failed bundle remains
+  diagnostic evidence and no target product or UI defect was found.
 
 - `2026-08-28` planning update after fresh Claude medium
   `eval-live-007-claude-code-20260828T094324Z`: target implementation, review, scope fidelity,
