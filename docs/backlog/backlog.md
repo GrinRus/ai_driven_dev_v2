@@ -7,7 +7,7 @@ slice, and local task.
 
 ## Next
 
-- `W45-E1-S6-T1` — Parse executable evidence with nested code delimiters safely.
+- None.
 
 ## Soon
 
@@ -37,6 +37,15 @@ slice, and local task.
   queue-restoration policy in `docs/backlog/roadmap.md` (`W8-E3-S1`).
 
 ## Current reconciliation
+
+- `2026-08-28` reconciliation after PR #451 (merge `809c67be`) marks `W45-E1-S6-T1` done and
+  leaves `Next`/`Soon` empty pending the fresh medium rerun. The implementation evidence parser
+  now recognizes valid nested-backtick `bun`/`node` commands using a bounded terminal outcome
+  marker, while malformed, unclosed, prose-only, and command-without-outcome evidence remains
+  fail-closed. Focused evidence/semantic tests (`70 passed`), full validators (`352 passed`), Ruff,
+  mypy, planning/docs checks, packaged UI browser, deterministic scenarios, adapter conformance,
+  security, and build are green. The prior Codex failure is retained as diagnostic evidence; no
+  Hono product or target-UI defect was found.
 
 - `2026-08-28` fresh Codex medium `eval-live-007-codex-20260828T145801Z` stopped at the
   implementation stage after bounded repairs exhausted on `SEM-UNVERIFIABLE-CHECK-CLAIM`: a
