@@ -16641,7 +16641,7 @@ contract.
 
 Local tasks:
 
-- `W45-E1-S6-T1` (next) Parse executable evidence with nested code delimiters safely.
+- `W45-E1-S6-T1` (done) Parse executable evidence with nested code delimiters safely.
   - Output: update the shared implementation evidence parser so a command wrapped as Markdown
     inline code can contain JavaScript or other nested backticks (for example a `bun -e` command
     using a template literal) and still be recognized as executable evidence with its terminal
@@ -16654,3 +16654,10 @@ Local tasks:
     ordinary commands remain accepted; malformed or unclosed nested code, prose-only claims, and
     command-without-outcome remain rejected. Run focused implementation evidence tests, Ruff,
     mypy, and planning consistency checks.
+  - Completion: PR #451 (merge `809c67be`) teaches the shared classifier to use the terminal
+    outcome marker as the right boundary for nested code payloads, requires balanced delimiters and
+    a known executable prefix, and keeps malformed/prose evidence fail-closed. Focused evidence
+    and semantic implement tests (`70 passed`), the full validator suite (`352 passed`), Ruff,
+    mypy, planning/docs checks, packaged UI browser, deterministic scenarios, adapter conformance,
+    security, and build all pass. The failed Codex medium bundle remains retained for a fresh
+    provider rerun from this clean main.
