@@ -93,6 +93,10 @@ Use concrete repair actions:
   bullet as an index entry and add the corresponding `EV-N` from `Evidence` or an exact existing
   workspace-relative artifact path. Rewriting only the path inside `Evidence` is insufficient;
   do not leave a bare command/result bullet in either index section;
+  every `EV-N` must remain a single top-level definition with one executable command or one exact
+  upstream artifact and an explicit outcome on that same bullet. Flatten nested command bullets
+  into separate evidence ids before retrying; bounded diff checks must contain literal `-> pass`
+  (or another supported outcome), not only a count such as `exactly four files`.
 - missing ready/proceed residue evidence: when the report cites test/type/lint/docs/build checks
   and keeps `ready`/`proceed` or `ready-with-risks`/`proceed-with-conditions`, add a
   post-QA `git status --ignored --short --untracked-files=all` evidence entry, cite it from
