@@ -16097,6 +16097,29 @@ Local tasks:
     top-level paths continue to fail with `SEM-TASK-DIFF-MISMATCH`/scope findings. Run focused core
     repository-evidence tests, Ruff, mypy, and the planning consistency checks.
 
+#### Slice W45-E1-S3 — selected-task execution scope fidelity (`planned`)
+
+Goal: keep each implementation attempt bounded to the one dependency-ready task selected by the
+ledger, so later task work cannot invalidate the current task's evidence or exhaust repair budget.
+
+Dependencies: W45-E1-S2; task-local baseline/diff evidence and the implement prompt contract.
+
+Local tasks:
+
+- `W45-E1-S3-T1` (next) Enforce the selected implementation task as a hard execution boundary.
+  - Output: strengthen the implement prompt and deterministic contract fixtures so the runtime must
+    change and report only the selected task's `In scope` paths, stop before later tasklist cards,
+    and leave later tests or deliverables for their own dependency-ready attempt. Preserve the
+    existing global allowed-write scope, task-local baseline/diff evidence, fail-closed mismatch
+    findings, and one-task-at-a-time ledger semantics.
+  - Scope: `prompt-packs/stages/implement/run.md`, `prompt-packs/stages/implement/system.md`, and
+    focused prompt/semantic/harness fixtures and tests only; do not weaken task-diff validation,
+    change runtime adapters, or alter public UI behavior.
+  - Verification: deterministic prompt/fixture checks prove selected-task-only guidance and later
+    task isolation; an out-of-scope task diff remains rejected with
+    `SEM-TASK-SCOPE-MISMATCH`; run focused implement/evidence tests, Ruff, mypy, and planning
+    consistency checks.
+
 - `2026-08-28` fresh Claude medium `eval-live-007-claude-code-20260827T223441Z` was rerun from
   clean `main` after the W45 evidence-contract fixes and completed `idea -> qa` with terminal
   `pass` and manual `counted-clean` quality evidence. All eight stage quality audits chose
