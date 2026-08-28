@@ -16570,3 +16570,29 @@ Local tasks:
   browser/contract tests, the full frontend suite, docs/planning checks, Ruff, mypy, packaged UI
   browser, deterministic scenarios, adapter conformance, and build passed; desktop shell
   composition remained planned.
+
+#### Slice W45-E1-S4 — QA evidence entry shape (`planned`)
+
+Goal: keep QA-local command evidence truthful and directly resolvable when a runtime author
+records multiple verification commands, without weakening the fail-closed upstream traceability
+contract.
+
+Dependencies: W45-E1-S3; the QA report contract, prompt pack, shared executable-command classifier,
+and `CROSS-QA-UPSTREAM-EVIDENCE` validator.
+
+Local tasks:
+
+- `W45-E1-S4-T1` (next) Harden QA evidence authoring for one-command-per-entry outcomes.
+  - Output: update the QA prompt/contract guidance and deterministic regression fixtures so each
+    `EV-N` definition contains one executable command (or one exact upstream artifact path) and an
+    explicit terminal outcome such as `pass`, `fail`, `no output`, or `exit code 0`. Prohibit a
+    parent evidence bullet with nested command bullets, require explicit `pass` for bounded diff
+    claims, and preserve fail-closed rejection of prose-only, source-only, circular, basename-only,
+    and command-without-outcome evidence. Do not broaden upstream artifact roots or change target
+    runtime behavior.
+  - Scope: `prompt-packs/stages/qa/`, `contracts/documents/qa-report.md`, and focused QA
+    cross-document/prompt fixtures and tests only; no adapters, UI, scenario, or public API changes.
+  - Verification: the Claude medium QA shape with bounded diff and post-QA residue commands
+    revalidates from `CROSS-QA-UPSTREAM-EVIDENCE` findings to zero; malformed nested, omitted-outcome,
+    and prose-only variants remain rejected. Run focused QA validator/prompt tests, Ruff, mypy, and
+    planning consistency.
