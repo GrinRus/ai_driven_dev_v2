@@ -7,8 +7,7 @@ slice, and local task.
 
 ## Next
 
-- `W45-E1-S3-T1` — enforce the selected implementation task as a hard execution boundary so a
-  runtime cannot modify later tasklist cards during the current attempt.
+- None.
 
 ## Soon
 
@@ -38,6 +37,13 @@ slice, and local task.
   queue-restoration policy in `docs/backlog/roadmap.md` (`W8-E3-S1`).
 
 ## Current reconciliation
+
+- `2026-08-28` reconciliation after PR #442 (merge `21e75401`) marks `W45-E1-S3-T1` done. The
+  implement prompts now enforce one selected task card per attempt and forbid edits to later-card
+  deliverables; active prompt hashes and focused regression coverage were updated. Focused prompt/
+  evidence tests (`138 passed`), Ruff, mypy, planning checks, and full CI including packaged UI
+  browser are green. The implementation-boundary fix is merged; the next action is a fresh medium
+  rerun on clean `main` for both Codex and Claude.
 
 - `2026-08-28` fresh Claude medium `eval-live-007-claude-code-20260828T061232Z` reached the
   implementation stage but failed closed after the runtime advanced from selected `TL-2` into

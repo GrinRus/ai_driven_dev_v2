@@ -16106,7 +16106,7 @@ Dependencies: W45-E1-S2; task-local baseline/diff evidence and the implement pro
 
 Local tasks:
 
-- `W45-E1-S3-T1` (next) Enforce the selected implementation task as a hard execution boundary.
+- `W45-E1-S3-T1` (done) Enforce the selected implementation task as a hard execution boundary.
   - Output: strengthen the implement prompt and deterministic contract fixtures so the runtime must
     change and report only the selected task's `In scope` paths, stop before later tasklist cards,
     and leave later tests or deliverables for their own dependency-ready attempt. Preserve the
@@ -16119,6 +16119,14 @@ Local tasks:
     task isolation; an out-of-scope task diff remains rejected with
     `SEM-TASK-SCOPE-MISMATCH`; run focused implement/evidence tests, Ruff, mypy, and planning
     consistency checks.
+
+- `2026-08-28` reconciliation after PR #442 (merge `21e75401`) marks `W45-E1-S3-T1` done. The
+  implement run and system prompts now require one bounded attempt for exactly the selected task
+  card and prohibit editing deliverables owned by later cards; prompt-pack hash fixtures and
+  regression coverage were updated. Focused prompt/evidence tests (`138 passed`), Ruff, mypy,
+  planning checks, and full CI including deterministic scenarios, adapter conformance, packaged UI
+  browser, security, and build checks are green. The selected-task boundary fix is ready for a
+  fresh Codex/Claude medium rerun from clean `main`.
 
 - `2026-08-28` fresh Claude medium `eval-live-007-claude-code-20260827T223441Z` was rerun from
   clean `main` after the W45 evidence-contract fixes and completed `idea -> qa` with terminal
