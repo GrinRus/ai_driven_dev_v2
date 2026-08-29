@@ -154,6 +154,30 @@ def _section(markdown: str, heading: str) -> str:
     return match.group("body").strip() if match is not None else ""
 
 
+def _section_bullets(markdown: str, heading: str) -> tuple[str, ...]:
+    """Return top-level bullets with wrapped Markdown lines joined together.
+
+    Runtime-authored implementation reports often wrap a verification item over
+    several physical lines.  Treat only column-zero ``- `` markers as new items;
+    indented lines remain part of the preceding item so command and result
+    evidence cannot be split into unverifiable fragments during aggregation.
+    """
+
+    section = _section(markdown, heading)
+    bullets: list[str] = []
+    current: str | None = None
+    for raw_line in section.splitlines():
+        if raw_line.startswith("- "):
+            if current is not None:
+                bullets.append(current)
+            current = raw_line[2:].strip()
+        elif current is not None and raw_line.strip():
+            current += " " + raw_line.strip()
+    if current is not None:
+        bullets.append(current)
+    return tuple(bullets)
+
+
 def render_aggregate_implementation_report(
     *,
     plan: TaskPlan,
@@ -184,12 +208,11 @@ def render_aggregate_implementation_report(
                 and normalized_line not in touched
             ):
                 touched.append(normalized_line)
-        verification_section = _section(report, "Verification") or _section(
-            report, "Verification notes"
+        verification_section = (
+            "Verification" if _section(report, "Verification") else "Verification notes"
         )
-        for line in verification_section.splitlines():
-            if line.strip().startswith("-"):
-                verification.append(f"- `{task.id}` {line.strip()[1:].strip()}")
+        for bullet in _section_bullets(report, verification_section):
+            verification.append(f"- `{task.id}` {bullet}")
         for criterion in task.acceptance_criteria:
             verification.append(
                 f"- `{task.id}` `{criterion.id}` -> covered by "
