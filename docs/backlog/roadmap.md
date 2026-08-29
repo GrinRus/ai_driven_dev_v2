@@ -16681,3 +16681,25 @@ Local tasks:
     evidence/semantic tests (`76 passed`), the full validator suite (`358 passed`), Ruff, mypy, and
     planning/docs checks (`50 passed`) are green. A fresh Claude Large rerun is required from this
     clean main; the prior blocked run remains retained as diagnostic evidence.
+
+#### Slice W45-E1-S7 — tasklist verification mapping (`planned`)
+
+Goal: make tasklist authoring unambiguous for the required per-task verification mapping so
+providers do not put the only concrete command evidence in nested bullets that the canonical
+parser cannot associate with a task id.
+
+Dependencies: W45-E1-S6; the tasklist rich-card contract and canonical task-plan parser.
+
+Local tasks:
+
+- `W45-E1-S7-T1` (next) Clarify same-line verification mapping in tasklist prompts and repair guidance.
+  - Output: update the tasklist run and repair prompt packs with an explicit same-line
+    `- <task-id>: <concrete check/result>` example for the `Verification notes` section and a
+    prohibition on leaving the mapped value empty with commands only in nested bullets. Preserve
+    the existing rich-card, dependency, execution-mode, and fail-closed validation contracts.
+  - Scope: `prompt-packs/stages/tasklist/run.md`, `prompt-packs/stages/tasklist/repair.md`,
+    `tests/test_prompt_quality.py`, and `tests/fixtures/active_prompt_pack_hashes.json` only;
+    do not change the task-plan parser, stage contracts, runtime adapters, or UI behavior.
+  - Verification: prompt-quality tests assert the explicit same-line syntax and nested-only
+    prohibition; active prompt hashes are updated; focused prompt tests, Ruff, mypy, and planning
+    consistency checks pass. A tasklist with an empty `- TL-N:` mapping remains fail-closed.
