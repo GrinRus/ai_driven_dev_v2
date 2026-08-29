@@ -1265,6 +1265,29 @@ def test_implement_prompts_require_executable_verification_evidence() -> None:
     assert "continuing ad hoc debugging until timeout" in repair_prompt
 
 
+def test_implement_prompt_requires_deterministic_async_test_cleanup() -> None:
+    run_prompt = Path("prompt-packs/stages/implement/run.md").read_text(
+        encoding="utf-8"
+    )
+
+    assert "Async test resource cleanup" in run_prompt
+    assert "async generator or iterator" in run_prompt
+    assert "`aclosing`" in run_prompt
+    assert "deterministic close protocol" in run_prompt
+    assert "every configured AnyIO backend" in run_prompt
+    assert "asyncio and" in run_prompt and "Trio" in run_prompt
+    assert "`ResourceWarning`" in run_prompt
+    assert "`PytestUnraisableExceptionWarning`" in run_prompt
+    assert "verification failures" in run_prompt
+    assert "do not suppress the warning" in run_prompt
+    assert "Accept an interrupted-generator fixture only" in run_prompt
+    assert "explicit cleanup mechanism" in run_prompt
+    assert "Reject or flag the exact" in run_prompt
+    assert "unclosed-generator pattern" in run_prompt
+    assert "direct-ASGI coverage rationale" in run_prompt
+    assert "weakening production behavior" in run_prompt
+
+
 def test_implement_prompts_enforce_selected_task_execution_boundary() -> None:
     run_prompt = Path("prompt-packs/stages/implement/run.md").read_text(encoding="utf-8")
     system_prompt = Path("prompt-packs/stages/implement/system.md").read_text(encoding="utf-8")
