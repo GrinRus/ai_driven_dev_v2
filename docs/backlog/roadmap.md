@@ -16734,7 +16734,7 @@ Local tasks:
     checks (`50 passed`), Ruff, mypy, and PR CI passed. A subsequent Claude Large quality audit
     found a separate target-test async-generator cleanup defect; it is tracked in W45-E1-S9-T1.
 
-#### Slice W45-E1-S9 — Large target regression-test cleanup (`planned`)
+#### Slice W45-E1-S9 — Large target regression-test cleanup (`done`)
 
 Goal: ensure provider-authored async regression tests in Large live runs cleanly release
 resources across every supported AnyIO backend before target quality is accepted.
@@ -16743,7 +16743,7 @@ Dependencies: W45-E1-S8; Large live implementation quality review and provider-f
 
 Local tasks:
 
-- `W45-E1-S9-T1` (next) Require deterministic async-generator cleanup in live-authored regression tests.
+- `W45-E1-S9-T1` (done) Require deterministic async-generator cleanup in live-authored regression tests.
   - Output: update the implementation-stage authoring guidance and focused quality fixtures so
     async-generator-backed tests use explicit cleanup (for example `aclosing`) when a hard
     disconnect can interrupt iteration. Preserve direct-ASGI coverage rationale, bounded target
@@ -16755,3 +16755,9 @@ Local tasks:
     explicit cleanup evidence; the exact malformed/unclosed-generator pattern is rejected or
     flagged, existing implementation evidence remains valid, and focused prompt/semantic,
     Ruff, mypy, and planning checks pass.
+  - Completion: PR #462 (merge `8e1727d8`) adds implementation-stage guidance requiring explicit
+    cleanup for interrupted async generators, clean asyncio/Trio evidence, and fail-closed handling
+    of `ResourceWarning`, `PytestUnraisableExceptionWarning`, and unclosed-generator fixtures.
+    Prompt/packaging tests (`87 passed`), docs/planning checks (`50 passed`), Ruff, mypy, and full
+    required CI including packaged UI browser, deterministic scenarios, adapter conformance, and
+    build passed.
