@@ -7,7 +7,7 @@ slice, and local task.
 
 ## Next
 
-- None.
+- `W45-E1-S10-T2` — Accept hyphenated negative verification outcomes as observed terminal results.
 
 ## Soon
 
@@ -37,6 +37,13 @@ slice, and local task.
   queue-restoration policy in `docs/backlog/roadmap.md` (`W8-E3-S1`).
 
 ## Current reconciliation
+
+- `2026-08-30` fresh Claude Large `eval-live-012-claude-code-20260829T230612Z` reached the intended
+  bounded Starlette implementation and target tests passed, but implement validation failed closed
+  on `SEM-UNVERIFIABLE-CHECK-CLAIM`: the executable residue audit used the truthful result marker
+  `-> no-test-cache-residue`, which the shared evidence matcher did not recognize. No target product
+  or UI/design defect was found; the target is backend-only and AIDD operator UI/API checkpoints
+  remained green. `W45-E1-S10-T2` is the sole Next task before a fresh Large Codex/Claude lane.
 
 - `2026-08-30` reconciliation after PR #465 (merge `f3e9abbf`) marks `W45-E1-S10-T1` done. The
   implementation prompt now requires authored command and terminal outcome text to remain in one
