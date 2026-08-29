@@ -7,7 +7,7 @@ slice, and local task.
 
 ## Next
 
-- None.
+- `W45-E1-S10-T1` — Define exact authored-command evidence formatting for implementation reports.
 
 ## Soon
 
@@ -37,6 +37,14 @@ slice, and local task.
   queue-restoration policy in `docs/backlog/roadmap.md` (`W8-E3-S1`).
 
 ## Current reconciliation
+
+- `2026-08-30` fresh Claude Large `eval-live-012-claude-code-20260829T202033Z` reached the
+  target implementation with the intended bounded Starlette change and passing target checks, but
+  AIDD stopped fail-closed because the authored verification command/result was split across
+  Markdown code-span delimiters. This is a new implementation-report authoring-contract gap,
+  tracked as `W45-E1-S10-T1`; no target product or UI defect was found. The backend-only target has
+  no visual design surface, while the operator UI/API checkpoint remained green. The next action is
+  to merge the bounded guidance/fixture fix and rerun the same Large Claude lane from clean `main`.
 
 - `2026-08-29` reconciliation after PR #462 (merge `8e1727d8`) marks `W45-E1-S9-T1` done. The
   implementation prompt now requires explicit cleanup for interrupted async generators, clean
