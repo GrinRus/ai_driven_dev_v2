@@ -16662,7 +16662,7 @@ Local tasks:
     security, and build all pass. The failed Codex medium bundle remains retained for a fresh
     provider rerun from this clean main.
 
-- `W45-E1-S6-T2` (next) Implement multiline heredoc command evidence recognition.
+- `W45-E1-S6-T2` (done) Implement multiline heredoc command evidence recognition.
   - Output: extend the shared implementation evidence classifier so a valid multiline heredoc
     command wrapped in a Markdown inline code span (for example `uv run --frozen python - <<'PY' ...
     PY` followed by `-> pass`) is recognized as executable evidence with its terminal outcome.
@@ -16676,3 +16676,8 @@ Local tasks:
     accepted; malformed/unclosed multiline spans, prose-only claims, and command-without-outcome
     remain rejected. Run focused implementation evidence/semantic tests, Ruff, mypy, and planning
     consistency checks.
+  - Completion: PR #455 (merge `5dfed7d6`) recognizes closed multiline inline-code/heredoc command
+    spans using the executable prefix while preserving fail-closed malformed/prose handling. Focused
+    evidence/semantic tests (`76 passed`), the full validator suite (`358 passed`), Ruff, mypy, and
+    planning/docs checks (`50 passed`) are green. A fresh Claude Large rerun is required from this
+    clean main; the prior blocked run remains retained as diagnostic evidence.

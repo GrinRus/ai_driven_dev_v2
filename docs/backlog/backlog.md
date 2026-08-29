@@ -7,9 +7,7 @@ slice, and local task.
 
 ## Next
 
-- `W45-E1-S6-T2` — Implement multiline heredoc command evidence recognition so valid multi-line
-  executable verification spans with terminal outcomes pass while malformed or unverifiable claims
-  remain fail-closed.
+- None.
 
 ## Soon
 
@@ -39,6 +37,13 @@ slice, and local task.
   queue-restoration policy in `docs/backlog/roadmap.md` (`W8-E3-S1`).
 
 ## Current reconciliation
+
+- `2026-08-29` reconciliation after PR #455 (merge `5dfed7d6`) marks `W45-E1-S6-T2` done. The
+  implementation evidence parser now recognizes valid closed multiline heredoc command spans with
+  terminal outcomes while retaining fail-closed handling for malformed, unclosed, prose-only, and
+  command-without-outcome evidence. Focused evidence/semantic tests (`76 passed`), full validators
+  (`358 passed`), Ruff, mypy, planning/docs (`50 passed`), and PR CI are green. The next action is
+  a fresh Claude Large rerun from this clean main; no new product or UI defect was found.
 
 - `2026-08-29` Large Claude rerun `eval-live-012-claude-code-20260829T100304Z` reached implement
   after idea/research/plan/review-spec/tasklist audits, but exhausted three bounded repairs on
