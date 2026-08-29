@@ -147,6 +147,19 @@ consistent across `implementation-report.md`, `validator-report.md`, and `stage-
     treat it as public API surface and record compatibility/test evidence or choose a private
     location that is not exported.
 
+15. Async test resource cleanup
+   - When a regression test interrupts an async generator or iterator because a disconnect,
+     cancellation, or send error stops iteration, close it explicitly with `aclosing` or an
+     equivalent deterministic close protocol before returning or raising.
+   - Run the authored regression test on every configured AnyIO backend, including asyncio and
+     Trio. Treat `ResourceWarning`, `PytestUnraisableExceptionWarning`, or an unclosed async
+     resource as verification failures; do not suppress the warning or report a green test.
+   - Accept an interrupted-generator fixture only when its implementation report names the
+     explicit cleanup mechanism and records clean backend results. Reject or flag the exact
+     unclosed-generator pattern even when the assertion itself passes.
+   - Keep direct-ASGI coverage rationale and hard-disconnect limitations explicit, and keep the
+     cleanup change bounded to the regression test rather than weakening production behavior.
+
 ## Execution instructions
 
 1. Read all required inputs, existing optional context, and `contracts/stages/implement.md` before drafting outputs.
