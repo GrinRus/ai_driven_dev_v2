@@ -16762,7 +16762,7 @@ Local tasks:
     required CI including packaged UI browser, deterministic scenarios, adapter conformance, and
     build passed.
 
-#### Slice W45-E1-S10 — authored verification command fidelity (`planned`)
+#### Slice W45-E1-S10 — authored verification command fidelity (`done`)
 
 Goal: keep authored verification commands and their terminal outcomes as one exact, executable
 evidence item in provider-written implementation reports, so semantic validation can prove the
@@ -16773,7 +16773,7 @@ evidence contract.
 
 Local tasks:
 
-- `W45-E1-S10-T1` (next) Define exact authored-command evidence formatting for implementation reports.
+- `W45-E1-S10-T1` (done) Define exact authored-command evidence formatting for implementation reports.
   - Output: update implementation-stage authoring guidance and focused semantic/prompt fixtures so
     every authored verification command is reproduced byte-for-byte, including its terminal outcome
     marker (for example, `` `uv run --frozen pytest -q tests/test_responses.py -> pass` ``), without
@@ -16793,3 +16793,9 @@ Local tasks:
     tests/test_responses.py -> pass` command was split across Markdown code-span delimiters in the
     provider report. No target product or UI defect was found; the backend-only target has no visual
     design surface.
+  - Completion: PR #465 (merge `f3e9abbf`) keeps authored command/result text in one exact Markdown
+    code span, adds exact-versus-split semantic regression coverage, updates the active prompt hash,
+    and passes focused prompt/semantic/evidence tests (`163`), docs/planning checks (`50`), Ruff,
+    mypy, full CI, deterministic scenarios, adapter conformance, packaged UI browser, CodeQL,
+    dependency review, scorecard, and build. A fresh Claude Large rerun from this clean main is
+    required; the failed bundle remains retained as diagnostic evidence.
