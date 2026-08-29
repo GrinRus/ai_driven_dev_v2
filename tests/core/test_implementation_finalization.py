@@ -13,6 +13,7 @@ from aidd.core.implementation_finalization import (
 )
 from aidd.core.task_ledger import TaskExecutionStatus, TaskLedger
 from aidd.core.task_plan import TaskExecutionMode, parse_task_plan
+from aidd.validators.semantic_rules.evidence import has_implementation_command_evidence
 
 
 def _plan():  # type: ignore[no-untyped-def]
@@ -135,6 +136,48 @@ def test_aggregate_report_requires_complete_task_evidence(tmp_path: Path) -> Non
     assert "`TL-1-AC1`" in report
     assert "`src/example.py`" in report
     assert "- `TL-1` `pytest -q` -> pass." in report
+
+
+def test_aggregate_report_preserves_wrapped_verification_evidence(tmp_path: Path) -> None:
+    plan = _plan()
+    attempt = tmp_path / "task-attempt"
+    attempt.mkdir()
+    (attempt / "implementation-report.md").write_text(
+        "# Implementation Report\n\n"
+        "## Touched files\n\n- `src/example.py`\n\n"
+        "## Verification\n\n"
+        "- Authored test suite:\n"
+        "  `uv run --frozen pytest -q tests/test_example.py`\n"
+        "  -> pass (12 passed).\n"
+        "  - nested detail remains part of the same item\n"
+        "- Lint check: `uv run --frozen ruff check src/example.py` -> pass.\n\n"
+        "## Follow-up notes\n\n- none\n",
+        encoding="utf-8",
+    )
+    ledger = TaskLedger.create(plan).transition(
+        "TL-1",
+        TaskExecutionStatus.EXECUTING,
+        attempt_number=1,
+        latest_attempt_path="task-attempt",
+    ).transition("TL-1", TaskExecutionStatus.SUCCEEDED)
+
+    report = render_aggregate_implementation_report(
+        plan=plan,
+        ledger=ledger,
+        workspace_root=tmp_path,
+    )
+
+    verification = report.split("## Verification notes", 1)[1].split(
+        "## Follow-up notes", 1
+    )[0]
+    assert "`uv run --frozen pytest -q tests/test_example.py` -> pass (12 passed)." in report
+    assert "nested detail remains part of the same item" in report
+    assert has_implementation_command_evidence(
+        "Authored test suite: `uv run --frozen pytest -q tests/test_example.py`"
+        " -> pass (12 passed)."
+    )
+    assert verification.count("Authored test suite:") == 1
+    assert verification.count("Lint check:") == 1
 
 
 def test_mixed_mode_aggregate_omits_verification_only_none_entry(tmp_path: Path) -> None:
