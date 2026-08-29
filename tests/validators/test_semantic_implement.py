@@ -1571,3 +1571,39 @@ def test_validate_semantic_outputs_accepts_backticked_python_heredoc_verificatio
     )
 
     assert findings == ()
+
+
+def test_validate_semantic_outputs_accepts_multiline_backticked_heredoc_verification(
+    tmp_path: Path,
+) -> None:
+    workspace_root = tmp_path / "workspace"
+    _write_implementation_report(
+        workspace_root,
+        "WI-SEM-IMPLEMENT-MULTILINE-HEREDOC",
+        "# Implementation Report\n\n"
+        "## Summary\n\n"
+        "Implemented selected task `TASK-EXAMPLE-STREAM-PROBE` with focused "
+        "verification evidence and no unrelated changes.\n\n"
+        "## Touched files\n\n"
+        "- `cli_tool/stream.py` - preserve stream disconnect handling.\n"
+        "- `tests/test_stream.py` - cover disconnect probe behavior.\n\n"
+        "## Verification\n\n"
+        "- `uv run --frozen python - <<'PY'\n"
+        "import anyio\n"
+        "print('probe passed')\n"
+        "PY` -> pass (observed the expected disconnect output).\n"
+        "- `uv run --frozen pytest tests/test_stream.py -q` -> pass (2 passed).\n"
+        "- `git status --ignored --short --untracked-files=all` -> pass (clean).\n\n"
+        "## Risks\n\n"
+        "- None.\n\n"
+        "## Follow-up\n\n"
+        "- none\n",
+    )
+
+    findings = validate_semantic_outputs(
+        stage="implement",
+        work_item="WI-SEM-IMPLEMENT-MULTILINE-HEREDOC",
+        workspace_root=workspace_root,
+    )
+
+    assert findings == ()

@@ -137,6 +137,7 @@ _KNOWN_COMMAND_EXECUTABLES = frozenset(
 )
 _SHELL_ASSIGNMENT_PATTERN = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*=\S+$")
 _BACKTICKED_FRAGMENT_PATTERN = re.compile(r"`([^`\n]+)`")
+_MULTILINE_BACKTICKED_FRAGMENT_PATTERN = re.compile(r"`(?P<body>[^`]*\n[^`]*)`", re.DOTALL)
 _BACKTICKED_RESULT_DELIMITER_PATTERN = re.compile(r"`\s*->\s*")
 _PROMPT_COMMAND_PATTERN = re.compile(r"^\s*\$\s+(.+?)\s*$", re.MULTILINE)
 _COMMAND_FIELD_PATTERN = re.compile(
@@ -290,6 +291,14 @@ def has_implementation_command_evidence(verification_item: str) -> bool:
                 return True
     if backticked_command_status is False:
         return False
+    # Markdown inline code spans may contain newlines.  Runtimes commonly emit
+    # heredoc verification commands in that form (for example, ``uv run
+    # python - <<'PY' ... PY``).  Treat the complete span as one command so
+    # valid executable evidence is not mistaken for an unverifiable prose
+    # claim.  A closed span and command-shaped prefix are still required.
+    for match in _MULTILINE_BACKTICKED_FRAGMENT_PATTERN.finditer(command_candidate):
+        if _looks_like_command(match.group("body"), explicit_container=False):
+            return True
     return any(
         _looks_like_command(match.group(1), explicit_container=False)
         for match in _BACKTICKED_FRAGMENT_PATTERN.finditer(command_candidate)
