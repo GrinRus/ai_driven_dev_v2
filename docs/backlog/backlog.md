@@ -7,7 +7,7 @@ slice, and local task.
 
 ## Next
 
-- `W45-E1-S8-T1` — Preserve wrapped verification commands in aggregate implementation reports.
+- `W45-E1-S9-T1` — Require deterministic async-generator cleanup in live-authored regression tests.
 
 ## Soon
 
@@ -37,6 +37,15 @@ slice, and local task.
   queue-restoration policy in `docs/backlog/roadmap.md` (`W8-E3-S1`).
 
 ## Current reconciliation
+
+- `2026-08-29` fresh Claude Large `eval-live-012-claude-code-20260829T182725Z` reached the
+  target implementation stage after provider retries and produced the bounded
+  `BaseHTTPMiddleware` `OSError` normalization plus a focused regression test. Manual focused
+  execution exposed a target-test quality defect under Trio: the interrupted async generator is
+  not closed, yielding `PytestUnraisableExceptionWarning` and `1 failed, 1 passed`. The target is
+  backend-only with no product UI/design surface; this is not a UI mismatch. `W45-E1-S9-T1` is
+  added as the separate AIDD authoring/quality-gate task before target remediation and a fresh
+  Large rerun.
 
 - `2026-08-29` Claude Large `eval-live-012-claude-code-20260829T142127Z` completed idea,
   research, plan, review-spec, tasklist, and all three implementation tasks. The target

@@ -16718,7 +16718,7 @@ evidence validator.
 
 Local tasks:
 
-- `W45-E1-S8-T1` (next) Preserve wrapped verification commands in aggregate implementation reports.
+- `W45-E1-S8-T1` (done) Preserve wrapped verification commands in aggregate implementation reports.
   - Output: update aggregate implementation-report rendering to join continuation lines with their
     top-level verification bullet so executable commands and terminal outcomes remain on one
     canonical evidence item. Preserve task ids, touched-file extraction, fail-closed validation,
@@ -16728,3 +16728,30 @@ Local tasks:
   - Verification: a wrapped multi-line command/result source report renders as one aggregate
     evidence bullet recognized by `has_implementation_command_evidence`; existing aggregate,
     validator, Ruff, mypy, and planning checks remain green.
+  - Completion: PR #460 (merge `95561400`) joins wrapped top-level verification bullets before
+    aggregate semantic validation and adds regression coverage for command/result continuations.
+    Focused finalization tests (`6 passed`), semantic/report tests (`84 passed`), docs/planning
+    checks (`50 passed`), Ruff, mypy, and PR CI passed. A subsequent Claude Large quality audit
+    found a separate target-test async-generator cleanup defect; it is tracked in W45-E1-S9-T1.
+
+#### Slice W45-E1-S9 — Large target regression-test cleanup (`planned`)
+
+Goal: ensure provider-authored async regression tests in Large live runs cleanly release
+resources across every supported AnyIO backend before target quality is accepted.
+
+Dependencies: W45-E1-S8; Large live implementation quality review and provider-free verification.
+
+Local tasks:
+
+- `W45-E1-S9-T1` (next) Require deterministic async-generator cleanup in live-authored regression tests.
+  - Output: update the implementation-stage authoring guidance and focused quality fixtures so
+    async-generator-backed tests use explicit cleanup (for example `aclosing`) when a hard
+    disconnect can interrupt iteration. Preserve direct-ASGI coverage rationale, bounded target
+    scope, and fail-closed verification evidence.
+  - Scope: `prompt-packs/stages/implement/`, the implementation quality contract/fixtures, and
+    focused prompt or semantic tests only; do not change runtime adapters, target repositories,
+    stage APIs, or UI behavior.
+  - Verification: a fixture containing an interrupted async generator is accepted only with
+    explicit cleanup evidence; the exact malformed/unclosed-generator pattern is rejected or
+    flagged, existing implementation evidence remains valid, and focused prompt/semantic,
+    Ruff, mypy, and planning checks pass.
