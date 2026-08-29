@@ -31,6 +31,53 @@ def test_validate_semantic_outputs_accepts_valid_implement_fixture_bundle() -> N
     assert findings == ()
 
 
+def test_implementation_report_preserves_authored_command_result_span(tmp_path: Path) -> None:
+    workspace_root = tmp_path / ".aidd"
+    work_item = "WI-SEM-IMPLEMENT-AUTHORED-COMMAND-SPAN"
+    selection_path = workspace_root / "workitems" / work_item / "context" / "task-selection.md"
+    selection_path.parent.mkdir(parents=True, exist_ok=True)
+    selection_path.write_text(
+        "# Task Selection\n\n"
+        "## Selected task\n\n"
+        "- Task id: `TL-2`\n\n"
+        "## Verification\n\n"
+        "- Run `uv run --frozen pytest -q tests/test_responses.py -> pass`.\n",
+        encoding="utf-8",
+    )
+
+    report_prefix = (
+        "# Implementation Report\n\n"
+        "## Summary\n\n"
+        "Selected task `TL-2` was implemented with bounded source and regression-test changes.\n\n"
+        "## Touched files\n\n"
+        "- `src/example.py` - implement the selected behavior.\n\n"
+        "## Verification\n\n"
+    )
+    exact_report = (
+        report_prefix
+        + "- `uv run --frozen pytest -q tests/test_responses.py -> pass` (134 passed).\n\n"
+        "## Risks\n\n- none\n\n## Follow-up\n\n- Continue to review.\n"
+    )
+    _write_implementation_report(workspace_root, work_item, exact_report)
+    assert validate_semantic_outputs(
+        stage="implement", work_item=work_item, workspace_root=workspace_root
+    ) == ()
+
+    split_report = exact_report.replace(
+        "`uv run --frozen pytest -q tests/test_responses.py -> pass`",
+        "`uv run --frozen pytest -q tests/test_responses.py` -> pass",
+    )
+    _write_implementation_report(workspace_root, work_item, split_report)
+    findings = validate_semantic_outputs(
+        stage="implement", work_item=work_item, workspace_root=workspace_root
+    )
+    assert any(
+        finding.code == UNVERIFIABLE_CHECK_CLAIM_CODE
+        and "uv run --frozen pytest -q tests/test_responses.py -> pass" in finding.message
+        for finding in findings
+    )
+
+
 def test_validate_semantic_outputs_accepts_example_style_implementation_report(
     tmp_path: Path,
 ) -> None:

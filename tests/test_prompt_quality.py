@@ -564,6 +564,18 @@ def test_plan_and_tasklist_preserve_authored_verification_commands() -> None:
         )
 
 
+def test_implement_prompt_keeps_authored_command_and_outcome_in_one_code_span() -> None:
+    run_prompt = Path("prompt-packs/stages/implement/run.md").read_text(encoding="utf-8")
+    normalized = " ".join(run_prompt.split())
+
+    assert "preserve that complete text byte-for-byte inside one Markdown code span" in normalized
+    assert "Do not split it into" in normalized
+    assert "move the marker outside the code span" in normalized
+    assert "normalize flags or paths" in normalized
+    assert "replace the authored command with a count-only summary" in normalized
+    assert "`uv run --frozen pytest -q tests/test_responses.py -> pass`" in run_prompt
+
+
 def test_tasklist_prompts_require_verification_notes_for_every_task_id() -> None:
     contract = Path("contracts/stages/tasklist.md").read_text(encoding="utf-8")
     document_contract = Path("contracts/documents/tasklist.md").read_text(

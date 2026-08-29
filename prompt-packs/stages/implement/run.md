@@ -96,6 +96,12 @@ consistent across `implementation-report.md`, `validator-report.md`, and `stage-
    result such as `-> no task-local cache or coverage residue` is also valid when it directly
    describes the command's observed result. Do not use vague outcome prose such as `looks good`
    or `completed successfully` without a concrete marker or exit code.
+   When an authored verification source already includes the command and its terminal outcome,
+   preserve that complete text byte-for-byte inside one Markdown code span, including the outcome
+   marker (for example, `` `uv run --frozen pytest -q tests/test_responses.py -> pass` ``). Do not
+   split it into `` `command` -> pass ``, move the marker outside the code span, normalize flags or
+   paths, or replace the authored command with a count-only summary. Additional observed detail may
+   follow the closed span, but the exact authored command/result text must remain intact.
 7. No-op outcomes require explicit evidence-based justification plus next action; otherwise no-op is invalid.
    The sole exception is a rich task whose system-owned selection explicitly says
    `Execution mode: verification-only`: execute and preserve its required checks, report
