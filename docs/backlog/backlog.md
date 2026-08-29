@@ -7,7 +7,9 @@ slice, and local task.
 
 ## Next
 
-- None.
+- `W45-E1-S6-T2` — Implement multiline heredoc command evidence recognition so valid multi-line
+  executable verification spans with terminal outcomes pass while malformed or unverifiable claims
+  remain fail-closed.
 
 ## Soon
 
@@ -37,6 +39,14 @@ slice, and local task.
   queue-restoration policy in `docs/backlog/roadmap.md` (`W8-E3-S1`).
 
 ## Current reconciliation
+
+- `2026-08-29` Large Claude rerun `eval-live-012-claude-code-20260829T100304Z` reached implement
+  after idea/research/plan/review-spec/tasklist audits, but exhausted three bounded repairs on
+  `SEM-UNVERIFIABLE-CHECK-CLAIM`: valid multiline heredoc probe commands in the verification-only
+  implementation report were not recognized as executable evidence. No target repository changes
+  were made and the failure is classified as an AIDD evidence-parser gap; `W45-E1-S6-T2` is the
+  sole Next task before a fresh Claude Large rerun. The Codex Large rerun remains clean; the Large
+  target has no product UI, so visual target-design evidence is not applicable/not provided.
 
 - `2026-08-28` reconciliation after PR #451 (merge `809c67be`) marks `W45-E1-S6-T1` done and
   leaves `Next`/`Soon` empty pending the fresh medium rerun. The implementation evidence parser
