@@ -7,7 +7,7 @@ slice, and local task.
 
 ## Next
 
-- None.
+- `W45-E1-S7-T1` — Clarify same-line verification mapping in tasklist prompts and repair guidance.
 
 ## Soon
 
@@ -37,6 +37,14 @@ slice, and local task.
   queue-restoration policy in `docs/backlog/roadmap.md` (`W8-E3-S1`).
 
 ## Current reconciliation
+
+- `2026-08-29` fresh Claude Large `eval-live-012-claude-code-20260829T124639Z` passed idea,
+  research, plan, and review-spec with manual quality audits, but tasklist failed closed after
+  three validation attempts because TL-3/TL-4 left the top-level verification mapping empty and
+  placed commands only in nested bullets. No Starlette target change or product/UI defect was
+  found; this is a tasklist authoring-contract gap. `W45-E1-S7-T1` is the bounded prompt-guidance
+  fix before a fresh Claude Large rerun. The Starlette target has no product UI, so visual design,
+  responsive, accessibility, console, and overflow evidence remains not applicable.
 
 - `2026-08-29` reconciliation after PR #455 (merge `5dfed7d6`) marks `W45-E1-S6-T2` done. The
   implementation evidence parser now recognizes valid closed multiline heredoc command spans with
