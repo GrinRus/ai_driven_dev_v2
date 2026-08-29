@@ -7,7 +7,7 @@ slice, and local task.
 
 ## Next
 
-- `W45-E1-S10-T1` — Define exact authored-command evidence formatting for implementation reports.
+- None.
 
 ## Soon
 
@@ -37,6 +37,15 @@ slice, and local task.
   queue-restoration policy in `docs/backlog/roadmap.md` (`W8-E3-S1`).
 
 ## Current reconciliation
+
+- `2026-08-30` reconciliation after PR #465 (merge `f3e9abbf`) marks `W45-E1-S10-T1` done. The
+  implementation prompt now requires authored command and terminal outcome text to remain in one
+  exact Markdown code span; exact-versus-split semantic coverage, prompt/hash, docs/planning,
+  Ruff, mypy, full CI, deterministic, adapter, packaged UI browser, security, and build checks are
+  green. The failed Claude Large bundle `eval-live-012-claude-code-20260829T202033Z` remains
+  retained for diagnostic comparison; the next action is a fresh Claude Large rerun from this clean
+  main. The Starlette target is backend-only with no product UI/design surface, while AIDD's
+  operator UI/API checkpoint remains the relevant UI evidence.
 
 - `2026-08-30` fresh Claude Large `eval-live-012-claude-code-20260829T202033Z` reached the
   target implementation with the intended bounded Starlette change and passing target checks, but
