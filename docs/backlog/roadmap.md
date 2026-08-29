@@ -16661,3 +16661,18 @@ Local tasks:
     mypy, planning/docs checks, packaged UI browser, deterministic scenarios, adapter conformance,
     security, and build all pass. The failed Codex medium bundle remains retained for a fresh
     provider rerun from this clean main.
+
+- `W45-E1-S6-T2` (next) Implement multiline heredoc command evidence recognition.
+  - Output: extend the shared implementation evidence classifier so a valid multiline heredoc
+    command wrapped in a Markdown inline code span (for example `uv run --frozen python - <<'PY' ...
+    PY` followed by `-> pass`) is recognized as executable evidence with its terminal outcome.
+    Preserve fail-closed rejection of prose-only, malformed, unclosed, and command-without-outcome
+    evidence, including the nested-backtick cases covered by T1.
+  - Scope: `src/aidd/validators/semantic_rules/evidence.py` and focused implementation evidence
+    validator tests only; do not change runtime adapters, stage contracts, prompts, UI, or target
+    behavior.
+  - Dependencies: W45-E1-S6-T1.
+  - Verification: positive multiline Python/heredoc and ordinary commands with `-> pass` are
+    accepted; malformed/unclosed multiline spans, prose-only claims, and command-without-outcome
+    remain rejected. Run focused implementation evidence/semantic tests, Ruff, mypy, and planning
+    consistency checks.
