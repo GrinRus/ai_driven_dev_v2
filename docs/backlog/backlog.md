@@ -7,7 +7,7 @@ slice, and local task.
 
 ## Next
 
-- `W45-E1-S9-T1` — Require deterministic async-generator cleanup in live-authored regression tests.
+- None.
 
 ## Soon
 
@@ -37,6 +37,14 @@ slice, and local task.
   queue-restoration policy in `docs/backlog/roadmap.md` (`W8-E3-S1`).
 
 ## Current reconciliation
+
+- `2026-08-29` reconciliation after PR #462 (merge `8e1727d8`) marks `W45-E1-S9-T1` done. The
+  implementation prompt now requires explicit cleanup for interrupted async generators, clean
+  asyncio/Trio evidence, and rejection/flagging of unclosed-generator fixtures even when an
+  assertion passes. Prompt/packaging tests (`87 passed`), docs/planning checks (`50 passed`), Ruff,
+  mypy, and required CI are green. The next action is a fresh Claude Large rerun from this clean
+  `main`; the backend-only Starlette target has no product UI/design surface, so UI mismatch is
+  explicitly not applicable and must not be claimed.
 
 - `2026-08-29` fresh Claude Large `eval-live-012-claude-code-20260829T182725Z` reached the
   target implementation stage after provider retries and produced the bounded
