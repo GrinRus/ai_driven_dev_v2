@@ -588,6 +588,12 @@ def test_tasklist_prompts_require_verification_notes_for_every_task_id() -> None
     assert "Do not rely on checks embedded only inside `Ordered tasks`" in " ".join(
         run_prompt.split()
     )
+    normalized_run = " ".join(run_prompt.split())
+    normalized_repair = " ".join(repair_prompt.split())
+    assert "same bullet" in normalized_run
+    assert "empty `- TL-1:`" in normalized_run
+    assert "same top-level mapping bullet" in normalized_repair
+    assert "only commands in nested bullets" in normalized_repair
     assert "dedicated per-task `Verification notes` entries" in " ".join(
         document_contract.split()
     )

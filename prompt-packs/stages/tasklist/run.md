@@ -105,7 +105,10 @@ notes, and a concrete verification signal.
    `Verification notes` section must contain a bullet or list item for every task id declared in
    `Ordered tasks`, including command-only or verification-only tasks. Do not rely on checks
    embedded only inside `Ordered tasks`; those checks must be repeated or summarized under the
-   matching task id in `Verification notes`.
+   matching task id in `Verification notes`. Each mapping must have a non-empty value on the same
+   bullet, for example - TL-1: `uv run pytest -q tests/test_example.py -> pass`; do not write an
+   empty `- TL-1:` followed only by nested command bullets, because the canonical parser cannot
+   associate nested-only commands with the task id.
 7. Do not mark stage `succeeded` when upstream `review-spec` readiness/sign-off has unresolved
    blocking conditions.
 8. When `context/verification-output.md` names authored verification commands, copy those commands

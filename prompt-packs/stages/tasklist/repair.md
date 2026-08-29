@@ -96,8 +96,10 @@ Use concrete repair actions:
   `Milestone` or `Plan milestone` field because the canonical rich-task grammar ignores it;
 - weak verification guidance: add concrete primary checks per task (test/check/scenario), with
   one dedicated `Verification notes` entry for every task id declared in `Ordered tasks`,
-  including command-only or
-  verification-only tasks;
+  including command-only or verification-only tasks. Put the concrete check/result on the same
+  top-level mapping bullet, for example - TL-1: `uv run pytest -q tests/test_example.py -> pass`;
+  never leave `- TL-1:` empty with the only commands in nested bullets, which the canonical
+  parser treats as missing verification;
 - unclassified evidence-only task: add `Execution mode: verification-only` only when the task's
   dominant deliverable and acceptance criteria require command/check evidence without a
   task-local repository edit; otherwise keep the repository-change default,
