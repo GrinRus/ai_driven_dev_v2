@@ -16761,3 +16761,35 @@ Local tasks:
     Prompt/packaging tests (`87 passed`), docs/planning checks (`50 passed`), Ruff, mypy, and full
     required CI including packaged UI browser, deterministic scenarios, adapter conformance, and
     build passed.
+
+#### Slice W45-E1-S10 — authored verification command fidelity (`planned`)
+
+Goal: keep authored verification commands and their terminal outcomes as one exact, executable
+evidence item in provider-written implementation reports, so semantic validation can prove the
+selected task's checks without confusing Markdown formatting with a missing command.
+
+Dependencies: W45-E1-S9; implementation-stage verification guidance and the semantic implementation
+evidence contract.
+
+Local tasks:
+
+- `W45-E1-S10-T1` (next) Define exact authored-command evidence formatting for implementation reports.
+  - Output: update implementation-stage authoring guidance and focused semantic/prompt fixtures so
+    every authored verification command is reproduced byte-for-byte, including its terminal outcome
+    marker (for example, `` `uv run --frozen pytest -q tests/test_responses.py -> pass` ``), without
+    inserting a Markdown code-span boundary between the command and the outcome. Preserve the
+    existing ignored-workspace audit, wrapped-command, heredoc, nested-backtick, and fail-closed
+    evidence rules.
+  - Scope: `prompt-packs/stages/implement/run.md`, `tests/test_prompt_quality.py`, and focused
+    implementation semantic/evidence fixtures or tests only; do not change runtime adapters,
+    stage contracts, target repositories, or UI behavior.
+  - Verification: prompt and semantic tests accept a report that preserves the exact authored
+    command/result span and reject a report that splits the command from its outcome or substitutes
+    a count-only/normalized command; existing valid and malformed evidence tests remain green. Run
+    focused implementation/prompt tests, Ruff, mypy, and planning consistency checks.
+  - Diagnostic evidence: Claude Large run
+    `eval-live-012-claude-code-20260829T202033Z` reached the target implementation and passed its
+    target checks, but stopped fail-closed because the authored `uv run --frozen pytest -q
+    tests/test_responses.py -> pass` command was split across Markdown code-span delimiters in the
+    provider report. No target product or UI defect was found; the backend-only target has no visual
+    design surface.
