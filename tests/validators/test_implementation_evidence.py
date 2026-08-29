@@ -22,6 +22,7 @@ from aidd.validators.semantic_rules.evidence import (
         "`zsh -c 'test -f pyproject.toml'` -> pass",
         "`node -e \"console.log('verified')\"` -> pass",
         "`nl -ba src/hono-base.ts | sed -n '32,48p;388,400p'` -> pass",
+        "`uv run --frozen python - <<'PY'\nprint('verified')\nPY` -> pass",
         "`out=$(git status --short --untracked-files=all | awk '$1 == \"??\" "
         "&& $2 !~ /^\\.aidd\\// && $2 != \"aidd.example.toml\" { print }'); "
         "test -z \"$out\"` -> pass",
@@ -56,6 +57,28 @@ def test_command_evidence_accepts_nested_backtick_payloads(evidence: str) -> Non
 def test_command_evidence_rejects_malformed_nested_backtick_payloads(
     evidence: str,
 ) -> None:
+    assert not has_implementation_command_evidence(evidence)
+
+
+@pytest.mark.parametrize(
+    "evidence",
+    (
+        "`uv run --frozen python - <<'PY'\nprint('verified')\nPY` -> pass",
+        "`python - <<'PY'\nprint('verified')\nPY` -> exit code 0",
+    ),
+)
+def test_command_evidence_accepts_multiline_heredoc_spans(evidence: str) -> None:
+    assert has_implementation_command_evidence(evidence)
+
+
+@pytest.mark.parametrize(
+    "evidence",
+    (
+        "`uv run --frozen python - <<'PY'\nprint('verified')\nPY -> pass",
+        "The following prose describes a check:\n`the command ran\nwith no errors` -> pass",
+    ),
+)
+def test_command_evidence_rejects_unclosed_or_prose_multiline_spans(evidence: str) -> None:
     assert not has_implementation_command_evidence(evidence)
 
 
