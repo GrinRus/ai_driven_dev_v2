@@ -16692,7 +16692,7 @@ Dependencies: W45-E1-S6; the tasklist rich-card contract and canonical task-plan
 
 Local tasks:
 
-- `W45-E1-S7-T1` (next) Clarify same-line verification mapping in tasklist prompts and repair guidance.
+- `W45-E1-S7-T1` (done) Clarify same-line verification mapping in tasklist prompts and repair guidance.
   - Output: update the tasklist run and repair prompt packs with an explicit same-line
     `- <task-id>: <concrete check/result>` example for the `Verification notes` section and a
     prohibition on leaving the mapped value empty with commands only in nested bullets. Preserve
@@ -16703,3 +16703,28 @@ Local tasks:
   - Verification: prompt-quality tests assert the explicit same-line syntax and nested-only
     prohibition; active prompt hashes are updated; focused prompt tests, Ruff, mypy, and planning
     consistency checks pass. A tasklist with an empty `- TL-N:` mapping remains fail-closed.
+  - Completion: PR #458 (merge `f2fec5b3`) added same-line verification mapping examples and
+    nested-only prohibition to the tasklist run/repair prompts. Prompt-quality, packaging,
+    docs/planning, Ruff, mypy, and PR CI checks passed. The subsequent Claude Large run exposed
+    a separate aggregate implementation-report formatting gap, now tracked in W45-E1-S8-T1.
+
+#### Slice W45-E1-S8 — aggregate verification evidence preservation (`planned`)
+
+Goal: preserve complete, executable verification evidence when AIDD aggregates per-task
+implementation reports, including reports whose Markdown bullets wrap across lines.
+
+Dependencies: W45-E1-S7; aggregate implementation finalization and the shared implementation
+evidence validator.
+
+Local tasks:
+
+- `W45-E1-S8-T1` (next) Preserve wrapped verification commands in aggregate implementation reports.
+  - Output: update aggregate implementation-report rendering to join continuation lines with their
+    top-level verification bullet so executable commands and terminal outcomes remain on one
+    canonical evidence item. Preserve task ids, touched-file extraction, fail-closed validation,
+    and existing single-line report behavior.
+  - Scope: `src/aidd/core/implementation_finalization.py` and focused finalization/semantic tests
+    only; do not change runtime adapters, stage contracts, prompts, UI behavior, or target code.
+  - Verification: a wrapped multi-line command/result source report renders as one aggregate
+    evidence bullet recognized by `has_implementation_command_evidence`; existing aggregate,
+    validator, Ruff, mypy, and planning checks remain green.

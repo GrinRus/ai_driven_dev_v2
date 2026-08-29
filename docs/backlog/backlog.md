@@ -7,7 +7,7 @@ slice, and local task.
 
 ## Next
 
-- `W45-E1-S7-T1` — Clarify same-line verification mapping in tasklist prompts and repair guidance.
+- `W45-E1-S8-T1` — Preserve wrapped verification commands in aggregate implementation reports.
 
 ## Soon
 
@@ -37,6 +37,20 @@ slice, and local task.
   queue-restoration policy in `docs/backlog/roadmap.md` (`W8-E3-S1`).
 
 ## Current reconciliation
+
+- `2026-08-29` Claude Large `eval-live-012-claude-code-20260829T142127Z` completed idea,
+  research, plan, review-spec, tasklist, and all three implementation tasks. The target
+  Starlette fix and regression test passed authored verification (`203 passed, 2 xfailed`, Ruff
+  green), but aggregate implementation finalization failed closed because wrapped TL-1
+  verification bullets were flattened into prose fragments without executable command evidence.
+  The target is a backend library with no product UI; no UI/design defect was found. This is a
+  bounded aggregate-report rendering gap tracked as `W45-E1-S8-T1`; the run and its audits remain
+  retained for rerun after the fix.
+
+- `2026-08-29` reconciliation after PR #458 (merge `f2fec5b3`) marks `W45-E1-S7-T1` done. The
+  tasklist run and repair prompts now require same-line non-empty verification mappings; focused
+  prompt/packaging/docs/planning checks (`136 passed`), Ruff, mypy, and PR CI are green. The fresh
+  Claude Large rerun then exposed the separate aggregate-report formatting gap above.
 
 - `2026-08-29` fresh Claude Large `eval-live-012-claude-code-20260829T124639Z` passed idea,
   research, plan, and review-spec with manual quality audits, but tasklist failed closed after
