@@ -19,6 +19,12 @@ _VERIFICATION_ENTRY_PATTERN = _DEPENDENCY_ENTRY_PATTERN
 _TASK_ID_PATTERN = re.compile(rf"\b({_TASK_ID_TEXT})\b")
 _TASK_ID_FULL_PATTERN = re.compile(rf"^{_TASK_ID_TEXT}$")
 _NONE_DEPENDENCY_PATTERN = re.compile(r"^\s*none(?:\s|[.,;:—–-]|$)", re.IGNORECASE)
+_IMPLICIT_VERIFICATION_ONLY_PATTERN = re.compile(
+    r"\bverification[- ]only\s+(?:task|output|deliverable|check|step)\b|"
+    r"\b(?:no|without)\s+(?:any\s+)?(?:task[- ]local\s+)?repository\s+"
+    r"(?:edit|edits|change|changes|diff|differences)\b",
+    re.IGNORECASE,
+)
 _FIELD_LABELS = frozenset(
     {
         "outcome",
@@ -439,6 +445,28 @@ def _parse_card_fields(
                     line_number=heading_line,
                     field=label,
                     missing_fields=(label,),
+                )
+            )
+    if "execution mode" not in fields:
+        implicit_verification_line = next(
+            (
+                line_number
+                for line_number, line in lines
+                if _IMPLICIT_VERIFICATION_ONLY_PATTERN.search(line)
+            ),
+            None,
+        )
+        if implicit_verification_line is not None:
+            issues.append(
+                _issue(
+                    TaskPlanIssueKind.MISSING_FIELD,
+                    f"Task `{task_id}` describes verification-only work but is missing "
+                    "required field `execution mode`; declare `Execution mode: "
+                    "verification-only` explicitly.",
+                    task_id=task_id,
+                    line_number=implicit_verification_line,
+                    field="execution mode",
+                    missing_fields=("execution mode",),
                 )
             )
     expected_acceptance_pattern = re.compile(rf"^{re.escape(task_id)}-AC[1-9]\d*$")
