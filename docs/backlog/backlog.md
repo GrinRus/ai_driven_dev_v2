@@ -7,8 +7,7 @@ slice, and local task.
 
 ## Next
 
-- `W45-E1-S15-T1` — Implement dependency-aware tasklist scope guidance for coupled behavior and
-  regression work.
+- None.
 
 ## Soon
 
@@ -38,6 +37,14 @@ slice, and local task.
   queue-restoration policy in `docs/backlog/roadmap.md` (`W8-E3-S1`).
 
 ## Current reconciliation
+
+- `2026-08-30` reconciliation after PR #485 (merge `80e4212a`) marks `W45-E1-S15-T1` done and
+  closes the dependency-aware implementation-scope slice. Coupled behavior and regression work
+  now stays in one bounded card or explicit dependency order while unrelated edits remain
+  fail-closed. Focused tasklist/validator/docs/planning/packaging tests (`202 passed`), Ruff,
+  mypy, full CI, adapter conformance, deterministic scenarios, packaged UI browser, and build
+  checks are green. The next action is the fresh Codex+Claude Large rerun; no clean two-provider
+  Large success is claimed yet.
 
 - `2026-08-30` reconciliation after PR #482 (merge `683aff95`) marks `W45-E1-S14-T1` done and
   closes slice `W45-E1-S14`. Tasklist validation now rejects unresolved verification-command

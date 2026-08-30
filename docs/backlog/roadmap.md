@@ -17009,7 +17009,7 @@ Local tasks:
     mypy, CI, adapter conformance, deterministic scenarios, packaged UI browser, and build checks
     are green. The next action is a fresh Codex and Claude Large rerun from this clean main.
 
-#### Slice W45-E1-S15 — dependency-aware implementation scope (`planned`)
+#### Slice W45-E1-S15 — dependency-aware implementation scope (`done`)
 
 Goal: keep generated implementation cards reviewable when a regression task may legitimately
 require a production correction, without weakening the task-local mutation boundary.
@@ -17019,7 +17019,7 @@ validation.
 
 Local tasks:
 
-- `W45-E1-S15-T1` (next) Implement tasklist guidance and coverage for coupled behavior-and-regression
+- `W45-E1-S15-T1` (done) Implement tasklist guidance and coverage for coupled behavior-and-regression
   work.
   - Output: update the tasklist prompt/contract guidance and focused fixtures so a tasklist does
     not split a behavior fix from the tests needed to validate that fix when the test card could
@@ -17040,3 +17040,10 @@ Local tasks:
   - Acceptance: coupled tasklist output makes the production correction an explicit bounded task
     or includes the path in the same task; dependency order remains deterministic; scope validation
     remains fail-closed for genuinely unrelated paths.
+  - Completion: PR #485 (merge `80e4212a`) keeps coupled behavior corrections and regression
+    coverage in one bounded task or explicit dependency order. It adds the corresponding tasklist
+    contract/prompt/repair guidance, a deterministic coupled-scope fixture, parser coverage, and
+    prompt/hash checks. Focused tasklist/validator/docs/planning/packaging tests (`202 passed`),
+    Ruff, mypy, full CI, adapter conformance, deterministic scenarios, packaged UI browser, and
+    build checks are green. The next action is a fresh Codex and Claude Large rerun from this
+    clean main; no target product or UI/design defect was found in the diagnostic run.
