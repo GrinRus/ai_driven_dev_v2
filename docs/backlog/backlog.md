@@ -7,7 +7,7 @@ slice, and local task.
 
 ## Next
 
-- None.
+- `W45-E1-S13-T1` — Recognize supported command wrappers in implementation evidence.
 
 ## Soon
 
@@ -37,6 +37,14 @@ slice, and local task.
   queue-restoration policy in `docs/backlog/roadmap.md` (`W8-E3-S1`).
 
 ## Current reconciliation
+
+- `2026-08-30` fresh Large diagnostic reconciliation: Codex run
+  `eval-live-012-codex-20260830T091915Z` added the intended TL-1 red-regression coverage, but
+  AIDD implementation validation stopped on `SEM-UNVERIFIABLE-CHECK-CLAIM` because a valid
+  backticked `perl -e ... -- uv run ...` watchdog command was not recognized as executable
+  evidence. The target Starlette repository was not modified and its product UI/design surface
+  is not applicable. `W45-E1-S13-T1` is promoted to `Next` to close the shared matcher gap before
+  rerunning the Codex and Claude Large lane; no clean Large success is claimed yet.
 
 - `2026-08-30` reconciliation after PR #477 (merge `c4fb1953`) marks `W45-E1-S12-T1` done and
   closes slice `W45-E1-S12`. Task-plan parsing now rejects verification-only semantics that omit
