@@ -16853,7 +16853,7 @@ Local tasks:
     passed. A fresh Codex and Claude Large rerun from this reconciled main is required to validate
     the original lane.
 
-#### Slice W45-E1-S11 — Large target compatibility and bounded workspace (`planned`)
+#### Slice W45-E1-S11 — Large target compatibility and bounded workspace (`done`)
 
 Goal: prevent a Large provider patch from removing existing compatibility consumers or carrying
 tool-generated dependency-lock churn into an otherwise bounded target change.
@@ -16863,7 +16863,7 @@ Dependencies: W45-E1-S10; Large implementation/review evidence from
 
 Local tasks:
 
-- `W45-E1-S11-T1` (next) Require compatibility-preserving target edits and clean bounded diffs.
+- `W45-E1-S11-T1` (done) Require compatibility-preserving target edits and clean bounded diffs.
   - Output: update implementation-stage authoring guidance and focused prompt/quality fixtures so
     providers must search all existing consumers before renaming/removing a shared helper, retain a
     compatibility symbol or migrate every consumer with coverage, run full target collection
@@ -16889,3 +16889,8 @@ Local tasks:
   - Acceptance: the guidance makes compatibility-consumer search and full collection a required
     implementation step, keeps `uv.lock` out of the bounded target diff by default, and adds
     regression fixtures for both review findings without weakening runtime-agnostic core behavior.
+  - Completion: PR #474 (merge `365eb46a`) adds the implementation guidance, semantic guards, and
+    prompt/quality regressions. Focused semantic/prompt/hash tests (`133 passed`), full validator
+    tests (`366 passed`), docs/planning checks (`50 passed`), Ruff, mypy, deterministic scenarios,
+    adapter conformance, packaged UI browser, and build all passed. Fresh Codex and Claude Large
+    reruns remain required; no clean Large success is claimed by this task.
