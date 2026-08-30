@@ -16972,3 +16972,34 @@ Local tasks:
     full validator tests (`372 passed`), planning/docs (`50 passed`), Ruff, mypy, deterministic
     scenarios, adapter conformance, packaged UI browser, and build checks are green. Fresh
     Codex and Claude Large reruns remain required; no clean Large success is claimed by this task.
+
+#### Slice W45-E1-S14 — concrete tasklist verification commands (`planned`)
+
+Goal: fail early when provider-authored tasklists carry unresolved command placeholders, so
+implementation evidence cannot inherit a command that cannot be executed or reproduced.
+
+Dependencies: W45-E1-S13; tasklist semantic validation and implementation evidence validation.
+
+Local tasks:
+
+- `W45-E1-S14-T1` (next) Reject unresolved verification-command placeholders in tasklists.
+  - Output: extend tasklist semantic validation and focused fixtures so inline verification
+    commands containing unresolved angle-bracket placeholders such as `<test_name>` fail with a
+    located, actionable finding. Preserve legitimate shell redirection/process-substitution syntax,
+    authored command fidelity, and existing fail-closed checks for prose or malformed commands.
+  - Scope: `src/aidd/validators/semantic_rules/tasklist.py`,
+    `tests/validators/test_semantic_tasklist.py`, and tasklist contract guidance only; do not
+    change runtime adapters, stage APIs, target repositories, or UI behavior.
+  - Verification: a tasklist verification note containing `pytest tests/test_responses.py::<test_name>`
+    is rejected before implementation with a concrete replacement message, while a concrete
+    test command and shell forms such as `<(printf x)` remain accepted. Run focused tasklist
+    semantic tests, full validator tests, Ruff, mypy, and planning consistency checks.
+  - Diagnostic evidence: fresh Claude Large run
+    `eval-live-012-claude-code-20260830T122148Z` authored a verification-only TL-3 note with
+    `uv run --frozen pytest -q tests/test_responses.py::<test_name>`. The tasklist stage passed,
+    but implement failed closed on `SEM-UNVERIFIABLE-CHECK-CLAIM` because the unresolved command
+    placeholder could not be preserved as executable evidence. The target Starlette patch and
+    focused tests passed; no target product or UI/design defect was found.
+  - Acceptance: unresolved command placeholders are caught and repairable at tasklist, before
+    implementation consumes repair budget; concrete commands and valid shell syntax remain
+    backward compatible.
