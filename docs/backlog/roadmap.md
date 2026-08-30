@@ -17088,3 +17088,37 @@ Local tasks:
     full CI, adapter conformance, deterministic scenarios, packaged UI browser, and build checks
     are green. A fresh Codex+Claude Large rerun is required from this clean main; no clean
     two-provider Large success is claimed yet.
+
+#### Slice W45-E1-S17 — tasklist dependency explanation parsing (`planned`)
+
+Goal: keep the core task dependency graph aligned with the machine-readable dependency clause in
+provider-authored tasklists, so explanatory prose cannot introduce false dependencies or fail the
+task-aware checkpoint.
+
+Dependencies: W45-E1-S16; task-plan parsing, Task Workspace read model, and task-flow checkpoint
+validation.
+
+Local tasks:
+
+- `W45-E1-S17-T1` (next) Implement dependency-clause parsing that ignores explanatory prose after the
+  machine-readable dependency list while preserving explicit task ids, deterministic ordering,
+  and fail-closed handling of malformed or unknown dependencies.
+  - Output: update the core task-plan parser and focused parser/checkpoint tests so a line such as
+    `TL-4: TL-2 — same dependency reasoning as TL-3` yields only `TL-2` in the canonical ledger,
+    while `TL-4: TL-2, TL-3` retains both dependencies and unknown ids remain rejected.
+  - Scope: `src/aidd/core/task_plan.py`, `src/aidd/harness/task_flow_checkpoint.py` only through
+    focused tests; do not change runtime adapters, stage contracts, target repositories, or UI
+    behavior.
+  - Verification: parser, task read-model, and task-flow checkpoint tests cover em-dash and
+    en-dash explanations, explicit multi-id clauses, punctuation, malformed clauses, and public
+    dependency-drift prevention. Run focused core/harness tests, full validator/planning tests,
+    Ruff, and mypy.
+  - Diagnostic evidence: fresh Claude Large run
+    `eval-live-012-claude-code-20260830T203136Z` generated a valid tasklist with `TL-4: TL-2 —
+    same dependency reasoning as TL-3`, but the core parser included `TL-3` from the explanation;
+    the installed public Task Workspace then disagreed with the checkpoint parser and stopped
+    fail-closed on `dependency-drift:TL-4`. The target repository was not modified and has no
+    product UI/design surface; AIDD operator UI/API checkpoints remained green.
+  - Acceptance: machine-readable dependency clauses and checkpoint/public projections agree for
+    explanatory tasklist prose; explicit dependencies remain intact, unknown/malformed clauses
+    remain fail-closed, and no target runtime or UI behavior changes.

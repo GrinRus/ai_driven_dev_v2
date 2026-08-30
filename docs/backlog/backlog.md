@@ -7,7 +7,8 @@ slice, and local task.
 
 ## Next
 
-- None. The next action is a fresh Codex+Claude Large rerun from the reconciled clean `main`.
+- `W45-E1-S17-T1` — align core task-plan dependency parsing with the machine-readable clause so
+  explanatory prose cannot create false dependencies or fail the task-aware checkpoint.
 
 ## Soon
 
@@ -37,6 +38,13 @@ slice, and local task.
   queue-restoration policy in `docs/backlog/roadmap.md` (`W8-E3-S1`).
 
 ## Current reconciliation
+
+- `2026-08-31` fresh Claude Large rerun `eval-live-012-claude-code-20260830T203136Z` stopped
+  fail-closed at the task-aware checkpoint before implementation: the provider-authored tasklist
+  correctly declared `TL-4: TL-2 — same dependency reasoning as TL-3`, but the core task-plan
+  parser also captured `TL-3` from the explanatory text while the checkpoint parser retained only
+  `TL-2`. This is a real dependency-projection mismatch, not a target product or UI defect.
+  `W45-E1-S17-T1` is promoted to `Next`; after its merge, start a fresh Codex+Claude Large rerun.
 
 - `2026-08-30` reconciliation after PR #488 (merge `c1eeaafa`) marks `W45-E1-S16-T1` done and
   closes the inline compound-command evidence slice. The shared matcher now accepts recognized
