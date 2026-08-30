@@ -7,7 +7,7 @@ slice, and local task.
 
 ## Next
 
-- `W45-E1-S13-T1` — Recognize supported command wrappers in implementation evidence.
+- None.
 
 ## Soon
 
@@ -37,6 +37,15 @@ slice, and local task.
   queue-restoration policy in `docs/backlog/roadmap.md` (`W8-E3-S1`).
 
 ## Current reconciliation
+
+- `2026-08-30` reconciliation after PR #480 (merge `f61f414a`) marks `W45-E1-S13-T1` done and
+  closes slice `W45-E1-S13`. The implementation evidence matcher now recognizes valid `perl`
+  timeout wrappers while preserving fail-closed handling for malformed and unknown wrappers.
+  Focused evidence/implementation tests (`89 passed`), full validators (`372 passed`),
+  planning/docs (`50 passed`), Ruff, mypy, deterministic scenarios, adapter conformance,
+  packaged UI browser, and build checks are green. Fresh Codex and Claude Large reruns are the
+  next evidence lane; no clean Large success is claimed yet. The previously observed Claude
+  `-> absent` marker remains a possible follow-up only if the fresh lane reproduces it.
 
 - `2026-08-30` fresh Large diagnostic reconciliation: Codex run
   `eval-live-012-codex-20260830T091915Z` added the intended TL-1 red-regression coverage, but

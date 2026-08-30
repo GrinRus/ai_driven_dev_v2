@@ -16934,7 +16934,7 @@ Local tasks:
     build checks are green. Fresh Codex and Claude Large reruns remain required; no clean Large
     success is claimed by this task.
 
-#### Slice W45-E1-S13 — wrapped executable verification commands (`planned`)
+#### Slice W45-E1-S13 — wrapped executable verification commands (`done`)
 
 Goal: keep implementation evidence fail-closed for prose while accepting valid standard command
 wrappers used by provider-authored verification, including a `perl` timeout wrapper around an
@@ -16945,7 +16945,7 @@ Dependencies: W45-E1-S12; fresh Codex Large diagnostic
 
 Local tasks:
 
-- `W45-E1-S13-T1` (next) Recognize supported command wrappers in implementation evidence.
+- `W45-E1-S13-T1` (done) Recognize supported command wrappers in implementation evidence.
   - Output: extend the shared implementation-evidence command matcher and focused fixtures so
     valid `perl -e ... -- <command>` wrappers with an observed result are accepted as executable
     evidence, while prose, malformed quoting, and unknown wrappers remain rejected. Preserve all
@@ -16966,3 +16966,9 @@ Local tasks:
   - Acceptance: valid wrapped command evidence reaches semantic validation without weakening
     fail-closed handling of prose or malformed commands; the fresh Large lane can progress to
     the next authored target task.
+  - Completion: PR #480 (merge `f61f414a`) adds `perl` to the shared executable matcher and
+    implementation command pattern, with focused coverage for passing/failing watchdog wrappers
+    and rejection of malformed or unknown wrappers. Evidence/implementation tests (`89 passed`),
+    full validator tests (`372 passed`), planning/docs (`50 passed`), Ruff, mypy, deterministic
+    scenarios, adapter conformance, packaged UI browser, and build checks are green. Fresh
+    Codex and Claude Large reruns remain required; no clean Large success is claimed by this task.
