@@ -17047,3 +17047,38 @@ Local tasks:
     Ruff, mypy, full CI, adapter conformance, deterministic scenarios, packaged UI browser, and
     build checks are green. The next action is a fresh Codex and Claude Large rerun from this
     clean main; no target product or UI/design defect was found in the diagnostic run.
+
+#### Slice W45-E1-S16 — inline compound-command verification evidence (`planned`)
+
+Goal: accept valid shell compound verification commands when a provider keeps the terminal
+outcome marker inside the same Markdown code span, while continuing to reject prose and malformed
+command evidence.
+
+Dependencies: W45-E1-S15; shared implementation verification evidence matcher and Large live
+quality validation.
+
+Local tasks:
+
+- `W45-E1-S16-T1` (next) Accept inline result markers on shell compound commands.
+  - Output: update the shared implementation evidence matcher so a valid command such as
+    `` `if git diff --name-only | rg -q ...; then exit 1; else exit 0; fi -> pass` `` is
+    recognized as executable evidence when its outcome marker is inside the code span. Preserve
+    exact command/result handling, nested and multiline command support, fail-closed malformed
+    wrappers, and shell-like prose rejection.
+  - Scope: `src/aidd/validators/semantic_rules/evidence.py`,
+    `tests/validators/test_implementation_evidence.py`, and focused semantic implementation
+    fixtures only; do not change runtime adapters, stage APIs, prompts, target repositories, or
+    UI behavior.
+  - Verification: focused evidence tests cover inline compound-command pass/fail markers,
+    existing outside-span markers, malformed compounds, and prose; semantic implementation
+    validation accepts the valid inline command and rejects non-command claims. Run focused
+    validator tests, full validator tests, Ruff, mypy, and planning/docs consistency checks.
+  - Diagnostic evidence: Codex Large run `eval-live-012-codex-20260830T165848Z` produced the
+    intended bounded Starlette runtime change and all target checks passed (`205 passed, 2
+    xfailed`, supplemental `25 passed`, Ruff green), but AIDD stopped at implementation TL-4
+    because the valid compound command `if ...; then ...; fi -> pass` was placed inside one code
+    span and the matcher did not recognize it as executable evidence. The target is backend-only;
+    no product UI/design defect was found and AIDD operator UI/API checkpoints remained green.
+  - Acceptance: valid inline shell compound commands are accepted with their observed outcome,
+    malformed or prose lookalikes remain rejected, and the same Large flow can reach review/QA
+    without weakening fail-closed verification semantics.

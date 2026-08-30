@@ -7,7 +7,8 @@ slice, and local task.
 
 ## Next
 
-- None.
+- `W45-E1-S16-T1` — Accept inline result markers on shell compound commands in implementation
+  verification evidence before the next Codex+Claude Large rerun.
 
 ## Soon
 
@@ -37,6 +38,15 @@ slice, and local task.
   queue-restoration policy in `docs/backlog/roadmap.md` (`W8-E3-S1`).
 
 ## Current reconciliation
+
+- `2026-08-30` fresh Large diagnostic reconciliation: Codex run
+  `eval-live-012-codex-20260830T165848Z` completed the target implementation with the intended
+  ownership-aware Starlette refactor and passing target checks (`205 passed, 2 xfailed`,
+  supplemental `25 passed`, Ruff green). AIDD stopped fail-closed at implementation TL-4 because
+  its valid shell compound verification command kept `-> pass` inside one Markdown code span and
+  the shared evidence matcher treated the compound item as non-executable. The target is
+  backend-only, so no target UI/design defect exists; AIDD operator UI/API checkpoints remained
+  green. `W45-E1-S16-T1` is the sole Next task before a fresh Codex+Claude Large rerun.
 
 - `2026-08-30` reconciliation after PR #485 (merge `80e4212a`) marks `W45-E1-S15-T1` done and
   closes the dependency-aware implementation-scope slice. Coupled behavior and regression work
