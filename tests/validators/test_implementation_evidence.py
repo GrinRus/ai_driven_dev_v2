@@ -28,6 +28,9 @@ from aidd.validators.semantic_rules.evidence import (
         "`out=$(git status --short --untracked-files=all | awk '$1 == \"??\" "
         "&& $2 !~ /^\\.aidd\\// && $2 != \"aidd.example.toml\" { print }'); "
         "test -z \"$out\"` -> pass",
+        "`if git diff --name-only | rg -q -v '^(src|tests)/'; then exit 1; "
+        "else exit 0; fi -> pass`",
+        "`if git status --short; then exit 1; else exit 0; fi -> exit code 0`",
         "Reused the same verification command as `TL-2`; outcome passed.",
     ),
 )
@@ -53,6 +56,7 @@ def test_command_evidence_accepts_supported_wrapped_commands(evidence: str) -> N
     (
         "`perl -e 'alarm 4; exec @ARGV' -- uv run --frozen pytest -q tests/test_example.py -> pass",
         "`timeout 4 uv run --frozen pytest -q tests/test_example.py` -> pass",
+        "`if git status --short; then exit 1; else exit 0; fi -> unexpected`",
     ),
 )
 def test_command_evidence_rejects_malformed_or_unknown_wrappers(evidence: str) -> None:

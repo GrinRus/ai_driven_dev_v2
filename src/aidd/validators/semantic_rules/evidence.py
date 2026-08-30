@@ -159,6 +159,11 @@ _SHELL_COMPOUND_PATTERN = re.compile(
     r")(?:;\s*.+)?$",
     flags=re.IGNORECASE | re.DOTALL,
 )
+_INLINE_SHELL_RESULT_SUFFIX_PATTERN = re.compile(
+    r"\s+->\s*(?:pass|fail|ok|error|empty|no output|`?\d+`?|"
+    r"exit\s*(?:code\s*)?`?\d+`?)\s*$",
+    flags=re.IGNORECASE,
+)
 
 
 def is_deferred_implementation_verification(verification_item: str) -> bool:
@@ -206,7 +211,17 @@ def _looks_like_command(candidate: str, *, explicit_container: bool) -> bool:
         if substitution.group(1).lower() in _KNOWN_COMMAND_EXECUTABLES:
             return True
 
-    if _SHELL_COMPOUND_PATTERN.fullmatch(normalized_candidate) is not None:
+    shell_compound_candidate = normalized_candidate
+    if _SHELL_COMPOUND_PATTERN.fullmatch(shell_compound_candidate) is None:
+        inline_result = _INLINE_SHELL_RESULT_SUFFIX_PATTERN.search(
+            shell_compound_candidate
+        )
+        if inline_result is not None:
+            candidate_without_result = shell_compound_candidate[: inline_result.start()].rstrip()
+            if _SHELL_COMPOUND_PATTERN.fullmatch(candidate_without_result) is not None:
+                shell_compound_candidate = candidate_without_result
+
+    if _SHELL_COMPOUND_PATTERN.fullmatch(shell_compound_candidate) is not None:
         return any(
             token.strip(";(){}!").lower() in _KNOWN_COMMAND_EXECUTABLES
             for token in tokens[1:]
