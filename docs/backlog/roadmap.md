@@ -16895,7 +16895,7 @@ Local tasks:
     adapter conformance, packaged UI browser, and build all passed. Fresh Codex and Claude Large
     reruns remain required; no clean Large success is claimed by this task.
 
-#### Slice W45-E1-S12 — explicit verification-only task mode (`planned`)
+#### Slice W45-E1-S12 — explicit verification-only task mode (`done`)
 
 Goal: prevent verification-only task cards from silently inheriting repository-change semantics,
 so completed prerequisite checks can be recorded without triggering a false no-op failure during
@@ -16905,7 +16905,7 @@ Dependencies: W45-E1-S11; rich task-plan parsing and implementation evidence val
 
 Local tasks:
 
-- `W45-E1-S12-T1` (next) Require an explicit execution mode for verification-only task cards.
+- `W45-E1-S12-T1` (done) Require an explicit execution mode for verification-only task cards.
   - Output: extend task-plan parsing and tasklist validation so a card that explicitly describes a
     verification-only task/output or an intentional absence of task-local repository edits must
     declare `Execution mode: verification-only`; otherwise emit a located, actionable grammar
@@ -16925,3 +16925,11 @@ Local tasks:
     `repository-change`, rejected truthful `- none` touched-files evidence as a no-op, exhausted
     bounded repairs, and stopped before review/QA. The target Starlette patch and focused checks
     passed; no target product or UI/design defect was found.
+  - Completion: PR #477 (merge `c4fb1953`) makes task-plan parsing fail closed with a located,
+    actionable missing-field finding when verification-only semantics appear without an explicit
+    `Execution mode: verification-only`. Ordinary cards, title-only wording, and explicit
+    `repository-change` cards retain their existing behavior. Focused task-plan/tasklist tests
+    (`59 passed`), full validator tests (`367 passed`), docs/planning checks (`50 passed`), Ruff,
+    `mypy src`, deterministic scenarios, adapter conformance, packaged UI browser, security, and
+    build checks are green. Fresh Codex and Claude Large reruns remain required; no clean Large
+    success is claimed by this task.

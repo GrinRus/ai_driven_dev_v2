@@ -7,8 +7,7 @@ slice, and local task.
 
 ## Next
 
-- `W45-E1-S12-T1` — Require an explicit execution mode for verification-only task cards so
-  verification tasks with no task-local diff do not inherit repository-change semantics.
+- None.
 
 ## Soon
 
@@ -38,6 +37,15 @@ slice, and local task.
   queue-restoration policy in `docs/backlog/roadmap.md` (`W8-E3-S1`).
 
 ## Current reconciliation
+
+- `2026-08-30` reconciliation after PR #477 (merge `c4fb1953`) marks `W45-E1-S12-T1` done and
+  closes slice `W45-E1-S12`. Task-plan parsing now rejects verification-only semantics that omit
+  an explicit execution mode, with exact source location and repair guidance; ordinary and
+  explicit repository-change cards remain backward compatible. Focused task-plan/tasklist tests
+  (`59 passed`), full validators (`367 passed`), docs/planning (`50 passed`), Ruff, `mypy src`,
+  deterministic scenarios, adapter conformance, packaged UI browser, security, and build are
+  green. No next task is promoted while the required fresh Codex and Claude Large reruns are
+  pending; no clean Large success is claimed yet.
 
 - `2026-08-30` Claude Large `eval-live-012-claude-code-20260830T070220Z` reached the target
   implementation and added the intended TL-1/TL-2 Starlette changes with passing focused tests,
