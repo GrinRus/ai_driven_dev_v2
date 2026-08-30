@@ -17089,7 +17089,7 @@ Local tasks:
     are green. A fresh Codex+Claude Large rerun is required from this clean main; no clean
     two-provider Large success is claimed yet.
 
-#### Slice W45-E1-S17 — tasklist dependency explanation parsing (`planned`)
+#### Slice W45-E1-S17 — tasklist dependency explanation parsing (`done`)
 
 Goal: keep the core task dependency graph aligned with the machine-readable dependency clause in
 provider-authored tasklists, so explanatory prose cannot introduce false dependencies or fail the
@@ -17100,7 +17100,7 @@ validation.
 
 Local tasks:
 
-- `W45-E1-S17-T1` (next) Implement dependency-clause parsing that ignores explanatory prose after the
+- `W45-E1-S17-T1` (done) Implement dependency-clause parsing that ignores explanatory prose after the
   machine-readable dependency list while preserving explicit task ids, deterministic ordering,
   and fail-closed handling of malformed or unknown dependencies.
   - Output: update the core task-plan parser and focused parser/checkpoint tests so a line such as
@@ -17122,3 +17122,7 @@ Local tasks:
   - Acceptance: machine-readable dependency clauses and checkpoint/public projections agree for
     explanatory tasklist prose; explicit dependencies remain intact, unknown/malformed clauses
     remain fail-closed, and no target runtime or UI behavior changes.
+  - Completion evidence: PR #491 (merge `9faa84ae`) parses only the machine-readable clause before
+    an em/en-dash rationale. Core, Task Workspace, and checkpoint regressions cover explanatory task
+    ids, explicit multi-id dependencies, punctuation, and fail-closed unknown ids; focused tests,
+    validator tests, Ruff, mypy, and full CI are green.

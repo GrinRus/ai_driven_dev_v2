@@ -7,8 +7,7 @@ slice, and local task.
 
 ## Next
 
-- `W45-E1-S17-T1` — align core task-plan dependency parsing with the machine-readable clause so
-  explanatory prose cannot create false dependencies or fail the task-aware checkpoint.
+- None.
 
 ## Soon
 
@@ -38,6 +37,14 @@ slice, and local task.
   queue-restoration policy in `docs/backlog/roadmap.md` (`W8-E3-S1`).
 
 ## Current reconciliation
+
+- `2026-08-31` reconciliation after PR #491 (merge `9faa84ae`) marks `W45-E1-S17-T1` done and
+  closes the tasklist dependency explanation slice. Core and the installed checkpoint now agree
+  when provider-authored dependency entries include explanatory task ids after an em/en dash;
+  explicit dependencies and fail-closed unknown ids remain intact. Focused tests (`53 passed`),
+  full validator/task-read-model checks (`392 passed`), Ruff, mypy, and full CI are green. The target
+  remains backend-only with no product UI/design surface; the next evidence action is a fresh
+  Codex+Claude Large rerun from this clean main.
 
 - `2026-08-31` fresh Claude Large rerun `eval-live-012-claude-code-20260830T203136Z` stopped
   fail-closed at the task-aware checkpoint before implementation: the provider-authored tasklist
