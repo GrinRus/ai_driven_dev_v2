@@ -16852,3 +16852,40 @@ Local tasks:
     deterministic scenarios, adapter conformance, packaged UI browser, security checks, and build
     passed. A fresh Codex and Claude Large rerun from this reconciled main is required to validate
     the original lane.
+
+#### Slice W45-E1-S11 — Large target compatibility and bounded workspace (`planned`)
+
+Goal: prevent a Large provider patch from removing existing compatibility consumers or carrying
+tool-generated dependency-lock churn into an otherwise bounded target change.
+
+Dependencies: W45-E1-S10; Large implementation/review evidence from
+`eval-live-012-codex-20260830T025946Z`.
+
+Local tasks:
+
+- `W45-E1-S11-T1` (next) Require compatibility-preserving target edits and clean bounded diffs.
+  - Output: update implementation-stage authoring guidance and focused prompt/quality fixtures so
+    providers must search all existing consumers before renaming/removing a shared helper, retain a
+    compatibility symbol or migrate every consumer with coverage, run full target collection
+    including unchanged consumers, and restore tool-generated `uv.lock` changes unless dependency
+    updates are explicitly in scope. Preserve the selected Starlette exception-group fix and all
+    existing command/result evidence rules.
+  - Scope: `prompt-packs/stages/implement/run.md`, implementation quality/prompt fixtures, and
+    focused semantic or review-contract tests only; do not change runtime adapters, stage APIs,
+    target repositories, or UI behavior.
+  - Verification: prompt/quality fixtures require consumer search, full collection evidence, and
+    lockfile cleanup; reports that claim bounded scope while listing `uv.lock`, omit an unchanged
+    consumer collection check after removing a symbol, or leave an import failure unresolved are
+    rejected. Existing valid implementation evidence, nested/heredoc/wrapped command formats, and
+    fail-closed outcome handling remain green. Run focused prompt/semantic tests, docs/planning,
+    Ruff, and mypy.
+  - Diagnostic evidence: Codex Large run
+    `eval-live-012-codex-20260830T025946Z` produced the intended Starlette runtime behavior and
+    focused checks (`213 passed, 2 xfailed`, dedicated matrix `12 passed`, Ruff green), but review
+    rejected the workspace because removing `collapse_excgroups` broke the existing WSGI test
+    import and the target diff included an unrelated `955`-addition/`685`-deletion `uv.lock`
+    rewrite. AIDD operator UI/API checkpoints were green; the backend-only target has no product UI
+    or visual design surface.
+  - Acceptance: the guidance makes compatibility-consumer search and full collection a required
+    implementation step, keeps `uv.lock` out of the bounded target diff by default, and adds
+    regression fixtures for both review findings without weakening runtime-agnostic core behavior.
