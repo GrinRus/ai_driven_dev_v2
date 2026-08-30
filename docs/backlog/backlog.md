@@ -7,7 +7,8 @@ slice, and local task.
 
 ## Next
 
-- None. The next action is a fresh Codex and Claude Large rerun from reconciled `main`.
+- `W45-E1-S11-T1` — require compatibility-preserving target edits, full consumer collection, and
+  clean bounded diffs without generated `uv.lock` churn before the next Large rerun.
 
 ## Soon
 
@@ -37,6 +38,15 @@ slice, and local task.
   queue-restoration policy in `docs/backlog/roadmap.md` (`W8-E3-S1`).
 
 ## Current reconciliation
+
+- `2026-08-30` follow-up planning after Codex Large review of
+  `eval-live-012-codex-20260830T025946Z` adds `W45-E1-S11-T1` as the sole Next task. The target's
+  focused Starlette behavior passed (`213 passed, 2 xfailed`, dedicated matrix `12 passed`, Ruff
+  green), but review rejected the run because removing `collapse_excgroups` broke the unchanged
+  WSGI test consumer and an unrelated `uv.lock` rewrite entered the tracked diff. The backend-only
+  target has no product UI/design surface and AIDD operator UI/API checkpoints remained green. The
+  next cycle is planning merge → implementation fix → reconciliation → fresh Codex/Claude Large
+  rerun; no clean Large success is claimed yet.
 
 - `2026-08-30` reconciliation after PR #471 (merge `bbfd0a9e`) marks `W45-E1-S10-T3` done. The
   implementation prompt now treats `Verification` as an executable command ledger and keeps
