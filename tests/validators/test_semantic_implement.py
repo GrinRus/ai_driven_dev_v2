@@ -1462,6 +1462,41 @@ def test_validate_semantic_outputs_accepts_explicit_negative_residue_outcome(
     assert findings == ()
 
 
+def test_validate_semantic_outputs_accepts_hyphenated_negative_residue_outcome(
+    tmp_path: Path,
+) -> None:
+    workspace_root = tmp_path / ".aidd"
+    work_item = "WI-SEM-IMPLEMENT-HYPHENATED-NEGATIVE-RESIDUE"
+    _write_workspace_baseline(workspace_root, work_item)
+    _write_implementation_report(
+        workspace_root,
+        work_item,
+        (
+            "# Implementation Report\n\n"
+            "## Selected task\n\n"
+            "- Task id: `TASK-EXAMPLE-CACHE-HYGIENE`.\n\n"
+            "## Change summary\n\n"
+            "Implemented the selected cache hygiene check with bounded verification evidence.\n\n"
+            "## Touched files\n\n"
+            "- `src/cache_hygiene.py` - add cache hygiene guard.\n\n"
+            "## Verification\n\n"
+            "- `git status --ignored --short --untracked-files=all` -> no-test-cache-residue.\n\n"
+            "## Risks\n\n"
+            "- None observed.\n\n"
+            "## Follow-up\n\n"
+            "- Continue to review.\n"
+        ),
+    )
+
+    findings = validate_semantic_outputs(
+        stage="implement",
+        work_item=work_item,
+        workspace_root=workspace_root,
+    )
+
+    assert findings == ()
+
+
 def test_validate_semantic_outputs_rejects_ambiguous_arrow_outcome(
     tmp_path: Path,
 ) -> None:
