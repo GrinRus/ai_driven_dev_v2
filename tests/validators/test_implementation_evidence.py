@@ -23,6 +23,8 @@ from aidd.validators.semantic_rules.evidence import (
         "`node -e \"console.log('verified')\"` -> pass",
         "`nl -ba src/hono-base.ts | sed -n '32,48p;388,400p'` -> pass",
         "`uv run --frozen python - <<'PY'\nprint('verified')\nPY` -> pass",
+        "`perl -e 'alarm 4; exec @ARGV' -- uv run --frozen pytest -q tests/test_testclient.py "
+        "-k 'test_streaming_response_is_available_after_first_chunk'` -> fail (exit code 142)",
         "`out=$(git status --short --untracked-files=all | awk '$1 == \"??\" "
         "&& $2 !~ /^\\.aidd\\// && $2 != \"aidd.example.toml\" { print }'); "
         "test -z \"$out\"` -> pass",
@@ -31,6 +33,30 @@ from aidd.validators.semantic_rules.evidence import (
 )
 def test_command_evidence_accepts_only_explicit_command_shapes(evidence: str) -> None:
     assert has_implementation_command_evidence(evidence)
+
+
+@pytest.mark.parametrize(
+    "evidence",
+    (
+        "`perl -e 'alarm 4; exec @ARGV' -- uv run --frozen pytest -q "
+        "tests/test_example.py` -> pass",
+        "`perl -e 'alarm 4; exec @ARGV' -- uv run --frozen pytest -q "
+        "tests/test_example.py` -> fail (exit code 142)",
+    ),
+)
+def test_command_evidence_accepts_supported_wrapped_commands(evidence: str) -> None:
+    assert has_implementation_command_evidence(evidence)
+
+
+@pytest.mark.parametrize(
+    "evidence",
+    (
+        "`perl -e 'alarm 4; exec @ARGV' -- uv run --frozen pytest -q tests/test_example.py -> pass",
+        "`timeout 4 uv run --frozen pytest -q tests/test_example.py` -> pass",
+    ),
+)
+def test_command_evidence_rejects_malformed_or_unknown_wrappers(evidence: str) -> None:
+    assert not has_implementation_command_evidence(evidence)
 
 
 @pytest.mark.parametrize(
