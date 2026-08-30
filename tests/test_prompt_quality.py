@@ -1263,6 +1263,10 @@ def test_implement_prompts_require_executable_verification_evidence() -> None:
     assert "`not-run: <reason>` explicitly" in repair_prompt
     assert "Use one bullet per command/check" in run_prompt
     assert "``- `command goes here` -> pass (observed summary)``" in run_prompt
+    assert "Treat `Verification` as a command ledger" in run_prompt
+    assert "Do not add standalone caveats such as `neither command failed`" in run_prompt
+    assert "put resolver/tool warnings and other explanatory" in run_prompt
+    assert "A command-free outcome claim remains invalid" in run_prompt
     assert "one bullet per command/check" in repair_prompt
     assert "short intent on the same line" in run_prompt
     assert "copy this exact shape for every file" in run_prompt

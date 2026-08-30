@@ -102,6 +102,15 @@ consistent across `implementation-report.md`, `validator-report.md`, and `stage-
    split it into `` `command` -> pass ``, move the marker outside the code span, normalize flags or
    paths, or replace the authored command with a count-only summary. Additional observed detail may
    follow the closed span, but the exact authored command/result text must remain intact.
+   Treat `Verification` as a command ledger, not a narrative status log: every top-level or nested
+   bullet that says a check `passed`, `failed`, `succeeded`, `errored`, or otherwise reports an
+   outcome must include that check's executable command, assertion, artifact path, or captured
+   tool output on the same bullet. Do not add standalone caveats such as `neither command failed`
+   or `warnings did not fail` to `Verification`; put resolver/tool warnings and other explanatory
+   context under `Risks` or `Follow-up`, where they do not masquerade as a check result. If a caveat
+   must remain in `Verification`, pair it with the exact command and its terminal marker on that
+   same evidence item. A command-free outcome claim remains invalid even when another bullet nearby
+   contains the command it refers to.
 7. No-op outcomes require explicit evidence-based justification plus next action; otherwise no-op is invalid.
    The sole exception is a rich task whose system-owned selection explicitly says
    `Execution mode: verification-only`: execute and preserve its required checks, report

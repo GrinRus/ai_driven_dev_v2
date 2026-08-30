@@ -78,6 +78,69 @@ def test_implementation_report_preserves_authored_command_result_span(tmp_path: 
     )
 
 
+def test_implementation_report_rejects_command_free_verification_caveat(
+    tmp_path: Path,
+) -> None:
+    workspace_root = tmp_path / "workspace"
+    _write_implementation_report(
+        workspace_root,
+        "WI-SEM-IMPLEMENT-VERIFICATION-CAVEAT",
+        "# Implementation Report\n\n"
+        "## Summary\n\n"
+        "- Selected task: `TL-1`.\n"
+        "Implemented the selected bounded change with focused tests and evidence.\n\n"
+        "## Touched files\n\n"
+        "- `src/example.py` - changed the selected behavior.\n\n"
+        "## Verification\n\n"
+        "- `uv run pytest -q` -> pass (12 passed).\n"
+        "- Neither command failed because of the existing resolver warning.\n\n"
+        "## Risks\n\n"
+        "- none\n\n"
+        "## Follow-up\n\n"
+        "- Continue to review.\n",
+    )
+
+    findings = validate_semantic_outputs(
+        stage="implement",
+        work_item="WI-SEM-IMPLEMENT-VERIFICATION-CAVEAT",
+        workspace_root=workspace_root,
+    )
+
+    assert any(
+        finding.code == UNVERIFIABLE_CHECK_CLAIM_CODE
+        and "outcome claim without executable command evidence" in finding.message
+        for finding in findings
+    )
+
+
+def test_implementation_report_accepts_verification_caveat_in_risks(
+    tmp_path: Path,
+) -> None:
+    workspace_root = tmp_path / "workspace"
+    _write_implementation_report(
+        workspace_root,
+        "WI-SEM-IMPLEMENT-RISK-CAVEAT",
+        "# Implementation Report\n\n"
+        "## Summary\n\n"
+        "- Selected task: `TL-1`.\n"
+        "Implemented the selected bounded change with focused tests and evidence.\n\n"
+        "## Touched files\n\n"
+        "- `src/example.py` - changed the selected behavior.\n\n"
+        "## Verification\n\n"
+        "- `uv run pytest -q` -> pass (12 passed).\n\n"
+        "## Risks\n\n"
+        "- Neither command failed because of the existing resolver warning.\n\n"
+        "## Follow-up\n\n"
+        "- Continue to review.\n",
+    )
+
+    assert validate_semantic_outputs(
+        stage="implement",
+        work_item="WI-SEM-IMPLEMENT-RISK-CAVEAT",
+        workspace_root=workspace_root,
+    ) == ()
+
+
 def test_validate_semantic_outputs_accepts_example_style_implementation_report(
     tmp_path: Path,
 ) -> None:
