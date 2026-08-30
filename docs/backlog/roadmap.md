@@ -16894,3 +16894,34 @@ Local tasks:
     tests (`366 passed`), docs/planning checks (`50 passed`), Ruff, mypy, deterministic scenarios,
     adapter conformance, packaged UI browser, and build all passed. Fresh Codex and Claude Large
     reruns remain required; no clean Large success is claimed by this task.
+
+#### Slice W45-E1-S12 — explicit verification-only task mode (`planned`)
+
+Goal: prevent verification-only task cards from silently inheriting repository-change semantics,
+so completed prerequisite checks can be recorded without triggering a false no-op failure during
+implementation.
+
+Dependencies: W45-E1-S11; rich task-plan parsing and implementation evidence validation.
+
+Local tasks:
+
+- `W45-E1-S12-T1` (next) Require an explicit execution mode for verification-only task cards.
+  - Output: extend task-plan parsing and tasklist validation so a card that explicitly describes a
+    verification-only task/output or an intentional absence of task-local repository edits must
+    declare `Execution mode: verification-only`; otherwise emit a located, actionable grammar
+    finding. Preserve the backward-compatible `repository-change` default for ordinary cards and
+    do not infer evidence-only behavior from a title alone.
+  - Scope: `src/aidd/core/task_plan.py`, `tests/core/test_task_plan.py`,
+    `tests/validators/test_semantic_tasklist.py` only; do not change runtime adapters, stage APIs,
+    implementation evidence rules, target repositories, or UI behavior.
+  - Verification: explicit verification-only cards parse as `TaskExecutionMode.VERIFICATION_ONLY`;
+    cards whose body says `verification-only task` or `no task-local repository edits` without the
+    field fail with a located execution-mode finding; ordinary cards and explicit repository-change
+    cards retain existing behavior. Run focused task-plan/tasklist tests, full validator tests,
+    Ruff, mypy, and planning consistency checks.
+  - Diagnostic evidence: Claude Large run
+    `eval-live-012-claude-code-20260830T070220Z` generated TL-3/TL-4 verification-only cards
+    without the explicit execution-mode field. The implementation stage then inherited
+    `repository-change`, rejected truthful `- none` touched-files evidence as a no-op, exhausted
+    bounded repairs, and stopped before review/QA. The target Starlette patch and focused checks
+    passed; no target product or UI/design defect was found.
