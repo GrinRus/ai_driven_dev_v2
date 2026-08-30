@@ -31,6 +31,143 @@ def test_validate_semantic_outputs_accepts_valid_implement_fixture_bundle() -> N
     assert findings == ()
 
 
+def _compatibility_report(
+    *,
+    summary: str,
+    touched_files: str,
+    verification: str,
+) -> str:
+    return (
+        "# Implementation Report\n\n"
+        "## Selected task\n\n"
+        "- Task id: `TASK-COMPATIBILITY-GUARD`\n\n"
+        "## Change summary\n\n"
+        f"{summary}\n\n"
+        "## Touched files\n\n"
+        f"{touched_files}\n\n"
+        "## Verification\n\n"
+        f"{verification}\n\n"
+        "## Risks\n\n"
+        "- none\n\n"
+        "## Follow-up\n\n"
+        "- Continue to review.\n"
+    )
+
+
+def test_implementation_report_rejects_incidental_uv_lockfile_in_bounded_diff(
+    tmp_path: Path,
+) -> None:
+    workspace_root = tmp_path / "workspace"
+    _write_implementation_report(
+        workspace_root,
+        "WI-SEM-IMPLEMENT-LOCKFILE",
+        _compatibility_report(
+            summary="Implemented a bounded compatibility fix with focused regression coverage.",
+            touched_files=(
+                "- `src/example.py` - preserve the shared behavior.\n"
+                "- `uv.lock` - generated resolver churn."
+            ),
+            verification=(
+                "- `git diff --name-only` -> changes bounded to `src/example.py` and `uv.lock`."
+            ),
+        ),
+    )
+
+    findings = validate_semantic_outputs(
+        stage="implement",
+        work_item="WI-SEM-IMPLEMENT-LOCKFILE",
+        workspace_root=workspace_root,
+    )
+
+    assert any(
+        finding.code == MISSING_DIFF_EVIDENCE_CODE
+        and "uv.lock" in finding.message
+        for finding in findings
+    )
+
+
+def test_implementation_report_rejects_shared_symbol_change_without_consumer_collection(
+    tmp_path: Path,
+) -> None:
+    workspace_root = tmp_path / "workspace"
+    _write_implementation_report(
+        workspace_root,
+        "WI-SEM-IMPLEMENT-CONSUMERS",
+        _compatibility_report(
+            summary="Removed the shared helper and implemented the replacement behavior.",
+            touched_files="- `src/example.py` - replace the shared helper.",
+            verification="- `uv run pytest -q tests/test_example.py` -> pass (4 passed).",
+        ),
+    )
+
+    findings = validate_semantic_outputs(
+        stage="implement",
+        work_item="WI-SEM-IMPLEMENT-CONSUMERS",
+        workspace_root=workspace_root,
+    )
+    messages = " ".join(finding.message for finding in findings)
+
+    assert "tracked consumer search" in messages
+    assert "full target test collection" in messages
+
+
+def test_implementation_report_rejects_unresolved_import_after_shared_symbol_change(
+    tmp_path: Path,
+) -> None:
+    workspace_root = tmp_path / "workspace"
+    _write_implementation_report(
+        workspace_root,
+        "WI-SEM-IMPLEMENT-IMPORT",
+        _compatibility_report(
+            summary="Renamed the shared helper while preserving the selected behavior.",
+            touched_files="- `src/example.py` - rename the shared helper.",
+            verification=(
+                "- `rg -n 'shared_helper' .` -> pass (all consumers inspected).\n"
+                "- `uv run pytest --collect-only -q` -> fail (ImportError: cannot import name)."
+            ),
+        ),
+    )
+
+    findings = validate_semantic_outputs(
+        stage="implement",
+        work_item="WI-SEM-IMPLEMENT-IMPORT",
+        workspace_root=workspace_root,
+    )
+
+    assert any(
+        finding.code == UNVERIFIABLE_CHECK_CLAIM_CODE
+        and "unresolved import" in finding.message
+        for finding in findings
+    )
+
+
+def test_implementation_report_accepts_shared_symbol_change_with_required_evidence(
+    tmp_path: Path,
+) -> None:
+    workspace_root = tmp_path / "workspace"
+    _write_implementation_report(
+        workspace_root,
+        "WI-SEM-IMPLEMENT-COMPATIBLE",
+        _compatibility_report(
+            summary="Renamed the shared helper and migrated every consumer with focused coverage.",
+            touched_files="- `src/example.py` - preserve compatibility for the shared helper.",
+            verification=(
+                "- `rg -n 'shared_helper' .` -> pass (all tracked consumers inspected).\n"
+                "- `uv run pytest --collect-only -q` -> pass (full target test collection "
+                "includes unchanged consumers).\n"
+                "- `uv run pytest -q` -> pass (18 passed).\n"
+                "- `git status --ignored --short --untracked-files=all` -> pass (no residue)."
+            ),
+        ),
+    )
+
+    assert validate_semantic_outputs(
+        stage="implement",
+        work_item="WI-SEM-IMPLEMENT-COMPATIBLE",
+        workspace_root=workspace_root,
+    ) == ()
+
+
 def test_implementation_report_preserves_authored_command_result_span(tmp_path: Path) -> None:
     workspace_root = tmp_path / ".aidd"
     work_item = "WI-SEM-IMPLEMENT-AUTHORED-COMMAND-SPAN"

@@ -31,6 +31,28 @@ from aidd.validators.semantic_rules.common import (
 )
 
 SELECTED_TASK_ID_PATTERN = re.compile(r"\bTASK-[A-Z0-9][A-Z0-9-]*[A-Z0-9]\b")
+_SHARED_SYMBOL_CHANGE_PATTERN = re.compile(
+    r"(?:\b(?:remove|removed|removes|rename|renamed|renames|delete|deleted|deletes)\b"
+    r".{0,100}\b(?:shared|helper|symbol|function|method)\b|"
+    r"\b(?:shared|helper|symbol|function|method)\b.{0,100}\b"
+    r"(?:remove|removed|removes|rename|renamed|renames|delete|deleted|deletes)\b)",
+    re.IGNORECASE | re.DOTALL,
+)
+_TRACKED_CONSUMER_SEARCH_PATTERN = re.compile(
+    r"\brg\s+(?:-[^\s]+\s+)*-n\b|\b(?:tracked|all)\s+consumers?\b|"
+    r"\b(?:consumer|usage|import)\s+(?:search|check|scan)\b",
+    re.IGNORECASE,
+)
+_FULL_COLLECTION_PATTERN = re.compile(
+    r"--collect-only|full\s+(?:target\s+)?(?:test|suite)\s+collection|"
+    r"unchanged\s+consumers?\s+(?:collect|collection|covered)",
+    re.IGNORECASE,
+)
+_IMPORT_FAILURE_PATTERN = re.compile(
+    r"\b(?:importerror|modulenotfounderror|unresolved\s+import|cannot\s+import|"
+    r"collection\s+(?:error|failed)|has\s+no\s+attribute)\b",
+    re.IGNORECASE,
+)
 
 
 def _compact_text(text: str) -> str:
@@ -251,6 +273,84 @@ def _canonical_touched_file_paths(touched_files: SemanticSection) -> tuple[str, 
     return tuple(dict.fromkeys(paths))
 
 
+def _validate_target_compatibility_evidence(
+    *,
+    context: SemanticDocumentContext,
+    summary: SemanticSection,
+    touched_files: SemanticSection,
+    verification: SemanticSection,
+    follow_up: SemanticSection,
+) -> tuple[ValidationFinding, ...]:
+    """Reject bounded implementation claims that leave compatibility gaps or lockfile churn."""
+
+    findings: list[ValidationFinding] = []
+    touched_paths = _canonical_touched_file_paths(touched_files)
+    all_context = " ".join((summary.content, verification.content, follow_up.content))
+    normalized_context = all_context.casefold()
+
+    if "uv.lock" in {path.casefold() for path in touched_paths}:
+        explicitly_scoped = (
+            "dependency" in normalized_context
+            and "in scope" in normalized_context
+            and "not in scope" not in normalized_context
+            and "out of scope" not in normalized_context
+        )
+        if not explicitly_scoped:
+            findings.append(
+                context.finding(
+                    code=MISSING_DIFF_EVIDENCE_CODE,
+                    message=(
+                        "Bounded implementation evidence lists `uv.lock` without an explicit "
+                        "in-scope dependency update; restore tool-generated lockfile changes."
+                    ),
+                    severity="high",
+                    location=touched_files.location,
+                )
+            )
+
+    if not _SHARED_SYMBOL_CHANGE_PATTERN.search(summary.content):
+        return tuple(findings)
+
+    verification_text = verification.content
+    if not _TRACKED_CONSUMER_SEARCH_PATTERN.search(verification_text):
+        findings.append(
+            context.finding(
+                code=UNVERIFIABLE_CHECK_CLAIM_CODE,
+                message=(
+                    "Removing or renaming a shared symbol requires executable evidence of a "
+                    "tracked consumer search before handoff."
+                ),
+                severity="high",
+                location=verification.location,
+            )
+        )
+    if not _FULL_COLLECTION_PATTERN.search(verification_text):
+        findings.append(
+            context.finding(
+                code=UNVERIFIABLE_CHECK_CLAIM_CODE,
+                message=(
+                    "Removing or renaming a shared symbol requires full target test collection "
+                    "evidence, including unchanged consumers."
+                ),
+                severity="high",
+                location=verification.location,
+            )
+        )
+    if _IMPORT_FAILURE_PATTERN.search(verification_text):
+        findings.append(
+            context.finding(
+                code=UNVERIFIABLE_CHECK_CLAIM_CODE,
+                message=(
+                    "Implementation evidence records an unresolved import or collection failure "
+                    "after a shared-symbol change."
+                ),
+                severity="high",
+                location=verification.location,
+            )
+        )
+    return tuple(findings)
+
+
 def _validate_verification_item(
     *,
     context: SemanticDocumentContext,
@@ -376,6 +476,15 @@ def validate_implementation_report(
         )
     )
     findings.extend(_validate_verification_notes(context=context, verification=verification))
+    findings.extend(
+        _validate_target_compatibility_evidence(
+            context=context,
+            summary=summary,
+            touched_files=touched_files,
+            verification=verification,
+            follow_up=follow_up,
+        )
+    )
     if evidence_context_error is not None:
         findings.append(
             context.finding(

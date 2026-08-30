@@ -128,6 +128,14 @@ consistent across `implementation-report.md`, `validator-report.md`, and `stage-
    changed unless the selected task explicitly requires dependency/config updates. If such files
    change incidentally, stop and report the out-of-scope change instead of silently treating it as
    part of the implementation.
+   Before handoff, inspect `git diff --name-only` and restore tool-generated `uv.lock` changes;
+   dependency or lockfile updates are allowed only when the selected task explicitly puts them in
+   scope and the report names that decision.
+   Before removing or renaming a shared helper, symbol, or public function, search all tracked
+   consumers (for example `rg -n 'symbol_name' .`) and either retain a compatibility symbol or
+   migrate every consumer with focused coverage. A focused suite alone is insufficient: run the
+   full target test collection, including unchanged consumers, for example
+   `uv run pytest --collect-only -q`, and resolve any import or collection failure before handoff.
 11. Keep debugging bounded. Prefer authored verification commands and existing regression tests.
     If a check fails, make at most one focused fix attempt for that failure class, then rerun the
     narrow check. If it still fails or the root cause is unclear, stop editing and write the
