@@ -16799,3 +16799,21 @@ Local tasks:
     mypy, full CI, deterministic scenarios, adapter conformance, packaged UI browser, CodeQL,
     dependency review, scorecard, and build. A fresh Claude Large rerun from this clean main is
     required; the failed bundle remains retained as diagnostic evidence.
+
+- `W45-E1-S10-T2` (next) Accept hyphenated negative verification outcomes as observed terminal results.
+  - Output: extend the shared implementation evidence result matcher so an executable verification
+    command followed by a concrete hyphenated negative/clean marker such as
+    `` `git status --ignored --short --untracked-files=all` -> no-test-cache-residue `` is
+    recognized as a terminal outcome without weakening command or evidence requirements.
+  - Scope: `src/aidd/validators/semantic_rules/evidence.py` and focused semantic implementation
+    tests only; do not change runtime adapters, stage orchestration, target repositories, or UI.
+  - Verification: a report containing a command with `-> no-test-cache-residue` (and equivalent
+    hyphenated `no-*` clean markers) validates; ambiguous arrow prose and command-without-outcome
+    evidence remain fail-closed; existing valid/malformed evidence, Ruff, mypy, and planning checks
+    pass.
+  - Diagnostic evidence: fresh Claude Large run
+    `eval-live-012-claude-code-20260829T230612Z` produced the intended bounded Starlette patch and
+    passing target checks, but implement validation exhausted its repair budget on
+    `SEM-UNVERIFIABLE-CHECK-CLAIM` because the truthful residue-cleanup result
+    `-> no-test-cache-residue` was not recognized. The target is backend-only with no product UI or
+    design surface; AIDD operator UI/API checkpoints remained green.
