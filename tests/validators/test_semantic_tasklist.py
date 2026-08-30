@@ -115,6 +115,80 @@ def test_validate_semantic_outputs_flags_implicit_verification_only_mode(
     assert "Execution mode: verification-only" in finding.message
 
 
+def test_validate_semantic_outputs_rejects_unresolved_verification_command_placeholder(
+    tmp_path: Path,
+) -> None:
+    workspace_root = tmp_path / ".aidd"
+    _write_tasklist_document(
+        workspace_root,
+        "WI-SEM-TASKLIST-COMMAND-PLACEHOLDER",
+        (
+            "# Tasklist\n\n"
+            "## Task summary\n\n"
+            "Run the concrete regression command before implementation.\n\n"
+            "## Ordered tasks\n\n"
+            "### TL-1 — Run regression\n\n"
+            "- Outcome: The regression command is recorded for implementation.\n"
+            "- Dominant deliverable: `tests/test_responses.py` verification evidence.\n"
+            "- In scope: `tests/test_responses.py`.\n"
+            "- Acceptance criteria:\n"
+            "  - TL-1-AC1: The concrete regression command is executable.\n\n"
+            "## Dependencies\n\n"
+            "- TL-1: none\n\n"
+            "## Verification notes\n\n"
+            "- TL-1: `uv run --frozen pytest -q tests/test_responses.py::<test_name>` -> pass.\n"
+        ),
+    )
+
+    findings = validate_semantic_outputs(
+        stage="tasklist",
+        work_item="WI-SEM-TASKLIST-COMMAND-PLACEHOLDER",
+        workspace_root=workspace_root,
+    )
+
+    assert len(findings) == 1
+    finding = findings[0]
+    assert finding.code == INCOMPLETE_SECTION_CODE
+    assert finding.severity == "high"
+    assert "unresolved command placeholder `<test_name>`" in finding.message
+    assert "concrete executable value" in finding.message
+
+
+def test_validate_semantic_outputs_accepts_concrete_command_and_process_substitution(
+    tmp_path: Path,
+) -> None:
+    workspace_root = tmp_path / ".aidd"
+    _write_tasklist_document(
+        workspace_root,
+        "WI-SEM-TASKLIST-COMMAND-CONCRETE",
+        (
+            "# Tasklist\n\n"
+            "## Task summary\n\n"
+            "Run the concrete regression command before implementation.\n\n"
+            "## Ordered tasks\n\n"
+            "### TL-1 — Run regression\n\n"
+            "- Outcome: The regression command is recorded for implementation.\n"
+            "- Dominant deliverable: `tests/test_responses.py` verification evidence.\n"
+            "- In scope: `tests/test_responses.py`.\n"
+            "- Acceptance criteria:\n"
+            "  - TL-1-AC1: The concrete regression command is executable.\n\n"
+            "## Dependencies\n\n"
+            "- TL-1: none\n\n"
+            "## Verification notes\n\n"
+            "- TL-1: `uv run --frozen pytest -q tests/test_responses.py::test_streaming_response` "
+            "and `sh -c 'cat <(printf x)'` -> pass.\n"
+        ),
+    )
+
+    findings = validate_semantic_outputs(
+        stage="tasklist",
+        work_item="WI-SEM-TASKLIST-COMMAND-CONCRETE",
+        workspace_root=workspace_root,
+    )
+
+    assert findings == ()
+
+
 def test_validate_semantic_outputs_ignores_tradeoff_ids_when_tasklist_uses_tl_ids(
     tmp_path: Path,
 ) -> None:

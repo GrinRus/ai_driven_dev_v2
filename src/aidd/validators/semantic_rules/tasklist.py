@@ -25,6 +25,45 @@ def _compact_text(text: str) -> str:
     return re.sub(r"\s+", " ", text).strip()
 
 
+_INLINE_CODE_PATTERN = re.compile(r"(?<!`)`(?!`)(.*?)(?<!`)`(?!`)", flags=re.DOTALL)
+_UNRESOLVED_COMMAND_PLACEHOLDER_PATTERN = re.compile(r"<[A-Za-z][^>\n]*>")
+
+
+def _unresolved_verification_placeholder_findings(
+    context: SemanticDocumentContext,
+    section: SemanticSection,
+) -> tuple[ValidationFinding, ...]:
+    findings: list[ValidationFinding] = []
+    seen: set[tuple[str, str]] = set()
+    for line in section.content.splitlines():
+        code_spans = _INLINE_CODE_PATTERN.findall(line)
+        if not code_spans:
+            continue
+        task_ids = extract_tasklist_task_ids(line)
+        task_label = ", ".join(sorted(task_ids)) if task_ids else "the task"
+        for code_span in code_spans:
+            for match in _UNRESOLVED_COMMAND_PLACEHOLDER_PATTERN.finditer(code_span):
+                placeholder = match.group(0)
+                key = (task_label, placeholder)
+                if key in seen:
+                    continue
+                seen.add(key)
+                findings.append(
+                    context.finding(
+                        code=INCOMPLETE_SECTION_CODE,
+                        message=(
+                            f"Verification note for {task_label} contains unresolved command "
+                            f"placeholder `{placeholder}`. Replace it with a concrete executable "
+                            "value before implementation; shell redirection and process "
+                            "substitution forms remain allowed."
+                        ),
+                        severity="high",
+                        location=section.location,
+                    )
+                )
+    return tuple(findings)
+
+
 def _tasklist_task_ids(context: SemanticDocumentContext) -> set[str]:
     ordered_tasks = context.section_by_candidates(candidates=("Ordered tasks",))
     if not ordered_tasks.content:
@@ -225,6 +264,7 @@ def _validate_verification_notes(
         tasklist_task_ids=tasklist_task_ids,
         section_name="Verification notes",
     )
+    findings.extend(_unresolved_verification_placeholder_findings(context, section))
     missing_verification_entries = sorted(tasklist_task_ids - referenced_task_ids)
     if missing_verification_entries:
         missing_ids_text = ", ".join(missing_verification_entries)
@@ -380,6 +420,10 @@ def validate_tasklist(context: SemanticDocumentContext) -> tuple[ValidationFindi
     findings: list[ValidationFinding] = list(validate_placeholder_sections(context))
     summary = context.section_by_candidates(candidates=("Task summary",))
     findings.extend(_validate_task_summary(context, summary, set()))
+    verification_notes = context.section_by_candidates(candidates=("Verification notes",))
+    findings.extend(
+        _unresolved_verification_placeholder_findings(context, verification_notes)
+    )
     try:
         parse_task_plan("\n".join(context.markdown_lines))
     except TaskPlanParseError as exc:

@@ -97,6 +97,10 @@ Optional context documents may improve task decomposition quality, but they must
   notes must preserve those commands exactly when citing them, including flags, path lists,
   environment variables, and coverage/cache-disabling options such as `--coverage.enabled=false`;
   do not replace them with `npx`/package-manager aliases or broader suites.
+- verification notes must use concrete executable commands; do not leave unresolved angle-bracket
+  template placeholders such as `::<test_name>` or `<path>` inside a command. Shell syntax such as
+  input redirection (`< file`) and process substitution (`<(command)`) remains valid when it is
+  intentionally executable.
 - Optional broad checks outside the authored verification boundary may be listed only as
   optional/non-blocking exploratory checks; they must not become required pass criteria when the
   authored verification boundary is narrower.

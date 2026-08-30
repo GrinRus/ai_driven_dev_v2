@@ -7,7 +7,7 @@ slice, and local task.
 
 ## Next
 
-- None.
+- `W45-E1-S14-T1` — Reject unresolved verification-command placeholders in tasklists.
 
 ## Soon
 
@@ -37,6 +37,14 @@ slice, and local task.
   queue-restoration policy in `docs/backlog/roadmap.md` (`W8-E3-S1`).
 
 ## Current reconciliation
+
+- `2026-08-30` fresh Claude Large rerun
+  `eval-live-012-claude-code-20260830T122148Z` reached implementation with the correct direct
+  StreamingResponse patch and green target tests, but the provider-authored tasklist used the
+  unresolved command placeholder `tests/test_responses.py::<test_name>`. Implement validation
+  failed closed on `SEM-UNVERIFIABLE-CHECK-CLAIM`; this is an AIDD tasklist authoring gap, not a
+  target product or UI/design defect. `W45-E1-S14-T1` is promoted to `Next` to reject the invalid
+  command before implementation, then the Codex and Claude Large lane must rerun from clean main.
 
 - `2026-08-30` reconciliation after PR #480 (merge `f61f414a`) marks `W45-E1-S13-T1` done and
   closes slice `W45-E1-S13`. The implementation evidence matcher now recognizes valid `perl`
