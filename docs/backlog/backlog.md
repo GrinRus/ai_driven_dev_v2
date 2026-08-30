@@ -7,7 +7,8 @@ slice, and local task.
 
 ## Next
 
-- None.
+- `W45-E1-S12-T1` — Require an explicit execution mode for verification-only task cards so
+  verification tasks with no task-local diff do not inherit repository-change semantics.
 
 ## Soon
 
@@ -37,6 +38,15 @@ slice, and local task.
   queue-restoration policy in `docs/backlog/roadmap.md` (`W8-E3-S1`).
 
 ## Current reconciliation
+
+- `2026-08-30` Claude Large `eval-live-012-claude-code-20260830T070220Z` reached the target
+  implementation and added the intended TL-1/TL-2 Starlette changes with passing focused tests,
+  but stopped fail-closed at implement after TL-3/TL-4 verification-only cards omitted the
+  explicit execution-mode field. The task-plan parser defaulted those cards to `repository-change`,
+  so truthful `- none` touched-files evidence triggered no-op findings and exhausted bounded
+  repair. `W45-E1-S12-T1` is the sole Next task to make the ambiguity fail early and actionable;
+  no target product or UI/design defect was found. A fresh Codex and Claude Large rerun is
+  required after its merge; no clean Large success is claimed yet.
 
 - `2026-08-30` reconciliation after PR #474 (merge `365eb46a`) marks `W45-E1-S11-T1` done and
   closes slice `W45-E1-S11`. The implement prompt now requires tracked consumer search, full target
