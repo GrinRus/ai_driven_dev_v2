@@ -697,12 +697,16 @@ def parse_task_plan(markdown: str) -> TaskPlan:
         # machine-readable value (for example, ``T1: none — establishes M1``).
         # Only the leading dependency value defines the graph; milestone/review
         # ids in the rationale must not turn a valid ``none`` into a dependency.
-        if _NONE_DEPENDENCY_PATTERN.match(dependency_text.strip("` .")):
+        dependency_clause = re.split(
+            r"\s+[—–]\s+", dependency_text, maxsplit=1
+        )[0].strip()
+        if _NONE_DEPENDENCY_PATTERN.match(dependency_clause.strip("` .")):
             parsed_dependencies[task_id] = ()
         else:
             parsed_dependencies[task_id] = tuple(
                 dict.fromkeys(
-                    match.group(1).upper() for match in _TASK_ID_PATTERN.finditer(dependency_text)
+                    match.group(1).upper()
+                    for match in _TASK_ID_PATTERN.finditer(dependency_clause)
                 )
             )
             if not parsed_dependencies[task_id]:
