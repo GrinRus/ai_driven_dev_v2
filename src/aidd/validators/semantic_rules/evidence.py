@@ -15,7 +15,7 @@ IMPLEMENT_COMMAND_PATTERN = re.compile(
     r"aidd|ast-index|uv run|pytest|ruff|mypy|python|node|sphinx-build|npm|pnpm|yarn|"
     r"go test|cargo test|"
     r"make|git|grep|rg|sed|nl|echo|printf|flake8|black|prettier|ty check|"
-    r"bun|bunx|find|npx|vitest|tsc"
+    r"bun|bunx|find|npx|vitest|tsc|perl"
     r")\b[^`\n]*`|"
     + GENERIC_BACKTICKED_COMMAND_FRAGMENT
     + r"|"
@@ -117,6 +117,7 @@ _KNOWN_COMMAND_EXECUTABLES = frozenset(
         "nl",
         "npx",
         "pnpm",
+        "perl",
         "prettier",
         "printf",
         "pytest",
