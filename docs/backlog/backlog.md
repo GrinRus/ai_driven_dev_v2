@@ -7,7 +7,9 @@ slice, and local task.
 
 ## Next
 
-- None.
+- `W45-E1-S10-T3` — keep explanatory verification caveats executable or outside the
+  `Verification` section so provider-authored implementation reports remain fail-closed and
+  machine-verifiable.
 
 ## Soon
 
@@ -37,6 +39,14 @@ slice, and local task.
   queue-restoration policy in `docs/backlog/roadmap.md` (`W8-E3-S1`).
 
 ## Current reconciliation
+
+- `2026-08-30` fresh Codex Large `eval-live-012-codex-20260830T005635Z` produced the intended
+  bounded Starlette runtime change and focused target checks passed (`213 passed, 2 xfailed`, Ruff
+  green), but implement validation exhausted its repair budget on `SEM-UNVERIFIABLE-CHECK-CLAIM`:
+  an explanatory `neither command failed because of it` bullet in `Verification` contained an
+  outcome claim without an executable command on the same evidence item. No target product or
+  UI/design defect was found; the backend-only target's AIDD operator UI/API checkpoints remained
+  green. `W45-E1-S10-T3` is the sole Next task before a fresh Codex/Claude Large rerun.
 
 - `2026-08-30` reconciliation after PR #468 (merge `a7b84f67`) marks `W45-E1-S10-T2` done. The
   implementation evidence matcher now accepts concrete hyphenated negative/clean terminal markers,
