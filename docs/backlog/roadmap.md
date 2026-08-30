@@ -16973,7 +16973,7 @@ Local tasks:
     scenarios, adapter conformance, packaged UI browser, and build checks are green. Fresh
     Codex and Claude Large reruns remain required; no clean Large success is claimed by this task.
 
-#### Slice W45-E1-S14 — concrete tasklist verification commands (`planned`)
+#### Slice W45-E1-S14 — concrete tasklist verification commands (`done`)
 
 Goal: fail early when provider-authored tasklists carry unresolved command placeholders, so
 implementation evidence cannot inherit a command that cannot be executed or reproduced.
@@ -16982,7 +16982,7 @@ Dependencies: W45-E1-S13; tasklist semantic validation and implementation eviden
 
 Local tasks:
 
-- `W45-E1-S14-T1` (next) Reject unresolved verification-command placeholders in tasklists.
+- `W45-E1-S14-T1` (done) Reject unresolved verification-command placeholders in tasklists.
   - Output: extend tasklist semantic validation and focused fixtures so inline verification
     commands containing unresolved angle-bracket placeholders such as `<test_name>` fail with a
     located, actionable finding. Preserve legitimate shell redirection/process-substitution syntax,
@@ -17003,3 +17003,7 @@ Local tasks:
   - Acceptance: unresolved command placeholders are caught and repairable at tasklist, before
     implementation consumes repair budget; concrete commands and valid shell syntax remain
     backward compatible.
+  - Completion: PR #482 (merge `683aff95`) adds the tasklist semantic guard and contract guidance;
+    the focused tasklist suite (25 passed), full validator/docs/planning checks (424 passed), Ruff,
+    mypy, CI, adapter conformance, deterministic scenarios, packaged UI browser, and build checks
+    are green. The next action is a fresh Codex and Claude Large rerun from this clean main.
