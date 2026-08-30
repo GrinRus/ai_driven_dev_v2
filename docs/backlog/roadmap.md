@@ -16762,7 +16762,7 @@ Local tasks:
     required CI including packaged UI browser, deterministic scenarios, adapter conformance, and
     build passed.
 
-#### Slice W45-E1-S10 — authored verification command fidelity (`planned`)
+#### Slice W45-E1-S10 — authored verification command fidelity (`done`)
 
 Goal: keep authored verification commands and their terminal outcomes as one exact, executable
 evidence item in provider-written implementation reports, so semantic validation can prove the
@@ -16824,7 +16824,7 @@ Local tasks:
     packaged UI browser, CodeQL, dependency review, scorecard, and build passed. A fresh Claude Large
     rerun from this clean main is required to verify the original lane.
 
-- `W45-E1-S10-T3` (next) Keep explanatory verification caveats executable or outside the
+- `W45-E1-S10-T3` (done) Keep explanatory verification caveats executable or outside the
   `Verification` section.
   - Output: update implementation-stage authoring guidance and focused semantic/prompt fixtures so
     every bullet in `Verification` that contains an outcome claim also contains the exact command
@@ -16846,3 +16846,9 @@ Local tasks:
     explanatory `neither command failed because of it` outcome claim in `Verification` without an
     executable command on the same evidence item. No target product or UI/design defect was found;
     the backend-only target's AIDD operator UI/API checkpoints remained green.
+  - Completion: PR #471 (merge `bbfd0a9e`) adds explicit implementation-stage guidance, prompt
+    contract coverage, and semantic regressions for command-free verification caveats. Focused
+    semantic/prompt/packaging tests (`128 passed`), docs/planning checks (`50 passed`), Ruff, mypy,
+    deterministic scenarios, adapter conformance, packaged UI browser, security checks, and build
+    passed. A fresh Codex and Claude Large rerun from this reconciled main is required to validate
+    the original lane.
