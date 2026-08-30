@@ -76,6 +76,45 @@ def test_validate_semantic_outputs_rejects_legacy_compact_tasklist_ids(tmp_path:
     assert any("missing required field" in finding.message for finding in findings)
 
 
+def test_validate_semantic_outputs_flags_implicit_verification_only_mode(
+    tmp_path: Path,
+) -> None:
+    workspace_root = tmp_path / ".aidd"
+    _write_tasklist_document(
+        workspace_root,
+        "WI-SEM-TASKLIST-VERIFICATION-MODE",
+        (
+            "# Tasklist\n\n"
+            "## Task summary\n\n"
+            "Verify the implementation with a bounded command-only task.\n\n"
+            "## Ordered tasks\n\n"
+            "### TL-1 - Verify the implementation\n\n"
+            "- Outcome: This verification-only task confirms the fix.\n"
+            "- Dominant deliverable: pytest output for the implementation.\n"
+            "- In scope: `tests/test_example.py`.\n"
+            "- Acceptance criteria:\n"
+            "  - TL-1-AC1: The verification command passes.\n\n"
+            "## Dependencies\n\n"
+            "- TL-1: none\n\n"
+            "## Verification notes\n\n"
+            "- TL-1: `pytest tests/test_example.py -q`\n"
+        ),
+    )
+
+    findings = validate_semantic_outputs(
+        stage="tasklist",
+        work_item="WI-SEM-TASKLIST-VERIFICATION-MODE",
+        workspace_root=workspace_root,
+    )
+
+    assert len(findings) == 1
+    finding = findings[0]
+    assert finding.code == INCOMPLETE_SECTION_CODE
+    assert finding.severity == "high"
+    assert "missing required field `execution mode`" in finding.message
+    assert "Execution mode: verification-only" in finding.message
+
+
 def test_validate_semantic_outputs_ignores_tradeoff_ids_when_tasklist_uses_tl_ids(
     tmp_path: Path,
 ) -> None:

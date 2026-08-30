@@ -193,6 +193,58 @@ def test_parse_task_plan_preserves_explicit_verification_only_mode() -> None:
     assert plan.tasks[1].execution_mode is TaskExecutionMode.VERIFICATION_ONLY
 
 
+@pytest.mark.parametrize(
+    "description",
+    (
+        "This verification-only task confirms the fix.",
+        "No task-local repository edits are required for this check.",
+    ),
+)
+def test_parse_task_plan_requires_explicit_mode_for_implicit_verification_only(
+    description: str,
+) -> None:
+    markdown = _tasklist().replace(
+        "- Outcome: Invalid content is rejected.",
+        f"- Outcome: {description}",
+    )
+
+    with pytest.raises(TaskPlanParseError) as captured:
+        parse_task_plan(markdown)
+
+    issue = next(
+        issue
+        for issue in captured.value.issues
+        if issue.task_id == "TL-2" and issue.field == "execution mode"
+    )
+    assert issue.kind is TaskPlanIssueKind.MISSING_FIELD
+    assert issue.missing_fields == ("execution mode",)
+    assert issue.line_number == 19
+    assert "Execution mode: verification-only" in issue.message
+
+
+def test_parse_task_plan_does_not_infer_verification_only_from_title() -> None:
+    markdown = _tasklist().replace(
+        "### TL-2 — Add enforcement",
+        "### TL-2 — Verification-only follow-up",
+    )
+
+    plan = parse_task_plan(markdown)
+
+    assert plan.tasks[1].execution_mode is TaskExecutionMode.REPOSITORY_CHANGE
+
+
+def test_parse_task_plan_preserves_explicit_repository_change_mode() -> None:
+    markdown = _tasklist().replace(
+        "- Outcome: Invalid content is rejected.",
+        "- Outcome: This verification-only task is implemented with repository edits.\n"
+        "- Execution mode: repository-change",
+    )
+
+    plan = parse_task_plan(markdown)
+
+    assert plan.tasks[1].execution_mode is TaskExecutionMode.REPOSITORY_CHANGE
+
+
 def test_parse_task_plan_rejects_unknown_execution_mode() -> None:
     markdown = _tasklist().replace(
         "- In scope: `src/example.py` and `tests/test_validator.py`.",
