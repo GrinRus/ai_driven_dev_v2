@@ -124,6 +124,11 @@ notes, and a concrete verification signal.
    `./utils/*`, generated declaration outputs, and existing public import conventions. If the
    proposed path can be imported through the package boundary, either choose a non-exported
    location or record the public API risk and required compatibility evidence in the tasklist.
+11. Keep behavior and regression scopes coherent. If regression tests can expose a required
+    production correction, put the behavior path and its tests in one bounded task, or create an
+    explicit earlier dependency-ready production task and let the regression task depend on it. Do
+    not leave a tests-only card responsible for a correction outside its `In scope`; preserve
+    fail-closed scope validation for unrelated edits.
 
 ## Execution instructions
 

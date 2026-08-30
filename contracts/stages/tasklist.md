@@ -80,6 +80,11 @@ Optional context documents may improve task decomposition quality, but they must
   section requirement.
 - task ordering must already be executable in dependency order rather than being silently
   reordered; dependencies may reference only earlier task cards.
+- when a regression card validates a behavior change and its checks may reveal a required
+  production correction, keep the behavior path and regression coverage in one bounded card, or
+  make the production correction an explicit earlier dependency-ready card. Never create a
+  tests-only card that cannot legally apply a correction its own acceptance may require; keep
+  implementation scope fail-closed for unrelated paths.
 ## Required semantics versus Markdown presentation
 
 - compact bullet-only tasklists are not accepted; the H3 task-card form is required and there

@@ -79,6 +79,9 @@ For each finding:
 Use concrete repair actions:
 
 - bundled task scope: split into smaller ordered tasks with one dominant deliverable each;
+- coupled behavior/regression scope: keep the production correction and its regression coverage in
+  one bounded card, or add an explicit earlier dependency-ready production card; do not broaden a
+  tests-only card beyond its authored `In scope` and do not weaken fail-closed scope validation;
 - incomplete task card: preserve its id and add concrete `Outcome`, `Dominant deliverable`,
   `In scope`, and an `Acceptance criteria` field with unique `<task-id>-AC<n>` entries; make
   `In scope` include safe backticked repository-relative file or directory prefixes;

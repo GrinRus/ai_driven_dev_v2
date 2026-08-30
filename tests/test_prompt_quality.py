@@ -637,6 +637,28 @@ def test_tasklist_contract_and_prompts_require_rich_task_cards() -> None:
     )
 
 
+def test_tasklist_guides_coupled_behavior_and_regression_scope() -> None:
+    paths = (
+        "contracts/stages/tasklist.md",
+        "contracts/documents/tasklist.md",
+        "prompt-packs/stages/tasklist/run.md",
+        "prompt-packs/stages/tasklist/system.md",
+        "prompt-packs/stages/tasklist/repair.md",
+    )
+
+    for path in paths:
+        normalized = " ".join(Path(path).read_text(encoding="utf-8").split()).lower()
+        assert "regression" in normalized
+        assert "production correction" in normalized
+        assert "dependency-ready" in normalized
+        assert "tests-only" in normalized
+
+    run_prompt = Path("prompt-packs/stages/tasklist/run.md").read_text(encoding="utf-8")
+    repair_prompt = Path("prompt-packs/stages/tasklist/repair.md").read_text(encoding="utf-8")
+    assert "preserve fail-closed scope validation" in " ".join(run_prompt.split()).lower()
+    assert "do not broaden a tests-only card" in " ".join(repair_prompt.split()).lower()
+
+
 def test_tasklist_contract_prompts_and_repair_name_canonical_milestone_locations() -> None:
     paths = (
         "contracts/stages/tasklist.md",
