@@ -132,6 +132,25 @@ def test_task_workspace_groups_dependency_graph_and_selects_next_ready(tmp_path:
     )
 
 
+def test_task_workspace_dependency_graph_ignores_explanatory_task_ids(tmp_path: Path) -> None:
+    workspace_root = tmp_path / ".aidd"
+    _write_tasklist(
+        workspace_root,
+        _tasklist().replace(
+            "- TL-4: TL-2, TL-3\n",
+            "- TL-4: TL-2 — same dependency reasoning as TL-3\n",
+        ),
+    )
+
+    model = cast(
+        dict[str, Any],
+        resolve_task_read_model(workspace_root=workspace_root, work_item="WI-READ"),
+    )
+
+    assert model["dependency_graph"]["TL-4"]["dependencies"] == ["TL-2"]
+    assert model["critical_path"] == ["TL-1", "TL-2", "TL-4"]
+
+
 def test_task_workspace_action_projection_is_fail_closed_across_attempt_states(
     tmp_path: Path,
 ) -> None:

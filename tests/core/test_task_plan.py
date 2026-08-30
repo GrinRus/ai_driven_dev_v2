@@ -189,6 +189,17 @@ def test_parse_task_plan_allows_dependency_rationale_after_machine_value() -> No
     assert plan.tasks[1].dependencies == ("TL-1",)
 
 
+def test_parse_task_plan_ignores_task_ids_in_dash_rationale() -> None:
+    markdown = _tasklist().replace(
+        "- TL-2: TL-1\n",
+        "- TL-2: TL-1 — same dependency reasoning as TL-9\n",
+    )
+
+    plan = parse_task_plan(markdown)
+
+    assert plan.tasks[1].dependencies == ("TL-1",)
+
+
 def test_parse_task_plan_accepts_backticked_none_dependency() -> None:
     markdown = _tasklist().replace("- TL-1: none\n", "- TL-1: `none`.\n")
 

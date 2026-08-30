@@ -60,6 +60,28 @@ def test_tasklist_dependency_parser_normalizes_terminal_punctuation() -> None:
     assert dependencies == {"T1": (), "T2": ("T1",), "T3": ("T1", "T2")}
 
 
+def test_tasklist_dependency_parser_matches_core_for_explanatory_task_ids() -> None:
+    task_ids, dependencies = _tasklist_cards(
+        """# Tasklist
+
+### TL-1 — First task
+### TL-2 — Second task
+### TL-3 — Third task
+### TL-4 — Fourth task
+
+## Dependencies
+
+- TL-1: none
+- TL-2: TL-1
+- TL-3: TL-1
+- TL-4: TL-2 — same dependency reasoning as TL-3
+"""
+    )
+
+    assert task_ids == ["TL-1", "TL-2", "TL-3", "TL-4"]
+    assert dependencies["TL-4"] == ("TL-2",)
+
+
 def _write_workspace(tmp_path: Path, *, finalization: str = "pending") -> tuple[Path, Path]:
     workspace = tmp_path / ".aidd"
     work_item = "WI-CHECKPOINT"
