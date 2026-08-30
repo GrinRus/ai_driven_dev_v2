@@ -16762,7 +16762,7 @@ Local tasks:
     required CI including packaged UI browser, deterministic scenarios, adapter conformance, and
     build passed.
 
-#### Slice W45-E1-S10 — authored verification command fidelity (`done`)
+#### Slice W45-E1-S10 — authored verification command fidelity (`planned`)
 
 Goal: keep authored verification commands and their terminal outcomes as one exact, executable
 evidence item in provider-written implementation reports, so semantic validation can prove the
@@ -16823,3 +16823,26 @@ Local tasks:
     evidence checks (`88 passed`), Ruff, mypy, full CI, deterministic scenarios, adapter conformance,
     packaged UI browser, CodeQL, dependency review, scorecard, and build passed. A fresh Claude Large
     rerun from this clean main is required to verify the original lane.
+
+- `W45-E1-S10-T3` (next) Keep explanatory verification caveats executable or outside the
+  `Verification` section.
+  - Output: update implementation-stage authoring guidance and focused semantic/prompt fixtures so
+    every bullet in `Verification` that contains an outcome claim also contains the exact command
+    or assertion that produced it; move non-command caveats (for example, resolver warnings) to
+    `Risks`/`Follow-up`, or mark them as observations without pass/fail language. Preserve strict
+    fail-closed handling for command-free outcome claims and all existing command/result formats.
+  - Scope: `prompt-packs/stages/implement/run.md`, `tests/test_prompt_quality.py`, and focused
+    implementation semantic/evidence tests only; do not change runtime adapters, stage contracts,
+    target repositories, or UI behavior.
+  - Verification: a report with a command-free `Verification` caveat such as `neither command
+    failed` remains rejected; a report that places the same caveat in `Risks` or pairs it with the
+    exact command/result is accepted; existing valid/malformed, wrapped, heredoc, nested-backtick,
+    and hyphenated-outcome evidence remains green. Run focused semantic/prompt tests, Ruff, mypy,
+    and planning consistency checks.
+  - Diagnostic evidence: fresh Codex Large run
+    `eval-live-012-codex-20260830T005635Z` produced the intended bounded Starlette runtime fix and
+    passing target checks (`213 passed, 2 xfailed`, Ruff green), but implement validation exhausted
+    its repair budget on `SEM-UNVERIFIABLE-CHECK-CLAIM` because the provider report placed the
+    explanatory `neither command failed because of it` outcome claim in `Verification` without an
+    executable command on the same evidence item. No target product or UI/design defect was found;
+    the backend-only target's AIDD operator UI/API checkpoints remained green.
