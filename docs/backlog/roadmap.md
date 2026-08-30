@@ -17048,7 +17048,7 @@ Local tasks:
     build checks are green. The next action is a fresh Codex and Claude Large rerun from this
     clean main; no target product or UI/design defect was found in the diagnostic run.
 
-#### Slice W45-E1-S16 — inline compound-command verification evidence (`planned`)
+#### Slice W45-E1-S16 — inline compound-command verification evidence (`done`)
 
 Goal: accept valid shell compound verification commands when a provider keeps the terminal
 outcome marker inside the same Markdown code span, while continuing to reject prose and malformed
@@ -17059,7 +17059,7 @@ quality validation.
 
 Local tasks:
 
-- `W45-E1-S16-T1` (next) Accept inline result markers on shell compound commands.
+- `W45-E1-S16-T1` (done) Accept inline result markers on shell compound commands.
   - Output: update the shared implementation evidence matcher so a valid command such as
     `` `if git diff --name-only | rg -q ...; then exit 1; else exit 0; fi -> pass` `` is
     recognized as executable evidence when its outcome marker is inside the code span. Preserve
@@ -17082,3 +17082,9 @@ Local tasks:
   - Acceptance: valid inline shell compound commands are accepted with their observed outcome,
     malformed or prose lookalikes remain rejected, and the same Large flow can reach review/QA
     without weakening fail-closed verification semantics.
+  - Completion: PR #488 (merge `c1eeaafa`) added a conservative terminal result-marker matcher
+    used only when the command body is a valid shell compound expression. Focused evidence and
+    semantic implementation tests (`92 passed`), full validator tests (`376 passed`), Ruff, mypy,
+    full CI, adapter conformance, deterministic scenarios, packaged UI browser, and build checks
+    are green. A fresh Codex+Claude Large rerun is required from this clean main; no clean
+    two-provider Large success is claimed yet.
