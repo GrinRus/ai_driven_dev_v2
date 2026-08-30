@@ -7,7 +7,7 @@ slice, and local task.
 
 ## Next
 
-- `W45-E1-S10-T2` — Accept hyphenated negative verification outcomes as observed terminal results.
+- None.
 
 ## Soon
 
@@ -37,6 +37,16 @@ slice, and local task.
   queue-restoration policy in `docs/backlog/roadmap.md` (`W8-E3-S1`).
 
 ## Current reconciliation
+
+- `2026-08-30` reconciliation after PR #468 (merge `a7b84f67`) marks `W45-E1-S10-T2` done. The
+  implementation evidence matcher now accepts concrete hyphenated negative/clean terminal markers,
+  with focused semantic, full validator, docs/planning/evidence, Ruff, mypy, deterministic, adapter,
+  packaged-browser, security, and build checks green. The failed Claude Large bundle
+  `eval-live-012-claude-code-20260829T230612Z` remains retained as diagnostic evidence; its target
+  Starlette patch and tests were correct, and the only failure was the previously unsupported
+  `-> no-test-cache-residue` result marker. No target product or UI/design defect was found; AIDD
+  operator UI/API checkpoints remained green. Next action is a fresh Codex/Claude Large rerun from
+  this clean main before promoting the next backlog task.
 
 - `2026-08-30` fresh Claude Large `eval-live-012-claude-code-20260829T230612Z` reached the intended
   bounded Starlette implementation and target tests passed, but implement validation failed closed
