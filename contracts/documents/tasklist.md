@@ -42,6 +42,9 @@ Break the plan into reviewable implementation tasks with sequencing and verifica
 - every plan milestone is covered by at least one task; ad hoc `Milestone` or `Plan milestone`
   fields are not part of the canonical task-card grammar and do not count,
 - upstream references are present when the stage requires them.
+- when regression coverage may require a production correction, the behavior path and tests are
+  kept in one bounded card or the production correction is an explicit earlier dependency-ready
+  card; a tests-only card must not hide a correction outside its `In scope`.
 
 ## Notes
 

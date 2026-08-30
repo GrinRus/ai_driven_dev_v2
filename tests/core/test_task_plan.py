@@ -158,6 +158,22 @@ def test_parse_task_plan_preserves_order_and_acceptance() -> None:
     assert plan.tasks[0].execution_mode is TaskExecutionMode.REPOSITORY_CHANGE
 
 
+def test_coupled_behavior_regression_fixture_keeps_runtime_and_test_scope_coherent() -> None:
+    fixture = Path(
+        "contracts/examples/tasklist/coupled-behavior-regression.md"
+    ).read_text(encoding="utf-8")
+
+    plan = parse_task_plan(fixture)
+
+    assert plan.ordered_ids() == ("TL-1", "TL-2")
+    assert plan.tasks[0].scope_paths == (
+        "src/streaming.py",
+        "tests/test_streaming.py",
+    )
+    assert plan.tasks[1].dependencies == ("TL-1",)
+    assert plan.tasks[1].execution_mode is TaskExecutionMode.VERIFICATION_ONLY
+
+
 def test_parse_task_plan_allows_dependency_rationale_after_machine_value() -> None:
     markdown = _tasklist().replace(
         "- TL-1: none\n",
