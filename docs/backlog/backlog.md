@@ -7,8 +7,7 @@ slice, and local task.
 
 ## Next
 
-- `W45-E1-S16-T1` — Accept inline result markers on shell compound commands in implementation
-  verification evidence before the next Codex+Claude Large rerun.
+- None. The next action is a fresh Codex+Claude Large rerun from the reconciled clean `main`.
 
 ## Soon
 
@@ -38,6 +37,15 @@ slice, and local task.
   queue-restoration policy in `docs/backlog/roadmap.md` (`W8-E3-S1`).
 
 ## Current reconciliation
+
+- `2026-08-30` reconciliation after PR #488 (merge `c1eeaafa`) marks `W45-E1-S16-T1` done and
+  closes the inline compound-command evidence slice. The shared matcher now accepts recognized
+  terminal result markers inside a valid shell compound code span while preserving fail-closed
+  handling for malformed compounds, unknown wrappers, and prose. Focused tests (`92 passed`),
+  full validators (`376 passed`), Ruff, mypy, full CI, adapter conformance, deterministic
+  scenarios, packaged UI browser, and build checks are green. The target remains backend-only
+  (no product UI/design surface); the next evidence action is a fresh Codex+Claude Large rerun,
+  and no clean two-provider Large success is claimed yet.
 
 - `2026-08-30` fresh Large diagnostic reconciliation: Codex run
   `eval-live-012-codex-20260830T165848Z` completed the target implementation with the intended
