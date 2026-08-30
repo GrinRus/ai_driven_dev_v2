@@ -16800,7 +16800,7 @@ Local tasks:
     dependency review, scorecard, and build. A fresh Claude Large rerun from this clean main is
     required; the failed bundle remains retained as diagnostic evidence.
 
-- `W45-E1-S10-T2` (next) Accept hyphenated negative verification outcomes as observed terminal results.
+- `W45-E1-S10-T2` (done) Accept hyphenated negative verification outcomes as observed terminal results.
   - Output: extend the shared implementation evidence result matcher so an executable verification
     command followed by a concrete hyphenated negative/clean marker such as
     `` `git status --ignored --short --untracked-files=all` -> no-test-cache-residue `` is
@@ -16817,3 +16817,9 @@ Local tasks:
     `SEM-UNVERIFIABLE-CHECK-CLAIM` because the truthful residue-cleanup result
     `-> no-test-cache-residue` was not recognized. The target is backend-only with no product UI or
     design surface; AIDD operator UI/API checkpoints remained green.
+  - Completion: PR #468 (merge `a7b84f67`) recognizes concrete hyphenated `no-*`, `without-*`,
+    `clean-*`, and `clear-*` terminal markers while retaining fail-closed ambiguous-arrow handling.
+    Focused semantic/prompt tests (`125 passed`), full validator suite (`360 passed`), docs/planning/
+    evidence checks (`88 passed`), Ruff, mypy, full CI, deterministic scenarios, adapter conformance,
+    packaged UI browser, CodeQL, dependency review, scorecard, and build passed. A fresh Claude Large
+    rerun from this clean main is required to verify the original lane.
