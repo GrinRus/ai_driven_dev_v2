@@ -7,8 +7,7 @@ slice, and local task.
 
 ## Next
 
-- `W45-E1-S11-T1` — require compatibility-preserving target edits, full consumer collection, and
-  clean bounded diffs without generated `uv.lock` churn before the next Large rerun.
+- None.
 
 ## Soon
 
@@ -38,6 +37,17 @@ slice, and local task.
   queue-restoration policy in `docs/backlog/roadmap.md` (`W8-E3-S1`).
 
 ## Current reconciliation
+
+- `2026-08-30` reconciliation after PR #474 (merge `365eb46a`) marks `W45-E1-S11-T1` done and
+  closes slice `W45-E1-S11`. The implement prompt now requires tracked consumer search, full target
+  collection including unchanged consumers, and cleanup of incidental `uv.lock` changes. Semantic
+  regressions reject bounded reports that omit these safeguards or record unresolved imports.
+  Focused semantic/prompt/hash tests (`133 passed`), full validator tests (`366 passed`),
+  docs/planning (`50 passed`), Ruff, mypy, deterministic scenarios, adapter conformance, packaged
+  browser, and build are green. The failed Codex Large bundle
+  `eval-live-012-codex-20260830T025946Z` remains diagnostic; its next action is a fresh Codex and
+  Claude Large rerun from this clean main. The backend-only target has no product UI/design surface;
+  AIDD operator UI/API checkpoints remain green. No clean Large success is claimed yet.
 
 - `2026-08-30` follow-up planning after Codex Large review of
   `eval-live-012-codex-20260830T025946Z` adds `W45-E1-S11-T1` as the sole Next task. The target's
