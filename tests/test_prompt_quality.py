@@ -1281,6 +1281,29 @@ def test_implement_prompts_require_executable_verification_evidence() -> None:
     assert "continuing ad hoc debugging until timeout" in repair_prompt
 
 
+def test_implement_prompt_requires_compatibility_consumers_and_clean_target_diff() -> None:
+    run_prompt = Path("prompt-packs/stages/implement/run.md").read_text(encoding="utf-8")
+    normalized = " ".join(run_prompt.split())
+
+    assert "Before removing or renaming a shared helper, symbol, or public function" in run_prompt
+    assert "search all tracked consumers" in normalized
+    assert "retain a compatibility symbol or" in run_prompt
+    assert "migrate every consumer with focused coverage" in run_prompt
+    assert "A focused suite alone is insufficient" in normalized
+    assert "full target test collection" in normalized
+    assert "including unchanged consumers" in normalized
+    assert "`uv run pytest --collect-only -q`" in run_prompt
+    assert "resolve any import or collection failure before handoff" in normalized
+    assert (
+        "inspect `git diff --name-only` and restore tool-generated `uv.lock` changes"
+        in normalized
+    )
+    assert (
+        "dependency or lockfile updates are allowed only when the selected task explicitly"
+        in normalized
+    )
+
+
 def test_implement_prompt_requires_deterministic_async_test_cleanup() -> None:
     run_prompt = Path("prompt-packs/stages/implement/run.md").read_text(
         encoding="utf-8"
