@@ -7,7 +7,8 @@ slice, and local task.
 
 ## Next
 
-- None.
+- `W45-E1-S15-T1` — Implement dependency-aware tasklist scope guidance for coupled behavior and
+  regression work.
 
 ## Soon
 

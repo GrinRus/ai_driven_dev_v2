@@ -16839,6 +16839,7 @@ Local tasks:
     exact command/result is accepted; existing valid/malformed, wrapped, heredoc, nested-backtick,
     and hyphenated-outcome evidence remains green. Run focused semantic/prompt tests, Ruff, mypy,
     and planning consistency checks.
+
   - Diagnostic evidence: fresh Codex Large run
     `eval-live-012-codex-20260830T005635Z` produced the intended bounded Starlette runtime fix and
     passing target checks (`213 passed, 2 xfailed`, Ruff green), but implement validation exhausted
@@ -17007,3 +17008,35 @@ Local tasks:
     the focused tasklist suite (25 passed), full validator/docs/planning checks (424 passed), Ruff,
     mypy, CI, adapter conformance, deterministic scenarios, packaged UI browser, and build checks
     are green. The next action is a fresh Codex and Claude Large rerun from this clean main.
+
+#### Slice W45-E1-S15 — dependency-aware implementation scope (`planned`)
+
+Goal: keep generated implementation cards reviewable when a regression task may legitimately
+require a production correction, without weakening the task-local mutation boundary.
+
+Dependencies: W45-E1-S14; tasklist decomposition, dependency ordering, and task-local diff
+validation.
+
+Local tasks:
+
+- `W45-E1-S15-T1` (next) Implement tasklist guidance and coverage for coupled behavior-and-regression
+  work.
+  - Output: update the tasklist prompt/contract guidance and focused fixtures so a tasklist does
+    not split a behavior fix from the tests needed to validate that fix when the test card could
+    require production edits. The generated plan must either keep the coupled paths in one bounded
+    card or make the production correction an explicit dependency-ready card before its tests.
+  - Scope: tasklist prompt/contract guidance, deterministic tasklist fixtures, and focused
+    decomposition tests only; preserve fail-closed implementation scope validation and do not
+    change runtime adapters, stage APIs, target repositories, or UI behavior.
+  - Verification: a coupled behavior-plus-regression fixture yields dependency-ordered cards whose
+    implementation scopes can complete without a later tests-only card needing an unplanned
+    production edit; an out-of-scope edit still fails closed with the existing scope finding.
+  - Diagnostic evidence: fresh Codex Large run
+    `eval-live-012-codex-20260830T141056Z` completed TL-1 and TL-2, then selected TL-3 (tests only)
+    and added a required `starlette/responses.py` correction while writing regression tests. The
+    implementation validator correctly stopped on `SEM-TASK-SCOPE-MISMATCH`; the target checks
+    passed but the flow could not reach review/QA. This is a tasklist decomposition/authoring gap,
+    not a target product or UI defect.
+  - Acceptance: coupled tasklist output makes the production correction an explicit bounded task
+    or includes the path in the same task; dependency order remains deterministic; scope validation
+    remains fail-closed for genuinely unrelated paths.
