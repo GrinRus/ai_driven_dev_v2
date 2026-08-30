@@ -16933,3 +16933,36 @@ Local tasks:
     `mypy src`, deterministic scenarios, adapter conformance, packaged UI browser, security, and
     build checks are green. Fresh Codex and Claude Large reruns remain required; no clean Large
     success is claimed by this task.
+
+#### Slice W45-E1-S13 — wrapped executable verification commands (`planned`)
+
+Goal: keep implementation evidence fail-closed for prose while accepting valid standard command
+wrappers used by provider-authored verification, including a `perl` timeout wrapper around an
+`uv run` test command.
+
+Dependencies: W45-E1-S12; fresh Codex Large diagnostic
+`eval-live-012-codex-20260830T091915Z`.
+
+Local tasks:
+
+- `W45-E1-S13-T1` (next) Recognize supported command wrappers in implementation evidence.
+  - Output: extend the shared implementation-evidence command matcher and focused fixtures so
+    valid `perl -e ... -- <command>` wrappers with an observed result are accepted as executable
+    evidence, while prose, malformed quoting, and unknown wrappers remain rejected. Preserve all
+    existing command/result, heredoc, nested-backtick, negative-outcome, and fail-closed rules.
+  - Scope: `src/aidd/validators/semantic_rules/evidence.py`,
+    `tests/validators/test_implementation_evidence.py`, and focused semantic implementation
+    fixtures only; do not change runtime adapters, stage APIs, target repositories, or UI
+    behavior.
+  - Verification: a backticked `perl -e 'alarm 4; exec @ARGV' -- uv run ...` command with
+    `-> fail (exit code 142)` is accepted; an unclosed/malformed wrapper and command-free outcome
+    prose remain rejected. Run focused evidence/semantic tests, full validator tests, Ruff, mypy,
+    and planning consistency checks.
+  - Diagnostic evidence: Codex Large run
+    `eval-live-012-codex-20260830T091915Z` added correct TL-1 red-regression coverage and
+    recorded the bounded watchdog command, but the implementation validator rejected the report
+    at `SEM-UNVERIFIABLE-CHECK-CLAIM` because `perl` was not recognized as a known executable.
+    The target Starlette code was not changed and no target product/UI defect was found.
+  - Acceptance: valid wrapped command evidence reaches semantic validation without weakening
+    fail-closed handling of prose or malformed commands; the fresh Large lane can progress to
+    the next authored target task.
