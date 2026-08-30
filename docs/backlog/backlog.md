@@ -7,9 +7,7 @@ slice, and local task.
 
 ## Next
 
-- `W45-E1-S10-T3` — keep explanatory verification caveats executable or outside the
-  `Verification` section so provider-authored implementation reports remain fail-closed and
-  machine-verifiable.
+- None. The next action is a fresh Codex and Claude Large rerun from reconciled `main`.
 
 ## Soon
 
@@ -39,6 +37,18 @@ slice, and local task.
   queue-restoration policy in `docs/backlog/roadmap.md` (`W8-E3-S1`).
 
 ## Current reconciliation
+
+- `2026-08-30` reconciliation after PR #471 (merge `bbfd0a9e`) marks `W45-E1-S10-T3` done. The
+  implementation prompt now treats `Verification` as an executable command ledger and keeps
+  command-free outcome caveats in `Risks`/`Follow-up`; focused semantic/prompt/packaging tests
+  (`128 passed`), docs/planning (`50 passed`), Ruff, mypy, deterministic, adapter, packaged-browser,
+  security, and build checks are green. The fresh Codex Large bundle
+  `eval-live-012-codex-20260830T005635Z` remains retained as diagnostic evidence: the intended
+  backend-only Starlette patch and target checks passed (`213 passed, 2 xfailed`, Ruff green), while
+  AIDD stopped fail-closed on the now-addressed command-free verification caveat. No target product
+  or UI/design defect was found; AIDD operator UI/API checkpoints remained green. Next action is a
+  fresh Codex and Claude Large rerun from this reconciled clean main; no task is promoted until the
+  rerun establishes the lane result.
 
 - `2026-08-30` fresh Codex Large `eval-live-012-codex-20260830T005635Z` produced the intended
   bounded Starlette runtime change and focused target checks passed (`213 passed, 2 xfailed`, Ruff
