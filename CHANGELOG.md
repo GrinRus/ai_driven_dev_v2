@@ -7,7 +7,20 @@ stable compatibility window exists.
 
 ## Unreleased
 
-- Reserved for changes after `v0.1.0a18`.
+- Reserved for changes after `v0.1.0a19`.
+
+## 0.1.0a19 - 2026-08-31
+
+- Complete the task-centered operator surfaces for launch readiness, dependency-aware task
+  execution, Markdown evidence, decision recovery, implementation review, run history, and
+  immutable Flow Complete handoff while preserving the existing CLI and artifact contracts.
+- Add canonical ownership records, interview resume semantics, tolerant rich-tasklist parsing,
+  root-cause findings, one-time repair-extension recovery, and provider-free resilience fixtures.
+- Harden live Large evaluation evidence, task-aware checkpoints, implementation verification
+  parsing, dependency projection, and bounded target-workspace quality checks for maintained
+  Codex and Claude Code runs.
+- Retain responsive browser acceptance and operator UI state coverage while keeping manual live
+  E2E outside CI/CD and release automation.
 
 ## 0.1.0a18 - 2026-08-10
 

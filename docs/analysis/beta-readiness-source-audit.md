@@ -1,6 +1,6 @@
 # Beta Readiness Source Audit
 
-Date: 2026-08-10
+Date: 2026-08-31
 
 ## Purpose
 
@@ -21,7 +21,8 @@ Reviewed sources:
 ### README
 
 - The latest accepted published prerelease evidence is `0.1.0a18`.
-- The source development package version matches the package state: `0.1.0a19.dev0`.
+- The release-candidate package version matches the package state: `0.1.0a19`.
+- The last accepted published prerelease evidence before this candidate is `0.1.0a18`.
 - The `v0.1.0a18` GitHub Release workflow published to PyPI and verified `pipx` plus
   `uv tool`; README installation guidance stays pinned to the latest accepted package
   release.
@@ -31,6 +32,9 @@ Reviewed sources:
 - The README correctly states that live E2E is manual local operator audit evidence, not
   CI/CD, not a release workflow, not GitHub Actions, and not a release gate.
 - The README correctly states that Docker/GHCR is outside the alpha release contract.
+- Fresh Codex and Claude Code Large `AIDD-LIVE-012` runs are retained as local manual
+  operator-audit evidence with terminal `pass`, target verification, and task-aware
+  checkpoints; the pinned Starlette target is backend-only and supplies no product UI surface.
 
 Required change: none after this release-prep slice; keep beta-readiness wording as a
 preparation gate, not as a claim that AIDD is production-ready or ready for unattended
