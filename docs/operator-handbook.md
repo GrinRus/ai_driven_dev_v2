@@ -366,10 +366,11 @@ documents, write resolved answers to
 `.aidd/workitems/<work-item>/stages/<stage>/answers.md`, then rerun
 `aidd stage run <stage> --work-item <id> --runtime <runtime> --root .aidd`.
 
-In the UI, answer unresolved questions in the **Questions** tab. The browser writes
-`[resolved]` answers to the same `answers.md`; use **Run selected stage** or **Run
-workflow** after answering. Partial and deferred answer states remain file-mode CLI
-semantics for this release.
+In the UI, answer unresolved questions in the **Questions** tab.
+The UI can write question answers as `[resolved]`, `[partial]`, or `[deferred]` entries to the
+same `answers.md`; only `[resolved]` answers unblock blocking questions. Use **Run selected
+stage** or **Run workflow** after answering or update partial and deferred answers before
+retrying.
 
 When an operator needs a scoped correction or additional analysis on an existing stage
 artifact, use `aidd stage interact <stage> --request "..."` or the UI **Request change**

@@ -4,16 +4,20 @@ Thanks for your interest in contributing to AIDD.
 
 This project is building a runtime-agnostic, document-first orchestration system for AI-driven software delivery. Contributions are welcome in code, contracts, prompt packs, docs, harness scenarios, and eval tooling.
 
+For a new capability or behavior change, open a
+[feature proposal](https://github.com/GrinRus/ai_driven_dev_v2/issues/new?template=feature_request.yml)
+before investing in a large implementation. Reproducible defects and operator questions use the
+[issue chooser](https://github.com/GrinRus/ai_driven_dev_v2/issues/new/choose). Project roles and
+decision authority are described in [GOVERNANCE.md](./GOVERNANCE.md).
+
 ## Before you start
 
-Read these files first:
+For a small documentation or isolated defect fix, read `README.md`, `AGENTS.md`, and the nearest
+nested `AGENTS.md`. For product behavior or architecture changes, also read:
 
-1. `README.md`
-2. `AGENTS.md`
-3. `docs/product/user-stories.md`
-4. `docs/backlog/roadmap.md`
-5. `docs/architecture/target-architecture.md`
-6. the nearest nested `AGENTS.md` for the area you want to change
+1. `docs/product/user-stories.md`
+2. the relevant roadmap slice in `docs/backlog/roadmap.md`
+3. the owning section of `docs/architecture/target-architecture.md` or contract
 
 ## Ways to contribute
 
@@ -26,6 +30,10 @@ You can help by:
 - adding runtime adapters,
 - improving harness and eval manifests,
 - improving contributor experience and docs.
+
+New contributors can browse issues labeled
+[`good first issue`](https://github.com/GrinRus/ai_driven_dev_v2/issues?q=is%3Aissue%20state%3Aopen%20label%3A%22good%20first%20issue%22)
+or [`help wanted`](https://github.com/GrinRus/ai_driven_dev_v2/issues?q=is%3Aissue%20state%3Aopen%20label%3A%22help%20wanted%22).
 
 ## Development setup
 
