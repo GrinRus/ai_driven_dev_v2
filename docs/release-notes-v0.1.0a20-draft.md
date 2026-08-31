@@ -1,29 +1,29 @@
-# Release Notes: v0.1.0a19
+# Release Notes: v0.1.0a20
 
-Status: failed publication attempt; GitHub Release published, PyPI not published.
+Status: draft, not tagged or published.
 
-Current release-candidate package version: `0.1.0a19`.
+Current release-candidate package version: `0.1.0a20`.
 Latest accepted published prerelease evidence before this candidate: `0.1.0a18`.
 
 ## Summary
 
-This alpha prerelease consolidates the task-centered operator workflow and hardens the
-document-first validation, recovery, and live-evaluation evidence paths used by maintained
-Codex and Claude Code runs.
+This alpha prerelease carries forward the task-centered operator workflow and document-first
+validation, recovery, and live-evaluation evidence paths prepared for `v0.1.0a19`, with a
+compatible package build metadata pin.
 
 ## User-visible changes
 
-- Add a task-centered operator workspace with launch readiness, dependency-aware task views,
+- Add the task-centered operator workspace with launch readiness, dependency-aware task views,
   selected-task actions, active-attempt visibility, Markdown evidence, decision recovery,
   implementation review, run history, and immutable Flow Complete handoff.
 - Preserve canonical work-item identifiers, routes, CLI behavior, Markdown contracts, and
-  historical evidence while moving technical lineage and runtime controls into contextual
-  surfaces.
+  historical evidence while keeping technical lineage and runtime controls contextual.
 - Add durable interview resume and QID-ledger behavior, tolerant tasklist presentation and
   located findings, one-time repair-extension recovery, and provider-free resilience scenarios.
 - Harden implementation verification evidence, dependency parsing, bounded target diffs, and
   task-aware live checkpoints for large external evaluations.
-- Expand responsive browser and accessibility coverage for the supported operator surfaces.
+- Pin Hatchling to Core Metadata 2.4 so PyPI publication remains compatible with the release
+  publisher.
 
 ## Quality and evidence
 
@@ -46,10 +46,10 @@ Codex and Claude Code runs.
 
 ## Publication checklist
 
-- Release branch: `release/v0.1.0a19`.
+- Release branch: `release/v0.1.0a20`.
 - Publish only through the GitHub Release `published` event after deterministic release-branch
   checks pass.
 - Accept the release only after PyPI, `pipx`, and `uv tool` verification jobs pass.
 
-`0.1.0a19` was not accepted as a published package because the release publisher rejected
-its Core Metadata 2.5. The corrective `v0.1.0a20` candidate pins Hatchling to metadata 2.4.
+`0.1.0a20` package must not be described as the latest accepted published prerelease until
+the package-channel verification jobs complete successfully.

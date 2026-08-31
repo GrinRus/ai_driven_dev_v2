@@ -79,7 +79,9 @@ for the complete model.
 
 Latest published prerelease: `0.1.0a18`.
 Latest accepted published prerelease evidence: `0.1.0a18`.
-Current release-candidate package version on this branch: `0.1.0a19`.
+Previous candidate `0.1.0a19` reached a GitHub Release but was not published to PyPI because
+its build metadata was incompatible with the release publisher.
+Current release-candidate package version on this branch: `0.1.0a20`.
 Latest accepted published prerelease evidence before this candidate: `0.1.0a18`.
 The `main` branch is development source and may contain unreleased changes.
 

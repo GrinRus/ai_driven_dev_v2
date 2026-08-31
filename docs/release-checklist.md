@@ -166,12 +166,14 @@ python -m scripts.release.evidence_collector release-evidence.json
 
 ## Maintainer release state
 
-Current release-candidate package version: `0.1.0a19`.
+Current release-candidate package version: `0.1.0a20`.
 Latest accepted published prerelease evidence: `0.1.0a18`.
 Latest accepted published prerelease evidence before this candidate: `0.1.0a18`.
-`v0.1.0a19` is a prepared candidate only; it is not accepted release evidence until the
+The previous candidate `v0.1.0a19` reached a GitHub Release but its PyPI publication failed
+because unpinned Hatchling emitted Core Metadata 2.5, which the publisher rejected.
+`v0.1.0a20` is a prepared candidate only; it is not accepted release evidence until the
 GitHub Release is published and its PyPI, `pipx`, and `uv tool` verification jobs pass.
-Do not add an accepted `v0.1.0a19` evidence log entry until those package-channel checks
+Do not add an accepted `v0.1.0a20` evidence log entry until those package-channel checks
 complete successfully.
 
 README install guidance is pinned to `0.1.0a18` because the `v0.1.0a18` GitHub Release
@@ -461,6 +463,17 @@ package-channel acceptance and does not replace GitHub Release, PyPI, `pipx`, or
 Historical release attempts below may mention GHCR because earlier alpha candidates
 temporarily published container images. That evidence is retained for traceability only and
 does not make Docker/GHCR a supported alpha distribution channel.
+
+### `v0.1.0a19` failed publication attempt on 2026-08-31
+
+- Tag: `v0.1.0a19`
+- Release branch: `release/v0.1.0a19`
+- Commit: `dece20264c0a9cc14ce873ff2e320d1ce2a5a792`
+- GitHub Release: `https://github.com/GrinRus/ai_driven_dev_v2/releases/tag/v0.1.0a19`
+- Workflow run: `https://github.com/GrinRus/ai_driven_dev_v2/actions/runs/33372959846`
+- Result: failed publication attempt; PyPI returned no `0.1.0a19` project version.
+- Failure: Hatchling resolved to 1.32.0 and emitted Core Metadata 2.5, rejected by the
+  pinned PyPI publisher. The corrective build pin is carried by the `v0.1.0a20` candidate.
 
 ### `v0.1.0a18` accepted evidence on 2026-08-10
 
