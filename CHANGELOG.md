@@ -7,7 +7,14 @@ stable compatibility window exists.
 
 ## Unreleased
 
-- Reserved for changes after `v0.1.0a19`.
+- Reserved for changes after `v0.1.0a20`.
+
+## 0.1.0a20 - 2026-08-31
+
+- Republish the task-centered alpha candidate with the same operator, recovery, and live
+  evidence improvements prepared for `0.1.0a19`.
+- Pin the Hatchling build backend to emit Core Metadata 2.4, keeping wheel and sdist uploads
+  compatible with the release publisher.
 
 ## 0.1.0a19 - 2026-08-31
 
