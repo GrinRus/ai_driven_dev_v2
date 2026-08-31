@@ -1,7 +1,7 @@
 ## Summary
 
-- local task id(s):
-- user story impact:
+- issue or local task reference (or N/A):
+- user story impact (or N/A):
 - behavior change:
 
 ## Checklist

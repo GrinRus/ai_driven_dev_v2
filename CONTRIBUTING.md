@@ -31,9 +31,12 @@ You can help by:
 - improving harness and eval manifests,
 - improving contributor experience and docs.
 
-New contributors can browse issues labeled
+When maintainers have marked work as ready for external contribution, new contributors can
+browse issues labeled
 [`good first issue`](https://github.com/GrinRus/ai_driven_dev_v2/issues?q=is%3Aissue%20state%3Aopen%20label%3A%22good%20first%20issue%22)
 or [`help wanted`](https://github.com/GrinRus/ai_driven_dev_v2/issues?q=is%3Aissue%20state%3Aopen%20label%3A%22help%20wanted%22).
+If both lists are empty, open a feature proposal or ask on an existing issue before starting a
+substantial change.
 
 ## Development setup
 
@@ -132,7 +135,7 @@ If your change affects contracts, prompts, adapters, harness behavior, or eval l
 
 A good PR should:
 
-- reference the local task id(s),
+- reference a GitHub issue or local task when one exists, or use `N/A` for a small isolated fix,
 - explain the behavior change,
 - mention any updated docs/contracts/prompts,
 - note any new follow-up tasks,

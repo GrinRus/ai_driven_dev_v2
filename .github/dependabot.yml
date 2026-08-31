@@ -15,3 +15,12 @@ updates:
     directory: "/"
     schedule:
       interval: "weekly"
+
+  - package-ecosystem: "pip"
+    directory: "/.github"
+    schedule:
+      interval: "weekly"
+    groups:
+      release-tools:
+        patterns:
+          - "pipx"
