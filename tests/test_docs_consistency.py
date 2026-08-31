@@ -1698,3 +1698,27 @@ def test_release_publish_skill_describes_release_flow_guardrails() -> None:
         "git rev-parse refs/tags/v<project.version>^{commit}",
     ):
         assert needle in skill
+
+
+def test_community_entrypoints_are_actionable_and_not_version_stale() -> None:
+    repo_root = _repo_root()
+    security = (repo_root / "SECURITY.md").read_text(encoding="utf-8")
+    conduct = (repo_root / "CODE_OF_CONDUCT.md").read_text(encoding="utf-8")
+    contributing = (repo_root / "CONTRIBUTING.md").read_text(encoding="utf-8")
+    pull_request_template = (
+        repo_root / ".github" / "pull_request_template.md"
+    ).read_text(encoding="utf-8")
+    bug_report = (
+        repo_root / ".github" / "ISSUE_TEMPLATE" / "bug_report.yml"
+    ).read_text(encoding="utf-8")
+
+    assert "security/advisories/new" in security
+    assert "within 7 calendar days" in security
+    assert "within 14 calendar days" in security
+    assert "repository owner profile" not in security
+    assert "support.github.com/contact/report-abuse" in conduct
+    assert "repository owner profile" not in conduct
+    assert "If both lists are empty" in contributing
+    assert "issue or local task reference (or N/A)" in pull_request_template
+    assert 'placeholder: "aidd <version>"' in bug_report
+    assert "aidd 0.1.0a2" not in bug_report

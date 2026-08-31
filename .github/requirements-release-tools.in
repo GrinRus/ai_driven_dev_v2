@@ -1,0 +1,2 @@
+# Regenerate requirements-release-tools.txt with the command recorded in that file.
+pipx==1.17.1

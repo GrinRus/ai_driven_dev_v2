@@ -12,7 +12,7 @@ body:
     attributes:
       label: AIDD version
       description: Output from `aidd --version`.
-      placeholder: "aidd 0.1.0a2"
+      placeholder: "aidd <version>"
     validations:
       required: true
   - type: dropdown

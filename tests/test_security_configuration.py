@@ -19,7 +19,7 @@ def _read_yaml(relative_path: str) -> dict[str, Any]:
     return data
 
 
-def test_dependabot_tracks_uv_and_github_actions() -> None:
+def test_dependabot_tracks_project_and_release_dependencies() -> None:
     config = _read_yaml(".github/dependabot.yml")
     updates = config["updates"]
     assert isinstance(updates, list)
@@ -32,7 +32,16 @@ def test_dependabot_tracks_uv_and_github_actions() -> None:
 
     assert "uv" in ecosystems
     assert "github-actions" in ecosystems
-    assert "pip" not in ecosystems
+    assert "pip" in ecosystems
+
+    pip_updates = [
+        update
+        for update in updates
+        if isinstance(update, dict) and update.get("package-ecosystem") == "pip"
+    ]
+    assert len(pip_updates) == 1
+    assert pip_updates[0]["directory"] == "/.github"
+    assert pip_updates[0]["groups"]["release-tools"]["patterns"] == ["pipx"]
 
 
 def test_uv_lockfile_is_committable_for_dependabot_updates() -> None:

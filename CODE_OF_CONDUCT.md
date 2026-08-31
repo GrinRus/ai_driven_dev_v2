@@ -23,5 +23,11 @@ Unacceptable behavior:
 Maintainers may edit, hide, or remove comments; close issues; restrict participation; or
 escalate to GitHub moderation when behavior harms the project or its users.
 
-Report conduct concerns privately through the repository owner profile. Do not include
-sensitive security details in conduct reports; use `SECURITY.md` for vulnerabilities.
+AIDD does not currently operate a separate private conduct mailbox. For conduct in GitHub-hosted
+project spaces, use GitHub's private
+[abuse-reporting channel](https://support.github.com/contact/report-abuse) and include links to
+the affected repository content. Do not open a public issue for a private conduct report.
+
+Do not include sensitive security details in conduct reports; use `SECURITY.md` for
+vulnerabilities. If a report concerns a maintainer, send it directly to GitHub Support rather
+than attempting to resolve it in a repository discussion.

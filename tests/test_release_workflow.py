@@ -64,6 +64,25 @@ def test_release_workflow_has_pypi_install_verification_job() -> None:
     assert "aidd doctor" in run_blocks
 
 
+def test_release_workflow_hash_locks_the_pipx_bootstrap() -> None:
+    repo_root = _repo_root()
+    verify_job = _release_workflow_jobs()["verify-pypi-install"]
+    run_blocks = _job_run_blocks(verify_job)
+    requirements_input = (
+        repo_root / ".github" / "requirements-release-tools.in"
+    ).read_text(encoding="utf-8")
+    requirements_lock = (
+        repo_root / ".github" / "requirements-release-tools.txt"
+    ).read_text(encoding="utf-8")
+
+    assert "pip install --disable-pip-version-check --require-hashes" in run_blocks
+    assert "-r .github/requirements-release-tools.txt" in run_blocks
+    assert "pip install --upgrade pipx" not in run_blocks
+    assert "pipx==1.17.1" in requirements_input
+    assert "pipx==1.17.1" in requirements_lock
+    assert "--hash=sha256:" in requirements_lock
+
+
 def test_release_workflow_runs_deterministic_quality_before_publish() -> None:
     jobs = _release_workflow_jobs()
     assert "quality" in jobs
