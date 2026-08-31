@@ -166,14 +166,23 @@ python -m scripts.release.evidence_collector release-evidence.json
 
 ## Maintainer release state
 
-Maintainer source development package version: `0.1.0a19.dev0`.
+Current release-candidate package version: `0.1.0a19`.
 Latest accepted published prerelease evidence: `0.1.0a18`.
-No current release candidate is accepted from this development version.
+Latest accepted published prerelease evidence before this candidate: `0.1.0a18`.
+`v0.1.0a19` is a prepared candidate only; it is not accepted release evidence until the
+GitHub Release is published and its PyPI, `pipx`, and `uv tool` verification jobs pass.
+Do not add an accepted `v0.1.0a19` evidence log entry until those package-channel checks
+complete successfully.
 
 README install guidance is pinned to `0.1.0a18` because the `v0.1.0a18` GitHub Release
 workflow published to PyPI and verified `pipx` plus `uv tool` installability. The accepted
 release used source commit `5c5f43f8720d342e0a7eac8e75f983fbc0c74bdb`; its release workflow
 run is recorded below.
+
+The fresh Codex and Claude Code Large live-E2E evidence retained under
+`docs/e2e/live-large-codex-claude-run-report-2026-08-31.md` is local manual operator-audit
+evidence. It supports the candidate's flow-quality context but is not a CI/CD or package-
+channel release gate and does not claim beta or production readiness.
 
 Release candidate preparation for `v0.1.0a16` includes:
 
