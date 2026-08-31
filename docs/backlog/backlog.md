@@ -38,13 +38,17 @@ slice, and local task.
 
 ## Current reconciliation
 
-- `2026-08-31` reconciliation after PR #491 (merge `9faa84ae`) marks `W45-E1-S17-T1` done and
-  closes the tasklist dependency explanation slice. Core and the installed checkpoint now agree
-  when provider-authored dependency entries include explanatory task ids after an em/en dash;
-  explicit dependencies and fail-closed unknown ids remain intact. Focused tests (`53 passed`),
-  full validator/task-read-model checks (`392 passed`), Ruff, mypy, and full CI are green. The target
-  remains backend-only with no product UI/design surface; the next evidence action is a fresh
-  Codex+Claude Large rerun from this clean main.
+- `2026-08-31` reconciliation after fresh Large `AIDD-LIVE-012` runs records Codex
+  `eval-live-012-codex-20260830T220257Z` and Claude Code
+  `eval-live-012-claude-code-20260831T001223Z` as terminal `pass` from AIDD revision
+  `adbc73f621c3d4cfe782c7adb6e715bffac1ccca`. Both completed `idea → qa`, retained task-aware
+  schema-v1 checkpoints with matching tasklist/ledger hashes, successful TL-1..TL-3, aggregate
+  finalization, and Review eligibility. The pinned backend-only Starlette target passed focused
+  verification (`203 passed, 2 xfailed`, isolated regression `2 passed`, Ruff green); review and QA
+  found no target product defect. AIDD operator UI/API checkpoints remained green, while no
+  pixel-level target UI claim is applicable. The tracked evidence is in
+  `docs/e2e/live-large-codex-claude-run-report-2026-08-31.md`; deferred human, cross-runtime, and
+  Wave 36 tasks remain in Parking lot.
 
 - `2026-08-31` fresh Claude Large rerun `eval-live-012-claude-code-20260830T203136Z` stopped
   fail-closed at the task-aware checkpoint before implementation: the provider-authored tasklist
