@@ -13,6 +13,7 @@ from datetime import UTC, datetime, timedelta
 from http import HTTPStatus
 from io import BytesIO
 from pathlib import Path
+from types import SimpleNamespace
 from typing import Any
 
 import pytest
@@ -4519,6 +4520,48 @@ def test_ui_launch_revalidates_core_readiness_before_starting_a_job(tmp_path: Pa
     job = _wait_job(service, str(payload["job_id"]))
     assert job["status"] == "completed"
     assert job["result"]["run_id"] == "run-revalidated"  # type: ignore[index]
+
+
+def test_runtime_readiness_probe_collection_can_target_selected_runtime(
+    monkeypatch: Any,
+) -> None:
+    probed: list[str] = []
+
+    class _FakeAdapter:
+        def __init__(self, runtime_id: str) -> None:
+            self.runtime_id = runtime_id
+
+        def probe(self, _command: str) -> SimpleNamespace:
+            probed.append(self.runtime_id)
+            return SimpleNamespace(
+                available=True,
+                version_text="fixture",
+                command=self.runtime_id,
+                supports_raw_log_stream=True,
+                supports_structured_log_stream=False,
+                supports_questions=False,
+                supports_resume=False,
+                supports_subagents=False,
+                supports_permission_policy=True,
+                supports_live_decisions=False,
+                preferred_transport="subprocess",
+            )
+
+    monkeypatch.setattr(
+        ui_module,
+        "get_runtime_adapter_surface",
+        lambda runtime_id: _FakeAdapter(runtime_id),
+    )
+    monkeypatch.setattr(ui_module, "_execution_command_available", lambda _command: True)
+    config = ui_module.load_config(Path("aidd.test.toml"))
+
+    reports = ui_module._collect_runtime_readiness_probe_reports(
+        config,
+        runtime_ids=("generic-cli",),
+    )
+
+    assert tuple(reports) == ("generic-cli",)
+    assert probed == ["generic-cli"]
 
 
 def test_ui_launch_revalidation_fails_closed_for_stale_probe(tmp_path: Path) -> None:

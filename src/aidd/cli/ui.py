@@ -2070,9 +2070,16 @@ def _runtime_command_sources_from_config(path: Path) -> dict[str, RuntimeCommand
 
 def _collect_runtime_readiness_probe_reports(
     cfg: AiddConfig,
+    *,
+    runtime_ids: tuple[str, ...] | None = None,
 ) -> dict[str, RuntimeReadinessProbeReport]:
     reports: dict[str, RuntimeReadinessProbeReport] = {}
-    definitions = runtime_definitions()
+    selected_runtime_ids = None if runtime_ids is None else frozenset(runtime_ids)
+    definitions = tuple(
+        definition
+        for definition in runtime_definitions()
+        if selected_runtime_ids is None or definition.runtime_id in selected_runtime_ids
+    )
 
     def _probe_runtime(runtime_id: str) -> tuple[str, RuntimeReadinessProbeReport]:
         definition = next(item for item in definitions if item.runtime_id == runtime_id)
@@ -4670,6 +4677,38 @@ class OperatorUiService:
             launch_history=launch_history,
         )
 
+    def _runtime_readiness_for_mutation(
+        self,
+        config_path: Path,
+        *,
+        runtime: str,
+    ) -> RuntimeReadinessView:
+        """Build a fresh readiness view without probing unrelated runtimes.
+
+        Mutation revalidation only needs the selected runtime.  Keeping the full
+        readiness projection for GET requests is useful to the operator, but
+        probing every installed CLI on each launch makes a local launch depend on
+        unrelated provider startup latency (notably Codex app-server probes).
+        Custom providers remain backward compatible and may still return a full
+        mapping when injected by tests or callers.
+        """
+
+        cfg = load_config(config_path)
+        probe_reports: Mapping[str, RuntimeReadinessProbeReport]
+        if self._readiness_probe_provider is _collect_runtime_readiness_probe_reports:
+            probe_reports = _collect_runtime_readiness_probe_reports(
+                cfg,
+                runtime_ids=(runtime,),
+            )
+        else:
+            probe_reports = self._readiness_probe_provider(cfg)
+        return resolve_runtime_readiness(
+            config=cfg,
+            probe_reports=probe_reports,
+            command_sources=_runtime_command_sources_from_config(config_path),
+            launch_history=None,
+        )
+
     def _runtime_readiness(self) -> object:
         readiness = self._runtime_readiness_for_config(self.config_path)
         if self._context is None or self._context.work_item is None:
@@ -4728,7 +4767,10 @@ class OperatorUiService:
 
         if payload.get("require_runtime_revalidation") is not True:
             return
-        readiness = self._runtime_readiness_for_config(self.config_path)
+        readiness = self._runtime_readiness_for_mutation(
+            self.config_path,
+            runtime=runtime,
+        )
         item = next(
             (candidate for candidate in readiness.runtimes if candidate.runtime_id == runtime),
             None,
