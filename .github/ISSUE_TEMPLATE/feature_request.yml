@@ -1,0 +1,54 @@
+name: Feature proposal
+description: Propose a new capability or a change to existing AIDD behavior.
+title: "[Feature]: "
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Describe the operator or contributor problem before prescribing a solution.
+        Do not include secrets, private repository contents, provider tokens, or
+        unredacted runtime logs.
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem or opportunity
+      description: >-
+        Who is affected, what are they trying to accomplish, and what prevents it today?
+    validations:
+      required: true
+  - type: textarea
+    id: outcome
+    attributes:
+      label: Desired outcome
+      description: >-
+        Describe the observable result and how an operator or contributor would know it works.
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Possible approach
+      description: >-
+        Optional implementation or product direction, including alternatives you considered.
+    validations:
+      required: false
+  - type: textarea
+    id: compatibility
+    attributes:
+      label: Compatibility and safety
+      description: >-
+        Note affected runtimes, contracts, workflows, stored artifacts, or security boundaries.
+    validations:
+      required: false
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Submission checks
+      options:
+        - label: I searched existing issues and roadmap items for the same proposal.
+          required: true
+        - label: >-
+            I removed secrets, private repository content, credentials, and unredacted
+            runtime logs.
+          required: true

@@ -337,11 +337,13 @@ def test_release_readiness_docs_keep_candidate_and_accepted_versions_distinct() 
         repo_root / "docs" / "analysis" / "beta-readiness-source-audit.md"
     ).read_text(encoding="utf-8")
 
-    readme_install_section = readme.split("## Install with pipx", 1)[1].split(
-        "## Container support",
+    readme_install_section = readme.split("## Install", 1)[1].split(
+        "## Run your first workflow",
         1,
     )[0]
-    assert f'ai-driven-dev-v2=={latest_accepted_version}' in readme_install_section
+    assert "pipx install ai-driven-dev-v2" in readme_install_section
+    assert "uv tool install ai-driven-dev-v2" in readme_install_section
+    assert f'ai-driven-dev-v2=={latest_accepted_version}' not in readme_install_section
     assert f'ai-driven-dev-v2=={source_version}' not in readme_install_section
 
     assert latest_accepted_version != source_version
@@ -349,15 +351,8 @@ def test_release_readiness_docs_keep_candidate_and_accepted_versions_distinct() 
     if _is_development_version(source_version):
         assert source_version not in readme
         assert "Current source development package version" not in readme
-        assert (
-            f"Latest published prerelease: `{latest_accepted_version}`."
-            in readme
-        )
-        assert (
-            "The `main` branch is development source and may contain unreleased changes."
-            in readme
-        )
-        assert "Install the latest published prerelease:" in readme_install_section
+        assert "The `main` branch may contain unreleased changes." in readme
+        assert "Install the latest published package" in readme_install_section
         assert f"## {source_version} -" not in changelog
         assert f"`{source_version}`" not in changelog
         assert (
@@ -386,14 +381,7 @@ def test_release_readiness_docs_keep_candidate_and_accepted_versions_distinct() 
         )
         release_notes = release_notes_path.read_text(encoding="utf-8")
 
-        assert (
-            f"Current release-candidate package version on this branch: `{source_version}`."
-            in readme
-        )
-        assert (
-            "Latest accepted published prerelease evidence before this candidate: "
-            f"`{latest_accepted_version}`."
-        ) in readme
+        assert source_version not in readme
 
         assert f"## {source_version} -" in changelog
         assert (
@@ -435,6 +423,9 @@ def test_operator_ui_docs_and_backlog_queue_stay_synchronized() -> None:
     )
     latest_accepted_version = _latest_accepted_prerelease_version(release_checklist)
     readme = (repo_root / "README.md").read_text(encoding="utf-8")
+    operator_handbook = (repo_root / "docs" / "operator-handbook.md").read_text(
+        encoding="utf-8"
+    )
     roadmap = (repo_root / "docs" / "backlog" / "roadmap.md").read_text(
         encoding="utf-8"
     )
@@ -456,9 +447,10 @@ def test_operator_ui_docs_and_backlog_queue_stay_synchronized() -> None:
     assert (
         "The UI can write question answers as `[resolved]`, `[partial]`, or "
         "`[deferred]` entries"
-    ) in readme
-    assert "only `[resolved]` answers unblock blocking questions" in readme
-    assert "The UI writes question answers as `[resolved]` entries" not in readme
+    ) in operator_handbook
+    assert "only `[resolved]` answers unblock blocking questions" in operator_handbook
+    assert "The UI writes question answers as `[resolved]` entries" not in operator_handbook
+    assert "`[partial]`" not in readme
 
     assert (
         f"latest accepted `{latest_accepted_version}` package-channel evidence"
@@ -678,14 +670,17 @@ def test_local_operator_docs_define_product_path_and_github_issue_boundary() -> 
         assert "aidd doctor" in document
         assert "aidd init --work-item" in document
         assert "--request" in document
-        assert "aidd ui --work-item" in document
         assert ".aidd/" in document
 
-    for document in (readme, operator_handbook, operator_ui_lane, live_catalog):
+    for document in (operator_handbook, operator_ui_lane):
+        assert "aidd ui --work-item" in document
+
+    for document in (operator_handbook, operator_ui_lane, live_catalog):
         assert "aidd init --github-issue <url>" in document
         assert "out of product scope" in document
 
-    assert "Public GitHub repositories are evaluator evidence sources only" in readme
+    assert "aidd init --github-issue <url>" not in readme
+    assert "maintainer audit evidence, not a product intake path" in readme
     assert "Public GitHub repositories are live E2E targets" in live_catalog
 
 
@@ -701,14 +696,19 @@ def test_operator_docs_describe_ui_onboarding_without_cli_regression() -> None:
         _repo_root() / "docs" / "architecture" / "operator-frontend.md"
     ).read_text(encoding="utf-8")
 
-    for document in (readme, operator_handbook):
-        assert "aidd ui" in document
-        assert "create" in document and "resume" in document and "work item" in document
-        assert "explicit runtime selection" in document or "select a runtime" in document
-        assert "project-local `.aidd/`" in document
-        assert "aidd init --work-item" in document
+    assert "aidd ui" in readme
+    assert "A new project opens Guided Setup" in readme
+    assert "existing `.aidd/`" in readme
+    assert "choose a runtime" in readme
+    assert "aidd init --work-item" in readme
 
-    assert "Without `--work-item`" in readme
+    assert "aidd ui" in operator_handbook
+    assert "create" in operator_handbook
+    assert "resume" in operator_handbook
+    assert "work item" in operator_handbook
+    assert "explicit runtime selection" in operator_handbook
+    assert "project-local `.aidd/`" in operator_handbook
+    assert "aidd init --work-item" in operator_handbook
     assert "Bare `aidd`, `aidd --help`, and scripted subcommands keep" in operator_handbook
     assert "Bare `aidd` and `aidd --help` keep" in operator_frontend
     assert "current help behavior" in operator_frontend
@@ -735,23 +735,7 @@ def test_operator_docs_describe_completed_run_next_flow_handoff() -> None:
         _repo_root() / "docs" / "operator-troubleshooting.md"
     ).read_text(encoding="utf-8")
 
-    for expected in (
-        "After terminal `qa`, the command center switches to **Flow Complete**",
-        "final QA status",
-        "final artifacts",
-        "repair counts",
-        "approval counts",
-        "answered questions",
-        "recommended next-flow actions",
-        "source-run lineage",
-        "create a new work item",
-        "start a follow-up flow",
-        "clone the previous flow",
-        "eval / scenario batch",
-        "archive the run",
-        "without deleting artifacts or mutating the completed source run",
-    ):
-        assert expected in readme
+    assert "Operator Handbook" in readme
 
     for expected in (
         "### 6.7 Completed-run handoff and next-flow actions",
@@ -965,7 +949,7 @@ def test_operator_ui_current_docs_are_studio_only() -> None:
         root / "docs" / "e2e" / "operator-ui-studio-rollback-window-2026-07-18.md"
     ).read_text(encoding="utf-8")
 
-    assert "Document & Evidence Studio" in readme
+    assert "local Operator UI" in readme
     assert "Document & Evidence Studio" in handbook
     assert "## 8. Implemented Document & Evidence Studio" in architecture
     assert "Accepted next-generation UX direction" not in architecture

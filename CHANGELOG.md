@@ -7,7 +7,9 @@ stable compatibility window exists.
 
 ## Unreleased
 
-- Reserved for changes after `v0.1.0a20`.
+- Refocus the README as a concise, cross-rendered project entry point with unpinned package
+  installation, a browser-verified Operator UI screenshot, role-based documentation navigation,
+  feature-proposal guidance, explicit governance, and current license metadata.
 
 ## 0.1.0a20 - 2026-08-31
 
