@@ -166,20 +166,15 @@ python -m scripts.release.evidence_collector release-evidence.json
 
 ## Maintainer release state
 
-Current release-candidate package version: `0.1.0a20`.
-Latest accepted published prerelease evidence: `0.1.0a18`.
-Latest accepted published prerelease evidence before this candidate: `0.1.0a18`.
+Maintainer source development package version: `0.1.0a21.dev0`.
+Latest accepted published prerelease evidence: `0.1.0a20`.
+No current release candidate is accepted from this development version.
 The previous candidate `v0.1.0a19` reached a GitHub Release but its PyPI publication failed
 because unpinned Hatchling emitted Core Metadata 2.5, which the publisher rejected.
-`v0.1.0a20` is a prepared candidate only; it is not accepted release evidence until the
-GitHub Release is published and its PyPI, `pipx`, and `uv tool` verification jobs pass.
-Do not add an accepted `v0.1.0a20` evidence log entry until those package-channel checks
-complete successfully.
 
-README install guidance is pinned to `0.1.0a18` because the `v0.1.0a18` GitHub Release
-workflow published to PyPI and verified `pipx` plus `uv tool` installability. The accepted
-release used source commit `5c5f43f8720d342e0a7eac8e75f983fbc0c74bdb`; its release workflow
-run is recorded below.
+README install guidance is pinned to `0.1.0a20` because the `v0.1.0a20` GitHub Release
+workflow published to PyPI and verified `pipx` plus `uv tool` installability. The source
+development tree has moved to `0.1.0a21.dev0`; it is not a published release.
 
 The fresh Codex and Claude Code Large live-E2E evidence retained under
 `docs/e2e/live-large-codex-claude-run-report-2026-08-31.md` is local manual operator-audit
@@ -474,6 +469,25 @@ does not make Docker/GHCR a supported alpha distribution channel.
 - Result: failed publication attempt; PyPI returned no `0.1.0a19` project version.
 - Failure: Hatchling resolved to 1.32.0 and emitted Core Metadata 2.5, rejected by the
   pinned PyPI publisher. The corrective build pin is carried by the `v0.1.0a20` candidate.
+
+### `v0.1.0a20` accepted evidence on 2026-08-31
+
+- Tag: `v0.1.0a20`
+- Release branch: `release/v0.1.0a20`
+- Commit: `0803711c1e6f24c931803b13c852e8d727286d54`
+- GitHub Release: `https://github.com/GrinRus/ai_driven_dev_v2/releases/tag/v0.1.0a20`
+- Workflow run: `https://github.com/GrinRus/ai_driven_dev_v2/actions/runs/33385397818`
+- Result: accepted published prerelease and package-channel evidence.
+- Job results: `quality` passed on Python 3.12, 3.13, and 3.14; `build` passed;
+  `publish-pypi` passed; `verify-pypi-install` passed; `verify-uv-tool-install` passed.
+- Build evidence: the release tag matched `project.version` `0.1.0a20`, and the tag commit
+  matched the remote `release/v0.1.0a20` branch HEAD.
+- PyPI output: `https://pypi.org/project/ai-driven-dev-v2/0.1.0a20/`.
+- `pipx` verification output included `aidd 0.1.0a20` and `AIDD doctor` version `0.1.0a20`.
+- `uv tool` verification output included `aidd 0.1.0a20` and `AIDD doctor` version
+  `0.1.0a20`.
+- Local shell note: standalone `pipx` is not installed; the release workflow's isolated
+  `pipx` verification job passed. No Docker/GHCR artifact was published.
 
 ### `v0.1.0a18` accepted evidence on 2026-08-10
 

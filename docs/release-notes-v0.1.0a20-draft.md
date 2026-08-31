@@ -1,9 +1,9 @@
 # Release Notes: v0.1.0a20
 
-Status: draft, not tagged or published.
+Status: published on 2026-08-31; accepted package-channel evidence.
 
-Current release-candidate package version: `0.1.0a20`.
-Latest accepted published prerelease evidence before this candidate: `0.1.0a18`.
+Published package version: `0.1.0a20`.
+Latest accepted published prerelease evidence: `0.1.0a20`.
 
 ## Summary
 
@@ -27,6 +27,7 @@ compatible package build metadata pin.
 
 ## Quality and evidence
 
+- Release workflow quality, build, publish, `pipx`, and `uv tool` verification jobs passed.
 - Deterministic Python, frontend, browser, adapter-conformance, scenario, security, and package
   build checks are required by the release workflow.
 - Fresh local Large `AIDD-LIVE-012` runs for Codex and Claude Code completed `idea → qa` with
@@ -47,9 +48,11 @@ compatible package build metadata pin.
 ## Publication checklist
 
 - Release branch: `release/v0.1.0a20`.
-- Publish only through the GitHub Release `published` event after deterministic release-branch
-  checks pass.
-- Accept the release only after PyPI, `pipx`, and `uv tool` verification jobs pass.
-
-`0.1.0a20` package must not be described as the latest accepted published prerelease until
-the package-channel verification jobs complete successfully.
+- GitHub Release: `https://github.com/GrinRus/ai_driven_dev_v2/releases/tag/v0.1.0a20`.
+- Published workflow: `https://github.com/GrinRus/ai_driven_dev_v2/actions/runs/33385397818`.
+- Tag and release branch resolve to `0803711c1e6f24c931803b13c852e8d727286d54`.
+- Quality (Python 3.12/3.13/3.14), build, PyPI publish, `pipx`, and `uv tool` verification
+  jobs passed.
+- PyPI: `https://pypi.org/project/ai-driven-dev-v2/0.1.0a20/`.
+- The current source development version is `0.1.0a21.dev0`; no candidate from it is accepted.
+- Docker/GHCR is not a supported alpha distribution channel.

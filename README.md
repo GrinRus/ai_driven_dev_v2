@@ -77,12 +77,10 @@ for the complete model.
 
 ## Project status and safety
 
-Latest published prerelease: `0.1.0a18`.
-Latest accepted published prerelease evidence: `0.1.0a18`.
-Previous candidate `0.1.0a19` reached a GitHub Release but was not published to PyPI because
-its build metadata was incompatible with the release publisher.
-Current release-candidate package version on this branch: `0.1.0a20`.
-Latest accepted published prerelease evidence before this candidate: `0.1.0a18`.
+Latest published prerelease: `0.1.0a20`.
+Latest accepted published prerelease evidence: `0.1.0a20`.
+The previous candidate `0.1.0a19` reached a GitHub Release but was not published to PyPI;
+the corrected `0.1.0a20` release pins Hatchling to compatible Core Metadata 2.4.
 The `main` branch is development source and may contain unreleased changes.
 
 > [!WARNING]
@@ -119,7 +117,7 @@ or model access.
 Install the latest published prerelease:
 
 ```bash
-pipx install "ai-driven-dev-v2==0.1.0a18"
+pipx install "ai-driven-dev-v2==0.1.0a20"
 aidd --version
 aidd doctor
 ```
@@ -127,7 +125,7 @@ aidd doctor
 ## Install with uv tool
 
 ```bash
-uv tool install "ai-driven-dev-v2==0.1.0a18"
+uv tool install "ai-driven-dev-v2==0.1.0a20"
 aidd --version
 aidd doctor
 ```
