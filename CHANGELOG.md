@@ -7,6 +7,10 @@ stable compatibility window exists.
 
 ## Unreleased
 
+- No changes yet.
+
+## 0.1.0a21 - 2026-09-01
+
 - Refocus the README as a concise, cross-rendered project entry point with unpinned package
   installation, a browser-verified Operator UI screenshot, role-based documentation navigation,
   feature-proposal guidance, explicit governance, and current license metadata.
