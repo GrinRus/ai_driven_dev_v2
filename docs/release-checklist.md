@@ -186,17 +186,16 @@ python -m scripts.release.evidence_collector release-evidence.json
 
 ## Maintainer release state
 
-Current release-candidate package version: `0.1.0a21`.
-Latest accepted published prerelease evidence before this candidate: `0.1.0a20`.
-The accepted `v0.1.0a21` evidence log entry will be added after publication and verification.
+Maintainer source development package version: `0.1.0a22.dev0`.
+Latest accepted published prerelease evidence: `0.1.0a21`.
+No current release candidate is accepted from this development version.
 The previous candidate `v0.1.0a19` reached a GitHub Release but its PyPI publication failed
 because unpinned Hatchling emitted Core Metadata 2.5, which the publisher rejected.
 
 README install guidance resolves the latest published package from PyPI without hardcoding the
 release number. An isolated post-release check confirmed that unpinned `pipx` and `uv tool`
-installs both selected `0.1.0a20`. Exact release evidence below remains pinned to its version.
-The release branch carries `0.1.0a21`; `main` returns to a `.dev0` version in the post-release
-follow-up after publication.
+installs both selected `0.1.0a21`. Exact release evidence below remains pinned to its version.
+The source development tree has moved to `0.1.0a22.dev0`; it is not a published release.
 
 The fresh Codex and Claude Code Large live-E2E evidence retained under
 `docs/e2e/live-large-codex-claude-run-report-2026-08-31.md` is local manual operator-audit
@@ -483,6 +482,25 @@ package-channel acceptance and does not replace GitHub Release, PyPI, `pipx`, or
 Historical release attempts below may mention GHCR because earlier alpha candidates
 temporarily published container images. That evidence is retained for traceability only and
 does not make Docker/GHCR a supported alpha distribution channel.
+
+### `v0.1.0a21` accepted evidence on 2026-09-01
+
+- Tag: `v0.1.0a21`
+- Release branch: `release/v0.1.0a21`
+- Commit: `1d49477ee70145e80de760bf37e41bd2f211ced8`
+- GitHub Release: `https://github.com/GrinRus/ai_driven_dev_v2/releases/tag/v0.1.0a21`
+- Workflow run: `https://github.com/GrinRus/ai_driven_dev_v2/actions/runs/33546307202`
+- Result: accepted published prerelease and package-channel evidence.
+- Job results: `quality` passed on Python 3.12, 3.13, and 3.14; `build` passed;
+  `publish-pypi` passed; `verify-pypi-install` passed; `verify-uv-tool-install` passed.
+- Build evidence: the release tag matched `project.version` `0.1.0a21`, and the tag commit
+  matched the remote `release/v0.1.0a21` branch HEAD.
+- PyPI output: `https://pypi.org/project/ai-driven-dev-v2/0.1.0a21/`.
+- Independent local `pipx` verification used an isolated `uv tool run --from pipx` runner;
+  the installed `aidd` binary returned `aidd 0.1.0a21` and `aidd doctor` completed.
+- Independent local `uv tool` verification installed `ai-driven-dev-v2==0.1.0a21`;
+  the installed `aidd` binary returned `aidd 0.1.0a21` and `aidd doctor` completed.
+- No Docker/GHCR artifact was published.
 
 ### `v0.1.0a19` failed publication attempt on 2026-08-31
 

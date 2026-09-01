@@ -1,9 +1,9 @@
 # Release Notes: v0.1.0a21
 
-Status: draft, not tagged or published.
+Status: published on 2026-09-01; accepted package-channel evidence.
 
-Current release-candidate package version: `0.1.0a21`.
-Latest accepted published prerelease evidence before this candidate: `0.1.0a20`.
+Published package version: `0.1.0a21`.
+Latest accepted published prerelease evidence: `0.1.0a21`.
 
 ## Summary
 
@@ -22,7 +22,8 @@ This alpha prerelease carries the release and documentation hardening merged aft
 
 - Deterministic Python, frontend, browser, adapter-conformance, scenario, security, and package
   build checks are required by the release workflow.
-- Package publication is accepted only after PyPI, `pipx`, and `uv tool` verification jobs pass.
+- Release workflow quality, build, publish, `pipx`, and `uv tool` verification jobs passed.
+- Workflow run: `https://github.com/GrinRus/ai_driven_dev_v2/actions/runs/33546307202`.
 - Manual external E2E remains local operator-audit evidence and is not a release gate.
 
 ## Compatibility and limitations
@@ -35,8 +36,8 @@ This alpha prerelease carries the release and documentation hardening merged aft
 ## Publication checklist
 
 - Release branch: `release/v0.1.0a21`.
-- Publish only through the GitHub Release `published` event after deterministic release-branch
-  checks pass.
-- Accept the release only after PyPI, `pipx`, and `uv tool` verification jobs pass.
-- The `0.1.0a21` package must not be described as the latest accepted published prerelease until
-  all publication and install-verification evidence is complete.
+- Published through the GitHub Release `published` event after deterministic release-branch
+  checks passed.
+- PyPI, `pipx`, and `uv tool` verification jobs passed.
+- Tag and release branch resolve to `1d49477ee70145e80de760bf37e41bd2f211ced8`.
+- PyPI: `https://pypi.org/project/ai-driven-dev-v2/0.1.0a21/`.
