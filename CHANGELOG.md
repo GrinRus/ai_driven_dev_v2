@@ -16,6 +16,9 @@ stable compatibility window exists.
   `pip` backend explicitly, pin the hosted `uv` executable, exercise the exact binaries produced
   by both install lanes, keep repository-only architecture PNGs out of source distributions, and
   require published GitHub Release notes to reflect the actual publication outcome.
+- Keep the operator handbook's configuration inventory aligned with all supported runtime
+  selectors and permission controls, and document that stopping the UI server does not cancel
+  active runtime jobs.
 
 ## 0.1.0a20 - 2026-08-31
 

@@ -96,6 +96,37 @@ def test_current_docs_do_not_reintroduce_bootstrap_or_planned_adapter_wording() 
     )
 
 
+def test_operator_handbook_lists_all_consumed_runtime_config_fields() -> None:
+    handbook = (_repo_root() / "docs" / "operator-handbook.md").read_text(encoding="utf-8")
+    inventory = handbook.split("Current config fields consumed by the CLI:", 1)[1].split(
+        "## 6. First-Run Procedure", 1
+    )[0]
+
+    required_fields = (
+        "`runtime.generic_cli.command`",
+        "`runtime.claude_code.command`",
+        "`runtime.codex.command`",
+        "`runtime.opencode.command`",
+        "`runtime.qwen.command`",
+        "`runtime.<provider>.mode`",
+        "`runtime.<provider>.timeout_seconds`",
+        "`runtime.<provider>.stage_timeouts.<stage>`",
+        "`runtime.<provider>.permission_policy`",
+        "`runtime.<provider>.interaction_mode`",
+        "`runtime.<provider>.auto_approval_preset`",
+        "`runtime.<provider>.model`",
+        "`runtime.<provider>.reasoning_effort`",
+        "`logging.mode`",
+        "`repair.max_attempts`",
+    )
+
+    missing_fields = [field for field in required_fields if field not in inventory]
+    assert not missing_fields, (
+        "Operator handbook config inventory is missing consumed fields: "
+        f"{', '.join(missing_fields)}"
+    )
+
+
 def test_runtime_support_docs_name_registered_runtimes_and_tiers() -> None:
     repo_root = _repo_root()
     adapter_protocol = (
