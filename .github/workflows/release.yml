@@ -181,9 +181,6 @@ jobs:
     timeout-minutes: 15
     permissions:
       contents: read
-    env:
-      PIPX_HOME: ${{ runner.temp }}/pipx-home
-      PIPX_BIN_DIR: ${{ runner.temp }}/pipx-bin
     steps:
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
 
@@ -199,6 +196,8 @@ jobs:
 
       - name: Verify published package installability via pipx
         env:
+          PIPX_HOME: ${{ runner.temp }}/pipx-home
+          PIPX_BIN_DIR: ${{ runner.temp }}/pipx-bin
           RELEASE_TAG: ${{ github.event.release.tag_name }}
         run: |
           set -euo pipefail
@@ -231,9 +230,6 @@ jobs:
     timeout-minutes: 15
     permissions:
       contents: read
-    env:
-      UV_TOOL_DIR: ${{ runner.temp }}/uv-tools
-      UV_TOOL_BIN_DIR: ${{ runner.temp }}/uv-tool-bin
     steps:
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
 
@@ -248,6 +244,8 @@ jobs:
 
       - name: Verify published package installability via uv tool
         env:
+          UV_TOOL_DIR: ${{ runner.temp }}/uv-tools
+          UV_TOOL_BIN_DIR: ${{ runner.temp }}/uv-tool-bin
           RELEASE_TAG: ${{ github.event.release.tag_name }}
         run: |
           set -euo pipefail

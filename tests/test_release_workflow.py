@@ -40,6 +40,13 @@ def _job_run_blocks(job: dict[str, Any]) -> str:
     )
 
 
+def _named_step(job: dict[str, Any], name: str) -> dict[str, Any]:
+    for step in job.get("steps", []):
+        if isinstance(step, dict) and step.get("name") == name:
+            return step
+    raise AssertionError(f"Missing workflow step: {name}")
+
+
 def test_release_workflow_uses_published_release_event_not_tag_push() -> None:
     workflow = _release_workflow()
     triggers = workflow["on"]
@@ -67,9 +74,12 @@ def test_release_workflow_has_pypi_install_verification_job() -> None:
 def test_release_workflow_uses_installed_pipx_binary_with_pip_backend() -> None:
     verify_job = _release_workflow_jobs()["verify-pypi-install"]
     run_blocks = _job_run_blocks(verify_job)
+    verification_step = _named_step(
+        verify_job, "Verify published package installability via pipx"
+    )
 
-    assert verify_job["env"]["PIPX_HOME"] == "${{ runner.temp }}/pipx-home"
-    assert verify_job["env"]["PIPX_BIN_DIR"] == "${{ runner.temp }}/pipx-bin"
+    assert verification_step["env"]["PIPX_HOME"] == "${{ runner.temp }}/pipx-home"
+    assert verification_step["env"]["PIPX_BIN_DIR"] == "${{ runner.temp }}/pipx-bin"
     assert "python -m pipx install --force --backend pip" in run_blocks
     assert 'test -x "${PIPX_BIN_DIR}/aidd"' in run_blocks
     assert '"${PIPX_BIN_DIR}/aidd" --version' in run_blocks
@@ -152,13 +162,28 @@ def test_release_workflow_has_uv_tool_install_verification_job() -> None:
     run_blocks = _job_run_blocks(verify_job)
     assert "ATTEMPTS=10" in run_blocks
     assert "BACKOFF_SECONDS=30" in run_blocks
-    assert verify_job["env"]["UV_TOOL_DIR"] == "${{ runner.temp }}/uv-tools"
-    assert verify_job["env"]["UV_TOOL_BIN_DIR"] == "${{ runner.temp }}/uv-tool-bin"
+    verification_step = _named_step(
+        verify_job, "Verify published package installability via uv tool"
+    )
+    assert verification_step["env"]["UV_TOOL_DIR"] == "${{ runner.temp }}/uv-tools"
+    assert verification_step["env"]["UV_TOOL_BIN_DIR"] == "${{ runner.temp }}/uv-tool-bin"
     assert "uv tool install --force" in run_blocks
     assert 'test -x "${UV_TOOL_BIN_DIR}/aidd"' in run_blocks
     assert '"${UV_TOOL_BIN_DIR}/aidd" --version' in run_blocks
     assert '"${UV_TOOL_BIN_DIR}/aidd" doctor' in run_blocks
     assert "uv tool run" not in run_blocks
+
+
+def test_release_workflow_keeps_runner_context_at_step_scope() -> None:
+    jobs = _release_workflow_jobs()
+
+    for job_id, job in jobs.items():
+        job_env = job.get("env", {})
+        assert all(
+            "${{ runner." not in str(value)
+            for value in job_env.values()
+        ), f"runner context is not available in job-level env for {job_id}"
+
 
 
 def test_release_workflow_does_not_publish_container_images_for_alpha() -> None:

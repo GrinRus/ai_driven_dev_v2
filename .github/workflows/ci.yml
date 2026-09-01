@@ -158,6 +158,7 @@ jobs:
           uv run --extra dev python scripts/run_packaged_ui_scenarios.py
 
   build:
+    if: ${{ always() && !cancelled() }}
     needs:
       - lint-type-test
       - adapter-conformance
@@ -176,6 +177,33 @@ jobs:
       - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6.3.0
         with:
           python-version: "3.12"
+
+      - name: Require upstream CI lanes
+        env:
+          ADAPTER_CONFORMANCE_RESULT: ${{ needs.adapter-conformance.result }}
+          DETERMINISTIC_SCENARIOS_RESULT: ${{ needs.deterministic-scenarios.result }}
+          LINT_TYPE_TEST_RESULT: ${{ needs.lint-type-test.result }}
+          PACKAGED_UI_BROWSER_RESULT: ${{ needs.packaged-ui-browser.result }}
+        run: |
+          set -euo pipefail
+
+          failed=0
+          for lane in \
+            "lint-type-test:${LINT_TYPE_TEST_RESULT}" \
+            "adapter-conformance:${ADAPTER_CONFORMANCE_RESULT}" \
+            "deterministic-scenarios:${DETERMINISTIC_SCENARIOS_RESULT}" \
+            "packaged-ui-browser:${PACKAGED_UI_BROWSER_RESULT}"; do
+            name="${lane%%:*}"
+            result="${lane#*:}"
+            if [ "${result}" != "success" ]; then
+              echo "Required CI lane ${name} completed with ${result}." >&2
+              failed=1
+            fi
+          done
+
+          if [ "${failed}" -ne 0 ]; then
+            exit 1
+          fi
 
       - name: Install dependencies
         run: |
