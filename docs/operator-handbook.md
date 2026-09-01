@@ -209,9 +209,15 @@ Current config fields consumed by the CLI:
 - `runtime.claude_code.command`
 - `runtime.codex.command`
 - `runtime.opencode.command`
+- `runtime.qwen.command`
 - `runtime.<provider>.mode`
 - `runtime.<provider>.timeout_seconds`
 - `runtime.<provider>.stage_timeouts.<stage>`
+- `runtime.<provider>.permission_policy`
+- `runtime.<provider>.interaction_mode`
+- `runtime.<provider>.auto_approval_preset`
+- `runtime.<provider>.model`
+- `runtime.<provider>.reasoning_effort`
 - `logging.mode`
 - `repair.max_attempts`
 
@@ -331,6 +337,8 @@ Expected behavior in the current local implementation:
   stage** uses the same single-stage semantics as `aidd stage run <stage>`;
 - the UI **Request change** panel uses the same durable intervention semantics as
   `aidd stage interact <stage>`;
+- stopping the UI server affects only the HTTP server; active runtime jobs are not
+  cancelled and must be managed through their job controls;
 - `aidd stage run --runtime <supported-non-generic>` executes through the corresponding adapter path;
 - `generic-cli` is an advanced wrapper/test lane, not the default product onboarding runtime;
 - manual external evals are separate operator-audit evidence. Their scenario policies,
