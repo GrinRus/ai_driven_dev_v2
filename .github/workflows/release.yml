@@ -25,6 +25,7 @@ jobs:
 
       - uses: astral-sh/setup-uv@11f9893b081a58869d3b5fccaea48c9e9e46f990 # v8.3.2
         with:
+          version: "0.12.8"
           enable-cache: true
 
       - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6.3.0
@@ -60,6 +61,7 @@ jobs:
 
       - uses: astral-sh/setup-uv@11f9893b081a58869d3b5fccaea48c9e9e46f990 # v8.3.2
         with:
+          version: "0.12.8"
           enable-cache: true
 
       - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6.3.0
@@ -179,6 +181,9 @@ jobs:
     timeout-minutes: 15
     permissions:
       contents: read
+    env:
+      PIPX_HOME: ${{ runner.temp }}/pipx-home
+      PIPX_BIN_DIR: ${{ runner.temp }}/pipx-bin
     steps:
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
 
@@ -204,7 +209,7 @@ jobs:
 
           for attempt in $(seq 1 "${ATTEMPTS}"); do
             echo "Attempt ${attempt}/${ATTEMPTS}: pipx install ai-driven-dev-v2==${PACKAGE_VERSION}"
-            if python -m pipx install --force "ai-driven-dev-v2==${PACKAGE_VERSION}"; then
+            if python -m pipx install --force --backend pip "ai-driven-dev-v2==${PACKAGE_VERSION}"; then
               break
             fi
             if [ "${attempt}" -eq "${ATTEMPTS}" ]; then
@@ -215,8 +220,9 @@ jobs:
             sleep "${BACKOFF_SECONDS}"
           done
 
-          python -m pipx run --spec "ai-driven-dev-v2==${PACKAGE_VERSION}" aidd --version
-          python -m pipx run --spec "ai-driven-dev-v2==${PACKAGE_VERSION}" aidd doctor
+          test -x "${PIPX_BIN_DIR}/aidd"
+          "${PIPX_BIN_DIR}/aidd" --version
+          "${PIPX_BIN_DIR}/aidd" doctor
 
   verify-uv-tool-install:
     if: github.event_name == 'release'
@@ -225,11 +231,15 @@ jobs:
     timeout-minutes: 15
     permissions:
       contents: read
+    env:
+      UV_TOOL_DIR: ${{ runner.temp }}/uv-tools
+      UV_TOOL_BIN_DIR: ${{ runner.temp }}/uv-tool-bin
     steps:
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
 
       - uses: astral-sh/setup-uv@11f9893b081a58869d3b5fccaea48c9e9e46f990 # v8.3.2
         with:
+          version: "0.12.8"
           enable-cache: true
 
       - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6.3.0
@@ -260,5 +270,6 @@ jobs:
             sleep "${BACKOFF_SECONDS}"
           done
 
-          uv tool run --from "${PACKAGE_SPEC}" aidd --version
-          uv tool run --from "${PACKAGE_SPEC}" aidd doctor
+          test -x "${UV_TOOL_BIN_DIR}/aidd"
+          "${UV_TOOL_BIN_DIR}/aidd" --version
+          "${UV_TOOL_BIN_DIR}/aidd" doctor

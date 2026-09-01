@@ -606,6 +606,14 @@ def test_release_docs_describe_release_branch_publish_flow() -> None:
 
     assert "workflow_dispatch` path is a dry run" in distribution
     assert "release tag commit must match the remote release branch HEAD" in distribution
+    assert "`pipx` with the `pip` backend selected explicitly" in distribution
+    assert "executes the `aidd` binary created by" in distribution
+    assert "`PIPX_BIN_DIR`" in pre_history_checklist
+    assert "`UV_TOOL_BIN_DIR`" in pre_history_checklist
+    assert "package as published-but-unverified" in distribution
+    assert "draft or candidate-only status text" in distribution
+    assert "`verify-uv-tool-install` separately as passed" in pre_history_checklist
+    assert "candidate-only status text on a published release" in pre_history_checklist
     assert "Status: published on " in release_notes
     assert (
         "Release workflow quality, build, publish, `pipx`, and `uv tool` "
@@ -1696,6 +1704,10 @@ def test_release_publish_skill_describes_release_flow_guardrails() -> None:
         "If the release tag SHA does not match `origin/release/<tag>`, stop",
         "Tag v<project.version> already exists on origin",
         "git rev-parse refs/tags/v<project.version>^{commit}",
+        "--backend pip",
+        "The acceptance checks must execute the binaries installed into `PIPX_BIN_DIR`",
+        "classify the package as published-but-unverified",
+        "Never leave draft or candidate-only status text",
     ):
         assert needle in skill
 

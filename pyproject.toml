@@ -70,6 +70,11 @@ packages = ["src/aidd"]
 "contracts" = "aidd/_resources/contracts"
 "prompt-packs" = "aidd/_resources/prompt-packs"
 
+[tool.hatch.build.targets.sdist]
+exclude = [
+  "/docs/architecture/assets/operator-ui-target-v2/*.png",
+]
+
 [tool.ruff]
 target-version = "py312"
 line-length = 100

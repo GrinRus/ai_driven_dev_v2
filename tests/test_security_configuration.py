@@ -79,6 +79,22 @@ def test_ci_and_release_workflows_use_locked_uv_sync() -> None:
             assert "uv sync --locked --extra dev" in workflow_text, workflow_path.as_posix()
 
 
+def test_ci_and_release_workflows_pin_the_uv_executable() -> None:
+    for workflow_name in ("ci.yml", "release.yml"):
+        workflow = _read_yaml(f".github/workflows/{workflow_name}")
+        setup_uv_steps = [
+            step
+            for job in workflow["jobs"].values()
+            for step in job.get("steps", ())
+            if isinstance(step, dict)
+            and str(step.get("uses", "")).startswith("astral-sh/setup-uv@")
+        ]
+
+        assert setup_uv_steps, workflow_name
+        for step in setup_uv_steps:
+            assert step["with"]["version"] == "0.12.8", workflow_name
+
+
 def test_makefile_install_uses_locked_uv_sync() -> None:
     makefile_text = (_repo_root() / "Makefile").read_text(encoding="utf-8")
     assert "uv sync --locked --extra dev" in makefile_text

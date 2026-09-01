@@ -5,6 +5,7 @@ import json
 import os
 import subprocess
 import sys
+import tarfile
 import tomllib
 import zipfile
 from pathlib import Path
@@ -169,6 +170,48 @@ def test_built_wheel_includes_runtime_owned_contracts_and_prompt_packs(tmp_path:
     )
 
     assert installed_check.returncode == 0, installed_check.stderr or installed_check.stdout
+
+
+def test_built_sdist_excludes_repo_only_architecture_pngs(tmp_path: Path) -> None:
+    offline_environment = {**os.environ, "UV_OFFLINE": "1"}
+    completed = _run_bounded(
+        [
+            _uv_command(),
+            "build",
+            "--offline",
+            "--sdist",
+            "--out-dir",
+            tmp_path.as_posix(),
+        ],
+        cwd=_repo_root(),
+        environment=offline_environment,
+        timeout_seconds=120.0,
+    )
+
+    assert completed.returncode == 0, completed.stderr or completed.stdout
+    sdist_paths = sorted(tmp_path.glob("*.tar.gz"))
+    assert len(sdist_paths) == 1
+
+    with tarfile.open(sdist_paths[0], mode="r:gz") as archive:
+        archive_names = set(archive.getnames())
+
+    visual_reference_marker = "/docs/architecture/assets/operator-ui-target-v2/"
+    assert not any(
+        visual_reference_marker in name and name.endswith(".png")
+        for name in archive_names
+    )
+    for required_suffix in (
+        "/LICENSE",
+        "/README.md",
+        "/src/aidd/__init__.py",
+        "/contracts/stages/idea.md",
+        "/prompt-packs/stages/idea/system.md",
+        "/docs/architecture/assets/operator-ui-target-v2/generation-prompts.md",
+        "/tests/test_packaging_resources.py",
+    ):
+        assert any(name.endswith(required_suffix) for name in archive_names)
+
+    assert sdist_paths[0].stat().st_size < 5 * 1024 * 1024
 
 
 def test_docs_extra_is_absent_from_active_package_and_dependency_update_surfaces() -> None:

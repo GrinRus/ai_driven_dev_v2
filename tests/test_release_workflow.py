@@ -59,9 +59,22 @@ def test_release_workflow_has_pypi_install_verification_job() -> None:
     run_blocks = _job_run_blocks(verify_job)
     assert "ATTEMPTS=10" in run_blocks
     assert "BACKOFF_SECONDS=30" in run_blocks
-    assert "python -m pipx install --force" in run_blocks
-    assert "aidd --version" in run_blocks
-    assert "aidd doctor" in run_blocks
+    assert "python -m pipx install --force --backend pip" in run_blocks
+    assert '"${PIPX_BIN_DIR}/aidd" --version' in run_blocks
+    assert '"${PIPX_BIN_DIR}/aidd" doctor' in run_blocks
+
+
+def test_release_workflow_uses_installed_pipx_binary_with_pip_backend() -> None:
+    verify_job = _release_workflow_jobs()["verify-pypi-install"]
+    run_blocks = _job_run_blocks(verify_job)
+
+    assert verify_job["env"]["PIPX_HOME"] == "${{ runner.temp }}/pipx-home"
+    assert verify_job["env"]["PIPX_BIN_DIR"] == "${{ runner.temp }}/pipx-bin"
+    assert "python -m pipx install --force --backend pip" in run_blocks
+    assert 'test -x "${PIPX_BIN_DIR}/aidd"' in run_blocks
+    assert '"${PIPX_BIN_DIR}/aidd" --version' in run_blocks
+    assert '"${PIPX_BIN_DIR}/aidd" doctor' in run_blocks
+    assert "python -m pipx run" not in run_blocks
 
 
 def test_release_workflow_hash_locks_the_pipx_bootstrap() -> None:
@@ -139,10 +152,13 @@ def test_release_workflow_has_uv_tool_install_verification_job() -> None:
     run_blocks = _job_run_blocks(verify_job)
     assert "ATTEMPTS=10" in run_blocks
     assert "BACKOFF_SECONDS=30" in run_blocks
+    assert verify_job["env"]["UV_TOOL_DIR"] == "${{ runner.temp }}/uv-tools"
+    assert verify_job["env"]["UV_TOOL_BIN_DIR"] == "${{ runner.temp }}/uv-tool-bin"
     assert "uv tool install --force" in run_blocks
-    assert "uv tool run --from" in run_blocks
-    assert "aidd --version" in run_blocks
-    assert "aidd doctor" in run_blocks
+    assert 'test -x "${UV_TOOL_BIN_DIR}/aidd"' in run_blocks
+    assert '"${UV_TOOL_BIN_DIR}/aidd" --version' in run_blocks
+    assert '"${UV_TOOL_BIN_DIR}/aidd" doctor' in run_blocks
+    assert "uv tool run" not in run_blocks
 
 
 def test_release_workflow_does_not_publish_container_images_for_alpha() -> None:

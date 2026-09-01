@@ -119,9 +119,10 @@ Recommended release flow:
 5. publish the GitHub Release,
 6. build the Python package in the release workflow,
 7. publish to PyPI through Trusted Publishing,
-8. verify installability through `pipx`,
+8. verify installability through `pipx` with the `pip` backend selected explicitly,
 9. verify installability through `uv tool`,
-10. publish release notes.
+10. reconcile the published GitHub Release notes with the observed publish and verification
+    outcome.
 
 The release workflow publishes only from the GitHub Release `published` event. Its manual
 `workflow_dispatch` path is a dry run for deterministic quality and package build jobs only;
@@ -129,6 +130,24 @@ it must not publish to PyPI or run package installability verification against t
 The release workflow must run deterministic quality checks before publish. Manual
 external eval evidence can be refreshed locally before or after a release branch, but
 it is not a release gate and must remain outside GitHub Actions and the release workflow.
+
+The `pipx` verification lane selects the `pip` backend explicitly so an unrelated standalone
+`uv` executable on the runner cannot silently change `pipx` behavior or impose a second `uv`
+version requirement. Hosted CI and release jobs pin the `uv` executable version explicitly.
+Each install lane uses a runner-owned tool directory and executes the `aidd` binary created by
+its successful retry loop; a separately resolved `pipx run` or `uv tool run` environment is not
+accepted as evidence for the preceding install. The separate `uv tool` lane remains the
+authoritative verification of the `uv` installation path. After the workflow reaches a terminal
+state, the public GitHub Release body must state whether PyPI publication and both install checks
+passed or whether publication or verification failed. It records the `publish-pypi`,
+`verify-pypi-install`, and `verify-uv-tool-install` results separately as passed, failed, or
+skipped, and explicitly marks a package as published-but-unverified when either install lane
+lacks passing evidence. Published releases must not retain draft or candidate-only status text.
+
+High-resolution architecture reference PNGs are repository review assets, not Python source
+distribution inputs. They remain tracked and available from GitHub, while the sdist retains the
+source, tests, documentation, contracts, prompt packs, license, and the reference-generation
+notes needed by downstream source consumers.
 
 Operator-oriented step-by-step release execution lives in `docs/release-checklist.md`.
 
