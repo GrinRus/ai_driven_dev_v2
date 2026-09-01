@@ -186,16 +186,17 @@ python -m scripts.release.evidence_collector release-evidence.json
 
 ## Maintainer release state
 
-Maintainer source development package version: `0.1.0a21.dev0`.
-Latest accepted published prerelease evidence: `0.1.0a20`.
-No current release candidate is accepted from this development version.
+Current release-candidate package version: `0.1.0a21`.
+Latest accepted published prerelease evidence before this candidate: `0.1.0a20`.
+The accepted `v0.1.0a21` evidence log entry will be added after publication and verification.
 The previous candidate `v0.1.0a19` reached a GitHub Release but its PyPI publication failed
 because unpinned Hatchling emitted Core Metadata 2.5, which the publisher rejected.
 
 README install guidance resolves the latest published package from PyPI without hardcoding the
 release number. An isolated post-release check confirmed that unpinned `pipx` and `uv tool`
 installs both selected `0.1.0a20`. Exact release evidence below remains pinned to its version.
-The source development tree has moved to `0.1.0a21.dev0`; it is not a published release.
+The release branch carries `0.1.0a21`; `main` returns to a `.dev0` version in the post-release
+follow-up after publication.
 
 The fresh Codex and Claude Code Large live-E2E evidence retained under
 `docs/e2e/live-large-codex-claude-run-report-2026-08-31.md` is local manual operator-audit

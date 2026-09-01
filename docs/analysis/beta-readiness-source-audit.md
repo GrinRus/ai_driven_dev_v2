@@ -23,8 +23,7 @@ Reviewed sources:
 - The latest accepted published prerelease evidence is `0.1.0a20`.
 - The previous candidate `0.1.0a19` reached a GitHub Release but was not published to PyPI
   because its build metadata was incompatible with the release publisher.
-- The source development package version matches the package state: `0.1.0a21.dev0`; no
-  release candidate from this development version is accepted.
+- The release-candidate package version matches the package state: `0.1.0a21`; the last accepted published prerelease evidence before this candidate is `0.1.0a20`.
 - The `v0.1.0a20` GitHub Release workflow published to PyPI and verified `pipx` plus
   `uv tool`; README installation guidance is pinned to the latest accepted package release.
 - The documented public CLI commands match the registered command surface:
