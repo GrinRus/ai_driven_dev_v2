@@ -12,6 +12,10 @@ stable compatibility window exists.
   feature-proposal guidance, explicit governance, and current license metadata.
 - Make vulnerability and conduct reporting routes actionable, document security response targets,
   hash-lock the release workflow's `pipx` bootstrap, and remove stale contributor metadata.
+- Make package verification independent of an ambient `uv` executable by selecting the `pipx`
+  `pip` backend explicitly, pin the hosted `uv` executable, exercise the exact binaries produced
+  by both install lanes, keep repository-only architecture PNGs out of source distributions, and
+  require published GitHub Release notes to reflect the actual publication outcome.
 
 ## 0.1.0a20 - 2026-08-31
 

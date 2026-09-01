@@ -163,17 +163,38 @@ Expected successful jobs:
 Then independently verify package availability:
 
 ```bash
-python -m pipx run --spec "ai-driven-dev-v2==<project.version>" aidd --version
-python -m pipx run --spec "ai-driven-dev-v2==<project.version>" aidd doctor
-uv tool run --from "ai-driven-dev-v2==<project.version>" aidd --version
-uv tool run --from "ai-driven-dev-v2==<project.version>" aidd doctor
+pipx_evidence_root="$(mktemp -d)"
+export PIPX_HOME="${pipx_evidence_root}/home"
+export PIPX_BIN_DIR="${pipx_evidence_root}/bin"
+python -m pipx install --backend pip "ai-driven-dev-v2==<project.version>"
+"${PIPX_BIN_DIR}/aidd" --version
+"${PIPX_BIN_DIR}/aidd" doctor
+
+uv_evidence_root="$(mktemp -d)"
+export UV_TOOL_DIR="${uv_evidence_root}/tools"
+export UV_TOOL_BIN_DIR="${uv_evidence_root}/bin"
+uv tool install "ai-driven-dev-v2==<project.version>"
+"${UV_TOOL_BIN_DIR}/aidd" --version
+"${UV_TOOL_BIN_DIR}/aidd" doctor
 ```
 
 If `python -m pipx` is not installed locally, use an isolated pipx runner through `uv tool`
 and record that environment note with the evidence.
 
+The acceptance checks must execute the binaries installed into `PIPX_BIN_DIR` and
+`UV_TOOL_BIN_DIR`. Do not substitute `pipx run` or `uv tool run`, because those commands resolve
+separate temporary environments and do not prove that the preceding install produced a usable
+entry point.
+
 Record accepted evidence in `docs/release-checklist.md`: release URL, workflow run URL,
 tag/branch commit, PyPI URL, `pipx` evidence, and `uv tool` evidence.
+
+After the release workflow reaches a terminal state, reconcile the public GitHub Release body
+with the observed outcome. Record `publish-pypi`, `verify-pypi-install`, and
+`verify-uv-tool-install` separately as passed, failed, or skipped. If publication passed but
+either install lane lacks passing evidence, classify the package as published-but-unverified.
+Name a superseding release when one exists. Never leave draft or candidate-only status text on
+a published release.
 
 ## Post-release follow-up
 
@@ -207,6 +228,8 @@ Post-release version wording guardrail:
 - Tag/branch SHA mismatch: stop; do not publish or accept the evidence until fixed.
 - PyPI propagation delay: rerun verification only after confirming the package exists.
 - Trusted Publishing failure: record the workflow, environment, package, and claim details.
+- Published release body still says draft/candidate: reconcile it with the terminal workflow
+  result; do not alter or republish the tag.
 - Any live E2E request: keep it local manual operator evidence and outside release gates.
 
 ## Final report format

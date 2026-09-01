@@ -27,7 +27,6 @@ def _write_auth(operator_home: Path, runtime: str, content: bytes) -> Path:
     path = operator_home / relative
     path.parent.mkdir(parents=True, exist_ok=True)
     # This writes only synthetic fixtures under pytest's private temporary directory.
-    # codeql[py/clear-text-storage-sensitive-data]
     path.write_bytes(content)
     path.chmod(0o600)
     return path

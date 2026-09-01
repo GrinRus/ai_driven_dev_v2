@@ -56,6 +56,8 @@ python -m scripts.release.preflight --project-root . --version <version> --gh-bi
 - [ ] Source-of-truth audit is current for the release-prep slice:
   `README.md`, `docs/product/user-stories.md`, and
   `docs/architecture/target-architecture.md` match the code and release claims.
+- [ ] The explicit `uv` version used by every hosted CI and release setup step passes
+  `uv lock --check` and a locked dependency-sync dry run.
 - [ ] Manual external eval scenarios are not wired into GitHub Actions, CI/CD, or release workflows.
 
 ## 2. Create release branch and GitHub Release
@@ -96,9 +98,12 @@ Release workflow validation requires:
 - [ ] Installed package resolves and runs:
 
 ```bash
-pipx install ai-driven-dev-v2==<version>
-aidd --version
-aidd doctor
+pipx_release_root="$(mktemp -d)"
+export PIPX_HOME="${pipx_release_root}/home"
+export PIPX_BIN_DIR="${pipx_release_root}/bin"
+python -m pipx install --backend pip ai-driven-dev-v2==<version>
+"${PIPX_BIN_DIR}/aidd" --version
+"${PIPX_BIN_DIR}/aidd" doctor
 ```
 
 ## 4. Container support
@@ -116,6 +121,11 @@ AIDD does not publish or support Docker/GHCR images during the alpha phase.
 - [ ] `verify-pypi-install` job passed and its logs include `aidd --version` and `aidd doctor`.
 - [ ] `verify-uv-tool-install` job passed and its logs include `aidd --version` and `aidd doctor`.
 - [ ] These two jobs are required release evidence for published GitHub Release alpha builds.
+- [ ] Reconcile the published GitHub Release notes with the terminal workflow outcome. Record
+  `publish-pypi`, `verify-pypi-install`, and `verify-uv-tool-install` separately as passed,
+  failed, or skipped. Mark a package published-but-unverified if either install lane lacks
+  passing evidence, and name a superseding release when one exists. Never leave draft or
+  candidate-only status text on a published release.
 
 Prerequisite refresh before evidence capture:
 
@@ -137,20 +147,30 @@ Manual external-audit notes:
 Suggested package-path verification:
 
 ```bash
-pipx install ai-driven-dev-v2==<version>
-aidd --version
-aidd doctor
-pipx uninstall ai-driven-dev-v2
+pipx_evidence_root="$(mktemp -d)"
+export PIPX_HOME="${pipx_evidence_root}/home"
+export PIPX_BIN_DIR="${pipx_evidence_root}/bin"
+python -m pipx install --backend pip ai-driven-dev-v2==<version>
+"${PIPX_BIN_DIR}/aidd" --version
+"${PIPX_BIN_DIR}/aidd" doctor
+python -m pipx uninstall ai-driven-dev-v2
 ```
 
 Suggested `uv tool` verification:
 
 ```bash
+uv_evidence_root="$(mktemp -d)"
+export UV_TOOL_DIR="${uv_evidence_root}/tools"
+export UV_TOOL_BIN_DIR="${uv_evidence_root}/bin"
 uv tool install ai-driven-dev-v2==<version>
-aidd --version
-aidd doctor
+"${UV_TOOL_BIN_DIR}/aidd" --version
+"${UV_TOOL_BIN_DIR}/aidd" doctor
 uv tool uninstall ai-driven-dev-v2
 ```
+
+For isolated evidence, execute the entry points created in `PIPX_BIN_DIR` and
+`UV_TOOL_BIN_DIR`. Do not replace them with `pipx run` or `uv tool run`, which resolve separate
+temporary environments instead of proving that the preceding install produced a usable binary.
 
 For checklist copy-in, maintainers may collect bounded release evidence with the
 read-only evidence helper. The helper validates URLs and captured command outputs only;
@@ -447,6 +467,9 @@ package-channel acceptance and does not replace GitHub Release, PyPI, `pipx`, or
   audit, and security evidence required above.
 - [ ] Do not describe a `.dev0` source version as an accepted package release.
 - [ ] Publish GitHub release notes through the GitHub Release.
+- [ ] Replace draft/candidate status in the published GitHub Release body with each observed
+  PyPI and install-verification job result, including explicit published-but-unverified,
+  failure, skipped, or supersession status when applicable.
 
 ## 7. Post-release follow-up
 
