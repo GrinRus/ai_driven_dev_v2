@@ -5355,6 +5355,15 @@ button.intent-phase-step.active:hover {
   min-height: 140px;
   width: 100%;
 }
+.operator-request-readonly {
+  background: var(--surface-soft);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-control);
+  min-height: 140px;
+  overflow-wrap: anywhere;
+  padding: var(--space-4);
+  white-space: pre-wrap;
+}
 .operator-request-editor [data-request-preview-panel] {
   margin-top: var(--space-2);
 }

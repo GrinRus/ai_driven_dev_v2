@@ -181,6 +181,21 @@ test("Project Inbox exposes one durable continue-or-create entry recommendation"
   assert.match(html, /research/);
 });
 
+test("consumed request context is rendered as read-only copy without a nested textarea", async () => {
+  const context = await inboxContext();
+  const html = vm.runInContext(`renderOperatorRequestEditor({
+    request_text: "## Title\\n\\nA long-lived request",
+    consumed: true,
+    editable: false,
+    disabled_reason: "The request was consumed by an existing run."
+  })`, context);
+
+  assert.match(html, /class="operator-request-readonly"/);
+  assert.match(html, /Request Markdown \(read-only\)/);
+  assert.match(html, /The request was consumed by an existing run\./);
+  assert.doesNotMatch(html, /<textarea/);
+});
+
 test("disabled service eligibility does not disable read-only context navigation", async () => {
   const context = await inboxContext();
   const html = vm.runInContext(`renderStudioInboxItem({

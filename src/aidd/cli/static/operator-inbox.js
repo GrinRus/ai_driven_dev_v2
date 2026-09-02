@@ -208,6 +208,9 @@ function renderInboxSelectedContext(item) {
 function renderOperatorRequestEditor(context) {
   const disabled = context.editable !== true;
   const disabledReason = context.disabled_reason || "Request context is not editable.";
+  const requestField = disabled
+    ? `<div id="operatorWorkItemRequest" class="operator-request-readonly" role="textbox" aria-readonly="true" aria-labelledby="operatorWorkItemRequestLabel">${escapeHtml(context.request_text || "")}</div>`
+    : `<textarea id="operatorWorkItemRequest" data-request-field rows="7" maxlength="20000">${escapeHtml(context.request_text || "")}</textarea>`;
   return `
     <section class="operator-request-editor" data-request-editor data-request-consumed="${context.consumed ? "true" : "false"}">
       <div class="surface-title compact">
@@ -215,8 +218,10 @@ function renderOperatorRequestEditor(context) {
         <span class="small-badge">${context.consumed ? "consumed" : "editable"}</span>
       </div>
       <p class="muted">Edit the operator-owned request before the first consuming run. Generated stage documents remain read-only.</p>
-      <label class="field-label" for="operatorWorkItemRequest">Request Markdown</label>
-      <textarea id="operatorWorkItemRequest" data-request-field rows="7" maxlength="20000" ${disabled ? "disabled aria-disabled=\"true\"" : ""}>${escapeHtml(context.request_text || "")}</textarea>
+      ${disabled
+        ? `<span class="field-label" id="operatorWorkItemRequestLabel">Request Markdown (read-only)</span>`
+        : `<label class="field-label" for="operatorWorkItemRequest">Request Markdown</label>`}
+      ${requestField}
       ${disabled ? `<p class="form-readiness-note" data-request-disabled-reason>${escapeHtml(disabledReason)}</p>` : `
         <div class="setup-actions">
           <button type="button" class="secondary" data-request-preview>Preview</button>
