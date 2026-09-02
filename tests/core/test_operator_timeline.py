@@ -160,12 +160,92 @@ def test_operator_timeline_projects_task_and_finalization_frames(tmp_path: Path)
     assert task_frame.identity == "task:TL-2:attempt:0002"
     assert task_frame.task_id == "TL-2"
     assert task_frame.status == "failed"
+    # Legacy task attempts without their own start timestamp must not inherit
+    # the enclosing run's elapsed duration.
+    assert task_frame.started_at_utc is None
+    assert task_frame.duration_seconds is None
     assert task_frame.evidence_refs == (
         "reports/runs/WI-UI/run-ui/stages/implement/tasks/TL-2/attempts/attempt-0002/attempt-state.json",
         "reports/runs/WI-UI/run-ui/stages/implement/tasks/TL-2/attempts/attempt-0002/task-diff.json",
     )
     assert finalization_frame.identity == "finalization:implement:attempt:0001"
     assert finalization_frame.status == "failed"
+
+
+def test_operator_timeline_uses_referenced_stage_attempt_bounds_for_legacy_task_attempt(
+    tmp_path: Path,
+) -> None:
+    workspace_root = tmp_path / ".aidd"
+    create_run_manifest(
+        workspace_root=workspace_root,
+        work_item="WI-UI",
+        run_id="run-ui",
+        runtime_id="qwen",
+        stage_target="implement",
+        config_snapshot={"mode": "timeline-test"},
+    )
+    stage_attempt = create_next_attempt_directory(
+        workspace_root=workspace_root,
+        work_item="WI-UI",
+        run_id="run-ui",
+        stage="implement",
+    )
+    stage_index_path = stage_attempt / "artifact-index.json"
+    stage_index = json.loads(stage_index_path.read_text(encoding="utf-8"))
+    stage_index.update(
+        {
+            "created_at_utc": "2026-06-03T00:00:00Z",
+            "updated_at_utc": "2026-06-03T00:00:12Z",
+        }
+    )
+    stage_index_path.write_text(json.dumps(stage_index), encoding="utf-8")
+
+    task_attempt = (
+        workspace_root
+        / "reports"
+        / "runs"
+        / "WI-UI"
+        / "run-ui"
+        / "stages"
+        / "implement"
+        / "tasks"
+        / "TL-2"
+        / "attempts"
+        / "attempt-0001"
+    )
+    task_attempt.mkdir(parents=True)
+    (task_attempt / "attempt-state.json").write_text(
+        json.dumps({"status": "failed", "attempt_number": 1}),
+        encoding="utf-8",
+    )
+    (task_attempt / "stage-attempt-references.json").write_text(
+        json.dumps(
+            {
+                "schema_version": 1,
+                "task_id": "TL-2",
+                "task_attempt_number": 1,
+                "stage": "implement",
+                "stage_attempts": [
+                    {
+                        "attempt_number": 1,
+                        "path": "reports/runs/WI-UI/run-ui/stages/implement/attempts/attempt-0001",
+                    }
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    view = resolve_operator_run_timeline(
+        workspace_root=workspace_root,
+        work_item="WI-UI",
+        run_id="run-ui",
+    )
+
+    task_frame = next(frame for frame in view.frames if frame.kind == "task-attempt")
+    assert task_frame.started_at_utc == "2026-06-03T00:00:00Z"
+    assert task_frame.updated_at_utc == "2026-06-03T00:00:12Z"
+    assert task_frame.duration_seconds == 12.0
 
 
 def test_operator_timeline_retains_attempt_metadata_and_hashes(tmp_path: Path) -> None:

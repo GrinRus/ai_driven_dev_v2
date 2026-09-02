@@ -81,6 +81,38 @@ async function stopServer() {
   toast(result.message || "Stopping local UI server.");
 }
 
+async function activateInboxAction(context, action) {
+  await activateInboxWorkItemRoute(context);
+  if (!action || action === "continue-existing-intent") return;
+
+  if (context.stage && STAGES.includes(context.stage)) {
+    state.activeStage = context.stage;
+    state.activeStageExplicit = true;
+    state.activeArtifactKey = "";
+  }
+  if (action === "rerun-stale-downstream") {
+    await rerunStaleDownstream();
+    return;
+  }
+  if (action === "run-stage" || action === "resume-stage") {
+    await startStage(state.activeStage);
+    return;
+  }
+  if (action === "answer-questions") setOperatorMode("questions");
+  else if (action === "inspect-validation" || action === "review-intervention" || action === "inspect-blocker") setOperatorMode("validation");
+  else if (action === "request-change") setOperatorMode("request");
+  else if (action === "inspect-runtime-log" || action === "open-running-job") setOperatorMode("logs");
+  else if (action === "review-findings") setOperatorMode("review-findings");
+  else if (action === "qa-verdict") setOperatorMode("qa-verdict");
+  else if (action === "review-complete") setOperatorMode("artifacts");
+  else return;
+  requestCockpitReveal();
+  await fetchDashboard();
+  await fetchProjectHome(state.dashboard?.work_item || "");
+  await fetchInbox();
+  await renderAll();
+}
+
 function orderedTabButtons() {
   return [...document.querySelectorAll("[data-tab]")].filter((button) =>
     VALID_TABS.includes(button.dataset.tab || "") && !button.hidden
@@ -221,6 +253,23 @@ document.addEventListener("click", async (event) => {
       await refresh();
       return;
     }
+    const inboxActionTarget = event.target.closest("[data-inbox-action]");
+    if (inboxActionTarget) {
+      if (inboxActionTarget.disabled || inboxActionTarget.dataset.serviceActionEnabled === "false") return;
+      const routeTarget = inboxActionTarget.closest("[data-operator-route-intent]");
+      const action = inboxActionTarget.dataset.inboxAction || "";
+      if (routeTarget) {
+        const context = {
+          workItem: routeTarget.dataset.routeWorkItem,
+          runId: routeTarget.dataset.routeRunId,
+          stage: routeTarget.dataset.routeStage,
+          artifact: routeTarget.dataset.routeArtifact,
+          projectRoot: routeTarget.dataset.routeProjectRoot
+        };
+        await activateInboxAction(context, action);
+        return;
+      }
+    }
     const routeTarget = event.target.closest("[data-operator-route-intent]");
     if (routeTarget) {
       const intent = routeTarget.dataset.operatorRouteIntent;
@@ -228,7 +277,8 @@ document.addEventListener("click", async (event) => {
         workItem: routeTarget.dataset.routeWorkItem,
         runId: routeTarget.dataset.routeRunId,
         stage: routeTarget.dataset.routeStage,
-        artifact: routeTarget.dataset.routeArtifact
+        artifact: routeTarget.dataset.routeArtifact,
+        projectRoot: routeTarget.dataset.routeProjectRoot
       };
       if (intent === "inbox-work-item") await activateInboxWorkItemRoute(context);
       else await navigateOperatorRouteIntent(intent, context);
@@ -350,6 +400,19 @@ document.addEventListener("click", async (event) => {
       syncLocationState({historyMode: "push"});
       await renderCockpit();
       document.querySelector(`[data-task-select="${CSS.escape(taskSelection)}"]`)?.focus();
+      return;
+    }
+    const taskRecovery = event.target.closest("[data-task-recovery-task-id]");
+    if (taskRecovery) {
+      // Recovery is intentionally navigation-only: the core projection names
+      // the first safe prerequisite, while the operator explicitly starts or
+      // resumes it after inspecting its evidence and Runner guard.
+      const recoveryTaskId = taskRecovery.dataset.taskRecoveryTaskId || "";
+      if (!recoveryTaskId) return;
+      state.selectedTaskId = recoveryTaskId;
+      syncLocationState({historyMode: "push"});
+      await renderCockpit();
+      document.querySelector(`[data-task-select="${CSS.escape(recoveryTaskId)}"]`)?.focus();
       return;
     }
     const taskAction = event.target.closest("[data-task-action]");
@@ -968,20 +1031,36 @@ document.addEventListener("input", (event) => {
     state.onboarding.workItemInput = event.target.value;
     syncOnboardingCreateActionState();
   }
+  if (event.target.id === "onboardingTitle" || event.target.id === "projectNewTitle") {
+    state.onboarding.titleText = event.target.value;
+    syncOnboardingCreateActionState();
+    syncProjectWorkItemCreateActionState();
+  }
   if (event.target.id === "onboardingRequest") {
     state.onboarding.requestText = event.target.value;
     syncOnboardingCreateActionState();
   }
-  if (event.target.id === "onboardingContext") {
+  if (event.target.id === "projectNewRequest") {
+    state.onboarding.requestText = event.target.value;
+    syncProjectWorkItemCreateActionState();
+  }
+  if (event.target.id === "onboardingContext" || event.target.id === "projectNewContext") {
     state.onboarding.contextText = event.target.value;
     syncOnboardingCreateActionState();
+    syncProjectWorkItemCreateActionState();
+  }
+  if (event.target.id === "onboardingConstraints" || event.target.id === "projectNewConstraints") {
+    state.onboarding.constraintsText = event.target.value;
+    syncOnboardingCreateActionState();
+    syncProjectWorkItemCreateActionState();
+  }
+  if (event.target.id === "onboardingAdditional" || event.target.id === "projectNewAdditional") {
+    state.onboarding.additionalInformationText = event.target.value;
+    syncOnboardingCreateActionState();
+    syncProjectWorkItemCreateActionState();
   }
   if (event.target.id === "projectNewWorkItem") {
     state.onboarding.workItemInput = event.target.value;
-    syncProjectWorkItemCreateActionState();
-  }
-  if (event.target.id === "projectNewRequest") {
-    state.onboarding.requestText = event.target.value;
     syncProjectWorkItemCreateActionState();
   }
   if (event.target.closest?.("[data-request-field]")) {

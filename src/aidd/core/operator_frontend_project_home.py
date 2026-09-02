@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from aidd.core.onboarding import OnboardingWorkItemSummary
+from aidd.core.onboarding import OnboardingWorkItemSummary, project_work_item_request
 from aidd.core.operator_frontend_dashboard import resolve_operator_dashboard_view
 from aidd.core.operator_frontend_models import (
     OperatorIntentSummary,
@@ -65,12 +65,8 @@ def _intent_summary(
             source_path=workspace_relative_path(workspace_root, request_path),
             has_request_context=has_request_context,
         )
-    lines = [
-        " ".join(line.strip().split())
-        for line in text.splitlines()
-        if line.strip() and not line.lstrip().startswith("#")
-    ]
-    excerpt = " ".join(lines).strip() or "Request context is empty."
+    projection = project_work_item_request(text)
+    excerpt = " ".join(projection.brief.split()).strip() or "Request context is empty."
     if len(excerpt) > _INTENT_EXCERPT_LIMIT:
         excerpt = excerpt[: _INTENT_EXCERPT_LIMIT - 1].rstrip() + "…"
     return OperatorIntentSummary(
@@ -78,6 +74,12 @@ def _intent_summary(
         excerpt=excerpt,
         source_path=workspace_relative_path(workspace_root, request_path),
         has_request_context=has_request_context,
+        title=projection.title,
+        brief=projection.brief,
+        context=projection.context,
+        constraints=projection.constraints,
+        additional_information=projection.additional_information,
+        structured=projection.structured,
     )
 
 

@@ -52,6 +52,7 @@ test("Studio Inbox preserves section priority and exact durable routes", async (
       ]},
       running_now: [{
         job_id: "job-1", kind: "stage", message: "Working", last_output_text: "",
+        project_root: "/projects/project-a",
         route: {intent: "inbox-work-item", work_item: "WI-4", run_id: "run-4", stage: "research"}
       }]
     };
@@ -71,6 +72,7 @@ test("Studio Inbox preserves section priority and exact durable routes", async (
   assert.match(html, /data-inbox-action="answer-questions"/);
   assert.match(html, /data-inbox-action="run-stage"/);
   assert.match(html, /data-inbox-action="create-new-work-item"/);
+  assert.match(html, /data-route-project-root="\/projects\/project-a"/);
 });
 
 test("Studio Inbox renders canonical DOM keys while accepting legacy payload groups", async () => {
@@ -211,7 +213,44 @@ test("Inbox route activation resumes server context before browser navigation", 
   );
   const main = await readFile(path.join(staticRoot, "operator-main.js"), "utf8");
   assert.match(onboarding, /postJson\("\/api\/onboarding\/work-item"/);
+  assert.match(onboarding, /const projectMismatch = Boolean/);
+  assert.match(onboarding, /project_root: context\.projectRoot \|\|/);
   assert.match(onboarding, /navigateOperatorRouteIntent\("inbox-work-item", context\)/);
   assert.match(main, /intent === "inbox-work-item"/);
+  assert.match(main, /projectRoot: routeTarget\.dataset\.routeProjectRoot/);
   assert.match(main, /activateInboxWorkItemRoute\(context\)/);
+  assert.match(main, /async function activateInboxAction\(context, action\)/);
+  assert.match(main, /await activateInboxAction\(context, action\)/);
+  assert.match(main, /serviceActionEnabled === "false"/);
+});
+
+test("running job route switches project even when Work Item ids collide", async () => {
+  const calls = [];
+  const context = vm.createContext({
+    console,
+    state: {
+      dashboard: {work_item: "WI-SAME"},
+      projectHome: {project_root: "/project-b"},
+      onboarding: {projectRootInput: "/project-b"},
+    },
+    postJson: async (path, payload) => calls.push({path, payload}),
+    navigateOperatorRouteIntent: async (intent, route) => calls.push({intent, route}),
+  });
+  await load(context, "operator-onboarding.js");
+
+  await vm.runInContext(
+    "activateInboxWorkItemRoute({projectRoot: '/project-a', workItem: 'WI-SAME', runId: 'run-a', stage: 'plan'})",
+    context,
+  );
+
+  assert.deepEqual(JSON.parse(JSON.stringify(calls)), [
+    {
+      path: "/api/onboarding/work-item",
+      payload: {action: "resume", project_root: "/project-a", work_item: "WI-SAME"},
+    },
+    {
+      intent: "inbox-work-item",
+      route: {projectRoot: "/project-a", workItem: "WI-SAME", runId: "run-a", stage: "plan"},
+    },
+  ]);
 });

@@ -286,12 +286,18 @@ class OperatorWorkItemSummary:
 
 @dataclass(frozen=True, slots=True)
 class OperatorIntentSummary:
-    """Bounded, read-only presentation of the operator's original intent."""
+    """Bounded, read-only projection of the operator's Work Item request."""
 
     work_item: str
     excerpt: str
     source_path: str | None
     has_request_context: bool
+    title: str = ""
+    brief: str = ""
+    context: str = ""
+    constraints: str = ""
+    additional_information: str = ""
+    structured: bool = False
 
 
 @dataclass(frozen=True, slots=True)

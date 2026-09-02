@@ -208,6 +208,40 @@ def test_task_workspace_action_projection_is_fail_closed_across_attempt_states(
     assert done["action_projection"]["states"]["finalize"]["disabled_reason"] is None
 
 
+def test_dependency_blocked_task_projects_first_safe_recovery_target(tmp_path: Path) -> None:
+    workspace_root = tmp_path / ".aidd"
+    _write_tasklist(workspace_root)
+    ledger = _ledger(workspace_root)
+    ledger = ledger.transition("TL-1", TaskExecutionStatus.EXECUTING)
+    ledger = ledger.transition("TL-1", TaskExecutionStatus.SUCCEEDED)
+    ledger = ledger.transition("TL-2", TaskExecutionStatus.EXECUTING)
+    ledger = ledger.transition("TL-2", TaskExecutionStatus.FAILED, blocker="validator failed")
+    persist_task_ledger(
+        workspace_root=workspace_root,
+        work_item="WI-READ",
+        run_id="run-1",
+        ledger=ledger,
+    )
+
+    model = cast(
+        dict[str, Any],
+        resolve_task_read_model(
+            workspace_root=workspace_root,
+            work_item="WI-READ",
+            run_id="run-1",
+        ),
+    )
+    blocked = next(task for task in model["tasks"] if task["id"] == "TL-4")
+
+    assert blocked["action_projection"]["recommended"] is None
+    assert blocked["action_projection"]["recovery"] == {
+        "task_id": "TL-2",
+        "action": "resume",
+        "label": "Resume TL-2",
+        "reason": "Selected task is blocked by TL-2, TL-3.",
+    }
+
+
 def test_task_workspace_preserves_success_and_projects_partial_progress(tmp_path: Path) -> None:
     workspace_root = tmp_path / ".aidd"
     _write_tasklist(workspace_root)

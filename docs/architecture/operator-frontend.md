@@ -30,17 +30,22 @@ It must let an operator:
 The frontend is not a second workflow engine. It must use the same stage graph,
 contracts, validators, repair policy, run state, and adapter boundary as the CLI.
 
-### Intent-centered presentation
+### Work Item request presentation
 
-The UI uses **Intent** as a bounded presentation label for an existing work item and
-its `context/user-request.md`; it does not add an `intent.md` artifact, a second id, or
-a new lifecycle. The read model may expose a short, bounded request excerpt and its
-known source path, while the full Markdown remains in the Document Canvas.
+The UI uses the literal **Work Item** as the navigation object and keeps the operator request in
+`context/user-request.md`; it does not add an `intent.md` artifact, a second id, or a new
+lifecycle. New UI-authored request Markdown follows the `Title`, `Brief`, `Context`, `Constraints`,
+and `Additional information` sections defined by [`user-request.md`](../../contracts/documents/user-request.md).
+The read model exposes title and brief separately. Detailed context remains available in the
+Document Canvas and is never flattened into the header.
 
-This describes the implemented compatibility baseline. Wave 42 replaces `Intent` as a primary
-navigation noun with the literal `Work Item` and `Task` vocabulary defined in
-[Target Operator Experience](operator-frontend-target-ux.md), without changing canonical ids or
-the request artifact.
+Existing unsectioned request files are read through a compatibility projection. The projection may
+derive a bounded title and brief for navigation, but it must preserve the original Markdown and
+must not rewrite legacy artifacts automatically.
+
+This is the implemented compatibility baseline. It uses the Wave 42 `Work Item` and `Task`
+vocabulary defined in [Target Operator Experience](operator-frontend-target-ux.md), without
+changing canonical ids or the request artifact.
 
 Wave 42 migration preserves `work_item` ids, endpoint names, request shapes, durable paths, and
 historical evidence. User-visible labels emitted by core read models are part of the presentation
@@ -48,6 +53,19 @@ surface and migrate with static copy; internal route/action fields may retain co
 such as `intent` until an owning API task changes them. Layout-only DOM anchors may change, while
 mutation, recovery, deep-link, and draft identities remain stable until explicitly migrated and
 verified.
+
+### Multi-context UI jobs
+
+The selected project is a navigation context, not a process-wide execution lock. A UI runtime job
+captures its project root, workspace root, Work Item, run, and stage when it is created. Subsequent
+navigation may select another project while the job continues, and job reads remain addressable by
+`job_id` and captured context. Background execution must never resolve paths from the mutable
+currently selected project.
+
+Navigation does not weaken run-level mutation safety: conflicting writes within the same run still
+use the existing filesystem-backed lease and remain serialized or rejected. This boundary permits
+independent project navigation without claiming parallel task execution inside one shared Git
+working tree.
 
 The canonical eight stages remain the progression authority and are grouped only for
 navigation:

@@ -170,7 +170,10 @@ def _starter_stage_file_contents(stage: str) -> dict[str, str]:
 
 def _default_contract_reference_paths() -> tuple[str, ...]:
     common_contracts = tuple(f"contracts/documents/{name}" for name in RESERVED_STAGE_FILENAMES)
-    operator_contracts = ("contracts/documents/operator-request.md",)
+    operator_contracts = (
+        "contracts/documents/operator-request.md",
+        "contracts/documents/user-request.md",
+    )
     stage_contracts = tuple(f"contracts/stages/{stage}.md" for stage in STAGES)
     return common_contracts + operator_contracts + stage_contracts
 
@@ -254,8 +257,53 @@ def _render_intake_markdown(*, work_item: str, request_text: str) -> str:
     )
 
 
-def _render_user_request_markdown(*, request_text: str) -> str:
-    return "# User request\n\n" f"{request_text}\n"
+def _request_body_from_markdown(markdown: str) -> str:
+    lines = markdown.splitlines()
+    if lines and lines[0].strip().casefold() == "# user request":
+        lines = lines[1:]
+    return "\n".join(lines).strip()
+
+
+def _render_user_request_markdown(
+    *,
+    request_text: str,
+    title: str | None = None,
+    brief: str | None = None,
+    context: str | None = None,
+    constraints: str | None = None,
+    additional_information: str | None = None,
+) -> str:
+    if (
+        title is None
+        and brief is None
+        and context is None
+        and constraints is None
+        and additional_information is None
+    ):
+        return "# User request\n\n" f"{request_text}\n"
+
+    normalized_title = (title or "").strip()
+    normalized_brief = (brief if brief is not None else request_text).strip()
+    if not normalized_brief:
+        raise ValueError("Request brief must be non-empty for structured request context.")
+    if not normalized_title:
+        normalized_title = normalized_brief.splitlines()[0].strip()[:160]
+    if not normalized_title:
+        raise ValueError("Request title must be non-empty for structured request context.")
+    sections = [
+        ("Title", normalized_title),
+        ("Brief", normalized_brief),
+    ]
+    for heading, value in (
+        ("Context", context),
+        ("Constraints", constraints),
+        ("Additional information", additional_information),
+    ):
+        normalized = (value or "").strip()
+        if normalized:
+            sections.append((heading, normalized))
+    body = "\n\n".join(f"## {heading}\n\n{value}" for heading, value in sections)
+    return "# User request\n\n" f"{body}\n"
 
 
 def _render_repository_state_markdown(
@@ -284,8 +332,15 @@ def seed_work_item_context(
     request_text: str,
     project_root: Path | None = None,
     force: bool = False,
+    request_title: str | None = None,
+    request_brief: str | None = None,
+    request_context: str | None = None,
+    request_constraints: str | None = None,
+    request_additional_information: str | None = None,
 ) -> WorkItemContextSeedResult:
-    normalized_request = _normalized_request_text(request_text)
+    normalized_request = _normalized_request_text(
+        request_brief if request_brief is not None else request_text
+    )
     context_root = work_item_context_root(root=root, work_item=work_item)
     context_root.mkdir(parents=True, exist_ok=True)
     target_paths = tuple(context_root / filename for filename in REQUEST_CONTEXT_FILENAMES)
@@ -300,12 +355,20 @@ def seed_work_item_context(
     intake_path = context_root / WORKITEM_CONTEXT_INTAKE_FILENAME
     user_request_path = context_root / WORKITEM_CONTEXT_USER_REQUEST_FILENAME
     repository_state_path = context_root / WORKITEM_CONTEXT_REPOSITORY_STATE_FILENAME
-    intake_path.write_text(
-        _render_intake_markdown(work_item=work_item, request_text=normalized_request),
-        encoding="utf-8",
+    user_request_markdown = _render_user_request_markdown(
+        request_text=normalized_request,
+        title=request_title,
+        brief=request_brief,
+        context=request_context,
+        constraints=request_constraints,
+        additional_information=request_additional_information,
     )
-    user_request_path.write_text(
-        _render_user_request_markdown(request_text=normalized_request),
+    user_request_path.write_text(user_request_markdown, encoding="utf-8")
+    intake_path.write_text(
+        _render_intake_markdown(
+            work_item=work_item,
+            request_text=_request_body_from_markdown(user_request_markdown),
+        ),
         encoding="utf-8",
     )
     repository_state_path.write_text(
@@ -349,6 +412,11 @@ class WorkspaceBootstrapService:
         request_text: str,
         project_root: Path | None = None,
         force: bool = False,
+        request_title: str | None = None,
+        request_brief: str | None = None,
+        request_context: str | None = None,
+        request_constraints: str | None = None,
+        request_additional_information: str | None = None,
     ) -> WorkItemContextSeedResult:
         return seed_work_item_context(
             root=self.root,
@@ -356,4 +424,9 @@ class WorkspaceBootstrapService:
             request_text=request_text,
             project_root=project_root,
             force=force,
+            request_title=request_title,
+            request_brief=request_brief,
+            request_context=request_context,
+            request_constraints=request_constraints,
+            request_additional_information=request_additional_information,
         )

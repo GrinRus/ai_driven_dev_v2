@@ -397,6 +397,153 @@ def test_ui_job_identity_is_monotonic_and_visible_in_wire_view() -> None:
         store.correlate(job_id, run_id="run-other")
 
 
+def test_ui_job_context_is_captured_and_selected_dashboard_is_isolated(tmp_path: Path) -> None:
+    project_a = tmp_path / "project-a"
+    project_b = tmp_path / "project-b"
+    workspace_a = project_a / ".aidd"
+    workspace_b = project_b / ".aidd"
+    workspace_a.mkdir(parents=True)
+    workspace_b.mkdir(parents=True)
+
+    store = UiRunJobStore()
+    job_a = store.create(
+        kind="stage",
+        stage="plan",
+        work_item="WI-A",
+        run_id="run-a",
+        project_root=project_a,
+        workspace_root=workspace_a,
+    )
+    job_b = store.create(
+        kind="stage",
+        stage="idea",
+        work_item="WI-B",
+        run_id="run-b",
+        project_root=project_b,
+        workspace_root=workspace_b,
+    )
+
+    view_a = store.active_job_for_context(project_root=project_a, workspace_root=workspace_a)
+    view_b = store.active_job_for_context(project_root=project_b, workspace_root=workspace_b)
+    assert view_a is not None and view_a["job_id"] == job_a
+    assert view_a["project_root"] == project_a.as_posix()
+    assert view_a["workspace_root"] == workspace_a.as_posix()
+    assert view_b is not None and view_b["job_id"] == job_b
+    assert view_b["project_root"] == project_b.as_posix()
+
+
+def test_ui_runtime_job_survives_project_switch_with_originating_execution_context(
+    tmp_path: Path,
+) -> None:
+    project_a = tmp_path / "project-a"
+    project_b = tmp_path / "project-b"
+    workspace_a = project_a / ".aidd"
+    workspace_b = project_b / ".aidd"
+    workspace_a.mkdir(parents=True)
+    workspace_b.mkdir(parents=True)
+    started = threading.Event()
+    release = threading.Event()
+    captured: dict[str, object] = {}
+
+    def fake_stage_runner(options: StageRunOptions) -> None:
+        captured["work_item"] = options.work_item
+        captured["root"] = options.root
+        started.set()
+        assert release.wait(timeout=2)
+
+    service = OperatorUiService(
+        UiServerOptions(
+            work_item="WI-A",
+            root=workspace_a,
+            config=Path("aidd.test.toml"),
+            host="127.0.0.1",
+            port=0,
+        ),
+        stage_runner=fake_stage_runner,
+    )
+    response = service.handle_post(
+        "/api/stage/run",
+        {"stage": "plan", "runtime": "codex", "run_id": "run-a"},
+    )
+    payload = _payload(response)
+    job_id = str(payload["job_id"])
+    assert started.wait(timeout=2)
+
+    service._activate_context(  # noqa: SLF001 - context-isolation regression seam
+        project_root=project_b,
+        workspace_root=workspace_b,
+        work_item="WI-B",
+    )
+    dashboard_b = _payload(service.handle_get("/api/dashboard", {}))
+    assert dashboard_b["active_job"] is None
+    job_view = _payload(service.handle_get(f"/api/jobs/{job_id}", {}))
+    assert job_view["project_root"] == project_a.as_posix()
+    assert job_view["workspace_root"] == workspace_a.as_posix()
+
+    release.set()
+    completed = _wait_job(service, job_id)
+    assert completed["status"] == "completed"
+    assert captured["work_item"] == "WI-A"
+    assert captured["root"] == workspace_a
+
+
+def test_ui_resume_switches_project_context_while_job_is_active(
+    tmp_path: Path,
+) -> None:
+    project_a = tmp_path / "project-a"
+    project_b = tmp_path / "project-b"
+    workspace_a = project_a / ".aidd"
+    workspace_b = project_b / ".aidd"
+    workspace_a.mkdir(parents=True)
+    workspace_b.mkdir(parents=True)
+    seed_work_item_metadata(root=workspace_b, work_item="WI-B")
+    started = threading.Event()
+    release = threading.Event()
+
+    def fake_stage_runner(_options: StageRunOptions) -> None:
+        started.set()
+        assert release.wait(timeout=2)
+
+    service = OperatorUiService(
+        UiServerOptions(
+            work_item="WI-A",
+            root=workspace_a,
+            config=Path("aidd.test.toml"),
+            host="127.0.0.1",
+            port=0,
+        ),
+        stage_runner=fake_stage_runner,
+    )
+    launch = _payload(
+        service.handle_post(
+            "/api/stage/run",
+            {"stage": "plan", "runtime": "codex", "run_id": "run-a"},
+        )
+    )
+    job_id = str(launch["job_id"])
+    assert started.wait(timeout=2)
+
+    switched = _payload(
+        service.handle_post(
+            "/api/onboarding/work-item",
+            {
+                "action": "resume",
+                "project_root": project_b.as_posix(),
+                "work_item": "WI-B",
+            },
+        )
+    )
+    assert switched["context"]["project_root"] == project_b.as_posix()  # type: ignore[index]
+    assert switched["context"]["work_item"] == "WI-B"  # type: ignore[index]
+    assert _payload(service.handle_get("/api/dashboard", {}))["active_job"] is None
+    assert _payload(service.handle_get(f"/api/jobs/{job_id}", {}))["project_root"] == (
+        project_a.as_posix()
+    )
+
+    release.set()
+    assert _wait_job(service, job_id)["status"] == "completed"
+
+
 def test_ui_inbox_endpoint_composes_durable_and_running_state(tmp_path: Path) -> None:
     workspace_root = tmp_path / ".aidd"
     seed_work_item_metadata(root=workspace_root, work_item="WI-UI")
@@ -417,9 +564,13 @@ def test_ui_inbox_endpoint_composes_durable_and_running_state(tmp_path: Path) ->
         stage="idea",
         work_item="WI-UI",
         run_id="run-ui",
+        project_root=tmp_path,
+        workspace_root=workspace_root,
     )
     running = _payload(service.handle_get("/api/inbox", {}))["inbox"]
     assert running["running_now"][0]["job_id"] == job_id  # type: ignore[index]
+    assert running["running_now"][0]["project_root"] == tmp_path.as_posix()  # type: ignore[index]
+    assert running["running_now"][0]["workspace_root"] == workspace_root.as_posix()  # type: ignore[index]
     assert running["running_now"][0]["route"] == {  # type: ignore[index]
         "intent": "inbox-work-item",
         "work_item": "WI-UI",
@@ -1791,6 +1942,51 @@ def test_ui_onboarding_mode_serves_setup_until_context_handoff(
     assert workflow_request.config_path == project_root.resolve() / "aidd.test.toml"
     assert workflow_request.stage_start == "idea"
     assert workflow_request.stage_end == "plan"
+
+
+def test_ui_onboarding_persists_structured_work_item_request_fields(
+    tmp_path: Path,
+    monkeypatch: Any,
+) -> None:
+    project_root = tmp_path / "project"
+    project_root.mkdir()
+    service = _onboarding_service(tmp_path, monkeypatch)
+
+    created = _payload(
+        service.handle_post(
+            "/api/onboarding/work-item",
+            {
+                "action": "create",
+                "project_root": "project",
+                "work_item": "WI-STRUCTURED",
+                "title": "Clean operator header",
+                "brief": "Keep the Work Item header short.",
+                "request": "Keep the Work Item header short.",
+                "context": "Detailed context stays in the document surface.",
+                "constraints": "Do not rewrite consumed request history.",
+                "additional_information": "Reference: https://example.test/aidd",
+            },
+        )
+    )
+    assert created["context"]["work_item"] == "WI-STRUCTURED"  # type: ignore[index]
+
+    request = _payload(
+        service.handle_get("/api/work-item/request", {})
+    )
+    assert request["structured"] is True
+    assert request["title"] == "Clean operator header"
+    assert request["brief"] == "Keep the Work Item header short."
+    assert request["context"] == "Detailed context stays in the document surface."
+    assert request["constraints"] == "Do not rewrite consumed request history."
+    assert request["additional_information"] == "Reference: https://example.test/aidd"
+    assert "## Context" in request["request_markdown"]
+    assert "## Additional information" in request["request_markdown"]
+
+    project_home = _payload(service.handle_get("/api/project-home", {}))
+    intent = project_home["project_home"]["work_items"][0]["intent"]  # type: ignore[index]
+    assert intent["title"] == "Clean operator header"
+    assert intent["brief"] == "Keep the Work Item header short."
+    assert intent["context"] == "Detailed context stays in the document surface."
 
 
 def test_ui_onboarding_can_resume_existing_project_work_item(

@@ -7,6 +7,7 @@ import pytest
 from aidd.core.onboarding import (
     OnboardingProjectDeclaration,
     OnboardingService,
+    project_work_item_request,
 )
 
 
@@ -78,6 +79,48 @@ def test_onboarding_create_work_item_seeds_request_context(tmp_path: Path) -> No
     assert [(item.work_item, item.has_request_context) for item in refreshed.work_items] == [
         ("WI-001", True)
     ]
+
+
+def test_structured_request_context_round_trips_without_flattening(tmp_path: Path) -> None:
+    project_root = tmp_path / "project"
+    project_root.mkdir()
+    service = OnboardingService(launch_root=tmp_path)
+
+    created = service.create_work_item(
+        raw_project_root="project",
+        work_item="WI-STRUCTURED",
+        request_text="Ship the focused operator flow.",
+        request_title="Operator flow clarity",
+        request_context="Keep background and links out of the header.",
+        request_constraints="Preserve legacy request payloads.",
+        request_additional_information="Reference: https://example.test/operator-flow",
+    )
+
+    assert created.seeded_context is not None
+    markdown = created.seeded_context.user_request_path.read_text(encoding="utf-8")
+    assert "## Title\n\nOperator flow clarity" in markdown
+    assert "## Brief\n\nShip the focused operator flow." in markdown
+    assert "## Context\n\nKeep background and links out of the header." in markdown
+    context = service.request_context(raw_project_root="project", work_item="WI-STRUCTURED")
+    assert context.structured is True
+    assert context.title == "Operator flow clarity"
+    assert context.brief == "Ship the focused operator flow."
+    assert context.context == "Keep background and links out of the header."
+    assert context.constraints == "Preserve legacy request payloads."
+    assert context.additional_information == "Reference: https://example.test/operator-flow"
+
+
+def test_legacy_request_projection_preserves_full_body_as_context() -> None:
+    projection = project_work_item_request(
+        "# User request\n\nImplement the compact header.\n\nKeep detailed links below the fold.\n"
+    )
+
+    assert projection.structured is False
+    assert projection.title == "Implement the compact header."
+    assert projection.brief == "Implement the compact header."
+    assert projection.context == (
+        "Implement the compact header.\n\nKeep detailed links below the fold."
+    )
 
 
 def test_onboarding_rejects_unsafe_work_item_ids(tmp_path: Path) -> None:

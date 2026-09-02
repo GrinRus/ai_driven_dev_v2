@@ -271,7 +271,43 @@ If `validator fail count > 0`:
 2. Review finding codes, affected files, and missing sections.
 3. Open `repair-brief.md` if present and compare required fixes to current stage documents.
 
-### 5.3 Resolve blocking question gates
+### 5.3 Recover a failed implementation task
+
+When Task Workspace shows a downstream task as blocked while its prerequisite is `failed` or
+`ready`, recover the first dependency-ready task. Do not run the downstream task directly: its
+dependency guard is doing the right thing.
+
+In the UI:
+
+1. Open the selected downstream task and use **Open `<task-id>` recovery**.
+2. Inspect the prerequisite's validator report and latest attempt.
+3. Choose **Run** for a never-started prerequisite or **Resume** for a failed/blocked attempt.
+4. After every task is verified, use **Finalize** to publish the aggregate implementation result.
+
+For an existing run, the equivalent CLI sequence is:
+
+```bash
+uv run aidd task list --work-item IUIT-1450 --run-id run-20260902T103101Z --root .aidd
+uv run aidd task show TL-2 --work-item IUIT-1450 --run-id run-20260902T103101Z --root .aidd
+uv run aidd task run TL-2 \
+  --work-item IUIT-1450 \
+  --run-id run-20260902T103101Z \
+  --runtime <runtime-id> \
+  --root .aidd \
+  --config aidd.example.toml
+uv run aidd task finalize \
+  --work-item IUIT-1450 \
+  --run-id run-20260902T103101Z \
+  --runtime <runtime-id> \
+  --root .aidd \
+  --config aidd.example.toml
+```
+
+The retry path repairs historical runs that incorrectly persisted an ordinary validator failure
+as `blocked`. Genuine `blocked` state remains blocked until its unresolved question or runtime
+approval is handled; the UI and CLI will report that reason instead of silently retrying it.
+
+### 5.4 Resolve blocking question gates
 
 Use:
 
@@ -287,7 +323,7 @@ If status is `pending-blocking`:
    colon after `[resolved]`.
 4. Re-run `stage questions` until it reports no unresolved blocking questions.
 
-### 5.4 Stage intervention is rejected
+### 5.5 Stage intervention is rejected
 
 Use intervention only for current-stage, document-first corrections:
 

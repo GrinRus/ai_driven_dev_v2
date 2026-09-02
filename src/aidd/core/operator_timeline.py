@@ -20,6 +20,7 @@ from aidd.core.run_store import (
     work_item_runs_root,
 )
 from aidd.core.stages import STAGES, is_valid_stage
+from aidd.core.task_attempt_evidence import resolve_task_attempt_evidence
 from aidd.core.workspace import stage_root as workspace_stage_root
 
 
@@ -216,6 +217,61 @@ def _duration_seconds(
     return max(0.0, (updated - started).total_seconds())
 
 
+def _extreme_timestamp(
+    payloads: tuple[dict[str, object], ...],
+    keys: tuple[str, ...],
+    *,
+    latest: bool,
+) -> str | None:
+    values: list[str] = []
+    for payload in payloads:
+        value = _first_text((payload,), keys)
+        if value is not None:
+            values.append(value)
+    if not values:
+        return None
+    return (max if latest else min)(values)
+
+
+def _referenced_task_attempt_payloads(
+    *,
+    workspace_root: Path,
+    work_item: str,
+    run_id: str,
+    task_id: str | None,
+    attempt_number: int,
+    attempt_root: Path,
+) -> tuple[dict[str, object], ...]:
+    if task_id is None:
+        return ()
+    manifest_path = attempt_root / "stage-attempt-references.json"
+    if not manifest_path.exists():
+        return ()
+    try:
+        evidence = resolve_task_attempt_evidence(
+            task_attempt_path=attempt_root,
+            workspace_root=workspace_root,
+            work_item=work_item,
+            run_id=run_id,
+            task_id=task_id,
+            task_attempt_number=attempt_number,
+        )
+    except (OSError, ValueError):
+        return ()
+    payloads: list[dict[str, object]] = []
+    for reference in evidence.stage_attempts:
+        referenced_root = workspace_root / reference.path
+        for filename in (
+            "attempt-state.json",
+            "runtime-exit.json",
+            "artifact-index.json",
+        ):
+            payload = _state_payload(referenced_root / filename)
+            if payload:
+                payloads.append(payload)
+    return tuple(payloads)
+
+
 def _validator_outcome(
     *, stage_root: Path, attempt_root: Path, payloads: tuple[dict[str, object], ...]
 ) -> str | None:
@@ -288,15 +344,52 @@ def _frame_metadata(
     finalization_state = _state_payload(attempt_root / "finalization-state.json")
     runtime_exit = _state_payload(attempt_root / "runtime-exit.json")
     artifact_index = _state_payload(attempt_root / "artifact-index.json")
-    payloads = (state, finalization_state, runtime_exit, artifact_index, manifest)
+    referenced_task_payloads = _referenced_task_attempt_payloads(
+        workspace_root=workspace_root,
+        work_item=work_item,
+        run_id=run_id,
+        task_id=frame.task_id,
+        attempt_number=frame.attempt_number,
+        attempt_root=attempt_root,
+    )
+    # Task/finalization attempts own their lifecycle timestamps.  Falling back to the
+    # run manifest for those frames makes every nested attempt inherit the full run
+    # duration (and was the source of repeated multi-hour values in History).  Stage
+    # attempts retain the manifest fallback for legacy artifact indexes that predate
+    # per-attempt timestamps.
+    local_payloads = (
+        state,
+        finalization_state,
+        runtime_exit,
+        artifact_index,
+    )
+    payloads = (*local_payloads, *referenced_task_payloads)
+    if frame.kind == "stage-attempt":
+        payloads = (*payloads, manifest)
+    timestamp_payloads = (
+        (*local_payloads, manifest) if frame.kind == "stage-attempt" else local_payloads
+    )
     started_at = _first_text(
-        payloads,
+        timestamp_payloads,
         ("started_at_utc", "created_at_utc", "start_time_utc", "started_at"),
     )
     updated_at = _first_text(
-        payloads,
+        timestamp_payloads,
         ("updated_at_utc", "completed_at_utc", "finished_at_utc", "ended_at_utc"),
     ) or frame.time_utc
+    if frame.kind == "task-attempt" and referenced_task_payloads:
+        if started_at is None:
+            started_at = _extreme_timestamp(
+                referenced_task_payloads,
+                ("started_at_utc", "created_at_utc", "start_time_utc", "started_at"),
+                latest=False,
+            )
+        if updated_at is None:
+            updated_at = _extreme_timestamp(
+                referenced_task_payloads,
+                ("updated_at_utc", "completed_at_utc", "finished_at_utc", "ended_at_utc"),
+                latest=True,
+            )
     documents = artifact_index.get("documents")
     document_paths: tuple[tuple[str, Path], ...] = ()
     if isinstance(documents, dict):

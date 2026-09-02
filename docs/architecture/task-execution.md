@@ -71,10 +71,14 @@ for a stale or invalid graph.
 Global implement attempts under `stages/implement/attempts/attempt-000N/` are the canonical,
 single-copy owners of runtime payloads: `input-bundle.md`, `runtime.log`, repair context,
 adapter/runtime metadata, operator request/decision logs, and `artifact-index.json`. Task attempts
-under `stages/implement/tasks/<task-id>/attempts/attempt-000N/` own only task state,
-`repository-baseline.json`, `repository-final.json`, `task-diff.json`, the task implementation
-report, and task-owned question/answer evidence. Runtime payloads must not be copied or hard-linked
-into a task attempt.
+under `stages/implement/tasks/<task-id>/attempts/attempt-000N/` own task lifecycle state (including
+their own `created_at_utc` and `updated_at_utc` timestamps), `repository-baseline.json`,
+`repository-final.json`, `task-diff.json`, the task implementation report, and task-owned
+question/answer evidence. Runtime payloads must not be copied or hard-linked into a task attempt.
+
+Task and finalization history readers must not use the enclosing run manifest's timestamps as a
+fallback. Legacy nested attempts without timestamps remain readable, but their duration is
+reported as unavailable rather than showing the duration of the entire run.
 
 Each new task attempt records its global attempts in an atomically replaced
 `stage-attempt-references.json` schema-v1 manifest:

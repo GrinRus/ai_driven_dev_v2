@@ -17,6 +17,7 @@ from aidd.core.run_store import (
     next_attempt_number,
     persist_stage_status,
 )
+from aidd.core.stage_validation import update_stage_unblock_state
 from aidd.core.state_machine import StageState
 from aidd.core.task_attempt_evidence import write_task_attempt_references
 from aidd.core.task_attempt_lifecycle import (
@@ -213,7 +214,24 @@ def _complete_task_execution(
         stage="implement",
     )
     if not succeeded and metadata is not None and metadata.status == StageState.BLOCKED.value:
-        status = TaskExecutionStatus.BLOCKED
+        # Older runs could persist ``blocked`` for an ordinary failed task.  A
+        # task retry must repair that drift before deciding whether this is a
+        # genuine operator block.  The unblock helper only keeps the state
+        # blocked when unresolved questions or approvals are durable.
+        unblock_state = update_stage_unblock_state(
+            workspace_root=request.workspace_root,
+            work_item=request.work_item,
+            run_id=request.run_id,
+            stage="implement",
+        )
+        if not unblock_state.unblocked:
+            status = TaskExecutionStatus.BLOCKED
+        metadata = load_stage_metadata(
+            workspace_root=request.workspace_root,
+            work_item=request.work_item,
+            run_id=request.run_id,
+            stage="implement",
+        )
     ledger = complete_task_attempt(
         context=context,
         workspace_root=request.workspace_root,
@@ -223,12 +241,22 @@ def _complete_task_execution(
         blocker=blocker,
     )
     if not ledger.all_succeeded():
+        # A task failure is a failed implementation-stage outcome unless the stage
+        # explicitly entered the operator-blocked path (questions or runtime approval).
+        # Do not collapse validator/runtime failure into ``blocked``: the task ledger and
+        # stage lifecycle are separate projections of the same attempt and must remain
+        # actionable for repair/resume.
+        stage_status = (
+            StageState.BLOCKED.value
+            if metadata is not None and metadata.status == StageState.BLOCKED.value
+            else StageState.FAILED.value
+        )
         persist_stage_status(
             workspace_root=request.workspace_root,
             work_item=request.work_item,
             run_id=request.run_id,
             stage="implement",
-            status=(StageState.PENDING.value if succeeded else StageState.BLOCKED.value),
+            status=StageState.PENDING.value if succeeded else stage_status,
         )
     return ledger
 
