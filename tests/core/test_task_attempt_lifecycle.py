@@ -260,6 +260,9 @@ def test_interrupted_executing_task_is_abandoned_and_resumed_with_new_attempt(
         (first.task_attempt_path / "attempt-state.json").read_text(encoding="utf-8")
     )
     assert first_state["status"] == "abandoned"
+    assert first_state["created_at_utc"]
+    assert first_state["updated_at_utc"]
+    assert first_state["created_at_utc"] <= first_state["updated_at_utc"]
     assert second.ledger.entry("TL-1").status is TaskExecutionStatus.EXECUTING
     assert second.ledger.entry("TL-1").attempt_count == 2
 

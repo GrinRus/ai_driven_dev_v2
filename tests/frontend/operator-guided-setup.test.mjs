@@ -118,6 +118,26 @@ test("project-set and config details are collapsed behind Advanced", async () =>
   assert.match(advanced, /renderProjectSetEditor\(\)/);
 });
 
+test("Work Item creation exposes separate request context fields", async () => {
+  const source = await readFile(assetPath, "utf8");
+  for (const id of [
+    "onboardingTitle",
+    "onboardingRequest",
+    "onboardingContext",
+    "onboardingConstraints",
+    "onboardingAdditional",
+    "projectNewTitle",
+    "projectNewRequest",
+    "projectNewContext",
+    "projectNewConstraints",
+    "projectNewAdditional",
+  ]) {
+    assert.match(source, new RegExp(`id=\\"${id}\\"`));
+  }
+  assert.match(source, /additional_information/);
+  assert.match(source, /context\/user-request\.md/);
+});
+
 test("first-run setup has no mode selector with duplicate service semantics", async () => {
   const assets = await Promise.all([
     "operator-api-state.js",

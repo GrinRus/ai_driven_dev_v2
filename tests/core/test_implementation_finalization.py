@@ -108,12 +108,13 @@ def test_finalization_terminal_state_preserves_schema_and_blocker(tmp_path: Path
         (context.attempt_path / "finalization-state.json").read_text(encoding="utf-8")
     )
     assert ledger.finalization.status.value == "failed"
-    assert payload == {
-        "schema_version": 1,
-        "attempt_number": 1,
-        "status": "failed",
-        "blocker": "publication failed",
-    }
+    assert payload["schema_version"] == 1
+    assert payload["attempt_number"] == 1
+    assert payload["status"] == "failed"
+    assert payload["blocker"] == "publication failed"
+    assert payload["created_at_utc"]
+    assert payload["updated_at_utc"]
+    assert payload["created_at_utc"] <= payload["updated_at_utc"]
 
 
 def test_aggregate_report_requires_complete_task_evidence(tmp_path: Path) -> None:

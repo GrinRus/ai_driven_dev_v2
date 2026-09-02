@@ -123,13 +123,15 @@ function renderActiveStudioContextBar(studioState, item) {
   const dashboard = state.dashboard || {};
   const workItem = dashboard.work_item || state.activeRouteWorkItem || "Work Item";
   const intent = activeIntentSummary();
-  const intentExcerpt = intent?.excerpt || "Capture the desired outcome before starting delivery.";
+  const intentTitle = intent?.title || workItem;
+  const intentBrief = intent?.excerpt || intent?.brief || "Capture the desired outcome before starting delivery.";
   const currentPhase = INTENT_PHASES.find((phase) => phase.stages.includes(state.activeStage));
   return `
     <header class="surface studio-context-bar" data-studio-context-bar>
       <div>
         <p class="eyebrow">Work Item Workspace</p>
-        <h2>${escapeHtml(intentExcerpt)}</h2>
+        <h2>${escapeHtml(intentTitle)}</h2>
+        <p class="studio-context-brief">${escapeHtml(intentBrief)}</p>
         <p class="muted">${escapeHtml(currentPhase?.label || "Capture")} · ${escapeHtml(activeStudioStateLabel(studioState, item))}</p>
       </div>
       <dl class="studio-context-identity">
@@ -145,7 +147,10 @@ function renderNoRunOverview() {
   const workItem = dashboard.work_item || state.activeRouteWorkItem || "Work Item";
   const intent = activeIntentSummary();
   const request = state.requestContext?.work_item === workItem ? state.requestContext : null;
-  const requestText = request?.request_text || intent?.excerpt || "Request context is not available yet.";
+  const brief = request?.brief || intent?.brief || request?.request_text || intent?.excerpt || "Request context is not available yet.";
+  const context = request?.context || intent?.context || "";
+  const constraints = request?.constraints || intent?.constraints || "";
+  const additional = request?.additional_information || intent?.additional_information || "";
   const requestPath = request?.request_path || intent?.source_path || "operator-request.md";
   return `
     <section class="surface studio-document-canvas work-item-overview-canvas" data-studio-document-slot data-work-item-overview>
@@ -154,7 +159,13 @@ function renderNoRunOverview() {
         <span class="small-badge">read-only brief</span>
       </div>
       <div class="work-item-overview-request">
-        <p>${escapeHtml(requestText)}</p>
+        <p data-work-item-brief>${escapeHtml(brief)}</p>
+        ${(context || constraints || additional) ? `<details class="work-item-overview-details" open>
+          <summary>Detailed context</summary>
+          ${context ? `<section><h3>Context</h3><p>${escapeHtml(context)}</p></section>` : ""}
+          ${constraints ? `<section><h3>Constraints</h3><p>${escapeHtml(constraints)}</p></section>` : ""}
+          ${additional ? `<section><h3>Additional information</h3><p>${escapeHtml(additional)}</p></section>` : ""}
+        </details>` : ""}
         <div class="work-item-overview-source" data-work-item-request-source>
           <span><strong>Source</strong><code>${escapeHtml(requestPath)}</code></span>
           <span class="small-badge">operator-authored</span>
@@ -243,6 +254,9 @@ function renderTaskWorkspace(taskView) {
   const actionProjection = selected?.action_projection || taskView?.selected_task_actions || null;
   const actionStates = actionProjection?.states || {};
   const actionName = actionProjection?.recommended || actionProjection?.core_recommended || null;
+  const recovery = actionProjection?.recovery || null;
+  const recoveryTaskId = String(recovery?.task_id || "").trim();
+  const recoveryAction = String(recovery?.action || "").trim();
   const actionState = actionName ? actionStates[actionName] || null : null;
   const actionLabel = actionName === "run"
     ? "Run"
@@ -250,9 +264,15 @@ function renderTaskWorkspace(taskView) {
       ? "Resume"
       : actionName === "finalize"
         ? "Finalize"
-        : "No action available";
+        : recoveryTaskId
+          ? `Recover via ${recoveryTaskId}`
+          : "No action available";
   const actionReason = actionState?.disabled_reason
-    || (actionName ? "This task action is not currently eligible." : "No task action is currently eligible.");
+    || (actionName
+      ? "This task action is not currently eligible."
+      : recoveryTaskId
+        ? `${recovery.reason || "A prerequisite task must be completed first."} Open ${recoveryTaskId} to ${recoveryAction === "resume" ? "resume" : "run"} it.`
+        : "No task action is currently eligible.");
   const activeJob = state.activeJobStatus;
   const activeTaskJob = activeJob && ["task", "task-finalize"].includes(activeJob.kind);
   const attempts = selected?.attempts || [];
@@ -283,6 +303,9 @@ function renderTaskWorkspace(taskView) {
     ? selected.acceptance_criteria
     : [];
   const evidenceLinks = Array.isArray(selected?.evidence_links) ? selected.evidence_links : [];
+  const taskContext = String(selected?.context || "").trim();
+  const implementationConstraints = String(selected?.implementation_constraints || "").trim();
+  const outOfScope = String(selected?.out_of_scope || "").trim();
   const attemptsMarkup = attempts.length
     ? `<ul class="task-contract-list">${attempts.map((attempt) => `
         <li><strong>Attempt ${escapeHtml(attempt.number || "?")}</strong><span>${escapeHtml(attempt.status || "unknown")}</span><code>${escapeHtml(attempt.path || "not recorded")}</code></li>
@@ -298,6 +321,9 @@ function renderTaskWorkspace(taskView) {
     : `<p class="muted">No evidence links recorded.</p>`;
   const actionButton = actionName
     ? `<button data-task-action="${escapeHtml(actionName)}"${actionName === "run" || actionName === "resume" ? ` data-task-action-id="${escapeHtml(selected.id)}"` : ""} type="button" ${actionState?.eligible === true ? "" : "disabled aria-disabled=\"true\""}>${escapeHtml(actionLabel)}</button>`
+    : "";
+  const recoveryButton = recoveryTaskId
+    ? `<button class="secondary" data-task-recovery-task-id="${escapeHtml(recoveryTaskId)}" data-task-recovery-action="${escapeHtml(recoveryAction)}" type="button">Open ${escapeHtml(recoveryTaskId)} recovery</button>`
     : "";
   // The target active-task composition keeps the selected task/attempt facts in
   // the right inspector and reserves a full-width lower tray for raw output.
@@ -348,7 +374,9 @@ function renderTaskWorkspace(taskView) {
   const taskContractTechnical = selected ? `
     <details class="task-contract-technical">
       <summary>Task contract details</summary>
-      <p class="task-contract-outcome">${escapeHtml(selected.outcome || "Outcome is recorded in the task contract.")}</p>
+      ${taskContext ? `<section class="task-contract-section"><h4>Context</h4><p>${escapeHtml(taskContext)}</p></section>` : ""}
+      ${implementationConstraints ? `<section class="task-contract-section"><h4>Implementation constraints</h4><p>${escapeHtml(implementationConstraints)}</p></section>` : ""}
+      ${outOfScope ? `<section class="task-contract-section"><h4>Out of scope</h4><p>${escapeHtml(outOfScope)}</p></section>` : ""}
       ${hasAttemptEvidence ? taskContractPrimary : ""}
       <div class="task-contract-grid">
         <section class="task-contract-section"><h4>Verification</h4><p>${escapeHtml(selected.verification || "No verification command recorded.")}</p></section>
@@ -357,9 +385,9 @@ function renderTaskWorkspace(taskView) {
       </div>
       <section class="task-contract-section task-contract-blockers"><h4>Blockers</h4><p>${escapeHtml(selected.blocker || "none")}</p></section>
     </details>` : "";
-  const actionBar = selected && (!hasAttemptEvidence || !activeTaskJob) ? `<section class="task-action-bar" data-task-action-bar data-action-recommended="${escapeHtml(actionProjection?.recommended || "none")}">
+  const actionBar = selected && (!hasAttemptEvidence || !activeTaskJob) ? `<section class="task-action-bar" data-task-action-bar data-action-recommended="${escapeHtml(actionProjection?.recommended || (recoveryTaskId ? "recovery" : "none"))}">
     <div><p class="eyebrow">Next task action</p><strong>${escapeHtml(actionLabel)}</strong><p class="task-action-reason" data-task-action-reason>${escapeHtml(actionReason)}</p></div>
-    <div class="task-action-controls">${actionButton}${actionName && typeof renderContextualRunnerControl === "function" ? renderContextualRunnerControl({actionLabel: actionLabel.toLowerCase()}) : ""}</div>
+    <div class="task-action-controls">${actionButton}${recoveryButton}${actionName && typeof renderContextualRunnerControl === "function" ? renderContextualRunnerControl({actionLabel: actionLabel.toLowerCase()}) : ""}</div>
   </section>` : "";
   return `
     <section class="active-studio" data-studio-surface="task-workspace" data-state="ready">
@@ -421,8 +449,8 @@ function renderTaskWorkspace(taskView) {
       </section>
       <section class="surface task-workspace-detail" data-task-detail>
         ${selected ? `<div class="surface-title"><span>Selected task</span><span class="small-badge">${escapeHtml(selected.status || "unknown")}</span></div>
-          ${!hasAttemptEvidence ? `<h3>${escapeHtml(selected.id)} · ${escapeHtml(selected.title || "Untitled task")}</h3>
-          <p class="task-contract-outcome">${escapeHtml(selected.outcome || "Outcome is recorded in the task contract.")}</p>` : ""}
+          <h3>${escapeHtml(selected.id)} · ${escapeHtml(selected.title || "Untitled task")}</h3>
+          <p class="task-contract-outcome">${escapeHtml(selected.outcome || "Outcome is recorded in the task contract.")}</p>
           ${hasAttemptEvidence ? attemptTray : taskContractPrimary}
           ${taskContractTechnical}
           ${actionBar}

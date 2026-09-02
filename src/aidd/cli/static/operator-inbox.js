@@ -31,7 +31,8 @@ function inboxRouteAttributes(route) {
     `data-operator-route-intent="${escapeHtml(route.intent)}"`,
     `data-route-work-item="${escapeHtml(route.work_item)}"`,
     route.run_id ? `data-route-run-id="${escapeHtml(route.run_id)}"` : "",
-    route.stage ? `data-route-stage="${escapeHtml(route.stage)}"` : ""
+    route.stage ? `data-route-stage="${escapeHtml(route.stage)}"` : "",
+    route.project_root ? `data-route-project-root="${escapeHtml(route.project_root)}"` : ""
   ].filter(Boolean).join(" ");
 }
 
@@ -127,7 +128,7 @@ function renderStudioInboxItem(item, {selectedWorkItem = ""} = {}) {
         <div class="inbox-item-primary">
           ${renderStatusMarker({status: markerStatus, label: item.status_label})}
           <div class="inbox-item-heading">
-            <strong>${escapeHtml(projectItem?.intent?.excerpt || item.title)}</strong>
+            <strong>${escapeHtml(projectItem?.intent?.title || item.title)}</strong>
             <small class="inbox-item-identity">${escapeHtml(item.title)}</small>
             ${route ? "" : '<small class="inbox-item-identity">Durable identity unavailable</small>'}
           </div>
@@ -191,7 +192,7 @@ function renderInboxSelectedContext(item) {
         <p class="eyebrow">Selected Work Item</p>
         <span class="small-badge">${escapeHtml(item.status_label)}</span>
       </div>
-      <h2>${escapeHtml(projectItem?.intent?.excerpt || item.title)}</h2>
+      <h2>${escapeHtml(projectItem?.intent?.title || item.title)}</h2>
       <p class="inbox-selected-context-identity">${escapeHtml(context)}</p>
       <p>${escapeHtml(item.summary)}</p>
       <dl class="inbox-selected-context-facts">
@@ -262,11 +263,15 @@ function renderStudioEntryRecommendation(inbox) {
 function runningNowInboxItems(items = []) {
   return items.map((item) => ({
     ...item,
+    route: item.route ? {...item.route, project_root: item.project_root || ""} : null,
     item_id: item.job_id,
     state: item.route ? "running" : "malformed",
     status_label: item.route ? "Running now" : "Context unavailable",
     title: item.route ? `${item.kind} in progress` : `${item.kind} job`,
-    summary: item.last_output_text || item.message || "Waiting for durable runtime output.",
+    summary: [
+      item.project_root ? `Project: ${item.project_root}` : "",
+      item.last_output_text || item.message || "Waiting for durable runtime output."
+    ].filter(Boolean).join(" · "),
     primary_action: item.route
       ? {action: "open-running-job", label: "Open in Studio", enabled: true}
       : null

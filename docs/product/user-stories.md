@@ -28,6 +28,8 @@ As an **operator**, I want every stage to consume and produce Markdown artifacts
 Success signals:
 
 - stage inputs and outputs are readable Markdown files,
+- operator-authored Work Item requests can keep the brief, detailed context, constraints, and
+  additional information as separate readable sections,
 - required sections are documented and validated,
 - frontmatter stays optional metadata rather than the main payload.
 
@@ -122,6 +124,8 @@ Success signals:
 - the frontend can start and resume the full `idea -> qa` flow and individual stages,
 - blocking questions can be answered in the frontend and persist to the standard question and answer documents,
 - runtime logs, validation reports, repair history, and stage artifacts are visible with CLI-equivalent provenance,
+- an active UI job keeps its originating project/workspace context while the operator navigates to
+  another project,
 - the operator can choose optional model and reasoning-effort selectors for a capable runtime in the frontend,
   while omitted selectors preserve native defaults and the choice is retained in run provenance,
 - after a run reaches a terminal state, the frontend can guide the operator to create a new work item, follow-up flow, cloned flow, eval batch, or archive decision without mutating the completed run.

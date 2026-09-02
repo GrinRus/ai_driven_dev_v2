@@ -73,6 +73,9 @@ or validation wording when the canonical validator report proves the draft incon
 - `Status`
   - Must contain one terminal stage status for this run (`succeeded`, `failed`, `blocked`, or `needs-input`).
   - Must not use ambiguous states such as `done-ish` or `in progress`.
+  - For `implement`, a failed task or exhausted validation repair is `failed`; `blocked` is only
+    for unresolved questions or runtime approvals and must agree with the task ledger when one
+    exists.
 - `Blockers`
   - A succeeded stage-result must use exactly `- none` when no unresolved blocking
     question or other terminal blocker remains.

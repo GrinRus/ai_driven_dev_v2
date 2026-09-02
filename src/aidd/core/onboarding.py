@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import re
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -46,6 +47,18 @@ class OnboardingWorkItemCreation:
 
 
 @dataclass(frozen=True, slots=True)
+class WorkItemRequestProjection:
+    """Structured read projection over operator-owned request Markdown."""
+
+    title: str
+    brief: str
+    context: str
+    constraints: str
+    additional_information: str
+    structured: bool
+
+
+@dataclass(frozen=True, slots=True)
 class OperatorRequestContext:
     """The operator-owned request boundary exposed by the local UI service."""
 
@@ -56,6 +69,12 @@ class OperatorRequestContext:
     consumed: bool
     editable: bool
     disabled_reason: str | None = None
+    title: str = ""
+    brief: str = ""
+    context: str = ""
+    constraints: str = ""
+    additional_information: str = ""
+    structured: bool = False
 
     @property
     def markdown(self) -> str:
@@ -67,6 +86,79 @@ def _request_body(markdown: str) -> str:
     if lines and lines[0].strip().lower() == "# user request":
         lines = lines[1:]
     return "\n".join(lines).strip()
+
+
+_REQUEST_SECTION_ALIASES = {
+    "title": "title",
+    "brief": "brief",
+    "requested outcome": "brief",
+    "outcome": "brief",
+    "context": "context",
+    "detailed context": "context",
+    "constraints": "constraints",
+    "constraint": "constraints",
+    "additional information": "additional_information",
+    "additional info": "additional_information",
+    "additional": "additional_information",
+}
+
+
+def _first_meaningful_line(text: str) -> str:
+    for line in text.splitlines():
+        normalized = re.sub(r"^\s{0,3}#+\s*", "", line).strip()
+        if normalized:
+            return normalized
+    return ""
+
+
+def _first_paragraph(text: str) -> str:
+    paragraphs = [block.strip() for block in re.split(r"\n\s*\n", text.strip()) if block.strip()]
+    return paragraphs[0] if paragraphs else ""
+
+
+def project_work_item_request(markdown: str) -> WorkItemRequestProjection:
+    """Project canonical and legacy request Markdown without rewriting it."""
+    body = _request_body(markdown)
+    sections: dict[str, list[str]] = {}
+    current: str | None = None
+    for line in body.splitlines():
+        match = re.match(r"^##\s+(.+?)\s*$", line.strip())
+        if match:
+            current = _REQUEST_SECTION_ALIASES.get(match.group(1).strip().casefold())
+            if current is not None:
+                sections.setdefault(current, [])
+            continue
+        if current is not None:
+            sections[current].append(line)
+
+    values = {
+        key: "\n".join(lines).strip()
+        for key, lines in sections.items()
+    }
+    structured = bool(values.get("title") and values.get("brief"))
+    if structured:
+        return WorkItemRequestProjection(
+            title=values.get("title", ""),
+            brief=values.get("brief", ""),
+            context=values.get("context", ""),
+            constraints=values.get("constraints", ""),
+            additional_information=values.get("additional_information", ""),
+            structured=True,
+        )
+
+    # Legacy request bodies have no stable field boundaries. Keep the complete
+    # body in context while deriving only bounded navigation candidates.
+    legacy_navigation_body = "\n".join(
+        line for line in body.splitlines() if not line.lstrip().startswith("#")
+    ).strip()
+    return WorkItemRequestProjection(
+        title=_first_meaningful_line(body),
+        brief=_first_paragraph(legacy_navigation_body),
+        context=body,
+        constraints="",
+        additional_information="",
+        structured=False,
+    )
 
 
 def _request_context_consumed(*, workspace_root: Path, work_item: str) -> bool:
@@ -109,6 +201,11 @@ class OnboardingService:
         request_text: str | None = None,
         force_context: bool = False,
         project_set: tuple[OnboardingProjectDeclaration, ...] = (),
+        request_title: str | None = None,
+        request_brief: str | None = None,
+        request_context: str | None = None,
+        request_constraints: str | None = None,
+        request_additional_information: str | None = None,
     ) -> OnboardingWorkItemCreation:
         normalized_work_item = self._normalize_work_item(work_item)
         project = self.inspect_project(raw_project_root)
@@ -121,12 +218,18 @@ class OnboardingService:
         bootstrap = WorkspaceBootstrapService(root=project.workspace_root)
         work_item_root = bootstrap.bootstrap_work_item(work_item=normalized_work_item)
         seeded_context: WorkItemContextSeedResult | None = None
-        if request_text is not None and request_text.strip():
+        request_value = request_brief if request_brief is not None else request_text
+        if request_value is not None and request_value.strip():
             seeded_context = bootstrap.seed_request_context(
                 work_item=normalized_work_item,
-                request_text=request_text,
+                request_text=request_value,
                 project_root=project.project_root,
                 force=force_context,
+                request_title=request_title,
+                request_brief=request_brief,
+                request_context=request_context,
+                request_constraints=request_constraints,
+                request_additional_information=request_additional_information,
             )
         project_set_context_path: Path | None = None
         if resolved_project_set is not None:
@@ -157,13 +260,16 @@ class OnboardingService:
         )
         request_path = context_root / WORKITEM_CONTEXT_USER_REQUEST_FILENAME
         intake_path = context_root / "intake.md"
+        request_markdown = ""
         if request_path.exists():
             try:
-                request_text = _request_body(request_path.read_text(encoding="utf-8"))
+                request_markdown = request_path.read_text(encoding="utf-8")
+                request_text = _request_body(request_markdown)
             except UnicodeDecodeError as exc:
                 raise ValueError("Request context is not valid UTF-8 Markdown.") from exc
         else:
             request_text = ""
+        projection = project_work_item_request(request_markdown)
         consumed = _request_context_consumed(
             workspace_root=project.workspace_root,
             work_item=normalized_work_item,
@@ -180,6 +286,12 @@ class OnboardingService:
                 if consumed
                 else None
             ),
+            title=projection.title,
+            brief=projection.brief,
+            context=projection.context,
+            constraints=projection.constraints,
+            additional_information=projection.additional_information,
+            structured=projection.structured,
         )
 
     def write_request_context(
@@ -289,5 +401,8 @@ __all__ = [
     "OnboardingService",
     "OnboardingWorkItemCreation",
     "OnboardingWorkItemSummary",
+    "OperatorRequestContext",
+    "WorkItemRequestProjection",
+    "project_work_item_request",
     "workspace_contains_work_items",
 ]

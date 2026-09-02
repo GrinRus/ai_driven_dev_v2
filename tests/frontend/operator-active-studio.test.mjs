@@ -78,6 +78,42 @@ test("active Studio preserves Work Item, phase, and status context", async () =>
   assert.doesNotMatch(html, /data-primary-action/);
 });
 
+test("Work Item headers use title and brief while detailed request stays below", async () => {
+  const context = await contextFor({
+    work_item: "WI-1",
+    run: null,
+    stages: [],
+  });
+  context.state.projectHome = {
+    selected_work_item_resume: {
+      intent: {
+        work_item: "WI-1",
+        title: "Compact operator header",
+        brief: "A deliberately long brief that should stay out of the context bar because the bounded excerpt is the navigation projection.",
+        excerpt: "Keep navigation concise.",
+        context: "A very long repository background should never become the page heading.",
+        constraints: "Preserve durable Markdown.",
+        additional_information: "https://example.test/reference",
+      },
+    },
+  };
+  context.state.requestContext = {
+    work_item: "WI-1",
+    brief: "Keep navigation concise.",
+    context: "A very long repository background should never become the page heading.",
+    constraints: "Preserve durable Markdown.",
+    additional_information: "https://example.test/reference",
+    request_path: "workitems/WI-1/context/user-request.md",
+  };
+  const html = vm.runInContext("renderActiveStudio()", context);
+  assert.match(html, /<h2>Compact operator header<\/h2>/);
+  assert.match(html, /studio-context-brief\">Keep navigation concise\.<\/p>/);
+  assert.match(html, /data-work-item-brief>Keep navigation concise\.<\/p>/);
+  assert.match(html, /A very long repository background/);
+  assert.match(html, /Preserve durable Markdown/);
+  assert.doesNotMatch(html, /<h2>A very long repository background/);
+});
+
 test("no-run, blocked, and terminal Studio states do not invent primary actions", async () => {
   const dashboards = [
     {work_item: "WI-1", run: null, stages: []},
@@ -120,6 +156,9 @@ test("Task Workspace renders the selected contract from core action projection",
       title: "Implement selected task",
       status: "pending",
       outcome: "Deliver the bounded implementation.",
+      context: "Keep provider-specific details out of the task title.",
+      implementation_constraints: "Use existing core services.",
+      out_of_scope: "Do not change adapters.",
       dominant_deliverable: "A reviewed implementation",
       scope_paths: ["src/example.py"],
       acceptance_criteria: [{id: "AC-1", text: "Focused test passes."}],
@@ -144,6 +183,9 @@ test("Task Workspace renders the selected contract from core action projection",
   const html = vm.runInContext("renderTaskWorkspace(taskView)", context, {filename: "operator-active-studio.js"});
   assert.match(html, /data-task-detail/);
   assert.match(html, /A reviewed implementation/);
+  assert.match(html, /Keep provider-specific details out of the task title\./);
+  assert.match(html, /Use existing core services\./);
+  assert.match(html, /Do not change adapters\./);
   assert.match(html, /src\/example\.py/);
   assert.match(html, /Focused test passes\./);
   assert.match(html, /run:\/\/run-1\/implement\/task-TL-1/);
@@ -155,6 +197,47 @@ test("Task Workspace renders the selected contract from core action projection",
   assert.equal((html.match(/data-task-action="/g) || []).length, 1);
   assert.match(html, /data-contextual-runner-control/);
   assert.doesNotMatch(html, /selectedRuntimeReady\(\)/);
+});
+
+test("Task Workspace exposes a safe recovery target for dependency-blocked selection", async () => {
+  const context = await contextFor({
+    work_item: "WI-1",
+    run: {run_id: "run-1"},
+    stages: [{stage: "implement", status: "failed"}],
+  });
+  context.state.selectedTaskId = "TL-4";
+  const html = vm.runInContext(`renderTaskWorkspace({
+    task_list: [
+      {id: "TL-2", title: "Retry failed implementation", status: "failed", group: "Ready", ready: true, dependencies: ["TL-1"], attempt_count: 1},
+      {id: "TL-4", title: "Verify delivery", status: "pending", group: "Blocked", ready: false, dependencies: ["TL-2", "TL-3"], attempt_count: 0},
+    ],
+    next_ready_task: "TL-2",
+    critical_path: ["TL-2", "TL-4"],
+    selected_task: {
+      id: "TL-4", title: "Verify delivery", status: "pending", outcome: "Delivery is verified.",
+      dependencies: ["TL-2", "TL-3"], missing_dependencies: ["TL-2", "TL-3"],
+      acceptance_criteria: [], scope_paths: [], verification: "pytest -q", evidence_links: [], attempts: [],
+      action_projection: {
+        recommended: null,
+        core_recommended: null,
+        states: {
+          run: {action: "run", eligible: false, disabled_reason: "Task dependencies are incomplete: TL-2, TL-3."},
+          resume: {action: "resume", eligible: false, disabled_reason: "Task dependencies are incomplete: TL-2, TL-3."},
+          finalize: {action: "finalize", eligible: false, disabled_reason: "Every task must succeed before finalization."},
+        },
+        recovery: {
+          task_id: "TL-2", action: "resume", label: "Resume TL-2",
+          reason: "Selected task is blocked by TL-2, TL-3.",
+        },
+      },
+    },
+  })`, context, {filename: "operator-active-studio.js"});
+  assert.match(html, /data-action-recommended="recovery"/);
+  assert.match(html, /Recover via TL-2/);
+  assert.match(html, /data-task-recovery-task-id="TL-2"/);
+  assert.match(html, /Open TL-2 recovery/);
+  assert.match(html, /Selected task is blocked by TL-2, TL-3\./);
+  assert.doesNotMatch(html, /data-task-action="run"[^>]*data-task-action-id="TL-4"/);
 });
 
 test("Task Workspace preserves a literal service guard when Runner is unavailable", async () => {

@@ -176,6 +176,76 @@ def test_desktop_project_rail_keeps_work_item_context_and_filters_deterministica
         browser_page.diagnostics.assert_clean()
 
 
+def test_running_job_keeps_origin_project_when_operator_switches_projects(
+    tmp_path: Path,
+) -> None:
+    project_root = tmp_path / "multi-context"
+    _seed_inbox_states(project_root)
+    configure_sleeping_fixture_runtime(project_root, sleep_seconds=60)
+    other_project = project_root / "other-project"
+    build_browser_state_fixture(other_project, "no-run", work_item="WI-OTHER")
+
+    with sync_playwright() as playwright, operator_browser_harness(
+        project_root,
+        playwright,
+        work_item="WI-RUN",
+    ) as harness, harness.open_page((1280, 900)) as browser_page:
+        page = browser_page.page
+        page.goto(f"{harness.url}?ui=studio", wait_until="domcontentloaded")
+        _wait_for_work_item_surface(page, "WI-RUN")
+        launch_response = page.request.post(
+            f"{harness.url}api/workflow/run",
+            data={"runtime": "generic-cli", "log_follow": True},
+        )
+        assert launch_response.status == 200
+        job_id = launch_response.json()["job_id"]
+        try:
+            _wait_for_durable_payload(
+                fetch=lambda: page.request.get(
+                    f"{harness.url}api/jobs/{job_id}"
+                ).json(),
+                ready=lambda payload: payload.get("status") == "running",
+                phase="multi-context fixture job",
+            )
+
+            switch_response = page.request.post(
+                f"{harness.url}api/onboarding/work-item",
+                data={
+                    "action": "resume",
+                    "project_root": other_project.as_posix(),
+                    "work_item": "WI-OTHER",
+                },
+            )
+            assert switch_response.status == 200
+            page.goto(f"{harness.url}?ui=studio", wait_until="domcontentloaded")
+            _wait_for_work_item_surface(page, "WI-OTHER")
+            page.locator("#projectInboxButton").click()
+            running_button = page.locator(
+                '[data-inbox-section="running"] [data-inbox-action="open-running-job"]'
+            )
+            running_button.wait_for(state="visible", timeout=_SURFACE_TIMEOUT_MS)
+            assert (
+                running_button.get_attribute("data-route-project-root")
+                == project_root.as_posix()
+            )
+            running_button.click()
+            _wait_for_work_item_surface(page, "WI-RUN")
+            assert parse_qs(urlsplit(page.url).query)["work_item"] == ["WI-RUN"]
+            _assert_clean_navigation_diagnostics(browser_page)
+        finally:
+            cancel_response = page.request.post(
+                f"{harness.url}api/jobs/{job_id}/cancel"
+            )
+            assert cancel_response.status == 200
+            _wait_for_durable_payload(
+                fetch=lambda: page.request.get(
+                    f"{harness.url}api/jobs/{job_id}"
+                ).json(),
+                ready=lambda payload: payload.get("status") == "cancelled",
+                phase="multi-context fixture cancellation",
+            )
+
+
 def test_project_work_selects_inspector_filters_without_reordering_and_reloads(
     tmp_path: Path,
 ) -> None:

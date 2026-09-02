@@ -49,6 +49,29 @@ def _read_json(path: Path) -> dict[str, object] | None:
     return value if isinstance(value, dict) else None
 
 
+def _read_text(path: Path) -> str:
+    try:
+        return path.read_text(encoding="utf-8")
+    except OSError:
+        return ""
+
+
+def _validator_verdict(text: str) -> str | None:
+    match = re.search(r"(?im)^\s*-\s*Verdict:\s*`?(pass|fail)\b", text)
+    return match.group(1).lower() if match is not None else None
+
+
+def _stage_result_status(text: str) -> str | None:
+    section = re.search(r"(?ims)^##\s+Status\s*$\n(.*?)(?=^##\s+|\Z)", text)
+    if section is None:
+        return None
+    match = re.search(
+        r"(?im)^\s*-\s*(?:Status\s*:\s*)?`?(succeeded|failed|blocked|needs-input)\b",
+        section.group(1),
+    )
+    return match.group(1).lower() if match is not None else None
+
+
 def _tasklist_cards(text: str) -> tuple[list[str], dict[str, tuple[str, ...]]]:
     """Extract the stable task order and dependency section from rich tasklist Markdown."""
 
@@ -150,6 +173,8 @@ def _render_markdown(payload: dict[str, object]) -> str:
     ledger = ledger if isinstance(ledger, dict) else {}
     finalization = payload.get("finalization")
     finalization = finalization if isinstance(finalization, dict) else {}
+    lifecycle = payload.get("stage_lifecycle")
+    lifecycle = lifecycle if isinstance(lifecycle, dict) else {}
     review = payload.get("review_eligibility")
     review = review if isinstance(review, dict) else {}
     lines = [
@@ -176,6 +201,9 @@ def _render_markdown(payload: dict[str, object]) -> str:
         f"- Ledger schema: `{ledger.get('schema_version', 'unknown')}`",
         f"- Ledger source hash: `{ledger.get('source_tasklist_sha256', 'missing')}`",
         f"- Hashes match: `{tasklist.get('hash_matches', False)}`",
+        f"- Stage metadata: `{lifecycle.get('path', 'missing')}`",
+        f"- Stage lifecycle status: `{lifecycle.get('status', 'unknown')}`",
+        f"- Failed task ids: `{', '.join(lifecycle.get('failed_task_ids', [])) or 'none'}`",
         "",
         "## Tasks",
         "",
@@ -263,6 +291,44 @@ def build_task_flow_checkpoint(
             tasklist_text = None
     model = task_view or {}
     ledger = _read_json(ledger_path)
+    stage_metadata_path = (
+        workspace_root
+        / "reports"
+        / "runs"
+        / work_item
+        / run_id
+        / "stages"
+        / stage
+        / "stage-metadata.json"
+    )
+    stage_metadata = _read_json(stage_metadata_path)
+    stage_status = (
+        str(stage_metadata.get("status"))
+        if stage_metadata is not None and stage_metadata.get("status") is not None
+        else None
+    )
+    stage_documents_root = (
+        workspace_root
+        / "workitems"
+        / work_item
+        / "stages"
+        / stage
+    )
+    validator_report_path = stage_documents_root / "validator-report.md"
+    stage_result_path = stage_documents_root / "stage-result.md"
+    # The canonical documents live at the stage root.  Keep a read-only
+    # compatibility fallback for older harness fixtures that retained them
+    # under ``output/``; no target files are rewritten here.
+    if not validator_report_path.exists():
+        legacy_validator_report_path = stage_documents_root / "output" / "validator-report.md"
+        if legacy_validator_report_path.exists():
+            validator_report_path = legacy_validator_report_path
+    if not stage_result_path.exists():
+        legacy_stage_result_path = stage_documents_root / "output" / "stage-result.md"
+        if legacy_stage_result_path.exists():
+            stage_result_path = legacy_stage_result_path
+    validator_verdict = _validator_verdict(_read_text(validator_report_path))
+    stage_result_status = _stage_result_status(_read_text(stage_result_path))
     model_tasks = _task_items(model)
     authored_ids, authored_dependencies = _tasklist_cards(tasklist_text or "")
     findings: list[str] = []
@@ -305,6 +371,29 @@ def build_task_flow_checkpoint(
         findings.append("durable-ledger-hash-mismatch")
     if stage == "implement" and ledger is None:
         findings.append("missing-durable-task-ledger")
+    # The operator must be able to distinguish a failed validator/attempt from
+    # an unresolved operator question.  A failed task paired with a blocked
+    # implement stage is a cross-layer lifecycle drift: it makes the task look
+    # retryable while hiding the actual stage result and repair exhaustion.
+    failed_task_ids = [
+        str(item.get("id"))
+        for item in model_tasks
+        if str(item.get("status", "")) in {"failed", "repair-exhausted"}
+    ]
+    blocked_stage = stage_status == "blocked" or stage_result_status == "blocked"
+    if stage == "implement" and blocked_stage and failed_task_ids:
+        findings.append(
+            "implementation-status-drift:failed-task-stage-blocked:"
+            + ",".join(failed_task_ids)
+        )
+    if stage == "implement" and validator_verdict == "fail" and blocked_stage:
+        findings.append("implementation-status-drift:validator-fail-stage-blocked")
+    if (
+        stage == "implement"
+        and validator_verdict == "fail"
+        and stage_result_status == "succeeded"
+    ):
+        findings.append("implementation-status-drift:validator-fail-stage-succeeded")
 
     ready_ids = [str(item.get("id")) for item in model_tasks if item.get("ready") is True]
     expected_next = ready_ids[0] if ready_ids else None
@@ -393,6 +482,19 @@ def build_task_flow_checkpoint(
                 else None
             ),
             "source_tasklist_sha256": source_hash or public_ledger_hash,
+        },
+        "stage_lifecycle": {
+            "path": stage_metadata_path.as_posix() if stage_metadata is not None else None,
+            "status": stage_status,
+            "validator_report_path": (
+                validator_report_path.as_posix() if validator_verdict is not None else None
+            ),
+            "validator_verdict": validator_verdict,
+            "stage_result_path": (
+                stage_result_path.as_posix() if stage_result_status is not None else None
+            ),
+            "stage_result_status": stage_result_status,
+            "failed_task_ids": failed_task_ids,
         },
         "tasks": tasks,
         "next_ready_task": next_ready,

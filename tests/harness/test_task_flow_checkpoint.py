@@ -285,6 +285,79 @@ def test_checkpoint_fails_closed_on_invalid_next_ready_selection(tmp_path: Path)
     assert "invalid-core-next-ready-selection" in result.payload["findings"]
 
 
+def test_implement_checkpoint_catches_failed_task_marked_blocked_stage(tmp_path: Path) -> None:
+    workspace, tasklist = _write_workspace(tmp_path)
+    import hashlib
+
+    tasklist_hash = hashlib.sha256(tasklist.read_bytes()).hexdigest()
+    metadata_path = (
+        workspace
+        / "reports"
+        / "runs"
+        / "WI-CHECKPOINT"
+        / "run-1"
+        / "stages"
+        / "implement"
+        / "stage-metadata.json"
+    )
+    metadata_path.write_text(
+        json.dumps({"status": "blocked"}),
+        encoding="utf-8",
+    )
+    stage_documents_root = (
+        workspace
+        / "workitems"
+        / "WI-CHECKPOINT"
+        / "stages"
+        / "implement"
+    )
+    stage_documents_root.mkdir(parents=True, exist_ok=True)
+    validator_report_path = stage_documents_root / "validator-report.md"
+    validator_report_path.write_text(
+        "# Validator Report\n\n## Result\n\n- Verdict: `fail`\n",
+        encoding="utf-8",
+    )
+    stage_result_path = stage_documents_root / "stage-result.md"
+    stage_result_path.write_text(
+        "# Stage result\n\n## Status\n\n- Status: `blocked`\n",
+        encoding="utf-8",
+    )
+    model = _model(tasklist_hash=tasklist_hash)
+    model_tasks = model["tasks"]
+    assert isinstance(model_tasks, list)
+    model_tasks[0]["status"] = "failed"
+    model_tasks[0]["ready"] = True
+    model["next_ready_task"] = "TL-1"
+    result = build_task_flow_checkpoint(
+        scenario_id="AIDD-DETERMINISTIC-004",
+        work_item="WI-CHECKPOINT",
+        run_id="run-1",
+        runtime_id="generic-cli",
+        aidd_revision="aidd-rev",
+        target_revision="target-rev",
+        stage="implement",
+        workspace_root=workspace,
+        output_root=tmp_path / "bundle",
+        task_view=model,
+    )
+
+    assert result.classification == "fail"
+    assert (
+        "implementation-status-drift:failed-task-stage-blocked:TL-1"
+        in result.payload["findings"]
+    )
+    assert "implementation-status-drift:validator-fail-stage-blocked" in result.payload["findings"]
+    assert result.payload["stage_lifecycle"] == {
+        "path": metadata_path.as_posix(),
+        "status": "blocked",
+        "validator_report_path": validator_report_path.as_posix(),
+        "validator_verdict": "fail",
+        "stage_result_path": stage_result_path.as_posix(),
+        "stage_result_status": "blocked",
+        "failed_task_ids": ["TL-1"],
+    }
+
+
 def test_checkpoint_passes_after_aggregate_finalization_with_retained_task_evidence(
     tmp_path: Path,
 ) -> None:

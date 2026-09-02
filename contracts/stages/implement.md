@@ -160,6 +160,9 @@ optional when a destructive or policy-sensitive choice must be confirmed
 - default repair budget: 2 attempts after the initial run
 - repair uses the same target documents
 - AIDD core preserves validator findings and the generated repair brief for every failed attempt
+- A failed implementation task must preserve a failed implementation-stage lifecycle result:
+  validator failure after repair exhaustion is `failed` (with repair-budget evidence), while
+  `blocked` is reserved for unresolved questions or runtime approvals.
 - invalid-run handling:
   - when validation fails, repair must target the root cause class (`missing diffs`, `unverifiable claims`, or `incomplete summary`) before adding new content,
   - for `SEM-TASK-DIFF-MISMATCH`, repair removes prerequisite-only or otherwise unsupported

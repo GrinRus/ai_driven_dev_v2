@@ -752,7 +752,9 @@ def test_operator_onboarding_static_contract_keeps_creation_and_launch_separate(
             "syncOnboardingCreateActionState();",
         ),
     )
-    assert main.count("syncOnboardingCreateActionState();") == 4
+    # The structured request fields (title, constraints, and additional
+    # information) each keep the create action state synchronized as they edit.
+    assert main.count("syncOnboardingCreateActionState();") == 7
     create_predicate = onboarding[
         onboarding.index("function onboardingCanCreate()"):onboarding.index(
             "function syncOnboardingCreateActionState()"

@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 import re
 from dataclasses import dataclass
+from datetime import UTC, datetime
 from pathlib import Path
 from uuid import uuid4
 
@@ -77,9 +78,16 @@ def prepare_task_finalization(
     attempts_root.mkdir(parents=True, exist_ok=True)
     staging = attempts_root / f".attempt-{number:04d}-{uuid4().hex}.staging"
     staging.mkdir()
+    timestamp = datetime.now(UTC).isoformat().replace("+00:00", "Z")
     (staging / "finalization-state.json").write_text(
         json.dumps(
-            {"schema_version": 1, "attempt_number": number, "status": "executing"},
+            {
+                "schema_version": 1,
+                "attempt_number": number,
+                "status": "executing",
+                "created_at_utc": timestamp,
+                "updated_at_utc": timestamp,
+            },
             indent=2,
             sort_keys=True,
         )
@@ -128,6 +136,17 @@ def complete_task_finalization(
         run_id=run_id,
         ledger=ledger,
     )
+    timestamp = datetime.now(UTC).isoformat().replace("+00:00", "Z")
+    state_path = context.attempt_path / "finalization-state.json"
+    created_at_utc = timestamp
+    try:
+        existing = json.loads(state_path.read_text(encoding="utf-8"))
+    except (FileNotFoundError, OSError, TypeError, ValueError):
+        existing = None
+    if isinstance(existing, dict):
+        prior_created = existing.get("created_at_utc")
+        if isinstance(prior_created, str) and prior_created.strip():
+            created_at_utc = prior_created
     (context.attempt_path / "finalization-state.json").write_text(
         json.dumps(
             {
@@ -135,6 +154,8 @@ def complete_task_finalization(
                 "attempt_number": context.attempt_number,
                 "status": status.value,
                 "blocker": blocker,
+                "created_at_utc": created_at_utc,
+                "updated_at_utc": timestamp,
             },
             indent=2,
             sort_keys=True,

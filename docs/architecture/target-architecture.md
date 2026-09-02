@@ -205,6 +205,9 @@ The implemented operator frontend and project-set workflow support preserve this
   workspace and traceable per-project evidence;
 - project-set UI grouping is a read model over declared related roots inside one selected
   project-local `.aidd/`, not concurrent unrelated multi-project execution;
+- the selected project is a navigation context rather than a process-wide UI execution lock;
+- every UI runtime job captures its project/workspace context at creation, while same-run
+  conflicting mutations remain protected by the existing filesystem-backed lease;
 - prompt/workflow accountability is read-only provenance over run manifests, config snapshots,
   runtime id, Git SHA, the canonical stage graph, ordered per-attempt prompt hashes, and the
   actual `initial`, `repair`, or `intervention` execution mode from each artifact index;
