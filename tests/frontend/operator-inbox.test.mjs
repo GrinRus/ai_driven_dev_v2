@@ -196,6 +196,34 @@ test("consumed request context is rendered as read-only copy without a nested te
   assert.doesNotMatch(html, /<textarea/);
 });
 
+test("running Work Item request is read-only while launch consumption is being recorded", async () => {
+  const context = await inboxContext();
+  const html = vm.runInContext(`
+    state.projectHome = {
+      selected_work_item: "WI-running",
+      work_items: [{work_item: "WI-running", intent: {title: "Launch workflow"}}]
+    };
+    state.requestContext = {
+      work_item: "WI-running",
+      request_text: "## Title\\n\\nLaunch workflow",
+      consumed: false,
+      editable: true
+    };
+    renderInboxSelectedContext({
+      state: "running",
+      status_label: "Running",
+      title: "Launch workflow",
+      summary: "The workflow is executing.",
+      route: {intent: "inbox-work-item", work_item: "WI-running", run_id: "run-1", stage: "implement"},
+      primary_action: {action: "wait-for-stage", label: "Open", enabled: true}
+    });
+  `, context);
+
+  assert.match(html, /class="operator-request-readonly"/);
+  assert.match(html, /active run; request edits are disabled until it completes/);
+  assert.doesNotMatch(html, /<textarea/);
+});
+
 test("disabled service eligibility does not disable read-only context navigation", async () => {
   const context = await inboxContext();
   const html = vm.runInContext(`renderStudioInboxItem({

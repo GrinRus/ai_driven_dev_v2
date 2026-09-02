@@ -181,8 +181,21 @@ function renderInboxSelectedContext(item) {
   const requestContext = state.requestContext?.work_item === route.work_item
     ? state.requestContext
     : null;
-  const requestEditor = requestContext
-    ? renderOperatorRequestEditor(requestContext)
+  // The request endpoint can briefly report the context as editable while a
+  // newly launched run is still writing its manifest. The Inbox already has
+  // the authoritative running state, so keep the request read-only during
+  // that hand-off instead of exposing a nested scrolling editor.
+  const requestEditorContext = requestContext && item.state === "running"
+    ? {
+        ...requestContext,
+        consumed: true,
+        editable: false,
+        disabled_reason: requestContext.disabled_reason
+          || "The Work Item has an active run; request edits are disabled until it completes."
+      }
+    : requestContext;
+  const requestEditor = requestEditorContext
+    ? renderOperatorRequestEditor(requestEditorContext)
     : state.requestContextError
       ? `<p class="form-error" data-request-context-error>${escapeHtml(state.requestContextError)}</p>`
       : "";
