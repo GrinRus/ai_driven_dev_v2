@@ -15,6 +15,9 @@ from aidd.core.implementation_service import (
     ImplementationSourceMismatchError,
     TaskAttemptOutcome,
 )
+from aidd.core.run_store import load_stage_metadata, persist_stage_status
+from aidd.core.state_machine import StageState
+from aidd.core.task_ledger import TaskExecutionStatus
 
 
 def _write_tasklist(workspace_root: Path, *, suffix: str = "") -> Path:
@@ -239,6 +242,109 @@ def test_executor_exception_terminalizes_attempt_before_reraise(tmp_path: Path) 
     entry = captured.value.ledger.entry("TL-1")
     assert entry.status.value == "failed"
     assert entry.blocker == "adapter exploded"
+
+
+def test_failed_task_keeps_implementation_stage_failed_not_blocked(tmp_path: Path) -> None:
+    request = _request(tmp_path)
+
+    service = ImplementationExecutionService(
+        task_executor=lambda context: TaskAttemptOutcome(
+            succeeded=False,
+            blocker="validator failed",
+        ),
+        aggregate_finalizer=lambda context: AggregateFinalizationOutcome(succeeded=True),
+    )
+
+    result = service.run_task(request, task_id="TL-1")
+
+    assert result.ledger.entry("TL-1").status is TaskExecutionStatus.FAILED
+    metadata = load_stage_metadata(
+        workspace_root=request.workspace_root,
+        work_item=request.work_item,
+        run_id=request.run_id,
+        stage="implement",
+    )
+    assert metadata is not None
+    assert metadata.status == "failed"
+
+
+def test_retry_repairs_legacy_blocked_stage_status_for_failed_task(tmp_path: Path) -> None:
+    request = _request(tmp_path)
+    persist_stage_status(
+        workspace_root=request.workspace_root,
+        work_item=request.work_item,
+        run_id=request.run_id,
+        stage="implement",
+        status=StageState.BLOCKED.value,
+    )
+
+    service = ImplementationExecutionService(
+        task_executor=lambda context: TaskAttemptOutcome(
+            succeeded=False,
+            blocker="validator failed again",
+        ),
+        aggregate_finalizer=lambda context: AggregateFinalizationOutcome(succeeded=True),
+    )
+
+    result = service.run_task(request, task_id="TL-1")
+
+    assert result.ledger.entry("TL-1").status is TaskExecutionStatus.FAILED
+    metadata = load_stage_metadata(
+        workspace_root=request.workspace_root,
+        work_item=request.work_item,
+        run_id=request.run_id,
+        stage="implement",
+    )
+    assert metadata is not None
+    assert metadata.status == StageState.FAILED.value
+    assert [entry.status for entry in metadata.status_history[-2:]] == [
+        StageState.PREPARING.value,
+        StageState.FAILED.value,
+    ]
+
+
+def test_failed_task_preserves_genuine_question_block(tmp_path: Path) -> None:
+    request = _request(tmp_path)
+    stage_root = (
+        request.workspace_root
+        / "workitems"
+        / request.work_item
+        / "stages"
+        / "implement"
+    )
+    stage_root.mkdir(parents=True, exist_ok=True)
+    (stage_root / "questions.md").write_text(
+        "# Questions\n\n## Questions\n\n"
+        "- Q1 [blocking] Confirm the release owner.\n",
+        encoding="utf-8",
+    )
+    persist_stage_status(
+        workspace_root=request.workspace_root,
+        work_item=request.work_item,
+        run_id=request.run_id,
+        stage="implement",
+        status=StageState.BLOCKED.value,
+    )
+
+    service = ImplementationExecutionService(
+        task_executor=lambda context: TaskAttemptOutcome(
+            succeeded=False,
+            blocker="cannot proceed",
+        ),
+        aggregate_finalizer=lambda context: AggregateFinalizationOutcome(succeeded=True),
+    )
+
+    result = service.run_task(request, task_id="TL-1")
+
+    assert result.ledger.entry("TL-1").status is TaskExecutionStatus.BLOCKED
+    metadata = load_stage_metadata(
+        workspace_root=request.workspace_root,
+        work_item=request.work_item,
+        run_id=request.run_id,
+        stage="implement",
+    )
+    assert metadata is not None
+    assert metadata.status == StageState.BLOCKED.value
 
 
 def test_finalize_rejects_incomplete_ledger(tmp_path: Path) -> None:

@@ -9,6 +9,7 @@ import tomllib
 from collections import deque
 from collections.abc import Callable, Mapping
 from concurrent.futures import ThreadPoolExecutor, as_completed
+from contextvars import ContextVar
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from http import HTTPStatus
@@ -250,6 +251,8 @@ class _UiRunJob:
     ordinal: int
     work_item: str | None = None
     run_id: str | None = None
+    project_root: str | None = None
+    workspace_root: str | None = None
     exit_code: int | None = None
     message: str = ""
     result: object | None = None
@@ -278,6 +281,8 @@ class UiJobSummary:
     work_item: str | None
     run_id: str | None
     stage: str | None
+    project_root: str | None
+    workspace_root: str | None
     created_at_utc: str
     updated_at_utc: str
     ordinal: int
@@ -293,6 +298,8 @@ class UiRunningNowItem:
     status: str
     identity_status: str
     route: OperatorInboxRoute | None
+    project_root: str | None
+    workspace_root: str | None
     created_at_utc: str
     updated_at_utc: str
     message: str
@@ -335,6 +342,8 @@ def compose_operator_inbox_with_jobs(
                 status=job.status,
                 identity_status="correlated" if route is not None else "unavailable",
                 route=route,
+                project_root=job.project_root,
+                workspace_root=job.workspace_root,
                 created_at_utc=job.created_at_utc,
                 updated_at_utc=job.updated_at_utc,
                 message=job.message,
@@ -380,6 +389,8 @@ class UiRunJobStore:
         stage: str | None,
         work_item: str | None = None,
         run_id: str | None = None,
+        project_root: Path | None = None,
+        workspace_root: Path | None = None,
     ) -> str:
         job_id = f"job-{uuid4().hex}"
         with self._lock:
@@ -396,6 +407,16 @@ class UiRunJobStore:
                 ordinal=self._next_job_ordinal,
                 work_item=work_item,
                 run_id=run_id,
+                project_root=(
+                    project_root.resolve(strict=False).as_posix()
+                    if project_root is not None
+                    else None
+                ),
+                workspace_root=(
+                    workspace_root.resolve(strict=False).as_posix()
+                    if workspace_root is not None
+                    else None
+                ),
             )
             self._next_job_ordinal += 1
         return job_id
@@ -666,6 +687,35 @@ class UiRunJobStore:
                     return self._view_locked(job)
         return None
 
+    def active_job_for_context(
+        self,
+        *,
+        project_root: Path,
+        workspace_root: Path,
+    ) -> dict[str, object] | None:
+        """Return the newest active job owned by the selected project context.
+
+        Jobs created by older callers without explicit roots are retained as a
+        compatibility wildcard. New service-created jobs always carry both roots.
+        """
+        expected_project = project_root.resolve(strict=False).as_posix()
+        expected_workspace = workspace_root.resolve(strict=False).as_posix()
+        with self._lock:
+            self._evict_terminal_locked(self._now_utc())
+            for job in reversed(tuple(self._jobs.values())):
+                if job.status in _TERMINAL_JOB_STATUSES:
+                    continue
+                if (
+                    job.project_root is None
+                    or job.workspace_root is None
+                    or (
+                        job.project_root == expected_project
+                        and job.workspace_root == expected_workspace
+                    )
+                ):
+                    return self._view_locked(job)
+        return None
+
     def summaries(self) -> tuple[UiJobSummary, ...]:
         with self._lock:
             self._evict_terminal_locked(self._now_utc())
@@ -775,6 +825,8 @@ class UiRunJobStore:
             "work_item": job.work_item,
             "run_id": job.run_id,
             "stage": job.stage,
+            "project_root": job.project_root,
+            "workspace_root": job.workspace_root,
             "status": job.status,
             "exit_code": job.exit_code,
             "message": job.message,
@@ -812,6 +864,8 @@ class UiRunJobStore:
             work_item=job.work_item,
             run_id=job.run_id,
             stage=job.stage,
+            project_root=job.project_root,
+            workspace_root=job.workspace_root,
             created_at_utc=job.created_at_utc,
             updated_at_utc=job.updated_at_utc,
             ordinal=job.ordinal,
@@ -1763,6 +1817,12 @@ def _operator_request_context_payload(
     return {
         "work_item": context.work_item,
         "request_text": context.request_text,
+        "title": context.title,
+        "brief": context.brief,
+        "context": context.context,
+        "constraints": context.constraints,
+        "additional_information": context.additional_information,
+        "structured": context.structured,
         "request_markdown": preview_markdown or context.markdown,
         "request_path": _workspace_response_path(workspace_root, context.request_path),
         "intake_path": _workspace_response_path(workspace_root, context.intake_path),
@@ -2150,6 +2210,10 @@ class OperatorUiService:
         self._readiness_probe_provider = readiness_probe_provider
         self._folder_opener = folder_opener
         self._jobs = UiRunJobStore()
+        self._execution_context: ContextVar[UiProjectContext | None] = ContextVar(
+            "aidd_ui_execution_context",
+            default=None,
+        )
         self._operator_decisions = _UiOperatorDecisionCoordinator(
             jobs=self._jobs,
             attempt_path_resolver=self._job_attempt_path,
@@ -2214,12 +2278,17 @@ class OperatorUiService:
 
     @property
     def setup_required(self) -> bool:
-        return self._context is None
+        return self._effective_context() is None
 
     def _require_context(self) -> UiProjectContext:
-        if self._context is None:
+        context = self._effective_context()
+        if context is None:
             raise ValueError("Complete project setup before using this UI action.")
-        return self._context
+        return context
+
+    def _effective_context(self) -> UiProjectContext | None:
+        """Return the worker-local job context, or the selected navigation context."""
+        return self._execution_context.get() or self._context
 
     def _onboarding_service(self) -> OnboardingService:
         workspace_root = self.options.root
@@ -2258,8 +2327,6 @@ class OperatorUiService:
         workspace_root: Path,
         work_item: str,
     ) -> None:
-        if self._jobs.has_active_jobs():
-            raise ValueError("Cannot switch project while a UI runtime job is active.")
         resolved_project_root = project_root.resolve(strict=False)
         self._context = UiProjectContext(
             work_item=work_item,
@@ -2701,24 +2768,17 @@ class OperatorUiService:
             raise ValueError("action must be create or resume.")
         service = self._onboarding_service()
         if action == "resume":
-            if self._context is not None:
-                resolve_operator_project_home_view(
-                    project_root=self.project_root,
-                    workspace_root=self.workspace_root,
-                    selected_work_item=work_item,
-                    recent_project_roots=tuple(self._recent_project_roots),
-                )
-                self._activate_context(
-                    project_root=self.project_root,
-                    workspace_root=self.workspace_root,
-                    work_item=work_item,
-                )
-                return {
-                    "project": self._active_onboarding_project_summary(),
-                    "work_item": work_item,
-                    "context": self._onboarding_state()["context"],
-                }
-            project = service.inspect_project(project_root)
+            # Resume is also the explicit project-switch operation. Resolve
+            # the requested project before activating it so a running job in
+            # the previous project keeps its captured execution context.
+            # A bare ``.`` remains a compatibility shorthand for the current
+            # project when the caller did not provide a project selector.
+            requested_project = (
+                self.project_root
+                if self._context is not None and project_root in {"", "."}
+                else project_root
+            )
+            project = service.inspect_project(requested_project)
             if work_item not in {item.work_item for item in project.work_items}:
                 raise ValueError(f"Work item '{work_item}' does not exist in selected project.")
             self._activate_context(
@@ -2727,17 +2787,37 @@ class OperatorUiService:
                 work_item=work_item,
             )
             return {
-                "project": project,
+                "project": self._active_onboarding_project_summary(),
                 "work_item": work_item,
                 "context": self._onboarding_state()["context"],
             }
 
+        raw_brief = payload.get("brief")
+        request_brief = None if raw_brief is None else str(raw_brief)
+        raw_title = payload.get("title")
+        request_title = None if raw_title is None else str(raw_title)
+        raw_context = payload.get("context")
+        request_context = None if raw_context is None else str(raw_context)
+        raw_constraints = payload.get("constraints")
+        request_constraints = None if raw_constraints is None else str(raw_constraints)
+        raw_additional = payload.get("additional_information")
+        request_additional_information = (
+            None if raw_additional is None else str(raw_additional)
+        )
+        raw_request = payload.get("request", payload.get("brief", ""))
+        if not isinstance(raw_request, str) or not raw_request.strip():
+            raise ValueError("request is required.")
         created = service.create_work_item(
             raw_project_root=project_root,
             work_item=work_item,
-            request_text=_text_from_payload(payload, "request", default=""),
+            request_text=raw_request.strip(),
             force_context=bool(payload.get("force_context", False)),
             project_set=self._project_set_from_payload(payload),
+            request_title=request_title,
+            request_brief=request_brief,
+            request_context=request_context,
+            request_constraints=request_constraints,
+            request_additional_information=request_additional_information,
         )
         self._activate_context(
             project_root=created.project.project_root,
@@ -3270,7 +3350,10 @@ class OperatorUiService:
         return _json_response(
             {
                 "app_version": __version__,
-                "active_job": self._jobs.active_job(),
+                "active_job": self._jobs.active_job_for_context(
+                    project_root=self.project_root,
+                    workspace_root=self.workspace_root,
+                ),
                 "dashboard": self._dashboard_view(
                     stage=stage,
                     run_id=_first_param(params, "run_id"),
@@ -3338,7 +3421,10 @@ class OperatorUiService:
         except (OSError, ValueError, KeyError, TypeError):
             pass
 
-        active = self._jobs.active_job()
+        active = self._jobs.active_job_for_context(
+            project_root=self.project_root,
+            workspace_root=self.workspace_root,
+        )
         active_exact = bool(
             active is not None
             and active.get("work_item") == self.work_item
@@ -3748,6 +3834,18 @@ class OperatorUiService:
         raw_attempt_path = job.get("attempt_path")
         if isinstance(raw_attempt_path, str) and raw_attempt_path:
             return Path(raw_attempt_path)
+        raw_job_workspace = job.get("workspace_root")
+        job_workspace_root = (
+            Path(raw_job_workspace)
+            if isinstance(raw_job_workspace, str)
+            else self.workspace_root
+        )
+        raw_job_work_item = job.get("work_item")
+        job_work_item = (
+            raw_job_work_item
+            if isinstance(raw_job_work_item, str)
+            else self.work_item
+        )
         result = job.get("result")
         stage = job.get("stage")
         run_id: object = None
@@ -3760,15 +3858,15 @@ class OperatorUiService:
             run_id
             if isinstance(run_id, str) and run_id
             else resolve_latest_run_id(
-                workspace_root=self.workspace_root,
-                work_item=self.work_item,
+                workspace_root=job_workspace_root,
+                work_item=job_work_item,
             )
         )
         if selected_run_id is None:
             return None
         return _latest_attempt_path(
-            workspace_root=self.workspace_root,
-            work_item=self.work_item,
+            workspace_root=job_workspace_root,
+            work_item=job_work_item,
             run_id=selected_run_id,
             stage=stage,
         )
@@ -4438,11 +4536,15 @@ class OperatorUiService:
         work_item: str | None = None,
         run_id: str | None = None,
     ) -> object:
+        job_context = self._require_context()
+        job_work_item = work_item or self.work_item
         job_id = self._jobs.create(
             kind=kind,
             stage=stage,
-            work_item=work_item or self.work_item,
+            work_item=job_work_item,
             run_id=run_id,
+            project_root=job_context.project_root,
+            workspace_root=job_context.root,
         )
 
         def _capture_attempt(
@@ -4471,6 +4573,7 @@ class OperatorUiService:
                 stream="system",
                 text=f"AIDD UI {kind} job started.\n",
             )
+            execution_token = self._execution_context.set(job_context)
             try:
                 result = target(job_id)
                 if isinstance(result, Mapping):
@@ -4520,14 +4623,18 @@ class OperatorUiService:
                     text=f"AIDD UI {kind} job failed: {exc}\n",
                 )
                 self._jobs.fail(job_id, message=str(exc), exit_code=1)
+            finally:
+                self._execution_context.reset(execution_token)
 
         threading.Thread(target=_run, name=f"aidd-ui-{kind}-{job_id}", daemon=True).start()
         return {
             "job_id": job_id,
-            "work_item": work_item or self.work_item,
+            "work_item": job_work_item,
             "run_id": run_id,
             "stage": stage,
             "kind": kind,
+            "project_root": job_context.project_root,
+            "workspace_root": job_context.root,
         }
 
     def _run_workflow(

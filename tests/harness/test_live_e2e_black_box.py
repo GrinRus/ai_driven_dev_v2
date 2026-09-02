@@ -25,6 +25,8 @@ from aidd.harness.live_e2e_black_box_orchestration import (
     BlackBoxLiveE2EResult,
     LiveE2EInterrupted,
     _find_resume_state,
+    _frontend_operator_surface_checks,
+    _frontend_probe_targets,
     _live_interruption_handlers,
     _next_flow_complete_visible,
     _run_black_box_command,
@@ -52,6 +54,76 @@ def test_next_flow_complete_visible_accepts_stage_audit_and_dashboard_states(
         status="pass",
         qa_stage_state=qa_stage_state,
     )
+
+
+def test_implement_frontend_checkpoint_includes_task_projection_probe(tmp_path: Path) -> None:
+    tasklist_path = (
+        tmp_path
+        / ".aidd"
+        / "workitems"
+        / "WI-1"
+        / "stages"
+        / "tasklist"
+        / "output"
+        / "tasklist.md"
+    )
+    tasklist_path.parent.mkdir(parents=True)
+    tasklist_path.write_text("### TL-1 — Task\n", encoding="utf-8")
+    context = type(
+        "Context",
+        (),
+        {
+            "run_id": "run-1",
+            "work_item": "WI-1",
+            "prepared_working_copy": type(
+                "WorkingCopy", (), {"working_copy_path": tmp_path}
+            )(),
+        },
+    )()
+    targets = dict(_frontend_probe_targets(context, "implement"))
+    assert "tasks-api" in targets
+    assert targets["tasks-api"] == "/api/tasks?run_id=run-1"
+
+
+def test_implement_surface_check_requires_recovery_projection_when_ready_prerequisite_exists(
+) -> None:
+    context = type("Context", (), {"work_item": "WI-1", "run_id": "run-1"})()
+    probes = [
+        {
+            "name": "tasks-api",
+            "json_payload": {
+                "run_id": "run-1",
+                "tasks": [
+                    {
+                        "id": "TL-2",
+                        "status": "failed",
+                        "ready": True,
+                        "missing_dependencies": [],
+                    },
+                    {
+                        "id": "TL-4",
+                        "status": "pending",
+                        "ready": False,
+                        "missing_dependencies": ["TL-2"],
+                        "action_projection": {
+                            "recovery": {"task_id": "TL-2", "action": "resume"}
+                        },
+                    },
+                ],
+            },
+        }
+    ]
+    result = _frontend_operator_surface_checks(
+        ctx=context,
+        stage="implement",
+        probes=probes,
+    )
+    check = next(
+        item
+        for item in result["checks"]
+        if item["name"] == "task-recovery-projection-visible"
+    )
+    assert check["ok"] is True
 
 
 def _run(args: list[str], *, cwd: Path | None = None) -> str:

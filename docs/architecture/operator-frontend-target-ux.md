@@ -81,8 +81,8 @@ permission compatibility, selected model/reasoning values, `eligible`, and one l
 
 1. Open a project and scan Work Items grouped by **Needs input**, **Running**, **Ready**, and
    **Complete**.
-2. Create a Work Item by writing the requested outcome and optional context; do not require a
-   Runner yet.
+2. Create a Work Item by writing a short title, brief outcome, detailed context, constraints, and
+   optional additional information; do not require a Runner yet.
 3. Review the Work Item, select an eligible Runner, inspect scope and evidence destination, and
    launch the workflow.
 4. Follow the eight canonical stages. Open generated Markdown when it matters to the current
@@ -143,8 +143,13 @@ surface over Markdown; it is not a parallel database and not an unrestricted doc
 
 #### Operator-authored inputs
 
-- `operator-request.md` and supported context inputs may be edited before their first consuming
-  run. The UI shows Write and Preview modes, unsaved state, validation, and the exact destination.
+- `context/user-request.md` follows the `Title`, `Brief`, `Context`, `Constraints`, and
+  `Additional information` sections from the durable document contract. The UI shows Write and
+  Preview modes, unsaved state, validation, and the exact destination.
+- The Work Item header shows only the title and a bounded brief. Detailed context, constraints,
+  and additional information remain in the document surface or an explicit details section.
+- Existing unsectioned request files are rendered through a lossless compatibility projection and
+  are not silently rewritten.
 - Once a run has consumed an input revision, changing the requested outcome creates a new
   intervention, remediation, or follow-up input. It never silently rewrites consumed history.
 - `answers.md` is authored through a question form with explicit `resolved`, `partial`, or
@@ -218,6 +223,8 @@ After a valid tasklist exists, Tasks becomes the default work surface for Delive
 - a core-owned next-ready recommendation and critical-path marker;
 - **Run**, **Resume**, or **Finalize implementation** as mutually exclusive primary actions;
 - the selected Runner beside the primary action, with a literal disabled reason when ineligible.
+- a dependency-blocked selection exposes the first safe prerequisite recovery target (for example,
+  **Resume TL-2**) without enabling a mutation on the blocked task itself;
 
 List is the default because dependency-aware execution is ordered work. A board may be added as a
 view preference only after list behavior is complete; it must not permit manual movement that
@@ -257,6 +264,9 @@ conflict, success, offline, reconnecting, and permission-denied behavior where a
   consequence of repair versus change.
 - Runtime failure never consumes validation repair budget.
 - Succeeded tasks remain visibly preserved when another task or aggregate finalization fails.
+- A failed implementation task keeps the implementation stage in `failed`/repair-exhausted state;
+  `blocked` is reserved for unresolved questions or runtime approvals. Live checkpoints verify this
+  agreement across validator output, stage metadata, task ledger, and the recovery projection.
 - Stale Review or QA never renders Flow Complete.
 - Reconnect restores the exact Work Item, task, attempt, document, draft, and log cursor when the
   durable objects still exist.

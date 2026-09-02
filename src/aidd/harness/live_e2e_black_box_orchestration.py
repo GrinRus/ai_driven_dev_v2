@@ -4067,7 +4067,7 @@ def _http_post_json(
 def _frontend_probe_targets(ctx: FlowContext, stage: str) -> tuple[tuple[str, str], ...]:
     stage_query = urlencode({"stage": stage, "run_id": ctx.run_id})
     run_query = urlencode({"run_id": ctx.run_id})
-    return (
+    targets = [
         ("page", "/"),
         ("dashboard-api", f"/api/dashboard?{stage_query}"),
         ("run-api", f"/api/run?{run_query}"),
@@ -4075,7 +4075,31 @@ def _frontend_probe_targets(ctx: FlowContext, stage: str) -> tuple[tuple[str, st
         ("questions-api", f"/api/questions?{urlencode({'stage': stage})}"),
         ("logs-api", f"/api/logs?{stage_query}"),
         ("artifacts-api", f"/api/artifacts?{stage_query}"),
-    )
+    ]
+    rich_tasklist = False
+    if stage == "implement" and ctx.prepared_working_copy is not None:
+        tasklist_path = (
+            ctx.prepared_working_copy.working_copy_path
+            / ".aidd"
+            / "workitems"
+            / ctx.work_item
+            / "stages"
+            / "tasklist"
+            / "output"
+            / "tasklist.md"
+        )
+        try:
+            rich_tasklist = bool(
+                re.search(r"(?m)^###\s+[A-Za-z0-9][\w.-]*\b", tasklist_path.read_text())
+            )
+        except OSError:
+            rich_tasklist = False
+    if stage == "implement" and rich_tasklist:
+        # The task projection is the public boundary where dependency-aware
+        # recovery becomes observable.  Probe it during implement checkpoints
+        # so a backend-only pass cannot hide a broken Task Workspace path.
+        targets.append(("tasks-api", f"/api/tasks?{run_query}"))
+    return tuple(targets)
 
 
 def _frontend_running_probe_targets(
@@ -4216,6 +4240,15 @@ def _frontend_probe_semantic_failure(
             or _json_has_key(payload, "items")
         ):
             return "artifacts API response does not expose artifact list"
+        return None
+    if name == "tasks-api":
+        if not _json_contains_value(payload, ctx.run_id):
+            return "tasks API response does not include current run_id"
+        tasks = payload.get("tasks")
+        if not isinstance(tasks, list) or not any(isinstance(item, dict) for item in tasks):
+            return "tasks API response does not expose task projection"
+        if not any(_json_has_key(payload, key) for key in ("tasklist", "next_ready_task")):
+            return "tasks API response does not expose task progression state"
     return None
 
 
@@ -4265,6 +4298,7 @@ def _frontend_operator_surface_checks(
     stage_payload = _frontend_probe_json_payload(probes, "stage-api")
     logs_payload = _frontend_probe_json_payload(probes, "logs-api")
     artifacts_payload = _frontend_probe_json_payload(probes, "artifacts-api")
+    tasks_payload = _frontend_probe_json_payload(probes, "tasks-api")
     primary = _PRIMARY_STAGE_OUTPUTS.get(stage, "")
 
     checks = [
@@ -4331,6 +4365,40 @@ def _frontend_operator_surface_checks(
                     or _json_has_key(run_payload, "next_action")
                 ),
                 detail="blocked or failed run exposes recovery guidance",
+            )
+        )
+    if stage == "implement" and _frontend_probe_by_name(probes, "tasks-api"):
+        task_items = tasks_payload.get("tasks")
+        task_items = task_items if isinstance(task_items, list) else []
+        ready_ids = {
+            str(item.get("id"))
+            for item in task_items
+            if isinstance(item, dict) and item.get("ready") is True
+        }
+        dependency_blocked = [
+            item
+            for item in task_items
+            if isinstance(item, dict)
+            and isinstance(item.get("missing_dependencies"), list)
+            and item.get("missing_dependencies")
+        ]
+        actionable_blocked = dependency_blocked if ready_ids else []
+        recovery_ok = all(
+            isinstance(item.get("action_projection"), dict)
+            and isinstance(item["action_projection"].get("recovery"), dict)
+            and str(item["action_projection"]["recovery"].get("task_id")) in ready_ids
+            for item in actionable_blocked
+        )
+        checks.append(
+            _operator_surface_check(
+                name="task-recovery-projection-visible",
+                ok=bool(tasks_payload)
+                and (not actionable_blocked or recovery_ok),
+                detail=(
+                    "dependency-blocked tasks expose a core-owned recovery target"
+                    if actionable_blocked
+                    else "task projection is available; recovery target is not currently required"
+                ),
             )
         )
     failed = [str(check["name"]) for check in checks if check.get("ok") is not True]
@@ -7612,6 +7680,38 @@ def _run_stage_and_inspect(ctx: FlowContext, stage: str) -> StepClassification:
             extra={"error": "frontend checkpoint failed"},
         )
         return "fail"
+    task_checkpoint_classification: StepClassification = "skipped"
+    task_checkpoint_payload: dict[str, object] = {}
+    if stage == "implement" and classification != "infra-fail":
+        task_checkpoint_classification, _ = _task_flow_checkpoint(
+            ctx=ctx,
+            stage=stage,
+            stage_run_id=stage_run_id,
+        )
+        # Preserve an explicit operator-question block, but never allow a
+        # failed implementation task to masquerade as that block.  The latter
+        # is the exact cross-layer drift that previously made TL-2 appear
+        # retryable while the stage-result was blocked.
+        checkpoint_path = ctx.bundle_root / TASK_FLOW_CHECKPOINT_JSON_FILENAME
+        if checkpoint_path.exists():
+            task_checkpoint_payload = _read_json_object(checkpoint_path)
+        checkpoint_findings = task_checkpoint_payload.get("findings", [])
+        status_drift = isinstance(checkpoint_findings, list) and any(
+            str(item).startswith("implementation-status-drift:")
+            for item in checkpoint_findings
+        )
+        if task_checkpoint_classification == "fail" and (
+            classification != "blocked" or status_drift
+        ):
+            _persist_state(
+                ctx=ctx,
+                status="fail",
+                next_action="stop",
+                current_stage=stage,
+                completed_stages=_state_completed_stages(ctx.bundle_root),
+                extra={"error": "task-flow checkpoint failed closed"},
+            )
+            return "fail"
     if classification == "pass":
         _append_completed_stage_run(
             ctx=ctx,
@@ -7622,11 +7722,12 @@ def _run_stage_and_inspect(ctx: FlowContext, stage: str) -> StepClassification:
             audit_markdown_path=ctx.bundle_root / STAGE_AUDITS_DIRNAME / f"{stage_run_id}.md",
             current_stage=_next_stage_after(ctx.scenario, stage),
         )
-        task_checkpoint_classification, _ = _task_flow_checkpoint(
-            ctx=ctx,
-            stage=stage,
-            stage_run_id=stage_run_id,
-        )
+        if task_checkpoint_classification == "skipped":
+            task_checkpoint_classification, _ = _task_flow_checkpoint(
+                ctx=ctx,
+                stage=stage,
+                stage_run_id=stage_run_id,
+            )
         if task_checkpoint_classification == "fail":
             _persist_state(
                 ctx=ctx,

@@ -4,6 +4,7 @@ import json
 import re
 import shutil
 from dataclasses import dataclass
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Protocol
 from uuid import uuid4
@@ -117,6 +118,16 @@ def _write_attempt_state(
     status: str,
     blocker: str | None = None,
 ) -> None:
+    timestamp = datetime.now(UTC).isoformat().replace("+00:00", "Z")
+    created_at_utc = timestamp
+    try:
+        existing = json.loads(_attempt_state_path(attempt_path).read_text(encoding="utf-8"))
+    except (FileNotFoundError, OSError, TypeError, ValueError):
+        existing = None
+    if isinstance(existing, dict):
+        prior_created = existing.get("created_at_utc")
+        if isinstance(prior_created, str) and prior_created.strip():
+            created_at_utc = prior_created
     _attempt_state_path(attempt_path).write_text(
         json.dumps(
             {
@@ -125,6 +136,8 @@ def _write_attempt_state(
                 "attempt_number": attempt_number,
                 "status": status,
                 "blocker": blocker,
+                "created_at_utc": created_at_utc,
+                "updated_at_utc": timestamp,
             },
             indent=2,
             sort_keys=True,
@@ -336,6 +349,12 @@ def prepare_task_attempt(
     )
     staging_path.replace(task_attempt_path)
     implement_stage_root = workspace_root / "workitems" / work_item / "stages" / "implement"
+    stage_metadata = load_stage_metadata(
+        workspace_root=workspace_root,
+        work_item=work_item,
+        run_id=run_id,
+        stage="implement",
+    )
     for document_name in (
         "implementation-report.md",
         "stage-result.md",
@@ -345,6 +364,7 @@ def prepare_task_attempt(
         (implement_stage_root / document_name).unlink(missing_ok=True)
     preserve_interview = (
         resume_blocked_task
+        or (stage_metadata is not None and stage_metadata.status == StageState.BLOCKED.value)
         or _selected_task_id(
             workspace_root=workspace_root,
             work_item=work_item,

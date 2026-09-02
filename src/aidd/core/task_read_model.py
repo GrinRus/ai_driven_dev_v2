@@ -189,6 +189,36 @@ def _task_action_projection(
         recommended = "finalize"
     else:
         recommended = None
+
+    # A dependency-blocked selection is not itself actionable.  Expose the
+    # first dependency-eligible task as an explicit recovery target so the
+    # operator surface can offer a safe navigation affordance without
+    # inferring retry policy from group labels or status strings.
+    recovery: dict[str, object] | None = None
+    if missing_dependencies:
+        recovery_target = next(
+            (candidate for candidate in ledger.ready_task_ids() if candidate != entry.id),
+            None,
+        )
+        if recovery_target is not None:
+            recovery_entry = ledger.entry(recovery_target)
+            recovery_action = (
+                "resume"
+                if recovery_entry.status
+                in {TaskExecutionStatus.BLOCKED, TaskExecutionStatus.FAILED}
+                else "run"
+            )
+            recovery_label = "Resume" if recovery_action == "resume" else "Run"
+            recovery = {
+                "task_id": recovery_target,
+                "action": recovery_action,
+                "label": f"{recovery_label} {recovery_target}",
+                "reason": (
+                    "Selected task is blocked by "
+                    + ", ".join(missing_dependencies)
+                    + "."
+                ),
+            }
     return {
         "schema_version": TASK_ACTION_PROJECTION_SCHEMA_VERSION,
         "recommended": recommended,
@@ -207,6 +237,7 @@ def _task_action_projection(
             "eligible": None,
             "disabled_reason": "Runner readiness must be revalidated by the service.",
         },
+        "recovery": recovery,
     }
 
 

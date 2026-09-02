@@ -7,11 +7,9 @@ slice, and local task.
 
 ## Next
 
-- None.
+- `W46-E1-S2-T4`
 
 ## Soon
-
-- None.
 
 ## Parking lot
 
@@ -22,6 +20,7 @@ slice, and local task.
 - `W36-E7-S3-T2` — Record five first-time-operator sessions after initial live hardening.
 - `W36-E7-S3-T3` — Reconcile observed session findings before beta readiness.
 - `W36-E7-S4-T5` — Record final same-revision Codex and Claude acceptance evidence.
+- `W46-E2-S2-T4`
 
 ## Update rules
 
@@ -37,6 +36,24 @@ slice, and local task.
   queue-restoration policy in `docs/backlog/roadmap.md` (`W8-E3-S1`).
 
 ## Current reconciliation
+
+- `2026-09-02` Wave 46 failed-task recovery fix: implementation validator/runtime failures now persist
+  `failed` stage metadata instead of masquerading as `blocked`, while explicit question/approval
+  blocks remain unchanged. Retrying a legacy drifted run now repairs the stage status and preserves
+  interview evidence. Task Workspace exposes a core-owned prerequisite recovery target, Inbox
+  dispatches action-specific recovery surfaces, and rich-tasklist live checkpoints reconcile validator
+  verdict, stage-result/metadata, task ledger, and recovery projection. Focused core/harness/frontend
+  tests, the full 66-case live black-box suite, Ruff, and mypy are green.
+
+- `2026-09-02` Wave 46 implementation slice: UI runtime jobs now capture project/workspace
+  context and continue while the operator navigates to another project; dashboard/recovery views
+  filter jobs by the selected context, and Inbox routes a live job back to its originating project.
+  Work Item requests now use separate Title, Brief, Context, Constraints, and Additional
+  information sections with lossless legacy projection; Studio and Task Workspace headers keep
+  detailed content below the bounded navigation header. Core/CLI regression tests (`250 passed`),
+  Ruff, mypy, frontend Node tests (`139 passed`), planning, and docs consistency checks are green.
+  The provider-free Chromium scenario is authored as `W46-E1-S2-T4` and remains the sole Next
+  task because this environment has no installed Playwright Chromium binary.
 
 - `2026-08-31` reconciliation after fresh Large `AIDD-LIVE-012` runs records Codex
   `eval-live-012-codex-20260830T220257Z` and Claude Code

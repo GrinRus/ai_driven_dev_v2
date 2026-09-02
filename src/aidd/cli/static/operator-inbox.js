@@ -31,7 +31,8 @@ function inboxRouteAttributes(route) {
     `data-operator-route-intent="${escapeHtml(route.intent)}"`,
     `data-route-work-item="${escapeHtml(route.work_item)}"`,
     route.run_id ? `data-route-run-id="${escapeHtml(route.run_id)}"` : "",
-    route.stage ? `data-route-stage="${escapeHtml(route.stage)}"` : ""
+    route.stage ? `data-route-stage="${escapeHtml(route.stage)}"` : "",
+    route.project_root ? `data-route-project-root="${escapeHtml(route.project_root)}"` : ""
   ].filter(Boolean).join(" ");
 }
 
@@ -127,7 +128,7 @@ function renderStudioInboxItem(item, {selectedWorkItem = ""} = {}) {
         <div class="inbox-item-primary">
           ${renderStatusMarker({status: markerStatus, label: item.status_label})}
           <div class="inbox-item-heading">
-            <strong>${escapeHtml(projectItem?.intent?.excerpt || item.title)}</strong>
+            <strong>${escapeHtml(projectItem?.intent?.title || item.title)}</strong>
             <small class="inbox-item-identity">${escapeHtml(item.title)}</small>
             ${route ? "" : '<small class="inbox-item-identity">Durable identity unavailable</small>'}
           </div>
@@ -180,8 +181,21 @@ function renderInboxSelectedContext(item) {
   const requestContext = state.requestContext?.work_item === route.work_item
     ? state.requestContext
     : null;
-  const requestEditor = requestContext
-    ? renderOperatorRequestEditor(requestContext)
+  // The request endpoint can briefly report the context as editable while a
+  // newly launched run is still writing its manifest. The Inbox already has
+  // the authoritative running state, so keep the request read-only during
+  // that hand-off instead of exposing a nested scrolling editor.
+  const requestEditorContext = requestContext && item.state === "running"
+    ? {
+        ...requestContext,
+        consumed: true,
+        editable: false,
+        disabled_reason: requestContext.disabled_reason
+          || "The Work Item has an active run; request edits are disabled until it completes."
+      }
+    : requestContext;
+  const requestEditor = requestEditorContext
+    ? renderOperatorRequestEditor(requestEditorContext)
     : state.requestContextError
       ? `<p class="form-error" data-request-context-error>${escapeHtml(state.requestContextError)}</p>`
       : "";
@@ -191,7 +205,7 @@ function renderInboxSelectedContext(item) {
         <p class="eyebrow">Selected Work Item</p>
         <span class="small-badge">${escapeHtml(item.status_label)}</span>
       </div>
-      <h2>${escapeHtml(projectItem?.intent?.excerpt || item.title)}</h2>
+      <h2>${escapeHtml(projectItem?.intent?.title || item.title)}</h2>
       <p class="inbox-selected-context-identity">${escapeHtml(context)}</p>
       <p>${escapeHtml(item.summary)}</p>
       <dl class="inbox-selected-context-facts">
@@ -207,6 +221,9 @@ function renderInboxSelectedContext(item) {
 function renderOperatorRequestEditor(context) {
   const disabled = context.editable !== true;
   const disabledReason = context.disabled_reason || "Request context is not editable.";
+  const requestField = disabled
+    ? `<div id="operatorWorkItemRequest" class="operator-request-readonly" role="textbox" aria-readonly="true" aria-labelledby="operatorWorkItemRequestLabel">${escapeHtml(context.request_text || "")}</div>`
+    : `<textarea id="operatorWorkItemRequest" data-request-field rows="7" maxlength="20000">${escapeHtml(context.request_text || "")}</textarea>`;
   return `
     <section class="operator-request-editor" data-request-editor data-request-consumed="${context.consumed ? "true" : "false"}">
       <div class="surface-title compact">
@@ -214,8 +231,10 @@ function renderOperatorRequestEditor(context) {
         <span class="small-badge">${context.consumed ? "consumed" : "editable"}</span>
       </div>
       <p class="muted">Edit the operator-owned request before the first consuming run. Generated stage documents remain read-only.</p>
-      <label class="field-label" for="operatorWorkItemRequest">Request Markdown</label>
-      <textarea id="operatorWorkItemRequest" data-request-field rows="7" maxlength="20000" ${disabled ? "disabled aria-disabled=\"true\"" : ""}>${escapeHtml(context.request_text || "")}</textarea>
+      ${disabled
+        ? `<span class="field-label" id="operatorWorkItemRequestLabel">Request Markdown (read-only)</span>`
+        : `<label class="field-label" for="operatorWorkItemRequest">Request Markdown</label>`}
+      ${requestField}
       ${disabled ? `<p class="form-readiness-note" data-request-disabled-reason>${escapeHtml(disabledReason)}</p>` : `
         <div class="setup-actions">
           <button type="button" class="secondary" data-request-preview>Preview</button>
@@ -262,11 +281,15 @@ function renderStudioEntryRecommendation(inbox) {
 function runningNowInboxItems(items = []) {
   return items.map((item) => ({
     ...item,
+    route: item.route ? {...item.route, project_root: item.project_root || ""} : null,
     item_id: item.job_id,
     state: item.route ? "running" : "malformed",
     status_label: item.route ? "Running now" : "Context unavailable",
     title: item.route ? `${item.kind} in progress` : `${item.kind} job`,
-    summary: item.last_output_text || item.message || "Waiting for durable runtime output.",
+    summary: [
+      item.project_root ? `Project: ${item.project_root}` : "",
+      item.last_output_text || item.message || "Waiting for durable runtime output."
+    ].filter(Boolean).join(" · "),
     primary_action: item.route
       ? {action: "open-running-job", label: "Open in Studio", enabled: true}
       : null

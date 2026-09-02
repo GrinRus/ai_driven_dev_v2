@@ -17126,3 +17126,205 @@ Local tasks:
     an em/en-dash rationale. Core, Task Workspace, and checkpoint regressions cover explanatory task
     ids, explicit multi-id dependencies, punctuation, and fail-closed unknown ids; focused tests,
     validator tests, Ruff, mypy, and full CI are green.
+
+## Wave 46 — operator multi-context navigation and request clarity (`planned`)
+
+Goal: let an active UI runtime job continue in its own captured project context while the operator
+navigates elsewhere, and expose Work Item request information as separate title, brief, context,
+constraint, and additional-information fields without changing the canonical workflow or task
+execution semantics.
+
+Linked stories: `US-02`, `US-06`, `US-11`, `US-12`
+
+### Epic W46-E1 — multi-context UI jobs (`planned`)
+
+#### Slice W46-E1-S1 — captured job context (`done`)
+
+Goal: make every UI runtime job independent from the mutable selected project context.
+
+Dependencies: existing UI job registry and operator frontend contract.
+
+Local tasks:
+
+- `W46-E1-S1-T1` (done) Define the captured UI job context contract and compatibility behavior.
+  - Output: architecture wording and a durable job identity shape containing project root, workspace
+    root, Work Item, run, and stage; document that navigation does not cancel or move a job.
+  - Scope: `docs/architecture/operator-frontend.md`, `docs/architecture/target-architecture.md`.
+  - Verification: architecture consistency review confirms same-run mutation leases remain binding.
+- `W46-E1-S1-T2` (done) Implement immutable project/workspace context capture in the UI job store.
+  - Output: `_UiRunJob` and wire views retain the context captured at job creation.
+  - Scope: `src/aidd/cli/ui.py` job store and service boundary.
+  - Verification: unit test creates jobs for two projects and proves each view retains its own roots.
+- `W46-E1-S1-T3` (done) Route background job callbacks through their captured context.
+  - Output: worker execution, attempt discovery, runtime options, and evidence paths never read a
+    newly selected project from the main service context.
+  - Scope: `src/aidd/cli/ui.py` job execution closures.
+  - Verification: switch projects during a blocked fake job and assert all writes/logs stay in the
+    originating workspace.
+
+#### Slice W46-E1-S2 — context-aware navigation and job visibility (`planned`)
+
+Goal: remove the over-broad project-switch guard while keeping safe job inspection and mutation.
+
+Dependencies: `W46-E1-S1`.
+
+Local tasks:
+
+- `W46-E1-S2-T1` (done) Replace the global active-job project-switch rejection with safe context switching.
+  - Output: `_activate_context` permits navigation while preserving per-run mutation protection.
+  - Scope: `src/aidd/cli/ui.py`, `tests/cli/test_ui.py`.
+  - Verification: A → B navigation succeeds during job A; conflicting same-run writes remain blocked.
+- `W46-E1-S2-T2` (done) Expose project-aware active-job selection to dashboard and recovery views.
+  - Output: selected project sees its own active job while the Inbox can list other running jobs with
+    their captured project identity.
+  - Scope: `src/aidd/cli/ui.py` read endpoints and `tests/cli/test_ui.py`.
+  - Verification: dashboard payloads do not leak job A into project B and Inbox preserves both.
+- `W46-E1-S2-T3` (done) Render a “running in another project” job surface with stable open/log/cancel hooks.
+  - Output: frontend exposes job identity and navigation without pretending it belongs to the current
+    Work Item.
+  - Scope: `src/aidd/cli/static/operator-*.js`, `tests/frontend/`.
+  - Verification: Node frontend tests cover cross-project job rendering and recovery.
+- `W46-E1-S2-T4` (next) Add a provider-free two-project browser scenario for navigation and isolation.
+  - Output: deterministic UI scenario and retained evidence for switching, logs, and artifacts.
+  - Scope: `browser_tests/test_journey_inbox.py`, `tests/test_packaged_ui_scenarios.py`, scenario
+    assets, and E2E docs.
+  - Verification: packaged browser gate passes without console errors or cross-project artifacts.
+
+### Epic W46-E2 — structured Work Item context (`planned`)
+
+#### Slice W46-E2-S1 — request document contract and projection (`done`)
+
+Goal: make the operator-owned request structurally readable while preserving legacy Markdown.
+
+Local tasks:
+
+- `W46-E2-S1-T1` (done) Define the `user-request.md` contract with Title, Brief, Context, Constraints, and
+  Additional information sections.
+  - Output: `contracts/documents/user-request.md` and linked architecture guidance.
+  - Scope: contracts and architecture docs only.
+  - Verification: contract review covers required sections, immutability, and legacy fallback.
+- `W46-E2-S1-T2` (done) Parse structured and legacy request Markdown into a typed operator read model.
+  - Output: separate title/brief/context/constraints/additional fields with bounded legacy fallback.
+  - Scope: `src/aidd/core/onboarding.py`, `src/aidd/core/operator_frontend_project_home.py`.
+  - Verification: core fixtures cover structured, legacy, empty, malformed, and UTF-8 documents.
+- `W46-E2-S1-T3` (done) Preserve compatibility for CLI/API request payloads while exposing structured fields.
+  - Output: old `request`/`request_text` payloads still work; new fields round-trip to Markdown.
+  - Scope: `src/aidd/cli/ui.py`, `tests/cli/test_ui.py`.
+  - Verification: old and new payload tests produce deterministic durable documents.
+
+#### Slice W46-E2-S2 — clean Work Item and Task headers (`planned`)
+
+Goal: keep headers concise and make detailed information available in explicit lower-level surfaces.
+
+Dependencies: `W46-E2-S1`.
+
+Local tasks:
+
+- `W46-E2-S2-T1` (done) Split Guided Setup and existing-project creation into explicit request fields.
+  - Output: title, brief, context, constraints, and additional-information controls with one payload
+    shape and the correct `context/user-request.md` destination label.
+  - Scope: `src/aidd/cli/static/operator-onboarding.js`, frontend tests.
+  - Verification: both creation paths emit the same structured payload.
+- `W46-E2-S2-T2` (done) Render only title and bounded brief in the Work Item header.
+  - Output: long context, links, and constraints no longer appear in `<h1>/<h2>` or project rails.
+  - Scope: `src/aidd/cli/static/operator-active-studio.js`, frontend tests.
+  - Verification: long-content DOM test proves header remains bounded and complete details remain below.
+- `W46-E2-S2-T3` (done) Render Task Workspace details by information hierarchy.
+  - Output: title/outcome once at the top; context, implementation constraints, out-of-scope,
+    verification, and evidence in accessible expandable details.
+  - Scope: `src/aidd/cli/static/operator-active-studio.js`, frontend tests.
+  - Verification: selected task retains every authored field without repeated header noise.
+- `W46-E2-S2-T4` (parked) Add responsive and browser acceptance for long request/task content.
+  - Output: provider-free geometry/accessibility coverage for desktop and mobile states.
+  - Scope: `browser_tests/`, `tests/test_packaged_ui_scenarios.py`, static UI tests, and E2E docs.
+  - Verification: no overflow, keyboard-inaccessible details, or lost request fields.
+
+### Epic W46-E3 — failed-task recovery consistency (`done`)
+
+Goal: keep failed implementation tasks, stage lifecycle state, and operator recovery actions
+consistent so an operator can identify the first failed task and resume it without guessing.
+
+Linked stories: `US-03`, `US-04`, `US-07`, `US-11`, `US-13`
+
+#### Slice W46-E3-S1 — implementation lifecycle consistency (`done`)
+
+Primary output: a core implementation completion path that preserves the distinction between
+failed validation, repair exhaustion, and blocked operator input.
+
+Touched areas:
+
+- `src/aidd/core/implementation_service.py`
+- `src/aidd/core/task_attempt_lifecycle.py`
+- `contracts/stages/implement.md`
+- `contracts/documents/stage-result.md`
+- core implementation and stage lifecycle tests
+
+Dependencies: existing task ledger, repair budget, and canonical stage-result contracts.
+
+Local tasks:
+
+- `W46-E3-S1-T1` (done) Preserve failed-task and stage lifecycle status consistently.
+  - Output: a failed implementation task remains `failed`/`repair-exhausted` at the stage boundary,
+    while `blocked` remains reserved for unresolved questions or runtime approvals. Retries of
+    legacy runs repair the historical `blocked` drift without deleting interview evidence.
+  - Scope: core implementation completion/status persistence, task-attempt evidence preservation,
+    contract clarification, and focused regression tests; do not change task dependency ordering
+    or adapter behavior.
+  - Verification: a failed task fixture proves task ledger status, stage metadata, validator
+    verdict, and canonical `stage-result.md` agree; blocked-question fixtures remain blocked.
+
+#### Slice W46-E3-S2 — dependency-aware recovery actions (`done`)
+
+Primary output: an operator surface that points from a selected blocked task to its first safe
+recovery action instead of leaving the operator at “No action available”.
+
+Touched areas:
+
+- `src/aidd/core/task_read_model.py`
+- `src/aidd/cli/static/operator-active-studio.js`
+- `src/aidd/cli/static/operator-inbox.js`
+- `src/aidd/cli/static/operator-main.js`
+- core, CLI, and frontend tests
+
+Dependencies: `W46-E3-S1-T1`, existing Task Workspace action projection, and Inbox route contracts.
+
+Local tasks:
+
+- `W46-E3-S2-T1` (done) Add a safe recovery action for blocked downstream tasks.
+  - Output: selected dependency-blocked tasks show the missing prerequisite and a direct action to
+    inspect or resume the next ready failed task, while preserving dependency guards.
+  - Scope: task read model, Task Workspace renderer, and provider-free frontend fixtures only.
+  - Verification: TL-2 failed/ready with TL-4 selected renders one enabled recovery action for
+    TL-2 and never enables a TL-4 mutation.
+
+- `W46-E3-S2-T2` (done) Route Inbox primary actions to their intended recovery surface.
+  - Output: `inspect-validation`, `request-change`, and resume actions opened from Inbox retain
+    their action-specific Studio destination instead of falling back to generic overview.
+  - Scope: Inbox route attributes and click dispatch plus frontend regression tests only.
+  - Verification: each Inbox primary action reaches its matching Recovery/Request/Resume surface
+    without losing Work Item, run, or stage identity.
+
+#### Slice W46-E3-S3 — live negative-path evidence (`done`)
+
+Primary output: provider-free live-style evidence for validator failure, exhausted repair, and
+dependency-blocked Task Workspace recovery.
+
+Touched areas:
+
+- `src/aidd/harness/live_e2e_black_box_orchestration.py`
+- `src/aidd/harness/task_flow_checkpoint.py`
+- `harness/scenarios/deterministic/`
+- `harness/scenarios/live/` and E2E docs
+- harness and browser tests
+
+Dependencies: `W46-E3-S1-T1`, `W46-E3-S2-T1`, and `W46-E3-S2-T2`.
+
+Local tasks:
+
+- `W46-E3-S3-T1` (done) Gate live checkpoints on cross-layer failure consistency and recovery.
+  - Output: a deterministic negative-path scenario that asserts validator/stage/task agreement,
+    selected-task action projection, Inbox recovery routing, and rendered recovery affordance.
+  - Scope: harness checkpoint and scenario/browser fixtures; do not add provider credentials or
+    make subjective UI quality a core verdict.
+  - Verification: the seeded TL-2-failed/TL-4-selected run fails on status drift or missing safe
+    recovery action and passes only when the complete recovery path is observable.
