@@ -4,7 +4,10 @@ from pathlib import Path
 
 import pytest
 
-from tests.planning_integrity import roadmap_backlog_integrity_errors
+from tests.planning_integrity import (
+    backlog_reconciliation_errors,
+    roadmap_backlog_integrity_errors,
+)
 
 
 def _roadmap(*tasks: str) -> str:
@@ -48,6 +51,28 @@ def test_repository_roadmap_and_backlog_obey_generic_integrity_rules() -> None:
     backlog = (repo_root / "docs/backlog/backlog.md").read_text(encoding="utf-8")
 
     assert roadmap_backlog_integrity_errors(roadmap, backlog) == ()
+    assert backlog_reconciliation_errors(backlog) == ()
+
+
+@pytest.mark.parametrize(
+    "body",
+    (
+        "",
+        "- `2026-09-05` Current\n- `2026-09-04` Old instruction\n",
+        "- `2026-09-05` Current\n" + "  Older evidence\n" * 40,
+    ),
+)
+def test_backlog_reconciliation_rejects_missing_or_accumulated_history(body: str) -> None:
+    assert backlog_reconciliation_errors("## Current reconciliation\n" + body)
+
+
+def test_backlog_reconciliation_accepts_one_bounded_note_and_archive_link() -> None:
+    backlog = (
+        "## Current reconciliation\n\n"
+        "- `2026-09-05` Current work and remaining blocker.\n\n"
+        "Earlier evidence: [archive](reconciliation-history-2026-09-05.md).\n"
+    )
+    assert backlog_reconciliation_errors(backlog) == ()
 
 
 @pytest.mark.parametrize(

@@ -67,6 +67,11 @@ The maintained set must cover these buckets without turning the matrix into a fu
 | live full flow interview product evaluation | `large + manual + product-evaluation` | `AIDD-LIVE-010` |
 | live full flow interview product evaluation | `xlarge + manual + product-evaluation` | `AIDD-LIVE-006`, `AIDD-LIVE-008`, `AIDD-LIVE-011` |
 
+`AIDD-SMOKE-001` also verifies workflow-record ownership from an initialized workspace:
+the fixture runtime writes only `plan.md`, AIDD publishes the canonical stage result and
+validator report, and the stage succeeds in one attempt without repair. Runtime logs and
+verification results preserve evidence for that boundary.
+
 The Codex-only Wave 43 stability lane reuses the maintained `AIDD-LIVE-007` medium
 product-evaluation scenario rather than introducing a second scenario class. Its pinned profile,
 metric vocabulary, and repetition evidence contract are documented in

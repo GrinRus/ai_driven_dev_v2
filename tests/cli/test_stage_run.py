@@ -22,6 +22,8 @@ from aidd.cli.stage_run import (
     run_stage_interact_command,
     run_stage_repair_extension_command,
 )
+from aidd.config import ProjectConfig, ProjectSetConfig
+from aidd.core.project_set import persist_project_set_context, resolve_project_set
 from aidd.core.run_lookup import latest_run_id
 from aidd.core.run_store import (
     RUN_EVENTS_JSONL_FILENAME,
@@ -33,6 +35,7 @@ from aidd.core.run_store import (
 )
 from aidd.core.runtime_operator import RuntimeOperatorRequest
 from aidd.core.stage_runner import prepare_stage_bundle
+from aidd.core.workspace import WorkspaceBootstrapService
 from aidd.runtime_permissions import (
     RuntimeOperatorDecisionAction,
     RuntimeOperatorDecisionSource,
@@ -42,6 +45,203 @@ from aidd.validators.models import ValidationFinding
 from aidd.validators.reports import render_validator_report
 
 runner = CliRunner()
+
+
+def _materialize_project_set_context(tmp_path: Path, workspace_root: Path, work_item: str) -> None:
+    (tmp_path / "services" / "api").mkdir(parents=True)
+    (tmp_path / "apps" / "web").mkdir(parents=True)
+    persist_project_set_context(
+        workspace_root=workspace_root, work_item=work_item,
+        project_set=resolve_project_set(
+            repository_root=tmp_path,
+            project_set=ProjectSetConfig(projects=(
+                ProjectConfig(id="api", root=Path("services/api")),
+                ProjectConfig(id="web", root=Path("apps/web")),
+            )),
+        ),
+    )
+
+
+@pytest.mark.parametrize("attempt_mode", ("initial", "repair", "intervention"))
+@pytest.mark.parametrize("project_set", (False, True))
+def test_substantive_only_runtime_leaves_workflow_records_to_aidd(
+    tmp_path: Path, attempt_mode: str, project_set: bool
+) -> None:
+    workspace_root = tmp_path / ".aidd"
+    work_item = "WI-SUBSTANTIVE"
+    run_id = "run-substantive"
+    WorkspaceBootstrapService(root=workspace_root).bootstrap_work_item(work_item=work_item)
+    _materialize_plan_inputs(workspace_root=workspace_root, work_item=work_item)
+    if project_set:
+        _materialize_project_set_context(tmp_path, workspace_root, work_item)
+    plan = _valid_plan_output_documents()["plan.md"]
+    if attempt_mode == "intervention":
+        final_plan = plan.replace(
+            "- Risk: Missing constraints; mitigation: clarify assumptions.",
+            "- Risk: Migration failure; mitigation: keep a tested rollback path.",
+        )
+    else:
+        final_plan = plan
+    initial_plan = "# Plan\n\nIncomplete plan.\n" if attempt_mode == "repair" else plan
+    writer = _write_runtime_writer_script(
+        tmp_path=tmp_path,
+        documents={"plan.md": initial_plan},
+        next_documents={"plan.md": final_plan},
+        exit_code=0,
+        extra_stdout_lines=("substantive-only writes=plan.md",),
+    )
+    config = _write_cli_config(
+        tmp_path=tmp_path,
+        runtime_command=f"{shlex.quote(sys.executable)} {shlex.quote(writer.as_posix())}",
+        max_repair_attempts=1 if attempt_mode == "repair" else 0,
+    )
+    common_args = [
+        "plan", "--work-item", work_item, "--runtime", "generic-cli", "--run-id", run_id,
+        "--root", str(workspace_root), "--config", str(config), "--no-log-follow",
+    ]
+    result = runner.invoke(app, ["stage", "run", *common_args])
+    assert result.exit_code == 0, result.output
+    if attempt_mode != "repair":
+        assert "Stage attempts: 1" in result.output
+        assert "Repair retry scheduled" not in result.output
+    if attempt_mode == "intervention":
+        result = runner.invoke(
+            app,
+            ["stage", "interact", *common_args, "--request", "Add migration rollback risks"],
+        )
+        assert result.exit_code == 0, result.output
+        assert "Repair retry scheduled" not in result.output
+
+    stage_root = workspace_root / "workitems" / work_item / "stages" / "plan"
+    output = stage_root / "output"
+    assert (output / "plan.md").read_text(encoding="utf-8") == final_plan
+    stage_result = (output / "stage-result.md").read_text(encoding="utf-8")
+    assert "succeeded" in stage_result
+    assert "review-spec" in stage_result
+    assert "## Attempt history" in stage_result
+    if project_set:
+        assert "## Project-set evidence" in stage_result
+        assert f"`workitems/{work_item}/context/project-set.md`" in stage_result
+        for project_id, root in (("api", "services/api"), ("web", "apps/web")):
+            assert f"`{project_id}`" in stage_result
+            assert f"`{root}`" in stage_result
+    assert "Verdict: `pass`" in (output / "validator-report.md").read_text(encoding="utf-8")
+    attempt_number = 1 if attempt_mode == "initial" else 2
+    artifact_path = run_attempt_artifact_index_path(
+        workspace_root=workspace_root, work_item=work_item, run_id=run_id, stage="plan",
+        attempt_number=attempt_number,
+    )
+    artifact = json.loads(artifact_path.read_text(encoding="utf-8"))
+    assert artifact["attempt_mode"] == attempt_mode
+    assert "substantive-only writes=plan.md" in (
+        artifact_path.parent / RUN_RUNTIME_LOG_FILENAME
+    ).read_text(encoding="utf-8")
+    if attempt_mode == "repair":
+        assert "(`initial`) -> failed validation" in stage_result
+        assert "(`repair`) -> succeeded" in stage_result
+        assert (stage_root / "repair-brief.md").is_file()
+    if attempt_mode == "intervention":
+        assert (stage_root / "operator-requests" / "request-0001.md").is_file()
+
+
+@pytest.mark.parametrize("failure", ("substantive", "lookalike-runtime-draft"))
+@pytest.mark.parametrize("project_set", (False, True))
+def test_bootstrap_reconciliation_preserves_real_failures_and_runtime_draft_evidence(
+    tmp_path: Path, failure: str, project_set: bool
+) -> None:
+    workspace_root = tmp_path / ".aidd"
+    work_item = "WI-BOOTSTRAP-FAIL"
+    WorkspaceBootstrapService(root=workspace_root).bootstrap_work_item(work_item=work_item)
+    _materialize_plan_inputs(workspace_root=workspace_root, work_item=work_item)
+    if project_set:
+        _materialize_project_set_context(tmp_path, workspace_root, work_item)
+    documents = {"plan.md": _valid_plan_output_documents()["plan.md"]}
+    runtime_draft = "# Stage result\n\nStage not run yet.\n\nRuntime-authored extra evidence.\n"
+    if failure == "substantive":
+        documents["plan.md"] = "# Plan\n\nInvalid substantive output.\n"
+    else:
+        documents["stage-result.md"] = runtime_draft
+    writer = _write_runtime_writer_script(tmp_path=tmp_path, documents=documents, exit_code=0)
+    config = _write_cli_config(
+        tmp_path=tmp_path,
+        runtime_command=f"{shlex.quote(sys.executable)} {shlex.quote(writer.as_posix())}",
+        max_repair_attempts=0,
+    )
+    result = runner.invoke(app, [
+        "stage", "run", "plan", "--work-item", work_item, "--runtime", "generic-cli",
+        "--run-id", "run-bootstrap-fail", "--root", str(workspace_root), "--config", str(config),
+        "--no-log-follow",
+    ])
+
+    assert result.exit_code == 1, result.output
+    assert "action=stop state=failed" in result.output
+    stage_root = workspace_root / "workitems" / work_item / "stages" / "plan"
+    assert not (stage_root / "output" / "plan.md").exists()
+    assert (stage_root / "plan.md").read_text(encoding="utf-8") == documents["plan.md"]
+    assert "Verdict: `fail`" in (stage_root / "validator-report.md").read_text(encoding="utf-8")
+    if failure == "lookalike-runtime-draft":
+        artifact_path = run_attempt_artifact_index_path(
+            workspace_root=workspace_root, work_item=work_item, run_id="run-bootstrap-fail",
+            stage="plan", attempt_number=1,
+        )
+        artifact = json.loads(artifact_path.read_text(encoding="utf-8"))
+        evidence_path = workspace_root / artifact["documents"]["runtime_stage_result_draft"]
+        assert evidence_path.read_text(encoding="utf-8") == runtime_draft
+
+
+@pytest.mark.parametrize("attempt_mode", ("initial", "repair", "intervention"))
+@pytest.mark.parametrize("project_set", (False, True))
+def test_substantive_only_runtime_routes_completion_blockers_to_interview(
+    tmp_path: Path, attempt_mode: str, project_set: bool
+) -> None:
+    workspace_root = tmp_path / ".aidd"
+    work_item = "WI-OWNERSHIP-BLOCKED"
+    WorkspaceBootstrapService(root=workspace_root).bootstrap_work_item(work_item=work_item)
+    _materialize_plan_inputs(workspace_root=workspace_root, work_item=work_item)
+    if project_set:
+        _materialize_project_set_context(tmp_path, workspace_root, work_item)
+    plan = _valid_plan_output_documents()["plan.md"]
+    blocked_plan = plan + "\n## Blockers\n\nOperator scope approval is required.\n"
+    question = "- Q1 [blocking] May the approved scope expand to include migration fallback?\n"
+    blocked_documents = {"plan.md": blocked_plan, "questions.md": "# Questions\n\n" + question}
+    first_documents = {
+        "initial": blocked_documents,
+        "repair": {"plan.md": "# Plan\n\nIncomplete plan.\n"},
+        "intervention": {"plan.md": plan},
+    }[attempt_mode]
+    writer = _write_runtime_writer_script(
+        tmp_path=tmp_path, documents=first_documents, next_documents=blocked_documents,
+        exit_code=0,
+    )
+    config = _write_cli_config(
+        tmp_path=tmp_path,
+        runtime_command=f"{shlex.quote(sys.executable)} {shlex.quote(writer.as_posix())}",
+        max_repair_attempts=1 if attempt_mode == "repair" else 0,
+    )
+    common_args = [
+        "plan", "--work-item", work_item, "--runtime", "generic-cli", "--run-id", "run-blocked",
+        "--root", str(workspace_root), "--config", str(config), "--no-log-follow",
+    ]
+    result = runner.invoke(app, ["stage", "run", *common_args])
+    if attempt_mode == "intervention":
+        assert result.exit_code == 0, result.output
+        result = runner.invoke(app, [
+            "stage", "interact", *common_args, "--request", "Add migration fallback",
+        ])
+
+    assert result.exit_code == 1, result.output
+    assert "action=wait state=blocked" in result.output
+    assert "Blocking questions are unresolved." in result.output
+    stage_root = workspace_root / "workitems" / work_item / "stages" / "plan"
+    stage_result = (stage_root / "stage-result.md").read_text(encoding="utf-8")
+    assert "## Status\n\n- Status: `blocked`" in stage_result
+    assert "Q1" in stage_result
+    assert (stage_root / "plan.md").read_text(encoding="utf-8") == blocked_plan
+    assert "[blocking]" in (stage_root / "questions.md").read_text(encoding="utf-8")
+    assert "[resolved]" not in (stage_root / "answers.md").read_text(encoding="utf-8")
+    published_plan = stage_root / "output" / "plan.md"
+    if published_plan.exists():
+        assert published_plan.read_text(encoding="utf-8") != blocked_plan
 
 
 def test_cli_operator_decision_provider_returns_tty_decision(

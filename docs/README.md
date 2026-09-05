@@ -18,6 +18,8 @@ and quick start; the documents below own detailed behavior and policy.
 
 - [Contributing Guide](../CONTRIBUTING.md) — development setup, task selection, design rules, and
   pull-request expectations.
+- [Agent Development Map](./agent-development.md) — instruction inheritance, ownership, skills,
+  and focused Python, Node, and browser checks.
 - [Governance](../GOVERNANCE.md) — roles, decisions, merge authority, and project continuity.
 - [Release Checklist](./release-checklist.md) — release preparation, publication, and package
   verification.

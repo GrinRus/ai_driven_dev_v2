@@ -19,6 +19,7 @@ from aidd.core.stage_registry import (
     resolve_expected_output_documents,
     resolve_runtime_output_documents,
 )
+from aidd.core.workspace import STAGE_RESULT_BOOTSTRAP_TEMPLATE
 from aidd.core.workspace import stage_output_root as workspace_stage_output_root
 from aidd.core.workspace import stage_root as workspace_stage_root
 from aidd.validators.cross_document import validate_cross_document_consistency
@@ -56,7 +57,7 @@ def _should_promote_misplaced_stage_output(
         "# Questions\n\nNo questions yet.",
         "# Answers\n\nNo answers yet.",
         "# Validator report\n\nNo validator output yet.",
-        "# Stage result\n\nStage not run yet.",
+        STAGE_RESULT_BOOTSTRAP_TEMPLATE.strip(),
     }:
         return True
     try:
@@ -69,7 +70,7 @@ _MISPLACED_OUTPUT_PROMOTION_WARNING_CODE = "STRUCT-OUTPUT-PROMOTED"
 _UNEXPECTED_RUNTIME_DOCUMENTS: dict[str, tuple[str, str | None]] = {
     "stage-result.md": (
         "runtime-stage-result.md",
-        "# Stage result\n\nStage not run yet.",
+        STAGE_RESULT_BOOTSTRAP_TEMPLATE.strip(),
     ),
     "validator-report.md": (
         "runtime-validator-report.md",
@@ -93,6 +94,7 @@ def retain_unexpected_runtime_documents(
     workspace_root: Path,
     execution_state: StageExecutionState,
     contracts_root: Path = DEFAULT_STAGE_CONTRACTS_ROOT,
+    attempt_started_at_ns: int | None = None,
 ) -> tuple[Path, ...]:
     """Retain runtime writes to AIDD-owned records as attempt evidence.
 
@@ -106,7 +108,10 @@ def retain_unexpected_runtime_documents(
         work_item=execution_state.work_item,
         stage=execution_state.stage,
     )
-    attempt_started_at = execution_state.attempt_path.stat().st_mtime_ns
+    attempt_started_at = (
+        execution_state.attempt_path.stat().st_mtime_ns
+        if attempt_started_at_ns is None else attempt_started_at_ns
+    )
     retained: list[Path] = []
     for filename, (evidence_name, placeholder) in _UNEXPECTED_RUNTIME_DOCUMENTS.items():
         canonical_path = stage_root / filename

@@ -13,8 +13,12 @@ Required outputs for every `research` attempt:
 - `validator-report.md`
 
 `research-notes.md` is the primary runtime-authored content artifact. `stage-result.md`
-is a runtime-authored summary draft that AIDD may normalize after validation, and
-`validator-report.md` is canonical only after AIDD writes the post-runtime validation report.
+and `validator-report.md` are AIDD-generated workflow records. The runtime must not create
+or edit either record in initial, repair, or intervention attempts. It writes only substantive
+runtime content and exposes evidence for AIDD reconciliation. If a blocker prevents completion,
+it must submit a `[blocking]` question through the controlled interview path; blocker prose alone
+does not pause AIDD. The primary-output list above is the published compatibility view, not a
+grant of runtime write authority.
 
 Conditional outputs:
 

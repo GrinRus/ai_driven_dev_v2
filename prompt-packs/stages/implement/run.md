@@ -139,8 +139,8 @@ consistent across `implementation-report.md`, `validator-report.md`, and `stage-
 11. Keep debugging bounded. Prefer authored verification commands and existing regression tests.
     If a check fails, make at most one focused fix attempt for that failure class, then rerun the
     narrow check. If it still fails or the root cause is unclear, stop editing and write the
-    required output documents with the exact failing command/output and `stage-result.md` status
-    `failed` or `blocked` as appropriate. Do not create an open-ended series of ad hoc debug
+    required substantive output with the exact failing command/output and explicit blockers
+    for AIDD to derive `failed` or `blocked` as appropriate. Do not create an open-ended series of ad hoc debug
     scripts, and do not spend the stage trying to make optional broad checks pass before recording
     the required implementation report.
 12. Do not create top-level `workitems/...`. Canonical stage/control artifacts are under
@@ -258,7 +258,7 @@ consistent across `implementation-report.md`, `validator-report.md`, and `stage-
 - If a required section has no findings or blockers, write exactly `- none` rather than leaving it empty.
 - Keep implementation evidence, questions, and blockers truthful; AIDD reconciles status, verdict,
   and next actions into canonical records.
-- Keep `stage-result.md` next-action copy flow-aware: `implement` hands off to `review`, never
+- Keep substantive next-action recommendations flow-aware: `implement` hands off to `review`, never
   directly to `qa`.
 
 ## Completion checklist

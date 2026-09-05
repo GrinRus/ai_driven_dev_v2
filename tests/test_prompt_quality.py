@@ -7,6 +7,7 @@ import pytest
 
 from aidd.core.stages import STAGES
 from aidd.validators.protocol import VALIDATOR_FINDING_CODES, VALIDATOR_REPORT_FIELDS
+from tests.agent_instruction_support import skill_text_with_references
 
 
 @pytest.mark.parametrize("stage", STAGES)
@@ -36,6 +37,12 @@ def test_stage_repair_prompt_contains_budget_and_status_consistency_rules(stage:
     assert "`- Q1 [resolved]: ...` is invalid" in prompt_text
     assert "`- Q1: [resolved] ...`" in prompt_text
     assert "do not create `[resolved]`" in prompt_text
+    normalized_prompt = " ".join(prompt_text.split())
+    assert "Do not write `stage-result.md` or `validator-report.md`" in normalized_prompt
+    assert "AIDD determines `succeeded` after validation" in prompt_text
+    assert "Do not treat the previous failed validator report as a new result" in prompt_text
+    assert "When repairing a draft `validator-report.md`" not in prompt_text
+    assert "set `stage-result.md`" not in prompt_text
 
 
 @pytest.mark.parametrize("stage", STAGES)
@@ -1003,7 +1010,7 @@ def test_research_prompts_and_contracts_require_bounded_local_probes() -> None:
 def test_live_docs_distinguish_provider_no_progress_from_quality_failure() -> None:
     catalog = Path("docs/e2e/live-e2e-catalog.md").read_text(encoding="utf-8")
     rubric = Path("docs/e2e/live-quality-rubric.md").read_text(encoding="utf-8")
-    skill = Path(".agents/skills/live-e2e/SKILL.md").read_text(encoding="utf-8")
+    skill = skill_text_with_references("live-e2e")
 
     for text in (catalog, rubric, skill):
         lower_text = text.lower()

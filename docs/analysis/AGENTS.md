@@ -6,4 +6,5 @@ Analysis docs preserve research that shaped the architecture.
 
 - Keep summaries concise and decision-oriented.
 - Prefer conclusions that drive architecture or roadmap choices.
-- Keep analysis in English.
+- Preserve the original context and date of research conclusions. Mark superseded conclusions
+  and link current decisions rather than making an old analysis appear current.

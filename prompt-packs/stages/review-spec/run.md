@@ -126,7 +126,7 @@ containing only `ready-with-conditions`.
 - If a required section has no findings or blockers, write exactly `- none` rather than leaving it empty.
 - Keep review findings, questions, and decision evidence truthful; AIDD reconciles status, verdict,
   blockers, and next actions into canonical records.
-- Keep `stage-result.md` next-action copy flow-aware: `review-spec` hands off to `tasklist`, never
+- Keep substantive next-action recommendations flow-aware: `review-spec` hands off to `tasklist`, never
   directly to `implement`, `review`, or `qa`.
 
 ## Completion checklist

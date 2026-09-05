@@ -2,7 +2,20 @@ from __future__ import annotations
 
 from pathlib import Path
 
+import pytest
+
 from aidd.adapters.native_prompt import build_native_prompt_text
+from aidd.cli.support import _active_prompt_pack_paths
+from aidd.core.repair import render_repair_brief
+from aidd.core.stage_preparation import prepare_stage_bundle
+from aidd.core.stage_registry import (
+    DEFAULT_STAGE_CONTRACTS_ROOT,
+    resolve_prompt_pack_file_paths,
+    resolve_stage_output_registry,
+)
+from aidd.core.stages import STAGES
+from aidd.validators.models import ValidationFinding, ValidationIssueLocation
+from aidd.validators.reports import render_validator_report
 
 
 def test_native_prompt_compiler_includes_attempt_bundle_and_contract(
@@ -116,3 +129,122 @@ def test_native_prompt_compiler_includes_operator_request_context(
     assert "Add migration rollback risks." in prompt
     assert "# Operator intervention prompt" in prompt
     assert "Apply only the requested stage-scoped delta" in prompt
+
+
+@pytest.mark.parametrize("stage", STAGES)
+@pytest.mark.parametrize("attempt_mode", ("initial", "repair", "intervention"))
+def test_composed_stage_request_respects_runtime_write_authority(
+    tmp_path: Path, stage: str, attempt_mode: str
+) -> None:
+    """Exercise real contract, brief, active-pack selection, and final native guidance together."""
+    repository_root = DEFAULT_STAGE_CONTRACTS_ROOT.parent.parent
+    workspace_root = tmp_path / "target-repository" / ".aidd"
+    work_item = "WI-OWNERSHIP"
+    bundle = prepare_stage_bundle(
+        workspace_root=workspace_root, work_item=work_item, stage=stage
+    )
+    stage_brief_path = tmp_path / "stage-brief.md"
+    stage_brief_path.write_text(bundle.stage_brief_markdown, encoding="utf-8")
+    registry = resolve_stage_output_registry(
+        workspace_root=workspace_root, work_item=work_item, stage=stage
+    )
+    repair_mode = attempt_mode == "repair"
+    active_paths = _active_prompt_pack_paths(
+        prompt_pack_paths=resolve_prompt_pack_file_paths(stage=stage),
+        repair_mode=repair_mode,
+        intervention_mode=attempt_mode == "intervention",
+    )
+    expected_names = {
+        "initial": {"system.md", "run.md", "interview.md"},
+        "repair": {"system.md", "run.md", "repair.md", "interview.md"},
+        "intervention": {"system.md", "intervention.md"},
+    }
+    assert {path.name for path in active_paths} == expected_names[attempt_mode]
+    input_bundle_path = tmp_path / "input-bundle.md"
+    input_bundle_path.write_text(
+        "# Input bundle\n\nRetained upstream evidence.\n", encoding="utf-8"
+    )
+    runtime_output = registry.runtime_authored[0].relative_to(workspace_root).as_posix()
+    generated_output = f"workitems/{work_item}/stages/{stage}/stage-result.md"
+    repair_context = render_repair_brief(
+        validator_report_markdown=render_validator_report(findings=(
+            ValidationFinding(
+                code="SEM-INCOMPLETE-SECTION", severity="high",
+                message="Correct the located substantive-output finding.",
+                location=ValidationIssueLocation(workspace_relative_path=runtime_output),
+            ),
+            ValidationFinding(
+                code="SEM-INCOMPLETE-SECTION", severity="high",
+                message="Stage must name exactly the canonical current stage.",
+                location=ValidationIssueLocation(workspace_relative_path=generated_output),
+            ),
+        )),
+        validator_report_path=f"workitems/{work_item}/stages/{stage}/validator-report.md",
+        prior_stage_artifacts=(),
+        stage_attempt_count=1,
+        max_repair_attempts=2,
+    ) if repair_mode else None
+    operator_request = "Preserve evidence and clarify the current stage recommendation."
+    prompt = build_native_prompt_text(
+        runtime_id="codex",
+        stage=stage,
+        work_item=work_item,
+        run_id="run-ownership",
+        workspace_root=workspace_root,
+        stage_brief_path=stage_brief_path,
+        prompt_pack_paths=active_paths,
+        repository_root=repository_root,
+        attempt_number=1 if attempt_mode == "initial" else 2,
+        repair_mode=repair_mode,
+        attempt_mode=attempt_mode,
+        input_bundle_path=input_bundle_path,
+        repair_context_markdown=repair_context,
+        operator_request_markdown=operator_request if attempt_mode == "intervention" else None,
+    )
+
+    write_targets = prompt.split("# Runtime write targets\n", maxsplit=1)[1].split(
+        "\n# ", maxsplit=1
+    )[0]
+    for path in registry.runtime_authored:
+        assert path.relative_to(workspace_root).as_posix() in write_targets
+    for path in registry.aidd_generated:
+        assert path.name not in write_targets
+        assert f"## `{path.name}`" not in bundle.stage_brief_markdown
+    for path in active_paths:
+        assert path.read_text(encoding="utf-8").strip() in prompt
+    assert "Retained upstream evidence." in prompt
+    assert f"- Attempt mode: {attempt_mode}" in prompt
+    if attempt_mode == "intervention":
+        assert operator_request in prompt
+    if repair_mode:
+        assert "Correct the located substantive-output finding." in prompt
+        assert f"AIDD must reconcile `{generated_output}`" in prompt
+        assert f"Update `{generated_output}`" not in prompt
+        assert f"Update `{runtime_output}`" in prompt
+
+    execution_contract = prompt.rsplit("## Execution contract", maxsplit=1)[1]
+    assert "`Runtime write targets` section" in execution_contract
+    assert "`Expected output documents` section" not in execution_contract
+    assert "Do not write `stage-result.md` or `validator-report.md`" in execution_contract
+    assert "If a blocker prevents completion, submit a `[blocking]` question" in execution_contract
+    assert "Substantive blocker prose alone does not pause AIDD." in execution_contract
+    if attempt_mode in {"repair", "intervention"}:
+        mode_prompt = next(path for path in active_paths if path.stem == attempt_mode)
+        assert "submit a `[blocking]` question" in mode_prompt.read_text(encoding="utf-8")
+    normalized = " ".join(prompt.split())
+    # Retained regression signatures are positive mutation instructions from the old composed
+    # request, not references to read-only records or legacy evidence.
+    forbidden_instructions = (
+        "runtime-authored summary draft",
+        "When repairing a draft `validator-report.md`",
+        "set `stage-result.md`",
+        "update `stage-result.md` truthfully",
+        "record the outcome truthfully in `stage-result.md`",
+        "any repair summary in `stage-result.md`",
+        "Re-copy the `stage-result.md` and `validator-report.md` skeleton",
+        "create or replace `tasklist.md`, `stage-result.md`",
+        "If `stage-result.md` retained the bootstrap placeholder, replace",
+        "align `stage-result.md` blockers/next actions",
+    )
+    for instruction in forbidden_instructions:
+        assert instruction not in normalized, (stage, attempt_mode, instruction)

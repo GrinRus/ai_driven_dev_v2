@@ -215,9 +215,10 @@ def render_stage_brief(
                 "- Project roots: "
                 + ", ".join(f"`{project.relative_root}`" for project in project_set.projects),
                 (
-                    "- `stage-result.md` must include a `Project-set evidence` section that "
-                    "cites the project context path plus every declared project id and root, "
-                    "or marks an unaffected project explicitly."
+                    "- Expose project ownership in substantive runtime content: cite the project "
+                    "context path plus every declared project id and root, or mark an unaffected "
+                    "project explicitly. AIDD generates `Project-set evidence` in "
+                    "`stage-result.md`."
                 ),
             ]
         )
@@ -269,6 +270,9 @@ def render_stage_brief(
         [
             "",
             "# Expected output documents (published compatibility view)",
+            "",
+            "This publication inventory does not grant runtime write authority; use only "
+            "`Runtime write targets` for substantive completion output.",
             "",
         ]
     )

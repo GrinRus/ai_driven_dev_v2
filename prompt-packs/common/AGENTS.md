@@ -1,9 +1,10 @@
 # AGENTS.md
 
-This directory holds reusable prompt fragments shared by stage packs.
+This directory is reserved for shared prompt fragments; current stage packs are self-contained.
 
 ## Rules
 
 - Keep shared guidance runtime-agnostic.
 - Do not place stage-specific output rules here.
-- Keep this directory small; duplicate local guidance when that improves clarity.
+- Do not reintroduce an inactive shared fragment into execution implicitly. Any shared fragment
+  must have an explicit consumer, provenance, and regression evidence.

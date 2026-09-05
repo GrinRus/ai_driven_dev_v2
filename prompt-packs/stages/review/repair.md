@@ -5,6 +5,13 @@ You are rerunning the `review` stage because validation failed.
 Your job is to resolve validator findings with minimal edits while preserving finding traceability,
 severity/disposition coherence, and approval-decision correctness.
 
+## Runtime write authority
+
+Write only `review-report.md` as the substantive repair output. Do not write `stage-result.md` or
+`validator-report.md`; AIDD owns their canonical status, validation, history, and publication.
+Read existing workflow records as evidence. Use the controlled interview path for questions
+and operator answers; do not invent answers.
+
 ## Read order (do not skip)
 
 1. `validator-report.md` (latest findings, severities, and locations)
@@ -23,7 +30,7 @@ severity/disposition coherence, and approval-decision correctness.
    - `../plan/output/plan.md`
 
 `repair-brief.md` is AIDD-owned read-only repair control evidence. Do not rewrite it; put
-any repair summary in `stage-result.md` and reference `repair-brief.md` by path for traceability.
+any repair summary in `review-report.md` and reference `repair-brief.md` by path for traceability.
 
 Do not inspect AIDD validator implementation files, installed package files, or bundled examples
 during repair. Use `validator-report.md`, `repair-brief.md`, and the named contracts as the repair
@@ -31,21 +38,22 @@ scope. After updating the required documents and checking consistency, stop.
 
 ## Validator-report protocol v1
 
-When repairing a draft `validator-report.md`:
+Read `validator-report.md` as AIDD-owned finding evidence; do not rewrite it:
 
-- write only the canonical fields `Total issues`, `Blocking issues`, `Affected documents`,
+- interpret the canonical fields `Total issues`, `Blocking issues`, `Affected documents`,
   `Dominant failure categories`, optional `Finding occurrences`, `Verdict`, and
   `Repair required for progression`;
-- copy only finding codes declared by `contracts/documents/validator-report.md`; do not
-  invent, rename, or generalize a code;
-- treat `Validator verdict` and `Repair required` as read-only legacy field aliases and
-  rewrite them to their canonical labels;
-- treat `STRUCT-MISSING-DOCUMENT`, `STRUCT-MISSING-HEADING`,
-  `STRUCT-EMPTY-SECTION`, and `CROSS-REFERENCE-MISMATCH` as read-only legacy codes;
-  never author them in repaired output.
+- when citing a finding, copy only finding codes declared by
+  `contracts/documents/validator-report.md`; do not invent, rename, or generalize a code;
+- recognize `Validator verdict` and `Repair required` as read-only legacy field aliases;
+  AIDD writers emit the canonical labels;
+- recognize `STRUCT-MISSING-DOCUMENT`, `STRUCT-MISSING-HEADING`,
+  `STRUCT-EMPTY-SECTION`, and `CROSS-REFERENCE-MISMATCH` as read-only legacy codes.
 
-Canonical output is mandatory even when the input used a declared legacy alias. Any other field
-alias or finding code is invalid protocol vocabulary; do not preserve it.
+Any other field alias or finding code is invalid protocol vocabulary. Report unknown input
+vocabulary in substantive runtime content instead of changing the validator report. If it or any
+other blocker prevents completion, submit a `[blocking]` question through the controlled
+interview path; substantive blocker prose alone does not pause AIDD.
 
 Interview document format is strict. `questions.md` bullets use `- Q1 [blocking|non-blocking] ...`;
 `answers.md` bullets must reuse the same question id with `[resolved|partial|deferred]`, for example
@@ -66,7 +74,8 @@ For each finding:
    - cross-document status drift;
 2. patch only the smallest section needed in `review-report.md`;
 3. re-check finding ids, severity labels, and dispositions for consistency;
-4. re-check `stage-result.md` and `validator-report.md` so blockers and terminal status match.
+4. read `stage-result.md` and `validator-report.md` as prior evidence and expose current blockers
+   in substantive runtime content for AIDD reconciliation.
 
 Findings may be top-level bullets or `### RV-*` / `### REV-*` subsections. When a finding uses a
 subsection, keep nested severity/disposition/rationale/evidence bullets inside that subsection; do
@@ -100,13 +109,15 @@ Use concrete repair actions:
   upstream artifact explicitly supersedes that requirement. Named mechanisms include concrete
   APIs/library calls, named synchronization primitives, language-appropriate exception
   cause/chaining mechanisms, and required regression assertions;
-- status drift: align validator verdict, stage status, blockers, and next actions.
+- status drift: correct conflicting claims in substantive runtime content and expose blockers
+  and next-action evidence; AIDD reconciles validator verdict and stage status.
 
 ## Targeted repair discipline
 
 - Fix only the sections named by validator findings unless cross-document consistency requires a narrow companion edit.
 - Preserve valid sections and stable ids; do not rewrite complete documents just to satisfy one failed heading.
-- Re-copy the `stage-result.md` and `validator-report.md` skeleton headings from `stage-brief.md` or the document contracts when a common output is malformed.
+- Re-copy only the `review-report.md` skeleton headings from `stage-brief.md` or its document contract
+  when substantive output is malformed. AIDD repairs generated workflow records.
 
 ## Repair rules
 
@@ -114,13 +125,13 @@ Use concrete repair actions:
 2. Keep finding ids stable where possible.
 3. Do not mark stage `succeeded` while unresolved `must-fix` findings remain.
 4. Keep blocking ambiguity explicit via `[blocking]` questions when required baseline is missing.
-5. Keep `stage-result.md` attempt status truthful for the current repair attempt.
+5. Keep `review-report.md` evidence truthful for the current repair attempt; AIDD owns attempt status.
 6. Use exact required headings from document contracts; do not rename or qualify headings.
-7. Read the repair budget section in `repair-brief.md` before declaring terminal status.
-8. If `repair-brief.md` says `repair-budget-final-attempt` or `Rerun allowed after this attempt: no`, still repair the listed findings and set `stage-result.md` status from the actual repaired output state; do not fail solely because no later rerun is available.
-9. If AIDD later records `repair-budget-exhausted` after validation, terminal status must be `failed`.
-10. Do not claim success unless required headings, validator verdict, stage-result status, approval status, and unresolved findings are mutually consistent.
-11. If all listed findings are resolved and no blockers remain, set `stage-result.md` `Status` to `succeeded`; remove stale notes that say canonical AIDD validation still has open findings.
+7. Read the repair budget section in `repair-brief.md` before reporting the repair outcome.
+8. If `repair-brief.md` says `repair-budget-final-attempt` or `Rerun allowed after this attempt: no`, still repair the listed substantive findings; AIDD derives terminal status from post-runtime validation; do not fail solely because no later rerun is available.
+9. If AIDD later records `repair-budget-exhausted` after validation, AIDD sets terminal status to `failed`.
+10. Do not claim the repair is complete unless required headings, approval status, and unresolved findings are mutually consistent.
+11. If all listed findings are resolved and no blockers remain, record the repaired evidence in `review-report.md`; AIDD determines `succeeded` after validation. Do not treat the previous failed validator report as a new result.
 
 ## Repair exit checks
 

@@ -46,11 +46,13 @@ REQUEST_CONTEXT_FILENAMES: tuple[str, ...] = (
     WORKITEM_CONTEXT_REPOSITORY_STATE_FILENAME,
 )
 
+STAGE_RESULT_BOOTSTRAP_TEMPLATE = "# Stage result\n\nStage not run yet.\n"
+
 _STAGE_FILE_TEMPLATES: dict[str, str] = {
     "questions.md": "# Questions\n\nNo questions yet.\n",
     "answers.md": "# Answers\n\nNo answers yet.\n",
     "validator-report.md": "# Validator report\n\nNo validator output yet.\n",
-    "stage-result.md": "# Stage result\n\nStage not run yet.\n",
+    "stage-result.md": STAGE_RESULT_BOOTSTRAP_TEMPLATE,
 }
 
 
