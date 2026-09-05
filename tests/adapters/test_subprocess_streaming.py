@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import io
 import os
 import signal
 import sys
@@ -7,11 +8,18 @@ import threading
 import time
 from enum import StrEnum
 from pathlib import Path
+from queue import Queue
 
 import pytest
 
 from aidd.adapters.runtime_execution import RuntimeSubprocessSpec
-from aidd.adapters.subprocess_streaming import run_streamed_subprocess
+from aidd.adapters.subprocess_streaming import (
+    StreamEofEvent,
+    StreamErrorEvent,
+    StreamEvent,
+    run_streamed_subprocess,
+    stream_reader,
+)
 
 
 class StopReason(StrEnum):
@@ -19,6 +27,30 @@ class StopReason(StrEnum):
     TIMEOUT = "timeout"
     CANCELLED = "cancelled"
     LAUNCH_FAILURE = "launch_failure"
+
+
+def test_stream_reader_emits_typed_error_instead_of_eof_on_reader_failure() -> None:
+    class BrokenPipe(io.RawIOBase):
+        def read(self, _size: int) -> bytes:
+            raise RuntimeError("reader failed")
+
+    queue: Queue[StreamEvent] = Queue()
+    stream_reader(target="stdout", pipe=BrokenPipe(), queue=queue)
+
+    event = queue.get_nowait()
+    assert isinstance(event, StreamErrorEvent)
+    assert event.target == "stdout"
+    assert str(event.error) == "reader failed"
+    assert not isinstance(event, StreamEofEvent)
+
+
+def test_stream_reader_emits_typed_eof_after_clean_read() -> None:
+    queue: Queue[StreamEvent] = Queue()
+    stream_reader(target="stderr", pipe=io.BytesIO(), queue=queue)
+
+    event = queue.get_nowait()
+    assert isinstance(event, StreamEofEvent)
+    assert event.target == "stderr"
 
 
 @pytest.mark.parametrize(
