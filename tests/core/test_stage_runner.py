@@ -1058,6 +1058,63 @@ def test_run_single_stage_preflight_blocks_invalid_optional_inputs_before_attemp
     ).exists()
 
 
+def test_run_single_stage_preflight_blocks_non_file_required_inputs_before_attempt(
+    tmp_path: Path,
+) -> None:
+    workspace_root = tmp_path / ".aidd"
+    create_run_manifest(
+        workspace_root=workspace_root,
+        work_item="WI-001",
+        run_id="run-001",
+        runtime_id="generic-cli",
+        stage_target="plan",
+        config_snapshot={"mode": "test"},
+    )
+    preparation_bundle = prepare_stage_bundle(
+        workspace_root=workspace_root,
+        work_item="WI-001",
+        stage="plan",
+    )
+    _materialize_expected_inputs(preparation_bundle.required_input_documents)
+    directory_input = preparation_bundle.required_input_documents[0]
+    directory_input.unlink()
+    directory_input.mkdir()
+
+    def _unused_adapter_executor(
+        _invocation: AdapterInvocationBundle,
+        _execution_state: StageExecutionState,
+    ) -> AdapterExecutionOutcome:
+        raise AssertionError("adapter must not run with a non-file stage input")
+
+    with pytest.raises(
+        StageInputPreflightError,
+        match=(
+            "Stage input preflight failed: required input document is not readable: "
+            "workitems/WI-001/stages/idea/output/idea-brief.md"
+        ),
+    ):
+        run_single_stage_orchestration(
+            workspace_root=workspace_root,
+            work_item="WI-001",
+            run_id="run-001",
+            stage="plan",
+            adapter_executor=_unused_adapter_executor,
+        )
+
+    assert load_stage_metadata(
+        workspace_root=workspace_root,
+        work_item="WI-001",
+        run_id="run-001",
+        stage="plan",
+    ) is None
+    assert not run_attempts_root(
+        workspace_root=workspace_root,
+        work_item="WI-001",
+        run_id="run-001",
+        stage="plan",
+    ).exists()
+
+
 def test_discover_stage_markdown_outputs_returns_discovered_and_missing_documents(
     tmp_path: Path,
 ) -> None:
