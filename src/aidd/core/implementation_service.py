@@ -159,13 +159,47 @@ def _record_global_attempt_references(
     )
 
 
+def _persist_primary_executor_failure(
+    *,
+    context: TaskExecutionContext,
+    request: ImplementationExecutionRequest,
+    blocker: str,
+) -> TaskLedger:
+    """Persist an executor failure before collecting optional attempt evidence."""
+
+    ledger = complete_task_attempt(
+        context=context,
+        workspace_root=request.workspace_root,
+        work_item=request.work_item,
+        run_id=request.run_id,
+        status=TaskExecutionStatus.FAILED,
+        blocker=blocker,
+    )
+    persist_stage_status(
+        workspace_root=request.workspace_root,
+        work_item=request.work_item,
+        run_id=request.run_id,
+        stage="implement",
+        status=StageState.FAILED.value,
+    )
+    return ledger
+
+
 def _complete_task_execution(
     *,
     context: TaskExecutionContext,
     request: ImplementationExecutionRequest,
     succeeded: bool,
     blocker: str | None = None,
+    primary_executor_failure: bool = False,
 ) -> TaskLedger:
+    primary_failure_ledger = None
+    if primary_executor_failure:
+        primary_failure_ledger = _persist_primary_executor_failure(
+            context=context,
+            request=request,
+            blocker=blocker or "Task attempt executor failed.",
+        )
     _record_global_attempt_references(context=context, request=request)
     implementation_report = (
         request.workspace_root
@@ -206,6 +240,8 @@ def _complete_task_execution(
     if succeeded and issues:
         succeeded = False
         blocker = " ".join(issues)
+    if primary_failure_ledger is not None:
+        return primary_failure_ledger
     status = TaskExecutionStatus.SUCCEEDED if succeeded else TaskExecutionStatus.FAILED
     metadata = load_stage_metadata(
         workspace_root=request.workspace_root,
@@ -337,12 +373,22 @@ class ImplementationExecutionService:
         try:
             outcome = self._task_executor(context)
         except Exception as exc:
-            failed = _complete_task_execution(
-                context=context,
-                request=request,
-                succeeded=False,
-                blocker=str(exc) or exc.__class__.__name__,
-            )
+            try:
+                failed = _complete_task_execution(
+                    context=context,
+                    request=request,
+                    succeeded=False,
+                    blocker=str(exc) or exc.__class__.__name__,
+                    primary_executor_failure=True,
+                )
+            except Exception:
+                # Optional evidence collection must not hide the executor cause.  The
+                # primary ledger transition has already been attempted before enrichment.
+                failed = load_task_ledger(
+                    workspace_root=request.workspace_root,
+                    work_item=request.work_item,
+                    run_id=request.run_id,
+                ) or context.ledger
             raise ImplementationPortError("Task attempt executor failed.", ledger=failed) from exc
         ledger = _complete_task_execution(
             context=context,
