@@ -93,6 +93,9 @@ def test_streamed_subprocess_forwards_invalid_bytes_to_display_without_reader_fa
     assert result.exit_code == 0
     assert result.stop_reason is None
     assert result.stdout_text == "before\n\ufffdafter\n"
+    assert result.runtime_log_source_path is not None
+    assert result.runtime_log_source_path.read_bytes() == b"before\n\xffafter\n"
+    assert result.stdout_byte_count == len(b"before\n\xffafter\n")
 
 
 def test_stream_callbacks_run_in_caller_thread(tmp_path: Path) -> None:
