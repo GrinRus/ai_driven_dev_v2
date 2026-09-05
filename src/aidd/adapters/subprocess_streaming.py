@@ -20,6 +20,26 @@ _STREAM_READ_BYTES = 64 * 1024
 
 
 @dataclass(frozen=True, slots=True)
+class StreamChunkEvent:
+    target: StreamTarget
+    payload: bytes
+
+
+@dataclass(frozen=True, slots=True)
+class StreamEofEvent:
+    target: StreamTarget
+
+
+@dataclass(frozen=True, slots=True)
+class StreamErrorEvent:
+    target: StreamTarget
+    error: BaseException
+
+
+StreamEvent = StreamChunkEvent | StreamEofEvent | StreamErrorEvent
+
+
+@dataclass(frozen=True, slots=True)
 class StreamedSubprocessResult[ExitClassificationT: StrEnum]:
     exit_code: int | None
     stdout_text: str
@@ -43,20 +63,30 @@ def stream_reader(
     *,
     target: StreamTarget,
     pipe: BinaryIO | None,
-    queue: Queue[tuple[StreamTarget, bytes | None]],
+    queue: Queue[StreamEvent],
 ) -> None:
     if pipe is None:
-        queue.put((target, None))
+        queue.put(StreamEofEvent(target=target))
         return
+    reader_error: BaseException | None = None
     try:
         while True:
             chunk = pipe.read(_STREAM_READ_BYTES)
             if not chunk:
                 break
-            queue.put((target, chunk))
+            queue.put(StreamChunkEvent(target=target, payload=chunk))
+    except BaseException as exc:
+        reader_error = exc
     finally:
-        pipe.close()
-        queue.put((target, None))
+        try:
+            pipe.close()
+        except BaseException as exc:
+            if reader_error is None:
+                reader_error = exc
+    if reader_error is not None:
+        queue.put(StreamErrorEvent(target=target, error=reader_error))
+    else:
+        queue.put(StreamEofEvent(target=target))
 
 
 def safe_launch_failure_message(exc: OSError) -> str:
@@ -99,7 +129,7 @@ def run_streamed_subprocess[ExitClassificationT: StrEnum](
     process = supervisor.process
     sink = DiskBackedRuntimeLogSink(directory=capture_directory or spec.cwd)
 
-    queue: Queue[tuple[StreamTarget, bytes | None]] = Queue()
+    queue: Queue[StreamEvent] = Queue()
     reader_threads = (
         threading.Thread(
             target=stream_reader,
@@ -124,6 +154,7 @@ def run_streamed_subprocess[ExitClassificationT: StrEnum](
         thread.start()
 
     stream_done: dict[StreamTarget, bool] = {"stdout": False, "stderr": False}
+    reader_error: BaseException | None = None
     deadline = time.monotonic() + timeout_seconds if timeout_seconds is not None else None
     parent_exit_drain_deadline: float | None = None
     stop_reason: ExitClassificationT | None = None
@@ -185,18 +216,30 @@ def run_streamed_subprocess[ExitClassificationT: StrEnum](
             assert writer_error is not None
             raise writer_error
         try:
-            target, chunk = queue.get(timeout=queue_timeout_seconds)
+            event = queue.get(timeout=queue_timeout_seconds)
         except Empty:
             if process.poll() is not None and all(stream_done.values()):
                 break
             continue
 
-        if chunk is None:
-            stream_done[target] = True
+        if isinstance(event, StreamEofEvent):
+            stream_done[event.target] = True
             if process.poll() is not None and all(stream_done.values()):
                 break
             continue
 
+        if isinstance(event, StreamErrorEvent):
+            stream_done[event.target] = True
+            if reader_error is None:
+                reader_error = event.error
+            if process.poll() is None:
+                supervisor.request_stop()
+            if process.poll() is not None and all(stream_done.values()):
+                break
+            continue
+
+        target = event.target
+        chunk = event.payload
         try:
             display_chunk = sink.write(target, chunk)
         except BaseException:
@@ -218,6 +261,9 @@ def run_streamed_subprocess[ExitClassificationT: StrEnum](
         if stdin_writer.error is not None and stop_reason is None:
             sink.abort()
             raise stdin_writer.error
+    if reader_error is not None and stop_reason is None:
+        sink.abort()
+        raise reader_error
 
     snapshot = sink.finish()
     return StreamedSubprocessResult(
