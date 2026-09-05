@@ -7,13 +7,17 @@ from pathlib import Path
 import pytest
 
 from aidd.validators.protocol import (
+    DOCUMENT_READ_FAILURES,
     VALIDATOR_FINDING_CODES,
     VALIDATOR_REPORT_FIELDS,
     VALIDATOR_REPORT_PROTOCOL_VERSION,
+    DocumentReadFailureKind,
     ValidatorReportProtocolError,
     ValidatorReportSection,
     canonical_validator_finding_code,
     parse_validator_report,
+    resolve_document_read_failure,
+    resolve_document_read_failure_code,
     resolve_validator_finding_code,
     resolve_validator_report_field,
     validator_report_field,
@@ -45,6 +49,35 @@ def test_protocol_registry_resolves_fields_and_declared_aliases() -> None:
     assert resolve_validator_report_field("Repair required").key == "repair_required"
     with pytest.raises(ValidatorReportProtocolError, match="Unknown.*field"):
         resolve_validator_report_field("Validation result")
+
+
+def test_document_read_failure_registry_is_canonical_and_bidirectional() -> None:
+    assert tuple(spec.kind for spec in DOCUMENT_READ_FAILURES) == (
+        DocumentReadFailureKind.NON_FILE,
+        DocumentReadFailureKind.UNREADABLE,
+        DocumentReadFailureKind.INVALID_UTF8,
+        DocumentReadFailureKind.MALFORMED_FRONTMATTER,
+    )
+    assert len({spec.kind for spec in DOCUMENT_READ_FAILURES}) == len(DOCUMENT_READ_FAILURES)
+    assert len({spec.code for spec in DOCUMENT_READ_FAILURES}) == len(DOCUMENT_READ_FAILURES)
+    assert all(
+        resolve_document_read_failure(spec.kind) is spec
+        and resolve_document_read_failure_code(spec.code) is spec
+        and spec.finding_code == spec.code
+        and spec.code in {finding.code for finding in VALIDATOR_FINDING_CODES}
+        for spec in DOCUMENT_READ_FAILURES
+    )
+
+
+@pytest.mark.parametrize("value", ("missing", "STRUCT-UNKNOWN-DOCUMENT-READ"))
+def test_document_read_failure_registry_rejects_unknown_values(value: str) -> None:
+    resolver = (
+        resolve_document_read_failure_code
+        if value.startswith("STRUCT-")
+        else resolve_document_read_failure
+    )
+    with pytest.raises(ValidatorReportProtocolError, match="Unknown document-read failure"):
+        resolver(value)
 
 
 @pytest.mark.parametrize(
