@@ -19,8 +19,12 @@ from aidd.core.project_set import ResolvedProjectSet
 from aidd.core.remediation import latest_remediation_input_documents
 from aidd.core.repair import RepairBudgetPolicy, persist_repair_history_snapshot
 from aidd.core.run_store import (
+    load_attempt_artifact_index,
     load_stage_metadata,
+    next_attempt_number,
     persist_stage_status,
+    run_attempt_root,
+    run_stage_metadata_path,
     write_adapter_exception_artifact,
     write_attempt_artifact_index,
 )
@@ -594,7 +598,185 @@ def _intervention_context_documents(
     return tuple(path for path in candidates if path.exists())
 
 
-def run_single_stage_orchestration(
+def _terminalize_unhandled_post_execution_exception(
+    *,
+    workspace_root: Path,
+    work_item: str,
+    run_id: str,
+    stage: str,
+    contracts_root: Path,
+    changed_at_utc: datetime | None,
+    exception: Exception,
+    previous_status: str | None = None,
+) -> None:
+    """Best-effort terminalization for exceptions after an attempt starts.
+
+    Normal validation findings still use the repair state machine. An unexpected exception
+    in discovery, interview reconciliation, or validation is a failed terminal outcome, and
+    all secondary evidence writes must never replace the original exception.
+    """
+
+    if previous_status in {
+        StageState.EXECUTING.value,
+        StageState.VALIDATING.value,
+    }:
+        # A call that did not acquire a new attempt must not rewrite an existing live
+        # owner. Stale lifecycle convergence is handled by the explicit reconciliation API.
+        return
+    try:
+        metadata = load_stage_metadata(
+            workspace_root=workspace_root,
+            work_item=work_item,
+            run_id=run_id,
+            stage=stage,
+        )
+    except Exception as cleanup_error:
+        exception.add_note(
+            "Could not inspect stage metadata during post-execution terminalization: "
+            f"{type(cleanup_error).__name__}: {cleanup_error}"
+        )
+        return
+    if metadata is None or metadata.status not in {
+        StageState.EXECUTING.value,
+        StageState.VALIDATING.value,
+    }:
+        return
+
+    try:
+        attempt_number = (
+            next_attempt_number(
+                workspace_root=workspace_root,
+                work_item=work_item,
+                run_id=run_id,
+                stage=stage,
+            )
+            - 1
+        )
+    except Exception as cleanup_error:
+        exception.add_note(
+            "Could not locate the failed attempt during post-execution terminalization: "
+            f"{type(cleanup_error).__name__}: {cleanup_error}"
+        )
+        return
+    if attempt_number < 1:
+        try:
+            persist_stage_status(
+                workspace_root=workspace_root,
+                work_item=work_item,
+                run_id=run_id,
+                stage=stage,
+                status=StageState.FAILED.value,
+                changed_at_utc=changed_at_utc,
+            )
+        except Exception as cleanup_error:
+            exception.add_note(
+                "Could not persist failed stage state: "
+                f"{type(cleanup_error).__name__}: {cleanup_error}"
+            )
+        return
+
+    attempt_path = run_attempt_root(
+        workspace_root=workspace_root,
+        work_item=work_item,
+        run_id=run_id,
+        stage=stage,
+        attempt_number=attempt_number,
+    )
+    try:
+        artifact_index = load_attempt_artifact_index(
+            workspace_root=workspace_root,
+            work_item=work_item,
+            run_id=run_id,
+            stage=stage,
+            attempt_number=attempt_number,
+        )
+    except Exception as cleanup_error:
+        exception.add_note(
+            "Could not read attempt artifact index during post-execution terminalization: "
+            f"{type(cleanup_error).__name__}: {cleanup_error}"
+        )
+        artifact_index = None
+    attempt_mode = (
+        "initial"
+        if artifact_index is None or artifact_index.attempt_mode is None
+        else artifact_index.attempt_mode
+    )
+    execution_state = StageExecutionState(
+        stage=stage,
+        work_item=work_item,
+        run_id=run_id,
+        attempt_number=attempt_number,
+        attempt_path=attempt_path,
+        stage_metadata_path=run_stage_metadata_path(
+            workspace_root=workspace_root,
+            work_item=work_item,
+            run_id=run_id,
+            stage=stage,
+        ),
+    )
+    failure_message = " ".join(str(exception).split())[:2000] or type(exception).__name__
+    try:
+        persist_stage_status(
+            workspace_root=workspace_root,
+            work_item=work_item,
+            run_id=run_id,
+            stage=stage,
+            status=StageState.FAILED.value,
+            changed_at_utc=changed_at_utc,
+        )
+    except Exception as cleanup_error:
+        exception.add_note(
+            "Could not persist failed stage state: "
+            f"{type(cleanup_error).__name__}: {cleanup_error}"
+        )
+    try:
+        write_adapter_exception_artifact(
+            workspace_root=workspace_root,
+            work_item=work_item,
+            run_id=run_id,
+            stage=stage,
+            attempt_number=attempt_number,
+            exception=exception,
+        )
+    except Exception as cleanup_error:
+        exception.add_note(
+            "Could not write post-execution exception evidence: "
+            f"{type(cleanup_error).__name__}: {cleanup_error}"
+        )
+    try:
+        _write_canonical_stage_result(
+            workspace_root=workspace_root,
+            execution_state=execution_state,
+            lifecycle_status=StageState.FAILED,
+            attempt_mode=attempt_mode,
+            attempt_outcome=f"post-execution processing failed: {failure_message}",
+            repair_history=metadata.repair_history,
+            validator_verdict="not-run",
+            blockers=(f"Post-execution processing failed: {failure_message}",),
+        )
+    except Exception as cleanup_error:
+        exception.add_note(
+            "Could not write canonical failed stage result: "
+            f"{type(cleanup_error).__name__}: {cleanup_error}"
+        )
+    try:
+        write_attempt_artifact_index(
+            workspace_root=workspace_root,
+            work_item=work_item,
+            run_id=run_id,
+            stage=stage,
+            attempt_number=attempt_number,
+            contracts_root=contracts_root,
+            attempt_mode=attempt_mode,
+        )
+    except Exception as cleanup_error:
+        exception.add_note(
+            "Could not write attempt artifact index: "
+            f"{type(cleanup_error).__name__}: {cleanup_error}"
+        )
+
+
+def _run_single_stage_orchestration(
     *,
     workspace_root: Path,
     work_item: str,
@@ -1110,6 +1292,68 @@ def run_single_stage_orchestration(
         validation_transition=validation_transition,
         transition=transition,
     )
+
+
+def run_single_stage_orchestration(
+    *,
+    workspace_root: Path,
+    work_item: str,
+    run_id: str,
+    stage: str,
+    adapter_executor: Callable[
+        [AdapterInvocationBundle, StageExecutionState],
+        AdapterExecutionOutcome,
+    ],
+    contracts_root: Path = DEFAULT_STAGE_CONTRACTS_ROOT,
+    repair_policy: RepairBudgetPolicy | None = None,
+    project_set: ResolvedProjectSet | None = None,
+    changed_at_utc: datetime | None = None,
+    intervention_request_path: Path | None = None,
+    resume_mode: bool = False,
+    defer_success_publication: bool = False,
+    validation_finding_provider: Callable[
+        [StageExecutionState, StageOutputDiscovery], tuple[ValidationFinding, ...]
+    ]
+    | None = None,
+) -> StageOrchestrationResult:
+    """Run one stage and terminalize unexpected post-execution failures safely."""
+
+    metadata_before_attempt = load_stage_metadata(
+        workspace_root=workspace_root,
+        work_item=work_item,
+        run_id=run_id,
+        stage=stage,
+    )
+    try:
+        return _run_single_stage_orchestration(
+            workspace_root=workspace_root,
+            work_item=work_item,
+            run_id=run_id,
+            stage=stage,
+            adapter_executor=adapter_executor,
+            contracts_root=contracts_root,
+            repair_policy=repair_policy,
+            project_set=project_set,
+            changed_at_utc=changed_at_utc,
+            intervention_request_path=intervention_request_path,
+            resume_mode=resume_mode,
+            defer_success_publication=defer_success_publication,
+            validation_finding_provider=validation_finding_provider,
+        )
+    except Exception as exception:
+        _terminalize_unhandled_post_execution_exception(
+            workspace_root=workspace_root,
+            work_item=work_item,
+            run_id=run_id,
+            stage=stage,
+            contracts_root=contracts_root,
+            changed_at_utc=changed_at_utc,
+            exception=exception,
+            previous_status=(
+                None if metadata_before_attempt is None else metadata_before_attempt.status
+            ),
+        )
+        raise
 
 
 __all__ = [

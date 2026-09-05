@@ -3323,6 +3323,128 @@ def test_run_single_stage_orchestration_stops_on_adapter_failure(tmp_path: Path)
     assert orchestration.validation_transition is None
 
 
+@pytest.mark.parametrize(
+    "failpoint",
+    (
+        "discover_stage_markdown_outputs",
+        "_restore_operator_owned_answers_after_runtime_attempt",
+        "run_structural_validation_after_output_discovery",
+    ),
+)
+def test_run_single_stage_orchestration_terminalizes_post_execution_failpoints(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    failpoint: str,
+) -> None:
+    workspace_root = tmp_path / ".aidd"
+    create_run_manifest(
+        workspace_root=workspace_root,
+        work_item="WI-001",
+        run_id="run-001",
+        runtime_id="generic-cli",
+        stage_target="plan",
+        config_snapshot={"mode": "test"},
+    )
+    preview_bundle = prepare_stage_bundle(
+        workspace_root=workspace_root,
+        work_item="WI-001",
+        stage="plan",
+    )
+    _materialize_expected_inputs(preview_bundle.expected_input_bundle)
+
+    def _adapter_executor(
+        _invocation: AdapterInvocationBundle,
+        _execution_state: StageExecutionState,
+    ) -> AdapterExecutionOutcome:
+        return AdapterExecutionOutcome(succeeded=True, details="success")
+
+    def _raise_post_execution_failure(*_args: object, **_kwargs: object) -> object:
+        raise RuntimeError(f"{failpoint} failed")
+
+    monkeypatch.setattr(f"aidd.core.stage_runner.{failpoint}", _raise_post_execution_failure)
+
+    with pytest.raises(RuntimeError, match=f"{failpoint} failed"):
+        run_single_stage_orchestration(
+            workspace_root=workspace_root,
+            work_item="WI-001",
+            run_id="run-001",
+            stage="plan",
+            adapter_executor=_adapter_executor,
+        )
+
+    metadata = load_stage_metadata(
+        workspace_root=workspace_root,
+        work_item="WI-001",
+        run_id="run-001",
+        stage="plan",
+    )
+    assert metadata is not None
+    assert metadata.status == StageState.FAILED.value
+    assert [change.status for change in metadata.status_history[-2:]] == [
+        StageState.VALIDATING.value,
+        StageState.FAILED.value,
+    ]
+    attempt_path = sorted(
+        run_attempts_root(workspace_root, "WI-001", "run-001", "plan").glob("attempt-*")
+    )[-1]
+    exception_payload = json.loads(
+        (attempt_path / "adapter-exception.json").read_text(encoding="utf-8")
+    )
+    assert exception_payload["kind"] == "adapter-exception"
+    assert exception_payload["message"] == f"{failpoint} failed"
+    stage_result = (
+        workspace_root / "workitems" / "WI-001" / "stages" / "plan" / "stage-result.md"
+    ).read_text(encoding="utf-8")
+    assert "- Status: `failed`" in stage_result
+    assert f"Post-execution processing failed: {failpoint} failed" in stage_result
+    assert metadata.status not in {StageState.EXECUTING.value, StageState.VALIDATING.value}
+
+
+def test_run_single_stage_orchestration_does_not_rewrite_existing_live_owner(
+    tmp_path: Path,
+) -> None:
+    workspace_root = tmp_path / ".aidd"
+    create_run_manifest(
+        workspace_root=workspace_root,
+        work_item="WI-001",
+        run_id="run-001",
+        runtime_id="generic-cli",
+        stage_target="plan",
+        config_snapshot={"mode": "test"},
+    )
+    persist_stage_status(
+        workspace_root=workspace_root,
+        work_item="WI-001",
+        run_id="run-001",
+        stage="plan",
+        status=StageState.VALIDATING.value,
+    )
+
+    def _unused_adapter_executor(
+        _invocation: AdapterInvocationBundle,
+        _execution_state: StageExecutionState,
+    ) -> AdapterExecutionOutcome:
+        raise AssertionError("adapter must not run before preflight")
+
+    with pytest.raises(StageInputPreflightError, match="missing required input document"):
+        run_single_stage_orchestration(
+            workspace_root=workspace_root,
+            work_item="WI-001",
+            run_id="run-001",
+            stage="plan",
+            adapter_executor=_unused_adapter_executor,
+        )
+
+    metadata = load_stage_metadata(
+        workspace_root=workspace_root,
+        work_item="WI-001",
+        run_id="run-001",
+        stage="plan",
+    )
+    assert metadata is not None
+    assert metadata.status == StageState.VALIDATING.value
+
+
 def test_run_single_stage_orchestration_blocks_before_validation_for_operator_request(
     tmp_path: Path,
 ) -> None:
