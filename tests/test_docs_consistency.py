@@ -16,7 +16,11 @@ from aidd.core.stage_registry import (
 )
 from aidd.core.stages import STAGES
 from aidd.runtime_catalog import runtime_definitions, runtime_ids
-from aidd.validators.protocol import VALIDATOR_FINDING_CODES, VALIDATOR_REPORT_FIELDS
+from aidd.validators.protocol import (
+    DOCUMENT_READ_FAILURES,
+    VALIDATOR_FINDING_CODES,
+    VALIDATOR_REPORT_FIELDS,
+)
 from tests.agent_instruction_support import skill_text_with_references
 
 _USER_STORY_ID_PATTERN = re.compile(r"^###\s+(US-\d+)\b", re.MULTILINE)
@@ -249,6 +253,21 @@ def test_validator_report_contract_matches_protocol_registry() -> None:
     for spec in VALIDATOR_FINDING_CODES:
         if spec.status == "legacy":
             assert f"code `{spec.code}`" in legacy_vocabulary
+
+
+def test_document_read_failure_contract_matches_protocol_registry() -> None:
+    repo_root = _repo_root()
+    contract = (repo_root / "contracts" / "documents" / "validator-report.md").read_text(
+        encoding="utf-8"
+    )
+    taxonomy = contract.split("### Document-read failure taxonomy", maxsplit=1)[1].split(
+        "### Semantic checks", maxsplit=1
+    )[0]
+    documented = dict(
+        re.findall(r"\| `([^`]+)` \| `([^`]+)` \|", taxonomy)
+    )
+    expected = {spec.kind.value: spec.code for spec in DOCUMENT_READ_FAILURES}
+    assert documented == expected
 
 
 def test_live_docs_classify_malformed_interview_documents_as_stage_output_failure() -> None:

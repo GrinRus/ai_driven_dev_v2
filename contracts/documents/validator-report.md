@@ -114,6 +114,19 @@ publish codes outside this list.
 - `STRUCT-OUTPUT-PROMOTED`
 - `STRUCT-STALE-STAGE-RESULT-PLACEHOLDER`
 
+### Document-read failure taxonomy
+
+Structural validation uses the following canonical failure kinds when a declared Markdown
+document cannot be read. The kind is the machine-readable cause used by probes and orchestration;
+the code is the validator finding written to `validator-report.md` and must remain stable.
+
+| Failure kind | Canonical finding code | Meaning |
+| --- | --- | --- |
+| `non_file` | `STRUCT-DOCUMENT-NON-FILE` | The discovered path exists but is not a regular file. |
+| `unreadable` | `STRUCT-DOCUMENT-UNREADABLE` | The path cannot be opened or read. |
+| `invalid_utf8` | `STRUCT-DOCUMENT-INVALID-UTF8` | The file bytes are not valid UTF-8. |
+| `malformed_frontmatter` | `STRUCT-DOCUMENT-MALFORMED-FRONTMATTER` | Frontmatter delimiters or entries are malformed. |
+
 ### Semantic checks
 
 - `SEM-INCOMPLETE-EXECUTION-SUMMARY`

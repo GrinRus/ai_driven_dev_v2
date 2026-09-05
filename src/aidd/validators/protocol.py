@@ -19,6 +19,15 @@ class ValidatorReportProtocolError(ValueError):
     """Raised when validator-report protocol vocabulary is unknown or invalid."""
 
 
+class DocumentReadFailureKind(StrEnum):
+    """Canonical machine-readable causes for a Markdown document read failure."""
+
+    NON_FILE = "non_file"
+    UNREADABLE = "unreadable"
+    INVALID_UTF8 = "invalid_utf8"
+    MALFORMED_FRONTMATTER = "malformed_frontmatter"
+
+
 class ValidatorReportSection(StrEnum):
     SUMMARY = "Summary"
     STRUCTURAL = "Structural checks"
@@ -52,6 +61,21 @@ class ValidatorFindingCodeSpec:
         if self.section is ValidatorReportSection.SEMANTIC:
             return "semantic"
         return "cross-document"
+
+
+@dataclass(frozen=True, slots=True)
+class DocumentReadFailureSpec:
+    """Map one document-read failure kind to its canonical finding code."""
+
+    kind: DocumentReadFailureKind
+    code: str
+    description: str
+
+    @property
+    def finding_code(self) -> str:
+        """Explicit alias for callers that emit a :class:`ValidationFinding`."""
+
+        return self.code
 
 
 @dataclass(frozen=True, slots=True)
@@ -129,6 +153,10 @@ VALIDATOR_REPORT_FIELDS = (
 )
 
 _STRUCTURAL_CODES = (
+    "STRUCT-DOCUMENT-NON-FILE",
+    "STRUCT-DOCUMENT-UNREADABLE",
+    "STRUCT-DOCUMENT-INVALID-UTF8",
+    "STRUCT-DOCUMENT-MALFORMED-FRONTMATTER",
     "INTERVIEW-MALFORMED-DOCUMENT",
     "STRUCT-DUPLICATE-REQUIRED-SECTION",
     "STRUCT-EMPTY-REQUIRED-SECTION",
@@ -211,6 +239,32 @@ VALIDATOR_FINDING_CODES = (
     ),
 )
 
+DOCUMENT_READ_FAILURES = (
+    DocumentReadFailureSpec(
+        kind=DocumentReadFailureKind.NON_FILE,
+        code="STRUCT-DOCUMENT-NON-FILE",
+        description="The discovered Markdown path exists but is not a regular file.",
+    ),
+    DocumentReadFailureSpec(
+        kind=DocumentReadFailureKind.UNREADABLE,
+        code="STRUCT-DOCUMENT-UNREADABLE",
+        description="The Markdown path cannot be opened or read.",
+    ),
+    DocumentReadFailureSpec(
+        kind=DocumentReadFailureKind.INVALID_UTF8,
+        code="STRUCT-DOCUMENT-INVALID-UTF8",
+        description="The Markdown bytes are not valid UTF-8.",
+    ),
+    DocumentReadFailureSpec(
+        kind=DocumentReadFailureKind.MALFORMED_FRONTMATTER,
+        code="STRUCT-DOCUMENT-MALFORMED-FRONTMATTER",
+        description="The optional frontmatter delimiters or entries are malformed.",
+    ),
+)
+
+DOCUMENT_READ_FAILURE_CODES = tuple(spec.code for spec in DOCUMENT_READ_FAILURES)
+DOCUMENT_READ_FAILURE_KINDS = tuple(spec.kind for spec in DOCUMENT_READ_FAILURES)
+
 _FIELDS_BY_KEY = MappingProxyType({field.key: field for field in VALIDATOR_REPORT_FIELDS})
 _FIELDS_BY_LABEL = MappingProxyType(
     {
@@ -220,6 +274,12 @@ _FIELDS_BY_LABEL = MappingProxyType(
     }
 )
 _CODES_BY_VALUE = MappingProxyType({spec.code: spec for spec in VALIDATOR_FINDING_CODES})
+_DOCUMENT_READ_FAILURES_BY_KIND = MappingProxyType(
+    {spec.kind: spec for spec in DOCUMENT_READ_FAILURES}
+)
+_DOCUMENT_READ_FAILURES_BY_CODE = MappingProxyType(
+    {spec.code: spec for spec in DOCUMENT_READ_FAILURES}
+)
 
 _FIELD_LINE_PATTERN = re.compile(r"^\s*[-*]\s*(?P<label>[^:]+):\s*(?P<value>.*?)\s*$")
 _FINDING_LINE_PATTERN = re.compile(
@@ -268,6 +328,33 @@ def resolve_validator_finding_code(
             f"Legacy validator finding code cannot be written: {normalized}."
         )
     return spec
+
+
+def resolve_document_read_failure(
+    kind: DocumentReadFailureKind | str,
+) -> DocumentReadFailureSpec:
+    """Resolve a canonical document-read failure kind from a string or enum."""
+
+    normalized = kind.value if isinstance(kind, DocumentReadFailureKind) else kind.strip().lower()
+    normalized = normalized.replace("-", "_")
+    try:
+        return _DOCUMENT_READ_FAILURES_BY_KIND[DocumentReadFailureKind(normalized)]
+    except (KeyError, ValueError) as exc:
+        raise ValidatorReportProtocolError(
+            f"Unknown document-read failure kind: {kind!r}."
+        ) from exc
+
+
+def resolve_document_read_failure_code(code: str) -> DocumentReadFailureSpec:
+    """Resolve a canonical document-read failure from its validator finding code."""
+
+    normalized = code.strip().upper()
+    try:
+        return _DOCUMENT_READ_FAILURES_BY_CODE[normalized]
+    except KeyError as exc:
+        raise ValidatorReportProtocolError(
+            f"Unknown document-read failure code: {code!r}."
+        ) from exc
 
 
 def canonical_validator_finding_code(code: str) -> str:
