@@ -12,6 +12,8 @@ Intervention rules:
 - do not create or edit `repair-brief.md`;
 - Do not write `stage-result.md` or `validator-report.md`; AIDD owns their canonical
   status, validation, history, and publication;
+- Never create, edit, delete, or replace either record; if a finding names one, expose the needed
+  correction in `research-notes.md` and let AIDD reconcile the workflow record.
 - record the intervention outcome truthfully in substantive runtime content for AIDD reconciliation;
 - keep unresolved blocking questions explicit instead of inventing answers;
 - if the request cannot be safely completed within the current stage scope, record the blocker in `research-notes.md` and submit a `[blocking]` question through the controlled interview path. Substantive blocker prose alone does not pause AIDD.
