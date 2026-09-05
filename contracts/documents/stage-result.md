@@ -10,17 +10,17 @@ post-runtime validation. The runtime must not create or edit `stage-result.md` i
 repair, or intervention attempts; it exposes evidence in its substantive output. A blocker that
 prevents completion must also become a `[blocking]` question through the controlled interview
 path so AIDD can persist the blocked state; substantive blocker prose alone does not pause AIDD.
-Legacy runtime-authored drafts may be retained as raw candidate evidence and reconciled by AIDD,
-but compatibility handling does not grant runtime write authority over this record.
-When retaining a runtime draft, use the attempt boundary captured before runtime execution;
-later log or artifact creation must not cause the draft to be mistaken for pre-attempt content.
+Unexpected runtime candidates may be retained as raw candidate evidence and reconciled by AIDD,
+but compatibility handling does not grant runtime write authority over this record. When retaining
+a candidate, use the attempt boundary captured before runtime execution; later log or artifact
+creation must not cause the candidate to be mistaken for pre-attempt content.
 
 Before cross-document validation, AIDD adds declared project-set evidence to its exact bootstrap
 placeholder without claiming a terminal status or validator pass. When substantive outputs and
 cross-document checks validate, AIDD replaces this recognized bootstrap record with a complete
 lifecycle-derived record before validating the terminal record. This must not consume a model
 repair attempt. Invalid substantive outputs still require repair or an explicit stop;
-non-placeholder runtime drafts retain their existing validation and raw-evidence handling.
+non-placeholder runtime candidates retain their existing validation and raw-evidence handling.
 
 ## Required sections
 
@@ -130,7 +130,7 @@ non-placeholder runtime drafts retain their existing validation and raw-evidence
   - Must explain why the stage ended in the declared terminal status.
   - Must include repair-budget outcome when repair logic was used.
   - If AIDD normalizes stale runtime status/verdict text after canonical validation
-    passes, terminal notes must not retain runtime-authored claims that the stage
+    passes, terminal notes must not retain candidate claims that the stage
     ended as `failed`, `blocked`, or `needs-input`.
   - If `repair-brief.md` declares `repair-budget-final-attempt`, status must reflect the actual validation outcome of that attempt, not fail solely because no later rerun is available.
   - If AIDD records `repair-budget-exhausted` after a failed final attempt, status must be `failed`.
@@ -171,7 +171,7 @@ non-placeholder runtime drafts retain their existing validation and raw-evidence
   review, QA, or release as the next operator step until the intervening canonical stage
   has completed.
 - If canonical AIDD validation passes, runtime exit succeeded, and no unresolved blocking
-  questions remain, AIDD may normalize a stale draft `Status: failed|blocked` or
+  questions remain, AIDD may normalize a stale candidate `Status: failed|blocked` or
   `Validator verdict: fail` to `succeeded` / `pass` before publication and record that
   normalization in `Terminal state notes`. It must remove or replace stale
   terminal-status notes that contradict the normalized status, while preserving

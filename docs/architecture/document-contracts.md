@@ -167,17 +167,16 @@ This document records:
 - next actions,
 - links to logs and reports.
 
-It is the durable checkpoint for workflow progression.
-
-The runtime-authored version is a draft until post-runtime validation finishes. AIDD must not
-advance a stage solely because the draft claims success; the canonical validator state decides
-whether the draft may be published downstream.
+It is the durable checkpoint for workflow progression. AIDD creates it from lifecycle state,
+runtime evidence, and post-runtime validation. Any runtime-produced content with this filename is
+unexpected candidate evidence retained under the attempt boundary; it is never a lifecycle
+checkpoint and cannot advance or publish a stage.
 
 ## 7.1 Validator report ownership
 
-`validator-report.md` is AIDD-canonical after the validator coordinator runs. Runtime-authored
-content with the same filename is treated as draft evidence and can be overwritten by the
-canonical validator report.
+`validator-report.md` is AIDD-canonical after the validator coordinator runs. Any runtime-produced
+content with the same filename is unexpected candidate evidence retained under the attempt
+boundary and can never supersede the canonical validator report.
 
 The report must not claim `pass` when canonical findings remain open.
 
