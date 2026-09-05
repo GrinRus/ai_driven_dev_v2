@@ -6,7 +6,7 @@ Describe structural, semantic, and cross-document validation findings.
 
 The canonical report is written by AIDD after post-runtime validation. The runtime must not
 create or edit `validator-report.md` in initial, repair, or intervention attempts; it reads
-findings as repair input and fixes the named substantive output. Legacy model-authored reports
+findings as repair input and fixes the named substantive output. Unexpected model-produced reports
 may be retained as raw candidate evidence and replaced by the canonical AIDD report, but this
 compatibility handling does not grant runtime write authority.
 

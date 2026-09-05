@@ -201,6 +201,11 @@ def test_artifact_ownership_docs_and_prompt_packs_are_consistent() -> None:
 
     assert "`validator-report.md` is AIDD-canonical" in document_contracts
     assert "`repair-brief.md` is not runtime-authored" in document_contracts
+    for forbidden_phrase in (
+        "The runtime-authored version is a draft",
+        "Runtime-authored content with the same filename is treated as draft evidence",
+    ):
+        assert forbidden_phrase not in document_contracts
     assert "nested or indented bullets" in questions_contract.lower()
     assert "nested or indented bullets" in document_contracts.lower()
     assert "AIDD writes this workflow record" in stage_result_contract
@@ -216,7 +221,12 @@ def test_artifact_ownership_docs_and_prompt_packs_are_consistent() -> None:
         )
 
         normalized_contract = " ".join(stage_contract.split())
-        assert "runtime-authored summary draft" not in stage_contract
+        for forbidden_phrase in (
+            "runtime-authored summary draft",
+            "runtime-authored version is a draft",
+            "runtime-authored content with the same filename is treated as draft evidence",
+        ):
+            assert forbidden_phrase not in stage_contract
         assert "AIDD-generated workflow records" in stage_contract
         assert "runtime must not create or edit either record" in normalized_contract
         assert "initial, repair, or intervention attempts" in normalized_contract
