@@ -12,19 +12,6 @@ const STUDIO_INBOX_SECTION_LABELS = Object.freeze({
   complete: "Complete"
 });
 
-// Older persisted fixtures may still use the pre-Wave-42 presentation keys. They
-// are accepted as input only; the DOM always exposes the core-owned vocabulary.
-const CORE_INBOX_SECTION_ALIASES = Object.freeze({
-  "needs-input": "needs-input",
-  running: "running",
-  ready: "ready",
-  complete: "complete",
-  "needs-decision": "needs-input",
-  "running-now": "running",
-  "ready-to-continue": "ready",
-  "flow-complete": "complete"
-});
-
 function inboxRouteAttributes(route) {
   if (!route) return "";
   return [
@@ -279,23 +266,20 @@ function runningNowInboxItems(items = []) {
 }
 
 function studioInboxSections(inbox) {
-  const durable = new Map((inbox?.durable?.sections || []).map((section) => [section.key, section]));
-  const sections = new Map();
-  for (const section of durable.values()) {
-    const presentationKey = CORE_INBOX_SECTION_ALIASES[section.key] || section.key;
-    sections.set(presentationKey, {
+  const sections = new Map((inbox?.durable?.sections || []).map((section) => [
+    section.key,
+    {
       ...section,
-      key: presentationKey,
-      label: STUDIO_INBOX_SECTION_LABELS[presentationKey] || section.label
-    });
-  }
+      label: STUDIO_INBOX_SECTION_LABELS[section.key] || section.label
+    }
+  ]));
   const durableRunning = sections.get("running");
   const runningNow = runningNowInboxItems(inbox?.running_now || []);
   sections.set("running", {
     ...(durableRunning || {}),
     key: "running",
     label: STUDIO_INBOX_SECTION_LABELS.running,
-    // A live job is the richer compatibility representation for its same
+    // A live job provides current process details for its same
     // work-item/run; fall back to the durable wait-for-stage item otherwise.
     items: runningNow.length ? runningNow : (durableRunning?.items || [])
   });

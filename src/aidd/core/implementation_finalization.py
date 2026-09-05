@@ -1,13 +1,13 @@
 from __future__ import annotations
 
 import json
-import re
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from pathlib import Path
 from uuid import uuid4
 
 from aidd.core.identifiers import contained_component_path
+from aidd.core.markdown import extract_h2_section
 from aidd.core.run_store import run_stage_root
 from aidd.core.task_attempt_lifecycle import existing_attempts, reconcile_staging_attempts
 from aidd.core.task_ledger import (
@@ -166,15 +166,6 @@ def complete_task_finalization(
     return ledger
 
 
-def _section(markdown: str, heading: str) -> str:
-    match = re.search(
-        rf"^##\s+{re.escape(heading)}\s*$\n(?P<body>.*?)(?=^##\s+|\Z)",
-        markdown,
-        flags=re.MULTILINE | re.DOTALL | re.IGNORECASE,
-    )
-    return match.group("body").strip() if match is not None else ""
-
-
 def _section_bullets(markdown: str, heading: str) -> tuple[str, ...]:
     """Return top-level bullets with wrapped Markdown lines joined together.
 
@@ -184,7 +175,7 @@ def _section_bullets(markdown: str, heading: str) -> tuple[str, ...]:
     evidence cannot be split into unverifiable fragments during aggregation.
     """
 
-    section = _section(markdown, heading)
+    section = extract_h2_section(markdown, heading)
     bullets: list[str] = []
     current: str | None = None
     for raw_line in section.splitlines():
@@ -221,7 +212,7 @@ def render_aggregate_implementation_report(
             f"- `{task.id}`: {task.outcome} Evidence: "
             f"`{entry.latest_attempt_path}/implementation-report.md`."
         )
-        for line in _section(report, "Touched files").splitlines():
+        for line in extract_h2_section(report, "Touched files").splitlines():
             normalized_line = line.strip()
             if (
                 normalized_line.startswith("-")
@@ -230,7 +221,7 @@ def render_aggregate_implementation_report(
             ):
                 touched.append(normalized_line)
         verification_section = (
-            "Verification" if _section(report, "Verification") else "Verification notes"
+            "Verification" if extract_h2_section(report, "Verification") else "Verification notes"
         )
         for bullet in _section_bullets(report, verification_section):
             verification.append(f"- `{task.id}` {bullet}")
@@ -239,7 +230,7 @@ def render_aggregate_implementation_report(
                 f"- `{task.id}` `{criterion.id}` -> covered by "
                 f"`{entry.latest_attempt_path}/implementation-report.md`."
             )
-        for line in _section(report, "Follow-up notes").splitlines():
+        for line in extract_h2_section(report, "Follow-up notes").splitlines():
             if line.strip().startswith("-") and "none" not in line.casefold():
                 follow_up.append(f"- `{task.id}` {line.strip()[1:].strip()}")
     lines = [

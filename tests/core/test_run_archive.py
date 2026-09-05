@@ -81,7 +81,7 @@ def test_archive_decisions_are_append_only_and_leave_manifest_immutable(tmp_path
     assert hashlib.sha256(manifest.read_bytes()).hexdigest() == before_hash
 
 
-def test_archive_read_model_supports_legacy_manifest_state(tmp_path: Path) -> None:
+def test_archive_read_model_rejects_retired_manifest_state(tmp_path: Path) -> None:
     workspace_root = tmp_path / ".aidd"
     manifest = _manifest(workspace_root)
     payload = json.loads(manifest.read_text(encoding="utf-8"))
@@ -93,14 +93,14 @@ def test_archive_read_model_supports_legacy_manifest_state(tmp_path: Path) -> No
     }
     manifest.write_text(json.dumps(payload), encoding="utf-8")
 
-    summary = resolve_run_metadata_summary(
-        workspace_root=workspace_root,
-        work_item="WI-ARCHIVE",
-        run_id="run-1",
-    )
-
-    assert summary.archive.archived is True
-    assert summary.archive.reason == "Legacy archive."
+    with pytest.raises(
+        RunArchiveProtocolError, match="Embedded operator_archive state is unsupported"
+    ):
+        resolve_run_metadata_summary(
+            workspace_root=workspace_root,
+            work_item="WI-ARCHIVE",
+            run_id="run-1",
+        )
 
 
 def test_archive_read_model_rejects_malformed_overlay(tmp_path: Path) -> None:

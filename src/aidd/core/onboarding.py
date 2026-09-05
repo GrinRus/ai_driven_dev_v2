@@ -15,7 +15,6 @@ from aidd.core.run_store import RUN_MANIFEST_FILENAME, work_item_runs_root
 from aidd.core.workspace import (
     WORKITEM_CONTEXT_USER_REQUEST_FILENAME,
     WORKITEM_METADATA_FILENAME,
-    WORKSPACE_WORKITEMS_DIRNAME,
     WorkItemContextSeedResult,
     WorkspaceBootstrapService,
     work_item_context_root,
@@ -117,7 +116,7 @@ def _first_paragraph(text: str) -> str:
 
 
 def project_work_item_request(markdown: str) -> WorkItemRequestProjection:
-    """Project canonical and legacy request Markdown without rewriting it."""
+    """Project structured or free-form current request Markdown without rewriting it."""
     body = _request_body(markdown)
     sections: dict[str, list[str]] = {}
     current: str | None = None
@@ -146,14 +145,14 @@ def project_work_item_request(markdown: str) -> WorkItemRequestProjection:
             structured=True,
         )
 
-    # Legacy request bodies have no stable field boundaries. Keep the complete
+    # Free-form CLI request bodies have no stable field boundaries. Keep the complete
     # body in context while deriving only bounded navigation candidates.
-    legacy_navigation_body = "\n".join(
+    navigation_body = "\n".join(
         line for line in body.splitlines() if not line.lstrip().startswith("#")
     ).strip()
     return WorkItemRequestProjection(
         title=_first_meaningful_line(body),
-        brief=_first_paragraph(legacy_navigation_body),
+        brief=_first_paragraph(navigation_body),
         context=body,
         constraints="",
         additional_information="",
@@ -391,10 +390,6 @@ class OnboardingService:
         return tuple(items)
 
 
-def workspace_contains_work_items(workspace_root: Path) -> bool:
-    return (workspace_root / WORKSPACE_WORKITEMS_DIRNAME).is_dir()
-
-
 __all__ = [
     "OnboardingProjectDeclaration",
     "OnboardingProjectSummary",
@@ -404,5 +399,4 @@ __all__ = [
     "OperatorRequestContext",
     "WorkItemRequestProjection",
     "project_work_item_request",
-    "workspace_contains_work_items",
 ]

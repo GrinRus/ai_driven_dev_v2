@@ -114,29 +114,16 @@ Any compatibility policy change must update, in the same change:
 - CI/release workflow configuration when policy requirements change;
 - roadmap status for the corresponding local task.
 
-## 6. Deprecation rules
+## 6. Alpha interface changes
 
-Deprecations must be explicit, time-bounded, and reversible until the announced removal window closes.
+Alpha interfaces and persisted formats may change without a backward-compatibility window.
+Changes must be explicit in current contracts and the changelog.
 
 ### 6.1 Shared deprecation lifecycle
 
-Every deprecation follows these phases:
-
-1. Announcement:
-   - mark deprecated in docs and roadmap notes;
-   - describe replacement path;
-   - define the planned removal milestone.
-2. Transition window:
-   - keep legacy behavior available;
-   - provide migration guidance and examples.
-3. Removal:
-   - remove deprecated behavior;
-   - update contracts/docs/scenarios to remove stale references.
-
-Minimum notice window:
-
-- at least two tagged releases between deprecation announcement and removal for non-critical changes;
-- immediate removal is allowed only for security or severe data-integrity risks, with explicit incident notes.
+For a retired interface, remove its implementation, update all in-repository consumers, and
+document the current replacement. Unsupported persisted inputs must stop explicitly. Do not
+retain aliases, silent upgrades, or parallel readers solely for older AIDD versions.
 
 ### 6.2 Contract deprecation rules
 
@@ -169,20 +156,19 @@ catalog entries.
   - removal target release.
 - Scenario removal must update `docs/e2e/live-e2e-catalog.md` and keep historical evidence discoverable in Git history.
 
-### 6.5 Current compatibility shims
+### 6.5 Current-format boundary
 
-These shims are intentionally isolated in `src/aidd/compatibility.py`. The Wave 16
-decision is to retain them for compatibility instead of deleting legacy behavior
-in the complexity-reduction refactor. They are covered by config and run-store
-compatibility tests.
+The alpha cleanup intentionally removes backward compatibility for obsolete configuration,
+artifact layouts, document aliases, and internal Python imports. Only formats written by the
+current AIDD implementation are supported. Historical workspaces must be recreated with the
+current CLI; retained historical evidence can be inspected directly without being resumed.
 
-- `legacy-raw-provider-command-upgrade` keeps older config files working when a
-  provider runtime command is set to the raw probe binary, such as `codex`,
-  without an explicit execution mode.
-- `legacy-artifact-index-without-prompt-provenance` keeps older run artifact
-  indexes readable when they predate prompt-pack provenance metadata.
+Removed or malformed formats must fail explicitly when read, rather than being silently upgraded
+or accepted with invented provenance. Runtime-generated formatting variations allowed by the
+current Markdown contracts remain supported; they are not version-compatibility shims.
 
-Removal window: either shim may only be removed by a future compatibility-removal
-wave after release notes announce the deprecation and at least one minor release
-keeps the shim available. That future task must update this policy, migration
-guidance, and the compatibility tests in the same change.
+`logging.mode` is removed because it never controlled logging. Live log forwarding uses
+`--log-follow` / `--no-log-follow`; durable runtime logs remain mandatory in both modes.
+Remove the obsolete `[logging]` section from existing configuration before loading it.
+Bare provider probe commands without an explicit execution mode are rejected; omit the command
+to use the maintained default, or configure the command and mode together.

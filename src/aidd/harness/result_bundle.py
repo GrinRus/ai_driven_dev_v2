@@ -4,12 +4,11 @@ import hashlib
 import json
 import shutil
 import tempfile
-import warnings
 from collections.abc import Mapping
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from pathlib import Path
-from typing import Any, cast
+from typing import Any
 
 from aidd.core.identifiers import SafeIdentifier, contained_component_path
 from aidd.core.workspace import WORKSPACE_REPORTS_DIRNAME, WORKSPACE_REPORTS_EVALS_DIRNAME
@@ -76,11 +75,7 @@ def _validate_run_id(run_id: str) -> str:
 
 def build_result_bundle_layout(*, workspace_root: Path, run_id: str) -> ResultBundleLayout:
     normalized_run_id = _validate_run_id(run_id)
-    evals_root = (
-        workspace_root
-        / WORKSPACE_REPORTS_DIRNAME
-        / WORKSPACE_REPORTS_EVALS_DIRNAME
-    )
+    evals_root = workspace_root / WORKSPACE_REPORTS_DIRNAME / WORKSPACE_REPORTS_EVALS_DIRNAME
     run_root = contained_component_path(
         evals_root,
         normalized_run_id,
@@ -388,21 +383,6 @@ def _atomic_write_json(path: Path, payload: Any) -> Path:
     return path
 
 
-def read_artifact_digests(*, layout: ResultBundleLayout) -> dict[str, Any] | None:
-    if not layout.artifact_digests_path.is_file():
-        warnings.warn(
-            "Result bundle has no artifact-digests.json; treating it as a legacy bundle.",
-            stacklevel=2,
-        )
-        return None
-    payload = json.loads(layout.artifact_digests_path.read_text(encoding="utf-8"))
-    if not isinstance(payload, dict):
-        raise ValueError("Result bundle artifact digest manifest is malformed.")
-    if payload.get("schema_version") != 1 or not isinstance(payload.get("artifacts"), list):
-        raise ValueError("Result bundle artifact digest manifest is malformed.")
-    return cast(dict[str, Any], payload)
-
-
 def copy_or_link_run_artifacts(
     *,
     layout: ResultBundleLayout,
@@ -427,9 +407,7 @@ def copy_or_link_run_artifacts(
 
     layout.run_root.mkdir(parents=True, exist_ok=True)
     layout.artifact_digests_path.unlink(missing_ok=True)
-    staging_root = Path(
-        tempfile.mkdtemp(prefix=".artifact-materialization-", dir=layout.run_root)
-    )
+    staging_root = Path(tempfile.mkdtemp(prefix=".artifact-materialization-", dir=layout.run_root))
     prepared: list[tuple[str, Path, Path, str, int]] = []
     try:
         for key, (source_path, destination_path) in sources.items():
@@ -438,9 +416,7 @@ def copy_or_link_run_artifacts(
             source_digest = _sha256(source_path)
             staged_digest = _sha256(staged_path)
             if source_digest != staged_digest:
-                raise OSError(
-                    f"Artifact copy verification failed: {source_path.as_posix()}"
-                )
+                raise OSError(f"Artifact copy verification failed: {source_path.as_posix()}")
             prepared.append(
                 (
                     key,
@@ -476,7 +452,4 @@ def copy_or_link_run_artifacts(
     finally:
         shutil.rmtree(staging_root, ignore_errors=True)
 
-    return {
-        key: destination_path
-        for key, (_source_path, destination_path) in sources.items()
-    }
+    return {key: destination_path for key, (_source_path, destination_path) in sources.items()}

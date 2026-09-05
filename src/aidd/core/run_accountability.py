@@ -134,7 +134,7 @@ def resolve_run_accountability(
                 )
             elif index is not None and index.attempt_mode is None:
                 warnings.append(
-                    f"Attempt mode is missing for legacy {stage} attempt {attempt_number}."
+                    f"Attempt mode is missing for {stage} attempt {attempt_number}."
                 )
             attempts.append(
                 RunAccountabilityAttempt(
@@ -159,13 +159,13 @@ def resolve_run_accountability(
         )
     if not attempts and prompts:
         warnings.append(
-            "Attempt-level prompt provenance is unavailable; using run-manifest fallback."
+            "No attempts are recorded; showing planned run-manifest prompt provenance."
         )
     if attempts and not prompts:
         warnings.append("Attempt-level prompt provenance contains no usable prompt entries.")
     elif not prompts:
         warnings.append(
-            "Run manifest has no prompt-pack provenance; it may predate provenance capture."
+            "Run manifest has no prompt-pack provenance."
         )
     if not summary.repository_git_sha:
         warnings.append("Run manifest does not record a repository Git SHA.")

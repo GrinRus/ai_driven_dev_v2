@@ -8,7 +8,7 @@ repo:
 objective: Keep a bounded deterministic workflow lane local by exercising a multi-stage
   fixture-backed path without public repositories or live task selection.
 task: Run a deterministic bounded workflow against the local minimal fixture and
-  verify the final tasklist-stage outputs are produced.
+  verify the final tasklist-stage outputs are produced by their declared owners.
 stage_scope:
   start: idea
   end: tasklist
@@ -41,8 +41,19 @@ verify:
   - test -f .aidd/workitems/WI-DETERMINISTIC-WORKFLOW/stages/tasklist/output/validator-report.md
   - grep -En '^### (TL-[0-9]+|T[0-9]+) .+' .aidd/workitems/WI-DETERMINISTIC-WORKFLOW/stages/tasklist/output/tasklist.md
   - grep -En 'Outcome:|Dominant deliverable:|In scope:|Acceptance criteria:' .aidd/workitems/WI-DETERMINISTIC-WORKFLOW/stages/tasklist/output/tasklist.md
+  - |-
+    python3 - <<'PYTHON'
+    import json
+    from pathlib import Path
+    indexes = list(Path('.aidd/reports/runs/WI-DETERMINISTIC-WORKFLOW').rglob('artifact-index.json'))
+    assert indexes, 'Expected retained attempt evidence'
+    for path in indexes:
+        documents = json.loads(path.read_text())['documents']
+        assert not {'runtime_stage_result_draft', 'runtime_validator_draft'} & documents.keys(), path
+    PYTHON
   pass_conditions:
   - Required tasklist output documents exist.
+  - Runtime writes substantive content only; AIDD publishes lifecycle and validator records.
   - Every task uses the rich task-card shape with task-local acceptance criteria.
 limits:
   timeout_minutes: 5

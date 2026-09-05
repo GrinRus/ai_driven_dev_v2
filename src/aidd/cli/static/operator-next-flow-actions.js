@@ -172,10 +172,6 @@ function resetLaunchReadiness(wizard = state.nextFlowWizard) {
   wizard.launchReadinessError = "";
 }
 
-function nextFlowDraftForm(action = state.nextFlowWizard.action) {
-  return action === "clone-flow" ? "clone" : "follow-up";
-}
-
 function nextFlowBrowserDraftIdentity(action = state.nextFlowWizard.action) {
   return operatorPurposeDraftIdentity(
     action === "clone-flow" ? "clone" : "follow-up",

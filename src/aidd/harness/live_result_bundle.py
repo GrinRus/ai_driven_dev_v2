@@ -31,7 +31,7 @@ ArtifactCategory = Literal[
     "target-patch",
     "task-run",
 ]
-ReferenceMode = Literal["bundle-relative", "legacy-degraded"]
+ReferenceMode = Literal["bundle-relative"]
 
 
 class LiveResultBundleError(RuntimeError):
@@ -107,22 +107,7 @@ def resolve_live_result_reference(
     *,
     bundle_root: Path,
     reference: str,
-    allow_legacy_absolute: bool = False,
-) -> tuple[Path, ReferenceMode]:
-    candidate = Path(reference)
-    if candidate.is_absolute():
-        if not allow_legacy_absolute:
-            raise LiveResultBundleError(
-                "Absolute live result references are legacy evidence and require "
-                "allow_legacy_absolute=True."
-            )
-        resolved = candidate.resolve(strict=True)
-        if not resolved.is_file():
-            raise LiveResultBundleError(
-                f"Legacy live result reference is not a file: {reference!r}."
-            )
-        return resolved, "legacy-degraded"
-
+) -> Path:
     relative = _safe_relative_path(reference)
     resolved_root = bundle_root.resolve(strict=True)
     path = resolved_root.joinpath(*relative.parts)
@@ -136,7 +121,7 @@ def resolve_live_result_reference(
         raise LiveResultBundleError(
             f"Live result reference is dangling or escapes the bundle: {reference!r}."
         )
-    return resolved, "bundle-relative"
+    return resolved
 
 
 def _copy_regular_file(*, source: Path, destination: Path) -> None:
@@ -478,12 +463,10 @@ def validate_live_result_bundle(
             or not isinstance(size_bytes, int)
         ):
             raise LiveResultBundleError("Live result artifact record is incomplete.")
-        path, mode = resolve_live_result_reference(
+        path = resolve_live_result_reference(
             bundle_root=resolved_bundle_root,
             reference=reference,
         )
-        if mode != "bundle-relative":
-            raise LiveResultBundleError("Canonical artifact unexpectedly resolved as legacy.")
         if path.stat().st_size != size_bytes or _sha256(path) != sha256:
             raise LiveResultBundleError(
                 f"Live result artifact does not match its index: {reference!r}."

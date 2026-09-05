@@ -55,14 +55,15 @@ Examples:
 - `operator-request.md`
 - `stage-result.md`
 
-`stage-result.md` is runtime-facing as a draft and workflow-facing as the final stage summary:
-the runtime writes the Markdown summary, and the AIDD core may correct terminal status when
-canonical validation proves the draft inconsistent. During repair attempts, the core may also add
-the required `repair-brief.md` trace reference before validation because `repair-brief.md` is
-AIDD-owned control evidence.
+`stage-result.md` and `validator-report.md` are AIDD-owned workflow records. Runtimes read
+these records as context and write only the substantive content listed in the stage brief.
+AIDD records validation, terminal status, attempt history, and repair references after runtime
+execution. Unexpected runtime copies are retained as raw attempt evidence, never promoted over
+canonical records.
 
-`validator-report.md` is different. A runtime may draft it as evidence, but the canonical
-report is the one AIDD writes after validation.
+Workspace initialization leaves `validator-report.md` absent until AIDD performs validation.
+An early runtime failure has runtime evidence and no validator verdict; placeholder text is
+not a validator report.
 
 `repair-brief.md` is not runtime-authored. It is AIDD-owned control evidence that runtimes may
 read during repair attempts.
@@ -167,15 +168,18 @@ This document records:
 
 It is the durable checkpoint for workflow progression.
 
-The runtime-authored version is a draft until post-runtime validation finishes. AIDD must not
-advance a stage solely because the draft claims success; the canonical validator state decides
-whether the draft may be published downstream.
+AIDD derives the stage result from canonical validation and workflow state. Runtime-authored
+content cannot set the terminal status or authorize downstream publication.
+
+When runtime content and interview gates pass, AIDD first renders the current attempt's
+candidate result from the observed validation outcome. Semantic validation then checks this
+AIDD-owned record, rather than a bootstrap scaffold or runtime copy. A candidate result does
+not authorize publication; the resolved transition and final result remain gated by that check.
 
 ## 7.1 Validator report ownership
 
-`validator-report.md` is AIDD-canonical after the validator coordinator runs. Runtime-authored
-content with the same filename is treated as draft evidence and can be overwritten by the
-canonical validator report.
+The validator coordinator owns `validator-report.md`. Its findings determine validation
+success; runtime-authored text with the same filename remains unexpected raw evidence.
 
 The report must not claim `pass` when canonical findings remain open.
 

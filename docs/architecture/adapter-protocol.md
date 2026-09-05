@@ -35,6 +35,11 @@ Execution note:
   `adapter-flags` wrapper command;
 - the probe target and the execution command do not have to be identical.
 
+Readiness describes the adapter's effective execution transport. Registered in-process
+conformance commands expose their own capabilities and do not require a subprocess executable.
+External commands still require executable and provider-capability checks; unregistered command
+names do not gain availability through the conformance path.
+
 ## 3. Implemented interface
 
 The current implementation uses a synchronous stage execution boundary:

@@ -4,9 +4,13 @@
 
 Describe structural, semantic, and cross-document validation findings.
 
-The canonical report is written by AIDD after post-runtime validation. Any
-model-authored `validator-report.md` content produced during runtime execution is treated
-as draft evidence and may be replaced by the canonical AIDD validator report.
+AIDD writes the canonical report after validating runtime content. Runtimes must not create
+or edit it. Unexpected runtime copies remain raw attempt evidence and cannot create, replace,
+or suppress canonical findings.
+
+Workspace initialization does not create a placeholder report. Until validation runs, the
+report is absent and its verdict is unavailable. An early runtime failure remains runtime
+evidence; it must not manufacture a passing validator result.
 
 ## Required sections
 
@@ -21,10 +25,11 @@ Optional non-verdict evidence may use an `Advisory observations` section between
 
 ## Protocol version
 
-This contract defines validator-report protocol v1. AIDD writers must emit the canonical
-field labels and finding codes below. During the v1 compatibility window, readers may also
-accept only the aliases declared under `Legacy read aliases`. Removing those aliases requires
-a new major validator-report protocol version.
+This contract defines the current validator-report format. AIDD writers and readers use only
+the canonical field labels and finding codes below. Retired aliases are rejected explicitly;
+they are not silently normalized into current reports. Numeric `Blocking issues` values and
+verdict `repair` are also rejected; use canonical `yes`/`no` and `pass`/`fail`. Reports may omit
+optional summary fields when the producing AIDD service does not have that evidence.
 
 ## Required skeleton
 
@@ -149,17 +154,12 @@ publish codes outside this list.
 - `CROSS-TASKLIST-PLAN-MILESTONE`
 - `CROSS-TASKLIST-PLAN-VERIFICATION`
 
-## Legacy read aliases
+## Retired vocabulary
 
-Protocol v1 readers accept these historical forms, but writers must never emit them:
-
-- field `Validator verdict` resolves to canonical field `Verdict`;
-- field `Repair required` resolves to canonical field `Repair required for progression`;
-- code `STRUCT-MISSING-DOCUMENT` resolves to `STRUCT-MISSING-REQUIRED-DOCUMENT`;
-- code `STRUCT-MISSING-HEADING` resolves to `STRUCT-MISSING-REQUIRED-SECTION`;
-- code `STRUCT-EMPTY-SECTION` resolves to `STRUCT-EMPTY-REQUIRED-SECTION`;
-- code `CROSS-REFERENCE-MISMATCH` remains readable as a legacy cross-document code but
-  has no canonical replacement because its historical meaning is ambiguous.
+The historical field labels `Validator verdict` and `Repair required`, and finding codes
+`STRUCT-MISSING-DOCUMENT`, `STRUCT-MISSING-HEADING`, `STRUCT-EMPTY-SECTION`, and
+`CROSS-REFERENCE-MISMATCH` are invalid in current reports. Preserve rejected files as evidence;
+do not make a runtime rewrite an AIDD-owned report to recover from an unsupported format.
 
 ## Severity rules
 

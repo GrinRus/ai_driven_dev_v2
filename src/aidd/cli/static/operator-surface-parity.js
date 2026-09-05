@@ -117,7 +117,7 @@ const PROVIDER_FREE_ROUTE_MANIFEST = Object.freeze([
     id: "create-work-item",
     target: "02-create-work-item.png",
     fixture: "setup",
-    route: "?ui=studio",
+    route: "/",
     routeIntent: "setup",
     viewport: "1280x900",
     context: {project: "."}
@@ -261,8 +261,9 @@ function validateProviderFreeRouteManifest(entries = PROVIDER_FREE_ROUTE_MANIFES
     if (!PROVIDER_FREE_FIXTURES.has(entry.fixture)) {
       throw new Error(`Unknown provider-free fixture for ${entry.id}: ${entry.fixture}`);
     }
-    if (!String(entry.route || "").startsWith("?") || String(entry.route).includes("http")) {
-      throw new Error(`Provider-free route must be a local query: ${entry.id}`);
+    if ((entry.route !== "/" && !String(entry.route || "").startsWith("?"))
+      || String(entry.route).includes("http")) {
+      throw new Error(`Provider-free route must be a local root or query: ${entry.id}`);
     }
     if (!PROVIDER_FREE_ROUTE_INTENTS.has(entry.routeIntent)) {
       throw new Error(`Unknown provider-free route intent for ${entry.id}: ${entry.routeIntent}`);

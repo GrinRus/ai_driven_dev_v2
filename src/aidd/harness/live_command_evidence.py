@@ -126,18 +126,10 @@ def read_command_output(
     bundle_root: Path,
     command_payload: Mapping[str, Any],
 ) -> tuple[str, str]:
-    legacy_stdout = command_payload.get("stdout_text")
-    legacy_stderr = command_payload.get("stderr_text")
-    if isinstance(legacy_stdout, str) or isinstance(legacy_stderr, str):
-        return (
-            legacy_stdout if isinstance(legacy_stdout, str) else "",
-            legacy_stderr if isinstance(legacy_stderr, str) else "",
-        )
-
     raw_relative_path = command_payload.get("evidence_path")
     expected_digest = command_payload.get("evidence_sha256")
     if not isinstance(raw_relative_path, str) or not isinstance(expected_digest, str):
-        return "", ""
+        raise ValueError("Command output requires a current evidence path and digest.")
     relative_path = Path(raw_relative_path)
     if relative_path.is_absolute() or ".." in relative_path.parts:
         raise ValueError("Command evidence path must be bundle-relative and contained.")

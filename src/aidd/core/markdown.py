@@ -23,6 +23,16 @@ def normalize_heading(title: str) -> str:
     return re.sub(r"\s+", " ", title).strip().lower()
 
 
+def extract_h2_section(markdown: str, heading: str) -> str:
+    """Read an H2 section while retaining its nested headings and body formatting."""
+    match = re.search(
+        rf"^##\s+{re.escape(heading)}\s*$\n(?P<body>.*?)(?=^##\s+|\Z)",
+        markdown,
+        flags=re.MULTILINE | re.DOTALL | re.IGNORECASE,
+    )
+    return match.group("body").strip() if match is not None else ""
+
+
 def extract_section_lines(markdown_text: str, heading: str) -> list[str]:
     target_heading = f"## {heading}".lower()
     in_section = False

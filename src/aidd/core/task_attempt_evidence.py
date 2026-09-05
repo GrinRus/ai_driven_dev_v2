@@ -1,14 +1,12 @@
 from __future__ import annotations
 
 import json
-import re
 from dataclasses import dataclass
 from pathlib import Path, PurePosixPath
 
 from aidd.core.run_store import run_attempt_root, write_json_payload
 
 TASK_ATTEMPT_REFERENCES_FILENAME = "stage-attempt-references.json"
-_LEGACY_STAGE_ATTEMPT_RE = re.compile(r"^stage-attempt-(\d{4})$")
 
 
 @dataclass(frozen=True, slots=True)
@@ -252,21 +250,14 @@ def resolve_task_attempt_evidence(
             layout="references",
             stage_attempts=manifest.stage_attempts,
         )
-    legacy: list[TaskStageAttemptReference] = []
-    for candidate in sorted(task_attempt_path.glob("stage-attempt-[0-9][0-9][0-9][0-9]")):
-        match = _LEGACY_STAGE_ATTEMPT_RE.fullmatch(candidate.name)
-        if match is None or not candidate.is_dir():
-            continue
-        resolved = candidate.resolve(strict=True)
-        if not resolved.is_relative_to(workspace_root.resolve(strict=True)):
-            raise ValueError("Legacy task stage-attempt evidence escapes workspace root.")
-        legacy.append(
-            TaskStageAttemptReference(
-                attempt_number=int(match.group(1)),
-                path=candidate.relative_to(workspace_root).as_posix(),
-            )
+    if any(task_attempt_path.glob("stage-attempt-[0-9][0-9][0-9][0-9]")):
+        raise ValueError(
+            "Embedded task stage-attempt evidence is unsupported; recreate the workspace "
+            "with the current CLI."
         )
-    return ResolvedTaskAttemptEvidence(layout="legacy", stage_attempts=tuple(legacy))
+    # An executing or interrupted task can precede its first global stage attempt.
+    # No references is absence of evidence, never an inferred historical layout.
+    return ResolvedTaskAttemptEvidence(layout="references", stage_attempts=())
 
 
 __all__ = [

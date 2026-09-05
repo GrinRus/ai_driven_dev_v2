@@ -5,8 +5,7 @@ from typing import Annotated
 import typer
 
 from aidd import __version__
-from aidd.adapters.surface import get_runtime_adapter_surface
-from aidd.cli.doctor import _runtime_probe_report, doctor
+from aidd.cli.doctor import doctor
 from aidd.cli.eval import eval_doctor, eval_execute, eval_summary
 from aidd.cli.init_command import init
 from aidd.cli.run import run_artifacts, run_callback, run_logs, run_show
@@ -18,69 +17,9 @@ from aidd.cli.stage import (
     stage_run,
     stage_summary,
 )
-from aidd.cli.support import (
-    _active_prompt_pack_paths,
-    _allocate_stage_run_id,
-    _path_summary,
-    _prefix_stream_chunk,
-    _print_workflow_run_summary,
-    _runtime_command_for_runtime,
-    _runtime_execution_mode_for_runtime,
-    _runtime_timeout_for_runtime,
-    _tail_lines,
-    console,
-)
+from aidd.cli.support import console
 from aidd.cli.task import task_finalize, task_list, task_run, task_show
 from aidd.cli.ui import ui_command
-from aidd.core.stage_graph import select_next_runnable_stage, summarize_workflow_advancement
-
-__all__ = [
-    "_active_prompt_pack_paths",
-    "_allocate_stage_run_id",
-    "_path_summary",
-    "_prefix_stream_chunk",
-    "_print_workflow_run_summary",
-    "_runtime_command_for_runtime",
-    "_runtime_execution_mode_for_runtime",
-    "_runtime_probe_report",
-    "_runtime_timeout_for_runtime",
-    "_tail_lines",
-    "app",
-    "doctor",
-    "eval_doctor",
-    "eval_execute",
-    "eval_summary",
-    "init",
-    "main",
-    "probe_claude_code",
-    "probe_codex",
-    "probe_generic_cli",
-    "probe_opencode",
-    "probe_qwen",
-    "run_artifacts",
-    "run_callback",
-    "run_logs",
-    "run_show",
-    "stage_interact",
-    "select_next_runnable_stage",
-    "stage_questions",
-    "stage_reconcile_terminal",
-    "stage_repair_extension",
-    "stage_run",
-    "stage_summary",
-    "summarize_workflow_advancement",
-    "task_list",
-    "task_finalize",
-    "task_run",
-    "task_show",
-    "ui_command",
-]
-
-probe_generic_cli = get_runtime_adapter_surface("generic-cli").probe
-probe_claude_code = get_runtime_adapter_surface("claude-code").probe
-probe_codex = get_runtime_adapter_surface("codex").probe
-probe_opencode = get_runtime_adapter_surface("opencode").probe
-probe_qwen = get_runtime_adapter_surface("qwen").probe
 
 app = typer.Typer(
     help="Runtime-agnostic orchestration for document-first AI software delivery.",

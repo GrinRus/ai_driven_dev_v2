@@ -116,13 +116,6 @@ function runtimeSelectorPayload() {
   const runtime = selectedRuntimeView();
   const supported = new Set(runtime?.capabilities?.supported_selectors || []);
   const payload = {};
-  if (runtime && Object.prototype.hasOwnProperty.call(runtime, "eligible")) {
-    payload.require_runtime_revalidation = true;
-    if (runtime.config_identity) payload.readiness_config_identity = runtime.config_identity;
-    if (runtime.probe_observed_at_utc) {
-      payload.readiness_probe_observed_at_utc = runtime.probe_observed_at_utc;
-    }
-  }
   const model = String(state.runtimeModel || "").trim();
   const reasoningEffort = String(state.runtimeReasoningEffort || "").trim();
   if (state.runtimeModelDirty && model && supported.has("model")) payload.model = model;
@@ -156,13 +149,7 @@ function focusRuntimeSelector() {
 }
 
 function selectedRuntimeReady() {
-  const runtime = selectedRuntimeView();
-  if (!runtime) return false;
-  if (Object.prototype.hasOwnProperty.call(runtime, "eligible")) {
-    return runtime.eligible === true;
-  }
-  // Compatibility with pre-readiness payloads retained by older browser fixtures.
-  return Boolean(runtime.provider_available && runtime.execution_command_available);
+  return selectedRuntimeView()?.eligible === true;
 }
 
 function runtimeReadinessMessage() {
@@ -175,10 +162,7 @@ function runtimeReadinessMessage() {
   return "";
 }
 
-function renderContextualRunnerControl({actionLabel = "launch"} = {}) {
-  // Keep the historical signature stable for packaged asset contracts while
-  // allowing launch Overview to opt into the richer readiness inspector.
-  const inspector = arguments[0]?.inspector === true;
+function renderContextualRunnerControl({actionLabel = "launch", inspector = false} = {}) {
   const runtime = selectedRuntimeView();
   const runtimeLabel = state.selectedRuntime || "no Runner selected";
   const ready = selectedRuntimeReady();

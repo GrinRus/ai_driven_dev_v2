@@ -68,6 +68,34 @@ def test_valid_render_passes_geometry_gate() -> None:
             browser.close()
 
 
+@pytest.mark.parametrize("disabled", (False, True))
+def test_native_textarea_scrolling_preserves_primary_layout_owner(disabled: bool) -> None:
+    with sync_playwright() as playwright:
+        browser = playwright.chromium.launch(headless=True)
+        page = browser.new_page(viewport={"width": 390, "height": 844})
+        try:
+            page.set_content(
+                "<style>* { box-sizing: border-box; } body { margin: 0; }</style>"
+                "<main id='workspace' style='height:160px;overflow-y:auto'>"
+                "<section style='min-height:420px'>"
+                "<label for='requestEditor'>Request Markdown</label>"
+                "<textarea id='requestEditor' rows='4' maxlength='20000' "
+                "style='display:block;width:100%;height:100px;overflow-y:auto' "
+                f"{'disabled' if disabled else ''}>"
+                + "A line of editable request context.\n" * 40
+                + "</textarea></section></main>"
+            )
+            editor = page.get_by_label("Request Markdown")
+            assert editor.is_disabled() is disabled
+            assert editor.evaluate("node => node.scrollHeight > node.clientHeight")
+            assert page.locator("#workspace").evaluate(
+                "node => node.scrollHeight > node.clientHeight"
+            )
+            assert_rendered_geometry(page)
+        finally:
+            browser.close()
+
+
 @pytest.mark.parametrize(("expected_rule", "markup"), _INVALID_GEOMETRY)
 def test_invalid_render_reports_expected_geometry_rule(
     expected_rule: str,

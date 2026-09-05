@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-import shlex
-import shutil
 from pathlib import Path
 from typing import Literal
 
@@ -83,14 +81,6 @@ def _active_prompt_pack_paths(
     if repair_mode:
         return tuple(path for path in prompt_pack_paths if path.name != "intervention.md")
     return tuple(path for path in prompt_pack_paths if path.name not in mode_specific)
-
-
-def _execution_command_available(command: str) -> bool:
-    try:
-        tokens = shlex.split(command)
-    except ValueError:
-        return False
-    return bool(tokens) and shutil.which(tokens[0]) is not None
 
 
 def _tail_lines(text: str, *, line_count: int) -> str:

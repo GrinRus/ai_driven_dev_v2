@@ -134,9 +134,7 @@ def test_operator_js_bootstrap_loads_manifested_browser_modules() -> None:
     for route in module_routes:
         assert f'"{route}"' in loader
 
-    assert loader.index('"/operator-surface-parity.js"') < loader.index(
-        '"/operator-api-state.js"'
-    )
+    assert loader.index('"/operator-surface-parity.js"') < loader.index('"/operator-api-state.js"')
 
 
 def test_operator_assets_have_no_legacy_renderer_boundary() -> None:
@@ -371,7 +369,7 @@ def test_operator_script_modules_own_static_ui_surfaces() -> None:
     assert "function renderStageHeader()" in shell
     assert "function renderTechnicalRegions()" in cockpit
     assert "function operatorProjectLabel(projectRoot)" in shell
-    assert 'projectPath.title = `Project: ${projectLabel}`;' in shell
+    assert "projectPath.title = `Project: ${projectLabel}`;" in shell
     assert "workItemChip.title = workItemLabel;" in shell
     assert "runChip.title = runLabel;" in shell
     assert "async function renderArtifacts()" in artifacts
@@ -380,8 +378,7 @@ def test_operator_script_modules_own_static_ui_surfaces() -> None:
     assert "workbench.scrollIntoView" in artifacts
     assert "workbench.focus({preventScroll: true})" in artifacts
     assert "function questionControlId(prefix, questionId, index)" in questions
-    assert "function renderInterviewSummary(view)" in questions
-    assert "function renderBlockedStageContext(view)" in questions
+    assert "function renderQuestionDecisionContext(view, question)" in questions
     assert "async function answerAndResume(questionId)" in questions
     assert "async function resumeAfterAnswers()" in questions
     assert "async function renderApprovals()" in approvals
@@ -393,7 +390,7 @@ def test_operator_script_modules_own_static_ui_surfaces() -> None:
     assert "function renderOnboarding()" in onboarding
     assert "function syncOnboardingCreateActionState()" in onboarding
     assert "async function fetchDashboard()" in dashboard_actions
-    assert "async function fetchProjectHome(workItem = \"\")" in dashboard_actions
+    assert 'async function fetchProjectHome(workItem = "")' in dashboard_actions
     assert "async function startWorkflow()" in dashboard_actions
     assert "async function startRepairExtension(stage = state.activeStage)" in dashboard_actions
     assert 'kind: "repair-extension"' in dashboard_actions
@@ -452,12 +449,12 @@ def test_studio_history_uses_typed_frames_without_runtime_mutation() -> None:
             "function renderStudioHistory(timeline)",
             "function renderStudioRunComparisonPanel()",
             "function renderActiveRunComparisonPanel()",
-            'data-studio-history',
-            'data-history-frame=',
-            'data-history-return-live',
-            'data-history-evidence-path=',
+            "data-studio-history",
+            "data-history-frame=",
+            "data-history-return-live",
+            "data-history-evidence-path=",
             "active runtime is not stopped",
-            'data-comparison-evidence-path=',
+            "data-comparison-evidence-path=",
             "snapshot unavailable",
             "Compare is unavailable until two retained attempts are present",
             "History will not reconstruct it",
@@ -484,11 +481,9 @@ def test_studio_history_uses_typed_frames_without_runtime_mutation() -> None:
     )
     assert "return renderStudioHistory(await loadStudioHistoryTimeline());" in cockpit
     assert "renderWorkItemRuns" in cockpit + active_studio
-    assert 'state.historyAutoFollow = false' in main
-    assert 'state.historyAutoFollow = true' in main
-    assert "renderActiveRunComparisonPanel()" in _asset_text(
-        "/operator-next-flow-actions.js"
-    )
+    assert "state.historyAutoFollow = false" in main
+    assert "state.historyAutoFollow = true" in main
+    assert "renderActiveRunComparisonPanel()" in _asset_text("/operator-next-flow-actions.js")
 
 
 def test_studio_flow_complete_uses_only_core_recommendation() -> None:
@@ -607,7 +602,7 @@ def test_operator_state_and_dashboard_assets_keep_runtime_and_tab_contracts() ->
             "pendingNextFlowWizardReveal: false",
             "activeStageExplicit: false",
             "const OPERATOR_MODES",
-            "const LEGACY_TAB_TO_MODE",
+            "const DETAIL_TAB_TO_MODE",
             "const RECOVERY_NEXT_ACTIONS",
             'activeTab: "work"',
             'workDetail: "overview"',
@@ -628,7 +623,7 @@ def test_operator_state_and_dashboard_assets_keep_runtime_and_tab_contracts() ->
             "function revealCockpitOnMobile()",
             "function scrollNextFlowWizardToTopOnMobile()",
             "function revealNextFlowWizardOnMobile()",
-            "window.matchMedia(\"(max-width: 760px)\").matches",
+            'window.matchMedia("(max-width: 760px)").matches',
             "workspace.scrollTo({top: Math.max(0, workspace.scrollTop - topbarHeight), "
             'behavior: "auto"});',
             "window.requestAnimationFrame(scrollCockpitToTopOnMobile);",
@@ -644,10 +639,10 @@ def test_operator_state_and_dashboard_assets_keep_runtime_and_tab_contracts() ->
             "STAGES.includes(route.stage)",
             "state.activeStageExplicit = true;",
             "function operatorRouteSnapshot()",
-            "function syncLocationState({historyMode = \"replace\"} = {})",
+            'function syncLocationState({historyMode = "replace"} = {})',
             'window.history[method]({aiddOperatorRoute: true}, "", next);',
             "function sourceFindingsUrl()",
-            "function projectHomeUrl(workItem = \"\")",
+            'function projectHomeUrl(workItem = "")',
             "/api/next-flow/source-findings",
             "/api/project-home",
             "readinessLoading: true",
@@ -671,9 +666,9 @@ def test_operator_state_and_dashboard_assets_keep_runtime_and_tab_contracts() ->
             "await recoverActiveJobFromDashboard(payload.active_job);",
             "await pollActiveJob();",
             "state.activeJobCursor = 0;",
-            "async function fetchProjectHome(workItem = \"\")",
+            'async function fetchProjectHome(workItem = "")',
             "dashboardUrl()",
-            "if (state.activeStageExplicit) params.set(\"stage\", state.activeStage);",
+            'if (state.activeStageExplicit) params.set("stage", state.activeStage);',
             "/api/dashboard",
             (
                 "const viewedStage = state.dashboard.active_stage_view?.stage "
@@ -682,10 +677,10 @@ def test_operator_state_and_dashboard_assets_keep_runtime_and_tab_contracts() ->
             "if (viewedStage && STAGES.includes(viewedStage)) {",
             "state.activeStage = viewedStage;",
             'state.activeRunId = state.dashboard.run?.run_id || "";',
-                (
-                    'isRecoveryNextAction(nextAction) && '
-                    '(state.activeTab === "work" || explicitRecoveryRoute)'
-                ),
+            (
+                "isRecoveryNextAction(nextAction) && "
+                '(state.activeTab === "work" || explicitRecoveryRoute)'
+            ),
             'state.activeTab = "recovery";',
             'state.recoveryDetail = "questions";',
             'state.recoveryDetail = "validation";',
@@ -693,11 +688,11 @@ def test_operator_state_and_dashboard_assets_keep_runtime_and_tab_contracts() ->
             "dashboardRuntimeRecoveryAction()",
             'state.recoveryDetail = "logs";',
             "requestCockpitReveal();",
-            "version.startsWith(\"v\") ? version : `v${version || \"dev\"}`",
+            'version.startsWith("v") ? version : `v${version || "dev"}`',
             'api("/api/runtime-readiness")',
             'if (element.textContent === message) element.textContent = "";',
             'button.setAttribute("aria-selected", isActive ? "true" : "false");',
-            'content.dataset.operatorMode = state.activeTab;',
+            "content.dataset.operatorMode = state.activeTab;",
         ),
     )
     assert (
@@ -756,7 +751,7 @@ def test_operator_onboarding_static_contract_keeps_creation_and_launch_separate(
     # information) each keep the create action state synchronized as they edit.
     assert main.count("syncOnboardingCreateActionState();") == 7
     create_predicate = onboarding[
-        onboarding.index("function onboardingCanCreate()"):onboarding.index(
+        onboarding.index("function onboardingCanCreate()") : onboarding.index(
             "function syncOnboardingCreateActionState()"
         )
     ]
@@ -767,12 +762,8 @@ def test_operator_onboarding_static_contract_keeps_creation_and_launch_separate(
     workflow_start = dashboard_actions.index("async function startWorkflow()")
     stage_start = dashboard_actions.index("async function startStage(")
     dispatch_start = dashboard_actions.index("async function dispatchTaskAwareLaunch(")
-    assert "if (!ensureRunnableRuntime()) return;" in dashboard_actions[
-        workflow_start:stage_start
-    ]
-    assert "if (!ensureRunnableRuntime()) return;" in dashboard_actions[
-        stage_start:dispatch_start
-    ]
+    assert "if (!ensureRunnableRuntime()) return;" in dashboard_actions[workflow_start:stage_start]
+    assert "if (!ensureRunnableRuntime()) return;" in dashboard_actions[stage_start:dispatch_start]
     shell = _asset_text("/operator-shell-rendering.js")
     assert "if (!state.selectedRuntime)" in shell
     assert "if (!selectedRuntimeReady())" in shell
@@ -803,7 +794,7 @@ def test_operator_onboarding_distinguishes_deterministic_runner_path() -> None:
             ".runner-selection-guidance {",
             "border-left: 4px solid var(--amber);",
             ".runner-card.recommended {",
-            "box-shadow: inset 3px 0 0 var(--green);",
+            "box-shadow: inset 3px 0 0 var(--mint);",
             ".runner-card.recommended.selected {",
             ".runner-card-meta {",
             ".runner-card-guidance {",
@@ -824,7 +815,8 @@ def test_operator_shell_asset_keeps_runtime_readiness_navigation_and_markdown_co
             "if (state.readinessLoading) return null;",
             "function selectedRuntimeReady()",
             "function runtimeReadinessMessage()",
-            "function renderContextualRunnerControl({actionLabel = \"launch\"} = {})",
+            'function renderContextualRunnerControl({actionLabel = "launch", '
+            'inspector = false} = {})',
             "data-contextual-runner-control",
             "data-open-runner",
             "runtime.eligible === true",
@@ -902,7 +894,7 @@ def test_operator_stage_retry_affordance_links_to_recovery_history() -> None:
         components,
         (
             ".repair-resolved-summary {",
-            "border-left: 4px solid var(--green);",
+            "border-left: 4px solid var(--mint);",
             ".repair-resolved-summary .small-badge {",
         ),
     )
@@ -934,7 +926,7 @@ def test_operator_cockpit_asset_keeps_overview_sidebar_and_activity_contracts() 
     _assert_contains_all(
         cockpit,
         (
-                "async function renderCockpit({skipArtifactLoad = false} = {})",
+            "async function renderCockpit({skipArtifactLoad = false} = {})",
             "renderQuestionCards({showResume: true})",
             'state.recoveryDetail === "questions"',
             "content.innerHTML = renderQuestions();",
@@ -971,7 +963,7 @@ def test_operator_cockpit_asset_keeps_overview_sidebar_and_activity_contracts() 
             "stage: state.activeStage,",
             "function renderHistoryMode()",
             "renderRuntimeSelector();",
-                "await renderCockpit({skipArtifactLoad});",
+            "await renderCockpit({skipArtifactLoad});",
         ),
     )
 
@@ -1132,17 +1124,17 @@ def test_operator_artifact_asset_keeps_document_and_truncation_contracts() -> No
             "function artifactCategoryDetail(category)",
             "function artifactOwnershipBadge(item = {})",
             "function artifactSupportsDownload(item = {})",
-            "function renderArtifactDownloadButton(item = {}, className = \"link-button\")",
+            'function renderArtifactDownloadButton(item = {}, className = "link-button")',
             "function renderArtifactOwnershipNote(item = {})",
             "function markdownHeadingSummary(text)",
-            "function readerAnchorSlug(value, fallback = \"section\")",
+            'function readerAnchorSlug(value, fallback = "section")',
             "function readerHeadingAnchorId(heading, index = 0)",
             "function renderMarkdownWithReaderAnchors(text)",
             "function renderSourceWithLineAnchors(text)",
             "function renderFindingAnchor(item = {})",
-            'data-source-rendering=\"exact-bounded-source\"',
-            'data-reader-cross-document=\"push\"',
-            'data-finding-anchor-link=\"heading\"',
+            'data-source-rendering="exact-bounded-source"',
+            'data-reader-cross-document="push"',
+            'data-finding-anchor-link="heading"',
             "Document map",
             "function renderRequirementList(requirements)",
             "function renderValidationResults(results)",
@@ -1154,7 +1146,7 @@ def test_operator_artifact_asset_keeps_document_and_truncation_contracts() -> No
             "Downstream handoff copies under output/",
             "canonical source",
             "handoff mirror",
-            "\"mirror\": \"MR\"",
+            '"mirror": "MR"',
             "Canonical source of truth",
             "Published handoff mirror",
             "Canonical stage path:",
@@ -1206,10 +1198,7 @@ def test_operator_artifact_asset_keeps_document_and_truncation_contracts() -> No
         "const preferredKey = state.activeArtifactKey || preferredEvidenceArtifactKey(view);"
         in artifacts
     )
-    assert (
-        'const selectedArtifactKey = selection.node?.kind === "document"'
-        in artifacts
-    )
+    assert 'const selectedArtifactKey = selection.node?.kind === "document"' in artifacts
     assert "await loadArtifactDocument(selectedArtifactKey);" in artifacts
     assert artifacts.index("${renderEvidenceWorkbenchShell(selection)}") < artifacts.index(
         '<details class="surface evidence-drilldown">'
@@ -1234,7 +1223,7 @@ def test_operator_artifact_asset_keeps_document_and_truncation_contracts() -> No
             ".reader-evidence-group {",
             ".reader-comparison-grid {",
             ".finding-anchor {",
-            ".document-canvas pre [data-finding-anchor=\"line\"] {",
+            '.document-canvas pre [data-finding-anchor="line"] {',
             ".workbench-toc-list a,",
             "min-height: var(--control-height);",
         ),
@@ -1270,21 +1259,21 @@ def test_operator_questions_asset_keeps_answer_resolution_and_saved_answer_contr
     _assert_contains_all(
         questions,
         (
-                "function questionControlId(prefix, questionId, index)",
-                "function decisionWorkbenchHeader({",
-                'data-decision-workbench="question"',
-                'data-decision-item="question"',
-                'data-decision-submit="true"',
-                "data-decision-source-snippet",
-                "data-decision-input-schema",
-                "data-decision-consequence",
-                (
+            "function questionControlId(prefix, questionId, index)",
+            "function decisionWorkbenchHeader({",
+            'data-decision-workbench="question"',
+            'data-decision-item="question"',
+            'data-decision-submit="true"',
+            "data-decision-source-snippet",
+            "data-decision-input-schema",
+            "data-decision-consequence",
+            (
                 'const questionTextId = questionControlId("question-text", '
                 "question.question_id, index);"
             ),
             'const answerId = questionControlId("answer", question.question_id, index);',
             'const resolutionId = questionControlId("resolution", question.question_id, index);',
-            '<p id="${questionTextId}">${escapeHtml(question.text)}</p>',
+            '<p class="question-card-prompt sr-only" id="${questionTextId}">',
             (
                 '<label class="sr-only" for="${answerId}">Answer for '
                 "${escapeHtml(questionLabel)}</label>"
@@ -1292,32 +1281,19 @@ def test_operator_questions_asset_keeps_answer_resolution_and_saved_answer_contr
             '<textarea id="${answerId}" name="${answerId}" aria-describedby="${questionTextId}"',
             '<label class="sr-only" for="${resolutionId}">Resolution for ',
             (
-                '<select id="${resolutionId}" name="${resolutionId}" '
+                '<select class="question-resolution-native" id="${resolutionId}" '
+                'name="${resolutionId}" '
                 'aria-describedby="${questionTextId}"'
             ),
             "function questionDisplayStatus(question)",
             "function questionRequiresResolvedResume(question)",
             "function updateQuestionResumeButtonState(questionId)",
             "function updateQuestionResumeButtonStates()",
-            "function interviewDecisionCounts(view)",
-            "function renderInterviewDecisionSpotlight(view)",
-            "data-interview-decision-spotlight",
-            "No interview questions for this stage",
-            "Blocking questions need resolved answers",
-            "Interview answers need final resolution",
-            "Interview answers saved",
-            "Primary action: answer required questions",
-            "${renderInterviewDecisionSpotlight(view)}",
-            "function renderInterviewSummary(view)",
-            "function renderBlockedStageContext(view)",
-            "Questions / Interview Loop",
             'data-human-decision-surface="question"',
-            "Required answers",
-            "Blocked stage",
-            'const savedAnswer = question.answer_resolution',
+            "const savedAnswer = question.answer_resolution",
             "const draft = questionDraft(question.question_id)?.value || null;",
             'const answerText = draft?.text ?? question.answer_text ?? "";',
-            'const resolutionValue = draft?.resolution || question.answer_resolution || '
+            "const resolutionValue = draft?.resolution || question.answer_resolution || "
             '"resolved";',
             'class="saved-answer"',
             'data-question-id="${escapeHtml(question.question_id)}"',
@@ -1329,8 +1305,6 @@ def test_operator_questions_asset_keeps_answer_resolution_and_saved_answer_contr
             "Answer recorded in answers.md",
             "${escapeHtml(answerText)}</textarea>",
             'option value="resolved" ${resolutionValue === "resolved" ? "selected" : ""}',
-            "Update answer",
-            "Update & resume",
             "Select resolved to resume",
             "data-requires-resolved-resume",
             "Blocking questions must be saved as resolved before resume.",
@@ -1345,19 +1319,8 @@ def test_operator_questions_asset_keeps_answer_resolution_and_saved_answer_contr
         ),
     )
     assert "data-answer-resume-all" not in questions
-    _assert_contains_all(
-        components,
-        (
-            ".interview-decision-spotlight {",
-            "box-shadow: inset 4px 0 0 var(--green);",
-            ".interview-decision-spotlight.warn {",
-            ".interview-decision-spotlight.bad {",
-            ".interview-decision-facts {",
-            "grid-template-columns: repeat(5, minmax(0, 1fr));",
-        ),
-    )
-    assert ".interview-decision-spotlight," in responsive
-    assert ".interview-decision-facts," in responsive
+    assert ".question-card" in components
+    assert "[data-human-decision-surface" in responsive
 
 
 def test_operator_recovery_assets_keep_repair_center_contracts() -> None:
@@ -1372,10 +1335,7 @@ def test_operator_recovery_assets_keep_repair_center_contracts() -> None:
             "explicit-stop",
             "function renderRecoveryActionBand(diagnostics)",
             "renderValidationFindingSummary(finding)",
-            (
-                "const requestPrimary = status === \"repair-exhausted\" "
-                "|| status === \"explicit-stop\";"
-            ),
+            ('const requestPrimary = status === "repair-exhausted" || status === "explicit-stop";'),
             "Repair exhausted",
             "Validation still fails after repair attempts.",
             "function renderValidationFindingList(validation)",
@@ -1387,10 +1347,8 @@ def test_operator_recovery_assets_keep_repair_center_contracts() -> None:
             "repair-decision-consequence",
             "repair-supporting-preview",
             "function renderBlockedStageRecovery(diagnostics)",
-            "Validation / Repair Center",
             "Repair Available",
             "Run Repair",
-            "Stop Run",
             "Request Change",
             'data-recovery-action="request-change"',
             'data-recovery-stage="${escapeHtml(state.activeStage)}"',
@@ -1532,17 +1490,20 @@ def test_task_workspace_attempt_tray_preserves_factual_live_state() -> None:
     _assert_contains_all(
         studio,
         (
-            'data-task-attempt-tray',
-            'Reconnect cursor',
-            'Raw output',
-            'runtimeOutputFreshnessLabel(activeJob)',
-            'activeJob.elapsed_seconds',
+            "data-task-attempt-tray",
+            "Reconnect cursor",
+            "Raw output",
+            "runtimeOutputFreshnessLabel(activeJob)",
+            "activeJob.elapsed_seconds",
             'data-cancel-job="${escapeHtml(activeJob.job_id)}"',
         ),
     )
-    assert "progress" not in studio.split("function renderTaskWorkspace", 1)[1].split(
-        "async function renderWorkItemTasks", 1
-    )[0].lower()
+    assert (
+        "progress"
+        not in studio.split("function renderTaskWorkspace", 1)[1]
+        .split("async function renderWorkItemTasks", 1)[0]
+        .lower()
+    )
     assert 'state.workDetail === "tasks"' in logs
 
 
@@ -1569,6 +1530,8 @@ def test_task_workspace_detail_uses_server_action_projection_and_bounded_contrac
     assert "new URLSearchParams(query)" in studio
     assert 'selected.group === "Ready"' not in task_workspace
     assert "selectedRuntimeReady()" not in task_workspace
+
+
 def test_studio_repository_evidence_uses_textual_change_and_scope_contracts() -> None:
     quality_gate = _asset_text("/operator-quality-gates.js")
 
@@ -1619,7 +1582,7 @@ def test_studio_review_qa_gates_render_exact_identity_and_blocker_contracts() ->
             "Known issue ·",
             "data-quality-gate-blocker",
             "function studioRemediationReadback(sourceStage)",
-            'data-remediation-readback=',
+            "data-remediation-readback=",
             'data-recovery-action="rerun-stale-downstream"',
             "Terminal handoff stays blocked",
             "function remediationDraftNote(sourceStage, fallback)",
@@ -1651,8 +1614,8 @@ def test_studio_review_qa_gates_render_exact_identity_and_blocker_contracts() ->
     _assert_contains_all(
         main,
         (
-            'data-remediation-source',
-            'data-remediation-note',
+            "data-remediation-source",
+            "data-remediation-note",
             "persistRemediationDraft(remediationSource)",
             "updateRemediationPreview(remediationSource)",
             "persistRemediationDraft(remediationNote)",
@@ -1822,7 +1785,7 @@ def test_operator_approvals_asset_keeps_request_and_intervention_contracts() -> 
             "data-intervention-target",
             '"validator_report"',
             '"questions.md"',
-            "!textPath.includes(\"/operator-requests/\")",
+            '!textPath.includes("/operator-requests/")',
             "function interventionTargetLabel(key)",
             "function updateSubmitInterventionState()",
             "function renderLatestRequestSummary(context)",
@@ -1842,7 +1805,7 @@ def test_operator_approvals_asset_keeps_request_and_intervention_contracts() -> 
         components,
         (
             ".approval-decision-spotlight {",
-            "box-shadow: inset 4px 0 0 var(--green);",
+            "box-shadow: inset 4px 0 0 var(--mint);",
             ".approval-decision-spotlight.warn {",
             ".approval-decision-spotlight.bad {",
             ".approval-decision-facts {",
@@ -1855,8 +1818,7 @@ def test_operator_approvals_asset_keeps_request_and_intervention_contracts() -> 
     assert '[data-human-decision-surface="question"] [data-primary-action]' in responsive
     assert '[data-human-decision-surface="intervention"] #submitInterventionButton' in responsive
     assert (
-        '[data-human-decision-surface="approval"] [data-operator-action="allow_once"]'
-        in responsive
+        '[data-human-decision-surface="approval"] [data-operator-action="allow_once"]' in responsive
     )
 
 
@@ -1875,7 +1837,7 @@ def test_operator_logs_asset_keeps_filter_raw_cancel_and_polling_contracts() -> 
             "function renderLogAuditLog(entries, sourceLabel, truncation)",
             (
                 "function renderLogPanel({title, meta, entries, rawText, emptyText, "
-                "actions = \"\", truncation = null})"
+                'actions = "", truncation = null})'
             ),
             "Runtime Logs / Live Console",
             "Summary",
@@ -1933,10 +1895,10 @@ def test_operator_logs_asset_keeps_filter_raw_cancel_and_polling_contracts() -> 
             "Live log tail was truncated before cursor",
             "use the durable runtime log for complete evidence",
             "Number.isFinite(nextCursor)",
-            "state.activeJobStatus.status === \"waiting-for-operator\"",
+            'state.activeJobStatus.status === "waiting-for-operator"',
             "async function startJobPolling(job)",
             "await renderAll({skipArtifactLoad: true});",
-            "message: \"job started\"",
+            'message: "job started"',
             "renderActiveRunPanel();",
             "renderNextActionPanel();",
             "renderGlobalNextActionStrip();",
@@ -2004,7 +1966,7 @@ def test_operator_next_action_sidebar_is_status_mirror_when_global_cta_is_primar
             "function workDetailOwnsPrimarySurface()",
             '["implement-review", "review-findings", "qa-verdict"].includes(state.workDetail)',
             "function intentDecisionSurfaceProvidesPrimary()",
-            "state.activeTab === \"recovery\"",
+            'state.activeTab === "recovery"',
             "workDetailOwnsPrimarySurface()",
             'document.body.classList.contains("evidence-log-mode")',
             "function renderNextActionSidebarMirror({label, statusMessage, tone})",
@@ -2122,7 +2084,7 @@ def test_operator_main_asset_keeps_refresh_order_and_event_routing_contracts() -
             "/api/open-folder",
             "/api/server/stop",
             "function orderedTabButtons()",
-            "VALID_TABS.includes(button.dataset.tab || \"\") && !button.hidden",
+            'VALID_TABS.includes(button.dataset.tab || "") && !button.hidden',
             'event.target.closest("[data-first-launch-run]")',
             'event.target.closest("[data-first-launch-stage]")',
             "await startStage(state.activeStage);",
@@ -2282,5 +2244,5 @@ def test_operator_css_custom_properties_are_resolved() -> None:
     defined = set(re.findall(r"(--[a-zA-Z0-9_-]+)\s*:", css))
     referenced = set(re.findall(r"var\((--[a-zA-Z0-9_-]+)", css))
 
-    assert "--ink" in defined
+    assert "--text" in defined
     assert not referenced - defined

@@ -295,6 +295,7 @@ def create_next_attempt_directory(
     *,
     contracts_root: Path = DEFAULT_STAGE_CONTRACTS_ROOT,
     repository_root: Path | None = None,
+    attempt_mode: str | None = None,
 ) -> Path:
     attempts_root = run_attempts_root(
         workspace_root=workspace_root,
@@ -335,6 +336,7 @@ def create_next_attempt_directory(
         attempt_number=attempt_number,
         contracts_root=contracts_root,
         repository_root=resolved_repository_root,
+        attempt_mode=attempt_mode,
     )
     return attempt_path
 
@@ -1000,27 +1002,6 @@ def create_run_manifest(
             mismatches.append("stage_target")
         existing_config = existing.get("config_snapshot")
         if isinstance(existing_config, dict):
-            def _legacy_default_selection_compatible(key: str) -> bool:
-                if key not in config_snapshot or key in existing_config:
-                    return False
-                if key in {"runtime_model", "runtime_reasoning_effort"}:
-                    return config_snapshot[key] is None
-                if key in {
-                    "runtime_model_source",
-                    "runtime_reasoning_effort_source",
-                }:
-                    return bool(config_snapshot[key] == "runtime-default")
-                if key == "runtime_selection":
-                    selection = config_snapshot[key]
-                    return (
-                        isinstance(selection, dict)
-                        and selection.get("requested_model") is None
-                        and selection.get("requested_reasoning_effort") is None
-                        and selection.get("model_source") == "runtime-default"
-                        and selection.get("reasoning_effort_source") == "runtime-default"
-                    )
-                return False
-
             for key in (
                 "workspace_root",
                 "runtime_command",
@@ -1034,10 +1015,10 @@ def create_run_manifest(
                 "runtime_reasoning_effort_source",
                 "runtime_selection",
             ):
-                if _legacy_default_selection_compatible(key):
-                    continue
                 if (key in existing_config or key in config_snapshot) and (
-                    existing_config.get(key) != config_snapshot.get(key)
+                    key not in existing_config
+                    or key not in config_snapshot
+                    or existing_config[key] != config_snapshot[key]
                 ):
                     mismatches.append(f"config_snapshot.{key}")
         if mismatches:

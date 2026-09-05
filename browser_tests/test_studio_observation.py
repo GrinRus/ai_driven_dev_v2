@@ -15,7 +15,7 @@ def test_studio_observes_durable_external_run_without_fake_progress(tmp_path: Pa
         playwright,
         work_item=fixture.work_item,
     ) as harness, harness.open_page((1280, 900)) as browser_page:
-        browser_page.page.goto(f"{harness.url}?ui=studio", wait_until="networkidle")
+        browser_page.page.goto(harness.url, wait_until="networkidle")
         observation = browser_page.page.locator('[data-studio-observation="durable-external"]')
         observation.wait_for(state="visible")
         assert "outside this browser session" in observation.inner_text()

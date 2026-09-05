@@ -21,7 +21,7 @@ def test_desktop_shell_keeps_rail_tabs_stage_strip_and_decision_column_in_view(
         work_item=fixture.work_item,
     ) as harness, harness.open_page(viewport) as browser_page:
         page = browser_page.page
-        page.goto(f"{harness.url}?ui=studio", wait_until="networkidle")
+        page.goto(harness.url, wait_until="networkidle")
 
         page.locator(".operator-workspace").wait_for(state="visible")
         action = page.locator("#globalNextActionButton")
@@ -98,7 +98,7 @@ def test_work_item_detail_uses_split_primary_and_work_item_rails(
         work_item=fixture.work_item,
     ) as harness, harness.open_page(viewport) as browser_page:
         page = browser_page.page
-        page.goto(f"{harness.url}?ui=studio", wait_until="networkidle")
+        page.goto(harness.url, wait_until="networkidle")
 
         primary = page.locator(".topbar .primary-nav")
         secondary = page.locator("#operatorWorkItemsRail")
@@ -167,7 +167,7 @@ def test_detail_header_starts_without_generic_desktop_chrome(
         work_item=fixture.work_item,
     ) as harness, harness.open_page(viewport) as browser_page:
         page = browser_page.page
-        page.goto(f"{harness.url}?ui=studio", wait_until="networkidle")
+        page.goto(harness.url, wait_until="networkidle")
 
         title = page.locator(".studio-context-bar h2")
         title.wait_for(state="visible")
@@ -242,7 +242,7 @@ def test_detail_context_header_keeps_identity_in_compact_target_rhythm(
         work_item=fixture.work_item,
     ) as harness, harness.open_page(viewport) as browser_page:
         page = browser_page.page
-        page.goto(f"{harness.url}?ui=studio", wait_until="networkidle")
+        page.goto(harness.url, wait_until="networkidle")
 
         context = page.locator(".intent-context-region .studio-context-bar")
         context.wait_for(state="visible")
@@ -310,7 +310,7 @@ def test_tablet_detail_shell_keeps_context_before_tabs_and_stages(
         work_item=fixture.work_item,
     ) as harness, harness.open_page(viewport) as browser_page:
         page = browser_page.page
-        page.goto(f"{harness.url}?ui=studio", wait_until="networkidle")
+        page.goto(harness.url, wait_until="networkidle")
 
         geometry = page.evaluate(
             """() => {
@@ -354,7 +354,7 @@ def test_mobile_detail_header_keeps_brand_work_item_and_inbox_path(
         work_item=fixture.work_item,
     ) as harness, harness.open_page(viewport) as browser_page:
         page = browser_page.page
-        page.goto(f"{harness.url}?ui=studio", wait_until="networkidle")
+        page.goto(harness.url, wait_until="networkidle")
 
         geometry = page.evaluate(
             """() => {
@@ -415,7 +415,7 @@ def test_shared_breadcrumb_uses_project_work_item_and_stage_labels(
         work_item=fixture.work_item,
     ) as harness, harness.open_page(viewport) as browser_page:
         page = browser_page.page
-        page.goto(f"{harness.url}?ui=studio", wait_until="networkidle")
+        page.goto(harness.url, wait_until="networkidle")
         page.locator("#intentChip").get_by_text(
             f"Work Item: {fixture.work_item}", exact=True
         ).wait_for(state="attached")
@@ -444,7 +444,7 @@ def test_desktop_flow_complete_reclaims_empty_decision_column(tmp_path: Path) ->
     ) as harness, harness.open_page((1280, 900)) as browser_page:
         page = browser_page.page
         page.goto(
-            f"{harness.url}?ui=studio&work_item={fixture.work_item}"
+            f"{harness.url}?work_item={fixture.work_item}"
             f"&run_id={fixture.run_id}&stage=qa",
             wait_until="domcontentloaded",
         )

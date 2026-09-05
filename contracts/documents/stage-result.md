@@ -5,9 +5,15 @@
 Summarize a completed or halted stage attempt with durable status, output evidence,
 validation state, blockers, and next actions.
 
-The runtime writes this Markdown summary as a draft stage output. AIDD treats it as the
-workflow-facing summary only after post-runtime validation, and may normalize terminal status
-or validation wording when the canonical validator report proves the draft inconsistent.
+AIDD derives this workflow record from the attempt lifecycle, canonical validation, and retained
+content evidence. Runtimes must not create or edit it, including during repair or intervention.
+Unexpected runtime copies remain raw attempt evidence and never determine progression.
+
+After substantive content validation and interview gates pass, AIDD renders the current
+attempt's candidate result from that observed state before validating the complete result
+document. The terminal document gate must not validate a bootstrap scaffold or a runtime copy
+as the current AIDD result. The candidate does not authorize publication: AIDD records the
+resolved transition and publishes only after the terminal document gate also passes.
 
 ## Required sections
 
@@ -67,7 +73,12 @@ or validation wording when the canonical validator report proves the draft incon
   - Must match the stage that produced this file.
 - `Attempt history`
   - Must list attempts in chronological order.
-  - Each attempt must include at minimum: attempt number, trigger (`initial` or `repair`), and outcome.
+  - Each attempt must include at minimum: attempt number, recorded trigger (`initial`, `repair`,
+    `resume`, `intervention`, or `repair-extension`), and outcome. Missing or malformed attempt
+    metadata is an explicit evidence error; trigger and repair consumption must not be guessed
+    from directory order.
+  - AIDD records the selected trigger before publishing the attempt as executing. Preparation
+    failures retain that trigger, so operator inspection does not see an unclassified live attempt.
   - Failed attempts must reference validator or runtime evidence when available.
   - Repair attempts must reference `repair-brief.md` by workspace-relative path when it exists.
 - `Status`
@@ -79,10 +90,8 @@ or validation wording when the canonical validator report proves the draft incon
 - `Blockers`
   - A succeeded stage-result must use exactly `- none` when no unresolved blocking
     question or other terminal blocker remains.
-  - AIDD may normalize an explicitly empty successful runtime claim such as `No blockers.`
-    to `- none` before canonical validation when no unresolved blocking question exists; it
-    must never erase a concrete blocker. Blocked and needs-input results must retain concrete
-    blocker entries.
+  - AIDD derives blockers from current workflow and interview state; it must never erase a
+    concrete unresolved blocker. Blocked and needs-input results retain concrete entries.
 - `Produced outputs`
   - Must list output documents produced in the final attempt as AIDD workspace-relative paths.
   - Must explicitly note missing required outputs when status is not `succeeded`.
@@ -116,9 +125,8 @@ or validation wording when the canonical validator report proves the draft incon
 - `Terminal state notes`
   - Must explain why the stage ended in the declared terminal status.
   - Must include repair-budget outcome when repair logic was used.
-  - If AIDD normalizes stale runtime status/verdict text after canonical validation
-    passes, terminal notes must not retain runtime-authored claims that the stage
-    ended as `failed`, `blocked`, or `needs-input`.
+  - Terminal notes must agree with the final canonical state; an earlier failed attempt must
+    remain historical evidence rather than contradict the current terminal status.
   - If `repair-brief.md` declares `repair-budget-final-attempt`, status must reflect the actual validation outcome of that attempt, not fail solely because no later rerun is available.
   - If AIDD records `repair-budget-exhausted` after a failed final attempt, status must be `failed`.
 - `Project-set evidence` (conditional)
@@ -156,13 +164,9 @@ or validation wording when the canonical validator report proves the draft incon
   stage id from the canonical chain. Do not describe later work such as implementation,
   review, QA, or release as the next operator step until the intervening canonical stage
   has completed.
-- If canonical AIDD validation passes, runtime exit succeeded, and no unresolved blocking
-  questions remain, AIDD may normalize a stale draft `Status: failed|blocked` or
-  `Validator verdict: fail` to `succeeded` / `pass` before publication and record that
-  normalization in `Terminal state notes`. It must remove or replace stale
-  terminal-status notes that contradict the normalized status, while preserving
-  product-quality decisions in the primary stage report such as review rejection or QA
-  readiness.
+- AIDD derives the terminal state from current canonical validation, runtime outcome, and
+  unresolved blocking questions. Preserve failed-attempt history and independent product-quality
+  decisions in primary reports, such as review rejection or QA readiness.
 - Use explicit `- none` markers instead of leaving required sections empty.
 
 ## Validation cues

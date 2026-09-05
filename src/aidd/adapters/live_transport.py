@@ -7,7 +7,7 @@ import threading
 from collections.abc import Callable, Mapping
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, TypeVar
+from typing import Any
 
 from aidd.adapters.runtime_execution import RuntimeRunResult
 from aidd.adapters.runtime_log_capture import (
@@ -18,8 +18,6 @@ from aidd.adapters.runtime_log_capture import (
 from aidd.core.stage_models import AdapterExecutionStatus
 from aidd.runtime_catalog import RuntimeExecutionMode
 from aidd.runtime_permissions import RuntimeInteractionMode, RuntimePermissionPolicy
-
-ExitClassificationT = TypeVar("ExitClassificationT")
 
 
 @dataclass(frozen=True, slots=True)
@@ -154,11 +152,6 @@ def split_command(configured_command: str, *, runtime_label: str) -> tuple[str, 
     return tokens
 
 
-def command_executable_name(configured_command: str, *, runtime_label: str) -> str:
-    tokens = split_command(configured_command, runtime_label=runtime_label)
-    return Path(tokens[0]).name
-
-
 def should_use_live_transport(
     *,
     permission_policy: RuntimePermissionPolicy,
@@ -192,7 +185,6 @@ __all__ = [
     "LiveTransportResult",
     "StreamCapture",
     "append_jsonl",
-    "command_executable_name",
     "run_help_text",
     "should_use_live_transport",
     "split_command",

@@ -40,7 +40,7 @@ from aidd.core.run_inspection import (
     resolve_run_metadata_summary,
     resolve_stage_result_summary,
 )
-from aidd.core.run_lookup import latest_attempt_number
+from aidd.core.run_lookup import latest_attempt_number, latest_attempt_path
 from aidd.core.run_store import (
     RUN_EVENTS_JSONL_FILENAME,
     load_attempt_artifact_index,
@@ -684,30 +684,6 @@ def _raw_log_diagnostics(
     )
 
 
-def _latest_attempt_root_or_none(
-    *,
-    workspace_root: Path,
-    work_item: str,
-    run_id: str,
-    stage: str,
-) -> Path | None:
-    attempt_number = latest_attempt_number(
-        workspace_root=workspace_root,
-        work_item=work_item,
-        run_id=run_id,
-        stage=stage,
-    )
-    if attempt_number is None:
-        return None
-    return run_attempt_root(
-        workspace_root=workspace_root,
-        work_item=work_item,
-        run_id=run_id,
-        stage=stage,
-        attempt_number=attempt_number,
-    )
-
-
 def _approval_queue_diagnostics(
     *,
     workspace_root: Path,
@@ -715,7 +691,7 @@ def _approval_queue_diagnostics(
     stage: str,
     run_id: str,
 ) -> OperatorRuntimeApprovalQueueDiagnostics:
-    attempt_root = _latest_attempt_root_or_none(
+    attempt_root = latest_attempt_path(
         workspace_root=workspace_root,
         work_item=work_item,
         run_id=run_id,
@@ -876,7 +852,7 @@ def _stopped_diagnostics(
     run_id: str,
     result: StageResultSummary,
 ) -> OperatorStoppedDiagnostics:
-    attempt_root = _latest_attempt_root_or_none(
+    attempt_root = latest_attempt_path(
         workspace_root=workspace_root,
         work_item=work_item,
         run_id=run_id,

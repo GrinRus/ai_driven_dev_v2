@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 import os
 import re
+import runpy
 import sys
 from dataclasses import replace
 from datetime import UTC, datetime
@@ -71,6 +72,7 @@ from aidd.core.stage_runner import (
 )
 from aidd.core.stage_terminal import reconcile_stage_result_after_validation_pass
 from aidd.core.state_machine import StageState, is_terminal_state, transition_stage_state
+from aidd.core.workspace import WorkspaceBootstrapService
 from aidd.runtime_permissions import (
     RuntimeOperatorDecisionAction,
     RuntimeOperatorDecisionSource,
@@ -246,7 +248,7 @@ def test_prepare_stage_bundle_renders_stage_brief_with_relative_paths(tmp_path: 
     assert "\nplan\n" in content
     assert "# Expected input bundle" in content
     assert "`workitems/WI-001/stages/research/output/research-notes.md`" in content
-    assert "# Expected output documents" in content
+    assert "# Published documents" in content
     assert "`workitems/WI-001/stages/plan/plan.md`" in content
 
 
@@ -350,6 +352,7 @@ def test_persist_execution_state_creates_attempt_and_sets_executing_status(tmp_p
         work_item="WI-001",
         run_id="run-001",
         stage="plan",
+        attempt_mode="initial",
         changed_at_utc=datetime(2026, 4, 22, 10, 0, tzinfo=UTC),
     )
 
@@ -367,6 +370,36 @@ def test_persist_execution_state_creates_attempt_and_sets_executing_status(tmp_p
     )
     assert stage_metadata_payload["status"] == "executing"
     assert stage_metadata_payload["updated_at_utc"] == "2026-04-22T10:00:00Z"
+    artifact_index = json.loads(
+        (execution_state.attempt_path / "artifact-index.json").read_text(encoding="utf-8")
+    )
+    assert artifact_index["attempt_mode"] == "initial"
+
+
+def test_persist_execution_state_rejects_unknown_mode_before_allocating_attempt(
+    tmp_path: Path,
+) -> None:
+    workspace_root = tmp_path / ".aidd"
+    create_run_manifest(
+        workspace_root=workspace_root,
+        work_item="WI-001",
+        run_id="run-001",
+        runtime_id="generic-cli",
+        stage_target="plan",
+        config_snapshot={"mode": "test"},
+    )
+
+    with pytest.raises(ValueError, match="attempt mode"):
+        persist_execution_state(
+            workspace_root=workspace_root,
+            work_item="WI-001",
+            run_id="run-001",
+            stage="plan",
+            attempt_mode="unclassified",
+        )
+
+    assert not tuple(run_attempts_root(workspace_root, "WI-001", "run-001", "plan").glob("*"))
+    assert load_stage_metadata(workspace_root, "WI-001", "run-001", "plan") is None
 
 
 def test_persist_execution_state_uses_monotonic_attempt_numbers(tmp_path: Path) -> None:
@@ -385,12 +418,14 @@ def test_persist_execution_state_uses_monotonic_attempt_numbers(tmp_path: Path) 
         work_item="WI-001",
         run_id="run-001",
         stage="plan",
+        attempt_mode="initial",
     )
     second = persist_execution_state(
         workspace_root=workspace_root,
         work_item="WI-001",
         run_id="run-001",
         stage="plan",
+        attempt_mode="initial",
     )
 
     assert first.attempt_number == 1
@@ -420,6 +455,7 @@ def test_prepare_adapter_invocation_initial_attempt_has_no_repair_context(
         work_item="WI-001",
         run_id="run-001",
         stage="plan",
+        attempt_mode="initial",
     )
 
     invocation = prepare_adapter_invocation(
@@ -466,6 +502,7 @@ def test_prepare_adapter_invocation_initial_attempt_removes_stale_repair_brief(
         work_item="WI-001",
         run_id="run-001",
         stage="plan",
+        attempt_mode="initial",
     )
     stale_repair_brief_path = (
         workspace_root / "workitems" / "WI-001" / "stages" / "plan" / "repair-brief.md"
@@ -508,6 +545,7 @@ def test_prepare_adapter_invocation_repair_attempt_injects_repair_context(tmp_pa
         work_item="WI-001",
         run_id="run-001",
         stage="plan",
+        attempt_mode="initial",
     )
     persist_stage_status(
         workspace_root=workspace_root,
@@ -521,6 +559,7 @@ def test_prepare_adapter_invocation_repair_attempt_injects_repair_context(tmp_pa
         work_item="WI-001",
         run_id="run-001",
         stage="plan",
+        attempt_mode="repair",
     )
     repair_brief_path = (
         workspace_root / "workitems" / "WI-001" / "stages" / "plan" / "repair-brief.md"
@@ -592,6 +631,7 @@ def test_prepare_adapter_invocation_uses_repair_extension_brief_for_reopened_att
         work_item="WI-001",
         run_id="run-001",
         stage="plan",
+        attempt_mode="initial",
     )
     persist_stage_status(
         workspace_root=workspace_root,
@@ -626,6 +666,7 @@ def test_prepare_adapter_invocation_uses_repair_extension_brief_for_reopened_att
         work_item="WI-001",
         run_id="run-001",
         stage="plan",
+        attempt_mode="repair-extension",
     )
 
     invocation = prepare_adapter_invocation(
@@ -663,6 +704,7 @@ def test_repair_attempt_input_bundle_includes_existing_stage_outputs(tmp_path: P
         work_item="WI-001",
         run_id="run-001",
         stage="plan",
+        attempt_mode="initial",
     )
     stage_root = workspace_root / "workitems" / "WI-001" / "stages" / "plan"
     stage_root.mkdir(parents=True, exist_ok=True)
@@ -729,6 +771,7 @@ def test_restore_core_owned_repair_brief_reverts_runtime_overwrite(
         work_item="WI-001",
         run_id="run-001",
         stage="plan",
+        attempt_mode="initial",
     )
     persist_stage_status(
         workspace_root=workspace_root,
@@ -742,6 +785,7 @@ def test_restore_core_owned_repair_brief_reverts_runtime_overwrite(
         work_item="WI-001",
         run_id="run-001",
         stage="plan",
+        attempt_mode="repair",
     )
     repair_brief_path = (
         workspace_root / "workitems" / "WI-001" / "stages" / "plan" / "repair-brief.md"
@@ -790,6 +834,7 @@ def test_restore_core_owned_repair_brief_removes_model_created_initial_brief(
         work_item="WI-001",
         run_id="run-001",
         stage="plan",
+        attempt_mode="initial",
     )
     invocation = prepare_adapter_invocation(
         workspace_root=workspace_root,
@@ -834,6 +879,7 @@ def test_run_single_stage_orchestration_restores_repair_brief_when_adapter_raise
         work_item="WI-001",
         run_id="run-001",
         stage="plan",
+        attempt_mode="initial",
     )
     persist_stage_status(
         workspace_root=workspace_root,
@@ -932,6 +978,7 @@ def test_prepare_adapter_invocation_requires_existing_input_documents(tmp_path: 
         work_item="WI-001",
         run_id="run-001",
         stage="plan",
+        attempt_mode="initial",
     )
 
     with pytest.raises(FileNotFoundError, match="Input bundle preparation requires an existing"):
@@ -940,6 +987,10 @@ def test_prepare_adapter_invocation_requires_existing_input_documents(tmp_path: 
             preparation_bundle=preparation_bundle,
             execution_state=execution_state,
         )
+    artifact_index = json.loads(
+        (execution_state.attempt_path / "artifact-index.json").read_text(encoding="utf-8")
+    )
+    assert artifact_index["attempt_mode"] == "initial"
 
 
 def test_run_single_stage_preflight_blocks_missing_required_inputs_before_attempt(
@@ -1081,6 +1132,7 @@ def test_discover_stage_markdown_outputs_returns_discovered_and_missing_document
         work_item="WI-001",
         run_id="run-001",
         stage="plan",
+        attempt_mode="initial",
     )
     invocation = prepare_adapter_invocation(
         workspace_root=workspace_root,
@@ -1146,6 +1198,7 @@ def test_canonical_validator_report_ignores_runtime_validator_draft(
         work_item="WI-001",
         run_id="run-001",
         stage="plan",
+        attempt_mode="initial",
     )
     invocation = prepare_adapter_invocation(
         workspace_root=workspace_root,
@@ -1224,6 +1277,7 @@ def test_discovery_rejects_aidd_owned_runtime_targets(tmp_path: Path) -> None:
         work_item="WI-001",
         run_id="run-001",
         stage="plan",
+        attempt_mode="initial",
     )
     invocation = prepare_adapter_invocation(
         workspace_root=workspace_root,
@@ -1270,6 +1324,7 @@ def test_discovery_retains_unexpected_runtime_workflow_documents_as_attempt_evid
         work_item="WI-001",
         run_id="run-001",
         stage="plan",
+        attempt_mode="initial",
     )
     invocation = prepare_adapter_invocation(
         workspace_root=workspace_root,
@@ -1347,6 +1402,7 @@ def test_discover_stage_markdown_outputs_promotes_misplaced_output_documents(
         work_item="WI-001",
         run_id="run-001",
         stage="plan",
+        attempt_mode="initial",
     )
     invocation = prepare_adapter_invocation(
         workspace_root=workspace_root,
@@ -1422,6 +1478,7 @@ def test_discover_stage_markdown_outputs_rejects_mismatched_execution_context(
         work_item="WI-001",
         run_id="run-001",
         stage="plan",
+        attempt_mode="initial",
     )
     invocation = prepare_adapter_invocation(
         workspace_root=workspace_root,
@@ -1488,6 +1545,7 @@ def test_publish_stage_outputs_makes_downstream_output_references_satisfiable(
         work_item="WI-001",
         run_id="run-research",
         stage="research",
+        attempt_mode="initial",
     )
     with pytest.raises(
         FileNotFoundError,
@@ -1641,6 +1699,90 @@ def test_publish_stage_outputs_still_requires_missing_substantive_documents(
         )
 
 
+@pytest.mark.parametrize("corrupt_candidate", (False, True))
+def test_content_only_workflow_validates_aidd_results_before_publication(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, corrupt_candidate: bool,
+) -> None:
+    from aidd.core import stage_runner
+
+    workspace_root = tmp_path / ".aidd"
+    bootstrap = WorkspaceBootstrapService(root=workspace_root)
+    bootstrap.bootstrap_work_item("WI-CONTENT")
+    bootstrap.seed_request_context(
+        work_item="WI-CONTENT",
+        request_text="Deliver the bounded deterministic fixture milestones.",
+        project_root=tmp_path,
+    )
+    create_run_manifest(
+        workspace_root=workspace_root,
+        work_item="WI-CONTENT",
+        run_id="run-content",
+        runtime_id="generic-cli",
+        stage_target="tasklist",
+        config_snapshot={"mode": "test"},
+    )
+    fixture = runpy.run_path("harness/fixtures/minimal-python/aidd_fixture_runtime.py")
+    checked_stages: list[str] = []
+    original_check = stage_runner.reconcile_and_validate_stage_result_after_validation_pass
+
+    def check_candidate(**kwargs):
+        stage = kwargs["stage"]
+        metadata = load_stage_metadata(
+            workspace_root=workspace_root,
+            work_item="WI-CONTENT",
+            run_id="run-content",
+            stage=stage,
+        )
+        assert metadata is not None and metadata.status == "validating"
+        stage_root = workspace_root / "workitems/WI-CONTENT/stages" / stage
+        assert tuple((stage_root / "output").glob("*.md")) == ()
+        if corrupt_candidate:
+            result_path = stage_root / "stage-result.md"
+            result_path.write_text(
+                result_path.read_text().replace(f"- Stage: `{stage}`", "- Stage: `qa`"),
+                encoding="utf-8",
+            )
+        checked_stages.append(stage)
+        return original_check(**kwargs)
+
+    monkeypatch.setattr(
+        stage_runner, "reconcile_and_validate_stage_result_after_validation_pass", check_candidate
+    )
+
+    def execute_content(invocation, execution_state):
+        documents = fixture[f"_{invocation.stage.replace('-', '_')}_documents"]()
+        assert not {"stage-result.md", "validator-report.md"} & documents.keys()
+        stage_root = workspace_root / "workitems/WI-CONTENT/stages" / invocation.stage
+        for name, content in documents.items():
+            (stage_root / name).write_text(content, encoding="utf-8")
+        (execution_state.attempt_path / "runtime.log").write_text("fixture content written\n")
+        return AdapterExecutionOutcome(succeeded=True, details="success")
+
+    stages = ("idea", "research", "plan", "review-spec", "tasklist")
+    for stage in stages:
+        result = run_single_stage_orchestration(
+            workspace_root=workspace_root,
+            work_item="WI-CONTENT",
+            run_id="run-content",
+            stage=stage,
+            adapter_executor=execute_content,
+        )
+        if corrupt_candidate:
+            assert result.transition.action is PostValidationAction.REPAIR
+            assert result.validation_result.findings
+            assert not tuple(
+                (workspace_root / "workitems/WI-CONTENT/stages" / stage / "output").glob("*.md")
+            )
+            return
+        assert result.transition.action is PostValidationAction.ADVANCE
+        assert result.validation_result.findings == ()
+        attempts = run_attempts_root(workspace_root, "WI-CONTENT", "run-content", stage)
+        assert [path.name for path in attempts.iterdir()] == ["attempt-0001"]
+        index = json.loads((attempts / "attempt-0001/artifact-index.json").read_text())
+        assert index["attempt_mode"] == "initial"
+    assert checked_stages == list(stages)
+
+
 def test_run_single_stage_orchestration_executes_generic_cli_happy_path(
     tmp_path: Path,
 ) -> None:
@@ -1777,8 +1919,10 @@ def test_deferred_success_preserves_first_attempt_before_later_task_runs(
 
 
 def test_post_normalization_stage_result_finding_requests_repair(
-    tmp_path: Path,
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch,
 ) -> None:
+    from aidd.core import stage_runner
+
     workspace_root = tmp_path / ".aidd"
     create_run_manifest(
         workspace_root=workspace_root,
@@ -1794,12 +1938,22 @@ def test_post_normalization_stage_result_finding_requests_repair(
         stage="plan",
     )
     _materialize_expected_inputs(preview_bundle.expected_input_bundle)
-    runtime_documents = _valid_plan_output_documents()
-    runtime_documents["stage-result.md"] = runtime_documents["stage-result.md"].replace(
-        "## Attempt history\n\n- attempt-0001\n\n",
-        "## Attempt history\n\n"
-        "- Attempt 1 (`initial`): first claim.\n"
-        "- Attempt 1 (`initial`): duplicate claim.\n\n",
+    runtime_documents = {"plan.md": _valid_plan_output_documents()["plan.md"]}
+    original_writer = stage_runner._write_canonical_stage_result
+
+    def write_duplicate_attempt_history(**kwargs):
+        path = original_writer(**kwargs)
+        path.write_text(
+            path.read_text().replace(
+                "## Attempt history\n\n",
+                "## Attempt history\n\n- Attempt 1 (`initial`): duplicate claim.\n",
+            ),
+            encoding="utf-8",
+        )
+        return path
+
+    monkeypatch.setattr(
+        stage_runner, "_write_canonical_stage_result", write_duplicate_attempt_history
     )
     stage_root = workspace_root / "workitems" / "WI-001" / "stages" / "plan"
 
@@ -2276,6 +2430,7 @@ def test_run_single_stage_orchestration_preserves_repair_context_after_blocked_r
         work_item="WI-001",
         run_id="run-001",
         stage="plan",
+        attempt_mode="initial",
     )
     persist_stage_status(
         workspace_root=workspace_root,
@@ -2301,6 +2456,7 @@ def test_run_single_stage_orchestration_preserves_repair_context_after_blocked_r
         work_item="WI-001",
         run_id="run-001",
         stage="plan",
+        attempt_mode="repair",
     )
     persist_stage_status(
         workspace_root=workspace_root,
@@ -2485,6 +2641,7 @@ def test_run_single_stage_orchestration_preserves_historical_repair_brief_trace_
         work_item="WI-001",
         run_id="run-001",
         stage="plan",
+        attempt_mode="initial",
     )
     persist_stage_status(
         workspace_root=workspace_root,
@@ -2510,6 +2667,7 @@ def test_run_single_stage_orchestration_preserves_historical_repair_brief_trace_
         work_item="WI-001",
         run_id="run-001",
         stage="plan",
+        attempt_mode="repair",
     )
     persist_stage_status(
         workspace_root=workspace_root,
@@ -2883,6 +3041,7 @@ def test_run_single_stage_orchestration_allows_final_repair_attempt_to_pass(
         work_item="WI-001",
         run_id="run-001",
         stage="plan",
+        attempt_mode="initial",
     )
     persist_stage_status(
         workspace_root=workspace_root,
@@ -2983,6 +3142,7 @@ def test_run_single_stage_orchestration_normalizes_missing_repair_brief_trace(
         work_item="WI-001",
         run_id="run-001",
         stage="plan",
+        attempt_mode="initial",
     )
     persist_stage_status(
         workspace_root=workspace_root,
@@ -3057,11 +3217,12 @@ def test_run_single_stage_orchestration_forces_failed_status_on_exhausted_repair
         stage="plan",
     )
     _materialize_expected_inputs(preview_bundle.expected_input_bundle)
-    persist_execution_state(
+    create_next_attempt_directory(
         workspace_root=workspace_root,
         work_item="WI-001",
         run_id="run-001",
         stage="plan",
+        attempt_mode="initial",
     )
     persist_stage_status(
         workspace_root=workspace_root,
@@ -3297,6 +3458,7 @@ def test_run_structural_validation_after_output_discovery_writes_report_path(
         work_item="WI-001",
         run_id="run-001",
         stage="plan",
+        attempt_mode="initial",
     )
     invocation = prepare_adapter_invocation(
         workspace_root=workspace_root,
@@ -3355,6 +3517,7 @@ def test_validation_collects_semantic_findings_with_independent_structural_defec
         work_item="WI-001",
         run_id="run-001",
         stage="plan",
+        attempt_mode="initial",
     )
     invocation = prepare_adapter_invocation(
         workspace_root=workspace_root,
@@ -3418,6 +3581,7 @@ def test_route_stage_questions_to_interview_detects_unresolved_blocking_question
         work_item="WI-001",
         run_id="run-001",
         stage="plan",
+        attempt_mode="initial",
     )
     invocation = prepare_adapter_invocation(
         workspace_root=workspace_root,
@@ -3483,6 +3647,7 @@ def test_route_stage_questions_to_interview_skips_when_blocking_questions_resolv
         work_item="WI-001",
         run_id="run-001",
         stage="plan",
+        attempt_mode="initial",
     )
     invocation = prepare_adapter_invocation(
         workspace_root=workspace_root,
@@ -3543,6 +3708,7 @@ def test_prepare_adapter_invocation_repair_attempt_requires_repair_brief(
         work_item="WI-001",
         run_id="run-001",
         stage="plan",
+        attempt_mode="initial",
     )
     persist_stage_status(
         workspace_root=workspace_root,
@@ -3556,6 +3722,7 @@ def test_prepare_adapter_invocation_repair_attempt_requires_repair_brief(
         work_item="WI-001",
         run_id="run-001",
         stage="plan",
+        attempt_mode="repair",
     )
 
     with pytest.raises(FileNotFoundError, match="Repair rerun requires an existing repair brief"):
@@ -3709,11 +3876,12 @@ def test_persist_validation_state_with_repair_budget_keeps_repair_when_budget_re
         stage_target="plan",
         config_snapshot={"mode": "test"},
     )
-    persist_execution_state(
+    create_next_attempt_directory(
         workspace_root=workspace_root,
         work_item="WI-001",
         run_id="run-001",
         stage="plan",
+        attempt_mode="initial",
     )
     persist_stage_status(
         workspace_root=workspace_root,
@@ -3752,23 +3920,26 @@ def test_persist_validation_state_with_repair_budget_forces_fail_when_exhausted(
         stage_target="plan",
         config_snapshot={"mode": "test"},
     )
-    persist_execution_state(
+    create_next_attempt_directory(
         workspace_root=workspace_root,
         work_item="WI-001",
         run_id="run-001",
         stage="plan",
+        attempt_mode="initial",
     )
-    persist_execution_state(
+    create_next_attempt_directory(
         workspace_root=workspace_root,
         work_item="WI-001",
         run_id="run-001",
         stage="plan",
+        attempt_mode="repair",
     )
-    persist_execution_state(
+    create_next_attempt_directory(
         workspace_root=workspace_root,
         work_item="WI-001",
         run_id="run-001",
         stage="plan",
+        attempt_mode="repair",
     )
     persist_stage_status(
         workspace_root=workspace_root,
@@ -3914,6 +4085,7 @@ def test_stage_transition_flow_covers_happy_validator_failure_and_blocked_paths(
         work_item="WI-001",
         run_id="run-001",
         stage="plan",
+        attempt_mode="initial",
         changed_at_utc=datetime(2026, 4, 22, 10, 0, tzinfo=UTC),
     )
     transition_stage_state(StageState.EXECUTING, StageState.VALIDATING)
@@ -3963,6 +4135,7 @@ def test_stage_transition_flow_covers_adapter_failure_path(tmp_path: Path) -> No
         work_item="WI-001",
         run_id="run-001",
         stage="plan",
+        attempt_mode="initial",
         changed_at_utc=datetime(2026, 4, 22, 10, 0, tzinfo=UTC),
     )
     transition_stage_state(StageState.EXECUTING, StageState.FAILED)

@@ -60,7 +60,7 @@ def test_human_decision_surface_is_mobile_first_without_overflow(
         work_item=fixture.work_item,
     ) as harness, harness.open_page(viewport) as browser_page:
         page = browser_page.page
-        page.goto(f"{harness.url}?ui=studio", wait_until="networkidle")
+        page.goto(harness.url, wait_until="networkidle")
         root_selector, primary_selector = _open_surface(page, surface)
         root = page.locator(root_selector)
         root.wait_for(state="visible")

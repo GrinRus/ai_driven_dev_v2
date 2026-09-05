@@ -46,15 +46,15 @@ test("archived run intents retain both history and artifact inspection", async (
   const context = await routeIntentContext();
   const input = {workItem: "WI-ARCHIVE", runId: "run-closed", archived: true};
   const historyHref = vm.runInContext(
-    `operatorRouteIntentHref("historical-run", ${JSON.stringify(input)})`,
+    `encodeOperatorRoute(resolveOperatorRouteIntent("historical-run", ${JSON.stringify(input)}).route)`,
     context,
   );
   const artifactsHref = vm.runInContext(
-    `operatorRouteIntentHref("run-artifacts", ${JSON.stringify(input)})`,
+    `encodeOperatorRoute(resolveOperatorRouteIntent("run-artifacts", ${JSON.stringify(input)}).route)`,
     context,
   );
-  assert.match(historyHref, /^\/\?mode=history/);
-  assert.match(artifactsHref, /^\/\?mode=studio&view=artifacts/);
+  assert.match(historyHref, /^\?mode=history/);
+  assert.match(artifactsHref, /^\?mode=studio&view=artifacts/);
   assert.match(historyHref, /run_id=run-closed/);
   assert.match(artifactsHref, /run_id=run-closed/);
 });

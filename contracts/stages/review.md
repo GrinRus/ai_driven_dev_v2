@@ -12,8 +12,8 @@ Review the implementation result, identify risks, and confirm whether the change
 - `questions.md` / `answers.md` when clarification is required
 
 `review-report.md` is the primary runtime-authored content artifact. `stage-result.md`
-is a runtime-authored summary draft that AIDD may normalize after validation, and
-`validator-report.md` is canonical only after AIDD writes the post-runtime validation report.
+and `validator-report.md` are AIDD-owned workflow records. AIDD writes their lifecycle and
+validation content after runtime execution; runtimes must not create or edit either record.
 
 ## System-owned control artifacts
 

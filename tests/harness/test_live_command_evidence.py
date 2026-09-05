@@ -63,11 +63,12 @@ def test_command_evidence_is_content_addressed_and_projection_is_bounded(
     )
 
 
-def test_command_evidence_reader_accepts_legacy_inline_record(tmp_path: Path) -> None:
-    assert read_command_output(
-        bundle_root=tmp_path,
-        command_payload={"stdout_text": "old out", "stderr_text": "old err"},
-    ) == ("old out", "old err")
+def test_command_evidence_reader_rejects_retired_inline_record(tmp_path: Path) -> None:
+    with pytest.raises(ValueError, match="current evidence path and digest"):
+        read_command_output(
+            bundle_root=tmp_path,
+            command_payload={"stdout_text": "old out", "stderr_text": "old err"},
+        )
 
 
 def test_command_evidence_reader_rejects_digest_mismatch(tmp_path: Path) -> None:

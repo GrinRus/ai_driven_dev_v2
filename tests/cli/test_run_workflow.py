@@ -3,13 +3,17 @@ from __future__ import annotations
 import json
 import shlex
 import sys
+from collections.abc import Callable
 from pathlib import Path
+from typing import Any
 
 import pytest
 import typer
 from typer.testing import CliRunner
 
 from aidd.cli import main as cli_main
+from aidd.cli import run as cli_run
+from aidd.cli.stage_run import StageRunOptions
 from aidd.core.run_store import persist_stage_status, run_manifest_path, work_item_runs_root
 from aidd.core.stage_graph import StageAdvancementSummary
 from aidd.core.stage_registry import resolve_expected_output_documents
@@ -24,6 +28,17 @@ _RUNTIME_COMMANDS: dict[str, str] = {
     "codex": "codex-fake",
     "opencode": "opencode-fake",
 }
+
+
+def _patch_stage_runner(monkeypatch: pytest.MonkeyPatch, stage_runner: Callable[..., Any]) -> None:
+    def run_attempt(options: StageRunOptions) -> None:
+        stage_runner(
+            stage=options.stage, work_item=options.work_item, runtime=options.runtime,
+            run_id=options.run_id, root=options.root, config=options.config,
+            log_follow=options.log_follow,
+        )
+    monkeypatch.setattr(cli_run, "stage_run", stage_runner)
+    monkeypatch.setattr(cli_run, "run_stage_attempt_command", run_attempt)
 
 
 def _write_config(tmp_path: Path) -> Path:
@@ -320,7 +335,7 @@ def test_run_executes_runnable_stages_in_dependency_order(
         if stage == "implement":
             _write_fake_project_change(tmp_path)
 
-    monkeypatch.setattr(cli_main, "stage_run", _fake_stage_run)
+    _patch_stage_runner(monkeypatch, _fake_stage_run)
 
     result = runner.invoke(
         cli_main.app,
@@ -389,7 +404,7 @@ def test_run_stops_when_stage_execution_returns_nonzero_exit(
         )
         raise typer.Exit(code=1)
 
-    monkeypatch.setattr(cli_main, "stage_run", _fake_stage_run)
+    _patch_stage_runner(monkeypatch, _fake_stage_run)
 
     result = runner.invoke(
         cli_main.app,
@@ -452,7 +467,7 @@ def test_run_dispatches_workflow_for_supported_non_generic_runtimes(
         if stage == "implement":
             _write_fake_project_change(tmp_path)
 
-    monkeypatch.setattr(cli_main, "stage_run", _fake_stage_run)
+    _patch_stage_runner(monkeypatch, _fake_stage_run)
 
     result = runner.invoke(
         cli_main.app,
@@ -694,7 +709,7 @@ def test_run_manifest_persists_runtime_specific_command_snapshot(
         if stage == "implement":
             _write_fake_project_change(tmp_path)
 
-    monkeypatch.setattr(cli_main, "stage_run", _fake_stage_run)
+    _patch_stage_runner(monkeypatch, _fake_stage_run)
     result = runner.invoke(
         cli_main.app,
         [
@@ -774,7 +789,7 @@ def test_run_stops_for_non_generic_runtime_when_stage_execution_fails(
         )
         raise typer.Exit(code=1)
 
-    monkeypatch.setattr(cli_main, "stage_run", _fake_stage_run)
+    _patch_stage_runner(monkeypatch, _fake_stage_run)
     result = runner.invoke(
         cli_main.app,
         [
@@ -841,13 +856,13 @@ def test_run_reports_non_generic_noop_path_with_nonzero_exit(
     def _unexpected_stage_run(**_: object) -> None:
         raise AssertionError("stage_run should not be called when no stage is runnable")
 
-    monkeypatch.setattr(cli_main, "select_next_runnable_stage", _fake_select_next_runnable_stage)
+    monkeypatch.setattr(cli_run, "select_next_runnable_stage", _fake_select_next_runnable_stage)
     monkeypatch.setattr(
-        cli_main,
+        cli_run,
         "summarize_workflow_advancement",
         _fake_summarize_workflow_advancement,
     )
-    monkeypatch.setattr(cli_main, "stage_run", _unexpected_stage_run)
+    _patch_stage_runner(monkeypatch, _unexpected_stage_run)
     result = runner.invoke(
         cli_main.app,
         [
@@ -899,7 +914,7 @@ def test_run_respects_custom_stage_bounds(tmp_path: Path, monkeypatch: pytest.Mo
             stage=stage,
         )
 
-    monkeypatch.setattr(cli_main, "stage_run", _fake_stage_run)
+    _patch_stage_runner(monkeypatch, _fake_stage_run)
     result = runner.invoke(
         cli_main.app,
         [

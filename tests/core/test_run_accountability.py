@@ -174,7 +174,7 @@ def test_run_accountability_aggregates_ordered_per_attempt_prompt_provenance(
     assert not any("Attempt mode is missing" in warning for warning in view.warnings)
 
 
-def test_run_accountability_marks_legacy_attempt_mode_unknown(tmp_path: Path) -> None:
+def test_run_accountability_reports_unsupported_missing_attempt_mode(tmp_path: Path) -> None:
     workspace_root = tmp_path / ".aidd"
     create_run_manifest(
         workspace_root=workspace_root,
@@ -208,8 +208,10 @@ def test_run_accountability_marks_legacy_attempt_mode_unknown(tmp_path: Path) ->
     )
 
     assert view.attempts[0].attempt_mode == "unknown"
-    assert view.attempts[0].prompt_pack_provenance
-    assert any("legacy idea attempt 1" in warning for warning in view.warnings)
+    assert view.attempts[0].prompt_pack_provenance == ()
+    assert any(
+        "Attempt evidence is malformed for idea attempt 1" in warning for warning in view.warnings
+    )
 
 
 def test_run_accountability_does_not_fabricate_prompts_for_corrupt_attempt(

@@ -103,85 +103,6 @@ function transitionGuidedSetup(event, payload = {}) {
   return state.onboarding.guided;
 }
 
-function setGuidedDeliveryPreference(enabled) {
-  state.onboarding.guidedDelivery = Boolean(enabled);
-  renderOnboarding();
-}
-
-function guidedDeliveryExplanation(guided = state.onboarding.guided) {
-  const step = guided?.step || "project";
-  const explanations = {
-    project: ["Confirm the project boundary", "Validate the local workspace before choosing delivery context."],
-    "work-item": ["Choose durable Work Item context", "Create a new request or resume saved evidence without launching runtime work."],
-    runtime: ["Choose the execution runtime", "Review observed runtime readiness before a launch request is dispatched."],
-    "review-launch": ["Review and launch", "Confirm the selected context, then use the same guarded service action as Studio."]
-  };
-  const [title, detail] = explanations[step] || explanations.project;
-  return Object.freeze({title, detail});
-}
-
-function renderGuidedDeliveryPreference() {
-  const enabled = state.onboarding.guidedDelivery !== false;
-  const explanation = guidedDeliveryExplanation();
-  return `
-    <section class="guided-delivery-preference" aria-labelledby="guidedDeliveryTitle">
-      <div>
-        <strong id="guidedDeliveryTitle">Guided Delivery</strong>
-        <p>Presentation guidance only; selected context, requests, and durable outcomes stay unchanged.</p>
-      </div>
-      <button type="button" class="secondary" data-guided-delivery-toggle aria-pressed="${enabled}">
-        ${enabled ? "Guidance on" : "Guidance off"}
-      </button>
-    </section>
-    ${enabled ? `
-      <aside class="guided-delivery-explanation" role="note">
-        <span class="small-badge">Current decision</span>
-        <strong>${escapeHtml(explanation.title)}</strong>
-        <p>${escapeHtml(explanation.detail)}</p>
-      </aside>
-    ` : ""}
-  `;
-}
-
-function renderGuidedSetupProgress(guided = state.onboarding.guided || initialGuidedSetupState()) {
-  const labels = [
-    ["project", "Project"],
-    ["work-item", "Work Item"],
-    ["runtime", "Runtime"],
-    ["review-launch", "Review & Launch"]
-  ];
-  const activeIndex = Math.max(0, GUIDED_SETUP_STEPS.indexOf(guided.step));
-  return `
-    <nav class="guided-setup-progress" aria-label="Guided setup progress">
-      ${labels.map(([step, label], index) => {
-        const complete = index < activeIndex;
-        const active = index === activeIndex;
-        return `
-          <div class="guided-setup-step ${complete ? "complete" : active ? "active" : "upcoming"}" aria-current="${active ? "step" : "false"}">
-            <span class="guided-setup-step-index">${complete ? "✓" : index + 1}</span>
-            <strong>${escapeHtml(label)}</strong>
-            <small>${complete ? "completed" : active ? "active" : "upcoming"}</small>
-          </div>
-        `;
-      }).join("")}
-    </nav>
-  `;
-}
-
-function renderGuidedSetupSummary(guided = state.onboarding.guided || initialGuidedSetupState()) {
-  if (guided.projectStatus !== "valid" && !guided.workItem) return "";
-  const project = onboardingProject();
-  return `
-    <section class="surface guided-setup-summary" aria-label="Setup summary">
-      <div class="surface-title"><span>Setup summary</span><span class="small-badge">selected context</span></div>
-      <dl>
-        <div><dt>Project</dt><dd>${escapeHtml(project?.project_root || state.onboarding.projectRootInput || "Local project")}</dd></div>
-        <div><dt>Work Item</dt><dd>${escapeHtml(guided.workItem || "Choose a Work Item")}</dd></div>
-      </dl>
-    </section>
-  `;
-}
-
 function onboardingProject() {
   return state.onboarding.project || null;
 }
@@ -285,17 +206,6 @@ function onboardingRunnerCards() {
     `;
   }).join("");
   return `${onboardingRunnerGuidance(runtimes)}${cards}${renderProtectedWriteScope()}`;
-}
-
-function onboardingRecentProjects() {
-  const projects = state.onboarding.recentProjects || [];
-  if (!projects.length) return `<div class="empty-state">No recent projects in this UI process.</div>`;
-  return projects.map((projectRoot) => `
-    <button class="artifact-row" data-onboarding-recent-project="${escapeHtml(projectRoot)}" type="button">
-      <span><strong>${escapeHtml(compactPath(projectRoot, 72))}</strong>${pathLine(projectRoot, 86)}</span>
-      <span class="small-badge">recent</span>
-    </button>
-  `).join("");
 }
 
 function onboardingWorkItems() {
@@ -616,7 +526,7 @@ function renderProjectWorkItemCreator() {
       <form id="projectNewWorkItemForm" class="form-grid">
         <label class="field-label" for="projectNewWorkItem">Work Item id</label>
         <input id="projectNewWorkItem" name="work_item" type="text" maxlength="120" value="${escapeHtml(state.onboarding.workItemInput)}" autocomplete="off" spellcheck="false" placeholder="WI-123">
-        <label class="field-label" for="projectNewTitle">Title <span class="muted">(optional for legacy compatibility)</span></label>
+        <label class="field-label" for="projectNewTitle">Title <span class="muted">(optional)</span></label>
         <input id="projectNewTitle" name="title" type="text" maxlength="160" placeholder="Short navigation title" value="${escapeHtml(state.onboarding.titleText)}">
         <label class="field-label" for="projectNewRequest">Brief outcome</label>
         <textarea id="projectNewRequest" name="request" rows="5" maxlength="20000" placeholder="What should this Work Item deliver?">${escapeHtml(state.onboarding.requestText)}</textarea>

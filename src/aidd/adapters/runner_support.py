@@ -21,7 +21,7 @@ RuntimeArtifactPaths = RuntimeEvidencePaths
 
 
 # These documents are AIDD-owned or operator-owned workflow records.  They may be
-# present in the historical compatibility output list, but they must never be used
+# present in a published output list, but they must never be used
 # as a runtime process-completion signal.
 _NON_RUNTIME_COMPLETION_DOCUMENT_NAMES = frozenset(
     {
@@ -38,8 +38,7 @@ def runtime_content_document_paths(paths: tuple[Path, ...]) -> tuple[Path, ...]:
     """Return only substantive runtime-authored document paths.
 
     The core normally supplies this projection already.  Adapters repeat the
-    boundary check because older callers and retained run manifests may still
-    provide the complete published compatibility list.
+    boundary check so system-owned records never become provider completion signals.
     """
 
     return tuple(

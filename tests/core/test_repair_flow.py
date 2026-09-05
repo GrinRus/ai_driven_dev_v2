@@ -15,7 +15,6 @@ from aidd.core.run_store import (
     create_run_manifest,
     load_stage_metadata,
     persist_stage_status,
-    write_attempt_artifact_index,
 )
 from aidd.core.stage_runner import (
     PostValidationAction,
@@ -40,12 +39,13 @@ def _bootstrap_run(tmp_path: Path, *, stage_target: str = "plan") -> Path:
     return workspace_root
 
 
-def _start_attempt(workspace_root: Path, *, stage: str = "plan") -> int:
+def _start_attempt(workspace_root: Path, *, mode: str, stage: str = "plan") -> int:
     execution_state = persist_execution_state(
         workspace_root=workspace_root,
         work_item="WI-001",
         run_id="run-001",
         stage=stage,
+        attempt_mode=mode,
     )
     persist_stage_status(
         workspace_root=workspace_root,
@@ -61,7 +61,7 @@ def test_one_shot_repair_success_flow(tmp_path: Path) -> None:
     workspace_root = _bootstrap_run(tmp_path)
     policy = RepairBudgetPolicy(default_max_repair_attempts=2)
 
-    attempt_number = _start_attempt(workspace_root)
+    attempt_number = _start_attempt(workspace_root, mode="initial")
     first_transition = persist_validation_state_with_repair_budget(
         workspace_root=workspace_root,
         work_item="WI-001",
@@ -82,7 +82,7 @@ def test_one_shot_repair_success_flow(tmp_path: Path) -> None:
         stage_status="repair-needed",
     )
 
-    attempt_number = _start_attempt(workspace_root)
+    attempt_number = _start_attempt(workspace_root, mode="repair")
     second_transition = persist_validation_state_with_repair_budget(
         workspace_root=workspace_root,
         work_item="WI-001",
@@ -124,15 +124,7 @@ def test_resume_attempt_is_recorded_without_consuming_repair_budget(tmp_path: Pa
     policy = RepairBudgetPolicy(default_max_repair_attempts=3)
 
     for mode in ("initial", "repair", "resume", "repair"):
-        attempt_number = _start_attempt(workspace_root)
-        write_attempt_artifact_index(
-            workspace_root=workspace_root,
-            work_item="WI-001",
-            run_id="run-001",
-            stage="plan",
-            attempt_number=attempt_number,
-            attempt_mode=mode,
-        )
+        _start_attempt(workspace_root, mode=mode)
 
     counter = evaluate_stage_repair_counter(
         workspace_root=workspace_root,
@@ -177,15 +169,7 @@ def test_repair_extension_is_distinct_and_does_not_reset_automatic_budget(
     workspace_root = _bootstrap_run(tmp_path)
     modes = ("initial", "repair", "repair")
     for mode in modes:
-        attempt_number = _start_attempt(workspace_root)
-        write_attempt_artifact_index(
-            workspace_root=workspace_root,
-            work_item="WI-001",
-            run_id="run-001",
-            stage="plan",
-            attempt_number=attempt_number,
-            attempt_mode=mode,
-        )
+        attempt_number = _start_attempt(workspace_root, mode=mode)
         persist_repair_history_snapshot(
             workspace_root=workspace_root,
             work_item="WI-001",
@@ -218,15 +202,7 @@ def test_repair_extension_is_distinct_and_does_not_reset_automatic_budget(
         grant=grant,
     )
 
-    extension_attempt = _start_attempt(workspace_root)
-    write_attempt_artifact_index(
-        workspace_root=workspace_root,
-        work_item="WI-001",
-        run_id="run-001",
-        stage="plan",
-        attempt_number=extension_attempt,
-        attempt_mode="repair-extension",
-    )
+    extension_attempt = _start_attempt(workspace_root, mode="repair-extension")
     extension_result = persist_repair_history_snapshot(
         workspace_root=workspace_root,
         work_item="WI-001",
@@ -281,7 +257,7 @@ def test_repeated_repair_failure_flow_records_attempt_history(tmp_path: Path) ->
     policy = RepairBudgetPolicy(default_max_repair_attempts=2)
 
     for attempt_number, trigger in ((1, "initial"), (2, "repair"), (3, "repair")):
-        current_attempt = _start_attempt(workspace_root)
+        current_attempt = _start_attempt(workspace_root, mode=trigger)
         assert current_attempt == attempt_number
         transition = persist_validation_state_with_repair_budget(
             workspace_root=workspace_root,
@@ -325,7 +301,7 @@ def test_exhausted_budget_forces_terminal_stop_transition(tmp_path: Path) -> Non
     workspace_root = _bootstrap_run(tmp_path)
     policy = RepairBudgetPolicy(default_max_repair_attempts=1)
 
-    _start_attempt(workspace_root)
+    _start_attempt(workspace_root, mode="initial")
     persist_validation_state_with_repair_budget(
         workspace_root=workspace_root,
         work_item="WI-001",
@@ -334,7 +310,7 @@ def test_exhausted_budget_forces_terminal_stop_transition(tmp_path: Path) -> Non
         verdict=ValidationVerdict.REPAIR,
         repair_policy=policy,
     )
-    _start_attempt(workspace_root)
+    _start_attempt(workspace_root, mode="repair")
     transition = persist_validation_state_with_repair_budget(
         workspace_root=workspace_root,
         work_item="WI-001",
@@ -355,7 +331,7 @@ def test_implement_repair_loop_integration_scenario(tmp_path: Path) -> None:
     workspace_root = _bootstrap_run(tmp_path, stage_target="implement")
     policy = RepairBudgetPolicy(default_max_repair_attempts=2)
 
-    attempt_number = _start_attempt(workspace_root, stage="implement")
+    attempt_number = _start_attempt(workspace_root, stage="implement", mode="initial")
     first_transition = persist_validation_state_with_repair_budget(
         workspace_root=workspace_root,
         work_item="WI-001",
@@ -376,7 +352,7 @@ def test_implement_repair_loop_integration_scenario(tmp_path: Path) -> None:
         stage_status="repair-needed",
     )
 
-    attempt_number = _start_attempt(workspace_root, stage="implement")
+    attempt_number = _start_attempt(workspace_root, stage="implement", mode="repair")
     second_transition = persist_validation_state_with_repair_budget(
         workspace_root=workspace_root,
         work_item="WI-001",

@@ -91,7 +91,7 @@ def test_operator_tokens_match_target_palette_and_reading_density() -> None:
     assert declared["--color-action-primary"] == "var(--cobalt)"
     assert declared["--cobalt"] == "#155eef"
     assert declared["--color-action-primary-hover"] == "var(--cobalt-dark)"
-    assert declared["--green"] == "var(--mint)"
+    assert declared["--color-state-success"] == "var(--mint)"
     assert declared["--mint"] == "#087f5b"
     assert declared["--type-body-size"] == "14px"
 
@@ -113,14 +113,8 @@ def test_raw_value_inventory_outside_token_layer_cannot_grow() -> None:
     assert len(colors) <= 89
     assert len(lengths) <= 83
     assert len(motion) <= 1
-    color_counts = Counter(
-        re.findall(r"#[0-9a-fA-F]{3,8}\b|rgba?\([^)]*\)", styles)
-    )
-    assert not {
-        color: count
-        for color, count in color_counts.items()
-        if count > 1
-    }
+    color_counts = Counter(re.findall(r"#[0-9a-fA-F]{3,8}\b|rgba?\([^)]*\)", styles))
+    assert not {color: count for color, count in color_counts.items() if count > 1}
 
 
 def test_density_mode_changes_shared_tokens_instead_of_component_rules() -> None:

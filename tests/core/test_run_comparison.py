@@ -3,6 +3,8 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
+import pytest
+
 from aidd.core.run_comparison import resolve_run_comparison
 from aidd.core.run_store import (
     create_next_attempt_directory,
@@ -14,6 +16,8 @@ from aidd.core.run_store import (
     run_manifest_path,
     write_attempt_artifact_index,
 )
+from aidd.validators.models import ValidationFinding
+from aidd.validators.reports import render_validator_report
 
 
 def _set_manifest_prompts(
@@ -128,7 +132,11 @@ def _prepare_comparison_run(
         run_id=run_id,
         key="validator_report",
         filename="validator-report.md",
-        text=f"# Validator Report\n\n- Verdict: `{validator_verdict}`\n",
+        text=render_validator_report(
+            ()
+            if validator_verdict == "pass"
+            else (ValidationFinding("SEM-INCOMPLETE-SECTION", "Plan section is incomplete."),)
+        ),
     )
 
 
@@ -198,8 +206,10 @@ def test_run_comparison_detects_prompt_stage_artifact_and_validator_drift(
     assert validator_delta.target_verdict == "pass"
 
 
-def test_run_comparison_dual_reads_legacy_verdict_and_flags_unknown_alias(
+@pytest.mark.parametrize("field_label", ("Validator verdict", "Validation result"))
+def test_run_comparison_rejects_retired_and_unknown_verdict_labels(
     tmp_path: Path,
+    field_label: str,
 ) -> None:
     workspace_root = tmp_path / ".aidd"
     for run_id in ("run-a", "run-b"):
@@ -216,33 +226,22 @@ def test_run_comparison_dual_reads_legacy_verdict_and_flags_unknown_alias(
         run_id="run-b",
         key="validator_report",
         filename="validator-report.md",
-        text="## Result\n\n- Validator verdict: `fail`\n",
+        text=render_validator_report(
+            (ValidationFinding("SEM-INCOMPLETE-SECTION", "Plan section is incomplete."),)
+        ).replace("- Verdict:", f"- {field_label}:"),
     )
 
-    legacy_view = resolve_run_comparison(
-        workspace_root=workspace_root,
-        work_item="WI-CMP",
-        baseline_run_id="run-a",
-        target_run_id="run-b",
-    )
-    legacy_delta = next(
-        item for item in legacy_view.validator_outcome_deltas if item.stage == "plan"
-    )
-    assert legacy_delta.baseline_verdict == legacy_delta.target_verdict == "fail"
-
-    _write_run_artifact(
-        workspace_root,
-        run_id="run-b",
-        key="validator_report",
-        filename="validator-report.md",
-        text="## Result\n\n- Validation result: `fail`\n",
-    )
     malformed_view = resolve_run_comparison(
         workspace_root=workspace_root,
         work_item="WI-CMP",
         baseline_run_id="run-a",
         target_run_id="run-b",
     )
+    delta = next(
+        item for item in malformed_view.validator_outcome_deltas if item.stage == "plan"
+    )
+    assert delta.baseline_verdict == "fail"
+    assert delta.target_verdict is None
 
     assert any(
         "validator report" in warning and "corrupted" in warning
@@ -250,7 +249,7 @@ def test_run_comparison_dual_reads_legacy_verdict_and_flags_unknown_alias(
     )
 
 
-def test_run_comparison_warns_for_missing_legacy_provenance_and_unsafe_artifact(
+def test_run_comparison_warns_for_missing_provenance_and_unsafe_artifact(
     tmp_path: Path,
 ) -> None:
     workspace_root = tmp_path / ".aidd"

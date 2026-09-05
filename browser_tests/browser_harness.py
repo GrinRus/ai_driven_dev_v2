@@ -12,10 +12,11 @@ from collections.abc import Iterator
 from contextlib import contextmanager
 from dataclasses import dataclass, field
 from pathlib import Path
+from typing import Literal
 from urllib.parse import urlsplit
 
 import pytest
-from playwright.sync_api import Browser, BrowserContext, Page, Playwright, Request, Route
+from playwright.sync_api import Browser, BrowserContext, Locator, Page, Playwright, Request, Route
 from playwright.sync_api import Error as PlaywrightError
 
 INSTALL_COMMAND = "uv run --extra dev python -m playwright install chromium"
@@ -28,6 +29,21 @@ VIEWPORTS: tuple[tuple[int, int], ...] = (
 )
 _UI_URL = re.compile(r"AIDD UI: (http://127\.0\.0\.1:\d+/)")
 _OPERATOR_SURFACE_TIMEOUT_MS = 30_000
+
+
+@contextmanager
+def expect_rendered_surface(
+    surface: Locator,
+    *,
+    state: Literal["attached", "visible"] = "visible",
+) -> Iterator[None]:
+    """Bound navigation plus the required DOM state to the existing 30-second deadline."""
+    deadline = time.monotonic() + _OPERATOR_SURFACE_TIMEOUT_MS / 1000
+    yield
+    surface.wait_for(
+        state=state,
+        timeout=max(1, (deadline - time.monotonic()) * 1000),
+    )
 
 
 def wait_for_work_item_surface(page: Page, work_item: str) -> None:
@@ -141,6 +157,14 @@ class OperatorBrowserHarness:
                 diagnostics=diagnostics,
                 viewport=viewport,
             )
+        except Exception as exc:
+            exc.add_note(f"Browser viewport: {width}x{height}; URL: {page.url}")
+            exc.add_note(
+                f"Browser errors: console={diagnostics.console_errors!r}; "
+                f"page={diagnostics.page_errors!r}; requests={diagnostics.failed_requests!r}; "
+                f"HTTP errors={[item for item in diagnostics.http_statuses if item[1] >= 400]!r}"
+            )
+            raise
         finally:
             context.close()
             self._contexts.remove(context)

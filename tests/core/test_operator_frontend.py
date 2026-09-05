@@ -53,16 +53,32 @@ from aidd.core.runtime_readiness import (
     RuntimeReadinessProbeReport,
     resolve_runtime_readiness,
 )
+from aidd.core.stage_preparation import persist_execution_state
 from aidd.core.stage_registry import resolve_required_input_documents
 from aidd.core.stages import STAGES
-from aidd.core.workspace import seed_work_item_metadata
+from aidd.core.workspace import WorkspaceBootstrapService, seed_work_item_metadata
 from aidd.runtime_permissions import (
     RuntimeOperatorDecisionAction,
     RuntimeOperatorDecisionSource,
     RuntimeOperatorRequestKind,
     RuntimeOperatorRisk,
 )
+from aidd.validators.models import ValidationFinding, ValidationIssueLocation
 from aidd.validators.protocol import ValidatorReportProtocolError
+from aidd.validators.reports import render_validator_report
+
+
+def _validator_report(verdict: str = "pass") -> str:
+    findings = (
+        ()
+        if verdict == "pass"
+        else (
+            ValidationFinding(
+                code="SEM-INCOMPLETE-SECTION", message="Missing evidence.", severity="high"
+            ),
+        )
+    )
+    return render_validator_report(findings)
 
 
 def _prepare_run(workspace_root: Path) -> None:
@@ -75,6 +91,7 @@ def _prepare_run(workspace_root: Path) -> None:
         config_snapshot={"mode": "test"},
     )
     create_next_attempt_directory(
+        attempt_mode="initial",
         workspace_root=workspace_root,
         work_item="WI-UI",
         run_id="run-ui",
@@ -135,22 +152,28 @@ def _write_questions(workspace_root: Path) -> None:
 
 def test_parse_validator_report_findings_extracts_location_and_message() -> None:
     findings = parse_validator_report_findings(
-        "\n".join(
+        render_validator_report(
             (
-                "# Validator Report",
-                "",
-                "## Structural checks",
-                "",
-                "- `STRUCT-MISSING-DOCUMENT` (`critical`) in "
-                "`workitems/WI-UI/stages/plan/plan.md`: Missing required document.",
-                "- not a finding bullet",
-                "## Cross-document checks",
-                "",
-                "- `CROSS-BLOCKING-UNANSWERED` (`high`) in "
-                "`workitems/WI-UI/stages/plan/questions.md`:12: Q1 is unresolved.",
-                "",
+                ValidationFinding(
+                    code="STRUCT-MISSING-REQUIRED-DOCUMENT",
+                    severity="critical",
+                    message="Missing required document.",
+                    location=ValidationIssueLocation(
+                        workspace_relative_path="workitems/WI-UI/stages/plan/plan.md"
+                    ),
+                ),
+                ValidationFinding(
+                    code="CROSS-BLOCKING-UNANSWERED",
+                    severity="high",
+                    message="Q1 is unresolved.",
+                    location=ValidationIssueLocation(
+                        workspace_relative_path="workitems/WI-UI/stages/plan/questions.md",
+                        line_number=12,
+                    ),
+                ),
             )
         )
+        + "\n- not a finding bullet\n"
     )
 
     assert findings[0].category == "structural"
@@ -167,32 +190,21 @@ def test_parse_validator_report_findings_extracts_location_and_message() -> None
 def test_operator_validator_reader_rejects_unknown_protocol_code() -> None:
     with pytest.raises(ValidatorReportProtocolError):
         parse_validator_report_findings(
-            "## Semantic checks\n\n"
-            "- `SEM-UNKNOWN-CODE` (`high`) in `plan.md`: Unknown.\n"
+            "## Semantic checks\n\n- `SEM-UNKNOWN-CODE` (`high`) in `plan.md`: Unknown.\n"
         )
 
 
 def test_parse_validator_report_findings_collapses_duplicate_command_claims() -> None:
-    finding_line = (
-        "- `SEM-UNVERIFIABLE-CHECK-CLAIM` (`high`) in "
-        "`workitems/IUIT-1232/stages/implement/implementation-report.md`:38: "
-        "Verification note includes outcome claim without executable command evidence."
+    finding = ValidationFinding(
+        code="SEM-UNVERIFIABLE-CHECK-CLAIM",
+        severity="high",
+        message="Verification note includes outcome claim without executable command evidence.",
+        location=ValidationIssueLocation(
+            workspace_relative_path="workitems/IUIT-1232/stages/implement/implementation-report.md",
+            line_number=38,
+        ),
     )
-
-    findings = parse_validator_report_findings(
-        "\n".join(
-            (
-                "# Validator Report",
-                "",
-                "## Semantic checks",
-                "",
-                finding_line,
-                finding_line,
-                finding_line,
-                finding_line,
-            )
-        )
-    )
+    findings = parse_validator_report_findings(render_validator_report((finding,) * 4))
 
     assert len(findings) == 1
     assert findings[0].code == "SEM-UNVERIFIABLE-CHECK-CLAIM"
@@ -293,7 +305,7 @@ def _write_valid_plan_outputs(workspace_root: Path, *, body_suffix: str = "") ->
         encoding="utf-8",
     )
     stage_root.joinpath("validator-report.md").write_text(
-        "# Validator Report\n\n- Verdict: `pass`\n",
+        _validator_report(),
         encoding="utf-8",
     )
     return plan_path
@@ -331,6 +343,7 @@ def _prepare_terminal_qa_run(
     )
     for stage in STAGES:
         create_next_attempt_directory(
+            attempt_mode="initial",
             workspace_root=workspace_root,
             work_item="WI-UI",
             run_id="run-ui",
@@ -348,7 +361,7 @@ def _prepare_terminal_qa_run(
         stage_root.mkdir(parents=True, exist_ok=True)
         stage_validator_verdict = validator_verdict if stage == "qa" else "pass"
         stage_root.joinpath("validator-report.md").write_text(
-            f"# Validator Report\n\n- Verdict: `{stage_validator_verdict}`\n",
+            _validator_report(stage_validator_verdict),
             encoding="utf-8",
         )
         stage_root.joinpath("stage-result.md").write_text(
@@ -444,7 +457,7 @@ def test_operator_dashboard_view_surfaces_blocked_stage_evidence_and_activity(
     stage_root = workspace_root / "workitems" / "WI-UI" / "stages" / "plan"
     stage_root.joinpath("plan.md").write_text("# Plan\n\n- Ship UI cockpit.\n", encoding="utf-8")
     stage_root.joinpath("validator-report.md").write_text(
-        "# Validator Report\n\n- Verdict: `fail`\n",
+        _validator_report("fail"),
         encoding="utf-8",
     )
     stage_root.joinpath("repair-brief.md").write_text(
@@ -508,10 +521,7 @@ def test_operator_dashboard_view_surfaces_blocked_stage_evidence_and_activity(
     recent_by_key = {ref.key: ref for ref in dashboard.recent_artifacts}
     assert recent_by_key["operator_request"].category == "runtime-input"
     assert recent_by_key["operator_request"].canonical is False
-    assert all(
-        (workspace_root / ref.path).exists()
-        for ref in dashboard.recent_artifacts
-    )
+    assert all((workspace_root / ref.path).exists() for ref in dashboard.recent_artifacts)
     assert any(event.event == "question" for event in dashboard.activity)
     assert any(event.event == "operator.request.created" for event in dashboard.activity)
 
@@ -544,8 +554,7 @@ def test_operator_dashboard_next_action_finds_blocked_stage_when_another_stage_i
     assert dashboard.next_action.stage == "plan"
     assert dashboard.next_action.enabled is True
     assert any(
-        blocker.kind == "questions" and blocker.stage == "plan"
-        for blocker in dashboard.blockers
+        blocker.kind == "questions" and blocker.stage == "plan" for blocker in dashboard.blockers
     )
 
 
@@ -564,19 +573,16 @@ def test_operator_dashboard_next_action_inspects_failed_validation(
     stage_root = workspace_root / "workitems" / "WI-UI" / "stages" / "plan"
     stage_root.mkdir(parents=True, exist_ok=True)
     stage_root.joinpath("validator-report.md").write_text(
-        "\n".join(
+        render_validator_report(
             (
-                "# Validator Report",
-                "",
-                "## Semantic checks",
-                "",
-                    "- `SEM-INCOMPLETE-SECTION` (`high`) in "
-                "`workitems/WI-UI/stages/plan/plan.md`: Missing rollback plan.",
-                "",
-                "## Result",
-                "",
-                "- Verdict: `fail`",
-                "",
+                ValidationFinding(
+                    code="SEM-INCOMPLETE-SECTION",
+                    severity="high",
+                    message="Missing rollback plan.",
+                    location=ValidationIssueLocation(
+                        workspace_relative_path="workitems/WI-UI/stages/plan/plan.md"
+                    ),
+                ),
             )
         ),
         encoding="utf-8",
@@ -594,9 +600,7 @@ def test_operator_dashboard_next_action_inspects_failed_validation(
     assert dashboard.first_failure.kind == "validation-failed"
     assert dashboard.primary_validation_finding is not None
     assert dashboard.primary_validation_finding.code == "SEM-INCOMPLETE-SECTION"
-    assert dashboard.primary_validation_finding.path == (
-        "workitems/WI-UI/stages/plan/plan.md"
-    )
+    assert dashboard.primary_validation_finding.path == ("workitems/WI-UI/stages/plan/plan.md")
     assert dashboard.active_stage_view is not None
     assert (
         dashboard.active_stage_view.diagnostics.validation.primary_validation_finding
@@ -832,7 +836,7 @@ def test_operator_dashboard_next_action_reviews_failed_intervention_result(
     stage_root = workspace_root / "workitems" / "WI-UI" / "stages" / "plan"
     stage_root.mkdir(parents=True, exist_ok=True)
     stage_root.joinpath("validator-report.md").write_text(
-        "# Validator Report\n\n- Verdict: `fail`\n",
+        _validator_report("fail"),
         encoding="utf-8",
     )
     request = persist_operator_intervention_request(
@@ -872,7 +876,7 @@ def test_operator_dashboard_keeps_intervention_next_action_after_repair_retry_fa
     stage_root = workspace_root / "workitems" / "WI-UI" / "stages" / "plan"
     stage_root.mkdir(parents=True, exist_ok=True)
     stage_root.joinpath("validator-report.md").write_text(
-        "# Validator Report\n\n- Verdict: `fail`\n",
+        _validator_report("fail"),
         encoding="utf-8",
     )
     stage_root.joinpath("repair-brief.md").write_text(
@@ -909,6 +913,7 @@ def test_operator_dashboard_keeps_intervention_next_action_after_repair_retry_fa
         repair_brief_path=stage_root / "repair-brief.md",
     )
     create_next_attempt_directory(
+        attempt_mode="repair",
         workspace_root=workspace_root,
         work_item="WI-UI",
         run_id="run-ui",
@@ -972,6 +977,7 @@ def test_operator_dashboard_advances_stepwise_run_without_workflow_bounds(
         config_snapshot={"mode": "test"},
     )
     create_next_attempt_directory(
+        attempt_mode="repair",
         workspace_root=workspace_root,
         work_item="WI-UI",
         run_id="run-ui",
@@ -1019,6 +1025,7 @@ def test_operator_dashboard_prioritizes_running_stage_over_stale_validation(
     )
     for stage in ("idea", "research", "plan", "review-spec", "tasklist"):
         create_next_attempt_directory(
+            attempt_mode="repair",
             workspace_root=workspace_root,
             work_item="WI-UI",
             run_id="run-ui",
@@ -1032,6 +1039,7 @@ def test_operator_dashboard_prioritizes_running_stage_over_stale_validation(
             status="succeeded",
         )
     create_next_attempt_directory(
+        attempt_mode="repair",
         workspace_root=workspace_root,
         work_item="WI-UI",
         run_id="run-ui",
@@ -1075,7 +1083,7 @@ def test_operator_dashboard_prioritizes_running_stage_over_stale_validation(
         encoding="utf-8",
     )
     stage_root.joinpath("validator-report.md").write_text(
-        "# Validator Report\n\n## Result\n\n- Verdict: `fail`\n",
+        _validator_report("fail"),
         encoding="utf-8",
     )
 
@@ -1113,6 +1121,7 @@ def test_operator_dashboard_running_stage_uses_fast_metadata_path(
     )
     for stage in ("idea", "research", "plan"):
         create_next_attempt_directory(
+            attempt_mode="repair",
             workspace_root=workspace_root,
             work_item="WI-UI",
             run_id="run-ui",
@@ -1126,6 +1135,7 @@ def test_operator_dashboard_running_stage_uses_fast_metadata_path(
             status="succeeded",
         )
     create_next_attempt_directory(
+        attempt_mode="repair",
         workspace_root=workspace_root,
         work_item="WI-UI",
         run_id="run-ui",
@@ -1250,9 +1260,7 @@ def test_operator_dashboard_next_action_marks_completed_flow(tmp_path: Path) -> 
     assert repair_highlight.attempt_number == 2
     assert "Verification notes must cover T7 and T8" in repair_highlight.reason
     assert "workitems/WI-UI/stages/plan/plan.md" not in repair_highlight.reason
-    assert repair_highlight.repair_brief_path == (
-        "workitems/WI-UI/stages/plan/repair-brief.md"
-    )
+    assert repair_highlight.repair_brief_path == ("workitems/WI-UI/stages/plan/repair-brief.md")
     assert dashboard.terminal_handoff.approval_counts.requested == 1
     assert dashboard.terminal_handoff.approval_counts.approved == 1
     assert dashboard.terminal_handoff.questions_answered_count == 1
@@ -1266,8 +1274,7 @@ def test_operator_dashboard_next_action_marks_completed_flow(tmp_path: Path) -> 
         "runtime_log",
     }
     assert {
-        action.action
-        for action in dashboard.terminal_handoff.recommended_next_flow_actions
+        action.action for action in dashboard.terminal_handoff.recommended_next_flow_actions
     } == {
         "create-new-work-item",
         "start-follow-up-flow",
@@ -1363,6 +1370,7 @@ def test_operator_dashboard_does_not_block_on_historical_validator_failure_after
         workspace_root / "workitems" / "WI-UI" / "stages" / "qa" / "validator-report.md"
     )
     create_next_attempt_directory(
+        attempt_mode="repair",
         workspace_root=workspace_root,
         work_item="WI-UI",
         run_id="run-ui",
@@ -1381,6 +1389,7 @@ def test_operator_dashboard_does_not_block_on_historical_validator_failure_after
         repair_brief_path=None,
     )
     create_next_attempt_directory(
+        attempt_mode="repair",
         workspace_root=workspace_root,
         work_item="WI-UI",
         run_id="run-ui",
@@ -1405,7 +1414,7 @@ def test_operator_dashboard_does_not_block_on_historical_validator_failure_after
         stage="qa",
         status="succeeded",
     )
-    validator_report.write_text("# Validator Report\n\n- Verdict: `pass`\n", encoding="utf-8")
+    validator_report.write_text(_validator_report(), encoding="utf-8")
 
     dashboard = resolve_operator_dashboard_view(
         workspace_root=workspace_root,
@@ -1544,8 +1553,7 @@ def test_operator_dashboard_terminal_handoff_blocks_missing_required_evidence(
         artifact.key for artifact in dashboard.terminal_handoff.final_artifacts
     }
     assert all(
-        not action.enabled
-        for action in dashboard.terminal_handoff.recommended_next_flow_actions
+        not action.enabled for action in dashboard.terminal_handoff.recommended_next_flow_actions
     )
 
 
@@ -1604,8 +1612,7 @@ def test_operator_dashboard_terminal_handoff_accepts_stepwise_final_qa_run(
     assert dashboard.terminal_handoff.status == "completed"
     assert dashboard.terminal_handoff.final_qa_status == "ready"
     assert {
-        action.action
-        for action in dashboard.terminal_handoff.recommended_next_flow_actions
+        action.action for action in dashboard.terminal_handoff.recommended_next_flow_actions
     } >= {"start-follow-up-flow", "create-new-work-item"}
 
 
@@ -1669,8 +1676,7 @@ def test_operator_terminal_handoff_next_action_contract_survives_archive_decisio
         "archive-run",
     }
     assert {
-        action.action
-        for action in before_archive.terminal_handoff.recommended_next_flow_actions
+        action.action for action in before_archive.terminal_handoff.recommended_next_flow_actions
     } == expected_actions
 
     persist_run_archive_decision(
@@ -1692,8 +1698,7 @@ def test_operator_terminal_handoff_next_action_contract_survives_archive_decisio
     assert after_archive.run.archive.archived is True
     assert after_archive.terminal_handoff is not None
     assert {
-        action.action
-        for action in after_archive.terminal_handoff.recommended_next_flow_actions
+        action.action for action in after_archive.terminal_handoff.recommended_next_flow_actions
     } == expected_actions
 
 
@@ -1772,6 +1777,91 @@ def test_operator_dashboard_run_summary_keeps_lineage_empty_for_old_runs(
     assert dashboard.run.lineage.child_work_item_candidates == ()
 
 
+@pytest.mark.parametrize(
+    ("attempt_mode", "repairs_used"),
+    (("initial", 0), ("repair", 1), ("resume", 0), ("intervention", 0), ("repair-extension", 0)),
+)
+def test_operator_stage_view_reads_active_attempt_mode_before_invocation(
+    tmp_path: Path,
+    attempt_mode: str,
+    repairs_used: int,
+) -> None:
+    workspace_root = tmp_path / ".aidd"
+    WorkspaceBootstrapService(root=workspace_root).bootstrap_work_item("WI-UI")
+    create_run_manifest(
+        workspace_root=workspace_root,
+        work_item="WI-UI",
+        run_id="run-ui",
+        runtime_id="generic-cli",
+        stage_target="plan",
+        config_snapshot={"mode": "test"},
+    )
+    persist_execution_state(
+        workspace_root=workspace_root,
+        work_item="WI-UI",
+        run_id="run-ui",
+        stage="plan",
+        attempt_mode=attempt_mode,
+    )
+
+    view = resolve_operator_stage_view(
+        workspace_root=workspace_root,
+        work_item="WI-UI",
+        stage="plan",
+        run_id="run-ui",
+        active_job=True,
+    )
+
+    assert view.result.final_state == "executing"
+    assert view.result.validator_pass_count == 0
+    assert view.result.validator_fail_count == 0
+    extension = view.diagnostics.validation.repair_extension
+    assert extension is not None
+    assert extension.eligible is False
+    assert extension.automatic_repair_attempts_used == repairs_used
+
+
+def test_operator_stage_view_preserves_early_runtime_failure_before_validation(
+    tmp_path: Path,
+) -> None:
+    workspace_root = tmp_path / ".aidd"
+    WorkspaceBootstrapService(root=workspace_root).bootstrap_work_item("WI-UI")
+    _prepare_run(workspace_root)
+    persist_stage_status(
+        workspace_root=workspace_root,
+        work_item="WI-UI",
+        run_id="run-ui",
+        stage="plan",
+        status="failed",
+    )
+
+    view = resolve_operator_stage_view(
+        workspace_root=workspace_root,
+        work_item="WI-UI",
+        stage="plan",
+        run_id="run-ui",
+    )
+
+    assert view.result.final_state == "failed"
+    assert view.result.validator_pass_count == 0
+    assert view.result.validator_fail_count == 0
+    assert view.diagnostics.validation.validation_findings == ()
+    assert view.diagnostics.raw_log.status == "available"
+    report_path = workspace_root / view.result.validator_report_path
+    assert not report_path.exists()
+
+    report_path.write_text(_validator_report("fail"), encoding="utf-8")
+    validated = resolve_operator_stage_view(
+        workspace_root=workspace_root,
+        work_item="WI-UI",
+        stage="plan",
+        run_id="run-ui",
+    )
+    assert validated.result.validator_pass_count == 0
+    assert validated.result.validator_fail_count == 1
+    assert len(validated.diagnostics.validation.validation_findings) == 1
+
+
 def test_operator_read_models_expose_run_stage_logs_artifacts_and_questions(
     tmp_path: Path,
 ) -> None:
@@ -1833,9 +1923,7 @@ def test_operator_stage_view_diagnostics_report_blocked_questions(
     assert diagnostics.blocking_questions.status == "blocked"
     assert diagnostics.blocking_questions.unresolved_count == 1
     assert diagnostics.blocking_questions.unresolved_question_ids == ("Q1",)
-    assert diagnostics.blocking_questions.answers_path == (
-        "workitems/WI-UI/stages/plan/answers.md"
-    )
+    assert diagnostics.blocking_questions.answers_path == ("workitems/WI-UI/stages/plan/answers.md")
 
 
 def test_operator_stage_view_projects_rejected_interview_candidate_recovery(
@@ -1895,8 +1983,7 @@ def test_operator_stage_view_projects_rejected_interview_candidate_recovery(
     assert candidate.canonical_question.question_id == "Q1"
     assert candidate.canonical_question.answer_text == "Release owner approved the target."
     assert candidate.raw_candidate_path == (
-        "reports/runs/WI-UI/run-ui/stages/plan/attempts/attempt-0001/"
-        "runtime-questions-candidate.md"
+        "reports/runs/WI-UI/run-ui/stages/plan/attempts/attempt-0001/runtime-questions-candidate.md"
     )
     assert candidate.raw_candidate is not None
     assert candidate.eligible_recovery_action == "resume-stage"
@@ -1940,6 +2027,7 @@ def test_operator_stage_view_candidate_diagnostics_cover_absent_accepted_and_sta
     assert accepted.eligible_recovery_action is None
 
     create_next_attempt_directory(
+        attempt_mode="repair",
         workspace_root=workspace_root,
         work_item="WI-UI",
         run_id="run-ui",
@@ -1993,7 +2081,7 @@ def test_operator_stage_view_diagnostics_report_repair_available(
     stage_root.mkdir(parents=True, exist_ok=True)
     validator_report = stage_root / "validator-report.md"
     repair_brief = stage_root / "repair-brief.md"
-    validator_report.write_text("# Validator Report\n\n- Verdict: `fail`\n", encoding="utf-8")
+    validator_report.write_text(_validator_report("fail"), encoding="utf-8")
     repair_brief.write_text("# Repair Brief\n\n- Add missing risk evidence.\n", encoding="utf-8")
     persist_repair_history_snapshot(
         workspace_root=workspace_root,
@@ -2041,7 +2129,7 @@ def test_operator_stage_view_diagnostics_report_repair_exhausted(
     stage_root.mkdir(parents=True, exist_ok=True)
     validator_report = stage_root / "validator-report.md"
     repair_brief = stage_root / "repair-brief.md"
-    validator_report.write_text("# Validator Report\n\n- Verdict: `fail`\n", encoding="utf-8")
+    validator_report.write_text(_validator_report("fail"), encoding="utf-8")
     repair_brief.write_text("# Repair Brief\n\n- Add missing risk evidence.\n", encoding="utf-8")
     stage_root.joinpath("stage-result.md").write_text(
         "\n".join(
@@ -2096,13 +2184,16 @@ def test_operator_stage_view_diagnostics_report_stopped_event(
 ) -> None:
     workspace_root = tmp_path / ".aidd"
     _prepare_run(workspace_root)
-    events_path = run_attempt_root(
-        workspace_root=workspace_root,
-        work_item="WI-UI",
-        run_id="run-ui",
-        stage="plan",
-        attempt_number=1,
-    ) / RUN_EVENTS_JSONL_FILENAME
+    events_path = (
+        run_attempt_root(
+            workspace_root=workspace_root,
+            work_item="WI-UI",
+            run_id="run-ui",
+            stage="plan",
+            attempt_number=1,
+        )
+        / RUN_EVENTS_JSONL_FILENAME
+    )
     events_path.write_text(
         (
             '{"timestamp":"2026-05-25T00:00:00Z","level":"error",'
@@ -2392,9 +2483,7 @@ def test_operator_evidence_graph_view_links_artifacts_events_and_approvals(
     assert graph.incomplete_reasons == ()
     assert nodes["stage:plan"].status == "blocked"
     assert nodes["document:plan"].path == "workitems/WI-UI/stages/plan/plan.md"
-    assert nodes["mirror:output/plan.md"].path == (
-        "workitems/WI-UI/stages/plan/output/plan.md"
-    )
+    assert nodes["mirror:output/plan.md"].path == ("workitems/WI-UI/stages/plan/output/plan.md")
     assert nodes["document:validator_report"].status == "pass"
     assert nodes["document:stage_result"].status == "blocked"
     assert nodes["log:runtime_log"].path == (
@@ -2431,10 +2520,7 @@ def test_operator_evidence_graph_view_links_artifacts_events_and_approvals(
     assert refs_by_key["runtime_log"].category == "runtime-evidence"
     assert refs_by_key["runtime_log"].canonical is False
     assert refs_by_key["runtime_log"].available is True
-    assert all(
-        node.path is None or not Path(node.path).is_absolute()
-        for node in graph.nodes
-    )
+    assert all(node.path is None or not Path(node.path).is_absolute() for node in graph.nodes)
     assert all(not Path(ref.path).is_absolute() for ref in graph.artifact_table)
 
 
@@ -2450,14 +2536,8 @@ def test_operator_artifact_category_distinguishes_published_output_mirrors() -> 
         operator_artifact_category(key="plan", kind="document", path=canonical_path)
         == "canonical-stage-document"
     )
-    assert (
-        operator_artifact_is_canonical(key="plan", kind="document", path=output_path)
-        is False
-    )
-    assert (
-        operator_artifact_is_canonical(key="plan", kind="document", path=canonical_path)
-        is True
-    )
+    assert operator_artifact_is_canonical(key="plan", kind="document", path=output_path) is False
+    assert operator_artifact_is_canonical(key="plan", kind="document", path=canonical_path) is True
     for draft_key in (
         "runtime_stage_result_draft",
         "runtime_validator_draft",
@@ -2557,8 +2637,7 @@ def test_operator_stage_document_workbench_returns_present_markdown_contract_con
     assert validation["validator-report"].status == "pass"
     assert validation["stage-result"].status == "blocked"
     assert any(
-        ref.kind == "document" and ref.label == "validator_report"
-        for ref in workbench.references
+        ref.kind == "document" and ref.label == "validator_report" for ref in workbench.references
     )
     categories = {ref.label: ref.category for ref in workbench.references}
     assert categories["plan"] == "canonical-stage-document"
@@ -2678,6 +2757,7 @@ def test_operator_stage_document_workbench_lists_previous_attempt_diff_and_versi
         ),
     )
     create_next_attempt_directory(
+        attempt_mode="repair",
         workspace_root=workspace_root,
         work_item="WI-UI",
         run_id="run-ui",
@@ -2717,6 +2797,7 @@ def test_operator_artifacts_view_exposes_project_set_context(tmp_path: Path) -> 
     project_context_path.parent.mkdir(parents=True)
     project_context_path.write_text("# Project Set\n\n- Project id: `api`\n", encoding="utf-8")
     create_next_attempt_directory(
+        attempt_mode="repair",
         workspace_root=workspace_root,
         work_item="WI-UI",
         run_id="run-ui",
@@ -2753,9 +2834,7 @@ def test_persist_operator_answer_writes_standard_answers_document(tmp_path: Path
     assert questions_view.questions[0].answer_text == "The target release is 0.2.0."
     assert questions_view.questions[0].answer_resolution is AnswerResolution.RESOLVED
     assert questions_view.answers_path.read_text(encoding="utf-8") == (
-        "# Answers\n\n"
-        "## Answers\n\n"
-        "- Q1 [resolved] The target release is 0.2.0.\n"
+        "# Answers\n\n## Answers\n\n- Q1 [resolved] The target release is 0.2.0.\n"
     )
 
 
@@ -2879,7 +2958,7 @@ def test_runtime_readiness_view_uses_config_and_passed_probe_reports(
                 execution_command_available=False,
                 authentication_status="failed",
                 authentication_detail="credential probe failed",
-            )
+            ),
         },
         command_sources={
             "generic-cli": "config",

@@ -31,6 +31,7 @@ def _mark_question_fixture(project_root: Path, work_item: str, run_id: str) -> N
         work_item=work_item,
         run_id=run_id,
         stage="idea",
+        attempt_mode="initial",
     )
     persist_stage_status(workspace_root, work_item, run_id, "idea", "blocked")
     persist_questions_document(
@@ -98,7 +99,7 @@ def test_wave42_first_time_operator_journey_records_bounded_rehearsal(
         playwright,
     ) as harness, harness.open_page((1280, 900)) as browser_page:
         page = browser_page.page
-        page.goto(f"{harness.url}?ui=studio", wait_until="networkidle")
+        page.goto(harness.url, wait_until="networkidle")
 
         step_started = time.monotonic()
         page.locator("#onboardingProjectRoot").fill(project_root.as_posix())
@@ -166,7 +167,7 @@ def test_wave42_first_time_operator_journey_records_bounded_rehearsal(
 
         step_started = time.monotonic()
         page.goto(
-            f"{harness.url}?ui=studio&mode=studio&work_item={work_item}"
+            f"{harness.url}?mode=studio&work_item={work_item}"
             f"&run_id={run_id}&stage=idea&view=recovery",
             # The fixture deliberately keeps its launch job alive while the
             # durable blocked state is injected; polling prevents networkidle

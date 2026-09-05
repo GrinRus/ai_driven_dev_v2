@@ -36,19 +36,6 @@ _CANONICAL_OUTCOMES = frozenset(
         "launch_failure",
     }
 )
-_LEGACY_CLASSIFICATIONS = {
-    "success": "success",
-    "cancelled": "cancellation",
-    "canceled": "cancellation",
-    "timeout": "timeout",
-    "denied": "denial",
-    "blocked": "blocked",
-    "launch_failure": "launch_failure",
-    "provider_error": "runtime_failure",
-    "failed": "runtime_failure",
-}
-
-
 @dataclass(frozen=True, slots=True)
 class RuntimeLaunchOutcome:
     runtime_id: str
@@ -71,14 +58,8 @@ def _read_outcome(path: Path) -> tuple[RuntimeLaunchOutcomeName, str | None]:
     adapter_outcome = str(payload.get("adapter_outcome") or "").strip().lower()
     if adapter_outcome in _CANONICAL_OUTCOMES:
         return cast(RuntimeLaunchOutcomeName, adapter_outcome), None
-    classification = str(payload.get("exit_classification") or "").strip().lower()
-    legacy = _LEGACY_CLASSIFICATIONS.get(classification)
-    if legacy is not None:
-        return (
-            cast(RuntimeLaunchOutcomeName, legacy),
-            "legacy runtime evidence has no canonical adapter_outcome",
-        )
-    return "unknown", "runtime evidence has no recognized canonical outcome"
+    return "unknown", "runtime evidence has no recognized canonical adapter_outcome"
+
 
 
 def resolve_runtime_launch_history(
@@ -135,7 +116,7 @@ def resolve_runtime_launch_history(
                     warning = "artifact index is malformed; launch timestamp is unavailable"
                 recorded_at_utc = None if index is None else index.updated_at_utc
                 if index is None and warning is None:
-                    warning = "legacy attempt has no artifact index timestamp"
+                    warning = "attempt has no artifact index timestamp"
                 evidence_path = exit_path.resolve(strict=False).relative_to(
                     workspace_root.resolve(strict=False)
                 ).as_posix()

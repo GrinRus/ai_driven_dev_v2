@@ -86,8 +86,7 @@ def test_render_validator_report_groups_findings_and_renders_location() -> None:
         "`workitems/WI-001/stages/qa/stage-result.md`"
     ) in report
     assert (
-        "- `SEM-PLACEHOLDER-CONTENT` (`high`) in "
-        "`workitems/WI-001/stages/qa/qa-report.md`:14"
+        "- `SEM-PLACEHOLDER-CONTENT` (`high`) in `workitems/WI-001/stages/qa/qa-report.md`:14"
     ) in report
     assert "- Verdict: `fail`" in report
     assert "- Repair required for progression: yes" in report
@@ -116,9 +115,7 @@ def test_render_validator_report_collapses_exact_duplicate_findings() -> None:
         message="Verification note includes outcome claim without executable command evidence.",
         severity="high",
         location=ValidationIssueLocation(
-            workspace_relative_path=(
-                "workitems/WI-001/stages/implement/implementation-report.md"
-            ),
+            workspace_relative_path=("workitems/WI-001/stages/implement/implementation-report.md"),
             line_number=38,
         ),
     )
@@ -138,8 +135,7 @@ def test_write_validator_report_writes_rendered_markdown(tmp_path: Path) -> None
         ValidationFinding(
             code="STRUCT-MISSING-REQUIRED-SECTION",
             message=(
-                "Missing required section `Status` in "
-                "workitems/WI-001/stages/qa/stage-result.md"
+                "Missing required section `Status` in workitems/WI-001/stages/qa/stage-result.md"
             ),
             severity="high",
             location=ValidationIssueLocation(
@@ -158,7 +154,7 @@ def test_write_validator_report_writes_rendered_markdown(tmp_path: Path) -> None
 
 @pytest.mark.parametrize(
     "code",
-    [spec.code for spec in VALIDATOR_FINDING_CODES if spec.status == "canonical"],
+    [spec.code for spec in VALIDATOR_FINDING_CODES],
 )
 def test_render_validator_report_places_every_canonical_code_in_registered_section(
     code: str,

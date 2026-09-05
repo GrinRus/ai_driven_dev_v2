@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import shlex
+import shutil
 from collections.abc import Callable, Mapping
 from dataclasses import dataclass
 from enum import StrEnum
@@ -140,11 +142,13 @@ class RuntimeAdapterExecutionResult:
     def resolved_status(self) -> AdapterExecutionStatus:
         if self.status is not None:
             return self.status
-        return (
-            AdapterExecutionStatus.SUCCEEDED
-            if self.succeeded
-            else AdapterExecutionStatus.FAILED
-        )
+        return AdapterExecutionStatus.SUCCEEDED if self.succeeded else AdapterExecutionStatus.FAILED
+
+
+@dataclass(frozen=True, slots=True)
+class RuntimeExecutionProbeReport:
+    provider: CapabilityReport
+    execution_command_available: bool
 
 
 @dataclass(frozen=True, slots=True)
@@ -156,6 +160,35 @@ class RuntimeAdapterSurface:
     execute_stage_request_fn: StageRequestExecutor
     conformance_spec_builder: ConformanceSpecBuilder
     default_execution_mode: RuntimeExecutionMode
+
+    def probe_configured_command(
+        self, *, configured_command: str, provider_command: str
+    ) -> RuntimeExecutionProbeReport:
+        if (
+            self.runtime_id == "generic-cli"
+            and configured_command.strip() == _GENERIC_CLI_LIVE_CONFORMANCE_COMMAND
+        ):
+            return RuntimeExecutionProbeReport(
+                provider=CapabilityReport(
+                    runtime_id=self.runtime_id,
+                    available=True,
+                    command=_GENERIC_CLI_LIVE_CONFORMANCE_COMMAND,
+                    version_text="built-in",
+                    supports_raw_log_stream=False,
+                    supports_permission_policy=True,
+                    supports_live_decisions=True,
+                    preferred_transport="in-process",
+                ),
+                execution_command_available=True,
+            )
+        try:
+            tokens = shlex.split(configured_command)
+        except ValueError:
+            tokens = []
+        return RuntimeExecutionProbeReport(
+            provider=self.probe(provider_command),
+            execution_command_available=bool(tokens) and shutil.which(tokens[0]) is not None,
+        )
 
     def execute_stage_request(
         self,
@@ -529,18 +562,14 @@ def _execute_generic_cli(
         on_stdout=on_stdout,
         on_stderr=on_stderr,
         timeout_seconds=request.timeout_seconds,
-        document_completion_paths=runtime_content_document_paths(
-            request.expected_output_documents
-        ),
+        document_completion_paths=runtime_content_document_paths(request.expected_output_documents),
         cancel_requested=request.cancel_requested,
         capture_directory=attempt_path,
     )
     persist_generic_cli_runtime_artifacts(attempt_path=attempt_path, run_result=run_result)
     _cleanup_runtime_capture_sources(run_result)
     evidence = runtime_evidence_paths(attempt_path)
-    adapter_outcome = adapter_outcome_for_classification(
-        run_result.exit_classification.value
-    )
+    adapter_outcome = adapter_outcome_for_classification(run_result.exit_classification.value)
     return RuntimeAdapterExecutionResult(
         succeeded=run_result.exit_classification
         in (
@@ -604,9 +633,7 @@ def _execute_claude_code(
     )
     persist_claude_code_runtime_log(attempt_path=attempt_path, run_result=run_result)
     evidence = runtime_evidence_paths(attempt_path)
-    adapter_outcome = adapter_outcome_for_classification(
-        run_result.exit_classification.value
-    )
+    adapter_outcome = adapter_outcome_for_classification(run_result.exit_classification.value)
     event_artifacts = persist_runtime_event_artifacts(
         attempt_path=attempt_path,
         run_result=run_result,
@@ -701,9 +728,7 @@ def _execute_codex(
         )
         live_event_artifacts = persist_lifecycle_projection_from_jsonl(
             attempt_path=attempt_path,
-            source_path=(
-                live_result.runtime_jsonl_path or live_result.events_jsonl_path
-            ),
+            source_path=(live_result.runtime_jsonl_path or live_result.events_jsonl_path),
         )
         if live_result.run_result is None:
             return RuntimeAdapterExecutionResult(
@@ -773,9 +798,7 @@ def _execute_codex(
     )
     persist_codex_runtime_log(attempt_path=attempt_path, run_result=run_result)
     evidence = runtime_evidence_paths(attempt_path)
-    adapter_outcome = adapter_outcome_for_classification(
-        run_result.exit_classification.value
-    )
+    adapter_outcome = adapter_outcome_for_classification(run_result.exit_classification.value)
     event_artifacts = persist_runtime_event_artifacts(
         attempt_path=attempt_path,
         run_result=run_result,
@@ -847,17 +870,13 @@ def _execute_opencode(
         on_stdout=on_stdout,
         on_stderr=on_stderr,
         timeout_seconds=request.timeout_seconds,
-        document_completion_paths=runtime_content_document_paths(
-            request.expected_output_documents
-        ),
+        document_completion_paths=runtime_content_document_paths(request.expected_output_documents),
         cancel_requested=request.cancel_requested,
         capture_directory=attempt_path,
     )
     persist_opencode_runtime_log(attempt_path=attempt_path, run_result=run_result)
     evidence = runtime_evidence_paths(attempt_path)
-    adapter_outcome = adapter_outcome_for_classification(
-        run_result.exit_classification.value
-    )
+    adapter_outcome = adapter_outcome_for_classification(run_result.exit_classification.value)
     event_artifacts = persist_runtime_event_artifacts(
         attempt_path=attempt_path,
         run_result=run_result,
@@ -940,9 +959,7 @@ def _execute_qwen(
         )
         live_event_artifacts = persist_lifecycle_projection_from_jsonl(
             attempt_path=attempt_path,
-            source_path=(
-                live_result.runtime_jsonl_path or live_result.events_jsonl_path
-            ),
+            source_path=(live_result.runtime_jsonl_path or live_result.events_jsonl_path),
         )
         if live_result.run_result is None:
             return RuntimeAdapterExecutionResult(
@@ -1005,17 +1022,13 @@ def _execute_qwen(
         on_stdout=on_stdout,
         on_stderr=on_stderr,
         timeout_seconds=request.timeout_seconds,
-        document_completion_paths=runtime_content_document_paths(
-            request.expected_output_documents
-        ),
+        document_completion_paths=runtime_content_document_paths(request.expected_output_documents),
         cancel_requested=request.cancel_requested,
         capture_directory=attempt_path,
     )
     persist_qwen_runtime_log(attempt_path=attempt_path, run_result=run_result)
     evidence = runtime_evidence_paths(attempt_path)
-    adapter_outcome = adapter_outcome_for_classification(
-        run_result.exit_classification.value
-    )
+    adapter_outcome = adapter_outcome_for_classification(run_result.exit_classification.value)
     event_artifacts = persist_runtime_event_artifacts(
         attempt_path=attempt_path,
         run_result=run_result,
@@ -1108,10 +1121,6 @@ def get_runtime_adapter_surface(runtime_id: str) -> RuntimeAdapterSurface:
 
 def runtime_adapter_surfaces() -> tuple[RuntimeAdapterSurface, ...]:
     return tuple(RUNTIME_ADAPTER_SURFACES.values())
-
-
-def runtime_adapter_surface_ids() -> tuple[str, ...]:
-    return tuple(RUNTIME_ADAPTER_SURFACES)
 
 
 def default_execution_mode_for_surface(surface: RuntimeAdapterSurface) -> RuntimeExecutionMode:

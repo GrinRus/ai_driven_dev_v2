@@ -21,7 +21,7 @@
 }
 .brand-mark {
   align-items: center;
-  background: var(--teal);
+  background: var(--cobalt);
   border: 1px solid #2fc4bd;
   border-radius: 5px;
   color: var(--color-text-inverse);
@@ -99,8 +99,8 @@
   white-space: nowrap;
 }
 .badge-button:hover {
-  border-color: var(--teal);
-  color: var(--teal-dark);
+  border-color: var(--cobalt);
+  color: var(--cobalt-dark);
 }
 .status-chip.good,
 .status-badge.succeeded,
@@ -297,8 +297,8 @@ h1, h2, h3, p {
 .viewer-modes button.active,
 .viewer-modes button[aria-pressed="true"] {
   background: var(--color-bg-selected);
-  border-color: var(--teal);
-  color: var(--teal-dark);
+  border-color: var(--cobalt);
+  color: var(--cobalt-dark);
 }
 /* Document Studio composition: navigation first, one reading canvas, contextual evidence. */
 body {
@@ -550,7 +550,7 @@ body.setup-active .primary-nav #projectInboxButton {
   font-size: var(--type-caption-size);
 }
 .studio-context-identity dd {
-  font-family: var(--mono);
+  font-family: var(--font-mono);
   font-size: 13px;
   font-weight: 700;
   margin: 0;
@@ -588,10 +588,10 @@ body.setup-active .primary-nav #projectInboxButton {
 .intent-phase-step.active,
 .intent-phase-step:hover {
   background: var(--studio-accent-soft);
-  border-color: var(--teal);
+  border-color: var(--cobalt);
 }
 .intent-phase-step.complete .intent-phase-index {
-  background: var(--green);
+  background: var(--mint);
   color: var(--color-text-inverse);
 }
 .intent-phase-step.blocked .intent-phase-index {
@@ -668,10 +668,10 @@ body.setup-active .primary-nav #projectInboxButton {
 .studio-document-item:hover,
 .studio-document-item.active {
   background: var(--studio-accent-soft);
-  border-left-color: var(--teal);
+  border-left-color: var(--cobalt);
 }
 .studio-document-icon {
-  color: var(--teal-dark);
+  color: var(--cobalt-dark);
   font-size: 18px;
   line-height: 1;
 }
@@ -684,7 +684,7 @@ body.setup-active .primary-nav #projectInboxButton {
 }
 .studio-document-item small {
   color: var(--muted);
-  font-family: var(--mono);
+  font-family: var(--font-mono);
   font-size: var(--type-caption-size);
   margin-top: var(--space-1);
 }

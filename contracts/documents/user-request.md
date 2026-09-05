@@ -7,7 +7,7 @@ durable input for the governed workflow; it is not a runtime-authored stage resu
 
 ## Canonical authoring sections
 
-New Work Items should use these sections in this order:
+New UI-authored Work Items use these sections in this order:
 
 - `Title`
 - `Brief`
@@ -28,11 +28,12 @@ optional and may be omitted when they have no content.
 - `Additional information` contains links, examples, references, and other helpful material that
   is not part of the outcome or constraints.
 
-## Backward compatibility
+## Plain-text authoring
 
-Existing unsectioned `user-request.md` files remain readable. A compatibility reader may derive a
-bounded title from the first meaningful line and a brief from the first paragraph, while exposing
-the complete original Markdown as context. It must not rewrite a legacy document automatically.
+The CLI and onboarding service also accept an unsectioned Markdown request. Its read projection
+derives a bounded title from the first meaningful line and a brief from the first paragraph,
+while exposing the complete original Markdown as context. Reading must preserve the authored
+document unchanged.
 
 ## Ownership and lifecycle
 
@@ -49,4 +50,4 @@ the complete original Markdown as context. It must not rewrite a legacy document
 - headings are unique and appear in the canonical order;
 - section bodies are valid UTF-8 Markdown;
 - detailed sections do not get copied into a Work Item header or navigation label;
-- legacy unsectioned documents remain readable without data loss.
+- unsectioned CLI and onboarding requests remain readable without data loss.

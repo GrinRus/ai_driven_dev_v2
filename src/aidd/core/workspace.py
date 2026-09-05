@@ -49,7 +49,6 @@ REQUEST_CONTEXT_FILENAMES: tuple[str, ...] = (
 _STAGE_FILE_TEMPLATES: dict[str, str] = {
     "questions.md": "# Questions\n\nNo questions yet.\n",
     "answers.md": "# Answers\n\nNo answers yet.\n",
-    "validator-report.md": "# Validator report\n\nNo validator output yet.\n",
     "stage-result.md": "# Stage result\n\nStage not run yet.\n",
 }
 
@@ -152,18 +151,14 @@ def create_workspace_tree(root: Path, work_item: str) -> Path:
 
 def _starter_stage_file_contents(stage: str) -> dict[str, str]:
     stage_brief = (
-        "# Stage\n\n"
-        f"{stage}\n\n"
-        "# Goal\n\n"
-        "Describe the intended outcome for this stage run.\n\n"
-        "# Inputs\n\n"
-        "- none\n\n"
-        "# Outputs\n\n"
-        "- none\n\n"
-        "# Constraints\n\n"
-        "- keep output in Markdown\n\n"
-        "# Open questions\n\n"
-        "- none\n"
+        f"# Stage\n\n{stage}\n\n"
+        "# Purpose\n\nThis stage is not prepared. AIDD replaces this brief before invocation.\n\n"
+        "# Expected input bundle\n\n- not prepared\n\n"
+        "# Runtime write targets\n\n- not prepared\n\n"
+        "# AIDD-generated records\n\n- not prepared\n\n"
+        "# Interview/control documents\n\n- not prepared\n\n"
+        "# Published documents\n\n- not prepared\n\n"
+        "# Workspace path discipline\n\n- AIDD workspace paths are relative to `.aidd/`.\n"
     )
     return {"stage-brief.md": stage_brief, **_STAGE_FILE_TEMPLATES}
 

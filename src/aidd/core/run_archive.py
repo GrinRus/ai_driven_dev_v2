@@ -242,6 +242,11 @@ def resolve_run_archive_decision(
     run_id: str,
     manifest_payload: dict[str, Any],
 ) -> RunArchiveDecision | None:
+    if "operator_archive" in manifest_payload:
+        raise RunArchiveProtocolError(
+            "Embedded operator_archive state is unsupported; recreate the workspace "
+            "with the current CLI."
+        )
     decisions = load_run_archive_decisions(
         workspace_root=workspace_root,
         work_item=work_item,
@@ -250,26 +255,7 @@ def resolve_run_archive_decision(
     if decisions:
         return decisions[-1]
 
-    legacy = manifest_payload.get("operator_archive")
-    if not isinstance(legacy, dict) or legacy.get("archived") is not True:
-        return None
-    archived_at = str(legacy.get("archived_at_utc", "")).strip()
-    source = str(legacy.get("source", "")).strip()
-    raw_reason = legacy.get("reason")
-    if (
-        not archived_at
-        or not source
-        or (raw_reason is not None and not isinstance(raw_reason, str))
-    ):
-        raise RunArchiveProtocolError("Legacy archive state in run manifest is malformed.")
-    return RunArchiveDecision(
-        work_item_id=work_item,
-        run_id=run_id,
-        decision_number=0,
-        archived_at_utc=archived_at,
-        reason=raw_reason.strip() if isinstance(raw_reason, str) and raw_reason.strip() else None,
-        source=source,
-    )
+    return None
 
 
 __all__ = [

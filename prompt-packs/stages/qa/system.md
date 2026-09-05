@@ -25,4 +25,4 @@ Non-negotiable rules:
   complete,
 - do not downgrade solely for isolated optional broad-suite failures in unrelated environment-sensitive tests
   when authored verification, acceptance criteria, and review evidence for the selected task are clean,
-- keep `qa-report.md`, `stage-result.md`, and `validator-report.md` mutually consistent.
+- keep substantive content truthful; AIDD reconciles lifecycle and validator records.

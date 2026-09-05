@@ -27,6 +27,7 @@ from aidd.core.repair import (
     write_repair_brief,
 )
 from aidd.core.run_store import (
+    create_next_attempt_directory,
     create_run_manifest,
     load_stage_metadata,
     persist_stage_status,
@@ -383,18 +384,37 @@ def test_count_stage_attempts_ignores_non_attempt_directories(tmp_path: Path) ->
     _make_attempt_dir(attempts_root, "attempt-final")
     _make_attempt_dir(attempts_root, "misc")
 
-    assert count_stage_attempts(
-        workspace_root=tmp_path / ".aidd",
-        work_item="WI-001",
-        run_id="run-001",
-        stage="plan",
-    ) == 2
+    assert (
+        count_stage_attempts(
+            workspace_root=tmp_path / ".aidd",
+            work_item="WI-001",
+            run_id="run-001",
+            stage="plan",
+        )
+        == 2
+    )
 
 
 def test_repair_attempts_used_treats_initial_attempt_as_non_repair() -> None:
-    assert repair_attempts_used(stage_attempt_count=0) == 0
-    assert repair_attempts_used(stage_attempt_count=1) == 0
-    assert repair_attempts_used(stage_attempt_count=3) == 2
+    assert repair_attempts_used(stage_attempt_count=0, attempt_modes=()) == 0
+    assert repair_attempts_used(stage_attempt_count=1, attempt_modes=("initial",)) == 0
+    assert (
+        repair_attempts_used(stage_attempt_count=3, attempt_modes=("initial", "repair", "repair"))
+        == 2
+    )
+
+
+def test_repair_accounting_does_not_charge_resume_or_intervention_attempts() -> None:
+    assert repair_attempts_used(
+        stage_attempt_count=5,
+        attempt_modes=("initial", "resume", "repair", "intervention", "repair-extension"),
+    ) == 1
+
+
+@pytest.mark.parametrize("modes", ((None,), ("unknown",), ()))
+def test_repair_accounting_rejects_missing_or_unknown_attempt_modes(modes: tuple) -> None:
+    with pytest.raises(ValueError, match="Attempt modes|explicit valid mode"):
+        repair_attempts_used(stage_attempt_count=1, attempt_modes=modes)
 
 
 def test_remaining_repair_attempts_clamps_at_zero() -> None:
@@ -404,20 +424,14 @@ def test_remaining_repair_attempts_clamps_at_zero() -> None:
 
 
 def test_evaluate_stage_repair_counter_reports_budget_state(tmp_path: Path) -> None:
-    attempts_root = (
-        tmp_path
-        / ".aidd"
-        / "reports"
-        / "runs"
-        / "WI-001"
-        / "run-001"
-        / "stages"
-        / "plan"
-        / "attempts"
-    )
-    _make_attempt_dir(attempts_root, "attempt-0001")
-    _make_attempt_dir(attempts_root, "attempt-0002")
-    _make_attempt_dir(attempts_root, "attempt-0003")
+    for mode in ("initial", "repair", "repair"):
+        create_next_attempt_directory(
+            workspace_root=tmp_path / ".aidd",
+            work_item="WI-001",
+            run_id="run-001",
+            stage="plan",
+            attempt_mode=mode,
+        )
 
     counter = evaluate_stage_repair_counter(
         workspace_root=tmp_path / ".aidd",
@@ -469,21 +483,13 @@ def test_parse_validator_report_findings_extracts_codes_and_locations() -> None:
     assert findings[1].source_path == "workitems/WI-001/stages/plan/plan.md"
 
 
-def test_repair_reader_normalizes_legacy_code_and_rejects_unknown_code() -> None:
-    legacy = parse_validator_report_findings(
-        validator_report_markdown=(
-            "## Structural checks\n\n"
-            "- `STRUCT-MISSING-DOCUMENT` (`high`) in `plan.md`: Missing.\n"
-        )
-    )
-
-    assert legacy[0].code == "STRUCT-MISSING-REQUIRED-DOCUMENT"
+@pytest.mark.parametrize("code", ("STRUCT-MISSING-DOCUMENT", "SEM-UNKNOWN-CODE"))
+def test_repair_reader_rejects_retired_and_unknown_codes(code: str) -> None:
     with pytest.raises(ValidatorReportProtocolError):
         parse_validator_report_findings(
             validator_report_markdown=(
-                "## Semantic checks\n\n"
-                "- `SEM-UNKNOWN-CODE` (`high`) in `plan.md`: Unknown.\n"
-            )
+                f"## Structural checks\n\n- `{code}` (`high`) in `plan.md`: Missing.\n"
+            ),
         )
 
 
@@ -719,9 +725,7 @@ def test_render_repair_brief_adds_actionable_list_format_hint() -> None:
                 ),
                 severity="medium",
                 location=ValidationIssueLocation(
-                    workspace_relative_path=(
-                        "workitems/WI-001/stages/idea/idea-brief.md"
-                    ),
+                    workspace_relative_path=("workitems/WI-001/stages/idea/idea-brief.md"),
                     line_number=20,
                 ),
             ),
@@ -746,9 +750,7 @@ def test_render_repair_brief_adds_placeholder_and_success_blocker_hints() -> Non
         findings=(
             ValidationFinding(
                 code="SEM-PLACEHOLDER-CONTENT",
-                message=(
-                    "Placeholder content remains in required section `Decision`: `TODO`."
-                ),
+                message=("Placeholder content remains in required section `Decision`: `TODO`."),
                 severity="high",
                 location=ValidationIssueLocation(
                     workspace_relative_path=(
@@ -793,9 +795,7 @@ def test_render_repair_brief_names_canonical_tasklist_milestone_locations() -> N
                 ),
                 severity="high",
                 location=ValidationIssueLocation(
-                    workspace_relative_path=(
-                        "workitems/WI-001/stages/tasklist/output/tasklist.md"
-                    ),
+                    workspace_relative_path=("workitems/WI-001/stages/tasklist/output/tasklist.md"),
                     line_number=9,
                 ),
             ),
@@ -804,12 +804,8 @@ def test_render_repair_brief_names_canonical_tasklist_milestone_locations() -> N
 
     repair_brief = render_repair_brief(
         validator_report_markdown=report_markdown,
-        validator_report_path=(
-            "workitems/WI-001/stages/tasklist/output/validator-report.md"
-        ),
-        prior_stage_artifacts=(
-            "workitems/WI-001/stages/plan/output/plan.md",
-        ),
+        validator_report_path=("workitems/WI-001/stages/tasklist/output/validator-report.md"),
+        prior_stage_artifacts=("workitems/WI-001/stages/plan/output/plan.md",),
         stage_attempt_count=1,
         max_repair_attempts=2,
     )
@@ -896,9 +892,7 @@ def test_render_repair_brief_adds_review_evidence_reference_hint() -> None:
                 ),
                 severity="high",
                 location=ValidationIssueLocation(
-                    workspace_relative_path=(
-                        "workitems/WI-001/stages/review/review-report.md"
-                    ),
+                    workspace_relative_path=("workitems/WI-001/stages/review/review-report.md"),
                     line_number=9,
                 ),
             ),
@@ -939,14 +933,14 @@ def test_render_repair_brief_adds_review_spec_evidence_and_reconciliation_hint()
                     ),
                     line_number=7,
                 ),
+            ),
+            ValidationFinding(
+                code="SEM-UNSUPPORTED-CLAIM",
+                message=(
+                    "High-severity or source-inspection review-spec contradiction "
+                    "claims must include `Evidence:` and `Reconciliation:` explaining "
+                    "how the issue relates to upstream research or plan evidence."
                 ),
-                ValidationFinding(
-                    code="SEM-UNSUPPORTED-CLAIM",
-                    message=(
-                        "High-severity or source-inspection review-spec contradiction "
-                        "claims must include `Evidence:` and `Reconciliation:` explaining "
-                        "how the issue relates to upstream research or plan evidence."
-                    ),
                 severity="high",
                 location=ValidationIssueLocation(
                     workspace_relative_path=(
@@ -988,9 +982,7 @@ def test_render_repair_brief_adds_review_workspace_hygiene_hint() -> None:
                 ),
                 severity="high",
                 location=ValidationIssueLocation(
-                    workspace_relative_path=(
-                        "workitems/WI-001/stages/review/review-report.md"
-                    ),
+                    workspace_relative_path=("workitems/WI-001/stages/review/review-report.md"),
                     line_number=7,
                 ),
             ),
@@ -1017,8 +1009,7 @@ def test_render_repair_brief_adds_implement_verification_command_hint() -> None:
             ValidationFinding(
                 code="SEM-UNVERIFIABLE-CHECK-CLAIM",
                 message=(
-                    "Verification note includes outcome claim without executable "
-                    "command evidence."
+                    "Verification note includes outcome claim without executable command evidence."
                 ),
                 severity="high",
                 location=ValidationIssueLocation(
@@ -1034,9 +1025,7 @@ def test_render_repair_brief_adds_implement_verification_command_hint() -> None:
     repair_brief = render_repair_brief(
         validator_report_markdown=report_markdown,
         validator_report_path="workitems/WI-001/stages/implement/validator-report.md",
-        prior_stage_artifacts=(
-            "workitems/WI-001/stages/implement/implementation-report.md",
-        ),
+        prior_stage_artifacts=("workitems/WI-001/stages/implement/implementation-report.md",),
         stage_attempt_count=1,
         max_repair_attempts=2,
     )

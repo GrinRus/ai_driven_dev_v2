@@ -6,7 +6,11 @@ from urllib.parse import urlsplit
 import pytest
 from playwright.sync_api import Page, Route, sync_playwright
 
-from browser_tests.browser_harness import VIEWPORTS, operator_browser_harness
+from browser_tests.browser_harness import (
+    VIEWPORTS,
+    expect_rendered_surface,
+    operator_browser_harness,
+)
 from browser_tests.journey_support import configure_sleeping_fixture_runtime
 from browser_tests.rendered_assertions import assert_accessible_render
 from browser_tests.rendered_geometry import assert_rendered_geometry
@@ -42,13 +46,9 @@ def _discard_expected_answer_failure(browser_page: object) -> None:
     ]
 
 
-@pytest.mark.parametrize("selector", ("studio", "legacy"))
-def test_question_recovery_parity_preserves_answer_service_path(
-    tmp_path: Path,
-    selector: str,
-) -> None:
+def test_question_recovery_preserves_answer_service_path(tmp_path: Path) -> None:
     fixture = build_browser_state_fixture(
-        tmp_path / f"question-parity-{selector}",
+        tmp_path / "question-answer-service",
         "blocking-question",
     )
     with sync_playwright() as playwright, operator_browser_harness(
@@ -57,7 +57,8 @@ def test_question_recovery_parity_preserves_answer_service_path(
         work_item=fixture.work_item,
     ) as harness, harness.open_page((1280, 900)) as browser_page:
         page = browser_page.page
-        page.goto(f"{harness.url}?ui={selector}", wait_until="networkidle")
+        with expect_rendered_surface(page.locator('[data-question-text="Q1"]')):
+            page.goto(harness.url, wait_until="domcontentloaded")
         page.locator('[data-question-text="Q1"]').fill(
             "Use the same durable answer service path."
         )
@@ -103,7 +104,8 @@ def test_question_recovery_restores_draft_and_resumes_from_durable_answer(
         work_item=fixture.work_item,
     ) as harness, harness.open_page(viewport) as browser_page:
         page = browser_page.page
-        page.goto(f"{harness.url}?ui=studio", wait_until="networkidle")
+        with expect_rendered_surface(page.locator('[data-question-text="Q1"]')):
+            page.goto(harness.url, wait_until="domcontentloaded")
         page.locator("#runtimeSettings").evaluate("node => { node.open = true; }")
         page.locator("#runtimeSelect").select_option("generic-cli")
         page.wait_for_function("eval('selectedRuntimeReady()')", timeout=15_000)
@@ -117,7 +119,8 @@ def test_question_recovery_restores_draft_and_resumes_from_durable_answer(
         resolution.select_option("partial" if viewport[0] % 2 == 0 else "deferred")
         assert page.locator('[data-answer-resume="Q1"]').is_disabled()
 
-        page.reload(wait_until="networkidle")
+        with expect_rendered_surface(page.locator('[data-question-text="Q1"]')):
+            page.reload(wait_until="domcontentloaded")
         answer = page.locator('[data-question-text="Q1"]')
         answer.wait_for(state="visible")
         assert answer.input_value().startswith("Keep the public CLI")
@@ -132,7 +135,8 @@ def test_question_recovery_restores_draft_and_resumes_from_durable_answer(
             "new URLSearchParams(location.search).get('mode') === 'history'",
             timeout=10_000,
         )
-        page.go_back(wait_until="networkidle")
+        with expect_rendered_surface(page.locator('[data-question-text="Q1"]')):
+            page.go_back(wait_until="domcontentloaded")
         answer = page.locator('[data-question-text="Q1"]')
         answer.wait_for(state="visible")
         assert answer.input_value().startswith("Keep the public CLI")
@@ -215,7 +219,7 @@ def test_rejected_interview_candidate_recovery_preserves_focus_and_repair_budget
         work_item=fixture.work_item,
     ) as harness, harness.open_page(viewport) as browser_page:
         page = browser_page.page
-        page.goto(f"{harness.url}?ui=studio", wait_until="networkidle")
+        page.goto(harness.url, wait_until="networkidle")
         page.locator("#runtimeSettings").evaluate("node => { node.open = true; }")
         page.locator("#runtimeSelect").select_option("generic-cli")
         page.wait_for_function("eval('selectedRuntimeReady()')", timeout=15_000)

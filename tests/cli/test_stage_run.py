@@ -10,7 +10,7 @@ import typer
 from typer.testing import CliRunner
 
 from aidd.adapters.runtime_artifacts import RUNTIME_EXIT_METADATA_FILENAME
-from aidd.cli.main import _active_prompt_pack_paths, _prefix_stream_chunk, app
+from aidd.cli.main import app
 from aidd.cli.stage_run import (
     StageInteractOptions,
     StageRepairExtensionOptions,
@@ -22,6 +22,7 @@ from aidd.cli.stage_run import (
     run_stage_interact_command,
     run_stage_repair_extension_command,
 )
+from aidd.cli.support import _active_prompt_pack_paths, _prefix_stream_chunk
 from aidd.core.run_lookup import latest_run_id
 from aidd.core.run_store import (
     RUN_EVENTS_JSONL_FILENAME,
@@ -318,32 +319,29 @@ def _write_cli_config(
     *,
     tmp_path: Path,
     runtime_command: str,
-    claude_code_command: str = "claude",
-    codex_command: str = "codex",
-    opencode_command: str = "opencode",
-    qwen_command: str = "qwen",
+    claude_code_command: str | None = None,
+    codex_command: str | None = None,
+    opencode_command: str | None = None,
+    qwen_command: str | None = None,
     max_repair_attempts: int = 2,
 ) -> Path:
     config_path = tmp_path / "aidd.test.toml"
-    config_path.write_text(
-        (
-            "[workspace]\n"
-            'root = ".aidd"\n\n'
-            "[runtime.generic_cli]\n"
-            f'command = "{runtime_command}"\n\n'
-            "[runtime.claude_code]\n"
-            f'command = "{claude_code_command}"\n\n'
-            "[runtime.codex]\n"
-            f'command = "{codex_command}"\n\n'
-            "[runtime.opencode]\n"
-            f'command = "{opencode_command}"\n\n'
-            "[runtime.qwen]\n"
-            f'command = "{qwen_command}"\n\n'
-            "[repair]\n"
-            f"max_attempts = {max_repair_attempts}\n"
-        ),
-        encoding="utf-8",
-    )
+    sections = ['[workspace]\nroot = ".aidd"\n']
+    for runtime_section, command in (
+        ("generic_cli", runtime_command),
+        ("claude_code", claude_code_command),
+        ("codex", codex_command),
+        ("opencode", opencode_command),
+        ("qwen", qwen_command),
+    ):
+        if command is not None:
+            sections.append(
+                f"[runtime.{runtime_section}]\n"
+                f"command = {json.dumps(command)}\n"
+                'mode = "adapter-flags"\n'
+            )
+    sections.append(f"[repair]\nmax_attempts = {max_repair_attempts}\n")
+    config_path.write_text("\n".join(sections), encoding="utf-8")
     return config_path
 
 
@@ -820,14 +818,9 @@ def test_stage_run_continues_canonical_next_stage_in_explicit_unbounded_run(
 
     assert result.exit_code == 0, result.output
     manifest = json.loads(
-        (
-            workspace_root
-            / "reports"
-            / "runs"
-            / work_item
-            / run_id
-            / "run-manifest.json"
-        ).read_text(encoding="utf-8")
+        (workspace_root / "reports" / "runs" / work_item / run_id / "run-manifest.json").read_text(
+            encoding="utf-8"
+        )
     )
     assert manifest["stage_target"] == "research"
     assert "AIDD stage run: stage=plan" in result.stdout
@@ -1270,9 +1263,7 @@ def test_stage_interact_reuses_synchronously_prepared_request(
 
     prepared = prepare_stage_interaction(options)
     request_root = prepared.operator_request.request_path.parent
-    assert [path.name for path in request_root.glob("request-*.md")] == [
-        "request-0001.md"
-    ]
+    assert [path.name for path in request_root.glob("request-*.md")] == ["request-0001.md"]
 
     run_stage_interact_command(
         StageInteractOptions(
@@ -1289,9 +1280,7 @@ def test_stage_interact_reuses_synchronously_prepared_request(
         )
     )
 
-    assert [path.name for path in request_root.glob("request-*.md")] == [
-        "request-0001.md"
-    ]
+    assert [path.name for path in request_root.glob("request-*.md")] == ["request-0001.md"]
 
 
 def test_stage_interact_reports_original_intervention_attempt_when_repair_retries(

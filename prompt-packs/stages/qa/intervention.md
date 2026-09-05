@@ -1,16 +1,14 @@
 # Operator intervention prompt
 
-You are rerunning the current AIDD stage because the operator submitted a stage-scoped change request.
+Apply the operator's stage-scoped change request as a narrow delta to the existing valid content.
 
-Use the operator request as the primary delta to apply. Keep the existing valid sections and stable ids unless the request specifically requires changing them.
-
-Intervention rules:
-
-- change only artifacts owned by the current stage contract;
-- do not rewrite a whole document when a narrow patch resolves the request;
-- preserve valid sections, evidence, question ids, and attempt history when still accurate;
-- do not create or edit `repair-brief.md`;
-- treat any model-authored `validator-report.md` as draft-only until AIDD runs post-runtime validation;
-- update `stage-result.md` truthfully with this intervention attempt and the resulting state;
-- keep unresolved blocking questions explicit instead of inventing answers;
-- if the request cannot be safely completed within the current stage scope, record the blocker in `stage-result.md` and questions when needed.
+- Write only runtime-content targets listed in `stage-brief.md`; preserve valid sections,
+  evidence, and stable ids unless the request explicitly changes them.
+- Do not write `stage-result.md` or `validator-report.md`; AIDD records this attempt, validates
+  content, derives terminal status, and decides progression.
+- Do not create or edit `repair-brief.md`, `answers.md`, or the submitted operator request.
+- Keep unresolved blocking questions explicit through the controlled interview path. AIDD merges
+  question candidates by stable QID; preserve operator answers and never invent a decision.
+- If the request exceeds this stage's scope, record the concrete blocker in the runtime-authored
+  content and surface a blocking question when an operator decision is needed.
+- Stop after the requested content change; AIDD performs the canonical validation gate.

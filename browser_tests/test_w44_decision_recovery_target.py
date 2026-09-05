@@ -246,7 +246,7 @@ def test_approval_workbench_exposes_one_primary_action_at_supported_viewports(
         work_item=fixture.work_item,
     ) as harness, harness.open_page(viewport) as browser_page:
         page = browser_page.page
-        response = page.goto(f"{harness.url}?ui=studio", wait_until="networkidle")
+        response = page.goto(harness.url, wait_until="networkidle")
         assert response is not None and response.ok
         _render_approval_surface(page)
         surface = page.locator('[data-human-decision-surface="approval"]')

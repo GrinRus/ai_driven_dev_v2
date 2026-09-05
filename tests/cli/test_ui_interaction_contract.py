@@ -32,13 +32,12 @@ def test_shared_interaction_contract_is_packaged_with_semantic_state_markers() -
     assert "function validateSharedInteractionContract(" in primitives
     assert 'data-interaction-contract="shared-v1"' in primitives
     assert 'data-status-text' in primitives
-    assert 'data-primary-action data-decision-action=' in primitives
+    assert 'data-primary-action data-recovery-action=' in primitives
 
 
 def test_shared_interaction_contract_keeps_recovery_and_decision_regions_scoped() -> None:
     primitives = _asset("/operator-primitives.js")
 
     assert 'data-interaction-region role="${role}"' in primitives
-    assert 'data-interaction-region role="status" aria-live="polite"' in primitives
-    assert 'data-primary-slot' in primitives
+    assert 'data-decision-bar="recovery" data-recovery-summary=' in primitives
     assert 'data-primary-recovery-slot' in primitives

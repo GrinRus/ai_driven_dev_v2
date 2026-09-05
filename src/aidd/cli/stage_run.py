@@ -43,6 +43,7 @@ from aidd.core.repair import (
     count_stage_attempts,
     effective_repair_budget,
     generate_repair_brief,
+    load_stage_attempt_modes,
     parse_validator_report_findings,
     persist_repair_history_snapshot,
     preflight_repair_extension,
@@ -53,7 +54,6 @@ from aidd.core.run_lookup import latest_attempt_number, latest_run_id
 from aidd.core.run_store import (
     RUN_RUNTIME_LOG_FILENAME,
     create_run_manifest,
-    load_attempt_artifact_index,
     load_stage_metadata,
     next_attempt_number,
     run_attempt_root,
@@ -926,19 +926,15 @@ def _repair_extension_budget_snapshot(
         run_id=run_id,
         stage=stage,
     )
-    attempt_modes: list[str | None] = []
-    for attempt_number in range(1, stage_attempt_count + 1):
-        index = load_attempt_artifact_index(
+    used = repair_attempts_used(
+        stage_attempt_count=stage_attempt_count,
+        attempt_modes=load_stage_attempt_modes(
             workspace_root=workspace_root,
             work_item=work_item,
             run_id=run_id,
             stage=stage,
-            attempt_number=attempt_number,
-        )
-        attempt_modes.append(None if index is None else index.attempt_mode)
-    used = repair_attempts_used(
-        stage_attempt_count=stage_attempt_count,
-        attempt_modes=tuple(attempt_modes) if attempt_modes else None,
+            stage_attempt_count=stage_attempt_count,
+        ),
     )
     maximum = effective_repair_budget(stage=stage, policy=repair_policy)
     return used, maximum, max(0, maximum - used)

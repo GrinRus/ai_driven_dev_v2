@@ -478,7 +478,7 @@ def ensure_stage_result_references_repair_brief(
 def _replace_or_add_status_section(markdown: str) -> str:
     """Canonicalize the Status section to one lifecycle-owned marker.
 
-    Runtime drafts can contain a mixture of legacy bare markers and newer labelled
+    Runtime drafts can contain a mixture of bare markers and labelled
     markers, sometimes with conflicting values after a repair.  The lifecycle state
     is authoritative, so discard the draft body and write the contract's single
     labelled status line while leaving every other section byte-for-byte intact.

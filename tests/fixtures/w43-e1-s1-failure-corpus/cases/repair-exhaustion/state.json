@@ -1,6 +1,7 @@
 {
   "stage": "implement",
   "stage_attempt_count": 3,
+  "attempt_modes": ["initial", "repair", "repair"],
   "max_repair_attempts": 2,
   "repair_attempts_used": 2,
   "remaining_repair_attempts": 0,

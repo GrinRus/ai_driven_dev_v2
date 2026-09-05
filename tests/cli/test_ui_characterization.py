@@ -36,11 +36,9 @@ from aidd.runtime_permissions import (
 )
 
 _EXPECTED = json.loads(
-    (
-        Path(__file__).parents[1]
-        / "fixtures"
-        / "operator_ui_characterization.json"
-    ).read_text(encoding="utf-8")
+    (Path(__file__).parents[1] / "fixtures" / "operator_ui_characterization.json").read_text(
+        encoding="utf-8"
+    )
 )
 
 
@@ -61,9 +59,7 @@ def _response_snapshot(response: Any) -> dict[str, object]:
 
 class _ConflictService(OperatorUiService):
     def _start_stage_job(self, payload: dict[str, Any]) -> object:
-        raise RunMutationConflict(
-            "Run mutation conflict: characterized owner already exists."
-        )
+        raise RunMutationConflict("Run mutation conflict: characterized owner already exists.")
 
 
 def test_ui_route_contract_characterization(tmp_path: Path) -> None:
@@ -237,7 +233,12 @@ def _dashboard_summary(payload: dict[str, object]) -> dict[str, object]:
 def test_ui_dashboard_state_characterization(tmp_path: Path) -> None:
     running_root = tmp_path / "running"
     running_service = _service(running_root)
-    running_job = running_service._jobs.create(kind="stage", stage="idea")
+    running_job = running_service._jobs.create(
+        kind="stage",
+        stage="idea",
+        project_root=running_service._require_context().project_root,
+        workspace_root=running_service.workspace_root,
+    )
     running_payload = _payload(running_service.handle_get("/api/dashboard", {}))
     running = _dashboard_summary(running_payload)
     running["active_job_status"] = running_payload["active_job"]["status"]  # type: ignore[index]

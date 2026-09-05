@@ -63,6 +63,7 @@ def _prepare_plan_attempt(
         work_item="WI-001",
         run_id="run-001",
         stage="plan",
+        attempt_mode="initial",
     )
     invocation = prepare_adapter_invocation(
         workspace_root=workspace_root,

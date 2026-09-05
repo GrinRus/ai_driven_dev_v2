@@ -75,7 +75,7 @@ test("Studio Inbox preserves section priority and exact durable routes", async (
   assert.match(html, /data-route-project-root="\/projects\/project-a"/);
 });
 
-test("Studio Inbox renders canonical DOM keys while accepting legacy payload groups", async () => {
+test("Studio Inbox retains durable running items when no live jobs are available", async () => {
   const context = await inboxContext();
   const html = vm.runInContext(`
     state.inbox = {

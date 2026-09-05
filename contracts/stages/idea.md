@@ -13,8 +13,8 @@ Required outputs for every `idea` attempt:
 - `validator-report.md`
 
 `idea-brief.md` is the primary runtime-authored content artifact. `stage-result.md`
-is a runtime-authored summary draft that AIDD may normalize after validation, and
-`validator-report.md` is canonical only after AIDD writes the post-runtime validation report.
+and `validator-report.md` are AIDD-owned workflow records. AIDD writes their lifecycle and
+validation content after runtime execution; runtimes must not create or edit either record.
 
 Conditional outputs:
 

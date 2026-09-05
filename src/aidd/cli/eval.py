@@ -6,7 +6,7 @@ from typing import Annotated
 import typer
 from rich.table import Table
 
-from aidd.cli.doctor import _runtime_probe_report
+from aidd.adapters.surface import get_runtime_adapter_surface
 from aidd.cli.support import console
 from aidd.evals.reporting import resolve_latest_eval_summary_report_path
 from aidd.harness.deterministic_eval import (
@@ -41,7 +41,7 @@ def eval_doctor(
         definition = get_runtime_definition(runtime)
     except ValueError as exc:
         raise typer.BadParameter(str(exc)) from exc
-    report = _runtime_probe_report(definition=definition)
+    report = get_runtime_adapter_surface(runtime).probe(definition.probe_command)
     table = Table(title="AIDD eval doctor")
     table.add_column("Check")
     table.add_column("Value")

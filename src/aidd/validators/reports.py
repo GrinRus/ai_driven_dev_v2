@@ -20,7 +20,7 @@ class _RenderedFinding:
 
 
 def _classify_bucket(code: str) -> ValidatorReportSection:
-    return resolve_validator_finding_code(code, for_write=True).section
+    return resolve_validator_finding_code(code).section
 
 
 def _format_location(finding: ValidationFinding) -> str:

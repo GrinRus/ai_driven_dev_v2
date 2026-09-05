@@ -1,6 +1,6 @@
 # Semantic validator fixtures
 
-Fixtures for `tests/validators/test_semantic.py` regression coverage.
+Fixtures for the stage-specific `tests/validators/test_semantic_*.py` modules regression coverage.
 
 - `valid/workspace/` contains a bundle that should pass semantic checks for `idea`.
 - `invalid/workspace/` contains a bundle with placeholder content that must fail semantic checks.

@@ -3,7 +3,6 @@ from __future__ import annotations
 from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
-from typing import TypeVar
 
 from aidd.runtime_budget import validate_runtime_budget
 from aidd.runtime_catalog import RuntimeExecutionMode
@@ -12,8 +11,6 @@ from aidd.runtime_permissions import (
     RuntimeInteractionMode,
     RuntimePermissionPolicy,
 )
-
-ExitClassificationT = TypeVar("ExitClassificationT")
 
 
 @dataclass(frozen=True, slots=True)

@@ -12,6 +12,8 @@ from aidd.core.run_store import (
     create_run_manifest,
     persist_stage_status,
 )
+from aidd.validators.models import ValidationFinding
+from aidd.validators.reports import render_validator_report
 
 runner = CliRunner()
 
@@ -52,10 +54,15 @@ def test_stage_summary_reports_final_state_runtime_and_attempt_count(tmp_path: P
     stage_root.mkdir(parents=True, exist_ok=True)
     (stage_root / "validator-report.md").write_text(
         (
-            "# Validator Report\n\n"
-            "## Result\n\n"
-            "- Verdict: `fail`\n"
-            "- Repair required for progression: yes\n"
+            render_validator_report(
+                (
+                    ValidationFinding(
+                        code="SEM-PLACEHOLDER-CONTENT",
+                        severity="high",
+                        message="Replace placeholder content.",
+                    ),
+                )
+            )
         ),
         encoding="utf-8",
     )
@@ -164,10 +171,17 @@ def test_stage_summary_supports_success_blocked_repair_needed_and_failed(
     stage_root.mkdir(parents=True, exist_ok=True)
     (stage_root / "validator-report.md").write_text(
         (
-            "# Validator Report\n\n"
-            "## Result\n\n"
-            f"- Verdict: `{verdict}`\n"
-            "- Repair required for progression: no\n"
+            render_validator_report(())
+            if verdict == "pass"
+            else render_validator_report(
+                (
+                    ValidationFinding(
+                        code="SEM-PLACEHOLDER-CONTENT",
+                        severity="high",
+                        message="Replace placeholder content.",
+                    ),
+                )
+            )
         ),
         encoding="utf-8",
     )

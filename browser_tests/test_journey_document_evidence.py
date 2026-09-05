@@ -6,7 +6,11 @@ from urllib.parse import parse_qs, urlencode, urlsplit
 import pytest
 from playwright.sync_api import Page, sync_playwright
 
-from browser_tests.browser_harness import VIEWPORTS, operator_browser_harness
+from browser_tests.browser_harness import (
+    VIEWPORTS,
+    expect_rendered_surface,
+    operator_browser_harness,
+)
 from browser_tests.rendered_assertions import assert_accessible_render
 from browser_tests.rendered_geometry import assert_rendered_geometry
 from browser_tests.state_fixtures import build_browser_state_fixture
@@ -19,16 +23,9 @@ def _assert_rendered_gate(page: Page, viewport: tuple[int, int]) -> None:
     assert_rendered_geometry(page)
 
 
-@pytest.mark.parametrize(
-    "query",
-    ("", "?ui=legacy", "?ui=studio", "?ui=unknown"),
-)
-def test_studio_workbench_ignores_retired_presentation_selector(
-    tmp_path: Path,
-    query: str,
-) -> None:
+def test_studio_workbench_opens_from_document_route(tmp_path: Path) -> None:
     fixture = build_browser_state_fixture(
-        tmp_path / (query.removeprefix("?ui=") or "missing"),
+        tmp_path / "document-route",
         "remediation-stale",
     )
 
@@ -38,7 +35,6 @@ def test_studio_workbench_ignores_retired_presentation_selector(
         work_item=fixture.work_item,
     ) as harness, harness.open_page((1280, 900)) as browser_page:
         page = browser_page.page
-        selector = query.removeprefix("?")
         context = urlencode(
             {
                 "mode": "studio",
@@ -47,10 +43,8 @@ def test_studio_workbench_ignores_retired_presentation_selector(
                 "stage": "qa",
             }
         )
-        separator = "&" if selector else ""
-        page.goto(
-            f"{harness.url}?{selector}{separator}{context}", wait_until="networkidle"
-        )
+        with expect_rendered_surface(page.locator("#studioDocumentCanvas")):
+            page.goto(f"{harness.url}?{context}", wait_until="domcontentloaded")
         page.locator(".active-studio").wait_for(state="visible")
         assert page.locator(".active-studio").count() == 1
         assert page.locator("#studioDocumentCanvas").count() == 1
@@ -82,10 +76,10 @@ def test_document_canvas_and_evidence_inspector_preserve_safe_context(
                 "stage": "qa",
             }
         )
-        response = page.goto(f"{harness.url}?{route}", wait_until="networkidle")
-        assert response is not None and response.ok
-
         canvas = page.locator("#studioDocumentCanvas")
+        with expect_rendered_surface(canvas.get_by_text("QA verdict: ready", exact=False)):
+            response = page.goto(f"{harness.url}?{route}", wait_until="domcontentloaded")
+        assert response is not None and response.ok
         canvas.locator('[data-document-canvas-mode="preview"]').wait_for(state="visible")
         assert "QA verdict: ready" in canvas.inner_text()
         assert "Historical / stale" in canvas.inner_text()
@@ -154,13 +148,15 @@ def test_document_canvas_and_evidence_inspector_preserve_safe_context(
         assert "is not available" in unsafe_response.text()
         assert "config_snapshot" not in unsafe_response.text()
 
-        page.reload(wait_until="networkidle")
+        with expect_rendered_surface(canvas):
+            page.reload(wait_until="domcontentloaded")
         page.locator(
             '#studioDocumentCanvas [data-document-canvas-mode="preview"]'
         ).wait_for(state="visible")
         assert parse_qs(urlsplit(page.url).query).get("artifact") == ["qa_report"]
 
-        page.go_back(wait_until="networkidle")
+        with expect_rendered_surface(canvas):
+            page.go_back(wait_until="domcontentloaded")
         page.evaluate("() => window.aiddRouteRestore || Promise.resolve()")
         canvas.locator('[data-document-canvas-mode="preview"]').wait_for(state="visible")
 
@@ -172,7 +168,8 @@ def test_document_canvas_and_evidence_inspector_preserve_safe_context(
         ).first.wait_for(state="visible")
         assert "qa complete" in page.locator("#intentContent").inner_text()
 
-        page.go_back(wait_until="networkidle")
+        with expect_rendered_surface(canvas):
+            page.go_back(wait_until="domcontentloaded")
         page.evaluate("() => window.aiddRouteRestore || Promise.resolve()")
         canvas.locator('[data-document-canvas-mode="preview"]').wait_for(state="visible")
         _assert_rendered_gate(page, viewport)

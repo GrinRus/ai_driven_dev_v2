@@ -24,7 +24,7 @@ def test_tracked_repository_inventory_excludes_generated_cache_surfaces() -> Non
     tracked_paths = _tracked_existing_paths()
 
     assert Path("manifest.txt") not in tracked_paths
-    assert Path("MANIFEST.md") in tracked_paths
+    assert Path("MANIFEST.md") not in tracked_paths
     assert all(
         "__pycache__" not in path.parts
         and ".pytest_cache" not in path.parts

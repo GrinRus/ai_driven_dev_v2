@@ -9,7 +9,6 @@ import pytest
 from aidd.harness.result_bundle import (
     copy_or_link_run_artifacts,
     ensure_result_bundle_layout,
-    read_artifact_digests,
 )
 
 
@@ -47,9 +46,7 @@ def test_copy_or_link_run_artifacts_materializes_bundle_files(tmp_path: Path) ->
     assert "pass" in layout.verdict_path.read_text(encoding="utf-8")
     assert "runtime" in layout.runtime_jsonl_path.read_text(encoding="utf-8")
     assert "normalized" in layout.events_jsonl_path.read_text(encoding="utf-8")
-    digest_payload = json.loads(
-        layout.artifact_digests_path.read_text(encoding="utf-8")
-    )
+    digest_payload = json.loads(layout.artifact_digests_path.read_text(encoding="utf-8"))
     assert digest_payload["schema_version"] == 1
     assert [item["path"] for item in digest_payload["artifacts"]] == sorted(
         (
@@ -110,10 +107,3 @@ def test_copy_failure_does_not_publish_commit_marker(
 
     assert not layout.artifact_digests_path.exists()
     assert not tuple(layout.run_root.glob(".artifact-materialization-*"))
-
-
-def test_read_artifact_digests_warns_for_legacy_bundle(tmp_path: Path) -> None:
-    layout = ensure_result_bundle_layout(workspace_root=tmp_path, run_id="legacy-run")
-
-    with pytest.warns(UserWarning, match="legacy bundle"):
-        assert read_artifact_digests(layout=layout) is None

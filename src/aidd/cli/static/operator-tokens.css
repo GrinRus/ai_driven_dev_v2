@@ -9,7 +9,6 @@
   --line: #d9dee6;
   --line-strong: #c3cbd6;
   --text: #111827;
-  --ink: var(--text);
   --muted: #526071;
   --surface-active: #edf3ff;
   --surface-active-strong: #e4ecff;
@@ -25,10 +24,6 @@
   --topbar-control-line: rgba(255, 255, 255, 0.22);
   --topbar-text: #f6f8fc;
   --topbar-muted: #b5c4d8;
-  /* Compatibility aliases keep existing component selectors on the target palette. */
-  --teal: var(--cobalt);
-  --teal-dark: var(--cobalt-dark);
-  --green: var(--mint);
   --amber: #a56600;
   --red: #b4232a;
   --blue: #2563c7;
@@ -61,7 +56,7 @@
   --color-state-info-border-muted: #bfcee5;
   --color-state-info-border-strong: #adc2e2;
   --color-state-info-border-blue: #b8d7f4;
-  --color-state-success: var(--green);
+  --color-state-success: var(--mint);
   --color-state-success-text: #0f6b3b;
   --color-state-success-bg: var(--surface-success);
   --color-state-success-bg-subtle: #f7fbf8;
@@ -93,7 +88,6 @@
   /* Type roles cover document reading and compact operational metadata. */
   --font-sans: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
-  --mono: var(--font-mono);
   --type-display-size: 32px;
   --type-title-size: 18px;
   --type-heading-size: 14px;

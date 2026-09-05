@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import hashlib
-import json
 import os
 import subprocess
 import sys
@@ -16,9 +15,6 @@ from aidd.cli.ui_assets import operator_static_asset_manifest
 from aidd.core.contracts import repo_root_from
 from aidd.core.stage_registry import resolve_prompt_pack_paths
 from aidd.core.stages import STAGES
-
-_ACTIVE_PROMPT_HASHES_PATH = Path("tests/fixtures/active_prompt_pack_hashes.json")
-_REMOVED_COMMON_PROMPT = "prompt-packs/common/run-rules.md"
 
 
 def _repo_root() -> Path:
@@ -56,14 +52,22 @@ def _active_prompt_hashes() -> dict[str, str]:
     }
 
 
-def test_active_prompt_pack_paths_and_hashes_match_the_removal_baseline() -> None:
-    expected = json.loads(
-        (_repo_root() / _ACTIVE_PROMPT_HASHES_PATH).read_text(encoding="utf-8")
-    )
+def test_all_prompt_content_is_declared_by_current_stage_contracts() -> None:
+    root = _repo_root()
+    actual_content_paths = {
+        path.relative_to(root).as_posix()
+        for path in (root / "prompt-packs").rglob("*.md")
+        if path.name != "AGENTS.md"
+    }
+    declared_paths = set(_active_prompt_hashes())
 
-    assert _active_prompt_hashes() == expected
-    assert _REMOVED_COMMON_PROMPT not in expected
-    assert not (_repo_root() / _REMOVED_COMMON_PROMPT).exists()
+    assert declared_paths == actual_content_paths
+    assert all(path.startswith("prompt-packs/stages/") for path in declared_paths)
+    for stage in STAGES:
+        assert set(resolve_prompt_pack_paths(stage=stage)) == {
+            f"prompt-packs/stages/{stage}/{mode}.md"
+            for mode in ("system", "run", "repair", "interview", "intervention")
+        }
 
 
 def test_built_wheel_includes_runtime_owned_contracts_and_prompt_packs(tmp_path: Path) -> None:
@@ -93,6 +97,13 @@ def test_built_wheel_includes_runtime_owned_contracts_and_prompt_packs(tmp_path:
             name for name in archive_names if name.endswith(".dist-info/METADATA")
         )
         metadata_text = archive.read(metadata_name).decode("utf-8")
+        packaged_prompt_hashes = {
+            name.removeprefix("aidd/_resources/"): hashlib.sha256(archive.read(name)).hexdigest()
+            for name in archive_names
+            if name.startswith("aidd/_resources/prompt-packs/")
+            and name.endswith(".md")
+            and not name.endswith("/AGENTS.md")
+        }
         archive.extractall(extracted_root)
 
     requires_dist = tuple(
@@ -125,9 +136,7 @@ def test_built_wheel_includes_runtime_owned_contracts_and_prompt_packs(tmp_path:
     assert "aidd/_resources/contracts/documents/repair-extension.md" in archive_names
     assert "aidd/_resources/contracts/documents/stage-result.md" in archive_names
     assert "aidd/_resources/prompt-packs/stages/plan/system.md" in archive_names
-    for prompt_path in _active_prompt_hashes():
-        assert f"aidd/_resources/{prompt_path}" in archive_names
-    assert f"aidd/_resources/{_REMOVED_COMMON_PROMPT}" not in archive_names
+    assert packaged_prompt_hashes == _active_prompt_hashes()
     for asset in operator_static_asset_manifest():
         assert f"aidd/cli/static/{asset.filename}" in archive_names
 

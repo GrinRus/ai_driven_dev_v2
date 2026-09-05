@@ -127,6 +127,25 @@ test("core readiness eligibility and literal disabled reason drive launch gating
   assert.match(html, /data-open-runner/);
 });
 
+test("launch stays blocked when readiness omits core eligibility despite available binaries", async () => {
+  const context = await readinessContext();
+  context.state.selectedRuntime = "generic-cli";
+  context.state.readiness = {
+    runtimes: [{
+      runtime_id: "generic-cli",
+      provider_available: true,
+      execution_command_available: true,
+    }],
+  };
+  assert.equal(vm.runInContext("selectedRuntimeReady()", context), false);
+  assert.equal(
+    vm.runInContext("runtimeReadinessMessage()", context),
+    "Selected runtime is not ready for execution.",
+  );
+  const html = vm.runInContext("renderContextualRunnerControl()", context);
+  assert.match(html, /data-runner-eligible="false"/);
+});
+
 test("eligible readiness keeps one contextual Runner control focused on the canonical selector", async () => {
   const context = await readinessContext();
   context.state.selectedRuntime = "codex";
@@ -146,11 +165,7 @@ test("eligible readiness keeps one contextual Runner control focused on the cano
   assert.equal(vm.runInContext("selectedRuntimeReady()", context), true);
   assert.deepEqual(
     JSON.parse(JSON.stringify(vm.runInContext("runtimeSelectorPayload()", context))),
-    {
-      require_runtime_revalidation: true,
-      readiness_config_identity: "config-current",
-      readiness_probe_observed_at_utc: "2026-08-13T10:00:00Z",
-    },
+    {},
   );
   const html = vm.runInContext("renderContextualRunnerControl({actionLabel: 'workflow launch'})", context);
   assert.match(html, /data-runner-eligible="true"/);

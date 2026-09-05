@@ -284,8 +284,8 @@ For every stage run:
    projection with run/stage/attempt identity, timing/outcome, operator references, a runtime
    evidence pointer, and provider-payload digest.
    Provider-specific native adapters may mark a process `document_complete` only after the
-   declared Markdown outputs are present, terminal documents have been updated, and the
-   files have settled. This is still raw-log-visible adapter evidence; it does not skip the
+   runtime-authored Markdown content is present, has changed, and has settled.
+   AIDD-owned terminal records and operator-owned answers are never completion targets. This is still raw-log-visible adapter evidence; it does not skip the
    canonical validation step. When a stage writes fresh blocking questions, `answers.md`
    may still be an unanswered placeholder; validation and interview routing decide whether
    the stage waits for operator answers.
@@ -437,7 +437,9 @@ request repair by themselves. Repair briefs group primary, related, and advisory
 retaining exact finding ids and locations.
 
 Only validation-triggered `repair` attempts consume the automatic repair budget. Runtime retry,
-question `resume`, and operator `intervention` remain distinct attempt modes. After automatic
+question `resume`, and operator `intervention` remain distinct attempt modes. Accounting reads
+persisted `attempt_mode` metadata; missing or malformed metadata stops with an explicit evidence
+error rather than inferring repair usage from attempt directory counts. After automatic
 exhaustion, the target recovery contract permits at most one durable `repair-extension` grant for
 the latest exhausted stage in the same run. The grant records run/stage identity, config plus
 validator/brief hashes, author, time, and reason; it never resets budget or history.

@@ -51,5 +51,6 @@ and quick start; the documents below own detailed behavior and policy.
 - [Browser Testing](./architecture/browser-testing.md) — browser fixtures, journeys, and rendered
   acceptance.
 
-Timestamped documents under `analysis/` and `e2e/` are retained audit evidence. Start from the
-stable guides above unless a task or release record points to a specific audit.
+Historical audits, completed planning, and superseded release notes are retained in Git history.
+The documentation tree contains current guides, contracts, scenario definitions, and the latest
+accepted package-release evidence. New run evidence belongs in its generated evaluation bundle.

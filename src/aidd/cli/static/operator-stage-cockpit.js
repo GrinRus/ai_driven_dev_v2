@@ -140,9 +140,6 @@ function renderRecoveryActionBandReadOnly(diagnostics) {
 }
 
 function renderRecoveryActionBandInternal(diagnostics, {showPrimary = true} = {}) {
-  /* Legacy asset contracts: the visible validation target is the document
-     workbench, while these labels remain searchable for compatibility. */
-  // Validation / Repair Center · Stop Run
   const validation = diagnostics?.validation;
   const stopped = diagnostics?.stopped;
   const status = repairCenterStatus(validation, stopped);

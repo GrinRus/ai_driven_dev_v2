@@ -284,10 +284,9 @@ repository flow and must remain manual-only.
 
 ## Candidate Repository Drafts
 
-Candidate drafts are not maintained coverage. They are setup-proofed lanes that
-may be promoted only after a separate proof run and planning update. See
-[`Live E2E Candidate Setup Audits`](./live-e2e-candidate-setup-audits.md) for
-the Pydantic, FastAPI, Rich, and Ruff audit table.
+Candidate drafts are not maintained coverage. A candidate may be promoted only after a fresh
+setup proof, bounded execution, and planning update. Previous setup audits remain in Git history;
+they are not evidence that the current checkout or environment is ready.
 
 ### `Textualize/rich`
 
@@ -547,7 +546,7 @@ untracked product files, known harness files, final report presence, and termina
 flow-state/verdict consistency. The summary is navigation evidence, not
 runner-owned quality scoring. It does not update `verdict.md`, `grader.json`,
 `flow-quality-report.md`, `code-quality-report.md`, or `quality-report.md`. It derives
-execution, review, counted-clean, manual-stop, and legacy-degraded flags from primary
+execution, review, counted-clean, and manual-stop flags from primary
 evidence. Manual `quality-report.md` remains the only final counted-clean decision.
 The summary only projects it alongside independent execution and provenance signals.
 

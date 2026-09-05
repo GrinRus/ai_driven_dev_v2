@@ -67,7 +67,7 @@ interaction_mode = "batch"        # batch | evented | live
 auto_approval_preset = "broad"    # off | conservative | broad
 ```
 
-`full-access` is the backward-compatible default and keeps the existing provider-default
+`full-access` is the default and keeps the existing provider-default
 behavior. Non-full policies route normalized runtime approval requests through the
 `RuntimeOperatorBroker`; policy-approved decisions are recorded in
 `operator-decisions.jsonl`, and unresolved requests are recorded in

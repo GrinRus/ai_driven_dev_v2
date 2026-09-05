@@ -47,7 +47,7 @@ def test_history_journey_preserves_retained_runs(
     ) as harness, harness.open_page(viewport) as browser_page:
         page = browser_page.page
         page.goto(
-            f"{harness.url}?ui=studio&mode=history&work_item={fixture.work_item}"
+            f"{harness.url}?mode=history&work_item={fixture.work_item}"
             f"&run_id={fixture.run_id}&stage=implement",
             wait_until="domcontentloaded",
         )
@@ -104,7 +104,7 @@ def test_history_surface_wait_fails_closed_for_wrong_run_identity(tmp_path: Path
     ) as harness, harness.open_page((1280, 900)) as browser_page:
         page = browser_page.page
         page.goto(
-            f"{harness.url}?ui=studio&mode=history&work_item={fixture.work_item}"
+            f"{harness.url}?mode=history&work_item={fixture.work_item}"
             f"&run_id={fixture.run_id}&stage=implement",
             wait_until="domcontentloaded",
         )

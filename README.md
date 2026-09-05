@@ -52,6 +52,11 @@ history. The `main` branch may contain unreleased changes.
 
 Beta readiness is a future evidence gate, not a current production-readiness claim.
 
+Current alpha builds support the current configuration and artifact formats. Recreate workspaces
+from older versions before resuming work, and remove the obsolete `[logging]` configuration section.
+See the [compatibility policy](https://github.com/GrinRus/ai_driven_dev_v2/blob/main/docs/compatibility-policy.md)
+for the current-format boundary.
+
 Before running AIDD:
 
 - use a disposable branch, sandboxed checkout, or otherwise controlled workspace;
