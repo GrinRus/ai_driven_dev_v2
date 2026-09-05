@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 from pathlib import Path
 
 import pytest
@@ -281,6 +282,55 @@ def test_executor_exception_survives_corrupt_report_enrichment(
     )
     assert metadata is not None
     assert metadata.status == StageState.FAILED.value
+    attempt_state = (
+        captured.value.ledger.entry("TL-1").latest_attempt_path
+        if captured.value.ledger is not None
+        else None
+    )
+    assert attempt_state is not None
+    enrichment = json.loads(
+        (request.workspace_root / attempt_state / "attempt-state.json").read_text(
+            encoding="utf-8"
+        )
+    )
+    assert enrichment["enrichment_errors"][0].startswith("implementation report:")
+
+
+def test_failed_task_keeps_primary_blocker_when_report_enrichment_is_corrupt(
+    tmp_path: Path,
+) -> None:
+    request = _request(tmp_path)
+
+    def fail_with_corrupt_report(context):  # type: ignore[no-untyped-def]
+        report = (
+            request.workspace_root
+            / "workitems"
+            / request.work_item
+            / "stages"
+            / "implement"
+            / "implementation-report.md"
+        )
+        report.parent.mkdir(parents=True, exist_ok=True)
+        report.write_bytes(b"# Implementation Report\n\xff\n")
+        return TaskAttemptOutcome(succeeded=False, blocker="validator failed")
+
+    service = ImplementationExecutionService(
+        task_executor=fail_with_corrupt_report,
+        aggregate_finalizer=lambda context: AggregateFinalizationOutcome(succeeded=True),
+    )
+
+    result = service.run_task(request, task_id="TL-1")
+
+    entry = result.ledger.entry("TL-1")
+    assert entry.status is TaskExecutionStatus.FAILED
+    assert entry.blocker == "validator failed"
+    assert entry.latest_attempt_path is not None
+    enrichment = json.loads(
+        (request.workspace_root / entry.latest_attempt_path / "attempt-state.json").read_text(
+            encoding="utf-8"
+        )
+    )
+    assert enrichment["enrichment_errors"][0].startswith("implementation report:")
 
 
 def test_failed_task_keeps_implementation_stage_failed_not_blocked(tmp_path: Path) -> None:
