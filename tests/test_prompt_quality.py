@@ -109,6 +109,35 @@ def test_stage_run_prompts_assign_terminal_records_to_aidd(stage: str) -> None:
         assert f"{verb} `validator-report.md`" not in run_prompt
 
 
+@pytest.mark.parametrize("stage", STAGES)
+def test_stage_intervention_prompts_protect_aidd_records(stage: str) -> None:
+    intervention_prompt = (
+        Path("prompt-packs") / "stages" / stage / "intervention.md"
+    ).read_text(encoding="utf-8")
+    normalized_prompt = " ".join(intervention_prompt.split())
+
+    assert "Do not write `stage-result.md` or `validator-report.md`" in normalized_prompt
+    assert (
+        "Never create, edit, delete, or replace either record" in normalized_prompt
+    )
+    assert "AIDD owns their canonical status, validation, history, and publication" in (
+        normalized_prompt
+    )
+
+    # The negative write boundary is expected; any other mutation verb paired with
+    # an AIDD-owned record would give the model contradictory instructions.
+    safe_boundary = (
+        "Do not write `stage-result.md` or `validator-report.md`; AIDD owns their canonical "
+        "status, validation, history, and publication;"
+    )
+    body_without_boundary = normalized_prompt.replace(safe_boundary, "")
+    for verb in ("write", "update", "create", "edit", "delete", "replace"):
+        assert re.search(
+            rf"(?i)\b{verb}\s+`(?:stage-result|validator-report)\.md`",
+            body_without_boundary,
+        ) is None
+
+
 def test_interview_document_contracts_and_native_prompt_forbid_marker_colon() -> None:
     questions_contract = Path("contracts/documents/questions.md").read_text(
         encoding="utf-8"
