@@ -22,6 +22,7 @@ from aidd.adapters.runtime_evidence import (
         ("non_zero_exit", RuntimeAdapterOutcome.RUNTIME_FAILURE),
         ("runtime_non_zero_exit", RuntimeAdapterOutcome.RUNTIME_FAILURE),
         ("provider_error", RuntimeAdapterOutcome.RUNTIME_FAILURE),
+        ("capture_failure", RuntimeAdapterOutcome.RUNTIME_FAILURE),
         ("timeout", RuntimeAdapterOutcome.TIMEOUT),
         ("cancelled", RuntimeAdapterOutcome.CANCELLATION),
         ("user_cancelled", RuntimeAdapterOutcome.CANCELLATION),
@@ -90,6 +91,30 @@ def test_success_evidence_has_no_stop_reason(tmp_path: Path) -> None:
 
     metadata = json.loads(paths.runtime_exit_metadata_path.read_text(encoding="utf-8"))
     assert "stop_reason" not in metadata
+
+
+def test_capture_error_is_retained_with_partial_runtime_evidence(tmp_path: Path) -> None:
+    paths = commit_runtime_evidence(
+        RuntimeEvidenceCommitRequest(
+            attempt_path=tmp_path,
+            adapter_outcome=RuntimeAdapterOutcome.RUNTIME_FAILURE,
+            exit_classification="capture_failure",
+            exit_code=0,
+            stdout_text="before\n",
+            stderr_text="",
+            runtime_log_text="before\n",
+            stop_reason=RuntimeStopReason.RUNTIME_FAILURE,
+            capture_error="RuntimeError: reader failed",
+        )
+    )
+
+    assert paths.runtime_log_path.read_text(encoding="utf-8") == "before\n"
+    metadata = json.loads(paths.runtime_exit_metadata_path.read_text(encoding="utf-8"))
+    assert metadata["adapter_outcome"] == "runtime_failure"
+    assert metadata["exit_classification"] == "capture_failure"
+    assert metadata["exit_code"] == 0
+    assert metadata["stop_reason"] == "runtime_failure"
+    assert metadata["capture_error"] == "RuntimeError: reader failed"
 
 
 def test_runtime_evidence_request_requires_consistent_stop_reason(

@@ -181,9 +181,15 @@ def resolve_exit_classification[ExitClassificationT: StrEnum](
     stop_reason: ExitClassificationT | None,
     success_value: ExitClassificationT,
     non_zero_value: ExitClassificationT,
+    capture_error: str | None = None,
+    capture_failure_value: ExitClassificationT | None = None,
 ) -> ExitClassificationT:
     if stop_reason is not None:
         return stop_reason
+    if capture_error is not None:
+        if capture_failure_value is None:
+            raise ValueError("capture_failure_value is required when capture_error is set.")
+        return capture_failure_value
     if exit_code == 0:
         return success_value
     return non_zero_value
@@ -261,6 +267,7 @@ def persist_runtime_log_artifacts(
     stdout_truncated: bool = False,
     stderr_truncated: bool = False,
     runtime_log_truncated: bool = False,
+    capture_error: str | None = None,
 ) -> RuntimeArtifactPaths:
     resolved_outcome = adapter_outcome or adapter_outcome_for_classification(
         exit_classification
@@ -285,6 +292,7 @@ def persist_runtime_log_artifacts(
             stdout_truncated=stdout_truncated,
             stderr_truncated=stderr_truncated,
             runtime_log_truncated=runtime_log_truncated,
+            capture_error=capture_error,
         )
     )
 

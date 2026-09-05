@@ -57,6 +57,7 @@ class StreamedSubprocessResult[ExitClassificationT: StrEnum]:
     stdout_truncated: bool = False
     stderr_truncated: bool = False
     runtime_log_truncated: bool = False
+    capture_error: str | None = None
 
 
 def stream_reader(
@@ -92,6 +93,13 @@ def stream_reader(
 def safe_launch_failure_message(exc: OSError) -> str:
     message = str(exc).replace("\r", " ").replace("\n", " ").strip()
     return f"[launch-failure] {type(exc).__name__}: {message}\n"
+
+
+def safe_capture_failure_message(exc: BaseException) -> str:
+    message = str(exc).replace("\r", " ").replace("\n", " ").strip()
+    if message:
+        return f"{type(exc).__name__}: {message}"
+    return type(exc).__name__
 
 
 def run_streamed_subprocess[ExitClassificationT: StrEnum](
@@ -261,9 +269,9 @@ def run_streamed_subprocess[ExitClassificationT: StrEnum](
         if stdin_writer.error is not None and stop_reason is None:
             sink.abort()
             raise stdin_writer.error
-    if reader_error is not None and stop_reason is None:
-        sink.abort()
-        raise reader_error
+    # Preserve a partial capture on reader failure and let the adapter classify
+    # it from ``capture_error``. The generic runner cannot choose a
+    # provider-specific stop-reason enum here.
 
     snapshot = sink.finish()
     return StreamedSubprocessResult(
@@ -283,4 +291,9 @@ def run_streamed_subprocess[ExitClassificationT: StrEnum](
         stdout_truncated=snapshot.stdout_truncated,
         stderr_truncated=snapshot.stderr_truncated,
         runtime_log_truncated=snapshot.runtime_log_truncated,
+        capture_error=(
+            safe_capture_failure_message(reader_error)
+            if reader_error is not None
+            else None
+        ),
     )
