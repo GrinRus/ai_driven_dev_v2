@@ -47,11 +47,11 @@ Every live E2E run must follow the installed full-flow operator model:
 11. Preserve install, setup, run, verify, and teardown evidence in the eval bundle.
 12. Write `stage-audits/<stage-run-id>.json` and `.md` after each stage run.
     If a stage subprocess times out or stops making provider progress while its durable
-    metadata is still non-terminal, the harness must call the installed
-    `aidd stage reconcile-terminal` command with the canonical run identity, expected
-    state, and reason. Only that public compare-and-set application operation may append
-    the terminal `failed` history entry; live harness modules must not import core
-    stage-status persistence.
+    metadata is still in an abandoned in-flight state (`executing` or `validating`), the
+    harness must call the installed `aidd stage reconcile-terminal` command with the canonical
+    run identity, expected state, and reason. Only that public compare-and-set application
+    operation may append the terminal `failed` history entry; live harness modules must not
+    import core stage-status persistence.
 13. Preserve `stage-timing.json`, `stage-timing.md`, `self-repair-matrix.json`, and
     `self-repair-matrix.md` so operators can audit step duration, per-attempt runtime windows,
     deterministic repair-probe coverage, terminal document consistency, per-stage command
@@ -417,7 +417,8 @@ Every live eval bundle must aim to contain:
 - `stage-audits/<stage-run-id>.json`
 - `stage-audits/<stage-run-id>.md`
 - target `.aidd/reports/runs/<work-item>/<run-id>/stages/<stage>/terminal-reconciliation.json`
-  when an abandoned non-terminal stage is reconciled through the installed public command
+  when an abandoned `executing` or `validating` stage is reconciled through the installed
+  public command
 - `stage-quality-audits/<stage-run-id>.md` for each completed `product-evaluation` stage run,
   written manually by the launching agent before resume
 - `target-workspace-evidence.json`

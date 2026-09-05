@@ -15,7 +15,7 @@ from aidd.core.run_store import (
 runner = CliRunner()
 
 
-def _prepare_stage(workspace_root: Path) -> None:
+def _prepare_stage(workspace_root: Path, *, status: str = "executing") -> None:
     create_run_manifest(
         workspace_root=workspace_root,
         work_item="WI-CLI-RECONCILE",
@@ -29,11 +29,11 @@ def _prepare_stage(workspace_root: Path) -> None:
         work_item="WI-CLI-RECONCILE",
         run_id="run-cli-reconcile",
         stage="idea",
-        status="executing",
+        status=status,
     )
 
 
-def _command(workspace_root: Path) -> list[str]:
+def _command(workspace_root: Path, *, expected_state: str = "executing") -> list[str]:
     return [
         "stage",
         "reconcile-terminal",
@@ -43,7 +43,7 @@ def _command(workspace_root: Path) -> list[str]:
         "--run-id",
         "run-cli-reconcile",
         "--expected-state",
-        "executing",
+        expected_state,
         "--reason",
         "provider-no-progress",
         "--root",
@@ -79,6 +79,35 @@ def test_stage_reconcile_terminal_cli_is_public_and_idempotent(tmp_path: Path) -
     assert (metadata_path.read_bytes(), evidence_path.read_bytes()) == stable_bytes
 
 
+def test_stage_reconcile_terminal_cli_handles_validating_state(
+    tmp_path: Path,
+) -> None:
+    workspace_root = tmp_path / ".aidd"
+    _prepare_stage(workspace_root, status="validating")
+
+    result = runner.invoke(
+        app,
+        _command(workspace_root, expected_state="validating"),
+    )
+
+    assert result.exit_code == 0
+    payload = json.loads(result.stdout)
+    assert payload["expected_state"] == "validating"
+    assert payload["disposition"] == "reconciled"
+    assert payload["reconciled"] is True
+    metadata = load_stage_metadata(
+        workspace_root,
+        "WI-CLI-RECONCILE",
+        "run-cli-reconcile",
+        "idea",
+    )
+    assert metadata is not None
+    assert [entry.status for entry in metadata.status_history] == [
+        "validating",
+        "failed",
+    ]
+
+
 def test_stage_reconcile_terminal_cli_rejects_terminal_expected_state(
     tmp_path: Path,
 ) -> None:
@@ -89,3 +118,15 @@ def test_stage_reconcile_terminal_cli_rejects_terminal_expected_state(
 
     assert result.exit_code == 2
     assert "must be non-terminal" in result.stdout
+
+
+def test_stage_reconcile_terminal_cli_rejects_non_inflight_expected_state(
+    tmp_path: Path,
+) -> None:
+    command = _command(tmp_path / ".aidd", expected_state="preparing")
+
+    result = runner.invoke(app, command)
+
+    assert result.exit_code == 2
+    assert "executing" in result.stdout
+    assert "validating" in result.stdout
