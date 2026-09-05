@@ -887,6 +887,91 @@ body.work-overview-mode .intent-decision-surface .next-action-button-stack .next
   body.work-overview-mode .canonical-stage-group .intent-phase-list {
     grid-template-columns: minmax(0, 1fr);
   }
+
+  /* Flow Complete is a terminal summary rather than a stage-editing screen.
+     Give it the compact eight-stage timeline from the target composition so
+     the handoff and completion inspector share the first viewport. */
+  body.terminal-handoff-mode .canonical-stage-groups {
+    gap: var(--space-2);
+    grid-template-columns: repeat(8, minmax(0, 1fr));
+  }
+
+  body.terminal-handoff-mode .canonical-stage-strip {
+    background: transparent;
+    border: 0;
+    padding: var(--space-2) 0;
+  }
+
+  body.terminal-handoff-mode .canonical-stage-strip > .surface-title {
+    display: none;
+  }
+
+  body.terminal-handoff-mode .canonical-stage-group {
+    display: contents;
+  }
+
+  body.terminal-handoff-mode .canonical-stage-group h3 {
+    display: none;
+  }
+
+  body.terminal-handoff-mode .canonical-stage-group .intent-phase-list {
+    display: contents;
+  }
+
+  body.terminal-handoff-mode .canonical-stage-group .intent-phase-list li {
+    display: block;
+    min-width: 0;
+  }
+
+  body.terminal-handoff-mode .canonical-stage-step {
+    align-content: start;
+    background: transparent;
+    border: 0;
+    border-radius: 0;
+    display: grid;
+    gap: var(--space-2);
+    grid-template-columns: minmax(0, 1fr);
+    justify-items: center;
+    min-height: 64px;
+    padding: 0;
+    text-align: center;
+  }
+
+  body.terminal-handoff-mode .canonical-stage-step .intent-phase-index {
+    background: var(--color-state-success);
+    border-color: var(--color-state-success);
+    color: var(--color-text-inverse);
+  }
+
+  body.terminal-handoff-mode .canonical-stage-step.active {
+    box-shadow: none;
+  }
+
+  body.terminal-handoff-mode .canonical-stage-step strong {
+    font-size: var(--type-caption-size);
+    line-height: 1.2;
+    overflow-wrap: anywhere;
+  }
+
+  body.terminal-handoff-mode .canonical-stage-step small {
+    display: none;
+  }
+
+  /* With the compact terminal timeline the completion inspector fits beside
+     the handoff on desktop. Keep its recommendation in normal flow so the
+     action cannot cover the first "Other actions" row. Tablet and phone keep
+     the existing safe-area dock because their single-column layout needs it. */
+  body.terminal-handoff-mode [data-studio-flow-complete]
+    [data-next-flow-action][data-primary-action] {
+    left: auto;
+    position: static;
+    right: auto;
+    width: 100%;
+  }
+
+  body.terminal-handoff-mode [data-studio-flow-complete] {
+    padding-bottom: 0;
+  }
 }
 
 .contextual-runner-control.runner-inspector {
@@ -932,6 +1017,54 @@ body.work-overview-mode .intent-decision-surface .next-action-button-stack .next
   font-size: var(--type-caption-size);
   margin: var(--space-2) 0 0;
   padding-top: var(--space-3);
+}
+
+.runner-inspector-scope {
+  border-top: 1px solid var(--line);
+  margin-top: var(--space-1);
+  padding-top: var(--space-3);
+}
+
+.runner-inspector-scope .panel-item {
+  display: grid;
+  gap: var(--space-1);
+  min-width: 0;
+}
+
+.runner-inspector-scope .panel-item strong {
+  font-size: var(--type-caption-size);
+  text-transform: uppercase;
+}
+
+.runner-inspector-scope .panel-item span,
+.runner-inspector-scope .panel-item small {
+  color: var(--color-text-secondary);
+  font-size: var(--type-caption-size);
+  overflow-wrap: anywhere;
+}
+
+.launch-edit-request {
+  width: 100%;
+}
+
+@media (max-width: 760px) {
+  /* On a phone the Runner card and its single primary action are the decision
+     surface. The desktop explanatory copy is otherwise repeated below the
+     controls; retain only its screen-reader guidance for the runtime selector. */
+  body.work-overview-mode .intent-decision-surface .next-action-copy {
+    display: block;
+    min-height: 1px;
+  }
+
+  body.work-overview-mode .intent-decision-surface .next-action-copy > .next-action-icon,
+  body.work-overview-mode .intent-decision-surface .next-action-copy .eyebrow,
+  body.work-overview-mode .intent-decision-surface .next-action-copy h2,
+  body.work-overview-mode .intent-decision-surface .next-action-copy > div > p:not(.sr-only),
+  body.work-overview-mode .intent-decision-surface .next-action-copy .next-action-evidence-actions,
+  body.work-overview-mode .intent-decision-surface .next-action-copy .stale-downstream-summary,
+  body.work-overview-mode .intent-decision-surface .next-action-copy .mode-decision-peek {
+    display: none;
+  }
 }
 
 .work-item-overview-canvas {
@@ -1295,34 +1428,45 @@ body.work-overview-mode .intent-decision-surface .next-action-button-stack .next
   }
 }
 
-/* The smallest supported phone cannot fit the launch inspector and its
-   action in one normal-flow column. Keep the same launch button and
-   readiness copy, but pin that one consequential action to a touch-safe
-   bottom dock so it remains visible and focusable without changing the
-   fail-closed mutation path. The duplicated empty-state helper is already
-   represented by the literal Runner reason above it, so it is omitted only
-   at this narrow width to avoid covering the dock. */
+/* The smallest supported phone needs a compact normal-flow launch inspector.
+   Keep the Runner and its one consequential action in reading order so the
+   action never covers a selector or readiness fact. The duplicated empty-state
+   helper is already represented by the literal Runner reason above it, so it
+   is omitted only at this narrow width. */
 @media (max-width: 360px) {
   body.work-overview-mode .intent-decision-surface {
-    padding-bottom: calc(var(--space-8) + var(--control-height-touch));
+    padding-bottom: var(--space-4);
   }
 
   body.work-overview-mode .intent-decision-surface .runner-inspector-empty {
     display: none;
   }
 
-  body.work-overview-mode .intent-decision-surface .next-action-copy {
-    margin-top: calc(var(--control-height-touch) + var(--space-8));
+  body.work-overview-mode .intent-decision-surface .runner-inspector {
+    gap: var(--space-2);
+    padding: var(--space-2) var(--space-3);
+  }
+
+  body.work-overview-mode .intent-decision-surface .runner-inspector-facts {
+    margin-top: var(--space-1);
+    padding-top: var(--space-2);
+  }
+
+  /* The Runner reason already communicates the blocked state at 320px. Keep
+     the compact inspector scannable and leave room for its primary action in
+     the initial viewport; the full readiness row remains available at 390px
+     and on desktop. */
+  body.work-overview-mode .intent-decision-surface .runner-inspector-facts > div:nth-child(2) {
+    display: none;
+  }
+
+  body.work-overview-mode .intent-decision-surface .runner-inspector-scope {
+    display: none;
   }
 
   body.work-overview-mode .intent-decision-surface #globalNextActionButton {
-    bottom: max(var(--space-8), env(safe-area-inset-bottom));
-    box-shadow: var(--elevation-overlay);
-    left: var(--space-8);
-    position: fixed;
-    right: var(--space-8);
-    width: auto;
-    z-index: 60;
+    position: static;
+    width: 100%;
   }
 }
 

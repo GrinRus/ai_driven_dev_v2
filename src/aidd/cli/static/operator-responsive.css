@@ -134,6 +134,38 @@
   }
 }
 
+/* Create is a bounded authoring decision: keep the single submit action in
+   the initial desktop viewport while the editor and Markdown preview remain
+   independently scrollable in the workspace. */
+@media (min-width: 901px) {
+  .target-create-work-item {
+    padding-bottom: calc(var(--space-10) + var(--control-height-touch) + var(--space-6));
+  }
+
+  .target-create-footer {
+    align-items: center;
+    background: var(--surface);
+    border-top: 1px solid var(--line);
+    box-shadow: var(--elevation-overlay);
+    display: flex;
+    justify-content: space-between;
+    left: 0;
+    padding: var(--space-4) var(--intent-shell-gutter);
+    position: fixed;
+    right: 0;
+    bottom: 0;
+    z-index: 60;
+  }
+
+  .target-create-footer .setup-actions {
+    justify-content: flex-end;
+  }
+
+  .target-create-footer .setup-actions button {
+    min-height: var(--control-height-touch);
+  }
+}
+
 @media (max-width: 760px) {
   .target-surface-header,
   .target-create-footer {
