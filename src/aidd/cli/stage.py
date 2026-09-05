@@ -236,7 +236,7 @@ def stage_reconcile_terminal(
         str,
         typer.Option(
             "--expected-state",
-            help="Non-terminal state that must still be current.",
+            help="Abandoned in-flight state that must still be current: executing or validating.",
         ),
     ],
     reason: Annotated[

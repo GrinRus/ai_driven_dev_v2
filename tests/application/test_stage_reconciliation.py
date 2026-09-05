@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 from datetime import UTC, datetime
 from pathlib import Path
+from threading import Event, Thread
 
 import pytest
 
@@ -10,11 +11,13 @@ from aidd.application.stage_reconciliation import (
     TerminalStageReconciliationRequest,
     reconcile_terminal_stage,
 )
+from aidd.core.mutation_lease import RunMutationConflict, acquire_run_mutation_lease
 from aidd.core.run_store import (
     create_run_manifest,
     load_stage_metadata,
     persist_stage_status,
     run_manifest_path,
+    run_root,
     run_stage_metadata_path,
 )
 
@@ -83,6 +86,73 @@ def test_reconcile_terminal_stage_is_idempotent_and_byte_stable(tmp_path: Path) 
     ) == stable_bytes
 
 
+def test_reconcile_validating_stage_is_idempotent_and_byte_stable(tmp_path: Path) -> None:
+    workspace_root = tmp_path / ".aidd"
+    metadata_path = _prepare_stage(workspace_root, status="validating")
+    manifest_path = run_manifest_path(workspace_root, WORK_ITEM, RUN_ID)
+
+    first = reconcile_terminal_stage(
+        _request(workspace_root, expected_state="validating"),
+        changed_at_utc=CHANGED_AT,
+    )
+    metadata = load_stage_metadata(workspace_root, WORK_ITEM, RUN_ID, STAGE)
+
+    assert first.disposition == "reconciled"
+    assert first.reconciled is True
+    assert metadata is not None
+    assert metadata.status == "failed"
+    assert [entry.status for entry in metadata.status_history] == [
+        "validating",
+        "failed",
+    ]
+    stable_bytes = (
+        metadata_path.read_bytes(),
+        manifest_path.read_bytes(),
+        first.evidence_path.read_bytes(),
+    )
+
+    second = reconcile_terminal_stage(
+        _request(workspace_root, expected_state="validating"),
+        changed_at_utc=CHANGED_AT,
+    )
+
+    assert second.to_payload() == first.to_payload()
+    assert (
+        metadata_path.read_bytes(),
+        manifest_path.read_bytes(),
+        first.evidence_path.read_bytes(),
+    ) == stable_bytes
+
+
+def test_reconcile_validating_stage_does_not_rewrite_live_owner(
+    tmp_path: Path,
+) -> None:
+    workspace_root = tmp_path / ".aidd"
+    _prepare_stage(workspace_root, status="validating")
+    selected_run_root = run_root(workspace_root, WORK_ITEM, RUN_ID)
+    acquired = Event()
+    release = Event()
+
+    def hold_live_owner() -> None:
+        with acquire_run_mutation_lease(selected_run_root, operation="stage:run:idea"):
+            acquired.set()
+            release.wait(timeout=5)
+
+    owner = Thread(target=hold_live_owner)
+    owner.start()
+    try:
+        assert acquired.wait(timeout=5)
+        with pytest.raises(RunMutationConflict):
+            reconcile_terminal_stage(
+                _request(workspace_root, expected_state="validating"),
+                changed_at_utc=CHANGED_AT,
+            )
+    finally:
+        release.set()
+        owner.join(timeout=5)
+    assert not owner.is_alive()
+
+
 @pytest.mark.parametrize("status", ("succeeded", "failed"))
 def test_reconcile_terminal_stage_does_not_rewrite_terminal_stage(
     tmp_path: Path,
@@ -137,6 +207,7 @@ def test_reconcile_terminal_stage_does_not_rewrite_identity_mismatch(
         ("run_id", "/tmp/run"),
         ("stage", "not-a-stage"),
         ("expected_state", "failed"),
+        ("expected_state", "preparing"),
         ("reason", "not canonical"),
     ),
 )

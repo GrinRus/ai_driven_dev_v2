@@ -21,6 +21,9 @@ from aidd.core.state_machine import StageState, is_terminal_state
 
 TERMINAL_RECONCILIATION_FILENAME = "terminal-reconciliation.json"
 TERMINAL_RECONCILIATION_SCHEMA_VERSION = 1
+ABANDONED_STAGE_STATES = frozenset(
+    {StageState.EXECUTING, StageState.VALIDATING}
+)
 
 ReconciliationDisposition = Literal[
     "reconciled",
@@ -59,8 +62,11 @@ class TerminalStageReconciliationRequest:
         if self.stage not in STAGES:
             raise ValueError(f"Unknown stage: {self.stage!r}.")
         expected = StageState(self.expected_state.strip())
-        if is_terminal_state(expected):
-            raise ValueError("Expected stage state must be non-terminal.")
+        if expected not in ABANDONED_STAGE_STATES:
+            raise ValueError(
+                "Expected stage state must be non-terminal and one of `executing` or "
+                "`validating`."
+            )
         object.__setattr__(self, "expected_state", expected.value)
         object.__setattr__(
             self,
@@ -268,6 +274,7 @@ def reconcile_terminal_stage(
 
 
 __all__ = [
+    "ABANDONED_STAGE_STATES",
     "TERMINAL_RECONCILIATION_FILENAME",
     "TERMINAL_RECONCILIATION_SCHEMA_VERSION",
     "TerminalStageReconciliationRequest",
