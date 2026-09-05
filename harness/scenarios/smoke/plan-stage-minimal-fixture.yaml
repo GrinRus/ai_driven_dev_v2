@@ -7,8 +7,8 @@ repo:
   url: harness/fixtures/minimal-python
 objective: Keep the smallest deterministic stage lane local and reproducible by exercising
   a single plan-stage run against the minimal fixture.
-task: Run the plan stage against the local minimal fixture and verify that required
-  output files are produced.
+task: Run the plan stage with substantive-only runtime output and verify AIDD generates
+  canonical workflow records without runtime-authored drafts.
 stage_scope:
   start: plan
   end: plan
@@ -20,7 +20,7 @@ setup:
     root = ".aidd"
 
     [runtime.generic_cli]
-    command = "python3 ../aidd_fixture_runtime.py"
+    command = "env AIDD_FIXTURE_SUBSTANTIVE_ONLY=1 python3 ../aidd_fixture_runtime.py"
     TOML
 aidd_invocation:
   work_item: WI-SMOKE-PLAN
@@ -39,7 +39,25 @@ verify:
   - test -f .aidd/workitems/WI-SMOKE-PLAN/stages/plan/output/plan.md
   - test -f .aidd/workitems/WI-SMOKE-PLAN/stages/plan/output/stage-result.md
   - test -f .aidd/workitems/WI-SMOKE-PLAN/stages/plan/output/validator-report.md
+  - |-
+    python3 - <<'PY'
+    from pathlib import Path
+
+    root = Path('.aidd')
+    output = root / 'workitems/WI-SMOKE-PLAN/stages/plan/output'
+    assert 'succeeded' in (output / 'stage-result.md').read_text()
+    assert '(`repair`)' not in (output / 'stage-result.md').read_text()
+    assert not (output.parent / 'repair-brief.md').exists()
+    assert 'Verdict: `pass`' in (output / 'validator-report.md').read_text()
+    logs = tuple(root.glob('reports/runs/WI-SMOKE-PLAN/*/stages/plan/attempts/*/runtime.log'))
+    assert len(logs) == 1, 'valid bootstrapped plan must finish in exactly one attempt'
+    assert 'substantive-only writes=plan.md' in logs[0].read_text()
+    assert not tuple(logs[0].parent.glob('runtime-*.md')), 'runtime wrote an AIDD-owned draft'
+    PY
   - PYTHONPATH=src python -m pytest -q tests/test_minimal_app.py
+  pass_conditions:
+  - Runtime writes plan.md only; AIDD generates succeeded stage-result.md and a passing validator report without a repair attempt.
+  - Retained runtime logs prove the substantive-only output boundary.
 limits:
   timeout_minutes: 5
 interview:

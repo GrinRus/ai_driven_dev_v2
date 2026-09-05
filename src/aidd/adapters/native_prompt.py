@@ -166,11 +166,12 @@ def build_native_prompt_text(
             "",
             "## Execution contract",
             "",
-            "Use the workspace documents as the source of truth. Write the required "
-            "stage output Markdown files under the AIDD workspace for this stage.",
+            "Use the workspace documents as the source of truth. Write only the substantive "
+            "runtime output Markdown files under the AIDD workspace for this stage.",
             "",
-            "Write each required document to the exact path listed in the Stage brief "
-            "`Expected output documents` section. Do not place required documents only "
+            "Write each substantive document to the exact path listed in the Stage brief "
+            "`Runtime write targets` section. The published compatibility view is not a "
+            "runtime write list. Do not place required documents only "
             "under an `output/` subdirectory; AIDD publishes `output/` after canonical "
             "validation passes.",
             "",
@@ -184,9 +185,16 @@ def build_native_prompt_text(
             "",
             "During intervention attempts, treat the operator request as durable input. "
             "Apply only the requested stage-scoped delta, preserve valid existing sections, "
-            "and record the outcome truthfully in `stage-result.md`.",
+            "and record the outcome truthfully in substantive runtime content.",
             "",
-            "Treat any existing model-authored `validator-report.md` as draft. "
+            "If a blocker prevents completion, submit a `[blocking]` question through the "
+            "controlled interview path. Substantive blocker prose alone does not pause AIDD. "
+            "Do not invent an operator answer or mark an unresolved blocker as resolved.",
+            "",
+            "Do not write `stage-result.md` or `validator-report.md` in initial, repair, or "
+            "intervention attempts. Read existing workflow records as evidence; AIDD owns "
+            "their canonical status, validation, attempt history, and publication. Legacy "
+            "model-authored drafts do not grant write authority. "
             "AIDD post-runtime validation is the final truth source.",
             "",
             "Do not claim validator pass or stage success unless the artifacts you "

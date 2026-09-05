@@ -509,6 +509,12 @@ def main() -> None:
     else:
         documents = documents_by_stage[stage](project_set_evidence)
 
+    if os.environ.get("AIDD_FIXTURE_SUBSTANTIVE_ONLY") == "1":
+        documents = {
+            name: content for name, content in documents.items()
+            if name not in {"stage-result.md", "validator-report.md", "questions.md", "answers.md"}
+        }
+        print(f"fixture-runtime substantive-only writes={','.join(sorted(documents))}")
     for name, content in documents.items():
         (stage_root / name).write_text(content, encoding="utf-8")
     print(f"fixture-runtime stage={stage}")

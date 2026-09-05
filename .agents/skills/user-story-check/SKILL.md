@@ -1,22 +1,23 @@
 ---
 name: user-story-check
-description: Check whether a proposed change still fits the main AIDD user stories and update product docs when scope changes.
+description: Check a proposed AIDD workflow, runtime, distribution, evaluation, or operator UX change against product scope and user-story acceptance signals.
 ---
 
 # user-story-check
 
-## Use when
+Read the relevant stories in [user-stories.md](../../../docs/product/user-stories.md)
+and the accepted change's parent slice. Identify the operator/maintainer outcome,
+which acceptance signals it supports or threatens, and whether it adds product scope
+or changes implementation only. Include task execution and project ownership when
+cross-stage, frontend, or multi-project behavior is affected.
 
-- A change touches workflow semantics, distribution, adapter scope, eval scope, or operator UX.
+For analysis or review, return the mismatch and needed document changes without
+implementing them. When implementation is already authorized, update product docs only
+if scope or acceptance behavior changed; retain unrelated stories and historical evidence.
+Do not convert an implementation limitation into a weaker product requirement merely
+because a test failed.
 
-## Procedure
-
-1. Read `docs/product/user-stories.md`.
-2. Identify which user stories the change supports, extends, or threatens.
-3. Check whether the change adds new product scope or only implementation detail.
-4. Update user stories only if product scope actually changed.
-5. Call out any mismatch between the code plan and the documented product intent.
-
-## Output
-
-Return: impacted user stories, whether docs must change, and any scope mismatch.
+Report impacted story IDs, the observable acceptance signal, whether documentation
+must change, and any unresolved scope decision. Use
+[the development map](../../../docs/agent-development.md) to locate checks for the
+actual behavior rather than adding a prose-only test for every wording change.

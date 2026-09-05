@@ -55,14 +55,16 @@ Examples:
 - `operator-request.md`
 - `stage-result.md`
 
-`stage-result.md` is runtime-facing as a draft and workflow-facing as the final stage summary:
-the runtime writes the Markdown summary, and the AIDD core may correct terminal status when
-canonical validation proves the draft inconsistent. During repair attempts, the core may also add
-the required `repair-brief.md` trace reference before validation because `repair-brief.md` is
-AIDD-owned control evidence.
+`stage-result.md` and `validator-report.md` are runtime-readable AIDD workflow records.
+AIDD creates and reconciles them from lifecycle state, substantive runtime content, and
+post-runtime validation. Initial, repair, and intervention attempts must not create or edit
+either record. The runtime writes only the substantive documents listed under `Runtime write
+targets` in its stage brief, and follows the controlled interview path when clarification is needed.
+Legacy model-authored workflow drafts may be retained as raw candidate evidence; compatibility
+reconciliation does not make them runtime completion targets.
 
-`validator-report.md` is different. A runtime may draft it as evidence, but the canonical
-report is the one AIDD writes after validation.
+`validator-report.md` is AIDD-canonical. Its findings are read-only repair input, and AIDD
+also owns the required `repair-brief.md` trace reference in the terminal stage result.
 
 `repair-brief.md` is not runtime-authored. It is AIDD-owned control evidence that runtimes may
 read during repair attempts.

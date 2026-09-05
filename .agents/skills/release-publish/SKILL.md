@@ -1,6 +1,6 @@
 ---
 name: release-publish
-description: Prepare, publish, verify, and record AIDD Python package releases through this repository's release/v<version> branch and GitHub Release published-event flow; use when cutting a new prerelease or release, running release dry-runs, checking PyPI/pipx/uv tool evidence, or performing post-release version-bump follow-up.
+description: Prepare, publish, or verify AIDD package releases through the release branch and GitHub Release flow, including dry-runs, install evidence, and accepted post-release follow-up.
 ---
 
 # release-publish
@@ -16,20 +16,24 @@ description: Prepare, publish, verify, and record AIDD Python package releases t
 Do not use this skill for manual live E2E execution. Use `live-e2e` for local live
 operator audits.
 
-## Read first
+## Select the requested operation
 
-1. `AGENTS.md`
-2. `README.md`
-3. `docs/product/user-stories.md`
-4. `docs/architecture/target-architecture.md`
-5. `docs/architecture/distribution-and-development.md`
-6. `docs/release-checklist.md`
-7. `.github/workflows/release.yml`
+Prepare, inspect, publish, verify, or perform post-release follow-up as requested;
+release inspection does not authorize publication or version changes. Read the relevant
+sections of [the release checklist](../../../docs/release-checklist.md),
+[distribution policy](../../../docs/architecture/distribution-and-development.md), and
+`.github/workflows/release.yml`. Use the checklist's current source/release state, not
+a release version copied from a historical example.
+
+Complete local preparation before a required external approval. Existing explicit
+authorization for the same action, version, and target remains valid; do not ask again.
+Branch pushes, remote dry-runs, draft releases, and public body/PR updates are external
+writes and must stay within that authorization. This skill grants no additional scope.
 
 ## Hard stops
 
 - Do not publish, create a release tag, or trigger release workflow publishing without
-  explicit user approval for that publish step.
+  explicit user approval for that publish step, including approval already given.
 - Do not use direct tag-push publishing. Never run `git push origin v<tag>` as the
   release trigger.
 - Publish only through a GitHub Release `published` event.
@@ -46,7 +50,7 @@ operator audits.
 Confirm the branch, version, and local state before changing or publishing anything:
 
 ```bash
-git status --short --branch --untracked-files=no
+git status --short --branch
 python - <<'PY'
 from pathlib import Path
 import tomllib
@@ -73,12 +77,31 @@ Use the project version as the single source of truth:
 - tag: `v<project.version>`
 - GitHub Release target: `release/v<project.version>`
 
-Create and push the release branch from the intended release commit:
+Create the release branch from the intended release commit. For a release from updated
+`main`, the command shape is below; if another worktree owns that branch, prepare a
+release worktree without disturbing it:
 
 ```bash
 git switch main
 git pull --ff-only origin main
 git switch -c release/v<project.version>
+```
+
+Run preflight on that branch before the authorized push:
+
+```bash
+python -m scripts.release.preflight --project-root . --version <project.version>
+```
+
+The helper checks command availability,
+branch/version, remote tag and PyPI absence, and packaged browser readiness without
+publishing. An auth or network error is not evidence that a tag or package is absent.
+If `gh` is outside `PATH`, pass its known location with `--gh-binary` as described in
+the checklist. A failed check stops publishing preparation until its cause is resolved.
+
+After passing preflight, push within the accepted release scope:
+
+```bash
 git push -u origin release/v<project.version>
 ```
 
@@ -99,21 +122,11 @@ dry-run evidence.
 
 ## GitHub Release publish
 
-Before creating a release, verify the release and tag do not already exist:
-
-```bash
-if gh release view v<project.version> >/dev/null 2>&1; then
-  echo "GitHub Release v<project.version> already exists" >&2
-  exit 1
-fi
-
-if git ls-remote --exit-code --tags origin refs/tags/v<project.version> >/dev/null 2>&1; then
-  echo "Tag v<project.version> already exists on origin" >&2
-  exit 1
-fi
-```
-
-If either exists unexpectedly, stop and inspect. Do not republish or move tags casually.
+Before creating a release, refresh the preflight result and inspect
+`gh release view v<project.version>`. Distinguish an absent release from authentication,
+network, or permissions errors. If the release exists, or the preflight reports
+an existing remote tag, stop and inspect. Do not republish
+or move tags to bypass the failure.
 
 Create a draft prerelease targeting the release branch:
 
@@ -130,7 +143,7 @@ gh release create v<project.version> \
 Confirm the draft targets `release/v<project.version>`. Draft releases may not materialize
 the tag until publication.
 
-Publish only after explicit user approval:
+Publish only with explicit user approval, preserving approval already given:
 
 ```bash
 gh release edit v<project.version> --draft=false --prerelease --latest=false
@@ -188,6 +201,15 @@ entry point.
 
 Record accepted evidence in `docs/release-checklist.md`: release URL, workflow run URL,
 tag/branch commit, PyPI URL, `pipx` evidence, and `uv tool` evidence.
+Use the bounded read-only evidence collector with captured outputs and exit codes:
+
+```bash
+python -m scripts.release.evidence_collector release-evidence.json
+```
+
+The checklist documents payload fields. The helper validates supplied evidence; it
+does not fetch missing evidence or prove a command ran. Inspect its result before
+copying it into the accepted release record.
 
 After the release workflow reaches a terminal state, reconcile the public GitHub Release body
 with the observed outcome. Record `publish-pypi`, `verify-pypi-install`, and
@@ -198,7 +220,7 @@ a published release.
 
 ## Post-release follow-up
 
-After a successful prerelease:
+When post-release follow-up is part of the accepted task, after a successful prerelease:
 
 1. switch back to updated `main`;
 2. create a `codex/post-<version>-release-followup` branch;
@@ -215,9 +237,9 @@ Post-release version wording guardrail:
   beta-readiness audits, or distribution policy docs.
 - Do not publish, install, or advertise the next `.dev0` source version as the latest or
   current release.
-- README install, status, and source-checkout positioning must name the latest accepted
-  published prerelease and may warn that `main` is development source with unreleased
-  changes.
+- README install guidance resolves the latest published package from PyPI without
+  hardcoding a release number. Keep exact accepted versions in release evidence and
+  maintainer state; README may warn that `main` contains unreleased changes.
 - Keep docs consistency tests aligned with this split so README cannot reintroduce `.dev0`
   as a public release version.
 
@@ -231,6 +253,9 @@ Post-release version wording guardrail:
 - Published release body still says draft/candidate: reconcile it with the terminal workflow
   result; do not alter or republish the tag.
 - Any live E2E request: keep it local manual operator evidence and outside release gates.
+- Bound retries to the accepted release verification window. Preserve failed attempts
+  and stop on repeated unchanged infrastructure blockers instead of publishing another
+  version or changing credentials automatically.
 
 ## Final report format
 

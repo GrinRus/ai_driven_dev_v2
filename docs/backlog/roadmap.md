@@ -2,6 +2,10 @@
 
 This file is the canonical implementation plan for AIDD.
 
+For bounded reading, locate a local task with `rg -n '<task-id>' docs/backlog/roadmap.md`,
+then read its parent slice, dependencies, and linked contract. The active queue lives in
+`backlog.md`; completed evidence remains attached to its original task or dated audit.
+
 ## Status vocabulary
 
 Waves, epics, and slices use exactly `planned` or `done`. Local tasks use exactly:
@@ -17502,3 +17506,156 @@ Local tasks:
     fully evidenced.
   - Completion evidence: target UX, roadmap/backlog, browser tests, and the live acceptance record
     agree; docs/planning checks passed (`105 passed`) on 2026-09-05.
+
+---
+
+## Wave 51 — agent development instruction consistency (`done`)
+
+Goal: align maintainer instructions and runtime requests with implemented ownership, commands,
+and validation while preserving historical evidence and bounded task context.
+
+Integration note: this revision was authored as Wave 47 on `f2819535` and rekeyed to
+Wave 51 when integrating `origin/main` at `9fcbcea9`. The upstream Wave 47 Focus Canvas
+work and reserved Waves 48–50 in the accepted remediation plan retain their identities.
+
+### Epic W51-E1 — auditable agent workflows (`done`)
+
+Linked stories: `US-01`, `US-03`, `US-04`, `US-07`, `US-10`
+
+#### Slice W51-E1-S1 — runtime document ownership (`done`)
+
+Primary output: consistent runtime write authority across initial, repair, and intervention.
+Touched areas: contracts, active prompt packs, shared native request assembly, focused tests.
+Dependencies: Wave 43 canonical artifact ownership and current adapter request interfaces.
+
+Local tasks:
+
+- `W51-E1-S1-T1` (done) Reconcile stage contracts and prompts with canonical artifact ownership.
+  - Output: all stage modes reserve workflow records for AIDD and preserve substantive output,
+    repair, interview, and verification obligations.
+  - Scope: stage/document contracts and active prompt text; preserve compatibility pointers.
+  - Verification: ownership and prompt-quality checks reject contradictory write instructions.
+  - Evidence: all eight stage contracts and 23 active prompt files now reserve workflow records
+    for AIDD; compatibility paths and substantive requirements remain covered by prompt checks.
+- `W51-E1-S1-T2` (done) Align shared native request guidance with runtime write targets.
+  - Output: native requests name substantive write targets and read-only workflow records.
+  - Scope: shared request compiler and stage-brief guidance; no provider defaults or new APIs.
+  - Verification: native-request regressions cover initial, repair, and intervention modes.
+  - Evidence: 24 composed requests cover all eight stages across the three attempt modes.
+- `W51-E1-S1-T3` (done) Validate composed runtime requests and substantive-only completion.
+  - Output: stage-by-mode regression coverage and reviewed active prompt hashes.
+  - Scope: deterministic prompt, stage, adapter, and scenario evidence checks.
+  - Verification: composed requests and provider-free completion preserve canonical AIDD records;
+    an unfulfillable intervention uses controlled blocking questions and remains blocked instead
+    of relying on unparsed blocker prose in a substantive document.
+  - Evidence: real CLI success and controlled-blocking cases cover all three attempt modes;
+    reviewed hashes pin the changed active packs, and the deterministic ownership smoke passes.
+- `W51-E1-S1-T4` (done) Reconcile bootstrapped AIDD records before substantive-output progression.
+  - Output: a valid substantive-only attempt replaces AIDD-owned bootstrap placeholders without
+    spending runtime repair budget on lifecycle records or asking the runtime to rewrite them.
+  - Scope: the owning lifecycle/repair-context helper, its ownership contract, and focused
+    bootstrap regressions; preserve raw runtime drafts and substantive validation findings.
+  - Verification: an initialized workspace succeeds without spurious repair for valid runtime
+    content, including project-set context; invalid substantive content still repairs or stops
+    with canonical evidence retained.
+  - Discovery: the provider-free ownership smoke first reached valid plan content but consumed
+    repair on generated stage-result Stage/Attempt-history placeholders. This extends the
+    original request-composition check to the generated repair context it actually consumes.
+  - Evidence: 132 focused CLI/core tests pass, including project-set success, blocked and invalid
+    output cases, plus idempotent bootstrap recognition and preservation of lookalike drafts.
+    Raw draft retention now snapshots its boundary before runtime log writes can advance it.
+
+#### Slice W51-E1-S2 — reusable maintainer skills (`done`)
+
+Primary output: concise skills with correct commands, bounded scope, and explicit evidence.
+Touched areas: `.agents/skills/` and focused skill-workflow tests.
+Dependencies: current live harness configuration, resume parser, and release runbook.
+
+Local tasks:
+
+- `W51-E1-S2-T1` (done) Correct live and release workflows and extract detailed skill references.
+  - Output: correct model-profile/resume/release guidance, shared references, deterministic eval
+    instructions, and actionable navigation, contract-change, and log-triage procedures.
+  - Scope: skill files and reference documents; no live provider execution or publication.
+  - Verification: workflow checks compare examples against actual configuration and CLI parsing.
+  - Evidence: all nine skills validate; four workflow tests parse actual live/resume, deterministic
+    eval, model configuration, and release helpers. Independent resume and audit-only forward
+    checks preserve run identity and evidence ownership.
+
+#### Slice W51-E1-S3 — instruction hierarchy and local checks (`done`)
+
+Primary output: an up-to-date repository instruction hierarchy and contributor check matrix.
+Touched areas: AGENTS.md files, CLAUDE.md, contributor docs, Makefile, and PR template.
+Dependencies: current architecture and CI lanes.
+
+Local tasks:
+
+- `W51-E1-S3-T1` (done) Refresh agent ownership, inheritance, evidence policy, and check routing.
+  - Output: current CLI/UI/application guidance, consolidated common rules, preserved useful
+    leaf constraints and compatibility links, and discoverable local validation commands.
+  - Scope: maintainer instructions and check entrypoints; no product behavior changes.
+  - Verification: instruction consistency checks and dry-run validation of Makefile targets.
+  - Evidence: 45 scoped AGENTS files replace 67 files; redundant leaves inherit common rules,
+    and five new owners cover application, static UI, frontend/browser tests, and scripts.
+    The agent-development map and Makefile expose the existing Python, Node, and browser lanes.
+
+#### Slice W51-E1-S4 — bounded planning context (`done`)
+
+Primary output: a short active queue with preserved dated reconciliation evidence.
+Touched areas: backlog documents and planning integrity tests.
+Dependencies: current roadmap IDs and queue projection rules.
+
+Local tasks:
+
+- `W51-E1-S4-T1` (done) Archive accumulated reconciliation history and document targeted roadmap reading.
+  - Output: one current backlog reconciliation, unchanged unrelated queue IDs, and complete
+    historical reconciliation content retained with working links.
+  - Scope: planning documents and bounded-queue checks; preserve canonical roadmap task IDs.
+  - Verification: planning integrity and archive-preservation checks pass.
+  - Evidence: all 3,674 historical reconciliation lines are preserved byte-for-byte in the dated
+    archive; the recorded SHA-256 matches the original body at the audit's base revision.
+
+#### Slice W51-E1-S5 — maintainer instruction validation (`done`)
+
+Primary output: a deterministic gate for skill structure, local references, and workflow examples.
+Touched areas: validation scripts, tests, CI, and contributor check integration.
+Dependencies: `W51-E1-S2-T1`, `W51-E1-S3-T1`, `W51-E1-S4-T1`.
+
+Local tasks:
+
+- `W51-E1-S5-T1` (done) Add a reusable instruction validator and regression coverage.
+  - Output: actionable failures for malformed skill metadata, broken maintained references,
+    and drift in executable workflow examples; existing behavioral tests remain authoritative.
+  - Scope: maintainer tooling only; no heuristic claim to detect every prose contradiction.
+  - Verification: positive repository checks and negative malformed-input fixtures, followed by
+    focused prompt/docs/planning checks and configured lint, typing, and deterministic tests.
+  - Evidence: `make check-agents` validates 61 maintained documents and passes 37 focused tests;
+    malformed metadata, broken links, workflow drift, and oversized reconciliation have regressions.
+
+
+Completion evidence (2026-09-05, local worktree based on `f2819535`):
+
+- Broad Python regression: **2,582 passed** on Python 3.13.7. The final project-set bootstrap
+  correction also passed **132 focused CLI/core tests**, including its new positive, blocked,
+  invalid-output, and idempotency cases.
+- Ruff, strict mypy (`235` source files), packaged JavaScript syntax (`25` assets), and Node
+  frontend tests (`140` passed) are green. `make check-agents` passes its structural and
+  workflow/planning gates; skill-creator validation accepts all nine skills.
+- Final `AIDD-SMOKE-001` run `eval-smoke-001-generic-cli-20260905T094911Z` passed all five
+  verification commands: one substantive-only plan attempt, canonical AIDD records, no repair.
+  Original runs remain intact; hash-verified local copies, including earlier failed runs, live
+  under `.aidd/eval-audit/w47-ownership-final-evidence/`.
+- No real-provider live run or browser journey was executed for this revision. UI behavior and
+  provider profiles were not changed; the browser evidence task `W46-E1-S2-T4` stays in Next.
+
+Integration validation (2026-09-05, combined with main `9fcbcea9`):
+
+- Adapter, stage CLI, runner, terminal, project-set, and repair regressions: **517 passed**.
+- Instruction/workflow/planning checks: **37 passed**; docs/prompts/contracts/packaging:
+  **136 passed**; JavaScript syntax: **25 assets**; Node frontend: **146 passed**.
+- Ruff and strict mypy pass across all `235` source files.
+- `AIDD-SMOKE-001` run `eval-smoke-001-generic-cli-20260905T101414Z` passes all five checks,
+  with one plan-only runtime attempt and no repairs. Hash-verified copies of all retained runs
+  are available locally under `.aidd/eval-audit/w51-merge-evidence/`.
+- The earlier broad Python result remains evidence for the pre-integration baseline; the
+  combined version was checked with the focused suites above. CI validates the PR merge candidate.

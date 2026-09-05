@@ -5,9 +5,22 @@
 Summarize a completed or halted stage attempt with durable status, output evidence,
 validation state, blockers, and next actions.
 
-The runtime writes this Markdown summary as a draft stage output. AIDD treats it as the
-workflow-facing summary only after post-runtime validation, and may normalize terminal status
-or validation wording when the canonical validator report proves the draft inconsistent.
+AIDD writes this workflow record from lifecycle state, substantive runtime content, and
+post-runtime validation. The runtime must not create or edit `stage-result.md` in initial,
+repair, or intervention attempts; it exposes evidence in its substantive output. A blocker that
+prevents completion must also become a `[blocking]` question through the controlled interview
+path so AIDD can persist the blocked state; substantive blocker prose alone does not pause AIDD.
+Legacy runtime-authored drafts may be retained as raw candidate evidence and reconciled by AIDD,
+but compatibility handling does not grant runtime write authority over this record.
+When retaining a runtime draft, use the attempt boundary captured before runtime execution;
+later log or artifact creation must not cause the draft to be mistaken for pre-attempt content.
+
+Before cross-document validation, AIDD adds declared project-set evidence to its exact bootstrap
+placeholder without claiming a terminal status or validator pass. When substantive outputs and
+cross-document checks validate, AIDD replaces this recognized bootstrap record with a complete
+lifecycle-derived record before validating the terminal record. This must not consume a model
+repair attempt. Invalid substantive outputs still require repair or an explicit stop;
+non-placeholder runtime drafts retain their existing validation and raw-evidence handling.
 
 ## Required sections
 
@@ -130,6 +143,7 @@ or validation wording when the canonical validator report proves the draft incon
 
 ## Authoring rules
 
+- These rules govern AIDD writers and compatibility reconciliation, not runtime completion targets.
 - Use required heading names exactly; do not collapse `Attempt history` into `Status`.
 - Core-authored repair-history stage results must use `# Stage Result` as the document title
   and `## Stage` as the required stage section heading.

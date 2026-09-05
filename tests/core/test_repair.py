@@ -487,6 +487,29 @@ def test_repair_reader_normalizes_legacy_code_and_rejects_unknown_code() -> None
         )
 
 
+@pytest.mark.parametrize(
+    "document_name", ("stage-result.md", "validator-report.md", "repair-brief.md")
+)
+def test_repair_brief_assigns_generated_record_corrections_to_aidd(document_name: str) -> None:
+    source_path = f"workitems/WI-001/stages/plan/{document_name}"
+    message = "Required generated record section is incomplete."
+    brief = render_repair_brief(
+        validator_report_markdown=render_validator_report(findings=(ValidationFinding(
+            code="SEM-INCOMPLETE-SECTION", message=message, severity="low",
+            location=ValidationIssueLocation(workspace_relative_path=source_path),
+        ),)),
+        validator_report_path="workitems/WI-001/stages/plan/validator-report.md",
+        prior_stage_artifacts=(), stage_attempt_count=1, max_repair_attempts=1,
+    )
+    assert f"AIDD must reconcile `{source_path}`" in brief
+    assert f"Update `{source_path}`" not in brief
+    assert "Runtime must not create or edit this record" in brief
+    assert "submit a `[blocking]` question through the controlled interview path" in brief
+    assert message in brief
+    assert "`SEM-INCOMPLETE-SECTION` `low`" in brief
+    assert "SEM-INCOMPLETE-SECTION" not in brief.split("## Optional quality improvements", 1)[1]
+
+
 def test_render_repair_brief_includes_required_sections_and_budget_context(tmp_path: Path) -> None:
     workspace_root = tmp_path / ".aidd"
     validator_report_path = (
@@ -540,7 +563,7 @@ def test_render_repair_brief_includes_required_sections_and_budget_context(tmp_p
     assert "## Mandatory fixes" in repair_brief
     assert "## Optional quality improvements" in repair_brief
     assert (
-        "- [`CROSS-REPAIR-BRIEF-NOT-REFERENCED`] Update "
+        "- [`CROSS-REPAIR-BRIEF-NOT-REFERENCED`] AIDD must reconcile "
         "`workitems/WI-001/stages/plan/stage-result.md`"
     ) in repair_brief
     optional_section = repair_brief.split("## Optional quality improvements", 1)[1]

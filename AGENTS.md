@@ -3,7 +3,8 @@
 Build and maintain `ai_driven_dev_v2`, a runtime-agnostic orchestration system for
 document-first AI software delivery.
 
-Keep this file short. Put local rules in nested `AGENTS.md` files and reusable workflows in `.agents/skills/`.
+Keep this file short. Use nested `AGENTS.md` only for distinct local constraints and
+`.agents/skills/` for reusable workflows; do not copy the same rules into every leaf directory.
 
 ## Start here
 
@@ -11,24 +12,17 @@ Before editing, read only the context needed for the owning area:
 
 1. `README.md`
 2. `docs/product/user-stories.md`
-3. the nearest nested `AGENTS.md`
+3. every applicable `AGENTS.md` along each touched path, from the repository root to its directory
 4. the relevant section of `docs/architecture/target-architecture.md` or the owning contract
 5. for behavior changes, the relevant roadmap slice and local task in
    `docs/backlog/roadmap.md` and `docs/backlog/backlog.md`
 
-Use `.agents/skills/project-navigation/` when ownership is unclear. Do not load unrelated
-documents or repeat instructions already supplied by a nearer `AGENTS.md`.
+Rules accumulate from root to leaf. A nearer file overrides a parent only for a direct conflict
+in its own scope; it does not replace unrelated parent rules. Apply this separately to every
+touched area, including tests and docs. Do not reload instructions already present in context.
 
-## What this repo is for
-
-AIDD runs a staged software-delivery workflow with:
-
-- Markdown stage inputs and outputs,
-- validation before progression,
-- self-repair on invalid outputs,
-- user interview loops when requirements are unclear,
-- adapter-based runtime integration,
-- harness and eval support from day one.
+Use `.agents/skills/project-navigation/` when ownership is unclear. The ownership and nearest-check
+matrix is in `docs/agent-development.md`. Read targeted roadmap sections, not the entire history.
 
 ## Non-negotiable rules
 
@@ -51,13 +45,14 @@ AIDD runs a staged software-delivery workflow with:
   nearest non-destructive validation without asking for routine confirmation.
 - Ask a question only when an unresolved ambiguity would materially change the result and
   repository context cannot resolve it safely.
-- Require explicit confirmation before external writes, destructive actions, releases,
-  credential changes, or a material expansion of scope.
+- External writes, destructive actions, releases, credential changes, or a material expansion
+  of scope require explicit authorization. Authorization already given for the same action
+  remains valid; do not ask for routine confirmation again.
 - Keep the current work layer explicit: research, planning, implementation, review, or external
   coordination. Do not silently cross into another layer.
-- Use parallel agents only when the request or an applicable skill calls for them and the work
-  splits into independent, non-overlapping streams. Assign ownership, cap concurrency, and
-  synthesize one final result.
+- Use parallel agents for independent, non-overlapping streams when they improve the work.
+  Assign ownership, cap concurrency, avoid concurrent edits to the same files, and synthesize
+  one final result.
 
 ## Development loop
 
@@ -78,12 +73,11 @@ AIDD runs a staged software-delivery workflow with:
   evals. Do not combine a model migration with a broad prompt rewrite.
 - Keep model names, reasoning settings, and provider capabilities in runtime configuration,
   adapters, or harness profiles, never in runtime-agnostic core behavior.
-- Treat model families by workload role rather than doing a global string replacement. For a
-  GPT-5.6 migration, preserve the existing quality, latency, cost, endpoint, tool, and effective
-  reasoning contracts before tuning.
-- Do not enable Pro mode, maximum reasoning, persisted reasoning, explicit caching,
-  Programmatic Tool Calling, or multi-agent execution as repository-wide defaults. Adopt an
-  optional capability only for a measured need with compatibility checks and eval evidence.
+- Treat model families by workload role rather than doing a global string replacement. Preserve
+  quality, latency, cost, endpoint, tool, and effective reasoning contracts before tuning.
+- Keep optional provider capabilities and multi-agent execution opt-in. Change defaults only
+  for a measured need with compatibility checks and eval evidence; keep provider-specific
+  migration details in configuration, profiles, adapters, or the accepted local task.
 - Record what changed, what stayed pinned, the validation evidence, and any remaining gap.
 
 ## Planning rules
@@ -102,34 +96,32 @@ Never add a task to `docs/backlog/backlog.md` unless it already exists in `docs/
 ## Quick repo map
 
 - `src/aidd/core/` — orchestration, stage order, workspace logic
+- `src/aidd/application/` — composition of core services, validation, and publication
+- `src/aidd/cli/` and its `static/` directory — CLI, local operator HTTP surface, and packaged UI
 - `src/aidd/adapters/` — runtime integration only
+- `src/aidd/runtime_logs/` — retained raw-log and normalized-event models
 - `src/aidd/validators/` — document validation
-- `src/aidd/harness/` — scenario loading and execution scaffolding
-- `src/aidd/evals/` — graders, verdicts, and reports
-- `contracts/` — durable stage and document contracts
-- `prompt-packs/` — file-based stage prompts
+- `src/aidd/harness/`, `src/aidd/evals/` — scenario execution, graders, verdicts, and reports
+- `contracts/`, `prompt-packs/` — durable Markdown contracts and file-based stage prompts
 - `harness/scenarios/live/` — manual external eval manifests
 - `docs/` — product, architecture, backlog, and E2E docs
 - `.agents/skills/` — Codex-discoverable team skills
+- `tests/`, `tests/frontend/`, `browser_tests/` — Python, Node DOM, and browser verification
+- `scripts/`, `.github/workflows/`, `Makefile` — local checks, CI, packaging, and release tooling
 
 ## Commands
 
-Start with the narrowest relevant check. Use these full defaults for broad changes or when a
-nested `AGENTS.md` requires them:
+Start with the narrowest check in `docs/agent-development.md`. For broad changes:
 
 ```bash
 uv sync --locked --extra dev
-uv run --extra dev ruff check .
-uv run --extra dev python -m mypy src scripts
-uv run --extra dev pytest -q
+make check
 ```
 
-Useful bootstrap commands:
-
-```bash
-uv run aidd doctor
-uv run aidd init --work-item WI-001
-```
+`make check` runs instruction checks, Python lint/types/tests, JavaScript syntax, and Node DOM
+tests. Browser journeys are a separate `make test-browser` target and require Playwright Chromium.
+No provider credentials are needed for these local checks. Report an unavailable prerequisite
+instead of treating an unrun check as passed.
 
 ## Done means
 
@@ -142,7 +134,3 @@ A change is done when:
 - backlog and scenario docs are updated when scope changed,
 - no runtime-specific shortcut leaked into the core,
 - the final report names validation performed and any unverified or blocked work.
-
-## Nested instructions
-
-This repository uses nested `AGENTS.md` files. Always prefer the nearest one for local rules.

@@ -880,6 +880,16 @@ def _render_correction_item(
     hint = _repair_hint_for_finding(finding)
     suffix = f" {hint}" if hint else ""
     repeat_note = f" (repeated {occurrence_count} times)" if occurrence_count > 1 else ""
+    if finding.source_path is not None and Path(finding.source_path).name in {
+        "stage-result.md", "validator-report.md", "repair-brief.md"
+    }:
+        owned_hint = f" AIDD-only correction: {hint}" if hint else ""
+        return (
+            f"- [`{finding.code}`] AIDD must reconcile {target} to resolve: {finding.message}"
+            f"{repeat_note}{owned_hint} Runtime must not create or edit this record; expose "
+            "the corresponding evidence in substantive runtime content. If a blocker prevents "
+            "completion, submit a `[blocking]` question through the controlled interview path."
+        )
     return (
         f"- [`{finding.code}`] Update {target} to resolve: {finding.message}"
         f"{repeat_note}{suffix}"

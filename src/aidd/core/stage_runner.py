@@ -84,6 +84,7 @@ from aidd.core.stage_terminal import (
     exhausted_budget_validation_finding,
     force_stage_result_failed_for_exhausted_budget,
     normalize_success_stage_result_blockers_if_empty,
+    prepare_bootstrap_stage_result_for_validation,
     repair_brief_exhausts_terminal_budget,
     strip_stage_result_success_claims_for_validator_findings,
     write_stage_result_from_lifecycle_state,
@@ -702,6 +703,9 @@ def run_single_stage_orchestration(
             contracts_root=contracts_root,
         )
         raise
+    # Runtime logs and exit metadata mutate the attempt directory after stage document writes.
+    # Retention must compare drafts against this stable pre-runtime boundary instead.
+    attempt_started_at_ns = execution_state.attempt_path.stat().st_mtime_ns
     try:
         adapter_outcome = adapter_executor(adapter_invocation, execution_state)
     except Exception as adapter_exception:
@@ -745,6 +749,7 @@ def run_single_stage_orchestration(
                 workspace_root=workspace_root,
                 execution_state=execution_state,
                 contracts_root=contracts_root,
+                attempt_started_at_ns=attempt_started_at_ns,
             ),
         )
         run_cleanup(
@@ -771,6 +776,7 @@ def run_single_stage_orchestration(
             workspace_root=workspace_root,
             execution_state=execution_state,
             contracts_root=contracts_root,
+            attempt_started_at_ns=attempt_started_at_ns,
         )
         restore_core_owned_repair_brief(
             invocation_bundle=adapter_invocation,
@@ -941,6 +947,9 @@ def run_single_stage_orchestration(
             )
             / "stage-result.md"
         )
+    bootstrap_stage_result = prepare_bootstrap_stage_result_for_validation(
+        workspace_root=workspace_root, work_item=work_item, stage=stage,
+    )
     validation_result = run_structural_validation_after_output_discovery(
         workspace_root=workspace_root,
         discovery=discovery,
@@ -973,6 +982,26 @@ def run_single_stage_orchestration(
             findings=(*validation_result.findings, *interview_findings),
         )
     if not validation_result.findings and not interview_routing.requires_interview:
+        if bootstrap_stage_result:
+            # The recognized bootstrap record belongs to AIDD, not to the runtime. Render
+            # its complete lifecycle record before validating it; substantive findings and
+            # non-placeholder runtime drafts still follow the existing validation path.
+            metadata = load_stage_metadata(
+                workspace_root=workspace_root, work_item=work_item, run_id=run_id, stage=stage
+            )
+            _write_canonical_stage_result(
+                workspace_root=workspace_root,
+                execution_state=execution_state,
+                lifecycle_status=StageState.SUCCEEDED,
+                attempt_mode=adapter_invocation.attempt_mode,
+                attempt_outcome="succeeded",
+                repair_history=() if metadata is None else metadata.repair_history,
+                produced_output_paths=discovery.discovered_markdown_documents,
+                missing_output_paths=discovery.missing_markdown_documents,
+                validator_verdict="pass",
+                validator_report_path=validation_result.validator_report_path,
+                repair_brief_path=repair_brief_trace_path,
+            )
         final_stage_result_findings = reconcile_and_validate_stage_result_after_validation_pass(
             workspace_root=workspace_root,
             work_item=work_item,

@@ -6,7 +6,7 @@ Describe what failed validation and what the repair attempt must correct.
 
 `repair-brief.md` is AIDD-owned repair control evidence. Runtime adapters and model
 providers may read it as input, but must not rewrite it. Model-authored repair summaries
-belong in `stage-result.md` or a future `repair-notes.md`, not in this control artifact.
+belong in the current stage's substantive runtime output, not in workflow or control records.
 
 ## Required sections
 
@@ -46,7 +46,13 @@ belong in `stage-result.md` or a future `repair-notes.md`, not in this control a
 
 - Each required correction must map to one or more failed check codes.
 - Fix actions must be actionable and scoped to document-level edits.
-- If a failed check cannot be repaired automatically, mark it as `needs-human-input` with reason.
+- Corrections for AIDD-owned `stage-result.md`, `validator-report.md`, or `repair-brief.md`
+  must name AIDD as the repair owner and explicitly forbid runtime edits. Preserve the finding
+  code, message, path, and progression requirement; runtime content may expose source evidence
+  for reconciliation, but changing a generated record is never a model repair action.
+- If a failed check cannot be repaired automatically, mark it as `needs-human-input` with reason
+  and require the runtime to submit a `[blocking]` question through the controlled interview path
+  when completion requires operator input. Substantive blocker prose alone does not pause AIDD.
 - Do not add new scope beyond resolving listed failed checks unless explicitly required.
 
 ## Authoring rules

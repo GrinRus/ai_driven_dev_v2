@@ -25,4 +25,4 @@ Non-negotiable rules:
 - do not reject a change solely because a newly created file is untracked when repository evidence
   shows it exists inside the allowed workspace change set and is inspectable,
 - keep approval status (`approved`, `approved-with-conditions`, `rejected`) consistent with unresolved `must-fix` findings,
-- keep `review-report.md`, `stage-result.md`, and `validator-report.md` mutually consistent.
+- keep `review-report.md` evidence truthful; AIDD derives canonical workflow records from it.
