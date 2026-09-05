@@ -15,7 +15,7 @@ from aidd.core.stage_registry import (
     resolve_expected_output_documents,
     resolve_required_input_documents,
 )
-from aidd.validators.document_loader import load_markdown_document
+from aidd.validators.document_loader import load_markdown_document, probe_markdown_document
 from aidd.validators.models import ValidationFinding, ValidationIssueLocation
 
 MISSING_REQUIRED_DOCUMENT_CODE = "STRUCT-MISSING-REQUIRED-DOCUMENT"
@@ -23,6 +23,22 @@ MISSING_REQUIRED_SECTION_CODE = "STRUCT-MISSING-REQUIRED-SECTION"
 DUPLICATE_REQUIRED_SECTION_CODE = "STRUCT-DUPLICATE-REQUIRED-SECTION"
 EMPTY_REQUIRED_SECTION_CODE = "STRUCT-EMPTY-REQUIRED-SECTION"
 STALE_STAGE_RESULT_PLACEHOLDER_CODE = "STRUCT-STALE-STAGE-RESULT-PLACEHOLDER"
+
+
+def _document_read_failure_finding(
+    *,
+    path: Path,
+    workspace_root: Path,
+    failure_code: str,
+    failure_message: str,
+) -> ValidationFinding:
+    relative_path = _workspace_relative(path, workspace_root)
+    return ValidationFinding(
+        code=failure_code,
+        message=f"Unable to read Markdown document `{relative_path}`: {failure_message}",
+        severity="critical",
+        location=ValidationIssueLocation(workspace_relative_path=relative_path),
+    )
 
 
 def _iter_required_documents(
@@ -183,6 +199,19 @@ def validate_required_sections(
         if not output_path.exists():
             continue
 
+        probe = probe_markdown_document(path=output_path, workspace_root=workspace_root)
+        if not probe.readable:
+            assert probe.failure is not None
+            findings.append(
+                _document_read_failure_finding(
+                    path=output_path,
+                    workspace_root=workspace_root,
+                    failure_code=probe.failure.code,
+                    failure_message=probe.failure.message,
+                )
+            )
+            continue
+
         required_sections = _required_sections_for_document(
             stage=stage,
             document_name=output_path.name,
@@ -191,7 +220,8 @@ def validate_required_sections(
         if not required_sections:
             continue
 
-        loaded_document = load_markdown_document(path=output_path, workspace_root=workspace_root)
+        loaded_document = probe.document
+        assert loaded_document is not None
         section_index = MarkdownSectionIndex.from_markdown(loaded_document.body)
         headings = section_index.headings
         markdown_lines = list(section_index.markdown_lines)

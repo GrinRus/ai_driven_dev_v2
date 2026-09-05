@@ -24,6 +24,7 @@ from aidd.core.workspace import stage_output_root as workspace_stage_output_root
 from aidd.core.workspace import stage_root as workspace_stage_root
 from aidd.validators.cross_document import validate_cross_document_consistency
 from aidd.validators.models import ValidationFinding
+from aidd.validators.protocol import DOCUMENT_READ_FAILURE_CODES
 from aidd.validators.reports import write_validator_report
 from aidd.validators.semantic import validate_semantic_outputs
 from aidd.validators.structural import (
@@ -298,7 +299,10 @@ def run_structural_validation_after_output_discovery(
     )
     findings: tuple[ValidationFinding, ...]
     findings = (*structural_findings, *section_findings)
-    if not findings or discovery.discovered_markdown_documents:
+    has_document_read_failure = any(
+        finding.code in DOCUMENT_READ_FAILURE_CODES for finding in findings
+    )
+    if (not findings or discovery.discovered_markdown_documents) and not has_document_read_failure:
         semantic_findings = validate_semantic_outputs(
             stage=discovery.stage,
             work_item=discovery.work_item,
