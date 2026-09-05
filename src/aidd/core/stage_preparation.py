@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from datetime import datetime
+from enum import StrEnum
 from pathlib import Path
 
 from aidd.core.markdown import extract_required_sections_from_document_contract
@@ -99,6 +100,42 @@ add the remaining dependency-ordered cards, and publish only the resulting taskl
 
 class StageInputPreflightError(FileNotFoundError):
     """Raised before attempt creation when required stage inputs are unavailable."""
+
+
+class StageInputReadiness(StrEnum):
+    """Readiness states shared by stage eligibility and input preflight."""
+
+    READY = "ready"
+    MISSING = "missing"
+    NOT_REGULAR_FILE = "not_regular_file"
+    INVALID_UTF8 = "invalid_utf8"
+    UNREADABLE = "unreadable"
+
+
+def assess_stage_input_readiness(path: Path) -> StageInputReadiness:
+    """Classify whether a stage input can be consumed as UTF-8 Markdown text.
+
+    This deliberately stops at the common transport/readability boundary. Document
+    structure and frontmatter remain the responsibility of the stage validators.
+    """
+
+    try:
+        if not path.exists():
+            return StageInputReadiness.MISSING
+        if not path.is_file():
+            return StageInputReadiness.NOT_REGULAR_FILE
+        path.read_text(encoding="utf-8")
+    except UnicodeDecodeError:
+        return StageInputReadiness.INVALID_UTF8
+    except OSError:
+        return StageInputReadiness.UNREADABLE
+    return StageInputReadiness.READY
+
+
+def is_stage_input_ready(path: Path) -> bool:
+    """Return whether ``path`` passes the shared stage-input readiness predicate."""
+
+    return assess_stage_input_readiness(path) is StageInputReadiness.READY
 
 
 def _document_title_from_name(document_name: str) -> str:
@@ -404,24 +441,23 @@ def validate_required_stage_inputs(
 ) -> None:
     def _validate_document(document_path: Path, *, input_kind: str) -> None:
         relative_path = workspace_relative_paths(workspace_root, (document_path,))[0]
-        if not document_path.exists():
+        readiness = assess_stage_input_readiness(document_path)
+        if readiness is StageInputReadiness.MISSING:
             raise StageInputPreflightError(
                 f"Stage input preflight failed: missing {input_kind} input document: "
                 f"{relative_path}"
             )
-        try:
-            document_path.read_text(encoding="utf-8")
-        except UnicodeDecodeError as exc:
+        if readiness is StageInputReadiness.INVALID_UTF8:
             raise StageInputPreflightError(
                 f"Stage input preflight failed: {input_kind} input document is not "
                 "UTF-8 text: "
                 f"{relative_path}"
-            ) from exc
-        except OSError as exc:
+            )
+        if readiness is not StageInputReadiness.READY:
             raise StageInputPreflightError(
                 f"Stage input preflight failed: {input_kind} input document is not readable: "
                 f"{relative_path}"
-            ) from exc
+            )
 
     for document_path in preparation_bundle.required_input_documents:
         _validate_document(document_path, input_kind="required")
@@ -473,10 +509,13 @@ def persist_execution_state(
 
 
 __all__ = [
+    "assess_stage_input_readiness",
     "attempt_number_from_path",
+    "is_stage_input_ready",
     "persist_execution_state",
     "prepare_stage_bundle",
     "render_stage_brief",
+    "StageInputReadiness",
     "StageInputPreflightError",
     "validate_required_stage_inputs",
 ]

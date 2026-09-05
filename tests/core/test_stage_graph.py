@@ -227,6 +227,53 @@ def test_evaluate_stage_eligibility_reports_missing_required_input_documents(
     assert eligibility.is_eligible is False
 
 
+@pytest.mark.parametrize("invalid_kind", ("directory", "invalid_utf8"))
+def test_evaluate_stage_eligibility_rejects_non_readable_required_inputs(
+    tmp_path: Path,
+    invalid_kind: str,
+) -> None:
+    workspace_root = tmp_path / ".aidd"
+    work_item = "WI-001"
+    create_run_manifest(
+        workspace_root=workspace_root,
+        work_item=work_item,
+        run_id="run-001",
+        runtime_id="generic-cli",
+        stage_target="review-spec",
+        config_snapshot={"mode": "test"},
+    )
+    persist_stage_status(
+        workspace_root=workspace_root,
+        work_item=work_item,
+        run_id="run-001",
+        stage="plan",
+        status=StageState.SUCCEEDED.value,
+    )
+    _materialize_required_inputs(
+        workspace_root,
+        work_item=work_item,
+        stage="review-spec",
+    )
+    invalid_input = workspace_root / "workitems" / work_item / "context" / "repository-state.md"
+    invalid_input.unlink()
+    if invalid_kind == "directory":
+        invalid_input.mkdir()
+    else:
+        invalid_input.write_bytes(b"\xff")
+
+    eligibility = evaluate_stage_eligibility(
+        workspace_root=workspace_root,
+        work_item=work_item,
+        run_id="run-001",
+        stage="review-spec",
+    )
+
+    assert eligibility.missing_input_documents == (
+        "workitems/WI-001/context/repository-state.md",
+    )
+    assert eligibility.is_eligible is False
+
+
 def test_select_next_runnable_stage_returns_first_stage_for_new_run(tmp_path: Path) -> None:
     workspace_root = tmp_path / ".aidd"
     create_run_manifest(
