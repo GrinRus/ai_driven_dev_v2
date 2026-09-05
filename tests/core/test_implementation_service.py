@@ -244,6 +244,45 @@ def test_executor_exception_terminalizes_attempt_before_reraise(tmp_path: Path) 
     assert entry.blocker == "adapter exploded"
 
 
+def test_executor_exception_survives_corrupt_report_enrichment(
+    tmp_path: Path,
+) -> None:
+    request = _request(tmp_path)
+
+    def explode_with_corrupt_report(context):  # type: ignore[no-untyped-def]
+        report = (
+            request.workspace_root
+            / "workitems"
+            / request.work_item
+            / "stages"
+            / "implement"
+            / "implementation-report.md"
+        )
+        report.parent.mkdir(parents=True, exist_ok=True)
+        report.write_bytes(b"# Implementation Report\n\xff\n")
+        raise RuntimeError("adapter exploded")
+
+    service = ImplementationExecutionService(
+        task_executor=explode_with_corrupt_report,
+        aggregate_finalizer=lambda context: AggregateFinalizationOutcome(succeeded=True),
+    )
+
+    with pytest.raises(ImplementationPortError) as captured:
+        service.run_task(request, task_id="TL-1")
+
+    assert isinstance(captured.value.__cause__, RuntimeError)
+    assert captured.value.ledger is not None
+    assert captured.value.ledger.entry("TL-1").status is TaskExecutionStatus.FAILED
+    metadata = load_stage_metadata(
+        workspace_root=request.workspace_root,
+        work_item=request.work_item,
+        run_id=request.run_id,
+        stage="implement",
+    )
+    assert metadata is not None
+    assert metadata.status == StageState.FAILED.value
+
+
 def test_failed_task_keeps_implementation_stage_failed_not_blocked(tmp_path: Path) -> None:
     request = _request(tmp_path)
 
