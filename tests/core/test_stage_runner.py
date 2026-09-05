@@ -3332,6 +3332,61 @@ def test_run_structural_validation_after_output_discovery_writes_report_path(
     assert "`STRUCT-MISSING-REQUIRED-DOCUMENT`" not in report_text
 
 
+def test_run_structural_validation_maps_malformed_output_without_secondary_reads(
+    tmp_path: Path,
+) -> None:
+    workspace_root = tmp_path / ".aidd"
+    create_run_manifest(
+        workspace_root=workspace_root,
+        work_item="WI-001",
+        run_id="run-001",
+        runtime_id="generic-cli",
+        stage_target="plan",
+        config_snapshot={"mode": "test"},
+    )
+    preparation_bundle = prepare_stage_bundle(
+        workspace_root=workspace_root,
+        work_item="WI-001",
+        stage="plan",
+    )
+    _materialize_expected_inputs(preparation_bundle.expected_input_bundle)
+    execution_state = persist_execution_state(
+        workspace_root=workspace_root,
+        work_item="WI-001",
+        run_id="run-001",
+        stage="plan",
+    )
+    invocation = prepare_adapter_invocation(
+        workspace_root=workspace_root,
+        preparation_bundle=preparation_bundle,
+        execution_state=execution_state,
+    )
+    valid_documents = _valid_plan_output_documents()
+    for output_path in preparation_bundle.expected_output_documents:
+        output_path.parent.mkdir(parents=True, exist_ok=True)
+        if output_path.name == "plan.md":
+            output_path.write_bytes(b"---\nstatus: draft\n# Plan\n")
+        else:
+            output_path.write_text(valid_documents[output_path.name], encoding="utf-8")
+
+    discovery = discover_stage_markdown_outputs(
+        execution_state=execution_state,
+        invocation_bundle=invocation,
+    )
+    validation = run_structural_validation_after_output_discovery(
+        workspace_root=workspace_root,
+        discovery=discovery,
+    )
+
+    assert [finding.code for finding in validation.findings] == [
+        "STRUCT-DOCUMENT-MALFORMED-FRONTMATTER"
+    ]
+    report_text = validation.validator_report_path.read_text(encoding="utf-8")
+    assert "`STRUCT-DOCUMENT-MALFORMED-FRONTMATTER`" in report_text
+    assert "`SEM-" not in report_text
+    assert "`CROSS-" not in report_text
+
+
 def test_validation_collects_semantic_findings_with_independent_structural_defects(
     tmp_path: Path,
 ) -> None:
