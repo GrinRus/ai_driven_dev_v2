@@ -26,6 +26,7 @@ from aidd.adapters.live_transport import (
     run_help_text,
     split_command,
 )
+from aidd.adapters.process_io import decode_runtime_bytes
 from aidd.adapters.process_supervisor import OwnedProcessSupervisor
 from aidd.adapters.runtime_execution import RuntimeSubprocessSpec
 from aidd.adapters.runtime_log_capture import (
@@ -250,7 +251,7 @@ class _JsonRpcLineClient:
     def __init__(
         self,
         *,
-        process: subprocess.Popen[str],
+        process: subprocess.Popen[bytes],
         transcript_path: Path,
         capture_directory: Path,
         on_stdout: Callable[[str], None] | None,
@@ -330,7 +331,9 @@ class _JsonRpcLineClient:
         append_jsonl(self.transcript_path, {"direction": "client", "payload": dict(payload)})
         if self.process.stdin is None:
             return
-        self.process.stdin.write(json.dumps(dict(payload), sort_keys=True) + "\n")
+        self.process.stdin.write(
+            (json.dumps(dict(payload), sort_keys=True) + "\n").encode("utf-8")
+        )
         self.process.stdin.flush()
 
     def next_message(self, *, timeout_seconds: float) -> Mapping[str, Any] | None:
@@ -342,7 +345,8 @@ class _JsonRpcLineClient:
     def _read_stdout(self) -> None:
         assert self.process.stdout is not None
         try:
-            for line in self.process.stdout:
+            for raw_line in self.process.stdout:
+                line = decode_runtime_bytes(raw_line)
                 self._sink.write("stdout", line)
                 if self._on_stdout is not None:
                     self._on_stdout(line)
@@ -362,7 +366,8 @@ class _JsonRpcLineClient:
     def _read_stderr(self) -> None:
         assert self.process.stderr is not None
         try:
-            for line in self.process.stderr:
+            for raw_line in self.process.stderr:
+                line = decode_runtime_bytes(raw_line)
                 self._sink.write("stderr", line)
                 if self._on_stderr is not None:
                     self._on_stderr(line)
@@ -754,7 +759,7 @@ def _drain_until_response(
                 )
     return (
         None,
-        "codex-live: app-server exited before response",
+        "codex-live: protocol failure: app-server exited before response",
         CodexExitClassification.PROTOCOL_FAILURE,
     )
 
@@ -857,7 +862,7 @@ def _codex_jsonrpc_approval_result(
 def _early_stop_result(
     *,
     client: _JsonRpcLineClient,
-    process: subprocess.Popen[str],
+    process: subprocess.Popen[bytes],
     pending_request_id: str | None,
     denied_reason: str | None,
     transcript_path: Path,
@@ -924,7 +929,7 @@ def _early_stop_result(
 def _failed_result(
     *,
     client: _JsonRpcLineClient,
-    process: subprocess.Popen[str],
+    process: subprocess.Popen[bytes],
     transcript_path: Path,
     details: str,
 ) -> LiveTransportResult[CodexExitClassification]:
@@ -942,7 +947,7 @@ def _failed_result(
 
 def _run_result(
     *,
-    process: subprocess.Popen[str],
+    process: subprocess.Popen[bytes],
     client: _JsonRpcLineClient,
     stop_reason: CodexExitClassification | None,
 ) -> CodexRunResult:
