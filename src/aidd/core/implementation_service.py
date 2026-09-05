@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import shutil
+from collections.abc import Callable
 from dataclasses import dataclass
 from enum import StrEnum
 from pathlib import Path
@@ -122,6 +123,38 @@ class AggregateFinalizer(Protocol):
     def __call__(self, context: TaskFinalizationContext) -> AggregateFinalizationOutcome: ...
 
 
+def _best_effort_enrichment[EnrichmentValue](
+    *,
+    errors: list[str],
+    label: str,
+    operation: Callable[[], EnrichmentValue],
+) -> EnrichmentValue | None:
+    try:
+        return operation()
+    except Exception as exc:
+        detail = str(exc) or exc.__class__.__name__
+        errors.append(f"{label}: {detail}")
+        return None
+
+
+def _write_enrichment_errors(*, attempt_path: Path, errors: list[str]) -> None:
+    if not errors:
+        return
+    state_path = attempt_path / "attempt-state.json"
+    try:
+        payload = json.loads(state_path.read_text(encoding="utf-8"))
+        if not isinstance(payload, dict):
+            return
+        payload["enrichment_errors"] = list(errors)
+        state_path.write_text(
+            json.dumps(payload, indent=2, sort_keys=True) + "\n",
+            encoding="utf-8",
+        )
+    except (OSError, TypeError, ValueError):
+        # The primary task state is already durable; enrichment diagnostics are optional.
+        return
+
+
 def _prepare_task_execution(
     *,
     request: ImplementationExecutionRequest,
@@ -193,6 +226,7 @@ def _complete_task_execution(
     blocker: str | None = None,
     primary_executor_failure: bool = False,
 ) -> TaskLedger:
+    enrichment_errors: list[str] = []
     primary_failure_ledger = None
     if primary_executor_failure:
         primary_failure_ledger = _persist_primary_executor_failure(
@@ -200,7 +234,14 @@ def _complete_task_execution(
             request=request,
             blocker=blocker or "Task attempt executor failed.",
         )
-    _record_global_attempt_references(context=context, request=request)
+    _best_effort_enrichment(
+        errors=enrichment_errors,
+        label="stage-attempt references",
+        operation=lambda: _record_global_attempt_references(
+            context=context,
+            request=request,
+        ),
+    )
     implementation_report = (
         request.workspace_root
         / "workitems"
@@ -211,36 +252,86 @@ def _complete_task_execution(
     )
     report_text: str | None = None
     if implementation_report.exists():
-        report_text = implementation_report.read_text(encoding="utf-8")
-        shutil.copy2(
-            implementation_report,
-            context.task_attempt_path / "implementation-report.md",
+        report_text = _best_effort_enrichment(
+            errors=enrichment_errors,
+            label="implementation report",
+            operation=lambda: implementation_report.read_text(encoding="utf-8"),
         )
-    copy_interview_evidence(implementation_report.parent, context.task_attempt_path)
+        if report_text is not None:
+            _best_effort_enrichment(
+                errors=enrichment_errors,
+                label="implementation report copy",
+                operation=lambda: shutil.copy2(
+                    implementation_report,
+                    context.task_attempt_path / "implementation-report.md",
+                ),
+            )
+    _best_effort_enrichment(
+        errors=enrichment_errors,
+        label="interview evidence",
+        operation=lambda: copy_interview_evidence(
+            implementation_report.parent,
+            context.task_attempt_path,
+        ),
+    )
     final_snapshot_path = context.task_attempt_path / "repository-final.json"
     if final_snapshot_path.exists():
-        final_snapshot = load_repository_snapshot(final_snapshot_path)
-    else:
-        final_snapshot = capture_repository_snapshot(
-            project_root=request.project_root,
-            task_id=context.task.id,
+        final_snapshot = _best_effort_enrichment(
+            errors=enrichment_errors,
+            label="repository final snapshot",
+            operation=lambda: load_repository_snapshot(final_snapshot_path),
         )
-        write_repository_snapshot(final_snapshot_path, final_snapshot)
-    diff, issues = task_diff_evidence(
-        context=context,
-        workspace_root=request.workspace_root,
-        work_item=request.work_item,
-        final_snapshot=final_snapshot,
-        report=report_text,
-    )
-    (context.task_attempt_path / "task-diff.json").write_text(
-        json.dumps(diff, indent=2, sort_keys=True) + "\n",
-        encoding="utf-8",
-    )
+    else:
+        final_snapshot = _best_effort_enrichment(
+            errors=enrichment_errors,
+            label="repository final snapshot",
+            operation=lambda: capture_repository_snapshot(
+                project_root=request.project_root,
+                task_id=context.task.id,
+            ),
+        )
+        if final_snapshot is not None:
+            _best_effort_enrichment(
+                errors=enrichment_errors,
+                label="repository final snapshot write",
+                operation=lambda: write_repository_snapshot(final_snapshot_path, final_snapshot),
+            )
+    issues: tuple[str, ...] = tuple()
+    if final_snapshot is not None:
+        diff_result = _best_effort_enrichment(
+            errors=enrichment_errors,
+            label="task diff evidence",
+            operation=lambda: task_diff_evidence(
+                context=context,
+                workspace_root=request.workspace_root,
+                work_item=request.work_item,
+                final_snapshot=final_snapshot,
+                report=report_text,
+            ),
+        )
+        if diff_result is not None:
+            diff, issues = diff_result
+            _best_effort_enrichment(
+                errors=enrichment_errors,
+                label="task diff evidence write",
+                operation=lambda: (
+                    context.task_attempt_path / "task-diff.json"
+                ).write_text(
+                    json.dumps(diff, indent=2, sort_keys=True) + "\n",
+                    encoding="utf-8",
+                ),
+            )
     if succeeded and issues:
         succeeded = False
         blocker = " ".join(issues)
+    if succeeded and enrichment_errors:
+        succeeded = False
+        blocker = "Task evidence enrichment failed: " + "; ".join(enrichment_errors)
     if primary_failure_ledger is not None:
+        _write_enrichment_errors(
+            attempt_path=context.task_attempt_path,
+            errors=enrichment_errors,
+        )
         return primary_failure_ledger
     status = TaskExecutionStatus.SUCCEEDED if succeeded else TaskExecutionStatus.FAILED
     metadata = load_stage_metadata(
@@ -294,6 +385,10 @@ def _complete_task_execution(
             stage="implement",
             status=StageState.PENDING.value if succeeded else stage_status,
         )
+    _write_enrichment_errors(
+        attempt_path=context.task_attempt_path,
+        errors=enrichment_errors,
+    )
     return ledger
 
 
