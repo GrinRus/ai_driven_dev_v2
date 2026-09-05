@@ -1112,6 +1112,55 @@ def test_discover_stage_markdown_outputs_returns_discovered_and_missing_document
     assert discovery.missing_markdown_documents == ()
 
 
+def test_discover_stage_markdown_outputs_excludes_non_regular_markdown_paths(
+    tmp_path: Path,
+) -> None:
+    workspace_root = tmp_path / ".aidd"
+    create_run_manifest(
+        workspace_root=workspace_root,
+        work_item="WI-001",
+        run_id="run-001",
+        runtime_id="generic-cli",
+        stage_target="plan",
+        config_snapshot={"mode": "test"},
+    )
+    preparation_bundle = prepare_stage_bundle(
+        workspace_root=workspace_root,
+        work_item="WI-001",
+        stage="plan",
+    )
+    _materialize_expected_inputs(preparation_bundle.expected_input_bundle)
+    execution_state = persist_execution_state(
+        workspace_root=workspace_root,
+        work_item="WI-001",
+        run_id="run-001",
+        stage="plan",
+    )
+    invocation = prepare_adapter_invocation(
+        workspace_root=workspace_root,
+        preparation_bundle=preparation_bundle,
+        execution_state=execution_state,
+    )
+    valid_documents = _valid_plan_output_documents()
+    for output_path in preparation_bundle.expected_output_documents:
+        output_path.parent.mkdir(parents=True, exist_ok=True)
+        if output_path.name == "plan.md":
+            output_path.mkdir()
+        else:
+            output_path.write_text(valid_documents[output_path.name], encoding="utf-8")
+
+    discovery = discover_stage_markdown_outputs(
+        execution_state=execution_state,
+        invocation_bundle=invocation,
+    )
+
+    plan_path = next(
+        path for path in preparation_bundle.expected_output_documents if path.name == "plan.md"
+    )
+    assert plan_path not in discovery.discovered_markdown_documents
+    assert discovery.missing_markdown_documents == (plan_path,)
+
+
 @pytest.mark.parametrize(
     ("plan_text", "runtime_verdict", "expected_verdict", "expect_findings"),
     (
