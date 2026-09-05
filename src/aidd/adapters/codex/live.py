@@ -26,7 +26,6 @@ from aidd.adapters.live_transport import (
     run_help_text,
     split_command,
 )
-from aidd.adapters.process_io import decode_runtime_bytes
 from aidd.adapters.process_supervisor import OwnedProcessSupervisor
 from aidd.adapters.runtime_execution import RuntimeSubprocessSpec
 from aidd.adapters.runtime_log_capture import (
@@ -346,8 +345,7 @@ class _JsonRpcLineClient:
         assert self.process.stdout is not None
         try:
             for raw_line in self.process.stdout:
-                line = decode_runtime_bytes(raw_line)
-                self._sink.write("stdout", line)
+                line = self._sink.write("stdout", raw_line)
                 if self._on_stdout is not None:
                     self._on_stdout(line)
                 message = _parse_json_line(line)
@@ -367,8 +365,7 @@ class _JsonRpcLineClient:
         assert self.process.stderr is not None
         try:
             for raw_line in self.process.stderr:
-                line = decode_runtime_bytes(raw_line)
-                self._sink.write("stderr", line)
+                line = self._sink.write("stderr", raw_line)
                 if self._on_stderr is not None:
                     self._on_stderr(line)
         except BaseException as exc:
