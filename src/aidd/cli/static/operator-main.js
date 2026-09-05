@@ -823,6 +823,11 @@ document.addEventListener("click", async (event) => {
       await renderAll();
       return;
     }
+    const saveDraftButton = event.target.closest("[data-save-draft]");
+    if (saveDraftButton) {
+      keepQuestionDraft(saveDraftButton.dataset.saveDraft);
+      return;
+    }
     const answerPreviewButton = event.target.closest("[data-answer-preview]");
     if (answerPreviewButton) {
       await previewAnswer(answerPreviewButton.dataset.answerPreview);

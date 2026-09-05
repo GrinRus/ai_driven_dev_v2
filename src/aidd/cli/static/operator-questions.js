@@ -99,21 +99,44 @@ function persistQuestionDraft(questionId) {
   });
 }
 
+function keepQuestionDraft(questionId) {
+  persistQuestionDraft(questionId);
+  toast("Draft kept locally; it is not part of durable answers.md yet.");
+  return true;
+}
+
 function updateQuestionResumeButtonState(questionId) {
   const button = document.querySelector(`[data-answer-resume="${CSS.escape(questionId)}"]`);
   if (!button || button.dataset.requiresResolvedResume !== "true") return;
   const resolution = document.querySelector(`[data-question-resolution="${CSS.escape(questionId)}"]`);
   const textarea = document.querySelector(`[data-question-text="${CSS.escape(questionId)}"]`);
+  const draft = questionDraft(questionId)?.value;
+  const hasDraft = Boolean(draft && (
+    String(draft.text || "").trim()
+    || String(draft.resolution || "").trim()
+    || (draft.evidence_links || []).length
+    || String(draft.unblock_consequence || "").trim()
+  ));
+  if (button.dataset.serverResolved === "true") {
+    button.disabled = hasDraft;
+    button.textContent = hasDraft
+      ? "Save answer before resume"
+      : (button.dataset.resumeReadyLabel || "Resume stage");
+    button.title = hasDraft
+      ? "Save the changed answer and confirm durable readback before resuming."
+      : "";
+    return;
+  }
   const resolved = (resolution?.value || "resolved") === "resolved";
   const hasText = Boolean(textarea?.value?.trim());
-  button.disabled = !(resolved && hasText);
+  button.disabled = true;
   button.textContent = resolved && hasText
-    ? (button.dataset.resumeReadyLabel || "Save answer & resume")
+    ? "Save answer before resume"
     : !hasText
       ? "Enter an answer to resume"
       : "Select resolved to resume";
   button.title = resolved && hasText
-    ? ""
+    ? "Save the resolved answer and confirm durable readback before resuming."
     : !hasText
       ? "Blocking questions need an answer before the stage can resume."
       : "Blocking questions must be saved as resolved before resume.";
@@ -366,12 +389,17 @@ function renderQuestionDecisionContext(view, question) {
         <span class="status-marker" data-status="blocked"><span class="status-marker-symbol" aria-hidden="true"></span><span>Decision required</span></span>
         <span class="small-badge bad">Blocking question · ${escapeHtml(stageTitle(state.activeStage))}</span>
       </div>
+      <div class="decision-provenance-strip" data-decision-provenance>
+        <span>QID ${escapeHtml(question?.question_id || "unknown")}</span>
+        <span>${escapeHtml(stageTitle(state.activeStage))} · Attempt ${escapeHtml(activeStageItem()?.attempt_count || 1)}</span>
+        <span>Retained source</span>
+      </div>
       <h2 id="decision-question-title">${escapeHtml(question?.text || "Decision required")}</h2>
       <div class="decision-question-rationale">
         <strong>Why it matters</strong>
         <p>${escapeHtml(questionWhyItMatters(question))}</p>
       </div>
-      <details class="decision-evidence-disclosure" data-decision-evidence ${evidenceLinks.length || snippets.length ? "open" : ""}>
+      <details class="decision-evidence-disclosure" data-decision-evidence data-evidence-drawer="true" ${evidenceLinks.length || snippets.length ? "open" : ""}>
         <summary><span>Evidence (${escapeHtml(evidenceCount)})</span><span aria-hidden="true">⌄</span></summary>
         <div class="decision-evidence-list">
           <button class="decision-evidence-row" data-reader-artifact-key="${escapeHtml(sourcePath.replace(/\.md$/, ""))}" data-reader-cross-document="push" data-reader-artifact-key-label="${escapeHtml(sourcePath)}" type="button">
@@ -391,12 +419,32 @@ function renderQuestionImpactPanel(view, question) {
   const destination = view?.answers_path || "answers.md not materialized";
   const attemptCount = activeStageItem()?.attempt_count || 0;
   const unresolved = view?.unresolved_blocking_question_ids || [];
+  const questionId = question?.question_id || "";
+  const resolution = question?.answer_resolution || "unresolved";
+  const questionBlocked = unresolved.includes(questionId) || (!questionId && unresolved.length > 0);
+  const resolved = resolution === "resolved" && !questionBlocked;
+  const partialOrDeferred = resolution === "partial" || resolution === "deferred";
+  const impactStatus = questionBlocked ? (partialOrDeferred ? "pending" : "blocked") : "complete";
+  const impactLabel = questionBlocked
+    ? partialOrDeferred
+      ? `${resolution[0].toUpperCase()}${resolution.slice(1)} answer saved; ${stageTitle(state.activeStage)} remains blocked`
+      : `Resolve this question to unblock ${stageTitle(state.activeStage)}`
+    : resolved
+      ? `Resolved; ${stageTitle(state.activeStage)} is ready to resume`
+      : `${stageTitle(state.activeStage)} can resume when runtime readiness allows`;
+  const impactDetail = questionBlocked
+    ? partialOrDeferred
+      ? `The ${resolution} contribution is retained in answers.md, but a resolved answer is still required.`
+      : `Save a resolved answer and confirm durable readback before resuming ${stageTitle(state.activeStage)}.`
+    : resolved
+      ? `The durable answer is confirmed. Resume remains a separate action and starts a real ${stageTitle(state.activeStage)} attempt.`
+      : "No blocking question is currently preventing this stage from proceeding.";
   return `
     <aside class="surface interview-context-panel decision-impact-panel" data-decision-impact>
       <div class="surface-title"><span>Decision impact</span><span aria-hidden="true">⚖</span></div>
-      <div class="decision-impact-state">
-        <span class="status-marker" data-status="complete"><span class="status-marker-symbol" aria-hidden="true"></span><span>Resolved unblocks ${escapeHtml(stageTitle(state.activeStage))}</span></span>
-        <p>Saving a resolved answer moves this stage from blocked to ready to proceed.</p>
+      <div class="decision-impact-state" data-answer-resolution-state="${escapeHtml(resolution)}" data-stage-blocked="${questionBlocked ? "true" : "false"}">
+        <span class="status-marker" data-status="${escapeHtml(impactStatus)}"><span class="status-marker-symbol" aria-hidden="true"></span><span>${escapeHtml(impactLabel)}</span></span>
+        <p>${escapeHtml(impactDetail)}</p>
       </div>
       <dl class="decision-impact-facts">
         <div><dt>Destination (durable)</dt><dd data-answer-destination-panel>${pathLine(destination, 88)}</dd></div>
@@ -425,6 +473,14 @@ function renderQuestionCards({showResume}) {
   }
   const activeQuestions = questions.filter((question) => unresolved.has(question.question_id));
   const historyQuestions = questions.filter((question) => !unresolved.has(question.question_id));
+  const primaryQuestionId = activeQuestions[0]?.question_id || "";
+  const resumeCandidateId = showResume && !unresolved.size
+    ? questions.find((question) => (
+      question.policy === "blocking"
+      && question.answer_resolution === "resolved"
+      && !questionDraft(question.question_id)
+    ))?.question_id || ""
+    : "";
   const renderCards = (items) => items.map((question, index) => {
         const questionLabel = question.question_id || `question ${index + 1}`;
         const questionTextId = questionControlId("question-text", question.question_id, index);
@@ -442,13 +498,28 @@ function renderQuestionCards({showResume}) {
         const evidenceLinks = draft?.evidence_links || question.answer_evidence_links || [];
         const unblockConsequence = draft?.unblock_consequence ?? question.answer_unblock_consequence ?? "";
         const resumeNeedsResolved = questionRequiresResolvedResume(question);
-        const resumeDisabled = resumeNeedsResolved && (
-          resolutionValue !== "resolved" || !answerText.trim()
-        );
+        const serverResolved = resumeNeedsResolved
+          && question.answer_resolution === "resolved"
+          && !unresolved.has(question.question_id)
+          && !draft;
+        const resumeDisabled = resumeNeedsResolved && !serverResolved;
         const resumeLabel = resumeDisabled
-          ? !answerText.trim() ? "Enter an answer to resume" : "Select resolved to resume"
-          : displayStatus === "resolved" ? "Save resolved answer" : "Save answer & keep blocked";
-        const answerLabel = resolutionValue === "resolved" ? "Save resolved answer" : "Save answer & keep blocked";
+          ? resolutionValue !== "resolved"
+            ? "Select resolved to resume"
+            : draft
+              ? "Save answer before resume"
+              : !answerText.trim()
+                ? "Enter an answer to resume"
+                : "Save answer before resume"
+          : `Resume ${stageTitle(state.activeStage)}`;
+        const answerLabel = resolutionValue === "resolved"
+          ? "Save resolved answer"
+          : `Save ${resolutionValue} answer`;
+        const saveIsPrimary = unresolved.has(question.question_id)
+          && question.question_id === primaryQuestionId;
+        const resumeIsPrimary = !saveIsPrimary
+          && serverResolved
+          && question.question_id === resumeCandidateId;
         return `
           <article class="question-card" data-question-id="${escapeHtml(question.question_id)}" data-question-status="${escapeHtml(displayStatus)}" data-answer-resolution="${escapeHtml(resolutionValue)}" data-decision-item="question" data-decision-source="${escapeHtml(question.text || "")}">
             <div class="question-head">
@@ -491,14 +562,17 @@ function renderQuestionCards({showResume}) {
                 <option value="deferred" ${resolutionValue === "deferred" ? "selected" : ""}>deferred</option>
               </select>
               <details class="question-save-options">
-                <summary>Keep draft</summary>
-              <button data-save-answer="${escapeHtml(question.question_id)}" data-decision-alternative="draft" type="button" class="secondary">Keep draft</button>
+                <summary>Keep draft locally</summary>
+              <button data-save-draft="${escapeHtml(question.question_id)}" data-decision-alternative="draft" type="button" class="secondary">Keep draft locally</button>
               </details>
               <div class="answer-editor-tabs" role="tablist" aria-label="Answer editor mode">
                 <button class="active" data-answer-editor-mode="write" type="button" role="tab" aria-selected="true">Write</button>
                 <button data-answer-preview="${escapeHtml(question.question_id)}" type="button" role="tab" aria-selected="false">Preview</button>
               </div>
-              ${showResume ? `<button data-primary-action data-decision-submit="true" data-answer-resume="${escapeHtml(question.question_id)}" data-requires-resolved-resume="${resumeNeedsResolved ? "true" : "false"}" data-resume-ready-label="Save answer & resume" type="button" ${resumeDisabled ? 'disabled title="Blocking questions must be saved as resolved before resume."' : ""}>${escapeHtml(resumeDisabled ? resumeLabel : answerLabel)}</button>` : ""}
+              ${showResume ? `
+                <button ${saveIsPrimary ? "data-primary-action" : ""} data-decision-submit="true" data-save-answer="${escapeHtml(question.question_id)}" type="button" class="${saveIsPrimary ? "primary" : "secondary"}">${escapeHtml(answerLabel)}</button>
+                <button ${resumeIsPrimary ? "data-primary-action" : ""} data-decision-submit="true" data-answer-resume="${escapeHtml(question.question_id)}" data-requires-resolved-resume="${resumeNeedsResolved ? "true" : "false"}" data-server-resolved="${serverResolved ? "true" : "false"}" data-resume-ready-label="Resume ${escapeHtml(stageTitle(state.activeStage))}" type="button" class="secondary" ${resumeDisabled ? `disabled title="${escapeHtml(resumeLabel)}"` : ""}>${escapeHtml(resumeLabel)}</button>
+              ` : ""}
               <span class="question-durable-destination" data-answer-destination="${escapeHtml(question.question_id)}"><strong>Destination</strong>${pathLine(destination, 88)}</span>
             </div>
           </article>
@@ -523,7 +597,7 @@ function renderQuestions() {
   const questions = view?.questions || [];
   const question = questions[0] || null;
   return `
-    <div class="interview-loop-screen" data-human-decision-surface="question" data-recovery-summary="question" data-decision-workbench="question" data-decision-item-count="${escapeHtml(questions.length)}">
+    <div class="interview-loop-screen focus-canvas" data-human-decision-surface="question" data-focus-canvas="true" data-recovery-summary="question" data-decision-workbench="question" data-decision-item-count="${escapeHtml(questions.length)}">
       <section class="surface decision-question-main">
         ${question ? renderQuestionDecisionContext(view, question) : ""}
         ${renderQuestionCards({showResume: true})}
@@ -554,8 +628,7 @@ async function saveAnswer(questionId) {
     questionId
   );
   const controls = [
-    `[data-save-answer="${questionId}"]`,
-    `[data-answer-resume="${questionId}"]`
+    `[data-save-answer="${questionId}"]`
   ];
   const answerPayload = {
     stage: state.activeStage,
@@ -632,23 +705,48 @@ async function previewAnswer(questionId) {
 }
 
 async function answerAndResume(questionId) {
-  const resolution = document.querySelector(`[data-question-resolution="${CSS.escape(questionId)}"]`);
-  if ((resolution?.value || "resolved") !== "resolved") {
-    updateQuestionResumeButtonState(questionId);
-    toast("Select resolved before resuming a blocking stage.");
-    return;
-  }
-  const saved = await saveAnswer(questionId);
-  if (!saved) return;
   await fetchDashboard();
-  const unresolved = state.dashboard?.active_stage_view?.questions?.unresolved_blocking_question_ids || [];
+  const view = state.dashboard?.active_stage_view?.questions;
+  const unresolved = view?.unresolved_blocking_question_ids || [];
+  const question = (view?.questions || []).find((item) => item.question_id === questionId);
+  if (!question || question.answer_resolution !== "resolved" || unresolved.includes(questionId)) {
+    await renderAll();
+    toast("Save a resolved answer and confirm durable readback before resuming.");
+    return false;
+  }
   if (unresolved.length) {
     await renderAll();
-    toast("Answer saved; remaining blocking questions must be resolved before resume.");
-    return;
+    toast("Resolve all blocking questions before resume.");
+    return false;
   }
-  await fetchReadiness();
-  await startStage(state.activeStage);
+  const resumeButton = document.querySelector(`[data-answer-resume="${CSS.escape(questionId)}"]`);
+  if (resumeButton) {
+    resumeButton.disabled = true;
+    resumeButton.setAttribute("aria-busy", "true");
+    resumeButton.textContent = "Checking Runner…";
+  }
+  try {
+    const readinessAccepted = await fetchReadiness();
+    const runtimeReady = typeof selectedRuntimeReady === "function"
+      ? selectedRuntimeReady()
+      : true;
+    if (readinessAccepted === false || !runtimeReady) {
+      await renderAll();
+      const readinessMessage = typeof runtimeReadinessMessage === "function"
+        ? runtimeReadinessMessage()
+        : "";
+      toast(readinessMessage || "Runner is not ready to resume this stage.");
+      return false;
+    }
+    await startStage(state.activeStage);
+    return true;
+  } finally {
+    if (!state.activeJobId) {
+      const currentButton = document.querySelector(`[data-answer-resume="${CSS.escape(questionId)}"]`);
+      if (currentButton) currentButton.removeAttribute("aria-busy");
+      updateQuestionResumeButtonState(questionId);
+    }
+  }
 }
 
 async function resumeAfterAnswers() {
@@ -657,8 +755,9 @@ async function resumeAfterAnswers() {
   if (unresolved.length) {
     await renderAll();
     toast("Resolve blocking questions before resume.");
-    return;
+    return false;
   }
   await fetchReadiness();
   await startStage(state.activeStage);
+  return true;
 }

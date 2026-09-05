@@ -37,6 +37,15 @@ slice, and local task.
 
 ## Current reconciliation
 
+- `2026-09-05` Wave 47 Focus Canvas production rollout is complete. The production Decision
+  Workbench now separates durable answer save/readback from readiness-checked Resume, keeps
+  Partial/Deferred blocked, and uses the Focus Canvas hierarchy with a mobile fixed action and
+  desktop first-viewport action. Live loopback acceptance covered Inbox → Work Item → Decision
+  Workbench → durable readback → Resume → live logs/reconnect/cancel plus validation, runtime, and
+  rejected-candidate recovery. Fresh captures and the requirement-by-requirement evidence are in
+  `docs/e2e/focus-canvas-live-acceptance-2026-09-05.md`; provider and human first-time-operator
+  gates remain explicitly parked.
+
 - `2026-09-02` Wave 46 failed-task recovery fix: implementation validator/runtime failures now persist
   `failed` stage metadata instead of masquerading as `blocked`, while explicit question/approval
   blocks remain unchanged. Retrying a legacy drifted run now repairs the stage status and preserves

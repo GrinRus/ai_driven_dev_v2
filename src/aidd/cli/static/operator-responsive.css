@@ -518,6 +518,13 @@
   body.recovery-mode:has([data-human-decision-surface="question"]) .interview-context-panel {
     display: none;
   }
+  /* Once the durable answer clears the blocker, the only useful history item
+     is the server-confirmed Resume action. Keep that card reachable on mobile
+     while continuing to hide answered history during the blocked state. */
+  body.recovery-mode:has([data-human-decision-surface="question"])
+    .question-history:has([data-server-resolved="true"]:not(:disabled)) {
+    display: block;
+  }
   body.recovery-mode:has([data-human-decision-surface="question"]) .question-list {
     display: block;
   }

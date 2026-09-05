@@ -141,7 +141,7 @@ def test_desktop_project_rail_keeps_work_item_context_and_filters_deterministica
         work_item="WI-RUN",
     ) as harness, harness.open_page((1280, 900)) as browser_page:
         page = browser_page.page
-        response = page.goto(f"{harness.url}?ui=studio", wait_until="networkidle")
+        response = page.goto(f"{harness.url}?ui=studio", wait_until="domcontentloaded")
         assert response is not None and response.ok
 
         rail = page.locator("[data-operator-rail-project]")
