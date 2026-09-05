@@ -83,6 +83,7 @@ class RuntimeRunResult[ExitClassificationT]:
     stdout_truncated: bool = False
     stderr_truncated: bool = False
     runtime_log_truncated: bool = False
+    capture_error: str | None = None
 
     @property
     def stdout(self) -> str:

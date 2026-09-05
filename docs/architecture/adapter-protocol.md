@@ -250,6 +250,7 @@ one evidence envelope. `runtime.log` is written atomically first and schema-v1
 | --- | --- | --- | --- |
 | runtime completed successfully | `success` | absent | provider/process code |
 | runtime exited unsuccessfully | `runtime_failure` | `runtime_failure` | provider/process code |
+| stream capture or reader failed | `runtime_failure` | `runtime_failure` | provider/process code when available |
 | runtime budget expired | `timeout` | `timeout` | provider/process code when available |
 | execution was cancelled | `cancellation` | `cancellation` | provider/process code when available |
 | operator or policy denied execution | `denial` | `denial` | `null` when no provider process result exists |
@@ -257,8 +258,10 @@ one evidence envelope. `runtime.log` is written atomically first and schema-v1
 | executable launch failed | `launch_failure` | `launch_failure` | `null` |
 
 Success never has a stop reason. Blocked and launch-failure evidence never fabricates a process
-exit code. Workflow policy uses the canonical outcome; adapter-specific classifications remain
-available for provider diagnostics.
+exit code. A capture failure preserves any partial raw log and records the adapter-specific
+`capture_failure` classification plus a sanitized capture error in `runtime-exit.json`; it can
+never be reported as successful. Workflow policy uses the canonical outcome; adapter-specific
+classifications remain available for provider diagnostics.
 
 ## 8. Workspace expectations
 

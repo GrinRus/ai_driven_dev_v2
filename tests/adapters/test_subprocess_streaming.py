@@ -14,6 +14,7 @@ import pytest
 
 from aidd.adapters.runtime_execution import RuntimeSubprocessSpec
 from aidd.adapters.subprocess_streaming import (
+    StreamChunkEvent,
     StreamEofEvent,
     StreamErrorEvent,
     StreamEvent,
@@ -51,6 +52,45 @@ def test_stream_reader_emits_typed_eof_after_clean_read() -> None:
     event = queue.get_nowait()
     assert isinstance(event, StreamEofEvent)
     assert event.target == "stderr"
+
+
+def test_reader_failure_after_partial_output_preserves_evidence_and_fails_closed(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    def fake_stream_reader(*, target: str, pipe: object, queue: Queue[StreamEvent]) -> None:
+        del pipe
+        if target == "stdout":
+            time.sleep(0.2)
+            queue.put(StreamChunkEvent(target="stdout", payload=b"before\n"))
+            queue.put(
+                StreamErrorEvent(target="stdout", error=RuntimeError("reader failed"))
+            )
+            return
+        queue.put(StreamEofEvent(target="stderr"))
+
+    monkeypatch.setattr(
+        "aidd.adapters.subprocess_streaming.stream_reader",
+        fake_stream_reader,
+    )
+    result = run_streamed_subprocess(
+        spec=RuntimeSubprocessSpec(
+            command=(sys.executable, "-c", "import time; time.sleep(0.05)"),
+            cwd=tmp_path,
+            env=dict(os.environ),
+        ),
+        timeout_seconds=5.0,
+        timeout_stop_reason=StopReason.TIMEOUT,
+        cancel_stop_reason=StopReason.CANCELLED,
+        capture_directory=tmp_path,
+    )
+
+    assert result.exit_code == 0
+    assert result.stop_reason is None
+    assert result.capture_error == "RuntimeError: reader failed"
+    assert result.stdout_text == "before\n"
+    assert result.runtime_log_source_path is not None
+    assert result.runtime_log_source_path.read_bytes() == b"before\n"
 
 
 @pytest.mark.parametrize(
