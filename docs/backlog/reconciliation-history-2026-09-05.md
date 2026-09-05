@@ -7,6 +7,20 @@ The archive stays in the original directory so repository-relative evidence link
 
 Preserved reconciliation SHA-256: `83958c09648cb2ec0d217c0b7806d52a828238267742a2ef51753b723cc55866`.
 
+## Additional reconciliation from main
+
+Preserved verbatim while integrating revision `9fcbcea98a24c57ae015193c5e378cab480c050c`.
+Additional reconciliation SHA-256: `9b61e27dddacf8566b45b25fcbdedd9efb1669560b09faa8f71946471487ef7d`.
+
+- `2026-09-05` Wave 47 Focus Canvas production rollout is complete. The production Decision
+  Workbench now separates durable answer save/readback from readiness-checked Resume, keeps
+  Partial/Deferred blocked, and uses the Focus Canvas hierarchy with a mobile fixed action and
+  desktop first-viewport action. Live loopback acceptance covered Inbox → Work Item → Decision
+  Workbench → durable readback → Resume → live logs/reconnect/cancel plus validation, runtime, and
+  rejected-candidate recovery. Fresh captures and the requirement-by-requirement evidence are in
+  `docs/e2e/focus-canvas-live-acceptance-2026-09-05.md`; provider and human first-time-operator
+  gates remain explicitly parked.
+
 ## Preserved reconciliation
 
 - `2026-09-02` Wave 46 failed-task recovery fix: implementation validator/runtime failures now persist

@@ -37,10 +37,11 @@ slice, and local task.
 
 ## Current reconciliation
 
-- `2026-09-05` Wave 47 is complete: runtime ownership and bootstrap handling, maintainer
-  instructions and skills, the bounded planning queue, and instruction validation are reconciled.
-  The roadmap records broad Python, focused project-set, lint/type, Node, and deterministic
-  smoke evidence. `W46-E1-S2-T4` remains the sole Next task for its provider-free Chromium
+- `2026-09-05` Wave 51 completes the agent-development revision: runtime ownership and
+  bootstrap handling, maintainer instructions and skills, bounded planning, and instruction
+  validation are reconciled. Upstream Wave 47 Focus Canvas completion and its live acceptance
+  evidence are preserved in the dated archive. Waves 48–50 retain their accepted remediation
+  identities. `W46-E1-S2-T4` remains the sole Next task for its provider-free Chromium
   verification; parked human/provider evidence remains deferred.
 
 Earlier reconciliation evidence is retained in

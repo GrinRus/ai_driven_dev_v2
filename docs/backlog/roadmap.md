@@ -17333,18 +17333,196 @@ Local tasks:
   - Verification: the seeded TL-2-failed/TL-4-selected run fails on status drift or missing safe
     recovery action and passes only when the complete recovery path is observable.
 
+## Wave 47 — Focus Canvas production rollout (`done`)
+
+Goal: bring the selected Focus Canvas visual and interaction direction into the production
+Operator UI while preserving the canonical workflow, document-first artifacts, core-owned
+readiness, runtime boundaries, and retained evidence.
+
+Linked stories: `US-02`, `US-03`, `US-05`, `US-06`, `US-11`, `US-13`
+
+Dependencies: the implemented Wave 42 task-centered target, the Wave 46 project/workspace job
+context, and the existing `/api/answers` durable write/read models.
+
+### Epic W47-E1 — decision-first operator surface (`done`)
+
+Goal: make one operator decision easy to understand, save, verify, and resume without conflating
+human input with runtime execution, then reuse the same truthful surface for recovery states.
+
+#### Slice W47-E1-S1 — durable decision lifecycle (`done`)
+
+Goal: separate answer persistence, durable readback, readiness, stage resume, live output, and
+validation into explicit operator-visible states.
+
+Dependencies: `W42-E5-S1`, `W42-E5-S2`, and the current question/answer service semantics.
+
+Primary output: a production Decision Workbench in which saving an answer never falsely claims that
+the stage already resumed or advanced.
+
+Local tasks:
+
+- `W47-E1-S1-T1` (done) Define the Focus Canvas decision state transition contract.
+  - Output: update `docs/architecture/operator-frontend-target-ux.md` with explicit save/readback,
+    resolution, resume, readiness, runtime, validation, and recovery semantics derived from the
+    selected prototype audit.
+  - Scope: architecture and acceptance wording only; do not change runtime or UI code.
+  - Verification: docs/planning consistency checks and architecture review confirm that each state
+    has one truthful primary action and that Partial/Deferred remain blocked.
+  - Completion evidence: the Decision lifecycle contract was added to the target UX document;
+    docs/planning checks passed (`52 passed` on 2026-09-05).
+
+- `W47-E1-S1-T2` (done) Separate durable answer save from stage resume in the question workbench.
+  - Output: `operator-questions.js` and event dispatch persist `/api/answers`, wait for matching
+    durable readback, and expose Resume as a separate mutation instead of calling `startStage` from
+    the save path.
+  - Scope: `src/aidd/cli/static/operator-questions.js`, `operator-main.js`, and focused frontend
+    tests; preserve existing API payloads and core semantics.
+  - Verification: Node synchronization tests prove one answer POST, durable winner reconciliation,
+    no duplicate resume, and no stage launch during save.
+  - Completion evidence: answer save now has its own visible mutation and local-draft action;
+    Resume performs a fresh durable question readback and readiness-checked stage launch. Focused
+    frontend tests passed (`45 passed`) and UI asset contracts passed (`53 passed`) on 2026-09-05.
+
+- `W47-E1-S1-T3` (done) Render resolution-aware durable and resume-ready states.
+  - Output: Resolved, Partial, Deferred, pending, conflict, failed, and readback-confirmed states
+    show the correct consequence, destination, runner readiness, and one primary action.
+  - Scope: question renderer, shared decision state, and frontend fixtures only unless a missing
+    core projection is proven; never infer eligibility in the browser.
+  - Verification: frontend UI-state tests cover all resolution branches and assert that only a
+    fully resolved blocker set exposes Resume.
+  - Completion evidence: question cards now expose one primary save/resume action, server-resolved
+    answers expose a separate `Resume <stage>` action, and the impact panel is resolution-aware.
+    Frontend tests passed (`47 passed`), asset contracts passed (`53 passed`), and docs/planning
+    checks passed (`105 passed`) on 2026-09-05.
+
+- `W47-E1-S1-T4` (done) Add the provider-free question recovery journey for the new lifecycle.
+  - Output: browser scenario and retained evidence for save, durable readback, Partial/Deferred
+    blocking, Resume, live output, validation pass, validation failure, and runtime failure.
+  - Scope: `browser_tests/test_journey_question_recovery.py`, packaged UI scenario assets, and
+    E2E documentation.
+  - Verification: browser journey passes without console errors and preserves Work Item, stage,
+    QID, draft, attempt, and log context across transitions.
+  - Completion evidence: the durable save/readback/resume journey passed on mobile and desktop;
+    rejected-candidate, validation, and runtime recovery variants also passed with clean browser
+    diagnostics. The live acceptance record is `docs/e2e/focus-canvas-live-acceptance-2026-09-05.md`.
+
+#### Slice W47-E1-S2 — Focus Canvas composition and responsive action (`done`)
+
+Goal: apply the selected visual hierarchy to the production decision surface without changing
+workflow ownership or inventing state.
+
+Dependencies: `W47-E1-S1`.
+
+Local tasks:
+
+- `W47-E1-S2-T1` (done) Render the desktop Focus Canvas decision composition.
+  - Output: focused question surface with canonical Project, Work Item, Stage, QID, consequence,
+    evidence, destination, and contextual Runner placement.
+  - Scope: `operator-questions.js`, `operator-tokens.css`, `operator-components.css`, and related
+    layout styles.
+  - Verification: rendered browser captures at `1280x900` and `1440x900` meet first-action and
+    hierarchy acceptance without changing route or API contracts.
+  - Completion evidence: production `operator-questions.js` and `operator-intent-shell.css` now
+    render the Focus Canvas hierarchy; the five-viewport hierarchy gate passed, including both
+    desktop target widths.
+
+- `W47-E1-S2-T2` (done) Add the evidence and provenance inspector for a decision.
+  - Output: bounded evidence disclosure with source path, attempt, freshness, retained destination,
+    provenance, and a safe link to the canonical Markdown document.
+  - Scope: decision renderer and document/evidence navigation only.
+  - Verification: DOM and browser checks preserve the answer draft while opening and closing
+    evidence and never present generated Markdown as editable.
+  - Completion evidence: the production decision surface exposes `data-evidence-drawer`, source
+    document/retained-attempt facts, durable destination, and a provenance strip; UI-state and
+    browser hierarchy tests passed.
+
+- `W47-E1-S2-T3` (done) Make the decision action reachable and accessible on mobile.
+  - Output: sticky primary action, local field error/focus behavior, visible focus, wrapping paths,
+    and no horizontal overflow for the target mobile sizes.
+  - Scope: `operator-responsive.css` and focused interaction tests.
+  - Verification: `320x568`, `390x844`, and `768x1024` pass first-action, keyboard-order, target-size,
+    contrast, and overflow checks.
+  - Completion evidence: mobile Focus Canvas puts Decision Impact first and keeps one touch-sized
+    fixed primary action; the five-viewport hierarchy gate and mobile durable-resume journey passed.
+
+#### Slice W47-E1-S3 — shared recovery variants (`done`)
+
+Goal: reuse the truthful Workbench composition for approvals and recovery without sharing misleading
+labels or consequences.
+
+Dependencies: `W47-E1-S1` and `W47-E1-S2`.
+
+Local tasks:
+
+- `W47-E1-S3-T1` (done) Align the runtime approval Workbench with the Focus Canvas action model.
+  - Output: approval-specific consequence, permission scope, pending, approved, denied, cancelled,
+    and policy-blocked states.
+  - Scope: approval/intervention renderer and frontend fixtures.
+  - Verification: approval browser journey exposes exactly one eligible primary action per state.
+  - Completion evidence: approval Workbench browser hierarchy passed across all five supported
+    viewports with one eligible primary action and clean accessibility/overflow diagnostics.
+
+- `W47-E1-S3-T2` (done) Align validation repair with the Focus Canvas evidence hierarchy.
+  - Output: finding, rule, retained location, repair budget, repair action, and Request Change path
+    are visible without implying that a repair already succeeded.
+  - Scope: validation recovery renderer and responsive styles.
+  - Verification: validation recovery journey distinguishes repair, change, and blocked states.
+  - Completion evidence: validation/review recovery gates passed at desktop and mobile; repair,
+    Request Change, finding evidence, and repair exhaustion remain distinct.
+
+- `W47-E1-S3-T3` (done) Align runtime failure and repair exhaustion recovery.
+  - Output: raw runtime evidence, retry eligibility, repair budget, and safe next action remain
+    distinct from validation failure.
+  - Scope: runtime/recovery renderers and frontend tests.
+  - Verification: runtime recovery journey proves retry does not consume validation repair budget.
+  - Completion evidence: runtime retry/recovery passed on mobile and desktop and the runtime
+    validation recovery matrix passed without mutation or console errors.
+
+#### Slice W47-E1-S4 — live production acceptance (`done`)
+
+Goal: prove the target UI on a genuinely running project, not only in provider-free fixtures.
+
+Dependencies: `W47-E1-S1`, `W47-E1-S2`, `W47-E1-S3`, and an eligible local runtime/project.
+
+Local tasks:
+
+- `W47-E1-S4-T1` (done) Run and retain the live Focus Canvas operator journey.
+  - Output: auditable live-project evidence covering Inbox, Work Item, Decision Workbench, durable
+    answer save, separate Resume, live logs, validation, and at least one recovery branch.
+  - Scope: live E2E manifest, retained screenshots/logs, and acceptance report; no provider-specific
+    shortcut in core behavior.
+  - Verification: the live project reaches the expected state transitions with no console errors,
+    false advancement, lost context, or missing durable evidence.
+  - Completion evidence: live loopback project acceptance is recorded in
+    `docs/e2e/focus-canvas-live-acceptance-2026-09-05.md`, with fresh desktop/mobile captures and
+    Inbox → Work Item → Decision Workbench → durable readback → separate Resume → live logs →
+    recovery evidence.
+
+- `W47-E1-S4-T2` (done) Reconcile documentation, roadmap, backlog, and acceptance evidence.
+  - Output: final target UX wording, task statuses, screenshots, and live acceptance report agree
+    with the shipped behavior and remaining gaps.
+  - Scope: docs/planning/evidence only after implementation is complete.
+  - Verification: planning/docs checks pass and the requirement-by-requirement completion audit is
+    fully evidenced.
+  - Completion evidence: target UX, roadmap/backlog, browser tests, and the live acceptance record
+    agree; docs/planning checks passed (`105 passed`) on 2026-09-05.
+
 ---
 
-## Wave 47 — agent development instruction consistency (`done`)
+## Wave 51 — agent development instruction consistency (`done`)
 
 Goal: align maintainer instructions and runtime requests with implemented ownership, commands,
 and validation while preserving historical evidence and bounded task context.
 
-### Epic W47-E1 — auditable agent workflows (`done`)
+Integration note: this revision was authored as Wave 47 on `f2819535` and rekeyed to
+Wave 51 when integrating `origin/main` at `9fcbcea9`. The upstream Wave 47 Focus Canvas
+work and reserved Waves 48–50 in the accepted remediation plan retain their identities.
+
+### Epic W51-E1 — auditable agent workflows (`done`)
 
 Linked stories: `US-01`, `US-03`, `US-04`, `US-07`, `US-10`
 
-#### Slice W47-E1-S1 — runtime document ownership (`done`)
+#### Slice W51-E1-S1 — runtime document ownership (`done`)
 
 Primary output: consistent runtime write authority across initial, repair, and intervention.
 Touched areas: contracts, active prompt packs, shared native request assembly, focused tests.
@@ -17352,19 +17530,19 @@ Dependencies: Wave 43 canonical artifact ownership and current adapter request i
 
 Local tasks:
 
-- `W47-E1-S1-T1` (done) Reconcile stage contracts and prompts with canonical artifact ownership.
+- `W51-E1-S1-T1` (done) Reconcile stage contracts and prompts with canonical artifact ownership.
   - Output: all stage modes reserve workflow records for AIDD and preserve substantive output,
     repair, interview, and verification obligations.
   - Scope: stage/document contracts and active prompt text; preserve compatibility pointers.
   - Verification: ownership and prompt-quality checks reject contradictory write instructions.
   - Evidence: all eight stage contracts and 23 active prompt files now reserve workflow records
     for AIDD; compatibility paths and substantive requirements remain covered by prompt checks.
-- `W47-E1-S1-T2` (done) Align shared native request guidance with runtime write targets.
+- `W51-E1-S1-T2` (done) Align shared native request guidance with runtime write targets.
   - Output: native requests name substantive write targets and read-only workflow records.
   - Scope: shared request compiler and stage-brief guidance; no provider defaults or new APIs.
   - Verification: native-request regressions cover initial, repair, and intervention modes.
   - Evidence: 24 composed requests cover all eight stages across the three attempt modes.
-- `W47-E1-S1-T3` (done) Validate composed runtime requests and substantive-only completion.
+- `W51-E1-S1-T3` (done) Validate composed runtime requests and substantive-only completion.
   - Output: stage-by-mode regression coverage and reviewed active prompt hashes.
   - Scope: deterministic prompt, stage, adapter, and scenario evidence checks.
   - Verification: composed requests and provider-free completion preserve canonical AIDD records;
@@ -17372,7 +17550,7 @@ Local tasks:
     of relying on unparsed blocker prose in a substantive document.
   - Evidence: real CLI success and controlled-blocking cases cover all three attempt modes;
     reviewed hashes pin the changed active packs, and the deterministic ownership smoke passes.
-- `W47-E1-S1-T4` (done) Reconcile bootstrapped AIDD records before substantive-output progression.
+- `W51-E1-S1-T4` (done) Reconcile bootstrapped AIDD records before substantive-output progression.
   - Output: a valid substantive-only attempt replaces AIDD-owned bootstrap placeholders without
     spending runtime repair budget on lifecycle records or asking the runtime to rewrite them.
   - Scope: the owning lifecycle/repair-context helper, its ownership contract, and focused
@@ -17387,7 +17565,7 @@ Local tasks:
     output cases, plus idempotent bootstrap recognition and preservation of lookalike drafts.
     Raw draft retention now snapshots its boundary before runtime log writes can advance it.
 
-#### Slice W47-E1-S2 — reusable maintainer skills (`done`)
+#### Slice W51-E1-S2 — reusable maintainer skills (`done`)
 
 Primary output: concise skills with correct commands, bounded scope, and explicit evidence.
 Touched areas: `.agents/skills/` and focused skill-workflow tests.
@@ -17395,7 +17573,7 @@ Dependencies: current live harness configuration, resume parser, and release run
 
 Local tasks:
 
-- `W47-E1-S2-T1` (done) Correct live and release workflows and extract detailed skill references.
+- `W51-E1-S2-T1` (done) Correct live and release workflows and extract detailed skill references.
   - Output: correct model-profile/resume/release guidance, shared references, deterministic eval
     instructions, and actionable navigation, contract-change, and log-triage procedures.
   - Scope: skill files and reference documents; no live provider execution or publication.
@@ -17404,7 +17582,7 @@ Local tasks:
     eval, model configuration, and release helpers. Independent resume and audit-only forward
     checks preserve run identity and evidence ownership.
 
-#### Slice W47-E1-S3 — instruction hierarchy and local checks (`done`)
+#### Slice W51-E1-S3 — instruction hierarchy and local checks (`done`)
 
 Primary output: an up-to-date repository instruction hierarchy and contributor check matrix.
 Touched areas: AGENTS.md files, CLAUDE.md, contributor docs, Makefile, and PR template.
@@ -17412,7 +17590,7 @@ Dependencies: current architecture and CI lanes.
 
 Local tasks:
 
-- `W47-E1-S3-T1` (done) Refresh agent ownership, inheritance, evidence policy, and check routing.
+- `W51-E1-S3-T1` (done) Refresh agent ownership, inheritance, evidence policy, and check routing.
   - Output: current CLI/UI/application guidance, consolidated common rules, preserved useful
     leaf constraints and compatibility links, and discoverable local validation commands.
   - Scope: maintainer instructions and check entrypoints; no product behavior changes.
@@ -17421,7 +17599,7 @@ Local tasks:
     and five new owners cover application, static UI, frontend/browser tests, and scripts.
     The agent-development map and Makefile expose the existing Python, Node, and browser lanes.
 
-#### Slice W47-E1-S4 — bounded planning context (`done`)
+#### Slice W51-E1-S4 — bounded planning context (`done`)
 
 Primary output: a short active queue with preserved dated reconciliation evidence.
 Touched areas: backlog documents and planning integrity tests.
@@ -17429,7 +17607,7 @@ Dependencies: current roadmap IDs and queue projection rules.
 
 Local tasks:
 
-- `W47-E1-S4-T1` (done) Archive accumulated reconciliation history and document targeted roadmap reading.
+- `W51-E1-S4-T1` (done) Archive accumulated reconciliation history and document targeted roadmap reading.
   - Output: one current backlog reconciliation, unchanged unrelated queue IDs, and complete
     historical reconciliation content retained with working links.
   - Scope: planning documents and bounded-queue checks; preserve canonical roadmap task IDs.
@@ -17437,15 +17615,15 @@ Local tasks:
   - Evidence: all 3,674 historical reconciliation lines are preserved byte-for-byte in the dated
     archive; the recorded SHA-256 matches the original body at the audit's base revision.
 
-#### Slice W47-E1-S5 — maintainer instruction validation (`done`)
+#### Slice W51-E1-S5 — maintainer instruction validation (`done`)
 
 Primary output: a deterministic gate for skill structure, local references, and workflow examples.
 Touched areas: validation scripts, tests, CI, and contributor check integration.
-Dependencies: `W47-E1-S2-T1`, `W47-E1-S3-T1`, `W47-E1-S4-T1`.
+Dependencies: `W51-E1-S2-T1`, `W51-E1-S3-T1`, `W51-E1-S4-T1`.
 
 Local tasks:
 
-- `W47-E1-S5-T1` (done) Add a reusable instruction validator and regression coverage.
+- `W51-E1-S5-T1` (done) Add a reusable instruction validator and regression coverage.
   - Output: actionable failures for malformed skill metadata, broken maintained references,
     and drift in executable workflow examples; existing behavioral tests remain authoritative.
   - Scope: maintainer tooling only; no heuristic claim to detect every prose contradiction.
@@ -17469,3 +17647,15 @@ Completion evidence (2026-09-05, local worktree based on `f2819535`):
   under `.aidd/eval-audit/w47-ownership-final-evidence/`.
 - No real-provider live run or browser journey was executed for this revision. UI behavior and
   provider profiles were not changed; the browser evidence task `W46-E1-S2-T4` stays in Next.
+
+Integration validation (2026-09-05, combined with main `9fcbcea9`):
+
+- Adapter, stage CLI, runner, terminal, project-set, and repair regressions: **517 passed**.
+- Instruction/workflow/planning checks: **37 passed**; docs/prompts/contracts/packaging:
+  **136 passed**; JavaScript syntax: **25 assets**; Node frontend: **146 passed**.
+- Ruff and strict mypy pass across all `235` source files.
+- `AIDD-SMOKE-001` run `eval-smoke-001-generic-cli-20260905T101414Z` passes all five checks,
+  with one plan-only runtime attempt and no repairs. Hash-verified copies of all retained runs
+  are available locally under `.aidd/eval-audit/w51-merge-evidence/`.
+- The earlier broad Python result remains evidence for the pre-integration baseline; the
+  combined version was checked with the focused suites above. CI validates the PR merge candidate.

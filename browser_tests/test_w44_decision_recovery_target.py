@@ -62,7 +62,7 @@ def test_question_recovery_renders_the_decision_before_shared_chrome(
         page = browser_page.page
         response = page.goto(
             _route(harness.url, fixture, "idea"),
-            wait_until="networkidle",
+            wait_until="domcontentloaded",
         )
         assert response is not None and response.ok
         surface = page.locator('[data-human-decision-surface="question"]')
@@ -188,7 +188,7 @@ def test_question_workbench_keeps_target_hierarchy_at_supported_viewports(
         page = browser_page.page
         response = page.goto(
             _route(harness.url, fixture, "idea"),
-            wait_until="networkidle",
+            wait_until="domcontentloaded",
         )
         assert response is not None and response.ok
         surface = page.locator('[data-human-decision-surface="question"]')

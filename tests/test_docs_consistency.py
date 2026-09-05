@@ -692,6 +692,30 @@ def test_operator_docs_describe_live_manual_providers_and_execution_wrappers() -
     assert "`native` execution" in runtime_matrix
 
 
+def test_adapter_protocol_separates_raw_bytes_from_display_text() -> None:
+    adapter_protocol = (
+        _repo_root() / "docs" / "architecture" / "adapter-protocol.md"
+    ).read_text(encoding="utf-8")
+    policy = adapter_protocol.split(
+        "#### 5.1.1 Byte authority and text presentation policy", maxsplit=1
+    )[1].split("### 5.2 Structured runtime log", maxsplit=1)[0]
+    normalized_policy = " ".join(policy.split())
+
+    for expected_text in (
+        "Raw bytes are the authoritative runtime evidence",
+        "read stdout and stderr as binary streams",
+        "append each observed byte chunk to the durable raw log before attempting any text",
+        "display-only UTF-8 projections",
+        '`errors="replace"`',
+        "replacement character (`U+FFFD`)",
+        "Byte counters and truncation metadata describe the raw stream",
+        "decode as strict UTF-8 and parse as valid JSON",
+        "reader errors remain distinct from EOF",
+        "render the text projection literally",
+    ):
+        assert " ".join(expected_text.split()) in normalized_policy
+
+
 def test_local_operator_docs_define_product_path_and_github_issue_boundary() -> None:
     readme = (_repo_root() / "README.md").read_text(encoding="utf-8")
     operator_handbook = (_repo_root() / "docs" / "operator-handbook.md").read_text(

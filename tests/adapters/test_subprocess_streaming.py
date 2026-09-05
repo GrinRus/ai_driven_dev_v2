@@ -75,6 +75,26 @@ def test_streamed_subprocess_normalizes_launch_oserror(
     assert result.runtime_log_text == result.stderr_text
 
 
+def test_streamed_subprocess_forwards_invalid_bytes_to_display_without_reader_failure(
+    tmp_path: Path,
+) -> None:
+    script = "import os; os.write(1, b'before\\n\\xffafter\\n')"
+    result = run_streamed_subprocess(
+        spec=RuntimeSubprocessSpec(
+            command=(sys.executable, "-c", script),
+            cwd=tmp_path,
+            env=dict(os.environ),
+        ),
+        timeout_seconds=5.0,
+        timeout_stop_reason=StopReason.TIMEOUT,
+        cancel_stop_reason=StopReason.CANCELLED,
+    )
+
+    assert result.exit_code == 0
+    assert result.stop_reason is None
+    assert result.stdout_text == "before\n\ufffdafter\n"
+
+
 def test_stream_callbacks_run_in_caller_thread(tmp_path: Path) -> None:
     caller_thread_id = threading.get_ident()
     callback_thread_ids: list[int] = []

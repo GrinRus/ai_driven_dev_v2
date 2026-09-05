@@ -7,15 +7,16 @@ from dataclasses import dataclass
 from enum import StrEnum
 from pathlib import Path
 from queue import Empty, Queue
-from typing import Literal, TextIO
+from typing import BinaryIO, Literal
 
-from aidd.adapters.process_io import ManagedStdinWriter
+from aidd.adapters.process_io import ManagedStdinWriter, decode_runtime_bytes
 from aidd.adapters.process_supervisor import OwnedProcessSupervisor
 from aidd.adapters.runtime_execution import RuntimeSubprocessSpec
 from aidd.adapters.runtime_log_capture import DiskBackedRuntimeLogSink
 from aidd.runtime_budget import validate_runtime_budget
 
 StreamTarget = Literal["stdout", "stderr"]
+_STREAM_READ_BYTES = 64 * 1024
 
 
 @dataclass(frozen=True, slots=True)
@@ -41,15 +42,16 @@ class StreamedSubprocessResult[ExitClassificationT: StrEnum]:
 def stream_reader(
     *,
     target: StreamTarget,
-    pipe: TextIO | None,
-    queue: Queue[tuple[StreamTarget, str | None]],
+    pipe: BinaryIO | None,
+    queue: Queue[tuple[StreamTarget, bytes | None]],
 ) -> None:
     if pipe is None:
         queue.put((target, None))
         return
     try:
-        for chunk in iter(pipe.readline, ""):
-            if chunk == "":
+        while True:
+            chunk = pipe.read(_STREAM_READ_BYTES)
+            if not chunk:
                 break
             queue.put((target, chunk))
     finally:
@@ -97,7 +99,7 @@ def run_streamed_subprocess[ExitClassificationT: StrEnum](
     process = supervisor.process
     sink = DiskBackedRuntimeLogSink(directory=capture_directory or spec.cwd)
 
-    queue: Queue[tuple[StreamTarget, str | None]] = Queue()
+    queue: Queue[tuple[StreamTarget, bytes | None]] = Queue()
     reader_threads = (
         threading.Thread(
             target=stream_reader,
@@ -195,8 +197,9 @@ def run_streamed_subprocess[ExitClassificationT: StrEnum](
                 break
             continue
 
+        display_chunk = decode_runtime_bytes(chunk)
         try:
-            sink.write(target, chunk)
+            sink.write(target, display_chunk)
         except BaseException:
             supervisor.request_stop()
             supervisor.drain_streams(reader_threads)
@@ -205,10 +208,10 @@ def run_streamed_subprocess[ExitClassificationT: StrEnum](
             sink.abort()
             raise
         if target == "stdout":
-            _invoke_stream_callback(on_stdout, chunk)
+            _invoke_stream_callback(on_stdout, display_chunk)
             continue
 
-        _invoke_stream_callback(on_stderr, chunk)
+        _invoke_stream_callback(on_stderr, display_chunk)
 
     supervisor.drain_streams(reader_threads)
     if stdin_writer is not None:

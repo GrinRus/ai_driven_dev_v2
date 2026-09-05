@@ -38,12 +38,29 @@ def test_owned_supervisor_stops_parent_and_descendant(tmp_path: Path) -> None:
         )
     )
     assert supervisor.process.stdout is not None
-    assert supervisor.process.stdout.readline().strip() == "ready"
+    assert supervisor.process.stdout.readline().strip() == b"ready"
 
     supervisor.request_stop(grace_seconds=0.2)
 
     assert supervisor.process.poll() is not None
     assert supervisor.process_group_exists() is False
+
+
+def test_owned_supervisor_exposes_invalid_output_bytes_without_text_decoding(
+    tmp_path: Path,
+) -> None:
+    script = "import os; os.write(1, b'before\\n\\xffafter\\n')"
+    supervisor = OwnedProcessSupervisor.launch(
+        RuntimeSubprocessSpec(
+            command=(sys.executable, "-c", script),
+            cwd=tmp_path,
+            env=dict(os.environ),
+        )
+    )
+
+    assert supervisor.process.stdout is not None
+    assert supervisor.process.stdout.read() == b"before\n\xffafter\n"
+    assert supervisor.process.wait(timeout=1.0) == 0
 
 
 @pytest.mark.skipif(os.name == "nt", reason="inherited-pipe behavior is POSIX-specific")
