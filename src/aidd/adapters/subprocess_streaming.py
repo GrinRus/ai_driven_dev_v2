@@ -9,7 +9,7 @@ from pathlib import Path
 from queue import Empty, Queue
 from typing import BinaryIO, Literal
 
-from aidd.adapters.process_io import ManagedStdinWriter, decode_runtime_bytes
+from aidd.adapters.process_io import ManagedStdinWriter
 from aidd.adapters.process_supervisor import OwnedProcessSupervisor
 from aidd.adapters.runtime_execution import RuntimeSubprocessSpec
 from aidd.adapters.runtime_log_capture import DiskBackedRuntimeLogSink
@@ -197,9 +197,8 @@ def run_streamed_subprocess[ExitClassificationT: StrEnum](
                 break
             continue
 
-        display_chunk = decode_runtime_bytes(chunk)
         try:
-            sink.write(target, display_chunk)
+            display_chunk = sink.write(target, chunk)
         except BaseException:
             supervisor.request_stop()
             supervisor.drain_streams(reader_threads)

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import codecs
 import json
 import os
 import threading
@@ -39,14 +40,15 @@ class _BoundedUtf8Tail:
         self._value = b""
         self.byte_count = 0
         self.char_count = 0
+        self._truncated = False
 
-    def append(self, text: str) -> None:
-        payload = text.encode("utf-8")
+    def append(self, payload: bytes, text: str) -> None:
         self.byte_count += len(payload)
         self.char_count += len(text)
-        combined = self._value + payload
+        combined = self._value + text.encode("utf-8")
         if len(combined) > self._maximum_bytes:
             combined = combined[-self._maximum_bytes :]
+            self._truncated = True
         self._value = combined.decode("utf-8", errors="ignore").encode("utf-8")
 
     @property
@@ -55,7 +57,7 @@ class _BoundedUtf8Tail:
 
     @property
     def truncated(self) -> bool:
-        return self.byte_count > len(self._value)
+        return self._truncated
 
 
 class DiskBackedRuntimeLogSink:
@@ -72,6 +74,10 @@ class DiskBackedRuntimeLogSink:
         self._stdout = _BoundedUtf8Tail(STDIO_TAIL_BYTES)
         self._stderr = _BoundedUtf8Tail(STDIO_TAIL_BYTES)
         self._combined = _BoundedUtf8Tail(COMBINED_TAIL_BYTES)
+        self._decoders: dict[StreamTarget, codecs.IncrementalDecoder] = {
+            "stdout": codecs.getincrementaldecoder("utf-8")(errors="replace"),
+            "stderr": codecs.getincrementaldecoder("utf-8")(errors="replace"),
+        }
         self._line_buffers: dict[StreamTarget, str] = {"stdout": "", "stderr": ""}
         self._discard_line: dict[StreamTarget, bool] = {
             "stdout": False,
@@ -80,22 +86,23 @@ class DiskBackedRuntimeLogSink:
         self._lock = threading.Lock()
         self._snapshot: RuntimeLogCaptureSnapshot | None = None
 
-    def write(self, target: StreamTarget, text: str) -> None:
-        payload = text.encode("utf-8")
+    def write(self, target: StreamTarget, value: bytes | str) -> str:
+        payload = value.encode("utf-8") if isinstance(value, str) else value
         with self._lock:
             if self._snapshot is not None:
                 raise RuntimeError("Runtime log sink is already finalized.")
             self._runtime_log.write(payload)
-            self._combined.append(text)
-            stream_tail = self._stdout if target == "stdout" else self._stderr
-            stream_tail.append(text)
-            self._consume_structured_lines(target, text)
+            text = self._decoders[target].decode(payload, final=False)
+            self._append_display(target, payload, text)
+            return text
 
     def finish(self) -> RuntimeLogCaptureSnapshot:
         with self._lock:
             if self._snapshot is not None:
                 return self._snapshot
             for target in ("stdout", "stderr"):
+                text = self._decoders[target].decode(b"", final=True)
+                self._append_display(target, b"", text)
                 self._commit_structured_line(target, self._line_buffers[target])
                 self._line_buffers[target] = ""
             self._runtime_log.flush()
@@ -121,6 +128,12 @@ class DiskBackedRuntimeLogSink:
                 runtime_log_truncated=self._combined.truncated,
             )
             return self._snapshot
+
+    def _append_display(self, target: StreamTarget, payload: bytes, text: str) -> None:
+        self._combined.append(payload, text)
+        stream_tail = self._stdout if target == "stdout" else self._stderr
+        stream_tail.append(payload, text)
+        self._consume_structured_lines(target, text)
 
     def abort(self) -> None:
         with self._lock:

@@ -9,7 +9,6 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, TypeVar
 
-from aidd.adapters.process_io import decode_runtime_bytes
 from aidd.adapters.runtime_execution import RuntimeRunResult
 from aidd.adapters.runtime_log_capture import (
     DiskBackedRuntimeLogSink,
@@ -121,8 +120,7 @@ class StreamCapture:
     ) -> None:
         try:
             for raw_line in stream:
-                line = decode_runtime_bytes(raw_line)
-                self._sink.write(target, line)
+                line = self._sink.write(target, raw_line)
                 if callback is not None:
                     callback(line)
         except BaseException as exc:
