@@ -7,7 +7,7 @@ from typing import IO, Any
 
 
 def decode_runtime_bytes(value: bytes | str) -> str:
-    """Decode a runtime chunk for display without losing the capture stream."""
+    """Decode a runtime chunk for a tolerant display view."""
     if isinstance(value, bytes):
         return value.decode("utf-8", errors="replace")
     return value
