@@ -39,6 +39,9 @@ def test_stage_repair_prompt_contains_budget_and_status_consistency_rules(stage:
     assert "do not create `[resolved]`" in prompt_text
     normalized_prompt = " ".join(prompt_text.split())
     assert "Do not write `stage-result.md` or `validator-report.md`" in normalized_prompt
+    assert (
+        "Never create, edit, delete, or replace either record" in normalized_prompt
+    )
     assert "AIDD determines `succeeded` after validation" in prompt_text
     assert "Do not treat the previous failed validator report as a new result" in prompt_text
     assert "When repairing a draft `validator-report.md`" not in prompt_text

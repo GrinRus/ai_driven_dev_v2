@@ -9,6 +9,8 @@ recommendation actionability, and sign-off consistency.
 
 Write only `review-spec-report.md` as the substantive repair output. Do not write `stage-result.md` or
 `validator-report.md`; AIDD owns their canonical status, validation, history, and publication.
+Never create, edit, delete, or replace either record; if a finding names one, expose the needed
+correction in `review-spec-report.md` and let AIDD reconcile the workflow record.
 Read existing workflow records as evidence. Use the controlled interview path for questions
 and operator answers; do not invent answers.
 
