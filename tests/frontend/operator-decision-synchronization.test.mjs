@@ -426,3 +426,109 @@ test("pending readiness updates stay disabled and accepted work preserves a newe
   assert.equal(context.__posts.length, 1);
   assert.equal(context.__cleared.length, 0);
 });
+
+test("question save confirms durable readback without starting the stage", async () => {
+  const posts = [];
+  let stageStarts = 0;
+  let readinessChecks = 0;
+  const textarea = {value: "Release owner is Platform."};
+  const resolution = {value: "resolved"};
+  const evidence = {value: ""};
+  const consequence = {value: "Plan can resume."};
+  const controls = new Map([
+    ['[data-question-text="Q1"]', textarea],
+    ['[data-question-resolution="Q1"]', resolution],
+    ['[data-question-evidence="Q1"]', evidence],
+    ['[data-question-consequence="Q1"]', consequence]
+  ]);
+  const context = vm.createContext({
+    CSS: {escape: (value) => value},
+    console,
+    document: {
+      querySelector(selector) {
+        return controls.get(selector) || null;
+      },
+      querySelectorAll() { return []; },
+    },
+    state: {
+      activeStage: "plan",
+      activeRunId: "run-1",
+      activeRouteWorkItem: "WI-1",
+      dashboard: {
+        work_item: "WI-1",
+        active_stage_view: {
+          questions: {
+            unresolved_blocking_question_ids: ["Q1"],
+            questions: [{question_id: "Q1", answer_resolution: null}]
+          }
+        }
+      }
+    },
+    clearOperatorDraft() {},
+    fetchDashboard: async () => {},
+    fetchReadiness: async () => { readinessChecks += 1; },
+    operatorDraftIdentity: () => ({form: "question", question: "Q1"}),
+    postJson: async (url, payload) => {
+      posts.push({url, payload});
+      context.state.dashboard.active_stage_view.questions = {
+        unresolved_blocking_question_ids: [],
+        questions: [{
+          question_id: "Q1",
+          answer_resolution: payload.resolution,
+          answer_text: payload.text,
+          answer_evidence_links: [],
+          answer_unblock_consequence: payload.unblock_consequence
+        }]
+      };
+      return {answers_path: "workitems/WI-1/stages/plan/answers.md"};
+    },
+    questionDraft: () => null,
+    renderAll: async () => {},
+    setMutationControlsPending() {},
+    startStage: async () => { stageStarts += 1; },
+    toast() {},
+  });
+  await load(context, "operator-mutation-guard.js");
+  await load(context, "operator-questions.js");
+
+  assert.equal(await vm.runInContext("saveAnswer('Q1')", context), true);
+  assert.equal(posts.length, 1);
+  assert.equal(posts[0].url, "/api/answers");
+  assert.equal(stageStarts, 0);
+  assert.equal(readinessChecks, 0);
+
+  assert.equal(await vm.runInContext("answerAndResume('Q1')", context), true);
+  assert.equal(stageStarts, 1);
+  assert.equal(readinessChecks, 1);
+});
+
+test("question resume remains blocked until the durable answer is resolved", async () => {
+  let stageStarts = 0;
+  const context = vm.createContext({
+    CSS: {escape: (value) => value},
+    console,
+    document: {querySelector() { return null; }, querySelectorAll() { return []; }},
+    state: {
+      activeStage: "plan",
+      activeRunId: "run-1",
+      dashboard: {
+        work_item: "WI-1",
+        active_stage_view: {
+          questions: {
+            unresolved_blocking_question_ids: ["Q1"],
+            questions: [{question_id: "Q1", answer_resolution: "partial", answer_text: "Not final."}]
+          }
+        }
+      }
+    },
+    fetchDashboard: async () => {},
+    fetchReadiness: async () => {},
+    renderAll: async () => {},
+    startStage: async () => { stageStarts += 1; },
+    toast() {},
+  });
+  await load(context, "operator-questions.js");
+
+  assert.equal(await vm.runInContext("answerAndResume('Q1')", context), false);
+  assert.equal(stageStarts, 0);
+});
