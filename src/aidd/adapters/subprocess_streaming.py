@@ -16,6 +16,7 @@ from aidd.adapters.runtime_log_capture import DiskBackedRuntimeLogSink
 from aidd.runtime_budget import validate_runtime_budget
 
 StreamTarget = Literal["stdout", "stderr"]
+_STREAM_READ_BYTES = 64 * 1024
 
 
 @dataclass(frozen=True, slots=True)
@@ -48,8 +49,9 @@ def stream_reader(
         queue.put((target, None))
         return
     try:
-        for chunk in iter(pipe.readline, b""):
-            if chunk == b"":
+        while True:
+            chunk = pipe.read(_STREAM_READ_BYTES)
+            if not chunk:
                 break
             queue.put((target, chunk))
     finally:
