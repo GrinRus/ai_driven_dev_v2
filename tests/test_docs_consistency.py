@@ -390,14 +390,14 @@ def test_release_readiness_docs_keep_candidate_and_accepted_versions_distinct() 
     assert "uv tool install ai-driven-dev-v2" in install
     assert "ai-driven-dev-v2==" not in install
     assert source_version not in readme
+    assert source_version != accepted_version
+    assert f"### `v{source_version}` accepted evidence" not in checklist
     if _is_development_version(source_version):
-        assert source_version != accepted_version
         assert f"## {source_version} -" not in changelog
         assert f"Maintainer source development package version: `{source_version}`." in checklist
         assert (
             "No current release candidate is accepted from this development version." in checklist
         )
-        assert f"### `v{source_version}` accepted evidence" not in checklist
     else:
         assert f"## {source_version} -" in changelog
         assert f"Current release-candidate package version: `{source_version}`." in checklist
@@ -419,6 +419,32 @@ def test_operator_ui_docs_and_backlog_queue_stay_synchronized() -> None:
     assert "## 8. Implemented Document & Evidence Studio" in architecture
     assert "three destinations" in architecture
     assert "persistent presentation toggle" not in architecture
+
+
+def test_current_operator_visual_references_are_present_and_documented() -> None:
+    root = _repo_root()
+    architecture = (root / "docs/architecture/operator-frontend.md").read_text(encoding="utf-8")
+    target = (root / "docs/architecture/operator-frontend-target-ux.md").read_text(encoding="utf-8")
+    reference_dir = root / "docs/architecture/assets/operator-ui-target-v2"
+    for filename in (
+        "01-project-work-items.png",
+        "02-create-work-item.png",
+        "03-work-item-launch.png",
+        "04-task-workspace.png",
+        "05-active-task-run.png",
+        "06-decision-workbench.png",
+        "07-validation-repair.png",
+        "08-markdown-workspace.png",
+        "09-implementation-review.png",
+        "10-review-qa-remediation.png",
+        "11-run-history.png",
+        "12-flow-complete.png",
+        "13-mobile-decision.png",
+    ):
+        assert filename in architecture
+        assert filename in target
+        assert (reference_dir / filename).is_file()
+    assert (reference_dir / "generation-prompts.md").is_file()
 
 
 def test_release_docs_describe_release_branch_publish_flow() -> None:
