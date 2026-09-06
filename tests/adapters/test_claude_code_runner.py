@@ -21,14 +21,12 @@ from aidd.adapters.claude_code.runner import (
     assemble_command,
     build_execution_environment,
     build_subprocess_spec,
-    command_preview,
-    normalize_structured_events,
     persist_attempt_runtime_log,
-    persist_normalized_events_jsonl,
     run_subprocess_with_streaming,
 )
 from aidd.adapters.runtime_artifacts import RUNTIME_EXIT_METADATA_FILENAME
 from aidd.runtime_catalog import RuntimeExecutionMode, get_runtime_definition
+from aidd.runtime_logs.events import normalize_structured_events, persist_runtime_event_artifacts
 
 
 def _context() -> ClaudeCodeCommandContext:
@@ -632,7 +630,7 @@ def test_normalize_structured_events_collects_json_from_stdout_and_stderr() -> N
     )
 
 
-def test_persist_normalized_events_jsonl_writes_events_when_available(tmp_path: Path) -> None:
+def test_persist_runtime_event_artifacts_writes_events_when_available(tmp_path: Path) -> None:
     attempt_path = tmp_path / "attempt-0001"
     run_result = ClaudeCodeRunResult(
         exit_code=0,
@@ -642,10 +640,11 @@ def test_persist_normalized_events_jsonl_writes_events_when_available(tmp_path: 
         exit_classification=ClaudeCodeExitClassification.SUCCESS,
     )
 
-    events_path = persist_normalized_events_jsonl(
+    artifacts = persist_runtime_event_artifacts(
         attempt_path=attempt_path,
         run_result=run_result,
     )
+    events_path = artifacts.events_jsonl_path
 
     assert events_path == attempt_path / "events.jsonl"
     lines = events_path.read_text(encoding="utf-8").strip().splitlines()
@@ -665,7 +664,7 @@ def test_persist_normalized_events_jsonl_writes_events_when_available(tmp_path: 
     assert runtime_events[1]["payload"]["msg"] == "slow"
 
 
-def test_persist_normalized_events_jsonl_returns_none_without_json_lines(tmp_path: Path) -> None:
+def test_persist_runtime_event_artifacts_returns_none_without_json_lines(tmp_path: Path) -> None:
     attempt_path = tmp_path / "attempt-0001"
     run_result = ClaudeCodeRunResult(
         exit_code=0,
@@ -675,10 +674,11 @@ def test_persist_normalized_events_jsonl_returns_none_without_json_lines(tmp_pat
         exit_classification=ClaudeCodeExitClassification.SUCCESS,
     )
 
-    events_path = persist_normalized_events_jsonl(
+    artifacts = persist_runtime_event_artifacts(
         attempt_path=attempt_path,
         run_result=run_result,
     )
+    events_path = artifacts.events_jsonl_path
 
     assert events_path is None
     assert not (attempt_path / "events.jsonl").exists()
@@ -714,10 +714,11 @@ def test_artifact_persistence_and_classification_regression(tmp_path: Path) -> N
         attempt_path=attempt_path,
         run_result=result,
     )
-    events_path = persist_normalized_events_jsonl(
+    artifacts = persist_runtime_event_artifacts(
         attempt_path=attempt_path,
         run_result=result,
     )
+    events_path = artifacts.events_jsonl_path
 
     assert "fixture-start stage=plan\n" in runtime_artifacts.runtime_log_path.read_text(
         encoding="utf-8"
@@ -741,18 +742,6 @@ def test_assemble_command_rejects_empty_configured_command() -> None:
 def test_assemble_command_rejects_invalid_shell_syntax() -> None:
     with pytest.raises(ValueError, match="not valid shell syntax"):
         assemble_command(configured_command='"unterminated', context=_context())
-
-
-def test_command_preview_renders_shell_escaped_output() -> None:
-    preview = command_preview(
-        configured_command='claude --profile "team alpha"',
-        context=_context(),
-    )
-
-    assert preview.startswith("claude --profile 'team alpha'")
-    assert "--workspace-root" in preview
-    assert "--stage-brief" in preview
-    assert "--prompt-pack" in preview
 
 
 def test_context_rejects_empty_prompt_pack_inputs() -> None:

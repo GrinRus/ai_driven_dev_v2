@@ -55,10 +55,6 @@ class StageAdvancementSummary:
     missing_input_documents: tuple[str, ...] = ()
 
 
-def stage_graph() -> tuple[str, ...]:
-    return STAGES
-
-
 def _normalize_stage_bounds(
     *,
     stage_start: str | None,
@@ -136,17 +132,6 @@ def resolve_stage_dependencies(
     if stage not in manifests:
         raise StageDependencyResolutionError(f"Unknown stage: {stage}")
     return _resolve_manifest_dependencies(stage, manifests[stage].required_input_paths)
-
-
-def resolve_stage_dependency_graph(
-    *,
-    contracts_root: Path = DEFAULT_STAGE_CONTRACTS_ROOT,
-) -> dict[str, tuple[str, ...]]:
-    manifests = load_all_stage_manifests(contracts_root=contracts_root)
-    return {
-        stage: _resolve_manifest_dependencies(stage, manifest.required_input_paths)
-        for stage, manifest in manifests.items()
-    }
 
 
 def evaluate_stage_eligibility(

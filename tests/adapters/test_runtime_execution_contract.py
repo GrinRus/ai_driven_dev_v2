@@ -30,7 +30,7 @@ def test_runtime_run_result_exposes_common_contract_names() -> None:
         exit_classification="non-zero",
     )
 
-    assert result.stdout == "out"
-    assert result.stderr == "err"
-    assert result.runtime_log == "log"
-    assert result.normalized_exit_classification == "non-zero"
+    assert result.stdout_text == "out"
+    assert result.stderr_text == "err"
+    assert result.runtime_log_text == "log"
+    assert result.exit_classification == "non-zero"

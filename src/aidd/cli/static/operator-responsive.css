@@ -723,9 +723,7 @@
 
   .studio-history,
   .history-run-list,
-  .studio-run-comparison,
-  .studio-history-lineage,
-  .studio-history-archive {
+  .studio-run-comparison {
     min-width: 0;
   }
   .history-filmstrip-frames {
@@ -747,15 +745,13 @@
   }
   .history-selection .surface-title,
   .studio-run-comparison .surface-title,
-  .studio-run-comparison .comparison-controls,
-  .studio-history-archive .lineage-actions {
+  .studio-run-comparison .comparison-controls {
     align-items: stretch;
     display: grid;
     grid-template-columns: minmax(0, 1fr);
   }
   .history-selection button,
-  .studio-run-comparison button,
-  .studio-history-archive button {
+  .studio-run-comparison button {
     min-height: var(--control-height);
     width: 100%;
   }
@@ -1124,7 +1120,6 @@
   .stale-downstream-facts,
   .next-flow-actions-grid,
   .terminal-summary-grid,
-  .lineage-flow,
   .lineage-actions,
   .next-flow-wizard-frame,
   .wizard-context-grid,

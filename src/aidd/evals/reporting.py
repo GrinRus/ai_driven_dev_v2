@@ -254,15 +254,6 @@ def resolve_latest_eval_summary_report_path(*, workspace_root: Path) -> Path:
     return candidate_paths[0]
 
 
-def write_verdict(path: Path, status: str, summary: str) -> None:
-    if status not in FAILURE_CLASSES:
-        raise ValueError(f"Unknown failure class: {status}")
-    path.write_text(
-        f"# Verdict\n\n- Status: {status}\n- Summary: {summary}\n",
-        encoding="utf-8",
-    )
-
-
 __all__ = [
     "FAILURE_BOUNDARY_CATEGORIES",
     "FAILURE_CLASSES",
@@ -274,5 +265,4 @@ __all__ = [
     "render_eval_summary_markdown",
     "resolve_latest_eval_summary_report_path",
     "write_eval_summary_markdown",
-    "write_verdict",
 ]

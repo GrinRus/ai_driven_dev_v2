@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import shlex
 from collections.abc import Callable, Mapping
 from dataclasses import dataclass
 from enum import StrEnum
@@ -351,19 +350,3 @@ def persist_attempt_runtime_log(
         capture_error=run_result.capture_error,
     )
     return paths.runtime_log_path
-
-
-def command_preview(
-    *,
-    configured_command: str,
-    context: QwenCommandContext,
-    repository_root: Path | None = None,
-) -> str:
-    return " ".join(
-        shlex.quote(token)
-        for token in assemble_command(
-            configured_command=configured_command,
-            context=context,
-            repository_root=repository_root,
-        )
-    )

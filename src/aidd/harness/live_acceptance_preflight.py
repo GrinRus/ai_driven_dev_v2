@@ -85,17 +85,6 @@ def capture_tracked_source_state(source_checkout: Path) -> TrackedSourceState:
     )
 
 
-def assert_tracked_source_unchanged(
-    source_checkout: Path,
-    expected: TrackedSourceState,
-) -> None:
-    actual = capture_tracked_source_state(source_checkout)
-    if actual != expected:
-        raise LiveAcceptancePreflightError(
-            "Tracked AIDD source changed during prod-like live acceptance."
-        )
-
-
 def _is_nested(left: Path, right: Path) -> bool:
     return left == right or left.is_relative_to(right) or right.is_relative_to(left)
 
@@ -246,7 +235,6 @@ __all__ = [
     "LiveAcceptanceLayout",
     "LiveAcceptancePreflightError",
     "TrackedSourceState",
-    "assert_tracked_source_unchanged",
     "capture_tracked_source_state",
     "prepare_live_acceptance_layout",
 ]

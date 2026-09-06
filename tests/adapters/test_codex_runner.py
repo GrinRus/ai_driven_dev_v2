@@ -15,7 +15,6 @@ from aidd.adapters.codex.runner import (
     assemble_command,
     build_execution_environment,
     build_subprocess_spec,
-    command_preview,
     persist_attempt_runtime_log,
     run_subprocess_with_streaming,
 )
@@ -81,19 +80,6 @@ def test_assemble_command_respects_shell_quoted_base_tokens(tmp_path: Path) -> N
     )
 
     assert command[:2] == ("codex", "exec")
-
-
-def test_command_preview_renders_shell_quoted_command(tmp_path: Path) -> None:
-    context = _context(tmp_path)
-    preview = command_preview(
-        configured_command="codex",
-        context=context,
-        repository_root=tmp_path,
-    )
-
-    assert preview.startswith("codex ")
-    assert "--stage plan" in preview
-    assert "--work-item WI-123" in preview
 
 
 def test_build_execution_environment_sets_runtime_metadata(tmp_path: Path) -> None:

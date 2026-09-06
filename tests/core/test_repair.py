@@ -10,7 +10,6 @@ from aidd.core.repair import (
     RepairBudgetPolicy,
     ValidatorReportFinding,
     count_stage_attempts,
-    default_repair_budget,
     effective_repair_budget,
     evaluate_repair_extension_eligibility,
     evaluate_stage_repair_counter,
@@ -21,9 +20,7 @@ from aidd.core.repair import (
     preflight_repair_extension,
     remaining_repair_attempts,
     render_repair_brief,
-    render_stage_result_with_repair_history,
     repair_attempts_used,
-    validate_repair_extension_grant,
     write_repair_brief,
 )
 from aidd.core.run_store import (
@@ -31,6 +28,10 @@ from aidd.core.run_store import (
     create_run_manifest,
     load_stage_metadata,
     persist_stage_status,
+)
+from aidd.core.stage_terminal import (
+    CanonicalStageResultProjection,
+    render_stage_result_from_lifecycle_state,
 )
 from aidd.validators.models import ValidationFinding, ValidationIssueLocation
 from aidd.validators.protocol import ValidatorReportProtocolError
@@ -42,7 +43,7 @@ def _make_attempt_dir(root: Path, name: str) -> None:
 
 
 def test_default_repair_budget_is_two_attempts() -> None:
-    assert default_repair_budget() == 2
+    assert effective_repair_budget(stage="plan") == 2
 
 
 def _repair_extension_grant() -> RepairExtensionGrant:
@@ -108,17 +109,6 @@ def test_repair_extension_contract_allows_latest_exhausted_stage() -> None:
 
     assert decision.eligible
     assert decision.disabled_reason is None
-    validate_repair_extension_grant(
-        grant,
-        expected_work_item_id="WI-001",
-        expected_run_id="run-001",
-        expected_stage="plan",
-        latest_stage_status="repair-exhausted",
-        latest_attempt_mode="repair",
-        current_validator_report_sha256="a" * 64,
-        current_repair_brief_sha256="b" * 64,
-        current_configuration_identity="codex:config-001",
-    )
 
 
 @pytest.mark.parametrize(
@@ -157,8 +147,6 @@ def test_repair_extension_contract_rejects_unsafe_selection(
     assert not decision.eligible
     assert decision.disabled_reason is not None
     assert message.lower() in decision.disabled_reason.lower()
-    with pytest.raises(ValueError, match=message):
-        validate_repair_extension_grant(grant, **kwargs)
 
 
 def _prepare_exhausted_repair_extension_workspace(
@@ -1124,30 +1112,37 @@ def test_generate_and_write_repair_brief_roundtrip(tmp_path: Path) -> None:
     assert "# Failed checks" in brief_path.read_text(encoding="utf-8")
 
 
-def test_render_stage_result_with_repair_history_includes_attempt_lines() -> None:
-    stage_result = render_stage_result_with_repair_history(
-        stage="review",
-        work_item="WI-001",
-        status="failed",
-        repair_history=(
-            RepairHistoryEntry(
-                attempt_number=1,
-                trigger="initial",
-                outcome="failed validation",
-                recorded_at_utc="2026-04-22T10:00:00Z",
-                validator_report_path="workitems/WI-001/stages/review/validator-report.md",
+def test_canonical_stage_result_includes_repair_history_attempt_lines() -> None:
+    stage_result = render_stage_result_from_lifecycle_state(
+        CanonicalStageResultProjection(
+            stage="review",
+            work_item="WI-001",
+            status="failed",
+            attempt_number=2,
+            attempt_mode="repair",
+            attempt_outcome="failed validation",
+            validator_verdict="fail",
+            repair_history=(
+                RepairHistoryEntry(
+                    attempt_number=1,
+                    trigger="initial",
+                    outcome="failed validation",
+                    recorded_at_utc="2026-04-22T10:00:00Z",
+                    validator_report_path="workitems/WI-001/stages/review/validator-report.md",
+                ),
+                RepairHistoryEntry(
+                    attempt_number=2,
+                    trigger="repair",
+                    outcome="failed validation",
+                    recorded_at_utc="2026-04-22T10:05:00Z",
+                    validator_report_path="workitems/WI-001/stages/review/validator-report.md",
+                    repair_brief_path="workitems/WI-001/stages/review/repair-brief.md",
+                ),
             ),
-            RepairHistoryEntry(
-                attempt_number=2,
-                trigger="repair",
-                outcome="failed validation",
-                recorded_at_utc="2026-04-22T10:05:00Z",
-                validator_report_path="workitems/WI-001/stages/review/validator-report.md",
-                repair_brief_path="workitems/WI-001/stages/review/repair-brief.md",
-            ),
+            validator_report_path="workitems/WI-001/stages/review/validator-report.md",
+            repair_brief_path="workitems/WI-001/stages/review/repair-brief.md",
         ),
-        validator_report_path="workitems/WI-001/stages/review/validator-report.md",
-        repair_brief_path="workitems/WI-001/stages/review/repair-brief.md",
+        workspace_root=Path(".aidd"),
     )
 
     assert stage_result.startswith("# Stage Result\n\n## Stage\n\n- Stage: `review`\n")
@@ -1157,17 +1152,24 @@ def test_render_stage_result_with_repair_history_includes_attempt_lines() -> Non
     assert "`workitems/WI-001/stages/review/repair-brief.md`" in stage_result
 
 
-def test_render_stage_result_with_repair_history_preserves_primary_outputs() -> None:
-    stage_result = render_stage_result_with_repair_history(
-        stage="review",
-        work_item="WI-001",
-        status="succeeded",
-        repair_history=(),
-        produced_output_paths=(
-            "workitems/WI-001/stages/review/review-report.md",
-            "workitems/WI-001/stages/review/stage-result.md",
+def test_canonical_stage_result_preserves_primary_outputs_with_repair_evidence() -> None:
+    stage_result = render_stage_result_from_lifecycle_state(
+        CanonicalStageResultProjection(
+            stage="review",
+            work_item="WI-001",
+            status="succeeded",
+            attempt_number=1,
+            attempt_mode="initial",
+            attempt_outcome="validated",
+            validator_verdict="pass",
+            repair_history=(),
+            produced_output_paths=(
+                "workitems/WI-001/stages/review/review-report.md",
+                "workitems/WI-001/stages/review/stage-result.md",
+            ),
+            validator_report_path="workitems/WI-001/stages/review/validator-report.md",
         ),
-        validator_report_path="workitems/WI-001/stages/review/validator-report.md",
+        workspace_root=Path(".aidd"),
     )
 
     assert "## Produced outputs" in stage_result

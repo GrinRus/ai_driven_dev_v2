@@ -1117,11 +1117,3 @@ def get_runtime_adapter_surface(runtime_id: str) -> RuntimeAdapterSurface:
     except KeyError as exc:
         supported = ", ".join(RUNTIME_ADAPTER_SURFACES)
         raise ValueError(f"Unsupported runtime id: {runtime_id}. Supported: {supported}.") from exc
-
-
-def runtime_adapter_surfaces() -> tuple[RuntimeAdapterSurface, ...]:
-    return tuple(RUNTIME_ADAPTER_SURFACES.values())
-
-
-def default_execution_mode_for_surface(surface: RuntimeAdapterSurface) -> RuntimeExecutionMode:
-    return surface.default_execution_mode

@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import shlex
 from collections.abc import Callable, Mapping
 from dataclasses import dataclass
 from enum import StrEnum
@@ -21,8 +20,6 @@ from aidd.adapters.runner_support import (
 from aidd.adapters.runtime_execution import RuntimeRunResult, RuntimeSubprocessSpec
 from aidd.adapters.subprocess_streaming import run_streamed_subprocess
 from aidd.runtime_catalog import RuntimeExecutionMode, normalize_execution_mode
-from aidd.runtime_logs.events import normalize_structured_events as normalize_runtime_log_events
-from aidd.runtime_logs.events import persist_runtime_event_artifacts
 
 
 @dataclass(frozen=True, slots=True)
@@ -395,40 +392,4 @@ def persist_attempt_runtime_log(
     return ClaudeCodeRuntimeArtifacts(
         runtime_log_path=paths.runtime_log_path,
         runtime_exit_metadata_path=paths.runtime_exit_metadata_path,
-    )
-
-
-def normalize_structured_events(
-    *,
-    run_result: ClaudeCodeRunResult,
-) -> tuple[dict[str, object], ...]:
-    return normalize_runtime_log_events(run_result=run_result)
-
-
-def persist_normalized_events_jsonl(
-    *,
-    attempt_path: Path,
-    run_result: ClaudeCodeRunResult,
-) -> Path | None:
-    return persist_runtime_event_artifacts(
-        attempt_path=attempt_path,
-        run_result=run_result,
-    ).events_jsonl_path
-
-
-def command_preview(
-    *,
-    configured_command: str,
-    context: ClaudeCodeCommandContext,
-    launch_options: ClaudeCodeLaunchOptions | None = None,
-    repository_root: Path | None = None,
-) -> str:
-    return " ".join(
-        shlex.quote(token)
-        for token in assemble_command(
-            configured_command=configured_command,
-            context=context,
-            launch_options=launch_options,
-            repository_root=repository_root,
-        )
     )

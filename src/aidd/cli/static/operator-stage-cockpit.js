@@ -131,15 +131,7 @@ function renderRepairExtensionPreview(validation) {
   `;
 }
 
-function renderRecoveryActionBand(diagnostics) {
-  return renderRecoveryActionBandInternal(diagnostics, {showPrimary: true});
-}
-
 function renderRecoveryActionBandReadOnly(diagnostics) {
-  return renderRecoveryActionBandInternal(diagnostics, {showPrimary: false});
-}
-
-function renderRecoveryActionBandInternal(diagnostics, {showPrimary = true} = {}) {
   const validation = diagnostics?.validation;
   const stopped = diagnostics?.stopped;
   const status = repairCenterStatus(validation, stopped);
@@ -174,7 +166,7 @@ function renderRecoveryActionBandInternal(diagnostics, {showPrimary = true} = {}
       </div>
       <div class="repair-actions">
         ${repairAvailable && typeof renderContextualRunnerControl === "function" ? renderContextualRunnerControl({actionLabel: "validation repair"}) : extensionEligible && typeof renderContextualRunnerControl === "function" ? renderContextualRunnerControl({actionLabel: "one more repair"}) : ""}
-        ${showPrimary ? extensionEligible ? `<button data-recovery-action="repair-extension" data-recovery-stage="${escapeHtml(state.activeStage)}" data-repair-extension type="button">Run one more repair</button>` : requestPrimary ? `<button data-recovery-action="request-change" data-recovery-stage="${escapeHtml(state.activeStage)}" type="button">Request Change</button>` : `<button data-run-repair type="button" ${repairAvailable ? "" : "disabled"}>Run Repair</button>` : `<span class="muted">Primary recovery action is shown above.</span>`}
+        <span class="muted">Primary recovery action is shown above.</span>
         ${requestPrimary && extensionEligible ? `<button data-recovery-action="request-change" data-recovery-stage="${escapeHtml(state.activeStage)}" type="button" class="secondary">Request Change</button><button data-work-item-tab="overview" type="button" class="secondary">Start new run</button>` : requestPrimary ? `<button type="button" class="secondary" disabled aria-disabled="true">${status === "explicit-stop" ? "Repair unavailable" : "Repair exhausted"}</button>` : `<button data-tab-shortcut="request" type="button" class="secondary">Request Change</button>`}
       </div>
       ${extensionPreview ? `<div class="repair-supporting-preview">${renderRepairExtensionPreview(validation)}</div>` : ""}
@@ -1075,8 +1067,6 @@ async function renderAll({skipArtifactLoad = false} = {}) {
   renderTopbar();
   renderProjectHomeRail();
   renderWorkItemTabs();
-  renderStageRail();
-  renderStageHeader();
   applyActiveStudioShellPresentation();
   updateContextualTabs();
   renderSidebar();

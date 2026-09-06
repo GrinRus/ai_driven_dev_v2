@@ -401,29 +401,50 @@ claimed complete by this cleanup.
   - Scope: validators and validator tests.
   - Verification: validator suite preserves current valid/invalid document outcomes.
 
-- `W52-E1-S2-T4` (planned) Remove the unused byte-decoding helper introduced by upstream integration.
+- `W52-E1-S2-T4` (next) Remove unused core and adapter facades confirmed by the second audit.
   - Dependencies: `W52-E3-S2-T1` and the first cleanup PR merged into main.
-  - Output: one maintained adapter byte-decoding path without an unconsumed export.
-  - Scope: `src/aidd/adapters/process_io.py` and direct adapter tests; a separate second PR.
-  - Verification: symbol-reference review, raw-byte capture regressions, and required CI.
+  - Output: current core functions and adapter surfaces without unconsumed wrappers or
+    disconnected provider scaffolding.
+  - Scope: core/adapter helpers, projections, exports, and their tests in the second cleanup PR.
+  - Verification: complete reference review; preserve current output ownership, path containment,
+    atomic writes, repair eligibility, command assembly, raw-byte capture, and capability guards.
 
-- `W52-E1-S2-T5` (planned) Remove unconsumed document-read convenience aliases and reverse lookup.
-  - Dependencies: `W52-E1-S2-T4` and its cleanup PR merged into main.
+- `W52-E1-S2-T5` (soon) Remove unconsumed validator aliases, path facades, and reverse lookup.
+  - Dependencies: `W52-E1-S2-T4` and the second cleanup PR merged into main.
   - Output: validator consumers use the existing typed failure object and kind-based resolver.
-  - Scope: document loader/protocol and direct tests; a separate third PR after a fresh audit.
+  - Scope: document loader/protocol, structural and placeholder helpers, and direct tests;
+    the third cleanup PR after a fresh audit.
   - Verification: complete reference review and readable, malformed, missing, and failed-read
     regressions preserve the current issue codes and fail-closed behavior; required CI passes.
 
-### Epic W52-E2 — execution surfaces (`done`)
+- `W52-E1-S2-T6` (soon) Reject retired or incomplete persisted formats at current read boundaries.
+  - Dependencies: `W52-E1-S2-T4` and the second cleanup PR merged into main.
+  - Output: existing ledger, stage metadata, repair grant, repository snapshot, run manifest,
+    and remediation documents require their current schema and required evidence fields.
+  - Scope: current core readers, owning contracts, and negative/integration regressions in
+    the third cleanup PR; no automatic version upgrade or invented lifecycle history.
+  - Verification: current round trips and task/resume flows pass; missing/retired/unknown
+    versions and malformed required fields stop explicitly. Preserve absent pre-execution
+    documents, nullable initial fields, and read-only unavailable-evidence diagnostics.
 
-#### Slice W52-E2-S1 — harness cleanup (`done`)
+### Epic W52-E2 — execution surfaces (`planned`)
+
+#### Slice W52-E2-S1 — harness cleanup (`planned`)
 
 - `W52-E2-S1-T1` (done) Remove dead harness implementations and obsolete evidence compatibility.
   - Output: authoritative report/process helpers and current evidence readers.
   - Scope: harness/evals and their tests.
   - Verification: harness/eval tests and deterministic scenario lane.
 
-#### Slice W52-E2-S2 — operator UI cleanup (`done`)
+- `W52-E2-S1-T2` (next) Remove unused harness and eval projections found by the second audit.
+  - Dependencies: `W52-E3-S2-T1` and the first cleanup PR merged into main.
+  - Output: evidence parsing, verdict writing, teardown, and source/owner observation use
+    their maintained paths without alternate test-only facades.
+  - Scope: harness/eval helpers and their tests in the second cleanup PR.
+  - Verification: preserve failure precedence, simultaneous execution/teardown failure evidence,
+    source-integrity and real-PID observations; retain documented manual and CI entrypoints.
+
+#### Slice W52-E2-S2 — operator UI cleanup (`planned`)
 
 - `W52-E2-S2-T1` (done) Remove unused UI functions and dormant test-only components.
   - Output: maintained UI assets and tests represent rendered product behavior.
@@ -433,18 +454,33 @@ claimed complete by this cleanup.
     10 focused browser checks). After integrating Focus Canvas, the complete question/Inbox
     files passed 17 cases; all 140 Node tests and 25 JavaScript syntax checks passed.
 
+- `W52-E2-S2-T2` (next) Remove unreachable UI renderers, selectors, and empty calls.
+  - Dependencies: `W52-E3-S2-T1` and the first cleanup PR merged into main.
+  - Output: current History, recovery inspector, and Focus Canvas retain their behavior while
+    obsolete renderers, transitive helpers, duplicate state lists, and unused CSS disappear.
+  - Scope: packaged JavaScript/CSS and current UI assertions in the second cleanup PR.
+  - Verification: source references, JavaScript syntax, Node state tests, asset contracts,
+    and all packaged browser journeys; keep current actions, routes, accessibility and geometry.
+
 ### Epic W52-E3 — repository maintenance (`planned`)
 
-#### Slice W52-E3-S1 — active documentation (`done`)
+#### Slice W52-E3-S1 — active documentation (`planned`)
 
 - `W52-E3-S1-T1` (done) Remove historical reports and stale planning history; repair active references.
   - Output: current documentation index, compact planning, and no stale active file references.
   - Scope: historical docs/reports, roadmap/backlog, contributor instructions, documentation tests.
   - Verification: documentation consistency, repository hygiene, and local-link checks.
 
-#### Slice W52-E3-S2 — integration verification (`planned`)
+- `W52-E3-S1-T2` (next) Reconcile remaining obsolete compatibility statements and planning overlap.
+  - Dependencies: `W52-E3-S2-T1` and the first cleanup PR merged into main.
+  - Output: maintained documents describe current readers and recovery; the accepted audit plan
+    distinguishes remaining work from already merged cleanup without rewriting historical findings.
+  - Scope: normative documentation and bounded planning reconciliation in the second cleanup PR.
+  - Verification: implementation/reference review, documentation/planning checks and link audit.
 
-- `W52-E3-S2-T1` (next) Verify the integrated cleanup and reconcile remaining residue.
+#### Slice W52-E3-S2 — integration verification (`done`)
+
+- `W52-E3-S2-T1` (done) Verify the integrated cleanup and reconcile remaining residue.
   - Dependencies: `W52-E3-S1-T1`, `W52-E1-S1-T1`, `W52-E1-S2-T1`, `W52-E1-S2-T2`, `W52-E1-S2-T3`, `W52-E2-S1-T1`, `W52-E2-S2-T1`.
   - Output: lint/type/test/scenario evidence and a reconciled current queue.
   - Scope: integration fixes and verification only.
@@ -455,4 +491,8 @@ claimed complete by this cleanup.
     Scenario evidence confirms 29 executed verification commands, 15 matching artifact digests,
     20 scoped stage attempts, and no repairs. The two plan-only fixtures also retain four
     preexisting upstream attempt indexes; those are not additional executed attempts.
-    The task remains active until the first PR's required CI and main merge are verified.
+  - Merged evidence: PR #533 merged as `82dc9b3c` on 2026-09-06; its tree matches reviewed
+    head `08d304c1`. Required CI passed on Python 3.12/3.13/3.14 (2697 passed, 8 platform/environment
+    skips each), all 12 packaged browser journeys (78 cases), all five CI scenarios, adapter
+    conformance, wheel/sdist build, dependency review, CodeQL, and Scorecard. Fresh follow-up
+    findings are owned by the second and third cleanup PR tasks above.

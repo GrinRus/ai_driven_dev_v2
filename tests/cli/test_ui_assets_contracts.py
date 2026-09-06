@@ -287,7 +287,7 @@ def test_operator_responsive_css_keeps_mobile_topbar_status_readable() -> None:
 def test_operator_responsive_css_keeps_intent_phase_stepper_inside_viewport() -> None:
     shell_css = _asset_text("/operator-intent-shell.css")
     responsive = _asset_text("/operator-responsive.css")
-    shell = _asset_text("/operator-shell-rendering.js")
+    studio = _asset_text("/operator-active-studio.js")
 
     assert ".intent-phase-list" in responsive
     assert ".canonical-stage-groups" in responsive
@@ -295,8 +295,9 @@ def test_operator_responsive_css_keeps_intent_phase_stepper_inside_viewport() ->
     assert ".intent-phase-step" in shell_css
     assert "min-width: 0;" in shell_css
     assert "overflow-wrap: anywhere;" in shell_css
-    assert "function scrollActiveStageIntoView()" in shell
-    assert 'document.getElementById("intentPhaseStepper")' in shell
+    assert "function renderIntentPhaseStepper()" in studio
+    assert 'aria-controls="canonicalStageGroups"' in studio
+    assert 'class="canonical-stage-groups"' in studio
 
 
 def test_operator_workbench_css_wraps_path_lines_without_document_overflow() -> None:
@@ -349,8 +350,6 @@ def test_operator_script_modules_own_static_ui_surfaces() -> None:
 
     assert '"/operator-api-state.js"' in loader
     assert "const state = {" in api_state
-    assert "function stageRetrySummary(item)" in api_state
-    assert "open Recovery for repair and retry history" in api_state
     assert "function secondsLabel(value)" in api_state
     assert "function runtimeOutputFreshnessLabel(job)" in api_state
     assert "function activeJobIsLive(job = state.activeJobStatus)" in api_state
@@ -364,9 +363,7 @@ def test_operator_script_modules_own_static_ui_surfaces() -> None:
     assert "function primaryValidationFindingForValidation(validation)" in api_state
     assert "async function api(path, options = {})" in api_state
     assert "function renderRuntimeSelector()" in shell
-    assert "function renderStageRail()" in shell
     assert "function renderProjectHomeRail()" in shell
-    assert "function renderStageHeader()" in shell
     assert "function renderTechnicalRegions()" in cockpit
     assert "function operatorProjectLabel(projectRoot)" in shell
     assert "projectPath.title = `Project: ${projectLabel}`;" in shell
@@ -406,7 +403,7 @@ def test_operator_script_modules_own_static_ui_surfaces() -> None:
     assert "function renderStudioFlowCompleteState()" in next_flow_view
     assert "function renderStudioHistory(timeline)" in _asset_text("/operator-history.js")
     assert "async function renderCockpit({skipArtifactLoad = false} = {})" in cockpit
-    assert "function renderRecoveryActionBand(diagnostics)" in cockpit
+    assert "function renderRecoveryActionBandReadOnly(diagnostics)" in cockpit
     assert "function renderRepairExtensionPreview(validation)" in cockpit
     assert 'data-recovery-action="repair-extension"' in cockpit
     assert "Run one more repair" in cockpit
@@ -458,11 +455,11 @@ def test_studio_history_uses_typed_frames_without_runtime_mutation() -> None:
             "snapshot unavailable",
             "Compare is unavailable until two retained attempts are present",
             "History will not reconstruct it",
-            "function renderStudioHistoryLineage()",
+            "function renderTargetHistoryLineage(run)",
             "data-studio-history-lineage",
             'data-operator-route-intent="parent-run"',
             'data-operator-route-intent="child-work-item"',
-            "function renderStudioHistoryArchive()",
+            "function renderTargetHistoryRetention(run)",
             "data-studio-history-archive",
             "append-only visibility disposition",
             'data-operator-route-intent="run-artifacts"',
@@ -824,9 +821,7 @@ def test_operator_shell_asset_keeps_runtime_readiness_navigation_and_markdown_co
             "function renderProjectHomeRail()",
             "function currentWorkItemSummary()",
             "function workItemHandoffStatus(item)",
-            "function workItemTerminalLabel(item)",
             'if (handoffStatus === "failed") return "bad";',
-            'if (handoffStatus === "failed") return "qa not-ready";',
             "const progress = `${completed} of ${total} stages complete`;",
             "QA not ready · ${progress}",
             "QA risks · ${progress}",
@@ -838,13 +833,7 @@ def test_operator_shell_asset_keeps_runtime_readiness_navigation_and_markdown_co
             "workflow-progress-steps",
             "stage-progress-step",
             "studio-workflow-progress",
-            "workItemTerminalLabel(item)",
             "function updateContextualTabs()",
-            "function tabHasQuestions()",
-            "function tabHasValidation()",
-            "function tabHasRunEvidence()",
-            "function tabHasArtifacts()",
-            "function tabHasApprovals()",
             "function tabHasRecovery()",
             "function updateTabShortcutVisibility(visible)",
             "const mode = normalizeOperatorMode(shortcut).mode;",
@@ -871,23 +860,13 @@ def test_operator_project_rail_uses_distinct_segment_states() -> None:
     assert 'class="stage-rail"' not in shell
 
 
-def test_operator_stage_retry_affordance_links_to_recovery_history() -> None:
-    api_state = _asset_text("/operator-api-state.js")
+def test_operator_resolved_retry_summary_keeps_recovery_history() -> None:
     shell = _asset_text("/operator-shell-rendering.js")
     layout = _asset_text("/operator-layout.css")
     components = _asset_text("/operator-components.css")
     cockpit = _asset_text("/operator-stage-cockpit.js")
     main = _asset_text("/operator-main.js")
 
-    _assert_contains_all(
-        api_state,
-        (
-            "function stageRetrySummary(item)",
-            "attemptCount <= 1",
-            "retryCount",
-            "open Recovery for repair and retry history",
-        ),
-    )
     assert "stage-card" not in shell
     assert ".stage-card" not in layout
     _assert_contains_all(
@@ -902,6 +881,8 @@ def test_operator_stage_retry_affordance_links_to_recovery_history() -> None:
         cockpit,
         (
             "function renderResolvedRepairSummary(validation)",
+            "const attempts = validation?.repair_attempts || [];",
+            "const retryCount = Math.max(0, attempts.length - 1);",
             "resolved after retry",
             "resolved across",
             "Validation is clear after a retry.",
@@ -1333,7 +1314,7 @@ def test_operator_recovery_assets_keep_repair_center_contracts() -> None:
             "function repairCenterStatus(validation, stopped)",
             "repair-exhausted",
             "explicit-stop",
-            "function renderRecoveryActionBand(diagnostics)",
+            "function renderRecoveryActionBandReadOnly(diagnostics)",
             "renderValidationFindingSummary(finding)",
             ('const requestPrimary = status === "repair-exhausted" || status === "explicit-stop";'),
             "Repair exhausted",
@@ -2236,7 +2217,10 @@ def test_operator_script_keeps_dynamic_accessibility_contracts() -> None:
     assert 'event.key === "Home"' in operator_main
     assert 'event.key === "End"' in operator_main
     assert "renderTruncationNotice(" in _asset_text("/operator-artifacts-documents.js")
-    assert "function scrollActiveStageIntoView()" in _asset_text("/operator-shell-rendering.js")
+    assert 'closest("[data-stage-mobile-toggle]")' in operator_main
+    assert 'stageMobileToggle.setAttribute("aria-expanded", String(!expanded));' in (
+        operator_main
+    )
 
 
 def test_operator_css_custom_properties_are_resolved() -> None:

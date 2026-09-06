@@ -4,9 +4,8 @@ import pytest
 
 from aidd.evals.log_analysis import (
     CoarseRuntimeEvent,
-    FailureTaxonomyResult,
+    FailureBoundarySelection,
     NormalizedRuntimeEvent,
-    classify_failure_taxonomy,
     select_first_failure_boundary,
 )
 
@@ -15,16 +14,16 @@ def _runtime_error_event(message: str) -> CoarseRuntimeEvent:
     return CoarseRuntimeEvent(line_number=1, category="error", message=message)
 
 
-def test_classify_failure_taxonomy_detects_environment_failures() -> None:
-    result = classify_failure_taxonomy(
+def test_select_first_failure_boundary_detects_environment_failures() -> None:
+    result = select_first_failure_boundary(
         runtime_events=(_runtime_error_event("git clone failed: network unreachable"),),
     )
 
     assert result.category == "environment"
 
 
-def test_classify_failure_taxonomy_detects_adapter_failures_from_normalized_events() -> None:
-    result = classify_failure_taxonomy(
+def test_select_first_failure_boundary_detects_adapter_failures_from_normalized_events() -> None:
+    result = select_first_failure_boundary(
         normalized_events=(
             NormalizedRuntimeEvent(
                 line_number=1,
@@ -38,17 +37,19 @@ def test_classify_failure_taxonomy_detects_adapter_failures_from_normalized_even
     assert result.category == "adapter"
 
 
-def test_classify_failure_taxonomy_detects_runtime_failures_from_exit_code() -> None:
-    result = classify_failure_taxonomy(aidd_exit_code=2)
+def test_select_first_failure_boundary_detects_runtime_failures_from_exit_code() -> None:
+    result = select_first_failure_boundary(aidd_exit_code=2)
 
-    assert result == FailureTaxonomyResult(
+    assert result == FailureBoundarySelection(
         category="runtime",
-        reason="AIDD run exited with non-zero status 2.",
+        signal_source="aidd-exit-code",
+        signal_line_number=None,
+        reason="AIDD exited with 2",
     )
 
 
-def test_classify_failure_taxonomy_detects_validation_failures() -> None:
-    result = classify_failure_taxonomy(
+def test_select_first_failure_boundary_detects_validation_failures() -> None:
+    result = select_first_failure_boundary(
         aidd_exit_code=0,
         validator_failures=(
             CoarseRuntimeEvent(
@@ -63,8 +64,8 @@ def test_classify_failure_taxonomy_detects_validation_failures() -> None:
     assert "STRUCT-001" in result.reason
 
 
-def test_classify_failure_taxonomy_prioritizes_validation_over_aidd_exit() -> None:
-    result = classify_failure_taxonomy(
+def test_select_first_failure_boundary_prioritizes_validation_over_aidd_exit() -> None:
+    result = select_first_failure_boundary(
         aidd_exit_code=1,
         stage_metadata_failures=(
             CoarseRuntimeEvent(
@@ -79,8 +80,8 @@ def test_classify_failure_taxonomy_prioritizes_validation_over_aidd_exit() -> No
     assert "plan" in result.reason
 
 
-def test_classify_failure_taxonomy_detects_scenario_verification_failures() -> None:
-    result = classify_failure_taxonomy(
+def test_select_first_failure_boundary_detects_scenario_verification_failures() -> None:
+    result = select_first_failure_boundary(
         aidd_exit_code=0,
         verification_exit_code=1,
     )
@@ -88,8 +89,8 @@ def test_classify_failure_taxonomy_detects_scenario_verification_failures() -> N
     assert result.category == "scenario-verification"
 
 
-def test_classify_failure_taxonomy_detects_noop_execution_signals() -> None:
-    result = classify_failure_taxonomy(
+def test_select_first_failure_boundary_detects_noop_execution_signals() -> None:
+    result = select_first_failure_boundary(
         runtime_events=(
             CoarseRuntimeEvent(
                 line_number=10,
@@ -100,11 +101,12 @@ def test_classify_failure_taxonomy_detects_noop_execution_signals() -> None:
     )
 
     assert result.category == "scenario-verification"
-    assert "no-op execution signal" in result.reason
+    assert result.signal_source == "runtime.log"
+    assert "no runnable stages found" in result.reason
 
 
-def test_classify_failure_taxonomy_prioritizes_validation_over_verification() -> None:
-    result = classify_failure_taxonomy(
+def test_select_first_failure_boundary_prioritizes_validation_over_verification() -> None:
+    result = select_first_failure_boundary(
         aidd_exit_code=0,
         verification_exit_code=1,
         validator_failures=(
@@ -119,8 +121,8 @@ def test_classify_failure_taxonomy_prioritizes_validation_over_verification() ->
     assert result.category == "validation"
 
 
-def test_classify_failure_taxonomy_prioritizes_environment_over_runtime() -> None:
-    result = classify_failure_taxonomy(
+def test_select_first_failure_boundary_prioritizes_environment_over_runtime() -> None:
+    result = select_first_failure_boundary(
         runtime_events=(_runtime_error_event("network unreachable"),),
         aidd_exit_code=2,
     )
@@ -128,11 +130,13 @@ def test_classify_failure_taxonomy_prioritizes_environment_over_runtime() -> Non
     assert result.category == "environment"
 
 
-def test_classify_failure_taxonomy_returns_none_without_signals() -> None:
-    result = classify_failure_taxonomy()
+def test_select_first_failure_boundary_returns_none_without_signals() -> None:
+    result = select_first_failure_boundary()
 
-    assert result == FailureTaxonomyResult(
+    assert result == FailureBoundarySelection(
         category="none",
+        signal_source="none",
+        signal_line_number=None,
         reason="No failure signal detected.",
     )
 
@@ -148,20 +152,21 @@ def test_classify_failure_taxonomy_returns_none_without_signals() -> None:
         ("operation timed out", "environment"),
     ],
 )
-def test_public_failure_classifiers_share_one_decision(
+def test_first_failure_boundary_classifies_runtime_log_signals(
     message: str,
     expected_category: str,
 ) -> None:
     runtime_events = (_runtime_error_event(message),)
 
-    taxonomy = classify_failure_taxonomy(runtime_events=runtime_events)
     boundary = select_first_failure_boundary(runtime_events=runtime_events)
 
-    assert taxonomy.category == expected_category
     assert boundary.category == expected_category
+    assert boundary.signal_source == "runtime.log"
+    assert boundary.signal_line_number == 1
+    assert boundary.reason == message
 
 
-def test_normalized_runtime_failure_is_not_lost_by_taxonomy() -> None:
+def test_normalized_runtime_failure_retains_event_location() -> None:
     normalized_events = (
         NormalizedRuntimeEvent(
             line_number=3,
@@ -171,11 +176,12 @@ def test_normalized_runtime_failure_is_not_lost_by_taxonomy() -> None:
         ),
     )
 
-    taxonomy = classify_failure_taxonomy(normalized_events=normalized_events)
     boundary = select_first_failure_boundary(normalized_events=normalized_events)
 
-    assert taxonomy.category == "runtime"
     assert boundary.category == "runtime"
+    assert boundary.signal_source == "events.jsonl"
+    assert boundary.signal_line_number == 3
+    assert boundary.reason == "provider_exception"
 
 
 def test_unknown_informational_message_has_no_prefix_fallback() -> None:
@@ -187,5 +193,4 @@ def test_unknown_informational_message_has_no_prefix_fallback() -> None:
         ),
     )
 
-    assert classify_failure_taxonomy(runtime_events=runtime_events).category == "none"
     assert select_first_failure_boundary(runtime_events=runtime_events).category == "none"

@@ -303,9 +303,10 @@ uv run aidd task finalize \
   --config aidd.example.toml
 ```
 
-The retry path repairs historical runs that incorrectly persisted an ordinary validator failure
-as `blocked`. Genuine `blocked` state remains blocked until its unresolved question or runtime
-approval is handled; the UI and CLI will report that reason instead of silently retrying it.
+Retry checks the current task failure and its blocking gates before continuing. Unresolved
+questions or runtime approvals keep the task blocked; the UI and CLI report that reason.
+Once those gates are resolved, an eligible failed task can continue through the normal attempt
+lifecycle without treating an ordinary validator failure as an unresolved interview.
 
 ### 5.4 Resolve blocking question gates
 

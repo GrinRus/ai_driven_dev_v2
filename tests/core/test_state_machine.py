@@ -4,7 +4,6 @@ import pytest
 
 from aidd.core.state_machine import (
     StageState,
-    all_stage_states,
     allowed_transitions,
     is_terminal_state,
     is_valid_transition,
@@ -12,8 +11,8 @@ from aidd.core.state_machine import (
 )
 
 
-def test_all_stage_states_exposes_canonical_sequence() -> None:
-    assert all_stage_states() == (
+def test_stage_state_enum_exposes_canonical_sequence() -> None:
+    assert tuple(StageState) == (
         StageState.PENDING,
         StageState.PREPARING,
         StageState.EXECUTING,

@@ -2,17 +2,9 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from aidd.adapters.claude_code.approvals import (
-    claude_permission_prompt_to_operator_request,
-    operator_decision_to_claude_permission_response,
-)
 from aidd.adapters.codex.approvals import (
     codex_approval_request_to_operator_request,
     operator_decision_to_codex_response,
-)
-from aidd.adapters.opencode.approvals import (
-    opencode_permission_request_to_operator_request,
-    operator_decision_to_opencode_response,
 )
 from aidd.core.runtime_operator import RuntimeOperatorDecision
 from aidd.runtime_permissions import (
@@ -145,51 +137,3 @@ def test_codex_approval_mapper_keeps_file_change_without_paths_unbounded() -> No
     assert request.id == "file-change-2"
     assert request.kind is RuntimeOperatorRequestKind.FILE_EDIT
     assert request.paths == ()
-
-
-def test_opencode_permission_mapper_handles_file_edit() -> None:
-    request = opencode_permission_request_to_operator_request(
-        {"id": "open-1", "tool": "edit", "path": "src/app.py"},
-        runtime_id="opencode",
-        stage="implement",
-        cwd=Path("/repo"),
-    )
-
-    assert request.id == "open-1"
-    assert request.kind is RuntimeOperatorRequestKind.FILE_EDIT
-    assert request.paths == (Path("src/app.py"),)
-
-    response = operator_decision_to_opencode_response(
-        RuntimeOperatorDecision(
-            request_id="open-1",
-            action=RuntimeOperatorDecisionAction.DENY,
-            source=RuntimeOperatorDecisionSource.CLI,
-        )
-    )
-    assert response["allow"] is False
-
-
-def test_claude_permission_prompt_mapper_handles_bash_and_response() -> None:
-    request = claude_permission_prompt_to_operator_request(
-        tool_name="Bash",
-        tool_input={"command": "npm install"},
-        runtime_id="claude-code",
-        stage="implement",
-        cwd=Path("/repo"),
-        request_id="claude-1",
-    )
-
-    assert request.id == "claude-1"
-    assert request.kind is RuntimeOperatorRequestKind.SHELL
-    assert request.payload["command"] == "npm install"
-
-    response = operator_decision_to_claude_permission_response(
-        RuntimeOperatorDecision(
-            request_id="claude-1",
-            action=RuntimeOperatorDecisionAction.CANCEL,
-            source=RuntimeOperatorDecisionSource.UI,
-            reason="cancelled",
-        )
-    )
-    assert response["behavior"] == "deny"
-    assert response["message"] == "cancelled"

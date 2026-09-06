@@ -11,7 +11,7 @@ from collections.abc import Callable, Sequence
 from dataclasses import dataclass
 from pathlib import Path
 from queue import Empty, Queue
-from typing import Literal, TextIO, cast
+from typing import Literal, TextIO
 
 from aidd.core.bounded_log_reader import read_bounded_log
 from aidd.harness.runner import HarnessCommandTranscript
@@ -510,30 +510,11 @@ def _terminate_process(process: subprocess.Popen[str]) -> tuple[str, str, int | 
     return stdout_text, stderr_text, process.returncode
 
 
-def _timeout_output_to_text(value: str | bytes | None) -> str:
-    if value is None:
-        return ""
-    if isinstance(value, bytes):
-        return value.decode("utf-8", errors="replace")
-    return value
-
-
-def _combined_frontend_checkpoint_classification(
-    *classifications: StepClassification,
-) -> StepClassification:
-    for candidate in ("fail", "pass", "blocked", "infra-fail"):
-        if candidate in classifications:
-            return cast(StepClassification, candidate)
-    return "skipped"
-
-
 __all__ = [
     "BlackBoxCommandResult",
     "LiveE2EInterrupted",
     "StepClassification",
     "_command_text",
-    "_combined_frontend_checkpoint_classification",
     "_run_black_box_command",
     "_terminate_process",
-    "_timeout_output_to_text",
 ]

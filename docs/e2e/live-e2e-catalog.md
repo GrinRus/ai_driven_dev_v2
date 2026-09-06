@@ -440,9 +440,9 @@ After `W42-E7-S3-T1` enables task-aware live evidence, maintained full-flow runs
 `task-flow-checkpoint.md` projection. The checkpoint is runner-owned run-integrity evidence, not a
 replacement for stage validation, manual product-quality review, or responsive UI evidence.
 
-Legacy live fixtures that intentionally publish only a placeholder tasklist remain outside this
-task-aware lane and do not receive a task-flow checkpoint. A rich tasklist is identified by its
-canonical task-card headings; malformed rich cards are still recorded as fail-closed findings.
+Maintained full-flow fixtures publish the current rich tasklist with canonical task-card headings.
+Malformed task cards are recorded as fail-closed findings. A run stopped before publishing a
+tasklist has no task-flow checkpoint; absence is not successful task-aware evidence.
 
 The runner records one snapshot after the validated tasklist is published and one after Implement
 reaches aggregate finalization. Each snapshot contains:
@@ -504,7 +504,8 @@ budget, currently `scope: "per-stage-command"`. `stage-timing.json` and
 Command output is materialized once under `command-evidence/`; `flow-steps.json`,
 the lifecycle transcripts, `grader.json`, `run-transcript.json`, and the aggregate
 `runtime.log` projection retain only a relative pointer, SHA-256, exit/duration metadata,
-and bounded previews. Legacy inline command records remain readable.
+and bounded previews. Readers require these referenced artifacts and reject retired inline
+command records.
 `verify-transcript.json` may include `workspace_cleanup` when successful manifest
 verification created known ignored byproducts after QA. That cleanup is limited to
 new verification residue and is execution hygiene before final workspace evidence.

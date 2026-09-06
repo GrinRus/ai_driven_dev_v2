@@ -6,7 +6,6 @@ from time import monotonic
 
 from aidd.core.contracts import repo_root_from
 from aidd.core.workspace import WorkspaceBootstrapService
-from aidd.evals.verdicts import VerdictStatus
 from aidd.harness.eval_models import (
     EvalClassification,
     EvalExecutionState,
@@ -323,15 +322,10 @@ def execute_deterministic_eval(
     )
 
 
-def successful_status(status: VerdictStatus) -> bool:
-    return status == "pass"
-
-
 __all__ = [
     "DETERMINISTIC_RUNTIME_ID",
     "DeterministicEvalInputError",
     "DeterministicEvalRequest",
     "execute_deterministic_eval",
-    "successful_status",
     "validate_deterministic_scenario",
 ]

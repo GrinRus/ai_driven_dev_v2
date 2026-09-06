@@ -228,8 +228,8 @@ separate unit:
 
 Archive intent is an append-only operator overlay under
 `reports/operator-overlays/<work-item>/run-archive/<run-id>/`; it is joined into run read
-models but never written into `run-manifest.json`. Legacy manifests that already contain
-`operator_archive` remain readable when no overlay exists.
+models but never written into `run-manifest.json`. Readers reject the retired embedded
+`operator_archive` field; current archive decisions require the overlay.
 
 Lineage metadata must reference source runs and artifacts rather than rewriting completed
 artifacts. The core owns the source-run and baseline references; adapters only execute the

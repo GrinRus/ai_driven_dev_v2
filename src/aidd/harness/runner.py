@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import os
-from collections.abc import Callable, Mapping
+from collections.abc import Mapping
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, cast
@@ -396,44 +396,3 @@ def run_teardown_steps(
         command_transcripts=command_transcripts,
         duration_seconds=sum(transcript.duration_seconds for transcript in command_transcripts),
     )
-
-
-def run_with_teardown[T](
-    *,
-    action: Callable[[], T],
-    teardown_commands: tuple[str, ...],
-    working_copy_path: Path,
-    environment: Mapping[str, str] | None = None,
-    lifecycle_budget: HarnessLifecycleBudget | None = None,
-) -> tuple[T, HarnessTeardownResult]:
-    result_marker = object()
-    action_result: T | object = result_marker
-    action_error: BaseException | None = None
-    try:
-        action_result = action()
-    except BaseException as exc:  # pragma: no cover - exercised by failure-path tests.
-        action_error = exc
-
-    try:
-        teardown_result = run_teardown_steps(
-            teardown_commands=teardown_commands,
-            working_copy_path=working_copy_path,
-            environment=environment,
-            lifecycle_budget=lifecycle_budget,
-        )
-    except BaseException as teardown_error:
-        if action_error is not None:
-            if isinstance(action_error, Exception) and isinstance(teardown_error, Exception):
-                raise ExceptionGroup(
-                    "Scenario execution and teardown both failed.",
-                    [action_error, teardown_error],
-                ) from None
-            raise BaseExceptionGroup(
-                "Scenario execution and teardown both failed.",
-                [action_error, teardown_error],
-            ) from None
-        raise
-
-    if action_error is not None:
-        raise action_error
-    return cast(T, action_result), teardown_result

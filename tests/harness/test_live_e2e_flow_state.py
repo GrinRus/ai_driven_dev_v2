@@ -8,9 +8,10 @@ from pathlib import Path
 import pytest
 
 from aidd.harness.live_e2e_flow_state import (
+    detect_stale_owner,
     find_resume_state,
+    read_json_object,
     reconcile_stale_owner_for_resume,
-    stale_owner_read_model,
 )
 
 RUN_ID = "canonical-run"
@@ -133,12 +134,16 @@ def test_stale_owner_detection_is_read_only(tmp_path: Path) -> None:
     )
     before = state_path.read_bytes()
 
-    read_model = stale_owner_read_model(state_path)
+    payload = read_json_object(state_path)
+    observation = detect_stale_owner(payload)
 
-    assert read_model["status"] == "stale-owner"
-    assert read_model["durable_status"] == "running"
-    assert read_model["owner_observation"]["stale_owner"] is True
-    assert read_model["owner_observation"]["active_step"]["stage"] == "idea"
+    assert observation.read_status == "stale-owner"
+    assert observation.durable_status == "running"
+    assert observation.stale_owner is True
+    assert observation.owner_alive is False
+    assert observation.active_step is not None
+    assert observation.active_step["stage"] == "idea"
+    assert payload == json.loads(before)
     assert state_path.read_bytes() == before
 
 
@@ -248,7 +253,15 @@ def test_live_owner_is_not_reported_or_reconciled_as_stale(tmp_path: Path) -> No
     )
     before = state_path.read_bytes()
 
-    assert stale_owner_read_model(state_path)["status"] == "running"
+    payload = read_json_object(state_path)
+    observation = detect_stale_owner(payload)
+
+    assert observation.read_status == "running"
+    assert observation.durable_status == "running"
+    assert observation.evaluator_pid == os.getpid()
+    assert observation.owner_alive is True
+    assert observation.stale_owner is False
+    assert payload == json.loads(before)
     with pytest.raises(ValueError, match="has status `running`"):
         _find(
             report_root=report_root,

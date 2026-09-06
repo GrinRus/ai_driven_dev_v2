@@ -2269,10 +2269,6 @@ class OperatorUiService:
     def project_root(self) -> Path:
         return self._require_context().project_root
 
-    @property
-    def setup_required(self) -> bool:
-        return self._effective_context() is None
-
     def _require_context(self) -> UiProjectContext:
         context = self._effective_context()
         if context is None:

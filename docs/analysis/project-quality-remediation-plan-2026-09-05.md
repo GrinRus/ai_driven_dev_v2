@@ -13,6 +13,22 @@ merge, not compete for its IDs or edit its UI surface in parallel.
 Source assessment:
 [`project-quality-flow-audit-2026-09-05.md`](project-quality-flow-audit-2026-09-05.md).
 
+### Execution reconciliation — 2026-09-06
+
+The original assessment and candidate task descriptions below retain their dated context.
+Focus Canvas and the first Wave 52 cleanup PR (#533, main `82dc9b3c`) are now merged.
+Before promoting a candidate slice, compare its output with current code and the canonical
+[roadmap](../backlog/roadmap.md): the unreachable process island, obsolete configuration
+accessors, completed planning history, and prompt/document ownership residue have already
+been removed or reconciled. These overlapping outputs do not by themselves close the broader
+lifecycle, boundary, maintainability, or beta-acceptance findings.
+
+The accepted [current-format policy](../compatibility-policy.md#65-current-format-boundary)
+supersedes proposals below to preserve legacy reads or mappings in W48-E3-S1/S2/S3. Any
+promoted task must use current formats with explicit rejection of retired data. Read-only
+inspection of incomplete evidence remains distinct from permission to resume it. Estimates
+below describe the original plan; remaining scope and effort must be re-evaluated at promotion.
+
 ## Parent outcome decomposed
 
 Parent outcome: close the 2026-09-05 quality-audit findings and produce trustworthy beta-candidate
