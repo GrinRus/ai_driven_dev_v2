@@ -7,8 +7,8 @@ slice, and local task.
 
 ## Next
 
-- `W48-E3-S3-T3` — Materialize raw attempt logs/exits/events, stage validators, task ledger, and
-  finalization evidence.
+- `W48-E3-S3-T4` — Atomically seal and validate inventory, digests, sizes, and identities before
+  PASS.
 
 ## Soon
 
@@ -38,9 +38,10 @@ slice, and local task.
 
 ## Current reconciliation
 
-- `2026-09-07` `W48-E3-S3-T2` completed in PR #556 and is present on `origin/main` at `70929f5a`.
-  Required CI lanes and full local `make check` passed; evaluation bundles now persist distinct
-  evaluation/product IDs, schema-v2 feature selection, and lifecycle phase metadata. The adjacent
-  `codex/ui-completion` checkout remains untouched with its own unpushed UI work; `W48-E3-S3-T3`
-  is now the promoted dependency-ready successor, while `W46-E2-S2-T4` and human/provider
-  acceptance tasks stay parked.
+- `2026-09-07` `W48-E3-S3-T3` completed in PR #558 and is present on `origin/main` at `432ca93e`.
+  Required CI lanes passed; evaluation bundles now materialize raw attempt logs/exits/events,
+  stage validators, task ledgers, and finalization evidence under bundle-relative
+  `canonical-evidence` with digest/size records. Focused result-bundle/eval coverage passed
+  (32 tests), and the adjacent `codex/ui-completion` checkout remains untouched with its own
+  unpushed UI work. `W48-E3-S3-T4` is now the promoted dependency-ready successor, while
+  `W46-E2-S2-T4` and human/provider acceptance tasks stay parked.
