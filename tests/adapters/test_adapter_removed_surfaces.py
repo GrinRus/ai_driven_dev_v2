@@ -45,3 +45,43 @@ def test_native_prompt_module_is_the_only_prompt_read_owner() -> None:
         "_read_text_for_prompt" not in _defined_names(runner_path)
         for runner_path in runner_paths
     )
+
+
+def test_unused_core_and_adapter_facades_stay_removed() -> None:
+    removed_paths = (
+        REPOSITORY_ROOT / "src/aidd/adapters/runtime_artifacts.py",
+        REPOSITORY_ROOT / "src/aidd/adapters/runtime_registry.py",
+        REPOSITORY_ROOT / "src/aidd/cli/run_lookup.py",
+    )
+    assert all(not path.exists() for path in removed_paths)
+
+    removed_symbols = {
+        REPOSITORY_ROOT / "src/aidd/core/adapter_interview.py": {
+            "AdapterQuestionMetadataPersistence",
+            "persist_adapter_question_metadata",
+        },
+        REPOSITORY_ROOT / "src/aidd/core/stage_models.py": {"StageResumeResult"},
+        REPOSITORY_ROOT / "src/aidd/core/stage_validation.py": {
+            "prepare_stage_resume_after_answers",
+        },
+        REPOSITORY_ROOT / "src/aidd/core/stage_runner.py": {
+            "prepare_stage_resume_after_answers",
+            "_route_stage_questions_to_interview_with_validation",
+        },
+        REPOSITORY_ROOT / "src/aidd/core/run_inspection.py": {
+            "ResolvedCliRunTarget",
+            "resolve_cli_run_target",
+        },
+        REPOSITORY_ROOT / "src/aidd/core/run_lookup.py": {
+            "ResumeGuardError",
+            "CorruptedRunError",
+            "ClosedRunError",
+            "guard_run_resume",
+            "guard_latest_run_resume",
+            "latest_attempt_path_for_work_item",
+            "attempt_artifact_index_path",
+            "resolve_latest_attempt_artifact_paths",
+        },
+    }
+    for path, names in removed_symbols.items():
+        assert _defined_names(path).isdisjoint(names)
