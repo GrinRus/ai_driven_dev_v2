@@ -222,7 +222,41 @@ completed-flow visibility, stage/artifact/log/question navigation, repair and
 next-flow handoff states, readability, keyboard/focus behavior, responsive behavior
 or `not inspected`, and any manual screenshots or browser notes.
 
-## 9. Converting failures into regression cases
+## 9. Failure cause contract
+
+The execution verdict and the first decisive failure cause are separate fields. Current-format
+reports use the versioned `FailureCause` model in `src/aidd/evals/failure_causes.py` with these
+required fields:
+
+- `schema_version`: integer `1`;
+- `category`: `environment`, `infrastructure`, `adapter`, `runtime`, `validation`,
+  `scenario-verification`, or `none`;
+- `phase`: `preparation`, `install`, `setup`, `execution`, `verification`, `teardown`, or
+  `analysis`;
+- `source`: `environment`, `harness`, `adapter`, `runtime`, `validator`, `scenario`, or `none`;
+- `reason`: a non-empty operator-readable explanation;
+- `evidence_link`: a workspace-relative POSIX path for every non-`none` cause.
+
+The compatibility table is fail-closed:
+
+| Execution verdict | Allowed cause categories |
+| --- | --- |
+| `pass` | `none` or no cause |
+| `blocked` | `scenario-verification` |
+| `fail` | `adapter`, `runtime`, `validation`, `scenario-verification` |
+| `infra-fail` | `environment`, `infrastructure` |
+
+Category/source pairs are also constrained: environment signals come from the environment,
+infrastructure signals from the environment or harness, adapter signals from the adapter, runtime
+signals from the runtime or adapter, validator signals from the validator, and
+scenario-verification signals from the scenario or harness.
+Legacy boundary labels are converted only through the explicit mapping in the model. In
+particular, `harness`, `setup`, and `target-setup` map to `infrastructure`; a missing or unknown
+legacy category is rejected rather than inferred from a verdict, attempt ordinal, or free-form
+message. Later report-projection tasks consume this contract in log analysis, grader, summary, and
+UI outputs.
+
+## 10. Converting failures into regression cases
 
 Every real failure that matters should be convertible into:
 
@@ -232,7 +266,7 @@ Every real failure that matters should be convertible into:
 
 This is how the project accumulates reliability instead of anecdote.
 
-## 10. CI and release integration
+## 11. CI and release integration
 
 Recommended layers:
 
@@ -241,7 +275,7 @@ Recommended layers:
 - local manual operator audits: external audits against curated public repositories;
 - release: build, publish, and PyPI installability verification only.
 
-## 11. Summary
+## 12. Summary
 
 Harness and eval make runtime agnosticism, deterministic regression coverage, and manual
 installed-operator audits measurable rather than aspirational.
