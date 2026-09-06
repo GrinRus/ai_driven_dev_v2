@@ -474,14 +474,19 @@ Primary output: a PASS bundle remains fully auditable after harness cache deleti
     and dependency-review checks passed. Full `make check` passed (3107 Python tests, Ruff,
     strict mypy, JavaScript, instruction, and planning checks); focused bundle contract fixtures
     passed (13). The adjacent UI checkout remained untouched.
-- `W48-E3-S3-T2` (next) Persist actual product run ID, feature selection, and phase metadata.
+- `W48-E3-S3-T2` (done) Persist actual product run ID, feature selection, and phase metadata.
   - Dependencies: `W48-E3-S3-T1`.
   - Output: successful runs retain distinct eval/product IDs and an existing feature-selection
     record with phase metadata.
   - Scope: eval report preparation/materialization; no UI-owned paths.
   - Verification: successful bundle references distinct IDs and a readable feature-selection
     artifact.
-- `W48-E3-S3-T3` (planned) Materialize raw attempt logs/exits/events, stage validators, task
+  - Completion evidence: PR #556 merged to `origin/main` at `70929f5a`; Python 3.12–3.14,
+    adapter-conformance, deterministic-scenarios, packaged-ui-browser, build, CodeQL, Scorecard,
+    and dependency-review checks passed. Full `make check` passed (3107 Python tests, Ruff,
+    strict mypy, JavaScript, instruction, and planning checks); focused eval/harness coverage
+    passed (186 tests). The adjacent UI checkout remained untouched.
+- `W48-E3-S3-T3` (next) Materialize raw attempt logs/exits/events, stage validators, task
   ledger, and finalization evidence.
   - Dependencies: `W48-E3-S3-T2`.
   - Output: all required raw and canonical evidence is copied into the bundle before cache cleanup.
