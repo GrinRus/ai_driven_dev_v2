@@ -7,7 +7,8 @@ slice, and local task.
 
 ## Next
 
-- `W48-E3-S3-T2` — Persist actual product run ID, feature selection, and phase metadata.
+- `W48-E3-S3-T3` — Materialize raw attempt logs/exits/events, stage validators, task ledger, and
+  finalization evidence.
 
 ## Soon
 
@@ -37,9 +38,9 @@ slice, and local task.
 
 ## Current reconciliation
 
-- `2026-09-07` `W48-E3-S3-T1` completed in PR #554 and is present on `origin/main` at `70f4731e`.
-  Required CI lanes and full local `make check` passed; the task defines the schema-v2 bundle
-  inventory, distinct evaluation/product identity, conditional requirements, relative references,
-  and strict legacy rejection. The adjacent `codex/ui-completion` checkout remains untouched
-  with its own unpushed UI work; `W48-E3-S3-T2` is now the promoted dependency-ready successor,
-  while `W46-E2-S2-T4` and human/provider acceptance tasks stay parked.
+- `2026-09-07` `W48-E3-S3-T2` completed in PR #556 and is present on `origin/main` at `70929f5a`.
+  Required CI lanes and full local `make check` passed; evaluation bundles now persist distinct
+  evaluation/product IDs, schema-v2 feature selection, and lifecycle phase metadata. The adjacent
+  `codex/ui-completion` checkout remains untouched with its own unpushed UI work; `W48-E3-S3-T3`
+  is now the promoted dependency-ready successor, while `W46-E2-S2-T4` and human/provider
+  acceptance tasks stay parked.
