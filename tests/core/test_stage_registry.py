@@ -4,6 +4,11 @@ from pathlib import Path
 
 import pytest
 
+from aidd.core.ownership_registry import (
+    DocumentOwnershipRegistry,
+    OwnershipClass,
+    OwnershipMatrixRow,
+)
 from aidd.core.stage_registry import (
     StageManifestLoadError,
     load_all_stage_manifests,
@@ -335,6 +340,135 @@ def test_resolve_expected_output_documents_matches_declared_stage_outputs(tmp_pa
         workspace_root / "workitems" / "WI-001" / "stages" / "idea" / "questions.md",
         workspace_root / "workitems" / "WI-001" / "stages" / "idea" / "answers.md",
     )
+
+
+def test_stage_output_registry_uses_declared_owner_for_synthetic_document(
+    tmp_path: Path,
+) -> None:
+    contracts_root = tmp_path / "contracts" / "stages"
+    contracts_root.mkdir(parents=True)
+    required_outputs = ("idea-brief.md", "synthetic-control.md", "stage-result.md")
+    prompt_paths = ("prompt-packs/stages/idea/system.md",)
+    _write_stage_contract(
+        contracts_root=contracts_root,
+        stage="idea",
+        required_inputs=("context/intake.md",),
+        required_outputs=required_outputs,
+        prompt_pack_paths=prompt_paths,
+    )
+    _touch_contract_references(
+        repo_root=tmp_path,
+        required_outputs=required_outputs,
+        prompt_pack_paths=prompt_paths,
+    )
+    ownership_registry = DocumentOwnershipRegistry(
+        rows=(
+            OwnershipMatrixRow(
+                path_pattern="workitems/<id>/stages/<stage>/idea-brief.md",
+                stages=("idea",),
+                ownership_class=OwnershipClass.RUNTIME_CONTENT,
+                create="Runtime adapter",
+                mutate="Runtime attempt only",
+                validate="AIDD validator",
+                publish="AIDD core after validation",
+                ui_authoring="No; read-only",
+            ),
+            OwnershipMatrixRow(
+                path_pattern="workitems/<id>/stages/<stage>/synthetic-control.md",
+                stages=("idea",),
+                ownership_class=OwnershipClass.AIDD_CONTROL_DOCUMENT,
+                create="AIDD core",
+                mutate="AIDD core",
+                validate="AIDD validator",
+                publish="AIDD core",
+                ui_authoring="No; read-only",
+            ),
+            OwnershipMatrixRow(
+                path_pattern="workitems/<id>/stages/<stage>/stage-result.md",
+                stages=None,
+                ownership_class=OwnershipClass.AIDD_WORKFLOW_RECORD,
+                create="AIDD core",
+                mutate="AIDD core",
+                validate="AIDD validator",
+                publish="AIDD core",
+                ui_authoring="No; read-only",
+            ),
+            OwnershipMatrixRow(
+                path_pattern="workitems/<id>/stages/<stage>/repair-brief.md",
+                stages=None,
+                ownership_class=OwnershipClass.AIDD_CONTROL_DOCUMENT,
+                create="AIDD core",
+                mutate="AIDD core",
+                validate="AIDD validator",
+                publish="AIDD core",
+                ui_authoring="No; read-only",
+            ),
+        )
+    )
+
+    resolved = resolve_stage_output_registry(
+        stage="idea",
+        work_item="WI-SYNTHETIC",
+        workspace_root=tmp_path / ".aidd",
+        contracts_root=contracts_root,
+        ownership_registry=ownership_registry,
+    )
+
+    synthetic = (
+        tmp_path
+        / ".aidd"
+        / "workitems"
+        / "WI-SYNTHETIC"
+        / "stages"
+        / "idea"
+        / "synthetic-control.md"
+    )
+    assert synthetic in resolved.interview_control
+    assert synthetic not in resolved.runtime_authored
+    assert synthetic not in resolved.aidd_generated
+
+
+def test_stage_output_registry_rejects_output_missing_from_ownership_matrix(
+    tmp_path: Path,
+) -> None:
+    contracts_root = tmp_path / "contracts" / "stages"
+    contracts_root.mkdir(parents=True)
+    required_outputs = ("idea-brief.md", "unregistered.md")
+    prompt_paths = ("prompt-packs/stages/idea/system.md",)
+    _write_stage_contract(
+        contracts_root=contracts_root,
+        stage="idea",
+        required_inputs=("context/intake.md",),
+        required_outputs=required_outputs,
+        prompt_pack_paths=prompt_paths,
+    )
+    _touch_contract_references(
+        repo_root=tmp_path,
+        required_outputs=required_outputs,
+        prompt_pack_paths=prompt_paths,
+    )
+
+    with pytest.raises(StageManifestLoadError, match="absent from the ownership matrix"):
+        resolve_stage_output_registry(
+            stage="idea",
+            work_item="WI-UNREGISTERED",
+            workspace_root=tmp_path / ".aidd",
+            contracts_root=contracts_root,
+            ownership_registry=DocumentOwnershipRegistry(
+                rows=(
+                    OwnershipMatrixRow(
+                        path_pattern="workitems/<id>/stages/<stage>/idea-brief.md",
+                        stages=("idea",),
+                        ownership_class=OwnershipClass.RUNTIME_CONTENT,
+                        create="Runtime adapter",
+                        mutate="Runtime attempt only",
+                        validate="AIDD validator",
+                        publish="AIDD core after validation",
+                        ui_authoring="No; read-only",
+                    ),
+                )
+            ),
+        )
 
 
 @pytest.mark.parametrize("stage", STAGES)
