@@ -370,14 +370,6 @@
 }
 
 
-.onboarding-work-item-branch {
-  min-width: 0;
-  padding: var(--space-6);
-  border: 1px solid var(--color-border-default);
-  border-radius: var(--radius-surface);
-  background: var(--color-bg-raised);
-}
-
 .onboarding-advanced {
   border-top: 1px solid var(--color-border-muted);
   padding-top: var(--space-4);
@@ -3252,10 +3244,6 @@ button.artifact-row:not(:disabled):not([aria-disabled="true"]):hover {
   border-radius: 0;
   border-top: var(--control-border-width) solid var(--color-border-default);
   padding: var(--space-6) 0 0;
-}
-.history-filmstrip {
-  border-color: var(--color-border-strong);
-  box-shadow: var(--elevation-surface);
 }
 .workbench-side-row {
   border-bottom: 1px solid var(--line);

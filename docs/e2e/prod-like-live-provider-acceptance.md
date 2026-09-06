@@ -10,7 +10,7 @@ general live E2E catalog without creating another workflow, adapter, or UI execu
 - Use `AIDD-LIVE-007`, whose `feature_size` is `medium`, and the pinned Hono revision
   `cf2d2b7edcf07adef2db7614557f4d7f9e2be7ba`.
 - Run the complete public `idea -> qa` stage graph through native `codex` and `claude-code`.
-- Keep the canonical Codex `gpt-5.5` / `xhigh` live profile. Claude Code uses its native default
+- Keep the canonical Codex `gpt-5.6-luna` / `high` live profile. Claude Code uses its native default
   model selection.
 
 This is a local production-like audit, not a claim that the public target or provider service is

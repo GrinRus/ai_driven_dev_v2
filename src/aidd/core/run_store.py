@@ -373,6 +373,11 @@ def load_run_manifest(
         raise ValueError(f"Run manifest is not valid JSON: {path}.") from exc
     if not isinstance(payload, dict):
         raise ValueError("Run manifest must be a JSON object.")
+    if "operator_archive" in payload:
+        raise ValueError(
+            "Run manifest contains retired operator_archive state; recreate the workspace "
+            "with the current CLI."
+        )
     version = payload.get("schema_version")
     if type(version) is not int or version != 1:
         raise ValueError("Run manifest requires explicit integer schema_version 1.")
