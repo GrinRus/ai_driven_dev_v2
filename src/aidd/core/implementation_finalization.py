@@ -6,6 +6,12 @@ from datetime import UTC, datetime
 from pathlib import Path
 from uuid import uuid4
 
+from aidd.core.attempt_lineage import (
+    AttemptKind,
+    AttemptLineage,
+    AttemptScope,
+    FinalizationAttemptState,
+)
 from aidd.core.identifiers import contained_component_path
 from aidd.core.markdown import extract_h2_section
 from aidd.core.run_store import load_run_manifest, load_stage_metadata, run_stage_root
@@ -83,19 +89,19 @@ def prepare_task_finalization(
     staging = attempts_root / f".attempt-{number:04d}-{uuid4().hex}.staging"
     staging.mkdir()
     timestamp = datetime.now(UTC).isoformat().replace("+00:00", "Z")
+    state = FinalizationAttemptState(
+        attempt_number=number,
+        status="executing",
+        created_at_utc=timestamp,
+        updated_at_utc=timestamp,
+        lineage=AttemptLineage(
+            scope=AttemptScope.FINALIZATION,
+            attempt_kind=AttemptKind.FINALIZATION,
+            attempt_number=number,
+        ),
+    )
     (staging / "finalization-state.json").write_text(
-        json.dumps(
-            {
-                "schema_version": 1,
-                "attempt_number": number,
-                "status": "executing",
-                "created_at_utc": timestamp,
-                "updated_at_utc": timestamp,
-            },
-            indent=2,
-            sort_keys=True,
-        )
-        + "\n",
+        json.dumps(state.to_dict(), indent=2, sort_keys=True) + "\n",
         encoding="utf-8",
     )
     attempt_path = contained_component_path(
@@ -143,28 +149,32 @@ def complete_task_finalization(
     timestamp = datetime.now(UTC).isoformat().replace("+00:00", "Z")
     state_path = context.attempt_path / "finalization-state.json"
     created_at_utc = timestamp
+    lineage = AttemptLineage(
+        scope=AttemptScope.FINALIZATION,
+        attempt_kind=AttemptKind.FINALIZATION,
+        attempt_number=context.attempt_number,
+    )
     try:
-        existing = json.loads(state_path.read_text(encoding="utf-8"))
-    except (FileNotFoundError, OSError, TypeError, ValueError):
+        existing_payload = json.loads(state_path.read_text(encoding="utf-8"))
+    except (FileNotFoundError, OSError):
         existing = None
-    if isinstance(existing, dict):
-        prior_created = existing.get("created_at_utc")
-        if isinstance(prior_created, str) and prior_created.strip():
-            created_at_utc = prior_created
+    else:
+        existing = FinalizationAttemptState.from_dict(existing_payload)
+    if existing is not None:
+        if existing.created_at_utc is not None and existing.created_at_utc.strip():
+            created_at_utc = existing.created_at_utc
+        if existing.lineage is not None:
+            lineage = existing.lineage
+    state = FinalizationAttemptState(
+        attempt_number=context.attempt_number,
+        status=status.value,
+        blocker=blocker,
+        created_at_utc=created_at_utc,
+        updated_at_utc=timestamp,
+        lineage=lineage,
+    )
     (context.attempt_path / "finalization-state.json").write_text(
-        json.dumps(
-            {
-                "schema_version": 1,
-                "attempt_number": context.attempt_number,
-                "status": status.value,
-                "blocker": blocker,
-                "created_at_utc": created_at_utc,
-                "updated_at_utc": timestamp,
-            },
-            indent=2,
-            sort_keys=True,
-        )
-        + "\n",
+        json.dumps(state.to_dict(), indent=2, sort_keys=True) + "\n",
         encoding="utf-8",
     )
     return ledger

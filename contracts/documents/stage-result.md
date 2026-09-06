@@ -85,6 +85,11 @@ resolved transition and publishes only after the terminal document gate also pas
     `resume`, `intervention`, or `repair-extension`), and outcome. Missing or malformed attempt
     metadata is an explicit evidence error; trigger and repair consumption must not be guessed
     from directory order.
+  - Current attempts include a versioned `lineage` object with `scope: stage`, `attempt_kind`,
+    `attempt_number`, and an optional workspace-relative `parent_attempt_path`. The attempt number
+    is a storage coordinate, not a repair signal. Retired records without lineage are rejected by
+    lifecycle readers; historical evidence may be inspected as raw files but never upgraded or
+    resumed, and no repair is inferred from ordinal position.
   - AIDD records the selected trigger before publishing the attempt as executing. Preparation
     failures retain that trigger, so operator inspection does not see an unclassified live attempt.
   - Failed attempts must reference validator or runtime evidence when available.

@@ -37,8 +37,9 @@ do not create a separate scratch document or rewrite `stage-result.md`.
 ## Rerun-budget notes
 
 - Must include current attempt index and remaining repair attempts.
-- Count only persisted attempts whose recorded `attempt_mode` is `repair`. Initial execution,
-  question resume, and operator intervention do not consume the automatic repair budget.
+- Count only persisted attempts whose recorded lineage has `scope: stage` and
+  `attempt_kind: repair`. Initial execution, question resume, and operator intervention do not
+  consume the automatic repair budget.
 - Missing or malformed attempt metadata is an explicit evidence error. Never infer repair
   consumption from the number or order of attempt directories, and never assume `count - 1`.
 - Must state whether another rerun is allowed after this repair attempt.

@@ -5,6 +5,7 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
+from aidd.core.attempt_lineage import AttemptKind, AttemptLineage, AttemptScope
 from aidd.core.identifiers import contained_component_path
 from aidd.core.models.run import (
     RepairExtensionGrant,
@@ -296,6 +297,7 @@ def create_next_attempt_directory(
     contracts_root: Path = DEFAULT_STAGE_CONTRACTS_ROOT,
     repository_root: Path | None = None,
     attempt_mode: str | None = None,
+    lineage: AttemptLineage | None = None,
 ) -> Path:
     attempts_root = run_attempts_root(
         workspace_root=workspace_root,
@@ -337,6 +339,7 @@ def create_next_attempt_directory(
         contracts_root=contracts_root,
         repository_root=resolved_repository_root,
         attempt_mode=attempt_mode,
+        lineage=lineage,
     )
     return attempt_path
 
@@ -708,6 +711,7 @@ def write_attempt_artifact_index(
     contracts_root: Path = DEFAULT_STAGE_CONTRACTS_ROOT,
     repository_root: Path | None = None,
     attempt_mode: str | None = None,
+    lineage: AttemptLineage | None = None,
     prompt_pack_paths: tuple[Path, ...] | None = None,
 ) -> Path:
     artifact_index_path = run_attempt_artifact_index_path(
@@ -777,9 +781,28 @@ def write_attempt_artifact_index(
         resource_source=resource_source,
         resource_root=resolved_repository_root.as_posix(),
         attempt_mode=attempt_mode,
+        lineage=lineage,
         changed_at_utc=timestamp,
     )
     if existing_index is not None:
+        effective_attempt_mode = attempt_mode or existing_index.attempt_mode
+        effective_lineage = lineage or existing_index.lineage
+        if (
+            effective_lineage is not None
+            and effective_lineage.attempt_kind is AttemptKind.UNKNOWN
+            and effective_attempt_mode is not None
+        ):
+            effective_lineage = AttemptLineage(
+                scope=AttemptScope.STAGE,
+                attempt_kind=AttemptKind(effective_attempt_mode.strip().lower()),
+                attempt_number=attempt_number,
+            )
+        if (
+            effective_lineage is not None
+            and effective_attempt_mode is not None
+            and effective_lineage.attempt_kind.value != effective_attempt_mode.strip().lower()
+        ):
+            raise ValueError("Artifact index attempt_mode disagrees with its lineage.")
         index = RunArtifactIndex(
             schema_version=existing_index.schema_version,
             run_id=index.run_id,
@@ -791,7 +814,8 @@ def write_attempt_artifact_index(
             prompt_pack_provenance=index.prompt_pack_provenance,
             resource_source=index.resource_source,
             resource_root=index.resource_root,
-            attempt_mode=attempt_mode or existing_index.attempt_mode,
+            attempt_mode=effective_attempt_mode,
+            lineage=effective_lineage,
             created_at_utc=existing_index.created_at_utc,
             updated_at_utc=timestamp,
         )

@@ -288,6 +288,9 @@ def test_interrupted_executing_task_is_abandoned_and_resumed_with_new_attempt(
     assert first_state["created_at_utc"]
     assert first_state["updated_at_utc"]
     assert first_state["created_at_utc"] <= first_state["updated_at_utc"]
+    assert first_state["lineage"]["scope"] == "task"
+    assert first_state["lineage"]["attempt_kind"] == "task"
+    assert first_state["lineage"]["attempt_number"] == 1
     assert second.ledger.entry("TL-1").status is TaskExecutionStatus.EXECUTING
     assert second.ledger.entry("TL-1").attempt_count == 2
     metadata = load_stage_metadata(workspace_root, "WI-1", "run-1", "implement")

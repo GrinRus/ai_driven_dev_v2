@@ -361,6 +361,27 @@ Local tasks:
   - Completion evidence: target UX, roadmap/backlog, browser tests, and the live acceptance record
     agree; docs/planning checks passed (`105 passed`) on 2026-09-05.
 
+## Wave 48 — lifecycle and evidence truth (`planned`)
+
+Goal: make attempt evidence explicit and prevent ordinal storage numbers from being interpreted as
+repair history.
+
+### Epic W48-E3 — truthful eval evidence (`planned`)
+
+#### Slice W48-E3-S1 — explicit attempt lineage (`planned`)
+
+Primary output: stage, task, and aggregate-finalization attempts share a versioned lineage contract
+while retired ordinal-only evidence is rejected rather than silently upgraded.
+
+- `W48-E3-S1-T1` (next) Define versioned stage/task/finalization attempt lineage with current-format
+  rejection of retired ordinal-only evidence.
+  - Output: typed core lineage model, current artifact-index/task-reference/finalization views,
+    explicit retired-format rejection, and normative contract updates.
+  - Scope: `src/aidd/core/attempt_lineage.py`, core evidence models, task/finalization state,
+    `docs/architecture/`, `contracts/documents/`, and focused core tests; no UI-owned paths.
+  - Verification: round-trip fixtures distinguish `initial`, `repair`, `resume`, `intervention`,
+    `repair-extension`, `task`, and `finalization`; retired ordinal-only payloads are rejected.
+
 ## Wave 51 — agent development instruction consistency (`done`)
 
 The maintainer instruction hierarchy, executable workflow checks, runtime document ownership,
@@ -376,9 +397,9 @@ repository clutter while preserving current workflow, validation, repair, and ev
 
 Integration note: authored as Wave 47 on `f2819535`, this cleanup is rekeyed to Wave 52
 when integrating `191dfb16`. The upstream Focus Canvas Wave 47 and instruction Wave 51
-keep their identities. Waves 48–50 remain reserved by the accepted remediation plan in
-`docs/analysis/project-quality-remediation-plan-2026-09-05.md`; its unpromoted work is not
-claimed complete by this cleanup.
+keep their identities. Remaining Waves 48–50 work stays governed by the accepted remediation
+plan in `docs/analysis/project-quality-remediation-plan-2026-09-05.md`; only explicitly promoted
+tasks such as `W48-E3-S1-T1` are claimed in the canonical roadmap.
 
 ### Epic W52-E1 — current contracts and core (`done`)
 

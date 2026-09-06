@@ -4,6 +4,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
+from aidd.core.attempt_lineage import AttemptKind, AttemptLineage, AttemptScope
 from aidd.core.persisted_state import require_fields
 
 
@@ -447,6 +448,7 @@ class RunArtifactIndex:
     created_at_utc: str
     updated_at_utc: str
     attempt_mode: str | None = None
+    lineage: AttemptLineage | None = None
     schema_version: int = 1
 
     @classmethod
@@ -463,8 +465,32 @@ class RunArtifactIndex:
         resource_source: str | None = None,
         resource_root: str | None = None,
         attempt_mode: str | None = None,
+        lineage: AttemptLineage | None = None,
         changed_at_utc: str,
     ) -> RunArtifactIndex:
+        if lineage is None:
+            normalized_mode = None if attempt_mode is None else attempt_mode.strip().lower()
+            if normalized_mode is not None:
+                try:
+                    attempt_kind = AttemptKind(normalized_mode)
+                except ValueError as exc:
+                    raise ValueError(
+                        f"Unknown artifact-index attempt_mode: {normalized_mode}"
+                    ) from exc
+            else:
+                attempt_kind = AttemptKind.UNKNOWN
+            lineage = AttemptLineage(
+                scope=AttemptScope.STAGE,
+                attempt_kind=attempt_kind,
+                attempt_number=attempt_number,
+            )
+        if lineage is not None:
+            lineage.validate_identity(scope=AttemptScope.STAGE, attempt_number=attempt_number)
+            if (
+                attempt_mode is not None
+                and lineage.attempt_kind.value != attempt_mode.strip().lower()
+            ):
+                raise ValueError("Artifact index attempt_mode disagrees with its lineage.")
         return cls(
             run_id=run_id,
             work_item_id=work_item_id,
@@ -476,6 +502,7 @@ class RunArtifactIndex:
             resource_source=resource_source,
             resource_root=resource_root,
             attempt_mode=attempt_mode,
+            lineage=lineage,
             created_at_utc=changed_at_utc,
             updated_at_utc=changed_at_utc,
         )
@@ -497,6 +524,8 @@ class RunArtifactIndex:
             prompt_pack_provenance.append(parsed_entry)
         if "attempt_mode" not in payload:
             raise ValueError("Artifact index requires an attempt_mode field.")
+        if "lineage" not in payload:
+            raise ValueError("Artifact index requires current-format lineage.")
         raw_attempt_mode = payload["attempt_mode"]
         attempt_mode = None
         if raw_attempt_mode is not None:
@@ -509,6 +538,15 @@ class RunArtifactIndex:
                 "repair-extension",
             }:
                 raise ValueError(f"Unknown artifact-index attempt_mode: {attempt_mode}")
+        lineage = None
+        if payload.get("lineage") is not None:
+            lineage = AttemptLineage.from_dict(payload["lineage"])
+            lineage.validate_identity(
+                scope=AttemptScope.STAGE,
+                attempt_number=int(payload["attempt_number"]),
+            )
+            if attempt_mode is not None and lineage.attempt_kind.value != attempt_mode:
+                raise ValueError("Artifact index attempt_mode disagrees with its lineage.")
         return cls(
             schema_version=1,
             run_id=str(payload["run_id"]),
@@ -527,6 +565,7 @@ class RunArtifactIndex:
                 str(payload["resource_root"]) if payload.get("resource_root") is not None else None
             ),
             attempt_mode=attempt_mode,
+            lineage=lineage,
             created_at_utc=str(payload["created_at_utc"]),
             updated_at_utc=str(payload["updated_at_utc"]),
         )
@@ -546,4 +585,13 @@ class RunArtifactIndex:
             "attempt_mode": self.attempt_mode,
             "created_at_utc": self.created_at_utc,
             "updated_at_utc": self.updated_at_utc,
+            **({"lineage": self.lineage.to_dict()} if self.lineage is not None else {}),
         }
+
+    @property
+    def effective_lineage(self) -> AttemptLineage:
+        """Return the explicit current-format lineage."""
+
+        if self.lineage is None:
+            raise ValueError("Artifact index is missing current-format lineage.")
+        return self.lineage
