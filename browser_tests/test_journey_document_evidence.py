@@ -172,6 +172,13 @@ def test_document_canvas_and_evidence_inspector_preserve_safe_context(
             page.go_back(wait_until="domcontentloaded")
         page.evaluate("() => window.aiddRouteRestore || Promise.resolve()")
         canvas.locator('[data-document-canvas-mode="preview"]').wait_for(state="visible")
+        document_button = page.locator(".studio-document-item:visible").first
+        document_button.hover()
+        document_button.evaluate(
+            """async (button) => {
+              await Promise.all(button.getAnimations().map((animation) => animation.finished));
+            }"""
+        )
         _assert_rendered_gate(page, viewport)
 
         workbench_queries = [

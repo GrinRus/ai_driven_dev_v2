@@ -628,7 +628,7 @@ body.setup-active .primary-nav #projectInboxButton {
   text-align: left;
   width: 100%;
 }
-.studio-document-item:hover,
+.studio-document-item:not(:disabled):not([aria-disabled="true"]):hover,
 .studio-document-item.active {
   background: var(--studio-accent-soft);
   border-left-color: var(--cobalt);
