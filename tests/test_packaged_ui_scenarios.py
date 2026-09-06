@@ -28,6 +28,17 @@ def test_packaged_ui_discovery_matches_all_manifest_journeys() -> None:
     assert all(JOURNEY_NODE_IDS[journey] for journey in discovered)
 
 
+def test_packaged_ui_registry_covers_two_project_inbox_isolation() -> None:
+    repository_root = Path(__file__).resolve().parents[1]
+    inbox_nodes = JOURNEY_NODE_IDS["W36-E7-S1-T12"]
+
+    assert "browser_tests/test_journey_inbox.py" in inbox_nodes
+    source = (repository_root / "browser_tests" / "test_journey_inbox.py").read_text(
+        encoding="utf-8"
+    )
+    assert "test_running_job_keeps_origin_project_when_operator_switches_projects" in source
+
+
 @pytest.mark.parametrize(
     ("entries", "message"),
     (
