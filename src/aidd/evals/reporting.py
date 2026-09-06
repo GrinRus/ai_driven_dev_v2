@@ -2,16 +2,18 @@ from __future__ import annotations
 
 import math
 from collections import defaultdict
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from pathlib import Path
 
 from aidd.core.workspace import WORKSPACE_REPORTS_DIRNAME, WORKSPACE_REPORTS_EVALS_DIRNAME
+from aidd.evals.failure_causes import FailureCause
 from aidd.evals.log_analysis import FailureTaxonomyCategory
 from aidd.evals.verdicts import ScenarioVerdict, VerdictStatus
 
 FAILURE_BOUNDARY_CATEGORIES: tuple[FailureTaxonomyCategory, ...] = (
     "environment",
+    "infrastructure",
     "adapter",
     "runtime",
     "validation",
@@ -29,6 +31,7 @@ class ScenarioSummaryRow:
     verdict_status: VerdictStatus
     duration_seconds: float
     failure_boundary: FailureTaxonomyCategory
+    failure_cause: FailureCause = field(default_factory=FailureCause.none)
 
 
 @dataclass(frozen=True, slots=True)
@@ -71,6 +74,7 @@ def build_scenario_summary_row(
         verdict_status=verdict.status,
         duration_seconds=duration_seconds,
         failure_boundary=_normalize_failure_boundary(failure_boundary),
+        failure_cause=verdict.failure_cause,
     )
 
 
@@ -174,8 +178,9 @@ def render_eval_summary_markdown(
     else:
         lines.extend(
             (
-                "| Scenario | Run | Runtime | Verdict | Duration (s) | Failure Boundary |",
-                "| --- | --- | --- | --- | ---: | --- |",
+                "| Scenario | Run | Runtime | Verdict | Duration (s) | Failure Boundary | "
+                "Failure Cause |",
+                "| --- | --- | --- | --- | ---: | --- | --- |",
             )
         )
         for scenario_row in normalized_scenario_rows:
@@ -186,7 +191,8 @@ def render_eval_summary_markdown(
                 f"`{scenario_row.runtime_id}` | "
                 f"`{scenario_row.verdict_status}` | "
                 f"{_format_duration(scenario_row.duration_seconds)} | "
-                f"`{scenario_row.failure_boundary}` |"
+                f"`{scenario_row.failure_boundary}` | "
+                f"`{scenario_row.failure_cause.category.value}` |"
             )
 
     lines.append("")

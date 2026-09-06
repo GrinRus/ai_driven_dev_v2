@@ -18,6 +18,7 @@ RuntimeEventCategory = Literal[
 ]
 FailureTaxonomyCategory = Literal[
     "environment",
+    "infrastructure",
     "adapter",
     "runtime",
     "validation",
@@ -362,6 +363,18 @@ def _is_noop_signal(message: str) -> bool:
     )
 
 
+def _is_infrastructure_signal(message: str) -> bool:
+    normalized = message.lower().replace("_", " ").replace("-", " ")
+    return bool(
+        re.search(
+            r"\b(?:prep(?:aration)?|install|setup|teardown)"
+            r"(?:\s+command|\s+step|\s+phase)?\s+"
+            r"(?:failed|failure|error|non zero)\b",
+            normalized,
+        )
+    )
+
+
 def _failure_candidates(
     *,
     runtime_events: tuple[CoarseRuntimeEvent, ...] = (),
@@ -410,6 +423,16 @@ def _failure_candidates(
                     reason=event.message,
                 ),
             )
+        elif _is_infrastructure_signal(event.message):
+            _push_candidate(
+                rank=2,
+                selection=FailureBoundarySelection(
+                    category="infrastructure",
+                    signal_source="runtime.log",
+                    signal_line_number=event.line_number,
+                    reason=event.message,
+                ),
+            )
         elif _is_noop_signal(event.message):
             _push_candidate(
                 rank=2,
@@ -447,6 +470,16 @@ def _failure_candidates(
                 rank=1,
                 selection=FailureBoundarySelection(
                     category="adapter",
+                    signal_source="events.jsonl",
+                    signal_line_number=normalized_event.line_number,
+                    reason=normalized_event.event_kind,
+                ),
+            )
+        elif _is_infrastructure_signal(normalized_event.event_kind):
+            _push_candidate(
+                rank=2,
+                selection=FailureBoundarySelection(
+                    category="infrastructure",
                     signal_source="events.jsonl",
                     signal_line_number=normalized_event.line_number,
                     reason=normalized_event.event_kind,

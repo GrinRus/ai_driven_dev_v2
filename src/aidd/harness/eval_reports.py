@@ -12,6 +12,13 @@ from aidd.core.run_store import (
     RUN_RUNTIME_JSONL_FILENAME,
     work_item_runs_root,
 )
+from aidd.evals.failure_causes import (
+    FailureCause,
+    FailureCauseCategory,
+    FailureCausePhase,
+    FailureCauseSource,
+    validate_verdict_compatibility,
+)
 from aidd.evals.log_analysis import (
     CoarseRuntimeEvent,
     FailureBoundarySelection,
@@ -40,6 +47,7 @@ from aidd.evals.verdicts import (
     build_scenario_verdict_from_harness_outcome,
 )
 from aidd.harness.eval_models import (
+    EvalExecutionState,
     EvalReportPersistenceContext,
     EvalRuntimeLogSourceContext,
     EvalScenarioRunResult,
@@ -122,6 +130,123 @@ def extract_exit_code(error: BaseException | None) -> int | None:
     if match := EXIT_CODE_PATTERN.search(str(error)):
         return int(match.group("code"))
     return None
+
+
+def _first_validation_failure_detail(payload: dict[str, object]) -> str | None:
+    raw_stages = payload.get("stages", [])
+    if not isinstance(raw_stages, list):
+        return None
+    for raw_stage in raw_stages:
+        if not isinstance(raw_stage, dict):
+            continue
+        stage = str(raw_stage.get("stage") or "unknown")
+        raw_attempts = raw_stage.get("attempts")
+        if not isinstance(raw_attempts, list):
+            continue
+        for raw_attempt in raw_attempts:
+            if not isinstance(raw_attempt, dict):
+                continue
+            validation_result = str(raw_attempt.get("validation_result") or "unknown")
+            if validation_result in {"failed", "blocked"}:
+                final_failure_code = str(raw_stage.get("final_failure_code") or "").strip()
+                suffix = (
+                    f"; final failure code `{final_failure_code}`"
+                    if final_failure_code
+                    else ""
+                )
+                return (
+                    f"stage `{stage}` validation result `{validation_result}`{suffix}"
+                )
+    return None
+
+
+def _failure_cause_for_state(
+    *,
+    status: VerdictStatus,
+    state: EvalExecutionState,
+    stage_timing_payload: dict[str, object],
+) -> FailureCause:
+    if status == "pass":
+        return FailureCause.none()
+
+    if state.prep_error is not None:
+        return FailureCause(
+            category=FailureCauseCategory.INFRASTRUCTURE,
+            phase=FailureCausePhase.PREPARATION,
+            source=FailureCauseSource.HARNESS,
+            reason=str(state.prep_error),
+            evidence_link="harness-metadata.json",
+        )
+    for error, phase, evidence_link in (
+        (state.install_error, FailureCausePhase.INSTALL, "install-transcript.json"),
+        (state.setup_error, FailureCausePhase.SETUP, "setup-transcript.json"),
+        (state.run_error, FailureCausePhase.EXECUTION, "runtime.log"),
+        (state.teardown_error, FailureCausePhase.TEARDOWN, "teardown-transcript.json"),
+    ):
+        if error is not None:
+            return FailureCause(
+                category=FailureCauseCategory.INFRASTRUCTURE,
+                phase=phase,
+                source=FailureCauseSource.HARNESS,
+                reason=str(error),
+                evidence_link=evidence_link,
+            )
+
+    if status == "blocked":
+        return FailureCause(
+            category=FailureCauseCategory.SCENARIO_VERIFICATION,
+            phase=FailureCausePhase.VERIFICATION,
+            source=FailureCauseSource.SCENARIO,
+            reason="Scenario is blocked pending operator input.",
+            evidence_link="verify-transcript.json",
+        )
+    if state.verification_error is not None:
+        return FailureCause(
+            category=FailureCauseCategory.SCENARIO_VERIFICATION,
+            phase=FailureCausePhase.VERIFICATION,
+            source=FailureCauseSource.SCENARIO,
+            reason=str(state.verification_error),
+            evidence_link="verify-transcript.json",
+        )
+
+    if validation_detail := _first_validation_failure_detail(stage_timing_payload):
+        return FailureCause(
+            category=FailureCauseCategory.VALIDATION,
+            phase=FailureCausePhase.VERIFICATION,
+            source=FailureCauseSource.VALIDATOR,
+            reason=validation_detail,
+            evidence_link="validator-report.md",
+        )
+
+    exit_code = (
+        None if state.aidd_run_result is None else state.aidd_run_result.exit_code
+    )
+    return FailureCause(
+        category=FailureCauseCategory.RUNTIME,
+        phase=FailureCausePhase.EXECUTION,
+        source=FailureCauseSource.RUNTIME,
+        reason=(
+            "AIDD execution did not produce a result."
+            if exit_code is None
+            else f"AIDD exited with {exit_code}."
+        ),
+        evidence_link="runtime.log",
+    )
+
+
+def _boundary_for_failure_cause(
+    *,
+    cause: FailureCause,
+    fallback: FailureBoundarySelection,
+) -> FailureBoundarySelection:
+    if cause.category is FailureCauseCategory.NONE:
+        return fallback
+    return FailureBoundarySelection(
+        category=cause.category.value,  # type: ignore[arg-type]
+        signal_source=cause.source.value,
+        signal_line_number=fallback.signal_line_number,
+        reason=cause.reason,
+    )
 
 
 def stage_failure_events_from_timing_payload(
@@ -279,9 +404,45 @@ def render_validator_report_source(
     run_error: BaseException | None,
     verification_error: BaseException | None,
     teardown_error: BaseException | None,
+    failure_cause: FailureCause | None = None,
 ) -> str:
     verdict = "pass" if status == "pass" else "fail"
     if status == "pass":
+        return """# Validator Report
+
+## Summary
+
+- Total issues: 0
+- Blocking issues: no
+- Affected documents: none
+- Dominant failure categories: none
+
+## Structural checks
+
+- none
+
+## Semantic checks
+
+- none
+
+## Cross-document checks
+
+- none
+
+## Result
+
+- Verdict: `pass`
+- Repair required for progression: no
+"""
+
+    # Infrastructure, runtime, and scenario-verification failures are not document
+    # validation findings.  Keep the validator artifact explicit, but do not invent a
+    # structural or semantic issue that would mask the typed primary cause.
+    if (
+        failure_cause is not None
+        and status != "blocked"
+        and failure_cause.category is not FailureCauseCategory.VALIDATION
+    ):
         return """# Validator Report
 
 ## Summary
@@ -380,9 +541,12 @@ def render_log_analysis_markdown(
     *,
     status: VerdictStatus,
     boundary: FailureBoundarySelection,
+    failure_cause: FailureCause | None = None,
     runtime_diagnostics_markdown: str | None = None,
     stage_timing_markdown: str | None = None,
 ) -> str:
+    if failure_cause is not None:
+        validate_verdict_compatibility(verdict=status, cause=failure_cause)
     signal_line = (
         str(boundary.signal_line_number)
         if boundary.signal_line_number is not None
@@ -396,6 +560,15 @@ def render_log_analysis_markdown(
         f"- Signal Line: `{signal_line}`\n"
         f"- Reason: {boundary.reason}\n"
     )
+    if failure_cause is not None:
+        evidence_link = failure_cause.evidence_link or "none"
+        base += (
+            f"- Failure Cause Category: `{failure_cause.category.value}`\n"
+            f"- Failure Cause Phase: `{failure_cause.phase.value}`\n"
+            f"- Failure Cause Source: `{failure_cause.source.value}`\n"
+            f"- Failure Cause Reason: {failure_cause.reason}\n"
+            f"- Failure Cause Evidence: `{evidence_link}`\n"
+        )
     sections = [base.rstrip()]
     if runtime_diagnostics_markdown is not None:
         sections.append(runtime_diagnostics_markdown.rstrip())
@@ -601,7 +774,10 @@ def grader_payload(
     summary: str,
     first_failure_boundary: FailureBoundarySelection,
     feature_selection_payload: dict[str, object],
+    failure_cause: FailureCause | None = None,
 ) -> dict[str, object]:
+    normalized_failure_cause = failure_cause or FailureCause.none()
+    validate_verdict_compatibility(verdict=status, cause=normalized_failure_cause)
     return {
         "execution": {
             "first_failure_boundary": {
@@ -610,6 +786,7 @@ def grader_payload(
                 "signal_line_number": first_failure_boundary.signal_line_number,
                 "signal_source": first_failure_boundary.signal_source,
             },
+            "failure_cause": normalized_failure_cause.to_dict(),
             "status": status,
             "summary": summary,
         },
@@ -638,16 +815,6 @@ def persist_eval_reports(
     runtime_log_source = render_runtime_log_source(
         EvalRuntimeLogSourceContext(prep=prep, state=state)
     )
-    validator_report_source = render_validator_report_source(
-        status=status,
-        summary=summary,
-        prep_error=state.prep_error,
-        install_error=state.install_error,
-        setup_error=state.setup_error,
-        run_error=state.run_error,
-        verification_error=state.verification_error,
-        teardown_error=state.teardown_error,
-    )
     stage_timing_payload = build_stage_timing_payload(
         scenario=scenario,
         run_id=run_id,
@@ -664,6 +831,22 @@ def persist_eval_reports(
         aidd_run_result=state.aidd_run_result,
         verification_result=state.verification_result,
         teardown_result=state.teardown_result,
+    )
+    failure_cause = _failure_cause_for_state(
+        status=status,
+        state=state,
+        stage_timing_payload=stage_timing_payload,
+    )
+    validator_report_source = render_validator_report_source(
+        status=status,
+        summary=summary,
+        prep_error=state.prep_error,
+        install_error=state.install_error,
+        setup_error=state.setup_error,
+        run_error=state.run_error,
+        verification_error=state.verification_error,
+        teardown_error=state.teardown_error,
+        failure_cause=failure_cause,
     )
     aidd_workspace_root = (
         None
@@ -711,6 +894,10 @@ def persist_eval_reports(
         ),
         verification_exit_code=verification_exit_code,
     )
+    first_failure_boundary = _boundary_for_failure_cause(
+        cause=failure_cause,
+        fallback=first_failure_boundary,
+    )
     first_failure_note = (
         None
         if first_failure_boundary.category == "none"
@@ -747,6 +934,7 @@ def persist_eval_reports(
             if state.verification_error is not None
             else None
         ),
+        failure_cause=failure_cause,
     )
 
     runtime_log_source_path, validator_report_source_path, verdict_source_path = (
@@ -843,6 +1031,7 @@ def persist_eval_reports(
         render_log_analysis_markdown(
             status=status,
             boundary=first_failure_boundary,
+            failure_cause=failure_cause,
             runtime_diagnostics_markdown=render_runtime_diagnostics_markdown(
                 normalized_events=normalized_events,
                 stage_timing_payload=stage_timing_payload,
@@ -868,6 +1057,7 @@ def persist_eval_reports(
                 summary=summary,
                 first_failure_boundary=first_failure_boundary,
                 feature_selection_payload=prep.feature_selection_payload,
+                failure_cause=failure_cause,
             ),
             indent=2,
             sort_keys=True,
@@ -906,4 +1096,5 @@ def persist_eval_reports(
         feature_selection_path=layout.feature_selection_path,
         first_failure_boundary=first_failure_boundary,
         first_failure_note=first_failure_note,
+        failure_cause=failure_cause,
     )
