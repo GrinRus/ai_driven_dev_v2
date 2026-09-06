@@ -460,7 +460,7 @@ Primary output: execution verdict and first decisive cause remain compatible acr
 
 Primary output: a PASS bundle remains fully auditable after harness cache deletion.
 
-- `W48-E3-S3-T1` (next) Define conditional bundle inventory, separate eval/product IDs, relative
+- `W48-E3-S3-T1` (done) Define conditional bundle inventory, separate eval/product IDs, relative
   references, and legacy policy.
   - Dependencies: `W48-E3-S1-T1` and `W48-E3-S2-T1`.
   - Output: current bundle contract distinguishes evaluation identity from product-run identity,
@@ -469,7 +469,12 @@ Primary output: a PASS bundle remains fully auditable after harness cache deleti
   - Scope: result-bundle/eval contracts and focused integrity fixtures; no UI-owned paths.
   - Verification: fixtures reject dangling links and ambiguous identity while preserving valid
     pass/fail/infra-fail bundle reads.
-- `W48-E3-S3-T2` (planned) Persist actual product run ID, feature selection, and phase metadata.
+  - Completion evidence: PR #554 merged to `origin/main` at `70f4731e`; Python 3.12–3.14,
+    adapter-conformance, deterministic-scenarios, packaged-ui-browser, build, CodeQL, Scorecard,
+    and dependency-review checks passed. Full `make check` passed (3107 Python tests, Ruff,
+    strict mypy, JavaScript, instruction, and planning checks); focused bundle contract fixtures
+    passed (13). The adjacent UI checkout remained untouched.
+- `W48-E3-S3-T2` (next) Persist actual product run ID, feature selection, and phase metadata.
   - Dependencies: `W48-E3-S3-T1`.
   - Output: successful runs retain distinct eval/product IDs and an existing feature-selection
     record with phase metadata.
