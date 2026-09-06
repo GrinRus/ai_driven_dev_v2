@@ -3,6 +3,10 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
+import pytest
+
+from aidd.core.attempt_lineage import AttemptKind, AttemptLineage, AttemptScope
+from aidd.core.models.run import RunArtifactIndex
 from aidd.evals.stage_timing import (
     build_self_repair_matrix_payload,
     build_stage_timing_payload,
@@ -52,6 +56,34 @@ def _scenario() -> Scenario:
     )
 
 
+def _write_stage_artifact_index(
+    stage_root: Path,
+    attempt_number: int,
+    attempt_kind: AttemptKind,
+) -> None:
+    attempt_path = stage_root / "attempts" / f"attempt-{attempt_number:04d}"
+    attempt_path.mkdir(parents=True, exist_ok=True)
+    index = RunArtifactIndex.create(
+        run_id="run-20260426T100000Z",
+        work_item_id="WI-001",
+        stage=stage_root.name,
+        attempt_number=attempt_number,
+        documents={},
+        logs={},
+        attempt_mode=attempt_kind.value,
+        lineage=AttemptLineage(
+            scope=AttemptScope.STAGE,
+            attempt_kind=attempt_kind,
+            attempt_number=attempt_number,
+        ),
+        changed_at_utc="2026-04-26T10:00:00Z",
+    )
+    (attempt_path / "artifact-index.json").write_text(
+        json.dumps(index.to_dict(), indent=2, sort_keys=True) + "\n",
+        encoding="utf-8",
+    )
+
+
 def test_stage_timing_payload_reports_attempt_windows_and_harness_steps(tmp_path: Path) -> None:
     workspace_root = tmp_path / ".aidd"
     stage_root = (
@@ -87,6 +119,8 @@ def test_stage_timing_payload_reports_attempt_windows_and_harness_steps(tmp_path
         "- `STRUCT-MISSING-REQUIRED-SECTION` `high` in `idea-brief.md`: add heading.\n",
         encoding="utf-8",
     )
+    _write_stage_artifact_index(stage_root, 1, AttemptKind.INITIAL)
+    _write_stage_artifact_index(stage_root, 2, AttemptKind.REPAIR)
     work_item_stage_root = workspace_root / "workitems" / "WI-001" / "stages" / "idea"
     work_item_stage_root.mkdir(parents=True)
     (work_item_stage_root / "repair-brief.md").write_text(
@@ -140,6 +174,8 @@ def test_stage_timing_payload_reports_attempt_windows_and_harness_steps(tmp_path
     assert stages[0]["stage"] == "idea"
     assert stages[0]["attempts"][0]["runtime_seconds"] == 123.0
     assert stages[0]["attempts"][1]["runtime_seconds"] == 56.0
+    assert stages[0]["attempts"][0]["attempt_kind"] == "initial"
+    assert stages[0]["attempts"][1]["attempt_kind"] == "repair"
     assert "STRUCT-MISSING-REQUIRED-SECTION" in stages[0]["attempts"][1]["repair_reason"]
     assert stages[0]["terminal_docs_consistent"] is True
     assert "| `idea` | 1 | 123.000 | `success`/`0` | `False` | `repair-needed`" in markdown
@@ -163,6 +199,7 @@ def test_stage_timing_marks_terminal_doc_mismatch(tmp_path: Path) -> None:
         workspace_root / "reports" / "runs" / "WI-001" / "run-20260426T100000Z" / "stages" / "plan"
     )
     stage_root.mkdir(parents=True)
+    _write_stage_artifact_index(stage_root, 1, AttemptKind.INITIAL)
     (stage_root / "stage-metadata.json").write_text(
         json.dumps(
             {
@@ -230,6 +267,8 @@ def test_stage_timing_allows_successful_final_repair_attempt_docs(
         / "tasklist"
     )
     stage_root.mkdir(parents=True)
+    _write_stage_artifact_index(stage_root, 1, AttemptKind.INITIAL)
+    _write_stage_artifact_index(stage_root, 2, AttemptKind.REPAIR)
     (stage_root / "stage-metadata.json").write_text(
         json.dumps(
             {
@@ -296,3 +335,92 @@ def test_repair_history_markdown_reports_no_repair_attempts(tmp_path: Path) -> N
     )
 
     assert "- No stage repair attempts recorded." in render_repair_history_markdown(payload)
+
+
+def test_stage_timing_does_not_infer_repair_from_resume_ordinal(tmp_path: Path) -> None:
+    workspace_root = tmp_path / ".aidd"
+    stage_root = (
+        workspace_root
+        / "reports"
+        / "runs"
+        / "WI-001"
+        / "run-20260426T100000Z"
+        / "stages"
+        / "idea"
+    )
+    stage_root.mkdir(parents=True)
+    (stage_root / "stage-metadata.json").write_text(
+        json.dumps(
+            {
+                "status": "succeeded",
+                "status_history": [
+                    {"status": "executing", "changed_at_utc": "2026-04-26T10:00:00Z"},
+                    {"status": "validating", "changed_at_utc": "2026-04-26T10:01:00Z"},
+                    {"status": "executing", "changed_at_utc": "2026-04-26T10:01:01Z"},
+                    {"status": "validating", "changed_at_utc": "2026-04-26T10:02:00Z"},
+                    {"status": "succeeded", "changed_at_utc": "2026-04-26T10:02:01Z"},
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
+    _write_stage_artifact_index(stage_root, 1, AttemptKind.INITIAL)
+    _write_stage_artifact_index(stage_root, 2, AttemptKind.RESUME)
+
+    payload = build_stage_timing_payload(
+        scenario=_scenario(),
+        run_id="eval-run",
+        runtime_id="claude-code",
+        work_item="WI-001",
+        workspace_root=workspace_root,
+        total_duration_seconds=65.0,
+    )
+
+    stage = next(item for item in payload["stages"] if item["stage"] == "idea")
+    assert [attempt["attempt_kind"] for attempt in stage["attempts"]] == [
+        "initial",
+        "resume",
+    ]
+    matrix = build_self_repair_matrix_payload(payload)
+    row = next(item for item in matrix["matrix"] if item["stage"] == "idea")
+    assert row["repair_success"] is None
+    assert "No stage repair attempts recorded." in render_repair_history_markdown(payload)
+
+
+def test_stage_timing_rejects_attempt_without_lineage(tmp_path: Path) -> None:
+    workspace_root = tmp_path / ".aidd"
+    stage_root = (
+        workspace_root
+        / "reports"
+        / "runs"
+        / "WI-001"
+        / "run-20260426T100000Z"
+        / "stages"
+        / "idea"
+    )
+    stage_root.mkdir(parents=True)
+    (stage_root / "stage-metadata.json").write_text(
+        json.dumps(
+            {
+                "status": "succeeded",
+                "status_history": [
+                    {"status": "executing", "changed_at_utc": "2026-04-26T10:00:00Z"},
+                    {"status": "succeeded", "changed_at_utc": "2026-04-26T10:01:00Z"},
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
+    attempt_path = stage_root / "attempts" / "attempt-0001"
+    attempt_path.mkdir(parents=True)
+    (attempt_path / "artifact-index.json").write_text("{}", encoding="utf-8")
+
+    with pytest.raises(ValueError, match="current-format artifact index with lineage"):
+        build_stage_timing_payload(
+            scenario=_scenario(),
+            run_id="eval-run",
+            runtime_id="claude-code",
+            work_item="WI-001",
+            workspace_root=workspace_root,
+            total_duration_seconds=1.0,
+        )

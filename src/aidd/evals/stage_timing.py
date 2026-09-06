@@ -7,6 +7,8 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
+from aidd.core.attempt_lineage import AttemptKind, AttemptLineage, AttemptScope
+from aidd.core.models.run import RunArtifactIndex
 from aidd.core.stages import STAGES
 from aidd.evals.self_repair_probes import probes_for_stage, validate_probe_catalog
 from aidd.validators.protocol import (
@@ -312,6 +314,37 @@ def _attempt_runtime_exit(stage_root: Path, attempt_number: int) -> dict[str, An
     return _read_json(attempt_path) if attempt_path.exists() else {}
 
 
+def _stage_attempt_lineage(stage_root: Path, attempt_number: int) -> AttemptLineage:
+    artifact_index_path = (
+        stage_root / "attempts" / f"attempt-{attempt_number:04d}" / "artifact-index.json"
+    )
+    try:
+        payload = json.loads(artifact_index_path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as exc:
+        raise ValueError(
+            "Stage timing requires a current-format artifact index with lineage: "
+            f"{artifact_index_path.as_posix()}"
+        ) from exc
+    if not isinstance(payload, dict):
+        raise ValueError(
+            "Stage timing artifact index must be a JSON object: "
+            f"{artifact_index_path.as_posix()}"
+        )
+    try:
+        artifact_index = RunArtifactIndex.from_dict(payload)
+        artifact_index_lineage = artifact_index.effective_lineage
+        artifact_index_lineage.validate_identity(
+            scope=AttemptScope.STAGE,
+            attempt_number=attempt_number,
+        )
+    except (TypeError, ValueError) as exc:
+        raise ValueError(
+            "Stage timing requires a current-format artifact index with lineage: "
+            f"{artifact_index_path.as_posix()}"
+        ) from exc
+    return artifact_index_lineage
+
+
 def _stage_attempts(
     stage_root: Path,
     stage_metadata: dict[str, Any],
@@ -325,6 +358,7 @@ def _stage_attempts(
             continue
 
         attempt_number += 1
+        lineage = _stage_attempt_lineage(stage_root, attempt_number)
         started_at = _parse_utc_timestamp(entry.get("changed_at_utc"))
         runtime_finished_at: datetime | None = None
         validation_result = "unknown"
@@ -341,12 +375,16 @@ def _stage_attempts(
         runtime_exit = _attempt_runtime_exit(stage_root, attempt_number)
         attempts.append(
             {
-                "attempt": attempt_number,
+                "attempt": lineage.attempt_number,
+                "attempt_kind": lineage.attempt_kind.value,
+                "lineage": lineage.to_dict(),
                 "repair_reason": _repair_reason_for_attempt(
                     stage_root=stage_root,
-                    attempt_number=attempt_number,
+                    attempt_number=lineage.attempt_number,
                     work_item_stage_root=work_item_stage_root,
-                ),
+                )
+                if lineage.attempt_kind is AttemptKind.REPAIR
+                else None,
                 "runtime_exit_classification": runtime_exit.get("exit_classification"),
                 "runtime_exit_code": runtime_exit.get("exit_code"),
                 "runtime_seconds": _duration_seconds(started_at, runtime_finished_at),
@@ -584,11 +622,8 @@ def render_repair_history_markdown(payload: dict[str, object]) -> str:
         for raw_attempt in attempts:
             if not isinstance(raw_attempt, dict):
                 continue
-            attempt_number = raw_attempt.get("attempt")
-            is_repair_attempt = isinstance(attempt_number, int) and attempt_number > 1
-            repair_reason = raw_attempt.get("repair_reason")
-            has_repair_reason = bool(repair_reason and str(repair_reason).strip() != "n/a")
-            if is_repair_attempt or has_repair_reason:
+            is_repair_attempt = raw_attempt.get("attempt_kind") == AttemptKind.REPAIR.value
+            if is_repair_attempt:
                 repair_rows.append((str(raw_stage.get("stage", "unknown")), raw_attempt))
 
     if not repair_rows:
@@ -724,12 +759,13 @@ def build_self_repair_matrix_payload(payload: dict[str, object]) -> dict[str, ob
             else "not-reached"
         )
         final_status = str(raw_stage.get("status", "not-reached"))
+        repair_attempts = [
+            item
+            for item in attempt_dicts
+            if item.get("attempt_kind") == AttemptKind.REPAIR.value
+        ]
         repair_success = (
-            True
-            if len(attempt_dicts) > 1 and final_status == "succeeded"
-            else False
-            if len(attempt_dicts) > 1
-            else None
+            final_status == "succeeded" if repair_attempts else None
         )
         final_failure_code = (
             None
