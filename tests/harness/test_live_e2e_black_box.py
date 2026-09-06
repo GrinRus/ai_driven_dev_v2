@@ -339,6 +339,7 @@ def write_stage_outputs(stage: str, work_item: str, run_id: str) -> None:
                     }}
                 ],
                 "repair_history": [],
+                "repair_extension_grant": None,
                 "attempt_count": 1,
             }}
         )
@@ -411,6 +412,8 @@ def write_executing_stage_metadata(stage: str, work_item: str, run_id: str) -> N
                         "changed_at_utc": "2026-05-25T00:00:00Z",
                     }}
                 ],
+                "repair_history": [],
+                "repair_extension_grant": None,
             }}
         )
     )
@@ -522,6 +525,8 @@ def write_adapter_timeout_stage_artifacts(stage: str, work_item: str, run_id: st
                         "changed_at_utc": "2026-05-25T01:00:00Z",
                     }},
                 ],
+                "repair_history": [],
+                "repair_extension_grant": None,
             }}
         )
     )

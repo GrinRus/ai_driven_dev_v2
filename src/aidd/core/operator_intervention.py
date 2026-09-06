@@ -8,7 +8,7 @@ from uuid import uuid4
 
 from aidd.core.identifiers import contained_component_path
 from aidd.core.run_lookup import latest_run_id
-from aidd.core.run_store import load_stage_metadata, run_manifest_path
+from aidd.core.run_store import load_run_manifest, load_stage_metadata
 from aidd.core.stage_paths import workspace_relative_path
 from aidd.core.stage_registry import (
     DEFAULT_STAGE_CONTRACTS_ROOT,
@@ -431,12 +431,7 @@ def resolve_intervention_run_id(
         selected = latest_run_id(workspace_root=workspace_root, work_item=work_item) or ""
     if not selected:
         raise ValueError(f"No run found for work item '{work_item}'.")
-    manifest_path = run_manifest_path(
-        workspace_root=workspace_root,
-        work_item=work_item,
-        run_id=selected,
-    )
-    if not manifest_path.exists():
+    if load_run_manifest(workspace_root, work_item, selected) is None:
         raise ValueError(f"Run '{selected}' does not exist for work item '{work_item}'.")
     return selected
 

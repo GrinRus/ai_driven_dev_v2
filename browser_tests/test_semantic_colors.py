@@ -18,13 +18,17 @@ def test_status_and_surface_palettes_resolve_through_semantic_roles(tmp_path: Pa
             f"""
             <link rel="stylesheet" href="{harness.url}operator.css">
             <main>
-              <span id="success" class="status-badge succeeded">Succeeded</span>
-              <span id="warning" class="status-badge blocked">Blocked</span>
-              <span id="danger" class="status-badge failed">Failed</span>
-              <span id="info" class="status-badge running">Running</span>
-              <section id="goodSurface" class="decision-summary good">Approved</section>
-              <section id="warnSurface" class="decision-summary warn">Needs review</section>
-              <section id="badSurface" class="decision-summary bad">Rejected</section>
+              <span id="success" class="small-badge good">Succeeded</span>
+              <span id="warning" class="small-badge warn">Blocked</span>
+              <span id="danger" class="small-badge bad">Failed</span>
+              <span id="info" class="small-badge running">Running</span>
+              <section id="neutralSurface" class="state-surface">No pending action</section>
+              <section id="warnSurface" class="state-surface" data-state="unavailable">
+                Runtime unavailable
+              </section>
+              <section id="badSurface" class="state-surface" data-state="error">
+                Runtime failed
+              </section>
             </main>
             """,
             wait_until="networkidle",
@@ -49,7 +53,7 @@ def test_status_and_surface_palettes_resolve_through_semantic_roles(tmp_path: Pa
                 warning: value("#warning", "backgroundColor"),
                 danger: value("#danger", "backgroundColor"),
                 info: value("#info", "backgroundColor"),
-                goodSurface: value("#goodSurface", "backgroundColor"),
+                neutralSurface: value("#neutralSurface", "backgroundColor"),
                 warnSurface: value("#warnSurface", "backgroundColor"),
                 badSurface: value("#badSurface", "backgroundColor"),
                 successToken: tokenColor("--color-state-success-bg"),
@@ -66,7 +70,7 @@ def test_status_and_surface_palettes_resolve_through_semantic_roles(tmp_path: Pa
         assert styles["info"] == styles["infoToken"]
         assert len(
             {
-                styles["goodSurface"],
+                styles["neutralSurface"],
                 styles["warnSurface"],
                 styles["badSurface"],
             }

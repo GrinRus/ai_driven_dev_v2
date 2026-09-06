@@ -50,7 +50,6 @@ from aidd.core.stage_runner import (
     StageInterviewRouting,
     StageOrchestrationResult,
     StageOutputDiscovery,
-    StageResumeResult,
     StageStructuralValidationResult,
     StageValidationState,
     ValidationVerdict,
@@ -62,7 +61,6 @@ from aidd.core.stage_runner import (
     persist_validation_state_with_repair_budget,
     prepare_adapter_invocation,
     prepare_stage_bundle,
-    prepare_stage_resume_after_answers,
     publish_stage_outputs_after_validation_pass,
     restore_core_owned_repair_brief,
     route_stage_questions_to_interview,
@@ -5118,116 +5116,29 @@ def test_update_stage_unblock_state_keeps_stage_blocked_with_partial_answer(
     assert unblock_state.unblocked is False
 
 
-def test_prepare_stage_resume_after_answers_keeps_stage_blocked_without_resolved_answers(
+
+
+def test_post_execution_cleanup_preserves_invalid_metadata_and_primary_failure(
     tmp_path: Path,
 ) -> None:
+    from aidd.core.stage_runner import _terminalize_unhandled_post_execution_exception
+
     workspace_root = tmp_path / ".aidd"
-    create_run_manifest(
-        workspace_root=workspace_root,
-        work_item="WI-001",
-        run_id="run-001",
-        runtime_id="generic-cli",
-        stage_target="plan",
-        config_snapshot={"mode": "test"},
+    state = persist_execution_state(
+        workspace_root=workspace_root, work_item="WI-001", run_id="run-001",
+        stage="plan", attempt_mode="initial",
     )
-    persist_stage_status(
-        workspace_root=workspace_root,
-        work_item="WI-001",
-        run_id="run-001",
-        stage="plan",
-        status=StageState.BLOCKED.value,
+    payload = json.loads(state.stage_metadata_path.read_text())
+    payload.pop("status_history")
+    state.stage_metadata_path.write_text(json.dumps(payload), encoding="utf-8")
+    before = {path: path.read_bytes() for path in workspace_root.rglob("*") if path.is_file()}
+    failure = RuntimeError("original runtime failure")
+    _terminalize_unhandled_post_execution_exception(
+        workspace_root=workspace_root, work_item="WI-001", run_id="run-001", stage="plan",
+        contracts_root=Path("contracts"), changed_at_utc=None, exception=failure,
     )
-    stage_root = workspace_root / "workitems" / "WI-001" / "stages" / "plan"
-    stage_root.mkdir(parents=True, exist_ok=True)
-    (stage_root / "questions.md").write_text(
-        "# Questions\n\n## Questions\n\n- Q1 [blocking] Confirm release owner approval.\n",
-        encoding="utf-8",
-    )
-
-    resume_result = prepare_stage_resume_after_answers(
-        workspace_root=workspace_root,
-        work_item="WI-001",
-        run_id="run-001",
-        stage="plan",
-    )
-
-    assert isinstance(resume_result, StageResumeResult)
-    assert resume_result.unblock_state.unblocked is False
-    assert resume_result.preparation_bundle is None
-    assert resume_result.execution_state is None
-    assert resume_result.adapter_invocation is None
-
-
-def test_prepare_stage_resume_after_answers_creates_new_attempt_and_invocation(
-    tmp_path: Path,
-) -> None:
-    workspace_root = tmp_path / ".aidd"
-    create_run_manifest(
-        workspace_root=workspace_root,
-        work_item="WI-001",
-        run_id="run-001",
-        runtime_id="generic-cli",
-        stage_target="plan",
-        config_snapshot={"mode": "test"},
-    )
-    persist_stage_status(
-        workspace_root=workspace_root,
-        work_item="WI-001",
-        run_id="run-001",
-        stage="plan",
-        status=StageState.BLOCKED.value,
-    )
-    stage_root = workspace_root / "workitems" / "WI-001" / "stages" / "plan"
-    stage_root.mkdir(parents=True, exist_ok=True)
-    (stage_root / "questions.md").write_text(
-        "# Questions\n\n## Questions\n\n- Q1 [blocking] Confirm release owner approval.\n",
-        encoding="utf-8",
-    )
-    (stage_root / "answers.md").write_text(
-        "# Answers\n\n## Answers\n\n- Q1 [resolved] Release owner approval is recorded.\n",
-        encoding="utf-8",
-    )
-
-    preview_bundle = prepare_stage_bundle(
-        workspace_root=workspace_root,
-        work_item="WI-001",
-        stage="plan",
-    )
-    _materialize_expected_inputs(preview_bundle.expected_input_bundle)
-    resume_result = prepare_stage_resume_after_answers(
-        workspace_root=workspace_root,
-        work_item="WI-001",
-        run_id="run-001",
-        stage="plan",
-    )
-
-    assert resume_result.unblock_state.unblocked is True
-    assert resume_result.preparation_bundle is not None
-    assert resume_result.execution_state is not None
-    assert resume_result.adapter_invocation is not None
-    assert resume_result.execution_state.attempt_number == 1
-    assert resume_result.execution_state.attempt_path.name == "attempt-0001"
-    assert resume_result.adapter_invocation.attempt_number == 1
-    assert resume_result.adapter_invocation.attempt_mode == "resume"
-    assert resume_result.adapter_invocation.repair_mode is False
-    assert json.loads(
-        resume_result.execution_state.attempt_path.joinpath("artifact-index.json").read_text(
-            encoding="utf-8"
-        )
-    )["attempt_mode"] == "resume"
-    assert resume_result.adapter_invocation.input_bundle_path.exists()
-    assert (
-        "`workitems/WI-001/stages/plan/questions.md`"
-        in resume_result.adapter_invocation.input_bundle_markdown
-    )
-    assert (
-        "`workitems/WI-001/stages/plan/answers.md`"
-        in resume_result.adapter_invocation.input_bundle_markdown
-    )
-    assert "Release owner approval is recorded." in (
-        resume_result.adapter_invocation.input_bundle_markdown
-    )
-    assert (
-        "`workitems/WI-001/stages/plan/answers.md`"
-        in resume_result.preparation_bundle.stage_brief_markdown
-    )
+    assert str(failure) == "original runtime failure"
+    assert any("status_history" in note for note in failure.__notes__)
+    assert {
+        path: path.read_bytes() for path in workspace_root.rglob("*") if path.is_file()
+    } == before

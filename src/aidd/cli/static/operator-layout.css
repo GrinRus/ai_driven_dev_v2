@@ -72,8 +72,6 @@
 }
 .version-badge,
 .status-chip,
-.counter,
-.status-badge,
 .small-badge {
   border: 1px solid var(--line-strong);
   border-radius: 999px;
@@ -85,58 +83,29 @@
   padding: 4px 7px;
   white-space: nowrap;
 }
-.badge-button {
-  background: transparent;
-  border: 1px solid var(--line-strong);
-  border-radius: 999px;
-  color: var(--muted);
-  display: inline-flex;
-  font-size: var(--type-caption-size);
-  font-weight: 700;
-  line-height: 1;
-  min-height: 0;
-  padding: 4px 7px;
-  white-space: nowrap;
-}
-.badge-button:hover {
-  border-color: var(--cobalt);
-  color: var(--cobalt-dark);
-}
 .status-chip.good,
-.status-badge.succeeded,
 .small-badge.good {
   background: var(--color-state-success-bg);
   border-color: var(--color-state-success-border);
   color: var(--color-state-success-text);
 }
-.status-badge.blocked,
-.status-badge.repair-needed,
-.status-badge.waiting-for-operator,
 .small-badge.waiting-for-operator,
-.small-badge.retried,
-.status-badge.retried,
-.badge-button.retried,
 .small-badge.warn {
   background: var(--color-state-warning-bg-soft);
   border-color: var(--color-state-warning-border-soft);
   color: var(--color-state-warning-text);
 }
-.status-badge.failed,
 .small-badge.bad {
   background: var(--color-state-danger-bg-strong);
   border-color: var(--color-state-danger-border);
   color: var(--color-state-danger-text);
 }
-.status-badge.cancelled,
 .small-badge.cancelled {
   background: var(--color-state-danger-bg-strong);
   border-color: var(--color-state-danger-border);
   color: var(--color-state-danger-text);
 }
-.status-badge.running,
 .small-badge.running,
-.status-badge.ready,
-.status-badge.cancelling,
 .small-badge.cancelling {
   background: var(--color-state-info-bg);
   border-color: #b5d2ee;
@@ -285,12 +254,6 @@ h1, h2, h3, p {
 #stageTitle {
   font-size: 21px;
   line-height: 1.2;
-}
-.badge-row {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-  justify-content: flex-end;
 }
 .log-filter button.active,
 .log-filter button[aria-pressed="true"],

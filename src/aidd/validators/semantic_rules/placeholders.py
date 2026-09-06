@@ -21,14 +21,6 @@ class PlaceholderOccurrence:
     line_number: int
 
 
-def has_non_placeholder_text(text: str) -> bool:
-    return not contains_placeholder_content(text)
-
-
-def contains_placeholder_content(text: str) -> bool:
-    return bool(find_placeholder_occurrences(text))
-
-
 def find_placeholder_occurrences(text: str) -> tuple[PlaceholderOccurrence, ...]:
     placeholder_matches = tuple(PLACEHOLDER_PATTERN.finditer(text))
     if not placeholder_matches:
@@ -185,9 +177,7 @@ def is_standalone_ellipsis_placeholder(
 
 __all__ = [
     "PlaceholderOccurrence",
-    "contains_placeholder_content",
     "find_placeholder_occurrences",
-    "has_non_placeholder_text",
     "inline_code_match_for_placeholder",
     "inline_placeholder_context_is_content",
     "inline_placeholder_requires_context",

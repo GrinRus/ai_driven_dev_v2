@@ -417,9 +417,6 @@
 }
 
 @media (max-width: 900px) and (min-width: 761px) {
-  .onboarding-work-item-branches {
-    grid-template-columns: minmax(0, 1fr);
-  }
   .canonical-stage-groups {
     grid-template-columns: repeat(4, minmax(0, 1fr));
   }
@@ -464,9 +461,6 @@
     width: min(280px, calc(100vw - (var(--space-6) * 2)));
     z-index: 60;
   }
-  [data-studio-quality-gate="review"] .quality-gate-document {
-    padding-bottom: calc(var(--space-8) + var(--control-height));
-  }
 }
 
 @media (max-width: 760px) {
@@ -481,9 +475,6 @@
     right: var(--space-4);
     width: auto;
     z-index: 60;
-  }
-  [data-studio-quality-gate="review"] .quality-gate-document {
-    padding-bottom: calc(var(--space-10) + var(--control-height-touch));
   }
 
   /* The question state is a focused decision page, not a miniature dashboard. */
@@ -769,8 +760,7 @@
     gap: var(--space-3);
     min-width: 0;
   }
-  .studio-flow-complete .flow-complete-hero,
-  .studio-flow-complete .next-flow-decision-spotlight {
+  .studio-flow-complete .flow-complete-hero {
     gap: var(--space-2);
     margin: 0;
     padding: var(--space-3);
@@ -778,7 +768,6 @@
   .studio-flow-complete .flow-complete-hero h2 {
     font-size: var(--type-title-size);
   }
-  .studio-flow-complete .next-flow-decision-spotlight button,
   .studio-flow-complete-other > summary,
   .studio-flow-complete-other button {
     min-height: var(--control-height);
@@ -932,9 +921,6 @@
     white-space: nowrap;
     padding: 0 4px;
   }
-  .project-home-tabs button {
-    min-height: var(--control-height-touch);
-  }
   .path-line {
     overflow-wrap: anywhere;
     text-overflow: clip;
@@ -942,9 +928,6 @@
   }
   .maintenance-overflow {
     margin-top: var(--space-3);
-  }
-  body.recovery-mode .project-home-rail {
-    display: none;
   }
   body.recovery-mode .recovery-workbench {
     display: grid;
@@ -999,15 +982,6 @@
   body.recovery-mode .recovery-section button,
   body.recovery-mode .recovery-section summary {
     min-height: var(--control-height-touch);
-  }
-  body.evidence-log-mode .project-home-rail {
-    display: none;
-  }
-  body.live-job-mode .project-home-rail,
-  body.external-running-stage-mode .project-home-rail,
-  body.terminal-handoff-mode .project-home-rail,
-  body.terminal-repair-mode .project-home-rail {
-    display: none;
   }
   .intent-decision-surface {
     grid-template-columns: 1fr;
@@ -1095,7 +1069,6 @@
   .project-set-row,
   .intent-entry-recommendation,
   .onboarding-shell,
-  .onboarding-work-item-branches,
   .inline-form-row,
   .artifact-layout,
   .workbench-main,
@@ -1109,13 +1082,9 @@
   .reader-body-layout-compact,
   .studio-reading-sidebar,
   .artifact-ownership-note,
-  .project-setup-grid,
   .flow-complete-hero,
   .terminal-attention-spotlight,
   .terminal-evidence-spotlight,
-  .next-flow-decision-spotlight,
-  .decision-summary,
-  .decision-summary-metrics,
   .stale-downstream-summary,
   .stale-downstream-facts,
   .next-flow-actions-grid,
@@ -1139,8 +1108,6 @@
   .evidence-graph-canvas,
   .evidence-edge-list,
   .repair-timeline,
-  .recovery-hero,
-  .recovery-facts,
   .run-progress-meta,
   .live-progress-meta,
   .intent-entry-actions {
@@ -1250,30 +1217,6 @@
   .evidence-table-wrap {
     overflow-x: auto;
   }
-  .activity-panel .table-wrap {
-    overflow-x: hidden;
-  }
-  .activity-panel .activity-table {
-    table-layout: fixed;
-    width: 100%;
-  }
-  .activity-panel .activity-table th,
-  .activity-panel .activity-table td {
-    overflow-wrap: anywhere;
-    word-break: break-word;
-  }
-  .activity-panel .activity-table th:nth-child(1),
-  .activity-panel .activity-table td:nth-child(1) {
-    width: 74px;
-  }
-  .activity-panel .activity-table th:nth-child(2),
-  .activity-panel .activity-table td:nth-child(2) {
-    width: 52px;
-  }
-  .activity-panel .activity-table th:nth-child(3),
-  .activity-panel .activity-table td:nth-child(3) {
-    width: 72px;
-  }
   .diff-preview-row {
     grid-template-columns: 1fr;
   }
@@ -1282,10 +1225,6 @@
   }
   .diff-file-list {
     max-height: 260px;
-  }
-  .artifacts-panel {
-    border-left: 0;
-    border-top: 1px solid var(--line);
   }
   .log-row {
     grid-template-columns: 70px minmax(0, 1fr);
@@ -1549,7 +1488,6 @@
   .decision-question-context h2 {
     font-size: var(--type-title-size);
   }
-  .decision-evidence-grid,
   .decision-resolution-options {
     grid-template-columns: minmax(0, 1fr);
   }

@@ -2837,7 +2837,7 @@ def test_persist_operator_answer_writes_standard_answers_document(tmp_path: Path
         text="The target release is 0.2.0.",
     )
 
-    assert questions_view.has_unresolved_blocking_questions is False
+    assert questions_view.unresolved_blocking_question_ids == ()
     assert questions_view.questions[0].status == "resolved"
     assert questions_view.questions[0].answer_text == "The target release is 0.2.0."
     assert questions_view.questions[0].answer_resolution is AnswerResolution.RESOLVED
@@ -2859,7 +2859,7 @@ def test_persist_operator_answer_preserves_partial_semantics(tmp_path: Path) -> 
         resolution=AnswerResolution.PARTIAL,
     )
 
-    assert questions_view.has_unresolved_blocking_questions is True
+    assert questions_view.unresolved_blocking_question_ids == ("Q1",)
     assert questions_view.questions[0].status == "pending-blocking"
     assert questions_view.questions[0].answer_text == "Release is not final yet."
     assert questions_view.questions[0].answer_resolution is AnswerResolution.PARTIAL
@@ -2891,7 +2891,7 @@ def test_persist_operator_answer_updates_resolved_answer_in_place(
     assert answers_text.count("Q1") == 1
     assert "The target release is 0.2.0." not in answers_text
     assert "- Q1 [partial] Release is not final yet." in answers_text
-    assert questions_view.has_unresolved_blocking_questions is True
+    assert questions_view.unresolved_blocking_question_ids == ("Q1",)
     assert questions_view.questions[0].answer_text == "Release is not final yet."
     assert questions_view.questions[0].answer_resolution is AnswerResolution.PARTIAL
 

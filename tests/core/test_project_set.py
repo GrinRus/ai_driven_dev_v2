@@ -29,7 +29,7 @@ def test_resolve_project_set_accepts_declared_local_roots(tmp_path: Path) -> Non
     )
 
     assert resolved.repository_root == tmp_path.resolve()
-    assert resolved.project_ids() == ("api", "web")
+    assert tuple(project.id for project in resolved.projects) == ("api", "web")
     assert resolved.projects[0].relative_root == "services/api"
     assert resolved.projects[0].role == "primary"
 

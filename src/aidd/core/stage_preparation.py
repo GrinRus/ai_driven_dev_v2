@@ -9,6 +9,8 @@ from aidd.core.project_set import ResolvedProjectSet, persist_project_set_contex
 from aidd.core.run_store import (
     RUN_ATTEMPT_PREFIX,
     create_next_attempt_directory,
+    load_run_manifest,
+    load_stage_metadata,
     persist_stage_status,
 )
 from aidd.core.stage_models import StageExecutionState, StagePreparationBundle
@@ -439,6 +441,10 @@ def persist_execution_state(
         "initial", "repair", "resume", "intervention", "repair-extension"
     }:
         raise ValueError("Executing an attempt requires an explicit valid attempt mode.")
+    load_run_manifest(workspace_root=workspace_root, work_item=work_item, run_id=run_id)
+    load_stage_metadata(
+        workspace_root=workspace_root, work_item=work_item, run_id=run_id, stage=stage
+    )
     attempt_path = create_next_attempt_directory(
         workspace_root=workspace_root,
         work_item=work_item,

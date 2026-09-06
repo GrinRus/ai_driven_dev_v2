@@ -76,10 +76,6 @@ class RepairExtensionPreflightResult:
     def blocked(self) -> bool:
         return self.action == "blocked"
 
-    @property
-    def runtime_required(self) -> bool:
-        return self.action == "reopened"
-
 
 def evaluate_repair_extension_eligibility(
     grant: RepairExtensionGrant,

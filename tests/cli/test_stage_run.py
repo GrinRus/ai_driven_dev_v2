@@ -9,7 +9,7 @@ import pytest
 import typer
 from typer.testing import CliRunner
 
-from aidd.adapters.runtime_artifacts import RUNTIME_EXIT_METADATA_FILENAME
+from aidd.adapters.runtime_evidence import RUNTIME_EXIT_METADATA_FILENAME
 from aidd.cli.main import app
 from aidd.cli.stage_run import (
     StageInteractOptions,
@@ -2039,6 +2039,15 @@ def test_stage_run_resumes_blocked_stage_after_answers_are_provided(tmp_path: Pa
         next_documents=_valid_plan_output_documents(),
         exit_code=0,
     )
+    counter_path = tmp_path / "runtime-calls.txt"
+    writer_script.write_text(writer_script.read_text().replace(
+        "first_documents =",
+        f"counter_path = Path({str(counter_path)!r})\n"
+        "counter = int(counter_path.read_text()) if counter_path.exists() else 0\n"
+        "counter_path.write_text(str(counter + 1))\n"
+        "first_documents =",
+        1,
+    ))
     runtime_command = f"{shlex.quote(sys.executable)} {shlex.quote(writer_script.as_posix())}"
     config_path = _write_cli_config(
         tmp_path=tmp_path,
@@ -2067,6 +2076,26 @@ def test_stage_run_resumes_blocked_stage_after_answers_are_provided(tmp_path: Pa
     assert first_run.exit_code == 1, first_run.output
     assert "action=wait state=blocked" in first_run.stdout
     blocked_run_id = _run_id_for_work_item(workspace_root=workspace_root, work_item="WI-006")
+    attempts_root = (
+        workspace_root / "reports/runs/WI-006" / blocked_run_id / "stages/plan/attempts"
+    )
+    first_attempt = attempts_root / "attempt-0001"
+    retained = {path.name: path.read_bytes() for path in first_attempt.iterdir() if path.is_file()}
+    runtime_calls_before_resume = counter_path.read_text()
+    unanswered_run = runner.invoke(app, [
+        "stage", "run", "plan", "--work-item", "WI-006", "--runtime", "generic-cli",
+        "--root", str(workspace_root), "--config", str(config_path), "--no-log-follow",
+    ])
+    assert unanswered_run.exit_code == 1, unanswered_run.output
+    assert counter_path.read_text() == runtime_calls_before_resume
+    assert sorted(path.name for path in attempts_root.iterdir() if path.is_dir()) == [
+        "attempt-0001",
+    ]
+    assert {
+        path.name: path.read_bytes() for path in first_attempt.iterdir() if path.is_file()
+    } == retained
+    blocked_metadata = json.loads((attempts_root.parent / "stage-metadata.json").read_text())
+    assert blocked_metadata["status"] == "blocked"
     answers_path = workspace_root / "workitems" / "WI-006" / "stages" / "plan" / "answers.md"
     answers_path.write_text(
         ("# Answers\n\n- `Q1` `[resolved]` Include migration fallback in the first rollout.\n"),
@@ -2123,6 +2152,26 @@ def test_stage_run_resumes_blocked_stage_after_answers_are_provided(tmp_path: Pa
     )
     payload = json.loads(metadata_path.read_text(encoding="utf-8"))
     assert payload["status"] == "succeeded"
+
+
+    assert sorted(path.name for path in attempts_root.iterdir() if path.is_dir()) == [
+        "attempt-0001", "attempt-0002",
+    ]
+    assert int(counter_path.read_text()) == int(runtime_calls_before_resume) + 1
+    assert {
+        path.name: path.read_bytes() for path in first_attempt.iterdir() if path.is_file()
+    } == retained
+    resumed_attempt = attempts_root / "attempt-0002"
+    index = json.loads((resumed_attempt / "artifact-index.json").read_text())
+    assert index["attempt_mode"] == "resume"
+    input_bundle = workspace_root / index["documents"]["input_bundle"]
+    assert input_bundle == resumed_attempt / "input-bundle.md"
+    input_text = input_bundle.read_text()
+    assert "workitems/WI-006/stages/plan/questions.md" in input_text
+    assert "workitems/WI-006/stages/plan/answers.md" in input_text
+    assert "Include migration fallback in the first rollout." in input_text
+    stage_brief = workspace_root / "workitems/WI-006/stages/plan/stage-brief.md"
+    assert "workitems/WI-006/stages/plan/answers.md" in stage_brief.read_text()
 
 
 def test_prefix_stream_chunk_formats_multiline_follow_output() -> None:

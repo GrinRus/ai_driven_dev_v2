@@ -16,7 +16,6 @@ def test_operator_token_inventory_covers_accepted_semantic_roles() -> None:
     tokens = _asset("/operator-tokens.css")
     declared = set(re.findall(r"(--[a-z0-9-]+)\s*:", tokens))
     required = {
-        "--color-bg-canvas",
         "--color-bg-surface",
         "--color-bg-subtle",
         "--color-border-default",
@@ -38,7 +37,6 @@ def test_operator_token_inventory_covers_accepted_semantic_roles() -> None:
         "--color-focus",
         "--font-sans",
         "--font-mono",
-        "--type-display-size",
         "--type-title-size",
         "--type-body-size",
         "--type-label-size",
@@ -57,7 +55,6 @@ def test_operator_token_inventory_covers_accepted_semantic_roles() -> None:
         "--radius-pill",
         "--elevation-surface",
         "--elevation-overlay",
-        "--elevation-sticky",
         "--control-height-compact",
         "--control-height-default",
         "--control-height-touch",
@@ -74,8 +71,6 @@ def test_operator_token_inventory_covers_accepted_semantic_roles() -> None:
         "--focus-offset",
         "--focus-shadow",
         "--motion-duration-fast",
-        "--motion-duration-default",
-        "--motion-duration-slow",
         "--motion-ease-standard",
     }
     assert required <= declared

@@ -5,7 +5,7 @@ from pathlib import Path
 
 import pytest
 
-from aidd.cli.run_lookup import resolve_cli_run_target
+from aidd.core.run_inspection import resolve_run_artifacts_summary
 from aidd.core.run_store import (
     create_next_attempt_directory,
     create_run_manifest,
@@ -15,7 +15,7 @@ from aidd.core.run_store import (
 )
 
 
-def test_resolve_cli_run_target_uses_latest_run_and_attempt(tmp_path: Path) -> None:
+def test_resolve_run_artifacts_summary_uses_latest_run_and_attempt(tmp_path: Path) -> None:
     workspace_root = tmp_path / ".aidd"
     now = datetime.now(UTC).replace(microsecond=0)
 
@@ -58,11 +58,11 @@ def test_resolve_cli_run_target_uses_latest_run_and_attempt(tmp_path: Path) -> N
         work_item="WI-001",
         run_id="run-002",
         stage="plan",
-        status="running",
+        status="executing",
         changed_at_utc=now + timedelta(minutes=5),
     )
 
-    resolved = resolve_cli_run_target(
+    resolved = resolve_run_artifacts_summary(
         workspace_root=workspace_root,
         work_item="WI-001",
         stage="plan",
@@ -70,19 +70,13 @@ def test_resolve_cli_run_target_uses_latest_run_and_attempt(tmp_path: Path) -> N
 
     assert resolved.run_id == "run-002"
     assert resolved.attempt_number == 2
-    assert resolved.attempt_path == run_attempt_root(
-        workspace_root=workspace_root,
-        work_item="WI-001",
-        run_id="run-002",
-        stage="plan",
-        attempt_number=2,
-    )
-    assert resolved.documents["stage_brief"].as_posix().endswith(
-        "/workitems/WI-001/stages/plan/stage-brief.md"
-    )
+    assert resolved.logs["runtime_log"] == (
+        run_attempt_root(workspace_root, "WI-001", "run-002", "plan", 2) / "runtime.log"
+    ).relative_to(workspace_root).as_posix()
+    assert resolved.documents["stage_brief"] == "workitems/WI-001/stages/plan/stage-brief.md"
 
 
-def test_resolve_cli_run_target_supports_explicit_run_and_attempt(tmp_path: Path) -> None:
+def test_resolve_run_artifacts_summary_supports_explicit_run_and_attempt(tmp_path: Path) -> None:
     workspace_root = tmp_path / ".aidd"
 
     create_run_manifest(
@@ -100,7 +94,7 @@ def test_resolve_cli_run_target_supports_explicit_run_and_attempt(tmp_path: Path
         stage="plan",
     )
 
-    resolved = resolve_cli_run_target(
+    resolved = resolve_run_artifacts_summary(
         workspace_root=workspace_root,
         work_item="WI-001",
         stage="plan",
@@ -111,7 +105,7 @@ def test_resolve_cli_run_target_supports_explicit_run_and_attempt(tmp_path: Path
     assert resolved.attempt_number == 1
 
 
-def test_resolve_cli_run_target_rejects_closed_runs(tmp_path: Path) -> None:
+def test_resolve_run_artifacts_summary_keeps_terminal_runs_readable(tmp_path: Path) -> None:
     workspace_root = tmp_path / ".aidd"
     now = datetime.now(UTC).replace(microsecond=0)
 
@@ -134,20 +128,19 @@ def test_resolve_cli_run_target_rejects_closed_runs(tmp_path: Path) -> None:
         work_item="WI-001",
         run_id="run-001",
         stage="plan",
-        status="passed",
+        status="succeeded",
         changed_at_utc=now + timedelta(minutes=5),
     )
 
-    with pytest.raises(ValueError, match="terminal status"):
-        resolve_cli_run_target(
-            workspace_root=workspace_root,
-            work_item="WI-001",
-            stage="plan",
-            run_id="run-001",
-        )
+    resolved = resolve_run_artifacts_summary(
+        workspace_root=workspace_root, work_item="WI-001", stage="plan", run_id="run-001",
+    )
+    assert resolved.run_id == "run-001"
+    assert resolved.attempt_number == 1
+    assert "runtime_log" in resolved.logs
 
 
-def test_resolve_cli_run_target_rejects_missing_artifact_index(tmp_path: Path) -> None:
+def test_resolve_run_artifacts_summary_rejects_missing_artifact_index(tmp_path: Path) -> None:
     workspace_root = tmp_path / ".aidd"
 
     create_run_manifest(
@@ -173,7 +166,7 @@ def test_resolve_cli_run_target_rejects_missing_artifact_index(tmp_path: Path) -
     ).unlink()
 
     with pytest.raises(ValueError, match="Artifact index is missing"):
-        resolve_cli_run_target(
+        resolve_run_artifacts_summary(
             workspace_root=workspace_root,
             work_item="WI-001",
             stage="plan",
@@ -182,7 +175,7 @@ def test_resolve_cli_run_target_rejects_missing_artifact_index(tmp_path: Path) -
         )
 
 
-def test_resolve_cli_run_target_rejects_ambiguous_latest_run(tmp_path: Path) -> None:
+def test_resolve_run_artifacts_summary_rejects_ambiguous_latest_run(tmp_path: Path) -> None:
     workspace_root = tmp_path / ".aidd"
     now = datetime.now(UTC).replace(microsecond=0)
 
@@ -219,7 +212,7 @@ def test_resolve_cli_run_target_rejects_ambiguous_latest_run(tmp_path: Path) -> 
         work_item="WI-001",
         run_id="run-001",
         stage="plan",
-        status="running",
+        status="executing",
         changed_at_utc=now + timedelta(minutes=5),
     )
     persist_stage_status(
@@ -227,12 +220,12 @@ def test_resolve_cli_run_target_rejects_ambiguous_latest_run(tmp_path: Path) -> 
         work_item="WI-001",
         run_id="run-002",
         stage="plan",
-        status="running",
+        status="executing",
         changed_at_utc=now + timedelta(minutes=5),
     )
 
     with pytest.raises(ValueError, match="Ambiguous latest run"):
-        resolve_cli_run_target(
+        resolve_run_artifacts_summary(
             workspace_root=workspace_root,
             work_item="WI-001",
             stage="plan",

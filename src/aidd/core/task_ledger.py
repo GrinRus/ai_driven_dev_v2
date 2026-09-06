@@ -8,7 +8,13 @@ from pathlib import Path
 from typing import Any
 
 from aidd.core.identifiers import contained_component_path
-from aidd.core.run_store import run_stage_root, write_json_payload
+from aidd.core.persisted_state import require_fields
+from aidd.core.run_store import (
+    load_run_manifest,
+    load_stage_metadata,
+    run_stage_root,
+    write_json_payload,
+)
 from aidd.core.task_plan import TaskCard, TaskPlan
 
 TASK_LEDGER_FILENAME = "task-ledger.json"
@@ -83,24 +89,36 @@ class TaskLedgerEntry:
 
     @classmethod
     def from_dict(cls, payload: dict[str, Any]) -> TaskLedgerEntry:
+        require_fields(
+            payload,
+            label="Task ledger entry",
+            fields={
+                "id": str,
+                "title": str,
+                "dependencies": list,
+                "acceptance_ids": list,
+                "status": str,
+                "attempt_count": int,
+                "latest_attempt_path": (str, type(None)),
+                "blocker": (str, type(None)),
+                "updated_at_utc": (str, type(None)),
+            },
+        )
+        for field in ("dependencies", "acceptance_ids"):
+            if not all(isinstance(item, str) for item in payload[field]):
+                raise ValueError(f"Task ledger entry `{field}` must be a string list.")
+        if payload["attempt_count"] < 0:
+            raise ValueError("Task ledger entry attempt_count must be >= 0.")
         return cls(
-            id=str(payload["id"]),
-            title=str(payload["title"]),
-            dependencies=tuple(str(item) for item in payload.get("dependencies", [])),
-            acceptance_ids=tuple(str(item) for item in payload.get("acceptance_ids", [])),
-            status=TaskExecutionStatus(str(payload.get("status", "pending"))),
-            attempt_count=int(payload.get("attempt_count", 0)),
-            latest_attempt_path=(
-                str(payload["latest_attempt_path"])
-                if payload.get("latest_attempt_path") is not None
-                else None
-            ),
-            blocker=(str(payload["blocker"]) if payload.get("blocker") is not None else None),
-            updated_at_utc=(
-                str(payload["updated_at_utc"])
-                if payload.get("updated_at_utc") is not None
-                else None
-            ),
+            id=payload["id"],
+            title=payload["title"],
+            dependencies=tuple(payload["dependencies"]),
+            acceptance_ids=tuple(payload["acceptance_ids"]),
+            status=TaskExecutionStatus(payload["status"]),
+            attempt_count=payload["attempt_count"],
+            latest_attempt_path=payload["latest_attempt_path"],
+            blocker=payload["blocker"],
+            updated_at_utc=payload["updated_at_utc"],
         )
 
     def to_dict(self) -> dict[str, object]:
@@ -127,20 +145,25 @@ class TaskFinalization:
 
     @classmethod
     def from_dict(cls, payload: dict[str, Any]) -> TaskFinalization:
+        require_fields(
+            payload,
+            label="Task finalization",
+            fields={
+                "status": str,
+                "attempt_count": int,
+                "latest_attempt_path": (str, type(None)),
+                "blocker": (str, type(None)),
+                "updated_at_utc": (str, type(None)),
+            },
+        )
+        if payload["attempt_count"] < 0:
+            raise ValueError("Task finalization attempt_count must be >= 0.")
         return cls(
-            status=TaskFinalizationStatus(str(payload.get("status", "pending"))),
-            attempt_count=int(payload.get("attempt_count", 0)),
-            latest_attempt_path=(
-                str(payload["latest_attempt_path"])
-                if payload.get("latest_attempt_path") is not None
-                else None
-            ),
-            blocker=(str(payload["blocker"]) if payload.get("blocker") is not None else None),
-            updated_at_utc=(
-                str(payload["updated_at_utc"])
-                if payload.get("updated_at_utc") is not None
-                else None
-            ),
+            status=TaskFinalizationStatus(payload["status"]),
+            attempt_count=payload["attempt_count"],
+            latest_attempt_path=payload["latest_attempt_path"],
+            blocker=payload["blocker"],
+            updated_at_utc=payload["updated_at_utc"],
         )
 
     def to_dict(self) -> dict[str, object]:
@@ -174,20 +197,25 @@ class TaskLedger:
 
     @classmethod
     def from_dict(cls, payload: dict[str, Any]) -> TaskLedger:
-        finalization_payload = payload.get("finalization", {})
-        if not isinstance(finalization_payload, dict):
-            finalization_payload = {}
+        require_fields(
+            payload,
+            label="Task ledger",
+            schema_version=2,
+            fields={
+                "source_tasklist_sha256": str,
+                "tasks": list,
+                "created_at_utc": str,
+                "updated_at_utc": str,
+                "finalization": dict,
+            },
+        )
         return cls(
             schema_version=2,
-            source_tasklist_sha256=str(payload["source_tasklist_sha256"]),
-            tasks=tuple(
-                TaskLedgerEntry.from_dict(item)
-                for item in payload.get("tasks", [])
-                if isinstance(item, dict)
-            ),
-            created_at_utc=str(payload["created_at_utc"]),
-            updated_at_utc=str(payload["updated_at_utc"]),
-            finalization=TaskFinalization.from_dict(finalization_payload),
+            source_tasklist_sha256=payload["source_tasklist_sha256"],
+            tasks=tuple(TaskLedgerEntry.from_dict(item) for item in payload["tasks"]),
+            created_at_utc=payload["created_at_utc"],
+            updated_at_utc=payload["updated_at_utc"],
+            finalization=TaskFinalization.from_dict(payload["finalization"]),
         )
 
     def to_dict(self) -> dict[str, object]:
@@ -389,6 +417,10 @@ def persist_task_ledger(
 def ensure_task_ledger(
     *, workspace_root: Path, work_item: str, run_id: str, plan: TaskPlan
 ) -> TaskLedger:
+    load_run_manifest(workspace_root=workspace_root, work_item=work_item, run_id=run_id)
+    load_stage_metadata(
+        workspace_root=workspace_root, work_item=work_item, run_id=run_id, stage="implement"
+    )
     existing = load_task_ledger(
         workspace_root=workspace_root,
         work_item=work_item,

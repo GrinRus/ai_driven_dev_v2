@@ -67,7 +67,6 @@ textarea:disabled {
   opacity: var(--control-disabled-opacity);
 }
 button.secondary,
-button.quick-link,
 .log-filter button,
 .viewer-modes button {
   background: var(--surface);
@@ -75,7 +74,6 @@ button.quick-link,
   color: var(--text);
 }
 button.secondary:not(:disabled):not([aria-disabled="true"]):hover,
-button.quick-link:not(:disabled):not([aria-disabled="true"]):hover,
 .log-filter button:not(:disabled):not([aria-disabled="true"]):hover,
 .viewer-modes button:not(:disabled):not([aria-disabled="true"]):hover {
   background: var(--color-bg-selected);

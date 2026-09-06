@@ -61,6 +61,9 @@ drift, a prior grant, or succeeded downstream work is rejected before runtime ex
 
 ## Invariants
 
+- The persisted grant in stage metadata requires explicit integer schema version 1 and every
+  recorded identity, evidence, and authorization field. Missing or malformed fields stop
+  selection; they are not replaced with defaults. Before authorization the parent grant is `null`.
 - The identity tuple `(work item, run, stage)` is immutable.
 - A grant is one-time and cannot be copied to another run or stage.
 - The automatic repair budget and its exhaustion record remain unchanged.

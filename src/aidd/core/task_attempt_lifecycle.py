@@ -12,6 +12,7 @@ from uuid import uuid4
 from aidd.core.identifiers import contained_component_path
 from aidd.core.interview import stage_has_unresolved_blocking_questions
 from aidd.core.run_store import (
+    load_run_manifest,
     load_stage_metadata,
     next_attempt_number,
     persist_stage_status,
@@ -211,6 +212,10 @@ def reconcile_task_execution_state(
 ) -> TaskLedger:
     """Terminalize abandoned task attempts after the run lease has been acquired."""
 
+    load_run_manifest(workspace_root=workspace_root, work_item=work_item, run_id=run_id)
+    metadata = load_stage_metadata(
+        workspace_root=workspace_root, work_item=work_item, run_id=run_id, stage="implement"
+    )
     reconciled = ledger
     stage_projection_needs_reconciliation = False
     for entry in ledger.tasks:
@@ -259,12 +264,6 @@ def reconcile_task_execution_state(
             ledger=reconciled,
         )
     if stage_projection_needs_reconciliation:
-        metadata = load_stage_metadata(
-            workspace_root=workspace_root,
-            work_item=work_item,
-            run_id=run_id,
-            stage="implement",
-        )
         if metadata is not None and metadata.status in {
             StageState.PREPARING.value,
             StageState.EXECUTING.value,

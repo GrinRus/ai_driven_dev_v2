@@ -13,23 +13,16 @@ from aidd.core.run_store import (
     run_stage_metadata_path,
 )
 from aidd.core.runtime_operator import unapproved_operator_request_ids
-from aidd.core.stage_invocation import prepare_adapter_invocation
 from aidd.core.stage_models import (
     PostValidationAction,
     PostValidationTransition,
     RepairBudgetValidationTransition,
     StageInterviewRouting,
-    StageResumeResult,
     StageUnblockState,
     StageValidationState,
     ValidationVerdict,
 )
 from aidd.core.stage_outputs import publish_stage_outputs_after_validation_pass
-from aidd.core.stage_preparation import (
-    persist_execution_state,
-    prepare_stage_bundle,
-    validate_required_stage_inputs,
-)
 from aidd.core.stage_registry import DEFAULT_STAGE_CONTRACTS_ROOT
 from aidd.core.stage_terminal import reconcile_stage_result_after_validation_pass
 from aidd.core.state_machine import StageState, is_terminal_state, transition_stage_state
@@ -287,71 +280,6 @@ def _stage_has_unapproved_operator_requests(
     return bool(unapproved_operator_request_ids(attempt_path=attempt_path))
 
 
-def prepare_stage_resume_after_answers(
-    *,
-    workspace_root: Path,
-    work_item: str,
-    run_id: str,
-    stage: str,
-    contracts_root: Path = DEFAULT_STAGE_CONTRACTS_ROOT,
-    changed_at_utc: datetime | None = None,
-) -> StageResumeResult:
-    unblock_state = update_stage_unblock_state(
-        workspace_root=workspace_root,
-        work_item=work_item,
-        run_id=run_id,
-        stage=stage,
-        changed_at_utc=changed_at_utc,
-    )
-    if not unblock_state.unblocked:
-        return StageResumeResult(
-            stage=stage,
-            work_item=work_item,
-            run_id=run_id,
-            unblock_state=unblock_state,
-            preparation_bundle=None,
-            execution_state=None,
-            adapter_invocation=None,
-        )
-
-    preparation_bundle = prepare_stage_bundle(
-        workspace_root=workspace_root,
-        work_item=work_item,
-        stage=stage,
-        contracts_root=contracts_root,
-        include_existing_stage_outputs=True,
-    )
-    validate_required_stage_inputs(
-        workspace_root=workspace_root,
-        preparation_bundle=preparation_bundle,
-    )
-    execution_state = persist_execution_state(
-        workspace_root=workspace_root,
-        work_item=work_item,
-        run_id=run_id,
-        stage=stage,
-        attempt_mode="resume",
-        contracts_root=contracts_root,
-        changed_at_utc=changed_at_utc,
-    )
-    adapter_invocation = prepare_adapter_invocation(
-        workspace_root=workspace_root,
-        preparation_bundle=preparation_bundle,
-        execution_state=execution_state,
-        contracts_root=contracts_root,
-        resume_mode=True,
-    )
-    return StageResumeResult(
-        stage=stage,
-        work_item=work_item,
-        run_id=run_id,
-        unblock_state=unblock_state,
-        preparation_bundle=preparation_bundle,
-        execution_state=execution_state,
-        adapter_invocation=adapter_invocation,
-    )
-
-
 def decide_post_validation_transition(
     validation_state: StageValidationState,
     *,
@@ -479,6 +407,5 @@ __all__ = [
     "persist_validation_state",
     "persist_validation_state_with_repair_budget",
     "reconcile_and_validate_stage_result_after_validation_pass",
-    "prepare_stage_resume_after_answers",
     "update_stage_unblock_state",
 ]

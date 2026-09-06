@@ -10,7 +10,6 @@ from pathlib import Path
 import pytest
 
 from aidd.adapters.generic_cli.runner import (
-    RUNTIME_EXIT_METADATA_FILENAME,
     GenericCliExitClassification,
     GenericCliRunResult,
     GenericCliRuntimeArtifacts,
@@ -23,6 +22,7 @@ from aidd.adapters.generic_cli.runner import (
     persist_attempt_runtime_artifacts,
     run_subprocess_with_streaming,
 )
+from aidd.adapters.runtime_evidence import RUNTIME_EXIT_METADATA_FILENAME
 from aidd.core.run_store import RUN_RUNTIME_LOG_FILENAME
 
 

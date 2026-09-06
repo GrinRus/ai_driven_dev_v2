@@ -5,7 +5,6 @@ from pathlib import Path
 from aidd.core.markdown import (
     MarkdownHeading,
     MarkdownSectionIndex,
-    extract_markdown_headings,
     extract_required_sections_from_document_contract,
     extract_stage_required_heading_map,
 )
@@ -15,7 +14,7 @@ from aidd.core.stage_registry import (
     resolve_expected_output_documents,
     resolve_required_input_documents,
 )
-from aidd.validators.document_loader import load_markdown_document, probe_markdown_document
+from aidd.validators.document_loader import probe_markdown_document
 from aidd.validators.models import ValidationFinding, ValidationIssueLocation
 
 MISSING_REQUIRED_DOCUMENT_CODE = "STRUCT-MISSING-REQUIRED-DOCUMENT"
@@ -100,11 +99,6 @@ def _required_sections_for_document(
         sections.extend(stage_requirements.get(document_name, ()))
 
     return tuple(dict.fromkeys(section for section in sections if section))
-
-
-def extract_document_headings(*, path: Path, workspace_root: Path) -> tuple[MarkdownHeading, ...]:
-    loaded_document = load_markdown_document(path=path, workspace_root=workspace_root)
-    return extract_markdown_headings(loaded_document.body)
 
 
 def _section_has_meaningful_content(
