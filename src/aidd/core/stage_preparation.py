@@ -4,6 +4,7 @@ from datetime import datetime
 from enum import StrEnum
 from pathlib import Path
 
+from aidd.core.attempt_lineage import AttemptKind, AttemptLineage, AttemptScope
 from aidd.core.markdown import extract_required_sections_from_document_contract
 from aidd.core.project_set import ResolvedProjectSet, persist_project_set_context
 from aidd.core.run_store import (
@@ -12,6 +13,7 @@ from aidd.core.run_store import (
     load_run_manifest,
     load_stage_metadata,
     persist_stage_status,
+    write_attempt_artifact_index,
 )
 from aidd.core.stage_models import StageExecutionState, StagePreparationBundle
 from aidd.core.stage_paths import workspace_relative_paths
@@ -453,6 +455,22 @@ def persist_execution_state(
         attempt_mode=attempt_mode,
         contracts_root=contracts_root,
     )
+    attempt_number = attempt_number_from_path(attempt_path)
+    lineage = AttemptLineage(
+        scope=AttemptScope.STAGE,
+        attempt_kind=AttemptKind(attempt_mode),
+        attempt_number=attempt_number,
+    )
+    write_attempt_artifact_index(
+        workspace_root=workspace_root,
+        work_item=work_item,
+        run_id=run_id,
+        stage=stage,
+        attempt_number=attempt_number,
+        contracts_root=contracts_root,
+        attempt_mode=attempt_mode,
+        lineage=lineage,
+    )
     stage_metadata_path = persist_stage_status(
         workspace_root=workspace_root,
         work_item=work_item,
@@ -465,9 +483,10 @@ def persist_execution_state(
         stage=stage,
         work_item=work_item,
         run_id=run_id,
-        attempt_number=attempt_number_from_path(attempt_path),
+        attempt_number=attempt_number,
         attempt_path=attempt_path,
         stage_metadata_path=stage_metadata_path,
+        lineage=lineage,
     )
 
 

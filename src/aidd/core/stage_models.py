@@ -4,6 +4,7 @@ from dataclasses import dataclass
 from enum import StrEnum
 from pathlib import Path
 
+from aidd.core.attempt_lineage import AttemptLineage
 from aidd.core.state_machine import StageState
 from aidd.validators.models import ValidationFinding
 
@@ -28,6 +29,7 @@ class StageExecutionState:
     attempt_number: int
     attempt_path: Path
     stage_metadata_path: Path
+    lineage: AttemptLineage | None = None
 
 
 @dataclass(frozen=True, slots=True)

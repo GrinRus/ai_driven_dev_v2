@@ -29,6 +29,7 @@ class TaskFinalizationContext:
     ledger: TaskLedger
     attempt_path: Path
     attempt_number: int
+    lineage: AttemptLineage | None = None
 
 
 def aggregate_execution_mode(plan: TaskPlan) -> TaskExecutionMode:
@@ -89,16 +90,17 @@ def prepare_task_finalization(
     staging = attempts_root / f".attempt-{number:04d}-{uuid4().hex}.staging"
     staging.mkdir()
     timestamp = datetime.now(UTC).isoformat().replace("+00:00", "Z")
+    lineage = AttemptLineage(
+        scope=AttemptScope.FINALIZATION,
+        attempt_kind=AttemptKind.FINALIZATION,
+        attempt_number=number,
+    )
     state = FinalizationAttemptState(
         attempt_number=number,
         status="executing",
         created_at_utc=timestamp,
         updated_at_utc=timestamp,
-        lineage=AttemptLineage(
-            scope=AttemptScope.FINALIZATION,
-            attempt_kind=AttemptKind.FINALIZATION,
-            attempt_number=number,
-        ),
+        lineage=lineage,
     )
     (staging / "finalization-state.json").write_text(
         json.dumps(state.to_dict(), indent=2, sort_keys=True) + "\n",
@@ -126,6 +128,7 @@ def prepare_task_finalization(
         ledger=ledger,
         attempt_path=attempt_path,
         attempt_number=number,
+        lineage=lineage,
     )
 
 

@@ -189,6 +189,7 @@ def _record_global_attempt_references(
         task_attempt_number=context.task_attempt_number,
         task_attempt_path=context.task_attempt_path,
         stage_attempt_numbers=tuple(range(context.global_attempt_start, end)),
+        lineage=context.lineage,
     )
 
 

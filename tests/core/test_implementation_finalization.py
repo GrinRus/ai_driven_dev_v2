@@ -84,6 +84,10 @@ def test_finalization_attempts_are_monotonic_after_interruption(tmp_path: Path) 
     assert first.attempt_number == 1
     assert second.attempt_number == 2
     assert second.attempt_path.name == "attempt-0002"
+    assert first.lineage is not None
+    assert first.lineage.scope.value == "finalization"
+    assert first.lineage.attempt_kind.value == "finalization"
+    assert first.lineage.attempt_number == 1
 
 
 def test_finalization_terminal_state_preserves_schema_and_blocker(tmp_path: Path) -> None:

@@ -372,6 +372,16 @@ def test_persist_execution_state_creates_attempt_and_sets_executing_status(tmp_p
         (execution_state.attempt_path / "artifact-index.json").read_text(encoding="utf-8")
     )
     assert artifact_index["attempt_mode"] == "initial"
+    assert artifact_index["lineage"] == {
+        "attempt_kind": "initial",
+        "attempt_number": 1,
+        "parent_attempt_path": None,
+        "schema_version": 1,
+        "scope": "stage",
+    }
+    assert execution_state.lineage is not None
+    assert execution_state.lineage.attempt_kind.value == "initial"
+    assert execution_state.lineage.attempt_number == 1
 
 
 def test_persist_execution_state_rejects_unknown_mode_before_allocating_attempt(
