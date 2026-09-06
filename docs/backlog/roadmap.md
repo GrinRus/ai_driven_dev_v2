@@ -416,7 +416,7 @@ while retired ordinal-only evidence is rejected rather than silently upgraded.
 
 Primary output: execution verdict and first decisive cause remain compatible across every report.
 
-- `W48-E3-S2-T1` (next) Define typed failure cause, phase, source, reason, evidence link, and
+- `W48-E3-S2-T1` (done) Define typed failure cause, phase, source, reason, evidence link, and
   legacy mapping.
   - Output: one versioned failure-cause contract with a fail-closed compatibility table for
     execution verdicts and first decisive causes.
@@ -424,6 +424,18 @@ Primary output: execution verdict and first decisive cause remain compatible acr
   - Verification: contradictory verdict/cause combinations are rejected, while setup failure,
     provider/runtime failure, validation failure, and infrastructure failure retain distinct
     report semantics.
+  - Completion evidence: PR #548 merged to `origin/main` at `f45c4d84`; Python 3.12–3.14,
+    adapter-conformance, deterministic-scenarios, packaged-ui-browser, build, CodeQL, Scorecard,
+    and dependency-review checks passed. Local failure-cause (26), eval/failure-evidence (215),
+    Ruff, and strict mypy checks passed; the adjacent UI checkout remained untouched.
+- `W48-E3-S2-T2` (next) Preserve partial phase transcripts and the failing command.
+  - Dependencies: `W48-E3-S2-T1`.
+  - Output: a failed phase retains all completed command records, the failing command, and its
+    typed primary cause before later evidence enrichment.
+  - Scope: harness runner and focused harness/eval evidence tests; no UI-owned paths and no
+    verdict/report projection changes beyond the persisted failure-cause seam.
+  - Verification: a two-command phase whose second command fails records commands one and two,
+    preserves the original cause, and remains readable after enrichment failure.
 
 ## Wave 51 — agent development instruction consistency (`done`)
 
