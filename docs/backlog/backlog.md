@@ -7,7 +7,7 @@ slice, and local task.
 
 ## Next
 
-- `W48-E3-S2-T2` — Preserve partial phase transcripts and the failing command.
+- `W48-E3-S2-T3` — Propagate the cause through log analysis, grader, verdict, and summary.
 
 ## Soon
 
@@ -37,8 +37,8 @@ slice, and local task.
 
 ## Current reconciliation
 
-- `2026-09-06` `W48-E3-S2-T1` completed in PR #548 and is present on `origin/main` at `f45c4d84`.
-  Required CI lanes and local failure-cause, eval/failure-evidence, Ruff, and strict mypy checks
-  passed. The task owned eval contracts and focused model tests; the adjacent `codex/ui-completion`
-  checkout remains untouched. `W48-E3-S2-T2` is now the promoted direct successor and continues
-  to avoid the UI-owned paths; `W46-E2-S2-T4` and human/provider acceptance tasks stay parked.
+- `2026-09-06` `W48-E3-S2-T2` completed in PR #550 and is present on `origin/main` at `d11d56c8`.
+  Required CI lanes and local harness, eval, planning/docs, Ruff, and strict mypy checks passed.
+  The task owned harness transcript persistence; the adjacent `codex/ui-completion` checkout
+  remains untouched. `W48-E3-S2-T3` is now the promoted direct successor and continues to avoid
+  the UI-owned paths; `W46-E2-S2-T4` and human/provider acceptance tasks stay parked.
