@@ -12,6 +12,7 @@ from aidd.core.run_archive import (
     RunArchiveProtocolError,
     load_run_archive_decisions,
     persist_run_archive_decision,
+    resolve_run_archive_decision,
     run_archive_decisions_root,
 )
 from aidd.core.run_inspection import resolve_run_metadata_summary
@@ -96,10 +97,11 @@ def test_archive_read_model_rejects_retired_manifest_state(tmp_path: Path) -> No
     with pytest.raises(
         RunArchiveProtocolError, match="Embedded operator_archive state is unsupported"
     ):
-        resolve_run_metadata_summary(
+        resolve_run_archive_decision(
             workspace_root=workspace_root,
             work_item="WI-ARCHIVE",
             run_id="run-1",
+            manifest_payload=payload,
         )
 
 

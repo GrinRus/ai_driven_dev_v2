@@ -36,18 +36,6 @@ class OwnershipMatrixRow:
     publish: str
     ui_authoring: str
 
-    @property
-    def stage(self) -> str | None:
-        """Return the single stage for stage-specific rows, otherwise ``None``."""
-
-        if self.stages is None or len(self.stages) != 1:
-            return None
-        return self.stages[0]
-
-    @property
-    def applies_to_all_stages(self) -> bool:
-        return self.stages is None
-
     def applies_to(self, stage: str) -> bool:
         if not is_valid_stage(stage):
             raise OwnershipRegistryError(f"Unknown stage: {stage}")
@@ -83,16 +71,6 @@ class DocumentOwnershipRegistry:
         if not is_valid_stage(stage):
             raise OwnershipRegistryError(f"Unknown stage: {stage}")
         return tuple(row for row in self.rows if row.applies_to(stage))
-
-    def for_owner(self, ownership_class: OwnershipClass) -> tuple[OwnershipMatrixRow, ...]:
-        try:
-            owner = OwnershipClass(ownership_class)
-        except ValueError as exc:
-            raise OwnershipRegistryError(
-                f"Unknown ownership class: {ownership_class}"
-            ) from exc
-        return tuple(row for row in self.rows if row.ownership_class is owner)
-
 
 DEFAULT_OWNERSHIP_MATRIX_PATH = default_document_contracts_root() / "ownership-matrix.md"
 

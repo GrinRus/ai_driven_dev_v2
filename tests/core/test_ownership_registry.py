@@ -27,12 +27,16 @@ def test_load_ownership_registry_parses_canonical_rows() -> None:
     registry = load_ownership_registry()
 
     assert len(registry.rows) == 20
-    assert registry.row_for("workitems/<id>/stages/<stage>/idea-brief.md").stage == "idea"
+    assert registry.row_for("workitems/<id>/stages/<stage>/idea-brief.md").stages == ("idea",)
     assert registry.row_for("workitems/<id>/stages/<stage>/stage-result.md").ownership_class == (
         OwnershipClass.AIDD_WORKFLOW_RECORD
     )
     assert len(registry.for_stage("qa")) == 13
-    assert set(registry.for_owner(OwnershipClass.RUNTIME_CONTENT)) == {
+    assert {
+        row
+        for row in registry.rows
+        if row.ownership_class is OwnershipClass.RUNTIME_CONTENT
+    } == {
         registry.row_for(f"workitems/<id>/stages/<stage>/{filename}")
         for filename in (
             "idea-brief.md",
@@ -50,7 +54,7 @@ def test_load_ownership_registry_parses_canonical_rows() -> None:
 @pytest.mark.parametrize("stage", STAGES)
 def test_stage_specific_rows_have_one_runtime_owner(stage: str) -> None:
     registry = load_ownership_registry()
-    rows = tuple(row for row in registry.for_stage(stage) if row.stage == stage)
+    rows = tuple(row for row in registry.for_stage(stage) if row.stages == (stage,))
 
     assert len(rows) == 1
     assert rows[0].ownership_class is OwnershipClass.RUNTIME_CONTENT

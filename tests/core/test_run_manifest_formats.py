@@ -55,6 +55,7 @@ def _tree(root: Path) -> dict[str, bytes | None]:
         ("created_at_utc", _REMOVE),
         ("updated_at_utc", _REMOVE),
         ("lineage", None),
+        ("operator_archive", {"archived": True}),
     ],
 )
 @pytest.mark.parametrize("operation", ("reuse", "status", "repair-history", "repair-grant"))
