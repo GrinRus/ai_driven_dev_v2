@@ -1,11 +1,11 @@
 from __future__ import annotations
 
 import re
+from collections.abc import Mapping
 from dataclasses import dataclass
 from enum import StrEnum
 from pathlib import Path
 from types import MappingProxyType
-from typing import Mapping
 
 from aidd.core.resources import default_document_contracts_root
 from aidd.core.stages import is_valid_stage
