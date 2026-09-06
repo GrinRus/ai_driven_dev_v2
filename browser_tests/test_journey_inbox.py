@@ -209,6 +209,7 @@ def test_running_job_keeps_origin_project_when_operator_switches_projects(
         )
         assert launch_response.status == 200
         job_id = launch_response.json()["job_id"]
+        job_cancelled = False
         try:
             _wait_for_durable_payload(
                 fetch=lambda: page.request.get(
@@ -266,6 +267,20 @@ def test_running_job_keeps_origin_project_when_operator_switches_projects(
             _wait_for_work_item_surface(page, "WI-RUN")
             assert parse_qs(urlsplit(page.url).query)["work_item"] == ["WI-RUN"]
 
+            cancel_response = page.request.post(
+                f"{harness.url}api/jobs/{job_id}/cancel"
+            )
+            assert cancel_response.status == 200
+            _wait_for_durable_payload(
+                fetch=lambda: page.request.get(
+                    f"{harness.url}api/jobs/{job_id}"
+                ).json(),
+                ready=lambda payload: payload.get("status") == "cancelled",
+                phase="multi-context fixture cancellation before artifact switch",
+            )
+            job_cancelled = True
+            page.evaluate("clearReconciledActiveJob()")
+
             origin_switch = page.request.post(
                 f"{harness.url}api/onboarding/work-item",
                 data={
@@ -278,6 +293,14 @@ def test_running_job_keeps_origin_project_when_operator_switches_projects(
             origin_state = page.request.get(f"{harness.url}api/onboarding/state")
             assert origin_state.status == 200
             assert origin_state.json()["context"]["work_item"] == "WI-COMPLETE"
+            switched_live_logs = page.request.get(
+                f"{harness.url}api/jobs/{job_id}/logs?cursor=0"
+            )
+            assert switched_live_logs.status == 200
+            assert any(
+                "AIDD UI workflow job started." in chunk["text"]
+                for chunk in switched_live_logs.json()["chunks"]
+            )
             origin_artifacts = page.request.get(
                 f"{harness.url}api/artifacts?stage=qa&run_id=run-complete"
             )
@@ -292,17 +315,18 @@ def test_running_job_keeps_origin_project_when_operator_switches_projects(
             assert "qa complete" in origin_logs.json()["text"]
             _assert_clean_navigation_diagnostics(browser_page)
         finally:
-            cancel_response = page.request.post(
-                f"{harness.url}api/jobs/{job_id}/cancel"
-            )
-            assert cancel_response.status == 200
-            _wait_for_durable_payload(
-                fetch=lambda: page.request.get(
-                    f"{harness.url}api/jobs/{job_id}"
-                ).json(),
-                ready=lambda payload: payload.get("status") == "cancelled",
-                phase="multi-context fixture cancellation",
-            )
+            if not job_cancelled:
+                cancel_response = page.request.post(
+                    f"{harness.url}api/jobs/{job_id}/cancel"
+                )
+                assert cancel_response.status == 200
+                _wait_for_durable_payload(
+                    fetch=lambda: page.request.get(
+                        f"{harness.url}api/jobs/{job_id}"
+                    ).json(),
+                    ready=lambda payload: payload.get("status") == "cancelled",
+                    phase="multi-context fixture cancellation",
+                )
 
 
 def test_project_work_selects_inspector_filters_without_reordering_and_reloads(
