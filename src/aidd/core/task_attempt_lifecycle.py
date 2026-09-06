@@ -11,7 +11,11 @@ from uuid import uuid4
 
 from aidd.core.identifiers import contained_component_path
 from aidd.core.interview import stage_has_unresolved_blocking_questions
-from aidd.core.run_store import load_stage_metadata, next_attempt_number
+from aidd.core.run_store import (
+    load_stage_metadata,
+    next_attempt_number,
+    persist_stage_status,
+)
 from aidd.core.stage_validation import update_stage_unblock_state
 from aidd.core.state_machine import StageState
 from aidd.core.task_ledger import (
@@ -22,6 +26,8 @@ from aidd.core.task_ledger import (
     task_root,
 )
 from aidd.core.task_plan import TaskCard, TaskPlan, parse_task_plan
+
+INTERRUPTED_TASK_BLOCKER = "Task execution was interrupted; resume creates a new attempt."
 
 
 @dataclass(frozen=True, slots=True)
@@ -206,6 +212,7 @@ def reconcile_task_execution_state(
     """Terminalize abandoned task attempts after the run lease has been acquired."""
 
     reconciled = ledger
+    stage_projection_needs_reconciliation = False
     for entry in ledger.tasks:
         attempts_root = task_attempts_root(
             workspace_root=workspace_root,
@@ -224,6 +231,8 @@ def reconcile_task_execution_state(
                     status="abandoned",
                     blocker="Task attempt was abandoned before ledger commit.",
                 )
+        if entry.status is TaskExecutionStatus.FAILED and entry.blocker == INTERRUPTED_TASK_BLOCKER:
+            stage_projection_needs_reconciliation = True
         if entry.status is not TaskExecutionStatus.EXECUTING:
             continue
         if entry.latest_attempt_path is not None:
@@ -239,8 +248,9 @@ def reconcile_task_execution_state(
         reconciled = reconciled.transition(
             entry.id,
             TaskExecutionStatus.FAILED,
-            blocker="Task execution was interrupted; resume creates a new attempt.",
+            blocker=INTERRUPTED_TASK_BLOCKER,
         )
+        stage_projection_needs_reconciliation = True
     if reconciled != ledger:
         persist_task_ledger(
             workspace_root=workspace_root,
@@ -248,6 +258,25 @@ def reconcile_task_execution_state(
             run_id=run_id,
             ledger=reconciled,
         )
+    if stage_projection_needs_reconciliation:
+        metadata = load_stage_metadata(
+            workspace_root=workspace_root,
+            work_item=work_item,
+            run_id=run_id,
+            stage="implement",
+        )
+        if metadata is not None and metadata.status in {
+            StageState.PREPARING.value,
+            StageState.EXECUTING.value,
+            StageState.VALIDATING.value,
+        }:
+            persist_stage_status(
+                workspace_root=workspace_root,
+                work_item=work_item,
+                run_id=run_id,
+                stage="implement",
+                status=StageState.FAILED.value,
+            )
     return reconciled
 
 

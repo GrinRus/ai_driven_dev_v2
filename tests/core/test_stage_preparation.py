@@ -54,8 +54,8 @@ def test_project_set_stage_brief_assigns_lifecycle_evidence_to_aidd(tmp_path: Pa
         ),
         project_set_context_path="workitems/WI-001/context/project-set.md",
     )
-    assert "AIDD authors the `Project-set evidence` section" in brief
-    assert "do not write the lifecycle record" in brief
+    assert "AIDD generates `Project-set evidence` in `stage-result.md`" in brief
+    assert "Only these substantive documents are runtime completion targets" in brief
     assert "- Project ids: `api`" in brief
     assert "- Project roots: `api`" in brief
 

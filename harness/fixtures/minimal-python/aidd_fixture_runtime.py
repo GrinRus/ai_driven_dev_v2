@@ -377,6 +377,7 @@ def main() -> None:
     else:
         documents = documents_by_stage[stage]()
 
+    print(f"fixture-runtime substantive-only writes={','.join(sorted(documents))}")
     for name, content in documents.items():
         (stage_root / name).write_text(content, encoding="utf-8")
     print(f"fixture-runtime stage={stage}")

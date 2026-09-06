@@ -5,10 +5,22 @@ You are rerunning the `plan` stage because validation failed.
 Your job is to resolve validator findings with minimal edits while preserving milestone ordering
 logic, dependency clarity, and review readiness.
 
+## Runtime write authority
+
+Write only `plan.md` and other runtime-content targets explicitly listed in `stage-brief.md`.
+Do not write `stage-result.md` or `validator-report.md`; AIDD owns their canonical
+status, validation, history, and publication. Never create, edit, delete, or replace either record.
+If a finding names one, expose the needed correction in `plan.md` for AIDD reconciliation.
+`repair-brief.md` is AIDD-owned read-only repair control evidence. Do not rewrite it.
+Keep any repair summary and remaining content blockers in `plan.md` using its existing sections.
+AIDD owns terminal status, repair references, and downstream next actions. Read workflow records
+and their contracts as evidence.
+
 ## Read order (do not skip)
 
 Read `stage-brief.md`, the current `plan.md`, and its
 `contracts/documents/plan.md` contract before applying the findings.
+
 1. `validator-report.md` (latest findings and severities)
 2. `repair-brief.md` (repair scope and constraints)
 3. `contracts/stages/plan.md`
@@ -18,6 +30,12 @@ Read `stage-brief.md`, the current `plan.md`, and its
 Do not inspect AIDD validator implementation files, installed package files, or bundled examples
 during repair. Use `validator-report.md`, `repair-brief.md`, and the named contracts as the repair
 scope. After updating the required documents and checking consistency, stop.
+
+Read `contracts/documents/validator-report.md` and `contracts/documents/stage-result.md`
+for canonical field labels and finding codes; do not invent or rename protocol vocabulary.
+Report unknown input vocabulary in substantive content without modifying the workflow record.
+If it or another blocker prevents completion, submit a `[blocking]` question through the
+controlled interview path; substantive blocker prose alone does not pause AIDD.
 
 ## Interview context
 
@@ -29,20 +47,12 @@ Operator answers use the same QID, for example `- Q1 [resolved] ...`; do not cre
 `answers.md`, invent `A1`/`A2` answer ids, or create `[resolved]` answers yourself. Missing
 answers remain an operator checkpoint. Render assumptions as non-bullet continuation prose.
 
-## Authoring boundary
-
-Write only `plan.md` and other runtime-content targets explicitly listed in `stage-brief.md`.
-Do not write `stage-result.md` or `validator-report.md`; AIDD owns validation, attempt history,
-terminal status, repair references, and downstream next actions. Read those records as evidence.
-`repair-brief.md` is AIDD-owned read-only repair control evidence. Do not rewrite it.
-Keep any repair summary and remaining content blockers in `plan.md` using its existing sections.
-If a finding concerns an AIDD-owned record, report the inconsistency without editing that record.
-
 Read the repair budget in `repair-brief.md`. On `repair-budget-final-attempt` or
 `Rerun allowed after this attempt: no`, still repair the content; do not fail solely because no
-later rerun is available. AIDD may record `succeeded` only after canonical validation passes;
+later rerun is available. AIDD determines `succeeded` after validation;
 `repair-budget-exhausted` with unresolved findings remains `failed`. Do not reset budget or
 attempt history. Keep evidence and unresolved questions consistent with the repaired content.
+Do not treat the previous failed validator report as a new result.
 
 ## Finding-to-fix mapping
 
@@ -52,6 +62,8 @@ For each finding:
    `Verification approach`, `Verification notes`, scope boundaries);
 2. patch the smallest section that resolves the issue code;
 3. re-check sequencing consistency across milestones and dependency links;
+4. keep readiness and blocker claims in `plan.md` consistent with unresolved `[blocking]`
+   questions and substantive repair evidence; AIDD derives stage status.
 
 Use concrete repair actions:
 
@@ -69,11 +81,16 @@ Use concrete repair actions:
   `context/allowed-write-scope.md` as exhaustive and do not edit, broaden, or reinterpret it.
   Treat `SEM-PLAN-SCOPE-MISMATCH` as fail-closed evidence and correct every named proposed write
   before claiming the Plan is ready.
+- downstream-order drift: keep plan recommendations flow-aware: `review-spec` is the immediate
+  canonical downstream stage, before task decomposition, implementation, review, or QA.
+  AIDD writes workflow next actions.
 
 ## Targeted repair discipline
 
 - Fix only the sections named by validator findings unless cross-document consistency requires a narrow companion edit.
 - Preserve valid sections and stable ids; do not rewrite complete documents just to satisfy one failed heading.
+- Re-copy only the `plan.md` skeleton headings from `stage-brief.md` or its document contract
+  when substantive output is malformed. AIDD repairs generated workflow records.
 
 ## Repair rules
 

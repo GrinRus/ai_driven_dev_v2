@@ -5,10 +5,22 @@ You are rerunning the `research` stage because validation failed.
 Your job is to resolve research-validator findings with minimal edits while preserving evidence
 traceability and question-state consistency.
 
+## Runtime write authority
+
+Write only `research-notes.md` and other runtime-content targets explicitly listed in `stage-brief.md`.
+Do not write `stage-result.md` or `validator-report.md`; AIDD owns their canonical
+status, validation, history, and publication. Never create, edit, delete, or replace either record.
+If a finding names one, expose the needed correction in `research-notes.md` for AIDD reconciliation.
+`repair-brief.md` is AIDD-owned read-only repair control evidence. Do not rewrite it.
+Keep any repair summary and remaining content blockers in `research-notes.md` using its existing sections.
+AIDD owns terminal status, repair references, and downstream next actions. Read workflow records
+and their contracts as evidence.
+
 ## Read order (do not skip)
 
 Read `stage-brief.md`, the current `research-notes.md`, and its
 `contracts/documents/research-notes.md` contract before applying the findings.
+
 1. `validator-report.md` (latest issue list and severities)
 2. `repair-brief.md` (repair scope and constraints)
 3. `contracts/stages/research.md`
@@ -17,6 +29,12 @@ Read `stage-brief.md`, the current `research-notes.md`, and its
 Do not inspect AIDD validator implementation files, installed package files, or bundled examples
 during repair. Use `validator-report.md`, `repair-brief.md`, and the named contracts as the repair
 scope. After updating the required documents and checking consistency, stop.
+
+Read `contracts/documents/validator-report.md` and `contracts/documents/stage-result.md`
+for canonical field labels and finding codes; do not invent or rename protocol vocabulary.
+Report unknown input vocabulary in substantive content without modifying the workflow record.
+If it or another blocker prevents completion, submit a `[blocking]` question through the
+controlled interview path; substantive blocker prose alone does not pause AIDD.
 
 ## Interview context
 
@@ -28,20 +46,12 @@ Operator answers use the same QID, for example `- Q1 [resolved] ...`; do not cre
 `answers.md`, invent `A1`/`A2` answer ids, or create `[resolved]` answers yourself. Missing
 answers remain an operator checkpoint. Render assumptions as non-bullet continuation prose.
 
-## Authoring boundary
-
-Write only `research-notes.md` and other runtime-content targets explicitly listed in `stage-brief.md`.
-Do not write `stage-result.md` or `validator-report.md`; AIDD owns validation, attempt history,
-terminal status, repair references, and downstream next actions. Read those records as evidence.
-`repair-brief.md` is AIDD-owned read-only repair control evidence. Do not rewrite it.
-Keep any repair summary and remaining content blockers in `research-notes.md` using its existing sections.
-If a finding concerns an AIDD-owned record, report the inconsistency without editing that record.
-
 Read the repair budget in `repair-brief.md`. On `repair-budget-final-attempt` or
 `Rerun allowed after this attempt: no`, still repair the content; do not fail solely because no
-later rerun is available. AIDD may record `succeeded` only after canonical validation passes;
+later rerun is available. AIDD determines `succeeded` after validation;
 `repair-budget-exhausted` with unresolved findings remains `failed`. Do not reset budget or
 attempt history. Keep evidence and unresolved questions consistent with the repaired content.
+Do not treat the previous failed validator report as a new result.
 
 ## Finding-to-fix mapping
 
@@ -51,14 +61,15 @@ For each finding:
    `Trade-offs`, `Open questions`);
 2. patch the smallest section that resolves the issue;
 3. re-check citation consistency across `Sources`, `Findings`, and `Evidence trace`;
-4. remove or account for any temporary research scripts or probes left directly under `.aidd/`;
+4. keep unresolved `[blocking]` questions explicit in `research-notes.md`; AIDD derives blocker status.
+5. remove or account for any temporary research scripts or probes left directly under `.aidd/`;
    cite evidence in canonical Markdown instead of preserving scratch files.
-5. re-check that any local repro/probe cited by research is bounded by construction. Do not
+6. re-check that any local repro/probe cited by research is bounded by construction. Do not
    preserve evidence from an open-ended server, infinite stream, watcher, or command that
    only stopped because the external per-stage timeout fired or the run was interrupted. Add
    a finite iteration count, an in-script timeout such as `anyio.fail_after(...)`, or
    `subprocess.run(..., timeout=...)`; otherwise downgrade the probe to `not-run: <reason>`.
-6. re-check ignored verification residue from research commands with
+7. re-check ignored verification residue from research commands with
    `git status --ignored --short --untracked-files=all` or equivalent evidence; `.pytest_cache/`,
    `.ruff_cache/`, `coverage/`, `.coverage*`, `__pycache__/`, build, dist, or dependency-cache artifacts must be
    absent, cleaned, or explicitly kept as active workspace pollution findings. Do not claim cleanup
@@ -75,6 +86,10 @@ Use concrete repair actions:
 
 - Fix only the sections named by validator findings unless cross-document consistency requires a narrow companion edit.
 - Preserve valid sections and stable ids; do not rewrite complete documents just to satisfy one failed heading.
+- Re-copy only the `research-notes.md` skeleton headings from `stage-brief.md` or its document contract
+  when substantive output is malformed. AIDD repairs generated workflow records.
+- Replace bootstrap placeholders in `research-notes.md` completely; AIDD owns placeholder removal
+  in generated workflow records.
 
 ## Repair rules
 

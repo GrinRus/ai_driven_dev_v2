@@ -7,11 +7,9 @@ slice, and local task.
 
 ## Next
 
-- `W47-E2-S2-T1`
+- `W52-E3-S2-T1`
 
 ## Soon
-
-- `W47-E3-S2-T1`
 
 ## Parking lot
 
@@ -40,5 +38,9 @@ slice, and local task.
 
 ## Current reconciliation
 
-The approved Wave 47 cleanup removes historical documentation and obsolete compatibility.
-Current product behavior and pending operator/browser acceptance tasks remain in scope.
+- `2026-09-06` Wave 52 removes approved historical documentation and obsolete compatibility.
+  Integration with `191dfb16` preserves Focus Canvas, runtime failure fixes, instruction
+  checks, and all eight pending operator/browser/provider tasks. Current integration
+  verification remains active. Newly integrated unused adapter and validator helpers have
+  separate follow-up PR tasks; the unrelated browser task returns to Next after cleanup.
+  Earlier completed task records and reconciliation are available in Git history.

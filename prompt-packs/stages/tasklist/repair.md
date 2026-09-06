@@ -5,10 +5,22 @@ You are rerunning the `tasklist` stage because validation failed.
 Your job is to resolve validator findings with minimal edits while preserving task id stability,
 dependency clarity, and reviewability of each task item.
 
+## Runtime write authority
+
+Write only `tasklist.md` and other runtime-content targets explicitly listed in `stage-brief.md`.
+Do not write `stage-result.md` or `validator-report.md`; AIDD owns their canonical
+status, validation, history, and publication. Never create, edit, delete, or replace either record.
+If a finding names one, expose the needed correction in `tasklist.md` for AIDD reconciliation.
+`repair-brief.md` is AIDD-owned read-only repair control evidence. Do not rewrite it.
+Keep any repair summary and remaining content blockers in `tasklist.md` using its existing sections.
+AIDD owns terminal status, repair references, and downstream next actions. Read workflow records
+and their contracts as evidence.
+
 ## Read order (do not skip)
 
 Read `stage-brief.md`, the current `tasklist.md`, and its
 `contracts/documents/tasklist.md` contract before applying the findings.
+
 1. `validator-report.md` (latest finding codes, severities, and locations)
 2. `repair-brief.md` (repair scope and constraints)
 3. `stage-brief.md` (embedded required skeletons for installed package runs)
@@ -25,6 +37,12 @@ Do not inspect AIDD validator implementation files, installed package files, or 
 during repair. Use `validator-report.md`, `repair-brief.md`, and the named contracts as the repair
 scope. After updating the required documents and checking consistency, stop.
 
+Read `contracts/documents/validator-report.md` and `contracts/documents/stage-result.md`
+for canonical field labels and finding codes; do not invent or rename protocol vocabulary.
+Report unknown input vocabulary in substantive content without modifying the workflow record.
+If it or another blocker prevents completion, submit a `[blocking]` question through the
+controlled interview path; substantive blocker prose alone does not pause AIDD.
+
 ## Interview context
 
 Read `contracts/documents/questions.md` and `contracts/documents/answers.md` when available.
@@ -35,20 +53,12 @@ Operator answers use the same QID, for example `- Q1 [resolved] ...`; do not cre
 `answers.md`, invent `A1`/`A2` answer ids, or create `[resolved]` answers yourself. Missing
 answers remain an operator checkpoint. Render assumptions as non-bullet continuation prose.
 
-## Authoring boundary
-
-Write only `tasklist.md` and other runtime-content targets explicitly listed in `stage-brief.md`.
-Do not write `stage-result.md` or `validator-report.md`; AIDD owns validation, attempt history,
-terminal status, repair references, and downstream next actions. Read those records as evidence.
-`repair-brief.md` is AIDD-owned read-only repair control evidence. Do not rewrite it.
-Keep any repair summary and remaining content blockers in `tasklist.md` using its existing sections.
-If a finding concerns an AIDD-owned record, report the inconsistency without editing that record.
-
 Read the repair budget in `repair-brief.md`. On `repair-budget-final-attempt` or
 `Rerun allowed after this attempt: no`, still repair the content; do not fail solely because no
-later rerun is available. AIDD may record `succeeded` only after canonical validation passes;
+later rerun is available. AIDD determines `succeeded` after validation;
 `repair-budget-exhausted` with unresolved findings remains `failed`. Do not reset budget or
 attempt history. Keep evidence and unresolved questions consistent with the repaired content.
+Do not treat the previous failed validator report as a new result.
 
 ## Finding-to-fix mapping
 
@@ -66,6 +76,8 @@ For each finding:
    - cross-document status drift;
 2. patch the smallest affected section in `tasklist.md`;
 3. re-check dependency references and task ordering after every dependency edit;
+4. read `stage-result.md` and `validator-report.md` as prior evidence and expose current blockers
+   in substantive runtime content for AIDD reconciliation.
 
 Use concrete repair actions:
 
@@ -99,11 +111,17 @@ Use concrete repair actions:
   task-local repository edit; otherwise keep the repository-change default,
 - unresolved upstream blocking conditions: keep/add `[blocking]` questions instead of forcing
   `succeeded`;
+- stage/validator drift: correct tasklist readiness and blocker evidence; AIDD derives
+  terminal status and next actions from post-runtime validation.
 
 ## Targeted repair discipline
 
 - Fix only the sections named by validator findings unless cross-document consistency requires a narrow companion edit.
 - Preserve valid sections and stable ids; do not rewrite complete documents just to satisfy one failed heading.
+- Re-copy only the `tasklist.md` skeleton headings from `stage-brief.md` or its document contract
+  when substantive output is malformed. AIDD repairs generated workflow records.
+- Replace bootstrap placeholders in `tasklist.md` completely; AIDD owns placeholder removal
+  in generated workflow records.
 
 ## Repair rules
 

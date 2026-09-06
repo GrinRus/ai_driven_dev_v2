@@ -7,6 +7,7 @@ import pytest
 
 from aidd.core.stages import STAGES
 from aidd.validators.protocol import VALIDATOR_FINDING_CODES
+from tests.agent_instruction_support import skill_text_with_references
 
 
 @pytest.mark.parametrize("stage", STAGES)
@@ -35,6 +36,16 @@ def test_stage_repair_prompt_contains_budget_and_status_consistency_rules(stage:
     assert "safe presentation differences without changing meaning" in prompt_text
     assert "do not create or edit\n`answers.md`" in prompt_text
     assert "create `[resolved]` answers yourself" in prompt_text
+
+    normalized_prompt = " ".join(prompt_text.split())
+    assert "Do not write `stage-result.md` or `validator-report.md`" in normalized_prompt
+    assert (
+        "Never create, edit, delete, or replace either record" in normalized_prompt
+    )
+    assert "AIDD determines `succeeded` after validation" in prompt_text
+    assert "Do not treat the previous failed validator report as a new result" in prompt_text
+    assert "When repairing a draft `validator-report.md`" not in prompt_text
+    assert "set `stage-result.md`" not in prompt_text
 
 
 @pytest.mark.parametrize("stage", STAGES)
@@ -106,6 +117,35 @@ def test_stage_run_prompts_assign_terminal_records_to_aidd(stage: str) -> None:
     for verb in ("Write", "Update"):
         assert f"{verb} `stage-result.md`" not in run_prompt
         assert f"{verb} `validator-report.md`" not in run_prompt
+
+
+@pytest.mark.parametrize("stage", STAGES)
+def test_stage_intervention_prompts_protect_aidd_records(stage: str) -> None:
+    intervention_prompt = (
+        Path("prompt-packs") / "stages" / stage / "intervention.md"
+    ).read_text(encoding="utf-8")
+    normalized_prompt = " ".join(intervention_prompt.split())
+
+    assert "Do not write `stage-result.md` or `validator-report.md`" in normalized_prompt
+    assert (
+        "Never create, edit, delete, or replace either record" in normalized_prompt
+    )
+    assert "AIDD owns their canonical status, validation, history, and publication" in (
+        normalized_prompt
+    )
+
+    # The negative write boundary is expected; any other mutation verb paired with
+    # an AIDD-owned record would give the model contradictory instructions.
+    safe_boundary = (
+        "Do not write `stage-result.md` or `validator-report.md`; AIDD owns their canonical "
+        "status, validation, history, and publication."
+    )
+    body_without_boundary = normalized_prompt.replace(safe_boundary, "")
+    for verb in ("write", "update", "create", "edit", "delete", "replace"):
+        assert re.search(
+            rf"(?i)\b{verb}\s+`(?:stage-result|validator-report)\.md`",
+            body_without_boundary,
+        ) is None
 
 
 def test_interview_document_contracts_and_native_prompt_forbid_marker_colon() -> None:
@@ -1012,7 +1052,7 @@ def test_research_prompts_and_contracts_require_bounded_local_probes() -> None:
 def test_live_docs_distinguish_provider_no_progress_from_quality_failure() -> None:
     catalog = Path("docs/e2e/live-e2e-catalog.md").read_text(encoding="utf-8")
     rubric = Path("docs/e2e/live-quality-rubric.md").read_text(encoding="utf-8")
-    skill = Path(".agents/skills/live-e2e/SKILL.md").read_text(encoding="utf-8")
+    skill = skill_text_with_references("live-e2e")
 
     for text in (catalog, rubric, skill):
         lower_text = text.lower()

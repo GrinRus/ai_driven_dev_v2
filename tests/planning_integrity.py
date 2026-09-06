@@ -142,6 +142,20 @@ def parse_backlog(backlog: str) -> tuple[BacklogEntry, ...]:
     return tuple(entries)
 
 
+def backlog_reconciliation_errors(backlog: str) -> tuple[str, ...]:
+    """Keep current operational context separate from dated historical evidence."""
+    heading = "## Current reconciliation\n"
+    if backlog.count(heading) != 1:
+        return ("backlog must have exactly one Current reconciliation section",)
+    body = backlog.split(heading, 1)[1].split("\n## ", 1)[0]
+    errors: list[str] = []
+    if len(re.findall(r"^- `\d{4}-\d{2}-\d{2}`", body, re.MULTILINE)) != 1:
+        errors.append("backlog must have one current dated reconciliation entry")
+    if len(body.strip().splitlines()) > 40:
+        errors.append("current reconciliation exceeds 40 lines; archive prior evidence")
+    return tuple(errors)
+
+
 def roadmap_backlog_integrity_errors(roadmap: str, backlog: str) -> tuple[str, ...]:
     tasks, roadmap_errors = parse_roadmap(roadmap)
     errors = list(roadmap_errors)

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import io
 import os
 import signal
 import sys
@@ -7,11 +8,19 @@ import threading
 import time
 from enum import StrEnum
 from pathlib import Path
+from queue import Queue
 
 import pytest
 
 from aidd.adapters.runtime_execution import RuntimeSubprocessSpec
-from aidd.adapters.subprocess_streaming import run_streamed_subprocess
+from aidd.adapters.subprocess_streaming import (
+    StreamChunkEvent,
+    StreamEofEvent,
+    StreamErrorEvent,
+    StreamEvent,
+    run_streamed_subprocess,
+    stream_reader,
+)
 
 
 class StopReason(StrEnum):
@@ -19,6 +28,69 @@ class StopReason(StrEnum):
     TIMEOUT = "timeout"
     CANCELLED = "cancelled"
     LAUNCH_FAILURE = "launch_failure"
+
+
+def test_stream_reader_emits_typed_error_instead_of_eof_on_reader_failure() -> None:
+    class BrokenPipe(io.RawIOBase):
+        def read(self, _size: int) -> bytes:
+            raise RuntimeError("reader failed")
+
+    queue: Queue[StreamEvent] = Queue()
+    stream_reader(target="stdout", pipe=BrokenPipe(), queue=queue)
+
+    event = queue.get_nowait()
+    assert isinstance(event, StreamErrorEvent)
+    assert event.target == "stdout"
+    assert str(event.error) == "reader failed"
+    assert not isinstance(event, StreamEofEvent)
+
+
+def test_stream_reader_emits_typed_eof_after_clean_read() -> None:
+    queue: Queue[StreamEvent] = Queue()
+    stream_reader(target="stderr", pipe=io.BytesIO(), queue=queue)
+
+    event = queue.get_nowait()
+    assert isinstance(event, StreamEofEvent)
+    assert event.target == "stderr"
+
+
+def test_reader_failure_after_partial_output_preserves_evidence_and_fails_closed(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    def fake_stream_reader(*, target: str, pipe: object, queue: Queue[StreamEvent]) -> None:
+        del pipe
+        if target == "stdout":
+            time.sleep(0.2)
+            queue.put(StreamChunkEvent(target="stdout", payload=b"before\n"))
+            queue.put(
+                StreamErrorEvent(target="stdout", error=RuntimeError("reader failed"))
+            )
+            return
+        queue.put(StreamEofEvent(target="stderr"))
+
+    monkeypatch.setattr(
+        "aidd.adapters.subprocess_streaming.stream_reader",
+        fake_stream_reader,
+    )
+    result = run_streamed_subprocess(
+        spec=RuntimeSubprocessSpec(
+            command=(sys.executable, "-c", "import time; time.sleep(0.05)"),
+            cwd=tmp_path,
+            env=dict(os.environ),
+        ),
+        timeout_seconds=5.0,
+        timeout_stop_reason=StopReason.TIMEOUT,
+        cancel_stop_reason=StopReason.CANCELLED,
+        capture_directory=tmp_path,
+    )
+
+    assert result.exit_code == 0
+    assert result.stop_reason is None
+    assert result.capture_error == "RuntimeError: reader failed"
+    assert result.stdout_text == "before\n"
+    assert result.runtime_log_source_path is not None
+    assert result.runtime_log_source_path.read_bytes() == b"before\n"
 
 
 @pytest.mark.parametrize(
@@ -73,6 +145,29 @@ def test_streamed_subprocess_normalizes_launch_oserror(
         "[launch-failure] OSError: unsafe multiline launch diagnostic\n"
     )
     assert result.runtime_log_text == result.stderr_text
+
+
+def test_streamed_subprocess_forwards_invalid_bytes_to_display_without_reader_failure(
+    tmp_path: Path,
+) -> None:
+    script = "import os; os.write(1, b'before\\n\\xffafter\\n')"
+    result = run_streamed_subprocess(
+        spec=RuntimeSubprocessSpec(
+            command=(sys.executable, "-c", script),
+            cwd=tmp_path,
+            env=dict(os.environ),
+        ),
+        timeout_seconds=5.0,
+        timeout_stop_reason=StopReason.TIMEOUT,
+        cancel_stop_reason=StopReason.CANCELLED,
+    )
+
+    assert result.exit_code == 0
+    assert result.stop_reason is None
+    assert result.stdout_text == "before\n\ufffdafter\n"
+    assert result.runtime_log_source_path is not None
+    assert result.runtime_log_source_path.read_bytes() == b"before\n\xffafter\n"
+    assert result.stdout_byte_count == len(b"before\n\xffafter\n")
 
 
 def test_stream_callbacks_run_in_caller_thread(tmp_path: Path) -> None:

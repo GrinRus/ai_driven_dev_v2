@@ -6,6 +6,7 @@ from pathlib import Path
 from aidd.core.implementation_eligibility import implementation_finalization_blocker
 from aidd.core.run_store import load_stage_metadata
 from aidd.core.stage_paths import workspace_relative_path
+from aidd.core.stage_preparation import is_stage_input_ready
 from aidd.core.stage_registry import (
     DEFAULT_STAGE_CONTRACTS_ROOT,
     load_all_stage_manifests,
@@ -191,7 +192,7 @@ def evaluate_stage_eligibility(
             workspace_root=workspace_root,
             contracts_root=contracts_root,
         )
-        if not path.exists()
+        if not is_stage_input_ready(path)
     )
     if stage in {"review", "qa"}:
         finalization_blocker = implementation_finalization_blocker(

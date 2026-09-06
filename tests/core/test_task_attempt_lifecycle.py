@@ -17,7 +17,8 @@ from aidd.core.mutation_lease import (
     acquire_run_mutation_lease_handle,
     use_transferred_run_mutation_lease,
 )
-from aidd.core.run_store import persist_stage_status
+from aidd.core.run_store import load_stage_metadata, persist_stage_status
+from aidd.core.state_machine import StageState
 from aidd.core.task_attempt_lifecycle import TaskExecutionContext, TaskResumeBlockedError
 from aidd.core.task_ledger import (
     TaskExecutionStatus,
@@ -240,6 +241,13 @@ def test_interrupted_executing_task_is_abandoned_and_resumed_with_new_attempt(
     )
     tasklist_path.parent.mkdir(parents=True, exist_ok=True)
     tasklist_path.write_text(_tasklist(), encoding="utf-8")
+    persist_stage_status(
+        workspace_root=workspace_root,
+        work_item="WI-1",
+        run_id="run-1",
+        stage="implement",
+        status=StageState.EXECUTING.value,
+    )
 
     first = prepare_task_execution(
         workspace_root=workspace_root,
@@ -265,6 +273,64 @@ def test_interrupted_executing_task_is_abandoned_and_resumed_with_new_attempt(
     assert first_state["created_at_utc"] <= first_state["updated_at_utc"]
     assert second.ledger.entry("TL-1").status is TaskExecutionStatus.EXECUTING
     assert second.ledger.entry("TL-1").attempt_count == 2
+    metadata = load_stage_metadata(workspace_root, "WI-1", "run-1", "implement")
+    assert metadata is not None
+    assert metadata.status == StageState.FAILED.value
+    assert [entry.status for entry in metadata.status_history[-2:]] == [
+        StageState.EXECUTING.value,
+        StageState.FAILED.value,
+    ]
+
+
+def test_reconciliation_repairs_stage_projection_after_ledger_commit(tmp_path: Path) -> None:
+    workspace_root = tmp_path / ".aidd"
+    tasklist_path = (
+        workspace_root / "workitems" / "WI-1" / "stages" / "tasklist" / "output" / "tasklist.md"
+    )
+    tasklist_path.parent.mkdir(parents=True, exist_ok=True)
+    tasklist_path.write_text(_tasklist(), encoding="utf-8")
+    persist_stage_status(
+        workspace_root=workspace_root,
+        work_item="WI-1",
+        run_id="run-1",
+        stage="implement",
+        status=StageState.EXECUTING.value,
+    )
+    first = prepare_task_execution(
+        workspace_root=workspace_root,
+        work_item="WI-1",
+        run_id="run-1",
+        task_id="TL-1",
+        project_root=tmp_path,
+    )
+    interrupted = first.ledger.transition(
+        "TL-1",
+        TaskExecutionStatus.FAILED,
+        blocker="Task execution was interrupted; resume creates a new attempt.",
+    )
+    persist_task_ledger(
+        workspace_root=workspace_root,
+        work_item="WI-1",
+        run_id="run-1",
+        ledger=interrupted,
+    )
+
+    resumed = prepare_task_execution(
+        workspace_root=workspace_root,
+        work_item="WI-1",
+        run_id="run-1",
+        task_id="TL-1",
+        project_root=tmp_path,
+    )
+
+    metadata = load_stage_metadata(workspace_root, "WI-1", "run-1", "implement")
+    assert metadata is not None
+    assert metadata.status == StageState.FAILED.value
+    assert [entry.status for entry in metadata.status_history[-2:]] == [
+        StageState.EXECUTING.value,
+        StageState.FAILED.value,
+    ]
+    assert resumed.ledger.entry("TL-1").attempt_count == 2
 
 def test_blocked_task_preserves_questions_and_answers_until_resume(tmp_path: Path) -> None:
     workspace_root = tmp_path / ".aidd"

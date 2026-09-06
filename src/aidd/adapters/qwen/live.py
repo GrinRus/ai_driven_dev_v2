@@ -430,7 +430,7 @@ def _has_explicit_dual_file_flags(tokens: tuple[str, ...]) -> bool:
 
 def _run_result(
     *,
-    process: subprocess.Popen[str],
+    process: subprocess.Popen[bytes],
     capture: StreamCapture,
     stop_reason: QwenExitClassification | None,
 ) -> QwenRunResult:

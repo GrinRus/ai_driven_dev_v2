@@ -8,6 +8,14 @@ validation state, blockers, and next actions.
 AIDD derives this workflow record from the attempt lifecycle, canonical validation, and retained
 content evidence. Runtimes must not create or edit it, including during repair or intervention.
 Unexpected runtime copies remain raw attempt evidence and never determine progression.
+Capture their attempt boundary before runtime execution so later log or artifact creation
+cannot mistake new candidates for pre-attempt content. A blocker that prevents completion
+must also become a `[blocking]` question through the controlled interview path; substantive
+blocker prose alone does not pause AIDD.
+
+Before cross-document content checks, AIDD may add declared project-set evidence to its exact
+bootstrap placeholder without claiming a terminal status or validator pass. This projection
+does not consume a model repair attempt or replace the final lifecycle-derived candidate.
 
 After substantive content validation and interview gates pass, AIDD renders the current
 attempt's candidate result from that observed state before validating the complete result
@@ -138,6 +146,7 @@ resolved transition and publishes only after the terminal document gate also pas
 
 ## Authoring rules
 
+- These rules govern AIDD writers and canonical lifecycle reconciliation, not runtime completion targets.
 - Use required heading names exactly; do not collapse `Attempt history` into `Status`.
 - Core-authored repair-history stage results must use `# Stage Result` as the document title
   and `## Stage` as the required stage section heading.

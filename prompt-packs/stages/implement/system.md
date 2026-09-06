@@ -28,4 +28,4 @@ Non-negotiable rules:
   preserve the required checks, report `Touched files` as `- none`, and make no repository edit;
   omitted mode retains normal repository-change and no-op rules,
 - keep verification notes limited to checks that were actually executed,
-- keep substantive content truthful; AIDD reconciles lifecycle and validator records.
+- keep `implementation-report.md` evidence truthful; AIDD derives canonical workflow records from it.

@@ -2,7 +2,15 @@ from __future__ import annotations
 
 import threading
 from dataclasses import dataclass
-from typing import IO
+from io import TextIOBase
+from typing import IO, Any
+
+
+def decode_runtime_bytes(value: bytes | str) -> str:
+    """Decode a runtime chunk for a tolerant display view."""
+    if isinstance(value, bytes):
+        return value.decode("utf-8", errors="replace")
+    return value
 
 
 @dataclass(slots=True)
@@ -11,14 +19,17 @@ class ManagedStdinWriter:
     _errors: list[BaseException]
 
     @classmethod
-    def start(cls, pipe: IO[str] | None, text: str | None) -> ManagedStdinWriter | None:
+    def start(cls, pipe: IO[Any] | None, text: str | None) -> ManagedStdinWriter | None:
         if pipe is None or text is None:
             return None
         errors: list[BaseException] = []
 
         def _write() -> None:
             try:
-                pipe.write(text)
+                payload: str | bytes = (
+                    text if isinstance(pipe, TextIOBase) else text.encode("utf-8")
+                )
+                pipe.write(payload)
                 pipe.close()
             except BrokenPipeError:
                 pass
@@ -46,4 +57,4 @@ class ManagedStdinWriter:
         self._thread.join(timeout=timeout_seconds)
 
 
-__all__ = ["ManagedStdinWriter"]
+__all__ = ["ManagedStdinWriter", "decode_runtime_bytes"]

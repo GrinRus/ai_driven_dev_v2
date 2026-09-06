@@ -7,7 +7,7 @@ from dataclasses import dataclass
 from enum import StrEnum
 from pathlib import Path
 from queue import Empty, Queue
-from typing import Literal, TextIO
+from typing import BinaryIO, Literal
 
 from aidd.adapters.process_io import ManagedStdinWriter
 from aidd.adapters.process_supervisor import OwnedProcessSupervisor
@@ -16,6 +16,27 @@ from aidd.adapters.runtime_log_capture import DiskBackedRuntimeLogSink
 from aidd.runtime_budget import validate_runtime_budget
 
 StreamTarget = Literal["stdout", "stderr"]
+_STREAM_READ_BYTES = 64 * 1024
+
+
+@dataclass(frozen=True, slots=True)
+class StreamChunkEvent:
+    target: StreamTarget
+    payload: bytes
+
+
+@dataclass(frozen=True, slots=True)
+class StreamEofEvent:
+    target: StreamTarget
+
+
+@dataclass(frozen=True, slots=True)
+class StreamErrorEvent:
+    target: StreamTarget
+    error: BaseException
+
+
+StreamEvent = StreamChunkEvent | StreamEofEvent | StreamErrorEvent
 
 
 @dataclass(frozen=True, slots=True)
@@ -36,30 +57,49 @@ class StreamedSubprocessResult[ExitClassificationT: StrEnum]:
     stdout_truncated: bool = False
     stderr_truncated: bool = False
     runtime_log_truncated: bool = False
+    capture_error: str | None = None
 
 
 def stream_reader(
     *,
     target: StreamTarget,
-    pipe: TextIO | None,
-    queue: Queue[tuple[StreamTarget, str | None]],
+    pipe: BinaryIO | None,
+    queue: Queue[StreamEvent],
 ) -> None:
     if pipe is None:
-        queue.put((target, None))
+        queue.put(StreamEofEvent(target=target))
         return
+    reader_error: BaseException | None = None
     try:
-        for chunk in iter(pipe.readline, ""):
-            if chunk == "":
+        while True:
+            chunk = pipe.read(_STREAM_READ_BYTES)
+            if not chunk:
                 break
-            queue.put((target, chunk))
+            queue.put(StreamChunkEvent(target=target, payload=chunk))
+    except BaseException as exc:
+        reader_error = exc
     finally:
-        pipe.close()
-        queue.put((target, None))
+        try:
+            pipe.close()
+        except BaseException as exc:
+            if reader_error is None:
+                reader_error = exc
+    if reader_error is not None:
+        queue.put(StreamErrorEvent(target=target, error=reader_error))
+    else:
+        queue.put(StreamEofEvent(target=target))
 
 
 def safe_launch_failure_message(exc: OSError) -> str:
     message = str(exc).replace("\r", " ").replace("\n", " ").strip()
     return f"[launch-failure] {type(exc).__name__}: {message}\n"
+
+
+def safe_capture_failure_message(exc: BaseException) -> str:
+    message = str(exc).replace("\r", " ").replace("\n", " ").strip()
+    if message:
+        return f"{type(exc).__name__}: {message}"
+    return type(exc).__name__
 
 
 def run_streamed_subprocess[ExitClassificationT: StrEnum](
@@ -97,7 +137,7 @@ def run_streamed_subprocess[ExitClassificationT: StrEnum](
     process = supervisor.process
     sink = DiskBackedRuntimeLogSink(directory=capture_directory or spec.cwd)
 
-    queue: Queue[tuple[StreamTarget, str | None]] = Queue()
+    queue: Queue[StreamEvent] = Queue()
     reader_threads = (
         threading.Thread(
             target=stream_reader,
@@ -122,6 +162,7 @@ def run_streamed_subprocess[ExitClassificationT: StrEnum](
         thread.start()
 
     stream_done: dict[StreamTarget, bool] = {"stdout": False, "stderr": False}
+    reader_error: BaseException | None = None
     deadline = time.monotonic() + timeout_seconds if timeout_seconds is not None else None
     parent_exit_drain_deadline: float | None = None
     stop_reason: ExitClassificationT | None = None
@@ -183,20 +224,32 @@ def run_streamed_subprocess[ExitClassificationT: StrEnum](
             assert writer_error is not None
             raise writer_error
         try:
-            target, chunk = queue.get(timeout=queue_timeout_seconds)
+            event = queue.get(timeout=queue_timeout_seconds)
         except Empty:
             if process.poll() is not None and all(stream_done.values()):
                 break
             continue
 
-        if chunk is None:
-            stream_done[target] = True
+        if isinstance(event, StreamEofEvent):
+            stream_done[event.target] = True
             if process.poll() is not None and all(stream_done.values()):
                 break
             continue
 
+        if isinstance(event, StreamErrorEvent):
+            stream_done[event.target] = True
+            if reader_error is None:
+                reader_error = event.error
+            if process.poll() is None:
+                supervisor.request_stop()
+            if process.poll() is not None and all(stream_done.values()):
+                break
+            continue
+
+        target = event.target
+        chunk = event.payload
         try:
-            sink.write(target, chunk)
+            display_chunk = sink.write(target, chunk)
         except BaseException:
             supervisor.request_stop()
             supervisor.drain_streams(reader_threads)
@@ -205,10 +258,10 @@ def run_streamed_subprocess[ExitClassificationT: StrEnum](
             sink.abort()
             raise
         if target == "stdout":
-            _invoke_stream_callback(on_stdout, chunk)
+            _invoke_stream_callback(on_stdout, display_chunk)
             continue
 
-        _invoke_stream_callback(on_stderr, chunk)
+        _invoke_stream_callback(on_stderr, display_chunk)
 
     supervisor.drain_streams(reader_threads)
     if stdin_writer is not None:
@@ -216,6 +269,9 @@ def run_streamed_subprocess[ExitClassificationT: StrEnum](
         if stdin_writer.error is not None and stop_reason is None:
             sink.abort()
             raise stdin_writer.error
+    # Preserve a partial capture on reader failure and let the adapter classify
+    # it from ``capture_error``. The generic runner cannot choose a
+    # provider-specific stop-reason enum here.
 
     snapshot = sink.finish()
     return StreamedSubprocessResult(
@@ -235,4 +291,9 @@ def run_streamed_subprocess[ExitClassificationT: StrEnum](
         stdout_truncated=snapshot.stdout_truncated,
         stderr_truncated=snapshot.stderr_truncated,
         runtime_log_truncated=snapshot.runtime_log_truncated,
+        capture_error=(
+            safe_capture_failure_message(reader_error)
+            if reader_error is not None
+            else None
+        ),
     )

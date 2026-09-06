@@ -56,10 +56,14 @@ Examples:
 - `stage-result.md`
 
 `stage-result.md` and `validator-report.md` are AIDD-owned workflow records. Runtimes read
-these records as context and write only the substantive content listed in the stage brief.
+these records as context. Initial, repair, and intervention attempts must not create or edit
+either record. The runtime writes only the substantive documents listed under `Runtime write
+targets` in its stage brief, and follows the controlled interview path when clarification is needed.
 AIDD records validation, terminal status, attempt history, and repair references after runtime
 execution. Unexpected runtime copies are retained as raw attempt evidence, never promoted over
-canonical records.
+canonical records. AIDD captures the raw-candidate attempt boundary before execution. Its
+validator findings are read-only repair input; AIDD also owns the `repair-brief.md` trace
+reference in the terminal stage result.
 
 Workspace initialization leaves `validator-report.md` absent until AIDD performs validation.
 An early runtime failure has runtime evidence and no validator verdict; placeholder text is
@@ -171,6 +175,8 @@ It is the durable checkpoint for workflow progression.
 AIDD derives the stage result from canonical validation and workflow state. Runtime-authored
 content cannot set the terminal status or authorize downstream publication.
 
+Before cross-document content checks, AIDD may add declared project-set evidence to its
+recognized bootstrap placeholder without claiming terminal status or validator success.
 When runtime content and interview gates pass, AIDD first renders the current attempt's
 candidate result from the observed validation outcome. Semantic validation then checks this
 AIDD-owned record, rather than a bootstrap scaffold or runtime copy. A candidate result does

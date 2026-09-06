@@ -211,6 +211,37 @@ name what is unavailable, why it matters, and the next safe action.
   state. Undo is offered only when the underlying contract supports a compensating write.
 - Keyboard order is Write -> Preview -> supporting evidence -> primary submit -> secondary cancel.
 
+### 5.4 Decision lifecycle
+
+The Decision Workbench treats human input and runtime execution as separate durable state
+transitions. Saving an answer writes the canonical `answers.md` document and confirms the matching
+server readback; it never starts a stage, advances the stage strip, or claims that downstream
+documents are ready by itself.
+
+The workbench exposes one primary action for the current state:
+
+| State | Primary action | Durable consequence |
+| --- | --- | --- |
+| Draft / invalid | Save answer after local validation | No server mutation until required answer fields are valid. |
+| Save pending | None; show pending status | Duplicate submissions are suppressed. |
+| Readback confirmed with unresolved blockers | Save answer / return to decision | The answer is retained, but the Work Item remains `Needs input`. |
+| Readback confirmed with all blocking questions resolved | Resume `<stage>` | The core revalidates runner readiness and starts a new stage attempt. |
+| Stage attempt running | Open live output / cancel when eligible | Runtime logs and attempt identity remain bound to the originating context. |
+| Validation failed | Run repair or Request change | The stage does not advance; repair budget and evidence remain visible. |
+| Runtime failed | Retry stage or Request change | Runtime failure does not consume validation repair budget. |
+
+`resolved` is the only answer resolution that can remove a blocking question. `partial` and
+`deferred` answers are valid durable contributions but keep the stage blocked and must explain what
+information or decision is still required. A `Resume` action is shown only after the server
+readback confirms that no blocking question remains and the core-owned readiness projection allows
+the selected runner and stage action. The frontend does not infer eligibility from answer fields.
+
+After `Resume`, the stage remains in its current state until a real attempt produces a validated
+stage result. A running attempt must expose its exact run/stage identity and available native logs;
+only a passing validation may advance the stage strip. Missing, conflicting, or stale readback
+returns the operator to the durable decision state with the local draft preserved and the server
+winner shown separately.
+
 ## 6. Task Workspace contract
 
 After a valid tasklist exists, Tasks becomes the default work surface for Deliver. It shows:
@@ -263,6 +294,8 @@ conflict, success, offline, reconnecting, and permission-denied behavior where a
 - Validation failure shows document, rule, retained location, hint, repair budget, and the
   consequence of repair versus change.
 - Runtime failure never consumes validation repair budget.
+- Saving a decision never implies that a stage has resumed or advanced; resume requires a separate
+  readiness-checked action after durable readback.
 - Succeeded tasks remain visibly preserved when another task or aggregate finalization fails.
 - A failed implementation task keeps the implementation stage in `failed`/repair-exhausted state;
   `blocked` is reserved for unresolved questions or runtime approvals. Live checkpoints verify this
@@ -299,6 +332,8 @@ conflict, success, offline, reconnecting, and permission-denied behavior where a
   truth without fabricating versions.
 - Question, approval, runtime failure, validation repair, task resume, implementation review,
   QA remediation, History, and Flow Complete each expose exactly one primary action.
+- A blocking question separates Save, durable readback, Resume, attempt execution, and validation;
+  Partial and Deferred never expose a false unblock.
 - `320x568`, `390x844`, `768x1024`, `1280x900`, and `1440x900` pass first-action visibility,
   focus order, target size, contrast, clipping, overflow, and reconnect checks.
 - Provider-free browser fixtures cover every reference surface before default routing changes.

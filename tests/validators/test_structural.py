@@ -2,6 +2,8 @@ from __future__ import annotations
 
 from pathlib import Path
 
+import pytest
+
 from aidd.validators.models import ValidationFinding, ValidationIssueLocation
 from aidd.validators.structural import (
     DUPLICATE_REQUIRED_SECTION_CODE,
@@ -653,4 +655,71 @@ def test_validate_required_sections_reports_stale_stage_result_placeholder(
                 line_number=3,
             ),
         ),
+    )
+
+
+@pytest.mark.parametrize(
+    ("materialize", "expected_code"),
+    (
+        ("directory", "STRUCT-DOCUMENT-NON-FILE"),
+        ("invalid-utf8", "STRUCT-DOCUMENT-INVALID-UTF8"),
+        ("malformed-frontmatter", "STRUCT-DOCUMENT-MALFORMED-FRONTMATTER"),
+    ),
+)
+def test_validate_required_sections_maps_document_read_failures_to_one_located_finding(
+    tmp_path: Path,
+    materialize: str,
+    expected_code: str,
+) -> None:
+    contracts_root = tmp_path / "contracts" / "stages"
+    contracts_root.mkdir(parents=True)
+    required_outputs = ("stage-result.md",)
+    prompt_paths = ("prompt-packs/stages/qa/system.md",)
+    _write_stage_contract(
+        contracts_root=contracts_root,
+        stage="qa",
+        required_inputs=("context/intake.md",),
+        required_outputs=required_outputs,
+        prompt_pack_paths=prompt_paths,
+    )
+    _touch_contract_references(
+        repo_root=tmp_path,
+        required_outputs=required_outputs,
+        prompt_pack_paths=prompt_paths,
+    )
+    _write_document_contract(
+        repo_root=tmp_path,
+        document_name="stage-result.md",
+        required_sections=("Status",),
+    )
+
+    workspace_root = tmp_path / ".aidd"
+    output_path = (
+        workspace_root / "workitems" / "WI-001" / "stages" / "qa" / "stage-result.md"
+    )
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    if materialize == "directory":
+        output_path.mkdir()
+    elif materialize == "invalid-utf8":
+        output_path.write_bytes(b"# Stage Result\n\xff")
+    else:
+        output_path.write_text("---\nstatus: draft\n# Stage Result\n", encoding="utf-8")
+
+    findings = validate_required_sections(
+        stage="qa",
+        work_item="WI-001",
+        workspace_root=workspace_root,
+        contracts_root=contracts_root,
+    )
+
+    assert len(findings) == 1
+    finding = findings[0]
+    assert finding.code == expected_code
+    assert finding.severity == "critical"
+    assert finding.location == ValidationIssueLocation(
+        workspace_relative_path="workitems/WI-001/stages/qa/stage-result.md"
+    )
+    assert finding.message.startswith(
+        "Unable to read Markdown document "
+        "`workitems/WI-001/stages/qa/stage-result.md`:"
     )

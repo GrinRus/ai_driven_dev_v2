@@ -5,7 +5,8 @@
 Describe structural, semantic, and cross-document validation findings.
 
 AIDD writes the canonical report after validating runtime content. Runtimes must not create
-or edit it. Unexpected runtime copies remain raw attempt evidence and cannot create, replace,
+or edit it in initial, repair, or intervention attempts. Findings are read-only repair input.
+Unexpected runtime copies remain raw attempt evidence and cannot create, replace,
 or suppress canonical findings.
 
 Workspace initialization does not create a placeholder report. Until validation runs, the
@@ -116,6 +117,19 @@ publish codes outside this list.
 - `STRUCT-MISSING-REQUIRED-SECTION`
 - `STRUCT-OUTPUT-PROMOTED`
 - `STRUCT-STALE-STAGE-RESULT-PLACEHOLDER`
+
+### Document-read failure taxonomy
+
+Structural validation uses the following canonical failure kinds when a declared Markdown
+document cannot be read. The kind is the machine-readable cause used by probes and orchestration;
+the code is the validator finding written to `validator-report.md` and must remain stable.
+
+| Failure kind | Canonical finding code | Meaning |
+| --- | --- | --- |
+| `non_file` | `STRUCT-DOCUMENT-NON-FILE` | The discovered path exists but is not a regular file. |
+| `unreadable` | `STRUCT-DOCUMENT-UNREADABLE` | The path cannot be opened or read. |
+| `invalid_utf8` | `STRUCT-DOCUMENT-INVALID-UTF8` | The file bytes are not valid UTF-8. |
+| `malformed_frontmatter` | `STRUCT-DOCUMENT-MALFORMED-FRONTMATTER` | Frontmatter delimiters or entries are malformed. |
 
 ### Semantic checks
 

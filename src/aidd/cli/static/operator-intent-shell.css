@@ -1341,6 +1341,326 @@ body.work-overview-mode .intent-decision-surface .next-action-button-stack .next
   display: contents;
 }
 
+/* Focus Canvas decision mode: reduce chrome to the one navigation rail and
+   give the operator a calm, document-like canvas. Existing routes and the
+   Work Item rail remain available through Inbox; only the focused question
+   surface claims the extra width while a decision is in progress. */
+@media (min-width: 1100px) and (min-height: 700px) {
+  body.recovery-mode:has([data-focus-canvas="true"]) {
+    --operator-secondary-rail-width: 0px;
+    --operator-rail-width: var(--operator-primary-rail-width);
+    background: var(--bg);
+  }
+
+  body.recovery-mode:has([data-focus-canvas="true"]) .operator-work-items-rail {
+    display: none;
+  }
+
+  body.recovery-mode:has([data-focus-canvas="true"]) .topbar {
+    margin-left: var(--operator-primary-rail-width);
+  }
+
+  body.recovery-mode:has([data-focus-canvas="true"]) .topbar .primary-nav {
+    padding: 20px 10px 24px;
+  }
+
+  body.recovery-mode:has([data-focus-canvas="true"]) .topbar .primary-nav::before {
+    content: "AIDD";
+    display: block;
+    font-size: 20px;
+    letter-spacing: -0.05em;
+    padding: 0 0 22px;
+    text-align: center;
+  }
+
+  body.recovery-mode:has([data-focus-canvas="true"]) .topbar .primary-nav .operator-rail-nav {
+    margin-top: 0;
+  }
+
+  body.recovery-mode:has([data-focus-canvas="true"]) .operator-workspace {
+    margin-left: var(--operator-primary-rail-width);
+    padding: 0;
+    width: calc(100% - var(--operator-primary-rail-width));
+  }
+
+  body.recovery-mode:has([data-focus-canvas="true"]) .operator-workspace
+    > .intent-context-region {
+    padding-inline: clamp(28px, 5vw, 72px);
+  }
+
+  body.recovery-mode:has([data-focus-canvas="true"]) .operator-workspace
+    > .work-item-tabs,
+  body.recovery-mode:has([data-focus-canvas="true"]) .operator-workspace
+    > .intent-phase-region {
+    padding-inline: clamp(28px, 5vw, 72px);
+  }
+
+  body.recovery-mode:has([data-focus-canvas="true"]) .operator-workspace
+    > .intent-document-surface {
+    padding: clamp(28px, 4vw, 52px) clamp(28px, 5vw, 72px) 80px;
+  }
+
+  body.recovery-mode:has([data-focus-canvas="true"]) .operator-workspace
+    .studio-context-bar {
+    background: transparent;
+    padding-block: 18px 14px;
+  }
+
+  body.recovery-mode:has([data-focus-canvas="true"]) .operator-workspace
+    .studio-context-bar h2 {
+    font-size: clamp(22px, 2.2vw, 30px);
+  }
+
+  body.recovery-mode:has([data-focus-canvas="true"]) .operator-workspace
+    .intent-phase-stepper {
+    padding-block: 12px 16px;
+  }
+
+  body.recovery-mode:has([data-focus-canvas="true"]) .operator-workspace
+    .canonical-stage-step {
+    background: transparent;
+    border-color: transparent;
+    min-height: 46px;
+    padding-inline: 2px;
+  }
+
+  body.recovery-mode:has([data-focus-canvas="true"]) .operator-workspace
+    .canonical-stage-step[data-status="current"] {
+    background: var(--surface-warning);
+    border-color: var(--color-state-warning-border);
+  }
+
+  body.recovery-mode:has([data-focus-canvas="true"])
+    .interview-loop-screen[data-human-decision-surface="question"] {
+    background: transparent;
+    gap: clamp(28px, 4vw, 56px);
+    grid-template-columns: minmax(0, 1fr) minmax(260px, 300px);
+  }
+
+  body.recovery-mode:has([data-focus-canvas="true"])
+    .interview-loop-screen[data-human-decision-surface="question"]
+    > .decision-question-main {
+    background: transparent;
+    border: 0;
+    padding: 0;
+    gap: 24px;
+  }
+
+  body.recovery-mode:has([data-focus-canvas="true"])
+    .decision-question-context {
+    background: transparent;
+    padding: 0;
+  }
+
+  body.recovery-mode:has([data-focus-canvas="true"])
+    .decision-question-context h2 {
+    font-size: clamp(30px, 3vw, 42px);
+    letter-spacing: -0.035em;
+    line-height: 1.08;
+    max-width: 25ch;
+  }
+
+  body.recovery-mode:has([data-focus-canvas="true"])
+    .decision-provenance-strip {
+    align-items: center;
+    color: var(--color-text-secondary);
+    display: flex;
+    flex-wrap: wrap;
+    font-size: var(--type-label-size);
+    gap: 14px;
+    order: 2;
+  }
+
+  body.recovery-mode:has([data-focus-canvas="true"])
+    .decision-provenance-strip span + span {
+    border-left: 1px solid var(--line);
+    padding-left: 14px;
+  }
+
+  body.recovery-mode:has([data-focus-canvas="true"])
+    .decision-evidence-disclosure {
+    order: 4;
+  }
+
+  body.recovery-mode:has([data-focus-canvas="true"])
+    .decision-question-rationale {
+    font-size: 16px;
+    max-width: 68ch;
+  }
+
+  body.recovery-mode:has([data-focus-canvas="true"])
+    .decision-evidence-disclosure {
+    margin-top: 10px;
+  }
+
+  body.recovery-mode:has([data-focus-canvas="true"])
+    .question-card {
+    background: transparent;
+    border: 0;
+    border-radius: 0;
+    gap: 14px;
+    padding: 0;
+  }
+
+  body.recovery-mode:has([data-focus-canvas="true"])
+    .question-card .question-head {
+    align-items: baseline;
+    border-top: 1px solid var(--line);
+    padding-top: 20px;
+  }
+
+  body.recovery-mode:has([data-focus-canvas="true"])
+    .question-card > [data-question-text] {
+    background: var(--surface);
+    border-color: var(--line-strong);
+    border-radius: var(--radius-surface);
+    font-size: 16px;
+    line-height: 1.55;
+    min-height: 180px;
+    padding: 18px;
+  }
+
+  body.recovery-mode:has([data-focus-canvas="true"])
+    .question-card .decision-resolution {
+    margin-block: 4px 2px;
+  }
+
+  body.recovery-mode:has([data-focus-canvas="true"])
+    .question-card .decision-resolution-label {
+    color: var(--color-text-primary);
+  }
+
+  body.recovery-mode:has([data-focus-canvas="true"])
+    .question-card [data-save-answer],
+  body.recovery-mode:has([data-focus-canvas="true"])
+    .question-card [data-answer-resume] {
+    bottom: auto !important;
+    box-shadow: none;
+    justify-self: start;
+    min-width: 190px;
+    position: static !important;
+    right: auto !important;
+    width: auto !important;
+  }
+
+  body.recovery-mode:has([data-focus-canvas="true"])
+    .question-card [data-primary-action] {
+    box-shadow: var(--elevation-surface);
+  }
+
+  body.recovery-mode:has([data-focus-canvas="true"])
+    .question-card [data-save-answer],
+  body.recovery-mode:has([data-focus-canvas="true"])
+    .question-card [data-answer-resume] {
+    order: 10;
+  }
+
+  body.recovery-mode:has([data-focus-canvas="true"])
+    .question-card [data-answer-resume][disabled] {
+    display: none;
+  }
+
+  /* The primary decision must remain available in the first desktop viewport;
+     supporting actions stay in document flow, while this one control uses the
+     existing safe fixed action treatment. */
+  body.recovery-mode:has([data-focus-canvas="true"])
+    .question-card [data-primary-action] {
+    bottom: var(--space-4) !important;
+    box-shadow: var(--elevation-overlay) !important;
+    min-height: var(--control-height-default);
+    position: fixed !important;
+    right: var(--space-6) !important;
+    width: min(280px, calc(100vw - (var(--space-6) * 2))) !important;
+    z-index: 60;
+  }
+
+  body.recovery-mode:has([data-focus-canvas="true"])
+    .decision-impact-panel {
+    background: transparent;
+    border: 0;
+    border-left: 1px solid var(--line);
+    border-radius: 0;
+    padding: 0 0 0 24px;
+  }
+
+  body.recovery-mode:has([data-focus-canvas="true"])
+    .decision-question-main .question-history {
+    border-top: 1px solid var(--line);
+    margin-top: 8px;
+    padding-top: 18px;
+  }
+
+  body.recovery-mode:has([data-focus-canvas="true"])
+    .decision-impact-state {
+    font-size: 14px;
+  }
+
+  body.recovery-mode:has([data-focus-canvas="true"])
+    .decision-impact-facts {
+    gap: 14px;
+    margin-top: 20px;
+    padding-top: 20px;
+  }
+}
+
+@media (max-width: 760px) {
+  /* On phones the impact summary is the orientation cue; show it before the
+     editor and keep the fixed primary action from obscuring the copy. */
+  body.recovery-mode:has([data-focus-canvas="true"])
+    .interview-loop-screen[data-human-decision-surface="question"] {
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+  }
+
+  body.recovery-mode:has([data-focus-canvas="true"])
+    .interview-loop-screen[data-human-decision-surface="question"]
+    > .decision-impact-panel {
+    display: block;
+    order: -1;
+    padding: 0 0 16px;
+    border: 0;
+    border-bottom: 1px solid var(--line);
+  }
+
+  body.recovery-mode:has([data-focus-canvas="true"])
+    .decision-impact-panel .surface-title {
+    margin-bottom: 8px;
+  }
+
+  body.recovery-mode:has([data-focus-canvas="true"])
+    .decision-impact-facts {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  body.recovery-mode:has([data-focus-canvas="true"])
+    .decision-provenance-strip {
+    gap: 8px;
+  }
+
+  body.recovery-mode:has([data-focus-canvas="true"])
+    .decision-provenance-strip span + span {
+    border-left: 0;
+    padding-left: 0;
+  }
+
+  body.recovery-mode:has([data-focus-canvas="true"])
+    .interview-loop-screen[data-human-decision-surface="question"]
+    > .decision-question-main {
+    padding: 0;
+  }
+
+  body.recovery-mode:has([data-focus-canvas="true"])
+    .question-card [data-answer-resume][disabled] {
+    display: none;
+  }
+
+  body.recovery-mode:has([data-focus-canvas="true"])
+    .decision-question-context h2 {
+    font-size: clamp(26px, 7.5vw, 34px);
+  }
+}
+
 /* Persistent target rail: keep project identity and Work Item selection visible
    while reusing the existing navigation ids and route-intent handlers. */
 @media (min-width: 1100px) and (min-height: 700px) {

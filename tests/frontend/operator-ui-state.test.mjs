@@ -722,8 +722,60 @@ test("question Recovery renders exact durable ids and resolution states", async 
   assert.match(html, /data-question-id="Q-RESOLVED" data-question-status="resolved" data-answer-resolution="resolved"/);
   assert.match(html, /data-question-id="Q-PARTIAL" data-question-status="partial" data-answer-resolution="partial"/);
   assert.match(html, /data-question-id="Q-DEFERRED" data-question-status="deferred" data-answer-resolution="deferred"/);
-  assert.equal((html.match(/data-primary-action/g) || []).length, 3);
+  assert.equal((html.match(/data-primary-action/g) || []).length, 1);
   assert.match(html, /Select resolved to resume/);
+  assert.match(html, /data-save-answer="Q-PARTIAL"/);
+  assert.match(html, /Save partial answer/);
+  assert.match(html, /data-answer-resume="Q-PARTIAL"/);
+});
+
+test("resolved durable question exposes Resume separately from Save", async () => {
+  const {context} = domContext();
+  context.readOperatorDraft = () => null;
+  await load(context, "operator-api-state.js");
+  await load(context, "operator-questions.js");
+  vm.runInContext(`state.activeStage = "plan"; state.dashboard = {
+    active_stage_view: {questions: {
+      unresolved_blocking_question_ids: [],
+      questions: [{question_id: "Q1", policy: "blocking", status: "resolved", answer_resolution: "resolved", answer_text: "Confirmed."}]
+    }}
+  }`, context);
+  const html = vm.runInContext("renderQuestionCards({showResume: true})", context);
+  assert.match(html, /data-save-answer="Q1"/);
+  assert.match(html, /Save resolved answer/);
+  assert.match(html, /data-answer-resume="Q1"/);
+  assert.match(html, /data-server-resolved="true"/);
+  assert.match(html, /Resume Plan/);
+  assert.equal((html.match(/data-primary-action/g) || []).length, 1);
+});
+
+test("question impact copy never claims that partial or deferred answers unblock the stage", async () => {
+  const {context} = domContext();
+  context.readOperatorDraft = () => null;
+  context.stageTitle = (stage) => stage === "plan" ? "Plan" : stage;
+  await load(context, "operator-api-state.js");
+  await load(context, "operator-questions.js");
+  vm.runInContext(`state.activeStage = "plan"; state.dashboard = {
+    active_stage_view: {questions: {
+      unresolved_blocking_question_ids: ["Q1"],
+      answers_path: "workitems/WI-UI/stages/plan/answers.md",
+      questions: [{question_id: "Q1", policy: "blocking", answer_resolution: "partial", answer_text: "Not final."}]
+    }}
+  }`, context);
+  const partial = vm.runInContext("renderQuestionImpactPanel(state.dashboard.active_stage_view.questions, state.dashboard.active_stage_view.questions.questions[0])", context);
+  assert.match(partial, /data-answer-resolution-state="partial"/);
+  assert.match(partial, /Plan remains blocked/);
+  assert.doesNotMatch(partial, /Resolved unblocks/);
+
+  vm.runInContext(`state.dashboard.active_stage_view.questions = {
+    unresolved_blocking_question_ids: [],
+    answers_path: "workitems/WI-UI/stages/plan/answers.md",
+    questions: [{question_id: "Q1", policy: "blocking", answer_resolution: "resolved", answer_text: "Confirmed."}]
+  }`, context);
+  const resolved = vm.runInContext("renderQuestionImpactPanel(state.dashboard.active_stage_view.questions, state.dashboard.active_stage_view.questions.questions[0])", context);
+  assert.match(resolved, /data-stage-blocked="false"/);
+  assert.match(resolved, /ready to resume/);
+  assert.match(resolved, /separate action/);
 });
 
 test("question answer cards expose structured context and preview destination", async () => {

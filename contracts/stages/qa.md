@@ -12,8 +12,12 @@ Summarize verification outcomes, remaining risks, and readiness status.
 - `questions.md` / `answers.md` when clarification is required
 
 `qa-report.md` is the primary runtime-authored content artifact. `stage-result.md`
-and `validator-report.md` are AIDD-owned workflow records. AIDD writes their lifecycle and
-validation content after runtime execution; runtimes must not create or edit either record.
+and `validator-report.md` are AIDD-generated workflow records. The runtime must not create
+or edit either record in initial, repair, or intervention attempts. It writes only substantive
+runtime content and exposes evidence for AIDD reconciliation. If a blocker prevents completion,
+it must submit a `[blocking]` question through the controlled interview path; blocker prose alone
+does not pause AIDD. The primary-output list above is the published artifact view, not a
+grant of runtime write authority.
 
 ## System-owned control artifacts
 

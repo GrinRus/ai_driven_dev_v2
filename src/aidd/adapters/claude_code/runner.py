@@ -105,6 +105,7 @@ class ClaudeCodeExitClassification(StrEnum):
     TIMEOUT = "timeout"
     USER_CANCELLED = "user_cancelled"
     ADAPTER_FAILURE = "adapter_failure"
+    CAPTURE_FAILURE = "capture_failure"
 
 
 @dataclass(frozen=True, slots=True)
@@ -308,12 +309,15 @@ def _resolve_exit_classification(
     *,
     exit_code: int | None,
     stop_reason: ClaudeCodeExitClassification | None,
+    capture_error: str | None = None,
 ) -> ClaudeCodeExitClassification:
     return resolve_exit_classification(
         exit_code=exit_code,
         stop_reason=stop_reason,
         success_value=ClaudeCodeExitClassification.SUCCESS,
         non_zero_value=ClaudeCodeExitClassification.RUNTIME_NON_ZERO_EXIT,
+        capture_error=capture_error,
+        capture_failure_value=ClaudeCodeExitClassification.CAPTURE_FAILURE,
     )
 
 
@@ -341,6 +345,7 @@ def run_subprocess_with_streaming(
     exit_classification = _resolve_exit_classification(
         exit_code=streamed_result.exit_code,
         stop_reason=streamed_result.stop_reason,
+        capture_error=streamed_result.capture_error,
     )
     return ClaudeCodeRunResult(
         exit_code=streamed_result.exit_code,
@@ -359,6 +364,7 @@ def run_subprocess_with_streaming(
         stdout_truncated=streamed_result.stdout_truncated,
         stderr_truncated=streamed_result.stderr_truncated,
         runtime_log_truncated=streamed_result.runtime_log_truncated,
+        capture_error=streamed_result.capture_error,
     )
 
 
@@ -384,6 +390,7 @@ def persist_attempt_runtime_log(
         stdout_truncated=run_result.stdout_truncated,
         stderr_truncated=run_result.stderr_truncated,
         runtime_log_truncated=run_result.runtime_log_truncated,
+        capture_error=run_result.capture_error,
     )
     return ClaudeCodeRuntimeArtifacts(
         runtime_log_path=paths.runtime_log_path,

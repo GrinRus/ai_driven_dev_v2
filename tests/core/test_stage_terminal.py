@@ -12,11 +12,44 @@ from aidd.core.stage_terminal import (
     exhausted_budget_validation_finding,
     force_stage_result_failed_for_exhausted_budget,
     normalize_success_stage_result_blockers_if_empty,
+    prepare_bootstrap_stage_result_for_validation,
     reconcile_stage_result_after_validation_pass,
     render_stage_result_from_lifecycle_state,
     repair_brief_exhausts_terminal_budget,
     strip_stage_result_success_claims_for_validator_findings,
 )
+from aidd.core.workspace import STAGE_RESULT_BOOTSTRAP_TEMPLATE
+
+
+@pytest.mark.parametrize("runtime_suffix", ("", "\nRuntime-authored extra evidence.\n"))
+def test_bootstrap_context_projection_is_idempotent_and_preserves_runtime_drafts(
+    tmp_path: Path, runtime_suffix: str,
+) -> None:
+    stage_root = tmp_path / "workitems" / "WI-001" / "stages" / "plan"
+    stage_root.mkdir(parents=True)
+    context = tmp_path / "workitems" / "WI-001" / "context" / "project-set.md"
+    context.parent.mkdir()
+    context.write_text("# Project set\n\n| `api` | `services/api` | `primary` |\n")
+    stage_result = stage_root / "stage-result.md"
+    original = STAGE_RESULT_BOOTSTRAP_TEMPLATE + runtime_suffix
+    stage_result.write_text(original)
+
+    recognized = prepare_bootstrap_stage_result_for_validation(
+        workspace_root=tmp_path, work_item="WI-001", stage="plan",
+    )
+    prepared = stage_result.read_text()
+    assert recognized is (not runtime_suffix)
+    if runtime_suffix:
+        assert prepared == original
+    else:
+        assert "## Project-set evidence" in prepared
+        assert "`api` at `services/api`" in prepared
+        assert "## Status" not in prepared
+        assert "Validator verdict" not in prepared
+        assert prepare_bootstrap_stage_result_for_validation(
+            workspace_root=tmp_path, work_item="WI-001", stage="plan",
+        )
+        assert stage_result.read_text() == prepared
 
 
 def test_render_stage_result_from_lifecycle_state_is_byte_stable_and_replaces_todo() -> None:

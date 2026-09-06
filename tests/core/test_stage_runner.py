@@ -1109,6 +1109,63 @@ def test_run_single_stage_preflight_blocks_invalid_optional_inputs_before_attemp
     ).exists()
 
 
+def test_run_single_stage_preflight_blocks_non_file_required_inputs_before_attempt(
+    tmp_path: Path,
+) -> None:
+    workspace_root = tmp_path / ".aidd"
+    create_run_manifest(
+        workspace_root=workspace_root,
+        work_item="WI-001",
+        run_id="run-001",
+        runtime_id="generic-cli",
+        stage_target="plan",
+        config_snapshot={"mode": "test"},
+    )
+    preparation_bundle = prepare_stage_bundle(
+        workspace_root=workspace_root,
+        work_item="WI-001",
+        stage="plan",
+    )
+    _materialize_expected_inputs(preparation_bundle.required_input_documents)
+    directory_input = preparation_bundle.required_input_documents[0]
+    directory_input.unlink()
+    directory_input.mkdir()
+
+    def _unused_adapter_executor(
+        _invocation: AdapterInvocationBundle,
+        _execution_state: StageExecutionState,
+    ) -> AdapterExecutionOutcome:
+        raise AssertionError("adapter must not run with a non-file stage input")
+
+    with pytest.raises(
+        StageInputPreflightError,
+        match=(
+            "Stage input preflight failed: required input document is not readable: "
+            "workitems/WI-001/stages/idea/output/idea-brief.md"
+        ),
+    ):
+        run_single_stage_orchestration(
+            workspace_root=workspace_root,
+            work_item="WI-001",
+            run_id="run-001",
+            stage="plan",
+            adapter_executor=_unused_adapter_executor,
+        )
+
+    assert load_stage_metadata(
+        workspace_root=workspace_root,
+        work_item="WI-001",
+        run_id="run-001",
+        stage="plan",
+    ) is None
+    assert not run_attempts_root(
+        workspace_root=workspace_root,
+        work_item="WI-001",
+        run_id="run-001",
+        stage="plan",
+    ).exists()
+
+
 def test_discover_stage_markdown_outputs_returns_discovered_and_missing_documents(
     tmp_path: Path,
 ) -> None:
@@ -1162,6 +1219,56 @@ def test_discover_stage_markdown_outputs_returns_discovered_and_missing_document
     assert execution_state.attempt_path / "runtime.log" not in discovery.expected_markdown_documents
     assert discovery.discovered_markdown_documents == invocation.expected_output_documents
     assert discovery.missing_markdown_documents == ()
+
+
+def test_discover_stage_markdown_outputs_excludes_non_regular_markdown_paths(
+    tmp_path: Path,
+) -> None:
+    workspace_root = tmp_path / ".aidd"
+    create_run_manifest(
+        workspace_root=workspace_root,
+        work_item="WI-001",
+        run_id="run-001",
+        runtime_id="generic-cli",
+        stage_target="plan",
+        config_snapshot={"mode": "test"},
+    )
+    preparation_bundle = prepare_stage_bundle(
+        workspace_root=workspace_root,
+        work_item="WI-001",
+        stage="plan",
+    )
+    _materialize_expected_inputs(preparation_bundle.expected_input_bundle)
+    execution_state = persist_execution_state(
+        workspace_root=workspace_root,
+        work_item="WI-001",
+        run_id="run-001",
+        stage="plan",
+        attempt_mode="initial",
+    )
+    invocation = prepare_adapter_invocation(
+        workspace_root=workspace_root,
+        preparation_bundle=preparation_bundle,
+        execution_state=execution_state,
+    )
+    valid_documents = _valid_plan_output_documents()
+    for output_path in preparation_bundle.expected_output_documents:
+        output_path.parent.mkdir(parents=True, exist_ok=True)
+        if output_path.name == "plan.md":
+            output_path.mkdir()
+        else:
+            output_path.write_text(valid_documents[output_path.name], encoding="utf-8")
+
+    discovery = discover_stage_markdown_outputs(
+        execution_state=execution_state,
+        invocation_bundle=invocation,
+    )
+
+    plan_path = next(
+        path for path in preparation_bundle.expected_output_documents if path.name == "plan.md"
+    )
+    assert plan_path not in discovery.discovered_markdown_documents
+    assert discovery.missing_markdown_documents == (plan_path,)
 
 
 @pytest.mark.parametrize(
@@ -3378,6 +3485,183 @@ def test_run_single_stage_orchestration_stops_on_adapter_failure(tmp_path: Path)
     assert orchestration.validation_transition is None
 
 
+@pytest.mark.parametrize(
+    "failpoint",
+    (
+        "discover_stage_markdown_outputs",
+        "_restore_operator_owned_answers_after_runtime_attempt",
+        "run_structural_validation_after_output_discovery",
+    ),
+)
+def test_run_single_stage_orchestration_terminalizes_post_execution_failpoints(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    failpoint: str,
+) -> None:
+    workspace_root = tmp_path / ".aidd"
+    create_run_manifest(
+        workspace_root=workspace_root,
+        work_item="WI-001",
+        run_id="run-001",
+        runtime_id="generic-cli",
+        stage_target="plan",
+        config_snapshot={"mode": "test"},
+    )
+    preview_bundle = prepare_stage_bundle(
+        workspace_root=workspace_root,
+        work_item="WI-001",
+        stage="plan",
+    )
+    _materialize_expected_inputs(preview_bundle.expected_input_bundle)
+
+    def _adapter_executor(
+        _invocation: AdapterInvocationBundle,
+        _execution_state: StageExecutionState,
+    ) -> AdapterExecutionOutcome:
+        return AdapterExecutionOutcome(succeeded=True, details="success")
+
+    def _raise_post_execution_failure(*_args: object, **_kwargs: object) -> object:
+        raise RuntimeError(f"{failpoint} failed")
+
+    monkeypatch.setattr(f"aidd.core.stage_runner.{failpoint}", _raise_post_execution_failure)
+
+    with pytest.raises(RuntimeError, match=f"{failpoint} failed"):
+        run_single_stage_orchestration(
+            workspace_root=workspace_root,
+            work_item="WI-001",
+            run_id="run-001",
+            stage="plan",
+            adapter_executor=_adapter_executor,
+        )
+
+    metadata = load_stage_metadata(
+        workspace_root=workspace_root,
+        work_item="WI-001",
+        run_id="run-001",
+        stage="plan",
+    )
+    assert metadata is not None
+    assert metadata.status == StageState.FAILED.value
+    assert [change.status for change in metadata.status_history[-2:]] == [
+        StageState.VALIDATING.value,
+        StageState.FAILED.value,
+    ]
+    attempt_path = sorted(
+        run_attempts_root(workspace_root, "WI-001", "run-001", "plan").glob("attempt-*")
+    )[-1]
+    exception_payload = json.loads(
+        (attempt_path / "adapter-exception.json").read_text(encoding="utf-8")
+    )
+    assert exception_payload["kind"] == "adapter-exception"
+    assert exception_payload["message"] == f"{failpoint} failed"
+    stage_result = (
+        workspace_root / "workitems" / "WI-001" / "stages" / "plan" / "stage-result.md"
+    ).read_text(encoding="utf-8")
+    assert "- Status: `failed`" in stage_result
+    assert f"Post-execution processing failed: {failpoint} failed" in stage_result
+    assert metadata.status not in {StageState.EXECUTING.value, StageState.VALIDATING.value}
+
+
+@pytest.mark.parametrize("recorded_mode", (None, "unknown-mode"))
+def test_post_execution_terminalization_preserves_unknown_attempt_mode_evidence(
+    tmp_path: Path,
+    recorded_mode: str | None,
+) -> None:
+    from aidd.core.stage_runner import _terminalize_unhandled_post_execution_exception
+
+    workspace_root = tmp_path / ".aidd"
+    create_run_manifest(
+        workspace_root=workspace_root,
+        work_item="WI-001",
+        run_id="run-001",
+        runtime_id="generic-cli",
+        stage_target="plan",
+        config_snapshot={"mode": "test"},
+    )
+    state = persist_execution_state(
+        workspace_root=workspace_root,
+        work_item="WI-001",
+        run_id="run-001",
+        stage="plan",
+        attempt_mode="initial",
+    )
+    index_path = state.attempt_path / "artifact-index.json"
+    index = json.loads(index_path.read_text(encoding="utf-8"))
+    index["attempt_mode"] = recorded_mode
+    index_text = json.dumps(index)
+    index_path.write_text(index_text, encoding="utf-8")
+    primary_failure = RuntimeError("discovery failed")
+
+    _terminalize_unhandled_post_execution_exception(
+        workspace_root=workspace_root,
+        work_item="WI-001",
+        run_id="run-001",
+        stage="plan",
+        contracts_root=Path("contracts"),
+        changed_at_utc=None,
+        exception=primary_failure,
+    )
+
+    metadata = load_stage_metadata(
+        workspace_root=workspace_root,
+        work_item="WI-001",
+        run_id="run-001",
+        stage="plan",
+    )
+    assert metadata is not None and metadata.status == StageState.FAILED.value
+    assert index_path.read_text(encoding="utf-8") == index_text
+    evidence = json.loads((state.attempt_path / "adapter-exception.json").read_text())
+    assert evidence["message"] == "discovery failed"
+    assert any("valid recorded attempt_mode" in note for note in primary_failure.__notes__)
+    stage_result = workspace_root / "workitems/WI-001/stages/plan/stage-result.md"
+    assert not stage_result.exists()
+
+
+def test_run_single_stage_orchestration_does_not_rewrite_existing_live_owner(
+    tmp_path: Path,
+) -> None:
+    workspace_root = tmp_path / ".aidd"
+    create_run_manifest(
+        workspace_root=workspace_root,
+        work_item="WI-001",
+        run_id="run-001",
+        runtime_id="generic-cli",
+        stage_target="plan",
+        config_snapshot={"mode": "test"},
+    )
+    persist_stage_status(
+        workspace_root=workspace_root,
+        work_item="WI-001",
+        run_id="run-001",
+        stage="plan",
+        status=StageState.VALIDATING.value,
+    )
+
+    def _unused_adapter_executor(
+        _invocation: AdapterInvocationBundle,
+        _execution_state: StageExecutionState,
+    ) -> AdapterExecutionOutcome:
+        raise AssertionError("adapter must not run before preflight")
+
+    with pytest.raises(StageInputPreflightError, match="missing required input document"):
+        run_single_stage_orchestration(
+            workspace_root=workspace_root,
+            work_item="WI-001",
+            run_id="run-001",
+            stage="plan",
+            adapter_executor=_unused_adapter_executor,
+        )
+
+    metadata = load_stage_metadata(
+        workspace_root=workspace_root,
+        work_item="WI-001",
+        run_id="run-001",
+        stage="plan",
+    )
+    assert metadata is not None
+    assert metadata.status == StageState.VALIDATING.value
+
+
 def test_run_single_stage_orchestration_blocks_before_validation_for_operator_request(
     tmp_path: Path,
 ) -> None:
@@ -3492,6 +3776,62 @@ def test_run_structural_validation_after_output_discovery_writes_report_path(
     )
     report_text = structural_validation.validator_report_path.read_text(encoding="utf-8")
     assert "`STRUCT-MISSING-REQUIRED-DOCUMENT`" not in report_text
+
+
+def test_run_structural_validation_maps_malformed_output_without_secondary_reads(
+    tmp_path: Path,
+) -> None:
+    workspace_root = tmp_path / ".aidd"
+    create_run_manifest(
+        workspace_root=workspace_root,
+        work_item="WI-001",
+        run_id="run-001",
+        runtime_id="generic-cli",
+        stage_target="plan",
+        config_snapshot={"mode": "test"},
+    )
+    preparation_bundle = prepare_stage_bundle(
+        workspace_root=workspace_root,
+        work_item="WI-001",
+        stage="plan",
+    )
+    _materialize_expected_inputs(preparation_bundle.expected_input_bundle)
+    execution_state = persist_execution_state(
+        workspace_root=workspace_root,
+        work_item="WI-001",
+        run_id="run-001",
+        stage="plan",
+        attempt_mode="initial",
+    )
+    invocation = prepare_adapter_invocation(
+        workspace_root=workspace_root,
+        preparation_bundle=preparation_bundle,
+        execution_state=execution_state,
+    )
+    valid_documents = _valid_plan_output_documents()
+    for output_path in preparation_bundle.expected_output_documents:
+        output_path.parent.mkdir(parents=True, exist_ok=True)
+        if output_path.name == "plan.md":
+            output_path.write_bytes(b"---\nstatus: draft\n# Plan\n")
+        else:
+            output_path.write_text(valid_documents[output_path.name], encoding="utf-8")
+
+    discovery = discover_stage_markdown_outputs(
+        execution_state=execution_state,
+        invocation_bundle=invocation,
+    )
+    validation = run_structural_validation_after_output_discovery(
+        workspace_root=workspace_root,
+        discovery=discovery,
+    )
+
+    assert [finding.code for finding in validation.findings] == [
+        "STRUCT-DOCUMENT-MALFORMED-FRONTMATTER"
+    ]
+    report_text = validation.validator_report_path.read_text(encoding="utf-8")
+    assert "`STRUCT-DOCUMENT-MALFORMED-FRONTMATTER`" in report_text
+    assert "`SEM-" not in report_text
+    assert "`CROSS-" not in report_text
 
 
 def test_validation_collects_semantic_findings_with_independent_structural_defects(

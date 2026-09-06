@@ -107,7 +107,13 @@ def test_question_recovery_restores_draft_and_resumes_from_durable_answer(
         with expect_rendered_surface(page.locator('[data-question-text="Q1"]')):
             page.goto(harness.url, wait_until="domcontentloaded")
         page.locator("#runtimeSettings").evaluate("node => { node.open = true; }")
-        page.locator("#runtimeSelect").select_option("generic-cli")
+        page.wait_for_function(
+            "document.querySelectorAll("
+            "'#runtimeSelect option[value=\\\"generic-cli\\\"]'"
+            ").length > 0",
+            timeout=30_000,
+        )
+        page.locator("#runtimeSelect").select_option("generic-cli", force=True)
         page.wait_for_function("eval('selectedRuntimeReady()')", timeout=15_000)
         root = page.locator('[data-human-decision-surface="question"]')
         root.wait_for(state="visible")
@@ -141,7 +147,13 @@ def test_question_recovery_restores_draft_and_resumes_from_durable_answer(
         answer.wait_for(state="visible")
         assert answer.input_value().startswith("Keep the public CLI")
         page.locator("#runtimeSettings").evaluate("node => { node.open = true; }")
-        page.locator("#runtimeSelect").select_option("generic-cli")
+        page.wait_for_function(
+            "document.querySelectorAll("
+            "'#runtimeSelect option[value=\\\"generic-cli\\\"]'"
+            ").length > 0",
+            timeout=30_000,
+        )
+        page.locator("#runtimeSelect").select_option("generic-cli", force=True)
         page.wait_for_function("eval('selectedRuntimeReady()')", timeout=15_000)
 
         resolution = page.locator('[data-question-resolution="Q1"]')
@@ -181,9 +193,26 @@ def test_question_recovery_restores_draft_and_resumes_from_durable_answer(
                 stage_posts.append(str(request.url))
 
         page.on("request", _record_answer)
+        save_button = page.locator('[data-save-answer="Q1"]')
+        with page.expect_response(
+            lambda response: urlsplit(response.url).path == "/api/answers"
+        ):
+            save_button.click()
+        page.wait_for_function(
+            "eval(\"state.dashboard.active_stage_view.questions."
+            "unresolved_blocking_question_ids\").length === 0"
+        )
+        page.wait_for_function(
+            "!document.querySelector('[data-answer-resume=\\\"Q1\\\"]')?.disabled"
+        )
+        assert len(answer_posts) == 1
+        assert len(stage_posts) == 0
+
         resume_button = page.locator('[data-answer-resume="Q1"]')
+        resume_button.wait_for(state="visible")
         assert not resume_button.is_disabled()
-        page.evaluate("answerAndResume('Q1')")
+        resume_button.click()
+        page.wait_for_function("eval('state.activeJobId')", timeout=30_000)
         assert len(answer_posts) == 1
         assert len(stage_posts) == 1
         page.wait_for_function("readOperatorDraft(questionDraftIdentity('Q1')) === null")
@@ -219,9 +248,18 @@ def test_rejected_interview_candidate_recovery_preserves_focus_and_repair_budget
         work_item=fixture.work_item,
     ) as harness, harness.open_page(viewport) as browser_page:
         page = browser_page.page
-        page.goto(harness.url, wait_until="networkidle")
+        with expect_rendered_surface(
+            page.locator('[data-interview-candidate-recovery="rejected"]')
+        ):
+            page.goto(harness.url, wait_until="domcontentloaded")
         page.locator("#runtimeSettings").evaluate("node => { node.open = true; }")
-        page.locator("#runtimeSelect").select_option("generic-cli")
+        page.wait_for_function(
+            "document.querySelectorAll("
+            "'#runtimeSelect option[value=\\\"generic-cli\\\"]'"
+            ").length > 0",
+            timeout=30_000,
+        )
+        page.locator("#runtimeSelect").select_option("generic-cli", force=True)
         page.wait_for_function("eval('selectedRuntimeReady()')", timeout=15_000)
 
         recovery = page.locator('[data-interview-candidate-recovery="rejected"]')
@@ -258,8 +296,13 @@ def test_rejected_interview_candidate_recovery_preserves_focus_and_repair_budget
                 repair_posts.append(request_url)
 
         page.on("request", _record_request)
+        page.locator('[data-save-answer="Q1"]').click()
+        page.wait_for_function(
+            "eval(\"state.dashboard.active_stage_view.questions."
+            "unresolved_blocking_question_ids\").length === 0"
+        )
         page.locator('[data-answer-resume="Q1"]').click()
-        page.wait_for_function("eval('state.activeJobId')", timeout=10_000)
+        page.wait_for_function("eval('state.activeJobId')", timeout=30_000)
         assert len(stage_posts) == 1
         assert repair_posts == []
         job_id = page.evaluate("eval('state.activeJobId')")

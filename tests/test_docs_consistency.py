@@ -16,7 +16,12 @@ from aidd.core.stage_registry import (
 )
 from aidd.core.stages import STAGES
 from aidd.runtime_catalog import runtime_definitions, runtime_ids
-from aidd.validators.protocol import VALIDATOR_FINDING_CODES, VALIDATOR_REPORT_FIELDS
+from aidd.validators.protocol import (
+    DOCUMENT_READ_FAILURES,
+    VALIDATOR_FINDING_CODES,
+    VALIDATOR_REPORT_FIELDS,
+)
+from tests.agent_instruction_support import skill_text_with_references
 
 _USER_STORY_ID_PATTERN = re.compile(r"^###\s+(US-\d+)\b", re.MULTILINE)
 _ROADMAP_STORY_ID_PATTERN = re.compile(r"\bUS-\d+\b")
@@ -183,34 +188,49 @@ def test_adapter_protocol_documents_current_execution_result_surface() -> None:
 
 def test_artifact_ownership_docs_and_prompt_packs_are_consistent() -> None:
     repo_root = _repo_root()
-    document_contracts = (
-        repo_root / "docs" / "architecture" / "document-contracts.md"
-    ).read_text(encoding="utf-8")
-    stage_result_contract = (
-        repo_root / "contracts" / "documents" / "stage-result.md"
-    ).read_text(encoding="utf-8")
-    questions_contract = (
-        repo_root / "contracts" / "documents" / "questions.md"
-    ).read_text(encoding="utf-8")
+    document_contracts = (repo_root / "docs" / "architecture" / "document-contracts.md").read_text(
+        encoding="utf-8"
+    )
+    stage_result_contract = (repo_root / "contracts" / "documents" / "stage-result.md").read_text(
+        encoding="utf-8"
+    )
+    questions_contract = (repo_root / "contracts" / "documents" / "questions.md").read_text(
+        encoding="utf-8"
+    )
 
     assert "`stage-result.md` and `validator-report.md` are AIDD-owned" in document_contracts
     assert "`repair-brief.md` is not runtime-authored" in document_contracts
+    for forbidden_phrase in (
+        "The runtime-authored version is a draft",
+        "Runtime-authored content with the same filename is treated as draft evidence",
+    ):
+        assert forbidden_phrase not in document_contracts
     assert "nested or indented bullets" in questions_contract.lower()
     assert "nested or indented bullets" in document_contracts.lower()
     assert "AIDD derives this workflow record" in stage_result_contract
-    assert "Runtimes must not create or edit it" in stage_result_contract
+    assert (
+        "Runtimes must not create or edit it, including during repair or intervention"
+        in stage_result_contract
+    )
 
     for stage in STAGES:
-        stage_contract = (
-            repo_root / "contracts" / "stages" / f"{stage}.md"
-        ).read_text(encoding="utf-8")
-        run_prompt = (
-            repo_root / "prompt-packs" / "stages" / stage / "run.md"
-        ).read_text(encoding="utf-8")
+        stage_contract = (repo_root / "contracts" / "stages" / f"{stage}.md").read_text(
+            encoding="utf-8"
+        )
+        run_prompt = (repo_root / "prompt-packs" / "stages" / stage / "run.md").read_text(
+            encoding="utf-8"
+        )
 
-        assert "runtime-authored summary draft" not in stage_contract
-        assert "are AIDD-owned workflow records" in stage_contract
-        assert "runtimes must not create or edit either record" in stage_contract
+        normalized_contract = " ".join(stage_contract.split())
+        for forbidden_phrase in (
+            "runtime-authored summary draft",
+            "runtime-authored version is a draft",
+            "runtime-authored content with the same filename is treated as draft evidence",
+        ):
+            assert forbidden_phrase not in stage_contract
+        assert "AIDD-generated workflow records" in stage_contract
+        assert "runtime must not create or edit either record" in normalized_contract
+        assert "initial, repair, or intervention attempts" in normalized_contract
         assert "## AIDD-generated records (do not write)" in run_prompt
         assert "validator-report.md` is written canonically by AIDD" in run_prompt
         assert "stage-result.md` is written canonically by AIDD" in run_prompt
@@ -238,6 +258,21 @@ def test_validator_report_contract_matches_protocol_registry() -> None:
     assert "## Retired vocabulary" in contract
 
 
+def test_document_read_failure_contract_matches_protocol_registry() -> None:
+    repo_root = _repo_root()
+    contract = (repo_root / "contracts" / "documents" / "validator-report.md").read_text(
+        encoding="utf-8"
+    )
+    taxonomy = contract.split("### Document-read failure taxonomy", maxsplit=1)[1].split(
+        "### Semantic checks", maxsplit=1
+    )[0]
+    documented = dict(
+        re.findall(r"\| `([^`]+)` \| `([^`]+)` \|", taxonomy)
+    )
+    expected = {spec.kind.value: spec.code for spec in DOCUMENT_READ_FAILURES}
+    assert documented == expected
+
+
 def test_live_docs_classify_malformed_interview_documents_as_stage_output_failure() -> None:
     repo_root = _repo_root()
     live_catalog = (repo_root / "docs" / "e2e" / "live-e2e-catalog.md").read_text(
@@ -257,15 +292,11 @@ def test_live_docs_classify_malformed_interview_documents_as_stage_output_failur
 
 def test_live_docs_classify_unsupported_review_spec_claims_as_stage_output_failure() -> None:
     repo_root = _repo_root()
-    live_catalog = (repo_root / "docs" / "e2e" / "live-e2e-catalog.md").read_text(
-        encoding="utf-8"
-    )
+    live_catalog = (repo_root / "docs" / "e2e" / "live-e2e-catalog.md").read_text(encoding="utf-8")
     live_rubric = (repo_root / "docs" / "e2e" / "live-quality-rubric.md").read_text(
         encoding="utf-8"
     )
-    live_skill = (repo_root / ".agents" / "skills" / "live-e2e" / "SKILL.md").read_text(
-        encoding="utf-8"
-    )
+    live_skill = skill_text_with_references("live-e2e")
 
     for text in (live_catalog, live_rubric, live_skill):
         normalized_text = " ".join(text.split())
@@ -464,6 +495,30 @@ def test_operator_docs_describe_live_manual_providers_and_execution_wrappers() -
     assert "opencode run --format json --dangerously-skip-permissions" in operator_handbook
     assert "probe target and the execution command do not have to be identical" in adapter_protocol
     assert "`native` execution" in runtime_matrix
+
+
+def test_adapter_protocol_separates_raw_bytes_from_display_text() -> None:
+    adapter_protocol = (
+        _repo_root() / "docs" / "architecture" / "adapter-protocol.md"
+    ).read_text(encoding="utf-8")
+    policy = adapter_protocol.split(
+        "#### 5.1.1 Byte authority and text presentation policy", maxsplit=1
+    )[1].split("### 5.2 Structured runtime log", maxsplit=1)[0]
+    normalized_policy = " ".join(policy.split())
+
+    for expected_text in (
+        "Raw bytes are the authoritative runtime evidence",
+        "read stdout and stderr as binary streams",
+        "append each observed byte chunk to the durable raw log before attempting any text",
+        "display-only UTF-8 projections",
+        '`errors="replace"`',
+        "replacement character (`U+FFFD`)",
+        "Byte counters and truncation metadata describe the raw stream",
+        "decode as strict UTF-8 and parse as valid JSON",
+        "reader errors remain distinct from EOF",
+        "render the text projection literally",
+    ):
+        assert " ".join(expected_text.split()) in normalized_policy
 
 
 def test_local_operator_docs_define_product_path_and_github_issue_boundary() -> None:
@@ -919,19 +974,15 @@ def test_readme_quickstart_uses_request_context_and_real_runtime_first() -> None
 
 
 def test_live_e2e_skill_describes_local_operator_contract() -> None:
-    live_e2e_skill = (_repo_root() / ".agents" / "skills" / "live-e2e" / "SKILL.md").read_text(
-        encoding="utf-8"
-    )
-    aidd_eval_skill = (_repo_root() / ".agents" / "skills" / "aidd-eval" / "SKILL.md").read_text(
-        encoding="utf-8"
-    )
+    live_e2e_skill = " ".join(skill_text_with_references("live-e2e").split())
+    aidd_eval_skill = " ".join(skill_text_with_references("aidd-eval").split())
 
     for needle in (
         "prepared local **source checkout**",
         "`AIDD_EVAL_CLAUDE_CODE_COMMAND`",
         "`AIDD_EVAL_CODEX_COMMAND`",
         "`AIDD_EVAL_OPENCODE_COMMAND`",
-        "native provider CLI",
+        "Native provider CLI",
         "AIDD-compatible wrapper command",
         "aidd eval doctor",
         (
@@ -951,8 +1002,8 @@ def test_live_e2e_skill_describes_local_operator_contract() -> None:
         "Fresh terminal QA state:",
         "`target-workspace-evidence.json`",
         "`target-workspace-evidence.md`",
-        "snapshot tracked AIDD `HEAD`",
-        "Rerun the same manifest/runtime until it is clean.",
+        "snapshot of tracked AIDD `HEAD`",
+        "Rerun the same manifest/runtime until it is clean **within the agreed run/time budget**",
         "plan step, execute through public operator surfaces, inspect artifacts",
         "frontend-checkpoints.json",
         "first listed authored task",
@@ -1014,27 +1065,31 @@ def test_live_e2e_skill_describes_local_operator_contract() -> None:
         "manual-frontend-evidence/",
         "non-gating evidence for the manual `quality-report.md`",
     ):
-        assert needle in live_e2e_skill
+        assert " ".join(needle.split()) in live_e2e_skill
 
-    assert "For **local live-run operator guidance**, prefer `live-e2e`." in aidd_eval_skill
+    assert "For **local live-run operator guidance**, prefer [live-e2e]" in aidd_eval_skill
     assert "the launching agent is the operator-agent" in aidd_eval_skill
     assert "`- Q1 [resolved] answer text`" in aidd_eval_skill
     assert "stage-audits/<stage-run-id>.json" in aidd_eval_skill
     assert "stage-quality-audits/<stage-run-id>.md" in aidd_eval_skill
     assert "request-remediation" in aidd_eval_skill
-    assert "preserves distinct stage-run audits" in aidd_eval_skill
-    assert "${TMPDIR:-/tmp}/aidd-live-e2e/<run_id>/source/aidd" in aidd_eval_skill
+    assert "retain earlier stage-run audits when remediation repeats a stage" in aidd_eval_skill
+    assert "Start from the run id and the roots printed by the command" in aidd_eval_skill
     assert "quality-report.md" in aidd_eval_skill
-    assert "AIDD operator UI/UX evidence" in aidd_eval_skill
-    assert "target-workspace-evidence.json" in aidd_eval_skill
-    assert "top-level `workitems/...` duplicates are severe" in aidd_eval_skill
-    assert (
-        "`frontend-checkpoints.*` as raw operator-surface availability evidence"
-        in aidd_eval_skill
-    )
-    assert "Observed running stages add a `running-stage` checkpoint phase" in (
+    assert "`Operator UI/UX decision` is a manual AIDD operator-UI sub-decision only" in (
         aidd_eval_skill
     )
+    assert "target-workspace-evidence.json" in aidd_eval_skill
+    assert (
+        "top-level `workitems/...` duplicates normally make manual "
+        "deliverable quality `not-counted`"
+        in (aidd_eval_skill)
+    )
+    assert (
+        "API probes in `frontend-checkpoints.*` are raw surface evidence, not a UI/UX audit."
+        in aidd_eval_skill
+    )
+    assert "Observed running stages add a `running-stage` checkpoint phase" in (aidd_eval_skill)
     assert "`wait-for-stage` next action" in aidd_eval_skill
     assert "pending-log state before `runtime.log` exists" in aidd_eval_skill
     assert "`frontend-checkpoints.md` includes a manual visual review checklist" in (
@@ -1042,8 +1097,8 @@ def test_live_e2e_skill_describes_local_operator_contract() -> None:
     )
     assert "desktop/mobile topbar readability" in aidd_eval_skill
     assert "failure-appropriate" in aidd_eval_skill
-    assert "as a prompt, not proof" in aidd_eval_skill
-    assert "`not inspected` in manual reports" in aidd_eval_skill
+    assert "as a prompt, not as proof" in aidd_eval_skill
+    assert "explicitly mark surfaces `not inspected`" in aidd_eval_skill
     assert "`--manual-frontend-evidence <path>`" in aidd_eval_skill
     assert "`manual-frontend-evidence/`" in aidd_eval_skill
 
@@ -1159,9 +1214,7 @@ def test_live_e2e_next_flow_checkpoint_policy_is_manual_only() -> None:
     live_catalog = (_repo_root() / "docs" / "e2e" / "live-e2e-catalog.md").read_text(
         encoding="utf-8"
     )
-    live_e2e_skill = (
-        _repo_root() / ".agents" / "skills" / "live-e2e" / "SKILL.md"
-    ).read_text(encoding="utf-8")
+    live_e2e_skill = skill_text_with_references("live-e2e")
 
     for expected in (
         "## Next-Flow Terminal Checkpoint Policy",
@@ -1191,7 +1244,7 @@ def test_live_e2e_next_flow_checkpoint_policy_is_manual_only() -> None:
         "next-flow-lineage.json",
         "separate manual-only option",
         "outside CI/CD and release automation",
-        "Never require launching a second public-repository flow",
+        "it still must not launch a child public-repository",
     ):
         assert expected in live_e2e_skill
 
@@ -1458,9 +1511,9 @@ def test_operator_frontend_defines_scoped_browser_draft_contract() -> None:
 
 
 def test_release_publish_skill_describes_release_flow_guardrails() -> None:
-    skill = (
-        _repo_root() / ".agents" / "skills" / "release-publish" / "SKILL.md"
-    ).read_text(encoding="utf-8")
+    skill = (_repo_root() / ".agents" / "skills" / "release-publish" / "SKILL.md").read_text(
+        encoding="utf-8"
+    )
 
     for needle in (
         "release/v<project.version>",
@@ -1474,7 +1527,8 @@ def test_release_publish_skill_describes_release_flow_guardrails() -> None:
         "If the PyPI version already exists, stop and ask for a new version decision.",
         "Docker/GHCR is not a supported alpha release channel.",
         "If the release tag SHA does not match `origin/release/<tag>`, stop",
-        "Tag v<project.version> already exists on origin",
+        ("If the release exists, or the preflight reports\n"
+         "an existing remote tag, stop and inspect."),
         "git rev-parse refs/tags/v<project.version>^{commit}",
         "--backend pip",
         "The acceptance checks must execute the binaries installed into `PIPX_BIN_DIR`",

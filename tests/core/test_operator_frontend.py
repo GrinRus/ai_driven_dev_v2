@@ -204,7 +204,15 @@ def test_parse_validator_report_findings_collapses_duplicate_command_claims() ->
             line_number=38,
         ),
     )
-    findings = parse_validator_report_findings(render_validator_report((finding,) * 4))
+    report = render_validator_report((finding,))
+    finding_line = next(
+        line for line in report.splitlines() if line.startswith(f"- `{finding.code}`")
+    )
+    report = report.replace(finding_line, "\n".join((finding_line,) * 4)).replace(
+        "- Total issues: 1", "- Total issues: 4"
+    )
+    assert report.splitlines().count(finding_line) == 4
+    findings = parse_validator_report_findings(report)
 
     assert len(findings) == 1
     assert findings[0].code == "SEM-UNVERIFIABLE-CHECK-CLAIM"

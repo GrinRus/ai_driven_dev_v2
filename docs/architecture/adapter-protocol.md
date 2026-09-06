@@ -158,6 +158,31 @@ memory. Schema-v1 `runtime-exit.json` records full byte/character counters and a
 truncation metadata. Oversized chunks are written completely to disk and truncated only in the
 in-memory tail.
 
+#### 5.1.1 Byte authority and text presentation policy
+
+Raw bytes are the authoritative runtime evidence. Adapters MUST read stdout and stderr as binary
+streams and append each observed byte chunk to the durable raw log before attempting any text
+decoding. `runtime.log` and any raw source copy preserve those bytes exactly, in observed order;
+they are not normalized, re-encoded, or repaired to make them valid UTF-8.
+
+The `stdout_text`, `stderr_text`, and `runtime_log_text` fields are bounded, display-only UTF-8
+projections. They MUST be decoded incrementally with `errors="replace"`, so an invalid or split
+UTF-8 sequence produces the replacement character (`U+FFFD`) in the presentation view without
+altering or discarding the authoritative bytes. Byte counters and truncation metadata describe
+the raw stream; character counters describe the resulting display projection and may therefore
+include replacement characters. A display-tail boundary may omit an incomplete trailing sequence,
+but this is a presentation detail and never changes the durable raw log.
+
+Structured JSONL events are derived only from complete lines that decode as strict UTF-8 and parse
+as valid JSON. An undecodable or malformed line remains available in the raw log but MUST NOT be
+silently promoted to a structured event. A text decode problem is not clean EOF and cannot by
+itself be reported as a successful or empty capture; reader errors remain distinct from EOF for
+the execution result.
+
+CLI and API consumers MUST render the text projection literally and keep the durable raw artifact
+available for exact inspection. Workflow policy and evals use the canonical outcome and durable
+paths, never a lossy in-memory text projection as a substitute for raw evidence.
+
 Structured JSONL records are processed incrementally while capture is active, or read from the
 provider-native JSONL artifact. Consumers never require the full raw stdout/stderr text in
 memory. A callback, writer, or capture failure terminates the owned process group and cannot
@@ -230,6 +255,7 @@ one evidence envelope. `runtime.log` is written atomically first and schema-v1
 | --- | --- | --- | --- |
 | runtime completed successfully | `success` | absent | provider/process code |
 | runtime exited unsuccessfully | `runtime_failure` | `runtime_failure` | provider/process code |
+| stream capture or reader failed | `runtime_failure` | `runtime_failure` | provider/process code when available |
 | runtime budget expired | `timeout` | `timeout` | provider/process code when available |
 | execution was cancelled | `cancellation` | `cancellation` | provider/process code when available |
 | operator or policy denied execution | `denial` | `denial` | `null` when no provider process result exists |
@@ -237,8 +263,10 @@ one evidence envelope. `runtime.log` is written atomically first and schema-v1
 | executable launch failed | `launch_failure` | `launch_failure` | `null` |
 
 Success never has a stop reason. Blocked and launch-failure evidence never fabricates a process
-exit code. Workflow policy uses the canonical outcome; adapter-specific classifications remain
-available for provider diagnostics.
+exit code. A capture failure preserves any partial raw log and records the adapter-specific
+`capture_failure` classification plus a sanitized capture error in `runtime-exit.json`; it can
+never be reported as successful. Workflow policy uses the canonical outcome; adapter-specific
+classifications remain available for provider diagnostics.
 
 ## 8. Workspace expectations
 

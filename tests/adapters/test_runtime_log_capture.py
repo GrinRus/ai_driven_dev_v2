@@ -55,6 +55,32 @@ def test_disk_backed_sink_preserves_full_order_with_bounded_utf8_tails(
     assert snapshot.runtime_log_truncated is True
 
 
+def test_disk_backed_sink_persists_raw_bytes_before_incremental_display_decode(
+    tmp_path: Path,
+) -> None:
+    sink = DiskBackedRuntimeLogSink(directory=tmp_path)
+    sink.write("stdout", b"before\n\xc3")
+    sink.write("stderr", b"err\n\xff")
+    sink.write("stdout", b"\xa9after\n\xff")
+
+    snapshot = sink.finish()
+
+    assert snapshot.runtime_log_source_path.read_bytes() == (
+        b"before\n\xc3err\n\xff\xa9after\n\xff"
+    )
+    assert snapshot.stdout_text == "before\néafter\n�"
+    assert snapshot.stderr_text == "err\n�"
+    assert snapshot.runtime_log_text == "before\nerr\n�éafter\n�"
+    assert snapshot.stdout_byte_count == len(b"before\n\xc3\xa9after\n\xff")
+    assert snapshot.stderr_byte_count == len(b"err\n\xff")
+    assert snapshot.runtime_log_byte_count == len(
+        b"before\n\xc3err\n\xff\xa9after\n\xff"
+    )
+    assert snapshot.stdout_char_count == len("before\néafter\n�")
+    assert snapshot.stderr_char_count == len("err\n�")
+    assert snapshot.runtime_log_char_count == len("before\nerr\n�éafter\n�")
+
+
 def test_high_volume_subprocess_commits_full_log_and_bounded_tail_metadata(
     tmp_path: Path,
 ) -> None:

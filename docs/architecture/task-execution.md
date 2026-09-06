@@ -25,6 +25,8 @@ constraints, and out-of-scope notes do not replace the required fields.
 - every attempt captures repository status before and after execution plus runtime/repair evidence;
 - attempt preparation uses a staging directory and durable attempt state so an interrupted
   `executing` task can be terminalized as abandoned and resumed with a new monotonic attempt;
+- reconciling an abandoned executing task also terminalizes an in-flight `implement` stage
+  projection as `failed`, while preserving terminal and operator-blocked stage states;
 - task readiness is derived from succeeded dependencies rather than persisted independently;
 - auto execution stops on the first blocked or failed task; explicit task execution may resume
   pending, blocked, or failed tasks but never a succeeded task;

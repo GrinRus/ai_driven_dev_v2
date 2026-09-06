@@ -77,7 +77,7 @@ class StreamCapture:
     def error(self) -> BaseException | None:
         return self._errors[0] if self._errors else None
 
-    def attach(self, process: subprocess.Popen[str]) -> None:
+    def attach(self, process: subprocess.Popen[bytes]) -> None:
         if process.stdout is not None:
             thread = threading.Thread(
                 target=self._read_stream,
@@ -117,8 +117,8 @@ class StreamCapture:
         errors: list[BaseException],
     ) -> None:
         try:
-            for line in stream:
-                self._sink.write(target, line)
+            for raw_line in stream:
+                line = self._sink.write(target, raw_line)
                 if callback is not None:
                     callback(line)
         except BaseException as exc:

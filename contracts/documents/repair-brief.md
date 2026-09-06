@@ -51,7 +51,13 @@ do not create a separate scratch document or rewrite `stage-result.md`.
 
 - Each required correction must map to one or more failed check codes.
 - Fix actions must be actionable and scoped to document-level edits.
-- If a failed check cannot be repaired automatically, mark it as `needs-human-input` with reason.
+- Corrections for AIDD-owned `stage-result.md`, `validator-report.md`, or `repair-brief.md`
+  must name AIDD as the repair owner and explicitly forbid runtime edits. Preserve the finding
+  code, message, path, and progression requirement; runtime content may expose source evidence
+  for reconciliation, but changing a generated record is never a model repair action.
+- If a failed check cannot be repaired automatically, mark it as `needs-human-input` with reason
+  and require the runtime to submit a `[blocking]` question through the controlled interview path
+  when completion requires operator input. Substantive blocker prose alone does not pause AIDD.
 - Do not add new scope beyond resolving listed failed checks unless explicitly required.
 
 ## Authoring rules

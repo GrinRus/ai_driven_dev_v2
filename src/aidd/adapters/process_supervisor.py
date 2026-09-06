@@ -15,7 +15,7 @@ _DEFAULT_DRAIN_GRACE_SECONDS = 0.5
 
 @dataclass(slots=True)
 class OwnedProcessSupervisor:
-    process: subprocess.Popen[str]
+    process: subprocess.Popen[bytes]
 
     @classmethod
     def launch(cls, spec: RuntimeSubprocessSpec) -> OwnedProcessSupervisor:
@@ -31,8 +31,8 @@ class OwnedProcessSupervisor:
             stdin=subprocess.PIPE if spec.stdin_text is not None else None,
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
-            text=True,
-            bufsize=1,
+            text=False,
+            bufsize=0,
             start_new_session=os.name != "nt",
             creationflags=creationflags,
         )

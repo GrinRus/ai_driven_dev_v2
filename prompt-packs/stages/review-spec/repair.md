@@ -5,10 +5,22 @@ You are rerunning the `review-spec` stage because validation failed.
 Your job is to resolve validator findings with minimal edits while preserving issue traceability,
 recommendation actionability, and sign-off consistency.
 
+## Runtime write authority
+
+Write only `review-spec-report.md` and other runtime-content targets explicitly listed in `stage-brief.md`.
+Do not write `stage-result.md` or `validator-report.md`; AIDD owns their canonical
+status, validation, history, and publication. Never create, edit, delete, or replace either record.
+If a finding names one, expose the needed correction in `review-spec-report.md` for AIDD reconciliation.
+`repair-brief.md` is AIDD-owned read-only repair control evidence. Do not rewrite it.
+Keep any repair summary and remaining content blockers in `review-spec-report.md` using its existing sections.
+AIDD owns terminal status, repair references, and downstream next actions. Read workflow records
+and their contracts as evidence.
+
 ## Read order (do not skip)
 
 Read `stage-brief.md`, the current `review-spec-report.md`, and its
 `contracts/documents/review-spec-report.md` contract before applying the findings.
+
 1. `validator-report.md` (latest findings and severities)
 2. `repair-brief.md` (repair scope and constraints)
 3. `contracts/stages/review-spec.md`
@@ -23,6 +35,12 @@ Do not inspect AIDD validator implementation files, installed package files, or 
 during repair. Use `validator-report.md`, `repair-brief.md`, and the named contracts as the repair
 scope. After updating the required documents and checking consistency, stop.
 
+Read `contracts/documents/validator-report.md` and `contracts/documents/stage-result.md`
+for canonical field labels and finding codes; do not invent or rename protocol vocabulary.
+Report unknown input vocabulary in substantive content without modifying the workflow record.
+If it or another blocker prevents completion, submit a `[blocking]` question through the
+controlled interview path; substantive blocker prose alone does not pause AIDD.
+
 ## Interview context
 
 Read `contracts/documents/questions.md` and `contracts/documents/answers.md` when available.
@@ -33,20 +51,12 @@ Operator answers use the same QID, for example `- Q1 [resolved] ...`; do not cre
 `answers.md`, invent `A1`/`A2` answer ids, or create `[resolved]` answers yourself. Missing
 answers remain an operator checkpoint. Render assumptions as non-bullet continuation prose.
 
-## Authoring boundary
-
-Write only `review-spec-report.md` and other runtime-content targets explicitly listed in `stage-brief.md`.
-Do not write `stage-result.md` or `validator-report.md`; AIDD owns validation, attempt history,
-terminal status, repair references, and downstream next actions. Read those records as evidence.
-`repair-brief.md` is AIDD-owned read-only repair control evidence. Do not rewrite it.
-Keep any repair summary and remaining content blockers in `review-spec-report.md` using its existing sections.
-If a finding concerns an AIDD-owned record, report the inconsistency without editing that record.
-
 Read the repair budget in `repair-brief.md`. On `repair-budget-final-attempt` or
 `Rerun allowed after this attempt: no`, still repair the content; do not fail solely because no
-later rerun is available. AIDD may record `succeeded` only after canonical validation passes;
+later rerun is available. AIDD determines `succeeded` after validation;
 `repair-budget-exhausted` with unresolved findings remains `failed`. Do not reset budget or
 attempt history. Keep evidence and unresolved questions consistent with the repaired content.
+Do not treat the previous failed validator report as a new result.
 
 ## Finding-to-fix mapping
 
@@ -62,6 +72,9 @@ Use concrete repair actions:
 - `SEM-PLACEHOLDER-CONTENT`: inspect the exact token and line named by the finding, replace
   it with concrete stage-relevant content, and preserve every unaffected section. Do not
   regenerate the whole report from the skeleton.
+- `SEM-INCOMPLETE-SECTION` in an AIDD-generated record: expose the actual blockers or their
+  absence in substantive runtime content; AIDD reconciles its own record. Never erase a
+  concrete blocker or an unresolved blocking question.
 - weak issue quality: rewrite issues with explicit scope, severity, evidence, and rationale linked to plan
   risks/gaps; `Issue list` may use top-level bullets or `### I<N> - ...` subsections, but each
   issue item/subsection must include explicit `Severity`, `Evidence`, and `Rationale` text; if no material issue
@@ -86,11 +99,18 @@ Use concrete repair actions:
   `ready-with-conditions`; do not replace it with prose such as `conditionally ready`;
 - contradiction in plan, operator request, repository state, or optional context: keep/add a
   blocking question instead of forcing approval;
+- cross-document drift: repair conflicting readiness, decision, and blocker claims in
+  `review-spec-report.md`. AIDD reconciles workflow status after validation; a previous failed
+  workflow record must not force stale failure wording into the repaired substantive output.
+- downstream-order drift: keep report recommendations flow-aware: `tasklist` is the immediate
+  canonical downstream stage, before implementation, review, or QA. AIDD writes workflow next actions.
 
 ## Targeted repair discipline
 
 - Fix only the sections named by validator findings unless cross-document consistency requires a narrow companion edit.
 - Preserve valid sections and stable ids; do not rewrite complete documents just to satisfy one failed heading.
+- Re-copy only the `review-spec-report.md` skeleton headings from `stage-brief.md` or its document contract
+  when substantive output is malformed. AIDD repairs generated workflow records.
 
 ## Repair rules
 

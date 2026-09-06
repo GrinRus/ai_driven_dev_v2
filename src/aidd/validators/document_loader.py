@@ -1,8 +1,13 @@
 from __future__ import annotations
 
+from dataclasses import dataclass
 from pathlib import Path
 
 from aidd.validators.models import LoadedMarkdownDocument, MarkdownDocumentMetadata
+from aidd.validators.protocol import (
+    DocumentReadFailureKind,
+    resolve_document_read_failure,
+)
 
 _COMMON_DOCUMENTS = frozenset(
     {
@@ -23,6 +28,53 @@ class DocumentPathError(ValueError):
 
 class DocumentLoadError(ValueError):
     """Raised when a resolved document cannot be loaded."""
+
+
+@dataclass(frozen=True, slots=True)
+class MarkdownReadFailure:
+    """A normalized, repair-oriented failure from a Markdown readability probe."""
+
+    kind: DocumentReadFailureKind
+    message: str
+
+    def __post_init__(self) -> None:
+        normalized_message = self.message.strip()
+        if not normalized_message:
+            raise ValueError("Markdown read failure message must not be empty.")
+        object.__setattr__(self, "message", normalized_message)
+
+    @property
+    def code(self) -> str:
+        return resolve_document_read_failure(self.kind).code
+
+
+@dataclass(frozen=True, slots=True)
+class MarkdownReadProbeResult:
+    """Typed result of probing one Markdown path for readability."""
+
+    path: Path
+    document: LoadedMarkdownDocument | None = None
+    failure: MarkdownReadFailure | None = None
+
+    def __post_init__(self) -> None:
+        if (self.document is None) == (self.failure is None):
+            raise ValueError("Markdown read probe must contain exactly one outcome.")
+
+    @property
+    def readable(self) -> bool:
+        return self.document is not None
+
+    @property
+    def failure_kind(self) -> DocumentReadFailureKind | None:
+        return None if self.failure is None else self.failure.kind
+
+    @property
+    def failure_code(self) -> str | None:
+        return None if self.failure is None else self.failure.code
+
+    @property
+    def failure_message(self) -> str | None:
+        return None if self.failure is None else self.failure.message
 
 
 def _resolve_workspace_relative_path(workspace_root: Path, relative_path: Path) -> Path:
@@ -136,6 +188,54 @@ def _parse_optional_frontmatter(raw_body: str) -> dict[str, str] | None:
         frontmatter[normalized_key] = value.strip()
 
     return frontmatter
+
+
+def _markdown_read_failure(
+    *,
+    path: Path,
+    kind: DocumentReadFailureKind,
+    message: str,
+) -> MarkdownReadProbeResult:
+    return MarkdownReadProbeResult(
+        path=path,
+        failure=MarkdownReadFailure(kind=kind, message=message),
+    )
+
+
+def _classify_document_load_error(exc: Exception) -> DocumentReadFailureKind:
+    if isinstance(exc, UnicodeDecodeError):
+        return DocumentReadFailureKind.INVALID_UTF8
+    if isinstance(exc, DocumentPathError):
+        return DocumentReadFailureKind.UNREADABLE
+    if isinstance(exc, DocumentLoadError):
+        normalized = str(exc).casefold()
+        if "not a file" in normalized:
+            return DocumentReadFailureKind.NON_FILE
+        if "frontmatter" in normalized:
+            return DocumentReadFailureKind.MALFORMED_FRONTMATTER
+    return DocumentReadFailureKind.UNREADABLE
+
+
+def probe_markdown_document(
+    *,
+    path: Path,
+    workspace_root: Path,
+) -> MarkdownReadProbeResult:
+    """Return a typed readability outcome without leaking expected read exceptions."""
+
+    try:
+        document = load_markdown_document(path=path, workspace_root=workspace_root)
+    except (DocumentPathError, DocumentLoadError, OSError, UnicodeDecodeError) as exc:
+        return _markdown_read_failure(
+            path=path,
+            kind=_classify_document_load_error(exc),
+            message=str(exc),
+        )
+    return MarkdownReadProbeResult(path=path, document=document)
+
+
+# The longer name reads naturally at call sites that treat this as a capability probe.
+probe_markdown_readability = probe_markdown_document
 
 
 def classify_document_type(workspace_relative_path: Path) -> str:
