@@ -191,6 +191,25 @@ and the aggregate transcript carry the bundle-relative pointer, digest, exit cod
 duration, and bounded previews. Readers require these references and reject retired inline
 command-output copies. Bundle paths must be relative and digest-verified.
 
+### 7.1 Current result-bundle contract
+
+The current self-contained bundle contract is schema version `2` and is represented by
+`aidd.harness.result_bundle_contract`. Every inventory carries an explicit identity with
+`evaluation_run_id`, optional `product_run_id`, `scenario_id`, `runtime_id`, and
+`work_item`. The evaluator identity and product execution identity are never guessed from
+one another: when a product run has not started, `product_run_id` is explicitly `null`,
+and equal evaluator/product IDs are invalid.
+
+Inventory artifact paths are POSIX, bundle-relative references. An artifact requirement
+declares the terminal statuses for which a path must exist (`pass`, `fail`, `blocked`, or
+`infra-fail`) and may constrain its status condition. Validation rejects missing files,
+references that escape the bundle root, duplicate paths, and mismatched optional size or
+SHA-256 metadata. Legacy inventories containing only `run_id`, unsupported schema or
+reference modes, and incomplete identities are rejected rather than interpreted.
+
+This module defines and validates the contract; materialization and atomic sealing remain
+separate responsibilities of the follow-on bundle tasks.
+
 ## 8. Log analysis requirements
 
 Log analysis is mandatory because logs often reveal adapter or install-path failures before graders do.
