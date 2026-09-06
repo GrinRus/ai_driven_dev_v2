@@ -233,6 +233,41 @@ def option(args: list[str], name: str, default: str = "") -> str:
     return args[index + 1]
 
 
+def write_artifact_index(stage: str, work_item: str, run_id: str) -> None:
+    stage_root = (
+        Path(".aidd") / "reports" / "runs" / work_item / run_id / "stages" / stage
+    )
+    attempt_root = stage_root / "attempts" / "attempt-0001"
+    attempt_root.mkdir(parents=True, exist_ok=True)
+    (attempt_root / "artifact-index.json").write_text(
+        json.dumps(
+            {{
+                "schema_version": 1,
+                "run_id": run_id,
+                "work_item_id": work_item,
+                "stage": stage,
+                "attempt_number": 1,
+                "documents": {{ }},
+                "logs": {{ }},
+                "prompt_pack_provenance": [],
+                "resource_source": None,
+                "resource_root": None,
+                "attempt_mode": "initial",
+                "created_at_utc": "2026-05-25T00:00:00Z",
+                "updated_at_utc": "2026-05-25T00:00:00Z",
+                "lineage": {{
+                    "schema_version": 1,
+                    "scope": "stage",
+                    "attempt_kind": "initial",
+                    "attempt_number": 1,
+                    "parent_attempt_path": None,
+                }},
+            }}
+        )
+        + "\\n"
+    )
+
+
 def write_stage_outputs(stage: str, work_item: str, run_id: str) -> None:
     write_executing_stage_metadata(stage, work_item, run_id)
     if stage == TRANSITION_BARRIER_STAGE:
@@ -396,6 +431,7 @@ def write_executing_stage_metadata(stage: str, work_item: str, run_id: str) -> N
     )
     attempt_root = stage_root / "attempts" / "attempt-0001"
     attempt_root.mkdir(parents=True, exist_ok=True)
+    write_artifact_index(stage, work_item, run_id)
     (stage_root / "stage-metadata.json").write_text(
         json.dumps(
             {{
@@ -505,6 +541,7 @@ def write_adapter_timeout_stage_artifacts(stage: str, work_item: str, run_id: st
     )
     attempt_root = stage_root / "attempts" / "attempt-0001"
     attempt_root.mkdir(parents=True, exist_ok=True)
+    write_artifact_index(stage, work_item, run_id)
     (stage_root / "stage-metadata.json").write_text(
         json.dumps(
             {{
