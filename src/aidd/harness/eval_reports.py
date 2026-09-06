@@ -1095,12 +1095,21 @@ def persist_eval_reports(
         aidd_artifact_references={
             "scenario_path": prep.scenario_path.as_posix(),
             "runtime_log": RUNTIME_LOG_FILENAME,
+            "runtime_log_source": RUNTIME_LOG_FILENAME,
             "validator_report": VALIDATOR_REPORT_FILENAME,
+            "validator_report_source": VALIDATOR_REPORT_FILENAME,
             "verdict": VERDICT_FILENAME,
+            "verdict_source": VERDICT_FILENAME,
             "runtime_jsonl": (
                 "n/a" if runtime_jsonl_source_path is None else RUNTIME_JSONL_FILENAME
             ),
+            "runtime_jsonl_source": (
+                "n/a" if runtime_jsonl_source_path is None else RUNTIME_JSONL_FILENAME
+            ),
             "events_jsonl": (
+                "n/a" if events_jsonl_source_path is None else EVENTS_JSONL_FILENAME
+            ),
+            "events_jsonl_source": (
                 "n/a" if events_jsonl_source_path is None else EVENTS_JSONL_FILENAME
             ),
             "resource_source": (
