@@ -186,11 +186,15 @@ def _step_transcript_payload(
     step: str,
     command_transcripts: tuple[HarnessCommandTranscript, ...],
     duration_seconds: float,
+    failed_command: str | None = None,
+    failed_exit_code: int | None = None,
 ) -> dict[str, Any]:
     return {
         "command_count": len(command_transcripts),
         "commands": [_command_transcript_payload(item) for item in command_transcripts],
         "duration_seconds": duration_seconds,
+        "failed_command": failed_command,
+        "failed_exit_code": failed_exit_code,
         "step": step,
     }
 
@@ -303,6 +307,12 @@ def write_command_transcripts(
                 setup_result.command_transcripts if setup_result is not None else tuple()
             ),
             duration_seconds=setup_result.duration_seconds if setup_result is not None else 0.0,
+            failed_command=(
+                setup_result.failed_command if setup_result is not None else None
+            ),
+            failed_exit_code=(
+                setup_result.failed_exit_code if setup_result is not None else None
+            ),
         ),
     )
     run_path = _write_json(
@@ -335,6 +345,16 @@ def write_command_transcripts(
             duration_seconds=(
                 verification_result.duration_seconds if verification_result is not None else 0.0
             ),
+            failed_command=(
+                verification_result.failed_command
+                if verification_result is not None
+                else None
+            ),
+            failed_exit_code=(
+                verification_result.failed_exit_code
+                if verification_result is not None
+                else None
+            ),
         ),
     )
     teardown_path = _write_json(
@@ -346,6 +366,16 @@ def write_command_transcripts(
             ),
             duration_seconds=(
                 teardown_result.duration_seconds if teardown_result is not None else 0.0
+            ),
+            failed_command=(
+                teardown_result.failed_command
+                if teardown_result is not None
+                else None
+            ),
+            failed_exit_code=(
+                teardown_result.failed_exit_code
+                if teardown_result is not None
+                else None
             ),
         ),
     )

@@ -256,6 +256,14 @@ legacy category is rejected rather than inferred from a verdict, attempt ordinal
 message. Later report-projection tasks consume this contract in log analysis, grader, summary, and
 UI outputs.
 
+Command phases preserve evidence before reporting continues. A setup, verification, or teardown
+failure raises a typed harness command error carrying every completed transcript, the failing
+command, its exit code, and cumulative duration. Deterministic evaluation materializes that
+partial result in its execution state, so the corresponding `*-transcript.json` retains the
+successful commands and the failing command instead of becoming an empty placeholder. The step
+payload exposes `failed_command` and `failed_exit_code` in addition to the per-command records;
+the fields are `null` for a completed or skipped phase.
+
 ## 10. Converting failures into regression cases
 
 Every real failure that matters should be convertible into:
