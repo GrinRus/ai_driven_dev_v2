@@ -428,7 +428,7 @@ Primary output: execution verdict and first decisive cause remain compatible acr
     adapter-conformance, deterministic-scenarios, packaged-ui-browser, build, CodeQL, Scorecard,
     and dependency-review checks passed. Local failure-cause (26), eval/failure-evidence (215),
     Ruff, and strict mypy checks passed; the adjacent UI checkout remained untouched.
-- `W48-E3-S2-T2` (next) Preserve partial phase transcripts and the failing command.
+- `W48-E3-S2-T2` (done) Preserve partial phase transcripts and the failing command.
   - Dependencies: `W48-E3-S2-T1`.
   - Output: a failed phase retains all completed command records, the failing command, and its
     typed primary cause before later evidence enrichment.
@@ -436,6 +436,19 @@ Primary output: execution verdict and first decisive cause remain compatible acr
     verdict/report projection changes beyond the persisted failure-cause seam.
   - Verification: a two-command phase whose second command fails records commands one and two,
     preserves the original cause, and remains readable after enrichment failure.
+  - Completion evidence: PR #550 merged to `origin/main` at `d11d56c8`; Python 3.12–3.14,
+    adapter-conformance, deterministic-scenarios, packaged-ui-browser, build, CodeQL, Scorecard,
+    and dependency-review checks passed. Local harness, eval, planning/docs, Ruff, and strict
+    mypy checks passed; the adjacent UI checkout remained untouched.
+- `W48-E3-S2-T3` (next) Propagate the cause through log analysis, grader, verdict, and summary.
+  - Dependencies: `W48-E3-S2-T2`.
+  - Output: one typed first-decisive cause is carried into log-analysis, grader, verdict, and
+    summary projections without synthesizing validation findings for infrastructure failures.
+  - Scope: eval log analysis/reporting/verdict writers and focused regression tests; no UI-owned
+    paths and no browser payload changes.
+  - Verification: DET-002 is classified as `infra-fail` with an `infrastructure`/`setup` cause,
+    while malformed Markdown remains `fail` with a `validation` cause; contradictory projections
+    are rejected.
 
 ## Wave 51 — agent development instruction consistency (`done`)
 
