@@ -373,7 +373,7 @@ repair history.
 Primary output: stage, task, and aggregate-finalization attempts share a versioned lineage contract
 while retired ordinal-only evidence is rejected rather than silently upgraded.
 
-- `W48-E3-S1-T1` (next) Define versioned stage/task/finalization attempt lineage with current-format
+- `W48-E3-S1-T1` (done) Define versioned stage/task/finalization attempt lineage with current-format
   rejection of retired ordinal-only evidence.
   - Output: typed core lineage model, current artifact-index/task-reference/finalization views,
     explicit retired-format rejection, and normative contract updates.
@@ -381,6 +381,10 @@ while retired ordinal-only evidence is rejected rather than silently upgraded.
     `docs/architecture/`, `contracts/documents/`, and focused core tests; no UI-owned paths.
   - Verification: round-trip fixtures distinguish `initial`, `repair`, `resume`, `intervention`,
     `repair-extension`, `task`, and `finalization`; retired ordinal-only payloads are rejected.
+  - Completion evidence: PR #542 merged to `origin/main` at `08c902af`; Python 3.12–3.14,
+    adapter-conformance, deterministic-scenarios, packaged-ui-browser, build, CodeQL, Scorecard,
+    and dependency-review checks passed. Local core, CLI/eval, remaining non-UI, and planning/docs
+    suites passed; the adjacent UI checkout remained untouched.
 
 ## Wave 51 — agent development instruction consistency (`done`)
 

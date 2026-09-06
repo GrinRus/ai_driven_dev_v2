@@ -7,9 +7,6 @@ slice, and local task.
 
 ## Next
 
-- `W48-E3-S1-T1` — Define versioned stage/task/finalization attempt lineage and reject retired
-  ordinal-only evidence.
-
 ## Soon
 
 ## Parking lot
@@ -38,6 +35,8 @@ slice, and local task.
 
 ## Current reconciliation
 
-- `2026-09-06` `W48-E3-S1-T1` is the first dependency-ready remediation task after the merged W47
-  UI baseline. It owns core lineage/evidence paths only; the adjacent `codex/ui-completion`
-  checkout remains untouched. `W46-E2-S2-T4` and human/provider acceptance tasks stay parked.
+- `2026-09-06` `W48-E3-S1-T1` completed in PR #542 and is present on `origin/main` at `08c902af`.
+  Required CI lanes and local core/CLI/eval/planning checks passed. The task owned core
+  lineage/evidence paths only; the adjacent `codex/ui-completion` checkout remains untouched.
+  `W48-E3-S1-T2` is dependency-ready for the next promotion; `W46-E2-S2-T4` and human/provider
+  acceptance tasks stay parked.
