@@ -159,17 +159,22 @@ navigates elsewhere, and expose Work Item request information as separate title,
 constraint, and additional-information fields without changing the canonical workflow or task
 execution semantics.
 
-### Epic W46-E1 — multi-context UI jobs (`planned`)
+### Epic W46-E1 — multi-context UI jobs (`done`)
 
-#### Slice W46-E1-S2 — context-aware navigation and job visibility (`planned`)
+#### Slice W46-E1-S2 — context-aware navigation and job visibility (`done`)
 
 Goal: remove the over-broad project-switch guard while keeping safe job inspection and mutation.
 
-- `W46-E1-S2-T4` (next) Add a provider-free two-project browser scenario for navigation and isolation.
+- `W46-E1-S2-T4` (done) Add a provider-free two-project browser scenario for navigation and isolation.
   - Output: deterministic UI scenario and retained evidence for switching, logs, and artifacts.
   - Scope: `browser_tests/test_journey_inbox.py`, `tests/test_packaged_ui_scenarios.py`, scenario
     assets, and E2E docs.
   - Verification: packaged browser gate passes without console errors or cross-project artifacts.
+  - Completion evidence: PR #540 was squash-merged as `6a12a338`; the provider-free packaged
+    browser gate, Python 3.12/3.13/3.14 lint/type/test matrix, adapter conformance, deterministic
+    scenarios, build, CodeQL, dependency review, and Scorecard all passed. The journey records
+    captured origin context and live job logs across a sibling-project switch, then verifies
+    selected-project artifact/log isolation after returning to the origin workspace.
 
 ### Epic W46-E2 — structured Work Item context (`planned`)
 

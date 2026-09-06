@@ -7,8 +7,6 @@ slice, and local task.
 
 ## Next
 
-- `W46-E1-S2-T4`
-
 ## Soon
 
 ## Parking lot
@@ -37,9 +35,8 @@ slice, and local task.
 
 ## Current reconciliation
 
-- `2026-09-06` Wave 52 completes the approved code, documentation and reference cleanup without
-  historical-format compatibility. PR #533 and PR #534 are merged with required CI and resulting
-  main trees verified; the third PR carries the final current-format and transitive-residue fixes
-  through the same review/CI/merge gate. Active ownership-registry work and all eight unrelated
-  acceptance tasks remain open. `W46-E1-S2-T4` returns to Next; no provider or human acceptance
-  result is inferred from cleanup tests. Earlier execution notes remain in Git and PR evidence.
+- `2026-09-06` `W46-E1-S2-T4` completed in PR #540 and is present on `origin/main` at
+  `6a12a338`; required local and CI evidence passed, including the packaged provider-free browser
+  gate. The immediate queue is empty; `W46-E2-S2-T4` and the human/provider acceptance tasks stay
+  parked and are not promoted without an explicit acceptance decision. Earlier execution notes
+  remain in Git and PR evidence.
