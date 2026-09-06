@@ -204,19 +204,6 @@ function renderSelectedHistoryView(timeline, frames, selected) {
   return renderHistoryTimeline(timeline, frames, selected);
 }
 
-function renderHistoryFrameButton(frame) {
-  const selected = frame.identity === state.historySelectedFrame;
-  const mode = frame.attempt_mode && frame.attempt_mode !== "unknown" ? ` · ${frame.attempt_mode}` : "";
-  const duration = Number.isFinite(frame.duration_seconds) ? ` · ${Number(frame.duration_seconds).toFixed(1)}s` : "";
-  return `
-    <button class="history-frame ${selected ? "selected" : ""}" data-history-frame="${escapeHtml(frame.identity)}" type="button" aria-pressed="${selected ? "true" : "false"}">
-      <span class="small-badge ${historyFrameTone(frame.status)}">${escapeHtml(frame.status)}</span>
-      <strong>${escapeHtml(historyFrameLabel(frame))}</strong>
-      <span>${escapeHtml(frame.time_utc || frame.updated_at_utc || "Timestamp unavailable")}${escapeHtml(mode)}${escapeHtml(duration)}</span>
-    </button>
-  `;
-}
-
 function renderHistoryFrameDetails(frame) {
   if (!frame) return `<div class="empty-state">No retained attempt selected.</div>`;
   const value = (item, fallback = "not recorded") => escapeHtml(item || fallback);
@@ -395,7 +382,7 @@ function renderStudioHistoryArchive() {
         <div class="terminal-summary-grid">
           <div class="panel-item"><strong>Recorded</strong><span>${escapeHtml(archive.archived_at_utc || "timestamp unavailable")}</span></div>
           <div class="panel-item"><strong>Reason</strong><span>${escapeHtml(archive.reason || "no reason recorded")}</span></div>
-          <div class="panel-item"><strong>Source</strong><span>${escapeHtml(archive.source || "legacy manifest fallback")}</span></div>
+          <div class="panel-item"><strong>Source</strong><span>${escapeHtml(archive.source || "Archive source unavailable")}</span></div>
         </div>
         <p>Archive is an append-only visibility disposition. Completed run evidence and lineage remain immutable and inspectable.</p>
       ` : `<p>No archive overlay is recorded for this run.</p>`}

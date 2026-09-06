@@ -74,14 +74,15 @@ def test_provider_free_manifest_maps_target_files_to_loadable_local_fixtures(
         assert entry["clockMode"] == "fixed"
         assert entry["idMode"] == "deterministic"
         route = str(entry["route"])
-        assert route.startswith("?")
+        assert route == "/" or route.startswith("?")
         parsed = urlsplit(route)
         assert parsed.scheme == ""
         assert parsed.netloc == ""
         query = parse_qs(parsed.query)
         route_intent = str(entry["routeIntent"])
         if route_intent == "setup":
-            assert query == {"ui": ["studio"]}
+            assert route == "/"
+            assert query == {}
         else:
             assert query.get("mode") == [route_intent]
 

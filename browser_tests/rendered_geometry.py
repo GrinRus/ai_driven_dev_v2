@@ -109,6 +109,8 @@ _GEOMETRY_MEASUREMENTS = r"""
 
   const scrollable = Array.from(document.querySelectorAll("body *")).filter((element) => {
     if (!visible(element)) return false;
+    // Native editing scrolls content within a control, not a second layout region.
+    if (element instanceof HTMLTextAreaElement) return false;
     const style = getComputedStyle(element);
     return ["auto", "scroll"].includes(style.overflowY)
       && element.scrollHeight > element.clientHeight + 1;

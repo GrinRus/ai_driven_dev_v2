@@ -18,7 +18,7 @@ from aidd.validators.models import ValidationFinding
 runner = CliRunner()
 
 
-def _manifest_config_snapshot(workspace_root: Path, runtime: str) -> dict[str, str]:
+def _manifest_config_snapshot(workspace_root: Path, runtime: str) -> dict[str, object]:
     cfg = load_config(Path("aidd.example.toml"))
     runtime_cfg = cfg.runtime_config(runtime)
     return {
@@ -30,6 +30,24 @@ def _manifest_config_snapshot(workspace_root: Path, runtime: str) -> dict[str, s
         "runtime_permission_policy": runtime_cfg.permission_policy.value,
         "runtime_interaction_mode": runtime_cfg.interaction_mode.value,
         "runtime_auto_approval_preset": runtime_cfg.auto_approval_preset.value,
+        "runtime_model": runtime_cfg.model,
+        "runtime_reasoning_effort": runtime_cfg.reasoning_effort,
+        "runtime_model_source": "runtime-config"
+        if runtime_cfg.model is not None
+        else "runtime-default",
+        "runtime_reasoning_effort_source": (
+            "runtime-config" if runtime_cfg.reasoning_effort is not None else "runtime-default"
+        ),
+        "runtime_selection": {
+            "requested_model": runtime_cfg.model,
+            "requested_reasoning_effort": runtime_cfg.reasoning_effort,
+            "model_source": "runtime-config"
+            if runtime_cfg.model is not None
+            else "runtime-default",
+            "reasoning_effort_source": (
+                "runtime-config" if runtime_cfg.reasoning_effort is not None else "runtime-default"
+            ),
+        },
     }
 
 
@@ -348,15 +366,9 @@ def test_failed_aggregate_finalization_retries_without_rerunning_task(
             encoding="utf-8",
         )
         (stage_root / "stage-result.md").write_text("# Stage result\n", encoding="utf-8")
-        (stage_root / "validator-report.md").write_text(
-            "# Validator report\n", encoding="utf-8"
-        )
-        (stage_root / "questions.md").write_text(
-            "# Questions\n\n- none\n", encoding="utf-8"
-        )
-        (stage_root / "answers.md").write_text(
-            "# Answers\n\n- none\n", encoding="utf-8"
-        )
+        (stage_root / "validator-report.md").write_text("# Validator report\n", encoding="utf-8")
+        (stage_root / "questions.md").write_text("# Questions\n\n- none\n", encoding="utf-8")
+        (stage_root / "answers.md").write_text("# Answers\n\n- none\n", encoding="utf-8")
 
     validation_calls = 0
 
@@ -367,7 +379,7 @@ def test_failed_aggregate_finalization_retries_without_rerunning_task(
         if validation_calls == 1:
             return (
                 ValidationFinding(
-                        code="SEM-INCOMPLETE-EXECUTION-SUMMARY",
+                    code="SEM-INCOMPLETE-EXECUTION-SUMMARY",
                     message="Injected aggregate validation failure.",
                 ),
             )
@@ -399,9 +411,7 @@ def test_failed_aggregate_finalization_retries_without_rerunning_task(
             config=Path("aidd.example.toml"),
         )
 
-    failed = load_task_ledger(
-        workspace_root=workspace_root, work_item="WI-TASK", run_id="run-1"
-    )
+    failed = load_task_ledger(workspace_root=workspace_root, work_item="WI-TASK", run_id="run-1")
     assert failed is not None
     assert failed.entry("TL-1").status.value == "succeeded"
     assert failed.finalization.status.value == "failed"

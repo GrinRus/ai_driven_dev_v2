@@ -285,51 +285,24 @@ def persist_flow_state(
 
 
 def completed_stages(bundle_root: Path) -> tuple[str, ...]:
-    payload = load_flow_state(bundle_root)
-    raw_stage_runs = payload.get("completed_stage_runs")
-    if isinstance(raw_stage_runs, list) and raw_stage_runs:
-        stages = [
-            item.get("stage")
-            for item in raw_stage_runs
-            if isinstance(item, dict) and isinstance(item.get("stage"), str)
-        ]
-        return tuple(str(stage) for stage in stages)
-    raw = payload.get("completed_stages")
-    if not isinstance(raw, list):
-        return tuple()
-    return tuple(str(item) for item in raw if isinstance(item, str))
+    return tuple(str(item["stage"]) for item in completed_stage_runs(bundle_root))
 
 
 def completed_stage_runs(bundle_root: Path) -> tuple[dict[str, Any], ...]:
     payload = load_flow_state(bundle_root)
-    raw_stage_runs = payload.get("completed_stage_runs")
-    if isinstance(raw_stage_runs, list) and raw_stage_runs:
-        normalized: list[dict[str, Any]] = []
-        for index, item in enumerate(raw_stage_runs, start=1):
-            if not isinstance(item, dict):
-                continue
-            stage = item.get("stage")
-            if not isinstance(stage, str) or not stage:
-                continue
-            stage_run_id = item.get("stage_run_id")
-            if not isinstance(stage_run_id, str) or not stage_run_id:
-                stage_run_id = f"stage-{index:04d}-{stage}"
-            normalized.append({**item, "stage": stage, "stage_run_id": stage_run_id})
-        return tuple(normalized)
-    raw_stages = payload.get("completed_stages")
-    if not isinstance(raw_stages, list):
+    if not payload:
         return tuple()
-    return tuple(
-        {
-            "stage_run_id": str(stage),
-            "stage": str(stage),
-            "stage_run_index": index,
-            "iteration": 1,
-            "legacy_stage_run": True,
-        }
-        for index, stage in enumerate(raw_stages, start=1)
-        if isinstance(stage, str) and stage
-    )
+    raw_stage_runs = payload.get("completed_stage_runs")
+    if not isinstance(raw_stage_runs, list):
+        raise ValueError("Flow state requires the current completed_stage_runs ledger.")
+    records: list[dict[str, Any]] = []
+    for item in raw_stage_runs:
+        if not isinstance(item, dict) or item.get("stage") not in STAGES:
+            raise ValueError("Flow state contains an invalid completed stage record.")
+        if not isinstance(item.get("stage_run_id"), str) or not item["stage_run_id"]:
+            raise ValueError("Completed stage record is missing its stage_run_id.")
+        records.append(dict(item))
+    return tuple(records)
 
 
 def handled_quality_stage_run_ids(bundle_root: Path) -> set[str]:

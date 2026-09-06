@@ -59,28 +59,34 @@ def test_load_config_defaults_native_providers_to_native(tmp_path: Path) -> None
     cfg = load_config(tmp_path / "missing.toml")
 
     assert (
-        cfg.claude_code_command
+        cfg.runtime_config("claude-code").command
         == "claude -p --output-format stream-json --verbose --dangerously-skip-permissions"
     )
-    assert cfg.claude_code_execution_mode is RuntimeExecutionMode.NATIVE
+    assert cfg.runtime_config("claude-code").execution_mode is RuntimeExecutionMode.NATIVE
     assert (
-        cfg.codex_command
+        cfg.runtime_config("codex").command
         == "codex exec --dangerously-bypass-approvals-and-sandbox --skip-git-repo-check --json -"
     )
-    assert cfg.codex_execution_mode is RuntimeExecutionMode.NATIVE
-    assert cfg.opencode_command == "opencode run --format json --dangerously-skip-permissions"
-    assert cfg.opencode_execution_mode is RuntimeExecutionMode.NATIVE
-    assert cfg.qwen_command == "qwen --approval-mode auto --output-format stream-json"
-    assert cfg.qwen_execution_mode is RuntimeExecutionMode.NATIVE
-    assert cfg.generic_cli_execution_mode is RuntimeExecutionMode.ADAPTER_FLAGS
-    assert cfg.claude_code_timeout_seconds is None
-    assert cfg.codex_timeout_seconds is None
-    assert cfg.opencode_timeout_seconds is None
-    assert cfg.qwen_timeout_seconds is None
-    assert cfg.claude_code_stage_timeout_seconds == {}
-    assert cfg.codex_stage_timeout_seconds == {}
-    assert cfg.opencode_stage_timeout_seconds == {}
-    assert cfg.qwen_stage_timeout_seconds == {}
+    assert cfg.runtime_config("codex").execution_mode is RuntimeExecutionMode.NATIVE
+    assert (
+        cfg.runtime_config("opencode").command
+        == "opencode run --format json --dangerously-skip-permissions"
+    )
+    assert cfg.runtime_config("opencode").execution_mode is RuntimeExecutionMode.NATIVE
+    assert (
+        cfg.runtime_config("qwen").command
+        == "qwen --approval-mode auto --output-format stream-json"
+    )
+    assert cfg.runtime_config("qwen").execution_mode is RuntimeExecutionMode.NATIVE
+    assert cfg.runtime_config("generic-cli").execution_mode is RuntimeExecutionMode.ADAPTER_FLAGS
+    assert cfg.runtime_config("claude-code").timeout_seconds is None
+    assert cfg.runtime_config("codex").timeout_seconds is None
+    assert cfg.runtime_config("opencode").timeout_seconds is None
+    assert cfg.runtime_config("qwen").timeout_seconds is None
+    assert cfg.runtime_config("claude-code").stage_timeout_seconds == {}
+    assert cfg.runtime_config("codex").stage_timeout_seconds == {}
+    assert cfg.runtime_config("opencode").stage_timeout_seconds == {}
+    assert cfg.runtime_config("qwen").stage_timeout_seconds == {}
     assert cfg.project_set.projects == ()
     assert cfg.runtime_config("codex").permission_policy is RuntimePermissionPolicy.FULL_ACCESS
     assert cfg.runtime_config("codex").interaction_mode is RuntimeInteractionMode.BATCH
@@ -146,7 +152,7 @@ def test_load_config_rejects_invalid_or_unsupported_typed_selectors(
             "[runtime.codex]\napproval_policy = 'never'",
             "[runtime.codex] contains unknown keys: approval_policy",
         ),
-        ("[logging]\nformat = 'text'", "[logging] contains unknown keys: format"),
+        ("[logging]\nmode = 'both'", "unknown top-level keys: logging"),
         ("[repair]\nretries = 2", "[repair] contains unknown keys: retries"),
         ("[project_set]\nproject = []", "[project_set] contains unknown keys: project"),
         (
@@ -171,7 +177,6 @@ def test_load_config_rejects_unknown_keys(
     "config_text",
     (
         "[workspace]\nroot = '   '",
-        "[logging]\nmode = ''",
         "[runtime.codex]\ncommand = '   '",
         "[runtime.codex]\nmode = ''",
         "[runtime.codex]\npermission_policy = ''",
@@ -225,23 +230,22 @@ def test_runtime_configs_are_primary_config_storage(tmp_path: Path) -> None:
     field_names = {field.name for field in fields(AiddConfig)}
     assert "runtime_configs" in field_names
     assert "codex_command" not in field_names
-    assert cfg.runtime_config("codex").command == cfg.codex_command
-    assert cfg.runtime_config("codex").execution_mode is cfg.codex_execution_mode
+    assert cfg.runtime_config("codex") is cfg.runtime_configs["codex"]
 
 
-def test_legacy_runtime_properties_are_read_only_map_shims() -> None:
+def test_runtime_config_constructor_copies_caller_maps() -> None:
+    source = _runtime_configs()
     cfg = AiddConfig(
         workspace_root=Path(".aidd"),
-        log_mode="both",
         max_repair_attempts=2,
-        runtime_configs=_runtime_configs(),
+        runtime_configs=source,
     )
 
-    assert cfg.claude_code_command == "claude"
-    assert cfg.claude_code_stage_timeout_seconds == {"research": 1500}
-    stage_timeout_copy = cfg.claude_code_stage_timeout_seconds
-    stage_timeout_copy["qa"] = 10
-    assert cfg.claude_code_stage_timeout_seconds == {"research": 1500}
+    assert cfg.runtime_config("claude-code").command == "claude"
+    assert cfg.runtime_config("claude-code").stage_timeout_seconds == {"research": 1500}
+    source["claude-code"].stage_timeout_seconds["qa"] = 10
+    source.clear()
+    assert cfg.runtime_config("claude-code").stage_timeout_seconds == {"research": 1500}
 
 
 def test_runtime_config_map_requires_all_supported_runtime_ids() -> None:
@@ -251,7 +255,6 @@ def test_runtime_config_map_requires_all_supported_runtime_ids() -> None:
     try:
         AiddConfig(
             workspace_root=Path(".aidd"),
-            log_mode="both",
             max_repair_attempts=2,
             runtime_configs=runtime_configs,
         )
@@ -273,7 +276,6 @@ def test_runtime_config_map_rejects_unknown_runtime_ids() -> None:
     try:
         AiddConfig(
             workspace_root=Path(".aidd"),
-            log_mode="both",
             max_repair_attempts=2,
             runtime_configs=runtime_configs,
         )
@@ -283,41 +285,18 @@ def test_runtime_config_map_rejects_unknown_runtime_ids() -> None:
         raise AssertionError("Expected ValueError for unknown runtime config id.")
 
 
-def test_load_config_upgrades_legacy_raw_provider_commands_to_native(
-    tmp_path: Path,
-) -> None:
+@pytest.mark.parametrize("runtime", ("claude_code", "codex", "opencode", "qwen"))
+def test_load_config_rejects_implicit_raw_provider_command(tmp_path: Path, runtime: str) -> None:
     config_path = tmp_path / "aidd.toml"
+    command = "claude" if runtime == "claude_code" else runtime
+    config_path.write_text(f"[runtime.{runtime}]\ncommand = '{command}'\n", encoding="utf-8")
+    with pytest.raises(ValueError, match="raw provider commands require an explicit mode"):
+        load_config(config_path)
     config_path.write_text(
-        "\n".join(
-            (
-                "[runtime.claude_code]",
-                'command = "claude"',
-                "",
-                "[runtime.codex]",
-                'command = "codex"',
-                "",
-                "[runtime.opencode]",
-                'command = "opencode"',
-                "",
-            )
-        ),
+        f"[runtime.{runtime}]\ncommand = '{command}'\nmode = 'native'\n",
         encoding="utf-8",
     )
-
-    cfg = load_config(config_path)
-
-    assert (
-        cfg.claude_code_command
-        == "claude -p --output-format stream-json --verbose --dangerously-skip-permissions"
-    )
-    assert cfg.claude_code_execution_mode is RuntimeExecutionMode.NATIVE
-    assert (
-        cfg.codex_command
-        == "codex exec --dangerously-bypass-approvals-and-sandbox --skip-git-repo-check --json -"
-    )
-    assert cfg.codex_execution_mode is RuntimeExecutionMode.NATIVE
-    assert cfg.opencode_command == "opencode run --format json --dangerously-skip-permissions"
-    assert cfg.opencode_execution_mode is RuntimeExecutionMode.NATIVE
+    assert load_config(config_path).runtime_config(runtime.replace("_", "-")).command == command
 
 
 def test_load_config_parses_runtime_permission_fields(tmp_path: Path) -> None:
@@ -454,12 +433,12 @@ def test_load_config_treats_custom_provider_commands_as_adapter_flags(
 
     cfg = load_config(config_path)
 
-    assert cfg.claude_code_command == "/tmp/aidd-claude-wrapper --profile live"
-    assert cfg.claude_code_execution_mode is RuntimeExecutionMode.ADAPTER_FLAGS
-    assert cfg.codex_command == "/tmp/aidd-codex-wrapper --profile live"
-    assert cfg.codex_execution_mode is RuntimeExecutionMode.ADAPTER_FLAGS
-    assert cfg.opencode_command == "/tmp/aidd-opencode-wrapper --profile live"
-    assert cfg.opencode_execution_mode is RuntimeExecutionMode.ADAPTER_FLAGS
+    assert cfg.runtime_config("claude-code").command == "/tmp/aidd-claude-wrapper --profile live"
+    assert cfg.runtime_config("claude-code").execution_mode is RuntimeExecutionMode.ADAPTER_FLAGS
+    assert cfg.runtime_config("codex").command == "/tmp/aidd-codex-wrapper --profile live"
+    assert cfg.runtime_config("codex").execution_mode is RuntimeExecutionMode.ADAPTER_FLAGS
+    assert cfg.runtime_config("opencode").command == "/tmp/aidd-opencode-wrapper --profile live"
+    assert cfg.runtime_config("opencode").execution_mode is RuntimeExecutionMode.ADAPTER_FLAGS
 
 
 def test_load_config_parses_runtime_timeout_seconds(tmp_path: Path) -> None:
@@ -483,9 +462,9 @@ def test_load_config_parses_runtime_timeout_seconds(tmp_path: Path) -> None:
 
     cfg = load_config(config_path)
 
-    assert cfg.claude_code_timeout_seconds == 900
-    assert cfg.codex_timeout_seconds == 300.5
-    assert cfg.opencode_timeout_seconds == 120
+    assert cfg.runtime_config("claude-code").timeout_seconds == 900
+    assert cfg.runtime_config("codex").timeout_seconds == 300.5
+    assert cfg.runtime_config("opencode").timeout_seconds == 120
 
 
 def test_load_config_parses_stage_timeout_seconds(tmp_path: Path) -> None:
@@ -510,12 +489,12 @@ def test_load_config_parses_stage_timeout_seconds(tmp_path: Path) -> None:
 
     cfg = load_config(config_path)
 
-    assert cfg.claude_code_timeout_seconds == 1200
-    assert cfg.claude_code_stage_timeout_seconds == {
+    assert cfg.runtime_config("claude-code").timeout_seconds == 1200
+    assert cfg.runtime_config("claude-code").stage_timeout_seconds == {
         "research": 1500,
         "implement": 1800,
     }
-    assert cfg.codex_stage_timeout_seconds == {"plan": 900}
+    assert cfg.runtime_config("codex").stage_timeout_seconds == {"plan": 900}
 
 
 def test_load_config_parses_repair_max_attempts(tmp_path: Path) -> None:
@@ -557,7 +536,6 @@ def test_load_config_rejects_negative_repair_max_attempts(tmp_path: Path) -> Non
     (
         ('workspace = ".aidd"', r"\[workspace\] must be a table"),
         ("[workspace]\nroot = 123", r"\[workspace\.root\].*string"),
-        ("[logging]\nmode = false", r"\[logging\.mode\].*string"),
         ("runtime = []", r"\[runtime\] must be a table"),
         ("[runtime.codex]\ncommand = []", r"\[runtime\.codex\.command\].*string"),
         ("[runtime.codex]\nmode = 1", r"\[runtime\.codex\.mode\].*string"),

@@ -164,6 +164,7 @@ def _attempt(workspace_root: Path, stage: str, *, work_item: str, run_id: str) -
         work_item=work_item,
         run_id=run_id,
         stage=stage,
+        attempt_mode="initial",
     )
     return run_attempt_root(
         workspace_root=workspace_root,
@@ -261,7 +262,14 @@ def _succeed_through(
                 runtime_log_text=f"{stage} complete\n",
             )
         )
+        write_validator_report(
+            path=(
+                workspace_root / "workitems" / work_item / "stages" / stage / "validator-report.md"
+            ),
+            findings=(),
+        )
         persist_stage_status(workspace_root, work_item, run_id, stage, "succeeded")
+        write_attempt_artifact_index(workspace_root, work_item, run_id, stage, 1)
 
 
 def _git(project_root: Path, *args: str) -> None:
@@ -591,6 +599,8 @@ def build_browser_state_fixture(
             "ready" if approved else "not-ready",
             work_item=work_item,
         )
+        for stage in ("review", "qa"):
+            write_attempt_artifact_index(workspace_root, work_item, run_id, stage, 1)
         return _descriptor(
             name=state,
             project_root=project_root,
@@ -861,9 +871,9 @@ def build_browser_state_fixture(
             run_id=run_id,
             stage=stage,
             attempt_number=1,
-            trigger="repair",
-            outcome="repair budget exhausted" if exhausted else "failed validation",
-            stage_status="failed" if exhausted else "repair-needed",
+            trigger="initial",
+            outcome="failed validation",
+            stage_status="repair-needed",
             validator_report_path=validator_report,
             repair_brief_path=repair_brief,
         )
@@ -871,13 +881,40 @@ def build_browser_state_fixture(
             "validation checkpoint reached\n",
             encoding="utf-8",
         )
+        if exhausted:
+            for attempt_number in (2, 3):
+                attempt_root = create_next_attempt_directory(
+                    workspace_root,
+                    work_item,
+                    run_id,
+                    stage,
+                    attempt_mode="repair",
+                )
+                attempt_root.joinpath("runtime.log").write_text(
+                    "validation repair checkpoint reached\n",
+                    encoding="utf-8",
+                )
+                persist_repair_history_snapshot(
+                    workspace_root=workspace_root,
+                    work_item=work_item,
+                    run_id=run_id,
+                    stage=stage,
+                    attempt_number=attempt_number,
+                    trigger="repair",
+                    outcome=(
+                        "repair budget exhausted" if attempt_number == 3 else "failed validation"
+                    ),
+                    stage_status="failed" if attempt_number == 3 else "repair-needed",
+                    validator_report_path=validator_report,
+                    repair_brief_path=repair_brief,
+                )
         return _descriptor(
             name=state,
             project_root=project_root,
             route="studio",
             context_keys=("project", "work_item", "run", "stage", "attempt"),
             surface="Validation Recovery",
-            action="Request Change" if exhausted else "Run Repair",
+            action="Run one more repair" if exhausted else "Run Repair",
             marker="repair-exhausted" if exhausted else "repair-available",
             work_item=work_item,
             run_id=run_id,
@@ -936,8 +973,9 @@ def build_browser_state_fixture(
                 runtime_log_text="qa evidence collected\n",
             )
         )
-        persist_stage_status(workspace_root, work_item, run_id, "qa", "succeeded")
+        persist_stage_status(workspace_root, work_item, run_id, "qa", "validating")
         _write_qa_report(workspace_root, "not-ready", work_item=work_item)
+        write_attempt_artifact_index(workspace_root, work_item, run_id, "qa", 1)
         return _descriptor(
             name=state,
             project_root=project_root,
@@ -958,6 +996,8 @@ def build_browser_state_fixture(
         )
         _write_qa_report(workspace_root, "ready", work_item=work_item)
         _write_review_report(workspace_root, "approved", work_item=work_item)
+        for stage in ("review", "qa"):
+            write_attempt_artifact_index(workspace_root, work_item, run_id, stage, 1)
         request = create_remediation_request(
             workspace_root=workspace_root,
             work_item=work_item,
@@ -1024,11 +1064,12 @@ def build_browser_state_fixture(
                 "terminal-handoff-failed": "not-ready",
             }[state]
         _write_qa_report(workspace_root, verdict, work_item=work_item)
+        write_attempt_artifact_index(workspace_root, work_item, run_id, "qa", 1)
         terminal_expectations = {
             "terminal-handoff": ("Create New Work Item", "completed"),
             "terminal-handoff-warning": ("Start Follow-up Flow", "completed-with-warning"),
             "terminal-handoff-failed": ("Start Follow-up Flow", "failed"),
-            "terminal-handoff-blocked": ("Start Follow-up Flow", "blocked"),
+            "terminal-handoff-blocked": ("Resume stage", "evidence-incomplete"),
         }
         action, marker = terminal_expectations[state]
         return _descriptor(
@@ -1036,7 +1077,9 @@ def build_browser_state_fixture(
             project_root=project_root,
             route="studio",
             context_keys=("project", "work_item", "run", "stage", "document"),
-            surface="Flow Complete",
+            surface=(
+                "QA evidence recovery" if state == "terminal-handoff-blocked" else "Flow Complete"
+            ),
             action=action,
             marker=marker,
             work_item=work_item,

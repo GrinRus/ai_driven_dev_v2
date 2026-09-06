@@ -18,7 +18,7 @@ it does not itself require editing the queue.
 3. Before coding, name the exact output, dominant touched area, main verification,
    and satisfied dependencies. If no accepted task fits, define the smallest relevant
    local task before behavior changes rather than taking unrelated queued work.
-4. Read archived reconciliation only when investigating that history. Use the roadmap's
+4. Read Git history only when investigating completed work. Use the roadmap's
    queue-restoration policy if all work is done and the queue is empty.
 
 ## Update hierarchy and queue
@@ -43,8 +43,8 @@ Create another slice only for a different outcome and another epic only for a ne
 Do not queue slices/epics or invent completion evidence. Mark completed work in the
 roadmap only after inspecting its outcome and verification, then remove its queue entry.
 Record discovered follow-ups in the roadmap before promoting them. Keep current
-reconciliation bounded; preserve dated outcomes in the linked history archive rather
-than rewriting old failures or retaining accumulated history in the active queue.
+reconciliation bounded; use Git history for completed task records rather than rewriting
+old failures or retaining accumulated history in the active queue.
 
 ## Check and report
 

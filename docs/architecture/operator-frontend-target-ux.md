@@ -1,7 +1,7 @@
 # Target Operator Experience
 
-Status: normative target for Wave 42. Existing Operator UI routes and services remain the
-compatibility baseline until their owning Wave 42 slices are implemented and browser-verified.
+Status: normative interaction contract for the task-centered Operator UI. Pending responsive
+and observed-usability acceptance work is tracked in the roadmap.
 
 This document defines the task-centered Operator UI that replaces the previous visual reference
 sets. It changes presentation and interaction hierarchy, not the canonical workflow, adapter
@@ -148,8 +148,8 @@ surface over Markdown; it is not a parallel database and not an unrestricted doc
   Preview modes, unsaved state, validation, and the exact destination.
 - The Work Item header shows only the title and a bounded brief. Detailed context, constraints,
   and additional information remain in the document surface or an explicit details section.
-- Existing unsectioned request files are rendered through a lossless compatibility projection and
-  are not silently rewritten.
+- Unsectioned requests authored through the CLI or onboarding service use a lossless plain-text
+  projection and are not silently rewritten.
 - Once a run has consumed an input revision, changing the requested outcome creates a new
   intervention, remediation, or follow-up input. It never silently rewrites consumed history.
 - `answers.md` is authored through a question form with explicit `resolved`, `partial`, or
@@ -346,12 +346,12 @@ This target does not add a workflow stage, a new adapter contract, direct editin
 stage outputs, multi-user cloud coordination, fabricated progress, or frontend-owned eligibility.
 Runtime-specific details remain in adapters and core-owned read models remain authoritative.
 
-Wave 42 changes visible vocabulary, composition, and read projections while preserving canonical
+The task-centered UI uses current vocabulary, composition, and read projections while preserving canonical
 `work_item` ids, endpoint names, request shapes, durable paths, and historical evidence text.
-Internal compatibility fields such as route `intent` values may remain until an owning task
-explicitly migrates them; they must not leak back into user-facing navigation copy. Historical
-runs remain read-only compatible and are never rewritten to match the new shell.
+Internal route fields such as `intent` are current transport identifiers; they must not leak into
+user-facing navigation copy. Retained runs in the current artifact format remain readable and
+are never rewritten to match the shell. Retired formats follow the current compatibility policy.
 
-The task-centered renderer becomes the default only after its provider-free fixtures, responsive
-browser matrix, and observed first-time journey pass. Rollback changes renderer/routing selection
-only and never mutates durable workflow state.
+The task-centered renderer is the default. Provider-free browser checks verify its implemented
+behavior; observed first-time usability remains a separate pending acceptance gate and must not
+be reported as passed by scripted checks.

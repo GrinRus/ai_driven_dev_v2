@@ -2,11 +2,12 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from aidd.core.models.run import StageRunMetadata
 from aidd.core.run_store import (
     RUN_ATTEMPT_INPUT_BUNDLE_FILENAME,
     RUN_ATTEMPT_REPAIR_CONTEXT_FILENAME,
+    load_attempt_artifact_index,
     load_stage_metadata,
+    next_attempt_number,
     write_attempt_artifact_index,
 )
 from aidd.core.stage_models import (
@@ -126,38 +127,51 @@ def _write_attempt_repair_context(
     return repair_context_path
 
 
-def _previous_stage_status_before_current_attempt(
+def resolve_next_stage_attempt_mode(
     *,
-    stage_metadata: StageRunMetadata | None,
-) -> str | None:
-    if stage_metadata is None:
-        return None
-    status_history = stage_metadata.status_history
-    if len(status_history) < 2:
-        return None
-    if status_history[-1].status == StageState.EXECUTING.value:
-        return status_history[-2].status
-    return status_history[-1].status
-
-
-def _is_repair_context_attempt(
-    *,
-    execution_state: StageExecutionState,
-    stage_metadata: StageRunMetadata | None,
-    previous_status: str | None,
-) -> bool:
-    if execution_state.attempt_number <= 1:
-        return False
-    if previous_status == StageState.REPAIR_NEEDED.value:
-        return True
-    if previous_status != StageState.PREPARING.value or stage_metadata is None:
-        return False
-    if not stage_metadata.repair_history:
-        return False
-    return any(
-        status_change.status == StageState.BLOCKED.value
-        for status_change in stage_metadata.status_history
+    workspace_root: Path,
+    work_item: str,
+    run_id: str,
+    stage: str,
+    intervention_mode: bool = False,
+    resume_mode: bool = False,
+) -> str:
+    """Select the new attempt's trigger from the requested action and live lifecycle."""
+    if intervention_mode:
+        return "intervention"
+    if resume_mode:
+        return "resume"
+    stage_metadata = load_stage_metadata(
+        workspace_root=workspace_root,
+        work_item=work_item,
+        run_id=run_id,
+        stage=stage,
     )
+    if stage_metadata is None:
+        return "initial"
+    planned_attempt_number = next_attempt_number(
+        workspace_root=workspace_root,
+        work_item=work_item,
+        run_id=run_id,
+        stage=stage,
+    )
+    if any(
+        entry.attempt_number == planned_attempt_number and entry.trigger == "repair-extension"
+        for entry in stage_metadata.repair_history
+    ):
+        return "repair-extension"
+    if stage_metadata.status == StageState.REPAIR_NEEDED.value:
+        return "repair"
+    if (
+        stage_metadata.status == StageState.PREPARING.value
+        and stage_metadata.repair_history
+        and any(
+            status_change.status == StageState.BLOCKED.value
+            for status_change in stage_metadata.status_history
+        )
+    ):
+        return "repair"
+    return "initial"
 
 
 def historical_repair_brief_trace_path(
@@ -216,31 +230,26 @@ def prepare_adapter_invocation(
         work_item=execution_state.work_item,
         stage=execution_state.stage,
     )
-    stage_metadata = load_stage_metadata(
+    artifact_index = load_attempt_artifact_index(
         workspace_root=workspace_root,
         work_item=execution_state.work_item,
         run_id=execution_state.run_id,
         stage=execution_state.stage,
+        attempt_number=execution_state.attempt_number,
     )
-    extension_attempt = stage_metadata is not None and any(
-        entry.attempt_number == execution_state.attempt_number
-        and entry.trigger == "repair-extension"
-        for entry in stage_metadata.repair_history
-    )
+    if artifact_index is None or artifact_index.attempt_mode is None:
+        raise ValueError("Adapter preparation requires a recorded attempt mode.")
+    attempt_mode = artifact_index.attempt_mode
+    intervention_mode = attempt_mode == "intervention"
+    if intervention_mode != (intervention_request_path is not None):
+        raise ValueError("Operator intervention request must match the recorded attempt mode.")
+    if resume_mode != (attempt_mode == "resume"):
+        raise ValueError("Resume intent must match the recorded attempt mode.")
+    extension_attempt = attempt_mode == "repair-extension"
     candidate_repair_brief_path = stage_documents_root / (
         "repair-extension-brief.md" if extension_attempt else "repair-brief.md"
     )
-    previous_status = _previous_stage_status_before_current_attempt(
-        stage_metadata=stage_metadata,
-    )
-    repair_mode = _is_repair_context_attempt(
-        execution_state=execution_state,
-        stage_metadata=stage_metadata,
-        previous_status=previous_status,
-    )
-    intervention_mode = intervention_request_path is not None
-    if intervention_mode or resume_mode:
-        repair_mode = False
+    repair_mode = attempt_mode in {"repair", "repair-extension"}
     repair_brief_path: Path | None = None
     repair_brief_markdown: str | None = None
     repair_context_markdown: str | None = None
@@ -301,17 +310,6 @@ def prepare_adapter_invocation(
         attempt_path=execution_state.attempt_path,
         expected_input_bundle=preparation_bundle.expected_input_bundle,
     )
-    attempt_mode = (
-        "intervention"
-        if intervention_mode
-        else "resume"
-        if resume_mode
-        else "repair-extension"
-        if extension_attempt
-        else "repair"
-        if repair_mode
-        else "initial"
-    )
     write_attempt_artifact_index(
         workspace_root=workspace_root,
         work_item=execution_state.work_item,
@@ -321,7 +319,6 @@ def prepare_adapter_invocation(
         contracts_root=contracts_root,
         attempt_mode=attempt_mode,
     )
-
     return AdapterInvocationBundle(
         stage=execution_state.stage,
         work_item=execution_state.work_item,
@@ -407,5 +404,6 @@ __all__ = [
     "ATTEMPT_REPAIR_CONTEXT_FILENAME",
     "historical_repair_brief_trace_path",
     "prepare_adapter_invocation",
+    "resolve_next_stage_attempt_mode",
     "restore_core_owned_repair_brief",
 ]

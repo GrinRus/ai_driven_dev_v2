@@ -152,45 +152,6 @@ test("first-run setup has no mode selector with duplicate service semantics", as
   assert.match(source, /data-next-flow-action="start-follow-up-flow"/);
 });
 
-test("Guided Delivery toggles presentation without changing selected context", async () => {
-  const value = await context();
-  value.state = {
-    project: {project_root: "/workspace/project"},
-    selectedRuntime: "generic-cli",
-    activeStage: "implement",
-    activeRunId: "RUN-1",
-    requestPayload: {work_item: "WI-1", from_stage: "idea"},
-    durableResult: {run_id: "RUN-1", status: "succeeded"},
-    onboarding: {
-      guidedDelivery: true,
-      workItemInput: "WI-1",
-      requestText: "Implement the request",
-      guided: {step: "review-launch"},
-    },
-  };
-  value.renderOnboarding = () => {};
-  const before = JSON.parse(JSON.stringify(value.state));
-  vm.runInContext("setGuidedDeliveryPreference(false)", value);
-  const after = JSON.parse(JSON.stringify(value.state));
-  assert.equal(after.onboarding.guidedDelivery, false);
-  after.onboarding.guidedDelivery = true;
-  assert.deepEqual(after, before);
-});
-
-test("Guided Delivery explains the current decision and shared service semantics", async () => {
-  const source = await readFile(assetPath, "utf8");
-  assert.match(source, /data-guided-delivery-toggle/);
-  assert.match(source, /Presentation guidance only; selected context, requests, and durable outcomes stay unchanged/);
-  assert.match(source, /use the same guarded service action as Studio/);
-  const value = await context();
-  value.state = {onboarding: {guided: {step: "runtime"}}};
-  const explanation = JSON.parse(JSON.stringify(vm.runInContext("guidedDeliveryExplanation()", value)));
-  assert.deepEqual(explanation, {
-    title: "Choose the execution runtime",
-    detail: "Review observed runtime readiness before a launch request is dispatched.",
-  });
-});
-
 test("Review and Launch uses the shared task-aware mutation dispatcher", async () => {
   const assets = await Promise.all([
     "operator-dashboard-actions.js",

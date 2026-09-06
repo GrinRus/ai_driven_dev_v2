@@ -9,10 +9,7 @@ from typing import Literal
 VALIDATOR_REPORT_PROTOCOL_VERSION = 1
 ADVISORY_OBSERVATIONS_HEADING = "Advisory observations"
 
-ProtocolEntryStatus = Literal["canonical", "legacy"]
-ValidatorFindingCategory = Literal[
-    "structural", "semantic", "cross-document", "interview"
-]
+ValidatorFindingCategory = Literal["structural", "semantic", "cross-document", "interview"]
 
 
 class ValidatorReportProtocolError(ValueError):
@@ -42,15 +39,12 @@ class ValidatorReportFieldSpec:
     label: str
     section: ValidatorReportSection
     required: bool = True
-    aliases: tuple[str, ...] = ()
 
 
 @dataclass(frozen=True, slots=True)
 class ValidatorFindingCodeSpec:
     code: str
     section: ValidatorReportSection
-    status: ProtocolEntryStatus = "canonical"
-    replacement: str | None = None
 
     @property
     def category(self) -> ValidatorFindingCategory:
@@ -83,7 +77,6 @@ class ParsedValidatorReportField:
     key: str
     value: str
     line_number: int
-    used_legacy_alias: bool
 
 
 @dataclass(frozen=True, slots=True)
@@ -112,18 +105,10 @@ class ValidatorReportReadModel:
         field = self.field("verdict")
         return None if field is None else field.value.strip("`").strip().lower()
 
-    @property
-    def advisory_observations(self) -> tuple[ParsedValidatorFinding, ...]:
-        """Alias that makes the non-verdict channel explicit to evidence consumers."""
-
-        return self.advisories
-
 
 VALIDATOR_REPORT_FIELDS = (
     ValidatorReportFieldSpec("total_issues", "Total issues", ValidatorReportSection.SUMMARY),
-    ValidatorReportFieldSpec(
-        "blocking_issues", "Blocking issues", ValidatorReportSection.SUMMARY
-    ),
+    ValidatorReportFieldSpec("blocking_issues", "Blocking issues", ValidatorReportSection.SUMMARY),
     ValidatorReportFieldSpec(
         "affected_documents", "Affected documents", ValidatorReportSection.SUMMARY
     ),
@@ -142,13 +127,11 @@ VALIDATOR_REPORT_FIELDS = (
         "verdict",
         "Verdict",
         ValidatorReportSection.RESULT,
-        aliases=("Validator verdict",),
     ),
     ValidatorReportFieldSpec(
         "repair_required",
         "Repair required for progression",
         ValidatorReportSection.RESULT,
-        aliases=("Repair required",),
     ),
 )
 
@@ -206,36 +189,10 @@ VALIDATOR_FINDING_CODES = (
         ValidatorFindingCodeSpec(code, ValidatorReportSection.STRUCTURAL)
         for code in _STRUCTURAL_CODES
     ),
-    *(
-        ValidatorFindingCodeSpec(code, ValidatorReportSection.SEMANTIC)
-        for code in _SEMANTIC_CODES
-    ),
+    *(ValidatorFindingCodeSpec(code, ValidatorReportSection.SEMANTIC) for code in _SEMANTIC_CODES),
     *(
         ValidatorFindingCodeSpec(code, ValidatorReportSection.CROSS_DOCUMENT)
         for code in _CROSS_DOCUMENT_CODES
-    ),
-    ValidatorFindingCodeSpec(
-        "STRUCT-MISSING-DOCUMENT",
-        ValidatorReportSection.STRUCTURAL,
-        status="legacy",
-        replacement="STRUCT-MISSING-REQUIRED-DOCUMENT",
-    ),
-    ValidatorFindingCodeSpec(
-        "STRUCT-MISSING-HEADING",
-        ValidatorReportSection.STRUCTURAL,
-        status="legacy",
-        replacement="STRUCT-MISSING-REQUIRED-SECTION",
-    ),
-    ValidatorFindingCodeSpec(
-        "STRUCT-EMPTY-SECTION",
-        ValidatorReportSection.STRUCTURAL,
-        status="legacy",
-        replacement="STRUCT-EMPTY-REQUIRED-SECTION",
-    ),
-    ValidatorFindingCodeSpec(
-        "CROSS-REFERENCE-MISMATCH",
-        ValidatorReportSection.CROSS_DOCUMENT,
-        status="legacy",
     ),
 )
 
@@ -267,11 +224,7 @@ DOCUMENT_READ_FAILURE_KINDS = tuple(spec.kind for spec in DOCUMENT_READ_FAILURES
 
 _FIELDS_BY_KEY = MappingProxyType({field.key: field for field in VALIDATOR_REPORT_FIELDS})
 _FIELDS_BY_LABEL = MappingProxyType(
-    {
-        label.casefold(): field
-        for field in VALIDATOR_REPORT_FIELDS
-        for label in (field.label, *field.aliases)
-    }
+    {field.label.casefold(): field for field in VALIDATOR_REPORT_FIELDS}
 )
 _CODES_BY_VALUE = MappingProxyType({spec.code: spec for spec in VALIDATOR_FINDING_CODES})
 _DOCUMENT_READ_FAILURES_BY_KIND = MappingProxyType(
@@ -287,21 +240,15 @@ _FINDING_LINE_PATTERN = re.compile(
     r"in\s+(?P<location>`[^`]+`(?::\d+)?|unknown location|[^:]+):\s+"
     r"(?P<message>.+?)\s*$"
 )
-_BACKTICKED_LOCATION_PATTERN = re.compile(
-    r"^`(?P<path>[^`]+)`(?::(?P<line>\d+))?$"
-)
-_REPEATED_SUFFIX_PATTERN = re.compile(
-    r"^(?P<message>.+?)\s+\(repeated (?P<count>\d+) times\)$"
-)
+_BACKTICKED_LOCATION_PATTERN = re.compile(r"^`(?P<path>[^`]+)`(?::(?P<line>\d+))?$")
+_REPEATED_SUFFIX_PATTERN = re.compile(r"^(?P<message>.+?)\s+\(repeated (?P<count>\d+) times\)$")
 
 
 def validator_report_field(key: str) -> ValidatorReportFieldSpec:
     try:
         return _FIELDS_BY_KEY[key.strip()]
     except KeyError as exc:
-        raise ValidatorReportProtocolError(
-            f"Unknown validator-report field key: {key!r}."
-        ) from exc
+        raise ValidatorReportProtocolError(f"Unknown validator-report field key: {key!r}.") from exc
 
 
 def resolve_validator_report_field(label: str) -> ValidatorReportFieldSpec:
@@ -313,20 +260,12 @@ def resolve_validator_report_field(label: str) -> ValidatorReportFieldSpec:
         ) from exc
 
 
-def resolve_validator_finding_code(
-    code: str, *, for_write: bool = False
-) -> ValidatorFindingCodeSpec:
+def resolve_validator_finding_code(code: str) -> ValidatorFindingCodeSpec:
     normalized = code.strip().upper()
     try:
         spec = _CODES_BY_VALUE[normalized]
     except KeyError as exc:
-        raise ValidatorReportProtocolError(
-            f"Unknown validator finding code: {code!r}."
-        ) from exc
-    if for_write and spec.status != "canonical":
-        raise ValidatorReportProtocolError(
-            f"Legacy validator finding code cannot be written: {normalized}."
-        )
+        raise ValidatorReportProtocolError(f"Unknown validator finding code: {code!r}.") from exc
     return spec
 
 
@@ -357,11 +296,6 @@ def resolve_document_read_failure_code(code: str) -> DocumentReadFailureSpec:
         ) from exc
 
 
-def canonical_validator_finding_code(code: str) -> str:
-    spec = resolve_validator_finding_code(code)
-    return spec.replacement or spec.code
-
-
 def _parse_finding_location(raw_location: str) -> tuple[str | None, int | None]:
     normalized = raw_location.strip()
     if normalized.casefold() == "unknown location":
@@ -386,25 +320,29 @@ def _validate_progression_semantics(
     fields: tuple[ParsedValidatorReportField, ...],
     findings: tuple[ParsedValidatorFinding, ...],
 ) -> None:
-    """Reject a report that makes a failing finding optional for progression.
-
-    The summary/result fields are optional for read compatibility with older
-    protocol-v1 evidence, so semantic validation runs only when the canonical
-    verdict and repair fields are both present.
-    """
-
+    """Require the current report fields and one unambiguous progression decision."""
     field_values = {field.key: field.value.strip("`").strip().lower() for field in fields}
-    verdict = field_values.get("verdict")
-    repair_required = field_values.get("repair_required")
-    has_canonical_summary = any(
-        key in field_values for key in ("total_issues", "blocking_issues")
-    )
-    if verdict is None or repair_required is None or not has_canonical_summary:
-        # Minimal result-only artifacts are retained for compatibility with
-        # older stage-summary and runtime evidence readers.
-        return
+    missing = [
+        field.label
+        for field in VALIDATOR_REPORT_FIELDS
+        if field.required and field.key not in field_values
+    ]
+    if missing:
+        raise ValidatorReportProtocolError(
+            "Validator report is missing required current-format fields: "
+            + ", ".join(missing)
+            + "."
+        )
+    verdict = field_values["verdict"]
+    repair_required = field_values["repair_required"]
+    if not field_values["total_issues"].isdigit():
+        raise ValidatorReportProtocolError("Total issues must be a non-negative integer.")
+    if int(field_values["total_issues"]) != len(findings):
+        raise ValidatorReportProtocolError(
+            "Total issues must equal the number of canonical findings."
+        )
 
-    if verdict in {"fail", "repair"}:
+    if verdict == "fail":
         if not findings:
             raise ValidatorReportProtocolError(
                 "Validator verdict `fail` requires at least one canonical finding."
@@ -424,15 +362,11 @@ def _validate_progression_semantics(
                 "A passing validator report must not require repair for progression."
             )
     else:
-        raise ValidatorReportProtocolError(
-            f"Unsupported validator verdict: {verdict!r}."
-        )
+        raise ValidatorReportProtocolError(f"Unsupported validator verdict: {verdict!r}.")
 
     blocking_issues = field_values.get("blocking_issues")
     if blocking_issues not in {"yes", "no"}:
-        # Historical reports used a numeric count. Keep those reports readable
-        # during the protocol-v1 compatibility window.
-        return
+        raise ValidatorReportProtocolError("Blocking issues must be `yes` or `no`.")
     expected_blocking = bool(findings)
     if (blocking_issues == "yes") != expected_blocking:
         expected = "yes" if expected_blocking else "no"
@@ -444,7 +378,7 @@ def _validate_progression_semantics(
 
 
 def parse_validator_report(markdown: str) -> ValidatorReportReadModel:
-    """Parse canonical or declared-legacy validator-report protocol vocabulary."""
+    """Parse the current canonical validator-report protocol vocabulary."""
 
     fields: list[ParsedValidatorReportField] = []
     findings: list[ParsedValidatorFinding] = []
@@ -465,11 +399,15 @@ def parse_validator_report(markdown: str) -> ValidatorReportReadModel:
         finding_match = _FINDING_LINE_PATTERN.fullmatch(raw_line)
         if finding_match is not None:
             code_spec = resolve_validator_finding_code(finding_match.group("code"))
-            if current_section in {
-                ValidatorReportSection.STRUCTURAL,
-                ValidatorReportSection.SEMANTIC,
-                ValidatorReportSection.CROSS_DOCUMENT,
-            } and code_spec.section is not current_section:
+            if (
+                current_section
+                in {
+                    ValidatorReportSection.STRUCTURAL,
+                    ValidatorReportSection.SEMANTIC,
+                    ValidatorReportSection.CROSS_DOCUMENT,
+                }
+                and code_spec.section is not current_section
+            ):
                 raise ValidatorReportProtocolError(
                     f"Finding {code_spec.code} is in the wrong report section on line "
                     f"{line_number}."
@@ -477,17 +415,14 @@ def parse_validator_report(markdown: str) -> ValidatorReportReadModel:
             severity = finding_match.group("severity").strip().lower()
             if severity not in {"critical", "high", "medium", "low"}:
                 raise ValidatorReportProtocolError(
-                    f"Unsupported validator finding severity on line {line_number}: "
-                    f"{severity!r}."
+                    f"Unsupported validator finding severity on line {line_number}: {severity!r}."
                 )
             source_path, source_line_number = _parse_finding_location(
                 finding_match.group("location")
             )
-            message, occurrence_count = _parse_finding_message(
-                finding_match.group("message")
-            )
+            message, occurrence_count = _parse_finding_message(finding_match.group("message"))
             parsed_finding = ParsedValidatorFinding(
-                code=code_spec.replacement or code_spec.code,
+                code=code_spec.code,
                 severity=severity,
                 message=message,
                 source_path=source_path,
@@ -526,7 +461,6 @@ def parse_validator_report(markdown: str) -> ValidatorReportReadModel:
                 key=field_spec.key,
                 value=field_match.group("value").strip(),
                 line_number=line_number,
-                used_legacy_alias=label != field_spec.label,
             )
         )
 
@@ -539,36 +473,3 @@ def parse_validator_report(markdown: str) -> ValidatorReportReadModel:
         findings=parsed_findings,
         advisories=parsed_advisories,
     )
-
-
-def render_validator_report_skeleton() -> str:
-    """Render the canonical prompt-facing validator-report protocol skeleton."""
-
-    lines = ["```md", "# Validator Report", ""]
-    fields_by_section = {
-        section: tuple(
-            field for field in VALIDATOR_REPORT_FIELDS if field.section is section
-        )
-        for section in ValidatorReportSection
-    }
-    placeholders = {
-        "total_issues": "<number>",
-        "blocking_issues": "<yes|no>",
-        "affected_documents": "<workspace-relative paths or none>",
-        "dominant_failure_categories": "<ordered categories or none>",
-        "finding_occurrences": "<raw count; remove line when no duplicates were collapsed>",
-        "verdict": "`<pass|fail>`",
-        "repair_required": "<yes|no>",
-    }
-    for section in ValidatorReportSection:
-        if section is ValidatorReportSection.RESULT:
-            lines.extend((f"## {ADVISORY_OBSERVATIONS_HEADING}", "", "- none", ""))
-        lines.extend((f"## {section.value}", ""))
-        fields = fields_by_section[section]
-        if fields:
-            lines.extend(f"- {field.label}: {placeholders[field.key]}" for field in fields)
-        else:
-            lines.append("- none")
-        lines.append("")
-    lines.append("```")
-    return "\n".join(lines)

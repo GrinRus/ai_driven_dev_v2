@@ -88,10 +88,29 @@ from aidd.runtime_permissions import (
     RuntimeOperatorRisk,
     RuntimePermissionPolicy,
 )
+from aidd.validators.models import ValidationFinding
+from aidd.validators.reports import render_validator_report
 
 
 def test_ui_implementation_adapter_does_not_import_cli_task_business_service() -> None:
     assert "aidd.cli.task" not in inspect.getsource(ui_module)
+
+
+def _ready_probe(config: Any) -> dict[str, RuntimeReadinessProbeReport]:
+    return {
+        definition.runtime_id: RuntimeReadinessProbeReport(
+            provider_available=True,
+            execution_command_available=True,
+            provider_version="test",
+            provider_command=definition.probe_command,
+            config_identity=runtime_config_identity(
+                runtime_id=definition.runtime_id,
+                runtime_config=config.runtime_config(definition.runtime_id),
+            ),
+            observed_at_utc=datetime.now(UTC).isoformat().replace("+00:00", "Z"),
+        )
+        for definition in runtime_definitions()
+    }
 
 
 def _service(
@@ -115,7 +134,7 @@ def _service(
         port=0,
         allow_remote_approvals=allow_remote_approvals,
     )
-    kwargs: dict[str, Any] = {}
+    kwargs: dict[str, Any] = {"readiness_probe_provider": _ready_probe}
     if workflow_runner is not None:
         kwargs["workflow_runner"] = workflow_runner
     if stage_runner is not None:
@@ -175,17 +194,6 @@ def _onboarding_service_with_runner(
     workflow_runner: Any | None = None,
 ) -> OperatorUiService:
     monkeypatch.chdir(tmp_path)
-
-    def _ready_probe(_config: object) -> dict[str, RuntimeReadinessProbeReport]:
-        return {
-            definition.runtime_id: RuntimeReadinessProbeReport(
-                provider_available=True,
-                execution_command_available=True,
-                provider_version="test",
-                provider_command=definition.probe_command,
-            )
-            for definition in runtime_definitions()
-        }
 
     kwargs: dict[str, Any] = {"readiness_probe_provider": _ready_probe}
     if workflow_runner is not None:
@@ -311,7 +319,8 @@ def test_ui_job_store_bounds_live_chunks_and_paginates_absolute_cursors() -> Non
     while True:
         page = store.logs(job_id, cursor=cursor)
         payload_bytes = sum(
-            len(str(chunk["text"]).encode("utf-8")) for chunk in page["chunks"]  # type: ignore[union-attr]
+            len(str(chunk["text"]).encode("utf-8"))
+            for chunk in page["chunks"]  # type: ignore[union-attr]
         )
         assert payload_bytes <= 16
         if first_page:
@@ -321,7 +330,8 @@ def test_ui_job_store_bounds_live_chunks_and_paginates_absolute_cursors() -> Non
         next_cursor = int(page["cursor"])
         assert next_cursor > cursor
         collected += "".join(
-            str(chunk["text"]) for chunk in page["chunks"]  # type: ignore[union-attr]
+            str(chunk["text"])
+            for chunk in page["chunks"]  # type: ignore[union-attr]
         )
         page_count += 1
         cursor = next_cursor
@@ -460,6 +470,7 @@ def test_ui_runtime_job_survives_project_switch_with_originating_execution_conte
             port=0,
         ),
         stage_runner=fake_stage_runner,
+        readiness_probe_provider=_ready_probe,
     )
     response = service.handle_post(
         "/api/stage/run",
@@ -513,6 +524,7 @@ def test_ui_resume_switches_project_context_while_job_is_active(
             port=0,
         ),
         stage_runner=fake_stage_runner,
+        readiness_probe_provider=_ready_probe,
     )
     launch = _payload(
         service.handle_post(
@@ -715,11 +727,20 @@ def _prepare_run(workspace_root: Path) -> None:
     stage_root = workspace_root / "workitems" / "WI-UI" / "stages" / "plan"
     stage_root.mkdir(parents=True, exist_ok=True)
     stage_root.joinpath("validator-report.md").write_text(
-        "# Validator Report\n\n## Result\n\n- Verdict: `fail`\n",
+        render_validator_report(
+            (
+                ValidationFinding(
+                    code="SEM-INCOMPLETE-SECTION",
+                    severity="medium",
+                    message="Missing validation evidence.",
+                ),
+            )
+        ),
         encoding="utf-8",
     )
     stage_root.joinpath("stage-result.md").write_text(
-        "# Stage Result\n\n## Summary\n\nBlocked on clarification.\n",
+        "# Stage Result\n\n## Status\n\n- Status: `blocked`\n\n"
+        "## Summary\n\nBlocked on clarification.\n",
         encoding="utf-8",
     )
     stage_root.joinpath("plan.md").write_text(
@@ -731,6 +752,14 @@ def _prepare_run(workspace_root: Path) -> None:
         "- `SEM-INCOMPLETE-SECTION` `medium` in "
         "`workitems/WI-UI/stages/plan/plan.md`: Missing validation evidence.\n",
         encoding="utf-8",
+    )
+    write_attempt_artifact_index(
+        workspace_root=workspace_root,
+        work_item="WI-UI",
+        run_id="run-ui",
+        stage="plan",
+        attempt_number=1,
+        attempt_mode="initial",
     )
 
 
@@ -769,11 +798,11 @@ def _prepare_completed_qa_run(
         stage_root = workspace_root / "workitems" / "WI-UI" / "stages" / stage
         stage_root.mkdir(parents=True, exist_ok=True)
         stage_root.joinpath("validator-report.md").write_text(
-            "# Validator Report\n\n- Verdict: `pass`\n",
+            render_validator_report(()),
             encoding="utf-8",
         )
         stage_root.joinpath("stage-result.md").write_text(
-            "# Stage Result\n\n## Status\n\n- `succeeded`\n",
+            "# Stage Result\n\n## Status\n\n- Status: `succeeded`\n",
             encoding="utf-8",
         )
         run_attempt_runtime_log_path(
@@ -1970,9 +1999,7 @@ def test_ui_onboarding_persists_structured_work_item_request_fields(
     )
     assert created["context"]["work_item"] == "WI-STRUCTURED"  # type: ignore[index]
 
-    request = _payload(
-        service.handle_get("/api/work-item/request", {})
-    )
+    request = _payload(service.handle_get("/api/work-item/request", {}))
     assert request["structured"] is True
     assert request["title"] == "Clean operator header"
     assert request["brief"] == "Keep the Work Item header short."
@@ -2049,7 +2076,8 @@ def test_ui_existing_workspace_reopens_project_inbox_without_selecting_work_item
             config=Path("aidd.test.toml"),
             host="127.0.0.1",
             port=0,
-        )
+        ),
+        readiness_probe_provider=_ready_probe,
     )
 
     state_payload = _payload(service.handle_get("/api/onboarding/state", {}))
@@ -2095,7 +2123,8 @@ def test_ui_project_context_creates_an_independent_work_item_without_runtime(
             config=Path("aidd.test.toml"),
             host="127.0.0.1",
             port=0,
-        )
+        ),
+        readiness_probe_provider=_ready_probe,
     )
 
     created = _payload(
@@ -2114,9 +2143,9 @@ def test_ui_project_context_creates_an_independent_work_item_without_runtime(
     assert isinstance(context, dict)
     assert context["work_item"] == "WI-NEW"
     assert (
-        workspace_root / "workitems" / "WI-NEW" / "context" / "user-request.md"
-    ).read_text(encoding="utf-8").endswith(
-        "Create an independent work item from the project Inbox.\n"
+        (workspace_root / "workitems" / "WI-NEW" / "context" / "user-request.md")
+        .read_text(encoding="utf-8")
+        .endswith("Create an independent work item from the project Inbox.\n")
     )
     project_home = _payload(service.handle_get("/api/project-home", {}))["project_home"]
     assert [item["work_item"] for item in project_home["work_items"]] == [  # type: ignore[index]
@@ -2141,7 +2170,8 @@ def test_ui_relative_nested_workspace_root_creates_new_work_item_in_project_work
             config=Path("aidd.test.toml"),
             host="127.0.0.1",
             port=0,
-        )
+        ),
+        readiness_probe_provider=_ready_probe,
     )
 
     created = _payload(
@@ -2161,11 +2191,7 @@ def test_ui_relative_nested_workspace_root_creates_new_work_item_in_project_work
     assert context["workspace_root"] == workspace_root.as_posix()
     assert context["work_item"] == "WI-INDEPENDENT"
     assert (
-        workspace_root
-        / "workitems"
-        / "WI-INDEPENDENT"
-        / "context"
-        / "user-request.md"
+        workspace_root / "workitems" / "WI-INDEPENDENT" / "context" / "user-request.md"
     ).is_file()
     assert not (project_root / "project" / ".aidd").exists()
 
@@ -2226,7 +2252,8 @@ def test_ui_request_context_supports_preview_write_and_durable_readback(
             config=Path("aidd.test.toml"),
             host="127.0.0.1",
             port=0,
-        )
+        ),
+        readiness_probe_provider=_ready_probe,
     )
 
     current = _payload(service.handle_get("/api/work-item/request", {}))
@@ -2287,7 +2314,8 @@ def test_ui_request_context_is_fail_closed_after_consuming_run(
             config=Path("aidd.test.toml"),
             host="127.0.0.1",
             port=0,
-        )
+        ),
+        readiness_probe_provider=_ready_probe,
     )
 
     context = _payload(service.handle_get("/api/work-item/request", {}))
@@ -2374,9 +2402,9 @@ def test_ui_answer_preview_is_non_mutating_and_write_persists_context(
     question = written["questions"][0]
     assert question["answer_evidence_links"] == ["reports/plan.md#rollout", "run://run-1/qa"]
     assert question["answer_unblock_consequence"] == "The plan stage can resume after scope review."
-    answers_text = (
-        workspace_root / "workitems/WI-UI/stages/plan/answers.md"
-    ).read_text(encoding="utf-8")
+    answers_text = (workspace_root / "workitems/WI-UI/stages/plan/answers.md").read_text(
+        encoding="utf-8"
+    )
     assert "reports/plan.md#rollout" in answers_text
     assert "The plan stage can resume after scope review." in answers_text
 
@@ -2487,7 +2515,7 @@ def test_ui_stage_endpoint_exposes_repair_and_explicit_stop_recovery_states(
     _prepare_run(stopped_root)
     stopped_stage_root = stopped_root / "workitems" / "WI-UI" / "stages" / "plan"
     stopped_stage_root.joinpath("validator-report.md").write_text(
-        "# Validator Report\n\n- Verdict: `pass`\n",
+        render_validator_report(()),
         encoding="utf-8",
     )
     persist_stage_status(
@@ -4340,9 +4368,7 @@ def test_ui_stage_interact_endpoint_delegates_request_and_streams_logs(
         "run_id": "run-ui-flow",
         "stage": "plan",
         "request_id": "request-0001",
-        "request_path": (
-            "workitems/WI-UI/stages/plan/operator-requests/request-0001.md"
-        ),
+        "request_path": ("workitems/WI-UI/stages/plan/operator-requests/request-0001.md"),
         "request_excerpt": "Add migration rollback risks",
     }
     assert started.wait(timeout=2)
@@ -4358,18 +4384,16 @@ def test_ui_stage_interact_endpoint_delegates_request_and_streams_logs(
     assert options.target_documents == ("workitems/WI-UI/stages/plan/plan.md",)
     assert options.prepared_interaction is not None
     assert options.prepared_interaction.operator_request.request_id == "request-0001"
-    assert len(
-        list(
-            (
-                workspace_root
-                / "workitems"
-                / "WI-UI"
-                / "stages"
-                / "plan"
-                / "operator-requests"
-            ).glob("request-*.md")
+    assert (
+        len(
+            list(
+                (
+                    workspace_root / "workitems" / "WI-UI" / "stages" / "plan" / "operator-requests"
+                ).glob("request-*.md")
+            )
         )
-    ) == 1
+        == 1
+    )
     assert options.cancel_requested is not None
     assert options.cancel_requested() is False
     assert any(
@@ -4615,10 +4639,7 @@ def test_ui_runtime_readiness_endpoint_exposes_probe_and_config_data(
                 provider_version="Python <3>",
                 provider_command="/usr/bin/python",
                 observed_at_utc=(
-                    datetime.now(UTC)
-                    .replace(microsecond=0)
-                    .isoformat()
-                    .replace("+00:00", "Z")
+                    datetime.now(UTC).replace(microsecond=0).isoformat().replace("+00:00", "Z")
                 ),
             )
         }
@@ -4708,8 +4729,6 @@ def test_ui_launch_revalidates_core_readiness_before_starting_a_job(tmp_path: Pa
         "/api/workflow/run",
         {
             "runtime": "generic-cli",
-            "require_runtime_revalidation": True,
-            "readiness_config_identity": "client-snapshot",
         },
     )
     payload = _payload(response)
@@ -4727,20 +4746,25 @@ def test_runtime_readiness_probe_collection_can_target_selected_runtime(
         def __init__(self, runtime_id: str) -> None:
             self.runtime_id = runtime_id
 
-        def probe(self, _command: str) -> SimpleNamespace:
+        def probe_configured_command(
+            self, *, configured_command: str, provider_command: str
+        ) -> SimpleNamespace:
             probed.append(self.runtime_id)
             return SimpleNamespace(
-                available=True,
-                version_text="fixture",
-                command=self.runtime_id,
-                supports_raw_log_stream=True,
-                supports_structured_log_stream=False,
-                supports_questions=False,
-                supports_resume=False,
-                supports_subagents=False,
-                supports_permission_policy=True,
-                supports_live_decisions=False,
-                preferred_transport="subprocess",
+                execution_command_available=True,
+                provider=SimpleNamespace(
+                    available=True,
+                    version_text="fixture",
+                    command=self.runtime_id,
+                    supports_raw_log_stream=True,
+                    supports_structured_log_stream=False,
+                    supports_questions=False,
+                    supports_resume=False,
+                    supports_subagents=False,
+                    supports_permission_policy=True,
+                    supports_live_decisions=False,
+                    preferred_transport="subprocess",
+                ),
             )
 
     monkeypatch.setattr(
@@ -4748,7 +4772,6 @@ def test_runtime_readiness_probe_collection_can_target_selected_runtime(
         "get_runtime_adapter_surface",
         lambda runtime_id: _FakeAdapter(runtime_id),
     )
-    monkeypatch.setattr(ui_module, "_execution_command_available", lambda _command: True)
     config = ui_module.load_config(Path("aidd.test.toml"))
 
     reports = ui_module._collect_runtime_readiness_probe_reports(
@@ -4758,6 +4781,38 @@ def test_runtime_readiness_probe_collection_can_target_selected_runtime(
 
     assert tuple(reports) == ("generic-cli",)
     assert probed == ["generic-cli"]
+
+
+@pytest.mark.parametrize(
+    ("command", "eligible"),
+    (("generic-cli-live-conformance", True), ("generic-cli-live-conformance --unknown", False)),
+)
+def test_ui_readiness_uses_configured_adapter_transport(
+    tmp_path: Path, monkeypatch: Any, command: str, eligible: bool
+) -> None:
+    config_path = tmp_path / "aidd.toml"
+    config_path.write_text(
+        "[runtime.generic_cli]\n"
+        f"command = {json.dumps(command)}\n"
+        'mode = "adapter-flags"\n'
+        'permission_policy = "brokered"\n'
+        'interaction_mode = "live"\n',
+        encoding="utf-8",
+    )
+    monkeypatch.setenv("PATH", "")
+    config = ui_module.load_config(config_path)
+    probes = ui_module._collect_runtime_readiness_probe_reports(
+        config, runtime_ids=("generic-cli",)
+    )
+    view = ui_module.resolve_runtime_readiness(config=config, probe_reports=probes)
+    runtime = next(item for item in view.runtimes if item.runtime_id == "generic-cli")
+
+    assert runtime.eligible is eligible
+    assert runtime.execution_command_available is eligible
+    if eligible:
+        assert runtime.capabilities.supports_permission_policy is True
+        assert runtime.capabilities.supports_live_decisions is True
+        assert runtime.capabilities.preferred_transport == "in-process"
 
 
 def test_ui_launch_revalidation_fails_closed_for_stale_probe(tmp_path: Path) -> None:
@@ -4781,7 +4836,7 @@ def test_ui_launch_revalidation_fails_closed_for_stale_probe(tmp_path: Path) -> 
     service = _service(workspace_root, readiness_probe_provider=stale_probe)
     response = service.handle_post(
         "/api/workflow/run",
-        {"runtime": "generic-cli", "require_runtime_revalidation": True},
+        {"runtime": "generic-cli"},
     )
     payload = _payload_with_status(response, HTTPStatus.BAD_REQUEST)
     assert "stale" in str(payload["error"]).lower()
@@ -4800,9 +4855,7 @@ def test_ui_runtime_readiness_reports_invalid_scope_without_claiming_no_scope(
         readiness_probe_provider=lambda _cfg: {},
     )
 
-    scope = _payload(service.handle_get("/api/runtime-readiness", {}))[
-        "protected_write_scope"
-    ]
+    scope = _payload(service.handle_get("/api/runtime-readiness", {}))["protected_write_scope"]
 
     assert scope["status"] == "invalid"
     assert scope["prefixes"] == []
@@ -4836,16 +4889,17 @@ def test_ui_runtime_readiness_is_not_workflow_source_of_truth(
             incomplete=(),
         )
 
-    def forbidden_readiness_probe_provider(
-        cfg: object,
+    def observed_readiness_probe_provider(
+        cfg: Any,
     ) -> dict[str, RuntimeReadinessProbeReport]:
-        raise AssertionError("workflow run must not call readiness probes")
+        captured["probe_config"] = cfg
+        return _ready_probe(cfg)
 
     service = _service(
         workspace_root,
         config=config_path,
         workflow_runner=fake_workflow_runner,
-        readiness_probe_provider=forbidden_readiness_probe_provider,
+        readiness_probe_provider=observed_readiness_probe_provider,
     )
 
     response = service.handle_post(
@@ -4864,6 +4918,9 @@ def test_ui_runtime_readiness_is_not_workflow_source_of_truth(
     assert job_payload["result"]["run_id"] == "run-ui-source"  # type: ignore[index]
     assert request.config_snapshot["runtime_command"] == "python -m trusted_runtime"
     assert request.config_snapshot["mode"] == "ui-workflow"
+    assert captured["probe_config"].runtime_config("generic-cli").command == (
+        "python -m trusted_runtime"
+    )
 
 
 def test_operator_ui_local_project_e2e_lane_covers_core_operator_flow(
@@ -5306,9 +5363,7 @@ def test_ui_tasks_endpoint_returns_rich_task_state(tmp_path: Path) -> None:
     assert task_list[0]["id"] == "TL-1"
     assert "acceptance_criteria" not in task_list[0]
     assert payload["selected_task"] is None
-    selected_payload = _payload(
-        service.handle_get("/api/tasks", {"task_id": ["TL-1"]})
-    )
+    selected_payload = _payload(service.handle_get("/api/tasks", {"task_id": ["TL-1"]}))
     assert selected_payload["selected_task"]["id"] == "TL-1"  # type: ignore[index]
     assert selected_payload["selection"] == {"state": "selected", "task_id": "TL-1"}
 
@@ -5356,8 +5411,11 @@ def test_ui_selected_task_actions_require_run_and_runner_readiness(tmp_path: Pat
     assert unavailable_actions["recommended"] is None
     assert unavailable_actions["runner"]["eligible"] is False  # type: ignore[index]
     assert "unavailable" in str(unavailable_actions["runner"]["disabled_reason"])  # type: ignore[index]
-    assert unavailable_actions["states"]["run"]["disabled_reason"] == (
-        unavailable_actions["runner"]["disabled_reason"]  # type: ignore[index]
+    assert (
+        unavailable_actions["states"]["run"]["disabled_reason"]
+        == (
+            unavailable_actions["runner"]["disabled_reason"]  # type: ignore[index]
+        )
     )
 
 
@@ -5365,11 +5423,14 @@ def test_ui_selected_task_actions_fail_closed_on_mutation_conflict(tmp_path: Pat
     workspace_root = tmp_path / ".aidd"
     _seed_rich_tasklist(workspace_root)
     service = _service(workspace_root)
-    lease_path = run_root(
-        workspace_root=workspace_root,
-        work_item="WI-UI",
-        run_id="run-1",
-    ) / ".mutation-lease"
+    lease_path = (
+        run_root(
+            workspace_root=workspace_root,
+            work_item="WI-UI",
+            run_id="run-1",
+        )
+        / ".mutation-lease"
+    )
     lease_path.mkdir(parents=True)
     (lease_path / "owner.json").write_text(
         json.dumps({"operation": "workflow", "pid": os.getpid()}),

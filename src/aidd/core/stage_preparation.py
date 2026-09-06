@@ -21,52 +21,10 @@ from aidd.core.stage_registry import (
     resolve_stage_output_registry,
 )
 from aidd.core.state_machine import StageState
-from aidd.validators.protocol import render_validator_report_skeleton
 
-_STAGE_RESULT_SKELETON = """```md
-# Stage Result
-
-## Stage
-
-- Stage: `<canonical-stage-id>`
-
-## Attempt history
-
-- Attempt 1 (`initial`): <outcome and evidence>
-
-## Status
-
-- Status: `<succeeded|failed|blocked|needs-input>`
-
-## Produced outputs
-
-- `<AIDD-workspace-relative-path, for example workitems/<id>/stages/<stage>/output/<document.md>>`
-
-## Validation summary
-
-- Validator verdict: `<pass|fail|not-run>`
-- Validator report: `workitems/<id>/stages/<stage>/validator-report.md`
-  (repository-root path `.aidd/workitems/<id>/stages/<stage>/validator-report.md`)
-
-## Blockers
-
-- none
-
-## Next actions
-
-- <operator or immediate canonical downstream stage action; on success include the exact
-  next stage id>
-
-## Terminal state notes
-
-- <why the stage ended in the declared status>
-```"""
-
-_COMMON_OUTPUT_SKELETONS = {
-    "stage-result.md": _STAGE_RESULT_SKELETON,
-    "validator-report.md": render_validator_report_skeleton(),
-}
-_SKIPPED_CONTRACT_SKELETONS = {"answers.md", "questions.md"}
+_NON_RUNTIME_DOCUMENTS = frozenset(
+    {"stage-result.md", "validator-report.md", "repair-brief.md", "questions.md", "answers.md"}
+)
 _TASKLIST_OUTPUT_SKELETON = """```md
 # Tasklist
 
@@ -150,10 +108,7 @@ def _contract_output_skeleton(
 ) -> str | None:
     if document_name == "tasklist.md":
         return _TASKLIST_OUTPUT_SKELETON
-    if (
-        document_name in _COMMON_OUTPUT_SKELETONS
-        or document_name in _SKIPPED_CONTRACT_SKELETONS
-    ):
+    if document_name in _NON_RUNTIME_DOCUMENTS:
         return None
 
     document_contract_path = contracts_root.parent / "documents" / document_name
@@ -182,11 +137,6 @@ def _append_output_skeletons(
     expected_names = {Path(path).name for path in expected_output_documents}
     skeletons: list[tuple[str, str]] = []
     for document_name in sorted(expected_names):
-        common_skeleton = _COMMON_OUTPUT_SKELETONS.get(document_name)
-        if common_skeleton is not None:
-            skeletons.append((document_name, common_skeleton))
-            continue
-
         contract_skeleton = _contract_output_skeleton(
             document_name=document_name,
             contracts_root=contracts_root,
@@ -259,8 +209,20 @@ def render_stage_brief(
                 ),
             ]
         )
-    compatibility_view = published_output_documents or expected_output_documents
-    runtime_documents = runtime_output_documents or expected_output_documents
+    published_documents = (
+        expected_output_documents
+        if published_output_documents is None
+        else published_output_documents
+    )
+    runtime_documents = tuple(
+        path
+        for path in (
+            expected_output_documents
+            if runtime_output_documents is None
+            else runtime_output_documents
+        )
+        if Path(path).name not in _NON_RUNTIME_DOCUMENTS
+    )
     lines.extend(
         [
             "",
@@ -302,18 +264,7 @@ def render_stage_brief(
     else:
         lines.append("- none")
     lines.extend(["", "# Published documents", ""])
-    lines.extend(f"- `{path}`" for path in compatibility_view)
-    lines.extend(
-        [
-            "",
-            "# Expected output documents (published compatibility view)",
-            "",
-            "This publication inventory does not grant runtime write authority; use only "
-            "`Runtime write targets` for substantive completion output.",
-            "",
-        ]
-    )
-    lines.extend(f"- `{path}`" for path in compatibility_view)
+    lines.extend(f"- `{path}`" for path in published_documents)
     lines.extend(
         [
             "",
@@ -480,14 +431,20 @@ def persist_execution_state(
     work_item: str,
     run_id: str,
     stage: str,
+    attempt_mode: str,
     contracts_root: Path = DEFAULT_STAGE_CONTRACTS_ROOT,
     changed_at_utc: datetime | None = None,
 ) -> StageExecutionState:
+    if not isinstance(attempt_mode, str) or attempt_mode not in {
+        "initial", "repair", "resume", "intervention", "repair-extension"
+    }:
+        raise ValueError("Executing an attempt requires an explicit valid attempt mode.")
     attempt_path = create_next_attempt_directory(
         workspace_root=workspace_root,
         work_item=work_item,
         run_id=run_id,
         stage=stage,
+        attempt_mode=attempt_mode,
         contracts_root=contracts_root,
     )
     stage_metadata_path = persist_stage_status(

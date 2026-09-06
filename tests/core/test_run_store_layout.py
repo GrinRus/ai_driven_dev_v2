@@ -432,7 +432,7 @@ def test_attempt_artifact_index_records_project_set_context_when_present(
     )
 
 
-def test_load_attempt_artifact_index_supports_legacy_payload_without_prompt_provenance(
+def test_load_attempt_artifact_index_rejects_missing_prompt_provenance(
     tmp_path: Path,
 ) -> None:
     workspace_root = tmp_path / ".aidd"
@@ -457,16 +457,14 @@ def test_load_attempt_artifact_index_supports_legacy_payload_without_prompt_prov
         encoding="utf-8",
     )
 
-    loaded = load_attempt_artifact_index(
-        workspace_root=workspace_root,
-        work_item="WI-001",
-        run_id="run-001",
-        stage="plan",
-        attempt_number=1,
-    )
-
-    assert loaded is not None
-    assert loaded.prompt_pack_provenance == ()
+    with pytest.raises(ValueError, match="requires a prompt_pack_provenance list"):
+        load_attempt_artifact_index(
+            workspace_root=workspace_root,
+            work_item="WI-001",
+            run_id="run-001",
+            stage="plan",
+            attempt_number=1,
+        )
 
 
 def test_run_store_fresh_run_creates_manifest_attempt_and_stage_metadata(tmp_path: Path) -> None:

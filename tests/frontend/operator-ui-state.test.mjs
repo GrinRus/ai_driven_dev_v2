@@ -226,7 +226,7 @@ test("terminal handoff recommendation fails closed for legacy and malformed payl
     })
   ]`, context)));
   assert.deepEqual(recommendations.map((item) => item.state), [
-    "legacy-no-recommendation",
+    "invalid-no-recommendation",
     "none",
     "recommended",
     "invalid-no-recommendation",
@@ -298,7 +298,7 @@ test("provider-free route manifest covers every Wave 42 target filename determin
     "12-flow-complete.png",
     "13-mobile-decision.png",
   ]);
-  assert.ok(entries.every((entry) => entry.route.startsWith("?")));
+  assert.ok(entries.every((entry) => entry.route === "/" || entry.route.startsWith("?")));
   assert.ok(entries.every((entry) => entry.provider === "local"));
   assert.ok(entries.every((entry) => entry.requiresLiveProvider === false));
   assert.ok(entries.every((entry) => entry.credentialMode === "none"));
@@ -938,6 +938,7 @@ test("shared dashboard actions preserve workflow and stage request payloads", as
       state.readinessLoading = false;
       state.readiness = {runtimes: [{
         runtime_id: "generic-cli",
+        eligible: true,
         provider_available: true,
         execution_command_available: true
       }]};
@@ -999,7 +1000,7 @@ test("same stage launch is submitted and attached to polling once", async () => 
     state.activeStage = "plan";
     state.selectedRuntime = "generic-cli";
     state.readinessLoading = false;
-    state.readiness = {runtimes: [{runtime_id: "generic-cli", provider_available: true, execution_command_available: true}]};
+    state.readiness = {runtimes: [{runtime_id: "generic-cli", eligible: true, provider_available: true, execution_command_available: true}]};
   `, context);
 
   const first = vm.runInContext('dispatchTaskAwareLaunch("stage", "plan")', context);
@@ -1349,6 +1350,7 @@ test("next-flow view renders terminal and readiness states without network mutat
       state.readiness = {
         runtimes: [{
           runtime_id: "generic-cli",
+          eligible: true,
           provider_available: true,
           execution_command_available: true
         }]

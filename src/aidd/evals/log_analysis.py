@@ -348,18 +348,7 @@ def parse_validator_report_failures_text(
         for finding in report.findings
     )
 
-    if findings:
-        return findings
-    verdict_field = report.field("verdict")
-    if report.verdict == "fail":
-        return (
-            CoarseRuntimeEvent(
-                line_number=verdict_field.line_number if verdict_field is not None else 1,
-                category="validator",
-                message="validator report verdict is fail",
-            ),
-        )
-    return tuple()
+    return findings
 
 
 def parse_validator_report_failures(

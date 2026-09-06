@@ -44,7 +44,6 @@ def test_pre_review_execution_pass_is_not_counted_clean(tmp_path: Path) -> None:
         stage_quality_audit_paths=(tmp_path / "missing-audit.md",),
         final_report_paths=(tmp_path / "missing-report.md",),
         quality_report_path=tmp_path / "quality-report.md",
-        legacy_degraded=False,
     )
 
     assert status.execution_pass is True
@@ -54,17 +53,15 @@ def test_pre_review_execution_pass_is_not_counted_clean(tmp_path: Path) -> None:
 
 
 @pytest.mark.parametrize(
-    ("decision", "legacy_degraded", "counted_clean", "reason"),
+    ("decision", "counted_clean", "reason"),
     (
-        ("not-counted", False, False, "quality-report.md does not record counted-clean"),
-        ("counted-clean", False, True, None),
-        ("counted-clean", True, False, "bundle uses legacy degraded evidence"),
+        ("not-counted", False, "quality-report.md does not record counted-clean"),
+        ("counted-clean", True, None),
     ),
 )
 def test_post_review_status_is_derived_from_primary_evidence(
     tmp_path: Path,
     decision: str,
-    legacy_degraded: bool,
     counted_clean: bool,
     reason: str | None,
 ) -> None:
@@ -77,7 +74,6 @@ def test_post_review_status_is_derived_from_primary_evidence(
         stage_quality_audit_paths=audits,
         final_report_paths=reports,
         quality_report_path=quality_report,
-        legacy_degraded=legacy_degraded,
     )
 
     assert status.quality_reviewed is True
@@ -103,7 +99,6 @@ def test_manual_quality_stop_is_independent_from_execution_verdict(
         stage_quality_audit_paths=audits,
         final_report_paths=reports,
         quality_report_path=quality_report,
-        legacy_degraded=False,
     )
 
     assert status.execution_pass is False

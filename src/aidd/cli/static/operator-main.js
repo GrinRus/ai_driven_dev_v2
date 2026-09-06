@@ -305,16 +305,6 @@ document.addEventListener("click", async (event) => {
       syncOnboardingCreateEditorMode();
       return;
     }
-    if (event.target.closest("[data-guided-delivery-toggle]")) {
-      setGuidedDeliveryPreference(state.onboarding.guidedDelivery === false);
-      return;
-    }
-    const onboardingRecentProject = event.target.closest("[data-onboarding-recent-project]")?.dataset.onboardingRecentProject;
-    if (onboardingRecentProject) {
-      state.onboarding.projectRootInput = onboardingRecentProject;
-      await inspectOnboardingProject();
-      return;
-    }
     const onboardingRuntime = event.target.closest("[data-onboarding-runtime]")?.dataset.onboardingRuntime;
     if (onboardingRuntime) {
       state.selectedRuntime = onboardingRuntime;

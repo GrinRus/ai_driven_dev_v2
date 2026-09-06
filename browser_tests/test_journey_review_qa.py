@@ -5,7 +5,11 @@ from urllib.parse import urlsplit
 
 from playwright.sync_api import Page, sync_playwright
 
-from browser_tests.browser_harness import VIEWPORTS, operator_browser_harness
+from browser_tests.browser_harness import (
+    VIEWPORTS,
+    expect_rendered_surface,
+    operator_browser_harness,
+)
 from browser_tests.journey_support import configure_sleeping_fixture_runtime
 from browser_tests.rendered_assertions import assert_accessible_render
 from browser_tests.rendered_geometry import assert_rendered_geometry
@@ -30,7 +34,7 @@ def _open_gate(page: Page, detail: str) -> None:
 
 def _journey_url(base: str, work_item: str, run_id: str) -> str:
     return (
-        f"{base}?ui=studio&mode=studio&work_item={work_item}"
+        f"{base}?mode=studio&work_item={work_item}"
         f"&run_id={run_id}&stage=qa"
     )
 
@@ -50,10 +54,13 @@ def test_review_qa_gate_blocks_rejected_and_not_ready_evidence_across_viewports(
         for viewport in VIEWPORTS:
             with harness.open_page(viewport) as browser_page:
                 page = browser_page.page
-                page.goto(
-                    _journey_url(harness.url, fixture.work_item or "", fixture.run_id or ""),
-                    wait_until="networkidle",
-                )
+                with expect_rendered_surface(
+                    page.locator('[data-studio-flow-complete][data-terminal-status="failed"]')
+                ):
+                    page.goto(
+                        _journey_url(harness.url, fixture.work_item or "", fixture.run_id or ""),
+                        wait_until="domcontentloaded",
+                    )
                 _open_gate(page, "review-findings")
                 review = page.locator('[data-studio-quality-gate="review"]')
                 assert review.get_attribute("data-review-status") == "rejected"
@@ -71,7 +78,10 @@ def test_review_qa_gate_blocks_rejected_and_not_ready_evidence_across_viewports(
                 dashboard = page.evaluate(
                     "async () => (await (await fetch('/api/dashboard?run_id=run-browser')).json())"
                 )
-                assert dashboard.get("terminal_handoff") is None
+                handoff = dashboard["dashboard"]["terminal_handoff"]
+                assert handoff["status"] == "failed"
+                assert handoff["final_qa_status"] == "not-ready"
+                assert handoff["recommended_outcome"] == "start-follow-up-flow"
                 assert_accessible_render(page, target_size=44 if viewport[0] <= 760 else 32)
                 assert_rendered_geometry(page)
                 browser_page.diagnostics.assert_clean()
@@ -91,10 +101,14 @@ def test_selected_review_finding_uses_one_durable_remediation_request(
         work_item=fixture.work_item,
     ) as harness, harness.open_page((1280, 900)) as browser_page:
         page = browser_page.page
-        page.goto(
-            _journey_url(harness.url, fixture.work_item or "", fixture.run_id or ""),
-            wait_until="networkidle",
-        )
+        with expect_rendered_surface(
+            page.locator('[data-studio-flow-complete][data-terminal-status="failed"]')
+        ):
+            page.goto(
+                _journey_url(harness.url, fixture.work_item or "", fixture.run_id or ""),
+                wait_until="domcontentloaded",
+            )
+        page.wait_for_function("eval('selectedRuntimeReady()')", timeout=15_000)
         _open_gate(page, "review-findings")
         with page.expect_response(
             lambda response: urlsplit(response.url).path == "/api/remediation/launch"
@@ -124,10 +138,11 @@ def test_stale_qa_has_no_terminal_handoff_and_requires_durable_rerun(tmp_path: P
         work_item=fixture.work_item,
     ) as harness, harness.open_page((1280, 900)) as browser_page:
         page = browser_page.page
-        page.goto(
-            _journey_url(harness.url, fixture.work_item or "", fixture.run_id or ""),
-            wait_until="networkidle",
-        )
+        with expect_rendered_surface(page.locator(".active-studio")):
+            page.goto(
+                _journey_url(harness.url, fixture.work_item or "", fixture.run_id or ""),
+                wait_until="domcontentloaded",
+            )
         _open_gate(page, "qa-verdict")
         readback = page.locator('[data-remediation-readback="qa"]')
         assert "Stale stages: Review → QA" in readback.inner_text()
@@ -136,8 +151,9 @@ def test_stale_qa_has_no_terminal_handoff_and_requires_durable_rerun(tmp_path: P
         dashboard = page.evaluate(
             "async () => (await (await fetch('/api/dashboard?run_id=run-browser')).json())"
         )
-        assert dashboard.get("terminal_handoff") is None
-        page.reload(wait_until="networkidle")
+        assert dashboard["dashboard"]["terminal_handoff"] is None
+        with expect_rendered_surface(page.locator(".active-studio")):
+            page.reload(wait_until="domcontentloaded")
         _open_gate(page, "qa-verdict")
         assert page.locator('[data-remediation-readback="qa"]').count() == 1
         browser_page.diagnostics.assert_clean()

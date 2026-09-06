@@ -147,8 +147,7 @@ def evaluate_repair_extension_eligibility(
         return RepairExtensionEligibility(
             eligible=False,
             disabled_reason=(
-                "Repair extension evidence is stale; refresh the validator report and repair "
-                "brief."
+                "Repair extension evidence is stale; refresh the validator report and repair brief."
             ),
         )
     if grant.configuration_identity != current_configuration_identity.strip():
@@ -245,11 +244,14 @@ def _write_repair_extension_stage_result(
     )
     if metadata is None:
         raise ValueError("Stage metadata is required before writing repair-extension evidence.")
-    stage_result_path = workspace_stage_root(
-        root=workspace_root,
-        work_item=work_item,
-        stage=stage,
-    ) / "stage-result.md"
+    stage_result_path = (
+        workspace_stage_root(
+            root=workspace_root,
+            work_item=work_item,
+            stage=stage,
+        )
+        / "stage-result.md"
+    )
     write_stage_result_from_lifecycle_state(
         CanonicalStageResultProjection(
             stage=stage,
@@ -273,9 +275,7 @@ def _write_repair_extension_stage_result(
             repair_brief_path=repair_brief_path,
             blockers=blockers,
             repair_budget_status=(
-                None
-                if status == StageState.SUCCEEDED.value
-                else "repair-budget-exhausted"
+                None if status == StageState.SUCCEEDED.value else "repair-budget-exhausted"
             ),
         ),
         workspace_root=workspace_root,
@@ -347,10 +347,7 @@ def preflight_repair_extension(
         )
 
     derived_status = latest_stage_status or metadata.status
-    if (
-        latest_stage_status is None
-        and derived_status.strip().lower() == StageState.FAILED.value
-    ):
+    if latest_stage_status is None and derived_status.strip().lower() == StageState.FAILED.value:
         try:
             repair_brief_text = repair_brief_path.read_text(encoding="utf-8", errors="replace")
         except OSError as exc:
@@ -427,11 +424,14 @@ def preflight_repair_extension(
     )
     if not findings:
         try:
-            revalidated_report_path = workspace_stage_root(
-                root=workspace_root,
-                work_item=grant.work_item_id,
-                stage=grant.stage,
-            ) / "repair-extension-validator-report.md"
+            revalidated_report_path = (
+                workspace_stage_root(
+                    root=workspace_root,
+                    work_item=grant.work_item_id,
+                    stage=grant.stage,
+                )
+                / "repair-extension-validator-report.md"
+            )
             revalidated_report_path.write_text(
                 render_validator_report(()),
                 encoding="utf-8",
@@ -509,11 +509,14 @@ def preflight_repair_extension(
             grant=grant,
         )
 
-    fresh_brief_path = workspace_stage_root(
-        root=workspace_root,
-        work_item=grant.work_item_id,
-        stage=grant.stage,
-    ) / "repair-extension-brief.md"
+    fresh_brief_path = (
+        workspace_stage_root(
+            root=workspace_root,
+            work_item=grant.work_item_id,
+            stage=grant.stage,
+        )
+        / "repair-extension-brief.md"
+    )
     try:
         persist_repair_extension_grant(
             workspace_root=workspace_root,
@@ -599,6 +602,7 @@ def preflight_repair_extension(
         findings=findings,
         grant=grant,
     )
+
 
 @dataclass(frozen=True, slots=True)
 class ValidatorReportFinding:
@@ -730,14 +734,14 @@ def parse_validator_report_findings(
 ) -> tuple[ValidatorReportFinding, ...]:
     report = parse_validator_report(validator_report_markdown)
     return tuple(
-            ValidatorReportFinding(
-                code=finding.code,
-                severity=finding.severity,
-                message=finding.message,
-                source_path=finding.source_path,
-            )
-            for finding in report.findings
+        ValidatorReportFinding(
+            code=finding.code,
+            severity=finding.severity,
+            message=finding.message,
+            source_path=finding.source_path,
         )
+        for finding in report.findings
+    )
 
 
 def parse_validator_report_advisories(
@@ -822,9 +826,7 @@ def group_repair_findings(
                 )
             if target_index is not None:
                 existing = groups[target_index]
-                if any(
-                    _finding_identity(item) == identity for item in existing.related
-                ):
+                if any(_finding_identity(item) == identity for item in existing.related):
                     continue
                 groups[target_index] = RepairFindingGroup(
                     primary=existing.primary,
@@ -860,9 +862,7 @@ def _render_failed_checks(findings: tuple[ValidatorReportFinding, ...]) -> list[
         location = (
             f"`{finding.source_path}`" if finding.source_path is not None else "unknown location"
         )
-        lines.append(
-            f"- `{finding.code}` `{finding.severity}` in {location}: {finding.message}"
-        )
+        lines.append(f"- `{finding.code}` `{finding.severity}` in {location}: {finding.message}")
     lines.append("")
     return lines
 
@@ -873,9 +873,7 @@ def _render_correction_item(
     occurrence_count: int = 1,
 ) -> str:
     target = (
-        f"`{finding.source_path}`"
-        if finding.source_path is not None
-        else "affected stage docs"
+        f"`{finding.source_path}`" if finding.source_path is not None else "affected stage docs"
     )
     hint = _repair_hint_for_finding(finding)
     suffix = f" {hint}" if hint else ""
@@ -891,8 +889,7 @@ def _render_correction_item(
             "completion, submit a `[blocking]` question through the controlled interview path."
         )
     return (
-        f"- [`{finding.code}`] Update {target} to resolve: {finding.message}"
-        f"{repeat_note}{suffix}"
+        f"- [`{finding.code}`] Update {target} to resolve: {finding.message}{repeat_note}{suffix}"
     )
 
 
@@ -936,9 +933,7 @@ def _render_advisory_items(findings: Iterable[ValidatorReportFinding]) -> list[s
     lines: list[str] = []
     for finding in findings:
         target = (
-            f"`{finding.source_path}`"
-            if finding.source_path is not None
-            else "affected stage docs"
+            f"`{finding.source_path}`" if finding.source_path is not None else "affected stage docs"
         )
         lines.append(
             f"- [`{finding.code}`] Observe {target}: {finding.message} "
@@ -952,13 +947,10 @@ def _render_advisory_items(findings: Iterable[ValidatorReportFinding]) -> list[s
 def _repair_hint_for_finding(finding: ValidatorReportFinding) -> str:
     normalized_message = finding.message.lower()
     normalized_source_path = (finding.source_path or "").lower()
-    if (
-        finding.code == "SEM-INCOMPLETE-SECTION"
-        and (
-            "task-card grammar" in normalized_message
-            or "tasklist grammar" in normalized_message
-            or normalized_source_path.endswith("tasklist.md")
-        )
+    if finding.code == "SEM-INCOMPLETE-SECTION" and (
+        "task-card grammar" in normalized_message
+        or "tasklist grammar" in normalized_message
+        or normalized_source_path.endswith("tasklist.md")
     ):
         return (
             "Use one bounded tasklist correction pass: preserve every stable task id and each "
@@ -1052,13 +1044,10 @@ def _repair_hint_for_finding(finding: ValidatorReportFinding) -> str:
             "Align QA with upstream review evidence: unresolved `must-fix` or rejected review "
             "requires `QA verdict: not-ready` and release recommendation `hold`."
         )
-    if (
-        finding.code == "SEM-UNVERIFIABLE-CHECK-CLAIM"
-        and (
-            "ignored workspace residue" in normalized_message
-            or "ignored residue" in normalized_message
-            or "workspace residue" in normalized_message
-        )
+    if finding.code == "SEM-UNVERIFIABLE-CHECK-CLAIM" and (
+        "ignored workspace residue" in normalized_message
+        or "ignored residue" in normalized_message
+        or "workspace residue" in normalized_message
     ):
         return (
             "Check ignored residue after all review commands. Remove the residue and cite "
@@ -1141,9 +1130,7 @@ def render_repair_brief(
         advisory_findings=(*report_advisories, *advisory_findings),
     )
     canonical_findings = tuple(
-        finding
-        for group in correction_groups
-        for finding in (group.primary, *group.related)
+        finding for group in correction_groups for finding in (group.primary, *group.related)
     )
 
     next_attempt_number = stage_attempt_count + 1
@@ -1178,8 +1165,7 @@ def render_repair_brief(
             "",
             "- See `Advisory observations`; advisory evidence does not request repair.",
             "",
-            "Repair required for progression: "
-            f"`{'yes' if correction_groups else 'no'}`.",
+            f"Repair required for progression: `{'yes' if correction_groups else 'no'}`.",
             "",
         ]
     )
@@ -1428,9 +1414,7 @@ def render_stage_result_with_repair_history(
             "validator verdict claims must not remain `succeeded` or `pass`."
         )
     if normalized_repair_brief_path is not None:
-        lines.append(
-            f"- Repair decision context recorded in `{normalized_repair_brief_path}`."
-        )
+        lines.append(f"- Repair decision context recorded in `{normalized_repair_brief_path}`.")
     lines.append("")
     return "\n".join(lines)
 
@@ -1492,9 +1476,7 @@ def persist_repair_history_snapshot(
             validator_report_path=validator_report_path,
             repair_brief_path=repair_brief_path,
             repair_budget_status=(
-                "repair-budget-exhausted"
-                if stage_status == "failed"
-                else "repair-budget-available"
+                "repair-budget-exhausted" if stage_status == "failed" else "repair-budget-available"
             ),
         ),
         workspace_root=workspace_root,
@@ -1577,57 +1559,44 @@ def count_stage_attempts(
 def repair_attempts_used(
     *,
     stage_attempt_count: int,
-    attempt_modes: Sequence[str | None] | None = None,
+    attempt_modes: Sequence[str],
 ) -> int:
     if stage_attempt_count < 0:
         raise ValueError("Stage attempt count must be non-negative.")
-
-    if attempt_modes is not None:
-        normalized_modes = tuple(
-            None if mode is None else mode.strip().lower() for mode in attempt_modes
-        )
-        if len(normalized_modes) != stage_attempt_count:
-            raise ValueError("Attempt modes must correspond to the stage attempt count.")
-        # New artifact indexes identify validation-triggered repairs explicitly.  Resume and
-        # intervention attempts are durable attempts, but they never consume this budget.
-        if all(mode is not None for mode in normalized_modes):
-            return sum(mode == "repair" for mode in normalized_modes)
-
-        # Older indexes did not persist a mode.  Preserve their historical interpretation:
-        # the first attempt was initial and every later attempt was a repair.
-        return max(0, stage_attempt_count - 1)
-
-    # The first stage attempt is the initial run, not a repair run.  This fallback keeps the
-    # public helper compatible with callers that only know the legacy attempt count.
-    return max(0, stage_attempt_count - 1)
+    if len(attempt_modes) != stage_attempt_count:
+        raise ValueError("Attempt modes must correspond to the stage attempt count.")
+    allowed_modes = {"initial", "repair", "resume", "intervention", "repair-extension"}
+    if any(not isinstance(mode, str) or mode not in allowed_modes for mode in attempt_modes):
+        raise ValueError("Repair accounting requires an explicit valid mode for every attempt.")
+    return sum(mode == "repair" for mode in attempt_modes)
 
 
-def _attempt_modes_from_artifacts(
+def load_stage_attempt_modes(
     *,
     workspace_root: Path,
     work_item: str,
     run_id: str,
     stage: str,
     stage_attempt_count: int,
-) -> tuple[str | None, ...]:
-    """Read mode metadata without making old or malformed indexes fatal to accounting."""
-
+) -> tuple[str, ...]:
+    """Require recorded attempt modes instead of inferring repair usage from count."""
     from aidd.core.run_store import load_attempt_artifact_index
 
-    modes: list[str | None] = []
+    modes: list[str] = []
     for attempt_number in range(1, stage_attempt_count + 1):
-        try:
-            index = load_attempt_artifact_index(
-                workspace_root=workspace_root,
-                work_item=work_item,
-                run_id=run_id,
-                stage=stage,
-                attempt_number=attempt_number,
+        index = load_attempt_artifact_index(
+            workspace_root=workspace_root,
+            work_item=work_item,
+            run_id=run_id,
+            stage=stage,
+            attempt_number=attempt_number,
+        )
+        if index is None or index.attempt_mode is None:
+            raise ValueError(
+                f"Repair accounting requires recorded attempt_mode for {stage} "
+                f"attempt {attempt_number}."
             )
-        except (OSError, ValueError, KeyError, TypeError):
-            modes.append(None)
-            continue
-        modes.append(None if index is None else index.attempt_mode)
+        modes.append(index.attempt_mode)
     return tuple(modes)
 
 
@@ -1658,7 +1627,7 @@ def evaluate_stage_repair_counter(
     max_repair_attempts = effective_repair_budget(stage=stage, policy=resolved_policy)
     used = repair_attempts_used(
         stage_attempt_count=stage_attempt_count,
-        attempt_modes=_attempt_modes_from_artifacts(
+        attempt_modes=load_stage_attempt_modes(
             workspace_root=workspace_root,
             work_item=work_item,
             run_id=run_id,

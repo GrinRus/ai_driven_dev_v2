@@ -1,17 +1,20 @@
 from __future__ import annotations
 
+import importlib
+from dataclasses import replace
 from pathlib import Path
 
 import pytest
 from typer.testing import CliRunner
 
 from aidd.adapters.base import CapabilityReport
+from aidd.adapters.surface import get_runtime_adapter_surface
 from aidd.cli import main as cli_main
 
 runner = CliRunner()
 
 _CURRENT_DOCTOR_FOOTER = (
-    "Provider probe checks raw runtime availability; execution readiness checks "
+    "Adapter probe checks transport availability; execution readiness checks "
     "the configured AIDD command and mode."
 )
 
@@ -21,15 +24,15 @@ def _write_config(tmp_path: Path) -> Path:
     config_path.write_text(
         (
             "[workspace]\n"
-            "root = \".aidd\"\n\n"
+            'root = ".aidd"\n\n'
             "[runtime.generic_cli]\n"
-            "command = \"python-generic\"\n\n"
+            'command = "python-generic"\n\n'
             "[runtime.claude_code]\n"
-            "command = \"claude-fake\"\n\n"
+            'command = "claude-fake"\n\n'
             "[runtime.codex]\n"
-            "command = \"codex-fake\"\n\n"
+            'command = "codex-fake"\n\n'
             "[runtime.opencode]\n"
-            "command = \"opencode-fake\"\n"
+            'command = "opencode-fake"\n'
         ),
         encoding="utf-8",
     )
@@ -58,25 +61,14 @@ def test_doctor_reports_current_footer(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     config_path = _write_config(tmp_path)
+    doctor_module = importlib.import_module("aidd.cli.doctor")
     monkeypatch.setattr(
-        cli_main,
-        "probe_generic_cli",
-        lambda command: _fake_capability_report("generic-cli", command),
-    )
-    monkeypatch.setattr(
-        cli_main,
-        "probe_claude_code",
-        lambda command: _fake_capability_report("claude-code", command),
-    )
-    monkeypatch.setattr(
-        cli_main,
-        "probe_codex",
-        lambda command: _fake_capability_report("codex", command),
-    )
-    monkeypatch.setattr(
-        cli_main,
-        "probe_opencode",
-        lambda command: _fake_capability_report("opencode", command),
+        doctor_module,
+        "get_runtime_adapter_surface",
+        lambda runtime_id: replace(
+            get_runtime_adapter_surface(runtime_id),
+            probe=lambda command: _fake_capability_report(runtime_id, command),
+        ),
     )
 
     result = runner.invoke(cli_main.app, ["doctor", "--config", str(config_path)])

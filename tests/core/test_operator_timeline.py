@@ -160,7 +160,7 @@ def test_operator_timeline_projects_task_and_finalization_frames(tmp_path: Path)
     assert task_frame.identity == "task:TL-2:attempt:0002"
     assert task_frame.task_id == "TL-2"
     assert task_frame.status == "failed"
-    # Legacy task attempts without their own start timestamp must not inherit
+    # Task attempts without their own start timestamp must not inherit
     # the enclosing run's elapsed duration.
     assert task_frame.started_at_utc is None
     assert task_frame.duration_seconds is None
@@ -172,7 +172,7 @@ def test_operator_timeline_projects_task_and_finalization_frames(tmp_path: Path)
     assert finalization_frame.status == "failed"
 
 
-def test_operator_timeline_uses_referenced_stage_attempt_bounds_for_legacy_task_attempt(
+def test_operator_timeline_uses_referenced_stage_attempt_bounds_without_task_timestamps(
     tmp_path: Path,
 ) -> None:
     workspace_root = tmp_path / ".aidd"

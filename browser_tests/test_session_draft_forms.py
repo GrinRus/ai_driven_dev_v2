@@ -6,6 +6,7 @@ from pathlib import Path
 from playwright.sync_api import sync_playwright
 
 from browser_tests.browser_harness import (
+    expect_rendered_surface,
     operator_browser_harness,
     wait_for_work_item_surface,
 )
@@ -143,7 +144,7 @@ def test_intervention_submit_creates_one_stage_scoped_request(tmp_path: Path) ->
         work_item=fixture.work_item,
     ) as harness, harness.open_page((1280, 900)) as browser_page:
         page = browser_page.page
-        page.goto(f"{harness.url}?ui=studio", wait_until="domcontentloaded")
+        page.goto(harness.url, wait_until="domcontentloaded")
         wait_for_work_item_surface(page, fixture.work_item)
         page.locator("#runtimeSettings").evaluate("node => { node.open = true; }")
         page.locator("#runtimeSelect").select_option("generic-cli")
@@ -172,7 +173,7 @@ def test_intervention_submit_creates_one_stage_scoped_request(tmp_path: Path) ->
 
 
 def test_intervention_rejects_succeeded_downstream_without_request(tmp_path: Path) -> None:
-    fixture = build_browser_state_fixture(tmp_path / "blocked-intervention", "qa-decision")
+    fixture = build_browser_state_fixture(tmp_path / "blocked-intervention", "terminal-handoff")
     request_root = (
         fixture.workspace_root
         / "workitems"
@@ -188,11 +189,15 @@ def test_intervention_rejects_succeeded_downstream_without_request(tmp_path: Pat
         work_item=fixture.work_item,
     ) as harness, harness.open_page((1280, 900)) as browser_page:
         page = browser_page.page
-        page.goto(f"{harness.url}?ui=studio", wait_until="domcontentloaded")
-        wait_for_work_item_surface(page, fixture.work_item)
-        page.evaluate(
-            "state.activeStage = 'plan'; state.activeStageExplicit = true; fetchDashboard()"
-        )
+        with expect_rendered_surface(
+            page.locator("#intentChip").get_by_text(f"Work Item: {fixture.work_item}", exact=True),
+            state="attached",
+        ):
+            page.goto(
+                f"{harness.url}?mode=studio&work_item={fixture.work_item}"
+                f"&run_id={fixture.run_id}&stage=plan",
+                wait_until="domcontentloaded",
+            )
         page.evaluate("renderRequestChange()")
         blocked = page.locator('[data-intervention-eligible="false"]').first
         blocked.wait_for(state="visible")

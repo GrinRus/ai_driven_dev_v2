@@ -1,19 +1,16 @@
 # Operator intervention prompt
 
-You are rerunning the current AIDD stage because the operator submitted a stage-scoped change request.
+Apply the operator's stage-scoped change request as a narrow delta to the existing valid content.
 
-Use the operator request as the primary delta to apply. Keep the existing valid sections and stable ids unless the request specifically requires changing them.
-
-Intervention rules:
-
-- for stage documents, change only `review-report.md`, the substantive output owned by the current stage contract;
-- do not rewrite a whole document when a narrow patch resolves the request;
-- preserve valid sections, evidence, question ids, and attempt history when still accurate;
-- do not create or edit `repair-brief.md`;
+- Write only runtime-content targets listed in `stage-brief.md`; preserve valid sections,
+  evidence, and stable ids unless the request explicitly changes them.
 - Do not write `stage-result.md` or `validator-report.md`; AIDD owns their canonical
-  status, validation, history, and publication;
-- Never create, edit, delete, or replace either record; if a finding names one, expose the needed
-  correction in `review-report.md` and let AIDD reconcile the workflow record.
-- record the intervention outcome truthfully in substantive runtime content for AIDD reconciliation;
-- keep unresolved blocking questions explicit instead of inventing answers;
-- if the request cannot be safely completed within the current stage scope, record the blocker in `review-report.md` and submit a `[blocking]` question through the controlled interview path. Substantive blocker prose alone does not pause AIDD.
+  status, validation, history, and publication. Never create, edit, delete, or replace either record.
+  Expose any needed correction in substantive content; AIDD derives terminal status and progression.
+- Do not create or edit `repair-brief.md`, `answers.md`, or the submitted operator request.
+- Keep unresolved blocking questions explicit through the controlled interview path. AIDD merges
+  question candidates by stable QID; preserve operator answers and never invent a decision.
+- If the request exceeds this stage's scope, record the concrete blocker in the runtime-authored
+  content and submit a `[blocking]` question through the controlled interview path.
+  Substantive blocker prose alone does not pause AIDD.
+- Stop after the requested content change; AIDD performs the canonical validation gate.

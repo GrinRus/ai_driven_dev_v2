@@ -330,6 +330,7 @@ def prepare_stage_resume_after_answers(
         work_item=work_item,
         run_id=run_id,
         stage=stage,
+        attempt_mode="resume",
         contracts_root=contracts_root,
         changed_at_utc=changed_at_utc,
     )

@@ -4,8 +4,6 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
-from aidd.compatibility import legacy_prompt_pack_provenance_payload
-
 
 def _normalize_required_text(value: str, *, field_name: str) -> str:
     normalized = value.strip()
@@ -455,14 +453,21 @@ class RunArtifactIndex:
     @classmethod
     def from_dict(cls, payload: dict[str, Any]) -> RunArtifactIndex:
         prompt_pack_provenance: list[RunArtifactIndex.PromptPackProvenanceEntry] = []
-        for entry in legacy_prompt_pack_provenance_payload(payload):
+        if payload.get("schema_version") != 1:
+            raise ValueError("Unsupported artifact-index schema version.")
+        raw_provenance = payload.get("prompt_pack_provenance")
+        if not isinstance(raw_provenance, list):
+            raise ValueError("Artifact index requires a prompt_pack_provenance list.")
+        for entry in raw_provenance:
             if not isinstance(entry, dict):
-                continue
+                raise ValueError("Artifact-index prompt provenance entries must be objects.")
             parsed_entry = RunArtifactIndex.PromptPackProvenanceEntry.from_dict(entry)
             if parsed_entry is None:
-                continue
+                raise ValueError("Artifact-index prompt provenance entry is malformed.")
             prompt_pack_provenance.append(parsed_entry)
-        raw_attempt_mode = payload.get("attempt_mode")
+        if "attempt_mode" not in payload:
+            raise ValueError("Artifact index requires an attempt_mode field.")
+        raw_attempt_mode = payload["attempt_mode"]
         attempt_mode = None
         if raw_attempt_mode is not None:
             attempt_mode = str(raw_attempt_mode).strip().lower()
@@ -512,10 +517,3 @@ class RunArtifactIndex:
             "created_at_utc": self.created_at_utc,
             "updated_at_utc": self.updated_at_utc,
         }
-
-
-@dataclass(frozen=True)
-class RunRecord:
-    run_id: str
-    stage: str
-    status: str

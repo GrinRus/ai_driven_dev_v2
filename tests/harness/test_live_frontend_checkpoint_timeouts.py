@@ -194,7 +194,7 @@ def test_task_flow_public_task_view_relaunches_after_launcher_exits_before_readi
     monkeypatch.setattr(orchestration.time, "sleep", lambda _seconds: None)
     monkeypatch.setattr(
         orchestration,
-        "_steps_terminate_process",
+        "_terminate_process",
         lambda process: ("", "", process.poll()),
     )
 
@@ -246,7 +246,7 @@ def test_task_flow_public_task_view_probes_tasks_after_transient_root_refusal(
     monkeypatch.setattr(orchestration.time, "sleep", lambda _seconds: None)
     monkeypatch.setattr(
         orchestration,
-        "_steps_terminate_process",
+        "_terminate_process",
         lambda process: ("", "", process.poll()),
     )
 

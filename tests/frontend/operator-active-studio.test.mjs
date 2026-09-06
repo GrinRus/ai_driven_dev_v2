@@ -25,7 +25,6 @@ async function contextFor(dashboard) {
     },
     escapeHtml(value) { return String(value ?? ""); },
     stageTitle(stage) { return stage.toUpperCase(); },
-    stageSubtitle() { return "Clarify the request"; },
     activeStageItem() { return dashboard.stages?.[0] || null; },
     activeStageView() { return dashboard.active_stage_view || null; },
     selectedRuntimeView() { return null; },

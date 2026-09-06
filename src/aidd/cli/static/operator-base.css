@@ -35,7 +35,7 @@ textarea:focus-visible,
 }
 button {
   align-items: center;
-  background: var(--teal);
+  background: var(--cobalt);
   border: var(--control-border-width) solid var(--color-action-primary);
   border-radius: var(--radius-control);
   color: var(--color-text-inverse);
@@ -79,7 +79,7 @@ button.quick-link:not(:disabled):not([aria-disabled="true"]):hover,
 .log-filter button:not(:disabled):not([aria-disabled="true"]):hover,
 .viewer-modes button:not(:disabled):not([aria-disabled="true"]):hover {
   background: var(--color-bg-selected);
-  border-color: var(--teal);
+  border-color: var(--cobalt);
   color: var(--color-text-primary);
 }
 button.danger {
@@ -95,7 +95,7 @@ button.danger:not(:disabled):not([aria-disabled="true"]):hover {
 button.link-button {
   background: transparent;
   border: 0;
-  color: var(--teal-dark);
+  color: var(--cobalt-dark);
   min-height: var(--control-height);
   padding: 0 var(--space-2);
 }
@@ -168,7 +168,7 @@ input[type="radio"] {
 code {
   background: var(--surface-soft);
   border-radius: 4px;
-  font-family: var(--mono);
+  font-family: var(--font-mono);
   padding: 1px 4px;
 }
 

@@ -44,8 +44,5 @@ mode = "native"
 # root = "services/api"
 # role = "primary"
 
-[logging]
-mode = "both"
-
 [repair]
 max_attempts = 2

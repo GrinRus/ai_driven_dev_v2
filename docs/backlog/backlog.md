@@ -7,12 +7,13 @@ slice, and local task.
 
 ## Next
 
-- `W46-E1-S2-T4`
+- `W52-E3-S2-T1`
 
 ## Soon
 
 ## Parking lot
 
+- `W46-E1-S2-T4`
 - `W42-E7-S2-T3` — Record one genuine uncoached first-time operator observation when a participant
   and eligible environment are available; this is deferred human-usability evidence, not a pass.
 - `W43-E5-S2-T3` — Run a future cross-runtime lower-capability comparison after Codex-only alpha.
@@ -33,17 +34,13 @@ slice, and local task.
 - Remove completed tasks rather than leaving stale queue entries behind.
 - Keep one bounded current reconciliation note; Git and roadmap evidence retain history.
 - If roadmap is fully `done` and this queue is empty, reopen work using the
-  queue-restoration policy in `docs/backlog/roadmap.md` (`W8-E3-S1`).
+  queue-restoration policy in `docs/backlog/roadmap.md` (`Completed work and queue restoration`).
 
 ## Current reconciliation
 
-- `2026-09-05` Wave 51 completes the agent-development revision: runtime ownership and
-  bootstrap handling, maintainer instructions and skills, bounded planning, and instruction
-  validation are reconciled. Upstream Wave 47 Focus Canvas completion and its live acceptance
-  evidence are preserved in the dated archive. Waves 48–50 retain their accepted remediation
-  identities. `W46-E1-S2-T4` remains the sole Next task for its provider-free Chromium
-  verification; parked human/provider evidence remains deferred.
-
-Earlier reconciliation evidence is retained in
-[the dated archive](reconciliation-history-2026-09-05.md). Keep this section to one current
-reconciliation entry and at most 40 lines; archive prior entries before replacing it.
+- `2026-09-06` Wave 52 removes approved historical documentation and obsolete compatibility.
+  Integration with `191dfb16` preserves Focus Canvas, runtime failure fixes, instruction
+  checks, and all eight pending operator/browser/provider tasks. Current integration
+  verification remains active. Newly integrated unused adapter and validator helpers have
+  separate follow-up PR tasks; the unrelated browser task returns to Next after cleanup.
+  Earlier completed task records and reconciliation are available in Git history.

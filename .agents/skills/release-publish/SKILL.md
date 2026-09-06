@@ -234,7 +234,7 @@ Post-release version wording guardrail:
 
 - The next `.dev0` source version belongs in `pyproject.toml`, `uv.lock`, and
   maintainer/release-state docs such as `docs/release-checklist.md`,
-  beta-readiness audits, or distribution policy docs.
+  or distribution policy docs.
 - Do not publish, install, or advertise the next `.dev0` source version as the latest or
   current release.
 - README install guidance resolves the latest published package from PyPI without

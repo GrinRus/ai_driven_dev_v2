@@ -8,8 +8,8 @@ from playwright.sync_api import Page, sync_playwright
 
 from browser_tests.browser_harness import (
     VIEWPORTS,
+    expect_rendered_surface,
     operator_browser_harness,
-    wait_for_work_item_surface,
 )
 from browser_tests.journey_support import configure_sleeping_fixture_runtime
 from browser_tests.rendered_assertions import assert_accessible_render
@@ -24,16 +24,14 @@ def _assert_rendered_gate(page: Page, viewport: tuple[int, int]) -> None:
     assert_rendered_geometry(page)
 
 
-@pytest.mark.parametrize("selector", ("studio", "legacy"))
 @pytest.mark.parametrize("blocked", (False, True))
-def test_intervention_parity_preserves_allowed_and_blocked_service_paths(
+def test_intervention_preserves_allowed_and_blocked_service_paths(
     tmp_path: Path,
-    selector: str,
     blocked: bool,
 ) -> None:
     fixture = build_browser_state_fixture(
-        tmp_path / f"intervention-parity-{selector}-{blocked}",
-        "qa-decision" if blocked else "blocking-question",
+        tmp_path / f"intervention-service-{blocked}",
+        "terminal-handoff" if blocked else "blocking-question",
     )
     if not blocked:
         configure_sleeping_fixture_runtime(fixture.project_root, sleep_seconds=20)
@@ -52,12 +50,16 @@ def test_intervention_parity_preserves_allowed_and_blocked_service_paths(
         work_item=fixture.work_item,
     ) as harness, harness.open_page((1280, 900)) as browser_page:
         page = browser_page.page
-        page.goto(f"{harness.url}?ui={selector}", wait_until="networkidle")
-        if blocked:
-            page.evaluate(
-                "state.activeStage = 'plan'; state.activeStageExplicit = true; fetchDashboard()"
+        with expect_rendered_surface(
+            page.locator("#intentChip").get_by_text(f"Work Item: {fixture.work_item}", exact=True),
+            state="attached",
+        ):
+            page.goto(
+                f"{harness.url}?mode=studio&work_item={fixture.work_item}"
+                f"&run_id={fixture.run_id}&stage={stage}",
+                wait_until="domcontentloaded",
             )
-        else:
+        if not blocked:
             page.locator("#runtimeSettings").evaluate("node => { node.open = true; }")
             page.locator("#runtimeSelect").select_option("generic-cli")
             page.wait_for_function("eval('selectedRuntimeReady()')", timeout=15_000)
@@ -66,6 +68,8 @@ def test_intervention_parity_preserves_allowed_and_blocked_service_paths(
             f'[data-intervention-eligible="{"false" if blocked else "true"}"]'
         ).first
         eligible.wait_for(state="visible")
+        assert eligible.get_attribute("data-intervention-stage") == stage
+        assert eligible.get_attribute("data-intervention-run") == fixture.run_id
 
         if blocked:
             assert page.locator("#submitInterventionButton").is_disabled()
@@ -118,7 +122,11 @@ def test_allowed_intervention_restores_draft_and_creates_one_request(
         work_item=fixture.work_item,
     ) as harness, harness.open_page(viewport) as browser_page:
         page = browser_page.page
-        page.goto(f"{harness.url}?ui=studio", wait_until="networkidle")
+        with expect_rendered_surface(
+            page.locator("#intentChip").get_by_text(f"Work Item: {fixture.work_item}", exact=True),
+            state="attached",
+        ):
+            page.goto(harness.url, wait_until="domcontentloaded")
         page.locator("#runtimeSettings").evaluate("node => { node.open = true; }")
         page.locator("#runtimeSelect").select_option("generic-cli")
         page.wait_for_function("eval('selectedRuntimeReady()')", timeout=15_000)
@@ -131,7 +139,11 @@ def test_allowed_intervention_restores_draft_and_creates_one_request(
 
         request = page.locator("#operatorRequestText")
         request.fill("Update only the current stage evidence and preserve public contracts.")
-        page.reload(wait_until="networkidle")
+        with expect_rendered_surface(
+            page.locator("#intentChip").get_by_text(f"Work Item: {fixture.work_item}", exact=True),
+            state="attached",
+        ):
+            page.reload(wait_until="domcontentloaded")
         page.evaluate("setOperatorMode('request'); renderCockpitContent()")
         request = page.locator("#operatorRequestText")
         request.wait_for(state="visible")
@@ -223,7 +235,7 @@ def test_downstream_success_blocks_intervention_without_creating_request(
 ) -> None:
     fixture = build_browser_state_fixture(
         tmp_path / f"intervention-blocked-{viewport[0]}",
-        "qa-decision",
+        "terminal-handoff",
     )
     request_root = (
         fixture.workspace_root
@@ -240,11 +252,15 @@ def test_downstream_success_blocks_intervention_without_creating_request(
         work_item=fixture.work_item,
     ) as harness, harness.open_page(viewport) as browser_page:
         page = browser_page.page
-        page.goto(f"{harness.url}?ui=studio", wait_until="domcontentloaded")
-        wait_for_work_item_surface(page, fixture.work_item)
-        page.evaluate(
-            "state.activeStage = 'plan'; state.activeStageExplicit = true; fetchDashboard()"
-        )
+        with expect_rendered_surface(
+            page.locator("#intentChip").get_by_text(f"Work Item: {fixture.work_item}", exact=True),
+            state="attached",
+        ):
+            page.goto(
+                f"{harness.url}?mode=studio&work_item={fixture.work_item}"
+                f"&run_id={fixture.run_id}&stage=plan",
+                wait_until="domcontentloaded",
+            )
         page.evaluate("setOperatorMode('request'); renderCockpitContent()")
         blocked = page.locator('[data-intervention-eligible="false"]').first
         blocked.wait_for(state="visible")

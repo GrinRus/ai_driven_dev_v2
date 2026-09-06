@@ -22,7 +22,7 @@ def test_studio_runtime_readiness_is_dimensioned_and_scope_truthful(tmp_path: Pa
         playwright,
         work_item=fixture.work_item,
     ) as harness, harness.open_page((1280, 900)) as browser_page:
-        browser_page.page.goto(f"{harness.url}?ui=studio", wait_until="networkidle")
+        browser_page.page.goto(harness.url, wait_until="networkidle")
         browser_page.page.locator("#runtimeSettings").evaluate("node => { node.open = true; }")
         browser_page.page.locator("#runtimeSelect").select_option("generic-cli")
         browser_page.page.wait_for_timeout(100)

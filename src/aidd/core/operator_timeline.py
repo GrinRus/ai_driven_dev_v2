@@ -352,11 +352,8 @@ def _frame_metadata(
         attempt_number=frame.attempt_number,
         attempt_root=attempt_root,
     )
-    # Task/finalization attempts own their lifecycle timestamps.  Falling back to the
-    # run manifest for those frames makes every nested attempt inherit the full run
-    # duration (and was the source of repeated multi-hour values in History).  Stage
-    # attempts retain the manifest fallback for legacy artifact indexes that predate
-    # per-attempt timestamps.
+    # Attempt timing comes only from attempt-owned evidence. Run timestamps do not
+    # describe the duration of an individual attempt.
     local_payloads = (
         state,
         finalization_state,
@@ -364,11 +361,7 @@ def _frame_metadata(
         artifact_index,
     )
     payloads = (*local_payloads, *referenced_task_payloads)
-    if frame.kind == "stage-attempt":
-        payloads = (*payloads, manifest)
-    timestamp_payloads = (
-        (*local_payloads, manifest) if frame.kind == "stage-attempt" else local_payloads
-    )
+    timestamp_payloads = local_payloads
     started_at = _first_text(
         timestamp_payloads,
         ("started_at_utc", "created_at_utc", "start_time_utc", "started_at"),

@@ -12,10 +12,11 @@ from aidd.core.operator_frontend_validation import load_validator_report_finding
 from aidd.core.repair import (
     count_stage_attempts,
     evaluate_repair_extension_eligibility,
+    load_stage_attempt_modes,
     repair_attempts_used,
 )
 from aidd.core.run_inspection import StageResultSummary, resolve_run_metadata_summary
-from aidd.core.run_store import load_attempt_artifact_index, load_stage_metadata
+from aidd.core.run_store import load_stage_metadata
 from aidd.core.stage_paths import workspace_relative_path
 from aidd.core.stages import STAGES
 from aidd.core.workspace import stage_root
@@ -59,30 +60,6 @@ def _stage_result_has_exhaustion_marker(
     except OSError:
         return False
     return "repair-budget-exhausted" in text or "repair budget exhausted" in text
-
-
-def _attempt_modes(
-    *,
-    workspace_root: Path,
-    work_item: str,
-    run_id: str,
-    stage: str,
-    attempt_count: int,
-) -> tuple[str | None, ...]:
-    modes: list[str | None] = []
-    for attempt_number in range(1, attempt_count + 1):
-        try:
-            index = load_attempt_artifact_index(
-                workspace_root=workspace_root,
-                work_item=work_item,
-                run_id=run_id,
-                stage=stage,
-                attempt_number=attempt_number,
-            )
-        except (OSError, ValueError, KeyError, TypeError):
-            index = None
-        modes.append(None if index is None else index.attempt_mode)
-    return tuple(modes)
 
 
 def _downstream_succeeded(
@@ -232,9 +209,7 @@ def resolve_operator_repair_extension_preview(
     validator_path_value = _relative_existing_path(
         workspace_root=workspace_root, path=validator_path
     )
-    repair_path_value = _relative_existing_path(
-        workspace_root=workspace_root, path=repair_path
-    )
+    repair_path_value = _relative_existing_path(workspace_root=workspace_root, path=repair_path)
     findings = load_validator_report_findings(
         workspace_root=workspace_root,
         validator_report_path=validator_path_value,
@@ -248,12 +223,12 @@ def resolve_operator_repair_extension_preview(
     )
     used = repair_attempts_used(
         stage_attempt_count=attempt_count,
-        attempt_modes=_attempt_modes(
+        attempt_modes=load_stage_attempt_modes(
             workspace_root=workspace_root,
             work_item=work_item,
             run_id=run_id,
             stage=stage,
-            attempt_count=attempt_count,
+            stage_attempt_count=attempt_count,
         ),
     )
     maximum = max_repair_attempts

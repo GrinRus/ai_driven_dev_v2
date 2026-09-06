@@ -188,8 +188,8 @@ runner uses a real global flow timeout; per-stage command budgets are visible in
 Full command stdout and stderr are stored once in content-addressed
 `command-evidence/<sha256>.json` records. Flow steps, lifecycle transcripts, the grader,
 and the aggregate transcript carry the bundle-relative pointer, digest, exit code,
-duration, and bounded previews. Readers continue to accept legacy inline command output,
-but new reports must not create another complete copy.
+duration, and bounded previews. Readers require these references and reject retired inline
+command-output copies. Bundle paths must be relative and digest-verified.
 
 ## 8. Log analysis requirements
 

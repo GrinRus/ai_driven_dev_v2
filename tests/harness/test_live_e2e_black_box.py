@@ -15,11 +15,6 @@ import yaml
 from aidd.core.stages import STAGES
 from aidd.harness import live_e2e_black_box_orchestration as live_orchestration
 from aidd.harness.install_artifact import HarnessInstallResult
-from aidd.harness.live_e2e_black_box import (
-    _harness_environment,
-    _implementation_verification_evidence_shape,
-    run_black_box_live_e2e,
-)
 from aidd.harness.live_e2e_black_box_orchestration import (
     BlackBoxCommandResult,
     BlackBoxLiveE2EResult,
@@ -27,9 +22,12 @@ from aidd.harness.live_e2e_black_box_orchestration import (
     _find_resume_state,
     _frontend_operator_surface_checks,
     _frontend_probe_targets,
+    _harness_environment,
+    _implementation_verification_evidence_shape,
     _live_interruption_handlers,
     _next_flow_complete_visible,
     _run_black_box_command,
+    run_black_box_live_e2e,
 )
 from aidd.harness.runner import HarnessCommandTranscript
 from aidd.harness.scenarios import load_scenario
@@ -1320,7 +1318,7 @@ def _prepare_live_test(
         no_progress_timeout_minutes=no_progress_timeout_minutes,
     )
     monkeypatch.setattr(
-        "aidd.harness.live_e2e_black_box.prepare_local_wheel_install",
+        "aidd.harness.live_e2e_black_box_orchestration.prepare_local_wheel_install",
         lambda *, work_root, run_id, repository_root: _install_result_for_fake_aidd(
             fake_aidd
         ),
@@ -3017,7 +3015,6 @@ def test_black_box_live_product_evaluation_writes_navigation_bundle_summary(
         "quality_reviewed": False,
         "counted_clean": False,
         "manual_quality_stop": False,
-        "legacy_degraded": False,
         "not_clean_reasons": ["manual quality evidence is incomplete"],
     }
     assert [
@@ -3087,7 +3084,6 @@ def test_black_box_live_product_evaluation_writes_navigation_bundle_summary(
         "quality_reviewed": True,
         "counted_clean": True,
         "manual_quality_stop": False,
-        "legacy_degraded": False,
         "not_clean_reasons": [],
     }
     assert (refreshed.bundle_root / "verdict.md").read_bytes() == verdict_before
@@ -3703,7 +3699,7 @@ def test_black_box_live_e2e_adds_suffix_when_generated_run_id_exists(
         monkeypatch,
     )
     monkeypatch.setattr(
-        "aidd.harness.live_e2e_black_box.derive_run_id",
+        "aidd.harness.live_e2e_black_box_orchestration.derive_run_id",
         lambda *, scenario_id, runtime_id: "fixed-live-run",
     )
 
@@ -4862,7 +4858,7 @@ def test_black_box_live_e2e_reports_install_failure(
         raise RuntimeError("install failed")
 
     monkeypatch.setattr(
-        "aidd.harness.live_e2e_black_box.prepare_local_wheel_install",
+        "aidd.harness.live_e2e_black_box_orchestration.prepare_local_wheel_install",
         _fail_install,
     )
 

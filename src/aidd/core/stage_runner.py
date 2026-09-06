@@ -38,6 +38,7 @@ from aidd.core.stage_invocation import (
     ATTEMPT_REPAIR_CONTEXT_FILENAME,
     historical_repair_brief_trace_path,
     prepare_adapter_invocation,
+    resolve_next_stage_attempt_mode,
     restore_core_owned_repair_brief,
 )
 from aidd.core.stage_models import (
@@ -696,11 +697,7 @@ def _terminalize_unhandled_post_execution_exception(
             f"{type(cleanup_error).__name__}: {cleanup_error}"
         )
         artifact_index = None
-    attempt_mode = (
-        "initial"
-        if artifact_index is None or artifact_index.attempt_mode is None
-        else artifact_index.attempt_mode
-    )
+    attempt_mode = None if artifact_index is None else artifact_index.attempt_mode
     execution_state = StageExecutionState(
         stage=stage,
         work_item=work_item,
@@ -743,6 +740,12 @@ def _terminalize_unhandled_post_execution_exception(
             "Could not write post-execution exception evidence: "
             f"{type(cleanup_error).__name__}: {cleanup_error}"
         )
+    if attempt_mode is None:
+        exception.add_note(
+            "Cannot write terminal records without a valid recorded attempt_mode; "
+            "the failed lifecycle state and original exception evidence are retained."
+        )
+        return
     try:
         _write_canonical_stage_result(
             workspace_root=workspace_root,
@@ -855,6 +858,14 @@ def _run_single_stage_orchestration(
         work_item=work_item,
         run_id=run_id,
         stage=stage,
+        attempt_mode=resolve_next_stage_attempt_mode(
+            workspace_root=workspace_root,
+            work_item=work_item,
+            run_id=run_id,
+            stage=stage,
+            intervention_mode=intervention_request_path is not None,
+            resume_mode=resume_mode,
+        ),
         contracts_root=contracts_root,
         changed_at_utc=changed_at_utc,
     )
@@ -1129,7 +1140,7 @@ def _run_single_stage_orchestration(
             )
             / "stage-result.md"
         )
-    bootstrap_stage_result = prepare_bootstrap_stage_result_for_validation(
+    prepare_bootstrap_stage_result_for_validation(
         workspace_root=workspace_root, work_item=work_item, stage=stage,
     )
     validation_result = run_structural_validation_after_output_discovery(
@@ -1164,26 +1175,25 @@ def _run_single_stage_orchestration(
             findings=(*validation_result.findings, *interview_findings),
         )
     if not validation_result.findings and not interview_routing.requires_interview:
-        if bootstrap_stage_result:
-            # The recognized bootstrap record belongs to AIDD, not to the runtime. Render
-            # its complete lifecycle record before validating it; substantive findings and
-            # non-placeholder runtime drafts still follow the existing validation path.
-            metadata = load_stage_metadata(
-                workspace_root=workspace_root, work_item=work_item, run_id=run_id, stage=stage
-            )
-            _write_canonical_stage_result(
-                workspace_root=workspace_root,
-                execution_state=execution_state,
-                lifecycle_status=StageState.SUCCEEDED,
-                attempt_mode=adapter_invocation.attempt_mode,
-                attempt_outcome="succeeded",
-                repair_history=() if metadata is None else metadata.repair_history,
-                produced_output_paths=discovery.discovered_markdown_documents,
-                missing_output_paths=discovery.missing_markdown_documents,
-                validator_verdict="pass",
-                validator_report_path=validation_result.validator_report_path,
-                repair_brief_path=repair_brief_trace_path,
-            )
+        candidate_metadata = load_stage_metadata(
+            workspace_root=workspace_root,
+            work_item=work_item,
+            run_id=run_id,
+            stage=stage,
+        )
+        _write_canonical_stage_result(
+            workspace_root=workspace_root,
+            execution_state=execution_state,
+            lifecycle_status=StageState.SUCCEEDED,
+            attempt_mode=adapter_invocation.attempt_mode,
+            attempt_outcome="content validation passed; terminal result validation pending",
+            repair_history=() if candidate_metadata is None else candidate_metadata.repair_history,
+            produced_output_paths=discovery.discovered_markdown_documents,
+            missing_output_paths=discovery.missing_markdown_documents,
+            validator_verdict=ValidationVerdict.PASS.value,
+            validator_report_path=validation_result.validator_report_path,
+            repair_brief_path=repair_brief_trace_path,
+        )
         final_stage_result_findings = reconcile_and_validate_stage_result_after_validation_pass(
             workspace_root=workspace_root,
             work_item=work_item,

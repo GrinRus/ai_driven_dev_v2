@@ -15,7 +15,7 @@ def test_studio_evidence_inspector_is_value_conditional(tmp_path: Path) -> None:
         playwright,
         work_item=no_run.work_item,
     ) as harness, harness.open_page((1280, 900)) as browser_page:
-        browser_page.page.goto(f"{harness.url}?ui=studio", wait_until="networkidle")
+        browser_page.page.goto(harness.url, wait_until="networkidle")
         assert browser_page.page.locator("#studioEvidenceInspector:visible").count() == 0
         browser_page.diagnostics.assert_clean()
 
@@ -25,7 +25,7 @@ def test_studio_evidence_inspector_is_value_conditional(tmp_path: Path) -> None:
         playwright,
         work_item=qa.work_item,
     ) as harness, harness.open_page((1280, 900)) as browser_page:
-        browser_page.page.goto(f"{harness.url}?ui=studio", wait_until="networkidle")
+        browser_page.page.goto(harness.url, wait_until="networkidle")
         inspector = browser_page.page.locator("#studioEvidenceInspector:visible")
         inspector.wait_for(state="visible")
         assert inspector.locator("[data-inspector-section]").count() > 0

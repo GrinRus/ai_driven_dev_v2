@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import re
-from pathlib import Path
 
 from aidd.validators.models import ValidationFinding, ValidationIssueLocation
 from aidd.validators.semantic_rules.common import (
@@ -26,6 +25,7 @@ from aidd.validators.semantic_rules.common import (
     is_risk_metadata_entry,
     validate_placeholder_sections,
     validate_setup_ignored_workspace_status_evidence,
+    work_item_root_from_output_path,
 )
 from aidd.validators.task_evidence import validate_aggregate_task_evidence
 
@@ -327,16 +327,8 @@ def _validate_setup_ready_workspace_hygiene_evidence(
     )
 
 
-def _work_item_root_from_output_path(output_path: Path) -> Path | None:
-    parts = output_path.parts
-    for index, part in enumerate(parts):
-        if part == "workitems" and index + 1 < len(parts):
-            return Path(*parts[: index + 2])
-    return None
-
-
 def _acceptance_criteria_ids(context: SemanticDocumentContext) -> tuple[str, ...]:
-    work_item_root = _work_item_root_from_output_path(context.output_path)
+    work_item_root = work_item_root_from_output_path(context.output_path)
     if work_item_root is None:
         return tuple()
 

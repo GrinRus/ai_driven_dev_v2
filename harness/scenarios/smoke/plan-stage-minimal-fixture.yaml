@@ -20,7 +20,7 @@ setup:
     root = ".aidd"
 
     [runtime.generic_cli]
-    command = "env AIDD_FIXTURE_SUBSTANTIVE_ONLY=1 python3 ../aidd_fixture_runtime.py"
+    command = "python3 ../aidd_fixture_runtime.py"
     TOML
 aidd_invocation:
   work_item: WI-SMOKE-PLAN

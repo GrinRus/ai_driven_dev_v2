@@ -16,7 +16,7 @@ def test_studio_document_canvas_uses_safe_workbench_for_all_reader_modes(tmp_pat
         playwright,
         work_item=fixture.work_item,
     ) as harness, harness.open_page((1280, 900)) as browser_page:
-        response = browser_page.page.goto(f"{harness.url}?ui=studio", wait_until="networkidle")
+        response = browser_page.page.goto(harness.url, wait_until="networkidle")
         assert response is not None and response.ok
         progress = browser_page.page.locator(".studio-workflow-progress")
         assert progress.get_attribute("open") is None

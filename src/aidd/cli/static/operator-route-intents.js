@@ -44,8 +44,3 @@ function resolveOperatorRouteIntent(intent, context = {}) {
     })
   });
 }
-
-function operatorRouteIntentHref(intent, context = {}) {
-  const resolved = resolveOperatorRouteIntent(intent, context);
-  return `/${encodeOperatorRoute(resolved.route)}`;
-}

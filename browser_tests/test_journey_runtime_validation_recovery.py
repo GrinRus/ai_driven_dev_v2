@@ -66,7 +66,7 @@ def test_runtime_failures_show_exact_durable_signal_without_mutation(
                     if request.method == "POST"
                     else None,
                 )
-                page.goto(f"{harness.url}?ui=studio", wait_until="domcontentloaded")
+                page.goto(harness.url, wait_until="domcontentloaded")
                 wait_for_work_item_surface(page, fixture.work_item)
                 _open_recovery(page)
 
@@ -117,7 +117,7 @@ def test_validation_recovery_exposes_one_eligible_primary_action(
         for viewport in VIEWPORTS:
             with harness.open_page(viewport) as browser_page:
                 page = browser_page.page
-                page.goto(f"{harness.url}?ui=studio", wait_until="domcontentloaded")
+                page.goto(harness.url, wait_until="domcontentloaded")
                 wait_for_work_item_surface(page, fixture.work_item)
                 page.evaluate(
                     "async () => {"
@@ -150,7 +150,7 @@ def test_runtime_recovery_keeps_retry_single_and_separate_from_summary(
         work_item=fixture.work_item,
     ) as harness, harness.open_page(viewport) as browser_page:
         page = browser_page.page
-        page.goto(f"{harness.url}?ui=studio", wait_until="domcontentloaded")
+        page.goto(harness.url, wait_until="domcontentloaded")
         wait_for_work_item_surface(page, fixture.work_item)
         _open_recovery(page)
         runtime = page.locator('[data-recovery-kind="runtime"]')
@@ -167,54 +167,67 @@ def test_runtime_recovery_keeps_retry_single_and_separate_from_summary(
     ("fixture_state", "stage"),
     (("runtime-failure", "idea"), ("validation-repair-exhausted", "plan")),
 )
-def test_runtime_validation_recovery_parity_preserves_durable_read_models(
+def test_runtime_validation_recovery_exposes_durable_evidence(
     tmp_path: Path,
     fixture_state: str,
     stage: str,
 ) -> None:
     fixture = build_browser_state_fixture(tmp_path / fixture_state, fixture_state)
-    snapshots: list[dict[str, object]] = []
     with sync_playwright() as playwright, operator_browser_harness(
         fixture.project_root,
         playwright,
         work_item=fixture.work_item,
-    ) as harness:
-        for selector in ("", "?ui=legacy", "?ui=studio", "?ui=unknown"):
-            with harness.open_page((1280, 900)) as browser_page:
-                page = browser_page.page
-                page.goto(f"{harness.url}{selector}", wait_until="domcontentloaded")
-                wait_for_work_item_surface(page, fixture.work_item)
-                page.evaluate(
-                    "async (stage) => {"
-                    "  state.activeStage = stage;"
-                    "  state.activeStageExplicit = true;"
-                    "  await fetchDashboard();"
-                    "}",
-                    stage,
-                )
-                _open_recovery(page)
-                snapshots.append(
-                    page.evaluate(
-                        "() => {"
-                        "  const view = activeStageView();"
-                        "  const diagnostics = view?.diagnostics || {};"
-                        "  const primary = document.querySelector("
-                        "    '[data-primary-recovery-slot] button'"
-                        "  );"
-                        "  return {"
-                        "    first_failure: state.dashboard?.first_failure || null,"
-                        "    validation: diagnostics.validation || null,"
-                        "    raw_log: diagnostics.raw_log || null,"
-                        "    request_change: diagnostics.request_change || null,"
-                        "    evidence_path: document.querySelector("
-                        "      '[data-recovery-summary] [data-evidence-path]'"
-                        "    )?.dataset.evidencePath || null,"
-                        "    primary_action: primary?.dataset.recoveryAction || null,"
-                        "    primary_stage: primary?.dataset.recoveryStage || null"
-                        "  };"
-                        "}"
-                    )
-                )
-                browser_page.diagnostics.assert_clean()
-
-    assert snapshots[1:] == snapshots[:1] * 3
+    ) as harness, harness.open_page((1280, 900)) as browser_page:
+        page = browser_page.page
+        page.goto(harness.url, wait_until="domcontentloaded")
+        wait_for_work_item_surface(page, fixture.work_item)
+        page.evaluate(
+            "async (stage) => {"
+            "  state.activeStage = stage;"
+            "  state.activeStageExplicit = true;"
+            "  await fetchDashboard();"
+            "}",
+            stage,
+        )
+        _open_recovery(page)
+        snapshot = page.evaluate(
+            "() => {"
+            "  const view = activeStageView();"
+            "  const diagnostics = view?.diagnostics || {};"
+            "  const primary = document.querySelector("
+            "    '[data-primary-recovery-slot] button'"
+            "  );"
+            "  return {"
+            "    first_failure: state.dashboard?.first_failure || null,"
+            "    validation: diagnostics.validation || null,"
+            "    raw_log: diagnostics.raw_log || null,"
+            "    request_change: diagnostics.request_change || null,"
+            "    evidence_path: document.querySelector("
+            "      '[data-recovery-summary] [data-evidence-path]'"
+            "    )?.dataset.evidencePath || null,"
+            "    primary_action: primary?.dataset.recoveryAction || null,"
+            "    primary_stage: primary?.dataset.recoveryStage || null"
+            "  };"
+            "}"
+        )
+        assert snapshot["first_failure"]["stage"] == stage
+        assert snapshot["raw_log"]["path"].endswith("runtime.log")
+        assert (fixture.workspace_root / snapshot["raw_log"]["path"]).is_file()
+        assert snapshot["request_change"]["latest_request_id"] is None
+        if fixture_state == "runtime-failure":
+            assert (fixture.workspace_root / snapshot["evidence_path"]).is_file()
+            assert snapshot["first_failure"]["kind"] == "provider_error"
+            assert snapshot["validation"]["validator_fail_count"] == 0
+            assert snapshot["primary_action"] is None
+        else:
+            assert snapshot["first_failure"]["kind"] == "validation-failed"
+            assert snapshot["validation"]["validator_fail_count"] == 1
+            finding = snapshot["validation"]["primary_validation_finding"]
+            assert snapshot["evidence_path"] == f"{finding['path']}:{finding['line_number']}"
+            assert (fixture.workspace_root / finding["path"]).is_file()
+            repair_extension = snapshot["validation"]["repair_extension"]
+            assert repair_extension["automatic_repair_attempts_used"] == 2
+            assert repair_extension["automatic_repair_attempts_remaining"] == 0
+            assert snapshot["primary_action"] == "repair-extension"
+            assert snapshot["primary_stage"] == stage
+        browser_page.diagnostics.assert_clean()

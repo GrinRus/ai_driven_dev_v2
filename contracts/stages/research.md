@@ -17,7 +17,7 @@ and `validator-report.md` are AIDD-generated workflow records. The runtime must 
 or edit either record in initial, repair, or intervention attempts. It writes only substantive
 runtime content and exposes evidence for AIDD reconciliation. If a blocker prevents completion,
 it must submit a `[blocking]` question through the controlled interview path; blocker prose alone
-does not pause AIDD. The primary-output list above is the published compatibility view, not a
+does not pause AIDD. The primary-output list above is the published artifact view, not a
 grant of runtime write authority.
 
 Conditional outputs:

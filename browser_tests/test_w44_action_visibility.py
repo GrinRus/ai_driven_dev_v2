@@ -31,7 +31,7 @@ def test_inbox_does_not_require_or_render_a_runner(tmp_path: Path) -> None:
         work_item=fixture.work_item,
     ) as harness, harness.open_page((1280, 900)) as browser_page:
         page = browser_page.page
-        page.goto(f"{harness.url}?ui=studio", wait_until="networkidle")
+        page.goto(harness.url, wait_until="networkidle")
         page.locator("#projectInboxButton").click()
         page.locator(".studio-inbox").wait_for(state="visible")
         _assert_non_launch_surface_has_no_global_launch(page)

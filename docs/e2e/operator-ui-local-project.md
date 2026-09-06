@@ -405,8 +405,8 @@ evidence. Inbox and History renderers bind these intents; they do not construct 
 variants. Archived runs retain both history and artifact intents because navigation is
 read-only and does not alter the completed run.
 
-Writers emit only that canonical form. Readers temporarily accept legacy `tab` and `key`
-aliases, report the legacy source, and normalize them without mutation. Invalid identifiers,
+Writers and readers use only that canonical form. Retired `tab` and `key` query aliases
+are unsupported and are not converted into current navigation state. Invalid identifiers,
 unknown stages, path-like artifact values, conflicting attempt/task-attempt detail, and stale
 known work-item/run ids are dropped with stable warnings. History without a valid run falls
 back to Studio when the work item survives and otherwise to Inbox.
@@ -440,7 +440,7 @@ through the public UI state builder before browser acceptance.
 | Target reference | Route fixture | Route query |
 | --- | --- | --- |
 | `01-project-work-items.png` | `no-run` | `?mode=inbox` |
-| `02-create-work-item.png` | `setup` | `?ui=studio` |
+| `02-create-work-item.png` | `setup` | `/` |
 | `03-work-item-launch.png` | `no-run` | `?mode=studio&work_item=WI-BROWSER&view=overview` |
 | `04-task-workspace.png` | `implementation-finalized` | `?mode=studio&work_item=WI-BROWSER&run_id=run-browser&stage=implement&work_tab=tasks` |
 | `05-active-task-run.png` | `running` | `?mode=studio&work_item=WI-BROWSER&run_id=run-browser&stage=idea&attempt=1` |

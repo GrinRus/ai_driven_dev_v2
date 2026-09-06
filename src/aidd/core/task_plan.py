@@ -128,12 +128,6 @@ class TaskPlanParseIssue:
     missing_fields: tuple[str, ...] = ()
     relation: TaskPlanIssueRelation = TaskPlanIssueRelation.ROOT
 
-    @property
-    def source_line_number(self) -> int | None:
-        """Alias used by evidence consumers that call the location a source line."""
-
-        return self.line_number
-
     def __str__(self) -> str:
         return self.message
 
@@ -160,13 +154,8 @@ def _issue(
 
 
 class TaskPlanParseError(ValueError):
-    def __init__(self, issues: tuple[TaskPlanParseIssue | str, ...]) -> None:
-        self.issues = tuple(
-            issue
-            if isinstance(issue, TaskPlanParseIssue)
-            else _issue("legacy", issue)
-            for issue in issues
-        )
+    def __init__(self, issues: tuple[TaskPlanParseIssue, ...]) -> None:
+        self.issues = issues
         self.messages = tuple(issue.message for issue in self.issues)
         super().__init__("Invalid tasklist: " + "; ".join(self.messages))
 

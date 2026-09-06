@@ -11,22 +11,20 @@ from aidd.evals.log_analysis import (
     parse_validator_report_failures,
     parse_validator_report_failures_text,
 )
+from aidd.validators.models import ValidationFinding, ValidationIssueLocation
 from aidd.validators.protocol import ValidatorReportProtocolError
+from aidd.validators.reports import render_validator_report
 
 
 def test_parse_validator_report_failures_extracts_findings() -> None:
-    report_text = "\n".join(
+    report_text = render_validator_report(
         (
-            "# Validator Report",
-            "",
-            "## Structural checks",
-            "",
-            "- `STRUCT-MISSING-REQUIRED-SECTION` (`high`) in "
-            "`workitems/WI-001/stages/qa/stage-result.md`: missing section",
-            "",
-            "## Result",
-            "",
-            "- Verdict: `fail`",
+            ValidationFinding(
+                code="STRUCT-MISSING-REQUIRED-SECTION",
+                severity="high",
+                location=ValidationIssueLocation("workitems/WI-001/stages/qa/stage-result.md"),
+                message="missing section",
+            ),
         )
     )
 
@@ -35,34 +33,28 @@ def test_parse_validator_report_failures_extracts_findings() -> None:
     assert len(events) == 1
     assert events[0].category == "validator"
     assert "STRUCT-MISSING-REQUIRED-SECTION (high)" in events[0].message
-    assert events[0].line_number == 5
+    assert report_text.splitlines()[events[0].line_number - 1].startswith("- `STRUCT-")
 
 
-def test_parse_validator_report_failures_uses_verdict_when_findings_missing() -> None:
-    events = parse_validator_report_failures_text(
-        "# Validator Report\n\n## Result\n\n- Verdict: `fail`\n"
-    )
-
-    assert len(events) == 1
-    assert events[0].category == "validator"
-    assert events[0].message == "validator report verdict is fail"
+def test_parse_validator_report_failures_rejects_verdict_without_findings() -> None:
+    report = render_validator_report(()).replace("- Verdict: `pass`", "- Verdict: `fail`")
+    with pytest.raises(ValidatorReportProtocolError, match="requires at least one"):
+        parse_validator_report_failures_text(report)
 
 
-def test_log_analysis_reader_accepts_declared_legacy_vocabulary() -> None:
-    events = parse_validator_report_failures_text(
-        "## Structural checks\n\n"
-        "- `STRUCT-MISSING-DOCUMENT` (`high`) in `plan.md`: missing.\n\n"
-        "## Result\n\n- Validator verdict: `fail`\n"
-    )
-
-    assert "STRUCT-MISSING-REQUIRED-DOCUMENT" in events[0].message
+def test_log_analysis_reader_rejects_retired_protocol_vocabulary() -> None:
+    with pytest.raises(ValidatorReportProtocolError):
+        parse_validator_report_failures_text(
+            "## Structural checks\n\n"
+            "- `STRUCT-MISSING-DOCUMENT` (`high`) in `plan.md`: missing.\n\n"
+            "## Result\n\n- Validator verdict: `fail`\n"
+        )
 
 
 def test_log_analysis_reader_rejects_unknown_protocol_code() -> None:
     with pytest.raises(ValidatorReportProtocolError):
         parse_validator_report_failures_text(
-            "## Semantic checks\n\n"
-            "- `SEM-UNKNOWN-CODE` (`high`) in `plan.md`: unknown.\n"
+            "## Semantic checks\n\n- `SEM-UNKNOWN-CODE` (`high`) in `plan.md`: unknown.\n"
         )
 
 

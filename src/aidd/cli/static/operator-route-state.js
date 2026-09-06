@@ -37,37 +37,21 @@ function routeAttempt(params, field, warnings) {
   return Number(value);
 }
 
-function inferredLegacyMode(params) {
-  const tab = String(params.get("tab") || "").trim();
-  if (tab === "history") return "history";
-  if (tab || params.has("stage") || params.has("run_id") || params.has("key")) {
-    return "studio";
-  }
-  return "inbox";
-}
-
-function inferredLegacyView(params) {
-  const tab = String(params.get("tab") || "").trim();
-  if (["logs", "artifacts"].includes(tab)) return tab;
-  if (tab === "evidence") return "artifacts";
-  if (["questions", "validation", "approvals", "request", "recovery"].includes(tab)) {
-    return "recovery";
-  }
-  return "overview";
-}
-
 function decodeOperatorRoute(search, {knownWorkItems = null, knownRuns = null} = {}) {
   const params = new URLSearchParams(String(search || "").replace(/^\?/, ""));
   const warnings = [];
+  for (const retired of ["tab", "key"]) {
+    if (params.has(retired)) warnings.push(routeWarning("unsupported-field", retired, params.get(retired)));
+  }
   const canonicalMode = String(params.get("mode") || "").trim();
-  let mode = canonicalMode || inferredLegacyMode(params);
-  const source = canonicalMode ? "canonical" : params.toString() ? "legacy" : "default";
+  let mode = canonicalMode || "inbox";
+  const source = canonicalMode ? "canonical" : "default";
   if (!OPERATOR_ROUTE_MODES.has(mode)) {
     warnings.push(routeWarning("invalid-value", "mode", mode));
     mode = "inbox";
   }
   const requestedView = String(params.get("view") || "").trim();
-  let view = requestedView || inferredLegacyView(params);
+  let view = requestedView || "overview";
   if (!OPERATOR_ROUTE_VIEWS.has(view)) {
     warnings.push(routeWarning("invalid-value", "view", view));
     view = "overview";
@@ -81,7 +65,6 @@ function decodeOperatorRoute(search, {knownWorkItems = null, knownRuns = null} =
   let runId = routeIdentifier(params, "run_id", warnings);
   let artifact = routeIdentifier(params, "artifact", warnings);
   let taskId = routeIdentifier(params, "task_id", warnings);
-  if (!artifact && params.has("key")) artifact = routeIdentifier(params, "key", warnings);
   const requestedStage = String(params.get("stage") || "").trim();
   let stage = OPERATOR_ROUTE_STAGES.has(requestedStage) ? requestedStage : "";
   if (requestedStage && !stage) {

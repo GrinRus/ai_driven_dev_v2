@@ -9,7 +9,12 @@ from urllib.parse import parse_qs, urlsplit
 import pytest
 from playwright.sync_api import Locator, Page, sync_playwright
 
-from browser_tests.browser_harness import VIEWPORTS, BrowserPage, operator_browser_harness
+from browser_tests.browser_harness import (
+    VIEWPORTS,
+    BrowserPage,
+    expect_rendered_surface,
+    operator_browser_harness,
+)
 from browser_tests.journey_support import (
     configure_sleeping_fixture_runtime,
     wait_for_recorded_process_exit,
@@ -103,16 +108,9 @@ def _seed_inbox_states(project_root: Path) -> None:
     )
 
 
-@pytest.mark.parametrize(
-    "query",
-    ("", "?ui=legacy", "?ui=studio", "?ui=unknown"),
-)
-def test_inbox_ignores_retired_presentation_selector(
-    tmp_path: Path,
-    query: str,
-) -> None:
+def test_project_inbox_opens_from_active_work_item(tmp_path: Path) -> None:
     fixture = build_browser_state_fixture(
-        tmp_path / (query.removeprefix("?ui=") or "missing"), "no-run"
+        tmp_path / "inbox-navigation", "no-run"
     )
 
     with sync_playwright() as playwright, operator_browser_harness(
@@ -121,7 +119,11 @@ def test_inbox_ignores_retired_presentation_selector(
         work_item=fixture.work_item,
     ) as harness, harness.open_page((1280, 900)) as browser_page:
         page = browser_page.page
-        page.goto(f"{harness.url}{query}", wait_until="networkidle")
+        with expect_rendered_surface(
+            page.locator("#intentChip").get_by_text(f"Work Item: {fixture.work_item}", exact=True),
+            state="attached",
+        ):
+            page.goto(harness.url, wait_until="domcontentloaded")
         page.locator("#projectInboxButton").click()
         page.locator(".studio-inbox").wait_for(state="visible")
         assert page.locator(".project-home-screen").count() == 0
@@ -141,7 +143,10 @@ def test_desktop_project_rail_keeps_work_item_context_and_filters_deterministica
         work_item="WI-RUN",
     ) as harness, harness.open_page((1280, 900)) as browser_page:
         page = browser_page.page
-        response = page.goto(f"{harness.url}?ui=studio", wait_until="domcontentloaded")
+        with expect_rendered_surface(
+            page.locator('[data-operator-rail-item][data-route-work-item="WI-RUN"]')
+        ):
+            response = page.goto(harness.url, wait_until="domcontentloaded")
         assert response is not None and response.ok
 
         rail = page.locator("[data-operator-rail-project]")
@@ -191,7 +196,7 @@ def test_running_job_keeps_origin_project_when_operator_switches_projects(
         work_item="WI-RUN",
     ) as harness, harness.open_page((1280, 900)) as browser_page:
         page = browser_page.page
-        page.goto(f"{harness.url}?ui=studio", wait_until="domcontentloaded")
+        page.goto(harness.url, wait_until="domcontentloaded")
         _wait_for_work_item_surface(page, "WI-RUN")
         launch_response = page.request.post(
             f"{harness.url}api/workflow/run",
@@ -217,7 +222,7 @@ def test_running_job_keeps_origin_project_when_operator_switches_projects(
                 },
             )
             assert switch_response.status == 200
-            page.goto(f"{harness.url}?ui=studio", wait_until="domcontentloaded")
+            page.goto(harness.url, wait_until="domcontentloaded")
             _wait_for_work_item_surface(page, "WI-OTHER")
             page.locator("#projectInboxButton").click()
             running_button = page.locator(
@@ -257,7 +262,8 @@ def test_project_work_selects_inspector_filters_without_reordering_and_reloads(
         playwright,
     ) as harness, harness.open_page((1280, 900)) as browser_page:
         page = browser_page.page
-        response = page.goto(f"{harness.url}?mode=inbox", wait_until="networkidle")
+        with expect_rendered_surface(page.locator(".studio-inbox")):
+            response = page.goto(f"{harness.url}?mode=inbox", wait_until="domcontentloaded")
         assert response is not None and response.ok
         page.locator(".studio-inbox").wait_for(state="visible")
         assert page.locator("[data-inbox-inspector]").count() == 0
@@ -292,7 +298,10 @@ def test_project_work_selects_inspector_filters_without_reordering_and_reloads(
         selected.focus()
         page.keyboard.press("Space")
         assert selected.evaluate("node => document.activeElement === node")
-        page.reload(wait_until="networkidle")
+        with expect_rendered_surface(
+            page.locator('[data-inbox-selected-context="WI-DECISION"]')
+        ):
+            page.reload(wait_until="domcontentloaded")
         page.locator('[data-inbox-selected-context="WI-DECISION"]').wait_for(
             state="visible"
         )
@@ -319,7 +328,7 @@ def test_inbox_prioritizes_and_routes_durable_and_running_work(
         work_item="WI-RUN",
     ) as harness, harness.open_page(viewport) as browser_page:
         page = browser_page.page
-        response = page.goto(f"{harness.url}?ui=studio", wait_until="domcontentloaded")
+        response = page.goto(harness.url, wait_until="domcontentloaded")
         assert response is not None and response.ok
         _wait_for_work_item_surface(page, "WI-RUN")
 
@@ -393,7 +402,7 @@ def test_inbox_prioritizes_and_routes_durable_and_running_work(
             },
         )
         assert switch_response.status == 200
-        page.goto(f"{harness.url}?ui=studio", wait_until="domcontentloaded")
+        page.goto(harness.url, wait_until="domcontentloaded")
         _wait_for_work_item_surface(page, "WI-RUN")
         launch_response = page.request.post(
             f"{harness.url}api/workflow/run",

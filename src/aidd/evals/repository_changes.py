@@ -381,12 +381,9 @@ def live_workspace_snapshot_from_payload(
 ) -> LiveWorkspaceSnapshot:
     status_short = payload.get("status_short")
     ignored_inventory = _bounded_inventory_from_payload(payload.get("ignored_inventory"))
-    legacy_ignored_files = _string_tuple(payload.get("ignored_files"))
-    ignored_files = (
-        legacy_ignored_files
-        if ignored_inventory is None
-        else ignored_inventory.sample
-    )
+    if ignored_inventory is None:
+        raise ValueError("Workspace snapshot requires the current ignored_inventory record.")
+    ignored_files = ignored_inventory.sample
     return LiveWorkspaceSnapshot(
         tracked_files=_string_tuple(payload.get("tracked_files")),
         untracked_files=_string_tuple(payload.get("untracked_files")),

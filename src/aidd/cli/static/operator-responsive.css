@@ -48,8 +48,8 @@
    is not hidden. */
 @media (max-width: 1500px) and (min-width: 761px) {
   [data-studio-flow-complete] [data-next-flow-action][data-primary-action] {
-    background: var(--teal-dark);
-    border: 1px solid var(--teal-dark);
+    background: var(--cobalt-dark);
+    border: 1px solid var(--cobalt-dark);
     bottom: max(var(--space-8), env(safe-area-inset-bottom));
     box-shadow: var(--elevation-overlay);
     left: auto;
@@ -217,7 +217,7 @@
 }
 
 /* Target Review and remediation keep the evidence-first hierarchy at every
- * supported viewport. The old floating recovery action is only for the legacy
+ * supported viewport. The floating recovery action belongs to the compact quality
  * gate; target request panels own their single action in normal flow. */
 @media (max-width: 1120px) {
   .target-implementation-overview {
@@ -434,8 +434,8 @@
 @media (max-width: 1500px) and (min-width: 761px) {
   body.recovery-mode:has([data-human-decision-surface="question"])
     .question-list > .question-card:first-child [data-primary-action] {
-    background: var(--teal-dark);
-    border: 1px solid var(--teal-dark);
+    background: var(--cobalt-dark);
+    border: 1px solid var(--cobalt-dark);
     bottom: var(--space-4);
     box-shadow: var(--elevation-overlay);
     min-height: var(--control-height);
@@ -454,8 +454,8 @@
      canvas and finding rail. Keep the real control in the DOM; only its
      placement changes at bounded viewport heights. */
   [data-studio-quality-gate="review"] [data-remediation-launch="review"] {
-    background: var(--teal-dark);
-    border: 1px solid var(--teal-dark);
+    background: var(--cobalt-dark);
+    border: 1px solid var(--cobalt-dark);
     bottom: var(--space-4);
     box-shadow: var(--elevation-overlay);
     min-height: var(--control-height);
@@ -471,8 +471,8 @@
 
 @media (max-width: 760px) {
   [data-studio-quality-gate="review"] [data-remediation-launch="review"] {
-    background: var(--teal-dark);
-    border: 1px solid var(--teal-dark);
+    background: var(--cobalt-dark);
+    border: 1px solid var(--cobalt-dark);
     bottom: max(var(--space-4), env(safe-area-inset-bottom));
     box-shadow: var(--elevation-overlay);
     left: var(--space-4);
@@ -512,10 +512,7 @@
   }
   body.recovery-mode:has([data-human-decision-surface="question"]) .interview-loop-screen > .surface > .surface-title,
   body.recovery-mode:has([data-human-decision-surface="question"]) .decision-workbench-header,
-  body.recovery-mode:has([data-human-decision-surface="question"]) .interview-summary,
-  body.recovery-mode:has([data-human-decision-surface="question"]) .interview-decision-spotlight,
-  body.recovery-mode:has([data-human-decision-surface="question"]) .question-history,
-  body.recovery-mode:has([data-human-decision-surface="question"]) .interview-context-panel {
+  body.recovery-mode:has([data-human-decision-surface="question"]) .question-history{
     display: none;
   }
   /* Once the durable answer clears the blocker, the only useful history item
@@ -554,7 +551,7 @@
     margin-bottom: var(--space-6);
   }
   body.recovery-mode:has([data-human-decision-surface="question"]) .question-card textarea {
-    border: 2px solid var(--teal-dark);
+    border: 2px solid var(--cobalt-dark);
     border-radius: var(--radius-surface);
     min-height: 180px;
     padding: var(--space-6);
@@ -585,7 +582,7 @@
     order: 2;
   }
   body.recovery-mode:has([data-human-decision-surface="question"]) .question-save-options summary {
-    color: var(--teal-dark);
+    color: var(--cobalt-dark);
   }
   body.recovery-mode:has([data-human-decision-surface="question"]) .interview-loop-screen > aside {
     border: 0;
@@ -1064,7 +1061,7 @@
   }
   .mode-decision-peek.good {
     border-color: var(--color-state-success-border-strong);
-    box-shadow: inset 3px 0 0 var(--green);
+    box-shadow: inset 3px 0 0 var(--mint);
   }
   .mode-decision-peek.warn {
     border-color: var(--color-state-warning-border);
@@ -1136,8 +1133,6 @@
   .follow-up-definition-grid,
   .launch-confirmation-grid,
   .interview-loop-screen,
-  .interview-decision-spotlight,
-  .interview-decision-facts,
   .validation-repair-center,
   .request-change-grid,
   .approval-decision-spotlight,
@@ -1148,7 +1143,6 @@
   .evidence-graph-screen,
   .evidence-graph-canvas,
   .evidence-edge-list,
-  .interview-summary,
   .repair-timeline,
   .recovery-hero,
   .recovery-facts,
@@ -1343,7 +1337,6 @@
     max-width: 100%;
     width: 100%;
   }
-  [data-human-decision-surface] .interview-summary,
   [data-human-decision-surface] .approval-summary-grid {
     display: none;
   }
@@ -1397,12 +1390,10 @@
   [data-human-decision-surface="approval"] .approval-queue {
     order: 1;
   }
-  [data-human-decision-surface="question"] .interview-decision-spotlight,
   [data-human-decision-surface="intervention"] .latest-request-summary,
   [data-human-decision-surface="approval"] .approval-decision-spotlight {
     order: 2;
   }
-  [data-human-decision-surface="question"] .interview-context-panel,
   [data-human-decision-surface="intervention"] .intervention-preview-column,
   [data-human-decision-surface="approval"] .approval-audit-wrap,
   [data-human-decision-surface="approval"] .approval-ledger-paths {
@@ -1449,8 +1440,8 @@
   [data-human-decision-surface="approval"] [data-operator-action="allow_once"],
   [data-studio-flow-complete] [data-next-flow-action][data-primary-action],
   [data-primary-recovery-slot] > [data-primary-action] {
-    background: var(--teal-dark);
-    border: 1px solid var(--teal-dark);
+    background: var(--cobalt-dark);
+    border: 1px solid var(--cobalt-dark);
     bottom: max(var(--space-4), env(safe-area-inset-bottom));
     box-shadow: 0 8px 24px rgb(15 23 42 / 18%);
     left: var(--space-4);
@@ -1540,13 +1531,6 @@
     right: var(--space-4);
     top: calc(var(--control-height-touch) + var(--space-4));
     width: min(280px, calc(100vw - (2 * var(--space-4))));
-  }
-  body.recovery-mode:has([data-human-decision-surface="question"]) .interview-summary + .panel-item .path-line {
-    display: block;
-    max-width: 100%;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
   }
 }
 
@@ -1949,8 +1933,8 @@
   .target-implementation-review [data-aidd-primary-action],
   .target-remediation-surface [data-remediation-launch="review"],
   .target-remediation-surface [data-remediation-launch="qa"] {
-    background: var(--teal-dark);
-    border: 1px solid var(--teal-dark);
+    background: var(--cobalt-dark);
+    border: 1px solid var(--cobalt-dark);
     bottom: var(--space-4);
     box-shadow: var(--elevation-overlay);
     min-height: var(--control-height);
@@ -1973,8 +1957,8 @@
   .target-implementation-review [data-aidd-primary-action],
   .target-remediation-surface [data-remediation-launch="review"],
   .target-remediation-surface [data-remediation-launch="qa"] {
-    background: var(--teal-dark);
-    border: 1px solid var(--teal-dark);
+    background: var(--cobalt-dark);
+    border: 1px solid var(--cobalt-dark);
     bottom: max(var(--space-4), env(safe-area-inset-bottom));
     box-shadow: var(--elevation-overlay);
     left: var(--space-4);
@@ -2136,8 +2120,8 @@ button.decision-resolution-option[aria-checked="true"]:focus-visible {
 @media (min-width: 761px) {
   [data-human-decision-surface="question"] .question-list > .question-card:first-child [data-primary-action],
   [data-human-decision-surface="approval"] .approval-card.pending [data-primary-action] {
-    background: var(--teal-dark);
-    border: 1px solid var(--teal-dark);
+    background: var(--cobalt-dark);
+    border: 1px solid var(--cobalt-dark);
     bottom: var(--space-4);
     box-shadow: var(--elevation-overlay);
     min-height: var(--control-height);

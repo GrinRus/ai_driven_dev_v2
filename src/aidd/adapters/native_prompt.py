@@ -170,7 +170,7 @@ def build_native_prompt_text(
             "runtime output Markdown files under the AIDD workspace for this stage.",
             "",
             "Write each substantive document to the exact path listed in the Stage brief "
-            "`Runtime write targets` section. The published compatibility view is not a "
+            "`Runtime write targets` section. The `Published documents` inventory is not a "
             "runtime write list. Do not place required documents only "
             "under an `output/` subdirectory; AIDD publishes `output/` after canonical "
             "validation passes.",
@@ -193,7 +193,7 @@ def build_native_prompt_text(
             "",
             "Do not write `stage-result.md` or `validator-report.md` in initial, repair, or "
             "intervention attempts. Read existing workflow records as evidence; AIDD owns "
-            "their canonical status, validation, attempt history, and publication. Legacy "
+            "their canonical status, validation, attempt history, and publication. Unexpected "
             "model-authored drafts do not grant write authority. "
             "AIDD post-runtime validation is the final truth source.",
             "",

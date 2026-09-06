@@ -3,7 +3,7 @@
 ## Summary
 
 - Total issues: `2`
-- Blocking issues: `2`
+- Blocking issues: `yes`
 - Affected documents: `plan.md`, `stage-result.md`
 - Dominant failure categories: `semantic`
 
@@ -14,5 +14,5 @@
 
 ## Result
 
-- Verdict: `repair`
+- Verdict: `fail`
 - Repair required for progression: `yes`

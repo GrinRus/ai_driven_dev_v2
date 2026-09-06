@@ -12,6 +12,7 @@ from aidd.core.allowed_write_scope import (
     AllowedWriteScopeError,
     resolve_allowed_write_scope,
 )
+from aidd.core.markdown import extract_h2_section
 from aidd.core.stage_models import StageExecutionState, StageOutputDiscovery
 from aidd.core.task_attempt_lifecycle import TaskExecutionContext
 from aidd.core.task_plan import TaskExecutionMode
@@ -157,18 +158,9 @@ def write_repository_snapshot(path: Path, snapshot: RepositorySnapshot) -> None:
     )
 
 
-def _section(markdown: str, heading: str) -> str:
-    match = re.search(
-        rf"^##\s+{re.escape(heading)}\s*$\n(?P<body>.*?)(?=^##\s+|\Z)",
-        markdown,
-        flags=re.MULTILINE | re.DOTALL | re.IGNORECASE,
-    )
-    return match.group("body").strip() if match is not None else ""
-
-
 def _reported_touched_paths(report: str) -> tuple[str, ...]:
     paths: list[str] = []
-    for line in _section(report, "Touched files").splitlines():
+    for line in extract_h2_section(report, "Touched files").splitlines():
         bullet = _TOP_LEVEL_BULLET_PATTERN.match(line)
         if bullet is None:
             continue

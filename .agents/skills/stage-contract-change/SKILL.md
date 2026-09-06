@@ -17,11 +17,11 @@ applicable instructions and affected scenarios.
 
 | Surface | What must agree |
 | --- | --- |
-| `src/aidd/core/stage_registry.py` | Separate runtime-authored, AIDD-generated, interview/control, and published output projections; published compatibility views do not grant runtime write authority. |
+| `src/aidd/core/stage_registry.py` | Separate runtime-authored, AIDD-generated, interview/control, and published output projections; publication does not grant runtime write authority. |
 | `src/aidd/core/stage_preparation.py`, `src/aidd/adapters/native_prompt.py` | Actual attempt request, declared context, allowed output paths, and shared native wrapper. |
 | `src/aidd/cli/support.py`, `src/aidd/core/repair.py`, `src/aidd/core/stage_runner.py` | Attempt-mode selection, generated repair instructions, bootstrap reconciliation, and canonical lifecycle records; blocked completion needs a controlled blocking question, not unparsed prose. |
 | `src/aidd/validators/`, `src/aidd/core/stage_validation.py`, `src/aidd/application/` | Structural/semantic/cross-document validation, lifecycle reconciliation, canonical publication, and repair findings. |
-| `prompt-packs/stages/<stage>/` | Active system, run, repair, and intervention instructions; legacy `prompt-packs/<stage>/` files remain compatibility pointers. |
+| `prompt-packs/stages/<stage>/` | Active system, run, repair, and intervention instructions. |
 | Contract examples and `harness/scenarios/` | Valid outputs, relevant invalid/repair cases, and observable progression/stop behavior. |
 
 Update the contract before code. AIDD owns canonical `stage-result.md`,
@@ -45,10 +45,9 @@ implicitly or turn runtime-specific flags into core semantics.
    matching `tests/validators/` cases. Select only the affected tests.
 4. Run `tests/test_prompt_quality.py`, `tests/test_docs_consistency.py`, and
    `tests/test_packaging_resources.py` for changed active packs. Review semantic diffs
-   before updating `tests/fixtures/active_prompt_pack_hashes.json`; do not refresh
-   hashes merely to silence an unexplained mismatch.
+   against substantive output, ownership, interview, repair, and verification requirements.
 5. Inspect deterministic evidence that valid substantive outputs still progress and
    invalid/missing outputs still repair or stop. Keep runtime logs and canonical reports.
 
 Report changed contract behavior, affected stage/mode combinations, scenario/test
-results, reviewed prompt hashes, preserved compatibility, and unverified paths.
+results, preserved requirements, intentional format changes, and unverified paths.

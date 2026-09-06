@@ -34,7 +34,7 @@ class StageOutputRegistry:
 
     ``published`` intentionally retains the historical declared-output view.  The other
     collections are disjoint ownership projections so new callers can request only the set they
-    are allowed to create or mutate without changing the compatibility reader.
+    are allowed to create or mutate while published paths remain a separate read projection.
     """
 
     runtime_authored: tuple[Path, ...]

@@ -10,8 +10,7 @@ and are a separate surface from these maintainer instructions.
 Read applicable `AGENTS.md` files cumulatively from root to leaf for each touched path. Read
 the linked contract section and accepted local task, rather than loading whole architecture
 or roadmap files. A nearer instruction overrides only a conflicting rule within its scope.
-Compatibility pointers under `prompt-packs/<stage>/` lead to the canonical stage packs; they
-do not define additional runtime prompts.
+Runtime prompts are loaded from the canonical `prompt-packs/stages/<stage>/` directories.
 
 | Change area | Owner and context | Nearest verification |
 | --- | --- | --- |

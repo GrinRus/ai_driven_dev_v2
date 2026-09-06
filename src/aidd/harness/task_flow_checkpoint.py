@@ -316,17 +316,6 @@ def build_task_flow_checkpoint(
     )
     validator_report_path = stage_documents_root / "validator-report.md"
     stage_result_path = stage_documents_root / "stage-result.md"
-    # The canonical documents live at the stage root.  Keep a read-only
-    # compatibility fallback for older harness fixtures that retained them
-    # under ``output/``; no target files are rewritten here.
-    if not validator_report_path.exists():
-        legacy_validator_report_path = stage_documents_root / "output" / "validator-report.md"
-        if legacy_validator_report_path.exists():
-            validator_report_path = legacy_validator_report_path
-    if not stage_result_path.exists():
-        legacy_stage_result_path = stage_documents_root / "output" / "stage-result.md"
-        if legacy_stage_result_path.exists():
-            stage_result_path = legacy_stage_result_path
     validator_verdict = _validator_verdict(_read_text(validator_report_path))
     stage_result_status = _stage_result_status(_read_text(stage_result_path))
     model_tasks = _task_items(model)

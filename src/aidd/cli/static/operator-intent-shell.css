@@ -611,7 +611,7 @@ body {
     padding-inline: var(--space-1);
   }
 
-  /* The legacy layout rule applies ellipsis to stage labels after the target
+  /* The base layout rule applies ellipsis to stage labels after the target
      strip is composed. Keep the canonical labels readable at compact desktop
      density; wrapping is preferable to a misleading clipped stage name. */
   .operator-workspace .canonical-stage-step strong,
@@ -1336,7 +1336,7 @@ body.work-overview-mode .intent-decision-surface .next-action-button-stack .next
 }
 
 /* The nav wrapper remains transparent outside the desktop rail so existing
-   onboarding/mobile button layout and ids retain their compatibility shape. */
+   onboarding/mobile button layout and ids retain their interaction hooks. */
 .operator-rail-nav {
   display: contents;
 }

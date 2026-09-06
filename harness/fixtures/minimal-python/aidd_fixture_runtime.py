@@ -1,105 +1,11 @@
+"""Deterministic runtime content only; AIDD owns workflow and interview records."""
+
 import os
 import re
 from pathlib import Path
 
-VALIDATOR_REPORT = """# Validator Report
 
-## Summary
-
-- Total issues: 0
-
-## Structural checks
-
-- none
-
-## Semantic checks
-
-- none
-
-## Cross-document checks
-
-- none
-
-## Result
-
-- Verdict: `pass`
-"""
-
-QUESTIONS = "# Questions\n\n## Questions\n\n- none\n"
-ANSWERS = "# Answers\n\n## Answers\n\n- none\n"
-
-
-def _stage_result(stage: str, primary_output: str, project_set_evidence: str = "") -> str:
-    next_stage = {
-        "idea": "research",
-        "research": "plan",
-        "plan": "review-spec",
-        "review-spec": "tasklist",
-        "tasklist": "implement",
-        "implement": "review",
-        "review": "qa",
-        "qa": "complete",
-    }[stage]
-    return f"""# Stage result
-
-## Stage
-
-{stage}
-
-## Attempt history
-
-- attempt-0001
-
-## Status
-
-succeeded
-
-## Produced outputs
-
-- {primary_output}
-
-## Validation summary
-
-- structural: pass
-- semantic: pass
-
-## Blockers
-
-- none
-
-## Next actions
-
-- advance to `{next_stage}`
-
-{project_set_evidence}
-## Terminal state notes
-
-Ready.
-"""
-
-
-def _project_set_evidence(workspace_root: Path, work_item: str) -> str:
-    project_set_path = workspace_root / "workitems" / work_item / "context" / "project-set.md"
-    if not project_set_path.exists():
-        return ""
-    project_set_relative_path = f"workitems/{work_item}/context/project-set.md"
-    lines = [
-        "## Project-set evidence",
-        "",
-        f"- Context: `{project_set_relative_path}`",
-    ]
-    for line in project_set_path.read_text(encoding="utf-8").splitlines():
-        match = re.match(r"^\|\s*`([^`]+)`\s*\|\s*`([^`]+)`\s*\|", line.strip())
-        if match is None:
-            continue
-        lines.append(
-            f"- `{match.group(1)}` at `{match.group(2)}` retained deterministic stage evidence."
-        )
-    lines.append("")
-    return "\n".join(lines)
-
-
-def _idea_documents(project_set_evidence: str) -> dict[str, str]:
+def _idea_documents() -> dict[str, str]:
     return {
         "idea-brief.md": """# Idea Brief
 
@@ -121,14 +27,10 @@ Produce bounded idea, research, and plan evidence for the declared `api` and `we
 
 - none
 """,
-        "stage-result.md": _stage_result("idea", "idea-brief.md", project_set_evidence),
-        "validator-report.md": VALIDATOR_REPORT,
-        "questions.md": QUESTIONS,
-        "answers.md": ANSWERS,
     }
 
 
-def _research_documents(project_set_evidence: str) -> dict[str, str]:
+def _research_documents() -> dict[str, str]:
     return {
         "research-notes.md": """# Research Notes
 
@@ -156,14 +58,10 @@ def _research_documents(project_set_evidence: str) -> dict[str, str]:
 
 - none
 """,
-        "stage-result.md": _stage_result("research", "research-notes.md", project_set_evidence),
-        "validator-report.md": VALIDATOR_REPORT,
-        "questions.md": QUESTIONS,
-        "answers.md": ANSWERS,
     }
 
 
-def _plan_documents(project_set_evidence: str) -> dict[str, str]:
+def _plan_documents() -> dict[str, str]:
     return {
         "plan.md": """# Plan
 
@@ -204,14 +102,10 @@ def _plan_documents(project_set_evidence: str) -> dict[str, str]:
 - M2: `python -m pytest -q`
 - M3: `python -m pytest -q`
 """,
-        "stage-result.md": _stage_result("plan", "plan.md", project_set_evidence),
-        "validator-report.md": VALIDATOR_REPORT,
-        "questions.md": QUESTIONS,
-        "answers.md": ANSWERS,
     }
 
 
-def _review_spec_documents(project_set_evidence: str) -> dict[str, str]:
+def _review_spec_documents() -> dict[str, str]:
     return {
         "review-spec-report.md": """# Review Spec Report
 
@@ -241,16 +135,10 @@ def _review_spec_documents(project_set_evidence: str) -> dict[str, str]:
 
 - `approved`
 """,
-        "stage-result.md": _stage_result(
-            "review-spec", "review-spec-report.md", project_set_evidence
-        ),
-        "validator-report.md": VALIDATOR_REPORT,
-        "questions.md": QUESTIONS,
-        "answers.md": ANSWERS,
     }
 
 
-def _tasklist_documents(project_set_evidence: str) -> dict[str, str]:
+def _tasklist_documents() -> dict[str, str]:
     return {
         "tasklist.md": """# Tasklist
 
@@ -296,10 +184,6 @@ Apply three dependency-ordered changes to the deterministic minimal fixture.
 - TL-2: `python -m pytest -q`
 - TL-3: `python -m pytest -q`
 """,
-        "stage-result.md": _stage_result("tasklist", "tasklist.md", project_set_evidence),
-        "validator-report.md": VALIDATOR_REPORT,
-        "questions.md": QUESTIONS,
-        "answers.md": ANSWERS,
     }
 
 
@@ -336,7 +220,6 @@ def _apply_task_change(project_root: Path, task_id: str) -> tuple[str, str]:
 def _implement_documents(
     workspace_root: Path,
     work_item: str,
-    project_set_evidence: str,
 ) -> dict[str, str]:
     task_id = _selected_task(workspace_root, work_item)
     touched_path, acceptance_id = _apply_task_change(workspace_root.parent, task_id)
@@ -379,12 +262,6 @@ def _implement_documents(
 
 - none
 """,
-        "stage-result.md": _stage_result(
-            "implement", "implementation-report.md", project_set_evidence
-        ),
-        "validator-report.md": VALIDATOR_REPORT,
-        "questions.md": QUESTIONS,
-        "answers.md": ANSWERS,
     }
 
 
@@ -403,7 +280,7 @@ def _task_acceptance_evidence(*, evidence_path: str, outcome: str) -> str:
     )
 
 
-def _review_documents(project_set_evidence: str) -> dict[str, str]:
+def _review_documents() -> dict[str, str]:
     implementation_path = (
         "workitems/WI-DETERMINISTIC-TASKS/stages/implement/output/"
         "implementation-report.md"
@@ -435,14 +312,10 @@ def _review_documents(project_set_evidence: str) -> dict[str, str]:
 
 {task_evidence}
 """,
-        "stage-result.md": _stage_result("review", "review-report.md", project_set_evidence),
-        "validator-report.md": VALIDATOR_REPORT,
-        "questions.md": QUESTIONS,
-        "answers.md": ANSWERS,
     }
 
 
-def _qa_documents(project_set_evidence: str) -> dict[str, str]:
+def _qa_documents() -> dict[str, str]:
     implementation_path = (
         "workitems/WI-DETERMINISTIC-TASKS/stages/implement/output/"
         "implementation-report.md"
@@ -480,10 +353,6 @@ def _qa_documents(project_set_evidence: str) -> dict[str, str]:
 
 {task_evidence}
 """,
-        "stage-result.md": _stage_result("qa", "qa-report.md", project_set_evidence),
-        "validator-report.md": VALIDATOR_REPORT,
-        "questions.md": QUESTIONS,
-        "answers.md": ANSWERS,
     }
 
 
@@ -493,7 +362,6 @@ def main() -> None:
     work_item = os.environ["AIDD_WORK_ITEM"]
     stage_root = workspace_root / "workitems" / work_item / "stages" / stage
     stage_root.mkdir(parents=True, exist_ok=True)
-    project_set_evidence = _project_set_evidence(workspace_root, work_item)
 
     documents_by_stage = {
         "idea": _idea_documents,
@@ -505,16 +373,11 @@ def main() -> None:
         "qa": _qa_documents,
     }
     if stage == "implement":
-        documents = _implement_documents(workspace_root, work_item, project_set_evidence)
+        documents = _implement_documents(workspace_root, work_item)
     else:
-        documents = documents_by_stage[stage](project_set_evidence)
+        documents = documents_by_stage[stage]()
 
-    if os.environ.get("AIDD_FIXTURE_SUBSTANTIVE_ONLY") == "1":
-        documents = {
-            name: content for name, content in documents.items()
-            if name not in {"stage-result.md", "validator-report.md", "questions.md", "answers.md"}
-        }
-        print(f"fixture-runtime substantive-only writes={','.join(sorted(documents))}")
+    print(f"fixture-runtime substantive-only writes={','.join(sorted(documents))}")
     for name, content in documents.items():
         (stage_root / name).write_text(content, encoding="utf-8")
     print(f"fixture-runtime stage={stage}")

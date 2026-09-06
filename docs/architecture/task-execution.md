@@ -112,11 +112,10 @@ created for that task attempt. Interrupted manifest writes leave no partial cano
 Global and task attempts share run retention: a referenced global attempt is never cleaned up
 independently, while deleting an entire run removes both owner and references together.
 
-Readers prefer the schema-v1 reference manifest. For runs created before this contract, absence of
-the manifest enables read-only compatibility with embedded `stage-attempt-000N/` directories and
-legacy top-level runtime files. A malformed or dangling new manifest is corruption and never falls
-back to legacy copies. Writers create only the reference layout; no background migration rewrites
-historical runs.
+Readers and writers use only the schema-v1 reference manifest. Embedded `stage-attempt-000N/`
+directories and old top-level runtime files are unsupported and fail explicitly. A newly allocated
+task attempt may have no referenced stage attempts yet; this is an empty current attempt, not a
+legacy evidence fallback. Malformed or dangling manifests remain corruption.
 
 ## Public entrypoint contract
 

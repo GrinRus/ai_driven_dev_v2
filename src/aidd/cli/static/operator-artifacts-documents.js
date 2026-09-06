@@ -138,10 +138,6 @@ function documentNavigatorRoleLabel(role) {
   return DOCUMENT_NAVIGATOR_ROLES.find(([value]) => value === role)?.[1] || "Evidence";
 }
 
-function documentNavigatorRoleDetail(role) {
-  return DOCUMENT_NAVIGATOR_ROLES.find(([value]) => value === role)?.[2] || "Supporting retained evidence.";
-}
-
 function documentFilename(path, fallback = "document") {
   const normalized = String(path || "").replace(/\\/g, "/").replace(/\/$/, "");
   return normalized.split("/").pop() || fallback;

@@ -31,8 +31,6 @@ def _configure_live_conformance(project_root: Path) -> None:
         'permission_policy = "brokered"\n'
         'interaction_mode = "live"\n'
         'auto_approval_preset = "broad"\n\n'
-        "[logging]\n"
-        'mode = "both"\n\n'
         "[repair]\n"
         "max_attempts = 2\n",
         encoding="utf-8",
@@ -44,13 +42,9 @@ def _assert_rendered_gate(page: Page, viewport: tuple[int, int]) -> None:
     assert_rendered_geometry(page)
 
 
-@pytest.mark.parametrize("selector", ("studio", "legacy"))
-def test_approval_recovery_parity_preserves_durable_decision_service(
-    tmp_path: Path,
-    selector: str,
-) -> None:
+def test_approval_recovery_preserves_durable_decision_service(tmp_path: Path) -> None:
     fixture = build_browser_state_fixture(
-        tmp_path / f"approval-parity-{selector}",
+        tmp_path / "approval-decision-service",
         "no-run",
     )
     _configure_live_conformance(fixture.project_root)
@@ -60,7 +54,7 @@ def test_approval_recovery_parity_preserves_durable_decision_service(
         work_item=fixture.work_item,
     ) as harness, harness.open_page((1280, 900)) as browser_page:
         page = browser_page.page
-        page.goto(f"{harness.url}?ui={selector}", wait_until="networkidle")
+        page.goto(harness.url, wait_until="networkidle")
         job = page.evaluate(
             """async () => {
               const launched = await postJson('/api/stage/run', {
@@ -119,7 +113,7 @@ def test_runtime_approval_preserves_scope_confirmation_and_durable_winner(
         work_item=fixture.work_item,
     ) as harness, harness.open_page(viewport) as browser_page:
         page = browser_page.page
-        page.goto(f"{harness.url}?ui=studio", wait_until="networkidle")
+        page.goto(harness.url, wait_until="networkidle")
         job = page.evaluate(
             """async () => {
               const launched = await postJson('/api/stage/run', {

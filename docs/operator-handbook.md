@@ -141,18 +141,23 @@ command = "qwen --approval-mode auto --output-format stream-json"
 mode = "native"
 # timeout_seconds = 3600
 
-[logging]
-mode = "both"
-
 [repair]
 max_attempts = 2
 ```
 
 Configuration loading is fail-closed. Omitting a documented key selects its default, but
-an explicitly blank workspace, logging, command, execution-mode, permission-policy,
+an explicitly blank workspace, command, execution-mode, permission-policy,
 interaction-mode, auto-approval, model, or reasoning-effort value is invalid. Unknown top-level sections, runtime
 sections, section keys, project fields, runtime ids, and stage-timeout names are rejected
 before any runtime process or persisted run state is created.
+
+The obsolete `[logging]` section is unsupported. Use `--log-follow` or `--no-log-follow`
+to control live forwarding; both modes retain the complete durable runtime log. Workspaces
+from retired AIDD formats must be recreated before execution with this alpha version.
+
+Setting a provider command to its bare probe binary, such as `codex`, without an explicit
+execution `mode` is invalid. Either omit the command to select the maintained native default,
+or supply the intended command and mode together; AIDD no longer silently upgrades old commands.
 
 `model` and `reasoning_effort` are optional typed selectors. AIDD validates their type,
 non-empty value, and runtime adapter capability before launch; it does not maintain a
@@ -218,7 +223,6 @@ Current config fields consumed by the CLI:
 - `runtime.<provider>.auto_approval_preset`
 - `runtime.<provider>.model`
 - `runtime.<provider>.reasoning_effort`
-- `logging.mode`
 - `repair.max_attempts`
 
 ## 6. First-Run Procedure
@@ -297,6 +301,9 @@ intentionally want to overwrite `intake.md`, `user-request.md`, and `repository-
 Running `aidd init` without a request still initializes the workspace tree, but the work
 item is not runnable until the intake context exists.
 
+`validator-report.md` is created only after AIDD performs validation. A newly initialized
+workspace or a runtime failure before validation has no validator verdict.
+
 ### 6.4 Inspect generated workspace artifacts
 
 Recommended quick checks:
@@ -308,7 +315,7 @@ find .aidd -maxdepth 4 -type f | sort | head -n 40
 Verify that:
 
 - work item directories were created;
-- stage document placeholders exist;
+- initial stage documents exist, with `validator-report.md` absent before validation;
 - initialization is repeatable and deterministic for operator use.
 - `.aidd/` is rooted inside the local project, not beside it.
 

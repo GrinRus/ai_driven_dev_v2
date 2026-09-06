@@ -7,7 +7,13 @@ stable compatibility window exists.
 
 ## Unreleased
 
-- No changes yet.
+- Remove unused internal APIs, duplicate implementations, dormant UI components, and historical
+  documentation from the active repository tree. Completed planning and old release/audit records
+  remain in Git history.
+- Align repair/intervention prompts and stage briefs with canonical AIDD-owned workflow records.
+- Remove backward compatibility for retired configuration and artifact formats. Recreate old
+  workspaces with the current CLI. Remove the obsolete `[logging]` configuration section;
+  live forwarding still uses `--log-follow` and durable logs are always retained.
 
 ## 0.1.0a21 - 2026-09-01
 

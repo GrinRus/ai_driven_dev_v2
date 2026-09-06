@@ -13,8 +13,6 @@ from aidd.validators.protocol import (
     VALIDATOR_REPORT_PROTOCOL_VERSION,
     DocumentReadFailureKind,
     ValidatorReportProtocolError,
-    ValidatorReportSection,
-    canonical_validator_finding_code,
     parse_validator_report,
     resolve_document_read_failure,
     resolve_document_read_failure_code,
@@ -29,26 +27,21 @@ _NON_FINDING_PROTOCOL_LITERALS = {"STRUCT-MISSING"}
 
 def test_protocol_registry_is_versioned_and_collision_free() -> None:
     assert VALIDATOR_REPORT_PROTOCOL_VERSION == 1
-    assert len({field.key for field in VALIDATOR_REPORT_FIELDS}) == len(
-        VALIDATOR_REPORT_FIELDS
-    )
-    labels = [
-        label.casefold()
-        for field in VALIDATOR_REPORT_FIELDS
-        for label in (field.label, *field.aliases)
-    ]
+    assert len({field.key for field in VALIDATOR_REPORT_FIELDS}) == len(VALIDATOR_REPORT_FIELDS)
+    labels = [field.label.casefold() for field in VALIDATOR_REPORT_FIELDS]
     assert len(set(labels)) == len(labels)
-    assert len({spec.code for spec in VALIDATOR_FINDING_CODES}) == len(
-        VALIDATOR_FINDING_CODES
-    )
+    assert len({spec.code for spec in VALIDATOR_FINDING_CODES}) == len(VALIDATOR_FINDING_CODES)
 
 
-def test_protocol_registry_resolves_fields_and_declared_aliases() -> None:
+def test_protocol_registry_resolves_only_current_fields() -> None:
     assert validator_report_field("verdict").label == "Verdict"
-    assert resolve_validator_report_field("Validator verdict").key == "verdict"
-    assert resolve_validator_report_field("Repair required").key == "repair_required"
-    with pytest.raises(ValidatorReportProtocolError, match="Unknown.*field"):
-        resolve_validator_report_field("Validation result")
+    assert resolve_validator_report_field("Verdict").key == "verdict"
+    assert (
+        resolve_validator_report_field("Repair required for progression").key == "repair_required"
+    )
+    for label in ("Validator verdict", "Repair required", "Validation result"):
+        with pytest.raises(ValidatorReportProtocolError, match="Unknown.*field"):
+            resolve_validator_report_field(label)
 
 
 def test_document_read_failure_registry_is_canonical_and_bidirectional() -> None:
@@ -81,26 +74,17 @@ def test_document_read_failure_registry_rejects_unknown_values(value: str) -> No
 
 
 @pytest.mark.parametrize(
-    ("legacy", "canonical"),
-    [
-        ("STRUCT-MISSING-DOCUMENT", "STRUCT-MISSING-REQUIRED-DOCUMENT"),
-        ("STRUCT-MISSING-HEADING", "STRUCT-MISSING-REQUIRED-SECTION"),
-        ("STRUCT-EMPTY-SECTION", "STRUCT-EMPTY-REQUIRED-SECTION"),
-    ],
+    "retired",
+    (
+        "STRUCT-MISSING-DOCUMENT",
+        "STRUCT-MISSING-HEADING",
+        "STRUCT-EMPTY-SECTION",
+        "CROSS-REFERENCE-MISMATCH",
+    ),
 )
-def test_protocol_registry_maps_unambiguous_legacy_codes(
-    legacy: str, canonical: str
-) -> None:
-    assert canonical_validator_finding_code(legacy) == canonical
-    with pytest.raises(ValidatorReportProtocolError, match="cannot be written"):
-        resolve_validator_finding_code(legacy, for_write=True)
-
-
-def test_ambiguous_legacy_code_remains_read_only_without_replacement() -> None:
-    spec = resolve_validator_finding_code("CROSS-REFERENCE-MISMATCH")
-    assert spec.status == "legacy"
-    assert spec.replacement is None
-    assert spec.section is ValidatorReportSection.CROSS_DOCUMENT
+def test_protocol_registry_rejects_retired_codes(retired: str) -> None:
+    with pytest.raises(ValidatorReportProtocolError, match="Unknown validator finding"):
+        resolve_validator_finding_code(retired)
 
 
 def test_unknown_finding_code_is_rejected() -> None:
@@ -126,37 +110,11 @@ def test_all_validator_finding_literals_are_registered() -> None:
     assert emitted_literals <= registered
 
 
-def test_validator_report_reader_normalizes_declared_legacy_vocabulary() -> None:
-    canonical = parse_validator_report(
-        """# Validator Report
-
-## Structural checks
-
-- `STRUCT-MISSING-REQUIRED-DOCUMENT` (`high`) in `plan.md`: Missing document.
-
-## Result
-
-- Verdict: `fail`
-- Repair required for progression: yes
-"""
-    )
-    legacy = parse_validator_report(
-        """# Validator Report
-
-## Structural checks
-
-- `STRUCT-MISSING-DOCUMENT` (`high`) in `plan.md`: Missing document.
-
-## Result
-
-- Validator verdict: `fail`
-- Repair required: yes
-"""
-    )
-
-    assert legacy.verdict == canonical.verdict == "fail"
-    assert legacy.findings == canonical.findings
-    assert all(field.used_legacy_alias for field in legacy.fields)
+def test_validator_report_reader_rejects_incomplete_historical_reports() -> None:
+    with pytest.raises(
+        ValidatorReportProtocolError, match="missing required current-format fields"
+    ):
+        parse_validator_report("## Result\n\n- Verdict: `pass`\n")
 
 
 def test_validator_report_reader_rejects_fail_with_optional_only_corrections() -> None:
@@ -171,6 +129,8 @@ def test_validator_report_reader_rejects_fail_with_optional_only_corrections() -
 
 - Total issues: 1
 - Blocking issues: no
+- Affected documents: none
+- Dominant failure categories: none
 
 ## Semantic checks
 
@@ -192,6 +152,8 @@ def test_validator_report_reader_treats_low_findings_as_progression_blocking() -
 
 - Total issues: 1
 - Blocking issues: yes
+- Affected documents: `plan.md`
+- Dominant failure categories: semantic checks
 
 ## Semantic checks
 
@@ -216,6 +178,8 @@ def test_validator_report_reader_keeps_advisory_observations_out_of_verdict() ->
 
 - Total issues: 0
 - Blocking issues: no
+- Affected documents: none
+- Dominant failure categories: none
 
 ## Advisory observations
 
@@ -238,10 +202,7 @@ def test_validator_report_reader_keeps_advisory_observations_out_of_verdict() ->
     "markdown",
     [
         "## Result\n\n- Validation result: `fail`\n",
-        (
-            "## Semantic checks\n\n"
-            "- `SEM-UNDECLARED-CODE` (`high`) in `plan.md`: Unknown.\n"
-        ),
+        ("## Semantic checks\n\n- `SEM-UNDECLARED-CODE` (`high`) in `plan.md`: Unknown.\n"),
         (
             "## Structural checks\n\n"
             "- `SEM-PLACEHOLDER-CONTENT` (`high`) in `plan.md`: Wrong section.\n"

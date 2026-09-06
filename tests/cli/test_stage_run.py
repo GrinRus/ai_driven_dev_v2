@@ -10,7 +10,7 @@ import typer
 from typer.testing import CliRunner
 
 from aidd.adapters.runtime_artifacts import RUNTIME_EXIT_METADATA_FILENAME
-from aidd.cli.main import _active_prompt_pack_paths, _prefix_stream_chunk, app
+from aidd.cli.main import app
 from aidd.cli.stage_run import (
     StageInteractOptions,
     StageRepairExtensionOptions,
@@ -22,13 +22,16 @@ from aidd.cli.stage_run import (
     run_stage_interact_command,
     run_stage_repair_extension_command,
 )
+from aidd.cli.support import _active_prompt_pack_paths, _prefix_stream_chunk
 from aidd.config import ProjectConfig, ProjectSetConfig
 from aidd.core.project_set import persist_project_set_context, resolve_project_set
+from aidd.core.repair import persist_repair_history_snapshot
 from aidd.core.run_lookup import latest_run_id
 from aidd.core.run_store import (
     RUN_EVENTS_JSONL_FILENAME,
     RUN_RUNTIME_JSONL_FILENAME,
     RUN_RUNTIME_LOG_FILENAME,
+    create_next_attempt_directory,
     create_run_manifest,
     persist_stage_status,
     run_attempt_artifact_index_path,
@@ -147,7 +150,7 @@ def test_substantive_only_runtime_leaves_workflow_records_to_aidd(
 @pytest.mark.parametrize("failure", ("substantive", "lookalike-runtime-draft"))
 @pytest.mark.parametrize("project_set", (False, True))
 def test_bootstrap_reconciliation_preserves_real_failures_and_runtime_draft_evidence(
-    tmp_path: Path, failure: str, project_set: bool
+    tmp_path: Path, failure: str, project_set: bool, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     workspace_root = tmp_path / ".aidd"
     work_item = "WI-BOOTSTRAP-FAIL"
@@ -160,7 +163,35 @@ def test_bootstrap_reconciliation_preserves_real_failures_and_runtime_draft_evid
     if failure == "substantive":
         documents["plan.md"] = "# Plan\n\nInvalid substantive output.\n"
     else:
+        from aidd.core import stage_runner
+
+        if project_set:
+            runtime_draft += (
+                "\n## Project-set evidence\n\n"
+                f"- Context: `workitems/{work_item}/context/project-set.md`.\n"
+                "- Projects: `api` at `services/api`; `web` at `apps/web`.\n"
+            )
         documents["stage-result.md"] = runtime_draft
+        original_writer = stage_runner._write_canonical_stage_result
+
+        def write_invalid_aidd_candidate(**kwargs):
+            path = original_writer(**kwargs)
+            if kwargs["attempt_outcome"] == (
+                "content validation passed; terminal result validation pending"
+            ):
+                path.write_text(
+                    path.read_text().replace(
+                        "## Attempt history\n\n",
+                        "## Attempt history\n\n- Attempt 1 (`initial`): duplicate claim.\n",
+                    ),
+                    encoding="utf-8",
+                )
+            return path
+
+        # The current negative gate validates AIDD's record; the runtime draft remains raw evidence.
+        monkeypatch.setattr(
+            stage_runner, "_write_canonical_stage_result", write_invalid_aidd_candidate
+        )
     writer = _write_runtime_writer_script(tmp_path=tmp_path, documents=documents, exit_code=0)
     config = _write_cli_config(
         tmp_path=tmp_path,
@@ -180,6 +211,7 @@ def test_bootstrap_reconciliation_preserves_real_failures_and_runtime_draft_evid
     assert (stage_root / "plan.md").read_text(encoding="utf-8") == documents["plan.md"]
     assert "Verdict: `fail`" in (stage_root / "validator-report.md").read_text(encoding="utf-8")
     if failure == "lookalike-runtime-draft":
+        assert "SEM-INCOMPLETE-SECTION" in (stage_root / "validator-report.md").read_text()
         artifact_path = run_attempt_artifact_index_path(
             workspace_root=workspace_root, work_item=work_item, run_id="run-bootstrap-fail",
             stage="plan", attempt_number=1,
@@ -518,32 +550,29 @@ def _write_cli_config(
     *,
     tmp_path: Path,
     runtime_command: str,
-    claude_code_command: str = "claude",
-    codex_command: str = "codex",
-    opencode_command: str = "opencode",
-    qwen_command: str = "qwen",
+    claude_code_command: str | None = None,
+    codex_command: str | None = None,
+    opencode_command: str | None = None,
+    qwen_command: str | None = None,
     max_repair_attempts: int = 2,
 ) -> Path:
     config_path = tmp_path / "aidd.test.toml"
-    config_path.write_text(
-        (
-            "[workspace]\n"
-            'root = ".aidd"\n\n'
-            "[runtime.generic_cli]\n"
-            f'command = "{runtime_command}"\n\n'
-            "[runtime.claude_code]\n"
-            f'command = "{claude_code_command}"\n\n'
-            "[runtime.codex]\n"
-            f'command = "{codex_command}"\n\n'
-            "[runtime.opencode]\n"
-            f'command = "{opencode_command}"\n\n'
-            "[runtime.qwen]\n"
-            f'command = "{qwen_command}"\n\n'
-            "[repair]\n"
-            f"max_attempts = {max_repair_attempts}\n"
-        ),
-        encoding="utf-8",
-    )
+    sections = ['[workspace]\nroot = ".aidd"\n']
+    for runtime_section, command in (
+        ("generic_cli", runtime_command),
+        ("claude_code", claude_code_command),
+        ("codex", codex_command),
+        ("opencode", opencode_command),
+        ("qwen", qwen_command),
+    ):
+        if command is not None:
+            sections.append(
+                f"[runtime.{runtime_section}]\n"
+                f"command = {json.dumps(command)}\n"
+                'mode = "adapter-flags"\n'
+            )
+    sections.append(f"[repair]\nmax_attempts = {max_repair_attempts}\n")
+    config_path.write_text("\n".join(sections), encoding="utf-8")
     return config_path
 
 
@@ -559,7 +588,7 @@ def _prepare_cli_repair_extension_workspace(
     _materialize_plan_inputs(workspace_root=workspace_root, work_item=work_item)
     writer_script = _write_runtime_writer_script(
         tmp_path=tmp_path,
-        documents=documents,
+        documents={name: content for name, content in documents.items() if name == "plan.md"},
         exit_code=exit_code,
     )
     runtime_command = f"{shlex.quote(sys.executable)} {shlex.quote(writer_script.as_posix())}"
@@ -602,6 +631,26 @@ def _prepare_cli_repair_extension_workspace(
         "# Repair brief\n\nRepair budget status: `repair-budget-exhausted`.\n",
         encoding="utf-8",
     )
+    for attempt_number, attempt_mode in enumerate(("initial", "repair", "repair"), start=1):
+        create_next_attempt_directory(
+            workspace_root=workspace_root,
+            work_item=work_item,
+            run_id=run_id,
+            stage="plan",
+            attempt_mode=attempt_mode,
+        )
+        persist_repair_history_snapshot(
+            workspace_root=workspace_root,
+            work_item=work_item,
+            run_id=run_id,
+            stage="plan",
+            attempt_number=attempt_number,
+            trigger=attempt_mode,
+            outcome="failed validation",
+            stage_status="failed",
+            validator_report_path=stage_root / "validator-report.md",
+            repair_brief_path=stage_root / "repair-brief.md",
+        )
     return workspace_root, config_path, stage_root
 
 
@@ -636,7 +685,8 @@ def test_stage_repair_extension_cli_runs_one_explicit_attempt_and_streams_eviden
 
     assert result.exit_code == 0, result.output
     assert "Repair-extension preview" in result.stdout
-    assert "Automatic repair budget" in result.stdout
+    assert "Automatic repair budget: used=2 max=2 remaining=0" in result.stdout
+    assert "Attempt: 4" in result.stdout
     assert "Repair-extension preflight: action=reopened" in result.stdout
     assert "Validator evidence:" in result.stdout
     assert "Stage run result: action=advance state=succeeded" in result.stdout
@@ -1020,14 +1070,9 @@ def test_stage_run_continues_canonical_next_stage_in_explicit_unbounded_run(
 
     assert result.exit_code == 0, result.output
     manifest = json.loads(
-        (
-            workspace_root
-            / "reports"
-            / "runs"
-            / work_item
-            / run_id
-            / "run-manifest.json"
-        ).read_text(encoding="utf-8")
+        (workspace_root / "reports" / "runs" / work_item / run_id / "run-manifest.json").read_text(
+            encoding="utf-8"
+        )
     )
     assert manifest["stage_target"] == "research"
     assert "AIDD stage run: stage=plan" in result.stdout
@@ -1470,9 +1515,7 @@ def test_stage_interact_reuses_synchronously_prepared_request(
 
     prepared = prepare_stage_interaction(options)
     request_root = prepared.operator_request.request_path.parent
-    assert [path.name for path in request_root.glob("request-*.md")] == [
-        "request-0001.md"
-    ]
+    assert [path.name for path in request_root.glob("request-*.md")] == ["request-0001.md"]
 
     run_stage_interact_command(
         StageInteractOptions(
@@ -1489,9 +1532,7 @@ def test_stage_interact_reuses_synchronously_prepared_request(
         )
     )
 
-    assert [path.name for path in request_root.glob("request-*.md")] == [
-        "request-0001.md"
-    ]
+    assert [path.name for path in request_root.glob("request-*.md")] == ["request-0001.md"]
 
 
 def test_stage_interact_reports_original_intervention_attempt_when_repair_retries(
@@ -1786,21 +1827,35 @@ def test_stage_run_retries_after_repair_and_succeeds_within_budget(tmp_path: Pat
 
 def test_stage_run_repairs_duplicate_attempt_history_found_after_normalization(
     tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
+    from aidd.core import stage_runner
+
+    original_writer = stage_runner._write_canonical_stage_result
+
+    def write_duplicate_initial_history(**kwargs):
+        path = original_writer(**kwargs)
+        if kwargs["execution_state"].attempt_number == 1 and kwargs["attempt_outcome"] == (
+            "content validation passed; terminal result validation pending"
+        ):
+            path.write_text(
+                path.read_text().replace(
+                    "## Attempt history\n\n",
+                    "## Attempt history\n\n- Attempt 1 (`initial`): duplicate claim.\n",
+                ),
+                encoding="utf-8",
+            )
+        return path
+
+    monkeypatch.setattr(
+        stage_runner, "_write_canonical_stage_result", write_duplicate_initial_history
+    )
     workspace_root = tmp_path / ".aidd"
     work_item = "WI-POST-NORMALIZATION"
     _materialize_plan_inputs(workspace_root=workspace_root, work_item=work_item)
-    invalid_documents = _valid_plan_output_documents()
-    invalid_documents["stage-result.md"] = invalid_documents["stage-result.md"].replace(
-        "## Attempt history\n\n- attempt-0001\n\n",
-        "## Attempt history\n\n"
-        "- Attempt 1 (`initial`): first claim.\n"
-        "- Attempt 1 (`initial`): duplicate claim.\n\n",
-    )
     writer_script = _write_runtime_writer_script(
         tmp_path=tmp_path,
-        documents=invalid_documents,
-        next_documents=_valid_plan_output_documents(repair_trace=True),
+        documents={"plan.md": _valid_plan_output_documents()["plan.md"]},
         exit_code=0,
     )
     runtime_command = f"{shlex.quote(sys.executable)} {shlex.quote(writer_script.as_posix())}"

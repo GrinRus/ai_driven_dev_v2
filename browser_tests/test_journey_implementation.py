@@ -55,7 +55,7 @@ def test_implementation_recovery_preserves_success_and_repository_evidence(
             with harness.open_page(viewport) as browser_page:
                 page = browser_page.page
                 page.goto(
-                    f"{harness.url}?ui=studio&mode=studio&work_item={fixture.work_item}"
+                    f"{harness.url}?mode=studio&work_item={fixture.work_item}"
                     f"&run_id={fixture.run_id}&stage=implement",
                     wait_until="domcontentloaded",
                 )
@@ -97,7 +97,7 @@ def test_finalization_retry_is_the_only_review_eligibility_boundary(tmp_path: Pa
         ) as harness, harness.open_page((1280, 900)) as browser_page:
             page = browser_page.page
             page.goto(
-                f"{harness.url}?ui=studio&mode=studio&work_item={fixture.work_item}"
+                f"{harness.url}?mode=studio&work_item={fixture.work_item}"
                 f"&run_id={fixture.run_id}&stage=implement",
                 wait_until="domcontentloaded",
             )

@@ -17,6 +17,8 @@ from aidd.harness.scenarios import (
     ScenarioRepoSource,
     ScenarioRunConfig,
 )
+from aidd.validators.models import ValidationFinding
+from aidd.validators.reports import render_validator_report
 
 
 def _scenario() -> Scenario:
@@ -53,13 +55,7 @@ def _scenario() -> Scenario:
 def test_stage_timing_payload_reports_attempt_windows_and_harness_steps(tmp_path: Path) -> None:
     workspace_root = tmp_path / ".aidd"
     stage_root = (
-        workspace_root
-        / "reports"
-        / "runs"
-        / "WI-001"
-        / "run-20260426T100000Z"
-        / "stages"
-        / "idea"
+        workspace_root / "reports" / "runs" / "WI-001" / "run-20260426T100000Z" / "stages" / "idea"
     )
     attempt_root = stage_root / "attempts" / "attempt-0001"
     attempt_root.mkdir(parents=True)
@@ -98,11 +94,11 @@ def test_stage_timing_payload_reports_attempt_windows_and_harness_steps(tmp_path
         encoding="utf-8",
     )
     (work_item_stage_root / "stage-result.md").write_text(
-        "# Stage Result\n\n## Status\n\n- `succeeded`\n",
+        "# Stage Result\n\n## Status\n\n- Status: `succeeded`\n",
         encoding="utf-8",
     )
     (work_item_stage_root / "validator-report.md").write_text(
-        "# Validator Report\n\n## Result\n\n- Verdict: `pass`\n",
+        render_validator_report(()),
         encoding="utf-8",
     )
     run_result = HarnessAiddRunResult(
@@ -164,13 +160,7 @@ def test_stage_timing_payload_reports_attempt_windows_and_harness_steps(tmp_path
 def test_stage_timing_marks_terminal_doc_mismatch(tmp_path: Path) -> None:
     workspace_root = tmp_path / ".aidd"
     stage_root = (
-        workspace_root
-        / "reports"
-        / "runs"
-        / "WI-001"
-        / "run-20260426T100000Z"
-        / "stages"
-        / "plan"
+        workspace_root / "reports" / "runs" / "WI-001" / "run-20260426T100000Z" / "stages" / "plan"
     )
     stage_root.mkdir(parents=True)
     (stage_root / "stage-metadata.json").write_text(
@@ -189,15 +179,20 @@ def test_stage_timing_marks_terminal_doc_mismatch(tmp_path: Path) -> None:
     work_item_stage_root = workspace_root / "workitems" / "WI-001" / "stages" / "plan"
     work_item_stage_root.mkdir(parents=True)
     (work_item_stage_root / "stage-result.md").write_text(
-        "# Stage Result\n\n## Status\n\n- `succeeded`\n\n"
+        "# Stage Result\n\n## Status\n\n- Status: `succeeded`\n\n"
         "## Validation summary\n\n- Validator verdict: `pass`\n",
         encoding="utf-8",
     )
     (work_item_stage_root / "validator-report.md").write_text(
-        "# Validator Report\n\n"
-        "## Semantic checks\n\n"
-        "- `SEM-PLACEHOLDER-CONTENT` (`high`) in `plan.md`: fix.\n\n"
-        "## Result\n\n- Verdict: `fail`\n- Repair required for progression: yes\n",
+        render_validator_report(
+            (
+                ValidationFinding(
+                    code="SEM-PLACEHOLDER-CONTENT",
+                    severity="high",
+                    message="Replace placeholder content.",
+                ),
+            )
+        ),
         encoding="utf-8",
     )
     (work_item_stage_root / "repair-brief.md").write_text(
@@ -254,14 +249,12 @@ def test_stage_timing_allows_successful_final_repair_attempt_docs(
     work_item_stage_root = workspace_root / "workitems" / "WI-001" / "stages" / "tasklist"
     work_item_stage_root.mkdir(parents=True)
     (work_item_stage_root / "stage-result.md").write_text(
-        "# Stage Result\n\n## Status\n\n- `succeeded`\n\n"
+        "# Stage Result\n\n## Status\n\n- Status: `succeeded`\n\n"
         "## Validation summary\n\n- Validator verdict: `pass`\n",
         encoding="utf-8",
     )
     (work_item_stage_root / "validator-report.md").write_text(
-        "# Validator Report\n\n## Result\n\n"
-        "- Verdict: `pass`\n"
-        "- Repair required for progression: no\n",
+        render_validator_report(()),
         encoding="utf-8",
     )
     (work_item_stage_root / "repair-brief.md").write_text(

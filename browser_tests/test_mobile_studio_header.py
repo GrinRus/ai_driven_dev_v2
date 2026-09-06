@@ -19,7 +19,7 @@ def test_mobile_studio_header_is_compact_and_keeps_maintenance_after_decision(
         work_item=fixture.work_item,
     ) as harness, harness.open_page(viewport) as browser_page:
         page = browser_page.page
-        page.goto(f"{harness.url}?ui=studio", wait_until="networkidle")
+        page.goto(harness.url, wait_until="networkidle")
         settings = page.locator("#runtimeSettings")
         if settings.get_attribute("open") is None:
             page.locator("#runtimeSettings > summary").click()
@@ -78,7 +78,7 @@ def test_mobile_recovery_header_keeps_identity_and_decision_surface(
         work_item=fixture.work_item,
     ) as harness, harness.open_page(viewport) as browser_page:
         page = browser_page.page
-        page.goto(f"{harness.url}?ui=studio", wait_until="domcontentloaded")
+        page.goto(harness.url, wait_until="domcontentloaded")
         page.wait_for_function("typeof renderCockpit === 'function'")
         page.evaluate(
             "async () => {"

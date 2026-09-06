@@ -341,10 +341,8 @@ def _complete_task_execution(
         stage="implement",
     )
     if not succeeded and metadata is not None and metadata.status == StageState.BLOCKED.value:
-        # Older runs could persist ``blocked`` for an ordinary failed task.  A
-        # task retry must repair that drift before deciding whether this is a
-        # genuine operator block.  The unblock helper only keeps the state
-        # blocked when unresolved questions or approvals are durable.
+        # A failed task can coincide with an operator-blocked stage. Retain the
+        # blocked status only while unresolved questions or approvals are durable.
         unblock_state = update_stage_unblock_state(
             workspace_root=request.workspace_root,
             work_item=request.work_item,
