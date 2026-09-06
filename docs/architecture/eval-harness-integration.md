@@ -208,6 +208,12 @@ The analysis should detect at least:
 - excessive question churn;
 - install-path mismatches between target cwd and artifact expectations.
 
+Stage timing and self-repair reports must classify attempts from each persisted stage
+`artifact-index.json` lineage. `attempt_number` remains a storage coordinate: a second attempt is
+not a repair unless its lineage has `scope: stage` and `attempt_kind: repair`. Missing or malformed
+lineage is an evidence error, while `resume`, `intervention`, and `repair-extension` remain
+distinct kinds and must not be folded into the automatic repair count.
+
 Manual post-run quality review is still expected when the launching SWE agent needs a
 deliverable-quality decision: a technically completed run can still produce weak
 artifacts, weak code, weak tests, or poor operator UI/UX. That review belongs in
