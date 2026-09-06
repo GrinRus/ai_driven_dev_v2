@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import re
+import shutil
 import tomllib
 from dataclasses import dataclass
 from pathlib import Path
@@ -57,7 +58,14 @@ from aidd.harness.eval_models import (
 )
 from aidd.harness.eval_report_writers import write_eval_source_artifacts
 from aidd.harness.result_bundle import (
+    EVENTS_JSONL_FILENAME,
+    FEATURE_SELECTION_FILENAME,
+    RUNTIME_JSONL_FILENAME,
+    RUNTIME_LOG_FILENAME,
+    VALIDATOR_REPORT_FILENAME,
+    VERDICT_FILENAME,
     ResultBundleLayout,
+    collect_aidd_evidence_sources,
     copy_or_link_run_artifacts,
     write_command_transcripts,
     write_feature_selection,
@@ -978,6 +986,12 @@ def persist_eval_reports(
             filename=RUN_EVENTS_JSONL_FILENAME,
         ),
     )
+    aidd_evidence_sources, aidd_evidence_references = collect_aidd_evidence_sources(
+        layout=layout,
+        source_workspace_root=aidd_workspace_root,
+        work_item=work_item,
+        product_run_id=product_run_id,
+    )
     normalized_events = (
         tuple()
         if events_jsonl_source_path is None
@@ -1080,16 +1094,14 @@ def persist_eval_reports(
         aidd_run_result=state.aidd_run_result,
         aidd_artifact_references={
             "scenario_path": prep.scenario_path.as_posix(),
-            "runtime_log_source": runtime_log_source_path.as_posix(),
-            "validator_report_source": validator_report_source_path.as_posix(),
-            "verdict_source": verdict_source_path.as_posix(),
-            "runtime_jsonl_source": (
-                "n/a"
-                if runtime_jsonl_source_path is None
-                else runtime_jsonl_source_path.as_posix()
+            "runtime_log": RUNTIME_LOG_FILENAME,
+            "validator_report": VALIDATOR_REPORT_FILENAME,
+            "verdict": VERDICT_FILENAME,
+            "runtime_jsonl": (
+                "n/a" if runtime_jsonl_source_path is None else RUNTIME_JSONL_FILENAME
             ),
-            "events_jsonl_source": (
-                "n/a" if events_jsonl_source_path is None else events_jsonl_source_path.as_posix()
+            "events_jsonl": (
+                "n/a" if events_jsonl_source_path is None else EVENTS_JSONL_FILENAME
             ),
             "resource_source": (
                 "packaged"
@@ -1105,7 +1117,7 @@ def persist_eval_reports(
                     else state.install_result.artifact_path.as_posix()
                 )
             ),
-            "feature_selection_path": layout.feature_selection_path.as_posix(),
+            "feature_selection_path": FEATURE_SELECTION_FILENAME,
             "working_copy_path": (
                 state.prepared_working_copy.working_copy_path.as_posix()
                 if state.prepared_working_copy is not None
@@ -1116,6 +1128,7 @@ def persist_eval_reports(
                 if state.live_runtime_config_path is not None
                 else "n/a"
             ),
+            **aidd_evidence_references,
         },
     )
     write_feature_selection(layout=layout, payload=feature_selection_payload)
@@ -1134,7 +1147,11 @@ def persist_eval_reports(
         verdict_path=verdict_source_path,
         runtime_jsonl_path=runtime_jsonl_source_path,
         events_jsonl_path=events_jsonl_source_path,
+        additional_sources=aidd_evidence_sources,
     )
+    # Concatenated sources are an internal staging detail.  The canonical top-level
+    # copies and materialized AIDD tree above are the only durable references.
+    shutil.rmtree(layout.run_root / "_sources", ignore_errors=True)
 
     write_stage_timing_artifacts(layout=layout, payload=stage_timing_payload)
     rendered_stage_timing = render_stage_timing_markdown(stage_timing_payload)

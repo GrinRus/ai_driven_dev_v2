@@ -3,6 +3,7 @@ from __future__ import annotations
 import hashlib
 import json
 import shutil
+import stat
 import tempfile
 from collections.abc import Mapping
 from dataclasses import dataclass
@@ -42,6 +43,8 @@ RUN_TRANSCRIPT_FILENAME = "run-transcript.json"
 VERIFY_TRANSCRIPT_FILENAME = "verify-transcript.json"
 TEARDOWN_TRANSCRIPT_FILENAME = "teardown-transcript.json"
 ARTIFACT_DIGESTS_FILENAME = "artifact-digests.json"
+AIDD_EVIDENCE_DIRNAME = "canonical-evidence"
+RUNTIME_EXIT_METADATA_FILENAME = "runtime-exit.json"
 
 
 @dataclass(frozen=True, slots=True)
@@ -403,8 +406,115 @@ def _sha256(path: Path) -> str:
 
 
 def _validate_artifact_source(source_path: Path) -> None:
-    if not source_path.exists() or not source_path.is_file():
+    try:
+        mode = source_path.lstat().st_mode
+    except FileNotFoundError:
+        mode = 0
+    if not stat.S_ISREG(mode):
         raise ValueError(f"Artifact source file does not exist: {source_path.as_posix()}")
+
+
+def _relative_destination(*, layout: ResultBundleLayout, destination: Path) -> Path:
+    if not destination.is_absolute():
+        destination = layout.run_root / destination
+    resolved_root = layout.run_root.resolve(strict=False)
+    resolved_destination = destination.resolve(strict=False)
+    if not resolved_destination.is_relative_to(resolved_root):
+        raise ValueError(
+            f"Artifact destination must stay inside result bundle: {destination.as_posix()}"
+        )
+    return resolved_destination.relative_to(resolved_root)
+
+
+def _iter_evidence_sources(
+    *,
+    source_root: Path,
+    destination_root: Path,
+) -> tuple[tuple[Path, Path], ...]:
+    """Enumerate trusted regular files from one AIDD evidence tree."""
+
+    if not source_root.exists():
+        return tuple()
+    if source_root.is_symlink() or not source_root.is_dir():
+        raise ValueError(f"AIDD evidence source must be a real directory: {source_root}")
+    sources: list[tuple[Path, Path]] = []
+    for source in sorted(source_root.rglob("*")):
+        mode = source.lstat().st_mode
+        if stat.S_ISLNK(mode):
+            raise ValueError(f"Symlink is not trusted AIDD evidence: {source}")
+        if stat.S_ISDIR(mode):
+            continue
+        if not stat.S_ISREG(mode):
+            raise ValueError(f"Unsupported AIDD evidence node: {source}")
+        sources.append((source, destination_root / source.relative_to(source_root)))
+    return tuple(sources)
+
+
+def collect_aidd_evidence_sources(
+    *,
+    layout: ResultBundleLayout,
+    source_workspace_root: Path | None,
+    work_item: str,
+    product_run_id: str | None,
+) -> tuple[dict[str, tuple[Path, Path]], dict[str, str]]:
+    """Collect raw and canonical AIDD files before an isolated workspace is removed.
+
+    The returned source map is consumed by :func:`copy_or_link_run_artifacts`; all
+    destinations are bundle-relative and therefore remain readable after the source
+    workspace is cleaned up.
+    """
+
+    if source_workspace_root is None:
+        return {}, {}
+    workspace_root = source_workspace_root.resolve(strict=False)
+    normalized_work_item = SafeIdentifier.parse(work_item, label="work_item").value
+    sources: list[tuple[str, Path, Path]] = []
+    references: dict[str, str] = {}
+    roots: list[tuple[str, Path]] = [
+        ("work_item", workspace_root / "workitems" / normalized_work_item)
+    ]
+    if product_run_id is not None:
+        roots.append(
+            (
+                "task_run",
+                workspace_root
+                / "reports"
+                / "runs"
+                / normalized_work_item
+                / SafeIdentifier.parse(product_run_id, label="product_run_id").value,
+            )
+        )
+    for category, source_root in roots:
+        destination_root = layout.run_root / AIDD_EVIDENCE_DIRNAME / category.replace(
+            "_", "-"
+        )
+        enumerated = _iter_evidence_sources(
+            source_root=source_root,
+            destination_root=destination_root,
+        )
+        if not enumerated:
+            continue
+        relative_root = destination_root.relative_to(layout.run_root).as_posix()
+        references[f"{category}_root"] = relative_root
+        for index, (source, destination) in enumerate(enumerated):
+            sources.append((f"{category}:{index}", source, destination))
+            filename = source.name
+            relative = destination.relative_to(layout.run_root).as_posix()
+            if filename == "task-ledger.json":
+                references.setdefault("task_ledger", relative)
+            elif filename == "finalization-state.json":
+                references["finalization_evidence"] = relative
+            elif filename == RUNTIME_LOG_FILENAME:
+                references.setdefault("runtime_attempt_log", relative)
+            elif filename == RUNTIME_EXIT_METADATA_FILENAME:
+                references.setdefault("runtime_exit_metadata", relative)
+            elif filename == RUNTIME_JSONL_FILENAME:
+                references.setdefault("runtime_attempt_jsonl", relative)
+            elif filename == EVENTS_JSONL_FILENAME:
+                references.setdefault("events_attempt_jsonl", relative)
+    return {
+        key: (source, destination) for key, source, destination in sources
+    }, references
 
 
 def _atomic_write_json(path: Path, payload: Any) -> Path:
@@ -429,6 +539,7 @@ def copy_or_link_run_artifacts(
     verdict_path: Path,
     runtime_jsonl_path: Path | None = None,
     events_jsonl_path: Path | None = None,
+    additional_sources: Mapping[str, tuple[Path, Path]] | None = None,
 ) -> dict[str, Path]:
     sources: dict[str, tuple[Path, Path]] = {
         "runtime_log": (runtime_log_path, layout.runtime_log_path),
@@ -439,6 +550,10 @@ def copy_or_link_run_artifacts(
         sources["runtime_jsonl"] = (runtime_jsonl_path, layout.runtime_jsonl_path)
     if events_jsonl_path is not None:
         sources["events_jsonl"] = (events_jsonl_path, layout.events_jsonl_path)
+    for key, (source_path, destination_path) in (additional_sources or {}).items():
+        if key in sources:
+            raise ValueError(f"Duplicate result bundle artifact key: {key}")
+        sources[key] = (source_path, destination_path)
 
     for source_path, _destination_path in sources.values():
         _validate_artifact_source(source_path)
@@ -449,7 +564,13 @@ def copy_or_link_run_artifacts(
     prepared: list[tuple[str, Path, Path, str, int]] = []
     try:
         for key, (source_path, destination_path) in sources.items():
-            staged_path = staging_root / destination_path.name
+            staged_path = staging_root / _relative_destination(
+                layout=layout,
+                destination=destination_path
+            )
+            if staged_path.exists():
+                raise ValueError(f"Duplicate result bundle artifact path: {destination_path}")
+            staged_path.parent.mkdir(parents=True, exist_ok=True)
             shutil.copyfile(source_path, staged_path)
             source_digest = _sha256(source_path)
             staged_digest = _sha256(staged_path)
@@ -465,6 +586,10 @@ def copy_or_link_run_artifacts(
                 )
             )
 
+        if additional_sources:
+            evidence_root = layout.run_root / AIDD_EVIDENCE_DIRNAME
+            if evidence_root.exists():
+                shutil.rmtree(evidence_root)
         for _key, staged_path, destination_path, _digest, _size in prepared:
             destination_path.parent.mkdir(parents=True, exist_ok=True)
             staged_path.replace(destination_path)

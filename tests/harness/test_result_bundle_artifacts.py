@@ -2,11 +2,13 @@ from __future__ import annotations
 
 import json
 import os
+import shutil
 from pathlib import Path
 
 import pytest
 
 from aidd.harness.result_bundle import (
+    collect_aidd_evidence_sources,
     copy_or_link_run_artifacts,
     ensure_result_bundle_layout,
 )
@@ -107,3 +109,81 @@ def test_copy_failure_does_not_publish_commit_marker(
 
     assert not layout.artifact_digests_path.exists()
     assert not tuple(layout.run_root.glob(".artifact-materialization-*"))
+
+
+def test_aidd_evidence_is_materialized_before_source_cleanup(tmp_path: Path) -> None:
+    source_workspace = tmp_path / "target" / ".aidd"
+    work_item_root = source_workspace / "workitems" / "WI-EVIDENCE"
+    run_root = source_workspace / "reports" / "runs" / "WI-EVIDENCE" / "product-1"
+    (work_item_root / "stages" / "qa").mkdir(parents=True)
+    (run_root / "stages" / "implement" / "attempts" / "attempt-0001").mkdir(
+        parents=True
+    )
+    (run_root / "stages" / "qa").mkdir(parents=True)
+    (work_item_root / "stages" / "qa" / "validator-report.md").write_text(
+        "# canonical validator\n", encoding="utf-8"
+    )
+    (run_root / "stages" / "qa" / "stage-metadata.json").write_text(
+        '{"status":"succeeded"}\n', encoding="utf-8"
+    )
+    attempt_root = run_root / "stages" / "implement" / "attempts" / "attempt-0001"
+    (attempt_root / "runtime.log").write_text("raw runtime\n", encoding="utf-8")
+    (attempt_root / "runtime-exit.json").write_text(
+        '{"exit_code":0}\n', encoding="utf-8"
+    )
+    (run_root / "stages" / "implement" / "task-ledger.json").write_text(
+        '{"schema_version":1}\n', encoding="utf-8"
+    )
+    finalization_root = (
+        run_root
+        / "stages"
+        / "implement"
+        / "finalization"
+        / "attempts"
+        / "attempt-0001"
+    )
+    finalization_root.mkdir(parents=True)
+    (finalization_root / "finalization-state.json").write_text(
+        '{"status":"succeeded"}\n', encoding="utf-8"
+    )
+
+    sources_root = tmp_path / "sources"
+    sources_root.mkdir()
+    runtime_log = sources_root / "runtime.log"
+    validator = sources_root / "validator-report.md"
+    verdict = sources_root / "verdict.md"
+    runtime_log.write_text("eval runtime\n", encoding="utf-8")
+    validator.write_text("# eval validator\n", encoding="utf-8")
+    verdict.write_text("# eval verdict\n", encoding="utf-8")
+    layout = ensure_result_bundle_layout(workspace_root=tmp_path, run_id="eval-evidence")
+    additional, references = collect_aidd_evidence_sources(
+        layout=layout,
+        source_workspace_root=source_workspace,
+        work_item="WI-EVIDENCE",
+        product_run_id="product-1",
+    )
+    assert references["task_ledger"].endswith("task-ledger.json")
+    assert references["finalization_evidence"].endswith("finalization-state.json")
+    copy_or_link_run_artifacts(
+        layout=layout,
+        runtime_log_path=runtime_log,
+        validator_report_path=validator,
+        verdict_path=verdict,
+        additional_sources=additional,
+    )
+
+    shutil.rmtree(source_workspace)
+    canonical_validator = (
+        layout.run_root
+        / references["work_item_root"]
+        / "stages"
+        / "qa"
+        / "validator-report.md"
+    )
+    assert canonical_validator.is_file()
+    assert (layout.run_root / references["task_ledger"]).is_file()
+    assert (layout.run_root / references["finalization_evidence"]).is_file()
+    digest_payload = json.loads(layout.artifact_digests_path.read_text(encoding="utf-8"))
+    digest_paths = {item["path"] for item in digest_payload["artifacts"]}
+    assert references["task_ledger"] in digest_paths
+    assert references["finalization_evidence"] in digest_paths
