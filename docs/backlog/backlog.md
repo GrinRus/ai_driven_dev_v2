@@ -7,7 +7,7 @@ slice, and local task.
 
 ## Next
 
-- `W48-E3-S3-T1` — Define conditional bundle inventory, separate eval/product IDs, relative references, and legacy policy.
+- `W48-E3-S3-T2` — Persist actual product run ID, feature selection, and phase metadata.
 
 ## Soon
 
@@ -37,9 +37,9 @@ slice, and local task.
 
 ## Current reconciliation
 
-- `2026-09-07` `W48-E3-S2-T3` completed in PR #552 and is present on `origin/main` at `11cb9685`.
-  Required CI lanes and local eval/harness regressions, Ruff, and strict mypy checks passed. The
-  task propagated typed causes through eval projections and corrected DET-002 classification; the
-  adjacent `codex/ui-completion` checkout remains untouched. `W48-E3-S3-T1` is now the promoted
-  dependency-ready successor and continues to avoid UI-owned paths; `W46-E2-S2-T4` and
-  human/provider acceptance tasks stay parked.
+- `2026-09-07` `W48-E3-S3-T1` completed in PR #554 and is present on `origin/main` at `70f4731e`.
+  Required CI lanes and full local `make check` passed; the task defines the schema-v2 bundle
+  inventory, distinct evaluation/product identity, conditional requirements, relative references,
+  and strict legacy rejection. The adjacent `codex/ui-completion` checkout remains untouched
+  with its own unpushed UI work; `W48-E3-S3-T2` is now the promoted dependency-ready successor,
+  while `W46-E2-S2-T4` and human/provider acceptance tasks stay parked.
