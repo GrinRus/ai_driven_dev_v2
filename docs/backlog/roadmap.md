@@ -385,7 +385,7 @@ while retired ordinal-only evidence is rejected rather than silently upgraded.
     adapter-conformance, deterministic-scenarios, packaged-ui-browser, build, CodeQL, Scorecard,
     and dependency-review checks passed. Local core, CLI/eval, remaining non-UI, and planning/docs
     suites passed; the adjacent UI checkout remained untouched.
-- `W48-E3-S1-T2` (next) Persist lineage from each owning lifecycle service.
+- `W48-E3-S1-T2` (done) Persist lineage from each owning lifecycle service.
   - Dependencies: `W48-E3-S1-T1` and W48-E1 terminalization.
   - Output: stage preparation, task-attempt lifecycle, task evidence references, and aggregate
     finalization publish one explicit lineage object before their durable state is exposed.
@@ -394,6 +394,18 @@ while retired ordinal-only evidence is rejected rather than silently upgraded.
   - Verification: three dependency-ordered clean task attempts retain `scope: task` lineage in
     state and reference manifests, finalization retains `scope: finalization`, and no repair edge
     is inferred from empty or ordinal-only stage references.
+  - Completion evidence: PR #544 merged to `origin/main` at `8deed571`; Python 3.12–3.14,
+    adapter-conformance, deterministic-scenarios, packaged-ui-browser, build, CodeQL, Scorecard,
+    and dependency-review checks passed. Local core (1087), planning (13), Ruff, and strict mypy
+    checks passed; the adjacent UI checkout remained untouched.
+- `W48-E3-S1-T3` (next) Derive timing, repair history, and repair matrix only from lineage.
+  - Dependencies: `W48-E3-S1-T2`.
+  - Output: evaluation projections classify repairs from explicit stage lineage rather than
+    attempt ordinals.
+  - Scope: `stage_timing.py`, repair-history projections, deterministic evidence tests, and
+    related documentation; no UI-owned paths.
+  - Verification: DET-004 reports zero repairs for clean attempts; one injected `repair` lineage
+    reports exactly one repair without treating resume or intervention as repair.
 
 ## Wave 51 — agent development instruction consistency (`done`)
 
