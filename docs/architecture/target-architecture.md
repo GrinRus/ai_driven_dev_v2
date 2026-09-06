@@ -195,7 +195,12 @@ The exact layout may evolve, but the model is fixed:
 - normal stage attempts currently persist raw runtime logs and runtime exit metadata under
   `reports/runs/.../attempts/`;
 - eval lanes derive additional timing and quality reports from those run artifacts and scenario
-  execution evidence.
+  execution evidence;
+- deterministic eval result bundles materialize the relevant work-item tree and product task-run
+  tree under `canonical-evidence/` before an isolated `.aidd` workspace is cleaned up. Every
+  copied regular file is recorded with its bundle-relative path, SHA-256 digest, and byte size in
+  `artifact-digests.json`; metadata points only at those durable bundle references for raw attempt
+  logs/exits/events, stage validators, task ledgers, and aggregate-finalization evidence.
 
 The implemented operator frontend and project-set workflow support preserve this ownership model:
 
