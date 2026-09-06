@@ -104,6 +104,10 @@ blocking answer persistence, runtime logs, artifact and validation visibility,
 repair-history links, and declared project-set root visibility. Public GitHub
 repositories remain live E2E inputs only.
 
+The maintained Inbox journey also covers two sibling disposable projects: a running job keeps
+its captured origin project and live logs while the operator switches projects, and artifact/log
+read models remain scoped to whichever project is selected when they are requested.
+
 The installed/source local-project smoke path is tracked as
 `AIDD-INSTALLED-LOCAL-001` in
 `harness/scenarios/smoke/installed-local-project-fixture.yaml`. It remains a

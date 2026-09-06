@@ -184,11 +184,16 @@ def test_desktop_project_rail_keeps_work_item_context_and_filters_deterministica
 def test_running_job_keeps_origin_project_when_operator_switches_projects(
     tmp_path: Path,
 ) -> None:
-    project_root = tmp_path / "multi-context"
+    project_root = tmp_path / "origin-project"
     _seed_inbox_states(project_root)
-    configure_sleeping_fixture_runtime(project_root, sleep_seconds=60)
-    other_project = project_root / "other-project"
-    build_browser_state_fixture(other_project, "no-run", work_item="WI-OTHER")
+    configure_sleeping_fixture_runtime(project_root, sleep_seconds=20)
+    other_project = tmp_path / "other-project"
+    build_browser_state_fixture(
+        other_project,
+        "terminal-handoff",
+        work_item="WI-OTHER",
+        run_id="run-other",
+    )
 
     with sync_playwright() as playwright, operator_browser_harness(
         project_root,
@@ -213,6 +218,23 @@ def test_running_job_keeps_origin_project_when_operator_switches_projects(
                 phase="multi-context fixture job",
             )
 
+            origin_job = page.request.get(f"{harness.url}api/jobs/{job_id}")
+            assert origin_job.status == 200
+            origin_job_payload = origin_job.json()
+            assert origin_job_payload["project_root"] == project_root.as_posix()
+            assert origin_job_payload["workspace_root"] == (
+                project_root / ".aidd"
+            ).as_posix()
+            live_logs = page.request.get(
+                f"{harness.url}api/jobs/{job_id}/logs?cursor=0"
+            )
+            assert live_logs.status == 200
+            live_log_payload = live_logs.json()
+            assert any(
+                "AIDD UI workflow job started." in chunk["text"]
+                for chunk in live_log_payload["chunks"]
+            )
+
             switch_response = page.request.post(
                 f"{harness.url}api/onboarding/work-item",
                 data={
@@ -224,6 +246,13 @@ def test_running_job_keeps_origin_project_when_operator_switches_projects(
             assert switch_response.status == 200
             page.goto(harness.url, wait_until="domcontentloaded")
             _wait_for_work_item_surface(page, "WI-OTHER")
+            other_artifacts = page.request.get(
+                f"{harness.url}api/artifacts?stage=qa&run_id=run-other"
+            )
+            assert other_artifacts.status == 200
+            other_artifacts_text = other_artifacts.text()
+            assert "workitems/WI-OTHER" in other_artifacts_text
+            assert "workitems/WI-COMPLETE" not in other_artifacts_text
             page.locator("#projectInboxButton").click()
             running_button = page.locator(
                 '[data-inbox-section="running"] [data-inbox-action="open-running-job"]'
@@ -236,6 +265,31 @@ def test_running_job_keeps_origin_project_when_operator_switches_projects(
             running_button.click()
             _wait_for_work_item_surface(page, "WI-RUN")
             assert parse_qs(urlsplit(page.url).query)["work_item"] == ["WI-RUN"]
+
+            origin_switch = page.request.post(
+                f"{harness.url}api/onboarding/work-item",
+                data={
+                    "action": "resume",
+                    "project_root": project_root.as_posix(),
+                    "work_item": "WI-COMPLETE",
+                },
+            )
+            assert origin_switch.status == 200
+            origin_state = page.request.get(f"{harness.url}api/onboarding/state")
+            assert origin_state.status == 200
+            assert origin_state.json()["context"]["work_item"] == "WI-COMPLETE"
+            origin_artifacts = page.request.get(
+                f"{harness.url}api/artifacts?stage=qa&run_id=run-complete"
+            )
+            assert origin_artifacts.status == 200
+            origin_artifacts_text = origin_artifacts.text()
+            assert "workitems/WI-COMPLETE" in origin_artifacts_text
+            assert "workitems/WI-OTHER" not in origin_artifacts_text
+            origin_logs = page.request.get(
+                f"{harness.url}api/logs?stage=qa&run_id=run-complete"
+            )
+            assert origin_logs.status == 200
+            assert "qa complete" in origin_logs.json()["text"]
             _assert_clean_navigation_diagnostics(browser_page)
         finally:
             cancel_response = page.request.post(
