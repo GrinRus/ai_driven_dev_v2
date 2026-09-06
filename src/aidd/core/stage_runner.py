@@ -65,20 +65,11 @@ from aidd.core.stage_outputs import (
     retain_unexpected_runtime_documents,
     run_structural_validation_after_output_discovery,
 )
-from aidd.core.stage_paths import (
-    workspace_relative_path as _workspace_relative_path,
-)
-from aidd.core.stage_paths import (
-    workspace_relative_paths as _to_workspace_relative_paths,
-)
 from aidd.core.stage_preparation import (
     StageInputPreflightError,
     persist_execution_state,
     prepare_stage_bundle,
     validate_required_stage_inputs,
-)
-from aidd.core.stage_preparation import (
-    render_stage_brief as _render_stage_brief,
 )
 from aidd.core.stage_registry import DEFAULT_STAGE_CONTRACTS_ROOT
 from aidd.core.stage_terminal import (
@@ -105,10 +96,6 @@ from aidd.core.state_machine import StageState, transition_stage_state
 from aidd.core.workspace import stage_root as workspace_stage_root
 from aidd.validators.models import ValidationFinding
 from aidd.validators.reports import write_validator_report
-
-_route_stage_questions_to_interview_with_validation = (
-    route_stage_questions_to_interview_with_validation
-)
 
 
 def _append_validation_findings(
@@ -1125,7 +1112,7 @@ def _run_single_stage_orchestration(
         stage=stage,
         repair_brief_path=repair_brief_trace_path,
     )
-    interview_routing, interview_findings = _route_stage_questions_to_interview_with_validation(
+    interview_routing, interview_findings = route_stage_questions_to_interview_with_validation(
         workspace_root=workspace_root,
         discovery=discovery,
     )
@@ -1385,10 +1372,6 @@ __all__ = [
     "StageUnblockState",
     "StageValidationState",
     "ValidationVerdict",
-    "_render_stage_brief",
-    "_route_stage_questions_to_interview_with_validation",
-    "_to_workspace_relative_paths",
-    "_workspace_relative_path",
     "decide_post_validation_transition",
     "derive_validation_verdict",
     "discover_stage_markdown_outputs",
