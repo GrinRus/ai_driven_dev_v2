@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import re
 from pathlib import Path
 
 import pytest
@@ -16,6 +17,41 @@ from aidd.core.stage_registry import (
 from aidd.core.stages import STAGES
 from aidd.validators.models import ValidationFinding, ValidationIssueLocation
 from aidd.validators.reports import render_validator_report
+
+_PROTECTED_RECORD_MUTATION = re.compile(
+    r"(?i)\b(?:write|update|create|edit|delete|replace)\b[^`\n]{0,160}"
+    r"`(?:[^`]*?/)?(?:stage-result|validator-report)\.md`"
+)
+
+
+def _without_protected_record_boundaries(prompt: str) -> str:
+    """Remove expected negative rules before checking for contradictory mutations."""
+    safe_prefixes = (
+        "Never create, edit, delete, or replace either record",
+    )
+    negative_boundary = re.compile(
+        r"(?i)\bdo not write\b[^.`\n]*`(?:stage-result|validator-report)\.md`[^.\n]*(?:[.;]|$)"
+    )
+    lines: list[str] = []
+    for line in prompt.splitlines():
+        if any(
+            line.strip().removeprefix("- ").startswith(prefix)
+            for prefix in safe_prefixes
+        ):
+            continue
+        lines.append(negative_boundary.sub("", line))
+    return "\n".join(lines)
+
+
+def test_protected_record_mutation_matcher_detects_reintroduced_update() -> None:
+    prompt = (
+        "Do not write `stage-result.md` or `validator-report.md`; AIDD owns the records.\n"
+        "Update `stage-result.md` to reflect the repaired outcome."
+    )
+
+    assert _PROTECTED_RECORD_MUTATION.findall(
+        _without_protected_record_boundaries(prompt)
+    ) == ["Update `stage-result.md`"]
 
 
 def test_native_prompt_compiler_includes_attempt_bundle_and_contract(
@@ -248,3 +284,8 @@ def test_composed_stage_request_respects_runtime_write_authority(
     )
     for instruction in forbidden_instructions:
         assert instruction not in normalized, (stage, attempt_mode, instruction)
+
+    contradictory_mutations = _PROTECTED_RECORD_MUTATION.findall(
+        _without_protected_record_boundaries(prompt)
+    )
+    assert not contradictory_mutations, (stage, attempt_mode, contradictory_mutations)
