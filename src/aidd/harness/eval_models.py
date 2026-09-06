@@ -34,6 +34,7 @@ class EvalScenarioRunResult:
     first_failure_boundary: FailureBoundarySelection
     first_failure_note: str | None
     failure_cause: FailureCause | None = None
+    product_run_id: str | None = None
 
 
 @dataclass(frozen=True, slots=True)

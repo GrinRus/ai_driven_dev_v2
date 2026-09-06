@@ -7,6 +7,8 @@ from dataclasses import dataclass
 from pathlib import Path
 from time import monotonic
 
+from aidd.core.identifiers import SafeIdentifier
+from aidd.core.run_lookup import latest_run_id
 from aidd.core.run_store import (
     RUN_EVENTS_JSONL_FILENAME,
     RUN_RUNTIME_JSONL_FILENAME,
@@ -49,6 +51,7 @@ from aidd.evals.verdicts import (
 from aidd.harness.eval_models import (
     EvalExecutionState,
     EvalReportPersistenceContext,
+    EvalRunPreparation,
     EvalRuntimeLogSourceContext,
     EvalScenarioRunResult,
 )
@@ -57,12 +60,16 @@ from aidd.harness.result_bundle import (
     ResultBundleLayout,
     copy_or_link_run_artifacts,
     write_command_transcripts,
+    write_feature_selection,
     write_harness_metadata,
 )
 from aidd.harness.scenarios import Scenario
 from aidd.runtime_catalog import get_runtime_definition
 
 EXIT_CODE_PATTERN = re.compile(r"non-zero exit \((?P<code>\d+)\)")
+PRODUCT_RUN_ID_PATTERN = re.compile(
+    r"\brun_id=(?P<run_id>[A-Za-z0-9][A-Za-z0-9._-]{0,127})\b"
+)
 
 
 @dataclass(frozen=True, slots=True)
@@ -797,6 +804,89 @@ def grader_payload(
     }
 
 
+def _product_run_id_for_state(
+    *, prep: EvalRunPreparation, state: EvalExecutionState
+) -> str | None:
+    """Resolve the product run created in the isolated target workspace."""
+
+    if state.aidd_run_result is None or state.prepared_working_copy is None:
+        return None
+    product_workspace = state.prepared_working_copy.working_copy_path / ".aidd"
+    try:
+        product_run_id = latest_run_id(
+            workspace_root=product_workspace,
+            work_item=prep.work_item,
+        )
+    except ValueError:
+        product_run_id = None
+    if product_run_id is not None:
+        return product_run_id
+
+    # Some adapters expose the authoritative run id only in their bounded CLI output.
+    # Use the last emitted id, which is the terminal invocation for stage scenarios.
+    output = "\n".join(
+        (state.aidd_run_result.stdout_text, state.aidd_run_result.stderr_text)
+    )
+    for match in reversed(tuple(PRODUCT_RUN_ID_PATTERN.finditer(output))):
+        try:
+            return SafeIdentifier.parse(match.group("run_id"), label="product_run_id").value
+        except ValueError:
+            continue
+    return None
+
+
+def _phase_outcome(*, result: object | None, error: BaseException | None) -> str:
+    if error is not None:
+        return "failed"
+    return "succeeded" if result is not None else "not-run"
+
+
+def _phase_metadata(
+    *,
+    prep: EvalRunPreparation,
+    state: EvalExecutionState,
+    status: VerdictStatus,
+    evaluation_run_id: str,
+    product_run_id: str | None,
+) -> dict[str, object]:
+    outcomes = {
+        "preparation": _phase_outcome(
+            result=state.prepared_working_copy,
+            error=state.prep_error,
+        ),
+        "install": _phase_outcome(result=state.install_result, error=state.install_error),
+        "setup": _phase_outcome(result=state.setup_result, error=state.setup_error),
+        "execution": _phase_outcome(
+            result=state.aidd_run_result,
+            error=state.run_error,
+        ),
+        "verification": _phase_outcome(
+            result=state.verification_result,
+            error=state.verification_error,
+        ),
+        "teardown": _phase_outcome(
+            result=state.teardown_result,
+            error=state.teardown_error,
+        ),
+    }
+    terminal_phase = next(
+        (phase for phase in reversed(tuple(outcomes)) if outcomes[phase] != "not-run"),
+        "preparation",
+    )
+    return {
+        "evaluation_run_id": evaluation_run_id,
+        "product_run_id": product_run_id,
+        "requested_stage": {
+            "start": prep.scenario.run.stage_start,
+            "end": prep.scenario.run.stage_end,
+        },
+        "outcomes": outcomes,
+        "status": status,
+        "terminal_phase": terminal_phase,
+        "schema_version": 1,
+    }
+
+
 def persist_eval_reports(
     context: EvalReportPersistenceContext,
 ) -> EvalScenarioRunResult:
@@ -836,6 +926,23 @@ def persist_eval_reports(
         status=status,
         state=state,
         stage_timing_payload=stage_timing_payload,
+    )
+    product_run_id = _product_run_id_for_state(prep=prep, state=state)
+    phase_metadata = _phase_metadata(
+        prep=prep,
+        state=state,
+        status=status,
+        evaluation_run_id=run_id,
+        product_run_id=product_run_id,
+    )
+    feature_selection_payload = dict(prep.feature_selection_payload)
+    feature_selection_payload.update(
+        {
+            "evaluation_run_id": run_id,
+            "product_run_id": product_run_id,
+            "phase_metadata": phase_metadata,
+            "schema_version": 2,
+        }
     )
     validator_report_source = render_validator_report_source(
         status=status,
@@ -966,7 +1073,10 @@ def persist_eval_reports(
         resource_source=(
             "packaged" if state.install_result is not None else prep.resource_layout.source
         ),
-        aidd_run_id=None if state.aidd_run_result is None else run_id,
+        aidd_run_id=product_run_id,
+        evaluation_run_id=run_id,
+        product_run_id=product_run_id,
+        phase_metadata=phase_metadata,
         aidd_run_result=state.aidd_run_result,
         aidd_artifact_references={
             "scenario_path": prep.scenario_path.as_posix(),
@@ -1008,6 +1118,7 @@ def persist_eval_reports(
             ),
         },
     )
+    write_feature_selection(layout=layout, payload=feature_selection_payload)
     write_command_transcripts(
         layout=layout,
         install_result=state.install_result,
@@ -1056,7 +1167,7 @@ def persist_eval_reports(
                 status=status,
                 summary=summary,
                 first_failure_boundary=first_failure_boundary,
-                feature_selection_payload=prep.feature_selection_payload,
+                feature_selection_payload=feature_selection_payload,
                 failure_cause=failure_cause,
             ),
             indent=2,
@@ -1097,4 +1208,5 @@ def persist_eval_reports(
         first_failure_boundary=first_failure_boundary,
         first_failure_note=first_failure_note,
         failure_cause=failure_cause,
+        product_run_id=product_run_id,
     )

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 from pathlib import Path
 
 from typer.testing import CliRunner
@@ -29,6 +30,16 @@ def test_eval_execute_runs_full_deterministic_lifecycle(tmp_path: Path) -> None:
     assert (bundle / "verify-transcript.json").is_file()
     assert (bundle / "teardown-transcript.json").is_file()
     assert (bundle / "verdict.md").is_file()
+    metadata = json.loads((bundle / "harness-metadata.json").read_text(encoding="utf-8"))
+    selection = json.loads((bundle / "feature-selection.json").read_text(encoding="utf-8"))
+    assert metadata["evaluation_run_id"] == bundle.name
+    assert metadata["product_run_id"]
+    assert metadata["product_run_id"] != metadata["evaluation_run_id"]
+    assert metadata["phase_metadata"]["status"] == "pass"
+    assert metadata["phase_metadata"]["outcomes"]["execution"] == "succeeded"
+    assert selection["evaluation_run_id"] == bundle.name
+    assert selection["product_run_id"] == metadata["product_run_id"]
+    assert selection["phase_metadata"]["terminal_phase"] == "teardown"
 
 
 def test_eval_execute_rejects_live_scenario_before_creating_root(tmp_path: Path) -> None:
