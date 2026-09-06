@@ -412,7 +412,7 @@ while retired ordinal-only evidence is rejected rather than silently upgraded.
     eval/failure-evidence (144), Ruff, and strict mypy checks passed; the adjacent UI checkout
     remained untouched.
 
-#### Slice W48-E3-S2 — one failure-cause model (`planned`)
+#### Slice W48-E3-S2 — one failure-cause model (`done`)
 
 Primary output: execution verdict and first decisive cause remain compatible across every report.
 
@@ -440,7 +440,7 @@ Primary output: execution verdict and first decisive cause remain compatible acr
     adapter-conformance, deterministic-scenarios, packaged-ui-browser, build, CodeQL, Scorecard,
     and dependency-review checks passed. Local harness, eval, planning/docs, Ruff, and strict
     mypy checks passed; the adjacent UI checkout remained untouched.
-- `W48-E3-S2-T3` (next) Propagate the cause through log analysis, grader, verdict, and summary.
+- `W48-E3-S2-T3` (done) Propagate the cause through log analysis, grader, verdict, and summary.
   - Dependencies: `W48-E3-S2-T2`.
   - Output: one typed first-decisive cause is carried into log-analysis, grader, verdict, and
     summary projections without synthesizing validation findings for infrastructure failures.
@@ -449,6 +449,49 @@ Primary output: execution verdict and first decisive cause remain compatible acr
   - Verification: DET-002 is classified as `infra-fail` with an `infrastructure`/`setup` cause,
     while malformed Markdown remains `fail` with a `validation` cause; contradictory projections
     are rejected.
+  - Completion evidence: PR #552 merged to `origin/main` at `11cb9685`; Python 3.12–3.14,
+    adapter-conformance, deterministic-scenarios, packaged-ui-browser, build, CodeQL, Scorecard,
+    and dependency-review checks passed. Local eval suite (169), focused harness/eval regression
+    suites, Ruff, and strict mypy passed; a real AIDD-DETERMINISTIC-002 run produced
+    `infra-fail` / `infrastructure` / `setup` without synthetic validator findings. The adjacent
+    UI checkout remained untouched.
+
+#### Slice W48-E3-S3 — self-contained bundle v2 (`planned`)
+
+Primary output: a PASS bundle remains fully auditable after harness cache deletion.
+
+- `W48-E3-S3-T1` (next) Define conditional bundle inventory, separate eval/product IDs, relative
+  references, and legacy policy.
+  - Dependencies: `W48-E3-S1-T1` and `W48-E3-S2-T1`.
+  - Output: current bundle contract distinguishes evaluation identity from product-run identity,
+    validates conditional artifact inventory and workspace-relative references, and rejects
+    ambiguous or legacy-only evidence instead of guessing.
+  - Scope: result-bundle/eval contracts and focused integrity fixtures; no UI-owned paths.
+  - Verification: fixtures reject dangling links and ambiguous identity while preserving valid
+    pass/fail/infra-fail bundle reads.
+- `W48-E3-S3-T2` (planned) Persist actual product run ID, feature selection, and phase metadata.
+  - Dependencies: `W48-E3-S3-T1`.
+  - Output: successful runs retain distinct eval/product IDs and an existing feature-selection
+    record with phase metadata.
+  - Scope: eval report preparation/materialization; no UI-owned paths.
+  - Verification: successful bundle references distinct IDs and a readable feature-selection
+    artifact.
+- `W48-E3-S3-T3` (planned) Materialize raw attempt logs/exits/events, stage validators, task
+  ledger, and finalization evidence.
+  - Dependencies: `W48-E3-S3-T2`.
+  - Output: all required raw and canonical evidence is copied into the bundle before cache cleanup.
+  - Scope: result-bundle materializer and focused evidence tests; no UI-owned paths.
+  - Verification: references survive deletion of product and harness `.aidd` roots.
+- `W48-E3-S3-T4` (planned) Atomically seal and validate inventory, digests, sizes, and identities
+  before PASS.
+  - Dependencies: `W48-E3-S3-T3`.
+  - Output: missing, mutated, orphaned, or identity-ambiguous evidence converts candidate PASS to
+    an explicit bundle-integrity failure.
+  - Scope: bundle finalization and integrity validator; no UI-owned paths.
+  - Verification: integrity fixtures exercise missing, mutated, orphaned, and mismatched identity
+    evidence before allowing PASS.
+
+Dependencies: T1 → T2/T3 → T4.
 
 ## Wave 51 — agent development instruction consistency (`done`)
 
