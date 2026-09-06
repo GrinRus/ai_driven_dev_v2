@@ -7,7 +7,7 @@ slice, and local task.
 
 ## Next
 
-- `W48-E3-S2-T1` — Define the typed failure-cause model and compatibility table.
+- `W48-E3-S2-T2` — Preserve partial phase transcripts and the failing command.
 
 ## Soon
 
@@ -37,9 +37,8 @@ slice, and local task.
 
 ## Current reconciliation
 
-- `2026-09-06` `W48-E3-S1-T3` completed in PR #546 and is present on `origin/main` at `2ad81274`.
-  Required CI lanes and local stage-timing, live-harness, eval, Ruff, and strict mypy checks
-  passed. The task owned eval projections and non-UI harness fixtures; the adjacent
-  `codex/ui-completion` checkout remains untouched. `W48-E3-S2-T1` is now the promoted
-  implementation task and continues to avoid the UI-owned paths; `W46-E2-S2-T4` and
-  human/provider acceptance tasks stay parked.
+- `2026-09-06` `W48-E3-S2-T1` completed in PR #548 and is present on `origin/main` at `f45c4d84`.
+  Required CI lanes and local failure-cause, eval/failure-evidence, Ruff, and strict mypy checks
+  passed. The task owned eval contracts and focused model tests; the adjacent `codex/ui-completion`
+  checkout remains untouched. `W48-E3-S2-T2` is now the promoted direct successor and continues
+  to avoid the UI-owned paths; `W46-E2-S2-T4` and human/provider acceptance tasks stay parked.
