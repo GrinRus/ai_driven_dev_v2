@@ -7,7 +7,7 @@ slice, and local task.
 
 ## Next
 
-- `W48-E3-S1-T2` — Persist lineage from each owning lifecycle service.
+- `W48-E3-S1-T3` — Derive timing, repair history, and repair matrix only from lineage.
 
 ## Soon
 
@@ -37,8 +37,8 @@ slice, and local task.
 
 ## Current reconciliation
 
-- `2026-09-06` `W48-E3-S1-T1` completed in PR #542 and is present on `origin/main` at `08c902af`.
-  Required CI lanes and local core/CLI/eval/planning checks passed. The task owned core
-  lineage/evidence paths only; the adjacent `codex/ui-completion` checkout remains untouched.
-  `W48-E3-S1-T2` is now the promoted implementation task and continues to avoid the UI-owned
+- `2026-09-06` `W48-E3-S1-T2` completed in PR #544 and is present on `origin/main` at `8deed571`.
+  Required CI lanes and local core/planning checks passed. The task owned core lifecycle and
+  evidence paths only; the adjacent `codex/ui-completion` checkout remains untouched.
+  `W48-E3-S1-T3` is now the promoted implementation task and continues to avoid the UI-owned
   paths; `W46-E2-S2-T4` and human/provider acceptance tasks stay parked.
