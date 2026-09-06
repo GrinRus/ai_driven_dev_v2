@@ -207,8 +207,15 @@ references that escape the bundle root, duplicate paths, and mismatched optional
 SHA-256 metadata. Legacy inventories containing only `run_id`, unsupported schema or
 reference modes, and incomplete identities are rejected rather than interpreted.
 
-This module defines and validates the contract; materialization and atomic sealing remain
-separate responsibilities of the follow-on bundle tasks.
+The evaluation report writer persists these identity fields in `harness-metadata.json` and
+`feature-selection.json`. The feature-selection artifact also records schema version `2`
+and phase metadata: requested stage bounds, per-lifecycle-phase outcomes, terminal phase,
+and the two run identities. The product ID is resolved from the isolated product run store
+after execution (with a bounded CLI-output fallback), so a successful eval does not reuse
+the evaluator bundle ID.
+
+This module defines and validates the contract; raw evidence materialization and atomic
+sealing remain separate responsibilities of the follow-on bundle tasks.
 
 ## 8. Log analysis requirements
 

@@ -48,6 +48,13 @@ def test_execute_deterministic_eval_persists_failed_verification_bundle(
     assert (result.bundle_root / "run-transcript.json").is_file()
     assert (result.bundle_root / "verify-transcript.json").is_file()
     assert (result.bundle_root / "teardown-transcript.json").is_file()
+    selection = json.loads(
+        (result.bundle_root / "feature-selection.json").read_text(encoding="utf-8")
+    )
+    assert selection["schema_version"] == 2
+    assert selection["evaluation_run_id"] == result.run_id
+    assert selection["phase_metadata"]["status"] == "fail"
+    assert result.product_run_id == selection["product_run_id"]
 
 
 def test_execute_deterministic_eval_persists_partial_failed_command_transcript(

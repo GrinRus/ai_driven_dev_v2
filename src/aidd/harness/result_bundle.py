@@ -211,6 +211,9 @@ def write_harness_metadata(
     workspace_root: Path | None = None,
     resource_source: str | None = None,
     aidd_run_id: str | None = None,
+    evaluation_run_id: str | None = None,
+    product_run_id: str | None = None,
+    phase_metadata: Mapping[str, Any] | None = None,
     aidd_run_result: HarnessAiddRunResult | None = None,
     aidd_artifact_references: Mapping[str, str] | None = None,
 ) -> Path:
@@ -244,6 +247,11 @@ def write_harness_metadata(
         "runtime_targets": list(scenario.runtime_targets),
         "aidd_artifact_references": dict(aidd_artifact_references or {}),
     }
+    if evaluation_run_id is not None:
+        metadata_payload["evaluation_run_id"] = evaluation_run_id
+        metadata_payload["product_run_id"] = product_run_id
+    if phase_metadata is not None:
+        metadata_payload["phase_metadata"] = dict(phase_metadata)
     if aidd_run_id is not None:
         metadata_payload["aidd_run_id"] = aidd_run_id
     if install_result is not None:
