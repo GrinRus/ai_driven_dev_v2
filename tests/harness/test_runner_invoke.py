@@ -281,3 +281,6 @@ def test_run_verification_steps_preserves_partial_transcript_on_failure(
     assert len(transcripts) == 2
     assert transcripts[0].exit_code == 0
     assert transcripts[1].exit_code == 2
+    assert exc_info.value.failed_command == "printf 'second\\n'; exit 2"
+    assert exc_info.value.failed_exit_code == 2
+    assert exc_info.value.duration_seconds >= transcripts[0].duration_seconds

@@ -220,6 +220,11 @@ def render_runtime_log_source(context: EvalRuntimeLogSourceContext) -> str:
 
     if state.setup_result is not None:
         lines.append(f"setup_commands={len(state.setup_result.command_transcripts)}")
+        if state.setup_result.failed_command is not None:
+            lines.append(f"setup_failed_command={state.setup_result.failed_command}")
+            lines.append(
+                f"setup_failed_exit_code={state.setup_result.failed_exit_code}"
+            )
     if state.aidd_run_result is not None:
         lines.append(f"aidd_exit_code={state.aidd_run_result.exit_code}")
         if state.aidd_run_result.stdout_text.strip():
@@ -232,8 +237,23 @@ def render_runtime_log_source(context: EvalRuntimeLogSourceContext) -> str:
         lines.append(
             f"verification_commands={len(state.verification_result.command_transcripts)}"
         )
+        if state.verification_result.failed_command is not None:
+            lines.append(
+                f"verification_failed_command={state.verification_result.failed_command}"
+            )
+            lines.append(
+                "verification_failed_exit_code="
+                f"{state.verification_result.failed_exit_code}"
+            )
     if state.teardown_result is not None:
         lines.append(f"teardown_commands={len(state.teardown_result.command_transcripts)}")
+        if state.teardown_result.failed_command is not None:
+            lines.append(
+                f"teardown_failed_command={state.teardown_result.failed_command}"
+            )
+            lines.append(
+                f"teardown_failed_exit_code={state.teardown_result.failed_exit_code}"
+            )
 
     for error in (
         state.prep_error,

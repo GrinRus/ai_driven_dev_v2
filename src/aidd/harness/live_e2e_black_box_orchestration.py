@@ -2840,6 +2840,8 @@ def _run_setup(ctx: FlowContext) -> None:
             executed_commands=tuple(transcript.command for transcript in transcripts),
             command_transcripts=transcripts,
             duration_seconds=_transcript_duration(transcripts),
+            failed_command=exc.failed_command,
+            failed_exit_code=exc.failed_exit_code,
         )
         _write_step_transcript(
             path=ctx.bundle_root / SETUP_TRANSCRIPT_FILENAME,
@@ -7371,6 +7373,8 @@ def _run_verify(ctx: FlowContext) -> HarnessVerificationResult:
             aidd_exit_code=0,
             command_transcripts=transcripts,
             duration_seconds=_transcript_duration(transcripts),
+            failed_command=exc.failed_command,
+            failed_exit_code=exc.failed_exit_code,
         )
         _write_step_transcript(
             path=ctx.bundle_root / VERIFY_TRANSCRIPT_FILENAME,
@@ -7455,6 +7459,8 @@ def _run_teardown(ctx: FlowContext) -> tuple[HarnessTeardownResult | None, BaseE
             executed_commands=tuple(transcript.command for transcript in transcripts),
             command_transcripts=transcripts,
             duration_seconds=_transcript_duration(transcripts),
+            failed_command=exc.failed_command,
+            failed_exit_code=exc.failed_exit_code,
         )
         _write_step_transcript(
             path=ctx.bundle_root / TEARDOWN_TRANSCRIPT_FILENAME,
