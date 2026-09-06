@@ -7,7 +7,7 @@ from typing import Any
 
 from aidd.core.run_inspection import resolve_run_metadata_summary
 from aidd.core.run_lookup import latest_attempt_number
-from aidd.core.run_store import load_attempt_artifact_index, run_manifest_path
+from aidd.core.run_store import load_attempt_artifact_index, load_run_manifest
 from aidd.core.stages import STAGES
 
 
@@ -60,16 +60,9 @@ def _load_manifest(
     work_item: str,
     run_id: str,
 ) -> dict[str, Any]:
-    path = run_manifest_path(
-        workspace_root=workspace_root,
-        work_item=work_item,
-        run_id=run_id,
-    )
-    if not path.exists():
+    payload = load_run_manifest(workspace_root, work_item, run_id)
+    if payload is None:
         raise ValueError(f"Run manifest does not exist for run '{run_id}'.")
-    payload = json.loads(path.read_text(encoding="utf-8"))
-    if not isinstance(payload, dict):
-        raise ValueError(f"Run manifest must be a JSON object for run '{run_id}'.")
     return payload
 
 
@@ -89,8 +82,7 @@ def resolve_run_accountability(
         work_item=work_item,
         run_id=run_id,
     )
-    raw_config = manifest.get("config_snapshot", {})
-    config_snapshot = raw_config if isinstance(raw_config, dict) else {}
+    config_snapshot = manifest["config_snapshot"]
     warnings: list[str] = []
     attempts: list[RunAccountabilityAttempt] = []
     aggregate_entries: list[RunAccountabilityPrompt] = []
@@ -169,8 +161,6 @@ def resolve_run_accountability(
         )
     if not summary.repository_git_sha:
         warnings.append("Run manifest does not record a repository Git SHA.")
-    if not manifest.get("resource_root"):
-        warnings.append("Run manifest does not record a resource root.")
     return RunAccountabilityView(
         run_id=summary.run_id,
         work_item=summary.work_item,
@@ -180,9 +170,9 @@ def resolve_run_accountability(
         workflow_stage_start=summary.workflow_stage_start,
         workflow_stage_end=summary.workflow_stage_end,
         repository_git_sha=summary.repository_git_sha,
-        resource_source=str(manifest.get("resource_source", "")).strip() or None,
+        resource_source=manifest["resource_source"].strip(),
         resource_revision=summary.resource_revision,
-        resource_root=str(manifest.get("resource_root", "")).strip() or None,
+        resource_root=manifest["resource_root"].strip(),
         config_snapshot=config_snapshot,
         prompt_pack_provenance=prompts,
         attempts=tuple(attempts),

@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import json
 from collections.abc import Callable, Mapping
 from dataclasses import dataclass, replace
 from datetime import UTC, datetime
@@ -10,8 +9,8 @@ from typing import Any
 from aidd.core.mutation_lease import acquire_run_mutation_lease
 from aidd.core.run_store import (
     create_run_manifest,
+    load_run_manifest,
     load_stage_metadata,
-    run_manifest_path,
     run_root,
     work_item_runs_root,
 )
@@ -167,40 +166,13 @@ def validate_workflow_continuation(
     if request.run_id is None:
         raise ValueError("Workflow continuation requires an explicit run_id.")
 
-    manifest_path = run_manifest_path(
-        workspace_root=request.workspace_root,
-        work_item=request.work_item,
-        run_id=request.run_id,
-    )
-    if not manifest_path.is_file():
+    manifest = load_run_manifest(request.workspace_root, request.work_item, request.run_id)
+    if manifest is None:
         raise ValueError(
             f"Workflow continuation run '{request.run_id}' does not exist for work item "
             f"'{request.work_item}'."
         )
-    try:
-        manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
-    except json.JSONDecodeError as exc:
-        raise ValueError(
-            f"Workflow continuation manifest for run '{request.run_id}' is not valid JSON."
-        ) from exc
-    if not isinstance(manifest, dict):
-        raise ValueError(
-            f"Workflow continuation manifest for run '{request.run_id}' must be an object."
-        )
-    if (
-        manifest.get("run_id") != request.run_id
-        or manifest.get("work_item_id") != request.work_item
-    ):
-        raise ValueError(
-            f"Workflow continuation manifest identity does not match run '{request.run_id}' "
-            f"and work item '{request.work_item}'."
-        )
-
-    raw_bounds = manifest.get("workflow_bounds")
-    if not isinstance(raw_bounds, dict):
-        raise ValueError(
-            f"Workflow continuation run '{request.run_id}' has no canonical workflow bounds."
-        )
+    raw_bounds = manifest["workflow_bounds"]
     original_start = raw_bounds.get("start")
     original_end = raw_bounds.get("end")
     if original_start not in STAGES or original_end not in STAGES:
@@ -215,7 +187,7 @@ def validate_workflow_continuation(
             f"run '{request.run_id}' bounds {original_start}->{original_end}."
         )
 
-    original_target = str(manifest.get("stage_target", "")).strip()
+    original_target = str(manifest["stage_target"]).strip()
     create_run_manifest(
         workspace_root=request.workspace_root,
         work_item=request.work_item,

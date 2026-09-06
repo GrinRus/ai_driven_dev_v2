@@ -6,24 +6,21 @@ from pathlib import Path
 
 import pytest
 
+from aidd.core.run_inspection import resolve_run_artifacts_summary
 from aidd.core.run_lookup import (
-    ClosedRunError,
-    CorruptedRunError,
-    attempt_artifact_index_path,
-    guard_latest_run_resume,
-    guard_run_resume,
+    AmbiguousLatestRunError,
     latest_attempt_number,
     latest_attempt_path,
-    latest_attempt_path_for_work_item,
     latest_run_id,
     latest_run_path,
     resolve_attempt_artifact_paths,
-    resolve_latest_attempt_artifact_paths,
 )
 from aidd.core.run_store import (
     create_next_attempt_directory,
     create_run_manifest,
+    load_run_manifest,
     persist_stage_status,
+    run_attempt_artifact_index_path,
     run_attempt_root,
     run_manifest_path,
     run_root,
@@ -63,7 +60,7 @@ def test_latest_run_path_uses_manifest_updated_timestamp(tmp_path: Path) -> None
         work_item=work_item,
         run_id="run-001",
         stage="plan",
-        status="running",
+        status="executing",
         changed_at_utc=now + timedelta(minutes=1),
     )
     persist_stage_status(
@@ -71,7 +68,7 @@ def test_latest_run_path_uses_manifest_updated_timestamp(tmp_path: Path) -> None
         work_item=work_item,
         run_id="run-002",
         stage="plan",
-        status="running",
+        status="executing",
         changed_at_utc=now + timedelta(minutes=2),
     )
     persist_stage_status(
@@ -79,7 +76,7 @@ def test_latest_run_path_uses_manifest_updated_timestamp(tmp_path: Path) -> None
         work_item=work_item,
         run_id="run-001",
         stage="plan",
-        status="passed",
+        status="succeeded",
         changed_at_utc=now + timedelta(minutes=3),
     )
 
@@ -110,7 +107,7 @@ def test_latest_run_resolver_preserves_sub_second_identity(tmp_path: Path) -> No
         work_item=work_item,
         run_id="run-001",
         stage="plan",
-        status="running",
+        status="executing",
         changed_at_utc=same_second.replace(microsecond=100_000),
     )
     persist_stage_status(
@@ -118,7 +115,7 @@ def test_latest_run_resolver_preserves_sub_second_identity(tmp_path: Path) -> No
         work_item=work_item,
         run_id="run-002",
         stage="plan",
-        status="running",
+        status="executing",
         changed_at_utc=same_second.replace(microsecond=900_000),
     )
 
@@ -172,7 +169,7 @@ def test_latest_attempt_number_resolves_highest_attempt(tmp_path: Path) -> None:
     )
 
 
-def test_latest_attempt_path_for_work_item_uses_latest_run(tmp_path: Path) -> None:
+def test_latest_run_and_attempt_selection_use_latest_timestamp(tmp_path: Path) -> None:
     workspace_root = tmp_path / ".aidd"
     work_item = "WI-001"
     stage = "plan"
@@ -217,13 +214,16 @@ def test_latest_attempt_path_for_work_item_uses_latest_run(tmp_path: Path) -> No
         work_item=work_item,
         run_id="run-002",
         stage=stage,
-        status="running",
+        status="executing",
         changed_at_utc=now + timedelta(minutes=5),
     )
 
-    assert latest_attempt_path_for_work_item(
+    selected_run = latest_run_id(workspace_root, work_item)
+    assert selected_run == "run-002"
+    assert latest_attempt_path(
         workspace_root=workspace_root,
         work_item=work_item,
+        run_id=selected_run,
         stage=stage,
     ) == run_attempt_root(
         workspace_root=workspace_root,
@@ -244,7 +244,7 @@ def test_attempt_artifact_index_path_matches_attempt_layout(tmp_path: Path) -> N
         stage="plan",
     )
 
-    assert attempt_artifact_index_path(
+    assert run_attempt_artifact_index_path(
         workspace_root=workspace_root,
         work_item="WI-001",
         run_id="run-001",
@@ -314,7 +314,7 @@ def test_resolve_attempt_artifact_paths_returns_none_when_index_missing(tmp_path
         run_id="run-001",
         stage="plan",
     )
-    index_path = attempt_artifact_index_path(
+    index_path = run_attempt_artifact_index_path(
         workspace_root=workspace_root,
         work_item="WI-001",
         run_id="run-001",
@@ -335,7 +335,7 @@ def test_resolve_attempt_artifact_paths_returns_none_when_index_missing(tmp_path
     )
 
 
-def test_resolve_latest_attempt_artifact_paths_uses_latest_run_and_attempt(
+def test_resolve_run_artifacts_summary_uses_latest_run_and_attempt(
     tmp_path: Path,
 ) -> None:
     workspace_root = tmp_path / ".aidd"
@@ -382,11 +382,11 @@ def test_resolve_latest_attempt_artifact_paths_uses_latest_run_and_attempt(
         work_item=work_item,
         run_id="run-002",
         stage=stage,
-        status="running",
+        status="executing",
         changed_at_utc=now + timedelta(minutes=10),
     )
 
-    resolved = resolve_latest_attempt_artifact_paths(
+    resolved = resolve_run_artifacts_summary(
         workspace_root=workspace_root,
         work_item=work_item,
         stage=stage,
@@ -394,95 +394,25 @@ def test_resolve_latest_attempt_artifact_paths_uses_latest_run_and_attempt(
     assert resolved is not None
     assert resolved.run_id == "run-002"
     assert resolved.attempt_number == 2
-    assert resolved.logs["runtime_log"].as_posix().endswith(
+    assert resolved.logs["runtime_log"].endswith(
         "/run-002/stages/plan/attempts/attempt-0002/runtime.log"
     )
 
 
-def test_guard_run_resume_allows_non_terminal_stage_status(tmp_path: Path) -> None:
+def test_manifest_reader_preserves_absence_and_rejects_corrupt_json(tmp_path: Path) -> None:
     workspace_root = tmp_path / ".aidd"
-    create_run_manifest(
-        workspace_root=workspace_root,
-        work_item="WI-001",
-        run_id="run-001",
-        runtime_id="generic-cli",
-        stage_target="plan",
-        config_snapshot={"mode": "test"},
-    )
-    persist_stage_status(
-        workspace_root=workspace_root,
-        work_item="WI-001",
-        run_id="run-001",
-        stage="plan",
-        status="running",
-        changed_at_utc=datetime.now(UTC).replace(microsecond=0) + timedelta(minutes=1),
-    )
-
-    guard_run_resume(
-        workspace_root=workspace_root,
-        work_item="WI-001",
-        run_id="run-001",
-        stage="plan",
-    )
-
-
-def test_guard_run_resume_rejects_terminal_stage_status(tmp_path: Path) -> None:
-    workspace_root = tmp_path / ".aidd"
-    create_run_manifest(
-        workspace_root=workspace_root,
-        work_item="WI-001",
-        run_id="run-001",
-        runtime_id="generic-cli",
-        stage_target="plan",
-        config_snapshot={"mode": "test"},
-    )
-    persist_stage_status(
-        workspace_root=workspace_root,
-        work_item="WI-001",
-        run_id="run-001",
-        stage="plan",
-        status="passed",
-        changed_at_utc=datetime.now(UTC).replace(microsecond=0) + timedelta(minutes=2),
-    )
-
-    with pytest.raises(ClosedRunError, match="terminal status"):
-        guard_run_resume(
-            workspace_root=workspace_root,
-            work_item="WI-001",
-            run_id="run-001",
-            stage="plan",
-        )
-
-
-def test_guard_run_resume_rejects_missing_or_corrupted_manifest(tmp_path: Path) -> None:
-    workspace_root = tmp_path / ".aidd"
-
-    with pytest.raises(CorruptedRunError, match="manifest is missing"):
-        guard_run_resume(
-            workspace_root=workspace_root,
-            work_item="WI-001",
-            run_id="run-001",
-            stage="plan",
-        )
-
-    broken_manifest = run_manifest_path(
-        workspace_root=workspace_root,
-        work_item="WI-001",
-        run_id="run-002",
-    )
-    broken_manifest.parent.mkdir(parents=True, exist_ok=True)
+    assert load_run_manifest(workspace_root, "WI-001", "run-001") is None
+    broken_manifest = run_manifest_path(workspace_root, "WI-001", "run-002")
+    broken_manifest.parent.mkdir(parents=True)
     broken_manifest.write_text("{not-json", encoding="utf-8")
-
-    with pytest.raises(CorruptedRunError, match="not valid JSON"):
-        guard_run_resume(
-            workspace_root=workspace_root,
-            work_item="WI-001",
-            run_id="run-002",
-            stage="plan",
-        )
+    before = broken_manifest.read_bytes()
+    with pytest.raises(ValueError, match="not valid JSON"):
+        load_run_manifest(workspace_root, "WI-001", "run-002")
+    assert latest_run_id(workspace_root, "WI-001") is None
+    assert broken_manifest.read_bytes() == before
 
 
-def test_guard_latest_run_resume_returns_latest_run_id(tmp_path: Path) -> None:
+def test_latest_run_id_uses_current_metadata_timestamp(tmp_path: Path) -> None:
     workspace_root = tmp_path / ".aidd"
     now = datetime.now(UTC).replace(microsecond=0)
 
@@ -507,21 +437,17 @@ def test_guard_latest_run_resume_returns_latest_run_id(tmp_path: Path) -> None:
         work_item="WI-001",
         run_id="run-002",
         stage="plan",
-        status="running",
+        status="executing",
         changed_at_utc=now + timedelta(minutes=10),
     )
 
     assert (
-        guard_latest_run_resume(
-            workspace_root=workspace_root,
-            work_item="WI-001",
-            stage="plan",
-        )
+        latest_run_id(workspace_root=workspace_root, work_item="WI-001")
         == "run-002"
     )
 
 
-def test_guard_latest_run_resume_rejects_ambiguous_latest_runs(tmp_path: Path) -> None:
+def test_latest_run_id_rejects_ambiguous_timestamps(tmp_path: Path) -> None:
     workspace_root = tmp_path / ".aidd"
     now = datetime.now(UTC).replace(microsecond=0)
 
@@ -546,7 +472,7 @@ def test_guard_latest_run_resume_rejects_ambiguous_latest_runs(tmp_path: Path) -
         work_item="WI-001",
         run_id="run-001",
         stage="plan",
-        status="running",
+        status="executing",
         changed_at_utc=now + timedelta(minutes=10),
     )
     persist_stage_status(
@@ -554,13 +480,9 @@ def test_guard_latest_run_resume_rejects_ambiguous_latest_runs(tmp_path: Path) -
         work_item="WI-001",
         run_id="run-002",
         stage="plan",
-        status="running",
+        status="executing",
         changed_at_utc=now + timedelta(minutes=10),
     )
 
-    with pytest.raises(CorruptedRunError, match="Ambiguous latest run"):
-        guard_latest_run_resume(
-            workspace_root=workspace_root,
-            work_item="WI-001",
-            stage="plan",
-        )
+    with pytest.raises(AmbiguousLatestRunError, match="Ambiguous latest run"):
+        latest_run_id(workspace_root=workspace_root, work_item="WI-001")

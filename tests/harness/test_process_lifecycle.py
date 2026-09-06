@@ -13,8 +13,8 @@ def test_lifecycle_budget_reports_one_shared_remaining_deadline() -> None:
     budget = HarnessLifecycleBudget.start(10.0, now=100.0)
 
     assert budget.remaining_seconds(now=103.5) == 6.5
-    assert budget.exhausted(now=109.0) is False
-    assert budget.exhausted(now=110.0) is True
+    assert budget.remaining_seconds(now=109.0) == 1.0
+    assert budget.remaining_seconds(now=110.0) == 0.0
 
 
 def test_exhausted_budget_does_not_launch_command(tmp_path: Path) -> None:

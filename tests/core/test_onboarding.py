@@ -191,7 +191,7 @@ def test_onboarding_project_set_validation_and_context(tmp_path: Path) -> None:
         ),
     )
 
-    assert resolved.project_ids() == ("api", "web")
+    assert tuple(project.id for project in resolved.projects) == ("api", "web")
 
     created = service.create_work_item(
         raw_project_root="project",

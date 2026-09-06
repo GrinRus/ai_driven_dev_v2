@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-from aidd import runtime_catalog
-from aidd.adapters import runtime_registry
 from aidd.runtime_catalog import (
     RuntimeExecutionMode,
     get_runtime_definition,
@@ -17,13 +15,6 @@ def test_runtime_registry_covers_maintained_runtimes() -> None:
         "opencode",
         "qwen",
     )
-
-
-def test_adapter_runtime_registry_is_compatibility_shim() -> None:
-    assert runtime_registry.RuntimeExecutionMode is runtime_catalog.RuntimeExecutionMode
-    assert runtime_registry.RuntimeDefinition is runtime_catalog.RuntimeDefinition
-    assert runtime_registry.runtime_ids is runtime_catalog.runtime_ids
-    assert runtime_registry.get_runtime_definition is runtime_catalog.get_runtime_definition
 
 
 def test_native_provider_defaults() -> None:

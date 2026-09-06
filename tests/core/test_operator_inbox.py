@@ -63,7 +63,9 @@ def test_inbox_projection_has_stable_sections_and_exact_identity(tmp_path: Path)
         "ready",
         "complete",
     ]
-    assert inbox.item_count == 1
+    assert tuple(
+        item.route.work_item for section in inbox.sections for item in section.items
+    ) == ("WI-READY",)
     item = inbox.sections[2].items[0]
     assert item.route.intent == "inbox-work-item"
     assert item.route.work_item == "WI-READY"
@@ -127,7 +129,9 @@ def test_inbox_projection_keeps_durable_running_item_visible(
     running = next(section for section in inbox.sections if section.key == "running")
     assert [item.route.work_item for item in running.items] == ["WI-RUNNING"]
     assert running.items[0].primary_action.action == "wait-for-stage"
-    assert inbox.item_count == 1
+    assert tuple(
+        item.route.work_item for section in inbox.sections for item in section.items
+    ) == ("WI-RUNNING",)
 
 
 def test_inbox_projection_orders_items_without_frontend_priority_policy(

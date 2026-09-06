@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import hashlib
+import json
 from pathlib import Path
 
 import pytest
@@ -217,7 +218,6 @@ def test_repair_extension_preflight_finalizes_manual_fix_without_runtime(tmp_pat
     )
 
     assert result.action == "finalized"
-    assert result.runtime_required is False
     assert result.stage_result_path is not None and result.stage_result_path.exists()
     assert runtime_calls == []
     metadata = load_stage_metadata(
@@ -254,7 +254,6 @@ def test_repair_extension_preflight_reopens_with_bounded_brief_without_spending_
     )
 
     assert result.action == "reopened"
-    assert result.runtime_required is True
     assert result.repair_brief_path is not None and result.repair_brief_path.exists()
     assert "repair-extension" in result.repair_brief_path.read_text(encoding="utf-8")
     metadata = load_stage_metadata(
@@ -1236,3 +1235,32 @@ def test_persist_repair_history_snapshot_updates_metadata_and_stage_result(tmp_p
     assert "`workitems/WI-001/stages/plan/plan.md`" in stage_result_text
     assert "`workitems/WI-001/stages/plan/validator-report.md`" in stage_result_text
     assert "`workitems/WI-001/stages/plan/repair-brief.md`" in stage_result_text
+
+
+@pytest.mark.parametrize("malformed", ({}, {"schema_version": 0}, False))
+def test_malformed_recorded_grant_stops_before_revalidation_or_replacement(
+    tmp_path: Path, malformed: object,
+) -> None:
+    workspace_root, grant = _prepare_exhausted_repair_extension_workspace(tmp_path)
+    metadata_path = workspace_root / "reports/runs/WI-001/run-001/stages/plan/stage-metadata.json"
+    payload = json.loads(metadata_path.read_text())
+    payload["repair_extension_grant"] = malformed
+    metadata_path.write_text(json.dumps(payload), encoding="utf-8")
+    before = {path: path.read_bytes() for path in workspace_root.rglob("*") if path.is_file()}
+    callback_calls: list[str] = []
+
+    def revalidate():
+        callback_calls.append("validation")
+        return ()
+
+    with pytest.raises(ValueError, match="[Gg]rant"):
+        preflight_repair_extension(
+            workspace_root=workspace_root, grant=grant,
+            current_configuration_identity="codex:config-001",
+            latest_stage_status="repair-exhausted", latest_attempt_mode="repair",
+            revalidate_documents=revalidate,
+        )
+    assert callback_calls == []
+    assert {
+        path: path.read_bytes() for path in workspace_root.rglob("*") if path.is_file()
+    } == before

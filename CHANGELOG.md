@@ -14,6 +14,9 @@ stable compatibility window exists.
 - Remove backward compatibility for retired configuration and artifact formats. Recreate old
   workspaces with the current CLI. Remove the obsolete `[logging]` configuration section;
   live forwarding still uses `--log-follow` and durable logs are always retained.
+- Require current run/stage/repair-grant/snapshot/remediation schema 1 and task-ledger schema 2
+  when reading persisted execution state. Reject incomplete records before lifecycle mutations;
+  do not upgrade old ledgers or reconstruct missing history, finalization, or stale-stage state.
 
 ## 0.1.0a21 - 2026-09-01
 

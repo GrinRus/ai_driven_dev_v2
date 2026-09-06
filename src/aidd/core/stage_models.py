@@ -165,17 +165,6 @@ class StageUnblockState:
     stage_metadata_path: Path | None
 
 
-@dataclass(frozen=True, slots=True)
-class StageResumeResult:
-    stage: str
-    work_item: str
-    run_id: str
-    unblock_state: StageUnblockState
-    preparation_bundle: StagePreparationBundle | None
-    execution_state: StageExecutionState | None
-    adapter_invocation: AdapterInvocationBundle | None
-
-
 @dataclass(frozen=True, slots=True, init=False)
 class AdapterExecutionOutcome:
     status: AdapterExecutionStatus
@@ -255,7 +244,6 @@ __all__ = [
     "StageOutputPromotion",
     "StageOutputPublication",
     "StagePreparationBundle",
-    "StageResumeResult",
     "StageStructuralValidationResult",
     "StageUnblockState",
     "StageValidationState",

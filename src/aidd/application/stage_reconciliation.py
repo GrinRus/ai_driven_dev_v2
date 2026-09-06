@@ -7,9 +7,9 @@ from pathlib import Path
 from typing import Any, Literal, cast
 
 from aidd.core.identifiers import SafeIdentifier
+from aidd.core.models.run import StageRunMetadata
 from aidd.core.mutation_lease import acquire_run_mutation_lease
 from aidd.core.run_store import (
-    load_stage_metadata,
     persist_stage_status,
     run_root,
     run_stage_metadata_path,
@@ -180,6 +180,13 @@ def _load_existing_result(
         return None
 
 
+def _load_metadata_for_reconciliation(path: Path) -> StageRunMetadata | None:
+    if not path.exists():
+        return None
+    # Validate the current format while retaining identity for the refusal evidence below.
+    return StageRunMetadata.from_dict(json.loads(path.read_text(encoding="utf-8")))
+
+
 def reconcile_terminal_stage(
     request: TerminalStageReconciliationRequest,
     *,
@@ -201,12 +208,7 @@ def reconcile_terminal_stage(
         selected_run_root,
         operation=f"stage:reconcile-terminal:{request.stage}",
     ):
-        before = load_stage_metadata(
-            workspace_root=request.workspace_root,
-            work_item=request.work_item,
-            run_id=request.run_id,
-            stage=request.stage,
-        )
+        before = _load_metadata_for_reconciliation(metadata_path)
         previous_status = None if before is None else before.status
         existing = _load_existing_result(
             request=request,
@@ -248,12 +250,7 @@ def reconcile_terminal_stage(
                     disposition = "reconciled"
                     reconciled = True
 
-        after = load_stage_metadata(
-            workspace_root=request.workspace_root,
-            work_item=request.work_item,
-            run_id=request.run_id,
-            stage=request.stage,
-        )
+        after = _load_metadata_for_reconciliation(metadata_path)
         result = TerminalStageReconciliationResult(
             request=request,
             disposition=disposition,

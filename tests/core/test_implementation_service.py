@@ -466,3 +466,47 @@ def test_service_has_no_cli_or_typer_imports() -> None:
 
     assert "aidd.cli" not in source
     assert "import typer" not in source
+
+
+@pytest.mark.parametrize("snapshot_name", ("repository-baseline.json", "repository-final.json"))
+@pytest.mark.parametrize("executor_failure", (False, True))
+def test_invalid_snapshot_format_cannot_be_recaptured_or_turn_into_success(
+    tmp_path: Path, snapshot_name: str, executor_failure: bool,
+) -> None:
+    request = _request(tmp_path)
+    successful_executor = _successful_executor(request)
+    retained: dict[Path, bytes] = {}
+    finalized: list[str] = []
+
+    def execute(context):
+        outcome = successful_executor(context)
+        path = context.task_attempt_path / snapshot_name
+        # Existing evidence is explicitly retired, even though its remaining shape is valid.
+        malformed = json.dumps({"schema_version": 0, "task_id": "TL-1", "status": [], "files": {}})
+        path.write_text(malformed, encoding="utf-8")
+        retained[path] = path.read_bytes()
+        if executor_failure:
+            raise RuntimeError("primary executor failure")
+        return outcome
+
+    def finalize(context):
+        finalized.append("published")
+        return AggregateFinalizationOutcome(succeeded=True, published=True)
+
+    service = ImplementationExecutionService(task_executor=execute, aggregate_finalizer=finalize)
+    if executor_failure:
+        with pytest.raises(ImplementationPortError) as caught:
+            service.run_all(request)
+        assert str(caught.value.__cause__) == "primary executor failure"
+        ledger = caught.value.ledger
+        assert ledger is not None
+        assert ledger.entry("TL-1").blocker == "primary executor failure"
+    else:
+        result = service.run_all(request)
+        ledger = result.ledger
+        assert "schema_version=1" in (ledger.entry("TL-1").blocker or "")
+        assert result.published is False
+    assert ledger.entry("TL-1").status is TaskExecutionStatus.FAILED
+    assert ledger.entry("TL-2").status is TaskExecutionStatus.PENDING
+    assert finalized == []
+    assert all(path.read_bytes() == content for path, content in retained.items())

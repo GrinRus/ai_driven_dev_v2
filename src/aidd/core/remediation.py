@@ -5,10 +5,9 @@ import re
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from pathlib import Path
-from typing import Any
 
 from aidd.core.identifiers import contained_component_path
-from aidd.core.run_store import run_manifest_path, run_root
+from aidd.core.run_store import load_run_manifest, run_root
 from aidd.core.stages import STAGES, stage_index
 from aidd.core.workspace import work_item_root
 
@@ -82,8 +81,7 @@ def _next_request_id(root: Path) -> str:
 
 
 def _validate_run_exists(*, workspace_root: Path, work_item: str, run_id: str) -> None:
-    path = run_manifest_path(workspace_root=workspace_root, work_item=work_item, run_id=run_id)
-    if not path.exists():
+    if load_run_manifest(workspace_root, work_item, run_id) is None:
         raise ValueError(f"Run '{run_id}' does not exist for work item '{work_item}'.")
 
 
@@ -162,6 +160,7 @@ def create_remediation_request(
         target_stage=target_stage,
         operator_note=operator_note,
     )
+    load_remediation_status(workspace_root=workspace_root, work_item=work_item, run_id=run_id)
     root = _remediation_root(workspace_root=workspace_root, work_item=work_item, run_id=run_id)
     root.mkdir(parents=True, exist_ok=True)
     request_id = _next_request_id(root)
@@ -262,13 +261,21 @@ def _status_path(*, workspace_root: Path, work_item: str, run_id: str) -> Path:
     )
 
 
-def _stale_from_payload(payload: dict[str, Any]) -> RemediationStaleStage:
+def _stale_from_payload(payload: object) -> RemediationStaleStage:
+    if not isinstance(payload, dict):
+        raise ValueError("Remediation stale_stages entries must be objects.")
+    for field in ("stage", "status", "invalidated_by", "invalidated_at_utc", "reason"):
+        value = payload.get(field)
+        if not isinstance(value, str) or not value.strip():
+            raise ValueError(f"Remediation stale_stages entries require non-empty {field}.")
+    if payload["stage"] not in STAGES or payload["status"] != "stale":
+        raise ValueError("Remediation stale_stages require a current stage and status 'stale'.")
     return RemediationStaleStage(
-        stage=str(payload["stage"]),
-        status=str(payload.get("status", "stale")),
-        invalidated_by=str(payload["invalidated_by"]),
-        invalidated_at_utc=str(payload["invalidated_at_utc"]),
-        reason=str(payload["reason"]),
+        stage=payload["stage"],
+        status=payload["status"],
+        invalidated_by=payload["invalidated_by"],
+        invalidated_at_utc=payload["invalidated_at_utc"],
+        reason=payload["reason"],
     )
 
 
@@ -287,10 +294,19 @@ def load_remediation_status(
     if not path.exists():
         return RemediationStatus(run_id=run_id, stale_stages=(), requests=requests)
     payload = json.loads(path.read_text(encoding="utf-8"))
+    if not isinstance(payload, dict):
+        raise ValueError("Remediation status must be a JSON object.")
+    version = payload.get("schema_version")
+    if type(version) is not int or version != 1:
+        raise ValueError("Remediation status requires explicit integer schema_version 1.")
+    if payload.get("run_id") != run_id:
+        raise ValueError("Remediation status run_id does not match the selected run.")
+    if not isinstance(payload.get("stale_stages"), list):
+        raise ValueError("Remediation status requires a stale_stages list.")
     return RemediationStatus(
         run_id=run_id,
         stale_stages=tuple(
-            _stale_from_payload(item) for item in payload.get("stale_stages", [])
+            _stale_from_payload(item) for item in payload["stale_stages"]
         ),
         requests=requests,
     )
@@ -306,6 +322,10 @@ def mark_downstream_stale(
 ) -> RemediationStatus:
     if target_stage not in STAGES:
         raise ValueError(f"Unknown target_stage '{target_stage}'.")
+    if not invalidated_by.strip():
+        raise ValueError("Remediation invalidated_by must not be empty.")
+    load_run_manifest(workspace_root, work_item, run_id)
+    load_remediation_status(workspace_root=workspace_root, work_item=work_item, run_id=run_id)
     timestamp = _utc_now()
     downstream = STAGES[stage_index(target_stage) + 1 :]
     stale_entries = tuple(
@@ -349,6 +369,7 @@ def clear_stale_stages(
     run_id: str,
     stages: tuple[str, ...],
 ) -> RemediationStatus:
+    load_run_manifest(workspace_root, work_item, run_id)
     current = load_remediation_status(
         workspace_root=workspace_root,
         work_item=work_item,

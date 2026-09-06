@@ -7,19 +7,12 @@ slice, and local task.
 
 ## Next
 
-- `W52-E1-S2-T4`
-- `W52-E2-S1-T2`
-- `W52-E2-S2-T2`
-- `W52-E3-S1-T2`
+- `W46-E1-S2-T4`
 
 ## Soon
 
-- `W52-E1-S2-T5`
-- `W52-E1-S2-T6`
-
 ## Parking lot
 
-- `W46-E1-S2-T4`
 - `W42-E7-S2-T3` — Record one genuine uncoached first-time operator observation when a participant
   and eligible environment are available; this is deferred human-usability evidence, not a pass.
 - `W43-E5-S2-T3` — Run a future cross-runtime lower-capability comparison after Codex-only alpha.
@@ -44,10 +37,9 @@ slice, and local task.
 
 ## Current reconciliation
 
-- `2026-09-06` Wave 52 removes approved historical documentation and obsolete compatibility.
-  Integration with `191dfb16` preserves Focus Canvas, runtime failure fixes, instruction
-  checks, and all eight pending operator/browser/provider tasks. PR #533 is merged and its
-  required CI and resulting main tree are verified. The second PR removes confirmed unused
-  facades and UI residue and reconciles normative text; the third removes validator residue
-  and retired persisted-format acceptance. The unrelated browser task returns to Next after cleanup.
-  Earlier completed task records and reconciliation are available in Git history.
+- `2026-09-06` Wave 52 completes the approved code, documentation and reference cleanup without
+  historical-format compatibility. PR #533 and PR #534 are merged with required CI and resulting
+  main trees verified; the third PR carries the final current-format and transitive-residue fixes
+  through the same review/CI/merge gate. Active ownership-registry work and all eight unrelated
+  acceptance tasks remain open. `W46-E1-S2-T4` returns to Next; no provider or human acceptance
+  result is inferred from cleanup tests. Earlier execution notes remain in Git and PR evidence.

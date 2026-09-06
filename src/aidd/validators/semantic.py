@@ -11,7 +11,6 @@ from aidd.validators.semantic_rules.registry import (
     UNSUPPORTED_CLAIM_CODE,
     UNSUPPORTED_VERDICT_CODE,
     UNVERIFIABLE_CHECK_CLAIM_CODE,
-    has_non_placeholder_text,
     validate_semantic_outputs,
 )
 
@@ -26,6 +25,5 @@ __all__ = [
     "UNSUPPORTED_CLAIM_CODE",
     "UNSUPPORTED_VERDICT_CODE",
     "UNVERIFIABLE_CHECK_CLAIM_CODE",
-    "has_non_placeholder_text",
     "validate_semantic_outputs",
 ]

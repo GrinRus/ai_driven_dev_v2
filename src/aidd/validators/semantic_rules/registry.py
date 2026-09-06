@@ -33,7 +33,6 @@ from aidd.validators.semantic_rules.implement import (
 from aidd.validators.semantic_rules.implement import (
     validate_implementation_report,
 )
-from aidd.validators.semantic_rules.placeholders import has_non_placeholder_text
 from aidd.validators.semantic_rules.plan import RULES as PLAN_RULES
 from aidd.validators.semantic_rules.qa import RULES as QA_RULES
 from aidd.validators.semantic_rules.research import RULES as RESEARCH_RULES
@@ -144,7 +143,6 @@ __all__ = [
     "UNSUPPORTED_CLAIM_CODE",
     "UNSUPPORTED_VERDICT_CODE",
     "UNVERIFIABLE_CHECK_CLAIM_CODE",
-    "has_non_placeholder_text",
     "semantic_rule_for",
     "validate_semantic_outputs",
 ]

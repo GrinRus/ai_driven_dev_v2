@@ -33,10 +33,6 @@ class HarnessLifecycleBudget:
         current = time.monotonic() if now is None else now
         return max(0.0, self.deadline - current)
 
-    def exhausted(self, *, now: float | None = None) -> bool:
-        remaining = self.remaining_seconds(now=now)
-        return remaining is not None and remaining <= 0.0
-
 
 @dataclass(frozen=True, slots=True)
 class HarnessProcessResult:

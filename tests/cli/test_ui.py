@@ -5510,6 +5510,40 @@ def test_ui_task_run_returns_conflict_before_background_job(tmp_path: Path) -> N
     assert "workflow" in str(payload["error"])
 
 
+@pytest.mark.parametrize("route", ("/api/tasks/run", "/api/tasks/finalize"))
+@pytest.mark.parametrize("missing_field", ("schema_version", "adapter_id"))
+def test_ui_task_mutations_reject_incomplete_manifest_before_background_job(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, route: str, missing_field: str,
+) -> None:
+    workspace_root = tmp_path / ".aidd"
+    _seed_rich_tasklist(workspace_root)
+    manifest_path = create_run_manifest(
+        workspace_root, "WI-UI", "run-current", "generic-cli", "implement", {},
+    )
+    manifest = json.loads(manifest_path.read_text())
+    del manifest[missing_field]
+    manifest_path.write_text(json.dumps(manifest), encoding="utf-8")
+    service = _service(workspace_root)
+    before = {
+        path.relative_to(workspace_root): path.read_bytes() if path.is_file() else None
+        for path in workspace_root.rglob("*")
+    }
+
+    def _unexpected_job(*args: object, **kwargs: object) -> None:
+        raise AssertionError("Invalid manifest must not create a background job.")
+
+    monkeypatch.setattr(service, "_start_job", _unexpected_job)
+    response = service.handle_post(
+        route, {"task_id": "TL-1", "runtime": "generic-cli", "run_id": "run-current"},
+    )
+
+    assert missing_field in str(_payload_with_status(response, HTTPStatus.BAD_REQUEST)["error"])
+    assert {
+        path.relative_to(workspace_root): path.read_bytes() if path.is_file() else None
+        for path in workspace_root.rglob("*")
+    } == before
+
+
 def test_ui_task_finalize_requires_explicit_run_id(tmp_path: Path) -> None:
     workspace_root = tmp_path / ".aidd"
     _seed_rich_tasklist(workspace_root)

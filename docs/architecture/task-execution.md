@@ -44,6 +44,24 @@ remote-host, or malformed owners remain conflicts. UI mutation endpoints acquire
 returning a background job id. Stage success remains uncommitted until the final aggregate
 implementation report passes validation and atomic publication succeeds.
 
+Existing `task-ledger.json` documents require schema 2, the source tasklist digest, complete
+task entries, a complete finalization object, and creation/update timestamps. Task and finalization
+entries require status, integer attempt count, latest attempt path, blocker, and update timestamp;
+tasks also require identity/title, dependency ids, and acceptance ids. Initial attempt paths,
+blockers, and nested update timestamps may be `null`, and attempt counts start at zero.
+Readers reject malformed entries instead of skipping tasks or converting missing finalization to
+pending. Schema-1 ledgers are not upgraded.
+
+`repository-baseline.json` and `repository-final.json` require schema 1, task identity, a string
+list of repository status entries, and a path-to-string file map. Empty status/file collections
+and the current `missing`/`non-file` file-state markers remain valid. Invalid baseline evidence
+cannot become an empty successful diff; final-evidence failures retain the current failure stop.
+
+An existing `remediation-status.json` requires schema 1, its owning run id, and a `stale_stages`
+list. Each entry records stage, status, invalidating request, timestamp, and reason. Missing or
+malformed state cannot become an empty list or be overwritten by mark/clear operations. The whole
+file may be absent before remediation; an explicitly empty current list is valid after clearing.
+
 ## Operator task projection
 
 The core projects task groups from dependency eligibility plus durable ledger state. Group names

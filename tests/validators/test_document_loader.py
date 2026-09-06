@@ -11,83 +11,40 @@ from aidd.validators.document_loader import (
     MarkdownReadProbeResult,
     classify_document_type,
     load_markdown_document,
-    load_markdown_documents,
     probe_markdown_document,
-    probe_markdown_readability,
-    resolve_common_document_path,
-    resolve_stage_document_path,
-    resolve_stage_root,
 )
 from aidd.validators.protocol import DocumentReadFailureKind
 
 
-def test_resolve_stage_root_uses_workspace_layout(tmp_path: Path) -> None:
+@pytest.mark.parametrize("path_kind", ("absolute", "parent-traversal", "symlink"))
+def test_markdown_reads_reject_workspace_escape_without_changing_outside_bytes(
+    tmp_path: Path, path_kind: str
+) -> None:
     workspace_root = tmp_path / ".aidd"
+    workspace_root.mkdir()
+    outside_path = tmp_path / "outside.md"
+    original = b"# Outside\n\nPrivate source bytes.\n"
+    outside_path.write_bytes(original)
+    if path_kind == "absolute":
+        candidate = outside_path
+    elif path_kind == "parent-traversal":
+        candidate = workspace_root / ".." / outside_path.name
+    else:
+        candidate = workspace_root / "linked.md"
+        candidate.symlink_to(outside_path)
 
-    resolved = resolve_stage_root(workspace_root=workspace_root, work_item="WI-001", stage="plan")
+    with pytest.raises(DocumentPathError, match="must stay inside workspace"):
+        load_markdown_document(path=candidate, workspace_root=workspace_root)
 
-    assert resolved == workspace_root / "workitems" / "WI-001" / "stages" / "plan"
+    probe = probe_markdown_document(path=candidate, workspace_root=workspace_root)
 
-
-def test_resolve_common_document_path_targets_stage_root(tmp_path: Path) -> None:
-    workspace_root = tmp_path / ".aidd"
-
-    resolved = resolve_common_document_path(
-        workspace_root=workspace_root,
-        work_item="WI-001",
-        stage="plan",
-        document_name="stage-result.md",
-    )
-
-    expected = workspace_root / "workitems" / "WI-001" / "stages" / "plan" / "stage-result.md"
-    assert resolved == expected
-
-
-def test_resolve_stage_document_path_targets_io_directory(tmp_path: Path) -> None:
-    workspace_root = tmp_path / ".aidd"
-
-    resolved = resolve_stage_document_path(
-        workspace_root=workspace_root,
-        work_item="WI-001",
-        stage="plan",
-        io_direction="output",
-        document_name="plan.md",
-    )
-
-    expected = workspace_root / "workitems" / "WI-001" / "stages" / "plan" / "output" / "plan.md"
-    assert resolved == expected
-
-
-def test_resolve_common_document_path_rejects_unknown_document(tmp_path: Path) -> None:
-    workspace_root = tmp_path / ".aidd"
-
-    with pytest.raises(DocumentPathError, match="Unknown common document"):
-        resolve_common_document_path(
-            workspace_root=workspace_root,
-            work_item="WI-001",
-            stage="plan",
-            document_name="plan.md",
-        )
-
-
-def test_resolve_stage_document_path_rejects_parent_traversal(tmp_path: Path) -> None:
-    workspace_root = tmp_path / ".aidd"
-
-    with pytest.raises(DocumentPathError, match="simple filename"):
-        resolve_stage_document_path(
-            workspace_root=workspace_root,
-            work_item="WI-001",
-            stage="plan",
-            io_direction="input",
-            document_name="../escape.md",
-        )
-
-
-def test_resolve_stage_root_rejects_workspace_escape(tmp_path: Path) -> None:
-    workspace_root = tmp_path / ".aidd"
-
-    with pytest.raises(DocumentPathError, match="escapes workspace root"):
-        resolve_stage_root(workspace_root=workspace_root, work_item="../../outside", stage="plan")
+    assert not probe.readable
+    assert probe.document is None
+    assert probe.failure is not None
+    assert probe.failure.kind is DocumentReadFailureKind.UNREADABLE
+    assert probe.failure.code == "STRUCT-DOCUMENT-UNREADABLE"
+    assert "must stay inside workspace" in probe.failure.message
+    assert outside_path.read_bytes() == original
 
 
 def test_load_markdown_document_returns_raw_body_and_metadata(tmp_path: Path) -> None:
@@ -173,15 +130,12 @@ def test_probe_markdown_document_returns_readable_document(tmp_path: Path) -> No
     assert result.readable
     assert result.document is not None
     assert result.failure is None
-    assert result.failure_kind is None
-    assert result.failure_code is None
-    assert result.failure_message is None
-    assert probe_markdown_readability(path=doc_path, workspace_root=workspace_root) == result
 
 
 @pytest.mark.parametrize(
     ("content", "kind", "code"),
     [
+        ("missing", DocumentReadFailureKind.UNREADABLE, "STRUCT-DOCUMENT-UNREADABLE"),
         ("directory", DocumentReadFailureKind.NON_FILE, "STRUCT-DOCUMENT-NON-FILE"),
         (b"# Plan\n\xff", DocumentReadFailureKind.INVALID_UTF8, "STRUCT-DOCUMENT-INVALID-UTF8"),
         (
@@ -200,7 +154,9 @@ def test_probe_markdown_document_returns_typed_failure_matrix(
     workspace_root = tmp_path / ".aidd"
     doc_path = workspace_root / "workitems" / "WI-001" / "stages" / "plan" / "output" / "plan.md"
     doc_path.parent.mkdir(parents=True)
-    if content == "directory":
+    if content == "missing":
+        assert not doc_path.exists()
+    elif content == "directory":
         doc_path.mkdir()
     elif isinstance(content, bytes):
         doc_path.write_bytes(content)
@@ -213,9 +169,8 @@ def test_probe_markdown_document_returns_typed_failure_matrix(
     assert result.document is None
     assert result.failure is not None
     assert result.failure.kind is kind
-    assert result.failure_kind is kind
-    assert result.failure_code == code
-    assert result.failure_message
+    assert result.failure.code == code
+    assert result.failure.message
 
 
 def test_probe_markdown_document_normalizes_os_read_error(
@@ -232,9 +187,11 @@ def test_probe_markdown_document_normalizes_os_read_error(
     monkeypatch.setattr(Path, "read_text", raise_permission_error)
     result = probe_markdown_document(path=doc_path, workspace_root=workspace_root)
 
-    assert result.failure_kind is DocumentReadFailureKind.UNREADABLE
-    assert result.failure_code == "STRUCT-DOCUMENT-UNREADABLE"
-    assert result.failure_message == "permission denied"
+    assert result.document is None
+    assert result.failure is not None
+    assert result.failure.kind is DocumentReadFailureKind.UNREADABLE
+    assert result.failure.code == "STRUCT-DOCUMENT-UNREADABLE"
+    assert result.failure.message == "permission denied"
 
 
 def test_markdown_read_probe_result_rejects_ambiguous_outcomes(tmp_path: Path) -> None:
@@ -274,33 +231,6 @@ def test_load_markdown_document_normalizes_workspace_relative_path(tmp_path: Pat
     assert loaded.metadata.workspace_relative_path == Path(
         "workitems/WI-001/stages/plan/output/plan.md"
     )
-
-
-def test_load_markdown_documents_rejects_duplicate_paths_after_normalization(
-    tmp_path: Path,
-) -> None:
-    workspace_root = tmp_path / ".aidd"
-    canonical_path = (
-        workspace_root / "workitems" / "WI-001" / "stages" / "plan" / "output" / "plan.md"
-    )
-    canonical_path.parent.mkdir(parents=True)
-    canonical_path.write_text("# Plan\n", encoding="utf-8")
-    aliased_path = (
-        workspace_root
-        / "workitems"
-        / "WI-001"
-        / "stages"
-        / "plan"
-        / "output"
-        / "."
-        / "plan.md"
-    )
-
-    with pytest.raises(DocumentLoadError, match="Duplicate document path after normalization"):
-        load_markdown_documents(
-            paths=[canonical_path, aliased_path],
-            workspace_root=workspace_root,
-        )
 
 
 def test_classify_document_type_detects_common_document() -> None:

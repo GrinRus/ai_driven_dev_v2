@@ -22,7 +22,7 @@ def test_microcopy_contrast_minimums_and_tabular_metrics_are_rendered(tmp_path: 
               <section class="state-surface" data-state="unavailable">
                 <div class="state-surface-copy"><p>Runtime is unavailable.</p></div>
               </section>
-              <span class="counter">08/12</span>
+              <div class="metric approval-summary-metric"><strong>08/12</strong></div>
               <span class="small-badge">12 attempts</span>
               <div class="metric"><span>Elapsed</span><strong>01:29</strong></div>
             </main>
@@ -36,7 +36,7 @@ def test_microcopy_contrast_minimums_and_tabular_metrics_are_rendered(tmp_path: 
             "nodes => nodes.map((node) => Number.parseFloat(getComputedStyle(node).fontSize))"
         )
         assert all(size >= 12 for size in font_sizes)
-        numeric = page.locator(".counter, .small-badge, .metric strong").evaluate_all(
+        numeric = page.locator(".small-badge, .metric strong").evaluate_all(
             "nodes => nodes.map((node) => getComputedStyle(node).fontVariantNumeric)"
         )
         assert numeric == ["tabular-nums", "tabular-nums", "tabular-nums"]

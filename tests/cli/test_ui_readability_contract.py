@@ -28,16 +28,16 @@ def test_packaged_styles_do_not_restore_subminimum_microcopy() -> None:
 
 def test_scannable_runtime_and_status_metrics_use_tabular_numerals() -> None:
     styles = _asset("/operator-components.css")
-
-    for selector in (
-        ".counter",
+    numeric_rule = re.search(
+        r"([^{}]+)\{([^{}]*font-variant-numeric:\s*tabular-nums;[^{}]*)\}",
+        styles,
+    )
+    assert numeric_rule is not None
+    selectors = {selector.strip() for selector in numeric_rule[1].split(",")}
+    assert {
         ".small-badge",
-        ".stage-index",
         ".metric strong",
-        ".decision-metric strong",
-        ".handoff-metric strong",
         ".approval-summary-metric strong",
-    ):
-        assert selector in styles
-    assert 'font-feature-settings: "tnum" 1;' in styles
-    assert "font-variant-numeric: tabular-nums;" in styles
+    }.issubset(selectors)
+    assert 'font-feature-settings: "tnum" 1;' in numeric_rule[2]
+    assert "font-variant-numeric: tabular-nums;" in numeric_rule[2]

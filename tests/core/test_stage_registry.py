@@ -105,7 +105,8 @@ def test_load_stage_manifest_parses_required_inputs_outputs(tmp_path: Path) -> N
     assert manifest.stage == "idea"
     assert manifest.purpose == "Shape the incoming request into a reviewable brief."
     assert manifest.required_input_paths == ("context/intake.md", "context/user-request.md")
-    assert manifest.optional_input_paths == ("context/constraints.md",)
+    assert tuple(item.path for item in manifest.optional_inputs) == ("context/constraints.md",)
+    assert all(item.required is False for item in manifest.optional_inputs)
     assert manifest.required_output_paths == ("idea-brief.md", "stage-result.md")
 
 

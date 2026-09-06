@@ -200,6 +200,29 @@ def test_reconcile_terminal_stage_does_not_rewrite_identity_mismatch(
     assert metadata_path.read_bytes() == before
 
 
+@pytest.mark.parametrize("missing_field", ("schema_version", "status_history", "repair_history"))
+def test_reconciliation_rejects_incomplete_metadata_without_rewriting_evidence(
+    tmp_path: Path, missing_field: str,
+) -> None:
+    workspace_root = tmp_path / ".aidd"
+    metadata_path = _prepare_stage(workspace_root)
+    payload = json.loads(metadata_path.read_text(encoding="utf-8"))
+    del payload[missing_field]
+    metadata_path.write_text(json.dumps(payload), encoding="utf-8")
+    before = {
+        path.relative_to(workspace_root): path.read_bytes() if path.is_file() else None
+        for path in workspace_root.rglob("*")
+    }
+
+    with pytest.raises(ValueError, match=missing_field):
+        reconcile_terminal_stage(_request(workspace_root), changed_at_utc=CHANGED_AT)
+
+    assert {
+        path.relative_to(workspace_root): path.read_bytes() if path.is_file() else None
+        for path in workspace_root.rglob("*")
+    } == before
+
+
 @pytest.mark.parametrize(
     ("field", "value"),
     (

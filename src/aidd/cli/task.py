@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import json
 from collections.abc import Callable
 from pathlib import Path
 from typing import Annotated, NoReturn, cast
@@ -34,7 +33,7 @@ from aidd.core.mutation_lease import (
 )
 from aidd.core.run_store import (
     create_run_manifest,
-    run_manifest_path,
+    load_run_manifest,
     run_root,
 )
 from aidd.core.task_attempt_lifecycle import TaskExecutionContext, load_task_execution_plan
@@ -62,17 +61,10 @@ def _validate_run_manifest_identity(
     runtime: str,
     config: Path,
 ) -> None:
-    manifest_path = run_manifest_path(
-        workspace_root=workspace_root,
-        work_item=work_item,
-        run_id=run_id,
-    )
-    if not manifest_path.exists():
+    manifest = load_run_manifest(workspace_root, work_item, run_id)
+    if manifest is None:
         raise ValueError(f"Run manifest does not exist for run `{run_id}`.")
-    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
-    if not isinstance(manifest, dict):
-        raise ValueError("Run manifest must contain a JSON object.")
-    manifest_runtime = str(manifest.get("runtime_id", ""))
+    manifest_runtime = manifest["runtime_id"]
     if manifest_runtime != runtime:
         raise ValueError(
             f"Runtime `{runtime}` does not match run manifest runtime `{manifest_runtime}`."

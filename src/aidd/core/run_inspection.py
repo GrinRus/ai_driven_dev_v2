@@ -7,32 +7,17 @@ from typing import Any
 
 from aidd.core.run_archive import resolve_run_archive_decision
 from aidd.core.run_lookup import (
-    ClosedRunError,
-    CorruptedRunError,
-    guard_latest_run_resume,
-    guard_run_resume,
     latest_attempt_number,
     latest_run_id,
     resolve_attempt_artifact_paths,
 )
 from aidd.core.run_store import (
+    load_run_manifest,
     load_stage_metadata,
-    run_attempt_root,
-    run_manifest_path,
 )
 from aidd.core.run_store import run_stages_root as run_stage_roots_path
 from aidd.core.workspace import work_item_metadata_path
 from aidd.validators.protocol import parse_validator_report
-
-
-@dataclass(frozen=True, slots=True)
-class ResolvedCliRunTarget:
-    run_id: str
-    stage: str
-    attempt_number: int
-    attempt_path: Path
-    documents: dict[str, Path]
-    logs: dict[str, Path]
 
 
 @dataclass(frozen=True, slots=True)
@@ -125,62 +110,15 @@ class RunArtifactsSummary:
     logs: dict[str, str]
 
 
-def _load_runtime_id(
-    *,
-    workspace_root: Path,
-    work_item: str,
-    run_id: str,
-) -> str:
-    manifest = run_manifest_path(
-        workspace_root=workspace_root,
-        work_item=work_item,
-        run_id=run_id,
-    )
-    if not manifest.exists():
-        raise ValueError(f"Run manifest is missing for work item '{work_item}', run '{run_id}'.")
-
-    try:
-        payload = json.loads(manifest.read_text(encoding="utf-8"))
-    except json.JSONDecodeError as exc:
-        raise ValueError(
-            f"Run manifest is not valid JSON for work item '{work_item}', run '{run_id}'."
-        ) from exc
-
-    if not isinstance(payload, dict):
-        raise ValueError(
-            f"Run manifest must be a JSON object for work item '{work_item}', run '{run_id}'."
-        )
-    runtime = str(payload.get("runtime_id", "")).strip()
-    if not runtime:
-        raise ValueError(
-            f"Run manifest runtime_id is missing for work item '{work_item}', run '{run_id}'."
-        )
-    return runtime
-
-
 def _load_manifest_payload(
     *,
     workspace_root: Path,
     work_item: str,
     run_id: str,
 ) -> dict[str, Any]:
-    manifest = run_manifest_path(
-        workspace_root=workspace_root,
-        work_item=work_item,
-        run_id=run_id,
-    )
-    if not manifest.exists():
+    payload = load_run_manifest(workspace_root, work_item, run_id)
+    if payload is None:
         raise ValueError(f"Run manifest is missing for work item '{work_item}', run '{run_id}'.")
-    try:
-        payload = json.loads(manifest.read_text(encoding="utf-8"))
-    except json.JSONDecodeError as exc:
-        raise ValueError(
-            f"Run manifest is not valid JSON for work item '{work_item}', run '{run_id}'."
-        ) from exc
-    if not isinstance(payload, dict):
-        raise ValueError(
-            f"Run manifest must be a JSON object for work item '{work_item}', run '{run_id}'."
-        )
     return payload
 
 
@@ -325,40 +263,20 @@ def resolve_run_metadata_summary(
         workspace_root=workspace_root,
         work_item=work_item,
     )
-    runtime_id = str(manifest_payload.get("runtime_id", "")).strip()
-    if not runtime_id:
-        raise ValueError(
-            "Run manifest runtime_id is missing for work item "
-            f"'{work_item}', run '{selected_run_id}'."
-        )
-    stage_target = str(manifest_payload.get("stage_target", "")).strip()
-    if not stage_target:
-        raise ValueError(
-            "Run manifest stage_target is missing for work item "
-            f"'{work_item}', run '{selected_run_id}'."
-        )
-    workflow_bounds = manifest_payload.get("workflow_bounds")
-    workflow_stage_start: str | None = None
-    workflow_stage_end: str | None = None
-    if isinstance(workflow_bounds, dict):
-        workflow_stage_start = str(workflow_bounds.get("start", "")).strip() or None
-        workflow_stage_end = str(workflow_bounds.get("end", "")).strip() or None
-    repository_git_sha = str(manifest_payload.get("repository_git_sha", "")).strip() or None
-    adapter_id = str(manifest_payload.get("adapter_id", "")).strip() or runtime_id
-    resource_revision = str(manifest_payload.get("resource_revision", "")).strip() or None
-    raw_prompt_pack_provenance = manifest_payload.get("prompt_pack_provenance", [])
-    prompt_pack_provenance: list[PromptPackProvenance] = []
-    if isinstance(raw_prompt_pack_provenance, list):
-        for entry in raw_prompt_pack_provenance:
-            if not isinstance(entry, dict):
-                continue
-            path = str(entry.get("path", "")).strip()
-            sha256 = str(entry.get("sha256", "")).strip()
-            if not path or not sha256:
-                continue
-            prompt_pack_provenance.append(PromptPackProvenance(path=path, sha256=sha256))
-    created_at_utc = str(manifest_payload.get("created_at_utc", "")).strip()
-    updated_at_utc = str(manifest_payload.get("updated_at_utc", "")).strip()
+    runtime_id = str(manifest_payload["runtime_id"]).strip()
+    stage_target = str(manifest_payload["stage_target"]).strip()
+    workflow_bounds = manifest_payload["workflow_bounds"]
+    workflow_stage_start = workflow_bounds["start"]
+    workflow_stage_end = workflow_bounds["end"]
+    repository_git_sha = manifest_payload["repository_git_sha"]
+    adapter_id = str(manifest_payload["adapter_id"]).strip()
+    resource_revision = manifest_payload["resource_revision"]
+    prompt_pack_provenance = [
+        PromptPackProvenance(path=entry["path"], sha256=entry["sha256"])
+        for entry in manifest_payload["prompt_pack_provenance"]
+    ]
+    created_at_utc = str(manifest_payload["created_at_utc"]).strip()
+    updated_at_utc = str(manifest_payload["updated_at_utc"]).strip()
 
     stage_roots = run_stage_roots_path(
         workspace_root=workspace_root,
@@ -654,11 +572,11 @@ def resolve_stage_result_summary(
     return StageResultSummary(
         run_id=selected_run_id,
         stage=stage,
-        runtime_id=_load_runtime_id(
+        runtime_id=_load_manifest_payload(
             workspace_root=workspace_root,
             work_item=work_item,
             run_id=selected_run_id,
-        ),
+        )["runtime_id"],
         final_state=stage_metadata.status,
         attempt_count=attempts,
         validator_pass_count=pass_count,
@@ -667,78 +585,4 @@ def resolve_stage_result_summary(
         log_artifact_paths=log_artifact_paths,
         document_artifact_paths=document_artifact_paths,
         repair_output_paths=repair_output_paths,
-    )
-
-
-def resolve_cli_run_target(
-    workspace_root: Path,
-    work_item: str,
-    stage: str,
-    *,
-    run_id: str | None = None,
-    attempt_number: int | None = None,
-) -> ResolvedCliRunTarget:
-    try:
-        if run_id is None:
-            selected_run_id = guard_latest_run_resume(
-                workspace_root=workspace_root,
-                work_item=work_item,
-                stage=stage,
-            )
-        else:
-            selected_run_id = run_id
-            guard_run_resume(
-                workspace_root=workspace_root,
-                work_item=work_item,
-                run_id=selected_run_id,
-                stage=stage,
-            )
-    except (ClosedRunError, CorruptedRunError) as exc:
-        raise ValueError(str(exc)) from exc
-
-    selected_attempt = attempt_number or latest_attempt_number(
-        workspace_root=workspace_root,
-        work_item=work_item,
-        run_id=selected_run_id,
-        stage=stage,
-    )
-    if selected_attempt is None:
-        raise ValueError(
-            "No attempts found for work item "
-            f"'{work_item}', run '{selected_run_id}', stage '{stage}'."
-        )
-
-    attempt_path = run_attempt_root(
-        workspace_root=workspace_root,
-        work_item=work_item,
-        run_id=selected_run_id,
-        stage=stage,
-        attempt_number=selected_attempt,
-    )
-    if not attempt_path.exists():
-        raise ValueError(
-            f"Attempt path does not exist for work item '{work_item}', run '{selected_run_id}', "
-            f"stage '{stage}', attempt {selected_attempt}."
-        )
-
-    artifact_paths = resolve_attempt_artifact_paths(
-        workspace_root=workspace_root,
-        work_item=work_item,
-        run_id=selected_run_id,
-        stage=stage,
-        attempt_number=selected_attempt,
-    )
-    if artifact_paths is None:
-        raise ValueError(
-            f"Artifact index is missing for work item '{work_item}', run '{selected_run_id}', "
-            f"stage '{stage}', attempt {selected_attempt}."
-        )
-
-    return ResolvedCliRunTarget(
-        run_id=selected_run_id,
-        stage=stage,
-        attempt_number=selected_attempt,
-        attempt_path=attempt_path,
-        documents=artifact_paths.documents,
-        logs=artifact_paths.logs,
     )

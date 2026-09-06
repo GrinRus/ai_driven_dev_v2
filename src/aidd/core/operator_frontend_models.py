@@ -27,10 +27,6 @@ class OperatorQuestionsView:
     questions: tuple[OperatorQuestionView, ...]
     unresolved_blocking_question_ids: tuple[str, ...]
 
-    @property
-    def has_unresolved_blocking_questions(self) -> bool:
-        return bool(self.unresolved_blocking_question_ids)
-
 
 @dataclass(frozen=True, slots=True)
 class OperatorRunView:
@@ -352,10 +348,6 @@ class OperatorInboxView:
     workspace_root: Path
     sections: tuple[OperatorInboxSection, ...]
     entry_recommendation: OperatorInboxEntryRecommendation | None = None
-
-    @property
-    def item_count(self) -> int:
-        return sum(len(section.items) for section in self.sections)
 
 
 @dataclass(frozen=True, slots=True)

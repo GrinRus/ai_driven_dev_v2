@@ -4,6 +4,8 @@ from pathlib import Path
 
 import pytest
 
+from aidd.core.markdown import MarkdownHeading, extract_markdown_headings
+from aidd.validators.document_loader import load_markdown_document
 from aidd.validators.models import ValidationFinding, ValidationIssueLocation
 from aidd.validators.structural import (
     DUPLICATE_REQUIRED_SECTION_CODE,
@@ -11,9 +13,6 @@ from aidd.validators.structural import (
     MISSING_REQUIRED_DOCUMENT_CODE,
     MISSING_REQUIRED_SECTION_CODE,
     STALE_STAGE_RESULT_PLACEHOLDER_CODE,
-    MarkdownHeading,
-    extract_document_headings,
-    extract_markdown_headings,
     validate_required_document_existence,
     validate_required_sections,
 )
@@ -262,7 +261,9 @@ Intro paragraph.
     )
 
 
-def test_extract_document_headings_reads_workspace_markdown(tmp_path: Path) -> None:
+def test_extract_markdown_headings_preserves_loaded_frontmatter_line_numbers(
+    tmp_path: Path,
+) -> None:
     workspace_root = tmp_path / ".aidd"
     doc_path = workspace_root / "workitems" / "WI-001" / "stages" / "qa" / "qa-report.md"
     doc_path.parent.mkdir(parents=True)
@@ -283,7 +284,8 @@ def test_extract_document_headings_reads_workspace_markdown(tmp_path: Path) -> N
         encoding="utf-8",
     )
 
-    headings = extract_document_headings(path=doc_path, workspace_root=workspace_root)
+    loaded = load_markdown_document(path=doc_path, workspace_root=workspace_root)
+    headings = extract_markdown_headings(loaded.body)
 
     assert headings == (
         MarkdownHeading(level=1, title="QA Report", line_number=4),

@@ -10,18 +10,6 @@ from aidd.core.workspace import WORKSPACE_REPORTS_DIRNAME, WORKSPACE_REPORTS_EVA
 from aidd.evals.log_analysis import FailureTaxonomyCategory
 from aidd.evals.verdicts import ScenarioVerdict, VerdictStatus
 
-FAILURE_CLASSES: tuple[str, ...] = (
-    "pass",
-    "document_fail",
-    "model_fail",
-    "env_fail",
-    "permission_fail",
-    "auth_fail",
-    "timeout",
-    "adapter_fail",
-    "harness_fail",
-    "needs_user_input",
-)
 FAILURE_BOUNDARY_CATEGORIES: tuple[FailureTaxonomyCategory, ...] = (
     "environment",
     "adapter",
@@ -256,7 +244,6 @@ def resolve_latest_eval_summary_report_path(*, workspace_root: Path) -> Path:
 
 __all__ = [
     "FAILURE_BOUNDARY_CATEGORIES",
-    "FAILURE_CLASSES",
     "RuntimeSummaryRow",
     "ScenarioSummaryRow",
     "SUMMARY_REPORT_FILENAME",

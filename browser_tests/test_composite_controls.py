@@ -30,7 +30,10 @@ def test_composite_controls_align_visual_and_accessibility_selection(tmp_path: P
                 </button>
               </div>
               <button class="artifact-doc" aria-pressed="true">implementation-report.md</button>
-              <button class="work-item-card" aria-current="true">WI-001</button>
+              <article class="inbox-item" tabindex="0" aria-current="true"
+                       data-selected-work-item="WI-001" aria-label="Select Work Item WI-001">
+                WI-001
+              </article>
             </main>
             """,
             wait_until="networkidle",
@@ -45,10 +48,10 @@ def test_composite_controls_align_visual_and_accessibility_selection(tmp_path: P
         assert page.get_by_role("radio", checked=True).count() == 1
         assert page.get_by_role("radio", checked=False).count() == 1
         assert page.locator('.artifact-doc[aria-pressed="true"]').count() == 1
-        assert page.locator('.work-item-card[aria-current="true"]').count() == 1
+        assert page.locator('.inbox-item[aria-current="true"]').count() == 1
         assert all(
             height >= 44
-            for height in page.locator("button").evaluate_all(
+            for height in page.locator("button, .inbox-item").evaluate_all(
                 "nodes => nodes.map((node) => node.getBoundingClientRect().height)"
             )
         )

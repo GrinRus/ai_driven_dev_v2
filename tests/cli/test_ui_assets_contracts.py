@@ -5,9 +5,6 @@ from html.parser import HTMLParser
 from importlib.resources import files
 
 from aidd.cli.ui_assets import (
-    _INDEX_HTML,
-    _OPERATOR_CSS,
-    _OPERATOR_JS,
     operator_static_asset_for_route,
     operator_static_asset_manifest,
 )
@@ -28,7 +25,7 @@ class _StartTagCollector(HTMLParser):
 
 def _html_tags() -> list[tuple[str, dict[str, str | None]]]:
     collector = _StartTagCollector()
-    collector.feed(_INDEX_HTML)
+    collector.feed(_asset_text("/"))
     return collector.tags
 
 
@@ -114,9 +111,6 @@ def test_operator_static_asset_manifest_preserves_compatibility_routes() -> None
     assert routes["/"].filename == "index.html"
     assert routes["/operator.js"].content_type == "text/javascript; charset=utf-8"
     assert routes["/operator.css"].content_type == "text/css; charset=utf-8"
-    assert _asset_text("/") == _INDEX_HTML
-    assert _asset_text("/operator.js") == _OPERATOR_JS
-    assert _asset_text("/operator.css") == _OPERATOR_CSS
     assert operator_static_asset_for_route("/missing.js") is None
 
 
@@ -139,7 +133,7 @@ def test_operator_js_bootstrap_loads_manifested_browser_modules() -> None:
 
 def test_operator_assets_have_no_legacy_renderer_boundary() -> None:
     bundle = _js_bundle()
-    assert "operator-presentation.js" not in _OPERATOR_JS
+    assert "operator-presentation.js" not in _asset_text("/operator.js")
     for obsolete in (
         "selectSurfaceRenderer",
         "resolveSurfaceRenderer",
@@ -227,7 +221,7 @@ def test_operator_html_exposes_intent_workspace_without_legacy_shell_regions() -
         'id="intentContent"',
         'id="intentTechnicalDetails"',
     ):
-        assert anchor in _INDEX_HTML
+        assert anchor in _asset_text("/")
     for legacy in (
         "stage-rail",
         "cockpit-header",
@@ -236,7 +230,7 @@ def test_operator_html_exposes_intent_workspace_without_legacy_shell_regions() -
         "bottom-dock",
         'id="cockpitContent"',
     ):
-        assert legacy not in _INDEX_HTML
+        assert legacy not in _asset_text("/")
 
 
 def test_visible_operator_vocabulary_uses_work_item_and_keeps_compatibility_identifiers() -> None:
@@ -315,22 +309,32 @@ def test_operator_workbench_css_wraps_path_lines_without_document_overflow() -> 
     assert "word-break: break-word;" in components
 
 
-def test_operator_responsive_css_prevents_activity_table_mobile_overflow() -> None:
-    responsive = _asset_text("/operator-responsive.css")
+def test_activity_table_preserves_readable_cells_and_bounded_wrapping_details() -> None:
+    components = _asset_text("/operator-components.css")
+    shell = _asset_text("/operator-intent-shell.css")
+    cockpit = _asset_text("/operator-stage-cockpit.js")
 
-    assert "@media (max-width: 1120px)" in responsive
-    assert ".request-change-grid," in responsive
-    assert ".activity-panel .table-wrap {" in responsive
-    assert "overflow-x: hidden;" in responsive
-    assert ".activity-panel .activity-table {" in responsive
-    assert "table-layout: fixed;" in responsive
-    assert ".activity-panel .activity-table th," in responsive
-    assert ".activity-panel .activity-table td {" in responsive
-    assert "overflow-wrap: anywhere;" in responsive
-    assert "word-break: break-word;" in responsive
-    assert ".activity-panel .activity-table th:nth-child(1)," in responsive
-    assert ".activity-panel .activity-table th:nth-child(2)," in responsive
-    assert ".activity-panel .activity-table th:nth-child(3)," in responsive
+    assert _attrs_for("section", id="technicalActivity")["class"] == "technical-region"
+    assert 'document.getElementById("technicalActivity")' in cockpit
+    assert '<table class="activity-table">' in cockpit
+    table = components.split(".activity-table {", 1)[1].split("}", 1)[0]
+    assert "border-collapse: collapse;" in table
+    assert "width: 100%;" in table
+    cells = components.split(".activity-table td {", 1)[1].split("}", 1)[0]
+    assert "font-size: 12px;" in cells
+    assert "border-bottom: 1px solid var(--line);" in cells
+    region = shell.split(".technical-region {", 1)[1].split("}", 1)[0]
+    assert "min-width: 0;" in region
+    summary = components.split(".activity-detail summary {", 1)[1].split("}", 1)[0]
+    assert "max-width: min(56ch, 100%);" in summary
+    detail = components.split(".activity-detail pre {", 1)[1].split("}", 1)[0]
+    for declaration in (
+        "max-height: 220px;",
+        "overflow: auto;",
+        "white-space: pre-wrap;",
+        "word-break: break-word;",
+    ):
+        assert declaration in detail
 
 
 def test_operator_script_modules_own_static_ui_surfaces() -> None:

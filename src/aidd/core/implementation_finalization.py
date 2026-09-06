@@ -8,7 +8,7 @@ from uuid import uuid4
 
 from aidd.core.identifiers import contained_component_path
 from aidd.core.markdown import extract_h2_section
-from aidd.core.run_store import run_stage_root
+from aidd.core.run_store import load_run_manifest, load_stage_metadata, run_stage_root
 from aidd.core.task_attempt_lifecycle import existing_attempts, reconcile_staging_attempts
 from aidd.core.task_ledger import (
     TaskFinalizationStatus,
@@ -58,6 +58,10 @@ def _finalization_attempts_root(*, workspace_root: Path, work_item: str, run_id:
 def prepare_task_finalization(
     *, workspace_root: Path, work_item: str, run_id: str, ledger: TaskLedger
 ) -> TaskFinalizationContext:
+    load_run_manifest(workspace_root=workspace_root, work_item=work_item, run_id=run_id)
+    load_stage_metadata(
+        workspace_root=workspace_root, work_item=work_item, run_id=run_id, stage="implement"
+    )
     if not ledger.all_succeeded():
         raise ValueError("Cannot finalize implementation before every task succeeds.")
     if ledger.finalization.status is TaskFinalizationStatus.SUCCEEDED:

@@ -17,9 +17,6 @@ from aidd.adapters.runtime_evidence import (
     stop_reason_for_outcome,
 )
 
-RuntimeArtifactPaths = RuntimeEvidencePaths
-
-
 # These documents are AIDD-owned or operator-owned workflow records.  They may be
 # present in a published output list, but they must never be used
 # as a runtime process-completion signal.
@@ -267,7 +264,7 @@ def persist_runtime_log_artifacts(
     stderr_truncated: bool = False,
     runtime_log_truncated: bool = False,
     capture_error: str | None = None,
-) -> RuntimeArtifactPaths:
+) -> RuntimeEvidencePaths:
     resolved_outcome = adapter_outcome or adapter_outcome_for_classification(
         exit_classification
     )
@@ -298,7 +295,6 @@ def persist_runtime_log_artifacts(
 
 __all__ = [
     "RUNTIME_LOG_FILENAME",
-    "RuntimeArtifactPaths",
     "build_aidd_execution_environment",
     "persist_runtime_log_artifacts",
     "resolve_exit_classification",

@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import json
 import re
 import subprocess
 import sys
@@ -132,10 +131,10 @@ from aidd.core.run_comparison import resolve_run_comparison
 from aidd.core.run_inspection import resolve_run_metadata_summary
 from aidd.core.run_lookup import latest_run_id as resolve_latest_run_id
 from aidd.core.run_store import (
+    load_run_manifest,
     next_attempt_number,
     persist_run_archive_decision,
     run_attempt_root,
-    run_manifest_path,
     run_root,
 )
 from aidd.core.runtime_launch_history import resolve_runtime_launch_history
@@ -2616,15 +2615,10 @@ class OperatorUiService:
         )
 
     def _validate_implementation_runtime(self, *, run_id: str, runtime: str) -> None:
-        path = run_manifest_path(
-            workspace_root=self.workspace_root,
-            work_item=self.work_item,
-            run_id=run_id,
-        )
-        if not path.is_file():
+        payload = load_run_manifest(self.workspace_root, self.work_item, run_id)
+        if payload is None:
             raise ValueError(f"Run manifest does not exist for run `{run_id}`.")
-        payload = json.loads(path.read_text(encoding="utf-8"))
-        manifest_runtime = payload.get("runtime_id") if isinstance(payload, dict) else None
+        manifest_runtime = payload["runtime_id"]
         if manifest_runtime != runtime:
             raise ValueError(
                 f"Runtime `{runtime}` does not match run manifest runtime "

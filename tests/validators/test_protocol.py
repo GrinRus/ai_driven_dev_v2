@@ -10,12 +10,10 @@ from aidd.validators.protocol import (
     DOCUMENT_READ_FAILURES,
     VALIDATOR_FINDING_CODES,
     VALIDATOR_REPORT_FIELDS,
-    VALIDATOR_REPORT_PROTOCOL_VERSION,
     DocumentReadFailureKind,
     ValidatorReportProtocolError,
     parse_validator_report,
     resolve_document_read_failure,
-    resolve_document_read_failure_code,
     resolve_validator_finding_code,
     resolve_validator_report_field,
     validator_report_field,
@@ -25,8 +23,7 @@ _CODE_PATTERN = re.compile(r"^(?:CROSS|INTERVIEW|SEM|STRUCT)-[A-Z0-9-]+$")
 _NON_FINDING_PROTOCOL_LITERALS = {"STRUCT-MISSING"}
 
 
-def test_protocol_registry_is_versioned_and_collision_free() -> None:
-    assert VALIDATOR_REPORT_PROTOCOL_VERSION == 1
+def test_protocol_registry_is_collision_free() -> None:
     assert len({field.key for field in VALIDATOR_REPORT_FIELDS}) == len(VALIDATOR_REPORT_FIELDS)
     labels = [field.label.casefold() for field in VALIDATOR_REPORT_FIELDS]
     assert len(set(labels)) == len(labels)
@@ -44,7 +41,7 @@ def test_protocol_registry_resolves_only_current_fields() -> None:
             resolve_validator_report_field(label)
 
 
-def test_document_read_failure_registry_is_canonical_and_bidirectional() -> None:
+def test_document_read_failure_registry_maps_canonical_kinds_to_finding_codes() -> None:
     assert tuple(spec.kind for spec in DOCUMENT_READ_FAILURES) == (
         DocumentReadFailureKind.NON_FILE,
         DocumentReadFailureKind.UNREADABLE,
@@ -55,22 +52,19 @@ def test_document_read_failure_registry_is_canonical_and_bidirectional() -> None
     assert len({spec.code for spec in DOCUMENT_READ_FAILURES}) == len(DOCUMENT_READ_FAILURES)
     assert all(
         resolve_document_read_failure(spec.kind) is spec
-        and resolve_document_read_failure_code(spec.code) is spec
-        and spec.finding_code == spec.code
         and spec.code in {finding.code for finding in VALIDATOR_FINDING_CODES}
         for spec in DOCUMENT_READ_FAILURES
     )
 
 
-@pytest.mark.parametrize("value", ("missing", "STRUCT-UNKNOWN-DOCUMENT-READ"))
-def test_document_read_failure_registry_rejects_unknown_values(value: str) -> None:
-    resolver = (
-        resolve_document_read_failure_code
-        if value.startswith("STRUCT-")
-        else resolve_document_read_failure
-    )
+def test_document_read_failure_registry_rejects_unknown_kind() -> None:
     with pytest.raises(ValidatorReportProtocolError, match="Unknown document-read failure"):
-        resolver(value)
+        resolve_document_read_failure("missing")
+
+
+def test_document_read_failure_registry_rejects_unknown_finding_code() -> None:
+    with pytest.raises(ValidatorReportProtocolError, match="Unknown validator finding"):
+        resolve_validator_finding_code("STRUCT-UNKNOWN-DOCUMENT-READ")
 
 
 @pytest.mark.parametrize(

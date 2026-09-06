@@ -14,9 +14,6 @@ from aidd.adapters.runner_support import (
     split_configured_command,
     validate_stage_command_context,
 )
-from aidd.adapters.runtime_artifacts import (
-    RUNTIME_EXIT_METADATA_FILENAME as _RUNTIME_EXIT_METADATA_FILENAME,
-)
 from aidd.adapters.runtime_execution import RuntimeRunResult, RuntimeSubprocessSpec
 from aidd.adapters.subprocess_streaming import run_streamed_subprocess
 
@@ -72,9 +69,6 @@ class GenericCliExitClassification(StrEnum):
 @dataclass(frozen=True, slots=True)
 class GenericCliRunResult(RuntimeRunResult[GenericCliExitClassification]):
     pass
-
-
-RUNTIME_EXIT_METADATA_FILENAME = _RUNTIME_EXIT_METADATA_FILENAME
 
 
 def _resolve_exit_classification(

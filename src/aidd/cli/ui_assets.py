@@ -203,10 +203,6 @@ _STATIC_ASSET_BY_ROUTE = {
     for asset in _OPERATOR_STATIC_ASSET_MANIFEST
 }
 
-_INDEX_HTML = _STATIC_TEXT_BY_FILENAME["index.html"]
-_OPERATOR_CSS = _STATIC_TEXT_BY_FILENAME["operator.css"]
-_OPERATOR_JS = _STATIC_TEXT_BY_FILENAME["operator.js"]
-
 
 def operator_static_asset_manifest() -> tuple[OperatorStaticAsset, ...]:
     return _OPERATOR_STATIC_ASSET_MANIFEST
@@ -227,9 +223,6 @@ def operator_static_asset_for_route(route: str) -> OperatorStaticAssetContent | 
 __all__ = [
     "OperatorStaticAsset",
     "OperatorStaticAssetContent",
-    "_INDEX_HTML",
-    "_OPERATOR_CSS",
-    "_OPERATOR_JS",
     "operator_static_asset_for_route",
     "operator_static_asset_manifest",
 ]

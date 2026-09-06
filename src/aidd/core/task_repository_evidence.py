@@ -13,6 +13,7 @@ from aidd.core.allowed_write_scope import (
     resolve_allowed_write_scope,
 )
 from aidd.core.markdown import extract_h2_section
+from aidd.core.persisted_state import require_fields
 from aidd.core.stage_models import StageExecutionState, StageOutputDiscovery
 from aidd.core.task_attempt_lifecycle import TaskExecutionContext
 from aidd.core.task_plan import TaskExecutionMode
@@ -40,16 +41,20 @@ class RepositorySnapshot:
 
     @classmethod
     def from_payload(cls, payload: object) -> RepositorySnapshot:
-        if not isinstance(payload, dict):
-            raise ValueError("Repository snapshot must be a JSON object.")
-        task_id = payload.get("task_id")
-        status = payload.get("status")
-        files = payload.get("files")
-        if not isinstance(task_id, str) or not task_id:
+        payload = require_fields(
+            payload,
+            label="Repository snapshot",
+            schema_version=1,
+            fields={"task_id": str, "status": list, "files": dict},
+        )
+        task_id = payload["task_id"]
+        status = payload["status"]
+        files = payload["files"]
+        if not task_id:
             raise ValueError("Repository snapshot task_id must be a non-empty string.")
-        if not isinstance(status, list) or not all(isinstance(item, str) for item in status):
+        if not all(isinstance(item, str) for item in status):
             raise ValueError("Repository snapshot status must be a string list.")
-        if not isinstance(files, dict) or not all(
+        if not all(
             isinstance(path, str) and isinstance(digest, str) for path, digest in files.items()
         ):
             raise ValueError("Repository snapshot files must map paths to digests.")

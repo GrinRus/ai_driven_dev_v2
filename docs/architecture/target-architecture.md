@@ -216,6 +216,35 @@ The implemented operator frontend and project-set workflow support preserve this
 
 Detailed contracts live in `operator-frontend.md` and `project-set-workspace.md`.
 
+### Current persisted run state
+
+Authoritative readers require the explicit current integer `schema_version` and the fields
+written by the current owner. Missing, retired, unknown, or incorrectly typed versions stop
+with a contextual error; readers do not coerce versions or manufacture missing lifecycle state.
+
+- `run-manifest.json` uses schema 1. It requires run/work-item/runtime/adapter identity,
+  stage target, workflow bounds with explicit `start` and `end`, configuration snapshot,
+  repository/resource provenance, prompt-pack provenance, and creation/update timestamps.
+  Unbounded workflow endpoints and unavailable Git/resource revisions may be `null`;
+  an empty configuration object is valid. Lineage remains optional. New-run construction may
+  select the adapter from the runtime, but persisted manifests always name the adapter.
+- `stage-metadata.json` uses schema 1. It requires identity, stage/status, both timestamps,
+  nonempty status history, a repair-history list, and an explicit repair-extension grant or
+  `null`. History entries contain their recorded fields; missing history is not reconstructed
+  from the latest status or timestamp. An empty repair history is valid before repair.
+- A present repair-extension grant uses schema 1 and contains the identity, evidence paths
+  and digests, configuration identity, author, authorization timestamp, and reason defined by
+  the repair-extension contract. A malformed grant is not treated as an absent authorization.
+
+Validate existing run and stage state before allocating attempts or changing lifecycle records,
+including interrupted-task reconciliation and finalization. Rejected state remains unchanged.
+An absent whole file before its first publication remains a valid preparation state. Read-only
+timing and raw-evidence views may report incomplete evidence as unavailable. Terminal reconciliation
+may inspect current-format metadata with a mismatched identity to record its refusal; it cannot
+rewrite that metadata. Diagnostic readers cannot authorize execution or invent provenance.
+Ledger, snapshot, and remediation formats are specified in
+`task-execution.md`.
+
 Completed-flow handoff must preserve the same ownership model. When a run reaches a terminal
 state after `qa`, the completed run is immutable evidence. Any next action creates or prepares a
 separate unit:

@@ -2,17 +2,16 @@ from __future__ import annotations
 
 from pathlib import Path
 
+import pytest
 from semantic_test_support import (
     _write_rich_tasklist_for_evidence,
 )
 
-from aidd.validators.semantic import (
-    has_non_placeholder_text,
-)
 from aidd.validators.semantic_rules.common import (
     SemanticDocumentContext,
     validate_placeholder_sections,
 )
+from aidd.validators.semantic_rules.placeholders import find_placeholder_occurrences
 from aidd.validators.semantic_rules.stage_result import validate_stage_result
 from aidd.validators.task_evidence import validate_aggregate_task_evidence
 
@@ -164,37 +163,38 @@ def test_structured_task_evidence_rejects_duplicate_and_non_pass_approved_entry(
     assert "contains duplicates" in messages
     assert "requires `Review status: rejected`" in messages
 
-def test_has_non_placeholder_text_detects_placeholders() -> None:
-    assert has_non_placeholder_text("Final answer with concrete detail.")
-    assert not has_non_placeholder_text("TBD: fill this section later.")
-    assert not has_non_placeholder_text("`TBD`")
-    assert not has_non_placeholder_text("- `N/A`")
-    assert not has_non_placeholder_text("- `...`")
-    assert has_non_placeholder_text(
-        "No placeholder content (`TBD`, `TODO`, `N/A`, `...`) remains."
-    )
-    assert has_non_placeholder_text(
-        "No placeholder content (TBD, TODO, N/A, ...) detected."
-    )
-    assert has_non_placeholder_text(
-        '- No\n  ambiguous "TBD" entries remain in the report.'
-    )
-    assert has_non_placeholder_text(
-        "- No\n  `N/A` values are used for required evidence."
-    )
-    assert has_non_placeholder_text(
-        "TSV header-only input is exercised with `data-tool insert ... --tsv`."
-    )
-    assert has_non_placeholder_text(
-        "```\nAssertionError: Cannot transform a table\n```\n"
-        "Then call `transform(...)` only when the table exists."
-    )
-    assert has_non_placeholder_text(
-        "The final frame is `db.py:1888 ... AssertionError: Cannot transform "
-        "a table that\ndoesn't exist yet` invoked from `cli.py:1180`."
-    )
-    assert has_non_placeholder_text(
-        'The prose says "edit `cli.py:1179` ... so the transform call is skipped".'
-    )
-    assert not has_non_placeholder_text("Placeholder: TBD")
-    assert not has_non_placeholder_text("- Evidence state:\n  TBD define signal.")
+
+@pytest.mark.parametrize(
+    ("text", "expected"),
+    [
+        ("Final answer with concrete detail.", ()),
+        ("TBD: fill this section later.", (("TBD", 1),)),
+        ("`TBD`", (("TBD", 1),)),
+        ("- `N/A`", (("N/A", 1),)),
+        ("- `...`", (("...", 1),)),
+        ("No placeholder content (`TBD`, `TODO`, `N/A`, `...`) remains.", ()),
+        ("No placeholder content (TBD, TODO, N/A, ...) detected.", ()),
+        ('- No\n  ambiguous "TBD" entries remain in the report.', ()),
+        ("- No\n  `N/A` values are used for required evidence.", ()),
+        ("TSV header-only input is exercised with `data-tool insert ... --tsv`.", ()),
+        (
+            "```\nAssertionError: Cannot transform a table\n```\n"
+            "Then call `transform(...)` only when the table exists.",
+            (),
+        ),
+        (
+            "The final frame is `db.py:1888 ... AssertionError: Cannot transform "
+            "a table that\ndoesn't exist yet` invoked from `cli.py:1180`.",
+            (),
+        ),
+        ('The prose says "edit `cli.py:1179` ... so the transform call is skipped".', ()),
+        ("Placeholder: TBD", (("TBD", 1),)),
+        ("- Evidence state:\n  TBD define signal.", (("TBD", 2),)),
+    ],
+)
+def test_find_placeholder_occurrences_preserves_context_and_locations(
+    text: str, expected: tuple[tuple[str, int], ...]
+) -> None:
+    occurrences = find_placeholder_occurrences(text)
+
+    assert tuple((item.token, item.line_number) for item in occurrences) == expected

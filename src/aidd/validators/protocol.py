@@ -6,7 +6,6 @@ from enum import StrEnum
 from types import MappingProxyType
 from typing import Literal
 
-VALIDATOR_REPORT_PROTOCOL_VERSION = 1
 ADVISORY_OBSERVATIONS_HEADING = "Advisory observations"
 
 ValidatorFindingCategory = Literal["structural", "semantic", "cross-document", "interview"]
@@ -64,12 +63,6 @@ class DocumentReadFailureSpec:
     kind: DocumentReadFailureKind
     code: str
     description: str
-
-    @property
-    def finding_code(self) -> str:
-        """Explicit alias for callers that emit a :class:`ValidationFinding`."""
-
-        return self.code
 
 
 @dataclass(frozen=True, slots=True)
@@ -220,8 +213,6 @@ DOCUMENT_READ_FAILURES = (
 )
 
 DOCUMENT_READ_FAILURE_CODES = tuple(spec.code for spec in DOCUMENT_READ_FAILURES)
-DOCUMENT_READ_FAILURE_KINDS = tuple(spec.kind for spec in DOCUMENT_READ_FAILURES)
-
 _FIELDS_BY_KEY = MappingProxyType({field.key: field for field in VALIDATOR_REPORT_FIELDS})
 _FIELDS_BY_LABEL = MappingProxyType(
     {field.label.casefold(): field for field in VALIDATOR_REPORT_FIELDS}
@@ -230,10 +221,6 @@ _CODES_BY_VALUE = MappingProxyType({spec.code: spec for spec in VALIDATOR_FINDIN
 _DOCUMENT_READ_FAILURES_BY_KIND = MappingProxyType(
     {spec.kind: spec for spec in DOCUMENT_READ_FAILURES}
 )
-_DOCUMENT_READ_FAILURES_BY_CODE = MappingProxyType(
-    {spec.code: spec for spec in DOCUMENT_READ_FAILURES}
-)
-
 _FIELD_LINE_PATTERN = re.compile(r"^\s*[-*]\s*(?P<label>[^:]+):\s*(?P<value>.*?)\s*$")
 _FINDING_LINE_PATTERN = re.compile(
     r"^\s*-\s+`(?P<code>[^`]+)`\s+\(`(?P<severity>[^`]+)`\)\s+"
@@ -281,18 +268,6 @@ def resolve_document_read_failure(
     except (KeyError, ValueError) as exc:
         raise ValidatorReportProtocolError(
             f"Unknown document-read failure kind: {kind!r}."
-        ) from exc
-
-
-def resolve_document_read_failure_code(code: str) -> DocumentReadFailureSpec:
-    """Resolve a canonical document-read failure from its validator finding code."""
-
-    normalized = code.strip().upper()
-    try:
-        return _DOCUMENT_READ_FAILURES_BY_CODE[normalized]
-    except KeyError as exc:
-        raise ValidatorReportProtocolError(
-            f"Unknown document-read failure code: {code!r}."
         ) from exc
 
 
