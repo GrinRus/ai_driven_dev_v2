@@ -385,6 +385,15 @@ while retired ordinal-only evidence is rejected rather than silently upgraded.
     adapter-conformance, deterministic-scenarios, packaged-ui-browser, build, CodeQL, Scorecard,
     and dependency-review checks passed. Local core, CLI/eval, remaining non-UI, and planning/docs
     suites passed; the adjacent UI checkout remained untouched.
+- `W48-E3-S1-T2` (next) Persist lineage from each owning lifecycle service.
+  - Dependencies: `W48-E3-S1-T1` and W48-E1 terminalization.
+  - Output: stage preparation, task-attempt lifecycle, task evidence references, and aggregate
+    finalization publish one explicit lineage object before their durable state is exposed.
+  - Scope: core lifecycle/evidence writers, focused lifecycle tests, and architecture guidance;
+    no UI-owned paths.
+  - Verification: three dependency-ordered clean task attempts retain `scope: task` lineage in
+    state and reference manifests, finalization retains `scope: finalization`, and no repair edge
+    is inferred from empty or ordinal-only stage references.
 
 ## Wave 51 — agent development instruction consistency (`done`)
 

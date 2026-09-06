@@ -83,6 +83,67 @@ def _request(tmp_path: Path) -> ImplementationExecutionRequest:
     )
 
 
+def _write_three_tasklist(workspace_root: Path) -> Path:
+    path = (
+        workspace_root
+        / "workitems"
+        / "WI-SERVICE"
+        / "stages"
+        / "tasklist"
+        / "output"
+        / "tasklist.md"
+    )
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(
+        """# Tasklist
+
+## Task summary
+
+Three dependency-ordered tasks exercise lifecycle lineage persistence.
+
+## Ordered tasks
+
+### TL-1 — Add the first change
+
+- Outcome: The first change is durable.
+- Dominant deliverable: `src/one.py` records the first change.
+- In scope: `src/one.py`.
+- Acceptance criteria:
+  - TL-1-AC1: The first change exists.
+
+### TL-2 — Add the second change
+
+- Outcome: The second change is durable.
+- Dominant deliverable: `src/two.py` records the second change.
+- In scope: `src/two.py`.
+- Acceptance criteria:
+  - TL-2-AC1: The second change exists.
+
+### TL-3 — Add the third change
+
+- Outcome: The third change is durable.
+- Dominant deliverable: `src/three.py` records the third change.
+- In scope: `src/three.py`.
+- Acceptance criteria:
+  - TL-3-AC1: The third change exists.
+
+## Dependencies
+
+- TL-1: none
+- TL-2: TL-1
+- TL-3: TL-2
+
+## Verification notes
+
+- TL-1: `pytest tests/test_one.py -q`
+- TL-2: `pytest tests/test_two.py -q`
+- TL-3: `pytest tests/test_three.py -q`
+""",
+        encoding="utf-8",
+    )
+    return path
+
+
 def _successful_executor(request: ImplementationExecutionRequest):
     def execute(context):  # type: ignore[no-untyped-def]
         target_path = context.task.scope_paths[0]
@@ -135,6 +196,80 @@ def test_run_all_preserves_dependency_order_and_finalizes(tmp_path: Path) -> Non
     assert result.next_target is ImplementationNextTarget.COMPLETE
     assert result.published is True
     assert result.ledger.all_succeeded()
+
+
+def test_run_all_persists_explicit_lineage_for_three_clean_task_attempts(
+    tmp_path: Path,
+) -> None:
+    workspace_root = tmp_path / ".aidd"
+    _write_three_tasklist(workspace_root)
+    request = ImplementationExecutionRequest(
+        workspace_root=workspace_root,
+        work_item="WI-SERVICE",
+        run_id="run-1",
+        project_root=tmp_path,
+    )
+    contexts = []
+    finalization_contexts = []
+
+    def execute(context):  # type: ignore[no-untyped-def]
+        contexts.append(context)
+        target = request.project_root / context.task.scope_paths[0]
+        target.parent.mkdir(parents=True, exist_ok=True)
+        target.write_text(f"completed = '{context.task.id}'\n", encoding="utf-8")
+        report = (
+            request.workspace_root
+            / "workitems"
+            / request.work_item
+            / "stages"
+            / "implement"
+            / "implementation-report.md"
+        )
+        report.parent.mkdir(parents=True, exist_ok=True)
+        report.write_text(
+            "# Implementation Report\n\n"
+            f"## Selected task\n\n- Task id: `{context.task.id}`\n\n"
+            "## Change summary\n\nCompleted the selected task.\n\n"
+            f"## Touched files\n\n- `{context.task.scope_paths[0]}` - completed task.\n\n"
+            "## Verification notes\n\n- check -> pass.\n\n"
+            "## Follow-up notes\n\n- none\n",
+            encoding="utf-8",
+        )
+        return TaskAttemptOutcome(succeeded=True)
+
+    def finalize(context):  # type: ignore[no-untyped-def]
+        finalization_contexts.append(context)
+        return AggregateFinalizationOutcome(succeeded=True, published=True)
+
+    result = ImplementationExecutionService(
+        task_executor=execute,
+        aggregate_finalizer=finalize,
+    ).run_all(request)
+
+    assert result.status is ImplementationExecutionStatus.SUCCEEDED
+    assert [context.task.id for context in contexts] == ["TL-1", "TL-2", "TL-3"]
+    assert len(finalization_contexts) == 1
+    for context in contexts:
+        assert context.lineage is not None
+        assert context.lineage.scope.value == "task"
+        assert context.lineage.attempt_kind.value == "task"
+        state = json.loads(
+            (context.task_attempt_path / "attempt-state.json").read_text(encoding="utf-8")
+        )
+        references = json.loads(
+            (context.task_attempt_path / "stage-attempt-references.json").read_text(
+                encoding="utf-8"
+            )
+        )
+        assert state["lineage"] == references["lineage"] == context.lineage.to_dict()
+        assert references["stage_attempts"] == []
+
+    finalization = finalization_contexts[0]
+    assert finalization.lineage is not None
+    finalization_state = json.loads(
+        (finalization.attempt_path / "finalization-state.json").read_text(encoding="utf-8")
+    )
+    assert finalization_state["lineage"] == finalization.lineage.to_dict()
 
 
 def test_run_all_finalizes_after_clean_verification_only_task(tmp_path: Path) -> None:

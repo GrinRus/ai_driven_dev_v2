@@ -60,6 +60,12 @@ that contain only `attempt_mode` or an ordinal. Historical evidence may be inspe
 but it must not be silently upgraded or resumed. Readers must never synthesize a repair edge from
 `attempt_number > 1`.
 
+The owning lifecycle service persists lineage before publishing each durable state: stage
+preparation writes the stage `artifact-index.json`, task-attempt lifecycle writes
+`attempt-state.json` and the task evidence reference manifest, and aggregate finalization writes
+`finalization-state.json`. Downstream readers preserve and validate that object; they do not
+reclassify an attempt from its directory number or regenerate a missing trigger.
+
 Run mutations use the shared filesystem lease. Same-host dead owners may be reclaimed; live,
 remote-host, or malformed owners remain conflicts. UI mutation endpoints acquire the lease before
 returning a background job id. Stage success remains uncommitted until the final aggregate

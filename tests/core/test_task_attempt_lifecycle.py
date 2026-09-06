@@ -30,6 +30,7 @@ from aidd.core.state_machine import StageState
 from aidd.core.task_attempt_lifecycle import (
     TaskExecutionContext,
     TaskResumeBlockedError,
+    _write_attempt_state,
     prepare_task_attempt,
     reconcile_task_execution_state,
 )
@@ -291,6 +292,10 @@ def test_interrupted_executing_task_is_abandoned_and_resumed_with_new_attempt(
     assert first_state["lineage"]["scope"] == "task"
     assert first_state["lineage"]["attempt_kind"] == "task"
     assert first_state["lineage"]["attempt_number"] == 1
+    assert first.lineage is not None
+    assert first.lineage.scope.value == "task"
+    assert first.lineage.attempt_kind.value == "task"
+    assert first.lineage.attempt_number == 1
     assert second.ledger.entry("TL-1").status is TaskExecutionStatus.EXECUTING
     assert second.ledger.entry("TL-1").attempt_count == 2
     metadata = load_stage_metadata(workspace_root, "WI-1", "run-1", "implement")
@@ -300,6 +305,23 @@ def test_interrupted_executing_task_is_abandoned_and_resumed_with_new_attempt(
         StageState.EXECUTING.value,
         StageState.FAILED.value,
     ]
+
+
+def test_attempt_state_writer_rejects_corrupt_existing_state(tmp_path: Path) -> None:
+    attempt_path = tmp_path / "attempt-0001"
+    attempt_path.mkdir()
+    state_path = attempt_path / "attempt-state.json"
+    state_path.write_text("{not-json", encoding="utf-8")
+
+    with pytest.raises(json.JSONDecodeError):
+        _write_attempt_state(
+            attempt_path,
+            task_id="TL-1",
+            attempt_number=1,
+            status="abandoned",
+        )
+
+    assert state_path.read_text(encoding="utf-8") == "{not-json"
 
 
 def test_reconciliation_repairs_stage_projection_after_ledger_commit(tmp_path: Path) -> None:
