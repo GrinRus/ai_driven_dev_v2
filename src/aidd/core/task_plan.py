@@ -196,9 +196,6 @@ class TaskPlan:
     def by_id(self) -> dict[str, TaskCard]:
         return {task.id: task for task in self.tasks}
 
-    def ordered_ids(self) -> tuple[str, ...]:
-        return tuple(task.id for task in self.tasks)
-
     def ready_task_ids(self, succeeded: set[str]) -> tuple[str, ...]:
         return tuple(
             task.id

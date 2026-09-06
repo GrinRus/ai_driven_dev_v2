@@ -922,43 +922,6 @@
   display: grid;
   gap: 14px;
 }
-.lineage-flow {
-  display: grid;
-  gap: 12px;
-  grid-template-columns: minmax(0, 0.9fr) minmax(0, 1fr) minmax(220px, 1fr);
-}
-.lineage-children {
-  display: grid;
-  gap: 8px;
-}
-.lineage-node {
-  background: var(--color-bg-raised);
-  border: 1px solid var(--line);
-  border-radius: 6px;
-  display: grid;
-  gap: 8px;
-  min-width: 0;
-  padding: 11px;
-}
-.lineage-node.current {
-  background: var(--color-bg-selected);
-  border-color: var(--cobalt);
-}
-.lineage-node.pending {
-  border-style: dashed;
-}
-.lineage-node strong {
-  font-family: var(--font-mono);
-  font-size: 13px;
-  overflow-wrap: anywhere;
-}
-.lineage-node p {
-  color: var(--muted);
-  font-size: 12px;
-  line-height: 1.35;
-  margin: 0;
-  overflow-wrap: anywhere;
-}
 .lineage-actions {
   display: grid;
   gap: 7px;

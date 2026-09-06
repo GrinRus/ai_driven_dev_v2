@@ -125,18 +125,6 @@ function runtimeSelectorPayload() {
   return payload;
 }
 
-function scrollActiveStageIntoView() {
-  const rail = document.getElementById("intentPhaseStepper")?.querySelector(".intent-phase-list");
-  if (!rail || !window.matchMedia("(max-width: 760px)").matches) return;
-  if (document.body.classList.contains("terminal-handoff-mode")) return;
-  if (document.body.classList.contains("terminal-repair-mode")) return;
-  if (document.body.classList.contains("post-stage-next-action-mode")) return;
-  const active = rail.querySelector(`[data-stage="${CSS.escape(state.activeStage)}"]`);
-  if (!active || rail.scrollWidth <= rail.clientWidth) return;
-  const left = active.offsetLeft - (rail.clientWidth - active.clientWidth) / 2;
-  rail.scrollTo({behavior: "auto", left: Math.max(0, left)});
-}
-
 function selectedRuntimeView() {
   if (state.readinessLoading) return null;
   return (state.readiness?.runtimes || []).find((runtime) => runtime.runtime_id === state.selectedRuntime) || null;
@@ -360,10 +348,6 @@ function renderTopbar() {
   localStatus.className = state.readinessError ? "status-chip" : "status-chip good";
 }
 
-function renderStageRail() {
-  // Stage navigation is rendered as the four-phase stepper in the active view.
-}
-
 function workItemHandoffStatus(item) {
   const handoff = state.dashboard?.terminal_handoff;
   if (!handoff || item?.work_item !== state.dashboard?.work_item) return "";
@@ -379,14 +363,6 @@ function workItemStatusClass(item) {
   if (stateName === "blocked") return "warn";
   if (stateName === "running") return "running";
   return "";
-}
-
-function workItemTerminalLabel(item) {
-  const handoffStatus = workItemHandoffStatus(item);
-  if (handoffStatus === "failed") return "qa not-ready";
-  if (handoffStatus === "completed-with-warning") return "qa risks";
-  if (handoffStatus === "blocked") return "blocked";
-  return item?.terminal_state || "ready";
 }
 
 function operatorRailProjectName(projectRoot) {
@@ -586,66 +562,6 @@ function renderProjectHomeRail() {
     workItemsRail.hidden = !operatorRailDesktop() || isInbox;
     workItemsRail.innerHTML = isInbox ? "" : `${projectMarkup}${workItemsMarkup}`;
   }
-}
-
-function renderStageHeader() {
-  // Stage title and status are part of the Intent context rendered by the active view.
-}
-
-function stageHasEvidence(stage) {
-  return (state.dashboard?.stages || []).some((item) => item.stage === stage && Number(item.attempt_count || 0) > 0);
-}
-
-function tabHasQuestions() {
-  const view = activeStageView()?.questions;
-  const activeQuestions = view?.questions || [];
-  const stageHasBlockers = (state.dashboard?.stages || []).some((item) =>
-    Number(item.unresolved_blocking_count || 0) > 0
-  );
-  return activeQuestions.length > 0
-    || stageHasBlockers
-    || state.dashboard?.next_action?.action === "answer-questions";
-}
-
-function tabHasValidation() {
-  const item = activeStageItem();
-  const validation = activeStageView()?.diagnostics?.validation;
-  const nextAction = state.dashboard?.next_action?.action || "";
-  return Boolean(
-    state.dashboard?.primary_validation_finding
-    || validation?.primary_validation_finding
-    || Number(item?.validator_fail_count || 0) > 0
-    || Number(item?.validator_pass_count || 0) > 0
-    || nextAction === "inspect-validation"
-    || nextAction === "review-intervention"
-  );
-}
-
-function tabHasRunEvidence() {
-  return Boolean(
-    state.dashboard?.run?.run_id
-    || state.activeJobId
-    || stageHasEvidence(state.activeStage)
-  );
-}
-
-function tabHasArtifacts() {
-  return Boolean(
-    state.dashboard?.primary_artifact
-    || (state.dashboard?.evidence_refs || []).length
-    || (state.dashboard?.recent_artifacts || []).length
-    || stageHasEvidence(state.activeStage)
-  );
-}
-
-function tabHasApprovals() {
-  const approvals = activeStageView()?.diagnostics?.approvals;
-  return Boolean(
-    Number(approvals?.pending_count || 0) > 0
-    || Number(approvals?.requested_count || 0) > 0
-    || Number(approvals?.approved_count || 0) > 0
-    || Number(approvals?.denied_count || 0) > 0
-  );
 }
 
 function tabHasRecovery() {

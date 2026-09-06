@@ -3,7 +3,6 @@ from __future__ import annotations
 import json
 import re
 from dataclasses import dataclass
-from pathlib import Path
 from typing import Any, Literal
 
 from aidd.validators.protocol import parse_validator_report
@@ -47,12 +46,6 @@ class RuntimeProviderDiagnosticSummary:
     model_profiles: tuple[str, ...]
     retry_signals: tuple[str, ...]
     rate_limit_signals: tuple[str, ...]
-
-
-@dataclass(frozen=True, slots=True)
-class FailureTaxonomyResult:
-    category: FailureTaxonomyCategory
-    reason: str
 
 
 @dataclass(frozen=True, slots=True)
@@ -243,23 +236,6 @@ def _classify_runtime_log_line(line: str) -> RuntimeEventCategory:
     return "info"
 
 
-def _classify_normalized_event(event: NormalizedRuntimeEvent) -> RuntimeEventCategory:
-    normalized_kind = event.event_kind.strip().lower()
-    if any(token in normalized_kind for token in ("error", "fail", "exception", "timeout")):
-        return "error"
-    if "warn" in normalized_kind:
-        return "warning"
-    if any(token in normalized_kind for token in ("question", "pause", "awaiting", "input")):
-        return "question"
-    if "repair" in normalized_kind:
-        return "repair"
-    if any(token in normalized_kind for token in ("validator", "validation")):
-        return "validator"
-    if "stage" in normalized_kind:
-        return "stage"
-    return "info"
-
-
 def parse_events_jsonl_text(events_jsonl_text: str) -> tuple[NormalizedRuntimeEvent, ...]:
     events: list[NormalizedRuntimeEvent] = []
     for line_number, raw_line in enumerate(events_jsonl_text.splitlines(), start=1):
@@ -296,32 +272,6 @@ def parse_events_jsonl_text(events_jsonl_text: str) -> tuple[NormalizedRuntimeEv
     return tuple(events)
 
 
-def parse_events_jsonl(events_jsonl_path: Path) -> tuple[NormalizedRuntimeEvent, ...]:
-    if not events_jsonl_path.exists() or not events_jsonl_path.is_file():
-        raise ValueError(f"events.jsonl file does not exist: {events_jsonl_path.as_posix()}")
-    return parse_events_jsonl_text(events_jsonl_path.read_text(encoding="utf-8"))
-
-
-def coarse_events_from_normalized_events(
-    normalized_events: tuple[NormalizedRuntimeEvent, ...],
-) -> tuple[CoarseRuntimeEvent, ...]:
-    coarse_events: list[CoarseRuntimeEvent] = []
-    for event in normalized_events:
-        message = (
-            str(event.payload.get("message")).strip()
-            if isinstance(event.payload.get("message"), str)
-            else event.event_kind
-        )
-        coarse_events.append(
-            CoarseRuntimeEvent(
-                line_number=event.line_number,
-                category=_classify_normalized_event(event),
-                message=message or event.event_kind,
-            )
-        )
-    return tuple(coarse_events)
-
-
 def parse_validator_report_failures_text(
     validator_report_text: str,
 ) -> tuple[CoarseRuntimeEvent, ...]:
@@ -349,89 +299,6 @@ def parse_validator_report_failures_text(
     )
 
     return findings
-
-
-def parse_validator_report_failures(
-    validator_report_path: Path,
-) -> tuple[CoarseRuntimeEvent, ...]:
-    if not validator_report_path.exists() or not validator_report_path.is_file():
-        raise ValueError(
-            f"validator-report.md file does not exist: {validator_report_path.as_posix()}"
-        )
-    return parse_validator_report_failures_text(
-        validator_report_path.read_text(encoding="utf-8")
-    )
-
-
-def parse_stage_metadata_validation_failures_text(
-    stage_metadata_text: str,
-) -> tuple[CoarseRuntimeEvent, ...]:
-    try:
-        payload = json.loads(stage_metadata_text)
-    except json.JSONDecodeError as exc:
-        raise ValueError("Invalid JSON in stage metadata payload.") from exc
-    if not isinstance(payload, dict):
-        raise ValueError("stage metadata payload must be a JSON object.")
-
-    stage = str(payload.get("stage") or "").strip() or "unknown"
-    events: list[CoarseRuntimeEvent] = []
-
-    status_history = payload.get("status_history")
-    if isinstance(status_history, list):
-        for index, item in enumerate(status_history, start=1):
-            if not isinstance(item, dict):
-                continue
-            status = str(item.get("status") or "").strip().lower()
-            changed_at_utc = str(item.get("changed_at_utc") or "").strip() or "unknown"
-            if status == "failed":
-                category: RuntimeEventCategory = "error"
-            elif status == "blocked":
-                category = "question"
-            elif status == "repair_needed":
-                category = "validator"
-            else:
-                continue
-            events.append(
-                CoarseRuntimeEvent(
-                    line_number=index,
-                    category=category,
-                    message=f"stage `{stage}` status `{status}` at `{changed_at_utc}`",
-                )
-            )
-
-    repair_history = payload.get("repair_history")
-    if isinstance(repair_history, list):
-        base_index = len(events)
-        for offset, item in enumerate(repair_history, start=1):
-            if not isinstance(item, dict):
-                continue
-            outcome = str(item.get("outcome") or "").strip().lower()
-            if "fail" not in outcome:
-                continue
-            attempt_number = item.get("attempt_number")
-            events.append(
-                CoarseRuntimeEvent(
-                    line_number=base_index + offset,
-                    category="validator",
-                    message=(
-                        f"repair attempt `{attempt_number}` recorded failing outcome `{outcome}`"
-                    ),
-                )
-            )
-
-    return tuple(events)
-
-
-def parse_stage_metadata_validation_failures(
-    stage_metadata_path: Path,
-) -> tuple[CoarseRuntimeEvent, ...]:
-    if not stage_metadata_path.exists() or not stage_metadata_path.is_file():
-        raise ValueError(
-            f"stage metadata file does not exist: {stage_metadata_path.as_posix()}"
-        )
-    return parse_stage_metadata_validation_failures_text(
-        stage_metadata_path.read_text(encoding="utf-8")
-    )
 
 
 def _is_environment_signal(message: str) -> bool:
@@ -492,29 +359,6 @@ def _is_noop_signal(message: str) -> bool:
             "failure classification: unsupported-runtime",
             "unsupported-runtime classification",
         )
-    )
-
-
-def classify_failure_taxonomy(
-    *,
-    runtime_events: tuple[CoarseRuntimeEvent, ...] = (),
-    normalized_events: tuple[NormalizedRuntimeEvent, ...] = (),
-    validator_failures: tuple[CoarseRuntimeEvent, ...] = (),
-    stage_metadata_failures: tuple[CoarseRuntimeEvent, ...] = (),
-    aidd_exit_code: int | None = None,
-    verification_exit_code: int | None = None,
-) -> FailureTaxonomyResult:
-    selection = _select_failure_boundary(
-        runtime_events=runtime_events,
-        normalized_events=normalized_events,
-        validator_failures=validator_failures,
-        stage_metadata_failures=stage_metadata_failures,
-        aidd_exit_code=aidd_exit_code,
-        verification_exit_code=verification_exit_code,
-    )
-    return FailureTaxonomyResult(
-        category=selection.category,
-        reason=_taxonomy_reason(selection),
     )
 
 
@@ -718,28 +562,6 @@ def _select_failure_boundary(
     ).selection
 
 
-def _taxonomy_reason(selection: FailureBoundarySelection) -> str:
-    if selection.signal_source == "none":
-        return selection.reason
-    if selection.signal_source == "aidd-exit-code":
-        exit_code = selection.reason.removeprefix("AIDD exited with ")
-        return f"AIDD run exited with non-zero status {exit_code}."
-    if selection.signal_source == "verification-exit-code":
-        exit_code = selection.reason.removeprefix("verification exited with ")
-        return f"verification exited with non-zero status {exit_code}."
-    if selection.signal_source == "stage-metadata":
-        return f"validation signal: {selection.reason}"
-    if selection.signal_source == "validator-report":
-        return f"validation signal: {selection.reason}"
-    if selection.category == "scenario-verification":
-        return f"no-op execution signal: {selection.reason}"
-    if selection.signal_source == "events.jsonl":
-        return f"normalized event signal: {selection.reason}"
-    if selection.category == "runtime":
-        return f"runtime error signal: {selection.reason}"
-    return f"runtime log signal: {selection.reason}"
-
-
 def select_first_failure_boundary(
     *,
     runtime_events: tuple[CoarseRuntimeEvent, ...] = (),
@@ -773,26 +595,3 @@ def parse_runtime_log_text(runtime_log_text: str) -> tuple[CoarseRuntimeEvent, .
             )
         )
     return tuple(events)
-
-
-def parse_runtime_log(runtime_log_path: Path) -> tuple[CoarseRuntimeEvent, ...]:
-    if not runtime_log_path.exists() or not runtime_log_path.is_file():
-        raise ValueError(f"runtime.log file does not exist: {runtime_log_path.as_posix()}")
-    return parse_runtime_log_text(runtime_log_path.read_text(encoding="utf-8"))
-
-
-def summarize_first_failure(
-    *, runtime_log_path: Path | None = None, runtime_log_text: str | None = None
-) -> str:
-    if runtime_log_path is None and runtime_log_text is None:
-        raise ValueError("Either runtime_log_path or runtime_log_text must be provided.")
-
-    events = (
-        parse_runtime_log(runtime_log_path)
-        if runtime_log_path is not None
-        else parse_runtime_log_text(runtime_log_text or "")
-    )
-    for event in events:
-        if event.category == "error":
-            return f"line {event.line_number}: {event.message}"
-    return "no failure signal found"

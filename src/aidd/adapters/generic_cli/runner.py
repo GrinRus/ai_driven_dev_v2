@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import shlex
 from collections.abc import Callable, Mapping
 from dataclasses import dataclass
 from enum import StrEnum
@@ -115,17 +114,6 @@ def assemble_command(
         "--prompt-pack",
         context.prompt_pack_path.as_posix(),
     )
-
-
-def command_preview(
-    *,
-    configured_command: str,
-    context: GenericCliStageContext,
-) -> str:
-    return " ".join(shlex.quote(token) for token in assemble_command(
-        configured_command=configured_command,
-        context=context,
-    ))
 
 
 def build_execution_environment(

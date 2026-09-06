@@ -1,14 +1,9 @@
 from __future__ import annotations
 
-from pathlib import Path
-
-import pytest
-
 from aidd.evals.log_analysis import (
     parse_events_jsonl_text,
-    parse_runtime_log,
     parse_runtime_log_text,
-    summarize_first_failure,
+    select_first_failure_boundary,
     summarize_runtime_provider_diagnostics,
 )
 
@@ -41,43 +36,41 @@ def test_parse_runtime_log_text_classifies_coarse_events() -> None:
     assert events[-1].line_number == 7
 
 
-def test_parse_runtime_log_ignores_blank_lines(tmp_path: Path) -> None:
-    runtime_log_path = tmp_path / "runtime.log"
-    runtime_log_path.write_text(
-        "line one\n\n   \nline two\n",
-        encoding="utf-8",
-    )
-
-    events = parse_runtime_log(runtime_log_path)
+def test_parse_runtime_log_ignores_blank_lines() -> None:
+    events = parse_runtime_log_text("line one\n\n   \nline two\n")
 
     assert [event.message for event in events] == ["line one", "line two"]
     assert [event.line_number for event in events] == [1, 4]
 
 
-def test_parse_runtime_log_rejects_missing_file(tmp_path: Path) -> None:
-    with pytest.raises(ValueError, match="runtime.log file does not exist"):
-        parse_runtime_log(tmp_path / "missing-runtime.log")
-
-
-def test_summarize_first_failure_returns_first_error_signal() -> None:
-    summary = summarize_first_failure(
-        runtime_log_text="\n".join(
-            (
-                "initial info",
-                "validator says fail",
-                "runtime failed with exit 1",
-                "another error line",
+def test_first_failure_boundary_returns_first_error_signal() -> None:
+    selection = select_first_failure_boundary(
+        runtime_events=parse_runtime_log_text(
+            "\n".join(
+                (
+                    "initial info",
+                    "validator says fail",
+                    "runtime failed with exit 1",
+                    "another error line",
+                )
             )
-        )
+        ),
     )
 
-    assert summary == "line 3: runtime failed with exit 1"
+    assert selection.category == "runtime"
+    assert selection.signal_source == "runtime.log"
+    assert selection.signal_line_number == 3
+    assert selection.reason == "runtime failed with exit 1"
 
 
-def test_summarize_first_failure_reports_absence_of_error_signal() -> None:
-    summary = summarize_first_failure(runtime_log_text="all good\nstill good\n")
+def test_first_failure_boundary_reports_absence_of_error_signal() -> None:
+    selection = select_first_failure_boundary(
+        runtime_events=parse_runtime_log_text("all good\nstill good\n"),
+    )
 
-    assert summary == "no failure signal found"
+    assert selection.category == "none"
+    assert selection.signal_source == "none"
+    assert selection.signal_line_number is None
 
 
 def test_summarize_runtime_provider_diagnostics_reports_model_retry_and_rate_limit() -> None:

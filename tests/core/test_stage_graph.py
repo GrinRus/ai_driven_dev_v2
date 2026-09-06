@@ -12,7 +12,6 @@ from aidd.core.stage_graph import (
     bounded_stage_graph,
     evaluate_stage_eligibility,
     resolve_stage_dependencies,
-    resolve_stage_dependency_graph,
     select_next_runnable_stage,
     summarize_workflow_advancement,
 )
@@ -58,13 +57,10 @@ def test_resolve_stage_dependencies_uses_manifest_declared_upstream_stages() -> 
     assert resolve_stage_dependencies("implement") == ("tasklist",)
 
 
-def test_resolve_stage_dependency_graph_returns_all_stage_dependency_entries() -> None:
-    graph = resolve_stage_dependency_graph()
-
-    assert tuple(graph) == STAGES
-    for stage, dependencies in graph.items():
-        for dependency in dependencies:
-            assert stage_index(dependency) < stage_index(stage)
+@pytest.mark.parametrize("stage", STAGES)
+def test_resolve_stage_dependencies_returns_only_upstream_stages(stage: str) -> None:
+    for dependency in resolve_stage_dependencies(stage):
+        assert stage_index(dependency) < stage_index(stage)
 
 
 def test_resolve_stage_dependencies_rejects_unknown_upstream_stage(tmp_path: Path) -> None:

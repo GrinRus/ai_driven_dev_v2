@@ -7,9 +7,15 @@ slice, and local task.
 
 ## Next
 
-- `W52-E3-S2-T1`
+- `W52-E1-S2-T4`
+- `W52-E2-S1-T2`
+- `W52-E2-S2-T2`
+- `W52-E3-S1-T2`
 
 ## Soon
+
+- `W52-E1-S2-T5`
+- `W52-E1-S2-T6`
 
 ## Parking lot
 
@@ -40,7 +46,8 @@ slice, and local task.
 
 - `2026-09-06` Wave 52 removes approved historical documentation and obsolete compatibility.
   Integration with `191dfb16` preserves Focus Canvas, runtime failure fixes, instruction
-  checks, and all eight pending operator/browser/provider tasks. Current integration
-  verification remains active. Newly integrated unused adapter and validator helpers have
-  separate follow-up PR tasks; the unrelated browser task returns to Next after cleanup.
+  checks, and all eight pending operator/browser/provider tasks. PR #533 is merged and its
+  required CI and resulting main tree are verified. The second PR removes confirmed unused
+  facades and UI residue and reconciles normative text; the third removes validator residue
+  and retired persisted-format acceptance. The unrelated browser task returns to Next after cleanup.
   Earlier completed task records and reconciliation are available in Git history.

@@ -7,7 +7,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Literal
 
-from aidd.core.models.run import RepairExtensionGrant, RepairHistoryEntry
+from aidd.core.models.run import RepairExtensionGrant
 from aidd.core.run_store import (
     RUN_ATTEMPT_PREFIX,
     load_stage_metadata,
@@ -28,16 +28,6 @@ from aidd.core.state_machine import StageState
 from aidd.core.workspace import stage_root as workspace_stage_root
 from aidd.validators.protocol import parse_validator_report
 from aidd.validators.reports import render_validator_report
-
-_IMMEDIATE_DOWNSTREAM_STAGE: dict[str, str] = {
-    "idea": "research",
-    "research": "plan",
-    "plan": "review-spec",
-    "review-spec": "tasklist",
-    "tasklist": "implement",
-    "implement": "review",
-    "review": "qa",
-}
 
 RepairFindingRelation = Literal["primary", "related", "advisory"]
 
@@ -178,17 +168,6 @@ def evaluate_repair_extension_eligibility(
             disabled_reason="Repair extension cannot bypass validation.",
         )
     return RepairExtensionEligibility(eligible=True)
-
-
-def validate_repair_extension_grant(
-    grant: RepairExtensionGrant,
-    **kwargs: object,
-) -> None:
-    """Raise a literal contract error when a selected extension grant is not eligible."""
-
-    decision = evaluate_repair_extension_eligibility(grant, **kwargs)  # type: ignore[arg-type]
-    if not decision.eligible:
-        raise ValueError(decision.disabled_reason)
 
 
 def _repair_extension_workspace_path(*, workspace_root: Path, relative_path: str) -> Path:
@@ -1221,30 +1200,6 @@ def write_repair_brief(*, path: Path, repair_brief_markdown: str) -> None:
     path.write_text(repair_brief_markdown, encoding="utf-8")
 
 
-def _format_attempt_history_line(entry: RepairHistoryEntry) -> str:
-    line = f"- Attempt `{entry.attempt_number}` (`{entry.trigger}`) -> {entry.outcome}."
-    evidence_items: list[str] = []
-    if entry.validator_report_path is not None:
-        evidence_items.append(f"validator: `{entry.validator_report_path}`")
-    if entry.repair_brief_path is not None:
-        evidence_items.append(f"repair brief: `{entry.repair_brief_path}`")
-    if evidence_items:
-        line += f" Evidence: {', '.join(evidence_items)}."
-    return line
-
-
-def _dedupe_paths(paths: Iterable[str]) -> tuple[str, ...]:
-    deduped: list[str] = []
-    seen: set[str] = set()
-    for path in paths:
-        normalized = path.strip()
-        if not normalized or normalized in seen:
-            continue
-        seen.add(normalized)
-        deduped.append(normalized)
-    return tuple(deduped)
-
-
 def _existing_declared_stage_output_paths(
     *,
     workspace_root: Path,
@@ -1265,158 +1220,6 @@ def _existing_declared_stage_output_paths(
         if candidate.exists():
             existing_paths.append(f"workitems/{work_item}/stages/{stage}/{output_path}")
     return tuple(existing_paths)
-
-
-def _successful_stage_result_next_action(stage: str) -> str:
-    next_stage = _IMMEDIATE_DOWNSTREAM_STAGE.get(stage)
-    if next_stage is None:
-        return "- Inspect terminal handoff and final artifacts."
-    return f"- Advance to the immediate canonical `{next_stage}` stage."
-
-
-def render_stage_result_with_repair_history(
-    *,
-    stage: str,
-    work_item: str | None,
-    status: str,
-    repair_history: Iterable[RepairHistoryEntry],
-    produced_output_paths: Iterable[str | Path] = (),
-    validator_report_path: str | Path | None = None,
-    repair_brief_path: str | Path | None = None,
-    workspace_root: Path | None = None,
-) -> str:
-    normalized_stage = stage.strip()
-    if not normalized_stage:
-        raise ValueError("Stage must not be empty for stage-result rendering.")
-
-    normalized_status = status.strip().lower()
-    if not normalized_status:
-        raise ValueError("Status must not be empty for stage-result rendering.")
-
-    history_entries = tuple(
-        sorted(
-            repair_history,
-            key=lambda entry: (entry.attempt_number, entry.trigger),
-        )
-    )
-    normalized_validator_report_path = (
-        _normalize_workspace_relative_path(
-            path=validator_report_path,
-            workspace_root=workspace_root,
-        )
-        if validator_report_path is not None
-        else None
-    )
-    normalized_repair_brief_path = (
-        _normalize_workspace_relative_path(path=repair_brief_path, workspace_root=workspace_root)
-        if repair_brief_path is not None
-        else None
-    )
-    normalized_produced_output_paths = tuple(
-        _normalize_workspace_relative_path(path=path, workspace_root=workspace_root)
-        for path in produced_output_paths
-    )
-
-    common_output_paths = [
-        (
-            f"workitems/{work_item}/stages/{normalized_stage}/stage-result.md"
-            if work_item is not None
-            else "stage-result.md"
-        )
-    ]
-    if normalized_validator_report_path is not None:
-        common_output_paths.append(normalized_validator_report_path)
-    if normalized_repair_brief_path is not None:
-        common_output_paths.append(normalized_repair_brief_path)
-    produced_outputs = _dedupe_paths(
-        (
-            *normalized_produced_output_paths,
-            *common_output_paths,
-        )
-    )
-
-    lines = [
-        "# Stage Result",
-        "",
-        "## Stage",
-        "",
-        f"- Stage: `{normalized_stage}`",
-        "",
-        "## Attempt history",
-        "",
-    ]
-    if history_entries:
-        lines.extend(_format_attempt_history_line(entry) for entry in history_entries)
-    else:
-        lines.append("- none")
-
-    lines.extend(
-        [
-            "",
-            "## Status",
-            "",
-            f"- `{normalized_status}`",
-            "",
-            "## Produced outputs",
-            "",
-            *(f"- `{path}`" for path in produced_outputs),
-        ]
-    )
-
-    lines.extend(
-        [
-            "",
-            "## Validation summary",
-            "",
-            f"- Validator verdict: {'pass' if normalized_status == 'succeeded' else 'fail'}",
-            (
-                f"- Validator findings: see `{normalized_validator_report_path}`."
-                if normalized_validator_report_path is not None
-                else "- Validator findings: none recorded."
-            ),
-            "",
-            "## Blockers",
-            "",
-        ]
-    )
-    if normalized_status == "succeeded":
-        lines.append("- none")
-    else:
-        lines.append(f"- Stage ended with status `{normalized_status}` and needs operator action.")
-
-    lines.extend(
-        [
-            "",
-            "## Next actions",
-            "",
-        ]
-    )
-    if normalized_status == "succeeded":
-        lines.append(_successful_stage_result_next_action(normalized_stage))
-    elif normalized_status == "failed":
-        lines.append("- Review validator report and decide whether to reopen scope or stop.")
-    else:
-        lines.append("- Resolve blockers and rerun the stage when policy allows.")
-
-    lines.extend(
-        [
-            "",
-            "## Terminal state notes",
-            "",
-            f"- Repair history entries recorded: `{len(history_entries)}`.",
-        ]
-    )
-    if normalized_status == "failed" and history_entries:
-        lines.append("- Repair budget status: `repair-budget-exhausted`.")
-    if normalized_status != "succeeded" and normalized_validator_report_path is not None:
-        lines.append(
-            "- Canonical AIDD validation found open findings; terminal status and "
-            "validator verdict claims must not remain `succeeded` or `pass`."
-        )
-    if normalized_repair_brief_path is not None:
-        lines.append(f"- Repair decision context recorded in `{normalized_repair_brief_path}`.")
-    lines.append("")
-    return "\n".join(lines)
 
 
 def persist_repair_history_snapshot(
@@ -1507,10 +1310,6 @@ def persist_repair_extension_grant(
         grant=grant,
         changed_at_utc=changed_at_utc,
     )
-
-
-def default_repair_budget() -> int:
-    return RepairBudgetPolicy().default_max_repair_attempts
 
 
 def effective_repair_budget(

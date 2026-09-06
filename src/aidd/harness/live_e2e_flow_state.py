@@ -73,17 +73,6 @@ class StaleOwnerObservation:
     active_step: dict[str, object] | None
     observed_at_utc: str
 
-    def to_payload(self) -> dict[str, object]:
-        return {
-            "durable_status": self.durable_status,
-            "read_status": self.read_status,
-            "evaluator_pid": self.evaluator_pid,
-            "owner_alive": self.owner_alive,
-            "stale_owner": self.stale_owner,
-            "active_step": self.active_step,
-            "observed_at_utc": self.observed_at_utc,
-        }
-
 
 def utc_now() -> str:
     return datetime.now(UTC).replace(microsecond=0).isoformat().replace("+00:00", "Z")
@@ -380,20 +369,6 @@ def detect_stale_owner(
     )
 
 
-def stale_owner_read_model(
-    state_path_value: Path,
-    *,
-    pid_is_alive: Callable[[object], bool] = _pid_is_alive,
-) -> dict[str, Any]:
-    payload = read_json_object(state_path_value)
-    observation = detect_stale_owner(payload, pid_is_alive=pid_is_alive)
-    read_model = dict(payload)
-    read_model["durable_status"] = observation.durable_status
-    read_model["status"] = observation.read_status
-    read_model["owner_observation"] = observation.to_payload()
-    return read_model
-
-
 @contextmanager
 def _flow_state_reconciliation_lock(state_path_value: Path) -> Iterator[None]:
     flags = os.O_RDONLY | getattr(os, "O_DIRECTORY", 0)
@@ -637,7 +612,6 @@ __all__ = [
     "read_json_object",
     "reconcile_stale_owner_for_resume",
     "remediation_cycles",
-    "stale_owner_read_model",
     "stale_downstream_stages",
     "state_path",
     "state_status",

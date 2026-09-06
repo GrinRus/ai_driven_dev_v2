@@ -357,7 +357,7 @@ def test_failed_task_keeps_implementation_stage_failed_not_blocked(tmp_path: Pat
     assert metadata.status == "failed"
 
 
-def test_retry_repairs_legacy_blocked_stage_status_for_failed_task(tmp_path: Path) -> None:
+def test_retry_reconciles_cleared_blocked_stage_after_task_failure(tmp_path: Path) -> None:
     request = _request(tmp_path)
     persist_stage_status(
         workspace_root=request.workspace_root,

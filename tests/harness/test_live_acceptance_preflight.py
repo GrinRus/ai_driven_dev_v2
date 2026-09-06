@@ -12,7 +12,6 @@ from aidd.harness.live_acceptance_isolation import (
 )
 from aidd.harness.live_acceptance_preflight import (
     LiveAcceptancePreflightError,
-    assert_tracked_source_unchanged,
     capture_tracked_source_state,
     prepare_live_acceptance_layout,
 )
@@ -56,17 +55,6 @@ def test_tracked_source_state_rejects_dirty_tracked_checkout(tmp_path: Path) -> 
 
     with pytest.raises(LiveAcceptancePreflightError, match="clean tracked"):
         capture_tracked_source_state(source)
-
-
-def test_tracked_source_postflight_detects_revision_change(tmp_path: Path) -> None:
-    source = _source_checkout(tmp_path)
-    expected = capture_tracked_source_state(source)
-    (source / "new.txt").write_text("new\n", encoding="utf-8")
-    _git(source, "add", "new.txt")
-    _git(source, "commit", "-m", "changed")
-
-    with pytest.raises(LiveAcceptancePreflightError, match="changed during"):
-        assert_tracked_source_unchanged(source, expected)
 
 
 @pytest.mark.parametrize("external_name", ("source/external", "source"))

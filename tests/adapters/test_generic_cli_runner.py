@@ -20,7 +20,6 @@ from aidd.adapters.generic_cli.runner import (
     assemble_command,
     build_execution_environment,
     build_subprocess_spec,
-    command_preview,
     persist_attempt_runtime_artifacts,
     run_subprocess_with_streaming,
 )
@@ -74,16 +73,6 @@ def test_assemble_command_rejects_empty_configured_command() -> None:
 def test_assemble_command_rejects_invalid_shell_syntax() -> None:
     with pytest.raises(ValueError, match="not valid shell syntax"):
         assemble_command(configured_command='"unterminated', context=_context())
-
-
-def test_command_preview_renders_shell_escaped_output() -> None:
-    preview = command_preview(
-        configured_command='runtime --profile "fast lane"',
-        context=_context(),
-    )
-
-    assert preview.startswith("runtime --profile 'fast lane'")
-    assert "--prompt-pack prompt-packs/stages/plan/system.md" in preview
 
 
 def test_build_execution_environment_injects_stage_and_run_metadata() -> None:

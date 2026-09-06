@@ -58,7 +58,7 @@ test("state surfaces expose consequence, recovery, and truthful live semantics",
 
 test("shared interaction contract covers every state and its semantic announcement", async () => {
   const context = await primitivesContext();
-  const states = JSON.parse(vm.runInContext("JSON.stringify(SHARED_INTERACTION_STATES)", context));
+  const states = JSON.parse(vm.runInContext("JSON.stringify(Object.keys(SHARED_INTERACTION_STATE_CONTRACT))", context));
   assert.deepEqual(states, [
     "loading", "empty", "partial", "error", "disabled", "selected", "pending",
     "conflict", "success", "offline", "unavailable", "reconnecting",

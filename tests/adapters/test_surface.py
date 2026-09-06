@@ -7,26 +7,26 @@ import pytest
 
 from aidd.adapters.base import CapabilityReport
 from aidd.adapters.surface import (
-    default_execution_mode_for_surface,
+    RUNTIME_ADAPTER_SURFACES,
     get_runtime_adapter_surface,
-    runtime_adapter_surfaces,
 )
 from aidd.runtime_catalog import RuntimeExecutionMode
 
 
 def test_runtime_adapter_surfaces_register_execution_and_conformance_callables() -> None:
-    surfaces = {surface.runtime_id: surface for surface in runtime_adapter_surfaces()}
+    surfaces = RUNTIME_ADAPTER_SURFACES
 
     assert set(surfaces) == {"generic-cli", "claude-code", "codex", "opencode", "qwen"}
-    for surface in surfaces.values():
+    for runtime_id, surface in surfaces.items():
+        assert surface.runtime_id == runtime_id
         assert callable(surface.execute_stage_request_fn)
         assert callable(surface.conformance_spec_builder)
 
 
 def test_default_execution_mode_comes_from_registered_surface() -> None:
     modes = {
-        surface.runtime_id: default_execution_mode_for_surface(surface)
-        for surface in runtime_adapter_surfaces()
+        surface.runtime_id: surface.default_execution_mode
+        for surface in RUNTIME_ADAPTER_SURFACES.values()
     }
     assert modes == {
         "generic-cli": RuntimeExecutionMode.ADAPTER_FLAGS,

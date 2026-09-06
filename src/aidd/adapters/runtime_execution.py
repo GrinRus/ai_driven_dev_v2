@@ -81,19 +81,3 @@ class RuntimeRunResult[ExitClassificationT]:
     stderr_truncated: bool = False
     runtime_log_truncated: bool = False
     capture_error: str | None = None
-
-    @property
-    def stdout(self) -> str:
-        return self.stdout_text
-
-    @property
-    def stderr(self) -> str:
-        return self.stderr_text
-
-    @property
-    def runtime_log(self) -> str:
-        return self.runtime_log_text
-
-    @property
-    def normalized_exit_classification(self) -> ExitClassificationT:
-        return self.exit_classification

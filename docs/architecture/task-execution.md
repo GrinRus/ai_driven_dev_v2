@@ -79,8 +79,9 @@ their own `created_at_utc` and `updated_at_utc` timestamps), `repository-baselin
 question/answer evidence. Runtime payloads must not be copied or hard-linked into a task attempt.
 
 Task and finalization history readers must not use the enclosing run manifest's timestamps as a
-fallback. Legacy nested attempts without timestamps remain readable, but their duration is
-reported as unavailable rather than showing the duration of the entire run.
+fallback. When attempt-owned timing evidence is missing or unreadable, the read-only history
+view reports duration as unavailable rather than showing the duration of the entire run.
+This diagnostic view does not authorize execution from a retired persisted format.
 
 Each new task attempt records its global attempts in an atomically replaced
 `stage-attempt-references.json` schema-v1 manifest:

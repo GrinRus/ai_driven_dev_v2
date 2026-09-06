@@ -6,7 +6,6 @@ from pathlib import Path
 
 from aidd.core.markdown import extract_bullets, extract_paragraph
 from aidd.core.resources import (
-    default_document_contracts_root,
     default_stage_contracts_root,
     resolve_prompt_pack_path,
     resolve_resource_layout_from_contracts_root,
@@ -17,7 +16,6 @@ from aidd.core.workspace import stage_root as workspace_stage_root
 from aidd.core.workspace import work_item_root as workspace_work_item_root
 
 DEFAULT_STAGE_CONTRACTS_ROOT = default_stage_contracts_root()
-DEFAULT_DOCUMENT_CONTRACTS_ROOT = default_document_contracts_root()
 
 
 class StageManifestLoadError(ValueError):
@@ -32,19 +30,15 @@ _INTERVIEW_DOCUMENT_NAMES = frozenset({"questions.md", "answers.md"})
 class StageOutputRegistry:
     """Owner-separated stage document paths.
 
-    ``published`` intentionally retains the historical declared-output view.  The other
-    collections are disjoint ownership projections so new callers can request only the set they
-    are allowed to create or mutate while published paths remain a separate read projection.
+    ``published`` is the complete declared-output view used for validation and publication.
+    The other collections separate document ownership so callers can request only the set
+    they are allowed to create or mutate.
     """
 
     runtime_authored: tuple[Path, ...]
     aidd_generated: tuple[Path, ...]
     interview_control: tuple[Path, ...]
     published: tuple[Path, ...]
-
-
-def all_stages() -> tuple[str, ...]:
-    return STAGES
 
 
 def stage_contract_path(stage: str, contracts_root: Path = DEFAULT_STAGE_CONTRACTS_ROOT) -> Path:
@@ -361,36 +355,6 @@ def resolve_aidd_generated_output_documents(
     ).aidd_generated
 
 
-def resolve_interview_control_documents(
-    *,
-    stage: str,
-    work_item: str,
-    workspace_root: Path,
-    contracts_root: Path = DEFAULT_STAGE_CONTRACTS_ROOT,
-) -> tuple[Path, ...]:
-    return resolve_stage_output_registry(
-        stage=stage,
-        work_item=work_item,
-        workspace_root=workspace_root,
-        contracts_root=contracts_root,
-    ).interview_control
-
-
-def resolve_published_output_documents(
-    *,
-    stage: str,
-    work_item: str,
-    workspace_root: Path,
-    contracts_root: Path = DEFAULT_STAGE_CONTRACTS_ROOT,
-) -> tuple[Path, ...]:
-    return resolve_stage_output_registry(
-        stage=stage,
-        work_item=work_item,
-        workspace_root=workspace_root,
-        contracts_root=contracts_root,
-    ).published
-
-
 def resolve_expected_output_documents(
     *,
     stage: str,
@@ -398,27 +362,11 @@ def resolve_expected_output_documents(
     workspace_root: Path,
     contracts_root: Path = DEFAULT_STAGE_CONTRACTS_ROOT,
 ) -> tuple[Path, ...]:
-    """Compatibility reader for the historical complete declared-output view."""
+    """Resolve the complete current declared-output view for validation and publication."""
 
-    return resolve_published_output_documents(
+    return resolve_stage_output_registry(
         stage=stage,
         work_item=work_item,
         workspace_root=workspace_root,
         contracts_root=contracts_root,
-    )
-
-
-def resolve_validator_targets(
-    *,
-    stage: str,
-    work_item: str,
-    workspace_root: Path,
-    contracts_root: Path = DEFAULT_STAGE_CONTRACTS_ROOT,
-) -> tuple[Path, ...]:
-    expected_outputs = resolve_expected_output_documents(
-        stage=stage,
-        work_item=work_item,
-        workspace_root=workspace_root,
-        contracts_root=contracts_root,
-    )
-    return tuple(path for path in expected_outputs if path.suffix.lower() == ".md")
+    ).published

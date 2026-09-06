@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import json
-import shlex
 from collections.abc import Callable, Mapping
 from dataclasses import dataclass
 from enum import StrEnum
@@ -295,22 +294,6 @@ def assemble_native_command(
     )
     _ = context
     return tuple(base_tokens)
-
-
-def command_preview(
-    *,
-    configured_command: str,
-    context: OpenCodeCommandContext,
-    repository_root: Path | None = None,
-) -> str:
-    return " ".join(
-        shlex.quote(token)
-        for token in assemble_command(
-            configured_command=configured_command,
-            context=context,
-            repository_root=repository_root,
-        )
-    )
 
 
 def build_execution_environment(

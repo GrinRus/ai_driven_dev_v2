@@ -21,23 +21,6 @@ const RECOVERY_SUMMARY_KINDS = new Set([
   "intervention",
   "quality-gate"
 ]);
-const SHARED_INTERACTION_STATES = Object.freeze([
-  "loading",
-  "empty",
-  "partial",
-  "error",
-  "disabled",
-  "selected",
-  "pending",
-  "conflict",
-  "success",
-  "offline",
-  "unavailable",
-  "reconnecting",
-  "permission-denied",
-  "focus",
-  "keyboard"
-]);
 const SHARED_INTERACTION_STATE_CONTRACT = Object.freeze({
   loading: Object.freeze({role: "status", live: "polite", busy: true}),
   empty: Object.freeze({role: "status", live: "polite", busy: false}),
