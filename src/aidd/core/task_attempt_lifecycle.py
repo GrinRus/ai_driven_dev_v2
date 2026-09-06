@@ -9,6 +9,7 @@ from pathlib import Path
 from typing import Protocol
 from uuid import uuid4
 
+from aidd.core.attempt_lineage import AttemptKind, AttemptLineage, AttemptScope
 from aidd.core.identifiers import contained_component_path
 from aidd.core.interview import stage_has_unresolved_blocking_questions
 from aidd.core.run_store import (
@@ -132,6 +133,15 @@ def _write_attempt_state(
     except (FileNotFoundError, OSError, TypeError, ValueError):
         existing = None
     if isinstance(existing, dict):
+        if "lineage" not in existing:
+            raise ValueError("Task attempt state uses a retired format without lineage.")
+        lineage = AttemptLineage.from_dict(existing["lineage"])
+        lineage.validate_identity(
+            scope=AttemptScope.TASK,
+            attempt_number=attempt_number,
+        )
+        if lineage.attempt_kind is not AttemptKind.TASK:
+            raise ValueError("Task attempt state lineage must use the `task` kind.")
         prior_created = existing.get("created_at_utc")
         if isinstance(prior_created, str) and prior_created.strip():
             created_at_utc = prior_created
@@ -143,6 +153,11 @@ def _write_attempt_state(
                 "attempt_number": attempt_number,
                 "status": status,
                 "blocker": blocker,
+                "lineage": AttemptLineage(
+                    scope=AttemptScope.TASK,
+                    attempt_kind=AttemptKind.TASK,
+                    attempt_number=attempt_number,
+                ).to_dict(),
                 "created_at_utc": created_at_utc,
                 "updated_at_utc": timestamp,
             },

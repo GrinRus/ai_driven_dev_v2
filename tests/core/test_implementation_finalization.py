@@ -112,6 +112,9 @@ def test_finalization_terminal_state_preserves_schema_and_blocker(tmp_path: Path
     assert payload["attempt_number"] == 1
     assert payload["status"] == "failed"
     assert payload["blocker"] == "publication failed"
+    assert payload["lineage"]["scope"] == "finalization"
+    assert payload["lineage"]["attempt_kind"] == "finalization"
+    assert payload["lineage"]["attempt_number"] == 1
     assert payload["created_at_utc"]
     assert payload["updated_at_utc"]
     assert payload["created_at_utc"] <= payload["updated_at_utc"]

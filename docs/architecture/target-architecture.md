@@ -466,10 +466,11 @@ request repair by themselves. Repair briefs group primary, related, and advisory
 retaining exact finding ids and locations.
 
 Only validation-triggered `repair` attempts consume the automatic repair budget. Runtime retry,
-question `resume`, and operator `intervention` remain distinct attempt modes. Accounting reads
-persisted `attempt_mode` metadata; missing or malformed metadata stops with an explicit evidence
-error rather than inferring repair usage from attempt directory counts. After automatic
-exhaustion, the target recovery contract permits at most one durable `repair-extension` grant for
+question `resume`, and operator `intervention` remain distinct attempt kinds. Current artifacts
+persist a versioned lineage object; retired records that only contain `attempt_mode` or an ordinal
+are rejected with an explicit evidence error rather than silently upgraded or interpreted from
+attempt directory counts. After automatic exhaustion, the target
+recovery contract permits at most one durable `repair-extension` grant for
 the latest exhausted stage in the same run. The grant records run/stage identity, config plus
 validator/brief hashes, author, time, and reason; it never resets budget or history.
 
@@ -529,10 +530,13 @@ unresolved questions and existing operator answers are preserved. Duplicate or a
 candidates are retained as raw attempt evidence and stop in an explicit operator-attention state
 without overwriting the ledger or consuming repair budget.
 
-`resume` is a non-repair attempt mode. It is recorded only when a runtime invocation actually
+`resume` is a non-repair attempt kind. It is recorded only when a runtime invocation actually
 starts; checking that answers exist or rejecting a malformed candidate does not allocate an empty
 attempt. Attempt history distinguishes `initial`, `repair`, `resume`, `intervention`, and the
-separately authorized `repair-extension` mode.
+separately authorized `repair-extension` kind. Task and aggregate-finalization attempts use
+their own `task` and `finalization` kinds. Current-format readers require explicit lineage and
+reject retired records without it; historical evidence may be inspected as raw files but is never
+classified or resumed from an ordinal.
 
 ## 14. Adapter architecture
 

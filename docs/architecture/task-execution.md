@@ -39,6 +39,27 @@ constraints, and out-of-scope notes do not replace the required fields.
   validation or atomic publication never changes successful task outcomes and can be retried with
   `aidd task finalize`.
 
+### Attempt lineage contract
+
+Stage, task, and aggregate-finalization attempts use the same versioned `lineage` object:
+
+```json
+{
+  "schema_version": 1,
+  "scope": "stage|task|finalization",
+  "attempt_kind": "initial|repair|resume|intervention|repair-extension|task|finalization|unknown",
+  "attempt_number": 1,
+  "parent_attempt_path": null
+}
+```
+
+`attempt_number` identifies a storage slot only; it never implies repair. Stage lineage uses the
+five stage execution kinds, task attempts use `task`, and aggregate finalization uses
+`finalization`. Current-format readers require the lineage object and reject retired artifacts
+that contain only `attempt_mode` or an ordinal. Historical evidence may be inspected as raw files,
+but it must not be silently upgraded or resumed. Readers must never synthesize a repair edge from
+`attempt_number > 1`.
+
 Run mutations use the shared filesystem lease. Same-host dead owners may be reclaimed; live,
 remote-host, or malformed owners remain conflicts. UI mutation endpoints acquire the lease before
 returning a background job id. Stage success remains uncommitted until the final aggregate
@@ -110,6 +131,13 @@ Each new task attempt records its global attempts in an atomically replaced
   "task_id": "TL-2",
   "task_attempt_number": 2,
   "stage": "implement",
+  "lineage": {
+    "schema_version": 1,
+    "scope": "task",
+    "attempt_kind": "task",
+    "attempt_number": 2,
+    "parent_attempt_path": null
+  },
   "stage_attempts": [
     {
       "attempt_number": 7,

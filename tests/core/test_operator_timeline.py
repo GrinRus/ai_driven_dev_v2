@@ -215,7 +215,19 @@ def test_operator_timeline_uses_referenced_stage_attempt_bounds_without_task_tim
     )
     task_attempt.mkdir(parents=True)
     (task_attempt / "attempt-state.json").write_text(
-        json.dumps({"status": "failed", "attempt_number": 1}),
+        json.dumps(
+            {
+                "status": "failed",
+                "attempt_number": 1,
+                "lineage": {
+                    "schema_version": 1,
+                    "scope": "task",
+                    "attempt_kind": "task",
+                    "attempt_number": 1,
+                    "parent_attempt_path": None,
+                },
+            }
+        ),
         encoding="utf-8",
     )
     (task_attempt / "stage-attempt-references.json").write_text(
@@ -223,9 +235,16 @@ def test_operator_timeline_uses_referenced_stage_attempt_bounds_without_task_tim
             {
                 "schema_version": 1,
                 "task_id": "TL-2",
-                "task_attempt_number": 1,
-                "stage": "implement",
-                "stage_attempts": [
+                    "task_attempt_number": 1,
+                    "stage": "implement",
+                    "lineage": {
+                        "schema_version": 1,
+                        "scope": "task",
+                        "attempt_kind": "task",
+                        "attempt_number": 1,
+                        "parent_attempt_path": None,
+                    },
+                    "stage_attempts": [
                     {
                         "attempt_number": 1,
                         "path": "reports/runs/WI-UI/run-ui/stages/implement/attempts/attempt-0001",

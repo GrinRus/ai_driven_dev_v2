@@ -4,6 +4,7 @@ import json
 from dataclasses import dataclass
 from pathlib import Path, PurePosixPath
 
+from aidd.core.attempt_lineage import AttemptKind, AttemptLineage, AttemptScope
 from aidd.core.run_store import run_attempt_root, write_json_payload
 
 TASK_ATTEMPT_REFERENCES_FILENAME = "stage-attempt-references.json"
@@ -41,6 +42,7 @@ class TaskAttemptEvidenceReferences:
     task_attempt_number: int
     stage_attempts: tuple[TaskStageAttemptReference, ...]
     stage: str = "implement"
+    lineage: AttemptLineage | None = None
     schema_version: int = 1
 
     def to_dict(self) -> dict[str, object]:
@@ -50,6 +52,7 @@ class TaskAttemptEvidenceReferences:
             "task_attempt_number": self.task_attempt_number,
             "stage": self.stage,
             "stage_attempts": [reference.to_dict() for reference in self.stage_attempts],
+            **({"lineage": self.lineage.to_dict()} if self.lineage is not None else {}),
         }
 
     @classmethod
@@ -78,11 +81,27 @@ class TaskAttemptEvidenceReferences:
         numbers = tuple(reference.attempt_number for reference in references)
         if numbers != tuple(sorted(set(numbers))):
             raise ValueError("Task stage-attempt references must be unique and ordered.")
+        if "lineage" not in payload:
+            raise ValueError("Task attempt evidence requires current-format lineage.")
+        lineage = AttemptLineage.from_dict(payload["lineage"])
+        lineage.validate_identity(
+            scope=AttemptScope.TASK,
+            attempt_number=task_attempt_number,
+        )
         return cls(
             task_id=task_id,
             task_attempt_number=task_attempt_number,
             stage_attempts=references,
+            lineage=lineage,
         )
+
+    @property
+    def effective_lineage(self) -> AttemptLineage:
+        """Return the explicit current-format task lineage."""
+
+        if self.lineage is None:
+            raise ValueError("Task attempt evidence is missing current-format lineage.")
+        return self.lineage
 
 
 @dataclass(frozen=True, slots=True)
@@ -167,7 +186,13 @@ def write_task_attempt_references(
     task_attempt_number: int,
     task_attempt_path: Path,
     stage_attempt_numbers: tuple[int, ...],
+    lineage: AttemptLineage | None = None,
 ) -> Path:
+    if lineage is not None:
+        lineage.validate_identity(
+            scope=AttemptScope.TASK,
+            attempt_number=task_attempt_number,
+        )
     references: list[TaskStageAttemptReference] = []
     for attempt_number in stage_attempt_numbers:
         attempt_path = run_attempt_root(
@@ -194,6 +219,12 @@ def write_task_attempt_references(
         task_id=task_id,
         task_attempt_number=task_attempt_number,
         stage_attempts=tuple(references),
+        lineage=lineage
+        or AttemptLineage(
+            scope=AttemptScope.TASK,
+            attempt_kind=AttemptKind.TASK,
+            attempt_number=task_attempt_number,
+        ),
     )
     path = task_attempt_path / TASK_ATTEMPT_REFERENCES_FILENAME
     write_json_payload(path, manifest.to_dict())
