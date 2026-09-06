@@ -398,7 +398,7 @@ while retired ordinal-only evidence is rejected rather than silently upgraded.
     adapter-conformance, deterministic-scenarios, packaged-ui-browser, build, CodeQL, Scorecard,
     and dependency-review checks passed. Local core (1087), planning (13), Ruff, and strict mypy
     checks passed; the adjacent UI checkout remained untouched.
-- `W48-E3-S1-T3` (next) Derive timing, repair history, and repair matrix only from lineage.
+- `W48-E3-S1-T3` (done) Derive timing, repair history, and repair matrix only from lineage.
   - Dependencies: `W48-E3-S1-T2`.
   - Output: evaluation projections classify repairs from explicit stage lineage rather than
     attempt ordinals.
@@ -406,6 +406,24 @@ while retired ordinal-only evidence is rejected rather than silently upgraded.
     related documentation; no UI-owned paths.
   - Verification: DET-004 reports zero repairs for clean attempts; one injected `repair` lineage
     reports exactly one repair without treating resume or intervention as repair.
+  - Completion evidence: PR #546 merged to `origin/main` at `2ad81274`; Python 3.12–3.14,
+    adapter-conformance, deterministic-scenarios, packaged-ui-browser, build, CodeQL, Scorecard,
+    and dependency-review checks passed. Local stage-timing (6), live black-box harness (66),
+    eval/failure-evidence (144), Ruff, and strict mypy checks passed; the adjacent UI checkout
+    remained untouched.
+
+#### Slice W48-E3-S2 — one failure-cause model (`planned`)
+
+Primary output: execution verdict and first decisive cause remain compatible across every report.
+
+- `W48-E3-S2-T1` (next) Define typed failure cause, phase, source, reason, evidence link, and
+  legacy mapping.
+  - Output: one versioned failure-cause contract with a fail-closed compatibility table for
+    execution verdicts and first decisive causes.
+  - Scope: eval contracts and focused model/projection tests; no UI-owned paths.
+  - Verification: contradictory verdict/cause combinations are rejected, while setup failure,
+    provider/runtime failure, validation failure, and infrastructure failure retain distinct
+    report semantics.
 
 ## Wave 51 — agent development instruction consistency (`done`)
 
