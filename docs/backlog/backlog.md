@@ -7,7 +7,7 @@ slice, and local task.
 
 ## Next
 
-- `W48-E3-S2-T3` — Propagate the cause through log analysis, grader, verdict, and summary.
+- `W48-E3-S3-T1` — Define conditional bundle inventory, separate eval/product IDs, relative references, and legacy policy.
 
 ## Soon
 
@@ -37,8 +37,9 @@ slice, and local task.
 
 ## Current reconciliation
 
-- `2026-09-06` `W48-E3-S2-T2` completed in PR #550 and is present on `origin/main` at `d11d56c8`.
-  Required CI lanes and local harness, eval, planning/docs, Ruff, and strict mypy checks passed.
-  The task owned harness transcript persistence; the adjacent `codex/ui-completion` checkout
-  remains untouched. `W48-E3-S2-T3` is now the promoted direct successor and continues to avoid
-  the UI-owned paths; `W46-E2-S2-T4` and human/provider acceptance tasks stay parked.
+- `2026-09-07` `W48-E3-S2-T3` completed in PR #552 and is present on `origin/main` at `11cb9685`.
+  Required CI lanes and local eval/harness regressions, Ruff, and strict mypy checks passed. The
+  task propagated typed causes through eval projections and corrected DET-002 classification; the
+  adjacent `codex/ui-completion` checkout remains untouched. `W48-E3-S3-T1` is now the promoted
+  dependency-ready successor and continues to avoid UI-owned paths; `W46-E2-S2-T4` and
+  human/provider acceptance tasks stay parked.
