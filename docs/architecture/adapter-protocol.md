@@ -123,7 +123,27 @@ Each adapter declares a capability report with at least:
 
 The core and CLI use this report to decide whether to proceed, degrade explicitly, or stop.
 
-## 4.1 Runtime operator requests
+### 4.1 Adapter-owned security/capability descriptor
+
+Each registered adapter surface may provide a static `RuntimeAdapterDescriptor` alongside its
+probe callable. The descriptor is immutable, contains no credential values, and separates
+provider metadata from observed installation state:
+
+- `runtime_id` — stable adapter identifier;
+- `protected_paths` — repository-relative POSIX path prefixes or filename markers that the
+  adapter identifies as provider-managed protected material;
+- `credential_paths` — provider credential/auth path markers;
+- `config_paths` — provider configuration path markers;
+- `capabilities` — named adapter capabilities that can be consumed by runtime-neutral policy.
+
+Path entries are validated as safe relative POSIX metadata (no absolute paths, parent traversal,
+backslashes, or empty values). The descriptor is an extension seam: adding a runtime adds its
+metadata in the adapter package rather than adding provider literals to `aidd.core`. A descriptor
+does not claim that a concrete binary is installed or that a capability was observed; those facts
+remain in `CapabilityReport` and behavioral conformance evidence. Built-in descriptors are
+introduced incrementally after this contract and must preserve the existing runtime IDs.
+
+## 4.2 Runtime operator requests
 
 AIDD separates product questions from runtime approvals:
 
