@@ -2094,6 +2094,97 @@ def test_black_box_live_e2e_passes_stepwise_and_writes_flow_artifacts(
     assert "Requires second public-repository flow: `false`" in next_flow_markdown
 
 
+def test_live_facade_characterization_preserves_artifacts_and_event_order(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    scenario_path, work_root, report_root = _prepare_live_test(
+        tmp_path,
+        monkeypatch,
+        frontend_checkpoints=True,
+    )
+
+    first = run_black_box_live_e2e(
+        scenario_path=scenario_path,
+        runtime_id="opencode",
+        work_root=work_root,
+        report_root=report_root,
+    )
+    second = run_black_box_live_e2e(
+        scenario_path=scenario_path,
+        runtime_id="opencode",
+        work_root=work_root,
+        report_root=report_root,
+    )
+
+    def normalized_contract(result: BlackBoxLiveE2EResult) -> tuple[object, ...]:
+        bundle_root = result.bundle_root
+        steps = json.loads(
+            (bundle_root / "flow-steps.json").read_text(encoding="utf-8")
+        )
+        step_order = tuple(
+            (
+                step["action"],
+                step.get("stage"),
+                step["classification"],
+                step["decision"],
+                step["plan"],
+            )
+            for step in steps
+            if step["action"] != "frontend-running-stage-checkpoint"
+        )
+        raw_events = (
+            json.loads(raw_event)
+            for raw_event in (bundle_root / "operator-actions.jsonl")
+            .read_text(encoding="utf-8")
+            .splitlines()
+        )
+        stable_events = (
+            event
+            for event in raw_events
+            if event["action"] != "frontend-running-stage-checkpoint"
+        )
+        operator_events = tuple(
+            (
+                index,
+                event["action"],
+                event["stage"],
+                event["classification"],
+            )
+            for index, event in enumerate(stable_events, start=1)
+        )
+        stable_artifact_paths = tuple(
+            sorted(
+                path.relative_to(bundle_root).as_posix()
+                for path in bundle_root.rglob("*")
+                if path.is_file() and path.parent.name != "command-evidence"
+            )
+        )
+        command_evidence_count = sum(
+            1
+            for path in (bundle_root / "command-evidence").glob("*.json")
+            if path.is_file()
+        )
+        state = json.loads(
+            (bundle_root / "flow-state.json").read_text(encoding="utf-8")
+        )
+        return (
+            result.status,
+            (stable_artifact_paths, command_evidence_count > 0),
+            step_order,
+            operator_events,
+            tuple(state["completed_stages"]),
+            tuple(
+                (item["stage"], item["iteration"], item["stage_run_index"])
+                for item in state["completed_stage_runs"]
+            ),
+        )
+
+    assert first.status == "pass"
+    assert second.status == "pass"
+    assert normalized_contract(first) == normalized_contract(second)
+
+
 def test_black_box_live_e2e_imports_manual_frontend_evidence_without_gating(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
