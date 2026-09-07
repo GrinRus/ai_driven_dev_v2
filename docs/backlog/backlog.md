@@ -7,7 +7,7 @@ slice, and local task.
 
 ## Next
 
-- `W49-E1-S1-T1` — Publish a mode-specific project-set capability matrix in US-12 and architecture.
+- `W49-E1-S1-T2` — Block aggregate finalization when repository evidence contains outside-set changes.
 
 ## Soon
 
@@ -37,10 +37,9 @@ slice, and local task.
 
 ## Current reconciliation
 
-- `2026-09-07` `W48-E3-S3-T4` completed in PR #560 and is present on `origin/main` at `b85db4e8`.
-  Required CI lanes passed; result bundles now atomically publish a digest/size inventory commit
-  marker, validate identity and orphan/mutation evidence, and persist candidate PASS integrity
-  failures as explicit `infra-fail` records. Focused lifecycle/eval and sealing coverage passed
-  (49 tests), and the adjacent `codex/ui-completion` checkout remains untouched with its own
-  unpushed UI work. `W49-E1-S1-T1` is now the promoted dependency-ready successor, while
-  `W46-E2-S2-T4` and human/provider acceptance tasks stay parked.
+- `2026-09-07` `W49-E1-S1-T1` completed in PR #562 and is present on `origin/main` at `3d75b674`.
+  The mode-specific project-set matrix now distinguishes full-access declaration/attribution/
+  detection/fail-closed progression from brokered or isolated preventive containment. Focused
+  docs, planning, and agent-workflow checks passed (63 tests); all required CI lanes passed. The
+  adjacent `codex/ui-completion` checkout remains untouched with its own unpushed UI work, so
+  `W49-E1-S1-T2` is the next non-UI dependency-ready task; UI-bound T4 remains held for W47 merge.
