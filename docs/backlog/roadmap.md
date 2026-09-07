@@ -550,18 +550,19 @@ remediation plan until their dependencies are promoted into this canonical roadm
     dependency-review checks passed. The adjacent `codex/ui-completion` checkout remained
   untouched.
 
-- `W49-E1-S1-T4` (blocked) Align UI copy with detected/rejected versus preventively contained
+- `W49-E1-S1-T4` (next) Align UI copy with detected/rejected versus preventively contained
   modes.
   - Output: the operator UI distinguishes full-access detection/attribution warnings from
     brokered or isolated preventive containment while reusing the merged Focus Canvas components.
   - Scope: UI presentation copy and its DOM/browser acceptance; no parallel presentation pattern.
   - Verification: full-access and enforced-containment fixtures render distinct copy and preserve
     the shared core recommendation.
-  - Dependency note: blocked until the neighboring `codex/ui-completion` branch is merged; do
-    not edit UI-owned files from this workstream before that integration.
+  - Dependency note: the neighboring UI refactor is now integrated by PR #574 at `45a1a8f7`;
+    this task is dependency-ready and owns the remaining UI copy/browser acceptance. Keep its
+    implementation in the UI workstream and do not duplicate presentation patterns here.
 
-Dependencies: W48 exit gate → `W49-E1-S1-T1` → `W49-E1-S1-T2`; T4 remains dependent on the
-merged W47 UI work and must not edit UI-owned paths before that integration.
+Dependencies: W48 exit gate → `W49-E1-S1-T1` → `W49-E1-S1-T2`; T4 is now unblocked by the
+merged W47 UI work and must be implemented against the integrated UI surfaces.
 
 #### Slice W49-E1-S2 — adapter-owned provider metadata (`planned`)
 
@@ -620,19 +621,26 @@ runtime-neutral core.
     passed (1409 tests), focused registry/config/docs checks passed (155 tests), Ruff, strict
     mypy, and `git diff --check` passed, and all required Python 3.12–3.14, adapter-conformance,
     deterministic-scenarios, packaged-ui-browser, build, CodeQL, Scorecard, and dependency-review
-    checks passed. The adjacent `codex/ui-completion` checkout remained untouched; its local
-    unpushed UI work remains isolated and `W49-E1-S1-T4` stays blocked until that branch is merged.
+    checks passed. The adjacent UI work remained untouched in this task; it was subsequently
+    integrated by PR #574 at `45a1a8f7`.
 
-- `W49-E1-S2-T5` (next) Prove clean extension with an allowlisted fake external descriptor.
+- `W49-E1-S2-T5` (done) Prove clean extension with an allowlisted fake external descriptor.
   - Output: a fake runtime can participate through adapter-local code and an explicit matrix row
     without a runtime-neutral core edit.
   - Scope: architecture/conformance fixtures and extension documentation; no UI-owned paths.
   - Verification: the fake descriptor passes the adapter/security matrix and core source guards
     continue to reject provider literals.
+  - Completion evidence: PR #575 merged to `origin/main` at `e0fceade` after updating its base to
+    the integrated UI merge `45a1a8f7`; the test-only descriptor proved catalog projection,
+    all seven conformance dimensions, and protected-path policy injection without production
+    registration. The extended local suite passed (557 tests), Ruff/format and diff checks
+    passed, and all required Python 3.12–3.14, adapter-conformance, deterministic-scenarios,
+    packaged-ui-browser, build, CodeQL, Scorecard, and dependency-review checks passed on the
+    exact candidate. No UI-owned files were changed by this task.
 
 Dependencies: W48 exit gate → `W49-E1-S2-T1` → `W49-E1-S2-T2` → `W49-E1-S2-T3` →
-`W49-E1-S2-T4` → `W49-E1-S2-T5`; the UI-bound `W49-E1-S1-T4` remains blocked on the merged
-W47 UI work and must not edit UI-owned paths before that integration.
+`W49-E1-S2-T4` → `W49-E1-S2-T5`; the UI-bound `W49-E1-S1-T4` is now dependency-ready after
+the integrated UI merge and is the next task in the active queue.
 
 ## Wave 51 — agent development instruction consistency (`done`)
 
