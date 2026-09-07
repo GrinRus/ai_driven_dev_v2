@@ -97,9 +97,15 @@ The implemented request shape contains:
 - `input_bundle_path`
 - `repair_brief_path`
 - `repair_context_markdown`
+- `protected_path_markers` — adapter-composed, runtime-neutral path markers used by the
+  core operator policy to classify provider-managed protected material.
 
 The request deliberately names concrete prepared artifacts rather than asking adapters to
-resolve contracts or derive stage IO.
+resolve contracts or derive stage IO. The registered adapter surface combines its descriptor's
+protected, credential, and configuration markers into `protected_path_markers` before invoking
+the adapter function. The core policy consumes those injected markers alongside its generic
+`.aidd` evidence and operating-system safeguards; it does not contain provider names or
+credential filenames.
 
 ## 4. Capability model
 

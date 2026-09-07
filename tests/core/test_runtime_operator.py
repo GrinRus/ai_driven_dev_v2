@@ -272,11 +272,9 @@ def test_broad_policy_denies_sensitive_aidd_workspace_writes(tmp_path: Path) -> 
 
     for path in (
         workspace_root / ".env.local",
-        workspace_root / "auth" / "codex.json",
         workspace_root / "reports" / "runs" / "WI-001" / "operator-requests.jsonl",
         workspace_root / "reports" / "runs" / "WI-001" / "operator-decisions.jsonl",
         workspace_root / "workitems" / "WI-001" / "stages" / "plan" / "repair-brief.md",
-        workspace_root / ".codex" / "auth.json",
     ):
         request = RuntimeOperatorRequest.create(
             runtime_id="generic-cli",
@@ -855,6 +853,75 @@ def test_protected_runtime_path_classification_is_centralized(
     expected: ProtectedRuntimePathKind | None,
 ) -> None:
     assert classify_protected_runtime_path(tmp_path / relative_path) is expected
+
+
+def test_injected_adapter_markers_drive_protected_path_classification(
+    tmp_path: Path,
+) -> None:
+    markers = (
+        ".fake-runtime",
+        ".fake-runtime/auth.json",
+        "fake-runtime.json",
+    )
+
+    assert (
+        classify_protected_runtime_path(
+            tmp_path / "repo/.fake-runtime/cache/state.json",
+            protected_path_markers=markers,
+        )
+        is ProtectedRuntimePathKind.SENSITIVE_DATA
+    )
+    assert (
+        classify_protected_runtime_path(
+            tmp_path / "repo/config/fake-runtime.json",
+            protected_path_markers=markers,
+        )
+        is ProtectedRuntimePathKind.SENSITIVE_DATA
+    )
+    assert (
+        classify_protected_runtime_path(
+            tmp_path / "repo/src/app.py",
+            protected_path_markers=markers,
+        )
+        is None
+    )
+
+    policy = _policy(tmp_path)
+    policy = RuntimeOperatorPolicy(
+        permission_policy=policy.permission_policy,
+        auto_approval_preset=policy.auto_approval_preset,
+        project_roots=policy.project_roots,
+        workspace_root=policy.workspace_root,
+        configured_command_prefixes=policy.configured_command_prefixes,
+        protected_path_markers=markers,
+    )
+    request = RuntimeOperatorRequest.create(
+        runtime_id="fake-runtime",
+        stage="implement",
+        kind=RuntimeOperatorRequestKind.FILE_WRITE,
+        paths=(policy.project_roots[0] / ".fake-runtime" / "auth.json",),
+    )
+
+    decision = policy.evaluate(request)
+
+    assert decision is not None
+    assert decision.action is RuntimeOperatorDecisionAction.DENY
+
+
+def test_runtime_neutral_policy_has_no_builtin_provider_literals() -> None:
+    source = Path("src/aidd/core/runtime_operator.py").read_text(encoding="utf-8")
+
+    for provider_marker in (".claude", ".codex", ".opencode", ".qwen"):
+        assert provider_marker not in source
+    for credential_filename in (
+        "auth.json",
+        "credentials.json",
+        "claude.json",
+        "codex.json",
+        "opencode.json",
+        "qwen.json",
+    ):
+        assert credential_filename not in source
 
 
 def test_protected_reads_require_operator_or_fail_closed(tmp_path: Path) -> None:

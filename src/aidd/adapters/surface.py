@@ -3,7 +3,7 @@ from __future__ import annotations
 import shlex
 import shutil
 from collections.abc import Callable, Mapping
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from enum import StrEnum
 from pathlib import Path
 from typing import cast
@@ -218,6 +218,7 @@ class RuntimeAdapterSurface:
             model=request.model,
             reasoning_effort=request.reasoning_effort,
         )
+        request = _request_with_descriptor_markers(request, descriptor=self.descriptor)
         return self.execute_stage_request_fn(
             configured_command=configured_command,
             request=request,
@@ -352,7 +353,30 @@ def _operator_policy_for_stage_request(
         auto_approval_preset=request.auto_approval_preset,
         project_roots=request.project_roots or (request.repository_root,),
         workspace_root=request.workspace_root,
+        protected_path_markers=request.protected_path_markers,
     )
+
+
+def _request_with_descriptor_markers(
+    request: StageRuntimeRequest,
+    *,
+    descriptor: RuntimeAdapterDescriptor | None,
+) -> StageRuntimeRequest:
+    if descriptor is None:
+        return request
+    markers = tuple(
+        dict.fromkeys(
+            (
+                *request.protected_path_markers,
+                *descriptor.protected_paths,
+                *descriptor.credential_paths,
+                *descriptor.config_paths,
+            )
+        )
+    )
+    if markers == request.protected_path_markers:
+        return request
+    return replace(request, protected_path_markers=markers)
 
 
 def _execute_generic_cli_live_conformance(

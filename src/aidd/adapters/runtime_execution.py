@@ -29,6 +29,8 @@ class StageRuntimeRequest:
     prompt_pack_paths: tuple[Path, ...]
     repository_root: Path
     project_roots: tuple[Path, ...] = ()
+    # Adapter-composed protected path markers consumed by the runtime-neutral policy.
+    protected_path_markers: tuple[str, ...] = ()
     expected_output_documents: tuple[Path, ...] = ()
     attempt_number: int = 1
     attempt_mode: str = "initial"
