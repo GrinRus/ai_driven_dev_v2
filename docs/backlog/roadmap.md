@@ -610,14 +610,20 @@ runtime-neutral core.
     deterministic, packaged-ui-browser, build, CodeQL, Scorecard, and dependency-review checks
     passed. The adjacent `codex/ui-completion` checkout remains untouched.
 
-- `W49-E1-S2-T4` (next) Drive built-in registration/config compatibility from descriptors.
+- `W49-E1-S2-T4` (done) Drive built-in registration/config compatibility from descriptors.
   - Output: built-in runtime registration and configuration compatibility consume adapter-owned
     descriptors without central provider branches; existing runtime IDs and TOML remain stable.
   - Scope: adapter registry/config composition and compatibility tests; no UI-owned paths.
   - Verification: existing runtime IDs and TOML configurations resolve unchanged, while a source
     guard prevents new provider-specific registration branches in runtime-neutral code.
+  - Completion evidence: PR #572 merged to `origin/main` at `60de556a`; adapter/core suites
+    passed (1409 tests), focused registry/config/docs checks passed (155 tests), Ruff, strict
+    mypy, and `git diff --check` passed, and all required Python 3.12–3.14, adapter-conformance,
+    deterministic-scenarios, packaged-ui-browser, build, CodeQL, Scorecard, and dependency-review
+    checks passed. The adjacent `codex/ui-completion` checkout remained untouched; its local
+    unpushed UI work remains isolated and `W49-E1-S1-T4` stays blocked until that branch is merged.
 
-- `W49-E1-S2-T5` (soon) Prove clean extension with an allowlisted fake external descriptor.
+- `W49-E1-S2-T5` (next) Prove clean extension with an allowlisted fake external descriptor.
   - Output: a fake runtime can participate through adapter-local code and an explicit matrix row
     without a runtime-neutral core edit.
   - Scope: architecture/conformance fixtures and extension documentation; no UI-owned paths.
