@@ -2,9 +2,9 @@
 
 ## Status
 
-This is the **accepted audit-remediation plan**, but its local tasks are not yet part of the
-canonical roadmap or active backlog. Candidate IDs become authoritative only when each slice is
-promoted through the repository's backlog workflow.
+This is the **accepted audit-remediation plan**. Its local tasks become authoritative in the
+canonical roadmap and active backlog only when each slice is promoted through the repository's
+backlog workflow.
 
 This revision starts at W48 because the adjacent UI task owned the candidate
 `Wave 47 — Focus Canvas production rollout`. That work is now integrated through PR #574
@@ -33,9 +33,11 @@ below describe the original plan; remaining scope and effort must be re-evaluate
 
 The first post-merge UI task, `W49-E1-S1-T4`, is complete in PR #577 (`4237289b`). Its exact-run
 permission read-model extension and mode-specific copy/browser acceptance were implemented on top
-of the merged Focus Canvas baseline without editing the neighboring checkout. The remaining
-two-root deterministic scenario task, `W49-E1-S1-T3`, is now the promoted `Next` item; it owns
-scenario fixtures/assertions only and must preserve the already-merged UI boundary.
+of the merged Focus Canvas baseline without editing the neighboring checkout. The two-root
+deterministic scenario task, `W49-E1-S1-T3`, is complete in PR #579 (`f434a977`): its positive and
+negative lanes pass with exact project-set evidence, expected fail-closed exit handling, and no
+Review/QA progression. The next promoted task is `W49-E3-S1-T1`, which owns planning-contract
+hygiene only and must preserve the already-merged UI boundary.
 
 ## Parent outcome decomposed
 
