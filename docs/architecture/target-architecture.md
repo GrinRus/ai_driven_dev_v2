@@ -213,6 +213,9 @@ The implemented operator frontend and project-set workflow support preserve this
   workflow engine;
 - project-set flows use declared local project roots while keeping one governed `.aidd/`
   workspace and traceable per-project evidence;
+- project-set boundary claims are permission-mode specific: `full-access` provides declaration,
+  attribution, post-run detection, and fail-closed progression, while brokered or isolated modes
+  provide preventive containment when their adapter transport can enforce it;
 - project-set UI grouping is a read model over declared related roots inside one selected
   project-local `.aidd/`, not concurrent unrelated multi-project execution;
 - the selected project is a navigation context rather than a process-wide UI execution lock;
