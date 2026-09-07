@@ -255,6 +255,7 @@ class OperatorRunSummary:
     updated_at_utc: str | None
     lineage: OperatorRunLineage
     archive: OperatorRunArchive
+    runtime_permission_policy: str | None = None
 
 
 @dataclass(frozen=True, slots=True)

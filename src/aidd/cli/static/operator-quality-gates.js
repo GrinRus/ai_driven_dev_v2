@@ -104,6 +104,49 @@ function studioRepositoryChangeLabel(status) {
   return "Changed";
 }
 
+const PROJECT_SET_ENFORCED_POLICIES = new Set(["brokered", "isolated", "deny-unapproved"]);
+
+function projectSetPermissionPolicy() {
+  const runPolicy = typeof state !== "undefined"
+    ? String(state.dashboard?.run?.runtime_permission_policy || "").trim()
+    : "";
+  if (runPolicy) return runPolicy;
+  if (typeof selectedRuntimeView !== "function") return "";
+  return String(selectedRuntimeView()?.permission_policy || "").trim();
+}
+
+function renderProjectSetBoundaryNotice({outsideProjectSetCount = 0, projectSetRootCount = 0} = {}) {
+  const outside = Number(outsideProjectSetCount) > 0;
+  if (!projectSetRootCount && !outside) return "";
+  const policy = projectSetPermissionPolicy();
+  const mode = policy || "unknown";
+  const state = outside ? "outside" : policy ? "clean" : "unknown";
+  let title = "Project-set boundary mode unavailable";
+  let detail = "Permission mode is not retained for this run; inspect durable run evidence before interpreting project-set status.";
+  if (policy === "full-access") {
+    title = "Detected after execution";
+    detail = outside
+      ? "Outside-set changes were detected after execution and attributed to the declared project set. Full-access mode does not prevent runtime operations."
+      : "Changed paths are attributed after execution to the declared project set; no outside-set changes were detected.";
+  } else if (PROJECT_SET_ENFORCED_POLICIES.has(policy)) {
+    title = "Preventive containment";
+    detail = outside
+      ? `Outside-set evidence is present even though ${policy} mode is configured; progression remains blocked while the durable evidence is reviewed.`
+      : `${policy} mode blocks or requires approval before an outside-set operation proceeds.`;
+  } else if (policy === "plan") {
+    title = "Approval-gated execution";
+    detail = outside
+      ? "Outside-set evidence is present; keep progression blocked until the approval plan and durable evidence are reviewed."
+      : "Plan mode records requested ownership and does not execute provider changes until approval is resolved.";
+  }
+  return `
+    <aside class="truncation-notice project-set-boundary-notice" role="status" data-project-set-boundary-notice data-project-set-boundary-mode="${escapeHtml(mode)}" data-project-set-boundary-state="${state}">
+      <strong>${escapeHtml(title)}</strong>
+      <span>${escapeHtml(detail)}</span>
+    </aside>
+  `;
+}
+
 function renderStudioRepositoryEvidence({
   diffView,
   evidence,
@@ -141,6 +184,10 @@ function renderStudioRepositoryEvidence({
           ${diffView.project_set_roots.map((root) => `<span>${escapeHtml(root.root_id)}: ${escapeHtml(root.relative_root)}</span>`).join("")}
         </div>
       ` : ""}
+      ${renderProjectSetBoundaryNotice({
+        outsideProjectSetCount: outsideProjectSet.length,
+        projectSetRootCount: diffView.project_set_roots?.length || 0,
+      })}
       ${renderWarnings(mismatchWarnings)}
       ${renderDiffFilters(files)}
       <div class="diff-review-layout">

@@ -6,17 +6,19 @@ This is the **accepted audit-remediation plan**, but its local tasks are not yet
 canonical roadmap or active backlog. Candidate IDs become authoritative only when each slice is
 promoted through the repository's backlog workflow.
 
-This revision starts at W48 because the adjacent UI task owns the candidate
-`Wave 47 — Focus Canvas production rollout`. The remediation plan must integrate that work after
-merge, not compete for its IDs or edit its UI surface in parallel.
+This revision starts at W48 because the adjacent UI task owned the candidate
+`Wave 47 — Focus Canvas production rollout`. That work is now integrated through PR #574
+(merge `45a1a8f7`); remaining W49 UI work is limited to the explicitly promoted copy and
+browser-acceptance slice below and must reuse the merged Focus Canvas surfaces.
 
 Source assessment:
 [`project-quality-flow-audit-2026-09-05.md`](project-quality-flow-audit-2026-09-05.md).
 
-### Execution reconciliation — 2026-09-06
+### Execution reconciliation — 2026-09-07
 
 The original assessment and candidate task descriptions below retain their dated context.
-Focus Canvas and the first Wave 52 cleanup PR (#533, main `82dc9b3c`) are now merged.
+Focus Canvas (PR #574, main `45a1a8f7`) and the first Wave 52 cleanup PR (#533, main
+`82dc9b3c`) are now merged.
 Before promoting a candidate slice, compare its output with current code and the canonical
 [roadmap](../backlog/roadmap.md): the unreachable process island, obsolete configuration
 accessors, completed planning history, and prompt/document ownership residue have already
@@ -84,8 +86,7 @@ estimates, not delivery commitments.
 
 ## Concurrent UI work boundary
 
-At the time of this revision, the adjacent `Улучшить UI и UX` task is implementing W47 in the main
-checkout. Until its PR merges, it has exclusive ownership of:
+Before PR #574 merged, the adjacent `Улучшить UI и UX` task had exclusive ownership of:
 
 - `src/aidd/cli/static/**`;
 - `tests/frontend/**` and UI-focused `browser_tests/**`;
@@ -95,21 +96,23 @@ checkout. Until its PR merges, it has exclusive ownership of:
 - W47 UI planning and acceptance evidence in `roadmap.md` and `backlog.md`.
 
 `src/aidd/cli/ui.py`, public UI payloads, core operator read models, packaged UI scenarios, and
-shared planning files are integration seams. They may be changed by this plan only after inspecting
-the current UI diff/PR and establishing one owner for the exact file. The operating rules are:
+shared planning files remain integration seams. With PR #574 merged, W49-E1-S1-T4 owns its
+mode-specific presentation copy and DOM/browser acceptance; it may extend the exact-run read model
+only to carry already-persisted manifest data. The operating rules are:
 
 1. W48 core, adapter, validator, harness, and eval tasks may run in parallel only when their diff
    does not touch the UI-owned paths or change a payload consumed by W47.
 2. W49-E2-S2 is held until the W47 UI PR is merged and a post-merge compatibility baseline is
-   green. If W47 already produces one of its outputs, close or reslice the residual work instead of
-   reimplementing it.
+   green. That gate is now satisfied by PR #574; if W47 already produces one of the E2 outputs,
+   close or reslice the residual work instead of reimplementing it.
 3. W50 UI/browser/provider/human acceptance runs only against a revision containing both W47 and
    all beta-critical remediation changes.
 4. Integration happens through merged `origin/main`; do not copy uncommitted UI files between
    worktrees or resolve overlap by overwriting the adjacent checkout.
 5. Before selecting every local task, refresh the adjacent task/PR status and compare its touched
    paths with the candidate task. An overlap means sequence or transfer ownership, never parallel
-   editing.
+   editing. After PR #574, the adjacent checkout remains read-only reference state; integration
+   happens from `origin/main`.
 
 ## Planning rules for execution
 
@@ -149,15 +152,15 @@ Repeat this loop until the W50 exit gate is met:
 
 ## Recommended queue decision
 
-The adjacent UI task currently owns `W47-E1-S1-T4`, while the existing browser task
+The adjacent UI task's W47 implementation is merged as PR #574, while the existing browser task
 `W46-E1-S2-T4` remains separately queued. Neither result should be treated as final beta evidence
 before lifecycle and evidence semantics stabilize. Recommended remediation order:
 
-1. keep W47 implementation and its branch/PR under the adjacent UI owner;
-2. promote no W48 task until the W47 planning changes in `roadmap.md`/`backlog.md` are merged or the
-   adjacent owner formally hands those files back;
-3. make `W48-E1-S1-T1` the first remediation task only after the overlap check confirms its branch
-   can be based on current `origin/main` without touching UI-owned paths;
+1. keep the adjacent UI checkout read-only and treat PR #574's merge as the Focus Canvas baseline;
+2. implement `W49-E1-S1-T4` as the first post-merge UI-owned remediation task, with exact-run
+   permission mode and distinct detected-versus-contained copy;
+3. make the next remediation task only after the overlap check confirms its branch can be based on
+   current `origin/main` without touching files still owned by the adjacent thread;
 4. retain `W46-E1-S2-T4` and `W46-E2-S2-T4` for the W50 candidate matrix rather than deleting or
    duplicating them;
 5. promote only a direct successor into `Soon` after the current task is accepted;

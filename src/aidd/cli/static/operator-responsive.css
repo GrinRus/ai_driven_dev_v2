@@ -292,6 +292,13 @@
 }
 
 @media (max-width: 760px) {
+  /* Project-set status labels can wrap to two lines on compact screens. Keep
+   * the changed-file list in the primary workspace scroll instead of creating
+   * a nested scroll region when those labels lengthen. */
+  .target-implementation-review .diff-file-list {
+    max-height: none;
+    overflow: visible;
+  }
   .target-implementation-summary-claims {
     grid-template-columns: minmax(0, 1fr);
   }

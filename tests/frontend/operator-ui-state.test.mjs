@@ -437,6 +437,72 @@ test("Studio repository evidence names change kinds scope and claim mismatches",
   assert.match(html, /Not mentioned in report: 1/);
 });
 
+test("project-set boundary copy follows the exact run permission mode", async () => {
+  const context = vm.createContext({
+    escapeHtml(value) {
+      return String(value);
+    },
+    selectedRuntimeView() {
+      return {permission_policy: "brokered"};
+    },
+    state: {
+      dashboard: {
+        run: {runtime_permission_policy: "full-access"},
+      },
+    },
+  });
+  await load(context, "operator-quality-gates.js");
+
+  const fullAccess = vm.runInContext(
+    "renderProjectSetBoundaryNotice({outsideProjectSetCount: 1, projectSetRootCount: 2})",
+    context,
+  );
+  assert.match(fullAccess, /data-project-set-boundary-mode="full-access"/);
+  assert.match(fullAccess, /data-project-set-boundary-state="outside"/);
+  assert.match(fullAccess, /Detected after execution/);
+  assert.match(fullAccess, /does not prevent runtime operations/);
+  assert.doesNotMatch(fullAccess, /Preventive containment/);
+
+  vm.runInContext(
+    "state.dashboard.run.runtime_permission_policy = 'brokered'",
+    context,
+  );
+  const brokered = vm.runInContext(
+    "renderProjectSetBoundaryNotice({outsideProjectSetCount: 0, projectSetRootCount: 2})",
+    context,
+  );
+  assert.match(brokered, /data-project-set-boundary-mode="brokered"/);
+  assert.match(brokered, /data-project-set-boundary-state="clean"/);
+  assert.match(brokered, /Preventive containment/);
+  assert.match(brokered, /blocks or requires approval/);
+  assert.doesNotMatch(brokered, /attributed after execution/);
+
+  vm.runInContext(
+    "state.dashboard.run.runtime_permission_policy = 'plan'",
+    context,
+  );
+  const plan = vm.runInContext(
+    "renderProjectSetBoundaryNotice({outsideProjectSetCount: 1, projectSetRootCount: 1})",
+    context,
+  );
+  assert.match(plan, /data-project-set-boundary-mode="plan"/);
+  assert.match(plan, /Approval-gated execution/);
+  assert.match(plan, /approval plan/);
+
+  vm.runInContext(
+    "state.dashboard.run.runtime_permission_policy = ''",
+    context,
+  );
+  vm.runInContext("selectedRuntimeView = () => ({permission_policy: ''})", context);
+  const unknown = vm.runInContext(
+    "renderProjectSetBoundaryNotice({outsideProjectSetCount: 1, projectSetRootCount: 1})",
+    context,
+  );
+  assert.match(unknown, /data-project-set-boundary-mode="unknown"/);
+  assert.match(unknown, /mode unavailable/);
+  assert.doesNotMatch(unknown, /prevents|blocks/);
+});
+
 test("Implementation Review exposes report truth without editing stage documents", async () => {
   const context = vm.createContext({
     escapeHtml(value) {
