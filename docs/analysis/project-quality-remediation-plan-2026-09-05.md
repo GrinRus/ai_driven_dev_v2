@@ -36,8 +36,10 @@ permission read-model extension and mode-specific copy/browser acceptance were i
 of the merged Focus Canvas baseline without editing the neighboring checkout. The two-root
 deterministic scenario task, `W49-E1-S1-T3`, is complete in PR #579 (`f434a977`): its positive and
 negative lanes pass with exact project-set evidence, expected fail-closed exit handling, and no
-Review/QA progression. The next promoted task is `W49-E3-S1-T1`, which owns planning-contract
-hygiene only and must preserve the already-merged UI boundary.
+Review/QA progression. Planning-contract task `W49-E3-S1-T1` is complete in PR #581 (`2a80f526`):
+parent status roll-up, parked-child semantics, and merged-history archive authority are now
+explicit, with all required CI lanes green. The next promoted task is `W49-E3-S1-T2`, which
+owns reconciliation-history archival only and must preserve the already-merged UI boundary.
 
 ## Parent outcome decomposed
 
@@ -167,15 +169,15 @@ before lifecycle and evidence semantics stabilize. Recommended remediation order
 1. keep the adjacent UI checkout read-only and treat PR #574's merge as the Focus Canvas baseline;
 2. treat the completed `W49-E1-S1-T4` merge (#577, `4237289b`) as the source of truth for
    mode-specific permission copy and exact-run metadata;
-3. implement `W49-E1-S1-T3` next, after confirming its scenario-only branch does not overlap the
-   adjacent UI workstream;
-4. retain `W46-E1-S2-T4` and `W46-E2-S2-T4` for the W50 candidate matrix rather than deleting or
+3. retain the completed scenario-only `W49-E1-S1-T3` evidence after confirming that its branch
+   did not overlap the adjacent UI workstream;
+4. record `W49-E3-S1-T1` as complete and promote only its direct successor `W49-E3-S1-T2`;
+5. retain `W46-E1-S2-T4` and `W46-E2-S2-T4` for the W50 candidate matrix rather than deleting or
    duplicating them;
-5. promote only a direct successor into `Soon` after the current task is accepted;
 6. keep provider/human acceptance parked until exact candidate freeze.
 
-The queue and roadmap now record the T4 completion and promote T3 as the next dependency-ready
-task; future promotions must continue through the same per-task delivery loop.
+The queue and roadmap now record T1 completion and promote T2 as the next dependency-ready task;
+future promotions must continue through the same per-task delivery loop.
 
 # Wave 48 — lifecycle and evidence truth
 
