@@ -6,6 +6,7 @@ from dataclasses import fields
 from pathlib import Path
 
 import pytest
+import yaml
 
 from aidd.adapters.surface import RuntimeAdapterExecutionResult
 from aidd.core.contracts import repo_root_from
@@ -345,6 +346,46 @@ def test_roadmap_references_only_existing_user_story_ids() -> None:
         "Roadmap references unknown user story ids: "
         f"{', '.join(unknown_story_ids)}"
     )
+
+
+def test_user_story_traceability_registry_is_structured_and_resolvable() -> None:
+    repo_root = _repo_root()
+    registry_path = repo_root / "docs" / "product" / "user-story-traceability.yaml"
+    user_stories_path = repo_root / "docs" / "product" / "user-stories.md"
+    payload = yaml.safe_load(registry_path.read_text(encoding="utf-8"))
+
+    assert isinstance(payload, dict)
+    assert payload.get("schemaVersion") == 1
+    assert payload.get("source") == "docs/product/user-stories.md"
+    required_groups = tuple(payload["referencePolicy"]["requiredGroups"])
+    assert required_groups == ("contracts", "code", "tests", "scenarios", "evidence")
+
+    stories = payload.get("stories")
+    assert isinstance(stories, list)
+    declared_ids = _USER_STORY_ID_PATTERN.findall(user_stories_path.read_text(encoding="utf-8"))
+    registry_ids = [entry.get("id") for entry in stories if isinstance(entry, dict)]
+    assert registry_ids == declared_ids
+    assert len(registry_ids) == len(set(registry_ids))
+
+    repo_root_resolved = repo_root.resolve()
+    for entry in stories:
+        assert isinstance(entry, dict)
+        assert isinstance(entry.get("title"), str) and entry["title"].strip()
+        assert isinstance(entry.get("assessment"), str) and entry["assessment"].strip()
+        for group in required_groups:
+            references = entry.get(group)
+            assert isinstance(references, list) and references, (
+                f"{entry.get('id')} must declare non-empty {group} references"
+            )
+            for reference in references:
+                assert isinstance(reference, str) and reference.strip()
+                reference_path = Path(reference)
+                assert not reference_path.is_absolute(), reference
+                resolved = (repo_root / reference_path).resolve()
+                assert resolved.is_relative_to(repo_root_resolved), reference
+                assert resolved.is_file(), (
+                    f"{entry.get('id')} references missing artifact {reference}"
+                )
 
 
 def test_stage_contract_prompt_pack_paths_exist() -> None:

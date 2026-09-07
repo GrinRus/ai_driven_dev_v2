@@ -28,6 +28,8 @@ and quick start; the documents below own detailed behavior and policy.
 ## Product and planning
 
 - [User Stories](./product/user-stories.md) — product personas, outcomes, and scope boundaries.
+- [User-story traceability](./product/user-story-traceability.yaml) — structured links from each
+  story to contracts, code boundaries, tests, scenarios, and evidence.
 - [Roadmap](./backlog/roadmap.md) — canonical waves, epics, slices, and local tasks.
 - [Backlog](./backlog/backlog.md) — short actionable queue derived from the roadmap.
 
