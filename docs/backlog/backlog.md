@@ -7,7 +7,7 @@ slice, and local task.
 
 ## Next
 
-- `W49-E3-S1-T2` — Archive historical reconciliation bullets, leaving one current note.
+- `W49-E3-S1-T3` — Add bounded-note and parent-status roll-up validation.
 
 ## Soon
 
@@ -41,6 +41,6 @@ slice, and local task.
   `2a80f526`. The parent-status algebra, parked-child rule, and merged-history archive
   authority passed the full required CI lanes, including packaged UI browser acceptance; the
   neighboring UI refactor remains integrated by PR #574 at `45a1a8f7` and its checkout is
-  read-only reference state. The 509 historical reconciliation bullets are indexed in
-  [the Git archive index](reconciliation-history-index.md); the next dependency-ready task is
-  `W49-E3-S1-T2`.
+  read-only reference state. `W49-E3-S1-T2` completed in PR #583 and is present on `origin/main`
+  at `8c2f6bfe`; the 509 historical reconciliation bullets are indexed in [the Git archive
+  index](reconciliation-history-index.md). The next dependency-ready task is `W49-E3-S1-T3`.
