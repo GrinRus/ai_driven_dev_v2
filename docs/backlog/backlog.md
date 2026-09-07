@@ -7,7 +7,7 @@ slice, and local task.
 
 ## Next
 
-- `W49-E2-S2-T1` — Extract UI job registry/lifecycle from `cli/ui.py`.
+- `W49-E2-S2-T2` — Extract HTTP payload codecs/controller dispatch.
 
 ## Soon
 
@@ -49,5 +49,8 @@ slice, and local task.
   coordinator owns canonical result materialization/sealing and run-transcript projection while
   success, blocked, awaiting-quality-review, and manual-stop schemas remain unchanged. The 99-test
   harness group, focused bundle tests, characterization, Ruff, strict mypy, and all required
-  CI/security lanes passed. No frontend, runtime, or UI-owned files changed. The next
-  dependency-ready task is `W49-E2-S2-T1` for server-side UI job lifecycle extraction.
+  CI/security lanes passed. No frontend, runtime, or UI-owned files changed. `W49-E2-S2-T1`
+  completed in PR #603 and is present on `origin/main` at `058331b3`; the UI job registry/lifecycle
+  now has one canonical server-side owner, with two-project lifecycle isolation and the full 341
+  test CLI suite green. No static UI, frontend tests, or neighboring UI checkout files changed.
+  The next dependency-ready task is `W49-E2-S2-T2` for HTTP payload codecs/controller dispatch.

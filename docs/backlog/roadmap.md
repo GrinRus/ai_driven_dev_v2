@@ -786,7 +786,7 @@ item is `W49-E2-S2-T1` for server-side UI job lifecycle extraction.
 Primary output: server-side UI orchestration is decomposed without revisiting W47 presentation or
 changing its public behavior.
 
-- `W49-E2-S2-T1` (next) Extract UI job registry/lifecycle from `cli/ui.py`.
+- `W49-E2-S2-T1` (done) Extract UI job registry/lifecycle from `cli/ui.py`.
   - Output: project-scoped job registration, lookup, and lifecycle transitions move behind a
     focused CLI application-service module while existing HTTP and operator behavior remains
     unchanged.
@@ -797,6 +797,21 @@ changing its public behavior.
   - Dependencies: merged W47 UI PR, completed W49-E2-S1 decomposition, and a fresh
     `origin/main` baseline. Compare the final W47 diff before implementation and reslice if that
     work already owns any lifecycle output.
+  - Completion evidence: PR #603 merged to `origin/main` at `058331b3`; job state, bounded log
+    retention, cancellation, terminal evidence, and project/workspace projections now have one
+    focused owner in `aidd.cli.ui_jobs`, while `ui.py` retains compatible imports and routing.
+    Two-project isolation/ownership checks and the full CLI suite (341 tests) passed, along with
+    Ruff, strict mypy, and all required CI/security lanes. No static UI, frontend tests, or
+    neighboring UI checkout files changed.
+
+- `W49-E2-S2-T2` (next) Extract HTTP payload codecs/controller dispatch.
+  - Output: endpoint payload decoding, response encoding, and controller dispatch move behind a
+    focused CLI transport module without changing stable routes or status/body shapes.
+  - Scope: server-side CLI transport and contract tests; no `src/aidd/cli/static/**`,
+    `tests/frontend/**`, UI browser journeys, or neighboring UI checkout edits.
+  - Verification: endpoint contract fixtures preserve success, validation, not-found, and
+    explicit-failure response shapes across project contexts.
+  - Dependencies: W49-E2-S2-T1, the merged W47 UI baseline, and a fresh `origin/main`.
 
 | Task | Output | Dominant area | Main verification | Effort |
 | --- | --- | --- | --- | ---: |
