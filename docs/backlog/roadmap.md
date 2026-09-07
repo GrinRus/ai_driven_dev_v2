@@ -747,15 +747,18 @@ Dependencies: W49-E1-S1/T2/T4/T3 completion → `W49-E3-S1-T1` → `W49-E3-S1-T2
 
 #### Slice W49-E3-S2 — executable user-story traceability (`planned`)
 
-- `W49-E3-S2-T1` (next) Correct optional-frontmatter and superseded beta-audit wording.
+- `W49-E3-S2-T1` (done) Correct optional-frontmatter and superseded beta-audit wording.
   - Output: architecture and analysis documents agree with the current document contract and
     declared US-13 set.
   - Scope: `docs/architecture/` and `docs/analysis/`; no runtime or UI-owned paths.
   - Verification: documentation consistency checks reject stale optional-frontmatter or
     superseded beta-audit claims while preserving current product wording.
   - Dependencies: W49-E3-S1 completion.
+  - Completion evidence: PR #589 merged to `origin/main` at `9780f1c2`; 69 focused docs/planning
+    tests passed locally, and all required CI lanes passed after a transient browser-lane retry.
+    No runtime or UI-owned files changed.
 
-- `W49-E3-S2-T2` (planned) Define a structured US-01…US-13 traceability registry.
+- `W49-E3-S2-T2` (next) Define a structured US-01…US-13 traceability registry.
   - Output: each story links to its contracts, code boundaries, tests, scenarios, and evidence.
   - Scope: product traceability data and documentation checks; no runtime or UI-owned paths.
   - Verification: every referenced artifact exists and story IDs are unique.

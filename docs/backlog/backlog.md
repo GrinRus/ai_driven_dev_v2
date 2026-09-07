@@ -7,7 +7,7 @@ slice, and local task.
 
 ## Next
 
-- `W49-E3-S2-T1` — Correct optional-frontmatter and superseded beta-audit wording.
+- `W49-E3-S2-T2` — Define a structured US-01…US-13 traceability registry.
 
 ## Soon
 
@@ -49,5 +49,8 @@ slice, and local task.
   runtime or UI-owned files changed. `W49-E3-S1-T4` completed in PR #587 and is present on
   `origin/main` at `83db1f5c`; the roll-up and generic planning-integrity checks returned no
   errors, with the focused planning/docs suite passing 68 tests. No runtime or UI-owned files
-  changed. The next dependency-ready task is `W49-E3-S2-T1`; T2/T3 remain planned behind their
-  declared dependencies.
+  changed. `W49-E3-S2-T1` completed in PR #589 and is present on `origin/main` at `9780f1c2`;
+  its architecture/analysis wording and documentation consistency guard agree on optional
+  frontmatter and the current US-13 scope. The neighboring UI refactor remains read-only
+  reference state. No runtime or UI-owned files changed. The next dependency-ready task is
+  `W49-E3-S2-T2`; T3 remains planned behind T1/T2.
