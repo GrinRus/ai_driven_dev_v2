@@ -7,7 +7,7 @@ slice, and local task.
 
 ## Next
 
-- `W49-E3-S2-T3` — Generate and validate a byte-stable traceability view in CI.
+- `W49-E2-S1-T1` — Characterize public live-facade artifact and event ordering.
 
 ## Soon
 
@@ -57,4 +57,8 @@ slice, and local task.
   schema-versioned registry covers all 13 stories with contract, code, test, scenario, and
   evidence references, and the consistency guard verifies unique IDs plus repository-relative
   artifact existence. Local validation passed 181 focused docs/planning/quality tests; no runtime
-  or UI-owned files changed. The next dependency-ready task is `W49-E3-S2-T3`.
+  or UI-owned files changed. `W49-E3-S2-T3` completed in PR #593 and is present on `origin/main`
+  at `ebba859d`; its deterministic generator produces the checked-in Markdown view, rejects
+  missing or duplicate required references, and passed 77 focused traceability/docs/planning
+  tests plus all required CI/security lanes. No runtime or UI-owned files changed. The next
+  dependency-ready task is `W49-E2-S1-T1`.
