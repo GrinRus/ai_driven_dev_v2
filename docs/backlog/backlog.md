@@ -7,7 +7,7 @@ slice, and local task.
 
 ## Next
 
-- `W49-E3-S1-T3` — Add bounded-note and parent-status roll-up validation.
+- `W49-E3-S1-T4` — Reconcile current wave/epic/slice statuses mechanically.
 
 ## Soon
 
@@ -43,4 +43,7 @@ slice, and local task.
   neighboring UI refactor remains integrated by PR #574 at `45a1a8f7` and its checkout is
   read-only reference state. `W49-E3-S1-T2` completed in PR #583 and is present on `origin/main`
   at `8c2f6bfe`; the 509 historical reconciliation bullets are indexed in [the Git archive
-  index](reconciliation-history-index.md). The next dependency-ready task is `W49-E3-S1-T3`.
+  index](reconciliation-history-index.md). `W49-E3-S1-T3` completed in PR #585 and is present
+  on `origin/main` at `638d9aa`; its 68-test planning/docs suite validates duplicate current notes,
+  recursive parent roll-ups, stale completed parents, and parked/blocked child semantics. No
+  runtime or UI-owned files changed. The next dependency-ready task is `W49-E3-S1-T4`.

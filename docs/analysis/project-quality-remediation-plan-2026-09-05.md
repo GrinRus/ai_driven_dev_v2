@@ -40,8 +40,11 @@ Review/QA progression. Planning-contract task `W49-E3-S1-T1` is complete in PR #
 parent status roll-up, parked-child semantics, and merged-history archive authority are now
 explicit, with all required CI lanes green. Planning task `W49-E3-S1-T2` is complete in PR #583
 (`8c2f6bfe`): the 509 historical bullets are indexed at immutable Git revision `e46ea4c`, while
-the active backlog retains one bounded current note. The next promoted task is `W49-E3-S1-T3`,
-which owns executable planning validation only and must preserve the already-merged UI boundary.
+the active backlog retains one bounded current note. Planning-validation task `W49-E3-S1-T3` is
+complete in PR #585 (`638d9aa`): its focused 68-test suite covers duplicate current notes,
+recursive parent roll-ups, stale completed parents, and parked/blocked child semantics without
+touching runtime or UI-owned files. The next promoted task is `W49-E3-S1-T4`, which owns the
+mechanical roadmap status reconciliation and must preserve the already-merged UI boundary.
 
 ## Parent outcome decomposed
 
@@ -173,13 +176,14 @@ before lifecycle and evidence semantics stabilize. Recommended remediation order
    mode-specific permission copy and exact-run metadata;
 3. retain the completed scenario-only `W49-E1-S1-T3` evidence after confirming that its branch
    did not overlap the adjacent UI workstream;
-4. record `W49-E3-S1-T1` and `W49-E3-S1-T2` as complete, then promote only `W49-E3-S1-T3`;
+4. record `W49-E3-S1-T1`, `W49-E3-S1-T2`, and `W49-E3-S1-T3` as complete, then promote only
+   `W49-E3-S1-T4`;
 5. retain `W46-E1-S2-T4` and `W46-E2-S2-T4` for the W50 candidate matrix rather than deleting or
    duplicating them;
 6. keep provider/human acceptance parked until exact candidate freeze.
 
-The queue and roadmap now record T1/T2 completion and promote T3 as the next dependency-ready
-task; future promotions must continue through the same per-task delivery loop.
+The queue and roadmap now record T1/T2/T3 completion and promote T4 as the next
+dependency-ready task; future promotions must continue through the same per-task delivery loop.
 
 # Wave 48 — lifecycle and evidence truth
 
