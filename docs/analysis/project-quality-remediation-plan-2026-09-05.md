@@ -69,6 +69,18 @@ next promoted item was audited against current code: `W49-E2-S1-T2` is already s
 preexisting cleanup commit `4d99b3fd`, which removed the unreachable 14-function `_legacy_*`
 process island. It is recorded as done without a duplicate production edit. The next promoted
 task is `W49-E2-S1-T3`, extracting stage execution and inspection behind the characterized facade.
+`W49-E2-S1-T3` completed in PR #597 (`25b58943`): stage classification, public inspection-question
+detection, and callback-driven stage-loop coordination now have one focused harness owner. The
+terminal/blocked fixtures, boundary checks, characterization, Ruff, strict mypy, and all required
+CI/security lanes passed. `W49-E2-S1-T4` completed in PR #599 (`b5b3fa47`): HTTP probes, target
+selection, semantic classification, timeout handling, and operator-surface checks now have one
+focused frontend harness owner; the 96-test harness group and all required CI/security lanes
+passed. `W49-E2-S1-T5` completed in PR #601 (`71659ca0`): canonical result-bundle
+materialization/sealing and run-transcript projection moved behind a focused bundle coordinator;
+the 99-test harness group and all required CI/security lanes passed. None of these tasks touched
+frontend source, runtime adapters, or UI-owned paths. The next dependency-ready task is
+`W49-E2-S2-T1`, extracting the server-side UI job registry/lifecycle from `cli/ui.py` while
+preserving the merged W47 presentation boundary.
 
 ## Parent outcome decomposed
 
@@ -476,8 +488,12 @@ no frontend, report, runtime, or UI-owned files changed. T4 completed in PR #599
 `b5b3fa47`) with HTTP probes, target selection, semantic classification, timeout handling, and
 operator-surface checks extracted into one focused frontend harness module. Its deterministic
 probe-state matrix, 96-test harness group, characterization, Ruff, strict mypy, and full required
-CI/security lanes passed; no UI-owned files changed. T5 is now the next dependency-ready
-implementation task.
+CI/security lanes passed; no UI-owned files changed. T5 completed in PR #601 (`71659ca0`) with
+canonical result-bundle materialization/sealing and run-transcript projection extracted into one
+focused bundle coordinator. Its success, blocked, awaiting-quality-review, and manual-stop
+fixtures, 99-test harness group, characterization, Ruff, strict mypy, and full required
+CI/security lanes passed; no frontend, runtime, or UI-owned files changed. The next
+dependency-ready implementation task is `W49-E2-S2-T1`.
 
 ### Slice W49-E2-S2 — post-Focus-Canvas service-boundary stabilization
 

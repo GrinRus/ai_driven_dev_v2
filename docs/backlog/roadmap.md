@@ -694,11 +694,11 @@ runtime-neutral core.
 
 Dependencies: W48 exit gate → `W49-E1-S2-T1` → `W49-E1-S2-T2` → `W49-E1-S2-T3` →
 `W49-E1-S2-T4` → `W49-E1-S2-T5`; all W49-E1 boundary tasks are complete, and the active queue
-item is `W49-E2-S1-T5` for bundle/report coordination extraction.
+item is `W49-E2-S2-T1` for server-side UI job lifecycle extraction.
 
 ### Epic W49-E2 — behavior-preserving hotspot reduction (`planned`)
 
-#### Slice W49-E2-S1 — live harness decomposition (`planned`)
+#### Slice W49-E2-S1 — live harness decomposition (`done`)
 
 - `W49-E2-S1-T1` (done) Characterize public live-facade artifact and event ordering.
   - Output: a deterministic characterization records the normalized artifacts and event order
@@ -763,7 +763,7 @@ item is `W49-E2-S1-T5` for bundle/report coordination extraction.
     packaged-browser, build, CodeQL, Scorecard, and dependency-review lanes passed. No UI-owned
     files changed.
 
-- `W49-E2-S1-T5` (next) Extract bundle/report coordination behind the facade.
+- `W49-E2-S1-T5` (done) Extract bundle/report coordination behind the facade.
   - Output: result-bundle materialization, report finalization, and terminal artifact coordination
     move behind a focused harness report module while success, blocked, and manual-stop bundles
     retain their current schemas and evidence ownership.
@@ -774,6 +774,52 @@ item is `W49-E2-S1-T5` for bundle/report coordination extraction.
     provider credentials.
   - Dependencies: `W49-E2-S1-T4`, stable W48 evidence semantics, and the merged W47 UI
     compatibility baseline.
+  - Completion evidence: PR #601 merged to `origin/main` at `71659ca0`; canonical result-bundle
+    materialization/sealing and run-transcript serialization now have one focused owner behind
+    the live facade. Success, blocked, awaiting-quality-review, and manual-stop fixtures retain
+    their normalized artifacts and schemas; focused bundle tests, the 99-test harness group,
+    characterization, Ruff, strict mypy, and all required CI/security lanes passed. No frontend,
+    runtime, or UI-owned files changed.
+
+#### Slice W49-E2-S2 — post-Focus-Canvas service-boundary stabilization (`planned`)
+
+Primary output: server-side UI orchestration is decomposed without revisiting W47 presentation or
+changing its public behavior.
+
+- `W49-E2-S2-T1` (next) Extract UI job registry/lifecycle from `cli/ui.py`.
+  - Output: project-scoped job registration, lookup, and lifecycle transitions move behind a
+    focused CLI application-service module while existing HTTP and operator behavior remains
+    unchanged.
+  - Scope: server-side UI orchestration and lifecycle tests; no `src/aidd/cli/static/**`,
+    `tests/frontend/**`, UI browser journeys, or neighboring UI checkout edits.
+  - Verification: two-project job lifecycle fixtures preserve isolation, cleanup, and terminal
+    state behavior; the post-W47 CLI/frontend/browser compatibility baseline remains green.
+  - Dependencies: merged W47 UI PR, completed W49-E2-S1 decomposition, and a fresh
+    `origin/main` baseline. Compare the final W47 diff before implementation and reslice if that
+    work already owns any lifecycle output.
+
+| Task | Output | Dominant area | Main verification | Effort |
+| --- | --- | --- | --- | ---: |
+| `W49-E2-S2-T1` | Extract UI job registry/lifecycle from `cli/ui.py`. | CLI application service | Two-project job lifecycle tests preserve isolation. | 1.5d |
+| `W49-E2-S2-T2` | Extract HTTP payload codecs/controller dispatch. | CLI transport | Endpoint contract suite preserves status/body shapes. | 2d |
+| `W49-E2-S2-T3` | Replace dashboard `_next_action` branching with ordered typed rules. | Core dashboard evidence | Full state matrix yields exactly one deterministic action. | 1d |
+
+Dependencies: merged W47 UI PR and a green post-merge CLI/frontend/browser compatibility baseline.
+Before promoting each task, compare it with the final W47 diff. If W47 already produces the
+output, record that evidence and reslice only the remaining hotspot; do not repeat the refactor.
+
+#### Slice W49-E2-S3 — complexity-tail ratchet (`planned`)
+
+| Task | Output | Dominant area | Main verification | Effort |
+| --- | --- | --- | --- | ---: |
+| `W49-E2-S3-T1` | Add a reviewed complexity baseline and no-new-E/F ratchet. | Quality tooling | Synthetic new E/F block fails the check. | 1d |
+| `W49-E2-S3-T2` | Decompose `build_task_flow_checkpoint`. | Task checkpoint | Complexity is C or lower and checkpoint fixtures are byte-equivalent. | 2d |
+| `W49-E2-S3-T3` | Decompose `_validate_scenario_contract`. | Scenario validation | Complexity is C or lower and invalid-manifest matrix is unchanged. | 1.5d |
+| `W49-E2-S3-T4` | Decompose `run_single_stage_orchestration` after W48. | Core stage lifecycle | Transition matrix remains green and complexity is C or lower. | 2d |
+| `W49-E2-S3-T5` | Decompose the Codex live transport. | Codex adapter | Codex adapter passes the bytes/events/timeout/cancel matrix. | 1.25d |
+| `W49-E2-S3-T6` | Decompose the Qwen live transport. | Qwen adapter | Qwen adapter passes the bytes/events/timeout/cancel matrix. | 1.25d |
+
+Dependencies: T1 first; every remaining task is independent and behavior-preserving.
 
 ### Epic W49-E3 — planning and documentation truth (`done`)
 
