@@ -1461,7 +1461,7 @@ def test_operator_ownership_docs_cover_stable_beta_contracts() -> None:
         "`audit_history` rows",
     ):
         assert needle in operator_frontend
-    assert "## 4.1 Operator UI grouping" in project_set
+    assert "## 4.2 Operator UI grouping" in project_set
     assert "`outside-project-set`" in project_set
     assert "unrelated repositories must be opened through separate UI sessions" in project_set
 
@@ -1512,6 +1512,34 @@ def test_runtime_log_docs_match_the_supported_cli_contract() -> None:
         assert "`aidd run logs`" in document
         assert "`--tail --lines N`" in document
         assert "separate audit artifacts" in document
+
+
+def test_project_set_docs_make_permission_mode_boundary_explicit() -> None:
+    repo_root = _repo_root()
+    project_set = (
+        repo_root / "docs" / "architecture" / "project-set-workspace.md"
+    ).read_text(encoding="utf-8")
+    target_architecture = (
+        repo_root / "docs" / "architecture" / "target-architecture.md"
+    ).read_text(encoding="utf-8")
+    user_stories = (
+        repo_root / "docs" / "product" / "user-stories.md"
+    ).read_text(encoding="utf-8")
+
+    us12 = user_stories.split("### US-12 — project-set workflow", 1)[1].split(
+        "### US-13 —", 1
+    )[0]
+    assert "configured permission mode" in us12
+    assert "`full-access`" in us12
+    assert "brokered or isolated modes" in us12
+    assert "execution stays bounded to the declared project set" not in us12
+
+    assert "## 4.1 Mode-specific capability matrix" in project_set
+    for mode in ("`full-access`", "`brokered`", "`plan`", "`deny-unapproved`"):
+        assert mode in project_set
+    assert "aggregate progression fails closed" in project_set
+    assert "instead of promising containment" in project_set
+    assert "project-set boundary claims are permission-mode specific" in target_architecture
 
     assert "The CLI should support three log modes" not in target_architecture
     assert "`normalized`: show AIDD-normalized events" not in target_architecture

@@ -138,7 +138,10 @@ Success signals:
 
 - project or package roots are declared before execution and remain visible in run artifacts,
 - stage artifacts, questions, logs, and validation evidence preserve project ownership and cross-project links,
-- execution stays bounded to the declared project set while runtime-specific discovery remains outside core workflow semantics.
+- boundary behavior follows the configured permission mode: `full-access` uses the declared set
+  for attribution, post-run detection, and fail-closed progression after an outside-set change,
+  while brokered or isolated modes prevent or reject outside-set operations;
+- runtime-specific discovery never silently expands the declared project set.
 
 ### US-13 — incremental task execution
 
