@@ -91,6 +91,7 @@ class RunMetadataSummary:
     created_at_utc: str
     updated_at_utc: str
     stages: tuple[RunStageMetadataSummary, ...]
+    runtime_permission_policy: str | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -271,6 +272,17 @@ def resolve_run_metadata_summary(
     repository_git_sha = manifest_payload["repository_git_sha"]
     adapter_id = str(manifest_payload["adapter_id"]).strip()
     resource_revision = manifest_payload["resource_revision"]
+    config_snapshot = manifest_payload.get("config_snapshot")
+    raw_runtime_permission_policy = (
+        config_snapshot.get("runtime_permission_policy")
+        if isinstance(config_snapshot, dict)
+        else None
+    )
+    runtime_permission_policy = (
+        raw_runtime_permission_policy.strip()
+        if isinstance(raw_runtime_permission_policy, str) and raw_runtime_permission_policy.strip()
+        else None
+    )
     prompt_pack_provenance = [
         PromptPackProvenance(path=entry["path"], sha256=entry["sha256"])
         for entry in manifest_payload["prompt_pack_provenance"]
@@ -336,6 +348,7 @@ def resolve_run_metadata_summary(
         created_at_utc=created_at_utc,
         updated_at_utc=updated_at_utc,
         stages=tuple(stage_summaries),
+        runtime_permission_policy=runtime_permission_policy,
     )
 
 

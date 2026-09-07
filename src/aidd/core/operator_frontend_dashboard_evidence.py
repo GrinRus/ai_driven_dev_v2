@@ -290,6 +290,7 @@ def _run_summary(metadata: RunMetadataSummary) -> OperatorRunSummary:
             reason=metadata.archive.reason,
             source=metadata.archive.source,
         ),
+        runtime_permission_policy=metadata.runtime_permission_policy,
     )
 
 

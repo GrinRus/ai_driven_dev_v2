@@ -423,6 +423,11 @@ Current W20 implementation status:
 - when a project-set declaration is present, Implement Review groups source diff rows by
   declared root labels and flags `outside-project-set` source changes without changing
   single-project clients that ignore the optional grouping fields;
+- the dashboard run summary retains the exact `runtime_permission_policy` from the run
+  manifest's immutable config snapshot. Implement Review uses that value for project-set copy:
+  `full-access` describes detected and attributed changes without promising prevention, while
+  brokered, plan, and deny-unapproved describe preventive containment or rejection only when the
+  adapter contract supports it; a missing value is presented as unknown and never as contained;
 - the overview cockpit includes Prompt / Workflow Accountability cards backed by
   `/api/run/accountability`, showing prompt provenance, config snapshot keys, runtime id,
   stage graph, Git SHA, and unavailable-provenance diagnostics;

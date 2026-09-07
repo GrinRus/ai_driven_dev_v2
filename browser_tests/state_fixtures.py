@@ -144,6 +144,7 @@ def _create_run(
     run_id: str,
     stage_target: str = "qa",
     lineage: dict[str, object] | None = None,
+    permission_policy: str = "full-access",
 ) -> None:
     create_run_manifest(
         workspace_root=workspace_root,
@@ -151,7 +152,10 @@ def _create_run(
         run_id=run_id,
         runtime_id="generic-cli",
         stage_target=stage_target,
-        config_snapshot={"mode": "browser-fixture"},
+        config_snapshot={
+            "mode": "browser-fixture",
+            "runtime_permission_policy": permission_policy,
+        },
         workflow_stage_start="idea",
         workflow_stage_end="qa",
         lineage=lineage,
@@ -480,6 +484,7 @@ def build_browser_state_fixture(
     work_item: str = WORK_ITEM,
     run_id: str = RUN_ID,
     route_intent_override: str | None = None,
+    permission_policy: str = "full-access",
 ) -> BrowserStateFixture:
     project_root.mkdir(parents=True, exist_ok=True)
     if state == "setup":
@@ -554,7 +559,13 @@ def build_browser_state_fixture(
                 }
             ],
         }
-    _create_run(workspace_root, work_item=work_item, run_id=run_id, lineage=lineage)
+    _create_run(
+        workspace_root,
+        work_item=work_item,
+        run_id=run_id,
+        lineage=lineage,
+        permission_policy=permission_policy,
+    )
     if state == "history":
         _implementation_fixture(
             project_root=project_root,

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
+import pytest
 from playwright.sync_api import Page, sync_playwright
 
 from browser_tests.browser_harness import (
@@ -82,6 +83,81 @@ def test_implementation_recovery_preserves_success_and_repository_evidence(
                 assert repository.get_by_role("button", name="Proceed to review").is_disabled()
                 _assert_gate(page, viewport)
                 browser_page.diagnostics.assert_clean()
+
+
+@pytest.mark.parametrize("viewport", ((1280, 900), (390, 844)))
+@pytest.mark.parametrize(
+    ("permission_policy", "expected_title", "expected_detail"),
+    (
+        (
+            "full-access",
+            "Detected after execution",
+            "does not prevent runtime operations",
+        ),
+        (
+            "brokered",
+            "Preventive containment",
+            "progression remains blocked",
+        ),
+    ),
+)
+def test_implementation_review_project_set_copy_matches_run_permission_mode(
+    tmp_path: Path,
+    viewport: tuple[int, int],
+    permission_policy: str,
+    expected_title: str,
+    expected_detail: str,
+) -> None:
+    fixture = build_browser_state_fixture(
+        tmp_path / f"project-set-copy-{permission_policy}-{viewport[0]}",
+        "implementation-finalized",
+        permission_policy=permission_policy,
+    )
+    project_set_root = fixture.project_root / "src" / "contained"
+    project_set_root.mkdir(parents=True)
+    project_set_context = (
+        fixture.workspace_root
+        / "workitems"
+        / (fixture.work_item or "")
+        / "context"
+        / "project-set.md"
+    )
+    project_set_context.write_text(
+        "# Project set\n\n"
+        "## Projects\n\n"
+        "| Project id | Root | Role |\n"
+        "| --- | --- | --- |\n"
+        "| `contained` | `src/contained` | `primary` |\n",
+        encoding="utf-8",
+    )
+
+    with (
+        sync_playwright() as playwright,
+        operator_browser_harness(
+            fixture.project_root,
+            playwright,
+            work_item=fixture.work_item,
+        ) as harness,
+        harness.open_page(viewport) as browser_page,
+    ):
+        page = browser_page.page
+        page.goto(
+            f"{harness.url}?mode=studio&work_item={fixture.work_item}"
+            f"&run_id={fixture.run_id}&stage=implement",
+            wait_until="domcontentloaded",
+        )
+        wait_for_work_item_surface(page, fixture.work_item or "")
+        page.wait_for_function("eval('selectedRuntimeReady()')", timeout=15_000)
+        _open_implementation(page)
+
+        notice = page.locator("[data-project-set-boundary-notice]")
+        notice.wait_for(state="visible")
+        assert notice.get_attribute("data-project-set-boundary-mode") == permission_policy
+        assert notice.get_attribute("data-project-set-boundary-state") == "outside"
+        assert expected_title in notice.inner_text()
+        assert expected_detail in notice.inner_text()
+        _assert_gate(page, viewport)
+        browser_page.diagnostics.assert_clean()
 
 
 def test_finalization_retry_is_the_only_review_eligibility_boundary(tmp_path: Path) -> None:

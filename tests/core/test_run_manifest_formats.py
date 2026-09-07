@@ -130,3 +130,21 @@ def test_current_manifest_round_trip_preserves_nullable_provenance_and_default_a
     assert summary.workflow_stage_start is None
     assert summary.workflow_stage_end is None
     assert summary.adapter_id == "generic-cli"
+
+
+def test_run_metadata_summary_retains_exact_permission_policy_from_manifest(
+    tmp_path: Path,
+) -> None:
+    workspace = tmp_path / ".aidd"
+    create_run_manifest(
+        workspace,
+        "WI-1",
+        "run-1",
+        "generic-cli",
+        "implement",
+        {"runtime_permission_policy": " brokered "},
+    )
+
+    summary = resolve_run_metadata_summary(workspace, "WI-1", run_id="run-1")
+
+    assert summary.runtime_permission_policy == "brokered"
