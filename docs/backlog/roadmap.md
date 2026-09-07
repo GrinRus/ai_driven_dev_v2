@@ -722,14 +722,18 @@ queue item is the promoted W49-E3 planning-hygiene task.
     still searchable in the roadmap or history. PR #583 (`8c2f6bfe`) adds the archive index for
     the 509 bullets, including its immutable revision and verified SHA-256 digest.
 
-- `W49-E3-S1-T3` (next) Add bounded-note and parent-status roll-up validation.
+- `W49-E3-S1-T3` (done) Add bounded-note and parent-status roll-up validation.
   - Output: planning integrity checks reject duplicate current notes and stale completed parents,
     while applying the explicit parked-child rule.
   - Scope: planning-integrity tests and their fixtures; no runtime or UI-owned paths.
   - Verification: duplicate-note, stale-parent, done, planned, parked, and blocked examples each
     produce the documented result.
+  - Completion evidence: PR #585 merged to `origin/main` at `638d9aa`; planning-integrity now
+    exposes recursive parent roll-up validation and duplicate current-note detection. The focused
+    planning/docs suite passed (68 tests), Ruff and diff checks passed, and no runtime or UI-owned
+    files changed.
 
-- `W49-E3-S1-T4` (planned) Reconcile current wave/epic/slice statuses mechanically.
+- `W49-E3-S1-T4` (next) Reconcile current wave/epic/slice statuses mechanically.
   - Output: current roadmap parent statuses agree with their child task algebra and active queue.
   - Scope: `docs/backlog/roadmap.md` and `docs/backlog/backlog.md`; no runtime or UI-owned paths.
   - Verification: the roll-up checker reports no mismatch on the current roadmap and queue.
