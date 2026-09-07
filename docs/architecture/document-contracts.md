@@ -20,7 +20,7 @@ A document contract defines:
 
 - the path pattern,
 - the document purpose,
-- required frontmatter,
+- optional frontmatter metadata and any fields a specific contract requires,
 - required sections,
 - required links or references,
 - cross-document dependencies,
@@ -132,7 +132,8 @@ Example for `plan.md`:
 Verifies:
 
 - file existence,
-- frontmatter presence,
+- frontmatter syntax and any contract-declared fields (frontmatter is optional unless the
+  contract explicitly requires it),
 - required headings,
 - required subsections,
 - obvious malformed structure.

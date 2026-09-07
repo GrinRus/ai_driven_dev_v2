@@ -235,6 +235,8 @@ def test_artifact_ownership_docs_and_prompt_packs_are_consistent() -> None:
         in stage_result_contract
     )
 
+    assert "frontmatter is optional unless the" in document_contracts.lower()
+
     for stage in STAGES:
         stage_contract = (repo_root / "contracts" / "stages" / f"{stage}.md").read_text(
             encoding="utf-8"
@@ -1518,6 +1520,26 @@ def test_operator_ownership_docs_cover_stable_beta_contracts() -> None:
     ):
         assert needle in release_checklist
     assert "Claude Code remains `blocked/auth-env`" not in release_checklist
+
+
+def test_frontmatter_and_beta_audit_scope_match_current_product_contract() -> None:
+    repo_root = _repo_root()
+    document_contracts = (
+        repo_root / "docs" / "architecture" / "document-contracts.md"
+    ).read_text(encoding="utf-8")
+    target_architecture = (
+        repo_root / "docs" / "architecture" / "target-architecture.md"
+    ).read_text(encoding="utf-8")
+    audit = (
+        repo_root / "docs" / "analysis" / "project-quality-flow-audit-2026-09-05.md"
+    ).read_text(encoding="utf-8")
+
+    assert "frontmatter is optional" in document_contracts.lower()
+    assert "contract explicitly requires it" in document_contracts.lower()
+    assert "frontmatter syntax and declared fields when present" in target_architecture
+    assert "Resolution note — 2026-09-07" in audit
+    assert "former US-12-only beta-readiness audit is retired historical evidence" in audit
+    assert "`US-13`" in audit
 
 
 def test_runtime_log_docs_match_the_supported_cli_contract() -> None:

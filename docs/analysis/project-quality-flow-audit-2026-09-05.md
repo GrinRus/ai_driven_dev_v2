@@ -461,6 +461,12 @@ retrievable location with digests.
 Reconcile the wording and add a small generated traceability table. Do not solve this with more
 free-form narrative.
 
+Resolution note — 2026-09-07: current architecture guidance now treats frontmatter as optional
+metadata unless a contract explicitly requires it, and structural validation checks syntax and
+declared fields under that rule. The product source and future beta gate include `US-13`; the
+former US-12-only beta-readiness audit is retired historical evidence, not a current acceptance
+claim. Executable story traceability remains the follow-up in `W49-E3-S2-T2` and `T3`.
+
 ### F-17 — assurance breadth has a few ungoverned edges (`P3`, E4)
 
 The default Python suite under `tests/` is large and passed in full, so this is not a claim that

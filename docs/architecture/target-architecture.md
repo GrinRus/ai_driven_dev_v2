@@ -374,7 +374,7 @@ A contract specifies:
 - path patterns,
 - required input documents,
 - required output documents,
-- required frontmatter fields,
+- optional frontmatter metadata and any contract-declared required fields,
 - required headings/sections,
 - required cross-references,
 - validation rules,
@@ -434,7 +434,8 @@ Validation is layered:
 
 ### 11.1 Structural validation
 
-Checks file existence, frontmatter presence, required headings, section order when relevant, and obvious formatting issues.
+Checks file existence, frontmatter syntax and declared fields when present (or explicitly required
+by the contract), required headings, section order when relevant, and obvious formatting issues.
 
 ### 11.2 Semantic validation
 
