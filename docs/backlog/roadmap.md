@@ -42,7 +42,8 @@ child has an explicit `done` marker and the corresponding completion evidence is
 
 The current-state authorities are separate from the archive: `roadmap.md` is canonical for
 hierarchy, task definitions, dependencies, and statuses, while `backlog.md` is the exact
-projection of actionable local-task statuses (`next`, `soon`, and `parked`). Completed task
+projection of non-done queue statuses (`next`, `soon`, and `parked`), with `parked` reserved
+for deferred rather than actionable work. Completed task
 definitions, dated reconciliation notes, and their evidence are archived by the merged Git
 history reachable from `origin/main` (PR/commit SHAs are the retrieval keys). Unmerged
 branches, working trees, and historical prose never override the current roadmap or queue;
