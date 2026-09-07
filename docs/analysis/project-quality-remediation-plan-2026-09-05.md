@@ -468,7 +468,12 @@ Dependencies: T1 → T2 → T3/T4 → T5.
 
 Dependencies: T1 → T2 → T3 → T4/T5. Begin only after W48 evidence semantics are stable and
 `W47-E1-S4-T2` has reconciled the final Focus Canvas journeys; otherwise the frontend-probe
-characterization would be stale before extraction starts.
+characterization would be stale before extraction starts. T3 completed in PR #597 (merged
+`25b58943`) with stage classification, public inspection-question detection, and callback-driven
+stage-loop coordination extracted into a focused harness module. Its terminal/blocked fixtures,
+boundary tests, characterization, Ruff, strict mypy, and full required CI/security lanes passed;
+no frontend, report, runtime, or UI-owned files changed. T4 is now the next dependency-ready
+implementation task.
 
 ### Slice W49-E2-S2 — post-Focus-Canvas service-boundary stabilization
 
