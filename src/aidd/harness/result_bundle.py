@@ -279,6 +279,7 @@ def write_harness_metadata(
         "scenario_id": scenario.scenario_id,
         "status": normalized_status,
         "task": scenario.task,
+        "expected_exit_code": scenario.run.expected_exit_code,
         "work_item": normalized_work_item,
         "stage_scope": {
             "start": scenario.run.stage_start,

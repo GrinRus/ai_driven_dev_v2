@@ -90,6 +90,7 @@ class ScenarioRunConfig:
     interview_required: bool
     max_remediation_cycles: int = 3
     no_progress_timeout_minutes: int | None = None
+    expected_exit_code: int = 0
 
 
 @dataclass(frozen=True)
@@ -386,6 +387,13 @@ def _to_run_config(raw: dict[str, Any]) -> ScenarioRunConfig:
     limits = raw.get("limits")
     interview = raw.get("interview")
     runtime_targets_raw = raw.get("runtime_targets")
+    expected_exit_code = _to_optional_int(payload=raw, key="expected_exit_code")
+    if expected_exit_code is None:
+        expected_exit_code = 0
+    if expected_exit_code < 0:
+        raise ScenarioManifestError(
+            "Scenario manifest key 'expected_exit_code' must be zero or a positive integer."
+        )
 
     if isinstance(stage_scope, dict):
         stage_start = str(stage_scope.get("start", "")).strip() or None
@@ -447,6 +455,7 @@ def _to_run_config(raw: dict[str, Any]) -> ScenarioRunConfig:
         max_remediation_cycles=max_remediation_cycles,
         no_progress_timeout_minutes=no_progress_timeout_minutes,
         interview_required=interview_required,
+        expected_exit_code=expected_exit_code,
     )
 
 

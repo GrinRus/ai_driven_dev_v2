@@ -166,6 +166,16 @@ def test_write_scenario_verdict_markdown_persists_file(tmp_path: Path) -> None:
         ),
         (
             HarnessOutcome(
+                aidd_exit_code=2,
+                verification_failed=False,
+                blocked_by_questions=False,
+                infrastructure_failure=False,
+                expected_aidd_exit_code=2,
+            ),
+            "pass",
+        ),
+        (
+            HarnessOutcome(
                 aidd_exit_code=0,
                 verification_failed=True,
                 blocked_by_questions=False,

@@ -57,7 +57,7 @@ The maintained set must cover these buckets without turning the matrix into a fu
 | Bucket | Required coverage | Maintained scenarios |
 | --- | --- | --- |
 | deterministic stage | `small + ci` | `AIDD-SMOKE-001` |
-| deterministic workflow | `medium + ci` | `AIDD-DETERMINISTIC-001`, `AIDD-DETERMINISTIC-003`, `AIDD-DETERMINISTIC-004` |
+| deterministic workflow | `medium + ci` | `AIDD-DETERMINISTIC-001`, `AIDD-DETERMINISTIC-003`, `AIDD-DETERMINISTIC-004`, `AIDD-DETERMINISTIC-007`, `AIDD-DETERMINISTIC-008` |
 | deterministic workflow | `large + manual` | `AIDD-DETERMINISTIC-002` |
 | resilience regression | `small + manual` | `AIDD-DETERMINISTIC-005` |
 | repair-extension resilience | `small + manual` | `AIDD-DETERMINISTIC-006` |
@@ -145,6 +145,8 @@ Qwen when local auth is ready.
 | `AIDD-DETERMINISTIC-002` | `harness/scenarios/deterministic/minimal-python-full-workflow.yaml` | `deterministic-workflow` | `large` | n/a | `manual` | `generic-cli` | `generic-cli`, `claude-code` | `fixture-seed` |
 | `AIDD-DETERMINISTIC-003` | `harness/scenarios/deterministic/project-set-plan-context.yaml` | `deterministic-workflow` | `medium` | n/a | `ci` | `generic-cli` | `generic-cli` | `fixture-seed` |
 | `AIDD-DETERMINISTIC-004` | `harness/scenarios/deterministic/minimal-python-task-execution.yaml` | `deterministic-workflow` | `medium` | n/a | `ci` | `generic-cli` | `generic-cli` | `fixture-seed` |
+| `AIDD-DETERMINISTIC-007` | `harness/scenarios/deterministic/project-set-implementation-positive.yaml` | `deterministic-workflow` | `medium` | n/a | `ci` | `generic-cli` | `generic-cli` | `fixture-seed` |
+| `AIDD-DETERMINISTIC-008` | `harness/scenarios/deterministic/project-set-implementation-outside.yaml` | `deterministic-workflow` | `medium` | n/a | `ci` | `generic-cli` | `generic-cli` | `fixture-seed` |
 | `AIDD-DETERMINISTIC-005` | `harness/scenarios/deterministic/w43-resilience-scenarios.yaml` | `deterministic-stage` | `small` | n/a | `manual` | `generic-cli` | `generic-cli` | `fixture-seed` |
 | `AIDD-DETERMINISTIC-006` | `harness/scenarios/deterministic/w43-repair-extension-scenarios.yaml` | `deterministic-stage` | `small` | n/a | `manual` | `generic-cli` | `generic-cli` | `fixture-seed` |
 | `AIDD-LIVE-004` | `harness/scenarios/live/httpx-cli-docs-sync.yaml` | `live-full-flow` | `small` | `flow-regression` | `manual` | `codex` | `codex`, `qwen` | `authored-task-pool` |
@@ -168,6 +170,12 @@ evidence for ten scenarios.
 `AIDD-DETERMINISTIC-006` is the provider-free repair-extension lane. It exercises one-shot
 success and repeated failure, manual-fix prevalidation, stale evidence, downstream guards, a
 second-grant rejection, Request Change separation, and immutable prior-attempt artifacts.
+
+`AIDD-DETERMINISTIC-007` and `AIDD-DETERMINISTIC-008` are the provider-free project-set
+implementation lane. The positive scenario changes one file under each declared root and requires
+aggregate finalization to succeed. The negative scenario changes the web root plus an intentional
+outside-root path, expects the fail-closed exit code, and verifies exact path/task attribution in
+`outside-project-set.md` while Review and QA remain absent.
 
 ## Feature Selection Policy
 

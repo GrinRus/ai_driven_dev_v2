@@ -32,6 +32,7 @@ class HarnessOutcome:
     verification_failed: bool
     blocked_by_questions: bool
     infrastructure_failure: bool
+    expected_aidd_exit_code: int = 0
 
 
 def _normalize_required_field(*, field_name: str, value: str) -> str:
@@ -80,7 +81,10 @@ def map_harness_outcome_to_verdict_status(outcome: HarnessOutcome) -> VerdictSta
         return "infra-fail"
     if outcome.blocked_by_questions:
         return "blocked"
-    if outcome.aidd_exit_code == 0 and not outcome.verification_failed:
+    if (
+        outcome.aidd_exit_code == outcome.expected_aidd_exit_code
+        and not outcome.verification_failed
+    ):
         return "pass"
     return "fail"
 

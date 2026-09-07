@@ -615,3 +615,25 @@ def test_project_set_deterministic_scenario_declares_two_root_context_checks() -
     assert any("`web`" in command for command in scenario.verify.commands)
     assert any("artifact-index.json" in command for command in scenario.verify.commands)
     assert any("input-bundle.md" in command for command in scenario.verify.commands)
+
+
+def test_project_set_implementation_scenarios_declare_expected_outcomes() -> None:
+    positive = load_scenario(
+        Path("harness/scenarios/deterministic/project-set-implementation-positive.yaml")
+    )
+    negative = load_scenario(
+        Path("harness/scenarios/deterministic/project-set-implementation-outside.yaml")
+    )
+
+    assert positive.scenario_id == "AIDD-DETERMINISTIC-007"
+    assert positive.run.expected_exit_code == 0
+    assert positive.run.stage_end == "implement"
+    assert any("services/api/project-marker.py" in command for command in positive.verify.commands)
+    assert any("apps/web/project-marker.js" in command for command in positive.verify.commands)
+
+    assert negative.scenario_id == "AIDD-DETERMINISTIC-008"
+    assert negative.run.expected_exit_code == 2
+    assert negative.run.stage_end == "implement"
+    verification = "\n".join(negative.verify.commands)
+    assert "outside-project-set.md" in verification
+    assert "rogue-marker.txt" in verification

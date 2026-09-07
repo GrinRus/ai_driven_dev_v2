@@ -1,0 +1,80 @@
+id: AIDD-DETERMINISTIC-008
+scenario_class: deterministic-workflow
+feature_size: medium
+automation_lane: ci
+canonical_runtime: generic-cli
+expected_exit_code: 2
+repo:
+  url: harness/fixtures/minimal-python
+objective: Prove that aggregate implementation finalization rejects an outside-project-set change.
+task: Execute dependency-ordered implementation changes with one intentional outside-root write and
+  retain the exact fail-closed evidence.
+stage_scope:
+  start: idea
+  end: implement
+setup:
+  commands:
+  - mkdir -p services/api apps/web
+  - |-
+    cat > aidd.example.toml <<'TOML'
+    [workspace]
+    root = ".aidd"
+
+    [runtime.generic_cli]
+    command = "python3 ../aidd_fixture_runtime.py"
+
+    [[project_set.projects]]
+    id = "api"
+    root = "services/api"
+
+    [[project_set.projects]]
+    id = "web"
+    root = "apps/web"
+    TOML
+aidd_invocation:
+  work_item: WI-DETERMINISTIC-PROJECT-SET-IMPLEMENT-NEGATIVE
+  expected_stage_scope:
+    start: idea
+    end: implement
+feature_source:
+  mode: fixture-seed
+  selection_policy: fixture-owned
+  fixture_path: harness/fixtures/minimal-python
+  seed_id: minimal-python-project-set-implementation-outside
+  summary: Use the fixture runtime to add a web-root change plus an intentional outside-root probe.
+verify:
+  commands:
+  - test -f services/api/project-marker.py
+  - test -f apps/web/project-marker.js
+  - test -f outside/rogue-marker.txt
+  - |-
+    python - <<'PY'
+    import json
+    from pathlib import Path
+
+    runs_root = Path(".aidd/reports/runs/WI-DETERMINISTIC-PROJECT-SET-IMPLEMENT-NEGATIVE")
+    runs = sorted(path for path in runs_root.glob("run-*") if path.is_dir())
+    assert runs, "missing run evidence"
+    run_root = runs[-1]
+    finalization_root = run_root / "stages/implement/finalization/attempts"
+    attempts = sorted(path for path in finalization_root.glob("attempt-*") if path.is_dir())
+    assert attempts, "missing aggregate finalization evidence"
+    attempt = attempts[-1]
+    finalization_state = json.loads((attempt / "finalization-state.json").read_text())
+    assert finalization_state["status"] == "failed"
+    evidence = (attempt / "outside-project-set.md").read_text()
+    assert "`outside/rogue-marker.txt`" in evidence
+    assert "`TL-2`" in evidence
+    assert not (run_root / "stages/review/output").exists()
+    assert not (run_root / "stages/qa/output").exists()
+    PY
+pass_conditions:
+- The API and web roots retain their source changes.
+- Aggregate finalization exits non-zero and persists exact outside-root path and task attribution.
+- Review and QA do not progress after the fail-closed finalization boundary.
+limits:
+  timeout_minutes: 10
+interview:
+  required: false
+runtime_targets:
+- generic-cli
