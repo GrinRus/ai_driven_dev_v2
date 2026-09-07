@@ -41,4 +41,6 @@ slice, and local task.
   `2a80f526`. The parent-status algebra, parked-child rule, and merged-history archive
   authority passed the full required CI lanes, including packaged UI browser acceptance; the
   neighboring UI refactor remains integrated by PR #574 at `45a1a8f7` and its checkout is
-  read-only reference state. The next dependency-ready task is `W49-E3-S1-T2`.
+  read-only reference state. The 509 historical reconciliation bullets are indexed in
+  [the Git archive index](reconciliation-history-index.md); the next dependency-ready task is
+  `W49-E3-S1-T2`.
