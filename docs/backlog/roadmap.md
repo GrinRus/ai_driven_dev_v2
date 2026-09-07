@@ -694,7 +694,7 @@ runtime-neutral core.
 
 Dependencies: W48 exit gate → `W49-E1-S2-T1` → `W49-E1-S2-T2` → `W49-E1-S2-T3` →
 `W49-E1-S2-T4` → `W49-E1-S2-T5`; all W49-E1 boundary tasks are complete, and the active queue
-item is `W49-E2-S1-T3` for stage execution/inspection extraction.
+item is `W49-E2-S1-T4` for frontend probe and semantic-classification extraction.
 
 ### Epic W49-E2 — behavior-preserving hotspot reduction (`planned`)
 
@@ -727,7 +727,7 @@ item is `W49-E2-S1-T3` for stage execution/inspection extraction.
     the 14-function island and obsolete imports. PR #595 revalidated the characterization and
     public bundle boundaries after that cleanup; no duplicate production edit is required.
 
-- `W49-E2-S1-T3` (next) Extract stage execution/inspection.
+- `W49-E2-S1-T3` (done) Extract stage execution/inspection.
   - Output: stage execution and post-stage inspection move behind a focused harness module while
     the public live facade keeps its current behavior and artifact contract.
   - Scope: live harness stage execution/inspection helpers and deterministic terminal/blocked
@@ -736,6 +736,25 @@ item is `W49-E2-S1-T3` for stage execution/inspection extraction.
     ordering before and after extraction, without provider credentials.
   - Dependencies: `W49-E2-S1-T1` and `W49-E2-S1-T2`, stable W48 evidence semantics, and the
     merged W47 UI compatibility baseline.
+  - Completion evidence: PR #597 merged to `origin/main` at `25b58943`; stage classification,
+    public inspection-question detection, and the stage loop now live in
+    `live_e2e_black_box_stage.py` behind callback-owned runtime seams. Focused terminal,
+    blocked, quality-gate, boundary, characterization, Ruff, and strict mypy checks passed;
+    all required Python, adapter, deterministic, packaged-browser, build, CodeQL, Scorecard,
+    and dependency-review lanes passed on the exact candidate. No frontend, report, runtime,
+    or UI-owned files changed.
+
+- `W49-E2-S1-T4` (next) Extract frontend probes and semantic-failure classification.
+  - Output: frontend HTTP probes, target selection, operator-surface checks, and semantic-failure
+    classification move behind a focused harness probe module while checkpoint evidence and the
+    public live facade retain their current behavior.
+  - Scope: live harness frontend probe helpers and deterministic probe-state matrix; no report,
+    runtime, or UI-owned paths.
+  - Verification: ready, non-2xx, malformed JSON, semantic mismatch, running-stage, and rich
+    task-projection probe states preserve classifications, operator checks, artifacts, and event
+    ordering without provider credentials.
+  - Dependencies: `W49-E2-S1-T3`, stable W48 evidence semantics, and the merged W47 UI
+    compatibility baseline.
 
 ### Epic W49-E3 — planning and documentation truth (`done`)
 

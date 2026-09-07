@@ -7,7 +7,7 @@ slice, and local task.
 
 ## Next
 
-- `W49-E2-S1-T3` — Extract stage execution/inspection.
+- `W49-E2-S1-T4` — Extract frontend probes and semantic-failure classification.
 
 ## Soon
 
@@ -66,5 +66,10 @@ slice, and local task.
   order, and completed-stage state across two public runs. The neighboring UI refactor remains a
   read-only reference state and no UI-owned files changed. The planned T2 `_legacy_*` removal was
   audited as already present in preexisting cleanup commit `4d99b3fd`, so it is recorded as
-  reconciled without a duplicate production edit. The next dependency-ready task is
-  `W49-E2-S1-T3`.
+  reconciled without a duplicate production edit. `W49-E2-S1-T3` completed in PR #597 and is
+  present on `origin/main` at `25b58943`; its focused stage module owns stage classification,
+  public inspection-question detection, and callback-driven stage-loop coordination. Terminal,
+  blocked, quality-gate, boundary, characterization, Ruff, strict mypy, and all required CI
+  lanes passed on the exact candidate. No frontend, report, runtime, or UI-owned files changed.
+  The next dependency-ready task is `W49-E2-S1-T4` for frontend probes and semantic-failure
+  classification; the neighboring UI refactor remains a read-only reference state.
