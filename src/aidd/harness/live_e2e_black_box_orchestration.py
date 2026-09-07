@@ -19,9 +19,7 @@ from dataclasses import dataclass
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any, Literal, cast
-from urllib.error import HTTPError, URLError
 from urllib.parse import urlencode
-from urllib.request import Request, urlopen
 
 from aidd.adapters.runtime_evidence import (
     RuntimeAdapterOutcome,
@@ -86,6 +84,48 @@ from aidd.harness.live_bundle_manifest import LiveBundleSealInputs, seal_live_bu
 from aidd.harness.live_command_evidence import (
     persist_command_evidence,
     read_command_output,
+)
+from aidd.harness.live_e2e_black_box_frontend import (
+    frontend_checkpoint_timed_out as _frontend_checkpoint_timed_out_extracted,
+)
+from aidd.harness.live_e2e_black_box_frontend import (
+    frontend_checkpoint_timeout_seconds as _frontend_checkpoint_timeout_seconds_extracted,
+)
+from aidd.harness.live_e2e_black_box_frontend import (
+    frontend_operator_surface_checks as _frontend_operator_surface_checks_extracted,
+)
+from aidd.harness.live_e2e_black_box_frontend import (
+    frontend_probe_by_name as _frontend_probe_by_name_extracted,
+)
+from aidd.harness.live_e2e_black_box_frontend import (
+    frontend_probe_json_payload as _frontend_probe_json_payload_extracted,
+)
+from aidd.harness.live_e2e_black_box_frontend import (
+    frontend_probe_semantic_failure as _frontend_probe_semantic_failure_extracted,
+)
+from aidd.harness.live_e2e_black_box_frontend import (
+    frontend_probe_targets as _frontend_probe_targets_extracted,
+)
+from aidd.harness.live_e2e_black_box_frontend import (
+    frontend_running_probe_targets as _frontend_running_probe_targets_extracted,
+)
+from aidd.harness.live_e2e_black_box_frontend import (
+    frontend_running_stage_surface_checks as _frontend_running_stage_surface_checks_extracted,
+)
+from aidd.harness.live_e2e_black_box_frontend import (
+    http_post_json as _http_post_json_extracted,
+)
+from aidd.harness.live_e2e_black_box_frontend import (
+    http_probe as _http_probe_extracted,
+)
+from aidd.harness.live_e2e_black_box_frontend import (
+    json_contains_value as _json_contains_value_extracted,
+)
+from aidd.harness.live_e2e_black_box_frontend import (
+    json_has_key as _json_has_key_extracted,
+)
+from aidd.harness.live_e2e_black_box_frontend import (
+    operator_surface_check as _operator_surface_check_extracted,
 )
 from aidd.harness.live_e2e_black_box_reports import (
     _read_json_object,
@@ -3113,36 +3153,22 @@ def _frontend_checkpoint_command(ctx: FlowContext, port: int) -> tuple[str, ...]
     )
 
 
-def _http_probe(
-    url: str,
-    *,
-    timeout_seconds: float = FRONTEND_CHECKPOINT_PROBE_TIMEOUT_SECONDS,
-) -> dict[str, object]:
-    try:
-        with urlopen(url, timeout=timeout_seconds) as response:
-            body = response.read(1048576).decode("utf-8", errors="replace")
-            payload: dict[str, object] = {
-                "ok": 200 <= response.status < 300,
-                "status": response.status,
-                "body_preview": body[:1000],
-            }
-            try:
-                parsed = json.loads(body)
-            except json.JSONDecodeError:
-                parsed = None
-            if isinstance(parsed, dict):
-                payload["json_payload"] = parsed
-            return payload
-    except HTTPError as exc:
-        body = exc.read(1048576).decode("utf-8", errors="replace")
-        return {
-            "ok": False,
-            "status": exc.code,
-            "body_preview": body[:1000],
-            "error": str(exc),
-        }
-    except (OSError, URLError) as exc:
-        return {"ok": False, "status": None, "body_preview": "", "error": str(exc)}
+# Keep the historical private names stable while the canonical probe surface lives in its
+# focused module.  Every checkpoint path therefore resolves to one owner.
+_http_probe = _http_probe_extracted
+_http_post_json = _http_post_json_extracted
+_frontend_probe_targets = _frontend_probe_targets_extracted
+_frontend_running_probe_targets = _frontend_running_probe_targets_extracted
+_frontend_checkpoint_timeout_seconds = _frontend_checkpoint_timeout_seconds_extracted
+_frontend_checkpoint_timed_out = _frontend_checkpoint_timed_out_extracted
+_json_contains_value = _json_contains_value_extracted
+_json_has_key = _json_has_key_extracted
+_frontend_probe_semantic_failure = _frontend_probe_semantic_failure_extracted
+_frontend_probe_by_name = _frontend_probe_by_name_extracted
+_frontend_probe_json_payload = _frontend_probe_json_payload_extracted
+_operator_surface_check = _operator_surface_check_extracted
+_frontend_operator_surface_checks = _frontend_operator_surface_checks_extracted
+_frontend_running_stage_surface_checks = _frontend_running_stage_surface_checks_extracted
 
 
 def _task_flow_public_task_probe(
@@ -3395,455 +3421,6 @@ def _task_flow_checkpoint(
         },
     )
     return classification, (result.json_path, result.markdown_path)
-
-
-def _http_post_json(
-    url: str,
-    payload: dict[str, object],
-    *,
-    timeout_seconds: float = FRONTEND_CHECKPOINT_PROBE_TIMEOUT_SECONDS,
-) -> dict[str, object]:
-    data = json.dumps(payload).encode("utf-8")
-    request = Request(
-        url,
-        data=data,
-        method="POST",
-        headers={"Content-Type": "application/json"},
-    )
-    try:
-        with urlopen(request, timeout=timeout_seconds) as response:
-            body = response.read(1048576).decode("utf-8", errors="replace")
-            result: dict[str, object] = {
-                "ok": 200 <= response.status < 300,
-                "status": response.status,
-                "body_preview": body[:1000],
-            }
-            try:
-                parsed = json.loads(body)
-            except json.JSONDecodeError:
-                parsed = None
-            if isinstance(parsed, dict):
-                result["json_payload"] = parsed
-            return result
-    except HTTPError as exc:
-        body = exc.read(1048576).decode("utf-8", errors="replace")
-        return {
-            "ok": False,
-            "status": exc.code,
-            "body_preview": body[:1000],
-            "error": str(exc),
-        }
-    except (OSError, URLError) as exc:
-        return {"ok": False, "status": None, "body_preview": "", "error": str(exc)}
-
-
-def _frontend_probe_targets(ctx: FlowContext, stage: str) -> tuple[tuple[str, str], ...]:
-    stage_query = urlencode({"stage": stage, "run_id": ctx.run_id})
-    run_query = urlencode({"run_id": ctx.run_id})
-    targets = [
-        ("page", "/"),
-        ("dashboard-api", f"/api/dashboard?{stage_query}"),
-        ("run-api", f"/api/run?{run_query}"),
-        ("stage-api", f"/api/stage?{stage_query}"),
-        ("questions-api", f"/api/questions?{urlencode({'stage': stage})}"),
-        ("logs-api", f"/api/logs?{stage_query}"),
-        ("artifacts-api", f"/api/artifacts?{stage_query}"),
-    ]
-    rich_tasklist = False
-    if stage == "implement" and ctx.prepared_working_copy is not None:
-        tasklist_path = (
-            ctx.prepared_working_copy.working_copy_path
-            / ".aidd"
-            / "workitems"
-            / ctx.work_item
-            / "stages"
-            / "tasklist"
-            / "output"
-            / "tasklist.md"
-        )
-        try:
-            rich_tasklist = bool(
-                re.search(r"(?m)^###\s+[A-Za-z0-9][\w.-]*\b", tasklist_path.read_text())
-            )
-        except OSError:
-            rich_tasklist = False
-    if stage == "implement" and rich_tasklist:
-        # The task projection is the public boundary where dependency-aware
-        # recovery becomes observable.  Probe it during implement checkpoints
-        # so a backend-only pass cannot hide a broken Task Workspace path.
-        targets.append(("tasks-api", f"/api/tasks?{run_query}"))
-    return tuple(targets)
-
-
-def _frontend_running_probe_targets(
-    ctx: FlowContext,
-    stage: str,
-) -> tuple[tuple[str, str], ...]:
-    stage_query = urlencode({"stage": stage, "run_id": ctx.run_id})
-    run_query = urlencode({"run_id": ctx.run_id})
-    return (
-        ("page", "/"),
-        ("dashboard-api", f"/api/dashboard?{stage_query}"),
-        ("run-api", f"/api/run?{run_query}"),
-        ("stage-api", f"/api/stage?{stage_query}"),
-        ("logs-api", f"/api/logs?{stage_query}"),
-    )
-
-
-def _frontend_checkpoint_timeout_seconds(phase: str) -> float:
-    probe_count = 5 if phase == "running-stage" else 7
-    return (
-        FRONTEND_CHECKPOINT_STARTUP_TIMEOUT_SECONDS
-        + probe_count * FRONTEND_CHECKPOINT_PROBE_TIMEOUT_SECONDS
-    )
-
-
-def _frontend_checkpoint_timed_out(
-    *,
-    failure_reason: str | None,
-    probes: list[dict[str, object]],
-) -> bool:
-    evidence = [failure_reason or ""]
-    evidence.extend(str(probe.get("error") or "") for probe in probes)
-    return any("timed out" in item.lower() for item in evidence)
-
-
-def _json_contains_value(value: object, expected: str) -> bool:
-    if isinstance(value, str):
-        return value == expected or expected in value
-    if isinstance(value, dict):
-        return any(_json_contains_value(item, expected) for item in value.values())
-    if isinstance(value, list | tuple):
-        return any(_json_contains_value(item, expected) for item in value)
-    return False
-
-
-def _json_has_key(value: object, key: str) -> bool:
-    if isinstance(value, dict):
-        return key in value or any(_json_has_key(item, key) for item in value.values())
-    if isinstance(value, list | tuple):
-        return any(_json_has_key(item, key) for item in value)
-    return False
-
-
-def _frontend_probe_semantic_failure(
-    *,
-    ctx: FlowContext,
-    stage: str,
-    name: str,
-    probe: dict[str, object],
-    phase: str = "post-stage",
-    observed_stage_status: str | None = None,
-) -> str | None:
-    if probe.get("ok") is not True:
-        return "probe returned non-2xx response"
-    if name == "page":
-        body = str(probe.get("body_preview") or "")
-        return None if body.strip() else "UI page body is empty"
-    payload = probe.get("json_payload")
-    if not isinstance(payload, dict):
-        return "API probe did not return a JSON object"
-    if name == "run-api":
-        if not _json_contains_value(payload, ctx.run_id):
-            return "run API response does not include current run_id"
-        if not _json_contains_value(payload, ctx.work_item):
-            return "run API response does not include current work_item"
-        return None
-    if name == "dashboard-api":
-        dashboard = payload.get("dashboard")
-        if not isinstance(dashboard, dict):
-            return "dashboard API response does not include dashboard object"
-        if not _json_contains_value(dashboard, ctx.run_id):
-            return "dashboard API response does not include current run_id"
-        if not _json_contains_value(dashboard, ctx.work_item):
-            return "dashboard API response does not include current work_item"
-        if not _json_contains_value(dashboard, stage):
-            return "dashboard API response does not include current stage"
-        if not any(_json_has_key(dashboard, key) for key in ("next_action", "terminal_handoff")):
-            return "dashboard API response does not expose next action or terminal handoff"
-        if phase == "running-stage":
-            next_action = dashboard.get("next_action")
-            if not isinstance(next_action, dict):
-                return "dashboard API response does not expose running next action"
-            if next_action.get("action") != "wait-for-stage":
-                return "dashboard next action is not the running-stage wait state"
-            if next_action.get("enabled") is not False:
-                return "running-stage wait action must be disabled"
-            if not _json_contains_value(next_action, stage):
-                return "running-stage wait action does not include current stage"
-        return None
-    if name == "stage-api":
-        if not _json_contains_value(payload, ctx.run_id):
-            return "stage API response does not include current run_id"
-        if not _json_contains_value(payload, stage):
-            return "stage API response does not include current stage"
-        if not any(
-            _json_has_key(payload, key) for key in ("status", "state", "stage_state", "final_state")
-        ):
-            return "stage API response does not include stage status/state"
-        if (
-            phase == "running-stage"
-            and observed_stage_status is not None
-            and not _json_contains_value(payload, observed_stage_status)
-        ):
-            return "stage API response does not include observed running status"
-        return None
-    if name == "questions-api":
-        if not _json_contains_value(payload, stage):
-            return "questions API response does not include current stage"
-        if not any(_json_has_key(payload, key) for key in ("questions", "items", "state")):
-            return "questions API response does not expose question state"
-        return None
-    if name == "logs-api":
-        if not _json_contains_value(payload, stage):
-            return "logs API response does not include current stage"
-        log_keys: tuple[str, ...] = ("logs", "chunks", "text", "lines")
-        if phase == "running-stage":
-            log_keys = (*log_keys, "available", "message")
-        if not any(_json_has_key(payload, key) for key in log_keys):
-            return "logs API response does not expose log data"
-        return None
-    if name == "artifacts-api":
-        if not _json_contains_value(payload, stage):
-            return "artifacts API response does not include current stage"
-        primary = _PRIMARY_STAGE_OUTPUTS.get(stage, "")
-        if not (
-            _json_contains_value(payload, primary)
-            or _json_has_key(payload, "artifacts")
-            or _json_has_key(payload, "items")
-        ):
-            return "artifacts API response does not expose artifact list"
-        return None
-    if name == "tasks-api":
-        if not _json_contains_value(payload, ctx.run_id):
-            return "tasks API response does not include current run_id"
-        tasks = payload.get("tasks")
-        if not isinstance(tasks, list) or not any(isinstance(item, dict) for item in tasks):
-            return "tasks API response does not expose task projection"
-        if not any(_json_has_key(payload, key) for key in ("tasklist", "next_ready_task")):
-            return "tasks API response does not expose task progression state"
-    return None
-
-
-def _frontend_probe_by_name(
-    probes: Sequence[dict[str, object]],
-    name: str,
-) -> dict[str, object]:
-    for probe in probes:
-        if probe.get("name") == name:
-            return probe
-    return {}
-
-
-def _frontend_probe_json_payload(
-    probes: Sequence[dict[str, object]],
-    name: str,
-) -> dict[str, object]:
-    payload = _frontend_probe_by_name(probes, name).get("json_payload")
-    return payload if isinstance(payload, dict) else {}
-
-
-def _operator_surface_check(
-    *,
-    name: str,
-    ok: bool,
-    detail: str,
-) -> dict[str, object]:
-    return {
-        "name": name,
-        "ok": ok,
-        "detail": detail,
-    }
-
-
-def _frontend_operator_surface_checks(
-    *,
-    ctx: FlowContext,
-    stage: str,
-    probes: Sequence[dict[str, object]],
-) -> dict[str, object]:
-    page_probe = _frontend_probe_by_name(probes, "page")
-    page_body = str(page_probe.get("body_preview") or "")
-    dashboard_payload = _frontend_probe_json_payload(probes, "dashboard-api")
-    dashboard_raw = dashboard_payload.get("dashboard")
-    dashboard = dashboard_raw if isinstance(dashboard_raw, dict) else {}
-    run_payload = _frontend_probe_json_payload(probes, "run-api")
-    stage_payload = _frontend_probe_json_payload(probes, "stage-api")
-    logs_payload = _frontend_probe_json_payload(probes, "logs-api")
-    artifacts_payload = _frontend_probe_json_payload(probes, "artifacts-api")
-    tasks_payload = _frontend_probe_json_payload(probes, "tasks-api")
-    primary = _PRIMARY_STAGE_OUTPUTS.get(stage, "")
-
-    checks = [
-        _operator_surface_check(
-            name="operator-shell-visible",
-            ok="AIDD Operator Console" in page_body or "AIDD UI" in page_body,
-            detail="page exposes the operator UI shell label",
-        ),
-        _operator_surface_check(
-            name="work-item-context-visible",
-            ok=_json_contains_value(run_payload, ctx.work_item),
-            detail="run payload exposes current work item",
-        ),
-        _operator_surface_check(
-            name="run-context-visible",
-            ok=_json_contains_value(run_payload, ctx.run_id),
-            detail="run payload exposes current run id",
-        ),
-        _operator_surface_check(
-            name="active-stage-visible",
-            ok=_json_contains_value(stage_payload, stage),
-            detail="stage payload exposes active checkpoint stage",
-        ),
-        _operator_surface_check(
-            name="stage-status-visible",
-            ok=any(
-                _json_has_key(stage_payload, key)
-                for key in ("status", "state", "stage_state", "final_state")
-            ),
-            detail="stage payload exposes operator-readable stage status",
-        ),
-        _operator_surface_check(
-            name="next-action-visible",
-            ok=any(_json_has_key(dashboard, key) for key in ("next_action", "terminal_handoff")),
-            detail="dashboard payload exposes the next operator action or terminal handoff",
-        ),
-        _operator_surface_check(
-            name="runtime-log-surface-visible",
-            ok=any(
-                _json_has_key(logs_payload, key)
-                for key in ("logs", "chunks", "text", "lines", "message")
-            ),
-            detail="logs payload exposes saved or pending runtime log state",
-        ),
-        _operator_surface_check(
-            name="artifact-surface-visible",
-            ok=(
-                _json_contains_value(artifacts_payload, primary)
-                or _json_has_key(artifacts_payload, "artifacts")
-                or _json_has_key(artifacts_payload, "items")
-            ),
-            detail="artifacts payload exposes primary output or artifact list state",
-        ),
-    ]
-    first_failure = run_payload.get("first_failure")
-    blockers = run_payload.get("blockers")
-    has_blockers = isinstance(blockers, list) and bool(blockers)
-    if first_failure is not None or has_blockers:
-        checks.append(
-            _operator_surface_check(
-                name="recovery-action-visible",
-                ok=(
-                    _json_has_key(run_payload, "recovery_actions")
-                    or _json_has_key(run_payload, "next_action")
-                ),
-                detail="blocked or failed run exposes recovery guidance",
-            )
-        )
-    if stage == "implement" and _frontend_probe_by_name(probes, "tasks-api"):
-        task_items = tasks_payload.get("tasks")
-        task_items = task_items if isinstance(task_items, list) else []
-        ready_ids = {
-            str(item.get("id"))
-            for item in task_items
-            if isinstance(item, dict) and item.get("ready") is True
-        }
-        dependency_blocked = [
-            item
-            for item in task_items
-            if isinstance(item, dict)
-            and isinstance(item.get("missing_dependencies"), list)
-            and item.get("missing_dependencies")
-        ]
-        actionable_blocked = dependency_blocked if ready_ids else []
-        recovery_ok = all(
-            isinstance(item.get("action_projection"), dict)
-            and isinstance(item["action_projection"].get("recovery"), dict)
-            and str(item["action_projection"]["recovery"].get("task_id")) in ready_ids
-            for item in actionable_blocked
-        )
-        checks.append(
-            _operator_surface_check(
-                name="task-recovery-projection-visible",
-                ok=bool(tasks_payload)
-                and (not actionable_blocked or recovery_ok),
-                detail=(
-                    "dependency-blocked tasks expose a core-owned recovery target"
-                    if actionable_blocked
-                    else "task projection is available; recovery target is not currently required"
-                ),
-            )
-        )
-    failed = [str(check["name"]) for check in checks if check.get("ok") is not True]
-    return {
-        "ok": not failed,
-        "checks": checks,
-        "failed_checks": failed,
-    }
-
-
-def _frontend_running_stage_surface_checks(
-    *,
-    ctx: FlowContext,
-    stage: str,
-    observed_stage_status: str,
-    probes: Sequence[dict[str, object]],
-) -> dict[str, object]:
-    page_probe = _frontend_probe_by_name(probes, "page")
-    page_body = str(page_probe.get("body_preview") or "")
-    dashboard_payload = _frontend_probe_json_payload(probes, "dashboard-api")
-    dashboard_raw = dashboard_payload.get("dashboard")
-    dashboard = dashboard_raw if isinstance(dashboard_raw, dict) else {}
-    run_payload = _frontend_probe_json_payload(probes, "run-api")
-    stage_payload = _frontend_probe_json_payload(probes, "stage-api")
-    logs_payload = _frontend_probe_json_payload(probes, "logs-api")
-    next_action_raw = dashboard.get("next_action")
-    next_action = next_action_raw if isinstance(next_action_raw, dict) else {}
-
-    checks = [
-        _operator_surface_check(
-            name="operator-shell-visible",
-            ok="AIDD Operator Console" in page_body or "AIDD UI" in page_body,
-            detail="page exposes the operator UI shell label",
-        ),
-        _operator_surface_check(
-            name="work-item-context-visible",
-            ok=_json_contains_value(run_payload, ctx.work_item),
-            detail="run payload exposes current work item",
-        ),
-        _operator_surface_check(
-            name="run-context-visible",
-            ok=_json_contains_value(run_payload, ctx.run_id),
-            detail="run payload exposes current run id",
-        ),
-        _operator_surface_check(
-            name="running-stage-visible",
-            ok=_json_contains_value(dashboard, stage)
-            and _json_contains_value(stage_payload, observed_stage_status),
-            detail="dashboard and stage payloads expose the active running stage",
-        ),
-        _operator_surface_check(
-            name="running-wait-action-visible",
-            ok=next_action.get("action") == "wait-for-stage"
-            and next_action.get("enabled") is False
-            and _json_contains_value(next_action, stage),
-            detail="dashboard exposes a disabled wait action for the running stage",
-        ),
-        _operator_surface_check(
-            name="runtime-log-affordance-visible",
-            ok=any(
-                _json_has_key(logs_payload, key)
-                for key in ("logs", "chunks", "text", "lines", "available", "message")
-            ),
-            detail="logs payload exposes either live log data or a pending-log message",
-        ),
-    ]
-    failed = [str(check["name"]) for check in checks if check.get("ok") is not True]
-    return {
-        "ok": not failed,
-        "checks": checks,
-        "failed_checks": failed,
-    }
 
 
 def _read_frontend_checkpoint_payload(ctx: FlowContext) -> dict[str, object]:
