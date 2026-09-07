@@ -7,7 +7,7 @@ slice, and local task.
 
 ## Next
 
-- `W49-E1-S1-T4` — Align UI copy with detected/rejected versus preventively contained modes.
+- `W49-E1-S1-T3` — Add two-root positive and outside-root negative implement scenarios.
 
 ## Soon
 
@@ -37,10 +37,10 @@ slice, and local task.
 
 ## Current reconciliation
 
-- `2026-09-07` `W49-E1-S2-T5` completed in PR #575 and is present on `origin/main` at
-  `e0fceade`. The test-only external descriptor proves catalog projection, all required
-  conformance dimensions, and protected-path policy injection without production registration;
-  the extended local suite passed (557 tests), and all required CI lanes passed on the exact
-  candidate. The neighboring UI refactor is integrated by PR #574 at `45a1a8f7`, so
-  `W49-E1-S1-T4` is now unblocked and promoted to `Next`; its UI-owned implementation must stay
-  in the UI workstream.
+- `2026-09-07` `W49-E1-S1-T4` completed in PR #577 and is present on `origin/main` at
+  `4237289b`. The exact persisted permission mode now drives distinct full-access versus
+  enforced-containment copy, with responsive browser and manifest/read-model evidence; all
+  required CI lanes passed on the exact candidate. The neighboring UI refactor remains integrated
+  by PR #574 at `45a1a8f7` and its checkout is read-only reference state. The deterministic
+  two-root positive/negative scenario task `W49-E1-S1-T3` is promoted to `Next` as the first
+  dependency-ready follow-up.

@@ -31,6 +31,12 @@ promoted task must use current formats with explicit rejection of retired data. 
 inspection of incomplete evidence remains distinct from permission to resume it. Estimates
 below describe the original plan; remaining scope and effort must be re-evaluated at promotion.
 
+The first post-merge UI task, `W49-E1-S1-T4`, is complete in PR #577 (`4237289b`). Its exact-run
+permission read-model extension and mode-specific copy/browser acceptance were implemented on top
+of the merged Focus Canvas baseline without editing the neighboring checkout. The remaining
+two-root deterministic scenario task, `W49-E1-S1-T3`, is now the promoted `Next` item; it owns
+scenario fixtures/assertions only and must preserve the already-merged UI boundary.
+
 ## Parent outcome decomposed
 
 Parent outcome: close the 2026-09-05 quality-audit findings and produce trustworthy beta-candidate
@@ -157,16 +163,17 @@ The adjacent UI task's W47 implementation is merged as PR #574, while the existi
 before lifecycle and evidence semantics stabilize. Recommended remediation order:
 
 1. keep the adjacent UI checkout read-only and treat PR #574's merge as the Focus Canvas baseline;
-2. implement `W49-E1-S1-T4` as the first post-merge UI-owned remediation task, with exact-run
-   permission mode and distinct detected-versus-contained copy;
-3. make the next remediation task only after the overlap check confirms its branch can be based on
-   current `origin/main` without touching files still owned by the adjacent thread;
+2. treat the completed `W49-E1-S1-T4` merge (#577, `4237289b`) as the source of truth for
+   mode-specific permission copy and exact-run metadata;
+3. implement `W49-E1-S1-T3` next, after confirming its scenario-only branch does not overlap the
+   adjacent UI workstream;
 4. retain `W46-E1-S2-T4` and `W46-E2-S2-T4` for the W50 candidate matrix rather than deleting or
    duplicating them;
 5. promote only a direct successor into `Soon` after the current task is accepted;
 6. keep provider/human acceptance parked until exact candidate freeze.
 
-No queue or roadmap file is changed by this analysis-plan commit.
+The queue and roadmap now record the T4 completion and promote T3 as the next dependency-ready
+task; future promotions must continue through the same per-task delivery loop.
 
 # Wave 48 — lifecycle and evidence truth
 

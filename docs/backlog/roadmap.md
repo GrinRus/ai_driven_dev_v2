@@ -550,7 +550,17 @@ remediation plan until their dependencies are promoted into this canonical roadm
     dependency-review checks passed. The adjacent `codex/ui-completion` checkout remained
   untouched.
 
-- `W49-E1-S1-T4` (next) Align UI copy with detected/rejected versus preventively contained
+- `W49-E1-S1-T3` (next) Add two-root positive and outside-root negative implement scenarios.
+  - Output: deterministic project-set fixtures prove both the positive two-root workflow and the
+    outside-root rejection path without weakening the aggregate finalization gate.
+  - Scope: deterministic scenario manifests, fixtures, and assertions; no new UI presentation
+    pattern and no runtime-specific logic in core.
+  - Verification: the positive run changes both declared roots, while the negative run preserves
+    exact outside-root evidence and stops Review/QA progression.
+  - Dependencies: `W49-E1-S1-T2` and the completed UI copy/browser acceptance in
+    `W49-E1-S1-T4`.
+
+- `W49-E1-S1-T4` (done) Align UI copy with detected/rejected versus preventively contained
   modes.
   - Output: the operator UI distinguishes full-access detection/attribution warnings from
     brokered or isolated preventive containment while reusing the merged Focus Canvas components.
@@ -558,11 +568,18 @@ remediation plan until their dependencies are promoted into this canonical roadm
   - Verification: full-access and enforced-containment fixtures render distinct copy and preserve
     the shared core recommendation.
   - Dependency note: the neighboring UI refactor is now integrated by PR #574 at `45a1a8f7`;
-    this task is dependency-ready and owns the remaining UI copy/browser acceptance. Keep its
-    implementation in the UI workstream and do not duplicate presentation patterns here.
+    this task owned the remaining UI copy/browser acceptance and reused the integrated Focus Canvas
+    surfaces. Keep the adjacent checkout read-only; integration is through `origin/main`.
+  - Completion evidence: PR #577 merged to `origin/main` at `4237289b`; the exact persisted
+    `runtime_permission_policy` is projected into the run summary and mode-specific copy is covered
+    by frontend, manifest, core, characterization, responsive-browser, and documentation checks.
+    The required Python 3.12–3.14, adapter-conformance, deterministic-scenarios,
+    packaged-ui-browser, build, CodeQL, Scorecard, and dependency-review lanes passed on the exact
+    candidate. The adjacent UI PR #574 remains the shared presentation baseline.
 
-Dependencies: W48 exit gate → `W49-E1-S1-T1` → `W49-E1-S1-T2`; T4 is now unblocked by the
-merged W47 UI work and must be implemented against the integrated UI surfaces.
+Dependencies: W48 exit gate → `W49-E1-S1-T1` → `W49-E1-S1-T2` → `W49-E1-S1-T4` →
+`W49-E1-S1-T3`. T4 was implemented only after the merged W47 UI work; T3 is now the first
+dependency-ready follow-up and must stay in deterministic scenario ownership.
 
 #### Slice W49-E1-S2 — adapter-owned provider metadata (`planned`)
 
