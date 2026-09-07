@@ -572,7 +572,7 @@ runtime-neutral core.
     packaged-ui-browser, build, CodeQL, Scorecard, and dependency-review checks passed. The
     adjacent `codex/ui-completion` checkout remained untouched.
 
-- `W49-E1-S2-T2` (next) Implement descriptors for built-in runtimes.
+- `W49-E1-S2-T2` (done) Implement descriptors for built-in runtimes.
   - Output: every maintained runtime surface supplies a validated adapter-owned descriptor for
     protected, credential, and config paths plus supported capabilities.
   - Scope: built-in adapter packages, runtime-surface registration, and contract tests; no core
@@ -580,9 +580,24 @@ runtime-neutral core.
   - Verification: a contract table resolves a descriptor for every `runtime_ids()` entry, keeps
     runtime IDs stable, rejects unsafe metadata, and confirms the core has no new provider-specific
     branches.
+  - Completion evidence: PR #568 merged to `origin/main` at `a211670e`; all maintained surfaces
+    now expose adapter-owned descriptors and the marker table covers every runtime. Focused and
+    full adapter, documentation, planning, and workflow checks passed (378 tests), Ruff and strict
+    mypy passed, and all required CI lanes passed after one documented flaky packaged-browser
+    rerun. The adjacent `codex/ui-completion` checkout remained untouched.
 
-Dependencies: W48 exit gate → `W49-E1-S2-T1` → `W49-E1-S2-T2`; later provider-boundary tasks remain
-in the accepted remediation plan until their dependencies are promoted.
+- `W49-E1-S2-T3` (next) Consume protected-path metadata and remove provider literals from core.
+  - Output: runtime policy consumes adapter-owned protected, credential, and config markers through
+    an injected runtime-neutral seam; provider names and filenames are absent from core policy
+    branches while existing protection classifications remain fail-closed.
+  - Scope: runtime-neutral policy inputs, adapter-to-core composition, and security/lifecycle tests;
+    no UI-owned paths.
+  - Verification: the existing protection matrix passes for every built-in runtime, an injected
+    descriptor drives classification for a fake runtime, and a source guard rejects new provider
+    literals in `aidd.core`.
+
+Dependencies: W48 exit gate → `W49-E1-S2-T1` → `W49-E1-S2-T2` → `W49-E1-S2-T3`; T4 remains held
+for the merged W47 UI work and must not edit UI-owned paths before that integration.
 
 ## Wave 51 — agent development instruction consistency (`done`)
 
