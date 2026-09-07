@@ -80,10 +80,15 @@ from aidd.harness.install_artifact import (
     HarnessInstallResult,
     prepare_local_wheel_install,
 )
-from aidd.harness.live_bundle_manifest import LiveBundleSealInputs, seal_live_bundle
 from aidd.harness.live_command_evidence import (
     persist_command_evidence,
     read_command_output,
+)
+from aidd.harness.live_e2e_black_box_bundle import (
+    materialize_canonical_live_result as _materialize_canonical_live_result_extracted,
+)
+from aidd.harness.live_e2e_black_box_bundle import (
+    write_run_transcript as _write_run_transcript_extracted,
 )
 from aidd.harness.live_e2e_black_box_frontend import (
     frontend_checkpoint_timed_out as _frontend_checkpoint_timed_out_extracted,
@@ -223,10 +228,6 @@ from aidd.harness.live_product_summary import derive_live_product_acceptance
 from aidd.harness.live_remediation_evidence import (
     classify_remediation_terminal_evidence,
     read_remediation_terminal_evidence,
-)
-from aidd.harness.live_result_bundle import (
-    LiveResultBundleIdentity,
-    materialize_live_result_bundle,
 )
 from aidd.harness.live_runtime_config import (
     validate_live_runtime_command,
@@ -7922,59 +7923,50 @@ def _write_run_transcript_from_flow(*, ctx: FlowContext, exit_code: int) -> Path
             for command in raw_commands
             if isinstance(command, dict)
         )
-    return _write_json(
-        ctx.bundle_root / RUN_TRANSCRIPT_FILENAME,
-        {
-            "command_count": len(commands),
-            "commands": commands,
-            "duration_seconds": result.duration_seconds,
-            "exit_code": result.exit_code,
-            "process_segment_count": len(process_segments),
-            "process_segments": process_segments,
-            "process_segment_duration_seconds": result.duration_seconds,
-            "runtime_id": result.runtime_id,
-            "step": "run",
-            "timed_out": result.timed_out,
-            "timeout_seconds": result.timeout_seconds,
-            "timeout_policy": _timeout_policy_payload(ctx),
-            "work_item": result.work_item,
-        },
+    return _write_run_transcript_extracted(
+        bundle_root=ctx.bundle_root,
+        exit_code=result.exit_code,
+        runtime_id=result.runtime_id,
+        work_item=result.work_item,
+        duration_seconds=result.duration_seconds,
+        timed_out=result.timed_out,
+        timeout_seconds=result.timeout_seconds,
+        timeout_policy=_timeout_policy_payload(ctx),
+        process_segments=process_segments,
+        commands=commands,
+        write_json=_write_json,
     )
 
 
 def _materialize_canonical_live_result(ctx: FlowContext) -> None:
-    identity = LiveResultBundleIdentity(
+    _materialize_canonical_live_result_extracted(
+        bundle_root=ctx.bundle_root,
         scenario_id=ctx.scenario.scenario_id,
         runtime_id=ctx.runtime_id,
         run_id=ctx.run_id,
         work_item=ctx.work_item,
-    )
-    materialize_live_result_bundle(
-        bundle_root=ctx.bundle_root,
-        identity=identity,
         target_root=(
             None
             if ctx.prepared_working_copy is None
             else ctx.prepared_working_copy.working_copy_path
         ),
+        target_revision=(
+            None
+            if ctx.prepared_working_copy is None
+            else ctx.prepared_working_copy.resolved_revision
+        ),
+        source_repository_root=ctx.source_repository_root,
+        source_commit=(
+            None
+            if ctx.install_result is None
+            else ctx.install_result.source_revision
+        ),
+        wheel_path=(
+            None
+            if ctx.install_result is None
+            else ctx.install_result.artifact_path
+        ),
     )
-    if (
-        ctx.source_repository_root is not None
-        and ctx.install_result is not None
-        and ctx.install_result.artifact_path is not None
-        and ctx.install_result.source_revision is not None
-        and ctx.prepared_working_copy is not None
-    ):
-        seal_live_bundle(
-            bundle_root=ctx.bundle_root,
-            inputs=LiveBundleSealInputs(
-                identity=identity,
-                source_repository_root=ctx.source_repository_root,
-                source_commit=ctx.install_result.source_revision,
-                wheel_path=ctx.install_result.artifact_path,
-                target_revision=ctx.prepared_working_copy.resolved_revision,
-            ),
-        )
 
 
 def _blocked_result(ctx: FlowContext) -> BlackBoxLiveE2EResult:
