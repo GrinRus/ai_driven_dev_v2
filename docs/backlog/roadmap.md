@@ -758,13 +758,17 @@ Dependencies: W49-E1-S1/T2/T4/T3 completion → `W49-E3-S1-T1` → `W49-E3-S1-T2
     tests passed locally, and all required CI lanes passed after a transient browser-lane retry.
     No runtime or UI-owned files changed.
 
-- `W49-E3-S2-T2` (next) Define a structured US-01…US-13 traceability registry.
+- `W49-E3-S2-T2` (done) Define a structured US-01…US-13 traceability registry.
   - Output: each story links to its contracts, code boundaries, tests, scenarios, and evidence.
   - Scope: product traceability data and documentation checks; no runtime or UI-owned paths.
   - Verification: every referenced artifact exists and story IDs are unique.
   - Dependencies: W49-E3-S1 completion.
+  - Completion evidence: PR #591 merged to `origin/main` at `dc0cca33`; the schema-versioned
+    registry covers all 13 stories and the consistency guard verifies unique IDs, required groups,
+    repository-relative paths, and artifact existence. The focused docs/planning/quality suite
+    passed 181 tests; no runtime or UI-owned files changed.
 
-- `W49-E3-S2-T3` (planned) Generate and validate a byte-stable traceability view in CI.
+- `W49-E3-S2-T3` (next) Generate and validate a byte-stable traceability view in CI.
   - Output: CI validates the generated story view and rejects missing required references.
   - Scope: docs tooling and deterministic documentation fixtures; no runtime or UI-owned paths.
   - Verification: removing a required test or scenario reference fails generation.
