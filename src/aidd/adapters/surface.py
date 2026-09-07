@@ -9,6 +9,7 @@ from pathlib import Path
 from typing import cast
 
 from aidd.adapters.base import CapabilityReport, RuntimeAdapterDescriptor
+from aidd.adapters.claude_code import DESCRIPTOR as CLAUDE_CODE_DESCRIPTOR
 from aidd.adapters.claude_code import probe as probe_claude_code
 from aidd.adapters.claude_code.runner import (
     ClaudeCodeCommandContext,
@@ -23,6 +24,7 @@ from aidd.adapters.claude_code.runner import (
 from aidd.adapters.claude_code.runner import (
     run_subprocess_with_streaming as run_claude_code_subprocess_with_streaming,
 )
+from aidd.adapters.codex import DESCRIPTOR as CODEX_DESCRIPTOR
 from aidd.adapters.codex import probe as probe_codex
 from aidd.adapters.codex.live import (
     codex_live_transport_available,
@@ -39,6 +41,7 @@ from aidd.adapters.codex.runner import persist_attempt_runtime_log as persist_co
 from aidd.adapters.codex.runner import (
     run_subprocess_with_streaming as run_codex_subprocess_with_streaming,
 )
+from aidd.adapters.generic_cli import DESCRIPTOR as GENERIC_CLI_DESCRIPTOR
 from aidd.adapters.generic_cli import probe as probe_generic_cli
 from aidd.adapters.generic_cli.runner import (
     GenericCliExitClassification,
@@ -52,6 +55,7 @@ from aidd.adapters.generic_cli.runner import (
     run_subprocess_with_streaming as run_generic_cli_subprocess_with_streaming,
 )
 from aidd.adapters.live_transport import should_use_live_transport
+from aidd.adapters.opencode import DESCRIPTOR as OPENCODE_DESCRIPTOR
 from aidd.adapters.opencode import probe as probe_opencode
 from aidd.adapters.opencode.runner import OpenCodeCommandContext, OpenCodeExitClassification
 from aidd.adapters.opencode.runner import build_subprocess_spec as build_opencode_subprocess_spec
@@ -61,6 +65,7 @@ from aidd.adapters.opencode.runner import (
 from aidd.adapters.opencode.runner import (
     run_subprocess_with_streaming as run_opencode_subprocess_with_streaming,
 )
+from aidd.adapters.qwen import DESCRIPTOR as QWEN_DESCRIPTOR
 from aidd.adapters.qwen import probe as probe_qwen
 from aidd.adapters.qwen.live import (
     execute_qwen_live_transport,
@@ -1063,6 +1068,7 @@ def _execute_qwen(
 _SURFACES_BY_RUNTIME: dict[str, RuntimeAdapterSurface] = {
     "generic-cli": RuntimeAdapterSurface(
         runtime_id="generic-cli",
+        descriptor=GENERIC_CLI_DESCRIPTOR,
         probe=probe_generic_cli,
         exit_classification_enum=GenericCliExitClassification,
         success_value=GenericCliExitClassification.SUCCESS,
@@ -1072,6 +1078,7 @@ _SURFACES_BY_RUNTIME: dict[str, RuntimeAdapterSurface] = {
     ),
     "claude-code": RuntimeAdapterSurface(
         runtime_id="claude-code",
+        descriptor=CLAUDE_CODE_DESCRIPTOR,
         probe=probe_claude_code,
         exit_classification_enum=ClaudeCodeExitClassification,
         success_value=ClaudeCodeExitClassification.SUCCESS,
@@ -1081,6 +1088,7 @@ _SURFACES_BY_RUNTIME: dict[str, RuntimeAdapterSurface] = {
     ),
     "codex": RuntimeAdapterSurface(
         runtime_id="codex",
+        descriptor=CODEX_DESCRIPTOR,
         probe=probe_codex,
         exit_classification_enum=CodexExitClassification,
         success_value=CodexExitClassification.SUCCESS,
@@ -1090,6 +1098,7 @@ _SURFACES_BY_RUNTIME: dict[str, RuntimeAdapterSurface] = {
     ),
     "opencode": RuntimeAdapterSurface(
         runtime_id="opencode",
+        descriptor=OPENCODE_DESCRIPTOR,
         probe=probe_opencode,
         exit_classification_enum=OpenCodeExitClassification,
         success_value=OpenCodeExitClassification.SUCCESS,
@@ -1099,6 +1108,7 @@ _SURFACES_BY_RUNTIME: dict[str, RuntimeAdapterSurface] = {
     ),
     "qwen": RuntimeAdapterSurface(
         runtime_id="qwen",
+        descriptor=QWEN_DESCRIPTOR,
         probe=probe_qwen,
         exit_classification_enum=QwenExitClassification,
         success_value=QwenExitClassification.SUCCESS,
