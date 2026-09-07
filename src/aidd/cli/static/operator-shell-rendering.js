@@ -166,10 +166,22 @@ function renderContextualRunnerControl({actionLabel = "launch", inspector = fals
     ? `
         <div class="runner-inspector-facts" data-runner-inspector-facts>
           <div><span>Model</span><strong>${escapeHtml(model)}</strong></div>
+          <div><span>Readiness</span><strong>${escapeHtml(
+            state.readinessLoading
+              ? "checking"
+              : state.readinessError
+                ? "unavailable"
+                : ready
+                  ? "eligible"
+                  : "blocked",
+          )}</strong></div>
         </div>
         ${runtime
           ? renderRuntimeReadinessDimensions(runtime, {compact: true})
           : '<p class="runner-inspector-empty">Select an eligible Runner to load current readiness evidence.</p>'}
+        ${typeof renderProtectedWriteScope === "function"
+          ? `<div class="runner-inspector-scope" data-runner-inspector-scope>${renderProtectedWriteScope()}</div>`
+          : ""}
       `
     : "";
   return `
@@ -224,9 +236,10 @@ function renderRuntimeReadinessDimensions(runtime, {compact = false} = {}) {
     ["Probe observed", runtime.probe_observed_at_utc || "not observed"],
     ["Latest launch", runtimeLatestLaunchSummary(runtime)]
   ];
+  const visibleRows = compact ? rows.slice(0, 4) : rows;
   return `
     <span class="runtime-readiness-dimensions ${compact ? "compact" : ""}" data-runtime-readiness-dimensions>
-      ${rows.map(([label, value]) => `<span><strong>${escapeHtml(label)}</strong>${escapeHtml(value)}</span>`).join("")}
+      ${visibleRows.map(([label, value]) => `<span><strong>${escapeHtml(label)}</strong>${escapeHtml(value)}</span>`).join("")}
     </span>
   `;
 }

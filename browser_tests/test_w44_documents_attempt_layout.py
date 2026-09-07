@@ -172,7 +172,7 @@ def test_task_attempt_detail_and_live_tray_share_desktop_workbench(
         page.locator('[data-task-select="TL-2"]').click()
         detail = page.locator("[data-task-detail]")
         tray = page.locator("[data-task-attempt-tray]")
-        detail.locator("h3").wait_for(state="visible")
+        detail.locator("h3").first.wait_for(state="visible")
         tray.wait_for(state="visible")
 
         geometry = page.evaluate(

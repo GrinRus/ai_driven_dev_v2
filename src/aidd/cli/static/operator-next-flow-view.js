@@ -1590,6 +1590,15 @@ function renderGlobalNextActionStrip() {
   const finding = action.action === "inspect-validation" || action.action === "review-intervention"
     ? primaryValidationFinding()
     : null;
+  const launchEyebrow = launchOverview ? "Launch" : "Run Next Action";
+  const launchDetail = launchOverview
+    ? (choosingRuntime
+      ? "Choose a Runner and confirm readiness before launching this Work Item."
+      : detail)
+    : detail;
+  const launchGuidance = launchOverview && choosingRuntime
+    ? "Select runtime in the toolbar, then start the governed workflow."
+    : "";
   host.classList.toggle("live-progress-active", Boolean(activeJobState));
   host.classList.toggle("external-progress-active", Boolean(externalRunningState));
   const technicalLiveProgress = activeJobState
@@ -1611,9 +1620,10 @@ function renderGlobalNextActionStrip() {
     <div class="next-action-copy">
       <span class="next-action-icon" aria-hidden="true">&gt;</span>
       <div>
-        <p class="eyebrow">Run Next Action</p>
+        <p class="eyebrow">${escapeHtml(launchEyebrow)}</p>
         <h2>${escapeHtml(label)}</h2>
-        <p>${escapeHtml(detail)}</p>
+        <p>${escapeHtml(launchDetail)}</p>
+        ${launchGuidance ? `<p id="launch-runtime-guidance" class="sr-only">${escapeHtml(launchGuidance)}</p>` : ""}
         ${renderValidationFindingSummary(finding)}
         ${renderGlobalTerminalEvidenceActions()}
         ${renderStaleDownstreamSummary(action)}
@@ -1628,7 +1638,8 @@ function renderGlobalNextActionStrip() {
       </div>
       <div class="next-action-button-stack">
         ${showRunner && typeof renderContextualRunnerControl === "function" ? renderContextualRunnerControl({actionLabel: label, inspector: launchOverview}) : ""}
-        <button id="globalNextActionButton" class="next-button" data-primary-action type="button" ${disabled ? "disabled" : ""}>${escapeHtml(label)}</button>
+        <button id="globalNextActionButton" class="next-button" data-primary-action type="button" ${disabled ? "disabled" : ""}${launchGuidance ? ' aria-describedby="launch-runtime-guidance"' : ""}>${escapeHtml(label)}</button>
+        ${launchOverview ? '<button class="secondary launch-edit-request" data-open-request-tab type="button">Edit request</button>' : ""}
         ${renderNextActionBlocker(blockerMessage)}
       </div>
     </div>

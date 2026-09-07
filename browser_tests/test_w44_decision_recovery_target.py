@@ -220,6 +220,11 @@ def test_question_workbench_keeps_target_hierarchy_at_supported_viewports(
         assert all(box is not None and box["height"] >= 44 for box in option_boxes)
         if viewport[0] <= 760:
             assert len({round(box["y"]) for box in option_boxes if box is not None}) == 1
+            assert impact.is_hidden()
+            assert page.locator(".intent-phase-stepper > .surface-title").is_hidden()
+            if viewport == (390, 844):
+                assert options_box["y"] < viewport[1]
+                assert options_box["y"] + options_box["height"] <= primary_box["y"]
         if viewport[0] >= 960:
             main_box = surface.locator(".decision-question-main").bounding_box()
             assert main_box is not None and impact_box is not None

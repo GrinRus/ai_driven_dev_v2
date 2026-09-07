@@ -46,6 +46,10 @@ test("runtime presentation keeps binary, command, authentication, and capability
     assert.match(html, new RegExp(value));
   }
   assert.doesNotMatch(html, />ready</);
+  const compact = vm.runInContext("renderRuntimeReadinessDimensions(runtime, {compact: true})", context);
+  assert.match(compact, /Binary/);
+  assert.match(compact, /Adapter capabilities/);
+  assert.doesNotMatch(compact, /Latest launch/);
 });
 
 test("protected write scope distinguishes bounded, invalid, and not-authored states", async () => {
