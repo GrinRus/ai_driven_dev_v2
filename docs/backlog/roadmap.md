@@ -392,14 +392,14 @@ Local tasks:
   - Completion evidence: target UX, roadmap/backlog, browser tests, and the live acceptance record
     agree; docs/planning checks passed (`105 passed`) on 2026-09-05.
 
-## Wave 48 — lifecycle and evidence truth (`planned`)
+## Wave 48 — lifecycle and evidence truth (`done`)
 
 Goal: make attempt evidence explicit and prevent ordinal storage numbers from being interpreted as
 repair history.
 
-### Epic W48-E3 — truthful eval evidence (`planned`)
+### Epic W48-E3 — truthful eval evidence (`done`)
 
-#### Slice W48-E3-S1 — explicit attempt lineage (`planned`)
+#### Slice W48-E3-S1 — explicit attempt lineage (`done`)
 
 Primary output: stage, task, and aggregate-finalization attempts share a versioned lineage contract
 while retired ordinal-only evidence is rejected rather than silently upgraded.
@@ -546,9 +546,9 @@ Dependencies: T1 → T2/T3 → T4.
 
 ## Wave 49 — product boundaries and sustainable maintenance (`planned`)
 
-### Epic W49-E1 — truthful product and provider boundaries (`planned`)
+### Epic W49-E1 — truthful product and provider boundaries (`done`)
 
-#### Slice W49-E1-S1 — project-set policy and implement gate (`planned`)
+#### Slice W49-E1-S1 — project-set policy and implement gate (`done`)
 
 The mode-specific capability decision keeps full-access detection/attribution distinct from
 preventive containment in brokered or isolated modes. Later W49 tasks remain in the accepted
@@ -616,9 +616,9 @@ remediation plan until their dependencies are promoted into this canonical roadm
 
 Dependencies: W48 exit gate → `W49-E1-S1-T1` → `W49-E1-S1-T2` → `W49-E1-S1-T4` →
 `W49-E1-S1-T3`. T4 was implemented only after the merged W47 UI work; all four local tasks are
-now complete and the slice retains its planned parent status pending the planning-hygiene roll-up.
+now complete and the slice is marked `done` by the planning-hygiene roll-up.
 
-#### Slice W49-E1-S2 — adapter-owned provider metadata (`planned`)
+#### Slice W49-E1-S2 — adapter-owned provider metadata (`done`)
 
 Primary output: adding a runtime does not require provider literals or credential filenames in
 runtime-neutral core.
@@ -693,8 +693,8 @@ runtime-neutral core.
     exact candidate. No UI-owned files were changed by this task.
 
 Dependencies: W48 exit gate → `W49-E1-S2-T1` → `W49-E1-S2-T2` → `W49-E1-S2-T3` →
-`W49-E1-S2-T4` → `W49-E1-S2-T5`; all W49-E1 boundary tasks are complete, and the next active
-queue item is the promoted W49-E3 planning-hygiene task.
+`W49-E1-S2-T4` → `W49-E1-S2-T5`; all W49-E1 boundary tasks are complete, and the active queue
+item is `W49-E3-S1-T4` for planning-hygiene reconciliation.
 
 ### Epic W49-E3 — planning and documentation truth (`planned`)
 
@@ -741,13 +741,15 @@ queue item is the promoted W49-E3 planning-hygiene task.
 Dependencies: W49-E1-S1/T2/T4/T3 completion → `W49-E3-S1-T1` → `W49-E3-S1-T2` →
 `W49-E3-S1-T3` → `W49-E3-S1-T4`.
 
-## Wave 51 — agent development instruction consistency (`done`)
+## Wave 51 — agent development instruction consistency (`planned`)
 
 The maintainer instruction hierarchy, executable workflow checks, runtime document ownership,
 and bootstrap regressions were integrated by PR #515 and its follow-up fixes. Their completed
 local-task definitions and execution records remain in Git history. Current guidance is in
 `docs/agent-development.md`; the checks remain in CI. The cleanup below replaces the historical
 archive and frozen prompt hashes with bounded planning and semantic prompt checks.
+Because this current-format section has no declared child task hierarchy, the parent-status
+algebra keeps it `planned`; historical completion records do not substitute for active children.
 
 ## Wave 52 — repository cleanup and current-format boundary (`done`)
 
