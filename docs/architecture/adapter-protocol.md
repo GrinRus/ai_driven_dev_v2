@@ -143,6 +143,13 @@ does not claim that a concrete binary is installed or that a capability was obse
 remain in `CapabilityReport` and behavioral conformance evidence. Built-in descriptors are
 introduced incrementally after this contract and must preserve the existing runtime IDs.
 
+The maintained built-in surfaces currently register descriptors for `generic-cli`, `claude-code`,
+`codex`, `opencode`, and `qwen`. Their provider roots and credential/configuration markers live
+in the corresponding `aidd.adapters.<runtime>` package; the runtime registry only attaches the
+adapter-owned value to its surface. `generic-cli` contributes the provider-neutral `.env`,
+credential, and settings markers, while named runtimes contribute their own hidden directory and
+provider file markers. These are path markers only, never credential contents.
+
 ## 4.2 Runtime operator requests
 
 AIDD separates product questions from runtime approvals:

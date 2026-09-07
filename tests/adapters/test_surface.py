@@ -11,7 +11,7 @@ from aidd.adapters.surface import (
     get_runtime_adapter_descriptor,
     get_runtime_adapter_surface,
 )
-from aidd.runtime_catalog import RuntimeExecutionMode
+from aidd.runtime_catalog import RuntimeExecutionMode, runtime_ids
 
 
 def test_runtime_adapter_surfaces_register_execution_and_conformance_callables() -> None:
@@ -36,6 +36,52 @@ def test_default_execution_mode_comes_from_registered_surface() -> None:
         "opencode": RuntimeExecutionMode.NATIVE,
         "qwen": RuntimeExecutionMode.NATIVE,
     }
+
+
+def test_every_maintained_runtime_resolves_a_stable_descriptor() -> None:
+    assert tuple(RUNTIME_ADAPTER_SURFACES) == runtime_ids()
+
+    expected_markers = {
+        "generic-cli": {
+            "protected_paths": (".env",),
+            "credential_paths": ("auth.json", "credentials.json"),
+            "config_paths": ("settings.json",),
+        },
+        "claude-code": {
+            "protected_paths": (".claude", ".env"),
+            "credential_paths": (".claude/auth.json", "claude.json"),
+            "config_paths": (".claude/settings.json",),
+        },
+        "codex": {
+            "protected_paths": (".codex", ".env"),
+            "credential_paths": (".codex/auth.json", "codex.json"),
+            "config_paths": (".codex/config.toml",),
+        },
+        "opencode": {
+            "protected_paths": (".opencode", ".env"),
+            "credential_paths": (".opencode/auth.json", "opencode.json"),
+            "config_paths": (".opencode/config.json",),
+        },
+        "qwen": {
+            "protected_paths": (".qwen", ".env"),
+            "credential_paths": (".qwen/auth.json", "qwen.json"),
+            "config_paths": (".qwen/settings.json",),
+        },
+    }
+
+    for runtime_id in runtime_ids():
+        descriptor = get_runtime_adapter_descriptor(runtime_id)
+        surface = get_runtime_adapter_surface(runtime_id)
+
+        assert descriptor is surface.descriptor
+        assert descriptor.runtime_id == runtime_id
+        assert isinstance(descriptor.protected_paths, tuple)
+        assert isinstance(descriptor.credential_paths, tuple)
+        assert isinstance(descriptor.config_paths, tuple)
+        assert descriptor.capabilities
+        assert descriptor.to_dict()["runtime_id"] == runtime_id
+        for field_name, markers in expected_markers[runtime_id].items():
+            assert set(markers).issubset(getattr(descriptor, field_name))
 
 
 def test_adapter_descriptor_contract_is_immutable_and_non_secret() -> None:
@@ -76,9 +122,9 @@ def test_adapter_descriptor_rejects_unsafe_metadata(kwargs: dict[str, object]) -
         RuntimeAdapterDescriptor(**kwargs)
 
 
-def test_surface_descriptor_accessor_fails_closed_until_runtime_metadata_is_registered() -> None:
-    with pytest.raises(ValueError, match="no security/capability descriptor"):
-        get_runtime_adapter_descriptor("generic-cli")
+def test_surface_descriptor_accessor_fails_closed_for_unregistered_runtime() -> None:
+    with pytest.raises(ValueError, match="Unsupported runtime id"):
+        get_runtime_adapter_descriptor("not-registered")
 
 
 def test_builtin_conformance_probe_uses_its_actual_transport_capabilities(monkeypatch) -> None:
