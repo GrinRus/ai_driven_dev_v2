@@ -97,6 +97,18 @@ from aidd.harness.live_e2e_black_box_reports import (
     write_flow_report,
     write_json_markdown_bundle,
 )
+from aidd.harness.live_e2e_black_box_stage import (
+    StageLoopDependencies,
+)
+from aidd.harness.live_e2e_black_box_stage import (
+    classify_stage_run as _stage_classify_stage_run,
+)
+from aidd.harness.live_e2e_black_box_stage import (
+    inspection_reports_unresolved_questions as _stage_inspection_reports_unresolved_questions,
+)
+from aidd.harness.live_e2e_black_box_stage import (
+    run_stage_loop as _stage_run_stage_loop,
+)
 from aidd.harness.live_e2e_black_box_steps import (
     BlackBoxCommandResult,
     LiveE2EInterrupted,
@@ -3068,38 +3080,8 @@ def _inspection_commands(ctx: FlowContext, stage: str) -> tuple[tuple[str, ...],
     )
 
 
-def _classify_stage_run(result: BlackBoxCommandResult) -> StepClassification:
-    if result.no_progress:
-        return "infra-fail"
-    output = f"{result.stdout_text}\n{result.stderr_text}".lower()
-    if (
-        "blocking questions are unresolved" in output
-        or "action=wait state=blocked" in output
-        or "runtime approval is waiting for operator" in output
-    ):
-        return "blocked"
-    if result.exit_code == 0:
-        return "pass"
-    return "fail"
-
-
-def _inspection_reports_unresolved_questions(
-    results: tuple[BlackBoxCommandResult, ...],
-) -> bool:
-    for result in results:
-        if not any(
-            result.command[index : index + 2] == ("stage", "questions")
-            for index in range(len(result.command) - 1)
-        ):
-            continue
-        output = f"{result.stdout_text}\n{result.stderr_text}".lower()
-        if (
-            "blocking questions are unresolved" in output
-            or "pending-blocking" in output
-            or "action=wait state=blocked" in output
-        ):
-            return True
-    return False
+_classify_stage_run = _stage_classify_stage_run
+_inspection_reports_unresolved_questions = _stage_inspection_reports_unresolved_questions
 
 
 def _frontend_checkpoints_enabled(ctx: FlowContext) -> bool:
@@ -7263,19 +7245,16 @@ def _run_remediation_rerun_stage(ctx: FlowContext, stage: str) -> StepClassifica
 
 
 def _run_stage_loop(ctx: FlowContext) -> StepClassification:
-    while True:
-        quality_gate = _quality_review_gate(ctx)
-        if quality_gate is not None:
-            return quality_gate
-        stage = _first_incomplete_stage(ctx)
-        if stage is None:
-            return "pass"
-        if stage in _state_stale_downstream_stages(ctx.bundle_root):
-            classification = _run_remediation_rerun_stage(ctx, stage)
-        else:
-            classification = _run_stage_and_inspect(ctx, stage)
-        if classification != "pass":
-            return classification
+    return _stage_run_stage_loop(
+        ctx,
+        dependencies=StageLoopDependencies(
+            quality_review_gate=_quality_review_gate,
+            first_incomplete_stage=_first_incomplete_stage,
+            stale_downstream_stages=_state_stale_downstream_stages,
+            run_remediation_rerun_stage=_run_remediation_rerun_stage,
+            run_stage_and_inspect=_run_stage_and_inspect,
+        ),
+    )
 
 
 def _has_timed_out_stage_attempt(ctx: FlowContext) -> bool:

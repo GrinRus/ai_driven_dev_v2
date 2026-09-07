@@ -5,6 +5,7 @@ from pathlib import Path
 
 from aidd.harness import live_e2e_black_box_orchestration as orchestration
 from aidd.harness import live_e2e_black_box_reports as reports
+from aidd.harness import live_e2e_black_box_stage as stage
 from aidd.harness import live_e2e_black_box_steps as steps
 
 
@@ -50,3 +51,19 @@ def test_harness_does_not_import_core_stage_status_persistence() -> None:
                 violations.append(source_path.name)
 
     assert violations == []
+
+
+def test_orchestration_reexports_canonical_stage_decisions() -> None:
+    assert orchestration._classify_stage_run is stage.classify_stage_run
+    assert (
+        orchestration._inspection_reports_unresolved_questions
+        is stage.inspection_reports_unresolved_questions
+    )
+
+
+def test_orchestration_delegates_stage_loop_to_stage_module() -> None:
+    source_path = Path(orchestration.__file__)
+    source = source_path.read_text(encoding="utf-8")
+
+    assert "return _stage_run_stage_loop(" in source
+    assert "run_stage_loop" in stage.__dict__
