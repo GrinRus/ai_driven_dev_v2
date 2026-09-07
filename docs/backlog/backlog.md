@@ -7,8 +7,7 @@ slice, and local task.
 
 ## Next
 
-- `W49-E3-S1-T1` — Define parent-status algebra, including parked-child semantics and archive
-  authority.
+- `W49-E3-S1-T2` — Archive historical reconciliation bullets, leaving one current note.
 
 ## Soon
 
@@ -38,9 +37,8 @@ slice, and local task.
 
 ## Current reconciliation
 
-- `2026-09-07` `W49-E1-S1-T3` completed in PR #579 and is present on `origin/main` at
-  `f434a977`. The positive and negative project-set implementation scenarios pass the full
-  deterministic lane, including exact outside-root/task attribution, expected fail-closed exit,
-  and Review/QA non-progression. The neighboring UI refactor remains integrated by PR #574 at
-  `45a1a8f7`; its checkout is read-only reference state. The next dependency-ready task is the
-  newly promoted planning-contract task `W49-E3-S1-T1`.
+- `2026-09-07` `W49-E3-S1-T1` completed in PR #581 and is present on `origin/main` at
+  `2a80f526`. The parent-status algebra, parked-child rule, and merged-history archive
+  authority passed the full required CI lanes, including packaged UI browser acceptance; the
+  neighboring UI refactor remains integrated by PR #574 at `45a1a8f7` and its checkout is
+  read-only reference state. The next dependency-ready task is `W49-E3-S1-T2`.

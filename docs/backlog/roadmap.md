@@ -700,7 +700,7 @@ queue item is the promoted W49-E3 planning-hygiene task.
 
 #### Slice W49-E3-S1 — executable planning hygiene (`planned`)
 
-- `W49-E3-S1-T1` (next) Define parent-status algebra, including parked-child semantics and
+- `W49-E3-S1-T1` (done) Define parent-status algebra, including parked-child semantics and
   archive authority.
   - Output: the planning contract defines unambiguous `done`, `planned`, `parked`, and `blocked`
     roll-up behavior and identifies the authoritative archive for completed history.
@@ -709,8 +709,12 @@ queue item is the promoted W49-E3 planning-hygiene task.
   - Verification: examples for each parent status and parked-child case pass the planning
     integrity checks without inventing completion evidence.
   - Dependencies: completed W49-E1 boundary tasks and the W48 exit gate.
+  - Completion evidence: PR #581 merged to `origin/main` at `2a80f526`; the recursive
+    parent-status rules, parked/blocked non-terminal semantics, and merged-history archive
+    authority are documented, and planning/docs checks passed (60 tests). No runtime or
+    UI-owned files changed.
 
-- `W49-E3-S1-T2` (planned) Archive historical reconciliation bullets, leaving one current note.
+- `W49-E3-S1-T2` (next) Archive historical reconciliation bullets, leaving one current note.
   - Output: historical reconciliation IDs remain discoverable in Git while active docs keep one
     bounded current note.
   - Scope: `docs/backlog/backlog.md` and linked planning history; no runtime or UI-owned paths.
