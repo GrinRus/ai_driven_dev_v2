@@ -6,9 +6,12 @@ from collections.abc import Callable
 from pathlib import Path
 
 from aidd.core.implementation_finalization import (
+    OUTSIDE_PROJECT_SET_EVIDENCE_FILENAME,
     TaskFinalizationContext,
     aggregate_execution_mode,
+    outside_project_set_changes,
     render_aggregate_implementation_report,
+    render_outside_project_set_evidence,
 )
 from aidd.core.implementation_service import AggregateFinalizationOutcome
 from aidd.core.run_store import persist_stage_status
@@ -38,6 +41,24 @@ def aggregate_finalization_port(
         )
         diagnostics_path = context.attempt_path / "publication-diagnostics.json"
         try:
+            outside_changes = outside_project_set_changes(
+                workspace_root=workspace_root,
+                work_item=work_item,
+                ledger=context.ledger,
+            )
+            if outside_changes:
+                (context.attempt_path / OUTSIDE_PROJECT_SET_EVIDENCE_FILENAME).write_text(
+                    render_outside_project_set_evidence(
+                        work_item=work_item,
+                        changes=outside_changes,
+                    ),
+                    encoding="utf-8",
+                )
+                outside_paths = ", ".join(f"`{path}`" for path, _ in outside_changes)
+                raise ValueError(
+                    "Aggregate implementation finalization blocked by outside declared "
+                    f"project-set paths: {outside_paths}."
+                )
             plan = load_task_execution_plan(
                 workspace_root=workspace_root,
                 work_item=work_item,

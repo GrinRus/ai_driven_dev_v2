@@ -131,6 +131,12 @@ not expand the declared project set without an explicit operator decision. An
 outside-set change in `full-access` is evidence for the detector and fail-closed
 progression gate, not a silently accepted scope expansion.
 
+When aggregate implementation finalization detects an outside-set change, it must
+persist `outside-project-set.md` in the finalization attempt with the exact changed
+paths and contributing task ids. The finalization status is failed, so the existing
+implementation-finalization gate prevents downstream Review and QA from treating
+the aggregate as successful.
+
 ## 6. Harness and eval expectations
 
 Project-set support is not complete until harness coverage proves:

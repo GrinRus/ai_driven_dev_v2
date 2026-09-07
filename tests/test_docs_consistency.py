@@ -1539,6 +1539,8 @@ def test_project_set_docs_make_permission_mode_boundary_explicit() -> None:
         assert mode in project_set
     assert "aggregate progression fails closed" in project_set
     assert "instead of promising containment" in project_set
+    assert "outside-project-set.md" in project_set
+    assert "downstream Review and QA" in project_set
     assert "project-set boundary claims are permission-mode specific" in target_architecture
 
     assert "The CLI should support three log modes" not in target_architecture
