@@ -7,7 +7,7 @@ slice, and local task.
 
 ## Next
 
-- `W49-E1-S2-T2` — Implement descriptors for built-in runtimes.
+- `W49-E1-S2-T3` — Consume protected-path metadata and remove provider literals from core.
 
 ## Soon
 
@@ -37,10 +37,11 @@ slice, and local task.
 
 ## Current reconciliation
 
-- `2026-09-07` `W49-E1-S2-T1` completed in PR #566 and is present on `origin/main` at `53834da5`.
-  The adapter protocol now exposes validated, immutable security/capability descriptors with
-  fail-closed access and deterministic non-secret serialization. Focused adapter, documentation,
-  planning, and workflow checks passed (377 tests); Ruff, strict mypy, and all required CI lanes
-  passed. The adjacent `codex/ui-completion` checkout remains untouched with its completed-but-
-  unpushed UI work; UI-bound W49 T4 remains held for that merge. `W49-E1-S2-T2` is now the next
-  non-UI dependency-ready task.
+- `2026-09-07` `W49-E1-S2-T2` completed in PR #568 and is present on `origin/main` at `a211670e`.
+  All maintained runtime surfaces now register validated adapter-owned descriptors, with exact
+  protected/credential/config marker coverage and explicit capability sets. Focused and full
+  adapter, documentation, planning, and workflow checks passed (378 tests); Ruff, strict mypy,
+  and all required CI lanes passed after one documented flaky packaged-browser rerun. The adjacent
+  `codex/ui-completion` checkout remains untouched with its completed-but-unpushed UI work; UI-
+  bound W49 T4 remains held for that merge. `W49-E1-S2-T3` is now the next non-UI dependency-ready
+  task.
