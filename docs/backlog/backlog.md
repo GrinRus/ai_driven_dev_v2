@@ -7,7 +7,7 @@ slice, and local task.
 
 ## Next
 
-- `W49-E1-S2-T5` — Prove clean extension with an allowlisted fake external descriptor.
+- `W49-E1-S1-T4` — Align UI copy with detected/rejected versus preventively contained modes.
 
 ## Soon
 
@@ -37,11 +37,10 @@ slice, and local task.
 
 ## Current reconciliation
 
-- `2026-09-07` `W49-E1-S2-T4` completed in PR #572 and is present on `origin/main` at
-  `60de556a`. Built-in registration/configuration compatibility now projects from adapter-owned
-  metadata while runtime IDs, TOML sections, commands, and typed selector behavior remain stable.
-  Core and adapter suites passed (1409 tests), focused registry/config/docs checks passed (155
-  tests), Ruff and strict mypy passed, and all required CI lanes passed. The adjacent
-  `codex/ui-completion` checkout remains untouched with completed-but-unpushed UI work;
-  UI-bound `W49-E1-S1-T4` remains blocked until that branch is merged. `W49-E1-S2-T5` is now
-  the next non-UI dependency-ready task.
+- `2026-09-07` `W49-E1-S2-T5` completed in PR #575 and is present on `origin/main` at
+  `e0fceade`. The test-only external descriptor proves catalog projection, all required
+  conformance dimensions, and protected-path policy injection without production registration;
+  the extended local suite passed (557 tests), and all required CI lanes passed on the exact
+  candidate. The neighboring UI refactor is integrated by PR #574 at `45a1a8f7`, so
+  `W49-E1-S1-T4` is now unblocked and promoted to `Next`; its UI-owned implementation must stay
+  in the UI workstream.
