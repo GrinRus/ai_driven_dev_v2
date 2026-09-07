@@ -263,12 +263,17 @@ def _classification(
             if state.aidd_run_result is None
             else str(state.aidd_run_result.exit_code)
         )
-        return EvalClassification(
-            status="fail",
-            summary=(
+        mismatch_summary = (
+            f"AIDD execution failed with exit code {exit_code}."
+            if expected_exit_code == 0
+            else (
                 f"AIDD execution returned exit code {exit_code}; expected "
                 f"{expected_exit_code}."
-            ),
+            )
+        )
+        return EvalClassification(
+            status="fail",
+            summary=mismatch_summary,
             blocked_by_questions=False,
             infrastructure_failure=False,
             verification_failed=False,
