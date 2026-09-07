@@ -630,7 +630,7 @@ function renderOnboarding() {
           </form>
         </section>
         <aside class="target-create-preview" data-request-preview-panel aria-label="Request Markdown preview">
-          <div class="target-panel-heading"><strong>user-request.md</strong><button class="secondary" type="button" data-copy-request-destination aria-label="Copy request destination">Copy</button></div>
+          <div class="target-panel-heading"><strong>operator-request.md</strong><button class="secondary" type="button" data-copy-request-destination aria-label="Copy request destination">Copy</button></div>
           <p class="target-document-destination">Destination: <code>.aidd/workitems/${escapeHtml(workItem)}/context/user-request.md</code></p>
           <div class="target-markdown-preview" data-request-preview-markdown>${onboardingCreatePreviewHtml()}</div>
         </aside>

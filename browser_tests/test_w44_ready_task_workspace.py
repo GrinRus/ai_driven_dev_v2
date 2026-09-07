@@ -72,6 +72,20 @@ def test_ready_task_workspace_keeps_core_ledger_and_one_launch_action_visible(
             assert table_headers.count() == 5
             assert all(not table_headers.nth(index).is_visible() for index in range(5))
 
+        if 901 <= viewport[0] <= 1300:
+            assert table_headers.nth(4).is_hidden()
+            assert page.locator(".task-workspace-event").count() >= 1
+            assert all(
+                page.locator(".task-workspace-event").nth(index).is_hidden()
+                for index in range(page.locator(".task-workspace-event").count())
+            )
+            assert page.locator(".task-workspace-item").first.evaluate(
+                "node => getComputedStyle(node).gridTemplateColumns.split(' ').length"
+            ) == 4
+            assert selected.locator(".task-workspace-task-cell strong").evaluate(
+                "node => node.scrollWidth <= node.clientWidth + 1"
+            )
+
         page.reload(wait_until="networkidle")
         page.locator('[data-task-select="TL-2"].selected').wait_for(state="visible")
         assert "task_id=TL-2" in page.url
