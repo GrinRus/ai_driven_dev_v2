@@ -523,16 +523,29 @@ The mode-specific capability decision keeps full-access detection/attribution di
 preventive containment in brokered or isolated modes. Later W49 tasks remain in the accepted
 remediation plan until their dependencies are promoted into this canonical roadmap.
 
-- `W49-E1-S1-T1` (next) Publish a mode-specific project-set capability matrix in US-12 and
+- `W49-E1-S1-T1` (done) Publish a mode-specific project-set capability matrix in US-12 and
   architecture.
   - Output: product wording and architecture describe declaration, attribution, detection, and
     fail-closed progression for full-access mode, while reserving preventive containment claims
     for brokered/isolated modes.
   - Scope: `docs/product/user-stories.md` and `docs/architecture/`; no UI-owned paths.
   - Verification: documentation checks reject unconditional containment wording and preserve the
-    declared project-set workflow.
+    declared project-set workflow. Completed in PR #562, merged as `3d75b674`; the focused docs,
+    planning, and agent-workflow checks passed (63 tests), and the required Python, adapter,
+    deterministic, packaged UI, build, CodeQL, Scorecard, and dependency-review checks passed.
 
-Dependencies: W48 exit gate → `W49-E1-S1-T1` → W49-E1-S1-T2/T4.
+- `W49-E1-S1-T2` (next) Block aggregate finalization when repository evidence contains
+  outside-set changes.
+  - Output: full-access runs detect exact outside-root paths and prevent Review/QA progression
+    until the evidence is explicitly handled; brokered/isolated containment behavior remains
+    unchanged.
+  - Scope: core project-set diff/evidence reader, aggregate implementation finalization gate,
+    and focused lifecycle/evidence tests; no UI-owned paths.
+  - Verification: a two-root implementation fixture with an intentional outside-root change
+    leaves exact path evidence and blocks aggregate finalization and downstream Review/QA.
+
+Dependencies: W48 exit gate → `W49-E1-S1-T1` → `W49-E1-S1-T2`; T4 remains dependent on the
+merged W47 UI work and must not edit UI-owned paths before that integration.
 
 ## Wave 51 — agent development instruction consistency (`done`)
 
