@@ -7,9 +7,11 @@ slice, and local task.
 
 ## Next
 
-- `W49-E1-S2-T3` — Consume protected-path metadata and remove provider literals from core.
+- `W49-E1-S2-T4` — Drive built-in registration/config compatibility from descriptors.
 
 ## Soon
+
+- `W49-E1-S2-T5` — Prove clean extension with an allowlisted fake external descriptor.
 
 ## Parking lot
 
@@ -37,11 +39,10 @@ slice, and local task.
 
 ## Current reconciliation
 
-- `2026-09-07` `W49-E1-S2-T2` completed in PR #568 and is present on `origin/main` at `a211670e`.
-  All maintained runtime surfaces now register validated adapter-owned descriptors, with exact
-  protected/credential/config marker coverage and explicit capability sets. Focused and full
-  adapter, documentation, planning, and workflow checks passed (378 tests); Ruff, strict mypy,
-  and all required CI lanes passed after one documented flaky packaged-browser rerun. The adjacent
-  `codex/ui-completion` checkout remains untouched with its completed-but-unpushed UI work; UI-
-  bound W49 T4 remains held for that merge. `W49-E1-S2-T3` is now the next non-UI dependency-ready
-  task.
+- `2026-09-07` `W49-E1-S2-T3` completed in PR #570 and is present on `origin/main` at `82b7bdb1`.
+  Runtime policy now consumes adapter-composed protected/credential/config markers; built-in
+  provider roots and credential filenames are absent from `aidd.core`. Core and adapter suites
+  passed (1405 tests), Ruff, strict mypy, and all required CI lanes passed. The adjacent
+  `codex/ui-completion` checkout remains untouched with its completed-but-unpushed UI work;
+  UI-bound `W49-E1-S1-T4` remains blocked until that branch is merged. `W49-E1-S2-T4` is now
+  the next non-UI dependency-ready task, with T5 promoted to Soon.
