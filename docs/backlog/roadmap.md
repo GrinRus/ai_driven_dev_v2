@@ -558,7 +558,7 @@ merged W47 UI work and must not edit UI-owned paths before that integration.
 Primary output: adding a runtime does not require provider literals or credential filenames in
 runtime-neutral core.
 
-- `W49-E1-S2-T1` (next) Define adapter security/capability descriptor.
+- `W49-E1-S2-T1` (done) Define adapter security/capability descriptor.
   - Output: an adapter-owned descriptor contract covers protected paths, credentials, config,
     and runtime capabilities without provider-specific branches in core.
   - Scope: adapter protocol and runtime-neutral metadata types, with focused contract tests; no
@@ -566,9 +566,23 @@ runtime-neutral core.
   - Verification: a descriptor contract test accepts a fake runtime descriptor containing
     protected paths, credential/config metadata, and capabilities without editing core provider
     literals.
+  - Completion evidence: PR #566 merged to `origin/main` at `53834da5`; the focused adapter,
+    documentation, planning, and workflow checks passed (377 tests), Ruff and strict mypy passed,
+    and all required Python 3.12–3.14, adapter-conformance, deterministic-scenarios,
+    packaged-ui-browser, build, CodeQL, Scorecard, and dependency-review checks passed. The
+    adjacent `codex/ui-completion` checkout remained untouched.
 
-Dependencies: W48 exit gate → `W49-E1-S2-T1`; subsequent descriptor rollout tasks remain in the
-accepted remediation plan until this contract is merged.
+- `W49-E1-S2-T2` (next) Implement descriptors for built-in runtimes.
+  - Output: every maintained runtime surface supplies a validated adapter-owned descriptor for
+    protected, credential, and config paths plus supported capabilities.
+  - Scope: built-in adapter packages, runtime-surface registration, and contract tests; no core
+    provider literals and no UI-owned paths.
+  - Verification: a contract table resolves a descriptor for every `runtime_ids()` entry, keeps
+    runtime IDs stable, rejects unsafe metadata, and confirms the core has no new provider-specific
+    branches.
+
+Dependencies: W48 exit gate → `W49-E1-S2-T1` → `W49-E1-S2-T2`; later provider-boundary tasks remain
+in the accepted remediation plan until their dependencies are promoted.
 
 ## Wave 51 — agent development instruction consistency (`done`)
 
