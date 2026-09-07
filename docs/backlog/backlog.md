@@ -7,7 +7,8 @@ slice, and local task.
 
 ## Next
 
-- `W49-E1-S1-T3` — Add two-root positive and outside-root negative implement scenarios.
+- `W49-E3-S1-T1` — Define parent-status algebra, including parked-child semantics and archive
+  authority.
 
 ## Soon
 
@@ -37,10 +38,9 @@ slice, and local task.
 
 ## Current reconciliation
 
-- `2026-09-07` `W49-E1-S1-T4` completed in PR #577 and is present on `origin/main` at
-  `4237289b`. The exact persisted permission mode now drives distinct full-access versus
-  enforced-containment copy, with responsive browser and manifest/read-model evidence; all
-  required CI lanes passed on the exact candidate. The neighboring UI refactor remains integrated
-  by PR #574 at `45a1a8f7` and its checkout is read-only reference state. The deterministic
-  two-root positive/negative scenario task `W49-E1-S1-T3` is promoted to `Next` as the first
-  dependency-ready follow-up.
+- `2026-09-07` `W49-E1-S1-T3` completed in PR #579 and is present on `origin/main` at
+  `f434a977`. The positive and negative project-set implementation scenarios pass the full
+  deterministic lane, including exact outside-root/task attribution, expected fail-closed exit,
+  and Review/QA non-progression. The neighboring UI refactor remains integrated by PR #574 at
+  `45a1a8f7`; its checkout is read-only reference state. The next dependency-ready task is the
+  newly promoted planning-contract task `W49-E3-S1-T1`.

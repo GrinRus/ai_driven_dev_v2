@@ -550,13 +550,19 @@ remediation plan until their dependencies are promoted into this canonical roadm
     dependency-review checks passed. The adjacent `codex/ui-completion` checkout remained
   untouched.
 
-- `W49-E1-S1-T3` (next) Add two-root positive and outside-root negative implement scenarios.
+- `W49-E1-S1-T3` (done) Add two-root positive and outside-root negative implement scenarios.
   - Output: deterministic project-set fixtures prove both the positive two-root workflow and the
     outside-root rejection path without weakening the aggregate finalization gate.
   - Scope: deterministic scenario manifests, fixtures, and assertions; no new UI presentation
     pattern and no runtime-specific logic in core.
   - Verification: the positive run changes both declared roots, while the negative run preserves
     exact outside-root evidence and stops Review/QA progression.
+  - Completion evidence: PR #579 merged to `origin/main` at `f434a977`; the positive and negative
+    deterministic scenarios passed in the full CI lane, including expected fail-closed exit code,
+    exact outside-root/task attribution, and Review/QA non-progression. Focused loader, verdict,
+    lifecycle, documentation, and scenario tests passed; the required Python 3.12–3.14, adapter-
+    conformance, deterministic-scenarios, packaged-ui-browser, build, CodeQL, Scorecard, and
+    dependency-review checks passed on the exact candidate. No UI-owned files were changed.
   - Dependencies: `W49-E1-S1-T2` and the completed UI copy/browser acceptance in
     `W49-E1-S1-T4`.
 
@@ -578,8 +584,8 @@ remediation plan until their dependencies are promoted into this canonical roadm
     candidate. The adjacent UI PR #574 remains the shared presentation baseline.
 
 Dependencies: W48 exit gate → `W49-E1-S1-T1` → `W49-E1-S1-T2` → `W49-E1-S1-T4` →
-`W49-E1-S1-T3`. T4 was implemented only after the merged W47 UI work; T3 is now the first
-dependency-ready follow-up and must stay in deterministic scenario ownership.
+`W49-E1-S1-T3`. T4 was implemented only after the merged W47 UI work; all four local tasks are
+now complete and the slice retains its planned parent status pending the planning-hygiene roll-up.
 
 #### Slice W49-E1-S2 — adapter-owned provider metadata (`planned`)
 
@@ -656,8 +662,44 @@ runtime-neutral core.
     exact candidate. No UI-owned files were changed by this task.
 
 Dependencies: W48 exit gate → `W49-E1-S2-T1` → `W49-E1-S2-T2` → `W49-E1-S2-T3` →
-`W49-E1-S2-T4` → `W49-E1-S2-T5`; the UI-bound `W49-E1-S1-T4` is now dependency-ready after
-the integrated UI merge and is the next task in the active queue.
+`W49-E1-S2-T4` → `W49-E1-S2-T5`; all W49-E1 boundary tasks are complete, and the next active
+queue item is the promoted W49-E3 planning-hygiene task.
+
+### Epic W49-E3 — planning and documentation truth (`planned`)
+
+#### Slice W49-E3-S1 — executable planning hygiene (`planned`)
+
+- `W49-E3-S1-T1` (next) Define parent-status algebra, including parked-child semantics and
+  archive authority.
+  - Output: the planning contract defines unambiguous `done`, `planned`, `parked`, and `blocked`
+    roll-up behavior and identifies the authoritative archive for completed history.
+  - Scope: `docs/backlog/roadmap.md`, `docs/backlog/backlog.md`, and the planning contract;
+    no runtime or UI-owned paths.
+  - Verification: examples for each parent status and parked-child case pass the planning
+    integrity checks without inventing completion evidence.
+  - Dependencies: completed W49-E1 boundary tasks and the W48 exit gate.
+
+- `W49-E3-S1-T2` (planned) Archive historical reconciliation bullets, leaving one current note.
+  - Output: historical reconciliation IDs remain discoverable in Git while active docs keep one
+    bounded current note.
+  - Scope: `docs/backlog/backlog.md` and linked planning history; no runtime or UI-owned paths.
+  - Verification: the active queue contains no stale completion bullets and every retained ID is
+    still searchable in the roadmap or history.
+
+- `W49-E3-S1-T3` (planned) Add bounded-note and parent-status roll-up validation.
+  - Output: planning integrity checks reject duplicate current notes and stale completed parents,
+    while applying the explicit parked-child rule.
+  - Scope: planning-integrity tests and their fixtures; no runtime or UI-owned paths.
+  - Verification: duplicate-note, stale-parent, done, planned, parked, and blocked examples each
+    produce the documented result.
+
+- `W49-E3-S1-T4` (planned) Reconcile current wave/epic/slice statuses mechanically.
+  - Output: current roadmap parent statuses agree with their child task algebra and active queue.
+  - Scope: `docs/backlog/roadmap.md` and `docs/backlog/backlog.md`; no runtime or UI-owned paths.
+  - Verification: the roll-up checker reports no mismatch on the current roadmap and queue.
+
+Dependencies: W49-E1-S1/T2/T4/T3 completion → `W49-E3-S1-T1` → `W49-E3-S1-T2` →
+`W49-E3-S1-T3` → `W49-E3-S1-T4`.
 
 ## Wave 51 — agent development instruction consistency (`done`)
 
