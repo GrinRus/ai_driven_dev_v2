@@ -7,7 +7,7 @@ slice, and local task.
 
 ## Next
 
-- `W49-E2-S1-T1` — Characterize public live-facade artifact and event ordering.
+- `W49-E2-S1-T3` — Extract stage execution/inspection.
 
 ## Soon
 
@@ -60,5 +60,11 @@ slice, and local task.
   or UI-owned files changed. `W49-E3-S2-T3` completed in PR #593 and is present on `origin/main`
   at `ebba859d`; its deterministic generator produces the checked-in Markdown view, rejects
   missing or duplicate required references, and passed 77 focused traceability/docs/planning
-  tests plus all required CI/security lanes. No runtime or UI-owned files changed. The next
-  dependency-ready task is `W49-E2-S1-T1`.
+  tests plus all required CI/security lanes. No runtime or UI-owned files changed. `W49-E2-S1-T1`
+  completed in PR #595 and is present on `origin/main` at `0011426f`; its provider-free
+  characterization compares stable live-facade artifacts, normalized flow steps, operator event
+  order, and completed-stage state across two public runs. The neighboring UI refactor remains a
+  read-only reference state and no UI-owned files changed. The planned T2 `_legacy_*` removal was
+  audited as already present in preexisting cleanup commit `4d99b3fd`, so it is recorded as
+  reconciled without a duplicate production edit. The next dependency-ready task is
+  `W49-E2-S1-T3`.
