@@ -9,17 +9,19 @@ DESCRIPTOR = RuntimeAdapterDescriptor(
     protected_paths=(".qwen", ".env"),
     credential_paths=(".qwen/auth.json", ".qwen/credentials.json", "qwen.json"),
     config_paths=(".qwen/settings.json", "qwen.json"),
-    capabilities=(
-        "raw-log-stream",
-        "structured-log-stream",
-        "questions",
-        "subagents",
-        "non-interactive",
-        "working-directory",
-        "env-injection",
-        "permission-policy",
-        "live-decisions",
-        "native-transport",
+    capabilities=frozenset(
+        {
+            "raw-log-stream",
+            "structured-log-stream",
+            "questions",
+            "subagents",
+            "non-interactive",
+            "working-directory",
+            "env-injection",
+            "permission-policy",
+            "live-decisions",
+            "native-transport",
+        }
     ),
 )
 

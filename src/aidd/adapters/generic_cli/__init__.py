@@ -9,12 +9,14 @@ DESCRIPTOR = RuntimeAdapterDescriptor(
     protected_paths=(".env",),
     credential_paths=("auth.json", "credentials", "credentials.json", "token.json", "tokens.json"),
     config_paths=("settings.json",),
-    capabilities=(
-        "raw-log-stream",
-        "non-interactive",
-        "working-directory",
-        "env-injection",
-        "permission-policy",
+    capabilities=frozenset(
+        {
+            "raw-log-stream",
+            "non-interactive",
+            "working-directory",
+            "env-injection",
+            "permission-policy",
+        }
     ),
 )
 

@@ -9,18 +9,20 @@ DESCRIPTOR = RuntimeAdapterDescriptor(
     protected_paths=(".codex", ".env"),
     credential_paths=(".codex/auth.json", ".codex/credentials.json", "codex.json"),
     config_paths=(".codex/config.toml", "codex.json"),
-    capabilities=(
-        "raw-log-stream",
-        "structured-log-stream",
-        "questions",
-        "resume",
-        "subagents",
-        "non-interactive",
-        "working-directory",
-        "env-injection",
-        "permission-policy",
-        "live-decisions",
-        "native-transport",
+    capabilities=frozenset(
+        {
+            "raw-log-stream",
+            "structured-log-stream",
+            "questions",
+            "resume",
+            "subagents",
+            "non-interactive",
+            "working-directory",
+            "env-injection",
+            "permission-policy",
+            "live-decisions",
+            "native-transport",
+        }
     ),
 )
 

@@ -9,17 +9,19 @@ DESCRIPTOR = RuntimeAdapterDescriptor(
     protected_paths=(".claude", ".env"),
     credential_paths=(".claude/auth.json", ".claude/credentials.json", "claude.json"),
     config_paths=(".claude/settings.json", "claude.json"),
-    capabilities=(
-        "raw-log-stream",
-        "structured-log-stream",
-        "questions",
-        "resume",
-        "subagents",
-        "non-interactive",
-        "working-directory",
-        "env-injection",
-        "permission-policy",
-        "deferred-resume",
+    capabilities=frozenset(
+        {
+            "raw-log-stream",
+            "structured-log-stream",
+            "questions",
+            "resume",
+            "subagents",
+            "non-interactive",
+            "working-directory",
+            "env-injection",
+            "permission-policy",
+            "deferred-resume",
+        }
     ),
 )
 

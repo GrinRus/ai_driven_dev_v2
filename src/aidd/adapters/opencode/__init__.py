@@ -9,16 +9,18 @@ DESCRIPTOR = RuntimeAdapterDescriptor(
     protected_paths=(".opencode", ".env"),
     credential_paths=(".opencode/auth.json", ".opencode/credentials.json", "opencode.json"),
     config_paths=(".opencode/config.json", "opencode.json"),
-    capabilities=(
-        "raw-log-stream",
-        "structured-log-stream",
-        "questions",
-        "resume",
-        "subagents",
-        "non-interactive",
-        "working-directory",
-        "env-injection",
-        "permission-policy",
+    capabilities=frozenset(
+        {
+            "raw-log-stream",
+            "structured-log-stream",
+            "questions",
+            "resume",
+            "subagents",
+            "non-interactive",
+            "working-directory",
+            "env-injection",
+            "permission-policy",
+        }
     ),
 )
 
