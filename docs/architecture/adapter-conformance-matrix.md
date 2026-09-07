@@ -39,3 +39,8 @@ Experimental registered runtimes:
 ## Usage rule
 
 The matrix is normative for maintained runtimes. Any new maintained runtime must add one new row and must satisfy every required dimension. Experimental runtimes such as `qwen` stay out of this required matrix until promoted.
+
+Tests additionally construct an explicit in-memory `fake-external` row from
+`tests/fixtures/fake_external_adapter.py`. This test-only fixture is not a maintained runtime and
+is never added to the production matrix; it verifies that an external descriptor can satisfy the
+same required dimensions through an adapter-local surface.
