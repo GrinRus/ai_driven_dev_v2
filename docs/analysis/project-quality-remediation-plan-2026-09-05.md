@@ -43,8 +43,11 @@ explicit, with all required CI lanes green. Planning task `W49-E3-S1-T2` is comp
 the active backlog retains one bounded current note. Planning-validation task `W49-E3-S1-T3` is
 complete in PR #585 (`638d9aa`): its focused 68-test suite covers duplicate current notes,
 recursive parent roll-ups, stale completed parents, and parked/blocked child semantics without
-touching runtime or UI-owned files. The next promoted task is `W49-E3-S1-T4`, which owns the
-mechanical roadmap status reconciliation and must preserve the already-merged UI boundary.
+touching runtime or UI-owned files. The status-reconciliation task `W49-E3-S1-T4` is complete in
+PR #587 (`83db1f5c`): current parent
+markers agree with recursive child algebra, both planning-integrity checks return no errors, and
+the focused planning/docs suite passes 68 tests. The next promoted task is `W49-E3-S2-T1`, which
+owns documentation wording only and must preserve the already-merged UI boundary.
 
 ## Parent outcome decomposed
 
@@ -176,13 +179,13 @@ before lifecycle and evidence semantics stabilize. Recommended remediation order
    mode-specific permission copy and exact-run metadata;
 3. retain the completed scenario-only `W49-E1-S1-T3` evidence after confirming that its branch
    did not overlap the adjacent UI workstream;
-4. record `W49-E3-S1-T1`, `W49-E3-S1-T2`, and `W49-E3-S1-T3` as complete, then promote only
-   `W49-E3-S1-T4`;
+4. record `W49-E3-S1-T1` through `W49-E3-S1-T4` as complete, then promote only
+   `W49-E3-S2-T1` from the accepted traceability slice;
 5. retain `W46-E1-S2-T4` and `W46-E2-S2-T4` for the W50 candidate matrix rather than deleting or
    duplicating them;
 6. keep provider/human acceptance parked until exact candidate freeze.
 
-The queue and roadmap now record T1/T2/T3 completion and promote T4 as the next
+The queue and roadmap now record W49-E3-S1 completion and promote `W49-E3-S2-T1` as the next
 dependency-ready task; future promotions must continue through the same per-task delivery loop.
 
 # Wave 48 — lifecycle and evidence truth

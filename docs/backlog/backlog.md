@@ -7,7 +7,7 @@ slice, and local task.
 
 ## Next
 
-- `W49-E3-S1-T4` — Reconcile current wave/epic/slice statuses mechanically.
+- `W49-E3-S2-T1` — Correct optional-frontmatter and superseded beta-audit wording.
 
 ## Soon
 
@@ -46,4 +46,8 @@ slice, and local task.
   index](reconciliation-history-index.md). `W49-E3-S1-T3` completed in PR #585 and is present
   on `origin/main` at `638d9aa`; its 68-test planning/docs suite validates duplicate current notes,
   recursive parent roll-ups, stale completed parents, and parked/blocked child semantics. No
-  runtime or UI-owned files changed. The next dependency-ready task is `W49-E3-S1-T4`.
+  runtime or UI-owned files changed. `W49-E3-S1-T4` completed in PR #587 and is present on
+  `origin/main` at `83db1f5c`; the roll-up and generic planning-integrity checks returned no
+  errors, with the focused planning/docs suite passing 68 tests. No runtime or UI-owned files
+  changed. The next dependency-ready task is `W49-E3-S2-T1`; T2/T3 remain planned behind their
+  declared dependencies.

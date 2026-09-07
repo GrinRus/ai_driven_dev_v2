@@ -694,11 +694,11 @@ runtime-neutral core.
 
 Dependencies: W48 exit gate → `W49-E1-S2-T1` → `W49-E1-S2-T2` → `W49-E1-S2-T3` →
 `W49-E1-S2-T4` → `W49-E1-S2-T5`; all W49-E1 boundary tasks are complete, and the active queue
-item is `W49-E3-S1-T4` for planning-hygiene reconciliation.
+item is `W49-E3-S2-T1` for executable user-story traceability.
 
 ### Epic W49-E3 — planning and documentation truth (`planned`)
 
-#### Slice W49-E3-S1 — executable planning hygiene (`planned`)
+#### Slice W49-E3-S1 — executable planning hygiene (`done`)
 
 - `W49-E3-S1-T1` (done) Define parent-status algebra, including parked-child semantics and
   archive authority.
@@ -733,13 +733,41 @@ item is `W49-E3-S1-T4` for planning-hygiene reconciliation.
     planning/docs suite passed (68 tests), Ruff and diff checks passed, and no runtime or UI-owned
     files changed.
 
-- `W49-E3-S1-T4` (next) Reconcile current wave/epic/slice statuses mechanically.
+- `W49-E3-S1-T4` (done) Reconcile current wave/epic/slice statuses mechanically.
   - Output: current roadmap parent statuses agree with their child task algebra and active queue.
   - Scope: `docs/backlog/roadmap.md` and `docs/backlog/backlog.md`; no runtime or UI-owned paths.
   - Verification: the roll-up checker reports no mismatch on the current roadmap and queue.
+  - Completion evidence: PR #587 merged to `origin/main` at `83db1f5`; all current wave, epic,
+    and slice markers now agree with recursive child status algebra. Both roll-up and generic
+    roadmap/backlog integrity checks returned no errors; the focused planning/docs suite passed
+    (68 tests), and no runtime or UI-owned files changed.
 
 Dependencies: W49-E1-S1/T2/T4/T3 completion → `W49-E3-S1-T1` → `W49-E3-S1-T2` →
 `W49-E3-S1-T3` → `W49-E3-S1-T4`.
+
+#### Slice W49-E3-S2 — executable user-story traceability (`planned`)
+
+- `W49-E3-S2-T1` (next) Correct optional-frontmatter and superseded beta-audit wording.
+  - Output: architecture and analysis documents agree with the current document contract and
+    declared US-13 set.
+  - Scope: `docs/architecture/` and `docs/analysis/`; no runtime or UI-owned paths.
+  - Verification: documentation consistency checks reject stale optional-frontmatter or
+    superseded beta-audit claims while preserving current product wording.
+  - Dependencies: W49-E3-S1 completion.
+
+- `W49-E3-S2-T2` (planned) Define a structured US-01…US-13 traceability registry.
+  - Output: each story links to its contracts, code boundaries, tests, scenarios, and evidence.
+  - Scope: product traceability data and documentation checks; no runtime or UI-owned paths.
+  - Verification: every referenced artifact exists and story IDs are unique.
+  - Dependencies: W49-E3-S1 completion.
+
+- `W49-E3-S2-T3` (planned) Generate and validate a byte-stable traceability view in CI.
+  - Output: CI validates the generated story view and rejects missing required references.
+  - Scope: docs tooling and deterministic documentation fixtures; no runtime or UI-owned paths.
+  - Verification: removing a required test or scenario reference fails generation.
+  - Dependencies: W49-E3-S2-T1 and W49-E3-S2-T2.
+
+Dependencies: `W49-E3-S1` → `W49-E3-S2-T1`/`W49-E3-S2-T2` → `W49-E3-S2-T3`.
 
 ## Wave 51 — agent development instruction consistency (`planned`)
 
