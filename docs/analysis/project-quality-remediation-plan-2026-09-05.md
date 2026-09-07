@@ -78,9 +78,12 @@ focused frontend harness owner; the 96-test harness group and all required CI/se
 passed. `W49-E2-S1-T5` completed in PR #601 (`71659ca0`): canonical result-bundle
 materialization/sealing and run-transcript projection moved behind a focused bundle coordinator;
 the 99-test harness group and all required CI/security lanes passed. None of these tasks touched
-frontend source, runtime adapters, or UI-owned paths. The next dependency-ready task is
-`W49-E2-S2-T1`, extracting the server-side UI job registry/lifecycle from `cli/ui.py` while
-preserving the merged W47 presentation boundary.
+frontend source, runtime adapters, or UI-owned paths. `W49-E2-S2-T1` completed in PR #603
+(`058331b3`): job state, bounded logs, cancellation, terminal evidence, and project/workspace
+projections now have one focused owner in `aidd.cli.ui_jobs`; the full CLI suite (341 tests), Ruff,
+strict mypy, and all required CI/security lanes passed. The next dependency-ready task is
+`W49-E2-S2-T2`, extracting HTTP payload codecs/controller dispatch while preserving stable routes,
+response shapes, and the merged W47 presentation boundary.
 
 ## Parent outcome decomposed
 
@@ -492,8 +495,11 @@ CI/security lanes passed; no UI-owned files changed. T5 completed in PR #601 (`7
 canonical result-bundle materialization/sealing and run-transcript projection extracted into one
 focused bundle coordinator. Its success, blocked, awaiting-quality-review, and manual-stop
 fixtures, 99-test harness group, characterization, Ruff, strict mypy, and full required
-CI/security lanes passed; no frontend, runtime, or UI-owned files changed. The next
-dependency-ready implementation task is `W49-E2-S2-T1`.
+CI/security lanes passed; no frontend, runtime, or UI-owned files changed. `W49-E2-S2-T1` is now
+complete in PR #603 (`058331b3`) with the job lifecycle owner extracted into `aidd.cli.ui_jobs`.
+The next dependency-ready implementation task is `W49-E2-S2-T2`, extracting HTTP payload
+codecs/controller dispatch while preserving stable endpoint contracts and the merged W47
+presentation boundary.
 
 ### Slice W49-E2-S2 — post-Focus-Canvas service-boundary stabilization
 
