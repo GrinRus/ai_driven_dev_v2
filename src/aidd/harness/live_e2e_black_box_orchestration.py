@@ -97,18 +97,24 @@ from aidd.harness.live_e2e_black_box_reports import (
     write_flow_report,
     write_json_markdown_bundle,
 )
+from aidd.harness.live_e2e_black_box_stage import (
+    StageLoopDependencies,
+)
+from aidd.harness.live_e2e_black_box_stage import (
+    classify_stage_run as _stage_classify_stage_run,
+)
+from aidd.harness.live_e2e_black_box_stage import (
+    inspection_reports_unresolved_questions as _stage_inspection_reports_unresolved_questions,
+)
+from aidd.harness.live_e2e_black_box_stage import (
+    run_stage_loop as _stage_run_stage_loop,
+)
 from aidd.harness.live_e2e_black_box_steps import (
     BlackBoxCommandResult,
     LiveE2EInterrupted,
     _command_text,
     _run_black_box_command,
     _terminate_process,
-)
-from aidd.harness.live_e2e_black_box_stage import (
-    StageLoopDependencies,
-    classify_stage_run as _stage_classify_stage_run,
-    inspection_reports_unresolved_questions as _stage_inspection_reports_unresolved_questions,
-    run_stage_loop as _stage_run_stage_loop,
 )
 from aidd.harness.live_e2e_flow_state import (
     FLOW_STATE_FILENAME,
