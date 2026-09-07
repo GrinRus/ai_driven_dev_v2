@@ -3,6 +3,9 @@ from __future__ import annotations
 from dataclasses import dataclass
 from enum import StrEnum
 
+from aidd.adapters.base import RuntimeAdapterDescriptor
+from aidd.adapters.registry import runtime_adapter_descriptors
+
 
 class RuntimeExecutionMode(StrEnum):
     NATIVE = "native"
@@ -28,86 +31,58 @@ class RuntimeDefinition:
     selector_execution_modes: tuple[RuntimeExecutionMode, ...] = ()
 
 
+def _runtime_definition_from_descriptor(
+    descriptor: RuntimeAdapterDescriptor,
+) -> RuntimeDefinition:
+    registration = descriptor.registration
+    if registration is None:
+        raise ValueError(
+            f"Adapter {descriptor.runtime_id!r} is missing runtime registration metadata."
+        )
+    try:
+        default_execution_mode = RuntimeExecutionMode(registration.default_execution_mode)
+        supported_execution_modes = tuple(
+            RuntimeExecutionMode(value) for value in registration.supported_execution_modes
+        )
+        supported_selectors = frozenset(
+            RuntimeSelector(value) for value in registration.supported_selectors
+        )
+        selector_execution_modes = tuple(
+            RuntimeExecutionMode(value) for value in registration.selector_execution_modes
+        )
+    except ValueError as exc:
+        raise ValueError(
+            f"Invalid runtime registration for {descriptor.runtime_id!r}: {exc}"
+        ) from exc
+    if default_execution_mode not in supported_execution_modes:
+        raise ValueError(
+            f"Runtime registration for {descriptor.runtime_id!r} must include its default "
+            "execution mode in supported_execution_modes."
+        )
+    return RuntimeDefinition(
+        runtime_id=registration.runtime_id,
+        config_section=registration.config_section,
+        support_tier=registration.support_tier,
+        default_command=registration.default_command,
+        probe_command=registration.probe_command,
+        default_execution_mode=default_execution_mode,
+        supported_execution_modes=supported_execution_modes,
+        brokered_default_command=registration.brokered_default_command,
+        supported_selectors=supported_selectors,
+        selector_execution_modes=selector_execution_modes,
+    )
+
+
 _RUNTIME_DEFINITIONS: dict[str, RuntimeDefinition] = {
-    "generic-cli": RuntimeDefinition(
-        runtime_id="generic-cli",
-        config_section="generic_cli",
-        support_tier="tier-1",
-        default_command="python",
-        probe_command="python",
-        default_execution_mode=RuntimeExecutionMode.ADAPTER_FLAGS,
-        supported_execution_modes=(RuntimeExecutionMode.ADAPTER_FLAGS,),
-        brokered_default_command="python",
-    ),
-    "claude-code": RuntimeDefinition(
-        runtime_id="claude-code",
-        config_section="claude_code",
-        support_tier="tier-1",
-        default_command=(
-            "claude -p --output-format stream-json --verbose --dangerously-skip-permissions"
-        ),
-        probe_command="claude",
-        default_execution_mode=RuntimeExecutionMode.NATIVE,
-        supported_execution_modes=(
-            RuntimeExecutionMode.NATIVE,
-            RuntimeExecutionMode.ADAPTER_FLAGS,
-        ),
-        brokered_default_command=(
-            "claude -p --output-format stream-json --verbose --permission-mode default"
-        ),
-    ),
-    "codex": RuntimeDefinition(
-        runtime_id="codex",
-        config_section="codex",
-        support_tier="tier-2",
-        default_command=(
-            "codex exec --dangerously-bypass-approvals-and-sandbox "
-            "--skip-git-repo-check --json -"
-        ),
-        probe_command="codex",
-        default_execution_mode=RuntimeExecutionMode.NATIVE,
-        supported_execution_modes=(
-            RuntimeExecutionMode.NATIVE,
-            RuntimeExecutionMode.ADAPTER_FLAGS,
-        ),
-        brokered_default_command=(
-            "codex exec --sandbox workspace-write --skip-git-repo-check --json -"
-        ),
-        supported_selectors=frozenset(RuntimeSelector),
-        selector_execution_modes=(
-            RuntimeExecutionMode.NATIVE,
-            RuntimeExecutionMode.ADAPTER_FLAGS,
-        ),
-    ),
-    "opencode": RuntimeDefinition(
-        runtime_id="opencode",
-        config_section="opencode",
-        support_tier="tier-3",
-        default_command="opencode run --format json --dangerously-skip-permissions",
-        probe_command="opencode",
-        default_execution_mode=RuntimeExecutionMode.NATIVE,
-        supported_execution_modes=(
-            RuntimeExecutionMode.NATIVE,
-            RuntimeExecutionMode.ADAPTER_FLAGS,
-        ),
-        brokered_default_command="opencode run --format json",
-    ),
-    "qwen": RuntimeDefinition(
-        runtime_id="qwen",
-        config_section="qwen",
-        support_tier="experimental",
-        default_command="qwen --approval-mode auto --output-format stream-json",
-        probe_command="qwen",
-        default_execution_mode=RuntimeExecutionMode.NATIVE,
-        supported_execution_modes=(
-            RuntimeExecutionMode.NATIVE,
-            RuntimeExecutionMode.ADAPTER_FLAGS,
-        ),
-        brokered_default_command=(
-            "qwen --approval-mode default --output-format stream-json"
-        ),
-    ),
+    definition.runtime_id: definition
+    for definition in (
+        _runtime_definition_from_descriptor(descriptor)
+        for descriptor in runtime_adapter_descriptors()
+    )
 }
+
+if len(_RUNTIME_DEFINITIONS) != len(runtime_adapter_descriptors()):
+    raise ValueError("Runtime adapter registrations must use unique runtime IDs.")
 
 
 def runtime_definitions() -> tuple[RuntimeDefinition, ...]:

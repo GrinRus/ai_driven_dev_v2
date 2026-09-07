@@ -196,6 +196,8 @@ def test_adapter_protocol_documents_static_descriptor_contract() -> None:
         "credential_paths",
         "config_paths",
         "capabilities",
+        "registration",
+        "RuntimeDefinition",
         "no credential values",
         "CapabilityReport",
         "behavioral conformance evidence",

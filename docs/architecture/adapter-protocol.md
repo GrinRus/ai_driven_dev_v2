@@ -141,6 +141,9 @@ provider metadata from observed installation state:
 - `credential_paths` — provider credential/auth path markers;
 - `config_paths` — provider configuration path markers;
 - `capabilities` — named adapter capabilities that can be consumed by runtime-neutral policy.
+- `registration` — optional adapter-owned compatibility metadata for the runtime catalog:
+  configuration section, support tier, probe/default commands, execution modes, brokered
+  command, and typed selector support.
 
 Path entries are validated as safe relative POSIX metadata (no absolute paths, parent traversal,
 backslashes, or empty values). The descriptor is an extension seam: adding a runtime adds its
@@ -155,6 +158,12 @@ in the corresponding `aidd.adapters.<runtime>` package; the runtime registry onl
 adapter-owned value to its surface. `generic-cli` contributes the provider-neutral `.env`,
 credential, and settings markers, while named runtimes contribute their own hidden directory and
 provider file markers. These are path markers only, never credential contents.
+
+Registration metadata follows the same ownership rule. The built-in adapter registry assembles
+descriptors in stable compatibility order, and `aidd.runtime_catalog` projects each registration
+into the existing `RuntimeDefinition`/TOML-facing API. This preserves runtime IDs, configuration
+section names, commands, and enum behavior for existing users while allowing a new adapter to
+provide its registration locally instead of adding a provider branch to the catalog.
 
 ## 4.2 Runtime operator requests
 
