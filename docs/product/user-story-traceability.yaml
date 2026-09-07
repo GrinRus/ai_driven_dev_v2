@@ -113,8 +113,8 @@ stories:
       - tests/core/test_interview_candidate_parsing.py
       - tests/core/test_interview_contract_examples.py
     scenarios:
-      - harness/scenarios/live/sqlite-utils-yielded-rows-interview.yaml
       - harness/scenarios/deterministic/minimal-python-full-workflow.yaml
+      - harness/scenarios/deterministic/w43-resilience-scenarios.yaml
     evidence:
       - docs/e2e/scenario-matrix.md
       - docs/architecture/target-architecture.md
