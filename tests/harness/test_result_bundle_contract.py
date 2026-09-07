@@ -152,3 +152,28 @@ def test_legacy_inventory_payload_is_rejected() -> None:
         ResultBundleInventory.from_dict(
             {"run_id": "run-001", "status": "pass", "artifacts": []}
         )
+
+
+def test_orphaned_bundle_file_is_rejected(tmp_path: Path) -> None:
+    (tmp_path / "verdict.md").write_text("pass\n", encoding="utf-8")
+    (tmp_path / "unexpected.txt").write_text("orphan\n", encoding="utf-8")
+    inventory = _inventory(artifacts=(ResultBundleArtifact(path="verdict.md"),))
+    with pytest.raises(ResultBundleContractError, match="orphaned"):
+        validate_result_bundle_inventory(inventory=inventory, bundle_root=tmp_path)
+
+
+def test_expected_identity_is_checked_at_validation_boundary(tmp_path: Path) -> None:
+    (tmp_path / "verdict.md").write_text("pass\n", encoding="utf-8")
+    inventory = _inventory(artifacts=(ResultBundleArtifact(path="verdict.md"),))
+    with pytest.raises(ResultBundleContractError, match="identity"):
+        validate_result_bundle_inventory(
+            inventory=inventory,
+            bundle_root=tmp_path,
+            expected_identity=ResultBundleIdentity(
+                evaluation_run_id="other-eval",
+                product_run_id="product-run-001",
+                scenario_id="AIDD-CONTRACT-TEST",
+                runtime_id="generic-cli",
+                work_item="WI-CONTRACT",
+            ),
+        )

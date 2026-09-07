@@ -14,6 +14,17 @@ from typing import Any
 from aidd.core.identifiers import SafeIdentifier, contained_component_path
 from aidd.core.workspace import WORKSPACE_REPORTS_DIRNAME, WORKSPACE_REPORTS_EVALS_DIRNAME
 from aidd.harness.install_artifact import HarnessInstallResult
+from aidd.harness.result_bundle_contract import (
+    RESULT_BUNDLE_INVENTORY_FILENAME,
+    BundleArtifactRequirement,
+    BundleStatus,
+    ResultBundleArtifact,
+    ResultBundleContractError,
+    ResultBundleIdentity,
+    ResultBundleInventory,
+    dump_result_bundle_inventory,
+    validate_result_bundle_inventory,
+)
 from aidd.harness.runner import (
     HarnessAiddRunResult,
     HarnessCommandTranscript,
@@ -45,8 +56,31 @@ TEARDOWN_TRANSCRIPT_FILENAME = "teardown-transcript.json"
 ARTIFACT_DIGESTS_FILENAME = "artifact-digests.json"
 AIDD_EVIDENCE_DIRNAME = "canonical-evidence"
 RUNTIME_EXIT_METADATA_FILENAME = "runtime-exit.json"
-
-
+SUMMARY_FILENAME = "summary.md"
+BUNDLE_INTEGRITY_FAILURE_FILENAME = "bundle-integrity-failure.md"
+_BUNDLE_STATUSES: frozenset[BundleStatus] = frozenset(
+    ("pass", "fail", "blocked", "infra-fail")
+)
+_REQUIRED_BUNDLE_FILENAMES = (
+    HARNESS_METADATA_FILENAME,
+    INSTALL_TRANSCRIPT_FILENAME,
+    SETUP_TRANSCRIPT_FILENAME,
+    RUN_TRANSCRIPT_FILENAME,
+    VERIFY_TRANSCRIPT_FILENAME,
+    TEARDOWN_TRANSCRIPT_FILENAME,
+    FEATURE_SELECTION_FILENAME,
+    RUNTIME_LOG_FILENAME,
+    VALIDATOR_REPORT_FILENAME,
+    REPAIR_HISTORY_FILENAME,
+    LOG_ANALYSIS_FILENAME,
+    STAGE_TIMING_JSON_FILENAME,
+    STAGE_TIMING_MARKDOWN_FILENAME,
+    SELF_REPAIR_MATRIX_JSON_FILENAME,
+    SELF_REPAIR_MATRIX_FILENAME,
+    GRADER_FILENAME,
+    VERDICT_FILENAME,
+    SUMMARY_FILENAME,
+)
 @dataclass(frozen=True, slots=True)
 class ResultBundleLayout:
     run_root: Path
@@ -70,6 +104,7 @@ class ResultBundleLayout:
     grader_path: Path
     verdict_path: Path
     artifact_digests_path: Path
+    inventory_path: Path
 
 
 def _validate_run_id(run_id: str) -> str:
@@ -107,6 +142,7 @@ def build_result_bundle_layout(*, workspace_root: Path, run_id: str) -> ResultBu
         grader_path=run_root / GRADER_FILENAME,
         verdict_path=run_root / VERDICT_FILENAME,
         artifact_digests_path=run_root / ARTIFACT_DIGESTS_FILENAME,
+        inventory_path=run_root / RESULT_BUNDLE_INVENTORY_FILENAME,
     )
 
 
@@ -135,6 +171,7 @@ def build_result_bundle_layout_at_run_root(*, run_root: Path) -> ResultBundleLay
         grader_path=normalized_run_root / GRADER_FILENAME,
         verdict_path=normalized_run_root / VERDICT_FILENAME,
         artifact_digests_path=normalized_run_root / ARTIFACT_DIGESTS_FILENAME,
+        inventory_path=normalized_run_root / RESULT_BUNDLE_INVENTORY_FILENAME,
     )
 
 
@@ -616,3 +653,160 @@ def copy_or_link_run_artifacts(
         shutil.rmtree(staging_root, ignore_errors=True)
 
     return {key: destination_path for key, (_source_path, destination_path) in sources.items()}
+
+
+def _bundle_artifact_files(*, layout: ResultBundleLayout) -> tuple[Path, ...]:
+    """Return regular content files, excluding mutable seal indexes."""
+
+    if not layout.run_root.is_dir():
+        raise ResultBundleContractError(f"bundle root does not exist: {layout.run_root!s}.")
+    files: list[Path] = []
+    for path in sorted(layout.run_root.rglob("*")):
+        if path.is_symlink():
+            raise ResultBundleContractError(
+                f"bundle contains an untrusted symlink: {path.relative_to(layout.run_root)}."
+            )
+        mode = path.lstat().st_mode
+        if stat.S_ISDIR(mode):
+            continue
+        if not stat.S_ISREG(mode):
+            raise ResultBundleContractError(
+                "bundle contains an unsupported artifact node: "
+                f"{path.relative_to(layout.run_root)}."
+            )
+        if path in {layout.inventory_path, layout.artifact_digests_path}:
+            continue
+        if path.name.startswith(".") and path.name.endswith(".tmp"):
+            raise ResultBundleContractError(
+                f"bundle contains an unfinished temporary artifact: {path.name!r}."
+            )
+        files.append(path)
+    return tuple(files)
+
+
+def build_result_bundle_inventory(
+    *,
+    layout: ResultBundleLayout,
+    identity: ResultBundleIdentity,
+    status: BundleStatus,
+    requirements: tuple[BundleArtifactRequirement, ...] = (),
+) -> ResultBundleInventory:
+    """Snapshot content files into the versioned bundle inventory contract."""
+
+    artifacts = tuple(
+        ResultBundleArtifact(
+            path=path.relative_to(layout.run_root).as_posix(),
+            sha256=_sha256(path),
+            size_bytes=path.stat().st_size,
+        )
+        for path in _bundle_artifact_files(layout=layout)
+    )
+    selected_requirements = requirements or tuple(
+        BundleArtifactRequirement(
+            path=filename,
+            required_for=frozenset(_BUNDLE_STATUSES),
+        )
+        for filename in _REQUIRED_BUNDLE_FILENAMES
+    )
+    return ResultBundleInventory(
+        identity=identity,
+        status=status,
+        artifacts=artifacts,
+        requirements=selected_requirements,
+    ).normalized()
+
+
+def _validate_bundle_metadata_identity(
+    *,
+    layout: ResultBundleLayout,
+    identity: ResultBundleIdentity,
+) -> None:
+    try:
+        payload = json.loads(layout.harness_metadata_path.read_text(encoding="utf-8"))
+    except (FileNotFoundError, json.JSONDecodeError) as exc:
+        raise ResultBundleContractError("bundle metadata is missing or invalid JSON.") from exc
+    if not isinstance(payload, dict):
+        raise ResultBundleContractError("bundle metadata must be a JSON object.")
+    expected = identity.normalized().to_dict()
+    actual = {
+        key: payload.get(key)
+        for key in ("evaluation_run_id", "product_run_id", "scenario_id", "runtime_id", "work_item")
+    }
+    if actual != expected:
+        raise ResultBundleContractError(
+            "bundle metadata identity does not match execution identity."
+        )
+
+
+def seal_result_bundle(
+    *,
+    layout: ResultBundleLayout,
+    identity: ResultBundleIdentity,
+    status: BundleStatus,
+    requirements: tuple[BundleArtifactRequirement, ...] = (),
+) -> ResultBundleInventory:
+    """Atomically publish a digest-backed inventory as the bundle commit marker."""
+
+    normalized_identity = identity.normalized()
+    layout.run_root.mkdir(parents=True, exist_ok=True)
+    _validate_bundle_metadata_identity(layout=layout, identity=normalized_identity)
+    if status == "pass" and normalized_identity.product_run_id is not None:
+        for category in ("work-item", "task-run"):
+            evidence_root = layout.run_root / AIDD_EVIDENCE_DIRNAME / category
+            if not evidence_root.is_dir() or not any(
+                path.is_file() for path in evidence_root.rglob("*")
+            ):
+                raise ResultBundleContractError(
+                    f"bundle is missing canonical AIDD evidence tree: {category}."
+                )
+
+    # An inventory is the final commit marker.  Write the complete digest index first,
+    # then re-snapshot and atomically replace the inventory after validation.
+    inventory = build_result_bundle_inventory(
+        layout=layout,
+        identity=normalized_identity,
+        status=status,
+        requirements=requirements,
+    )
+    validate_result_bundle_inventory(
+        inventory=inventory,
+        bundle_root=layout.run_root,
+        expected_identity=normalized_identity,
+    )
+    _atomic_write_json(
+        layout.artifact_digests_path,
+        {
+            "artifacts": [item.to_dict() for item in inventory.artifacts],
+            "schema_version": 2,
+        },
+    )
+    inventory = build_result_bundle_inventory(
+        layout=layout,
+        identity=normalized_identity,
+        status=status,
+        requirements=requirements,
+    )
+    validate_result_bundle_inventory(
+        inventory=inventory,
+        bundle_root=layout.run_root,
+        expected_identity=normalized_identity,
+    )
+    temporary_path = layout.inventory_path.with_name(f".{layout.inventory_path.name}.tmp")
+    try:
+        temporary_path.write_text(dump_result_bundle_inventory(inventory), encoding="utf-8")
+        temporary_path.replace(layout.inventory_path)
+    except OSError:
+        layout.inventory_path.unlink(missing_ok=True)
+        raise
+    finally:
+        temporary_path.unlink(missing_ok=True)
+    try:
+        validate_result_bundle_inventory(
+            inventory=inventory,
+            bundle_root=layout.run_root,
+            expected_identity=normalized_identity,
+        )
+    except ResultBundleContractError:
+        layout.inventory_path.unlink(missing_ok=True)
+        raise
+    return inventory

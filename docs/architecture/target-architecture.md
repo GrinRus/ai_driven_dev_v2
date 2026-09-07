@@ -200,7 +200,12 @@ The exact layout may evolve, but the model is fixed:
   tree under `canonical-evidence/` before an isolated `.aidd` workspace is cleaned up. Every
   copied regular file is recorded with its bundle-relative path, SHA-256 digest, and byte size in
   `artifact-digests.json`; metadata points only at those durable bundle references for raw attempt
-  logs/exits/events, stage validators, task ledgers, and aggregate-finalization evidence.
+  logs/exits/events, stage validators, task ledgers, and aggregate-finalization evidence. Finalization
+  snapshots the complete inventory (including identity, status, digest, and size) into
+  `result-bundle-inventory.json` with an atomic replace; that file is the commit marker. Before a
+  PASS is exposed, the validator rejects missing, mutated, orphaned, symlinked, or identity-mismatched
+  evidence. A failed seal is persisted as an explicit `infra-fail` bundle-integrity result rather
+  than being reported as PASS or disappearing as an exception.
 
 The implemented operator frontend and project-set workflow support preserve this ownership model:
 

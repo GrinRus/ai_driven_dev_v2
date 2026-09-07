@@ -48,6 +48,7 @@ from aidd.evals.verdicts import (
     ScenarioVerdict,
     VerdictStatus,
     build_scenario_verdict_from_harness_outcome,
+    write_scenario_verdict_markdown,
 )
 from aidd.harness.eval_models import (
     EvalExecutionState,
@@ -58,6 +59,7 @@ from aidd.harness.eval_models import (
 )
 from aidd.harness.eval_report_writers import write_eval_source_artifacts
 from aidd.harness.result_bundle import (
+    BUNDLE_INTEGRITY_FAILURE_FILENAME,
     EVENTS_JSONL_FILENAME,
     FEATURE_SELECTION_FILENAME,
     RUNTIME_JSONL_FILENAME,
@@ -67,9 +69,15 @@ from aidd.harness.result_bundle import (
     ResultBundleLayout,
     collect_aidd_evidence_sources,
     copy_or_link_run_artifacts,
+    seal_result_bundle,
     write_command_transcripts,
     write_feature_selection,
     write_harness_metadata,
+)
+from aidd.harness.result_bundle_contract import (
+    BundleArtifactRequirement,
+    ResultBundleContractError,
+    ResultBundleIdentity,
 )
 from aidd.harness.scenarios import Scenario
 from aidd.runtime_catalog import get_runtime_definition
@@ -1221,6 +1229,185 @@ def persist_eval_reports(
         summary_path.read_text(encoding="utf-8") + "\n" + rendered_stage_timing,
         encoding="utf-8",
     )
+
+    bundle_identity = ResultBundleIdentity(
+        evaluation_run_id=run_id,
+        product_run_id=product_run_id,
+        scenario_id=scenario.scenario_id,
+        runtime_id=runtime_id,
+        work_item=work_item,
+    )
+    try:
+        seal_result_bundle(layout=layout, identity=bundle_identity, status=status)
+    except ResultBundleContractError as exc:
+        if status != "pass":
+            raise
+
+        # A candidate PASS is never allowed to disappear as an exception.  Persist a
+        # durable infrastructure verdict that explains the failed seal, then seal that
+        # failure bundle with a reduced requirement set so missing PASS-only evidence is
+        # itself represented rather than silently fabricated.
+        status = "infra-fail"
+        summary = "Candidate PASS rejected: result bundle integrity validation failed."
+        first_failure_boundary = FailureBoundarySelection(
+            category="infrastructure",
+            signal_source="harness",
+            signal_line_number=None,
+            reason=str(exc),
+        )
+        first_failure_note = f"harness: {exc}"
+        failure_cause = FailureCause(
+            category=FailureCauseCategory.INFRASTRUCTURE,
+            phase=FailureCausePhase.ANALYSIS,
+            source=FailureCauseSource.HARNESS,
+            reason=f"Bundle integrity validation failed before PASS: {exc}",
+            evidence_link=BUNDLE_INTEGRITY_FAILURE_FILENAME,
+        )
+        integrity_failure_path = layout.run_root / BUNDLE_INTEGRITY_FAILURE_FILENAME
+        integrity_failure_path.write_text(
+            "# Bundle integrity failure\n\n"
+            "The candidate PASS was rejected before publication of a valid PASS bundle.\n\n"
+            f"- Reason: {exc}\n"
+            f"- Evaluation run: `{run_id}`\n"
+            f"- Product run: `{product_run_id or 'none'}`\n",
+            encoding="utf-8",
+        )
+
+        phase_metadata = _phase_metadata(
+            prep=prep,
+            state=state,
+            status=status,
+            evaluation_run_id=run_id,
+            product_run_id=product_run_id,
+        )
+        feature_selection_payload.update(
+            {
+                "product_run_id": product_run_id,
+                "phase_metadata": phase_metadata,
+            }
+        )
+        try:
+            metadata_payload = json.loads(
+                layout.harness_metadata_path.read_text(encoding="utf-8")
+            )
+        except (FileNotFoundError, json.JSONDecodeError):
+            metadata_payload = {}
+        if not isinstance(metadata_payload, dict):
+            metadata_payload = {}
+        metadata_payload.update(bundle_identity.to_dict())
+        metadata_payload.update(
+            {
+                "status": status,
+                "phase_metadata": phase_metadata,
+                "bundle_integrity_failure": {
+                    "reason": str(exc),
+                    "artifact": BUNDLE_INTEGRITY_FAILURE_FILENAME,
+                },
+            }
+        )
+        layout.harness_metadata_path.write_text(
+            json.dumps(metadata_payload, indent=2, sort_keys=True) + "\n",
+            encoding="utf-8",
+        )
+        layout.validator_report_path.write_text(
+            render_validator_report_source(
+                status=status,
+                summary=summary,
+                prep_error=state.prep_error,
+                install_error=state.install_error,
+                setup_error=state.setup_error,
+                run_error=state.run_error,
+                verification_error=state.verification_error,
+                teardown_error=state.teardown_error,
+                failure_cause=failure_cause,
+            ),
+            encoding="utf-8",
+        )
+        verdict = build_scenario_verdict_from_harness_outcome(
+            scenario_id=scenario.scenario_id,
+            run_id=run_id,
+            runtime_id=runtime_id,
+            outcome=HarnessOutcome(
+                aidd_exit_code=(
+                    None if state.aidd_run_result is None else state.aidd_run_result.exit_code
+                ),
+                verification_failed=False,
+                blocked_by_questions=False,
+                infrastructure_failure=True,
+            ),
+            summary=summary,
+            artifact_links=(
+                RUNTIME_LOG_FILENAME,
+                VALIDATOR_REPORT_FILENAME,
+                VERDICT_FILENAME,
+                BUNDLE_INTEGRITY_FAILURE_FILENAME,
+            ),
+            first_failure_note=first_failure_note,
+            failure_cause=failure_cause,
+        )
+        write_scenario_verdict_markdown(path=layout.verdict_path, verdict=verdict)
+        layout.log_analysis_path.write_text(
+            render_log_analysis_markdown(
+                status=status,
+                boundary=first_failure_boundary,
+                failure_cause=failure_cause,
+                runtime_diagnostics_markdown=render_runtime_diagnostics_markdown(
+                    normalized_events=normalized_events,
+                    stage_timing_payload=stage_timing_payload,
+                    runtime_id=runtime_id,
+                    runtime_config_path=state.live_runtime_config_path,
+                    harness_timeout_seconds=(
+                        None
+                        if state.aidd_run_result is None
+                        else state.aidd_run_result.timeout_seconds
+                    ),
+                ),
+                stage_timing_markdown=rendered_stage_timing,
+            ),
+            encoding="utf-8",
+        )
+        layout.grader_path.write_text(
+            json.dumps(
+                grader_payload(
+                    scenario=scenario,
+                    run_id=run_id,
+                    runtime_id=runtime_id,
+                    status=status,
+                    summary=summary,
+                    first_failure_boundary=first_failure_boundary,
+                    feature_selection_payload=feature_selection_payload,
+                    failure_cause=failure_cause,
+                ),
+                indent=2,
+                sort_keys=True,
+            )
+            + "\n",
+            encoding="utf-8",
+        )
+        scenario_row = build_scenario_summary_row(
+            verdict=verdict,
+            duration_seconds=duration_seconds,
+            failure_boundary=first_failure_boundary.category,
+        )
+        summary_path = write_eval_summary_markdown(
+            path=layout.run_root / SUMMARY_REPORT_FILENAME,
+            scenario_rows=(scenario_row,),
+        )
+        summary_path.write_text(
+            summary_path.read_text(encoding="utf-8") + "\n" + rendered_stage_timing,
+            encoding="utf-8",
+        )
+        seal_result_bundle(
+            layout=layout,
+            identity=bundle_identity,
+            status=status,
+            requirements=(
+                BundleArtifactRequirement(
+                    path=BUNDLE_INTEGRITY_FAILURE_FILENAME,
+                    required_for=frozenset({"infra-fail"}),
+                ),
+            ),
+        )
 
     return EvalScenarioRunResult(
         scenario_id=scenario.scenario_id,

@@ -19,6 +19,7 @@ from aidd.core.identifiers import SafeIdentifier
 RESULT_BUNDLE_CONTRACT_SCHEMA_VERSION = 2
 RESULT_BUNDLE_REFERENCE_MODE = "bundle-relative"
 RESULT_BUNDLE_LEGACY_POLICY = "reject"
+RESULT_BUNDLE_INVENTORY_FILENAME = "result-bundle-inventory.json"
 
 BundleStatus = Literal["pass", "fail", "blocked", "infra-fail"]
 BundleArtifactCondition = Literal["always", "pass", "fail", "blocked", "infra-fail"]
@@ -299,7 +300,10 @@ class ResultBundleInventory:
 
 
 def validate_result_bundle_inventory(
-    *, inventory: ResultBundleInventory, bundle_root: Path
+    *,
+    inventory: ResultBundleInventory,
+    bundle_root: Path,
+    expected_identity: ResultBundleIdentity | None = None,
 ) -> ResultBundleInventory:
     """Reject dangling references, missing conditional artifacts, or bad digests."""
 
@@ -307,6 +311,8 @@ def validate_result_bundle_inventory(
     root = bundle_root.resolve(strict=False)
     if not root.is_dir():
         raise ResultBundleContractError(f"bundle root does not exist: {bundle_root!s}.")
+    if expected_identity is not None and value.identity != expected_identity.normalized():
+        raise ResultBundleContractError("result bundle identity does not match expected execution.")
     artifacts = {item.path: item for item in value.artifacts}
     for artifact in value.artifacts:
         if artifact.condition not in {"always", value.status}:
@@ -326,6 +332,27 @@ def validate_result_bundle_inventory(
                 raise ResultBundleContractError(
                     f"bundle artifact digest does not match: {artifact.path!r}."
                 )
+    actual_paths: set[str] = set()
+    for path in root.rglob("*"):
+        if path.is_symlink():
+            raise ResultBundleContractError(
+                f"bundle contains an untrusted symlink: {path.relative_to(root).as_posix()!r}."
+            )
+        if not path.is_file():
+            continue
+        relative = path.relative_to(root).as_posix()
+        if relative in {
+            RESULT_BUNDLE_INVENTORY_FILENAME,
+            "artifact-digests.json",
+        }:
+            continue
+        actual_paths.add(relative)
+    inventory_paths = {item.path for item in value.artifacts}
+    orphaned = sorted(actual_paths - inventory_paths)
+    if orphaned:
+        raise ResultBundleContractError(
+            "bundle contains orphaned artifacts: " + ", ".join(orphaned) + "."
+        )
     for requirement in value.requirements:
         if value.status not in requirement.required_for:
             continue
@@ -356,6 +383,7 @@ __all__ = [
     "BundleArtifactRequirement",
     "BundleStatus",
     "RESULT_BUNDLE_CONTRACT_SCHEMA_VERSION",
+    "RESULT_BUNDLE_INVENTORY_FILENAME",
     "RESULT_BUNDLE_LEGACY_POLICY",
     "RESULT_BUNDLE_REFERENCE_MODE",
     "ResultBundleArtifact",
