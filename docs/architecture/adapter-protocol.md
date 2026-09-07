@@ -165,6 +165,15 @@ into the existing `RuntimeDefinition`/TOML-facing API. This preserves runtime ID
 section names, commands, and enum behavior for existing users while allowing a new adapter to
 provide its registration locally instead of adding a provider branch to the catalog.
 
+### 4.1.1 Test-only extension proof
+
+`tests/fixtures/fake_external_adapter.py` is a test-only external descriptor. Its metadata is
+injected into an explicit in-memory `RuntimeConformanceRow` and a temporary adapter surface;
+the production adapter registry and runtime-neutral catalog are not modified. The fixture proves
+that a new adapter can project registration metadata, satisfy every required conformance
+dimension, and supply protected-path markers to the core operator policy without adding provider
+literals to `aidd.core` or `aidd.runtime_catalog`.
+
 ## 4.2 Runtime operator requests
 
 AIDD separates product questions from runtime approvals:

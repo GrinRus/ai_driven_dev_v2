@@ -201,6 +201,9 @@ def test_adapter_protocol_documents_static_descriptor_contract() -> None:
         "no credential values",
         "CapabilityReport",
         "behavioral conformance evidence",
+        "4.1.1 Test-only extension proof",
+        "fake_external_adapter.py",
+        "in-memory `RuntimeConformanceRow`",
     ):
         assert expected_text in adapter_protocol
 
