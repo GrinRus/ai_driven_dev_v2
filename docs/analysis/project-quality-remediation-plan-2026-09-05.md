@@ -46,8 +46,12 @@ recursive parent roll-ups, stale completed parents, and parked/blocked child sem
 touching runtime or UI-owned files. The status-reconciliation task `W49-E3-S1-T4` is complete in
 PR #587 (`83db1f5c`): current parent
 markers agree with recursive child algebra, both planning-integrity checks return no errors, and
-the focused planning/docs suite passes 68 tests. The next promoted task is `W49-E3-S2-T1`, which
-owns documentation wording only and must preserve the already-merged UI boundary.
+the focused planning/docs suite passes 68 tests. `W49-E3-S2-T1` is complete in PR #589
+(`9780f1c2`): architecture and analysis wording now matches optional frontmatter and the current
+US-13 scope, with a documentation consistency guard; all required CI lanes passed after one
+transient browser-lane retry. No runtime or UI-owned files changed. The next promoted task is
+`W49-E3-S2-T2`, which owns the structured traceability registry and must preserve the already-
+merged UI boundary.
 
 ## Parent outcome decomposed
 
@@ -185,8 +189,9 @@ before lifecycle and evidence semantics stabilize. Recommended remediation order
    duplicating them;
 6. keep provider/human acceptance parked until exact candidate freeze.
 
-The queue and roadmap now record W49-E3-S1 completion and promote `W49-E3-S2-T1` as the next
-dependency-ready task; future promotions must continue through the same per-task delivery loop.
+The queue and roadmap now record W49-E3-S1 and `W49-E3-S2-T1` completion and promote
+`W49-E3-S2-T2` as the next dependency-ready task; future promotions must continue through the
+same per-task delivery loop.
 
 # Wave 48 — lifecycle and evidence truth
 
