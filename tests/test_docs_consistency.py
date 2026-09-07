@@ -186,6 +186,23 @@ def test_adapter_protocol_documents_current_execution_result_surface() -> None:
         assert expected_text in adapter_protocol
 
 
+def test_adapter_protocol_documents_static_descriptor_contract() -> None:
+    adapter_protocol = (
+        _repo_root() / "docs" / "architecture" / "adapter-protocol.md"
+    ).read_text(encoding="utf-8")
+    for expected_text in (
+        "RuntimeAdapterDescriptor",
+        "protected_paths",
+        "credential_paths",
+        "config_paths",
+        "capabilities",
+        "no credential values",
+        "CapabilityReport",
+        "behavioral conformance evidence",
+    ):
+        assert expected_text in adapter_protocol
+
+
 def test_artifact_ownership_docs_and_prompt_packs_are_consistent() -> None:
     repo_root = _repo_root()
     document_contracts = (repo_root / "docs" / "architecture" / "document-contracts.md").read_text(

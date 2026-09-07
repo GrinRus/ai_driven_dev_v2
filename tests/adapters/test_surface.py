@@ -5,9 +5,10 @@ from dataclasses import replace
 
 import pytest
 
-from aidd.adapters.base import CapabilityReport
+from aidd.adapters.base import CapabilityReport, RuntimeAdapterDescriptor
 from aidd.adapters.surface import (
     RUNTIME_ADAPTER_SURFACES,
+    get_runtime_adapter_descriptor,
     get_runtime_adapter_surface,
 )
 from aidd.runtime_catalog import RuntimeExecutionMode
@@ -35,6 +36,49 @@ def test_default_execution_mode_comes_from_registered_surface() -> None:
         "opencode": RuntimeExecutionMode.NATIVE,
         "qwen": RuntimeExecutionMode.NATIVE,
     }
+
+
+def test_adapter_descriptor_contract_is_immutable_and_non_secret() -> None:
+    descriptor = RuntimeAdapterDescriptor(
+        runtime_id="fake-runtime",
+        protected_paths=(".fake-runtime", "project/.runtime"),
+        credential_paths=(".fake-runtime/auth.json",),
+        config_paths=(".fake-runtime/settings.json",),
+        capabilities=("questions", "structured-logs"),
+    )
+
+    assert descriptor.supports_capability("questions")
+    assert not descriptor.supports_capability("unknown")
+    assert descriptor.to_dict() == {
+        "runtime_id": "fake-runtime",
+        "protected_paths": [".fake-runtime", "project/.runtime"],
+        "credential_paths": [".fake-runtime/auth.json"],
+        "config_paths": [".fake-runtime/settings.json"],
+        "capabilities": ["questions", "structured-logs"],
+    }
+    with pytest.raises((AttributeError, TypeError)):
+        descriptor.runtime_id = "changed"  # type: ignore[misc]
+
+
+@pytest.mark.parametrize(
+    "kwargs",
+    (
+        {"runtime_id": "", "protected_paths": ()},
+        {"runtime_id": "fake", "protected_paths": ("/absolute",)},
+        {"runtime_id": "fake", "protected_paths": ("../outside",)},
+        {"runtime_id": "fake", "credential_paths": ("bad\\path",)},
+        {"runtime_id": "fake", "config_paths": ("",)},
+        {"runtime_id": "fake", "capabilities": ("not valid",)},
+    ),
+)
+def test_adapter_descriptor_rejects_unsafe_metadata(kwargs: dict[str, object]) -> None:
+    with pytest.raises((TypeError, ValueError)):
+        RuntimeAdapterDescriptor(**kwargs)
+
+
+def test_surface_descriptor_accessor_fails_closed_until_runtime_metadata_is_registered() -> None:
+    with pytest.raises(ValueError, match="no security/capability descriptor"):
+        get_runtime_adapter_descriptor("generic-cli")
 
 
 def test_builtin_conformance_probe_uses_its_actual_transport_capabilities(monkeypatch) -> None:

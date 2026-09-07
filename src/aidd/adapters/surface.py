@@ -8,7 +8,7 @@ from enum import StrEnum
 from pathlib import Path
 from typing import cast
 
-from aidd.adapters.base import CapabilityReport
+from aidd.adapters.base import CapabilityReport, RuntimeAdapterDescriptor
 from aidd.adapters.claude_code import probe as probe_claude_code
 from aidd.adapters.claude_code.runner import (
     ClaudeCodeCommandContext,
@@ -160,6 +160,7 @@ class RuntimeAdapterSurface:
     execute_stage_request_fn: StageRequestExecutor
     conformance_spec_builder: ConformanceSpecBuilder
     default_execution_mode: RuntimeExecutionMode
+    descriptor: RuntimeAdapterDescriptor | None = None
 
     def probe_configured_command(
         self, *, configured_command: str, provider_command: str
@@ -1117,3 +1118,12 @@ def get_runtime_adapter_surface(runtime_id: str) -> RuntimeAdapterSurface:
     except KeyError as exc:
         supported = ", ".join(RUNTIME_ADAPTER_SURFACES)
         raise ValueError(f"Unsupported runtime id: {runtime_id}. Supported: {supported}.") from exc
+
+
+def get_runtime_adapter_descriptor(runtime_id: str) -> RuntimeAdapterDescriptor:
+    """Return static security/capability metadata for a registered adapter."""
+
+    surface = get_runtime_adapter_surface(runtime_id)
+    if surface.descriptor is None:
+        raise ValueError(f"Adapter {runtime_id!r} has no security/capability descriptor.")
+    return surface.descriptor
