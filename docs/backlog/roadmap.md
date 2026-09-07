@@ -805,8 +805,13 @@ changing its public behavior.
     neighboring UI checkout files changed.
 
 - `W49-E2-S2-T2` (next) Extract HTTP payload codecs/controller dispatch.
-  - Output: endpoint payload decoding, response encoding, and controller dispatch move behind a
-    focused CLI transport module without changing stable routes or status/body shapes.
+  - Pre-implementation reconciliation: the JSON body/response codecs already have a focused owner
+    in `aidd.cli.ui_http`, and generic route dispatch is owned by `aidd.cli.ui_routing` (W21).
+    The remaining slice is therefore resliced to compose those owners behind one transport boundary
+    and add endpoint contract fixtures; no duplicate codec or router implementation is permitted.
+  - Output: service/controller composition and handler construction move behind a focused CLI
+    transport module while preserving the existing `ui_http` codecs, stable routes, and status/body
+    shapes.
   - Scope: server-side CLI transport and contract tests; no `src/aidd/cli/static/**`,
     `tests/frontend/**`, UI browser journeys, or neighboring UI checkout edits.
   - Verification: endpoint contract fixtures preserve success, validation, not-found, and
@@ -816,7 +821,7 @@ changing its public behavior.
 | Task | Output | Dominant area | Main verification | Effort |
 | --- | --- | --- | --- | ---: |
 | `W49-E2-S2-T1` | Extract UI job registry/lifecycle from `cli/ui.py`. | CLI application service | Two-project job lifecycle tests preserve isolation. | 1.5d |
-| `W49-E2-S2-T2` | Extract HTTP payload codecs/controller dispatch. | CLI transport | Endpoint contract suite preserves status/body shapes. | 2d |
+| `W49-E2-S2-T2` | Compose existing HTTP codecs/router behind a CLI transport boundary and add endpoint contracts. | CLI transport | Endpoint contract suite preserves status/body shapes. | 2d |
 | `W49-E2-S2-T3` | Replace dashboard `_next_action` branching with ordered typed rules. | Core dashboard evidence | Full state matrix yields exactly one deterministic action. | 1d |
 
 Dependencies: merged W47 UI PR and a green post-merge CLI/frontend/browser compatibility baseline.
