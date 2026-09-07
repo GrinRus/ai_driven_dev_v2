@@ -486,13 +486,17 @@ Primary output: a PASS bundle remains fully auditable after harness cache deleti
     and dependency-review checks passed. Full `make check` passed (3107 Python tests, Ruff,
     strict mypy, JavaScript, instruction, and planning checks); focused eval/harness coverage
     passed (186 tests). The adjacent UI checkout remained untouched.
-- `W48-E3-S3-T3` (next) Materialize raw attempt logs/exits/events, stage validators, task
+- `W48-E3-S3-T3` (done) Materialize raw attempt logs/exits/events, stage validators, task
   ledger, and finalization evidence.
   - Dependencies: `W48-E3-S3-T2`.
   - Output: all required raw and canonical evidence is copied into the bundle before cache cleanup.
   - Scope: result-bundle materializer and focused evidence tests; no UI-owned paths.
   - Verification: references survive deletion of product and harness `.aidd` roots.
-- `W48-E3-S3-T4` (planned) Atomically seal and validate inventory, digests, sizes, and identities
+  - Completion evidence: PR #558 merged to `origin/main` at `432ca93e`; Python 3.12–3.14,
+    adapter-conformance, deterministic-scenarios, packaged-ui-browser, build, CodeQL, Scorecard,
+    and dependency-review checks passed. Focused result-bundle/eval coverage passed (32 tests);
+    Ruff and strict mypy passed for changed modules. The adjacent UI checkout remained untouched.
+- `W48-E3-S3-T4` (next) Atomically seal and validate inventory, digests, sizes, and identities
   before PASS.
   - Dependencies: `W48-E3-S3-T3`.
   - Output: missing, mutated, orphaned, or identity-ambiguous evidence converts candidate PASS to
