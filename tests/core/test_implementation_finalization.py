@@ -5,12 +5,17 @@ from pathlib import Path
 
 import pytest
 
+from aidd.application.implementation import aggregate_finalization_port
 from aidd.core.implementation_finalization import (
+    OUTSIDE_PROJECT_SET_EVIDENCE_FILENAME,
+    TaskFinalizationContext,
     aggregate_execution_mode,
     complete_task_finalization,
+    outside_project_set_changes,
     prepare_task_finalization,
     render_aggregate_implementation_report,
 )
+from aidd.core.run_store import create_run_manifest, load_stage_metadata, persist_stage_status
 from aidd.core.task_ledger import TaskExecutionStatus, TaskLedger
 from aidd.core.task_plan import TaskExecutionMode, parse_task_plan
 from aidd.validators.semantic_rules.evidence import has_implementation_command_evidence
@@ -299,3 +304,121 @@ One task verifies existing repository state.
     )
 
     assert aggregate_execution_mode(plan) is TaskExecutionMode.VERIFICATION_ONLY
+
+
+def _write_project_set_context(workspace_root: Path, work_item: str = "WI-1") -> None:
+    context = workspace_root / "workitems" / work_item / "context" / "project-set.md"
+    context.parent.mkdir(parents=True, exist_ok=True)
+    context.write_text(
+        "# Project set\n\n"
+        "## Projects\n\n"
+        "| Project id | Root | Role |\n"
+        "| --- | --- | --- |\n"
+        "| `api` | `services/api` | `primary` |\n"
+        "| `web` | `apps/web` | `secondary` |\n",
+        encoding="utf-8",
+    )
+
+
+def test_outside_project_set_changes_preserve_exact_paths_and_task_ids(tmp_path: Path) -> None:
+    workspace_root = tmp_path / ".aidd"
+    ledger = _successful_ledger(workspace_root)
+    _write_project_set_context(workspace_root)
+    (workspace_root / "task-attempt" / "task-diff.json").write_text(
+        json.dumps(
+            {
+                "schema_version": 1,
+                "task_id": "TL-1",
+                "observed_touched_paths": [
+                    "services/api/src/example.py",
+                    "README.md",
+                    "docs/notes.md",
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    assert outside_project_set_changes(
+        workspace_root=workspace_root,
+        work_item="WI-1",
+        ledger=ledger,
+    ) == (
+        ("README.md", ("TL-1",)),
+        ("docs/notes.md", ("TL-1",)),
+    )
+
+
+def test_aggregate_finalization_blocks_outside_project_set_and_persists_evidence(
+    tmp_path: Path,
+) -> None:
+    workspace_root = tmp_path / ".aidd"
+    work_item, run_id = "WI-1", "run-1"
+    ledger = _successful_ledger(workspace_root)
+    _write_project_set_context(workspace_root, work_item)
+    (workspace_root / "task-attempt" / "task-diff.json").write_text(
+        json.dumps(
+            {
+                "schema_version": 1,
+                "task_id": "TL-1",
+                "observed_touched_paths": ["outside.py"],
+            }
+        ),
+        encoding="utf-8",
+    )
+    create_run_manifest(
+        workspace_root=workspace_root,
+        work_item=work_item,
+        run_id=run_id,
+        runtime_id="generic-cli",
+        stage_target="implement",
+        config_snapshot={},
+    )
+    persist_stage_status(
+        workspace_root=workspace_root,
+        work_item=work_item,
+        run_id=run_id,
+        stage="implement",
+        status="executing",
+    )
+    finalization_attempt = (
+        workspace_root
+        / "reports"
+        / "runs"
+        / work_item
+        / run_id
+        / "stages"
+        / "implement"
+        / "finalization"
+        / "attempts"
+        / "attempt-0001"
+    )
+    finalization_attempt.mkdir(parents=True)
+    context = TaskFinalizationContext(
+        ledger=ledger,
+        attempt_path=finalization_attempt,
+        attempt_number=1,
+    )
+
+    with pytest.raises(ValueError, match="outside declared project-set paths"):
+        aggregate_finalization_port(
+            workspace_root=workspace_root,
+            work_item=work_item,
+            run_id=run_id,
+        )(context)
+
+    evidence = finalization_attempt / OUTSIDE_PROJECT_SET_EVIDENCE_FILENAME
+    assert evidence.is_file()
+    assert "`outside.py`" in evidence.read_text(encoding="utf-8")
+    diagnostics = json.loads(
+        (finalization_attempt / "publication-diagnostics.json").read_text(encoding="utf-8")
+    )
+    assert diagnostics["status"] == "failed"
+    metadata = load_stage_metadata(
+        workspace_root=workspace_root,
+        work_item=work_item,
+        run_id=run_id,
+        stage="implement",
+    )
+    assert metadata is not None
+    assert metadata.status == "failed"

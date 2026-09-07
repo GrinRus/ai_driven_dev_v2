@@ -1,9 +1,10 @@
 from __future__ import annotations
 
 import json
+import re
 from dataclasses import dataclass
 from datetime import UTC, datetime
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 from uuid import uuid4
 
 from aidd.core.attempt_lineage import (
@@ -14,6 +15,7 @@ from aidd.core.attempt_lineage import (
 )
 from aidd.core.identifiers import contained_component_path
 from aidd.core.markdown import extract_h2_section
+from aidd.core.project_set import PROJECT_SET_CONTEXT_FILENAME
 from aidd.core.run_store import load_run_manifest, load_stage_metadata, run_stage_root
 from aidd.core.task_attempt_lifecycle import existing_attempts, reconcile_staging_attempts
 from aidd.core.task_ledger import (
@@ -22,6 +24,10 @@ from aidd.core.task_ledger import (
     persist_task_ledger,
 )
 from aidd.core.task_plan import TaskExecutionMode, TaskPlan
+from aidd.core.workspace import work_item_context_root
+
+OUTSIDE_PROJECT_SET_EVIDENCE_FILENAME = "outside-project-set.md"
+_PROJECT_SET_ROW_PATTERN = re.compile(r"^\|\s*`([^`]+)`\s*\|\s*`([^`]+)`\s*\|")
 
 
 @dataclass(frozen=True, slots=True)
@@ -30,6 +36,125 @@ class TaskFinalizationContext:
     attempt_path: Path
     attempt_number: int
     lineage: AttemptLineage | None = None
+
+
+def _declared_project_set_roots(*, workspace_root: Path, work_item: str) -> tuple[str, ...]:
+    context_path = (
+        work_item_context_root(root=workspace_root, work_item=work_item)
+        / PROJECT_SET_CONTEXT_FILENAME
+    )
+    if not context_path.is_file():
+        return ()
+    roots: list[str] = []
+    for line in context_path.read_text(encoding="utf-8", errors="replace").splitlines():
+        match = _PROJECT_SET_ROW_PATTERN.match(line.strip())
+        if match is None:
+            continue
+        raw_root = match.group(2).strip().strip("/")
+        if raw_root in {"", "."}:
+            roots.append("")
+            continue
+        relative = PurePosixPath(raw_root)
+        if relative.is_absolute() or ".." in relative.parts or "\\" in raw_root:
+            raise ValueError(
+                "Project-set context contains an unsafe repository-relative root: "
+                f"{raw_root}."
+            )
+        roots.append(relative.as_posix())
+    unique_roots = tuple(dict.fromkeys(roots))
+    if not unique_roots:
+        raise ValueError(
+            f"Project-set context does not declare any roots: {context_path.as_posix()}."
+        )
+    return unique_roots
+
+
+def _path_is_in_project_set(path: str, roots: tuple[str, ...]) -> bool:
+    relative = PurePosixPath(path)
+    if relative.is_absolute() or ".." in relative.parts or "\\" in path:
+        raise ValueError(f"Task diff contains an unsafe repository-relative path: {path}.")
+    normalized = relative.as_posix()
+    return any(
+        not root or normalized == root or normalized.startswith(f"{root}/")
+        for root in roots
+    )
+
+
+def outside_project_set_changes(
+    *, workspace_root: Path, work_item: str, ledger: TaskLedger
+) -> tuple[tuple[str, tuple[str, ...]], ...]:
+    """Return observed task paths that are outside the declared project-set roots.
+
+    Task snapshots are captured relative to the selected repository root. This helper
+    reads only those durable task-diff artifacts, so a finalization retry evaluates the
+    same evidence instead of taking a new mutable working-tree snapshot.
+    """
+
+    roots = _declared_project_set_roots(workspace_root=workspace_root, work_item=work_item)
+    if not roots:
+        return ()
+    outside: dict[str, set[str]] = {}
+    resolved_workspace = workspace_root.resolve(strict=False)
+    for entry in ledger.tasks:
+        if entry.latest_attempt_path is None:
+            raise ValueError(f"Task `{entry.id}` is missing its latest attempt path.")
+        attempt_path = (workspace_root / entry.latest_attempt_path).resolve(strict=False)
+        if not attempt_path.is_relative_to(resolved_workspace):
+            raise ValueError(
+                f"Task attempt path escapes workspace root for `{entry.id}`: "
+                f"{entry.latest_attempt_path}."
+            )
+        diff_path = attempt_path / "task-diff.json"
+        if not diff_path.is_file():
+            raise ValueError(
+                f"Task diff evidence is missing for `{entry.id}`: {diff_path.as_posix()}."
+            )
+        try:
+            payload = json.loads(diff_path.read_text(encoding="utf-8"))
+        except (OSError, UnicodeError, json.JSONDecodeError) as exc:
+            raise ValueError(
+                f"Task diff evidence is unreadable for `{entry.id}`: {diff_path.as_posix()}."
+            ) from exc
+        if not isinstance(payload, dict):
+            raise ValueError(f"Task diff evidence must be an object for `{entry.id}`.")
+        if payload.get("schema_version") != 1 or payload.get("task_id") != entry.id:
+            raise ValueError(
+                f"Task diff evidence identity is invalid for `{entry.id}`."
+            )
+        observed = payload.get("observed_touched_paths")
+        if not isinstance(observed, list) or not all(isinstance(path, str) for path in observed):
+            raise ValueError(
+                f"Task diff evidence has invalid observed paths for `{entry.id}`."
+            )
+        for path in observed:
+            if not _path_is_in_project_set(path, roots):
+                outside.setdefault(path, set()).add(entry.id)
+    return tuple(
+        (path, tuple(sorted(task_ids))) for path, task_ids in sorted(outside.items())
+    )
+
+
+def render_outside_project_set_evidence(
+    *,
+    work_item: str,
+    changes: tuple[tuple[str, tuple[str, ...]], ...],
+) -> str:
+    lines = [
+        "# Outside Project-Set Evidence",
+        "",
+        "- Work item: `" + work_item + "`",
+        "- Status: `blocked`",
+        "- Aggregate implementation finalization is fail-closed until these paths are reviewed.",
+        "",
+        "## Outside-set changes",
+        "",
+    ]
+    lines.extend(
+        f"- `{path}` (observed by task(s): {', '.join(f'`{task_id}`' for task_id in task_ids)})"
+        for path, task_ids in changes
+    )
+    lines.append("")
+    return "\n".join(lines)
 
 
 def aggregate_execution_mode(plan: TaskPlan) -> TaskExecutionMode:
@@ -278,9 +403,12 @@ def render_aggregate_implementation_report(
 
 
 __all__ = [
+    "OUTSIDE_PROJECT_SET_EVIDENCE_FILENAME",
     "TaskFinalizationContext",
     "aggregate_execution_mode",
     "complete_task_finalization",
+    "outside_project_set_changes",
     "prepare_task_finalization",
     "render_aggregate_implementation_report",
+    "render_outside_project_set_evidence",
 ]
