@@ -548,7 +548,17 @@ remediation plan until their dependencies are promoted into this canonical roadm
     (127 tests), Ruff and strict mypy passed, and all required Python 3.12–3.14, adapter-
     conformance, deterministic-scenarios, packaged-ui-browser, build, CodeQL, Scorecard, and
     dependency-review checks passed. The adjacent `codex/ui-completion` checkout remained
-    untouched.
+  untouched.
+
+- `W49-E1-S1-T4` (blocked) Align UI copy with detected/rejected versus preventively contained
+  modes.
+  - Output: the operator UI distinguishes full-access detection/attribution warnings from
+    brokered or isolated preventive containment while reusing the merged Focus Canvas components.
+  - Scope: UI presentation copy and its DOM/browser acceptance; no parallel presentation pattern.
+  - Verification: full-access and enforced-containment fixtures render distinct copy and preserve
+    the shared core recommendation.
+  - Dependency note: blocked until the neighboring `codex/ui-completion` branch is merged; do
+    not edit UI-owned files from this workstream before that integration.
 
 Dependencies: W48 exit gate → `W49-E1-S1-T1` → `W49-E1-S1-T2`; T4 remains dependent on the
 merged W47 UI work and must not edit UI-owned paths before that integration.
@@ -586,7 +596,7 @@ runtime-neutral core.
     mypy passed, and all required CI lanes passed after one documented flaky packaged-browser
     rerun. The adjacent `codex/ui-completion` checkout remained untouched.
 
-- `W49-E1-S2-T3` (next) Consume protected-path metadata and remove provider literals from core.
+- `W49-E1-S2-T3` (done) Consume protected-path metadata and remove provider literals from core.
   - Output: runtime policy consumes adapter-owned protected, credential, and config markers through
     an injected runtime-neutral seam; provider names and filenames are absent from core policy
     branches while existing protection classifications remain fail-closed.
@@ -595,9 +605,28 @@ runtime-neutral core.
   - Verification: the existing protection matrix passes for every built-in runtime, an injected
     descriptor drives classification for a fake runtime, and a source guard rejects new provider
     literals in `aidd.core`.
+  - Completion evidence: PR #570 merged to `origin/main` at `82b7bdb1`; core and adapter suites
+    passed (1405 tests), Ruff and strict mypy passed, and all required Python, adapter,
+    deterministic, packaged-ui-browser, build, CodeQL, Scorecard, and dependency-review checks
+    passed. The adjacent `codex/ui-completion` checkout remains untouched.
 
-Dependencies: W48 exit gate → `W49-E1-S2-T1` → `W49-E1-S2-T2` → `W49-E1-S2-T3`; T4 remains held
-for the merged W47 UI work and must not edit UI-owned paths before that integration.
+- `W49-E1-S2-T4` (next) Drive built-in registration/config compatibility from descriptors.
+  - Output: built-in runtime registration and configuration compatibility consume adapter-owned
+    descriptors without central provider branches; existing runtime IDs and TOML remain stable.
+  - Scope: adapter registry/config composition and compatibility tests; no UI-owned paths.
+  - Verification: existing runtime IDs and TOML configurations resolve unchanged, while a source
+    guard prevents new provider-specific registration branches in runtime-neutral code.
+
+- `W49-E1-S2-T5` (soon) Prove clean extension with an allowlisted fake external descriptor.
+  - Output: a fake runtime can participate through adapter-local code and an explicit matrix row
+    without a runtime-neutral core edit.
+  - Scope: architecture/conformance fixtures and extension documentation; no UI-owned paths.
+  - Verification: the fake descriptor passes the adapter/security matrix and core source guards
+    continue to reject provider literals.
+
+Dependencies: W48 exit gate → `W49-E1-S2-T1` → `W49-E1-S2-T2` → `W49-E1-S2-T3` →
+`W49-E1-S2-T4` → `W49-E1-S2-T5`; the UI-bound `W49-E1-S1-T4` remains blocked on the merged
+W47 UI work and must not edit UI-owned paths before that integration.
 
 ## Wave 51 — agent development instruction consistency (`done`)
 
