@@ -7,7 +7,7 @@ slice, and local task.
 
 ## Next
 
-- `W49-E3-S2-T2` — Define a structured US-01…US-13 traceability registry.
+- `W49-E3-S2-T3` — Generate and validate a byte-stable traceability view in CI.
 
 ## Soon
 
@@ -52,5 +52,9 @@ slice, and local task.
   changed. `W49-E3-S2-T1` completed in PR #589 and is present on `origin/main` at `9780f1c2`;
   its architecture/analysis wording and documentation consistency guard agree on optional
   frontmatter and the current US-13 scope. The neighboring UI refactor remains read-only
-  reference state. No runtime or UI-owned files changed. The next dependency-ready task is
-  `W49-E3-S2-T2`; T3 remains planned behind T1/T2.
+  reference state. No runtime or UI-owned files changed. `W49-E3-S2-T2` completed in PR #591 and
+  is present on `origin/main` at `dc0cca33`; its
+  schema-versioned registry covers all 13 stories with contract, code, test, scenario, and
+  evidence references, and the consistency guard verifies unique IDs plus repository-relative
+  artifact existence. Local validation passed 181 focused docs/planning/quality tests; no runtime
+  or UI-owned files changed. The next dependency-ready task is `W49-E3-S2-T3`.
