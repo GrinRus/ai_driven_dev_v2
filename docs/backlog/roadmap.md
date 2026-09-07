@@ -534,7 +534,7 @@ remediation plan until their dependencies are promoted into this canonical roadm
     planning, and agent-workflow checks passed (63 tests), and the required Python, adapter,
     deterministic, packaged UI, build, CodeQL, Scorecard, and dependency-review checks passed.
 
-- `W49-E1-S1-T2` (next) Block aggregate finalization when repository evidence contains
+- `W49-E1-S1-T2` (done) Block aggregate finalization when repository evidence contains
   outside-set changes.
   - Output: full-access runs detect exact outside-root paths and prevent Review/QA progression
     until the evidence is explicitly handled; brokered/isolated containment behavior remains
@@ -543,9 +543,32 @@ remediation plan until their dependencies are promoted into this canonical roadm
     and focused lifecycle/evidence tests; no UI-owned paths.
   - Verification: a two-root implementation fixture with an intentional outside-root change
     leaves exact path evidence and blocks aggregate finalization and downstream Review/QA.
+  - Completion evidence: PR #564 merged to `origin/main` at `0b671901`; the focused docs,
+    planning, lifecycle, evidence, implementation-service, and CLI conformance checks passed
+    (127 tests), Ruff and strict mypy passed, and all required Python 3.12–3.14, adapter-
+    conformance, deterministic-scenarios, packaged-ui-browser, build, CodeQL, Scorecard, and
+    dependency-review checks passed. The adjacent `codex/ui-completion` checkout remained
+    untouched.
 
 Dependencies: W48 exit gate → `W49-E1-S1-T1` → `W49-E1-S1-T2`; T4 remains dependent on the
 merged W47 UI work and must not edit UI-owned paths before that integration.
+
+#### Slice W49-E1-S2 — adapter-owned provider metadata (`planned`)
+
+Primary output: adding a runtime does not require provider literals or credential filenames in
+runtime-neutral core.
+
+- `W49-E1-S2-T1` (next) Define adapter security/capability descriptor.
+  - Output: an adapter-owned descriptor contract covers protected paths, credentials, config,
+    and runtime capabilities without provider-specific branches in core.
+  - Scope: adapter protocol and runtime-neutral metadata types, with focused contract tests; no
+    UI-owned paths.
+  - Verification: a descriptor contract test accepts a fake runtime descriptor containing
+    protected paths, credential/config metadata, and capabilities without editing core provider
+    literals.
+
+Dependencies: W48 exit gate → `W49-E1-S2-T1`; subsequent descriptor rollout tasks remain in the
+accepted remediation plan until this contract is merged.
 
 ## Wave 51 — agent development instruction consistency (`done`)
 
