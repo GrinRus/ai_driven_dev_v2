@@ -43,6 +43,97 @@ class BacklogEntry:
     section: str
 
 
+ContainerKey = tuple[str, int, ...]
+
+
+def _container_label(key: ContainerKey) -> str:
+    kind = key[0]
+    if kind == "wave":
+        return f"W{key[1]}"
+    if kind == "epic":
+        return f"W{key[1]}-E{key[2]}"
+    return f"W{key[1]}-E{key[2]}-S{key[3]}"
+
+
+def _roadmap_container_tree(
+    roadmap: str,
+) -> tuple[dict[ContainerKey, str], dict[ContainerKey, list[ContainerKey | str]]]:
+    """Parse declared containers and their direct task/container children."""
+    declared: dict[ContainerKey, str] = {}
+    children: dict[ContainerKey, list[ContainerKey | str]] = {}
+    current_wave: ContainerKey | None = None
+    current_epic: ContainerKey | None = None
+    current_slice: ContainerKey | None = None
+
+    for line in roadmap.splitlines():
+        if match := _WAVE_RE.match(line):
+            current_wave = ("wave", int(match["wave"]))
+            declared[current_wave] = match["status"]
+            children.setdefault(current_wave, [])
+            current_epic = None
+            current_slice = None
+        elif match := _EPIC_RE.match(line):
+            current_epic = ("epic", int(match["wave"]), int(match["epic"]))
+            declared[current_epic] = match["status"]
+            children.setdefault(current_epic, [])
+            if current_wave is not None:
+                children[current_wave].append(current_epic)
+            current_slice = None
+        elif match := _SLICE_RE.match(line):
+            current_slice = (
+                "slice",
+                int(match["wave"]),
+                int(match["epic"]),
+                int(match["slice"]),
+            )
+            declared[current_slice] = match["status"]
+            children.setdefault(current_slice, [])
+            if current_epic is not None:
+                children[current_epic].append(current_slice)
+        elif match := _TASK_RE.match(line):
+            if current_slice is not None:
+                children[current_slice].append(match["status"])
+
+    return declared, children
+
+
+def parent_status_rollup_errors(roadmap: str) -> tuple[str, ...]:
+    """Validate recursive wave/epic/slice status roll-up against local task states.
+
+    This check is intentionally separate from the generic roadmap/backlog parser while the
+    current roadmap is being mechanically reconciled by W49-E3-S1-T4.
+    """
+    declared, children = _roadmap_container_tree(roadmap)
+    effective: dict[ContainerKey, str] = {}
+
+    def status_for(key: ContainerKey, ancestors: frozenset[ContainerKey] = frozenset()) -> str:
+        if key in effective:
+            return effective[key]
+        if key in ancestors:
+            return "planned"
+        child_states = [
+            status_for(child, ancestors | {key}) if isinstance(child, tuple) else child
+            for child in children.get(key, [])
+        ]
+        result = (
+            "done"
+            if child_states and all(state == "done" for state in child_states)
+            else "planned"
+        )
+        effective[key] = result
+        return result
+
+    errors: list[str] = []
+    for key, status in declared.items():
+        expected = status_for(key)
+        if status != expected:
+            errors.append(
+                f"parent status mismatch for {_container_label(key)}: "
+                f"declared {status!r}, expected {expected!r}"
+            )
+    return tuple(errors)
+
+
 def _task_blocks(lines: list[str]) -> list[tuple[re.Match[str], list[str]]]:
     starts = [
         (index, match)

@@ -6,6 +6,7 @@ import pytest
 
 from tests.planning_integrity import (
     backlog_reconciliation_errors,
+    parent_status_rollup_errors,
     roadmap_backlog_integrity_errors,
 )
 
@@ -73,6 +74,78 @@ def test_backlog_reconciliation_accepts_one_bounded_note_and_archive_link() -> N
         "Earlier evidence: [archive](reconciliation-history-2026-09-05.md).\n"
     )
     assert backlog_reconciliation_errors(backlog) == ()
+
+
+def test_backlog_reconciliation_rejects_duplicate_current_notes() -> None:
+    backlog = (
+        "## Current reconciliation\n\n"
+        "- `2026-09-05` First current note.\n"
+        "- `2026-09-05` Duplicate current note.\n"
+    )
+
+    assert backlog_reconciliation_errors(backlog)
+
+
+def _rollup_roadmap(*task_statuses: str) -> str:
+    parent_status = (
+        "done"
+        if task_statuses and all(status == "done" for status in task_statuses)
+        else "planned"
+    )
+    tasks = [
+        f"- `W1-E1-S1-T{number}` ({status}) Task {number}."
+        for number, status in enumerate(task_statuses, start=1)
+    ]
+    return "\n".join(
+        (
+            f"## Wave 1 — wave (`{parent_status}`)",
+            f"### Epic W1-E1 — epic (`{parent_status}`)",
+            f"#### Slice W1-E1-S1 — slice (`{parent_status}`)",
+            "Local tasks:",
+            *tasks,
+        )
+    )
+
+
+@pytest.mark.parametrize(
+    "task_statuses",
+    (
+        ("done", "done"),
+        ("done", "planned"),
+        ("done", "parked"),
+        ("parked", "parked"),
+        ("done", "blocked"),
+    ),
+)
+def test_parent_status_rollup_accepts_documented_child_states(
+    task_statuses: tuple[str, ...],
+) -> None:
+    assert parent_status_rollup_errors(_rollup_roadmap(*task_statuses)) == ()
+
+
+def test_parent_status_rollup_rejects_stale_completed_parent() -> None:
+    roadmap = _rollup_roadmap("done", "planned").replace(
+        "#### Slice W1-E1-S1 — slice (`planned`)",
+        "#### Slice W1-E1-S1 — slice (`done`)",
+    )
+
+    errors = parent_status_rollup_errors(roadmap)
+
+    assert any("parent status mismatch for W1-E1-S1" in error for error in errors)
+
+
+def test_parent_status_rollup_rejects_done_container_without_children() -> None:
+    roadmap = "\n".join(
+        (
+            "## Wave 1 — wave (`done`)",
+            "### Epic W1-E1 — epic (`done`)",
+            "#### Slice W1-E1-S1 — slice (`done`)",
+        )
+    )
+
+    errors = parent_status_rollup_errors(roadmap)
+
+    assert any("expected 'planned'" in error for error in errors)
 
 
 @pytest.mark.parametrize(
