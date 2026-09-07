@@ -694,13 +694,13 @@ runtime-neutral core.
 
 Dependencies: W48 exit gate → `W49-E1-S2-T1` → `W49-E1-S2-T2` → `W49-E1-S2-T3` →
 `W49-E1-S2-T4` → `W49-E1-S2-T5`; all W49-E1 boundary tasks are complete, and the active queue
-item is `W49-E2-S1-T1` for live-facade characterization.
+item is `W49-E2-S1-T3` for stage execution/inspection extraction.
 
 ### Epic W49-E2 — behavior-preserving hotspot reduction (`planned`)
 
 #### Slice W49-E2-S1 — live harness decomposition (`planned`)
 
-- `W49-E2-S1-T1` (next) Characterize public live-facade artifact and event ordering.
+- `W49-E2-S1-T1` (done) Characterize public live-facade artifact and event ordering.
   - Output: a deterministic characterization records the normalized artifacts and event order
     that the public live facade must preserve during later decomposition.
   - Scope: harness characterization tests and deterministic fixtures; no runtime or UI-owned paths.
@@ -708,6 +708,34 @@ item is `W49-E2-S1-T1` for live-facade characterization.
     event ordering without provider credentials.
   - Dependencies: W48 evidence semantics are stable and the merged W47 UI compatibility baseline
     is available.
+  - Completion evidence: PR #595 merged to `origin/main` at `0011426f`; the provider-free
+    characterization runs the public facade twice and compares stable artifact inventory,
+    normalized flow steps, operator event order, and completed-stage state while allowing the
+    documented optional provisional running-stage checkpoint. Focused characterization, existing
+    public-bundle, boundary, Ruff, and diff checks passed; all required Python, adapter,
+    deterministic, packaged-browser, build, CodeQL, Scorecard, and dependency-review lanes passed
+    on the exact candidate. No runtime or UI-owned files changed.
+
+- `W49-E2-S1-T2` (done) Remove the unreachable 14-function `_legacy_*` process island.
+  - Output: the live orchestrator contains no unreachable legacy process implementation while
+    preserving the canonical step/report helpers and the T1 characterization contract.
+  - Scope: live orchestrator cleanup and harness boundary verification; no UI-owned paths.
+  - Verification: source inspection finds no `_legacy_*` process definitions, canonical helper
+    imports remain in place, and the T1 characterization stays green.
+  - Completion evidence: the required removal is already present on `origin/main` in commit
+    `4d99b3fd` (`refactor: remove repository residue and require current formats`), which removed
+    the 14-function island and obsolete imports. PR #595 revalidated the characterization and
+    public bundle boundaries after that cleanup; no duplicate production edit is required.
+
+- `W49-E2-S1-T3` (next) Extract stage execution/inspection.
+  - Output: stage execution and post-stage inspection move behind a focused harness module while
+    the public live facade keeps its current behavior and artifact contract.
+  - Scope: live harness stage execution/inspection helpers and deterministic terminal/blocked
+    fixtures; no frontend probe, report, runtime, or UI-owned paths.
+  - Verification: terminal and blocked fixtures produce equivalent normalized artifacts and event
+    ordering before and after extraction, without provider credentials.
+  - Dependencies: `W49-E2-S1-T1` and `W49-E2-S1-T2`, stable W48 evidence semantics, and the
+    merged W47 UI compatibility baseline.
 
 ### Epic W49-E3 — planning and documentation truth (`done`)
 
