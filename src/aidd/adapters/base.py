@@ -45,6 +45,72 @@ def _normalize_capabilities(values: Iterable[str]) -> frozenset[str]:
 
 
 @dataclass(frozen=True, slots=True)
+class RuntimeAdapterRegistration:
+    """Adapter-owned runtime/config compatibility metadata.
+
+    Values intentionally use stable strings so the adapter protocol does not depend on
+    the runtime catalog's enum implementation.  The catalog converts these values at its
+    neutral boundary and keeps the existing public ``RuntimeDefinition`` API intact.
+    """
+
+    runtime_id: str
+    config_section: str
+    support_tier: str
+    default_command: str
+    probe_command: str
+    default_execution_mode: str
+    supported_execution_modes: tuple[str, ...]
+    brokered_default_command: str | None = None
+    supported_selectors: tuple[str, ...] = ()
+    selector_execution_modes: tuple[str, ...] = ()
+
+    def __post_init__(self) -> None:
+        for field_name in (
+            "runtime_id",
+            "config_section",
+            "support_tier",
+            "default_command",
+            "probe_command",
+        ):
+            value = getattr(self, field_name)
+            if not isinstance(value, str) or not value.strip():
+                raise ValueError(f"{field_name} must be a non-empty string.")
+        default_execution_mode = self.default_execution_mode
+        if not isinstance(default_execution_mode, str):
+            raise TypeError("default_execution_mode must be a string.")
+        if not default_execution_mode.strip():
+            raise ValueError("default_execution_mode must not be blank.")
+        object.__setattr__(self, "default_execution_mode", default_execution_mode.strip())
+        for field_name in (
+            "supported_execution_modes",
+            "supported_selectors",
+            "selector_execution_modes",
+        ):
+            values = getattr(self, field_name)
+            if isinstance(values, str):
+                values = (values,)
+            normalized_values: list[str] = []
+            for value in values:
+                if not isinstance(value, str):
+                    raise TypeError(f"{field_name} entries must be strings.")
+                normalized_values.append(value.strip())
+            normalized = tuple(normalized_values)
+            if any(not value for value in normalized):
+                raise ValueError(f"{field_name} entries must be non-empty strings.")
+            object.__setattr__(self, field_name, normalized)
+        if self.brokered_default_command is not None:
+            if not isinstance(self.brokered_default_command, str):
+                raise TypeError("brokered_default_command must be a string when provided.")
+            if not self.brokered_default_command.strip():
+                raise ValueError("brokered_default_command must not be blank.")
+            object.__setattr__(
+                self,
+                "brokered_default_command",
+                self.brokered_default_command.strip(),
+            )
+
+
+@dataclass(frozen=True, slots=True)
 class RuntimeAdapterDescriptor:
     """Static adapter-owned security and capability metadata.
 
@@ -59,6 +125,7 @@ class RuntimeAdapterDescriptor:
     credential_paths: tuple[str, ...] = ()
     config_paths: tuple[str, ...] = ()
     capabilities: frozenset[str] = frozenset()
+    registration: RuntimeAdapterRegistration | None = None
 
     def __post_init__(self) -> None:
         runtime_id = self.runtime_id.strip()
@@ -67,6 +134,13 @@ class RuntimeAdapterDescriptor:
         if any(character.isspace() for character in runtime_id) or "/" in runtime_id:
             raise ValueError("runtime_id must be a stable adapter identifier.")
         object.__setattr__(self, "runtime_id", runtime_id)
+        if self.registration is not None:
+            if not isinstance(self.registration, RuntimeAdapterRegistration):
+                raise TypeError(
+                    "registration must be a RuntimeAdapterRegistration when provided."
+                )
+            if self.registration.runtime_id != runtime_id:
+                raise ValueError("registration.runtime_id must match descriptor.runtime_id.")
         for field_name in ("protected_paths", "credential_paths", "config_paths"):
             object.__setattr__(
                 self,
