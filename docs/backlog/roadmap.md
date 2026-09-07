@@ -456,7 +456,7 @@ Primary output: execution verdict and first decisive cause remain compatible acr
     `infra-fail` / `infrastructure` / `setup` without synthetic validator findings. The adjacent
     UI checkout remained untouched.
 
-#### Slice W48-E3-S3 — self-contained bundle v2 (`planned`)
+#### Slice W48-E3-S3 — self-contained bundle v2 (`done`)
 
 Primary output: a PASS bundle remains fully auditable after harness cache deletion.
 
@@ -496,7 +496,7 @@ Primary output: a PASS bundle remains fully auditable after harness cache deleti
     adapter-conformance, deterministic-scenarios, packaged-ui-browser, build, CodeQL, Scorecard,
     and dependency-review checks passed. Focused result-bundle/eval coverage passed (32 tests);
     Ruff and strict mypy passed for changed modules. The adjacent UI checkout remained untouched.
-- `W48-E3-S3-T4` (next) Atomically seal and validate inventory, digests, sizes, and identities
+- `W48-E3-S3-T4` (done) Atomically seal and validate inventory, digests, sizes, and identities
   before PASS.
   - Dependencies: `W48-E3-S3-T3`.
   - Output: missing, mutated, orphaned, or identity-ambiguous evidence converts candidate PASS to
@@ -504,8 +504,35 @@ Primary output: a PASS bundle remains fully auditable after harness cache deleti
   - Scope: bundle finalization and integrity validator; no UI-owned paths.
   - Verification: integrity fixtures exercise missing, mutated, orphaned, and mismatched identity
     evidence before allowing PASS.
+  - Completion evidence: PR #560 merged to `origin/main` at `b85db4e8`; Python 3.12–3.14,
+    adapter-conformance, deterministic-scenarios, packaged-ui-browser, build, CodeQL, Scorecard,
+    and dependency-review checks passed. Full local Python regression reached 3112 tests; after
+    correcting a provider-free smoke fixture, targeted lifecycle/eval coverage passed (15),
+    result-bundle sealing/contract coverage passed (34), Ruff and strict mypy passed. The adjacent
+    `codex/ui-completion` checkout remained untouched.
 
 Dependencies: T1 → T2/T3 → T4.
+
+## Wave 49 — product boundaries and sustainable maintenance (`planned`)
+
+### Epic W49-E1 — truthful product and provider boundaries (`planned`)
+
+#### Slice W49-E1-S1 — project-set policy and implement gate (`planned`)
+
+The mode-specific capability decision keeps full-access detection/attribution distinct from
+preventive containment in brokered or isolated modes. Later W49 tasks remain in the accepted
+remediation plan until their dependencies are promoted into this canonical roadmap.
+
+- `W49-E1-S1-T1` (next) Publish a mode-specific project-set capability matrix in US-12 and
+  architecture.
+  - Output: product wording and architecture describe declaration, attribution, detection, and
+    fail-closed progression for full-access mode, while reserving preventive containment claims
+    for brokered/isolated modes.
+  - Scope: `docs/product/user-stories.md` and `docs/architecture/`; no UI-owned paths.
+  - Verification: documentation checks reject unconditional containment wording and preserve the
+    declared project-set workflow.
+
+Dependencies: W48 exit gate → `W49-E1-S1-T1` → W49-E1-S1-T2/T4.
 
 ## Wave 51 — agent development instruction consistency (`done`)
 
