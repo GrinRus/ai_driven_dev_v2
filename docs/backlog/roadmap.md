@@ -714,14 +714,15 @@ queue item is the promoted W49-E3 planning-hygiene task.
     authority are documented, and planning/docs checks passed (60 tests). No runtime or
     UI-owned files changed.
 
-- `W49-E3-S1-T2` (next) Archive historical reconciliation bullets, leaving one current note.
+- `W49-E3-S1-T2` (done) Archive historical reconciliation bullets, leaving one current note.
   - Output: historical reconciliation IDs remain discoverable in Git while active docs keep one
     bounded current note.
   - Scope: `docs/backlog/backlog.md` and linked planning history; no runtime or UI-owned paths.
   - Verification: the active queue contains no stale completion bullets and every retained ID is
-    still searchable in the roadmap or history.
+    still searchable in the roadmap or history. PR #583 (`8c2f6bfe`) adds the archive index for
+    the 509 bullets, including its immutable revision and verified SHA-256 digest.
 
-- `W49-E3-S1-T3` (planned) Add bounded-note and parent-status roll-up validation.
+- `W49-E3-S1-T3` (next) Add bounded-note and parent-status roll-up validation.
   - Output: planning integrity checks reject duplicate current notes and stale completed parents,
     while applying the explicit parked-child rule.
   - Scope: planning-integrity tests and their fixtures; no runtime or UI-owned paths.
