@@ -18,6 +18,36 @@ of local-task status: `Next` maps to `next`, `Soon` to `soon`, and `Parking lot`
 `parked`. Historical outcomes such as `superseded`, `legacy`, or `not applicable` are
 ordinary disposition notes, not status values.
 
+### Parent-status algebra and archive authority
+
+Wave, epic, and slice headings expose only `planned` or `done`; local tasks use the six
+statuses above. A parent status is derived from its declared children, recursively, rather
+than from its prose or queue placement:
+
+| Child state | Parent status | Rule |
+| --- | --- | --- |
+| One or more children exist and every child is `done` | `done` | The parent has no unresolved child outcome. |
+| Any child is `planned`, `next`, `soon`, `parked`, or `blocked` | `planned` | The parent still has unresolved or deferred work. |
+| No child task/container is declared | `planned` | An empty container cannot claim completion. |
+
+Examples: children `[done, done]` roll up to `done`; `[done, planned]`, `[done, blocked]`,
+and `[done, parked]` roll up to `planned`; `[parked, parked]` also remains `planned`.
+
+`parked` means consciously deferred, not completed: a parked child keeps its parent
+`planned`, remains visible in the backlog `Parking lot`, and must not be converted into
+completion evidence. `blocked` has the same non-terminal roll-up but must retain the
+dependency gap that prevents execution. `next` and `soon` are actionable queue projections;
+they also keep the parent `planned`. A parent may become `done` only after every declared
+child has an explicit `done` marker and the corresponding completion evidence is present.
+
+The current-state authorities are separate from the archive: `roadmap.md` is canonical for
+hierarchy, task definitions, dependencies, and statuses, while `backlog.md` is the exact
+projection of actionable local-task statuses (`next`, `soon`, and `parked`). Completed task
+definitions, dated reconciliation notes, and their evidence are archived by the merged Git
+history reachable from `origin/main` (PR/commit SHAs are the retrieval keys). Unmerged
+branches, working trees, and historical prose never override the current roadmap or queue;
+a future history document may improve discoverability but is not a second status authority.
+
 ## Planning model
 
 - **Wave** — broad delivery phase
