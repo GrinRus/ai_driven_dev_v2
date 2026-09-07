@@ -105,6 +105,52 @@ def _plan_documents() -> dict[str, str]:
     }
 
 
+def _project_set_plan_documents() -> dict[str, str]:
+    return {
+        "plan.md": """# Plan
+
+## Goals
+
+- Deliver bounded implementation evidence for both declared project roots.
+
+## Out of scope
+
+- Review and QA progression are excluded from this implement-stage deterministic lane.
+
+## Milestones
+
+- M1: Add the API project marker under `services/api`.
+- M2: Add the web project marker under `apps/web`.
+
+## Implementation strategy
+
+- Complete M1 before M2 and preserve task-local diffs for aggregate finalization.
+
+## Risks
+
+- R1: An outside-root edit could invalidate the project-set boundary; mitigation: verify
+  aggregate finalization against each task diff.
+
+## Dependencies
+
+- M1 precedes M2.
+
+## Verification approach
+
+- Run the authored root-marker checks and inspect task-local diffs after M1 and M2.
+
+## Verification notes
+
+- M1: inspect the API task diff and marker path.
+- M2: inspect the web task diff and marker path.
+
+## Open questions
+
+- none
+""",
+    }
+
+
 def _review_spec_documents() -> dict[str, str]:
     return {
         "review-spec-report.md": """# Review Spec Report
@@ -187,6 +233,61 @@ Apply three dependency-ordered changes to the deterministic minimal fixture.
     }
 
 
+def _is_project_set_implementation(work_item: str) -> bool:
+    return work_item.startswith("WI-DETERMINISTIC-PROJECT-SET-IMPLEMENT-")
+
+
+def _project_set_is_negative(work_item: str) -> bool:
+    return work_item.endswith("NEGATIVE")
+
+
+def _project_set_tasklist_documents() -> dict[str, str]:
+    return {
+        "tasklist.md": """# Tasklist
+
+## Task summary
+
+Execute one dependency-ordered implementation change in each declared project root.
+
+## Ordered tasks
+
+### TL-1 — Add the API project marker
+
+- Outcome: M1 is complete and the API project marker exists under the declared `services/api` root.
+- Dominant deliverable: `services/api/project-marker.py`.
+- In scope: `services/api`.
+- Execution mode: repository-change
+- Acceptance criteria:
+  - TL-1-AC1: The API project marker exists at `services/api/project-marker.py`.
+- Dependencies: none
+- Verification: `test -f services/api/project-marker.py`
+
+### TL-2 — Add the web project marker
+
+- Outcome: M2 is complete and the web project marker is recorded, with an explicit
+  outside-root probe in the negative fixture.
+- Dominant deliverable: `apps/web/project-marker.js`.
+- In scope: `apps/web` and the intentional probe path `outside`.
+- Execution mode: repository-change
+- Acceptance criteria:
+  - TL-2-AC1: The web project marker exists under the declared `apps/web` root.
+- Dependencies: TL-1
+- Verification: `test -f apps/web/project-marker.js`
+
+## Dependencies
+
+- TL-1: none
+- TL-2: TL-1
+
+## Verification notes
+
+- TL-1: the API root marker is created under the declared `services/api` root.
+- TL-2: the web root marker is created under the declared `apps/web` root; the negative fixture
+  also preserves an outside-root change for aggregate finalization to reject.
+""",
+    }
+
+
 def _selected_task(workspace_root: Path, work_item: str) -> str:
     path = workspace_root / "workitems" / work_item / "context" / "task-selection.md"
     if not path.exists():
@@ -215,6 +316,100 @@ def _apply_task_change(project_root: Path, task_id: str) -> tuple[str, str]:
         encoding="utf-8",
     )
     return "FIXTURE_EVIDENCE.md", "TL-3-AC1"
+
+
+def _apply_project_set_change(
+    project_root: Path,
+    task_id: str,
+    *,
+    negative: bool,
+) -> tuple[tuple[str, ...], str, str]:
+    if task_id == "TL-1":
+        path = project_root / "services/api/project-marker.py"
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text('project = "api"\n', encoding="utf-8")
+        return (
+            (path.relative_to(project_root).as_posix(),),
+            "TL-1-AC1",
+            "test -f services/api/project-marker.py",
+        )
+    if negative:
+        web_path = project_root / "apps/web/project-marker.js"
+        web_path.parent.mkdir(parents=True, exist_ok=True)
+        web_path.write_text('export const project = "web";\n', encoding="utf-8")
+        outside_path = project_root / "outside/rogue-marker.txt"
+        outside_path.parent.mkdir(parents=True, exist_ok=True)
+        outside_path.write_text("outside project-set probe\n", encoding="utf-8")
+        return (
+            (
+                web_path.relative_to(project_root).as_posix(),
+                outside_path.relative_to(project_root).as_posix(),
+            ),
+            "TL-2-AC1",
+            "test -f apps/web/project-marker.js",
+        )
+    path = project_root / "apps/web/project-marker.js"
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text('export const project = "web";\n', encoding="utf-8")
+    return (
+        (path.relative_to(project_root).as_posix(),),
+        "TL-2-AC1",
+        "test -f apps/web/project-marker.js",
+    )
+
+
+def _project_set_implementation_documents(
+    workspace_root: Path,
+    work_item: str,
+) -> dict[str, str]:
+    task_id = _selected_task(workspace_root, work_item)
+    touched_paths, acceptance_id, verification = _apply_project_set_change(
+        workspace_root.parent,
+        task_id,
+        negative=_project_set_is_negative(work_item),
+    )
+    touched_lines = "\n".join(
+        f"- `{path}` - implementation evidence for `{task_id}`." for path in touched_paths
+    )
+    return {
+        "implementation-report.md": f"""# Implementation Report
+
+## Summary
+
+- Selected task: `{task_id}`.
+- Completed `{task_id}` as a project-set implementation change for `{acceptance_id}`.
+
+## Acceptance evidence
+
+- `{acceptance_id}`: `{verification}` -> pass; the task-local deliverable is present.
+
+## Touched files
+
+{touched_lines}
+
+## Verification
+
+- `{task_id}` `{acceptance_id}`: `{verification}` -> pass
+- `git diff --name-only` -> pass; touched {", ".join(f"`{path}`" for path in touched_paths)}
+- `git status --ignored --short --untracked-files=all` -> pass; no ignored residue created.
+
+## Verification notes
+
+- `{verification}` -> pass for `{task_id}` and `{acceptance_id}`.
+
+## Risks
+
+- none
+
+## Follow-up
+
+- none
+
+## Follow-up notes
+
+- none
+""",
+    }
 
 
 def _implement_documents(
@@ -372,7 +567,13 @@ def main() -> None:
         "review": _review_documents,
         "qa": _qa_documents,
     }
-    if stage == "implement":
+    if _is_project_set_implementation(work_item) and stage == "plan":
+        documents = _project_set_plan_documents()
+    elif _is_project_set_implementation(work_item) and stage == "tasklist":
+        documents = _project_set_tasklist_documents()
+    elif _is_project_set_implementation(work_item) and stage == "implement":
+        documents = _project_set_implementation_documents(workspace_root, work_item)
+    elif stage == "implement":
         documents = _implement_documents(workspace_root, work_item)
     else:
         documents = documents_by_stage[stage]()

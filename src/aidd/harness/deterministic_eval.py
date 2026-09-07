@@ -223,7 +223,11 @@ def _execute(
     )
 
 
-def _classification(state: EvalExecutionState) -> EvalClassification:
+def _classification(
+    state: EvalExecutionState,
+    *,
+    expected_exit_code: int,
+) -> EvalClassification:
     infrastructure_error = next(
         (
             error
@@ -253,22 +257,38 @@ def _classification(state: EvalExecutionState) -> EvalClassification:
             infrastructure_failure=False,
             verification_failed=True,
         )
-    if state.aidd_run_result is None or state.aidd_run_result.exit_code != 0:
+    if state.aidd_run_result is None or state.aidd_run_result.exit_code != expected_exit_code:
         exit_code = (
             "missing"
             if state.aidd_run_result is None
             else str(state.aidd_run_result.exit_code)
         )
+        mismatch_summary = (
+            f"AIDD execution failed with exit code {exit_code}."
+            if expected_exit_code == 0
+            else (
+                f"AIDD execution returned exit code {exit_code}; expected "
+                f"{expected_exit_code}."
+            )
+        )
         return EvalClassification(
             status="fail",
-            summary=f"AIDD execution failed with exit code {exit_code}.",
+            summary=mismatch_summary,
             blocked_by_questions=False,
             infrastructure_failure=False,
             verification_failed=False,
         )
+    expected_summary = (
+        "Deterministic scenario completed and verification passed."
+        if expected_exit_code == 0
+        else (
+            "Deterministic scenario completed with the expected fail-closed exit "
+            f"code {expected_exit_code}; verification passed."
+        )
+    )
     return EvalClassification(
         status="pass",
-        summary="Deterministic scenario completed and verification passed.",
+        summary=expected_summary,
         blocked_by_questions=False,
         infrastructure_failure=False,
         verification_failed=False,
@@ -379,7 +399,10 @@ def execute_deterministic_eval(
         EvalReportPersistenceContext(
             prep=prep,
             state=state,
-            classification=_classification(state),
+            classification=_classification(
+                state,
+                expected_exit_code=prep.scenario.run.expected_exit_code,
+            ),
             started=started,
         )
     )

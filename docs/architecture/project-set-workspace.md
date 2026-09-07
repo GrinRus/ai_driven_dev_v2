@@ -155,3 +155,12 @@ two local roots and verifies that both project ids remain visible in project-set
 context, stage-brief evidence, attempt artifact indexes, and input bundles. The
 operator artifact read model also exposes `project_set_context` so frontend
 consumers can link the project-set context document without parsing stage briefs.
+
+Implementation coverage is provided by
+`harness/scenarios/deterministic/project-set-implementation-positive.yaml` and
+`harness/scenarios/deterministic/project-set-implementation-outside.yaml`. The positive lane
+changes both declared roots and proves successful aggregate finalization. The negative lane
+expects the non-zero fail-closed exit, verifies exact outside-root path and task attribution in
+`outside-project-set.md`, and confirms that Review and QA do not progress. Deterministic harness
+manifests may declare a non-zero `expected_exit_code` when that exit is the acceptance signal;
+the actual exit and expectation are retained in the harness metadata.

@@ -1042,6 +1042,7 @@ def persist_eval_reports(
         verification_failed=classification.verification_failed,
         blocked_by_questions=classification.blocked_by_questions,
         infrastructure_failure=classification.infrastructure_failure,
+        expected_aidd_exit_code=scenario.run.expected_exit_code,
     )
     verdict = build_scenario_verdict_from_harness_outcome(
         scenario_id=scenario.scenario_id,

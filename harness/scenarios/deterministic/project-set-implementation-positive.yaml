@@ -1,0 +1,78 @@
+id: AIDD-DETERMINISTIC-007
+scenario_class: deterministic-workflow
+feature_size: medium
+automation_lane: ci
+canonical_runtime: generic-cli
+repo:
+  url: harness/fixtures/minimal-python
+objective: Prove that implementation evidence can change both declared project roots.
+task: Execute dependency-ordered implementation changes in the declared api and web roots and
+  preserve per-root attribution through aggregate finalization.
+stage_scope:
+  start: idea
+  end: implement
+setup:
+  commands:
+  - mkdir -p services/api apps/web
+  - |-
+    cat > aidd.example.toml <<'TOML'
+    [workspace]
+    root = ".aidd"
+
+    [runtime.generic_cli]
+    command = "python3 ../aidd_fixture_runtime.py"
+
+    [[project_set.projects]]
+    id = "api"
+    root = "services/api"
+
+    [[project_set.projects]]
+    id = "web"
+    root = "apps/web"
+    TOML
+aidd_invocation:
+  work_item: WI-DETERMINISTIC-PROJECT-SET-IMPLEMENT-POSITIVE
+  expected_stage_scope:
+    start: idea
+    end: implement
+feature_source:
+  mode: fixture-seed
+  selection_policy: fixture-owned
+  fixture_path: harness/fixtures/minimal-python
+  seed_id: minimal-python-project-set-implementation-positive
+  summary: Use the fixture runtime to change one file under each declared project root.
+verify:
+  commands:
+  - test -f services/api/project-marker.py
+  - test -f apps/web/project-marker.js
+  - |-
+    python - <<'PY'
+    import json
+    from pathlib import Path
+
+    runs_root = Path(".aidd/reports/runs/WI-DETERMINISTIC-PROJECT-SET-IMPLEMENT-POSITIVE")
+    runs = sorted(path for path in runs_root.glob("run-*") if path.is_dir())
+    assert runs, "missing run evidence"
+    run_root = runs[-1]
+    finalization_root = run_root / "stages/implement/finalization/attempts"
+    attempts = sorted(path for path in finalization_root.glob("attempt-*") if path.is_dir())
+    assert attempts, "missing aggregate finalization evidence"
+    finalization_state = json.loads((attempts[-1] / "finalization-state.json").read_text())
+    assert finalization_state["status"] == "succeeded"
+    task_diff_root = run_root / "stages/implement/tasks"
+    api_diff = json.loads((task_diff_root / "TL-1/attempts/attempt-0001/task-diff.json").read_text())
+    web_diff = json.loads((task_diff_root / "TL-2/attempts/attempt-0001/task-diff.json").read_text())
+    assert api_diff["observed_touched_paths"] == ["services/api/project-marker.py"]
+    assert web_diff["observed_touched_paths"] == ["apps/web/project-marker.js"]
+    assert not (run_root / "stages/implement/finalization/attempts/attempt-0001/outside-project-set.md").exists()
+    PY
+pass_conditions:
+- Both declared roots have one task-local source change.
+- Aggregate implementation finalization succeeds only after both task diffs are captured.
+- Review and QA are not needed for this bounded implement-stage scenario.
+limits:
+  timeout_minutes: 10
+interview:
+  required: false
+runtime_targets:
+- generic-cli

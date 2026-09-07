@@ -148,3 +148,9 @@ def test_validate_deterministic_scenario_rejects_provider_only_target() -> None:
             scenario_path=SMOKE_SCENARIO,
             scenario=provider_only,
         )
+
+
+def test_deterministic_manifest_defaults_to_zero_expected_exit_code() -> None:
+    scenario = load_scenario(SMOKE_SCENARIO)
+
+    assert scenario.run.expected_exit_code == 0
