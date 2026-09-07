@@ -7,7 +7,7 @@ slice, and local task.
 
 ## Next
 
-- `W49-E2-S1-T4` — Extract frontend probes and semantic-failure classification.
+- `W49-E2-S1-T5` — Extract bundle/report coordination behind the facade.
 
 ## Soon
 
@@ -71,5 +71,9 @@ slice, and local task.
   public inspection-question detection, and callback-driven stage-loop coordination. Terminal,
   blocked, quality-gate, boundary, characterization, Ruff, strict mypy, and all required CI
   lanes passed on the exact candidate. No frontend, report, runtime, or UI-owned files changed.
-  The next dependency-ready task is `W49-E2-S1-T4` for frontend probes and semantic-failure
-  classification; the neighboring UI refactor remains a read-only reference state.
+  `W49-E2-S1-T4` completed in PR #599 and is present on `origin/main` at `b5b3fa47`; its focused
+  frontend module owns HTTP probes, target selection, semantic classification, timeout handling,
+  and operator-surface checks. The 96-test harness group, deterministic probe matrix,
+  characterization, Ruff, strict mypy, and all required CI/security lanes passed. No UI-owned
+  files changed. The next dependency-ready task is `W49-E2-S1-T5` for bundle/report coordination;
+  the neighboring UI refactor remains a read-only reference state.

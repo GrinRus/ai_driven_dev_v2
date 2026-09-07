@@ -472,7 +472,11 @@ characterization would be stale before extraction starts. T3 completed in PR #59
 `25b58943`) with stage classification, public inspection-question detection, and callback-driven
 stage-loop coordination extracted into a focused harness module. Its terminal/blocked fixtures,
 boundary tests, characterization, Ruff, strict mypy, and full required CI/security lanes passed;
-no frontend, report, runtime, or UI-owned files changed. T4 is now the next dependency-ready
+no frontend, report, runtime, or UI-owned files changed. T4 completed in PR #599 (merged
+`b5b3fa47`) with HTTP probes, target selection, semantic classification, timeout handling, and
+operator-surface checks extracted into one focused frontend harness module. Its deterministic
+probe-state matrix, 96-test harness group, characterization, Ruff, strict mypy, and full required
+CI/security lanes passed; no UI-owned files changed. T5 is now the next dependency-ready
 implementation task.
 
 ### Slice W49-E2-S2 — post-Focus-Canvas service-boundary stabilization

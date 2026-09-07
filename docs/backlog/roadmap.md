@@ -694,7 +694,7 @@ runtime-neutral core.
 
 Dependencies: W48 exit gate → `W49-E1-S2-T1` → `W49-E1-S2-T2` → `W49-E1-S2-T3` →
 `W49-E1-S2-T4` → `W49-E1-S2-T5`; all W49-E1 boundary tasks are complete, and the active queue
-item is `W49-E2-S1-T4` for frontend probe and semantic-classification extraction.
+item is `W49-E2-S1-T5` for bundle/report coordination extraction.
 
 ### Epic W49-E2 — behavior-preserving hotspot reduction (`planned`)
 
@@ -744,7 +744,7 @@ item is `W49-E2-S1-T4` for frontend probe and semantic-classification extraction
     and dependency-review lanes passed on the exact candidate. No frontend, report, runtime,
     or UI-owned files changed.
 
-- `W49-E2-S1-T4` (next) Extract frontend probes and semantic-failure classification.
+- `W49-E2-S1-T4` (done) Extract frontend probes and semantic-failure classification.
   - Output: frontend HTTP probes, target selection, operator-surface checks, and semantic-failure
     classification move behind a focused harness probe module while checkpoint evidence and the
     public live facade retain their current behavior.
@@ -754,6 +754,25 @@ item is `W49-E2-S1-T4` for frontend probe and semantic-classification extraction
     task-projection probe states preserve classifications, operator checks, artifacts, and event
     ordering without provider credentials.
   - Dependencies: `W49-E2-S1-T3`, stable W48 evidence semantics, and the merged W47 UI
+    compatibility baseline.
+  - Completion evidence: PR #599 merged to `origin/main` at `b5b3fa47`; HTTP probes, target
+    selection, semantic classification, timeout handling, and operator-surface checks now have
+    one canonical owner in `live_e2e_black_box_frontend.py`, with private orchestration aliases
+    retained for compatibility. The deterministic probe matrix and 96-test harness group passed,
+    characterization remained green, and all required Python, adapter, deterministic,
+    packaged-browser, build, CodeQL, Scorecard, and dependency-review lanes passed. No UI-owned
+    files changed.
+
+- `W49-E2-S1-T5` (next) Extract bundle/report coordination behind the facade.
+  - Output: result-bundle materialization, report finalization, and terminal artifact coordination
+    move behind a focused harness report module while success, blocked, and manual-stop bundles
+    retain their current schemas and evidence ownership.
+  - Scope: live harness bundle/report coordination and deterministic bundle fixtures; no frontend,
+    runtime, or UI-owned paths.
+  - Verification: success, blocked, awaiting-quality-review, and manual-stop flows preserve
+    normalized bundle inventory, report content, terminal status, and event ordering without
+    provider credentials.
+  - Dependencies: `W49-E2-S1-T4`, stable W48 evidence semantics, and the merged W47 UI
     compatibility baseline.
 
 ### Epic W49-E3 — planning and documentation truth (`done`)
