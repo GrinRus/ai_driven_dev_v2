@@ -3,6 +3,7 @@ from __future__ import annotations
 import ast
 from pathlib import Path
 
+from aidd.harness import live_e2e_black_box_frontend as frontend
 from aidd.harness import live_e2e_black_box_orchestration as orchestration
 from aidd.harness import live_e2e_black_box_reports as reports
 from aidd.harness import live_e2e_black_box_stage as stage
@@ -67,3 +68,32 @@ def test_orchestration_delegates_stage_loop_to_stage_module() -> None:
 
     assert "return _stage_run_stage_loop(" in source
     assert "run_stage_loop" in stage.__dict__
+
+
+def test_orchestration_reexports_canonical_frontend_probe_surface() -> None:
+    assert orchestration._http_probe is frontend.http_probe
+    assert orchestration._http_post_json is frontend.http_post_json
+    assert orchestration._frontend_probe_targets is frontend.frontend_probe_targets
+    assert (
+        orchestration._frontend_probe_semantic_failure
+        is frontend.frontend_probe_semantic_failure
+    )
+    assert (
+        orchestration._frontend_operator_surface_checks
+        is frontend.frontend_operator_surface_checks
+    )
+
+
+def test_orchestration_uses_one_frontend_probe_owner() -> None:
+    source_path = Path(orchestration.__file__)
+    source = source_path.read_text(encoding="utf-8")
+
+    assert "_frontend_probe_targets = _frontend_probe_targets_extracted" in source
+    assert (
+        "_frontend_probe_semantic_failure = _frontend_probe_semantic_failure_extracted"
+        in source
+    )
+    assert (
+        "_frontend_operator_surface_checks = _frontend_operator_surface_checks_extracted"
+        in source
+    )
