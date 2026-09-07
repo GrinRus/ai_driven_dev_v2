@@ -54,14 +54,28 @@ def _assert_project_work_composition(page: Page, viewport: tuple[int, int]) -> N
         field_boxes = row.locator(".inbox-item-copy, .inbox-item-field").evaluate_all(
             "nodes => nodes.map(node => {"
             " const box = node.getBoundingClientRect();"
-            " return {y: box.y, bottom: box.bottom};"
+            " return {y: box.y, bottom: box.bottom, "
+            "hidden: getComputedStyle(node).display === 'none'};"
             "})"
         )
         assert all(
-            box["y"] >= row_geometry["y"] - 1
+            box["hidden"]
+            or (box["y"] >= row_geometry["y"] - 1
             and box["bottom"] <= row_geometry["y"] + row_geometry["height"] + 1
+            )
             for box in field_boxes
         )
+        if viewport[0] >= 1100:
+            rail_brand = page.locator(".operator-rail-brand")
+            assert rail_brand.is_visible()
+            assert rail_brand.inner_text() == "AIDD"
+            topbar_box = page.locator(".topbar").bounding_box()
+            assert topbar_box is not None and topbar_box["height"] <= 1
+        if viewport[0] <= 1300:
+            assert page.locator(".inbox-table-head span:nth-child(4)").is_hidden()
+            assert page.locator(".inbox-table-head span:nth-child(5)").is_hidden()
+            assert row.locator(".inbox-item-runner").is_hidden()
+            assert row.locator(".inbox-item-event").is_hidden()
     else:
         # On tablet/mobile the inspector follows the list and remains in normal flow.
         assert inspector_box["y"] >= _bottom(sections_box) - 1

@@ -1768,6 +1768,57 @@
   }
 }
 
+/* At the medium desktop width the target shell leaves a deliberately compact task ledger beside
+ * the selected-task inspector. Keep the actionable columns readable and move
+ * the verbose event string into the selected-task detail instead of allowing
+ * five columns to force task titles into four-line wraps. */
+@media (min-width: 901px) and (max-width: 81.25em) {
+  .task-workspace-table-head,
+  .task-workspace-item {
+    grid-template-columns:
+      minmax(180px, 2.5fr)
+      minmax(72px, 1fr)
+      minmax(40px, .5fr)
+      minmax(72px, .85fr);
+  }
+
+  .task-workspace-table-head > span:nth-child(5),
+  .task-workspace-event {
+    display: none;
+  }
+
+  /* Validation keeps the finding inspector beside the document canvas. Trim
+     the navigator slightly at the supported medium width so the retained
+     Markdown reader remains a real reading column instead of a 300px sliver. */
+  .validation-document-workbench {
+    gap: var(--space-3);
+    grid-template-columns: minmax(150px, 160px) minmax(0, 1fr);
+  }
+}
+
+@media (min-width: 761px) {
+  /* The validation inspector already carries role, stage, attempt, and
+     source-of-truth facts. Keep the document brief as a compact badge strip;
+     the actual Markdown body should own the vertical reading space. */
+  .validation-document-canvas .reader-brief-compact {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .validation-document-canvas .reader-brief-compact-main {
+    display: none;
+  }
+
+  .validation-document-canvas .reader-brief-compact-facts {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-2);
+  }
+
+  .validation-document-canvas .reader-brief-compact-fact {
+    display: none;
+  }
+}
+
 /* W44-E1-S3-T34: the Project Work surface is a compact server-owned table.
    Selection opens the inspector; the list itself stays dense and scannable. */
 .studio-inbox[data-inbox-populated="true"][data-inbox-selected="true"] .intent-entry-recommendation {
@@ -1972,6 +2023,43 @@
   .studio-inbox .inbox-item-stage > strong {
     display: inline;
   }
+}
+
+/* Keep the Project Work table legible when the desktop shell has only a
+ * medium amount of horizontal room (the supported medium viewport).  The
+ * target still exposes the full server-owned metadata in the selected-item
+ * inspector; the list prioritises the scan path (title, stage, progress,
+ * status, action) instead of squeezing every secondary field into a
+ * sub-700px grid. */
+@media (min-width: 901px) and (max-width: 81.25em) {
+  .studio-inbox .inbox-table-head {
+    grid-template-columns: minmax(0, 2.25fr) minmax(72px, .9fr) minmax(112px, 1.35fr) minmax(72px, .8fr) auto;
+  }
+
+  .studio-inbox .inbox-table-head span:nth-child(4),
+  .studio-inbox .inbox-table-head span:nth-child(5),
+  .studio-inbox .inbox-item-runner,
+  .studio-inbox .inbox-item-event {
+    display: none;
+  }
+
+  .studio-inbox .inbox-item {
+    grid-template-columns: minmax(0, 2.25fr) minmax(72px, .9fr) minmax(112px, 1.35fr) minmax(72px, .8fr) auto;
+  }
+}
+
+/* Status is already represented by the dedicated Status column.  Keep the
+ * first-column marker's text in the accessibility tree without letting it
+ * consume a second column's worth of width or duplicate the visible row
+ * label. */
+.studio-inbox .inbox-item-primary .status-marker [data-status-text] {
+  clip: rect(0 0 0 0);
+  clip-path: inset(50%);
+  height: 1px;
+  overflow: hidden;
+  position: absolute;
+  white-space: nowrap;
+  width: 1px;
 }
 
 /* Review and remediation keep their single decisive action reachable while

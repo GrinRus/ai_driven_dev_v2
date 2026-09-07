@@ -519,7 +519,35 @@ body {
   }
 
   body:not(.setup-active).inbox-detail-mode .topbar .primary-nav {
-    padding: 88px 14px 24px;
+    padding: 18px 14px 24px;
+  }
+
+  /* Inbox is the project-level surface.  Keep the fixed navigation rail, but
+     collapse the generic breadcrumb/status row so the Work heading starts at
+     the top of the canvas like the target Project Work reference. */
+  body:not(.setup-active).inbox-detail-mode .topbar {
+    background: transparent;
+    border-bottom: 0;
+    height: 0;
+    min-height: 0;
+    overflow: visible;
+    padding: 0;
+  }
+
+  body:not(.setup-active).inbox-detail-mode .topbar > .top-context,
+  body:not(.setup-active).inbox-detail-mode .topbar > .top-status,
+  body:not(.setup-active).inbox-detail-mode .topbar > .top-actions {
+    display: none;
+  }
+
+  body:not(.setup-active).inbox-detail-mode .operator-rail-brand {
+    color: #f5f8ff;
+    display: block;
+    font-size: 24px;
+    font-weight: 800;
+    letter-spacing: -0.05em;
+    line-height: 1;
+    margin: 2px 0 18px 4px;
   }
 
   body:not(.setup-active).inbox-detail-mode .topbar .primary-nav button {
@@ -535,7 +563,7 @@ body {
   }
 
   body:not(.setup-active).inbox-detail-mode .operator-rail-brand {
-    display: none;
+    display: block;
   }
 
   /* A completed handoff (and other read-only surfaces) has no decision
@@ -609,6 +637,16 @@ body {
   .operator-workspace .canonical-stage-step {
     gap: var(--space-2);
     padding-inline: var(--space-1);
+    grid-template-columns: 24px minmax(0, 1fr);
+  }
+
+  .operator-workspace .canonical-stage-step .intent-phase-index {
+    height: 24px;
+    width: 24px;
+  }
+
+  .operator-workspace .canonical-stage-step strong {
+    font-size: var(--type-label-size);
   }
 
   /* The legacy layout rule applies ellipsis to stage labels after the target
@@ -1063,6 +1101,64 @@ body.work-overview-mode .intent-decision-surface .next-action-button-stack .next
   body.work-overview-mode .intent-decision-surface .next-action-copy .next-action-evidence-actions,
   body.work-overview-mode .intent-decision-surface .next-action-copy .stale-downstream-summary,
   body.work-overview-mode .intent-decision-surface .next-action-copy .mode-decision-peek {
+    display: none;
+  }
+}
+
+/* Target evidence surfaces own their complete workbench.  The shared desktop
+ * shell reserves a 336px decision column for launch and recovery inspectors;
+ * these review/history/terminal surfaces do not mount that inspector, so let
+ * their document surface span the full canvas instead of leaving a phantom
+ * right-hand gutter that compresses the diff and gate into a narrow column. */
+@media (min-width: 1100px) and (min-height: 700px) {
+  body:not(.setup-active) .operator-workspace:has(.target-implementation-review),
+  body:not(.setup-active) .operator-workspace:has(.target-remediation-surface),
+  body:not(.setup-active) .operator-workspace:has(.target-history-surface),
+  body:not(.setup-active) .operator-workspace:has(.target-flow-complete),
+  body.markdown-workspace-mode .operator-workspace {
+    grid-template-areas:
+      "context"
+      "tabs"
+      "phases"
+      "content"
+      "technical";
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  body:not(.setup-active) .operator-workspace:has(.target-implementation-review)
+    > .intent-document-surface,
+  body:not(.setup-active) .operator-workspace:has(.target-remediation-surface)
+    > .intent-document-surface,
+  body:not(.setup-active) .operator-workspace:has(.target-history-surface)
+    > .intent-document-surface,
+  body:not(.setup-active) .operator-workspace:has(.target-flow-complete)
+    > .intent-document-surface,
+  body.markdown-workspace-mode .operator-workspace > .intent-document-surface {
+    grid-column: 1;
+  }
+
+  body:not(.setup-active):not(.inbox-detail-mode)
+    .operator-workspace .intent-phase-stepper {
+    padding-block: var(--space-3);
+  }
+
+  body:not(.setup-active):not(.inbox-detail-mode)
+    .operator-workspace .intent-phase-stepper > .surface-title {
+    display: none;
+  }
+
+  body:not(.setup-active):not(.inbox-detail-mode)
+    .operator-workspace .intent-context-region .studio-context-bar .muted {
+    display: none;
+  }
+}
+
+/* The Work Item title and identity row already communicate the current brief
+ * and status. Remove the repeated one-line excerpt at tablet widths so the
+ * context header stays within the same compact 80px rhythm as desktop. */
+@media (min-width: 761px) and (max-width: 1099px) {
+  body:not(.setup-active):not(.inbox-detail-mode)
+    .operator-workspace .intent-context-region .studio-context-bar .muted {
     display: none;
   }
 }
@@ -2625,5 +2721,119 @@ body.markdown-workspace-mode .document-context-evidence .evidence-inspector-titl
   body.recovery-mode .topbar .top-actions {
     grid-column: 4;
     grid-row: 1;
+  }
+}
+
+/* Mobile Decision is a bounded answer flow. Keep the current stage as one
+ * compact orientation row, then lead directly with the question context. The
+ * impact inspector duplicates destination/attempt facts that are already
+ * retained by the answer card and otherwise pushes the resolution controls
+ * below the first viewport. */
+@media (max-width: 760px) {
+  body.recovery-mode:has([data-human-decision-surface="question"])
+    .intent-phase-stepper {
+    background: var(--color-bg-surface);
+    border: 0;
+    border-bottom: 1px solid var(--color-border-default);
+    border-radius: 0;
+    gap: 0;
+    padding: 0;
+  }
+
+  body.recovery-mode:has([data-human-decision-surface="question"])
+    .intent-phase-stepper > .surface-title {
+    display: none;
+  }
+
+  body.recovery-mode:has([data-human-decision-surface="question"])
+    .intent-phase-stepper .canonical-stage-mobile-summary {
+    border: 0;
+    border-radius: 0;
+    min-height: 60px;
+    padding: 0 20px;
+  }
+
+  body.recovery-mode:has([data-human-decision-surface="question"])
+    .intent-phase-stepper .stage-mobile-summary-disclosure {
+    font-size: 0;
+  }
+
+  body.recovery-mode:has([data-human-decision-surface="question"])
+    .intent-phase-stepper .stage-mobile-summary-disclosure::after {
+    content: "⌄";
+    display: block;
+    font-size: 24px;
+    line-height: 1;
+  }
+
+  body.recovery-mode:has([data-human-decision-surface="question"])
+    .interview-loop-screen > .decision-impact-panel {
+    display: none;
+  }
+
+  /* Match the existing Focus Canvas rule's specificity so the mobile
+     * composition does not reintroduce the desktop impact inspector. */
+  body.recovery-mode:has([data-focus-canvas="true"])
+    .interview-loop-screen[data-human-decision-surface="question"]
+    > .decision-impact-panel {
+    display: none;
+  }
+
+  body.recovery-mode:has([data-human-decision-surface="question"])
+    .decision-evidence-row > span:nth-child(2) {
+    display: grid;
+    gap: var(--space-1);
+    min-width: 0;
+  }
+}
+
+/* Keep the narrow safety viewport compact after all shared mobile rules have
+ * loaded; this final block intentionally wins the cascade. */
+@media (max-width: 360px) {
+  body.recovery-mode:has([data-human-decision-surface="question"])
+    .operator-workspace {
+    gap: var(--space-2);
+  }
+
+  body.recovery-mode:has([data-human-decision-surface="question"])
+    .intent-phase-stepper .canonical-stage-mobile-summary {
+    min-height: 44px;
+    padding-inline: 12px;
+  }
+
+  body.recovery-mode:has([data-human-decision-surface="question"])
+    .decision-question-context {
+    gap: var(--space-1);
+    padding: 0 12px 4px;
+  }
+
+  body.recovery-mode:has([data-human-decision-surface="question"])
+    .decision-provenance-strip,
+  body.recovery-mode:has([data-human-decision-surface="question"])
+    .decision-evidence-snippet {
+    display: none;
+  }
+
+  body.recovery-mode:has([data-human-decision-surface="question"])
+    .decision-question-context h2 {
+    font-size: 28px;
+    line-height: 1.06;
+  }
+
+  body.recovery-mode:has([data-human-decision-surface="question"])
+    .decision-question-rationale {
+    font-size: var(--type-label-size);
+    line-height: 1.35;
+  }
+
+  body.recovery-mode:has([data-human-decision-surface="question"])
+    .decision-evidence-disclosure {
+    margin-top: 0;
+    padding-top: var(--space-2);
+  }
+
+  body.recovery-mode:has([data-human-decision-surface="question"])
+    .decision-evidence-row {
+    padding: var(--space-2);
   }
 }
