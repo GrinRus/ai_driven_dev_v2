@@ -19,10 +19,13 @@ from aidd.core.stage_registry import (
     resolve_expected_output_documents,
     resolve_runtime_output_documents,
 )
+from aidd.core.workspace import STAGE_RESULT_BOOTSTRAP_TEMPLATE
 from aidd.core.workspace import stage_output_root as workspace_stage_output_root
 from aidd.core.workspace import stage_root as workspace_stage_root
 from aidd.validators.cross_document import validate_cross_document_consistency
+from aidd.validators.document_loader import probe_markdown_document
 from aidd.validators.models import ValidationFinding
+from aidd.validators.protocol import DOCUMENT_READ_FAILURE_CODES
 from aidd.validators.reports import write_validator_report
 from aidd.validators.semantic import validate_semantic_outputs
 from aidd.validators.structural import (
@@ -56,7 +59,7 @@ def _should_promote_misplaced_stage_output(
         "# Questions\n\nNo questions yet.",
         "# Answers\n\nNo answers yet.",
         "# Validator report\n\nNo validator output yet.",
-        "# Stage result\n\nStage not run yet.",
+        STAGE_RESULT_BOOTSTRAP_TEMPLATE.strip(),
     }:
         return True
     try:
@@ -69,7 +72,7 @@ _MISPLACED_OUTPUT_PROMOTION_WARNING_CODE = "STRUCT-OUTPUT-PROMOTED"
 _UNEXPECTED_RUNTIME_DOCUMENTS: dict[str, tuple[str, str | None]] = {
     "stage-result.md": (
         "runtime-stage-result.md",
-        "# Stage result\n\nStage not run yet.",
+        STAGE_RESULT_BOOTSTRAP_TEMPLATE.strip(),
     ),
     "validator-report.md": (
         "runtime-validator-report.md",
@@ -93,6 +96,7 @@ def retain_unexpected_runtime_documents(
     workspace_root: Path,
     execution_state: StageExecutionState,
     contracts_root: Path = DEFAULT_STAGE_CONTRACTS_ROOT,
+    attempt_started_at_ns: int | None = None,
 ) -> tuple[Path, ...]:
     """Retain runtime writes to AIDD-owned records as attempt evidence.
 
@@ -106,7 +110,10 @@ def retain_unexpected_runtime_documents(
         work_item=execution_state.work_item,
         stage=execution_state.stage,
     )
-    attempt_started_at = execution_state.attempt_path.stat().st_mtime_ns
+    attempt_started_at = (
+        execution_state.attempt_path.stat().st_mtime_ns
+        if attempt_started_at_ns is None else attempt_started_at_ns
+    )
     retained: list[Path] = []
     for filename, (evidence_name, placeholder) in _UNEXPECTED_RUNTIME_DOCUMENTS.items():
         canonical_path = stage_root / filename
@@ -143,6 +150,7 @@ def retain_unexpected_runtime_documents(
 def _promote_misplaced_stage_output_documents(
     *,
     expected_markdown_documents: tuple[Path, ...],
+    workspace_root: Path,
 ) -> tuple[StageOutputPromotion, ...]:
     promotions: list[StageOutputPromotion] = []
     for destination_path in expected_markdown_documents:
@@ -154,6 +162,11 @@ def _promote_misplaced_stage_output_documents(
             source_path=misplaced_output_path,
             destination_path=destination_path,
         ):
+            continue
+        if not probe_markdown_document(
+            path=misplaced_output_path,
+            workspace_root=workspace_root,
+        ).readable:
             continue
         destination_path.parent.mkdir(parents=True, exist_ok=True)
         copy2(misplaced_output_path, destination_path)
@@ -250,13 +263,18 @@ def discover_stage_markdown_outputs(
         contracts_root=contracts_root,
     )
     promoted_misplaced_documents = _promote_misplaced_stage_output_documents(
-        expected_markdown_documents=expected_markdown_documents
+        expected_markdown_documents=expected_markdown_documents,
+        workspace_root=workspace_root,
     )
+    readability = {
+        path: probe_markdown_document(path=path, workspace_root=workspace_root)
+        for path in expected_markdown_documents
+    }
     discovered_markdown_documents = tuple(
-        path for path in expected_markdown_documents if path.exists()
+        path for path in expected_markdown_documents if readability[path].readable
     )
     missing_markdown_documents = tuple(
-        path for path in expected_markdown_documents if not path.exists()
+        path for path in expected_markdown_documents if not readability[path].readable
     )
     return StageOutputDiscovery(
         stage=execution_state.stage,
@@ -293,7 +311,10 @@ def run_structural_validation_after_output_discovery(
     )
     findings: tuple[ValidationFinding, ...]
     findings = (*structural_findings, *section_findings)
-    if not findings or discovery.discovered_markdown_documents:
+    has_document_read_failure = any(
+        finding.code in DOCUMENT_READ_FAILURE_CODES for finding in findings
+    )
+    if (not findings or discovery.discovered_markdown_documents) and not has_document_read_failure:
         semantic_findings = validate_semantic_outputs(
             stage=discovery.stage,
             work_item=discovery.work_item,

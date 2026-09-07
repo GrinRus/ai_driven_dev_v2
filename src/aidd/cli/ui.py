@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import json
 import re
 import subprocess
 import sys
@@ -38,7 +37,6 @@ from aidd.cli.stage_run import (
     run_stage_repair_extension_command,
 )
 from aidd.cli.support import (
-    _execution_command_available,
     _runtime_command_for_runtime,
     _runtime_execution_mode_for_runtime,
     console,
@@ -133,10 +131,10 @@ from aidd.core.run_comparison import resolve_run_comparison
 from aidd.core.run_inspection import resolve_run_metadata_summary
 from aidd.core.run_lookup import latest_run_id as resolve_latest_run_id
 from aidd.core.run_store import (
+    load_run_manifest,
     next_attempt_number,
     persist_run_archive_decision,
     run_attempt_root,
-    run_manifest_path,
     run_root,
 )
 from aidd.core.runtime_launch_history import resolve_runtime_launch_history
@@ -693,11 +691,7 @@ class UiRunJobStore:
         project_root: Path,
         workspace_root: Path,
     ) -> dict[str, object] | None:
-        """Return the newest active job owned by the selected project context.
-
-        Jobs created by older callers without explicit roots are retained as a
-        compatibility wildcard. New service-created jobs always carry both roots.
-        """
+        """Return the newest active job owned by the selected project context."""
         expected_project = project_root.resolve(strict=False).as_posix()
         expected_workspace = workspace_root.resolve(strict=False).as_posix()
         with self._lock:
@@ -706,12 +700,8 @@ class UiRunJobStore:
                 if job.status in _TERMINAL_JOB_STATUSES:
                     continue
                 if (
-                    job.project_root is None
-                    or job.workspace_root is None
-                    or (
-                        job.project_root == expected_project
-                        and job.workspace_root == expected_workspace
-                    )
+                    job.project_root == expected_project
+                    and job.workspace_root == expected_workspace
                 ):
                     return self._view_locked(job)
         return None
@@ -2143,15 +2133,17 @@ def _collect_runtime_readiness_probe_reports(
 
     def _probe_runtime(runtime_id: str) -> tuple[str, RuntimeReadinessProbeReport]:
         definition = next(item for item in definitions if item.runtime_id == runtime_id)
-        provider_report = get_runtime_adapter_surface(definition.runtime_id).probe(
-            definition.probe_command
-        )
         runtime_config = cfg.runtime_config(definition.runtime_id)
+        execution_probe = get_runtime_adapter_surface(runtime_id).probe_configured_command(
+            configured_command=runtime_config.command,
+            provider_command=definition.probe_command,
+        )
+        provider_report = execution_probe.provider
         return (
             definition.runtime_id,
             RuntimeReadinessProbeReport(
                 provider_available=provider_report.available,
-                execution_command_available=_execution_command_available(runtime_config.command),
+                execution_command_available=execution_probe.execution_command_available,
                 provider_version=provider_report.version_text,
                 provider_command=provider_report.command,
                 capabilities=RuntimeCapabilityProbeReport(
@@ -2275,10 +2267,6 @@ class OperatorUiService:
     @property
     def project_root(self) -> Path:
         return self._require_context().project_root
-
-    @property
-    def setup_required(self) -> bool:
-        return self._effective_context() is None
 
     def _require_context(self) -> UiProjectContext:
         context = self._effective_context()
@@ -2487,7 +2475,7 @@ class OperatorUiService:
             )
         return {
             **model,
-            # Keep the existing rich `tasks` field for compatibility with the current
+            # Expose the rich `tasks` field consumed by the current
             # implementation gate while exposing an explicitly bounded list/detail boundary.
             "tasks": [
                 selected_task if task.get("id") == task_id and selected_task is not None else task
@@ -2515,7 +2503,7 @@ class OperatorUiService:
             raise ValueError("run_id is required.")
         if not runtime:
             raise ValueError("runtime is required.")
-        self._revalidate_runtime_for_mutation(payload, runtime=runtime)
+        self._revalidate_runtime_for_mutation(runtime=runtime)
         model_override, reasoning_effort_override = _runtime_selector_overrides_from_payload(
             payload
         )
@@ -2577,7 +2565,7 @@ class OperatorUiService:
             raise ValueError("run_id is required.")
         if not runtime:
             raise ValueError("runtime is required.")
-        self._revalidate_runtime_for_mutation(payload, runtime=runtime)
+        self._revalidate_runtime_for_mutation(runtime=runtime)
         lease = acquire_run_mutation_lease_handle(
             run_root(
                 workspace_root=self.workspace_root,
@@ -2627,15 +2615,10 @@ class OperatorUiService:
         )
 
     def _validate_implementation_runtime(self, *, run_id: str, runtime: str) -> None:
-        path = run_manifest_path(
-            workspace_root=self.workspace_root,
-            work_item=self.work_item,
-            run_id=run_id,
-        )
-        if not path.is_file():
+        payload = load_run_manifest(self.workspace_root, self.work_item, run_id)
+        if payload is None:
             raise ValueError(f"Run manifest does not exist for run `{run_id}`.")
-        payload = json.loads(path.read_text(encoding="utf-8"))
-        manifest_runtime = payload.get("runtime_id") if isinstance(payload, dict) else None
+        manifest_runtime = payload["runtime_id"]
         if manifest_runtime != runtime:
             raise ValueError(
                 f"Runtime `{runtime}` does not match run manifest runtime "
@@ -2771,7 +2754,7 @@ class OperatorUiService:
             # Resume is also the explicit project-switch operation. Resolve
             # the requested project before activating it so a running job in
             # the previous project keeps its captured execution context.
-            # A bare ``.`` remains a compatibility shorthand for the current
+            # A bare ``.`` selects the current
             # project when the caller did not provide a project selector.
             requested_project = (
                 self.project_root
@@ -3037,7 +3020,7 @@ class OperatorUiService:
     def _launch_remediation(self, payload: dict[str, Any]) -> object:
         runtime = _runtime_from_payload(payload)
         _validate_runtime(runtime)
-        self._revalidate_runtime_for_mutation(payload, runtime=runtime)
+        self._revalidate_runtime_for_mutation(runtime=runtime)
         source_stage = _text_from_payload(payload, "source_stage")
         source_ids = self._validated_remediation_source_ids(
             source_stage=source_stage,
@@ -3138,7 +3121,7 @@ class OperatorUiService:
     def _rerun_stale_downstream(self, payload: dict[str, Any]) -> object:
         runtime = _runtime_from_payload(payload)
         _validate_runtime(runtime)
-        self._revalidate_runtime_for_mutation(payload, runtime=runtime)
+        self._revalidate_runtime_for_mutation(runtime=runtime)
         run_id = _source_run_id_from_payload(payload)
         stale_stages = self._stale_downstream_stages(run_id)
         if not stale_stages:
@@ -3203,7 +3186,7 @@ class OperatorUiService:
     def _rerun_remediation_stage(self, payload: dict[str, Any]) -> object:
         runtime = _runtime_from_payload(payload)
         _validate_runtime(runtime)
-        self._revalidate_runtime_for_mutation(payload, runtime=runtime)
+        self._revalidate_runtime_for_mutation(runtime=runtime)
         run_id = _source_run_id_from_payload(payload)
         stage = _text_from_payload(payload, "stage")
         stale_stages = self._stale_downstream_stages(run_id)
@@ -3921,7 +3904,7 @@ class OperatorUiService:
         stage = _stage_from_payload(payload)
         runtime = _runtime_from_payload(payload)
         _validate_runtime(runtime)
-        self._revalidate_runtime_for_mutation(payload, runtime=runtime)
+        self._revalidate_runtime_for_mutation(runtime=runtime)
         model_override, reasoning_effort_override = _runtime_selector_overrides_from_payload(
             payload
         )
@@ -3947,7 +3930,7 @@ class OperatorUiService:
         stage = _stage_from_payload(payload)
         runtime = _runtime_from_payload(payload)
         _validate_runtime(runtime)
-        self._revalidate_runtime_for_mutation(payload, runtime=runtime)
+        self._revalidate_runtime_for_mutation(runtime=runtime)
         raw_run_id = payload.get("run_id")
         if not isinstance(raw_run_id, str) or not raw_run_id.strip():
             raise ValueError("run_id is required for repair-extension.")
@@ -4028,7 +4011,7 @@ class OperatorUiService:
         stage = _stage_from_payload(payload)
         runtime = _runtime_from_payload(payload)
         _validate_runtime(runtime)
-        self._revalidate_runtime_for_mutation(payload, runtime=runtime)
+        self._revalidate_runtime_for_mutation(runtime=runtime)
         raw_request = payload.get("request")
         if not isinstance(raw_request, str) or not raw_request.strip():
             raise ValueError("request is required.")
@@ -4215,7 +4198,7 @@ class OperatorUiService:
         self._require_context()
         runtime = _runtime_from_payload(payload)
         _validate_runtime(runtime)
-        self._revalidate_runtime_for_mutation(payload, runtime=runtime)
+        self._revalidate_runtime_for_mutation(runtime=runtime)
         _runtime_selector_overrides_from_payload(payload)
         stage_start, stage_end = _workflow_bounds_from_payload(payload)
         requested_run_id = _optional_run_id_from_payload(payload)
@@ -4431,7 +4414,7 @@ class OperatorUiService:
         new_work_item = _text_from_payload(payload, "new_work_item")
         runtime = _runtime_from_payload(payload)
         _validate_runtime(runtime)
-        self._revalidate_runtime_for_mutation(payload, runtime=runtime)
+        self._revalidate_runtime_for_mutation(runtime=runtime)
         preflight = validate_next_flow_launch_preflight(
             NextFlowLaunchPreflightRequest(
                 workspace_root=self.workspace_root,
@@ -4796,8 +4779,8 @@ class OperatorUiService:
         readiness projection for GET requests is useful to the operator, but
         probing every installed CLI on each launch makes a local launch depend on
         unrelated provider startup latency (notably Codex app-server probes).
-        Custom providers remain backward compatible and may still return a full
-        mapping when injected by tests or callers.
+        Injected providers receive the configuration and return a full mapping;
+        the mutation selects the requested runtime from that projection.
         """
 
         cfg = load_config(config_path)
@@ -4861,19 +4844,10 @@ class OperatorUiService:
 
     def _revalidate_runtime_for_mutation(
         self,
-        payload: Mapping[str, Any],
         *,
         runtime: str,
     ) -> None:
-        """Re-check core-owned launch eligibility immediately before a UI mutation.
-
-        Older callers may not send the readiness marker yet; retaining that wire
-        compatibility keeps existing API clients and historical fixtures readable.
-        New operator surfaces always send the marker from ``runtimeSelectorPayload``.
-        """
-
-        if payload.get("require_runtime_revalidation") is not True:
-            return
+        """Re-check core-owned launch eligibility immediately before every UI mutation."""
         readiness = self._runtime_readiness_for_mutation(
             self.config_path,
             runtime=runtime,

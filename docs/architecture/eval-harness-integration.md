@@ -188,8 +188,34 @@ runner uses a real global flow timeout; per-stage command budgets are visible in
 Full command stdout and stderr are stored once in content-addressed
 `command-evidence/<sha256>.json` records. Flow steps, lifecycle transcripts, the grader,
 and the aggregate transcript carry the bundle-relative pointer, digest, exit code,
-duration, and bounded previews. Readers continue to accept legacy inline command output,
-but new reports must not create another complete copy.
+duration, and bounded previews. Readers require these references and reject retired inline
+command-output copies. Bundle paths must be relative and digest-verified.
+
+### 7.1 Current result-bundle contract
+
+The current self-contained bundle contract is schema version `2` and is represented by
+`aidd.harness.result_bundle_contract`. Every inventory carries an explicit identity with
+`evaluation_run_id`, optional `product_run_id`, `scenario_id`, `runtime_id`, and
+`work_item`. The evaluator identity and product execution identity are never guessed from
+one another: when a product run has not started, `product_run_id` is explicitly `null`,
+and equal evaluator/product IDs are invalid.
+
+Inventory artifact paths are POSIX, bundle-relative references. An artifact requirement
+declares the terminal statuses for which a path must exist (`pass`, `fail`, `blocked`, or
+`infra-fail`) and may constrain its status condition. Validation rejects missing files,
+references that escape the bundle root, duplicate paths, and mismatched optional size or
+SHA-256 metadata. Legacy inventories containing only `run_id`, unsupported schema or
+reference modes, and incomplete identities are rejected rather than interpreted.
+
+The evaluation report writer persists these identity fields in `harness-metadata.json` and
+`feature-selection.json`. The feature-selection artifact also records schema version `2`
+and phase metadata: requested stage bounds, per-lifecycle-phase outcomes, terminal phase,
+and the two run identities. The product ID is resolved from the isolated product run store
+after execution (with a bounded CLI-output fallback), so a successful eval does not reuse
+the evaluator bundle ID.
+
+This module defines and validates the contract; raw evidence materialization and atomic
+sealing remain separate responsibilities of the follow-on bundle tasks.
 
 ## 8. Log analysis requirements
 
@@ -208,6 +234,12 @@ The analysis should detect at least:
 - excessive question churn;
 - install-path mismatches between target cwd and artifact expectations.
 
+Stage timing and self-repair reports must classify attempts from each persisted stage
+`artifact-index.json` lineage. `attempt_number` remains a storage coordinate: a second attempt is
+not a repair unless its lineage has `scope: stage` and `attempt_kind: repair`. Missing or malformed
+lineage is an evidence error, while `resume`, `intervention`, and `repair-extension` remain
+distinct kinds and must not be folded into the automatic repair count.
+
 Manual post-run quality review is still expected when the launching SWE agent needs a
 deliverable-quality decision: a technically completed run can still produce weak
 artifacts, weak code, weak tests, or poor operator UI/UX. That review belongs in
@@ -216,7 +248,49 @@ completed-flow visibility, stage/artifact/log/question navigation, repair and
 next-flow handoff states, readability, keyboard/focus behavior, responsive behavior
 or `not inspected`, and any manual screenshots or browser notes.
 
-## 9. Converting failures into regression cases
+## 9. Failure cause contract
+
+The execution verdict and the first decisive failure cause are separate fields. Current-format
+reports use the versioned `FailureCause` model in `src/aidd/evals/failure_causes.py` with these
+required fields:
+
+- `schema_version`: integer `1`;
+- `category`: `environment`, `infrastructure`, `adapter`, `runtime`, `validation`,
+  `scenario-verification`, or `none`;
+- `phase`: `preparation`, `install`, `setup`, `execution`, `verification`, `teardown`, or
+  `analysis`;
+- `source`: `environment`, `harness`, `adapter`, `runtime`, `validator`, `scenario`, or `none`;
+- `reason`: a non-empty operator-readable explanation;
+- `evidence_link`: a workspace-relative POSIX path for every non-`none` cause.
+
+The compatibility table is fail-closed:
+
+| Execution verdict | Allowed cause categories |
+| --- | --- |
+| `pass` | `none` or no cause |
+| `blocked` | `scenario-verification` |
+| `fail` | `adapter`, `runtime`, `validation`, `scenario-verification` |
+| `infra-fail` | `environment`, `infrastructure` |
+
+Category/source pairs are also constrained: environment signals come from the environment,
+infrastructure signals from the environment or harness, adapter signals from the adapter, runtime
+signals from the runtime or adapter, validator signals from the validator, and
+scenario-verification signals from the scenario or harness.
+Legacy boundary labels are converted only through the explicit mapping in the model. In
+particular, `harness`, `setup`, and `target-setup` map to `infrastructure`; a missing or unknown
+legacy category is rejected rather than inferred from a verdict, attempt ordinal, or free-form
+message. Later report-projection tasks consume this contract in log analysis, grader, summary, and
+UI outputs.
+
+Command phases preserve evidence before reporting continues. A setup, verification, or teardown
+failure raises a typed harness command error carrying every completed transcript, the failing
+command, its exit code, and cumulative duration. Deterministic evaluation materializes that
+partial result in its execution state, so the corresponding `*-transcript.json` retains the
+successful commands and the failing command instead of becoming an empty placeholder. The step
+payload exposes `failed_command` and `failed_exit_code` in addition to the per-command records;
+the fields are `null` for a completed or skipped phase.
+
+## 10. Converting failures into regression cases
 
 Every real failure that matters should be convertible into:
 
@@ -226,7 +300,7 @@ Every real failure that matters should be convertible into:
 
 This is how the project accumulates reliability instead of anecdote.
 
-## 10. CI and release integration
+## 11. CI and release integration
 
 Recommended layers:
 
@@ -235,7 +309,7 @@ Recommended layers:
 - local manual operator audits: external audits against curated public repositories;
 - release: build, publish, and PyPI installability verification only.
 
-## 11. Summary
+## 12. Summary
 
 Harness and eval make runtime agnosticism, deterministic regression coverage, and manual
 installed-operator audits measurable rather than aspirational.

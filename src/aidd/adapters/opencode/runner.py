@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import json
-import shlex
 from collections.abc import Callable, Mapping
 from dataclasses import dataclass
 from enum import StrEnum
@@ -71,6 +70,7 @@ class OpenCodeExitClassification(StrEnum):
     TIMEOUT = "timeout"
     CANCELLED = "cancelled"
     LAUNCH_FAILURE = "launch_failure"
+    CAPTURE_FAILURE = "capture_failure"
 
 
 @dataclass(frozen=True, slots=True)
@@ -86,9 +86,11 @@ def _resolve_exit_classification(
     stdout_text: str = "",
     stderr_text: str = "",
     structured_events_source_path: Path | None = None,
+    capture_error: str | None = None,
 ) -> OpenCodeExitClassification:
     if (
         stop_reason is None
+        and capture_error is None
         and exit_code == 0
         and (
             _has_structured_provider_error(
@@ -106,6 +108,8 @@ def _resolve_exit_classification(
         stop_reason=stop_reason,
         success_value=OpenCodeExitClassification.SUCCESS,
         non_zero_value=OpenCodeExitClassification.NON_ZERO_EXIT,
+        capture_error=capture_error,
+        capture_failure_value=OpenCodeExitClassification.CAPTURE_FAILURE,
     )
 
 
@@ -292,22 +296,6 @@ def assemble_native_command(
     return tuple(base_tokens)
 
 
-def command_preview(
-    *,
-    configured_command: str,
-    context: OpenCodeCommandContext,
-    repository_root: Path | None = None,
-) -> str:
-    return " ".join(
-        shlex.quote(token)
-        for token in assemble_command(
-            configured_command=configured_command,
-            context=context,
-            repository_root=repository_root,
-        )
-    )
-
-
 def build_execution_environment(
     *,
     context: OpenCodeCommandContext,
@@ -422,6 +410,7 @@ def run_subprocess_with_streaming(
     exit_classification = _resolve_exit_classification(
         exit_code=streamed_result.exit_code,
         stop_reason=streamed_result.stop_reason,
+        capture_error=streamed_result.capture_error,
         stdout_text=streamed_result.stdout_text,
         stderr_text=streamed_result.stderr_text,
         structured_events_source_path=streamed_result.structured_events_source_path,
@@ -443,6 +432,7 @@ def run_subprocess_with_streaming(
         stdout_truncated=streamed_result.stdout_truncated,
         stderr_truncated=streamed_result.stderr_truncated,
         runtime_log_truncated=streamed_result.runtime_log_truncated,
+        capture_error=streamed_result.capture_error,
     )
 
 
@@ -469,5 +459,6 @@ def persist_attempt_runtime_log(
         stdout_truncated=run_result.stdout_truncated,
         stderr_truncated=run_result.stderr_truncated,
         runtime_log_truncated=run_result.runtime_log_truncated,
+        capture_error=run_result.capture_error,
     )
     return paths.runtime_log_path

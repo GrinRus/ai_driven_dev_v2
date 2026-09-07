@@ -28,6 +28,7 @@ def _prepare_repair_exhausted_run(tmp_path: Path) -> tuple[Path, Path, Path]:
         config_snapshot={"mode": "test"},
     )
     create_next_attempt_directory(
+        attempt_mode="repair",
         workspace_root=workspace_root,
         work_item="WI-REPAIR",
         run_id="run-repair",
@@ -117,7 +118,7 @@ def test_repair_extension_preview_is_core_owned_and_eligible(tmp_path: Path) -> 
     assert preview.selected_runner == "codex"
     assert preview.current_findings
     assert preview.primary_cause == preview.current_findings[0]
-    assert preview.automatic_repair_attempts_remaining == 2
+    assert preview.automatic_repair_attempts_remaining == 1
     assert preview.manual_grant_used is False
 
 

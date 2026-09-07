@@ -6,7 +6,8 @@ from pathlib import Path
 import pytest
 
 from aidd.core.stages import STAGES
-from aidd.validators.protocol import VALIDATOR_FINDING_CODES, VALIDATOR_REPORT_FIELDS
+from aidd.validators.protocol import VALIDATOR_FINDING_CODES
+from tests.agent_instruction_support import skill_text_with_references
 
 
 @pytest.mark.parametrize("stage", STAGES)
@@ -30,36 +31,55 @@ def test_stage_repair_prompt_contains_budget_and_status_consistency_rules(stage:
     assert "After updating the required documents and checking consistency, stop" in prompt_text
     assert "contracts/documents/questions.md" in prompt_text
     assert "contracts/documents/answers.md" in prompt_text
-    assert "Do not invent `A1`/`A2` answer ids" in prompt_text
+    assert "invent `A1`/`A2` answer ids" in prompt_text
     assert "`- Q1 [resolved] ...`" in prompt_text
-    assert "Do not put a colon after the marker" in prompt_text
-    assert "`- Q1 [resolved]: ...` is invalid" in prompt_text
-    assert "`- Q1: [resolved] ...`" in prompt_text
-    assert "do not create `[resolved]`" in prompt_text
+    assert "safe presentation differences without changing meaning" in prompt_text
+    assert "do not create or edit\n`answers.md`" in prompt_text
+    assert "create `[resolved]` answers yourself" in prompt_text
+
+    normalized_prompt = " ".join(prompt_text.split())
+    assert "Do not write `stage-result.md` or `validator-report.md`" in normalized_prompt
+    assert (
+        "Never create, edit, delete, or replace either record" in normalized_prompt
+    )
+    assert "AIDD determines `succeeded` after validation" in prompt_text
+    assert "Do not treat the previous failed validator report as a new result" in prompt_text
+    assert "When repairing a draft `validator-report.md`" not in prompt_text
+    assert "set `stage-result.md`" not in prompt_text
 
 
 @pytest.mark.parametrize("stage", STAGES)
 def test_stage_repair_prompt_uses_only_registered_validator_protocol_vocabulary(
     stage: str,
 ) -> None:
-    prompt_path = Path("prompt-packs") / "stages" / stage / "repair.md"
-    prompt_text = prompt_path.read_text(encoding="utf-8")
-    protocol_block = prompt_text.split("## Validator-report protocol v1", maxsplit=1)[1].split(
-        "\n## ", maxsplit=1
-    )[0]
-
-    for field in VALIDATOR_REPORT_FIELDS:
-        assert f"`{field.label}`" in protocol_block
-        for alias in field.aliases:
-            assert f"`{alias}`" in protocol_block
+    prompt_text = (Path("prompt-packs") / "stages" / stage / "repair.md").read_text(
+        encoding="utf-8"
+    )
     registered_codes = {spec.code for spec in VALIDATOR_FINDING_CODES}
     prompt_codes = set(
-        re.findall(r"`((?:CROSS|INTERVIEW|SEM|STRUCT)-[A-Z0-9-]+)`", protocol_block)
+        re.findall(r"`((?:CROSS|INTERVIEW|SEM|STRUCT)-[A-Z0-9-]+)`", prompt_text)
     )
     assert prompt_codes <= registered_codes
-    assert "read-only legacy field aliases" in protocol_block
-    assert "read-only legacy codes" in protocol_block
-    assert "invalid protocol vocabulary" in protocol_block
+    assert "When repairing a draft `validator-report.md`" not in prompt_text
+    assert "legacy" not in prompt_text
+
+
+@pytest.mark.parametrize("stage", STAGES)
+@pytest.mark.parametrize("mode", ("repair", "intervention"))
+def test_retry_prompts_preserve_aidd_and_operator_ownership(stage: str, mode: str) -> None:
+    prompt = (Path("prompt-packs") / "stages" / stage / f"{mode}.md").read_text(
+        encoding="utf-8"
+    )
+    assert "Do not write `stage-result.md` or `validator-report.md`" in prompt
+    assert "AIDD" in prompt and "terminal status" in prompt
+    assert "repair-brief.md" in prompt and "answers.md" in prompt
+    assert "blocking question" in prompt.lower()
+    assert "stable QID" in prompt
+    for stale_action in (
+        "update `stage-result.md`", "set `stage-result.md`", "Re-copy the `stage-result.md`",
+        "When repairing a draft `validator-report.md`", "write `# Answers",
+    ):
+        assert stale_action not in prompt
 
 
 @pytest.mark.parametrize("stage", STAGES)
@@ -97,6 +117,35 @@ def test_stage_run_prompts_assign_terminal_records_to_aidd(stage: str) -> None:
     for verb in ("Write", "Update"):
         assert f"{verb} `stage-result.md`" not in run_prompt
         assert f"{verb} `validator-report.md`" not in run_prompt
+
+
+@pytest.mark.parametrize("stage", STAGES)
+def test_stage_intervention_prompts_protect_aidd_records(stage: str) -> None:
+    intervention_prompt = (
+        Path("prompt-packs") / "stages" / stage / "intervention.md"
+    ).read_text(encoding="utf-8")
+    normalized_prompt = " ".join(intervention_prompt.split())
+
+    assert "Do not write `stage-result.md` or `validator-report.md`" in normalized_prompt
+    assert (
+        "Never create, edit, delete, or replace either record" in normalized_prompt
+    )
+    assert "AIDD owns their canonical status, validation, history, and publication" in (
+        normalized_prompt
+    )
+
+    # The negative write boundary is expected; any other mutation verb paired with
+    # an AIDD-owned record would give the model contradictory instructions.
+    safe_boundary = (
+        "Do not write `stage-result.md` or `validator-report.md`; AIDD owns their canonical "
+        "status, validation, history, and publication."
+    )
+    body_without_boundary = normalized_prompt.replace(safe_boundary, "")
+    for verb in ("write", "update", "create", "edit", "delete", "replace"):
+        assert re.search(
+            rf"(?i)\b{verb}\s+`(?:stage-result|validator-report)\.md`",
+            body_without_boundary,
+        ) is None
 
 
 def test_interview_document_contracts_and_native_prompt_forbid_marker_colon() -> None:
@@ -1003,7 +1052,7 @@ def test_research_prompts_and_contracts_require_bounded_local_probes() -> None:
 def test_live_docs_distinguish_provider_no_progress_from_quality_failure() -> None:
     catalog = Path("docs/e2e/live-e2e-catalog.md").read_text(encoding="utf-8")
     rubric = Path("docs/e2e/live-quality-rubric.md").read_text(encoding="utf-8")
-    skill = Path(".agents/skills/live-e2e/SKILL.md").read_text(encoding="utf-8")
+    skill = skill_text_with_references("live-e2e")
 
     for text in (catalog, rubric, skill):
         lower_text = text.lower()
@@ -1300,7 +1349,7 @@ def test_implement_prompts_require_executable_verification_evidence() -> None:
     assert "at most one focused fix attempt" in run_prompt
     assert "truthful failed verification report" in run_prompt
     assert "timing out without stage artifacts" in run_prompt
-    assert "continuing ad hoc debugging until timeout" in repair_prompt
+    assert "ad hoc debugging until timeout" in repair_prompt
 
 
 def test_implement_prompt_requires_compatibility_consumers_and_clean_target_diff() -> None:

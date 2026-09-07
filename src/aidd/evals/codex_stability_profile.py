@@ -69,15 +69,6 @@ CODEX_STABILITY_REQUIRED_ARTIFACTS: tuple[str, ...] = (
     "verdict.md",
 )
 
-CODEX_STABILITY_CONDITIONAL_ARTIFACTS: tuple[str, ...] = (
-    "runtime.jsonl",
-    "events.jsonl",
-    "questions.md",
-    "answers.md",
-    "frontend-checkpoints.json",
-    "frontend-checkpoints.md",
-)
-
 CODEX_STABILITY_REQUIRED_EVIDENCE_FIELDS: tuple[str, ...] = (
     "scenario_id",
     "run_id",
@@ -596,7 +587,6 @@ def validate_repetition_evidence(
 
 
 __all__ = [
-    "CODEX_STABILITY_CONDITIONAL_ARTIFACTS",
     "CODEX_STABILITY_METRIC_IDS",
     "CODEX_STABILITY_PROFILE_SCHEMA_VERSION",
     "CODEX_STABILITY_REQUIRED_ARTIFACTS",

@@ -1,8 +1,13 @@
 from __future__ import annotations
 
+from dataclasses import dataclass
 from pathlib import Path
 
 from aidd.validators.models import LoadedMarkdownDocument, MarkdownDocumentMetadata
+from aidd.validators.protocol import (
+    DocumentReadFailureKind,
+    resolve_document_read_failure,
+)
 
 _COMMON_DOCUMENTS = frozenset(
     {
@@ -25,84 +30,39 @@ class DocumentLoadError(ValueError):
     """Raised when a resolved document cannot be loaded."""
 
 
-def _resolve_workspace_relative_path(workspace_root: Path, relative_path: Path) -> Path:
-    if relative_path.is_absolute():
-        raise DocumentPathError(
-            f"Path must be workspace-relative, got absolute path: {relative_path}"
-        )
+@dataclass(frozen=True, slots=True)
+class MarkdownReadFailure:
+    """A normalized, repair-oriented failure from a Markdown readability probe."""
 
-    workspace_root_resolved = workspace_root.resolve(strict=False)
-    candidate = (workspace_root / relative_path).resolve(strict=False)
-    if not candidate.is_relative_to(workspace_root_resolved):
-        raise DocumentPathError(
-            f"Path escapes workspace root: {relative_path} (workspace={workspace_root_resolved})"
-        )
+    kind: DocumentReadFailureKind
+    message: str
 
-    return candidate
+    def __post_init__(self) -> None:
+        normalized_message = self.message.strip()
+        if not normalized_message:
+            raise ValueError("Markdown read failure message must not be empty.")
+        object.__setattr__(self, "message", normalized_message)
 
-
-def _validate_document_name(document_name: str) -> None:
-    if not document_name:
-        raise DocumentPathError("Document name must not be empty.")
-
-    candidate = Path(document_name)
-    if candidate.name != document_name:
-        raise DocumentPathError(
-            f"Document name must be a simple filename without path separators: {document_name}"
-        )
+    @property
+    def code(self) -> str:
+        return resolve_document_read_failure(self.kind).code
 
 
-def resolve_stage_root(workspace_root: Path, work_item: str, stage: str) -> Path:
-    if not work_item:
-        raise DocumentPathError("Work item id must not be empty.")
-    if not stage:
-        raise DocumentPathError("Stage id must not be empty.")
+@dataclass(frozen=True, slots=True)
+class MarkdownReadProbeResult:
+    """Typed result of probing one Markdown path for readability."""
 
-    relative_path = Path("workitems") / work_item / "stages" / stage
-    return _resolve_workspace_relative_path(workspace_root, relative_path)
+    path: Path
+    document: LoadedMarkdownDocument | None = None
+    failure: MarkdownReadFailure | None = None
 
+    def __post_init__(self) -> None:
+        if (self.document is None) == (self.failure is None):
+            raise ValueError("Markdown read probe must contain exactly one outcome.")
 
-def resolve_common_document_path(
-    workspace_root: Path,
-    work_item: str,
-    stage: str,
-    document_name: str,
-) -> Path:
-    _validate_document_name(document_name)
-    if document_name not in _COMMON_DOCUMENTS:
-        allowed = ", ".join(sorted(_COMMON_DOCUMENTS))
-        raise DocumentPathError(
-            f"Unknown common document '{document_name}'. Expected one of: {allowed}"
-        )
-
-    stage_root = resolve_stage_root(workspace_root=workspace_root, work_item=work_item, stage=stage)
-    return _resolve_workspace_relative_path(
-        workspace_root=workspace_root,
-        relative_path=stage_root.relative_to(workspace_root.resolve(strict=False)) / document_name,
-    )
-
-
-def resolve_stage_document_path(
-    workspace_root: Path,
-    work_item: str,
-    stage: str,
-    io_direction: str,
-    document_name: str,
-) -> Path:
-    _validate_document_name(document_name)
-    if io_direction not in _STAGE_IO_DIRECTORIES:
-        allowed = ", ".join(sorted(_STAGE_IO_DIRECTORIES))
-        raise DocumentPathError(
-            f"Unknown stage document direction '{io_direction}'. Expected one of: {allowed}"
-        )
-
-    stage_root = resolve_stage_root(workspace_root=workspace_root, work_item=work_item, stage=stage)
-    return _resolve_workspace_relative_path(
-        workspace_root=workspace_root,
-        relative_path=stage_root.relative_to(workspace_root.resolve(strict=False))
-        / io_direction
-        / document_name,
-    )
+    @property
+    def readable(self) -> bool:
+        return self.document is not None
 
 
 def _parse_optional_frontmatter(raw_body: str) -> dict[str, str] | None:
@@ -136,6 +96,50 @@ def _parse_optional_frontmatter(raw_body: str) -> dict[str, str] | None:
         frontmatter[normalized_key] = value.strip()
 
     return frontmatter
+
+
+def _markdown_read_failure(
+    *,
+    path: Path,
+    kind: DocumentReadFailureKind,
+    message: str,
+) -> MarkdownReadProbeResult:
+    return MarkdownReadProbeResult(
+        path=path,
+        failure=MarkdownReadFailure(kind=kind, message=message),
+    )
+
+
+def _classify_document_load_error(exc: Exception) -> DocumentReadFailureKind:
+    if isinstance(exc, UnicodeDecodeError):
+        return DocumentReadFailureKind.INVALID_UTF8
+    if isinstance(exc, DocumentPathError):
+        return DocumentReadFailureKind.UNREADABLE
+    if isinstance(exc, DocumentLoadError):
+        normalized = str(exc).casefold()
+        if "not a file" in normalized:
+            return DocumentReadFailureKind.NON_FILE
+        if "frontmatter" in normalized:
+            return DocumentReadFailureKind.MALFORMED_FRONTMATTER
+    return DocumentReadFailureKind.UNREADABLE
+
+
+def probe_markdown_document(
+    *,
+    path: Path,
+    workspace_root: Path,
+) -> MarkdownReadProbeResult:
+    """Return a typed readability outcome without leaking expected read exceptions."""
+
+    try:
+        document = load_markdown_document(path=path, workspace_root=workspace_root)
+    except (DocumentPathError, DocumentLoadError, OSError, UnicodeDecodeError) as exc:
+        return _markdown_read_failure(
+            path=path,
+            kind=_classify_document_load_error(exc),
+            message=str(exc),
+        )
+    return MarkdownReadProbeResult(path=path, document=document)
 
 
 def classify_document_type(workspace_relative_path: Path) -> str:
@@ -186,25 +190,3 @@ def load_markdown_document(path: Path, workspace_root: Path) -> LoadedMarkdownDo
         modified_time_epoch_s=stat.st_mtime,
     )
     return LoadedMarkdownDocument(body=body, metadata=metadata, frontmatter=frontmatter)
-
-
-def load_markdown_documents(
-    paths: list[Path],
-    workspace_root: Path,
-) -> list[LoadedMarkdownDocument]:
-    loaded_documents: list[LoadedMarkdownDocument] = []
-    seen_paths: set[Path] = set()
-
-    for path in paths:
-        loaded = load_markdown_document(path=path, workspace_root=workspace_root)
-        normalized_path = loaded.metadata.workspace_relative_path
-        if normalized_path in seen_paths:
-            raise DocumentLoadError(
-                "Duplicate document path after normalization: "
-                f"{normalized_path} (source={path})"
-            )
-
-        seen_paths.add(normalized_path)
-        loaded_documents.append(loaded)
-
-    return loaded_documents

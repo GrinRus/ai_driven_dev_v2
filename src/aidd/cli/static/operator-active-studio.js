@@ -44,26 +44,6 @@ function activeIntentSummary() {
     || null;
 }
 
-function phaseStatus(phase, stages) {
-  const items = phase.stages.map((stage) => stages.find((item) => item.stage === stage)).filter(Boolean);
-  if (!items.length) return "pending";
-  if (items.some((item) => ["blocked", "failed", "cancelled"].includes(item.status))) return "blocked";
-  if (items.some((item) => ["preparing", "executing", "validating"].includes(item.status))) return "active";
-  if (items.every((item) => item.status === "succeeded")) return "complete";
-  if (items.some((item) => item.status !== "pending")) return "ready";
-  return "pending";
-}
-
-function phaseFocusStage(phase, stages) {
-  const active = phase.stages.find((stage) => stage === state.activeStage);
-  if (active) return active;
-  const current = [...phase.stages].reverse().find((stage) => {
-    const item = stages.find((candidate) => candidate.stage === stage);
-    return item && item.status !== "pending";
-  });
-  return current || phase.stages[0];
-}
-
 function renderIntentPhaseStepper() {
   const stages = state.dashboard?.stages || [];
   const orderedStages = INTENT_PHASES.flatMap((phase) => phase.stages);
@@ -328,7 +308,7 @@ function renderTaskWorkspace(taskView) {
   // The target active-task composition keeps the selected task/attempt facts in
   // the right inspector and reserves a full-width lower tray for raw output.
   // Keep the existing data hooks so routes, focus handling, and browser
-  // compatibility assertions continue to observe the same durable facts.
+  // interaction checks continue to observe the same durable facts.
   const attemptTray = `
     <section class="task-attempt-tray ${hasAttemptEvidence ? "has-evidence" : "empty"}" data-task-attempt-tray data-active-task-attempt="${hasAttemptEvidence ? "true" : "false"}" data-attempt-status="${escapeHtml(attemptStatus)}"${hasAttemptEvidence ? "" : " hidden"}>
       <div class="task-attempt-header">

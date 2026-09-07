@@ -243,7 +243,9 @@ def test_materialization_references_only_current_attempt_range_without_payload_c
     assert not (task_attempt / "repair-context.md").exists()
 
 
-def test_read_model_resolves_new_references_and_legacy_embedded_attempts(tmp_path: Path) -> None:
+def test_read_model_resolves_current_references_and_rejects_embedded_attempts(
+    tmp_path: Path,
+) -> None:
     workspace_root = tmp_path / ".aidd"
     referenced_attempt = _global_attempt(workspace_root, 1)
     referenced_attempt.joinpath("runtime.log").write_text("runtime\n", encoding="utf-8")
@@ -260,13 +262,6 @@ def test_read_model_resolves_new_references_and_legacy_embedded_attempts(tmp_pat
         task_attempt_path=new_attempt,
         stage_attempt_numbers=(1,),
     )
-    legacy_attempt = _task_attempt(workspace_root, number=2)
-    legacy_attempt.joinpath("attempt-state.json").write_text(
-        '{"status": "failed"}', encoding="utf-8"
-    )
-    legacy_attempt.joinpath("stage-attempt-0002").mkdir()
-    legacy_attempt.joinpath("runtime.log").write_text("legacy\n", encoding="utf-8")
-
     items = _attempts(
         new_attempt.parent,
         workspace_root=workspace_root,
@@ -282,23 +277,25 @@ def test_read_model_resolves_new_references_and_legacy_embedded_attempts(tmp_pat
             }
         ],
     }
-    assert items[1]["runtime_evidence"] == {
-        "layout": "legacy",
-        "stage_attempts": [
-            {
-                "attempt_number": 2,
-                "path": legacy_attempt.joinpath("stage-attempt-0002")
-                .relative_to(workspace_root)
-                .as_posix(),
-            }
-        ],
-    }
-    legacy = resolve_task_attempt_evidence(
-        task_attempt_path=legacy_attempt,
-        workspace_root=workspace_root,
-        work_item="WI-1",
-        run_id="run-1",
-        task_id="TL-1",
-        task_attempt_number=2,
+    legacy_attempt = _task_attempt(workspace_root, number=2)
+    legacy_attempt.joinpath("attempt-state.json").write_text(
+        '{"status": "failed"}', encoding="utf-8"
     )
-    assert legacy.layout == "legacy"
+    legacy_attempt.joinpath("stage-attempt-0002").mkdir()
+    legacy_attempt.joinpath("runtime.log").write_text("legacy\n", encoding="utf-8")
+
+    with pytest.raises(ValueError, match="Embedded task stage-attempt evidence is unsupported"):
+        _attempts(
+            new_attempt.parent,
+            workspace_root=workspace_root,
+            task_evidence_identity=("WI-1", "run-1", "TL-1"),
+        )
+    with pytest.raises(ValueError, match="Embedded task stage-attempt evidence is unsupported"):
+        resolve_task_attempt_evidence(
+            task_attempt_path=legacy_attempt,
+            workspace_root=workspace_root,
+            work_item="WI-1",
+            run_id="run-1",
+            task_id="TL-1",
+            task_attempt_number=2,
+        )

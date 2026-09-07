@@ -14,11 +14,10 @@ from aidd.adapters.opencode.runner import (
     assemble_command,
     build_execution_environment,
     build_subprocess_spec,
-    command_preview,
     persist_attempt_runtime_log,
     run_subprocess_with_streaming,
 )
-from aidd.adapters.runtime_artifacts import RUNTIME_EXIT_METADATA_FILENAME
+from aidd.adapters.runtime_evidence import RUNTIME_EXIT_METADATA_FILENAME
 from aidd.runtime_catalog import RuntimeExecutionMode, get_runtime_definition
 
 
@@ -82,19 +81,6 @@ def test_assemble_command_respects_shell_quoted_base_tokens(tmp_path: Path) -> N
     )
 
     assert command[:2] == ("opencode", "exec")
-
-
-def test_command_preview_renders_shell_quoted_command(tmp_path: Path) -> None:
-    context = _context(tmp_path)
-    preview = command_preview(
-        configured_command="opencode",
-        context=context,
-        repository_root=tmp_path,
-    )
-
-    assert preview.startswith("opencode ")
-    assert "--stage plan" in preview
-    assert "--work-item WI-123" in preview
 
 
 def test_build_execution_environment_sets_runtime_metadata(tmp_path: Path) -> None:

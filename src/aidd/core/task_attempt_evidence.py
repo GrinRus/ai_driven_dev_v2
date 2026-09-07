@@ -1,14 +1,13 @@
 from __future__ import annotations
 
 import json
-import re
 from dataclasses import dataclass
 from pathlib import Path, PurePosixPath
 
+from aidd.core.attempt_lineage import AttemptKind, AttemptLineage, AttemptScope
 from aidd.core.run_store import run_attempt_root, write_json_payload
 
 TASK_ATTEMPT_REFERENCES_FILENAME = "stage-attempt-references.json"
-_LEGACY_STAGE_ATTEMPT_RE = re.compile(r"^stage-attempt-(\d{4})$")
 
 
 @dataclass(frozen=True, slots=True)
@@ -43,6 +42,7 @@ class TaskAttemptEvidenceReferences:
     task_attempt_number: int
     stage_attempts: tuple[TaskStageAttemptReference, ...]
     stage: str = "implement"
+    lineage: AttemptLineage | None = None
     schema_version: int = 1
 
     def to_dict(self) -> dict[str, object]:
@@ -52,6 +52,7 @@ class TaskAttemptEvidenceReferences:
             "task_attempt_number": self.task_attempt_number,
             "stage": self.stage,
             "stage_attempts": [reference.to_dict() for reference in self.stage_attempts],
+            **({"lineage": self.lineage.to_dict()} if self.lineage is not None else {}),
         }
 
     @classmethod
@@ -80,11 +81,27 @@ class TaskAttemptEvidenceReferences:
         numbers = tuple(reference.attempt_number for reference in references)
         if numbers != tuple(sorted(set(numbers))):
             raise ValueError("Task stage-attempt references must be unique and ordered.")
+        if "lineage" not in payload:
+            raise ValueError("Task attempt evidence requires current-format lineage.")
+        lineage = AttemptLineage.from_dict(payload["lineage"])
+        lineage.validate_identity(
+            scope=AttemptScope.TASK,
+            attempt_number=task_attempt_number,
+        )
         return cls(
             task_id=task_id,
             task_attempt_number=task_attempt_number,
             stage_attempts=references,
+            lineage=lineage,
         )
+
+    @property
+    def effective_lineage(self) -> AttemptLineage:
+        """Return the explicit current-format task lineage."""
+
+        if self.lineage is None:
+            raise ValueError("Task attempt evidence is missing current-format lineage.")
+        return self.lineage
 
 
 @dataclass(frozen=True, slots=True)
@@ -169,7 +186,13 @@ def write_task_attempt_references(
     task_attempt_number: int,
     task_attempt_path: Path,
     stage_attempt_numbers: tuple[int, ...],
+    lineage: AttemptLineage | None = None,
 ) -> Path:
+    if lineage is not None:
+        lineage.validate_identity(
+            scope=AttemptScope.TASK,
+            attempt_number=task_attempt_number,
+        )
     references: list[TaskStageAttemptReference] = []
     for attempt_number in stage_attempt_numbers:
         attempt_path = run_attempt_root(
@@ -196,6 +219,12 @@ def write_task_attempt_references(
         task_id=task_id,
         task_attempt_number=task_attempt_number,
         stage_attempts=tuple(references),
+        lineage=lineage
+        or AttemptLineage(
+            scope=AttemptScope.TASK,
+            attempt_kind=AttemptKind.TASK,
+            attempt_number=task_attempt_number,
+        ),
     )
     path = task_attempt_path / TASK_ATTEMPT_REFERENCES_FILENAME
     write_json_payload(path, manifest.to_dict())
@@ -252,21 +281,14 @@ def resolve_task_attempt_evidence(
             layout="references",
             stage_attempts=manifest.stage_attempts,
         )
-    legacy: list[TaskStageAttemptReference] = []
-    for candidate in sorted(task_attempt_path.glob("stage-attempt-[0-9][0-9][0-9][0-9]")):
-        match = _LEGACY_STAGE_ATTEMPT_RE.fullmatch(candidate.name)
-        if match is None or not candidate.is_dir():
-            continue
-        resolved = candidate.resolve(strict=True)
-        if not resolved.is_relative_to(workspace_root.resolve(strict=True)):
-            raise ValueError("Legacy task stage-attempt evidence escapes workspace root.")
-        legacy.append(
-            TaskStageAttemptReference(
-                attempt_number=int(match.group(1)),
-                path=candidate.relative_to(workspace_root).as_posix(),
-            )
+    if any(task_attempt_path.glob("stage-attempt-[0-9][0-9][0-9][0-9]")):
+        raise ValueError(
+            "Embedded task stage-attempt evidence is unsupported; recreate the workspace "
+            "with the current CLI."
         )
-    return ResolvedTaskAttemptEvidence(layout="legacy", stage_attempts=tuple(legacy))
+    # An executing or interrupted task can precede its first global stage attempt.
+    # No references is absence of evidence, never an inferred historical layout.
+    return ResolvedTaskAttemptEvidence(layout="references", stage_attempts=())
 
 
 __all__ = [

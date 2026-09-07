@@ -6,13 +6,6 @@ from io import TextIOBase
 from typing import IO, Any
 
 
-def decode_runtime_bytes(value: bytes | str) -> str:
-    """Decode a runtime chunk for a tolerant display view."""
-    if isinstance(value, bytes):
-        return value.decode("utf-8", errors="replace")
-    return value
-
-
 @dataclass(slots=True)
 class ManagedStdinWriter:
     _thread: threading.Thread
@@ -57,4 +50,4 @@ class ManagedStdinWriter:
         self._thread.join(timeout=timeout_seconds)
 
 
-__all__ = ["ManagedStdinWriter", "decode_runtime_bytes"]
+__all__ = ["ManagedStdinWriter"]

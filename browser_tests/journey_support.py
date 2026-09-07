@@ -50,8 +50,6 @@ def configure_sleeping_fixture_runtime(
         f'command = "{sys.executable} {wrapper.as_posix()}"\n'
         'mode = "adapter-flags"\n'
         'permission_policy = "full-access"\n\n'
-        "[logging]\n"
-        'mode = "both"\n\n'
         "[repair]\n"
         "max_attempts = 2\n",
         encoding="utf-8",

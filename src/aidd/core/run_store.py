@@ -1,11 +1,11 @@
 from __future__ import annotations
 
 import json
-from dataclasses import dataclass
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
+from aidd.core.attempt_lineage import AttemptKind, AttemptLineage, AttemptScope
 from aidd.core.identifiers import contained_component_path
 from aidd.core.models.run import (
     RepairExtensionGrant,
@@ -26,6 +26,7 @@ from aidd.core.runtime_operator import (
     OPERATOR_REQUESTS_FILENAME,
 )
 from aidd.core.stage_registry import DEFAULT_STAGE_CONTRACTS_ROOT, resolve_expected_output_documents
+from aidd.core.stages import STAGES
 from aidd.core.workspace import (
     RESERVED_STAGE_FILENAMES,
     WORKSPACE_REPORTS_DIRNAME,
@@ -295,6 +296,8 @@ def create_next_attempt_directory(
     *,
     contracts_root: Path = DEFAULT_STAGE_CONTRACTS_ROOT,
     repository_root: Path | None = None,
+    attempt_mode: str | None = None,
+    lineage: AttemptLineage | None = None,
 ) -> Path:
     attempts_root = run_attempts_root(
         workspace_root=workspace_root,
@@ -335,6 +338,8 @@ def create_next_attempt_directory(
         attempt_number=attempt_number,
         contracts_root=contracts_root,
         repository_root=resolved_repository_root,
+        attempt_mode=attempt_mode,
+        lineage=lineage,
     )
     return attempt_path
 
@@ -357,6 +362,78 @@ def run_stage_metadata_path(workspace_root: Path, work_item: str, run_id: str, s
     )
 
 
+def load_run_manifest(
+    workspace_root: Path,
+    work_item: str,
+    run_id: str,
+) -> dict[str, Any] | None:
+    path = run_manifest_path(workspace_root, work_item, run_id)
+    if not path.exists():
+        return None
+    try:
+        payload = json.loads(path.read_text(encoding="utf-8"))
+    except json.JSONDecodeError as exc:
+        raise ValueError(f"Run manifest is not valid JSON: {path}.") from exc
+    if not isinstance(payload, dict):
+        raise ValueError("Run manifest must be a JSON object.")
+    if "operator_archive" in payload:
+        raise ValueError(
+            "Run manifest contains retired operator_archive state; recreate the workspace "
+            "with the current CLI."
+        )
+    version = payload.get("schema_version")
+    if type(version) is not int or version != 1:
+        raise ValueError("Run manifest requires explicit integer schema_version 1.")
+    for field in (
+        "run_id",
+        "work_item_id",
+        "runtime_id",
+        "adapter_id",
+        "stage_target",
+        "resource_source",
+        "resource_root",
+        "created_at_utc",
+        "updated_at_utc",
+    ):
+        value = payload.get(field)
+        if not isinstance(value, str) or not value.strip():
+            raise ValueError(f"Run manifest requires a non-empty string {field}.")
+    for field, expected in (("run_id", run_id), ("work_item_id", work_item)):
+        if payload[field] != expected:
+            raise ValueError(f"Run manifest {field} mismatch for run '{run_id}'.")
+    for field in ("repository_git_sha", "resource_revision"):
+        value = payload.get(field)
+        if field not in payload or (
+            value is not None and (not isinstance(value, str) or not value.strip())
+        ):
+            raise ValueError(f"Run manifest requires {field} as a non-empty string or null.")
+    bounds = payload.get("workflow_bounds")
+    if not isinstance(bounds, dict):
+        raise ValueError("Run manifest requires a workflow_bounds object.")
+    for field in ("start", "end"):
+        value = bounds.get(field)
+        if field not in bounds or (
+            value is not None and (not isinstance(value, str) or not value.strip())
+        ):
+            raise ValueError(
+                f"Run manifest requires workflow_bounds.{field} as a non-empty string or null."
+            )
+    if not isinstance(payload.get("config_snapshot"), dict):
+        raise ValueError("Run manifest requires a config_snapshot object.")
+    provenance = payload.get("prompt_pack_provenance")
+    if not isinstance(provenance, list):
+        raise ValueError("Run manifest requires a prompt_pack_provenance list.")
+    for entry in provenance:
+        if not isinstance(entry, dict) or any(
+            not isinstance(entry.get(field), str) or not entry[field].strip()
+            for field in ("path", "sha256")
+        ):
+            raise ValueError("Run manifest prompt_pack_provenance requires path/sha256 strings.")
+    if "lineage" in payload and not isinstance(payload["lineage"], dict):
+        raise ValueError("Run manifest lineage must be an object when present.")
+    return payload
+
+
 def load_stage_metadata(
     workspace_root: Path,
     work_item: str,
@@ -372,7 +449,13 @@ def load_stage_metadata(
     if not metadata_path.exists():
         return None
     payload = json.loads(metadata_path.read_text(encoding="utf-8"))
-    return StageRunMetadata.from_dict(payload)
+    metadata = StageRunMetadata.from_dict(payload)
+    for field, expected in (("run_id", run_id), ("work_item_id", work_item), ("stage", stage)):
+        if getattr(metadata, field) != expected:
+            raise ValueError(
+                f"Stage metadata {field} mismatch for run '{run_id}', stage '{stage}'."
+            )
+    return metadata
 
 
 def load_attempt_artifact_index(
@@ -628,6 +711,7 @@ def write_attempt_artifact_index(
     contracts_root: Path = DEFAULT_STAGE_CONTRACTS_ROOT,
     repository_root: Path | None = None,
     attempt_mode: str | None = None,
+    lineage: AttemptLineage | None = None,
     prompt_pack_paths: tuple[Path, ...] | None = None,
 ) -> Path:
     artifact_index_path = run_attempt_artifact_index_path(
@@ -697,9 +781,28 @@ def write_attempt_artifact_index(
         resource_source=resource_source,
         resource_root=resolved_repository_root.as_posix(),
         attempt_mode=attempt_mode,
+        lineage=lineage,
         changed_at_utc=timestamp,
     )
     if existing_index is not None:
+        effective_attempt_mode = attempt_mode or existing_index.attempt_mode
+        effective_lineage = lineage or existing_index.lineage
+        if (
+            effective_lineage is not None
+            and effective_lineage.attempt_kind is AttemptKind.UNKNOWN
+            and effective_attempt_mode is not None
+        ):
+            effective_lineage = AttemptLineage(
+                scope=AttemptScope.STAGE,
+                attempt_kind=AttemptKind(effective_attempt_mode.strip().lower()),
+                attempt_number=attempt_number,
+            )
+        if (
+            effective_lineage is not None
+            and effective_attempt_mode is not None
+            and effective_lineage.attempt_kind.value != effective_attempt_mode.strip().lower()
+        ):
+            raise ValueError("Artifact index attempt_mode disagrees with its lineage.")
         index = RunArtifactIndex(
             schema_version=existing_index.schema_version,
             run_id=index.run_id,
@@ -711,12 +814,13 @@ def write_attempt_artifact_index(
             prompt_pack_provenance=index.prompt_pack_provenance,
             resource_source=index.resource_source,
             resource_root=index.resource_root,
-            attempt_mode=attempt_mode or existing_index.attempt_mode,
+            attempt_mode=effective_attempt_mode,
+            lineage=effective_lineage,
             created_at_utc=existing_index.created_at_utc,
             updated_at_utc=timestamp,
         )
 
-    _write_json_payload(artifact_index_path, index.to_dict())
+    write_json_payload(artifact_index_path, index.to_dict())
     return artifact_index_path
 
 
@@ -732,26 +836,18 @@ def write_json_payload(path: Path, payload: dict[str, Any]) -> None:
             temp_path.unlink()
 
 
-_write_json_payload = write_json_payload
-
-
-def _touch_manifest_timestamp(
+def _persist_stage_metadata(
     workspace_root: Path,
     work_item: str,
     run_id: str,
-    updated_at_utc: str,
+    metadata_path: Path,
+    metadata: StageRunMetadata,
 ) -> None:
-    manifest_path = run_manifest_path(
-        workspace_root=workspace_root,
-        work_item=work_item,
-        run_id=run_id,
-    )
-    if not manifest_path.exists():
-        return
-
-    payload = json.loads(manifest_path.read_text(encoding="utf-8"))
-    payload["updated_at_utc"] = updated_at_utc
-    _write_json_payload(manifest_path, payload)
+    manifest = load_run_manifest(workspace_root, work_item, run_id)
+    write_json_payload(metadata_path, metadata.to_dict())
+    if manifest is not None:
+        manifest["updated_at_utc"] = metadata.updated_at_utc
+        write_json_payload(run_manifest_path(workspace_root, work_item, run_id), manifest)
 
 
 def persist_stage_status(
@@ -767,13 +863,6 @@ def persist_stage_status(
         raise ValueError("Status must be a non-empty string.")
 
     timestamp = _format_utc_timestamp(changed_at_utc)
-    stage_root = run_stage_root(
-        workspace_root=workspace_root,
-        work_item=work_item,
-        run_id=run_id,
-        stage=stage,
-    )
-    stage_root.mkdir(parents=True, exist_ok=True)
     metadata_path = run_stage_metadata_path(
         workspace_root=workspace_root,
         work_item=work_item,
@@ -798,12 +887,12 @@ def persist_stage_status(
     else:
         metadata = existing.with_status(status=status, changed_at_utc=timestamp)
 
-    _write_json_payload(metadata_path, metadata.to_dict())
-    _touch_manifest_timestamp(
+    _persist_stage_metadata(
         workspace_root=workspace_root,
         work_item=work_item,
         run_id=run_id,
-        updated_at_utc=timestamp,
+        metadata_path=metadata_path,
+        metadata=metadata,
     )
     return metadata_path
 
@@ -863,12 +952,12 @@ def persist_repair_history_entry(
         run_id=run_id,
         stage=stage,
     )
-    _write_json_payload(metadata_path, metadata.to_dict())
-    _touch_manifest_timestamp(
+    _persist_stage_metadata(
         workspace_root=workspace_root,
         work_item=work_item,
         run_id=run_id,
-        updated_at_utc=timestamp,
+        metadata_path=metadata_path,
+        metadata=metadata,
     )
     return metadata_path
 
@@ -906,12 +995,12 @@ def persist_repair_extension_grant(
         run_id=run_id,
         stage=stage,
     )
-    _write_json_payload(metadata_path, metadata.to_dict())
-    _touch_manifest_timestamp(
+    _persist_stage_metadata(
         workspace_root=workspace_root,
         work_item=work_item,
         run_id=run_id,
-        updated_at_utc=timestamp,
+        metadata_path=metadata_path,
+        metadata=metadata,
     )
     return metadata_path
 
@@ -937,43 +1026,33 @@ def create_run_manifest(
         run_id=run_id,
     )
     if manifest_path.exists():
-        existing = json.loads(manifest_path.read_text(encoding="utf-8"))
-        if not isinstance(existing, dict):
-            raise ValueError("Existing run manifest must be a JSON object.")
+        existing = load_run_manifest(workspace_root, work_item, run_id)
+        if existing is None:
+            raise ValueError("Existing run manifest disappeared before reuse.")
         mismatches: list[str] = []
-        if str(existing.get("runtime_id", "")) != runtime_id:
+        if existing["runtime_id"] != runtime_id:
             mismatches.append("runtime_id")
-        existing_adapter = str(existing.get("adapter_id", existing.get("runtime_id", "")))
+        existing_adapter = existing["adapter_id"]
         if existing_adapter != (adapter_id or runtime_id):
             mismatches.append("adapter_id")
-        bounds = existing.get("workflow_bounds")
-        requested_target_is_bounded = False
-        if isinstance(bounds, dict):
-            start = bounds.get("start")
-            end = bounds.get("end")
-            if workflow_stage_start is not None and workflow_stage_start != start:
-                mismatches.append("workflow_bounds.start")
-            if workflow_stage_end is not None and workflow_stage_end != end:
-                mismatches.append("workflow_bounds.end")
-            try:
-                from aidd.core.stages import STAGES
-
-                requested_target_is_bounded = (
-                    isinstance(start, str)
-                    and isinstance(end, str)
-                    and start in STAGES
-                    and end in STAGES
-                    and stage_target in STAGES
-                    and STAGES.index(start) <= STAGES.index(stage_target) <= STAGES.index(end)
-                )
-            except ValueError:
-                requested_target_is_bounded = False
+        bounds = existing["workflow_bounds"]
+        start = bounds["start"]
+        end = bounds["end"]
+        if workflow_stage_start is not None and workflow_stage_start != start:
+            mismatches.append("workflow_bounds.start")
+        if workflow_stage_end is not None and workflow_stage_end != end:
+            mismatches.append("workflow_bounds.end")
+        requested_target_is_bounded = (
+            start in STAGES
+            and end in STAGES
+            and stage_target in STAGES
+            and STAGES.index(start) <= STAGES.index(stage_target) <= STAGES.index(end)
+        )
         requested_target_is_canonical_continuation = False
-        existing_stage_target = str(existing.get("stage_target", ""))
+        existing_stage_target = existing["stage_target"]
         if (
-            isinstance(bounds, dict)
-            and bounds.get("start") is None
-            and bounds.get("end") is None
+            start is None
+            and end is None
             and existing_stage_target in STAGES
             and stage_target in STAGES
         ):
@@ -998,48 +1077,26 @@ def create_run_manifest(
             and not requested_target_is_canonical_continuation
         ):
             mismatches.append("stage_target")
-        existing_config = existing.get("config_snapshot")
-        if isinstance(existing_config, dict):
-            def _legacy_default_selection_compatible(key: str) -> bool:
-                if key not in config_snapshot or key in existing_config:
-                    return False
-                if key in {"runtime_model", "runtime_reasoning_effort"}:
-                    return config_snapshot[key] is None
-                if key in {
-                    "runtime_model_source",
-                    "runtime_reasoning_effort_source",
-                }:
-                    return bool(config_snapshot[key] == "runtime-default")
-                if key == "runtime_selection":
-                    selection = config_snapshot[key]
-                    return (
-                        isinstance(selection, dict)
-                        and selection.get("requested_model") is None
-                        and selection.get("requested_reasoning_effort") is None
-                        and selection.get("model_source") == "runtime-default"
-                        and selection.get("reasoning_effort_source") == "runtime-default"
-                    )
-                return False
-
-            for key in (
-                "workspace_root",
-                "runtime_command",
-                "runtime_execution_mode",
-                "runtime_permission_policy",
-                "runtime_interaction_mode",
-                "runtime_auto_approval_preset",
-                "runtime_model",
-                "runtime_reasoning_effort",
-                "runtime_model_source",
-                "runtime_reasoning_effort_source",
-                "runtime_selection",
+        existing_config = existing["config_snapshot"]
+        for key in (
+            "workspace_root",
+            "runtime_command",
+            "runtime_execution_mode",
+            "runtime_permission_policy",
+            "runtime_interaction_mode",
+            "runtime_auto_approval_preset",
+            "runtime_model",
+            "runtime_reasoning_effort",
+            "runtime_model_source",
+            "runtime_reasoning_effort_source",
+            "runtime_selection",
+        ):
+            if (key in existing_config or key in config_snapshot) and (
+                key not in existing_config
+                or key not in config_snapshot
+                or existing_config[key] != config_snapshot[key]
             ):
-                if _legacy_default_selection_compatible(key):
-                    continue
-                if (key in existing_config or key in config_snapshot) and (
-                    existing_config.get(key) != config_snapshot.get(key)
-                ):
-                    mismatches.append(f"config_snapshot.{key}")
+                mismatches.append(f"config_snapshot.{key}")
         if mismatches:
             raise ValueError(
                 "Existing run manifest conflicts with immutable fields: "
@@ -1094,7 +1151,7 @@ def create_run_manifest(
     }
     if lineage is not None:
         payload["lineage"] = dict(lineage)
-    _write_json_payload(manifest_path, payload)
+    write_json_payload(manifest_path, payload)
     return manifest_path
 
 
@@ -1117,120 +1174,3 @@ def persist_run_archive_decision(
         source=source,
         changed_at_utc=changed_at_utc,
     )
-
-
-@dataclass(frozen=True)
-class RunStore:
-    workspace_root: Path
-    work_item: str
-    run_id: str
-
-    @property
-    def root(self) -> Path:
-        return run_root(
-            workspace_root=self.workspace_root,
-            work_item=self.work_item,
-            run_id=self.run_id,
-        )
-
-    def manifest_path(self) -> Path:
-        return run_manifest_path(
-            workspace_root=self.workspace_root,
-            work_item=self.work_item,
-            run_id=self.run_id,
-        )
-
-    def create_manifest(
-        self,
-        runtime_id: str,
-        stage_target: str,
-        config_snapshot: dict[str, Any],
-        *,
-        workflow_stage_start: str | None = None,
-        workflow_stage_end: str | None = None,
-        contracts_root: Path = DEFAULT_STAGE_CONTRACTS_ROOT,
-        repository_root: Path | None = None,
-        adapter_id: str | None = None,
-    ) -> Path:
-        return create_run_manifest(
-            workspace_root=self.workspace_root,
-            work_item=self.work_item,
-            run_id=self.run_id,
-            runtime_id=runtime_id,
-            stage_target=stage_target,
-            config_snapshot=config_snapshot,
-            workflow_stage_start=workflow_stage_start,
-            workflow_stage_end=workflow_stage_end,
-            contracts_root=contracts_root,
-            repository_root=repository_root,
-            adapter_id=adapter_id,
-        )
-
-    def create_next_attempt(
-        self,
-        stage: str,
-        *,
-        contracts_root: Path = DEFAULT_STAGE_CONTRACTS_ROOT,
-        repository_root: Path | None = None,
-    ) -> Path:
-        return create_next_attempt_directory(
-            workspace_root=self.workspace_root,
-            work_item=self.work_item,
-            run_id=self.run_id,
-            stage=stage,
-            contracts_root=contracts_root,
-            repository_root=repository_root,
-        )
-
-    def attempt_artifact_index_path(self, stage: str, attempt_number: int) -> Path:
-        return run_attempt_artifact_index_path(
-            workspace_root=self.workspace_root,
-            work_item=self.work_item,
-            run_id=self.run_id,
-            stage=stage,
-            attempt_number=attempt_number,
-        )
-
-    def write_attempt_artifact_index(
-        self,
-        stage: str,
-        attempt_number: int,
-        *,
-        changed_at_utc: datetime | None = None,
-        contracts_root: Path = DEFAULT_STAGE_CONTRACTS_ROOT,
-        repository_root: Path | None = None,
-    ) -> Path:
-        return write_attempt_artifact_index(
-            workspace_root=self.workspace_root,
-            work_item=self.work_item,
-            run_id=self.run_id,
-            stage=stage,
-            attempt_number=attempt_number,
-            changed_at_utc=changed_at_utc,
-            contracts_root=contracts_root,
-            repository_root=repository_root,
-        )
-
-    def stage_metadata_path(self, stage: str) -> Path:
-        return run_stage_metadata_path(
-            workspace_root=self.workspace_root,
-            work_item=self.work_item,
-            run_id=self.run_id,
-            stage=stage,
-        )
-
-    def persist_stage_status(
-        self,
-        stage: str,
-        status: str,
-        *,
-        changed_at_utc: datetime | None = None,
-    ) -> Path:
-        return persist_stage_status(
-            workspace_root=self.workspace_root,
-            work_item=self.work_item,
-            run_id=self.run_id,
-            stage=stage,
-            status=status,
-            changed_at_utc=changed_at_utc,
-        )

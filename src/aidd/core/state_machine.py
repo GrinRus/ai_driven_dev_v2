@@ -47,10 +47,6 @@ _ALLOWED_TRANSITIONS: dict[StageState, frozenset[StageState]] = {
 _TERMINAL_STATES = frozenset({StageState.SUCCEEDED, StageState.FAILED})
 
 
-def all_stage_states() -> tuple[StageState, ...]:
-    return tuple(StageState)
-
-
 def allowed_transitions(from_state: StageState) -> frozenset[StageState]:
     return _ALLOWED_TRANSITIONS[from_state]
 

@@ -23,7 +23,7 @@ def test_create_work_item_uses_target_editor_and_preview(
         tmp_path, playwright
     ) as harness, harness.open_page(viewport) as browser_page:
         page = browser_page.page
-        page.goto(f"{harness.url}?ui=studio", wait_until="networkidle")
+        page.goto(harness.url, wait_until="networkidle")
         surface = page.locator("[data-create-work-item-surface]")
         surface.wait_for(state="visible")
         assert surface.locator("[data-request-editor]").is_visible()
@@ -44,7 +44,7 @@ def test_create_work_item_target_shell_has_one_action_and_live_markdown_modes(
         tmp_path / f"create-contract-{viewport[0]}", playwright
     ) as harness, harness.open_page(viewport) as browser_page:
         page = browser_page.page
-        page.goto(f"{harness.url}?ui=studio", wait_until="networkidle")
+        page.goto(harness.url, wait_until="networkidle")
         surface = page.locator("[data-create-work-item-surface]")
         surface.wait_for(state="visible")
 
@@ -110,7 +110,7 @@ def test_implementation_review_uses_repository_truth_and_review_gate_shell(
     ) as harness, harness.open_page(viewport) as browser_page:
         page = browser_page.page
         page.goto(
-            f"{harness.url}?ui=studio&mode=studio&work_item={fixture.work_item}"
+            f"{harness.url}?mode=studio&work_item={fixture.work_item}"
             f"&run_id={fixture.run_id}&stage=implement",
             wait_until="domcontentloaded",
         )
@@ -161,7 +161,7 @@ def test_review_remediation_uses_finding_evidence_and_request_hierarchy(
     ) as harness, harness.open_page(viewport) as browser_page:
         page = browser_page.page
         page.goto(
-            f"{harness.url}?ui=studio&mode=studio&work_item={fixture.work_item}"
+            f"{harness.url}?mode=studio&work_item={fixture.work_item}"
             f"&run_id={fixture.run_id}&stage=qa",
             wait_until="domcontentloaded",
         )

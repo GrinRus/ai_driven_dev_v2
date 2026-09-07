@@ -12,8 +12,12 @@ Break the approved plan into reviewable implementation tasks with verification n
 - `questions.md` / `answers.md` when clarification is required
 
 `tasklist.md` is the primary runtime-authored content artifact. `stage-result.md`
-is a runtime-authored summary draft that AIDD may normalize after validation, and
-`validator-report.md` is canonical only after AIDD writes the post-runtime validation report.
+and `validator-report.md` are AIDD-generated workflow records. The runtime must not create
+or edit either record in initial, repair, or intervention attempts. It writes only substantive
+runtime content and exposes evidence for AIDD reconciliation. If a blocker prevents completion,
+it must submit a `[blocking]` question through the controlled interview path; blocker prose alone
+does not pause AIDD. The primary-output list above is the published artifact view, not a
+grant of runtime write authority.
 
 ## System-owned control artifacts
 
@@ -56,7 +60,7 @@ Optional context documents may improve task decomposition quality, but they must
     `In scope` fields,
   - explicit `Execution mode: verification-only` on any task whose standalone deliverable is
     command/check evidence with no intended task-local repository diff; omitted mode is the
-    backward-compatible `repository-change` default,
+    `repository-change` default,
   - at least one safe backticked repository-relative file or directory prefix in every `In scope`
     field; absolute paths, `..` traversal, and glob syntax are invalid,
   - when `context/allowed-write-scope.md` exists, every task-local `In scope` path must be the

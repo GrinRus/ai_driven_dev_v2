@@ -17,7 +17,6 @@ from aidd.core.run_store import (
     RUN_RUNTIME_LOG_FILENAME,
     RUN_STAGE_METADATA_FILENAME,
     RUN_STAGES_DIRNAME,
-    RunStore,
     create_next_attempt_directory,
     create_run_manifest,
     format_attempt_directory_name,
@@ -156,13 +155,6 @@ def test_invalid_run_id_creates_no_partial_manifest_tree(tmp_path: Path) -> None
         )
 
     assert not workspace_root.exists()
-
-
-def test_run_store_dataclass_root_matches_helper(tmp_path: Path) -> None:
-    workspace_root = tmp_path / ".aidd"
-    store = RunStore(workspace_root=workspace_root, work_item="WI-001", run_id="run-001")
-
-    assert store.root == run_root(workspace_root, "WI-001", "run-001")
 
 
 def test_create_run_manifest_writes_runtime_stage_and_config_snapshot(tmp_path: Path) -> None:
@@ -432,7 +424,7 @@ def test_attempt_artifact_index_records_project_set_context_when_present(
     )
 
 
-def test_load_attempt_artifact_index_supports_legacy_payload_without_prompt_provenance(
+def test_load_attempt_artifact_index_rejects_missing_prompt_provenance(
     tmp_path: Path,
 ) -> None:
     workspace_root = tmp_path / ".aidd"
@@ -457,29 +449,36 @@ def test_load_attempt_artifact_index_supports_legacy_payload_without_prompt_prov
         encoding="utf-8",
     )
 
-    loaded = load_attempt_artifact_index(
-        workspace_root=workspace_root,
-        work_item="WI-001",
-        run_id="run-001",
-        stage="plan",
-        attempt_number=1,
-    )
-
-    assert loaded is not None
-    assert loaded.prompt_pack_provenance == ()
+    with pytest.raises(ValueError, match="requires a prompt_pack_provenance list"):
+        load_attempt_artifact_index(
+            workspace_root=workspace_root,
+            work_item="WI-001",
+            run_id="run-001",
+            stage="plan",
+            attempt_number=1,
+        )
 
 
 def test_run_store_fresh_run_creates_manifest_attempt_and_stage_metadata(tmp_path: Path) -> None:
     workspace_root = tmp_path / ".aidd"
-    store = RunStore(workspace_root=workspace_root, work_item="WI-001", run_id="run-001")
-
-    manifest_path = store.create_manifest(
+    manifest_path = create_run_manifest(
+        workspace_root=workspace_root,
+        work_item="WI-001",
+        run_id="run-001",
         runtime_id="generic-cli",
         stage_target="plan",
         config_snapshot={"mode": "test"},
     )
-    attempt_path = store.create_next_attempt("plan")
-    stage_metadata_path = store.persist_stage_status(
+    attempt_path = create_next_attempt_directory(
+        workspace_root=workspace_root,
+        work_item="WI-001",
+        run_id="run-001",
+        stage="plan",
+    )
+    stage_metadata_path = persist_stage_status(
+        workspace_root=workspace_root,
+        work_item="WI-001",
+        run_id="run-001",
         stage="plan",
         status="running",
         changed_at_utc=datetime(2026, 4, 21, 11, 0, tzinfo=UTC),
@@ -487,7 +486,7 @@ def test_run_store_fresh_run_creates_manifest_attempt_and_stage_metadata(tmp_pat
 
     assert manifest_path.exists()
     assert attempt_path.name == "attempt-0001"
-    assert store.attempt_artifact_index_path("plan", 1).exists()
+    assert run_attempt_artifact_index_path(workspace_root, "WI-001", "run-001", "plan", 1).exists()
     stage_metadata = json.loads(stage_metadata_path.read_text(encoding="utf-8"))
     assert stage_metadata["status"] == "running"
     assert stage_metadata["updated_at_utc"] == "2026-04-21T11:00:00Z"
@@ -495,19 +494,21 @@ def test_run_store_fresh_run_creates_manifest_attempt_and_stage_metadata(tmp_pat
 
 def test_run_store_repeated_attempts_keep_distinct_artifact_indexes(tmp_path: Path) -> None:
     workspace_root = tmp_path / ".aidd"
-    store = RunStore(workspace_root=workspace_root, work_item="WI-001", run_id="run-001")
-
-    first_attempt = store.create_next_attempt("plan")
-    second_attempt = store.create_next_attempt("plan")
+    first_attempt = create_next_attempt_directory(workspace_root, "WI-001", "run-001", "plan")
+    second_attempt = create_next_attempt_directory(workspace_root, "WI-001", "run-001", "plan")
 
     assert first_attempt.name == "attempt-0001"
     assert second_attempt.name == "attempt-0002"
 
     first_index = json.loads(
-        store.attempt_artifact_index_path("plan", 1).read_text(encoding="utf-8")
+        run_attempt_artifact_index_path(workspace_root, "WI-001", "run-001", "plan", 1).read_text(
+            encoding="utf-8"
+        )
     )
     second_index = json.loads(
-        store.attempt_artifact_index_path("plan", 2).read_text(encoding="utf-8")
+        run_attempt_artifact_index_path(workspace_root, "WI-001", "run-001", "plan", 2).read_text(
+            encoding="utf-8"
+        )
     )
 
     assert first_index["attempt_number"] == 1
@@ -644,9 +645,10 @@ def test_artifact_index_write_is_atomic_on_interrupted_replace(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     workspace_root = tmp_path / ".aidd"
-    store = RunStore(workspace_root=workspace_root, work_item="WI-001", run_id="run-001")
-    store.create_next_attempt("plan")
-    artifact_index_path = store.attempt_artifact_index_path("plan", 1)
+    create_next_attempt_directory(workspace_root, "WI-001", "run-001", "plan")
+    artifact_index_path = run_attempt_artifact_index_path(
+        workspace_root, "WI-001", "run-001", "plan", 1
+    )
     original_payload = artifact_index_path.read_text(encoding="utf-8")
     original_replace = Path.replace
 
@@ -658,7 +660,10 @@ def test_artifact_index_write_is_atomic_on_interrupted_replace(
     monkeypatch.setattr(Path, "replace", _failing_replace)
 
     with pytest.raises(OSError, match="simulated interrupted write"):
-        store.write_attempt_artifact_index(
+        write_attempt_artifact_index(
+            workspace_root=workspace_root,
+            work_item="WI-001",
+            run_id="run-001",
             stage="plan",
             attempt_number=1,
             changed_at_utc=datetime(2026, 4, 21, 12, 10, tzinfo=UTC),

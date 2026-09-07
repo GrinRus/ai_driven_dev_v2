@@ -42,7 +42,7 @@ def test_clickable_rows_publish_authoritative_selection_state_without_false_mode
     assert 'class="stage-rail"' not in shell
 
 
-def test_composite_selection_css_is_driven_by_aria_as_well_as_legacy_classes() -> None:
+def test_composite_selection_css_is_driven_by_authoritative_aria_state() -> None:
     styles = "\n".join(
         _asset(route)
         for route in (
@@ -56,7 +56,7 @@ def test_composite_selection_css_is_driven_by_aria_as_well_as_legacy_classes() -
         '.log-filter button[aria-pressed="true"]',
         '.viewer-modes button[aria-pressed="true"]',
         '.runner-card[aria-pressed="true"]',
-        '.work-item-card[aria-current="true"]',
+        '.inbox-item[aria-current="true"]',
         '.artifact-doc[aria-pressed="true"]',
         '.filter-row button[aria-pressed="true"]',
     ):

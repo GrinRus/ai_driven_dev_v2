@@ -25,7 +25,7 @@ def test_documents_keep_navigator_reader_and_context_visible(
     ) as harness, harness.open_page(viewport) as browser_page:
         page = browser_page.page
         page.goto(
-            f"{harness.url}?ui=studio&mode=studio&work_item={fixture.work_item}"
+            f"{harness.url}?mode=studio&work_item={fixture.work_item}"
             f"&run_id={fixture.run_id}&stage=qa&work_tab=documents&artifact=qa_report",
             wait_until="networkidle",
         )
@@ -101,7 +101,7 @@ def test_markdown_workspace_uses_target_context_inspector_and_compact_reader(
     ) as harness, harness.open_page(viewport) as browser_page:
         page = browser_page.page
         page.goto(
-            f"{harness.url}?ui=studio&mode=studio&work_item={fixture.work_item}"
+            f"{harness.url}?mode=studio&work_item={fixture.work_item}"
             f"&run_id={fixture.run_id}&stage=qa&work_tab=documents&artifact=qa_report",
             wait_until="networkidle",
         )
@@ -156,7 +156,7 @@ def test_task_attempt_detail_and_live_tray_share_desktop_workbench(
     ) as harness, harness.open_page(viewport) as browser_page:
         page = browser_page.page
         page.goto(
-            f"{harness.url}?ui=studio&mode=studio&work_item={fixture.work_item}"
+            f"{harness.url}?mode=studio&work_item={fixture.work_item}"
             f"&run_id={fixture.run_id}&stage=implement&work_tab=tasks",
             wait_until="networkidle",
         )

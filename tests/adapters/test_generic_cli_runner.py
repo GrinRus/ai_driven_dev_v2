@@ -10,7 +10,6 @@ from pathlib import Path
 import pytest
 
 from aidd.adapters.generic_cli.runner import (
-    RUNTIME_EXIT_METADATA_FILENAME,
     GenericCliExitClassification,
     GenericCliRunResult,
     GenericCliRuntimeArtifacts,
@@ -20,10 +19,10 @@ from aidd.adapters.generic_cli.runner import (
     assemble_command,
     build_execution_environment,
     build_subprocess_spec,
-    command_preview,
     persist_attempt_runtime_artifacts,
     run_subprocess_with_streaming,
 )
+from aidd.adapters.runtime_evidence import RUNTIME_EXIT_METADATA_FILENAME
 from aidd.core.run_store import RUN_RUNTIME_LOG_FILENAME
 
 
@@ -74,16 +73,6 @@ def test_assemble_command_rejects_empty_configured_command() -> None:
 def test_assemble_command_rejects_invalid_shell_syntax() -> None:
     with pytest.raises(ValueError, match="not valid shell syntax"):
         assemble_command(configured_command='"unterminated', context=_context())
-
-
-def test_command_preview_renders_shell_escaped_output() -> None:
-    preview = command_preview(
-        configured_command='runtime --profile "fast lane"',
-        context=_context(),
-    )
-
-    assert preview.startswith("runtime --profile 'fast lane'")
-    assert "--prompt-pack prompt-packs/stages/plan/system.md" in preview
 
 
 def test_build_execution_environment_injects_stage_and_run_metadata() -> None:
@@ -340,6 +329,16 @@ def test_resolve_exit_classification_uses_exit_code_without_stop_reason() -> Non
 
     assert success_classification is GenericCliExitClassification.SUCCESS
     assert non_zero_classification is GenericCliExitClassification.NON_ZERO_EXIT
+
+
+def test_resolve_exit_classification_rejects_capture_error_as_success() -> None:
+    classification = _resolve_exit_classification(
+        exit_code=0,
+        stop_reason=None,
+        capture_error="RuntimeError: reader failed",
+    )
+
+    assert classification is GenericCliExitClassification.CAPTURE_FAILURE
 
 
 def test_run_subprocess_with_streaming_classifies_non_zero_exit(tmp_path: Path) -> None:

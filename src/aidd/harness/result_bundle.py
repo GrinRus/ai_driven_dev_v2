@@ -3,17 +3,28 @@ from __future__ import annotations
 import hashlib
 import json
 import shutil
+import stat
 import tempfile
-import warnings
 from collections.abc import Mapping
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from pathlib import Path
-from typing import Any, cast
+from typing import Any
 
 from aidd.core.identifiers import SafeIdentifier, contained_component_path
 from aidd.core.workspace import WORKSPACE_REPORTS_DIRNAME, WORKSPACE_REPORTS_EVALS_DIRNAME
 from aidd.harness.install_artifact import HarnessInstallResult
+from aidd.harness.result_bundle_contract import (
+    RESULT_BUNDLE_INVENTORY_FILENAME,
+    BundleArtifactRequirement,
+    BundleStatus,
+    ResultBundleArtifact,
+    ResultBundleContractError,
+    ResultBundleIdentity,
+    ResultBundleInventory,
+    dump_result_bundle_inventory,
+    validate_result_bundle_inventory,
+)
 from aidd.harness.runner import (
     HarnessAiddRunResult,
     HarnessCommandTranscript,
@@ -43,8 +54,33 @@ RUN_TRANSCRIPT_FILENAME = "run-transcript.json"
 VERIFY_TRANSCRIPT_FILENAME = "verify-transcript.json"
 TEARDOWN_TRANSCRIPT_FILENAME = "teardown-transcript.json"
 ARTIFACT_DIGESTS_FILENAME = "artifact-digests.json"
-
-
+AIDD_EVIDENCE_DIRNAME = "canonical-evidence"
+RUNTIME_EXIT_METADATA_FILENAME = "runtime-exit.json"
+SUMMARY_FILENAME = "summary.md"
+BUNDLE_INTEGRITY_FAILURE_FILENAME = "bundle-integrity-failure.md"
+_BUNDLE_STATUSES: frozenset[BundleStatus] = frozenset(
+    ("pass", "fail", "blocked", "infra-fail")
+)
+_REQUIRED_BUNDLE_FILENAMES = (
+    HARNESS_METADATA_FILENAME,
+    INSTALL_TRANSCRIPT_FILENAME,
+    SETUP_TRANSCRIPT_FILENAME,
+    RUN_TRANSCRIPT_FILENAME,
+    VERIFY_TRANSCRIPT_FILENAME,
+    TEARDOWN_TRANSCRIPT_FILENAME,
+    FEATURE_SELECTION_FILENAME,
+    RUNTIME_LOG_FILENAME,
+    VALIDATOR_REPORT_FILENAME,
+    REPAIR_HISTORY_FILENAME,
+    LOG_ANALYSIS_FILENAME,
+    STAGE_TIMING_JSON_FILENAME,
+    STAGE_TIMING_MARKDOWN_FILENAME,
+    SELF_REPAIR_MATRIX_JSON_FILENAME,
+    SELF_REPAIR_MATRIX_FILENAME,
+    GRADER_FILENAME,
+    VERDICT_FILENAME,
+    SUMMARY_FILENAME,
+)
 @dataclass(frozen=True, slots=True)
 class ResultBundleLayout:
     run_root: Path
@@ -68,6 +104,7 @@ class ResultBundleLayout:
     grader_path: Path
     verdict_path: Path
     artifact_digests_path: Path
+    inventory_path: Path
 
 
 def _validate_run_id(run_id: str) -> str:
@@ -76,11 +113,7 @@ def _validate_run_id(run_id: str) -> str:
 
 def build_result_bundle_layout(*, workspace_root: Path, run_id: str) -> ResultBundleLayout:
     normalized_run_id = _validate_run_id(run_id)
-    evals_root = (
-        workspace_root
-        / WORKSPACE_REPORTS_DIRNAME
-        / WORKSPACE_REPORTS_EVALS_DIRNAME
-    )
+    evals_root = workspace_root / WORKSPACE_REPORTS_DIRNAME / WORKSPACE_REPORTS_EVALS_DIRNAME
     run_root = contained_component_path(
         evals_root,
         normalized_run_id,
@@ -109,6 +142,7 @@ def build_result_bundle_layout(*, workspace_root: Path, run_id: str) -> ResultBu
         grader_path=run_root / GRADER_FILENAME,
         verdict_path=run_root / VERDICT_FILENAME,
         artifact_digests_path=run_root / ARTIFACT_DIGESTS_FILENAME,
+        inventory_path=run_root / RESULT_BUNDLE_INVENTORY_FILENAME,
     )
 
 
@@ -137,6 +171,7 @@ def build_result_bundle_layout_at_run_root(*, run_root: Path) -> ResultBundleLay
         grader_path=normalized_run_root / GRADER_FILENAME,
         verdict_path=normalized_run_root / VERDICT_FILENAME,
         artifact_digests_path=normalized_run_root / ARTIFACT_DIGESTS_FILENAME,
+        inventory_path=normalized_run_root / RESULT_BUNDLE_INVENTORY_FILENAME,
     )
 
 
@@ -191,11 +226,15 @@ def _step_transcript_payload(
     step: str,
     command_transcripts: tuple[HarnessCommandTranscript, ...],
     duration_seconds: float,
+    failed_command: str | None = None,
+    failed_exit_code: int | None = None,
 ) -> dict[str, Any]:
     return {
         "command_count": len(command_transcripts),
         "commands": [_command_transcript_payload(item) for item in command_transcripts],
         "duration_seconds": duration_seconds,
+        "failed_command": failed_command,
+        "failed_exit_code": failed_exit_code,
         "step": step,
     }
 
@@ -212,6 +251,9 @@ def write_harness_metadata(
     workspace_root: Path | None = None,
     resource_source: str | None = None,
     aidd_run_id: str | None = None,
+    evaluation_run_id: str | None = None,
+    product_run_id: str | None = None,
+    phase_metadata: Mapping[str, Any] | None = None,
     aidd_run_result: HarnessAiddRunResult | None = None,
     aidd_artifact_references: Mapping[str, str] | None = None,
 ) -> Path:
@@ -245,6 +287,11 @@ def write_harness_metadata(
         "runtime_targets": list(scenario.runtime_targets),
         "aidd_artifact_references": dict(aidd_artifact_references or {}),
     }
+    if evaluation_run_id is not None:
+        metadata_payload["evaluation_run_id"] = evaluation_run_id
+        metadata_payload["product_run_id"] = product_run_id
+    if phase_metadata is not None:
+        metadata_payload["phase_metadata"] = dict(phase_metadata)
     if aidd_run_id is not None:
         metadata_payload["aidd_run_id"] = aidd_run_id
     if install_result is not None:
@@ -308,6 +355,12 @@ def write_command_transcripts(
                 setup_result.command_transcripts if setup_result is not None else tuple()
             ),
             duration_seconds=setup_result.duration_seconds if setup_result is not None else 0.0,
+            failed_command=(
+                setup_result.failed_command if setup_result is not None else None
+            ),
+            failed_exit_code=(
+                setup_result.failed_exit_code if setup_result is not None else None
+            ),
         ),
     )
     run_path = _write_json(
@@ -340,6 +393,16 @@ def write_command_transcripts(
             duration_seconds=(
                 verification_result.duration_seconds if verification_result is not None else 0.0
             ),
+            failed_command=(
+                verification_result.failed_command
+                if verification_result is not None
+                else None
+            ),
+            failed_exit_code=(
+                verification_result.failed_exit_code
+                if verification_result is not None
+                else None
+            ),
         ),
     )
     teardown_path = _write_json(
@@ -351,6 +414,16 @@ def write_command_transcripts(
             ),
             duration_seconds=(
                 teardown_result.duration_seconds if teardown_result is not None else 0.0
+            ),
+            failed_command=(
+                teardown_result.failed_command
+                if teardown_result is not None
+                else None
+            ),
+            failed_exit_code=(
+                teardown_result.failed_exit_code
+                if teardown_result is not None
+                else None
             ),
         ),
     )
@@ -370,8 +443,115 @@ def _sha256(path: Path) -> str:
 
 
 def _validate_artifact_source(source_path: Path) -> None:
-    if not source_path.exists() or not source_path.is_file():
+    try:
+        mode = source_path.lstat().st_mode
+    except FileNotFoundError:
+        mode = 0
+    if not stat.S_ISREG(mode):
         raise ValueError(f"Artifact source file does not exist: {source_path.as_posix()}")
+
+
+def _relative_destination(*, layout: ResultBundleLayout, destination: Path) -> Path:
+    if not destination.is_absolute():
+        destination = layout.run_root / destination
+    resolved_root = layout.run_root.resolve(strict=False)
+    resolved_destination = destination.resolve(strict=False)
+    if not resolved_destination.is_relative_to(resolved_root):
+        raise ValueError(
+            f"Artifact destination must stay inside result bundle: {destination.as_posix()}"
+        )
+    return resolved_destination.relative_to(resolved_root)
+
+
+def _iter_evidence_sources(
+    *,
+    source_root: Path,
+    destination_root: Path,
+) -> tuple[tuple[Path, Path], ...]:
+    """Enumerate trusted regular files from one AIDD evidence tree."""
+
+    if not source_root.exists():
+        return tuple()
+    if source_root.is_symlink() or not source_root.is_dir():
+        raise ValueError(f"AIDD evidence source must be a real directory: {source_root}")
+    sources: list[tuple[Path, Path]] = []
+    for source in sorted(source_root.rglob("*")):
+        mode = source.lstat().st_mode
+        if stat.S_ISLNK(mode):
+            raise ValueError(f"Symlink is not trusted AIDD evidence: {source}")
+        if stat.S_ISDIR(mode):
+            continue
+        if not stat.S_ISREG(mode):
+            raise ValueError(f"Unsupported AIDD evidence node: {source}")
+        sources.append((source, destination_root / source.relative_to(source_root)))
+    return tuple(sources)
+
+
+def collect_aidd_evidence_sources(
+    *,
+    layout: ResultBundleLayout,
+    source_workspace_root: Path | None,
+    work_item: str,
+    product_run_id: str | None,
+) -> tuple[dict[str, tuple[Path, Path]], dict[str, str]]:
+    """Collect raw and canonical AIDD files before an isolated workspace is removed.
+
+    The returned source map is consumed by :func:`copy_or_link_run_artifacts`; all
+    destinations are bundle-relative and therefore remain readable after the source
+    workspace is cleaned up.
+    """
+
+    if source_workspace_root is None:
+        return {}, {}
+    workspace_root = source_workspace_root.resolve(strict=False)
+    normalized_work_item = SafeIdentifier.parse(work_item, label="work_item").value
+    sources: list[tuple[str, Path, Path]] = []
+    references: dict[str, str] = {}
+    roots: list[tuple[str, Path]] = [
+        ("work_item", workspace_root / "workitems" / normalized_work_item)
+    ]
+    if product_run_id is not None:
+        roots.append(
+            (
+                "task_run",
+                workspace_root
+                / "reports"
+                / "runs"
+                / normalized_work_item
+                / SafeIdentifier.parse(product_run_id, label="product_run_id").value,
+            )
+        )
+    for category, source_root in roots:
+        destination_root = layout.run_root / AIDD_EVIDENCE_DIRNAME / category.replace(
+            "_", "-"
+        )
+        enumerated = _iter_evidence_sources(
+            source_root=source_root,
+            destination_root=destination_root,
+        )
+        if not enumerated:
+            continue
+        relative_root = destination_root.relative_to(layout.run_root).as_posix()
+        references[f"{category}_root"] = relative_root
+        for index, (source, destination) in enumerate(enumerated):
+            sources.append((f"{category}:{index}", source, destination))
+            filename = source.name
+            relative = destination.relative_to(layout.run_root).as_posix()
+            if filename == "task-ledger.json":
+                references.setdefault("task_ledger", relative)
+            elif filename == "finalization-state.json":
+                references["finalization_evidence"] = relative
+            elif filename == RUNTIME_LOG_FILENAME:
+                references.setdefault("runtime_attempt_log", relative)
+            elif filename == RUNTIME_EXIT_METADATA_FILENAME:
+                references.setdefault("runtime_exit_metadata", relative)
+            elif filename == RUNTIME_JSONL_FILENAME:
+                references.setdefault("runtime_attempt_jsonl", relative)
+            elif filename == EVENTS_JSONL_FILENAME:
+                references.setdefault("events_attempt_jsonl", relative)
+    return {
+        key: (source, destination) for key, source, destination in sources
+    }, references
 
 
 def _atomic_write_json(path: Path, payload: Any) -> Path:
@@ -388,21 +568,6 @@ def _atomic_write_json(path: Path, payload: Any) -> Path:
     return path
 
 
-def read_artifact_digests(*, layout: ResultBundleLayout) -> dict[str, Any] | None:
-    if not layout.artifact_digests_path.is_file():
-        warnings.warn(
-            "Result bundle has no artifact-digests.json; treating it as a legacy bundle.",
-            stacklevel=2,
-        )
-        return None
-    payload = json.loads(layout.artifact_digests_path.read_text(encoding="utf-8"))
-    if not isinstance(payload, dict):
-        raise ValueError("Result bundle artifact digest manifest is malformed.")
-    if payload.get("schema_version") != 1 or not isinstance(payload.get("artifacts"), list):
-        raise ValueError("Result bundle artifact digest manifest is malformed.")
-    return cast(dict[str, Any], payload)
-
-
 def copy_or_link_run_artifacts(
     *,
     layout: ResultBundleLayout,
@@ -411,6 +576,7 @@ def copy_or_link_run_artifacts(
     verdict_path: Path,
     runtime_jsonl_path: Path | None = None,
     events_jsonl_path: Path | None = None,
+    additional_sources: Mapping[str, tuple[Path, Path]] | None = None,
 ) -> dict[str, Path]:
     sources: dict[str, tuple[Path, Path]] = {
         "runtime_log": (runtime_log_path, layout.runtime_log_path),
@@ -421,26 +587,32 @@ def copy_or_link_run_artifacts(
         sources["runtime_jsonl"] = (runtime_jsonl_path, layout.runtime_jsonl_path)
     if events_jsonl_path is not None:
         sources["events_jsonl"] = (events_jsonl_path, layout.events_jsonl_path)
+    for key, (source_path, destination_path) in (additional_sources or {}).items():
+        if key in sources:
+            raise ValueError(f"Duplicate result bundle artifact key: {key}")
+        sources[key] = (source_path, destination_path)
 
     for source_path, _destination_path in sources.values():
         _validate_artifact_source(source_path)
 
     layout.run_root.mkdir(parents=True, exist_ok=True)
     layout.artifact_digests_path.unlink(missing_ok=True)
-    staging_root = Path(
-        tempfile.mkdtemp(prefix=".artifact-materialization-", dir=layout.run_root)
-    )
+    staging_root = Path(tempfile.mkdtemp(prefix=".artifact-materialization-", dir=layout.run_root))
     prepared: list[tuple[str, Path, Path, str, int]] = []
     try:
         for key, (source_path, destination_path) in sources.items():
-            staged_path = staging_root / destination_path.name
+            staged_path = staging_root / _relative_destination(
+                layout=layout,
+                destination=destination_path
+            )
+            if staged_path.exists():
+                raise ValueError(f"Duplicate result bundle artifact path: {destination_path}")
+            staged_path.parent.mkdir(parents=True, exist_ok=True)
             shutil.copyfile(source_path, staged_path)
             source_digest = _sha256(source_path)
             staged_digest = _sha256(staged_path)
             if source_digest != staged_digest:
-                raise OSError(
-                    f"Artifact copy verification failed: {source_path.as_posix()}"
-                )
+                raise OSError(f"Artifact copy verification failed: {source_path.as_posix()}")
             prepared.append(
                 (
                     key,
@@ -451,6 +623,10 @@ def copy_or_link_run_artifacts(
                 )
             )
 
+        if additional_sources:
+            evidence_root = layout.run_root / AIDD_EVIDENCE_DIRNAME
+            if evidence_root.exists():
+                shutil.rmtree(evidence_root)
         for _key, staged_path, destination_path, _digest, _size in prepared:
             destination_path.parent.mkdir(parents=True, exist_ok=True)
             staged_path.replace(destination_path)
@@ -476,7 +652,161 @@ def copy_or_link_run_artifacts(
     finally:
         shutil.rmtree(staging_root, ignore_errors=True)
 
-    return {
-        key: destination_path
-        for key, (_source_path, destination_path) in sources.items()
+    return {key: destination_path for key, (_source_path, destination_path) in sources.items()}
+
+
+def _bundle_artifact_files(*, layout: ResultBundleLayout) -> tuple[Path, ...]:
+    """Return regular content files, excluding mutable seal indexes."""
+
+    if not layout.run_root.is_dir():
+        raise ResultBundleContractError(f"bundle root does not exist: {layout.run_root!s}.")
+    files: list[Path] = []
+    for path in sorted(layout.run_root.rglob("*")):
+        if path.is_symlink():
+            raise ResultBundleContractError(
+                f"bundle contains an untrusted symlink: {path.relative_to(layout.run_root)}."
+            )
+        mode = path.lstat().st_mode
+        if stat.S_ISDIR(mode):
+            continue
+        if not stat.S_ISREG(mode):
+            raise ResultBundleContractError(
+                "bundle contains an unsupported artifact node: "
+                f"{path.relative_to(layout.run_root)}."
+            )
+        if path in {layout.inventory_path, layout.artifact_digests_path}:
+            continue
+        if path.name.startswith(".") and path.name.endswith(".tmp"):
+            raise ResultBundleContractError(
+                f"bundle contains an unfinished temporary artifact: {path.name!r}."
+            )
+        files.append(path)
+    return tuple(files)
+
+
+def build_result_bundle_inventory(
+    *,
+    layout: ResultBundleLayout,
+    identity: ResultBundleIdentity,
+    status: BundleStatus,
+    requirements: tuple[BundleArtifactRequirement, ...] = (),
+) -> ResultBundleInventory:
+    """Snapshot content files into the versioned bundle inventory contract."""
+
+    artifacts = tuple(
+        ResultBundleArtifact(
+            path=path.relative_to(layout.run_root).as_posix(),
+            sha256=_sha256(path),
+            size_bytes=path.stat().st_size,
+        )
+        for path in _bundle_artifact_files(layout=layout)
+    )
+    selected_requirements = requirements or tuple(
+        BundleArtifactRequirement(
+            path=filename,
+            required_for=frozenset(_BUNDLE_STATUSES),
+        )
+        for filename in _REQUIRED_BUNDLE_FILENAMES
+    )
+    return ResultBundleInventory(
+        identity=identity,
+        status=status,
+        artifacts=artifacts,
+        requirements=selected_requirements,
+    ).normalized()
+
+
+def _validate_bundle_metadata_identity(
+    *,
+    layout: ResultBundleLayout,
+    identity: ResultBundleIdentity,
+) -> None:
+    try:
+        payload = json.loads(layout.harness_metadata_path.read_text(encoding="utf-8"))
+    except (FileNotFoundError, json.JSONDecodeError) as exc:
+        raise ResultBundleContractError("bundle metadata is missing or invalid JSON.") from exc
+    if not isinstance(payload, dict):
+        raise ResultBundleContractError("bundle metadata must be a JSON object.")
+    expected = identity.normalized().to_dict()
+    actual = {
+        key: payload.get(key)
+        for key in ("evaluation_run_id", "product_run_id", "scenario_id", "runtime_id", "work_item")
     }
+    if actual != expected:
+        raise ResultBundleContractError(
+            "bundle metadata identity does not match execution identity."
+        )
+
+
+def seal_result_bundle(
+    *,
+    layout: ResultBundleLayout,
+    identity: ResultBundleIdentity,
+    status: BundleStatus,
+    requirements: tuple[BundleArtifactRequirement, ...] = (),
+) -> ResultBundleInventory:
+    """Atomically publish a digest-backed inventory as the bundle commit marker."""
+
+    normalized_identity = identity.normalized()
+    layout.run_root.mkdir(parents=True, exist_ok=True)
+    _validate_bundle_metadata_identity(layout=layout, identity=normalized_identity)
+    if status == "pass" and normalized_identity.product_run_id is not None:
+        for category in ("work-item", "task-run"):
+            evidence_root = layout.run_root / AIDD_EVIDENCE_DIRNAME / category
+            if not evidence_root.is_dir() or not any(
+                path.is_file() for path in evidence_root.rglob("*")
+            ):
+                raise ResultBundleContractError(
+                    f"bundle is missing canonical AIDD evidence tree: {category}."
+                )
+
+    # An inventory is the final commit marker.  Write the complete digest index first,
+    # then re-snapshot and atomically replace the inventory after validation.
+    inventory = build_result_bundle_inventory(
+        layout=layout,
+        identity=normalized_identity,
+        status=status,
+        requirements=requirements,
+    )
+    validate_result_bundle_inventory(
+        inventory=inventory,
+        bundle_root=layout.run_root,
+        expected_identity=normalized_identity,
+    )
+    _atomic_write_json(
+        layout.artifact_digests_path,
+        {
+            "artifacts": [item.to_dict() for item in inventory.artifacts],
+            "schema_version": 2,
+        },
+    )
+    inventory = build_result_bundle_inventory(
+        layout=layout,
+        identity=normalized_identity,
+        status=status,
+        requirements=requirements,
+    )
+    validate_result_bundle_inventory(
+        inventory=inventory,
+        bundle_root=layout.run_root,
+        expected_identity=normalized_identity,
+    )
+    temporary_path = layout.inventory_path.with_name(f".{layout.inventory_path.name}.tmp")
+    try:
+        temporary_path.write_text(dump_result_bundle_inventory(inventory), encoding="utf-8")
+        temporary_path.replace(layout.inventory_path)
+    except OSError:
+        layout.inventory_path.unlink(missing_ok=True)
+        raise
+    finally:
+        temporary_path.unlink(missing_ok=True)
+    try:
+        validate_result_bundle_inventory(
+            inventory=inventory,
+            bundle_root=layout.run_root,
+            expected_identity=normalized_identity,
+        )
+    except ResultBundleContractError:
+        layout.inventory_path.unlink(missing_ok=True)
+        raise
+    return inventory

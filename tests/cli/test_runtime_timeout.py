@@ -2,31 +2,24 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from aidd.cli.main import _runtime_timeout_for_runtime
-from aidd.config import AiddConfig
+from aidd.cli.support import _runtime_timeout_for_runtime
+from aidd.config import AiddConfig, RuntimeConfig
 from aidd.runtime_catalog import RuntimeExecutionMode
 
 
 def _config() -> AiddConfig:
     return AiddConfig(
         workspace_root=Path(".aidd"),
-        generic_cli_command="python",
-        claude_code_command="claude",
-        codex_command="codex",
-        opencode_command="opencode",
-        generic_cli_execution_mode=RuntimeExecutionMode.ADAPTER_FLAGS,
-        claude_code_execution_mode=RuntimeExecutionMode.NATIVE,
-        codex_execution_mode=RuntimeExecutionMode.NATIVE,
-        opencode_execution_mode=RuntimeExecutionMode.NATIVE,
-        generic_cli_timeout_seconds=None,
-        claude_code_timeout_seconds=1200,
-        codex_timeout_seconds=900,
-        opencode_timeout_seconds=900,
-        generic_cli_stage_timeout_seconds={},
-        claude_code_stage_timeout_seconds={"research": 1500, "implement": 1800},
-        codex_stage_timeout_seconds={},
-        opencode_stage_timeout_seconds={},
-        log_mode="both",
+        runtime_configs={
+            "generic-cli": RuntimeConfig("python", RuntimeExecutionMode.ADAPTER_FLAGS, None, {}),
+            "claude-code": RuntimeConfig(
+                "claude", RuntimeExecutionMode.NATIVE, 1200,
+                {"research": 1500, "implement": 1800},
+            ),
+            "codex": RuntimeConfig("codex", RuntimeExecutionMode.NATIVE, 900, {}),
+            "opencode": RuntimeConfig("opencode", RuntimeExecutionMode.NATIVE, 900, {}),
+            "qwen": RuntimeConfig("qwen", RuntimeExecutionMode.NATIVE, 900, {}),
+        },
         max_repair_attempts=2,
     )
 

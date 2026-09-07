@@ -5,8 +5,9 @@
 Describe what failed validation and what the repair attempt must correct.
 
 `repair-brief.md` is AIDD-owned repair control evidence. Runtime adapters and model
-providers may read it as input, but must not rewrite it. Model-authored repair summaries
-belong in `stage-result.md` or a future `repair-notes.md`, not in this control artifact.
+providers may read it as input, but must not rewrite it. Runtime-authored repair summaries
+belong in the substantive stage document's existing sections. AIDD owns lifecycle summaries;
+do not create a separate scratch document or rewrite `stage-result.md`.
 
 ## Required sections
 
@@ -36,6 +37,11 @@ belong in `stage-result.md` or a future `repair-notes.md`, not in this control a
 ## Rerun-budget notes
 
 - Must include current attempt index and remaining repair attempts.
+- Count only persisted attempts whose recorded lineage has `scope: stage` and
+  `attempt_kind: repair`. Initial execution, question resume, and operator intervention do not
+  consume the automatic repair budget.
+- Missing or malformed attempt metadata is an explicit evidence error. Never infer repair
+  consumption from the number or order of attempt directories, and never assume `count - 1`.
 - Must state whether another rerun is allowed after this repair attempt.
 - Must declare `repair-budget-final-attempt` when this repair attempt is the last allowed attempt.
 - `repair-budget-final-attempt` means no further rerun is allowed after this attempt, but the stage may still pass if the repaired outputs validate.
@@ -46,7 +52,13 @@ belong in `stage-result.md` or a future `repair-notes.md`, not in this control a
 
 - Each required correction must map to one or more failed check codes.
 - Fix actions must be actionable and scoped to document-level edits.
-- If a failed check cannot be repaired automatically, mark it as `needs-human-input` with reason.
+- Corrections for AIDD-owned `stage-result.md`, `validator-report.md`, or `repair-brief.md`
+  must name AIDD as the repair owner and explicitly forbid runtime edits. Preserve the finding
+  code, message, path, and progression requirement; runtime content may expose source evidence
+  for reconciliation, but changing a generated record is never a model repair action.
+- If a failed check cannot be repaired automatically, mark it as `needs-human-input` with reason
+  and require the runtime to submit a `[blocking]` question through the controlled interview path
+  when completion requires operator input. Substantive blocker prose alone does not pause AIDD.
 - Do not add new scope beyond resolving listed failed checks unless explicitly required.
 
 ## Authoring rules

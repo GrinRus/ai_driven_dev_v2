@@ -6,6 +6,7 @@ from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from aidd.core.resources import ResourceLayout
+    from aidd.evals.failure_causes import FailureCause
     from aidd.evals.log_analysis import FailureBoundarySelection
     from aidd.evals.verdicts import VerdictStatus
     from aidd.harness.install_artifact import HarnessInstallResult
@@ -32,6 +33,8 @@ class EvalScenarioRunResult:
     feature_selection_path: Path
     first_failure_boundary: FailureBoundarySelection
     first_failure_note: str | None
+    failure_cause: FailureCause | None = None
+    product_run_id: str | None = None
 
 
 @dataclass(frozen=True, slots=True)

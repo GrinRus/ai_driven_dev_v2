@@ -30,5 +30,5 @@ Non-negotiable rules:
 - map every task to an existing plan milestone by citing its exact `M<n>` id in `Outcome`,
   optional `Context`, a nested acceptance criterion, or its dedicated `Verification notes` entry;
   cover every plan milestone and do not invent a `Milestone` or `Plan milestone` field,
-- keep `stage-result.md` and `validator-report.md` consistent with tasklist readiness and question status.
+- expose tasklist readiness and question status truthfully for AIDD workflow reconciliation.
 - do not emit the legacy compact bullet-only tasklist shape.

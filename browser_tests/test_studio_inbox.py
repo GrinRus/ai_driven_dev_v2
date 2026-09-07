@@ -30,7 +30,7 @@ def test_studio_inbox_routes_each_durable_section_to_exact_context(
         playwright,
         work_item=fixture.work_item,
     ) as harness, harness.open_page((1280, 900)) as browser_page:
-        response = browser_page.page.goto(f"{harness.url}?ui=studio", wait_until="networkidle")
+        response = browser_page.page.goto(harness.url, wait_until="networkidle")
         assert response is not None and response.ok
         browser_page.page.locator('[data-tab-shortcut="project-home"]').first.click()
         inbox_section = browser_page.page.locator(f'[data-inbox-section="{section}"]')

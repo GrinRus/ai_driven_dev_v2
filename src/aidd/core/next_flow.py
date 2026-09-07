@@ -7,7 +7,7 @@ from pathlib import Path
 from typing import Any
 
 from aidd.core.run_inspection import RunMetadataSummary, resolve_run_metadata_summary
-from aidd.core.run_store import run_manifest_path
+from aidd.core.run_store import load_run_manifest, run_manifest_path
 from aidd.core.stage_registry import (
     DEFAULT_STAGE_CONTRACTS_ROOT,
     StageManifestLoadError,
@@ -565,16 +565,9 @@ def _load_source_run_manifest(
     work_item: str,
     run_id: str,
 ) -> dict[str, object]:
-    manifest_path = run_manifest_path(
-        workspace_root=workspace_root,
-        work_item=work_item,
-        run_id=run_id,
-    )
-    if not manifest_path.exists():
-        raise ValueError(f"Source run manifest does not exist: {manifest_path.as_posix()}.")
-    payload = json.loads(manifest_path.read_text(encoding="utf-8"))
-    if not isinstance(payload, dict):
-        raise ValueError(f"Source run manifest must be a JSON object: {manifest_path.as_posix()}.")
+    payload = load_run_manifest(workspace_root, work_item, run_id)
+    if payload is None:
+        raise ValueError(f"Source run manifest does not exist for run '{run_id}'.")
     return payload
 
 

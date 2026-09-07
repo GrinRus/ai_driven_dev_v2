@@ -69,7 +69,7 @@ def test_terminal_outcomes_keep_completed_source_run_immutable(
             lambda route: held_readiness.append(route),
         )
         page.goto(
-            f"{harness.url}?ui=studio&work_item={fixture.work_item}"
+            f"{harness.url}?work_item={fixture.work_item}"
             f"&run_id={fixture.run_id}&stage=qa",
             wait_until="domcontentloaded",
         )
@@ -175,7 +175,7 @@ def test_stale_qa_does_not_render_flow_complete(tmp_path: Path) -> None:
     ) as harness, harness.open_page((1280, 900)) as browser_page:
         page = browser_page.page
         page.goto(
-            f"{harness.url}?ui=studio&work_item={fixture.work_item}"
+            f"{harness.url}?work_item={fixture.work_item}"
             f"&run_id={fixture.run_id}&stage=qa",
             wait_until="domcontentloaded",
         )
@@ -191,14 +191,14 @@ def test_stale_qa_does_not_render_flow_complete(tmp_path: Path) -> None:
         ("terminal-handoff", "completed", "create-new-work-item"),
         ("terminal-handoff-warning", "completed-with-warning", "start-follow-up-flow"),
         ("terminal-handoff-failed", "failed", "start-follow-up-flow"),
-        ("terminal-handoff-blocked", "blocked", "start-follow-up-flow"),
+        ("terminal-handoff-blocked", "blocked", None),
     ),
 )
 def test_fresh_terminal_status_uses_exact_core_recommendation(
     tmp_path: Path,
     fixture_state: str,
     status: str,
-    recommended: str,
+    recommended: str | None,
 ) -> None:
     fixture = build_browser_state_fixture(tmp_path / fixture_state, fixture_state)
     with sync_playwright() as playwright, operator_browser_harness(
@@ -208,15 +208,29 @@ def test_fresh_terminal_status_uses_exact_core_recommendation(
     ) as harness, harness.open_page((1280, 900)) as browser_page:
         page = browser_page.page
         page.goto(
-            f"{harness.url}?ui=studio&work_item={fixture.work_item}"
+            f"{harness.url}?work_item={fixture.work_item}"
             f"&run_id={fixture.run_id}&stage=qa",
             wait_until="domcontentloaded",
         )
         wait_for_work_item_surface(page, fixture.work_item)
         flow = page.locator("[data-studio-flow-complete]")
-        flow.wait_for(state="visible")
-        assert flow.get_attribute("data-terminal-status") == status
-        assert flow.locator("[data-core-recommended-outcome]").get_attribute(
-            "data-core-recommended-outcome"
-        ) == recommended
+        if recommended is None:
+            page.locator(".active-studio").wait_for(state="visible")
+            handoff = page.evaluate("state.dashboard.terminal_handoff")
+            assert handoff["status"] == status
+            assert handoff["final_qa_status"] == "evidence-incomplete"
+            assert handoff["recommended_outcome"] is None
+            assert any(
+                blocker["kind"] == "terminal-missing-evidence"
+                and "Validator report" in blocker["detail"]
+                for blocker in handoff["blockers"]
+            )
+            assert flow.count() == 0
+            assert page.locator(".active-studio").get_attribute("data-state") == "terminal"
+        else:
+            flow.wait_for(state="visible")
+            assert flow.get_attribute("data-terminal-status") == status
+            assert flow.locator("[data-core-recommended-outcome]").get_attribute(
+                "data-core-recommended-outcome"
+            ) == recommended
         browser_page.diagnostics.assert_clean()

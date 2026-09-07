@@ -125,7 +125,7 @@ signals are mapped to planned increments.
 - If a required section has no findings or blockers, write exactly `- none` rather than leaving it empty.
 - Keep plan and question evidence truthful; AIDD reconciles status, verdict, blockers, and next
   actions into canonical records.
-- Keep `stage-result.md` next-action copy flow-aware: `plan` hands off to `review-spec`, never
+- Keep substantive next-action recommendations flow-aware: `plan` hands off to `review-spec`, never
   directly to `tasklist`, `implement`, `review`, or `qa`.
 
 ## Completion checklist

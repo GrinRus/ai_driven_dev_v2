@@ -18,6 +18,8 @@ and quick start; the documents below own detailed behavior and policy.
 
 - [Contributing Guide](../CONTRIBUTING.md) — development setup, task selection, design rules, and
   pull-request expectations.
+- [Agent Development Map](./agent-development.md) — instruction inheritance, ownership, skills,
+  and focused Python, Node, and browser checks.
 - [Governance](../GOVERNANCE.md) — roles, decisions, merge authority, and project continuity.
 - [Release Checklist](./release-checklist.md) — release preparation, publication, and package
   verification.
@@ -51,5 +53,7 @@ and quick start; the documents below own detailed behavior and policy.
 - [Browser Testing](./architecture/browser-testing.md) — browser fixtures, journeys, and rendered
   acceptance.
 
-Timestamped documents under `analysis/` and `e2e/` are retained audit evidence. Start from the
-stable guides above unless a task or release record points to a specific audit.
+Historical audits, completed planning, and superseded release notes are retained in Git history.
+The documentation tree contains current guides, contracts, accepted remediation plans, scenario
+definitions, and current release/UI acceptance records. New run evidence belongs in its generated
+evaluation bundle.

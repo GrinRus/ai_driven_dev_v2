@@ -6,7 +6,6 @@ from time import monotonic
 
 from aidd.core.contracts import repo_root_from
 from aidd.core.workspace import WorkspaceBootstrapService
-from aidd.evals.verdicts import VerdictStatus
 from aidd.harness.eval_models import (
     EvalClassification,
     EvalExecutionState,
@@ -19,6 +18,11 @@ from aidd.harness.process_lifecycle import HarnessLifecycleBudget
 from aidd.harness.repo_prep import prepare_scenario_repository, prepare_working_copy
 from aidd.harness.runner import (
     HarnessAiddRunResult,
+    HarnessCommandError,
+    HarnessCommandTranscript,
+    HarnessSetupResult,
+    HarnessTeardownResult,
+    HarnessVerificationResult,
     invoke_aidd_run,
     invoke_aidd_stage,
     run_setup_steps,
@@ -114,6 +118,58 @@ def _config_path(working_copy: Path) -> Path:
             "Deterministic scenario setup must create `aidd.example.toml`."
         )
     return path
+
+
+def _command_transcripts_from_error(
+    error: BaseException,
+) -> tuple[HarnessCommandTranscript, ...]:
+    if isinstance(error, HarnessCommandError):
+        return error.command_transcripts
+    return tuple()
+
+
+def _setup_result_from_error(error: BaseException) -> HarnessSetupResult | None:
+    if not isinstance(error, HarnessCommandError):
+        return None
+    transcripts = _command_transcripts_from_error(error)
+    return HarnessSetupResult(
+        executed_commands=tuple(transcript.command for transcript in transcripts),
+        command_transcripts=transcripts,
+        duration_seconds=error.duration_seconds,
+        failed_command=error.failed_command,
+        failed_exit_code=error.failed_exit_code,
+    )
+
+
+def _verification_result_from_error(
+    error: BaseException,
+    *,
+    aidd_exit_code: int,
+) -> HarnessVerificationResult | None:
+    if not isinstance(error, HarnessCommandError):
+        return None
+    transcripts = _command_transcripts_from_error(error)
+    return HarnessVerificationResult(
+        executed_commands=tuple(transcript.command for transcript in transcripts),
+        aidd_exit_code=aidd_exit_code,
+        command_transcripts=transcripts,
+        duration_seconds=error.duration_seconds,
+        failed_command=error.failed_command,
+        failed_exit_code=error.failed_exit_code,
+    )
+
+
+def _teardown_result_from_error(error: BaseException) -> HarnessTeardownResult | None:
+    if not isinstance(error, HarnessCommandError):
+        return None
+    transcripts = _command_transcripts_from_error(error)
+    return HarnessTeardownResult(
+        executed_commands=tuple(transcript.command for transcript in transcripts),
+        command_transcripts=transcripts,
+        duration_seconds=error.duration_seconds,
+        failed_command=error.failed_command,
+        failed_exit_code=error.failed_exit_code,
+    )
 
 
 def _execute(
@@ -278,6 +334,7 @@ def execute_deterministic_eval(
             )
         except BaseException as exc:
             state.setup_error = exc
+            state.setup_result = _setup_result_from_error(exc)
 
         if state.setup_error is None:
             try:
@@ -303,6 +360,10 @@ def execute_deterministic_eval(
                 )
             except BaseException as exc:
                 state.verification_error = exc
+                state.verification_result = _verification_result_from_error(
+                    exc,
+                    aidd_exit_code=state.aidd_run_result.exit_code,
+                )
 
         try:
             state.teardown_result = run_teardown_steps(
@@ -312,6 +373,7 @@ def execute_deterministic_eval(
             )
         except BaseException as exc:
             state.teardown_error = exc
+            state.teardown_result = _teardown_result_from_error(exc)
 
     return persist_eval_reports(
         EvalReportPersistenceContext(
@@ -323,15 +385,10 @@ def execute_deterministic_eval(
     )
 
 
-def successful_status(status: VerdictStatus) -> bool:
-    return status == "pass"
-
-
 __all__ = [
     "DETERMINISTIC_RUNTIME_ID",
     "DeterministicEvalInputError",
     "DeterministicEvalRequest",
     "execute_deterministic_eval",
-    "successful_status",
     "validate_deterministic_scenario",
 ]

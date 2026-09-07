@@ -110,7 +110,7 @@ def test_structured_request_context_round_trips_without_flattening(tmp_path: Pat
     assert context.additional_information == "Reference: https://example.test/operator-flow"
 
 
-def test_legacy_request_projection_preserves_full_body_as_context() -> None:
+def test_plain_text_request_projection_preserves_full_body_as_context() -> None:
     projection = project_work_item_request(
         "# User request\n\nImplement the compact header.\n\nKeep detailed links below the fold.\n"
     )
@@ -191,7 +191,7 @@ def test_onboarding_project_set_validation_and_context(tmp_path: Path) -> None:
         ),
     )
 
-    assert resolved.project_ids() == ("api", "web")
+    assert tuple(project.id for project in resolved.projects) == ("api", "web")
 
     created = service.create_work_item(
         raw_project_root="project",

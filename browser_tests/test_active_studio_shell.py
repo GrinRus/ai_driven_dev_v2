@@ -23,7 +23,7 @@ def test_active_studio_shell_preserves_context_and_one_primary_action(
         playwright,
         work_item=fixture.work_item,
     ) as harness, harness.open_page((1280, 900)) as browser_page:
-        response = browser_page.page.goto(f"{harness.url}?ui=studio", wait_until="networkidle")
+        response = browser_page.page.goto(harness.url, wait_until="networkidle")
         assert response is not None and response.ok
         assert (
             browser_page.page.locator("#intentContent").get_attribute("data-active-studio")

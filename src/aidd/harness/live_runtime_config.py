@@ -75,18 +75,6 @@ def _default_live_native_command(*, runtime_id: str) -> str:
     )
 
 
-def resolve_live_runtime_commands(
-    *,
-    environment: Mapping[str, str] | None = None,
-) -> dict[str, str]:
-    return {
-        runtime_id: entry.command
-        for runtime_id, entry in resolve_live_runtime_command_entries(
-            environment=environment,
-        ).items()
-    }
-
-
 def resolve_live_runtime_command_entries(
     *,
     environment: Mapping[str, str] | None = None,
@@ -313,9 +301,6 @@ def write_live_runtime_config(
                 f"review = {LIVE_E2E_STAGE_TIMEOUT_SECONDS}",
                 f"qa = {LIVE_E2E_STAGE_TIMEOUT_SECONDS}",
                 "",
-                "[logging]",
-                'mode = "both"',
-                "",
                 "[repair]",
                 "max_attempts = 2",
                 "",
@@ -329,7 +314,6 @@ def write_live_runtime_config(
 __all__ = [
     "LiveRuntimeCommand",
     "resolve_live_runtime_command_entries",
-    "resolve_live_runtime_commands",
     "validate_live_runtime_command",
     "write_live_runtime_config",
 ]

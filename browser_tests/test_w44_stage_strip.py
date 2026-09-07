@@ -25,7 +25,7 @@ def test_stage_strip_keeps_labels_readable_on_desktop_and_tablet(
     ) as harness, harness.open_page(viewport) as browser_page:
         page = browser_page.page
         page.goto(
-            f"{harness.url}?ui=studio&mode=studio&work_item={fixture.work_item}"
+            f"{harness.url}?mode=studio&work_item={fixture.work_item}"
             f"&run_id={fixture.run_id}&stage=qa&work_tab=documents&artifact=qa_report",
             wait_until="networkidle",
         )
@@ -89,7 +89,7 @@ def test_mobile_stage_strip_is_compact_and_keyboard_expandable(
     ) as harness, harness.open_page(viewport) as browser_page:
         page = browser_page.page
         page.goto(
-            f"{harness.url}?ui=studio&mode=studio&work_item={fixture.work_item}"
+            f"{harness.url}?mode=studio&work_item={fixture.work_item}"
             f"&run_id={fixture.run_id}&stage=qa&work_tab=documents&artifact=qa_report",
             wait_until="networkidle",
         )

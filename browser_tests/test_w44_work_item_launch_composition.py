@@ -30,7 +30,7 @@ def test_work_item_launch_has_one_runner_inspector_and_readable_overview(
         work_item=fixture.work_item,
     ) as harness, harness.open_page(viewport) as browser_page:
         page = browser_page.page
-        response = page.goto(f"{harness.url}?ui=studio", wait_until="networkidle")
+        response = page.goto(harness.url, wait_until="networkidle")
         assert response is not None and response.ok
         page.locator("[data-work-item-overview]").wait_for(state="visible")
 

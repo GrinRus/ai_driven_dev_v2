@@ -2,10 +2,10 @@
 
 Document status:
 
-- sections 1 through 7 define workflow invariants, write boundaries, compatibility surfaces,
+- sections 1 through 7 define workflow invariants, write boundaries, application interfaces,
   and the shared application-service boundary;
 - sections 8 and 9 define the implemented Document & Evidence Studio information architecture,
-  presentation contract, and compatibility baseline;
+  and presentation contract;
 - [Target Operator Experience](operator-frontend-target-ux.md) defines the accepted Wave 42
   interaction hierarchy, Markdown behavior, task workspace, and replacement visual references;
 - Mission Control, cockpit, right-rail, bottom-dock, and Work / Recovery / Evidence / History
@@ -39,18 +39,18 @@ and `Additional information` sections defined by [`user-request.md`](../../contr
 The read model exposes title and brief separately. Detailed context remains available in the
 Document Canvas and is never flattened into the header.
 
-Existing unsectioned request files are read through a compatibility projection. The projection may
+Current CLI-created unsectioned requests are read through a plain-text projection. The projection may
 derive a bounded title and brief for navigation, but it must preserve the original Markdown and
-must not rewrite legacy artifacts automatically.
+must not rewrite operator-authored artifacts automatically.
 
-This is the implemented compatibility baseline. It uses the Wave 42 `Work Item` and `Task`
+This is the implemented request contract. It uses the `Work Item` and `Task`
 vocabulary defined in [Target Operator Experience](operator-frontend-target-ux.md), without
 changing canonical ids or the request artifact.
 
-Wave 42 migration preserves `work_item` ids, endpoint names, request shapes, durable paths, and
+The current UI preserves `work_item` ids, endpoint names, request shapes, durable paths, and
 historical evidence. User-visible labels emitted by core read models are part of the presentation
-surface and migrate with static copy; internal route/action fields may retain compatibility values
-such as `intent` until an owning API task changes them. Layout-only DOM anchors may change, while
+surface and change with static copy; internal route/action fields such as `intent` remain current
+transport identifiers. Layout-only DOM anchors may change, while
 mutation, recovery, deep-link, and draft identities remain stable until explicitly migrated and
 verified.
 
@@ -108,9 +108,8 @@ then maintenance. Existing dynamic form and action controls keep their IDs where
 to a mutation or recovery contract; shell layout anchors are not compatibility APIs and may be
 replaced without changing routes, services, or payloads.
 
-`Intent` is the user-facing vocabulary. Canonical `work_item` fields, route parameters, command
-examples, and source/target lineage identifiers remain technical values and are shown only in
-technical details or contract-level surfaces.
+`Work Item` and `Task` are the user-facing vocabulary. Internal route fields and source/target
+lineage identifiers remain available in technical details and contract-level surfaces.
 
 ## 2. Source of truth
 
@@ -250,8 +249,8 @@ The first frontend contract covers these flows:
    - compare runs by prompt hash deltas, stage status deltas, bounded artifact hash
      deltas, and validator outcome deltas without reading outside the project-local
      `.aidd/` workspace;
-   - treat missing prompt hashes, missing resource roots, or legacy manifests as warnings,
-     not UI crashes;
+   - show unavailable resource roots or prelaunch provenance as explicit diagnostics;
+     unsupported or malformed persisted formats must fail explicitly without crashing the UI;
    - keep prompt paths, content hashes, Git SHA, config root, runtime id, and stage graph
      inputs read-only provenance. The frontend must not edit prompt packs, run manifests,
      or historical artifacts while rendering accountability/comparison views.
@@ -386,14 +385,6 @@ Current W20 implementation status:
   blocking questions are surfaced before runnable-stage suggestions, failed
   validation points to validation inspection, and only existing artifact files are
   shown in Recent Artifacts;
-- the static UI is organized as an integrated workbench matching
-  `13-integrated-operator-workbench.png`: Project Home and Work Item Board sit before the
-  active-run workbench; a primary run-global Next Action strip sits above the selected
-  stage work area; the central Document Workbench groups known artifacts by category;
-  the Artifacts tab opens the Stage Document Workbench first and keeps the evidence
-  graph/table behind a secondary drill-down; the right rail shows Recovery Assistant,
-  blockers, evidence, runtime root, and safety; the bottom dock keeps Activity / Events
-  and Recent Artifacts available;
 - artifact read models classify documents and logs as canonical stage documents, runtime
   inputs, validation evidence, runtime evidence, project evidence, or lineage evidence,
   while preserving the existing artifact-index and workspace-relative path safety model;
@@ -406,9 +397,10 @@ Current W20 implementation status:
   the primary finding must be visible in the run-global Next Action / Recovery surface
   without requiring raw report inspection;
 - validation recovery must make the next operator action explicit: when repair is
-  available, `Run Repair` is the primary action; when repair budget is exhausted or the
-  stage explicitly stopped, `Request Change` is the primary action and raw logs/evidence
-  remain secondary drill-downs;
+  available, `Run Repair` is the primary action; after automatic repair exhaustion, an
+  eligible one-time extension exposes `Run one more repair`. Otherwise, `Request Change`
+  is offered only when current core eligibility permits it. Raw logs/evidence remain
+  secondary drill-downs;
 - Recent Activity includes run/stage metadata and `events.jsonl` entries across
   all attempted stages plus `operator.request.created` entries for durable
   intervention requests; the static UI overlays process-local live job chunks into
@@ -420,8 +412,7 @@ Current W20 implementation status:
   Logs tab and follows the intervention job through the same polling path as stage
   runs;
 - long workspace-relative paths are retained in payloads and element titles, but
-  rendered in compact form so evidence lanes stay scannable in the right sidebar
-  and bottom dock;
+  rendered in compact form so contextual evidence remains scannable;
 - the command center includes an Active Run panel with job id, stage, selected runner,
   elapsed time, last output age, timeout summary, runner command, cancel action, and
   logs shortcut;
@@ -434,7 +425,7 @@ Current W20 implementation status:
   single-project clients that ignore the optional grouping fields;
 - the overview cockpit includes Prompt / Workflow Accountability cards backed by
   `/api/run/accountability`, showing prompt provenance, config snapshot keys, runtime id,
-  stage graph, Git SHA, and legacy-provenance warnings;
+  stage graph, Git SHA, and unavailable-provenance diagnostics;
 - the Run History cockpit includes a read-only run comparison panel backed by
   `/api/run/comparison`, defaulting baseline selection from lineage/source-run context
   when available and allowing manual baseline run id entry for bounded prompt, stage,
@@ -514,17 +505,15 @@ job registry.
 ## 8. Implemented Document & Evidence Studio
 
 **Document & Evidence Studio** is the only supported packaged renderer: a document-centered
-operator experience with four coordinated modes and one shared workflow authority. The previous
-Mission Control reference assets are historical implementation context, not supported UI.
+operator experience with three coordinated destinations and one shared workflow authority.
 
 The concept uses one mental model:
 
 - **Inbox** answers: "What requires my decision now?"
 - **Studio** answers: "Which canonical document, decision, or evidence am I reviewing?"
 - **History** uses an execution Filmstrip to answer: "How did this run reach this state?"
-- **Guided Delivery** answers: "What should I do next, why, and what will it change?"
 
-Guided Delivery is a presentation mode over the same core services, not a second workflow.
+Guided Setup introduces the same core services used by Studio.
 Inbox and History are rebuildable read models over `.aidd/`, not sources of truth. Studio
 does not turn generated documents into an unaudited editor: answers, intervention requests,
 remediation requests, approvals, and launch requests continue to use the write boundaries in
@@ -540,7 +529,7 @@ section 4.
 | Platform engineer or adapter author | Inspect runtime readiness, capabilities, approvals, raw logs, and adapter evidence without changing core semantics. |
 
 The interface keeps canonical nouns such as `Project`, `Work Item`, `Run`, `Stage`,
-`Attempt`, `Runtime`, `Artifact`, and `Evidence`. Guided Delivery explains those terms in
+`Attempt`, `Runtime`, `Artifact`, and `Evidence`. Contextual guidance explains those terms in
 context instead of inventing a separate simplified vocabulary.
 
 ### 8.2 Information architecture
@@ -551,13 +540,11 @@ The visible object hierarchy is:
 Project root -> Work Item -> Run -> Stage -> Attempt / Task attempt -> Artifact / Evidence
 ```
 
-The stable global navigation model contains three destinations and one presentation preference:
+The stable global navigation model contains three destinations:
 
 1. **Inbox** — default entry for an existing project-local workspace.
 2. **Studio** — the selected work item, run, stage, document, and current decision.
 3. **History** — expanded Filmstrip, run comparison, and lineage.
-4. **Guided Delivery preference** — a persistent presentation toggle and contextual guide, not
-   a destination or separate workflow route.
 
 Maintenance actions such as **Refresh**, **Open `.aidd`**, and **Stop server** live in a
 labelled overflow menu. Questions, approvals, Request Change, evidence details, logs, and
@@ -721,10 +708,9 @@ History preserves parent/source/current/child lineage, archive state, and read-o
 artifacts and logs. Comparison remains within the active work item or explicit source lineage;
 unrelated projects are not silently compared.
 
-### 8.6 Guided Delivery mode
+### 8.6 Guided Setup
 
-Guided Delivery is enabled by default for clean setup and can be toggled without losing the
-selected context. Its setup sequence has at most four decision steps:
+Clean setup uses at most four decision steps:
 
 1. **Project** — validate the root and resolved `.aidd/`; keep `project_set` under
    **Advanced**.
@@ -742,9 +728,8 @@ During a run, the guide becomes one contextual explanation: what happened, why t
 stopped or is ready, what the operator must decide, which durable artifact will be written,
 one primary action, and **View evidence**. At terminal QA it becomes a Start Next Flow guide.
 
-Guided Delivery and Studio must call the same service path for the same action and must
-produce the same durable result. Guided preference may be stored as noncanonical browser
-state; it must never alter runtime selection, eligibility, validation, or artifacts.
+Guided Setup and Studio call the same service path for the same action and produce the same
+durable result. Contextual guidance never alters runtime eligibility, validation, or artifacts.
 
 ### 8.7 Main operator journey
 
@@ -794,7 +779,7 @@ The accepted completed-flow outcomes remain:
 
 #### 8.8.1 Action-to-service semantics
 
-Visible labels name their actual consequence. Guided Delivery and Studio dispatch the same
+Visible labels name their actual consequence. Guided Setup and Studio dispatch the same
 endpoint/application service for the same action; presentation mode cannot select a different
 mutation path.
 
@@ -843,13 +828,13 @@ Runtime readiness is likewise dimensioned: binary detection is
 `detected`/`unavailable`/`unknown`, execution-command availability is
 `available`/`unavailable`/`unknown`, authentication is
 `verified`/`failed`/`unverified`, and adapter capabilities are `known` or `unknown` with
-their individual flags. The legacy provider/command booleans remain compatibility fields and
+their individual flags. Provider/command availability booleans describe those individual facts and
 must not be combined into an inferred authentication or overall-ready claim.
 
 Each runtime may also carry one `latest_launch` projection resolved from canonical
 `runtime-exit.json` plus its attempt artifact index. The index owns the displayed timestamp;
-legacy evidence without it keeps the normalized outcome with a null timestamp and warning,
-while corrupt evidence is reported as `unknown` rather than fabricated provenance.
+missing timestamp evidence is shown as unavailable with a warning, while corrupt evidence is
+reported as `unknown` rather than fabricated provenance.
 
 Connectivity has exactly four observable states: `online` after a successful current transport
 exchange, `reconnecting` while bounded retry is active, `offline` after observed transport
@@ -868,10 +853,9 @@ Here, failed, blocked, or warning handoff means a fresh terminal QA verdict. Mis
 stale QA, and runs that have not reached terminal QA do not enter Flow Complete and receive no
 terminal recommendation.
 
-The additive terminal-handoff response exposes `recommended_outcome` and
-`recommendation_rationale` without removing `recommended_next_flow_actions` or source-run
-identity. A client reading an older payload without those fields must resolve it to the explicit
-`legacy-no-recommendation` compatibility state and must not infer priority from action order.
+The terminal-handoff response exposes `recommended_outcome`, `recommendation_rationale`,
+`recommended_next_flow_actions`, and source-run identity. Missing recommendation fields are an
+incomplete response; the client must not invent priority from action order.
 
 Follow-up and cloned flows show source work item, source run, baseline, inherited artifacts,
 and audit preview before launch. They always receive new identities and never mutate the
@@ -890,7 +874,8 @@ completed source run.
 | Waiting runtime approval | Recovery Studio | **Review request** | Keep separate from product questions; show scope, breadth, reason, and audit state. |
 | Blocking question | Recovery Studio | **Answer question** | Preserve resolved/partial/deferred semantics; only resolved unblocks. |
 | Validation failed, repair available | Recovery Studio | **Run Repair** | Show exact finding, document, line, hint, and attempt budget. |
-| Repair exhausted or explicit stop | Recovery Studio | **Request Change** | Never infer repair availability from stale artifacts. |
+| Automatic repair exhausted, extension eligible | Recovery Studio | **Run one more repair** | Use the one-time core-authorized extension without resetting automatic history or budget. |
+| Extension unavailable or explicit stop | Recovery Studio | Eligible **Request Change** or the core-provided next action | Never infer repair or intervention availability from stale artifacts. |
 | Runtime or provider failure | Recovery Studio | **Review failure** then eligible retry | Do not consume validation repair budget. |
 | Intervention allowed | Studio | **Submit & run** | Persist Markdown request and revalidate normally. |
 | Intervention blocked by succeeded downstream | Recovery Studio | **Open remediation options** | Never bypass downstream invalidation policy. |
@@ -899,7 +884,7 @@ completed source run.
 | Successful remediation | Recovery Studio | **Rerun stale downstream** | Stale QA never opens Flow Complete. |
 | Fresh terminal QA | Flow Complete | Recommended next-flow decision | Keep source run immutable. |
 | Archived or historical run | History | **Open evidence** | Read-only; archive is not deletion. |
-| Missing or malformed legacy evidence | Studio | **View available source** | Name the missing artifact, degrade safely, and never invent data. |
+| Missing or malformed evidence | Studio | **View available source** | Name the missing artifact, degrade safely, and never invent data. |
 | Loading | Current surface | None | Stable skeleton and disabled mutation controls. |
 | Mutation pending or conflict | Current surface | Pending or **Read latest state** | Suppress duplicates and show the durable server winner. |
 
@@ -1029,9 +1014,9 @@ Semantic token direction:
 | `--status-info` | `#1f5e98` | Running and informational signal. |
 | `--focus` | `#245fb3` | High-contrast focus ring independent of status. |
 
-Implementation should introduce these semantic aliases rather than spreading raw hex values.
-Compatibility mappings may preserve existing `--teal`, `--green`, `--amber`, `--red`, and
-`--blue` compatibility aliases in shared semantic tokens.
+Use semantic role tokens for actions, status, and focus, with palette mappings maintained in
+`operator-tokens.css`. Consumers use the current `--cobalt`, `--cobalt-dark`, `--mint`, `--text`,
+and `--font-mono` tokens directly where those palette or typography values are intended.
 
 Typography uses the existing Inter/system stack for UI and the existing monospace stack for
 paths, source, logs, hashes, and ids. Reference roles are 32/40 for a guided page title, 24/32
@@ -1103,7 +1088,7 @@ shared brief and per-screen prompts are preserved in
 - Studio remains read-only for generated evidence; direct document editing is out of scope.
 - Filmstrip exposes only durable attempts, events, logs, and artifacts; it must not imply
   snapshots that are not retained.
-- Guided Delivery and expert mode share endpoints and action semantics.
+- Guided Setup and Studio share endpoints and action semantics.
 - Evidence panels use zero-value visibility: an empty inspector or graph is hidden.
 - Mobile is decision and monitoring first; dense desktop evidence uses drill-down.
 - Blocking Inbox items cannot be dismissed.
@@ -1133,7 +1118,7 @@ Before implementation is considered done, the local UI evidence lane must prove:
 - Inbox and Studio show completed-stage count, current stage, and factual blocker/terminal/live
   state without fabricated percentage progress or repeated equal-weight status panels;
 - an Inbox item opens the exact work item, run, stage, document, and recovery/evidence context;
-- Guided Delivery and Studio call the same service path and create the same durable artifacts;
+- Guided Setup and Studio call the same service path and create the same durable artifacts;
 - Studio's first viewport contains context, one current decision, and the primary document;
   empty supporting panels are hidden;
 - all eight canonical stages remain available while Filmstrip separately renders real attempts,

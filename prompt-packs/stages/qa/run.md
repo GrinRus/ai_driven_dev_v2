@@ -244,9 +244,8 @@ acceptance id, and concrete evidence. Any `fail` or `not-verified` entry require
   post-runtime publication.
 - Keep the required headings exactly as written; add stage-specific detail under those headings instead of renaming them.
 - If a required section has no findings or blockers, write exactly `- none` rather than leaving it empty.
-- If no clarification is needed and you create `questions.md` or `answers.md`, write exactly
-  `# Questions\n\n- none\n` or `# Answers\n\n- none\n`; do not write prose such as
-  `No questions required.` as a bullet.
+- If no clarification is needed, leave the interview ledger unchanged. Do not create or edit
+  `answers.md`; operator answers remain protected input.
 - Keep QA findings, questions, and evidence truthful; AIDD reconciles status, verdict, blockers, and
   next actions into canonical records.
 

@@ -22,9 +22,6 @@ class ResolvedProjectSet:
     repository_root: Path
     projects: tuple[ResolvedProject, ...]
 
-    def project_ids(self) -> tuple[str, ...]:
-        return tuple(project.id for project in self.projects)
-
 
 def _reject_absolute_root(project: ProjectConfig) -> None:
     if project.root.is_absolute():

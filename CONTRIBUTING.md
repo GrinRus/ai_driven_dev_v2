@@ -12,8 +12,10 @@ decision authority are described in [GOVERNANCE.md](./GOVERNANCE.md).
 
 ## Before you start
 
-For a small documentation or isolated defect fix, read `README.md`, `AGENTS.md`, and the nearest
-nested `AGENTS.md`. For product behavior or architecture changes, also read:
+Read `README.md`, `AGENTS.md`, and applicable nested `AGENTS.md` files from root to leaf for every
+area you will touch. Parent rules remain in effect unless a nearer rule directly conflicts.
+Use the [agent development map](docs/agent-development.md) to find owners and focused checks.
+For product behavior or architecture changes, also read:
 
 1. `docs/product/user-stories.md`
 2. the relevant roadmap slice in `docs/backlog/roadmap.md`
@@ -44,6 +46,8 @@ substantial change.
 
 - Python 3.12+
 - `uv`
+- Node.js for packaged JavaScript syntax and DOM tests
+- Playwright Chromium for browser checks (`uv run --extra dev python -m playwright install chromium`)
 - optional runtime CLIs for adapter work, such as Claude Code
 
 ### Local setup
@@ -86,7 +90,7 @@ Planning files:
 1. Open `docs/backlog/backlog.md`.
 2. Pick the first local task marked `next`.
 3. Confirm that you understand the linked user story and slice goal.
-4. Read the nearest nested `AGENTS.md` files for the area you will touch.
+4. Read the applicable root-to-leaf `AGENTS.md` chain for each area you will touch.
 5. Implement the smallest change that satisfies the task.
 6. Update docs, contracts, or manifests when behavior changes.
 7. Mark follow-up work in the roadmap/backlog if you discovered new work.
@@ -121,13 +125,21 @@ Rules for new planning items:
 
 ## Quality bar
 
-Before opening a PR, run the smallest relevant checks:
+Before opening a PR, run the smallest relevant checks in the
+[ownership and check matrix](docs/agent-development.md). For changes across multiple areas:
 
 ```bash
-uv run --extra dev ruff check .
-uv run --extra dev python -m mypy src scripts
-uv run --extra dev pytest -q
+make check
 ```
+
+This includes agent instruction validation, Python lint/types/tests, JavaScript syntax, and
+Node DOM tests. UI behavior changes also need the relevant browser journey; `make test-browser`
+runs the packaged journey lane used by CI. Browser tests are outside the default pytest
+`testpaths`, so a successful `pytest -q` does not establish browser coverage. These checks do
+not require provider credentials. State missing prerequisites or unrun checks in the PR.
+
+For instruction or skill edits, `make check-agents` checks links and paths, then runs focused
+instruction, workflow-example, and planning integrity tests.
 
 If your change affects contracts, prompts, adapters, harness behavior, or eval logic, also update the matching docs and scenario/manifests.
 
@@ -140,6 +152,9 @@ A good PR should:
 - mention any updated docs/contracts/prompts,
 - note any new follow-up tasks,
 - keep the diff focused.
+
+Keep current normative docs accurate and preserve dated evaluation evidence. Mark superseded
+reports with a link to newer evidence rather than rewriting their historical outcomes.
 
 Use the PR template in `.github/pull_request_template.md`.
 

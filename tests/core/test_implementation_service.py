@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 from pathlib import Path
 
 import pytest
@@ -82,6 +83,67 @@ def _request(tmp_path: Path) -> ImplementationExecutionRequest:
     )
 
 
+def _write_three_tasklist(workspace_root: Path) -> Path:
+    path = (
+        workspace_root
+        / "workitems"
+        / "WI-SERVICE"
+        / "stages"
+        / "tasklist"
+        / "output"
+        / "tasklist.md"
+    )
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(
+        """# Tasklist
+
+## Task summary
+
+Three dependency-ordered tasks exercise lifecycle lineage persistence.
+
+## Ordered tasks
+
+### TL-1 — Add the first change
+
+- Outcome: The first change is durable.
+- Dominant deliverable: `src/one.py` records the first change.
+- In scope: `src/one.py`.
+- Acceptance criteria:
+  - TL-1-AC1: The first change exists.
+
+### TL-2 — Add the second change
+
+- Outcome: The second change is durable.
+- Dominant deliverable: `src/two.py` records the second change.
+- In scope: `src/two.py`.
+- Acceptance criteria:
+  - TL-2-AC1: The second change exists.
+
+### TL-3 — Add the third change
+
+- Outcome: The third change is durable.
+- Dominant deliverable: `src/three.py` records the third change.
+- In scope: `src/three.py`.
+- Acceptance criteria:
+  - TL-3-AC1: The third change exists.
+
+## Dependencies
+
+- TL-1: none
+- TL-2: TL-1
+- TL-3: TL-2
+
+## Verification notes
+
+- TL-1: `pytest tests/test_one.py -q`
+- TL-2: `pytest tests/test_two.py -q`
+- TL-3: `pytest tests/test_three.py -q`
+""",
+        encoding="utf-8",
+    )
+    return path
+
+
 def _successful_executor(request: ImplementationExecutionRequest):
     def execute(context):  # type: ignore[no-untyped-def]
         target_path = context.task.scope_paths[0]
@@ -134,6 +196,80 @@ def test_run_all_preserves_dependency_order_and_finalizes(tmp_path: Path) -> Non
     assert result.next_target is ImplementationNextTarget.COMPLETE
     assert result.published is True
     assert result.ledger.all_succeeded()
+
+
+def test_run_all_persists_explicit_lineage_for_three_clean_task_attempts(
+    tmp_path: Path,
+) -> None:
+    workspace_root = tmp_path / ".aidd"
+    _write_three_tasklist(workspace_root)
+    request = ImplementationExecutionRequest(
+        workspace_root=workspace_root,
+        work_item="WI-SERVICE",
+        run_id="run-1",
+        project_root=tmp_path,
+    )
+    contexts = []
+    finalization_contexts = []
+
+    def execute(context):  # type: ignore[no-untyped-def]
+        contexts.append(context)
+        target = request.project_root / context.task.scope_paths[0]
+        target.parent.mkdir(parents=True, exist_ok=True)
+        target.write_text(f"completed = '{context.task.id}'\n", encoding="utf-8")
+        report = (
+            request.workspace_root
+            / "workitems"
+            / request.work_item
+            / "stages"
+            / "implement"
+            / "implementation-report.md"
+        )
+        report.parent.mkdir(parents=True, exist_ok=True)
+        report.write_text(
+            "# Implementation Report\n\n"
+            f"## Selected task\n\n- Task id: `{context.task.id}`\n\n"
+            "## Change summary\n\nCompleted the selected task.\n\n"
+            f"## Touched files\n\n- `{context.task.scope_paths[0]}` - completed task.\n\n"
+            "## Verification notes\n\n- check -> pass.\n\n"
+            "## Follow-up notes\n\n- none\n",
+            encoding="utf-8",
+        )
+        return TaskAttemptOutcome(succeeded=True)
+
+    def finalize(context):  # type: ignore[no-untyped-def]
+        finalization_contexts.append(context)
+        return AggregateFinalizationOutcome(succeeded=True, published=True)
+
+    result = ImplementationExecutionService(
+        task_executor=execute,
+        aggregate_finalizer=finalize,
+    ).run_all(request)
+
+    assert result.status is ImplementationExecutionStatus.SUCCEEDED
+    assert [context.task.id for context in contexts] == ["TL-1", "TL-2", "TL-3"]
+    assert len(finalization_contexts) == 1
+    for context in contexts:
+        assert context.lineage is not None
+        assert context.lineage.scope.value == "task"
+        assert context.lineage.attempt_kind.value == "task"
+        state = json.loads(
+            (context.task_attempt_path / "attempt-state.json").read_text(encoding="utf-8")
+        )
+        references = json.loads(
+            (context.task_attempt_path / "stage-attempt-references.json").read_text(
+                encoding="utf-8"
+            )
+        )
+        assert state["lineage"] == references["lineage"] == context.lineage.to_dict()
+        assert references["stage_attempts"] == []
+
+    finalization = finalization_contexts[0]
+    assert finalization.lineage is not None
+    finalization_state = json.loads(
+        (finalization.attempt_path / "finalization-state.json").read_text(encoding="utf-8")
+    )
+    assert finalization_state["lineage"] == finalization.lineage.to_dict()
 
 
 def test_run_all_finalizes_after_clean_verification_only_task(tmp_path: Path) -> None:
@@ -244,6 +380,94 @@ def test_executor_exception_terminalizes_attempt_before_reraise(tmp_path: Path) 
     assert entry.blocker == "adapter exploded"
 
 
+def test_executor_exception_survives_corrupt_report_enrichment(
+    tmp_path: Path,
+) -> None:
+    request = _request(tmp_path)
+
+    def explode_with_corrupt_report(context):  # type: ignore[no-untyped-def]
+        report = (
+            request.workspace_root
+            / "workitems"
+            / request.work_item
+            / "stages"
+            / "implement"
+            / "implementation-report.md"
+        )
+        report.parent.mkdir(parents=True, exist_ok=True)
+        report.write_bytes(b"# Implementation Report\n\xff\n")
+        raise RuntimeError("adapter exploded")
+
+    service = ImplementationExecutionService(
+        task_executor=explode_with_corrupt_report,
+        aggregate_finalizer=lambda context: AggregateFinalizationOutcome(succeeded=True),
+    )
+
+    with pytest.raises(ImplementationPortError) as captured:
+        service.run_task(request, task_id="TL-1")
+
+    assert isinstance(captured.value.__cause__, RuntimeError)
+    assert captured.value.ledger is not None
+    assert captured.value.ledger.entry("TL-1").status is TaskExecutionStatus.FAILED
+    metadata = load_stage_metadata(
+        workspace_root=request.workspace_root,
+        work_item=request.work_item,
+        run_id=request.run_id,
+        stage="implement",
+    )
+    assert metadata is not None
+    assert metadata.status == StageState.FAILED.value
+    attempt_state = (
+        captured.value.ledger.entry("TL-1").latest_attempt_path
+        if captured.value.ledger is not None
+        else None
+    )
+    assert attempt_state is not None
+    enrichment = json.loads(
+        (request.workspace_root / attempt_state / "attempt-state.json").read_text(
+            encoding="utf-8"
+        )
+    )
+    assert enrichment["enrichment_errors"][0].startswith("implementation report:")
+
+
+def test_failed_task_keeps_primary_blocker_when_report_enrichment_is_corrupt(
+    tmp_path: Path,
+) -> None:
+    request = _request(tmp_path)
+
+    def fail_with_corrupt_report(context):  # type: ignore[no-untyped-def]
+        report = (
+            request.workspace_root
+            / "workitems"
+            / request.work_item
+            / "stages"
+            / "implement"
+            / "implementation-report.md"
+        )
+        report.parent.mkdir(parents=True, exist_ok=True)
+        report.write_bytes(b"# Implementation Report\n\xff\n")
+        return TaskAttemptOutcome(succeeded=False, blocker="validator failed")
+
+    service = ImplementationExecutionService(
+        task_executor=fail_with_corrupt_report,
+        aggregate_finalizer=lambda context: AggregateFinalizationOutcome(succeeded=True),
+    )
+
+    result = service.run_task(request, task_id="TL-1")
+
+    entry = result.ledger.entry("TL-1")
+    assert entry.status is TaskExecutionStatus.FAILED
+    assert entry.blocker == "validator failed"
+    assert entry.latest_attempt_path is not None
+    enrichment = json.loads(
+        (request.workspace_root / entry.latest_attempt_path / "attempt-state.json").read_text(
+            encoding="utf-8"
+        )
+    )
+    assert enrichment["enrichment_errors"][0].startswith("implementation report:")
+
+
 def test_failed_task_keeps_implementation_stage_failed_not_blocked(tmp_path: Path) -> None:
     request = _request(tmp_path)
 
@@ -268,7 +492,7 @@ def test_failed_task_keeps_implementation_stage_failed_not_blocked(tmp_path: Pat
     assert metadata.status == "failed"
 
 
-def test_retry_repairs_legacy_blocked_stage_status_for_failed_task(tmp_path: Path) -> None:
+def test_retry_reconciles_cleared_blocked_stage_after_task_failure(tmp_path: Path) -> None:
     request = _request(tmp_path)
     persist_stage_status(
         workspace_root=request.workspace_root,
@@ -377,3 +601,47 @@ def test_service_has_no_cli_or_typer_imports() -> None:
 
     assert "aidd.cli" not in source
     assert "import typer" not in source
+
+
+@pytest.mark.parametrize("snapshot_name", ("repository-baseline.json", "repository-final.json"))
+@pytest.mark.parametrize("executor_failure", (False, True))
+def test_invalid_snapshot_format_cannot_be_recaptured_or_turn_into_success(
+    tmp_path: Path, snapshot_name: str, executor_failure: bool,
+) -> None:
+    request = _request(tmp_path)
+    successful_executor = _successful_executor(request)
+    retained: dict[Path, bytes] = {}
+    finalized: list[str] = []
+
+    def execute(context):
+        outcome = successful_executor(context)
+        path = context.task_attempt_path / snapshot_name
+        # Existing evidence is explicitly retired, even though its remaining shape is valid.
+        malformed = json.dumps({"schema_version": 0, "task_id": "TL-1", "status": [], "files": {}})
+        path.write_text(malformed, encoding="utf-8")
+        retained[path] = path.read_bytes()
+        if executor_failure:
+            raise RuntimeError("primary executor failure")
+        return outcome
+
+    def finalize(context):
+        finalized.append("published")
+        return AggregateFinalizationOutcome(succeeded=True, published=True)
+
+    service = ImplementationExecutionService(task_executor=execute, aggregate_finalizer=finalize)
+    if executor_failure:
+        with pytest.raises(ImplementationPortError) as caught:
+            service.run_all(request)
+        assert str(caught.value.__cause__) == "primary executor failure"
+        ledger = caught.value.ledger
+        assert ledger is not None
+        assert ledger.entry("TL-1").blocker == "primary executor failure"
+    else:
+        result = service.run_all(request)
+        ledger = result.ledger
+        assert "schema_version=1" in (ledger.entry("TL-1").blocker or "")
+        assert result.published is False
+    assert ledger.entry("TL-1").status is TaskExecutionStatus.FAILED
+    assert ledger.entry("TL-2").status is TaskExecutionStatus.PENDING
+    assert finalized == []
+    assert all(path.read_bytes() == content for path, content in retained.items())

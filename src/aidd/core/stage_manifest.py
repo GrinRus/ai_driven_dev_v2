@@ -108,9 +108,5 @@ class StageManifest:
         return tuple(declaration.path for declaration in self.required_inputs)
 
     @property
-    def optional_input_paths(self) -> tuple[str, ...]:
-        return tuple(declaration.path for declaration in self.optional_inputs)
-
-    @property
     def required_output_paths(self) -> tuple[str, ...]:
         return tuple(declaration.path for declaration in self.required_outputs)

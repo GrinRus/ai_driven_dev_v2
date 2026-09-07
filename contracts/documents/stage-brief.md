@@ -2,60 +2,63 @@
 
 ## Purpose
 
-Provide one runtime-facing Markdown brief that defines the current stage, target outcome,
-document IO expectations, and constraints before execution starts.
+AIDD prepares this runtime-facing Markdown brief before each attempt. It names the stage,
+substantive content to write, prepared inputs, and document ownership without granting the
+runtime authority over workflow records.
 
 ## Required sections
 
-The authored document must include these top-level headings exactly:
+Use these top-level headings in order:
 
 - `Stage`
-- `Goal`
-- `Inputs`
-- `Outputs`
-- `Constraints`
-- `Open questions`
+- `Purpose`
+- `Expected input bundle`
+- `Runtime write targets`
+- `AIDD-generated records`
+- `Interview/control documents`
+- `Published documents`
+- `Workspace path discipline`
+
+`Declared project set` appears after `Expected input bundle` when multiple project roots are
+declared. `Required output skeletons` may follow path discipline when runtime content has a
+known scaffold. Skeleton headings are nested beneath that section, not additional top-level
+stage-brief fields.
 
 ## Field notes
 
-- `Stage`
-  - Must contain exactly one canonical stage name from the active stage chain.
-  - Must use the lowercase stage id (for example, `plan`).
-- `Goal`
-  - Must describe the stage outcome in 1-3 sentences.
-  - Must stay scoped to the current stage and avoid downstream commitments.
-- `Inputs`
-  - Must list the expected input documents as AIDD workspace-relative paths.
-  - Each item must be one document path per bullet.
-- `Outputs`
-  - Must list the required output documents as AIDD workspace-relative paths.
-  - Must include `stage-result.md` when the stage contract requires it.
-- `Constraints`
-  - Must list hard requirements the runtime must respect for this run.
-  - Must include format constraints when relevant (for example, Markdown-only output).
-- `Open questions`
-  - Must list unresolved questions that may block completion.
-  - Must be explicit when there are no unresolved items (for example, `- none`).
+- `Stage` names one lowercase canonical stage id.
+- `Purpose` describes the stage outcome without committing downstream work.
+- `Expected input bundle` lists prepared input documents as workspace-relative paths.
+- `Runtime write targets` lists only substantive runtime-authored documents. These are the
+  only document-completion targets; do not include lifecycle records or operator answers.
+- `AIDD-generated records` lists lifecycle and validation documents for read-only context.
+  AIDD writes `stage-result.md` and `validator-report.md`; runtimes never repair their text.
+- `Interview/control documents` lists controlled question/intervention inputs and read-only
+  answers or repair evidence. Use the declared interview path for raw question candidates;
+  AIDD merges them by stable QID and preserves operator answers.
+- `Published documents` lists the complete canonical source set that AIDD publishes into the
+  stage `output/` directory after validation. Publication does not grant authoring permission
+  for AIDD-generated records.
+- `Workspace path discipline` states that `workitems/...` resolves under the configured
+  `.aidd/` workspace, not under the repository root.
+- `Declared project set` names the context path, project ids, and roots. Runtime content must
+  preserve those boundaries. AIDD authors the `Project-set evidence` section in `stage-result.md`.
+- `Required output skeletons` contains only runtime-content scaffolds. A scaffold is prompt
+  input; placeholders must be replaced before the output is validated.
 
 ## Authoring rules
 
-- Use the required heading names exactly; do not rename or merge headings.
-- Keep all document paths in backticks and workspace-relative form.
-- Treat `workitems/...` as relative to the configured `.aidd/` workspace root.
-  From the repository root, canonical stage artifacts live under `.aidd/workitems/...`;
-  do not create top-level `workitems/...`.
-- Do not invent user answers or hidden assumptions; unresolved items belong in `Open questions`.
-- Keep wording specific and actionable; avoid placeholder text such as `TBD`, `N/A`, or `...`.
-- Do not embed JSON schemas or machine-only payloads in place of narrative Markdown content.
+- AIDD owns this brief; runtime and operator attempts do not edit it in place.
+- Keep document paths in backticks and workspace-relative form, one document per bullet.
+- Use `- none` for an empty AIDD-generated or interview/control document list.
+- Do not include duplicate compatibility output inventories or writable skeletons for
+  `stage-result.md`, `validator-report.md`, `repair-brief.md`, or `answers.md`.
+- Preserve unresolved questions and existing answers; never invent an operator decision.
+- Keep the brief Markdown-first without embedded model-authored JSON schemas.
 
 ## Validation cues
 
-- the required heading set is present exactly once,
-- the stage name is canonical and stage-specific,
-- input and output paths are explicit and AIDD workspace-relative,
-- unresolved clarifications are surfaced in `Open questions`,
-- the brief does not invent missing user answers.
-
-## Notes
-
-This is a Markdown contract, not a runtime-output JSON schema.
+- stage and purpose match the stage contract;
+- input, runtime-content, control, and published paths preserve their distinct ownership;
+- project-set evidence remains AIDD-authored;
+- skeletons cannot direct the runtime to overwrite canonical workflow records.

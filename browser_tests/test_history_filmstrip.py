@@ -22,7 +22,7 @@ def test_studio_history_selects_durable_frame_and_returns_to_live(tmp_path: Path
     ) as harness, harness.open_page((1280, 900)) as browser_page:
         page = browser_page.page
         page.goto(
-            f"{harness.url}?ui=studio&mode=history&work_item={fixture.work_item}"
+            f"{harness.url}?mode=history&work_item={fixture.work_item}"
             f"&run_id={fixture.run_id}&stage=implement",
             wait_until="networkidle",
         )
@@ -73,7 +73,7 @@ def test_studio_history_is_a_vertical_mobile_drill_down(
     ) as harness, harness.open_page(viewport) as browser_page:
         page = browser_page.page
         page.goto(
-            f"{harness.url}?ui=studio&mode=history&work_item={fixture.work_item}"
+            f"{harness.url}?mode=history&work_item={fixture.work_item}"
             f"&run_id={fixture.run_id}&stage=implement",
             wait_until="networkidle",
         )

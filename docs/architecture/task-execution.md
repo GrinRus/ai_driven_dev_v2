@@ -25,6 +25,8 @@ constraints, and out-of-scope notes do not replace the required fields.
 - every attempt captures repository status before and after execution plus runtime/repair evidence;
 - attempt preparation uses a staging directory and durable attempt state so an interrupted
   `executing` task can be terminalized as abandoned and resumed with a new monotonic attempt;
+- reconciling an abandoned executing task also terminalizes an in-flight `implement` stage
+  projection as `failed`, while preserving terminal and operator-blocked stage states;
 - task readiness is derived from succeeded dependencies rather than persisted independently;
 - auto execution stops on the first blocked or failed task; explicit task execution may resume
   pending, blocked, or failed tasks but never a succeeded task;
@@ -37,10 +39,55 @@ constraints, and out-of-scope notes do not replace the required fields.
   validation or atomic publication never changes successful task outcomes and can be retried with
   `aidd task finalize`.
 
+### Attempt lineage contract
+
+Stage, task, and aggregate-finalization attempts use the same versioned `lineage` object:
+
+```json
+{
+  "schema_version": 1,
+  "scope": "stage|task|finalization",
+  "attempt_kind": "initial|repair|resume|intervention|repair-extension|task|finalization|unknown",
+  "attempt_number": 1,
+  "parent_attempt_path": null
+}
+```
+
+`attempt_number` identifies a storage slot only; it never implies repair. Stage lineage uses the
+five stage execution kinds, task attempts use `task`, and aggregate finalization uses
+`finalization`. Current-format readers require the lineage object and reject retired artifacts
+that contain only `attempt_mode` or an ordinal. Historical evidence may be inspected as raw files,
+but it must not be silently upgraded or resumed. Readers must never synthesize a repair edge from
+`attempt_number > 1`.
+
+The owning lifecycle service persists lineage before publishing each durable state: stage
+preparation writes the stage `artifact-index.json`, task-attempt lifecycle writes
+`attempt-state.json` and the task evidence reference manifest, and aggregate finalization writes
+`finalization-state.json`. Downstream readers preserve and validate that object; they do not
+reclassify an attempt from its directory number or regenerate a missing trigger.
+
 Run mutations use the shared filesystem lease. Same-host dead owners may be reclaimed; live,
 remote-host, or malformed owners remain conflicts. UI mutation endpoints acquire the lease before
 returning a background job id. Stage success remains uncommitted until the final aggregate
 implementation report passes validation and atomic publication succeeds.
+
+Existing `task-ledger.json` documents require schema 2, the source tasklist digest, complete
+task entries, a complete finalization object, and creation/update timestamps. Task and finalization
+entries require status, integer attempt count, latest attempt path, blocker, and update timestamp;
+tasks also require identity/title, dependency ids, and acceptance ids. Initial attempt paths,
+blockers, and nested update timestamps may be `null`, and attempt counts start at zero.
+Readers reject malformed entries instead of skipping tasks or converting missing finalization to
+pending. Schema-1 ledgers are not upgraded.
+
+`repository-baseline.json` and `repository-final.json` require schema 1, task identity, a string
+list of repository status entries, and a path-to-string file map. Empty status/file collections
+and the current `missing`/`non-file` file-state markers remain valid. Invalid baseline evidence
+cannot become an empty successful diff; final-evidence failures retain the current failure stop.
+
+An existing `remediation-status.json` requires schema 1, its owning run id, and a `stale_stages`
+list. Each entry records stage, status, invalidating request, timestamp, and reason. Missing or
+malformed state cannot become an empty list or be overwritten by mark/clear operations. The whole
+file may be absent before remediation; an explicitly empty current list is valid after clearing.
 
 ## Operator task projection
 
@@ -77,8 +124,9 @@ their own `created_at_utc` and `updated_at_utc` timestamps), `repository-baselin
 question/answer evidence. Runtime payloads must not be copied or hard-linked into a task attempt.
 
 Task and finalization history readers must not use the enclosing run manifest's timestamps as a
-fallback. Legacy nested attempts without timestamps remain readable, but their duration is
-reported as unavailable rather than showing the duration of the entire run.
+fallback. When attempt-owned timing evidence is missing or unreadable, the read-only history
+view reports duration as unavailable rather than showing the duration of the entire run.
+This diagnostic view does not authorize execution from a retired persisted format.
 
 Each new task attempt records its global attempts in an atomically replaced
 `stage-attempt-references.json` schema-v1 manifest:
@@ -89,6 +137,13 @@ Each new task attempt records its global attempts in an atomically replaced
   "task_id": "TL-2",
   "task_attempt_number": 2,
   "stage": "implement",
+  "lineage": {
+    "schema_version": 1,
+    "scope": "task",
+    "attempt_kind": "task",
+    "attempt_number": 2,
+    "parent_attempt_path": null
+  },
   "stage_attempts": [
     {
       "attempt_number": 7,
@@ -110,11 +165,10 @@ created for that task attempt. Interrupted manifest writes leave no partial cano
 Global and task attempts share run retention: a referenced global attempt is never cleaned up
 independently, while deleting an entire run removes both owner and references together.
 
-Readers prefer the schema-v1 reference manifest. For runs created before this contract, absence of
-the manifest enables read-only compatibility with embedded `stage-attempt-000N/` directories and
-legacy top-level runtime files. A malformed or dangling new manifest is corruption and never falls
-back to legacy copies. Writers create only the reference layout; no background migration rewrites
-historical runs.
+Readers and writers use only the schema-v1 reference manifest. Embedded `stage-attempt-000N/`
+directories and old top-level runtime files are unsupported and fail explicitly. A newly allocated
+task attempt may have no referenced stage attempts yet; this is an empty current attempt, not a
+legacy evidence fallback. Malformed or dangling manifests remain corruption.
 
 ## Public entrypoint contract
 

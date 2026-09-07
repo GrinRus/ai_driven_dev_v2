@@ -50,6 +50,7 @@ class RuntimeEvidenceCommitRequest:
     stdout_truncated: bool = False
     stderr_truncated: bool = False
     runtime_log_truncated: bool = False
+    capture_error: str | None = None
 
     def __post_init__(self) -> None:
         if not self.exit_classification.strip():
@@ -57,6 +58,8 @@ class RuntimeEvidenceCommitRequest:
         if self.adapter_outcome is RuntimeAdapterOutcome.SUCCESS:
             if self.stop_reason is not None:
                 raise ValueError("Successful runtime evidence must not have a stop reason.")
+            if self.capture_error is not None:
+                raise ValueError("Successful runtime evidence must not have a capture error.")
             return
         if self.stop_reason is None:
             raise ValueError("Non-success runtime evidence requires a stop reason.")
@@ -77,6 +80,7 @@ _CLASSIFICATION_OUTCOMES: dict[str, RuntimeAdapterOutcome] = {
     "runtime_non_zero_exit": RuntimeAdapterOutcome.RUNTIME_FAILURE,
     "provider_error": RuntimeAdapterOutcome.RUNTIME_FAILURE,
     "protocol_failure": RuntimeAdapterOutcome.RUNTIME_FAILURE,
+    "capture_failure": RuntimeAdapterOutcome.RUNTIME_FAILURE,
     "timeout": RuntimeAdapterOutcome.TIMEOUT,
     "cancelled": RuntimeAdapterOutcome.CANCELLATION,
     "user_cancelled": RuntimeAdapterOutcome.CANCELLATION,
@@ -160,6 +164,8 @@ def commit_runtime_evidence(
         metadata["runtime_log_tail_truncated"] = request.runtime_log_truncated
     if request.stop_reason is not None:
         metadata["stop_reason"] = request.stop_reason.value
+    if request.capture_error is not None:
+        metadata["capture_error"] = request.capture_error
 
     if request.runtime_log_source_path is None:
         _atomic_write_text(paths.runtime_log_path, request.runtime_log_text)

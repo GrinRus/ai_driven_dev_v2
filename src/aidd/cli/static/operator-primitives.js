@@ -13,20 +13,6 @@ const STATE_SURFACE_STATES = new Set([
   "reconnecting",
   "unavailable"
 ]);
-const INBOX_ITEM_STATES = new Set([
-  "blocking",
-  "running",
-  "ready",
-  "terminal",
-  "malformed"
-]);
-const GUIDED_STEP_STATES = new Set([
-  "current",
-  "complete",
-  "invalid",
-  "optional",
-  "disabled"
-]);
 const RECOVERY_SUMMARY_KINDS = new Set([
   "question",
   "approval",
@@ -34,23 +20,6 @@ const RECOVERY_SUMMARY_KINDS = new Set([
   "validation",
   "intervention",
   "quality-gate"
-]);
-const SHARED_INTERACTION_STATES = Object.freeze([
-  "loading",
-  "empty",
-  "partial",
-  "error",
-  "disabled",
-  "selected",
-  "pending",
-  "conflict",
-  "success",
-  "offline",
-  "unavailable",
-  "reconnecting",
-  "permission-denied",
-  "focus",
-  "keyboard"
 ]);
 const SHARED_INTERACTION_STATE_CONTRACT = Object.freeze({
   loading: Object.freeze({role: "status", live: "polite", busy: true}),
@@ -132,66 +101,6 @@ function renderStatusMarker({status, label}) {
   `;
 }
 
-function renderPrimaryActionSlot({primaryAction = null, guidance = ""} = {}) {
-  const action = primaryAction && String(primaryAction.action || "").trim()
-    ? primaryAction
-    : null;
-  const content = action
-    ? `<button class="decision-bar-primary-action" data-primary-action data-decision-action="${escapeHtml(action.action)}" type="button" ${action.enabled === false ? 'disabled aria-disabled="true"' : ""}>${escapeHtml(action.label)}</button>`
-    : `<span class="decision-bar-no-action">${escapeHtml(guidance || "No action available")}</span>`;
-  return `<div class="decision-bar-primary-slot" data-primary-slot>${content}</div>`;
-}
-
-function renderDecisionBar({
-  kind,
-  status,
-  statusLabel,
-  title,
-  body,
-  guidance = "",
-  primaryAction = null,
-  metrics = [],
-  legacyTone = ""
-}) {
-  const stateName = decisionBarState(status);
-  const sharedState = {
-    action: "selected",
-    "no-action": "disabled",
-    pending: "pending",
-    blocked: "error",
-    complete: "success",
-    stale: "conflict"
-  }[stateName];
-  validateSharedInteractionContract({
-    state: sharedState,
-    accessibleName: title,
-    statusText: statusLabel,
-    primaryActionCount: primaryAction ? 1 : 0
-  });
-  const legacyClass = legacyTone ? ` decision-summary ${escapeHtml(legacyTone)}` : "";
-  return `
-    <section class="decision-bar${legacyClass}" data-decision-bar="${escapeHtml(kind)}" data-state="${escapeHtml(stateName)}" data-interaction-region role="status" aria-live="polite">
-      <div class="decision-bar-copy decision-summary-copy">
-        ${renderStatusMarker({status: stateName, label: statusLabel})}
-        <strong>${escapeHtml(title)}</strong>
-        <p>${escapeHtml(body)}</p>
-        ${renderPrimaryActionSlot({primaryAction, guidance})}
-      </div>
-      <div class="decision-bar-supporting decision-summary-metrics">
-        ${metrics.map((metric) => {
-          const metricClass = metric.tone ? ` ${escapeHtml(metric.tone)}` : "";
-          return `
-            <div class="decision-metric${metricClass}">
-              <span>${escapeHtml(metric.label)}</span>
-              <strong>${escapeHtml(metric.value)}</strong>
-            </div>
-          `;
-        }).join("")}
-      </div>
-    </section>
-  `;
-}
-
 function renderStateSurface({kind, state: requestedState, title, consequence, recovery = null}) {
   const stateName = String(requestedState || "").trim();
   if (!STATE_SURFACE_STATES.has(stateName) && !SHARED_INTERACTION_STATE_CONTRACT[stateName]) {
@@ -222,100 +131,6 @@ function renderStateSurface({kind, state: requestedState, title, consequence, re
         <p>${escapeHtml(visibleConsequence)}</p>
       </div>
       ${recoveryAction ? `<div class="state-surface-action">${recoveryAction}</div>` : ""}
-    </section>
-  `;
-}
-
-function renderInboxItem({
-  id,
-  state: requestedState,
-  statusLabel,
-  title,
-  summary,
-  route = "",
-  primaryAction = null,
-  metadata = []
-}) {
-  const stateName = String(requestedState || "").trim();
-  if (!INBOX_ITEM_STATES.has(stateName)) {
-    throw new Error(`Unknown Inbox Item state: ${stateName || "empty"}`);
-  }
-  const markerStatus = {
-    blocking: "blocked",
-    running: "pending",
-    ready: "action",
-    terminal: "complete",
-    malformed: "stale"
-  }[stateName];
-  const action = primaryAction && String(primaryAction.action || "").trim()
-    ? primaryAction
-    : null;
-  return `
-    <article class="inbox-item" data-inbox-item="${escapeHtml(id)}" data-state="${escapeHtml(stateName)}" data-inbox-route="${escapeHtml(route)}">
-      <div class="inbox-item-copy">
-        ${renderStatusMarker({status: markerStatus, label: statusLabel})}
-        <strong>${escapeHtml(title)}</strong>
-        <p>${escapeHtml(summary)}</p>
-        ${metadata.length ? `<dl>${metadata.map((entry) => `<div><dt>${escapeHtml(entry.label)}</dt><dd>${escapeHtml(entry.value)}</dd></div>`).join("")}</dl>` : ""}
-      </div>
-      <div class="inbox-item-action">
-        ${action ? `<button data-inbox-action="${escapeHtml(action.action)}" type="button" ${action.enabled === false ? 'disabled aria-disabled="true"' : ""}>${escapeHtml(action.label)}</button>` : '<span class="inbox-item-no-action">No action available</span>'}
-      </div>
-    </article>
-  `;
-}
-
-function renderGuidedField(stepId, field) {
-  const fieldId = `guided-${stepId}-${field.id}`;
-  if (field.type === "select") {
-    return `
-      <label for="${escapeHtml(fieldId)}">${escapeHtml(field.label)}</label>
-      <select id="${escapeHtml(fieldId)}" name="${escapeHtml(field.id)}">
-        ${(field.options || []).map((option) => `<option value="${escapeHtml(option.value)}" ${option.value === field.value ? "selected" : ""}>${escapeHtml(option.label)}</option>`).join("")}
-      </select>
-    `;
-  }
-  return `
-    <label for="${escapeHtml(fieldId)}">${escapeHtml(field.label)}</label>
-    <input id="${escapeHtml(fieldId)}" name="${escapeHtml(field.id)}" type="${escapeHtml(field.type || "text")}" value="${escapeHtml(field.value || "")}" ${field.invalid ? 'aria-invalid="true"' : ""}>
-  `;
-}
-
-function renderGuidedStep({
-  id,
-  state: requestedState,
-  title,
-  explanation,
-  fields,
-  primaryAction,
-  backAction,
-  advanced = []
-}) {
-  const stateName = String(requestedState || "").trim();
-  if (!GUIDED_STEP_STATES.has(stateName)) {
-    throw new Error(`Unknown Guided Step state: ${stateName || "empty"}`);
-  }
-  if (!primaryAction?.action || !backAction?.action) {
-    throw new Error("Guided Step requires explicit primary and Back actions");
-  }
-  return `
-    <section class="guided-step" data-guided-step="${escapeHtml(id)}" data-state="${escapeHtml(stateName)}">
-      <header class="guided-step-header">
-        ${renderStatusMarker({status: stateName === "complete" ? "complete" : stateName === "invalid" ? "blocked" : stateName === "disabled" ? "no-action" : "action", label: stateName})}
-        <h2>${escapeHtml(title)}</h2>
-        <p>${escapeHtml(explanation)}</p>
-      </header>
-      <div class="guided-step-inputs">
-        ${(fields || []).map((field) => `<div class="guided-step-field">${renderGuidedField(id, field)}</div>`).join("")}
-      </div>
-      <div class="guided-step-actions">
-        <button class="secondary" data-guided-action="${escapeHtml(backAction.action)}" type="button" ${backAction.enabled === false ? 'disabled aria-disabled="true"' : ""}>${escapeHtml(backAction.label || "Back")}</button>
-        <button data-guided-action="${escapeHtml(primaryAction.action)}" type="button" ${primaryAction.enabled === false ? 'disabled aria-disabled="true"' : ""}>${escapeHtml(primaryAction.label)}</button>
-      </div>
-      <details class="guided-step-advanced">
-        <summary>Advanced</summary>
-        <div>${advanced.map((item) => `<p>${escapeHtml(item)}</p>`).join("") || "<p>No advanced settings for this step.</p>"}</div>
-      </details>
     </section>
   `;
 }

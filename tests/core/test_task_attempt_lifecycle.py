@@ -6,8 +6,10 @@ from pathlib import Path
 
 import pytest
 
+from aidd.core.implementation_finalization import prepare_task_finalization
 from aidd.core.implementation_service import (
     ImplementationExecutionRequest,
+    ImplementationExecutionService,
     _complete_task_execution,
     _prepare_task_execution,
 )
@@ -17,8 +19,21 @@ from aidd.core.mutation_lease import (
     acquire_run_mutation_lease_handle,
     use_transferred_run_mutation_lease,
 )
-from aidd.core.run_store import persist_stage_status
-from aidd.core.task_attempt_lifecycle import TaskExecutionContext, TaskResumeBlockedError
+from aidd.core.run_store import (
+    create_run_manifest,
+    load_stage_metadata,
+    persist_stage_status,
+    run_stage_metadata_path,
+)
+from aidd.core.stage_preparation import persist_execution_state
+from aidd.core.state_machine import StageState
+from aidd.core.task_attempt_lifecycle import (
+    TaskExecutionContext,
+    TaskResumeBlockedError,
+    _write_attempt_state,
+    prepare_task_attempt,
+    reconcile_task_execution_state,
+)
 from aidd.core.task_ledger import (
     TaskExecutionStatus,
     TaskFinalizationStatus,
@@ -152,13 +167,17 @@ def test_task_ledger_enforces_dependencies_and_hash(tmp_path: Path) -> None:
             plan=changed_plan,
         )
 
-def test_task_ledger_v1_defaults_finalization_and_v2_transitions() -> None:
-    ledger = TaskLedger.create(parse_task_plan(_tasklist()))
-    legacy = ledger.to_dict()
-    legacy["schema_version"] = 1
-    legacy.pop("finalization")
+def test_task_ledger_rejects_v1_without_upgrading_finalization() -> None:
+    retired = TaskLedger.create(parse_task_plan(_tasklist())).to_dict()
+    retired["schema_version"] = 1
+    retired.pop("finalization")
+    with pytest.raises(ValueError, match="schema_version=2"):
+        TaskLedger.from_dict(retired)
 
-    restored = TaskLedger.from_dict(legacy)
+
+def test_task_ledger_v2_round_trip_preserves_finalization_transitions() -> None:
+    ledger = TaskLedger.create(parse_task_plan(_tasklist()))
+    restored = TaskLedger.from_dict(ledger.to_dict())
 
     assert restored.schema_version == 2
     assert restored.finalization.status is TaskFinalizationStatus.PENDING
@@ -240,6 +259,13 @@ def test_interrupted_executing_task_is_abandoned_and_resumed_with_new_attempt(
     )
     tasklist_path.parent.mkdir(parents=True, exist_ok=True)
     tasklist_path.write_text(_tasklist(), encoding="utf-8")
+    persist_stage_status(
+        workspace_root=workspace_root,
+        work_item="WI-1",
+        run_id="run-1",
+        stage="implement",
+        status=StageState.EXECUTING.value,
+    )
 
     first = prepare_task_execution(
         workspace_root=workspace_root,
@@ -263,8 +289,90 @@ def test_interrupted_executing_task_is_abandoned_and_resumed_with_new_attempt(
     assert first_state["created_at_utc"]
     assert first_state["updated_at_utc"]
     assert first_state["created_at_utc"] <= first_state["updated_at_utc"]
+    assert first_state["lineage"]["scope"] == "task"
+    assert first_state["lineage"]["attempt_kind"] == "task"
+    assert first_state["lineage"]["attempt_number"] == 1
+    assert first.lineage is not None
+    assert first.lineage.scope.value == "task"
+    assert first.lineage.attempt_kind.value == "task"
+    assert first.lineage.attempt_number == 1
     assert second.ledger.entry("TL-1").status is TaskExecutionStatus.EXECUTING
     assert second.ledger.entry("TL-1").attempt_count == 2
+    metadata = load_stage_metadata(workspace_root, "WI-1", "run-1", "implement")
+    assert metadata is not None
+    assert metadata.status == StageState.FAILED.value
+    assert [entry.status for entry in metadata.status_history[-2:]] == [
+        StageState.EXECUTING.value,
+        StageState.FAILED.value,
+    ]
+
+
+def test_attempt_state_writer_rejects_corrupt_existing_state(tmp_path: Path) -> None:
+    attempt_path = tmp_path / "attempt-0001"
+    attempt_path.mkdir()
+    state_path = attempt_path / "attempt-state.json"
+    state_path.write_text("{not-json", encoding="utf-8")
+
+    with pytest.raises(json.JSONDecodeError):
+        _write_attempt_state(
+            attempt_path,
+            task_id="TL-1",
+            attempt_number=1,
+            status="abandoned",
+        )
+
+    assert state_path.read_text(encoding="utf-8") == "{not-json"
+
+
+def test_reconciliation_repairs_stage_projection_after_ledger_commit(tmp_path: Path) -> None:
+    workspace_root = tmp_path / ".aidd"
+    tasklist_path = (
+        workspace_root / "workitems" / "WI-1" / "stages" / "tasklist" / "output" / "tasklist.md"
+    )
+    tasklist_path.parent.mkdir(parents=True, exist_ok=True)
+    tasklist_path.write_text(_tasklist(), encoding="utf-8")
+    persist_stage_status(
+        workspace_root=workspace_root,
+        work_item="WI-1",
+        run_id="run-1",
+        stage="implement",
+        status=StageState.EXECUTING.value,
+    )
+    first = prepare_task_execution(
+        workspace_root=workspace_root,
+        work_item="WI-1",
+        run_id="run-1",
+        task_id="TL-1",
+        project_root=tmp_path,
+    )
+    interrupted = first.ledger.transition(
+        "TL-1",
+        TaskExecutionStatus.FAILED,
+        blocker="Task execution was interrupted; resume creates a new attempt.",
+    )
+    persist_task_ledger(
+        workspace_root=workspace_root,
+        work_item="WI-1",
+        run_id="run-1",
+        ledger=interrupted,
+    )
+
+    resumed = prepare_task_execution(
+        workspace_root=workspace_root,
+        work_item="WI-1",
+        run_id="run-1",
+        task_id="TL-1",
+        project_root=tmp_path,
+    )
+
+    metadata = load_stage_metadata(workspace_root, "WI-1", "run-1", "implement")
+    assert metadata is not None
+    assert metadata.status == StageState.FAILED.value
+    assert [entry.status for entry in metadata.status_history[-2:]] == [
+        StageState.EXECUTING.value,
+        StageState.FAILED.value,
+    ]
+    assert resumed.ledger.entry("TL-1").attempt_count == 2
 
 def test_blocked_task_preserves_questions_and_answers_until_resume(tmp_path: Path) -> None:
     workspace_root = tmp_path / ".aidd"
@@ -329,3 +437,103 @@ def test_blocked_task_preserves_questions_and_answers_until_resume(tmp_path: Pat
 
     assert (resumed.task_attempt_path / "questions.md").exists()
     assert "[resolved]" in (resumed.task_attempt_path / "answers.md").read_text(encoding="utf-8")
+
+
+@pytest.mark.parametrize("invalid_file", ("stage-metadata", "run-manifest"))
+@pytest.mark.parametrize("operation", (
+    "global-attempt", "task-attempt", "new-ledger-service", "reconciliation",
+    "finalization", "finalization-service",
+))
+def test_invalid_current_state_stops_before_attempt_or_ledger_mutation(
+    tmp_path: Path, invalid_file: str, operation: str,
+) -> None:
+    workspace_root = tmp_path / ".aidd"
+    work_item, run_id = "WI-1", "run-1"
+    tasklist = workspace_root / "workitems" / work_item / "stages/tasklist/output/tasklist.md"
+    tasklist.parent.mkdir(parents=True)
+    tasklist.write_text(_tasklist(), encoding="utf-8")
+    manifest_path = create_run_manifest(
+        workspace_root=workspace_root, work_item=work_item, run_id=run_id,
+        runtime_id="generic-cli", stage_target="implement", config_snapshot={},
+    )
+    persist_stage_status(
+        workspace_root=workspace_root, work_item=work_item, run_id=run_id,
+        stage="implement", status="executing",
+    )
+    ledger = TaskLedger.create(parse_task_plan(_tasklist()))
+    if operation == "reconciliation":
+        attempt = (
+            workspace_root / "reports/runs/WI-1/run-1/stages/implement/tasks/TL-1/attempts"
+            / "attempt-0001"
+        )
+        attempt.mkdir(parents=True)
+        (attempt / "task-state.json").write_text('{"status":"executing"}\n')
+        ledger = ledger.transition(
+            "TL-1", TaskExecutionStatus.EXECUTING,
+            latest_attempt_path=attempt.relative_to(workspace_root).as_posix(),
+        )
+    if operation.startswith("finalization"):
+        for task in ledger.tasks:
+            ledger = ledger.transition(task.id, TaskExecutionStatus.EXECUTING)
+            ledger = ledger.transition(task.id, TaskExecutionStatus.SUCCEEDED)
+    if operation != "new-ledger-service":
+        persist_task_ledger(
+            workspace_root=workspace_root, work_item=work_item, run_id=run_id, ledger=ledger,
+        )
+    metadata_path = run_stage_metadata_path(
+        workspace_root=workspace_root, work_item=work_item, run_id=run_id, stage="implement",
+    )
+    invalid_path = metadata_path if invalid_file == "stage-metadata" else manifest_path
+    payload = json.loads(invalid_path.read_text())
+    payload.pop("schema_version")
+    invalid_path.write_text(json.dumps(payload), encoding="utf-8")
+
+    def snapshot() -> dict[str, bytes | None]:
+        return {
+            path.relative_to(workspace_root).as_posix(): (
+                path.read_bytes() if path.is_file() else None
+            )
+            for path in workspace_root.rglob("*")
+        }
+
+    before = snapshot()
+    calls: list[str] = []
+
+    def forbidden_callback(context):
+        calls.append("runtime/finalizer")
+        raise AssertionError("Invalid persisted state must stop before execution")
+
+    service = ImplementationExecutionService(
+        task_executor=forbidden_callback, aggregate_finalizer=forbidden_callback,
+    )
+    request = ImplementationExecutionRequest(
+        workspace_root=workspace_root, work_item=work_item, run_id=run_id, project_root=tmp_path,
+    )
+    with pytest.raises(ValueError, match="schema_version"):
+        if operation == "global-attempt":
+            persist_execution_state(
+                workspace_root=workspace_root, work_item=work_item, run_id=run_id,
+                stage="implement", attempt_mode="initial",
+            )
+        elif operation == "task-attempt":
+            prepare_task_attempt(
+                workspace_root=workspace_root, work_item=work_item, run_id=run_id,
+                task_id="TL-1", project_root=tmp_path,
+                repository_baseline=lambda **kwargs: {
+                    "schema_version": 1, "task_id": "TL-1", "status": [], "files": {},
+                },
+            )
+        elif operation == "new-ledger-service":
+            service.run_task(request, task_id="TL-1")
+        elif operation == "reconciliation":
+            reconcile_task_execution_state(
+                workspace_root=workspace_root, work_item=work_item, run_id=run_id, ledger=ledger,
+            )
+        elif operation == "finalization-service":
+            service.finalize(request)
+        else:
+            prepare_task_finalization(
+                workspace_root=workspace_root, work_item=work_item, run_id=run_id, ledger=ledger,
+            )
+    assert calls == []
+    assert snapshot() == before

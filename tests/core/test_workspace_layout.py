@@ -115,18 +115,16 @@ def test_workspace_rejects_work_item_symlink_escape(tmp_path: Path) -> None:
     assert tuple(outside.iterdir()) == ()
 
 
-def test_init_workspace_seeds_non_control_stage_files(tmp_path: Path) -> None:
+def test_init_workspace_defers_validation_and_repair_records(tmp_path: Path) -> None:
     root = tmp_path / ".aidd"
     work_item = "WI-001"
 
     item_root = init_workspace(root=root, work_item=work_item)
     plan_stage_root = item_root / WORKITEM_STAGES_DIRNAME / "plan"
 
+    deferred_records = {"validator-report.md", "repair-brief.md"}
     for filename in RESERVED_STAGE_FILENAMES:
-        if filename == "repair-brief.md":
-            continue
-        assert (plan_stage_root / filename).exists()
-    assert not (plan_stage_root / "repair-brief.md").exists()
+        assert (plan_stage_root / filename).exists() == (filename not in deferred_records)
 
 
 def test_init_workspace_seeds_default_contract_references(tmp_path: Path) -> None:

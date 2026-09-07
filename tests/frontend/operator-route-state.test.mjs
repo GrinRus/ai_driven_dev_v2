@@ -37,7 +37,7 @@ test("canonical route state round-trips every supported context key", async () =
   assert.deepEqual(decode(context, query).value, route);
 });
 
-test("Work Item tabs round-trip without changing legacy route contexts", async () => {
+test("Work Item tabs round-trip with explicit canonical route contexts", async () => {
   const context = await routeContext();
   const route = {
     mode: "studio",
@@ -84,7 +84,7 @@ test("selected Task Workspace task is a bounded canonical route key", async () =
   assert.deepEqual(decode(context, query).value, route);
 });
 
-test("missing and legacy routes resolve deterministically", async () => {
+test("missing routes default to Inbox and retired fields produce warnings", async () => {
   const context = await routeContext();
   assert.deepEqual(decode(context, "").value, {
     mode: "inbox",
@@ -96,11 +96,11 @@ test("missing and legacy routes resolve deterministically", async () => {
     taskAttempt: null,
     artifact: "",
   });
-  const legacy = decode(context, "?tab=evidence&stage=qa&run_id=run-1&key=qa-report.md");
-  assert.equal(legacy.source, "legacy");
-  assert.equal(legacy.value.mode, "studio");
-  assert.equal(legacy.value.view, "artifacts");
-  assert.equal(legacy.value.artifact, "qa-report.md");
+  const retired = decode(context, "?tab=evidence&stage=qa&run_id=run-1&key=qa-report.md");
+  assert.equal(retired.source, "default");
+  assert.equal(retired.value.mode, "inbox");
+  assert.equal(retired.value.artifact, "");
+  assert.deepEqual(retired.warnings.map((item) => item.field), ["tab", "key"]);
 });
 
 test("invalid, stale, and ambiguous contexts fail closed with stable warnings", async () => {

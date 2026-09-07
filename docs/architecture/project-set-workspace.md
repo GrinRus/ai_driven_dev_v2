@@ -78,7 +78,24 @@ The core should keep canonical stage documents in the existing work-item tree.
 Project-specific evidence may be referenced from those documents or from reports,
 but it must remain traceable from the stage result.
 
-## 4.1 Operator UI grouping
+## 4.1 Mode-specific capability matrix
+
+The declared project set is always the provenance and validation scope. Whether it
+also acts as a preventive runtime boundary depends on the configured permission mode
+and the adapter transport that can enforce it:
+
+| Permission mode | Declaration and attribution | Preventive containment | Outside-set change or request | Runtime discovery |
+| --- | --- | --- | --- | --- |
+| `full-access` | Resolved roots and project ids remain in context, stage, and run artifacts. | Not promised; provider-default access is preserved. | The post-run detector records exact paths and aggregate progression fails closed until the evidence is reviewed. | Discovery may be observed, but it cannot silently rewrite the declared set. |
+| `brokered` | Same declaration and attribution contract. | Enforced where the adapter has a confirmed approval transport; otherwise the request is blocked before launch. | An out-of-root operation is rejected or requires an explicit operator decision; its path remains in evidence. | Discovery cannot expand the set without an explicit operator decision. |
+| `plan` | Declaration and requested ownership are recorded before execution. | No provider execution is implied until the approval plan is resolved. | Requests remain approval-gated and do not advance aggregate workflow state while unresolved. | Discovery is not allowed to amend the declaration. |
+| `deny-unapproved` | Same declaration and attribution contract. | Unapproved operations are denied; only policy-eligible requests may proceed. | An out-of-root operation is denied and leaves a durable decision/evidence record. | Discovery cannot expand the set. |
+
+The matrix describes product claims, not a second permission engine. Provider-specific
+approval mechanics remain adapter-owned, while the core owns declaration, attribution,
+post-run detection, and fail-closed workflow progression.
+
+## 4.2 Operator UI grouping
 
 The operator UI may group read-only surfaces by declared root, but it must not create a
 second project-set authority.
@@ -97,8 +114,10 @@ Required UI behavior:
 
 ## 5. Execution bounds
 
-Declared project roots are execution bounds for AIDD-owned planning and
-validation.
+Declared project roots are always execution bounds for AIDD-owned planning and
+validation. They are also preventive runtime bounds only in the non-full modes and
+adapter transports that enforce them; `full-access` uses the same roots for
+attribution and post-run detection instead of promising containment.
 
 The core must reject or flag:
 
@@ -108,7 +127,15 @@ The core must reject or flag:
 - duplicate roots that make ownership ambiguous.
 
 Adapters may observe runtime-specific project metadata, but that observation must
-not expand the allowed project set without an explicit operator decision.
+not expand the declared project set without an explicit operator decision. An
+outside-set change in `full-access` is evidence for the detector and fail-closed
+progression gate, not a silently accepted scope expansion.
+
+When aggregate implementation finalization detects an outside-set change, it must
+persist `outside-project-set.md` in the finalization attempt with the exact changed
+paths and contributing task ids. The finalization status is failed, so the existing
+implementation-finalization gate prevents downstream Review and QA from treating
+the aggregate as successful.
 
 ## 6. Harness and eval expectations
 

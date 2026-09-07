@@ -152,7 +152,7 @@ def test_parse_task_plan_classifies_scope_derivative_as_related() -> None:
 def test_parse_task_plan_preserves_order_and_acceptance() -> None:
     plan = parse_task_plan(_tasklist())
 
-    assert plan.ordered_ids() == ("TL-1", "TL-2")
+    assert tuple(task.id for task in plan.tasks) == ("TL-1", "TL-2")
     assert plan.tasks[1].dependencies == ("TL-1",)
     assert plan.tasks[1].acceptance_criteria[0].id == "TL-2-AC1"
     assert plan.tasks[0].execution_mode is TaskExecutionMode.REPOSITORY_CHANGE
@@ -165,7 +165,7 @@ def test_coupled_behavior_regression_fixture_keeps_runtime_and_test_scope_cohere
 
     plan = parse_task_plan(fixture)
 
-    assert plan.ordered_ids() == ("TL-1", "TL-2")
+    assert tuple(task.id for task in plan.tasks) == ("TL-1", "TL-2")
     assert plan.tasks[0].scope_paths == (
         "src/streaming.py",
         "tests/test_streaming.py",
@@ -391,7 +391,7 @@ def test_canonical_tasklist_example_retains_executable_semantics() -> None:
 
     plan = parse_task_plan(example)
 
-    assert plan.ordered_ids() == ("TL-1", "TL-2", "TL-3")
+    assert tuple(task.id for task in plan.tasks) == ("TL-1", "TL-2", "TL-3")
     assert all(task.outcome and task.dominant_deliverable for task in plan.tasks)
     assert all(task.scope_paths for task in plan.tasks)
     assert all(task.acceptance_criteria for task in plan.tasks)

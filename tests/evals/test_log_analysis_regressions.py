@@ -6,7 +6,6 @@ from aidd.evals.log_analysis import (
     parse_events_jsonl_text,
     parse_runtime_log_text,
     select_first_failure_boundary,
-    summarize_first_failure,
 )
 
 
@@ -58,11 +57,9 @@ def test_regression_multi_error_prefers_earliest_runtime_line_signal() -> None:
 
 def test_regression_empty_runtime_log_inputs_remain_stable() -> None:
     runtime_events = parse_runtime_log_text("")
-    summary = summarize_first_failure(runtime_log_text="")
     selection = select_first_failure_boundary(runtime_events=runtime_events)
 
     assert runtime_events == ()
-    assert summary == "no failure signal found"
     assert selection.category == "none"
 
 
@@ -70,6 +67,7 @@ def test_regression_stage_run_failed_line_is_not_runtime_error() -> None:
     runtime_events = parse_runtime_log_text("Stage run result: action=stop state=failed\n")
 
     assert runtime_events[0].category == "stage"
+    assert select_first_failure_boundary(runtime_events=runtime_events).category == "none"
 
 
 def test_regression_empty_events_jsonl_inputs_remain_stable() -> None:

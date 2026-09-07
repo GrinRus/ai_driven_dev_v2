@@ -5,7 +5,7 @@ const OPERATOR_MODES = [
   "evidence",
   "history"
 ];
-const LEGACY_TAB_TO_MODE = {
+const DETAIL_TAB_TO_MODE = {
   "project-home": ["work", "project-home"],
   "overview": ["work", "overview"],
   "implement-review": ["work", "implement-review"],
@@ -23,7 +23,7 @@ const LEGACY_TAB_TO_MODE = {
 };
 const VALID_TABS = [
   ...OPERATOR_MODES,
-  ...Object.keys(LEGACY_TAB_TO_MODE)
+  ...Object.keys(DETAIL_TAB_TO_MODE)
 ];
 const WORK_ITEM_TAB_LABELS = Object.freeze({
   overview: "Overview",
@@ -69,9 +69,9 @@ const NON_BLOCKING_VALIDATION_NOTICE_CODES = new Set([
 function terminalHandoffRecommendation(handoff) {
   if (!handoff || !Object.prototype.hasOwnProperty.call(handoff, "recommended_outcome")) {
     return Object.freeze({
-      state: "legacy-no-recommendation",
+      state: "invalid-no-recommendation",
       outcome: null,
-      rationale: "This terminal handoff predates the recommendation contract. Choose from allowed outcomes."
+      rationale: "The terminal handoff is missing its required recommendation fields."
     });
   }
   const outcome = String(handoff.recommended_outcome || "").trim();
@@ -215,7 +215,6 @@ const state = {
     createError: "",
     creating: false,
     createPanelOpen: false,
-    guidedDelivery: true,
     guided: {
       step: "project",
       projectStatus: "unvalidated",
@@ -381,10 +380,6 @@ function stageTitle(stage) {
   return STAGE_COPY[stage]?.[0] || stage;
 }
 
-function stageSubtitle(stage) {
-  return STAGE_COPY[stage]?.[1] || "";
-}
-
 function statusClass(status) {
   return String(status || "pending").toLowerCase().replace(/_/g, "-");
 }
@@ -480,19 +475,6 @@ function activeStageView() {
   return state.dashboard?.active_stage_view || null;
 }
 
-function stageRetrySummary(item) {
-  const attemptCount = Number(item?.attempt_count || 0);
-  if (attemptCount <= 1) return null;
-  const retryCount = attemptCount - 1;
-  const retryLabel = retryCount === 1 ? "1 retry" : `${retryCount} retries`;
-  return {
-    attemptCount,
-    retryCount,
-    label: `retry ${attemptCount}x`,
-    title: `${retryLabel} after the first attempt; open Recovery for repair and retry history`
-  };
-}
-
 function needsRuntime(action) {
   return ["run-workflow", "run-stage", "resume-stage", "rerun-stale-downstream"].includes(action);
 }
@@ -511,8 +493,8 @@ function normalizeOperatorMode(tab) {
             : "history"
     };
   }
-  const legacy = LEGACY_TAB_TO_MODE[requested];
-  if (legacy) return {mode: legacy[0], detail: legacy[1]};
+  const detail = DETAIL_TAB_TO_MODE[requested];
+  if (detail) return {mode: detail[0], detail: detail[1]};
   return {mode: "work", detail: "overview"};
 }
 

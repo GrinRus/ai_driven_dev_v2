@@ -35,6 +35,11 @@ Execution note:
   `adapter-flags` wrapper command;
 - the probe target and the execution command do not have to be identical.
 
+Readiness describes the adapter's effective execution transport. Registered in-process
+conformance commands expose their own capabilities and do not require a subprocess executable.
+External commands still require executable and provider-capability checks; unregistered command
+names do not gain availability through the conformance path.
+
 ## 3. Implemented interface
 
 The current implementation uses a synchronous stage execution boundary:
@@ -92,9 +97,15 @@ The implemented request shape contains:
 - `input_bundle_path`
 - `repair_brief_path`
 - `repair_context_markdown`
+- `protected_path_markers` — adapter-composed, runtime-neutral path markers used by the
+  core operator policy to classify provider-managed protected material.
 
 The request deliberately names concrete prepared artifacts rather than asking adapters to
-resolve contracts or derive stage IO.
+resolve contracts or derive stage IO. The registered adapter surface combines its descriptor's
+protected, credential, and configuration markers into `protected_path_markers` before invoking
+the adapter function. The core policy consumes those injected markers alongside its generic
+`.aidd` evidence and operating-system safeguards; it does not contain provider names or
+credential filenames.
 
 ## 4. Capability model
 
@@ -118,7 +129,43 @@ Each adapter declares a capability report with at least:
 
 The core and CLI use this report to decide whether to proceed, degrade explicitly, or stop.
 
-## 4.1 Runtime operator requests
+### 4.1 Adapter-owned security/capability descriptor
+
+Each registered adapter surface may provide a static `RuntimeAdapterDescriptor` alongside its
+probe callable. The descriptor is immutable, contains no credential values, and separates
+provider metadata from observed installation state:
+
+- `runtime_id` — stable adapter identifier;
+- `protected_paths` — repository-relative POSIX path prefixes or filename markers that the
+  adapter identifies as provider-managed protected material;
+- `credential_paths` — provider credential/auth path markers;
+- `config_paths` — provider configuration path markers;
+- `capabilities` — named adapter capabilities that can be consumed by runtime-neutral policy.
+- `registration` — optional adapter-owned compatibility metadata for the runtime catalog:
+  configuration section, support tier, probe/default commands, execution modes, brokered
+  command, and typed selector support.
+
+Path entries are validated as safe relative POSIX metadata (no absolute paths, parent traversal,
+backslashes, or empty values). The descriptor is an extension seam: adding a runtime adds its
+metadata in the adapter package rather than adding provider literals to `aidd.core`. A descriptor
+does not claim that a concrete binary is installed or that a capability was observed; those facts
+remain in `CapabilityReport` and behavioral conformance evidence. Built-in descriptors are
+introduced incrementally after this contract and must preserve the existing runtime IDs.
+
+The maintained built-in surfaces currently register descriptors for `generic-cli`, `claude-code`,
+`codex`, `opencode`, and `qwen`. Their provider roots and credential/configuration markers live
+in the corresponding `aidd.adapters.<runtime>` package; the runtime registry only attaches the
+adapter-owned value to its surface. `generic-cli` contributes the provider-neutral `.env`,
+credential, and settings markers, while named runtimes contribute their own hidden directory and
+provider file markers. These are path markers only, never credential contents.
+
+Registration metadata follows the same ownership rule. The built-in adapter registry assembles
+descriptors in stable compatibility order, and `aidd.runtime_catalog` projects each registration
+into the existing `RuntimeDefinition`/TOML-facing API. This preserves runtime IDs, configuration
+section names, commands, and enum behavior for existing users while allowing a new adapter to
+provide its registration locally instead of adding a provider branch to the catalog.
+
+## 4.2 Runtime operator requests
 
 AIDD separates product questions from runtime approvals:
 
@@ -250,6 +297,7 @@ one evidence envelope. `runtime.log` is written atomically first and schema-v1
 | --- | --- | --- | --- |
 | runtime completed successfully | `success` | absent | provider/process code |
 | runtime exited unsuccessfully | `runtime_failure` | `runtime_failure` | provider/process code |
+| stream capture or reader failed | `runtime_failure` | `runtime_failure` | provider/process code when available |
 | runtime budget expired | `timeout` | `timeout` | provider/process code when available |
 | execution was cancelled | `cancellation` | `cancellation` | provider/process code when available |
 | operator or policy denied execution | `denial` | `denial` | `null` when no provider process result exists |
@@ -257,8 +305,10 @@ one evidence envelope. `runtime.log` is written atomically first and schema-v1
 | executable launch failed | `launch_failure` | `launch_failure` | `null` |
 
 Success never has a stop reason. Blocked and launch-failure evidence never fabricates a process
-exit code. Workflow policy uses the canonical outcome; adapter-specific classifications remain
-available for provider diagnostics.
+exit code. A capture failure preserves any partial raw log and records the adapter-specific
+`capture_failure` classification plus a sanitized capture error in `runtime-exit.json`; it can
+never be reported as successful. Workflow policy uses the canonical outcome; adapter-specific
+classifications remain available for provider diagnostics.
 
 ## 8. Workspace expectations
 

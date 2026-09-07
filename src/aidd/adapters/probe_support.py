@@ -128,56 +128,6 @@ def detect_capability_flags(help_text: str) -> dict[str, bool]:
     }
 
 
-def probe_runtime_from_help(
-    *,
-    runtime_id: str,
-    command: str,
-    timeout_seconds: float,
-    use_timeout_output: bool = False,
-) -> CapabilityReport:
-    discovered = discover_command(command)
-    available = discovered is not None
-    version_text = (
-        discover_version(
-            discovered,
-            timeout_seconds=timeout_seconds,
-            use_timeout_output=use_timeout_output,
-        )
-        if discovered
-        else None
-    )
-    detected = (
-        detect_capability_flags(
-            discover_help_text(
-                discovered,
-                timeout_seconds=timeout_seconds,
-                use_timeout_output=use_timeout_output,
-            )
-            or ""
-        )
-        if discovered
-        else {}
-    )
-
-    return CapabilityReport(
-        runtime_id=runtime_id,
-        available=available,
-        command=discovered or command,
-        version_text=version_text,
-        supports_raw_log_stream=available,
-        supports_structured_log_stream=detected.get("supports_structured_log_stream", False),
-        supports_questions=detected.get("supports_questions", False),
-        supports_resume=detected.get("supports_resume", False),
-        supports_subagents=detected.get("supports_subagents", False),
-        supports_non_interactive_mode=detected.get("supports_non_interactive_mode", False),
-        supports_working_directory_control=detected.get(
-            "supports_working_directory_control",
-            False,
-        ),
-        supports_env_injection=detected.get("supports_env_injection", False),
-    )
-
-
 def probe_basic_runtime(
     *,
     runtime_id: str,

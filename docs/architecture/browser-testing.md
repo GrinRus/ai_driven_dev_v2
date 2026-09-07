@@ -14,8 +14,8 @@ uv run --extra dev pytest -q browser_tests
 ```
 
 Browser tests live in the repository-root `browser_tests/` directory, outside the default
-`tests/` collection. Until `W36-E7-S2` adds an explicit browser CI lane, ordinary
-`uv run --extra dev pytest -q` and existing CI jobs do not require a browser binary.
+`tests/` collection. Ordinary `uv run --extra dev pytest -q` does not require a browser binary.
+The dedicated packaged-browser CI job installs Chromium and runs the browser lane explicitly.
 
 ## Packaging boundary
 
@@ -35,6 +35,16 @@ DOM, and JavaScript behavior. Additional engines require a separate compatibilit
 evidence; they are not inferred from Playwright support.
 
 ## Network and evidence boundary
+
+Journeys wait for their required rendered surface within a bounded 30-second deadline.
+Background runtime readiness checks and polling do not define whether a document, question,
+or quality-gate surface is ready. Launch tests still await runtime readiness explicitly, and
+every journey retains its browser diagnostics and product assertions.
+
+Geometry checks distinguish the primary layout scroll owner from native text editing.
+A labelled, height-bounded `textarea` may scroll its own content without becoming a second
+layout scroll owner. Nested layout containers still fail the scroll-ownership check; native
+editors remain subject to clipping, horizontal overflow, focus, and accessibility checks.
 
 The deterministic suite allows only the loopback origin created for its disposable local
 project. Provider authentication, provider runtimes, remote repositories, arbitrary filesystem

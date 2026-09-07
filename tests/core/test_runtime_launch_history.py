@@ -105,7 +105,7 @@ def test_runtime_launch_history_selects_latest_per_runtime(tmp_path: Path) -> No
     assert history["codex"].warning is None
 
 
-def test_runtime_launch_history_marks_legacy_and_malformed_evidence(tmp_path: Path) -> None:
+def test_runtime_launch_history_marks_retired_and_malformed_evidence(tmp_path: Path) -> None:
     workspace_root = tmp_path / ".aidd"
     legacy = _attempt(
         workspace_root,
@@ -126,9 +126,9 @@ def test_runtime_launch_history_marks_legacy_and_malformed_evidence(tmp_path: Pa
         work_item="WI-HISTORY",
     )
 
-    assert history["generic-cli"].outcome == "cancellation"
+    assert history["generic-cli"].outcome == "unknown"
     assert history["generic-cli"].recorded_at_utc is None
-    assert "legacy runtime evidence" in (history["generic-cli"].warning or "")
+    assert "no recognized canonical adapter_outcome" in (history["generic-cli"].warning or "")
 
     exit_path.write_text("{broken", encoding="utf-8")
     malformed = resolve_runtime_launch_history(

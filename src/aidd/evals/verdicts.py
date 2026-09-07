@@ -1,12 +1,15 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Literal
 
+from aidd.evals.failure_causes import FailureCause, validate_verdict_compatibility
+
 VerdictStatus = Literal["pass", "fail", "blocked", "infra-fail"]
 VERDICT_STATUSES: tuple[VerdictStatus, ...] = ("pass", "fail", "blocked", "infra-fail")
+_MISSING_FAILURE_CAUSE = object()
 
 
 @dataclass(frozen=True, slots=True)
@@ -20,6 +23,7 @@ class ScenarioVerdict:
     artifact_links: tuple[str, ...]
     first_failure_note: str | None
     verification_summary: str | None
+    failure_cause: FailureCause = field(default_factory=FailureCause.none)
 
 
 @dataclass(frozen=True, slots=True)
@@ -92,12 +96,25 @@ def build_scenario_verdict(
     artifact_links: tuple[str, ...] | None = None,
     first_failure_note: str | None = None,
     verification_summary: str | None = None,
+    failure_cause: FailureCause | None | object = _MISSING_FAILURE_CAUSE,
 ) -> ScenarioVerdict:
+    normalized_status = _normalize_verdict_status(status)
+    if failure_cause is _MISSING_FAILURE_CAUSE:
+        normalized_failure_cause = FailureCause.none()
+    elif failure_cause is None:
+        validate_verdict_compatibility(verdict=normalized_status, cause=None)
+        normalized_failure_cause = FailureCause.none()
+    elif isinstance(failure_cause, FailureCause):
+        validate_verdict_compatibility(verdict=normalized_status, cause=failure_cause)
+        normalized_failure_cause = failure_cause
+    else:
+        raise ValueError("failure_cause must be a FailureCause or null.")
+
     return ScenarioVerdict(
         scenario_id=_normalize_required_field(field_name="scenario_id", value=scenario_id),
         run_id=_normalize_required_field(field_name="run_id", value=run_id),
         runtime_id=_normalize_required_field(field_name="runtime_id", value=runtime_id),
-        status=_normalize_verdict_status(status),
+        status=normalized_status,
         summary=_normalize_required_field(field_name="summary", value=summary),
         created_at_utc=(
             _normalize_required_field(field_name="created_at_utc", value=created_at_utc)
@@ -113,6 +130,7 @@ def build_scenario_verdict(
             field_name="verification_summary",
             value=verification_summary,
         ),
+        failure_cause=normalized_failure_cause,
     )
 
 
@@ -127,6 +145,7 @@ def build_scenario_verdict_from_harness_outcome(
     artifact_links: tuple[str, ...] | None = None,
     first_failure_note: str | None = None,
     verification_summary: str | None = None,
+    failure_cause: FailureCause | None | object = _MISSING_FAILURE_CAUSE,
 ) -> ScenarioVerdict:
     return build_scenario_verdict(
         scenario_id=scenario_id,
@@ -138,6 +157,7 @@ def build_scenario_verdict_from_harness_outcome(
         artifact_links=artifact_links,
         first_failure_note=first_failure_note,
         verification_summary=verification_summary,
+        failure_cause=failure_cause,
     )
 
 
@@ -149,6 +169,8 @@ def render_scenario_verdict_markdown(verdict: ScenarioVerdict) -> str:
     )
     first_failure_note = verdict.first_failure_note or "none"
     verification_summary = verdict.verification_summary or "none"
+    failure_cause = verdict.failure_cause
+    evidence_link = failure_cause.evidence_link or "none"
 
     lines = [
         "# Verdict",
@@ -169,6 +191,13 @@ def render_scenario_verdict_markdown(verdict: ScenarioVerdict) -> str:
         "## Analysis",
         f"- First Failure Note: {first_failure_note}",
         f"- Verification Summary: {verification_summary}",
+        "",
+        "## Failure Cause",
+        f"- Category: `{failure_cause.category.value}`",
+        f"- Phase: `{failure_cause.phase.value}`",
+        f"- Source: `{failure_cause.source.value}`",
+        f"- Reason: {failure_cause.reason}",
+        f"- Evidence: `{evidence_link}`",
         "",
     ]
     return "\n".join(lines)

@@ -148,99 +148,6 @@ function updateQuestionResumeButtonStates() {
   });
 }
 
-function interviewDecisionCounts(view) {
-  const questions = view?.questions || [];
-  const unresolved = view?.unresolved_blocking_question_ids || [];
-  return {
-    total: questions.length,
-    required: unresolved.length,
-    resolved: questions.filter(
-      (question) => question.answer_resolution === "resolved"
-    ).length,
-    partial: questions.filter(
-      (question) => question.answer_resolution === "partial"
-    ).length,
-    deferred: questions.filter(
-      (question) => question.answer_resolution === "deferred"
-    ).length
-  };
-}
-
-function renderInterviewDecisionSpotlight(view) {
-  const counts = interviewDecisionCounts(view);
-  let tone = "good";
-  let title = "No interview questions for this stage";
-  let body = (
-    "This stage has no model-authored questions. Continue the workflow when runtime "
-    + "readiness allows."
-  );
-  let primary = "Primary action: continue stage flow";
-  if (counts.required) {
-    tone = "bad";
-    title = "Blocking questions need resolved answers";
-    body = (
-      `${counts.required} blocking question${counts.required === 1 ? "" : "s"} must be `
-      + "saved as resolved before the runtime can resume. Answer each active card, choose "
-      + "resolved, then resume the stage."
-    );
-    primary = "Primary action: answer required questions";
-  } else if (counts.partial || counts.deferred) {
-    tone = "warn";
-    title = "Interview answers need final resolution";
-    body = (
-      `${counts.partial} partial and ${counts.deferred} deferred answer`
-      + `${counts.partial + counts.deferred === 1 ? "" : "s"} are saved. Review them before `
-      + "treating the stage context as final."
-    );
-    primary = "Primary action: update partial or deferred answers";
-  } else if (counts.resolved) {
-    title = "Interview answers saved";
-    body = (
-      `${counts.resolved} resolved answer${counts.resolved === 1 ? "" : "s"} are saved in `
-      + "answers.md. Resume the stage when runtime readiness allows."
-    );
-    primary = "Primary action: resume stage";
-  }
-  return `
-    <div class="interview-decision-spotlight ${escapeHtml(tone)}"
-      data-interview-decision-spotlight role="status" aria-live="polite">
-      <div class="interview-decision-copy">
-        <span class="small-badge ${escapeHtml(tone)}">interview loop</span>
-        <strong>${escapeHtml(title)}</strong>
-        <p>${escapeHtml(body)}</p>
-        <small>${escapeHtml(primary)}</small>
-      </div>
-      <div class="interview-decision-facts">
-        <span><strong>Required</strong>${escapeHtml(counts.required)}</span>
-        <span><strong>Resolved</strong>${escapeHtml(counts.resolved)}</span>
-        <span><strong>Partial</strong>${escapeHtml(counts.partial)}</span>
-        <span><strong>Deferred</strong>${escapeHtml(counts.deferred)}</span>
-        <span><strong>Total</strong>${escapeHtml(counts.total)}</span>
-      </div>
-    </div>
-  `;
-}
-
-function renderInterviewSummary(view) {
-  const questions = view?.questions || [];
-  const unresolved = view?.unresolved_blocking_question_ids || [];
-  const answered = questions.filter((question) => question.answer_resolution === "resolved").length;
-  const partial = questions.filter((question) => question.answer_resolution === "partial").length;
-  const deferred = questions.filter((question) => question.answer_resolution === "deferred").length;
-  return `
-    <div class="interview-summary">
-      <div class="metric"><span>Required answers</span><strong>${escapeHtml(unresolved.length)}</strong></div>
-      <div class="metric"><span>Resolved</span><strong>${escapeHtml(answered)}</strong></div>
-      <div class="metric"><span>Partial</span><strong>${escapeHtml(partial)}</strong></div>
-      <div class="metric"><span>Deferred</span><strong>${escapeHtml(deferred)}</strong></div>
-    </div>
-    <div class="panel-item">
-      <strong>Answers document</strong>
-      ${pathLine(view?.answers_path || "answers.md not materialized", 88)}
-    </div>
-  `;
-}
-
 function interviewCandidateRecoveryAction(candidate) {
   const canonical = candidate?.canonical_question;
   if (!candidate || candidate.status !== "rejected") return null;
@@ -325,34 +232,6 @@ function renderInterviewCandidateRecovery(candidate) {
         ${requestChange}
       </div>
     </section>
-  `;
-}
-
-function renderBlockedStageContext(view) {
-  const diagnostics = activeStageView()?.diagnostics;
-  const blocking = diagnostics?.blocking_questions;
-  const unresolved = blocking?.unresolved_question_ids || view?.unresolved_blocking_question_ids || [];
-  const blocked = unresolved.length > 0;
-  return `
-    <aside class="surface interview-context-panel">
-      <div class="surface-title">
-        <span>Interview Loop</span>
-        <span class="small-badge ${blocked ? "bad" : "good"}">${blocked ? "blocked" : "clear"}</span>
-      </div>
-      <div class="panel-item">
-        <strong>Blocked stage</strong>
-        <span>${blocked ? escapeHtml(stageTitle(state.activeStage)) : "No blocked stage"}</span>
-      </div>
-      <div class="panel-item">
-        <strong>Required question ids</strong>
-        <span>${escapeHtml(unresolved.join(", ") || "none")}</span>
-      </div>
-      <div class="panel-item">
-        <strong>Resume rule</strong>
-        <span>${blocked ? "Resolve all blocking questions before continuing the runtime." : "Stage can resume when runtime readiness allows."}</span>
-      </div>
-      <p class="muted recovery-context-note">Use the answer card action after each required answer is ready.</p>
-    </aside>
   `;
 }
 
@@ -460,10 +339,6 @@ function renderQuestionImpactPanel(view, question) {
 }
 
 function renderQuestionCards({showResume}) {
-  /* Legacy static contracts remain documented while the visible card uses the
-     target Workbench composition: <p id="${questionTextId}">${escapeHtml(question.text)}</p>
-     <select id="${resolutionId}" name="${resolutionId}" aria-describedby="${questionTextId}"
-     ${renderInterviewDecisionSpotlight(view)} Questions / Interview Loop Update answer Update & resume */
   const view = activeStageView()?.questions;
   const questions = view?.questions || [];
   const destination = view?.answers_path || "answers.md not materialized";

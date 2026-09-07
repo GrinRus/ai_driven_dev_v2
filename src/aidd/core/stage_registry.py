@@ -5,8 +5,15 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from aidd.core.markdown import extract_bullets, extract_paragraph
+from aidd.core.ownership_registry import (
+    DEFAULT_OWNERSHIP_MATRIX_PATH,
+    DocumentOwnershipRegistry,
+    OwnershipClass,
+    OwnershipMatrixRow,
+    OwnershipRegistryError,
+    load_ownership_registry,
+)
 from aidd.core.resources import (
-    default_document_contracts_root,
     default_stage_contracts_root,
     resolve_prompt_pack_path,
     resolve_resource_layout_from_contracts_root,
@@ -17,34 +24,25 @@ from aidd.core.workspace import stage_root as workspace_stage_root
 from aidd.core.workspace import work_item_root as workspace_work_item_root
 
 DEFAULT_STAGE_CONTRACTS_ROOT = default_stage_contracts_root()
-DEFAULT_DOCUMENT_CONTRACTS_ROOT = default_document_contracts_root()
 
 
 class StageManifestLoadError(ValueError):
     """Raised when a stage manifest cannot be loaded from contracts."""
 
 
-_AIDD_GENERATED_DOCUMENT_NAMES = frozenset({"stage-result.md", "validator-report.md"})
-_INTERVIEW_DOCUMENT_NAMES = frozenset({"questions.md", "answers.md"})
-
-
 @dataclass(frozen=True, slots=True)
 class StageOutputRegistry:
     """Owner-separated stage document paths.
 
-    ``published`` intentionally retains the historical declared-output view.  The other
-    collections are disjoint ownership projections so new callers can request only the set they
-    are allowed to create or mutate without changing the compatibility reader.
+    ``published`` is the complete declared-output view used for validation and publication.
+    The other collections separate document ownership so callers can request only the set
+    they are allowed to create or mutate.
     """
 
     runtime_authored: tuple[Path, ...]
     aidd_generated: tuple[Path, ...]
     interview_control: tuple[Path, ...]
     published: tuple[Path, ...]
-
-
-def all_stages() -> tuple[str, ...]:
-    return STAGES
 
 
 def stage_contract_path(stage: str, contracts_root: Path = DEFAULT_STAGE_CONTRACTS_ROOT) -> Path:
@@ -287,12 +285,92 @@ def _resolve_declared_output_documents(
     )
 
 
+def _ownership_path_pattern(
+    *,
+    path: Path,
+    workspace_root: Path,
+    work_item: str,
+    stage: str,
+) -> str:
+    """Normalize one resolved stage path to the matrix's placeholder pattern."""
+
+    try:
+        relative = path.resolve(strict=False).relative_to(workspace_root.resolve(strict=False))
+    except ValueError as exc:
+        raise StageManifestLoadError(
+            f"Declared document is outside workspace root: {path}"
+        ) from exc
+
+    expected_prefix = ("workitems", work_item, "stages", stage)
+    if relative.parts[:4] != expected_prefix or len(relative.parts) == 4:
+        raise StageManifestLoadError(
+            "Declared stage output must be a stage-local document: "
+            f"{relative.as_posix()} (stage={stage}, work_item={work_item})"
+        )
+
+    suffix = "/".join(relative.parts[4:])
+    suffix = re.sub(r"(^|/)request-[^/]+(?=\.md$)", r"\1request-<n>", suffix)
+    return f"workitems/<id>/stages/<stage>/{suffix}"
+
+
+def _ownership_row_for_path(
+    *,
+    path: Path,
+    workspace_root: Path,
+    work_item: str,
+    stage: str,
+    ownership_registry: DocumentOwnershipRegistry,
+) -> OwnershipMatrixRow:
+    pattern = _ownership_path_pattern(
+        path=path,
+        workspace_root=workspace_root,
+        work_item=work_item,
+        stage=stage,
+    )
+    try:
+        row = ownership_registry.row_for(pattern)
+    except OwnershipRegistryError as exc:
+        raise StageManifestLoadError(
+            f"Declared output is absent from the ownership matrix: {pattern}"
+        ) from exc
+    if not row.applies_to(stage):
+        raise StageManifestLoadError(
+            f"Ownership matrix row does not apply to stage '{stage}': {pattern}"
+        )
+    return row
+
+
+def _resolve_registry_control_documents(
+    *,
+    stage: str,
+    work_item: str,
+    workspace_root: Path,
+    ownership_registry: DocumentOwnershipRegistry,
+) -> tuple[Path, ...]:
+    """Resolve static stage-local AIDD control rows, excluding dynamic request records."""
+
+    stage_root = workspace_stage_root(root=workspace_root, work_item=work_item, stage=stage)
+    paths: list[Path] = []
+    prefix = "workitems/<id>/stages/<stage>/"
+    for row in ownership_registry.for_stage(stage):
+        if row.ownership_class is not OwnershipClass.AIDD_CONTROL_DOCUMENT:
+            continue
+        if not row.path_pattern.startswith(prefix):
+            continue
+        suffix = row.path_pattern.removeprefix(prefix)
+        if "<" in suffix or "/" in suffix:
+            continue
+        paths.append(stage_root / suffix)
+    return tuple(paths)
+
+
 def resolve_stage_output_registry(
     *,
     stage: str,
     work_item: str,
     workspace_root: Path,
     contracts_root: Path = DEFAULT_STAGE_CONTRACTS_ROOT,
+    ownership_registry: DocumentOwnershipRegistry | None = None,
 ) -> StageOutputRegistry:
     """Resolve the four owner-separated output sets for one stage.
 
@@ -308,21 +386,41 @@ def resolve_stage_output_registry(
         workspace_root=workspace_root,
         contracts_root=contracts_root,
     )
+    matrix = ownership_registry or load_ownership_registry(DEFAULT_OWNERSHIP_MATRIX_PATH)
+    rows = tuple(
+        _ownership_row_for_path(
+            path=path,
+            workspace_root=workspace_root,
+            work_item=work_item,
+            stage=stage,
+            ownership_registry=matrix,
+        )
+        for path in declared
+    )
     runtime_authored = tuple(
         path
-        for path in declared
-        if path.name not in _AIDD_GENERATED_DOCUMENT_NAMES
-        and path.name not in _INTERVIEW_DOCUMENT_NAMES
+        for path, row in zip(declared, rows, strict=True)
+        if row.ownership_class is OwnershipClass.RUNTIME_CONTENT
     )
     aidd_generated = tuple(
-        path for path in declared if path.name in _AIDD_GENERATED_DOCUMENT_NAMES
+        path
+        for path, row in zip(declared, rows, strict=True)
+        if row.ownership_class is OwnershipClass.AIDD_WORKFLOW_RECORD
     )
     interview_control = tuple(
-        path for path in declared if path.name in _INTERVIEW_DOCUMENT_NAMES
-    ) + (
-        workspace_stage_root(root=workspace_root, work_item=work_item, stage=stage)
-        / "repair-brief.md",
+        path
+        for path, row in zip(declared, rows, strict=True)
+        if row.ownership_class
+        in {OwnershipClass.INTERVIEW_LEDGER, OwnershipClass.AIDD_CONTROL_DOCUMENT}
     )
+    for path in _resolve_registry_control_documents(
+        stage=stage,
+        work_item=work_item,
+        workspace_root=workspace_root,
+        ownership_registry=matrix,
+    ):
+        if path not in interview_control:
+            interview_control += (path,)
     return StageOutputRegistry(
         runtime_authored=runtime_authored,
         aidd_generated=aidd_generated,
@@ -337,12 +435,14 @@ def resolve_runtime_output_documents(
     work_item: str,
     workspace_root: Path,
     contracts_root: Path = DEFAULT_STAGE_CONTRACTS_ROOT,
+    ownership_registry: DocumentOwnershipRegistry | None = None,
 ) -> tuple[Path, ...]:
     return resolve_stage_output_registry(
         stage=stage,
         work_item=work_item,
         workspace_root=workspace_root,
         contracts_root=contracts_root,
+        ownership_registry=ownership_registry,
     ).runtime_authored
 
 
@@ -352,43 +452,15 @@ def resolve_aidd_generated_output_documents(
     work_item: str,
     workspace_root: Path,
     contracts_root: Path = DEFAULT_STAGE_CONTRACTS_ROOT,
+    ownership_registry: DocumentOwnershipRegistry | None = None,
 ) -> tuple[Path, ...]:
     return resolve_stage_output_registry(
         stage=stage,
         work_item=work_item,
         workspace_root=workspace_root,
         contracts_root=contracts_root,
+        ownership_registry=ownership_registry,
     ).aidd_generated
-
-
-def resolve_interview_control_documents(
-    *,
-    stage: str,
-    work_item: str,
-    workspace_root: Path,
-    contracts_root: Path = DEFAULT_STAGE_CONTRACTS_ROOT,
-) -> tuple[Path, ...]:
-    return resolve_stage_output_registry(
-        stage=stage,
-        work_item=work_item,
-        workspace_root=workspace_root,
-        contracts_root=contracts_root,
-    ).interview_control
-
-
-def resolve_published_output_documents(
-    *,
-    stage: str,
-    work_item: str,
-    workspace_root: Path,
-    contracts_root: Path = DEFAULT_STAGE_CONTRACTS_ROOT,
-) -> tuple[Path, ...]:
-    return resolve_stage_output_registry(
-        stage=stage,
-        work_item=work_item,
-        workspace_root=workspace_root,
-        contracts_root=contracts_root,
-    ).published
 
 
 def resolve_expected_output_documents(
@@ -397,28 +469,14 @@ def resolve_expected_output_documents(
     work_item: str,
     workspace_root: Path,
     contracts_root: Path = DEFAULT_STAGE_CONTRACTS_ROOT,
+    ownership_registry: DocumentOwnershipRegistry | None = None,
 ) -> tuple[Path, ...]:
-    """Compatibility reader for the historical complete declared-output view."""
+    """Resolve the complete current declared-output view for validation and publication."""
 
-    return resolve_published_output_documents(
+    return resolve_stage_output_registry(
         stage=stage,
         work_item=work_item,
         workspace_root=workspace_root,
         contracts_root=contracts_root,
-    )
-
-
-def resolve_validator_targets(
-    *,
-    stage: str,
-    work_item: str,
-    workspace_root: Path,
-    contracts_root: Path = DEFAULT_STAGE_CONTRACTS_ROOT,
-) -> tuple[Path, ...]:
-    expected_outputs = resolve_expected_output_documents(
-        stage=stage,
-        work_item=work_item,
-        workspace_root=workspace_root,
-        contracts_root=contracts_root,
-    )
-    return tuple(path for path in expected_outputs if path.suffix.lower() == ".md")
+        ownership_registry=ownership_registry,
+    ).published

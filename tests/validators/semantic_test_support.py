@@ -170,13 +170,6 @@ def _write_acceptance_criteria(workspace_root: Path, work_item: str, body: str) 
     return path
 
 
-def _write_repository_state(workspace_root: Path, work_item: str, body: str) -> Path:
-    path = workspace_root / "workitems" / work_item / "context" / "repository-state.md"
-    path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(body, encoding="utf-8")
-    return path
-
-
 def _write_workspace_baseline(
     workspace_root: Path,
     work_item: str,
@@ -227,4 +220,3 @@ def _write_review_report(workspace_root: Path, work_item: str, body: str) -> Pat
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(body, encoding="utf-8")
     return path
-

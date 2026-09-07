@@ -9,13 +9,11 @@
   --line: #d9dee6;
   --line-strong: #c3cbd6;
   --text: #111827;
-  --ink: var(--text);
   --muted: #526071;
   --surface-active: #edf3ff;
   --surface-active-strong: #e4ecff;
   --surface-success: #edf8f3;
   --surface-warning: #fff7e6;
-  --surface-danger: #fff1f0;
   --navy: #061a33;
   --cobalt: #155eef;
   --cobalt-dark: #0b46b5;
@@ -25,22 +23,16 @@
   --topbar-control-line: rgba(255, 255, 255, 0.22);
   --topbar-text: #f6f8fc;
   --topbar-muted: #b5c4d8;
-  /* Compatibility aliases keep existing component selectors on the target palette. */
-  --teal: var(--cobalt);
-  --teal-dark: var(--cobalt-dark);
-  --green: var(--mint);
   --amber: #a56600;
   --red: #b4232a;
   --blue: #2563c7;
   --focus-ring: #245fb3;
   --focus-ring-soft: rgba(36, 95, 179, 0.2);
-  --color-bg-canvas: var(--bg);
   --color-bg-surface: var(--surface);
   --color-bg-subtle: var(--surface-soft);
   --color-bg-raised: var(--surface-raised);
   --color-bg-selected: var(--surface-active);
   --color-bg-muted: #f5f6f8;
-  --color-bg-muted-strong: #eef1f5;
   --color-bg-disabled: #f5f6f8;
   --color-border-default: var(--line);
   --color-border-strong: var(--line-strong);
@@ -61,7 +53,7 @@
   --color-state-info-border-muted: #bfcee5;
   --color-state-info-border-strong: #adc2e2;
   --color-state-info-border-blue: #b8d7f4;
-  --color-state-success: var(--green);
+  --color-state-success: var(--mint);
   --color-state-success-text: #0f6b3b;
   --color-state-success-bg: var(--surface-success);
   --color-state-success-bg-subtle: #f7fbf8;
@@ -93,14 +85,11 @@
   /* Type roles cover document reading and compact operational metadata. */
   --font-sans: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
-  --mono: var(--font-mono);
-  --type-display-size: 32px;
   --type-title-size: 18px;
   --type-heading-size: 14px;
   --type-body-size: 14px;
   --type-label-size: 12px;
   --type-caption-size: 12px;
-  --type-display-line: 1.15;
   --type-title-line: 1.25;
   --type-body-line: 1.5;
   --type-compact-line: 1.35;
@@ -128,7 +117,6 @@
   /* Operational elevation stays quiet and bounded. */
   --elevation-surface: 0 1px 2px rgba(23, 32, 27, 0.08);
   --elevation-overlay: 0 8px 24px rgba(23, 32, 27, 0.16);
-  --elevation-sticky: 0 2px 8px rgba(23, 32, 27, 0.12);
 
   /* Desktop density and minimum touch-safe control dimensions. */
   --control-height-compact: 32px;
@@ -141,35 +129,26 @@
   --control-line-height: var(--type-compact-line);
   --control-padding-block: 6px;
   --control-padding-inline: 12px;
-  --control-icon-size: 20px;
   --control-checkbox-size: 18px;
   --control-disabled-opacity: 0.68;
   --control-pending-opacity: 0.78;
 
   /* Document Studio visual anchors. */
   --studio-topbar-height: 64px;
-  --studio-stagebar-height: 68px;
   --studio-content-max: 1500px;
   --studio-file-rail: 280px;
   --studio-evidence-rail: 344px;
   --studio-reading-max: 820px;
   --studio-header-bg: var(--navy);
-  --studio-header-bg-deep: #041126;
   --studio-header-text: #f7fffd;
-  --studio-header-muted: #b9d7d3;
   --studio-accent-soft: #eaf0ff;
-  --studio-warning-soft: #fff8e8;
-  --studio-danger-soft: #fff2f0;
 
   /* Focus and meaningful transition roles. */
   --focus-width: 3px;
   --focus-offset: 2px;
   --focus-shadow: 0 0 0 4px var(--focus-ring-soft);
   --motion-duration-fast: 120ms;
-  --motion-duration-default: 160ms;
-  --motion-duration-slow: 240ms;
   --motion-ease-standard: cubic-bezier(0.2, 0, 0, 1);
-  --motion-ease-emphasized: cubic-bezier(0.2, 0, 0, 1.2);
 
   /* Bounded reading keeps retained source comparison scannable. */
   --reader-comparison-source-max-height: 42rem;

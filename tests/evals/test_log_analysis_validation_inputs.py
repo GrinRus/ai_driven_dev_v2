@@ -1,32 +1,24 @@
 from __future__ import annotations
 
-import json
-from pathlib import Path
-
 import pytest
 
 from aidd.evals.log_analysis import (
-    parse_stage_metadata_validation_failures,
-    parse_stage_metadata_validation_failures_text,
-    parse_validator_report_failures,
     parse_validator_report_failures_text,
 )
+from aidd.validators.models import ValidationFinding, ValidationIssueLocation
 from aidd.validators.protocol import ValidatorReportProtocolError
+from aidd.validators.reports import render_validator_report
 
 
 def test_parse_validator_report_failures_extracts_findings() -> None:
-    report_text = "\n".join(
+    report_text = render_validator_report(
         (
-            "# Validator Report",
-            "",
-            "## Structural checks",
-            "",
-            "- `STRUCT-MISSING-REQUIRED-SECTION` (`high`) in "
-            "`workitems/WI-001/stages/qa/stage-result.md`: missing section",
-            "",
-            "## Result",
-            "",
-            "- Verdict: `fail`",
+            ValidationFinding(
+                code="STRUCT-MISSING-REQUIRED-SECTION",
+                severity="high",
+                location=ValidationIssueLocation("workitems/WI-001/stages/qa/stage-result.md"),
+                message="missing section",
+            ),
         )
     )
 
@@ -35,74 +27,26 @@ def test_parse_validator_report_failures_extracts_findings() -> None:
     assert len(events) == 1
     assert events[0].category == "validator"
     assert "STRUCT-MISSING-REQUIRED-SECTION (high)" in events[0].message
-    assert events[0].line_number == 5
+    assert report_text.splitlines()[events[0].line_number - 1].startswith("- `STRUCT-")
 
 
-def test_parse_validator_report_failures_uses_verdict_when_findings_missing() -> None:
-    events = parse_validator_report_failures_text(
-        "# Validator Report\n\n## Result\n\n- Verdict: `fail`\n"
-    )
-
-    assert len(events) == 1
-    assert events[0].category == "validator"
-    assert events[0].message == "validator report verdict is fail"
+def test_parse_validator_report_failures_rejects_verdict_without_findings() -> None:
+    report = render_validator_report(()).replace("- Verdict: `pass`", "- Verdict: `fail`")
+    with pytest.raises(ValidatorReportProtocolError, match="requires at least one"):
+        parse_validator_report_failures_text(report)
 
 
-def test_log_analysis_reader_accepts_declared_legacy_vocabulary() -> None:
-    events = parse_validator_report_failures_text(
-        "## Structural checks\n\n"
-        "- `STRUCT-MISSING-DOCUMENT` (`high`) in `plan.md`: missing.\n\n"
-        "## Result\n\n- Validator verdict: `fail`\n"
-    )
-
-    assert "STRUCT-MISSING-REQUIRED-DOCUMENT" in events[0].message
+def test_log_analysis_reader_rejects_retired_protocol_vocabulary() -> None:
+    with pytest.raises(ValidatorReportProtocolError):
+        parse_validator_report_failures_text(
+            "## Structural checks\n\n"
+            "- `STRUCT-MISSING-DOCUMENT` (`high`) in `plan.md`: missing.\n\n"
+            "## Result\n\n- Validator verdict: `fail`\n"
+        )
 
 
 def test_log_analysis_reader_rejects_unknown_protocol_code() -> None:
     with pytest.raises(ValidatorReportProtocolError):
         parse_validator_report_failures_text(
-            "## Semantic checks\n\n"
-            "- `SEM-UNKNOWN-CODE` (`high`) in `plan.md`: unknown.\n"
+            "## Semantic checks\n\n- `SEM-UNKNOWN-CODE` (`high`) in `plan.md`: unknown.\n"
         )
-
-
-def test_parse_validator_report_failures_rejects_missing_file(tmp_path: Path) -> None:
-    with pytest.raises(ValueError, match="validator-report.md file does not exist"):
-        parse_validator_report_failures(tmp_path / "missing-validator-report.md")
-
-
-def test_parse_stage_metadata_validation_failures_extracts_status_and_repair_signals() -> None:
-    payload = {
-        "stage": "qa",
-        "status_history": [
-            {"status": "running", "changed_at_utc": "2026-04-22T09:00:00Z"},
-            {"status": "repair_needed", "changed_at_utc": "2026-04-22T09:01:00Z"},
-            {"status": "failed", "changed_at_utc": "2026-04-22T09:02:00Z"},
-        ],
-        "repair_history": [
-            {"attempt_number": 1, "outcome": "failed validation"},
-            {"attempt_number": 2, "outcome": "succeeded"},
-        ],
-    }
-
-    events = parse_stage_metadata_validation_failures_text(json.dumps(payload))
-
-    assert [event.category for event in events] == ["validator", "error", "validator"]
-    assert "status `repair_needed`" in events[0].message
-    assert "status `failed`" in events[1].message
-    assert "repair attempt `1`" in events[2].message
-
-
-def test_parse_stage_metadata_validation_failures_rejects_invalid_json() -> None:
-    with pytest.raises(ValueError, match="Invalid JSON in stage metadata payload"):
-        parse_stage_metadata_validation_failures_text("{not-json}")
-
-
-def test_parse_stage_metadata_validation_failures_rejects_non_object_payload() -> None:
-    with pytest.raises(ValueError, match="stage metadata payload must be a JSON object"):
-        parse_stage_metadata_validation_failures_text('["not-object"]')
-
-
-def test_parse_stage_metadata_validation_failures_rejects_missing_file(tmp_path: Path) -> None:
-    with pytest.raises(ValueError, match="stage metadata file does not exist"):
-        parse_stage_metadata_validation_failures(tmp_path / "missing-stage-metadata.json")

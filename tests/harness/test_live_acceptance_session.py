@@ -179,6 +179,33 @@ def test_changed_tracked_bytes_invalidate_session(tmp_path: Path) -> None:
     assert "source tracked bytes changed" in payload["violations"]
 
 
+def test_committed_source_revision_change_invalidates_session(tmp_path: Path) -> None:
+    source, external, provider = _roots(tmp_path)
+    baseline = capture_source_integrity(source)
+
+    with pytest.raises(LiveAcceptanceSessionError, match="source revision changed"):
+        with LiveAcceptanceSession(
+            source_checkout=source,
+            external_root=external,
+            provider_root=provider,
+        ) as session:
+            (source / "new.txt").write_text("new\n", encoding="utf-8")
+            _git(source, "add", "new.txt")
+            _git(source, "commit", "-m", "changed during session")
+
+    postflight = capture_source_integrity(source)
+    assert baseline.revision != postflight.revision
+    assert postflight.tracked_status == ""
+    assert session.result is not None
+    assert session.result.source_baseline == baseline
+    assert session.result.source_postflight == postflight
+    payload = json.loads((provider / SESSION_INTEGRITY_FILENAME).read_text(encoding="utf-8"))
+    assert payload["status"] == "fail"
+    assert "source revision changed" in payload["violations"]
+    assert "source tree changed" in payload["violations"]
+    assert payload["cleanup"]["sentinel_removed"] is True
+
+
 def test_changed_existing_untracked_bytes_invalidate_session(tmp_path: Path) -> None:
     source, external, provider = _roots(tmp_path)
     user_file = source / "user-notes.md"

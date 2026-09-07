@@ -11,7 +11,6 @@ class LiveProductAcceptance:
     quality_reviewed: bool
     counted_clean: bool
     manual_quality_stop: bool
-    legacy_degraded: bool
     not_clean_reasons: tuple[str, ...]
 
 
@@ -30,7 +29,6 @@ def derive_live_product_acceptance(
     stage_quality_audit_paths: tuple[Path, ...],
     final_report_paths: tuple[Path, ...],
     quality_report_path: Path,
-    legacy_degraded: bool,
 ) -> LiveProductAcceptance:
     manual_quality_stop = flow_status == "manual-quality-stop"
     execution_pass = (
@@ -55,7 +53,6 @@ def derive_live_product_acceptance(
         and quality_reviewed
         and manual_counted_clean
         and not manual_quality_stop
-        and not legacy_degraded
     )
     reasons: list[str] = []
     if not execution_pass:
@@ -66,14 +63,11 @@ def derive_live_product_acceptance(
         reasons.append("quality-report.md does not record counted-clean")
     if manual_quality_stop:
         reasons.append("manual quality review stopped the run")
-    if legacy_degraded:
-        reasons.append("bundle uses legacy degraded evidence")
     return LiveProductAcceptance(
         execution_pass=execution_pass,
         quality_reviewed=quality_reviewed,
         counted_clean=counted_clean,
         manual_quality_stop=manual_quality_stop,
-        legacy_degraded=legacy_degraded,
         not_clean_reasons=tuple(reasons),
     )
 

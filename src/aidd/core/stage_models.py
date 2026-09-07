@@ -4,6 +4,7 @@ from dataclasses import dataclass
 from enum import StrEnum
 from pathlib import Path
 
+from aidd.core.attempt_lineage import AttemptLineage
 from aidd.core.state_machine import StageState
 from aidd.validators.models import ValidationFinding
 
@@ -28,6 +29,7 @@ class StageExecutionState:
     attempt_number: int
     attempt_path: Path
     stage_metadata_path: Path
+    lineage: AttemptLineage | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -165,17 +167,6 @@ class StageUnblockState:
     stage_metadata_path: Path | None
 
 
-@dataclass(frozen=True, slots=True)
-class StageResumeResult:
-    stage: str
-    work_item: str
-    run_id: str
-    unblock_state: StageUnblockState
-    preparation_bundle: StagePreparationBundle | None
-    execution_state: StageExecutionState | None
-    adapter_invocation: AdapterInvocationBundle | None
-
-
 @dataclass(frozen=True, slots=True, init=False)
 class AdapterExecutionOutcome:
     status: AdapterExecutionStatus
@@ -255,7 +246,6 @@ __all__ = [
     "StageOutputPromotion",
     "StageOutputPublication",
     "StagePreparationBundle",
-    "StageResumeResult",
     "StageStructuralValidationResult",
     "StageUnblockState",
     "StageValidationState",

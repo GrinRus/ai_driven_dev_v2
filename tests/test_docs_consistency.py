@@ -16,7 +16,12 @@ from aidd.core.stage_registry import (
 )
 from aidd.core.stages import STAGES
 from aidd.runtime_catalog import runtime_definitions, runtime_ids
-from aidd.validators.protocol import VALIDATOR_FINDING_CODES, VALIDATOR_REPORT_FIELDS
+from aidd.validators.protocol import (
+    DOCUMENT_READ_FAILURES,
+    VALIDATOR_FINDING_CODES,
+    VALIDATOR_REPORT_FIELDS,
+)
+from tests.agent_instruction_support import skill_text_with_references
 
 _USER_STORY_ID_PATTERN = re.compile(r"^###\s+(US-\d+)\b", re.MULTILINE)
 _ROADMAP_STORY_ID_PATTERN = re.compile(r"\bUS-\d+\b")
@@ -116,7 +121,6 @@ def test_operator_handbook_lists_all_consumed_runtime_config_fields() -> None:
         "`runtime.<provider>.auto_approval_preset`",
         "`runtime.<provider>.model`",
         "`runtime.<provider>.reasoning_effort`",
-        "`logging.mode`",
         "`repair.max_attempts`",
     )
 
@@ -182,36 +186,70 @@ def test_adapter_protocol_documents_current_execution_result_surface() -> None:
         assert expected_text in adapter_protocol
 
 
+def test_adapter_protocol_documents_static_descriptor_contract() -> None:
+    adapter_protocol = (
+        _repo_root() / "docs" / "architecture" / "adapter-protocol.md"
+    ).read_text(encoding="utf-8")
+    for expected_text in (
+        "RuntimeAdapterDescriptor",
+        "protected_paths",
+        "credential_paths",
+        "config_paths",
+        "capabilities",
+        "registration",
+        "RuntimeDefinition",
+        "no credential values",
+        "CapabilityReport",
+        "behavioral conformance evidence",
+    ):
+        assert expected_text in adapter_protocol
+
+
 def test_artifact_ownership_docs_and_prompt_packs_are_consistent() -> None:
     repo_root = _repo_root()
-    document_contracts = (
-        repo_root / "docs" / "architecture" / "document-contracts.md"
-    ).read_text(encoding="utf-8")
-    stage_result_contract = (
-        repo_root / "contracts" / "documents" / "stage-result.md"
-    ).read_text(encoding="utf-8")
-    questions_contract = (
-        repo_root / "contracts" / "documents" / "questions.md"
-    ).read_text(encoding="utf-8")
+    document_contracts = (repo_root / "docs" / "architecture" / "document-contracts.md").read_text(
+        encoding="utf-8"
+    )
+    stage_result_contract = (repo_root / "contracts" / "documents" / "stage-result.md").read_text(
+        encoding="utf-8"
+    )
+    questions_contract = (repo_root / "contracts" / "documents" / "questions.md").read_text(
+        encoding="utf-8"
+    )
 
-    assert "`validator-report.md` is AIDD-canonical" in document_contracts
+    assert "`stage-result.md` and `validator-report.md` are AIDD-owned" in document_contracts
     assert "`repair-brief.md` is not runtime-authored" in document_contracts
+    for forbidden_phrase in (
+        "The runtime-authored version is a draft",
+        "Runtime-authored content with the same filename is treated as draft evidence",
+    ):
+        assert forbidden_phrase not in document_contracts
     assert "nested or indented bullets" in questions_contract.lower()
     assert "nested or indented bullets" in document_contracts.lower()
-    assert "AIDD treats it as the\nworkflow-facing summary" in stage_result_contract
+    assert "AIDD derives this workflow record" in stage_result_contract
+    assert (
+        "Runtimes must not create or edit it, including during repair or intervention"
+        in stage_result_contract
+    )
 
     for stage in STAGES:
-        stage_contract = (
-            repo_root / "contracts" / "stages" / f"{stage}.md"
-        ).read_text(encoding="utf-8")
-        run_prompt = (
-            repo_root / "prompt-packs" / "stages" / stage / "run.md"
-        ).read_text(encoding="utf-8")
-
-        assert "runtime-authored summary draft" in stage_contract
-        assert "canonical only after AIDD writes the post-runtime validation report" in (
-            stage_contract
+        stage_contract = (repo_root / "contracts" / "stages" / f"{stage}.md").read_text(
+            encoding="utf-8"
         )
+        run_prompt = (repo_root / "prompt-packs" / "stages" / stage / "run.md").read_text(
+            encoding="utf-8"
+        )
+
+        normalized_contract = " ".join(stage_contract.split())
+        for forbidden_phrase in (
+            "runtime-authored summary draft",
+            "runtime-authored version is a draft",
+            "runtime-authored content with the same filename is treated as draft evidence",
+        ):
+            assert forbidden_phrase not in stage_contract
+        assert "AIDD-generated workflow records" in stage_contract
+        assert "runtime must not create or edit either record" in normalized_contract
+        assert "initial, repair, or intervention attempts" in normalized_contract
         assert "## AIDD-generated records (do not write)" in run_prompt
         assert "validator-report.md` is written canonically by AIDD" in run_prompt
         assert "stage-result.md` is written canonically by AIDD" in run_prompt
@@ -225,26 +263,33 @@ def test_validator_report_contract_matches_protocol_registry() -> None:
     ).read_text(encoding="utf-8")
     canonical_vocabulary = contract.split(
         "## Canonical issue-code vocabulary", maxsplit=1
-    )[1].split("## Legacy read aliases", maxsplit=1)[0]
-    legacy_vocabulary = contract.split("## Legacy read aliases", maxsplit=1)[1].split(
-        "## Severity rules", maxsplit=1
-    )[0]
+    )[1].split("## Retired vocabulary", maxsplit=1)[0]
 
     for field in VALIDATOR_REPORT_FIELDS:
         assert f"{field.label}:" in contract
-        for alias in field.aliases:
-            assert f"field `{alias}` resolves to canonical field `{field.label}`" in contract
 
-    canonical_codes = {
-        spec.code for spec in VALIDATOR_FINDING_CODES if spec.status == "canonical"
-    }
+    canonical_codes = {spec.code for spec in VALIDATOR_FINDING_CODES}
     documented_canonical_codes = set(
         re.findall(r"`((?:CROSS|INTERVIEW|SEM|STRUCT)-[A-Z0-9-]+)`", canonical_vocabulary)
     )
     assert documented_canonical_codes == canonical_codes
-    for spec in VALIDATOR_FINDING_CODES:
-        if spec.status == "legacy":
-            assert f"code `{spec.code}`" in legacy_vocabulary
+    assert "## Legacy read aliases" not in contract
+    assert "## Retired vocabulary" in contract
+
+
+def test_document_read_failure_contract_matches_protocol_registry() -> None:
+    repo_root = _repo_root()
+    contract = (repo_root / "contracts" / "documents" / "validator-report.md").read_text(
+        encoding="utf-8"
+    )
+    taxonomy = contract.split("### Document-read failure taxonomy", maxsplit=1)[1].split(
+        "### Semantic checks", maxsplit=1
+    )[0]
+    documented = dict(
+        re.findall(r"\| `([^`]+)` \| `([^`]+)` \|", taxonomy)
+    )
+    expected = {spec.kind.value: spec.code for spec in DOCUMENT_READ_FAILURES}
+    assert documented == expected
 
 
 def test_live_docs_classify_malformed_interview_documents_as_stage_output_failure() -> None:
@@ -266,15 +311,11 @@ def test_live_docs_classify_malformed_interview_documents_as_stage_output_failur
 
 def test_live_docs_classify_unsupported_review_spec_claims_as_stage_output_failure() -> None:
     repo_root = _repo_root()
-    live_catalog = (repo_root / "docs" / "e2e" / "live-e2e-catalog.md").read_text(
-        encoding="utf-8"
-    )
+    live_catalog = (repo_root / "docs" / "e2e" / "live-e2e-catalog.md").read_text(encoding="utf-8")
     live_rubric = (repo_root / "docs" / "e2e" / "live-quality-rubric.md").read_text(
         encoding="utf-8"
     )
-    live_skill = (repo_root / ".agents" / "skills" / "live-e2e" / "SKILL.md").read_text(
-        encoding="utf-8"
-    )
+    live_skill = skill_text_with_references("live-e2e")
 
     for text in (live_catalog, live_rubric, live_skill):
         normalized_text = " ".join(text.split())
@@ -358,237 +399,53 @@ def test_release_checklist_requires_verification_job_evidence() -> None:
 def test_release_readiness_docs_keep_candidate_and_accepted_versions_distinct() -> None:
     repo_root = _repo_root()
     source_version = _project_version(repo_root)
-    release_checklist = (repo_root / "docs" / "release-checklist.md").read_text(
-        encoding="utf-8"
-    )
-    latest_accepted_version = _latest_accepted_prerelease_version(release_checklist)
+    checklist = (repo_root / "docs/release-checklist.md").read_text(encoding="utf-8")
+    accepted_version = _latest_accepted_prerelease_version(checklist)
     readme = (repo_root / "README.md").read_text(encoding="utf-8")
     changelog = (repo_root / "CHANGELOG.md").read_text(encoding="utf-8")
-    beta_audit = (
-        repo_root / "docs" / "analysis" / "beta-readiness-source-audit.md"
-    ).read_text(encoding="utf-8")
+    install = readme.split("## Install", 1)[1].split("## Run your first workflow", 1)[0]
 
-    readme_install_section = readme.split("## Install", 1)[1].split(
-        "## Run your first workflow",
-        1,
-    )[0]
-    assert "pipx install ai-driven-dev-v2" in readme_install_section
-    assert "uv tool install ai-driven-dev-v2" in readme_install_section
-    assert f'ai-driven-dev-v2=={latest_accepted_version}' not in readme_install_section
-    assert f'ai-driven-dev-v2=={source_version}' not in readme_install_section
-
-    assert latest_accepted_version != source_version
-
+    assert "pipx install ai-driven-dev-v2" in install
+    assert "uv tool install ai-driven-dev-v2" in install
+    assert "ai-driven-dev-v2==" not in install
+    assert source_version not in readme
+    assert source_version != accepted_version
+    assert f"### `v{source_version}` accepted evidence" not in checklist
     if _is_development_version(source_version):
-        assert source_version not in readme
-        assert "Current source development package version" not in readme
-        assert "The `main` branch may contain unreleased changes." in readme
-        assert "Install the latest published package" in readme_install_section
         assert f"## {source_version} -" not in changelog
-        assert f"`{source_version}`" not in changelog
+        assert f"Maintainer source development package version: `{source_version}`." in checklist
         assert (
-            f"source development package version matches the package state: `{source_version}`"
-            in beta_audit
-        )
-        assert (
-            f"latest accepted published prerelease evidence is `{latest_accepted_version}`"
-            in beta_audit
-        )
-        assert "## Maintainer release state" in release_checklist
-        assert f"Maintainer source development package version: `{source_version}`." in (
-            release_checklist
-        )
-        assert (
-            f"Latest accepted published prerelease evidence: `{latest_accepted_version}`."
-            in release_checklist
-        )
-        assert f"### `v{source_version}` accepted evidence" not in release_checklist
-        assert "No current release candidate is accepted from this development version." in (
-            release_checklist
+            "No current release candidate is accepted from this development version." in checklist
         )
     else:
-        release_notes_path = (
-            repo_root / "docs" / f"release-notes-v{source_version}-draft.md"
-        )
-        release_notes = release_notes_path.read_text(encoding="utf-8")
-
-        assert source_version not in readme
-
         assert f"## {source_version} -" in changelog
-        assert (
-            f"release-candidate package version matches the package state: `{source_version}`"
-            in beta_audit
-        )
-        assert (
-            "last accepted published prerelease evidence before this candidate is "
-            f"`{latest_accepted_version}`"
-        ) in beta_audit
-        assert f"Current release-candidate package version: `{source_version}`." in (
-            release_checklist
-        )
-        assert (
-            "Latest accepted published prerelease evidence before this candidate: "
-            f"`{latest_accepted_version}`."
-        ) in release_checklist
-        assert f"accepted `v{source_version}` evidence log entry" in release_checklist
-        assert f"### `v{source_version}` accepted evidence" not in release_checklist
-        assert "Status: draft, not tagged or published." in release_notes
-        assert f"Current release-candidate package version: `{source_version}`." in (
-            release_notes
-        )
-        assert (
-            "Latest accepted published prerelease evidence before this candidate: "
-            f"`{latest_accepted_version}`."
-        ) in release_notes
-        assert (
-            f"`{source_version}` package must not be described as the latest accepted "
-            "published prerelease"
-        ) in release_notes
+        assert f"Current release-candidate package version: `{source_version}`." in checklist
+    assert f"Latest accepted published prerelease evidence: `{accepted_version}`." in checklist
 
 
 def test_operator_ui_docs_and_backlog_queue_stay_synchronized() -> None:
-    repo_root = _repo_root()
-    source_version = _project_version(repo_root)
-    release_checklist = (repo_root / "docs" / "release-checklist.md").read_text(
-        encoding="utf-8"
-    )
-    latest_accepted_version = _latest_accepted_prerelease_version(release_checklist)
-    readme = (repo_root / "README.md").read_text(encoding="utf-8")
-    operator_handbook = (repo_root / "docs" / "operator-handbook.md").read_text(
-        encoding="utf-8"
-    )
-    roadmap = (repo_root / "docs" / "backlog" / "roadmap.md").read_text(
-        encoding="utf-8"
-    )
-    operator_frontend = (
-        repo_root / "docs" / "architecture" / "operator-frontend.md"
-    ).read_text(encoding="utf-8")
-    target_operator_frontend = (
-        repo_root / "docs" / "architecture" / "operator-frontend-target-ux.md"
-    ).read_text(encoding="utf-8")
-    w24_s1 = roadmap.split("#### Slice W24-E1-S1", 1)[1].split(
-        "#### Slice W24-E1-S2",
-        1,
-    )[0]
-    w24_s2 = roadmap.split("#### Slice W24-E1-S2", 1)[1].split("## Wave", 1)[0]
-    w26 = roadmap.split("## Wave 26", 1)[1]
-    w36 = roadmap.split("## Wave 36", 1)[1].split("## Wave 37", 1)[0]
-    w42 = roadmap.split("## Wave 42", 1)[1]
+    from tests.planning_integrity import roadmap_backlog_integrity_errors
 
-    assert (
-        "The UI can write question answers as `[resolved]`, `[partial]`, or "
-        "`[deferred]` entries"
-    ) in operator_handbook
-    assert "only `[resolved]` answers unblock blocking questions" in operator_handbook
-    assert "The UI writes question answers as `[resolved]` entries" not in operator_handbook
-    assert "`[partial]`" not in readme
+    root = _repo_root()
+    roadmap = (root / "docs/backlog/roadmap.md").read_text(encoding="utf-8")
+    backlog = (root / "docs/backlog/backlog.md").read_text(encoding="utf-8")
+    architecture = (root / "docs/architecture/operator-frontend.md").read_text(encoding="utf-8")
+    handbook = (root / "docs/operator-handbook.md").read_text(encoding="utf-8")
+    assert roadmap_backlog_integrity_errors(roadmap, backlog) == ()
+    assert "Completed work and queue restoration" in roadmap
+    assert len(backlog.splitlines()) <= 100
+    assert "only `[resolved]` answers unblock blocking questions" in handbook
+    assert "## 8. Implemented Document & Evidence Studio" in architecture
+    assert "three destinations" in architecture
+    assert "persistent presentation toggle" not in architecture
 
-    assert (
-        f"latest accepted `{latest_accepted_version}` package-channel evidence"
-        in w24_s1
-    )
-    assert f"`{source_version}` source development state" in w24_s1
-    assert "v0.1.0a3" not in w24_s1
 
-    assert "## Wave 24 — beta readiness release preparation (`done`)" in roadmap
-    assert "#### Slice W24-E1-S2 — manual live beta evidence refresh (`done`)" in roadmap
-    assert "`W24-E1-S2-T1` (done)" in w24_s2
-    assert "`W24-E1-S2-T2` (done)" in w24_s2
-    assert "`W24-E1-S2-T3` (done)" in w24_s2
-
-    assert "## Wave 26 — completed-flow lineage operator experience (`done`)" in roadmap
-    assert "`W26-E0-S1-T1` (done)" in w26
-    assert "### Epic W26-E1 — flow lineage core model and launch services (`done`)" in w26
-    assert "`W26-E1-S1-T1` (done) Add a terminal-run handoff read model" in w26
-    assert "`W26-E1-S1-T2` (done) Add lineage reference fields" in w26
-    assert "`W26-E1-S2-T1` (done) Implement a follow-up draft service" in w26
-    assert "`W26-E1-S2-T2` (done) Implement a clone-flow draft service" in w26
-    assert "`W26-E1-S2-T3` (done) Add launch preflight validation" in w26
-    assert "#### Slice W26-E1-S3 — workbench and evidence read models (`done`)" in w26
-    assert "#### Slice W26-E2-S0 — static UI refactoring foundation (`done`)" in w26
-    assert "`W26-E2-S0-T1` (done) Add a packaged static asset manifest" in w26
-    assert "`W26-E2-S0-T2` (done) Split `operator.js`" in w26
-    assert "`W26-E2-S0-T3` (done) Split `operator.css`" in w26
-    assert "`W26-E2-S0-T4` (done) Split monolithic script-string assertions" in w26
-    assert "#### Slice W26-E2-S1 — Mission Control shell updates (`done`)" in w26
-    assert "`W26-E2-S1-T1` (done) Render the Project Setup mode selector" in w26
-    assert "`W26-E2-S1-T2` (done) Render Flow Complete" in w26
-    assert "`W26-E2-S1-T3` (done) Render run history lineage" in w26
-    assert "### Epic W26-E2 — accepted operator UI screens (`done`)" in w26
-    assert "#### Slice W26-E2-S2 — Start Next Flow wizard (`done`)" in w26
-    assert "`W26-E2-S2-T1` (done) Render source findings selection" in w26
-    assert "`W26-E2-S2-T2` (done) Render follow-up work item definition" in w26
-    assert "`W26-E2-S2-T3` (done) Render launch confirmation" in w26
-    assert (
-        "#### Slice W26-E2-S3 — workbench, recovery, diagnostics, and evidence screens (`done`)"
-        in w26
-    )
-    assert "`W26-E2-S3-T1` (done) Render the Stage Document Workbench" in w26
-    assert "`W26-E2-S3-T2` (done) Render Questions / Interview Loop" in w26
-    assert "`W26-E2-S3-T3` (done) Render Runtime Logs / Live Console" in w26
-    assert "`W26-E2-S3-T4` (done) Render Artifacts / Evidence Graph" in w26
-    assert "`W26-E1-S3-T1` (done) Add a stage document workbench read model" in w26
-    assert "`W26-E1-S3-T2` (done) Add recovery and diagnostics read-model fields" in w26
-    assert "`W26-E1-S3-T3` (done) Add an evidence graph read model" in w26
-    assert "### Epic W26-E3 — API, safety, and regression coverage (`done`)" in w26
-    assert "#### Slice W26-E3-S1 — private UI next-flow API (`done`)" in w26
-    assert "`W26-E3-S1-T1` (done) Add private UI endpoints" in w26
-    assert "`W26-E3-S1-T2` (done) Add a launch endpoint" in w26
-    assert "`W26-E3-S1-T3` (done) Add an archive decision endpoint" in w26
-    assert "#### Slice W26-E3-S2 — deterministic UI and accessibility coverage (`done`)" in w26
-    assert "`W26-E3-S2-T1` (done) Add static DOM contract tests" in w26
-    assert "`W26-E3-S2-T2` (done) Add service-level UI regressions" in w26
-    assert "`W26-E3-S2-T3` (done) Extend the manual browser checklist" in w26
-    assert "### Epic W26-E4 — live E2E and eval evidence integration (`done`)" in w26
-    assert "#### Slice W26-E4-S1 — local-project UI E2E next-flow lane (`done`)" in w26
-    assert "`W26-E4-S1-T1` (done) Update the operator UI local-project E2E lane" in w26
-    assert "`W26-E4-S1-T2` (done) Add deterministic local fixture coverage" in w26
-    assert "`W26-E4-S1-T3` (done) Record a manual installed local-project smoke path" in w26
-    assert "#### Slice W26-E4-S2 — public live E2E next-flow checkpoint logic (`done`)" in w26
-    assert "`W26-E4-S2-T1` (done) Define the manual live E2E next-flow checkpoint policy" in w26
-    assert "`W26-E4-S2-T2` (done) Extend the black-box live evaluator final checkpoint" in w26
-    assert "`W26-E4-S2-T3` (done) Add an optional maintained-scenario follow-up proof path" in w26
-    assert "### Epic W26-E5 — operator documentation and rollout clarity (`done`)" in w26
-    assert "#### Slice W26-E5-S1 — completed-flow operator documentation (`done`)" in w26
-    assert "`W26-E5-S1-T1` (done) Document completed-run handoff" in w26
-    assert "Document & Evidence Studio migration (`planned`)" in w36
-    assert "legacy_only | candidate | parity_closed" in w36
-    assert "three destinations and one presentation preference" in operator_frontend
-    assert "Guided Delivery preference" in operator_frontend
-    assert "task-centered operator experience (`planned`)" in roadmap
-    assert "`W42-E2-S1-T1` (done)" in w42
-    assert "`W42-E2-S1-T2` (done)" in w42
-    assert "`W42-E2-S1-T4` (done)" in w42
-    assert "`W42-E2-S1-T3` (done)" in w42
-    assert "`W42-E2-S2-T2` (done)" in w42
-    assert "`W42-E3-S1-T1` (done)" in w42
-    assert "`W42-E3-S1-T2` (done)" in w42
-    assert "`W42-E3-S2-T1` (done)" in w42
-    assert "`W42-E3-S2-T2` (done)" in w42
-    assert "`W42-E3-S2-T3` (done)" in w42
-    assert "`W42-E4-S1-T1` (done)" in w42
-    assert "`W42-E4-S1-T2` (done)" in w42
-    assert "`W42-E4-S2-T1` (done)" in w42
-    assert "`W42-E4-S2-T2` (done)" in w42
-    assert "`W42-E4-S2-T3` (done)" in w42
-    assert "`W42-E5-S1-T1` (done)" in w42
-    assert "`W42-E5-S1-T2` (done)" in w42
-    assert "`W42-E5-S2-T1` (done)" in w42
-    assert "`W42-E5-S2-T2` (done)" in w42
-    assert "`W42-E6-S1-T1` (done)" in w42
-    assert "`W42-E6-S2-T1` (done)" in w42
-    assert "`W42-E7-S1-T1` (done)" in w42
-    assert "`W42-E7-S1-T2` (done)" in w42
-    assert "`W42-E7-S2-T2` (done)" in w42
-    assert "`W42-E7-S3-T1` (done)" in w42
-    visual_reference_dir = (
-        repo_root
-        / "docs"
-        / "architecture"
-        / "assets"
-        / "operator-ui-target-v2"
-    )
-    visual_references = (
+def test_current_operator_visual_references_are_present_and_documented() -> None:
+    root = _repo_root()
+    architecture = (root / "docs/architecture/operator-frontend.md").read_text(encoding="utf-8")
+    target = (root / "docs/architecture/operator-frontend-target-ux.md").read_text(encoding="utf-8")
+    reference_dir = root / "docs/architecture/assets/operator-ui-target-v2"
+    for filename in (
         "01-project-work-items.png",
         "02-create-work-item.png",
         "03-work-item-launch.png",
@@ -602,12 +459,11 @@ def test_operator_ui_docs_and_backlog_queue_stay_synchronized() -> None:
         "11-run-history.png",
         "12-flow-complete.png",
         "13-mobile-decision.png",
-    )
-    for filename in visual_references:
-        assert filename in operator_frontend
-        assert filename in target_operator_frontend
-        assert (visual_reference_dir / filename).is_file()
-    assert (visual_reference_dir / "generation-prompts.md").is_file()
+    ):
+        assert filename in architecture
+        assert filename in target
+        assert (reference_dir / filename).is_file()
+    assert (reference_dir / "generation-prompts.md").is_file()
 
 
 def test_release_docs_describe_release_branch_publish_flow() -> None:
@@ -617,10 +473,6 @@ def test_release_docs_describe_release_branch_publish_flow() -> None:
     )
     distribution = (
         repo_root / "docs" / "architecture" / "distribution-and-development.md"
-    ).read_text(encoding="utf-8")
-    latest_accepted_version = _latest_accepted_prerelease_version(release_checklist)
-    release_notes = (
-        repo_root / "docs" / f"release-notes-v{latest_accepted_version}-draft.md"
     ).read_text(encoding="utf-8")
 
     pre_history_checklist = release_checklist.split("## Release attempt evidence log", 1)[0]
@@ -645,11 +497,9 @@ def test_release_docs_describe_release_branch_publish_flow() -> None:
     assert "draft or candidate-only status text" in distribution
     assert "`verify-uv-tool-install` separately as passed" in pre_history_checklist
     assert "candidate-only status text on a published release" in pre_history_checklist
-    assert "Status: published on " in release_notes
-    assert (
-        "Release workflow quality, build, publish, `pipx`, and `uv tool` "
-        "verification jobs passed"
-    ) in release_notes
+    latest_evidence = release_checklist.split("## Latest accepted release evidence", 1)[1]
+    for job in ("publish-pypi", "verify-pypi-install", "verify-uv-tool-install"):
+        assert f"`{job}` passed" in latest_evidence
 
 
 def test_operator_docs_describe_live_manual_providers_and_execution_wrappers() -> None:
@@ -866,7 +716,7 @@ def test_operator_ui_local_project_manual_browser_checklist_is_complete() -> Non
         "never creates, resumes, repairs, archives, or launches work",
         "`mode=studio`",
         "`task_attempt`",
-        "Writers emit only that canonical form",
+        "Writers and readers use only that canonical form",
     ):
         assert expected in operator_ui_lane
 
@@ -1008,15 +858,11 @@ def test_operator_ui_current_docs_are_studio_only() -> None:
     architecture = (root / "docs" / "architecture" / "operator-frontend.md").read_text(
         encoding="utf-8"
     )
-    rollback = (
-        root / "docs" / "e2e" / "operator-ui-studio-rollback-window-2026-07-18.md"
-    ).read_text(encoding="utf-8")
 
     assert "local Operator UI" in readme
     assert "Document & Evidence Studio" in handbook
     assert "## 8. Implemented Document & Evidence Studio" in architecture
     assert "Accepted next-generation UX direction" not in architecture
-    assert "Historical, non-normative evidence" in rollback
 
 
 def test_operator_ui_evidence_template_has_measurable_ux_gates() -> None:
@@ -1114,32 +960,6 @@ def test_operator_ui_provider_free_browser_pass_template_is_complete() -> None:
         assert expected in operator_ui_lane
 
 
-def test_operator_ui_provider_free_browser_pass_record_is_complete() -> None:
-    record = (
-        _repo_root()
-        / "docs"
-        / "e2e"
-        / "operator-ui-provider-free-browser-pass-2026-07-18.md"
-    ).read_text(encoding="utf-8")
-
-    for expected in (
-        "provider-free-browser-pass-v1",
-        "0.1.0a16.dev0",
-        "28f8e26bf07e3dc4a1340bc9541e3e93ce2b6405",
-        "scripts/run_packaged_ui_scenarios.py",
-        "Chromium 149.0.7827.55",
-        "browser_tests.state_fixtures",
-        "320x568, 390x844, 768x1024, 1280x900, 1440x900",
-        "W36-E7-S1-T1..T12",
-        "all 12 passed; `failed_ids: []`",
-        "Network boundary: loopback-only passed",
-        "temporary fixture\n  projects and generated `.aidd/` workspaces removed",
-        "Overall result: `passed`",
-        "Blocker: `none`",
-        "Human elapsed time",
-        "`W36-E7-S3`",
-    ):
-        assert expected in record
 
 
 def test_observed_operator_acceptance_script_and_template_are_complete() -> None:
@@ -1199,19 +1019,15 @@ def test_readme_quickstart_uses_request_context_and_real_runtime_first() -> None
 
 
 def test_live_e2e_skill_describes_local_operator_contract() -> None:
-    live_e2e_skill = (_repo_root() / ".agents" / "skills" / "live-e2e" / "SKILL.md").read_text(
-        encoding="utf-8"
-    )
-    aidd_eval_skill = (_repo_root() / ".agents" / "skills" / "aidd-eval" / "SKILL.md").read_text(
-        encoding="utf-8"
-    )
+    live_e2e_skill = " ".join(skill_text_with_references("live-e2e").split())
+    aidd_eval_skill = " ".join(skill_text_with_references("aidd-eval").split())
 
     for needle in (
         "prepared local **source checkout**",
         "`AIDD_EVAL_CLAUDE_CODE_COMMAND`",
         "`AIDD_EVAL_CODEX_COMMAND`",
         "`AIDD_EVAL_OPENCODE_COMMAND`",
-        "native provider CLI",
+        "Native provider CLI",
         "AIDD-compatible wrapper command",
         "aidd eval doctor",
         (
@@ -1231,8 +1047,8 @@ def test_live_e2e_skill_describes_local_operator_contract() -> None:
         "Fresh terminal QA state:",
         "`target-workspace-evidence.json`",
         "`target-workspace-evidence.md`",
-        "snapshot tracked AIDD `HEAD`",
-        "Rerun the same manifest/runtime until it is clean.",
+        "snapshot of tracked AIDD `HEAD`",
+        "Rerun the same manifest/runtime until it is clean **within the agreed run/time budget**",
         "plan step, execute through public operator surfaces, inspect artifacts",
         "frontend-checkpoints.json",
         "first listed authored task",
@@ -1294,27 +1110,31 @@ def test_live_e2e_skill_describes_local_operator_contract() -> None:
         "manual-frontend-evidence/",
         "non-gating evidence for the manual `quality-report.md`",
     ):
-        assert needle in live_e2e_skill
+        assert " ".join(needle.split()) in live_e2e_skill
 
-    assert "For **local live-run operator guidance**, prefer `live-e2e`." in aidd_eval_skill
+    assert "For **local live-run operator guidance**, prefer [live-e2e]" in aidd_eval_skill
     assert "the launching agent is the operator-agent" in aidd_eval_skill
     assert "`- Q1 [resolved] answer text`" in aidd_eval_skill
     assert "stage-audits/<stage-run-id>.json" in aidd_eval_skill
     assert "stage-quality-audits/<stage-run-id>.md" in aidd_eval_skill
     assert "request-remediation" in aidd_eval_skill
-    assert "preserves distinct stage-run audits" in aidd_eval_skill
-    assert "${TMPDIR:-/tmp}/aidd-live-e2e/<run_id>/source/aidd" in aidd_eval_skill
+    assert "retain earlier stage-run audits when remediation repeats a stage" in aidd_eval_skill
+    assert "Start from the run id and the roots printed by the command" in aidd_eval_skill
     assert "quality-report.md" in aidd_eval_skill
-    assert "AIDD operator UI/UX evidence" in aidd_eval_skill
-    assert "target-workspace-evidence.json" in aidd_eval_skill
-    assert "top-level `workitems/...` duplicates are severe" in aidd_eval_skill
-    assert (
-        "`frontend-checkpoints.*` as raw operator-surface availability evidence"
-        in aidd_eval_skill
-    )
-    assert "Observed running stages add a `running-stage` checkpoint phase" in (
+    assert "`Operator UI/UX decision` is a manual AIDD operator-UI sub-decision only" in (
         aidd_eval_skill
     )
+    assert "target-workspace-evidence.json" in aidd_eval_skill
+    assert (
+        "top-level `workitems/...` duplicates normally make manual "
+        "deliverable quality `not-counted`"
+        in (aidd_eval_skill)
+    )
+    assert (
+        "API probes in `frontend-checkpoints.*` are raw surface evidence, not a UI/UX audit."
+        in aidd_eval_skill
+    )
+    assert "Observed running stages add a `running-stage` checkpoint phase" in (aidd_eval_skill)
     assert "`wait-for-stage` next action" in aidd_eval_skill
     assert "pending-log state before `runtime.log` exists" in aidd_eval_skill
     assert "`frontend-checkpoints.md` includes a manual visual review checklist" in (
@@ -1322,8 +1142,8 @@ def test_live_e2e_skill_describes_local_operator_contract() -> None:
     )
     assert "desktop/mobile topbar readability" in aidd_eval_skill
     assert "failure-appropriate" in aidd_eval_skill
-    assert "as a prompt, not proof" in aidd_eval_skill
-    assert "`not inspected` in manual reports" in aidd_eval_skill
+    assert "as a prompt, not as proof" in aidd_eval_skill
+    assert "explicitly mark surfaces `not inspected`" in aidd_eval_skill
     assert "`--manual-frontend-evidence <path>`" in aidd_eval_skill
     assert "`manual-frontend-evidence/`" in aidd_eval_skill
 
@@ -1439,9 +1259,7 @@ def test_live_e2e_next_flow_checkpoint_policy_is_manual_only() -> None:
     live_catalog = (_repo_root() / "docs" / "e2e" / "live-e2e-catalog.md").read_text(
         encoding="utf-8"
     )
-    live_e2e_skill = (
-        _repo_root() / ".agents" / "skills" / "live-e2e" / "SKILL.md"
-    ).read_text(encoding="utf-8")
+    live_e2e_skill = skill_text_with_references("live-e2e")
 
     for expected in (
         "## Next-Flow Terminal Checkpoint Policy",
@@ -1471,7 +1289,7 @@ def test_live_e2e_next_flow_checkpoint_policy_is_manual_only() -> None:
         "next-flow-lineage.json",
         "separate manual-only option",
         "outside CI/CD and release automation",
-        "Never require launching a second public-repository flow",
+        "it still must not launch a child public-repository",
     ):
         assert expected in live_e2e_skill
 
@@ -1662,7 +1480,7 @@ def test_operator_ownership_docs_cover_stable_beta_contracts() -> None:
         "`audit_history` rows",
     ):
         assert needle in operator_frontend
-    assert "## 4.1 Operator UI grouping" in project_set
+    assert "## 4.2 Operator UI grouping" in project_set
     assert "`outside-project-set`" in project_set
     assert "unrelated repositories must be opened through separate UI sessions" in project_set
 
@@ -1694,9 +1512,6 @@ def test_operator_ownership_docs_cover_stable_beta_contracts() -> None:
         "project-set grouping",
         "approval audit visibility",
         "Do not describe a `.dev0` source version as an accepted package release",
-        "Wave 29 provider-auth rerun",
-        "login-shell provider commands",
-        "shell or an explicit PATH prefix",
     ):
         assert needle in release_checklist
     assert "Claude Code remains `blocked/auth-env`" not in release_checklist
@@ -1716,6 +1531,36 @@ def test_runtime_log_docs_match_the_supported_cli_contract() -> None:
         assert "`aidd run logs`" in document
         assert "`--tail --lines N`" in document
         assert "separate audit artifacts" in document
+
+
+def test_project_set_docs_make_permission_mode_boundary_explicit() -> None:
+    repo_root = _repo_root()
+    project_set = (
+        repo_root / "docs" / "architecture" / "project-set-workspace.md"
+    ).read_text(encoding="utf-8")
+    target_architecture = (
+        repo_root / "docs" / "architecture" / "target-architecture.md"
+    ).read_text(encoding="utf-8")
+    user_stories = (
+        repo_root / "docs" / "product" / "user-stories.md"
+    ).read_text(encoding="utf-8")
+
+    us12 = user_stories.split("### US-12 — project-set workflow", 1)[1].split(
+        "### US-13 —", 1
+    )[0]
+    assert "configured permission mode" in us12
+    assert "`full-access`" in us12
+    assert "brokered or isolated modes" in us12
+    assert "execution stays bounded to the declared project set" not in us12
+
+    assert "## 4.1 Mode-specific capability matrix" in project_set
+    for mode in ("`full-access`", "`brokered`", "`plan`", "`deny-unapproved`"):
+        assert mode in project_set
+    assert "aggregate progression fails closed" in project_set
+    assert "instead of promising containment" in project_set
+    assert "outside-project-set.md" in project_set
+    assert "downstream Review and QA" in project_set
+    assert "project-set boundary claims are permission-mode specific" in target_architecture
 
     assert "The CLI should support three log modes" not in target_architecture
     assert "`normalized`: show AIDD-normalized events" not in target_architecture
@@ -1741,9 +1586,9 @@ def test_operator_frontend_defines_scoped_browser_draft_contract() -> None:
 
 
 def test_release_publish_skill_describes_release_flow_guardrails() -> None:
-    skill = (
-        _repo_root() / ".agents" / "skills" / "release-publish" / "SKILL.md"
-    ).read_text(encoding="utf-8")
+    skill = (_repo_root() / ".agents" / "skills" / "release-publish" / "SKILL.md").read_text(
+        encoding="utf-8"
+    )
 
     for needle in (
         "release/v<project.version>",
@@ -1757,7 +1602,8 @@ def test_release_publish_skill_describes_release_flow_guardrails() -> None:
         "If the PyPI version already exists, stop and ask for a new version decision.",
         "Docker/GHCR is not a supported alpha release channel.",
         "If the release tag SHA does not match `origin/release/<tag>`, stop",
-        "Tag v<project.version> already exists on origin",
+        ("If the release exists, or the preflight reports\n"
+         "an existing remote tag, stop and inspect."),
         "git rev-parse refs/tags/v<project.version>^{commit}",
         "--backend pip",
         "The acceptance checks must execute the binaries installed into `PIPX_BIN_DIR`",

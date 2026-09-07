@@ -1,13 +1,10 @@
 from __future__ import annotations
 
-from pathlib import Path
-
 import pytest
 
 from aidd.evals.log_analysis import (
-    coarse_events_from_normalized_events,
-    parse_events_jsonl,
     parse_events_jsonl_text,
+    select_first_failure_boundary,
 )
 
 
@@ -46,44 +43,31 @@ def test_parse_events_jsonl_text_rejects_non_object_payload() -> None:
         parse_events_jsonl_text('["array-is-not-supported"]\n')
 
 
-def test_parse_events_jsonl_reads_from_file(tmp_path: Path) -> None:
-    events_path = tmp_path / "events.jsonl"
-    events_path.write_text('{"event":"repair_applied","message":"repair loop"}\n', encoding="utf-8")
+@pytest.mark.parametrize(
+    ("event_kind", "expected_category"),
+    (
+        ("runtime_error", "runtime"),
+        ("warning", "none"),
+        ("question_raised", "none"),
+        ("repair_attempt", "none"),
+        ("validator_result", "none"),
+        ("stage_transition", "none"),
+        ("custom", "none"),
+    ),
+)
+def test_normalized_event_failure_selection_preserves_nonfailure_signals(
+    event_kind: str,
+    expected_category: str,
+) -> None:
+    events = parse_events_jsonl_text('\n' + '{"event":"' + event_kind + '"}\n')
 
-    events = parse_events_jsonl(events_path)
+    selection = select_first_failure_boundary(normalized_events=events)
 
-    assert len(events) == 1
-    assert events[0].event_kind == "repair_applied"
-
-
-def test_parse_events_jsonl_rejects_missing_file(tmp_path: Path) -> None:
-    with pytest.raises(ValueError, match="events.jsonl file does not exist"):
-        parse_events_jsonl(tmp_path / "missing-events.jsonl")
-
-
-def test_coarse_events_from_normalized_events_maps_categories() -> None:
-    normalized_events = parse_events_jsonl_text(
-        "\n".join(
-            (
-                '{"event":"runtime_error","message":"runtime failed"}',
-                '{"event":"warning","message":"watch this"}',
-                '{"event":"question_raised","message":"clarify?"}',
-                '{"event":"repair_attempt","message":"repairing"}',
-                '{"event":"validator_result","message":"validator status"}',
-                '{"event":"stage_transition","message":"plan -> review"}',
-                '{"event":"custom","message":"plain info"}',
-            )
-        )
-    )
-
-    coarse_events = coarse_events_from_normalized_events(normalized_events)
-
-    assert [event.category for event in coarse_events] == [
-        "error",
-        "warning",
-        "question",
-        "repair",
-        "validator",
-        "stage",
-        "info",
-    ]
+    assert selection.category == expected_category
+    if expected_category == "runtime":
+        assert selection.signal_source == "events.jsonl"
+        assert selection.signal_line_number == 2
+        assert selection.reason == event_kind
+    else:
+        assert selection.signal_source == "none"
+        assert selection.signal_line_number is None

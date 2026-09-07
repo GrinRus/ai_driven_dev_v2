@@ -195,7 +195,17 @@ The exact layout may evolve, but the model is fixed:
 - normal stage attempts currently persist raw runtime logs and runtime exit metadata under
   `reports/runs/.../attempts/`;
 - eval lanes derive additional timing and quality reports from those run artifacts and scenario
-  execution evidence.
+  execution evidence;
+- deterministic eval result bundles materialize the relevant work-item tree and product task-run
+  tree under `canonical-evidence/` before an isolated `.aidd` workspace is cleaned up. Every
+  copied regular file is recorded with its bundle-relative path, SHA-256 digest, and byte size in
+  `artifact-digests.json`; metadata points only at those durable bundle references for raw attempt
+  logs/exits/events, stage validators, task ledgers, and aggregate-finalization evidence. Finalization
+  snapshots the complete inventory (including identity, status, digest, and size) into
+  `result-bundle-inventory.json` with an atomic replace; that file is the commit marker. Before a
+  PASS is exposed, the validator rejects missing, mutated, orphaned, symlinked, or identity-mismatched
+  evidence. A failed seal is persisted as an explicit `infra-fail` bundle-integrity result rather
+  than being reported as PASS or disappearing as an exception.
 
 The implemented operator frontend and project-set workflow support preserve this ownership model:
 
@@ -203,6 +213,9 @@ The implemented operator frontend and project-set workflow support preserve this
   workflow engine;
 - project-set flows use declared local project roots while keeping one governed `.aidd/`
   workspace and traceable per-project evidence;
+- project-set boundary claims are permission-mode specific: `full-access` provides declaration,
+  attribution, post-run detection, and fail-closed progression, while brokered or isolated modes
+  provide preventive containment when their adapter transport can enforce it;
 - project-set UI grouping is a read model over declared related roots inside one selected
   project-local `.aidd/`, not concurrent unrelated multi-project execution;
 - the selected project is a navigation context rather than a process-wide UI execution lock;
@@ -216,6 +229,35 @@ The implemented operator frontend and project-set workflow support preserve this
 
 Detailed contracts live in `operator-frontend.md` and `project-set-workspace.md`.
 
+### Current persisted run state
+
+Authoritative readers require the explicit current integer `schema_version` and the fields
+written by the current owner. Missing, retired, unknown, or incorrectly typed versions stop
+with a contextual error; readers do not coerce versions or manufacture missing lifecycle state.
+
+- `run-manifest.json` uses schema 1. It requires run/work-item/runtime/adapter identity,
+  stage target, workflow bounds with explicit `start` and `end`, configuration snapshot,
+  repository/resource provenance, prompt-pack provenance, and creation/update timestamps.
+  Unbounded workflow endpoints and unavailable Git/resource revisions may be `null`;
+  an empty configuration object is valid. Lineage remains optional. New-run construction may
+  select the adapter from the runtime, but persisted manifests always name the adapter.
+- `stage-metadata.json` uses schema 1. It requires identity, stage/status, both timestamps,
+  nonempty status history, a repair-history list, and an explicit repair-extension grant or
+  `null`. History entries contain their recorded fields; missing history is not reconstructed
+  from the latest status or timestamp. An empty repair history is valid before repair.
+- A present repair-extension grant uses schema 1 and contains the identity, evidence paths
+  and digests, configuration identity, author, authorization timestamp, and reason defined by
+  the repair-extension contract. A malformed grant is not treated as an absent authorization.
+
+Validate existing run and stage state before allocating attempts or changing lifecycle records,
+including interrupted-task reconciliation and finalization. Rejected state remains unchanged.
+An absent whole file before its first publication remains a valid preparation state. Read-only
+timing and raw-evidence views may report incomplete evidence as unavailable. Terminal reconciliation
+may inspect current-format metadata with a mismatched identity to record its refusal; it cannot
+rewrite that metadata. Diagnostic readers cannot authorize execution or invent provenance.
+Ledger, snapshot, and remediation formats are specified in
+`task-execution.md`.
+
 Completed-flow handoff must preserve the same ownership model. When a run reaches a terminal
 state after `qa`, the completed run is immutable evidence. Any next action creates or prepares a
 separate unit:
@@ -228,8 +270,8 @@ separate unit:
 
 Archive intent is an append-only operator overlay under
 `reports/operator-overlays/<work-item>/run-archive/<run-id>/`; it is joined into run read
-models but never written into `run-manifest.json`. Legacy manifests that already contain
-`operator_archive` remain readable when no overlay exists.
+models but never written into `run-manifest.json`. Readers reject the retired embedded
+`operator_archive` field; current archive decisions require the overlay.
 
 Lineage metadata must reference source runs and artifacts rather than rewriting completed
 artifacts. The core owns the source-run and baseline references; adapters only execute the
@@ -284,8 +326,8 @@ For every stage run:
    projection with run/stage/attempt identity, timing/outcome, operator references, a runtime
    evidence pointer, and provider-payload digest.
    Provider-specific native adapters may mark a process `document_complete` only after the
-   declared Markdown outputs are present, terminal documents have been updated, and the
-   files have settled. This is still raw-log-visible adapter evidence; it does not skip the
+   runtime-authored Markdown content is present, has changed, and has settled.
+   AIDD-owned terminal records and operator-owned answers are never completion targets. This is still raw-log-visible adapter evidence; it does not skip the
    canonical validation step. When a stage writes fresh blocking questions, `answers.md`
    may still be an unanswered placeholder; validation and interview routing decide whether
    the stage waits for operator answers.
@@ -437,8 +479,11 @@ request repair by themselves. Repair briefs group primary, related, and advisory
 retaining exact finding ids and locations.
 
 Only validation-triggered `repair` attempts consume the automatic repair budget. Runtime retry,
-question `resume`, and operator `intervention` remain distinct attempt modes. After automatic
-exhaustion, the target recovery contract permits at most one durable `repair-extension` grant for
+question `resume`, and operator `intervention` remain distinct attempt kinds. Current artifacts
+persist a versioned lineage object; retired records that only contain `attempt_mode` or an ordinal
+are rejected with an explicit evidence error rather than silently upgraded or interpreted from
+attempt directory counts. After automatic exhaustion, the target
+recovery contract permits at most one durable `repair-extension` grant for
 the latest exhausted stage in the same run. The grant records run/stage identity, config plus
 validator/brief hashes, author, time, and reason; it never resets budget or history.
 
@@ -498,10 +543,13 @@ unresolved questions and existing operator answers are preserved. Duplicate or a
 candidates are retained as raw attempt evidence and stop in an explicit operator-attention state
 without overwriting the ledger or consuming repair budget.
 
-`resume` is a non-repair attempt mode. It is recorded only when a runtime invocation actually
+`resume` is a non-repair attempt kind. It is recorded only when a runtime invocation actually
 starts; checking that answers exist or rejecting a malformed candidate does not allocate an empty
 attempt. Attempt history distinguishes `initial`, `repair`, `resume`, `intervention`, and the
-separately authorized `repair-extension` mode.
+separately authorized `repair-extension` kind. Task and aggregate-finalization attempts use
+their own `task` and `finalization` kinds. Current-format readers require explicit lineage and
+reject retired records without it; historical evidence may be inspected as raw files but is never
+classified or resumed from an ordinal.
 
 ## 14. Adapter architecture
 

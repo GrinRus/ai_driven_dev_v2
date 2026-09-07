@@ -100,6 +100,9 @@ The maintained operator UI lane covers:
 - repair-history visibility through `repair-brief.md` paths;
 - operator request visibility through Evidence Refs and Recent Artifacts;
 - declared project-set roots through `project-set.md` artifact visibility;
+- two-project navigation while a provider-free runtime job is active: the Inbox keeps the
+  running action linked to its captured origin project, job logs remain addressable by job id,
+  and artifact/log read models stay scoped to the selected project's workspace;
 - loopback-only local convenience actions for opening allowlisted `.aidd/` folders
   and stopping the UI server without claiming runtime job cancellation.
 
@@ -125,6 +128,14 @@ Current deterministic coverage lives in:
 - `tests/cli/test_ui_assets_contracts.py::test_operator_next_flow_wizard_static_contract_covers_controls_and_preflight`
 - `tests/cli/test_ui_assets_contracts.py::test_studio_history_uses_typed_frames_without_runtime_mutation`
 - `tests/core/test_operator_frontend.py`
+- `browser_tests/test_journey_inbox.py::test_running_job_keeps_origin_project_when_operator_switches_projects`
+
+The multi-context browser journey uses sibling disposable projects. It records the origin
+project and workspace returned by `/api/jobs/<job_id>`, reads retained live chunks after switching
+projects, verifies the running Inbox route still carries the origin project root, and reads a
+terminal artifact payload after returning to the origin project. Artifact payloads are read once per
+selected project and must not contain the sibling project's work-item paths; no external provider
+or cross-project Inbox is required.
 
 These tests exercise `OperatorUiService` and the runtime-agnostic operator read/write
 services directly. Workflow-run, stage-run, and stage-intervention endpoints are
@@ -405,8 +416,8 @@ evidence. Inbox and History renderers bind these intents; they do not construct 
 variants. Archived runs retain both history and artifact intents because navigation is
 read-only and does not alter the completed run.
 
-Writers emit only that canonical form. Readers temporarily accept legacy `tab` and `key`
-aliases, report the legacy source, and normalize them without mutation. Invalid identifiers,
+Writers and readers use only that canonical form. Retired `tab` and `key` query aliases
+are unsupported and are not converted into current navigation state. Invalid identifiers,
 unknown stages, path-like artifact values, conflicting attempt/task-attempt detail, and stale
 known work-item/run ids are dropped with stable warnings. History without a valid run falls
 back to Studio when the work item survives and otherwise to Inbox.
@@ -440,7 +451,7 @@ through the public UI state builder before browser acceptance.
 | Target reference | Route fixture | Route query |
 | --- | --- | --- |
 | `01-project-work-items.png` | `no-run` | `?mode=inbox` |
-| `02-create-work-item.png` | `setup` | `?ui=studio` |
+| `02-create-work-item.png` | `setup` | `/` |
 | `03-work-item-launch.png` | `no-run` | `?mode=studio&work_item=WI-BROWSER&view=overview` |
 | `04-task-workspace.png` | `implementation-finalized` | `?mode=studio&work_item=WI-BROWSER&run_id=run-browser&stage=implement&work_tab=tasks` |
 | `05-active-task-run.png` | `running` | `?mode=studio&work_item=WI-BROWSER&run_id=run-browser&stage=idea&attempt=1` |

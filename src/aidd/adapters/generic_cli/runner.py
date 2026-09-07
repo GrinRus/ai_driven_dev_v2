@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import shlex
 from collections.abc import Callable, Mapping
 from dataclasses import dataclass
 from enum import StrEnum
@@ -14,9 +13,6 @@ from aidd.adapters.runner_support import (
     resolve_exit_classification,
     split_configured_command,
     validate_stage_command_context,
-)
-from aidd.adapters.runtime_artifacts import (
-    RUNTIME_EXIT_METADATA_FILENAME as _RUNTIME_EXIT_METADATA_FILENAME,
 )
 from aidd.adapters.runtime_execution import RuntimeRunResult, RuntimeSubprocessSpec
 from aidd.adapters.subprocess_streaming import run_streamed_subprocess
@@ -67,6 +63,7 @@ class GenericCliExitClassification(StrEnum):
     CANCELLED = "cancelled"
     DOCUMENT_COMPLETE = "document_complete"
     LAUNCH_FAILURE = "launch_failure"
+    CAPTURE_FAILURE = "capture_failure"
 
 
 @dataclass(frozen=True, slots=True)
@@ -74,19 +71,19 @@ class GenericCliRunResult(RuntimeRunResult[GenericCliExitClassification]):
     pass
 
 
-RUNTIME_EXIT_METADATA_FILENAME = _RUNTIME_EXIT_METADATA_FILENAME
-
-
 def _resolve_exit_classification(
     *,
     exit_code: int | None,
     stop_reason: GenericCliExitClassification | None,
+    capture_error: str | None = None,
 ) -> GenericCliExitClassification:
     return resolve_exit_classification(
         exit_code=exit_code,
         stop_reason=stop_reason,
         success_value=GenericCliExitClassification.SUCCESS,
         non_zero_value=GenericCliExitClassification.NON_ZERO_EXIT,
+        capture_error=capture_error,
+        capture_failure_value=GenericCliExitClassification.CAPTURE_FAILURE,
     )
 
 
@@ -111,17 +108,6 @@ def assemble_command(
         "--prompt-pack",
         context.prompt_pack_path.as_posix(),
     )
-
-
-def command_preview(
-    *,
-    configured_command: str,
-    context: GenericCliStageContext,
-) -> str:
-    return " ".join(shlex.quote(token) for token in assemble_command(
-        configured_command=configured_command,
-        context=context,
-    ))
 
 
 def build_execution_environment(
@@ -221,6 +207,7 @@ def run_subprocess_with_streaming(
     exit_classification = _resolve_exit_classification(
         exit_code=streamed_result.exit_code,
         stop_reason=streamed_result.stop_reason,
+        capture_error=streamed_result.capture_error,
     )
     return GenericCliRunResult(
         exit_code=streamed_result.exit_code,
@@ -239,6 +226,7 @@ def run_subprocess_with_streaming(
         stdout_truncated=streamed_result.stdout_truncated,
         stderr_truncated=streamed_result.stderr_truncated,
         runtime_log_truncated=streamed_result.runtime_log_truncated,
+        capture_error=streamed_result.capture_error,
     )
 
 
@@ -266,6 +254,7 @@ def persist_attempt_runtime_artifacts(
         stdout_truncated=run_result.stdout_truncated,
         stderr_truncated=run_result.stderr_truncated,
         runtime_log_truncated=run_result.runtime_log_truncated,
+        capture_error=run_result.capture_error,
     )
 
     return GenericCliRuntimeArtifacts(

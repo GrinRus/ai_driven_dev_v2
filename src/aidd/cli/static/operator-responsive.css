@@ -48,8 +48,8 @@
    is not hidden. */
 @media (max-width: 1500px) and (min-width: 761px) {
   [data-studio-flow-complete] [data-next-flow-action][data-primary-action] {
-    background: var(--teal-dark);
-    border: 1px solid var(--teal-dark);
+    background: var(--cobalt-dark);
+    border: 1px solid var(--cobalt-dark);
     bottom: max(var(--space-8), env(safe-area-inset-bottom));
     box-shadow: var(--elevation-overlay);
     left: auto;
@@ -249,7 +249,7 @@
 }
 
 /* Target Review and remediation keep the evidence-first hierarchy at every
- * supported viewport. The old floating recovery action is only for the legacy
+ * supported viewport. The floating recovery action belongs to the compact quality
  * gate; target request panels own their single action in normal flow. */
 @media (max-width: 1120px) {
   .target-implementation-overview {
@@ -449,9 +449,6 @@
 }
 
 @media (max-width: 900px) and (min-width: 761px) {
-  .onboarding-work-item-branches {
-    grid-template-columns: minmax(0, 1fr);
-  }
   .canonical-stage-groups {
     grid-template-columns: repeat(4, minmax(0, 1fr));
   }
@@ -466,8 +463,8 @@
 @media (max-width: 1500px) and (min-width: 761px) {
   body.recovery-mode:has([data-human-decision-surface="question"])
     .question-list > .question-card:first-child [data-primary-action] {
-    background: var(--teal-dark);
-    border: 1px solid var(--teal-dark);
+    background: var(--cobalt-dark);
+    border: 1px solid var(--cobalt-dark);
     bottom: var(--space-4);
     box-shadow: var(--elevation-overlay);
     min-height: var(--control-height);
@@ -486,8 +483,8 @@
      canvas and finding rail. Keep the real control in the DOM; only its
      placement changes at bounded viewport heights. */
   [data-studio-quality-gate="review"] [data-remediation-launch="review"] {
-    background: var(--teal-dark);
-    border: 1px solid var(--teal-dark);
+    background: var(--cobalt-dark);
+    border: 1px solid var(--cobalt-dark);
     bottom: var(--space-4);
     box-shadow: var(--elevation-overlay);
     min-height: var(--control-height);
@@ -496,15 +493,12 @@
     width: min(280px, calc(100vw - (var(--space-6) * 2)));
     z-index: 60;
   }
-  [data-studio-quality-gate="review"] .quality-gate-document {
-    padding-bottom: calc(var(--space-8) + var(--control-height));
-  }
 }
 
 @media (max-width: 760px) {
   [data-studio-quality-gate="review"] [data-remediation-launch="review"] {
-    background: var(--teal-dark);
-    border: 1px solid var(--teal-dark);
+    background: var(--cobalt-dark);
+    border: 1px solid var(--cobalt-dark);
     bottom: max(var(--space-4), env(safe-area-inset-bottom));
     box-shadow: var(--elevation-overlay);
     left: var(--space-4);
@@ -513,9 +507,6 @@
     right: var(--space-4);
     width: auto;
     z-index: 60;
-  }
-  [data-studio-quality-gate="review"] .quality-gate-document {
-    padding-bottom: calc(var(--space-10) + var(--control-height-touch));
   }
 
   /* The question state is a focused decision page, not a miniature dashboard. */
@@ -544,10 +535,7 @@
   }
   body.recovery-mode:has([data-human-decision-surface="question"]) .interview-loop-screen > .surface > .surface-title,
   body.recovery-mode:has([data-human-decision-surface="question"]) .decision-workbench-header,
-  body.recovery-mode:has([data-human-decision-surface="question"]) .interview-summary,
-  body.recovery-mode:has([data-human-decision-surface="question"]) .interview-decision-spotlight,
-  body.recovery-mode:has([data-human-decision-surface="question"]) .question-history,
-  body.recovery-mode:has([data-human-decision-surface="question"]) .interview-context-panel {
+  body.recovery-mode:has([data-human-decision-surface="question"]) .question-history{
     display: none;
   }
   /* Once the durable answer clears the blocker, the only useful history item
@@ -586,7 +574,7 @@
     margin-bottom: var(--space-6);
   }
   body.recovery-mode:has([data-human-decision-surface="question"]) .question-card textarea {
-    border: 2px solid var(--teal-dark);
+    border: 2px solid var(--cobalt-dark);
     border-radius: var(--radius-surface);
     min-height: 180px;
     padding: var(--space-6);
@@ -617,7 +605,7 @@
     order: 2;
   }
   body.recovery-mode:has([data-human-decision-surface="question"]) .question-save-options summary {
-    color: var(--teal-dark);
+    color: var(--cobalt-dark);
   }
   body.recovery-mode:has([data-human-decision-surface="question"]) .interview-loop-screen > aside {
     border: 0;
@@ -758,9 +746,7 @@
 
   .studio-history,
   .history-run-list,
-  .studio-run-comparison,
-  .studio-history-lineage,
-  .studio-history-archive {
+  .studio-run-comparison {
     min-width: 0;
   }
   .history-filmstrip-frames {
@@ -782,15 +768,13 @@
   }
   .history-selection .surface-title,
   .studio-run-comparison .surface-title,
-  .studio-run-comparison .comparison-controls,
-  .studio-history-archive .lineage-actions {
+  .studio-run-comparison .comparison-controls {
     align-items: stretch;
     display: grid;
     grid-template-columns: minmax(0, 1fr);
   }
   .history-selection button,
-  .studio-run-comparison button,
-  .studio-history-archive button {
+  .studio-run-comparison button {
     min-height: var(--control-height);
     width: 100%;
   }
@@ -808,8 +792,7 @@
     gap: var(--space-3);
     min-width: 0;
   }
-  .studio-flow-complete .flow-complete-hero,
-  .studio-flow-complete .next-flow-decision-spotlight {
+  .studio-flow-complete .flow-complete-hero {
     gap: var(--space-2);
     margin: 0;
     padding: var(--space-3);
@@ -817,7 +800,6 @@
   .studio-flow-complete .flow-complete-hero h2 {
     font-size: var(--type-title-size);
   }
-  .studio-flow-complete .next-flow-decision-spotlight button,
   .studio-flow-complete-other > summary,
   .studio-flow-complete-other button {
     min-height: var(--control-height);
@@ -971,9 +953,6 @@
     white-space: nowrap;
     padding: 0 4px;
   }
-  .project-home-tabs button {
-    min-height: var(--control-height-touch);
-  }
   .path-line {
     overflow-wrap: anywhere;
     text-overflow: clip;
@@ -981,9 +960,6 @@
   }
   .maintenance-overflow {
     margin-top: var(--space-3);
-  }
-  body.recovery-mode .project-home-rail {
-    display: none;
   }
   body.recovery-mode .recovery-workbench {
     display: grid;
@@ -1039,15 +1015,6 @@
   body.recovery-mode .recovery-section summary {
     min-height: var(--control-height-touch);
   }
-  body.evidence-log-mode .project-home-rail {
-    display: none;
-  }
-  body.live-job-mode .project-home-rail,
-  body.external-running-stage-mode .project-home-rail,
-  body.terminal-handoff-mode .project-home-rail,
-  body.terminal-repair-mode .project-home-rail {
-    display: none;
-  }
   .intent-decision-surface {
     grid-template-columns: 1fr;
   }
@@ -1096,7 +1063,7 @@
   }
   .mode-decision-peek.good {
     border-color: var(--color-state-success-border-strong);
-    box-shadow: inset 3px 0 0 var(--green);
+    box-shadow: inset 3px 0 0 var(--mint);
   }
   .mode-decision-peek.warn {
     border-color: var(--color-state-warning-border);
@@ -1134,7 +1101,6 @@
   .project-set-row,
   .intent-entry-recommendation,
   .onboarding-shell,
-  .onboarding-work-item-branches,
   .inline-form-row,
   .artifact-layout,
   .workbench-main,
@@ -1148,18 +1114,13 @@
   .reader-body-layout-compact,
   .studio-reading-sidebar,
   .artifact-ownership-note,
-  .project-setup-grid,
   .flow-complete-hero,
   .terminal-attention-spotlight,
   .terminal-evidence-spotlight,
-  .next-flow-decision-spotlight,
-  .decision-summary,
-  .decision-summary-metrics,
   .stale-downstream-summary,
   .stale-downstream-facts,
   .next-flow-actions-grid,
   .terminal-summary-grid,
-  .lineage-flow,
   .lineage-actions,
   .next-flow-wizard-frame,
   .wizard-context-grid,
@@ -1168,8 +1129,6 @@
   .follow-up-definition-grid,
   .launch-confirmation-grid,
   .interview-loop-screen,
-  .interview-decision-spotlight,
-  .interview-decision-facts,
   .validation-repair-center,
   .request-change-grid,
   .approval-decision-spotlight,
@@ -1180,10 +1139,7 @@
   .evidence-graph-screen,
   .evidence-graph-canvas,
   .evidence-edge-list,
-  .interview-summary,
   .repair-timeline,
-  .recovery-hero,
-  .recovery-facts,
   .run-progress-meta,
   .live-progress-meta,
   .intent-entry-actions {
@@ -1293,30 +1249,6 @@
   .evidence-table-wrap {
     overflow-x: auto;
   }
-  .activity-panel .table-wrap {
-    overflow-x: hidden;
-  }
-  .activity-panel .activity-table {
-    table-layout: fixed;
-    width: 100%;
-  }
-  .activity-panel .activity-table th,
-  .activity-panel .activity-table td {
-    overflow-wrap: anywhere;
-    word-break: break-word;
-  }
-  .activity-panel .activity-table th:nth-child(1),
-  .activity-panel .activity-table td:nth-child(1) {
-    width: 74px;
-  }
-  .activity-panel .activity-table th:nth-child(2),
-  .activity-panel .activity-table td:nth-child(2) {
-    width: 52px;
-  }
-  .activity-panel .activity-table th:nth-child(3),
-  .activity-panel .activity-table td:nth-child(3) {
-    width: 72px;
-  }
   .diff-preview-row {
     grid-template-columns: 1fr;
   }
@@ -1325,10 +1257,6 @@
   }
   .diff-file-list {
     max-height: 260px;
-  }
-  .artifacts-panel {
-    border-left: 0;
-    border-top: 1px solid var(--line);
   }
   .log-row {
     grid-template-columns: 70px minmax(0, 1fr);
@@ -1375,7 +1303,6 @@
     max-width: 100%;
     width: 100%;
   }
-  [data-human-decision-surface] .interview-summary,
   [data-human-decision-surface] .approval-summary-grid {
     display: none;
   }
@@ -1429,12 +1356,10 @@
   [data-human-decision-surface="approval"] .approval-queue {
     order: 1;
   }
-  [data-human-decision-surface="question"] .interview-decision-spotlight,
   [data-human-decision-surface="intervention"] .latest-request-summary,
   [data-human-decision-surface="approval"] .approval-decision-spotlight {
     order: 2;
   }
-  [data-human-decision-surface="question"] .interview-context-panel,
   [data-human-decision-surface="intervention"] .intervention-preview-column,
   [data-human-decision-surface="approval"] .approval-audit-wrap,
   [data-human-decision-surface="approval"] .approval-ledger-paths {
@@ -1481,8 +1406,8 @@
   [data-human-decision-surface="approval"] [data-operator-action="allow_once"],
   [data-studio-flow-complete] [data-next-flow-action][data-primary-action],
   [data-primary-recovery-slot] > [data-primary-action] {
-    background: var(--teal-dark);
-    border: 1px solid var(--teal-dark);
+    background: var(--cobalt-dark);
+    border: 1px solid var(--cobalt-dark);
     bottom: max(var(--space-4), env(safe-area-inset-bottom));
     box-shadow: 0 8px 24px rgb(15 23 42 / 18%);
     left: var(--space-4);
@@ -1573,13 +1498,6 @@
     top: calc(var(--control-height-touch) + var(--space-4));
     width: min(280px, calc(100vw - (2 * var(--space-4))));
   }
-  body.recovery-mode:has([data-human-decision-surface="question"]) .interview-summary + .panel-item .path-line {
-    display: block;
-    max-width: 100%;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  }
 }
 
 /* Decision and validation target layouts: keep the first consequential action
@@ -1602,7 +1520,6 @@
   .decision-question-context h2 {
     font-size: var(--type-title-size);
   }
-  .decision-evidence-grid,
   .decision-resolution-options {
     grid-template-columns: minmax(0, 1fr);
   }
@@ -2069,8 +1986,8 @@
   .target-implementation-review [data-aidd-primary-action],
   .target-remediation-surface [data-remediation-launch="review"],
   .target-remediation-surface [data-remediation-launch="qa"] {
-    background: var(--teal-dark);
-    border: 1px solid var(--teal-dark);
+    background: var(--cobalt-dark);
+    border: 1px solid var(--cobalt-dark);
     bottom: var(--space-4);
     box-shadow: var(--elevation-overlay);
     min-height: var(--control-height);
@@ -2093,8 +2010,8 @@
   .target-implementation-review [data-aidd-primary-action],
   .target-remediation-surface [data-remediation-launch="review"],
   .target-remediation-surface [data-remediation-launch="qa"] {
-    background: var(--teal-dark);
-    border: 1px solid var(--teal-dark);
+    background: var(--cobalt-dark);
+    border: 1px solid var(--cobalt-dark);
     bottom: max(var(--space-4), env(safe-area-inset-bottom));
     box-shadow: var(--elevation-overlay);
     left: var(--space-4);
@@ -2256,8 +2173,8 @@ button.decision-resolution-option[aria-checked="true"]:focus-visible {
 @media (min-width: 761px) {
   [data-human-decision-surface="question"] .question-list > .question-card:first-child [data-primary-action],
   [data-human-decision-surface="approval"] .approval-card.pending [data-primary-action] {
-    background: var(--teal-dark);
-    border: 1px solid var(--teal-dark);
+    background: var(--cobalt-dark);
+    border: 1px solid var(--cobalt-dark);
     bottom: var(--space-4);
     box-shadow: var(--elevation-overlay);
     min-height: var(--control-height);

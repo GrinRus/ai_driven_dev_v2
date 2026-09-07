@@ -2,26 +2,40 @@
 
 plan
 
-# Goal
+# Purpose
 
-Write a plan that describes the implementation approach and verification strategy.
+Write an implementation plan with milestones and a verification strategy.
 
-# Inputs
+# Expected input bundle
 
 - `workitems/WI-001/stages/idea/output/idea-brief.md`
 - `workitems/WI-001/stages/research/output/research-notes.md`
 
-# Outputs
+# Runtime write targets
 
-- `workitems/WI-001/stages/plan/output/plan.md`
+- `workitems/WI-001/stages/plan/plan.md`
+
+# AIDD-generated records
+
+Read only; AIDD writes these after content validation.
+
 - `workitems/WI-001/stages/plan/stage-result.md`
+- `workitems/WI-001/stages/plan/validator-report.md`
 
-# Constraints
+# Interview/control documents
 
-- keep output in Markdown
-- ask questions if the scope boundary is unclear
-- keep question and answer flow in `workitems/WI-001/stages/plan/questions.md` and `workitems/WI-001/stages/plan/answers.md`
+Use the controlled interview path for questions; preserve operator answers.
 
-# Open questions
+- `workitems/WI-001/stages/plan/questions.md`
+- `workitems/WI-001/stages/plan/answers.md`
 
-- none
+# Published documents
+
+- `workitems/WI-001/stages/plan/plan.md`
+- `workitems/WI-001/stages/plan/stage-result.md`
+- `workitems/WI-001/stages/plan/validator-report.md`
+
+# Workspace path discipline
+
+`workitems/...` is relative to the configured `.aidd/` workspace root. From the repository
+root, write `.aidd/workitems/...`; do not create top-level `workitems/...`.

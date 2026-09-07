@@ -452,8 +452,9 @@ retrievable location with digests.
 
 - `docs/architecture/document-contracts.md:19-29,123-133` and the target architecture describe
   frontmatter as required, while the product story and loader intentionally make it optional.
-- `docs/analysis/beta-readiness-source-audit.md` discusses coverage through `US-12`, while the
-  current product source includes `US-13`.
+- An earlier beta-readiness source audit discussed coverage through `US-12`, while the
+  product source included `US-13`. That obsolete audit was retired by the approved Wave 52
+  cleanup; its original text remains in Git history.
 - User-story IDs are checked when the roadmap mentions them, but there is no executable
   story-to-contract-to-test-to-scenario traceability requirement.
 

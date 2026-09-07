@@ -4,7 +4,8 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
-from aidd.compatibility import legacy_prompt_pack_provenance_payload
+from aidd.core.attempt_lineage import AttemptKind, AttemptLineage, AttemptScope
+from aidd.core.persisted_state import require_fields
 
 
 def _normalize_required_text(value: str, *, field_name: str) -> str:
@@ -36,10 +37,12 @@ class StageStatusChange:
 
     @classmethod
     def from_dict(cls, payload: dict[str, Any]) -> StageStatusChange:
-        return cls(
-            status=str(payload["status"]),
-            changed_at_utc=str(payload["changed_at_utc"]),
+        require_fields(
+            payload,
+            label="Stage status history entry",
+            fields={"status": str, "changed_at_utc": str},
         )
+        return cls(status=payload["status"], changed_at_utc=payload["changed_at_utc"])
 
 
 @dataclass(frozen=True, slots=True)
@@ -106,21 +109,25 @@ class RepairHistoryEntry:
 
     @classmethod
     def from_dict(cls, payload: dict[str, Any]) -> RepairHistoryEntry:
+        require_fields(
+            payload,
+            label="Repair history entry",
+            fields={
+                "attempt_number": int,
+                "trigger": str,
+                "outcome": str,
+                "recorded_at_utc": str,
+                "validator_report_path": (str, type(None)),
+                "repair_brief_path": (str, type(None)),
+            },
+        )
         return cls(
-            attempt_number=int(payload["attempt_number"]),
-            trigger=str(payload["trigger"]),
-            outcome=str(payload["outcome"]),
-            recorded_at_utc=str(payload["recorded_at_utc"]),
-            validator_report_path=(
-                str(payload["validator_report_path"])
-                if payload.get("validator_report_path") is not None
-                else None
-            ),
-            repair_brief_path=(
-                str(payload["repair_brief_path"])
-                if payload.get("repair_brief_path") is not None
-                else None
-            ),
+            attempt_number=payload["attempt_number"],
+            trigger=payload["trigger"],
+            outcome=payload["outcome"],
+            recorded_at_utc=payload["recorded_at_utc"],
+            validator_report_path=payload["validator_report_path"],
+            repair_brief_path=payload["repair_brief_path"],
         )
 
 
@@ -201,19 +208,37 @@ class RepairExtensionGrant:
 
     @classmethod
     def from_dict(cls, payload: dict[str, Any]) -> RepairExtensionGrant:
+        require_fields(
+            payload,
+            label="Repair-extension grant",
+            schema_version=1,
+            fields={
+                "work_item_id": str,
+                "run_id": str,
+                "stage": str,
+                "validator_report_path": str,
+                "validator_report_sha256": str,
+                "repair_brief_path": str,
+                "repair_brief_sha256": str,
+                "configuration_identity": str,
+                "author": str,
+                "authorized_at_utc": str,
+                "reason": str,
+            },
+        )
         return cls(
-            schema_version=int(payload.get("schema_version", 1)),
-            work_item_id=str(payload["work_item_id"]),
-            run_id=str(payload["run_id"]),
-            stage=str(payload["stage"]),
-            validator_report_path=str(payload["validator_report_path"]),
-            validator_report_sha256=str(payload["validator_report_sha256"]),
-            repair_brief_path=str(payload["repair_brief_path"]),
-            repair_brief_sha256=str(payload["repair_brief_sha256"]),
-            configuration_identity=str(payload["configuration_identity"]),
-            author=str(payload["author"]),
-            authorized_at_utc=str(payload["authorized_at_utc"]),
-            reason=str(payload["reason"]),
+            schema_version=1,
+            work_item_id=payload["work_item_id"],
+            run_id=payload["run_id"],
+            stage=payload["stage"],
+            validator_report_path=payload["validator_report_path"],
+            validator_report_sha256=payload["validator_report_sha256"],
+            repair_brief_path=payload["repair_brief_path"],
+            repair_brief_sha256=payload["repair_brief_sha256"],
+            configuration_identity=payload["configuration_identity"],
+            author=payload["author"],
+            authorized_at_utc=payload["authorized_at_utc"],
+            reason=payload["reason"],
         )
 
 
@@ -253,38 +278,42 @@ class StageRunMetadata:
 
     @classmethod
     def from_dict(cls, payload: dict[str, Any]) -> StageRunMetadata:
+        require_fields(
+            payload,
+            label="Stage metadata",
+            schema_version=1,
+            fields={
+                "run_id": str,
+                "work_item_id": str,
+                "stage": str,
+                "status": str,
+                "created_at_utc": str,
+                "updated_at_utc": str,
+                "status_history": list,
+                "repair_history": list,
+                "repair_extension_grant": (dict, type(None)),
+            },
+        )
+        if not payload["status_history"]:
+            raise ValueError("Stage metadata requires nonempty status_history.")
         history = tuple(
-            StageStatusChange.from_dict(change) for change in payload.get("status_history", [])
+            StageStatusChange.from_dict(change) for change in payload["status_history"]
         )
-        if not history:
-            fallback_timestamp = str(
-                payload.get("updated_at_utc", payload.get("created_at_utc", ""))
-            )
-            history = (
-                StageStatusChange(
-                    status=str(payload["status"]),
-                    changed_at_utc=fallback_timestamp,
-                ),
-            )
         repair_history = tuple(
-            RepairHistoryEntry.from_dict(entry) for entry in payload.get("repair_history", [])
+            RepairHistoryEntry.from_dict(entry) for entry in payload["repair_history"]
         )
-        raw_grant = payload.get("repair_extension_grant")
-        if raw_grant is None:
-            repair_extension_grant = None
-        elif isinstance(raw_grant, dict):
-            repair_extension_grant = RepairExtensionGrant.from_dict(raw_grant)
-        else:
-            raise ValueError("Repair-extension grant metadata must be an object or null.")
-
+        raw_grant = payload["repair_extension_grant"]
+        repair_extension_grant = (
+            None if raw_grant is None else RepairExtensionGrant.from_dict(raw_grant)
+        )
         return cls(
-            schema_version=int(payload.get("schema_version", 1)),
-            run_id=str(payload["run_id"]),
-            work_item_id=str(payload["work_item_id"]),
-            stage=str(payload["stage"]),
-            status=str(payload["status"]),
-            created_at_utc=str(payload["created_at_utc"]),
-            updated_at_utc=str(payload["updated_at_utc"]),
+            schema_version=1,
+            run_id=payload["run_id"],
+            work_item_id=payload["work_item_id"],
+            stage=payload["stage"],
+            status=payload["status"],
+            created_at_utc=payload["created_at_utc"],
+            updated_at_utc=payload["updated_at_utc"],
             status_history=history,
             repair_history=repair_history,
             repair_extension_grant=repair_extension_grant,
@@ -419,6 +448,7 @@ class RunArtifactIndex:
     created_at_utc: str
     updated_at_utc: str
     attempt_mode: str | None = None
+    lineage: AttemptLineage | None = None
     schema_version: int = 1
 
     @classmethod
@@ -435,8 +465,32 @@ class RunArtifactIndex:
         resource_source: str | None = None,
         resource_root: str | None = None,
         attempt_mode: str | None = None,
+        lineage: AttemptLineage | None = None,
         changed_at_utc: str,
     ) -> RunArtifactIndex:
+        if lineage is None:
+            normalized_mode = None if attempt_mode is None else attempt_mode.strip().lower()
+            if normalized_mode is not None:
+                try:
+                    attempt_kind = AttemptKind(normalized_mode)
+                except ValueError as exc:
+                    raise ValueError(
+                        f"Unknown artifact-index attempt_mode: {normalized_mode}"
+                    ) from exc
+            else:
+                attempt_kind = AttemptKind.UNKNOWN
+            lineage = AttemptLineage(
+                scope=AttemptScope.STAGE,
+                attempt_kind=attempt_kind,
+                attempt_number=attempt_number,
+            )
+        if lineage is not None:
+            lineage.validate_identity(scope=AttemptScope.STAGE, attempt_number=attempt_number)
+            if (
+                attempt_mode is not None
+                and lineage.attempt_kind.value != attempt_mode.strip().lower()
+            ):
+                raise ValueError("Artifact index attempt_mode disagrees with its lineage.")
         return cls(
             run_id=run_id,
             work_item_id=work_item_id,
@@ -448,6 +502,7 @@ class RunArtifactIndex:
             resource_source=resource_source,
             resource_root=resource_root,
             attempt_mode=attempt_mode,
+            lineage=lineage,
             created_at_utc=changed_at_utc,
             updated_at_utc=changed_at_utc,
         )
@@ -455,14 +510,23 @@ class RunArtifactIndex:
     @classmethod
     def from_dict(cls, payload: dict[str, Any]) -> RunArtifactIndex:
         prompt_pack_provenance: list[RunArtifactIndex.PromptPackProvenanceEntry] = []
-        for entry in legacy_prompt_pack_provenance_payload(payload):
+        if payload.get("schema_version") != 1:
+            raise ValueError("Unsupported artifact-index schema version.")
+        raw_provenance = payload.get("prompt_pack_provenance")
+        if not isinstance(raw_provenance, list):
+            raise ValueError("Artifact index requires a prompt_pack_provenance list.")
+        for entry in raw_provenance:
             if not isinstance(entry, dict):
-                continue
+                raise ValueError("Artifact-index prompt provenance entries must be objects.")
             parsed_entry = RunArtifactIndex.PromptPackProvenanceEntry.from_dict(entry)
             if parsed_entry is None:
-                continue
+                raise ValueError("Artifact-index prompt provenance entry is malformed.")
             prompt_pack_provenance.append(parsed_entry)
-        raw_attempt_mode = payload.get("attempt_mode")
+        if "attempt_mode" not in payload:
+            raise ValueError("Artifact index requires an attempt_mode field.")
+        if "lineage" not in payload:
+            raise ValueError("Artifact index requires current-format lineage.")
+        raw_attempt_mode = payload["attempt_mode"]
         attempt_mode = None
         if raw_attempt_mode is not None:
             attempt_mode = str(raw_attempt_mode).strip().lower()
@@ -474,8 +538,17 @@ class RunArtifactIndex:
                 "repair-extension",
             }:
                 raise ValueError(f"Unknown artifact-index attempt_mode: {attempt_mode}")
+        lineage = None
+        if payload.get("lineage") is not None:
+            lineage = AttemptLineage.from_dict(payload["lineage"])
+            lineage.validate_identity(
+                scope=AttemptScope.STAGE,
+                attempt_number=int(payload["attempt_number"]),
+            )
+            if attempt_mode is not None and lineage.attempt_kind.value != attempt_mode:
+                raise ValueError("Artifact index attempt_mode disagrees with its lineage.")
         return cls(
-            schema_version=int(payload.get("schema_version", 1)),
+            schema_version=1,
             run_id=str(payload["run_id"]),
             work_item_id=str(payload["work_item_id"]),
             stage=str(payload["stage"]),
@@ -492,6 +565,7 @@ class RunArtifactIndex:
                 str(payload["resource_root"]) if payload.get("resource_root") is not None else None
             ),
             attempt_mode=attempt_mode,
+            lineage=lineage,
             created_at_utc=str(payload["created_at_utc"]),
             updated_at_utc=str(payload["updated_at_utc"]),
         )
@@ -511,11 +585,13 @@ class RunArtifactIndex:
             "attempt_mode": self.attempt_mode,
             "created_at_utc": self.created_at_utc,
             "updated_at_utc": self.updated_at_utc,
+            **({"lineage": self.lineage.to_dict()} if self.lineage is not None else {}),
         }
 
+    @property
+    def effective_lineage(self) -> AttemptLineage:
+        """Return the explicit current-format lineage."""
 
-@dataclass(frozen=True)
-class RunRecord:
-    run_id: str
-    stage: str
-    status: str
+        if self.lineage is None:
+            raise ValueError("Artifact index is missing current-format lineage.")
+        return self.lineage

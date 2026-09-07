@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import hashlib
-import json
 import os
 import sys
 from collections.abc import Callable
@@ -43,6 +42,7 @@ from aidd.core.repair import (
     count_stage_attempts,
     effective_repair_budget,
     generate_repair_brief,
+    load_stage_attempt_modes,
     parse_validator_report_findings,
     persist_repair_history_snapshot,
     preflight_repair_extension,
@@ -53,11 +53,10 @@ from aidd.core.run_lookup import latest_attempt_number, latest_run_id
 from aidd.core.run_store import (
     RUN_RUNTIME_LOG_FILENAME,
     create_run_manifest,
-    load_attempt_artifact_index,
+    load_run_manifest,
     load_stage_metadata,
     next_attempt_number,
     run_attempt_root,
-    run_manifest_path,
     run_root,
     write_attempt_artifact_index,
 )
@@ -926,19 +925,15 @@ def _repair_extension_budget_snapshot(
         run_id=run_id,
         stage=stage,
     )
-    attempt_modes: list[str | None] = []
-    for attempt_number in range(1, stage_attempt_count + 1):
-        index = load_attempt_artifact_index(
+    used = repair_attempts_used(
+        stage_attempt_count=stage_attempt_count,
+        attempt_modes=load_stage_attempt_modes(
             workspace_root=workspace_root,
             work_item=work_item,
             run_id=run_id,
             stage=stage,
-            attempt_number=attempt_number,
-        )
-        attempt_modes.append(None if index is None else index.attempt_mode)
-    used = repair_attempts_used(
-        stage_attempt_count=stage_attempt_count,
-        attempt_modes=tuple(attempt_modes) if attempt_modes else None,
+            stage_attempt_count=stage_attempt_count,
+        ),
     )
     maximum = effective_repair_budget(stage=stage, policy=repair_policy)
     return used, maximum, max(0, maximum - used)
@@ -1024,24 +1019,14 @@ def run_stage_repair_extension_command(options: StageRepairExtensionOptions) -> 
             "and stage."
         )
         raise typer.Exit(code=1)
-    manifest_path = run_manifest_path(
-        workspace_root=workspace_root,
-        work_item=options.work_item,
-        run_id=options.run_id,
-    )
     try:
-        manifest_payload = json.loads(manifest_path.read_text(encoding="utf-8"))
-    except (OSError, json.JSONDecodeError) as exc:
+        manifest_payload = load_run_manifest(workspace_root, options.work_item, options.run_id)
+    except (OSError, ValueError) as exc:
         raise typer.BadParameter(f"Selected run manifest cannot be read: {exc}") from exc
-    if (
-        not isinstance(manifest_payload, dict)
-        or manifest_payload.get("runtime_id") != options.runtime
-    ):
-        manifest_runtime = (
-            manifest_payload.get("runtime_id")
-            if isinstance(manifest_payload, dict)
-            else None
-        )
+    if manifest_payload is None:
+        raise typer.BadParameter("Selected run manifest does not exist.")
+    manifest_runtime = manifest_payload["runtime_id"]
+    if manifest_runtime != options.runtime:
         raise typer.BadParameter(
             f"Runtime '{options.runtime}' does not match selected run manifest "
             f"'{manifest_runtime}'."

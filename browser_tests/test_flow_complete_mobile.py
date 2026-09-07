@@ -22,7 +22,7 @@ def test_flow_complete_keeps_terminal_decision_in_first_mobile_viewport(
     ) as harness, harness.open_page(viewport) as browser_page:
         page = browser_page.page
         page.goto(
-            f"{harness.url}?ui=studio&work_item={fixture.work_item}"
+            f"{harness.url}?work_item={fixture.work_item}"
             f"&run_id={fixture.run_id}&stage=qa",
             wait_until="networkidle",
         )

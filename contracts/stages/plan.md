@@ -12,8 +12,12 @@ Describe the intended solution, boundaries, risks, rollout, and verification app
 - `questions.md` / `answers.md` when clarification is required
 
 `plan.md` is the primary runtime-authored content artifact. `stage-result.md`
-is a runtime-authored summary draft that AIDD may normalize after validation, and
-`validator-report.md` is canonical only after AIDD writes the post-runtime validation report.
+and `validator-report.md` are AIDD-generated workflow records. The runtime must not create
+or edit either record in initial, repair, or intervention attempts. It writes only substantive
+runtime content and exposes evidence for AIDD reconciliation. If a blocker prevents completion,
+it must submit a `[blocking]` question through the controlled interview path; blocker prose alone
+does not pause AIDD. The primary-output list above is the published artifact view, not a
+grant of runtime write authority.
 
 ## System-owned control artifacts
 
@@ -48,7 +52,8 @@ verification commands may refer to other paths, but implementation milestones an
 not introduce an out-of-scope helper, module, test, configuration file, or generated artifact. If
 the preferred design needs a path outside the authored scope, keep a small private helper inside an
 allowed file when that is safe or raise a blocking question; never broaden or reinterpret the
-scope from the plan stage. A missing scope document preserves unrestricted legacy planning.
+scope from the plan stage. When this optional document is absent, no additional path allowlist
+is imposed by it.
 
 ## Upstream dependency rule
 

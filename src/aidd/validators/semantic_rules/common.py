@@ -161,7 +161,6 @@ REVIEW_SPEC_NO_ISSUES_PATTERN = re.compile(
     r"\b(no material (?:issues?|defects?) identified|no issues? identified|none)\b",
     flags=re.IGNORECASE,
 )
-REVIEW_SPEC_SEVERITY_PATTERN = QA_RISK_SEVERITY_PATTERN
 REVIEW_SPEC_RATIONALE_PATTERN = re.compile(
     r"\b(rationale|because)\b",
     flags=re.IGNORECASE,

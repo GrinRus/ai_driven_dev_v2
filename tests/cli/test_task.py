@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 from pathlib import Path
 
 import pytest
@@ -12,13 +13,14 @@ from aidd.cli.support import _runtime_command_for_runtime, _runtime_execution_mo
 from aidd.cli.task import execute_all_tasks, execute_task_by_id, finalize_implementation
 from aidd.config import load_config
 from aidd.core.run_store import create_run_manifest
-from aidd.core.task_ledger import load_task_ledger
+from aidd.core.task_ledger import TaskLedger, load_task_ledger, persist_task_ledger
+from aidd.core.task_plan import parse_task_plan
 from aidd.validators.models import ValidationFinding
 
 runner = CliRunner()
 
 
-def _manifest_config_snapshot(workspace_root: Path, runtime: str) -> dict[str, str]:
+def _manifest_config_snapshot(workspace_root: Path, runtime: str) -> dict[str, object]:
     cfg = load_config(Path("aidd.example.toml"))
     runtime_cfg = cfg.runtime_config(runtime)
     return {
@@ -30,6 +32,24 @@ def _manifest_config_snapshot(workspace_root: Path, runtime: str) -> dict[str, s
         "runtime_permission_policy": runtime_cfg.permission_policy.value,
         "runtime_interaction_mode": runtime_cfg.interaction_mode.value,
         "runtime_auto_approval_preset": runtime_cfg.auto_approval_preset.value,
+        "runtime_model": runtime_cfg.model,
+        "runtime_reasoning_effort": runtime_cfg.reasoning_effort,
+        "runtime_model_source": "runtime-config"
+        if runtime_cfg.model is not None
+        else "runtime-default",
+        "runtime_reasoning_effort_source": (
+            "runtime-config" if runtime_cfg.reasoning_effort is not None else "runtime-default"
+        ),
+        "runtime_selection": {
+            "requested_model": runtime_cfg.model,
+            "requested_reasoning_effort": runtime_cfg.reasoning_effort,
+            "model_source": "runtime-config"
+            if runtime_cfg.model is not None
+            else "runtime-default",
+            "reasoning_effort_source": (
+                "runtime-config" if runtime_cfg.reasoning_effort is not None else "runtime-default"
+            ),
+        },
     }
 
 
@@ -348,15 +368,9 @@ def test_failed_aggregate_finalization_retries_without_rerunning_task(
             encoding="utf-8",
         )
         (stage_root / "stage-result.md").write_text("# Stage result\n", encoding="utf-8")
-        (stage_root / "validator-report.md").write_text(
-            "# Validator report\n", encoding="utf-8"
-        )
-        (stage_root / "questions.md").write_text(
-            "# Questions\n\n- none\n", encoding="utf-8"
-        )
-        (stage_root / "answers.md").write_text(
-            "# Answers\n\n- none\n", encoding="utf-8"
-        )
+        (stage_root / "validator-report.md").write_text("# Validator report\n", encoding="utf-8")
+        (stage_root / "questions.md").write_text("# Questions\n\n- none\n", encoding="utf-8")
+        (stage_root / "answers.md").write_text("# Answers\n\n- none\n", encoding="utf-8")
 
     validation_calls = 0
 
@@ -367,7 +381,7 @@ def test_failed_aggregate_finalization_retries_without_rerunning_task(
         if validation_calls == 1:
             return (
                 ValidationFinding(
-                        code="SEM-INCOMPLETE-EXECUTION-SUMMARY",
+                    code="SEM-INCOMPLETE-EXECUTION-SUMMARY",
                     message="Injected aggregate validation failure.",
                 ),
             )
@@ -399,9 +413,7 @@ def test_failed_aggregate_finalization_retries_without_rerunning_task(
             config=Path("aidd.example.toml"),
         )
 
-    failed = load_task_ledger(
-        workspace_root=workspace_root, work_item="WI-TASK", run_id="run-1"
-    )
+    failed = load_task_ledger(workspace_root=workspace_root, work_item="WI-TASK", run_id="run-1")
     assert failed is not None
     assert failed.entry("TL-1").status.value == "succeeded"
     assert failed.finalization.status.value == "failed"
@@ -418,3 +430,49 @@ def test_failed_aggregate_finalization_retries_without_rerunning_task(
     assert finalized.finalization.status.value == "succeeded"
     assert finalized.finalization.attempt_count == 2
     assert task_runs == 1
+
+
+@pytest.mark.parametrize("invalid_version", (None, 1, "2", True, 99))
+def test_task_cli_rejects_retired_ledger_before_runtime_or_state_writes(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, invalid_version: object,
+) -> None:
+    workspace_root = tmp_path / ".aidd"
+    _write_tasklist(workspace_root)
+    create_run_manifest(
+        workspace_root=workspace_root, work_item="WI-TASK", run_id="run-1",
+        runtime_id="generic-cli", stage_target="qa", workflow_stage_start="tasklist",
+        workflow_stage_end="qa",
+        config_snapshot=_manifest_config_snapshot(workspace_root, "generic-cli"),
+    )
+    tasklist_path = workspace_root / "workitems/WI-TASK/stages/tasklist/output/tasklist.md"
+    ledger = TaskLedger.create(parse_task_plan(tasklist_path.read_text()))
+    ledger_path = persist_task_ledger(
+        workspace_root=workspace_root, work_item="WI-TASK", run_id="run-1", ledger=ledger,
+    )
+    payload = ledger.to_dict()
+    if invalid_version is None:
+        payload.pop("schema_version")
+    else:
+        payload["schema_version"] = invalid_version
+    ledger_path.write_text(json.dumps(payload), encoding="utf-8")
+    before = {path: path.read_bytes() for path in workspace_root.rglob("*") if path.is_file()}
+    runtime_calls: list[str] = []
+
+    def runtime(context):
+        runtime_calls.append("execute")
+        raise AssertionError("Malformed ledger must not reach runtime")
+
+    monkeypatch.setattr("aidd.cli.task._task_attempt_port", lambda **kwargs: runtime)
+    result = runner.invoke(app, [
+        "task", "run", "TL-1", "--work-item", "WI-TASK", "--run-id", "run-1",
+        "--runtime", "generic-cli", "--root", str(workspace_root),
+        "--config", str(Path("aidd.example.toml").resolve()), "--no-log-follow",
+    ])
+    assert result.exit_code != 0
+    assert isinstance(result.exception, ValueError)
+    assert "schema_version=2" in str(result.exception)
+    assert runtime_calls == []
+    assert {
+        path: path.read_bytes() for path in workspace_root.rglob("*") if path.is_file()
+    } == before
+    assert not list(workspace_root.rglob("attempt-*"))

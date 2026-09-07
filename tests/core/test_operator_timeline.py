@@ -160,7 +160,7 @@ def test_operator_timeline_projects_task_and_finalization_frames(tmp_path: Path)
     assert task_frame.identity == "task:TL-2:attempt:0002"
     assert task_frame.task_id == "TL-2"
     assert task_frame.status == "failed"
-    # Legacy task attempts without their own start timestamp must not inherit
+    # Task attempts without their own start timestamp must not inherit
     # the enclosing run's elapsed duration.
     assert task_frame.started_at_utc is None
     assert task_frame.duration_seconds is None
@@ -172,7 +172,7 @@ def test_operator_timeline_projects_task_and_finalization_frames(tmp_path: Path)
     assert finalization_frame.status == "failed"
 
 
-def test_operator_timeline_uses_referenced_stage_attempt_bounds_for_legacy_task_attempt(
+def test_operator_timeline_uses_referenced_stage_attempt_bounds_without_task_timestamps(
     tmp_path: Path,
 ) -> None:
     workspace_root = tmp_path / ".aidd"
@@ -215,7 +215,19 @@ def test_operator_timeline_uses_referenced_stage_attempt_bounds_for_legacy_task_
     )
     task_attempt.mkdir(parents=True)
     (task_attempt / "attempt-state.json").write_text(
-        json.dumps({"status": "failed", "attempt_number": 1}),
+        json.dumps(
+            {
+                "status": "failed",
+                "attempt_number": 1,
+                "lineage": {
+                    "schema_version": 1,
+                    "scope": "task",
+                    "attempt_kind": "task",
+                    "attempt_number": 1,
+                    "parent_attempt_path": None,
+                },
+            }
+        ),
         encoding="utf-8",
     )
     (task_attempt / "stage-attempt-references.json").write_text(
@@ -223,9 +235,16 @@ def test_operator_timeline_uses_referenced_stage_attempt_bounds_for_legacy_task_
             {
                 "schema_version": 1,
                 "task_id": "TL-2",
-                "task_attempt_number": 1,
-                "stage": "implement",
-                "stage_attempts": [
+                    "task_attempt_number": 1,
+                    "stage": "implement",
+                    "lineage": {
+                        "schema_version": 1,
+                        "scope": "task",
+                        "attempt_kind": "task",
+                        "attempt_number": 1,
+                        "parent_attempt_path": None,
+                    },
+                    "stage_attempts": [
                     {
                         "attempt_number": 1,
                         "path": "reports/runs/WI-UI/run-ui/stages/implement/attempts/attempt-0001",

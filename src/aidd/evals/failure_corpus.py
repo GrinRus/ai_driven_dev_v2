@@ -26,10 +26,7 @@ from aidd.validators.semantic_rules.placeholders import find_placeholder_occurre
 
 FAILURE_CORPUS_SCHEMA_VERSION = 1
 DEFAULT_FAILURE_CORPUS_ROOT = (
-    Path(__file__).resolve().parents[3]
-    / "tests"
-    / "fixtures"
-    / "w43-e1-s1-failure-corpus"
+    Path(__file__).resolve().parents[3] / "tests" / "fixtures" / "w43-e1-s1-failure-corpus"
 )
 
 FailureReplayKind = Literal[
@@ -143,8 +140,10 @@ def _load_case(raw: object, *, index: int) -> FailureCorpusCase:
         normalized_fixtures[name] = candidate.as_posix()
 
     expected = raw.get("expected_signals")
-    if not isinstance(expected, list) or not expected or not all(
-        isinstance(item, str) and item.strip() for item in expected
+    if (
+        not isinstance(expected, list)
+        or not expected
+        or not all(isinstance(item, str) and item.strip() for item in expected)
     ):
         raise FailureCorpusError(f"{context}.expected_signals must be a non-empty list.")
     related = raw.get("related_findings", [])
@@ -268,7 +267,14 @@ def replay_failure_case(corpus: FailureCorpus, case: FailureCorpusCase) -> Failu
             raise FailureCorpusError(
                 f"Case {case.case_id} lifecycle budget drifted from its manifest."
             )
-        used = repair_attempts_used(stage_attempt_count=attempt_count)
+        attempt_modes = state.get("attempt_modes")
+        if not isinstance(attempt_modes, list) or not all(
+            isinstance(mode, str) for mode in attempt_modes
+        ):
+            raise FailureCorpusError(
+                f"Case {case.case_id} lifecycle state must include recorded attempt_modes."
+            )
+        used = repair_attempts_used(stage_attempt_count=attempt_count, attempt_modes=attempt_modes)
         remaining = remaining_repair_attempts(
             repair_attempts_used=used,
             max_repair_attempts=max_repair_attempts,

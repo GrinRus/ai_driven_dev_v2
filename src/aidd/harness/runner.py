@@ -1,25 +1,12 @@
 from __future__ import annotations
 
 import os
-from collections.abc import Callable, Mapping
+from collections.abc import Mapping
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, cast
 
 from aidd.harness.process_lifecycle import HarnessLifecycleBudget, run_owned_process
 from aidd.harness.scenarios import Scenario
-
-
-class HarnessSetupError(RuntimeError):
-    """Raised when a setup command fails."""
-
-
-class HarnessVerificationError(RuntimeError):
-    """Raised when a verification command fails."""
-
-
-class HarnessTeardownError(RuntimeError):
-    """Raised when a teardown command fails."""
 
 
 @dataclass(frozen=True, slots=True)
@@ -33,11 +20,49 @@ class HarnessCommandTranscript:
     timeout_seconds: float | None = None
 
 
+class HarnessCommandError(RuntimeError):
+    """A command-phase failure with the complete partial transcript."""
+
+    command_transcripts: tuple[HarnessCommandTranscript, ...]
+    failed_command: str | None
+    failed_exit_code: int | None
+    duration_seconds: float
+
+    def __init__(
+        self,
+        message: str,
+        *,
+        command_transcripts: tuple[HarnessCommandTranscript, ...] = (),
+        failed_command: str | None = None,
+        failed_exit_code: int | None = None,
+        duration_seconds: float = 0.0,
+    ) -> None:
+        super().__init__(message)
+        self.command_transcripts = command_transcripts
+        self.failed_command = failed_command
+        self.failed_exit_code = failed_exit_code
+        self.duration_seconds = duration_seconds
+
+
+class HarnessSetupError(HarnessCommandError):
+    """Raised when a setup command fails."""
+
+
+class HarnessVerificationError(HarnessCommandError):
+    """Raised when a verification command fails."""
+
+
+class HarnessTeardownError(HarnessCommandError):
+    """Raised when a teardown command fails."""
+
+
 @dataclass(frozen=True, slots=True)
 class HarnessSetupResult:
     executed_commands: tuple[str, ...]
     command_transcripts: tuple[HarnessCommandTranscript, ...]
     duration_seconds: float
+    failed_command: str | None = None
+    failed_exit_code: int | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -60,6 +85,8 @@ class HarnessVerificationResult:
     aidd_exit_code: int
     command_transcripts: tuple[HarnessCommandTranscript, ...]
     duration_seconds: float
+    failed_command: str | None = None
+    failed_exit_code: int | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -67,6 +94,8 @@ class HarnessTeardownResult:
     executed_commands: tuple[str, ...]
     command_transcripts: tuple[HarnessCommandTranscript, ...]
     duration_seconds: float
+    failed_command: str | None = None
+    failed_exit_code: int | None = None
 
 
 def _validate_working_copy_path(working_copy_path: Path) -> None:
@@ -103,7 +132,7 @@ def _run_shell_commands(
     working_copy_path: Path,
     command_env: Mapping[str, str],
     error_label: str,
-    error_type: type[RuntimeError],
+    error_type: type[HarnessCommandError],
     lifecycle_budget: HarnessLifecycleBudget | None = None,
 ) -> tuple[HarnessCommandTranscript, ...]:
     command_transcripts: list[HarnessCommandTranscript] = []
@@ -137,14 +166,13 @@ def _run_shell_commands(
             )
             error = error_type(
                 f"{error_label} command failed with non-zero exit "
-                f"({completed.exit_code}): {command}\n{stderr}"
-            )
-            annotated_error = cast(Any, error)
-            annotated_error.command_transcripts = tuple(command_transcripts)
-            annotated_error.failed_command = command
-            annotated_error.failed_exit_code = completed.exit_code
-            annotated_error.duration_seconds = sum(
-                item.duration_seconds for item in command_transcripts
+                f"({completed.exit_code}): {command}\n{stderr}",
+                command_transcripts=tuple(command_transcripts),
+                failed_command=command,
+                failed_exit_code=completed.exit_code,
+                duration_seconds=sum(
+                    item.duration_seconds for item in command_transcripts
+                ),
             )
             raise error
     return tuple(command_transcripts)
@@ -396,44 +424,3 @@ def run_teardown_steps(
         command_transcripts=command_transcripts,
         duration_seconds=sum(transcript.duration_seconds for transcript in command_transcripts),
     )
-
-
-def run_with_teardown[T](
-    *,
-    action: Callable[[], T],
-    teardown_commands: tuple[str, ...],
-    working_copy_path: Path,
-    environment: Mapping[str, str] | None = None,
-    lifecycle_budget: HarnessLifecycleBudget | None = None,
-) -> tuple[T, HarnessTeardownResult]:
-    result_marker = object()
-    action_result: T | object = result_marker
-    action_error: BaseException | None = None
-    try:
-        action_result = action()
-    except BaseException as exc:  # pragma: no cover - exercised by failure-path tests.
-        action_error = exc
-
-    try:
-        teardown_result = run_teardown_steps(
-            teardown_commands=teardown_commands,
-            working_copy_path=working_copy_path,
-            environment=environment,
-            lifecycle_budget=lifecycle_budget,
-        )
-    except BaseException as teardown_error:
-        if action_error is not None:
-            if isinstance(action_error, Exception) and isinstance(teardown_error, Exception):
-                raise ExceptionGroup(
-                    "Scenario execution and teardown both failed.",
-                    [action_error, teardown_error],
-                ) from None
-            raise BaseExceptionGroup(
-                "Scenario execution and teardown both failed.",
-                [action_error, teardown_error],
-            ) from None
-        raise
-
-    if action_error is not None:
-        raise action_error
-    return cast(T, action_result), teardown_result

@@ -6,6 +6,7 @@ from pathlib import Path
 from aidd.core.implementation_eligibility import implementation_finalization_blocker
 from aidd.core.run_store import load_stage_metadata
 from aidd.core.stage_paths import workspace_relative_path
+from aidd.core.stage_preparation import is_stage_input_ready
 from aidd.core.stage_registry import (
     DEFAULT_STAGE_CONTRACTS_ROOT,
     load_all_stage_manifests,
@@ -52,10 +53,6 @@ class StageAdvancementSummary:
     blocked_upstream_stages: tuple[str, ...]
     failed_upstream_stages: tuple[str, ...]
     missing_input_documents: tuple[str, ...] = ()
-
-
-def stage_graph() -> tuple[str, ...]:
-    return STAGES
 
 
 def _normalize_stage_bounds(
@@ -137,17 +134,6 @@ def resolve_stage_dependencies(
     return _resolve_manifest_dependencies(stage, manifests[stage].required_input_paths)
 
 
-def resolve_stage_dependency_graph(
-    *,
-    contracts_root: Path = DEFAULT_STAGE_CONTRACTS_ROOT,
-) -> dict[str, tuple[str, ...]]:
-    manifests = load_all_stage_manifests(contracts_root=contracts_root)
-    return {
-        stage: _resolve_manifest_dependencies(stage, manifest.required_input_paths)
-        for stage, manifest in manifests.items()
-    }
-
-
 def evaluate_stage_eligibility(
     *,
     workspace_root: Path,
@@ -191,7 +177,7 @@ def evaluate_stage_eligibility(
             workspace_root=workspace_root,
             contracts_root=contracts_root,
         )
-        if not path.exists()
+        if not is_stage_input_ready(path)
     )
     if stage in {"review", "qa"}:
         finalization_blocker = implementation_finalization_blocker(

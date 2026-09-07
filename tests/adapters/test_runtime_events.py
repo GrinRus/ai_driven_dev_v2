@@ -10,7 +10,13 @@ from aidd.adapters.runtime_events import (
     detect_question_or_pause_events,
     persist_adapter_question_events,
 )
-from aidd.core.adapter_interview import AdapterQuestionEvent, QuestionPolicy
+from aidd.core.adapter_interview import (
+    AdapterQuestionEvent,
+    QuestionPolicy,
+    load_questions_document,
+    unresolved_blocking_questions,
+)
+from aidd.core.run_store import persist_stage_status, run_stage_metadata_path
 from aidd.runtime_logs.events import (
     MAX_LIFECYCLE_EVENT_BYTES,
     MAX_LIFECYCLE_EVENTS,
@@ -205,10 +211,28 @@ def test_detect_question_or_pause_events_uses_default_text_only_for_pause_event(
     assert detection.question_events[0].text == "Runtime paused and requires operator input."
 
 
-def test_persist_adapter_question_events_creates_empty_answers_document(
+@pytest.mark.parametrize("existing_metadata", (False, True))
+def test_persist_adapter_question_events_writes_interview_documents_without_mutating_run_metadata(
     tmp_path: Path,
+    existing_metadata: bool,
 ) -> None:
     workspace_root = tmp_path / ".aidd"
+    metadata_path = run_stage_metadata_path(
+        workspace_root=workspace_root,
+        work_item="WI-001",
+        run_id="run-001",
+        stage="plan",
+    )
+    metadata_before = None
+    if existing_metadata:
+        persist_stage_status(
+            workspace_root=workspace_root,
+            work_item="WI-001",
+            run_id="run-001",
+            stage="plan",
+            status="executing",
+        )
+        metadata_before = metadata_path.read_bytes()
 
     questions_path = persist_adapter_question_events(
         workspace_root=workspace_root,
@@ -225,8 +249,18 @@ def test_persist_adapter_question_events_creates_empty_answers_document(
 
     assert questions_path is not None
     assert "Who approves release?" in questions_path.read_text(encoding="utf-8")
+    questions = load_questions_document(
+        workspace_root=workspace_root, work_item="WI-001", stage="plan"
+    )
+    assert [question.question_id for question in questions] == ["Q1"]
+    unresolved = unresolved_blocking_questions(questions=questions)
+    assert [question.question_id for question in unresolved] == ["Q1"]
     answers_path = workspace_root / "workitems" / "WI-001" / "stages" / "plan" / "answers.md"
     assert "- none" in answers_path.read_text(encoding="utf-8")
+    if metadata_before is None:
+        assert not metadata_path.exists()
+    else:
+        assert metadata_path.read_bytes() == metadata_before
 
 
 def test_persist_adapter_question_events_preserves_misplaced_answers_for_promotion(

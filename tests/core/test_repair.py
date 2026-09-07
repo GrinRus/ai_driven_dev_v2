@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import hashlib
+import json
 from pathlib import Path
 
 import pytest
@@ -10,7 +11,6 @@ from aidd.core.repair import (
     RepairBudgetPolicy,
     ValidatorReportFinding,
     count_stage_attempts,
-    default_repair_budget,
     effective_repair_budget,
     evaluate_repair_extension_eligibility,
     evaluate_stage_repair_counter,
@@ -21,15 +21,18 @@ from aidd.core.repair import (
     preflight_repair_extension,
     remaining_repair_attempts,
     render_repair_brief,
-    render_stage_result_with_repair_history,
     repair_attempts_used,
-    validate_repair_extension_grant,
     write_repair_brief,
 )
 from aidd.core.run_store import (
+    create_next_attempt_directory,
     create_run_manifest,
     load_stage_metadata,
     persist_stage_status,
+)
+from aidd.core.stage_terminal import (
+    CanonicalStageResultProjection,
+    render_stage_result_from_lifecycle_state,
 )
 from aidd.validators.models import ValidationFinding, ValidationIssueLocation
 from aidd.validators.protocol import ValidatorReportProtocolError
@@ -41,7 +44,7 @@ def _make_attempt_dir(root: Path, name: str) -> None:
 
 
 def test_default_repair_budget_is_two_attempts() -> None:
-    assert default_repair_budget() == 2
+    assert effective_repair_budget(stage="plan") == 2
 
 
 def _repair_extension_grant() -> RepairExtensionGrant:
@@ -107,17 +110,6 @@ def test_repair_extension_contract_allows_latest_exhausted_stage() -> None:
 
     assert decision.eligible
     assert decision.disabled_reason is None
-    validate_repair_extension_grant(
-        grant,
-        expected_work_item_id="WI-001",
-        expected_run_id="run-001",
-        expected_stage="plan",
-        latest_stage_status="repair-exhausted",
-        latest_attempt_mode="repair",
-        current_validator_report_sha256="a" * 64,
-        current_repair_brief_sha256="b" * 64,
-        current_configuration_identity="codex:config-001",
-    )
 
 
 @pytest.mark.parametrize(
@@ -156,8 +148,6 @@ def test_repair_extension_contract_rejects_unsafe_selection(
     assert not decision.eligible
     assert decision.disabled_reason is not None
     assert message.lower() in decision.disabled_reason.lower()
-    with pytest.raises(ValueError, match=message):
-        validate_repair_extension_grant(grant, **kwargs)
 
 
 def _prepare_exhausted_repair_extension_workspace(
@@ -228,7 +218,6 @@ def test_repair_extension_preflight_finalizes_manual_fix_without_runtime(tmp_pat
     )
 
     assert result.action == "finalized"
-    assert result.runtime_required is False
     assert result.stage_result_path is not None and result.stage_result_path.exists()
     assert runtime_calls == []
     metadata = load_stage_metadata(
@@ -265,7 +254,6 @@ def test_repair_extension_preflight_reopens_with_bounded_brief_without_spending_
     )
 
     assert result.action == "reopened"
-    assert result.runtime_required is True
     assert result.repair_brief_path is not None and result.repair_brief_path.exists()
     assert "repair-extension" in result.repair_brief_path.read_text(encoding="utf-8")
     metadata = load_stage_metadata(
@@ -383,18 +371,37 @@ def test_count_stage_attempts_ignores_non_attempt_directories(tmp_path: Path) ->
     _make_attempt_dir(attempts_root, "attempt-final")
     _make_attempt_dir(attempts_root, "misc")
 
-    assert count_stage_attempts(
-        workspace_root=tmp_path / ".aidd",
-        work_item="WI-001",
-        run_id="run-001",
-        stage="plan",
-    ) == 2
+    assert (
+        count_stage_attempts(
+            workspace_root=tmp_path / ".aidd",
+            work_item="WI-001",
+            run_id="run-001",
+            stage="plan",
+        )
+        == 2
+    )
 
 
 def test_repair_attempts_used_treats_initial_attempt_as_non_repair() -> None:
-    assert repair_attempts_used(stage_attempt_count=0) == 0
-    assert repair_attempts_used(stage_attempt_count=1) == 0
-    assert repair_attempts_used(stage_attempt_count=3) == 2
+    assert repair_attempts_used(stage_attempt_count=0, attempt_modes=()) == 0
+    assert repair_attempts_used(stage_attempt_count=1, attempt_modes=("initial",)) == 0
+    assert (
+        repair_attempts_used(stage_attempt_count=3, attempt_modes=("initial", "repair", "repair"))
+        == 2
+    )
+
+
+def test_repair_accounting_does_not_charge_resume_or_intervention_attempts() -> None:
+    assert repair_attempts_used(
+        stage_attempt_count=5,
+        attempt_modes=("initial", "resume", "repair", "intervention", "repair-extension"),
+    ) == 1
+
+
+@pytest.mark.parametrize("modes", ((None,), ("unknown",), ()))
+def test_repair_accounting_rejects_missing_or_unknown_attempt_modes(modes: tuple) -> None:
+    with pytest.raises(ValueError, match="Attempt modes|explicit valid mode"):
+        repair_attempts_used(stage_attempt_count=1, attempt_modes=modes)
 
 
 def test_remaining_repair_attempts_clamps_at_zero() -> None:
@@ -404,20 +411,14 @@ def test_remaining_repair_attempts_clamps_at_zero() -> None:
 
 
 def test_evaluate_stage_repair_counter_reports_budget_state(tmp_path: Path) -> None:
-    attempts_root = (
-        tmp_path
-        / ".aidd"
-        / "reports"
-        / "runs"
-        / "WI-001"
-        / "run-001"
-        / "stages"
-        / "plan"
-        / "attempts"
-    )
-    _make_attempt_dir(attempts_root, "attempt-0001")
-    _make_attempt_dir(attempts_root, "attempt-0002")
-    _make_attempt_dir(attempts_root, "attempt-0003")
+    for mode in ("initial", "repair", "repair"):
+        create_next_attempt_directory(
+            workspace_root=tmp_path / ".aidd",
+            work_item="WI-001",
+            run_id="run-001",
+            stage="plan",
+            attempt_mode=mode,
+        )
 
     counter = evaluate_stage_repair_counter(
         workspace_root=tmp_path / ".aidd",
@@ -469,22 +470,37 @@ def test_parse_validator_report_findings_extracts_codes_and_locations() -> None:
     assert findings[1].source_path == "workitems/WI-001/stages/plan/plan.md"
 
 
-def test_repair_reader_normalizes_legacy_code_and_rejects_unknown_code() -> None:
-    legacy = parse_validator_report_findings(
-        validator_report_markdown=(
-            "## Structural checks\n\n"
-            "- `STRUCT-MISSING-DOCUMENT` (`high`) in `plan.md`: Missing.\n"
-        )
-    )
-
-    assert legacy[0].code == "STRUCT-MISSING-REQUIRED-DOCUMENT"
+@pytest.mark.parametrize("code", ("STRUCT-MISSING-DOCUMENT", "SEM-UNKNOWN-CODE"))
+def test_repair_reader_rejects_retired_and_unknown_codes(code: str) -> None:
     with pytest.raises(ValidatorReportProtocolError):
         parse_validator_report_findings(
             validator_report_markdown=(
-                "## Semantic checks\n\n"
-                "- `SEM-UNKNOWN-CODE` (`high`) in `plan.md`: Unknown.\n"
-            )
+                f"## Structural checks\n\n- `{code}` (`high`) in `plan.md`: Missing.\n"
+            ),
         )
+
+
+@pytest.mark.parametrize(
+    "document_name", ("stage-result.md", "validator-report.md", "repair-brief.md")
+)
+def test_repair_brief_assigns_generated_record_corrections_to_aidd(document_name: str) -> None:
+    source_path = f"workitems/WI-001/stages/plan/{document_name}"
+    message = "Required generated record section is incomplete."
+    brief = render_repair_brief(
+        validator_report_markdown=render_validator_report(findings=(ValidationFinding(
+            code="SEM-INCOMPLETE-SECTION", message=message, severity="low",
+            location=ValidationIssueLocation(workspace_relative_path=source_path),
+        ),)),
+        validator_report_path="workitems/WI-001/stages/plan/validator-report.md",
+        prior_stage_artifacts=(), stage_attempt_count=1, max_repair_attempts=1,
+    )
+    assert f"AIDD must reconcile `{source_path}`" in brief
+    assert f"Update `{source_path}`" not in brief
+    assert "Runtime must not create or edit this record" in brief
+    assert "submit a `[blocking]` question through the controlled interview path" in brief
+    assert message in brief
+    assert "`SEM-INCOMPLETE-SECTION` `low`" in brief
+    assert "SEM-INCOMPLETE-SECTION" not in brief.split("## Optional quality improvements", 1)[1]
 
 
 def test_render_repair_brief_includes_required_sections_and_budget_context(tmp_path: Path) -> None:
@@ -540,7 +556,7 @@ def test_render_repair_brief_includes_required_sections_and_budget_context(tmp_p
     assert "## Mandatory fixes" in repair_brief
     assert "## Optional quality improvements" in repair_brief
     assert (
-        "- [`CROSS-REPAIR-BRIEF-NOT-REFERENCED`] Update "
+        "- [`CROSS-REPAIR-BRIEF-NOT-REFERENCED`] AIDD must reconcile "
         "`workitems/WI-001/stages/plan/stage-result.md`"
     ) in repair_brief
     optional_section = repair_brief.split("## Optional quality improvements", 1)[1]
@@ -719,9 +735,7 @@ def test_render_repair_brief_adds_actionable_list_format_hint() -> None:
                 ),
                 severity="medium",
                 location=ValidationIssueLocation(
-                    workspace_relative_path=(
-                        "workitems/WI-001/stages/idea/idea-brief.md"
-                    ),
+                    workspace_relative_path=("workitems/WI-001/stages/idea/idea-brief.md"),
                     line_number=20,
                 ),
             ),
@@ -746,9 +760,7 @@ def test_render_repair_brief_adds_placeholder_and_success_blocker_hints() -> Non
         findings=(
             ValidationFinding(
                 code="SEM-PLACEHOLDER-CONTENT",
-                message=(
-                    "Placeholder content remains in required section `Decision`: `TODO`."
-                ),
+                message=("Placeholder content remains in required section `Decision`: `TODO`."),
                 severity="high",
                 location=ValidationIssueLocation(
                     workspace_relative_path=(
@@ -793,9 +805,7 @@ def test_render_repair_brief_names_canonical_tasklist_milestone_locations() -> N
                 ),
                 severity="high",
                 location=ValidationIssueLocation(
-                    workspace_relative_path=(
-                        "workitems/WI-001/stages/tasklist/output/tasklist.md"
-                    ),
+                    workspace_relative_path=("workitems/WI-001/stages/tasklist/output/tasklist.md"),
                     line_number=9,
                 ),
             ),
@@ -804,12 +814,8 @@ def test_render_repair_brief_names_canonical_tasklist_milestone_locations() -> N
 
     repair_brief = render_repair_brief(
         validator_report_markdown=report_markdown,
-        validator_report_path=(
-            "workitems/WI-001/stages/tasklist/output/validator-report.md"
-        ),
-        prior_stage_artifacts=(
-            "workitems/WI-001/stages/plan/output/plan.md",
-        ),
+        validator_report_path=("workitems/WI-001/stages/tasklist/output/validator-report.md"),
+        prior_stage_artifacts=("workitems/WI-001/stages/plan/output/plan.md",),
         stage_attempt_count=1,
         max_repair_attempts=2,
     )
@@ -896,9 +902,7 @@ def test_render_repair_brief_adds_review_evidence_reference_hint() -> None:
                 ),
                 severity="high",
                 location=ValidationIssueLocation(
-                    workspace_relative_path=(
-                        "workitems/WI-001/stages/review/review-report.md"
-                    ),
+                    workspace_relative_path=("workitems/WI-001/stages/review/review-report.md"),
                     line_number=9,
                 ),
             ),
@@ -939,14 +943,14 @@ def test_render_repair_brief_adds_review_spec_evidence_and_reconciliation_hint()
                     ),
                     line_number=7,
                 ),
+            ),
+            ValidationFinding(
+                code="SEM-UNSUPPORTED-CLAIM",
+                message=(
+                    "High-severity or source-inspection review-spec contradiction "
+                    "claims must include `Evidence:` and `Reconciliation:` explaining "
+                    "how the issue relates to upstream research or plan evidence."
                 ),
-                ValidationFinding(
-                    code="SEM-UNSUPPORTED-CLAIM",
-                    message=(
-                        "High-severity or source-inspection review-spec contradiction "
-                        "claims must include `Evidence:` and `Reconciliation:` explaining "
-                        "how the issue relates to upstream research or plan evidence."
-                    ),
                 severity="high",
                 location=ValidationIssueLocation(
                     workspace_relative_path=(
@@ -988,9 +992,7 @@ def test_render_repair_brief_adds_review_workspace_hygiene_hint() -> None:
                 ),
                 severity="high",
                 location=ValidationIssueLocation(
-                    workspace_relative_path=(
-                        "workitems/WI-001/stages/review/review-report.md"
-                    ),
+                    workspace_relative_path=("workitems/WI-001/stages/review/review-report.md"),
                     line_number=7,
                 ),
             ),
@@ -1017,8 +1019,7 @@ def test_render_repair_brief_adds_implement_verification_command_hint() -> None:
             ValidationFinding(
                 code="SEM-UNVERIFIABLE-CHECK-CLAIM",
                 message=(
-                    "Verification note includes outcome claim without executable "
-                    "command evidence."
+                    "Verification note includes outcome claim without executable command evidence."
                 ),
                 severity="high",
                 location=ValidationIssueLocation(
@@ -1034,9 +1035,7 @@ def test_render_repair_brief_adds_implement_verification_command_hint() -> None:
     repair_brief = render_repair_brief(
         validator_report_markdown=report_markdown,
         validator_report_path="workitems/WI-001/stages/implement/validator-report.md",
-        prior_stage_artifacts=(
-            "workitems/WI-001/stages/implement/implementation-report.md",
-        ),
+        prior_stage_artifacts=("workitems/WI-001/stages/implement/implementation-report.md",),
         stage_attempt_count=1,
         max_repair_attempts=2,
     )
@@ -1112,30 +1111,37 @@ def test_generate_and_write_repair_brief_roundtrip(tmp_path: Path) -> None:
     assert "# Failed checks" in brief_path.read_text(encoding="utf-8")
 
 
-def test_render_stage_result_with_repair_history_includes_attempt_lines() -> None:
-    stage_result = render_stage_result_with_repair_history(
-        stage="review",
-        work_item="WI-001",
-        status="failed",
-        repair_history=(
-            RepairHistoryEntry(
-                attempt_number=1,
-                trigger="initial",
-                outcome="failed validation",
-                recorded_at_utc="2026-04-22T10:00:00Z",
-                validator_report_path="workitems/WI-001/stages/review/validator-report.md",
+def test_canonical_stage_result_includes_repair_history_attempt_lines() -> None:
+    stage_result = render_stage_result_from_lifecycle_state(
+        CanonicalStageResultProjection(
+            stage="review",
+            work_item="WI-001",
+            status="failed",
+            attempt_number=2,
+            attempt_mode="repair",
+            attempt_outcome="failed validation",
+            validator_verdict="fail",
+            repair_history=(
+                RepairHistoryEntry(
+                    attempt_number=1,
+                    trigger="initial",
+                    outcome="failed validation",
+                    recorded_at_utc="2026-04-22T10:00:00Z",
+                    validator_report_path="workitems/WI-001/stages/review/validator-report.md",
+                ),
+                RepairHistoryEntry(
+                    attempt_number=2,
+                    trigger="repair",
+                    outcome="failed validation",
+                    recorded_at_utc="2026-04-22T10:05:00Z",
+                    validator_report_path="workitems/WI-001/stages/review/validator-report.md",
+                    repair_brief_path="workitems/WI-001/stages/review/repair-brief.md",
+                ),
             ),
-            RepairHistoryEntry(
-                attempt_number=2,
-                trigger="repair",
-                outcome="failed validation",
-                recorded_at_utc="2026-04-22T10:05:00Z",
-                validator_report_path="workitems/WI-001/stages/review/validator-report.md",
-                repair_brief_path="workitems/WI-001/stages/review/repair-brief.md",
-            ),
+            validator_report_path="workitems/WI-001/stages/review/validator-report.md",
+            repair_brief_path="workitems/WI-001/stages/review/repair-brief.md",
         ),
-        validator_report_path="workitems/WI-001/stages/review/validator-report.md",
-        repair_brief_path="workitems/WI-001/stages/review/repair-brief.md",
+        workspace_root=Path(".aidd"),
     )
 
     assert stage_result.startswith("# Stage Result\n\n## Stage\n\n- Stage: `review`\n")
@@ -1145,17 +1151,24 @@ def test_render_stage_result_with_repair_history_includes_attempt_lines() -> Non
     assert "`workitems/WI-001/stages/review/repair-brief.md`" in stage_result
 
 
-def test_render_stage_result_with_repair_history_preserves_primary_outputs() -> None:
-    stage_result = render_stage_result_with_repair_history(
-        stage="review",
-        work_item="WI-001",
-        status="succeeded",
-        repair_history=(),
-        produced_output_paths=(
-            "workitems/WI-001/stages/review/review-report.md",
-            "workitems/WI-001/stages/review/stage-result.md",
+def test_canonical_stage_result_preserves_primary_outputs_with_repair_evidence() -> None:
+    stage_result = render_stage_result_from_lifecycle_state(
+        CanonicalStageResultProjection(
+            stage="review",
+            work_item="WI-001",
+            status="succeeded",
+            attempt_number=1,
+            attempt_mode="initial",
+            attempt_outcome="validated",
+            validator_verdict="pass",
+            repair_history=(),
+            produced_output_paths=(
+                "workitems/WI-001/stages/review/review-report.md",
+                "workitems/WI-001/stages/review/stage-result.md",
+            ),
+            validator_report_path="workitems/WI-001/stages/review/validator-report.md",
         ),
-        validator_report_path="workitems/WI-001/stages/review/validator-report.md",
+        workspace_root=Path(".aidd"),
     )
 
     assert "## Produced outputs" in stage_result
@@ -1222,3 +1235,32 @@ def test_persist_repair_history_snapshot_updates_metadata_and_stage_result(tmp_p
     assert "`workitems/WI-001/stages/plan/plan.md`" in stage_result_text
     assert "`workitems/WI-001/stages/plan/validator-report.md`" in stage_result_text
     assert "`workitems/WI-001/stages/plan/repair-brief.md`" in stage_result_text
+
+
+@pytest.mark.parametrize("malformed", ({}, {"schema_version": 0}, False))
+def test_malformed_recorded_grant_stops_before_revalidation_or_replacement(
+    tmp_path: Path, malformed: object,
+) -> None:
+    workspace_root, grant = _prepare_exhausted_repair_extension_workspace(tmp_path)
+    metadata_path = workspace_root / "reports/runs/WI-001/run-001/stages/plan/stage-metadata.json"
+    payload = json.loads(metadata_path.read_text())
+    payload["repair_extension_grant"] = malformed
+    metadata_path.write_text(json.dumps(payload), encoding="utf-8")
+    before = {path: path.read_bytes() for path in workspace_root.rglob("*") if path.is_file()}
+    callback_calls: list[str] = []
+
+    def revalidate():
+        callback_calls.append("validation")
+        return ()
+
+    with pytest.raises(ValueError, match="[Gg]rant"):
+        preflight_repair_extension(
+            workspace_root=workspace_root, grant=grant,
+            current_configuration_identity="codex:config-001",
+            latest_stage_status="repair-exhausted", latest_attempt_mode="repair",
+            revalidate_documents=revalidate,
+        )
+    assert callback_calls == []
+    assert {
+        path: path.read_bytes() for path in workspace_root.rglob("*") if path.is_file()
+    } == before

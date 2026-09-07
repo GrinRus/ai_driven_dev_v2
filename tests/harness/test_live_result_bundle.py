@@ -149,11 +149,10 @@ def test_materialized_bundle_survives_mutable_root_deletion(tmp_path: Path) -> N
     assert (
         "canonical-evidence/final/manual-frontend-evidence/desktop.png" in paths
     )
-    patch_path, mode = resolve_live_result_reference(
+    patch_path = resolve_live_result_reference(
         bundle_root=bundle,
         reference="canonical-evidence/target/target.patch",
     )
-    assert mode == "bundle-relative"
     assert b"-before" in patch_path.read_bytes()
     assert b"+after" in patch_path.read_bytes()
     assert b"new-product.txt" in patch_path.read_bytes()
@@ -201,26 +200,12 @@ def test_validation_fails_closed_for_dangling_tampered_and_wrong_identity(
         )
 
 
-def test_absolute_reference_requires_explicit_legacy_degraded_mode(
-    tmp_path: Path,
-) -> None:
+def test_absolute_reference_is_rejected(tmp_path: Path) -> None:
     bundle = _prepare_bundle(tmp_path)
-    legacy = tmp_path / "legacy.md"
-    legacy.write_text("# Legacy\n", encoding="utf-8")
-
-    with pytest.raises(LiveResultBundleError, match="legacy evidence"):
-        resolve_live_result_reference(
-            bundle_root=bundle,
-            reference=legacy.as_posix(),
-        )
-
-    path, mode = resolve_live_result_reference(
-        bundle_root=bundle,
-        reference=legacy.as_posix(),
-        allow_legacy_absolute=True,
-    )
-    assert path == legacy
-    assert mode == "legacy-degraded"
+    external = tmp_path / "external.md"
+    external.write_text("# External\n", encoding="utf-8")
+    with pytest.raises(LiveResultBundleError, match="must be bundle-relative"):
+        resolve_live_result_reference(bundle_root=bundle, reference=external.as_posix())
 
 
 def test_materialization_rejects_symlinked_target_evidence(tmp_path: Path) -> None:

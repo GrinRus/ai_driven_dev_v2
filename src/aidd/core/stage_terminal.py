@@ -8,6 +8,7 @@ from pathlib import Path
 from aidd.core.models.run import RepairHistoryEntry
 from aidd.core.stage_registry import resolve_expected_output_documents
 from aidd.core.stages import next_stage
+from aidd.core.workspace import STAGE_RESULT_BOOTSTRAP_TEMPLATE
 from aidd.core.workspace import stage_root as workspace_stage_root
 from aidd.validators.models import ValidationFinding, ValidationIssueLocation
 
@@ -230,6 +231,31 @@ def _project_set_evidence_lines(
         ]
     )
     return tuple(lines)
+
+
+def prepare_bootstrap_stage_result_for_validation(
+    *, workspace_root: Path, work_item: str, stage: str,
+) -> bool:
+    """Project AIDD-owned context onto an exact bootstrap record without claiming success."""
+    stage_result_path = workspace_stage_root(
+        root=workspace_root, work_item=work_item, stage=stage
+    ) / "stage-result.md"
+    if not stage_result_path.exists():
+        return False
+    text = stage_result_path.read_text(encoding="utf-8", errors="replace").strip()
+    project_evidence = _project_set_evidence_lines(
+        workspace_root=workspace_root, work_item=work_item,
+    )
+    prepared = STAGE_RESULT_BOOTSTRAP_TEMPLATE.rstrip()
+    if project_evidence:
+        prepared += "\n\n" + "\n".join(project_evidence).strip()
+    # Recognize the exact prepared form too, so an interrupted validation is idempotent.
+    # Extra runtime prose, even with the bootstrap marker, remains an unexpected runtime draft.
+    if text not in {STAGE_RESULT_BOOTSTRAP_TEMPLATE.strip(), prepared}:
+        return False
+    if text != prepared:
+        stage_result_path.write_text(prepared + "\n", encoding="utf-8")
+    return True
 
 
 def render_stage_result_from_lifecycle_state(
@@ -478,7 +504,7 @@ def ensure_stage_result_references_repair_brief(
 def _replace_or_add_status_section(markdown: str) -> str:
     """Canonicalize the Status section to one lifecycle-owned marker.
 
-    Runtime drafts can contain a mixture of legacy bare markers and newer labelled
+    Runtime drafts can contain a mixture of bare markers and labelled
     markers, sometimes with conflicting values after a repair.  The lifecycle state
     is authoritative, so discard the draft body and write the contract's single
     labelled status line while leaving every other section byte-for-byte intact.
@@ -813,6 +839,7 @@ __all__ = [
     "exhausted_budget_validation_finding",
     "force_stage_result_failed_for_exhausted_budget",
     "normalize_success_stage_result_blockers_if_empty",
+    "prepare_bootstrap_stage_result_for_validation",
     "reconcile_stage_result_after_validation_pass",
     "repair_brief_exhausts_terminal_budget",
     "render_stage_result_from_lifecycle_state",

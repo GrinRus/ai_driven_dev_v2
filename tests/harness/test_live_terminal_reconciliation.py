@@ -26,13 +26,18 @@ def _result(*, stdout: str, exit_code: int = 0, stderr: str = "") -> BlackBoxCom
     )
 
 
-def _payload(working_copy: Path, **overrides: object) -> dict[str, object]:
+def _payload(
+    working_copy: Path,
+    *,
+    expected_state: str = "executing",
+    **overrides: object,
+) -> dict[str, object]:
     payload: dict[str, object] = {
         "schema_version": 1,
         "work_item": "WI-LIVE",
         "run_id": "run-live",
         "stage": "idea",
-        "expected_state": "executing",
+        "expected_state": expected_state,
         "reason": "stage-command-timeout",
         "reconciled": True,
         "evidence_path": (
@@ -49,6 +54,8 @@ def _invoke(
     monkeypatch: pytest.MonkeyPatch,
     working_copy: Path,
     command_result: BlackBoxCommandResult,
+    *,
+    expected_state: str = "executing",
 ):
     calls: list[dict[str, object]] = []
 
@@ -67,7 +74,7 @@ def _invoke(
         work_item="WI-LIVE",
         run_id="run-live",
         stage="idea",
-        expected_state="executing",
+        expected_state=expected_state,
         reason="stage-command-timeout",
     )
     return result, calls
@@ -104,6 +111,27 @@ def test_harness_invokes_installed_public_terminal_reconciliation(
         "stage-command-timeout",
         "--root",
         ".aidd",
+    )
+
+
+def test_harness_passes_validating_state_to_public_reconciliation(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    working_copy = tmp_path / "target"
+    working_copy.mkdir()
+    payload = _payload(working_copy, expected_state="validating")
+
+    result, calls = _invoke(
+        monkeypatch,
+        working_copy,
+        _result(stdout=json.dumps(payload)),
+        expected_state="validating",
+    )
+
+    assert result.payload["expected_state"] == "validating"
+    assert calls[0]["command"][calls[0]["command"].index("--expected-state") + 1] == (
+        "validating"
     )
 
 

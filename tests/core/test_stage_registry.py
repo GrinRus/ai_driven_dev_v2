@@ -4,22 +4,24 @@ from pathlib import Path
 
 import pytest
 
+from aidd.core.ownership_registry import (
+    DocumentOwnershipRegistry,
+    OwnershipClass,
+    OwnershipMatrixRow,
+)
 from aidd.core.stage_registry import (
     StageManifestLoadError,
-    all_stages,
     load_all_stage_manifests,
     load_stage_manifest,
     resolve_aidd_generated_output_documents,
     resolve_expected_output_documents,
-    resolve_interview_control_documents,
     resolve_optional_input_documents,
     resolve_prompt_pack_file_paths,
-    resolve_published_output_documents,
     resolve_required_input_documents,
     resolve_runtime_output_documents,
     resolve_stage_output_registry,
-    resolve_validator_targets,
 )
+from aidd.core.stages import STAGES
 
 
 def _write_stage_contract(
@@ -103,7 +105,8 @@ def test_load_stage_manifest_parses_required_inputs_outputs(tmp_path: Path) -> N
     assert manifest.stage == "idea"
     assert manifest.purpose == "Shape the incoming request into a reviewable brief."
     assert manifest.required_input_paths == ("context/intake.md", "context/user-request.md")
-    assert manifest.optional_input_paths == ("context/constraints.md",)
+    assert tuple(item.path for item in manifest.optional_inputs) == ("context/constraints.md",)
+    assert all(item.required is False for item in manifest.optional_inputs)
     assert manifest.required_output_paths == ("idea-brief.md", "stage-result.md")
 
 
@@ -184,7 +187,7 @@ def test_load_stage_manifest_fails_when_document_contract_is_missing(tmp_path: P
 def test_load_all_stage_manifests_reads_all_known_stages() -> None:
     manifests = load_all_stage_manifests()
 
-    assert set(manifests) == set(all_stages())
+    assert set(manifests) == set(STAGES)
     assert manifests["idea"].stage == "idea"
     assert manifests["qa"].stage == "qa"
 
@@ -321,15 +324,10 @@ def test_resolve_required_input_documents_rejects_workspace_escape(tmp_path: Pat
         )
 
 
-def test_resolve_expected_output_documents_and_validator_targets(tmp_path: Path) -> None:
+def test_resolve_expected_output_documents_matches_declared_stage_outputs(tmp_path: Path) -> None:
     workspace_root = tmp_path / ".aidd"
 
     expected_outputs = resolve_expected_output_documents(
-        stage="idea",
-        work_item="WI-001",
-        workspace_root=workspace_root,
-    )
-    validator_targets = resolve_validator_targets(
         stage="idea",
         work_item="WI-001",
         workspace_root=workspace_root,
@@ -342,10 +340,138 @@ def test_resolve_expected_output_documents_and_validator_targets(tmp_path: Path)
         workspace_root / "workitems" / "WI-001" / "stages" / "idea" / "questions.md",
         workspace_root / "workitems" / "WI-001" / "stages" / "idea" / "answers.md",
     )
-    assert validator_targets == expected_outputs
 
 
-@pytest.mark.parametrize("stage", all_stages())
+def test_stage_output_registry_uses_declared_owner_for_synthetic_document(
+    tmp_path: Path,
+) -> None:
+    contracts_root = tmp_path / "contracts" / "stages"
+    contracts_root.mkdir(parents=True)
+    required_outputs = ("idea-brief.md", "synthetic-control.md", "stage-result.md")
+    prompt_paths = ("prompt-packs/stages/idea/system.md",)
+    _write_stage_contract(
+        contracts_root=contracts_root,
+        stage="idea",
+        required_inputs=("context/intake.md",),
+        required_outputs=required_outputs,
+        prompt_pack_paths=prompt_paths,
+    )
+    _touch_contract_references(
+        repo_root=tmp_path,
+        required_outputs=required_outputs,
+        prompt_pack_paths=prompt_paths,
+    )
+    ownership_registry = DocumentOwnershipRegistry(
+        rows=(
+            OwnershipMatrixRow(
+                path_pattern="workitems/<id>/stages/<stage>/idea-brief.md",
+                stages=("idea",),
+                ownership_class=OwnershipClass.RUNTIME_CONTENT,
+                create="Runtime adapter",
+                mutate="Runtime attempt only",
+                validate="AIDD validator",
+                publish="AIDD core after validation",
+                ui_authoring="No; read-only",
+            ),
+            OwnershipMatrixRow(
+                path_pattern="workitems/<id>/stages/<stage>/synthetic-control.md",
+                stages=("idea",),
+                ownership_class=OwnershipClass.AIDD_CONTROL_DOCUMENT,
+                create="AIDD core",
+                mutate="AIDD core",
+                validate="AIDD validator",
+                publish="AIDD core",
+                ui_authoring="No; read-only",
+            ),
+            OwnershipMatrixRow(
+                path_pattern="workitems/<id>/stages/<stage>/stage-result.md",
+                stages=None,
+                ownership_class=OwnershipClass.AIDD_WORKFLOW_RECORD,
+                create="AIDD core",
+                mutate="AIDD core",
+                validate="AIDD validator",
+                publish="AIDD core",
+                ui_authoring="No; read-only",
+            ),
+            OwnershipMatrixRow(
+                path_pattern="workitems/<id>/stages/<stage>/repair-brief.md",
+                stages=None,
+                ownership_class=OwnershipClass.AIDD_CONTROL_DOCUMENT,
+                create="AIDD core",
+                mutate="AIDD core",
+                validate="AIDD validator",
+                publish="AIDD core",
+                ui_authoring="No; read-only",
+            ),
+        )
+    )
+
+    resolved = resolve_stage_output_registry(
+        stage="idea",
+        work_item="WI-SYNTHETIC",
+        workspace_root=tmp_path / ".aidd",
+        contracts_root=contracts_root,
+        ownership_registry=ownership_registry,
+    )
+
+    synthetic = (
+        tmp_path
+        / ".aidd"
+        / "workitems"
+        / "WI-SYNTHETIC"
+        / "stages"
+        / "idea"
+        / "synthetic-control.md"
+    )
+    assert synthetic in resolved.interview_control
+    assert synthetic not in resolved.runtime_authored
+    assert synthetic not in resolved.aidd_generated
+
+
+def test_stage_output_registry_rejects_output_missing_from_ownership_matrix(
+    tmp_path: Path,
+) -> None:
+    contracts_root = tmp_path / "contracts" / "stages"
+    contracts_root.mkdir(parents=True)
+    required_outputs = ("idea-brief.md", "unregistered.md")
+    prompt_paths = ("prompt-packs/stages/idea/system.md",)
+    _write_stage_contract(
+        contracts_root=contracts_root,
+        stage="idea",
+        required_inputs=("context/intake.md",),
+        required_outputs=required_outputs,
+        prompt_pack_paths=prompt_paths,
+    )
+    _touch_contract_references(
+        repo_root=tmp_path,
+        required_outputs=required_outputs,
+        prompt_pack_paths=prompt_paths,
+    )
+
+    with pytest.raises(StageManifestLoadError, match="absent from the ownership matrix"):
+        resolve_stage_output_registry(
+            stage="idea",
+            work_item="WI-UNREGISTERED",
+            workspace_root=tmp_path / ".aidd",
+            contracts_root=contracts_root,
+            ownership_registry=DocumentOwnershipRegistry(
+                rows=(
+                    OwnershipMatrixRow(
+                        path_pattern="workitems/<id>/stages/<stage>/idea-brief.md",
+                        stages=("idea",),
+                        ownership_class=OwnershipClass.RUNTIME_CONTENT,
+                        create="Runtime adapter",
+                        mutate="Runtime attempt only",
+                        validate="AIDD validator",
+                        publish="AIDD core after validation",
+                        ui_authoring="No; read-only",
+                    ),
+                )
+            ),
+        )
+
+
+@pytest.mark.parametrize("stage", STAGES)
 def test_stage_output_registry_separates_owner_sets(stage: str, tmp_path: Path) -> None:
     workspace_root = tmp_path / ".aidd"
     registry = resolve_stage_output_registry(
@@ -360,11 +486,6 @@ def test_stage_output_registry_separates_owner_sets(stage: str, tmp_path: Path) 
         workspace_root=workspace_root,
     )
     assert registry.published == expected
-    assert registry.published == resolve_published_output_documents(
-        stage=stage,
-        work_item="WI-001",
-        workspace_root=workspace_root,
-    )
     assert registry.runtime_authored == resolve_runtime_output_documents(
         stage=stage,
         work_item="WI-001",
@@ -375,11 +496,11 @@ def test_stage_output_registry_separates_owner_sets(stage: str, tmp_path: Path) 
         work_item="WI-001",
         workspace_root=workspace_root,
     )
-    assert registry.interview_control == resolve_interview_control_documents(
-        stage=stage,
-        work_item="WI-001",
-        workspace_root=workspace_root,
-    )
+    assert {path.name for path in registry.interview_control} == {
+        "questions.md",
+        "answers.md",
+        "repair-brief.md",
+    }
 
     assert {path.name for path in registry.aidd_generated} == {
         "stage-result.md",

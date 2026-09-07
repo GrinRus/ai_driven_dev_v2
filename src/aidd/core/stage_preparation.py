@@ -1,14 +1,19 @@
 from __future__ import annotations
 
 from datetime import datetime
+from enum import StrEnum
 from pathlib import Path
 
+from aidd.core.attempt_lineage import AttemptKind, AttemptLineage, AttemptScope
 from aidd.core.markdown import extract_required_sections_from_document_contract
 from aidd.core.project_set import ResolvedProjectSet, persist_project_set_context
 from aidd.core.run_store import (
     RUN_ATTEMPT_PREFIX,
     create_next_attempt_directory,
+    load_run_manifest,
+    load_stage_metadata,
     persist_stage_status,
+    write_attempt_artifact_index,
 )
 from aidd.core.stage_models import StageExecutionState, StagePreparationBundle
 from aidd.core.stage_paths import workspace_relative_paths
@@ -20,52 +25,10 @@ from aidd.core.stage_registry import (
     resolve_stage_output_registry,
 )
 from aidd.core.state_machine import StageState
-from aidd.validators.protocol import render_validator_report_skeleton
 
-_STAGE_RESULT_SKELETON = """```md
-# Stage Result
-
-## Stage
-
-- Stage: `<canonical-stage-id>`
-
-## Attempt history
-
-- Attempt 1 (`initial`): <outcome and evidence>
-
-## Status
-
-- Status: `<succeeded|failed|blocked|needs-input>`
-
-## Produced outputs
-
-- `<AIDD-workspace-relative-path, for example workitems/<id>/stages/<stage>/output/<document.md>>`
-
-## Validation summary
-
-- Validator verdict: `<pass|fail|not-run>`
-- Validator report: `workitems/<id>/stages/<stage>/validator-report.md`
-  (repository-root path `.aidd/workitems/<id>/stages/<stage>/validator-report.md`)
-
-## Blockers
-
-- none
-
-## Next actions
-
-- <operator or immediate canonical downstream stage action; on success include the exact
-  next stage id>
-
-## Terminal state notes
-
-- <why the stage ended in the declared status>
-```"""
-
-_COMMON_OUTPUT_SKELETONS = {
-    "stage-result.md": _STAGE_RESULT_SKELETON,
-    "validator-report.md": render_validator_report_skeleton(),
-}
-_SKIPPED_CONTRACT_SKELETONS = {"answers.md", "questions.md"}
+_NON_RUNTIME_DOCUMENTS = frozenset(
+    {"stage-result.md", "validator-report.md", "repair-brief.md", "questions.md", "answers.md"}
+)
 _TASKLIST_OUTPUT_SKELETON = """```md
 # Tasklist
 
@@ -101,6 +64,42 @@ class StageInputPreflightError(FileNotFoundError):
     """Raised before attempt creation when required stage inputs are unavailable."""
 
 
+class StageInputReadiness(StrEnum):
+    """Readiness states shared by stage eligibility and input preflight."""
+
+    READY = "ready"
+    MISSING = "missing"
+    NOT_REGULAR_FILE = "not_regular_file"
+    INVALID_UTF8 = "invalid_utf8"
+    UNREADABLE = "unreadable"
+
+
+def assess_stage_input_readiness(path: Path) -> StageInputReadiness:
+    """Classify whether a stage input can be consumed as UTF-8 Markdown text.
+
+    This deliberately stops at the common transport/readability boundary. Document
+    structure and frontmatter remain the responsibility of the stage validators.
+    """
+
+    try:
+        if not path.exists():
+            return StageInputReadiness.MISSING
+        if not path.is_file():
+            return StageInputReadiness.NOT_REGULAR_FILE
+        path.read_text(encoding="utf-8")
+    except UnicodeDecodeError:
+        return StageInputReadiness.INVALID_UTF8
+    except OSError:
+        return StageInputReadiness.UNREADABLE
+    return StageInputReadiness.READY
+
+
+def is_stage_input_ready(path: Path) -> bool:
+    """Return whether ``path`` passes the shared stage-input readiness predicate."""
+
+    return assess_stage_input_readiness(path) is StageInputReadiness.READY
+
+
 def _document_title_from_name(document_name: str) -> str:
     words = Path(document_name).stem.split("-")
     return " ".join("QA" if word == "qa" else word.capitalize() for word in words)
@@ -113,10 +112,7 @@ def _contract_output_skeleton(
 ) -> str | None:
     if document_name == "tasklist.md":
         return _TASKLIST_OUTPUT_SKELETON
-    if (
-        document_name in _COMMON_OUTPUT_SKELETONS
-        or document_name in _SKIPPED_CONTRACT_SKELETONS
-    ):
+    if document_name in _NON_RUNTIME_DOCUMENTS:
         return None
 
     document_contract_path = contracts_root.parent / "documents" / document_name
@@ -145,11 +141,6 @@ def _append_output_skeletons(
     expected_names = {Path(path).name for path in expected_output_documents}
     skeletons: list[tuple[str, str]] = []
     for document_name in sorted(expected_names):
-        common_skeleton = _COMMON_OUTPUT_SKELETONS.get(document_name)
-        if common_skeleton is not None:
-            skeletons.append((document_name, common_skeleton))
-            continue
-
         contract_skeleton = _contract_output_skeleton(
             document_name=document_name,
             contracts_root=contracts_root,
@@ -215,14 +206,27 @@ def render_stage_brief(
                 "- Project roots: "
                 + ", ".join(f"`{project.relative_root}`" for project in project_set.projects),
                 (
-                    "- `stage-result.md` must include a `Project-set evidence` section that "
-                    "cites the project context path plus every declared project id and root, "
-                    "or marks an unaffected project explicitly."
+                    "- Expose project ownership in substantive runtime content: cite the project "
+                    "context path plus every declared project id and root, or mark an unaffected "
+                    "project explicitly. AIDD generates `Project-set evidence` in "
+                    "`stage-result.md`."
                 ),
             ]
         )
-    compatibility_view = published_output_documents or expected_output_documents
-    runtime_documents = runtime_output_documents or expected_output_documents
+    published_documents = (
+        expected_output_documents
+        if published_output_documents is None
+        else published_output_documents
+    )
+    runtime_documents = tuple(
+        path
+        for path in (
+            expected_output_documents
+            if runtime_output_documents is None
+            else runtime_output_documents
+        )
+        if Path(path).name not in _NON_RUNTIME_DOCUMENTS
+    )
     lines.extend(
         [
             "",
@@ -264,15 +268,7 @@ def render_stage_brief(
     else:
         lines.append("- none")
     lines.extend(["", "# Published documents", ""])
-    lines.extend(f"- `{path}`" for path in compatibility_view)
-    lines.extend(
-        [
-            "",
-            "# Expected output documents (published compatibility view)",
-            "",
-        ]
-    )
-    lines.extend(f"- `{path}`" for path in compatibility_view)
+    lines.extend(f"- `{path}`" for path in published_documents)
     lines.extend(
         [
             "",
@@ -400,24 +396,23 @@ def validate_required_stage_inputs(
 ) -> None:
     def _validate_document(document_path: Path, *, input_kind: str) -> None:
         relative_path = workspace_relative_paths(workspace_root, (document_path,))[0]
-        if not document_path.exists():
+        readiness = assess_stage_input_readiness(document_path)
+        if readiness is StageInputReadiness.MISSING:
             raise StageInputPreflightError(
                 f"Stage input preflight failed: missing {input_kind} input document: "
                 f"{relative_path}"
             )
-        try:
-            document_path.read_text(encoding="utf-8")
-        except UnicodeDecodeError as exc:
+        if readiness is StageInputReadiness.INVALID_UTF8:
             raise StageInputPreflightError(
                 f"Stage input preflight failed: {input_kind} input document is not "
                 "UTF-8 text: "
                 f"{relative_path}"
-            ) from exc
-        except OSError as exc:
+            )
+        if readiness is not StageInputReadiness.READY:
             raise StageInputPreflightError(
                 f"Stage input preflight failed: {input_kind} input document is not readable: "
                 f"{relative_path}"
-            ) from exc
+            )
 
     for document_path in preparation_bundle.required_input_documents:
         _validate_document(document_path, input_kind="required")
@@ -440,15 +435,41 @@ def persist_execution_state(
     work_item: str,
     run_id: str,
     stage: str,
+    attempt_mode: str,
     contracts_root: Path = DEFAULT_STAGE_CONTRACTS_ROOT,
     changed_at_utc: datetime | None = None,
 ) -> StageExecutionState:
+    if not isinstance(attempt_mode, str) or attempt_mode not in {
+        "initial", "repair", "resume", "intervention", "repair-extension"
+    }:
+        raise ValueError("Executing an attempt requires an explicit valid attempt mode.")
+    load_run_manifest(workspace_root=workspace_root, work_item=work_item, run_id=run_id)
+    load_stage_metadata(
+        workspace_root=workspace_root, work_item=work_item, run_id=run_id, stage=stage
+    )
     attempt_path = create_next_attempt_directory(
         workspace_root=workspace_root,
         work_item=work_item,
         run_id=run_id,
         stage=stage,
+        attempt_mode=attempt_mode,
         contracts_root=contracts_root,
+    )
+    attempt_number = attempt_number_from_path(attempt_path)
+    lineage = AttemptLineage(
+        scope=AttemptScope.STAGE,
+        attempt_kind=AttemptKind(attempt_mode),
+        attempt_number=attempt_number,
+    )
+    write_attempt_artifact_index(
+        workspace_root=workspace_root,
+        work_item=work_item,
+        run_id=run_id,
+        stage=stage,
+        attempt_number=attempt_number,
+        contracts_root=contracts_root,
+        attempt_mode=attempt_mode,
+        lineage=lineage,
     )
     stage_metadata_path = persist_stage_status(
         workspace_root=workspace_root,
@@ -462,17 +483,21 @@ def persist_execution_state(
         stage=stage,
         work_item=work_item,
         run_id=run_id,
-        attempt_number=attempt_number_from_path(attempt_path),
+        attempt_number=attempt_number,
         attempt_path=attempt_path,
         stage_metadata_path=stage_metadata_path,
+        lineage=lineage,
     )
 
 
 __all__ = [
+    "assess_stage_input_readiness",
     "attempt_number_from_path",
+    "is_stage_input_ready",
     "persist_execution_state",
     "prepare_stage_bundle",
     "render_stage_brief",
+    "StageInputReadiness",
     "StageInputPreflightError",
     "validate_required_stage_inputs",
 ]

@@ -9,9 +9,15 @@ from pathlib import Path
 from typing import Protocol
 from uuid import uuid4
 
+from aidd.core.attempt_lineage import AttemptKind, AttemptLineage, AttemptScope
 from aidd.core.identifiers import contained_component_path
 from aidd.core.interview import stage_has_unresolved_blocking_questions
-from aidd.core.run_store import load_stage_metadata, next_attempt_number
+from aidd.core.run_store import (
+    load_run_manifest,
+    load_stage_metadata,
+    next_attempt_number,
+    persist_stage_status,
+)
 from aidd.core.stage_validation import update_stage_unblock_state
 from aidd.core.state_machine import StageState
 from aidd.core.task_ledger import (
@@ -23,6 +29,8 @@ from aidd.core.task_ledger import (
 )
 from aidd.core.task_plan import TaskCard, TaskPlan, parse_task_plan
 
+INTERRUPTED_TASK_BLOCKER = "Task execution was interrupted; resume creates a new attempt."
+
 
 @dataclass(frozen=True, slots=True)
 class TaskExecutionContext:
@@ -32,6 +40,7 @@ class TaskExecutionContext:
     global_attempt_start: int
     task_attempt_number: int
     task_attempt_path: Path
+    lineage: AttemptLineage | None = None
 
 
 class TaskResumeBlockedError(ValueError):
@@ -117,14 +126,37 @@ def _write_attempt_state(
     attempt_number: int,
     status: str,
     blocker: str | None = None,
+    lineage: AttemptLineage | None = None,
 ) -> None:
+    current_lineage = lineage or AttemptLineage(
+        scope=AttemptScope.TASK,
+        attempt_kind=AttemptKind.TASK,
+        attempt_number=attempt_number,
+    )
+    current_lineage.validate_identity(
+        scope=AttemptScope.TASK,
+        attempt_number=attempt_number,
+    )
+    if current_lineage.attempt_kind is not AttemptKind.TASK:
+        raise ValueError("Task attempt state lineage must use the `task` kind.")
     timestamp = datetime.now(UTC).isoformat().replace("+00:00", "Z")
     created_at_utc = timestamp
     try:
         existing = json.loads(_attempt_state_path(attempt_path).read_text(encoding="utf-8"))
-    except (FileNotFoundError, OSError, TypeError, ValueError):
+    except FileNotFoundError:
         existing = None
-    if isinstance(existing, dict):
+    if existing is not None:
+        if not isinstance(existing, dict):
+            raise ValueError("Task attempt state must be a JSON object.")
+        if "lineage" not in existing:
+            raise ValueError("Task attempt state uses a retired format without lineage.")
+        existing_lineage = AttemptLineage.from_dict(existing["lineage"])
+        existing_lineage.validate_identity(
+            scope=AttemptScope.TASK,
+            attempt_number=attempt_number,
+        )
+        if existing_lineage.attempt_kind is not AttemptKind.TASK:
+            raise ValueError("Task attempt state lineage must use the `task` kind.")
         prior_created = existing.get("created_at_utc")
         if isinstance(prior_created, str) and prior_created.strip():
             created_at_utc = prior_created
@@ -136,6 +168,7 @@ def _write_attempt_state(
                 "attempt_number": attempt_number,
                 "status": status,
                 "blocker": blocker,
+                "lineage": current_lineage.to_dict(),
                 "created_at_utc": created_at_utc,
                 "updated_at_utc": timestamp,
             },
@@ -205,7 +238,12 @@ def reconcile_task_execution_state(
 ) -> TaskLedger:
     """Terminalize abandoned task attempts after the run lease has been acquired."""
 
+    load_run_manifest(workspace_root=workspace_root, work_item=work_item, run_id=run_id)
+    metadata = load_stage_metadata(
+        workspace_root=workspace_root, work_item=work_item, run_id=run_id, stage="implement"
+    )
     reconciled = ledger
+    stage_projection_needs_reconciliation = False
     for entry in ledger.tasks:
         attempts_root = task_attempts_root(
             workspace_root=workspace_root,
@@ -224,6 +262,8 @@ def reconcile_task_execution_state(
                     status="abandoned",
                     blocker="Task attempt was abandoned before ledger commit.",
                 )
+        if entry.status is TaskExecutionStatus.FAILED and entry.blocker == INTERRUPTED_TASK_BLOCKER:
+            stage_projection_needs_reconciliation = True
         if entry.status is not TaskExecutionStatus.EXECUTING:
             continue
         if entry.latest_attempt_path is not None:
@@ -239,8 +279,9 @@ def reconcile_task_execution_state(
         reconciled = reconciled.transition(
             entry.id,
             TaskExecutionStatus.FAILED,
-            blocker="Task execution was interrupted; resume creates a new attempt.",
+            blocker=INTERRUPTED_TASK_BLOCKER,
         )
+        stage_projection_needs_reconciliation = True
     if reconciled != ledger:
         persist_task_ledger(
             workspace_root=workspace_root,
@@ -248,6 +289,19 @@ def reconcile_task_execution_state(
             run_id=run_id,
             ledger=reconciled,
         )
+    if stage_projection_needs_reconciliation:
+        if metadata is not None and metadata.status in {
+            StageState.PREPARING.value,
+            StageState.EXECUTING.value,
+            StageState.VALIDATING.value,
+        }:
+            persist_stage_status(
+                workspace_root=workspace_root,
+                work_item=work_item,
+                run_id=run_id,
+                stage="implement",
+                status=StageState.FAILED.value,
+            )
     return reconciled
 
 
@@ -335,11 +389,17 @@ def prepare_task_attempt(
         json.dumps(baseline, indent=2, sort_keys=True) + "\n",
         encoding="utf-8",
     )
+    task_lineage = AttemptLineage(
+        scope=AttemptScope.TASK,
+        attempt_kind=AttemptKind.TASK,
+        attempt_number=task_attempt_number,
+    )
     _write_attempt_state(
         staging_path,
         task_id=task_id,
         attempt_number=task_attempt_number,
         status="preparing",
+        lineage=task_lineage,
     )
     task_attempt_path = contained_component_path(
         attempts_root,
@@ -398,6 +458,7 @@ def prepare_task_attempt(
         task_id=task_id,
         attempt_number=task_attempt_number,
         status="executing",
+        lineage=task_lineage,
     )
     return TaskExecutionContext(
         plan=plan,
@@ -411,6 +472,7 @@ def prepare_task_attempt(
         ),
         task_attempt_number=task_attempt_number,
         task_attempt_path=task_attempt_path,
+        lineage=task_lineage,
     )
 
 
@@ -435,6 +497,7 @@ def complete_task_attempt(
         attempt_number=ledger.entry(context.task.id).attempt_count,
         status=status.value,
         blocker=blocker,
+        lineage=context.lineage,
     )
     persist_task_ledger(
         workspace_root=workspace_root,

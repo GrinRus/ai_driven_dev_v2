@@ -73,17 +73,6 @@ class StaleOwnerObservation:
     active_step: dict[str, object] | None
     observed_at_utc: str
 
-    def to_payload(self) -> dict[str, object]:
-        return {
-            "durable_status": self.durable_status,
-            "read_status": self.read_status,
-            "evaluator_pid": self.evaluator_pid,
-            "owner_alive": self.owner_alive,
-            "stale_owner": self.stale_owner,
-            "active_step": self.active_step,
-            "observed_at_utc": self.observed_at_utc,
-        }
-
 
 def utc_now() -> str:
     return datetime.now(UTC).replace(microsecond=0).isoformat().replace("+00:00", "Z")
@@ -285,51 +274,24 @@ def persist_flow_state(
 
 
 def completed_stages(bundle_root: Path) -> tuple[str, ...]:
-    payload = load_flow_state(bundle_root)
-    raw_stage_runs = payload.get("completed_stage_runs")
-    if isinstance(raw_stage_runs, list) and raw_stage_runs:
-        stages = [
-            item.get("stage")
-            for item in raw_stage_runs
-            if isinstance(item, dict) and isinstance(item.get("stage"), str)
-        ]
-        return tuple(str(stage) for stage in stages)
-    raw = payload.get("completed_stages")
-    if not isinstance(raw, list):
-        return tuple()
-    return tuple(str(item) for item in raw if isinstance(item, str))
+    return tuple(str(item["stage"]) for item in completed_stage_runs(bundle_root))
 
 
 def completed_stage_runs(bundle_root: Path) -> tuple[dict[str, Any], ...]:
     payload = load_flow_state(bundle_root)
-    raw_stage_runs = payload.get("completed_stage_runs")
-    if isinstance(raw_stage_runs, list) and raw_stage_runs:
-        normalized: list[dict[str, Any]] = []
-        for index, item in enumerate(raw_stage_runs, start=1):
-            if not isinstance(item, dict):
-                continue
-            stage = item.get("stage")
-            if not isinstance(stage, str) or not stage:
-                continue
-            stage_run_id = item.get("stage_run_id")
-            if not isinstance(stage_run_id, str) or not stage_run_id:
-                stage_run_id = f"stage-{index:04d}-{stage}"
-            normalized.append({**item, "stage": stage, "stage_run_id": stage_run_id})
-        return tuple(normalized)
-    raw_stages = payload.get("completed_stages")
-    if not isinstance(raw_stages, list):
+    if not payload:
         return tuple()
-    return tuple(
-        {
-            "stage_run_id": str(stage),
-            "stage": str(stage),
-            "stage_run_index": index,
-            "iteration": 1,
-            "legacy_stage_run": True,
-        }
-        for index, stage in enumerate(raw_stages, start=1)
-        if isinstance(stage, str) and stage
-    )
+    raw_stage_runs = payload.get("completed_stage_runs")
+    if not isinstance(raw_stage_runs, list):
+        raise ValueError("Flow state requires the current completed_stage_runs ledger.")
+    records: list[dict[str, Any]] = []
+    for item in raw_stage_runs:
+        if not isinstance(item, dict) or item.get("stage") not in STAGES:
+            raise ValueError("Flow state contains an invalid completed stage record.")
+        if not isinstance(item.get("stage_run_id"), str) or not item["stage_run_id"]:
+            raise ValueError("Completed stage record is missing its stage_run_id.")
+        records.append(dict(item))
+    return tuple(records)
 
 
 def handled_quality_stage_run_ids(bundle_root: Path) -> set[str]:
@@ -405,20 +367,6 @@ def detect_stale_owner(
         active_step=active_step,
         observed_at_utc=observed_at_utc or utc_now(),
     )
-
-
-def stale_owner_read_model(
-    state_path_value: Path,
-    *,
-    pid_is_alive: Callable[[object], bool] = _pid_is_alive,
-) -> dict[str, Any]:
-    payload = read_json_object(state_path_value)
-    observation = detect_stale_owner(payload, pid_is_alive=pid_is_alive)
-    read_model = dict(payload)
-    read_model["durable_status"] = observation.durable_status
-    read_model["status"] = observation.read_status
-    read_model["owner_observation"] = observation.to_payload()
-    return read_model
 
 
 @contextmanager
@@ -664,7 +612,6 @@ __all__ = [
     "read_json_object",
     "reconcile_stale_owner_for_resume",
     "remediation_cycles",
-    "stale_owner_read_model",
     "stale_downstream_stages",
     "state_path",
     "state_status",

@@ -17,11 +17,8 @@ from aidd.adapters.runtime_evidence import (
     stop_reason_for_outcome,
 )
 
-RuntimeArtifactPaths = RuntimeEvidencePaths
-
-
 # These documents are AIDD-owned or operator-owned workflow records.  They may be
-# present in the historical compatibility output list, but they must never be used
+# present in a published output list, but they must never be used
 # as a runtime process-completion signal.
 _NON_RUNTIME_COMPLETION_DOCUMENT_NAMES = frozenset(
     {
@@ -38,8 +35,7 @@ def runtime_content_document_paths(paths: tuple[Path, ...]) -> tuple[Path, ...]:
     """Return only substantive runtime-authored document paths.
 
     The core normally supplies this projection already.  Adapters repeat the
-    boundary check because older callers and retained run manifests may still
-    provide the complete published compatibility list.
+    boundary check so system-owned records never become provider completion signals.
     """
 
     return tuple(
@@ -181,9 +177,15 @@ def resolve_exit_classification[ExitClassificationT: StrEnum](
     stop_reason: ExitClassificationT | None,
     success_value: ExitClassificationT,
     non_zero_value: ExitClassificationT,
+    capture_error: str | None = None,
+    capture_failure_value: ExitClassificationT | None = None,
 ) -> ExitClassificationT:
     if stop_reason is not None:
         return stop_reason
+    if capture_error is not None:
+        if capture_failure_value is None:
+            raise ValueError("capture_failure_value is required when capture_error is set.")
+        return capture_failure_value
     if exit_code == 0:
         return success_value
     return non_zero_value
@@ -261,7 +263,8 @@ def persist_runtime_log_artifacts(
     stdout_truncated: bool = False,
     stderr_truncated: bool = False,
     runtime_log_truncated: bool = False,
-) -> RuntimeArtifactPaths:
+    capture_error: str | None = None,
+) -> RuntimeEvidencePaths:
     resolved_outcome = adapter_outcome or adapter_outcome_for_classification(
         exit_classification
     )
@@ -285,13 +288,13 @@ def persist_runtime_log_artifacts(
             stdout_truncated=stdout_truncated,
             stderr_truncated=stderr_truncated,
             runtime_log_truncated=runtime_log_truncated,
+            capture_error=capture_error,
         )
     )
 
 
 __all__ = [
     "RUNTIME_LOG_FILENAME",
-    "RuntimeArtifactPaths",
     "build_aidd_execution_environment",
     "persist_runtime_log_artifacts",
     "resolve_exit_classification",

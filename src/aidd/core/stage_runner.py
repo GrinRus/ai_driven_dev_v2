@@ -19,8 +19,12 @@ from aidd.core.project_set import ResolvedProjectSet
 from aidd.core.remediation import latest_remediation_input_documents
 from aidd.core.repair import RepairBudgetPolicy, persist_repair_history_snapshot
 from aidd.core.run_store import (
+    load_attempt_artifact_index,
     load_stage_metadata,
+    next_attempt_number,
     persist_stage_status,
+    run_attempt_root,
+    run_stage_metadata_path,
     write_adapter_exception_artifact,
     write_attempt_artifact_index,
 )
@@ -34,6 +38,7 @@ from aidd.core.stage_invocation import (
     ATTEMPT_REPAIR_CONTEXT_FILENAME,
     historical_repair_brief_trace_path,
     prepare_adapter_invocation,
+    resolve_next_stage_attempt_mode,
     restore_core_owned_repair_brief,
 )
 from aidd.core.stage_models import (
@@ -49,7 +54,6 @@ from aidd.core.stage_models import (
     StageOutputDiscovery,
     StageOutputPublication,
     StagePreparationBundle,
-    StageResumeResult,
     StageStructuralValidationResult,
     StageUnblockState,
     StageValidationState,
@@ -61,20 +65,11 @@ from aidd.core.stage_outputs import (
     retain_unexpected_runtime_documents,
     run_structural_validation_after_output_discovery,
 )
-from aidd.core.stage_paths import (
-    workspace_relative_path as _workspace_relative_path,
-)
-from aidd.core.stage_paths import (
-    workspace_relative_paths as _to_workspace_relative_paths,
-)
 from aidd.core.stage_preparation import (
     StageInputPreflightError,
     persist_execution_state,
     prepare_stage_bundle,
     validate_required_stage_inputs,
-)
-from aidd.core.stage_preparation import (
-    render_stage_brief as _render_stage_brief,
 )
 from aidd.core.stage_registry import DEFAULT_STAGE_CONTRACTS_ROOT
 from aidd.core.stage_terminal import (
@@ -84,6 +79,7 @@ from aidd.core.stage_terminal import (
     exhausted_budget_validation_finding,
     force_stage_result_failed_for_exhausted_budget,
     normalize_success_stage_result_blockers_if_empty,
+    prepare_bootstrap_stage_result_for_validation,
     repair_brief_exhausts_terminal_budget,
     strip_stage_result_success_claims_for_validator_findings,
     write_stage_result_from_lifecycle_state,
@@ -93,7 +89,6 @@ from aidd.core.stage_validation import (
     derive_validation_verdict,
     persist_validation_state,
     persist_validation_state_with_repair_budget,
-    prepare_stage_resume_after_answers,
     reconcile_and_validate_stage_result_after_validation_pass,
     update_stage_unblock_state,
 )
@@ -101,10 +96,6 @@ from aidd.core.state_machine import StageState, transition_stage_state
 from aidd.core.workspace import stage_root as workspace_stage_root
 from aidd.validators.models import ValidationFinding
 from aidd.validators.reports import write_validator_report
-
-_route_stage_questions_to_interview_with_validation = (
-    route_stage_questions_to_interview_with_validation
-)
 
 
 def _append_validation_findings(
@@ -593,7 +584,187 @@ def _intervention_context_documents(
     return tuple(path for path in candidates if path.exists())
 
 
-def run_single_stage_orchestration(
+def _terminalize_unhandled_post_execution_exception(
+    *,
+    workspace_root: Path,
+    work_item: str,
+    run_id: str,
+    stage: str,
+    contracts_root: Path,
+    changed_at_utc: datetime | None,
+    exception: Exception,
+    previous_status: str | None = None,
+) -> None:
+    """Best-effort terminalization for exceptions after an attempt starts.
+
+    Normal validation findings still use the repair state machine. An unexpected exception
+    in discovery, interview reconciliation, or validation is a failed terminal outcome, and
+    all secondary evidence writes must never replace the original exception.
+    """
+
+    if previous_status in {
+        StageState.EXECUTING.value,
+        StageState.VALIDATING.value,
+    }:
+        # A call that did not acquire a new attempt must not rewrite an existing live
+        # owner. Stale lifecycle convergence is handled by the explicit reconciliation API.
+        return
+    try:
+        metadata = load_stage_metadata(
+            workspace_root=workspace_root,
+            work_item=work_item,
+            run_id=run_id,
+            stage=stage,
+        )
+    except Exception as cleanup_error:
+        exception.add_note(
+            "Could not inspect stage metadata during post-execution terminalization: "
+            f"{type(cleanup_error).__name__}: {cleanup_error}"
+        )
+        return
+    if metadata is None or metadata.status not in {
+        StageState.EXECUTING.value,
+        StageState.VALIDATING.value,
+    }:
+        return
+
+    try:
+        attempt_number = (
+            next_attempt_number(
+                workspace_root=workspace_root,
+                work_item=work_item,
+                run_id=run_id,
+                stage=stage,
+            )
+            - 1
+        )
+    except Exception as cleanup_error:
+        exception.add_note(
+            "Could not locate the failed attempt during post-execution terminalization: "
+            f"{type(cleanup_error).__name__}: {cleanup_error}"
+        )
+        return
+    if attempt_number < 1:
+        try:
+            persist_stage_status(
+                workspace_root=workspace_root,
+                work_item=work_item,
+                run_id=run_id,
+                stage=stage,
+                status=StageState.FAILED.value,
+                changed_at_utc=changed_at_utc,
+            )
+        except Exception as cleanup_error:
+            exception.add_note(
+                "Could not persist failed stage state: "
+                f"{type(cleanup_error).__name__}: {cleanup_error}"
+            )
+        return
+
+    attempt_path = run_attempt_root(
+        workspace_root=workspace_root,
+        work_item=work_item,
+        run_id=run_id,
+        stage=stage,
+        attempt_number=attempt_number,
+    )
+    try:
+        artifact_index = load_attempt_artifact_index(
+            workspace_root=workspace_root,
+            work_item=work_item,
+            run_id=run_id,
+            stage=stage,
+            attempt_number=attempt_number,
+        )
+    except Exception as cleanup_error:
+        exception.add_note(
+            "Could not read attempt artifact index during post-execution terminalization: "
+            f"{type(cleanup_error).__name__}: {cleanup_error}"
+        )
+        artifact_index = None
+    attempt_mode = None if artifact_index is None else artifact_index.attempt_mode
+    execution_state = StageExecutionState(
+        stage=stage,
+        work_item=work_item,
+        run_id=run_id,
+        attempt_number=attempt_number,
+        attempt_path=attempt_path,
+        stage_metadata_path=run_stage_metadata_path(
+            workspace_root=workspace_root,
+            work_item=work_item,
+            run_id=run_id,
+            stage=stage,
+        ),
+    )
+    failure_message = " ".join(str(exception).split())[:2000] or type(exception).__name__
+    try:
+        persist_stage_status(
+            workspace_root=workspace_root,
+            work_item=work_item,
+            run_id=run_id,
+            stage=stage,
+            status=StageState.FAILED.value,
+            changed_at_utc=changed_at_utc,
+        )
+    except Exception as cleanup_error:
+        exception.add_note(
+            "Could not persist failed stage state: "
+            f"{type(cleanup_error).__name__}: {cleanup_error}"
+        )
+    try:
+        write_adapter_exception_artifact(
+            workspace_root=workspace_root,
+            work_item=work_item,
+            run_id=run_id,
+            stage=stage,
+            attempt_number=attempt_number,
+            exception=exception,
+        )
+    except Exception as cleanup_error:
+        exception.add_note(
+            "Could not write post-execution exception evidence: "
+            f"{type(cleanup_error).__name__}: {cleanup_error}"
+        )
+    if attempt_mode is None:
+        exception.add_note(
+            "Cannot write terminal records without a valid recorded attempt_mode; "
+            "the failed lifecycle state and original exception evidence are retained."
+        )
+        return
+    try:
+        _write_canonical_stage_result(
+            workspace_root=workspace_root,
+            execution_state=execution_state,
+            lifecycle_status=StageState.FAILED,
+            attempt_mode=attempt_mode,
+            attempt_outcome=f"post-execution processing failed: {failure_message}",
+            repair_history=metadata.repair_history,
+            validator_verdict="not-run",
+            blockers=(f"Post-execution processing failed: {failure_message}",),
+        )
+    except Exception as cleanup_error:
+        exception.add_note(
+            "Could not write canonical failed stage result: "
+            f"{type(cleanup_error).__name__}: {cleanup_error}"
+        )
+    try:
+        write_attempt_artifact_index(
+            workspace_root=workspace_root,
+            work_item=work_item,
+            run_id=run_id,
+            stage=stage,
+            attempt_number=attempt_number,
+            contracts_root=contracts_root,
+            attempt_mode=attempt_mode,
+        )
+    except Exception as cleanup_error:
+        exception.add_note(
+            "Could not write attempt artifact index: "
+            f"{type(cleanup_error).__name__}: {cleanup_error}"
+        )
+
+
+def _run_single_stage_orchestration(
     *,
     workspace_root: Path,
     work_item: str,
@@ -672,6 +843,14 @@ def run_single_stage_orchestration(
         work_item=work_item,
         run_id=run_id,
         stage=stage,
+        attempt_mode=resolve_next_stage_attempt_mode(
+            workspace_root=workspace_root,
+            work_item=work_item,
+            run_id=run_id,
+            stage=stage,
+            intervention_mode=intervention_request_path is not None,
+            resume_mode=resume_mode,
+        ),
         contracts_root=contracts_root,
         changed_at_utc=changed_at_utc,
     )
@@ -702,6 +881,9 @@ def run_single_stage_orchestration(
             contracts_root=contracts_root,
         )
         raise
+    # Runtime logs and exit metadata mutate the attempt directory after stage document writes.
+    # Retention must compare drafts against this stable pre-runtime boundary instead.
+    attempt_started_at_ns = execution_state.attempt_path.stat().st_mtime_ns
     try:
         adapter_outcome = adapter_executor(adapter_invocation, execution_state)
     except Exception as adapter_exception:
@@ -745,6 +927,7 @@ def run_single_stage_orchestration(
                 workspace_root=workspace_root,
                 execution_state=execution_state,
                 contracts_root=contracts_root,
+                attempt_started_at_ns=attempt_started_at_ns,
             ),
         )
         run_cleanup(
@@ -771,6 +954,7 @@ def run_single_stage_orchestration(
             workspace_root=workspace_root,
             execution_state=execution_state,
             contracts_root=contracts_root,
+            attempt_started_at_ns=attempt_started_at_ns,
         )
         restore_core_owned_repair_brief(
             invocation_bundle=adapter_invocation,
@@ -928,7 +1112,7 @@ def run_single_stage_orchestration(
         stage=stage,
         repair_brief_path=repair_brief_trace_path,
     )
-    interview_routing, interview_findings = _route_stage_questions_to_interview_with_validation(
+    interview_routing, interview_findings = route_stage_questions_to_interview_with_validation(
         workspace_root=workspace_root,
         discovery=discovery,
     )
@@ -941,6 +1125,9 @@ def run_single_stage_orchestration(
             )
             / "stage-result.md"
         )
+    prepare_bootstrap_stage_result_for_validation(
+        workspace_root=workspace_root, work_item=work_item, stage=stage,
+    )
     validation_result = run_structural_validation_after_output_discovery(
         workspace_root=workspace_root,
         discovery=discovery,
@@ -973,6 +1160,25 @@ def run_single_stage_orchestration(
             findings=(*validation_result.findings, *interview_findings),
         )
     if not validation_result.findings and not interview_routing.requires_interview:
+        candidate_metadata = load_stage_metadata(
+            workspace_root=workspace_root,
+            work_item=work_item,
+            run_id=run_id,
+            stage=stage,
+        )
+        _write_canonical_stage_result(
+            workspace_root=workspace_root,
+            execution_state=execution_state,
+            lifecycle_status=StageState.SUCCEEDED,
+            attempt_mode=adapter_invocation.attempt_mode,
+            attempt_outcome="content validation passed; terminal result validation pending",
+            repair_history=() if candidate_metadata is None else candidate_metadata.repair_history,
+            produced_output_paths=discovery.discovered_markdown_documents,
+            missing_output_paths=discovery.missing_markdown_documents,
+            validator_verdict=ValidationVerdict.PASS.value,
+            validator_report_path=validation_result.validator_report_path,
+            repair_brief_path=repair_brief_trace_path,
+        )
         final_stage_result_findings = reconcile_and_validate_stage_result_after_validation_pass(
             workspace_root=workspace_root,
             work_item=work_item,
@@ -1083,6 +1289,68 @@ def run_single_stage_orchestration(
     )
 
 
+def run_single_stage_orchestration(
+    *,
+    workspace_root: Path,
+    work_item: str,
+    run_id: str,
+    stage: str,
+    adapter_executor: Callable[
+        [AdapterInvocationBundle, StageExecutionState],
+        AdapterExecutionOutcome,
+    ],
+    contracts_root: Path = DEFAULT_STAGE_CONTRACTS_ROOT,
+    repair_policy: RepairBudgetPolicy | None = None,
+    project_set: ResolvedProjectSet | None = None,
+    changed_at_utc: datetime | None = None,
+    intervention_request_path: Path | None = None,
+    resume_mode: bool = False,
+    defer_success_publication: bool = False,
+    validation_finding_provider: Callable[
+        [StageExecutionState, StageOutputDiscovery], tuple[ValidationFinding, ...]
+    ]
+    | None = None,
+) -> StageOrchestrationResult:
+    """Run one stage and terminalize unexpected post-execution failures safely."""
+
+    metadata_before_attempt = load_stage_metadata(
+        workspace_root=workspace_root,
+        work_item=work_item,
+        run_id=run_id,
+        stage=stage,
+    )
+    try:
+        return _run_single_stage_orchestration(
+            workspace_root=workspace_root,
+            work_item=work_item,
+            run_id=run_id,
+            stage=stage,
+            adapter_executor=adapter_executor,
+            contracts_root=contracts_root,
+            repair_policy=repair_policy,
+            project_set=project_set,
+            changed_at_utc=changed_at_utc,
+            intervention_request_path=intervention_request_path,
+            resume_mode=resume_mode,
+            defer_success_publication=defer_success_publication,
+            validation_finding_provider=validation_finding_provider,
+        )
+    except Exception as exception:
+        _terminalize_unhandled_post_execution_exception(
+            workspace_root=workspace_root,
+            work_item=work_item,
+            run_id=run_id,
+            stage=stage,
+            contracts_root=contracts_root,
+            changed_at_utc=changed_at_utc,
+            exception=exception,
+            previous_status=(
+                None if metadata_before_attempt is None else metadata_before_attempt.status
+            ),
+        )
+        raise
+
+
 __all__ = [
     "ATTEMPT_INPUT_BUNDLE_FILENAME",
     "ATTEMPT_REPAIR_CONTEXT_FILENAME",
@@ -1100,15 +1368,10 @@ __all__ = [
     "StageOutputDiscovery",
     "StageOutputPublication",
     "StagePreparationBundle",
-    "StageResumeResult",
     "StageStructuralValidationResult",
     "StageUnblockState",
     "StageValidationState",
     "ValidationVerdict",
-    "_render_stage_brief",
-    "_route_stage_questions_to_interview_with_validation",
-    "_to_workspace_relative_paths",
-    "_workspace_relative_path",
     "decide_post_validation_transition",
     "derive_validation_verdict",
     "discover_stage_markdown_outputs",
@@ -1117,7 +1380,6 @@ __all__ = [
     "persist_validation_state_with_repair_budget",
     "prepare_adapter_invocation",
     "prepare_stage_bundle",
-    "prepare_stage_resume_after_answers",
     "validate_required_stage_inputs",
     "publish_stage_outputs_after_validation_pass",
     "restore_core_owned_repair_brief",

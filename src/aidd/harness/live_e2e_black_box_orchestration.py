@@ -18,8 +18,7 @@ from collections.abc import Callable, Iterator, Sequence
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from pathlib import Path
-from queue import Empty, Queue
-from typing import Any, Literal, TextIO, cast
+from typing import Any, Literal, cast
 from urllib.error import HTTPError, URLError
 from urllib.parse import urlencode
 from urllib.request import Request, urlopen
@@ -31,7 +30,6 @@ from aidd.adapters.runtime_evidence import (
     commit_runtime_evidence,
     runtime_evidence_paths,
 )
-from aidd.core.bounded_log_reader import read_bounded_log
 from aidd.core.identifiers import SafeIdentifier
 from aidd.core.markdown import MarkdownSectionIndex
 from aidd.core.next_flow import (
@@ -90,45 +88,21 @@ from aidd.harness.live_command_evidence import (
     read_command_output,
 )
 from aidd.harness.live_e2e_black_box_reports import (
-    _command_transcript_payload as _reports_command_transcript_payload,
-)
-from aidd.harness.live_e2e_black_box_reports import (
-    _read_json_object as _reports_read_json_object,
-)
-from aidd.harness.live_e2e_black_box_reports import (
-    _read_jsonl_objects as _reports_read_jsonl_objects,
-)
-from aidd.harness.live_e2e_black_box_reports import (
-    _transcript_duration as _reports_transcript_duration,
-)
-from aidd.harness.live_e2e_black_box_reports import (
-    _write_json as _reports_write_json,
-)
-from aidd.harness.live_e2e_black_box_reports import (
-    _write_step_transcript as _reports_write_step_transcript,
-)
-from aidd.harness.live_e2e_black_box_reports import (
-    _write_text_atomic as _reports_write_text_atomic,
-)
-from aidd.harness.live_e2e_black_box_reports import (
+    _read_json_object,
+    _read_jsonl_objects,
+    _transcript_duration,
+    _write_json,
+    _write_step_transcript,
+    _write_text_atomic,
     write_flow_report,
     write_json_markdown_bundle,
 )
 from aidd.harness.live_e2e_black_box_steps import (
     BlackBoxCommandResult,
     LiveE2EInterrupted,
-)
-from aidd.harness.live_e2e_black_box_steps import (
-    _combined_frontend_checkpoint_classification as _steps_checkpoint_classification,
-)
-from aidd.harness.live_e2e_black_box_steps import (
-    _command_text as _steps_command_text,
-)
-from aidd.harness.live_e2e_black_box_steps import (
-    _run_black_box_command as _steps_run_black_box_command,
-)
-from aidd.harness.live_e2e_black_box_steps import (
-    _terminate_process as _steps_terminate_process,
+    _command_text,
+    _run_black_box_command,
+    _terminate_process,
 )
 from aidd.harness.live_e2e_flow_state import (
     FLOW_STATE_FILENAME,
@@ -394,7 +368,7 @@ class FlowContext:
     scenario: Scenario
     run_id: str
     runtime_id: str
-    # Internal name kept close to older harness code: this is the temp execution work root.
+    # Temporary execution work root.
     workspace_root: Path
     report_root: Path
     bundle_root: Path
@@ -420,92 +394,6 @@ def _utc_now() -> str:
 
 def _default_work_root() -> Path:
     return Path(tempfile.gettempdir()) / "aidd-live-e2e"
-
-
-def _legacy_write_json(path: Path, payload: object) -> Path:
-    path.parent.mkdir(parents=True, exist_ok=True)
-    content = json.dumps(payload, indent=2, sort_keys=True) + "\n"
-    return _write_text_atomic(path, content)
-
-
-def _legacy_write_text_atomic(path: Path, content: str) -> Path:
-    path.parent.mkdir(parents=True, exist_ok=True)
-    tmp_path = path.with_name(f".{path.name}.{os.getpid()}.{threading.get_ident()}.tmp")
-    tmp_path.write_text(content, encoding="utf-8")
-    os.replace(tmp_path, path)
-    return path
-
-
-def _legacy_read_json_object(path: Path) -> dict[str, Any]:
-    payload = json.loads(path.read_text(encoding="utf-8"))
-    if not isinstance(payload, dict):
-        raise ValueError(f"Expected JSON object in {path.as_posix()}.")
-    return payload
-
-
-def _legacy_read_jsonl_objects(path: Path) -> list[dict[str, Any]]:
-    if not path.exists():
-        return []
-    objects: list[dict[str, Any]] = []
-    for line in path.read_text(encoding="utf-8", errors="replace").splitlines():
-        if not line.strip():
-            continue
-        try:
-            payload = json.loads(line)
-        except json.JSONDecodeError:
-            continue
-        if isinstance(payload, dict):
-            objects.append(payload)
-    return objects
-
-
-def _legacy_command_transcript_payload(
-    transcript: HarnessCommandTranscript,
-) -> dict[str, object]:
-    return {
-        "command": transcript.command,
-        "duration_seconds": transcript.duration_seconds,
-        "exit_code": transcript.exit_code,
-        "stderr_text": transcript.stderr_text,
-        "stdout_text": transcript.stdout_text,
-        "timed_out": transcript.timed_out,
-        "timeout_seconds": transcript.timeout_seconds,
-    }
-
-
-def _legacy_transcript_duration(
-    transcripts: tuple[HarnessCommandTranscript, ...],
-) -> float:
-    return sum(transcript.duration_seconds for transcript in transcripts)
-
-
-def _legacy_write_step_transcript(
-    *,
-    path: Path,
-    step: str,
-    transcripts: tuple[HarnessCommandTranscript, ...],
-    extra: dict[str, object] | None = None,
-) -> Path:
-    payload: dict[str, object] = {
-        "command_count": len(transcripts),
-        "commands": [
-            _legacy_command_transcript_payload(transcript) for transcript in transcripts
-        ],
-        "duration_seconds": _transcript_duration(transcripts),
-        "step": step,
-    }
-    if extra:
-        payload.update(extra)
-    return _write_json(path, payload)
-
-
-_write_json = _reports_write_json
-_write_text_atomic = _reports_write_text_atomic
-_read_json_object = _reports_read_json_object
-_read_jsonl_objects = _reports_read_jsonl_objects
-_command_transcript_payload = _reports_command_transcript_payload
-_transcript_duration = _reports_transcript_duration
-_write_step_transcript = _reports_write_step_transcript
 
 
 def _steps_path(bundle_root: Path) -> Path:
@@ -540,475 +428,6 @@ def _append_operator_action(
     path.parent.mkdir(parents=True, exist_ok=True)
     with path.open("a", encoding="utf-8") as stream:
         stream.write(json.dumps(event, sort_keys=True) + "\n")
-
-
-def _legacy_command_text(command: Sequence[str]) -> str:
-    return " ".join(command)
-
-
-def _format_heartbeat_duration(seconds: float) -> str:
-    total_seconds = max(int(seconds), 0)
-    hours, remainder = divmod(total_seconds, 3600)
-    minutes, seconds = divmod(remainder, 60)
-    if hours:
-        return f"{hours}h {minutes}m {seconds}s"
-    if minutes:
-        return f"{minutes}m {seconds}s"
-    return f"{seconds}s"
-
-
-def _runtime_log_heartbeat_label(path: Path | None) -> str:
-    if path is None:
-        return "n/a"
-    status = "waiting for first runtime event"
-    if path.exists():
-        bounded = read_bounded_log(path, mode="tail", requested_bytes=4096)
-        status = (
-            f"present; retained bytes {bounded.start_byte}:{bounded.end_byte}"
-            f"/{bounded.byte_size}"
-        )
-    return f"{path.resolve(strict=False).as_posix()} ({status})"
-
-
-def _format_heartbeat_timeout(seconds: float | None) -> str:
-    if seconds is None:
-        return "unbounded"
-    return _format_heartbeat_duration(seconds)
-
-
-def _heartbeat_next_evidence_hint(
-    *,
-    last_progress_reason: str,
-    runtime_log_path: Path | None,
-) -> str:
-    if runtime_log_path is not None and runtime_log_path.exists():
-        return "open runtime log for raw adapter output"
-    if last_progress_reason == "watched-files":
-        return "stage files changed before first runtime event; inspect artifacts or wait"
-    if last_progress_reason in {"stdout", "stderr"}:
-        return "command output was observed; wait for runtime log publication"
-    return "stage command is alive; waiting for runtime output or file activity"
-
-
-def _emit_command_heartbeat(
-    *,
-    stream: TextIO,
-    label: str,
-    elapsed_seconds: float,
-    last_progress_seconds_ago: float,
-    last_progress_reason: str,
-    timeout_seconds: float | None,
-    no_progress_timeout_seconds: float | None,
-    runtime_log_path: Path | None,
-) -> None:
-    next_evidence = _heartbeat_next_evidence_hint(
-        last_progress_reason=last_progress_reason,
-        runtime_log_path=runtime_log_path,
-    )
-    print(
-        "[aidd live] "
-        f"{label} still running after {_format_heartbeat_duration(elapsed_seconds)}; "
-        f"last signal: {last_progress_reason} "
-        f"{_format_heartbeat_duration(last_progress_seconds_ago)} ago; "
-        f"hard timeout: {_format_heartbeat_timeout(timeout_seconds)}; "
-        f"no-progress timeout: {_format_heartbeat_timeout(no_progress_timeout_seconds)}; "
-        f"runtime log: {_runtime_log_heartbeat_label(runtime_log_path)}; "
-        f"next evidence: {next_evidence}.",
-        file=stream,
-        flush=True,
-    )
-
-
-def _legacy_run_black_box_command(
-    *,
-    command: tuple[str, ...],
-    cwd: Path,
-    environment: dict[str, str],
-    timeout_seconds: float | None,
-    no_progress_timeout_seconds: float | None = None,
-    progress_probe: Callable[[], dict[str, object]] | None = None,
-    loop_observer: Callable[[], None] | None = None,
-    heartbeat_label: str | None = None,
-    heartbeat_interval_seconds: float | None = None,
-    heartbeat_runtime_log_path: Path | None = None,
-    heartbeat_stream: TextIO | None = None,
-) -> BlackBoxCommandResult:
-    started = time.monotonic()
-    timed_out = False
-    no_progress = False
-    no_progress_details: dict[str, object] | None = None
-    process: subprocess.Popen[str] | None = None
-    stdout_chunks: list[str] = []
-    stderr_chunks: list[str] = []
-    output_queue: Queue[tuple[str, str | None]] = Queue()
-    reader_threads: list[threading.Thread] = []
-    stream_done = {"stdout": False, "stderr": False}
-    hard_deadline = None if timeout_seconds is None else started + max(float(timeout_seconds), 0.0)
-    last_progress_monotonic = started
-    last_progress_utc = _utc_now()
-    last_progress_reason = "process-started"
-    last_progress_snapshot: dict[str, object] | None = None
-    last_progress_signature: str | None = None
-    heartbeat_interval = (
-        max(float(heartbeat_interval_seconds), 0.0)
-        if heartbeat_label is not None and heartbeat_interval_seconds is not None
-        else None
-    )
-    next_heartbeat_monotonic = (
-        started + heartbeat_interval
-        if heartbeat_interval is not None and heartbeat_interval > 0
-        else None
-    )
-
-    if progress_probe is not None:
-        try:
-            last_progress_snapshot = progress_probe()
-            last_progress_signature = _progress_snapshot_signature(last_progress_snapshot)
-        except OSError as exc:
-            last_progress_snapshot = {"probe_error": str(exc)}
-            last_progress_signature = _progress_snapshot_signature(last_progress_snapshot)
-
-    try:
-        process = subprocess.Popen(
-            command,
-            cwd=cwd,
-            env=environment,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
-            text=True,
-            start_new_session=True,
-        )
-
-        reader_threads = [
-            threading.Thread(
-                target=_legacy_read_command_stream,
-                args=("stdout", process.stdout, output_queue),
-                daemon=True,
-            ),
-            threading.Thread(
-                target=_legacy_read_command_stream,
-                args=("stderr", process.stderr, output_queue),
-                daemon=True,
-            ),
-        ]
-        for thread in reader_threads:
-            thread.start()
-
-        exit_code: int | None = None
-        while True:
-            try:
-                stream_name, chunk = output_queue.get(timeout=0.05)
-            except Empty:
-                stream_name = ""
-                chunk = None
-            if stream_name in stream_done and chunk is None:
-                stream_done[stream_name] = True
-            elif stream_name == "stdout" and chunk is not None:
-                stdout_chunks.append(chunk)
-                last_progress_monotonic = time.monotonic()
-                last_progress_utc = _utc_now()
-                last_progress_reason = "stdout"
-            elif stream_name == "stderr" and chunk is not None:
-                stderr_chunks.append(chunk)
-                last_progress_monotonic = time.monotonic()
-                last_progress_utc = _utc_now()
-                last_progress_reason = "stderr"
-
-            if progress_probe is not None:
-                try:
-                    snapshot = progress_probe()
-                    signature = _progress_snapshot_signature(snapshot)
-                except OSError as exc:
-                    snapshot = {"probe_error": str(exc)}
-                    signature = _progress_snapshot_signature(snapshot)
-                if signature != last_progress_signature:
-                    last_progress_signature = signature
-                    last_progress_snapshot = snapshot
-                    last_progress_monotonic = time.monotonic()
-                    last_progress_utc = _utc_now()
-                    last_progress_reason = "watched-files"
-
-            if loop_observer is not None:
-                loop_observer()
-
-            now = time.monotonic()
-            if next_heartbeat_monotonic is not None and now >= next_heartbeat_monotonic:
-                _emit_command_heartbeat(
-                    stream=heartbeat_stream or sys.stderr,
-                    label=heartbeat_label or "command",
-                    elapsed_seconds=max(now - started, 0.0),
-                    last_progress_seconds_ago=max(now - last_progress_monotonic, 0.0),
-                    last_progress_reason=last_progress_reason,
-                    timeout_seconds=timeout_seconds,
-                    no_progress_timeout_seconds=no_progress_timeout_seconds,
-                    runtime_log_path=heartbeat_runtime_log_path,
-                )
-                assert heartbeat_interval is not None
-                while next_heartbeat_monotonic <= now:
-                    next_heartbeat_monotonic += heartbeat_interval
-
-            if hard_deadline is not None and now >= hard_deadline:
-                timed_out = True
-                exit_code = 124
-                cleanup = _legacy_stop_process_group_for_streaming(process)
-                for thread in reader_threads:
-                    thread.join(timeout=1.0)
-                timeout_label = (
-                    f"{timeout_seconds:.3f}s"
-                    if timeout_seconds is not None
-                    else "configured timeout"
-                )
-                stderr_chunks.append(f"Command timed out after {timeout_label}.\n")
-                if cleanup.get("stderr_text"):
-                    stderr_chunks.append(str(cleanup["stderr_text"]))
-                if cleanup.get("stdout_text"):
-                    stdout_chunks.append(str(cleanup["stdout_text"]))
-                break
-
-            if (
-                no_progress_timeout_seconds is not None
-                and now - last_progress_monotonic >= no_progress_timeout_seconds
-            ):
-                no_progress = True
-                exit_code = PROVIDER_NO_PROGRESS_EXIT_CODE
-                cleanup = _legacy_stop_process_group_for_streaming(process)
-                for thread in reader_threads:
-                    thread.join(timeout=1.0)
-                stdout_tail = _legacy_text_tail("".join(stdout_chunks))
-                stderr_tail = _legacy_text_tail("".join(stderr_chunks))
-                no_progress_details = {
-                    "reason": "provider-no-progress",
-                    "message": "provider-no-progress before completed stage artifact",
-                    "duration_seconds": max(now - started, 0.0),
-                    "no_progress_timeout_seconds": no_progress_timeout_seconds,
-                    "hard_timeout_seconds": timeout_seconds,
-                    "last_progress_at_utc": last_progress_utc,
-                    "last_progress_seconds_ago": max(now - last_progress_monotonic, 0.0),
-                    "last_progress_reason": last_progress_reason,
-                    "observed_files": last_progress_snapshot or {},
-                    "stdout_tail": stdout_tail,
-                    "stderr_tail": stderr_tail,
-                    "process_exit_code": cleanup.get("return_code"),
-                    "terminated_process_group": cleanup.get("terminated_process_group"),
-                }
-                stderr_chunks.append(
-                    "Command stopped because provider made no progress for "
-                    f"{no_progress_timeout_seconds:.3f}s before completed stage artifact.\n"
-                )
-                if cleanup.get("stderr_text"):
-                    stderr_chunks.append(str(cleanup["stderr_text"]))
-                if cleanup.get("stdout_text"):
-                    stdout_chunks.append(str(cleanup["stdout_text"]))
-                break
-
-            if process.poll() is not None and all(stream_done.values()):
-                exit_code = process.returncode
-                break
-
-        for thread in reader_threads:
-            thread.join(timeout=1.0)
-        stdout_text = "".join(stdout_chunks)
-        stderr_text = "".join(stderr_chunks)
-        if exit_code is None:
-            exit_code = process.returncode if process.returncode is not None else 1
-    except LiveE2EInterrupted as exc:
-        cleanup = _legacy_stop_process_group_for_streaming(process)
-        for thread in reader_threads:
-            thread.join(timeout=1.0)
-        duration_seconds = time.monotonic() - started
-        stdout_text = "".join(stdout_chunks) + str(cleanup.get("stdout_text") or "")
-        stderr_text = "".join(stderr_chunks) + str(cleanup.get("stderr_text") or "")
-        transcript = HarnessCommandTranscript(
-            command=_command_text(command),
-            exit_code=130,
-            stdout_text=stdout_text,
-            stderr_text=stderr_text,
-            duration_seconds=duration_seconds,
-            timed_out=False,
-            timeout_seconds=timeout_seconds,
-        )
-        exc.command_result = BlackBoxCommandResult(
-            command=command,
-            transcript=transcript,
-        )
-        exc.cleanup = {
-            "command": list(command),
-            "process_exit_code": cleanup.get("return_code"),
-            "terminated_process_group": cleanup.get("terminated_process_group"),
-            "signal": exc.signum,
-        }
-        raise
-    except KeyboardInterrupt as exc:
-        cleanup = _legacy_stop_process_group_for_streaming(process)
-        for thread in reader_threads:
-            thread.join(timeout=1.0)
-        duration_seconds = time.monotonic() - started
-        transcript = HarnessCommandTranscript(
-            command=_command_text(command),
-            exit_code=130,
-            stdout_text="".join(stdout_chunks) + str(cleanup.get("stdout_text") or ""),
-            stderr_text="".join(stderr_chunks) + str(cleanup.get("stderr_text") or ""),
-            duration_seconds=duration_seconds,
-            timed_out=False,
-            timeout_seconds=timeout_seconds,
-        )
-        raise LiveE2EInterrupted(
-            "Black-box live E2E interrupted by operator.",
-            command_result=BlackBoxCommandResult(command=command, transcript=transcript),
-            cleanup={
-                "command": list(command),
-                "process_exit_code": cleanup.get("return_code"),
-                "terminated_process_group": cleanup.get("terminated_process_group"),
-                "signal": None,
-            },
-        ) from exc
-    except OSError as exc:
-        exit_code = 127
-        stdout_text = ""
-        stderr_text = f"Failed to execute command: {exc}\n"
-    duration_seconds = time.monotonic() - started
-    transcript = HarnessCommandTranscript(
-        command=_command_text(command),
-        exit_code=exit_code,
-        stdout_text=stdout_text,
-        stderr_text=stderr_text,
-        duration_seconds=duration_seconds,
-        timed_out=timed_out,
-        timeout_seconds=timeout_seconds,
-    )
-    return BlackBoxCommandResult(
-        command=command,
-        transcript=transcript,
-        no_progress=no_progress,
-        no_progress_details=no_progress_details,
-    )
-
-
-def _legacy_read_command_stream(
-    name: str,
-    stream: TextIO | None,
-    output_queue: Queue[tuple[str, str | None]],
-) -> None:
-    if stream is None:
-        output_queue.put((name, None))
-        return
-    try:
-        for line in iter(stream.readline, ""):
-            if not line:
-                break
-            output_queue.put((name, line))
-    finally:
-        output_queue.put((name, None))
-
-
-def _legacy_stop_process_group_for_streaming(
-    process: subprocess.Popen[str] | None,
-) -> dict[str, object]:
-    if process is None:
-        return {
-            "return_code": None,
-            "stdout_text": "",
-            "stderr_text": "",
-            "terminated_process_group": False,
-        }
-    terminated_process_group = False
-    if process.poll() is None:
-        try:
-            os.killpg(process.pid, signal.SIGTERM)
-            terminated_process_group = True
-        except ProcessLookupError:
-            pass
-        except OSError:
-            process.terminate()
-        try:
-            process.wait(timeout=2.0)
-        except subprocess.TimeoutExpired:
-            if process.poll() is None:
-                try:
-                    os.killpg(process.pid, signal.SIGKILL)
-                    terminated_process_group = True
-                except ProcessLookupError:
-                    pass
-                except OSError:
-                    process.kill()
-            try:
-                process.wait(timeout=2.0)
-            except subprocess.TimeoutExpired:
-                pass
-    return {
-        "return_code": process.returncode,
-        "stdout_text": "",
-        "stderr_text": "",
-        "terminated_process_group": terminated_process_group,
-    }
-
-
-def _legacy_terminate_process_group(
-    process: subprocess.Popen[str] | None,
-) -> dict[str, object]:
-    if process is None:
-        return {
-            "return_code": None,
-            "stdout_text": "",
-            "stderr_text": "",
-            "terminated_process_group": False,
-        }
-    terminated_process_group = False
-    if process.poll() is None:
-        try:
-            os.killpg(process.pid, signal.SIGTERM)
-            terminated_process_group = True
-        except ProcessLookupError:
-            pass
-        except OSError:
-            process.terminate()
-    try:
-        stdout_text, stderr_text = process.communicate(timeout=2.0)
-    except subprocess.TimeoutExpired:
-        if process.poll() is None:
-            try:
-                os.killpg(process.pid, signal.SIGKILL)
-                terminated_process_group = True
-            except ProcessLookupError:
-                pass
-            except OSError:
-                process.kill()
-        stdout_text, stderr_text = process.communicate(timeout=2.0)
-    return {
-        "return_code": process.returncode,
-        "stdout_text": stdout_text,
-        "stderr_text": stderr_text,
-        "terminated_process_group": terminated_process_group,
-    }
-
-
-def _legacy_terminate_process(process: subprocess.Popen[str]) -> tuple[str, str, int | None]:
-    cleanup = _legacy_terminate_process_group(process)
-    return_code = cleanup.get("return_code")
-    return (
-        str(cleanup.get("stdout_text") or ""),
-        str(cleanup.get("stderr_text") or ""),
-        return_code if isinstance(return_code, int) else None,
-    )
-
-
-def _legacy_timeout_output_to_text(value: str | bytes | None) -> str:
-    if value is None:
-        return ""
-    if isinstance(value, bytes):
-        return value.decode("utf-8", errors="replace")
-    return value
-
-
-def _legacy_text_tail(value: str, *, max_chars: int = 4000) -> str:
-    return value[-max_chars:] if len(value) > max_chars else value
-
-
-# Compatibility bindings stay monkeypatchable from the orchestration facade while the
-# canonical process implementation and result model are owned by the steps module.
-_command_text = _steps_command_text
-_run_black_box_command = _steps_run_black_box_command
-_terminate_process = _steps_terminate_process
 
 
 def _observed_path_payload(path: Path) -> dict[str, object]:
@@ -2552,16 +1971,6 @@ def _quality_review_gate(ctx: FlowContext) -> StepClassification | None:
 def _manual_quality_artifacts_payload(ctx: FlowContext) -> dict[str, object]:
     required_for_counted_clean = _requires_stage_quality_audits(ctx)
     stage_runs = _state_completed_stage_runs(ctx.bundle_root)
-    if not stage_runs:
-        stage_runs = tuple(
-            {
-                "stage": stage,
-                "stage_run_id": stage,
-                "iteration": 1,
-                "legacy_stage_run": True,
-            }
-            for stage in _stage_scope(ctx.scenario)
-        )
     stage_audits = [
         {
             "stage": str(stage_run["stage"]),
@@ -2871,7 +2280,6 @@ def _product_evaluation_bundle_summary_payload(ctx: FlowContext) -> dict[str, ob
             Path(str(report["path"])) for report in final_reports
         ),
         quality_report_path=ctx.bundle_root / QUALITY_REPORT_FILENAME,
-        legacy_degraded=False,
     )
     return {
         "schema_version": 1,
@@ -2891,7 +2299,6 @@ def _product_evaluation_bundle_summary_payload(ctx: FlowContext) -> dict[str, ob
             "quality_reviewed": acceptance.quality_reviewed,
             "counted_clean": acceptance.counted_clean,
             "manual_quality_stop": acceptance.manual_quality_stop,
-            "legacy_degraded": acceptance.legacy_degraded,
             "not_clean_reasons": list(acceptance.not_clean_reasons),
         },
         "stage_quality_audits": stage_quality_audits,
@@ -2954,7 +2361,6 @@ def _render_product_evaluation_bundle_summary_markdown(
         f"- Quality reviewed: `{acceptance['quality_reviewed']}`",
         f"- Counted clean: `{acceptance['counted_clean']}`",
         f"- Manual quality stop: `{acceptance['manual_quality_stop']}`",
-        f"- Legacy degraded: `{acceptance['legacy_degraded']}`",
         "- Not-clean reasons:",
         *(
             [
@@ -3434,6 +2840,8 @@ def _run_setup(ctx: FlowContext) -> None:
             executed_commands=tuple(transcript.command for transcript in transcripts),
             command_transcripts=transcripts,
             duration_seconds=_transcript_duration(transcripts),
+            failed_command=exc.failed_command,
+            failed_exit_code=exc.failed_exit_code,
         )
         _write_step_transcript(
             path=ctx.bundle_root / SETUP_TRANSCRIPT_FILENAME,
@@ -3564,23 +2972,6 @@ def _run_target_readiness(ctx: FlowContext) -> None:
         completed_stages=_state_completed_stages(ctx.bundle_root),
         extra={"target_readiness_evidence": readiness_path.as_posix()},
     )
-
-
-def _has_action_passed(
-    bundle_root: Path,
-    action: FlowAction,
-    *,
-    require_command: bool = False,
-) -> bool:
-    for step in _load_steps(bundle_root):
-        if step.get("action") != action or step.get("classification") != "pass":
-            continue
-        if require_command:
-            commands = step.get("commands")
-            if not isinstance(commands, list) or not commands:
-                continue
-        return True
-    return False
 
 
 def _transcripts_from_error(error: BaseException) -> tuple[HarnessCommandTranscript, ...]:
@@ -3923,7 +3314,7 @@ def _task_flow_public_task_view(
             last_surface = attempt_surface
         finally:
             if process is not None:
-                stdout_text, stderr_text, return_code = _steps_terminate_process(process)
+                stdout_text, stderr_text, return_code = _terminate_process(process)
                 attempt_surface["process_return_code"] = return_code
                 attempt_surface["process_state"] = "exited"
                 for key, value in (("stdout", stdout_text), ("stderr", stderr_text)):
@@ -3968,7 +3359,7 @@ def _task_flow_checkpoint(
         tasklist_text = tasklist_path.read_text(encoding="utf-8")
     except OSError:
         tasklist_text = ""
-    # Legacy/general live fixtures can reach the tasklist stage with a deliberately minimal
+    # General live fixtures can reach the tasklist stage with a deliberately minimal
     # placeholder.  Task-aware evidence is enabled only for the installed rich-tasklist flow;
     # malformed rich cards still fail closed inside ``build_task_flow_checkpoint``.
     if not re.search(r"(?m)^###\s+[A-Za-z0-9][\w.-]*\b", tasklist_text):
@@ -5892,9 +5283,6 @@ def _observed_stage_status(ctx: FlowContext, stage: str) -> str | None:
     return None if metadata is None else metadata.status
 
 
-_combined_frontend_checkpoint_classification = _steps_checkpoint_classification
-
-
 def _remediation_action_path(ctx: FlowContext, action_id: str) -> Path:
     return ctx.bundle_root / REMEDIATION_ACTIONS_DIRNAME / f"{action_id}.json"
 
@@ -6178,7 +5566,7 @@ def _write_runtime_events_from_raw_log(*, runtime_log_path: Path, destination: P
         )
     if not rows:
         return False
-    _reports_write_text_atomic(destination, "\n".join(rows) + "\n")
+    _write_text_atomic(destination, "\n".join(rows) + "\n")
     return True
 
 
@@ -7985,6 +7373,8 @@ def _run_verify(ctx: FlowContext) -> HarnessVerificationResult:
             aidd_exit_code=0,
             command_transcripts=transcripts,
             duration_seconds=_transcript_duration(transcripts),
+            failed_command=exc.failed_command,
+            failed_exit_code=exc.failed_exit_code,
         )
         _write_step_transcript(
             path=ctx.bundle_root / VERIFY_TRANSCRIPT_FILENAME,
@@ -8069,6 +7459,8 @@ def _run_teardown(ctx: FlowContext) -> tuple[HarnessTeardownResult | None, BaseE
             executed_commands=tuple(transcript.command for transcript in transcripts),
             command_transcripts=transcripts,
             duration_seconds=_transcript_duration(transcripts),
+            failed_command=exc.failed_command,
+            failed_exit_code=exc.failed_exit_code,
         )
         _write_step_transcript(
             path=ctx.bundle_root / TEARDOWN_TRANSCRIPT_FILENAME,
@@ -8099,14 +7491,6 @@ def _run_teardown(ctx: FlowContext) -> tuple[HarnessTeardownResult | None, BaseE
         evidence_paths=(ctx.bundle_root / TEARDOWN_TRANSCRIPT_FILENAME,),
     )
     return result, None
-
-
-def _copy_best_effort_artifact(*, source: Path, destination: Path) -> Path | None:
-    if not source.exists() or not source.is_file():
-        return None
-    destination.parent.mkdir(parents=True, exist_ok=True)
-    destination.write_text(source.read_text(encoding="utf-8", errors="replace"), encoding="utf-8")
-    return destination
 
 
 def _copy_attempt_jsonl_artifacts(
@@ -8235,7 +7619,7 @@ def _write_runtime_log_from_steps(ctx: FlowContext) -> Path:
                 "command="
                 f"{_command_text(tuple(str(item) for item in command.get('command', [])))} "
                 f"exit={command.get('exit_code')} "
-                f"evidence={command.get('evidence_path', 'legacy-inline')} "
+                f"evidence={command.get('evidence_path', 'missing')} "
                 f"sha256={command.get('evidence_sha256', 'n/a')}"
             )
             stdout_preview = command.get("stdout_preview")

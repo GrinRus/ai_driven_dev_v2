@@ -206,7 +206,7 @@ remediation source ids, repair counts, tracked/untracked product files, known
 harness files, final report presence, and terminal flow-state/verdict consistency.
 It does not change `verdict.md`, `grader.json`, `flow-quality-report.md`,
 `code-quality-report.md`, or `quality-report.md`. It derives `execution_pass`,
-`quality_reviewed`, `counted_clean`, `manual_quality_stop`, and `legacy_degraded`;
+`quality_reviewed`, `counted_clean`, and `manual_quality_stop`;
 Manual `quality-report.md` remains the only final counted-clean decision. The summary only
 projects that decision alongside the independent execution and provenance signals.
 

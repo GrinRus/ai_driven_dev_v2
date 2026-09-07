@@ -1,187 +1,152 @@
 from __future__ import annotations
 
+import json
+import shlex
+from dataclasses import replace
 from pathlib import Path
 
 import pytest
 
-from aidd.harness.runner import (
-    HarnessSetupError,
-    HarnessVerificationError,
-    invoke_aidd_run,
-    run_setup_steps,
-    run_verification_steps,
-    run_with_teardown,
+from aidd.harness.deterministic_eval import (
+    DeterministicEvalRequest,
+    execute_deterministic_eval,
 )
-from aidd.harness.scenarios import (
-    Scenario,
-    ScenarioCommandSteps,
-    ScenarioRepoSource,
-    ScenarioRunConfig,
+from aidd.harness.eval_models import EvalRunPreparation, EvalScenarioRunResult
+from aidd.harness.eval_preparation import prepare_eval_run
+from aidd.harness.scenarios import ScenarioCommandSteps
+
+SMOKE_SCENARIO = (
+    Path(__file__).resolve().parents[2]
+    / "harness/scenarios/smoke/plan-stage-minimal-fixture.yaml"
 )
 
 
-def _build_scenario(
+def _execute_lifecycle(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
     *,
-    setup_commands: tuple[str, ...],
-    verify_commands: tuple[str, ...],
-) -> Scenario:
-    return Scenario(
-        scenario_id="AIDD-TEST-RUNNER-INTEGRATION",
-        scenario_class="deterministic-workflow",
-        feature_size="small",
-        automation_lane="ci",
-        canonical_runtime="generic-cli",
-        task="Exercise harness lifecycle",
-        repo=ScenarioRepoSource(
-            url="https://github.com/example/repo",
-            default_branch="main",
-            revision=None,
-        ),
-        setup=ScenarioCommandSteps(commands=setup_commands),
-        run=ScenarioRunConfig(
-            stage_start="plan",
-            stage_end="qa",
-            runtime_targets=("generic-cli",),
-            patch_budget_files=3,
-            timeout_minutes=5,
-            interview_required=False,
-        ),
-        verify=ScenarioCommandSteps(commands=verify_commands),
-        feature_source=None,
-        live_flow=None,
-        runtime_targets=("generic-cli",),
-        is_live=False,
-        raw={"id": "AIDD-TEST-RUNNER-INTEGRATION"},
-    )
-
-
-def _write_fake_aidd(path: Path, *, exit_code: int) -> None:
-    path.write_text(
-        "\n".join(
-            (
-                "#!/bin/sh",
-                "printf 'fake aidd\\n'",
-                f"exit {exit_code}",
-            )
-        ),
+    setup_exit: int = 0,
+    run_exit: int = 0,
+    verify_exit: int = 0,
+    teardown_exit: int = 0,
+) -> tuple[EvalScenarioRunResult, Path]:
+    fake_aidd = tmp_path / "fake-aidd"
+    fake_aidd.write_text(
+        "#!/bin/sh\nprintf 'run\\n' >> lifecycle.log\n"
+        f"printf 'fake aidd\\n'\nexit {run_exit}\n",
         encoding="utf-8",
     )
-    path.chmod(0o755)
+    fake_aidd.chmod(0o755)
+    working_copy_marker = tmp_path / "working-copy-path"
 
-
-def test_harness_lifecycle_pass_path_runs_teardown(tmp_path: Path) -> None:
-    working_copy_path = tmp_path / "working-copy"
-    working_copy_path.mkdir(parents=True, exist_ok=True)
-    fake_aidd = tmp_path / "fake-aidd"
-    _write_fake_aidd(fake_aidd, exit_code=0)
-    scenario = _build_scenario(
-        setup_commands=("printf 'setup\\n' > setup.log",),
-        verify_commands=("printf 'verify\\n' > verify.log",),
-    )
-
-    def _action() -> tuple[object, object, object]:
-        setup_result = run_setup_steps(
-            scenario=scenario,
-            working_copy_path=working_copy_path,
+    def _prepare(
+        *, scenario_path: Path, runtime_id: str, workspace_root: Path
+    ) -> EvalRunPreparation:
+        prep = prepare_eval_run(
+            scenario_path=scenario_path,
+            runtime_id=runtime_id,
+            workspace_root=workspace_root,
         )
-        aidd_result = invoke_aidd_run(
-            scenario=scenario,
-            working_copy_path=working_copy_path,
-            runtime_id="generic-cli",
-            work_item="WI-700",
-            aidd_command=(fake_aidd.as_posix(),),
-        )
-        verify_result = run_verification_steps(
-            scenario=scenario,
-            working_copy_path=working_copy_path,
-            aidd_run_result=aidd_result,
-        )
-        return setup_result, aidd_result, verify_result
-
-    (_setup_result, _aidd_result, _verify_result), teardown_result = run_with_teardown(
-        action=_action,
-        teardown_commands=("printf 'teardown\\n' > teardown.log",),
-        working_copy_path=working_copy_path,
-    )
-
-    assert teardown_result.executed_commands == ("printf 'teardown\\n' > teardown.log",)
-    assert (working_copy_path / "setup.log").read_text(encoding="utf-8") == "setup\n"
-    assert (working_copy_path / "verify.log").read_text(encoding="utf-8") == "verify\n"
-    assert (working_copy_path / "teardown.log").read_text(encoding="utf-8") == "teardown\n"
-
-
-def test_harness_lifecycle_runs_teardown_when_setup_fails(tmp_path: Path) -> None:
-    working_copy_path = tmp_path / "working-copy"
-    working_copy_path.mkdir(parents=True, exist_ok=True)
-    scenario = _build_scenario(
-        setup_commands=("exit 4",),
-        verify_commands=("printf 'verify\\n' > verify.log",),
-    )
-
-    with pytest.raises(HarnessSetupError, match="Setup command failed"):
-        run_with_teardown(
-            action=lambda: run_setup_steps(
-                scenario=scenario,
-                working_copy_path=working_copy_path,
+        scenario = replace(
+            prep.scenario,
+            scenario_class="deterministic-workflow",
+            setup=ScenarioCommandSteps(
+                commands=(
+                    f"pwd > {shlex.quote(str(working_copy_marker))}",
+                    "printf '# fixture config\\n' > aidd.example.toml",
+                    f"printf 'setup\\n' >> lifecycle.log; exit {setup_exit}",
+                ),
             ),
-            teardown_commands=("printf 'teardown\\n' > teardown.log",),
-            working_copy_path=working_copy_path,
+            verify=ScenarioCommandSteps(
+                commands=(f"printf 'verify\\n' >> lifecycle.log; exit {verify_exit}",),
+            ),
+        )
+        return replace(
+            prep,
+            scenario=scenario,
+            aidd_command=(fake_aidd.as_posix(),),
+            teardown_commands=(
+                f"printf 'teardown\\n' >> lifecycle.log; exit {teardown_exit}",
+            ),
         )
 
-    assert (working_copy_path / "teardown.log").read_text(encoding="utf-8") == "teardown\n"
-    assert not (working_copy_path / "verify.log").exists()
+    monkeypatch.setattr("aidd.harness.deterministic_eval.prepare_eval_run", _prepare)
+    result = execute_deterministic_eval(
+        DeterministicEvalRequest(
+            scenario_path=SMOKE_SCENARIO,
+            workspace_root=tmp_path / ".aidd",
+        )
+    )
+    working_copy = Path(working_copy_marker.read_text(encoding="utf-8").strip())
+    return result, working_copy
 
 
-def test_harness_lifecycle_runs_teardown_when_verification_fails(tmp_path: Path) -> None:
-    working_copy_path = tmp_path / "working-copy"
-    working_copy_path.mkdir(parents=True, exist_ok=True)
-    fake_aidd = tmp_path / "fake-aidd"
-    _write_fake_aidd(fake_aidd, exit_code=0)
-    scenario = _build_scenario(
-        setup_commands=("printf 'setup\\n' > setup.log",),
-        verify_commands=("exit 9",),
+@pytest.mark.parametrize(
+    ("setup_exit", "run_exit", "verify_exit", "status", "steps", "error"),
+    (
+        (0, 0, 0, "pass", ["setup", "run", "verify", "teardown"], None),
+        (4, 0, 0, "infra-fail", ["setup", "teardown"], "Setup command failed"),
+        (0, 3, 0, "fail", ["setup", "run", "verify", "teardown"], "AIDD execution failed"),
+        (0, 0, 9, "fail", ["setup", "run", "verify", "teardown"], "Verification command failed"),
+    ),
+)
+def test_deterministic_lifecycle_always_runs_teardown_and_persists_evidence(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    setup_exit: int,
+    run_exit: int,
+    verify_exit: int,
+    status: str,
+    steps: list[str],
+    error: str | None,
+) -> None:
+    result, working_copy = _execute_lifecycle(
+        tmp_path,
+        monkeypatch,
+        setup_exit=setup_exit,
+        run_exit=run_exit,
+        verify_exit=verify_exit,
     )
 
-    def _action() -> object:
-        run_setup_steps(
-            scenario=scenario,
-            working_copy_path=working_copy_path,
-        )
-        aidd_result = invoke_aidd_run(
-            scenario=scenario,
-            working_copy_path=working_copy_path,
-            runtime_id="generic-cli",
-            work_item="WI-701",
-            aidd_command=(fake_aidd.as_posix(),),
-        )
-        return run_verification_steps(
-            scenario=scenario,
-            working_copy_path=working_copy_path,
-            aidd_run_result=aidd_result,
-        )
-
-    with pytest.raises(HarnessVerificationError, match="Verification command failed"):
-        run_with_teardown(
-            action=_action,
-            teardown_commands=("printf 'teardown\\n' > teardown.log",),
-            working_copy_path=working_copy_path,
-        )
-
-    assert (working_copy_path / "teardown.log").read_text(encoding="utf-8") == "teardown\n"
+    assert result.status == status
+    assert (working_copy / "lifecycle.log").read_text(encoding="utf-8").splitlines() == steps
+    verdict = result.verdict_path.read_text(encoding="utf-8")
+    assert f"- Status: `{status}`" in verdict
+    if error is not None:
+        assert error in verdict
+    teardown = json.loads((result.bundle_root / "teardown-transcript.json").read_text())
+    assert teardown["command_count"] == 1
+    assert teardown["commands"][0]["exit_code"] == 0
+    assert "teardown" in teardown["commands"][0]["command"]
 
 
-def test_harness_lifecycle_runs_teardown_for_interrupted_run(tmp_path: Path) -> None:
-    working_copy_path = tmp_path / "working-copy"
-    working_copy_path.mkdir(parents=True, exist_ok=True)
+@pytest.mark.parametrize("error_type", (RuntimeError, KeyboardInterrupt))
+@pytest.mark.parametrize("teardown_exit", (0, 5))
+def test_deterministic_lifecycle_retains_execution_and_teardown_failures(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    error_type: type[BaseException],
+    teardown_exit: int,
+) -> None:
+    def _fail_runtime_invocation(**_kwargs: object) -> None:
+        raise error_type("injected runtime interruption")
 
-    def _action() -> object:
-        raise KeyboardInterrupt("interrupted")
+    monkeypatch.setattr(
+        "aidd.harness.deterministic_eval.invoke_aidd_run",
+        _fail_runtime_invocation,
+    )
+    result, working_copy = _execute_lifecycle(
+        tmp_path,
+        monkeypatch,
+        teardown_exit=teardown_exit,
+    )
 
-    with pytest.raises(KeyboardInterrupt, match="interrupted"):
-        run_with_teardown(
-            action=_action,
-            teardown_commands=("printf 'teardown\\n' > teardown.log",),
-            working_copy_path=working_copy_path,
-        )
-
-    assert (working_copy_path / "teardown.log").read_text(encoding="utf-8") == "teardown\n"
+    assert result.status == "infra-fail"
+    assert (working_copy / "lifecycle.log").read_text(encoding="utf-8") == "setup\nteardown\n"
+    assert "injected runtime interruption" in result.verdict_path.read_text(encoding="utf-8")
+    runtime_log = (result.bundle_root / "runtime.log").read_text(encoding="utf-8")
+    assert "error=injected runtime interruption" in runtime_log
+    if teardown_exit:
+        assert "error=Teardown command failed with non-zero exit (5)" in runtime_log
+    else:
+        assert "teardown_commands=1" in runtime_log

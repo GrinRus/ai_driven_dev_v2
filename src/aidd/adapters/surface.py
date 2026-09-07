@@ -1,12 +1,15 @@
 from __future__ import annotations
 
+import shlex
+import shutil
 from collections.abc import Callable, Mapping
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from enum import StrEnum
 from pathlib import Path
 from typing import cast
 
-from aidd.adapters.base import CapabilityReport
+from aidd.adapters.base import CapabilityReport, RuntimeAdapterDescriptor
+from aidd.adapters.claude_code import DESCRIPTOR as CLAUDE_CODE_DESCRIPTOR
 from aidd.adapters.claude_code import probe as probe_claude_code
 from aidd.adapters.claude_code.runner import (
     ClaudeCodeCommandContext,
@@ -21,6 +24,7 @@ from aidd.adapters.claude_code.runner import (
 from aidd.adapters.claude_code.runner import (
     run_subprocess_with_streaming as run_claude_code_subprocess_with_streaming,
 )
+from aidd.adapters.codex import DESCRIPTOR as CODEX_DESCRIPTOR
 from aidd.adapters.codex import probe as probe_codex
 from aidd.adapters.codex.live import (
     codex_live_transport_available,
@@ -37,6 +41,7 @@ from aidd.adapters.codex.runner import persist_attempt_runtime_log as persist_co
 from aidd.adapters.codex.runner import (
     run_subprocess_with_streaming as run_codex_subprocess_with_streaming,
 )
+from aidd.adapters.generic_cli import DESCRIPTOR as GENERIC_CLI_DESCRIPTOR
 from aidd.adapters.generic_cli import probe as probe_generic_cli
 from aidd.adapters.generic_cli.runner import (
     GenericCliExitClassification,
@@ -50,6 +55,7 @@ from aidd.adapters.generic_cli.runner import (
     run_subprocess_with_streaming as run_generic_cli_subprocess_with_streaming,
 )
 from aidd.adapters.live_transport import should_use_live_transport
+from aidd.adapters.opencode import DESCRIPTOR as OPENCODE_DESCRIPTOR
 from aidd.adapters.opencode import probe as probe_opencode
 from aidd.adapters.opencode.runner import OpenCodeCommandContext, OpenCodeExitClassification
 from aidd.adapters.opencode.runner import build_subprocess_spec as build_opencode_subprocess_spec
@@ -59,6 +65,7 @@ from aidd.adapters.opencode.runner import (
 from aidd.adapters.opencode.runner import (
     run_subprocess_with_streaming as run_opencode_subprocess_with_streaming,
 )
+from aidd.adapters.qwen import DESCRIPTOR as QWEN_DESCRIPTOR
 from aidd.adapters.qwen import probe as probe_qwen
 from aidd.adapters.qwen.live import (
     execute_qwen_live_transport,
@@ -140,11 +147,13 @@ class RuntimeAdapterExecutionResult:
     def resolved_status(self) -> AdapterExecutionStatus:
         if self.status is not None:
             return self.status
-        return (
-            AdapterExecutionStatus.SUCCEEDED
-            if self.succeeded
-            else AdapterExecutionStatus.FAILED
-        )
+        return AdapterExecutionStatus.SUCCEEDED if self.succeeded else AdapterExecutionStatus.FAILED
+
+
+@dataclass(frozen=True, slots=True)
+class RuntimeExecutionProbeReport:
+    provider: CapabilityReport
+    execution_command_available: bool
 
 
 @dataclass(frozen=True, slots=True)
@@ -156,6 +165,36 @@ class RuntimeAdapterSurface:
     execute_stage_request_fn: StageRequestExecutor
     conformance_spec_builder: ConformanceSpecBuilder
     default_execution_mode: RuntimeExecutionMode
+    descriptor: RuntimeAdapterDescriptor | None = None
+
+    def probe_configured_command(
+        self, *, configured_command: str, provider_command: str
+    ) -> RuntimeExecutionProbeReport:
+        if (
+            self.runtime_id == "generic-cli"
+            and configured_command.strip() == _GENERIC_CLI_LIVE_CONFORMANCE_COMMAND
+        ):
+            return RuntimeExecutionProbeReport(
+                provider=CapabilityReport(
+                    runtime_id=self.runtime_id,
+                    available=True,
+                    command=_GENERIC_CLI_LIVE_CONFORMANCE_COMMAND,
+                    version_text="built-in",
+                    supports_raw_log_stream=False,
+                    supports_permission_policy=True,
+                    supports_live_decisions=True,
+                    preferred_transport="in-process",
+                ),
+                execution_command_available=True,
+            )
+        try:
+            tokens = shlex.split(configured_command)
+        except ValueError:
+            tokens = []
+        return RuntimeExecutionProbeReport(
+            provider=self.probe(provider_command),
+            execution_command_available=bool(tokens) and shutil.which(tokens[0]) is not None,
+        )
 
     def execute_stage_request(
         self,
@@ -179,6 +218,7 @@ class RuntimeAdapterSurface:
             model=request.model,
             reasoning_effort=request.reasoning_effort,
         )
+        request = _request_with_descriptor_markers(request, descriptor=self.descriptor)
         return self.execute_stage_request_fn(
             configured_command=configured_command,
             request=request,
@@ -313,7 +353,30 @@ def _operator_policy_for_stage_request(
         auto_approval_preset=request.auto_approval_preset,
         project_roots=request.project_roots or (request.repository_root,),
         workspace_root=request.workspace_root,
+        protected_path_markers=request.protected_path_markers,
     )
+
+
+def _request_with_descriptor_markers(
+    request: StageRuntimeRequest,
+    *,
+    descriptor: RuntimeAdapterDescriptor | None,
+) -> StageRuntimeRequest:
+    if descriptor is None:
+        return request
+    markers = tuple(
+        dict.fromkeys(
+            (
+                *request.protected_path_markers,
+                *descriptor.protected_paths,
+                *descriptor.credential_paths,
+                *descriptor.config_paths,
+            )
+        )
+    )
+    if markers == request.protected_path_markers:
+        return request
+    return replace(request, protected_path_markers=markers)
 
 
 def _execute_generic_cli_live_conformance(
@@ -529,18 +592,14 @@ def _execute_generic_cli(
         on_stdout=on_stdout,
         on_stderr=on_stderr,
         timeout_seconds=request.timeout_seconds,
-        document_completion_paths=runtime_content_document_paths(
-            request.expected_output_documents
-        ),
+        document_completion_paths=runtime_content_document_paths(request.expected_output_documents),
         cancel_requested=request.cancel_requested,
         capture_directory=attempt_path,
     )
     persist_generic_cli_runtime_artifacts(attempt_path=attempt_path, run_result=run_result)
     _cleanup_runtime_capture_sources(run_result)
     evidence = runtime_evidence_paths(attempt_path)
-    adapter_outcome = adapter_outcome_for_classification(
-        run_result.exit_classification.value
-    )
+    adapter_outcome = adapter_outcome_for_classification(run_result.exit_classification.value)
     return RuntimeAdapterExecutionResult(
         succeeded=run_result.exit_classification
         in (
@@ -604,9 +663,7 @@ def _execute_claude_code(
     )
     persist_claude_code_runtime_log(attempt_path=attempt_path, run_result=run_result)
     evidence = runtime_evidence_paths(attempt_path)
-    adapter_outcome = adapter_outcome_for_classification(
-        run_result.exit_classification.value
-    )
+    adapter_outcome = adapter_outcome_for_classification(run_result.exit_classification.value)
     event_artifacts = persist_runtime_event_artifacts(
         attempt_path=attempt_path,
         run_result=run_result,
@@ -701,9 +758,7 @@ def _execute_codex(
         )
         live_event_artifacts = persist_lifecycle_projection_from_jsonl(
             attempt_path=attempt_path,
-            source_path=(
-                live_result.runtime_jsonl_path or live_result.events_jsonl_path
-            ),
+            source_path=(live_result.runtime_jsonl_path or live_result.events_jsonl_path),
         )
         if live_result.run_result is None:
             return RuntimeAdapterExecutionResult(
@@ -773,9 +828,7 @@ def _execute_codex(
     )
     persist_codex_runtime_log(attempt_path=attempt_path, run_result=run_result)
     evidence = runtime_evidence_paths(attempt_path)
-    adapter_outcome = adapter_outcome_for_classification(
-        run_result.exit_classification.value
-    )
+    adapter_outcome = adapter_outcome_for_classification(run_result.exit_classification.value)
     event_artifacts = persist_runtime_event_artifacts(
         attempt_path=attempt_path,
         run_result=run_result,
@@ -847,17 +900,13 @@ def _execute_opencode(
         on_stdout=on_stdout,
         on_stderr=on_stderr,
         timeout_seconds=request.timeout_seconds,
-        document_completion_paths=runtime_content_document_paths(
-            request.expected_output_documents
-        ),
+        document_completion_paths=runtime_content_document_paths(request.expected_output_documents),
         cancel_requested=request.cancel_requested,
         capture_directory=attempt_path,
     )
     persist_opencode_runtime_log(attempt_path=attempt_path, run_result=run_result)
     evidence = runtime_evidence_paths(attempt_path)
-    adapter_outcome = adapter_outcome_for_classification(
-        run_result.exit_classification.value
-    )
+    adapter_outcome = adapter_outcome_for_classification(run_result.exit_classification.value)
     event_artifacts = persist_runtime_event_artifacts(
         attempt_path=attempt_path,
         run_result=run_result,
@@ -940,9 +989,7 @@ def _execute_qwen(
         )
         live_event_artifacts = persist_lifecycle_projection_from_jsonl(
             attempt_path=attempt_path,
-            source_path=(
-                live_result.runtime_jsonl_path or live_result.events_jsonl_path
-            ),
+            source_path=(live_result.runtime_jsonl_path or live_result.events_jsonl_path),
         )
         if live_result.run_result is None:
             return RuntimeAdapterExecutionResult(
@@ -1005,17 +1052,13 @@ def _execute_qwen(
         on_stdout=on_stdout,
         on_stderr=on_stderr,
         timeout_seconds=request.timeout_seconds,
-        document_completion_paths=runtime_content_document_paths(
-            request.expected_output_documents
-        ),
+        document_completion_paths=runtime_content_document_paths(request.expected_output_documents),
         cancel_requested=request.cancel_requested,
         capture_directory=attempt_path,
     )
     persist_qwen_runtime_log(attempt_path=attempt_path, run_result=run_result)
     evidence = runtime_evidence_paths(attempt_path)
-    adapter_outcome = adapter_outcome_for_classification(
-        run_result.exit_classification.value
-    )
+    adapter_outcome = adapter_outcome_for_classification(run_result.exit_classification.value)
     event_artifacts = persist_runtime_event_artifacts(
         attempt_path=attempt_path,
         run_result=run_result,
@@ -1049,6 +1092,7 @@ def _execute_qwen(
 _SURFACES_BY_RUNTIME: dict[str, RuntimeAdapterSurface] = {
     "generic-cli": RuntimeAdapterSurface(
         runtime_id="generic-cli",
+        descriptor=GENERIC_CLI_DESCRIPTOR,
         probe=probe_generic_cli,
         exit_classification_enum=GenericCliExitClassification,
         success_value=GenericCliExitClassification.SUCCESS,
@@ -1058,6 +1102,7 @@ _SURFACES_BY_RUNTIME: dict[str, RuntimeAdapterSurface] = {
     ),
     "claude-code": RuntimeAdapterSurface(
         runtime_id="claude-code",
+        descriptor=CLAUDE_CODE_DESCRIPTOR,
         probe=probe_claude_code,
         exit_classification_enum=ClaudeCodeExitClassification,
         success_value=ClaudeCodeExitClassification.SUCCESS,
@@ -1067,6 +1112,7 @@ _SURFACES_BY_RUNTIME: dict[str, RuntimeAdapterSurface] = {
     ),
     "codex": RuntimeAdapterSurface(
         runtime_id="codex",
+        descriptor=CODEX_DESCRIPTOR,
         probe=probe_codex,
         exit_classification_enum=CodexExitClassification,
         success_value=CodexExitClassification.SUCCESS,
@@ -1076,6 +1122,7 @@ _SURFACES_BY_RUNTIME: dict[str, RuntimeAdapterSurface] = {
     ),
     "opencode": RuntimeAdapterSurface(
         runtime_id="opencode",
+        descriptor=OPENCODE_DESCRIPTOR,
         probe=probe_opencode,
         exit_classification_enum=OpenCodeExitClassification,
         success_value=OpenCodeExitClassification.SUCCESS,
@@ -1085,6 +1132,7 @@ _SURFACES_BY_RUNTIME: dict[str, RuntimeAdapterSurface] = {
     ),
     "qwen": RuntimeAdapterSurface(
         runtime_id="qwen",
+        descriptor=QWEN_DESCRIPTOR,
         probe=probe_qwen,
         exit_classification_enum=QwenExitClassification,
         success_value=QwenExitClassification.SUCCESS,
@@ -1106,13 +1154,10 @@ def get_runtime_adapter_surface(runtime_id: str) -> RuntimeAdapterSurface:
         raise ValueError(f"Unsupported runtime id: {runtime_id}. Supported: {supported}.") from exc
 
 
-def runtime_adapter_surfaces() -> tuple[RuntimeAdapterSurface, ...]:
-    return tuple(RUNTIME_ADAPTER_SURFACES.values())
+def get_runtime_adapter_descriptor(runtime_id: str) -> RuntimeAdapterDescriptor:
+    """Return static security/capability metadata for a registered adapter."""
 
-
-def runtime_adapter_surface_ids() -> tuple[str, ...]:
-    return tuple(RUNTIME_ADAPTER_SURFACES)
-
-
-def default_execution_mode_for_surface(surface: RuntimeAdapterSurface) -> RuntimeExecutionMode:
-    return surface.default_execution_mode
+    surface = get_runtime_adapter_surface(runtime_id)
+    if surface.descriptor is None:
+        raise ValueError(f"Adapter {runtime_id!r} has no security/capability descriptor.")
+    return surface.descriptor

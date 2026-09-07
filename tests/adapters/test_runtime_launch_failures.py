@@ -9,10 +9,7 @@ import pytest
 
 from aidd.adapters.runtime_evidence import RuntimeAdapterOutcome
 from aidd.adapters.runtime_execution import StageRuntimeRequest
-from aidd.adapters.surface import (
-    default_execution_mode_for_surface,
-    get_runtime_adapter_surface,
-)
+from aidd.adapters.surface import get_runtime_adapter_surface
 from aidd.core.stage_models import AdapterExecutionStatus
 from aidd.runtime_permissions import (
     AutoApprovalPreset,
@@ -35,7 +32,7 @@ def _request(tmp_path: Path, runtime_id: str) -> StageRuntimeRequest:
     surface = get_runtime_adapter_surface(runtime_id)
     return StageRuntimeRequest(
         runtime_id=runtime_id,
-        execution_mode=default_execution_mode_for_surface(surface),
+        execution_mode=surface.default_execution_mode,
         permission_policy=RuntimePermissionPolicy.FULL_ACCESS,
         interaction_mode=RuntimeInteractionMode.BATCH,
         auto_approval_preset=AutoApprovalPreset.BROAD,

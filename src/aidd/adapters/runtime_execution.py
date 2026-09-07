@@ -3,7 +3,6 @@ from __future__ import annotations
 from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
-from typing import TypeVar
 
 from aidd.runtime_budget import validate_runtime_budget
 from aidd.runtime_catalog import RuntimeExecutionMode
@@ -12,8 +11,6 @@ from aidd.runtime_permissions import (
     RuntimeInteractionMode,
     RuntimePermissionPolicy,
 )
-
-ExitClassificationT = TypeVar("ExitClassificationT")
 
 
 @dataclass(frozen=True, slots=True)
@@ -32,6 +29,8 @@ class StageRuntimeRequest:
     prompt_pack_paths: tuple[Path, ...]
     repository_root: Path
     project_roots: tuple[Path, ...] = ()
+    # Adapter-composed protected path markers consumed by the runtime-neutral policy.
+    protected_path_markers: tuple[str, ...] = ()
     expected_output_documents: tuple[Path, ...] = ()
     attempt_number: int = 1
     attempt_mode: str = "initial"
@@ -83,19 +82,4 @@ class RuntimeRunResult[ExitClassificationT]:
     stdout_truncated: bool = False
     stderr_truncated: bool = False
     runtime_log_truncated: bool = False
-
-    @property
-    def stdout(self) -> str:
-        return self.stdout_text
-
-    @property
-    def stderr(self) -> str:
-        return self.stderr_text
-
-    @property
-    def runtime_log(self) -> str:
-        return self.runtime_log_text
-
-    @property
-    def normalized_exit_classification(self) -> ExitClassificationT:
-        return self.exit_classification
+    capture_error: str | None = None

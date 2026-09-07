@@ -67,6 +67,11 @@ The maintained set must cover these buckets without turning the matrix into a fu
 | live full flow interview product evaluation | `large + manual + product-evaluation` | `AIDD-LIVE-010` |
 | live full flow interview product evaluation | `xlarge + manual + product-evaluation` | `AIDD-LIVE-006`, `AIDD-LIVE-008`, `AIDD-LIVE-011` |
 
+`AIDD-SMOKE-001` also verifies workflow-record ownership from an initialized workspace:
+the fixture runtime writes only `plan.md`, AIDD publishes the canonical stage result and
+validator report, and the stage succeeds in one attempt without repair. Runtime logs and
+verification results preserve evidence for that boundary.
+
 The Codex-only Wave 43 stability lane reuses the maintained `AIDD-LIVE-007` medium
 product-evaluation scenario rather than introducing a second scenario class. Its pinned profile,
 metric vocabulary, and repetition evidence contract are documented in
@@ -98,6 +103,10 @@ The lane proves local-project behavior: page load, workflow-run request delegati
 blocking answer persistence, runtime logs, artifact and validation visibility,
 repair-history links, and declared project-set root visibility. Public GitHub
 repositories remain live E2E inputs only.
+
+The maintained Inbox journey also covers two sibling disposable projects: a running job keeps
+its captured origin project and live logs while the operator switches projects, and artifact/log
+read models remain scoped to whichever project is selected when they are requested.
 
 The installed/source local-project smoke path is tracked as
 `AIDD-INSTALLED-LOCAL-001` in
