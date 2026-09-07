@@ -3,6 +3,7 @@ from __future__ import annotations
 import ast
 from pathlib import Path
 
+from aidd.harness import live_e2e_black_box_bundle as bundle
 from aidd.harness import live_e2e_black_box_frontend as frontend
 from aidd.harness import live_e2e_black_box_orchestration as orchestration
 from aidd.harness import live_e2e_black_box_reports as reports
@@ -97,3 +98,13 @@ def test_orchestration_uses_one_frontend_probe_owner() -> None:
         "_frontend_operator_surface_checks = _frontend_operator_surface_checks_extracted"
         in source
     )
+
+
+def test_orchestration_delegates_bundle_report_serialization() -> None:
+    source_path = Path(orchestration.__file__)
+    source = source_path.read_text(encoding="utf-8")
+
+    assert "_materialize_canonical_live_result_extracted(" in source
+    assert "_write_run_transcript_extracted(" in source
+    assert bundle.materialize_canonical_live_result
+    assert bundle.write_run_transcript
