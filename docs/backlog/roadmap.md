@@ -694,9 +694,22 @@ runtime-neutral core.
 
 Dependencies: W48 exit gate → `W49-E1-S2-T1` → `W49-E1-S2-T2` → `W49-E1-S2-T3` →
 `W49-E1-S2-T4` → `W49-E1-S2-T5`; all W49-E1 boundary tasks are complete, and the active queue
-item is `W49-E3-S2-T1` for executable user-story traceability.
+item is `W49-E2-S1-T1` for live-facade characterization.
 
-### Epic W49-E3 — planning and documentation truth (`planned`)
+### Epic W49-E2 — behavior-preserving hotspot reduction (`planned`)
+
+#### Slice W49-E2-S1 — live harness decomposition (`planned`)
+
+- `W49-E2-S1-T1` (next) Characterize public live-facade artifact and event ordering.
+  - Output: a deterministic characterization records the normalized artifacts and event order
+    that the public live facade must preserve during later decomposition.
+  - Scope: harness characterization tests and deterministic fixtures; no runtime or UI-owned paths.
+  - Verification: current and extracted-path fixtures produce equivalent normalized artifacts and
+    event ordering without provider credentials.
+  - Dependencies: W48 evidence semantics are stable and the merged W47 UI compatibility baseline
+    is available.
+
+### Epic W49-E3 — planning and documentation truth (`done`)
 
 #### Slice W49-E3-S1 — executable planning hygiene (`done`)
 
@@ -745,7 +758,7 @@ item is `W49-E3-S2-T1` for executable user-story traceability.
 Dependencies: W49-E1-S1/T2/T4/T3 completion → `W49-E3-S1-T1` → `W49-E3-S1-T2` →
 `W49-E3-S1-T3` → `W49-E3-S1-T4`.
 
-#### Slice W49-E3-S2 — executable user-story traceability (`planned`)
+#### Slice W49-E3-S2 — executable user-story traceability (`done`)
 
 - `W49-E3-S2-T1` (done) Correct optional-frontmatter and superseded beta-audit wording.
   - Output: architecture and analysis documents agree with the current document contract and
@@ -768,11 +781,16 @@ Dependencies: W49-E1-S1/T2/T4/T3 completion → `W49-E3-S1-T1` → `W49-E3-S1-T2
     repository-relative paths, and artifact existence. The focused docs/planning/quality suite
     passed 181 tests; no runtime or UI-owned files changed.
 
-- `W49-E3-S2-T3` (next) Generate and validate a byte-stable traceability view in CI.
+- `W49-E3-S2-T3` (done) Generate and validate a byte-stable traceability view in CI.
   - Output: CI validates the generated story view and rejects missing required references.
   - Scope: docs tooling and deterministic documentation fixtures; no runtime or UI-owned paths.
   - Verification: removing a required test or scenario reference fails generation.
   - Dependencies: W49-E3-S2-T1 and W49-E3-S2-T2.
+  - Completion evidence: PR #593 merged to `origin/main` at `ebba859d`; the generated Markdown
+    view is byte-checked in CI, registry validation rejects missing/duplicate references, and the
+    focused traceability/docs/planning suite passed 77 tests. All required Python 3.12–3.14,
+    adapter-conformance, deterministic-scenarios, packaged-ui-browser, build, CodeQL, Scorecard,
+    and dependency-review checks passed. No runtime or UI-owned files changed.
 
 Dependencies: `W49-E3-S1` → `W49-E3-S2-T1`/`W49-E3-S2-T2` → `W49-E3-S2-T3`.
 
