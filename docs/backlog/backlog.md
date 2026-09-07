@@ -7,7 +7,7 @@ slice, and local task.
 
 ## Next
 
-- `W49-E1-S1-T2` — Block aggregate finalization when repository evidence contains outside-set changes.
+- `W49-E1-S2-T1` — Define adapter security/capability descriptor.
 
 ## Soon
 
@@ -37,9 +37,10 @@ slice, and local task.
 
 ## Current reconciliation
 
-- `2026-09-07` `W49-E1-S1-T1` completed in PR #562 and is present on `origin/main` at `3d75b674`.
-  The mode-specific project-set matrix now distinguishes full-access declaration/attribution/
-  detection/fail-closed progression from brokered or isolated preventive containment. Focused
-  docs, planning, and agent-workflow checks passed (63 tests); all required CI lanes passed. The
-  adjacent `codex/ui-completion` checkout remains untouched with its own unpushed UI work, so
-  `W49-E1-S1-T2` is the next non-UI dependency-ready task; UI-bound T4 remains held for W47 merge.
+- `2026-09-07` `W49-E1-S1-T2` completed in PR #564 and is present on `origin/main` at `0b671901`.
+  Aggregate implementation finalization now fails closed on exact outside-project-set paths and
+  persists a marker that keeps downstream Review/QA blocked. Focused docs, planning, lifecycle,
+  evidence, implementation-service, and CLI conformance checks passed (127 tests); Ruff, strict
+  mypy, and all required CI lanes passed. The adjacent `codex/ui-completion` checkout remains
+  untouched with its completed-but-unpushed UI work; UI-bound W49 T4 remains held for that merge.
+  `W49-E1-S2-T1` is now the next non-UI dependency-ready task.
