@@ -9,7 +9,7 @@ from collections.abc import Iterable, Mapping
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from enum import StrEnum
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 from typing import Any, Protocol
 from uuid import uuid4
 
@@ -51,10 +51,6 @@ _PROTECTED_NAMES = frozenset(
         ".ssh",
         ".aws",
         ".config",
-        ".claude",
-        ".codex",
-        ".opencode",
-        ".qwen",
     }
 )
 _PROTECTED_AIDD_DIR_NAMES = frozenset(
@@ -77,17 +73,7 @@ _PROTECTED_FILE_NAMES = frozenset(
     {
         OPERATOR_DECISIONS_FILENAME,
         OPERATOR_REQUESTS_FILENAME,
-        "auth.json",
-        "claude.json",
-        "codex.json",
-        "credentials.json",
-        "opencode.json",
-        "qwen.json",
         "repair-brief.md",
-        "settings.json",
-        "token.json",
-        "tokens.json",
-        "credentials",
         "known_hosts",
         "id_rsa",
         "id_ed25519",
@@ -522,6 +508,14 @@ class RuntimeOperatorPolicy:
     project_roots: tuple[Path, ...]
     workspace_root: Path
     configured_command_prefixes: tuple[str, ...] = ()
+    protected_path_markers: tuple[str, ...] = ()
+
+    def __post_init__(self) -> None:
+        object.__setattr__(
+            self,
+            "protected_path_markers",
+            _normalize_protected_path_markers(self.protected_path_markers),
+        )
 
     def evaluate(
         self,
@@ -642,7 +636,10 @@ class RuntimeOperatorPolicy:
             return None
         assert request.cwd is not None
         explicit_paths = _explicit_shell_paths(command=command, cwd=request.cwd)
-        if any(_is_protected_path(path) for path in explicit_paths):
+        if any(
+            _is_protected_path(path, protected_path_markers=self.protected_path_markers)
+            for path in explicit_paths
+        ):
             return None
         if _requires_operator_for_shell(command):
             return None
@@ -659,6 +656,7 @@ class RuntimeOperatorPolicy:
                     *self._resolved_project_roots(),
                     self.workspace_root.resolve(strict=False),
                 ),
+                protected_path_markers=self.protected_path_markers,
             )
         ):
             return _decision(
@@ -674,6 +672,7 @@ class RuntimeOperatorPolicy:
                 cwd=request.cwd,
                 project_roots=self._resolved_project_roots(),
                 workspace_root=self.workspace_root.resolve(strict=False),
+                protected_path_markers=self.protected_path_markers,
             )
         ):
             return _decision(
@@ -703,7 +702,7 @@ class RuntimeOperatorPolicy:
 
     def _first_protected_path(self, request: RuntimeOperatorRequest) -> Path | None:
         for path in self._resolved_request_paths(request):
-            if _is_protected_path(path):
+            if _is_protected_path(path, protected_path_markers=self.protected_path_markers):
                 return path
         return None
 
@@ -1002,6 +1001,7 @@ def _is_bounded_aidd_workspace_shell(
     cwd: Path | None,
     workspace_root: Path,
     allowed_roots: tuple[Path, ...],
+    protected_path_markers: tuple[str, ...] = (),
 ) -> bool:
     if cwd is None:
         return False
@@ -1017,6 +1017,7 @@ def _is_bounded_aidd_workspace_shell(
             path=path,
             workspace_root=workspace_root,
             allowed_roots=allowed_roots,
+            protected_path_markers=protected_path_markers,
         )
         for path in explicit_paths
     )
@@ -1028,6 +1029,7 @@ def _is_broad_project_local_shell(
     cwd: Path | None,
     project_roots: tuple[Path, ...],
     workspace_root: Path,
+    protected_path_markers: tuple[str, ...] = (),
 ) -> bool:
     if cwd is None or not _is_relative_to_any(cwd.resolve(strict=False), project_roots):
         return False
@@ -1036,7 +1038,8 @@ def _is_broad_project_local_shell(
     explicit_paths = _explicit_shell_paths(command=command, cwd=cwd)
     allowed_roots = (*project_roots, workspace_root)
     return all(
-        _is_relative_to_any(path, allowed_roots) and not _is_protected_path(path)
+        _is_relative_to_any(path, allowed_roots)
+        and not _is_protected_path(path, protected_path_markers=protected_path_markers)
         for path in explicit_paths
     )
 
@@ -1046,8 +1049,9 @@ def _is_aidd_workspace_shell_path(
     path: Path,
     workspace_root: Path,
     allowed_roots: tuple[Path, ...],
+    protected_path_markers: tuple[str, ...] = (),
 ) -> bool:
-    if _is_protected_path(path):
+    if _is_protected_path(path, protected_path_markers=protected_path_markers):
         return False
     if _is_relative_to(path, workspace_root):
         return True
@@ -1272,7 +1276,44 @@ def _contains_destructive_root_or_home_remove(tokens: tuple[str, ...]) -> bool:
     return False
 
 
-def classify_protected_runtime_path(path: Path) -> ProtectedRuntimePathKind | None:
+def _normalize_protected_path_markers(values: Iterable[str]) -> tuple[str, ...]:
+    if isinstance(values, str):
+        values = (values,)
+    normalized: list[str] = []
+    for value in values:
+        if not isinstance(value, str):
+            raise TypeError("protected_path_markers entries must be strings.")
+        candidate = value.strip()
+        if not candidate or "\\" in candidate or "\x00" in candidate:
+            raise ValueError("protected_path_markers entries must use safe POSIX paths.")
+        marker = PurePosixPath(candidate)
+        if marker.is_absolute() or any(part in {"", ".", ".."} for part in marker.parts):
+            raise ValueError(
+                "protected_path_markers entries must be relative and must not traverse parents."
+            )
+        canonical = marker.as_posix().lower()
+        if canonical not in normalized:
+            normalized.append(canonical)
+    return tuple(normalized)
+
+
+def _path_matches_protected_marker(path: Path, marker: str) -> bool:
+    marker_parts = tuple(part.lower() for part in PurePosixPath(marker).parts)
+    path_parts = tuple(part.lower() for part in path.parts)
+    if not marker_parts or len(marker_parts) > len(path_parts):
+        return False
+    width = len(marker_parts)
+    return any(
+        path_parts[index : index + width] == marker_parts
+        for index in range(len(path_parts) - width + 1)
+    )
+
+
+def classify_protected_runtime_path(
+    path: Path,
+    *,
+    protected_path_markers: Iterable[str] = (),
+) -> ProtectedRuntimePathKind | None:
     lowered_parts = tuple(part.lower() for part in path.parts)
     name = path.name.lower()
     if name.startswith(".env"):
@@ -1283,6 +1324,11 @@ def classify_protected_runtime_path(path: Path) -> ProtectedRuntimePathKind | No
             return ProtectedRuntimePathKind.SENSITIVE_DATA
         if name in _CORE_EVIDENCE_FILE_NAMES:
             return ProtectedRuntimePathKind.CORE_EVIDENCE
+    if any(
+        _path_matches_protected_marker(path, marker)
+        for marker in _normalize_protected_path_markers(protected_path_markers)
+    ):
+        return ProtectedRuntimePathKind.SENSITIVE_DATA
     if any(part in _PROTECTED_NAMES for part in lowered_parts):
         return ProtectedRuntimePathKind.SENSITIVE_DATA
     if name in _PROTECTED_FILE_NAMES:
@@ -1292,8 +1338,18 @@ def classify_protected_runtime_path(path: Path) -> ProtectedRuntimePathKind | No
     return None
 
 
-def _is_protected_path(path: Path) -> bool:
-    return classify_protected_runtime_path(path) is not None
+def _is_protected_path(
+    path: Path,
+    *,
+    protected_path_markers: Iterable[str] = (),
+) -> bool:
+    return (
+        classify_protected_runtime_path(
+            path,
+            protected_path_markers=protected_path_markers,
+        )
+        is not None
+    )
 
 
 def _is_relative_to_any(path: Path, roots: tuple[Path, ...]) -> bool:
