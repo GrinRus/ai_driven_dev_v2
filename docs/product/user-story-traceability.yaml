@@ -1,0 +1,296 @@
+schemaVersion: 1
+source: docs/product/user-stories.md
+referencePolicy:
+  pathFormat: repository-relative
+  requiredGroups:
+    - contracts
+    - code
+    - tests
+    - scenarios
+    - evidence
+stories:
+  - id: US-01
+    title: runtime portability
+    assessment: partial
+    contracts:
+      - docs/architecture/adapter-protocol.md
+      - docs/architecture/runtime-matrix.md
+      - contracts/stages/idea.md
+    code:
+      - src/aidd/core/stage_graph.py
+      - src/aidd/adapters/base.py
+      - src/aidd/adapters/registry.py
+    tests:
+      - tests/core/test_stage_graph.py
+      - tests/adapters/test_runtime_registry.py
+      - tests/adapters/test_adapter_removed_surfaces.py
+    scenarios:
+      - harness/scenarios/deterministic/minimal-python-full-workflow.yaml
+      - harness/scenarios/smoke/plan-stagepack-smoke.yaml
+    evidence:
+      - docs/architecture/adapter-conformance-matrix.md
+      - docs/e2e/scenario-matrix.md
+
+  - id: US-02
+    title: document-first artifacts
+    assessment: implemented-with-authority-gap
+    contracts:
+      - contracts/documents/idea-brief.md
+      - contracts/documents/plan.md
+      - contracts/documents/ownership-matrix.md
+    code:
+      - src/aidd/core/contracts.py
+      - src/aidd/core/markdown.py
+      - src/aidd/validators/document_loader.py
+      - src/aidd/validators/structural.py
+    tests:
+      - tests/validators/test_contract_examples.py
+      - tests/test_contract_registry.py
+    scenarios:
+      - harness/scenarios/smoke/plan-stage-minimal-fixture.yaml
+      - harness/scenarios/smoke/plan-stagepack-smoke.yaml
+    evidence:
+      - docs/architecture/document-contracts.md
+      - docs/analysis/project-quality-flow-audit-2026-09-05.md
+
+  - id: US-03
+    title: validation before progression
+    assessment: implemented-with-reliability-gap
+    contracts:
+      - contracts/documents/validator-report.md
+      - contracts/documents/stage-result.md
+      - contracts/stages/qa.md
+    code:
+      - src/aidd/core/stage_validation.py
+      - src/aidd/validators/structural.py
+      - src/aidd/validators/semantic.py
+    tests:
+      - tests/core/test_stage_terminal.py
+      - tests/core/test_state_machine.py
+      - tests/validators/test_contract_examples.py
+    scenarios:
+      - harness/scenarios/deterministic/w43-resilience-scenarios.yaml
+      - harness/scenarios/deterministic/minimal-python-full-workflow.yaml
+    evidence:
+      - docs/architecture/document-contracts.md
+      - docs/e2e/live-quality-rubric.md
+
+  - id: US-04
+    title: self-repair on bad outputs
+    assessment: implemented
+    contracts:
+      - contracts/documents/repair-brief.md
+      - contracts/documents/validator-report.md
+      - contracts/documents/stage-result.md
+    code:
+      - src/aidd/core/repair.py
+      - src/aidd/core/stage_runner.py
+      - src/aidd/core/stage_terminal.py
+    tests:
+      - tests/core/test_repair.py
+      - tests/core/test_repair_flow.py
+      - tests/core/test_stage_runner.py
+    scenarios:
+      - harness/scenarios/deterministic/w43-repair-extension-scenarios.yaml
+      - harness/scenarios/deterministic/w43-resilience-scenarios.yaml
+    evidence:
+      - docs/architecture/target-architecture.md
+      - docs/e2e/scenario-matrix.md
+
+  - id: US-05
+    title: user interview when the task is ambiguous
+    assessment: implemented
+    contracts:
+      - contracts/documents/questions.md
+      - contracts/documents/answers.md
+      - contracts/documents/stage-brief.md
+    code:
+      - src/aidd/core/interview.py
+      - src/aidd/core/stage_interview_routing.py
+      - src/aidd/core/adapter_interview.py
+    tests:
+      - tests/core/test_interview.py
+      - tests/core/test_interview_candidate_parsing.py
+      - tests/core/test_interview_contract_examples.py
+    scenarios:
+      - harness/scenarios/deterministic/minimal-python-full-workflow.yaml
+      - harness/scenarios/deterministic/w43-resilience-scenarios.yaml
+    evidence:
+      - docs/e2e/scenario-matrix.md
+      - docs/architecture/target-architecture.md
+
+  - id: US-06
+    title: native runtime visibility
+    assessment: implemented-with-reliability-gap
+    contracts:
+      - contracts/documents/stage-result.md
+      - contracts/documents/validator-report.md
+      - docs/architecture/adapter-protocol.md
+    code:
+      - src/aidd/adapters/runtime_log_capture.py
+      - src/aidd/adapters/subprocess_streaming.py
+      - src/aidd/core/bounded_log_reader.py
+    tests:
+      - tests/adapters/test_runtime_log_capture.py
+      - tests/adapters/test_subprocess_streaming.py
+      - tests/cli/test_run_logs.py
+    scenarios:
+      - harness/scenarios/deterministic/minimal-python-full-workflow.yaml
+      - harness/scenarios/live/starlette-streaming-error-boundary.yaml
+    evidence:
+      - docs/architecture/target-architecture.md
+      - docs/operator-handbook.md
+
+  - id: US-07
+    title: harness and eval from day one
+    assessment: partial
+    contracts:
+      - contracts/documents/stage-result.md
+      - contracts/documents/validator-report.md
+      - docs/architecture/eval-harness-integration.md
+    code:
+      - src/aidd/harness/deterministic_eval.py
+      - src/aidd/harness/scenarios.py
+      - src/aidd/evals/verdicts.py
+    tests:
+      - tests/evals/test_failure_causes.py
+      - tests/evals/test_failure_cause_projections.py
+      - tests/harness/test_scenario_loader_validation.py
+    scenarios:
+      - harness/scenarios/deterministic/minimal-python-full-workflow.yaml
+      - harness/scenarios/deterministic/w43-resilience-scenarios.yaml
+    evidence:
+      - docs/e2e/live-quality-rubric.md
+      - docs/e2e/scenario-matrix.md
+
+  - id: US-08
+    title: clean adapter extension
+    assessment: partial
+    contracts:
+      - docs/architecture/adapter-protocol.md
+      - contracts/documents/ownership-matrix.md
+      - contracts/stages/idea.md
+    code:
+      - src/aidd/adapters/base.py
+      - src/aidd/adapters/registry.py
+      - src/aidd/harness/adapter_conformance.py
+    tests:
+      - tests/adapters/test_runtime_registry.py
+      - tests/adapters/test_adapter_removed_surfaces.py
+      - tests/harness/test_conformance_matrix.py
+    scenarios:
+      - harness/scenarios/smoke/plan-stagepack-smoke.yaml
+      - harness/scenarios/deterministic/minimal-python-full-workflow.yaml
+    evidence:
+      - docs/architecture/adapter-conformance-matrix.md
+      - docs/architecture/runtime-matrix.md
+
+  - id: US-09
+    title: installable operator experience
+    assessment: implemented
+    contracts:
+      - docs/compatibility-policy.md
+      - docs/release-checklist.md
+      - docs/architecture/distribution-and-development.md
+    code:
+      - src/aidd/cli/main.py
+      - src/aidd/core/resources.py
+      - pyproject.toml
+    tests:
+      - tests/test_packaging_resources.py
+      - tests/test_package_version.py
+      - tests/test_release_workflow.py
+    scenarios:
+      - harness/scenarios/smoke/installed-local-project-fixture.yaml
+      - harness/scenarios/smoke/plan-stagepack-smoke.yaml
+    evidence:
+      - docs/release-checklist.md
+      - README.md
+
+  - id: US-10
+    title: prompt and workflow change accountability
+    assessment: implemented-with-eval-gap
+    contracts:
+      - contracts/documents/stage-result.md
+      - docs/architecture/eval-harness-integration.md
+      - docs/architecture/target-architecture.md
+    code:
+      - src/aidd/core/run_accountability.py
+      - src/aidd/core/run_provenance.py
+      - src/aidd/harness/result_bundle_contract.py
+    tests:
+      - tests/core/test_run_accountability.py
+      - tests/core/test_run_inspection.py
+      - tests/harness/test_result_bundle_contract.py
+    scenarios:
+      - harness/scenarios/deterministic/minimal-python-full-workflow.yaml
+      - harness/scenarios/live/httpx-cli-docs-sync.yaml
+    evidence:
+      - docs/e2e/scenario-matrix.md
+      - docs/analysis/project-quality-flow-audit-2026-09-05.md
+
+  - id: US-11
+    title: operator workflow frontend
+    assessment: partial
+    contracts:
+      - contracts/documents/questions.md
+      - contracts/documents/answers.md
+      - docs/architecture/operator-frontend.md
+    code:
+      - src/aidd/core/operator_frontend.py
+      - src/aidd/core/operator_inbox.py
+      - src/aidd/cli/ui.py
+    tests:
+      - tests/cli/test_ui.py
+      - tests/core/test_operator_frontend.py
+      - tests/frontend/operator-evidence-inspector.test.mjs
+    scenarios:
+      - docs/e2e/operator-ui-local-project.md
+      - docs/e2e/operator-ui-observed-acceptance.md
+    evidence:
+      - docs/architecture/operator-frontend-target-ux.md
+      - docs/e2e/focus-canvas-live-acceptance-2026-09-05.md
+
+  - id: US-12
+    title: project-set workflow
+    assessment: partial
+    contracts:
+      - contracts/documents/ownership-matrix.md
+      - docs/architecture/project-set-workspace.md
+      - contracts/documents/stage-result.md
+    code:
+      - src/aidd/core/project_set.py
+      - src/aidd/core/allowed_write_scope.py
+      - src/aidd/core/repository_diff.py
+    tests:
+      - tests/core/test_project_set.py
+      - tests/core/test_allowed_write_scope.py
+      - tests/core/test_repository_diff.py
+    scenarios:
+      - harness/scenarios/deterministic/project-set-implementation-positive.yaml
+      - harness/scenarios/deterministic/project-set-implementation-outside.yaml
+    evidence:
+      - docs/e2e/scenario-matrix.md
+      - docs/analysis/project-quality-flow-audit-2026-09-05.md
+
+  - id: US-13
+    title: incremental task execution
+    assessment: implemented
+    contracts:
+      - contracts/documents/tasklist.md
+      - contracts/documents/implementation-report.md
+      - docs/architecture/task-execution.md
+    code:
+      - src/aidd/core/task_plan.py
+      - src/aidd/core/task_ledger.py
+      - src/aidd/core/implementation_service.py
+    tests:
+      - tests/core/test_task_plan.py
+      - tests/core/test_task_read_model.py
+      - tests/core/test_task_attempt_lifecycle.py
+    scenarios:
+      - harness/scenarios/deterministic/minimal-python-task-execution.yaml
+      - harness/scenarios/deterministic/minimal-python-full-workflow.yaml
+    evidence:
+      - docs/architecture/task-execution.md
+      - docs/analysis/project-quality-flow-audit-2026-09-05.md
