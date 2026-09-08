@@ -902,7 +902,7 @@ output, record that evidence and reslice only the remaining hotspot; do not repe
     mypy, complexity ratchet, and all required CI/security/browser/build lanes passed. No runtime,
     static UI, frontend-test, or neighboring UI checkout files changed.
 
-- `W49-E2-S3-T4` (next) Decompose `_run_single_stage_orchestration` after W48.
+- `W49-E2-S3-T4` (done) Decompose `_run_single_stage_orchestration` after W48.
   - Output: core stage preparation, adapter execution, terminal handling, validation, and
     persistence are responsibility-specific helpers behind the unchanged orchestration facade.
   - Scope: `src/aidd/core/stage_runner.py` and existing core transition/failure/repair/interview
@@ -913,6 +913,37 @@ output, record that evidence and reslice only the remaining hotspot; do not repe
     stay green, the extracted helpers are complexity grade C or lower, and the complexity baseline
     removes only the completed hotspot without hiding unrelated debt.
   - Dependencies: W49-E2-S3-T3, a fresh `origin/main`, the merged W47 UI baseline, and a read-only
+    comparison with the neighboring UI refactor before implementation.
+  - Completion evidence: PR #613 merged to `origin/main` at `d9d17bfa`; stage preparation, adapter
+    execution, terminal handling, validation, and persistence now have focused helpers behind the
+    unchanged facade. The full core suite (1106 tests), Ruff, strict mypy, complexity ratchet, and
+    all required CI/security/browser/build lanes passed. No runtime, static UI, frontend-test, or
+    neighboring UI checkout files changed.
+
+- `W49-E2-S3-T5` (done) Decompose the Codex live transport.
+  - Output: Codex live session startup, initialization, turn execution, and event polling are
+    responsibility-specific helpers while raw transcript, approvals, cancellation, timeout, and
+    protocol-failure evidence remain unchanged.
+  - Scope: `src/aidd/adapters/codex/live.py` and its focused adapter tests only; preserve typed
+    selector payloads, operator broker semantics, process ownership, and all public result shapes.
+    Do not touch workflow semantics, static UI, frontend tests, or the neighboring UI checkout.
+  - Verification: the Codex bytes/events/timeout/cancel and approval matrix remains green, adapter
+    tests stay green, all extracted helpers are complexity grade C or lower, and only the completed
+    Codex hotspot is removed from the complexity baseline.
+  - Dependencies: W49-E2-S3-T4, a fresh `origin/main`, the merged W47 UI baseline, and a read-only
+    comparison with the neighboring UI refactor before implementation.
+  - Completion evidence: PR #615 merged to `origin/main` at `037a35ef`; 25 focused Codex live tests
+    and 318 adapter tests passed, as did Ruff, strict mypy, complexity ratchet, and all required
+    CI/security/browser/build lanes. No UI-owned files changed.
+
+- `W49-E2-S3-T6` (next) Decompose the Qwen live transport.
+  - Output: Qwen live transport lifecycle responsibilities are split without changing its public
+    result, raw evidence, approval, timeout, cancellation, or process-ownership contracts.
+  - Scope: `src/aidd/adapters/qwen/live.py` and focused adapter tests only; no workflow, static UI,
+    frontend-test, or neighboring UI checkout edits.
+  - Verification: Qwen bytes/events/timeout/cancel and approval fixtures remain green, extracted
+    helpers are complexity grade C or lower, and the baseline removes only the completed hotspot.
+  - Dependencies: W49-E2-S3-T5, a fresh `origin/main`, the merged W47 UI baseline, and a read-only
     comparison with the neighboring UI refactor before implementation.
 
 | Task | Output | Dominant area | Main verification | Effort |

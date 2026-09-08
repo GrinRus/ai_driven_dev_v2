@@ -93,6 +93,14 @@ UI-owned paths. The next promoted task is `W49-E2-S3-T4`, the core stage-orchest
 decomposition, with the neighboring UI checkout kept read-only and its merged PR #574 surfaces
 treated as the compatibility baseline.
 
+`W49-E2-S3-T4` is complete in PR #613 (`d9d17bfa`): the core stage-orchestration lifecycle is
+split behind the unchanged facade, with 1106 core tests and all required CI/security/browser/build
+lanes green. `W49-E2-S3-T5` is complete in PR #615 (`037a35ef`): Codex live transport lifecycle
+helpers preserve raw transcript, approval, timeout, cancellation, and protocol-failure behavior;
+25 focused Codex tests, 318 adapter tests, and all required lanes passed. Both changes keep the
+neighboring UI checkout read-only. The next promoted task is `W49-E2-S3-T6`, Qwen live transport
+decomposition under the same adapter-only boundary.
+
 ## Parent outcome decomposed
 
 Parent outcome: close the 2026-09-05 quality-audit findings and produce trustworthy beta-candidate
