@@ -1,4 +1,4 @@
-.PHONY: install lint typecheck test check-agents check-docs check-js test-frontend test-browser check doctor init-demo build
+.PHONY: install lint typecheck check-complexity test check-agents check-docs check-js test-frontend test-browser check doctor init-demo build
 
 install:
 	uv sync --locked --extra dev
@@ -8,6 +8,9 @@ lint:
 
 typecheck:
 	uv run --extra dev python -m mypy src scripts
+
+check-complexity:
+	uv run --extra dev python scripts/check_complexity.py
 
 test:
 	uv run --extra dev pytest -q
@@ -28,7 +31,7 @@ test-frontend:
 test-browser:
 	uv run --extra dev python scripts/run_packaged_ui_scenarios.py
 
-check: check-agents check-docs lint typecheck check-js test-frontend test
+check: check-agents check-docs lint typecheck check-complexity check-js test-frontend test
 
 doctor:
 	uv run aidd doctor

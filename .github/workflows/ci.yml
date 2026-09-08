@@ -48,6 +48,11 @@ jobs:
           set -euo pipefail
           uv run --extra dev python -m mypy src scripts
 
+      - name: Complexity baseline
+        run: |
+          set -euo pipefail
+          uv run --extra dev python scripts/check_complexity.py
+
       - name: Agent instruction structure and references
         run: |
           set -euo pipefail
