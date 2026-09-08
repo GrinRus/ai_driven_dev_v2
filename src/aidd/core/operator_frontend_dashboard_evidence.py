@@ -2048,9 +2048,16 @@ def _collect_operator_dashboard_evidence(
             run_id=run_id,
         )
     except ValueError as exc:
-        if not str(exc).startswith("No runs found for work item "):
+        message = str(exc)
+        if message.startswith("No runs found for work item "):
+            metadata = None
+        elif active_job and message.startswith("Run manifest is missing for work item "):
+            # The HTTP job record can become visible just before the worker persists its
+            # immutable run manifest. Keep the dashboard readable during that short bootstrap
+            # window; explicit stale/corrupt run requests still surface their error.
+            metadata = None
+        else:
             raise
-        metadata = None
 
     active_stage_view: OperatorStageView | None = None
     stale_by_stage: dict[str, RemediationStaleStage] = {}
