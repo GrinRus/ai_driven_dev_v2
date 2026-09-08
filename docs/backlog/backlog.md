@@ -7,11 +7,11 @@ slice, and local task.
 
 ## Next
 
-- `W50-E1-S2-T1` — Define retention locator, digest, size, revision, target pin, and redaction contract.
+- `W50-E2-S1-T1` — Freeze candidate SHA, source tree, wheel digest, scenario inventory, and test commands.
 
 ## Soon
 
-- `W50-E1-S2-T2` — Export and read back a sanitized immutable archive.
+- `W50-E2-S1-T2` — Run full static/unit/integration/browser/security/build gates on the frozen candidate.
 
 ## Parking lot
 
@@ -39,38 +39,14 @@ slice, and local task.
 
 ## Current reconciliation
 
-- `2026-09-08` W49-E3-S1/T1–T4 and W49-E3-S2/T1–T3 remain merged on `origin/main`; detailed
-  evidence is retained in `roadmap.md` and the [Git archive index](reconciliation-history-index.md).
-  The neighboring UI refactor is integrated by PR #574 at `45a1a8f7`; its checkout remains
-  read-only. W49-E2-S1/T1–T5 are merged in PRs #595/#597/#599/#601, W49-E2-S2/T1–T3 in
-  #603/#605/#606, and W49-E2-S3-T1 in #608; all preserve the no-UI boundary and required checks.
-  W49-E2-S3-T2 completed in PR #610 at `cfcfe33c` (checkpoint fixtures and 479-test harness green).
-  W49-E2-S3-T3 completed in PR #612 at `91b088d9` (50-test invalid-manifest matrix and 479-test
-  harness green). T4 completed in PR #613 at `d9d17bfa` (1106 core tests and required lanes green);
-  T5 completed in PR #615 at `037a35ef` (25 Codex live and 318 adapter tests plus required lanes
-  green); T6 completed in PR #617 at `18a71f2e` (18 focused Qwen live tests, 318 adapter tests,
-  complexity ratchet, and all required lanes green). T1 of W49-E4-S1 completed in PR #619 at
-  `d8b0f379`: 268 tracked Python files were formatted in the reviewed non-UI scope,
-  `browser_tests` remained excluded for the neighboring UI boundary, AST equivalence and focused
-  checks passed, and required CI/security/browser/build lanes were green. T2 completed in PR #622
-  at `765f051a`: CI now enforces `ruff format --check .` in the lint/type/test matrix, with 74
-  focused planning/docs/CI tests and all required CI/security/browser/build lanes green. W49-E4-S2-T1
-  completed in PR #624 at `a144fbae`: the reviewed baseline covers 23 lifecycle/evidence/adapter/
-  scenario-gate modules with exact line/branch counts, source SHA `951e3f8c`, tool versions, and
-  a reproducible 369-test command; checker tests and all required CI/security/browser/build lanes
-  passed. All remain outside runtime/UI-owned paths; the neighboring UI checkout is read-only.
-  W49-E4-S2-T2 completed in PR #626 at `63fa1d7e`: the Linux-native 23-module line/branch
-  baseline is enforced by one required CI job, with an explicit Python 3.13.7 interpreter pin and
-  a checker regression fixture; all Python, adapter, deterministic, packaged-browser, build, and
-  security lanes passed after correcting the OS-specific process-group metric. W49-E4-S3-T1
-  completed in PR #627 at `c165eb5d`: pinned CodeQL now analyzes both Python and packaged
-  JavaScript/TypeScript, and the complete CI/security/browser/build set passed. W50-E1-S1-T1
-  completed in PR #629 at `71c3779a`: the core freshness contract distinguishes current, stale,
-  incompatible, and unavailable evidence from candidate SHA, schema, target pin, and locator;
-  focused tests and all required CI/security/browser/build lanes passed. The adjacent UI checkout
-  remains read-only at `4c1356bc`; queue promotion now selects `W50-E1-S1-T2`. W50-E1-S1-T2
-  completed in PR #631 at `6cac4a82`: the shared freshness state/reason is projected into verdict
-  reports, grader payloads, harness metadata, operator run summaries, dashboard views, and terminal
-  handoffs without changing verdict history or crossing the adjacent UI boundary. Focused/full
-  checks, security, packaged-browser, and build lanes passed; the neighboring UI checkout remains
-  read-only at `4c1356bc`. Queue promotion now selects `W50-E1-S2-T1`.
+- `2026-09-08` Prior W49 evidence remains merged; detailed history is retained in `roadmap.md`
+  and the [Git archive index](reconciliation-history-index.md). The adjacent UI refactor remains
+  outside this worktree and read-only.
+- W50-E1-S1-T1/T2 completed in PRs #629/#631 (`71c3779a`/`6cac4a82`): freshness is typed and
+  projected through reports, graders, harness metadata, operator summaries, dashboard views, and
+  terminal handoffs; required lanes passed.
+- W50-E1-S2-T1/T2 completed in PRs #633/#634 (`dd557a75`/`7dab7e0d`): schema-1 retention metadata
+  and deterministic sanitized archive export/read/extract fail closed on missing provenance,
+  tampering, or mutable `.aidd` deletion; focused/full, security, packaged-browser, and build lanes
+  passed. No UI-owned paths changed; neighbor remains at `4c1356bc`.
+- Queue promotion now selects `W50-E2-S1-T1`.

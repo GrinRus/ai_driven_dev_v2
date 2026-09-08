@@ -1137,7 +1137,7 @@ Dependencies: `W49-E4-S1-T1` → `W49-E4-S1-T2`; `W49-E4-S1` → `W49-E4-S2-T1` 
 Goal: produce one exact-candidate decision whose deterministic, browser, install, provider, and
 human evidence is current, immutable, and retrievable.
 
-### Epic W50-E1 — evidence freshness and retention (`planned`)
+### Epic W50-E1 — evidence freshness and retention (`done`)
 
 #### Slice W50-E1-S1 — freshness model (`done`)
 
@@ -1168,9 +1168,9 @@ human evidence is current, immutable, and retrievable.
     neighboring UI checkout files changed; the neighboring checkout remains read-only at
     `4c1356bc`.
 
-#### Slice W50-E1-S2 — immutable sanitized bundle export (`planned`)
+#### Slice W50-E1-S2 — immutable sanitized bundle export (`done`)
 
-- `W50-E1-S2-T1` (next) Define retention locator, digest, size, revision, target pin, and
+- `W50-E1-S2-T1` (done) Define retention locator, digest, size, revision, target pin, and
   redaction contract.
   - Output: one typed archive-retention contract that rejects locators without integrity and
     provenance metadata.
@@ -1180,7 +1180,7 @@ human evidence is current, immutable, and retrievable.
     or redaction guarantees fail closed.
   - Dependencies: completed `W50-E1-S1` and W48 bundle v2.
 
-- `W50-E1-S2-T2` (soon) Export and read back a sanitized immutable archive.
+- `W50-E1-S2-T2` (done) Export and read back a sanitized immutable archive.
   - Output: a portable evidence archive with verified digest, size, revision, target pin, and
     redaction metadata that can be read after the mutable workspace bundle is removed.
   - Scope: bundle exporter/verifier and deterministic archive round-trip tests; no static UI,
@@ -1188,6 +1188,34 @@ human evidence is current, immutable, and retrievable.
   - Verification: a fresh checkout verifies the archive after mutable `.aidd` deletion, while
     tampered bytes or incomplete provenance fail closed.
   - Dependencies: `W50-E1-S2-T1` and W48 bundle v2.
+  - Completion evidence: PR #634 merged to `origin/main` at `7dab7e0d`; sealed W48 bundles
+    export as deterministic sanitized POSIX tar archives with sibling retention sidecars,
+    sanitized inventory/digest indexes, and verified read/extract after source `.aidd` deletion.
+    Focused (114 tests), full CI, security, packaged-browser, and build lanes passed. No static
+    UI, frontend-test, browser-test, or neighboring UI checkout files changed; that checkout
+    remains read-only at `4c1356bc`.
+
+### Epic W50-E2 — exact artifact candidate gate (`planned`)
+
+#### Slice W50-E2-S1 — freeze and local acceptance (`planned`)
+
+- `W50-E2-S1-T1` (next) Freeze candidate SHA, source tree, wheel digest, scenario inventory,
+  and test commands.
+  - Output: one complete candidate manifest bound to a clean worktree, source tree, wheel,
+    scenario inventory, and reproducible verification commands.
+  - Scope: candidate manifest and deterministic release-preflight tests; no static UI,
+    frontend, browser-test, or neighboring checkout paths.
+  - Verification: the record is complete, identity fields agree with the checked-out candidate,
+    and a dirty worktree or missing digest blocks publication.
+  - Dependencies: completed W50-E1 and W48 bundle v2.
+
+- `W50-E2-S1-T2` (soon) Run full static/unit/integration/browser/security/build gates on the
+  frozen candidate.
+  - Output: one signed/hashed readiness record linking every required result for the exact
+    candidate SHA.
+  - Scope: candidate acceptance coordinator and release evidence; no UI implementation changes.
+  - Verification: a failed or mismatched lane cannot render the candidate ready.
+  - Dependencies: `W50-E2-S1-T1` and the merged W47 Focus Canvas baseline.
 
 ## Wave 51 — agent development instruction consistency (`planned`)
 

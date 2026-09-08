@@ -162,8 +162,14 @@ was `W50-E1-S1-T2`, which completed in PR #631 at `6cac4a82`: freshness state an
 reasons are now projected consistently through verdict/report, grader, harness, and operator
 read models; stale or incompatible evidence cannot qualify a terminal Flow Complete handoff.
 The focused/full checks and required security, packaged-browser, and build lanes passed without
-touching static UI, frontend-test, browser-test, or the neighboring UI checkout. The next
-dependency-ready task is `W50-E1-S2-T1`.
+touching static UI, frontend-test, browser-test, or the neighboring UI checkout. W50-E1-S2-T1
+then completed in PR #633 at `dd557a75`: schema-1 retention metadata now requires an external
+locator, archive digest/size, source revision, target pin, evidence schema, and explicit sanitized
+redaction declarations, with fail-closed tests and all required lanes green. W50-E1-S2-T2 completed
+in PR #634 at `7dab7e0d`: deterministic sanitized tar export, retention sidecar, and verified
+read/extract survive mutable `.aidd` deletion and reject tampering. No UI-owned paths changed and
+the neighboring checkout remains read-only at `4c1356bc`. The next dependency-ready task is
+`W50-E2-S1-T1`.
 
 ## Parent outcome decomposed
 
