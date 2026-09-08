@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from collections.abc import Callable
+from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
 
@@ -96,6 +97,31 @@ from aidd.core.state_machine import StageState, transition_stage_state
 from aidd.core.workspace import stage_root as workspace_stage_root
 from aidd.validators.models import ValidationFinding
 from aidd.validators.reports import write_validator_report
+
+
+@dataclass(frozen=True, slots=True)
+class _PreparedStageExecution:
+    questions_text_before_attempt: str | None
+    answers_text_before_attempt: str | None
+    preparation_bundle: StagePreparationBundle
+    execution_state: StageExecutionState
+    adapter_invocation: AdapterInvocationBundle
+
+
+@dataclass(frozen=True, slots=True)
+class _PreparedStageValidation:
+    discovery: StageOutputDiscovery
+    interview_routing: StageInterviewRouting
+    interview_findings: tuple[ValidationFinding, ...]
+    exhausted_repair_budget: bool
+    exhausted_stage_result_path: Path | None
+    repair_brief_trace_path: Path | None
+
+
+@dataclass(frozen=True, slots=True)
+class _PersistedStageValidation:
+    validation_transition: RepairBudgetValidationTransition
+    transition: PostValidationTransition
 
 
 def _append_validation_findings(
@@ -764,28 +790,18 @@ def _terminalize_unhandled_post_execution_exception(
         )
 
 
-def _run_single_stage_orchestration(
+def _prepare_stage_execution(
     *,
     workspace_root: Path,
     work_item: str,
     run_id: str,
     stage: str,
-    adapter_executor: Callable[
-        [AdapterInvocationBundle, StageExecutionState],
-        AdapterExecutionOutcome,
-    ],
-    contracts_root: Path = DEFAULT_STAGE_CONTRACTS_ROOT,
-    repair_policy: RepairBudgetPolicy | None = None,
-    project_set: ResolvedProjectSet | None = None,
-    changed_at_utc: datetime | None = None,
-    intervention_request_path: Path | None = None,
-    resume_mode: bool = False,
-    defer_success_publication: bool = False,
-    validation_finding_provider: Callable[
-        [StageExecutionState, StageOutputDiscovery], tuple[ValidationFinding, ...]
-    ]
-    | None = None,
-) -> StageOrchestrationResult:
+    contracts_root: Path,
+    project_set: ResolvedProjectSet | None,
+    changed_at_utc: datetime | None,
+    intervention_request_path: Path | None,
+    resume_mode: bool,
+) -> _PreparedStageExecution:
     questions_text_before_attempt = _read_stage_questions_text(
         workspace_root=workspace_root,
         work_item=work_item,
@@ -881,11 +897,37 @@ def _run_single_stage_orchestration(
             contracts_root=contracts_root,
         )
         raise
+    return _PreparedStageExecution(
+        questions_text_before_attempt=questions_text_before_attempt,
+        answers_text_before_attempt=answers_text_before_attempt,
+        preparation_bundle=preparation_bundle,
+        execution_state=execution_state,
+        adapter_invocation=adapter_invocation,
+    )
+
+
+def _execute_adapter_attempt(
+    *,
+    workspace_root: Path,
+    work_item: str,
+    run_id: str,
+    stage: str,
+    adapter_executor: Callable[
+        [AdapterInvocationBundle, StageExecutionState],
+        AdapterExecutionOutcome,
+    ],
+    contracts_root: Path,
+    changed_at_utc: datetime | None,
+    prepared: _PreparedStageExecution,
+) -> AdapterExecutionOutcome:
     # Runtime logs and exit metadata mutate the attempt directory after stage document writes.
     # Retention must compare drafts against this stable pre-runtime boundary instead.
-    attempt_started_at_ns = execution_state.attempt_path.stat().st_mtime_ns
+    attempt_started_at_ns = prepared.execution_state.attempt_path.stat().st_mtime_ns
     try:
-        adapter_outcome = adapter_executor(adapter_invocation, execution_state)
+        adapter_outcome = adapter_executor(
+            prepared.adapter_invocation,
+            prepared.execution_state,
+        )
     except Exception as adapter_exception:
         original_exception = adapter_exception
 
@@ -913,7 +955,7 @@ def _run_single_stage_orchestration(
                 work_item=work_item,
                 run_id=run_id,
                 stage=stage,
-                attempt_number=execution_state.attempt_number,
+                attempt_number=prepared.execution_state.attempt_number,
                 exception=adapter_exception,
             )
         except Exception as cleanup_error:
@@ -925,7 +967,7 @@ def _run_single_stage_orchestration(
             "retain unexpected runtime documents",
             lambda: retain_unexpected_runtime_documents(
                 workspace_root=workspace_root,
-                execution_state=execution_state,
+                execution_state=prepared.execution_state,
                 contracts_root=contracts_root,
                 attempt_started_at_ns=attempt_started_at_ns,
             ),
@@ -933,7 +975,7 @@ def _run_single_stage_orchestration(
         run_cleanup(
             "restore core-owned repair brief",
             lambda: restore_core_owned_repair_brief(
-                invocation_bundle=adapter_invocation,
+                invocation_bundle=prepared.adapter_invocation,
                 workspace_root=workspace_root,
             ),
         )
@@ -944,7 +986,7 @@ def _run_single_stage_orchestration(
                 work_item=work_item,
                 run_id=run_id,
                 stage=stage,
-                attempt_number=execution_state.attempt_number,
+                attempt_number=prepared.execution_state.attempt_number,
                 contracts_root=contracts_root,
             ),
         )
@@ -952,12 +994,12 @@ def _run_single_stage_orchestration(
     else:
         retain_unexpected_runtime_documents(
             workspace_root=workspace_root,
-            execution_state=execution_state,
+            execution_state=prepared.execution_state,
             contracts_root=contracts_root,
             attempt_started_at_ns=attempt_started_at_ns,
         )
         restore_core_owned_repair_brief(
-            invocation_bundle=adapter_invocation,
+            invocation_bundle=prepared.adapter_invocation,
             workspace_root=workspace_root,
         )
         write_attempt_artifact_index(
@@ -965,10 +1007,22 @@ def _run_single_stage_orchestration(
             work_item=work_item,
             run_id=run_id,
             stage=stage,
-            attempt_number=execution_state.attempt_number,
+            attempt_number=prepared.execution_state.attempt_number,
             contracts_root=contracts_root,
         )
+    return adapter_outcome
 
+
+def _terminal_adapter_result(
+    *,
+    workspace_root: Path,
+    work_item: str,
+    run_id: str,
+    stage: str,
+    changed_at_utc: datetime | None,
+    prepared: _PreparedStageExecution,
+    adapter_outcome: AdapterExecutionOutcome,
+) -> StageOrchestrationResult | None:
     if adapter_outcome.blocked_for_operator:
         blocked_validation_state = _block_after_operator_request(
             workspace_root=workspace_root,
@@ -985,9 +1039,9 @@ def _run_single_stage_orchestration(
         )
         _write_canonical_stage_result(
             workspace_root=workspace_root,
-            execution_state=execution_state,
+            execution_state=prepared.execution_state,
             lifecycle_status=StageState.BLOCKED,
-            attempt_mode=adapter_invocation.attempt_mode,
+            attempt_mode=prepared.adapter_invocation.attempt_mode,
             attempt_outcome=adapter_outcome.details or "blocked for operator",
             repair_history=() if metadata is None else metadata.repair_history,
             validator_verdict="not-run",
@@ -998,9 +1052,9 @@ def _run_single_stage_orchestration(
             stage=stage,
             work_item=work_item,
             run_id=run_id,
-            preparation_bundle=preparation_bundle,
-            execution_state=execution_state,
-            adapter_invocation=adapter_invocation,
+            preparation_bundle=prepared.preparation_bundle,
+            execution_state=prepared.execution_state,
+            adapter_invocation=prepared.adapter_invocation,
             adapter_outcome=adapter_outcome,
             discovery=None,
             validation_result=None,
@@ -1009,46 +1063,58 @@ def _run_single_stage_orchestration(
             transition=transition,
         )
 
-    if not adapter_outcome.succeeded:
-        failed_validation_state = _fail_after_adapter_error(
-            workspace_root=workspace_root,
-            work_item=work_item,
-            run_id=run_id,
-            stage=stage,
-            changed_at_utc=changed_at_utc,
-        )
-        metadata = load_stage_metadata(
-            workspace_root=workspace_root,
-            work_item=work_item,
-            run_id=run_id,
-            stage=stage,
-        )
-        _write_canonical_stage_result(
-            workspace_root=workspace_root,
-            execution_state=execution_state,
-            lifecycle_status=StageState.FAILED,
-            attempt_mode=adapter_invocation.attempt_mode,
-            attempt_outcome=adapter_outcome.details or "adapter execution failed",
-            repair_history=() if metadata is None else metadata.repair_history,
-            validator_verdict="not-run",
-            blockers=(adapter_outcome.details or "Adapter execution failed before validation.",),
-        )
-        transition = decide_post_validation_transition(failed_validation_state)
-        return StageOrchestrationResult(
-            stage=stage,
-            work_item=work_item,
-            run_id=run_id,
-            preparation_bundle=preparation_bundle,
-            execution_state=execution_state,
-            adapter_invocation=adapter_invocation,
-            adapter_outcome=adapter_outcome,
-            discovery=None,
-            validation_result=None,
-            interview_routing=None,
-            validation_transition=None,
-            transition=transition,
-        )
+    if adapter_outcome.succeeded:
+        return None
+    failed_validation_state = _fail_after_adapter_error(
+        workspace_root=workspace_root,
+        work_item=work_item,
+        run_id=run_id,
+        stage=stage,
+        changed_at_utc=changed_at_utc,
+    )
+    metadata = load_stage_metadata(
+        workspace_root=workspace_root,
+        work_item=work_item,
+        run_id=run_id,
+        stage=stage,
+    )
+    _write_canonical_stage_result(
+        workspace_root=workspace_root,
+        execution_state=prepared.execution_state,
+        lifecycle_status=StageState.FAILED,
+        attempt_mode=prepared.adapter_invocation.attempt_mode,
+        attempt_outcome=adapter_outcome.details or "adapter execution failed",
+        repair_history=() if metadata is None else metadata.repair_history,
+        validator_verdict="not-run",
+        blockers=(adapter_outcome.details or "Adapter execution failed before validation.",),
+    )
+    transition = decide_post_validation_transition(failed_validation_state)
+    return StageOrchestrationResult(
+        stage=stage,
+        work_item=work_item,
+        run_id=run_id,
+        preparation_bundle=prepared.preparation_bundle,
+        execution_state=prepared.execution_state,
+        adapter_invocation=prepared.adapter_invocation,
+        adapter_outcome=adapter_outcome,
+        discovery=None,
+        validation_result=None,
+        interview_routing=None,
+        validation_transition=None,
+        transition=transition,
+    )
 
+
+def _prepare_stage_validation(
+    *,
+    workspace_root: Path,
+    work_item: str,
+    run_id: str,
+    stage: str,
+    contracts_root: Path,
+    changed_at_utc: datetime | None,
+    prepared: _PreparedStageExecution,
+) -> _PreparedStageValidation:
     transition_stage_state(from_state=StageState.EXECUTING, to_state=StageState.VALIDATING)
     persist_stage_status(
         workspace_root=workspace_root,
@@ -1059,46 +1125,48 @@ def _run_single_stage_orchestration(
         changed_at_utc=changed_at_utc,
     )
     discovery = discover_stage_markdown_outputs(
-        execution_state=execution_state,
-        invocation_bundle=adapter_invocation,
+        execution_state=prepared.execution_state,
+        invocation_bundle=prepared.adapter_invocation,
         contracts_root=contracts_root,
     )
     _restore_and_merge_questions_after_runtime_attempt(
         workspace_root=workspace_root,
         work_item=work_item,
         stage=stage,
-        questions_text_before_attempt=questions_text_before_attempt,
-        execution_state=execution_state,
+        questions_text_before_attempt=prepared.questions_text_before_attempt,
+        execution_state=prepared.execution_state,
     )
     _restore_operator_owned_answers_after_runtime_attempt(
         workspace_root=workspace_root,
         work_item=work_item,
         stage=stage,
-        answers_text_before_attempt=answers_text_before_attempt,
-        execution_state=execution_state,
+        answers_text_before_attempt=prepared.answers_text_before_attempt,
+        execution_state=prepared.execution_state,
     )
     write_attempt_artifact_index(
         workspace_root=workspace_root,
         work_item=work_item,
         run_id=run_id,
         stage=stage,
-        attempt_number=execution_state.attempt_number,
+        attempt_number=prepared.execution_state.attempt_number,
         contracts_root=contracts_root,
-        attempt_mode=adapter_invocation.attempt_mode,
+        attempt_mode=prepared.adapter_invocation.attempt_mode,
     )
     exhausted_repair_budget = repair_brief_exhausts_terminal_budget(
-        repair_brief_path=adapter_invocation.repair_brief_path,
-        repair_context_markdown=adapter_invocation.repair_context_markdown,
+        repair_brief_path=prepared.adapter_invocation.repair_brief_path,
+        repair_context_markdown=prepared.adapter_invocation.repair_context_markdown,
     )
     exhausted_stage_result_path: Path | None = None
     if exhausted_repair_budget:
-        ensure_repair_brief_records_exhausted_budget(adapter_invocation.repair_brief_path)
+        ensure_repair_brief_records_exhausted_budget(
+            prepared.adapter_invocation.repair_brief_path
+        )
         exhausted_stage_result_path = force_stage_result_failed_for_exhausted_budget(
             workspace_root=workspace_root,
             work_item=work_item,
             stage=stage,
         )
-    repair_brief_trace_path = adapter_invocation.repair_brief_path
+    repair_brief_trace_path = prepared.adapter_invocation.repair_brief_path
     if repair_brief_trace_path is None:
         repair_brief_trace_path = historical_repair_brief_trace_path(
             workspace_root=workspace_root,
@@ -1126,40 +1194,69 @@ def _run_single_stage_orchestration(
             / "stage-result.md"
         )
     prepare_bootstrap_stage_result_for_validation(
-        workspace_root=workspace_root, work_item=work_item, stage=stage,
+        workspace_root=workspace_root,
+        work_item=work_item,
+        stage=stage,
     )
+    return _PreparedStageValidation(
+        discovery=discovery,
+        interview_routing=interview_routing,
+        interview_findings=interview_findings,
+        exhausted_repair_budget=exhausted_repair_budget,
+        exhausted_stage_result_path=exhausted_stage_result_path,
+        repair_brief_trace_path=repair_brief_trace_path,
+    )
+
+
+def _collect_stage_validation_result(
+    *,
+    workspace_root: Path,
+    work_item: str,
+    run_id: str,
+    stage: str,
+    contracts_root: Path,
+    prepared: _PreparedStageExecution,
+    validation: _PreparedStageValidation,
+    validation_finding_provider: Callable[
+        [StageExecutionState, StageOutputDiscovery], tuple[ValidationFinding, ...]
+    ]
+    | None,
+) -> StageStructuralValidationResult:
     validation_result = run_structural_validation_after_output_discovery(
         workspace_root=workspace_root,
-        discovery=discovery,
+        discovery=validation.discovery,
         contracts_root=contracts_root,
     )
     if validation_finding_provider is not None:
-        task_findings = validation_finding_provider(execution_state, discovery)
+        task_findings = validation_finding_provider(
+            prepared.execution_state,
+            validation.discovery,
+        )
         if task_findings:
             validation_result = _append_validation_findings(
                 validation_result=validation_result,
                 findings=(*validation_result.findings, *task_findings),
             )
-    if exhausted_repair_budget and exhausted_stage_result_path is not None:
+    if validation.exhausted_repair_budget and validation.exhausted_stage_result_path is not None:
         findings = validation_result.findings
         if not any(finding.code == "CROSS-REPAIR-BUDGET-EXHAUSTED" for finding in findings):
             findings = (
                 *findings,
                 exhausted_budget_validation_finding(
                     workspace_root=workspace_root,
-                    stage_result_path=exhausted_stage_result_path,
+                    stage_result_path=validation.exhausted_stage_result_path,
                 ),
             )
         validation_result = _append_validation_findings(
             validation_result=validation_result,
             findings=findings,
         )
-    if interview_findings:
+    if validation.interview_findings:
         validation_result = _append_validation_findings(
             validation_result=validation_result,
-            findings=(*validation_result.findings, *interview_findings),
+            findings=(*validation_result.findings, *validation.interview_findings),
         )
-    if not validation_result.findings and not interview_routing.requires_interview:
+    if not validation_result.findings and not validation.interview_routing.requires_interview:
         candidate_metadata = load_stage_metadata(
             workspace_root=workspace_root,
             work_item=work_item,
@@ -1168,16 +1265,16 @@ def _run_single_stage_orchestration(
         )
         _write_canonical_stage_result(
             workspace_root=workspace_root,
-            execution_state=execution_state,
+            execution_state=prepared.execution_state,
             lifecycle_status=StageState.SUCCEEDED,
-            attempt_mode=adapter_invocation.attempt_mode,
+            attempt_mode=prepared.adapter_invocation.attempt_mode,
             attempt_outcome="content validation passed; terminal result validation pending",
             repair_history=() if candidate_metadata is None else candidate_metadata.repair_history,
-            produced_output_paths=discovery.discovered_markdown_documents,
-            missing_output_paths=discovery.missing_markdown_documents,
+            produced_output_paths=validation.discovery.discovered_markdown_documents,
+            missing_output_paths=validation.discovery.missing_markdown_documents,
             validator_verdict=ValidationVerdict.PASS.value,
             validator_report_path=validation_result.validator_report_path,
-            repair_brief_path=repair_brief_trace_path,
+            repair_brief_path=validation.repair_brief_trace_path,
         )
         final_stage_result_findings = reconcile_and_validate_stage_result_after_validation_pass(
             workspace_root=workspace_root,
@@ -1190,6 +1287,23 @@ def _run_single_stage_orchestration(
                 validation_result=validation_result,
                 findings=final_stage_result_findings,
             )
+    return validation_result
+
+
+def _persist_stage_validation_result(
+    *,
+    workspace_root: Path,
+    work_item: str,
+    run_id: str,
+    stage: str,
+    contracts_root: Path,
+    repair_policy: RepairBudgetPolicy | None,
+    changed_at_utc: datetime | None,
+    defer_success_publication: bool,
+    prepared: _PreparedStageExecution,
+    validation: _PreparedStageValidation,
+    validation_result: StageStructuralValidationResult,
+) -> _PersistedStageValidation:
     if validation_result.findings:
         strip_stage_result_success_claims_for_validator_findings(
             workspace_root=workspace_root,
@@ -1198,7 +1312,7 @@ def _run_single_stage_orchestration(
         )
     verdict = derive_validation_verdict(
         findings=validation_result.findings,
-        interview_routing=interview_routing,
+        interview_routing=validation.interview_routing,
     )
     validation_transition = persist_validation_state_with_repair_budget(
         workspace_root=workspace_root,
@@ -1216,8 +1330,8 @@ def _run_single_stage_orchestration(
         work_item=work_item,
         run_id=run_id,
         stage=stage,
-        attempt_number=execution_state.attempt_number,
-        attempt_mode=adapter_invocation.attempt_mode,
+        attempt_number=prepared.execution_state.attempt_number,
+        attempt_mode=prepared.adapter_invocation.attempt_mode,
         validation_transition=validation_transition,
         defer_success_publication=defer_success_publication,
     ):
@@ -1226,12 +1340,14 @@ def _run_single_stage_orchestration(
             work_item=work_item,
             run_id=run_id,
             stage=stage,
-            attempt_number=execution_state.attempt_number,
-            trigger=_repair_history_trigger(adapter_invocation=adapter_invocation),
+            attempt_number=prepared.execution_state.attempt_number,
+            trigger=_repair_history_trigger(
+                adapter_invocation=prepared.adapter_invocation,
+            ),
             outcome=_repair_history_outcome(validation_transition=validation_transition),
             stage_status=validation_transition.validation_state.next_state.value,
             validator_report_path=validation_result.validator_report_path,
-            repair_brief_path=adapter_invocation.repair_brief_path,
+            repair_brief_path=prepared.adapter_invocation.repair_brief_path,
             changed_at_utc=changed_at_utc,
         )
     metadata = load_stage_metadata(
@@ -1251,19 +1367,19 @@ def _run_single_stage_orchestration(
         )
     _write_canonical_stage_result(
         workspace_root=workspace_root,
-        execution_state=execution_state,
+        execution_state=prepared.execution_state,
         lifecycle_status=validation_transition.validation_state.next_state,
-        attempt_mode=adapter_invocation.attempt_mode,
+        attempt_mode=prepared.adapter_invocation.attempt_mode,
         attempt_outcome=_repair_history_outcome(validation_transition=validation_transition),
         repair_history=() if metadata is None else metadata.repair_history,
-        produced_output_paths=discovery.discovered_markdown_documents,
-        missing_output_paths=discovery.missing_markdown_documents,
+        produced_output_paths=validation.discovery.discovered_markdown_documents,
+        missing_output_paths=validation.discovery.missing_markdown_documents,
         validator_verdict=validation_transition.resolved_verdict.value,
         validator_report_path=validation_result.validator_report_path,
-        repair_brief_path=repair_brief_trace_path,
+        repair_brief_path=validation.repair_brief_trace_path,
         blockers=_canonical_stage_result_blockers(
             findings=validation_result.findings,
-            interview_routing=interview_routing,
+            interview_routing=validation.interview_routing,
         ),
         repair_budget_status=repair_budget_status,
     )
@@ -1273,19 +1389,112 @@ def _run_single_stage_orchestration(
         contracts_root=contracts_root,
         defer_success_publication=defer_success_publication,
     )
+    return _PersistedStageValidation(
+        validation_transition=validation_transition,
+        transition=transition,
+    )
+
+
+def _run_single_stage_orchestration(
+    *,
+    workspace_root: Path,
+    work_item: str,
+    run_id: str,
+    stage: str,
+    adapter_executor: Callable[
+        [AdapterInvocationBundle, StageExecutionState],
+        AdapterExecutionOutcome,
+    ],
+    contracts_root: Path = DEFAULT_STAGE_CONTRACTS_ROOT,
+    repair_policy: RepairBudgetPolicy | None = None,
+    project_set: ResolvedProjectSet | None = None,
+    changed_at_utc: datetime | None = None,
+    intervention_request_path: Path | None = None,
+    resume_mode: bool = False,
+    defer_success_publication: bool = False,
+    validation_finding_provider: Callable[
+        [StageExecutionState, StageOutputDiscovery], tuple[ValidationFinding, ...]
+    ]
+    | None = None,
+) -> StageOrchestrationResult:
+    prepared = _prepare_stage_execution(
+        workspace_root=workspace_root,
+        work_item=work_item,
+        run_id=run_id,
+        stage=stage,
+        contracts_root=contracts_root,
+        project_set=project_set,
+        changed_at_utc=changed_at_utc,
+        intervention_request_path=intervention_request_path,
+        resume_mode=resume_mode,
+    )
+    adapter_outcome = _execute_adapter_attempt(
+        workspace_root=workspace_root,
+        work_item=work_item,
+        run_id=run_id,
+        stage=stage,
+        adapter_executor=adapter_executor,
+        contracts_root=contracts_root,
+        changed_at_utc=changed_at_utc,
+        prepared=prepared,
+    )
+    terminal_result = _terminal_adapter_result(
+        workspace_root=workspace_root,
+        work_item=work_item,
+        run_id=run_id,
+        stage=stage,
+        changed_at_utc=changed_at_utc,
+        prepared=prepared,
+        adapter_outcome=adapter_outcome,
+    )
+    if terminal_result is not None:
+        return terminal_result
+
+    validation = _prepare_stage_validation(
+        workspace_root=workspace_root,
+        work_item=work_item,
+        run_id=run_id,
+        stage=stage,
+        contracts_root=contracts_root,
+        changed_at_utc=changed_at_utc,
+        prepared=prepared,
+    )
+    validation_result = _collect_stage_validation_result(
+        workspace_root=workspace_root,
+        work_item=work_item,
+        run_id=run_id,
+        stage=stage,
+        contracts_root=contracts_root,
+        prepared=prepared,
+        validation=validation,
+        validation_finding_provider=validation_finding_provider,
+    )
+    persisted = _persist_stage_validation_result(
+        workspace_root=workspace_root,
+        work_item=work_item,
+        run_id=run_id,
+        stage=stage,
+        contracts_root=contracts_root,
+        repair_policy=repair_policy,
+        changed_at_utc=changed_at_utc,
+        defer_success_publication=defer_success_publication,
+        prepared=prepared,
+        validation=validation,
+        validation_result=validation_result,
+    )
     return StageOrchestrationResult(
         stage=stage,
         work_item=work_item,
         run_id=run_id,
-        preparation_bundle=preparation_bundle,
-        execution_state=execution_state,
-        adapter_invocation=adapter_invocation,
+        preparation_bundle=prepared.preparation_bundle,
+        execution_state=prepared.execution_state,
+        adapter_invocation=prepared.adapter_invocation,
         adapter_outcome=adapter_outcome,
-        discovery=discovery,
+        discovery=validation.discovery,
         validation_result=validation_result,
-        interview_routing=interview_routing,
-        validation_transition=validation_transition,
-        transition=transition,
+        interview_routing=validation.interview_routing,
+        validation_transition=persisted.validation_transition,
+        transition=persisted.transition,
     )
 
 
