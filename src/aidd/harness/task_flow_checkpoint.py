@@ -13,7 +13,7 @@ import re
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from pathlib import Path
-from typing import Literal
+from typing import Literal, cast
 
 TASK_FLOW_CHECKPOINT_SCHEMA_VERSION = 1
 TASK_FLOW_CHECKPOINT_JSON_FILENAME = "task-flow-checkpoint.json"
@@ -28,6 +28,33 @@ class TaskFlowCheckpointResult:
     payload: dict[str, object]
     json_path: Path
     markdown_path: Path
+
+
+@dataclass(frozen=True, slots=True)
+class _CheckpointPaths:
+    tasklist: Path
+    ledger: Path
+    stage_metadata: Path
+    validator_report: Path
+    stage_result: Path
+
+
+@dataclass(frozen=True, slots=True)
+class _CheckpointState:
+    stage: str
+    workspace_root: Path
+    paths: _CheckpointPaths
+    tasklist_sha: str | None
+    ledger: dict[str, object] | None
+    stage_metadata: dict[str, object] | None
+    stage_status: str | None
+    validator_verdict: str | None
+    stage_result_status: str | None
+    model: dict[str, object]
+    public_task_view_available: bool
+    model_tasks: list[dict[str, object]]
+    authored_ids: list[str]
+    authored_dependencies: dict[str, tuple[str, ...]]
 
 
 def _sha256(path: Path) -> str | None:
@@ -164,6 +191,318 @@ def _terminal_evidence_valid(
     return False
 
 
+def _checkpoint_paths(
+    workspace_root: Path, work_item: str, run_id: str, stage: str
+) -> _CheckpointPaths:
+    run_root = workspace_root / "reports" / "runs" / work_item / run_id
+    tasklist = (
+        workspace_root
+        / "workitems"
+        / work_item
+        / "stages"
+        / "tasklist"
+        / "output"
+        / "tasklist.md"
+    )
+    stage_documents = workspace_root / "workitems" / work_item / "stages" / stage
+    return _CheckpointPaths(
+        tasklist=tasklist,
+        ledger=run_root / "stages" / "implement" / "task-ledger.json",
+        stage_metadata=run_root / "stages" / stage / "stage-metadata.json",
+        validator_report=stage_documents / "validator-report.md",
+        stage_result=stage_documents / "stage-result.md",
+    )
+
+
+def _load_checkpoint_state(
+    *,
+    stage: str,
+    workspace_root: Path,
+    work_item: str,
+    run_id: str,
+    task_view: dict[str, object] | None,
+) -> _CheckpointState:
+    paths = _checkpoint_paths(workspace_root, work_item, run_id, stage)
+    tasklist_sha = _sha256(paths.tasklist)
+    ledger = _read_json(paths.ledger)
+    stage_metadata = _read_json(paths.stage_metadata)
+    stage_status = (
+        str(stage_metadata.get("status"))
+        if stage_metadata is not None and stage_metadata.get("status") is not None
+        else None
+    )
+    validator_verdict = _validator_verdict(_read_text(paths.validator_report))
+    stage_result_status = _stage_result_status(_read_text(paths.stage_result))
+    model = task_view or {}
+    authored_ids, authored_dependencies = _tasklist_cards(
+        _read_text(paths.tasklist)
+    )
+    return _CheckpointState(
+        stage=stage,
+        workspace_root=workspace_root,
+        paths=paths,
+        tasklist_sha=tasklist_sha,
+        ledger=ledger,
+        stage_metadata=stage_metadata,
+        stage_status=stage_status,
+        validator_verdict=validator_verdict,
+        stage_result_status=stage_result_status,
+        model=model,
+        public_task_view_available=task_view is not None,
+        model_tasks=_task_items(model),
+        authored_ids=authored_ids,
+        authored_dependencies=authored_dependencies,
+    )
+
+
+def _collect_basic_findings(state: _CheckpointState) -> list[str]:
+    findings: list[str] = []
+    if state.tasklist_sha is None:
+        findings.append("missing-published-tasklist")
+    if not state.authored_ids:
+        findings.append("tasklist-has-no-authored-task-ids")
+    if not state.public_task_view_available:
+        findings.append("public-task-read-boundary-unavailable")
+    if not state.model_tasks:
+        findings.append("public-task-read-boundary-has-no-tasks")
+    model_ids = [str(item.get("id")) for item in state.model_tasks]
+    if state.authored_ids and model_ids != state.authored_ids:
+        findings.append("public-task-order-or-identity-drift")
+    for item in state.model_tasks:
+        task_id = str(item.get("id", ""))
+        expected = state.authored_dependencies.get(task_id)
+        actual = _dependencies(item)
+        if expected is not None and actual != expected:
+            findings.append(f"dependency-drift:{task_id}")
+    return findings
+
+
+def _collect_hash_findings(state: _CheckpointState) -> list[str]:
+    findings: list[str] = []
+    source_hash = state.ledger.get("source_tasklist_sha256") if state.ledger is not None else None
+    public_tasklist = state.model.get("tasklist")
+    public_tasklist = public_tasklist if isinstance(public_tasklist, dict) else {}
+    public_published_hash = public_tasklist.get("published_sha256")
+    public_ledger_hash = public_tasklist.get("ledger_sha256")
+    if (
+        isinstance(public_published_hash, str)
+        and state.tasklist_sha
+        and public_published_hash != state.tasklist_sha
+    ):
+        findings.append("public-tasklist-hash-mismatch")
+    if (
+        isinstance(public_ledger_hash, str)
+        and state.tasklist_sha
+        and public_ledger_hash != state.tasklist_sha
+    ):
+        findings.append("public-ledger-hash-mismatch")
+    if isinstance(source_hash, str) and state.tasklist_sha and source_hash != state.tasklist_sha:
+        findings.append("durable-ledger-hash-mismatch")
+    if state.stage == "implement" and state.ledger is None:
+        findings.append("missing-durable-task-ledger")
+    return findings
+
+
+def _collect_lifecycle_findings(state: _CheckpointState) -> tuple[list[str], list[str]]:
+    failed_task_ids = [
+        str(item.get("id"))
+        for item in state.model_tasks
+        if str(item.get("status", "")) in {"failed", "repair-exhausted"}
+    ]
+    findings: list[str] = []
+    blocked_stage = state.stage_status == "blocked" or state.stage_result_status == "blocked"
+    if state.stage == "implement" and blocked_stage and failed_task_ids:
+        findings.append(
+            "implementation-status-drift:failed-task-stage-blocked:"
+            + ",".join(failed_task_ids)
+        )
+    if state.stage == "implement" and state.validator_verdict == "fail" and blocked_stage:
+        findings.append("implementation-status-drift:validator-fail-stage-blocked")
+    if (
+        state.stage == "implement"
+        and state.validator_verdict == "fail"
+        and state.stage_result_status == "succeeded"
+    ):
+        findings.append("implementation-status-drift:validator-fail-stage-succeeded")
+    return findings, failed_task_ids
+
+
+def _collect_progression_findings(state: _CheckpointState) -> list[str]:
+    findings: list[str] = []
+    ready_ids = [str(item.get("id")) for item in state.model_tasks if item.get("ready") is True]
+    expected_next = ready_ids[0] if ready_ids else None
+    next_ready = state.model.get("next_ready_task")
+    if next_ready != expected_next:
+        findings.append("invalid-core-next-ready-selection")
+    if next_ready is not None and next_ready not in {
+        str(item.get("id")) for item in state.model_tasks
+    }:
+        findings.append("next-ready-task-is-unknown")
+
+    finalization = state.model.get("finalization")
+    finalization = finalization if isinstance(finalization, dict) else {}
+    finalization_status = str(finalization.get("status", "pending"))
+    finalization_evidence = finalization.get("latest_attempt_path")
+    if finalization_status == "succeeded":
+        if not state.model.get("all_succeeded"):
+            findings.append("premature-aggregate-finalization")
+        if not isinstance(finalization_evidence, str) or not finalization_evidence:
+            findings.append("missing-finalization-evidence-link")
+        elif not (
+            state.workspace_root / finalization_evidence / "finalization-state.json"
+        ).exists():
+            findings.append("missing-finalization-evidence")
+    if state.stage == "tasklist" and finalization_status == "succeeded":
+        findings.append("premature-aggregate-finalization")
+    review = state.model.get("review_eligibility")
+    review = review if isinstance(review, dict) else {}
+    review_eligible = review.get("eligible") is True or state.model.get("review_eligible") is True
+    if review_eligible != (finalization_status == "succeeded"):
+        findings.append("review-eligibility-disagrees-with-aggregate-finalization")
+    return findings
+
+
+def _build_task_payloads(state: _CheckpointState) -> tuple[list[dict[str, object]], list[str]]:
+    tasks: list[dict[str, object]] = []
+    findings: list[str] = []
+    for item in state.model_tasks:
+        task_id = str(item.get("id", ""))
+        links = _evidence_links(item)
+        terminal_evidence = links[-1] if links else None
+        tasks.append(
+            {
+                "id": task_id,
+                "order": len(tasks),
+                "dependencies": list(_dependencies(item)),
+                "status": str(item.get("status", "unknown")),
+                "attempt_count": _attempt_count(item),
+                "terminal_evidence": terminal_evidence,
+            }
+        )
+        if state.stage == "implement" and not _terminal_evidence_valid(
+            task=item,
+            workspace_root=state.workspace_root,
+        ):
+            findings.append(f"missing-terminal-task-evidence:{task_id}")
+    return tasks, findings
+
+
+def _mapping(value: object) -> dict[str, object]:
+    return value if isinstance(value, dict) else {}
+
+
+def _build_checkpoint_payload(
+    *,
+    state: _CheckpointState,
+    scenario_id: str,
+    work_item: str,
+    run_id: str,
+    runtime_id: str,
+    aidd_revision: str | None,
+    target_revision: str | None,
+    public_surface: dict[str, object] | None,
+    tasks: list[dict[str, object]],
+    failed_task_ids: list[str],
+    findings: list[str],
+) -> dict[str, object]:
+    finalization = _mapping(state.model.get("finalization"))
+    finalization_status = str(finalization.get("status", "pending"))
+    finalization_evidence = finalization.get("latest_attempt_path")
+    review = _mapping(state.model.get("review_eligibility"))
+    review_eligible = review.get("eligible") is True or state.model.get("review_eligible") is True
+    public_tasklist = _mapping(state.model.get("tasklist"))
+    public_ledger_hash = public_tasklist.get("ledger_sha256")
+    source_hash = (
+        state.ledger.get("source_tasklist_sha256") if state.ledger is not None else None
+    )
+    return {
+        "schema_version": TASK_FLOW_CHECKPOINT_SCHEMA_VERSION,
+        "created_at_utc": datetime.now(UTC).replace(microsecond=0).isoformat().replace(
+            "+00:00", "Z"
+        ),
+        "classification": "pass" if not findings else "fail",
+        "stage": state.stage,
+        "identity": {
+            "scenario_id": scenario_id,
+            "work_item": work_item,
+            "run_id": run_id,
+            "runtime_id": runtime_id,
+            "aidd_revision": aidd_revision or "unknown",
+            "target_revision": target_revision or "unknown",
+        },
+        "tasklist": {
+            "path": state.paths.tasklist.as_posix(),
+            "sha256": state.tasklist_sha,
+            "authored_task_ids": state.authored_ids,
+            "authored_dependencies": {
+                key: list(value) for key, value in state.authored_dependencies.items()
+            },
+            "hash_matches": not any("hash" in finding for finding in findings),
+        },
+        "ledger": {
+            "path": state.paths.ledger.as_posix() if state.ledger is not None else None,
+            "schema_version": state.ledger.get("schema_version")
+            if state.ledger is not None
+            else None,
+            "source_tasklist_sha256": source_hash or public_ledger_hash,
+        },
+        "stage_lifecycle": {
+            "path": state.paths.stage_metadata.as_posix()
+            if state.stage_metadata is not None
+            else None,
+            "status": state.stage_status,
+            "validator_report_path": state.paths.validator_report.as_posix()
+            if state.validator_verdict is not None
+            else None,
+            "validator_verdict": state.validator_verdict,
+            "stage_result_path": state.paths.stage_result.as_posix()
+            if state.stage_result_status is not None
+            else None,
+            "stage_result_status": state.stage_result_status,
+            "failed_task_ids": failed_task_ids,
+        },
+        "tasks": tasks,
+        "next_ready_task": state.model.get("next_ready_task"),
+        "blocker": _literal_blocker(state.model),
+        "finalization": {
+            "status": finalization_status,
+            "attempt_count": finalization.get("attempt_count", 0),
+            "evidence": (
+                f"{finalization_evidence}/finalization-state.json"
+                if isinstance(finalization_evidence, str) and finalization_evidence
+                else None
+            ),
+        },
+        "review_eligibility": {
+            "eligible": review_eligible,
+            "blocker": review.get("reason") or state.model.get("review_blocker"),
+        },
+        "findings": findings,
+        "collection": {
+            "source": "installed-public-ui-api-and-authorized-durable-artifacts",
+            "public_surface": public_surface or {"status": "not-recorded"},
+            "mutated_target": False,
+        },
+        "public_projection": state.model,
+    }
+
+
+def _write_checkpoint_artifacts(
+    *, payload: dict[str, object], output_root: Path
+) -> tuple[Path, Path]:
+    output_root.mkdir(parents=True, exist_ok=True)
+    json_path = output_root / TASK_FLOW_CHECKPOINT_JSON_FILENAME
+    markdown_path = output_root / TASK_FLOW_CHECKPOINT_MARKDOWN_FILENAME
+    encoded = json.dumps(payload, indent=2, sort_keys=True) + "\n"
+    tmp_json = json_path.with_suffix(f".{json_path.suffix.lstrip('.')}.tmp")
+    tmp_json.write_text(encoded, encoding="utf-8")
+    tmp_json.replace(json_path)
+    tmp_markdown = markdown_path.with_suffix(f".{markdown_path.suffix.lstrip('.')}.tmp")
+    tmp_markdown.write_text(_render_markdown(payload), encoding="utf-8")
+    tmp_markdown.replace(markdown_path)
+    return json_path, markdown_path
+
+
 def _render_markdown(payload: dict[str, object]) -> str:
     identity = payload.get("identity")
     identity = identity if isinstance(identity, dict) else {}
@@ -263,262 +602,38 @@ def build_task_flow_checkpoint(
 ) -> TaskFlowCheckpointResult:
     """Validate one public task projection and write an atomic checkpoint bundle."""
 
-    tasklist_path = (
-        workspace_root
-        / "workitems"
-        / work_item
-        / "stages"
-        / "tasklist"
-        / "output"
-        / "tasklist.md"
+    state = _load_checkpoint_state(
+        stage=stage,
+        workspace_root=workspace_root,
+        work_item=work_item,
+        run_id=run_id,
+        task_view=task_view,
     )
-    ledger_path = (
-        workspace_root
-        / "reports"
-        / "runs"
-        / work_item
-        / run_id
-        / "stages"
-        / "implement"
-        / "task-ledger.json"
+    findings = _collect_basic_findings(state)
+    findings.extend(_collect_hash_findings(state))
+    lifecycle_findings, failed_task_ids = _collect_lifecycle_findings(state)
+    findings.extend(lifecycle_findings)
+    findings.extend(_collect_progression_findings(state))
+    tasks, task_findings = _build_task_payloads(state)
+    findings.extend(task_findings)
+    payload = _build_checkpoint_payload(
+        state=state,
+        scenario_id=scenario_id,
+        work_item=work_item,
+        run_id=run_id,
+        runtime_id=runtime_id,
+        aidd_revision=aidd_revision,
+        target_revision=target_revision,
+        public_surface=public_surface,
+        tasks=tasks,
+        failed_task_ids=failed_task_ids,
+        findings=findings,
     )
-    tasklist_sha = _sha256(tasklist_path)
-    tasklist_text = None
-    if tasklist_path.exists():
-        try:
-            tasklist_text = tasklist_path.read_text(encoding="utf-8")
-        except OSError:
-            tasklist_text = None
-    model = task_view or {}
-    ledger = _read_json(ledger_path)
-    stage_metadata_path = (
-        workspace_root
-        / "reports"
-        / "runs"
-        / work_item
-        / run_id
-        / "stages"
-        / stage
-        / "stage-metadata.json"
+    json_path, markdown_path = _write_checkpoint_artifacts(
+        payload=payload,
+        output_root=output_root,
     )
-    stage_metadata = _read_json(stage_metadata_path)
-    stage_status = (
-        str(stage_metadata.get("status"))
-        if stage_metadata is not None and stage_metadata.get("status") is not None
-        else None
-    )
-    stage_documents_root = (
-        workspace_root
-        / "workitems"
-        / work_item
-        / "stages"
-        / stage
-    )
-    validator_report_path = stage_documents_root / "validator-report.md"
-    stage_result_path = stage_documents_root / "stage-result.md"
-    validator_verdict = _validator_verdict(_read_text(validator_report_path))
-    stage_result_status = _stage_result_status(_read_text(stage_result_path))
-    model_tasks = _task_items(model)
-    authored_ids, authored_dependencies = _tasklist_cards(tasklist_text or "")
-    findings: list[str] = []
-    if tasklist_sha is None:
-        findings.append("missing-published-tasklist")
-    if not authored_ids:
-        findings.append("tasklist-has-no-authored-task-ids")
-    if task_view is None:
-        findings.append("public-task-read-boundary-unavailable")
-    if not model_tasks:
-        findings.append("public-task-read-boundary-has-no-tasks")
-    model_ids = [str(item.get("id")) for item in model_tasks]
-    if authored_ids and model_ids != authored_ids:
-        findings.append("public-task-order-or-identity-drift")
-    for item in model_tasks:
-        task_id = str(item.get("id", ""))
-        expected = authored_dependencies.get(task_id)
-        actual = _dependencies(item)
-        if expected is not None and actual != expected:
-            findings.append(f"dependency-drift:{task_id}")
-
-    source_hash = ledger.get("source_tasklist_sha256") if ledger is not None else None
-    public_tasklist = model.get("tasklist")
-    public_tasklist = public_tasklist if isinstance(public_tasklist, dict) else {}
-    public_published_hash = public_tasklist.get("published_sha256")
-    public_ledger_hash = public_tasklist.get("ledger_sha256")
-    if (
-        isinstance(public_published_hash, str)
-        and tasklist_sha
-        and public_published_hash != tasklist_sha
-    ):
-        findings.append("public-tasklist-hash-mismatch")
-    if (
-        isinstance(public_ledger_hash, str)
-        and tasklist_sha
-        and public_ledger_hash != tasklist_sha
-    ):
-        findings.append("public-ledger-hash-mismatch")
-    if isinstance(source_hash, str) and tasklist_sha and source_hash != tasklist_sha:
-        findings.append("durable-ledger-hash-mismatch")
-    if stage == "implement" and ledger is None:
-        findings.append("missing-durable-task-ledger")
-    # The operator must be able to distinguish a failed validator/attempt from
-    # an unresolved operator question.  A failed task paired with a blocked
-    # implement stage is a cross-layer lifecycle drift: it makes the task look
-    # retryable while hiding the actual stage result and repair exhaustion.
-    failed_task_ids = [
-        str(item.get("id"))
-        for item in model_tasks
-        if str(item.get("status", "")) in {"failed", "repair-exhausted"}
-    ]
-    blocked_stage = stage_status == "blocked" or stage_result_status == "blocked"
-    if stage == "implement" and blocked_stage and failed_task_ids:
-        findings.append(
-            "implementation-status-drift:failed-task-stage-blocked:"
-            + ",".join(failed_task_ids)
-        )
-    if stage == "implement" and validator_verdict == "fail" and blocked_stage:
-        findings.append("implementation-status-drift:validator-fail-stage-blocked")
-    if (
-        stage == "implement"
-        and validator_verdict == "fail"
-        and stage_result_status == "succeeded"
-    ):
-        findings.append("implementation-status-drift:validator-fail-stage-succeeded")
-
-    ready_ids = [str(item.get("id")) for item in model_tasks if item.get("ready") is True]
-    expected_next = ready_ids[0] if ready_ids else None
-    next_ready = model.get("next_ready_task")
-    if next_ready != expected_next:
-        findings.append("invalid-core-next-ready-selection")
-    if next_ready is not None and next_ready not in model_ids:
-        findings.append("next-ready-task-is-unknown")
-
-    finalization = model.get("finalization")
-    finalization = finalization if isinstance(finalization, dict) else {}
-    finalization_status = str(finalization.get("status", "pending"))
-    finalization_attempt_count = finalization.get("attempt_count", 0)
-    finalization_evidence = finalization.get("latest_attempt_path")
-    if finalization_status == "succeeded":
-        if not model.get("all_succeeded"):
-            findings.append("premature-aggregate-finalization")
-        if not isinstance(finalization_evidence, str) or not finalization_evidence:
-            findings.append("missing-finalization-evidence-link")
-        elif not (
-            workspace_root / finalization_evidence / "finalization-state.json"
-        ).exists():
-            findings.append("missing-finalization-evidence")
-    if stage == "tasklist" and finalization_status == "succeeded":
-        findings.append("premature-aggregate-finalization")
-    review = model.get("review_eligibility")
-    review = review if isinstance(review, dict) else {}
-    review_eligible = review.get("eligible") is True or model.get("review_eligible") is True
-    durable_aggregate_succeeded = finalization_status == "succeeded"
-    if review_eligible != durable_aggregate_succeeded:
-        findings.append("review-eligibility-disagrees-with-aggregate-finalization")
-
-    tasks: list[dict[str, object]] = []
-    for item in model_tasks:
-        task_id = str(item.get("id", ""))
-        links = _evidence_links(item)
-        terminal_evidence = links[-1] if links else None
-        task_payload: dict[str, object] = {
-            "id": task_id,
-            "order": len(tasks),
-            "dependencies": list(_dependencies(item)),
-            "status": str(item.get("status", "unknown")),
-            "attempt_count": _attempt_count(item),
-            "terminal_evidence": terminal_evidence,
-        }
-        tasks.append(task_payload)
-        if stage == "implement" and not _terminal_evidence_valid(
-            task=item,
-            workspace_root=workspace_root,
-        ):
-            findings.append(f"missing-terminal-task-evidence:{task_id}")
-
-    classification: TaskFlowCheckpointClassification = "pass" if not findings else "fail"
-    payload: dict[str, object] = {
-        "schema_version": TASK_FLOW_CHECKPOINT_SCHEMA_VERSION,
-        "created_at_utc": (
-            datetime.now(UTC)
-            .replace(microsecond=0)
-            .isoformat()
-            .replace("+00:00", "Z")
-        ),
-        "classification": classification,
-        "stage": stage,
-        "identity": {
-            "scenario_id": scenario_id,
-            "work_item": work_item,
-            "run_id": run_id,
-            "runtime_id": runtime_id,
-            "aidd_revision": aidd_revision or "unknown",
-            "target_revision": target_revision or "unknown",
-        },
-        "tasklist": {
-            "path": tasklist_path.as_posix(),
-            "sha256": tasklist_sha,
-            "authored_task_ids": authored_ids,
-            "authored_dependencies": {
-                key: list(value) for key, value in authored_dependencies.items()
-            },
-            "hash_matches": not any("hash" in finding for finding in findings),
-        },
-        "ledger": {
-            "path": ledger_path.as_posix() if ledger is not None else None,
-            "schema_version": (
-                ledger.get("schema_version")
-                if ledger is not None
-                else None
-            ),
-            "source_tasklist_sha256": source_hash or public_ledger_hash,
-        },
-        "stage_lifecycle": {
-            "path": stage_metadata_path.as_posix() if stage_metadata is not None else None,
-            "status": stage_status,
-            "validator_report_path": (
-                validator_report_path.as_posix() if validator_verdict is not None else None
-            ),
-            "validator_verdict": validator_verdict,
-            "stage_result_path": (
-                stage_result_path.as_posix() if stage_result_status is not None else None
-            ),
-            "stage_result_status": stage_result_status,
-            "failed_task_ids": failed_task_ids,
-        },
-        "tasks": tasks,
-        "next_ready_task": next_ready,
-        "blocker": _literal_blocker(model),
-        "finalization": {
-            "status": finalization_status,
-            "attempt_count": finalization_attempt_count,
-            "evidence": (
-                f"{finalization_evidence}/finalization-state.json"
-                if isinstance(finalization_evidence, str) and finalization_evidence
-                else None
-            ),
-        },
-        "review_eligibility": {
-            "eligible": review_eligible,
-            "blocker": review.get("reason") or model.get("review_blocker"),
-        },
-        "findings": findings,
-        "collection": {
-            "source": "installed-public-ui-api-and-authorized-durable-artifacts",
-            "public_surface": public_surface or {"status": "not-recorded"},
-            "mutated_target": False,
-        },
-        "public_projection": model,
-    }
-    output_root.mkdir(parents=True, exist_ok=True)
-    json_path = output_root / TASK_FLOW_CHECKPOINT_JSON_FILENAME
-    markdown_path = output_root / TASK_FLOW_CHECKPOINT_MARKDOWN_FILENAME
-    encoded = json.dumps(payload, indent=2, sort_keys=True) + "\n"
-    tmp_json = json_path.with_suffix(f".{json_path.suffix.lstrip('.')}.tmp")
-    tmp_json.write_text(encoded, encoding="utf-8")
-    tmp_json.replace(json_path)
-    tmp_markdown = markdown_path.with_suffix(f".{markdown_path.suffix.lstrip('.')}.tmp")
-    tmp_markdown.write_text(_render_markdown(payload), encoding="utf-8")
-    tmp_markdown.replace(markdown_path)
+    classification = cast(TaskFlowCheckpointClassification, payload["classification"])
     return TaskFlowCheckpointResult(
         classification=classification,
         payload=payload,
