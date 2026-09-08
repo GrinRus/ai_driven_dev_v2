@@ -1,8 +1,9 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 
+from aidd.core.evidence_freshness import EvidenceFreshness, unavailable_evidence_freshness
 from aidd.core.interview import AnswerResolution, QuestionPolicy
 from aidd.core.run_inspection import RunLogSummary, RunMetadataSummary, StageResultSummary
 
@@ -256,6 +257,7 @@ class OperatorRunSummary:
     lineage: OperatorRunLineage
     archive: OperatorRunArchive
     runtime_permission_policy: str | None = None
+    freshness: EvidenceFreshness = field(default_factory=unavailable_evidence_freshness)
 
 
 @dataclass(frozen=True, slots=True)
@@ -511,6 +513,7 @@ class OperatorTerminalRunHandoff:
     recommended_outcome: str | None
     recommendation_rationale: str | None
     recommended_next_flow_actions: tuple[OperatorNextFlowRecommendation, ...]
+    freshness: EvidenceFreshness = field(default_factory=unavailable_evidence_freshness)
 
 
 @dataclass(frozen=True, slots=True)
@@ -659,6 +662,7 @@ class OperatorDashboardView:
     recent_artifacts: tuple[OperatorArtifactRef, ...]
     terminal_handoff: OperatorTerminalRunHandoff | None
     phases: tuple[OperatorIntentPhaseSummary, ...] = ()
+    freshness: EvidenceFreshness = field(default_factory=unavailable_evidence_freshness)
 
 
 __all__ = [

@@ -8,8 +8,15 @@ from dataclasses import dataclass
 from pathlib import Path
 from time import monotonic
 
+from aidd.core.evidence_freshness import (
+    EvidenceFreshness,
+    EvidenceFreshnessRequest,
+    classify_evidence_freshness,
+    unavailable_evidence_freshness,
+)
 from aidd.core.identifiers import SafeIdentifier
 from aidd.core.run_lookup import latest_run_id
+from aidd.core.run_provenance import resolve_repository_git_sha
 from aidd.core.run_store import (
     RUN_EVENTS_JSONL_FILENAME,
     RUN_RUNTIME_JSONL_FILENAME,
@@ -764,6 +771,7 @@ def grader_payload(
     first_failure_boundary: FailureBoundarySelection,
     feature_selection_payload: dict[str, object],
     failure_cause: FailureCause | None = None,
+    freshness: EvidenceFreshness | None = None,
 ) -> dict[str, object]:
     normalized_failure_cause = failure_cause or FailureCause.none()
     validate_verdict_compatibility(verdict=status, cause=normalized_failure_cause)
@@ -783,6 +791,7 @@ def grader_payload(
         "runtime_id": runtime_id,
         "scenario_id": scenario.scenario_id,
         "selected_task": feature_selection_payload.get("selected_task"),
+        "evidence_freshness": ((freshness or unavailable_evidence_freshness()).to_dict()),
     }
 
 
@@ -811,6 +820,42 @@ def _product_run_id_for_state(*, prep: EvalRunPreparation, state: EvalExecutionS
         except ValueError:
             continue
     return None
+
+
+def _eval_evidence_freshness(
+    *,
+    prep: EvalRunPreparation,
+    state: EvalExecutionState,
+    layout: ResultBundleLayout,
+) -> EvidenceFreshness:
+    """Project report provenance through the shared freshness contract."""
+
+    candidate_sha: str | None = None
+    if prep.source_repository_root is not None:
+        try:
+            candidate_sha = resolve_repository_git_sha(prep.source_repository_root)
+        except OSError:
+            candidate_sha = None
+    evidence_sha = None if state.install_result is None else state.install_result.source_revision
+    if evidence_sha is None and state.install_result is None:
+        evidence_sha = candidate_sha
+    evidence_target_pin = (
+        None
+        if state.prepared_working_copy is None
+        else state.prepared_working_copy.resolved_revision
+    )
+    candidate_target_pin = prep.scenario.repo.revision or evidence_target_pin
+    return classify_evidence_freshness(
+        EvidenceFreshnessRequest(
+            candidate_sha=candidate_sha,
+            evidence_sha=evidence_sha,
+            evidence_schema_version=1,
+            target_pin=candidate_target_pin,
+            evidence_target_pin=evidence_target_pin,
+            locator=layout.run_root.as_posix(),
+            locator_available=layout.run_root.exists(),
+        )
+    )
 
 
 def _phase_outcome(*, result: object | None, error: BaseException | None) -> str:
@@ -906,6 +951,7 @@ def persist_eval_reports(
         stage_timing_payload=stage_timing_payload,
     )
     product_run_id = _product_run_id_for_state(prep=prep, state=state)
+    freshness = _eval_evidence_freshness(prep=prep, state=state, layout=layout)
     phase_metadata = _phase_metadata(
         prep=prep,
         state=state,
@@ -1014,6 +1060,7 @@ def persist_eval_reports(
             else None
         ),
         failure_cause=failure_cause,
+        freshness=freshness,
     )
 
     runtime_log_source_path, validator_report_source_path, verdict_source_path = (
@@ -1093,6 +1140,7 @@ def persist_eval_reports(
             ),
             **aidd_evidence_references,
         },
+        evidence_freshness=freshness,
     )
     write_feature_selection(layout=layout, payload=feature_selection_payload)
     write_command_transcripts(
@@ -1147,6 +1195,7 @@ def persist_eval_reports(
                 first_failure_boundary=first_failure_boundary,
                 feature_selection_payload=feature_selection_payload,
                 failure_cause=failure_cause,
+                freshness=freshness,
             ),
             indent=2,
             sort_keys=True,
@@ -1164,6 +1213,7 @@ def persist_eval_reports(
         verdict=verdict,
         duration_seconds=duration_seconds,
         failure_boundary=first_failure_boundary.category,
+        freshness=freshness,
     )
     summary_path = write_eval_summary_markdown(
         path=layout.run_root / SUMMARY_REPORT_FILENAME,
@@ -1286,6 +1336,7 @@ def persist_eval_reports(
             ),
             first_failure_note=first_failure_note,
             failure_cause=failure_cause,
+            freshness=freshness,
         )
         write_scenario_verdict_markdown(path=layout.verdict_path, verdict=verdict)
         layout.log_analysis_path.write_text(
@@ -1319,6 +1370,7 @@ def persist_eval_reports(
                     first_failure_boundary=first_failure_boundary,
                     feature_selection_payload=feature_selection_payload,
                     failure_cause=failure_cause,
+                    freshness=freshness,
                 ),
                 indent=2,
                 sort_keys=True,
@@ -1330,6 +1382,7 @@ def persist_eval_reports(
             verdict=verdict,
             duration_seconds=duration_seconds,
             failure_boundary=first_failure_boundary.category,
+            freshness=freshness,
         )
         summary_path = write_eval_summary_markdown(
             path=layout.run_root / SUMMARY_REPORT_FILENAME,

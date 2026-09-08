@@ -196,6 +196,38 @@ def classify_evidence_freshness(request: EvidenceFreshnessRequest) -> EvidenceFr
     )
 
 
+def unavailable_evidence_freshness(
+    *,
+    reason: str = "Evidence freshness was not evaluated.",
+    candidate_sha: str | None = None,
+    evidence_sha: str | None = None,
+    evidence_schema_version: int | None = None,
+    target_pin: str | None = None,
+    evidence_target_pin: str | None = None,
+    locator: str | None = None,
+) -> EvidenceFreshness:
+    """Build an explicit unavailable result for a projection without identity inputs.
+
+    Read-model callers often have a valid record but no safe way to establish the
+    candidate identity.  They must still expose a typed state rather than omitting
+    freshness or treating the record as current.
+    """
+
+    normalized_reason = reason.strip()
+    if not normalized_reason:
+        raise ValueError("reason must be non-empty.")
+    return EvidenceFreshness(
+        status=EvidenceFreshnessStatus.UNAVAILABLE,
+        reason=normalized_reason,
+        candidate_sha=candidate_sha,
+        evidence_sha=evidence_sha,
+        evidence_schema_version=evidence_schema_version,
+        target_pin=target_pin,
+        evidence_target_pin=evidence_target_pin,
+        locator=locator,
+    )
+
+
 # Keep the verb used by the roadmap available for callers that prefer an evaluator name.
 evaluate_evidence_freshness = classify_evidence_freshness
 
@@ -207,4 +239,5 @@ __all__ = [
     "FRESHNESS_CONTRACT_SCHEMA_VERSION",
     "classify_evidence_freshness",
     "evaluate_evidence_freshness",
+    "unavailable_evidence_freshness",
 ]
