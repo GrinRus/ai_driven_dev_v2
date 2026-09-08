@@ -118,12 +118,6 @@
       "grade": "F"
     },
     {
-      "id": "src/aidd/harness/task_flow_checkpoint.py::build_task_flow_checkpoint",
-      "line": 250,
-      "complexity": 78,
-      "grade": "F"
-    },
-    {
       "id": "src/aidd/validators/cross_document_rules/qa_upstream.py::validate_qa_upstream",
       "line": 44,
       "complexity": 36,
