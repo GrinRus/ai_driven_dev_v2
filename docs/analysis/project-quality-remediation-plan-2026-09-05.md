@@ -501,8 +501,13 @@ The next dependency-ready implementation task is `W49-E2-S2-T2`. A pre-implement
 that JSON body/response codecs are already isolated in `aidd.cli.ui_http` and generic route dispatch
 is already isolated in `aidd.cli.ui_routing` (the W21 thin-router change). The task is therefore
 resliced to compose those existing owners behind one server-side transport boundary and add
-endpoint contract fixtures, rather than duplicating either implementation. This preserves stable
-endpoint contracts and the merged W47 presentation boundary while keeping the adjacent UI checkout
+endpoint contract fixtures, rather than duplicating either implementation. PR #605 merged this
+boundary at `0c5af159`; focused/full CLI and planning checks plus all required CI/security lanes
+passed after a transient packaged-browser rerun. `W49-E2-S2-T3` then completed in PR #606 at
+`2e4c42b3`: typed priority rules preserve the `OperatorNextAction` contract and the full core
+state matrix (1106 tests) passed with Ruff, strict mypy, and required CI/security lanes after two
+transient packaged-browser reruns. The next dependency-ready task is `W49-E2-S3-T1`, adding a
+reviewed complexity baseline and no-new-E/F ratchet while keeping the adjacent UI checkout
 read-only.
 
 ### Slice W49-E2-S2 — post-Focus-Canvas service-boundary stabilization

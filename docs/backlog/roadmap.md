@@ -804,7 +804,7 @@ changing its public behavior.
     Ruff, strict mypy, and all required CI/security lanes. No static UI, frontend tests, or
     neighboring UI checkout files changed.
 
-- `W49-E2-S2-T2` (next) Extract HTTP payload codecs/controller dispatch.
+- `W49-E2-S2-T2` (done) Compose existing HTTP codecs/router behind a CLI transport boundary.
   - Pre-implementation reconciliation: the JSON body/response codecs already have a focused owner
     in `aidd.cli.ui_http`, and generic route dispatch is owned by `aidd.cli.ui_routing` (W21).
     The remaining slice is therefore resliced to compose those owners behind one transport boundary
@@ -817,6 +817,30 @@ changing its public behavior.
   - Verification: endpoint contract fixtures preserve success, validation, not-found, and
     explicit-failure response shapes across project contexts.
   - Dependencies: W49-E2-S2-T1, the merged W47 UI baseline, and a fresh `origin/main`.
+  - Completion evidence: PR #605 merged to `origin/main` at `0c5af159`; `aidd.cli.ui_transport`
+    composes the existing `ui_http` codecs and `ui_routing` dispatch without duplicate logic.
+    Endpoint contracts cover success, validation, not-found, explicit failure, and two project
+    contexts; focused/full CLI suites (10 and 345 tests), planning/traceability/CI tests (52),
+    Ruff, strict mypy, and required CI/security lanes passed. No static UI, frontend tests, or
+    neighboring UI checkout files changed.
+
+- `W49-E2-S2-T3` (done) Replace dashboard `_next_action` branching with ordered typed rules.
+  - Output: dashboard next-action selection is evaluated through a typed context and a fixed
+    priority-ordered rule set, returning exactly one deterministic action without changing the
+    `OperatorNextAction` payload contract.
+  - Scope: core dashboard evidence and state-matrix tests; no `src/aidd/cli/static/**`,
+    `tests/frontend/**`, UI browser journeys, or neighboring UI checkout edits.
+  - Verification: full state matrix covers runtime selection, stale/blocked/question/recovery,
+    review/QA/terminal evidence, runnable, and no-runnable states; repeated evaluation is stable.
+  - Dependencies: W49-E2-S2-T2, the merged W47 UI baseline, and a fresh `origin/main`.
+  - Completion evidence: PR #606 merged to `origin/main` at `2e4c42b3`; ordered typed rules now
+    own the dashboard next-action priority while the `OperatorNextAction` payload and compatibility
+    wrappers remain unchanged. The state matrix covers runtime selection, stale/blocked/questions,
+    validation/intervention, review/QA/terminal evidence, runnable, and no-runnable states, with
+    repeated-evaluation stability checks. Focused/core/inbox checks (88), the full core suite
+    (1106), Ruff, strict mypy, and required CI/security lanes passed; the packaged-browser lane
+    needed two transient UI-owned reruns before passing. No static UI, frontend tests, or
+    neighboring UI checkout files changed.
 
 | Task | Output | Dominant area | Main verification | Effort |
 | --- | --- | --- | --- | ---: |
@@ -829,6 +853,14 @@ Before promoting each task, compare it with the final W47 diff. If W47 already p
 output, record that evidence and reslice only the remaining hotspot; do not repeat the refactor.
 
 #### Slice W49-E2-S3 — complexity-tail ratchet (`planned`)
+
+- `W49-E2-S3-T1` (next) Add a reviewed complexity baseline and no-new-E/F ratchet.
+  - Output: the repository records a reviewed baseline for existing high-complexity functions and
+    a deterministic check that fails when a new E/F-complexity block is introduced.
+  - Scope: quality tooling, baseline data, and focused tests only; no runtime or UI-owned paths.
+  - Verification: current baseline passes; a synthetic new E/F block fails with an actionable
+    message; existing complexity debt remains explicitly enumerated for follow-up slices.
+  - Dependencies: W49-E2-S2-T3, a fresh `origin/main`, and the merged W47 UI baseline.
 
 | Task | Output | Dominant area | Main verification | Effort |
 | --- | --- | --- | --- | ---: |
