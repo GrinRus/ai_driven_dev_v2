@@ -146,6 +146,13 @@ non-passing, mismatched, or non-HTTPS result references fail closed; the record'
 SHA-256 covers the complete gate inventory. This helper only validates supplied CI evidence and
 writes a local record; it does not query GitHub, publish, install, or alter workflow state.
 
+The installed deterministic candidate matrix is a separate read-only check. The maintainer
+installs the manifest's exact wheel into an isolated environment, executes every CI-marked
+scenario through that environment's `aidd` entry point, and records the resulting self-contained
+evidence-bundle paths and digests. A missing bundle, non-zero scenario, package-version mismatch,
+or wheel/manifest drift blocks the matrix; the runner does not invoke providers or mutate the
+repository checkout.
+
 The `pipx` verification lane selects the `pip` backend explicitly so an unrelated standalone
 `uv` executable on the runner cannot silently change `pipx` behavior or impose a second `uv`
 version requirement. Hosted CI and release jobs pin the `uv` executable version explicitly.

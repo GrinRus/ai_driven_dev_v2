@@ -92,6 +92,20 @@ uv run python -m scripts.release.candidate_readiness \
   Keep both JSON records with the candidate evidence. The readiness digest is valid only for the
   exact manifest digest/source revision and does not replace provider, human, or install evidence.
 
+- [ ] Run every CI-marked deterministic scenario through the exact installed wheel and retain the
+  hashed matrix report. The runner creates an isolated environment, checks the installed package
+  version and wheel digest against the candidate manifest, and fails closed when a scenario exits
+  non-zero or does not produce a self-contained evidence bundle:
+
+```bash
+uv run python -m scripts.release.installed_candidate_matrix \
+  --manifest .aidd/candidate-manifest.json \
+  --wheel dist/<candidate>.whl \
+  --output .aidd/installed-candidate-matrix.json
+```
+
+  This local evidence is provider-free and separate from `pipx`/`uv tool` package-channel checks.
+
 - [ ] Source-of-truth audit is current for the release-prep slice:
   `README.md`, `docs/product/user-stories.md`, and
   `docs/architecture/target-architecture.md` match the code and release claims.
