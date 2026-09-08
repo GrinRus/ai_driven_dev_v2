@@ -1139,7 +1139,7 @@ human evidence is current, immutable, and retrievable.
 
 ### Epic W50-E1 — evidence freshness and retention (`planned`)
 
-#### Slice W50-E1-S1 — freshness model (`planned`)
+#### Slice W50-E1-S1 — freshness model (`done`)
 
 - `W50-E1-S1-T1` (done) Define `current/stale/incompatible/unavailable` from candidate SHA,
   schema, target pin, and evidence locator.
@@ -1153,13 +1153,41 @@ human evidence is current, immutable, and retrievable.
     classifier and 16 deterministic state/validation tests passed with strict mypy, Ruff, and
     the full required CI/security/browser/build lanes. No UI-owned paths changed.
 
-- `W50-E1-S1-T2` (next) Project freshness consistently into reports and the operator read model.
+- `W50-E1-S1-T2` (done) Project freshness consistently into reports and the operator read model.
   - Output: service/report projections preserve freshness state and reason without changing
     verdict history.
   - Scope: evidence read model and tests; any UI projection must preserve the merged W47 Focus
     Canvas hierarchy and remain separate from the neighboring UI checkout.
   - Verification: service and presentation fixtures expose the same state/reason matrix.
   - Dependencies: `W50-E1-S1-T1` and the merged W47 UI baseline.
+  - Completion evidence: PR #631 merged to `origin/main` at `6cac4a82`; verdict reports,
+    grader payloads, harness metadata, operator run summaries, dashboard views, and terminal
+    handoffs now project the shared state/reason matrix while preserving verdict history and
+    terminal recommendation safety. Focused (135 tests), full `make check`, security,
+    packaged-browser, and build lanes passed. No static UI, frontend-test, browser-test, or
+    neighboring UI checkout files changed; the neighboring checkout remains read-only at
+    `4c1356bc`.
+
+#### Slice W50-E1-S2 — immutable sanitized bundle export (`planned`)
+
+- `W50-E1-S2-T1` (next) Define retention locator, digest, size, revision, target pin, and
+  redaction contract.
+  - Output: one typed archive-retention contract that rejects locators without integrity and
+    provenance metadata.
+  - Scope: evidence archive contract and focused deterministic tests; no static UI, frontend,
+    browser-test, or neighboring checkout paths.
+  - Verification: valid metadata round-trips, while missing digest, size, revision, target pin,
+    or redaction guarantees fail closed.
+  - Dependencies: completed `W50-E1-S1` and W48 bundle v2.
+
+- `W50-E1-S2-T2` (soon) Export and read back a sanitized immutable archive.
+  - Output: a portable evidence archive with verified digest, size, revision, target pin, and
+    redaction metadata that can be read after the mutable workspace bundle is removed.
+  - Scope: bundle exporter/verifier and deterministic archive round-trip tests; no static UI,
+    frontend, browser-test, or neighboring checkout paths.
+  - Verification: a fresh checkout verifies the archive after mutable `.aidd` deletion, while
+    tampered bytes or incomplete provenance fail closed.
+  - Dependencies: `W50-E1-S2-T1` and W48 bundle v2.
 
 ## Wave 51 — agent development instruction consistency (`planned`)
 

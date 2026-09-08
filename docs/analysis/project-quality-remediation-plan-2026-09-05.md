@@ -158,7 +158,12 @@ and Scorecard checks passed. No static UI, frontend-test, browser-test, or neigh
 files changed. W49-E4 is complete. W50-E1-S1-T1 then completed in PR #629 at `71c3779a`:
 the core-only typed freshness contract and focused state matrix passed the full required
 CI/security/browser/build lanes without touching UI-owned paths. The next dependency-ready task
-is `W50-E1-S1-T2`.
+was `W50-E1-S1-T2`, which completed in PR #631 at `6cac4a82`: freshness state and actionable
+reasons are now projected consistently through verdict/report, grader, harness, and operator
+read models; stale or incompatible evidence cannot qualify a terminal Flow Complete handoff.
+The focused/full checks and required security, packaged-browser, and build lanes passed without
+touching static UI, frontend-test, browser-test, or the neighboring UI checkout. The next
+dependency-ready task is `W50-E1-S2-T1`.
 
 ## Parent outcome decomposed
 
