@@ -7,7 +7,7 @@ slice, and local task.
 
 ## Next
 
-- `W49-E4-S1-T2` — Add `ruff format --check .` to CI.
+- `W49-E4-S2-T1` — Record line/branch coverage for lifecycle, evidence, adapters, and scenario gates.
 
 ## Soon
 
@@ -50,6 +50,8 @@ slice, and local task.
   complexity ratchet, and all required lanes green). T1 of W49-E4-S1 completed in PR #619 at
   `d8b0f379`: 268 tracked Python files were formatted in the reviewed non-UI scope,
   `browser_tests` remained excluded for the neighboring UI boundary, AST equivalence and focused
-  checks passed, and required CI/security/browser/build lanes were green. All remain outside
-  runtime/UI-owned paths; the neighboring UI checkout is read-only. Queue promotion now selects
-  the direct successor `W49-E4-S1-T2` to enforce the formatter baseline in CI.
+  checks passed, and required CI/security/browser/build lanes were green. T2 completed in PR #622
+  at `765f051a`: CI now enforces `ruff format --check .` in the lint/type/test matrix, with 74
+  focused planning/docs/CI tests and all required CI/security/browser/build lanes green. All remain
+  outside runtime/UI-owned paths; the neighboring UI checkout is read-only. Queue promotion now
+  selects the direct successor `W49-E4-S2-T1`.

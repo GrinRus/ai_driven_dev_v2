@@ -1052,7 +1052,7 @@ Dependencies: `W49-E3-S1` → `W49-E3-S2-T1`/`W49-E3-S2-T2` → `W49-E3-S2-T3`.
 
 ### Epic W49-E4 — assurance ratchets (`planned`)
 
-#### Slice W49-E4-S1 — formatter baseline (`planned`)
+#### Slice W49-E4-S1 — formatter baseline (`done`)
 
 - `W49-E4-S1-T1` (done) Decide formatter scope/exclusions and apply one isolated mechanical
   baseline.
@@ -1072,15 +1072,20 @@ Dependencies: `W49-E3-S1` → `W49-E3-S2-T1`/`W49-E3-S2-T2` → `W49-E3-S2-T3`.
     CI executed the complete Python suite. No `src/aidd/cli/static/**`, `tests/frontend/**`, or
     neighboring UI checkout files changed.
 
-- `W49-E4-S1-T2` (next) Add `ruff format --check .` to CI.
+- `W49-E4-S1-T2` (done) Add `ruff format --check .` to CI.
   - Output: CI rejects intentional Python formatting drift through a required deterministic check.
   - Scope: CI workflow and focused check fixtures only; no runtime or UI-owned paths.
   - Verification: a synthetic formatting drift fails the check and the clean tree passes.
   - Dependencies: `W49-E4-S1-T1`.
+  - Completion evidence: PR #622 merged to `origin/main` at `765f051a`; the lint/type/test
+    matrix runs `uv run --extra dev ruff format --check .` as a required step, with the workflow
+    contract covered by a focused test. The clean formatter check, 74 focused planning/docs/CI
+    tests, all Python matrix lanes, deterministic/conformance/browser/build lanes, and security
+    checks passed. No runtime or UI-owned paths changed.
 
 #### Slice W49-E4-S2 — critical-module coverage (`planned`)
 
-- `W49-E4-S2-T1` (planned) Record line/branch coverage for lifecycle, evidence, adapters, and
+- `W49-E4-S2-T1` (next) Record line/branch coverage for lifecycle, evidence, adapters, and
   scenario gates.
   - Output: a reviewed coverage baseline is tied to the exact SHA and command for critical
     modules without imposing a vanity global percentage.
