@@ -101,6 +101,22 @@ helpers preserve raw transcript, approval, timeout, cancellation, and protocol-f
 neighboring UI checkout read-only. The next promoted task is `W49-E2-S3-T6`, Qwen live transport
 decomposition under the same adapter-only boundary.
 
+### Execution reconciliation — 2026-09-08
+
+`W49-E2-S3-T6` is complete in PR #617 (`18a71f2e`): Qwen live session startup, polling,
+finalization, and result mapping now have responsibility-specific helpers while public result,
+raw-evidence, approval, timeout, cancellation, and process-ownership contracts remain unchanged.
+The focused Qwen suite (18 tests), full adapter suite (318 tests), Ruff, strict mypy, complexity
+ratchet, deterministic/conformance/browser/build, and security lanes passed. The Qwen hotspot
+moved from F(42) to a C-or-lower helper set and only its baseline entry was removed. No UI-owned
+files changed; the neighboring UI checkout remains read-only at `4c1356bc`.
+
+With all W49-E2 slices complete, the queue-restoration rule promotes `W49-E4-S1-T1` as the next
+dependency-ready task. It is intentionally limited to deciding formatter scope/exclusions and
+applying one isolated Python mechanical baseline after the hotspot tail; the plan requires AST
+equivalence and keeps `src/aidd/cli/static/**`, `tests/frontend/**`, UI browser tests, and the
+neighboring checkout out of scope.
+
 ## Parent outcome decomposed
 
 Parent outcome: close the 2026-09-05 quality-audit findings and produce trustworthy beta-candidate

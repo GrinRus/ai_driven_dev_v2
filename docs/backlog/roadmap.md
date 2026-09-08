@@ -696,7 +696,7 @@ Dependencies: W48 exit gate → `W49-E1-S2-T1` → `W49-E1-S2-T2` → `W49-E1-S2
 `W49-E1-S2-T4` → `W49-E1-S2-T5`; all W49-E1 boundary tasks are complete, and the active queue
 item is `W49-E2-S2-T1` for server-side UI job lifecycle extraction.
 
-### Epic W49-E2 — behavior-preserving hotspot reduction (`planned`)
+### Epic W49-E2 — behavior-preserving hotspot reduction (`done`)
 
 #### Slice W49-E2-S1 — live harness decomposition (`done`)
 
@@ -852,7 +852,7 @@ Dependencies: merged W47 UI PR and a green post-merge CLI/frontend/browser compa
 Before promoting each task, compare it with the final W47 diff. If W47 already produces the
 output, record that evidence and reslice only the remaining hotspot; do not repeat the refactor.
 
-#### Slice W49-E2-S3 — complexity-tail ratchet (`planned`)
+#### Slice W49-E2-S3 — complexity-tail ratchet (`done`)
 
 - `W49-E2-S3-T1` (done) Add a reviewed complexity baseline and no-new-E/F ratchet.
   - Output: the repository records a reviewed baseline for existing high-complexity functions and
@@ -936,7 +936,7 @@ output, record that evidence and reslice only the remaining hotspot; do not repe
     and 318 adapter tests passed, as did Ruff, strict mypy, complexity ratchet, and all required
     CI/security/browser/build lanes. No UI-owned files changed.
 
-- `W49-E2-S3-T6` (next) Decompose the Qwen live transport.
+- `W49-E2-S3-T6` (done) Decompose the Qwen live transport.
   - Output: Qwen live transport lifecycle responsibilities are split without changing its public
     result, raw evidence, approval, timeout, cancellation, or process-ownership contracts.
   - Scope: `src/aidd/adapters/qwen/live.py` and focused adapter tests only; no workflow, static UI,
@@ -945,6 +945,13 @@ output, record that evidence and reslice only the remaining hotspot; do not repe
     helpers are complexity grade C or lower, and the baseline removes only the completed hotspot.
   - Dependencies: W49-E2-S3-T5, a fresh `origin/main`, the merged W47 UI baseline, and a read-only
     comparison with the neighboring UI refactor before implementation.
+  - Completion evidence: PR #617 merged to `origin/main` at `18a71f2e`; Qwen live session startup,
+    polling, finalization, and result mapping now have responsibility-specific helpers while the
+    public result, raw evidence, approval, timeout, cancellation, and process-ownership contracts
+    remain unchanged. The focused Qwen suite (18 tests), full adapter suite (318 tests), Ruff,
+    strict mypy, complexity ratchet, and all required CI/security/browser/build lanes passed. The
+    Qwen hotspot moved from F(42) to a C-or-lower helper set and only its baseline entry was
+    removed. No UI-owned files changed; the neighboring UI checkout remained read-only.
 
 | Task | Output | Dominant area | Main verification | Effort |
 | --- | --- | --- | --- | ---: |
@@ -955,7 +962,8 @@ output, record that evidence and reslice only the remaining hotspot; do not repe
 | `W49-E2-S3-T5` | Decompose the Codex live transport. | Codex adapter | Codex adapter passes the bytes/events/timeout/cancel matrix. | 1.25d |
 | `W49-E2-S3-T6` | Decompose the Qwen live transport. | Qwen adapter | Qwen adapter passes the bytes/events/timeout/cancel matrix. | 1.25d |
 
-Dependencies: T1 first; every remaining task is independent and behavior-preserving.
+Dependencies: T1 first; every remaining task is independent and behavior-preserving. All six
+tasks are now complete, so this slice rolls up to `done`.
 
 ### Epic W49-E3 — planning and documentation truth (`done`)
 
@@ -1041,6 +1049,59 @@ Dependencies: W49-E1-S1/T2/T4/T3 completion → `W49-E3-S1-T1` → `W49-E3-S1-T2
     and dependency-review checks passed. No runtime or UI-owned files changed.
 
 Dependencies: `W49-E3-S1` → `W49-E3-S2-T1`/`W49-E3-S2-T2` → `W49-E3-S2-T3`.
+
+### Epic W49-E4 — assurance ratchets (`planned`)
+
+#### Slice W49-E4-S1 — formatter baseline (`planned`)
+
+- `W49-E4-S1-T1` (next) Decide formatter scope/exclusions and apply one isolated mechanical
+  baseline.
+  - Output: the repository has an explicit formatter scope and one isolated mechanical baseline
+    with no semantic AST change.
+  - Scope: Python formatting configuration and source files selected by the reviewed scope; no
+    runtime behavior, UI-owned files, frontend tests, or neighboring UI checkout edits.
+  - Verification: Ruff format check, Ruff lint, strict mypy, focused owning tests, and an AST
+    equivalence check pass; the diff contains formatting-only changes.
+  - Dependencies: W49-E2-S3-T6, a fresh `origin/main`, and the merged W47 UI baseline. Run after
+    hotspot refactors so the baseline does not create permanent merge conflicts.
+
+- `W49-E4-S1-T2` (planned) Add `ruff format --check .` to CI.
+  - Output: CI rejects intentional Python formatting drift through a required deterministic check.
+  - Scope: CI workflow and focused check fixtures only; no runtime or UI-owned paths.
+  - Verification: a synthetic formatting drift fails the check and the clean tree passes.
+  - Dependencies: `W49-E4-S1-T1`.
+
+#### Slice W49-E4-S2 — critical-module coverage (`planned`)
+
+- `W49-E4-S2-T1` (planned) Record line/branch coverage for lifecycle, evidence, adapters, and
+  scenario gates.
+  - Output: a reviewed coverage baseline is tied to the exact SHA and command for critical
+    modules without imposing a vanity global percentage.
+  - Scope: coverage tooling, baseline data, and focused tests; no UI-owned paths.
+  - Verification: the baseline records module identity, command, and revision and is reproducible
+    from a clean checkout.
+  - Dependencies: `W49-E4-S1` and a fresh `origin/main`.
+
+- `W49-E4-S2-T2` (planned) Add non-decreasing per-module thresholds in one CI job.
+  - Output: critical-module coverage cannot regress below its reviewed baseline in CI.
+  - Scope: CI coverage gate and regression fixtures; no runtime or UI-owned paths.
+  - Verification: a synthetic critical-module regression fails while unrelated global coverage
+    changes do not block the gate.
+  - Dependencies: `W49-E4-S2-T1`.
+
+#### Slice W49-E4-S3 — browser JavaScript security analysis (`planned`)
+
+- `W49-E4-S3-T1` (planned) Add JavaScript/TypeScript CodeQL analysis for packaged frontend source.
+  - Output: the security workflow uploads both Python and packaged-frontend analysis results.
+  - Scope: security workflow configuration only; do not edit `src/aidd/cli/static/**`,
+    `tests/frontend/**`, UI browser tests, or the neighboring UI checkout.
+  - Verification: the workflow configuration validates both language analyses and existing
+    Python CodeQL results remain available.
+  - Dependencies: W47 Focus Canvas merge, a fresh `origin/main`, and a read-only comparison with
+    the neighboring UI refactor.
+
+Dependencies: `W49-E4-S1-T1` → `W49-E4-S1-T2`; `W49-E4-S1` → `W49-E4-S2-T1` →
+`W49-E4-S2-T2`; the browser security task is independent after the W47 merge.
 
 ## Wave 51 — agent development instruction consistency (`planned`)
 

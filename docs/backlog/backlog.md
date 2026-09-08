@@ -7,7 +7,7 @@ slice, and local task.
 
 ## Next
 
-- `W49-E2-S3-T6` — Decompose the Qwen live transport.
+- `W49-E4-S1-T1` — Decide formatter scope/exclusions and apply one isolated mechanical baseline.
 
 ## Soon
 
@@ -46,5 +46,7 @@ slice, and local task.
   W49-E2-S3-T3 completed in PR #612 at `91b088d9` (50-test invalid-manifest matrix and 479-test
   harness green). T4 completed in PR #613 at `d9d17bfa` (1106 core tests and required lanes green);
   T5 completed in PR #615 at `037a35ef` (25 Codex live and 318 adapter tests plus required lanes
-  green). All remain outside runtime/UI-owned paths; the neighboring UI checkout is read-only.
-  The next dependency-ready task is `W49-E2-S3-T6` for Qwen live transport decomposition.
+  green); T6 completed in PR #617 at `18a71f2e` (18 focused Qwen live tests, 318 adapter tests,
+  complexity ratchet, and all required lanes green). All remain outside runtime/UI-owned paths;
+  the neighboring UI checkout is read-only. Queue restoration now promotes `W49-E4-S1-T1`, an
+  isolated Python formatter baseline that runs after the hotspot tail.
