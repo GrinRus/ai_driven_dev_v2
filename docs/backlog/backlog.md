@@ -7,7 +7,7 @@ slice, and local task.
 
 ## Next
 
-- `W49-E2-S3-T4` — Decompose `_run_single_stage_orchestration` after W48.
+- `W49-E2-S3-T6` — Decompose the Qwen live transport.
 
 ## Soon
 
@@ -43,7 +43,8 @@ slice, and local task.
   read-only. W49-E2-S1/T1–T5 are merged in PRs #595/#597/#599/#601, W49-E2-S2/T1–T3 in
   #603/#605/#606, and W49-E2-S3-T1 in #608; all preserve the no-UI boundary and required checks.
   W49-E2-S3-T2 completed in PR #610 at `cfcfe33c` (checkpoint fixtures and 479-test harness green).
-  W49-E2-S3-T3 completed in PR #612 at `91b088d9` (50-test invalid-manifest matrix, 479-test
-  harness, Ruff, strict mypy, complexity, and required CI/security/browser/build lanes green).
-  The next dependency-ready task is `W49-E2-S3-T4` for `_run_single_stage_orchestration`
-  decomposition.
+  W49-E2-S3-T3 completed in PR #612 at `91b088d9` (50-test invalid-manifest matrix and 479-test
+  harness green). T4 completed in PR #613 at `d9d17bfa` (1106 core tests and required lanes green);
+  T5 completed in PR #615 at `037a35ef` (25 Codex live and 318 adapter tests plus required lanes
+  green). All remain outside runtime/UI-owned paths; the neighboring UI checkout is read-only.
+  The next dependency-ready task is `W49-E2-S3-T6` for Qwen live transport decomposition.
