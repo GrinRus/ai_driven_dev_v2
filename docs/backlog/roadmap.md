@@ -1054,7 +1054,7 @@ Dependencies: `W49-E3-S1` → `W49-E3-S2-T1`/`W49-E3-S2-T2` → `W49-E3-S2-T3`.
 
 #### Slice W49-E4-S1 — formatter baseline (`planned`)
 
-- `W49-E4-S1-T1` (next) Decide formatter scope/exclusions and apply one isolated mechanical
+- `W49-E4-S1-T1` (done) Decide formatter scope/exclusions and apply one isolated mechanical
   baseline.
   - Output: the repository has an explicit formatter scope and one isolated mechanical baseline
     with no semantic AST change.
@@ -1064,8 +1064,15 @@ Dependencies: `W49-E3-S1` → `W49-E3-S2-T1`/`W49-E3-S2-T2` → `W49-E3-S2-T3`.
     equivalence check pass; the diff contains formatting-only changes.
   - Dependencies: W49-E2-S3-T6, a fresh `origin/main`, and the merged W47 UI baseline. Run after
     hotspot refactors so the baseline does not create permanent merge conflicts.
+  - Completion evidence: PR #619 merged to `origin/main` at `d8b0f379`; Ruff formatted 268
+    tracked Python files under the reviewed non-UI scope and excludes `browser_tests` to preserve
+    the neighboring UI boundary. AST equivalence, `ruff format --check .`, Ruff lint, strict
+    mypy, complexity, 73 focused docs/planning/CI tests, and all required CI/security/browser/build
+    checks passed. The full local suite reached 2106 passed before a manual stop due runtime;
+    CI executed the complete Python suite. No `src/aidd/cli/static/**`, `tests/frontend/**`, or
+    neighboring UI checkout files changed.
 
-- `W49-E4-S1-T2` (planned) Add `ruff format --check .` to CI.
+- `W49-E4-S1-T2` (next) Add `ruff format --check .` to CI.
   - Output: CI rejects intentional Python formatting drift through a required deterministic check.
   - Scope: CI workflow and focused check fixtures only; no runtime or UI-owned paths.
   - Verification: a synthetic formatting drift fails the check and the clean tree passes.

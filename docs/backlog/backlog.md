@@ -7,7 +7,7 @@ slice, and local task.
 
 ## Next
 
-- `W49-E4-S1-T1` — Decide formatter scope/exclusions and apply one isolated mechanical baseline.
+- `W49-E4-S1-T2` — Add `ruff format --check .` to CI.
 
 ## Soon
 
@@ -47,6 +47,9 @@ slice, and local task.
   harness green). T4 completed in PR #613 at `d9d17bfa` (1106 core tests and required lanes green);
   T5 completed in PR #615 at `037a35ef` (25 Codex live and 318 adapter tests plus required lanes
   green); T6 completed in PR #617 at `18a71f2e` (18 focused Qwen live tests, 318 adapter tests,
-  complexity ratchet, and all required lanes green). All remain outside runtime/UI-owned paths;
-  the neighboring UI checkout is read-only. Queue restoration now promotes `W49-E4-S1-T1`, an
-  isolated Python formatter baseline that runs after the hotspot tail.
+  complexity ratchet, and all required lanes green). T1 of W49-E4-S1 completed in PR #619 at
+  `d8b0f379`: 268 tracked Python files were formatted in the reviewed non-UI scope,
+  `browser_tests` remained excluded for the neighboring UI boundary, AST equivalence and focused
+  checks passed, and required CI/security/browser/build lanes were green. All remain outside
+  runtime/UI-owned paths; the neighboring UI checkout is read-only. Queue promotion now selects
+  the direct successor `W49-E4-S1-T2` to enforce the formatter baseline in CI.
