@@ -311,6 +311,8 @@ def _parse_artifact(raw: Any, *, label: str) -> CandidateArtifact:
     path = _string(payload, "path", label=label)
     if Path(path).is_absolute() is False and ".." in Path(path).parts:
         raise CandidateManifestError(f"{label}.path must not traverse parent directories.")
+    if label == "wheel" and not path.lower().endswith(".whl"):
+        raise CandidateManifestError("wheel.path must have a .whl suffix.")
     sha256 = _validate_sha256(_string(payload, "sha256", label=label), label=f"{label}.sha256")
     size = payload.get("size_bytes")
     if not isinstance(size, int) or isinstance(size, bool) or size <= 0:
@@ -427,6 +429,8 @@ def validate_candidate_manifest(
     wheel = _artifact(
         root, wheel_path or _resolve_recorded_path(root, manifest.wheel.path), label="Wheel"
     )
+    if not wheel.path.lower().endswith(".whl"):
+        raise CandidateManifestError("Wheel artifact must have a .whl suffix.")
     if wheel != manifest.wheel:
         raise CandidateManifestError("Candidate wheel digest or size no longer matches manifest.")
     selected_scenario_root = scenario_root or _resolve_recorded_path(root, manifest.scenario_root)
