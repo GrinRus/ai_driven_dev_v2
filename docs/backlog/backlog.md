@@ -7,11 +7,9 @@ slice, and local task.
 
 ## Next
 
-- `W50-E2-S1-T1` — Freeze candidate SHA, source tree, wheel digest, scenario inventory, and test commands.
+- `W50-E2-S1-T2` — Run full static/unit/integration/browser/security/build gates on the frozen candidate.
 
 ## Soon
-
-- `W50-E2-S1-T2` — Run full static/unit/integration/browser/security/build gates on the frozen candidate.
 
 ## Parking lot
 
@@ -49,4 +47,11 @@ slice, and local task.
   and deterministic sanitized archive export/read/extract fail closed on missing provenance,
   tampering, or mutable `.aidd` deletion; focused/full, security, packaged-browser, and build lanes
   passed. No UI-owned paths changed; neighbor remains at `4c1356bc`.
-- Queue promotion now selects `W50-E2-S1-T1`.
+- `W50-E2-S1-T1` completed in PR #636 at `88ac8a1d`: the candidate manifest freezes clean-worktree
+  Git SHA/tree, package version, wheel digest/size, CI scenario inventory, and reproducible
+  verification commands; fail-closed validation rejects drift and non-wheel artifacts. Focused
+  candidate/release tests, full `make check`, Python matrix, critical coverage, adapter,
+  deterministic, packaged-browser, build, and security lanes passed. No UI-owned paths changed;
+  neighbor remains at `4c1356bc`.
+- Queue promotion now selects `W50-E2-S1-T2`; `Soon` is empty until a direct successor is added
+  to the canonical roadmap.

@@ -1199,7 +1199,7 @@ human evidence is current, immutable, and retrievable.
 
 #### Slice W50-E2-S1 — freeze and local acceptance (`planned`)
 
-- `W50-E2-S1-T1` (next) Freeze candidate SHA, source tree, wheel digest, scenario inventory,
+- `W50-E2-S1-T1` (done) Freeze candidate SHA, source tree, wheel digest, scenario inventory,
   and test commands.
   - Output: one complete candidate manifest bound to a clean worktree, source tree, wheel,
     scenario inventory, and reproducible verification commands.
@@ -1208,8 +1208,15 @@ human evidence is current, immutable, and retrievable.
   - Verification: the record is complete, identity fields agree with the checked-out candidate,
     and a dirty worktree or missing digest blocks publication.
   - Dependencies: completed W50-E1 and W48 bundle v2.
+  - Completion evidence: PR #636 merged to `origin/main` at `88ac8a1d`; the candidate manifest
+    freezes clean-worktree Git SHA/tree, package version, wheel digest/size, CI scenario inventory,
+    and reproducible verification commands, while fail-closed validation rejects drift and
+    non-wheel artifacts. Focused candidate/release tests, full local `make check`, Python matrix,
+    critical coverage, adapter conformance, deterministic scenarios, packaged-browser, build,
+    CodeQL, Scorecard, and dependency-review lanes passed. No UI-owned paths changed; the
+    neighboring checkout remains read-only at `4c1356bc`.
 
-- `W50-E2-S1-T2` (soon) Run full static/unit/integration/browser/security/build gates on the
+- `W50-E2-S1-T2` (next) Run full static/unit/integration/browser/security/build gates on the
   frozen candidate.
   - Output: one signed/hashed readiness record linking every required result for the exact
     candidate SHA.
