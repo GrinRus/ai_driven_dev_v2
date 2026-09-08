@@ -5,8 +5,11 @@
 `critical-coverage-baseline.json` records reviewed line and branch coverage for a focused
 allowlist of lifecycle, evidence, adapter, and scenario-gate modules. It is intentionally not a
 repository-wide percentage and excludes `src/aidd/cli/static/**`, frontend tests, and browser/UI
-surfaces owned by the adjacent UI worktree. The `revision`, Python/Coverage versions, test paths,
-and exact pytest arguments make the measurement reproducible from a clean checkout.
+surfaces owned by the adjacent UI worktree. The `revision`, platform, Python/Coverage versions,
+test paths, and exact pytest arguments make the measurement reproducible from a clean Linux
+checkout. The Linux platform is deliberate: process-group handling in the process-supervisor
+adapter follows an OS-specific branch, so a macOS measurement is not interchangeable with the CI
+baseline.
 
 Run the baseline measurement from the repository root with the command represented by the
 `command` and `test_paths` arrays in the JSON file. Write the JSON report to
