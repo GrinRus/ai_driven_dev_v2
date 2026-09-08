@@ -1216,13 +1216,34 @@ human evidence is current, immutable, and retrievable.
     CodeQL, Scorecard, and dependency-review lanes passed. No UI-owned paths changed; the
     neighboring checkout remains read-only at `4c1356bc`.
 
-- `W50-E2-S1-T2` (next) Run full static/unit/integration/browser/security/build gates on the
+- `W50-E2-S1-T2` (done) Run full static/unit/integration/browser/security/build gates on the
   frozen candidate.
   - Output: one signed/hashed readiness record linking every required result for the exact
     candidate SHA.
   - Scope: candidate acceptance coordinator and release evidence; no UI implementation changes.
   - Verification: a failed or mismatched lane cannot render the candidate ready.
   - Dependencies: `W50-E2-S1-T1` and the merged W47 Focus Canvas baseline.
+  - Completion evidence: PR #638 merged to `origin/main` at `1abd1291`; the hashed readiness
+    contract binds all Python matrix, critical-coverage, adapter, deterministic, packaged-browser,
+    build, CodeQL, dependency-review, and Scorecard results to the candidate manifest digest and
+    source tree, rejecting missing, duplicate, failed, mismatched, non-HTTPS, or tampered evidence.
+    Focused/full local checks and all required CI/security/browser/build lanes passed. No UI-owned
+    paths changed; the neighboring checkout remains read-only at `4c1356bc`.
+
+- `W50-E2-S1-T3` (next) Run the installed deterministic happy/failure/repair/interview/task/
+  project-set/bundle matrix.
+  - Output: exact wheel passes every typed assertion with self-contained bundles.
+  - Scope: installed candidate evaluation and deterministic evidence; no UI implementation changes.
+  - Verification: every declared scenario runs against the frozen wheel and retains provenance,
+    terminal, repair, intervention, project-set, and bundle-integrity assertions.
+  - Dependencies: `W50-E2-S1-T2` and W48 bundle v2.
+
+- `W50-E2-S1-T4` (soon) Verify `pipx` and `uv tool` clean install and upgrade for the exact wheel.
+  - Output: installed package version and wheel digest match the candidate manifest.
+  - Scope: isolated package-channel verification; no UI implementation changes.
+  - Verification: runner-owned `pipx` and `uv tool` environments execute the installed `aidd`
+    binary and `doctor`, with a mismatched or unavailable artifact blocked.
+  - Dependencies: `W50-E2-S1-T3` and the exact candidate wheel.
 
 ## Wave 51 — agent development instruction consistency (`planned`)
 
