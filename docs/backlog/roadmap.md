@@ -1141,7 +1141,7 @@ human evidence is current, immutable, and retrievable.
 
 #### Slice W50-E1-S1 — freshness model (`planned`)
 
-- `W50-E1-S1-T1` (next) Define `current/stale/incompatible/unavailable` from candidate SHA,
+- `W50-E1-S1-T1` (done) Define `current/stale/incompatible/unavailable` from candidate SHA,
   schema, target pin, and evidence locator.
   - Output: one typed freshness contract with deterministic precedence and actionable reasons.
   - Scope: evidence freshness contract and focused deterministic tests; no UI-owned paths.
@@ -1149,8 +1149,11 @@ human evidence is current, immutable, and retrievable.
     or target metadata is `incompatible`, missing evidence is `unavailable`, and an exact matching
     bundle is `current`.
   - Dependencies: W48 exit gate, W49 assurance ratchets, and a fresh `origin/main`.
+  - Completion evidence: PR #629 merged to `origin/main` at `71c3779a`; the core-only typed
+    classifier and 16 deterministic state/validation tests passed with strict mypy, Ruff, and
+    the full required CI/security/browser/build lanes. No UI-owned paths changed.
 
-- `W50-E1-S1-T2` (planned) Project freshness consistently into reports and the operator read model.
+- `W50-E1-S1-T2` (next) Project freshness consistently into reports and the operator read model.
   - Output: service/report projections preserve freshness state and reason without changing
     verdict history.
   - Scope: evidence read model and tests; any UI projection must preserve the merged W47 Focus

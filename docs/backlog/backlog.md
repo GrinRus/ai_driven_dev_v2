@@ -7,7 +7,7 @@ slice, and local task.
 
 ## Next
 
-- `W50-E1-S1-T1` — Define evidence freshness states from candidate identity and locator.
+- `W50-E1-S1-T2` — Project freshness consistently into reports and the operator read model.
 
 ## Soon
 
@@ -62,5 +62,8 @@ slice, and local task.
   a checker regression fixture; all Python, adapter, deterministic, packaged-browser, build, and
   security lanes passed after correcting the OS-specific process-group metric. W49-E4-S3-T1
   completed in PR #627 at `c165eb5d`: pinned CodeQL now analyzes both Python and packaged
-  JavaScript/TypeScript, and the complete CI/security/browser/build set passed. The adjacent UI
-  checkout remains read-only at `4c1356bc`; queue promotion now selects `W50-E1-S1-T1`.
+  JavaScript/TypeScript, and the complete CI/security/browser/build set passed. W50-E1-S1-T1
+  completed in PR #629 at `71c3779a`: the core freshness contract distinguishes current, stale,
+  incompatible, and unavailable evidence from candidate SHA, schema, target pin, and locator;
+  focused tests and all required CI/security/browser/build lanes passed. The adjacent UI checkout
+  remains read-only at `4c1356bc`; queue promotion now selects `W50-E1-S1-T2`.
