@@ -85,6 +85,32 @@ class CodexLiveCommand:
     reasoning_effort: str | None = None
 
 
+@dataclass(frozen=True, slots=True)
+class _CodexLiveSession:
+    command: CodexLiveCommand
+    spec: RuntimeSubprocessSpec
+    transcript_path: Path
+    supervisor: OwnedProcessSupervisor
+    process: subprocess.Popen[bytes]
+    client: _JsonRpcLineClient
+    deadline: float | None
+
+
+@dataclass(frozen=True, slots=True)
+class _CodexLiveInitialization:
+    thread_id: str | None
+    early_result: LiveTransportResult[CodexExitClassification] | None
+
+
+@dataclass(frozen=True, slots=True)
+class _CodexLiveTurnDrain:
+    completed: bool
+    pending_request_id: str | None
+    denied_reason: str | None
+    early_classification: CodexExitClassification | None
+    terminal_result: LiveTransportResult[CodexExitClassification] | None
+
+
 def parse_codex_live_command(
     configured_command: str,
     *,
@@ -406,6 +432,165 @@ def codex_live_transport_available(
     return "--listen" in help_text and "generate-json-schema" in help_text
 
 
+def _start_codex_live_session(
+    *,
+    command: CodexLiveCommand,
+    context: CodexCommandContext,
+    base_env: Mapping[str, str],
+    repository_root: Path,
+    attempt_path: Path,
+    on_stdout: Callable[[str], None] | None,
+    on_stderr: Callable[[str], None] | None,
+    timeout_seconds: float | None,
+) -> _CodexLiveSession:
+    spec = build_subprocess_spec(
+        configured_command=command.executable,
+        context=context,
+        base_env=base_env,
+        repository_root=repository_root,
+        execution_mode=RuntimeExecutionMode.NATIVE,
+        model=command.model,
+        reasoning_effort=command.reasoning_effort,
+    )
+    attempt_path.mkdir(parents=True, exist_ok=True)
+    transcript_path = attempt_path / _CODEX_TRANSCRIPT_FILENAME
+    supervisor = OwnedProcessSupervisor.launch(
+        RuntimeSubprocessSpec(
+            command=(command.executable, "app-server", "--listen", "stdio://"),
+            cwd=repository_root,
+            env=spec.env,
+            stdin_text="",
+        )
+    )
+    process = supervisor.process
+    client = _JsonRpcLineClient(
+        process=process,
+        transcript_path=transcript_path,
+        capture_directory=attempt_path,
+        on_stdout=on_stdout,
+        on_stderr=on_stderr,
+    )
+    client.start()
+    deadline = None if timeout_seconds is None else time.monotonic() + timeout_seconds
+    return _CodexLiveSession(
+        command=command,
+        spec=spec,
+        transcript_path=transcript_path,
+        supervisor=supervisor,
+        process=process,
+        client=client,
+        deadline=deadline,
+    )
+
+
+def _initialize_codex_live_session(
+    *,
+    session: _CodexLiveSession,
+    repository_root: Path,
+    context: CodexCommandContext,
+    broker: RuntimeOperatorBroker,
+    operator_decision_provider: RuntimeOperatorDecisionProvider,
+    cancel_requested: Callable[[], bool] | None,
+) -> _CodexLiveInitialization:
+    client = session.client
+    initialize_id = client.request(
+        "initialize",
+        {
+            "clientInfo": {"name": "aidd", "version": "0"},
+            "capabilities": {"experimentalApi": True},
+        },
+    )
+    pending_request_id, denied_reason, stop_reason = _drain_until_response(
+        client=client,
+        response_id=initialize_id,
+        deadline=session.deadline,
+        cancel_requested=cancel_requested,
+        supervisor=session.supervisor,
+        repository_root=repository_root,
+        context=context,
+        broker=broker,
+        operator_decision_provider=operator_decision_provider,
+    )
+    if (
+        pending_request_id is not None
+        or denied_reason is not None
+        or stop_reason is not None
+    ):
+        return _CodexLiveInitialization(
+            thread_id=None,
+            early_result=_early_stop_result(
+                client=client,
+                process=session.process,
+                pending_request_id=pending_request_id,
+                denied_reason=denied_reason,
+                transcript_path=session.transcript_path,
+                broker=broker,
+                stop_reason=stop_reason,
+                supervisor=session.supervisor,
+            ),
+        )
+
+    client.notify("initialized")
+    thread_start_params: dict[str, object] = {
+        "cwd": repository_root.as_posix(),
+        "approvalPolicy": _AIDD_CODEX_APPROVAL_POLICY,
+        "approvalsReviewer": "user",
+        "sandbox": "read-only",
+        "ephemeral": True,
+        "serviceName": "aidd",
+        "baseInstructions": "Run the AIDD stage request exactly as provided.",
+    }
+    if session.command.model is not None:
+        thread_start_params["model"] = session.command.model
+    thread_start_id = client.request("thread/start", thread_start_params)
+    pending_request_id, denied_reason, stop_reason = _drain_until_response(
+        client=client,
+        response_id=thread_start_id,
+        deadline=session.deadline,
+        cancel_requested=cancel_requested,
+        supervisor=session.supervisor,
+        repository_root=repository_root,
+        context=context,
+        broker=broker,
+        operator_decision_provider=operator_decision_provider,
+    )
+    if (
+        pending_request_id is not None
+        or denied_reason is not None
+        or stop_reason is not None
+    ):
+        return _CodexLiveInitialization(
+            thread_id=None,
+            early_result=_early_stop_result(
+                client=client,
+                process=session.process,
+                pending_request_id=pending_request_id,
+                denied_reason=denied_reason,
+                transcript_path=session.transcript_path,
+                broker=broker,
+                stop_reason=stop_reason,
+                supervisor=session.supervisor,
+            ),
+        )
+
+    thread_id = _thread_id_from_transcript_response(
+        transcript_path=session.transcript_path,
+        response_id=thread_start_id,
+    )
+    if thread_id is None:
+        _stop_client(supervisor=session.supervisor, client=client)
+        return _CodexLiveInitialization(
+            thread_id=None,
+            early_result=_failed_result(
+                client=client,
+                process=session.process,
+                transcript_path=session.transcript_path,
+                details="codex-live: thread/start did not return a thread id",
+            ),
+        )
+    return _CodexLiveInitialization(thread_id=thread_id, early_result=None)
+
+
 def execute_codex_live_transport(
     *,
     configured_command: str,
@@ -443,125 +628,49 @@ def execute_codex_live_transport(
                 "stdio approval support"
             ),
         )
-
-    spec = build_subprocess_spec(
-        configured_command=command.executable,
+    session = _start_codex_live_session(
+        command=command,
         context=context,
         base_env=base_env,
         repository_root=repository_root,
-        execution_mode=RuntimeExecutionMode.NATIVE,
-        model=command.model,
-        reasoning_effort=command.reasoning_effort,
-    )
-    attempt_path.mkdir(parents=True, exist_ok=True)
-    transcript_path = attempt_path / _CODEX_TRANSCRIPT_FILENAME
-    supervisor = OwnedProcessSupervisor.launch(
-        RuntimeSubprocessSpec(
-            command=(command.executable, "app-server", "--listen", "stdio://"),
-            cwd=repository_root,
-            env=spec.env,
-            stdin_text="",
-        )
-    )
-    process = supervisor.process
-    client = _JsonRpcLineClient(
-        process=process,
-        transcript_path=transcript_path,
-        capture_directory=attempt_path,
+        attempt_path=attempt_path,
         on_stdout=on_stdout,
         on_stderr=on_stderr,
+        timeout_seconds=timeout_seconds,
     )
-    client.start()
-    deadline = None if timeout_seconds is None else time.monotonic() + timeout_seconds
-
-    initialize_id = client.request(
-        "initialize",
-        {
-            "clientInfo": {"name": "aidd", "version": "0"},
-            "capabilities": {"experimentalApi": True},
-        },
-    )
-    pending_request_id, denied_reason, stop_reason = _drain_until_response(
-        client=client,
-        response_id=initialize_id,
-        deadline=deadline,
-        cancel_requested=cancel_requested,
-        supervisor=supervisor,
+    initialization = _initialize_codex_live_session(
+        session=session,
         repository_root=repository_root,
         context=context,
         broker=broker,
         operator_decision_provider=operator_decision_provider,
-    )
-    if (
-        pending_request_id is not None
-        or denied_reason is not None
-        or stop_reason is not None
-    ):
-        return _early_stop_result(
-            client=client,
-            process=process,
-            pending_request_id=pending_request_id,
-            denied_reason=denied_reason,
-            transcript_path=transcript_path,
-            broker=broker,
-            stop_reason=stop_reason,
-            supervisor=supervisor,
-        )
-
-    client.notify("initialized")
-    thread_start_params: dict[str, object] = {
-        "cwd": repository_root.as_posix(),
-        "approvalPolicy": _AIDD_CODEX_APPROVAL_POLICY,
-        "approvalsReviewer": "user",
-        "sandbox": "read-only",
-        "ephemeral": True,
-        "serviceName": "aidd",
-        "baseInstructions": "Run the AIDD stage request exactly as provided.",
-    }
-    if command.model is not None:
-        thread_start_params["model"] = command.model
-    thread_start_id = client.request("thread/start", thread_start_params)
-    pending_request_id, denied_reason, stop_reason = _drain_until_response(
-        client=client,
-        response_id=thread_start_id,
-        deadline=deadline,
         cancel_requested=cancel_requested,
-        supervisor=supervisor,
+    )
+    if initialization.early_result is not None:
+        return initialization.early_result
+    assert initialization.thread_id is not None
+    return _execute_codex_live_turn(
+        session=session,
+        thread_id=initialization.thread_id,
         repository_root=repository_root,
         context=context,
         broker=broker,
         operator_decision_provider=operator_decision_provider,
+        cancel_requested=cancel_requested,
     )
-    if (
-        pending_request_id is not None
-        or denied_reason is not None
-        or stop_reason is not None
-    ):
-        return _early_stop_result(
-            client=client,
-            process=process,
-            pending_request_id=pending_request_id,
-            denied_reason=denied_reason,
-            transcript_path=transcript_path,
-            broker=broker,
-            stop_reason=stop_reason,
-            supervisor=supervisor,
-        )
 
-    thread_id = _thread_id_from_transcript_response(
-        transcript_path=transcript_path,
-        response_id=thread_start_id,
-    )
-    if thread_id is None:
-        _stop_client(supervisor=supervisor, client=client)
-        return _failed_result(
-            client=client,
-            process=process,
-            transcript_path=transcript_path,
-            details="codex-live: thread/start did not return a thread id",
-        )
 
-    turn_start_id = client.request(
+def _execute_codex_live_turn(
+    *,
+    session: _CodexLiveSession,
+    thread_id: str,
+    repository_root: Path,
+    context: CodexCommandContext,
+    broker: RuntimeOperatorBroker,
+    operator_decision_provider: RuntimeOperatorDecisionProvider,
+    cancel_requested: Callable[[], bool] | None,
+) -> LiveTransportResult[CodexExitClassification]:
+    turn_start_id = session.client.request(
         "turn/start",
         {
             "threadId": thread_id,
@@ -569,116 +678,38 @@ def execute_codex_live_transport(
             "approvalPolicy": _AIDD_CODEX_APPROVAL_POLICY,
             "approvalsReviewer": "user",
             "sandboxPolicy": {"type": "readOnly", "networkAccess": False},
-            "input": [{"type": "text", "text": spec.stdin_text or ""}],
+            "input": [{"type": "text", "text": session.spec.stdin_text or ""}],
             **(
-                {"effort": command.reasoning_effort}
-                if command.reasoning_effort is not None
+                {"effort": session.command.reasoning_effort}
+                if session.command.reasoning_effort is not None
                 else {}
             ),
         },
     )
-    completed = False
-    denied_reason = None
-    early_classification = None
-    pending_request_id = None
-    while process.poll() is None and not completed:
-        if cancel_requested is not None and cancel_requested():
-            _stop_client(supervisor=supervisor, client=client)
-            run_result = _run_result(
-                process=process,
-                client=client,
-                stop_reason=CodexExitClassification.CANCELLED,
-            )
-            return LiveTransportResult(
-                run_result=run_result,
-                status=AdapterExecutionStatus.FAILED,
-                details="codex-live: cancelled",
-                events_jsonl_path=transcript_path,
-            )
-        if deadline is not None and time.monotonic() >= deadline:
-            _stop_client(supervisor=supervisor, client=client)
-            run_result = _run_result(
-                process=process,
-                client=client,
-                stop_reason=CodexExitClassification.TIMEOUT,
-            )
-            return LiveTransportResult(
-                run_result=run_result,
-                status=AdapterExecutionStatus.FAILED,
-                details="codex-live: timeout",
-                events_jsonl_path=transcript_path,
-            )
-        message = client.next_message(timeout_seconds=0.1)
-        if client.error is not None:
-            client_error = client.error
-            _stop_client(supervisor=supervisor, client=client)
-            assert client_error is not None
-            return LiveTransportResult(
-                run_result=_captured_run_result(
-                    client=client,
-                    exit_code=None,
-                    exit_classification=CodexExitClassification.PROTOCOL_FAILURE,
-                ),
-                status=AdapterExecutionStatus.FAILED,
-                details=f"codex-live: protocol failure: {client_error}",
-                events_jsonl_path=transcript_path,
-            )
-        if message is None:
-            continue
-        if message.get("id") == turn_start_id and "error" in message:
-            denied_reason = f"codex-live: turn/start failed: {message.get('error')}"
-            early_classification = CodexExitClassification.PROTOCOL_FAILURE
-            break
-        if _message_is_approval_request(message):
-            pending_request_id, denied_reason = _handle_approval_request(
-                message=message,
-                client=client,
-                repository_root=repository_root,
-                context=context,
-                broker=broker,
-                operator_decision_provider=operator_decision_provider,
-            )
-            if pending_request_id is not None or denied_reason is not None:
-                if denied_reason is not None:
-                    early_classification = CodexExitClassification.DENIED
-                break
-        if message.get("method") == "turn/completed":
-            completed = True
-        elif message.get("method") == "thread/status/changed" and _status_is_idle(message):
-            completed = True
+    drained = _drain_codex_live_turn(
+        session=session,
+        turn_start_id=turn_start_id,
+        repository_root=repository_root,
+        context=context,
+        broker=broker,
+        operator_decision_provider=operator_decision_provider,
+        cancel_requested=cancel_requested,
+    )
+    if drained.terminal_result is not None:
+        return drained.terminal_result
 
-    if cancel_requested is not None and cancel_requested():
-        return _early_stop_result(
-            client=client,
-            process=process,
-            pending_request_id=None,
-            denied_reason=None,
-            transcript_path=transcript_path,
-            broker=broker,
-            stop_reason=CodexExitClassification.CANCELLED,
-            supervisor=supervisor,
-        )
-    if pending_request_id is not None or denied_reason is not None:
-        return _early_stop_result(
-            client=client,
-            process=process,
-            pending_request_id=pending_request_id,
-            denied_reason=denied_reason,
-            transcript_path=transcript_path,
-            broker=broker,
-            stop_reason=early_classification,
-            supervisor=supervisor,
-        )
-
-    _stop_client(supervisor=supervisor, client=client)
+    _stop_client(supervisor=session.supervisor, client=session.client)
     run_result = _run_result(
-        process=process,
-        client=client,
-        stop_reason=CodexExitClassification.SUCCESS if completed else None,
+        process=session.process,
+        client=session.client,
+        stop_reason=(
+            CodexExitClassification.SUCCESS if drained.completed else None
+        ),
     )
     status = (
         AdapterExecutionStatus.SUCCEEDED
-        if completed and run_result.exit_classification is CodexExitClassification.SUCCESS
+        if drained.completed
+        and run_result.exit_classification is CodexExitClassification.SUCCESS
         else AdapterExecutionStatus.FAILED
     )
     details = "codex-live: success" if status is AdapterExecutionStatus.SUCCEEDED else (
@@ -688,11 +719,211 @@ def execute_codex_live_transport(
         run_result=run_result,
         status=status,
         details=details,
-        events_jsonl_path=transcript_path,
-        operator_requests_path=broker.requests_path if broker.requests_path.exists() else None,
+        events_jsonl_path=session.transcript_path,
+        operator_requests_path=(
+            broker.requests_path if broker.requests_path.exists() else None
+        ),
         operator_decisions_path=(
             broker.decisions_path if broker.decisions_path.exists() else None
         ),
+    )
+
+
+def _drain_codex_live_turn(
+    *,
+    session: _CodexLiveSession,
+    turn_start_id: int,
+    repository_root: Path,
+    context: CodexCommandContext,
+    broker: RuntimeOperatorBroker,
+    operator_decision_provider: RuntimeOperatorDecisionProvider,
+    cancel_requested: Callable[[], bool] | None,
+) -> _CodexLiveTurnDrain:
+    completed = False
+    denied_reason: str | None = None
+    early_classification: CodexExitClassification | None = None
+    pending_request_id: str | None = None
+    while session.process.poll() is None and not completed:
+        iteration = _poll_codex_live_turn(
+            session=session,
+            turn_start_id=turn_start_id,
+            repository_root=repository_root,
+            context=context,
+            broker=broker,
+            operator_decision_provider=operator_decision_provider,
+            cancel_requested=cancel_requested,
+        )
+        if iteration.terminal_result is not None:
+            return iteration
+        completed = iteration.completed
+        pending_request_id = iteration.pending_request_id
+        denied_reason = iteration.denied_reason
+        early_classification = iteration.early_classification
+        if pending_request_id is not None or denied_reason is not None:
+            break
+
+    if cancel_requested is not None and cancel_requested():
+        terminal_result = _early_stop_result(
+            client=session.client,
+            process=session.process,
+            pending_request_id=None,
+            denied_reason=None,
+            transcript_path=session.transcript_path,
+            broker=broker,
+            stop_reason=CodexExitClassification.CANCELLED,
+            supervisor=session.supervisor,
+        )
+        return _CodexLiveTurnDrain(
+            completed=completed,
+            pending_request_id=None,
+            denied_reason=None,
+            early_classification=CodexExitClassification.CANCELLED,
+            terminal_result=terminal_result,
+        )
+    if pending_request_id is not None or denied_reason is not None:
+        terminal_result = _early_stop_result(
+            client=session.client,
+            process=session.process,
+            pending_request_id=pending_request_id,
+            denied_reason=denied_reason,
+            transcript_path=session.transcript_path,
+            broker=broker,
+            stop_reason=early_classification,
+            supervisor=session.supervisor,
+        )
+        return _CodexLiveTurnDrain(
+            completed=completed,
+            pending_request_id=pending_request_id,
+            denied_reason=denied_reason,
+            early_classification=early_classification,
+            terminal_result=terminal_result,
+        )
+    return _CodexLiveTurnDrain(
+        completed=completed,
+        pending_request_id=pending_request_id,
+        denied_reason=denied_reason,
+        early_classification=early_classification,
+        terminal_result=None,
+    )
+
+
+def _poll_codex_live_turn(
+    *,
+    session: _CodexLiveSession,
+    turn_start_id: int,
+    repository_root: Path,
+    context: CodexCommandContext,
+    broker: RuntimeOperatorBroker,
+    operator_decision_provider: RuntimeOperatorDecisionProvider,
+    cancel_requested: Callable[[], bool] | None,
+) -> _CodexLiveTurnDrain:
+    if cancel_requested is not None and cancel_requested():
+        _stop_client(supervisor=session.supervisor, client=session.client)
+        run_result = _run_result(
+            process=session.process,
+            client=session.client,
+            stop_reason=CodexExitClassification.CANCELLED,
+        )
+        return _CodexLiveTurnDrain(
+            completed=False,
+            pending_request_id=None,
+            denied_reason=None,
+            early_classification=CodexExitClassification.CANCELLED,
+            terminal_result=LiveTransportResult(
+                run_result=run_result,
+                status=AdapterExecutionStatus.FAILED,
+                details="codex-live: cancelled",
+                events_jsonl_path=session.transcript_path,
+            ),
+        )
+    if session.deadline is not None and time.monotonic() >= session.deadline:
+        _stop_client(supervisor=session.supervisor, client=session.client)
+        run_result = _run_result(
+            process=session.process,
+            client=session.client,
+            stop_reason=CodexExitClassification.TIMEOUT,
+        )
+        return _CodexLiveTurnDrain(
+            completed=False,
+            pending_request_id=None,
+            denied_reason=None,
+            early_classification=CodexExitClassification.TIMEOUT,
+            terminal_result=LiveTransportResult(
+                run_result=run_result,
+                status=AdapterExecutionStatus.FAILED,
+                details="codex-live: timeout",
+                events_jsonl_path=session.transcript_path,
+            ),
+        )
+    message = session.client.next_message(timeout_seconds=0.1)
+    if session.client.error is not None:
+        client_error = session.client.error
+        _stop_client(supervisor=session.supervisor, client=session.client)
+        assert client_error is not None
+        return _CodexLiveTurnDrain(
+            completed=False,
+            pending_request_id=None,
+            denied_reason=None,
+            early_classification=CodexExitClassification.PROTOCOL_FAILURE,
+            terminal_result=LiveTransportResult(
+                run_result=_captured_run_result(
+                    client=session.client,
+                    exit_code=None,
+                    exit_classification=CodexExitClassification.PROTOCOL_FAILURE,
+                ),
+                status=AdapterExecutionStatus.FAILED,
+                details=f"codex-live: protocol failure: {client_error}",
+                events_jsonl_path=session.transcript_path,
+            ),
+        )
+    if message is None:
+        return _CodexLiveTurnDrain(
+            completed=False,
+            pending_request_id=None,
+            denied_reason=None,
+            early_classification=None,
+            terminal_result=None,
+        )
+    if message.get("id") == turn_start_id and "error" in message:
+        return _CodexLiveTurnDrain(
+            completed=False,
+            pending_request_id=None,
+            denied_reason=f"codex-live: turn/start failed: {message.get('error')}",
+            early_classification=CodexExitClassification.PROTOCOL_FAILURE,
+            terminal_result=None,
+        )
+    pending_request_id: str | None = None
+    denied_reason: str | None = None
+    if _message_is_approval_request(message):
+        pending_request_id, denied_reason = _handle_approval_request(
+            message=message,
+            client=session.client,
+            repository_root=repository_root,
+            context=context,
+            broker=broker,
+            operator_decision_provider=operator_decision_provider,
+        )
+        if pending_request_id is not None or denied_reason is not None:
+            return _CodexLiveTurnDrain(
+                completed=False,
+                pending_request_id=pending_request_id,
+                denied_reason=denied_reason,
+                early_classification=(
+                    CodexExitClassification.DENIED
+                    if denied_reason is not None
+                    else None
+                ),
+                terminal_result=None,
+            )
+    completed = message.get("method") == "turn/completed" or (
+        message.get("method") == "thread/status/changed" and _status_is_idle(message)
+    )
+    return _CodexLiveTurnDrain(
+        completed=completed,
+        pending_request_id=pending_request_id,
+        denied_reason=denied_reason,
+        early_classification=None,
+        terminal_result=None,
     )
 
 

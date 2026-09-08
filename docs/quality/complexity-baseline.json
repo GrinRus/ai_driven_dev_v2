@@ -4,12 +4,6 @@
   "threshold": "E",
   "entries": [
     {
-      "id": "src/aidd/adapters/codex/live.py::execute_codex_live_transport",
-      "line": 409,
-      "complexity": 42,
-      "grade": "F"
-    },
-    {
       "id": "src/aidd/adapters/qwen/live.py::execute_qwen_live_transport",
       "line": 58,
       "complexity": 42,
