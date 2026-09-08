@@ -1132,6 +1132,32 @@ Dependencies: `W49-E3-S1` → `W49-E3-S2-T1`/`W49-E3-S2-T2` → `W49-E3-S2-T3`.
 Dependencies: `W49-E4-S1-T1` → `W49-E4-S1-T2`; `W49-E4-S1` → `W49-E4-S2-T1` →
 `W49-E4-S2-T2`; the browser security task is independent after the W47 merge.
 
+## Wave 50 — current and retrievable beta acceptance (`planned`)
+
+Goal: produce one exact-candidate decision whose deterministic, browser, install, provider, and
+human evidence is current, immutable, and retrievable.
+
+### Epic W50-E1 — evidence freshness and retention (`planned`)
+
+#### Slice W50-E1-S1 — freshness model (`planned`)
+
+- `W50-E1-S1-T1` (next) Define `current/stale/incompatible/unavailable` from candidate SHA,
+  schema, target pin, and evidence locator.
+  - Output: one typed freshness contract with deterministic precedence and actionable reasons.
+  - Scope: evidence freshness contract and focused deterministic tests; no UI-owned paths.
+  - Verification: an historical bundle on another candidate SHA is `stale`, incompatible schema
+    or target metadata is `incompatible`, missing evidence is `unavailable`, and an exact matching
+    bundle is `current`.
+  - Dependencies: W48 exit gate, W49 assurance ratchets, and a fresh `origin/main`.
+
+- `W50-E1-S1-T2` (planned) Project freshness consistently into reports and the operator read model.
+  - Output: service/report projections preserve freshness state and reason without changing
+    verdict history.
+  - Scope: evidence read model and tests; any UI projection must preserve the merged W47 Focus
+    Canvas hierarchy and remain separate from the neighboring UI checkout.
+  - Verification: service and presentation fixtures expose the same state/reason matrix.
+  - Dependencies: `W50-E1-S1-T1` and the merged W47 UI baseline.
+
 ## Wave 51 — agent development instruction consistency (`planned`)
 
 The maintainer instruction hierarchy, executable workflow checks, runtime document ownership,
