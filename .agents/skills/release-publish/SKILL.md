@@ -69,6 +69,31 @@ uv run --extra dev pytest -q
 Before claiming readiness, confirm `README.md`, `docs/product/user-stories.md`, and
 `docs/architecture/target-architecture.md` still match the code and release claims.
 
+Freeze the exact candidate before collecting acceptance evidence. Build the wheel from the clean
+checkout, then record its identity and the deterministic CI-scenario inventory with the bounded
+candidate helper:
+
+```bash
+uv run python -m scripts.release.candidate_manifest \
+  --project-root . \
+  --wheel dist/<candidate>.whl \
+  --output .aidd/candidate-manifest.json
+```
+
+The helper fails closed on dirty source, missing/empty/non-wheel artifacts, invalid Git identity,
+duplicate or empty verification commands, and an empty or malformed CI-scenario inventory. Keep
+the resulting manifest with the candidate evidence; validate it again before synthesizing a
+readiness decision:
+
+```bash
+uv run python -m scripts.release.candidate_manifest \
+  --validate \
+  --project-root . \
+  --manifest .aidd/candidate-manifest.json
+```
+
+This helper does not publish, create tags, or run provider/live workflows.
+
 ## Release branch and dry-run
 
 Use the project version as the single source of truth:

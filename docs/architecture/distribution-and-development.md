@@ -131,6 +131,13 @@ The release workflow must run deterministic quality checks before publish. Manua
 external eval evidence can be refreshed locally before or after a release branch, but
 it is not a release gate and must remain outside GitHub Actions and the release workflow.
 
+Before release or beta evidence is accepted, the maintainer freezes an exact-candidate manifest
+with `scripts.release.candidate_manifest`. The manifest binds a clean checkout's Git commit and
+tree, package version, wheel SHA-256/size, discovered CI-scenario inventory, and reproducible
+verification commands. Its validator rechecks those identities and fails closed on a dirty
+checkout, missing or changed wheel, changed scenario manifest, or candidate Git mismatch. The
+manifest is evidence metadata only; it does not publish, tag, install, or run provider workflows.
+
 The `pipx` verification lane selects the `pip` backend explicitly so an unrelated standalone
 `uv` executable on the runner cannot silently change `pipx` behavior or impose a second `uv`
 version requirement. Hosted CI and release jobs pin the `uv` executable version explicitly.

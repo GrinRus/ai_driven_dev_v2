@@ -244,6 +244,64 @@ def test_release_preflight_blocks_missing_browser_infrastructure(tmp_path: Path)
     assert check.blocker_kind == "browser-infrastructure"
 
 
+def test_release_preflight_validates_candidate_manifest_when_requested(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    _write_pyproject(tmp_path, "0.1.0a9")
+
+    def runner(argv: Sequence[str], _cwd: Path) -> CommandResult:
+        if tuple(argv[:3]) == ("git", "rev-parse", "--abbrev-ref"):
+            return CommandResult(returncode=0, stdout="release/v0.1.0a9\n")
+        return CommandResult(returncode=0)
+
+    calls: list[tuple[Path, Path]] = []
+
+    def validator(manifest_path: Path, *, project_root: Path, **_kwargs: object) -> None:
+        calls.append((manifest_path, project_root))
+
+    monkeypatch.setattr(_PREFLIGHT, "validate_candidate_manifest", validator)
+    result = run_preflight(
+        project_root=tmp_path,
+        command_runner=runner,
+        binary_resolver=lambda name: f"/usr/local/bin/{name}",
+        pypi_version_exists=lambda _version: False,
+        packaged_ui_browser_probe=_passing_browser_probe,
+        candidate_manifest_path=tmp_path / "candidate-manifest.json",
+    )
+
+    candidate = next(check for check in result.checks if check.name == "candidate-manifest")
+    assert candidate.status == "pass"
+    assert calls == [(tmp_path / "candidate-manifest.json", tmp_path.resolve())]
+
+
+def test_release_preflight_blocks_invalid_candidate_manifest(tmp_path: Path, monkeypatch) -> None:
+    _write_pyproject(tmp_path, "0.1.0a9")
+
+    def runner(argv: Sequence[str], _cwd: Path) -> CommandResult:
+        if tuple(argv[:3]) == ("git", "rev-parse", "--abbrev-ref"):
+            return CommandResult(returncode=0, stdout="release/v0.1.0a9\n")
+        return CommandResult(returncode=0)
+
+    def validator(*_args: object, **_kwargs: object) -> None:
+        raise _PREFLIGHT.CandidateManifestError("candidate source checkout is dirty")
+
+    monkeypatch.setattr(_PREFLIGHT, "validate_candidate_manifest", validator)
+    result = run_preflight(
+        project_root=tmp_path,
+        command_runner=runner,
+        binary_resolver=lambda name: f"/usr/local/bin/{name}",
+        pypi_version_exists=lambda _version: False,
+        packaged_ui_browser_probe=_passing_browser_probe,
+        candidate_manifest_path=tmp_path / "candidate-manifest.json",
+    )
+
+    candidate = next(check for check in result.checks if check.name == "candidate-manifest")
+    assert result.success is False
+    assert candidate.status == "fail"
+    assert candidate.blocker_kind == "candidate-manifest"
+
+
 def test_release_preflight_main_emits_json_for_invalid_project(
     tmp_path: Path,
     capsys,

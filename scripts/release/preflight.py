@@ -15,6 +15,11 @@ from dataclasses import asdict, dataclass
 from pathlib import Path
 from typing import Literal
 
+from scripts.release.candidate_manifest import (
+    CandidateManifestError,
+    validate_candidate_manifest,
+)
+
 PACKAGE_NAME = "ai-driven-dev-v2"
 COMMAND_TIMEOUT_SECONDS = 30.0
 NETWORK_TIMEOUT_SECONDS = 10.0
@@ -75,6 +80,9 @@ def run_preflight(
     binary_resolver: BinaryResolver | None = None,
     pypi_version_exists: PyPIVersionProbe | None = None,
     packaged_ui_browser_probe: BrowserProbe | None = None,
+    candidate_manifest_path: Path | None = None,
+    candidate_wheel_path: Path | None = None,
+    candidate_scenario_root: Path | None = None,
 ) -> PreflightResult:
     root = project_root.resolve()
     runner = command_runner or _run_command
@@ -170,6 +178,31 @@ def run_preflight(
 
     browser_probe = packaged_ui_browser_probe or _run_packaged_ui_browser
     checks.append(_packaged_ui_browser_check(root, probe=browser_probe))
+    if candidate_manifest_path is not None:
+        try:
+            validate_candidate_manifest(
+                candidate_manifest_path,
+                project_root=root,
+                wheel_path=candidate_wheel_path,
+                scenario_root=candidate_scenario_root,
+            )
+        except (CandidateManifestError, OSError, ValueError) as exc:
+            checks.append(
+                PreflightCheck(
+                    name="candidate-manifest",
+                    status="fail",
+                    detail=str(exc),
+                    blocker_kind="candidate-manifest",
+                )
+            )
+        else:
+            checks.append(
+                PreflightCheck(
+                    name="candidate-manifest",
+                    status="pass",
+                    detail=f"validated {candidate_manifest_path}",
+                )
+            )
 
     return PreflightResult(
         version=candidate_version,
@@ -400,6 +433,9 @@ def _parse_args(argv: Sequence[str]) -> argparse.Namespace:
     parser.add_argument("--gh-binary", default=None)
     parser.add_argument("--uv-binary", default=None)
     parser.add_argument("--skip-pypi", action="store_true")
+    parser.add_argument("--candidate-manifest", type=Path, default=None)
+    parser.add_argument("--candidate-wheel", type=Path, default=None)
+    parser.add_argument("--candidate-scenario-root", type=Path, default=None)
     return parser.parse_args(tuple(argv))
 
 
@@ -413,6 +449,9 @@ def main(argv: Sequence[str] | None = None) -> int:
             gh_binary=args.gh_binary,
             uv_binary=args.uv_binary,
             check_pypi=not args.skip_pypi,
+            candidate_manifest_path=args.candidate_manifest,
+            candidate_wheel_path=args.candidate_wheel,
+            candidate_scenario_root=args.candidate_scenario_root,
         )
     except Exception as exc:
         result = PreflightResult(

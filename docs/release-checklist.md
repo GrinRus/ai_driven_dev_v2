@@ -53,6 +53,28 @@ python -m scripts.release.preflight --project-root . --version <version>
 python -m scripts.release.preflight --project-root . --version <version> --gh-binary "${GH_CLI}"
 ```
 
+- [ ] Freeze the exact candidate before accepting release or beta evidence. The manifest records
+  the clean-worktree Git SHA/tree, package version, wheel digest/size, discovered CI scenario
+  inventory, and reproducible verification commands:
+
+```bash
+uv run python -m scripts.release.candidate_manifest \
+  --project-root . \
+  --wheel dist/<candidate>.whl \
+  --output .aidd/candidate-manifest.json
+```
+
+  Keep the manifest with the candidate evidence. Re-run its validator after checkout or artifact
+  changes; dirty source, a missing/tampered wheel, changed scenario manifests, or mismatched Git
+  identity must block the candidate rather than being treated as historical evidence.
+
+```bash
+uv run python -m scripts.release.candidate_manifest \
+  --validate \
+  --project-root . \
+  --manifest .aidd/candidate-manifest.json
+```
+
 - [ ] Source-of-truth audit is current for the release-prep slice:
   `README.md`, `docs/product/user-stories.md`, and
   `docs/architecture/target-architecture.md` match the code and release claims.
