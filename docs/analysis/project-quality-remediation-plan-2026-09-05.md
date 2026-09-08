@@ -155,7 +155,10 @@ analyzes both Python and packaged JavaScript/TypeScript while preserving the exi
 SARIF upload flow; the security configuration test asserts both languages. Full Python,
 adapter, deterministic, critical-coverage, packaged-browser, build, CodeQL, dependency-review,
 and Scorecard checks passed. No static UI, frontend-test, browser-test, or neighboring checkout
-files changed. W49-E4 is complete and the next dependency-ready task is `W50-E1-S1-T1`.
+files changed. W49-E4 is complete. W50-E1-S1-T1 then completed in PR #629 at `71c3779a`:
+the core-only typed freshness contract and focused state matrix passed the full required
+CI/security/browser/build lanes without touching UI-owned paths. The next dependency-ready task
+is `W50-E1-S1-T2`.
 
 ## Parent outcome decomposed
 
