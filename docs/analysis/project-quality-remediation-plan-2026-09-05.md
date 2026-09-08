@@ -142,6 +142,21 @@ tests. The baseline and checker exclude packaged UI/static/frontend/browser path
 neighboring UI checkout remains read-only. Full Python, adapter, deterministic, browser, build,
 and security lanes passed; the queue now promotes `W49-E4-S2-T2` for CI threshold enforcement.
 
+`W49-E4-S2-T2` is complete in PR #626 (`63fa1d7e`). The required `critical-coverage` job executes
+the exact 369-test line/branch command and fails closed on any reviewed-module regression, while
+unlisted modules remain outside the gate. Its first CI run exposed a legitimate OS-specific
+process-group coverage difference (`process_supervisor` on Linux versus the macOS baseline); the
+baseline now records the CI-native Linux metric and the job pins Python 3.13.7. The workflow
+contract, checker regression, all Python matrix lanes, adapter/conformance, deterministic,
+packaged-browser, build, and security checks passed. No runtime or UI-owned files changed.
+
+`W49-E4-S3-T1` is complete in PR #627 (`c165eb5d`). The pinned CodeQL security workflow now
+analyzes both Python and packaged JavaScript/TypeScript while preserving the existing analyze and
+SARIF upload flow; the security configuration test asserts both languages. Full Python,
+adapter, deterministic, critical-coverage, packaged-browser, build, CodeQL, dependency-review,
+and Scorecard checks passed. No static UI, frontend-test, browser-test, or neighboring checkout
+files changed. W49-E4 is complete and the next dependency-ready task is `W50-E1-S1-T1`.
+
 ## Parent outcome decomposed
 
 Parent outcome: close the 2026-09-05 quality-audit findings and produce trustworthy beta-candidate

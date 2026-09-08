@@ -7,7 +7,7 @@ slice, and local task.
 
 ## Next
 
-- `W49-E4-S2-T2` — Add non-decreasing per-module thresholds in one CI job.
+- `W50-E1-S1-T1` — Define evidence freshness states from candidate identity and locator.
 
 ## Soon
 
@@ -57,4 +57,10 @@ slice, and local task.
   scenario-gate modules with exact line/branch counts, source SHA `951e3f8c`, tool versions, and
   a reproducible 369-test command; checker tests and all required CI/security/browser/build lanes
   passed. All remain outside runtime/UI-owned paths; the neighboring UI checkout is read-only.
-  Queue promotion now selects the direct successor `W49-E4-S2-T2`.
+  W49-E4-S2-T2 completed in PR #626 at `63fa1d7e`: the Linux-native 23-module line/branch
+  baseline is enforced by one required CI job, with an explicit Python 3.13.7 interpreter pin and
+  a checker regression fixture; all Python, adapter, deterministic, packaged-browser, build, and
+  security lanes passed after correcting the OS-specific process-group metric. W49-E4-S3-T1
+  completed in PR #627 at `c165eb5d`: pinned CodeQL now analyzes both Python and packaged
+  JavaScript/TypeScript, and the complete CI/security/browser/build set passed. The adjacent UI
+  checkout remains read-only at `4c1356bc`; queue promotion now selects `W50-E1-S1-T1`.

@@ -1050,7 +1050,7 @@ Dependencies: W49-E1-S1/T2/T4/T3 completion → `W49-E3-S1-T1` → `W49-E3-S1-T2
 
 Dependencies: `W49-E3-S1` → `W49-E3-S2-T1`/`W49-E3-S2-T2` → `W49-E3-S2-T3`.
 
-### Epic W49-E4 — assurance ratchets (`planned`)
+### Epic W49-E4 — assurance ratchets (`done`)
 
 #### Slice W49-E4-S1 — formatter baseline (`done`)
 
@@ -1083,7 +1083,7 @@ Dependencies: `W49-E3-S1` → `W49-E3-S2-T1`/`W49-E3-S2-T2` → `W49-E3-S2-T3`.
     tests, all Python matrix lanes, deterministic/conformance/browser/build lanes, and security
     checks passed. No runtime or UI-owned paths changed.
 
-#### Slice W49-E4-S2 — critical-module coverage (`planned`)
+#### Slice W49-E4-S2 — critical-module coverage (`done`)
 
 - `W49-E4-S2-T1` (done) Record line/branch coverage for lifecycle, evidence, adapters, and
   scenario gates.
@@ -1099,16 +1099,23 @@ Dependencies: `W49-E3-S1` → `W49-E3-S2-T1`/`W49-E3-S2-T2` → `W49-E3-S2-T3`.
     focused regression tests pass, as do all Python, adapter, deterministic, browser, build, and
     security lanes. No UI-owned paths changed.
 
-- `W49-E4-S2-T2` (next) Add non-decreasing per-module thresholds in one CI job.
+- `W49-E4-S2-T2` (done) Add non-decreasing per-module thresholds in one CI job.
   - Output: critical-module coverage cannot regress below its reviewed baseline in CI.
   - Scope: CI coverage gate and regression fixtures; no runtime or UI-owned paths.
   - Verification: a synthetic critical-module regression fails while unrelated global coverage
     changes do not block the gate.
   - Dependencies: `W49-E4-S2-T1`.
+  - Completion evidence: PR #626 merged to `origin/main` at `63fa1d7e`; the required CI job runs
+    the exact 369-test line/branch command and fails closed on any reviewed-module regression,
+    while unlisted modules remain outside the gate. A Linux-specific process-group coverage
+    difference was identified on the first CI run and corrected by recording the CI-native metric
+    and pinning the baseline interpreter to Python 3.13.7. The workflow contract, checker
+    regression, full Python matrix, adapter, deterministic, packaged-browser, build, and security
+    lanes passed. No runtime or UI-owned paths changed.
 
-#### Slice W49-E4-S3 — browser JavaScript security analysis (`planned`)
+#### Slice W49-E4-S3 — browser JavaScript security analysis (`done`)
 
-- `W49-E4-S3-T1` (planned) Add JavaScript/TypeScript CodeQL analysis for packaged frontend source.
+- `W49-E4-S3-T1` (done) Add JavaScript/TypeScript CodeQL analysis for packaged frontend source.
   - Output: the security workflow uploads both Python and packaged-frontend analysis results.
   - Scope: security workflow configuration only; do not edit `src/aidd/cli/static/**`,
     `tests/frontend/**`, UI browser tests, or the neighboring UI checkout.
@@ -1116,9 +1123,40 @@ Dependencies: `W49-E3-S1` → `W49-E3-S2-T1`/`W49-E3-S2-T2` → `W49-E3-S2-T3`.
     Python CodeQL results remain available.
   - Dependencies: W47 Focus Canvas merge, a fresh `origin/main`, and a read-only comparison with
     the neighboring UI refactor.
+  - Completion evidence: PR #627 merged to `origin/main` at `c165eb5d`; the pinned CodeQL
+    initialization now analyzes both `python` and `javascript-typescript`, with the existing
+    analyze/upload flow retained. The security workflow, Python 3.12–3.14 matrix, deterministic,
+    adapter, critical-coverage, packaged-browser, and build lanes passed. No static UI,
+    frontend-test, browser-test, or neighboring UI checkout files changed.
 
 Dependencies: `W49-E4-S1-T1` → `W49-E4-S1-T2`; `W49-E4-S1` → `W49-E4-S2-T1` →
 `W49-E4-S2-T2`; the browser security task is independent after the W47 merge.
+
+## Wave 50 — current and retrievable beta acceptance (`planned`)
+
+Goal: produce one exact-candidate decision whose deterministic, browser, install, provider, and
+human evidence is current, immutable, and retrievable.
+
+### Epic W50-E1 — evidence freshness and retention (`planned`)
+
+#### Slice W50-E1-S1 — freshness model (`planned`)
+
+- `W50-E1-S1-T1` (next) Define `current/stale/incompatible/unavailable` from candidate SHA,
+  schema, target pin, and evidence locator.
+  - Output: one typed freshness contract with deterministic precedence and actionable reasons.
+  - Scope: evidence freshness contract and focused deterministic tests; no UI-owned paths.
+  - Verification: an historical bundle on another candidate SHA is `stale`, incompatible schema
+    or target metadata is `incompatible`, missing evidence is `unavailable`, and an exact matching
+    bundle is `current`.
+  - Dependencies: W48 exit gate, W49 assurance ratchets, and a fresh `origin/main`.
+
+- `W50-E1-S1-T2` (planned) Project freshness consistently into reports and the operator read model.
+  - Output: service/report projections preserve freshness state and reason without changing
+    verdict history.
+  - Scope: evidence read model and tests; any UI projection must preserve the merged W47 Focus
+    Canvas hierarchy and remain separate from the neighboring UI checkout.
+  - Verification: service and presentation fixtures expose the same state/reason matrix.
+  - Dependencies: `W50-E1-S1-T1` and the merged W47 UI baseline.
 
 ## Wave 51 — agent development instruction consistency (`planned`)
 
