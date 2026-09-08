@@ -508,9 +508,14 @@ passed after a transient packaged-browser rerun. `W49-E2-S2-T3` then completed i
 state matrix (1106 tests) passed with Ruff, strict mypy, and required CI/security lanes after two
 transient packaged-browser reruns. `W49-E2-S3-T1` then completed in PR #608 at `cb37d4eb`: Radon
 6.0.1 baseline data and a CI/Make ratchet now reject new or worsened E/F production blocks, with
-synthetic regression coverage and the full local/required CI lanes green. The next dependency-ready
-task is `W49-E2-S3-T2`, decomposing `build_task_flow_checkpoint` while keeping the adjacent UI
-checkout read-only.
+synthetic regression coverage and the full local/required CI lanes green. `W49-E2-S3-T2` then
+completed in PR #610 at `cfcfe33c`: `build_task_flow_checkpoint` now delegates to typed
+path/state, finding, and payload helpers, with a grade-A facade and grade-C-or-lower extracted
+blocks. The focused checkpoint suite (9 tests), full harness suite (479 tests), Ruff, strict mypy,
+complexity ratchet, and all required CI/security/browser/build lanes passed; checkpoint fixtures
+remain byte-equivalent and no runtime or UI-owned files changed. The next dependency-ready task is
+`W49-E2-S3-T3`, decomposing `_validate_scenario_contract` while keeping the adjacent UI checkout
+read-only and treating the merged W47 UI surface as a compatibility boundary.
 
 ### Slice W49-E2-S2 — post-Focus-Canvas service-boundary stabilization
 
