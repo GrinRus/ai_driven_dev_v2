@@ -1230,15 +1230,23 @@ human evidence is current, immutable, and retrievable.
     Focused/full local checks and all required CI/security/browser/build lanes passed. No UI-owned
     paths changed; the neighboring checkout remains read-only at `4c1356bc`.
 
-- `W50-E2-S1-T3` (next) Run the installed deterministic happy/failure/repair/interview/task/
+- `W50-E2-S1-T3` (done) Run the installed deterministic happy/failure/repair/interview/task/
   project-set/bundle matrix.
   - Output: exact wheel passes every typed assertion with self-contained bundles.
   - Scope: installed candidate evaluation and deterministic evidence; no UI implementation changes.
   - Verification: every declared scenario runs against the frozen wheel and retains provenance,
     terminal, repair, intervention, project-set, and bundle-integrity assertions.
   - Dependencies: `W50-E2-S1-T2` and W48 bundle v2.
+  - Completion evidence: PR #640 merged to `origin/main` at `add04c05`; the runner installs the
+    exact manifest-bound wheel in an isolated environment, executes every CI-marked deterministic
+    scenario through the installed `aidd` CLI, preserves stdout/stderr digests and bundle paths,
+    and emits a hashed fail-closed matrix. Focused tests (4), full Python matrix, critical
+    coverage, adapter conformance, deterministic scenarios, packaged-browser, build, CodeQL,
+    Scorecard, and dependency-review lanes passed. A review regression fixed manifest-relative
+    scenario paths before merge. No UI-owned paths changed; the neighboring checkout remains
+    read-only at `4c1356bc`.
 
-- `W50-E2-S1-T4` (soon) Verify `pipx` and `uv tool` clean install and upgrade for the exact wheel.
+- `W50-E2-S1-T4` (next) Verify `pipx` and `uv tool` clean install and upgrade for the exact wheel.
   - Output: installed package version and wheel digest match the candidate manifest.
   - Scope: isolated package-channel verification; no UI implementation changes.
   - Verification: runner-owned `pipx` and `uv tool` environments execute the installed `aidd`

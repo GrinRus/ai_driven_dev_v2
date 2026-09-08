@@ -188,7 +188,15 @@ Scorecard results to the exact candidate manifest identity and rejects incomplet
 evidence. Focused/full local checks and all required CI/security/browser/build lanes passed with
 no UI-owned changes; the neighboring checkout remains read-only at `4c1356bc`. The next
 dependency-ready task is `W50-E2-S1-T3`, the installed deterministic candidate matrix; T4 is its
-direct package-channel successor.
+direct package-channel successor. `W50-E2-S1-T3` completed in PR #640 at `add04c05`: an isolated
+environment installs the exact manifest-bound wheel, every CI-marked deterministic scenario runs
+through the installed `aidd` CLI, and a hashed fail-closed matrix preserves bundle paths and
+stdout/stderr digests. Focused tests (4), full Python matrix, critical coverage, adapter
+conformance, deterministic scenarios, packaged-browser, build, CodeQL, Scorecard, and
+dependency-review lanes passed. A review regression fixed manifest-relative scenario paths before
+merge. No UI-owned paths changed; the neighboring checkout remains read-only at `4c1356bc`. The
+next dependency-ready task is `W50-E2-S1-T4`, exact `pipx` and `uv tool` clean install/upgrade
+verification for the same wheel.
 
 ## Parent outcome decomposed
 

@@ -7,11 +7,9 @@ slice, and local task.
 
 ## Next
 
-- `W50-E2-S1-T3` — Run the installed deterministic happy/failure/repair/interview/task/project-set/bundle matrix.
+- `W50-E2-S1-T4` — Verify `pipx` and `uv tool` clean install and upgrade for the exact wheel.
 
 ## Soon
-
-- `W50-E2-S1-T4` — Verify `pipx` and `uv tool` clean install and upgrade for the exact wheel.
 
 ## Parking lot
 
@@ -60,4 +58,11 @@ slice, and local task.
   dependency-review, and Scorecard results to the exact candidate manifest identity, rejecting
   incomplete or mismatched evidence. Focused/full local checks and all required lanes passed; no
   UI-owned paths changed and neighbor remains at `4c1356bc`.
-- Queue promotion now selects `W50-E2-S1-T3`; its direct successor `W50-E2-S1-T4` is in `Soon`.
+- `W50-E2-S1-T3` completed in PR #640 at `add04c05`: the exact manifest-bound wheel installs in
+  an isolated environment, every CI-marked deterministic scenario runs through installed `aidd`,
+  and a hashed fail-closed matrix preserves bundle paths plus stdout/stderr digests. Focused
+  tests and all required CI/security/browser/build lanes passed. A review regression fixed
+  manifest-relative scenario paths before merge. No UI-owned paths changed; neighbor remains at
+  `4c1356bc`.
+- Queue promotion now selects `W50-E2-S1-T4`; `Soon` is empty until its successor is explicitly
+  accepted in the canonical roadmap.
