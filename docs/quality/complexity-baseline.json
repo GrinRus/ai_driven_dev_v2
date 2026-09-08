@@ -58,12 +58,6 @@
       "grade": "E"
     },
     {
-      "id": "src/aidd/core/stage_runner.py::_run_single_stage_orchestration",
-      "line": 767,
-      "complexity": 37,
-      "grade": "E"
-    },
-    {
       "id": "src/aidd/core/stage_terminal.py::render_stage_result_from_lifecycle_state",
       "line": 261,
       "complexity": 32,
