@@ -138,6 +138,14 @@ verification commands. Its validator rechecks those identities and fails closed 
 checkout, missing or changed wheel, changed scenario manifest, or candidate Git mismatch. The
 manifest is evidence metadata only; it does not publish, tag, install, or run provider workflows.
 
+After the candidate's required gates finish, maintainers may capture their immutable results with
+`scripts.release.candidate_readiness`. The readiness record binds every required Python matrix,
+coverage, conformance, deterministic, packaged-browser, build, CodeQL, dependency-review, and
+Scorecard result to the candidate manifest digest and full source commit/tree. Missing, duplicate,
+non-passing, mismatched, or non-HTTPS result references fail closed; the record's canonical
+SHA-256 covers the complete gate inventory. This helper only validates supplied CI evidence and
+writes a local record; it does not query GitHub, publish, install, or alter workflow state.
+
 The `pipx` verification lane selects the `pip` backend explicitly so an unrelated standalone
 `uv` executable on the runner cannot silently change `pipx` behavior or impose a second `uv`
 version requirement. Hosted CI and release jobs pin the `uv` executable version explicitly.

@@ -75,6 +75,23 @@ uv run python -m scripts.release.candidate_manifest \
   --manifest .aidd/candidate-manifest.json
 ```
 
+- [ ] Capture a hashed readiness record from the required CI/security/build results. Supply one
+  HTTPS result URL, result id, exact source commit, and `pass` status for each required lane:
+  `lint-type-test:3.12`, `lint-type-test:3.13`, `lint-type-test:3.14`, `critical-coverage`,
+  `adapter-conformance`, `deterministic-scenarios`, `packaged-ui-browser`, `build`, `codeql`,
+  `dependency-review`, and `scorecard`. The helper is read-only with respect to GitHub and release
+  state and fails closed on missing, duplicate, failed, or mismatched evidence:
+
+```bash
+uv run python -m scripts.release.candidate_readiness \
+  --manifest .aidd/candidate-manifest.json \
+  --evidence .aidd/candidate-gates.json \
+  --output .aidd/candidate-readiness.json
+```
+
+  Keep both JSON records with the candidate evidence. The readiness digest is valid only for the
+  exact manifest digest/source revision and does not replace provider, human, or install evidence.
+
 - [ ] Source-of-truth audit is current for the release-prep slice:
   `README.md`, `docs/product/user-stories.md`, and
   `docs/architecture/target-architecture.md` match the code and release claims.
