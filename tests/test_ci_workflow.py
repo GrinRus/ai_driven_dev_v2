@@ -53,3 +53,13 @@ def test_ci_lint_lane_checks_byte_stable_traceability_view() -> None:
     )
 
     assert "scripts/generate_user_story_traceability.py --check" in traceability_step["run"]
+
+
+def test_ci_lint_lane_enforces_complexity_baseline() -> None:
+    lint_job = _ci_workflow()["jobs"]["lint-type-test"]
+
+    complexity_step = next(
+        step for step in lint_job["steps"] if step.get("name") == "Complexity baseline"
+    )
+
+    assert "scripts/check_complexity.py" in complexity_step["run"]

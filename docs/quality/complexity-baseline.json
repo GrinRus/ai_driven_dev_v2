@@ -1,0 +1,139 @@
+{
+  "schema_version": 1,
+  "scope": "src/**/*.py",
+  "threshold": "E",
+  "entries": [
+    {
+      "id": "src/aidd/adapters/codex/live.py::execute_codex_live_transport",
+      "line": 409,
+      "complexity": 42,
+      "grade": "F"
+    },
+    {
+      "id": "src/aidd/adapters/qwen/live.py::execute_qwen_live_transport",
+      "line": 58,
+      "complexity": 42,
+      "grade": "F"
+    },
+    {
+      "id": "src/aidd/adapters/subprocess_streaming.py::run_streamed_subprocess",
+      "line": 105,
+      "complexity": 38,
+      "grade": "E"
+    },
+    {
+      "id": "src/aidd/core/operator_repair_extension.py::resolve_operator_repair_extension_preview",
+      "line": 132,
+      "complexity": 40,
+      "grade": "E"
+    },
+    {
+      "id": "src/aidd/core/operator_timeline.py::resolve_operator_run_history",
+      "line": 877,
+      "complexity": 36,
+      "grade": "E"
+    },
+    {
+      "id": "src/aidd/core/repair.py::_repair_hint_for_finding",
+      "line": 922,
+      "complexity": 35,
+      "grade": "E"
+    },
+    {
+      "id": "src/aidd/core/run_store.py::load_run_manifest",
+      "line": 365,
+      "complexity": 32,
+      "grade": "E"
+    },
+    {
+      "id": "src/aidd/core/run_store.py::create_run_manifest",
+      "line": 1008,
+      "complexity": 33,
+      "grade": "E"
+    },
+    {
+      "id": "src/aidd/core/runtime_operator.py::assess_runtime_operator_request",
+      "line": 376,
+      "complexity": 32,
+      "grade": "E"
+    },
+    {
+      "id": "src/aidd/core/stage_runner.py::_run_single_stage_orchestration",
+      "line": 767,
+      "complexity": 37,
+      "grade": "E"
+    },
+    {
+      "id": "src/aidd/core/stage_terminal.py::render_stage_result_from_lifecycle_state",
+      "line": 261,
+      "complexity": 32,
+      "grade": "E"
+    },
+    {
+      "id": "src/aidd/evals/repair_extension_scenarios.py::_run_one",
+      "line": 382,
+      "complexity": 32,
+      "grade": "E"
+    },
+    {
+      "id": "src/aidd/evals/repository_changes.py::classify_live_workspace_changes",
+      "line": 485,
+      "complexity": 37,
+      "grade": "E"
+    },
+    {
+      "id": "src/aidd/harness/live_e2e_black_box_frontend.py::frontend_probe_semantic_failure",
+      "line": 197,
+      "complexity": 50,
+      "grade": "F"
+    },
+    {
+      "id": "src/aidd/harness/live_e2e_black_box_frontend.py::frontend_operator_surface_checks",
+      "line": 319,
+      "complexity": 32,
+      "grade": "E"
+    },
+    {
+      "id": "src/aidd/harness/live_e2e_black_box_orchestration.py::_run_frontend_checkpoint",
+      "line": 4506,
+      "complexity": 36,
+      "grade": "E"
+    },
+    {
+      "id": "src/aidd/harness/live_e2e_black_box_orchestration.py::_run_stage_and_inspect",
+      "line": 6396,
+      "complexity": 49,
+      "grade": "F"
+    },
+    {
+      "id": "src/aidd/harness/live_e2e_black_box_steps.py::_run_black_box_command",
+      "line": 75,
+      "complexity": 43,
+      "grade": "F"
+    },
+    {
+      "id": "src/aidd/harness/scenarios.py::_validate_scenario_contract",
+      "line": 511,
+      "complexity": 50,
+      "grade": "F"
+    },
+    {
+      "id": "src/aidd/harness/task_flow_checkpoint.py::build_task_flow_checkpoint",
+      "line": 250,
+      "complexity": 78,
+      "grade": "F"
+    },
+    {
+      "id": "src/aidd/validators/cross_document_rules/qa_upstream.py::validate_qa_upstream",
+      "line": 44,
+      "complexity": 36,
+      "grade": "E"
+    },
+    {
+      "id": "src/aidd/validators/cross_document_rules/tasklist_plan.py::validate_tasklist_plan",
+      "line": 256,
+      "complexity": 37,
+      "grade": "E"
+    }
+  ]
+}
