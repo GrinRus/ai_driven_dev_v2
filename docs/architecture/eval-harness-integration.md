@@ -238,6 +238,15 @@ the freshness classifier: the archive digest protects the retained bytes, while 
 target pin, and evidence schema allow the reader to decide whether those bytes are current for a
 candidate. Archive export and read-back verification remain a separate task.
 
+The W50 archive exporter writes a deterministic, uncompressed POSIX tar containing a sanitized
+manifest and the non-redacted bundle files. It writes the retention record to a sibling
+`.retention.json` sidecar only after the archive has been completely written. The read-back path
+requires that sidecar (or an explicitly supplied record), verifies archive size and SHA-256 before
+opening tar members, rejects symlinks, traversal, duplicate or non-regular members, and then
+checks every member against the inner manifest and its provenance/redaction fields. Extraction is
+performed only after verification and refuses existing targets; deleting the mutable `.aidd/`
+source therefore does not affect the retained archive.
+
 ## 8. Log analysis requirements
 
 Log analysis is mandatory because logs often reveal adapter or install-path failures before graders do.
