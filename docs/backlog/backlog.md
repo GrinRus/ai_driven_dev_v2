@@ -7,7 +7,7 @@ slice, and local task.
 
 ## Next
 
-- `W49-E2-S2-T2` — Extract HTTP payload codecs/controller dispatch.
+- `W49-E2-S3-T1` — Add a reviewed complexity baseline and no-new-E/F ratchet.
 
 ## Soon
 
@@ -53,4 +53,15 @@ slice, and local task.
   completed in PR #603 and is present on `origin/main` at `058331b3`; the UI job registry/lifecycle
   now has one canonical server-side owner, with two-project lifecycle isolation and the full 341
   test CLI suite green. No static UI, frontend tests, or neighboring UI checkout files changed.
-  The next dependency-ready task is `W49-E2-S2-T2` for HTTP payload codecs/controller dispatch.
+  `W49-E2-S2-T2` completed in PR #605 and is present on `origin/main` at `0c5af159`; existing
+  `ui_http` codecs and `ui_routing` dispatch are composed by `aidd.cli.ui_transport`, with success,
+  validation, not-found, explicit-failure, and two-project endpoint contracts covered. Focused and
+  full CLI suites (10 and 345 tests), planning/traceability/CI tests (52), Ruff, strict mypy, and
+  required CI/security lanes passed after one transient packaged-browser rerun. No static UI,
+  frontend tests, or neighboring UI checkout files changed. The next dependency-ready task is
+  `W49-E2-S2-T3` for ordered dashboard next-action rules. `W49-E2-S2-T3` completed in PR #606
+  and is present on `origin/main` at `2e4c42b3`; typed priority rules and the dashboard state
+  matrix preserve the `OperatorNextAction` contract, with 1106 core tests, Ruff, strict mypy,
+  and required CI/security lanes green after two transient packaged-browser reruns. No static UI,
+  frontend tests, or neighboring UI checkout files changed. The next dependency-ready task is
+  `W49-E2-S3-T1` for the complexity baseline and no-new-E/F ratchet.
