@@ -69,7 +69,7 @@ def test_ci_critical_coverage_lane_enforces_reviewed_module_baseline() -> None:
         for step in coverage_job["steps"]
         if step.get("uses", "").startswith("actions/setup-python")
     )
-    assert setup_python["with"]["python-version"] == "3.13"
+    assert setup_python["with"]["python-version"] == "3.13.7"
 
     measure_step = next(
         step
