@@ -7,9 +7,11 @@ slice, and local task.
 
 ## Next
 
-- `W50-E2-S1-T2` — Run full static/unit/integration/browser/security/build gates on the frozen candidate.
+- `W50-E2-S1-T3` — Run the installed deterministic happy/failure/repair/interview/task/project-set/bundle matrix.
 
 ## Soon
+
+- `W50-E2-S1-T4` — Verify `pipx` and `uv tool` clean install and upgrade for the exact wheel.
 
 ## Parking lot
 
@@ -53,5 +55,9 @@ slice, and local task.
   candidate/release tests, full `make check`, Python matrix, critical coverage, adapter,
   deterministic, packaged-browser, build, and security lanes passed. No UI-owned paths changed;
   neighbor remains at `4c1356bc`.
-- Queue promotion now selects `W50-E2-S1-T2`; `Soon` is empty until a direct successor is added
-  to the canonical roadmap.
+- `W50-E2-S1-T2` completed in PR #638 at `1abd1291`: the hashed readiness contract binds all
+  required Python, coverage, conformance, deterministic, packaged-browser, build, CodeQL,
+  dependency-review, and Scorecard results to the exact candidate manifest identity, rejecting
+  incomplete or mismatched evidence. Focused/full local checks and all required lanes passed; no
+  UI-owned paths changed and neighbor remains at `4c1356bc`.
+- Queue promotion now selects `W50-E2-S1-T3`; its direct successor `W50-E2-S1-T4` is in `Soon`.

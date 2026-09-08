@@ -181,7 +181,14 @@ scenarios, packaged-browser, build, CodeQL, Scorecard, and dependency-review lan
 feature and docs remain outside `src/aidd/cli/static/**`, `tests/frontend/**`, and
 `browser_tests/**`; the neighboring checkout stayed read-only at `4c1356bc`. The next
 dependency-ready task is `W50-E2-S1-T2`, which must record fail-closed full-gate readiness for
-this exact candidate before provider or human acceptance evidence is counted.
+this exact candidate before provider or human acceptance evidence is counted. `W50-E2-S1-T2`
+completed in PR #638 at `1abd1291`: the hashed readiness contract binds all required Python,
+coverage, conformance, deterministic, packaged-browser, build, CodeQL, dependency-review, and
+Scorecard results to the exact candidate manifest identity and rejects incomplete or mismatched
+evidence. Focused/full local checks and all required CI/security/browser/build lanes passed with
+no UI-owned changes; the neighboring checkout remains read-only at `4c1356bc`. The next
+dependency-ready task is `W50-E2-S1-T3`, the installed deterministic candidate matrix; T4 is its
+direct package-channel successor.
 
 ## Parent outcome decomposed
 
