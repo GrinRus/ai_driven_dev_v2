@@ -112,12 +112,6 @@
       "grade": "F"
     },
     {
-      "id": "src/aidd/harness/scenarios.py::_validate_scenario_contract",
-      "line": 511,
-      "complexity": 50,
-      "grade": "F"
-    },
-    {
       "id": "src/aidd/validators/cross_document_rules/qa_upstream.py::validate_qa_upstream",
       "line": 44,
       "complexity": 36,

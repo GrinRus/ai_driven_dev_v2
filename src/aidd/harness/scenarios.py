@@ -508,19 +508,14 @@ def _require_choice(*, payload: dict[str, Any], key: str, supported: set[str]) -
     return value
 
 
-def _validate_scenario_contract(
+def _validate_scenario_basics(
     *,
     path: Path,
     scenario_class: str,
     feature_size: str,
     automation_lane: str,
     canonical_runtime: str,
-    repo: ScenarioRepoSource,
     run: ScenarioRunConfig,
-    feature_source: ScenarioFeatureSource | None,
-    live_flow: ScenarioLiveFlowConfig | None,
-    live_matrix_role: str | None,
-    raw: dict[str, Any],
 ) -> None:
     if run.stage_start is None or run.stage_end is None:
         raise ScenarioManifestError(
@@ -554,134 +549,183 @@ def _validate_scenario_contract(
             "cannot use `automation_lane: ci`."
         )
 
-    if is_live:
-        if repo.revision is None:
-            raise ScenarioManifestError(
-                "Live scenario manifests must pin `repo.revision` for maintained "
-                "black-box evidence."
-            )
-        if live_matrix_role is None:
-            raise ScenarioManifestError(
-                "Live scenario manifests must declare `live_matrix_role`."
-            )
-        if live_matrix_role == "flow-regression" and feature_size != "small":
-            raise ScenarioManifestError(
-                "Live scenario manifests with `live_matrix_role: flow-regression` "
-                "must declare `feature_size: small`."
-            )
-        if live_matrix_role == "product-evaluation" and feature_size not in {
-            "medium",
-            "large",
-            "xlarge",
-        }:
-            raise ScenarioManifestError(
-                "Live scenario manifests with `live_matrix_role: product-evaluation` "
-                "must declare `feature_size: medium`, `feature_size: large`, or "
-                "`feature_size: xlarge`."
-            )
-        if "workflow_bundle" in raw:
-            raise ScenarioManifestError(
-                "Live scenario manifests must not declare "
-                "`workflow_bundle`; live evidence bundles are evaluator-owned artifacts."
-            )
-        unsupported_live_runtimes = sorted(set(run.runtime_targets) - _LIVE_RUNTIME_IDS)
-        if unsupported_live_runtimes:
-            allowed = ", ".join(sorted(_LIVE_RUNTIME_IDS))
-            raise ScenarioManifestError(
-                "Live scenario manifests may only target supported live runtimes "
-                f"({allowed}); unsupported live runtime target(s): "
-                + ", ".join(unsupported_live_runtimes)
-                + "."
-            )
-        if canonical_runtime not in _LIVE_RUNTIME_IDS:
-            allowed = ", ".join(sorted(_LIVE_RUNTIME_IDS))
-            raise ScenarioManifestError(
-                "Live scenario manifests must use a supported live canonical runtime "
-                f"({allowed})."
-            )
-        if automation_lane != "manual":
-            raise ScenarioManifestError(
-                "Live scenario manifests must declare `automation_lane: manual`."
-            )
-        if run.stage_start != STAGES[0] or run.stage_end != STAGES[-1]:
-            raise ScenarioManifestError(
-                "Live scenario manifests must declare explicit full-flow stage scope "
-                "`idea -> qa`."
-            )
-        if feature_source is None:
-            raise ScenarioManifestError(
-                f"Live scenario manifest missing required key: feature_source ({path.as_posix()})."
-            )
-        if feature_source.mode != "authored-task-pool":
-            raise ScenarioManifestError(
-                "Live scenario manifests must use `feature_source.mode: authored-task-pool`."
-            )
-        for index, task in enumerate(feature_source.tasks):
-            if any(
-                "/stages/qa/output/" in command.replace("\\", "/")
-                for command in task.verification
-            ):
-                raise ScenarioManifestError(
-                    "Live authored task verification must not require future QA "
-                    f"artifacts (`feature_source.tasks[{index}].verification`). "
-                    "Keep post-QA artifact checks in top-level `verify.commands`."
-                )
-        if "quality" in raw:
-            raise ScenarioManifestError(
-                "Live scenario manifests must not declare `quality`; live E2E "
-                "execution bundles are separate from the manual post-run "
-                "`quality-report.md`."
-            )
-        if live_flow is None:
-            raise ScenarioManifestError(
-                f"Live scenario manifest missing required key: live_flow ({path.as_posix()})."
-            )
-        if live_flow.frontend_checkpoints is not True:
-            raise ScenarioManifestError(
-                "Live scenario manifest black-box checkpoint contract mismatch: "
-                "`live_flow.frontend_checkpoints` must be true so live E2E inspects "
-                "the public `aidd ui` surface and UI/API endpoints after each stage."
-            )
-        expects_interview = scenario_class == "live-full-flow-interview"
-        if live_flow.answer_policy != "agent-decides":
-            raise ScenarioManifestError(
-                "Live scenario manifest black-box answer contract mismatch: "
-                "`live_flow.answer_policy` must be `agent-decides` so any live "
-                "scenario can block on questions and resume after launching "
-                "operator-agent answers."
-            )
-        if run.interview_required is not expects_interview:
-            expected_value = "true" if expects_interview else "false"
-            raise ScenarioManifestError(
-                "Live scenario manifest interview contract mismatch: "
-                f"`interview.required` must be {expected_value} for "
-                f"`scenario_class: {scenario_class}`."
-            )
-        for index, task in enumerate(feature_source.tasks):
-            if expects_interview and not task.interview:
-                raise ScenarioManifestError(
-                    "Live interview scenario authored tasks must include "
-                    f"`feature_source.tasks[{index}].interview` guidance."
-                )
-            if live_matrix_role == "product-evaluation":
-                task_key = f"feature_source.tasks[{index}]"
-                if task.visible_request is None:
-                    raise ScenarioManifestError(
-                        "Product-evaluation live authored tasks must include "
-                        f"`{task_key}.visible_request`."
-                    )
-                if task.audit_rubric is None:
-                    raise ScenarioManifestError(
-                        "Product-evaluation live authored tasks must include "
-                        f"`{task_key}.audit_rubric`."
-                    )
-                if not task.complexity_axes:
-                    raise ScenarioManifestError(
-                        "Product-evaluation live authored tasks must include "
-                        f"`{task_key}.complexity_axes`."
-                    )
-        return
 
+def _validate_live_repository_contract(
+    *,
+    repo: ScenarioRepoSource,
+    feature_size: str,
+    live_matrix_role: str | None,
+    raw: dict[str, Any],
+) -> None:
+    if repo.revision is None:
+        raise ScenarioManifestError(
+            "Live scenario manifests must pin `repo.revision` for maintained black-box evidence."
+        )
+    if live_matrix_role is None:
+        raise ScenarioManifestError("Live scenario manifests must declare `live_matrix_role`.")
+    if live_matrix_role == "flow-regression" and feature_size != "small":
+        raise ScenarioManifestError(
+            "Live scenario manifests with `live_matrix_role: flow-regression` "
+            "must declare `feature_size: small`."
+        )
+    if live_matrix_role == "product-evaluation" and feature_size not in {
+        "medium",
+        "large",
+        "xlarge",
+    }:
+        raise ScenarioManifestError(
+            "Live scenario manifests with `live_matrix_role: product-evaluation` "
+            "must declare `feature_size: medium`, `feature_size: large`, or "
+            "`feature_size: xlarge`."
+        )
+    if "workflow_bundle" in raw:
+        raise ScenarioManifestError(
+            "Live scenario manifests must not declare "
+            "`workflow_bundle`; live evidence bundles are evaluator-owned artifacts."
+        )
+
+
+def _validate_live_runtime_contract(
+    *,
+    automation_lane: str,
+    canonical_runtime: str,
+    run: ScenarioRunConfig,
+) -> None:
+    unsupported_live_runtimes = sorted(set(run.runtime_targets) - _LIVE_RUNTIME_IDS)
+    if unsupported_live_runtimes:
+        allowed = ", ".join(sorted(_LIVE_RUNTIME_IDS))
+        raise ScenarioManifestError(
+            "Live scenario manifests may only target supported live runtimes "
+            f"({allowed}); unsupported live runtime target(s): "
+            + ", ".join(unsupported_live_runtimes)
+            + "."
+        )
+    if canonical_runtime not in _LIVE_RUNTIME_IDS:
+        allowed = ", ".join(sorted(_LIVE_RUNTIME_IDS))
+        raise ScenarioManifestError(
+            f"Live scenario manifests must use a supported live canonical runtime ({allowed})."
+        )
+    if automation_lane != "manual":
+        raise ScenarioManifestError(
+            "Live scenario manifests must declare `automation_lane: manual`."
+        )
+    if run.stage_start != STAGES[0] or run.stage_end != STAGES[-1]:
+        raise ScenarioManifestError(
+            "Live scenario manifests must declare explicit full-flow stage scope `idea -> qa`."
+        )
+
+
+def _require_live_feature_source(
+    *,
+    path: Path,
+    feature_source: ScenarioFeatureSource | None,
+) -> ScenarioFeatureSource:
+    if feature_source is None:
+        raise ScenarioManifestError(
+            f"Live scenario manifest missing required key: feature_source ({path.as_posix()})."
+        )
+    if feature_source.mode != "authored-task-pool":
+        raise ScenarioManifestError(
+            "Live scenario manifests must use `feature_source.mode: authored-task-pool`."
+        )
+    return feature_source
+
+
+def _validate_live_task_verification_contract(
+    *,
+    feature_source: ScenarioFeatureSource,
+) -> None:
+    for index, task in enumerate(feature_source.tasks):
+        if any("/stages/qa/output/" in command.replace("\\", "/") for command in task.verification):
+            raise ScenarioManifestError(
+                "Live authored task verification must not require future QA "
+                f"artifacts (`feature_source.tasks[{index}].verification`). "
+                "Keep post-QA artifact checks in top-level `verify.commands`."
+            )
+
+
+def _validate_live_flow_contract(
+    *,
+    path: Path,
+    scenario_class: str,
+    live_flow: ScenarioLiveFlowConfig | None,
+    raw: dict[str, Any],
+    run: ScenarioRunConfig,
+) -> bool:
+    if "quality" in raw:
+        raise ScenarioManifestError(
+            "Live scenario manifests must not declare `quality`; live E2E "
+            "execution bundles are separate from the manual post-run "
+            "`quality-report.md`."
+        )
+    if live_flow is None:
+        raise ScenarioManifestError(
+            f"Live scenario manifest missing required key: live_flow ({path.as_posix()})."
+        )
+    if live_flow.frontend_checkpoints is not True:
+        raise ScenarioManifestError(
+            "Live scenario manifest black-box checkpoint contract mismatch: "
+            "`live_flow.frontend_checkpoints` must be true so live E2E inspects "
+            "the public `aidd ui` surface and UI/API endpoints after each stage."
+        )
+    expects_interview = scenario_class == "live-full-flow-interview"
+    if live_flow.answer_policy != "agent-decides":
+        raise ScenarioManifestError(
+            "Live scenario manifest black-box answer contract mismatch: "
+            "`live_flow.answer_policy` must be `agent-decides` so any live "
+            "scenario can block on questions and resume after launching "
+            "operator-agent answers."
+        )
+    if run.interview_required is not expects_interview:
+        expected_value = "true" if expects_interview else "false"
+        raise ScenarioManifestError(
+            "Live scenario manifest interview contract mismatch: "
+            f"`interview.required` must be {expected_value} for "
+            f"`scenario_class: {scenario_class}`."
+        )
+    return expects_interview
+
+
+def _validate_live_task_metadata_contract(
+    *,
+    feature_source: ScenarioFeatureSource,
+    expects_interview: bool,
+    live_matrix_role: str | None,
+) -> None:
+    for index, task in enumerate(feature_source.tasks):
+        if expects_interview and not task.interview:
+            raise ScenarioManifestError(
+                "Live interview scenario authored tasks must include "
+                f"`feature_source.tasks[{index}].interview` guidance."
+            )
+        if live_matrix_role == "product-evaluation":
+            task_key = f"feature_source.tasks[{index}]"
+            if task.visible_request is None:
+                raise ScenarioManifestError(
+                    "Product-evaluation live authored tasks must include "
+                    f"`{task_key}.visible_request`."
+                )
+            if task.audit_rubric is None:
+                raise ScenarioManifestError(
+                    "Product-evaluation live authored tasks must include "
+                    f"`{task_key}.audit_rubric`."
+                )
+            if not task.complexity_axes:
+                raise ScenarioManifestError(
+                    "Product-evaluation live authored tasks must include "
+                    f"`{task_key}.complexity_axes`."
+                )
+
+
+def _validate_deterministic_contract(
+    *,
+    scenario_class: str,
+    run: ScenarioRunConfig,
+    feature_source: ScenarioFeatureSource | None,
+    live_flow: ScenarioLiveFlowConfig | None,
+    live_matrix_role: str | None,
+    raw: dict[str, Any],
+) -> None:
     if feature_source is None:
         raise ScenarioManifestError(
             "Deterministic scenario manifests must declare a `feature_source` block."
@@ -713,6 +757,68 @@ def _validate_scenario_contract(
         raise ScenarioManifestError(
             "Deterministic stage scenarios must declare the same start and end stage."
         )
+
+
+def _validate_scenario_contract(
+    *,
+    path: Path,
+    scenario_class: str,
+    feature_size: str,
+    automation_lane: str,
+    canonical_runtime: str,
+    repo: ScenarioRepoSource,
+    run: ScenarioRunConfig,
+    feature_source: ScenarioFeatureSource | None,
+    live_flow: ScenarioLiveFlowConfig | None,
+    live_matrix_role: str | None,
+    raw: dict[str, Any],
+) -> None:
+    _validate_scenario_basics(
+        path=path,
+        scenario_class=scenario_class,
+        feature_size=feature_size,
+        automation_lane=automation_lane,
+        canonical_runtime=canonical_runtime,
+        run=run,
+    )
+    if scenario_class in _LIVE_SCENARIO_CLASSES:
+        _validate_live_repository_contract(
+            repo=repo,
+            feature_size=feature_size,
+            live_matrix_role=live_matrix_role,
+            raw=raw,
+        )
+        _validate_live_runtime_contract(
+            automation_lane=automation_lane,
+            canonical_runtime=canonical_runtime,
+            run=run,
+        )
+        live_source = _require_live_feature_source(
+            path=path,
+            feature_source=feature_source,
+        )
+        _validate_live_task_verification_contract(feature_source=live_source)
+        expects_interview = _validate_live_flow_contract(
+            path=path,
+            scenario_class=scenario_class,
+            live_flow=live_flow,
+            raw=raw,
+            run=run,
+        )
+        _validate_live_task_metadata_contract(
+            feature_source=live_source,
+            expects_interview=expects_interview,
+            live_matrix_role=live_matrix_role,
+        )
+        return
+    _validate_deterministic_contract(
+        scenario_class=scenario_class,
+        run=run,
+        feature_source=feature_source,
+        live_flow=live_flow,
+        live_matrix_role=live_matrix_role,
+        raw=raw,
+    )
 
 
 def load_scenario(
