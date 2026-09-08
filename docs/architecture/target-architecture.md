@@ -281,6 +281,12 @@ reason so reports and the operator frontend can project the same state without m
 history. The freshness result itself uses schema version `1`; the evidence document's own
 `evidence_schema_version` remains an independent compatibility check.
 
+External retention of a bundle uses the schema-1 `EvidenceArchiveRetention` contract. Its locator,
+archive SHA-256, positive byte size, source revision, target pin, evidence schema, and explicit
+credential/provider-payload/target-path redaction declarations are all required before the archive can be
+considered retrievable; missing metadata fails closed. The contract protects archive provenance
+but does not perform export or byte verification.
+
 Completed-flow handoff must preserve the same ownership model. When a run reaches a terminal
 state after `qa`, the completed run is immutable evidence. Any next action creates or prepares a
 separate unit:

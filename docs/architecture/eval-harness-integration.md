@@ -217,6 +217,27 @@ the evaluator bundle ID.
 This module defines and validates the contract; raw evidence materialization and atomic
 sealing remain separate responsibilities of the follow-on bundle tasks.
 
+### 7.2 Immutable archive-retention contract
+
+When a bundle must survive cleanup of an ignored `.aidd/` workspace, its external retention
+record uses `aidd.harness.evidence_archive_contract` schema version `1`. The record is metadata
+only; it does not copy, upload, or verify archive bytes. An exporter must persist all of these
+fields before publishing a locator:
+
+- an absolute filesystem path or URI locator that does not point into a mutable `.aidd` tree;
+- the archive SHA-256 digest and positive byte size;
+- the candidate/source Git revision and the prepared target pin;
+- the evidence document schema version used by the bundle; and
+- a redaction declaration whose policy version is supported and explicitly confirms that
+  credentials and provider payloads were removed and target paths were redacted, with
+  normalized relative paths for any redacted files.
+
+Missing or malformed integrity, provenance, locator, or redaction metadata is rejected rather
+than treated as an unverified archive. The retention contract is deliberately independent from
+the freshness classifier: the archive digest protects the retained bytes, while source revision,
+target pin, and evidence schema allow the reader to decide whether those bytes are current for a
+candidate. Archive export and read-back verification remain a separate task.
+
 ## 8. Log analysis requirements
 
 Log analysis is mandatory because logs often reveal adapter or install-path failures before graders do.
