@@ -7,8 +7,6 @@ slice, and local task.
 
 ## Next
 
-- `W50-E2-S1-T4` — Verify `pipx` and `uv tool` clean install and upgrade for the exact wheel.
-
 ## Soon
 
 ## Parking lot
@@ -64,5 +62,12 @@ slice, and local task.
   tests and all required CI/security/browser/build lanes passed. A review regression fixed
   manifest-relative scenario paths before merge. No UI-owned paths changed; neighbor remains at
   `4c1356bc`.
-- Queue promotion now selects `W50-E2-S1-T4`; `Soon` is empty until its successor is explicitly
-  accepted in the canonical roadmap.
+- `W50-E2-S1-T4` completed in PR #642 at `c9127799`: the exact candidate wheel is clean-installed
+  and replaced through both `pipx` and `uv tool`, with installed version, doctor, and PEP 610
+  wheel-hash checks captured in a canonical fail-closed report. Focused release/docs/planning
+  tests (98) and all required CI/security/browser/build lanes passed; one unrelated UI-baseline
+  browser HTTP-400 flake was cleared by rerun. No UI-owned paths changed; neighbor remains at
+  `4c1356bc`.
+- W50-E2/S1 is complete and the local queue is intentionally empty. W50-E3 provider/human
+  acceptance is not promoted as a new local task; reuse the existing parked acceptance IDs only
+  when the required provider credentials and eligible participants/environments are available.

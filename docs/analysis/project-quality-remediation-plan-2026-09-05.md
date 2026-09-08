@@ -198,6 +198,17 @@ merge. No UI-owned paths changed; the neighboring checkout remains read-only at 
 next dependency-ready task is `W50-E2-S1-T4`, exact `pipx` and `uv tool` clean install/upgrade
 verification for the same wheel.
 
+`W50-E2-S1-T4` completed in PR #642 at `c9127799`: the exact candidate wheel is clean-installed
+and replaced through both `pipx` and `uv tool` in temporary runner-owned directories; installed
+`aidd --version`, `aidd doctor`, and the PEP 610 `direct_url.json` wheel hash are checked for both
+operations, and a canonical fail-closed report is retained. Focused release/docs/planning tests
+(98), full Python matrix, critical coverage, adapter conformance, deterministic scenarios,
+packaged-browser (successful rerun after one unrelated UI-baseline HTTP-400 flake), build, CodeQL,
+Scorecard, and dependency-review lanes passed. No UI-owned paths changed; the neighboring checkout
+remains read-only at `4c1356bc`. W50-E2/S1 is now complete. No dependency-ready local task is
+promoted: the remaining W50 provider/human acceptance must reuse existing parked tasks and awaits
+external credentials, provider availability, and eligible participant environments.
+
 ## Parent outcome decomposed
 
 Parent outcome: close the 2026-09-05 quality-audit findings and produce trustworthy beta-candidate
