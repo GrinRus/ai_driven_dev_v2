@@ -117,6 +117,15 @@ applying one isolated Python mechanical baseline after the hotspot tail; the pla
 equivalence and keeps `src/aidd/cli/static/**`, `tests/frontend/**`, UI browser tests, and the
 neighboring checkout out of scope.
 
+`W49-E4-S1-T1` is complete in PR #619 (`d8b0f379`). The reviewed formatter scope covers tracked
+Python under `src/`, `scripts/`, `tests/`, and `harness/`; `browser_tests` is explicitly excluded
+to avoid crossing the neighboring UI refactor boundary. Ruff formatted 268 files mechanically,
+AST equivalence held, and formatter/lint, strict mypy, complexity, focused planning/CI tests, and
+the complete required CI/security/browser/build lanes passed. The local full suite reached 2106
+passes before a runtime-based manual stop; CI executed the full default suite. No static UI,
+frontend-test, browser-test, or neighboring-checkout files changed. The queue now promotes the
+direct successor `W49-E4-S1-T2`, adding the clean-tree formatter check to CI.
+
 ## Parent outcome decomposed
 
 Parent outcome: close the 2026-09-05 quality-audit findings and produce trustworthy beta-candidate
