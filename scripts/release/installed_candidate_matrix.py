@@ -274,6 +274,9 @@ def run_installed_candidate_matrix(
         item.scenario_id for item in manifest.scenario_inventory
     ):
         raise CandidateMatrixError("Scenario inventory changed after candidate validation.")
+    manifest_paths = {
+        item.scenario_id: item.path for item in manifest.scenario_inventory
+    }
     workspace = workspace_root.resolve(strict=False)
     _assert_empty_workspace(workspace)
     with tempfile.TemporaryDirectory(prefix="aidd-candidate-venv-") as temporary:
@@ -340,7 +343,7 @@ def run_installed_candidate_matrix(
             executions.append(
                 ScenarioExecution(
                     scenario_id=scenario.scenario_id,
-                    path=scenario.path.as_posix(),
+                    path=manifest_paths[scenario.scenario_id],
                     return_code=completed.returncode,
                     bundle_path=bundle_path,
                     stdout_sha256=_digest_output(completed.stdout),

@@ -115,3 +115,19 @@ def test_failed_or_missing_bundle_is_not_ready_and_tampering_is_rejected(tmp_pat
     output.write_text(json.dumps(payload), encoding="utf-8")
     with pytest.raises(CandidateMatrixError, match="success"):
         read_installed_candidate_matrix(output, manifest_path=manifest_path)
+
+
+def test_build_requires_manifest_path_shape(tmp_path: Path) -> None:
+    _root, wheel, manifest, manifest_path = _candidate(tmp_path)
+    bundle = tmp_path / "bundle"
+    execution = _execution(manifest, bundle)
+    absolute_path_execution = ScenarioExecution(
+        scenario_id=execution.scenario_id,
+        path=(manifest_path.parent / execution.path).resolve().as_posix(),
+        return_code=execution.return_code,
+        bundle_path=execution.bundle_path,
+        stdout_sha256=execution.stdout_sha256,
+        stderr_sha256=execution.stderr_sha256,
+    )
+    with pytest.raises(CandidateMatrixError, match="path mismatch"):
+        build_installed_candidate_matrix(manifest_path, wheel, (absolute_path_execution,))
