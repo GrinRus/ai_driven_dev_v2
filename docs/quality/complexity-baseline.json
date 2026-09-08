@@ -4,12 +4,6 @@
   "threshold": "E",
   "entries": [
     {
-      "id": "src/aidd/adapters/qwen/live.py::execute_qwen_live_transport",
-      "line": 58,
-      "complexity": 42,
-      "grade": "F"
-    },
-    {
       "id": "src/aidd/adapters/subprocess_streaming.py::run_streamed_subprocess",
       "line": 105,
       "complexity": 38,
