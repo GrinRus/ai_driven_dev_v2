@@ -94,6 +94,41 @@ def test_critical_coverage_detects_line_and_branch_regressions(tmp_path: Path) -
     assert main(["--baseline", str(baseline_path), "--report", str(report_path)]) == 1
 
 
+def test_critical_coverage_ignores_unlisted_modules(tmp_path: Path) -> None:
+    baseline_path = tmp_path / "baseline.json"
+    report_path = tmp_path / "coverage.json"
+    _write_baseline(
+        baseline_path,
+        entries=[
+            {
+                "path": "src/aidd/core/example.py",
+                "category": "lifecycle",
+                "statements": 10,
+                "covered_statements": 8,
+                "branches": 10,
+                "covered_branches": 7,
+                "line_percent": 80.0,
+                "branch_percent": 70.0,
+            }
+        ],
+    )
+    _write_report(report_path)
+    report = json.loads(report_path.read_text(encoding="utf-8"))
+    report["files"]["src/aidd/unrelated.py"] = {
+        "summary": {
+            "num_statements": 100,
+            "covered_lines": 0,
+            "num_branches": 100,
+            "covered_branches": 0,
+            "percent_covered": 0.0,
+            "percent_branches_covered": 0.0,
+        }
+    }
+    report_path.write_text(json.dumps(report), encoding="utf-8")
+
+    assert check_critical_coverage(baseline_path=baseline_path, report_path=report_path) == ()
+
+
 def test_critical_coverage_rejects_ui_owned_baseline_entry(tmp_path: Path) -> None:
     baseline_path = tmp_path / "baseline.json"
     _write_baseline(

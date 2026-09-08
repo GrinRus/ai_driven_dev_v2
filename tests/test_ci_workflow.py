@@ -21,6 +21,7 @@ def test_ci_build_is_a_required_upstream_result_gate() -> None:
     assert build_job["if"] == "${{ always() && !cancelled() }}"
     assert build_job["needs"] == [
         "lint-type-test",
+        "critical-coverage",
         "adapter-conformance",
         "deterministic-scenarios",
         "packaged-ui-browser",
@@ -31,6 +32,7 @@ def test_ci_build_is_a_required_upstream_result_gate() -> None:
     )
     assert gate_step["env"] == {
         "ADAPTER_CONFORMANCE_RESULT": "${{ needs.adapter-conformance.result }}",
+        "CRITICAL_COVERAGE_RESULT": "${{ needs.critical-coverage.result }}",
         "DETERMINISTIC_SCENARIOS_RESULT": "${{ needs.deterministic-scenarios.result }}",
         "LINT_TYPE_TEST_RESULT": "${{ needs.lint-type-test.result }}",
         "PACKAGED_UI_BROWSER_RESULT": "${{ needs.packaged-ui-browser.result }}",
@@ -55,6 +57,36 @@ def test_ci_lint_lane_enforces_formatter_baseline() -> None:
     format_step = next(step for step in lint_job["steps"] if step.get("name") == "Format")
 
     assert "ruff format --check ." in format_step["run"]
+
+
+def test_ci_critical_coverage_lane_enforces_reviewed_module_baseline() -> None:
+    workflow = _ci_workflow()
+    coverage_job = workflow["jobs"]["critical-coverage"]
+
+    assert coverage_job["needs"] == "lint-type-test"
+    setup_python = next(
+        step
+        for step in coverage_job["steps"]
+        if step.get("uses", "").startswith("actions/setup-python")
+    )
+    assert setup_python["with"]["python-version"] == "3.13.7"
+
+    measure_step = next(
+        step
+        for step in coverage_job["steps"]
+        if step.get("name") == "Measure critical module coverage"
+    )
+    assert "--cov-branch" in measure_step["run"]
+    assert "--cov-report=json:coverage-critical.json" in measure_step["run"]
+    assert "tests/core/test_task_attempt_lifecycle.py" in measure_step["run"]
+
+    enforce_step = next(
+        step
+        for step in coverage_job["steps"]
+        if step.get("name") == "Enforce critical coverage baseline"
+    )
+    assert "scripts/check_critical_coverage.py" in enforce_step["run"]
+    assert "critical-coverage" in workflow["jobs"]["build"]["needs"]
 
 
 def test_ci_lint_lane_enforces_complexity_baseline() -> None:

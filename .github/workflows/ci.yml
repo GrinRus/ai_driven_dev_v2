@@ -83,6 +83,87 @@ jobs:
           set -euo pipefail
           uv run --extra dev pytest -q
 
+  critical-coverage:
+    needs: lint-type-test
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+
+      - uses: astral-sh/setup-uv@11f9893b081a58869d3b5fccaea48c9e9e46f990 # v8.3.2
+        with:
+          version: "0.12.8"
+          enable-cache: true
+
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6.3.0
+        with:
+          # Keep the measurement interpreter aligned with the reviewed baseline.
+          python-version: "3.13.7"
+
+      - name: Install dependencies
+        run: |
+          set -euo pipefail
+          uv sync --locked --extra dev
+
+      - name: Measure critical module coverage
+        run: |
+          set -euo pipefail
+          uv run --extra dev pytest -q \
+            tests/core/test_attempt_lineage.py \
+            tests/core/test_task_attempt_lifecycle.py \
+            tests/core/test_stage_runner.py \
+            tests/core/test_stage_terminal.py \
+            tests/core/test_implementation_service.py \
+            tests/core/test_implementation_finalization.py \
+            tests/core/test_task_attempt_evidence.py \
+            tests/core/test_task_repository_evidence.py \
+            tests/core/test_run_accountability.py \
+            tests/adapters/test_lifecycle_characterization.py \
+            tests/adapters/test_process_supervisor.py \
+            tests/adapters/test_runtime_evidence.py \
+            tests/adapters/test_runtime_execution.py \
+            tests/adapters/test_runtime_log_capture.py \
+            tests/adapters/test_subprocess_streaming.py \
+            tests/adapters/test_codex_live_transport.py \
+            tests/adapters/test_qwen_live_transport.py \
+            tests/harness/test_ci_scenario_lane.py \
+            tests/harness/test_ci_scenario_fixtures.py \
+            tests/harness/test_adapter_conformance_lane.py \
+            tests/harness/test_conformance_matrix.py \
+            tests/harness/test_deterministic_eval.py \
+            tests/evals/test_failure_causes.py \
+            tests/evals/test_verdicts.py \
+            --cov=aidd.core.attempt_lineage \
+            --cov=aidd.core.implementation_finalization \
+            --cov=aidd.core.implementation_service \
+            --cov=aidd.core.run_accountability \
+            --cov=aidd.core.run_provenance \
+            --cov=aidd.core.stage_runner \
+            --cov=aidd.core.stage_terminal \
+            --cov=aidd.core.task_attempt_evidence \
+            --cov=aidd.core.task_attempt_lifecycle \
+            --cov=aidd.core.task_repository_evidence \
+            --cov=aidd.adapters.codex.live \
+            --cov=aidd.adapters.process_supervisor \
+            --cov=aidd.adapters.qwen.live \
+            --cov=aidd.adapters.runtime_evidence \
+            --cov=aidd.adapters.runtime_execution \
+            --cov=aidd.adapters.runtime_log_capture \
+            --cov=aidd.adapters.subprocess_streaming \
+            --cov=aidd.harness.adapter_conformance \
+            --cov=aidd.harness.ci_scenario_lane \
+            --cov=aidd.harness.conformance_matrix \
+            --cov=aidd.harness.deterministic_eval \
+            --cov=aidd.evals.failure_causes \
+            --cov=aidd.evals.verdicts \
+            --cov-branch \
+            --cov-report=json:coverage-critical.json
+
+      - name: Enforce critical coverage baseline
+        run: |
+          set -euo pipefail
+          uv run --extra dev python scripts/check_critical_coverage.py
+
   adapter-conformance:
     needs: lint-type-test
     runs-on: ubuntu-latest
@@ -181,6 +262,7 @@ jobs:
     if: ${{ always() && !cancelled() }}
     needs:
       - lint-type-test
+      - critical-coverage
       - adapter-conformance
       - deterministic-scenarios
       - packaged-ui-browser
@@ -203,6 +285,7 @@ jobs:
           ADAPTER_CONFORMANCE_RESULT: ${{ needs.adapter-conformance.result }}
           DETERMINISTIC_SCENARIOS_RESULT: ${{ needs.deterministic-scenarios.result }}
           LINT_TYPE_TEST_RESULT: ${{ needs.lint-type-test.result }}
+          CRITICAL_COVERAGE_RESULT: ${{ needs.critical-coverage.result }}
           PACKAGED_UI_BROWSER_RESULT: ${{ needs.packaged-ui-browser.result }}
         run: |
           set -euo pipefail
@@ -210,6 +293,7 @@ jobs:
           failed=0
           for lane in \
             "lint-type-test:${LINT_TYPE_TEST_RESULT}" \
+            "critical-coverage:${CRITICAL_COVERAGE_RESULT}" \
             "adapter-conformance:${ADAPTER_CONFORMANCE_RESULT}" \
             "deterministic-scenarios:${DETERMINISTIC_SCENARIOS_RESULT}" \
             "packaged-ui-browser:${PACKAGED_UI_BROWSER_RESULT}"; do

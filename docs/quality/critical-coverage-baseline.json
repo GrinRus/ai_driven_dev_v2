@@ -1,6 +1,7 @@
 {
   "schema_version": 1,
   "revision": "951e3f8ce033533eb7bc0d4163cc3c3afa8e8e97",
+  "platform": "linux",
   "python": "3.13.7",
   "coverage": "7.13.5",
   "command": [
@@ -96,10 +97,10 @@
       "path": "src/aidd/adapters/process_supervisor.py",
       "category": "adapters",
       "statements": 83,
-      "covered_statements": 69,
+      "covered_statements": 67,
       "branches": 20,
       "covered_branches": 16,
-      "line_percent": 82.524272,
+      "line_percent": 80.582524,
       "branch_percent": 80.0
     },
     {
