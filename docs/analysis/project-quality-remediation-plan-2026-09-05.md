@@ -168,8 +168,20 @@ locator, archive digest/size, source revision, target pin, evidence schema, and 
 redaction declarations, with fail-closed tests and all required lanes green. W50-E1-S2-T2 completed
 in PR #634 at `7dab7e0d`: deterministic sanitized tar export, retention sidecar, and verified
 read/extract survive mutable `.aidd` deletion and reject tampering. No UI-owned paths changed and
-the neighboring checkout remains read-only at `4c1356bc`. The next dependency-ready task is
-`W50-E2-S1-T1`.
+the neighboring checkout remains read-only at `4c1356bc`.
+
+### Execution reconciliation — 2026-09-09
+
+`W50-E2-S1-T1` completed in PR #636 at `88ac8a1d`. The runtime-agnostic candidate manifest now
+freezes a clean-worktree Git SHA/tree, package version, wheel digest/size, CI scenario inventory,
+and reproducible verification commands; fail-closed validation rejects source, version, artifact,
+or scenario drift and non-wheel candidates. Focused candidate/release tests, full local `make
+check` (3272 passed), Python 3.12–3.14, critical coverage, adapter conformance, deterministic
+scenarios, packaged-browser, build, CodeQL, Scorecard, and dependency-review lanes passed. The
+feature and docs remain outside `src/aidd/cli/static/**`, `tests/frontend/**`, and
+`browser_tests/**`; the neighboring checkout stayed read-only at `4c1356bc`. The next
+dependency-ready task is `W50-E2-S1-T2`, which must record fail-closed full-gate readiness for
+this exact candidate before provider or human acceptance evidence is counted.
 
 ## Parent outcome decomposed
 
