@@ -375,7 +375,8 @@ Current W20 implementation status:
 - `GET /api/dashboard?stage=<stage>&run_id=<run_id?>` returns an
   `OperatorDashboardView` containing project/work-item/run summary, canonical
   stage rail, selected-stage cockpit data, next action, blockers, evidence refs,
-  recent activity, and recent artifacts derived from existing `.aidd/` state;
+  recent activity, recent artifacts, and the shared evidence-freshness state/reason
+  derived from existing `.aidd/` state;
 - `GET /api/project-home` returns the integrated Project Home read model for the selected
   local project root, `.aidd` root, discovered work items, latest run summaries, stage
   progress, blockers, terminal state, and project-set roots;
@@ -385,6 +386,9 @@ Current W20 implementation status:
   blocking questions are surfaced before runnable-stage suggestions, failed
   validation points to validation inspection, and only existing artifact files are
   shown in Recent Artifacts;
+- freshness is a read-only projection of candidate SHA, evidence schema, target pin, and
+  locator provenance. Missing identity is `unavailable`; `stale` and `incompatible` evidence
+  never changes the stored verdict history or silently qualifies a terminal handoff;
 - artifact read models classify documents and logs as canonical stage documents, runtime
   inputs, validation evidence, runtime evidence, project evidence, or lineage evidence,
   while preserving the existing artifact-index and workspace-relative path safety model;

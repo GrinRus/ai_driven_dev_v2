@@ -24,6 +24,9 @@ def resolve_operator_dashboard_view(
     selected_runner: str | None = None,
     active_job: bool = False,
     max_repair_attempts: int = 2,
+    candidate_sha: str | None = None,
+    candidate_target_pin: str | None = None,
+    supported_evidence_schema_versions: tuple[int, ...] = (1,),
 ) -> OperatorDashboardView:
     validate_operator_stage(active_stage)
     evidence = collect_operator_dashboard_evidence(
@@ -36,6 +39,9 @@ def resolve_operator_dashboard_view(
         selected_runner=selected_runner,
         active_job=active_job,
         max_repair_attempts=max_repair_attempts,
+        candidate_sha=candidate_sha,
+        candidate_target_pin=candidate_target_pin,
+        supported_evidence_schema_versions=supported_evidence_schema_versions,
     )
     return reduce_operator_dashboard_evidence(evidence)
 

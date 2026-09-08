@@ -6,6 +6,10 @@ from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from pathlib import Path
 
+from aidd.core.evidence_freshness import (
+    EvidenceFreshness,
+    unavailable_evidence_freshness,
+)
 from aidd.core.workspace import WORKSPACE_REPORTS_DIRNAME, WORKSPACE_REPORTS_EVALS_DIRNAME
 from aidd.evals.failure_causes import FailureCause
 from aidd.evals.log_analysis import FailureTaxonomyCategory
@@ -32,6 +36,7 @@ class ScenarioSummaryRow:
     duration_seconds: float
     failure_boundary: FailureTaxonomyCategory
     failure_cause: FailureCause = field(default_factory=FailureCause.none)
+    freshness: EvidenceFreshness = field(default_factory=unavailable_evidence_freshness)
 
 
 @dataclass(frozen=True, slots=True)
@@ -62,6 +67,7 @@ def build_scenario_summary_row(
     verdict: ScenarioVerdict,
     duration_seconds: float,
     failure_boundary: str = "none",
+    freshness: EvidenceFreshness | None = None,
 ) -> ScenarioSummaryRow:
     if not math.isfinite(duration_seconds):
         raise ValueError("duration_seconds must be finite.")
@@ -75,6 +81,7 @@ def build_scenario_summary_row(
         duration_seconds=duration_seconds,
         failure_boundary=_normalize_failure_boundary(failure_boundary),
         failure_cause=verdict.failure_cause,
+        freshness=verdict.freshness if freshness is None else freshness,
     )
 
 
@@ -122,6 +129,12 @@ def _format_duration(duration_seconds: float) -> str:
 
 def _default_created_at_utc() -> str:
     return datetime.now(UTC).replace(microsecond=0).isoformat().replace("+00:00", "Z")
+
+
+def _markdown_cell(value: str) -> str:
+    """Keep freshness reasons inside a single Markdown table cell."""
+
+    return value.replace("|", "\\|").replace("\n", " ").strip()
 
 
 def render_eval_summary_markdown(
@@ -179,8 +192,8 @@ def render_eval_summary_markdown(
         lines.extend(
             (
                 "| Scenario | Run | Runtime | Verdict | Duration (s) | Failure Boundary | "
-                "Failure Cause |",
-                "| --- | --- | --- | --- | ---: | --- | --- |",
+                "Failure Cause | Freshness | Freshness Reason |",
+                "| --- | --- | --- | --- | ---: | --- | --- | --- | --- |",
             )
         )
         for scenario_row in normalized_scenario_rows:
@@ -192,7 +205,9 @@ def render_eval_summary_markdown(
                 f"`{scenario_row.verdict_status}` | "
                 f"{_format_duration(scenario_row.duration_seconds)} | "
                 f"`{scenario_row.failure_boundary}` | "
-                f"`{scenario_row.failure_cause.category.value}` |"
+                f"`{scenario_row.failure_cause.category.value}` | "
+                f"`{scenario_row.freshness.status.value}` | "
+                f"{_markdown_cell(scenario_row.freshness.reason)} |"
             )
 
     lines.append("")

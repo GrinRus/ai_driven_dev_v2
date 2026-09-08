@@ -6,6 +6,12 @@ from contextvars import ContextVar
 from pathlib import Path
 from typing import cast
 
+from aidd.core.evidence_freshness import (
+    EvidenceFreshness,
+    EvidenceFreshnessRequest,
+    classify_evidence_freshness,
+    unavailable_evidence_freshness,
+)
 from aidd.core.operator_frontend_artifacts import (
     _artifact_size,
     operator_artifact_category,
@@ -53,6 +59,7 @@ from aidd.core.operator_intervention import (
     list_operator_intervention_requests,
 )
 from aidd.core.remediation import RemediationStaleStage, load_remediation_status
+from aidd.core.resources import resolve_resource_layout
 from aidd.core.run_inspection import (
     RunMetadataSummary,
     StageResultSummary,
@@ -61,12 +68,14 @@ from aidd.core.run_inspection import (
     resolve_stage_result_summary,
 )
 from aidd.core.run_lookup import latest_attempt_number
+from aidd.core.run_provenance import resolve_repository_git_sha, resolve_resource_revision
 from aidd.core.run_store import (
     RUN_ATTEMPT_INPUT_BUNDLE_FILENAME,
     RUN_EVENTS_JSONL_FILENAME,
     RUN_RUNTIME_EXIT_METADATA_FILENAME,
     load_stage_metadata,
     run_attempt_root,
+    run_manifest_path,
 )
 from aidd.core.runtime_operator import (
     OPERATOR_DECISIONS_FILENAME,
@@ -240,7 +249,12 @@ def _work_item_lineage(
     )
 
 
-def _empty_run_summary(*, workspace_root: Path, work_item: str) -> OperatorRunSummary:
+def _empty_run_summary(
+    *,
+    workspace_root: Path,
+    work_item: str,
+    freshness: EvidenceFreshness | None = None,
+) -> OperatorRunSummary:
     return OperatorRunSummary(
         run_id=None,
         work_item=work_item,
@@ -253,6 +267,8 @@ def _empty_run_summary(*, workspace_root: Path, work_item: str) -> OperatorRunSu
         updated_at_utc=None,
         lineage=_work_item_lineage(workspace_root=workspace_root, work_item=work_item),
         archive=_empty_run_archive(),
+        freshness=freshness
+        or unavailable_evidence_freshness(reason="No run is available for freshness evaluation."),
     )
 
 
@@ -263,7 +279,11 @@ def _optional_manifest_stage(value: str | None) -> str | None:
     return normalized
 
 
-def _run_summary(metadata: RunMetadataSummary) -> OperatorRunSummary:
+def _run_summary(
+    metadata: RunMetadataSummary,
+    *,
+    freshness: EvidenceFreshness | None = None,
+) -> OperatorRunSummary:
     lineage = metadata.lineage
     return OperatorRunSummary(
         run_id=metadata.run_id,
@@ -296,7 +316,61 @@ def _run_summary(metadata: RunMetadataSummary) -> OperatorRunSummary:
             reason=metadata.archive.reason,
             source=metadata.archive.source,
         ),
+        freshness=freshness
+        or unavailable_evidence_freshness(reason="Freshness candidate identity was not supplied."),
         runtime_permission_policy=metadata.runtime_permission_policy,
+    )
+
+
+def _default_candidate_identity() -> tuple[str | None, str | None]:
+    """Resolve the running AIDD resource identity when it is locally provable."""
+
+    try:
+        resource_layout = resolve_resource_layout()
+        candidate_sha = resolve_repository_git_sha(resource_layout.root)
+        candidate_pin = resolve_resource_revision(
+            resource_root=resource_layout.root,
+            resource_source=resource_layout.source,
+            repository_git_sha=candidate_sha,
+        )
+    except (FileNotFoundError, OSError):
+        return None, None
+    return candidate_sha, candidate_pin
+
+
+def project_operator_run_freshness(
+    *,
+    workspace_root: Path,
+    work_item: str,
+    metadata: RunMetadataSummary | None,
+    candidate_sha: str | None,
+    candidate_target_pin: str | None,
+    supported_evidence_schema_versions: tuple[int, ...] = (1,),
+) -> EvidenceFreshness:
+    """Project the selected run through the shared freshness contract."""
+
+    if metadata is None:
+        return unavailable_evidence_freshness(
+            reason="No run is available for freshness evaluation."
+        )
+    if candidate_sha is None and candidate_target_pin is None:
+        candidate_sha, candidate_target_pin = _default_candidate_identity()
+    locator_path = run_manifest_path(
+        workspace_root=workspace_root,
+        work_item=work_item,
+        run_id=metadata.run_id,
+    )
+    return classify_evidence_freshness(
+        EvidenceFreshnessRequest(
+            candidate_sha=candidate_sha,
+            evidence_sha=metadata.repository_git_sha,
+            evidence_schema_version=1,
+            target_pin=candidate_target_pin,
+            evidence_target_pin=metadata.resource_revision,
+            locator=workspace_relative_path(workspace_root, locator_path),
+            locator_available=locator_path.is_file(),
+            supported_schema_versions=supported_evidence_schema_versions,
+        )
     )
 
 
@@ -1599,7 +1673,13 @@ def _terminal_recommended_outcome(
     *,
     handoff_status: str,
     final_qa_status: str,
+    freshness: EvidenceFreshness | None = None,
 ) -> tuple[str | None, str | None]:
+    if freshness is not None and not freshness.is_current:
+        return (
+            None,
+            f"Terminal evidence is {freshness.status.value}: {freshness.reason}",
+        )
     if handoff_status == "completed" and final_qa_status == "ready":
         return (
             "create-new-work-item",
@@ -1945,6 +2025,7 @@ def _terminal_handoff(
     metadata: RunMetadataSummary | None,
     blockers: tuple[OperatorBlocker, ...],
     stale_by_stage: dict[str, RemediationStaleStage] | None = None,
+    freshness: EvidenceFreshness | None = None,
 ) -> OperatorTerminalRunHandoff | None:
     if metadata is None:
         return None
@@ -1992,6 +2073,7 @@ def _terminal_handoff(
     recommended_outcome, recommendation_rationale = _terminal_recommended_outcome(
         handoff_status=handoff_status,
         final_qa_status=final_qa_status,
+        freshness=freshness,
     )
     return OperatorTerminalRunHandoff(
         status=handoff_status,
@@ -2023,6 +2105,7 @@ def _terminal_handoff(
             runtime_id=metadata.runtime_id,
             missing_terminal_evidence=bool(missing_terminal_evidence),
         ),
+        freshness=freshness or unavailable_evidence_freshness(),
     )
 
 
@@ -2037,6 +2120,9 @@ def _collect_operator_dashboard_evidence(
     selected_runner: str | None = None,
     active_job: bool = False,
     max_repair_attempts: int = 2,
+    candidate_sha: str | None = None,
+    candidate_target_pin: str | None = None,
+    supported_evidence_schema_versions: tuple[int, ...] = (1,),
 ) -> OperatorDashboardEvidence:
     selected_project_root = (
         project_root.resolve(strict=False) if project_root is not None else Path.cwd()
@@ -2059,6 +2145,15 @@ def _collect_operator_dashboard_evidence(
         else:
             raise
 
+    freshness = project_operator_run_freshness(
+        workspace_root=workspace_root,
+        work_item=work_item,
+        metadata=metadata,
+        candidate_sha=candidate_sha,
+        candidate_target_pin=candidate_target_pin,
+        supported_evidence_schema_versions=supported_evidence_schema_versions,
+    )
+
     active_stage_view: OperatorStageView | None = None
     stale_by_stage: dict[str, RemediationStaleStage] = {}
     if metadata is not None:
@@ -2075,7 +2170,7 @@ def _collect_operator_dashboard_evidence(
                     workspace_root=workspace_root,
                     project_root=selected_project_root,
                     active_stage=active_stage,
-                    run=_run_summary(metadata),
+                    run=_run_summary(metadata, freshness=freshness),
                     stages=stages,
                     active_stage_view=None,
                     primary_artifact=None,
@@ -2088,6 +2183,7 @@ def _collect_operator_dashboard_evidence(
                     evidence_refs=(),
                     activity=(),
                     recent_artifacts=(),
+                    freshness=freshness,
                     terminal_handoff=None,
                 )
         remediation_status = load_remediation_status(
@@ -2125,9 +2221,13 @@ def _collect_operator_dashboard_evidence(
             project_root=selected_project_root,
             active_stage=active_stage,
             run=(
-                _run_summary(metadata)
+                _run_summary(metadata, freshness=freshness)
                 if metadata
-                else _empty_run_summary(workspace_root=workspace_root, work_item=work_item)
+                else _empty_run_summary(
+                    workspace_root=workspace_root,
+                    work_item=work_item,
+                    freshness=freshness,
+                )
             ),
             stages=stages,
             active_stage_view=None,
@@ -2141,6 +2241,7 @@ def _collect_operator_dashboard_evidence(
             evidence_refs=(),
             activity=(),
             recent_artifacts=(),
+            freshness=freshness,
             terminal_handoff=None,
         )
     primary_artifact = _primary_artifact(
@@ -2221,9 +2322,13 @@ def _collect_operator_dashboard_evidence(
         project_root=selected_project_root,
         active_stage=active_stage,
         run=(
-            _run_summary(metadata)
+            _run_summary(metadata, freshness=freshness)
             if metadata
-            else _empty_run_summary(workspace_root=workspace_root, work_item=work_item)
+            else _empty_run_summary(
+                workspace_root=workspace_root,
+                work_item=work_item,
+                freshness=freshness,
+            )
         ),
         stages=stages,
         active_stage_view=active_stage_view,
@@ -2254,12 +2359,14 @@ def _collect_operator_dashboard_evidence(
             work_item=work_item,
             metadata=metadata,
         ),
+        freshness=freshness,
         terminal_handoff=_terminal_handoff(
             workspace_root=workspace_root,
             work_item=work_item,
             metadata=metadata,
             blockers=blockers,
             stale_by_stage=stale_by_stage,
+            freshness=freshness,
         ),
     )
 
@@ -2275,6 +2382,9 @@ def collect_operator_dashboard_evidence(
     selected_runner: str | None = None,
     active_job: bool = False,
     max_repair_attempts: int = 2,
+    candidate_sha: str | None = None,
+    candidate_target_pin: str | None = None,
+    supported_evidence_schema_versions: tuple[int, ...] = (1,),
 ) -> OperatorDashboardEvidence:
     token = _READ_CACHE.set({})
     try:
@@ -2288,9 +2398,12 @@ def collect_operator_dashboard_evidence(
             selected_runner=selected_runner,
             active_job=active_job,
             max_repair_attempts=max_repair_attempts,
+            candidate_sha=candidate_sha,
+            candidate_target_pin=candidate_target_pin,
+            supported_evidence_schema_versions=supported_evidence_schema_versions,
         )
     finally:
         _READ_CACHE.reset(token)
 
 
-__all__ = ["collect_operator_dashboard_evidence"]
+__all__ = ["collect_operator_dashboard_evidence", "project_operator_run_freshness"]

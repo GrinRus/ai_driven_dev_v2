@@ -11,6 +11,7 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
+from aidd.core.evidence_freshness import EvidenceFreshness
 from aidd.core.identifiers import SafeIdentifier, contained_component_path
 from aidd.core.workspace import WORKSPACE_REPORTS_DIRNAME, WORKSPACE_REPORTS_EVALS_DIRNAME
 from aidd.harness.install_artifact import HarnessInstallResult
@@ -256,6 +257,7 @@ def write_harness_metadata(
     phase_metadata: Mapping[str, Any] | None = None,
     aidd_run_result: HarnessAiddRunResult | None = None,
     aidd_artifact_references: Mapping[str, str] | None = None,
+    evidence_freshness: EvidenceFreshness | None = None,
 ) -> Path:
     normalized_runtime_id = runtime_id.strip()
     normalized_work_item = work_item.strip()
@@ -288,6 +290,8 @@ def write_harness_metadata(
         "runtime_targets": list(scenario.runtime_targets),
         "aidd_artifact_references": dict(aidd_artifact_references or {}),
     }
+    if evidence_freshness is not None:
+        metadata_payload["evidence_freshness"] = evidence_freshness.to_dict()
     if evaluation_run_id is not None:
         metadata_payload["evaluation_run_id"] = evaluation_run_id
         metadata_payload["product_run_id"] = product_run_id

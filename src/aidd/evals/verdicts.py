@@ -5,6 +5,7 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Literal
 
+from aidd.core.evidence_freshness import EvidenceFreshness, unavailable_evidence_freshness
 from aidd.evals.failure_causes import FailureCause, validate_verdict_compatibility
 
 VerdictStatus = Literal["pass", "fail", "blocked", "infra-fail"]
@@ -24,6 +25,7 @@ class ScenarioVerdict:
     first_failure_note: str | None
     verification_summary: str | None
     failure_cause: FailureCause = field(default_factory=FailureCause.none)
+    freshness: EvidenceFreshness = field(default_factory=unavailable_evidence_freshness)
 
 
 @dataclass(frozen=True, slots=True)
@@ -101,6 +103,7 @@ def build_scenario_verdict(
     first_failure_note: str | None = None,
     verification_summary: str | None = None,
     failure_cause: FailureCause | None | object = _MISSING_FAILURE_CAUSE,
+    freshness: EvidenceFreshness | None = None,
 ) -> ScenarioVerdict:
     normalized_status = _normalize_verdict_status(status)
     if failure_cause is _MISSING_FAILURE_CAUSE:
@@ -135,6 +138,7 @@ def build_scenario_verdict(
             value=verification_summary,
         ),
         failure_cause=normalized_failure_cause,
+        freshness=freshness if freshness is not None else unavailable_evidence_freshness(),
     )
 
 
@@ -150,6 +154,7 @@ def build_scenario_verdict_from_harness_outcome(
     first_failure_note: str | None = None,
     verification_summary: str | None = None,
     failure_cause: FailureCause | None | object = _MISSING_FAILURE_CAUSE,
+    freshness: EvidenceFreshness | None = None,
 ) -> ScenarioVerdict:
     return build_scenario_verdict(
         scenario_id=scenario_id,
@@ -162,6 +167,7 @@ def build_scenario_verdict_from_harness_outcome(
         first_failure_note=first_failure_note,
         verification_summary=verification_summary,
         failure_cause=failure_cause,
+        freshness=freshness,
     )
 
 
@@ -175,6 +181,7 @@ def render_scenario_verdict_markdown(verdict: ScenarioVerdict) -> str:
     verification_summary = verdict.verification_summary or "none"
     failure_cause = verdict.failure_cause
     evidence_link = failure_cause.evidence_link or "none"
+    freshness = verdict.freshness
 
     lines = [
         "# Verdict",
@@ -191,6 +198,10 @@ def render_scenario_verdict_markdown(verdict: ScenarioVerdict) -> str:
         "",
         "## Evidence",
         *artifact_lines,
+        "",
+        "## Evidence Freshness",
+        f"- State: `{freshness.status.value}`",
+        f"- Reason: {freshness.reason}",
         "",
         "## Analysis",
         f"- First Failure Note: {first_failure_note}",

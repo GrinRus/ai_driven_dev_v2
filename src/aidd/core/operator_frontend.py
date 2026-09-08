@@ -7,6 +7,7 @@ from aidd.core.operator_frontend_artifacts import (
     resolve_operator_stage_document_workbench,
 )
 from aidd.core.operator_frontend_dashboard import resolve_operator_dashboard_view
+from aidd.core.operator_frontend_dashboard_evidence import project_operator_run_freshness
 from aidd.core.operator_frontend_logs import (
     resolve_operator_run_log_view,
     resolve_operator_run_view,
@@ -134,6 +135,7 @@ __all__ = [
     "resolve_operator_artifacts_view",
     "resolve_operator_evidence_graph_view",
     "resolve_operator_dashboard_view",
+    "project_operator_run_freshness",
     "resolve_operator_inbox_view",
     "resolve_operator_project_home_view",
     "resolve_operator_questions_view",

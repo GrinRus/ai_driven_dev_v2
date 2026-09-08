@@ -1,8 +1,9 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 
+from aidd.core.evidence_freshness import EvidenceFreshness, unavailable_evidence_freshness
 from aidd.core.operator_frontend_models import (
     OperatorActivityEvent,
     OperatorArtifactRef,
@@ -82,7 +83,8 @@ class OperatorDashboardEvidence:
     evidence_refs: tuple[OperatorEvidenceRef, ...]
     activity: tuple[OperatorActivityEvent, ...]
     recent_artifacts: tuple[OperatorArtifactRef, ...]
-    terminal_handoff: OperatorTerminalRunHandoff | None
+    terminal_handoff: OperatorTerminalRunHandoff | None = None
+    freshness: EvidenceFreshness = field(default_factory=unavailable_evidence_freshness)
 
 
 def reduce_operator_dashboard_evidence(
@@ -108,6 +110,7 @@ def reduce_operator_dashboard_evidence(
         recent_artifacts=evidence.recent_artifacts,
         terminal_handoff=evidence.terminal_handoff,
         phases=_intent_phases(evidence.stages),
+        freshness=evidence.freshness,
     )
 
 
