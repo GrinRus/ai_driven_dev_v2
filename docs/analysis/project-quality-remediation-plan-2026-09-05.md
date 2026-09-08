@@ -85,6 +85,14 @@ strict mypy, and all required CI/security lanes passed. The next dependency-read
 `W49-E2-S2-T2`, extracting HTTP payload codecs/controller dispatch while preserving stable routes,
 response shapes, and the merged W47 presentation boundary.
 
+The subsequent maintenance tail is also reconciled against the merged UI boundary: `W49-E2-S2-T2`
+completed in PR #605 (`0c5af159`), `W49-E2-S2-T3` in PR #606 (`2e4c42b3`), and
+`W49-E2-S3-T1` in PR #608 (`cb37d4eb`). `W49-E2-S3-T2` completed in PR #610 (`cfcfe33c`),
+and `W49-E2-S3-T3` completed in PR #612 (`91b088d9`); these changes remain outside runtime and
+UI-owned paths. The next promoted task is `W49-E2-S3-T4`, the core stage-orchestration
+decomposition, with the neighboring UI checkout kept read-only and its merged PR #574 surfaces
+treated as the compatibility baseline.
+
 ## Parent outcome decomposed
 
 Parent outcome: close the 2026-09-05 quality-audit findings and produce trustworthy beta-candidate

@@ -885,7 +885,7 @@ output, record that evidence and reslice only the remaining hotspot; do not repe
     existing Markdown/JSON fixtures and finding order remain byte-equivalent. No runtime, static
     UI, frontend-test, or neighboring UI checkout files changed.
 
-- `W49-E2-S3-T3` (next) Decompose `_validate_scenario_contract`.
+- `W49-E2-S3-T3` (done) Decompose `_validate_scenario_contract`.
   - Output: scenario-manifest validation is split by contract concern while preserving the
     current typed findings, fail-closed behavior, and public loader/report surfaces.
   - Scope: `src/aidd/harness/scenarios.py` and its focused validation tests only; no runtime,
@@ -894,6 +894,25 @@ output, record that evidence and reslice only the remaining hotspot; do not repe
     contract still yields an actionable validation result, and the complexity baseline moves the
     extracted production blocks to grade C or lower without suppressing unrelated debt.
   - Dependencies: W49-E2-S3-T2, a fresh `origin/main`, the merged W47 UI baseline, and a read-only
+    comparison with the neighboring UI refactor before implementation.
+  - Completion evidence: PR #612 merged to `origin/main` at `91b088d9`; the contract validator
+    now delegates baseline, live-runtime, task-metadata, flow, and deterministic checks to
+    responsibility-specific helpers while preserving typed findings and fail-closed loading.
+    The focused invalid-manifest suite (50 tests), full harness suite (479 tests), Ruff, strict
+    mypy, complexity ratchet, and all required CI/security/browser/build lanes passed. No runtime,
+    static UI, frontend-test, or neighboring UI checkout files changed.
+
+- `W49-E2-S3-T4` (next) Decompose `_run_single_stage_orchestration` after W48.
+  - Output: core stage preparation, adapter execution, terminal handling, validation, and
+    persistence are responsibility-specific helpers behind the unchanged orchestration facade.
+  - Scope: `src/aidd/core/stage_runner.py` and existing core transition/failure/repair/interview
+    tests only; preserve resume/intervention modes, repair budgets, timestamps, evidence indexes,
+    and all public result/transition shapes. Do not touch runtime adapters, `src/aidd/cli/static/**`,
+    `tests/frontend/**`, UI browser journeys, or the neighboring UI checkout.
+  - Verification: the stage-runner/operator transition matrix remains unchanged, full core tests
+    stay green, the extracted helpers are complexity grade C or lower, and the complexity baseline
+    removes only the completed hotspot without hiding unrelated debt.
+  - Dependencies: W49-E2-S3-T3, a fresh `origin/main`, the merged W47 UI baseline, and a read-only
     comparison with the neighboring UI refactor before implementation.
 
 | Task | Output | Dominant area | Main verification | Effort |

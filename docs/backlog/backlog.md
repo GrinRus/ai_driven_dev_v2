@@ -7,7 +7,7 @@ slice, and local task.
 
 ## Next
 
-- `W49-E2-S3-T3` — Decompose `_validate_scenario_contract`.
+- `W49-E2-S3-T4` — Decompose `_run_single_stage_orchestration` after W48.
 
 ## Soon
 
@@ -37,42 +37,13 @@ slice, and local task.
 
 ## Current reconciliation
 
-- `2026-09-08` Planning truth and traceability work W49-E3-S1/T1–T4 and W49-E3-S2/T1–T3 remain
-  merged on `origin/main`; their detailed evidence is retained in `roadmap.md` and the [Git
-  archive index](reconciliation-history-index.md). The neighboring UI refactor is integrated by
-  PR #574 at `45a1a8f7`; its checkout remains read-only reference state.
-  `W49-E2-S1-T1` completed in PR #595 at `0011426f`, and the planned T2 `_legacy_*` removal was
-  reconciled to preexisting cleanup commit `4d99b3fd` without a duplicate production edit.
-  `W49-E2-S1-T3` completed in PR #597 at `25b58943`, and T4 in PR #599 at `b5b3fa47`; their
-  focused stage and frontend modules preserve the characterized facade and all required
-  CI/security lanes passed. `W49-E2-S1-T5` completed in PR #601 at `71659ca0`; its focused bundle
-  coordinator owns canonical result materialization/sealing and run-transcript projection while
-  success, blocked, awaiting-quality-review, and manual-stop schemas remain unchanged. The 99-test
-  harness group, focused bundle tests, characterization, Ruff, strict mypy, and all required
-  CI/security lanes passed. No frontend, runtime, or UI-owned files changed. `W49-E2-S2-T1`
-  completed in PR #603 and is present on `origin/main` at `058331b3`; the UI job registry/lifecycle
-  now has one canonical server-side owner, with two-project lifecycle isolation and the full 341
-  test CLI suite green. No static UI, frontend tests, or neighboring UI checkout files changed.
-  `W49-E2-S2-T2` completed in PR #605 and is present on `origin/main` at `0c5af159`; existing
-  `ui_http` codecs and `ui_routing` dispatch are composed by `aidd.cli.ui_transport`, with success,
-  validation, not-found, explicit-failure, and two-project endpoint contracts covered. Focused and
-  full CLI suites (10 and 345 tests), planning/traceability/CI tests (52), Ruff, strict mypy, and
-  required CI/security lanes passed after one transient packaged-browser rerun. No static UI,
-  frontend tests, or neighboring UI checkout files changed. The next dependency-ready task is
-  `W49-E2-S2-T3` for ordered dashboard next-action rules. `W49-E2-S2-T3` completed in PR #606
-  and is present on `origin/main` at `2e4c42b3`; typed priority rules and the dashboard state
-  matrix preserve the `OperatorNextAction` contract, with 1106 core tests, Ruff, strict mypy,
-  and required CI/security lanes green after two transient packaged-browser reruns. No static UI,
-  frontend tests, or neighboring UI checkout files changed. The next dependency-ready task is
-  `W49-E2-S3-T1` for the complexity baseline and no-new-E/F ratchet. `W49-E2-S3-T1` completed in
-  PR #608 and is present on `origin/main` at `cb37d4eb`; the Radon baseline and CI ratchet cover
-  new E/F blocks, complexity increases, malformed baseline data, and stale entries. The full
-  3212-test Python suite, 141 Node DOM tests, Ruff, strict mypy, deterministic/conformance/
-  browser/build lanes, and security checks passed. No runtime or UI-owned files changed. `W49-E2-S3-T2`
-  completed in PR #610 and is present on `origin/main` at `cfcfe33c`; the checkpoint facade now
-  delegates to typed path/state, finding, and payload helpers. The focused checkpoint suite (9
-  tests), full harness suite (479 tests), Ruff, strict mypy, complexity ratchet, and all required
-  CI/security/browser/build lanes passed; the facade is complexity grade A and extracted blocks
-  are grade C or lower with byte-equivalent Markdown/JSON fixtures. No runtime, static UI,
-  frontend-test, or neighboring UI checkout files changed. The next dependency-ready task is
-  `W49-E2-S3-T3` for `_validate_scenario_contract` decomposition.
+- `2026-09-08` W49-E3-S1/T1–T4 and W49-E3-S2/T1–T3 remain merged on `origin/main`; detailed
+  evidence is retained in `roadmap.md` and the [Git archive index](reconciliation-history-index.md).
+  The neighboring UI refactor is integrated by PR #574 at `45a1a8f7`; its checkout remains
+  read-only. W49-E2-S1/T1–T5 are merged in PRs #595/#597/#599/#601, W49-E2-S2/T1–T3 in
+  #603/#605/#606, and W49-E2-S3-T1 in #608; all preserve the no-UI boundary and required checks.
+  W49-E2-S3-T2 completed in PR #610 at `cfcfe33c` (checkpoint fixtures and 479-test harness green).
+  W49-E2-S3-T3 completed in PR #612 at `91b088d9` (50-test invalid-manifest matrix, 479-test
+  harness, Ruff, strict mypy, complexity, and required CI/security/browser/build lanes green).
+  The next dependency-ready task is `W49-E2-S3-T4` for `_run_single_stage_orchestration`
+  decomposition.
