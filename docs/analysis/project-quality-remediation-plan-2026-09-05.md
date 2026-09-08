@@ -506,9 +506,11 @@ boundary at `0c5af159`; focused/full CLI and planning checks plus all required C
 passed after a transient packaged-browser rerun. `W49-E2-S2-T3` then completed in PR #606 at
 `2e4c42b3`: typed priority rules preserve the `OperatorNextAction` contract and the full core
 state matrix (1106 tests) passed with Ruff, strict mypy, and required CI/security lanes after two
-transient packaged-browser reruns. The next dependency-ready task is `W49-E2-S3-T1`, adding a
-reviewed complexity baseline and no-new-E/F ratchet while keeping the adjacent UI checkout
-read-only.
+transient packaged-browser reruns. `W49-E2-S3-T1` then completed in PR #608 at `cb37d4eb`: Radon
+6.0.1 baseline data and a CI/Make ratchet now reject new or worsened E/F production blocks, with
+synthetic regression coverage and the full local/required CI lanes green. The next dependency-ready
+task is `W49-E2-S3-T2`, decomposing `build_task_flow_checkpoint` while keeping the adjacent UI
+checkout read-only.
 
 ### Slice W49-E2-S2 — post-Focus-Canvas service-boundary stabilization
 

@@ -854,13 +854,29 @@ output, record that evidence and reslice only the remaining hotspot; do not repe
 
 #### Slice W49-E2-S3 — complexity-tail ratchet (`planned`)
 
-- `W49-E2-S3-T1` (next) Add a reviewed complexity baseline and no-new-E/F ratchet.
+- `W49-E2-S3-T1` (done) Add a reviewed complexity baseline and no-new-E/F ratchet.
   - Output: the repository records a reviewed baseline for existing high-complexity functions and
     a deterministic check that fails when a new E/F-complexity block is introduced.
   - Scope: quality tooling, baseline data, and focused tests only; no runtime or UI-owned paths.
   - Verification: current baseline passes; a synthetic new E/F block fails with an actionable
     message; existing complexity debt remains explicitly enumerated for follow-up slices.
   - Dependencies: W49-E2-S2-T3, a fresh `origin/main`, and the merged W47 UI baseline.
+  - Completion evidence: PR #608 merged to `origin/main` at `cb37d4eb`; Radon 6.0.1 now records
+    the reviewed E/F production-source baseline, while `scripts/check_complexity.py` fails for
+    new E/F blocks, complexity increases, malformed baseline data, or stale entries. The check
+    is exposed through `make check-complexity` and the CI lint lane; repository and synthetic
+    regression tests passed, together with the full 3212-test Python suite, 141 Node DOM tests,
+    Ruff, strict mypy, all deterministic/conformance/browser/build lanes, and security checks.
+    No runtime or UI-owned files changed.
+
+- `W49-E2-S3-T2` (next) Decompose `build_task_flow_checkpoint`.
+  - Output: task-flow checkpoint assembly is split by responsibility while preserving byte-level
+    checkpoint fixtures, failure evidence, and the existing public facade.
+  - Scope: `src/aidd/harness/task_flow_checkpoint.py` and its focused tests only; no runtime or
+    UI-owned paths, no neighboring UI checkout edits.
+  - Verification: characterization fixtures remain byte-equivalent and the complexity baseline
+    moves the extracted production blocks to grade C or lower without hiding unrelated E/F debt.
+  - Dependencies: W49-E2-S3-T1, a fresh `origin/main`, and the merged W47 UI baseline.
 
 | Task | Output | Dominant area | Main verification | Effort |
 | --- | --- | --- | --- | ---: |

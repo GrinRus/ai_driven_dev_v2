@@ -7,7 +7,7 @@ slice, and local task.
 
 ## Next
 
-- `W49-E2-S3-T1` — Add a reviewed complexity baseline and no-new-E/F ratchet.
+- `W49-E2-S3-T2` — Decompose `build_task_flow_checkpoint`.
 
 ## Soon
 
@@ -64,4 +64,9 @@ slice, and local task.
   matrix preserve the `OperatorNextAction` contract, with 1106 core tests, Ruff, strict mypy,
   and required CI/security lanes green after two transient packaged-browser reruns. No static UI,
   frontend tests, or neighboring UI checkout files changed. The next dependency-ready task is
-  `W49-E2-S3-T1` for the complexity baseline and no-new-E/F ratchet.
+  `W49-E2-S3-T1` for the complexity baseline and no-new-E/F ratchet. `W49-E2-S3-T1` completed in
+  PR #608 and is present on `origin/main` at `cb37d4eb`; the Radon baseline and CI ratchet cover
+  new E/F blocks, complexity increases, malformed baseline data, and stale entries. The full
+  3212-test Python suite, 141 Node DOM tests, Ruff, strict mypy, deterministic/conformance/
+  browser/build lanes, and security checks passed. No runtime or UI-owned files changed. The
+  next dependency-ready task is `W49-E2-S3-T2` for `build_task_flow_checkpoint` decomposition.
