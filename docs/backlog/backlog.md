@@ -7,9 +7,11 @@ slice, and local task.
 
 ## Next
 
-- `W50-E1-S1-T2` — Project freshness consistently into reports and the operator read model.
+- `W50-E1-S2-T1` — Define retention locator, digest, size, revision, target pin, and redaction contract.
 
 ## Soon
+
+- `W50-E1-S2-T2` — Export and read back a sanitized immutable archive.
 
 ## Parking lot
 
@@ -66,4 +68,9 @@ slice, and local task.
   completed in PR #629 at `71c3779a`: the core freshness contract distinguishes current, stale,
   incompatible, and unavailable evidence from candidate SHA, schema, target pin, and locator;
   focused tests and all required CI/security/browser/build lanes passed. The adjacent UI checkout
-  remains read-only at `4c1356bc`; queue promotion now selects `W50-E1-S1-T2`.
+  remains read-only at `4c1356bc`; queue promotion now selects `W50-E1-S1-T2`. W50-E1-S1-T2
+  completed in PR #631 at `6cac4a82`: the shared freshness state/reason is projected into verdict
+  reports, grader payloads, harness metadata, operator run summaries, dashboard views, and terminal
+  handoffs without changing verdict history or crossing the adjacent UI boundary. Focused/full
+  checks, security, packaged-browser, and build lanes passed; the neighboring UI checkout remains
+  read-only at `4c1356bc`. Queue promotion now selects `W50-E1-S2-T1`.
