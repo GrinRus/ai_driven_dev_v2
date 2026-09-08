@@ -292,6 +292,14 @@ the verifier checks the sidecar digest and size before validating the inner mani
 digest, and the redaction/provenance match. Only verified archives may be extracted, and extraction
 rejects symlinks, traversal, duplicate members, and existing targets.
 
+An exact-candidate manifest is the release-side identity contract for that evidence. The
+maintainer helper records the clean source checkout's full Git commit and tree, package name and
+version, wheel SHA-256/size, the discovered CI-scenario manifests with their digests and runtime
+targets, and the deterministic commands used for verification. Re-validation compares every
+record to the current checkout and artifacts; dirty source, missing or changed artifacts, and
+identity mismatches fail closed. The manifest helper only records and verifies metadata—it does
+not publish, tag, install, or execute provider workflows.
+
 Completed-flow handoff must preserve the same ownership model. When a run reaches a terminal
 state after `qa`, the completed run is immutable evidence. Any next action creates or prepares a
 separate unit:
