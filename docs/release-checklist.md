@@ -106,6 +106,22 @@ uv run python -m scripts.release.installed_candidate_matrix \
 
   This local evidence is provider-free and separate from `pipx`/`uv tool` package-channel checks.
 
+- [ ] Verify clean install and exact-wheel replacement through both supported package channels.
+  The second force-install is the channel-safe local-artifact equivalent of upgrade because
+  `pipx upgrade` and `uv tool upgrade` resolve registry package names rather than accepting a
+  wheel path. The runner checks the installed `aidd` version, `doctor`, and PEP 610 wheel hash;
+  any missing tool, failed command, or identity drift blocks the report:
+
+```bash
+uv run python -m scripts.release.installed_channel_verification \
+  --manifest .aidd/candidate-manifest.json \
+  --wheel dist/<candidate>.whl \
+  --output .aidd/installed-channel-verification.json
+```
+
+  Keep the report with the candidate evidence. It is provider-free and does not publish to PyPI,
+  create GitHub state, or replace the published-release verification jobs.
+
 - [ ] Source-of-truth audit is current for the release-prep slice:
   `README.md`, `docs/product/user-stories.md`, and
   `docs/architecture/target-architecture.md` match the code and release claims.

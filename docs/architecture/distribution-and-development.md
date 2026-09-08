@@ -153,6 +153,15 @@ evidence-bundle paths and digests. A missing bundle, non-zero scenario, package-
 or wheel/manifest drift blocks the matrix; the runner does not invoke providers or mutate the
 repository checkout.
 
+Package-channel verification is a second read-only check for the same candidate. The maintainer
+uses `scripts.release.installed_channel_verification` to perform a clean install and an exact-wheel
+replacement (the channel-safe equivalent of upgrade for a local artifact) through both `pipx` and
+`uv tool`. Each operation runs the installed `aidd --version` and `aidd doctor` entry points and
+reads the installed PEP 610 `direct_url.json` hash. A missing tool, wrong version, missing doctor
+success, absent provenance hash, or wheel drift blocks the report. The runner uses temporary,
+runner-owned tool directories, writes a canonical hashed report, and never resolves an unpinned
+registry package or changes GitHub/PyPI state.
+
 The `pipx` verification lane selects the `pip` backend explicitly so an unrelated standalone
 `uv` executable on the runner cannot silently change `pipx` behavior or impose a second `uv`
 version requirement. Hosted CI and release jobs pin the `uv` executable version explicitly.
