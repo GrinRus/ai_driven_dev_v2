@@ -4,6 +4,7 @@ import shlex
 import subprocess
 import time
 from collections.abc import Callable, Mapping
+from dataclasses import dataclass, replace
 from pathlib import Path
 from typing import Any
 
@@ -26,6 +27,7 @@ from aidd.adapters.qwen.runner import (
     QwenRunResult,
     build_subprocess_spec,
 )
+from aidd.adapters.runtime_execution import RuntimeSubprocessSpec
 from aidd.core.runtime_operator import RuntimeOperatorBroker, RuntimeOperatorDecisionProvider
 from aidd.core.stage_models import AdapterExecutionStatus
 from aidd.runtime_catalog import RuntimeExecutionMode
@@ -45,6 +47,28 @@ _CONTROLLED_VALUE_FLAGS = frozenset(
 _CONTROLLED_BOOL_FLAGS = frozenset({"-y", "--yolo"})
 
 
+@dataclass(frozen=True, slots=True)
+class _QwenLiveSession:
+    events_path: Path
+    input_path: Path
+    spec: RuntimeSubprocessSpec
+    supervisor: OwnedProcessSupervisor
+    process: subprocess.Popen[bytes]
+    capture: StreamCapture
+    seen_request_ids: set[str]
+    deadline: float | None
+    stdin_writer: ManagedStdinWriter | None
+
+
+@dataclass(frozen=True, slots=True)
+class _QwenLiveState:
+    read_offset: int = 0
+    pending_request_id: str | None = None
+    denied_reason: str | None = None
+    terminal_classification: QwenExitClassification | None = None
+    stop_reason: QwenExitClassification | None = None
+
+
 def qwen_live_transport_available(configured_command: str) -> bool:
     tokens = split_command(configured_command, runtime_label="qwen")
     if Path(tokens[0]).name != "qwen":
@@ -53,6 +77,57 @@ def qwen_live_transport_available(configured_command: str) -> bool:
         return False
     help_text = run_help_text((tokens[0], "--help"))
     return all(marker in help_text for marker in ("--json-file", "--input-file"))
+
+
+def _start_qwen_live_session(
+    *,
+    configured_command: str,
+    context: QwenCommandContext,
+    base_env: Mapping[str, str],
+    repository_root: Path,
+    attempt_path: Path,
+    on_stdout: Callable[[str], None] | None,
+    on_stderr: Callable[[str], None] | None,
+    timeout_seconds: float | None,
+) -> _QwenLiveSession:
+    attempt_path.mkdir(parents=True, exist_ok=True)
+    events_path = attempt_path / _QWEN_EVENTS_FILENAME
+    input_path = attempt_path / _QWEN_INPUT_FILENAME
+    input_path.touch()
+    controlled_command = _controlled_live_command(
+        configured_command=configured_command,
+        events_path=events_path,
+        input_path=input_path,
+    )
+    spec = build_subprocess_spec(
+        configured_command=shlex.join(controlled_command),
+        context=context,
+        base_env=base_env,
+        repository_root=repository_root,
+        execution_mode=RuntimeExecutionMode.NATIVE,
+    )
+    supervisor = OwnedProcessSupervisor.launch(spec)
+    process = supervisor.process
+    capture = StreamCapture(
+        directory=attempt_path,
+        on_stdout=on_stdout,
+        on_stderr=on_stderr,
+    )
+    capture.attach(process)
+    seen_request_ids: set[str] = set()
+    deadline = None if timeout_seconds is None else time.monotonic() + timeout_seconds
+    stdin_writer = ManagedStdinWriter.start(process.stdin, spec.stdin_text)
+    return _QwenLiveSession(
+        events_path=events_path,
+        input_path=input_path,
+        spec=spec,
+        supervisor=supervisor,
+        process=process,
+        capture=capture,
+        seen_request_ids=seen_request_ids,
+        deadline=deadline,
+        stdin_writer=stdin_writer,
+    )
 
 
 def execute_qwen_live_transport(
@@ -85,98 +160,125 @@ def execute_qwen_live_transport(
             ),
         )
 
-    attempt_path.mkdir(parents=True, exist_ok=True)
-    events_path = attempt_path / _QWEN_EVENTS_FILENAME
-    input_path = attempt_path / _QWEN_INPUT_FILENAME
-    input_path.touch()
-    controlled_command = _controlled_live_command(
+    session = _start_qwen_live_session(
         configured_command=configured_command,
-        events_path=events_path,
-        input_path=input_path,
-    )
-    spec = build_subprocess_spec(
-        configured_command=shlex.join(controlled_command),
         context=context,
         base_env=base_env,
         repository_root=repository_root,
-        execution_mode=RuntimeExecutionMode.NATIVE,
-    )
-    supervisor = OwnedProcessSupervisor.launch(spec)
-    process = supervisor.process
-    capture = StreamCapture(
-        directory=attempt_path,
+        attempt_path=attempt_path,
         on_stdout=on_stdout,
         on_stderr=on_stderr,
+        timeout_seconds=timeout_seconds,
     )
-    capture.attach(process)
-    seen_request_ids: set[str] = set()
-    deadline = None if timeout_seconds is None else time.monotonic() + timeout_seconds
-    stop_reason: QwenExitClassification | None = None
-    pending_request_id: str | None = None
-    denied_reason: str | None = None
-    terminal_classification: QwenExitClassification | None = None
-    read_offset = 0
-    stdin_writer = ManagedStdinWriter.start(process.stdin, spec.stdin_text)
-
-    while process.poll() is None:
-        if cancel_requested is not None and cancel_requested():
-            stop_reason = QwenExitClassification.CANCELLED
-            break
-        if capture.error is not None:
-            capture_error = capture.error
-            _stop_qwen_process(
-                supervisor=supervisor,
-                capture=capture,
-                stdin_writer=stdin_writer,
-            )
-            assert capture_error is not None
-            capture.abort()
-            raise capture_error
-        if stdin_writer is not None and stdin_writer.error is not None:
-            writer_error = stdin_writer.error
-            _stop_qwen_process(
-                supervisor=supervisor,
-                capture=capture,
-                stdin_writer=stdin_writer,
-            )
-            assert writer_error is not None
-            capture.abort()
-            raise writer_error
-        if deadline is not None and time.monotonic() >= deadline:
-            stop_reason = QwenExitClassification.TIMEOUT
-            break
-
-        (
-            read_offset,
-            pending_request_id,
-            denied_reason,
-            terminal_classification,
-        ) = _handle_new_events(
-            events_path=events_path,
-            read_offset=read_offset,
-            seen_request_ids=seen_request_ids,
-            runtime_id="qwen",
-            stage=context.stage,
-            cwd=repository_root,
+    state = _QwenLiveState()
+    while session.process.poll() is None:
+        state = _poll_qwen_live_session(
+            session=session,
+            state=state,
+            context=context,
+            repository_root=repository_root,
             broker=broker,
             operator_decision_provider=operator_decision_provider,
-            input_path=input_path,
+            cancel_requested=cancel_requested,
         )
-        if cancel_requested is not None and cancel_requested():
-            stop_reason = QwenExitClassification.CANCELLED
-            pending_request_id = None
-            denied_reason = None
+        if (
+            state.stop_reason is not None
+            or state.pending_request_id is not None
+            or state.denied_reason is not None
+        ):
             break
-        if pending_request_id is not None:
-            break
-        if denied_reason is not None:
-            break
-        time.sleep(0.05)
 
+    state = _finish_qwen_live_session(
+        session=session,
+        state=state,
+        context=context,
+        repository_root=repository_root,
+        broker=broker,
+        operator_decision_provider=operator_decision_provider,
+    )
+    return _qwen_live_result(session=session, state=state, broker=broker)
+
+
+def _poll_qwen_live_session(
+    *,
+    session: _QwenLiveSession,
+    state: _QwenLiveState,
+    context: QwenCommandContext,
+    repository_root: Path,
+    broker: RuntimeOperatorBroker,
+    operator_decision_provider: RuntimeOperatorDecisionProvider,
+    cancel_requested: Callable[[], bool] | None,
+) -> _QwenLiveState:
+    if cancel_requested is not None and cancel_requested():
+        return replace(state, stop_reason=QwenExitClassification.CANCELLED)
+    if session.capture.error is not None:
+        capture_error = session.capture.error
+        _stop_qwen_process(
+            supervisor=session.supervisor,
+            capture=session.capture,
+            stdin_writer=session.stdin_writer,
+        )
+        assert capture_error is not None
+        session.capture.abort()
+        raise capture_error
+    if session.stdin_writer is not None and session.stdin_writer.error is not None:
+        writer_error = session.stdin_writer.error
+        _stop_qwen_process(
+            supervisor=session.supervisor,
+            capture=session.capture,
+            stdin_writer=session.stdin_writer,
+        )
+        assert writer_error is not None
+        session.capture.abort()
+        raise writer_error
+    if session.deadline is not None and time.monotonic() >= session.deadline:
+        return replace(state, stop_reason=QwenExitClassification.TIMEOUT)
+    (
+        read_offset,
+        pending_request_id,
+        denied_reason,
+        terminal_classification,
+    ) = _handle_new_events(
+        events_path=session.events_path,
+        read_offset=state.read_offset,
+        seen_request_ids=session.seen_request_ids,
+        runtime_id="qwen",
+        stage=context.stage,
+        cwd=repository_root,
+        broker=broker,
+        operator_decision_provider=operator_decision_provider,
+        input_path=session.input_path,
+    )
+    if cancel_requested is not None and cancel_requested():
+        return _QwenLiveState(
+            read_offset=read_offset,
+            terminal_classification=terminal_classification,
+            stop_reason=QwenExitClassification.CANCELLED,
+        )
+    next_state = _QwenLiveState(
+        read_offset=read_offset,
+        pending_request_id=pending_request_id,
+        denied_reason=denied_reason,
+        terminal_classification=terminal_classification,
+    )
+    if pending_request_id is None and denied_reason is None:
+        time.sleep(0.05)
+    return next_state
+
+
+def _finish_qwen_live_session(
+    *,
+    session: _QwenLiveSession,
+    state: _QwenLiveState,
+    context: QwenCommandContext,
+    repository_root: Path,
+    broker: RuntimeOperatorBroker,
+    operator_decision_provider: RuntimeOperatorDecisionProvider,
+) -> _QwenLiveState:
     if (
-        stop_reason is not QwenExitClassification.CANCELLED
-        and pending_request_id is None
-        and denied_reason is None
+        state.stop_reason is not QwenExitClassification.CANCELLED
+        and state.pending_request_id is None
+        and state.denied_reason is None
     ):
         (
             read_offset,
@@ -184,37 +286,53 @@ def execute_qwen_live_transport(
             denied_reason,
             terminal_classification,
         ) = _handle_new_events(
-            events_path=events_path,
-            read_offset=read_offset,
-            seen_request_ids=seen_request_ids,
+            events_path=session.events_path,
+            read_offset=state.read_offset,
+            seen_request_ids=session.seen_request_ids,
             runtime_id="qwen",
             stage=context.stage,
             cwd=repository_root,
             broker=broker,
             operator_decision_provider=operator_decision_provider,
-            input_path=input_path,
+            input_path=session.input_path,
+        )
+        state = replace(
+            state,
+            read_offset=read_offset,
+            pending_request_id=pending_request_id,
+            denied_reason=denied_reason,
+            terminal_classification=terminal_classification,
         )
     _stop_qwen_process(
-        supervisor=supervisor,
-        capture=capture,
-        stdin_writer=stdin_writer,
+        supervisor=session.supervisor,
+        capture=session.capture,
+        stdin_writer=session.stdin_writer,
     )
-    if capture.error is not None:
-        capture.abort()
-        raise capture.error
+    if session.capture.error is not None:
+        session.capture.abort()
+        raise session.capture.error
     if (
-        stdin_writer is not None
-        and stdin_writer.error is not None
-        and stop_reason is None
+        session.stdin_writer is not None
+        and session.stdin_writer.error is not None
+        and state.stop_reason is None
     ):
-        capture.abort()
-        raise stdin_writer.error
+        session.capture.abort()
+        raise session.stdin_writer.error
+    return state
 
-    if stop_reason is QwenExitClassification.CANCELLED:
+
+def _qwen_live_result(
+    *,
+    session: _QwenLiveSession,
+    state: _QwenLiveState,
+    broker: RuntimeOperatorBroker,
+) -> LiveTransportResult[QwenExitClassification]:
+    events_path = session.events_path
+    if state.stop_reason is QwenExitClassification.CANCELLED:
         run_result = _run_result(
-            process=process,
-            capture=capture,
-            stop_reason=stop_reason,
+            process=session.process,
+            capture=session.capture,
+            stop_reason=state.stop_reason,
         )
         return LiveTransportResult(
             run_result=run_result,
@@ -229,10 +347,10 @@ def execute_qwen_live_transport(
                 broker.decisions_path if broker.decisions_path.exists() else None
             ),
         )
-    if pending_request_id is not None:
+    if state.pending_request_id is not None:
         return LiveTransportResult(
             run_result=_captured_run_result(
-                capture=capture,
+                capture=session.capture,
                 exit_code=None,
                 exit_classification=QwenExitClassification.BLOCKED,
             ),
@@ -244,27 +362,31 @@ def execute_qwen_live_transport(
             operator_decisions_path=(
                 broker.decisions_path if broker.decisions_path.exists() else None
             ),
-            pending_operator_request_ids=(pending_request_id,),
+            pending_operator_request_ids=(state.pending_request_id,),
         )
-    if denied_reason is not None:
+    if state.denied_reason is not None:
         run_result = _captured_run_result(
-            capture=capture,
+            capture=session.capture,
             exit_code=None,
             exit_classification=(
-                terminal_classification or QwenExitClassification.DENIED
+                state.terminal_classification or QwenExitClassification.DENIED
             ),
         )
         return LiveTransportResult(
             run_result=run_result,
             status=AdapterExecutionStatus.FAILED,
-            details=denied_reason,
+            details=state.denied_reason,
             runtime_jsonl_path=events_path if events_path.exists() else None,
             events_jsonl_path=events_path if events_path.exists() else None,
             operator_requests_path=broker.requests_path,
             operator_decisions_path=broker.decisions_path,
         )
 
-    run_result = _run_result(process=process, capture=capture, stop_reason=stop_reason)
+    run_result = _run_result(
+        process=session.process,
+        capture=session.capture,
+        stop_reason=state.stop_reason,
+    )
     status = (
         AdapterExecutionStatus.SUCCEEDED
         if run_result.exit_classification is QwenExitClassification.SUCCESS
@@ -276,7 +398,9 @@ def execute_qwen_live_transport(
         details=f"qwen-live: {run_result.exit_classification.value}",
         runtime_jsonl_path=events_path if events_path.exists() else None,
         events_jsonl_path=events_path if events_path.exists() else None,
-        operator_requests_path=broker.requests_path if broker.requests_path.exists() else None,
+        operator_requests_path=(
+            broker.requests_path if broker.requests_path.exists() else None
+        ),
         operator_decisions_path=(
             broker.decisions_path if broker.decisions_path.exists() else None
         ),
