@@ -287,6 +287,11 @@ credential/provider-payload/target-path redaction declarations are all required 
 considered retrievable; missing metadata fails closed. The contract protects archive provenance
 but does not perform export or byte verification.
 
+The harness exporter materializes a deterministic sanitized tar plus a sibling retention sidecar;
+the verifier checks the sidecar digest and size before validating the inner manifest, every file
+digest, and the redaction/provenance match. Only verified archives may be extracted, and extraction
+rejects symlinks, traversal, duplicate members, and existing targets.
+
 Completed-flow handoff must preserve the same ownership model. When a run reaches a terminal
 state after `qa`, the completed run is immutable evidence. Any next action creates or prepares a
 separate unit:
