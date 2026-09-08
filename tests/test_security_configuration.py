@@ -67,6 +67,19 @@ def test_security_workflow_has_static_analysis_and_scorecard_jobs() -> None:
     assert "github/codeql-action/analyze@" in serialized
     assert "ossf/scorecard-action@" in serialized
 
+    codeql_init = next(
+        step
+        for step in jobs["codeql"]["steps"]
+        if isinstance(step, dict)
+        and str(step.get("uses", "")).startswith("github/codeql-action/init@")
+    )
+    languages = {
+        language.strip()
+        for language in str(codeql_init["with"]["languages"]).split(",")
+        if language.strip()
+    }
+    assert languages == {"python", "javascript-typescript"}
+
 
 def test_ci_and_release_workflows_use_locked_uv_sync() -> None:
     workflow_paths = sorted((_repo_root() / ".github" / "workflows").glob("*.yml"))

@@ -39,7 +39,7 @@ jobs:
       - name: Initialize CodeQL
         uses: github/codeql-action/init@7188fc363630916deb702c7fdcf4e481b751f97a # v4.37.1
         with:
-          languages: python
+          languages: python, javascript-typescript
 
       - name: Perform CodeQL analysis
         uses: github/codeql-action/analyze@7188fc363630916deb702c7fdcf4e481b751f97a # v4.37.1
